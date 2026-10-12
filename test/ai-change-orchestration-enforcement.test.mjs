@@ -152,6 +152,16 @@ test('direct local guarded release is refused without orchestration context', ()
   assert.match(`${result.stdout}\n${result.stderr}`, /direct local production mutation is forbidden/);
 });
 
+test('read-only remote D1 probes are not classified as mutations while mutation detection remains fail-closed', () => {
+  const source = read('scripts/validate-workflow-orchestration-gates.mjs');
+  assert.match(source, /function stripReadOnlyD1Execute/);
+  assert.match(source, /explicitReadOnlyCommand/);
+  assert.match(source, /\(\?:SELECT\|PRAGMA\)/);
+  assert.match(source, /d1\\s\+execute/);
+  assert.match(source, /--remote/);
+  assert.doesNotMatch(source, /\(\?:SELECT\|PRAGMA\|WITH\)/);
+});
+
 test('every mutation-capable workflow job has an orchestration gate', () => {
   const result = spawnSync(process.execPath, ['scripts/validate-workflow-orchestration-gates.mjs'], {
     cwd: new URL('..', import.meta.url), encoding: 'utf8',
