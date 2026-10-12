@@ -33,8 +33,8 @@ test('OAuth connection ledger remains multi-resource and supports scoped soft di
 
 test('central admin exposes all site/service Social Hub handoffs plus the platform connection ledger', () => {
   assert.match(registry, /id: 'social'/);
-  assert.match(registry, /채널·자동게시/);
-  assert.match(loader, /social: \{ label:'채널·자동게시'/);
+  assert.match(registry, /labels: \{ ko: '채널'/);
+  assert.match(loader, /social: \{ label:'채널'/);
   assert.match(admin, /MULTI-CHANNEL CONTROL CENTER/);
   assert.match(admin, /전체 사이트·서비스 채널관리/);
   assert.match(admin, /loadChannelAdminDirectory/);

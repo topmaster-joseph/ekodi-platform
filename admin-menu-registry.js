@@ -56,7 +56,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'community', group: 'content', icon: '◌', labels: { ko: '행사·신청·예약', en: 'Events, Applications & Reservations' } },
   { id: 'books', group: 'content', icon: 'B', labels: { ko: '전체 게시물·미디어', en: 'Posts & Media' } },
   { id: 'devotional', group: 'content', icon: 'V', labels: { ko: '다국어 게시·묵상', en: 'Multilingual Publishing & Devotional' } },
-  { id: 'social', group: 'content', icon: '↗', labels: { ko: '방송·채널·자동게시', en: 'Broadcast, Channels & Autopost' } },
+  { id: 'social', group: 'content', icon: '↗', labels: { ko: '채널', en: 'Channels' } },
   { id: 'finance', group: 'finance', icon: '₩', labels: { ko: '결제·회계 운영', en: 'Finance Operations' } },
   { id: 'tax', group: 'content', icon: 'T', labels: { ko: '세금·증빙', en: 'Tax & Evidence' }, href: 'https://ekodi.kr/tax', adminHandoff: true, internal: true },
 

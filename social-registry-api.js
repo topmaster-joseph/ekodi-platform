@@ -1,6 +1,26 @@
 import authWorker from './auth-worker.js';
 
-const PROVIDERS = new Set(['youtube','instagram','facebook','kakao','blog','threads','live','tiktok','linkedin','other']);
+// The registry is a directory, not an OAuth permission store or an auto-publisher.
+export const SOCIAL_CHANNEL_PROVIDERS = Object.freeze([
+  'youtube','instagram','facebook','kakao','blog','naver_blog','brunch','threads','live',
+  'tiktok','linkedin','x','pinterest','band','telegram','discord','podcast',
+  'newsletter','rss','marketplace','naver_store','coupang','kakao_channel','daangn',
+  'google_business','wordpress','medium','substack','website','other'
+]);
+const PROVIDERS = new Set(SOCIAL_CHANNEL_PROVIDERS);
+const CHANNEL_KINDS = new Set(['owned','partner','external']);
+const CHANNEL_PURPOSES = new Set(['general','commerce','community','ministry','support','news']);
+const CHANNEL_VISIBILITIES = new Set(['public','internal']);
+const PUBLIC_CHANNEL_FIELDS = Object.freeze(['id','provider','label','url','description','isActive','order','handle','channelId','uploadsPlaylist','purpose']);
+export function publicSocialRegistrySnapshot(input) {
+  const registry = normalizeRegistry(input);
+  return { ...registry, organizations:registry.organizations
+    .filter(org => org.isActive && org.socialPolicy !== 'none')
+    .map(org => ({ ...org, channels:org.channels
+      .filter(channel => channel.isActive && channel.visibility === 'public')
+      .map(channel => Object.fromEntries(PUBLIC_CHANNEL_FIELDS
+        .filter(key => Object.hasOwn(channel,key)).map(key => [key,channel[key]]))) })) };
+}
 const POLICIES = new Set(['inherit_org','custom','none']);
 const DEFAULT_REGISTRY = {
   version: 3,
@@ -35,6 +55,14 @@ function httpsUrl(value, field) {
   let url;
   try { url = new URL(text); } catch { throw new Error(`${field} must be a valid URL`); }
   if (url.protocol !== 'https:') throw new Error(`${field} must use https`);
+  const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g,'');
+  if (url.username || url.password || hostname === 'localhost' || hostname.endsWith('.local')
+    || hostname.endsWith('.internal') || hostname === '::1'
+    || /^127\./.test(hostname) || /^10\./.test(hostname)
+    || /^192\.168\./.test(hostname) || /^169\.254\./.test(hostname)
+    || /^172\.(1[6-9]|2\d|3[01])\./.test(hostname)) {
+    throw new Error(`${field} cannot use credentials or private network addresses`);
+  }
   return url.toString();
 }
 function text(value, max = 120) { return String(value || '').trim().slice(0, max); }
@@ -70,9 +98,21 @@ export function normalizeRegistry(input) {
       if (channelIds.has(channelId)) throw new Error(`duplicate channel id: ${channelId}`);
       channelIds.add(channelId);
       const label = text(raw.label, 60) || provider;
+      if (raw.kind != null && !CHANNEL_KINDS.has(raw.kind)) throw new Error(`unsupported channel kind: ${raw.kind}`);
+      if (raw.purpose != null && !CHANNEL_PURPOSES.has(raw.purpose)) throw new Error(`unsupported channel purpose: ${raw.purpose}`);
+      if (raw.visibility != null && !CHANNEL_VISIBILITIES.has(raw.visibility)) throw new Error(`unsupported visibility: ${raw.visibility}`);
+      if (raw.publicationMode != null && !['link_only','manual'].includes(raw.publicationMode)) throw new Error('automatic posting cannot be granted by the directory');
+      const kind = raw.kind || 'owned';
+      const purpose = raw.purpose || 'general';
+      const visibility = raw.visibility || 'public';
+      const publicationMode = raw.publicationMode || 'link_only';
+      if (kind !== 'owned' && publicationMode !== 'link_only') {
+        throw new Error(`channel ${channelId} requires link-only distribution for partner or external URLs`);
+      }
       const item = {
         id: channelId, provider, label, url: httpsUrl(raw.url, `channel ${channelId}.url`),
-        description: text(raw.description, 180), isActive: raw.isActive !== false, order: order(raw.order, (index + 1) * 10)
+        description: text(raw.description, 180), isActive: raw.isActive !== false, order: order(raw.order, (index + 1) * 10),
+        kind, purpose, visibility, publicationMode
       };
       for (const key of ['handle','channelId','uploadsPlaylist']) {
         const value = text(raw[key], 120);
@@ -165,7 +205,7 @@ export async function handleSocialRegistry(request, env) {
   if (path === '/api/social/registry' && request.method === 'GET') {
     try {
       const current = await readRegistry(env);
-      const registry = { ...current.registry, organizations: current.registry.organizations.filter(org => org.isActive).map(org => ({ ...org, channels: org.channels.filter(ch => ch.isActive) })) };
+      const registry = publicSocialRegistrySnapshot(current.registry);
       return json({ ...registry, revision: current.revision, updatedAt: current.updatedAt }, 200, request, env, true);
     } catch (error) {
       console.error('public social registry', error);
