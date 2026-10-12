@@ -83,3 +83,13 @@ test('SeonamMedi release guards verify preserved domains instead of legacy redir
   }
   assert.match(verify, /seonammedi-domain-gateway\.js/);
 });
+
+
+test('search-bot verification follows the preserved public canonical', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const verify = await readFile(new URL('../.github/workflows/verify-seonammedi-domains.yml', import.meta.url), 'utf8');
+  assert.match(verify, /https:\/\/seonammedi\.kr\//);
+  assert.match(verify, /<link rel="canonical" href="https:\/\/seonammedi\.kr\/">/);
+  assert.match(verify, /customer-domain-preserved/);
+  assert.doesNotMatch(verify, /<link rel="canonical" href="https:\/\/ekodi\.kr\/seonammedi\/">/);
+});
