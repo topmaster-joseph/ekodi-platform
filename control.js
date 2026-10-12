@@ -116,6 +116,10 @@
     })();
     try{return await state.authPromise}finally{state.authPromise=null}
   }
+  function invalidateCommandAuth(){
+    resetPrivateSurface();
+    authDisplay('로그인 만료',false,'최고관리자 세션이 만료되었거나 실행 권한이 없습니다. 다시 로그인해 주세요.');
+  }
   async function preflightCommand(message){
     // A successful observation, not a client-side assertion, is the only evidence
     // that may satisfy EKODI Command Plane standing-delegation preflight.
@@ -161,7 +165,8 @@
           }
         }catch(error){
           if(!sameOperator())return;
-          preflightProblem='자동실행은 접수되지 않았습니다. '+(error.auth?'로그인 권한을 다시 확인해 주세요.':error.message);
+          if(error?.auth){invalidateCommandAuth();return}
+          preflightProblem='자동실행은 접수되지 않았습니다. '+error.message;
         }
       }
       if(!sameOperator())return;
@@ -176,6 +181,7 @@
         reply=String(result.reply||'').trim()||'AI가 유효한 답변을 반환하지 않았습니다. 명령 전달 기록을 확인해 주세요.';
       }catch(error){
         if(!sameOperator())return;
+        if(error?.auth){invalidateCommandAuth();return}
         reply='AI 설명을 받지 못했습니다. '+error.message;
       }
       if(!sameOperator())return;
