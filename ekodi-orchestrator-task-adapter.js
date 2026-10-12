@@ -546,6 +546,12 @@ async function platformAdminIdentityFromSession(db,session={}){
   return Object.freeze({personId:`platform-admin:${row.id}`,email,ekodiId:null});
 }
 
+// Share exactly the same authoritative administrator identity across submit,
+// status and human approval. Never accept a requester identifier from the body.
+export async function resolveOrchestratorPlatformAdminIdentity(env,session={}){
+  return platformAdminIdentityFromSession(dbFrom(env),session);
+}
+
 export async function getOrchestratorTaskStatusForPlatformAdmin(env,session,id){
   const db=dbFrom(env),identity=await platformAdminIdentityFromSession(db,session);
   if(!identity)throw new Error('EKODI_PLATFORM_SUPER_ADMIN_REQUIRED');
