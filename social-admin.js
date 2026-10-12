@@ -3,7 +3,7 @@
   const CONNECT_API = '/marketing-connect-api';
   const TOKEN_KEY = 'ekodi-auth-token';
   const token = () => sessionStorage.getItem(TOKEN_KEY) || '';
-  const providers = ['youtube','instagram','facebook','kakao','blog','naver_blog','brunch','threads','live','tiktok','linkedin','x','pinterest','band','telegram','discord','podcast','newsletter','rss','marketplace','website','other'];
+  const providers = ['youtube','instagram','facebook','kakao','blog','naver_blog','brunch','threads','live','tiktok','linkedin','x','pinterest','band','telegram','discord','podcast','newsletter','rss','marketplace','naver_store','coupang','kakao_channel','daangn','google_business','wordpress','medium','substack','website','other'];
   const channelKinds = [['owned','직접 운영'],['partner','제휴·협력'],['external','외부 참고']];
   const channelPurposes = [['general','일반·소개'],['commerce','상품·판매'],['community','커뮤니티'],['ministry','교회·사역'],['support','고객지원'],['news','뉴스·정보']];
   let revision = 0;
@@ -64,7 +64,7 @@
     if (!response.ok) { const error=new Error(data.detail || data.error || `게시 채널 요청 실패 (${response.status})`); error.code=data.error||''; throw error; }
     return data;
   }
-  function providerLabel(value) { return ({youtube:'YouTube',instagram:'Instagram',facebook:'Facebook',threads:'Threads',facebook_ads:'Meta 광고',kakao:'Kakao',blog:'Blog',naver_blog:'네이버 블로그',brunch:'브런치',tiktok:'TikTok',linkedin:'LinkedIn',x:'X',pinterest:'Pinterest',band:'네이버 밴드',telegram:'Telegram',discord:'Discord',podcast:'팟캐스트',newsletter:'뉴스레터',rss:'RSS',marketplace:'외부 판매처',website:'웹사이트',live:'라이브'})[String(value||'').toLowerCase()] || String(value || '채널'); }
+  function providerLabel(value) { return ({youtube:'YouTube',instagram:'Instagram',facebook:'Facebook',threads:'Threads',facebook_ads:'Meta 광고',kakao:'Kakao',blog:'Blog',naver_blog:'네이버 블로그',brunch:'브런치',tiktok:'TikTok',linkedin:'LinkedIn',x:'X',pinterest:'Pinterest',band:'네이버 밴드',telegram:'Telegram',discord:'Discord',podcast:'팟캐스트',newsletter:'뉴스레터',rss:'RSS',marketplace:'외부 판매처',naver_store:'네이버 스마트스토어',coupang:'쿠팡',kakao_channel:'카카오톡 채널',daangn:'당근',google_business:'Google 비즈니스 프로필',wordpress:'WordPress',medium:'Medium',substack:'Substack',website:'웹사이트',live:'라이브'})[String(value||'').toLowerCase()] || String(value || '채널'); }
   function reconnectProvider(value) { const provider=String(value||'').toLowerCase(); return provider==='youtube'?'youtube':provider==='threads'?'threads':['facebook','instagram','facebook_ads','meta'].includes(provider)?'meta':''; }
   function formatDate(value) { const parsed=Date.parse(String(value||'')); return Number.isFinite(parsed)?new Date(parsed).toLocaleString('ko-KR'):'-'; }
   function connectionState(value) { return ({active:'연결됨',expired:'만료',revoked:'해제',error:'오류',paused:'중지'})[String(value||'').toLowerCase()] || String(value || '확인중'); }
