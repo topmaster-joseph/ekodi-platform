@@ -1021,16 +1021,16 @@ function bindPublicOrganizationAdmin(){
 function resetPublicTimelineEditor(){
   const form=el('timelineManageForm');if(!form)return;
   form.reset();form.elements.id.value='';form.elements.status.value='published';form.elements.recordScope.value='news';form.elements.sortOrder.value=String(publicTimelineEntries.length);
-  if(el('timelineManageTitle'))el('timelineManageTitle').textContent='활동이력 추가';
+  if(el('timelineManageTitle'))el('timelineManageTitle').textContent='관련소식 추가';
   if(el('timelineManageMessage'))el('timelineManageMessage').textContent='';
 }
 function setPublicTimelineEditor(open,item=null){
   const form=el('timelineManageForm'),toggle=el('timelineManageToggle');if(!form||!toggle)return;
-  if(!open){resetPublicTimelineEditor();form.hidden=true;toggle.setAttribute('aria-expanded','false');toggle.textContent='활동이력 바로 수정';return}
+  if(!open){resetPublicTimelineEditor();form.hidden=true;toggle.setAttribute('aria-expanded','false');toggle.textContent='관련소식 관리';return}
   resetPublicTimelineEditor();
   if(item){
     form.elements.id.value=item.id;form.elements.date.value=item.date||'';form.elements.category.value=item.category||'';form.elements.recordScope.value=item.recordScope||'news';form.elements.title.value=item.title||'';form.elements.summary.value=item.summary||'';form.elements.evidence.value=item.evidence||'';form.elements.sortOrder.value=String(item.sortOrder??0);form.elements.status.value=item.status||'draft';
-    if(el('timelineManageTitle'))el('timelineManageTitle').textContent='활동이력 수정';
+    if(el('timelineManageTitle'))el('timelineManageTitle').textContent='관련소식 수정';
   }
   form.hidden=false;toggle.setAttribute('aria-expanded','true');toggle.textContent='편집 닫기';form.querySelector('input:not([type="hidden"]),textarea')?.focus();
 }
