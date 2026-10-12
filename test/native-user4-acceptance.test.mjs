@@ -301,3 +301,24 @@ test('Control API exposes only Agent self-update version needed for source pin a
   assert.match(code,/summary\.version = safeText\(result\.version, 32\)/);
   assert.match(code,/summarizeCommandResult\(parseJson\(command\.result_json\), command\.command_type\)/);
 });
+
+test('USER4 refuses to infer updated Agent version while Control API projection is unavailable',async()=>{
+  const at=USER4_CDP_FIX_FLOOR+600000;
+  let posted=0;
+  const fetchImpl=async(url,init)=>{
+    if(init.method==='POST'){
+      posted++;
+      return new Response(JSON.stringify({command:{type:'agent.self_update',id:'update',status:'queued'}}),{status:200});
+    }
+    const device={...good,capabilities:{agentStatus:true},
+      lastSeenAt:new Date(at-100).toISOString(),
+      recentCommands:posted?[{id:'update',type:'agent.self_update',status:'succeeded',
+        completedAt:new Date(at-1000).toISOString(),result:{message:'success'}}]:[]};
+    return new Response(JSON.stringify({devices:[device]}),{status:200});
+  };
+  await assert.rejects(()=>ensureUser4AgentUpdated({
+    token:'authorized-admin-session-token-abcdef',clock:()=>at,fetchImpl,
+    sleepFn:async()=>{},maxPoll:2
+  }),/user4_agent_update_version_projection_unavailable/);
+  assert.equal(posted,1);
+});
