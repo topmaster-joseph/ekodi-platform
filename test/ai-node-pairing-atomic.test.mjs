@@ -67,7 +67,7 @@ test('failed D1 node insert never restores a redeemed pairing code',async()=>{
   assert.equal(state.insertCount,0);
 });
 
-test('one-time node pairing implementation consumes code conditionally before issuing credentials',()=>{
+test('one-time node pairing implementation consumes code conditionally before issuing credentials',async()=>{
   const source=await import('node:fs/promises').then(fs=>fs.readFile(new URL('../ai-control-worker.js',import.meta.url),'utf8'));
   const section=source.slice(source.indexOf('async function enrollNode('),source.indexOf('async function insertTask('));
   const claim=section.indexOf('UPDATE ai_control_node_pairings SET used_at=? WHERE code_hash=? AND used_at=\'\' AND expires_at>=?');
