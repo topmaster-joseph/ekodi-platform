@@ -30,6 +30,9 @@ export function inspectCgmaCanaryPayload(value) {
       }
     }
   }
+  const allowed=new Set(['origin','boardId','confirmed','grantRef','nonce']);
+  if(Object.keys(value).some(key=>!allowed.has(key)))
+    return {ok:false,code:'PAYLOAD_INVALID'};
   if(value.boardId!==CGMA_NATIVE_CANARY.boardId||value.origin!==CGMA_NATIVE_CANARY.origin)
     return {ok:false,code:'BOARD_SCOPE_INVALID'};
   if(value.confirmed!==true)
