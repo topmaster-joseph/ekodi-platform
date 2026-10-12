@@ -28,7 +28,10 @@ test('EKODI Lab release is centrally guarded and bound to the apex public path',
   assert.match(workflow,/lab-release\.json/);
   assert.match(workflow,/https:\/\/ekodi\.kr\/ekodilab/);
   assert.match(workflow,/schedule:/);
-  assert.match(workflow,/github\.event_name != 'pull_request'/);
+  assert.match(workflow,/workflow_dispatch:[\s\S]*release_branch_ref:[\s\S]*release_task_id:/);
+  assert.match(workflow,/github\.event_name == 'workflow_dispatch'/);
+  assert.match(workflow,/EKODI_RELEASE_BRANCH_REF: \$\{\{ inputs\.release_branch_ref \|\| '' \}\}/);
+  assert.match(workflow,/EKODI_RELEASE_TASK_ID: \$\{\{ inputs\.release_task_id \|\| '' \}\}/);
   assert.doesNotMatch(workflow,/\bwrangler\b[^\n]*\bpages\s+deploy\b/i);
   assert.doesNotMatch(workflow,/Configure EKODI DNS|Attach custom domains/);
 
@@ -47,4 +50,18 @@ test('Lab production verifier rejects the stale placeholder build and internal w
   }
   assert.match(workflow,/ekodilab\\.pages\\.dev/);
   assert.match(workflow,/sourceSha==\$sha/);
+});
+
+
+test('Lab post-merge deploy is dispatched only by the guarded Orchestrator convergence path',async()=>{
+  const converge=await read('scripts/converge-orchestrated-pr-merge.mjs');
+  assert.match(converge,/const labHomepageTouched=/);
+  for(const file of [
+    'deploy/manifests/ekodilab.pages.json',
+    'scripts/guarded-pages-release.mjs',
+    '.github/workflows/deploy-ekodi-lab-homepage.yml',
+  ]) assert.ok(converge.includes("'"+file+"'"),file);
+  assert.match(converge,/actions\/workflows\/deploy-ekodi-lab-homepage\.yml\/dispatches/);
+  assert.match(converge,/release_branch_ref:branch,release_task_id:taskId/);
+  assert.match(converge,/EKODI Lab deploy dispatch failed/);
 });

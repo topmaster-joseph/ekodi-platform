@@ -68,6 +68,11 @@ const controlApiTouched=changedFiles.some(file=>[
   'coupang-partners-automation.js',
   'customer-entry-worker.js',
   'mission-control-entry-worker.js',
+  // Control API directly imports the Orchestrator completion/OIDC boundary.
+  // A trusted GitHub Actions merge does not automatically trigger main push.
+  'ekodi-orchestrator-task-adapter.js',
+  'github-actions-oidc.js',
+  'ai-command-control.js',
   // The same SeonamMedi monitor code runs in the public Site Core AND in
   // the Control API hourly scheduler. Both runtimes must be released together.
   'seonammedi-monitor.js',
@@ -103,6 +108,12 @@ const spaceTouched=changedFiles.some(file=>
   file==='.github/workflows/deploy-space.yml'
 );
 const mallSiteTouched=changedFiles.some(file=>file.startsWith('sites/ekodi-mall/')||file==='.github/workflows/deploy-ekodi-mall.yml');
+const labHomepageTouched=changedFiles.some(file=>
+  file.startsWith('sites/ekodi-lab/')||
+  file==='deploy/manifests/ekodilab.pages.json'||
+  file==='scripts/guarded-pages-release.mjs'||
+  file==='.github/workflows/deploy-ekodi-lab-homepage.yml'
+);
 const aiControlTouched=changedFiles.some(file=>
   file==='ai-control-worker.js'||
   file==='common-services-admin.js'||
@@ -113,6 +124,15 @@ const aiControlTouched=changedFiles.some(file=>
   file==='.github/workflows/deploy-ai-control.yml'||
   file==='scripts/converge-orchestrated-pr-merge.mjs'
 );
+// Collector-only changes need an explicit post-merge dispatch because
+// GITHUB_TOKEN merges do not emit an ordinary main push workflow.
+const trafficCollectorTouched=changedFiles.some(file=>[
+  'traffic-intelligence.js',
+  'traffic-collector-quality.js',
+  'scripts/collect-traffic-intelligence.mjs',
+  '.github/workflows/traffic-intelligence-analytics.yml',
+  'migrations/0059_traffic_intelligence.sql',
+].includes(file));
 // GITHUB_TOKEN merges do not trigger main push workflows. Browser telemetry
 // changes require the dedicated Shell Worker, not only the shared Site Core.
 const shellRuntimeTouched=changedFiles.some(file=>
@@ -333,6 +353,14 @@ async function dispatchPostMergeDeploys(){
     if(!dispatch.r.ok)fail('Mall Pages deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
     console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-ekodi-mall.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
+  if(labHomepageTouched){
+    const dispatch=await api('/actions/workflows/deploy-ekodi-lab-homepage.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('EKODI Lab deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-ekodi-lab-homepage.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
   // GITHUB_TOKEN merges do not invoke ordinary main push workflows.
   // Explicit dispatch forwards the already verified EKODI release receipt.
   if(controlApiTouched){
@@ -342,6 +370,14 @@ async function dispatchPostMergeDeploys(){
     });
     if(!dispatch.r.ok)fail('Control API deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
     console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-control-api.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+  if(trafficCollectorTouched){
+    const dispatch=await api('/actions/workflows/traffic-intelligence-analytics.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main'})
+    });
+    if(!dispatch.r.ok)fail('Traffic Intelligence collector dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,350));
+    console.log(JSON.stringify({ok:true,action:'traffic-collector-dispatched',workflow:'traffic-intelligence-analytics.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
   if(marketingGrowthTouched){
     const dispatch=await api('/actions/workflows/deploy-marketing-growth.yml/dispatches',{
