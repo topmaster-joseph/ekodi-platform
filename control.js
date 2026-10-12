@@ -185,7 +185,7 @@
       :serverVerified
         ?card('EKODI 서버 작업장부','서버 확인',state.taskCheckedAt+' 확인 · 최근 '+visibleTasks.length+'건 (최대 40건)')
         :card('브라우저 임시 기록','서버 미확인',state.taskNotice||'이 목록은 서버에서 현재 실행 상태를 확인한 결과가 아닙니다. 새로고침으로 확인하세요.');
-    $('#taskCards').innerHTML=sourceCard+(visibleTasks.length?visibleTasks.map(t=>card(t.title,statusLabel(t.status),(t.id||'')+' · '+(t.target||'auto'))).join(''):card(serverVerified?'서버 작업장부가 비어 있습니다':'저장된 작업이 없습니다',serverVerified?'서버 확인':'미확인',serverVerified?'최근 40개 범위에서 표시할 작업이 없습니다.':'명령 기록이 없거나 최신 서버 상태를 조회하지 못했습니다.'));
+    $('#taskCards').innerHTML=sourceCard+(visibleTasks.length?visibleTasks.map(t=>card(t.title,serverVerified?statusLabel(t.status):statusLabel(t.status)+' · 서버 미확인',(t.id||'')+' · '+(t.target||'auto'))).join(''):card(serverVerified?'서버 작업장부가 비어 있습니다':'저장된 작업이 없습니다',serverVerified?'서버 확인':'미확인',serverVerified?'최근 40개 범위에서 표시할 작업이 없습니다.':'명령 기록이 없거나 최신 서버 상태를 조회하지 못했습니다.'));
     $('#agentCards').innerHTML=AGENTS.map(([id,name,kind])=>card(name,id==='ekodi'?'최종 통제':'연결 대상',kind+' · EKODI 라우팅/권한 정책 적용')).join('');
     $('#workerCards').innerHTML=WORKERS.map(([id,name])=>card(name,'상태는 실행 시 확인',id+' 실행계층')).join('');
     $('#resultCards').innerHTML=state.results.length?state.results.map(r=>card(r.title,statusLabel(r.status),(r.provider||'EKODI')+(r.taskId?' · '+r.taskId:'')+'\n'+r.summary)).join(''):card('아직 결과가 없습니다','대기','명령 처리 후 검증된 결과가 이곳에 누적됩니다.');
