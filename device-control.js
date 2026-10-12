@@ -522,8 +522,11 @@ function deviceHealth(settings = {}, diagnostics = {}) {
   };
 }
 
-function summarizeCommandResult(result = {}) {
+function summarizeCommandResult(result = {}, commandType = '') {
   const summary = {};
+  // Expose only a bounded version for approved native Agent self-update receipts.
+  if (commandType === 'agent.self_update' && result?.version !== undefined)
+    summary.version = safeText(result.version, 32);
   const finiteNumber = value => value === null || value === undefined || value === ''
     ? null
     : (Number.isFinite(Number(value)) ? Number(value) : null);
@@ -1016,7 +1019,7 @@ async function listDevices(env) {
       issuedAt: command.issued_at,
       claimedAt: command.claimed_at,
       completedAt: command.completed_at,
-      result: summarizeCommandResult(parseJson(command.result_json)),
+      result: summarizeCommandResult(parseJson(command.result_json), command.command_type),
     });
   }
   const agentDevices = (devices.results || []).map(row => {

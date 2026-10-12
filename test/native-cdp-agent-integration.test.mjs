@@ -24,3 +24,12 @@ test('CDP worker supplies DOM proof and never returns success from process exit 
   assert.match(worker,/rm\(profile,\{recursive:true,force:true/);
   assert.match(worker,/windowsHide:true,stdio:\['ignore','ignore','pipe'\]/);
 });
+
+test('Agent pins the reviewed early-exit fallback worker, not a stale CDP binary',()=>{
+  const reviewedCommit='f6200d33031d7bfc42c8284e2ffa156cb51859da';
+  assert.match(agent,new RegExp('raw\\.githubusercontent\\.com/topmaster-joseph/ekodi-platform/'+reviewedCommit+'/tools/ekodi-device-agent/windows/ekodi-native-browser-cdp\\.mjs'));
+  assert.match(worker,/headlessMode:'legacy'/);
+  assert.match(worker,/CDP_BROWSER_EARLY_EXIT_ZERO/);
+  assert.match(worker,/installedCanaryBrowsers/);
+  assert.match(agent,/CDP_WORKER_EVIDENCE_INVALID/);
+});
