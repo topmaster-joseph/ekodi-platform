@@ -36,7 +36,7 @@ test('real active OAuth is not asked to reconnect',()=>{
 
 test('expired and mismatched callback errors show safe recovery without another automatic login',()=>{
   const html=renderMallSocialSetup({oauthNotice:{status:'error',reason:'YOUTUBE_TARGET_ACCOUNT_MISMATCH'}});
-  assert.match(html,/같은 계정/);
+  assert.match(html,/브랜드 채널/);
   assert.doesNotMatch(html,/refresh_token/i);
   assert.doesNotMatch(html,/<script>/);
 });
@@ -95,7 +95,7 @@ test('YouTube registered email is retained across OAuth status checks',()=>{
 test('failed YouTube connection reports the stored reason, never a raw provider error',()=>{
   const known=renderMallSocialSetup({platform:{youtubeConfigured:true},registeredAccounts:[{provider:'youtube',status:'error',lastError:'YOUTUBE_TARGET_ACCOUNT_MISMATCH'}]});
   assert.match(known,/최근 연결 실패/);
-  assert.match(known,/같은 계정/);
+  assert.match(known,/브랜드 채널/);
   const unknown=renderMallSocialSetup({platform:{youtubeConfigured:true},registeredAccounts:[{provider:'youtube',status:'error',lastError:'secret-value:should-not-render'}]});
   assert.match(unknown,/인증 결과 확인/);
   assert.doesNotMatch(unknown,/secret-value/);
