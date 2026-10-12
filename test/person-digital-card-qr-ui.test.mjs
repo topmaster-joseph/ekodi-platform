@@ -59,12 +59,12 @@ test('QR download exports one square PNG with a scan-safe quiet zone and preserv
   assert.equal(qrOptions.width,qrOptions.height);
   assert.equal(qrOptions.width,640);
   await handlers['copy:click']();
-  assert.deepEqual(events.find(e=>Array.isArray(e)&&e[0]==='copied'),['copied',root.dataset.target]);
+  assert.deepEqual(Array.from(events.find(e=>Array.isArray(e)&&e[0]==='copied')),['copied',root.dataset.target]);
   handlers['download:click']();
   assert.equal(fakeCanvas.width,768);
   assert.equal(fakeCanvas.height,768);
-  assert.deepEqual(events.find(e=>Array.isArray(e)&&e[0]==='fillRect'),['fillRect',0,0,768,768]);
-  assert.deepEqual(events.find(e=>Array.isArray(e)&&e[0]==='drawImage'),['drawImage',qrSource,64,64,640,640]);
+  assert.deepEqual(Array.from(events.find(e=>Array.isArray(e)&&e[0]==='fillRect')),['fillRect',0,0,768,768]);
+  assert.deepEqual(Array.from(events.find(e=>Array.isArray(e)&&e[0]==='drawImage')),['drawImage',qrSource,64,64,640,640]);
   assert.equal(downloads.length,1);
   assert.equal(downloads[0].download,'ekodi-contact-qr.png');
   assert.match(downloads[0].href,/^data:image\/png/);
