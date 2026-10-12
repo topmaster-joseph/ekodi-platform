@@ -1,6 +1,9 @@
 name: EKODI LANG-UI-001 Native Browser Acceptance
 
 on:
+  # EKODI-native weekly drift check, 03:27 KST Tuesday (UTC Monday 18:27).
+  schedule:
+    - cron: '27 18 * * 1'
   workflow_dispatch:
   pull_request:
     paths:
@@ -49,6 +52,9 @@ jobs:
           set -euo pipefail
           jq -e '.policy == "LANG-UI-001" and .readOnly == true and .ephemeral == true and .realProductionAndSyntheticSeparated == true' artifacts/native-language-selector/report.json
           jq -e '.production | type == "array"' artifacts/native-language-selector/report.json
+          if ! jq -e '.liveCertified == true' artifacts/native-language-selector/report.json >/dev/null; then
+            echo '::warning::LANG-UI-001 live certification incomplete: consult per-service inconclusive entries in the attached evidence.'
+          fi
           echo '### LANG-UI-001 first-party native Chromium' >> "$GITHUB_STEP_SUMMARY"
           jq -r '"- Synthetic fixture: \(.synthetic.status)\n- Live certification: \(.liveCertified)\n- Live observations: \([.production[] | "\(.service): \(.status) (\(.reason))"] | join(", "))"' artifacts/native-language-selector/report.json >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
