@@ -7,7 +7,7 @@ const source=readFileSync(new URL('../control.js',import.meta.url),'utf8');
 
 function browser({role='super_admin',sessionToken=true,storedTasks=[],storedResults=[],responses=[]}={}){
   const url=new URL('https://ekodi.kr/admin/control?embed=admin');
-  const calls=[],nodes=new Map();
+  const calls=[],nodes=new Map(),documentEvents=new Map();
   const node=selector=>{
     if(!nodes.has(selector))nodes.set(selector,{
       classList:{toggle(){},add(){},remove(){}},dataset:{},hidden:false,
@@ -26,10 +26,10 @@ function browser({role='super_admin',sessionToken=true,storedTasks=[],storedResu
   const refresh=node('refresh:tasks');
   refresh.closest=selector=>selector==='#viewTasks';
   const document={
-    readyState:'loading',documentElement:{dataset:{}},body:{scrollHeight:400},
+    readyState:'loading',visibilityState:'visible',documentElement:{dataset:{}},body:{scrollHeight:400},
     querySelector:node,
     querySelectorAll:key=>key==='[data-view]'?tabs:key==='[data-view-panel]'?panels:key==='[data-refresh]'?[refresh]:[],
-    addEventListener(name,handler){if(name==='DOMContentLoaded')this.boot=handler},
+    addEventListener(name,handler){if(name==='DOMContentLoaded')this.boot=handler;else documentEvents.set(name,handler)},
   };
   const storage={
     getItem:key=>key==='ekodi-auth-token'&&sessionToken?'test-token'
@@ -60,7 +60,9 @@ function browser({role='super_admin',sessionToken=true,storedTasks=[],storedResu
   });
   const settle=async()=>{for(let i=0;i<30;i++)await Promise.resolve();};
   return {calls,document,node,tabs,refresh,boot:()=>document.boot(),settle,
-    openTasks:()=>tabs.find(x=>x.dataset.view==='tasks').onclick()};
+    openTasks:()=>tabs.find(x=>x.dataset.view==='tasks').onclick(),
+    showView:view=>tabs.find(x=>x.dataset.view===view).onclick(),
+    changeVisibility:status=>{document.visibilityState=status;documentEvents.get('visibilitychange')?.();}};
 }
 
 test('authenticated Control reads the durable server task ledger, not only browser cache',async()=>{
@@ -167,4 +169,40 @@ test('AI answer history never claims server-verified execution merely from a sto
   assert.match(html,/AI 응답 · 작업 상태 별도 확인/);
   assert.match(html,/서버 작업장부에서 확인하세요/);
   assert.doesNotMatch(html,/<span class="badge">완료<\/span>/);
+});
+
+test('returning to a visible tasks tab updates stale status without background polling',async()=>{
+  const ui=browser({responses:[
+    {ok:true,tasks:[{id:'task-1',goal:'상태 감시',state:'running'}]},
+    {ok:true,tasks:[{id:'task-1',goal:'상태 감시',state:'verified'}]},
+  ]});
+  await ui.boot();
+  ui.openTasks();
+  await ui.settle();
+  assert.equal(ui.calls.filter(x=>x.path==='/api/control/ai/v8/tasks').length,1);
+  assert.match(ui.node('#taskCards').innerHTML,/실행 중/);
+  ui.changeVisibility('hidden');
+  await ui.settle();
+  assert.equal(ui.calls.filter(x=>x.path==='/api/control/ai/v8/tasks').length,1);
+  ui.changeVisibility('visible');
+  await ui.settle();
+  assert.equal(ui.calls.filter(x=>x.path==='/api/control/ai/v8/tasks').length,2);
+  assert.match(ui.node('#taskCards').innerHTML,/완료/);
+  ui.showView('chat');
+  ui.changeVisibility('hidden');
+  ui.changeVisibility('visible');
+  await ui.settle();
+  assert.equal(ui.calls.filter(x=>x.path==='/api/control/ai/v8/tasks').length,2);
+});
+
+test('visibility refresh respects authorization; a guest never reads the server ledger',async()=>{
+  const ui=browser({sessionToken:false});
+  await ui.boot();
+  ui.openTasks();
+  await ui.settle();
+  ui.changeVisibility('hidden');
+  ui.changeVisibility('visible');
+  await ui.settle();
+  assert.equal(ui.calls.filter(x=>x.path==='/api/control/ai/v8/tasks').length,0);
+  assert.match(ui.node('#taskCards').innerHTML,/서버 미확인/);
 });
