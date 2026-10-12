@@ -42,7 +42,7 @@ test('native workflow is PR executable with isolated Playwright evidence',()=>{
   assert.match(workflow,/pull_request:/);
   assert.match(workflow,/EKODI_LANG_STRICT_LIVE:/);
   assert.match(script,/strictLive&&report.liveDriftCount>0/);
-  assert.match(workflow,/'homepage-ambient\\.js'/);
+  assert.match(workflow,/'homepage-ambient\.js'/);
   assert.match(workflow,/npm install --no-save --package-lock=false playwright@1\.55\.0/);
   assert.match(workflow,/npx playwright install --with-deps chromium/);
   assert.match(workflow,/node scripts\/verify-language-selector-native\.mjs/);
