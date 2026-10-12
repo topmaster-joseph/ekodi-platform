@@ -41,7 +41,7 @@ test('board identity, existing authorization and server audit stay enforced',()=
   assert.match(source,/health\.boardId !== 'site:cgma:main'/);
   assert.match(source,/health\.independent !== true/);
   assert.match(source,/서버 감사기록은 별도 확인이 필요합니다/);
-  assert.match(board,/if\(!who\.authenticated&&Number\(instance\.allow_anonymous_write\)!==1\)/);
+  assert.match(board,/if\(!who\.authenticated\)return boardJson\(instance,\{error:'authentication_required'\},401\)/);
   assert.match(board,/if\(!owns&&!who\.manage\)/);
   assert.match(board,/await audit\(env,instance,who,'post\.create'/);
   assert.match(board,/await audit\(env,instance,who,'post\.edit'/);
