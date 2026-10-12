@@ -51,6 +51,30 @@
   new MutationObserver(restoreCurrentHome).observe(panel,{
     attributes:true,attributeFilter:['hidden','class']
   });
+  // The parent auth shell can hide without changing the child frame's own
+  // document visibility state. Tear down its old browsing context on logout,
+  // so a later administrator does not inherit a previous session's DOM.
+  const app=document.getElementById('app');
+  if(app){
+    new MutationObserver(()=>{
+      if(app.hidden){
+        if(frame.hasAttribute('src'))frame.removeAttribute('src');
+        notice.hidden=true;
+        frame.classList.remove('admin-control-frame-unavailable');
+        frame.removeAttribute('aria-hidden');
+        delete document.documentElement.dataset.ekodiControlEmbedded;
+        if(panel){
+          panel.hidden=true;
+          panel.classList.add('hidden-panel');
+        }
+      }else if(document.documentElement.dataset.ekodiAdminReady==='true'){
+        restoreCurrentHome();
+        if(window.EKODIAdminPanels?.current?.()==='command-home'){
+          activateSection('command-home');
+        }
+      }
+    }).observe(app,{attributes:true,attributeFilter:['hidden']});
+  }
   frame.addEventListener('error',()=>{
     if(frame.getAttribute('src'))reportFailure();
   });
