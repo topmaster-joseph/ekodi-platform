@@ -11,6 +11,11 @@ test('Mission postrelease canary uses EKODI-owned browser on both phone and desk
   assert.match(workflow,/uses: \.\/\.github\/workflows\/ekodi-background-browser-worker\.yml/g);
   assert.match(workflow,/device_profile: mobile-portrait/);
   assert.match(workflow,/device_profile: desktop/);
+  assert.equal((workflow.match(/surface_registry: config\/ekodimission-native-postrelease-surfaces\.json/g)||[]).length,2);
+  const onlyMission=JSON.parse(read('config/ekodimission-native-postrelease-surfaces.json'));
+  assert.equal(onlyMission.canonicalOrigin,'https://ekodi.kr');
+  assert.equal(onlyMission.maxPaths,6);
+  assert.deepEqual(onlyMission.surfaces,[],'Avoid unrelated board endpoints in Mission release canary');
   for(const route of ['/ekodimission','/ekodimission/activities','/ekodimission/history','/ekodimission/stories','/ekodimission/partners','/ekodimission/activities/260926-chuseok-open-table/archive'])
     assert.ok(workflow.includes(route),'Missing canonical route '+route);
   assert.match(workflow,/Deploy Activity Public Share Schema/);
