@@ -40,7 +40,7 @@ export function renderMallSocialSetup({ platform = {}, connections = [], registe
     active.length ? 'OAuth는 연결됐지만 실제 발행 채널이 비활성화돼 있습니다. 아래 연결 채널 상세 설정을 확인하세요.' :
     youtubeReady ? '첫 작업: YouTube Google 계정의 OAuth 연결을 완료하세요. Meta·Threads는 앱 등록이 추가로 필요합니다.' :
     '첫 작업: 플랫폼 앱을 등록한 다음 공식 OAuth로 계정을 연결하세요.';
-  const oauthReasons = {YOUTUBE_CHANNEL_NOT_FOUND:'Google 인증은 완료됐지만 YouTube 채널이 없습니다. 채널을 선택하거나 생성한 후 다시 연결하세요.',YOUTUBE_REFRESH_TOKEN_MISSING:'Google 장기 접근 권한을 받지 못했습니다. Google 계정에서 에코디 앱 권한을 확인한 뒤 다시 승인하세요.',YOUTUBE_TARGET_ACCOUNT_MISMATCH:'입력한 Google 이메일과 실제 승인한 Google 계정이 다릅니다. 같은 계정을 선택하세요.',GOOGLE_OAUTH_TICKET_REQUIRED:'Google 인증 결과를 서버에서 확인하지 못했습니다. 새 창을 닫은 뒤 연결 상태부터 확인하세요.',GOOGLE_OAUTH_EXCHANGE_FAILED:'Google 인증 응답을 처리하지 못했습니다. 연결 상태를 먼저 확인하고 잠시 후 다시 시도하세요.',GOOGLE_OAUTH_ACCESS_DENIED:'Google에서 권한 동의가 완료되지 않았습니다. 연결 상태를 확인한 뒤 필요하면 동의 화면에서 권한을 승인하세요.',AUTHORIZATION_CODE_MISSING:'Google에서 인증 코드를 받지 못했습니다. 팝업을 닫고 인증 결과를 먼저 확인하세요.'};
+  const oauthReasons = {YOUTUBE_CHANNEL_NOT_FOUND:'Google 인증은 완료됐지만 YouTube 채널이 없습니다. 채널을 선택하거나 생성한 후 다시 연결하세요.',YOUTUBE_REFRESH_TOKEN_MISSING:'Google 장기 접근 권한을 받지 못했습니다. Google 계정에서 에코디 앱 권한을 확인한 뒤 다시 승인하세요.',YOUTUBE_TARGET_ACCOUNT_MISMATCH:'Google 로그인 이메일이 입력한 이메일과 다릅니다. 브랜드 채널이라면 브랜드 채널 연결을 선택하고 해당 YouTube 채널을 Google 화면에서 직접 선택하세요.',GOOGLE_OAUTH_TICKET_REQUIRED:'Google 인증 결과를 서버에서 확인하지 못했습니다. 새 창을 닫은 뒤 연결 상태부터 확인하세요.',GOOGLE_OAUTH_EXCHANGE_FAILED:'Google 인증 응답을 처리하지 못했습니다. 연결 상태를 먼저 확인하고 잠시 후 다시 시도하세요.',GOOGLE_OAUTH_ACCESS_DENIED:'Google에서 권한 동의가 완료되지 않았습니다. 연결 상태를 확인한 뒤 필요하면 동의 화면에서 권한을 승인하세요.',AUTHORIZATION_CODE_MISSING:'Google에서 인증 코드를 받지 못했습니다. 팝업을 닫고 인증 결과를 먼저 확인하세요.'};
   const failedAccount = !youtubeConnected && ['error','reconnect_required'].includes(String(youtubeRecord?.status || ''));
   const safeLedgerReason = String(youtubeRecord?.lastError || '').trim();
   const failedAccountLine = failedAccount ? `<div class="mall-social-next" role="status"><strong>최근 연결 실패</strong> ${esc(oauthReasons[safeLedgerReason] || '연결 기록에 실패가 남았습니다. Google 계정과 YouTube 채널을 확인하고, 인증 결과 확인을 먼저 누르세요.')}</div>` : '';
@@ -49,7 +49,8 @@ export function renderMallSocialSetup({ platform = {}, connections = [], registe
     <label for="mallSocialYoutubeEmail">YouTube Google 계정 이메일</label>
     <input id="mallSocialYoutubeEmail" type="email" name="email" autocomplete="email" required maxlength="240" value="${esc(youtubeAccountHint)}" placeholder="Google 계정 이메일 입력">
     <button class="button primary" type="submit">Google 공식 인증 시작</button>
-    <small>이메일은 계정 식별에만 사용합니다. 암호 입력 없이 Google 공식 동의 화면으로 이동합니다.</small>
+    <label><input type="checkbox" name="youtubeBrandAccountMode" value="on"> YouTube 브랜드 채널로 연결 (예: 에코디몰·에코디무역)</label>
+    <small>브랜드 채널을 선택할 때 체크하세요. Google 이메일은 등록용 식별자이고, 연결할 실제 채널은 Google OAuth 승인 후 YouTube 채널 ID로 검증합니다. 연결만으로 자동 게시되지는 않습니다.</small>
     <button class="button" type="button" id="mallSocialVerifyConnection">인증 결과 확인</button><div id="mallSocialYoutubeMessage" role="status" aria-live="polite"></div>
   </form>` : '';
   return `<section class="mall-social-setup" aria-labelledby="mallSocialHeading">
