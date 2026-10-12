@@ -21,8 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 6
     env:
-      GH_TOKEN: \${{ github.token }}
-      REPAIR_BRANCH: \${{ github.event.workflow_run.head_branch }}
+      GH_TOKEN: ${{ github.token }}
+      REPAIR_BRANCH: ${{ github.event.workflow_run.head_branch }}
     steps:
       - name: Validate exact repaired orchestrator release and previously merged security source
         shell: bash
@@ -31,7 +31,7 @@ jobs:
           repo="$GITHUB_REPOSITORY"
           repair_branch="$REPAIR_BRANCH"
           [[ "$repair_branch" =~ ^ai/[a-zA-Z0-9._-]+/orch_[a-zA-Z0-9_-]+$ ]] || exit 0
-          owner="\${repo%%/*}"
+          owner="${repo%%/*}"
           encoded_head="$(printf '%s' "$owner:$repair_branch" | jq -sRr @uri)"
           repair_pr="$(gh api "repos/$repo/pulls?state=all&base=main&head=$encoded_head&per_page=30" | jq -c --arg branch "$repair_branch" '[.[] | select(.head.ref == $branch and .merged_at != null)][0] // empty')"
           [ -n "$repair_pr" ] || exit 0
@@ -45,11 +45,11 @@ jobs:
           source_branch="$(jq -r '.head.ref' <<< "$prior")"
           [[ "$source_branch" =~ ^ai/[a-zA-Z0-9._-]+/orch_[a-zA-Z0-9_-]+$ ]]
           source_sha="$(jq -r '.head.sha' <<< "$prior")"
-          source_task="\${source_branch##*/}"
-          repair_task="\${repair_branch##*/}"
+          source_task="${source_branch##*/}"
+          repair_task="${repair_branch##*/}"
           for pair in "$repair_branch|$repair_task" "$source_branch|$source_task"; do
-            branch="\${pair%%|*}"
-            task="\${pair##*|}"
+            branch="${pair%%|*}"
+            task="${pair##*|}"
             encoded_branch="$(printf '%s' "$branch" | jq -sRr @uri)"
             encoded_task="$(printf '%s' "$task" | jq -sRr @uri)"
             curl --fail-with-body -sS --retry 2 --max-time 15 \
