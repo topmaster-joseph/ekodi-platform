@@ -66,6 +66,9 @@ test('continuity workflow is receipt-gated, bounded, and never bypasses guarded 
   assert.match(watchdog, /actions: write/);
   assert.match(converger, /workflow_dispatch:/);
   assert.match(script, /hasAuthorizedReceipt\(planned\.taskId, planned\.branch\)/);
+  assert.match(script, /result\.taskId === taskId/);
+  assert.match(script, /result\.branchRef === branch/);
+  assert.match(script, /result\.authority === 'ekodi-orchestrator'/);
   assert.match(script, /current\.head\?\.sha !== planned\.sha/);
   assert.match(script, /MAX_DISPATCH_ATTEMPTS_PER_SHA = 2/);
   assert.match(script, /MAX_DISPATCHES_PER_SWEEP = 3/);
