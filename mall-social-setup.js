@@ -1,4 +1,5 @@
 // Tenant-scoped readiness board. OAuth secrets never enter this presentation.
+import { youtubeDataApiDisabledProject, youtubeDataApiCloudUrl } from './youtube-data-api-readiness.js';
 export function renderMallSocialSetup({ platform = {}, connections = [], registeredAccounts = [], channels = [], jobs = [], policy = {}, oauthNotice = null } = {}) {
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
   const targets = [
@@ -36,15 +37,18 @@ export function renderMallSocialSetup({ platform = {}, connections = [], registe
   const youtubeReady = platform.youtubeConfigured === true;
   const youtubeRecord = registeredAccounts.find(row => row.provider === 'youtube') || null;
   const youtubeAccountHint = String(youtubeRecord?.loginHint || youtubeRecord?.providerAccountId || '').trim();
-  const next = publishReady ? '게시 준비 완료: 발행 정책을 확인한 후 시험 게시하세요.' :
+  const youtubeApiBlock = !youtubeConnected ? registeredAccounts.filter(row=>row.provider==='youtube').map(row=>youtubeDataApiDisabledProject(row.lastError)).find(Boolean) : null;
+  const youtubeApiSetupUrl = youtubeApiBlock ? youtubeDataApiCloudUrl('YOUTUBE_DATA_API_DISABLED'+(youtubeApiBlock.projectId?':'+youtubeApiBlock.projectId:'')) : '';
+  const callbackApiBlock = youtubeDataApiDisabledProject(oauthNotice?.reason);
+  const next = youtubeApiBlock ? 'Google Cloud 프로젝트의 YouTube Data API v3 사용 설정이 필요합니다. 재연결보다 API 활성화를 먼저 확인하세요.' : publishReady ? '게시 준비 완료: 발행 정책을 확인한 후 시험 게시하세요.' :
     active.length ? 'OAuth는 연결됐지만 실제 발행 채널이 비활성화돼 있습니다. 아래 연결 채널 상세 설정을 확인하세요.' :
     youtubeReady ? '첫 작업: YouTube Google 계정의 OAuth 연결을 완료하세요. Meta·Threads는 앱 등록이 추가로 필요합니다.' :
     '첫 작업: 플랫폼 앱을 등록한 다음 공식 OAuth로 계정을 연결하세요.';
   const oauthReasons = {YOUTUBE_CHANNEL_NOT_FOUND:'Google 인증은 완료됐지만 YouTube 채널이 없습니다. 채널을 선택하거나 생성한 후 다시 연결하세요.',YOUTUBE_REFRESH_TOKEN_MISSING:'Google 장기 접근 권한을 받지 못했습니다. Google 계정에서 에코디 앱 권한을 확인한 뒤 다시 승인하세요.',YOUTUBE_TARGET_ACCOUNT_MISMATCH:'Google 로그인 이메일이 입력한 이메일과 다릅니다. 브랜드 채널이라면 브랜드 채널 연결을 선택하고 해당 YouTube 채널을 Google 화면에서 직접 선택하세요.',GOOGLE_OAUTH_TICKET_REQUIRED:'Google 인증 결과를 서버에서 확인하지 못했습니다. 새 창을 닫은 뒤 연결 상태부터 확인하세요.',GOOGLE_OAUTH_EXCHANGE_FAILED:'Google 인증 응답을 처리하지 못했습니다. 연결 상태를 먼저 확인하고 잠시 후 다시 시도하세요.',GOOGLE_OAUTH_ACCESS_DENIED:'Google에서 권한 동의가 완료되지 않았습니다. 연결 상태를 확인한 뒤 필요하면 동의 화면에서 권한을 승인하세요.',AUTHORIZATION_CODE_MISSING:'Google에서 인증 코드를 받지 못했습니다. 팝업을 닫고 인증 결과를 먼저 확인하세요.'};
   const failedAccount = !youtubeConnected && ['error','reconnect_required'].includes(String(youtubeRecord?.status || ''));
   const safeLedgerReason = String(youtubeRecord?.lastError || '').trim();
-  const failedAccountLine = failedAccount ? `<div class="mall-social-next" role="status"><strong>최근 연결 실패</strong> ${esc(oauthReasons[safeLedgerReason] || '연결 기록에 실패가 남았습니다. Google 계정과 YouTube 채널을 확인하고, 인증 결과 확인을 먼저 누르세요.')}</div>` : '';
-  const noticeLine = oauthNotice ? `<div class="mall-social-next ${oauthNotice.status==='success'?'ready':''}" role="status">${oauthNotice.status==='success'?'인증 결과가 접수됐습니다. OAuth 연결 수치를 확인하세요.':esc(oauthReasons[oauthNotice.reason]||oauthNotice.reason||'인증이 완료되지 않았습니다. 기존 연결 상태를 확인하고 필요한 경우에만 다시 승인하세요.')}</div>` : '';
+  const failedAccountLine = youtubeApiBlock ? `<div class="mall-social-next" role="status"><strong>Google Cloud API 사용 설정 필요</strong> YouTube Data API v3를 활성화한 뒤 설정 반영을 기다리고 연결 상태를 확인하세요. 필요할 때만 OAuth를 다시 진행합니다. <a href="${esc(youtubeApiSetupUrl)}" target="_blank" rel="noopener noreferrer">공식 API 설정 열기</a>${youtubeApiBlock.projectId?` (프로젝트 ${esc(youtubeApiBlock.projectId)})`:''}</div>` : failedAccount ? `<div class="mall-social-next" role="status"><strong>최근 연결 실패</strong> ${esc(oauthReasons[safeLedgerReason] || '연결 기록에 실패가 남았습니다. Google 계정과 YouTube 채널을 확인하고, 인증 결과 확인을 먼저 누르세요.')}</div>` : '';
+  const noticeLine = oauthNotice ? `<div class="mall-social-next ${oauthNotice.status==='success'?'ready':''}" role="status">${oauthNotice.status==='success'?'인증 결과가 접수됐습니다. OAuth 연결 수치를 확인하세요.':esc(callbackApiBlock?'YouTube Data API v3 사용 설정이 필요합니다. Google Cloud 프로젝트 설정을 확인하세요.':oauthReasons[oauthNotice.reason]||oauthNotice.reason||'인증이 완료되지 않았습니다. 기존 연결 상태를 확인하고 필요한 경우에만 다시 승인하세요.')}</div>` : '';
   const youtubeStart = youtubeReady && !youtubeConnected ? `<form id="mallSocialYoutubeConnectForm" class="mall-social-start" aria-label="YouTube 최초 연결">
     <label for="mallSocialYoutubeEmail">YouTube Google 계정 이메일</label>
     <input id="mallSocialYoutubeEmail" type="email" name="email" autocomplete="email" required maxlength="240" value="${esc(youtubeAccountHint)}" placeholder="Google 계정 이메일 입력">

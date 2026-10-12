@@ -54,3 +54,10 @@ test('EKODI central social connector exposes login-only YouTube OAuth and vault 
   assert.doesNotMatch(config,/marketing-connect-api\.ekodi\.kr/);
   assert.doesNotMatch(growth,/marketing-connect-api\.ekodi\.kr/);
 });
+
+test('YouTube API project disablement is normalized into an allowlisted registry reason',async()=>{
+  const code=await read('marketing-growth-worker.js');
+  assert.match(code,/function youtubeFailureCode\(error\)/);
+  assert.match(code,/state\?\.provider==='youtube'\?youtubeFailureCode\(error\)/);
+  assert.match(code,/reason:youtubeFailureCode\(error\)/);
+});
