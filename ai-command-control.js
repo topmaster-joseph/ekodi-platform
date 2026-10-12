@@ -2,7 +2,7 @@
 import { chooseEkodiExecution, sanitizeAiConnectionStatus } from './ekodi-ai-sovereignty-gate.js';
 import { providerStatus } from './ai-control-provider-router.js';
 import { findReusableComposition } from './ekodi-capability-ecosystem.js';
-import { isSameOriginAdminMutation, trustedAdminOrchestratorIdentity, prepareAdminOrchestratorSubmission, evaluateAdminOrchestratorSubmission } from './ekodi-ai-orchestrator-admin-handoff.js';
+import { isSameOriginAdminMutation, prepareAdminOrchestratorSubmission, evaluateAdminOrchestratorSubmission } from './ekodi-ai-orchestrator-admin-handoff.js';
 import { getCoreAiGatewayStatus } from './core-ai-gateway.js';
 import { adminAuthorityForRole, hasEkodiCapability } from './ekodi-authorization.js';
 import {
@@ -25,6 +25,7 @@ import {
   getOrchestratorTaskStatusForPlatformAdmin,
   listOrchestratorHumanGatesForPlatformAdmin,
   submitOrchestratorTask,
+  resolveOrchestratorPlatformAdminIdentity,
 } from './ekodi-orchestrator-task-adapter.js';
 import { collectPlatformRuntimeObservations } from './ekodi-platform-observer.js';
 import { runRuntimeAutonomicControlPlane } from './ekodi-autonomic-control-plane.js';
@@ -224,7 +225,10 @@ export async function handleEkodiV8CommandControl(request, env) {
       return json(request, env, { ok:false, code:text(error?.message || 'INVALID_ORCHESTRATOR_SUBMISSION',100) }, 400);
     }
     try {
-      const identity = await trustedAdminOrchestratorIdentity(auth.session);
+      const identity = await resolveOrchestratorPlatformAdminIdentity(env, auth.session);
+      if (!identity) {
+        return json(request, env, { ok:false, code:'ORCHESTRATOR_CANONICAL_ADMIN_REQUIRED' }, 403);
+      }
       const task = await submitOrchestratorTask(env, identity, input);
       const receipt = evaluateAdminOrchestratorSubmission(task);
       if (!receipt.accepted) {
