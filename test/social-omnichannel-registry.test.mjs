@@ -24,6 +24,8 @@ test('existing active channels retain their public links and never leak director
   assert.ok(!('kind' in yt));
   assert.ok(SOCIAL_CHANNEL_PROVIDERS.includes('marketplace'));
   assert.ok(SOCIAL_CHANNEL_PROVIDERS.includes('newsletter'));
+  assert.ok(SOCIAL_CHANNEL_PROVIDERS.includes('naver_store'));
+  assert.ok(SOCIAL_CHANNEL_PROVIDERS.includes('kakao_channel'));
 });
 
 test('the central directory can register internal, external and affiliate channels without enabling publishing',()=>{
