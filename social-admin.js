@@ -473,7 +473,18 @@
         const notes=[];
         if (!perf.reportReady) notes.push('상품별 제휴 실적 보고서가 확인되지 않았습니다. 수익 추정이나 자동 확대를 보류하세요.');
         if (channels.some(ch=>Number(ch.failed30d)>0)) notes.push('발행 오류가 있습니다. 채널 연결 상태와 승인 원장을 점검하세요.');
-        if ((data.decisions||[]).length) notes.push('기존 수익 엔진의 후보 판단을 참고하되, 실제 정산과 비용을 확인한 뒤 콘텐츠 변경을 승인하세요.');
+        const decisions=Array.isArray(data.decisions)?data.decisions:[];
+        if (decisions.length) {
+          notes.push('상품별 개선 후보는 검토용입니다. 정산·비용·충분한 근거를 확인하기 전에는 유료홍보나 대량 자동발행을 시작하지 않습니다.');
+          const actions={scale:'확대 검토',test:'소규모 실험',observe:'관찰',hold:'보류'};
+          for (const decision of decisions.slice(0,5)) {
+            const card=el('article','','social-publishing-selection');
+            const action=actions[decision.action]||'관찰';
+            card.append(el('strong',`${decision.productName||'상품'} · ${action}`));
+            card.append(el('small',`${providerLabel(decision.provider)} · 보고 주문 ${number(decision.orders30d)} · 보고 수수료 ${number(decision.observedProductCommission30dKrw)}원 · 평가 ${number(decision.policyScore)}`));
+            growthAdvice.append(card);
+          }
+        }
         if (Number(perf.campaignVisits)>0 && !Number(perf.outboundAffiliateClicks)) notes.push('홍보 방문은 있으나 외부 판매처 이동 집계가 없습니다. 랜딩 페이지·추적 연동을 확인하세요.');
         notes.push('채널별 매출 귀속은 추정치입니다. 표시된 수수료는 공급자 보고값이며 정산 완료 수익이나 순이익이 아닙니다.');
         notes.push('SEO·AEO·GEO 실제 검색 노출·AI 답변 인용은 Search Console 등 별도의 검증 데이터가 필요합니다.');
