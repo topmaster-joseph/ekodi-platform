@@ -74,6 +74,8 @@ test('mission native gate truth table rejects PR validation, feature push and fa
       {name:'PR-only successful validation',eventName:'workflow_run',event:'pull_request',branch:'main',result:'success',expected:false},
       {name:'feature branch push',eventName:'workflow_run',event:'push',branch:'feature',result:'success',expected:false},
       {name:'failed guarded deploy',eventName:'workflow_run',event:'workflow_dispatch',branch:'main',result:'failure',expected:false},
+      {name:'cancelled guarded deploy',eventName:'workflow_run',event:'workflow_dispatch',branch:'main',result:'cancelled',expected:false},
+      {name:'successful scheduled validation',eventName:'workflow_run',event:'schedule',branch:'main',result:'success',expected:false},
       {name:'PR source validation',eventName:'pull_request',event:'',branch:'',result:'success',expected:false},
       {name:'unrelated direct push',eventName:'push',event:'',branch:'main',result:'success',expected:false},
     ];
