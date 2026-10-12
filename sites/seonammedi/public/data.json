@@ -378,7 +378,9 @@
         "비상대책위원회",
         "심사결과",
         "소통"
-      ]
+      ],
+      "recordScope": "committee",
+      "committeeKind": "집회·캠페인"
     },
     {
       "date": "2026.09.09",
@@ -400,7 +402,9 @@
         "건의서",
         "공개서한",
         "재검증"
-      ]
+      ],
+      "recordScope": "committee",
+      "committeeKind": "기자회견"
     },
     {
       "date": "2026.09.14",
@@ -465,7 +469,9 @@
         "청와대",
         "상경투쟁",
         "공개서한"
-      ]
+      ],
+      "recordScope": "committee",
+      "committeeKind": "집회·캠페인"
     },
     {
       "date": "2026.09.22",
@@ -500,7 +506,9 @@
         "평화광장",
         "시민대회",
         "집행정지"
-      ]
+      ],
+      "recordScope": "committee",
+      "committeeKind": "집회·캠페인"
     }
   ],
   "sources": [

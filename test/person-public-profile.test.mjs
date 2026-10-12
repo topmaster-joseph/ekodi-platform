@@ -58,11 +58,20 @@ test('public person pages are a public projection of My EKODI, not a second admi
   assert.match(digitalCardServer,/person-digital-card-qr-center/);
   assert.match(digitalCardServer,/\/my\/vendor\/qrcode\.min\.js/);
   assert.match(digitalCardServer,/CARD_EXCHANGE_RATE_LIMITER/);
+  assert.match(digitalCardServer,/SHORT_CARD_RE/);
+  assert.match(digitalCardServer,/utm_source','short/);
+  assert.match(digitalCardAdmin,/대표 공유주소 · ekodi\.kr\//);
   assert.match(digitalCardAdmin,/set_my_identity_share_config/);
   assert.match(digitalCardAdmin,/get_my_identity_share_config/);
   assert.match(digitalCardAdmin,/get_my_contact_exchanges/);
   assert.match(digitalCardClient,/navigator\.contacts/);
   assert.match(digitalCardClient,/contextKey/);
+  assert.match(digitalCardClient,/navigator\.share/);
+  assert.match(digitalCardClient,/NDEFReader/);
+  assert.match(digitalCardClient,/recordType:'url'/);
+  assert.doesNotMatch(digitalCardClient,/navigator\.bluetooth/);
+  assert.match(digitalCardServer,/가까운 사람에게 보내기/);
+  assert.match(digitalCardServer,/NFC 태그 만들기/);
   assert.match(digitalCardQr,/new QRCode/);
   assert.match(digitalCardQr,/downloadQr/);
   assert.match(qrVendor,/QRCode/);
@@ -131,6 +140,24 @@ test('invalid @ paths are not claimed by the person profile router',async()=>{
 });
 
 
+test('canonical apex hands a collision-safe short person alias to My EKODI after known services',async()=>{
+  const my=binding('<html>short card</html>','text/html');
+  const response=await routeCanonicalSurface(new Request('https://ekodi.kr/joseph'),{MY:my});
+  assert.ok(response);
+  assert.equal(response.status,200);
+  assert.equal(my.calls.length,1);
+  assert.equal(my.calls[0].pathname,'/joseph');
+  assert.equal(response.headers.get('x-ekodi-canonical-surface'),'person-digital-card-short');
+});
+
+test('reserved My EKODI route is not captured by the short person alias',async()=>{
+  const my=binding('<html>my</html>','text/html');
+  const response=await routeCanonicalSurface(new Request('https://ekodi.kr/my'),{MY:my});
+  assert.equal(response.status,308);
+  assert.equal(response.headers.get('location'),'https://ekodi.kr/my/');
+  assert.equal(my.calls.length,0);
+});
+
 test('canonical apex hands person digital-card paths to My EKODI',async()=>{
   for(const path of ['/joseph/card','/joseph/card.vcf','/joseph/card/exchange','/joseph/qr']){
     const my=binding('<html>card</html>','text/html');
@@ -170,5 +197,59 @@ test('person QR route renders a first-party QR share center for the selected con
     assert.match(body,/context=ekodi&amp;utm_source=qr/);
     assert.match(body,/\/my\/vendor\/qrcode\.min\.js/);
     assert.doesNotMatch(body,/http-equiv="refresh"|location\.replace/);
+  }finally{globalThis.fetch=originalFetch}
+});
+
+
+test('person card offers nearby system sharing and progressive NFC without direct Web Bluetooth transfer',async()=>{
+  const originalFetch=globalThis.fetch;
+  globalThis.fetch=async url=>{
+    if(String(url).includes('/rest/v1/rpc/person_identity_share')){
+      return new Response(JSON.stringify({
+        ok:true,ready:true,handle:'joseph',display_name:'Joseph Jeong',headline:'',bio:'',links:[],phone:'',email:'',messengers:[],
+        exchange_enabled:true,
+        contexts:[{key:'ekodi',label:'EKODI',is_default:true,role_name:'EKODI',role_title:'대표'}],
+        selected_context:{key:'ekodi',label:'EKODI',is_default:true},
+        role:{key:'ekodi',name:'EKODI',title:'대표',description:'',url:''},
+      }),{status:200,headers:{'content-type':'application/json'}});
+    }
+    return originalFetch(url);
+  };
+  try{
+    const response=await myWorker.fetch(new Request('https://ekodi.kr/joseph/card?context=ekodi'),{
+      DATA_ENABLED:'true',DATA_MODE:'isolated-staging',
+      SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'publishable-test',
+    });
+    assert.equal(response.status,200);
+    const body=await response.text();
+    assert.match(body,/id="shareCard"[^>]*>가까운 사람에게 보내기</);
+    assert.match(body,/id="writeNfc"[^>]*hidden>NFC 태그 만들기</);
+    assert.match(body,/id="shareStatus"/);
+    assert.match(body,/QR 보기/);
+    assert.match(body,/digital-card\.js\?v=20261012-nearby-share-1/);
+  }finally{globalThis.fetch=originalFetch}
+});
+
+
+test('short person URL redirects an existing public card to the canonical card path',async()=>{
+  const originalFetch=globalThis.fetch;
+  globalThis.fetch=async url=>{
+    if(String(url).includes('/rest/v1/rpc/person_identity_share')){
+      return new Response(JSON.stringify({
+        ok:true,ready:true,handle:'joseph',display_name:'Joseph Jeong',headline:'',bio:'',links:[],phone:'',email:'',messengers:[],
+        exchange_enabled:true,contexts:[{key:'personal',label:'개인',is_default:true,role_name:'',role_title:''}],
+        selected_context:{key:'personal',label:'개인',is_default:true},role:null,
+      }),{status:200,headers:{'content-type':'application/json'}});
+    }
+    return originalFetch(url);
+  };
+  try{
+    const response=await myWorker.fetch(new Request('https://ekodi.kr/joseph?context=personal'),{
+      DATA_ENABLED:'true',DATA_MODE:'isolated-staging',
+      SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'publishable-test',
+    });
+    assert.equal(response.status,307);
+    assert.equal(response.headers.get('x-ekodi-surface-context'),'person-digital-card-short');
+    assert.equal(response.headers.get('location'),'https://ekodi.kr/joseph/card?context=personal&utm_source=short');
   }finally{globalThis.fetch=originalFetch}
 });

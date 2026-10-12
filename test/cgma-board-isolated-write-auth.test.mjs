@@ -160,3 +160,19 @@ test('an EKODI platform administrator without board membership cannot manage CGM
   assert.equal(noWrite.status,404);
   assert.equal(f.posts.size,0);
 });
+
+test('even a board owner cannot re-enable anonymous writes via config',async()=>{
+  const f=fixture();
+  const rejected=await f.call('PATCH','/api/config',{token:'owner',body:{allowAnonymousWrite:true}});
+  assert.equal(rejected.status,400);
+  assert.equal(rejected.body.error,'anonymous_writes_disabled');
+  assert.equal(f.mutations.filter(m=>m.sql.startsWith('UPDATE EKODI_BOARD_INSTANCES')).length,0);
+  const config=await f.call('GET','/api/config');
+  assert.equal(config.status,200);
+  assert.equal(config.body.allowAnonymousWrite,false);
+  const locked=await f.call('PATCH','/api/config',{token:'owner',body:{allowAnonymousWrite:false}});
+  assert.equal(locked.status,200);
+  const mutations=f.mutations.filter(m=>m.sql.startsWith('UPDATE EKODI_BOARD_INSTANCES'));
+  assert.equal(mutations.length,1);
+  assert.equal(mutations[0].params[1],0);
+});

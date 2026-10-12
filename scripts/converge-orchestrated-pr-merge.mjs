@@ -68,6 +68,10 @@ const controlApiTouched=changedFiles.some(file=>[
   'coupang-partners-automation.js',
   'customer-entry-worker.js',
   'mission-control-entry-worker.js',
+  // The same SeonamMedi monitor code runs in the public Site Core AND in
+  // the Control API hourly scheduler. Both runtimes must be released together.
+  'seonammedi-monitor.js',
+  'seonammedi-relevance.js',
   // PC Agent registry and heartbeat handlers are deployed by the Control API.
   'device-control.js',
   // AI Provider API runtime ownership; release-automation changes also repair missed deployments.
@@ -133,11 +137,16 @@ const sharedSiteTouched=changedFiles.some(file=>
   file.startsWith('auth-site/')||
   file==='deploy/manifests/shared-site.worker.json'||
   file==='seonammedi-admin-control.js'||
+  // Monitoring and publication checks are also embedded in the public Site Core.
+  file==='seonammedi-monitor.js'||
+  file==='seonammedi-relevance.js'||
   file==='wrangler.site.toml'||
   file==='platform-router-entry-worker.js'||
   file==='canonical-surface-router.js'||
   file==='admin-sidebar.js'||
   file==='scripts/verify-admin-production-ui-e2e.mjs'||
+  // Hybrid native browser admin page shares the guarded Site Core release boundary.
+  file==='hybrid-execution-admin.js'||
   file==='device-control-admin.js'||
   file==='device-control-admin.css'||
   // Keep all Device Control/Remote Power/Wake static assets in a single orchestrated deploy boundary.
@@ -176,7 +185,9 @@ const nativeUser2LocalAiTouched=changedFiles.some(file=>file==='scripts/verify-n
 const nativeUser3RecoveryTouched=changedFiles.some(file=>file==='scripts/recover-native-user3-localai.mjs');
 const nativeUser2RecoveryTouched=changedFiles.some(file=>file==='scripts/recover-native-user2-localai.mjs');
 const nativeUser2VirtualProbeTouched=changedFiles.some(file=>file==='scripts/verify-native-user2-virtual-probe.mjs');
-const nativeUser4VirtualProbeTouched=changedFiles.some(file=>file==='scripts/verify-native-user4-virtual-probe.mjs');
+const nativeUser4VirtualProbeTouched=changedFiles.some(file=>
+  file==='scripts/verify-native-user4-virtual-probe.mjs' ||
+  file==='scripts/select-native-user4-execution-route.mjs');
 const nativeUser4AcceptanceTouched=changedFiles.some(file=>file==='scripts/verify-native-user4-acceptance.mjs');
 // Supabase Church API is an independent guarded release boundary, not a Site Core asset.
 const churchApiTouched=changedFiles.some(file=>

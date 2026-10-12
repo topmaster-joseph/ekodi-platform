@@ -49,8 +49,17 @@ function gateHasMatchingCheckout(block) {
   });
 }
 
+function stripReadOnlyD1Execute(block) {
+  return String(block || '').split(/\n/).map(line => {
+    const remoteD1Execute = /wrangler(?:@[^\s]+)?[^\n]*\bd1\s+execute\b[^\n]*--remote/i.test(line);
+    const explicitReadOnlyCommand = /--command\s+["']\s*(?:SELECT|PRAGMA)\b/i.test(line);
+    return remoteD1Execute && explicitReadOnlyCommand ? '' : line;
+  }).join('\n');
+}
+
 function isMutation(block) {
-  return mutationPatterns.some(pattern => pattern.test(block.replace(/--dry-run[^\n]*/g, '')));
+  const sanitized = stripReadOnlyD1Execute(block).replace(/--dry-run[^\n]*/g, '');
+  return mutationPatterns.some(pattern => pattern.test(sanitized));
 }
 
 function jobRanges(lines) {

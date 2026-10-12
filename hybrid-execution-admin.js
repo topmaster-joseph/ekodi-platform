@@ -190,8 +190,9 @@
           <label>EKODI 내부 경로<input name="path" value="/ai/" maxlength="600" required autocomplete="off" spellcheck="false"></label>
           <label>화면<select name="deviceProfile"><option value="desktop">데스크톱</option><option value="compact-mobile">모바일</option><option value="tablet">태블릿</option></select></label>
           <button type="submit" class="primary" id="enqueueHybridNativeBrowser" disabled>자체 실행 요청</button>
+          <button type="button" class="secondary" id="enqueueHybridCgmaBoard" disabled>CGMA 게시판 자체 점검</button>
         </form>
-        <small class="hybrid-native-feedback" id="hybridNativeFeedback" role="status">온라인 자체 노드와 BG Browser Canary가 필요합니다. 외부 GitHub 사이트와 로그인 화면은 이 작업으로 실행할 수 없습니다.</small>
+        <small class="hybrid-native-feedback" id="hybridNativeFeedback" role="status">온라인 자체 노드와 BG Browser Canary가 필요합니다. CGMA 버튼은 /cgma/board 공개 화면만 읽기 전용으로 점검합니다. 관리자 로그인·글쓰기·수정·삭제 성공을 뜻하지 않습니다.</small>
       </section>
       <section class="hybrid-native-browser" id="hybridGoogleWorkspaceAudio" aria-label="Google Workspace 전용 오디오 실행">
         <div class="hybrid-row"><div><h4>Google Workspace · 주일예배 오디오 삽입</h4>
@@ -251,6 +252,7 @@
     panel.querySelector('#toggleHybridFabric')?.addEventListener('click', toggleFabric);
     panel.querySelector('#enqueueHybridDiagnostic')?.addEventListener('click', enqueueDiagnostic);
     panel.querySelector('#hybridNativeBrowserForm')?.addEventListener('submit', enqueueNativeBrowser);
+    panel.querySelector('#enqueueHybridCgmaBoard')?.addEventListener('click', enqueueNativeCgmaBoard);
     panel.querySelector('#enqueueWorkspaceAudio')?.addEventListener('click', enqueueWorkspaceAudio);
     panel.querySelector('#hybridStatusFilter')?.addEventListener('change', renderJobs);
     panel.querySelector('#hybridJobSearch')?.addEventListener('input', renderJobs);
@@ -352,6 +354,8 @@
     const ready = eligibleNativeBrowserNodes();
     const button = panel.querySelector('#enqueueHybridNativeBrowser');
     button.disabled = ready.length === 0;
+    const cgmaButton = panel.querySelector('#enqueueHybridCgmaBoard');
+    if (cgmaButton) cgmaButton.disabled = ready.length === 0 || lastDashboard.fabric?.canManage !== true;
     panel.querySelector('#hybridNativeReadiness').textContent = ready.length
       ? `실행 가능 후보 ${ready.length}대`
       : lastDashboard.fabric?.enabled === false ? '실행망 일시중지' : '실행 가능 노드 없음';
@@ -574,6 +578,17 @@
     } finally {
       renderWorkspaceAudioStatus();
     }
+  }
+
+  async function enqueueNativeCgmaBoard() {
+    const form = document.querySelector('#hybridNativeBrowserForm');
+    const button = document.querySelector('#enqueueHybridCgmaBoard');
+    if (!form || !button || button.disabled || !eligibleNativeBrowserNodes().length) return;
+    // Existing admin-session queue, consent dialog, native-only capabilities and
+    // isolated browser profile remain authoritative; no login or write actions.
+    form.elements.path.value = '/cgma/board';
+    form.elements.deviceProfile.value = 'desktop';
+    await enqueueNativeBrowser({preventDefault(){},currentTarget:form});
   }
 
   async function enqueueNativeBrowser(event) {
