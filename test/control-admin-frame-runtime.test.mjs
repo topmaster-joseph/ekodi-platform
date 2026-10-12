@@ -9,6 +9,7 @@ const sidebarSource=readFileSync(new URL('../admin-sidebar.js',import.meta.url),
 function fixture(){
   const listeners=new Map();
   const navListeners=new Map();
+  const observers=[];
   const classes=new Set();
   const panelClasses=new Set(['hidden-panel']);
   const attributes=new Map();
@@ -53,8 +54,19 @@ function fixture(){
     dispatchEvent:event=>navListeners.get(event.type)?.(event),
     EKODIAdminPanels:{current:()=> 'command-home'},
   };
-  runInNewContext(source,{document,window});
-  return {frame,notice,panel,root,listeners,navListeners,window};
+  class MutationObserver {
+    constructor(callback){this.callback=callback;observers.push(this)}
+    observe(target,options){
+      assert.equal(target,panel);
+      assert.equal(options.attributes,true);
+      assert.deepEqual(options.attributeFilter,['hidden','class']);
+    }
+  }
+  runInNewContext(source,{document,window,MutationObserver});
+  return {
+    frame,notice,panel,root,listeners,navListeners,window,
+    notifyPanelMutation:()=>observers.forEach(observer=>observer.callback()),
+  };
 }
 
 test('control frame verifier waits for login and does not report an unloaded iframe as broken',()=>{
@@ -182,4 +194,54 @@ test('clicking the same Control sidebar entry twice keeps the center panel visib
   }
   assert.equal(activateCount,2);
   assert.equal(eventCount,2);
+});
+
+test('post-auth reconciliation cannot leave current Control panel hidden',()=>{
+  const {frame,panel,root,window,navListeners,notifyPanelMutation}=fixture();
+  root.dataset.ekodiAdminReady='true';
+  navListeners.get('ekodi-admin-ready')();
+  assert.equal(panel.hidden,false);
+  assert.equal(frame.getAttribute('src'),'/admin/control?embed=admin');
+  // Reproduces a later compact-menu bootstrap that hides all panels without
+  // another ekodi-admin-section-changed event.
+  panel.hidden=true;
+  panel.classList.add('hidden-panel');
+  notifyPanelMutation();
+  assert.equal(window.EKODIAdminPanels.current(),'command-home');
+  assert.equal(panel.hidden,false);
+  assert.equal(panel.classList.contains('hidden-panel'),false);
+  assert.equal(frame.getAttribute('src'),'/admin/control?embed=admin');
+});
+
+test('reconciliation respects other selected sections and never forces Control open',()=>{
+  const {frame,panel,root,window,navListeners,notifyPanelMutation}=fixture();
+  let current='finance';
+  window.EKODIAdminPanels.current=()=>current;
+  root.dataset.ekodiAdminReady='true';
+  navListeners.get('ekodi-admin-ready')();
+  notifyPanelMutation();
+  assert.equal(panel.hidden,true);
+  assert.equal(frame.hasAttribute('src'),false);
+  current='command-home';
+  panel.hidden=true;
+  panel.classList.add('hidden-panel');
+  notifyPanelMutation();
+  assert.equal(panel.hidden,false);
+  assert.equal(frame.getAttribute('src'),'/admin/control?embed=admin');
+  current='finance';
+  navListeners.get('ekodi-admin-section-changed')({detail:{section:'finance'}});
+  notifyPanelMutation();
+  assert.equal(panel.hidden,true);
+});
+
+test('pre-auth and logged-out navigation never auto-loads the privileged iframe',()=>{
+  const {frame,panel,root,navListeners,notifyPanelMutation}=fixture();
+  panel.hidden=true;
+  panel.classList.add('hidden-panel');
+  notifyPanelMutation();
+  assert.equal(frame.hasAttribute('src'),false);
+  assert.equal(panel.hidden,true);
+  root.dataset.ekodiAdminReady='loading';
+  notifyPanelMutation();
+  assert.equal(frame.hasAttribute('src'),false);
 });
