@@ -1,5 +1,6 @@
 import { getEkodiCommandTask, ingestEkodiPulse } from './ekodi-command-ledger.js';
 import { runEkodiCommandQueue } from './ekodi-pulse-runtime.js';
+import { projectDeploymentGate } from './execution-state-projector.js';
 import authCore from './auth-worker-core.js';
 import { verifyGitHubActionsOidc } from './github-actions-oidc.js';
 import { accessGrantIsActive, accessRolePreset, effectiveAccessCapabilities, parseCapabilityList } from './access-governance.js';
@@ -336,6 +337,14 @@ function publicTask(row){
   const evidence=parseJson(row.evidence_json,[]);
   const commandMeta=evidence&&typeof evidence==='object'&&!Array.isArray(evidence)?evidence.commandLedger:null;
   const stateVersion=Number(row.state_version||1);
+  const deploymentRequested=Number(row.deployment_requested||0)===1;
+  const productionEvidence=parseJson(row.production_evidence_json,null);
+  const deploymentGate=deploymentRequested?projectDeploymentGate({
+    state:row.state,
+    risk:row.risk,
+    deploymentRequested,
+    productionEvidence,
+  }):null;
   const humanGate=row.state==='blocked'&&text(commandMeta?.state,40).toLowerCase()==='human_gate'
     ?Object.freeze({required:true,approvalTool:'approve_task',expectedStateVersion:stateVersion})
     :null;
@@ -350,7 +359,8 @@ function publicTask(row){
     assignedWorker:row.assigned_worker||null,
     branchRef:row.branch_ref||null,
     prRef:row.pr_ref||null,
-    deploymentRequested:Number(row.deployment_requested||0)===1,
+    deploymentRequested,
+    deploymentGate,
     commandState:commandMeta?.state||null,
     humanGate,
     attemptCount:Number(commandMeta?.attemptCount||0),
@@ -360,7 +370,7 @@ function publicTask(row){
     lastError:commandMeta?.lastError||'',
     result,
     evidence,
-    productionEvidence:parseJson(row.production_evidence_json,null),
+    productionEvidence,
     createdAt:row.created_at,
     updatedAt:row.updated_at,
     completedAt:row.completed_at||null,
