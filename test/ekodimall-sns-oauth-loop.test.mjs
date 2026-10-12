@@ -105,3 +105,18 @@ test('Google access denied callback is displayed as actionable failure without c
   assert.match(html,/권한 동의가 완료되지 않았습니다/);
   assert.doesNotMatch(html,/계정 연결이 서버에서 확인됐습니다/);
 });
+
+test('OAuth popup distinguishes failed Google callback from connected account',async()=>{
+  assert.match(script,/const callbackOk=initialChannelOAuthResult\.status==='success'/);
+  assert.match(script,/채널 인증 실패 · 연결되지 않음/);
+  assert.match(script,/Google 인증 응답 접수 · 연결 확인 중/);
+  assert.doesNotMatch(script,/<h1 style="font-size:20px">채널 인증 처리 완료<\/h1>/);
+});
+
+test('Brand Account choice survives manual OAuth ledger refresh and remains synchronized',()=>{
+  assert.match(script,/const previousBrandSelection=service==='mall'/);
+  assert.match(script,/brandModeInputs\.forEach\(box=>/);
+  assert.match(script,/box\.checked=Boolean\(previousBrandSelection\)/);
+  assert.match(script,/other\.checked=box\.checked/);
+  assert.match(script,/youtubeBrandAccountMode:btn\.dataset\.provider==='youtube'&&Boolean\(brandModeInputs\.some\(box=>box\.checked\)\)/);
+});

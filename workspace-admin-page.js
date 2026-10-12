@@ -97,7 +97,12 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       sessionStorage.removeItem(CHANNEL_OAUTH_POPUP_MARKER);
     }catch{}
     if(returnedInPopup){
-      document.body.innerHTML='<main style="font-family:system-ui,sans-serif;max-width:440px;margin:48px auto;padding:24px;text-align:center"><h1 style="font-size:20px">채널 인증 처리 완료</h1><p style="color:#667085">관리자 화면에 결과를 반영하고 이 창을 닫습니다.</p><button type="button" onclick="window.close()" style="padding:10px 16px">창 닫기</button></main>';
+      // A callback is not proof of an active tenant-scoped OAuth connection.
+      // An error callback must never be shown as a completed authorization.
+      const callbackOk=initialChannelOAuthResult.status==='success';
+      const callbackTitle=callbackOk?'Google 인증 응답 접수 · 연결 확인 중':'채널 인증 실패 · 연결되지 않음';
+      const callbackMessage=callbackOk?'Google 응답이 접수됐습니다. 실제 채널 연결은 관리자 화면의 활성 OAuth 원장으로 확인하세요.':'Google 계정 또는 YouTube 채널 인증이 완료되지 않았습니다. 관리자 화면의 최근 연결 실패와 연결 상태를 확인하세요.';
+      document.body.innerHTML='<main style="font-family:system-ui,sans-serif;max-width:440px;margin:48px auto;padding:24px;text-align:center"><h1 style="font-size:20px">'+callbackTitle+'</h1><p style="color:#667085">'+callbackMessage+'</p><button type="button" onclick="window.close()" style="padding:10px 16px">창 닫기</button></main>';
       setTimeout(()=>window.close(),120);
       return;
     }
@@ -793,6 +798,9 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     }
   }
   async function channel(){
+    // Preserve the explicit Brand Account selection across read-only ledger refreshes.
+    // Do not persist Google account hints or consent state in local storage.
+    const previousBrandSelection=service==='mall'&&Boolean(document.querySelector('#mallSocialYoutubeConnectForm [name="youtubeBrandAccountMode"]')?.checked||document.querySelector('#channelAccountForm [name="youtubeBrandAccountMode"]')?.checked);
     try{
       await exchangeCentralToken();const token=await accessToken();if(!token)return loginPanel('채널 연결에는 운영공간 로그인이 필요합니다.');state('채널 운영상태 확인 중');
       const growthControlPromise=service==='mall'?mallGrowthControl().catch(()=>({policy:{}})):Promise.resolve({policy:{}});
@@ -850,6 +858,13 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       $('mainPanel').classList.add('channel-shell-panel');
       $('mainPanel').innerHTML=`<div class='channel-workbench'>${service==='mall'?renderMallSocialSetup({platform,connections,registeredAccounts:registeredAccounts.map(a=>({...a,provider:channelProviderFromRegistry(a)})),channels:publishChannels,jobs,policy,oauthNotice:channelOAuthNotice}):''}${service==='mall'?'':`<p class='empty'>${ae(workspaceLabel())} 전용 채널센터입니다. 이 화면과 EKODI 최고관리자의 사이트별 채널센터는 같은 연결·게시 원장을 사용하므로 어느 쪽에서 등록·수정해도 동일하게 반영됩니다.</p>`}${service==='mall'?'':quickBar}<div class='channel-main-grid ${service==='mall'?'mall-simple-grid':''}'><div class='channel-main-column'>${service==='mall'?`<details class='channel-detail-section'><summary>전체 채널 목록 · 확장 보기</summary>${catalogPanel}</details>`:catalogPanel}${service==='mall'?`<details id='channel-policy' class='channel-detail-section mall-social-open-policy'><summary>2. 발행 정책 · 연결 후 설정</summary>${policyForm}</details>`:`<details id='channel-policy' class='channel-detail-section'><summary>자동게시 공통 정책</summary>${policyForm}</details>`}${mallTestForm}${service==='mall'?`<details id='mall-sns-advanced' class='channel-detail-section'><summary>계정·채널 상세 관리 (고급)</summary>${accountSection}</details>`:accountSection}${aiForm?`<details id='channel-ai' class='channel-detail-section'><summary>AI 성과기반 배분</summary>${aiForm}</details>`:''}<details id='channel-connections' class='channel-detail-section'><summary>실제 연결 채널 · 세부 운영설정</summary><div class='service-list'>${connectionRows||'<div class="channel-empty">인증 완료된 채널이 없습니다.</div>'}${orphanRows}</div></details><details id='channel-jobs' class='channel-detail-section'><summary>최근 게시 작업</summary>${jobRows?`<div class='table-wrap'><table><thead><tr><th>채널</th><th>계정</th><th>상태</th><th>예약</th><th>게시</th><th>오류</th><th>조치</th></tr></thead><tbody>${jobRows}</tbody></table></div>`:'<div class="channel-empty">게시 작업 기록이 없습니다.</div>'}</details></div>${service==='mall'?'':`<aside class='channel-help'><h2>설정 안내</h2><div class='channel-help-step'><b>1</b><div><strong>${youtubeConnected?'YouTube 연결 유지':'최초 1회 연결'}</strong><p>${youtubeConnected?'현재 연결은 중앙 Vault가 유지합니다. 별도 Google 승인을 다시 요구하지 않습니다.':'YouTube 등 외부 채널은 처음 연결할 때만 공식 승인을 완료합니다.'}</p></div></div><div class='channel-help-step'><b>2</b><div><strong>관리자 로그인으로 운영</strong><p>연결이 정상인 동안 추가 OAuth 없이 운영설정과 자동게시를 관리합니다.</p></div></div><div class='channel-help-step'><b>3</b><div><strong>게시 결과 확인</strong><p>성공·실패·재시도 내역을 확인하고 필요한 조치를 합니다.</p></div></div><div class='channel-help-links'>${youtubeConnected?`<button class='button' type='button' data-channel-panel='channel-connections'>YouTube 연결상태 보기</button>`:`<button class='button' type='button' data-channel-quick='youtube'>YouTube 최초 연결</button>`}<button class='button' type='button' data-channel-panel='channel-policy'>자동게시 설정 바로가기</button><button class='button' type='button' data-channel-panel='channel-jobs'>게시 결과 바로가기</button></div></aside>`}</div></div>`;
       
+      // Keep the quick and advanced forms in sync. A manual connection check
+      // must not silently turn a selected Brand Account flow back into email matching.
+      const brandModeInputs=[...document.querySelectorAll('#mallSocialYoutubeConnectForm [name="youtubeBrandAccountMode"],#channelAccountForm [name="youtubeBrandAccountMode"]')];
+      brandModeInputs.forEach(box=>{
+        box.checked=Boolean(previousBrandSelection);
+        box.addEventListener('change',()=>brandModeInputs.forEach(other=>{if(other!==box)other.checked=box.checked}));
+      });
       const pilotForm=$('mallSocialTestForm');
       if(pilotForm)pilotForm.addEventListener('submit',async event=>{
         event.preventDefault();
@@ -883,7 +898,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
         accountEl.requestSubmit();
       };
       const refreshConnection=$('mallSocialVerifyConnection');if(refreshConnection)refreshConnection.onclick=async()=>{refreshConnection.disabled=true;try{await channel()}finally{refreshConnection.disabled=false}};
-      document.querySelectorAll('[data-account-auth]').forEach(btn=>btn.onclick=async()=>{try{const account=registeredAccounts.find(a=>String(a.id)===String(btn.dataset.accountAuth));if(!account)throw new Error('등록 계정을 찾을 수 없습니다.');state(`${CHANNEL_PROVIDERS[btn.dataset.provider]?.label||btn.dataset.provider} 인증 준비`);await startChannelConnect(btn.dataset.provider,{...account,youtubeBrandAccountMode:btn.dataset.provider==='youtube'&&Boolean(accountEl?.querySelector('[name="youtubeBrandAccountMode"]')?.checked)})}catch(e){state('인증 확인 필요');$('pageCopy').textContent=e.message}});
+      document.querySelectorAll('[data-account-auth]').forEach(btn=>btn.onclick=async()=>{try{const account=registeredAccounts.find(a=>String(a.id)===String(btn.dataset.accountAuth));if(!account)throw new Error('등록 계정을 찾을 수 없습니다.');state(`${CHANNEL_PROVIDERS[btn.dataset.provider]?.label||btn.dataset.provider} 인증 준비`);await startChannelConnect(btn.dataset.provider,{...account,youtubeBrandAccountMode:btn.dataset.provider==='youtube'&&Boolean(brandModeInputs.some(box=>box.checked))})}catch(e){state('인증 확인 필요');$('pageCopy').textContent=e.message}});
       const policyEl=$('channelPolicyForm');if(policyEl)policyEl.onsubmit=async e=>{e.preventDefault();state('공통 정책 저장 중');const fd=new FormData(policyEl),providers=policyTargets.filter(target=>fd.has('provider:'+target.id)).map(target=>target.id);await automationApi('/v1/policy',{method:'PUT',body:JSON.stringify({mode:fd.get('mode'),maxDailyPosts:Number(fd.get('maxDailyPosts')||3),allowedProviders:providers,quietHours:{timezone:'Asia/Seoul',start:fd.get('start')||'08:00',end:fd.get('end')||'22:00'}})});await channel()};
       const aiEl=$('channelAiForm');if(aiEl)aiEl.onsubmit=async e=>{e.preventDefault();state('AI 배분 설정 저장 중');const fd=new FormData(aiEl),next=JSON.parse(JSON.stringify(growthPolicy));next.channels=(next.channels||[]).map(x=>({...x,enabled:fd.has('ai:'+x.id)}));await mallGrowthControl({method:'PUT',body:JSON.stringify({policy:next})});await channel()};
       document.querySelectorAll('[data-channel-control]').forEach(form=>form.onsubmit=async e=>{e.preventDefault();state('채널 · 사이트 설정 저장 중');const fd=new FormData(form),channelId=encodeURIComponent(form.dataset.channelControl);await automationApi(`/v1/channels/${channelId}/settings`,{method:'PUT',body:JSON.stringify({autoPublishEnabled:fd.get('autoPublishEnabled')==='on',maxPostsPerDay:Number(fd.get('maxPostsPerDay')||0),minHoursBetweenPosts:Number(fd.get('minHoursBetweenPosts')||0),maxAttempts:Number(fd.get('maxAttempts')||5),publishWindowStart:fd.get('publishWindowStart')||'',publishWindowEnd:fd.get('publishWindowEnd')||'',timezone:'Asia/Seoul'})});const siteId=channelSiteId();if(siteId)await automationApi(`/v1/sites/${encodeURIComponent(siteId)}/channels/${channelId}`,{method:'PUT',body:JSON.stringify({enabled:fd.get('siteEnabled')==='on',role:'primary',isDefault:fd.get('siteDefault')==='on',autoArchive:fd.get('autoArchive')==='on',archiveCategory:'past-event',priority:10})});await channel()});
