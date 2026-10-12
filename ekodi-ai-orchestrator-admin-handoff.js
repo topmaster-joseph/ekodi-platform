@@ -39,3 +39,28 @@ export function prepareAdminOrchestratorSubmission(body={}){
     target:Object.freeze({service}),
   });
 }
+
+const ORCH_TASK=/^orch_[a-z0-9][a-z0-9_-]{15,120}$/i;
+const ACCEPTABLE_STATES=new Set(['received','triaged','assigned','executing','production_verifying','completed']);
+
+export function evaluateAdminOrchestratorSubmission(task={}){
+  const id=clean(task?.taskId,160);
+  const branch=clean(task?.branchRef,220);
+  const state=clean(task?.state,40).toLowerCase();
+  const humanGate=task?.humanGate?.required===true;
+  const blockedForHumanGate=state==='blocked'&&humanGate;
+  // Canonical, nonterminal human-gate work is accepted, not approved or deployed.
+  const accepted=ORCH_TASK.test(id)&&branch===`ai/ekodi-admin/${id}`&&task.deploymentRequested===true
+    &&(ACCEPTABLE_STATES.has(state)||blockedForHumanGate);
+  return Object.freeze({
+    accepted,
+    taskId:id||null,
+    branchRef:accepted?branch:null,
+    state:state||'unknown',
+    stateVersion:Math.max(0,Math.trunc(Number(task?.stateVersion)||0)),
+    humanGate:blockedForHumanGate?Object.freeze({required:true}):null,
+    executionAuthorized:false,
+    deploymentAuthorized:false,
+    productionVerified:false,
+  });
+}
