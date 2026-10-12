@@ -59,15 +59,20 @@ function fixture(){
   class MutationObserver {
     constructor(callback){this.callback=callback;observers.push(this)}
     observe(target,options){
-      assert.equal(target,panel);
       assert.equal(options.attributes,true);
-      assert.deepEqual([...options.attributeFilter],['hidden','class']);
+      if(target===panel)assert.deepEqual([...options.attributeFilter],['hidden','class']);
+      else{
+        assert.equal(target,app);
+        assert.deepEqual([...options.attributeFilter],['hidden']);
+      }
+      this.target=target;
     }
   }
   runInNewContext(source,{document,window,MutationObserver});
   return {
     frame,notice,panel,root,app,listeners,navListeners,window,
-    notifyPanelMutation:()=>observers.forEach(observer=>observer.callback()),
+    notifyPanelMutation:()=>observers.filter(observer=>observer.target===panel).forEach(observer=>observer.callback()),
+    notifyAppMutation:()=>observers.filter(observer=>observer.target===app).forEach(observer=>observer.callback()),
   };
 }
 
@@ -285,4 +290,55 @@ test('authenticated navigation loads Control only after visible admin ready stat
   app.hidden=false;
   section({detail:{section:'command-home'}});
   assert.equal(frame.getAttribute('src'),'/admin/control?embed=admin');
+});
+
+test('admin logout clears the previously loaded Control iframe and private DOM context',()=>{
+  const {frame,notice,panel,app,root,listeners,navListeners,notifyAppMutation}=fixture();
+  root.dataset.ekodiAdminReady='true';
+  navListeners.get('ekodi-admin-ready')();
+  assert.equal(frame.getAttribute('src'),'/admin/control?embed=admin');
+  frame.contentDocument={getElementById:()=>({}),querySelector:()=>({})};
+  listeners.get('load')();
+  assert.equal(root.dataset.ekodiControlEmbedded,'ready');
+  app.hidden=true;
+  delete root.dataset.ekodiAdminReady;
+  notifyAppMutation();
+  assert.equal(frame.hasAttribute('src'),false);
+  assert.equal(root.dataset.ekodiControlEmbedded,undefined);
+  assert.equal(panel.hidden,true);
+  assert.equal(panel.classList.contains('hidden-panel'),true);
+  assert.equal(notice.hidden,true);
+});
+
+test('re-login only loads a fresh Control iframe after parent authentication completes',()=>{
+  const {frame,app,root,navListeners,notifyAppMutation}=fixture();
+  root.dataset.ekodiAdminReady='true';
+  navListeners.get('ekodi-admin-ready')();
+  assert.equal(frame.getAttribute('src'),'/admin/control?embed=admin');
+  app.hidden=true;
+  delete root.dataset.ekodiAdminReady;
+  notifyAppMutation();
+  assert.equal(frame.hasAttribute('src'),false);
+  app.hidden=false;
+  notifyAppMutation();
+  assert.equal(frame.hasAttribute('src'),false);
+  root.dataset.ekodiAdminReady='true';
+  navListeners.get('ekodi-admin-ready')();
+  assert.equal(frame.getAttribute('src'),'/admin/control?embed=admin');
+});
+
+test('logout clears a failed-frame notice so the next administrator starts clean',()=>{
+  const {frame,app,root,notice,listeners,navListeners,notifyAppMutation}=fixture();
+  root.dataset.ekodiAdminReady='true';
+  navListeners.get('ekodi-admin-ready')();
+  frame.contentDocument={getElementById:()=>null,querySelector:()=>null};
+  listeners.get('load')();
+  assert.equal(notice.hidden,false);
+  assert.equal(frame.classList.contains('admin-control-frame-unavailable'),true);
+  app.hidden=true;
+  delete root.dataset.ekodiAdminReady;
+  notifyAppMutation();
+  assert.equal(notice.hidden,true);
+  assert.equal(frame.classList.contains('admin-control-frame-unavailable'),false);
+  assert.equal(frame.getAttribute('aria-hidden'),null);
 });
