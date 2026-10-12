@@ -1159,7 +1159,10 @@ jobs:
 
   native_surface_verification_mobile:
     name: EKODI Native Surface Verification · Mobile
-    needs: deploy
+    # Run the same canonical surface sweep after desktop so post-release
+    # verification does not create its own rate-limit burst. A real 429 still
+    # fails in the native browser worker after bounded retry.
+    needs: native_surface_verification_desktop
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
       surface_paths: /,/my/,/admin/,/ekodimall/admin
