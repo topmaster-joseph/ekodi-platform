@@ -18,7 +18,7 @@
     ['qwen','Qwen','AI'],
   ];
   const WORKERS=[['cloud','Cloud Worker'],['browser','Browser Worker'],['local','Local Worker Pool']];
-  const state={sessions:[],activeId:null,view:'chat',busy:false,authenticated:false,authPromise:null,storageOwner:'',tasks:[],results:[],liveTasks:[],taskSource:'local',taskCheckedAt:'',taskRefreshing:false,taskNotice:''};
+  const state={sessions:[],activeId:null,view:'chat',busy:false,authenticated:false,authPromise:null,storageOwner:'',authEpoch:0,taskRequestId:0,tasks:[],results:[],liveTasks:[],taskSource:'local',taskCheckedAt:'',taskRefreshing:false,taskNotice:''};
   const $=s=>document.querySelector(s);
   const $$=s=>[...document.querySelectorAll(s)];
   const now=()=>new Date().toISOString();
@@ -33,7 +33,8 @@
   function saveState(){try{const key=scopedKey(CONTROL_STATE);if(key)sessionStorage.setItem(key,JSON.stringify({tasks:state.tasks.slice(0,40),results:state.results.slice(0,40)}))}catch{}}
   function resetPrivateSurface(){
     const hadPrivateData=Boolean(state.storageOwner||state.sessions.length||state.activeId||
-      state.tasks.length||state.results.length||state.liveTasks.length);
+      state.tasks.length||state.results.length||state.liveTasks.length||state.taskRefreshing||state.taskSource!=='local');
+    state.authEpoch++;state.taskRequestId++;state.taskRefreshing=false;
     state.storageOwner='';state.sessions=[];state.activeId=null;state.tasks=[];state.results=[];
     state.liveTasks=[];state.taskSource='local';state.taskCheckedAt='';state.taskNotice='';
     if(hadPrivateData){renderRecent();renderMessages();renderPanels()}
@@ -42,6 +43,7 @@
     const email=String(session?.email||'').trim().toLowerCase();
     if(!email)return false;
     if(state.storageOwner!==email){
+      state.authEpoch++;state.taskRequestId++;state.taskRefreshing=false;
       state.storageOwner=email;state.sessions=loadHistory();state.activeId=state.sessions[0]?.id||null;
       const cached=loadState();
       state.tasks=Array.isArray(cached.tasks)?cached.tasks.slice(0,40):[];
@@ -93,10 +95,12 @@
   async function verifySession(){
     if(state.authPromise)return state.authPromise;
     state.authPromise=(async()=>{
-      if(!token()){resetPrivateSurface();authDisplay('로그인 필요');return false}
+      const checkedToken=token();
+      if(!checkedToken){resetPrivateSurface();authDisplay('로그인 필요');return false}
       authDisplay('서버 인증 확인 중',false,'저장된 토큰의 권한과 유효기간을 확인하고 있습니다.');
       try{
         const session=await api('/api/session');
+        if(token()!==checkedToken){resetPrivateSurface();authDisplay('계정 변경 확인 중');return false}
         if(session?.authenticated===true && session?.role==='super_admin' && bindAccount(session)){
           authDisplay('최고관리자 인증됨',true);
           return true;
@@ -178,12 +182,18 @@
   // current server outcome, and errors must not be labeled as verified completion.
   async function refreshTasks(){
     if(state.taskRefreshing)return;
+    const requestId=++state.taskRequestId;
     state.taskRefreshing=true;
     state.taskSource='pending';
     renderPanels();
     try{
       if(!(await verifySession()))throw new Error('최고관리자 인증을 확인할 수 없습니다.');
+      if(requestId!==state.taskRequestId)return;
+      const owner=state.storageOwner,epoch=state.authEpoch,requestToken=token();
       const snapshot=await api('/api/control/ai/v8/tasks?limit=40');
+      // An old response must never repopulate another account's task panel.
+      if(requestId!==state.taskRequestId||state.authEpoch!==epoch||
+         state.storageOwner!==owner||token()!==requestToken)return;
       if(snapshot?.ok!==true||!Array.isArray(snapshot.tasks))throw new Error('작업 목록 응답을 확인할 수 없습니다.');
       state.liveTasks=snapshot.tasks.slice(0,40).filter(task=>task&&typeof task==='object').map(task=>({
         id:String(task.id||'').slice(0,160),
@@ -196,11 +206,14 @@
       state.taskSource='server';
       state.taskNotice='';
     }catch(error){
+      if(requestId!==state.taskRequestId)return;
       state.taskSource='error';
       state.taskNotice=error?.auth?'관리자 인증이 만료됐습니다. 다시 로그인해 주세요.':'서버 작업 상태를 확인할 수 없습니다. 아래 목록은 현재 브라우저에 기록된 내용입니다.';
     }finally{
-      state.taskRefreshing=false;
-      renderPanels();
+      if(requestId===state.taskRequestId){
+        state.taskRefreshing=false;
+        renderPanels();
+      }
     }
   }
   function renderPanels(){
