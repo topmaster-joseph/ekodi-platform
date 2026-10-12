@@ -79,5 +79,8 @@ test('Mall channel performance is read-only, scoped, and distinguishes reported 
   assert.match(ui,/정산 완료 수익이나 순이익이 아닙니다/);
   assert.match(ui,/채널별 매출 귀속은 추정치입니다/);
   assert.match(ui,/growthReload\.addEventListener\('click',loadMallGrowth\)/);
+  assert.match(ui,/data\.autonomousProfitLoop\|\|\{\}/);
+  assert.match(ui,/자동화 선행 문제/);
+  assert.match(ui,/stepLabels=\{source:'상품 수집'/);
   assert.doesNotMatch(ui,/\/v1\/mall\/dashboard'\s*,\s*\{\s*method\s*:\s*'POST'/);
 });
