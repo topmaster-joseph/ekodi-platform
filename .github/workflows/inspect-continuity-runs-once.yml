@@ -1,0 +1,49 @@
+name: EKODI Native Continuity Job Discovery (One Shot)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/inspect-continuity-runs-once.yml'
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+jobs:
+  inspect:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Read authentic existing continuity and merge runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'NODE'
+          const repo='topmaster-joseph/ekodi-platform';
+          const headers={
+            authorization:'Bearer '+process.env.GH_TOKEN,
+            accept:'application/vnd.github+json',
+            'x-github-api-version':'2022-11-28'
+          };
+          async function get(path){
+            const res=await fetch('https://api.github.com/repos/'+repo+path,{headers});
+            const result=await res.json().catch(()=>({}));
+            return {status:res.status,body:res.ok?result:{}};
+          }
+          for(const name of ['reconcile-orchestrated-pr-continuity.yml','converge-orchestrated-pr-merge.yml']){
+            const response=await get('/actions/workflows/'+name+'/runs?per_page=40');
+            const evidence=[];
+            for(const run of (response.body.workflow_runs||[]).slice(0,12)){
+              const jobs=await get('/actions/runs/'+run.id+'/jobs?per_page=15');
+              evidence.push({runId:run.id,event:run.event,headBranch:run.head_branch,
+                headSha:run.head_sha,status:run.status,conclusion:run.conclusion,
+                createdAt:run.created_at,
+                jobs:(jobs.body.jobs||[]).map(j=>({
+                  id:j.id,name:j.name,status:j.status,conclusion:j.conclusion
+                }))});
+            }
+            console.log('EKODI_NATIVE_CONTINUITY_RUNS '+JSON.stringify({
+              workflow:name,http:response.status,total:response.body.total_count||0,runs:evidence
+            }));
+          }
+          NODE
