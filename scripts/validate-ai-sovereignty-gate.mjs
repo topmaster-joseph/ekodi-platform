@@ -99,5 +99,8 @@ assert.ok(submit.includes('evaluateAdminOrchestratorSubmission(task)'));
 assert.ok(submit.includes('ORCHESTRATOR_TASK_NOT_ACCEPTED'));
 assert.ok(controlUi.includes("submitted?.accepted!==true"));
 assert.ok(controlUi.includes("$('#orchestratorRelease').checked=false"));
+assert.ok(controlUi.includes("crypto.subtle.digest('SHA-256',bytes)"));
+assert.ok(!controlUi.includes('let hash=2166136261'));
+
 
 console.log('EKODI reuse-first gate: policy, official submission, UI boundaries passed');
