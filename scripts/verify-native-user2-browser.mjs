@@ -115,3 +115,5 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
 // Owner-triggered protected release convergence after related-change review.
 
 // Owner-authored CI refresh following official main branch synchronization.
+
+// Owner-authored fresh CI after protected branch synchronization.
