@@ -63,8 +63,8 @@ test('Mission live browser smoke is bounded read-only and does not expose user c
 
 test('mission native gate truth table rejects PR validation, feature push and failed deployments',()=>{
   for(const job of ['native-mobile','native-desktop']){
-    const section=workflow.split('  '+job+':\\n')[1]?.split(/\\n  [a-z][a-z-]*:\\n/)[0]||'';
-    const condition=section.match(/^\\s+if: (.+)$/m)?.[1];
+    const section=workflow.split('  '+job+':\n')[1]?.split(/\n  [a-z][a-z-]*:\n/)[0]||'';
+    const condition=section.match(/^\s+if: (.+)$/m)?.[1];
     assert.ok(condition,'Missing native job condition for '+job);
     const cases=[
       {name:'explicit native dispatch',eventName:'workflow_dispatch',event:'',branch:'',result:'',expected:true},
