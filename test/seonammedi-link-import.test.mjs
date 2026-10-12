@@ -73,7 +73,9 @@ test('registered administrator public page has all three operations and fail-clo
   assert.match(publicJs,/bindPublicTimelineLinkImport/);
   assert.match(publicJs,/bindPublicMonitorContentAdmin/);
   assert.match(publicJs,/data-monitor-hide/);
-  assert.match(publicJs,/state:'rejected'/);
+  assert.match(publicJs,/\/admin\/timeline\/auto-source/);
+  assert.match(api,/if\(!\(can\(auth,TIMELINE_CAP\)\|\|can\(auth,CONTENT_CAP\)\)\)return json/);
+  assert.match(api,/UPDATE seonammedi_monitor_items SET review_state='rejected'/);
   assert.match(publicJs,/data-timeline-delete/);
   assert.match(adminHtml,/id="adminTimelineLinkForm"/);
   assert.match(adminJs,/bindAdminTimelineLinkImport/);
