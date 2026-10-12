@@ -61,7 +61,7 @@ jobs:
 
           # Snapshot lightweight PR metadata via GraphQL, but never request all open
           # PR file arrays in one gigantic query (GitHub GraphQL HTTP 504).
-          # Complete file lists are retrieved through paginated REST only for
+          # Stale PRs must refresh/rebase; complete file lists are retrieved through paginated REST only for
           # non-draft PRs sharing the current base SHA. Incomplete/missing
           # file evidence remains a hard failure, never a pass.
           gh_retry pr list --repo "$REPOSITORY" --state open --base "$BASE_REF" --limit 500 \
