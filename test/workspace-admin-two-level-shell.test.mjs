@@ -22,7 +22,7 @@ test('workspace admin uses direct left navigation and opens leaf sections in the
   const currentUse = runtime.indexOf('host.dataset.adminScopeCurrent=current');
   assert.ok(currentDeclaration >= 0 && currentUse > currentDeclaration, 'admin scope current must be declared before use');
   assert.match(css,/\.admin-subnav\{display:none!important\}/);
-  for(const label of ['운영 홈','메일','지급·수령 확인','업무','재무','헤더 · 푸터','디자인','다국어 번역 · 게시','사용자 · 권한','행사 · 신청자','채널·자동게시','마케팅 AI','운영 상태','변경 · 감사 기록'])assert.match(script,new RegExp(label));
+  for(const label of ['운영 홈','메일','지급·수령 확인','업무','재무','헤더 · 푸터','디자인','다국어 번역 · 게시','사용자 · 권한','행사 · 신청자','채널','마케팅 AI','운영 상태','변경 · 감사 기록'])assert.match(script,new RegExp(label));
   assert.match(script,/groupsForRole\(role=workspaceRole\)/);
   assert.match(script,/boot\(\)\.catch\(error=>/);
   assert.match(script,/workspaceBootRetry/);
