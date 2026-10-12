@@ -45,7 +45,7 @@ jobs:
       - name: Validate standalone board contract
         run: |
           node --check services/independent-board/worker.js
-          node --test test/independent-board-seonammedi.test.mjs
+          node --test test/independent-board-seonammedi.test.mjs test/seonammedi-voice-queue-positive.test.mjs test/seonammedi-voice-login-session.test.mjs test/seonammedi-voice-google-write-gate.test.mjs
 
   deploy:
     needs: validate
