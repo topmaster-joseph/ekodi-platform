@@ -56,6 +56,13 @@
       </div>
       <div data-records-admin-panel="timeline">
         <div class="heading"><div><p class="eyebrow">ACTIVITY HISTORY</p><h1>활동이력 관리</h1><p>기존 활동이력이 모두 사전 등록되어 있습니다. 새 이력을 추가하거나 수정하고, 공개 여부를 선택할 수 있습니다.</p></div></div>
+        <form id="adminTimelineLinkForm" class="card form-card link-import-form">
+          <h2>링크만 붙여넣어 등록</h2><p>기사 원문을 자동으로 확인해 제목·발행일·요약·출처를 등록합니다. 검증에 실패한 자료는 공개되지 않습니다.</p>
+          <label>자료 링크<input name="url" type="url" inputmode="url" placeholder="https://..." required></label>
+          <label>등록 상태<select name="status"><option value="published">검증 후 공개</option><option value="draft">비공개 저장</option></select></label>
+          <div class="actions"><button id="adminTimelineLinkPreviewButton" type="button" class="secondary">미리보기</button><button id="adminTimelineLinkSaveButton" type="submit" class="primary" disabled>링크로 등록</button></div>
+          <div id="adminTimelineLinkPreview" class="link-import-preview" hidden></div><p id="adminTimelineLinkMessage" class="message" role="status"></p>
+        </form>
         <div class="two-col">
           <form id="timelineForm" class="card form-card">
             <input type="hidden" name="id">
