@@ -21,6 +21,10 @@ test('Mission postrelease canary uses EKODI-owned browser on both phone and desk
   assert.match(workflow,/Deploy Activity Public Share Schema/);
   assert.match(workflow,/Deploy EKODI Operating Space/);
   assert.match(workflow,/workflow_run.conclusion == 'success'/);
+  assert.equal((workflow.match(/workflow_run.event == 'workflow_dispatch'/g)||[]).length,2,'Both device canaries must require actual dispatch for release workflow runs');
+  assert.equal((workflow.match(/workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'/g)||[]).length,2,'Only protected main push releases may trigger the native canary');
+  assert.doesNotMatch(workflow,/if: github.event_name != 'workflow_run' \|\| github.event.workflow_run.conclusion == 'success'/);
+
 });
 
 test('Mission live browser smoke is bounded read-only and does not expose user credentials',()=>{
