@@ -4,6 +4,7 @@ on:
     paths:
       - 'config/device-capability-governance-policy.json'
       - 'tools/ekodi-device-agent/windows/inventory-ekodi-desktop.ps1'
+      - 'tools/ekodi-device-agent/windows/plan-ekodi-desktop-organization.ps1'
       - 'test/device-capability-governance.test.mjs'
       - '.github/workflows/device-workspace-inventory.yml'
   push:
@@ -36,6 +37,23 @@ jobs:
           $errors = $null
           [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $p), [ref]$tokens, [ref]$errors)
           if ($errors.Count) { throw ($errors | Out-String) }
+      - name: Parse organization preview without executing
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'tools/ekodi-device-agent/windows/plan-ekodi-desktop-organization.ps1'), [ref]$tokens, [ref]$errors)
+          if ($errors.Count) { throw ($errors | Out-String) }
+      - name: Verify dry-run organization preview
+        shell: powershell
+        run: |
+          $desktop = Join-Path $env:RUNNER_TEMP 'desktop-plan-test'
+          New-Item -ItemType Directory -Path $desktop -Force | Out-Null
+          New-Item -ItemType Directory -Path (Join-Path $desktop 'ekodi-platform') -Force | Out-Null
+          $report = & ./tools/ekodi-device-agent/windows/plan-ekodi-desktop-organization.ps1 -DesktopPath $desktop | ConvertFrom-Json
+          if ($report.mode -ne 'dry-run' -or $report.mutationCount -ne 0) { throw 'Preview mutated desktop' }
+          if (@($report.candidates).Count -ne 1 -or $report.candidates[0].moveApproved -ne $false) { throw 'Invalid candidates' }
+          if (!(Test-Path (Join-Path $desktop 'ekodi-platform'))) { throw 'Original directory changed' }
       - name: Run against isolated synthetic desktop
         shell: powershell
         run: |
