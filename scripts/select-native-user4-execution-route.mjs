@@ -28,6 +28,15 @@ export function planUser4VirtualDesktopRecovery({probe={},now=Date.now()}={}) {
     return {state:'READY',targetAlias:'user4',automaticHostChanges:false,
       automaticReboot:false,missing:[],nextAction:'run-native-isolated-desktop-canary'};
   }
+  const edition=['home','pro','enterprise','education','server'].includes(probe.windowsEditionClass)
+    ? probe.windowsEditionClass : 'unknown';
+  if(edition==='home' && missing.includes('hyper-v-windows-feature')){
+    return {state:'UNSUPPORTED_WINDOWS_EDITION',targetAlias:'user4',
+      windowsEditionClass:'home',windowsBuild:probe.windowsBuild||0,
+      automaticHostChanges:false,automaticReboot:false,
+      preservesUserDesktop:true,requiresSeparateAdminApproval:true,
+      missing,nextAction:'use-ekodi-native-browser-or-authorize-compatible-host'};
+  }
   const nextAction=missing.includes('firmware-virtualization')
     ? 'inspect-firmware-virtualization-with-local-owner'
     : missing.includes('hyper-v-windows-feature')
@@ -36,6 +45,8 @@ export function planUser4VirtualDesktopRecovery({probe={},now=Date.now()}={}) {
         ? 'verify-hyper-v-management-tools'
         : 'prepare-and-verify-ekodi-base-vm-with-approval';
   return {state:'REQUIRES_MAINTENANCE',targetAlias:'user4',
+    windowsEditionClass:edition,
+    windowsBuild:Number.isSafeInteger(probe.windowsBuild) ? probe.windowsBuild : 0,
     automaticHostChanges:false,automaticReboot:false,
     preservesUserDesktop:true,requiresSeparateAdminApproval:true,
     missing,nextAction};

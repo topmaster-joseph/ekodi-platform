@@ -49,6 +49,10 @@ async function run(){
     targetAlias:'user4',commandId:out.id,receiptStatus:'succeeded',
     backendReady:proof.headlessBackendReady===true,
     backend:'hyper-v-ekodi-base',userDesktopAttached:false,
+    windowsEditionClass:['home','pro','enterprise','education','server'].includes(proof.windowsEditionClass)
+      ? proof.windowsEditionClass : 'unknown',
+    windowsBuild:Number.isSafeInteger(proof.windowsBuild) && proof.windowsBuild>0 && proof.windowsBuild<=99999
+      ? proof.windowsBuild : 0,
     virtualizationFirmwareEnabled:proof.virtualizationFirmwareEnabled===true,
     hyperVState:['Enabled','Disabled','EnablePending','DisablePending'].includes(proof.hyperVState)?proof.hyperVState:'unknown',
     hyperVPowerShellAvailable:proof.hyperVPowerShellAvailable===true,

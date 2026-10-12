@@ -1519,6 +1519,30 @@ function Get-WindowsOptionalFeatureStateSafe([string]$Name) {
 }
 
 function Get-IsolatedDesktopBackendProbe {
+  # Edition and build are allowlisted; never export computer name, identity or OS keys.
+  $windowsEditionClass = 'unknown'
+  $windowsBuild = 0
+  try {
+    $windowsOs = Get-CimInstance Win32_OperatingSystem -ErrorAction Stop
+    $caption = [string]$windowsOs.Caption
+    if ($caption -match 'Server') {
+      $windowsEditionClass = 'server'
+    } elseif ($caption -match 'Enterprise') {
+      $windowsEditionClass = 'enterprise'
+    } elseif ($caption -match 'Education') {
+      $windowsEditionClass = 'education'
+    } elseif ($caption -match 'Pro(fessional)?') {
+      $windowsEditionClass = 'pro'
+    } elseif ($caption -match '(Home|Core)') {
+      $windowsEditionClass = 'home'
+    }
+    $parsedBuild = 0
+    if ([int]::TryParse([string]$windowsOs.BuildNumber, [ref]$parsedBuild)) {
+      if ($parsedBuild -gt 0 -and $parsedBuild -le 99999) {
+        $windowsBuild = $parsedBuild
+      }
+    }
+  } catch { }
   $virtualizationFirmwareEnabled = $false
   try {
     $processors = @(Get-CimInstance Win32_Processor -ErrorAction Stop)
@@ -1576,6 +1600,8 @@ function Get-IsolatedDesktopBackendProbe {
     routingPolicy = 'EKODI-VIRTUALIZATION-ROUTING-001'
     backendPolicy = 'EKODI-ISOLATED-DESKTOP-BACKEND-001'
     agentVersion = $AgentVersion
+    windowsEditionClass = $windowsEditionClass
+    windowsBuild = $windowsBuild
     virtualizationFirmwareEnabled = [bool]$virtualizationFirmwareEnabled
     hyperVState = $hyperVState
     hyperVPowerShellAvailable = [bool]$hyperVPowerShellAvailable
