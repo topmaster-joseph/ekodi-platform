@@ -51,7 +51,7 @@ try {
   await link.waitFor({state:'attached',timeout:10000});
   // Real visitors scroll to the worship section; IntersectionObserver reveals
   // the parent .schedule.reveal only after it intersects the viewport.
-  await page.evaluate(()=>document.querySelector('[data-church-worship-admin]')?.scrollIntoView({block:'center'}));
+  await page.evaluate(()=>document.querySelector('.schedule.reveal')?.scrollIntoView({block:'center'}));
   await page.waitForFunction(()=>document.querySelector('.schedule.reveal')?.classList.contains('visible'),null,{timeout:9000});
   assert.equal(await link.isVisible(),false,'guest must never see management link');
   evidence.steps.push({name:'guest-hidden-on-real-site',pass:true});
