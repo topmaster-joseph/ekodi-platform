@@ -389,6 +389,28 @@ function availableIds(nav, group) {
   });
 }
 
+function sidebarDetailsDrifted(nav) {
+  if (!nav || !isPlatformSuperAdminSurface()) return false;
+  const group = String(nav.dataset.adminFocusedGroup || nav.dataset.adminGlobalGroup || '').trim();
+  if (!ADMIN_MENU_GROUPS.some(item => item.id === group)) return false;
+  const globals = nav.querySelector(`:scope>.${GLOBAL_CLASS}`);
+  const details = globals?.querySelector(`:scope>.${DETAILS_CLASS}`);
+  const ids = availableIds(nav, group);
+  const primaryOrder = PRIMARY_SECTIONS[group] || [];
+  const primarySet = new Set(primaryOrder);
+  const primary = primaryOrder.filter(id => ids.includes(id));
+  const extras = ids.filter(id => !primarySet.has(id));
+  const section = activeSection(nav);
+  const expanded = nav.dataset.adminMoreGroup === group || extras.includes(section);
+  const expected = expanded ? ids : primary;
+  if (!expected.length) return false;
+  if (!details || details.hidden || details.dataset.adminDetailGroup !== group) return true;
+  const rendered = new Set([...details.querySelectorAll('[data-admin-detail-section]')]
+    .map(node => node.dataset.adminDetailSection)
+    .filter(Boolean));
+  return expected.some(id => !rendered.has(id));
+}
+
 function syncWorkbenchState(nav, locale, preferredSection = '') {
   const { globals } = ensureContainers(nav);
   globalButtons(globals, locale);
@@ -612,8 +634,16 @@ export function mountAdminSidebar(root = document, options = {}) {
     });
   };
 
-  const observer = new MutationObserver(schedule);
-  observer.observe(nav, { childList: true, subtree: false });
+  const observer = new MutationObserver(mutations => {
+    const directNavChanged = mutations.some(mutation => mutation.target === nav);
+    const nestedDetailChanged = mutations.some(mutation =>
+      mutation.type === 'childList'
+      && mutation.target !== nav
+      && Boolean(mutation.target.closest?.(`.${GLOBAL_CLASS}`))
+    );
+    if (directNavChanged || (nestedDetailChanged && sidebarDetailsDrifted(nav))) schedule();
+  });
+  observer.observe(nav, { childList: true, subtree: true });
 
   nav.addEventListener('click', event => {
     const more = event.target.closest('[data-admin-detail-more]');
