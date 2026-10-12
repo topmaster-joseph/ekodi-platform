@@ -31,3 +31,10 @@ This documentation-only owner-authored commit requests that workflow through the
 2. EKODI Shell production deployment with verified commit/release receipt.
 3. Real public-page DOM and API check: single-locale hidden, two or more published locales rounded visible, initial hidden state, outage fail-closed, recovery and no footer selector.
 4. Cloudflare 429 remains a stop condition; an inconclusive check is not success.
+
+## Owner revalidation after protected-base synchronization
+
+- The first official Convergent Merge run [#38248346376](https://github.com/topmaster-joseph/ekodi-platform/actions/runs/38248346376) returned `action: branch-updated` and synchronized this PR branch to protected `main`.
+- The synchronized head `71f326d24de9502f0b076671b795b1d6eeaebe49` was generated through the trusted workflow but GitHub classified its pull-request jobs as `action_required`, not successful.
+- This subsequent owner-authored documentation-only update deliberately triggers fresh required PR CI on the synchronized source tree, without waiving those checks, altering release settings, or changing application code.
+- The official Orchestrator task identity remains unchanged, and production claims still require the actual protected merge plus live rollout receipt.
