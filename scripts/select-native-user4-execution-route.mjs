@@ -5,6 +5,41 @@ import {selectVirtualizationProvider} from '../virtualization-router.js';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 
+// Native USER4 recovery is advisory only. Never mutate Windows features,
+// create a VM, touch the current desktop or schedule a reboot from a probe.
+export function planUser4VirtualDesktopRecovery({probe={},now=Date.now()}={}) {
+  if(probe?.targetAlias!=='user4' || probe?.receiptStatus!=='succeeded'){
+    return {state:'PROBE_REQUIRED',targetAlias:'user4',automaticHostChanges:false,
+      automaticReboot:false,missing:['current-user4-native-probe'],
+      nextAction:'run-native-user4-readonly-probe'};
+  }
+  const when=Date.parse(String(probe.completedAt||''));
+  if(!Number.isFinite(when)||when>now||now-when>10*60*1000){
+    return {state:'PROBE_STALE',targetAlias:'user4',automaticHostChanges:false,
+      automaticReboot:false,missing:['fresh-user4-native-probe'],
+      nextAction:'refresh-native-user4-readonly-probe'};
+  }
+  const missing=[];
+  if(probe.virtualizationFirmwareEnabled!==true)missing.push('firmware-virtualization');
+  if(probe.hyperVState!=='Enabled')missing.push('hyper-v-windows-feature');
+  if(probe.hyperVPowerShellAvailable!==true)missing.push('hyper-v-powershell-management');
+  if(probe.baseVmPresent!==true)missing.push('ekodi-isolated-base-vm');
+  if(probe.backendReady===true && missing.length===0 && probe.userDesktopAttached===false){
+    return {state:'READY',targetAlias:'user4',automaticHostChanges:false,
+      automaticReboot:false,missing:[],nextAction:'run-native-isolated-desktop-canary'};
+  }
+  const nextAction=missing.includes('firmware-virtualization')
+    ? 'inspect-firmware-virtualization-with-local-owner'
+    : missing.includes('hyper-v-windows-feature')
+      ? 'verify-windows-edition-and-plan-admin-maintenance'
+      : missing.includes('hyper-v-powershell-management')
+        ? 'verify-hyper-v-management-tools'
+        : 'prepare-and-verify-ekodi-base-vm-with-approval';
+  return {state:'REQUIRES_MAINTENANCE',targetAlias:'user4',
+    automaticHostChanges:false,automaticReboot:false,
+    preservesUserDesktop:true,requiresSeparateAdminApproval:true,
+    missing,nextAction};
+}
 export function selectUser4ExecutionRoute({readiness={},probe={},now=Date.now()}={}) {
   // Source-bound and age-bounded: another PC or an old receipt cannot activate
   // the USER4 native browser fallback or the headless Hyper-V route.
@@ -42,6 +77,7 @@ export function selectUser4ExecutionRoute({readiness={},probe={},now=Date.now()}
       routeKind:'isolated-desktop',
       desktopBackendReady:true,
       browserAlternativeReady:browserReady,
+      recoveryPlan:planUser4VirtualDesktopRecovery({probe,now}),
       fallback:false,
       gapReason:null,
       observedAt:new Date().toISOString()
@@ -72,6 +108,7 @@ export function selectUser4ExecutionRoute({readiness={},probe={},now=Date.now()}
       externalProviderUsed:false,
       supportedTaskClasses:['browser-ui-validation','synthetic-surface-verification','isolated-browser-execution'],
       unsupportedTaskClasses:['isolated-desktop-execution','computer-use-automation'],
+      recoveryPlan:planUser4VirtualDesktopRecovery({probe,now}),
       observedAt:new Date().toISOString()
     };
   }
