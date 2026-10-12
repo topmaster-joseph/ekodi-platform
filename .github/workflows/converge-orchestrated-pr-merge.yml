@@ -13,8 +13,8 @@ permissions:
   actions: write
 
 concurrency:
-  group: ekodi-orchestrated-merge-${{ github.ref }}
-  cancel-in-progress: true
+  group: ekodi-orchestrated-merge
+  cancel-in-progress: false
 
 jobs:
   converge:
