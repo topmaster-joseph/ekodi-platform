@@ -32,3 +32,5 @@ The existing CGMA native background browser checks **public GET only**. The admi
 - `test/cgma-native-canary-authorization.test.mjs` prevents credential transport, target widening, fake completion and missing cleanup/audit evidence.
 
 This is a **readiness contract**, not a claim that a privileged production agent is already capable of or authorized to mutate the CGMA board.
+
+**Release verification note:** GitHub bot-authored merge synchronization can yield `action_required`; only a real owner-authored commit and successful required checks may unblock the protected merge. Never disable those checks.
