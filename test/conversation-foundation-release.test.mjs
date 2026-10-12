@@ -122,6 +122,9 @@ test('central Core redispatch suppresses a duplicate native Control push run for
   assert.match(workflow,/--arg sha "\$GITHUB_SHA"/);
   assert.match(workflow,/\.head_sha == \$sha/);
   assert.match(workflow,/native_control_run=true/);
+  assert.match(workflow,/Native Control run lookup attempt/);
+  assert.match(workflow,/continuing bounded retry/);
+  assert.match(workflow,/No confirmed native Control run after bounded lookup/);
   assert.match(workflow,/steps\.dedupe\.outputs\.native_control_run != 'true'/);
   assert.match(workflow,/github\.event_name == 'workflow_dispatch'/);
   assert.match(workflow,/gh workflow run deploy-control-api\.yml --ref main/);
