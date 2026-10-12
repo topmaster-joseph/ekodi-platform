@@ -14,6 +14,9 @@ export function isPublicSeonamMediSource(item){
   // An editor may approve a source after checking the actual publication.
   if(item.review_state==='verified')return true;
   // A search result or a description from a blog is not a confirmed news article.
+  // A snippet is NOT evidence of visiting the source. Only a durable publisher-page
+  // verification marker (or separate editor approval above) permits auto-publication.
+  if(item.source_verified!==1&&item.source_verified!==true)return false;
   if(item.source_type!=='news'||!hasRegionalMedicalContext(item.title)||!hasRegionalMedicalContext(item.summary_text))return false;
   try{
     const url=new URL(String(item.resolved_url||item.url||''));
