@@ -199,7 +199,12 @@
     renderPanels();
     try{
       if(!(await verifySession()))throw new Error('최고관리자 인증을 확인할 수 없습니다.');
-      if(requestId!==state.taskRequestId)return;
+      if(requestId!==state.taskRequestId){
+        // First authenticated hydration superseded an unauthenticated request.
+        // Load that verified account's Tasks tab without background polling.
+        if(state.authenticated&&state.view==='tasks')void refreshTasks();
+        return;
+      }
       const owner=state.storageOwner,epoch=state.authEpoch,requestToken=token();
       const snapshot=await api('/api/control/ai/v8/tasks?limit=40');
       // An old response must never repopulate another account's task panel.
@@ -218,6 +223,11 @@
       state.taskNotice='';
     }catch(error){
       if(requestId!==state.taskRequestId)return;
+      if(error?.auth){
+        resetPrivateSurface();
+        authDisplay('로그인 만료',false,'관리자 세션이 만료됐습니다. 다시 로그인해 주세요.');
+        return;
+      }
       state.taskSource='error';
       state.taskNotice=error?.auth?'관리자 인증이 만료됐습니다. 다시 로그인해 주세요.':'서버 작업 상태를 확인할 수 없습니다. 아래 목록은 현재 브라우저에 기록된 내용입니다.';
     }finally{
