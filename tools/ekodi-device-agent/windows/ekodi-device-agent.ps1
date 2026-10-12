@@ -1525,16 +1525,16 @@ function Get-IsolatedDesktopBackendProbe {
   try {
     $windowsOs = Get-CimInstance Win32_OperatingSystem -ErrorAction Stop
     $caption = [string]$windowsOs.Caption
-    if ($caption -match '(Home|Core)') {
-      $windowsEditionClass = 'home'
+    if ($caption -match 'Server') {
+      $windowsEditionClass = 'server'
     } elseif ($caption -match 'Enterprise') {
       $windowsEditionClass = 'enterprise'
     } elseif ($caption -match 'Education') {
       $windowsEditionClass = 'education'
     } elseif ($caption -match 'Pro(fessional)?') {
       $windowsEditionClass = 'pro'
-    } elseif ($caption -match 'Server') {
-      $windowsEditionClass = 'server'
+    } elseif ($caption -match '(Home|Core)') {
+      $windowsEditionClass = 'home'
     }
     $parsedBuild = 0
     if ([int]::TryParse([string]$windowsOs.BuildNumber, [ref]$parsedBuild)) {
