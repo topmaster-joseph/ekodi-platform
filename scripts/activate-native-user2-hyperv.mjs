@@ -72,3 +72,7 @@ async function main(){
 main().catch(e=>{console.error('[EKODI][USER2-HYPERV-NO-RESTART] '+String(e.message).slice(0,140));process.exitCode=1;});
 
 // Owner-authorized guarded convergence for exact USER2 maintenance release.
+
+// Re-dispatch guarded USER2 activation after sanitized Control API receipt projection release.
+
+// Owner-authored protected CI after official release base synchronization.
