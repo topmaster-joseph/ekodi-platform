@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import {
   classifyUser2BrowserFailure,
   eligibleUser2Agent,
@@ -100,4 +101,22 @@ test('USER3, external desktop status or missing token never causes USER2 mutatio
 test('browser failure exposes only allowlisted category',()=>{
   assert.equal(classifyUser2BrowserFailure('CDP_WORKER_FAILED: {"code":"CDP_PORT_TIMEOUT","token":"secret"}'),'CDP_PORT_TIMEOUT');
   assert.equal(classifyUser2BrowserFailure('C:/private/profile token=abc'),'BROWSER_FAILURE_UNCLASSIFIED');
+});
+
+
+test('workflow keeps USER2 browser recovery receipt-gated and post-merge dispatched',async()=>{
+  const workflow=await readFile(new URL('../.github/workflows/device-agent-production-verification.yml',import.meta.url),'utf8');
+  const merge=await readFile(new URL('../scripts/converge-orchestrated-pr-merge.mjs',import.meta.url),'utf8');
+  const script=await readFile(new URL('../scripts/recover-native-user2-browser.mjs',import.meta.url),'utf8');
+  assert.match(workflow,/user2-browser-recovery/);
+  assert.match(workflow,/EKODI AI Orchestration Gate for mutating verification/);
+  assert.match(workflow,/recover-native-user2-browser\.mjs/);
+  assert.match(merge,/nativeUser2BrowserRecoveryTouched/);
+  assert.match(merge,/execution_mode:'user2-browser-recovery'/);
+  assert.match(merge,/release_branch_ref:branch,release_task_id:taskId/);
+  assert.doesNotMatch(script,/Enable-WindowsOptionalFeature|Enable-WindowsFeature|Restart-Computer|Stop-Computer|New-VM|Start-VM/);
+  assert.match(script,/externalProviderUsed:false/);
+  assert.match(script,/userDesktopAttached:false/);
+  assert.match(script,/clipboardShared:false/);
+  assert.match(script,/userInputInjection:false/);
 });
