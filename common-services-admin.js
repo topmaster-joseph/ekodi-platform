@@ -78,7 +78,37 @@ function categoryServices(){if(state.category==='all')return SERVICES;if(state.c
 function visibleServices(){const query=state.query.trim().toLowerCase();return categoryServices().filter(service=>{const runtime=serviceState(service);const matchesQuery=!query||[service.name,service.domain,service.role,service.layer,kindLabel(service.kind,service.category)].some(value=>String(value||'').toLowerCase().includes(query));if(!matchesQuery)return false;if(state.statusFilter==='healthy')return runtime.key==='healthy';if(state.statusFilter==='attention')return runtime.key==='attention'||runtime.key==='critical';if(state.statusFilter==='standby')return runtime.key==='standby';if(state.statusFilter==='approval')return service.applyRule==='승인'||String(service.availability||'').includes('승인');return true})}
 function syncCategory(section=window.EKODIAdminPanels?.current?.()){state.category=categoryFromSection(section);const available=categoryServices();if(!available.some(item=>item.id===state.selected))state.selected=available[0]?.id||state.selected}
 function kindLabel(kind,category=''){if(kind==='provider')return'외부 공급자 연동';if(kind==='service')return'독립 서비스';if(category==='professional')return'전문 엔진';if(category==='common')return'공통 엔진';return'엔진'}
-async function jsonFetch(url,options={}){const headers={accept:'application/json',...authHeaders(),...(options.headers||{})};if(options.body&&!headers['content-type'])headers['content-type']='application/json';const response=await fetch(url,{...options,headers,cache:'no-store'});let data={};try{data=await response.json()}catch{}if(response.status===401||response.status===403){window.EKODIAdminCore?.showLogin?.('관리자 세션 만료 · 다시 로그인');throw new Error('admin_session_required')}if(!response.ok)throw new Error(data.error||`HTTP ${response.status}`);return data}
+async function centralSessionInvalid(){
+  const current=token();
+  if(!current)return true;
+  try{
+    const response=await fetch(`${CONTROL}/api/session`,{headers:{authorization:`Bearer ${current}`,accept:'application/json'},cache:'no-store'});
+    if(response.status===401||response.status===403)return true;
+    if(!response.ok)return false; // Network or Control API errors cannot invalidate a local login.
+    const data=await response.json().catch(()=>({}));
+    return data.authenticated===false;
+  }catch{return false}
+}
+async function jsonFetch(url,options={}){
+  const headers={accept:'application/json',...authHeaders(),...(options.headers||{})};
+  if(options.body&&!headers['content-type'])headers['content-type']='application/json';
+  const response=await fetch(url,{...options,headers,cache:'no-store'});
+  let data={};try{data=await response.json()}catch{}
+  if(response.status===401){
+    // An AI/service 401 is not proof the central Admin login has expired.
+    if(await centralSessionInvalid()){
+      window.EKODIAdminCore?.showLogin?.('관리자 세션 만료 · 다시 로그인');
+      throw Object.assign(new Error('admin_session_required'),{status:401});
+    }
+    throw Object.assign(new Error('해당 서비스 인증 확인 실패 · 관리자 로그인은 유지됩니다.'),{status:401,code:data?.error||'service_auth_unavailable'});
+  }
+  if(response.status===403){
+    // A denied service capability must never log out an authenticated admin.
+    throw Object.assign(new Error('해당 서비스에 대한 접근 권한이 없습니다. 관리자 로그인은 유지됩니다.'),{status:403,code:data?.error||'service_capability_denied'});
+  }
+  if(!response.ok)throw Object.assign(new Error(data.error||`HTTP ${response.status}`),{status:response.status});
+  return data;
+}
 const control=(path,options)=>jsonFetch(`${CONTROL}${path}`,options);
 // AI runtime has its own canonical /ai/api routes; the generic Control API
 // does not implement the legacy common-services/ai forwarding endpoint.
