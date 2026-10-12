@@ -25,6 +25,48 @@ const tag=(block,name)=>{const m=String(block||'').match(new RegExp('<'+name+'(?
 const sourceTag=block=>{const m=String(block||'').match(/<source(?:\s[^>]*)?>([\s\S]*?)<\/source>/i);return m?xmlText(m[1]):''};
 async function digest(value){const bytes=new TextEncoder().encode(String(value||''));const hash=await crypto.subtle.digest('SHA-256',bytes);return [...new Uint8Array(hash)].map(v=>v.toString(16).padStart(2,'0')).join('')}
 function rssUrl(query){const q=encodeURIComponent(query);return 'https://news.google.com/rss/search?q='+q+'&hl=ko&gl=KR&ceid=KR:ko'}
+// Cloudflare and upstream RSS gateways can briefly return 429/5xx.
+// Keep retries small, honour Retry-After, and never publish an unverified result.
+const RSS_RETRYABLE_STATUSES=new Set([429,500,502,503,504]);
+const RSS_RETRY_ATTEMPTS=3;
+const RSS_MAX_RETRY_DELAY_MS=2000;
+function rssRetryAfterMs(value,nowMs){
+  const text=String(value||'').trim();
+  if(!text)return null;
+  const seconds=Number(text);
+  if(Number.isFinite(seconds)&&seconds>=0)return Math.ceil(seconds*1000);
+  const date=Date.parse(text);
+  return Number.isFinite(date)?Math.max(0,date-nowMs):null;
+}
+export async function fetchSeonamMediNewsRss(query,{fetchImpl=fetch,wait=ms=>new Promise(resolve=>setTimeout(resolve,ms)),now=()=>Date.now()}={}){
+  const url=rssUrl(query);
+  const options={headers:{'user-agent':'EKODI-SeonamMedi-Monitor/1.2','accept':'application/rss+xml, application/xml;q=0.9, text/xml;q=0.8'},cf:{cacheTtl:0,cacheEverything:false}};
+  let lastError=new Error('RSS fetch did not complete');
+  for(let attempt=0;attempt<RSS_RETRY_ATTEMPTS;attempt++){
+    let response;
+    try{response=await fetchImpl(url,options)}
+    catch(error){
+      lastError=new Error('RSS network error: '+clean(error?.name||'fetch_failed',60));
+      if(attempt===RSS_RETRY_ATTEMPTS-1)break;
+      await wait(300*(attempt+1));
+      continue;
+    }
+    if(response.ok)return response.text();
+    lastError=new Error('HTTP '+response.status);
+    if(!RSS_RETRYABLE_STATUSES.has(response.status)||attempt===RSS_RETRY_ATTEMPTS-1)break;
+    const retryAfter=rssRetryAfterMs(response.headers?.get?.('retry-after'),now());
+    // An upstream cooldown longer than our budget is a failure, not a license
+    // to retry early or block all scheduled tasks for an unbounded period.
+    if(retryAfter!==null&&retryAfter>RSS_MAX_RETRY_DELAY_MS){
+      lastError=new Error('HTTP '+response.status+' (retry_after_deferred)');
+      break;
+    }
+    const backoff=300*(2**attempt);
+    const delay=Math.max(backoff,retryAfter||0);
+    await wait(Math.min(delay,RSS_MAX_RETRY_DELAY_MS));
+  }
+  throw lastError;
+}
 function parseRss(xml,key,label){
   const now=Date.now(),floor=now-RECENT_DAYS*86400000;
   return [...String(xml||'').matchAll(/<item>([\s\S]*?)<\/item>/gi)].slice(0,MAX_ITEMS_PER_QUERY).map(match=>{
@@ -118,9 +160,7 @@ export async function runSeonamMediHourlyCheck(env,{scheduledAt=null,force=false
   }catch(error){return {ok:false,error:'schema_unavailable',message:clean(error?.message,300)}}
   for(const query of QUERIES){
     try{
-      const response=await fetch(rssUrl(query.q),{headers:{'user-agent':'EKODI-SeonamMedi-Monitor/1.1'},cf:{cacheTtl:0,cacheEverything:false}});
-      if(!response.ok)throw new Error('HTTP '+response.status);
-      const items=parseRss(await response.text(),query.key,query.label);checked+=1;seen+=items.length;
+      const items=parseRss(await fetchSeonamMediNewsRss(query.q),query.key,query.label);checked+=1;seen+=items.length;
       for(let item of items){
         if(mediaBudget>0&&hasRegionalMedicalContext(item.title)){item=await enrichMedia(item);mediaBudget-=1;if(item.mediaState==='candidate')mediaCandidates+=1}
         if(await insertItem(env,item,startedAt))added+=1;
