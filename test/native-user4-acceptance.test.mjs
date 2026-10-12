@@ -326,10 +326,16 @@ test('USER4 refuses to infer updated Agent version while Control API projection 
 
 test('Windows native CDP worker propagates allowlisted receipt categories without raw stderr',()=>{
   const source=readFileSync(new URL('../tools/ekodi-device-agent/windows/ekodi-device-agent.ps1',import.meta.url),'utf8');
-  assert.match(source,/\$stderr\.Trim\(\) \| ConvertFrom-Json -ErrorAction Stop/);
-  assert.match(source,/if \(\$allowedCodes -ccontains \$candidate\) \{ \$failureCode = \$candidate \}/);
+  assert.match(source,/foreach \(\$line in/);
+  assert.match(source,/\$value \| ConvertFrom-Json -ErrorAction Stop/);
+  assert.match(source,/\$failure\.ok -eq \$false -and \$allowedCodes -ccontains \$candidate/);
   assert.match(source,/throw \$failureCode/);
   assert.doesNotMatch(source,/throw \('CDP_WORKER_FAILED: ' \+ \$stderr/);
   for(const code of ['CDP_BROWSER_EARLY_EXIT_ZERO','CDP_BROWSER_EARLY_EXIT_POLICY','CDP_PORT_TIMEOUT','CDP_WORKER_WATCHDOG_TIMEOUT'])
     assert(source.includes("'"+code+"'"),code);
+});
+
+test('USER4 upgrade release requires new 2.5.5 Agent and an updated official receipt',()=>{
+  assert.equal(USER4_CDP_WORKER_AGENT_VERSION,'2.5.5');
+  assert.equal(USER4_CDP_FIX_FLOOR,Date.parse('2026-10-12T18:00:00.000Z'));
 });

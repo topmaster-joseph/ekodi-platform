@@ -33,3 +33,19 @@ test('Agent pins the reviewed early-exit fallback worker, not a stale CDP binary
   assert.match(worker,/installedCanaryBrowsers/);
   assert.match(agent,/CDP_WORKER_EVIDENCE_INVALID/);
 });
+
+test('native Agent forwards only fixed CDP categories when browser stderr contains warnings',()=>{
+  const start=agent.indexOf('function Invoke-EkodiNativeCdpCanary');
+  const end=agent.indexOf('function Invoke-BackgroundBrowserCanary',start);
+  const wrapper=agent.slice(start,end);
+  assert.ok(start>=0 && end>start);
+  assert.match(wrapper,/foreach \(\$line in/);
+  assert.match(wrapper,/\$value\.Length -gt 180/);
+  assert.match(wrapper,/ConvertFrom-Json -ErrorAction Stop/);
+  assert.match(wrapper,/\$failure\.ok -eq \$false/);
+  assert.match(wrapper,/\$allowedCodes -ccontains \$candidate/);
+  assert.match(wrapper,/CDP_BROWSER_SPAWN/);
+  assert.match(wrapper,/throw \$failureCode/);
+  assert.doesNotMatch(wrapper,/throw \('CDP_WORKER_FAILED: ' \+ \$stderr/);
+  assert.match(agent,/AgentVersion = '2\.5\.5'/);
+});

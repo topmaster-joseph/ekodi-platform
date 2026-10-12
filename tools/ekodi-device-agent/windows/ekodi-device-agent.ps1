@@ -19,7 +19,7 @@ try {
   throw '[EKODI:EKA-299][crypto] Windows DPAPI assembly is unavailable: ' + $_.Exception.Message
 }
 
-$AgentVersion = '2.5.4'
+$AgentVersion = '2.5.5'
 # Some remote/managed Windows sessions omit ProgramData from the process environment.
 # Resolve the canonical system data directory without changing machine-wide settings.
 if ([string]::IsNullOrWhiteSpace($env:ProgramData)) {
@@ -1013,20 +1013,29 @@ function Invoke-EkodiNativeCdpCanary {
     # The native worker emits a fixed-category JSON receipt. Never forward raw
     # stderr (which may contain local paths or private browser diagnostics).
     $failureCode = 'CDP_WORKER_FAILED'
-    try {
-      $failure = $stderr.Trim() | ConvertFrom-Json -ErrorAction Stop
-      $candidate = [string]$failure.code
-      $allowedCodes = @(
-        'CDP_BROWSER_NOT_FOUND','CDP_BROWSER_EARLY_EXIT_ZERO',
-        'CDP_BROWSER_EARLY_EXIT_ACCESS','CDP_BROWSER_EARLY_EXIT_DEPENDENCY',
-        'CDP_BROWSER_EARLY_EXIT_POLICY','CDP_BROWSER_EARLY_EXIT_SANDBOX',
-        'CDP_BROWSER_EARLY_EXIT_UNKNOWN','CDP_PORT_TIMEOUT',
-        'CDP_PORT_INVALID','CDP_SOCKET_ERROR','CDP_SOCKET_TIMEOUT',
-        'CDP_COMMAND_TIMEOUT','CDP_DOM_EVIDENCE_MISSING',
-        'CDP_WORKER_WATCHDOG_TIMEOUT','CDP_BROWSER_UNEXPECTED_ERROR'
-      )
-      if ($allowedCodes -ccontains $candidate) { $failureCode = $candidate }
-    } catch { }
+    # Only accept the worker's small structured JSON failure line. Node/Chromium
+    # may write unrelated warnings to stderr; never surface their raw contents.
+    $allowedCodes = @(
+      'CDP_BROWSER_NOT_FOUND','CDP_BROWSER_EARLY_EXIT_ZERO',
+      'CDP_BROWSER_EARLY_EXIT_ACCESS','CDP_BROWSER_EARLY_EXIT_DEPENDENCY',
+      'CDP_BROWSER_EARLY_EXIT_POLICY','CDP_BROWSER_EARLY_EXIT_SANDBOX',
+      'CDP_BROWSER_EARLY_EXIT_UNKNOWN','CDP_BROWSER_SPAWN',
+      'CDP_BROWSER_REQUIRED','CDP_HEADLESS_MODE_INVALID','CDP_TIMEOUT_INVALID',
+      'CDP_PORT_TIMEOUT','CDP_PORT_INVALID','CDP_SOCKET_ERROR',
+      'CDP_SOCKET_TIMEOUT','CDP_COMMAND_TIMEOUT','CDP_DOM_EVIDENCE_MISSING',
+      'CDP_WORKER_WATCHDOG_TIMEOUT','CDP_BROWSER_UNEXPECTED_ERROR'
+    )
+    foreach ($line in @([string]$stderr -split "[\\r\\n]+")) {
+      $value = ([string]$line).Trim()
+      if ($value.Length -gt 180 -or -not $value.StartsWith('{')) { continue }
+      try {
+        $failure = $value | ConvertFrom-Json -ErrorAction Stop
+        $candidate = [string]$failure.code
+        if ($failure.ok -eq $false -and $allowedCodes -ccontains $candidate) {
+          $failureCode = $candidate
+        }
+      } catch { }
+    }
     throw $failureCode
   }
   try { $receipt = $stdout.Trim() | ConvertFrom-Json -ErrorAction Stop } catch { throw 'CDP_WORKER_INVALID_RECEIPT' }
