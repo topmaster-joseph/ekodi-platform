@@ -118,5 +118,6 @@ test('production receipt verifier uses mutually exclusive curl flags',()=>{
   assert.match(workflow,/curl --fail-with-body -sS --retry 3 --max-time 15/);
   assert.equal((workflow.match(/curl --fail-with-body -sS/g)||[]).length,1,'Only one receipt curl uses the verified flag combination');
   assert.doesNotMatch(workflow,/curl --fail-with-body\s+-f(?:s|S|\b)/);
+  assert.doesNotMatch(workflow,/--fail-with-body[^\n]*\s-fsS/,'Receipt command must not combine two curl failure modes');
   assert.match(workflow,/\.authorized == true and \.taskId == \$task and \.branchRef == \$branch/);
 });
