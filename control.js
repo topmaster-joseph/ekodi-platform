@@ -134,6 +134,10 @@
     state.busy=true;$('#sendButton').disabled=true;
     try{
       if(!(await verifySession())){toast('최고관리자 인증을 확인한 뒤 다시 실행해 주세요.');return}
+      const commandOwner=state.storageOwner,commandEpoch=state.authEpoch,commandToken=token();
+      const sameOperator=()=>state.authenticated&&state.storageOwner===commandOwner&&
+        state.authEpoch===commandEpoch&&token()===commandToken;
+      if(!sameOperator())return;
       const target=$('#executionTarget').value,executeNow=$('#executeNow').checked;
       const prior=historyForAssist();
       pushMessage('user',message,{target});$('#commandInput').value='';resizeInput();
@@ -141,6 +145,7 @@
       if(executeNow){
         try{
           const preflight=await preflightCommand(message);
+          if(!sameOperator())return;
           if(!preflight){
             preflightProblem='서버 사전점검이 통과하지 않아 자동실행을 접수하지 않았습니다.';
           }else{
@@ -152,22 +157,28 @@
               event:{kind:'control_command',source:'control-surface',summary:message,changeClass:'yellow',actionable:true,requiresHumanDecision:false},
               executeNow:true
             })});
+            if(!sameOperator())return;
           }
         }catch(error){
+          if(!sameOperator())return;
           preflightProblem='자동실행은 접수되지 않았습니다. '+(error.auth?'로그인 권한을 다시 확인해 주세요.':error.message);
         }
       }
+      if(!sameOperator())return;
       const taskId=queued?.task?.id||queued?.execution?.results?.[0]?.taskId||'';
       const taskStatus=queued?.task?.state||queued?.execution?.results?.[0]?.state||(preflightProblem?'preflight_failed':executeNow?'queued':'assist_only');
       if(taskId){state.tasks.unshift({id:taskId,title:title(message),status:taskStatus,target,at:now()});state.tasks=state.tasks.slice(0,40);saveState()}
       let reply='',provider='EKODI';
       try{
         const result=await api('/api/control/ai/assist',{method:'POST',body:JSON.stringify({message,history:prior,context:{source:'control-surface',section:'command',title:'EKODI Control',pathname:'/admin/control',executionTarget:target,taskId}})});
+        if(!sameOperator())return;
         provider=result.provider||'EKODI';
         reply=String(result.reply||'').trim()||'AI가 유효한 답변을 반환하지 않았습니다. 명령 전달 기록을 확인해 주세요.';
       }catch(error){
+        if(!sameOperator())return;
         reply='AI 설명을 받지 못했습니다. '+error.message;
       }
+      if(!sameOperator())return;
       if(queued?.task?.state==='auto_blocked')reply='EKODI 정책에 따라 자동실행이 차단되었습니다. 승인·검증 상태를 확인해 주세요.\n\n'+reply;
       if(preflightProblem)reply=preflightProblem+'\n\n'+reply;
       pushMessage('assistant',reply,{provider,target,status:taskStatus,taskId});
