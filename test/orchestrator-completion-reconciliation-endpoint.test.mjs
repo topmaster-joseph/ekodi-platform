@@ -204,3 +204,57 @@ test('candidate selection rotates reconciliation attempts instead of pinning the
   assert.match(source,/reconciliation_checked_at ASC, updated_at DESC/);
   assert.doesNotMatch(source,/ORDER BY updated_at ASC LIMIT 50/);
 });
+
+
+test('trusted OIDC native watch release requires pinned task, post-merge observe and artifact',async()=>{
+  const {token,fetchImpl}=oidcFixture();
+  const {env,row}=dbFixture();
+  const nativeTask='orch_recovery_dcf5dace563ac6da0488a29708afcf21';
+  const nativeBranch='ai/gpt6/'+nativeTask;
+  row.task_id=nativeTask;
+  row.branch_ref=nativeBranch;
+  const proof={
+    verified:true,source:'github-actions-native-operations-verified',
+    deliveryKind:'github-actions-schedule',
+    taskId:nativeTask,branchRef:nativeBranch,
+    pr:{number:4383,url:'https://github.com/topmaster-joseph/ekodi-platform/pull/4383',
+      mergedAt:'2026-10-12T13:54:00Z',mergeCommitSha:mergeSha},
+    requiredWorkflows:[
+      {name:'CI',conclusion:'success',runId:11},
+      {name:'EKODI AI Orchestration Gate',conclusion:'success',runId:12},
+    ],
+    deployments:[],
+    nativeWorkflow:{
+      name:'EKODI Native Operations Watch',
+      path:'.github/workflows/ekodi-native-operations-watch.yml',
+      workflowId:382137714,runId:101,runEvent:'schedule',
+      runHeadSha:'b'.repeat(40),runCreatedAt:'2026-10-12T15:37:00Z',
+      observeJob:'observe',
+      verifiedSteps:[
+        'Collect EKODI-owned read-only operational evidence',
+        'Preserve privacy-safe evidence, including failures'
+      ],
+      artifactId:303,artifactName:'ekodi-native-operations-101',artifactBytes:1024,
+    },
+  };
+  for(const modification of [
+    {nativeWorkflow:{...proof.nativeWorkflow,artifactBytes:0}},
+    {nativeWorkflow:{...proof.nativeWorkflow,runCreatedAt:'2026-10-12T12:00:00Z'}},
+    {nativeWorkflow:{...proof.nativeWorkflow,runEvent:'pull_request'}},
+    {nativeWorkflow:{...proof.nativeWorkflow,verifiedSteps:[]}},
+    {source:'github-actions-unverified'},
+  ]){
+    const resp=await handleOrchestratorCompletionReconciliation(
+      request(token,{action:'complete',taskId:nativeTask,branchRef:nativeBranch,evidence:{...proof,...modification}}),
+      env,{fetchImpl});
+    assert.equal(resp.status,400);
+    assert.equal((await resp.json()).reason,'completion_evidence_invalid');
+    assert.equal(row.state,'assigned');
+  }
+  const valid=await handleOrchestratorCompletionReconciliation(
+    request(token,{action:'complete',taskId:nativeTask,branchRef:nativeBranch,evidence:proof}),
+    env,{fetchImpl});
+  assert.equal(valid.status,200);
+  assert.equal((await valid.json()).state,'completed');
+  assert.equal(row.state,'completed');
+});
