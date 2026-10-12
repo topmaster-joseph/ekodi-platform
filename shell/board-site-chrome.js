@@ -60,7 +60,9 @@
     return root;
   }
   function selectChrome(doc,tag){
-    return doc.querySelector('body > '+tag+',body > .site-'+tag+',body > [role="'+(tag==='header'?'banner':'contentinfo')+'"],#app '+tag+',main ~ '+tag);
+    const role=tag==='header'?'banner':'contentinfo';
+    return doc.querySelector('body > '+tag+',body > .site-'+tag+',body > [role="'+role+'"],#app '+tag+',main ~ '+tag+',body '+tag+'[role="'+role+'"]')
+      ||doc.querySelector(tag);
   }
   function importStyle(doc){
     for(const item of doc.querySelectorAll('head link[rel~="stylesheet"],head style')){
