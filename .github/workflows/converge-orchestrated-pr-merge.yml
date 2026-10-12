@@ -4,26 +4,51 @@ on:
   push:
     branches:
       - 'ai/*/orch_*'
+  # Recovery branches created with GITHUB_TOKEN do NOT cause push workflows.
+  # PR-target uses only trusted main code and first verifies a release receipt.
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      branch_ref:
+        description: Existing, release-receipt-authorized orchestration branch
+        required: true
+        type: string
 
 permissions:
   contents: write
   pull-requests: write
   statuses: write
+  checks: read
   actions: write
 
 concurrency:
-  group: ekodi-orchestrated-merge-${{ github.ref }}
+  group: ekodi-orchestrated-merge-${{ github.event.pull_request.head.ref || inputs.branch_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
   converge:
+    if: >
+      github.event_name == 'push' ||
+      (github.event_name == 'pull_request_target' &&
+       github.event.pull_request.draft == false &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       startsWith(github.event.pull_request.head.ref, 'ai/') &&
+       contains(github.event.pull_request.head.ref, '/orch_')) ||
+      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
       GH_TOKEN: ${{ github.token }}
+      EKODI_TRUSTED_BRANCH: ${{ github.event.pull_request.head.ref || inputs.branch_ref || '' }}
+      EKODI_TRUSTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || '' }}
+      EKODI_TRUSTED_PR_NUMBER: ${{ github.event.pull_request.number || '' }}
     steps:
       - uses: actions/checkout@v7
         with:
+          # Always use trusted default-branch code; never checkout the PR head.
+          ref: main
+          persist-credentials: false
           fetch-depth: 1
       - uses: actions/setup-node@v7
         with:
