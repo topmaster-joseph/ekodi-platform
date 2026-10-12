@@ -748,6 +748,25 @@ function summarizeCommandResult(result = {}) {
       checkedAt: safeText(result.desktopCanary.checkedAt, 64),
     };
   }
+  if (result.hyperVPreparation && typeof result.hyperVPreparation === 'object') {
+    const proof = result.hyperVPreparation;
+    summary.hyperVPreparation = {
+      schemaVersion: proof.schemaVersion === 1 ? 1 : 0,
+      targetAlias: proof.targetAlias === 'user2' ? 'user2' : '',
+      firmwareVirtualizationEnabled: proof.firmwareVirtualizationEnabled === true,
+      hyperVState: ['Enabled','Disabled','EnablePending','DisablePending','Unavailable'].includes(proof.hyperVState)
+        ? proof.hyperVState : 'unknown',
+      hyperVModuleAvailable: proof.hyperVModuleAvailable === true,
+      baseVmPresent: proof.baseVmPresent === true,
+      administrator: proof.administrator === true,
+      featureEnableRequested: proof.featureEnableRequested === true,
+      featureChanged: proof.featureChanged === true,
+      rebootPerformed: proof.rebootPerformed === true,
+      rebootMayBeRequired: proof.rebootMayBeRequired === true,
+      guestExecutionAuthorized: proof.guestExecutionAuthorized === true,
+      checkedAt: safeText(proof.checkedAt, 64),
+    };
+  }
   if (result.desktopProbe && typeof result.desktopProbe === 'object') {
     summary.desktopProbe = {
       ok: result.desktopProbe.ok === true,
