@@ -5,8 +5,8 @@ import {runInNewContext} from 'node:vm';
 
 const source=readFileSync(new URL('../control.js',import.meta.url),'utf8');
 
-function browser({role='super_admin',email='admin@example.test',sessionToken=true,storedTasks=[],storedResults=[],responses=[],legacySessions=[]}={}){
-  const url=new URL('https://ekodi.kr/admin/control?embed=admin');
+function browser({role='super_admin',email='admin@example.test',sessionToken=true,storedTasks=[],storedResults=[],responses=[],legacySessions=[],initialUrl='https://ekodi.kr/admin/control?embed=admin'}={}){
+  const url=new URL(initialUrl);
   const calls=[],nodes=new Map(),documentEvents=new Map();
   const node=selector=>{
     if(!nodes.has(selector))nodes.set(selector,{
@@ -52,7 +52,7 @@ function browser({role='super_admin',email='admin@example.test',sessionToken=tru
     if(path==='/api/control/ai/v8/tasks'){
       const item=responses[Math.min(serverResponseIndex++,responses.length-1)]||{ok:true,tasks:[]};
       const status=item.status||200;
-      return {status,ok:status<400,json:async()=>item};
+      return {status,ok:status<400,json:async()=>{if(item.wait)await item.wait;return item;}};
     }
     throw new Error('unexpected API: '+path);
   }
@@ -249,4 +249,65 @@ test('session revocation clears on-screen browser history and cached results',as
   await ui.settle();
   assert.doesNotMatch(ui.node('#resultCards').innerHTML,/로그아웃 전 결과/);
   assert.doesNotMatch(ui.node('#recentTasks').innerHTML,/이전 세션/);
+});
+
+test('a late task response from admin A cannot appear in admin B workspace',async()=>{
+  let releaseA;
+  const wait=new Promise(resolve=>{releaseA=resolve});
+  const ui=browser({responses:[
+    {ok:true,wait,tasks:[{id:'task-A',goal:'A만의 작업 기록',state:'verified'}]},
+    {ok:true,tasks:[{id:'task-B',goal:'B의 서버 작업',state:'running'}]},
+  ]});
+  await ui.boot();
+  ui.openTasks();
+  await ui.settle();
+  assert.equal(ui.calls.filter(x=>x.path==='/api/control/ai/v8/tasks').length,1);
+  ui.changeIdentity({email:'other-admin@example.test'});
+  ui.showView('chat');
+  ui.changeVisibility('visible');
+  await ui.settle();
+  releaseA();
+  await ui.settle();
+  assert.doesNotMatch(ui.node('#taskCards').innerHTML,/A만의 작업 기록/);
+  ui.openTasks();
+  await ui.settle();
+  assert.match(ui.node('#taskCards').innerHTML,/B의 서버 작업/);
+  assert.doesNotMatch(ui.node('#taskCards').innerHTML,/A만의 작업 기록/);
+});
+
+test('a late server task response cannot expose prior admin data after logout',async()=>{
+  let finish;
+  const wait=new Promise(resolve=>{finish=resolve});
+  const ui=browser({storedTasks:[{id:'private',title:'과거 비밀작업',status:'verified'}],
+    responses:[{ok:true,wait,tasks:[{id:'late',goal:'늦게 온 개인작업',state:'verified'}]}]});
+  await ui.boot();
+  ui.openTasks();
+  await ui.settle();
+  ui.changeIdentity({role:'guest'});
+  ui.showView('chat');
+  ui.changeVisibility('visible');
+  await ui.settle();
+  finish();
+  await ui.settle();
+  assert.doesNotMatch(ui.node('#taskCards').innerHTML,/늦게 온 개인작업|과거 비밀작업/);
+  assert.match(ui.node('#taskCards').innerHTML,/서버 미확인/);
+});
+
+test('deep-linked Tasks refreshes after the initial account verification',async()=>{
+  const ui=browser({initialUrl:'https://ekodi.kr/admin/control?embed=admin&view=tasks',
+    responses:[{ok:true,tasks:[{id:'initial-task',goal:'로그인 직후 실시간 상태',state:'running'}]}]});
+  await ui.boot();
+  await ui.settle();
+  assert.match(ui.node('#taskCards').innerHTML,/로그인 직후 실시간 상태/);
+  assert.match(ui.node('#taskCards').innerHTML,/서버 확인/);
+});
+
+test('task ledger 401 revocation clears cached private records instead of exposing them',async()=>{
+  const ui=browser({storedTasks:[{id:'cached',title:'인증 전 작업',status:'verified'}],
+    responses:[{status:401,error:'UNAUTHORIZED'}]});
+  await ui.boot();
+  ui.openTasks();
+  await ui.settle();
+  assert.doesNotMatch(ui.node('#taskCards').innerHTML,/인증 전 작업/);
+  assert.match(ui.node('#taskCards').innerHTML,/서버 미확인/);
 });
