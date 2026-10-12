@@ -78,10 +78,15 @@ async function fixture(run,chromium){
   let respond;
   let mode='hold';
   let requested=false;
+  let requestCount=0;
   await page.route('**/api/i18n/v1/status?*',async route=>{
     requested=true;
+    requestCount++;
     while(mode==='hold')await new Promise(r=>respond=r);
     if(mode==='failed')return route.fulfill({status:503,contentType:'application/json',body:'{"error":"unavailable"}'});
+    if(mode==='throttled')return route.fulfill({status:429,contentType:'application/json',body:'{"error":"rate_limited"}'});
+    if(mode==='malformed')return route.fulfill({status:200,contentType:'application/json',body:'{"message":"missing publishedLocales"}'});
+    if(mode==='offline')return route.abort('failed');
     const locales=mode==='single'?['ko-KR']:['ko-KR','en'];
     return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({publishedLocales:locales})});
   });
@@ -98,17 +103,40 @@ async function fixture(run,chromium){
     await page.evaluate(()=>window.EKODIUserLanguage.refreshReadiness());
     await page.waitForTimeout(180);
     phases.push({phase:'synthetic-http503',snapshot:await inspect(page)});
+    mode='multi';
+    await page.evaluate(()=>window.EKODIUserLanguage.refreshReadiness());
+    await page.locator(LOCALE_SELECTOR).waitFor({state:'visible',timeout:5500});
+    phases.push({phase:'synthetic-post503-recovery',snapshot:await inspect(page)});
+    const countBefore429=requestCount;
+    mode='throttled';
+    await page.evaluate(()=>window.EKODIUserLanguage.refreshReadiness());
+    await page.waitForTimeout(180);
+    phases.push({phase:'synthetic-http429',snapshot:await inspect(page)});
+    const noAutomatic429Retry=requestCount-countBefore429===1;
+    mode='multi';
+    await page.evaluate(()=>window.EKODIUserLanguage.refreshReadiness());
+    await page.locator(LOCALE_SELECTOR).waitFor({state:'visible',timeout:5500});
+    phases.push({phase:'synthetic-post429-recovery',snapshot:await inspect(page)});
+    mode='malformed';
+    await page.evaluate(()=>window.EKODIUserLanguage.refreshReadiness());
+    await page.waitForTimeout(180);
+    phases.push({phase:'synthetic-malformed-readiness',snapshot:await inspect(page)});
     mode='single';
     await page.evaluate(()=>window.EKODIUserLanguage.refreshReadiness());
     await page.waitForTimeout(180);
     phases.push({phase:'synthetic-single',snapshot:await inspect(page)});
+    mode='offline';
+    await page.evaluate(()=>window.EKODIUserLanguage.refreshReadiness());
+    await page.waitForTimeout(180);
+    phases.push({phase:'synthetic-offline',snapshot:await inspect(page)});
     mode='multi';
     await page.evaluate(()=>window.EKODIUserLanguage.refreshReadiness());
     await page.locator(LOCALE_SELECTOR).waitFor({state:'visible',timeout:5500});
     phases.push({phase:'synthetic-recovery',snapshot:await inspect(page)});
-    const expects=['hidden','visible','hidden','hidden','visible'];
+    const expects=['hidden','visible','hidden','visible','hidden','visible','hidden','hidden','hidden','visible'];
     const results=phases.map((p,i)=>({phase:p.phase,result:classifyMock(p.snapshot,expects[i])}));
-    run.synthetic={status:results.every(r=>r.result==='pass')?'pass':'fail',results,phases,networkMutationsBlocked:blocked.length,fixtureOnly:true};
+    run.synthetic={status:results.every(r=>r.result==='pass')&&noAutomatic429Retry?'pass':'fail',results,phases,networkMutationsBlocked:blocked.length,
+      noAutomatic429Retry,fixtureOnly:true};
     return run.synthetic.status==='pass';
   }catch(error){
     run.synthetic={status:'inconclusive',reason:String(error.message||error).slice(0,240),phases,fixtureOnly:true};
@@ -153,6 +181,7 @@ async function live(run,chromium){
       run.production.push(result);
       if(api.some(x=>x.status===429)){result.status='inconclusive';result.reason='cloudflare_429_stop';stopped=true;}
       if(run.production.length===1)await page.screenshot({path:outputFile.replace(/report\.json$/,'root-desktop.png'),fullPage:false}).catch(()=>{});
+      if(result.status==='inconclusive')await page.screenshot({path:outputFile.replace(/report\.json$/,'inconclusive-'+service+'.png'),fullPage:false}).catch(()=>{});
     }catch(error){
       const msg=String(error.message||error).slice(0,250);
       run.production.push({service,path:surface,device,status:'inconclusive',reason:msg});
