@@ -321,7 +321,7 @@ test('seonammedi admin utilities live above the left menu and content starts nea
 
 test('seonammedi public and admin menus keep the agreed content-first order',async()=>{
   const [html,adminHtml]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('admin/index.html',root),'utf8')]);
-  const publicOrder=['활동이력','소통채널','시민의견','회계','공지','조직'];
+  const publicOrder=['활동이력','관련소식','시민의견','회계','공지','조직'];
   let cursor=-1;for(const label of publicOrder){const next=html.indexOf('>'+label+'</a>',cursor+1);assert.ok(next>cursor,'public menu order: '+label);cursor=next}
   assert.doesNotMatch(html,/data-view-link="records"|data-view-link="timeline"|data-view-link="materials"/);
   assert.match(html,/id="timeline"[^>]*data-view-section="status"/);
@@ -329,7 +329,8 @@ test('seonammedi public and admin menus keep the agreed content-first order',asy
   assert.doesNotMatch(html,/<h2>현재상황<\/h2>|CURRENT STATUS|출처 검증형/);
   assert.match(html,/data-status-tab="news"[^>]*>관련보도<\/button>/);
   assert.match(html,/data-status-tab="official"[^>]*>공식기록<\/button>/);
-  assert.match(html,/href="#timeline" data-view-link="status">활동이력<\/a>/);
+  assert.match(html,/href="#committee-activity" data-view-link="committee">활동이력<\/a>/);
+  assert.match(html,/href="#timeline" data-view-link="status">관련소식<\/a>/);
   assert.match(html,/id="timeline"[^>]*class="section activity-list-only"/);
   assert.doesNotMatch(html,/id="timeline"[\s\S]*?<div class="section-head">[\s\S]*?<h2>활동이력<\/h2>/);
   assert.doesNotMatch(html,/id="timeline"[\s\S]*?id="statusTabs"/);
@@ -367,7 +368,7 @@ test('seonammedi full public-menu administration covers status organization mate
   assert.match(app,/ORG_GROUP_META/);
   assert.match(app,/renderOrganizationGroup\('bidae'\)/);
   assert.match(app,/function showStatusTab\(tab\)/);
-  assert.match(app,/const canonicalViewHash=\{status:'timeline'/);
+  assert.match(app,/const canonicalViewHash=\{committee:'committee-activity',status:'timeline'/);
   assert.match(app,/canonicalViewHash\[key\]\|\|key/);
   assert.match(app,/renderMaterialsForStatus\?\.\(isNews\?'관련보도':'공식자료'\)/);
   assert.doesNotMatch(adminHtml,/id="financeForm"/);
@@ -434,7 +435,8 @@ test('seonammedi exposes seeded related channels on public and admin surfaces',a
     readFile(new URL('admin/index.html',root),'utf8'),
     readFile(new URL('../migrations/0118_seonammedi_channel_seed.sql',import.meta.url),'utf8')
   ]);
-  assert.match(html,/data-view-link="channels"/);
+  assert.match(html,/id="relatedChannelLinks"/);
+  assert.doesNotMatch(html,/data-view-link="channels"/);
   assert.match(html,/id="channels"[^>]*data-view-section="channels"/);
   assert.match(html,/id="publicChannelTabs"/);
   assert.match(html,/id="channelPreview"/);
@@ -443,6 +445,7 @@ test('seonammedi exposes seeded related channels on public and admin surfaces',a
   assert.match(app,/\/api\/seonammedi\/channels/);
   assert.match(app,/\/preview/);
   assert.match(app,/channels:'channels'/);
+  assert.match(app,/renderRelatedChannelLinks/);
   assert.match(app,/async function showChannelPreview\(index,\{updateRoute=true\}=\{\}\)/);
   assert.match(app,/renderChannelFallback/);
   assert.match(app,/channelRouteFromHash/);
@@ -674,7 +677,9 @@ test('seonammedi activity history always renders in descending date order across
   const app=await readFile(new URL('app.js',root),'utf8');
   assert.match(app,/const timelineDateKey=value=>/);
   assert.match(app,/const timelineDescending=\(a,b\)=>timelineDateKey\(b\.date\)-timelineDateKey\(a\.date\)/);
-  assert.match(app,/\(activeTimelineCategory==='전체'\?publicTimelineEntries:publicTimelineEntries\.filter\([^;]+\)\)\.slice\(\)\.sort\(timelineDescending\)/);
+  assert.match(app,/const relatedRows=publicTimelineEntries\.filter\(item=>!isCommitteeRecord\(item\)\)/);
+  assert.match(app,/\(activeTimelineCategory==='전체'\?relatedRows:relatedRows\.filter\([^;]+\)\)\.slice\(\)\.sort\(timelineDescending\)/);
+  assert.match(app,/committeeItems\(\)/);
 });
 
 // descending activity-history order is enforced for every public category filter
@@ -857,7 +862,7 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
   assert.ok(!app.includes("latest.textContent='마지막 갱신 '"));
   assert.match(css,/\.site-footer-copy\{display:grid;gap:2px/);
   assert.match(css,/footer>a\{flex:0 0 auto;margin-left:auto/);
-  for(const hash of ['timeline','channels','organization'])assert.match(adminHtml,new RegExp('href="\.\.\/#'+hash+'"'));
+  for(const hash of ['committee-activity','timeline','channels','organization'])assert.match(adminHtml,new RegExp('href="\.\.\/#'+hash+'"'));
   assert.match(adminHtml,/href="\.\.\/board\/voices">시민의견 관리/);
   assert.match(adminHtml,/href="\.\.\/board\/finance">회계 관리/);
   assert.match(adminHtml,/href="\.\.\/board\/notices">공지 관리/);
