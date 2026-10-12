@@ -16,9 +16,14 @@ export function assessLanguageDOM(snapshot, publishedLocales){
   const count=snapshot.visibleHeaderControls;
   // The effective text/document locale must be among the actually published languages.
   // An English homepage with Korean-only publication is not a successful hidden-selector result.
-  const effectiveLocale=String(snapshot.homepageLocale||snapshot.documentLocale||'').trim();
-  if(effectiveLocale && !unique.some(locale=>locale.toLowerCase()===effectiveLocale.toLowerCase()||locale==='ko-KR'&&effectiveLocale==='ko'))
-    return {status:'fail',reason:'document_locale_not_published'};
+  const allowed=new Set(unique.length?unique:['ko-KR']);
+  // Check document locale and homepage-owned text locale independently:
+  // either can become stale when async rendering races the shared Shell.
+  for(const current of [snapshot.documentLocale,snapshot.homepageLocale]){
+    const locale=String(current||'').trim();
+    if(locale && ![...allowed].some(code=>code.toLowerCase()===locale.toLowerCase()||(code==='ko-KR'&&locale==='ko')))
+      return {status:'fail',reason:'document_locale_not_published'};
+  }
   if(snapshot.footerControls>0||snapshot.headerControls>1)return {status:'fail',reason:'duplicate_or_footer_language_controls'};
   if(mustShow && (count!==1||!snapshot.pill||!snapshot.accessible||!snapshot.optionsMatchPublished)){
     return {status:'fail',reason:'published_multilocale_selector_contract'};
