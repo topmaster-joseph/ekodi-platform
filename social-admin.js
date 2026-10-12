@@ -212,12 +212,17 @@
       connectionScope = { type:'person', key:'' };
     }
     const summary = el('div','','social-admin-summary');
+    const directoryFilters = el('div','','social-directory-filters');
+    const channelSearch = input('', 'search', '기관·상품·채널명·주소 찾기');
+    const kindFilter = select('all',[['all','모든 관계'],...channelKinds]);
+    const purposeFilter = select('all',[['all','모든 목적'],...channelPurposes]);
+    directoryFilters.append(field('채널 검색',channelSearch,'wide'),field('운영 관계',kindFilter),field('목적',purposeFilter));
     const status = el('p','Registry를 불러오지 않았습니다.','social-admin-status'); status.setAttribute('role','status');
     const list = el('div','','social-org-list');
     const addOrg = el('button','＋ 기관 추가','ghost social-add-org'); addOrg.type='button';
     const addMall = el('button','＋ 에코디몰 채널 그룹','secondary social-add-mall'); addMall.type='button';
     const directoryHelp = el('p','채널 주소 등록은 자동게시 승인이 아닙니다. 직접 운영 채널도 공식 OAuth 연결·사이트 매핑·발행 정책 확인 후에만 게시됩니다. 외부·제휴 링크는 등록·공개·분석 용도로만 사용합니다.','social-admin-status');
-    section.append(head, siteDirectoryPanel, connectionPanel, publishingPanel, summary, directoryHelp, status, list, addOrg, addMall); content.append(section);
+    section.append(head, siteDirectoryPanel, connectionPanel, publishingPanel, summary, directoryFilters, directoryHelp, status, list, addOrg, addMall); content.append(section);
 
     function renderSummary() {
       const orgs = registry.organizations || [];
@@ -298,9 +303,24 @@
       card.append(top,fields,channelHead,channelList,addChannel,addExternal); return card;
     }
 
+    function applyDirectoryFilters() {
+      const query=channelSearch.value.trim().toLocaleLowerCase('ko-KR');
+      const kind=kindFilter.value, purpose=purposeFilter.value;
+      Array.from(list.children).forEach((card,index)=>{
+        const org=(registry.organizations||[])[index];
+        if (!org) return;
+        const candidates=(org.channels||[]).filter(channel=>
+          (kind==='all'||(channel.kind||'owned')===kind)
+          && (purpose==='all'||(channel.purpose||'general')===purpose));
+        const orgMatches=`${org.name||''} ${org.id||''} ${org.website||''}`.toLocaleLowerCase('ko-KR').includes(query);
+        const channelMatches=candidates.some(ch=>`${ch.label||''} ${ch.provider||''} ${ch.url||''} ${ch.description||''}`.toLocaleLowerCase('ko-KR').includes(query));
+        card.hidden=!(kind==='all'&&purpose==='all'&&orgMatches || candidates.length>0&&(orgMatches||channelMatches));
+      });
+    }
     function render() {
       renderSummary(); list.replaceChildren();
       (registry.organizations||[]).forEach((org,index)=>list.append(orgCard(org,index)));
+      applyDirectoryFilters();
     }
 
     function renderConnections(data) {
@@ -440,6 +460,9 @@
     }
 
     navButton.addEventListener('click',activate);
+    channelSearch.addEventListener('input',applyDirectoryFilters);
+    kindFilter.addEventListener('change',applyDirectoryFilters);
+    purposeFilter.addEventListener('change',applyDirectoryFilters);
     refresh.addEventListener('click',()=>Promise.all([renderSiteDirectory(),load(),loadConnections(),loadPublishingChannels()]));
     save.addEventListener('click',saveChanges);
     scopeType.addEventListener('change',()=>{ scopeKey.disabled=scopeType.value==='person'; if(scopeKey.disabled) scopeKey.value=''; });
