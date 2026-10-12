@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import {manifest,validateMatrix,validateRegistryCoverage,probeAnonymousMatrix} from '../scripts/audit-board-authorization.mjs';
 
 test('registered canonical board surfaces have anonymous denial probes',()=>{
   assert.deepEqual(validateMatrix(),[]);
-  assert.ok(manifest.boards.length>=7);
+  assert.ok(manifest.boards.length>=8);
   assert.ok(manifest.contractOnly.some(x=>x.id==='seonammedi.finance.comments'));
 });
 
@@ -18,7 +19,7 @@ test('anonymous probes reject POST, reply, edit, delete, and management on every
   assert.equal(result.ok,true,JSON.stringify(result.errors));
   assert.equal(result.fullyVerified,false,'anonymous-only proof must never be called full verification');
   assert.equal(result.authenticatedManagerVerified,false);
-  assert.ok(calls.length>30);
+  assert.ok(calls.length>35);
   assert.equal(calls.filter(x=>x.method==='POST').length,manifest.boards.reduce((n,b)=>n+b.deny.filter(x=>x.method==='POST').length,0));
 });
 
@@ -47,4 +48,12 @@ test('future boards in source or browser registry cannot silently escape coverag
   const registered={verifiedIndependentSurfaces:[{id:'cgma.board'},{id:'future-site.board'}]};
   const browser={surfaces:[{id:'journal.posts',kind:'board',enabled:true},{id:'community.board',kind:'board',enabled:false}]};
   assert.deepEqual(validateRegistryCoverage(manifest,registered,browser),['unregistered-live-board:future-site.board']);
+});
+
+test('live community.board cannot be browser-excluded or omitted from anonymous checks',async()=>{
+  const policy=JSON.parse(await readFile(new URL('../config/board-surface-verification.json',import.meta.url),'utf8'));
+  assert.equal(policy.surfaces.find(x=>x.id==='community.board')?.enabled,true);
+  const item=manifest.boards.find(x=>x.id==='community.board');
+  assert.equal(item?.url,'https://ekodi.kr/community/board');
+  assert.ok(item.deny.some(x=>x.method==='POST'&&x.path==='/api/posts'));
 });
