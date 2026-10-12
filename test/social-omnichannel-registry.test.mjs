@@ -82,5 +82,7 @@ test('Mall channel performance is read-only, scoped, and distinguishes reported 
   assert.match(ui,/data\.autonomousProfitLoop\|\|\{\}/);
   assert.match(ui,/자동화 선행 문제/);
   assert.match(ui,/stepLabels=\{source:'상품 수집'/);
+  assert.match(ui,/foldPanel\(growthPanel,'성과'\)/);
+  assert.match(ui,/publishingFold\.open=true/);
   assert.doesNotMatch(ui,/\/v1\/mall\/dashboard'\s*,\s*\{\s*method\s*:\s*'POST'/);
 });
