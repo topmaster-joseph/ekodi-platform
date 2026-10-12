@@ -20,6 +20,7 @@ test('owner issue label can only request existing guarded EKODI Mission security
   assert.match(workflow,/main_sha/);
   assert.match(workflow,/\[ "\$reviewed_sha" = "\$main_sha" \]/);
   assert.match(workflow,/reconcile-mission-media-moderation-release\.yml\/dispatches/);
+  assert.ok(workflow.indexOf('reviewed_sha') < workflow.indexOf('reconcile-mission-media-moderation-release.yml/dispatches'),'SQL integrity proof must precede all dispatch actions');
   assert.match(workflow,/inputs\[release_branch_ref\]/);
   assert.match(workflow,/inputs\[release_task_id\]/);
   assert.doesNotMatch(workflow,/\bapply_migration\b|\bdatabase\/query\b|supabase\.com\/v1\/projects/);
