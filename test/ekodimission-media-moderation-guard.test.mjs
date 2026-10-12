@@ -108,6 +108,7 @@ test('one-time guarded postmerge replay requires two real orchestrator receipts 
   assert.doesNotMatch(flow,/curl --fail-with-body -fsS/);
   assert.match(flow,/GH_TOKEN: \$\{\{ github\.token \}\}/);
   assert.match(flow,/release_task_id/,'Schema replay must keep official release task association');
+  assert.ok(flow.indexOf('source_sha')<flow.indexOf('reconcile-mission-media-moderation-release.yml/dispatches'),'Immutable SQL must be checked before native replay dispatch');
   assert.match(flow,/issues\/4265/,'Replay must remain restricted to pending security tracker');
   assert.match(flow,/\.merged_at != null/,'Follow-up release must be merged before replay');
   assert.match(flow,/ -f ref=main/,'Only the reviewed main workflow may deploy schema');
