@@ -216,7 +216,9 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
   ensureUser4AgentUpdated({token})
     .then(async update=>{
       const result=await verifyUser4Acceptance({token});
-      return {...result,agentUpdate:update};
+      return {...result,agentUpdate:update,
+        nativeAgentUpdateVerified:update.recentOfficialUpdateVerified===true,
+        ownerRefreshFloor:new Date(USER4_CDP_FIX_FLOOR).toISOString()};
     })
     .then(result=>{
       console.log('[EKODI][USER4-NATIVE-ACCEPTANCE] '+JSON.stringify(result));
