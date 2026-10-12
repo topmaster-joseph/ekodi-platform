@@ -3186,7 +3186,7 @@ try {
     if ($candidateText.Length -lt 8000 -or
         $candidateText -notmatch 'ekodi-owned-chromium-cdp' -or
         $candidateText -notmatch 'BROWSER_DOCUMENT_ORIGIN_BLOCKED' -or
-        $candidateText -notmatch 'BROWSER_MUTATION_BLOCKED') {
+        $candidateText -notmatch 'allowedSubresourceUrl') {
       throw 'github_browser_source_invalid'
     }
     Move-Item -LiteralPath $candidatePath -Destination $workerPath -Force
@@ -3225,7 +3225,8 @@ try {
         $proof.existingProfileReused -ne $false -or
         $proof.foregroundInput -ne $false -or
         $proof.mutationsAllowed -ne $false -or
-        $proof.domObserved -ne $true) {
+        $proof.domObserved -ne $true -or
+        [int]$proof.httpStatus -lt 200 -or [int]$proof.httpStatus -ge 400) {
       throw 'github_browser_readonly_receipt_invalid'
     }
     return @{
