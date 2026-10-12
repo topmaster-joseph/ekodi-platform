@@ -26,7 +26,11 @@
     const home=section==='command-home';
     panel.classList.toggle('hidden-panel',!home);
     panel.hidden=!home;
-    if(home&&frame.dataset.src&&!frame.hasAttribute('src')){
+    // A synthetic navigation event must not load the privileged iframe before
+    // the authenticated admin shell is ready and actually visible.
+    const signedIn=document.documentElement.dataset.ekodiAdminReady==='true' &&
+      document.getElementById('app')?.hidden===false;
+    if(home&&signedIn&&frame.dataset.src&&!frame.hasAttribute('src')){
       frame.setAttribute('src',frame.dataset.src);
     }
   };
