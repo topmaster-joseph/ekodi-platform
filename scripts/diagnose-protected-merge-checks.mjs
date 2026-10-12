@@ -6,6 +6,13 @@ import fs from 'node:fs';
 const REPO='topmaster-joseph/ekodi-platform';
 const REQUIRED=['test','EKODI AI Orchestration Gate'];
 const SAFE_TARGETS=[4392,4346,4441,4456];
+// Previously verified GitHub synthetic PR merge objects, retained only to distinguish
+// official workflow Check Runs from the repo's manually published commit statuses.
+const HISTORIC_MERGES=[
+  '5ac2187a9fa68a609fc1f983cb0fb36348ec69a6',
+  '0b1277c8346d3f0c50f807ba385c87f658888da5',
+  '26473a5b539b055d424cd13a1f6bdcfc3a244d36',
+];
 
 export function summarizeStatuses(body={}){
   return (Array.isArray(body.statuses)?body.statuses:[]).slice(0,100).map(x=>({
@@ -75,6 +82,19 @@ export async function gather({token,repo=REPO,prNumbers=SAFE_TARGETS,fetcher=fet
       legacy.body.checks.slice(0,40).map(x=>({context:String(x.context||'').slice(0,120),appId:Number(x.app_id)||null})):[],
     prs:[],
   };
+  summary.previousSyntheticCommits=[];
+  for(const sha of HISTORIC_MERGES){
+    const [status,checks]=await Promise.all([
+      get('/commits/'+sha+'/status'),
+      get('/commits/'+sha+'/check-runs?per_page=100'),
+    ]);
+    const statuses=summarizeStatuses(status.body);
+    const checkRuns=summarizeCheckRuns(checks.body);
+    summary.previousSyntheticCommits.push({
+      sha,statusHttp:status.http,checkRunsHttp:checks.http,
+      requiredComparison:compareRequired(statuses,checkRuns),
+    });
+  }
   for(const number of [...new Set(prNumbers)].slice(0,8)){
     if(!Number.isInteger(number)||number<1||number>999999)throw new Error('PR_INVALID');
     const pr=await get('/pulls/'+number);
