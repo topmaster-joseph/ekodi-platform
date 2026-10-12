@@ -3144,3 +3144,5 @@ try {
     $script:InstallMutex.Dispose()
   }
 }
+
+# EKODI protected USER2 Hyper-V release convergence; no implicit device mutation.
