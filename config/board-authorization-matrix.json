@@ -6,21 +6,235 @@
   "dynamicTenantCoverage": "requires_authenticated_read_only_inventory_and_per_tenant_probes",
   "realUserCrudProof": "required_not_substituted_by_mocks",
   "boards": [
-    {"id":"cgma.board","url":"https://ekodi.kr/cgma/board","kind":"site","read":"/api/health","deny":[{"method":"POST","path":"/api/posts"},{"method":"POST","path":"/api/posts/0/comments"},{"method":"PATCH","path":"/api/posts/0"},{"method":"DELETE","path":"/api/posts/0"},{"method":"GET","path":"/api/memberships"}]},
-    {"id":"cheonggye.board","url":"https://ekodi.kr/cheonggye/board","kind":"site","read":"/api/health","deny":[{"method":"POST","path":"/api/posts"},{"method":"POST","path":"/api/posts/0/comments"},{"method":"PATCH","path":"/api/posts/0"},{"method":"DELETE","path":"/api/posts/0"},{"method":"GET","path":"/api/memberships"}]},
-    {"id":"ekodimission.board","url":"https://ekodi.kr/ekodimission/board","kind":"site","read":"/api/health","deny":[{"method":"POST","path":"/api/posts"},{"method":"POST","path":"/api/posts/0/comments"},{"method":"PATCH","path":"/api/posts/0"},{"method":"DELETE","path":"/api/posts/0"},{"method":"GET","path":"/api/memberships"}]},
-    {"id":"ekodichurch.board","url":"https://ekodi.kr/ekodichurch/board","kind":"site","read":"/api/health","deny":[{"method":"POST","path":"/api/posts"},{"method":"POST","path":"/api/posts/0/comments"},{"method":"PATCH","path":"/api/posts/0"},{"method":"DELETE","path":"/api/posts/0"},{"method":"GET","path":"/api/memberships"}]},
-    {"id":"seonammedi.citizen_voice","url":"https://seonammedi.kr/board","kind":"independent","read":"/health","deny":[{"method":"POST","path":"/api/posts"},{"method":"POST","path":"/api/posts/0/replies"},{"method":"PUT","path":"/api/admin/posts/0"},{"method":"DELETE","path":"/api/admin/posts/0"}]},
-    {"id":"seonammedi.finance","url":"https://seonammedi.kr/board","kind":"independent","read":"/health","deny":[{"method":"POST","path":"/api/admin/finance"},{"method":"PUT","path":"/api/admin/finance/0"},{"method":"DELETE","path":"/api/admin/finance/0"}]},
-    {"id":"seonammedi.notice","url":"https://seonammedi.kr/board","kind":"independent","read":"/health","deny":[{"method":"POST","path":"/api/admin/notices"},{"method":"PUT","path":"/api/admin/notices/0"},{"method":"DELETE","path":"/api/admin/notices/0"}]}
+    {
+      "id": "cgma.board",
+      "url": "https://ekodi.kr/cgma/board",
+      "kind": "site",
+      "read": "/api/health",
+      "deny": [
+        {
+          "method": "POST",
+          "path": "/api/posts"
+        },
+        {
+          "method": "POST",
+          "path": "/api/posts/0/comments"
+        },
+        {
+          "method": "PATCH",
+          "path": "/api/posts/0"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/posts/0"
+        },
+        {
+          "method": "GET",
+          "path": "/api/memberships"
+        }
+      ]
+    },
+    {
+      "id": "cheonggye.board",
+      "url": "https://ekodi.kr/cheonggye/board",
+      "kind": "site",
+      "read": "/api/health",
+      "deny": [
+        {
+          "method": "POST",
+          "path": "/api/posts"
+        },
+        {
+          "method": "POST",
+          "path": "/api/posts/0/comments"
+        },
+        {
+          "method": "PATCH",
+          "path": "/api/posts/0"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/posts/0"
+        },
+        {
+          "method": "GET",
+          "path": "/api/memberships"
+        }
+      ]
+    },
+    {
+      "id": "ekodimission.board",
+      "url": "https://ekodi.kr/ekodimission/board",
+      "kind": "site",
+      "read": "/api/health",
+      "deny": [
+        {
+          "method": "POST",
+          "path": "/api/posts"
+        },
+        {
+          "method": "POST",
+          "path": "/api/posts/0/comments"
+        },
+        {
+          "method": "PATCH",
+          "path": "/api/posts/0"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/posts/0"
+        },
+        {
+          "method": "GET",
+          "path": "/api/memberships"
+        }
+      ]
+    },
+    {
+      "id": "ekodichurch.board",
+      "url": "https://ekodi.kr/ekodichurch/board",
+      "kind": "site",
+      "read": "/api/health",
+      "deny": [
+        {
+          "method": "POST",
+          "path": "/api/posts"
+        },
+        {
+          "method": "POST",
+          "path": "/api/posts/0/comments"
+        },
+        {
+          "method": "PATCH",
+          "path": "/api/posts/0"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/posts/0"
+        },
+        {
+          "method": "GET",
+          "path": "/api/memberships"
+        }
+      ]
+    },
+    {
+      "id": "community.board",
+      "url": "https://ekodi.kr/community/board",
+      "kind": "site",
+      "read": "/api/health",
+      "deny": [
+        {
+          "method": "POST",
+          "path": "/api/posts"
+        },
+        {
+          "method": "POST",
+          "path": "/api/posts/0/comments"
+        },
+        {
+          "method": "PATCH",
+          "path": "/api/posts/0"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/posts/0"
+        },
+        {
+          "method": "GET",
+          "path": "/api/memberships"
+        }
+      ]
+    },
+    {
+      "id": "seonammedi.citizen_voice",
+      "url": "https://seonammedi.kr/board",
+      "kind": "independent",
+      "read": "/health",
+      "deny": [
+        {
+          "method": "POST",
+          "path": "/api/posts"
+        },
+        {
+          "method": "POST",
+          "path": "/api/posts/0/replies"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/admin/posts/0"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/admin/posts/0"
+        }
+      ]
+    },
+    {
+      "id": "seonammedi.finance",
+      "url": "https://seonammedi.kr/board",
+      "kind": "independent",
+      "read": "/health",
+      "deny": [
+        {
+          "method": "POST",
+          "path": "/api/admin/finance"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/admin/finance/0"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/admin/finance/0"
+        }
+      ]
+    },
+    {
+      "id": "seonammedi.notice",
+      "url": "https://seonammedi.kr/board",
+      "kind": "independent",
+      "read": "/health",
+      "deny": [
+        {
+          "method": "POST",
+          "path": "/api/admin/notices"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/admin/notices/0"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/admin/notices/0"
+        }
+      ]
+    }
   ],
   "contractOnly": [
-    {"id":"seonammedi.board","reason":"legacy/main route overlaps independent worker; needs verified route ownership"},
-    {"id":"community","reason":"public UI and Supabase community-api use different origins; authenticated role tests required"},
-    {"id":"community.board","reason":"currently excluded from browser verification; must prove retired or test"},
-    {"id":"journal.posts","reason":"editorial content source; determine write surface and manager CRUD separately"},
-    {"id":"organization.notices","reason":"Supabase native/RLS board requires tenant-role fixtures"},
-    {"id":"seonammedi.notices.comments","reason":"feature pending unmerged PR #3915"},
-    {"id":"seonammedi.finance.comments","reason":"feature pending unmerged PR #3915"}
+    {
+      "id": "seonammedi.board",
+      "reason": "legacy/main route overlaps independent worker; needs verified route ownership"
+    },
+    {
+      "id": "community",
+      "reason": "public UI and Supabase community-api use different origins; authenticated role tests required"
+    },
+    {
+      "id": "journal.posts",
+      "reason": "editorial content source; determine write surface and manager CRUD separately"
+    },
+    {
+      "id": "organization.notices",
+      "reason": "Supabase native/RLS board requires tenant-role fixtures"
+    },
+    {
+      "id": "seonammedi.notices.comments",
+      "reason": "feature pending unmerged PR #3915"
+    },
+    {
+      "id": "seonammedi.finance.comments",
+      "reason": "feature pending unmerged PR #3915"
+    }
   ]
 }
