@@ -33,3 +33,12 @@ test('remote inventory command is allowlisted, capacity-gated and read-only',()=
   assert.ok(agent.includes("suggestedAction = 'review-only'"));
   assert.ok(agent.includes('Select-Object -First 100'));
 });
+
+test('admin exposes inventory without granting mutation',()=>{
+  const admin=readFileSync(new URL('device-control-admin.js',base),'utf8');
+  assert.ok(admin.includes("makeActionButton(device, 'filesystem.inventory'"));
+  assert.ok(admin.includes("!capability(device, 'filesystemInventory')"));
+  assert.ok(admin.includes("inventory.status === 'requires-user-context'"));
+  assert.ok(admin.includes("li.textContent ="));
+  assert.ok(admin.includes("result.append(inventoryCard)"));
+});
