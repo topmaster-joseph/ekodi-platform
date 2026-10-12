@@ -114,3 +114,15 @@ test('customer-domain and internal service-binding aliases never bypass members-
     assert.equal((await res.json()).error,'authentication_required',url);
   }
 });
+
+test('legacy anonymous-write flag cannot bypass login on public post and comment writes',async()=>{
+  const db=fakeDb('public',null,1);
+  for(const path of ['/api/posts','/api/posts/1/comments']){
+    const response=await call(db,path,'POST');
+    assert.equal(response.status,401,path);
+    assert.equal((await response.json()).error,'authentication_required',path);
+  }
+  const config=await call(db,'/api/config');
+  assert.equal(config.status,200);
+  assert.equal((await config.json()).allowAnonymousWrite,false);
+});
