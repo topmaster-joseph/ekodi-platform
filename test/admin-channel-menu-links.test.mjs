@@ -8,22 +8,22 @@ import { storeAdminScript, storeAdminCanAccess } from '../store-admin-engine.js'
 const manifest = JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8'));
 
 test('channel and autopost navigation is named consistently across administrator surfaces', async () => {
-  assert.equal(getAdminMenuLabel('social','ko'),'방송·채널·자동게시');
+  assert.equal(getAdminMenuLabel('social','ko'),'채널');
 
   const workspace = await (await workspaceAdminScript()).text();
   assert.match(workspace,/label:'마케팅'/);
   assert.match(workspace,/마케팅 AI/);
-  assert.match(workspace,/채널·자동게시/);
+  assert.match(workspace,/채널/);
   assert.match(workspace,/오늘 할 일/);
   assert.match(workspace,/업무 처리/);
-  assert.match(workspace,/\['publishing','채널·자동게시'\]/);
+  assert.match(workspace,/\['publishing','채널'\]/);
   assert.doesNotMatch(workspace,/mountCommandHome|EKODITenantCommandHome/);
 
   const store = await (await storeAdminScript()).text();
   assert.match(store,/홍보 · 채널/);
   assert.match(store,/마케팅 AI/);
-  assert.match(store,/채널·자동게시/);
-  assert.match(store,/\['publishing','채널·자동게시'\]/);
+  assert.match(store,/채널/);
+  assert.match(store,/\['publishing','채널'\]/);
   assert.doesNotMatch(store,/mountCommandHome|EKODITenantCommandHome/);
   assert.equal(storeAdminCanAccess('store_owner','publishing'),true);
   assert.equal(storeAdminCanAccess('marketing_manager','publishing'),true);
