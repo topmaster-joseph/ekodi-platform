@@ -1,0 +1,50 @@
+name: Device Workspace Inventory Contract
+on:
+  pull_request:
+    paths:
+      - 'config/device-capability-governance-policy.json'
+      - 'tools/ekodi-device-agent/windows/inventory-ekodi-desktop.ps1'
+      - 'test/device-capability-governance.test.mjs'
+      - '.github/workflows/device-workspace-inventory.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/device-capability-governance-policy.json'
+      - 'tools/ekodi-device-agent/windows/inventory-ekodi-desktop.ps1'
+      - 'test/device-capability-governance.test.mjs'
+      - '.github/workflows/device-workspace-inventory.yml'
+permissions:
+  contents: read
+jobs:
+  governance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test test/device-capability-governance.test.mjs
+  windows-inventory:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse without executing
+        shell: powershell
+        run: |
+          $p = 'tools/ekodi-device-agent/windows/inventory-ekodi-desktop.ps1'
+          $tokens = $null
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $p), [ref]$tokens, [ref]$errors)
+          if ($errors.Count) { throw ($errors | Out-String) }
+      - name: Run against isolated synthetic desktop
+        shell: powershell
+        run: |
+          $desktop = Join-Path $env:RUNNER_TEMP 'desktop-inventory-test'
+          New-Item -ItemType Directory -Path $desktop -Force | Out-Null
+          New-Item -ItemType Directory -Path (Join-Path $desktop 'ekodi-platform-example') -Force | Out-Null
+          New-Item -ItemType File -Path (Join-Path $desktop 'unrelated.txt') -Force | Out-Null
+          $report = & ./tools/ekodi-device-agent/windows/inventory-ekodi-desktop.ps1 -DesktopPath $desktop | ConvertFrom-Json
+          if ($report.mode -ne 'read-only' -or $report.itemCount -ne 1) { throw 'Unexpected inventory report' }
+          if ($report.items[0].name -ne 'ekodi-platform-example') { throw 'Unexpected entry' }
+          if (!(Test-Path (Join-Path $desktop 'ekodi-platform-example'))) { throw 'Directory was modified' }
+          if (!(Test-Path (Join-Path $desktop 'unrelated.txt'))) { throw 'Unrelated file was modified' }
