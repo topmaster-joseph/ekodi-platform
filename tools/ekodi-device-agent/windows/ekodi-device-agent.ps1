@@ -2763,6 +2763,22 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     'autologon.open' { return @{ message = Open-AutologonManager; settings = Get-AgentSettings } }
     'diagnostics.collect' { return @{ message = '시스템·저장공간·네트워크·프린터·시작프로그램·업데이트 진단을 완료했습니다.'; diagnostics = Get-FullDiagnostic; settings = Get-AgentSettings } }
     'computer.system.read' { return @{ message = '원격 컴퓨터 시스템 상태를 읽었습니다.'; system = Get-SystemSnapshot } }
+    'filesystem.inventory' {
+      $desktop = [Environment]::GetFolderPath('Desktop')
+      if (-not $desktop -or -not (Test-Path -LiteralPath $desktop -PathType Container)) {
+        return @{ message = '바탕화면을 찾을 수 없습니다.'; mode = 'read-only'; items = @(); itemCount = 0 }
+      }
+      $entries = @(Get-ChildItem -LiteralPath $desktop -Force -ErrorAction Stop | Where-Object { $_.Name -match '(?i)ekodi|에코디' } | Select-Object -First 100 | ForEach-Object {
+        @{
+          name = $_.Name
+          type = if ($_.PSIsContainer) { 'directory' } else { 'file' }
+          reparsePoint = [bool](($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)
+          lastWriteUtc = $_.LastWriteTimeUtc.ToString('o')
+          suggestedAction = 'review-only'
+        }
+      })
+      return @{ message = 'EKODI 바탕화면 항목 조사 완료(읽기 전용)'; mode = 'read-only'; items = $entries; itemCount = $entries.Count; truncated = ($entries.Count -ge 100) }
+    }
     'computer.process.list' { return @{ message = '원격 컴퓨터 프로세스 목록을 읽었습니다.'; processes = Get-RemoteProcessList } }
     'computer.agent.status' { return @{ message = 'EKODI Native Remote Agent 상태를 읽었습니다.'; agent = Get-RemoteAgentStatus } }
     'computer.desktop.probe' { return Invoke-IsolatedDesktopBackendProbe }
@@ -2876,7 +2892,7 @@ function Send-Heartbeat($Config) {
       powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
       diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
       networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true
-      computerRead = $true; processRead = $true; agentStatus = $true
+      computerRead = $true; processRead = $true; agentStatus = $true; filesystemInventory = $true
       isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktopProbe = $true; isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified; isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified; isolatedDesktopUiCanary = [bool](Get-IsolatedDesktopUiCanaryState).verified; isolatedDesktopSessionCanary = [bool](Get-IsolatedDesktopSessionCanaryState).verified; isolatedDesktop = [bool](Get-IsolatedDesktopSessionCanaryState).verified
       workspaceSlidesAudio = [bool](Get-WorkspaceSlidesAudioState).verified
       desktopCapture = $false; desktopInput = $false
