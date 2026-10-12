@@ -56,7 +56,8 @@ test('Control embedded presentation hides duplicate navigation and preserves aut
   assert.match(js,/document\.documentElement\.dataset\.controlEmbed='admin'/);
   assert.match(js,/await verifySession\(\)/);
   assert.match(js,/preflightVerified:preflight/);
-  assert.match(js,/HISTORY_KEY='ekodi-admin-command-history-v1'/);
+  assert.match(js,/HISTORY_KEY='ekodi-admin-command-history-v2'/);
+  assert.match(js,/function bindAccount\(session\)/);
   assert.match(html,/id="commandForm"/);
 });
 
