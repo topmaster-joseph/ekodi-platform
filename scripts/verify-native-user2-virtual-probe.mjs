@@ -67,3 +67,5 @@ run().catch(e=>{console.error('[EKODI][USER2-NATIVE-VIRTUAL-PROBE] '+String(e.me
 // Revalidate after official protected base synchronization.
 
 // Owner-authored CI following protected base refresh.
+
+// Owner-triggered guarded post-observer-fix convergence.
