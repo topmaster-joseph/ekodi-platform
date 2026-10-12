@@ -38,5 +38,9 @@ test('all Seonam independent voices/finance/notices plus standalone boards inher
 test('common adapter is a Shell asset and guarded orchestrator releases every board owner',async()=>{
  const shell=await read('wrangler.shell.toml'),orch=await read('scripts/converge-orchestrated-pr-merge.mjs');
  assert.ok(shell.includes('directory = "./shell"'));
+ const shared=await read('shell/shell.js');
+ assert.ok(shared.includes('autoInheritPublicBoardChrome()'));
+ assert.ok(shared.includes('shell/board-site-chrome.js'));
+ assert.ok(shared.includes("'data-ekodi-board-inheritance','automatic'"));
  for(const m of ["file.startsWith('shell/')","file.startsWith('services/independent-board/')","file==='site-board-control.js'","file.startsWith('sites/')",'deploy-ekodi-shell.yml','deploy-independent-board.yml','deploy-site-core.yml'])assert.ok(orch.includes(m),m);
 });
