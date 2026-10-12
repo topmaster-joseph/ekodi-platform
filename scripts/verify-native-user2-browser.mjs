@@ -111,3 +111,5 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
   .then(proof=>console.log('[EKODI][USER2-NATIVE-BROWSER] '+JSON.stringify(proof)))
   .catch(err=>{console.error('[EKODI][USER2-NATIVE-BROWSER] '+String(err.message||'failed').slice(0,120));process.exitCode=1;});
 }
+
+// Owner-triggered protected release convergence after related-change review.
