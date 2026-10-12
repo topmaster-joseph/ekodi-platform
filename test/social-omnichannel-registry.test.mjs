@@ -69,3 +69,15 @@ test('central UI distinguishes directory entries from OAuth connections and offe
   assert.match(ui,/channelSearch\.addEventListener\('input',applyDirectoryFilters\)/);
   assert.match(ui,/kindFilter\.addEventListener\('change',applyDirectoryFilters\)/);
 });
+
+test('Mall channel performance is read-only, scoped, and distinguishes reported commission from profit',async()=>{
+  const ui=await readFile(new URL('../social-admin.js',import.meta.url),'utf8');
+  assert.match(ui,/connectionScope\.type !== 'tenant' \|\| connectionScope\.key !== 'ekodimall'/);
+  assert.match(ui,/connectApi\('\/v1\/mall\/dashboard'\)/);
+  assert.match(ui,/성과 조회 불가/);
+  assert.match(ui,/보고 수수료/);
+  assert.match(ui,/정산 완료 수익이나 순이익이 아닙니다/);
+  assert.match(ui,/채널별 매출 귀속은 추정치입니다/);
+  assert.match(ui,/growthReload\.addEventListener\('click',loadMallGrowth\)/);
+  assert.doesNotMatch(ui,/\/v1\/mall\/dashboard'\s*,\s*\{\s*method\s*:\s*'POST'/);
+});
