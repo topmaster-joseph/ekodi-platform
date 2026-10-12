@@ -42,3 +42,16 @@ test('admin exposes inventory without granting mutation',()=>{
   assert.ok(admin.includes("li.textContent ="));
   assert.ok(admin.includes("result.append(inventoryCard)"));
 });
+
+test('organization preview is only observable and never grants folder mutation',()=>{
+  const api=readFileSync(new URL('device-control.js',base),'utf8');
+  const agent=readFileSync(new URL('tools/ekodi-device-agent/windows/ekodi-device-agent.ps1',base),'utf8');
+  const admin=readFileSync(new URL('device-control-admin.js',base),'utf8');
+  assert.ok(api.includes("'filesystem.organization.plan': { risk: 'observe' }"));
+  assert.ok(api.includes("'filesystem.organization.plan': 'filesystemInventory'"));
+  assert.ok(agent.includes("'filesystem.organization.plan' {"));
+  assert.ok(agent.includes('mutationCount = 0'));
+  assert.ok(agent.includes('moveApproved = $false; deleteApproved = $false'));
+  assert.ok(admin.includes("makeActionButton(device, 'filesystem.organization.plan'"));
+  assert.ok(admin.includes('이동·삭제 없음'));
+});
