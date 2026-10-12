@@ -137,6 +137,9 @@ const sharedSiteTouched=changedFiles.some(file=>
   file.startsWith('auth-site/')||
   file==='deploy/manifests/shared-site.worker.json'||
   file==='seonammedi-admin-control.js'||
+  // Monitoring and publication checks are also embedded in the public Site Core.
+  file==='seonammedi-monitor.js'||
+  file==='seonammedi-relevance.js'||
   file==='wrangler.site.toml'||
   file==='platform-router-entry-worker.js'||
   file==='canonical-surface-router.js'||
