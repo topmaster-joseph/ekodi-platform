@@ -43,15 +43,16 @@ function browser(initial='https://ekodi.kr/admin/control?embed=admin'){
     setTimeout:()=>0,clearTimeout(){},requestAnimationFrame:fn=>frames.push(fn),
   };
   runInNewContext(source,context);
-  document.boot?.();
+  const bootPromise=document.boot?.();
   return {
-    location,document,navigation,panels,replaceCalls,windowScroll,conversationScroll,
+    location,document,navigation,panels,replaceCalls,windowScroll,conversationScroll,bootPromise,
     flushFrames:()=>{for(const fn of frames.splice(0))fn()},
   };
 }
 
-test('embedded Control preserves embed=admin on every tab switch and back to chat',()=>{
+test('embedded Control preserves embed=admin on every tab switch and back to chat',async()=>{
   const ui=browser();
+  await ui.bootPromise;
   const select=view=>ui.navigation.find(item=>item.dataset.view===view).onclick();
   select('tasks');
   assert.equal(ui.location.pathname,'/admin/control');
@@ -65,8 +66,9 @@ test('embedded Control preserves embed=admin on every tab switch and back to cha
   assert.equal(ui.location.searchParams.has('view'),false);
 });
 
-test('Control opens the requested deep-linked tab after refresh in embedded mode',()=>{
+test('Control opens the requested deep-linked tab after refresh in embedded mode',async()=>{
   const ui=browser('https://ekodi.kr/admin/control?embed=admin&view=agents');
+  await ui.bootPromise;
   const agent=ui.panels.find(x=>x.dataset.viewPanel==='agents');
   const chat=ui.panels.find(x=>x.dataset.viewPanel==='chat');
   assert.equal(agent.classList.contains('active'),true);
@@ -74,16 +76,18 @@ test('Control opens the requested deep-linked tab after refresh in embedded mode
   assert.equal(ui.location.searchParams.get('embed'),'admin');
 });
 
-test('embedded conversation scrolls its own container, not the hidden outer page',()=>{
+test('embedded conversation scrolls its own container, not the hidden outer page',async()=>{
   const ui=browser();
+  await ui.bootPromise;
   ui.flushFrames();
   assert.equal(ui.conversationScroll.length,1);
   assert.equal(ui.conversationScroll[0].top,1800);
   assert.equal(ui.windowScroll.length,0);
 });
 
-test('standalone Control retains its document scrolling and no embed query is added',()=>{
+test('standalone Control retains its document scrolling and no embed query is added',async()=>{
   const ui=browser('https://ekodi.kr/admin/control');
+  await ui.bootPromise;
   ui.flushFrames();
   assert.equal(ui.windowScroll.length,1);
   assert.equal(ui.conversationScroll.length,0);
