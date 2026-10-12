@@ -27,6 +27,11 @@ test('Mission media UI E2E uses only production GET assets and mocked synthetic 
   assert.ok(script.includes("return route.fulfill({status:599"));
   assert.ok(!script.includes('SUPABASE_ACCESS_TOKEN'));
   assert.ok(!script.includes('apply_migration'));
+  // The browser must never include production credentials or non-synthetic auth fixtures.
+  assert.ok(!script.includes('secrets.SUPABASE_ACCESS_TOKEN'));
+  assert.ok(!script.includes('SUPABASE_SERVICE_ROLE_KEY'));
+  assert.ok(!script.includes('https://api.supabase.com/v1/projects/'));
+  assert.ok(script.includes('mode:\'real-production-GET-assets+intercepted-synthetic-auth-and-mutations\''));
 });
 
 test('EKODI-owned Chromium production harness includes synthetic media UI stage with quota and truthful evidence',()=>{
