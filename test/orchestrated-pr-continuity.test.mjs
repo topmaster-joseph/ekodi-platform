@@ -66,6 +66,7 @@ test('continuity workflow is receipt-gated, bounded, and never bypasses guarded 
   assert.match(watchdog, /ref: main/);
   assert.match(watchdog, /actions: write/);
   assert.match(converger, /workflow_dispatch:/);
+  assert.match(converger, /group: ekodi-orchestrated-merge\s*\n  cancel-in-progress: false/);
   assert.match(script, /hasAuthorizedReceipt\(planned\.taskId, planned\.branch\)/);
   assert.match(script, /result\.taskId === taskId/);
   assert.match(script, /result\.branchRef === branch/);
