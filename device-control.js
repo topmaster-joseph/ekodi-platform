@@ -74,6 +74,8 @@ const COMMAND_POLICIES = Object.freeze({
   'computer.process.list': { risk: 'observe' },
   'computer.agent.status': { risk: 'observe' },
   'computer.desktop.probe': { risk: 'observe' },
+  'computer.hyperv.preflight': { risk: 'observe' },
+  'computer.hyperv.enable': { risk: 'privileged', confirm: true },
   'computer.desktop.canary': { risk: 'maintain', confirm: true },
   'computer.desktop.guest.canary': { risk: 'maintain', confirm: true },
   'computer.desktop.ui.canary': { risk: 'maintain', confirm: true },
@@ -744,6 +746,25 @@ function summarizeCommandResult(result = {}) {
       sessionVmRemoved: result.desktopCanary.sessionVmRemoved === true,
       sessionDiskRemoved: result.desktopCanary.sessionDiskRemoved === true,
       checkedAt: safeText(result.desktopCanary.checkedAt, 64),
+    };
+  }
+  if (result.hyperVPreparation && typeof result.hyperVPreparation === 'object') {
+    const proof = result.hyperVPreparation;
+    summary.hyperVPreparation = {
+      schemaVersion: proof.schemaVersion === 1 ? 1 : 0,
+      targetAlias: proof.targetAlias === 'user2' ? 'user2' : '',
+      firmwareVirtualizationEnabled: proof.firmwareVirtualizationEnabled === true,
+      hyperVState: ['Enabled','Disabled','EnablePending','DisablePending','Unavailable'].includes(proof.hyperVState)
+        ? proof.hyperVState : 'unknown',
+      hyperVModuleAvailable: proof.hyperVModuleAvailable === true,
+      baseVmPresent: proof.baseVmPresent === true,
+      administrator: proof.administrator === true,
+      featureEnableRequested: proof.featureEnableRequested === true,
+      featureChanged: proof.featureChanged === true,
+      rebootPerformed: proof.rebootPerformed === true,
+      rebootMayBeRequired: proof.rebootMayBeRequired === true,
+      guestExecutionAuthorized: proof.guestExecutionAuthorized === true,
+      checkedAt: safeText(proof.checkedAt, 64),
     };
   }
   if (result.desktopProbe && typeof result.desktopProbe === 'object') {
@@ -1619,3 +1640,5 @@ export async function handleDeviceControl(request, env) {
   if (path.startsWith(ADMIN_PREFIX)) return handleAdmin(request, env);
   return handleAgent(request, env);
 }
+
+// Protected USER2 native Hyper-V receipt projection convergence.
