@@ -80,3 +80,14 @@ test('security-only migrations never drop or truncate persistent activity data',
     assert.doesNotMatch(sql,/\bdrop\s+table\b|\btruncate\s+table\b/i);
   }
 });
+
+test('guarded release reconciler uses valid non-conflicting curl failure flags',()=>{
+  const workflow=readFileSync(new URL('../.github/workflows/reconcile-mission-media-moderation-release.yml',import.meta.url),'utf8');
+  assert.doesNotMatch(workflow,/curl\\s+--fail-with-body\\s+-f[sS]?/,'-f conflicts with --fail-with-body and blocks all protected releases');
+  assert.doesNotMatch(workflow,/curl\\s+--fail-with-body\\s+-fsS/);
+  assert.equal((workflow.match(/curl --fail-with-body -sS/g)||[]).length,6);
+  assert.match(workflow,/\.authorized == true/);
+  assert.match(workflow,/merged_at/);
+  assert.match(workflow,/\$source_sha" = "\$main_sha/);
+  assert.match(workflow,/deploy-activity-public-share-schema\.yml\/dispatches/);
+});
