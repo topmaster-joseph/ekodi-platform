@@ -87,20 +87,31 @@ jobs:
           d1_names = sorted(item.get('name','') for item in d1.get('result', []) if item.get('name'))
           worker_residue = [n for n in worker_names if n.endswith('-staging') or '-staging-' in n]
           d1_residue = [n for n in d1_names if 'staging' in n.lower()]
+          # Non-destructive inventory: preview-named resources need classification,
+          # but are not automatically unsafe or eligible for deletion.
+          preview_workers = [n for n in worker_names if n.endswith('-preview') or '-preview-' in n]
+          preview_d1 = [n for n in d1_names if 'preview' in n.lower()]
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as f:
               f.write('## EKODI Production\n')
               f.write(f'- Workers: **{len(worker_names)}**\n')
               f.write(f'- Staging Worker residue: **{len(worker_residue)}**\n')
               f.write(f'- D1 databases: **{len(d1_names)}**\n')
               f.write(f'- Staging D1 residue: **{len(d1_residue)}**\n')
+              f.write(f'- Preview-named Workers (review): **{len(preview_workers)}**\n')
+              f.write(f'- Preview-named D1 (review): **{len(preview_d1)}**\n')
               if worker_residue:
                   f.write('- ❌ Production staging Workers: `' + '`, `'.join(worker_residue) + '`\n')
               if d1_residue:
                   f.write('- ❌ Production staging D1: `' + '`, `'.join(d1_residue) + '`\n')
               if not worker_residue and not d1_residue:
                   f.write('- ✅ Production is staging-free for Workers and D1.\n')
+              if preview_workers:
+                  f.write('- ⚠️ Production preview Worker names require classification: `' + '`, `'.join(preview_workers) + '`\n')
+              if preview_d1:
+                  f.write('- ⚠️ Production preview D1 names require classification: `' + '`, `'.join(preview_d1) + '`\n')
           print('Production Workers:', ', '.join(worker_names) or '(none)')
           print('Production D1:', ', '.join(d1_names) or '(none)')
+          print('PRODUCTION_PREVIEW_REVIEW_REQUIRED=' + ('true' if preview_workers or preview_d1 else 'false'))
           if worker_residue or d1_residue:
               if worker_residue:
                   print('::error::Production contains staging-named Workers: ' + ', '.join(worker_residue))
