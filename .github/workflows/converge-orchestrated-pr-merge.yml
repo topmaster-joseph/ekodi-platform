@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'ai/*/orch_*'
+  workflow_dispatch:
 
 permissions:
   contents: write
