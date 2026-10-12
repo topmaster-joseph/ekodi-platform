@@ -80,3 +80,35 @@ test('security-only migrations never drop or truncate persistent activity data',
     assert.doesNotMatch(sql,/\bdrop\s+table\b|\btruncate\s+table\b/i);
   }
 });
+
+test('guarded release reconciler uses valid non-conflicting curl failure flags',()=>{
+  const workflow=readFileSync(new URL('../.github/workflows/reconcile-mission-media-moderation-release.yml',import.meta.url),'utf8');
+  assert.doesNotMatch(workflow,/curl\\s+--fail-with-body\\s+-f[sS]?/,'-f conflicts with --fail-with-body and blocks all protected releases');
+  assert.doesNotMatch(workflow,/curl\\s+--fail-with-body\\s+-fsS/);
+  assert.equal((workflow.match(/curl --fail-with-body -sS/g)||[]).length,6);
+  assert.match(workflow,/\.authorized == true/);
+  assert.match(workflow,/merged_at/);
+  assert.match(workflow,/\$source_sha" = "\$main_sha/);
+  assert.match(workflow,/deploy-activity-public-share-schema\.yml\/dispatches/);
+});
+
+test('one-time guarded postmerge replay requires two real orchestrator receipts and immutable media SQL',()=>{
+  const flow=readFileSync(new URL('../.github/workflows/retry-mission-media-security-release.yml',import.meta.url),'utf8');
+  assert.match(flow,/workflow_run:/);
+  assert.match(flow,/github\.event\.workflow_run\.conclusion == 'success'/);
+  assert.match(flow,/\.merged == true/);
+  assert.match(flow,/pulls\/4336/);
+  assert.match(flow,/pulls\/\$repair_number/);
+  assert.match(flow,/release-receipt/);
+  assert.match(flow,/\.authorized == true/);
+  assert.match(flow,/original" = "\$current"/);
+  assert.match(flow,/issues\/4265/);
+  assert.match(flow,/reconcile-mission-media-moderation-release\.yml\/dispatches/);
+  assert.doesNotMatch(flow,/api\.supabase\.com\/v1\/projects/);
+  assert.doesNotMatch(flow,/curl --fail-with-body -fsS/);
+  assert.match(flow,/GH_TOKEN: \$\{\{ github\.token \}\}/);
+  assert.match(flow,/release_task_id/,'Schema replay must keep official release task association');
+  assert.match(flow,/issues\/4265/,'Replay must remain restricted to pending security tracker');
+  assert.match(flow,/\.merged_at != null/,'Follow-up release must be merged before replay');
+  assert.match(flow,/ -f ref=main/,'Only the reviewed main workflow may deploy schema');
+});
