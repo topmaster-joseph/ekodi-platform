@@ -5,7 +5,7 @@ import {runInNewContext} from 'node:vm';
 
 const source=readFileSync(new URL('../control.js',import.meta.url),'utf8');
 
-function browser({role='super_admin',sessionToken=true,storedTasks=[],responses=[]}={}){
+function browser({role='super_admin',sessionToken=true,storedTasks=[],storedResults=[],responses=[]}={}){
   const url=new URL('https://ekodi.kr/admin/control?embed=admin');
   const calls=[],nodes=new Map();
   const node=selector=>{
@@ -33,7 +33,7 @@ function browser({role='super_admin',sessionToken=true,storedTasks=[],responses=
   };
   const storage={
     getItem:key=>key==='ekodi-auth-token'&&sessionToken?'test-token'
-      :key==='ekodi-control-state-v1'?JSON.stringify({tasks:storedTasks,results:[]}):null,
+      :key==='ekodi-control-state-v1'?JSON.stringify({tasks:storedTasks,results:storedResults}):null,
     setItem(){},
   };
   let serverResponseIndex=0;
@@ -135,4 +135,36 @@ test('server task labels are escaped before being inserted into HTML',async()=>{
   const html=ui.node('#taskCards').innerHTML;
   assert.doesNotMatch(html,/<img /);
   assert.match(html,/&lt;img/);
+});
+
+test('server retry, degraded, handoff, and ignored states have clear non-completion labels',async()=>{
+  const ui=browser({responses:[{ok:true,tasks:[
+    {id:'retry-1',goal:'재시도 작업',state:'retry'},
+    {id:'degraded-1',goal:'부분 처리 작업',state:'degraded'},
+    {id:'executor-1',goal:'실행기 인계 작업',state:'executor_ready'},
+    {id:'ignored-1',goal:'제외된 작업',state:'ignored'},
+    {id:'core-1',goal:'기반 처리 작업',state:'core_only'},
+  ]}]});
+  await ui.boot();
+  ui.openTasks();
+  await ui.settle();
+  const html=ui.node('#taskCards').innerHTML;
+  for(const expected of ['재시도 대기','부분 처리 · 확인 필요','실행기 인계 대기','처리 제외','Core 처리 · 실행 증빙 대기']){
+    assert.ok(html.includes(expected),expected);
+  }
+  assert.equal(html.includes('<span class="badge">완료</span>'),false);
+});
+
+test('AI answer history never claims server-verified execution merely from a stored reply',async()=>{
+  const ui=browser({storedResults:[
+    {title:'검토 요청',summary:'AI 분석 설명',provider:'EKODI',status:'verified',taskId:''},
+    {title:'작업 연결',summary:'AI 응답 기록',provider:'Qwen',status:'verified',taskId:'server-123'},
+  ]});
+  await ui.boot();
+  const html=ui.node('#resultCards').innerHTML;
+  assert.match(html,/AI 응답과 실행 증빙은 별개입니다/);
+  assert.match(html,/AI 설명 · 실행 미확인/);
+  assert.match(html,/AI 응답 · 작업 상태 별도 확인/);
+  assert.match(html,/서버 작업장부에서 확인하세요/);
+  assert.doesNotMatch(html,/<span class="badge">완료<\/span>/);
 });
