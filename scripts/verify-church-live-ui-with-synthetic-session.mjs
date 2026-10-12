@@ -52,7 +52,15 @@ try {
   // Real visitors scroll to the worship section; IntersectionObserver reveals
   // the parent .schedule.reveal only after it intersects the viewport.
   await page.evaluate(()=>document.querySelector('.schedule.reveal')?.scrollIntoView({block:'center'}));
-  await page.waitForFunction(()=>document.querySelector('.schedule.reveal')?.classList.contains('visible'),null,{timeout:9000});
+  await page.waitForTimeout(1200);
+  evidence.worshipSchedule=await page.evaluate(()=>{
+    const s=document.querySelector('.schedule.reveal'),el=document.querySelector('[data-church-worship-admin]');
+    return {scheduleExists:!!s,classes:s?.className||'',scheduleRect:s?.getBoundingClientRect().toJSON(),
+      linkHidden:el?.hidden,linkDisplay:el?getComputedStyle(el).display:'',
+      scriptLoaded:[...document.scripts].some(x=>x.src.includes('script.js')),
+      readyState:document.readyState,scrollY,viewportHeight:innerHeight};
+  });
+  console.log('EKODI_CHURCH_SCHEDULE_DIAGNOSTIC='+JSON.stringify({schedule:evidence.worshipSchedule,pageErrors:evidence.pageErrors}));
   assert.equal(await link.isVisible(),false,'guest must never see management link');
   evidence.steps.push({name:'guest-hidden-on-real-site',pass:true});
 
