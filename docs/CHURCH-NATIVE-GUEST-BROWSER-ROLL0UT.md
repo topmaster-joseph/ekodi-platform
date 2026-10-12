@@ -25,3 +25,7 @@ This owner-authored release document is the official post-source evidence record
 ## Protected main synchronization — owner-triggered verification
 
 The official EKODI Convergent Merge updated the recovery branch to current protected main and returned `branch-updated` for PR #4432. GitHub marked the resulting bot-authored PR checks `action_required`. This owner-authored documentation-only commit requests fresh mandatory CI, native Chromium, Cloudflare boundary and Orchestrator checks for the **new synchronized SHA**. No execution contract, production route, role or secret is changed and no check is bypassed.
+
+## Concurrent protected releases — renewed owner verification
+
+A second official synchronization with protected `main` superseded the previous checked head while unrelated approved EKODI PRs were merging. GitHub marked the new bot-authored head `action_required`. Revalidate this latest head with owner-authored protected checks; keep the actual guest Chromium execution, no secrets, no shared user browser and no alternate merge policy. The prior success is retained as audit evidence, not reused as a fresh head status.
