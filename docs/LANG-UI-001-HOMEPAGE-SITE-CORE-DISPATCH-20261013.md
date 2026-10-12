@@ -28,3 +28,11 @@ This evidence-only owner-authored commit activates the official `converge-orches
 EKODI Convergent Merge run [#38278592733](https://github.com/topmaster-joseph/ekodi-platform/actions/runs/38278592733) returned `action:branch-updated` after validating official task provenance, synchronizing integration candidate to protected main at `6eaea9047135d06d99f7240026268e61eab14560`. GitHub can classify GitHub Actions-authored synchronization commits as `action_required` rather than passing required CI.
 
 This repository owner-authored **documentation-only** change starts fresh protected CI on the synchronized tree and does not weaken branch protection, force Cloudflare deployment, expand homepage translations, or modify runtime behavior beyond the exact source repair. Retain the original exact-SHA Human Gate and issue #4365's independent live acceptance.
+
+## Second owner CI revalidation after protected-main and duplicate review
+
+Official EKODI Convergent Merge [run #38278829341](https://github.com/topmaster-joseph/ekodi-platform/actions/runs/38278829341) synchronized branch to `9480535ef6a02c09b4adb73fab977e71b5f4c98b`. Bot-authored synchronization checks were marked `action_required`; only a fresh authorized owner-authored source commit plus passing protected CI qualifies for merging.
+
+A second source PR #4448 independently addressed the **same** homepage Site Core dispatch omission. Cross-reviewed matching source, test and release scope in comments on both PRs; later PR #4448 is **closed unmerged** so only the already issued and owner-approved #4447 can dispatch production. This is conflict prevention, not an exemption from the guard.
+
+This append-only release evidence change starts fresh GitHub protected CI on the synchronized tree, preserving the same EKODI D1 task, human authorization, Cloudflare quota checks, and actual post-production Chromium acceptance requirement.
