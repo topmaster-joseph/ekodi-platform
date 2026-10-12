@@ -63,6 +63,7 @@ test('protected merge reconciler only dispatches reviewed guards after official 
   assert.match(runner,/release-receipt/);
   assert.match(runner,/\.authorized == true/);
   assert.match(runner,/merged_at/);
+  assert.match(runner,/cancel-in-progress: false/,'post-merge guard dispatcher may not cancel a verified release');
   assert.match(runner,/if \[ -n "\$merged_at" \]/);
   assert.match(runner,/source_sha/);
   assert.match(runner,/main_sha/);
