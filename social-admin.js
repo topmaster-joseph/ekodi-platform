@@ -234,7 +234,17 @@
     const directoryHelp = el('p','채널 주소 등록은 자동게시 승인이 아닙니다. 직접 운영 채널도 공식 OAuth 연결·사이트 매핑·발행 정책 확인 후에만 게시됩니다. 외부·제휴 링크는 등록·공개·분석 용도로만 사용합니다.','social-admin-status');
     const directoryHead = el('div','','social-channel-head');
     directoryHead.append(el('h3','채널 등록·공개 관리'),el('span','검색 노출·외부 제휴 채널은 링크 관리, 실제 게시 계정은 하단에서 연결'));
-    section.append(head, directoryHead, summary, directoryFilters, addMall, directoryHelp, status, list, addOrg, siteDirectoryPanel, connectionPanel, publishingPanel, growthPanel); content.append(section);
+    // Compact sections: simple menu labels, advanced actions remain accessible.
+    const foldPanel=(panel,label)=>{
+      const fold=el('details','','social-admin-fold');
+      fold.append(el('summary',label),panel);
+      return fold;
+    };
+    const siteFold=foldPanel(siteDirectoryPanel,'사이트');
+    const connectionFold=foldPanel(connectionPanel,'연결');
+    const publishingFold=foldPanel(publishingPanel,'발행');
+    const growthFold=foldPanel(growthPanel,'성과');
+    section.append(head, directoryHead, summary, directoryFilters, addMall, directoryHelp, status, list, addOrg, siteFold, connectionFold, publishingFold, growthFold); content.append(section);
 
     function renderSummary() {
       const orgs = registry.organizations || [];
@@ -557,7 +567,9 @@
     scopeApply.addEventListener('click',async()=>{
       const type=scopeType.value; const key=scopeKey.value.trim();
       if(type!=='person'&&!key){connectionStatus.textContent='운영공간 slug 또는 매장 ID를 입력해 주세요.';connectionStatus.dataset.state='error';return;}
-      connectionScope={type,key:type==='person'?'':key}; await Promise.all([loadConnections(),loadPublishingChannels(),loadMallGrowth()]);
+      connectionScope={type,key:type==='person'?'':key};
+      if (type==='tenant' && key==='ekodimall') growthFold.open=true;
+      await Promise.all([loadConnections(),loadPublishingChannels(),loadMallGrowth()]);
     });
     siteDirectoryList.addEventListener('click',async event=>{
       const button=event.target.closest('[data-central-channel-subject]');
@@ -565,6 +577,8 @@
       const key=slug(button.dataset.centralChannelSubject||'');
       if(!key)return;
       scopeType.value='tenant';scopeKey.disabled=false;scopeKey.value=key;connectionScope={type:'tenant',key};
+      publishingFold.open=true;
+      if (key==='ekodimall') growthFold.open=true;
       siteDirectoryStatus.textContent=`${button.dataset.centralChannelName||key} 채널센터를 최고관리자 권한으로 불러오는 중입니다.`;siteDirectoryStatus.dataset.state='loading';
       await Promise.all([loadConnections(),loadPublishingChannels(),loadMallGrowth()]);
       siteDirectoryStatus.textContent=`${button.dataset.centralChannelName||key} 채널센터 · 사이트 관리자와 동일 원장`;siteDirectoryStatus.dataset.state='ready';
