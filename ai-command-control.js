@@ -2,7 +2,7 @@
 import { chooseEkodiExecution, sanitizeAiConnectionStatus } from './ekodi-ai-sovereignty-gate.js';
 import { providerStatus } from './ai-control-provider-router.js';
 import { findReusableComposition } from './ekodi-capability-ecosystem.js';
-import { isSameOriginAdminMutation, trustedAdminOrchestratorIdentity, prepareAdminOrchestratorSubmission } from './ekodi-ai-orchestrator-admin-handoff.js';
+import { isSameOriginAdminMutation, trustedAdminOrchestratorIdentity, prepareAdminOrchestratorSubmission, evaluateAdminOrchestratorSubmission } from './ekodi-ai-orchestrator-admin-handoff.js';
 import { getCoreAiGatewayStatus } from './core-ai-gateway.js';
 import { adminAuthorityForRole, hasEkodiCapability } from './ekodi-authorization.js';
 import {
@@ -213,12 +213,18 @@ export async function handleEkodiV8CommandControl(request, env) {
     try {
       const identity = await trustedAdminOrchestratorIdentity(auth.session);
       const task = await submitOrchestratorTask(env, identity, input);
+      const receipt = evaluateAdminOrchestratorSubmission(task);
+      if (!receipt.accepted) {
+        return json(request, env, {
+          ok:false, code:'ORCHESTRATOR_TASK_NOT_ACCEPTED',
+          taskId:receipt.taskId, state:receipt.state,
+          deploymentAuthorized:false, executionAuthorized:false,
+        }, 409);
+      }
       return json(request, env, {
         ok:true, code:'EKODI_ORCHESTRATOR_TASK_SUBMITTED',
-        taskId:task.taskId, branchRef:task.branchRef, state:task.state,
-        stateVersion:task.stateVersion, humanGate:task.humanGate || null,
-        executionAuthorized:false, deploymentAuthorized:false,
-        notice:'A real task was submitted; release still requires independently verified Orchestrator receipt and protected gates.',
+        ...receipt,
+        notice:'Task accepted, but official release receipt, human gates, CI and production verification remain required.',
       }, 202);
     } catch (error) {
       console.error('EKODI admin Orchestrator submission failed', error?.message || 'error');
