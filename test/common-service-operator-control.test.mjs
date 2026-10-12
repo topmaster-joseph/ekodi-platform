@@ -142,3 +142,20 @@ test('production build ships the common-service operator assets through the secu
   assert.match(site, /'\/common-services-admin\.css'/);
   assert.match(site, /'\/common-services-admin\.js'/);
 });
+
+test('AI pairing code remains visible after admin runtime refresh but never persists to browser storage', () => {
+  const admin = read('common-services-admin.js');
+  const grant = admin.slice(admin.indexOf('function activePairGrant()'),admin.indexOf('function aiNodeRows()'));
+  const pair = admin.slice(admin.indexOf('async function pairNode()'),admin.indexOf('function mount()',admin.indexOf('async function pairNode()')));
+  assert.ok(grant.includes('Date.now()>=grant.expiresAt'));
+  assert.ok(grant.includes('state.pairGrant=null'));
+  assert.ok(admin.includes('${esc(pairGrantMessage())}'),'render must keep issued code in secure admin DOM after refresh');
+  assert.ok(pair.includes('state.pairGrant=grant;await refreshAi()'),'the issued code must be saved before refresh redraw');
+  assert.ok(pair.includes("setTimeout(()=>{if(state.pairGrant!==grant)return;state.pairGrant=null"));
+  assert.ok(pair.includes("const code=String(data.code||'')"));
+  assert.ok(pair.includes("invalid_pairing_response"));
+  assert.ok(!/localStorage|sessionStorage|console\.|location\.|navigator\.clipboard/.test(pair),
+    'one-time secret must not go into persistent browser storage, logs, URLs or clipboard automatically');
+  assert.ok(pair.includes("state.pairGrant=null;const status=$('#commonAiPairCode')"),'failure must clear the secret');
+  assert.ok(admin.includes('계정형 노드는 EKODI 자체 Device Agent와 별도로 등록됩니다.'));
+});

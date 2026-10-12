@@ -209,3 +209,16 @@ test('Cloudflare host totals survive unavailable per-zone classifier without dis
   assert.doesNotMatch(collector,/console\.warn\([^\n]*error\.message/);
   assert.doesNotMatch(collector,/skippedZones\.push\(\{ zone:zone.name, message:/);
 });
+
+test('Cloudflare GraphQL can use a dedicated zone-scoped read token without broadening D1 release rights',async()=>{
+  const collector=await readFile('scripts/collect-traffic-intelligence.mjs','utf8');
+  const workflow=await readFile('.github/workflows/traffic-intelligence-analytics.yml','utf8');
+  assert.match(collector,/const analyticsToken = String\(process\.env\.CLOUDFLARE_TRAFFIC_ANALYTICS_TOKEN \|\| ''\)\.trim\(\) \|\| apiToken/);
+  assert.match(collector,/authorization:\x60Bearer \$\{path === '\/graphql' \? analyticsToken : apiToken\}\x60/);
+  assert.match(collector,/const payload = await cloudflare\(\x60\/zones\?per_page=50/);
+  assert.match(collector,/const payload = await cloudflare\('\/graphql'/);
+  assert.match(workflow,/CLOUDFLARE_TRAFFIC_ANALYTICS_TOKEN: \$\{\{ secrets\.CLOUDFLARE_TRAFFIC_ANALYTICS_TOKEN \}\}/);
+  assert.match(workflow,/CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
+  assert.match(workflow,/unset CLOUDFLARE_TRAFFIC_ANALYTICS_TOKEN/);
+  assert.match(workflow,/wrangler@4\.[\d.]+ d1 execute ekodi-auth/);
+});
