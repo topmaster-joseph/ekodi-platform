@@ -68,6 +68,10 @@ const controlApiTouched=changedFiles.some(file=>[
   'coupang-partners-automation.js',
   'customer-entry-worker.js',
   'mission-control-entry-worker.js',
+  // The same SeonamMedi monitor code runs in the public Site Core AND in
+  // the Control API hourly scheduler. Both runtimes must be released together.
+  'seonammedi-monitor.js',
+  'seonammedi-relevance.js',
   // PC Agent registry and heartbeat handlers are deployed by the Control API.
   'device-control.js',
   // AI Provider API runtime ownership; release-automation changes also repair missed deployments.
