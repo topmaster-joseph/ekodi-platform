@@ -11,10 +11,13 @@ test('synthetic production Admin UI verifier waits for lazy panel content to set
   assert.match(text, /timeout: 12000/);
 });
 
-test('synthetic production Admin UI verifier isolates backend auth side effects between menus', async () => {
+test('synthetic production Admin UI verifier reloads only after actual shell degradation', async () => {
   const text = await source();
-  assert.match(text, /backend 401 from one lazy module cannot hide the shell and poison later UI checks/);
-  assert.match(text, /await page\.goto\(ADMIN_URL, \{ waitUntil: 'domcontentloaded', timeout: 45000 \}\);\s*await waitForAdminShell\(\);\s*selectedWorkArea = null;/);
+  assert.match(text, /async function resetAdminShellIfPoisoned\(\)/);
+  assert.match(text, /state\.ready && state\.panels && state\.sidebar && state\.token && state\.visible/);
+  assert.match(text, /Cloudflare 429 throttling/);
+  assert.match(text, /const recoveredShell = await resetAdminShellIfPoisoned\(\)/);
+  assert.match(text, /if \(recoveredShell\) selectedWorkArea = null/);
 });
 
 test('synthetic production Admin UI verifier stubs the canonical apex session route with a fully authenticated super-admin contract', async () => {
@@ -111,4 +114,16 @@ test('Admin production UI workflow validates verifier contracts on PRs and reser
   assert.match(workflow, /validate-canonical-api-execution\.mjs/);
   assert.match(workflow, /apex-api-retirement\.test\.mjs/);
   assert.match(workflow, /verify-admin-production-ui-e2e\.mjs/);
+});
+
+
+test('synthetic production Admin UI verifier stubs canonical AI runtime read routes instead of retired common-services paths', async () => {
+  const text = await source();
+  for (const route of [
+    'https://ekodi.kr/ai/api/status',
+    'https://ekodi.kr/ai/api/tasks',
+    'https://ekodi.kr/ai/api/nodes',
+    'https://ekodi.kr/api/control/ai/v8/orchestrator/human-gates?limit=20',
+  ]) assert.ok(text.includes(route), route);
+  assert.doesNotMatch(text, /\/api\/control\/common-services\/ai\/(status|tasks|nodes)/);
 });
