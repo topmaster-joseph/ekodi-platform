@@ -28,6 +28,7 @@ let observer=null;
 let scheduled=false;
 let noticeTimer=null;
 let readinessTimer=null;
+let readinessResolved=false;
 let catalogRequest=0;
 const translatedTextNodes=new Map();
 const translatedAttributes=new Map();
@@ -50,7 +51,7 @@ function parseLocales(value){
 function readyLocales(){return parseLocales(document.documentElement.dataset.ekodiReadyLocales||FALLBACK_LOCALE);}
 function isLocaleReady(locale){return readyLocales().includes(normalize(locale)||FALLBACK_LOCALE);}
 function visibleLanguages(){const ready=new Set(readyLocales());return SUPPORTED.filter(item=>ready.has(item.locale));}
-function languageChoiceAvailable(){return visibleLanguages().length>1;}
+function languageChoiceAvailable(){return readinessResolved&&visibleLanguages().length>1;}
 function readCookie(){
   try{
     const prefix=`${COOKIE_KEY}=`;
@@ -156,6 +157,7 @@ function apply(locale,{save=true,emit=true,notify=true,source='shared-user-shell
 }
 function setReadyLocales(locales){
   const ready=parseLocales(Array.isArray(locales)?locales.join(' '):locales);
+  readinessResolved=true;
   document.documentElement.dataset.ekodiReadyLocales=ready.join(' ');
   if(activeLocale!==FALLBACK_LOCALE&&!ready.includes(activeLocale))apply(activeLocale,{save:true,emit:true,notify:true,source:'readiness-change'});
   syncControls();
