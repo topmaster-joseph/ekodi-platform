@@ -14,11 +14,15 @@ on:
         description: Existing, release-receipt-authorized orchestration branch
         required: true
         type: string
+      head_sha:
+        description: Exact already approved 40-digit HEAD SHA (verified against live PR and release receipt)
+        required: true
+        type: string
 
 permissions:
   contents: write
   pull-requests: write
-  statuses: write
+  statuses: read
   checks: read
   actions: write
 
@@ -41,7 +45,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       EKODI_TRUSTED_BRANCH: ${{ github.event.pull_request.head.ref || inputs.branch_ref || '' }}
-      EKODI_TRUSTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || '' }}
+      EKODI_TRUSTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || inputs.head_sha || '' }}
       EKODI_TRUSTED_PR_NUMBER: ${{ github.event.pull_request.number || '' }}
     steps:
       - uses: actions/checkout@v7
@@ -53,5 +57,5 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
-      - name: Wait for verified head checks, recover merge status drift, and merge
+      - name: Verify owner-approved HEAD checks, current branch, and guarded merge
         run: node scripts/converge-orchestrated-pr-merge.mjs
