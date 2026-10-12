@@ -113,6 +113,17 @@ const aiControlTouched=changedFiles.some(file=>
   file==='.github/workflows/deploy-ai-control.yml'||
   file==='scripts/converge-orchestrated-pr-merge.mjs'
 );
+// Collector-only merges need a native, post-merge dispatch because merges
+// performed using GITHUB_TOKEN do not emit a normal main-branch push event.
+// Keep dispatch confined to collector-affecting runtime/data contract files;
+// test-only or unrelated site changes must not consume Cloudflare quota.
+const trafficCollectorTouched=changedFiles.some(file=>[
+  'traffic-intelligence.js',
+  'traffic-collector-quality.js',
+  'scripts/collect-traffic-intelligence.mjs',
+  '.github/workflows/traffic-intelligence-analytics.yml',
+  'migrations/0059_traffic_intelligence.sql',
+].includes(file));
 // GITHUB_TOKEN merges do not trigger main push workflows. Browser telemetry
 // changes require the dedicated Shell Worker, not only the shared Site Core.
 const shellRuntimeTouched=changedFiles.some(file=>
@@ -329,6 +340,18 @@ async function dispatchPostMergeDeploys(){
     });
     if(!dispatch.r.ok)fail('Control API deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
     console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-control-api.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+  if(trafficCollectorTouched){
+    // This function is invoked only following a receipt-verified protected
+    // merge. The existing workflow serializes runs and D1 UPSERT is idempotent.
+    // The collection retains quota circuit breakers and partial-status rules.
+    const dispatch=await api('/actions/workflows/traffic-intelligence-analytics.yml/dispatches',{
+      method:'POST',body:JSON.stringify({ref:'main'})
+    });
+    if(!dispatch.r.ok)fail('Traffic Intelligence collector dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,350));
+    console.log(JSON.stringify({ok:true,action:'traffic-collector-dispatched',
+      workflow:'traffic-intelligence-analytics.yml',pr:pr.number,taskId,branch,
+      authority:'ekodi-orchestrator'}));
   }
   if(marketingGrowthTouched){
     const dispatch=await api('/actions/workflows/deploy-marketing-growth.yml/dispatches',{
