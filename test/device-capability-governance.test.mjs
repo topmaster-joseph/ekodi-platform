@@ -27,6 +27,8 @@ test('remote inventory command is allowlisted, capacity-gated and read-only',()=
   assert.ok(api.includes("'filesystem.inventory': { risk: 'observe' }"));
   assert.ok(api.includes("'filesystem.inventory': 'filesystemInventory'"));
   assert.ok(agent.includes('filesystemInventory = $true'));
+  assert.ok(agent.includes("[Security.Principal.WindowsIdentity]::GetCurrent().IsSystem"));
+  assert.ok(agent.includes("status = 'requires-user-context'"));
   assert.ok(agent.includes("'filesystem.inventory' {"));
   assert.ok(agent.includes("suggestedAction = 'review-only'"));
   assert.ok(agent.includes('Select-Object -First 100'));
