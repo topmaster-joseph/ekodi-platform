@@ -128,5 +128,17 @@
     "restorePointOrExportRequiredBeforeLifecycleMutation": true,
     "auditEvidenceRequired": true,
     "permanentPurgeRequiresSeparateExplicitApproval": true
+  },
+  "publicChrome": {
+    "ruleId": "EKODI-PUBLIC-BOARD-SITE-CHROME-001",
+    "status": "enforced",
+    "parentSiteHeaderFooterParityRequired": true,
+    "siteChromeRuntime": "shell/board-site-chrome.js",
+    "appliesToAllPublicBoards": true,
+    "independentBoardAuthorityUnaffected": true,
+    "publicHtmlOnly": true,
+    "apiSurfaceExcluded": true,
+    "perBoardOptOutAllowed": false,
+    "futureBoardsAutoInherit": true
   }
 }

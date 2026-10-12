@@ -268,14 +268,34 @@ async function readPost(env,instance,id){
 }
 
 function htmlEscape(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+// EKODI-PUBLIC-BOARD-SITE-CHROME-001: site chrome is owned by the
+// public parent, never manually copied into every board page.
+const BOARD_SITE_CHROME_SRC='https://ekodi.kr/shell/board-site-chrome.js';
+function boardChromeParentPath(route){
+  if(route.basePath==='/board')return '/';
+  return route.basePath.replace(/\/board\/?$/,'')+'/';
+}
+function boardChromeHeader(route){
+  const home=htmlEscape(boardChromeParentPath(route));
+  const name=htmlEscape(route.siteId==='cgma'?'CGMA':route.siteId);
+  const board=htmlEscape(route.basePath);
+  return '<header data-ekodi-board-chrome-placeholder="header" class="ekodi-board-site-header"><a href="'+home+'">'+name+'</a><nav aria-label="게시판 위치"><a href="'+board+'" aria-current="page">게시판</a><a href="'+home+'">사이트 홈</a></nav></header>';
+}
+function boardChromeFooter(route){
+  const home=htmlEscape(boardChromeParentPath(route));
+  return '<footer data-ekodi-board-chrome-placeholder="footer" class="ekodi-board-site-footer"><a href="'+home+'">사이트 홈으로 돌아가기</a></footer>';
+}
+function boardChromeScript(route){
+  return '<script src="'+BOARD_SITE_CHROME_SRC+'" defer data-ekodi-board-parent-path="'+htmlEscape(boardChromeParentPath(route))+'"></script>';
+}
 function page(route,posts){
   const items=posts.length?posts.map(post=>`<article><a href="${route.basePath}/post/${post.id}"><h2>${htmlEscape(post.title)}</h2></a><p>${htmlEscape(post.body).slice(0,220)}</p><time>${htmlEscape(post.createdAt)}</time></article>`).join(''):'<p class="empty">등록된 글이 없습니다.</p>';
-  return new Response(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>게시판</title><style>body{margin:0;background:#fff;color:#111;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}main{width:min(920px,calc(100% - 28px));margin:0 auto;padding:18px 0}header{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;padding:12px 0}h1{font-size:22px;margin:0}article{padding:15px 0;border-bottom:1px solid #e6e6e6}h2{font-size:18px;margin:0 0 7px}a{color:#111;text-decoration:none}p{white-space:pre-wrap;line-height:1.5;margin:0 0 7px}time{font-size:12px;color:#666}.empty{padding:30px 0}</style></head><body><main><header><h1>게시판</h1></header>${items}</main></body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-ekodi-board-id':boardId(route.siteId),'x-ekodi-board-independent':'true'}});
+  return new Response(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>게시판</title><style>body{margin:0;background:#fff;color:#111;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}main{width:min(920px,calc(100% - 28px));margin:0 auto;padding:18px 0}.board-page-title{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;padding:12px 0}h1{font-size:22px;margin:0}article{padding:15px 0;border-bottom:1px solid #e6e6e6}h2{font-size:18px;margin:0 0 7px}a{color:#111;text-decoration:none}p{white-space:pre-wrap;line-height:1.5;margin:0 0 7px}time{font-size:12px;color:#666}.empty{padding:30px 0}</style></head><body>${boardChromeHeader(route)}<main><section class="board-page-title"><h1>게시판</h1></section>${items}</main>${boardChromeFooter(route)}${boardChromeScript(route)}</body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-ekodi-board-id':boardId(route.siteId),'x-ekodi-board-independent':'true'}});
 }
 function postPage(route,post){
   if(!post)return new Response('Not Found',{status:404});
   const comments=post.comments.map(c=>`<li>${htmlEscape(c.body)} <small>${htmlEscape(c.createdAt)}</small></li>`).join('');
-  return new Response(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${htmlEscape(post.title)}</title></head><body><main><p><a href="${route.basePath}">← 게시판</a></p><h1>${htmlEscape(post.title)}</h1><p style="white-space:pre-wrap">${htmlEscape(post.body)}</p><hr><ul>${comments}</ul></main></body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-ekodi-board-id':boardId(route.siteId),'x-ekodi-board-independent':'true'}});
+  return new Response(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${htmlEscape(post.title)}</title></head><body>${boardChromeHeader(route)}<main><p><a href="${route.basePath}">← 게시판</a></p><h1>${htmlEscape(post.title)}</h1><p style="white-space:pre-wrap">${htmlEscape(post.body)}</p><hr><ul>${comments}</ul></main>${boardChromeFooter(route)}${boardChromeScript(route)}</body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-ekodi-board-id':boardId(route.siteId),'x-ekodi-board-independent':'true'}});
 }
 
 export async function handleSiteBoardRequest(request,env){

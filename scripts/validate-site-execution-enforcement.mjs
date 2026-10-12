@@ -52,12 +52,33 @@ const requiredContracts=new Set([
   'canonical-apex-path','shared-shell-and-ui-dna','brand-or-service-only-public-header',
   'site-owned-admin-addressability','auth-return-continuity','responsive-mobile-desktop-layout',
   'readability-and-no-clipping','keyboard-and-touch-accessibility','internal-external-link-integrity',
-  'loading-error-empty-state-usability','shared-header-footer-language-behavior','central-social-hub-inheritance',
+  'loading-error-empty-state-usability','shared-header-footer-language-behavior','public-board-parent-header-footer-parity','central-social-hub-inheritance',
   'no-direct-production-mutation','isolated-branch-and-regression-validation','guarded-staging-before-production',
   'canonical-mount-parity','descendant-slash-parity'
 ]);
 const contracts=new Set(policy.mandatoryContracts||[]);
 for(const contract of requiredContracts)if(!contracts.has(contract))fail(`missing mandatory site contract: ${contract}`);
+
+const boardChrome=policy.publicBoardChrome||{};
+if(boardChrome.ruleId!=='EKODI-PUBLIC-BOARD-SITE-CHROME-001'||boardChrome.status!=='enforced')fail('public board parent-site chrome must remain enforced');
+for(const key of ['headerAndFooterMustMatchOwningSite','dynamicParentSiteSourceOfTruth','boardEngineMustNotCopySiteChrome','onlyOneVisiblePublicHeaderAndFooter','relativeNavigationMustHonorCanonicalMount','boardLocalAuthenticationAndCrudUnaffected','apiResponsesUnchanged','offlineParentFallbackMustPreserveBoardAccess','futureSitesAutoInherit','productionUiVerificationRequired']){
+  if(boardChrome[key]!==true)fail('public board parent chrome flag must remain true: '+key);
+}
+if(boardChrome.perSiteOptOutAllowed!==false)fail('public board parent chrome must never allow site opt out');
+if(boardChrome.classification!=='platform_common'||boardChrome.sharedRuntime!=='shell/board-site-chrome.js')fail('public board chrome must belong to one shared runtime, never copied per site');
+const boardEnginePolicy=await readJson('config/replaceable-board-engine-policy.json');
+if(boardEnginePolicy.publicChrome?.ruleId!=='EKODI-PUBLIC-BOARD-SITE-CHROME-001'||boardEnginePolicy.publicChrome?.parentSiteHeaderFooterParityRequired!==true||boardEnginePolicy.publicChrome?.futureBoardsAutoInherit!==true||boardEnginePolicy.publicChrome?.perBoardOptOutAllowed!==false)fail('board engine policy must enforce inherited parent chrome');
+const [chromeRuntime,nativeBoard,independentBoard,noticeBoard,financeBoard]=await Promise.all([
+  read('shell/board-site-chrome.js'),read('site-board-control.js'),read('services/independent-board/worker.js'),
+  read('sites/seonammedi/public/notices/index.html'),read('sites/seonammedi/public/finance/index.html'),
+]);
+if(!chromeRuntime.includes('data-ekodi-board-parent-header')||!chromeRuntime.includes('data-ekodi-board-parent-footer')||!chromeRuntime.includes("credentials:'same-origin'"))fail('shared public board chrome must adopt parent header/footer over same-origin read-only fetch');
+if(!chromeRuntime.includes("dataset.ekodiBoardChrome='fallback'")||!chromeRuntime.includes("home.origin!==location.origin"))fail('public board chrome must fail safe and forbid cross-origin adoption');
+if(!nativeBoard.includes('boardChromeHeader(route)')||!nativeBoard.includes('boardChromeFooter(route)')||!nativeBoard.includes('boardChromeScript(route)'))fail('native public boards must inherit parent chrome on list and detail pages');
+for(const [name,html] of [['independent',independentBoard],['notices',noticeBoard],['finance',financeBoard]]){
+  if(!html.includes('shell/board-site-chrome.js'))fail(name+' public board must load common parent chrome adapter');
+}
+
 
 const mountParity=policy.canonicalMountParity||{};
 if(mountParity.policyId!=='CANONICAL-PATH-MOUNT-PARITY-001'||mountParity.status!=='enforced'||mountParity.mode!=='mandatory-recursive')fail('canonical path/mount parity must remain mandatory-recursive');

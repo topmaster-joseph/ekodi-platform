@@ -33,6 +33,7 @@
     "internal-external-link-integrity",
     "loading-error-empty-state-usability",
     "shared-header-footer-language-behavior",
+    "public-board-parent-header-footer-parity",
     "central-social-hub-inheritance",
     "no-direct-production-mutation",
     "isolated-branch-and-regression-validation",
@@ -210,5 +211,28 @@
     "productionVerificationRequired": true,
     "futureSitesAutoInherit": true,
     "perSiteOptOutAllowed": false
+  },
+  "publicBoardChrome": {
+    "ruleId": "EKODI-PUBLIC-BOARD-SITE-CHROME-001",
+    "status": "enforced",
+    "classification": "platform_common",
+    "scope": "all-current-and-future-public-boards-including-standalone-child-sites-and-custom-domains",
+    "headerAndFooterMustMatchOwningSite": true,
+    "dynamicParentSiteSourceOfTruth": true,
+    "boardEngineMustNotCopySiteChrome": true,
+    "onlyOneVisiblePublicHeaderAndFooter": true,
+    "relativeNavigationMustHonorCanonicalMount": true,
+    "boardLocalAuthenticationAndCrudUnaffected": true,
+    "apiResponsesUnchanged": true,
+    "sharedRuntime": "shell/board-site-chrome.js",
+    "nativeBoardRuntime": "site-board-control.js",
+    "independentBoardRuntime": "services/independent-board/worker.js",
+    "offlineParentFallbackMustPreserveBoardAccess": true,
+    "futureSitesAutoInherit": true,
+    "perSiteOptOutAllowed": false,
+    "productionUiVerificationRequired": true,
+    "tests": [
+      "test/public-board-parent-chrome.test.mjs"
+    ]
   }
 }
