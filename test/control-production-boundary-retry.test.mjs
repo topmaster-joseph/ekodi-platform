@@ -30,3 +30,14 @@ test('Control production boundary contract remains strict after retries',()=>{
   assert.match(workflow,/PF_ADMIN_AUTH_REQUIRED/);
   assert.match(workflow,/ekodi-learning-fabric/);
 });
+
+
+test('Control staging deploy retries transient Wrangler API failures without weakening strict failures',()=>{
+  assert.match(workflow,/WRANGLER_VERSION: '4\.149\.0'/);
+  assert.match(workflow,/max_attempts=3/);
+  assert.match(workflow,/malformed response\|internal server error/);
+  assert.match(workflow,/ECONNRESET\|EAI_AGAIN/);
+  assert.match(workflow,/sleep \$\(\(attempt \* 15\)\)/);
+  assert.match(workflow,/if ! grep -Eiq[\s\S]*exit "\$rc"/);
+  assert.match(workflow,/wrangler@\$\{WRANGLER_VERSION\} deploy --config wrangler\.api\.staging\.runtime\.toml/);
+});
