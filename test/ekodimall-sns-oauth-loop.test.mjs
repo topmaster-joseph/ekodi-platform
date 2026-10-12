@@ -122,3 +122,18 @@ test('no YouTube project setup warning if an actual active OAuth channel is conn
   const html=renderMallSocialSetup({platform:{youtubeConfigured:true},registeredAccounts:[{provider:'youtube',status:'error',lastError:'YOUTUBE_DATA_API_DISABLED:483044030492'}],connections:[{provider:'youtube',status:'active',external_id:'UC-live'}]});
   assert.doesNotMatch(html,/Google Cloud API 사용 설정 필요/);
 });
+
+test('OAuth popup distinguishes failed Google callback from connected account',async()=>{
+  assert.match(script,/const callbackOk=initialChannelOAuthResult\.status==='success'/);
+  assert.match(script,/채널 인증 실패 · 연결되지 않음/);
+  assert.match(script,/Google 인증 응답 접수 · 연결 확인 중/);
+  assert.doesNotMatch(script,/<h1 style="font-size:20px">채널 인증 처리 완료<\/h1>/);
+});
+
+test('Brand Account choice survives manual OAuth ledger refresh and remains synchronized',()=>{
+  assert.match(script,/const previousBrandSelection=service==='mall'/);
+  assert.match(script,/brandModeInputs\.forEach\(box=>/);
+  assert.match(script,/box\.checked=Boolean\(previousBrandSelection\)/);
+  assert.match(script,/other\.checked=box\.checked/);
+  assert.match(script,/youtubeBrandAccountMode:btn\.dataset\.provider==='youtube'&&Boolean\(brandModeInputs\.some\(box=>box\.checked\)\)/);
+});
