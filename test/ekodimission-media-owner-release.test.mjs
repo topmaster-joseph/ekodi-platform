@@ -15,6 +15,7 @@ test('owner issue label can only request existing guarded EKODI Mission security
   assert.match(workflow,/pulls\/4361/);
   assert.match(workflow,/\.merged == true/);
   assert.match(workflow,/release-receipt/);
+  assert.ok(workflow.indexOf('release-receipt') < workflow.indexOf('reconcile-mission-media-moderation-release.yml/dispatches'),'Canonical release receipt must be checked before dispatch');
   assert.match(workflow,/\.authorized == true/);
   assert.match(workflow,/reviewed_sha/);
   assert.match(workflow,/main_sha/);
