@@ -88,3 +88,19 @@ test('replay grace period is measured from job completion rather than initial qu
     { ...justCompleted, updated_at: '2026-10-12T08:00:00Z' },
   ], now, repo).reason, 'recover-transient-run');
 });
+
+
+test('merge convergence requires genuine GitHub Actions checks and never rewrites the approved head', () => {
+  const converge = readFileSync(new URL('../scripts/converge-orchestrated-pr-merge.mjs', import.meta.url), 'utf8');
+  assert.match(converge, /async function verifiedCheckRuns\(sha\)/);
+  assert.match(converge, /\/check-runs\?per_page=100/);
+  assert.match(converge, /run\.app\?\.slug==='github-actions'/);
+  assert.match(converge, /run\.status==='completed'/);
+  assert.match(converge, /release receipt head SHA does not match checked commit/);
+  assert.match(converge, /PR head SHA mismatches authorized trigger/);
+  assert.match(converge, /PR HEAD changed after required checks/);
+  assert.match(converge, /if\(!await verifiedCheckRuns\(headSha\)\)/);
+  assert.match(converge, /if\(!await verifiedCheckRuns\(mergeSha\)\)/);
+  assert.doesNotMatch(converge, /\/pulls\/'\+pr\.number\+'\/update-branch'/);
+  assert.doesNotMatch(converge, /\/statuses\/'\+mergeSha/);
+});
