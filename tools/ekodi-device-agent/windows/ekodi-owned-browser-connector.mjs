@@ -140,7 +140,8 @@ function openCdp(endpoint, deadline) {
     const document = item.resourceType === 'Document';
     const safe = (!document || allowedDocumentUrl(item.request?.url || '', taskMode)) &&
       ['GET', 'HEAD', 'OPTIONS'].includes(method);
-    if (!safe) requestGuardError = document ? 'BROWSER_DOCUMENT_ORIGIN_BLOCKED' : 'BROWSER_MUTATION_BLOCKED';
+    if (!safe) requestGuardError = document && /https:\/\/github\.com\/(?:login|session|signup)(?:\/|\?|$)/i.test(item.request?.url || '')
+      ? 'AUTH_REQUIRED' : document ? 'BROWSER_DOCUMENT_ORIGIN_BLOCKED' : 'BROWSER_MUTATION_BLOCKED';
     void send(safe ? 'Fetch.continueRequest' : 'Fetch.failRequest',
       safe ? { requestId: item.requestId } : { requestId: item.requestId, errorReason: 'BlockedByClient' },
       message.sessionId).catch(() => {});
@@ -166,7 +167,7 @@ export async function runBrowserConnection(raw, { candidates = browserPaths(), t
   try {
     child = spawn(browser, ['--headless=new', '--disable-gpu', '--disable-extensions',
       '--disable-sync', '--no-first-run', '--no-default-browser-check',
-      '--no-sandbox', '--remote-debugging-port=0', '--user-data-dir=' + profile, 'about:blank'],
+      '--remote-debugging-port=0', '--user-data-dir=' + profile, 'about:blank'],
     { windowsHide: true, stdio: 'ignore' });
     child.once('error', () => { child.spawnError = true; });
     cdp = openCdp(await endpointFor(profile, child, deadline), deadline);
@@ -186,6 +187,14 @@ export async function runBrowserConnection(raw, { candidates = browserPaths(), t
         returnByValue: true,
       }, sessionId);
       page = result?.result?.value;
+      if (cdp.getGuardError()) {
+        if (cdp.getGuardError() === 'AUTH_REQUIRED') return {
+          ...classifyPage({ url: 'https://github.com/login' }, task.mode),
+          provider: 'ekodi-owned-chromium-cdp', browser: path.basename(browser),
+          domObserved: false, profileLifetime: 'one-shot'
+        };
+        throw new Error(cdp.getGuardError());
+      }
       if (page && page.ready === 'complete' &&
           (task.mode === 'runtime-canary' || page.url !== 'about:blank')) break;
       await delay(200);
