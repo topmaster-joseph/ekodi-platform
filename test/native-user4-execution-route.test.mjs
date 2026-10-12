@@ -114,3 +114,39 @@ test('USER4 ready Hyper-V canary is only suggested when firmware, management and
   assert.equal(result.recoveryPlan.nextAction,'run-native-isolated-desktop-canary');
   assert.deepEqual(result.recoveryPlan.missing,[]);
 });
+
+test('Windows Home USER4 does not attempt unsupported Hyper-V activation',()=>{
+  const probe={...verifiedHyperV,windowsEditionClass:'home',windowsBuild:26100,
+    backendReady:false,hyperVState:'Disabled',hyperVPowerShellAvailable:false,baseVmPresent:false};
+  const result=selectUser4ExecutionRoute({readiness:healthyBrowser,probe,now});
+  assert.equal(result.route,'ekodi-background-browser-worker');
+  assert.equal(result.recoveryPlan.state,'UNSUPPORTED_WINDOWS_EDITION');
+  assert.equal(result.recoveryPlan.windowsEditionClass,'home');
+  assert.equal(result.recoveryPlan.nextAction,'use-ekodi-native-browser-or-authorize-compatible-host');
+  assert.equal(result.recoveryPlan.automaticHostChanges,false);
+  assert.equal(result.recoveryPlan.automaticReboot,false);
+  assert.equal(result.desktopBackendReady,false);
+});
+test('Pro USER4 can plan a separate approved Hyper-V maintenance window without mutation',()=>{
+  const probe={...verifiedHyperV,windowsEditionClass:'pro',windowsBuild:26100,
+    backendReady:false,hyperVState:'Disabled',hyperVPowerShellAvailable:false,baseVmPresent:false};
+  const result=planUser4VirtualDesktopRecovery({probe,now});
+  assert.equal(result.state,'REQUIRES_MAINTENANCE');
+  assert.equal(result.windowsEditionClass,'pro');
+  assert.equal(result.windowsBuild,26100);
+  assert.equal(result.nextAction,'verify-windows-edition-and-plan-admin-maintenance');
+  assert.equal(result.requiresSeparateAdminApproval,true);
+  assert.equal(result.automaticReboot,false);
+});
+test('Windows OS classification stays privacy-limited and read-only',async()=>{
+  const {readFileSync}=await import('node:fs');
+  const agent=readFileSync(new URL('../tools/ekodi-device-agent/windows/ekodi-device-agent.ps1',import.meta.url),'utf8');
+  const main=agent.slice(agent.indexOf('function Get-IsolatedDesktopBackendProbe'),agent.indexOf('function Invoke-IsolatedDesktopBackendProbe'));
+  assert.match(main,/Get-CimInstance Win32_OperatingSystem/);
+  assert.match(main,/windowsEditionClass = \$windowsEditionClass/);
+  assert.match(main,/windowsBuild = \$windowsBuild/);
+  assert.doesNotMatch(main,/Enable-WindowsOptionalFeature|Enable-ComputerRestore|Restart-Computer|Set-VM|New-VM/);
+  const probe=readFileSync(new URL('../scripts/verify-native-user4-virtual-probe.mjs',import.meta.url),'utf8');
+  assert.match(probe,/windowsEditionClass:\['home','pro','enterprise','education','server'\]/);
+  assert.match(probe,/windowsBuild:Number.isSafeInteger/);
+});

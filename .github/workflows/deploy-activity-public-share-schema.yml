@@ -2,15 +2,29 @@ name: Deploy Activity Public Share Schema
 
 on:
   workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'EKODI-approved orchestrator source branch'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Exact EKODI orchestrator release task ID'
+        required: true
+        type: string
   pull_request:
     paths:
       - 'supabase/migrations/20260926140500_activity_public_readonly_shares.sql'
       - 'supabase/migrations/20260927032500_activity_public_share_minimal_projection_guard.sql'
       - 'supabase/migrations/20261005041500_activity_collaborative_media_links.sql'
       - 'supabase/migrations/20261005121000_activity_collaborative_photo_uploads.sql'
+      - 'supabase/migrations/20261012060200_activity_media_moderation_guard.sql'
+      - 'supabase/migrations/20261012060300_activity_photo_reservation_moderation_guard.sql'
+      - 'supabase/migrations/20261012060400_activity_photo_finalize_moderation_guard.sql'
       - 'test/activity-public-share.test.mjs'
       - 'test/ekodimission-collaborative-media.test.mjs'
       - 'test/ekodimission-photo-upload.test.mjs'
+      - 'test/ekodimission-media-moderation-guard.test.mjs'
+      - 'supabase/tests/activity_media_moderation_guard.test.sql'
       - '.github/workflows/deploy-activity-public-share-schema.yml'
   push:
     branches: [main]
@@ -19,6 +33,9 @@ on:
       - 'supabase/migrations/20260927032500_activity_public_share_minimal_projection_guard.sql'
       - 'supabase/migrations/20261005041500_activity_collaborative_media_links.sql'
       - 'supabase/migrations/20261005121000_activity_collaborative_photo_uploads.sql'
+      - 'supabase/migrations/20261012060200_activity_media_moderation_guard.sql'
+      - 'supabase/migrations/20261012060300_activity_photo_reservation_moderation_guard.sql'
+      - 'supabase/migrations/20261012060400_activity_photo_finalize_moderation_guard.sql'
       - '.github/workflows/deploy-activity-public-share-schema.yml'
 
 permissions:
@@ -34,6 +51,9 @@ env:
   PRIVACY_GUARD_MIGRATION: supabase/migrations/20260927032500_activity_public_share_minimal_projection_guard.sql
   COLLAB_MEDIA_MIGRATION: supabase/migrations/20261005041500_activity_collaborative_media_links.sql
   PHOTO_UPLOAD_MIGRATION: supabase/migrations/20261005121000_activity_collaborative_photo_uploads.sql
+  LINK_GUARD_MIGRATION: supabase/migrations/20261012060200_activity_media_moderation_guard.sql
+  RESERVE_GUARD_MIGRATION: supabase/migrations/20261012060300_activity_photo_reservation_moderation_guard.sql
+  FINALIZE_GUARD_MIGRATION: supabase/migrations/20261012060400_activity_photo_finalize_moderation_guard.sql
   PUBLISHABLE_KEY: sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_
 
 jobs:
@@ -49,11 +69,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --test test/activity-public-share.test.mjs test/ekodimission-collaborative-media.test.mjs test/ekodimission-photo-upload.test.mjs
+          node --test test/activity-public-share.test.mjs test/ekodimission-collaborative-media.test.mjs test/ekodimission-photo-upload.test.mjs test/ekodimission-media-moderation-guard.test.mjs
           test -f "$BASE_MIGRATION"
           test -f "$PRIVACY_GUARD_MIGRATION"
           test -f "$COLLAB_MEDIA_MIGRATION"
           test -f "$PHOTO_UPLOAD_MIGRATION"
+          for migration in "$LINK_GUARD_MIGRATION" "$RESERVE_GUARD_MIGRATION" "$FINALIZE_GUARD_MIGRATION"; do
+            test -f "$migration"
+            grep -Fq 'hidden_at is null' "$migration"
+            grep -Fq 'security definer' "$migration"
+          done
+          grep -Fq 'media_moderated' "$LINK_GUARD_MIGRATION"
+          grep -Fq 'media_moderated' "$RESERVE_GUARD_MIGRATION"
+          grep -Fq 'upload_finalize_forbidden' "$FINALIZE_GUARD_MIGRATION"
           grep -Fq 'create table if not exists public.activity_public_shares' "$BASE_MIGRATION"
           grep -Fq 'activity_admin_create_share' "$BASE_MIGRATION"
           grep -Fq 'activity_admin_revoke_share' "$BASE_MIGRATION"
@@ -69,10 +97,10 @@ jobs:
           grep -Fq 'activity_public_finalize_media_upload' "$PHOTO_UPLOAD_MIGRATION"
           grep -Fq 'activity_public_media_file_ref' "$PHOTO_UPLOAD_MIGRATION"
           grep -Fq 'activity_media_links_content_sha256_unique' "$PHOTO_UPLOAD_MIGRATION"
-          ! grep -Eiq 'drop[[:space:]]+table|truncate[[:space:]]+table' "$BASE_MIGRATION" "$PRIVACY_GUARD_MIGRATION" "$COLLAB_MEDIA_MIGRATION" "$PHOTO_UPLOAD_MIGRATION"
+          ! grep -Eiq 'drop[[:space:]]+table|truncate[[:space:]]+table' "$BASE_MIGRATION" "$PRIVACY_GUARD_MIGRATION" "$COLLAB_MEDIA_MIGRATION" "$PHOTO_UPLOAD_MIGRATION" "$LINK_GUARD_MIGRATION" "$RESERVE_GUARD_MIGRATION" "$FINALIZE_GUARD_MIGRATION"
 
   production:
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'workflow_dispatch'
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 8
@@ -85,6 +113,21 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Verify exact EKODI release receipt (no direct production push)
+        shell: bash
+        env:
+          RELEASE_BRANCH: ${{ inputs.release_branch_ref }}
+          RELEASE_TASK: ${{ inputs.release_task_id }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_BRANCH" =~ ^ai/[a-zA-Z0-9._-]+/orch_[a-zA-Z0-9_-]+$ ]] || { echo 'Invalid orchestrator source branch'; exit 1; }
+          [[ "$RELEASE_TASK" =~ ^orch_[a-zA-Z0-9_-]+$ ]] || { echo 'Invalid orchestrator task ID'; exit 1; }
+          branch_tail="${RELEASE_BRANCH##*/}"
+          [ "$branch_tail" = "$RELEASE_TASK" ] || { echo 'Release task / branch mismatch'; exit 1; }
+          encoded_branch="$(printf '%s' "$RELEASE_BRANCH" | jq -sRr @uri)"
+          encoded_task="$(printf '%s' "$RELEASE_TASK" | jq -sRr @uri)"
+          curl --fail-with-body -fsS --retry 3 --max-time 15             "https://ekodi.kr/api/orchestrator/release-receipt?taskId=${encoded_task}&branchRef=${encoded_branch}"             | jq -e --arg task "$RELEASE_TASK" --arg branch "$RELEASE_BRANCH"                 '.ok == true and .authorized == true and .taskId == $task and .branchRef == $branch and .authority == "ekodi-orchestrator"' >/dev/null
+
       - name: Select Supabase deployment credential
         id: credential
         shell: bash
@@ -95,20 +138,40 @@ jobs:
           [ -n "$token" ] || token="${TOKEN_C:-}"
           [ -n "$token" ] || token="${TOKEN_D:-}"
           if [ -z "$token" ]; then
-            echo 'Supabase production deployment credential is unavailable; switching to live-schema verification fallback.'
-            echo 'available=false' >> "$GITHUB_OUTPUT"
-            exit 0
+            echo 'Supabase deployment credential unavailable: failing closed; no production mutation or false readiness.'
+            exit 1
           fi
           echo "::add-mask::$token"
           echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
           echo 'available=true' >> "$GITHUB_OUTPUT"
 
-      - name: Apply schema and privacy guard before UI promotion
+      - name: Verify installed production baseline without modifying data
         if: steps.credential.outputs.available == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          for migration in "$BASE_MIGRATION" "$PRIVACY_GUARD_MIGRATION" "$COLLAB_MEDIA_MIGRATION" "$PHOTO_UPLOAD_MIGRATION"; do
+          cat > /tmp/ekodi-mission-baseline-proof.sql <<'SQL'
+          select
+            to_regclass('public.activities') is not null as activities,
+            to_regclass('public.activity_media_links') is not null as media,
+            to_regprocedure('public.activity_public_submit_media_link(text,text,text,text,text,text,text,text)') is not null as link_submit,
+            to_regprocedure('public.activity_public_reserve_media_upload(text,text,text,text,text,text,bigint,text,text)') is not null as reserve_photo,
+            to_regprocedure('public.activity_public_finalize_media_upload(text,text,uuid,text,text)') is not null as finalize_photo;
+          SQL
+          jq -Rs '{query:.,read_only:true}' /tmp/ekodi-mission-baseline-proof.sql > /tmp/ekodi-mission-baseline-proof.json
+          code="$(curl -sS -o /tmp/ekodi-mission-baseline-proof-result.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H 'Content-Type: application/json' --data-binary @/tmp/ekodi-mission-baseline-proof.json)"
+          [ "$code" = 201 ]
+          jq -e '.[0] | .activities and .media and .link_submit and .reserve_photo and .finalize_photo' /tmp/ekodi-mission-baseline-proof-result.json >/dev/null
+
+      - name: Apply ordered moderation guards only (never replay vulnerable legacy definitions)
+        if: steps.credential.outputs.available == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for migration in "$LINK_GUARD_MIGRATION" "$RESERVE_GUARD_MIGRATION" "$FINALIZE_GUARD_MIGRATION"; do
             echo "Applying $migration"
             jq -Rs '{query:.,read_only:false}' "$migration" > /tmp/activity-share-migration.json
             code=$(curl -sS -o /tmp/activity-share-migration-result.json -w '%{http_code}' \
@@ -163,6 +226,25 @@ jobs:
             grep -Fq "$marker" /tmp/activity-share-proof-result.json
           done
 
+      - name: Verify that security guards are installed in production
+        if: steps.credential.outputs.available == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/ekodi-mission-moderation-proof.sql <<'SQL'
+          select
+            position('media_moderated' in pg_get_functiondef('public.activity_public_submit_media_link(text,text,text,text,text,text,text,text)'::regprocedure)) > 0 as link_moderated,
+            position('hidden_at is null' in lower(pg_get_functiondef('public.activity_public_submit_media_link(text,text,text,text,text,text,text,text)'::regprocedure))) > 0 as link_hidden_guard,
+            position('media_moderated' in pg_get_functiondef('public.activity_public_reserve_media_upload(text,text,text,text,text,text,bigint,text,text)'::regprocedure)) > 0 as photo_moderated,
+            position('hidden_at is null' in lower(pg_get_functiondef('public.activity_public_reserve_media_upload(text,text,text,text,text,text,bigint,text,text)'::regprocedure))) > 0 as photo_hidden_guard,
+            position('and hidden_at is null' in lower(pg_get_functiondef('public.activity_public_finalize_media_upload(text,text,uuid,text,text)'::regprocedure))) > 0 as finalize_hidden_guard;
+          SQL
+          jq -Rs '{query:.,read_only:true}' /tmp/ekodi-mission-moderation-proof.sql > /tmp/ekodi-mission-moderation-proof.json
+          code="$(curl -sS -o /tmp/ekodi-mission-moderation-proof-result.json -w '%{http_code}'             -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query"             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN"             -H 'Content-Type: application/json' --data-binary @/tmp/ekodi-mission-moderation-proof.json)"
+          [ "$code" = 201 ]
+          jq -e '.[0] | .link_moderated and .link_hidden_guard and .photo_moderated and .photo_hidden_guard and .finalize_hidden_guard' /tmp/ekodi-mission-moderation-proof-result.json >/dev/null
+          echo 'EKODI Mission moderation guards: verified in production.'
+
       - name: Verify anonymous private-link projection endpoint exists
         shell: bash
         run: |
@@ -177,33 +259,4 @@ jobs:
           grep -Eq '"ok"[[:space:]]*:[[:space:]]*false' /tmp/activity-share-public.json
           echo 'Activity public-share schema is production-ready and privacy-minimal before UI promotion.'
 
-      - name: Verify live activity archive and collaborative-media contract without deployment credential
-        if: steps.credential.outputs.available != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          base="https://$PROJECT_REF.supabase.co/rest/v1/rpc"
-
-          archive_code=$(curl -sS -o /tmp/activity-archive-live.json -w '%{http_code}' \
-            -X POST "$base/activity_public_archive_snapshot" \
-            -H "apikey: $PUBLISHABLE_KEY" \
-            -H 'Content-Type: application/json' \
-            --data '{"p_workspace_slug":"ekodimission","p_activity_key":"261003-autumn-community-trip"}')
-          if [ "$archive_code" != '200' ] || ! grep -Eq '"ok"[[:space:]]*:[[:space:]]*true' /tmp/activity-archive-live.json; then
-            echo 'activity_schema_setup_required: live archive contract is not ready.'
-            cat /tmp/activity-archive-live.json
-            exit 1
-          fi
-
-          submit_code=$(curl -sS -o /tmp/activity-media-submit-probe.json -w '%{http_code}' \
-            -X POST "$base/activity_public_submit_media_link" \
-            -H "apikey: $PUBLISHABLE_KEY" \
-            -H 'Content-Type: application/json' \
-            --data '{"p_workspace_slug":"ekodimission","p_activity_key":"__schema_probe__","p_media_type":"other","p_title":"schema probe","p_url":"https://example.com/schema-probe","p_canonical_url":"https://example.com/schema-probe","p_source_channel":"other","p_submitted_by_name":""}')
-          if [ "$submit_code" != '200' ] || ! grep -Eq '"error"[[:space:]]*:[[:space:]]*"activity_not_found"' /tmp/activity-media-submit-probe.json; then
-            echo 'activity_schema_setup_required: collaborative-media submit RPC is not ready.'
-            cat /tmp/activity-media-submit-probe.json
-            exit 1
-          fi
-
-          echo 'deployment credential unavailable; live activity share/archive/media contracts verified successfully.'
+      # Fail closed when credentials are unavailable; no anonymous fallback can prove moderation security.
