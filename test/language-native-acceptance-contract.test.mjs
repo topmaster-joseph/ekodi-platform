@@ -1,23 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {assessLanguageDOM,assessIndependentKoreanHeader,ORIGIN,LOCALE_SELECTOR} from '../scripts/verify-language-selector-native.mjs';
+import {assessLanguageDOM,assessIndependentKoreanHeader,ORIGIN,LOCALE_SELECTOR,LIVE_SURFACES} from '../scripts/verify-language-selector-native.mjs';
 
 const workflow=readFileSync(new URL('../.github/workflows/verify-language-selector-native.yml',import.meta.url),'utf8');
 const script=readFileSync(new URL('../scripts/verify-language-selector-native.mjs',import.meta.url),'utf8');
 const good={shellLoaded:true,headerReady:true,headerControls:1,visibleHeaderControls:1,
-  footerControls:0,pill:true,accessible:true,optionsMatchPublished:true};
+  footerControls:0,pill:true,accessible:true,optionsMatchPublished:true,
+  options:['ko-KR','en'],readyLocales:['ko-KR','en']};
 
 test('native LANG-UI-001 assessor accepts correctly published multi-language pill',()=>{
   assert.equal(assessLanguageDOM(good,['ko-KR','en']).status,'pass');
 });
 test('native assessor requires exactly one accessible published multi-language selector',()=>{
-  for(const patch of [{pill:false},{accessible:false},{optionsMatchPublished:false},{visibleHeaderControls:0},{headerControls:2},{footerControls:1}]){
+  for(const patch of [{pill:false},{accessible:false},{options:['ko-KR','ja']},{visibleHeaderControls:0},{headerControls:2},{footerControls:1}]){
     assert.equal(assessLanguageDOM({...good,...patch},['ko-KR','en']).status,'fail');
   }
 });
 test('native assessor forbids a selector for single or no published languages',()=>{
-  const absent={...good,headerControls:0,visibleHeaderControls:0};
+  const absent={...good,headerControls:0,visibleHeaderControls:0,readyLocales:['ko-KR'],options:[]};
   assert.equal(assessLanguageDOM(absent,['ko-KR']).status,'pass');
   assert.equal(assessLanguageDOM(absent,[]).status,'pass');
   assert.equal(assessLanguageDOM(good,['ko-KR']).status,'fail');
@@ -25,14 +26,14 @@ test('native assessor forbids a selector for single or no published languages',(
 test('production must never render an un-published homepage locale',()=>{
   assert.equal(assessLanguageDOM({...good,documentLocale:'en',homepageLocale:'en'},['ko-KR']).reason,'document_locale_not_published');
   assert.equal(assessLanguageDOM({...good,documentLocale:'ko-KR',homepageLocale:'en'},['ko-KR']).reason,'document_locale_not_published');
-  const hidden={...good,headerControls:0,visibleHeaderControls:0,documentLocale:'ko-KR',homepageLocale:'ko-KR'};
+  const hidden={...good,headerControls:0,visibleHeaderControls:0,readyLocales:['ko-KR'],options:[],documentLocale:'ko-KR',homepageLocale:'ko-KR'};
   assert.equal(assessLanguageDOM(hidden,['ko-KR']).status,'pass');
   assert.equal(assessLanguageDOM({...hidden,documentLocale:'en',homepageLocale:'en'},['ko-KR']).status,'fail');
   assert.equal(assessLanguageDOM({...good,documentLocale:'en',homepageLocale:'en'},['ko-KR','en']).status,'pass');
 });
 
 test('LANG-UI-001: document and homepage locale must independently agree with publication',()=>{
-  const hidden={...good,headerControls:0,visibleHeaderControls:0,documentLocale:'ko',homepageLocale:'ko-KR'};
+  const hidden={...good,headerControls:0,visibleHeaderControls:0,readyLocales:['ko-KR'],options:[],documentLocale:'ko',homepageLocale:'ko-KR'};
   assert.equal(assessLanguageDOM(hidden,['ko-KR']).status,'pass');
   assert.equal(assessLanguageDOM({...hidden,documentLocale:'en'},['ko-KR']).reason,'document_locale_not_published');
   assert.equal(assessLanguageDOM({...hidden,homepageLocale:'en'},['ko-KR']).reason,'document_locale_not_published');
@@ -41,6 +42,22 @@ test('LANG-UI-001: document and homepage locale must independently agree with pu
   assert.equal(assessLanguageDOM({...hidden,documentLocale:'ko-KR'},[]).status,'pass');
 });
 
+test('a self-consistent but falsely advertised dropdown must fail against the independent API',()=>{
+  const wrong={...good,options:['ko-KR','ja'],readyLocales:['ko-KR','ja'],
+    optionsMatchPublished:true,documentLocale:'ko-KR'};
+  assert.equal(assessLanguageDOM(wrong,['ko-KR','en']).reason,'runtime_readiness_not_equal_to_published_api');
+  assert.equal(assessLanguageDOM({...wrong,readyLocales:['ko-KR','en']},['ko-KR','en']).reason,
+    'selector_options_not_equal_to_published_api');
+  assert.equal(assessLanguageDOM({...good,options:['ko-KR','en','en']},['ko-KR','en']).status,'fail');
+  assert.equal(assessLanguageDOM({...good,readyLocales:['ko-KR']},['ko-KR','en']).status,'fail');
+});
+test('bounded live candidate follows the canonical EKODI service manifest',()=>{
+  assert.deepEqual(LIVE_SURFACES.map(s=>s.service),['ekodi','journal','seonammedi','biz']);
+  const biz=LIVE_SURFACES.find(s=>s.service==='biz');
+  assert.equal(biz.path,'/ekodibiz');
+  assert.equal(biz.device,'desktop');
+  assert.equal(new Set(LIVE_SURFACES.map(s=>s.path)).size,LIVE_SURFACES.length);
+});
 test('standalone SeonamMedi Korean header is assessed separately from shared Shell',()=>{
   const s={independentHeader:true,shellLoaded:false,documentLocale:'ko',headerControls:0,
     visibleHeaderControls:0,standaloneHeaderLanguageControls:0,footerControls:0};
@@ -73,6 +90,8 @@ test('native workflow is PR executable with isolated Playwright evidence',()=>{
   assert.match(script,/realProductionAndSyntheticSeparated:true/);
   assert.match(script,/cloudflare_429_stop/);
   assert.match(script,/liveMultiPublishedObserved/);
+  assert.match(script,/selector_options_not_equal_to_published_api/);
+  assert.match(script,/runtime_readiness_not_equal_to_published_api/);
   assert.match(script,/independent_korean_only_header/);
   assert.doesNotMatch(script,/GH_TOKEN|CLOUDFLARE_API_TOKEN|userDataDir/);
 });
