@@ -205,3 +205,33 @@ test('USER4 browser error classifier accepts only bounded diagnostic categories'
   assert.equal(classifyUser4BrowserFailure('CDP_BROWSER_EARLY_EXIT_UNKNOWN'), 'CDP_BROWSER_EARLY_EXIT_UNKNOWN');
   assert.equal(classifyUser4BrowserFailure('C:\\Users\\Sensitive\\private.log'), 'BROWSER_FAILURE_UNCLASSIFIED');
 });
+
+test('USER4 prior-day Agent update cannot satisfy 2026-10-12 owner refresh request',async()=>{
+  const now=USER4_CDP_FIX_FLOOR+120000;
+  let posts=0;
+  const before=new Date(USER4_CDP_FIX_FLOOR-3600000).toISOString();
+  const fetchImpl=async(url,init)=>{
+    if(init.method==='POST'){
+      posts++;
+      assert.equal(JSON.parse(init.body).type,'agent.self_update');
+      return new Response(JSON.stringify({command:{
+        type:'agent.self_update',id:'owner-refresh-user4',status:'queued'
+      }}),{status:200});
+    }
+    const recentCommands=[
+      {id:'old-success',type:'agent.self_update',status:'succeeded',completedAt:before},
+      ...(posts?[{id:'owner-refresh-user4',type:'agent.self_update',status:'succeeded',
+        completedAt:new Date(now-1000).toISOString()}]:[])
+    ];
+    return new Response(JSON.stringify({devices:[{...good,
+      capabilities:{agentStatus:true,localAiVerify:true},
+      lastSeenAt:new Date(now-100).toISOString(),recentCommands}]}),{status:200});
+  };
+  const proof=await ensureUser4AgentUpdated({
+    token:'authorized-admin-session-token-abcdef',clock:()=>now,fetchImpl,
+    sleepFn:async()=>{},maxPoll:3
+  });
+  assert.equal(posts,1);
+  assert.equal(proof.updatePerformed,true);
+  assert.equal(proof.recentOfficialUpdateVerified,true);
+});
