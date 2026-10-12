@@ -4,6 +4,7 @@ const CARD_RE=/^\/([a-z0-9][a-z0-9._-]{2,39})\/card\/?$/;
 const VCARD_RE=/^\/([a-z0-9][a-z0-9._-]{2,39})\/card\.vcf$/;
 const EXCHANGE_RE=/^\/([a-z0-9][a-z0-9._-]{2,39})\/card\/exchange\/?$/;
 const QR_RE=/^\/([a-z0-9][a-z0-9._-]{2,39})\/qr\/?$/;
+const SHORT_CARD_RE=/^\/([a-z0-9][a-z0-9_-]{2,39})\/?$/;
 const MAX_BODY_BYTES=8192;
 const encoder=new TextEncoder();
 
@@ -239,7 +240,27 @@ async function submitExchange(request,env,handle){
 }
 export async function routePersonDigitalCard(request,env={}){
   const url=new URL(request.url);
-  let match=url.pathname.match(EXCHANGE_RE);
+  let match=url.pathname.match(SHORT_CARD_RE);
+  if(match){
+    if(!['GET','HEAD'].includes(request.method))return new Response('Method Not Allowed',{status:405,headers:{allow:'GET, HEAD'}});
+    const share=await shareForHandle(env,match[1],'').catch(()=>null);
+    if(!share){
+      const html=setupHtml(null,match[1],'공개된 디지털 명함을 찾을 수 없습니다.');
+      return new Response(request.method==='HEAD'?null:html,{status:404,headers:publicCardHeaders({found:false,ready:false})});
+    }
+    const target=new URL(`/${match[1]}/card`,url.origin);
+    for(const [key,value] of url.searchParams)target.searchParams.append(key,value);
+    if(!target.searchParams.has('utm_source'))target.searchParams.set('utm_source','short');
+    return new Response(null,{status:307,headers:{
+      location:target.toString(),
+      'cache-control':'no-store',
+      'x-content-type-options':'nosniff',
+      'x-ekodi-surface-context':'person-digital-card-short',
+      'x-robots-tag':'noindex, follow',
+    }});
+  }
+
+  match=url.pathname.match(EXCHANGE_RE);
   if(match)return submitExchange(request,env,match[1]);
 
   match=url.pathname.match(QR_RE);
