@@ -5,7 +5,7 @@ import {runInNewContext} from 'node:vm';
 
 const source=readFileSync(new URL('../control.js',import.meta.url),'utf8');
 
-function browser({role='super_admin',sessionToken=true,storedTasks=[],storedResults=[],responses=[]}={}){
+function browser({role='super_admin',email='admin@example.test',sessionToken=true,storedTasks=[],storedResults=[],responses=[],legacySessions=[]}={}){
   const url=new URL('https://ekodi.kr/admin/control?embed=admin');
   const calls=[],nodes=new Map(),documentEvents=new Map();
   const node=selector=>{
@@ -31,18 +31,23 @@ function browser({role='super_admin',sessionToken=true,storedTasks=[],storedResu
     querySelectorAll:key=>key==='[data-view]'?tabs:key==='[data-view-panel]'?panels:key==='[data-refresh]'?[refresh]:[],
     addEventListener(name,handler){if(name==='DOMContentLoaded')this.boot=handler;else documentEvents.set(name,handler)},
   };
+  const identity={role,email,sessionToken};
+  const store=new Map([
+    ['ekodi-control-state-v2:'+encodeURIComponent(email),JSON.stringify({tasks:storedTasks,results:storedResults})],
+    ['ekodi-admin-command-history-v1',JSON.stringify(legacySessions)],
+    ['ekodi-control-state-v1',JSON.stringify({tasks:storedTasks,results:storedResults})],
+  ]);
   const storage={
-    getItem:key=>key==='ekodi-auth-token'&&sessionToken?'test-token'
-      :key==='ekodi-control-state-v1'?JSON.stringify({tasks:storedTasks,results:storedResults}):null,
-    setItem(){},
+    getItem:key=>key==='ekodi-auth-token'?(identity.sessionToken?'test-token':null):(store.get(key)||null),
+    setItem(key,value){store.set(key,String(value))},
   };
   let serverResponseIndex=0;
   async function fetch(urlString,options={}){
     const path=new URL(urlString).pathname;
     calls.push({path,authorization:options.headers?.authorization||''});
     if(path==='/api/session'){
-      return {status:role==='guest'?401:200,ok:role!=='guest',
-        json:async()=>({authenticated:role!=='guest',role})};
+      return {status:identity.role==='guest'?401:200,ok:identity.role!=='guest',
+        json:async()=>({authenticated:identity.role!=='guest',role:identity.role,email:identity.email})};
     }
     if(path==='/api/control/ai/v8/tasks'){
       const item=responses[Math.min(serverResponseIndex++,responses.length-1)]||{ok:true,tasks:[]};
@@ -59,7 +64,8 @@ function browser({role='super_admin',sessionToken=true,storedTasks=[],storedResu
     setTimeout:()=>0,clearTimeout(){},requestAnimationFrame:fn=>fn(),
   });
   const settle=async()=>{for(let i=0;i<30;i++)await Promise.resolve();};
-  return {calls,document,node,tabs,refresh,boot:()=>document.boot(),settle,
+  return {calls,document,node,tabs,refresh,store,boot:()=>document.boot(),settle,
+    changeIdentity:values=>Object.assign(identity,values),
     openTasks:()=>tabs.find(x=>x.dataset.view==='tasks').onclick(),
     showView:view=>tabs.find(x=>x.dataset.view===view).onclick(),
     changeVisibility:status=>{document.visibilityState=status;documentEvents.get('visibilitychange')?.();}};
@@ -205,4 +211,42 @@ test('visibility refresh respects authorization; a guest never reads the server 
   await ui.settle();
   assert.equal(ui.calls.filter(x=>x.path==='/api/control/ai/v8/tasks').length,0);
   assert.match(ui.node('#taskCards').innerHTML,/서버 미확인/);
+});
+
+test('unscoped legacy browser command history is never disclosed before authorization',async()=>{
+  const ui=browser({
+    role:'guest',sessionToken:false,
+    legacySessions:[{id:'old',title:'이전 관리자의 비공개 명령',messages:[]}],
+    storedResults:[{title:'이전 관리자 결과',summary:'기밀'}],
+  });
+  assert.doesNotMatch(ui.node('#recentTasks').innerHTML,/이전 관리자의 비공개 명령/);
+  await ui.boot();
+  assert.doesNotMatch(ui.node('#recentTasks').innerHTML,/이전 관리자의 비공개 명령/);
+  assert.doesNotMatch(ui.node('#resultCards').innerHTML,/이전 관리자 결과/);
+});
+
+test('new admin does not inherit the other account browser results after a session change',async()=>{
+  const ui=browser({storedResults:[{title:'A의 명령 결과',summary:'A만 확인'}]});
+  await ui.boot();
+  assert.match(ui.node('#resultCards').innerHTML,/A의 명령 결과/);
+  ui.changeIdentity({email:'other-admin@example.test'});
+  ui.store.set('ekodi-control-state-v2:other-admin%40example.test',JSON.stringify({
+    tasks:[],results:[{title:'B의 별도 결과',summary:'B만 확인'}]
+  }));
+  ui.showView('chat');
+  ui.changeVisibility('visible');
+  await ui.settle();
+  assert.match(ui.node('#resultCards').innerHTML,/B의 별도 결과/);
+  assert.doesNotMatch(ui.node('#resultCards').innerHTML,/A의 명령 결과/);
+});
+
+test('session revocation clears on-screen browser history and cached results',async()=>{
+  const ui=browser({storedResults:[{title:'로그아웃 전 결과',summary:'이전 세션'}]});
+  await ui.boot();
+  assert.match(ui.node('#resultCards').innerHTML,/로그아웃 전 결과/);
+  ui.changeIdentity({role:'guest'});
+  ui.changeVisibility('visible');
+  await ui.settle();
+  assert.doesNotMatch(ui.node('#resultCards').innerHTML,/로그아웃 전 결과/);
+  assert.doesNotMatch(ui.node('#recentTasks').innerHTML,/이전 세션/);
 });
