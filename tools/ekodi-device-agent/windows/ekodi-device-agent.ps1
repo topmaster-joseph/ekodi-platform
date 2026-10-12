@@ -2764,6 +2764,9 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     'diagnostics.collect' { return @{ message = '시스템·저장공간·네트워크·프린터·시작프로그램·업데이트 진단을 완료했습니다.'; diagnostics = Get-FullDiagnostic; settings = Get-AgentSettings } }
     'computer.system.read' { return @{ message = '원격 컴퓨터 시스템 상태를 읽었습니다.'; system = Get-SystemSnapshot } }
     'filesystem.inventory' {
+      if ([Security.Principal.WindowsIdentity]::GetCurrent().IsSystem) {
+        return @{ message = 'SYSTEM 서비스에서는 실제 사용자 바탕화면을 특정할 수 없습니다.'; mode = 'read-only'; status = 'requires-user-context'; items = @(); itemCount = 0 }
+      }
       $desktop = [Environment]::GetFolderPath('Desktop')
       if (-not $desktop -or -not (Test-Path -LiteralPath $desktop -PathType Container)) {
         return @{ message = '바탕화면을 찾을 수 없습니다.'; mode = 'read-only'; items = @(); itemCount = 0 }
