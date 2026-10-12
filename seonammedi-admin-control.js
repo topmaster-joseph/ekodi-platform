@@ -1020,6 +1020,15 @@ async function importTimelineFromLink(request,env,auth,{preview=false}={}){
   return json({ok:true,id,status,item},201);
 }
 
+async function hideAutoTimelineSource(env,auth,id){
+  if(!(can(auth,TIMELINE_CAP)||can(auth,CONTENT_CAP)))return json({ok:false,error:'timeline_forbidden'},403);
+  const source=await env.DB.prepare('SELECT id,title,review_state FROM seonammedi_monitor_items WHERE id=?').bind(id).first();
+  if(!source)return json({ok:false,error:'not_found'},404);
+  await env.DB.prepare("UPDATE seonammedi_monitor_items SET review_state='rejected' WHERE id=?").bind(id).run();
+  await audit(env,auth,'hide','monitored_timeline_source',id,{title:source.title,previousState:source.review_state});
+  return json({ok:true,id,hidden:true});
+}
+
 async function listAdminContent(env,auth){
   if(!can(auth,CONTENT_CAP))return json({ok:false,error:'content_forbidden'},403);
   await ensureContentCategoryColumn(env.DB);
@@ -1228,6 +1237,8 @@ export async function handleSeonamMediAdminApi(request,env){
   let match=url.pathname.match(/^\/api\/seonammedi\/admin\/notices\/(\d+)$/);
   if(match&&request.method==='PUT')return updateNotice(request,env,auth,Number(match[1]));
   if(match&&request.method==='DELETE')return deleteNotice(env,auth,Number(match[1]));
+  const monitoredSource=url.pathname.match(/^\/api\/seonammedi\/admin\/timeline\/auto-source\/(\d+)$/);
+  if(monitoredSource&&request.method==='DELETE')return hideAutoTimelineSource(env,auth,Number(monitoredSource[1]));
   if(url.pathname===PREFIX+'/admin/timeline/link-preview'&&request.method==='POST')return importTimelineFromLink(request,env,auth,{preview:true});
   if(url.pathname===PREFIX+'/admin/timeline/link-import'&&request.method==='POST')return importTimelineFromLink(request,env,auth);
   if(url.pathname===PREFIX+'/admin/timeline'&&request.method==='GET')return listAdminTimeline(env,auth);
