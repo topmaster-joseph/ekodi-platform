@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 
 const source=readFileSync(new URL('../admin-control-frame.js',import.meta.url),'utf8');
+const sidebarSource=readFileSync(new URL('../admin-sidebar.js',import.meta.url),'utf8');
 
 function fixture(){
   const listeners=new Map();
@@ -49,10 +50,11 @@ function fixture(){
   };
   const window={
     addEventListener:(event,callback)=>navListeners.set(event,callback),
+    dispatchEvent:event=>navListeners.get(event.type)?.(event),
     EKODIAdminPanels:{current:()=> 'command-home'},
   };
   runInNewContext(source,{document,window});
-  return {frame,notice,panel,root,listeners,navListeners};
+  return {frame,notice,panel,root,listeners,navListeners,window};
 }
 
 test('control frame verifier waits for login and does not report an unloaded iframe as broken',()=>{
@@ -142,4 +144,63 @@ test('authenticated admin ready event restores home panel without reloading the 
   assert.equal(frame.getAttribute('src'),'/admin/control?embed=admin');
   ready();
   assert.equal(frame.getAttribute('src'),'/admin/control?embed=admin');
+});
+
+test('clicking the same Control sidebar entry twice keeps the center panel visible',()=>{
+  const {frame,panel,window}=fixture();
+  const match=sidebarSource.match(/  control\.onclick=event=>\{[\s\S]*?\n  \};/);
+  assert.ok(match,'single Control navigation handler must exist');
+  const control={onclick:null};
+  let eventCount=0,activateCount=0;
+  // The compact menu hides all panels before syncTitle, and syncTitle emits
+  // nothing if this section is already active.
+  window.EKODIAdminPanels={
+    current:()=> 'command-home',
+    activate:section=>{
+      assert.equal(section,'command-home');
+      activateCount++;
+      panel.hidden=true;
+      panel.classList.add('hidden-panel');
+      return true;
+    },
+  };
+  window.dispatchEvent=event=>{
+    eventCount++;
+    const handle=window._onNavigation;
+    handle?.(event);
+  };
+  window._onNavigation=event=>{if(event.type==='ekodi-admin-section-changed'){
+    const activate=fixtureNavigation.get('ekodi-admin-section-changed');
+    activate?.(event);
+  }};
+  // The installed Control-frame handler is the real listener.
+  const fixtureNavigation=new Map();
+  const fresh=fixture();
+  fixtureNavigation.set('ekodi-admin-section-changed',fresh.navListeners.get('ekodi-admin-section-changed'));
+  // Rebind the real iframe listener to this panel so both clicks exercise it.
+  const originalActivate=fresh.navListeners.get('ekodi-admin-section-changed');
+  window._onNavigation=event=>{
+    if(event.type==='ekodi-admin-section-changed'){
+      originalActivate({detail:event.detail});
+      if(event.detail.section==='command-home'){
+        panel.hidden=fresh.panel.hidden;
+        panel.classList.toggle('hidden-panel',fresh.panel.classList.contains('hidden-panel'));
+        if(fresh.frame.hasAttribute('src')&&!frame.hasAttribute('src'))frame.setAttribute('src',fresh.frame.getAttribute('src'));
+      }
+    }
+  };
+  runInNewContext('const control = injectedControl; '+match[0],{
+    injectedControl:control,window,
+    CustomEvent:class CustomEvent{constructor(type,{detail}){this.type=type;this.detail=detail;}},
+  });
+  for(let i=0;i<2;i++){
+    let prevented=false;
+    control.onclick({preventDefault:()=>{prevented=true}});
+    assert.equal(prevented,true);
+    assert.equal(panel.hidden,false);
+    assert.equal(panel.classList.contains('hidden-panel'),false);
+    assert.equal(frame.getAttribute('src'),'/admin/control?embed=admin');
+  }
+  assert.equal(activateCount,2);
+  assert.equal(eventCount,2);
 });
