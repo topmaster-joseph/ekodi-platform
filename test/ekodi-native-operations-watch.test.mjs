@@ -61,7 +61,7 @@ test('read-only EKODI watch calls only GET and retains no article bodies or toke
   const result=await collectEkodiNativeWatch({fetchImpl,githubToken:'secret-not-in-output',nowMs:now,mode:'daily'});
   assert.equal(result.result,'ok');
   assert.equal(result.checks.length,7);
-  assert.equal(result.chatgptAutomationRequired,undefined);
+  assert.equal(result.chatgptAutomationRequired,false);
   assert.equal(result.mutatesProduction,false);
   assert.equal(result.evidenceOnly.trafficNumbersRetrieved,false);
   assert.equal(result.evidenceOnly.personalMissionReportProduced,false);
