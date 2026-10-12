@@ -64,6 +64,7 @@ test('protected merge reconciler only dispatches reviewed guards after official 
   assert.match(runner,/release-receipt/);
   assert.match(runner,/\.authorized == true/);
   assert.match(runner,/merged_at/);
+  assert.match(runner,/workflow_dispatch:/,'post-merge dispatcher has an explicitly authenticated native trigger');
   assert.match(runner,/cancel-in-progress: false/,'post-merge guard dispatcher may not cancel a verified release');
   assert.match(runner,/No verified protected merge within lease/,'missing protected merge must fail closed rather than deploy');
   assert.match(runner,/if \[ -n "\$merged_at" \]/);
