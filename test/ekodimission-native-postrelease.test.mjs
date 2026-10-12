@@ -1,3 +1,4 @@
+import { runInNewContext } from 'node:vm';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -57,4 +58,27 @@ test('Mission live browser smoke is bounded read-only and does not expose user c
   assert.match(native,/\.pageErrors \| length == 0/);
   assert.match(native,/artifacts\/background-browser-worker/);
   assert.doesNotMatch(workflow,/(?:SUPABASE_ACCESS_TOKEN|CLOUDFLARE_API_TOKEN|permissions: write|Desktop_Commander|curl.*POST|allowMutation: true)/);
+});
+
+
+test('mission native gate truth table rejects PR validation, feature push and failed deployments',()=>{
+  for(const job of ['native-mobile','native-desktop']){
+    const section=workflow.split('  '+job+':\\n')[1]?.split(/\\n  [a-z][a-z-]*:\\n/)[0]||'';
+    const condition=section.match(/^\\s+if: (.+)$/m)?.[1];
+    assert.ok(condition,'Missing native job condition for '+job);
+    const cases=[
+      {name:'explicit native dispatch',eventName:'workflow_dispatch',event:'',branch:'',result:'',expected:true},
+      {name:'guarded schema dispatch success',eventName:'workflow_run',event:'workflow_dispatch',branch:'main',result:'success',expected:true},
+      {name:'protected main push success',eventName:'workflow_run',event:'push',branch:'main',result:'success',expected:true},
+      {name:'PR-only successful validation',eventName:'workflow_run',event:'pull_request',branch:'main',result:'success',expected:false},
+      {name:'feature branch push',eventName:'workflow_run',event:'push',branch:'feature',result:'success',expected:false},
+      {name:'failed guarded deploy',eventName:'workflow_run',event:'workflow_dispatch',branch:'main',result:'failure',expected:false},
+      {name:'PR source validation',eventName:'pull_request',event:'',branch:'',result:'success',expected:false},
+      {name:'unrelated direct push',eventName:'push',event:'',branch:'main',result:'success',expected:false},
+    ];
+    for(const c of cases){
+      const got=Boolean(runInNewContext(condition,{github:{event_name:c.eventName,event:{workflow_run:{conclusion:c.result,event:c.event,head_branch:c.branch}}}}));
+      assert.equal(got,c.expected,job+': '+c.name);
+    }
+  }
 });
