@@ -5,14 +5,14 @@ import {runInNewContext} from 'node:vm';
 
 const source=readFileSync(new URL('../control.js',import.meta.url),'utf8');
 
-function browser({role='super_admin',email='admin@example.test',sessionToken=true,storedTasks=[],storedResults=[],responses=[],legacySessions=[],initialUrl='https://ekodi.kr/admin/control?embed=admin'}={}){
+function browser({role='super_admin',email='admin@example.test',sessionToken=true,storedTasks=[],storedResults=[],responses=[],assistResponses=[],actionResponses=[],executeNow=false,legacySessions=[],initialUrl='https://ekodi.kr/admin/control?embed=admin'}={}){
   const url=new URL(initialUrl);
   const calls=[],nodes=new Map(),documentEvents=new Map();
   const node=selector=>{
     if(!nodes.has(selector))nodes.set(selector,{
       classList:{toggle(){},add(){},remove(){}},dataset:{},hidden:false,
       innerHTML:'',textContent:'',value:'',style:{},scrollHeight:300,
-      addEventListener(){},querySelectorAll(){return[]},focus(){},
+      listeners:new Map(),addEventListener(name,handler){this.listeners.set(name,handler)},querySelectorAll(){return[]},focus(){},
       scrollTo(){},requestSubmit(){},closest(){return false},
     });
     return nodes.get(selector);
@@ -25,6 +25,7 @@ function browser({role='super_admin',email='admin@example.test',sessionToken=tru
   });
   const refresh=node('refresh:tasks');
   refresh.closest=selector=>selector==='#viewTasks';
+  node('#executeNow').checked=executeNow;
   const document={
     readyState:'loading',visibilityState:'visible',documentElement:{dataset:{}},body:{scrollHeight:400},
     querySelector:node,
@@ -41,13 +42,21 @@ function browser({role='super_admin',email='admin@example.test',sessionToken=tru
     getItem:key=>key==='ekodi-auth-token'?(identity.sessionToken?'test-token':null):(store.get(key)||null),
     setItem(key,value){store.set(key,String(value))},
   };
-  let serverResponseIndex=0;
+  let serverResponseIndex=0,assistResponseIndex=0,actionResponseIndex=0;
   async function fetch(urlString,options={}){
     const path=new URL(urlString).pathname;
     calls.push({path,authorization:options.headers?.authorization||''});
     if(path==='/api/session'){
       return {status:identity.role==='guest'?401:200,ok:identity.role!=='guest',
         json:async()=>({authenticated:identity.role!=='guest',role:identity.role,email:identity.email})};
+    }
+    if(path==='/api/control/ai/assist'||path==='/api/control/ai/actions'){
+      const isAssist=path.endsWith('/assist');
+      const list=isAssist?assistResponses:actionResponses;
+      const index=isAssist?assistResponseIndex++:actionResponseIndex++;
+      const item=list[Math.min(index,list.length-1)]||{ok:true,provider:'EKODI',reply:'답변'};
+      const status=item.status||200;
+      return {status,ok:status<400,json:async()=>{if(item.wait)await item.wait;return item;}};
     }
     if(path==='/api/control/ai/v8/tasks'){
       const item=responses[Math.min(serverResponseIndex++,responses.length-1)]||{ok:true,tasks:[]};
@@ -66,6 +75,7 @@ function browser({role='super_admin',email='admin@example.test',sessionToken=tru
   const settle=async()=>{for(let i=0;i<30;i++)await Promise.resolve();};
   return {calls,document,node,tabs,refresh,store,boot:()=>document.boot(),settle,
     changeIdentity:values=>Object.assign(identity,values),
+    submitCommand:value=>{node('#commandInput').value=value;node('#commandForm').listeners.get('submit')?.({preventDefault(){}})},
     openTasks:()=>tabs.find(x=>x.dataset.view==='tasks').onclick(),
     showView:view=>tabs.find(x=>x.dataset.view===view).onclick(),
     changeVisibility:status=>{document.visibilityState=status;documentEvents.get('visibilitychange')?.();}};
@@ -310,4 +320,57 @@ test('task ledger 401 revocation clears cached private records instead of exposi
   await ui.settle();
   assert.doesNotMatch(ui.node('#taskCards').innerHTML,/인증 전 작업/);
   assert.match(ui.node('#taskCards').innerHTML,/서버 미확인/);
+});
+
+test('AI response 401 revocation removes private conversation and results immediately',async()=>{
+  const ui=browser({storedResults:[{title:'개인 AI 기록',summary:'과거'}],
+    assistResponses:[{status:401,error:'SESSION_REVOKED'}]});
+  await ui.boot();
+  assert.match(ui.node('#resultCards').innerHTML,/개인 AI 기록/);
+  ui.submitCommand('보안 권한 확인 명령');
+  await ui.settle();
+  assert.match(ui.node('#authState').textContent,/로그인 만료/);
+  assert.equal(ui.node('#authBanner').hidden,false);
+  assert.doesNotMatch(ui.node('#resultCards').innerHTML,/개인 AI 기록/);
+  assert.doesNotMatch(ui.node('#messages').innerHTML,/보안 권한 확인 명령/);
+  assert.equal(ui.calls.filter(x=>x.path==='/api/control/ai/assist').length,1);
+});
+
+test('preflight API 403 blocks execution before an AI assist request or cached output',async()=>{
+  const ui=browser({executeNow:true,storedResults:[{title:'사전 기록',summary:'비공개'}],
+    actionResponses:[{status:403,error:'ACCESS_DENIED'}]});
+  await ui.boot();
+  ui.submitCommand('승인되지 않은 자동실행');
+  await ui.settle();
+  assert.match(ui.node('#authState').textContent,/로그인 만료/);
+  assert.equal(ui.calls.some(x=>x.path==='/api/control/ai/assist'),false);
+  assert.equal(ui.calls.some(x=>x.path==='/api/control/ai/v8/pulse'),false);
+  assert.doesNotMatch(ui.node('#resultCards').innerHTML,/사전 기록/);
+  assert.doesNotMatch(ui.node('#messages').innerHTML,/승인되지 않은 자동실행/);
+});
+
+test('non-authorization AI service error keeps session but labels the response as unverified',async()=>{
+  const ui=browser({assistResponses:[{status:503,error:'PROVIDER_UNAVAILABLE'}]});
+  await ui.boot();
+  ui.submitCommand('AI 답변만 요청');
+  await ui.settle();
+  assert.equal(ui.node('#authBanner').hidden,true);
+  assert.match(ui.node('#messages').innerHTML,/AI 설명을 받지 못했습니다/);
+  assert.match(ui.node('#resultCards').innerHTML,/AI 설명 · 실행 미확인/);
+});
+
+test('late AI response from a previous administrator does not appear after account switching',async()=>{
+  let finish;
+  const wait=new Promise(resolve=>{finish=resolve});
+  const ui=browser({assistResponses:[{ok:true,provider:'AI',reply:'이전 계정의 비밀 응답',wait}]});
+  await ui.boot();
+  ui.submitCommand('계정 A 명령');
+  await ui.settle();
+  ui.changeIdentity({email:'other-admin@example.test'});
+  ui.changeVisibility('visible');
+  await ui.settle();
+  finish();
+  await ui.settle();
+  assert.doesNotMatch(ui.node('#messages').innerHTML,/계정 A 명령|이전 계정의 비밀 응답/);
+  assert.doesNotMatch(ui.node('#resultCards').innerHTML,/이전 계정의 비밀 응답/);
 });
