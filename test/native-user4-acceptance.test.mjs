@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {classifyUser4BrowserFailure,eligibleUser4Agent,verifyUser4Browser,verifyUser4BrowserWithRetry,verifyUser4Acceptance,ensureUser4AgentUpdated,USER4_CDP_FIX_FLOOR,USER4_CDP_WORKER_AGENT_VERSION}
   from '../scripts/verify-native-user4-acceptance.mjs';
 const now=Date.parse('2026-10-11T06:30:00.000Z');
@@ -291,4 +292,12 @@ test('USER4 previous-version successful update cannot masquerade as reviewed CDP
     fetchImpl,clock:()=>at,sleepFn:async()=>{},maxPoll:3});
   assert.equal(result.updatePerformed,true);
   assert.equal(queued,1);
+});
+
+test('Control API exposes only Agent self-update version needed for source pin attestation',()=>{
+  const code=readFileSync(new URL('../device-control.js',import.meta.url),'utf8');
+  assert.match(code,/function summarizeCommandResult\(result = \{\}, commandType = ''\)/);
+  assert.match(code,/commandType === 'agent\.self_update'/);
+  assert.match(code,/summary\.version = safeText\(result\.version, 32\)/);
+  assert.match(code,/summarizeCommandResult\(parseJson\(command\.result_json\), command\.command_type\)/);
 });
