@@ -60,8 +60,9 @@
     try{
       if(releaseMode){
         // Stable per conversation/message to prevent duplicate task creation on retries.
-        let hash=2166136261;for(const ch of message){hash^=ch.charCodeAt(0);hash=Math.imul(hash,16777619)}
-        const idempotencyKey=('control-'+String(state.activeId||'session').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,55)+'-'+(hash>>>0).toString(36)).slice(0,100);
+        const bytes=new TextEncoder().encode(String(state.activeId||'session')+'\\0'+message);
+        const digest=await crypto.subtle.digest('SHA-256',bytes);
+        const idempotencyKey='control-'+Array.from(new Uint8Array(digest)).map(n=>n.toString(16).padStart(2,'0')).join('');
         const submitted=await api('/api/control/ai/v8/orchestrator/submit',{method:'POST',body:JSON.stringify({
           intent:message,risk:'high',deploymentRequested:true,idempotencyKey,service:'control'
         })});
