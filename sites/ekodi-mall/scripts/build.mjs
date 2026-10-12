@@ -1,3 +1,4 @@
+import { renderProductDiscoveryJsonLd } from './product-discovery.mjs';
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -224,7 +225,7 @@ for (const product of products) {
     RELATED_PRODUCTS: related || '<p class="empty">함께 볼 다른 상품을 준비 중입니다.</p>',
     NOTICE: esc(site.notice)
   });
-  await write(`products/${product.slug}/index.html`, html);
+  await write(`products/${product.slug}/index.html`, html.replace('</head>', renderProductDiscoveryJsonLd({site, product, store, productUrl}) + '\n</head>'));
 }
 
 for (const store of stores) {

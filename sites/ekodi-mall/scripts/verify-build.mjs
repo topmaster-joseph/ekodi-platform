@@ -17,7 +17,7 @@ const checks = [
   ['seller/index.html', ['OPEN SELLER STUDIO', 'PERSONAL PRODUCT STUDIO', 'sellerDraftForm', 'Google로 무료 시작', '7%', '8%', '9%', 'STOREFRONT', 'ANALYTICS', '/assets/seller-readiness.js', '/assets/seller-analytics.js', '/assets/seller-storefronts.js', '/assets/analytics.css']],
   ['checkout/index.html', ['INQUIRY BASKET', 'basketItems', '/assets/commerce.js']],
   ['stores/ekodi-select/index.html', ['EKODI Select', 'STORE COLLECTION']],
-  ['products/reusable-daily-bottle/index.html', ['리유저블 데일리 보틀', 'PRODUCT PAGE', 'data-add-basket']],
+  ['products/reusable-daily-bottle/index.html', ['리유저블 데일리 보틀', 'PRODUCT PAGE', 'data-add-basket', 'application/ld+json', '"@type":"WebPage"']],
   ['assets/commerce.js', ['ekodiMallInquiryBasketV1', 'data-basket-copy']],
   ['assets/seller.js', ['ekodiMallSellerStudioDraftV5', 'mall-seller', "plan: 'free'", 'product-link-reservation']],
   ['assets/seller-server.js', ['mall-api.ekodi.kr', '서버에 저장', '게시 · 링크 활성화', '/api/products', '/share-links', '/api/orders?limit=20', '/api/settlements', '직접링크 복사 · 7%', '일반 상품링크 · 8%']],
