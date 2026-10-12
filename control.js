@@ -32,9 +32,11 @@
   function loadState(){try{const key=scopedKey(CONTROL_STATE);return key?(JSON.parse(sessionStorage.getItem(key)||'{}')||{}):{}}catch{return{}}}
   function saveState(){try{const key=scopedKey(CONTROL_STATE);if(key)sessionStorage.setItem(key,JSON.stringify({tasks:state.tasks.slice(0,40),results:state.results.slice(0,40)}))}catch{}}
   function resetPrivateSurface(){
+    const hadPrivateData=Boolean(state.storageOwner||state.sessions.length||state.activeId||
+      state.tasks.length||state.results.length||state.liveTasks.length);
     state.storageOwner='';state.sessions=[];state.activeId=null;state.tasks=[];state.results=[];
     state.liveTasks=[];state.taskSource='local';state.taskCheckedAt='';state.taskNotice='';
-    renderRecent();renderMessages();renderPanels();
+    if(hadPrivateData){renderRecent();renderMessages();renderPanels()}
   }
   function bindAccount(session){
     const email=String(session?.email||'').trim().toLowerCase();
