@@ -158,7 +158,7 @@
   function newTask(){state.activeId=null;setView('chat');renderMessages();$('#commandInput').focus()}
   function closeRail(){$('#controlRail').classList.remove('open')}
   function bind(){
-    $('[data-view]').forEach(b=>b.onclick=()=>{setView(b.dataset.view);const next=new URL(location.href);if(b.dataset.view==='chat')next.searchParams.delete('view');else next.searchParams.set('view',b.dataset.view);history.replaceState(null,'',next.pathname+next.search+next.hash);});
+    $$('[data-view]').forEach(b=>b.onclick=()=>{setView(b.dataset.view);const next=new URL(location.href);if(b.dataset.view==='chat')next.searchParams.delete('view');else next.searchParams.set('view',b.dataset.view);history.replaceState(null,'',next.pathname+next.search+next.hash);});
     $('#newTask').onclick=newTask;$('#railOpen').onclick=()=>$('#controlRail').classList.add('open');$('#railClose').onclick=closeRail;
     $('#commandForm').addEventListener('submit',e=>{e.preventDefault();submitCommand($('#commandInput').value)});
     $('#commandInput').addEventListener('input',resizeInput);
