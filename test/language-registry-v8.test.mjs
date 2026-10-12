@@ -68,8 +68,10 @@ test('shell and injector consume the registry instead of per-service language ar
   assert.match(worker,/LANGUAGE_REGISTRY_BOOTSTRAP/);
   assert.match(worker,/\/language-registry\.json/);
   assert.match(runtime,/const VERSION=8/);
+  assert.match(runtime,/let readinessResolved=false;/);
+  assert.match(runtime,/readinessResolved=true;/);
   assert.match(runtime,/visibleLanguages/);
-  assert.match(runtime,/function languageChoiceAvailable\(\)\{return visibleLanguages\(\)\.length>1;\}/);
+  assert.match(runtime,/function languageChoiceAvailable\(\)\{return readinessResolved&&visibleLanguages\(\)\.length>1;\}/);
   assert.match(runtime,/if\(!languageChoiceAvailable\(\)\)\{document\.querySelector\('\[data-ekodi-language-placement="header"\]'\)\?\.remove\(\);return;\}/);
   assert.match(runtime,/select\.replaceChildren/);
   assert.match(runtime,/border-radius:999px/);
