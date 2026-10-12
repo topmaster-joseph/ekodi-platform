@@ -20,7 +20,7 @@ test('channel and autopost navigation is named consistently across administrator
   assert.doesNotMatch(workspace,/mountCommandHome|EKODITenantCommandHome/);
 
   const store = await (await storeAdminScript()).text();
-  assert.match(store,/홍보 · 채널/);
+  assert.match(store,/label:'홍보'/);
   assert.match(store,/마케팅 AI/);
   assert.match(store,/채널/);
   assert.match(store,/\['publishing','채널'\]/);
