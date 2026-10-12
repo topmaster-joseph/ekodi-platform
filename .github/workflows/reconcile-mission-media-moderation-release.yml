@@ -10,6 +10,7 @@ on:
       - 'supabase/migrations/20261012060400_activity_photo_finalize_moderation_guard.sql'
       - '.github/workflows/reconcile-mission-media-moderation-release.yml'
       - '.github/workflows/deploy-activity-public-share-schema.yml'
+      - 'test/ekodimission-media-moderation-guard.test.mjs'
   workflow_dispatch:
     inputs:
       release_branch_ref:
