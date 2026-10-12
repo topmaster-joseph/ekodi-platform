@@ -187,6 +187,28 @@ function completionEvidenceShapeValid(evidence,row){
     const item=required.find(entry=>entry?.name===name);
     if(!item||item.conclusion!=='success')return false;
   }
+  // The only allowed no-Worker release is the specifically Human-Gate approved
+  // native operations watch. OIDC collector must verify its actual main-branch
+  // scheduled/dispatch observe job and its non-empty evidence artifact.
+  if(evidence.deliveryKind==='github-actions-schedule'){
+    const w=evidence.nativeWorkflow||{};
+    if(text(row.task_id,160)!=='orch_recovery_dcf5dace563ac6da0488a29708afcf21')return false;
+    if(text(row.branch_ref,220)!=='ai/gpt6/orch_recovery_dcf5dace563ac6da0488a29708afcf21')return false;
+    if(evidence.source!=='github-actions-native-operations-verified')return false;
+    if(Number(evidence.pr?.number)!==4383||!/^\d{4}-\d{2}-\d{2}T/.test(text(evidence.pr?.mergedAt,80)))return false;
+    if(w.name!=='EKODI Native Operations Watch'||w.path!=='.github/workflows/ekodi-native-operations-watch.yml')return false;
+    if(!['schedule','workflow_dispatch'].includes(w.runEvent)||w.observeJob!=='observe')return false;
+    if(!Number.isSafeInteger(w.workflowId)||w.workflowId<1||!Number.isSafeInteger(w.runId)||w.runId<1)return false;
+    if(!Number.isSafeInteger(w.artifactId)||w.artifactId<1||!Number.isSafeInteger(w.artifactBytes)||w.artifactBytes<1)return false;
+    if(w.artifactName!=='ekodi-native-operations-'+w.runId)return false;
+    if(!/^[a-f0-9]{40}$/i.test(text(w.runHeadSha,80))||
+       !/^\d{4}-\d{2}-\d{2}T/.test(text(w.runCreatedAt,80))||
+       Date.parse(w.runCreatedAt)<=Date.parse(evidence.pr.mergedAt))return false;
+    if(!Array.isArray(w.verifiedSteps)||!
+      ['Collect EKODI-owned read-only operational evidence',
+       'Preserve privacy-safe evidence, including failures'].every(s=>w.verifiedSteps.includes(s)))return false;
+    return true;
+  }
   const deployments=Array.isArray(evidence.deployments)?evidence.deployments:[];
   if(!deployments.length)return false;
   if(!deployments.some(item=>Array.isArray(item?.stagingJobs)&&item.stagingJobs.length))return false;
