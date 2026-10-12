@@ -72,7 +72,16 @@
 <section id="timeline" class="section activity-list-only" data-view-section="status" data-status-pane="timeline" hidden>
   <div class="section-head section-view-title"><div><p class="eyebrow">ACTIVITY HISTORY</p><h2>활동이력</h2></div></div>
   <div class="activity-toolbar"><div class="filters" id="timelineFilters" aria-label="활동이력 세부 분류"></div><button id="timelineManageToggle" class="ekodi-public-admin-inline" type="button" hidden aria-expanded="false" aria-controls="timelineManageForm">활동이력 바로 수정</button></div>
-  <form id="timelineManageForm" class="panel module-compose inline-manage-form" hidden>
+  <form id="timelineLinkForm" class="panel module-compose inline-manage-form" hidden>
+    <strong>링크만으로 활동이력 등록</strong>
+    <p class="muted">기사·공식자료 주소를 넣으면 원문을 확인하고 제목, 내용, 발행일과 출처를 자동 입력합니다.</p>
+    <label>원문 링크<input id="timelineLinkUrl" name="url" type="url" inputmode="url" placeholder="https://example.org/article" required></label>
+    <div class="inline-manage-grid"><label>등록 상태<select name="status"><option value="published">검증 후 공개</option><option value="draft">비공개 저장</option></select></label></div>
+    <div class="form-actions"><button id="timelineLinkPreviewButton" type="button">링크 미리보기</button><button id="timelineLinkSaveButton" type="submit" disabled>이 자료 등록</button><button id="timelineLinkCancel" type="button" class="secondary">닫기</button></div>
+    <div id="timelineLinkPreview" class="link-import-preview" hidden></div>
+    <p id="timelineLinkMessage" role="status" class="muted"></p>
+  </form>
+  
     <input type="hidden" name="id">
     <strong id="timelineManageTitle">활동이력 추가</strong>
     <div class="inline-manage-grid"><label>일자<input name="date" maxlength="40" placeholder="2026.10.07" required></label><label>분류<input name="category" maxlength="80" placeholder="비대위 활동" required></label><label>정렬<input name="sortOrder" type="number" min="0" max="9999" value="0"></label></div>
