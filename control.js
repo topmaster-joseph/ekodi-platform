@@ -29,7 +29,7 @@
   function saveState(){try{sessionStorage.setItem(CONTROL_STATE,JSON.stringify({tasks:state.tasks.slice(0,40),results:state.results.slice(0,40)}))}catch{}}
   function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
   function title(text){const v=String(text||'').replace(/\s+/g,' ').trim();return v.length>46?v.slice(0,46)+'…':v||'새 작업'}
-  function statusLabel(v){return ({queued:'대기',running:'실행 중',verified:'완료',resolved:'완료',failed:'실패',blocked:'차단',auto_blocked:'승인·사전점검 필요',preflight_failed:'사전점검 실패',core_only:'Core 처리',human_gate:'확인 필요',assist_only:'검토',ready_for_executor:'실행 대기',approved_pending_executor:'승인됨'})[v]||v||'진행'}
+  function statusLabel(v){return ({queued:'대기',running:'실행 중',verified:'완료',resolved:'완료',failed:'실패',blocked:'차단',auto_blocked:'승인·사전점검 필요',preflight_failed:'사전점검 실패',core_only:'Core 처리 · 실행 증빙 대기',human_gate:'관리자 승인 대기',assist_only:'AI 설명',ready_for_executor:'실행 대기',approved_pending_executor:'승인 후 실행 대기',retry:'재시도 대기',degraded:'부분 처리 · 확인 필요',executor_ready:'실행기 인계 대기',ignored:'처리 제외'})[v]||v||'진행'}
   function headers(json=false){const h={accept:'application/json'};if(token())h.authorization='Bearer '+token();if(json)h['content-type']='application/json';return h}
   async function api(path,options={}){
     const response=await fetch(API+path,{cache:'no-store',...options,headers:{...headers(Boolean(options.body)),...(options.headers||{})}});
@@ -188,7 +188,8 @@
     $('#taskCards').innerHTML=sourceCard+(visibleTasks.length?visibleTasks.map(t=>card(t.title,serverVerified?statusLabel(t.status):statusLabel(t.status)+' · 서버 미확인',(t.id||'')+' · '+(t.target||'auto'))).join(''):card(serverVerified?'서버 작업장부가 비어 있습니다':'저장된 작업이 없습니다',serverVerified?'서버 확인':'미확인',serverVerified?'최근 40개 범위에서 표시할 작업이 없습니다.':'명령 기록이 없거나 최신 서버 상태를 조회하지 못했습니다.'));
     $('#agentCards').innerHTML=AGENTS.map(([id,name,kind])=>card(name,id==='ekodi'?'최종 통제':'연결 대상',kind+' · EKODI 라우팅/권한 정책 적용')).join('');
     $('#workerCards').innerHTML=WORKERS.map(([id,name])=>card(name,'상태는 실행 시 확인',id+' 실행계층')).join('');
-    $('#resultCards').innerHTML=state.results.length?state.results.map(r=>card(r.title,statusLabel(r.status),(r.provider||'EKODI')+(r.taskId?' · '+r.taskId:'')+'\n'+r.summary)).join(''):card('아직 결과가 없습니다','대기','명령 처리 후 검증된 결과가 이곳에 누적됩니다.');
+    const resultNotice=card('AI 응답과 실행 증빙은 별개입니다','확인 안내','여기에는 브라우저에 저장된 AI 답변 기록이 표시됩니다. 실제 실행 상태는 작업 탭의 EKODI 서버 작업장부에서 확인하세요.');
+    $('#resultCards').innerHTML=resultNotice+(state.results.length?state.results.map(r=>card(r.title,r.taskId?'AI 응답 · 작업 상태 별도 확인':'AI 설명 · 실행 미확인',(r.provider||'EKODI')+(r.taskId?' · Task '+r.taskId:'')+'\n'+r.summary)).join(''):card('아직 AI 응답 기록이 없습니다','브라우저 기록','명령을 입력하면 AI 답변 요약이 여기에 저장됩니다.'));
   }
   function resizeInput(){const input=$('#commandInput');input.style.height='auto';input.style.height=Math.min(input.scrollHeight,190)+'px'}
   function newTask(){state.activeId=null;setView('chat');renderMessages();$('#commandInput').focus()}
