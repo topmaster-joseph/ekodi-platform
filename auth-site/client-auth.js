@@ -13,7 +13,7 @@ const realms={
   ai:{name:'EKODI AI',returnTo:'https://ekodi.kr/ai/',origins:['https://ekodi.kr'],open:true,kind:'ai'},
   community:{name:'Community',returnTo:'https://ekodi.kr/community/',open:true,kind:'community'},
   singles:{name:'EKODI 동행',returnTo:'https://ekodi.kr/singles/',origins:['https://ekodi.kr'],open:true,kind:'singles'},
-  church:{name:'EKODI Church',returnTo:'https://church.ekodi.kr/',open:true,kind:'church'},
+  church:{name:'EKODI Church',returnTo:'https://ekodi.kr/ekodichurch/',origins:['https://ekodi.kr'],open:true,kind:'church'},
   biz:{name:'EKODI Biz',returnTo:'https://biz.ekodi.kr/',open:true,kind:'biz'},
   trade:{name:'EKODI Trading',returnTo:'https://trade.ekodi.kr/',open:true,kind:'trade'},
   mall:{name:'EKODI Mall',returnTo:'https://ekodi.kr/ekodimall',origins:['https://ekodi.kr'],open:true,kind:'mall'},
@@ -84,7 +84,8 @@ function safeReturn(raw){
     const cgmaPlatform=config.kind==='cgma-client'&&target.origin==='https://ekodi.kr'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/'));
     const internalEkodi=config.kind==='cgma-client'?cgmaPlatform:(hostname==='ekodi.kr'||hostname.endsWith('.ekodi.kr'));
     const missionPath=config.kind!=='mission'||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')));
-    if(target.protocol!=='https:'||target.username||target.password||(!allowedOrigins.has(target.origin)&&!internalEkodi)||!missionPath)return fallback.href;
+    const churchPath=config.kind!=='church'||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodichurch'||target.pathname.startsWith('/ekodichurch/')));
+    if(target.protocol!=='https:'||target.username||target.password||(!allowedOrigins.has(target.origin)&&!internalEkodi)||!missionPath||!churchPath)return fallback.href;
     target.hash='';
     return target.href;
   }catch{return fallback.href}
