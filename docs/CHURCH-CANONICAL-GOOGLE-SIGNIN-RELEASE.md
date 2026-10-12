@@ -20,3 +20,7 @@ The production Church public and administrative site is mounted at `https://ekod
 
 ## Protected-base CI regeneration
 This documentation follow-up is a repository-owner action after the Orchestrator-issued branch was verified. It requests fresh required status checks for the exact current PR head and allows the official Convergent Merge workflow to reconcile protected-main changes without bypassing protection.
+
+## Protected source revalidation (synchronized main)
+
+The EKODI Orchestrator synchronized this branch with protected main and generated merge head `81eb845b34d7f615a8e1b632b9cb6f3a65c5398f`. GitHub classified the associated bot-authored PR checks as `action_required`, so the repository owner added this documentation-only record to trigger fresh required checks on the synchronized head. No Auth/Access API implementation changed and no required check may be bypassed.
