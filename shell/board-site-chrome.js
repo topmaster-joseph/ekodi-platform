@@ -39,7 +39,8 @@
         const value=el.getAttribute('srcset')||'';
         if(!value.split(',').every(part=>/^\s*https?:\/\//i.test(part)))el.removeAttribute('srcset');
       }
-      el.removeAttribute('id'); // avoid duplicate IDs shadowing board forms
+      // Preserve site IDs used by its CSS, but never shadow board form IDs.
+      if(el.id&&document.getElementById(el.id))el.id='ekodi-parent-'+el.id;
       for(const attr of Array.from(el.attributes)){
         if(attr.name.startsWith('on'))el.removeAttribute(attr.name);
       }
