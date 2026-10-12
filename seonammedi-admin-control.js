@@ -927,8 +927,9 @@ async function updateTimeline(request,env,auth,id){
   const existing=await env.DB.prepare('SELECT * FROM seonammedi_timeline WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
   const body=await request.json().catch(()=>null),value=timelineInput(body,existing);if(!value)return json({ok:false,error:'invalid_timeline'},400);
   const now=new Date().toISOString();
-  await env.DB.prepare(`UPDATE seonammedi_timeline SET event_date=?,category=?,title=?,summary=?,evidence=?,links_json=?,media_json=?,monitor_keywords_json=?,status=?,sort_order=?,updated_at=? WHERE id=?`)
-    .bind(value.date,value.category,value.title,value.summary,value.evidence,JSON.stringify(value.links),JSON.stringify(value.media),JSON.stringify(value.monitorKeywords),value.status,value.sortOrder,now,id).run();
+  await env.DB.prepare(`UPDATE seonammedi_timeline SET event_date=?,category=?,title=?,summary=?,evidence=?,links_json=?,media_json=?,monitor_keywords_json=?,status=?,sort_order=?,updated_at=?,
+      created_by=CASE WHEN created_by='system-seed' THEN ? ELSE created_by END WHERE id=?`)
+    .bind(value.date,value.category,value.title,value.summary,value.evidence,JSON.stringify(value.links),JSON.stringify(value.media),JSON.stringify(value.monitorKeywords),value.status,value.sortOrder,now,auth.email,id).run();
   await audit(env,auth,'update','timeline',id,{title:value.title,status:value.status,category:value.category});return json({ok:true,id});
 }
 async function deleteTimeline(env,auth,id){
