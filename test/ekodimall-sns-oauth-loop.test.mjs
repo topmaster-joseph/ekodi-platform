@@ -82,3 +82,26 @@ test('Google broker exchange failures are explained without demanding blind re-a
   assert.match(html,/연결 상태를 먼저 확인/);
   assert.doesNotMatch(html,/>GOOGLE_OAUTH_EXCHANGE_FAILED</);
 });
+
+
+test('YouTube registered email is retained across OAuth status checks',()=>{
+  const html=renderMallSocialSetup({
+    platform:{youtubeConfigured:true}, connections:[],
+    registeredAccounts:[{provider:'youtube',status:'pending_authorization',loginHint:'seller+test@example.com'}]
+  });
+  assert.match(html,/id="mallSocialYoutubeEmail"[^>]*value="seller\+test@example\.com"/);
+  assert.doesNotMatch(html,/OAuth 인증 완료/);
+});
+test('failed YouTube connection reports the stored reason, never a raw provider error',()=>{
+  const known=renderMallSocialSetup({platform:{youtubeConfigured:true},registeredAccounts:[{provider:'youtube',status:'error',lastError:'YOUTUBE_TARGET_ACCOUNT_MISMATCH'}]});
+  assert.match(known,/최근 연결 실패/);
+  assert.match(known,/같은 계정/);
+  const unknown=renderMallSocialSetup({platform:{youtubeConfigured:true},registeredAccounts:[{provider:'youtube',status:'error',lastError:'secret-value:should-not-render'}]});
+  assert.match(unknown,/인증 결과 확인/);
+  assert.doesNotMatch(unknown,/secret-value/);
+});
+test('Google access denied callback is displayed as actionable failure without connection claims',()=>{
+  const html=renderMallSocialSetup({oauthNotice:{status:'error',reason:'GOOGLE_OAUTH_ACCESS_DENIED'}});
+  assert.match(html,/권한 동의가 완료되지 않았습니다/);
+  assert.doesNotMatch(html,/계정 연결이 서버에서 확인됐습니다/);
+});

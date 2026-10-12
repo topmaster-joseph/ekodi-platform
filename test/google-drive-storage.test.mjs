@@ -254,3 +254,18 @@ test('Marketing YouTube broker reports only allowlisted errors and never provide
   assert.equal(marketingYouTubeOAuthErrorCode({message:'Client secret leaked: abc123'}),'GOOGLE_OAUTH_EXCHANGE_FAILED');
   assert.equal(marketingYouTubeOAuthErrorCode(null),'GOOGLE_OAUTH_EXCHANGE_FAILED');
 });
+
+
+test('shared legacy Google callback forwards missing-code and denied marketing results, keeps Drive protected',()=>{
+  const at=control.indexOf("const payload = await readState(env,url.searchParams.get('state'))");
+  const end=control.indexOf('const hash = await nonceHash(payload.nonce);',at);
+  assert.ok(at>=0 && end>at);
+  const callback=control.slice(at,end);
+  assert.match(callback,/if\(payload\.purpose==='marketing_youtube'\)/);
+  assert.match(callback,/googleError==='access_denied'\?'GOOGLE_OAUTH_ACCESS_DENIED'/);
+  assert.match(callback,/if\(!code\)return marketingYouTubeResultRedirect\(payload\.marketingState,\{error:'AUTHORIZATION_CODE_MISSING'\}\)/);
+  assert.match(callback,/marketingYouTubeOAuthErrorCode\(error\)/);
+  assert.match(callback,/if\(!code\)return html/);
+  assert.doesNotMatch(callback,/console\.error\('Marketing YouTube OAuth broker callback failed',error\)/);
+  assert.equal(marketingYouTubeOAuthErrorCode({code:'GOOGLE_OAUTH_ACCESS_DENIED'}),'GOOGLE_OAUTH_ACCESS_DENIED');
+});
