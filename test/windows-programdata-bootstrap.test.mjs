@@ -12,5 +12,5 @@ test('Windows Agent restores missing ProgramData before computing persistent pat
   assert.match(source,/\[Environment\]::GetFolderPath\(\[Environment\+SpecialFolder\]::CommonApplicationData\)/);
   assert.match(source,/\[System\.IO\.Path\]::IsPathRooted\(\$env:ProgramData\)/);
   assert.match(source,/EKODI:EKA-298/);
-  assert.match(source,/\$AgentVersion = '2\.5\.3'/);
+  assert.match(source,/\$AgentVersion = '2\.5\.4'/);
 });
