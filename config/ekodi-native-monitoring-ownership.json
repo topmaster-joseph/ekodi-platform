@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-NATIVE-MONITORING-HANDOFF-001",
+  "status": "source-pr-pending-protected-release",
+  "operator": "ekodi-orchestrator",
+  "principle": "EKODI owns scheduled health, deployment and completion monitoring; ChatGPT automations have no authority or operational dependency",
+  "externalChatgptAutomations": {
+    "intendedActiveCount": 0,
+    "confirmedDisabledAt": "2026-10-12T12:29:50Z",
+    "mayRecreate": false
+  },
+  "monitoring": [
+    {
+      "formerTask": "EKODI 강제규칙·DB 관제 감시",
+      "nativeOwner": "EKODI Data Store Read-Only Watch + System Health",
+      "schedules": [
+        ".github/workflows/data-store-readonly-watch.yml",
+        ".github/workflows/ekodi-native-operations-watch.yml"
+      ],
+      "responsibility": "read-only D1/topology, canonical health and release evidence",
+      "handoffState": "native-workflow-added"
+    },
+    {
+      "formerTask": "EKODI 게시판 PR 감시",
+      "nativeOwner": "EKODI Native Operations Watch",
+      "schedules": [
+        ".github/workflows/ekodi-native-operations-watch.yml"
+      ],
+      "responsibility": "PR #3794 state with server-verified GitHub metadata; no auto-merge bypass",
+      "handoffState": "native-workflow-added"
+    },
+    {
+      "formerTask": "에코디 시스템 일일보고",
+      "nativeOwner": "EKODI System Health Analytics + Native Operations Watch",
+      "schedules": [
+        ".github/workflows/system-health-analytics.yml",
+        ".github/workflows/ekodi-native-operations-watch.yml"
+      ],
+      "responsibility": "daily official evidence at 08:45 KST; traffic quantities only from EKODI Traffic Intelligence",
+      "handoffState": "partial-no-unverified-traffic-numbers"
+    },
+    {
+      "formerTask": "EKODI Orchestrator 완료 확인",
+      "nativeOwner": "EKODI Reconcile Orchestrator Completions",
+      "schedules": [
+        ".github/workflows/reconcile-orchestrator-completions.yml",
+        ".github/workflows/ekodi-native-operations-watch.yml"
+      ],
+      "responsibility": "GitHub-OIDC verified completion only; no direct terminal task writes",
+      "handoffState": "existing-native"
+    },
+    {
+      "formerTask": "지부 사역보고",
+      "nativeOwner": "EKODI CMS document workflow",
+      "schedules": [],
+      "responsibility": "bi-monthly missionary report source gathering, privacy-safe draft, user-reviewed distribution",
+      "handoffState": "requires-authorized-sources-and-delivery-recipients;not-auto-scheduled"
+    }
+  ],
+  "guardrails": {
+    "readOnlyMonitoring": true,
+    "noPaidProviders": true,
+    "noNewAiApiCredentials": true,
+    "noAutomaticReleaseWithoutHumanGate": true,
+    "noUnverifiedContentPublication": true,
+    "notifications": "EKODI official workflow result only; no ChatGPT notifications"
+  },
+  "acceptance": {
+    "nativeWorkflowCI": true,
+    "schedulerActivationAfterMerge": true,
+    "liveRunEvidenceRequired": true,
+    "reportWithoutSourceDataForbidden": true
+  }
+}
