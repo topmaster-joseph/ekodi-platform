@@ -634,7 +634,7 @@ test('seonammedi public site uses shared authenticated inline admin without dupl
   assert.match(app,/authEndpoint:'\/api\/seonammedi\/admin\/me'/);
   assert.match(app,/await admin\.authorize\(\)/);
   assert.doesNotMatch(app,/admin\.attach/);
-  for(const label of ['조직 바로 수정','활동이력 바로 수정','연결채널 바로 수정'])assert.match(html,new RegExp(label));
+  for(const label of ['조직 바로 수정','관련소식 관리','연결채널 바로 수정'])assert.match(html,new RegExp(label));
   assert.match(app,/공지 작성/);
   assert.match(app,/bindPublicFinanceAdmin/);
   assert.match(app,/if\(admin\.has\('notices'\)\).*loadNotices\(\)/);
