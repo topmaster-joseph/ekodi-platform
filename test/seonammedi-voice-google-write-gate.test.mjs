@@ -26,9 +26,13 @@ test('voice UI keeps free reading and sharing but sends bearer token on both wri
   const html=await page.text();
   assert.match(html,/누구나 열람·공유할 수 있으며, 시민의견과 답글은 Google 로그인 후 작성/);
   assert.doesNotMatch(html,/누구나 로그인 없이 등록하고 답글/);
-  assert.match(html,/if\(!token\(\)\)\{login\(\);return\}/);
-  assert.match(html,/write\.onsubmit=async e=>\{e\.preventDefault\(\);const t=token\(\)/);
-  assert.match(html,/list\.addEventListener\("submit",async e=>[\s\S]*?const t=token\(\)/);
+  assert.match(html,/async function verifyVoiceAccount\(allowRefresh=true\)/);
+  assert.match(html,/\/board\/api\/auth\/session/);
+  assert.match(html,/await requireVoiceAccount\(\)/);
+  assert.match(html,/async function awaitVoicePublication\(data\)/);
+  assert.match(html,/id="voiceAuthStatus"/);
+  assert.match(html,/write\.onsubmit=async e=>\{e\.preventDefault\(\);if\(!await requireVoiceAccount\(\)\)return;const t=token\(\)/);
+  assert.match(html,/list\.addEventListener\("submit",async e=>[\s\S]*?await requireVoiceAccount\(\)/);
   const writes=html.match(/authorization:"Bearer "\+t/g)||[];
   assert.ok(writes.length>=2,'Both post and reply writes carry authorization');
   assert.match(html,/data-share=/);
