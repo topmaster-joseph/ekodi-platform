@@ -88,3 +88,23 @@ test('replay grace period is measured from job completion rather than initial qu
     { ...justCompleted, updated_at: '2026-10-12T08:00:00Z' },
   ], now, repo).reason, 'recover-transient-run');
 });
+
+
+test('convergent merge grounds protected status projection in genuine Actions checks', () => {
+  const workflow = readFileSync(new URL('../.github/workflows/converge-orchestrated-pr-merge.yml', import.meta.url), 'utf8');
+  const converge = readFileSync(new URL('../scripts/converge-orchestrated-pr-merge.mjs', import.meta.url), 'utf8');
+  assert.match(workflow, /checks: read/);
+  assert.match(converge, /async function verifiedCheckRuns\(sha\)/);
+  assert.match(converge, /\/check-runs\?per_page=100/);
+  assert.match(converge, /run\.app\?\.slug==='github-actions'/);
+  assert.match(converge, /run\.status==='completed'/);
+  assert.match(converge, /\['success','neutral','skipped'\]\.includes\(run\.conclusion\)/);
+  const verifyIndex = converge.indexOf('if(!await verifiedCheckRuns(headSha))');
+  const updateIndex = converge.indexOf("/pulls/'+pr.number+'/update-branch");
+  const projectIndex = converge.indexOf("/statuses/'+mergeSha");
+  const mergeIndex = converge.indexOf("/pulls/'+pr.number+'/merge");
+  assert.ok(verifyIndex >= 0);
+  assert.ok(updateIndex > verifyIndex, 'base refresh must happen only after genuine head checks');
+  assert.ok(projectIndex > verifyIndex, 'merge-status projection must happen only after genuine head checks');
+  assert.ok(mergeIndex > verifyIndex, 'merge must happen only after genuine head checks');
+});
