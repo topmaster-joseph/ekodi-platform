@@ -81,7 +81,7 @@ function clientMain(POLICY,CHANNEL_CATALOG){
     {id:'takeout',label:'포장주문',detail:'포장 · 전화주문',webSection:'orders',webLabel:'웹 주문관리'},
     {id:'reservation',label:'예약',detail:'예약 현황',webSection:'orders',webLabel:'웹 예약·주문'}
   ]);
-  const DEFAULT_GROUPS=[{id:'home',label:'홈',items:[['overview','운영 홈']]},{id:'sales',label:'주문 · 배달',items:[['pos','POS 통합화면'],['delivery','배달플랫폼'],['orders','주문 · 채널'],['sales','매출']]},{id:'catalog',label:'메뉴 · 재고',items:[['menu','메뉴 · 가격'],['inventory','재고']]},{id:'customers',label:'고객 · 리뷰',items:[['customers','고객'],['reviews','리뷰']]},{id:'growth',label:'홍보 · 채널',items:[['marketing','마케팅 AI'],['publishing','채널·자동게시']]},{id:'operations',label:'매장 관리',items:[['work','매장업무'],['site','사용자 사이트'],['connections','연결관리'],['finance','비용 · 정산'],['members','사용자 · 권한'],['chrome','헤더 · 푸터']]}];
+  const DEFAULT_GROUPS=[{id:'home',label:'홈',items:[['overview','운영 홈']]},{id:'sales',label:'주문 · 배달',items:[['pos','POS 통합화면'],['delivery','배달플랫폼'],['orders','주문 · 채널'],['sales','매출']]},{id:'catalog',label:'메뉴 · 재고',items:[['menu','메뉴 · 가격'],['inventory','재고']]},{id:'customers',label:'고객 · 리뷰',items:[['customers','고객'],['reviews','리뷰']]},{id:'growth',label:'홍보',items:[['marketing','마케팅 AI'],['publishing','채널']]},{id:'operations',label:'매장 관리',items:[['work','매장업무'],['site','사용자 사이트'],['connections','연결관리'],['finance','비용 · 정산'],['members','사용자 · 권한'],['chrome','헤더 · 푸터']]}];
   const FIRST_STORE_SLUGS=new Set(['jadam','pizzamaru','yogurt']);
   const FIRST_STORE_DELEGATED_GROUPS=[
     {id:'home',label:'매장 홈',items:[['overview','오늘 운영']]},
@@ -96,7 +96,7 @@ function clientMain(POLICY,CHANNEL_CATALOG){
     {id:'today',label:'오늘 주문',items:[['overview','오늘 운영'],['pos','POS 통합화면'],['orders','주문 현황'],['delivery','배달앱'],['sales','매출 현황'],['work','매장 업무']]},
     {id:'catalog',label:'메뉴 · 품절',items:[['menu','메뉴 · 가격'],['inventory','품절 · 재고']]},
     {id:'customers',label:'고객 · 리뷰',items:[['reviews','리뷰 관리'],['customers','고객 흐름']]},
-    {id:'growth',label:'홍보 · 채널',items:[['marketing','마케팅'],['publishing','SNS · 자동게시']]},
+    {id:'growth',label:'홍보',items:[['marketing','마케팅'],['publishing','채널']]},
     {id:'finance',label:'정산 · 회계',items:[['finance','비용 · 정산']]}
   ];
   const VIEWER_GROUPS=[
@@ -126,7 +126,7 @@ function clientMain(POLICY,CHANNEL_CATALOG){
     sales:['매출','오늘 매출·객단가·비교 신호를 확인합니다.'],
     inventory:['재고','메뉴 품절 신호와 향후 재고 연동 상태를 확인합니다.'],
     marketing:['마케팅 AI','이 점포 전용 Marketing AI 운영공간으로 연결합니다.'],
-    publishing:['채널·자동게시','이 점포의 SNS 게시계정을 등록하고 계정별 OAuth 인증·예약게시·자동게시 상태를 관리합니다.'],
+    publishing:['채널','이 점포의 SNS 게시계정을 등록하고 계정별 OAuth 인증·예약게시·자동게시 상태를 관리합니다.'],
     work:['매장업무','점포 운영업무와 승인 필요 행동을 관리합니다.'],
     finance:['비용 · 정산','비용·광고비·마진 집계 연결 상태를 확인합니다.'],
     connections:['연결관리','POS·배달플랫폼·EKODI Orders 연결 상태를 관리합니다.']
@@ -535,7 +535,7 @@ export function storeAdminPage(profile){const p=profile||{slug:'store',name:'점
   customers:['고객','개인정보 원문 없이 신규·재방문 흐름만 확인합니다.'],
   reviews:['리뷰','연결된 마케팅 원장에서 미응답 리뷰와 대응 상태를 확인합니다.'],
   marketing:['마케팅 AI','이 점포 전용 Marketing AI 운영공간으로 연결합니다.'],
-  publishing:['채널·자동게시','이 점포의 SNS 게시계정을 등록하고 계정별 OAuth 인증·예약게시·자동게시 상태를 관리합니다.'],
+  publishing:['채널','이 점포의 SNS 게시계정을 등록하고 계정별 OAuth 인증·예약게시·자동게시 상태를 관리합니다.'],
   work:['매장업무','점포 운영업무와 승인 필요 행동을 관리합니다.'],
   finance:['비용 · 정산','비용·광고비·마진 집계 연결 상태를 확인합니다.'],
   connections:['연결관리','POS·배달플랫폼·EKODI Orders 연결 상태를 관리합니다.'],
