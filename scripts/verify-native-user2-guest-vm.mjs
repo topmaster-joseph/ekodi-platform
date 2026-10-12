@@ -46,6 +46,9 @@ export async function verifyUser2GuestVm({token=process.env.E2E_ADMIN_TOKEN,fetc
    desktopSessionCanary:'isolated-desktop-session-canary'
   };
   if(proof.mode!==expectedModes[key])throw Error('native_stage_mode_mismatch');
+  if(type!=='computer.desktop.probe' && (
+    proof.ok!==true || proof.headless!==true && type==='computer.desktop.canary'
+  ))throw Error('native_guest_canary_invalid');
   if(type==='computer.desktop.probe'){
    if(proof.headlessBackendReady!==true){
     console.log('[EKODI][USER2-GUEST-VM-BLOCKED] '+JSON.stringify({hyperVState:proof.hyperVState,hyperVPowerShellAvailable:proof.hyperVPowerShellAvailable===true,baseVmPresent:proof.baseVmPresent===true,gapReason:proof.gapReason,commandsIssued:1,guestCommandsIssued:0}));
