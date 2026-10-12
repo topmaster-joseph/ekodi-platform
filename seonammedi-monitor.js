@@ -134,7 +134,7 @@ export async function handleSeonamMediMonitorApi(request,env){
   try{
     const [lastRun,rows]=await Promise.all([
       env.DB.prepare('SELECT id,started_at,completed_at,status,sources_checked,items_seen,new_items,error_summary FROM seonammedi_monitor_runs ORDER BY id DESC LIMIT 1').first(),
-      env.DB.prepare("SELECT title,url,resolved_url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,media_type,media_url,media_source,media_published_at,media_state,source_type,summary_text FROM seonammedi_monitor_items WHERE datetime(last_seen_at)>=datetime('now','-7 days') ORDER BY COALESCE(published_at,first_seen_at) DESC LIMIT 160").all()
+      env.DB.prepare("SELECT id,title,url,resolved_url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,media_type,media_url,media_source,media_published_at,media_state,source_type,summary_text FROM seonammedi_monitor_items WHERE datetime(last_seen_at)>=datetime('now','-7 days') ORDER BY COALESCE(published_at,first_seen_at) DESC LIMIT 160").all()
     ]);
     // Apply the same publication gate to ALL historical rows at read time:
     // previously collected but never content-confirmed items disappear now.
