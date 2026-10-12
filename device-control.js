@@ -1640,3 +1640,5 @@ export async function handleDeviceControl(request, env) {
   if (path.startsWith(ADMIN_PREFIX)) return handleAdmin(request, env);
   return handleAgent(request, env);
 }
+
+// Protected USER2 native Hyper-V receipt projection convergence.
