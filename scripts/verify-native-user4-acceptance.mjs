@@ -107,7 +107,9 @@ export async function verifyUser4Browser({token,fetchImpl=fetch,clock=()=>Date.n
 
 // Latest diagnostics-capable Chrome/Edge CDP worker requires a new official USER4 Agent update after 11:29 UTC.
 // Never infer that an older USER4 Agent has loaded it from an earlier heartbeat.
-export const USER4_CDP_FIX_FLOOR = Date.parse('2026-10-11T11:29:00.000Z');
+// Owner-requested USER4 safe Agent refresh (2026-10-12 22:18 KST). A prior
+// successful update does not satisfy this one-time release floor.
+export const USER4_CDP_FIX_FLOOR = Date.parse('2026-10-12T13:18:00.000Z');
 const UPDATE='agent.self_update';
 export async function ensureUser4AgentUpdated({
   token,fetchImpl=fetch,clock=()=>Date.now(),sleepFn=wait,pollMs=4000,maxPoll=65
@@ -177,12 +179,25 @@ export async function ensureUser4AgentUpdated({
   throw new Error('user4_agent_update_reconnect_timeout');
 }
 
+// A one-time retry is permitted only for a browser launcher that exited zero
+// before producing a CDP session. Never retry policy/access/credential failures.
+// Each attempt still needs an independent exact-USER4 successful command receipt.
+export async function verifyUser4BrowserWithRetry(options={}, verify=verifyUser4Browser) {
+  try { return await verify(options); }
+  catch(error) {
+    if(String(error?.message||'')!=='user4_browser_failed:CDP_BROWSER_EARLY_EXIT_ZERO')
+      throw error;
+    const result=await verify(options);
+    return {...result,transientBrowserRetryUsed:true};
+  }
+}
+
 export async function verifyUser4Acceptance(options={}){
   // Dispatch both independent canaries while the exact USER4 Agent heartbeat is
   // fresh; a slow browser task must not delay Ollama eligibility discovery.
   // EKODI Device Agent owns scheduling and may execute commands sequentially.
   const outcomes=await Promise.allSettled([
-    verifyUser4Browser(options),
+    verifyUser4BrowserWithRetry(options),
     verifyNativeLocalAi({...options,hostname:'user4'})
   ]);
   const browser=outcomes[0].status==='fulfilled'?outcomes[0].value:null;
@@ -214,7 +229,9 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
   ensureUser4AgentUpdated({token})
     .then(async update=>{
       const result=await verifyUser4Acceptance({token});
-      return {...result,agentUpdate:update};
+      return {...result,agentUpdate:update,
+        nativeAgentUpdateVerified:update.recentOfficialUpdateVerified===true,
+        ownerRefreshFloor:new Date(USER4_CDP_FIX_FLOOR).toISOString()};
     })
     .then(result=>{
       console.log('[EKODI][USER4-NATIVE-ACCEPTANCE] '+JSON.stringify(result));

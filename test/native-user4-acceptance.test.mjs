@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {classifyUser4BrowserFailure,eligibleUser4Agent,verifyUser4Browser,verifyUser4Acceptance,ensureUser4AgentUpdated,USER4_CDP_FIX_FLOOR}
+import {classifyUser4BrowserFailure,eligibleUser4Agent,verifyUser4Browser,verifyUser4BrowserWithRetry,verifyUser4Acceptance,ensureUser4AgentUpdated,USER4_CDP_FIX_FLOOR}
   from '../scripts/verify-native-user4-acceptance.mjs';
 const now=Date.parse('2026-10-11T06:30:00.000Z');
 const good={id:'device-4',hostname:'USER4',status:'online',revokedAt:null,
@@ -204,4 +204,69 @@ test('USER4 browser error classifier accepts only bounded diagnostic categories'
   assert.equal(classifyUser4BrowserFailure('CDP_BROWSER_EARLY_EXIT_ZERO'), 'CDP_BROWSER_EARLY_EXIT_ZERO');
   assert.equal(classifyUser4BrowserFailure('CDP_BROWSER_EARLY_EXIT_UNKNOWN'), 'CDP_BROWSER_EARLY_EXIT_UNKNOWN');
   assert.equal(classifyUser4BrowserFailure('C:\\Users\\Sensitive\\private.log'), 'BROWSER_FAILURE_UNCLASSIFIED');
+});
+
+test('USER4 prior-day Agent update cannot satisfy 2026-10-12 owner refresh request',async()=>{
+  const now=USER4_CDP_FIX_FLOOR+120000;
+  let posts=0;
+  const before=new Date(USER4_CDP_FIX_FLOOR-3600000).toISOString();
+  const fetchImpl=async(url,init)=>{
+    if(init.method==='POST'){
+      posts++;
+      assert.equal(JSON.parse(init.body).type,'agent.self_update');
+      return new Response(JSON.stringify({command:{
+        type:'agent.self_update',id:'owner-refresh-user4',status:'queued'
+      }}),{status:200});
+    }
+    const recentCommands=[
+      {id:'old-success',type:'agent.self_update',status:'succeeded',completedAt:before},
+      ...(posts?[{id:'owner-refresh-user4',type:'agent.self_update',status:'succeeded',
+        completedAt:new Date(now-1000).toISOString()}]:[])
+    ];
+    return new Response(JSON.stringify({devices:[{...good,
+      capabilities:{agentStatus:true,localAiVerify:true},
+      lastSeenAt:new Date(now-100).toISOString(),recentCommands}]}),{status:200});
+  };
+  const proof=await ensureUser4AgentUpdated({
+    token:'authorized-admin-session-token-abcdef',clock:()=>now,fetchImpl,
+    sleepFn:async()=>{},maxPoll:3
+  });
+  assert.equal(posts,1);
+  assert.equal(proof.updatePerformed,true);
+  assert.equal(proof.recentOfficialUpdateVerified,true);
+});
+
+test('exact transient CDP early-exit zero permits one fresh USER4 canary retry',async()=>{
+  let attempts=0;
+  const verify=async()=>{
+    attempts++;
+    if(attempts===1)throw Error('user4_browser_failed:CDP_BROWSER_EARLY_EXIT_ZERO');
+    return {targetAlias:'user4',receiptStatus:'succeeded',mode:'native-cdp',domBytes:512};
+  };
+  const proof=await verifyUser4BrowserWithRetry({},verify);
+  assert.equal(attempts,2);
+  assert.equal(proof.transientBrowserRetryUsed,true);
+  assert.equal(proof.targetAlias,'user4');
+});
+test('security, policy or auth browser failure never triggers another attempt',async()=>{
+  for(const reason of [
+    'user4_browser_failed:CDP_BROWSER_EARLY_EXIT_ACCESS',
+    'user4_browser_failed:CDP_BROWSER_EARLY_EXIT_POLICY',
+    'user4_browser_failed:CDP_BROWSER_EARLY_EXIT_SANDBOX',
+    'trusted_admin_session_required',
+    'user4_native_agent_not_healthy'
+  ]){
+    let attempts=0;
+    await assert.rejects(()=>verifyUser4BrowserWithRetry({},async()=>{
+      attempts++;throw Error(reason);
+    }),e=>e.message===reason);
+    assert.equal(attempts,1,reason);
+  }
+});
+test('repeat early exit remains failure and never produces an artificial success',async()=>{
+  let attempts=0;
+  await assert.rejects(()=>verifyUser4BrowserWithRetry({},async()=>{
+    attempts++;throw Error('user4_browser_failed:CDP_BROWSER_EARLY_EXIT_ZERO');
+  }),/CDP_BROWSER_EARLY_EXIT_ZERO/);
+  assert.equal(attempts,2);
 });

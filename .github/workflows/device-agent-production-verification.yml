@@ -87,8 +87,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: device-agent-production-verification-${{ github.ref }}
-  cancel-in-progress: true
+  # Passive post-deploy observation must never cancel an owner-authorized USER4
+  # update or real-device acceptance dispatched by the EKODI Orchestrator.
+  group: device-agent-production-verification-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && inputs.execution_mode || 'passive' }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
 
 jobs:
   contract:
