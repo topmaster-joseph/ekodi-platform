@@ -49,8 +49,10 @@ try {
   assert.ok(loaded,'canonical Church site did not load');
   const link=page.locator('[data-church-worship-admin]');
   await link.waitFor({state:'attached',timeout:10000});
-  // Real visitors scroll to the worship section; IntersectionObserver reveals
-  // the parent .schedule.reveal only after it intersects the viewport.
+  // Church is an intentional one-page accordion: #worship is display:none
+  // until the visitor follows the corresponding in-page navigation link.
+  await page.evaluate(()=>{location.hash='#worship';});
+  await page.waitForFunction(()=>getComputedStyle(document.querySelector('#worship')).display!=='none',null,{timeout:8000});
   await page.evaluate(()=>document.querySelector('.schedule.reveal')?.scrollIntoView({block:'center'}));
   await page.waitForTimeout(1200);
   evidence.worshipSchedule=await page.evaluate(()=>{
