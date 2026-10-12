@@ -10,3 +10,5 @@ This documentation-only commit is a one-time protected convergence wake-up after
 After GitHub update-branch, its bot-authored merge commit showed `action_required` for PR checks without running jobs. This documentation-only owner change requests genuine protected CI/staging on the refreshed head. No runtime or authentication policy change is made here.
 
 Refreshed protected-branch verification was retriggered after the automated GitHub merge-base move caused a transient required-status SHA race; no Admin application code changed.
+
+Owner-authored protected CI refresh for the current orchestrator-synchronized head. The previous bot-generated PR check runs had no jobs (`action_required`); credentials, runtime logic and authorization policies remain unchanged.
