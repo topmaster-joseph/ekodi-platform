@@ -333,3 +333,8 @@ test('Windows native CDP worker propagates allowlisted receipt categories withou
   for(const code of ['CDP_BROWSER_EARLY_EXIT_ZERO','CDP_BROWSER_EARLY_EXIT_POLICY','CDP_PORT_TIMEOUT','CDP_WORKER_WATCHDOG_TIMEOUT'])
     assert(source.includes("'"+code+"'"),code);
 });
+
+test('USER4 upgrade release requires new 2.5.5 Agent and an updated official receipt',()=>{
+  assert.equal(USER4_CDP_WORKER_AGENT_VERSION,'2.5.5');
+  assert.equal(USER4_CDP_FIX_FLOOR,Date.parse('2026-10-12T18:00:00.000Z'));
+});
