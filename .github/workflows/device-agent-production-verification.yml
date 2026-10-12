@@ -362,3 +362,5 @@ jobs:
 # Trigger existing guarded Orchestrator convergence for USER2 acceptance.
 
 # Owner-authored CI recheck after guarded base synchronization.
+
+# Owner-authorized protected USER2 observation-target release convergence.
