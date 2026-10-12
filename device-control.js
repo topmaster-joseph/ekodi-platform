@@ -74,6 +74,8 @@ const COMMAND_POLICIES = Object.freeze({
   'computer.process.list': { risk: 'observe' },
   'computer.agent.status': { risk: 'observe' },
   'computer.desktop.probe': { risk: 'observe' },
+  'computer.hyperv.preflight': { risk: 'observe' },
+  'computer.hyperv.enable': { risk: 'privileged', confirm: true },
   'computer.desktop.canary': { risk: 'maintain', confirm: true },
   'computer.desktop.guest.canary': { risk: 'maintain', confirm: true },
   'computer.desktop.ui.canary': { risk: 'maintain', confirm: true },

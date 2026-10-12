@@ -186,6 +186,7 @@ const nativeUser3RecoveryTouched=changedFiles.some(file=>file==='scripts/recover
 const nativeUser2RecoveryTouched=changedFiles.some(file=>file==='scripts/recover-native-user2-localai.mjs');
 const nativeUser2VirtualProbeTouched=changedFiles.some(file=>file==='scripts/verify-native-user2-virtual-probe.mjs');
 const nativeUser2BrowserTouched=changedFiles.some(file=>file==='scripts/verify-native-user2-browser.mjs');
+const nativeUser2HyperVEnableTouched=changedFiles.some(file=>file==='scripts/activate-native-user2-hyperv.mjs');
 const nativeUser4VirtualProbeTouched=changedFiles.some(file=>
   file==='scripts/verify-native-user4-virtual-probe.mjs' ||
   file==='scripts/select-native-user4-execution-route.mjs');
@@ -219,6 +220,15 @@ async function dispatchPostMergeDeploys(){
     console.log(JSON.stringify({ok:true,action:'native-user4-virtual-probe-dispatched',
       workflow:'device-agent-production-verification.yml',pr:pr.number,taskId,branch,
       authority:'ekodi-orchestrator'}));
+  }
+  if(nativeUser2HyperVEnableTouched){
+    const dispatched=await api('/actions/workflows/device-agent-production-verification.yml/dispatches',{
+      method:'POST',body:JSON.stringify({ref:'main',inputs:{
+        execution_mode:'user2-hyperv-enable',release_branch_ref:branch,release_task_id:taskId
+      }})
+    });
+    if(!dispatched.r.ok)fail('USER2 Hyper-V no-restart activation dispatch failed '+dispatched.r.status+' '+JSON.stringify(dispatched.data).slice(0,350));
+    console.log(JSON.stringify({ok:true,action:'native-user2-hyperv-enable-dispatched',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
   if(nativeUser2BrowserTouched){
     const dispatched=await api('/actions/workflows/device-agent-production-verification.yml/dispatches',{

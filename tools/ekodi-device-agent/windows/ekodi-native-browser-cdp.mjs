@@ -56,15 +56,16 @@ async function waitForPort(profile, child, deadline) {
   }
   throw new Error('CDP_PORT_TIMEOUT');
 }
-export async function probeCdp({browser, url=TARGET, timeoutMs=20000} = {}) {
+export async function probeCdp({browser, url=TARGET, timeoutMs=20000, headlessMode='new'} = {}) {
   if (!allowedTarget(url)) throw new Error('CDP_TARGET_FORBIDDEN');
   if (!browser) throw new Error('CDP_BROWSER_REQUIRED');
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 30000) throw new Error('CDP_TIMEOUT_INVALID');
+  if (!['new','legacy'].includes(headlessMode)) throw new Error('CDP_HEADLESS_MODE_INVALID');
   const profile = await mkdtemp(path.join(tmpdir(),'ekodi-cdp-canary-'));
   let child;
   let ws;
   try {
-    child=spawn(browser,['--headless=new','--disable-gpu','--no-first-run','--no-default-browser-check','--disable-extensions','--disable-sync','--remote-debugging-port=0','--user-data-dir='+profile,'about:blank'],{windowsHide:true,stdio:['ignore','ignore','pipe']});
+    child=spawn(browser,[headlessMode==='legacy'?'--headless':'--headless=new','--disable-gpu','--no-first-run','--no-default-browser-check','--disable-extensions','--disable-sync','--remote-debugging-port=0','--user-data-dir='+profile,'about:blank'],{windowsHide:true,stdio:['ignore','ignore','pipe']});
     let errorText='';
     child.stderr?.on('data',chunk=>{
       // Keep an in-memory diagnostic window; only fixed category codes are returned.
@@ -122,6 +123,14 @@ export async function attemptNativeCanaryBrowsers({browsers,probe=probeCdp,timeo
   for(const browser of browsers.slice(0,2)){
     try { return await probe({browser,timeoutMs}); }
     catch(e) {
+      // A clean Chromium early exit can occur when the installed binary forwards
+      // startup to another process before opening DevToolsActivePort. Retry once
+      // with the compatible headless switch and a fresh isolated profile.
+      // Permission, dependency and policy failures must not be retried this way.
+      if(String(e?.message||'').includes('CDP_BROWSER_EARLY_EXIT_ZERO')){
+        try { return await probe({browser,timeoutMs,headlessMode:'legacy'}); }
+        catch(legacyError) { e=legacyError; }
+      }
       const value=String(e?.message||'');
       const match=value.match(/CDP_[A-Z0-9_]+/);
       let code=match?.[0]||'CDP_BROWSER_UNEXPECTED_ERROR';
