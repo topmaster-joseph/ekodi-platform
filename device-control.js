@@ -522,8 +522,12 @@ function deviceHealth(settings = {}, diagnostics = {}) {
   };
 }
 
-function summarizeCommandResult(result = {}) {
+function summarizeCommandResult(result = {}, commandType = '') {
   const summary = {};
+  // Only native Agent self-update results expose the version needed for
+  // exact-source rollout attestation; never disclose raw device results.
+  if (commandType === 'agent.self_update' && result?.version !== undefined)
+    summary.version = safeText(result.version, 32);
   const finiteNumber = value => value === null || value === undefined || value === ''
     ? null
     : (Number.isFinite(Number(value)) ? Number(value) : null);
@@ -997,7 +1001,7 @@ async function listDevices(env) {
       issuedAt: command.issued_at,
       claimedAt: command.claimed_at,
       completedAt: command.completed_at,
-      result: summarizeCommandResult(parseJson(command.result_json)),
+      result: summarizeCommandResult(parseJson(command.result_json), command.command_type),
     });
   }
   const agentDevices = (devices.results || []).map(row => {
