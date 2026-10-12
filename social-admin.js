@@ -470,8 +470,25 @@
           card.append(el('small',channel.lastPublishedAt?`마지막 발행 ${formatDate(channel.lastPublishedAt)}`:'최근 발행 기록 없음'));
           growthChannels.append(card);
         }
+        const loop=data.autonomousProfitLoop||{};
+        const stages=loop.stages||{};
+        const stepLabels={source:'상품 수집',feedback:'실적 수집',intelligence:'분석',curate:'추천',publish:'발행',learn:'학습'};
+        if (loop.ok && Object.keys(stages).length) {
+          const flow=el('section','','social-growth-flow');
+          flow.append(el('strong','자동화 단계'));
+          for (const [key,label] of Object.entries(stepLabels)) {
+            const stage=stages[key]||{};
+            const line=el('div','','social-growth-stage');
+            line.append(el('span',label),el('span',String(stage.status||'대기')));
+            line.dataset.fresh=stage.fresh===true?'true':'false';
+            flow.append(line);
+          }
+          growthChannels.append(flow);
+        }
         const notes=[];
         if (!perf.reportReady) notes.push('상품별 제휴 실적 보고서가 확인되지 않았습니다. 수익 추정이나 자동 확대를 보류하세요.');
+        if (loop.ok && (loop.blockers||[]).length) notes.push(`자동화 선행 문제: ${(loop.blockers||[]).slice(0,3).join(', ')} · 원장/연결 상태부터 복구하세요.`);
+        if (loop.ok && (loop.stale||[]).length) notes.push(`오래된 데이터: ${(loop.stale||[]).slice(0,3).join(', ')} · 갱신 후 결과를 재평가하세요.`);
         if (channels.some(ch=>Number(ch.failed30d)>0)) notes.push('발행 오류가 있습니다. 채널 연결 상태와 승인 원장을 점검하세요.');
         const decisions=Array.isArray(data.decisions)?data.decisions:[];
         if (decisions.length) {
