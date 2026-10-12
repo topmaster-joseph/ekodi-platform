@@ -1009,7 +1009,26 @@ function Invoke-EkodiNativeCdpCanary {
   }
   $stdout = $stdoutTask.GetAwaiter().GetResult()
   $stderr = $stderrTask.GetAwaiter().GetResult()
-  if ($process.ExitCode -ne 0) { throw ('CDP_WORKER_FAILED: ' + $stderr.Substring(0,[Math]::Min(260,$stderr.Length))) }
+  if ($process.ExitCode -ne 0) {
+    # The native worker emits a fixed-category JSON receipt. Never forward raw
+    # stderr (which may contain local paths or private browser diagnostics).
+    $failureCode = 'CDP_WORKER_FAILED'
+    try {
+      $failure = $stderr.Trim() | ConvertFrom-Json -ErrorAction Stop
+      $candidate = [string]$failure.code
+      $allowedCodes = @(
+        'CDP_BROWSER_NOT_FOUND','CDP_BROWSER_EARLY_EXIT_ZERO',
+        'CDP_BROWSER_EARLY_EXIT_ACCESS','CDP_BROWSER_EARLY_EXIT_DEPENDENCY',
+        'CDP_BROWSER_EARLY_EXIT_POLICY','CDP_BROWSER_EARLY_EXIT_SANDBOX',
+        'CDP_BROWSER_EARLY_EXIT_UNKNOWN','CDP_PORT_TIMEOUT',
+        'CDP_PORT_INVALID','CDP_SOCKET_ERROR','CDP_SOCKET_TIMEOUT',
+        'CDP_COMMAND_TIMEOUT','CDP_DOM_EVIDENCE_MISSING',
+        'CDP_WORKER_WATCHDOG_TIMEOUT','CDP_BROWSER_UNEXPECTED_ERROR'
+      )
+      if ($allowedCodes -ccontains $candidate) { $failureCode = $candidate }
+    } catch { }
+    throw $failureCode
+  }
   try { $receipt = $stdout.Trim() | ConvertFrom-Json -ErrorAction Stop } catch { throw 'CDP_WORKER_INVALID_RECEIPT' }
   if ($receipt.ok -ne $true -or [int]$receipt.domBytes -le 0 -or [string]$receipt.url -ne $BrowserCanaryUrl -or [string]$receipt.mode -ne 'native-cdp') {
     throw 'CDP_WORKER_EVIDENCE_INVALID'
