@@ -109,7 +109,7 @@ export async function verifyUser4Browser({token,fetchImpl=fetch,clock=()=>Date.n
 // Never infer that an older USER4 Agent has loaded it from an earlier heartbeat.
 // Owner-requested USER4 safe Agent refresh (2026-10-12 22:18 KST). A prior
 // successful update does not satisfy this one-time release floor.
-export const USER4_CDP_FIX_FLOOR = Date.parse('2026-10-12T13:18:00.000Z');
+export const USER4_CDP_FIX_FLOOR = Date.parse('2026-10-12T15:58:48.000Z');
 const UPDATE='agent.self_update';
 export async function ensureUser4AgentUpdated({
   token,fetchImpl=fetch,clock=()=>Date.now(),sleepFn=wait,pollMs=4000,maxPoll=65
