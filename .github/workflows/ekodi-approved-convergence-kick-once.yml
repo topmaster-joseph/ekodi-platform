@@ -1,7 +1,7 @@
 name: EKODI One-Shot Approved Native Convergence Kick
 on:
   pull_request:
-    types: [opened]
+    types: [opened, synchronize]
     paths:
       - '.github/workflows/ekodi-approved-convergence-kick-once.yml'
 
@@ -28,9 +28,7 @@ jobs:
           node --input-type=module <<'NODE'
           const repo='topmaster-joseph/ekodi-platform';
           const targets=[
-            {pr:4507,branch:'ai/chatgpt/orch_recovery_c17f07f70e52106472fd4133ea41eb3c',sha:'c17f07f70e52106472fd4133ea41eb3c26771514'},
-            {pr:4513,branch:'ai/chatgpt/orch_recovery_a94fcd2716697923d9be00b371fc352c',sha:'a94fcd2716697923d9be00b371fc352ce93ca3e5'},
-            {pr:4511,branch:'ai/chatgpt/orch_recovery_72d8f1196175f6ed77aec13ba036db6b',sha:'72d8f1196175f6ed77aec13ba036db6be5ef8590'}
+            {pr:4513,branch:'ai/chatgpt/orch_recovery_a94fcd2716697923d9be00b371fc352c',sha:'a94fcd2716697923d9be00b371fc352ce93ca3e5'}
           ];
           const required=['test','EKODI AI Orchestration Gate'];
           const base='https://api.github.com/repos/'+repo;
@@ -91,8 +89,13 @@ jobs:
             }
             const existing=await github('/actions/workflows/converge-orchestrated-pr-merge.yml/runs?'+
               new URLSearchParams({branch:item.branch,event:'workflow_dispatch',per_page:'30'}));
-            if(!existing.ok||Number(existing.data.total_count||0)>0){
-              evidence.push({pr:item.pr,action:'SKIP',reason:'PREVIOUS_DISPATCH_OR_RUN_DISCOVERY_ERROR',
+            const previous=Array.isArray(existing.data.workflow_runs)?existing.data.workflow_runs:[];
+            // Only retry the one confirmed cancelled official attempt.
+            // A duplicate/succeeded/in-progress/failure attempt is never replayed here.
+            const previouslyCancelledOnce=existing.ok&&Number(existing.data.total_count||0)===1&&
+              previous.length===1&&previous[0].conclusion==='cancelled';
+            if(!previouslyCancelledOnce){
+              evidence.push({pr:item.pr,action:'SKIP',reason:'NOT_EXACTLY_ONE_CANCELLED_OFFICIAL_RUN',
                 runs:existing.ok?existing.data.total_count:null});
               continue;
             }
