@@ -27,6 +27,7 @@ test('Mission live browser smoke is bounded read-only and does not expose user c
   assert.equal(policy.status,'enforced');
   assert.equal(policy.owner,'ekodi-orchestrator');
   assert.equal(policy.networkSafety.mutationGrantDefault,false);
+  assert.equal(policy.provider.orchestration,'ekodi-owned','Browser tasks must remain under EKODI Orchestrator control');
   assert.equal(policy.evidence.machineReadableResultRequired,true);
   assert.match(native,/allowMutation:false/);
   assert.match(native,/\.horizontalOverflow == true/);
