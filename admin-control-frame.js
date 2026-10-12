@@ -40,6 +40,7 @@
   // second section event. Heal that single panel only after admin auth is ready.
   const restoreCurrentHome=()=>{
     if(document.documentElement.dataset.ekodiAdminReady!=='true')return;
+    if(document.getElementById('app')?.hidden)return;
     if(window.EKODIAdminPanels?.current?.()!=='command-home')return;
     if(panel.hidden||panel.classList.contains('hidden-panel'))activateSection('command-home');
   };
