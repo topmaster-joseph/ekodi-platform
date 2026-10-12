@@ -25,6 +25,7 @@ test('native assessor forbids a selector for single or no published languages',(
 test('production must never render an un-published homepage locale',()=>{
   assert.equal(assessLanguageDOM({...good,documentLocale:'en',homepageLocale:'en'},['ko-KR']).reason,'document_locale_not_published');
   assert.equal(assessLanguageDOM({...good,documentLocale:'ko-KR',homepageLocale:'en'},['ko-KR']).reason,'document_locale_not_published');
+  assert.equal(assessLanguageDOM({...good,documentLocale:'en',homepageLocale:'ko-KR'},['ko-KR']).reason,'document_locale_not_published');
   const hidden={...good,headerControls:0,visibleHeaderControls:0,documentLocale:'ko-KR',homepageLocale:'ko-KR'};
   assert.equal(assessLanguageDOM(hidden,['ko-KR']).status,'pass');
   assert.equal(assessLanguageDOM({...hidden,documentLocale:'en',homepageLocale:'en'},['ko-KR']).status,'fail');
