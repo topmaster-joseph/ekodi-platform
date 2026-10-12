@@ -112,7 +112,7 @@
     if (!navButton) {
       navButton = el('button', '', 'nav');
       navButton.type = 'button'; navButton.dataset.section = 'social';
-      navButton.append(document.createTextNode('◉ '), el('span', '채널·계정 연결'));
+      navButton.append(document.createTextNode('◉ '), el('span', '채널'));
       const communication = nav.querySelector('[data-section="communication"]');
       if (communication?.parentElement) communication.insertAdjacentElement('afterend', navButton);
       else nav.append(navButton);
@@ -457,7 +457,7 @@
     async function activate() {
       document.querySelectorAll('[data-panel]').forEach(panel=>{ const targets=String(panel.dataset.panel||'').split(' '); panel.classList.toggle('hidden-panel',!targets.includes('social')); });
       document.querySelectorAll('.sidebar .nav[data-section]').forEach(item=>item.classList.toggle('active',item.dataset.section==='social'));
-      const pageTitle=document.querySelector('#pageTitle'); if(pageTitle) pageTitle.textContent='사이트별 채널센터'; document.querySelector('.sidebar')?.classList.remove('open');
+      const pageTitle=document.querySelector('#pageTitle'); if(pageTitle) pageTitle.textContent='채널'; document.querySelector('.sidebar')?.classList.remove('open');
       await Promise.all([renderSiteDirectory(), registry.organizations.length ? Promise.resolve() : load(), loadConnections(), loadPublishingChannels()]);
     }
 
