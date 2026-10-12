@@ -55,7 +55,7 @@
     const meta=[m.provider,m.target,m.status&&statusLabel(m.status)].filter(Boolean).join(' · ');
     const task=m.taskId?'<div class="execution-card"><strong>EKODI Task '+esc(m.taskId)+'</strong><span>'+esc(statusLabel(m.status))+'</span></div>':'';
     return '<article class="turn '+esc(m.role)+'"><div class="meta">'+esc(m.role==='user'?'사용자':'EKODI')+(meta?' · '+esc(meta):'')+'</div><div class="bubble">'+esc(m.text)+'</div>'+task+'</article>';
-  }).join('');requestAnimationFrame(()=>{const c=$('#conversation');window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})})}
+  }).join('');requestAnimationFrame(()=>{const c=$('#conversation');if(document.documentElement.dataset.controlEmbed==='admin'&&c)c.scrollTo({top:c.scrollHeight,behavior:'smooth'});else window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})})}
   function historyForAssist(){const s=state.sessions.find(x=>x.id===state.activeId);return (s?.messages||[]).filter(m=>m.role==='user'||m.role==='assistant').slice(-8).map(m=>({role:m.role,text:m.text}))}
   function authDisplay(label,ok=false,detail=''){
     state.authenticated=ok;
@@ -158,7 +158,7 @@
   function newTask(){state.activeId=null;setView('chat');renderMessages();$('#commandInput').focus()}
   function closeRail(){$('#controlRail').classList.remove('open')}
   function bind(){
-    $$('[data-view]').forEach(b=>b.onclick=()=>{setView(b.dataset.view);history.replaceState(null,'',b.dataset.view==='chat'?'/admin/control':'/admin/control?view='+encodeURIComponent(b.dataset.view));});
+    $('[data-view]').forEach(b=>b.onclick=()=>{setView(b.dataset.view);const next=new URL(location.href);if(b.dataset.view==='chat')next.searchParams.delete('view');else next.searchParams.set('view',b.dataset.view);history.replaceState(null,'',next.pathname+next.search+next.hash);});
     $('#newTask').onclick=newTask;$('#railOpen').onclick=()=>$('#controlRail').classList.add('open');$('#railClose').onclick=closeRail;
     $('#commandForm').addEventListener('submit',e=>{e.preventDefault();submitCommand($('#commandInput').value)});
     $('#commandInput').addEventListener('input',resizeInput);
@@ -168,6 +168,8 @@
   }
   async function boot(){
     bind();renderRecent();renderMessages();renderPanels();
+    const requestedView=new URLSearchParams(location.search).get('view');
+    if(['tasks','agents','workers','results'].includes(requestedView))setView(requestedView);
     await verifySession();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
