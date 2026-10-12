@@ -29,12 +29,19 @@ export async function handlePublicBoardCatalog(request,env){
   if(!env?.DB?.prepare)return response({ok:false,error:'catalog_unavailable'},503);
   try{
     const requested=Number(limitRaw);
+    // Join only active registered customers or four official boards; speculative
+    // URL probes can have created stray board instances, which must not be listed.
     // No migrations/CREATE TABLE, on-demand inserts, tenant domains, emails,
     // membership, visibility=private rows or customer identifiers are exposed.
-    const rows=await env.DB.prepare(`SELECT board_id,site_id
-      FROM ekodi_board_instances
-      WHERE status='active' AND visibility='public' AND board_id>?
-      ORDER BY board_id LIMIT ?`).bind(rawCursor,requested+1).all();
+    const rows=await env.DB.prepare(`SELECT b.board_id,b.site_id
+      FROM ekodi_board_instances b
+      WHERE b.status='active' AND b.visibility='public' AND b.board_id>?
+        AND (
+          b.site_id IN ('cgma','cheonggye','ekodimission','ekodichurch')
+          OR EXISTS (SELECT 1 FROM customer_tenants t
+                     WHERE t.status='active' AND lower(t.slug)=lower(b.site_id))
+        )
+      ORDER BY b.board_id LIMIT ?`).bind(rawCursor,requested+1).all();
     const items=Array.isArray(rows?.results)?rows.results:[];
     if(items.length>requested+1)return response({ok:false,error:'catalog_result_invalid'},503);
     const page=items.slice(0,requested);
