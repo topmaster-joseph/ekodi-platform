@@ -33,3 +33,5 @@ if($moduleAvailable){try{$vmPresent=$null -ne (Get-VM -Name 'EKODI-Isolated-Base
  rebootMayBeRequired=($state -eq 'EnablePending');
  guestExecutionAuthorized=$false
 } | ConvertTo-Json -Compress
+
+# Owner-authored protected release validation trigger; not executed on USER2.
