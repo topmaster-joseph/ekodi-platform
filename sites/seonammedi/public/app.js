@@ -1153,7 +1153,8 @@ function renderPublicAdminControls(){
   const admin=publicAdminController;
   if(!admin||!publicAdminMe)return;
   if(admin.has('pages'))bindPublicOrganizationAdmin();
-  if(admin.has('timeline')){bindPublicTimelineAdmin();bindPublicTimelineLinkImport()}
+  if(admin.has('timeline'))bindPublicTimelineAdmin();
+  if(admin.has('timeline'))bindPublicTimelineLinkImport();
   if(admin.has('content'))bindPublicMonitorContentAdmin();
   if(admin.has('channels'))bindPublicChannelAdmin();
   if(admin.has('voices'))window.dispatchEvent(new CustomEvent('seonammedi:voice-inline-admin-authorized'));
