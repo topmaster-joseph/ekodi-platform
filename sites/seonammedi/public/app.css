@@ -154,3 +154,18 @@
 .link-import-form input,.link-import-form select{width:100%;max-width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:9px}
 .link-import-form button:disabled,.inline-manage-form button:disabled{opacity:.52;cursor:not-allowed}
 @media(max-width:760px){.link-import-preview{padding:12px}.activity-toolbar{flex-wrap:wrap}.activity-toolbar .ekodi-public-admin-inline{max-width:100%}}
+
+/* Split committee activity ledger from the original #timeline related-news URL. */
+.committee-toolbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;margin:16px 0}
+.committee-toolbar label{display:grid;gap:5px;flex:1 1 260px;font-weight:600}
+.committee-toolbar input{width:100%;min-height:40px;border:1px solid #cbd5e1;border-radius:10px;padding:9px 12px;background:#fff}
+#committeeActivityFilters{margin:12px 0 18px;flex-wrap:wrap}
+.related-linked-channels{margin:16px 0 24px;padding:14px 16px;background:#f8fafc;border:1px solid #e0e7ef;border-radius:14px}
+.related-linked-channels h3{margin:0 0 5px;font-size:1.04rem;color:#142945}
+.related-linked-channels p{margin:0 0 12px;font-size:.88rem}
+.related-channel-links{display:flex;flex-wrap:wrap;gap:9px}
+.related-channel-link{display:flex;align-items:center;gap:7px;border:1px solid #cbd5e1;border-radius:10px;padding:8px 11px;color:#163354;background:white;text-decoration:none;max-width:100%;overflow-wrap:anywhere}
+.related-channel-link span{font-size:.8rem;color:#64748b}
+.related-channel-link strong{font-size:.88rem;font-weight:650}
+.related-channel-link:hover,.related-channel-link:focus-visible{border-color:#315c8d;outline-offset:2px}
+@media(max-width:760px){.committee-toolbar{align-items:stretch}.related-linked-channels{padding:12px}.related-channel-links{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.related-channel-link{display:grid;gap:2px}}
