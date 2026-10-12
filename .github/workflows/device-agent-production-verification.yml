@@ -17,6 +17,7 @@ on:
           - user2-localai
           - user2-virtual-probe
           - user2-browser-acceptance
+          - user2-hyperv-enable
           - user4-virtual-probe
           - user2-upgrade-localai
           - user4-acceptance
@@ -160,7 +161,7 @@ jobs:
           node-version: '24'
 
       - name: EKODI AI Orchestration Gate for mutating verification
-        if: github.event_name == 'workflow_dispatch' && (inputs.execution_mode == 'verify' || inputs.execution_mode == 'status' || inputs.execution_mode == 'localai' || inputs.execution_mode == 'user3-upgrade-localai' || inputs.execution_mode == 'user2-localai' || inputs.execution_mode == 'user2-virtual-probe' || inputs.execution_mode == 'user2-browser-acceptance' || inputs.execution_mode == 'user4-virtual-probe' || inputs.execution_mode == 'user2-upgrade-localai' || inputs.execution_mode == 'user4-acceptance')
+        if: github.event_name == 'workflow_dispatch' && (inputs.execution_mode == 'verify' || inputs.execution_mode == 'status' || inputs.execution_mode == 'localai' || inputs.execution_mode == 'user3-upgrade-localai' || inputs.execution_mode == 'user2-localai' || inputs.execution_mode == 'user2-virtual-probe' || inputs.execution_mode == 'user2-browser-acceptance' || inputs.execution_mode == 'user2-hyperv-enable' || inputs.execution_mode == 'user4-virtual-probe' || inputs.execution_mode == 'user2-upgrade-localai' || inputs.execution_mode == 'user4-acceptance')
         env:
           EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
           EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
@@ -282,6 +283,12 @@ jobs:
       - name: Select USER2 native safe alternative without authorizing guest desktop
         if: always() && github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-virtual-probe'
         run: node scripts/select-native-user2-safe-route.mjs
+
+      - name: Activate USER2 Hyper-V feature through native Agent without reboot
+        if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-hyperv-enable'
+        env:
+          DEVICE_TARGET_HOSTNAME: 'user2'
+        run: node scripts/activate-native-user2-hyperv.mjs
 
       - name: Verify USER2 native browser with real bounded CDP receipt
         if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user2-browser-acceptance'
