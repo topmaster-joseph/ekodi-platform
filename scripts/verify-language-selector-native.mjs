@@ -14,6 +14,11 @@ export function assessLanguageDOM(snapshot, publishedLocales){
   const unique=[...new Set(publishedLocales.filter(x=>typeof x==='string'))];
   const mustShow=unique.length>=2;
   const count=snapshot.visibleHeaderControls;
+  // The effective text/document locale must be among the actually published languages.
+  // An English homepage with Korean-only publication is not a successful hidden-selector result.
+  const effectiveLocale=String(snapshot.homepageLocale||snapshot.documentLocale||'').trim();
+  if(effectiveLocale && !unique.some(locale=>locale.toLowerCase()===effectiveLocale.toLowerCase()||locale==='ko-KR'&&effectiveLocale==='ko'))
+    return {status:'fail',reason:'document_locale_not_published'};
   if(snapshot.footerControls>0||snapshot.headerControls>1)return {status:'fail',reason:'duplicate_or_footer_language_controls'};
   if(mustShow && (count!==1||!snapshot.pill||!snapshot.accessible||!snapshot.optionsMatchPublished)){
     return {status:'fail',reason:'published_multilocale_selector_contract'};
@@ -41,6 +46,7 @@ async function inspect(page){
     const expected=ready.filter(x=>window.EKODIUserLanguage?.supported?.some(l=>l.locale===x));
     return {
       url:location.href,documentLocale:document.documentElement.lang,
+      homepageLocale:document.documentElement.dataset.locale||null,
       shellLoaded:!!window.EKODIUserLanguage,headerReady:!!document.querySelector('[data-ekodi-user-header-root]'),
       headerControls:all.length,visibleHeaderControls:all.filter(displayed).length,footerControls:footer.length,
       options:opts,readyLocales:ready,datasetReady:document.documentElement.dataset.ekodiReadyLocales||'',
