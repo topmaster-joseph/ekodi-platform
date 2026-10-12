@@ -1,0 +1,110 @@
+name: EKODI One-Shot Approved Native Convergence Kick
+on:
+  pull_request:
+    types: [opened]
+    paths:
+      - '.github/workflows/ekodi-approved-convergence-kick-once.yml'
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: read
+  statuses: read
+  actions: write
+
+jobs:
+  dispatch:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'ai/chatgpt/native-approved-convergence-kick-20261013' &&
+      github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Dispatch only exact SHA receipt-approved EKODI official merge jobs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'NODE'
+          const repo='topmaster-joseph/ekodi-platform';
+          const targets=[
+            {pr:4441,branch:'ai/chatgpt/orch_recovery_c89617811c25c5cb3755252850f55298',sha:'c89617811c25c5cb3755252850f55298df3aed2c'},
+            {pr:4456,branch:'ai/chatgpt/orch_recovery_8f734df1e46a9852650c311ef8f95c82',sha:'8f734df1e46a9852650c311ef8f95c82acbb4334'},
+            {pr:4346,branch:'ai/gpt6/orch_recovery_064475876aa6891cda5e381096e018ad',sha:'064475876aa6891cda5e381096e018adf6acb963'}
+          ];
+          const required=['test','EKODI AI Orchestration Gate'];
+          const base='https://api.github.com/repos/'+repo;
+          const headers={
+            authorization:'Bearer '+process.env.GH_TOKEN,
+            accept:'application/vnd.github+json',
+            'x-github-api-version':'2022-11-28',
+            'content-type':'application/json'
+          };
+          if(!process.env.GH_TOKEN)throw Error('UNAUTHORIZED_ACTIONS_CONTEXT');
+          async function github(path,opts={}){
+            const res=await fetch(base+path,{...opts,headers});
+            const data=res.status===204?{}:await res.json().catch(()=>({}));
+            return {http:res.status,ok:res.ok,data:res.ok?data:{}};
+          }
+          let succeeded=0;
+          const evidence=[];
+          for(const item of targets){
+            const current=await github('/pulls/'+item.pr);
+            if(!current.ok||current.data.state!=='open'||current.data.draft||
+                current.data.base?.ref!=='main'||
+                current.data.head?.repo?.full_name!==repo||
+                current.data.head?.ref!==item.branch||
+                current.data.head?.sha!==item.sha){
+              evidence.push({pr:item.pr,action:'SKIP',reason:'PR_HEAD_NOT_EXACT_APPROVED_SHA'});
+              continue;
+            }
+            const [statuses,checks]=await Promise.all([
+              github('/commits/'+item.sha+'/status'),
+              github('/commits/'+item.sha+'/check-runs?per_page=100')
+            ]);
+            const statusesOk=statuses.ok&&required.every(name=>
+              (statuses.data.statuses||[]).some(s=>s.context===name&&s.state==='success'));
+            const checksOk=checks.ok&&required.every(name=>
+              (checks.data.check_runs||[]).some(c=>c.name===name&&c.app?.slug==='github-actions'&&
+                c.status==='completed'&&c.conclusion==='success'));
+            if(!statusesOk||!checksOk){
+              evidence.push({pr:item.pr,action:'SKIP',reason:'REAL_REQUIRED_CHECKS_NOT_VERIFIED',
+                statusesHttp:statuses.http,checksHttp:checks.http});
+              continue;
+            }
+            const taskId=item.branch.split('/').at(-1);
+            const receiptUrl='https://ekodi.kr/api/orchestrator/release-receipt?'+new URLSearchParams({
+              taskId,branchRef:item.branch
+            });
+            let receipt;
+            try{
+              const result=await fetch(receiptUrl,{headers:{
+                accept:'application/json','user-agent':'ekodi-native-approved-once-dispatch'
+              },signal:AbortSignal.timeout(9000)});
+              receipt=result.ok?await result.json():{};
+            }catch{receipt={};}
+            if(receipt.authorized!==true||receipt.taskId!==taskId||
+                receipt.branchRef!==item.branch||receipt.authority!=='ekodi-orchestrator'||
+                ['blocked','failed','cancelled'].includes(String(receipt.state||'').toLowerCase())){
+              evidence.push({pr:item.pr,action:'SKIP',reason:'OFFICIAL_RELEASE_RECEIPT_NOT_AUTHORIZED'});
+              continue;
+            }
+            const existing=await github('/actions/workflows/converge-orchestrated-pr-merge.yml/runs?'+
+              new URLSearchParams({branch:item.branch,event:'workflow_dispatch',per_page:'30'}));
+            if(!existing.ok||Number(existing.data.total_count||0)>0){
+              evidence.push({pr:item.pr,action:'SKIP',reason:'PREVIOUS_DISPATCH_OR_RUN_DISCOVERY_ERROR',
+                runs:existing.ok?existing.data.total_count:null});
+              continue;
+            }
+            const replay=await github('/actions/workflows/converge-orchestrated-pr-merge.yml/dispatches',{
+              method:'POST',body:JSON.stringify({ref:item.branch})
+            });
+            evidence.push({pr:item.pr,action:replay.http===204?'OFFICIAL_WORKFLOW_DISPATCHED':'DISPATCH_NOT_CONFIRMED',
+              http:replay.http,head:item.sha.slice(0,12)});
+            if(replay.http===204)succeeded++;
+          }
+          console.log('EKODI_NATIVE_APPROVED_DISPATCH '+JSON.stringify({
+            oneShot:true,mutatedProduction:false,manualBranchProtectionOverride:false,
+            succeeded,evidence
+          }));
+          NODE
