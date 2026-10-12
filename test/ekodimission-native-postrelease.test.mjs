@@ -24,6 +24,9 @@ test('Mission postrelease canary uses EKODI-owned browser on both phone and desk
   assert.match(workflow,/Deploy EKODI Operating Space/);
   assert.match(workflow,/workflow_run.conclusion == 'success'/);
   assert.equal((workflow.match(/workflow_run.event == 'workflow_dispatch'/g)||[]).length,2,'Both device canaries must require actual dispatch for release workflow runs');
+  assert.equal((workflow.match(/if: github.event_name == 'workflow_dispatch' \|\| \(github.event_name == 'workflow_run'/g)||[]).length,2,'PR validation must not spawn live public browser canaries');
+  assert.doesNotMatch(workflow,/if: github.event_name != 'workflow_run'/,'All native canaries must require an explicit release event');
+
   assert.equal((workflow.match(/workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'/g)||[]).length,2,'Only protected main push releases may trigger the native canary');
   assert.doesNotMatch(workflow,/if: github.event_name != 'workflow_run' \|\| github.event.workflow_run.conclusion == 'success'/);
 
@@ -36,6 +39,7 @@ test('Each native canary job itself refuses PR schema-validation completions',()
     const section=workflow.split('  '+job+':\n')[1]?.split(/\n  [a-z][a-z-]*:\n/)[0]||'';
     assert.ok(section,'Native job not present: '+job);
     assert.ok(section.includes(desired),'No production trigger guard inside '+job);
+    assert.ok(section.includes("if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run'"),'PR-only contract job must never execute the native browser: '+job);
     assert.ok(!section.includes("github.event.workflow_run.event == 'pull_request'"),'PR-only validation cannot trigger '+job);
   }
 });
