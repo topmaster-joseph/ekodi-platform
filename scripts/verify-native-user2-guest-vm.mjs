@@ -37,6 +37,15 @@ export async function verifyUser2GuestVm({token=process.env.E2E_ADMIN_TOKEN,fetc
    if(c?.status==='succeeded'){proof=c.result?.[key];break;}
   }
   if(!proof||proof.ok!==true)throw Error('missing_verified_'+key);
+  // A successful command is insufficient without matching schema and exact canary stage.
+  const expectedModes={
+   desktopProbe:'isolated-desktop-backend-probe',
+   desktopCanary:'isolated-desktop-hyperv-canary',
+   desktopGuestCanary:'isolated-desktop-guest-runtime-canary',
+   desktopUiCanary:'isolated-desktop-guest-ui-canary',
+   desktopSessionCanary:'isolated-desktop-session-canary'
+  };
+  if(proof.mode!==expectedModes[key])throw Error('native_stage_mode_mismatch');
   if(type==='computer.desktop.probe'){
    if(proof.headlessBackendReady!==true){
     console.log('[EKODI][USER2-GUEST-VM-BLOCKED] '+JSON.stringify({hyperVState:proof.hyperVState,hyperVPowerShellAvailable:proof.hyperVPowerShellAvailable===true,baseVmPresent:proof.baseVmPresent===true,gapReason:proof.gapReason,commandsIssued:1,guestCommandsIssued:0}));
