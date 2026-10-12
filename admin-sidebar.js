@@ -315,7 +315,11 @@ function globalButtons(globals, locale) {
   control.onclick=event=>{
     if(!window.EKODIAdminPanels?.activate)return;
     event.preventDefault();
-    window.EKODIAdminPanels.activate('command-home');
+    const activated=window.EKODIAdminPanels.activate('command-home');
+    // A repeated selection suppresses the layout's section-change event.
+    // Notify the existing central Control frame after the compact layout hides
+    // its panels, without adding bytes to the first-paint menu bundle.
+    if(activated===true)window.dispatchEvent(new CustomEvent('ekodi-admin-section-changed',{detail:{section:'command-home'}}));
   };
   control.textContent = locale === 'en' ? '⌘  EKODI Control' : '⌘  에코디 운영관제';
   control.setAttribute('aria-label',locale === 'en' ? 'Open EKODI Control' : '에코디 운영관제 열기');
