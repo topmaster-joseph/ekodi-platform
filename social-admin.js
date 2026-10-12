@@ -222,7 +222,9 @@
     const addOrg = el('button','＋ 기관 추가','ghost social-add-org'); addOrg.type='button';
     const addMall = el('button','＋ 에코디몰 채널 그룹','secondary social-add-mall'); addMall.type='button';
     const directoryHelp = el('p','채널 주소 등록은 자동게시 승인이 아닙니다. 직접 운영 채널도 공식 OAuth 연결·사이트 매핑·발행 정책 확인 후에만 게시됩니다. 외부·제휴 링크는 등록·공개·분석 용도로만 사용합니다.','social-admin-status');
-    section.append(head, siteDirectoryPanel, connectionPanel, publishingPanel, summary, directoryFilters, directoryHelp, status, list, addOrg, addMall); content.append(section);
+    const directoryHead = el('div','','social-channel-head');
+    directoryHead.append(el('h3','채널 등록·공개 관리'),el('span','검색 노출·외부 제휴 채널은 링크 관리, 실제 게시 계정은 하단에서 연결'));
+    section.append(head, directoryHead, summary, directoryFilters, addMall, directoryHelp, status, list, addOrg, siteDirectoryPanel, connectionPanel, publishingPanel); content.append(section);
 
     function renderSummary() {
       const orgs = registry.organizations || [];
