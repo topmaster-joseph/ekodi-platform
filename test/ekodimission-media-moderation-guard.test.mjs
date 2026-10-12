@@ -55,6 +55,7 @@ test('moderation deployment is orchestrator-authorized and never replays vulnera
   assert.match(workflow,/for migration in "\$LINK_GUARD_MIGRATION" "\$RESERVE_GUARD_MIGRATION" "\$FINALIZE_GUARD_MIGRATION"/);
   assert.doesNotMatch(workflow,/for migration in "\$BASE_MIGRATION" "\$PRIVACY_GUARD_MIGRATION"/);
   assert.match(workflow,/credential unavailable: failing closed/);
+  assert.doesNotMatch(workflow,/switching to live-schema verification fallback/i,'credentialless public checks cannot attest production moderation');
   assert.match(workflow,/Verify that security guards are installed in production/);
 });
 
