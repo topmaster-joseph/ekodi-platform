@@ -1,7 +1,17 @@
+import { hasRegionalMedicalContext, isPublicSeonamMediSource } from './seonammedi-relevance.js';
+
 const API_PATH='/api/seonammedi/monitor';
 const MAX_ITEMS_PER_QUERY=20;
 const RECENT_DAYS=7;
 const MEDIA_ENRICH_LIMIT=8;
+// Deliberately rate-limited; sources outside the budget stay unpublished until verified.
+async function ensureSourceVerificationColumn(db){
+  try{await db.prepare('SELECT source_verified FROM seonammedi_monitor_items LIMIT 0').all();return}catch(error){
+    if(!/no such column/i.test(String(error?.message||error)))throw error;
+  }
+  try{await db.prepare("ALTER TABLE seonammedi_monitor_items ADD COLUMN source_verified INTEGER NOT NULL DEFAULT 0").run()}
+  catch(error){if(!/duplicate column name/i.test(String(error?.message||error)))throw error}
+}
 const QUERIES=Object.freeze([
   {key:'seonam-national-medical',label:'서남권 국립의대',q:'"서남권" 국립의대'},
   {key:'mokpo-national-medical',label:'목포대 국립의대',q:'목포대 국립의대'},
@@ -19,7 +29,7 @@ function parseRss(xml,key,label){
   const now=Date.now(),floor=now-RECENT_DAYS*86400000;
   return [...String(xml||'').matchAll(/<item>([\s\S]*?)<\/item>/gi)].slice(0,MAX_ITEMS_PER_QUERY).map(match=>{
     const block=match[1];const title=tag(block,'title');const url=tag(block,'link');const publishedRaw=tag(block,'pubDate');const publisher=sourceTag(block)||'Google News';const publishedMs=Date.parse(publishedRaw);
-    return {queryKey:key,queryLabel:label,title,url,publisher,publishedAt:Number.isFinite(publishedMs)?new Date(publishedMs).toISOString():null,publishedMs,resolvedUrl:'',mediaType:'',mediaUrl:'',mediaSource:'',mediaPublishedAt:'',mediaState:'none',sourceType:'news',summaryText:''};
+    return {queryKey:key,queryLabel:label,title,url,publisher,publishedAt:Number.isFinite(publishedMs)?new Date(publishedMs).toISOString():null,publishedMs,resolvedUrl:'',mediaType:'',mediaUrl:'',mediaSource:'',mediaPublishedAt:'',mediaState:'none',sourceType:'news',summaryText:'',sourceVerified:false};
   }).filter(item=>item.title&&/^https:\/\//i.test(item.url)&&(!Number.isFinite(item.publishedMs)||item.publishedMs>=floor));
 }
 function stripMarkup(value){return clean(String(value||'').replace(/<[^>]+>/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>'),1200)}
@@ -34,7 +44,7 @@ async function fetchNaverBlogItems(env,query){
   return (Array.isArray(payload?.items)?payload.items:[]).map(row=>{
     const title=stripMarkup(row.title);const url=httpsUrl(row.link);const publishedAt=naverBlogDate(row.postdate);const publishedMs=publishedAt?Date.parse(publishedAt):NaN;
     let publisher='네이버 블로그';try{publisher=new URL(url).hostname==='blog.naver.com'?'네이버 블로그':new URL(url).hostname}catch{}
-    return {queryKey:query.key,queryLabel:query.label,title,url,publisher,publishedAt,publishedMs,resolvedUrl:url,mediaType:'',mediaUrl:'',mediaSource:'',mediaPublishedAt:'',mediaState:'none',sourceType:'blog',summaryText:stripMarkup(row.description)};
+    return {queryKey:query.key,queryLabel:query.label,title,url,publisher,publishedAt,publishedMs,resolvedUrl:url,mediaType:'',mediaUrl:'',mediaSource:'',mediaPublishedAt:'',mediaState:'none',sourceType:'blog',summaryText:stripMarkup(row.description),sourceVerified:false};
   }).filter(item=>item.title&&item.url&&(!Number.isFinite(item.publishedMs)||item.publishedMs>=floor));
 }
 function metaValue(html,key){
@@ -58,28 +68,40 @@ async function enrichMedia(item){
     const type=String(response.headers.get('content-type')||'').toLowerCase();
     if(!type.includes('text/html')&&!type.includes('application/xhtml+xml'))return {...item,resolvedUrl};
     const html=(await response.text()).slice(0,350000);
+    // A Google search result alone is not proof: inspect the publisher's
+    // actual page title and article text (or publisher-authored description).
+    const originalTitle=stripMarkup(metaValue(html,'og:title')||metaValue(html,'twitter:title')||(html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)||[])[1]);
+    const articleHtml=(html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i)||[])[1]||'';
+    const articleText=articleHtml?stripMarkup(articleHtml.replace(/<(?:script|style|nav|aside|footer)\b[^>]*>[\s\S]*?<\/(?:script|style|nav|aside|footer)>/gi,' ')):'';
+    const articleDescription=stripMarkup(metaValue(html,'og:description')||metaValue(html,'description')||metaValue(html,'twitter:description'));
+    const authoritativeContent=hasRegionalMedicalContext(articleText)?articleText:articleText.length>=60?'':articleDescription;
+    const articleEvidence=hasRegionalMedicalContext(item.title)&&hasRegionalMedicalContext(originalTitle)&&hasRegionalMedicalContext(authoritativeContent)
+      ?authoritativeContent:'';
+    const verifiedSummary=articleEvidence?clean(articleEvidence,900):'';
     const video=metaValue(html,'og:video:secure_url')||metaValue(html,'og:video:url')||metaValue(html,'og:video')||metaValue(html,'twitter:player');
     const image=metaValue(html,'og:image:secure_url')||metaValue(html,'og:image')||metaValue(html,'twitter:image');
     const mediaType=video?'video':image?'photo':'';
     const mediaUrl=httpsUrl(video||image,resolvedUrl);
     const mediaPublishedAt=metaValue(html,'article:published_time')||metaValue(html,'datePublished')||item.publishedAt||'';
-    return {...item,resolvedUrl,mediaType:mediaType&&mediaUrl?mediaType:'',mediaUrl:mediaUrl||'',mediaSource:item.publisher||new URL(resolvedUrl).hostname,mediaPublishedAt:clean(mediaPublishedAt,80),mediaState:mediaType&&mediaUrl?'candidate':'none'};
+    return {...item,resolvedUrl,summaryText:verifiedSummary||'',sourceVerified:Boolean(verifiedSummary),mediaType:mediaType&&mediaUrl?mediaType:'',mediaUrl:mediaUrl||'',mediaSource:item.publisher||new URL(resolvedUrl).hostname,mediaPublishedAt:clean(mediaPublishedAt,80),mediaState:mediaType&&mediaUrl?'candidate':'none'};
   }catch{return item}
 }
 async function insertItem(env,item,seenAt){
+  await ensureSourceVerificationColumn(env.DB);
   const fingerprint=await digest(item.title+'\n'+item.url);
   const existing=await env.DB.prepare('SELECT id FROM seonammedi_monitor_items WHERE fingerprint=? LIMIT 1').bind(fingerprint).first();
   if(existing?.id){
-    await env.DB.prepare('UPDATE seonammedi_monitor_items SET last_seen_at=?,publisher=?,published_at=COALESCE(?,published_at),query_key=?,query_label=?,resolved_url=CASE WHEN ?<>\'\' THEN ? ELSE resolved_url END,media_type=CASE WHEN ?<>\'\' THEN ? ELSE media_type END,media_url=CASE WHEN ?<>\'\' THEN ? ELSE media_url END,media_source=CASE WHEN ?<>\'\' THEN ? ELSE media_source END,media_published_at=CASE WHEN ?<>\'\' THEN ? ELSE media_published_at END,media_state=CASE WHEN ?=\'candidate\' THEN \'candidate\' ELSE media_state END,source_type=?,summary_text=CASE WHEN ?<>\'\' THEN ? ELSE summary_text END WHERE id=?')
-      .bind(seenAt,item.publisher,item.publishedAt,item.queryKey,item.queryLabel,item.resolvedUrl,item.resolvedUrl,item.mediaType,item.mediaType,item.mediaUrl,item.mediaUrl,item.mediaSource,item.mediaSource,item.mediaPublishedAt,item.mediaPublishedAt,item.mediaState,item.sourceType||'web',item.summaryText||'',item.summaryText||'',existing.id).run();
+    await env.DB.prepare('UPDATE seonammedi_monitor_items SET last_seen_at=?,publisher=?,published_at=COALESCE(?,published_at),query_key=?,query_label=?,resolved_url=CASE WHEN ?<>\'\' THEN ? ELSE resolved_url END,media_type=CASE WHEN ?<>\'\' THEN ? ELSE media_type END,media_url=CASE WHEN ?<>\'\' THEN ? ELSE media_url END,media_source=CASE WHEN ?<>\'\' THEN ? ELSE media_source END,media_published_at=CASE WHEN ?<>\'\' THEN ? ELSE media_published_at END,media_state=CASE WHEN ?=\'candidate\' THEN \'candidate\' ELSE media_state END,source_type=?,summary_text=CASE WHEN ?<>\'\' THEN ? ELSE summary_text END,source_verified=CASE WHEN ?=1 THEN 1 ELSE source_verified END WHERE id=?')
+      .bind(seenAt,item.publisher,item.publishedAt,item.queryKey,item.queryLabel,item.resolvedUrl,item.resolvedUrl,item.mediaType,item.mediaType,item.mediaUrl,item.mediaUrl,item.mediaSource,item.mediaSource,item.mediaPublishedAt,item.mediaPublishedAt,item.mediaState,item.sourceType||'web',item.summaryText||'',item.summaryText||'',item.sourceVerified?1:0,existing.id).run();
     return false;
   }
-  await env.DB.prepare("INSERT INTO seonammedi_monitor_items (fingerprint,title,url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,resolved_url,media_type,media_url,media_source,media_published_at,media_state,source_type,summary_text) VALUES (?,?,?,?,?,?,?,'source_only',?,?,?,?,?,?,?,?,?,?)")
-    .bind(fingerprint,item.title,item.url,item.publisher,item.publishedAt,item.queryKey,item.queryLabel,seenAt,seenAt,item.resolvedUrl,item.mediaType,item.mediaUrl,item.mediaSource,item.mediaPublishedAt,item.mediaState,item.sourceType||'web',item.summaryText||'').run();
+  await env.DB.prepare("INSERT INTO seonammedi_monitor_items (fingerprint,title,url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,resolved_url,media_type,media_url,media_source,media_published_at,media_state,source_type,summary_text,source_verified) VALUES (?,?,?,?,?,?,?,'source_only',?,?,?,?,?,?,?,?,?,?,?)")
+    .bind(fingerprint,item.title,item.url,item.publisher,item.publishedAt,item.queryKey,item.queryLabel,seenAt,seenAt,item.resolvedUrl,item.mediaType,item.mediaUrl,item.mediaSource,item.mediaPublishedAt,item.mediaState,item.sourceType||'web',item.summaryText||'',item.sourceVerified?1:0).run();
   return true;
 }
 export async function runSeonamMediHourlyCheck(env,{scheduledAt=null,force=false}={}){
   if(!env?.DB?.prepare)return {ok:false,error:'storage_unavailable'};
+  try{await ensureSourceVerificationColumn(env.DB)}catch(error){return {ok:false,error:'source_verification_schema_unavailable',message:clean(error?.message||error,300)}}
   const startedAt=new Date(scheduledAt||Date.now()).toISOString();let runId=null;let checked=0,seen=0,added=0,mediaCandidates=0,mediaBudget=MEDIA_ENRICH_LIMIT;const errors=[];
   if(!force){
     try{
@@ -100,14 +122,14 @@ export async function runSeonamMediHourlyCheck(env,{scheduledAt=null,force=false
       if(!response.ok)throw new Error('HTTP '+response.status);
       const items=parseRss(await response.text(),query.key,query.label);checked+=1;seen+=items.length;
       for(let item of items){
-        if(mediaBudget>0){item=await enrichMedia(item);mediaBudget-=1;if(item.mediaState==='candidate')mediaCandidates+=1}
+        if(mediaBudget>0&&hasRegionalMedicalContext(item.title)){item=await enrichMedia(item);mediaBudget-=1;if(item.mediaState==='candidate')mediaCandidates+=1}
         if(await insertItem(env,item,startedAt))added+=1;
       }
     }catch(error){errors.push(query.key+':news:'+clean(error?.message||error,160))}
     if(naverBlogConfigured(env)){
       try{
         const blogItems=await fetchNaverBlogItems(env,query);checked+=1;seen+=blogItems.length;
-        for(let item of blogItems){if(mediaBudget>0){item=await enrichMedia(item);mediaBudget-=1;if(item.mediaState==='candidate')mediaCandidates+=1}if(await insertItem(env,item,startedAt))added+=1}
+        for(let item of blogItems){if(mediaBudget>0&&hasRegionalMedicalContext(item.title)){item=await enrichMedia(item);mediaBudget-=1;if(item.mediaState==='candidate')mediaCandidates+=1}if(await insertItem(env,item,startedAt))added+=1}
       }catch(error){errors.push(query.key+':blog:'+clean(error?.message||error,160))}
     }
   }
@@ -121,11 +143,16 @@ export async function handleSeonamMediMonitorApi(request,env){
   if(request.method!=='GET')return json({ok:false,error:'method_not_allowed'},405,'no-store');
   if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable',lastRun:null,items:[]},503,'no-store');
   try{
-    const [lastRun,rows,mediaCount]=await Promise.all([
+    await ensureSourceVerificationColumn(env.DB);
+    const [lastRun,rows]=await Promise.all([
       env.DB.prepare('SELECT id,started_at,completed_at,status,sources_checked,items_seen,new_items,error_summary FROM seonammedi_monitor_runs ORDER BY id DESC LIMIT 1').first(),
-      env.DB.prepare("SELECT title,url,resolved_url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,media_type,media_url,media_source,media_published_at,media_state,source_type,summary_text FROM seonammedi_monitor_items WHERE datetime(last_seen_at)>=datetime('now','-7 days') ORDER BY COALESCE(published_at,first_seen_at) DESC LIMIT 48").all(),
-      env.DB.prepare("SELECT count(*) AS count FROM seonammedi_monitor_items WHERE datetime(last_seen_at)>=datetime('now','-7 days') AND media_state='candidate' AND media_type IN ('photo','video')").first()
+      env.DB.prepare("SELECT id,title,url,resolved_url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,media_type,media_url,media_source,media_published_at,media_state,source_type,summary_text,source_verified FROM seonammedi_monitor_items WHERE datetime(last_seen_at)>=datetime('now','-7 days') ORDER BY COALESCE(published_at,first_seen_at) DESC LIMIT 160").all()
     ]);
-    return json({ok:true,siteOwned:true,aiProvider:false,schedule:'hourly Asia/Seoul',scheduler:'existing-control-cron',channels:{news:true,naverBlog:naverBlogConfigured(env)},lastRun:lastRun||null,mediaCandidateCount:Number(mediaCount?.count||0),items:rows?.results||[]});
+    // Apply the same publication gate to ALL historical rows at read time:
+    // previously collected but never content-confirmed items disappear now.
+    const publicItems=(rows?.results||[]).filter(isPublicSeonamMediSource).slice(0,48)
+      .map(item=>({...item,content_match:item.review_state==='verified'?'editor_verified':'source_confirmed'}));
+    const mediaCandidateCount=publicItems.filter(item=>item.media_state==='candidate'&&['photo','video'].includes(item.media_type)).length;
+    return json({ok:true,siteOwned:true,aiProvider:false,schedule:'hourly Asia/Seoul',scheduler:'existing-control-cron',channels:{news:true,naverBlog:naverBlogConfigured(env)},lastRun:lastRun||null,mediaCandidateCount,items:publicItems},200,'no-store');
   }catch(error){return json({ok:false,error:'monitor_schema_unavailable',message:'사이트 자동점검 저장소 준비 중입니다.',lastRun:null,items:[]},503,'no-store')}
 }
