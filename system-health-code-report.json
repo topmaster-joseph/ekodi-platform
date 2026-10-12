@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-05T05:25:13.699Z",
-  "startedAt": "2026-10-05T05:24:47.340Z",
+  "generatedAt": "2026-10-12T05:45:41.403Z",
+  "startedAt": "2026-10-12T05:45:09.815Z",
   "repository": "topmaster-joseph/ekodi-platform",
   "branch": "main",
-  "head": "eb328ecd367d991b3150095504a52fa3550272ce",
-  "overallScore": 86.1,
+  "head": "5978553a51431c11b48ad7cc39e9094165635e63",
+  "overallScore": 86,
   "status": "watch",
   "thresholds": {
     "healthy": 90,
@@ -18,19 +18,19 @@
       "weight": 25,
       "score": 25,
       "status": "ok",
-      "detail": "676개 테스트 파일 · 전체 테스트 통과"
+      "detail": "806개 테스트 파일 · 전체 테스트 통과"
     },
     "duplication": {
       "weight": 15,
       "score": 1.5,
       "status": "error",
-      "detail": "교차 파일 중복 군집 30개 · 겹침 창 110개 정규화"
+      "detail": "교차 파일 중복 군집 30개 · 겹침 창 151개 정규화"
     },
     "complexity": {
       "weight": 15,
-      "score": 14.6,
+      "score": 14.5,
       "status": "ok",
-      "detail": "대형 파일 1개 · 매우 큰 파일 0개 · TODO/FIXME 15건"
+      "detail": "대형 파일 1개 · 매우 큰 파일 0개 · TODO/FIXME 21건"
     },
     "security": {
       "weight": 15,
@@ -48,7 +48,7 @@
       "weight": 10,
       "score": 10,
       "status": "ok",
-      "detail": "214개 Workflow · 배포 가드 검증 통과"
+      "detail": "227개 Workflow · 배포 가드 검증 통과"
     },
     "documentation": {
       "weight": 5,
@@ -58,15 +58,15 @@
     }
   },
   "metrics": {
-    "runtimeFiles": 876,
-    "runtimeLines": 151999,
-    "testFiles": 676,
-    "workflows": 214,
+    "runtimeFiles": 936,
+    "runtimeLines": 162434,
+    "testFiles": 806,
+    "workflows": 227,
     "largeFiles": 1,
     "veryLargeFiles": 0,
-    "todoMarkers": 15,
+    "todoMarkers": 21,
     "duplicateGroups": 30,
-    "duplicateWindows": 110
+    "duplicateWindows": 151
   },
   "technicalDebt": [
     {
@@ -129,24 +129,12 @@
       "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "affiliate-control.js:96",
-        "device-control.js:299"
-      ]
-    },
-    {
-      "id": "duplicate-5",
-      "severity": "medium",
-      "category": "duplication",
-      "title": "교차 파일 중복 로직 후보",
-      "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
-      "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
-      "evidence": [
         "ai-agent-control.js:28",
         "homepage-presentation-control.js:28"
       ]
     },
     {
-      "id": "duplicate-6",
+      "id": "duplicate-5",
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
@@ -158,7 +146,7 @@
       ]
     },
     {
-      "id": "duplicate-7",
+      "id": "duplicate-6",
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
@@ -168,6 +156,36 @@
         "books/publishing/studio/app.js:1",
         "publishing/studio/app.js:1"
       ]
+    },
+    {
+      "id": "duplicate-7",
+      "severity": "medium",
+      "category": "duplication",
+      "title": "교차 파일 중복 로직 후보",
+      "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
+      "evidence": [
+        "church-reports-control.js:54",
+        "community-reports-control.js:28"
+      ]
+    },
+    {
+      "id": "todo-volume",
+      "severity": "low",
+      "category": "complexity",
+      "title": "임시 작업 표식 누적",
+      "detail": "TODO/FIXME/HACK/TEMP 표식이 21건입니다.",
+      "recommendation": "오래된 항목부터 제거 조건과 책임 영역을 정리하세요.",
+      "evidence": [
+        "admin-sidebar.js:652",
+        "device-control-admin.js:164",
+        "device-control-admin.js:828",
+        "scripts/data-store-topology.mjs:33",
+        "scripts/inventory-declared-data-stores.mjs:25",
+        "scripts/system-health-code-audit.mjs:116",
+        "scripts/system-health-code-audit.mjs:133",
+        "scripts/system-health-code-audit.mjs:148"
+      ]
     }
   ],
   "checks": {
@@ -175,7 +193,7 @@
       "ok": true,
       "status": 0,
       "timedOut": false,
-      "summary": "✔ different ids within the same kind still vary atmosphere (1.576789ms)\n✔ css variables expose only visual tokens, not layout structure (0.482002ms)\n✔ durable write ingress policy is enforced and queue-first in production (7.252566ms)\n✔ seonammedi public voice success requires durable acceptance id (3.696014ms)\nℹ tests 3428\nℹ suites 0\nℹ pass 3428\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 24615.644858"
+      "summary": "✔ different ids within the same kind still vary atmosphere (1.728223ms)\n✔ css variables expose only visual tokens, not layout structure (0.3759ms)\n✔ durable write ingress policy is enforced and queue-first in production (9.662031ms)\n✔ seonammedi citizen voice keeps standalone ownership behind durable queue ingress (3.044668ms)\nℹ tests 4067\nℹ suites 0\nℹ pass 4066\nℹ fail 0\nℹ cancelled 0\nℹ skipped 1\nℹ todo 0\nℹ duration_ms 30003.241142"
     },
     "security": {
       "ok": true,
