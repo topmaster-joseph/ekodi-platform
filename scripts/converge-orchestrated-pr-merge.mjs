@@ -165,6 +165,7 @@ const sharedSiteTouched=changedFiles.some(file=>
   // AI membership is compiled into the shared ai-ops-admin.js bundle.
   file==='user-ai-tier-panel.js'||
   file==='common-services-admin.js'||
+  file==='admin-central-handoff.js'||
   file==='ai-provider-control.js'||
   file==='mall-social-setup.js'||
   file.startsWith('sites/')||
