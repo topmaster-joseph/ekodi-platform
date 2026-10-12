@@ -98,7 +98,7 @@ test('one-time guarded postmerge replay requires two real orchestrator receipts 
   assert.match(flow,/github\.event\.workflow_run\.conclusion == 'success'/);
   assert.match(flow,/\.merged == true/);
   assert.match(flow,/pulls\/4336/);
-  assert.match(flow,/pulls\/\$\{repair_number\}/);
+  assert.match(flow,/pulls\/\$repair_number/);
   assert.match(flow,/release-receipt/);
   assert.match(flow,/\.authorized == true/);
   assert.match(flow,/original" = "\$current"/);
