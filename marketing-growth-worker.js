@@ -5,6 +5,7 @@ import { d1SchemaReady } from './d1-schema-readiness.js';
 import { mallGrowthDashboardSnapshot } from './mall-growth-dashboard.js';
 import { channelCatalogSnapshot } from './channel-publishing-catalog.js';
 import { selectAuthorizedYouTubeChannels } from './youtube-brand-channel-verification.js';
+import { youtubeDataApiDisabledProject } from './youtube-data-api-readiness.js';
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const WRITE_ROLES = new Set(['tenant_admin','admin','workspace_admin','store_owner','hq_manager','client_admin','client_editor','marketing_manager','marketer','manager','owner']);
@@ -222,10 +223,11 @@ async function markRegistryActive(env,state,{connectionIds=[],actualIdentity=''}
   await env.DB.prepare("UPDATE external_account_connections SET status='active',credential_ref=?,metadata_json=?,last_verified_at=?,last_error='',updated_at=? WHERE id=? AND workspace_slug=?").bind(credentialRef,safeJson(metadata),stamp,stamp,id,workspaceSlug).run();
   await env.DB.prepare('INSERT INTO external_account_audit(id,connection_id,workspace_slug,actor_user_id,actor_email,action,detail_json,created_at) VALUES(?,?,?,?,?,?,?,?)').bind(`xaa_${crypto.randomUUID().replaceAll('-','')}`,id,workspaceSlug,state.actor_id,state.actor_email,'oauth.connected',safeJson({provider:state.provider,connectionIds}),stamp).run();
 }
+function youtubeFailureCode(error){const diagnosis=youtubeDataApiDisabledProject(error);return diagnosis?'YOUTUBE_DATA_API_DISABLED'+(diagnosis.projectId?':'+diagnosis.projectId:''):clean(error?.message||error,160);}
 async function markRegistryFailure(env,state,error){
   const id=clean(state?.registry_connection_id,120);if(!id)return;
   const workspaceSlug=await registryWorkspaceSlug(env,{type:state.subject_type,key:state.subject_key});if(!workspaceSlug)return;
-  const stamp=nowIso(),message=clean(error?.message||error,500);
+  const stamp=nowIso(),message=state?.provider==='youtube'?youtubeFailureCode(error):clean(error?.message||error,500);
   await env.DB.prepare("UPDATE external_account_connections SET status=CASE WHEN status='active' THEN 'reconnect_required' ELSE 'error' END,credential_ref='',last_error=?,updated_at=? WHERE id=? AND workspace_slug=?").bind(message,stamp,id,workspaceSlug).run();
   await env.DB.prepare('INSERT INTO external_account_audit(id,connection_id,workspace_slug,actor_user_id,actor_email,action,detail_json,created_at) VALUES(?,?,?,?,?,?,?,?)').bind(`xaa_${crypto.randomUUID().replaceAll('-','')}`,id,workspaceSlug,state.actor_id,state.actor_email,'oauth.failed',safeJson({provider:state.provider,error:message}),stamp).run();
 }
@@ -497,7 +499,7 @@ async function youtubeCallback(request, env) {
     }
     await markRegistryActive(env,state,{connectionIds,actualIdentity:brandAccountMode?String(selectedChannels[0].id):authorizedEmail});
     return redirectResult(state.return_url,{ekodi_connect:'success',provider:'youtube',connections:count});
-  } catch (error) { await markRegistryFailure(env,state,error); return redirectResult(state.return_url,{ekodi_connect:'error',provider:'youtube',reason:clean(error.message,160)}); }
+  } catch (error) { await markRegistryFailure(env,state,error); return redirectResult(state.return_url,{ekodi_connect:'error',provider:'youtube',reason:youtubeFailureCode(error)}); }
 }
 
 async function listConnections(request, env, subject) {
