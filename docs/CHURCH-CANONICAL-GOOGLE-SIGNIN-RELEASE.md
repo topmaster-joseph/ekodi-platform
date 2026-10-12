@@ -24,3 +24,7 @@ This documentation follow-up is a repository-owner action after the Orchestrator
 ## Protected source revalidation (synchronized main)
 
 The EKODI Orchestrator synchronized this branch with protected main and generated merge head `81eb845b34d7f615a8e1b632b9cb6f3a65c5398f`. GitHub classified the associated bot-authored PR checks as `action_required`, so the repository owner added this documentation-only record to trigger fresh required checks on the synchronized head. No Auth/Access API implementation changed and no required check may be bypassed.
+
+## Second protected merge-base refresh
+
+The Orchestrator synchronized again after other protected EKODI changes merged. GitHub classified the new bot-authored head `cf36312c8f64deb9bd79e8a8aa638870f599cf09` as `action_required`. The repository owner requests normal CI on this exact refreshed head. Production access-api is an existing two-file Edge Function (`access-api/index.ts` + `_shared/trust.ts`, `verify_jwt=true`); preserve both and the verifier mode across any guarded release. Do not report authentication E2E complete from anonymous checks.
