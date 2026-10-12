@@ -2,8 +2,8 @@
   'use strict';
   const API='https://ekodi.kr';
   const TOKEN_KEY='ekodi-auth-token';
-  const HISTORY_KEY='ekodi-admin-command-history-v1';
-  const CONTROL_STATE='ekodi-control-state-v1';
+  const HISTORY_KEY='ekodi-admin-command-history-v2';
+  const CONTROL_STATE='ekodi-control-state-v2';
   // Only a same-origin administrator iframe requests this presentation mode.
   // Authentication and authority checks still execute on the server.
   if(new URLSearchParams(location.search).get('embed')==='admin'){
@@ -18,15 +18,37 @@
     ['qwen','Qwen','AI'],
   ];
   const WORKERS=[['cloud','Cloud Worker'],['browser','Browser Worker'],['local','Local Worker Pool']];
-  const state={sessions:loadHistory(),activeId:null,view:'chat',busy:false,authenticated:false,authPromise:null,tasks:loadState().tasks||[],results:loadState().results||[],liveTasks:[],taskSource:'local',taskCheckedAt:'',taskRefreshing:false,taskNotice:''};
+  const state={sessions:[],activeId:null,view:'chat',busy:false,authenticated:false,authPromise:null,storageOwner:'',tasks:[],results:[],liveTasks:[],taskSource:'local',taskCheckedAt:'',taskRefreshing:false,taskNotice:''};
   const $=s=>document.querySelector(s);
   const $$=s=>[...document.querySelectorAll(s)];
   const now=()=>new Date().toISOString();
   function token(){try{return sessionStorage.getItem(TOKEN_KEY)||localStorage.getItem(TOKEN_KEY)||''}catch{return''}}
-  function loadHistory(){try{const v=JSON.parse(sessionStorage.getItem(HISTORY_KEY)||'[]');return Array.isArray(v)?v.slice(0,24):[]}catch{return[]}}
-  function saveHistory(){try{sessionStorage.setItem(HISTORY_KEY,JSON.stringify(state.sessions.slice(0,24)))}catch{}}
-  function loadState(){try{return JSON.parse(sessionStorage.getItem(CONTROL_STATE)||'{}')||{}}catch{return{}}}
-  function saveState(){try{sessionStorage.setItem(CONTROL_STATE,JSON.stringify({tasks:state.tasks.slice(0,40),results:state.results.slice(0,40)}))}catch{}}
+  // Never hydrate a previous operator's browser history before the server
+  // confirms the signed-in administrator. Legacy unscoped v1 data is not
+  // migrated across accounts because it has no verified owner.
+  function scopedKey(base){return state.storageOwner?base+':'+encodeURIComponent(state.storageOwner):''}
+  function loadHistory(){try{const key=scopedKey(HISTORY_KEY);if(!key)return[];const v=JSON.parse(sessionStorage.getItem(key)||'[]');return Array.isArray(v)?v.slice(0,24):[]}catch{return[]}}
+  function saveHistory(){try{const key=scopedKey(HISTORY_KEY);if(key)sessionStorage.setItem(key,JSON.stringify(state.sessions.slice(0,24)))}catch{}}
+  function loadState(){try{const key=scopedKey(CONTROL_STATE);return key?(JSON.parse(sessionStorage.getItem(key)||'{}')||{}):{}}catch{return{}}}
+  function saveState(){try{const key=scopedKey(CONTROL_STATE);if(key)sessionStorage.setItem(key,JSON.stringify({tasks:state.tasks.slice(0,40),results:state.results.slice(0,40)}))}catch{}}
+  function resetPrivateSurface(){
+    state.storageOwner='';state.sessions=[];state.activeId=null;state.tasks=[];state.results=[];
+    state.liveTasks=[];state.taskSource='local';state.taskCheckedAt='';state.taskNotice='';
+    renderRecent();renderMessages();renderPanels();
+  }
+  function bindAccount(session){
+    const email=String(session?.email||'').trim().toLowerCase();
+    if(!email)return false;
+    if(state.storageOwner!==email){
+      state.storageOwner=email;state.sessions=loadHistory();state.activeId=state.sessions[0]?.id||null;
+      const cached=loadState();
+      state.tasks=Array.isArray(cached.tasks)?cached.tasks.slice(0,40):[];
+      state.results=Array.isArray(cached.results)?cached.results.slice(0,40):[];
+      state.liveTasks=[];state.taskSource='local';state.taskCheckedAt='';state.taskNotice='';
+      renderRecent();renderMessages();renderPanels();
+    }
+    return true;
+  }
   function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
   function title(text){const v=String(text||'').replace(/\s+/g,' ').trim();return v.length>46?v.slice(0,46)+'…':v||'새 작업'}
   function statusLabel(v){return ({queued:'대기',running:'실행 중',verified:'완료',resolved:'완료',failed:'실패',blocked:'차단',auto_blocked:'승인·사전점검 필요',preflight_failed:'사전점검 실패',core_only:'Core 처리 · 실행 증빙 대기',human_gate:'관리자 승인 대기',assist_only:'AI 설명',ready_for_executor:'실행 대기',approved_pending_executor:'승인 후 실행 대기',retry:'재시도 대기',degraded:'부분 처리 · 확인 필요',executor_ready:'실행기 인계 대기',ignored:'처리 제외'})[v]||v||'진행'}
@@ -69,17 +91,19 @@
   async function verifySession(){
     if(state.authPromise)return state.authPromise;
     state.authPromise=(async()=>{
-      if(!token()){authDisplay('로그인 필요');return false}
+      if(!token()){resetPrivateSurface();authDisplay('로그인 필요');return false}
       authDisplay('서버 인증 확인 중',false,'저장된 토큰의 권한과 유효기간을 확인하고 있습니다.');
       try{
         const session=await api('/api/session');
-        if(session?.authenticated===true && session?.role==='super_admin'){
+        if(session?.authenticated===true && session?.role==='super_admin' && bindAccount(session)){
           authDisplay('최고관리자 인증됨',true);
           return true;
         }
-        authDisplay(session?.authenticated?'최고관리자 권한 없음':'로그인 필요');
+        resetPrivateSurface();
+        authDisplay(session?.authenticated?'최고관리자 계정 확인 필요':'로그인 필요');
         return false;
       }catch(error){
+        resetPrivateSurface();
         authDisplay(error?.auth?'로그인 만료':'인증 확인 실패',false,error?.auth?'로그인 세션이 만료되었거나 권한이 없습니다.':'인증 서버 연결을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.');
         return false;
       }
@@ -205,7 +229,9 @@
     // Avoid continuous polling: reconcile durable task states only when the
     // operator returns to a visible Tasks view. No request runs in background.
     document.addEventListener('visibilitychange',()=>{
-      if(document.visibilityState==='visible'&&state.view==='tasks')void refreshTasks();
+      if(document.visibilityState!=='visible')return;
+      if(state.view==='tasks')void refreshTasks();
+      else if(state.authenticated)void verifySession();
     });
   }
   async function boot(){
