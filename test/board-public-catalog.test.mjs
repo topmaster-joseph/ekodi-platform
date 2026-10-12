@@ -27,8 +27,10 @@ test('catalog is a bounded database read of existing public active boards only',
  ]);
  assert.deepEqual(d.boards.map(x=>Object.keys(x)),[Object.keys(d.boards[0]),Object.keys(d.boards[0])]);
  assert.equal(f.statements.length,1);
- assert.match(f.statements[0].sql,/WHERE status='active' AND visibility='public' AND board_id>\?/);
- assert.match(f.statements[0].sql,/ORDER BY board_id LIMIT \?/);
+ assert.match(f.statements[0].sql,/WHERE b.status='active' AND b.visibility='public' AND b.board_id>\?/);
+ assert.match(f.statements[0].sql,/ORDER BY b.board_id LIMIT \?/);
+ assert.match(f.statements[0].sql,/EXISTS \(SELECT 1 FROM customer_tenants t/);
+ assert.match(f.statements[0].sql,/t.status='active' AND lower\(t.slug\)=lower\(b.site_id\)/);
  assert.deepEqual(f.statements[0].args,['',41]);
  assert.doesNotMatch(f.statements[0].sql,/INSERT|UPDATE|DELETE|CREATE/i);
 });
