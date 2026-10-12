@@ -52,6 +52,38 @@
     return '<article class="turn '+esc(m.role)+'"><div class="meta">'+esc(m.role==='user'?'사용자':'EKODI')+(meta?' · '+esc(meta):'')+'</div><div class="bubble">'+esc(m.text)+'</div>'+task+'</article>';
   }).join('');requestAnimationFrame(()=>{const c=$('#conversation');window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})})}
   function historyForAssist(){const s=state.sessions.find(x=>x.id===state.activeId);return (s?.messages||[]).filter(m=>m.role==='user'||m.role==='assistant').slice(-8).map(m=>({role:m.role,text:m.text}))}
+  async function previewAiRoute(){
+    const goal=String($('#commandInput')?.value||'').trim();
+    if(!goal){toast('먼저 점검할 명령을 입력해 주세요.');return}
+    if(state.busy)return;
+    state.busy=true;$('#sendButton').disabled=true;
+    try{
+      const result=await api('/api/control/ai/v8/sovereignty/preview',{
+        method:'POST',
+        body:JSON.stringify({goal,risk:'normal',sensitive:false})
+      });
+      if(result?.previewOnly!==true || result?.executionAuthorized!==false){
+        throw new Error('안전한 미리보기 결과를 확인하지 못했습니다.');
+      }
+      const route=result.decision?.path==='provider'
+        ?'AI 후보: '+String(result.decision.providerId||'확인 필요')
+        :result.decision?.path==='ekodi-capability'
+          ?'EKODI 자체 기능 후보: '+String(result.decision.capabilityId||'확인 필요')
+          :'현재 승인된 실행 경로가 없습니다.';
+      const matches=(Array.isArray(result.reusableSuggestions)?result.reusableSuggestions:[])
+        .slice(0,5).map(item=>String(item.name||item.id||'')).filter(Boolean);
+      const checked=(Array.isArray(result.connections)?result.connections:[])
+        .filter(item=>item.connected===true).map(item=>item.id);
+      const vault=result.credentialVault?.configured===true?'개인별 암호화 금고 설정됨':'개인별 암호화 금고 설정 미확인';
+      const reply='AI 실행 경로 사전 점검 (실행되지 않음)\\n'+route+
+        '\\n관련 자체서비스: '+(matches.join(', ')||'검색 결과 없음')+
+        '\\n건강검사 확인된 AI: '+(checked.join(', ')||'없음')+
+        '\\n'+vault+
+        '\\n실제 실행은 EKODI 권한·검증·비용 정책에 따라 별도로 진행됩니다.';
+      pushMessage('assistant',reply,{provider:'EKODI 사전 점검',status:'assist_only'});
+    }catch(error){pushMessage('assistant',String(error.message||'미리보기 실패'),{status:'failed'});}
+    finally{state.busy=false;$('#sendButton').disabled=false}
+  }
   async function submitCommand(value){
     if(state.busy)return;const message=String(value||'').trim();if(!message)return;
     state.busy=true;$('#sendButton').disabled=true;const target=$('#executionTarget').value;const executeNow=$('#executeNow').checked;const releaseMode=$('#orchestratorRelease')?.checked===true;
@@ -145,6 +177,7 @@
     $$('.nav-item').forEach(b=>b.onclick=()=>setView(b.dataset.view));
     $('#newTask').onclick=newTask;$('#railOpen').onclick=()=>$('#controlRail').classList.add('open');$('#railClose').onclick=closeRail;
     $('#commandForm').addEventListener('submit',e=>{e.preventDefault();submitCommand($('#commandInput').value)});
+    $('#aiRoutePreview').addEventListener('click',()=>previewAiRoute());
     $('#commandInput').addEventListener('input',resizeInput);
     $('#commandInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#commandForm').requestSubmit()}});
     $$('[data-prompt]').forEach(b=>b.onclick=()=>{$('#commandInput').value=b.dataset.prompt;resizeInput();$('#commandInput').focus()});
