@@ -207,7 +207,6 @@ for (const product of products) {
     PRODUCT_NAME: esc(product.name),
     PRODUCT_DESCRIPTION: esc(product.description),
     PRODUCT_URL: esc(productUrl),
-    PRODUCT_DISCOVERY_JSON_LD: renderProductDiscoveryJsonLd({site,product,store,productUrl}),
     PRODUCT_CATEGORY: esc(product.category),
     PRODUCT_BADGE: esc(product.badge),
     PRODUCT_STATUS: esc(product.status),
@@ -226,7 +225,7 @@ for (const product of products) {
     RELATED_PRODUCTS: related || '<p class="empty">함께 볼 다른 상품을 준비 중입니다.</p>',
     NOTICE: esc(site.notice)
   });
-  await write(`products/${product.slug}/index.html`, html);
+  await write(`products/${product.slug}/index.html`, html.replace('</head>', renderProductDiscoveryJsonLd({site, product, store, productUrl}) + '\n</head>'));
 }
 
 for (const store of stores) {
