@@ -3146,3 +3146,5 @@ try {
 }
 
 # EKODI protected USER2 Hyper-V release convergence; no implicit device mutation.
+
+# Owner-authored required CI after Orchestrator main synchronization.
