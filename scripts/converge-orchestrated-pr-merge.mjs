@@ -16,7 +16,19 @@ async function statusMap(sha){
   if(!r.ok)fail('status lookup failed '+r.status);
   return new Map((data.statuses||[]).map(s=>[s.context,s]));
 }
+async function verifiedCheckRuns(sha){
+  const {r,data}=await api('/commits/'+sha+'/check-runs?per_page=100');
+  if(!r.ok)fail('check-runs lookup failed '+r.status);
+  const runs=Array.isArray(data.check_runs)?data.check_runs:[];
+  return required.every(name=>runs.some(run=>
+    run.name===name &&
+    run.app?.slug==='github-actions' &&
+    run.status==='completed' &&
+    ['success','neutral','skipped'].includes(run.conclusion)
+  ));
+}
 if(!repo||!token||!branch||!headSha)fail('missing runtime input');
+if(!/^[a-f0-9]{40}$/i.test(headSha))fail('unverified orchestrator head SHA');
 const match=branch.match(/^ai\/([a-z0-9][a-z0-9._-]{0,31})\/(orch_[a-z0-9][a-z0-9_-]{15,120})$/i);
 if(!match){console.log('[EKODI][ORCH-AUTO-MERGE] non-orchestrator branch; noop');process.exit(0)}
 const taskId=match[2];
@@ -24,6 +36,8 @@ const receiptUrl=new URL('https://ekodi.kr/api/orchestrator/release-receipt');
 receiptUrl.searchParams.set('taskId',taskId);receiptUrl.searchParams.set('branchRef',branch);
 const receipt=await fetch(receiptUrl,{headers:{accept:'application/json','user-agent':'ekodi-orchestrated-auto-merge'}}).then(async r=>({r,data:await r.json().catch(()=>({}))}));
 if(!receipt.r.ok||receipt.data?.authorized!==true)fail('release receipt is not authorized');
+const receiptApprovedSha=String(receipt.data?.headSha||receipt.data?.sourceHeadSha||receipt.data?.commitSha||'').trim();
+if(receiptApprovedSha&&receiptApprovedSha!==headSha)fail('release receipt head SHA does not match checked commit');
 
 const owner=repo.split('/')[0];
 let pr=null;
@@ -34,6 +48,7 @@ for(let i=0;i<20&&!pr;i++){
   if(!pr)await sleep(3000);
 }
 if(!pr)fail('open PR not found');
+if(pr.head?.sha!==headSha)fail('PR head SHA mismatches authorized trigger');
 // Draft PRs remain unpublished and must not be merged or deployed.
 if(pr.draft===true){console.log('[EKODI][ORCH-AUTO-MERGE] draft PR; unpublished hold, no merge');process.exit(0)}
 const filesLookup=await api('/pulls/'+pr.number+'/files?per_page=100');
@@ -453,27 +468,19 @@ for(let cycle=0;cycle<180;cycle++){
   const headStatuses=await statusMap(headSha);
   const pending=required.filter(k=>headStatuses.get(k)?.state!=='success');
   if(pending.length){await sleep(3000);continue}
-
-  // First converge the real PR head with the current protected base. This avoids
-  // chasing GitHub's ephemeral test-merge SHA while main is actively changing.
-  const update=await api('/pulls/'+pr.number+'/update-branch',{method:'PUT',body:JSON.stringify({expected_head_sha:headSha})});
-  if(update.r.status===202){
-    console.log(JSON.stringify({ok:true,action:'branch-updated',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
-    // update-branch creates a new head commit; its push starts a fresh convergence
-    // run and fresh required checks. The old run must not act on a stale head.
-    process.exit(0);
-  }
-  if(![200,202,422].includes(update.r.status))fail('update-branch failed '+update.r.status+' '+JSON.stringify(update.data).slice(0,500));
+  if(!await verifiedCheckRuns(headSha)){await sleep(3000);continue}
 
   const fresh=(await api('/pulls/'+pr.number)).data;
-  if(fresh?.head?.sha!==headSha){console.log('[EKODI][ORCH-AUTO-MERGE] head updated; next push run owns convergence');process.exit(0)}
+  if(fresh?.head?.sha!==headSha)fail('PR HEAD changed after required checks');
 
   const mergeSha=String(fresh?.merge_commit_sha||'');
   if(!/^[a-f0-9]{40}$/i.test(mergeSha)){await sleep(1200);continue}
-  for(const context of required){
-    const source=headStatuses.get(context);
-    const set=await api('/statuses/'+mergeSha,{method:'POST',body:JSON.stringify({state:'success',context,description:`Recovered from verified head ${headSha.slice(0,12)}`,target_url:source.target_url})});
-    if(!set.r.ok)fail(`failed to publish ${context} to merge SHA: ${set.r.status}`);
+  const mergeStatuses=await statusMap(mergeSha);
+  if(required.some(name=>mergeStatuses.has(name))){
+    if(!await verifiedCheckRuns(mergeSha)){
+      console.log('[EKODI][ORCH-AUTO-MERGE] synthetic merge needs genuine checks; never synthesizing');
+      await sleep(3000);continue;
+    }
   }
 
   const merged=await api('/pulls/'+pr.number+'/merge',{method:'PUT',body:JSON.stringify({sha:headSha,merge_method:'squash',commit_title:fresh.title})});
