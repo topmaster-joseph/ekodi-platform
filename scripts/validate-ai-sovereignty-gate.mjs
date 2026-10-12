@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { isSameOriginAdminMutation, trustedAdminOrchestratorIdentity, prepareAdminOrchestratorSubmission } from '../ekodi-ai-orchestrator-admin-handoff.js';
+import { isSameOriginAdminMutation, trustedAdminOrchestratorIdentity, prepareAdminOrchestratorSubmission, evaluateAdminOrchestratorSubmission } from '../ekodi-ai-orchestrator-admin-handoff.js';
 import {sanitizeAiConnectionStatus, chooseEkodiExecution, publicAiJobReceipt} from '../ekodi-ai-sovereignty-gate.js';
 const key='sk-not-for-output';
 assert.deepEqual(Object.keys(sanitizeAiConnectionStatus({id:'openai',available:true,apiKey:key,authMethod:'api-key'})).sort(), ['authMethod','connected','expiresAt','id','reauthenticationRequired'].sort());
@@ -73,4 +73,25 @@ assert.ok(controlUi.includes("'/api/control/ai/v8/orchestrator/tasks/'"));
 assert.ok(controlUi.includes('productionEvidencePresent'));
 assert.ok(controlUi.includes('수신됨 (검증 별도)'));
 assert.ok(controlUi.includes('refreshOrchestratorTasks().catch'));
+
+const taskId='orch_1234567890abcdef1234567890abcd';
+const candidate={taskId,branchRef:'ai/ekodi-admin/'+taskId,deploymentRequested:true,state:'assigned',stateVersion:2};
+const accepted=evaluateAdminOrchestratorSubmission(candidate);
+assert.equal(accepted.accepted,true);
+assert.equal(accepted.deploymentAuthorized,false);
+assert.equal(accepted.productionVerified,false);
+assert.equal(evaluateAdminOrchestratorSubmission({...candidate,state:'failed'}).accepted,false);
+assert.equal(evaluateAdminOrchestratorSubmission({...candidate,state:'cancelled'}).accepted,false);
+assert.equal(evaluateAdminOrchestratorSubmission({...candidate,branchRef:'ai/forged/'+taskId}).accepted,false);
+assert.equal(evaluateAdminOrchestratorSubmission({...candidate,deploymentRequested:false}).accepted,false);
+assert.equal(evaluateAdminOrchestratorSubmission({...candidate,state:'blocked'}).accepted,false);
+const gated=evaluateAdminOrchestratorSubmission({...candidate,state:'blocked',humanGate:{required:true}});
+assert.equal(gated.accepted,true);
+assert.equal(gated.humanGate.required,true);
+assert.equal(evaluateAdminOrchestratorSubmission({...candidate,state:'completed'}).productionVerified,false);
+assert.ok(submit.includes('evaluateAdminOrchestratorSubmission(task)'));
+assert.ok(submit.includes('ORCHESTRATOR_TASK_NOT_ACCEPTED'));
+assert.ok(controlUi.includes("submitted?.accepted!==true"));
+assert.ok(controlUi.includes("$('#orchestratorRelease').checked=false"));
+
 console.log('EKODI reuse-first gate: policy, official submission, UI boundaries passed');
