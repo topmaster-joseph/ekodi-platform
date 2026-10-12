@@ -39,6 +39,17 @@ if(pr.draft===true){console.log('[EKODI][ORCH-AUTO-MERGE] draft PR; unpublished 
 const filesLookup=await api('/pulls/'+pr.number+'/files?per_page=100');
 if(!filesLookup.r.ok)fail('PR file lookup failed '+filesLookup.r.status);
 const changedFiles=(Array.isArray(filesLookup.data)?filesLookup.data:[]).map(file=>String(file.filename||''));
+const storageTouched=changedFiles.some(file=>[
+  'google-drive-storage-control.js',
+  'storage-worker.js',
+  'storage-gateway.js',
+  'r2-storage-control.js',
+  'canonical-drive-writer.js',
+  'wrangler.storage.toml',
+  '.github/workflows/deploy-storage.yml',
+].includes(file));
+// Bot-mediated PR merges do not fire Storage's ordinary main push listener.
+// Only the verified EKODI Orchestrator can dispatch the guarded Storage workflow.
 // GitHub token-mediated merges do not emit regular main push events.
 // Dispatch CGMA's guarded edge workflow through the verified orchestrator.
 const cgmaApexTouched=changedFiles.some(file=>[
@@ -195,6 +206,14 @@ const churchApiTouched=changedFiles.some(file=>
   file==='.github/workflows/deploy-church-pastor-api.yml'
 );
 async function dispatchPostMergeDeploys(){
+  if(storageTouched){
+    const dispatch=await api('/actions/workflows/deploy-storage.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('Storage Worker deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,300));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-storage.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
   if(nativeUser4AcceptanceTouched){
     const dispatch=await api('/actions/workflows/device-agent-production-verification.yml/dispatches',{
       method:'POST',

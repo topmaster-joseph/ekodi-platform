@@ -1,6 +1,16 @@
 name: Deploy EKODI Storage Control
 
 on:
+  workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Verified EKODI Orchestrator source branch'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Verified EKODI Orchestrator task ID'
+        required: true
+        type: string
   pull_request:
     paths:
       - 'google-drive-storage-control.js'
@@ -97,6 +107,10 @@ jobs:
         with:
           node-version: '24'
       - name: EKODI AI Orchestration Gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+          EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Build immutable Storage candidate
         shell: bash
@@ -109,7 +123,7 @@ jobs:
           echo 'Storage staging candidate built successfully without production mutation.' >> "$GITHUB_STEP_SUMMARY"
 
   production:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     needs: [validate, staging]
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -124,6 +138,10 @@ jobs:
         with:
           node-version: '24'
       - name: EKODI AI Orchestration Gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+          EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Verify Cloudflare credentials
         run: |

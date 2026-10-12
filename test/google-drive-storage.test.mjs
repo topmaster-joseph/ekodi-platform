@@ -269,3 +269,21 @@ test('shared legacy Google callback forwards missing-code and denied marketing r
   assert.doesNotMatch(callback,/console\.error\('Marketing YouTube OAuth broker callback failed',error\)/);
   assert.equal(marketingYouTubeOAuthErrorCode({code:'GOOGLE_OAUTH_ACCESS_DENIED'}),'GOOGLE_OAUTH_ACCESS_DENIED');
 });
+
+
+test('Storage production is released from an exact EKODI Orchestrator receipt after protected bot merge', async()=>{
+  const deploy=await readFile(new URL('../.github/workflows/deploy-storage.yml',import.meta.url),'utf8');
+  const convergence=await readFile(new URL('../scripts/converge-orchestrated-pr-merge.mjs',import.meta.url),'utf8');
+  assert.match(deploy,/workflow_dispatch:/);
+  assert.match(deploy,/release_branch_ref:/);
+  assert.match(deploy,/release_task_id:/);
+  assert.match(deploy,/EKODI_RELEASE_BRANCH_REF:/);
+  assert.match(deploy,/EKODI_RELEASE_TASK_ID:/);
+  assert.match(deploy,/github\.event_name == 'workflow_dispatch'/);
+  assert.match(deploy,/validate-ekodi-ai-change-orchestration\.mjs" --release/);
+  assert.match(convergence,/const storageTouched=changedFiles\.some/);
+  assert.match(convergence,/if\(storageTouched\)/);
+  assert.match(convergence,/actions\/workflows\/deploy-storage\.yml\/dispatches/);
+  assert.match(convergence,/release_branch_ref:branch,release_task_id:taskId/);
+  assert.doesNotMatch(deploy,/break-glass|force: true/);
+});
