@@ -46,6 +46,20 @@ export function allowedDocumentUrl(value, mode) {
   } catch { return false; }
 }
 
+export function allowedSubresourceUrl(value, mode) {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'https:' || url.port || url.username || url.password) return false;
+    const host = url.hostname.toLowerCase();
+    if (mode === 'github-pr') return host === 'github.com' ||
+      host.endsWith('.githubassets.com') || host.endsWith('.githubusercontent.com');
+    if (mode === 'ekodi-site') return host === 'ekodi.kr' ||
+      host.endsWith('.supabase.co') || host === 'fonts.googleapis.com' ||
+      host === 'fonts.gstatic.com' || host === 'cdnjs.cloudflare.com';
+    return false;
+  } catch { return false; }
+}
+
 export function safeEvidenceUrl(raw) {
   try {
     const url = new URL(raw);
@@ -106,6 +120,7 @@ function openCdp(endpoint, deadline) {
   const pending = new Map();
   let nextId = 0;
   let requestGuardError = null;
+  let blockedRequests = 0;
   let status = null;
   const opened = new Promise((resolve, reject) => {
     const ms = Math.max(100, deadline - Date.now());
@@ -138,10 +153,14 @@ function openCdp(endpoint, deadline) {
     const item = message.params || {};
     const method = String(item.request?.method || '').toUpperCase();
     const document = item.resourceType === 'Document';
-    const safe = (!document || allowedDocumentUrl(item.request?.url || '', taskMode)) &&
+    const safe = (document ? allowedDocumentUrl(item.request?.url || '', taskMode) :
+      allowedSubresourceUrl(item.request?.url || '', taskMode)) &&
       ['GET', 'HEAD', 'OPTIONS'].includes(method);
-    if (!safe) requestGuardError = document && /https:\/\/github\.com\/(?:login|session|signup)(?:\/|\?|$)/i.test(item.request?.url || '')
-      ? 'AUTH_REQUIRED' : document ? 'BROWSER_DOCUMENT_ORIGIN_BLOCKED' : 'BROWSER_MUTATION_BLOCKED';
+    if (!safe) {
+      blockedRequests += 1;
+      if (document) requestGuardError = /https:\/\/github\.com\/(?:login|session|signup)(?:\/|\?|$)/i.test(item.request?.url || '')
+        ? 'AUTH_REQUIRED' : 'BROWSER_DOCUMENT_ORIGIN_BLOCKED';
+    }
     void send(safe ? 'Fetch.continueRequest' : 'Fetch.failRequest',
       safe ? { requestId: item.requestId } : { requestId: item.requestId, errorReason: 'BlockedByClient' },
       message.sessionId).catch(() => {});
@@ -149,6 +168,7 @@ function openCdp(endpoint, deadline) {
   let taskMode = 'runtime-canary';
   return { socket, opened, send, setMode: value => { taskMode = value; },
     getStatus: () => status, getGuardError: () => requestGuardError,
+    getBlockedRequests: () => blockedRequests,
     close: () => {
       try { socket.close(); } catch {}
       for (const slot of pending.values()) { clearTimeout(slot.timer); slot.reject(new Error('BROWSER_CLOSED')); }
@@ -204,7 +224,7 @@ export async function runBrowserConnection(raw, { candidates = browserPaths(), t
     if (cdp.getGuardError()) throw new Error(cdp.getGuardError());
     return { ...classifyPage({ ...page, status: cdp.getStatus() }, task.mode),
       provider: 'ekodi-owned-chromium-cdp', browser: path.basename(browser),
-      domObserved: true, profileLifetime: 'one-shot' };
+      domObserved: true, blockedRequests: cdp.getBlockedRequests(), profileLifetime: 'one-shot' };
   } finally {
     cdp?.close();
     if (child && child.exitCode === null) { try { child.kill(); } catch {} }
