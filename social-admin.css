@@ -31,3 +31,8 @@
 .social-growth-flow{display:grid;gap:6px;border:1px solid var(--line,#d9dee8);border-radius:10px;padding:10px}
 .social-growth-stage{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line,#d9dee8);padding:6px 2px;font-size:13px}
 .social-growth-stage:last-child{border-bottom:0}.social-growth-stage[data-fresh="false"]{opacity:.68}
+
+.social-admin-fold{border:1px solid var(--line,#d9dee8);border-radius:14px;background:var(--panel,#fff);overflow:hidden}
+.social-admin-fold>summary{padding:14px 16px;cursor:pointer;font-size:15px;font-weight:750;list-style:revert}
+.social-admin-fold[open]>summary{border-bottom:1px solid var(--line,#d9dee8)}
+.social-admin-fold>.social-site-directory,.social-admin-fold>.social-connections,.social-admin-fold>.social-publishing-registry,.social-admin-fold>.social-mall-growth{border:0;border-radius:0}
