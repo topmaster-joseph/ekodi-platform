@@ -23,3 +23,9 @@
 This documentation-only owner-authored commit requests the existing `converge-orchestrated-pr-merge.yml` on the officially issued branch. The script change is read-only diagnostic; do not publish unready translations, force a multi-language switch, disable 429 restrictions, or bypass protected checks. Exact-source Human Gate and native Chromium CI are mandatory.
 
 Related [issue #4365](https://github.com/topmaster-joseph/ekodi-platform/issues/4365) remains open until a real shared-shell public service actually has >=2 API-published locales and its options are verified. EKODIBIZ may separately need a site-owned header/Shell integration investigation, but no unsupported claim is made about its readiness.
+
+## Owner revalidation after protected-main synchronization
+
+Official [Convergent Merge run #38320403975](https://github.com/topmaster-joseph/ekodi-platform/actions/runs/38320403975) verified the D1-issued task, tested source CI, and synchronized this PR against the latest protected main. GitHub created a workflow-authored merge synchronization commit `163d501d9508691bc68a55bc883ec91d291a9eb8` whose required checks are not implicitly owner-authorized.
+
+This **documentation-only** repository-owner commit deliberately reruns required CI on the new synchronized source tree; it does not change application behavior, spoof CI status, publish any unready translations, bypass the 429 quota rule, or claim unsupported multi-locale availability. Exact-source Human Gate and Orchestrator receipt remain intact.
