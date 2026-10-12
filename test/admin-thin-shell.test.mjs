@@ -178,8 +178,9 @@ test('admin menu governance uses eleven platform control areas with role-project
   assert.doesNotMatch(sidebar, /shortcut\.textContent = locale === 'en' \? '⚡ Capabilities' : '⚡ 기능'/);
   assert.match(sidebar, /nav\.dataset\.adminMenuGovernance = 'role-projected-sidebar-v4'/);
   assert.match(sidebar, /item\.dataset\.adminMenuGroup = definition\.group/);
-  assert.match(sidebar, /observer\.observe\(nav, \{ childList: true, subtree: false \}\)/);
-  assert.doesNotMatch(sidebar, /subtree: true/);
+  assert.match(sidebar, /observer\.observe\(nav, \{ childList: true, subtree: true \}\)/);
+  assert.match(sidebar, /nestedDetailChanged && sidebarDetailsDrifted\(nav\)/);
+  assert.match(sidebar, /if \(queued \|\| syncing\) return/);
   assert.doesNotMatch(sidebar, /innerHTML\s*=/);
   assert.doesNotMatch(sidebar, /tabs\.dataset\.renderSignature/);
   assert.match(sidebar, /nav\[data-ekodi-admin-nav-mode="primary"\] > \.nav/);
