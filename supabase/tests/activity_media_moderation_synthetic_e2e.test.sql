@@ -3,7 +3,7 @@
 -- BEGIN/ROLLBACK prohibit persistence; do not target DEV/PROD or copy real user data.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(22);
+select plan(23);
 
 insert into public.tenants(id,slug,name,kind,settings)
 values ('cacacaca-1111-4111-8111-000000000001','ekodi-synthetic-moderation','EKODI Synthetic Moderation','association',
@@ -131,6 +131,8 @@ select ok((select count(*)::integer from public.activity_media_links
 -- Anonymous users may submit through approved RPCs, but cannot rewrite media rows.
 select ok(not has_table_privilege('anon','public.activity_media_links','UPDATE'),
  'anonymous actor cannot directly modify public.media moderation rows');
+select ok(not has_table_privilege('anon','public.activity_media_links','DELETE'),
+ 'anonymous actor cannot delete moderated media rows directly');
 
 select * from finish();
 rollback;
