@@ -109,6 +109,7 @@ export async function verifyUser4Browser({token,fetchImpl=fetch,clock=()=>Date.n
 // Never infer that an older USER4 Agent has loaded it from an earlier heartbeat.
 // Owner-requested USER4 safe Agent refresh (2026-10-12 22:18 KST). A prior
 // successful update does not satisfy this one-time release floor.
+export const USER4_CDP_WORKER_AGENT_VERSION = '2.5.4';
 export const USER4_CDP_FIX_FLOOR = Date.parse('2026-10-12T15:58:48.000Z');
 const UPDATE='agent.self_update';
 export async function ensureUser4AgentUpdated({
@@ -137,6 +138,7 @@ export async function ensureUser4AgentUpdated({
   const deviceId=initial.id;
   const existing=(initial.recentCommands||[]).filter(c=>
     c.type===UPDATE && c.status==='succeeded' &&
+    c.result?.version===USER4_CDP_WORKER_AGENT_VERSION &&
     Number.isFinite(when(c.completedAt)) && when(c.completedAt)>=USER4_CDP_FIX_FLOOR &&
     when(initial.lastSeenAt)>=when(c.completedAt)
   ).sort((a,b)=>when(b.completedAt)-when(a.completedAt))[0];
@@ -165,6 +167,8 @@ export async function ensureUser4AgentUpdated({
     if(receipt && ['failed','cancelled'].includes(receipt.status))
       throw new Error('user4_agent_official_update_'+receipt.status);
     if(receipt?.status==='succeeded'){
+      if(receipt.result?.version!==USER4_CDP_WORKER_AGENT_VERSION)
+        throw new Error('user4_agent_update_version_mismatch');
       const completedAt=when(receipt.completedAt);
       if(!Number.isFinite(completedAt)||completedAt<USER4_CDP_FIX_FLOOR)
         throw new Error('user4_agent_update_receipt_stale');
