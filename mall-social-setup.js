@@ -50,7 +50,7 @@ export function renderMallSocialSetup({ platform = {}, connections = [], registe
     <input id="mallSocialYoutubeEmail" type="email" name="email" autocomplete="email" required maxlength="240" value="${esc(youtubeAccountHint)}" placeholder="Google 계정 이메일 입력">
     <button class="button primary" type="submit">Google 공식 인증 시작</button>
     <label><input type="checkbox" name="youtubeBrandAccountMode" value="on"> YouTube 브랜드 채널로 연결 (예: 에코디몰·에코디무역)</label>
-    <small>브랜드 채널을 선택할 때 체크하세요. Google 이메일은 등록용 식별자이고, 연결할 실제 채널은 Google OAuth 승인 후 YouTube 채널 ID로 검증합니다. 연결만으로 자동 게시되지는 않습니다.</small>
+    <small>브랜드 채널을 선택할 때 체크하세요. Google 이메일은 등록용 식별자이고, 연결할 실제 채널은 Google 공식 동의 화면에서 브랜드 채널을 선택한 후 YouTube 채널 ID로 검증합니다. 연결만으로 자동 게시되지는 않습니다.</small>
     <button class="button" type="button" id="mallSocialVerifyConnection">인증 결과 확인</button><div id="mallSocialYoutubeMessage" role="status" aria-live="polite"></div>
   </form>` : '';
   return `<section class="mall-social-setup" aria-labelledby="mallSocialHeading">

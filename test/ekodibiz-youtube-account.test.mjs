@@ -7,7 +7,8 @@ test('EKODIBIZ YouTube OAuth forces explicit account choice while allowing any a
   const [growth, broker] = await Promise.all([read('marketing-growth-worker.js'), read('google-drive-storage-control.js')]);
   assert.ok(growth.includes("const requestedHint = clean(body.accountHint||registry?.login_hint||registry?.provider_account_id,180)"));
   assert.match(growth,/registryConnectionId/);
-  assert.match(growth, /startYouTubeOAuth\(\{state,accountHint\}\)/);
+  assert.ok(growth.includes("startYouTubeOAuth({state,accountHint:brandAccountMode?'':accountHint})"));
+  assert.match(growth,/YOUTUBE_BRAND_ACCOUNT_SCOPE_FORBIDDEN/);
   assert.doesNotMatch(growth, /subject\.key === 'ekodi-biz' \? 'ekodibiz@gmail\.com'/);
   assert.match(broker, /prompt:'consent select_account'/);
   assert.match(broker, /if\(hint\) params\.set\('login_hint',hint\)/);
