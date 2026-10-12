@@ -16,3 +16,7 @@ The original authoring PR #4358 is closed as a duplicate, and #4364 is the sole 
 ## Owner CI regeneration on synchronized release head
 
 The official Convergent Merge reconciled the current branch against the latest protected main. GitHub classified the resulting bot-authored merge head as `action_required`, even though the preceding release-branch tests passed, including the native Chromium test. This documentation-only owner commit requests all required checks anew on the protected synchronized revision and does not modify runtime code, security or role claims.
+
+## Second protected base refresh
+
+Concurrent EKODI protected-main releases caused the official Orchestrator to sync this branch again, producing bot head `0b2e0e2a32f5bc9296a48d23d0307602a8b01834` with GitHub `action_required` checks. This owner-authored record re-executes normal required CI and first-party Chromium verification. It neither weakens release checks nor extends the client or server permission contract.
