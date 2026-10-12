@@ -104,8 +104,10 @@ test('shared-site guarded release invokes native browser verification after prod
   ]) {
     assert.ok(sharedRelease.includes(`      - '${verifierPath}'`), `shared-site push trigger missing verifier: ${verifierPath}`);
   }
+  const admin=sharedRelease.match(/authenticated_admin_surface_verification:[\s\S]*?(?=\n\s{2}[a-zA-Z0-9_-]+:|$)/)?.[0]||'';
   const desktop=sharedRelease.match(/native_surface_verification_desktop:[\s\S]*?(?=\n\s{2}[a-zA-Z0-9_-]+:|$)/)?.[0]||'';
   const mobile=sharedRelease.match(/native_surface_verification_mobile:[\s\S]*?(?=\n\s{2}[a-zA-Z0-9_-]+:|$)/)?.[0]||'';
-  assert.match(desktop,/needs:\s*deploy/);
-  assert.match(mobile,/needs:\s*deploy/);
+  assert.match(admin,/needs:\s*deploy/);
+  assert.match(desktop,/needs:\s*\[\s*deploy\s*,\s*authenticated_admin_surface_verification\s*\]/);
+  assert.match(mobile,/needs:\s*native_surface_verification_desktop/);
 });
