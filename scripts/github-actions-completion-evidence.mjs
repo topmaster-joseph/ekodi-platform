@@ -10,6 +10,84 @@ const STAGING_EQUIVALENTS=Object.freeze({
   }),
 });
 
+// Explicit, non-generalizable release evidence for the approved EKODI native watch.
+// Normal Worker deployments retain their staging and production requirements.
+const NATIVE_WATCH_RELEASE=Object.freeze({
+  taskId:'orch_recovery_dcf5dace563ac6da0488a29708afcf21',
+  branchRef:'ai/gpt6/orch_recovery_dcf5dace563ac6da0488a29708afcf21',
+  prNumber:4383,
+  workflow:'EKODI Native Operations Watch',
+  path:'.github/workflows/ekodi-native-operations-watch.yml',
+  files:Object.freeze([
+    '.github/workflows/ekodi-native-operations-watch.yml',
+    'config/ekodi-native-monitoring-ownership.json',
+    'scripts/ekodi-native-operations-watch.mjs',
+    'test/ekodi-native-operations-watch.test.mjs',
+  ]),
+  steps:Object.freeze([
+    'Collect EKODI-owned read-only operational evidence',
+    'Preserve privacy-safe evidence, including failures',
+  ]),
+});
+
+async function collectNativeWatchEvidence({github,owner,repo,task,branch,pr,mergeSha}){
+  const expected=NATIVE_WATCH_RELEASE;
+  if(task!==expected.taskId||branch!==expected.branchRef||Number(pr?.number)!==expected.prNumber)
+    return {verified:false,reason:'native_release_not_allowlisted'};
+
+  // An unrelated Worker/code change must never qualify as Actions-only.
+  const changes=await github.rest.pulls.listFiles({owner,repo,pull_number:expected.prNumber,per_page:100});
+  const files=(changes.data||[]).map(x=>x.filename).sort();
+  if(files.length!==expected.files.length||files.some((x,i)=>x!==expected.files[i])||
+     (changes.data||[]).some(x=>x.status==='removed'))
+    return {verified:false,reason:'native_release_file_scope_invalid'};
+
+  const wf=await github.rest.actions.getWorkflow({owner,repo,workflow_id:'ekodi-native-operations-watch.yml'});
+  if(wf.data?.state!=='active'||wf.data?.path!==expected.path||!Number.isSafeInteger(Number(wf.data?.id)))
+    return {verified:false,reason:'native_workflow_not_active'};
+
+  let selected=null;
+  for(const event of ['schedule','workflow_dispatch']){
+    const response=await github.rest.actions.listWorkflowRuns({
+      owner,repo,workflow_id:Number(wf.data.id),branch:'main',event,per_page:30,
+    });
+    for(const run of response.data?.workflow_runs||[]){
+      if(!success(run)||run.name!==expected.workflow||run.event!==event||run.head_branch!=='main')continue;
+      if(Date.parse(run.created_at)<=Date.parse(pr.merged_at))continue;
+      const head=text(run.head_sha,80);
+      if(!/^[a-f0-9]{40}$/i.test(head))continue;
+      if(head!==mergeSha){
+        const ancestry=await github.rest.repos.compareCommits({owner,repo,base:mergeSha,head});
+        if(!['ahead','identical'].includes(String(ancestry.data?.status||'').toLowerCase()))continue;
+      }
+      if(!selected||String(run.created_at)>String(selected.created_at))selected=run;
+    }
+  }
+  if(!selected)return {verified:false,reason:'native_observe_success_missing'};
+  const jobsResult=await github.rest.actions.listJobsForWorkflowRun({
+    owner,repo,run_id:Number(selected.id),per_page:100,
+  });
+  const observe=(jobsResult.data?.jobs||[]).find(x=>x.name==='observe'&&success(x));
+  if(!observe||!expected.steps.every(n=>observe.steps?.some(x=>x.name===n&&success(x))))
+    return {verified:false,reason:'native_observe_steps_missing'};
+  const artifactResult=await github.rest.actions.listWorkflowRunArtifacts({
+    owner,repo,run_id:Number(selected.id),per_page:100,
+  });
+  const artifactName='ekodi-native-operations-'+Number(selected.id);
+  const artifact=(artifactResult.data?.artifacts||[]).find(x=>
+    x.name===artifactName&&x.expired===false&&Number(x.size_in_bytes)>0&&
+    (!x.workflow_run?.id||Number(x.workflow_run.id)===Number(selected.id)));
+  if(!artifact)return {verified:false,reason:'native_evidence_artifact_missing'};
+  return {verified:true,nativeWorkflow:{
+    name:expected.workflow,path:expected.path,workflowId:Number(wf.data.id),
+    runId:Number(selected.id),runEvent:selected.event,
+    runHeadSha:text(selected.head_sha,80),runCreatedAt:text(selected.created_at,80),
+    runUrl:text(selected.html_url,400),observeJob:'observe',
+    verifiedSteps:[...expected.steps],
+    artifactName,artifactId:Number(artifact.id),artifactBytes:Number(artifact.size_in_bytes),
+  }};
+}
+
 function text(value,max=500){return String(value??'').trim().slice(0,max)}
 function success(item){return item?.status==='completed'&&item?.conclusion==='success'}
 function stagingJob(job){return text(job?.name,160).toLowerCase().includes('staging')}
@@ -63,6 +141,17 @@ export async function collectAuthenticatedCompletionEvidence({github,owner='topm
     const run=checkRuns.find(item=>item?.name===name);
     if(!success(run))return {verified:false,reason:'required_workflow_not_successful',workflow:name};
     requiredWorkflows.push({name,runId:Number(run.id),url:text(run.html_url,400),conclusion:'success'});
+  }
+
+  if(task===NATIVE_WATCH_RELEASE.taskId){
+    const native=await collectNativeWatchEvidence({github,owner,repo,task,branch,pr,mergeSha});
+    if(native.verified!==true)return native;
+    return {
+      verified:true,source:'github-actions-native-operations-verified',
+      deliveryKind:'github-actions-schedule',taskId:task,branchRef:branch,
+      pr:{number:Number(pr.number),url:text(pr.html_url,400),mergedAt:text(pr.merged_at,80),mergeCommitSha:mergeSha},
+      requiredWorkflows,nativeWorkflow:native.nativeWorkflow,deployments:[],
+    };
   }
 
   // The production deployment is explicitly dispatched with the merge commit.

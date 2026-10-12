@@ -77,7 +77,8 @@ async function centralAdminSession(request,env,requiredCapability='ai:read'){
   const base=(clean(env.CONTROL_API_URL)||'https://ekodi.kr').replace(/\/+$/,'');
   try{
     const response=await fetch(`${base}/api/session`,{headers:{accept:'application/json',authorization:`Bearer ${token}`},cache:'no-store'});
-    if(!response.ok)return null;
+    if(response.status>=500)return{error:json({error:'central_identity_unavailable'},503)};
+    if(!response.ok)return null; // Only a definitive non-5xx central rejection can try legacy tokens.
     const data=await response.json().catch(()=>({}));
     if(data?.authenticated!==true)return null;
     const role=clean(data.role||data.authority?.role).toLowerCase();
@@ -91,7 +92,7 @@ async function centralAdminSession(request,env,requiredCapability='ai:read'){
     if(!capabilityGranted(data.authority,requiredCapability)&&role!=='super_admin')return{error:json({error:'capability_required',capability:requiredCapability},403)};
     const email=clean(data.email).toLowerCase();if(!email)return{error:json({error:'admin_identity_missing'},403)};
     return{user:{id:email,email,role,authority:data.authority},source:'central-admin'};
-  }catch(error){console.warn('central admin session unavailable',clean(error?.message||error));return null}
+  }catch(error){console.warn('central admin session unavailable',clean(error?.message||error));return{error:json({error:'central_identity_unavailable'},503)}}
 }
 async function legacySupabaseAdmin(request,env){
   const token=bearer(request);if(!token)return{error:json({error:'authentication_required'},401)};

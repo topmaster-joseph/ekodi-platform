@@ -8,13 +8,17 @@ on:
   pull_request:
     paths:
       - 'scripts/verify-language-selector-native.mjs'
+      - 'homepage-ambient.js'
       - 'test/language-native-acceptance-contract.test.mjs'
+      - 'test/homepage-published-language-contract.test.mjs'
       - '.github/workflows/verify-language-selector-native.yml'
   push:
     branches: [main]
     paths:
       - 'scripts/verify-language-selector-native.mjs'
+      - 'homepage-ambient.js'
       - 'test/language-native-acceptance-contract.test.mjs'
+      - 'test/homepage-published-language-contract.test.mjs'
       - '.github/workflows/verify-language-selector-native.yml'
 
 permissions:
@@ -37,7 +41,7 @@ jobs:
       - name: Verify read-only LANG-UI-001 native browser contract
         run: |
           node --check scripts/verify-language-selector-native.mjs
-          node --test test/language-native-acceptance-contract.test.mjs
+          node --test test/language-native-acceptance-contract.test.mjs test/homepage-published-language-contract.test.mjs
       - name: Install EKODI isolated Chromium harness
         run: |
           npm install --no-save --package-lock=false playwright@1.55.0
@@ -45,6 +49,9 @@ jobs:
       - name: Observe actual public pages and local synthetic readiness cases
         env:
           EKODI_LANGUAGE_EVIDENCE_FILE: artifacts/native-language-selector/report.json
+          # Only scheduled and manual post-release checks gate on real production.
+          # PR/push checks retain negative live evidence without blocking a fix for that drift.
+          EKODI_LANG_STRICT_LIVE: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'true' || 'false' }}
         run: node scripts/verify-language-selector-native.mjs
       - name: Validate machine-readable evidence boundaries
         shell: bash

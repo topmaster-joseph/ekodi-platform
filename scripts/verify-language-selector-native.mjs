@@ -14,6 +14,11 @@ export function assessLanguageDOM(snapshot, publishedLocales){
   const unique=[...new Set(publishedLocales.filter(x=>typeof x==='string'))];
   const mustShow=unique.length>=2;
   const count=snapshot.visibleHeaderControls;
+  // The effective text/document locale must be among the actually published languages.
+  // An English homepage with Korean-only publication is not a successful hidden-selector result.
+  const effectiveLocale=String(snapshot.homepageLocale||snapshot.documentLocale||'').trim();
+  if(effectiveLocale && !unique.some(locale=>locale.toLowerCase()===effectiveLocale.toLowerCase()||locale==='ko-KR'&&effectiveLocale==='ko'))
+    return {status:'fail',reason:'document_locale_not_published'};
   if(snapshot.footerControls>0||snapshot.headerControls>1)return {status:'fail',reason:'duplicate_or_footer_language_controls'};
   if(mustShow && (count!==1||!snapshot.pill||!snapshot.accessible||!snapshot.optionsMatchPublished)){
     return {status:'fail',reason:'published_multilocale_selector_contract'};
@@ -41,6 +46,7 @@ async function inspect(page){
     const expected=ready.filter(x=>window.EKODIUserLanguage?.supported?.some(l=>l.locale===x));
     return {
       url:location.href,documentLocale:document.documentElement.lang,
+      homepageLocale:document.documentElement.dataset.locale||null,
       shellLoaded:!!window.EKODIUserLanguage,headerReady:!!document.querySelector('[data-ekodi-user-header-root]'),
       headerControls:all.length,visibleHeaderControls:all.filter(displayed).length,footerControls:footer.length,
       options:opts,readyLocales:ready,datasetReady:document.documentElement.dataset.ekodiReadyLocales||'',
@@ -200,9 +206,15 @@ export async function runNativeAcceptance(){
   try{await live(report,chromium)}catch(e){report.production.push({status:'inconclusive',reason:String(e.message||e).slice(0,250)})}
   report.liveCertified=report.production.length===3&&report.production.every(x=>x.status==='pass');
   report.completedAt=new Date().toISOString();
+  // A source PR must first fix the live-production mismatch; production is still
+  // running the previous release until protected merge/deploy. Surface that drift
+  // in the artifact, and enforce it only on scheduled or explicit post-deploy probes.
+  const strictLive=process.env.EKODI_LANG_STRICT_LIVE==='true';
+  report.liveDriftCount=report.production.filter(x=>x.status==='fail').length;
+  report.strictLiveEnforced=strictLive;
   await fs.writeFile(outputFile,JSON.stringify(report,null,2));
-  console.log(JSON.stringify({policy:report.policy,synthetic:report.synthetic.status,production:report.production.map(x=>({service:x.service,status:x.status,reason:x.reason,apiStatus:x.apiStatus})),liveCertified:report.liveCertified,outputFile}));
-  if(report.synthetic.status==='fail'||report.production.some(x=>x.status==='fail'))process.exitCode=1;
+  console.log(JSON.stringify({policy:report.policy,synthetic:report.synthetic.status,production:report.production.map(x=>({service:x.service,status:x.status,reason:x.reason,apiStatus:x.apiStatus})),liveCertified:report.liveCertified,liveDriftCount:report.liveDriftCount,strictLiveEnforced:strictLive,outputFile}));
+  if(report.synthetic.status==='fail'||(strictLive&&report.liveDriftCount>0))process.exitCode=1;
   // Unavailable live data is recorded as inconclusive, never misrepresented as success.
   return report;
 }
