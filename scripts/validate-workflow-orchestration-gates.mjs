@@ -50,8 +50,7 @@ function gateHasMatchingCheckout(block) {
 }
 
 function stripReadOnlyD1Execute(block) {
-  const logical = String(block || '').replace(/\\\r?\n\s*/g, ' ');
-  return logical.split(/\n/).map(line => {
+  return String(block || '').split(/\n/).map(line => {
     const remoteD1Execute = /wrangler(?:@[^\s]+)?[^\n]*\bd1\s+execute\b[^\n]*--remote/i.test(line);
     const explicitReadOnlyCommand = /--command\s+["']\s*(?:SELECT|PRAGMA)\b/i.test(line);
     return remoteD1Execute && explicitReadOnlyCommand ? '' : line;
