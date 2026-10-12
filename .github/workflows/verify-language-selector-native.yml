@@ -8,12 +8,14 @@ on:
   pull_request:
     paths:
       - 'scripts/verify-language-selector-native.mjs'
+      - 'homepage-ambient.js'
       - 'test/language-native-acceptance-contract.test.mjs'
       - '.github/workflows/verify-language-selector-native.yml'
   push:
     branches: [main]
     paths:
       - 'scripts/verify-language-selector-native.mjs'
+      - 'homepage-ambient.js'
       - 'test/language-native-acceptance-contract.test.mjs'
       - '.github/workflows/verify-language-selector-native.yml'
 
