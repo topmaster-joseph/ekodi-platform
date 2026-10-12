@@ -159,8 +159,22 @@ function findTaggedVersion(value, expectedTag) {
   return '';
 }
 
-function currentSingleVersion() {
-  const raw = command(['deployments', 'status', '--config', worker.config, '--json'], { json: true });
+async function currentSingleVersion() {
+  let raw = '';
+  let lastError = null;
+  for (let attemptIndex = 1; attemptIndex <= 3; attemptIndex += 1) {
+    try {
+      raw = command(['deployments', 'status', '--config', worker.config, '--json'], { json: true });
+      lastError = null;
+      break;
+    } catch (error) {
+      lastError = error;
+      if (attemptIndex === 3) throw error;
+      console.warn(`Read-only Wrangler deployment status attempt ${attemptIndex}/3 failed; retrying safely.`);
+      await new Promise(resolve => setTimeout(resolve, 1500 * attemptIndex));
+    }
+  }
+  if (lastError) throw lastError;
   const status = parseJson(raw, 'deployment status');
   const weighted = activeVersions(status).filter(item => item.id && item.percentage > 0);
   const unique = [...new Map(weighted.map(item => [item.id, item])).values()];
@@ -386,7 +400,7 @@ try {
   runProviderIndependenceGate();
   if (secretsFilePath) console.log('Candidate will include the supplied secret set without printing secret values.');
   try {
-    previousVersion = currentSingleVersion();
+    previousVersion = await currentSingleVersion();
   } catch (error) {
     if (!allowFirstDeploy || !isMissingWorker(error)) throw error;
     await bootstrapFirstDeploy();
