@@ -15,3 +15,8 @@
 .social-publishing-site-add select{width:100%;padding:8px 9px;border:1px solid var(--line,#d9dee8);border-radius:9px;background:transparent;color:inherit}
 @media(max-width:900px){.social-publishing-binding{grid-template-columns:1fr 1fr}.social-publishing-binding-copy{grid-column:1/-1}.social-publishing-site-add{grid-template-columns:1fr 1fr}.social-publishing-site-add select{grid-column:1/-1}}
 @media(max-width:600px){.social-publishing-binding,.social-publishing-site-add{grid-template-columns:1fr}.social-publishing-channel-head{align-items:flex-start}}
+
+/* Central directory filters keep large multi-site channel portfolios usable. */
+.social-directory-filters{display:grid;grid-template-columns:minmax(220px,2fr) minmax(135px,1fr) minmax(135px,1fr);gap:8px;align-items:end}
+.social-directory-filters .social-field.wide{grid-column:auto}
+@media(max-width:760px){.social-directory-filters{grid-template-columns:1fr 1fr}.social-directory-filters .social-field.wide{grid-column:1/-1}}
