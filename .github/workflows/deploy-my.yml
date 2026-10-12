@@ -48,7 +48,9 @@ on:
       - 'supabase/migrations/*person_public_profiles*.sql'
       - 'supabase/migrations/*person_digital_card*.sql'
       - 'supabase/migrations/*person_identity_share*.sql'
-      - 'test/person-public-profile.test.mjs test/person-messenger-sharing.test.mjs'
+      - 'test/person-public-profile.test.mjs'
+      - 'test/person-messenger-sharing.test.mjs'
+      - 'test/person-digital-card-qr-ui.test.mjs'
       - '.github/workflows/deploy-my.yml'
   push:
     branches: [main]
@@ -156,7 +158,7 @@ jobs:
           grep -Fq 'private.person_messenger_contacts' "$MESSENGER_MIGRATION"
           grep -Fq 'person_identity_share_capabilities' "$MESSENGER_MIGRATION"
           grep -Fq 'set_my_identity_share_config_v2' "$MESSENGER_MIGRATION"
-          node --test test/universal-membership-contract.test.mjs test/my-ekodi-contract.test.mjs test/my-private-workspace-routing.test.mjs test/my-manifest-services.test.mjs test/my-life-journey.test.mjs test/my-life-communication.test.mjs test/my-progressive-personalization.test.mjs test/my-docs-ai.test.mjs test/my-intent-os.test.mjs test/my-intent-execution-bridge.test.mjs test/person-public-profile.test.mjs
+          node --test test/universal-membership-contract.test.mjs test/my-ekodi-contract.test.mjs test/my-private-workspace-routing.test.mjs test/my-manifest-services.test.mjs test/my-life-journey.test.mjs test/my-life-communication.test.mjs test/my-progressive-personalization.test.mjs test/my-docs-ai.test.mjs test/my-intent-os.test.mjs test/my-intent-execution-bridge.test.mjs test/person-public-profile.test.mjs test/person-messenger-sharing.test.mjs test/person-digital-card-qr-ui.test.mjs
           test -f deploy/manifests/my.worker.json
 
   staging:

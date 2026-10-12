@@ -59,12 +59,14 @@ jobs:
           check_bot() {
             name="$1"; ua="$2"
             rm -f /tmp/bot-h /tmp/bot-body
-            code=$(curl -sS -D /tmp/bot-h -o /tmp/bot-body -A "$ua" --connect-timeout 10 --max-time 30 -w '%{http_code}' 'https://ekodi.kr/seonammedi/')
-            echo "$name http=$code"
+            code=$(curl -sS -D /tmp/bot-h -o /tmp/bot-body -A "$ua" --connect-timeout 10 --max-time 30 -w '%{http_code}' 'https://seonammedi.kr/')
+            mode=$(awk 'BEGIN{IGNORECASE=1} /^x-ekodi-domain-mode:/ {sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit}' /tmp/bot-h)
+            echo "$name http=$code mode=$mode"
             test "$code" = '200'
+            test "$mode" = 'customer-domain-preserved'
             ! grep -Eiq '^x-robots-tag:.*noindex' /tmp/bot-h
             ! grep -Fiq '<meta name="robots" content="noindex' /tmp/bot-body
-            grep -Fq '<link rel="canonical" href="https://ekodi.kr/seonammedi/">' /tmp/bot-body
+            grep -Fq '<link rel="canonical" href="https://seonammedi.kr/">' /tmp/bot-body
             grep -Fq '<meta name="robots" content="index, follow, max-image-preview:large">' /tmp/bot-body
           }
           check_bot 'googlebot' 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'

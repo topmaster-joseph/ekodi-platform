@@ -15,7 +15,7 @@
   <meta property="og:url" content="https://seonammedi.kr/">
   <meta name="twitter:card" content="summary">
   <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://seonammedi.kr/#website","url":"https://seonammedi.kr/","name":"서남권 국립의대 소통센터","alternateName":["SEONAM MEDI","seonammedi.kr","서남권국립의대.kr"],"inLanguage":"ko"},{"@type":"WebPage","@id":"https://seonammedi.kr/#webpage","url":"https://seonammedi.kr/","name":"서남권 국립의대 소통센터 | SEONAM MEDI","description":"서남권 국립의대 관련 공식자료, 활동이력, 관련보도, 시민 의견과 공개 정보를 확인하는 소통센터입니다.","inLanguage":"ko","isPartOf":{"@id":"https://seonammedi.kr/#website"}}]}</script>
-  <link rel="stylesheet" href="/seonammedi/app.css?v=20261006-domain-routing-2">
+  <link rel="stylesheet" href="/seonammedi/app.css?v=20261012-source-link-1">
 <style id="seonammedi-organization-mobile-fix">
 #organization{min-height:0!important;padding-bottom:24px!important;background:#fff!important}
 #organization .section-head{margin-bottom:12px!important;gap:8px;align-items:center}
@@ -32,7 +32,7 @@
 <header class="site-header">
   <a class="brand" href="./"><strong>서남권 국립의대 소통센터</strong><small>서남권 의대 설립 비상대책위원회 관련 공개 기록·소통 채널</small></a>
   <nav aria-label="주요 메뉴">
-    <a href="#timeline" data-view-link="status">활동이력</a><a href="#channels" data-view-link="channels">소통채널</a><a href="board/voices">시민의견</a><a href="board/finance">회계</a><a href="board/notices">공지</a><a href="#organization" data-view-link="organization">조직</a>
+    <a href="#committee-activity" data-view-link="committee">활동이력</a><a href="#timeline" data-view-link="status">관련소식</a><a href="board/voices">시민의견</a><a href="board/finance">회계</a><a href="board/notices">공지</a><a href="#organization" data-view-link="organization">조직</a>
   </nav>
 </header>
 <main>
@@ -69,18 +69,56 @@
   <div id="participantOrganizations" class="participant-organizations"></div>
 </section>
 
+<section id="committee-activity" class="section activity-list-only" data-view-section="committee" hidden>
+  <div class="section-head section-view-title"><div><p class="eyebrow">COMMITTEE ACTIVITIES</p><h2>활동이력</h2><p class="note">서남권 국립의대 설립 비상대책위원회가 직접 주관·참여한 활동만 기록합니다. 언론보도와 대학·기관의 별도 활동은 관련소식에서 확인하세요.</p></div></div>
+  <div class="committee-toolbar">
+    <label>활동 검색 <input id="committeeActivitySearch" type="search" placeholder="활동명·내용·날짜 검색" aria-label="비상대책위 활동이력 검색"></label>
+    <button id="committeeActivityManageToggle" class="ekodi-public-admin-inline" type="button" hidden aria-expanded="false" aria-controls="committeeActivityForm">활동 등록</button>
+  </div>
+  <div id="committeeActivityFilters" class="filters" aria-label="비상대책위 활동 종류"></div>
+  <form id="committeeActivityForm" class="panel module-compose inline-manage-form" hidden>
+    <input name="id" type="hidden">
+    <strong id="committeeActivityFormTitle">비상대책위 활동 등록</strong>
+    <div class="inline-manage-grid">
+      <label>활동일 <input name="date" placeholder="2026.10.12" maxlength="40" required></label>
+      <label>활동 구분 <select name="committeeKind"><option>회의·의결</option><option>성명·입장 발표</option><option>기자회견</option><option>집회·캠페인</option><option>면담·협의</option><option>공문·요청</option><option>행사·연대활동</option><option>기타 활동</option></select></label>
+    </div>
+    <label>활동명 <input name="title" maxlength="220" required></label>
+    <label>활동 내용 <textarea name="summary" maxlength="8000" rows="5" required></textarea></label>
+    <label>근거·출처 <input name="evidence" maxlength="500" placeholder="회의록, 공식입장문, 현장기록 등"></label>
+    <label>관련 자료 링크 (선택) <input name="sourceUrl" type="url" inputmode="url" placeholder="https://..."></label>
+    <div class="inline-manage-grid">
+      <label>상태 <select name="status"><option value="published">공개</option><option value="draft">비공개</option></select></label>
+      <label>정렬 <input name="sortOrder" type="number" min="0" max="9999" value="0"></label>
+    </div>
+    <div class="form-actions"><button type="submit">저장</button><button id="committeeActivityCancel" type="button" class="secondary">취소</button><span id="committeeActivityMessage" class="muted" role="status"></span></div>
+  </form>
+  <div id="committeeActivityList" class="timeline" aria-live="polite"></div>
+</section>
+
 <section id="timeline" class="section activity-list-only" data-view-section="status" data-status-pane="timeline" hidden>
-  <div class="section-head section-view-title"><div><p class="eyebrow">ACTIVITY HISTORY</p><h2>활동이력</h2></div></div>
-  <div class="activity-toolbar"><div class="filters" id="timelineFilters" aria-label="활동이력 세부 분류"></div><button id="timelineManageToggle" class="ekodi-public-admin-inline" type="button" hidden aria-expanded="false" aria-controls="timelineManageForm">활동이력 바로 수정</button></div>
+  <div class="section-head section-view-title"><div><p class="eyebrow">RELATED NEWS &amp; SOURCES</p><h2>관련소식</h2><p class="note">신문·잡지·방송·대학·공식기록과 연결된 소셜채널을 출처별로 확인할 수 있습니다.</p></div></div>
+  <div class="activity-toolbar"><div class="filters" id="timelineFilters" aria-label="관련소식 출처별 세부 분류"></div><button id="timelineManageToggle" class="ekodi-public-admin-inline" type="button" hidden aria-expanded="false" aria-controls="timelineManageForm">관련소식 관리</button><button id="timelineLinkToggle" class="ekodi-public-admin-inline" type="button" hidden aria-expanded="false" aria-controls="timelineLinkForm">링크로 등록</button></div>
+  <form id="timelineLinkForm" class="panel module-compose inline-manage-form" hidden>
+    <strong>링크만으로 관련소식 등록</strong>
+    <p class="muted">기사·공식자료 주소를 넣으면 원문을 확인하고 제목, 내용, 발행일과 출처를 자동 입력합니다.</p>
+    <label>원문 링크<input id="timelineLinkUrl" name="url" type="url" inputmode="url" placeholder="https://example.org/article" required></label>
+    <div class="inline-manage-grid"><label>등록 상태<select name="status"><option value="published">검증 후 공개</option><option value="draft">비공개 저장</option></select></label></div>
+    <div class="form-actions"><button id="timelineLinkPreviewButton" type="button">링크 미리보기</button><button id="timelineLinkSaveButton" type="submit" disabled>이 자료 등록</button><button id="timelineLinkCancel" type="button" class="secondary">닫기</button></div>
+    <div id="timelineLinkPreview" class="link-import-preview" hidden></div>
+    <p id="timelineLinkMessage" role="status" class="muted"></p>
+  </form>
   <form id="timelineManageForm" class="panel module-compose inline-manage-form" hidden>
     <input type="hidden" name="id">
-    <strong id="timelineManageTitle">활동이력 추가</strong>
-    <div class="inline-manage-grid"><label>일자<input name="date" maxlength="40" placeholder="2026.10.07" required></label><label>분류<input name="category" maxlength="80" placeholder="비대위 활동" required></label><label>정렬<input name="sortOrder" type="number" min="0" max="9999" value="0"></label></div>
-    <label>제목<input name="title" maxlength="220" required></label>
+    <strong id="timelineManageTitle">관련소식 추가</strong>
+    <div class="inline-manage-grid"><label>일자<input name="date" maxlength="40" placeholder="2026.10.07" required></label><label>출처 분류<input name="category" list="publicNewsCategories" maxlength="80" placeholder="신문 · 방송 · 대학" required></label><label>정렬<input name="sortOrder" type="number" min="0" max="9999" value="0"></label></div>
+    <label>자료 구분<select name="recordScope"><option value="news">관련소식</option><option value="committee">비상대책위 활동이력</option></select></label><label>제목<input name="title" maxlength="220" required></label>
     <label>요약<textarea name="summary" maxlength="8000" rows="5"></textarea></label>
     <div class="inline-manage-grid"><label>근거 표시<input name="evidence" maxlength="500" placeholder="공식자료 · 언론보도 등"></label><label>상태<select name="status"><option value="published">공개</option><option value="draft">비공개</option></select></label></div>
     <div class="form-actions"><button type="submit">저장</button><button id="timelineManageCancel" type="button" class="secondary">취소</button><span id="timelineManageMessage" class="muted" role="status"></span></div>
   </form>
+  <div class="related-linked-channels"><h3>연결된 소셜채널</h3><p class="muted">채널명을 누르면 기존 소통채널 화면과 원문 링크로 이동합니다.</p><div id="relatedChannelLinks" class="related-channel-links" aria-label="연결된 채널 링크"></div></div>
+  <datalist id="publicNewsCategories"><option value="신문"><option value="잡지"><option value="방송"><option value="통신사"><option value="유튜브"><option value="블로그"><option value="대학"><option value="정부·공공기관"><option value="공식기록"><option value="시민·단체"></datalist>
   <div id="timelineList" class="timeline"></div>
 </section>
 
@@ -115,7 +153,7 @@
 </section>
 
 <section id="channels" class="section" data-view-section="channels" hidden>
-  <div class="section-head"><div><p class="eyebrow">COMMUNICATION CHANNELS</p><h2>소통채널</h2></div><div class="section-head-actions"><button id="channelManageToggle" class="ekodi-public-admin-inline" type="button" hidden aria-expanded="false" aria-controls="channelManageForm">소통채널 바로 수정</button></div></div>
+  <div class="section-head"><div><p class="eyebrow">RELATED NEWS · SOCIAL CHANNELS</p><h2>관련소식 · 연결 채널</h2></div><div class="section-head-actions"><button id="channelManageToggle" class="ekodi-public-admin-inline" type="button" hidden aria-expanded="false" aria-controls="channelManageForm">연결채널 바로 수정</button></div></div>
   <p class="muted">플랫폼 탭을 선택한 뒤 연결된 계정·채널을 고르면 아래 화면에서 바로 확인할 수 있습니다. 외부 서비스가 전체 화면 삽입을 제한하면 공식 임베드 또는 공개 요약과 원문 링크로 전환합니다.</p>
   <form id="channelManageForm" class="panel module-compose inline-manage-form" hidden>
     <input type="hidden" name="id">
@@ -177,6 +215,6 @@
   </div>
   <a href="admin/">관리</a>
 </footer>
-<script src="/seonammedi/app.js?v=20261006-domain-routing-2" defer></script>
+<script src="/seonammedi/app.js?v=20261012-source-link-1" defer></script>
 <script src="/seonammedi/voice-public-admin.js?v=20261006-domain-routing-2" defer></script>
 </body></html>
