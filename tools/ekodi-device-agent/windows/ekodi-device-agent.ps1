@@ -2763,6 +2763,19 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     'autologon.open' { return @{ message = Open-AutologonManager; settings = Get-AgentSettings } }
     'diagnostics.collect' { return @{ message = '시스템·저장공간·네트워크·프린터·시작프로그램·업데이트 진단을 완료했습니다.'; diagnostics = Get-FullDiagnostic; settings = Get-AgentSettings } }
     'computer.system.read' { return @{ message = '원격 컴퓨터 시스템 상태를 읽었습니다.'; system = Get-SystemSnapshot } }
+    'filesystem.organization.plan' {
+      if ([Security.Principal.WindowsIdentity]::GetCurrent().IsSystem) {
+        return @{ message = '사용자 바탕화면 접근은 사용자 세션에서만 가능합니다.'; mode = 'dry-run'; status = 'requires-user-context'; mutationCount = 0; candidates = @() }
+      }
+      $desktop = [Environment]::GetFolderPath('Desktop')
+      if (-not $desktop -or -not (Test-Path -LiteralPath $desktop -PathType Container)) {
+        return @{ message = '사용자 바탕화면이 없습니다.'; mode = 'dry-run'; status = 'desktop-unavailable'; mutationCount = 0; candidates = @() }
+      }
+      $candidates = @(Get-ChildItem -LiteralPath $desktop -Force -ErrorAction Stop | Where-Object { $_.Name -match '(?i)ekodi|에코디' -and $_.Name -ne 'EKODI 통합관리' } | Select-Object -First 100 | ForEach-Object {
+        @{ name = $_.Name; kind = if ($_.PSIsContainer) { 'directory' } else { 'file' }; classification = if (($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { 'manual-review-link' } else { 'verify-runtime-references-and-backup' }; moveApproved = $false; deleteApproved = $false }
+      })
+      return @{ message = 'EKODI 통합관리 사전계획 작성 완료'; mode = 'dry-run'; targetFolderName = 'EKODI 통합관리'; mutationCount = 0; candidates = $candidates; candidateCount = $candidates.Count }
+    }
     'filesystem.inventory' {
       if ([Security.Principal.WindowsIdentity]::GetCurrent().IsSystem) {
         return @{ message = 'SYSTEM 서비스에서는 실제 사용자 바탕화면을 특정할 수 없습니다.'; mode = 'read-only'; status = 'requires-user-context'; items = @(); itemCount = 0 }
