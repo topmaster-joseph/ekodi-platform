@@ -68,3 +68,5 @@ if(process.argv[1]&&process.argv[1].endsWith('verify-native-user2-guest-vm.mjs')
  verifyUser2GuestVm().then(r=>console.log('[EKODI][USER2-GUEST-VM-ACCEPTANCE] '+JSON.stringify(r))).catch(e=>{console.error('[EKODI][USER2-GUEST-VM-ACCEPTANCE] '+String(e.message).slice(0,110));process.exitCode=1;});
 
 // Canonical protected CI trigger; isolated Guest VM remains disabled until real probe is ready.
+
+// Owner-authored required check rerun after canonical base synchronization.
