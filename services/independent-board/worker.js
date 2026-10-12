@@ -299,10 +299,15 @@ async function refreshVoiceToken(){
     const d=JSON.parse(raw);session=d&&(d.currentSession||d.session||d);
   }catch{}
   if(!session?.refresh_token)return false;
-  const response=await fetch("https://renzehysxirjilvdxacv.supabase.co/auth/v1/token?grant_type=refresh_token",{
-    method:"POST",headers:{"content-type":"application/json",apikey:"sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"},
-    body:JSON.stringify({refresh_token:session.refresh_token}),cache:"no-store"
-  });
+  // If refresh is unavailable, let requireVoiceAccount redirect to Google
+  // instead of leaving a stale token blocking the login button.
+  let response;
+  try{
+    response=await fetch("https://renzehysxirjilvdxacv.supabase.co/auth/v1/token?grant_type=refresh_token",{
+      method:"POST",headers:{"content-type":"application/json",apikey:"sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"},
+      body:JSON.stringify({refresh_token:session.refresh_token}),cache:"no-store"
+    });
+  }catch{return false;}
   if(!response.ok)return false;
   const next=await response.json().catch(()=>null);
   if(!next?.access_token)return false;
