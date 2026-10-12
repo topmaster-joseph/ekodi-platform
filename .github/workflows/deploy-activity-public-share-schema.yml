@@ -126,7 +126,7 @@ jobs:
           [ "$branch_tail" = "$RELEASE_TASK" ] || { echo 'Release task / branch mismatch'; exit 1; }
           encoded_branch="$(printf '%s' "$RELEASE_BRANCH" | jq -sRr @uri)"
           encoded_task="$(printf '%s' "$RELEASE_TASK" | jq -sRr @uri)"
-          curl --fail-with-body -fsS --retry 3 --max-time 15             "https://ekodi.kr/api/orchestrator/release-receipt?taskId=${encoded_task}&branchRef=${encoded_branch}"             | jq -e --arg task "$RELEASE_TASK" --arg branch "$RELEASE_BRANCH"                 '.ok == true and .authorized == true and .taskId == $task and .branchRef == $branch and .authority == "ekodi-orchestrator"' >/dev/null
+          curl --fail-with-body -sS --retry 3 --max-time 15             "https://ekodi.kr/api/orchestrator/release-receipt?taskId=${encoded_task}&branchRef=${encoded_branch}"             | jq -e --arg task "$RELEASE_TASK" --arg branch "$RELEASE_BRANCH"                 '.ok == true and .authorized == true and .taskId == $task and .branchRef == $branch and .authority == "ekodi-orchestrator"' >/dev/null
 
       - name: Select Supabase deployment credential
         id: credential
