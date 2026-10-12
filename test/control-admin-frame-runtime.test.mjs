@@ -147,13 +147,13 @@ test('authenticated admin ready event restores home panel without reloading the 
 });
 
 test('clicking the same Control sidebar entry twice keeps the center panel visible',()=>{
-  const {frame,panel,window}=fixture();
+  const {frame,panel,window,navListeners}=fixture();
   const match=sidebarSource.match(/  control\.onclick=event=>\{[\s\S]*?\n  \};/);
   assert.ok(match,'single Control navigation handler must exist');
   const control={onclick:null};
   let eventCount=0,activateCount=0;
-  // The compact menu hides all panels before syncTitle, and syncTitle emits
-  // nothing if this section is already active.
+  // Simulate the compact menu: it hides all panels on each navigation, but
+  // suppresses its own duplicate section-change notification.
   window.EKODIAdminPanels={
     current:()=> 'command-home',
     activate:section=>{
@@ -166,34 +166,13 @@ test('clicking the same Control sidebar entry twice keeps the center panel visib
   };
   window.dispatchEvent=event=>{
     eventCount++;
-    const handle=window._onNavigation;
-    handle?.(event);
+    navListeners.get(event.type)?.(event);
   };
-  window._onNavigation=event=>{if(event.type==='ekodi-admin-section-changed'){
-    const activate=fixtureNavigation.get('ekodi-admin-section-changed');
-    activate?.(event);
-  }};
-  // The installed Control-frame handler is the real listener.
-  const fixtureNavigation=new Map();
-  const fresh=fixture();
-  fixtureNavigation.set('ekodi-admin-section-changed',fresh.navListeners.get('ekodi-admin-section-changed'));
-  // Rebind the real iframe listener to this panel so both clicks exercise it.
-  const originalActivate=fresh.navListeners.get('ekodi-admin-section-changed');
-  window._onNavigation=event=>{
-    if(event.type==='ekodi-admin-section-changed'){
-      originalActivate({detail:event.detail});
-      if(event.detail.section==='command-home'){
-        panel.hidden=fresh.panel.hidden;
-        panel.classList.toggle('hidden-panel',fresh.panel.classList.contains('hidden-panel'));
-        if(fresh.frame.hasAttribute('src')&&!frame.hasAttribute('src'))frame.setAttribute('src',fresh.frame.getAttribute('src'));
-      }
-    }
-  };
-  runInNewContext('const control = injectedControl; '+match[0],{
+  runInNewContext('const control=injectedControl; '+match[0],{
     injectedControl:control,window,
     CustomEvent:class CustomEvent{constructor(type,{detail}){this.type=type;this.detail=detail;}},
   });
-  for(let i=0;i<2;i++){
+  for(let n=0;n<2;n++){
     let prevented=false;
     control.onclick({preventDefault:()=>{prevented=true}});
     assert.equal(prevented,true);
