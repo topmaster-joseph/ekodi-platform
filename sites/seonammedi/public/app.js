@@ -1185,11 +1185,94 @@ function bindPublicFinanceAdmin(){
   };
   loadPublicFinanceAdmin().catch(()=>{});
 }
+
+function renderRelatedChannelLinks(){
+  const host=el('relatedChannelLinks');if(!host)return;
+  if(!publicChannels.length){host.innerHTML='<span class="muted">공개된 연결 채널이 없습니다.</span>';return}
+  host.innerHTML=publicChannels.map(item=>{
+    const platform=String(item.platform||'other').toLowerCase(),id=Number(item.id||0);
+    return '<a class="related-channel-link" href="#channels/'+encodeURIComponent(platform)+(id>0?'/'+id:'')+'"><span>'+escapeHtml(channelPlatformLabel(platform))+'</span><strong>'+escapeHtml(item.name||'연결 채널')+'</strong></a>';
+  }).join('');
+}
+function committeeItems(){
+  const needle=committeeSearchText.trim().toLocaleLowerCase('ko-KR');
+  return publicTimelineEntries.filter(isCommitteeRecord).filter(item=>{
+    if(selectedCommitteeFilter!=='전체'&&(item.committeeKind||'기타 활동')!==selectedCommitteeFilter)return false;
+    return !needle||[item.date,item.title,item.summary,item.evidence,item.committeeKind].join(' ').toLocaleLowerCase('ko-KR').includes(needle);
+  }).slice().sort(timelineDescending);
+}
+function renderCommitteeActivity(){
+  const host=el('committeeActivityList'),filters=el('committeeActivityFilters');if(!host)return;
+  if(filters){
+    filters.innerHTML=COMMITTEE_FILTERS.map(kind=>'<button type="button" data-committee-filter="'+escapeHtml(kind)+'" class="'+(kind===selectedCommitteeFilter?'active':'')+'">'+escapeHtml(kind)+'</button>').join('');
+    if(filters.dataset.bound!=='1'){filters.dataset.bound='1';filters.addEventListener('click',event=>{
+      const control=event.target.closest('[data-committee-filter]');if(!control)return;
+      selectedCommitteeFilter=control.dataset.committeeFilter;renderCommitteeActivity();
+    })}
+  }
+  const search=el('committeeActivitySearch');
+  if(search&&search.dataset.bound!=='1'){search.dataset.bound='1';search.addEventListener('input',()=>{committeeSearchText=search.value;renderCommitteeActivity()})}
+  const rows=committeeItems();
+  host.innerHTML=rows.length?rows.map((item,index)=>{
+    const actions=publicTimelineAdminMode&&Number(item.id)>0?'<div class="timeline-admin-actions"><span class="source-type">'+(item.status==='published'?'공개':'비공개')+'</span><button type="button" data-committee-edit="'+Number(item.id)+'">수정</button><button type="button" data-committee-status="'+Number(item.id)+'">'+(item.status==='published'?'비공개로':'공개로')+'</button><button type="button" data-committee-delete="'+Number(item.id)+'">삭제</button></div>':'';
+    return '<article class="timeline-item'+(index>2?' is-collapsed':'')+'"><div class="timeline-date">'+escapeHtml(item.date||'')+'</div><div class="timeline-content"><h3>'+escapeHtml(item.title||'')+'</h3><p class="timeline-summary">'+escapeHtml(item.summary||'')+'</p><div class="chips"><span class="chip">'+escapeHtml(item.committeeKind||'기타 활동')+'</span><span class="chip">'+escapeHtml(item.evidence||'비상대책위 활동기록')+'</span></div><div class="timeline-detail">'+evidenceBlock(item)+'</div>'+actions+'<button type="button" class="timeline-toggle" aria-expanded="'+(index>2?'false':'true')+'">'+(index>2?'자세히 보기':'접기')+'</button></div></article>';
+  }).join(''):'<p class="muted">해당 조건으로 확인된 비상대책위 활동기록이 없습니다.</p>';
+  host.querySelectorAll('.timeline-toggle').forEach(button=>button.addEventListener('click',()=>{const card=button.closest('.timeline-item'),closed=card.classList.toggle('is-collapsed');button.textContent=closed?'자세히 보기':'접기';button.setAttribute('aria-expanded',closed?'false':'true')}));
+}
+function bindCommitteeActivityAdmin(){
+  const form=el('committeeActivityForm'),toggle=el('committeeActivityManageToggle'),host=el('committeeActivityList'),cancel=el('committeeActivityCancel');
+  if(!form||!toggle||!host||form.dataset.bound==='1')return;
+  form.dataset.bound='1';toggle.hidden=false;
+  const setOpen=(open,item=null)=>{
+    form.hidden=!open;toggle.setAttribute('aria-expanded',String(open));toggle.textContent=open?'닫기':'활동 등록';
+    if(!open){form.reset();form.elements.id.value='';el('committeeActivityMessage').textContent='';return}
+    form.reset();
+    form.elements.id.value=item?.id||'';form.elements.date.value=item?.date||'';
+    form.elements.title.value=item?.title||'';form.elements.summary.value=item?.summary||'';
+    form.elements.evidence.value=item?.evidence||'';
+    form.elements.committeeKind.value=item?.committeeKind||'기타 활동';
+    form.elements.status.value=item?.status||'published';
+    form.elements.sortOrder.value=String(item?.sortOrder||0);
+    form.elements.sourceUrl.value=(item?.links||[])[0]?.url||'';
+    el('committeeActivityFormTitle').textContent=item?'비상대책위 활동 수정':'비상대책위 활동 등록';
+    form.querySelector('input[name="date"]')?.focus();
+  };
+  toggle.addEventListener('click',()=>setOpen(form.hidden));cancel.addEventListener('click',()=>setOpen(false));
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const inputs=form.elements,id=Number(inputs.id.value||0),message=el('committeeActivityMessage'),url=String(inputs.sourceUrl.value||'').trim();
+    if(url&&(!url.startsWith('https://')||safeUrl(url)==='#')){message.textContent='유효한 HTTPS 원문 주소만 사용할 수 있습니다.';return}
+    const payload={
+      date:inputs.date.value,category:'비대위 활동',recordScope:'committee',committeeKind:inputs.committeeKind.value,
+      title:inputs.title.value,summary:inputs.summary.value,evidence:inputs.evidence.value,status:inputs.status.value,
+      sortOrder:Number(inputs.sortOrder.value||0),links:url?[{url,label:'근거자료 원문',source:'비상대책위 활동기록'}]:[]
+    };
+    try{
+      message.textContent='저장 중…';
+      await publicAdminJson(id?'/api/seonammedi/admin/timeline/'+id:'/api/seonammedi/admin/timeline',{method:id?'PUT':'POST',body:JSON.stringify(payload)});
+      setOpen(false);await loadPublicTimelineAdmin();
+    }catch(error){message.textContent=error.message}
+  });
+  host.addEventListener('click',async event=>{
+    const edit=event.target.closest('[data-committee-edit]'),status=event.target.closest('[data-committee-status]'),del=event.target.closest('[data-committee-delete]');
+    const id=Number(edit?.dataset.committeeEdit||status?.dataset.committeeStatus||del?.dataset.committeeDelete||0);
+    if(!id)return;const item=publicTimelineEntries.find(row=>Number(row.id)===id&&isCommitteeRecord(row));if(!item)return;
+    if(edit){setOpen(true,item);return}
+    if(del&&!confirm('이 비상대책위 활동기록을 삭제할까요?'))return;
+    try{
+      if(del)await publicAdminJson('/api/seonammedi/admin/timeline/'+id,{method:'DELETE'});
+      if(status)await publicAdminJson('/api/seonammedi/admin/timeline/'+id,{method:'PUT',body:JSON.stringify({status:item.status==='published'?'draft':'published'})});
+      await loadPublicTimelineAdmin();
+    }catch(error){alert(error.message)}
+  });
+}
+
 function renderPublicAdminControls(){
   const admin=publicAdminController;
   if(!admin||!publicAdminMe)return;
   if(admin.has('pages'))bindPublicOrganizationAdmin();
   if(admin.has('timeline'))bindPublicTimelineAdmin();
+  if(admin.has('timeline'))bindCommitteeActivityAdmin();
   if(admin.has('timeline'))bindPublicTimelineLinkImport();
   if(admin.has('timeline')||admin.has('content'))bindPublicMonitorContentAdmin();
   if(admin.has('channels'))bindPublicChannelAdmin();
