@@ -30,8 +30,16 @@ jobs:
         with:
           node-version: '24'
 
-      - name: EKODI AI Orchestration Gate
-        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Validate orchestration policy contract
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs"
+
+      - name: Bind post-deploy verification to upstream deployment SHA
+        if: github.event_name == 'workflow_run'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.event.workflow_run.conclusion }}" = "success"
+          test "$(git rev-parse HEAD)" = "${{ github.event.workflow_run.head_sha }}"
 
       - name: Read Production Cloudflare quota Source of Truth
         id: quota
