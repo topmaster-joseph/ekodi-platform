@@ -1,4 +1,5 @@
 import authWorker from './auth-worker.js';
+import { CGMA_NATIVE_CANARY, inspectCgmaCanaryPayload } from './cgma-native-canary-policy.js';
 import { normalizeSlidesAudioPilot, validateSlidesAudioPilotReceipt, SLIDES_AUDIO_ITEMS, SLIDES_AUDIO_PRESENTATION_ID } from './google-workspace-slides-audio-policy.js';
 import { compareLocalExecutionCandidates, localExecutionPolicySnapshot, localExecutionScore, normalizeLocalResource } from './local-execution-policy.js';
 
@@ -23,6 +24,9 @@ const TASK_POLICIES = Object.freeze({
   'computer.process.list': { capability:'processRead', risk:'observe' },
   'computer.agent.status': { capability:'agentStatus', risk:'observe' },
   'computer.browser.execute': { capability:'backgroundBrowser', risk:'maintain', confirm:true, payload:'background-browser-task', executionMode:'background-only' },
+  // Reserved but not executable until server-side one-use delegation and authoritative
+  // audit evidence verification are implemented; no user credential propagation.
+  'board.cgma.authenticated-crud.verify': { capability:'cgmaBoardWriteCanary', risk:'privileged', confirm:true, payload:'cgma-native-grant', executionMode:'dedicated-headless-browser' },
   'computer.workspace.slides.audio.insert': { capability:'workspaceSlidesAudio', risk:'privileged', confirm:true, payload:'google-workspace-slides-audio', executionMode:'dedicated-headless-browser' },
   'network.diagnose': { capability:'networkDiagnostics', risk:'observe' },
   'printers.diagnose': { capability:'printerDiagnostics', risk:'observe' },
@@ -85,6 +89,11 @@ function sanitizePayload(type, rawPayload) {
     const itemId = safeText(rawPayload?.itemId, 80).toLowerCase();
     if (!/^[a-f0-9]{64}$/.test(itemId)) throw new Error('PAYLOAD_INVALID');
     return { itemId };
+  }
+  if (policy.payload === 'cgma-native-grant') {
+    const grant=inspectCgmaCanaryPayload(rawPayload);
+    if(!grant.ok) throw new Error(grant.code);
+    return {origin:CGMA_NATIVE_CANARY.origin,boardId:CGMA_NATIVE_CANARY.boardId,...grant,operations:CGMA_NATIVE_CANARY.operations};
   }
   if (policy.payload === 'google-workspace-slides-audio') return normalizeSlidesAudioPilot(rawPayload);
   if (policy.payload === 'background-browser-task') {
@@ -659,6 +668,14 @@ async function handleAdmin(request, env) {
     let payload;
     try { payload = sanitizePayload(taskType, body.payload || {}); }
     catch { return json({ error:'하이브리드 작업 인자가 유효하지 않습니다.', code:'HYBRID_TASK_PAYLOAD_INVALID' }, 400); }
+    if (taskType === CGMA_NATIVE_CANARY.taskType) {
+      // Do not enqueue write-capable native work until trusted server-issued grant,
+      // replay-safe consumption and authoritative board audit verification exist.
+      if (auth.session.role !== 'super_admin') return json({code:'CGMA_SUPER_ADMIN_REQUIRED'},403);
+      return json({code:'AUTH_REQUIRED',reason:'CGMA_NATIVE_WRITE_DELEGATION_NOT_CONFIGURED',
+        status:'authorization_required',boardId:CGMA_NATIVE_CANARY.boardId,
+        next:'server_issued_one_use_scoped_grant_required'},409);
+    }
     if (taskType === 'computer.workspace.slides.audio.insert' && auth.session.role !== 'super_admin') {
       return json({ error:'Google Workspace 원본 슬라이드 편집은 최고관리자만 실행할 수 있습니다.', code:'GOOGLE_WORKSPACE_SUPER_ADMIN_REQUIRED' }, 403);
     }
