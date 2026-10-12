@@ -194,8 +194,15 @@ export async function handleEkodiV8CommandControl(request, env) {
       healthVerified:healthy(item.id),
       authMethod:item.configured ? 'api-key' : 'unconfigured',
     }));
+    const credentialVault = Object.freeze({
+      configured: Boolean(String(env.USER_AI_CREDENTIAL_ENCRYPTION_KEY || '').trim()),
+      scope:'per-user',
+      sharingWithPlatformOrchestrator:false,
+      supportedProviderIds:['gemini-api','openai-api','claude-api'],
+      credentialValuesReturned:false,
+    });
     return json(request, env, { ok:true, previewOnly:true, executionAuthorized:false,
-      decision, connections, reusableSuggestions:suggestions,
+      decision, connections, reusableSuggestions:suggestions, credentialVault,
       notice:'Provider configured status is not proof of healthy connection. Reuse suggestions are not execution authority. Local provider verification is not yet wired.' });
   }
 
