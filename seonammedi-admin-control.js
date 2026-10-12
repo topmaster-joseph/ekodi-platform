@@ -2,6 +2,7 @@ import authWorker from './auth-worker.js';
 import { principalFromSupabaseRequest } from './ekodi-principal.js';
 import { accessGrantIsActive, effectiveAccessCapabilities } from './access-governance.js';
 import { runSeonamMediHourlyCheck } from './seonammedi-monitor.js';
+import { fetchSeonamMediLinkPreview } from './seonammedi-link-import.js';
 import { createBoardAdapter, handleBoardAdapter } from './common-board-adapter.js';
 import { createBoardRuntimeGuard } from './board-runtime-guard.js';
 
@@ -265,6 +266,10 @@ async function ensureSchema(db){
 
 async function ensureTimelineSeed(db){
   const seedKey='timeline-v1';
+  // Tombstones protect administrator deletions from automatic seed restoration.
+  await db.prepare(`CREATE TABLE IF NOT EXISTS seonammedi_timeline_deleted (
+    legacy_key TEXT PRIMARY KEY,deleted_by TEXT NOT NULL,deleted_at TEXT NOT NULL
+  )`).run();
   // Public timeline requests can reach this function without ensureSchema().
   // Create the seed-state table here so recovery never fails on a fresh/partial DB.
   await db.prepare(`CREATE TABLE IF NOT EXISTS seonammedi_seed_state (
@@ -276,6 +281,8 @@ async function ensureTimelineSeed(db){
   // cleared, partially migrated, or created after the marker was written.
   const now=new Date().toISOString();
   for(const item of TIMELINE_SEED){
+    const suppressed=await db.prepare('SELECT legacy_key FROM seonammedi_timeline_deleted WHERE legacy_key=?').bind(item.legacyKey).first();
+    if(suppressed)continue;
     const existing=await db.prepare('SELECT id,created_by FROM seonammedi_timeline WHERE legacy_key=? LIMIT 1').bind(item.legacyKey).first().catch(()=>null);
     if(existing?.id){
       if(String(existing.created_by||'')!=='system-seed')continue;
@@ -926,8 +933,18 @@ async function updateTimeline(request,env,auth,id){
 }
 async function deleteTimeline(env,auth,id){
   if(!can(auth,TIMELINE_CAP))return json({ok:false,error:'timeline_forbidden'},403);
-  const existing=await env.DB.prepare('SELECT id,title FROM seonammedi_timeline WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
-  await env.DB.prepare('DELETE FROM seonammedi_timeline WHERE id=?').bind(id).run();await audit(env,auth,'delete','timeline',id,{title:existing.title});return json({ok:true,id});
+  const existing=await env.DB.prepare('SELECT id,title,legacy_key,created_by FROM seonammedi_timeline WHERE id=?').bind(id).first();
+  if(!existing)return json({ok:false,error:'not_found'},404);
+  if(existing.legacy_key&&existing.created_by==='system-seed'){
+    await env.DB.prepare(`CREATE TABLE IF NOT EXISTS seonammedi_timeline_deleted (
+      legacy_key TEXT PRIMARY KEY,deleted_by TEXT NOT NULL,deleted_at TEXT NOT NULL
+    )`).run();
+    await env.DB.prepare('INSERT OR IGNORE INTO seonammedi_timeline_deleted(legacy_key,deleted_by,deleted_at) VALUES(?,?,?)')
+      .bind(existing.legacy_key,auth.email,new Date().toISOString()).run();
+  }
+  await env.DB.prepare('DELETE FROM seonammedi_timeline WHERE id=?').bind(id).run();
+  await audit(env,auth,'delete','timeline',id,{title:existing.title,legacyKey:existing.legacy_key||null});
+  return json({ok:true,id});
 }
 
 function voiceRow(row){return{id:Number(row.id),category:row.category,displayName:row.display_name||'',contact:row.contact||'',message:row.message||'',publicConsent:Boolean(row.public_consent),privacyConsent:Boolean(row.privacy_consent),status:VOICE_STATES.has(row.review_status)?row.review_status:'received',createdAt:row.created_at,updatedAt:row.updated_at}}
@@ -966,6 +983,40 @@ async function deleteAdminVoiceReply(env,auth,voiceId,replyId){
   const existing=await env.DB.prepare('SELECT id,voice_id,display_name FROM seonammedi_civic_voice_replies WHERE id=? AND voice_id=?').bind(replyId,voiceId).first();if(!existing)return json({ok:false,error:'not_found'},404);
   await env.DB.prepare('DELETE FROM seonammedi_civic_voice_replies WHERE id=? AND voice_id=?').bind(replyId,voiceId).run();
   await audit(env,auth,'delete','civic_voice_reply',replyId,{voiceId,displayName:existing.display_name||''});return json({ok:true,id:replyId,voiceId});
+}
+
+async function importTimelineFromLink(request,env,auth,{preview=false}={}){
+  if(!can(auth,TIMELINE_CAP))return json({ok:false,error:'timeline_forbidden'},403);
+  const body=await request.json().catch(()=>null);
+  const sourceUrl=String(body?.url||'').trim();
+  if(!sourceUrl||sourceUrl.length>2048)return json({ok:false,error:'invalid_source_url'},400);
+  let item;
+  try{item=await fetchSeonamMediLinkPreview(sourceUrl)}
+  catch(error){
+    const code=String(error?.message||'source_unavailable');
+    const badInput=/^(?:invalid_source_url|unsafe_source_redirect|source_redirect_loop|source_too_many_redirects)$/.test(code);
+    return json({ok:false,error:code},badInput?400:422);
+  }
+  if(preview)return json({ok:true,item});
+  if(!item.ready)return json({ok:false,error:!item.relevant?'source_not_relevant':'source_date_unavailable',item},422);
+  const status=String(body?.status)==='draft'?'draft':'published';
+  const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(item.sourceUrl));
+  const legacyKey='link-'+[...new Uint8Array(hash)].map(byte=>byte.toString(16).padStart(2,'0')).join('').slice(0,48);
+  const previous=await env.DB.prepare('SELECT id,status FROM seonammedi_timeline WHERE legacy_key=? LIMIT 1').bind(legacyKey).first();
+  if(previous)return json({ok:true,id:Number(previous.id),duplicate:true,status:previous.status,item},200);
+  const now=new Date().toISOString();
+  const links=[{url:item.sourceUrl,label:item.publisher+' 원문',source:item.publisher}];
+  const result=await env.DB.prepare(\`INSERT OR IGNORE INTO seonammedi_timeline
+    (legacy_key,event_date,category,title,summary,evidence,links_json,media_json,monitor_keywords_json,status,sort_order,created_by,created_at,updated_at)
+    VALUES(?,?,?,?,?,?,?,'[]','[]',?,0,?,?,?)\`)
+    .bind(legacyKey,item.date,item.category,item.title,item.summary,item.publisher+' · 원문 내용 확인',JSON.stringify(links),status,auth.email,now,now).run();
+  const id=Number(result?.meta?.last_row_id||0);
+  if(!id){
+    const concurrent=await env.DB.prepare('SELECT id,status FROM seonammedi_timeline WHERE legacy_key=?').bind(legacyKey).first();
+    return json({ok:true,id:Number(concurrent?.id||0),duplicate:true,status:concurrent?.status||'draft',item});
+  }
+  await audit(env,auth,'link_import','timeline',id,{url:item.sourceUrl,status,publisher:item.publisher});
+  return json({ok:true,id,status,item},201);
 }
 
 async function listAdminContent(env,auth){
@@ -1176,6 +1227,8 @@ export async function handleSeonamMediAdminApi(request,env){
   let match=url.pathname.match(/^\/api\/seonammedi\/admin\/notices\/(\d+)$/);
   if(match&&request.method==='PUT')return updateNotice(request,env,auth,Number(match[1]));
   if(match&&request.method==='DELETE')return deleteNotice(env,auth,Number(match[1]));
+  if(url.pathname===PREFIX+'/admin/timeline/link-preview'&&request.method==='POST')return importTimelineFromLink(request,env,auth,{preview:true});
+  if(url.pathname===PREFIX+'/admin/timeline/link-import'&&request.method==='POST')return importTimelineFromLink(request,env,auth);
   if(url.pathname===PREFIX+'/admin/timeline'&&request.method==='GET')return listAdminTimeline(env,auth);
   if(url.pathname===PREFIX+'/admin/timeline'&&request.method==='POST')return createTimeline(request,env,auth);
   let timelineMatch=url.pathname.match(/^\/api\/seonammedi\/admin\/timeline\/(\d+)$/);
