@@ -58,7 +58,7 @@ function browser({role='super_admin',sessionToken=true,storedTasks=[],responses=
     URL,URLSearchParams,Date,Math,
     setTimeout:()=>0,clearTimeout(){},requestAnimationFrame:fn=>fn(),
   });
-  const settle=()=>new Promise(resolve=>setImmediate(resolve));
+  const settle=async()=>{for(let i=0;i<30;i++)await Promise.resolve();};
   return {calls,document,node,tabs,refresh,boot:()=>document.boot(),settle,
     openTasks:()=>tabs.find(x=>x.dataset.view==='tasks').onclick()};
 }
