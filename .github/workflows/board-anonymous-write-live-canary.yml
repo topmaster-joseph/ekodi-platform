@@ -43,9 +43,10 @@ jobs:
       - name: Verify anonymous 401 probe stays non-persistent and credential-free
         run: node --test test/board-write-gate-production.test.mjs test/board-public-catalog.test.mjs
       - name: Require real public boards to reject unauthenticated post and comment requests
+        if: github.event_name != 'pull_request'
         run: node scripts/verify-board-write-gate-production.mjs
       - name: Record tested boundaries
-        if: success()
+        if: success() && github.event_name != 'pull_request'
         run: |
           {
             echo '## EKODI Board Anonymous Write Live Canary'
