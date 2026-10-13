@@ -30,5 +30,8 @@ test('verified-news archive and committee-specific feed share published automati
   assert.equal(classify({recordScope:'committee',title:'서남권 국립의대 비대위 현장'}),false);
   assert.equal(classify({recordScope:'news',title:'서남권 국립의대 비대위 입장 기사'}),true);
   assert.equal(classify({recordScope:'news',committeeRelated:true,title:'위원회 자료'}),true);
+  assert.equal(classify({recordScope:'news',category:'비대위 활동',title:'지역 기자회견 및 시민 참여 보도'}),true);
+  assert.equal(classify({recordScope:'committee',category:'비대위 활동',title:'공식 집회 이력'}),false);
+  assert.equal(classify({recordScope:'news',category:'정부·대학',title:'목포대 총학생회 행사'}),false);
   assert.equal(classify({recordScope:'news',title:'무관한 스포츠 방송'}),false);
 });
