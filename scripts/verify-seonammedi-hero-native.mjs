@@ -55,6 +55,18 @@ try {
       const response=await page.goto(origin+rootPath,{waitUntil:'domcontentloaded',timeout:30000});
       entry.httpStatus=response?.status()??null;
       must(response?.ok(),'page_not_http_2xx_'+entry.httpStatus);
+      // Inspect actual HTTP bytes: DOM cleanup can hide a corrupt HTML <head>.
+      const rawHtml=(await response.body()).toString('utf8');
+      const rawHead=rawHtml.match(/<head\b[^>]*>([\s\S]*?)<\/head\s*>/i)?.[1]||'';
+      const metaHead=rawHead.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi,'').replace(/<!--[\s\S]*?-->/g,'');
+      entry.rawHeadFound=Boolean(rawHead);
+      entry.rawEscapedHeadMarkers=(metaHead.match(/\\[nrt]/g)||[]).length;
+      entry.socialMetaRealLineBreak=/<meta\s+name="twitter:card"\s+content="summary_large_image">\r?\n\s*<meta\s+property="og:image"/i.test(metaHead);
+      const imageMetaOffset=rawHtml.indexOf('<meta property="og:image"');
+      entry.rawBeforeOgImageHex=imageMetaOffset>=0?Buffer.from(rawHtml.slice(Math.max(0,imageMetaOffset-36),imageMetaOffset)).toString('hex'):'';
+      must(entry.rawHeadFound,'homepage_html_head_missing');
+      must(entry.rawEscapedHeadMarkers===0,'literal_escaped_newline_in_raw_html_head');
+      must(entry.socialMetaRealLineBreak,'social_meta_tags_are_not_separated_by_real_linebreak');
       await page.locator('.campaign-hero-image').waitFor({state:'visible',timeout:12000});
       const assetCheck=await page.request.get(origin+assetPath,{timeout:25000,failOnStatusCode:false});
       entry.assetStatus=assetCheck.status();
@@ -80,6 +92,14 @@ try {
           heroDisplay:img?getComputedStyle(img).display:'',
           horizontalOverflow:document.documentElement.scrollWidth>document.documentElement.clientWidth+1,
           viewportWidth:document.documentElement.clientWidth,
+          leadingEscapedText:(()=>{
+            const body=document.body;
+            for(const node of Array.from(body?.childNodes||[])){
+              if(node.nodeType===Node.ELEMENT_NODE)break;
+              if(node.nodeType===Node.TEXT_NODE&&/\\[nrt]/.test(node.textContent||''))return true;
+            }
+            return false;
+          })(),
           siteHeader:!!document.querySelector('.site-header nav'),
           latestUpdates:!!document.querySelector('#homeLatestUpdates'),
           spotlight:!!document.querySelector('#homeSpotlight'),
@@ -101,6 +121,7 @@ try {
       must(entry.displayedWidth>=profile.width*0.90,'hero_not_prominent');
       must(!entry.horizontalOverflow,'viewport_horizontal_overflow');
       must(entry.siteHeader&&entry.latestUpdates&&entry.spotlight,'homepage_functionality_missing');
+      must(!entry.leadingEscapedText,'literal_escaped_newline_visible_above_header');
       must(entry.mobileHint,'mobile_magnification_instruction_missing');
       const shot=path.join(screenshotsPath,safeName+'-'+profile.name+'.png');
       await page.screenshot({path:shot,fullPage:true,animations:'disabled'});
