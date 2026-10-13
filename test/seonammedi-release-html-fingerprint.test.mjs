@@ -76,3 +76,11 @@ test('HTML head repair preserves script/style and rejects unrepairable malformed
   assert.throws(()=>repairSeonamMediHeadMarkup('<head><meta content="literal \\n value"></head>'),/unrepairable_literal/);
   assert.throws(()=>repairSeonamMediHeadMarkup('<html><body>missing head</body></html>'),/html_head_missing/);
 });
+
+
+test('homepage source has real metadata newlines and no DOM text-masking workaround',async()=>{
+  const source=await readFile(new URL('../sites/seonammedi/public/index.html',import.meta.url),'utf8');
+  assert.match(source, /<meta name="twitter:card" content="summary_large_image">\n\s*<meta property="og:image"/);
+  assert.doesNotMatch(source, /<meta name="twitter:card" content="summary_large_image">\\n/);
+  assert.doesNotMatch(source, /data-ekodi-leading-text-guard/);
+});
