@@ -240,7 +240,10 @@
     const units = el('div', '', 'release-units');
     const title = el('h3', 'Recent Deployments');
     const runs = el('div', '', 'release-runs');
-    section.append(head, policy, note, stateMessage, units, title, runs);
+    const actionsTitle = el('h3', 'Cloudflare 권한 · GitHub Actions');
+    const actionsPanel = el('div', '', 'release-units');
+    const actionsMessage = el('p', '', 'release-state');
+    section.append(head, policy, note, stateMessage, actionsTitle, actionsPanel, actionsMessage, units, title, runs);
     content.append(section);
 
     function renderPolicy(data) {
@@ -299,6 +302,84 @@
       }
     }
 
+    function opsLink(label, href) {
+      const link = el('a', label, 'ghost');
+      link.href = href;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      return link;
+    }
+
+    async function loadActionsPanel() {
+      actionsPanel.replaceChildren(el('div', '운영 권한과 허용된 실행 작업을 확인하는 중입니다.', 'release-empty'));
+      actionsMessage.textContent = '';
+      try {
+        const credential = token();
+        const response = await fetch(`${API}/api/control/secrets/actions`, {
+          headers:{ authorization:`Bearer ${credential}` },
+          cache:'no-store',
+        });
+        if (!response.ok) throw new Error('작업 제어 권한 또는 연결 상태를 확인할 수 없습니다. (' + response.status + ')');
+        const data = await response.json();
+        actionsPanel.replaceChildren();
+        const credentialCard = el('article', '', 'release-unit');
+        credentialCard.append(
+          el('h3', 'GitHub Actions 직접 실행'),
+          el('p', data.configured ? '전용 실행 자격증명 연결됨 · 실행 결과는 GitHub에서 별도로 확인' : '전용 실행 자격증명 미설정 · 실행 버튼 비활성화'),
+        );
+        credentialCard.append(opsLink('저장소 Actions Secrets 관리 ↗', data.actionsSecretSettings));
+        actionsPanel.append(credentialCard);
+
+        const cloudflareCard = el('article', '', 'release-unit');
+        cloudflareCard.append(el('h3', 'Cloudflare Analytics 토큰 권한'));
+        cloudflareCard.append(el('p', '조회 전용 권한으로 발급·교체하고 GitHub Actions Secret에 등록합니다. 에코디 화면은 토큰 값을 조회하거나 권한을 확장하지 않습니다.'));
+        cloudflareCard.append(
+          el('small', data.analyticsSecretName),
+          opsLink('Cloudflare API Tokens 관리 ↗', data.providerTokenConsole),
+          opsLink('GitHub Actions Secret 등록 ↗', data.actionsSecretSettings),
+        );
+        actionsPanel.append(cloudflareCard);
+
+        for (const item of data.workflows || []) {
+          const card = el('article', '', 'release-unit');
+          card.append(el('h3', item.label), el('small', item.id));
+          card.append(el('p', item.effect === 'aggregate-write' ? '기존 승인된 통계 집계를 갱신합니다. 원본 개인정보는 수집하지 않습니다.' : '진단 전용 작업으로 배포하거나 토큰 권한을 변경하지 않습니다.'));
+          const run = el('button', '실행 요청', 'secondary');
+          run.type = 'button';
+          run.disabled = !data.configured;
+          const history = opsLink('실행 기록 ↗', `https://github.com/${REPOSITORY}/actions/workflows/${encodeURIComponent(item.id)}`);
+          card.append(run, history);
+          run.addEventListener('click', async () => {
+            if (!window.confirm(`${item.label} 작업을 main 브랜치에서 실행하시겠습니까? 기존 GitHub 승인·검증 규칙이 그대로 적용됩니다.`)) return;
+            run.disabled = true;
+            actionsMessage.textContent = 'GitHub에 실행을 요청하고 있습니다.';
+            try {
+              const response = await fetch(`${API}/api/control/secrets/actions/dispatch`, {
+                method:'POST',
+                headers:{
+                  authorization:`Bearer ${token()}`,
+                  'content-type':'application/json',
+                  'x-ekodi-confirm-impact':'github-workflow-dispatch',
+                },
+                body:JSON.stringify({ workflow:item.id }),
+                cache:'no-store',
+              });
+              const result = await response.json().catch(() => ({}));
+              if (!response.ok) throw new Error(result.error || `실행 요청 거절 (${response.status})`);
+              actionsMessage.textContent = 'GitHub가 요청을 수락했습니다. 실제 실행 여부·성공 여부는 실행 기록에서 확인해야 합니다.';
+            } catch (error) {
+              actionsMessage.textContent = error.message || '실행 요청이 확인되지 않았습니다. 중복 요청 전에 실행 기록을 확인하세요.';
+            } finally {
+              run.disabled = !data.configured;
+            }
+          });
+          actionsPanel.append(card);
+        }
+      } catch (error) {
+        actionsPanel.replaceChildren(el('div', error.message || '운영 연결 상태를 확인하지 못했습니다.', 'release-empty'));
+      }
+    }
+
     async function load(force = false) {
       refresh.disabled = true;
       stateMessage.textContent = '';
@@ -307,6 +388,7 @@
       try {
         const data = await releaseData(force);
         renderPolicy(data);
+        void loadActionsPanel();
         renderUnits(data.units || []);
         renderRuns(data.recentRuns || []);
       } catch (error) {
