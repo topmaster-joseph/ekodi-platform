@@ -53,6 +53,7 @@ test('management API requests are read_only and fail closed on unavailable crede
  assert.equal(calls,1);
  await assert.rejects(()=>queryCatalog({token:'',projectRef:'renzehysxirjilvdxacv',fetchImpl}),/missing/);
  await assert.rejects(()=>queryCatalog({token:'temporary-example-secret',projectRef:'not-valid',fetchImpl}),/invalid/);
+ await assert.rejects(()=>queryCatalog({token:'temporary-example-secret',projectRef:'renzehysxirjilvdxacv',fetchImpl:async()=>({status:401})}),/HTTP 401/,'Unauthorized catalog reads must fail without attempting write or leaking response');
 });
 
 test('audit runs in two metadata-only lanes and writes a sanitized artifact',async()=>{
