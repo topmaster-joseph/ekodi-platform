@@ -13,6 +13,8 @@ test('catalog proof contains metadata only and omits all private row selection',
  assert.match(PROOF_SQL,/to_regprocedure\('public\.activity_public_finalize_media_upload/);
  assert.match(PROOF_SQL,/pg_get_functiondef/);
  assert.doesNotMatch(PROOF_SQL,/select\s+\*\s+from\s+public\.|from\s+public\.people|from\s+auth\.users|from\s+public\.person_contacts/i);
+ assert.doesNotMatch(PROOF_SQL,/\b(?:insert|update|delete|alter|drop|truncate|grant|revoke|copy)\b/i,'Audit must never contain mutating SQL');
+ assert.match(PROOF_SQL,/media_table_private/,'Public media table access remains part of the drift proof');
 });
 
 test('exactly one typed row and no extra JSON fields are accepted in report',()=>{
