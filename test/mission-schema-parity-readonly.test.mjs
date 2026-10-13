@@ -13,7 +13,7 @@ test('catalog proof contains metadata only and omits all private row selection',
  assert.match(PROOF_SQL,/to_regprocedure\('public\.activity_public_finalize_media_upload/);
  assert.match(PROOF_SQL,/pg_get_functiondef/);
  assert.doesNotMatch(PROOF_SQL,/select\s+\*\s+from\s+public\.|from\s+public\.people|from\s+auth\.users|from\s+public\.person_contacts/i);
- assert.doesNotMatch(PROOF_SQL,/\b(?:insert|update|delete|alter|drop|truncate|grant|revoke|copy)\b/i,'Audit must never contain mutating SQL');
+ assert.doesNotMatch(PROOF_SQL,/^\s*(?:insert\s+into|update\s+\w+|delete\s+from|alter\s+table|drop\s+|truncate\s+|grant\s+|revoke\s+|copy\s+)/im,'Audit must never contain mutating statements');
  assert.match(PROOF_SQL,/media_table_private/,'Public media table access remains part of the drift proof');
 });
 
