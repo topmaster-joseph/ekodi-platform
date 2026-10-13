@@ -498,7 +498,11 @@ async function main(){
  catch{return}
  state.status=status;
  const prelaunchAdmin=page==='/admin'&&status?.admin_preparation_enabled===true&&status?.onboarding_enabled===false;
- if(!status?.auth?.supabase_url||!status?.auth?.publishable_key)return;
+ // Public first-party EKODI identity settings are the same as the canonical auth hub.
+ // Only the publishable browser key is used; membership and payment remain server-gated.
+ const identityUrl=status?.auth?.supabase_url||'https://renzehysxirjilvdxacv.supabase.co';
+ const identityKey=status?.auth?.publishable_key||'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
+ if(!identityUrl||!identityKey)return;
  if(typeof window.supabase?.createClient!=='function'){
   const ready=await new Promise(resolve=>{
    const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
@@ -507,7 +511,7 @@ async function main(){
   });
   if(!ready){$('serviceStage').textContent='로그인 모듈 점검 중';return}
  }
- state.client=window.supabase.createClient(status.auth.supabase_url,status.auth.publishable_key,
+ state.client=window.supabase.createClient(identityUrl,identityKey,
  {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
  // Existing EKODI community bridge uses a short-lived OTP hash in the fragment.
  if(tokenHash){
