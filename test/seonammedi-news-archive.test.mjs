@@ -18,9 +18,12 @@ function mockDB(records){
   return{prepare(sql){
     if(sql==='SELECT source_verified FROM seonammedi_monitor_items LIMIT 0')return{all:async()=>({results:[]})};
     if(sql.includes('FROM seonammedi_monitor_runs'))return{first:async()=>({status:'ok',completed_at:'2026-10-13T01:00:00Z'})};
-    if(sql.includes('FROM seonammedi_monitor_items'))return{bind(limit,offset){
-      return{all:async()=>({results:sorted.filter(row=>!['rejected','archived'].includes(row.review_state)&&(row.review_state==='verified'||(row.source_verified===1&&row.source_type==='news'))).slice(offset,offset+limit)})};
-    }};
+    if(sql.includes('FROM seonammedi_monitor_items'))return{
+      all:async()=>({results:sorted.slice(0,160)}),
+      bind(limit,offset){
+        return{all:async()=>({results:sorted.filter(row=>!['rejected','archived'].includes(row.review_state)&&(row.review_state==='verified'||(row.source_verified===1&&row.source_type==='news'))).slice(offset,offset+limit)})};
+      }
+    };
     throw Error('unexpected statement: '+sql);
   }};
 }
@@ -68,4 +71,12 @@ test('the public page retains publisher-based categories and automatic older-rec
   assert.match(html,/id="timelineFeedStatus"/);
   assert.match(html,/id="timelineFeedMore"/);
   assert.match(html,/id="timelineLoadMore"/);
+});
+
+test('RSS input integrity and archive publication contract coexist after parallel merge',async()=>{
+  const source=await readFile(new URL('../seonammedi-monitor.js',import.meta.url),'utf8');
+  assert.match(source,/isValidSeonamMediRssDocument/);
+  assert.match(source,/recentCandidateCount:recentCandidates\.length/);
+  assert.match(source,/verifiedPublicCount:publicItems\.length/);
+  assert.match(source,/nextCursor:exhausted\?null:String\(offset\)/);
 });
