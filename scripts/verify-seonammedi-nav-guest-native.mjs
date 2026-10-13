@@ -64,7 +64,14 @@ try {
               entries:Array.from(group.querySelectorAll('.nav-submenu a')).map(a=>({label:a.textContent.trim(),href:a.getAttribute('href')})),
               button:!!group.querySelector(':scope > button[aria-expanded]')
             })):[];
-            return {top,groups,
+            const dropdowns=nav?Array.from(nav.querySelectorAll('.nav-group .nav-submenu')):[];
+            const toggles=nav?Array.from(nav.querySelectorAll('.nav-group > button')):[];
+            const dropdownsInitiallyHidden=dropdowns.length>0&&dropdowns.every(el=>getComputedStyle(el).display==='none');
+            const toggleButtonsTransparent=toggles.length>0&&toggles.every(button=>{
+              const color=getComputedStyle(button).backgroundColor;
+              return color==='transparent'||color==='rgba(0, 0, 0, 0)';
+            });
+            return {top,groups,dropdownsInitiallyHidden,toggleButtonsTransparent,
               horizontalOverflow:document.documentElement.scrollWidth>document.documentElement.clientWidth+1,
               heroOriginalPresent:!!document.querySelector('.campaign-hero-image'),
               heroLoaded:(()=>{const img=document.querySelector('.campaign-hero-image');return !!img?.complete&&img.naturalWidth===1903&&img.naturalHeight===735})(),
@@ -82,6 +89,8 @@ try {
           const publicSurface=!['/minutes/','/admin/'].includes(suffix);
           record.topLevelMatches=JSON.stringify(actualLabels)===JSON.stringify(LABELS);
           if(publicSurface&&!record.topLevelMatches)violations.push('menu_labels_mismatch: '+JSON.stringify(actualLabels));
+          if(publicSurface&&!record.dropdownsInitiallyHidden)violations.push('dropdown_submenu_visible_without_activation');
+          if(publicSurface&&!record.toggleButtonsTransparent)violations.push('dropdown_toggle_has_filled_background');
           if(record.horizontalOverflow)violations.push('horizontal_overflow');
           if(publicSurface&&!record.groups.find(x=>x.parent==='공지')?.entries.some(x=>x.label==='회계'))violations.push('finance_not_under_notices');
           if(publicSurface&&!record.groups.find(x=>x.parent==='공지')?.entries.some(x=>x.label==='회의록'))violations.push('minutes_not_under_notices');
