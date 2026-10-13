@@ -178,3 +178,105 @@ html[data-control-embed="admin"] .view.active:not(#viewChat){
 @media(max-width:760px){
  html[data-control-embed="admin"] .conversation{padding-bottom:18px!important}
 }
+
+/* EKODI white embedded Control contract */
+/* The parent Admin owns navigation. Only embedded Control colors are changed;
+   independent Control, session checks and action approval stay unchanged. */
+html[data-control-embed="admin"] {
+  color-scheme:light;
+  --bg:#fff;--text:#17253d;--muted:#53647a;--line:#e2e8f3;
+}
+html[data-control-embed="admin"],
+html[data-control-embed="admin"] body,
+html[data-control-embed="admin"] .control-shell {
+  background:#fff!important;color:#17253d!important;
+}
+html[data-control-embed="admin"] .control-main {
+  background:#fff!important;color:#17253d!important;
+}
+html[data-control-embed="admin"] .topbar,
+html[data-control-embed="admin"] .control-tabs {
+  background:#fff!important;color:#17253d!important;
+  border-bottom-color:#e0e8f3!important;
+}
+html[data-control-embed="admin"] .topbar strong,
+html[data-control-embed="admin"] .empty-state h1,
+html[data-control-embed="admin"] .panel-head {
+  color:#17253d!important;
+}
+html[data-control-embed="admin"] .topbar small,
+html[data-control-embed="admin"] .status-dot,
+html[data-control-embed="admin"] .empty-state p,
+html[data-control-embed="admin"] .panel-head p,
+html[data-control-embed="admin"] .turn .meta,
+html[data-control-embed="admin"] .card p {
+  color:#52647c!important;
+}
+html[data-control-embed="admin"] .control-tabs button {
+  color:#3f5271!important;background:#fff!important;
+}
+html[data-control-embed="admin"] .control-tabs button:hover,
+html[data-control-embed="admin"] .control-tabs button.active {
+  color:#174ea6!important;background:#eaf1ff!important;
+}
+html[data-control-embed="admin"] .control-tabs #newTask {
+  border-color:#d3dfed!important;
+}
+html[data-control-embed="admin"] .view.active,
+html[data-control-embed="admin"] .conversation {
+  background:#fff!important;color:#17253d!important;
+}
+html[data-control-embed="admin"] .suggestions button {
+  color:#213754!important;background:#fff!important;border-color:#d4e0f0!important;
+  box-shadow:0 5px 18px rgba(25,70,150,.06)!important;
+}
+html[data-control-embed="admin"] .suggestions button:hover {
+  background:#f0f5ff!important;
+}
+html[data-control-embed="admin"] .turn.user .bubble {
+  color:#142d52!important;background:#eaf1ff!important;
+}
+html[data-control-embed="admin"] .turn.assistant .bubble {
+  color:#17253d!important;
+}
+html[data-control-embed="admin"] .execution-card,
+html[data-control-embed="admin"] .card {
+  color:#17253d!important;background:#fff!important;border-color:#dce6f2!important;
+}
+html[data-control-embed="admin"] .badge {
+  border-color:#cddbea!important;
+}
+html[data-control-embed="admin"] .composer-wrap {
+  background:linear-gradient(180deg,rgba(255,255,255,0),#fff 29%,#fff)!important;
+}
+html[data-control-embed="admin"] .composer {
+  background:#fff!important;border-color:#ccdaec!important;
+  box-shadow:0 12px 32px rgba(25,65,120,.1)!important;
+}
+html[data-control-embed="admin"] .composer textarea {
+  background:#fff!important;color:#17253d!important;
+}
+html[data-control-embed="admin"] .composer textarea::placeholder,
+html[data-control-embed="admin"] .composer-note {
+  color:#63748c!important;
+}
+html[data-control-embed="admin"] .target-label,
+html[data-control-embed="admin"] .target-label select {
+  background:#f5f8fd!important;color:#243954!important;border-color:#d4e0f0!important;
+}
+html[data-control-embed="admin"] .toggle {
+  color:#425872!important;
+}
+html[data-control-embed="admin"] .send {
+  background:#2862ee!important;color:#fff!important;
+}
+html[data-control-embed="admin"] .auth-banner {
+  background:#f2f6ff!important;color:#1e3c68!important;
+  border-color:#c5d8f4!important;
+}
+html[data-control-embed="admin"] .auth-banner a {
+  color:#174ea6!important;
+}
+html[data-control-embed="admin"] .conversation {
+  scrollbar-color:#b6c8df transparent;
+}
