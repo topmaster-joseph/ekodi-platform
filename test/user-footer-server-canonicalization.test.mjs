@@ -12,5 +12,5 @@ test('shared footer injection is idempotent before browser JavaScript runs',asyn
   assert.match(injector,/if\(shared&&!serviceOwnsFooter\(this\.serviceId\)\)\{element\.remove\(\);return;\}/);
   assert.match(injector,/if\(sharedFooterReplacesLocalFooter\(this\.serviceId\)\)element\.remove\(\)/);
   assert.match(injector,/\.on\('footer',new UserFooterCanonicalizer\(serviceId\)\)/);
-  assert.match(injector,/if\(!serviceOwnsFooter\(this\.serviceId\)\)element\.append\(renderEkodiUserFooter\(\),\{html:true\}\)/);
+  assert.match(injector,/if\(!serviceOwnsFooter\(this\.serviceId\)&&!this\.existingFooter\)element\.append\(renderEkodiUserFooter\(\),\{html:true\}\)/);
 });
