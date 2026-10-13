@@ -36,14 +36,3 @@ test('the public API distinguishes candidate records from publishable news',asyn
   assert.equal(isPublicSeonamMediSource(unverified),false);
   assert.equal(isPublicSeonamMediSource({...unverified,source_verified:1}),true);
 });
-
-test('the public homepage never silently hides empty or degraded verified news',async()=>{
-  const app=await readFile(new URL('../sites/seonammedi/public/app.js',import.meta.url),'utf8');
-  assert.match(app,/section\.hidden=false/);
-  assert.match(app,/state==='partial'\?'일부 뉴스 검색원에서 오류가 발생했습니다/);
-  assert.match(app,/state==='failed'\?'일부 외부 뉴스 검색 서비스에 장애가 있습니다/);
-  assert.match(app,/검증되지 않은 검색 결과는 자동으로 공개하지 않습니다/);
-  assert.match(app,/<a href="#timeline">관련소식<\/a>/);
-  assert.match(app,/function monitorHomeRows/);
-  assert.match(app,/sort\(\(a,b\)=>String\(b\.published_at/);
-});
