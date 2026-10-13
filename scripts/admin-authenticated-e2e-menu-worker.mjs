@@ -26,6 +26,7 @@ const failedAdminAssets = [];
 const results = [];
 let browser;
 let page;
+let lastDocumentStatus = null;
 let fatal = null;
 let currentStage = 'bootstrap';
 const stage = value => { currentStage = value; console.log(`[E2E:${menuId}] stage=${value}`); };
@@ -36,9 +37,37 @@ async function clickFast(locator) {
   await locator.click({ force: true, noWaitAfter: true, timeout: interactionReadyTimeoutMs });
 }
 
+async function safeAuthHandoffDiagnostic(){
+  if(!page)return {surface:'browser-uninitialized'};
+  return page.evaluate(()=>{
+    let storageReadable=false,tokenPresent=false;
+    try{
+      tokenPresent=Boolean(sessionStorage.getItem('ekodi-auth-token'));
+      storageReadable=true;
+    }catch{}
+    const path=location.pathname;
+    const surface=location.hostname==='ekodi.kr' && (path==='/admin'||path.startsWith('/admin/'))?'admin':
+      location.hostname==='ekodi.kr'&&path.startsWith('/auth')?'auth':
+      location.hostname==='accounts.google.com'?'google':'unexpected';
+    return {
+      surface,storageReadable,tokenPresent,
+      appVisible:document.querySelector('#app')?.hidden===false,
+      loginVisible:document.querySelector('#loginScreen')?.hidden===false,
+      bootReady:document.documentElement.dataset.ekodiAdminReady==='true'
+    };
+  }).catch(()=>({surface:'unavailable'}));
+}
+
 async function waitForReady() {
   stage('ready-token');
-  await page.waitForFunction(() => sessionStorage.getItem('ekodi-auth-token'), null, { timeout: 15_000 });
+  try{
+    await page.waitForFunction(() => sessionStorage.getItem('ekodi-auth-token'), null, { timeout: 15_000 });
+  }catch{
+    const diagnostic=await safeAuthHandoffDiagnostic();
+    const safe={...diagnostic,documentStatus:lastDocumentStatus};
+    console.warn('[E2E:'+menuId+'] ready-token-diagnostic '+JSON.stringify(safe));
+    throw new Error('READY_TOKEN_TIMEOUT');
+  }
   stage('ready-app');
   await page.waitForSelector('#app:not([hidden])', { timeout: 15_000 });
   stage('ready-runtime');
@@ -596,6 +625,7 @@ try {
   context.setDefaultTimeout(5_000);
   context.setDefaultNavigationTimeout(15_000);
   page = await context.newPage();
+  page.on('response',response=>{if(response.request().resourceType()==='document')lastDocumentStatus=response.status();});
   page.on('pageerror', error => pageErrors.push(String(error?.stack || error?.message || error)));
   page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
   page.on('requestfailed', request => {
