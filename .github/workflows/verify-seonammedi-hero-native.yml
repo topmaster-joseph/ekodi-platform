@@ -95,10 +95,11 @@ jobs:
           npm install --no-save --package-lock=false playwright@1.55.0
           npx playwright install --with-deps chromium
       - name: Verify canonical production screen and original banner bytes
+        id: canonical
         run: |
           node scripts/verify-seonammedi-hero-native.mjs --origin=https://ekodi.kr --out=artifacts/native-hero-canonical
       - name: Verify preserved customer domain and original banner bytes
-        if: success()
+        if: always() && steps.canonical.outcome != 'skipped'
         run: |
           node scripts/verify-seonammedi-hero-native.mjs --origin=https://seonammedi.kr --out=artifacts/native-hero-customer
       - name: Preserve production evidence and screenshots
