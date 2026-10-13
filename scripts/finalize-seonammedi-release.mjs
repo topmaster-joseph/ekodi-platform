@@ -43,6 +43,11 @@ export async function finalizeSeonamMediRelease(output){
     .replace(/\/seonammedi\/app\.js(?:\?[^"']*)?/g,'/seonammedi/'+assets['app.js'].path)
     .replace(/\/seonammedi\/voice-public-admin\.js(?:\?[^"']*)?/g,'/seonammedi/'+assets['voice-public-admin.js'].path);
   if(!html.includes('data-ekodi-release-convergence'))html=html.replace('</head>',runtime+'\n</head>');
+  // Prevent escaped newline text from terminating <head> and appearing above the homepage.
+  const headSection=html.slice(0,html.toLowerCase().indexOf('</head>'));
+  if(/\\\\[nrt]/.test(headSection.replace(/<script\\b[^>]*>[\\s\\S]*?<\\/script>/gi,''))) {
+    throw new Error('seonammedi_homepage_head_contains_literal_escaped_whitespace');
+  }
   await writeFile(siteDir+'index.html',html);
 
   let admin=await readFile(siteDir+'admin/index.html','utf8');
