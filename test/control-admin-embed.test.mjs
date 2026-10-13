@@ -115,5 +115,5 @@ test('embedded EKODI Control honors the white administrator canvas, including er
   assert.doesNotMatch(outer,/#0b1626/i,'no dark fallback may cover the white Control surface');
   assert.match(outer,/#adminControlHome\.admin-control-home\s*\{[\s\S]*?background:#fff/);
   assert.match(outer,/#adminControlFrameNotice strong\{font-size:18px;color:#17253d\}/);
-  assert.match(scoped,/@|.*/); // Explicit scoped block still coexists with mobile base media rules.
+  assert.ok(css.includes('html[data-control-embed="admin"] .conversation{padding-bottom:18px!important}'),'mobile conversation spacing must remain');
 });
