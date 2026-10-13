@@ -1,0 +1,41 @@
+name: EKODI Control Native Browser Preflight
+
+# First-party EKODI virtualized browser: no third-party computer-use provider.
+# This is a read-only GUEST baseline against the currently deployed apex site,
+# not proof that draft Control sources were released to production.
+on:
+  pull_request:
+    paths:
+      - 'control.js'
+      - 'control.html'
+      - 'control.css'
+      - 'admin-control-frame.js'
+      - 'admin-sidebar.js'
+      - 'admin-shell.html'
+      - 'platform-router-entry-worker.js'
+      - 'site-worker.js'
+      - 'test/control-*.test.mjs'
+      - 'config/control-native-browser-surfaces.json'
+      - '.github/workflows/ekodi-control-native-preflight.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  desktop-native-guest:
+    uses: ./.github/workflows/ekodi-background-browser-worker.yml
+    with:
+      surface_path: '/admin/'
+      surface_paths: '/admin/,/admin/control,/control'
+      surface_registry: 'config/control-native-browser-surfaces.json'
+      device_profile: desktop
+      church_locale_diagnostic: false
+  mobile-native-guest:
+    uses: ./.github/workflows/ekodi-background-browser-worker.yml
+    with:
+      surface_path: '/admin/'
+      surface_paths: '/admin/,/admin/control,/control'
+      surface_registry: 'config/control-native-browser-surfaces.json'
+      device_profile: mobile-portrait
+      church_locale_diagnostic: false
