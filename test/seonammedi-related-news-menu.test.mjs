@@ -46,9 +46,9 @@ test('committee-related news panel and its management form belong only to the ac
     assert.ok(activityMarkup.includes('id="'+id+'"'),'missing from activity view '+id);
   assert.ok(!newsMarkup.includes('id="committeeNewsList"'),'committee news list duplicated in related-news view');
   assert.ok(!newsMarkup.includes('id="committeeNewsForm"'),'committee form duplicated in related-news view');
-  assert.match(js,/const relatedRows=publicTimelineEntries\\.filter\\(item=>!isCommitteeRecord\\(item\\)&&!isCommitteeRelatedNews\\(item\\)\\)/);
-  assert.match(js,/publicTimelineEntries\\.filter\\(isCommitteeRelatedNews\\)\\.slice\\(\\)\\.sort\\(timelineDescending\\)/);
-  assert.match(js,/if\\(admin\\.has\\('timeline'\\)\\)bindCommitteeNewsAdmin\\(\\)/);
+  assert.ok(js.includes('const relatedRows=publicTimelineEntries.filter(item=>!isCommitteeRecord(item)&&!isCommitteeRelatedNews(item))'));
+  assert.ok(js.includes('publicTimelineEntries.filter(isCommitteeRelatedNews).slice().sort(timelineDescending)'));
+  assert.ok(js.includes("if(admin.has('timeline'))bindCommitteeNewsAdmin();"));
 });
 
 test('committee manager can search, filter, add, update, hide, delete, and reclassify legacy records with explicit scope',async()=>{
