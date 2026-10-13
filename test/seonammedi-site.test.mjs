@@ -781,7 +781,9 @@ test('seonammedi citizen opinions hand off to the standalone board-owned UI',asy
   assert.match(worker,/의견 등록/);
   assert.match(worker,/답글 등록/);
   assert.match(worker,/\/api\/admin\/posts/);
-  assert.match(worker,/adminLogin\.hidden=false;await load\(\)/);
+  assert.doesNotMatch(worker,/adminLogin\.hidden=false;await load\(\)/);
+  assert.match(worker,/if\(q\|\|!voiceVerified\)/);
+  assert.match(worker,/manageToggle\.hidden=false/);
   const authEntry=await readFile(new URL('../auth-site/auth-entry.js',import.meta.url),'utf8');
   assert.match(authEntry,/purpose'\) === 'seonammedi-board-admin'/);
   assert.match(config,/database_name = "ekodi-independent-board"/);
