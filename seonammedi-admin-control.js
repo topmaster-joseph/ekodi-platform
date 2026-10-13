@@ -127,6 +127,7 @@ async function ensurePublicContentSchema(db){
     monitor_keywords_json TEXT NOT NULL DEFAULT '[]',
     record_scope TEXT NOT NULL DEFAULT 'news',
     committee_kind TEXT NOT NULL DEFAULT '',
+    committee_related INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'published',
     sort_order INTEGER NOT NULL DEFAULT 0,
     created_by TEXT NOT NULL DEFAULT '',
@@ -136,7 +137,7 @@ async function ensurePublicContentSchema(db){
   const repair=[
     ['seonammedi_notices','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','body',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','status',"TEXT NOT NULL DEFAULT 'draft'"],['seonammedi_notices','pinned','INTEGER NOT NULL DEFAULT 0'],['seonammedi_notices','published_at','TEXT'],['seonammedi_notices','image_key',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','image_type',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','image_keys_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_notices','image_types_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_notices','notice_kind',"TEXT NOT NULL DEFAULT 'notice'"],['seonammedi_notices','featured','INTEGER NOT NULL DEFAULT 0'],['seonammedi_notices','event_start','TEXT'],['seonammedi_notices','event_end','TEXT'],['seonammedi_notices','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','updated_at',"TEXT NOT NULL DEFAULT ''"],
     ['seonammedi_channels','platform',"TEXT NOT NULL DEFAULT 'other'"],['seonammedi_channels','name',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','url',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','category',"TEXT NOT NULL DEFAULT 'other'"],['seonammedi_channels','official','INTEGER NOT NULL DEFAULT 0'],['seonammedi_channels','visible','INTEGER NOT NULL DEFAULT 1'],['seonammedi_channels','sort_order','INTEGER NOT NULL DEFAULT 0'],['seonammedi_channels','note',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','updated_at',"TEXT NOT NULL DEFAULT ''"],
-    ['seonammedi_timeline','legacy_key','TEXT'],['seonammedi_timeline','event_date',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','category',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','summary',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','evidence',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','links_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','media_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','monitor_keywords_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','record_scope',"TEXT NOT NULL DEFAULT 'news'"],['seonammedi_timeline','committee_kind',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','status',"TEXT NOT NULL DEFAULT 'published'"],['seonammedi_timeline','sort_order','INTEGER NOT NULL DEFAULT 0'],['seonammedi_timeline','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','updated_at',"TEXT NOT NULL DEFAULT ''"]
+    ['seonammedi_timeline','legacy_key','TEXT'],['seonammedi_timeline','event_date',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','category',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','summary',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','evidence',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','links_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','media_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','monitor_keywords_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','record_scope',"TEXT NOT NULL DEFAULT 'news'"],['seonammedi_timeline','committee_kind',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','committee_related','INTEGER NOT NULL DEFAULT 0'],['seonammedi_timeline','status',"TEXT NOT NULL DEFAULT 'published'"],['seonammedi_timeline','sort_order','INTEGER NOT NULL DEFAULT 0'],['seonammedi_timeline','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','updated_at',"TEXT NOT NULL DEFAULT ''"]
   ];
   for(const [table,column,definition] of repair)await addColumnIfMissing(db,table,column,definition);
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_seonammedi_notices_public ON seonammedi_notices(status,pinned,published_at,updated_at)').run();
@@ -272,6 +273,7 @@ async function ensureSchema(db){
 async function ensureTimelineScope(db){
   await addColumnIfMissing(db,'seonammedi_timeline','record_scope',"TEXT NOT NULL DEFAULT 'news'");
   await addColumnIfMissing(db,'seonammedi_timeline','committee_kind',"TEXT NOT NULL DEFAULT ''");
+  await addColumnIfMissing(db,'seonammedi_timeline','committee_related','INTEGER NOT NULL DEFAULT 0');
 }
 async function ensureTimelineSeed(db){
   const seedKey='timeline-v1';
@@ -901,7 +903,7 @@ async function deleteNotice(env,auth,id){
 const parseJsonArray=value=>{try{const v=JSON.parse(String(value||'[]'));return Array.isArray(v)?v:[]}catch{return[]}};
 function timelineRow(row,admin=false){
   const confirmedSeed=row.created_by==='system-seed'?VERIFIED_COMMITTEE_SEEDS[row.legacy_key]:null;
-  const item={id:Number(row.id),date:row.event_date,category:row.category,title:row.title,summary:row.summary||'',evidence:row.evidence||'',links:parseJsonArray(row.links_json),media:parseJsonArray(row.media_json),monitorKeywords:parseJsonArray(row.monitor_keywords_json),sortOrder:Number(row.sort_order||0),recordScope:row.record_scope==='committee'||confirmedSeed?'committee':'news',committeeKind:row.committee_kind||confirmedSeed||''};
+  const item={id:Number(row.id),date:row.event_date,category:row.category,title:row.title,summary:row.summary||'',evidence:row.evidence||'',links:parseJsonArray(row.links_json),media:parseJsonArray(row.media_json),monitorKeywords:parseJsonArray(row.monitor_keywords_json),sortOrder:Number(row.sort_order||0),recordScope:row.record_scope==='committee'||confirmedSeed?'committee':'news',committeeKind:row.committee_kind||confirmedSeed||'',committeeRelated:row.record_scope!=='committee'&&Number(row.committee_related||0)===1};
   if(admin){item.status=row.status;item.createdBy=row.created_by||'';item.createdAt=row.created_at;item.updatedAt=row.updated_at}
   return item;
 }
@@ -926,16 +928,17 @@ function timelineInput(body,existing={}){
   const scope=clean(body?.recordScope??existing.record_scope??'news',24);
   if(!['news','committee'].includes(scope))return null;
   const committeeKind=scope==='committee'?clean(body?.committeeKind??existing.committee_kind??'기타 활동',60):'';
+  const committeeRelated=scope==='news'&&safeBool(body?.committeeRelated??existing.committee_related??false)?1:0;
   if(!date||!category||!title)return null;
-  return{date,category,title,summary,evidence,status,sortOrder,links,media,monitorKeywords,recordScope:scope,committeeKind};
+  return{date,category,title,summary,evidence,status,sortOrder,links,media,monitorKeywords,recordScope:scope,committeeKind,committeeRelated};
 }
 async function createTimeline(request,env,auth){
   if(!can(auth,TIMELINE_CAP))return json({ok:false,error:'timeline_forbidden'},403);
   await ensureTimelineScope(env.DB);
   const body=await request.json().catch(()=>null),value=timelineInput(body);if(!value)return json({ok:false,error:'invalid_timeline'},400);
   const now=new Date().toISOString();
-  const result=await env.DB.prepare(`INSERT INTO seonammedi_timeline(legacy_key,event_date,category,title,summary,evidence,links_json,media_json,monitor_keywords_json,record_scope,committee_kind,status,sort_order,created_by,created_at,updated_at)
-    VALUES(NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(value.date,value.category,value.title,value.summary,value.evidence,JSON.stringify(value.links),JSON.stringify(value.media),JSON.stringify(value.monitorKeywords),value.recordScope,value.committeeKind,value.status,value.sortOrder,auth.email,now,now).run();
+  const result=await env.DB.prepare(`INSERT INTO seonammedi_timeline(legacy_key,event_date,category,title,summary,evidence,links_json,media_json,monitor_keywords_json,record_scope,committee_kind,committee_related,status,sort_order,created_by,created_at,updated_at)
+    VALUES(NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(value.date,value.category,value.title,value.summary,value.evidence,JSON.stringify(value.links),JSON.stringify(value.media),JSON.stringify(value.monitorKeywords),value.recordScope,value.committeeKind,value.committeeRelated,value.status,value.sortOrder,auth.email,now,now).run();
   const id=Number(result?.meta?.last_row_id||0);await audit(env,auth,'create','timeline',id,{title:value.title,status:value.status,category:value.category});return json({ok:true,id},201);
 }
 async function updateTimeline(request,env,auth,id){
@@ -944,9 +947,9 @@ async function updateTimeline(request,env,auth,id){
   const existing=await env.DB.prepare('SELECT * FROM seonammedi_timeline WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
   const body=await request.json().catch(()=>null),value=timelineInput(body,existing);if(!value)return json({ok:false,error:'invalid_timeline'},400);
   const now=new Date().toISOString();
-  await env.DB.prepare(`UPDATE seonammedi_timeline SET event_date=?,category=?,title=?,summary=?,evidence=?,links_json=?,media_json=?,monitor_keywords_json=?,record_scope=?,committee_kind=?,status=?,sort_order=?,updated_at=?,
+  await env.DB.prepare(`UPDATE seonammedi_timeline SET event_date=?,category=?,title=?,summary=?,evidence=?,links_json=?,media_json=?,monitor_keywords_json=?,record_scope=?,committee_kind=?,committee_related=?,status=?,sort_order=?,updated_at=?,
       created_by=CASE WHEN created_by='system-seed' THEN ? ELSE created_by END WHERE id=?`)
-    .bind(value.date,value.category,value.title,value.summary,value.evidence,JSON.stringify(value.links),JSON.stringify(value.media),JSON.stringify(value.monitorKeywords),value.recordScope,value.committeeKind,value.status,value.sortOrder,now,auth.email,id).run();
+    .bind(value.date,value.category,value.title,value.summary,value.evidence,JSON.stringify(value.links),JSON.stringify(value.media),JSON.stringify(value.monitorKeywords),value.recordScope,value.committeeKind,value.committeeRelated,value.status,value.sortOrder,now,auth.email,id).run();
   await audit(env,auth,'update','timeline',id,{title:value.title,status:value.status,category:value.category});return json({ok:true,id});
 }
 async function deleteTimeline(env,auth,id){
