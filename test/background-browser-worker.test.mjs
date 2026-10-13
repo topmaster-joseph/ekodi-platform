@@ -106,6 +106,13 @@ test('shared-site guarded release invokes native browser verification after prod
   }
   const desktop=sharedRelease.match(/native_surface_verification_desktop:[\s\S]*?(?=\n\s{2}[a-zA-Z0-9_-]+:|$)/)?.[0]||'';
   const mobile=sharedRelease.match(/native_surface_verification_mobile:[\s\S]*?(?=\n\s{2}[a-zA-Z0-9_-]+:|$)/)?.[0]||'';
-  assert.match(desktop,/needs:\s*deploy/);
-  assert.match(mobile,/needs:\s*deploy/);
+  // Read-only native canaries must not concurrently flood the shared Cloudflare origin.
+  assert.match(desktop,/needs:\s*\[deploy, authenticated_admin_surface_verification\]/);
+  assert.match(desktop,/if:\s*\$\{\{ always\(\) && needs\.deploy\.result == 'success' \}\}/);
+  assert.match(mobile,/needs:\s*\[deploy, native_surface_verification_desktop, authenticated_admin_surface_verification\]/);
+  assert.match(mobile,/if:\s*\$\{\{ always\(\) && needs\.deploy\.result == 'success' \}\}/);
+  // A prior canary failure must not silently skip the remaining mandatory surfaces.
+  assert.match(sharedRelease,/authenticated_admin_surface_verification:[\s\S]*?needs:\s*deploy/);
+  assert.doesNotMatch(desktop,/continue-on-error:/);
+  assert.doesNotMatch(mobile,/continue-on-error:/);
 });
