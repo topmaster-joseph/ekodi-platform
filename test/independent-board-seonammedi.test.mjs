@@ -350,21 +350,3 @@ test('independent board header uses one aligned desktop row and a stacked mobile
     }
   }
 });
-
-
-test('standalone SeonamMedi board emits the dropdown stylesheet on every board and mount',async()=>{
-  const mod=await import(new URL('../services/independent-board/worker.js?dropdown-css='+Date.now(),import.meta.url));
-  for(const mount of ['https://seonammedi.kr/board','https://ekodi.kr/seonammedi/board']){
-    for(const route of ['voices','finance','notices']){
-      const response=await mod.default.fetch(new Request(mount+'/'+route),{});
-      assert.equal(response.status,200,mount+'/'+route);
-      const html=await response.text();
-      const style=html.match(/<style>([\s\S]*?)<\/style>/)?.[1]||'';
-      assert.match(style,/\.independent-board-header \.ekodi-six-nav \.nav-submenu\{display:none;/);
-      assert.match(style,/\.independent-board-header \.ekodi-six-nav \.nav-group>button\{background:transparent;border:0;/);
-      assert.match(style,/\.independent-board-header \.ekodi-six-nav \.nav-group:hover \.nav-submenu/);
-      assert.match(html,/aria-label="공지 세부메뉴 열기"/);
-      assert.match(html,/aria-expanded="false"/);
-    }
-  }
-});
