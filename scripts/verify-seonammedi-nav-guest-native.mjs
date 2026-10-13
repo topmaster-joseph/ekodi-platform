@@ -149,3 +149,5 @@ finally{
   if(!report.passed)process.exitCode=1;
 }
 // Post-merge read-only audit rerun for guarded release PR #4627.
+
+// Fresh operational witness after successful canonical Shared Site Core run #38385650879.
