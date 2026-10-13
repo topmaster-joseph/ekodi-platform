@@ -45,6 +45,7 @@ $script:RestartAfterCommand = $false
 $BrowserCanaryStatePath = Join-Path $Root 'background-browser-canary.json'
 $BrowserCanaryProfileRoot = Join-Path $env:ProgramData 'EKODI\BrowserWorker\CanaryProfile'
 $BrowserWorkerProfileRoot = Join-Path $env:ProgramData 'EKODI\BrowserWorker\Tasks'
+$BrowserTaskJournalRoot = Join-Path $Root 'browser-task-journal'
 $WorkspaceAudioRoot = Join-Path $env:ProgramData 'EKODI\GoogleWorkspace'
 $WorkspaceAudioScript = Join-Path $WorkspaceAudioRoot 'tools\ekodi-device-agent\windows\google-workspace-slides-audio.mjs'
 $WorkspaceAudioPolicy = Join-Path $WorkspaceAudioRoot 'google-workspace-slides-audio-policy.js'
@@ -2722,6 +2723,74 @@ function Get-EkodiLocalAiVerification {
   return @{ message = 'EKODI native local AI verification completed'; localAiProof = $proof }
 }
 
+
+# Audit only browser jobs dispatched through the authenticated Device Control queue.
+# User-owned Opera/Edge/Chrome sessions and externally launched tabs remain untouched.
+function Save-EkodiBrowserTaskAudit($Record) {
+  New-Item -ItemType Directory -Path $BrowserTaskJournalRoot -Force | Out-Null
+  $target = Join-Path $BrowserTaskJournalRoot ($Record.commandKey + '.json')
+  $temporary = Join-Path $BrowserTaskJournalRoot ($Record.commandKey + '-' + [guid]::NewGuid().ToString('N') + '.tmp')
+  try {
+    $Record | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $temporary -Encoding UTF8 -ErrorAction Stop
+    Move-Item -LiteralPath $temporary -Destination $target -Force -ErrorAction Stop
+  } finally {
+    Remove-Item -LiteralPath $temporary -Force -ErrorAction SilentlyContinue
+  }
+}
+function Start-EkodiBrowserTaskAudit($Command) {
+  $id = [string]$Command.id
+  if (-not $id) { throw 'browser_audit_command_id_required' }
+  $record = @{
+    schema = 'ekodi-native-browser-task-v1'
+    commandKey = Get-Sha256String $id
+    commandType = [string]$Command.type
+    launcher = 'ekodi-device-agent'
+    device = [string]$env:COMPUTERNAME
+    startedAt = (Get-Date).ToUniversalTime().ToString('o')
+    finishedAt = ''
+    state = 'running'
+    cleanupVerified = $false
+    browserProcessClosed = $false
+    profileRemoved = $false
+    userTabsTouched = $false
+  }
+  Save-EkodiBrowserTaskAudit $record
+  return $record
+}
+function Finish-EkodiBrowserTaskAudit($Record, [string]$State, $Result = $null) {
+  if (-not $Record) { return }
+  $proof = if ($Result -and $Result.browserWorker) { $Result.browserWorker } else { $null }
+  $Record.browserProcessClosed = ($null -ne $proof -and $proof.browserProcessClosed -eq $true)
+  $Record.profileRemoved = ($null -ne $proof -and $proof.profileRemoved -eq $true -and $proof.screenshotArtifactRemoved -eq $true)
+  $Record.cleanupVerified = ($Record.browserProcessClosed -and $Record.profileRemoved)
+  # No closure attestation from another runner is classified as unverified.
+  $Record.state = if ($State -eq 'completed' -and -not $Record.cleanupVerified) { 'cleanup_unverified' } else { $State }
+  if ($proof -and $proof.browser) { $Record.browser = [string]$proof.browser }
+  if ($proof -and $proof.taskId) { $Record.browserTaskId = [string]$proof.taskId }
+  $Record.finishedAt = (Get-Date).ToUniversalTime().ToString('o')
+  Save-EkodiBrowserTaskAudit $Record
+}
+function Get-EkodiBrowserTaskAuditSummary {
+  $items = @()
+  if (Test-Path -LiteralPath $BrowserTaskJournalRoot) {
+    foreach ($file in @(Get-ChildItem -LiteralPath $BrowserTaskJournalRoot -Filter '*.json' -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 20)) {
+      try {
+        $entry = Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($entry.schema -ne 'ekodi-native-browser-task-v1') { continue }
+        $items += @{
+          commandType = [string]$entry.commandType
+          state = [string]$entry.state
+          startedAt = [string]$entry.startedAt
+          finishedAt = [string]$entry.finishedAt
+          browser = [string]$entry.browser
+          cleanupVerified = [bool]$entry.cleanupVerified
+        }
+      } catch { }
+    }
+  }
+  return @{ checkedAt = (Get-Date).ToUniversalTime().ToString('o'); recent = $items; count = $items.Count }
+}
+
 function Get-RemoteAgentStatus {
   $taskState = 'unknown'
   try {
@@ -2740,6 +2809,7 @@ function Get-RemoteAgentStatus {
     foregroundUserSessionProtected = $true
     backgroundBrowserCanaryVerified = [bool](Get-BackgroundBrowserCanaryState).verified
     backgroundBrowserReady = [bool](Get-BackgroundBrowserCanaryState).verified
+    browserTaskAudit = Get-EkodiBrowserTaskAuditSummary
     isolatedDesktopProbeAvailable = $true
     isolatedDesktopCanaryVerified = [bool](Get-IsolatedDesktopCanaryState).verified
     isolatedDesktopGuestCanaryVerified = [bool](Get-IsolatedDesktopGuestCanaryState).verified
@@ -3072,13 +3142,21 @@ function Complete-Command($Config, [string]$CommandId, [bool]$Success, $Result) 
 function Poll-Command($Config) {
   $response = Invoke-RestMethod -Method Get -Uri "$($Config.apiBase)/api/device-agent/commands/next" -TimeoutSec 15 -Headers (Get-AgentHeaders $Config)
   if (-not $response.command) { return }
+  $audit = $null
   try {
+    if ([string]$response.command.type -in @('computer.browser.canary','computer.browser.execute','computer.browser.pr.observe')) {
+      $audit = Start-EkodiBrowserTaskAudit $response.command
+    }
     $result = Invoke-DeviceCommand $response.command
+    if ($audit) { Finish-EkodiBrowserTaskAudit $audit 'completed' $result }
     Complete-Command $Config ([string]$response.command.id) $true $result
     if ([string]$response.command.type -eq 'agent.self_update' -and $result.restartRequired -eq $true) {
       $script:RestartAfterCommand = $true
     }
   } catch {
+    if ($audit -and $audit.state -eq 'running') {
+      try { Finish-EkodiBrowserTaskAudit $audit 'failed' } catch { }
+    }
     Complete-Command $Config ([string]$response.command.id) $false @{ message = $_.Exception.Message }
   }
 }
