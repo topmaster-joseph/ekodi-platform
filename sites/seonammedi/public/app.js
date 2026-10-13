@@ -113,6 +113,10 @@ const isCommitteeRecord=item=>item?.recordScope==='committee';
 const isCommitteeRelatedNews=item=>{
   if(isCommitteeRecord(item))return false;
   if(item?.committeeRelated===true)return true;
+  // Existing editorially classified news predates the committeeRelated column.
+  // This legacy NEWS category means committee-related coverage, not a new
+  // committee-led activity entry; scope exclusion above stays authoritative.
+  if(/^비대위 활동$/.test(String(item?.category||'').trim()))return true;
   const context=[item?.title,item?.summary].filter(Boolean).join(' ');
   // Automatic records have already passed the server-side publication gate.
   return /비상대책위원회|비상대책위|비대위|대책위원회/.test(context)
