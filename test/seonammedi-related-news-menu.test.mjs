@@ -74,3 +74,42 @@ test('only four unambiguous original committee actions are seeded to activity le
   assert.notEqual(studentOnly?.recordScope,'committee');
   assert.ok(verified.every(item=>item.committeeKind));
 });
+
+test('committee news is a separate newest-first verified feed with administrator CRUD',async()=>{
+  const [html,js,adminHtml,adminJs,api,monitor]=await Promise.all([
+    read('sites/seonammedi/public/index.html'),read('sites/seonammedi/public/app.js'),
+    read('sites/seonammedi/public/admin/index.html'),read('sites/seonammedi/public/admin/admin.js'),
+    read('seonammedi-admin-control.js'),read('seonammedi-monitor.js')
+  ]);
+  for(const id of ['committeeNewsList','committeeNewsForm','committeeNewsManageToggle','committeeNewsCancel'])assert.match(html,new RegExp('id="'+id+'"'));
+  assert.match(html,/id="committeeNewsManageToggle"[^>]*hidden/);
+  assert.match(js,/function renderCommitteeNews\(\)/);
+  assert.match(js,/publicTimelineEntries\.filter\(isCommitteeRelatedNews\)\.slice\(\)\.sort\(timelineDescending\)/);
+  assert.match(js,/if\(admin\.has\('timeline'\)\)bindCommitteeNewsAdmin\(\)/);
+  for(const command of ['committee-news-edit','committee-news-status','committee-news-delete','committee-news-hide'])assert.ok(js.includes('data-'+command));
+  assert.match(js,/recordScope:'news',committeeRelated:true/);
+  assert.match(js,/monitorPubliclyVisible\(item\)/);
+  assert.match(monitor,/filter\(isPublicSeonamMediSource\)/);
+  assert.match(html,/name="committeeRelated" type="checkbox"/);
+  assert.match(adminHtml,/type="checkbox" name="committeeRelated"/);
+  assert.match(adminJs,/committeeRelated:form\.elements\.committeeRelated\.checked/);
+  assert.match(api,/committee_related INTEGER NOT NULL DEFAULT 0/);
+  assert.match(api,/await addColumnIfMissing\(db,'seonammedi_timeline','committee_related'/);
+  assert.match(api,/committeeRelated:row\.record_scope!=='committee'/);
+  assert.match(api,/record_scope=\?,committee_kind=\?,committee_related=\?/);
+  assert.match(api,/record_scope,committee_kind,committee_related,status,sort_order/);
+  assert.match(api,/if\(!can\(auth,TIMELINE_CAP\)\)return json/);
+});
+
+test('committee-related news classification never converts articles into committee-led activity',async()=>{
+  const {runInNewContext}=await import('node:vm');
+  const js=await read('sites/seonammedi/public/app.js');
+  const snippet=js.match(/const isCommitteeRecord=item=>[^;]+;\nconst isCommitteeRelatedNews=item=>\{[\s\S]*?\n\};/);
+  assert.ok(snippet,'relevance classification is present');
+  const classify=runInNewContext(snippet[0]+'\nisCommitteeRelatedNews');
+  assert.equal(classify({recordScope:'committee',committeeRelated:true,title:'서남권 의대 비대위 공식활동'}),false);
+  assert.equal(classify({recordScope:'news',title:'서남권 의대 비대위 활동 관련 보도'}),true);
+  assert.equal(classify({recordScope:'news',committeeRelated:true,title:'비상대책위 공식 제공 사진'}),true);
+  assert.equal(classify({recordScope:'news',title:'타 지역 비대위 소식'}),false);
+  assert.equal(classify({recordScope:'news',title:'전남 국립의대 관련 대학 보도'}),false);
+});
