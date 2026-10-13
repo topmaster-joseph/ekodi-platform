@@ -2,6 +2,15 @@ name: Deploy EKODIBIZ Revenue OS
 
 on:
   workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Verified EKODI Orchestrator source branch'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Verified EKODI Orchestrator task'
+        required: true
+        type: string
   pull_request:
     paths:
       - 'ekodibiz/**'
@@ -24,6 +33,10 @@ on:
 
 permissions:
   contents: read
+
+env:
+  EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+  EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
 
 concurrency:
   group: ekodibiz-revenue-os-${{ github.ref }}
@@ -137,7 +150,7 @@ jobs:
           echo 'EKODIBIZ deployed to development and functional AI operations verified.'
 
   deploy-production:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.release_branch_ref != '' && inputs.release_task_id != '')
     needs: deploy-staging
     runs-on: ubuntu-latest
     timeout-minutes: 22
