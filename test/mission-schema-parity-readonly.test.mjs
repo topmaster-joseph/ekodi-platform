@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp,readFile,rm} from 'node:fs/promises';
+import {readFileSync} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {FIELD_KEYS,PROOF_SQL,compare,queryCatalog,run,sanitizeRows} from '../scripts/report-mission-schema-parity.mjs';
@@ -69,4 +70,20 @@ test('audit runs in two metadata-only lanes and writes a sanitized artifact',asy
    assert.ok(!onDisk.includes('test-secret'));
    assert.equal(JSON.parse(onDisk).developmentParity,false);
  }finally{await rm(dir,{recursive:true,force:true})}
+});
+
+test('Owner-scoped repo event for native parity execution cannot be launched by a guest comment',()=>{
+  const workflow=readFileSync(new URL('../.github/workflows/mission-schema-parity-readonly.yml',import.meta.url),'utf8');
+  assert.match(workflow,/issue_comment:/);
+  assert.match(workflow,/types: \[created\]/);
+  assert.match(workflow,/github\.ref == 'refs\/heads\/main'/);
+  assert.match(workflow,/github\.event\.issue\.number == 4259/);
+  assert.match(workflow,/github\.event\.comment\.user\.login == 'topmaster-joseph'/);
+  assert.match(workflow,/startsWith\(github\.event\.comment\.body, 'EKODI-MISSION-PARITY-RUN:'/);
+  assert.match(workflow,/environment: production/);
+  assert.match(workflow,/permissions:\s*\n\s+contents: read/,'GitHub token must not have write permissions');
+  assert.match(workflow,/read_only=true/);
+  assert.doesNotMatch(workflow,/pull_request_target:/);
+  assert.doesNotMatch(workflow,/^\s+schedule:/m,'No unapproved recurring use of production management credential');
+  assert.doesNotMatch(workflow,/^\s+(?:push|pull_request|workflow_run):/m,'Catalog credential must not be available to non-owner events');
 });
