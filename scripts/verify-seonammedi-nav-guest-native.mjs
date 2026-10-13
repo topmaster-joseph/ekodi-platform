@@ -90,6 +90,33 @@ try {
           if(suffix==='/board/voices'&&record.editorShownWithoutLogin)violations.push('guest_composer_exposed');
           if(suffix==='/board/voices'&&record.authButtonVisible)violations.push('guest_login_button_before_write');
           if(suffix==='/minutes/'&&(!record.minutesGuestGate||!record.minutesPrivateContentHidden))violations.push('minutes_guest_privacy_gate_missing');
+          if(suffix==='/board/voices'){
+            if(!record.writeButtonVisible){
+              violations.push('guest_write_entry_missing');
+            } else {
+              // No credentials entered, no posting. Click only to confirm that
+              // anonymous writers are first handed to the canonical login gate.
+              const loginNavigations=[];
+              const observe=frame=>{
+                if(frame===page.mainFrame())loginNavigations.push(frame.url());
+              };
+              page.on('framenavigated',observe);
+              try {
+                await page.locator('#writeToggle').click({timeout:5000});
+                await pause(2200);
+                record.loginNavigations=loginNavigations.slice(-6).map(url=>{
+                  // Strip any auth query payloads from retained evidence.
+                  const u=new URL(url);return u.origin+u.pathname+(u.searchParams.get('site')?'?site='+u.searchParams.get('site'):'');
+                });
+                record.guestLoginRedirect=loginNavigations.some(url=>{
+                  try{const u=new URL(url);return u.origin==='https://ekodi.kr'&&
+                    u.pathname.startsWith('/auth/')&&u.searchParams.get('site')==='seonammedi'}catch{return false}
+                });
+                if(!record.guestLoginRedirect)violations.push('guest_write_did_not_open_canonical_login');
+              }catch(error){violations.push('guest_write_login_click_failed: '+String(error.message||error).slice(0,160))}
+              finally{page.off('framenavigated',observe)}
+            }
+          }
           record.violations=violations;
           if(violations.length)throw Error(violations.join('; '));
           record.ok=true;
