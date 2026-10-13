@@ -2,6 +2,8 @@ name: EKODI AI Orchestration Gate
 
 on:
   pull_request:
+  merge_group:
+    types: [checks_requested]
   push:
     branches: [main]
   workflow_dispatch:
@@ -105,7 +107,7 @@ jobs:
           node --test test/guarded-worker-release-rollback.test.mjs
       - name: Enforce apex-path-only domain policy
         env:
-          ZERO_SUBDOMAIN_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          ZERO_SUBDOMAIN_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
         run: |
           node --check scripts/zero-subdomain-guard.mjs
           node scripts/zero-subdomain-guard.mjs

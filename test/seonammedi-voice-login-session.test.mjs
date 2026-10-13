@@ -20,7 +20,7 @@ test('public board renders parseable login-first composer JavaScript on both sit
    assert.match(html,/id="voiceAuthStatus"[^>]*aria-live="polite"/);
    assert.match(html,/if\(!await requireVoiceAccount\(\)\)return/);
    assert.match(html,/voiceAuthLabel\(\(data.email/);
-   assert.match(html,/auth.searchParams.set\("site","portal"\)/);
+   assert.match(html,/auth.searchParams.set\("site","seonammedi"\)/);
    assert.match(html,/target.searchParams.set\("compose","1"\)/);
    assert.match(html,/if\(allowed&&new URLSearchParams\(location.search\).get\("compose"\)==="1"\)/);
  }

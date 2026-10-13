@@ -25,3 +25,21 @@ test('source integrity failures print exact structured evidence before exiting',
   assert.match(source,/for \(const error of report\.errors\)/);
   assert.match(source,/writeFile\(REPORT_PATH/);
 });
+
+
+test('source integrity audit materializes generated runtime files only as an ephemeral test precondition',()=>{
+  assert.match(source,/generate:user-services/);
+  assert.match(source,/generated-runtime-precondition/);
+  assert.match(source,/if \(!generate\.ok\)/);
+  assert.match(source,/'generated\/user-services\.js'/);
+  assert.match(source,/historical\/generated artifact must remain in Git history/);
+});
+
+test('legacy domain debt blocks only when the current audit window modifies the stale reference',()=>{
+  assert.match(source,/const changedFileSet = new Set\(changedFiles\)/);
+  assert.match(source,/if \(changedFileSet\.has\(file\)\) blocking\.push\(ref\)/);
+  assert.match(source,/else inherited\.push\(ref\)/);
+  assert.match(source,/type: 'legacy-domain-debt'/);
+  assert.match(source,/non-blocking inherited debt; any new or modified reference remains blocking/);
+  assert.match(source,/type: 'stale-domain-reference'/);
+});
