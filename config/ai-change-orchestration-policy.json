@@ -504,5 +504,69 @@
     "claimScopeMustMatchEvidenceScope": true,
     "materialKnowledgeCitationRequired": true,
     "finalResponseGuardRequired": true
+  },
+  "deploymentGateModel": {
+    "policyId": "EKODI-DEPLOY-3GATE-001",
+    "status": "enforced",
+    "principle": "preserve-detailed-verification-collapse-owner-facing-stages",
+    "publicSequence": [
+      "build",
+      "release",
+      "production"
+    ],
+    "detailedLifecycleRemainsAuditable": true,
+    "duplicateChecksMustBeDeduplicated": true,
+    "samePurposeChecksRunInsideOneGate": true,
+    "parallelizeIndependentChecks": true,
+    "riskRouting": {
+      "low": {
+        "publicGates": [
+          "build",
+          "production"
+        ],
+        "collapsedGates": [
+          "release"
+        ]
+      },
+      "normal": {
+        "publicGates": [
+          "build",
+          "release",
+          "production"
+        ],
+        "collapsedGates": []
+      },
+      "high": {
+        "publicGates": [
+          "build",
+          "release",
+          "production"
+        ],
+        "collapsedGates": [],
+        "independentVerificationRequired": true
+      },
+      "critical": {
+        "publicGates": [
+          "build",
+          "release",
+          "production"
+        ],
+        "collapsedGates": [],
+        "independentVerificationRequired": true
+      }
+    },
+    "completion": {
+      "productionEvidenceRequiredWhenDeploymentRequested": true,
+      "liveFunctionalVerificationRequired": true,
+      "deployCommandAloneNeverMeansDone": true
+    },
+    "preservation": [
+      "human-gates",
+      "security-boundaries",
+      "data-integrity",
+      "rollback-readiness",
+      "orchestrator-provenance",
+      "production-verification"
+    ]
   }
 }

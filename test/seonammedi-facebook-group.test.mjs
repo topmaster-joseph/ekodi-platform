@@ -49,7 +49,7 @@ test('group source does not fabricate published timeline entries or pretend scra
     read('sites/seonammedi/public/index.html'),
     read('sites/seonammedi/public/app.js')
   ]);
-  assert.match(js,/const relatedRows=publicTimelineEntries\.filter\(item=>!isCommitteeRecord\(item\)\)/);
+  assert.match(js,/const relatedRows=publicTimelineEntries\.filter\(item=>!isCommitteeRecord\(item\)&&!isCommitteeRelatedNews\(item\)\)/);
   assert.match(js,/filter\(item=>relatedNewsFilterMatches\(item,activeTimelineCategory\)\)/);
   assert.match(html,/확인되지 않은 게시물은 자동 공개하지 않습니다/);
   assert.match(html,/related-facebook-source/);

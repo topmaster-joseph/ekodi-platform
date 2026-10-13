@@ -222,7 +222,7 @@ const relatedNewsFilterMatches=(item,selected)=>{
 };
 function renderPublicTimeline(){
   const host=el('timelineList');if(!host)return;
-  const relatedRows=publicTimelineEntries.filter(item=>!isCommitteeRecord(item));
+  const relatedRows=publicTimelineEntries.filter(item=>!isCommitteeRecord(item)&&!isCommitteeRelatedNews(item));
   const rows=relatedRows.filter(item=>relatedNewsFilterMatches(item,activeTimelineCategory)).slice().sort(timelineDescending);
   host.innerHTML=rows.length?rows.map((item,index)=>{
     const adminActions=publicTimelineAdminMode&&!item.autoCollected?'<div class="timeline-admin-actions"><span class="source-type '+(item.status==='published'?'':'is-private')+'">'+(item.status==='published'?'공개':'비공개')+'</span><button type="button" data-timeline-edit="'+Number(item.id)+'">수정</button><button type="button" data-timeline-status="'+Number(item.id)+'">'+(item.status==='published'?'비공개로':'공개로')+'</button><button type="button" data-timeline-delete="'+Number(item.id)+'">삭제</button></div>':publicContentInlineMode&&item.autoCollected&&Number(item.monitorSourceId)>0?'<div class="timeline-admin-actions"><span class="source-type">자동수집 기사</span><button type="button" data-monitor-hide="'+Number(item.monitorSourceId)+'">이 자료 삭제</button></div>':'';
