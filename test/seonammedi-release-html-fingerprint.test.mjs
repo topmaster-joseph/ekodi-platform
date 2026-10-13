@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { finalizeSeonamMediRelease } from '../scripts/finalize-seonammedi-release.mjs';
+import { finalizeSeonamMediRelease, repairSeonamMediHeadMarkup } from '../scripts/finalize-seonammedi-release.mjs';
 
 const assets=[
   'app.js','app.css','voice-public-admin.js',
@@ -45,11 +45,29 @@ test('release fingerprint changes when only homepage HTML changes',async()=>{
   }finally{await rm(first.output,{recursive:true,force:true});await rm(second.output,{recursive:true,force:true})}
 });
 
-test('build rejects a literal escaped newline in homepage head, ignoring script source',async()=>{
+test('build self-heals literal escaped newline between head tags without hiding source code',async()=>{
   const good=await fixture('Homepage A',false);
   const bad=await fixture('Homepage A',true);
   try{
-    await assert.doesNotReject(finalizeSeonamMediRelease(good.output+'/'));
-    await assert.rejects(finalizeSeonamMediRelease(bad.output+'/'),/seonammedi_homepage_head_contains_literal_escaped_whitespace/);
+    const a=await finalizeSeonamMediRelease(good.output+'/');
+    const b=await finalizeSeonamMediRelease(bad.output+'/');
+    const html=await readFile(path.join(bad.root,'index.html'),'utf8');
+    assert.match(html, /summary_large_image">\n<meta property="og:image"/);
+    assert.doesNotMatch(html, /summary_large_image">\\n/);
+    assert.ok(html.includes('const okay="\\n"'));
+    assert.notEqual(a.release,b.release,'the repaired source has a distinct version fingerprint');
   }finally{await rm(good.output,{recursive:true,force:true});await rm(bad.output,{recursive:true,force:true})}
+});
+
+test('HTML head repair preserves script/style and rejects unrepairable malformed markup',()=>{
+  const source='<html><head><script>const x="\\n"</script><style>i:after{content:"\\n"}</style>'
+    +'<meta name="twitter:card" content="summary_large_image">\\n  <meta property="og:image" content="x">'
+    +'</head><body>body</body></html>';
+  const result=repairSeonamMediHeadMarkup(source);
+  assert.equal(result.repaired,1);
+  assert.ok(result.html.includes('<script>const x="\\n"</script>'));
+  assert.ok(result.html.includes('<style>i:after{content:"\\n"}</style>'));
+  assert.ok(result.html.includes('summary_large_image">\n  <meta property="og:image"'));
+  assert.throws(()=>repairSeonamMediHeadMarkup('<head><meta content="literal \\n value"></head>'),/unrepairable_literal/);
+  assert.throws(()=>repairSeonamMediHeadMarkup('<html><body>missing head</body></html>'),/html_head_missing/);
 });
