@@ -34,3 +34,39 @@ The existing CGMA native background browser checks **public GET only**. The admi
 This is a **readiness contract**, not a claim that a privileged production agent is already capable of or authorized to mutate the CGMA board.
 
 **Release verification note:** GitHub bot-authored merge synchronization can yield `action_required`; only a real owner-authored commit and successful required checks may unblock the protected merge. Never disable those checks.
+
+## 2026-10-13: isolated D1 grant storage milestone (not production authorization)
+
+A server-only library cgma-native-grant-store.js now holds a short-lived D1
+one-use lease state machine. Isolated Node 24 / in-memory SQLite tests cover
+device binding, principal identity, CGMA board scope, consent freshness,
+expiry, double-consumption, concurrent consumption, revocation and payload
+credential rejection.
+
+**This stage does not enable privileged native board writes.** There is no
+HTTP grant issuer, no device-side authorization, no production migration,
+no authoritative audit attestation, and no change to hybrid queue's
+AUTH_REQUIRED / CGMA_NATIVE_WRITE_DELEGATION_NOT_CONFIGURED safeguard.
+
+Before any production grant issuance, a trusted server handler must independently
+verify EKODI session, CGMA board-local owner/admin membership, explicit
+consent, isolated device identity, bounded lease, and authoritative board
+audit events. Never accept client-supplied attestation booleans as proof.
+A grant reference with nonce is not a bearer credential and never grants
+native agents direct access to protected CGMA write endpoints.
+
+## D1 authoritative audit verification milestone (not an enabled native writer)
+
+New server-only module cgma-native-audit-evidence.js validates a native
+canary receipt against independently queried D1 grant, exact test post,
+soft-delete state, and post.create -> post.edit -> post.delete audit IDs,
+actors and timestamps. It enforces the two-minute consumed lease and
+compares audit references to actual server rows; device-provided evidence
+alone cannot pass. In-memory SQLite tests cover valid and forged receipts,
+missing rows, wrong author/content, nondeleted posts and expired lease.
+
+The agent queue still returns AUTH_REQUIRED. The code does not provide a
+public grant issuer, a trusted device-to-server grant consumer, audited
+production data migration, or a legitimate authenticated production
+session. Remaining server integration must verify board-local authorization
+and user consent and must never trust client-supplied attestation booleans.

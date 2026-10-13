@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {
-  classifySeonamMediMonitor,classifyWorkflow,
+  classifySeonamMediMonitor,classifyMallSnsReadiness,classifyWorkflow,
   collectEkodiNativeWatch,renderEkodiWatchSummary
 } from '../scripts/ekodi-native-operations-watch.mjs';
 
@@ -26,6 +26,11 @@ function fakeFetch({monitor=okMonitor,failHealth=false,rateLimit=false}={}){
     if(rateLimit)return new Response('',{status:429});
     if(url.endsWith('/cgma/board/api/health'))return json({ok:true,boardId:'site:cgma:main',siteId:'cgma',independent:true});
     if(url.endsWith('/api/health'))return failHealth?new Response('',{status:503}):json({ok:true});
+    if(url.endsWith('/marketing-connect-api/health'))return json({
+      ok:true,schemaReady:true,oauthBroker:true,encryptedVault:true,paidActivation:false,
+      platform:{youtubeConfigured:true,metaConfigured:true,threadsConfigured:true},
+      mallPromotionAutomation:{channelReadiness:{youtubeConnected:true,socialPublishReady:true}}
+    });
     if(url.includes('/api/seonammedi/monitor'))return json(monitor);
     if(url.includes('/release-receipt?'))return json({ok:true,authorized:true,state:'completed'});
     if(url.includes('/actions/workflows/'))return json(workflowRuns);
@@ -61,7 +66,8 @@ test('read-only EKODI watch calls only GET and retains no article bodies or toke
   const {fetchImpl,calls}=fakeFetch();
   const result=await collectEkodiNativeWatch({fetchImpl,githubToken:'secret-not-in-output',nowMs:now,mode:'daily'});
   assert.equal(result.result,'ok');
-  assert.equal(result.checks.length,9);
+  assert.equal(result.checks.length,10);
+  assert.ok(result.checks.some(x=>x.name==='mall-sns-readiness'&&x.status==='ok'));
   assert.ok(result.checks.some(x=>x.name==='cgma-independent-board'&&x.status==='ok'));
   assert.ok(result.checks.some(x=>x.name==='cgma-board-health-watch.yml'&&x.status==='ok'));
   assert.equal(result.chatgptAutomationRequired,false);
@@ -95,6 +101,34 @@ test('CGMA board health verifies identity, not just a misleading ok flag',async(
   const report=await collectEkodiNativeWatch({fetchImpl:bogus,nowMs:now});
   assert.equal(report.result,'attention');
   assert.equal(report.checks.find(x=>x.name==='cgma-independent-board').reason,'board_identity_invalid');
+});
+
+test('Mall SNS native watch distinguishes configured provider from actual account-linked readiness',()=>{
+  const baseline={
+    ok:true,schemaReady:true,oauthBroker:true,encryptedVault:true,paidActivation:false,
+    platform:{youtubeConfigured:true,metaConfigured:false,threadsConfigured:false},
+    mallPromotionAutomation:{
+      channelReadiness:{youtubeConnected:false,socialPublishReady:false,
+        active:[{email:'never-copy@example.com',accessToken:'SENSITIVE'}]}
+    }
+  };
+  const status=classifyMallSnsReadiness(baseline);
+  assert.equal(status.status,'warning');
+  assert.equal(status.reason,'youtube_oauth_connection_required');
+  assert.equal(status.youtubeConfigured,true);
+  assert.equal(status.youtubeConnected,false);
+  assert.equal(status.socialPublishReady,false);
+  assert.ok(!JSON.stringify(status).includes('never-copy@example.com'));
+  assert.ok(!JSON.stringify(status).includes('SENSITIVE'));
+  assert.equal(classifyMallSnsReadiness({...baseline,
+    mallPromotionAutomation:{channelReadiness:{youtubeConnected:true,socialPublishReady:true}}
+  }).reason,'meta_threads_app_setup_required');
+  assert.equal(classifyMallSnsReadiness({...baseline,
+    platform:{youtubeConfigured:true,metaConfigured:true,threadsConfigured:true},
+    mallPromotionAutomation:{channelReadiness:{youtubeConnected:true,socialPublishReady:true}}
+  }).status,'ok');
+  assert.equal(classifyMallSnsReadiness({...baseline,oauthBroker:false}).status,'alert');
+  assert.equal(classifyMallSnsReadiness({...baseline,mallPromotionAutomation:{}}).reason,'readiness_missing');
 });
 
 test('provider 429 stops all further reads and preserves a deferred state',async()=>{
