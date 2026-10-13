@@ -56,9 +56,16 @@ try {
       entry.httpStatus=response?.status()??null;
       must(response?.ok(),'page_not_http_2xx_'+entry.httpStatus);
       await page.locator('.campaign-hero-image').waitFor({state:'visible',timeout:12000});
+      const assetCheck=await page.request.get(origin+assetPath,{timeout:25000,failOnStatusCode:false});
+      entry.assetStatus=assetCheck.status();
+      must(assetCheck.ok(),'hero_asset_http_'+entry.assetStatus);
+      const assetBody=await assetCheck.body();
+      entry.assetBytes=assetBody.length;
+      entry.assetSha256=crypto.createHash('sha256').update(assetBody).digest('hex');
+      must(entry.assetSha256===expectedSha,'hero_asset_bytes_differ_from_submitted_file');
       await page.waitForFunction(()=>{
         const img=document.querySelector('.campaign-hero-image');
-        return img?.complete&&img.naturalWidth>0;
+        return img?.complete===true;
       },null,{timeout:15000});
       const evidence=await page.evaluate(()=>{
         const img=document.querySelector('.campaign-hero-image');
@@ -82,7 +89,7 @@ try {
       });
       Object.assign(entry,evidence);
       must(new URL(entry.imageSrc).pathname===assetPath,'hero_asset_path_changed');
-      must(entry.naturalWidth===1903&&entry.naturalHeight===735,'hero_source_dimensions_mismatch');
+      must(entry.naturalWidth===1903&&entry.naturalHeight===735,'hero_source_dimensions_mismatch_or_not_loaded');
       must(entry.alt.includes('국립의대'),'hero_accessibility_alt_missing');
       must(entry.heroDisplay==='block','hero_style_missing');
       must(Math.abs(entry.displayedWidth/entry.displayedHeight-1903/735)<0.015,'hero_image_is_cropped_or_distorted');
@@ -90,13 +97,6 @@ try {
       must(!entry.horizontalOverflow,'viewport_horizontal_overflow');
       must(entry.siteHeader&&entry.latestUpdates&&entry.spotlight,'homepage_functionality_missing');
       must(entry.mobileHint,'mobile_magnification_instruction_missing');
-      const asset=await page.request.get(origin+assetPath,{timeout:25000,failOnStatusCode:false});
-      entry.assetStatus=asset.status();
-      must(asset.ok(),'hero_asset_http_'+entry.assetStatus);
-      const body=await asset.body();
-      entry.assetBytes=body.length;
-      entry.assetSha256=crypto.createHash('sha256').update(body).digest('hex');
-      must(entry.assetSha256===expectedSha,'hero_asset_bytes_differ_from_submitted_file');
       const shot=path.join(screenshotsPath,safeName+'-'+profile.name+'.png');
       await page.screenshot({path:shot,fullPage:true,animations:'disabled'});
       entry.screenshot=path.basename(shot);
