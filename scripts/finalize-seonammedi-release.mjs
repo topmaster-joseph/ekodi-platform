@@ -25,8 +25,13 @@ export async function finalizeSeonamMediRelease(output){
     assets[key]={path:fingerprinted,sha256:sha256(body)};
   }
   const routes={home:'/',timeline:'/#timeline',channels:'/#channels',voices:'/board',finance:'/finance/',notices:'/notices/',organization:'/#organization',admin:'/admin/'};
-  const release=shortHash(JSON.stringify({assets,routes}));
-  const manifest={schemaVersion:1,site:'seonammedi',release,assets,routes};
+  // HTML-only changes must create a new release; otherwise convergence can confirm stale markup.
+  const inputHtmlHashes={};
+  for(const page of ['index.html','admin/index.html','finance/index.html','notices/index.html']){
+    inputHtmlHashes[page]=sha256(await readFile(siteDir+page));
+  }
+  const release=shortHash(JSON.stringify({assets,routes,inputHtmlHashes}));
+  const manifest={schemaVersion:1,site:'seonammedi',release,assets,routes,inputHtmlHashes};
   await mkdir(siteDir+'.well-known/',{recursive:true});
   await writeFile(siteDir+'.well-known/ekodi-release.json',JSON.stringify(manifest,null,2)+'\n');
 
@@ -45,7 +50,8 @@ export async function finalizeSeonamMediRelease(output){
   if(!html.includes('data-ekodi-release-convergence'))html=html.replace('</head>',runtime+'\n</head>');
   // Prevent escaped newline text from terminating <head> and appearing above the homepage.
   const headSection=html.slice(0,html.toLowerCase().indexOf('</head>'));
-  if(/\\\\[nrt]/.test(headSection.replace(/<script\\b[^>]*>[\\s\\S]*?<\\/script>/gi,''))) {
+  const visibleHead=headSection.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi,'').replace(/<!--[\s\S]*?-->/g,'');
+  if(['\\n','\\r','\\t'].some(marker=>visibleHead.includes(marker))) {
     throw new Error('seonammedi_homepage_head_contains_literal_escaped_whitespace');
   }
   await writeFile(siteDir+'index.html',html);
