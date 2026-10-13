@@ -901,11 +901,11 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
 
 test('seonammedi customer domain cache-busts public and admin static assets',async()=>{
   const [html,adminHtml]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('admin/index.html',root),'utf8')]);
-  assert.ok(html.includes('/seonammedi/app.css?v=20261012-source-link-1'));
-  assert.ok(html.includes('/seonammedi/app.js?v=20261012-source-link-1'));
+  assert.ok(html.includes('/seonammedi/app.css?v=20261013-committee-news-1'));
+  assert.ok(html.includes('/seonammedi/app.js?v=20261013-committee-news-1'));
   assert.ok(adminHtml.includes('<a class="brand" href="./">'));
   assert.ok(adminHtml.includes('<a href="../" target="_blank" rel="noopener">공개페이지</a>'));
-  assert.ok(adminHtml.includes('/seonammedi/admin/admin.js?v=20261012-source-link-1'));
+  assert.ok(adminHtml.includes('/seonammedi/admin/admin.js?v=20261013-committee-news-1'));
   assert.ok(adminHtml.includes('/seonammedi/admin/admin-minutes.js?v=20261006-domain-routing-2'));
 });
 
