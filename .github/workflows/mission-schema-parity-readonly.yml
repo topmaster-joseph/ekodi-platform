@@ -1,0 +1,59 @@
+name: EKODI Mission DEV PROD Readonly Schema Parity
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mission-schema-parity-catalog-only
+  cancel-in-progress: false
+
+jobs:
+  read-only-parity:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      EKODI_DEV_PROJECT_REF: lxcxwbdwwojjkgybbqii
+      EKODI_PROD_PROJECT_REF: renzehysxirjilvdxacv
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Assert catalog-only script contract (no production mutation)
+        run: |
+          set -euo pipefail
+          node --check scripts/report-mission-schema-parity.mjs
+          node --test test/mission-schema-parity-readonly.test.mjs
+      - name: Compare DEV and PROD metadata with management read_only=true
+        run: |
+          set -euo pipefail
+          [ -n "$SUPABASE_ACCESS_TOKEN" ] || {
+            echo 'Missing approved Supabase management credential: fail closed.'
+            exit 1
+          }
+          echo "::add-mask::$SUPABASE_ACCESS_TOKEN"
+          node scripts/report-mission-schema-parity.mjs
+      - name: Publish sanitized truth report only
+        if: always()
+        run: |
+          if [ -f artifacts/mission-schema-parity/report.json ]; then
+            jq -r '"### EKODI Mission SQL metadata-only parity\n- Disposition: \\(.disposition)\n- PROD security guard verified: \\(.productionGuardVerified)\n- DEV/PROD parity verified: \\(.developmentParity)\n- Missing DEV contracts: \\(.missingInDev | join(", "))\n- Note: no SQL mutation or production user data copied"' artifacts/mission-schema-parity/report.json >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Mission parity report was not generated. No positive verification claim.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mission-schema-parity-catalog-only
+          path: artifacts/mission-schema-parity/report.json
+          if-no-files-found: warn
+          retention-days: 7
