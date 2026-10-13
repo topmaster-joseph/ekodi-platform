@@ -6,6 +6,14 @@ import { fileURLToPath } from 'node:url';
 
 export const ORIGIN='https://ekodi.kr';
 export const LOCALE_SELECTOR='[data-ekodi-language-placement="header"]';
+// Source paths/service identifiers are grounded in ekodi-service-manifest.js.
+// One extra public candidate is probed per weekly/PR pass; never crawl domains.
+export const LIVE_SURFACES=Object.freeze([
+  {path:'/',device:'desktop',service:'ekodi'},
+  {path:'/journal',device:'mobile',service:'journal'},
+  {path:'/seonammedi/',device:'desktop',service:'seonammedi'},
+  {path:'/ekodibiz',device:'desktop',service:'biz'}
+]);
 const outputFile=process.env.EKODI_LANGUAGE_EVIDENCE_FILE||'artifacts/native-language-selector/report.json';
 
 export function assessLanguageDOM(snapshot, publishedLocales){
@@ -23,8 +31,18 @@ export function assessLanguageDOM(snapshot, publishedLocales){
       return {status:'fail',reason:'document_locale_not_published'};
   }
   if(snapshot.footerControls>0||snapshot.headerControls>1)return {status:'fail',reason:'duplicate_or_footer_language_controls'};
-  if(mustShow && (count!==1||!snapshot.pill||!snapshot.accessible||!snapshot.optionsMatchPublished)){
-    return {status:'fail',reason:'published_multilocale_selector_contract'};
+  // Do not compare options to the page's own readiness list as a substitute
+  // for authoritative publication. Both UI state and dropdown choices must
+  // equal the independently observed public API locales.
+  const sameLocales=(actual,expected)=>
+    Array.isArray(actual)&&actual.length===expected.length&&
+    new Set(actual).size===actual.length&&actual.every(x=>expected.includes(x));
+  if(!sameLocales(snapshot.readyLocales,allowed)){
+    return {status:'fail',reason:'runtime_readiness_not_equal_to_published_api'};
+  }
+  if(mustShow){
+    if(count!==1||!snapshot.pill||!snapshot.accessible)return {status:'fail',reason:'published_multilocale_selector_contract'};
+    if(!sameLocales(snapshot.options,unique))return {status:'fail',reason:'selector_options_not_equal_to_published_api'};
   }
   if(!mustShow && (count!==0||snapshot.headerControls!==0)){
     return {status:'fail',reason:'single_locale_selector_leaked'};
@@ -171,11 +189,7 @@ async function live(run,chromium){
   const browser=await chromium.launch({headless:true});
   const contexts=[];
   let stopped=false;
-  for(const {path:surface,device,service} of [
-    {path:'/',device:'desktop',service:'ekodi'},
-    {path:'/journal',device:'mobile',service:'journal'},
-    {path:'/seonammedi/',device:'desktop',service:'seonammedi'}
-  ]){
+  for(const {path:surface,device,service} of LIVE_SURFACES){
     if(stopped)break;
     const context=await browser.newContext({viewport:device==='mobile'?{width:390,height:844}:{width:1440,height:900},serviceWorkers:'block'});
     contexts.push(context);
@@ -228,7 +242,8 @@ export async function runNativeAcceptance(){
   try{await live(report,chromium)}catch(e){report.production.push({status:'inconclusive',reason:String(e.message||e).slice(0,250)})}
   report.liveMultiPublishedObserved=report.production.some(x=>x.headerMode==='shared'&&x.status==='pass'&&x.apiPublished?.length>=2);
   // Korean-only standalone sites can be compliant without implying a live multilingual release.
-  report.liveCertified=report.production.length===3&&report.production.every(x=>x.status==='pass')&&report.liveMultiPublishedObserved;
+  report.liveCertified=report.production.length===LIVE_SURFACES.length&&
+    report.production.every(x=>x.status==='pass')&&report.liveMultiPublishedObserved;
   report.completedAt=new Date().toISOString();
   // A source PR must first fix the live-production mismatch; production is still
   // running the previous release until protected merge/deploy. Surface that drift

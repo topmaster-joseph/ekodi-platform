@@ -6,7 +6,7 @@
   <meta name="ekodi-route-contract" content="CANONICAL-PATH-MOUNT-PARITY-001 CANONICAL-ROUTE-SLASH-PARITY-001">
   <meta name="robots" content="noindex,nofollow,noarchive">
   <title>서남권 국립의대 소통센터 관리</title>
-  <link rel="stylesheet" href="/seonammedi/admin/admin.css?v=20261012-source-link-1">
+  <link rel="stylesheet" href="/seonammedi/admin/admin.css?v=20261013-committee-news-1">
 </head>
 <body>
 <header class="topbar">
@@ -68,7 +68,7 @@
             <input type="hidden" name="id">
             <h2 id="timelineFormTitle">활동이력 추가</h2>
             <div class="form-row"><label>일자<input name="date" maxlength="40" placeholder="2026.09.30" required></label><label>출처 분류<input name="category" list="adminNewsCategories" maxlength="80" placeholder="신문 · 방송 · 대학 등" required></label></div>
-            <label>자료 구분<select name="recordScope"><option value="news">관련소식</option><option value="committee">비상대책위 활동이력</option></select></label><label>제목<input name="title" maxlength="220" required></label>
+            <label>자료 구분<select name="recordScope"><option value="news">관련소식</option><option value="committee">비상대책위 활동이력</option></select></label><label><input type="checkbox" name="committeeRelated"> 비상대책위 관련소식으로도 표시</label><label>제목<input name="title" maxlength="220" required></label>
             <label>요약<textarea name="summary" maxlength="8000" rows="6"></textarea></label>
             <label>근거 표시<input name="evidence" maxlength="500" placeholder="공식자료 · 언론보도 등"></label>
             <div class="form-row"><label>정렬<input name="sortOrder" type="number" min="0" max="9999" value="0"></label><label>상태<select name="status"><option value="published">공개</option><option value="draft">비공개</option></select></label></div>
@@ -78,7 +78,7 @@
           <section class="card list-card"><div class="card-head"><h2>관련소식·활동이력 목록</h2><button type="button" id="reloadTimeline" class="secondary">새로고침</button></div><div id="timelineAdminList" class="item-list"></div></section>
         </div>
       </div>
-      <datalist id="adminNewsCategories"><option value="신문"><option value="잡지"><option value="방송"><option value="통신사"><option value="유튜브"><option value="블로그"><option value="대학"><option value="정부·공공기관"><option value="공식기록"><option value="시민·단체"></datalist>
+      <datalist id="adminNewsCategories"><option value="신문"><option value="잡지"><option value="방송"><option value="통신사"><option value="유튜브"><option value="블로그"><option value="대학"><option value="정부·공공기관"><option value="공식기록"><option value="페이스북"><option value="페이스북 그룹"><option value="시민·단체"></datalist>
       <div data-records-admin-panel="review" hidden>
         <div class="heading"><div><p class="eyebrow">WEB SEARCH REVIEW</p><h1>웹검색 게시검토</h1><p>일일점검으로 수집된 공식기록·관련보도 후보를 확인한 뒤 체크하여 공개합니다. 미승인 후보는 공개페이지에 표시되지 않습니다.</p></div><button id="reloadContent" type="button" class="secondary">새로고침</button></div>
         <section class="card list-card"><div class="card-head"><h2>수집 후보</h2><span class="muted">분류 선택 → 게시 체크</span></div><div id="contentList" class="item-list"></div><p id="contentMessage" class="message" role="status"></p></section>
@@ -187,7 +187,7 @@
     </section>
   </main>
 </div>
-<script type="module" src="/seonammedi/admin/admin.js?v=20261012-source-link-1"></script>
+<script type="module" src="/seonammedi/admin/admin.js?v=20261013-committee-news-1"></script>
 <script type="module" src="/seonammedi/admin/admin-minutes.js?v=20261006-domain-routing-2"></script>
 </body>
 </html>

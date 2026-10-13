@@ -80,33 +80,37 @@ test('aggregate outcome is not successful if both live receipts are absent',asyn
   assert.equal(result.mode,'ekodi-native-receipt-gated');
 });
 
-test('USER4 CDP and Ollama commands are both queued before either waits for completion',async()=>{
-  const posted=new Set();
+test('USER4 finishes local AI before launching resource-intensive CDP Browser Worker',async()=>{
+  const posted=[];
   const browserType='computer.browser.canary';
   const aiType='software.localai.verify';
   const fetchImpl=async(url,init)=>{
     if(init.method==='POST'){
       const {type}=JSON.parse(init.body);
       assert([browserType,aiType].includes(type));
-      posted.add(type);
+      posted.push(type);
       return new Response(JSON.stringify({command:{type,id:type,status:'queued'}}),{status:200});
     }
-    const recentCommands=posted.size===2?[
-      {id:browserType,type:browserType,status:'succeeded',completedAt:new Date(now).toISOString(),
-        result:{browserCanary:{ok:true,mode:'native-cdp',url:'https://ekodi.kr/',
-          contentBytes:3700,dedicatedAutomationProfile:true,focusIsolated:true,
-          clipboardShared:false,userInputInjection:false}}},
-      {id:aiType,type:aiType,status:'succeeded',completedAt:new Date(now).toISOString(),
-        result:{localAiProof:{ollamaApi:'ready',inference:'passed',
-          credentialCollection:false,executionMode:'fixed_loopback_api',
-          selectedModel:'qwen3:0.6b',claudeCli:'not_visible_to_agent'}}}
-    ]:[];
+    const recentCommands=[
+      ...(posted.includes(browserType)?[
+        {id:browserType,type:browserType,status:'succeeded',completedAt:new Date(now).toISOString(),
+          result:{browserCanary:{ok:true,mode:'native-cdp',url:'https://ekodi.kr/',
+            contentBytes:3700,dedicatedAutomationProfile:true,focusIsolated:true,
+            clipboardShared:false,userInputInjection:false}}}
+      ]:[]),
+      ...(posted.includes(aiType)?[
+        {id:aiType,type:aiType,status:'succeeded',completedAt:new Date(now).toISOString(),
+          result:{localAiProof:{ollamaApi:'ready',inference:'passed',
+            credentialCollection:false,executionMode:'fixed_loopback_api',
+            selectedModel:'qwen3:0.6b',claudeCli:'not_visible_to_agent'}}}
+      ]:[])
+    ];
     const device={...good,capabilities:{localAiVerify:true},recentCommands};
     return new Response(JSON.stringify({devices:[device]}),{status:200});
   };
   const result=await verifyUser4Acceptance({token:'authorized-admin-session-token-abcdef',
     clock:()=>now,fetchImpl,sleepFn:async()=>{},maxPoll:4});
-  assert.deepEqual([...posted].sort(),[browserType,aiType].sort());
+  assert.deepEqual(posted,[aiType,browserType]);
   assert.equal(result.ok,true);
   assert.equal(result.browserVerified,true);
   assert.equal(result.localAiVerified,true);
@@ -114,6 +118,33 @@ test('USER4 CDP and Ollama commands are both queued before either waits for comp
   assert.equal(result.localAi.targetAlias,'user4');
 });
 
+test('browser proof is still collected if USER4 local AI fails, without reporting full success',async()=>{
+  const posted=[];
+  const fetchImpl=async(url,init)=>{
+    if(init.method==='POST'){
+      const type=JSON.parse(init.body).type;
+      posted.push(type);
+      return new Response(JSON.stringify({command:{id:type,type,status:'queued'}}),{status:200});
+    }
+    const recentCommands=posted.map(type=>({
+      id:type,type,status:'succeeded',completedAt:new Date(now).toISOString(),
+      result:type==='software.localai.verify'
+        ? {localAiProof:{ollamaApi:'ready',inference:'not_ready',
+            credentialCollection:false,executionMode:'fixed_loopback_api'}}
+        : {browserCanary:{ok:true,mode:'native-cdp',url:'https://ekodi.kr/',
+            contentBytes:3700,dedicatedAutomationProfile:true,
+            focusIsolated:true,clipboardShared:false,userInputInjection:false}}
+    }));
+    return new Response(JSON.stringify({devices:[{...good,capabilities:{localAiVerify:true},recentCommands}]}),{status:200});
+  };
+  const result=await verifyUser4Acceptance({token:'authorized-admin-session-token-abcdef',
+    clock:()=>now,fetchImpl,sleepFn:async()=>{},maxPoll:4});
+  assert.deepEqual(posted,['software.localai.verify','computer.browser.canary']);
+  assert.equal(result.ok,false);
+  assert.equal(result.browserVerified,true);
+  assert.equal(result.localAiVerified,false);
+  assert.match(result.failures.join(','),/native_localai_inference_not_ready/);
+});
 
 test('USER4 browser failure diagnostics are an allowlisted category without raw data',()=>{
   assert.equal(classifyUser4BrowserFailure('CDP_NODE_RUNTIME_REQUIRED'),'CDP_NODE_RUNTIME_REQUIRED');

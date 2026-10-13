@@ -1,0 +1,112 @@
+name: SeonamMedi Native Hero Browser Verification
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'sites/seonammedi/public/**'
+      - 'scripts/verify-seonammedi-hero-native.mjs'
+      - 'test/seonammedi-hero-native.test.mjs'
+      - '.github/workflows/verify-seonammedi-hero-native.yml'
+  pull_request:
+    paths:
+      - 'sites/seonammedi/public/**'
+      - 'scripts/verify-seonammedi-hero-native.mjs'
+      - 'test/seonammedi-hero-native.test.mjs'
+      - '.github/workflows/verify-seonammedi-hero-native.yml'
+  workflow_run:
+    workflows:
+      - Deploy EKODI Shared Site Core
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seonammedi-native-hero-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  source-and-local-browser:
+    if: github.event_name != 'workflow_run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout EKODI source
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate hero source contract and image bytes
+        run: |
+          node --check scripts/verify-seonammedi-hero-native.mjs
+          node --test test/seonammedi-hero-native.test.mjs
+      - name: Install first-party Chromium harness
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Serve repository's actual static homepage
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .tmp/native-hero-site/seonammedi
+          cp -a sites/seonammedi/public/. .tmp/native-hero-site/seonammedi/
+          (
+            cd .tmp/native-hero-site
+            nohup python3 -m http.server 8765 --bind 127.0.0.1 > ../native-hero-http.log 2>&1 </dev/null &
+          )
+          for i in $(seq 1 30); do
+            if curl -fsS -o /dev/null 'http://127.0.0.1:8765/seonammedi/'; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Run EKODI-owned desktop and mobile Chromium against source
+        run: |
+          node scripts/verify-seonammedi-hero-native.mjs --origin=http://127.0.0.1:8765 --out=artifacts/native-hero-local
+      - name: Preserve local browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seonammedi-native-hero-local-${{ github.run_id }}
+          path: artifacts/native-hero-local
+          if-no-files-found: warn
+          retention-days: 14
+
+  production-native-browser:
+    continue-on-error: ${{ github.event_name == 'pull_request' }}
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout trusted EKODI branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && 'main' || github.ref }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install first-party Chromium harness
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Verify canonical production screen and original banner bytes
+        id: canonical
+        run: |
+          node scripts/verify-seonammedi-hero-native.mjs --origin=https://ekodi.kr --out=artifacts/native-hero-canonical
+      - name: Verify preserved customer domain and original banner bytes
+        if: always() && steps.canonical.outcome != 'skipped'
+        run: |
+          node scripts/verify-seonammedi-hero-native.mjs --origin=https://seonammedi.kr --out=artifacts/native-hero-customer
+      - name: Preserve production evidence and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seonammedi-native-hero-production-${{ github.run_id }}
+          path: artifacts/native-hero-*
+          if-no-files-found: warn
+          retention-days: 14

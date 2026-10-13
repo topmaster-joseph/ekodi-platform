@@ -18,9 +18,19 @@ test('public board renders parseable login-first composer JavaScript on both sit
    assert.equal(scripts.length,1,'board must have exactly one inline script');
    assert.doesNotThrow(()=>new Script(scripts[0]),'browser script must parse');
    assert.match(html,/id="voiceAuthStatus"[^>]*aria-live="polite"/);
+   assert.match(html,/id="voiceAuthStatus"[^>]*hidden/,'anonymous status must not prompt for login');
+   assert.doesNotMatch(html,/id="adminLogin"/,'no separate login button before writing');
+   assert.match(html,/id="voiceManageToggle"[^>]*hidden/,'management button is initially hidden');
+   assert.match(html,/if\(q\|\|!voiceVerified\)/,'unverified visitors cannot see management');
+   assert.match(html,/\/board\/api\/admin\/posts/,'server-side admin permission is checked');
+   assert.match(html,/manageToggle\.hidden=false/,'only admin API success reveals management');
+   assert.match(html,/manageToggle\.onclick=\(\)=>/,'management button controls inline edit mode');
+   assert.match(html,/if\(adminLink\)adminLink\.hidden=true/,'admin link is initially hidden');
+   assert.match(html,/render\(adminMode\?adminItems:publicItems,adminMode\)/,'public/admin cards switch without separate admin board');
+
    assert.match(html,/if\(!await requireVoiceAccount\(\)\)return/);
    assert.match(html,/voiceAuthLabel\(\(data.email/);
-   assert.match(html,/auth.searchParams.set\("site","portal"\)/);
+   assert.match(html,/auth.searchParams.set\("site","seonammedi"\)/);
    assert.match(html,/target.searchParams.set\("compose","1"\)/);
    assert.match(html,/if\(allowed&&new URLSearchParams\(location.search\).get\("compose"\)==="1"\)/);
  }

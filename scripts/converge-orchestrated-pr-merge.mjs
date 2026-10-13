@@ -59,6 +59,13 @@ const cgmaApexTouched=changedFiles.some(file=>[
   'site-board-control.js',
   'scripts/converge-orchestrated-pr-merge.mjs',
 ].includes(file));
+// The Access API owns the Google handoff allowlist. GitHub-token merges do not
+// emit main push events, so its guarded Supabase deploy must be dispatched.
+const accessApiTouched=changedFiles.some(file=>
+  file.startsWith('supabase/functions/access-api/')||
+  file.startsWith('supabase/functions/_shared/')||
+  file==='.github/workflows/deploy-access-api.yml'
+);
 const independentBoardTouched=changedFiles.some(file=>
   file.startsWith('services/independent-board/')||
   file==='wrangler.independent-board.toml'||
@@ -74,6 +81,12 @@ const myTouched=changedFiles.some(file=>
 );
 // Release targets are selected only from the verified, merged PR file list.
 const controlApiTouched=changedFiles.some(file=>[
+  // LANG-UI-001: public language status is served by api-worker.js via
+  // language-automation.js. A GITHUB_TOKEN merge does not fire main push CI,
+  // so this requires the same receipt-bound Control API deployment.
+  'language-automation.js',
+  'config/language-registry.js',
+  'config/managed-language-sites.js',
   'affiliate-control.js',
   'affiliate-marketplace.js',
   'coupang-partners-automation.js',
@@ -232,7 +245,26 @@ const churchApiTouched=changedFiles.some(file=>
   file.startsWith('supabase/functions/church-pastor-api/')||
   file==='.github/workflows/deploy-church-pastor-api.yml'
 );
+// Signed-in Admin continuity must run after the E2E harness or dispatch wiring changes.
+const adminContinuityVerificationTouched=changedFiles.some(file=>
+  file==='scripts/verify-admin-login-continuity.mjs'||
+  file==='test/admin-login-continuity-contract.test.mjs'||
+  file==='.github/workflows/verify-admin-authenticated-production-e2e.yml'||
+  file==='.github/workflows/admin-authenticated-e2e.yml'||
+  file==='scripts/converge-orchestrated-pr-merge.mjs'
+);
 async function dispatchPostMergeDeploys(){
+  if(adminContinuityVerificationTouched){
+    const response=await api('/actions/workflows/verify-admin-authenticated-production-e2e.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main'})
+    });
+    if(!response.r.ok)fail('Authenticated Admin E2E dispatch failed '+response.r.status);
+    console.log(JSON.stringify({ok:true,action:'admin-login-e2e-dispatched',
+      workflow:'verify-admin-authenticated-production-e2e.yml',pr:pr.number,
+      taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+
   if(nativeUser4AcceptanceTouched){
     const dispatch=await api('/actions/workflows/device-agent-production-verification.yml/dispatches',{
       method:'POST',
@@ -407,6 +439,14 @@ async function dispatchPostMergeDeploys(){
     });
     if(!dispatch.r.ok)fail('My EKODI deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
     console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-my.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+  if(accessApiTouched){
+    const dispatch=await api('/actions/workflows/deploy-access-api.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('Access API deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-access-api.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
   if(independentBoardTouched){
     const dispatch=await api('/actions/workflows/deploy-independent-board.yml/dispatches',{

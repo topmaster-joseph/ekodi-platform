@@ -321,7 +321,7 @@ test('seonammedi admin utilities live above the left menu and content starts nea
 
 test('seonammedi public and admin menus keep the agreed content-first order',async()=>{
   const [html,adminHtml]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('admin/index.html',root),'utf8')]);
-  const publicOrder=['활동이력','관련소식','시민의견','회계','공지','조직'];
+  const publicOrder=['활동이력','관련소식','소통채널','시민의견','공지','조직'];
   let cursor=-1;for(const label of publicOrder){const next=html.indexOf('>'+label+'</a>',cursor+1);assert.ok(next>cursor,'public menu order: '+label);cursor=next}
   assert.doesNotMatch(html,/data-view-link="records"|data-view-link="timeline"|data-view-link="materials"/);
   assert.match(html,/id="timeline"[^>]*data-view-section="status"/);
@@ -329,8 +329,8 @@ test('seonammedi public and admin menus keep the agreed content-first order',asy
   assert.doesNotMatch(html,/<h2>현재상황<\/h2>|CURRENT STATUS|출처 검증형/);
   assert.match(html,/data-status-tab="news"[^>]*>관련보도<\/button>/);
   assert.match(html,/data-status-tab="official"[^>]*>공식기록<\/button>/);
-  assert.match(html,/href="#committee-activity" data-view-link="committee">활동이력<\/a>/);
-  assert.match(html,/href="#timeline" data-view-link="status">관련소식<\/a>/);
+  assert.match(html,/href="#committee-activity"[^>]*>활동이력<\/a>/);
+  assert.match(html,/href="#timeline"[^>]*>관련소식<\/a>/);
   assert.match(html,/id="timeline"[^>]*class="section activity-list-only"/);
   assert.doesNotMatch(html,/id="timeline"[\s\S]*?<div class="section-head">[\s\S]*?<h2>활동이력<\/h2>/);
   assert.doesNotMatch(html,/id="timeline"[\s\S]*?id="statusTabs"/);
@@ -436,7 +436,7 @@ test('seonammedi exposes seeded related channels on public and admin surfaces',a
     readFile(new URL('../migrations/0118_seonammedi_channel_seed.sql',import.meta.url),'utf8')
   ]);
   assert.match(html,/id="relatedChannelLinks"/);
-  assert.doesNotMatch(html,/data-view-link="channels"/);
+  assert.match(html,/href="#channels" data-view-link="channels">소통채널<\/a>/);
   assert.match(html,/id="channels"[^>]*data-view-section="channels"/);
   assert.match(html,/id="publicChannelTabs"/);
   assert.match(html,/id="channelPreview"/);
@@ -685,8 +685,9 @@ test('seonammedi activity history always renders in descending date order across
   const app=await readFile(new URL('app.js',root),'utf8');
   assert.match(app,/const timelineDateKey=value=>/);
   assert.match(app,/const timelineDescending=\(a,b\)=>timelineDateKey\(b\.date\)-timelineDateKey\(a\.date\)/);
-  assert.match(app,/const relatedRows=publicTimelineEntries\.filter\(item=>!isCommitteeRecord\(item\)\)/);
-  assert.match(app,/\(activeTimelineCategory==='전체'\?relatedRows:relatedRows\.filter\([^;]+\)\)\.slice\(\)\.sort\(timelineDescending\)/);
+  assert.match(app,/const relatedRows=publicTimelineEntries\.filter\(item=>!isCommitteeRecord\(item\)&&!isCommitteeRelatedNews\(item\)\)/);
+  assert.match(app,/const relatedNewsFilterMatches=\(item,selected\)=>/);
+  assert.match(app,/const rows=relatedRows\.filter\(item=>relatedNewsFilterMatches\(item,activeTimelineCategory\)\)\.slice\(\)\.sort\(timelineDescending\)/);
   assert.match(app,/committeeItems\(\)/);
 });
 
@@ -780,7 +781,9 @@ test('seonammedi citizen opinions hand off to the standalone board-owned UI',asy
   assert.match(worker,/의견 등록/);
   assert.match(worker,/답글 등록/);
   assert.match(worker,/\/api\/admin\/posts/);
-  assert.match(worker,/adminLogin\.hidden=false;await load\(\)/);
+  assert.doesNotMatch(worker,/adminLogin\.hidden=false;await load\(\)/);
+  assert.match(worker,/if\(q\|\|!voiceVerified\)/);
+  assert.match(worker,/manageToggle\.hidden=false/);
   const authEntry=await readFile(new URL('../auth-site/auth-entry.js',import.meta.url),'utf8');
   assert.match(authEntry,/purpose'\) === 'seonammedi-board-admin'/);
   assert.match(config,/database_name = "ekodi-independent-board"/);
@@ -802,7 +805,7 @@ test('seonammedi voices finance and notices use sibling standalone board routes'
   assert.match(worker,/boardPath\(req,'notices'\)/);
   assert.match(worker,/function financePage\(req\)/);
   assert.match(worker,/function noticesPage\(req\)/);
-  assert.match(worker,/sitePath\(req,'\/#organization'\)/);
+  assert.match(worker,/home\('#organization'\)/);
 });
 
 
@@ -901,11 +904,13 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
 
 test('seonammedi customer domain cache-busts public and admin static assets',async()=>{
   const [html,adminHtml]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('admin/index.html',root),'utf8')]);
-  assert.ok(html.includes('/seonammedi/app.css?v=20261012-source-link-1'));
-  assert.ok(html.includes('/seonammedi/app.js?v=20261012-source-link-1'));
+  const cssVersion=html.match(/\/seonammedi\/app\.css\?v=(20261013-[a-z0-9-]+)/)?.[1];
+  const jsVersion=html.match(/\/seonammedi\/app\.js\?v=(20261013-[a-z0-9-]+)/)?.[1];
+  assert.ok(cssVersion,'public stylesheet must carry an explicit release cache-buster');
+  assert.equal(jsVersion,cssVersion,'public script and stylesheet must share one cache-buster');
   assert.ok(adminHtml.includes('<a class="brand" href="./">'));
   assert.ok(adminHtml.includes('<a href="../" target="_blank" rel="noopener">공개페이지</a>'));
-  assert.ok(adminHtml.includes('/seonammedi/admin/admin.js?v=20261012-source-link-1'));
+  assert.ok(adminHtml.includes('/seonammedi/admin/admin.js?v=20261013-committee-news-1'));
   assert.ok(adminHtml.includes('/seonammedi/admin/admin-minutes.js?v=20261006-domain-routing-2'));
 });
 

@@ -91,6 +91,10 @@ jobs:
           npm install --no-save --package-lock=false playwright@1.55.0
           npx playwright install --with-deps chromium
 
+      - name: Verify Admin login and reload session continuity
+        shell: bash
+        run: node scripts/verify-admin-login-continuity.mjs
+
       - name: Click and render every authenticated admin menu
         run: node scripts/admin-authenticated-e2e-retry.mjs
 

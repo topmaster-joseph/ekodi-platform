@@ -15,7 +15,7 @@ test('public landing serves only static content without invented people or event
   const result=await routeSinglesSurface(req('/singles'),env);
   assert.equal(result.status,200);
   const html=await result.text();
-  assert.match(html,/같은 믿음/);
+  assert.match(html,/함께라서 더 아름다운 우리/);
   assert.match(html,/\/singles\/my/);
   assert.doesNotMatch(html,/<img[^>]+src=['"]https?:/i);
   assert.match(result.headers.get('content-security-policy'),/frame-ancestors 'none'/);

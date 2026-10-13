@@ -14,7 +14,7 @@ if (!menuIds.includes(menuId)) throw new Error(`Unknown Admin menu: ${menuId}`);
 const group = getAdminMenuGroupForSection(menuId);
 const adminOrigin = 'https://ekodi.kr';
 const baseUrl = `${adminOrigin}/admin/`;
-const authenticatedEntryUrl = `${baseUrl}?route=finance#ekodi_admin_token=${token}`;
+const authenticatedEntryUrl = `${baseUrl}?route=finance`;
 const isCanonicalAdminUrl = url => url.hostname === 'ekodi.kr' && (url.pathname === '/admin' || url.pathname.startsWith('/admin/'));
 const artifactsDir = path.resolve('artifacts/admin-authenticated-e2e');
 const reportPath = path.join(artifactsDir, `menu-${menuId.replace(/[^a-z0-9_-]/gi, '_')}.json`);
@@ -593,6 +593,9 @@ try {
   stage('browser');
   browser = await chromium.launch({ headless: true, timeout: 20_000 });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
+  await context.addInitScript(value => {
+    sessionStorage.setItem('ekodi-auth-token', value);
+  }, token);
   context.setDefaultTimeout(5_000);
   context.setDefaultNavigationTimeout(15_000);
   page = await context.newPage();
