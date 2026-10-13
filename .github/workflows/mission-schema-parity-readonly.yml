@@ -46,7 +46,7 @@ jobs:
         if: always()
         run: |
           if [ -f artifacts/mission-schema-parity/report.json ]; then
-            jq -r '"### EKODI Mission SQL metadata-only parity\n- Disposition: \\(.disposition)\n- PROD security guard verified: \\(.productionGuardVerified)\n- DEV/PROD parity verified: \\(.developmentParity)\n- Missing DEV contracts: \\(.missingInDev | join(", "))\n- Note: no SQL mutation or production user data copied"' artifacts/mission-schema-parity/report.json >> "$GITHUB_STEP_SUMMARY"
+            jq -r '"### EKODI Mission SQL metadata-only parity\n- Disposition: \(.disposition)\n- PROD security guard verified: \(.productionGuardVerified)\n- DEV/PROD parity verified: \(.developmentParity)\n- Missing DEV contracts: \(.missingInDev | join(", "))\n- Note: no SQL mutation or production user data copied"' artifacts/mission-schema-parity/report.json >> "$GITHUB_STEP_SUMMARY"
           else
             echo 'Mission parity report was not generated. No positive verification claim.' >> "$GITHUB_STEP_SUMMARY"
           fi
