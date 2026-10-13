@@ -71,3 +71,4 @@
  .romantic-cta .primary,.romantic-cta .outline{flex:1 1 auto;width:100%}
 }
 @media(prefers-reduced-motion:reduce){.romantic-links a{transition:none}.romantic-links a:hover{transform:none}}
+/* EKODI guarded release recovery trigger · task 20261013-singles-photo-hero · no visual or auth policy change. */
