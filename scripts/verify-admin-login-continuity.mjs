@@ -81,7 +81,10 @@ try{
   passed=true;
 }catch(error){
   // Only an allowlisted stage and a categorical outcome are reported.
-  console.error('[EKODI][ADMIN-CONTINUITY] FAIL stage='+stage);
+  const codes=new Set(['SESSION_HTTP_DENIED','SESSION_NOT_SUPER_ADMIN','ADMIN_SURFACE_LOST','HANDOFF_FRAGMENT_NOT_CLEARED','CANONICAL_NESTED_ROUTE_LOST','RELOAD_ROUTE_LOST','LOGIN_REDIRECT_DETECTED']);
+  const reason=codes.has(error?.message)?error.message:'BROWSER_OR_RUNTIME_FAILURE';
+  stages.push('FAILED_'+reason);
+  console.error('[EKODI][ADMIN-CONTINUITY] FAIL stage='+stage+' code='+reason);
   process.exitCode=1;
 }finally{
   await fs.writeFile(reportFile,JSON.stringify({
