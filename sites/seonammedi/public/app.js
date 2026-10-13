@@ -365,10 +365,16 @@ function renderHomeMonitorUpdates(data){
   const section=el('homeLatestUpdates'),list=el('homeLatestList'),updated=el('homeLatestUpdatedAt');
   if(!section||!list)return;
   const rows=monitorHomeRows(data?.items||[]);
-  section.hidden=!rows.length;
-  if(!rows.length){list.innerHTML='';return}
+  section.hidden=false;
   const runAt=data?.lastRun?.completed_at||'';
-  if(updated)updated.textContent=runAt?'마지막 갱신 '+new Date(runAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})+' · EKODI 자동갱신':'1시간마다 자동 갱신';
+  const lastChecked=runAt?'마지막 수집 '+new Date(runAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'첫 수집 대기';
+  if(updated)updated.textContent=lastChecked+' · EKODI 자동갱신';
+  if(!rows.length){
+    const state=data?.lastRun?.status;
+    const explanation=state==='failed'?'일부 외부 뉴스 검색 서비스에 장애가 있습니다.':state==='partial'?'일부 뉴스 검색원에서 오류가 발생했습니다.':'현재 원문 확인이 완료된 새 기사가 없습니다.';
+    list.innerHTML='<p class="muted" role="status">'+explanation+' 검증되지 않은 검색 결과는 자동으로 공개하지 않습니다. 기존 기록은 <a href="#timeline">관련소식</a>에서 확인할 수 있습니다.</p>';
+    return;
+  }
   list.innerHTML=rows.map(item=>{
     const when=kstDate(item.published_at||item.first_seen_at||'');
     const state=item.review_state==='verified'?'검증 완료':'자동수집 · 원문 확인';
