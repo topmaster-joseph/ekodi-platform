@@ -34,7 +34,7 @@ if(!aiControl.includes('env.CONTROL_API.fetch(sessionRequest)'))fail('AI control
 if(aiControl.includes('clean(env.CONTROL_API_URL)'))fail('AI control must not fall back to public fetch for privileged identity');
 for(const filename of ['wrangler.ai.toml','wrangler.ai.release.toml']){
   const config=read(filename);
-  if(!config.includes('binding = "CONTROL_API"\\nservice = "ekodi-auth-api"'))fail(`${filename} missing central Control API Worker service binding`);
+  if(!config.includes('binding = "CONTROL_API"')||!config.includes('service = "ekodi-auth-api"'))fail(`${filename} missing central Control API Worker service binding`);
 }
 
 const postbuild=read('scripts/admin-performance-postbuild.mjs');
