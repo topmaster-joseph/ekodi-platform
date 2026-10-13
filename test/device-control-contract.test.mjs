@@ -488,3 +488,18 @@ test('native registered Windows Agent self-recovers after process exit without l
   assert.match(agent, /api\/device-agent\/commands\/next" -TimeoutSec 15/);
   assert.match(agent, /protectedToken = Protect-LocalSecret/);
 });
+
+
+test('browser task journal crosses Device Control sanitization and is shown without raw arguments', () => {
+  assert.match(api, /const audit = result\.agent\.browserTaskAudit/);
+  assert.match(api, /new Set\(\['computer\.browser\.canary','computer\.browser\.execute','computer\.browser\.pr\.observe'\]\)/);
+  assert.match(api, /summary\.agent\.browserTaskAudit =/);
+  assert.match(api, /audit\.recent\.slice\(0,20\)/);
+  assert.match(api, /ownedBrowserProcessId: Math\.max/);
+  assert.match(api, /ownedTabsClosed: Math\.min/);
+  assert.match(admin, /에코디 브라우저 작업 원장/);
+  assert.match(admin, /관측 탭/);
+  assert.match(admin, /닫힘/);
+  assert.match(admin, /item\.commandType/);
+  assert.doesNotMatch(admin, /item\.commandLine|item\.profilePath/);
+});

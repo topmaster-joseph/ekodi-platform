@@ -77,3 +77,14 @@ test('native screenshot closes only owned process tree and checks unique profile
   assert.match(deviceAgent, /background_browser_process_cleanup_unverified/);
   assert.match(deviceAgent, /background_browser_profile_cleanup_failed/);
 });
+
+
+test('native-owned CDP tab and PID evidence is persisted independently of user Opera tabs', () => {
+  assert.match(deviceAgent, /ownedTabId = \[string\]\$page\.id/);
+  assert.match(deviceAgent, /ownedTabsObserved = \[int\]\$ownedTabCount/);
+  assert.match(deviceAgent, /ownedTabsClosed =/);
+  assert.match(deviceAgent, /ownedBrowserProcessId = \[int\]\$capture\.processId/);
+  assert.match(deviceAgent, /browserProcessClosed = \[bool\]\$treeClosed/);
+  assert.match(deviceAgent, /interrupted_unverified/);
+  assert.match(deviceAgent, /userTabsTouched = \$false/);
+});
