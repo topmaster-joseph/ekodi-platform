@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Read-only guest baseline for the three canonical EKODI Control surfaces; not a release authorization",
+  "canonicalOrigin": "https://ekodi.kr",
+  "maxPaths": 3,
+  "surfaces": []
+}
