@@ -86,7 +86,7 @@ try {
           mobileHint:!!document.querySelector('.campaign-hero-mobile-hint'),
           brand:document.querySelector('.brand')?.textContent?.trim().slice(0,100),
           leadingVisibleText:(document.body?.innerText||'').slice(0,140),
-          leadingEscapedNewlines:/^(?:\s|\\\\[nrt])+\\\\[nrt]/.test((document.body?.innerText||'').slice(0,140).trimStart())
+          leadingEscapedNewlines:/^\\[nrt]/.test((document.body?.innerText||'').trimStart())
         };
       });
       Object.assign(entry,evidence);
