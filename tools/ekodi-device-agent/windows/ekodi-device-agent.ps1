@@ -1306,6 +1306,22 @@ function Invoke-EkodiCdpCommand($Socket, [int]$Id, [string]$Method, $Params = $n
   return $response
 }
 
+
+# An owned Chrome/Edge process is identified by an agent-generated Task-UUID
+# profile, not by the browser's name, foreground title or user profile.
+function Find-EkodiOwnedProfileBrowsers([string]$Profile) {
+  $rootPath = [IO.Path]::GetFullPath($BrowserWorkerProfileRoot).TrimEnd('\') + '\Task-'
+  $fullPath = [IO.Path]::GetFullPath($Profile)
+  if (-not $fullPath.StartsWith($rootPath, [StringComparison]::OrdinalIgnoreCase) -or
+      $fullPath.Substring($rootPath.Length) -notmatch '^[a-fA-F0-9]{32}$') {
+    throw 'browser_owned_profile_invalid'
+  }
+  $escaped = [regex]::Escape($fullPath)
+  $pattern = '(?i)(?:^|\s)--user-data-dir=(?:"' + $escaped + '"|' + $escaped + ')(?=\s|$)'
+  return @(Get-CimInstance Win32_Process -ErrorAction Stop |
+    Where-Object { $_.Name -in @('chrome.exe','msedge.exe') -and [regex]::IsMatch([string]$_.CommandLine, $pattern) })
+}
+
 function Invoke-EkodiHeadlessScreenshot(
   [string]$Browser,
   [string]$Target,
@@ -1340,8 +1356,11 @@ function Invoke-EkodiHeadlessScreenshot(
   }
 
   $socket = $null
+  $captureProof = $null
+  $started = $false
   try {
     [void]$process.Start()
+    $started = $true
     $stdoutTask = $process.StandardOutput.ReadToEndAsync()
     $stderrTask = $process.StandardError.ReadToEndAsync()
 
@@ -1389,13 +1408,15 @@ function Invoke-EkodiHeadlessScreenshot(
     if ($bytes.Length -le 0) { throw 'cdp_screenshot_empty' }
     [IO.File]::WriteAllBytes($ScreenshotPath, $bytes)
 
-    return @{
+    $captureProof = @{
       processId = $process.Id
+      browserProcessClosed = $false
       browserExitCode = $null
       cdpPort = $port
       pageUrl = [string]$page.url
       screenshotBytes = [long]$bytes.Length
     }
+    return $captureProof
   } finally {
     if ($socket) {
       try {
@@ -1405,13 +1426,29 @@ function Invoke-EkodiHeadlessScreenshot(
       } catch { }
       try { $socket.Dispose() } catch { }
     }
-    if (-not $process.HasExited) {
-      try { $process.Kill() } catch { }
+    # Terminate only our exact PID tree; no global Chrome/Opera taskkill.
+    if ($started -and -not $process.HasExited) {
+      try { & taskkill.exe /PID $process.Id /T /F 2>$null | Out-Null } catch { }
+      if (-not $process.HasExited) { try { $process.Kill() } catch { } }
       try { [void]$process.WaitForExit(5000) } catch { }
     }
-    try { [void]$stdoutTask.GetAwaiter().GetResult() } catch { }
-    try { [void]$stderrTask.GetAwaiter().GetResult() } catch { }
+    $treeClosed = $false
+    try {
+      $orphans = @(Find-EkodiOwnedProfileBrowsers $TaskProfile)
+      foreach ($orphan in $orphans) {
+        try { Stop-Process -Id ([int]$orphan.ProcessId) -Force -ErrorAction Stop } catch { }
+      }
+      Start-Sleep -Milliseconds 200
+      $treeClosed = (-not $started -or $process.HasExited) -and
+        @(Find-EkodiOwnedProfileBrowsers $TaskProfile).Count -eq 0
+    } catch { $treeClosed = $false }
+    if ($captureProof) { $captureProof.browserProcessClosed = [bool]$treeClosed }
+    if ($started) {
+      try { [void]$stdoutTask.GetAwaiter().GetResult() } catch { }
+      try { [void]$stderrTask.GetAwaiter().GetResult() } catch { }
+    }
     try { $process.Dispose() } catch { }
+    if (-not $treeClosed) { throw 'background_browser_process_cleanup_unverified' }
   }
 }
 
@@ -1562,6 +1599,7 @@ function Invoke-BackgroundBrowserWorker($Payload) {
         interactiveLoginOpened = $false
         createUserBrowserTab = $false
         ownedAutomationSurfaceAutoClosed = $true
+        browserProcessClosed = $true
         userOwnedSurfacesPreserved = $true
         temporaryProfileRemoved = $false
         screenshotArtifactRemoved = $false
@@ -1595,6 +1633,7 @@ function Invoke-BackgroundBrowserWorker($Payload) {
       screenshotTransport = 'chrome-devtools-protocol'
       cdpPortAssigned = [bool]($capture.cdpPort -gt 0)
       browserProcessIdObserved = [bool]($capture.processId -gt 0)
+      browserProcessClosed = [bool]($capture.browserProcessClosed)
       contentBytes = [Text.Encoding]::UTF8.GetByteCount($stdout)
       contentSha256 = Get-Sha256String $stdout
       screenshotBytes = [long]$shot.Length
@@ -1630,7 +1669,8 @@ function Invoke-BackgroundBrowserWorker($Payload) {
     }
   }
 
-  if (-not $proof -or -not $proof.profileRemoved -or -not $proof.screenshotArtifactRemoved) { throw 'background_browser_profile_cleanup_failed' }
+  if (-not $proof -or -not $proof.profileRemoved -or -not $proof.screenshotArtifactRemoved -or
+      $proof.browserProcessClosed -ne $true) { throw 'background_browser_profile_cleanup_failed' }
   if ($proof.authRequired -eq $true) {
     return @{ message = '인증이 필요한 자동작업을 사용자 화면에 열지 않고 AUTH_REQUIRED로 기록한 뒤 백그라운드 세션을 종료했습니다.'; browserWorker = $proof }
   }
