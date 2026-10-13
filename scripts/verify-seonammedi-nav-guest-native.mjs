@@ -148,3 +148,4 @@ finally{
   console.log(JSON.stringify({passed:report.passed,surfaceCount:report.results.length,successCount:report.results.filter(x=>x.ok).length,errors:report.errors,artifactPath:out}));
   if(!report.passed)process.exitCode=1;
 }
+// Post-merge read-only audit rerun for guarded release PR #4627.
