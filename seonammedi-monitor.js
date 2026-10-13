@@ -186,22 +186,47 @@ export async function runSeonamMediHourlyCheck(env,{scheduledAt=null,force=false
     .bind(completedAt,status,checked,seen,added,clean(errors.join(' | '),1000),runId).run().catch(()=>{});
   return {ok:status!=='failed',status,checked,seen,added,mediaCandidates,completedAt,errors};
 }
+// Public feed uses bounded batches so an old, unverified search hit cannot
+// starve newer approved records or limit the archive to the last seven days.
+const PUBLIC_NEWS_BATCH=160;
+const PUBLIC_NEWS_PAGE_SIZE=60;
+const PUBLIC_NEWS_MAX_SCANS=12;
 export async function handleSeonamMediMonitorApi(request,env){
   const url=new URL(request.url);if(url.pathname!==API_PATH)return null;
   if(request.method!=='GET')return json({ok:false,error:'method_not_allowed'},405,'no-store');
   if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable',lastRun:null,items:[]},503,'no-store');
+  const cursorValue=url.searchParams.get('cursor');
+  if(cursorValue!==null&&!/^(0|[1-9]\d{0,8})$/.test(cursorValue))return json({ok:false,error:'invalid_cursor'},400,'no-store');
+  const initialOffset=cursorValue===null?0:Number(cursorValue);
+  // Bound public requests; an absent limit remains backwards compatible.
+  const requestedLimit=Number(url.searchParams.get('limit'));
+  const pageSize=Number.isSafeInteger(requestedLimit)&&requestedLimit>0?Math.min(requestedLimit,PUBLIC_NEWS_PAGE_SIZE):48;
   try{
     await ensureSourceVerificationColumn(env.DB);
-    const [lastRun,rows]=await Promise.all([
-      env.DB.prepare('SELECT id,started_at,completed_at,status,sources_checked,items_seen,new_items,error_summary FROM seonammedi_monitor_runs ORDER BY id DESC LIMIT 1').first(),
-      env.DB.prepare("SELECT id,title,url,resolved_url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,media_type,media_url,media_source,media_published_at,media_state,source_type,summary_text,source_verified FROM seonammedi_monitor_items WHERE datetime(last_seen_at)>=datetime('now','-7 days') ORDER BY COALESCE(published_at,first_seen_at) DESC LIMIT 160").all()
-    ]);
-    // Apply the same publication gate to ALL historical rows at read time:
-    // previously collected but never content-confirmed items disappear now.
-    const recentCandidates=rows?.results||[];
-    const publicItems=recentCandidates.filter(isPublicSeonamMediSource).slice(0,48)
-      .map(item=>({...item,content_match:item.review_state==='verified'?'editor_verified':'source_confirmed'}));
+    const lastRun=await env.DB.prepare('SELECT id,started_at,completed_at,status,sources_checked,items_seen,new_items,error_summary FROM seonammedi_monitor_runs ORDER BY id DESC LIMIT 1').first();
+    const collected=[];
+    let offset=initialOffset,exhausted=false;
+    for(let scan=0;scan<PUBLIC_NEWS_MAX_SCANS&&collected.length<pageSize;scan++){
+      const rows=await env.DB.prepare("SELECT id,title,url,resolved_url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,media_type,media_url,media_source,media_published_at,media_state,source_type,summary_text,source_verified FROM seonammedi_monitor_items WHERE review_state NOT IN ('rejected','archived') AND (review_state='verified' OR (source_verified=1 AND source_type='news')) ORDER BY COALESCE(published_at,first_seen_at) DESC,id DESC LIMIT ? OFFSET ?").bind(PUBLIC_NEWS_BATCH,offset).all();
+      const candidates=rows?.results||[];
+      if(!candidates.length){exhausted=true;break}
+      const publicItems=candidates.filter(isPublicSeonamMediSource);
+      const needed=pageSize-collected.length;
+      const selected=publicItems.slice(0,needed);
+      collected.push(...selected);
+      if(publicItems.length>=needed){
+        const lastId=selected.at(-1)?.id;
+        offset+=candidates.findIndex(item=>item.id===lastId)+1;
+        break;
+      }
+      offset+=candidates.length;
+      if(candidates.length<PUBLIC_NEWS_BATCH){exhausted=true;break}
+    }
+    // Relevance and source verification remain enforced on each page, including
+    // entries collected before the current publication policy was introduced.
+    const publicItems=collected.map(item=>({...item,content_match:item.review_state==='verified'?'editor_verified':'source_confirmed'}));
+    const recentCandidates=(initialOffset===0?(await env.DB.prepare("SELECT id,title,url,resolved_url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,media_type,media_url,media_source,media_published_at,media_state,source_type,summary_text,source_verified FROM seonammedi_monitor_items WHERE datetime(last_seen_at)>=datetime('now','-7 days') ORDER BY COALESCE(published_at,first_seen_at) DESC LIMIT 160").all()).results||[]:[]);
     const mediaCandidateCount=publicItems.filter(item=>item.media_state==='candidate'&&['photo','video'].includes(item.media_type)).length;
-    return json({ok:true,siteOwned:true,aiProvider:false,schedule:'hourly Asia/Seoul',scheduler:'existing-control-cron',channels:{news:true,naverBlog:naverBlogConfigured(env)},lastRun:lastRun||null,mediaCandidateCount,recentCandidateCount:recentCandidates.length,verifiedPublicCount:publicItems.length,items:publicItems},200,'no-store');
+    return json({ok:true,siteOwned:true,aiProvider:false,schedule:'hourly Asia/Seoul',scheduler:'existing-control-cron',channels:{news:true,naverBlog:naverBlogConfigured(env)},lastRun:lastRun||null,mediaCandidateCount,recentCandidateCount:recentCandidates.length,verifiedPublicCount:publicItems.length,items:publicItems,nextCursor:exhausted?null:String(offset),sort:'publication_desc',archive:true},200,'no-store');
   }catch(error){return json({ok:false,error:'monitor_schema_unavailable',message:'사이트 자동점검 저장소 준비 중입니다.',lastRun:null,items:[]},503,'no-store')}
 }
