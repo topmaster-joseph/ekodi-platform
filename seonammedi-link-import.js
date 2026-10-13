@@ -53,9 +53,19 @@ export function extractSeonamMediArticle(html,sourceUrl){
   const date=getDate(meta(html,'article:published_time')||meta(html,'datePublished')||meta(html,'date')||(String(html).match(/["']datePublished["']\s*:\s*["']([^"']+)["']/i)||[])[1]||'');
   const url=new URL(sourceUrl);
   const publisher=clean(meta(html,'og:site_name')||url.hostname,160);
-  const relevant=hasRegionalMedicalContext(title)&&Boolean(evidence);
-  const category=/후보대학|후보 대학|선정 절차|심사자료/.test(title+' '+evidence)?'후보대학 선정':/비대위|대책위|시민대회|상경투쟁|기자회견|집회|결의대회/.test(title+' '+evidence)?'비대위 활동이력':'정부·대학';
-  return {title,summary:clean(evidence,240),publisher,date,category,sourceUrl,relevant,ready:relevant&&Boolean(date)};
+  // Preserve separate news/committee scopes: mentioning a committee is not
+  // evidence that the committee itself held a registered activity.
+  const committeeRelated=/(?:비상대책위원회|비상대책위|비대위)/i.test(title)
+    &&/(?:서남권|전남|전라남도|목포|무안)/i.test(title)
+    &&/(?:의대|의과대학)/i.test(title);
+  // The regional publisher's own body must independently corroborate
+  // context. A search result or headline alone is never publication proof.
+  const relevant=Boolean(evidence)&&hasRegionalMedicalContext(evidence)
+    &&(hasRegionalMedicalContext(title)||committeeRelated);
+  const category=/(?:헬로비전|방송|티비|tv|kbs|mbc|sbs|ytn|jtbc)/i.test(publisher)?'방송':'신문';
+  // Store an original metadata-only summary, not publisher article text.
+  const summary=relevant?'서남권 국립의대 신설 관련 보도입니다. 자세한 내용은 해당 언론사 원문을 확인하세요.':'';
+  return {title,summary,publisher,date,category,sourceUrl,committeeRelated:relevant&&committeeRelated,relevant,ready:relevant&&Boolean(date)};
 }
 export async function fetchSeonamMediLinkPreview(input,{fetchImpl=fetch}={}){
   let target=safeImportUrl(input);

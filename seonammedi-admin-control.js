@@ -1029,9 +1029,9 @@ async function importTimelineFromLink(request,env,auth,{preview=false}={}){
   const now=new Date().toISOString();
   const links=[{url:item.sourceUrl,label:item.publisher+' 원문',source:item.publisher}];
   const result=await env.DB.prepare(`INSERT OR IGNORE INTO seonammedi_timeline
-    (legacy_key,event_date,category,title,summary,evidence,links_json,media_json,monitor_keywords_json,record_scope,committee_kind,status,sort_order,created_by,created_at,updated_at)
-    VALUES(?,?,?,?,?,?,?,'[]','[]','news','',?,0,?,?,?)`)
-    .bind(legacyKey,item.date,item.category,item.title,item.summary,item.publisher+' · 원문 내용 확인',JSON.stringify(links),status,auth.email,now,now).run();
+    (legacy_key,event_date,category,title,summary,evidence,links_json,media_json,monitor_keywords_json,record_scope,committee_kind,committee_related,status,sort_order,created_by,created_at,updated_at)
+    VALUES(?,?,?,?,?,?,?,'[]','[]','news','',?,?,0,?,?,?)`)
+    .bind(legacyKey,item.date,item.category,item.title,item.summary,item.publisher+' · 원문 내용 확인',JSON.stringify(links),item.committeeRelated?1:0,status,auth.email,now,now).run();
   const id=Number(result?.meta?.last_row_id||0);
   if(!id){
     const concurrent=await env.DB.prepare('SELECT id,status FROM seonammedi_timeline WHERE legacy_key=?').bind(legacyKey).first();
