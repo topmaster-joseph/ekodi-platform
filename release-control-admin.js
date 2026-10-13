@@ -383,12 +383,13 @@
     async function load(force = false) {
       refresh.disabled = true;
       stateMessage.textContent = '';
+      // Credential preflight remains available even when public GitHub run listing is rate-limited.
+      void loadActionsPanel();
       units.replaceChildren(el('div', 'GitHub Actions에서 배포 상태를 확인하는 중입니다.', 'release-empty'));
       runs.replaceChildren();
       try {
         const data = await releaseData(force);
         renderPolicy(data);
-        void loadActionsPanel();
         renderUnits(data.units || []);
         renderRuns(data.recentRuns || []);
       } catch (error) {
