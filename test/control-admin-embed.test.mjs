@@ -98,3 +98,22 @@ test('guarded deployment checks a frameable same-origin admin Control endpoint',
     assert.deepEqual(byUrl(url)?.statuses,[200]);
   }
 });
+
+test('embedded EKODI Control honors the white administrator canvas, including errors and mobile',()=>{
+  const css=read('control.css');
+  const outer=read('admin-control-integration.css');
+  const marker='/* EKODI white embedded Control contract */';
+  assert.equal(css.split(marker).length,2,'white embedded theme must be declared once');
+  const scoped=css.split(marker)[1];
+  assert.match(scoped,/html\[data-control-embed="admin"\]\s*\{[\s\S]*color-scheme:light/);
+  for(const section of ['.control-main','.topbar','.control-tabs','.view.active','.conversation','.composer','.composer textarea','.auth-banner']){
+    assert.ok(scoped.includes(section),'white theme missing '+section);
+  }
+  assert.match(scoped,/\.turn\.assistant \.bubble\s*\{\s*color:#17253d!important/);
+  assert.match(scoped,/\.turn\.user \.bubble\s*\{[\s\S]*?background:#eaf1ff!important/);
+  assert.match(scoped,/\.send\s*\{\s*background:#2862ee!important;color:#fff!important/);
+  assert.doesNotMatch(outer,/#0b1626/i,'no dark fallback may cover the white Control surface');
+  assert.match(outer,/#adminControlHome\.admin-control-home\s*\{[\s\S]*?background:#fff/);
+  assert.match(outer,/#adminControlFrameNotice strong\{font-size:18px;color:#17253d\}/);
+  assert.match(scoped,/@|.*/); // Explicit scoped block still coexists with mobile base media rules.
+});
