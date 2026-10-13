@@ -50,8 +50,8 @@ try{
           if(entry.styles.dropdowns.some(group=>group.display!=='none'))throw Error('closed_submenu_visible:'+JSON.stringify(entry.styles.dropdowns));
           if(entry.styles.dropdowns.some(group=>!['transparent','rgba(0, 0, 0, 0)'].includes(group.background)))throw Error('dark_dropdown_toggle:'+JSON.stringify(entry.styles.dropdowns));
           if(entry.styles.horizontalOverflow)throw Error('page_horizontal_overflow');
-          const group=page.locator('header.site-header nav.ekodi-six-nav > .nav-group').filter({has:page.locator(':scope > a', {hasText:'공지'})}).last();
-          const toggle=group.locator(':scope > button');
+          const toggle=page.getByRole('button',{name:'공지 세부메뉴 열기'});
+          const group=toggle.locator('xpath=..');
           await toggle.click({timeout:5000});
           const open=await group.locator(':scope > .nav-submenu').evaluate(el=>getComputedStyle(el).display!=='none');
           if(!open)throw Error('dropdown_does_not_open');
