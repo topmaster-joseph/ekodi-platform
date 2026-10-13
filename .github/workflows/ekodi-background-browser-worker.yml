@@ -224,6 +224,16 @@ jobs:
           jq -e '.screenshots | length >= 1' "$result" >/dev/null
           echo '## EKODI Background Browser Worker' >> "$GITHUB_STEP_SUMMARY"
           jq -r '"- Result: \(.ok)\n- Final URL: \(.finalUrl)\n- Device: \(.deviceProfile) \(.viewport.width)x\(.viewport.height)\n- Headless/ephemeral: \(.headless)/\(.ephemeralContext)\n- Blocked mutations: \(.blockedMutations|length)\n- Page errors: \(.pageErrors|length)\n- HTTP 4xx/5xx responses: \(.httpErrorResponses|length)\n- Horizontal overflow snapshots: \([.results[] | select(.type == "snapshot" and .horizontalOverflow == true)] | length)\n- Screenshots: \(.screenshots|length)"' "$result" >> "$GITHUB_STEP_SUMMARY"
+      - name: Classify EKODI Control canonical guest routes
+        if: inputs.surface_registry == 'config/control-native-browser-surfaces.json'
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(find artifacts/background-browser-worker -name result.json -print -quit)
+          test -n "$result"
+          node scripts/classify-control-native-guest-preflight.mjs "$result"
+          report="$(dirname "$result")/control-native-guest-assessment.json"
+          jq -r '"### Control Guest Route Assessment\\n- Observed state: \\(.state)\\n- Guest-only proof: \\(.guestOnly)\\n- Production release verified: \\(.productionReleaseVerified)\\n- Admin authenticated: \\(.authenticatedAdminVerified)"' "$report" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
