@@ -84,7 +84,9 @@ try {
           latestUpdates:!!document.querySelector('#homeLatestUpdates'),
           spotlight:!!document.querySelector('#homeSpotlight'),
           mobileHint:!!document.querySelector('.campaign-hero-mobile-hint'),
-          brand:document.querySelector('.brand')?.textContent?.trim().slice(0,100)
+          brand:document.querySelector('.brand')?.textContent?.trim().slice(0,100),
+          leadingVisibleText:(document.body?.innerText||'').slice(0,140),
+          leadingEscapedNewlines:/^(?:\s|\\\\[nrt])+\\\\[nrt]/.test((document.body?.innerText||'').slice(0,140).trimStart())
         };
       });
       Object.assign(entry,evidence);
@@ -101,6 +103,7 @@ try {
       must(entry.displayedWidth>=profile.width*0.90,'hero_not_prominent');
       must(!entry.horizontalOverflow,'viewport_horizontal_overflow');
       must(entry.siteHeader&&entry.latestUpdates&&entry.spotlight,'homepage_functionality_missing');
+      must(!entry.leadingEscapedNewlines,'literal_escaped_newlines_visible_before_header');
       must(entry.mobileHint,'mobile_magnification_instruction_missing');
       const shot=path.join(screenshotsPath,safeName+'-'+profile.name+'.png');
       await page.screenshot({path:shot,fullPage:true,animations:'disabled'});
