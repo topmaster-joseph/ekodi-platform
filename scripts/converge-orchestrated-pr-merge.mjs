@@ -133,6 +133,7 @@ const labHomepageTouched=changedFiles.some(file=>
 );
 const aiControlTouched=changedFiles.some(file=>
   file==='ai-control-worker.js'||
+  file==='ai-commons.js'||
   file==='common-services-admin.js'||
   file.startsWith('ai-control/')||
   file.startsWith('ai-control-')||
@@ -171,6 +172,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   // AI membership is compiled into the shared ai-ops-admin.js bundle.
   file==='user-ai-tier-panel.js'||
   file==='common-services-admin.js'||
+  // AI Commons approval UI is compiled into the shared administrator Site Core.
+  file==='ai-commons-admin.js'||
   // Admin Google handoff is bundled in Site Core; never skip its post-merge release.
   file==='admin-central-handoff.js'||
   file==='ai-provider-control.js'||

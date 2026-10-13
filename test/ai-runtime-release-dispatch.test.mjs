@@ -38,3 +38,15 @@ test('orchestrator-dispatched Control API deployment owns PC Agent heartbeat han
   assert.ok(source.includes('/actions/workflows/deploy-control-api.yml/dispatches'));
   assert.ok(source.includes('inputs:{release_branch_ref:branch,release_task_id:taskId}'));
 });
+
+test('AI Commons admin UI and runtime use their respective official deployment paths',()=>{
+  const source=text('scripts/converge-orchestrated-pr-merge.mjs');
+  const ai=source.slice(source.indexOf('const aiControlTouched='),source.indexOf('const trafficCollectorTouched='));
+  const site=source.slice(source.indexOf('const sharedSiteTouched='),source.indexOf('const churchPagesTouched='));
+  assert.ok(ai.includes("file==='ai-commons.js'"));
+  assert.ok(ai.includes("file==='ai-control-worker.js'"));
+  assert.ok(site.includes("file==='ai-commons-admin.js'"));
+  assert.ok(source.includes('if(sharedSiteTouched){'));
+  assert.ok(source.includes('/actions/workflows/deploy-site-core.yml/dispatches'));
+  assert.ok(source.includes('release_branch_ref:branch,release_task_id:taskId'));
+});
