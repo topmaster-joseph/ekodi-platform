@@ -139,13 +139,10 @@ const timelineDescending=(a,b)=>timelineDateKey(b.date)-timelineDateKey(a.date)|
 const timelineNormalizeUrl=value=>{try{const u=new URL(String(value||''),location.origin);u.hash='';['utm_source','utm_medium','utm_campaign','utm_term','utm_content','fbclid','gclid'].forEach(k=>u.searchParams.delete(k));return u.href.replace(/\/$/,'')}catch{return String(value||'').trim().replace(/\/$/,'')}};
 const timelineTitleTokens=value=>[...new Set(String(value||'').toLowerCase().replace(/[^가-힣a-z0-9\s]/g,' ').split(/\s+/).filter(token=>token.length>1&&!genericWords.has(token)))];
 const timelineTitleSimilarity=(a,b)=>{const left=timelineTitleTokens(a),right=timelineTitleTokens(b);if(!left.length||!right.length)return 0;const r=new Set(right),hits=left.filter(token=>r.has(token)).length;return hits/Math.max(left.length,right.length)};
+// Related-news filters classify the publisher, not the article's topic.
 const monitorTimelineCategory=item=>{
-  const corpus=[item.title,item.summary_text].filter(Boolean).join(' ');
-  if(/후보대학|후보 대학|공모|평가위원|선정 결과|선정 절차/.test(corpus))return'후보대학 선정';
-  if(/장기현안|숙원|30년|수십년|연혁|역사|장기간/.test(corpus))return'장기현안';
-  if(/비대위|대책위|시민대회|상경투쟁|차량행진|기자회견|집회|호소문|서명|결의대회/.test(corpus))return'시민·단체';
-  if(/정부|교육부|보건복지부|복지부|국회|대통령|전라남도|전남도|목포대|순천대|대학교|대학|법원|지자체/.test(corpus))return'정부·대학';
-  return'정부·대학';
+  const category=relatedNewsCategory({sourceType:item.source_type,publisher:item.publisher,links:[{url:item.resolved_url||item.url,source:item.publisher}]});
+  return category==='기타'&&item.source_type==='news'?'신문':category;
 };
 const monitorTimelineDate=item=>kstDate(item.published_at||item.media_published_at||item.first_seen_at||item.created_at);
 const monitorTimelineEvidence=item=>item.review_state==='verified'?'최신 업데이트 · 검증 완료':'최신 업데이트 · 원문 확인';
@@ -375,30 +372,61 @@ function renderHomeMonitorUpdates(data){
     return `<a class="home-latest-card" href="${safeUrl(item.resolved_url||item.url)}" target="_blank" rel="noopener noreferrer"><span class="home-latest-meta">${escapeHtml(when||'최근')} · ${escapeHtml(item.query_label||'관련자료')}</span><strong>${escapeHtml(item.title||'수집 자료')}</strong><small>${escapeHtml(item.publisher||'출처 확인 중')} · ${escapeHtml(state)}</small></a>`;
   }).join('');
 }
-async function loadMonitor(){
+let monitorFeedEntries=[];
+let monitorNextCursor=null;
+let monitorPageLoading=false;
+function renderNewsPagingState(){
+  const status=el('timelineFeedStatus'),more=el('timelineFeedMore'),button=el('timelineLoadMore');
+  if(status)status.textContent='최신 발행일순 · '+monitorFeedEntries.length+'건 표시'+(monitorNextCursor?' · 아래로 스크롤하면 이전 소식을 자동으로 불러옵니다.':' · 수집·검증된 공개 기록');
+  if(more)more.hidden=!monitorNextCursor;
+  if(button){button.disabled=monitorPageLoading;button.textContent=monitorPageLoading?'이전 소식 불러오는 중…':'이전 소식 더 보기'}
+}
+async function loadMonitor({append=false}={}){
+  if(monitorPageLoading||(append&&!monitorNextCursor))return;
+  monitorPageLoading=true;
+  renderNewsPagingState();
   const badge=el('monitorBadge'),summary=el('monitorSummary'),list=el('monitorList');
   try{
-    const response=await fetch('/api/seonammedi/monitor',{cache:'no-store'});
+    const url='/api/seonammedi/monitor?limit=60'+(append?'&cursor='+encodeURIComponent(monitorNextCursor):'');
+    const response=await fetch(url,{cache:'no-store'});
     const data=await response.json().catch(()=>({}));
     if(!response.ok||!data.ok)throw new Error(data.message||'점검 상태를 불러오지 못했습니다.');
     const publicItems=(Array.isArray(data.items)?data.items:[]).filter(monitorPubliclyVisible);
-    latestMonitorData={...data,items:publicItems};
+    if(!append)monitorFeedEntries=[];
+    const seen=new Set(monitorFeedEntries.map(item=>Number(item.id)));
+    for(const item of publicItems)if(!seen.has(Number(item.id))){monitorFeedEntries.push(item);seen.add(Number(item.id))}
+    monitorNextCursor=data.nextCursor??null;
+    latestMonitorData={...data,items:monitorFeedEntries};
     const run=data.lastRun;
     const runText=run?.completed_at?new Date(run.completed_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'첫 실행 대기';
     if(badge)badge.textContent='사이트 자동점검: '+runText;
     if(summary)summary.textContent=run?('최근 점검 '+(run.status==='ok'?'정상':run.status==='partial'?'일부 확인':'확인 필요')+' · 출처 '+run.sources_checked+'개 · 신규 '+run.new_items+'건 · 사진·영상 근거 후보 '+Number(data.mediaCandidateCount||0)+'건'):'자동점검은 매시간 실행됩니다.';
-    const rows=publicItems.slice(0,18);window.__SEONAM_MONITOR_ITEMS=publicItems;applyMonitorTimelineUpdates(window.__SEONAM_MONITOR_ITEMS);attachMonitorMedia(window.__SEONAM_MONITOR_ITEMS);
-    if(list)list.innerHTML=rows.length?rows.map(item=>`<article class="source"><a href="${safeUrl(item.resolved_url||item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title||'')}</a>${item.summary_text?'<p>'+escapeHtml(item.summary_text)+'</p>':''}<small>${escapeHtml(item.publisher||'출처 확인 중')} · 자동수집 ${item.source_type==='blog'?'블로그':'보도'}${item.media_type?' · '+(item.media_type==='video'?'영상 근거 후보':'사진 근거 후보'):''} · ${item.source_type==='blog'?'개인·온라인 게시물 / 공식자료 교차확인 필요':'원문 확인 필요'}</small></article>`).join(''):'<p class="muted">최근 7일 내 새로 수집된 공개 자료가 없습니다.</p>';
+    const rows=monitorFeedEntries.slice(0,18);window.__SEONAM_MONITOR_ITEMS=monitorFeedEntries;applyMonitorTimelineUpdates(window.__SEONAM_MONITOR_ITEMS);attachMonitorMedia(window.__SEONAM_MONITOR_ITEMS);
+    if(list)list.innerHTML=rows.length?rows.map(item=>'<article class="source"><a href="'+safeUrl(item.resolved_url||item.url)+'" target="_blank" rel="noopener noreferrer">'+escapeHtml(item.title||'')+'</a>'+(item.summary_text?'<p>'+escapeHtml(item.summary_text)+'</p>':'')+'<small>'+escapeHtml(item.publisher||'출처 확인 중')+' · 자동수집 '+(item.source_type==='blog'?'블로그':'보도')+(item.media_type?' · '+(item.media_type==='video'?'영상 근거 후보':'사진 근거 후보'):'')+' · '+(item.source_type==='blog'?'개인·온라인 게시물 / 공식자료 교차확인 필요':'원문 확인 필요')+'</small></article>').join(''):'<p class="muted">현재 공개 검증된 자동수집 자료가 없습니다.</p>';
     renderHomeMonitorUpdates(latestMonitorData);
     refreshStatusDetail();
   }catch(error){
-    latestMonitorData=null;
-    if(badge)badge.textContent='사이트 자동점검: 준비 중';
-    if(summary)summary.textContent=error.message||'점검 상태를 불러오지 못했습니다.';
-    if(list)list.innerHTML='';
+    if(!append){
+      latestMonitorData=null;
+      if(badge)badge.textContent='사이트 자동점검: 준비 중';
+      if(summary)summary.textContent=error.message||'점검 상태를 불러오지 못했습니다.';
+      if(list)list.innerHTML='';
+    }
+    if(el('timelineFeedStatus'))el('timelineFeedStatus').textContent='자동수집 자료를 불러오지 못했습니다. 잠시 후 다시 시도합니다.';
     refreshStatusDetail();
+  }finally{monitorPageLoading=false;renderNewsPagingState()}
+}
+function bindNewsAutoPaging(){
+  const more=el('timelineFeedMore'),button=el('timelineLoadMore');
+  button?.addEventListener('click',()=>loadMonitor({append:true}));
+  if(more&&'IntersectionObserver' in window){
+    const observer=new IntersectionObserver(entries=>{
+      if(entries.some(entry=>entry.isIntersecting)&&monitorNextCursor&&!monitorPageLoading)loadMonitor({append:true});
+    },{rootMargin:'500px 0px'});
+    observer.observe(more);
   }
 }
+bindNewsAutoPaging();
 siteReady.finally(()=>loadMonitor());
 setInterval(()=>{if(document.visibilityState==='visible')loadMonitor()},15*60*1000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')loadMonitor()});
