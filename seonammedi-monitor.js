@@ -18,6 +18,34 @@ const QUERIES=Object.freeze([
   {key:'jeonnam-national-medical',label:'전남 국립의대',q:'전남 국립의대'},
   {key:'seonam-committee',label:'서남권 의대 비상대책위원회',q:'"서남권 의대" 비상대책위원회'}
 ]);
+
+// Every search topic gets one evidence attempt per round before another topic
+// gets its next attempt. Unused attempts are shared without exceeding the
+// existing total of eight; duplicate source URLs never consume two attempts.
+export function planSeonamMediEvidenceBudget(groups,maxAttempts=MEDIA_ENRICH_LIMIT){
+  const limit=Math.max(0,Math.min(MEDIA_ENRICH_LIMIT,Math.trunc(Number(maxAttempts)||0)));
+  const queues=(Array.isArray(groups)?groups:[]).map(group=>(Array.isArray(group)?group:[])
+    .map((item,itemIndex)=>({item,itemIndex}))
+    .filter(({item})=>hasRegionalMedicalContext(item?.title))
+    .sort((a,b)=>(Date.parse(b.item.publishedAt||'')||0)-(Date.parse(a.item.publishedAt||'')||0)));
+  const offsets=queues.map(()=>0),visited=new Set(),plan=[];
+  while(plan.length<limit){
+    let progressed=false;
+    for(let queryIndex=0;queryIndex<queues.length&&plan.length<limit;queryIndex++){
+      while(offsets[queryIndex]<queues[queryIndex].length){
+        const candidate=queues[queryIndex][offsets[queryIndex]++];
+        const source=String(candidate.item.url||'').trim();
+        if(source&&visited.has(source))continue;
+        if(source)visited.add(source);
+        plan.push({queryIndex,itemIndex:candidate.itemIndex});
+        progressed=true;
+        break;
+      }
+    }
+    if(!progressed)break;
+  }
+  return plan;
+}
 const clean=(value,max=1000)=>String(value??'').replace(/\s+/g,' ').trim().slice(0,max);
 const json=(body,status=200,cache='public, max-age=300')=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':cache,'x-content-type-options':'nosniff','referrer-policy':'no-referrer'}});
 const xmlText=value=>clean(String(value||'').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,'$1').replace(/<[^>]+>/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>'),1000);
@@ -152,7 +180,7 @@ async function insertItem(env,item,seenAt){
 export async function runSeonamMediHourlyCheck(env,{scheduledAt=null,force=false}={}){
   if(!env?.DB?.prepare)return {ok:false,error:'storage_unavailable'};
   try{await ensureSourceVerificationColumn(env.DB)}catch(error){return {ok:false,error:'source_verification_schema_unavailable',message:clean(error?.message||error,300)}}
-  const startedAt=new Date(scheduledAt||Date.now()).toISOString();let runId=null;let checked=0,seen=0,added=0,mediaCandidates=0,mediaBudget=MEDIA_ENRICH_LIMIT;const errors=[];
+  const startedAt=new Date(scheduledAt||Date.now()).toISOString();let runId=null;let checked=0,seen=0,added=0,mediaCandidates=0;const errors=[];
   if(!force){
     try{
       const existing=await env.DB.prepare("SELECT id,status,completed_at FROM seonammedi_monitor_runs WHERE strftime('%Y-%m-%d %H',datetime(started_at,'+9 hours'))=strftime('%Y-%m-%d %H',datetime(?,'+9 hours')) AND status IN ('running','ok','partial') ORDER BY id DESC LIMIT 1").bind(startedAt).first();
@@ -166,20 +194,30 @@ export async function runSeonamMediHourlyCheck(env,{scheduledAt=null,force=false
     const run=await env.DB.prepare("INSERT INTO seonammedi_monitor_runs(started_at,status,sources_checked,items_seen,new_items,error_summary) VALUES (?,'running',0,0,0,'')").bind(startedAt).run();
     runId=run?.meta?.last_row_id||null;
   }catch(error){return {ok:false,error:'schema_unavailable',message:clean(error?.message,300)}}
+  // Collect first, then allocate publisher-page verification fairly across all
+  // search topics. Every collected item is stored even if it was not verified.
+  const queryBuckets=[];
   for(const query of QUERIES){
+    const collected=[];
     try{
-      const items=parseRss(await fetchSeonamMediNewsRss(query.q),query.key,query.label);checked+=1;seen+=items.length;
-      for(let item of items){
-        if(mediaBudget>0&&hasRegionalMedicalContext(item.title)){item=await enrichMedia(item);mediaBudget-=1;if(item.mediaState==='candidate')mediaCandidates+=1}
-        if(await insertItem(env,item,startedAt))added+=1;
-      }
+      const items=parseRss(await fetchSeonamMediNewsRss(query.q),query.key,query.label);
+      checked+=1;seen+=items.length;collected.push(...items);
     }catch(error){errors.push(query.key+':news:'+clean(error?.message||error,160))}
     if(naverBlogConfigured(env)){
       try{
-        const blogItems=await fetchNaverBlogItems(env,query);checked+=1;seen+=blogItems.length;
-        for(let item of blogItems){if(mediaBudget>0&&hasRegionalMedicalContext(item.title)){item=await enrichMedia(item);mediaBudget-=1;if(item.mediaState==='candidate')mediaCandidates+=1}if(await insertItem(env,item,startedAt))added+=1}
+        const items=await fetchNaverBlogItems(env,query);
+        checked+=1;seen+=items.length;collected.push(...items);
       }catch(error){errors.push(query.key+':blog:'+clean(error?.message||error,160))}
     }
+    queryBuckets.push(collected);
+  }
+  for(const {queryIndex,itemIndex} of planSeonamMediEvidenceBudget(queryBuckets)){
+    const item=await enrichMedia(queryBuckets[queryIndex][itemIndex]);
+    queryBuckets[queryIndex][itemIndex]=item;
+    if(item.mediaState==='candidate')mediaCandidates+=1;
+  }
+  for(const items of queryBuckets)for(const item of items){
+    if(await insertItem(env,item,startedAt))added+=1;
   }
   const completedAt=new Date().toISOString();const status=errors.length?(checked?'partial':'failed'):'ok';
   await env.DB.prepare('UPDATE seonammedi_monitor_runs SET completed_at=?,status=?,sources_checked=?,items_seen=?,new_items=?,error_summary=? WHERE id=?')

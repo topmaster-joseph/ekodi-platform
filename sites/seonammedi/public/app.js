@@ -393,14 +393,27 @@ function monitorHomeRows(items=[]){
   }
   return selected.map(row=>row.item);
 }
-function renderHomeMonitorUpdates(data){
+function renderHomeMonitorUpdates(data,{failed=false}={}){
   const section=el('homeLatestUpdates'),list=el('homeLatestList'),updated=el('homeLatestUpdatedAt');
   if(!section||!list)return;
+  section.hidden=false;
+  if(failed){
+    if(updated)updated.textContent='자동수집 연결 상태 확인 중';
+    list.innerHTML='<p class="muted" role="status">자동수집 상태를 현재 확인할 수 없습니다. 기존 공개 기록은 계속 열람할 수 있습니다.</p>';
+    return;
+  }
   const rows=monitorHomeRows(data?.items||[]);
-  section.hidden=!rows.length;
-  if(!rows.length){list.innerHTML='';return}
-  const runAt=data?.lastRun?.completed_at||'';
-  if(updated)updated.textContent=runAt?'마지막 갱신 '+new Date(runAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})+' · EKODI 자동갱신':'1시간마다 자동 갱신';
+  const run=data?.lastRun;
+  const runAt=run?.completed_at||'';
+  if(updated)updated.textContent=runAt?'마지막 수집 '+new Date(runAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})+' · EKODI 자동갱신':'1시간마다 자동 갱신';
+  if(!rows.length){
+    const runLabel=run?.status==='ok'?'정상 수집':run?.status==='partial'?'일부 수집':run?.status==='failed'?'수집 실패':'상태 확인 중';
+    const candidates=Number(data?.recentCandidateCount||0);
+    const verified=Number(data?.verifiedPublicCount||0);
+    const message=run?'최근 자동수집 '+runLabel+' · 검색 후보 '+candidates+'건(조회 상한 내) · 공개 검증 기사 '+verified+'건. 원문 확인을 통과한 기사만 게시합니다.':'자동수집 첫 실행을 기다리고 있습니다.';
+    list.innerHTML='<p class="muted" role="status">'+escapeHtml(message)+'</p>';
+    return;
+  }
   list.innerHTML=rows.map(item=>{
     const when=kstDate(item.published_at||item.first_seen_at||'');
     const state=item.review_state==='verified'?'검증 완료':'자동수집 · 원문 확인';
@@ -446,6 +459,7 @@ async function loadMonitor({append=false}={}){
       if(badge)badge.textContent='사이트 자동점검: 준비 중';
       if(summary)summary.textContent=error.message||'점검 상태를 불러오지 못했습니다.';
       if(list)list.innerHTML='';
+      renderHomeMonitorUpdates(null,{failed:true});
     }
     if(el('timelineFeedStatus'))el('timelineFeedStatus').textContent='자동수집 자료를 불러오지 못했습니다. 잠시 후 다시 시도합니다.';
     refreshStatusDetail();
