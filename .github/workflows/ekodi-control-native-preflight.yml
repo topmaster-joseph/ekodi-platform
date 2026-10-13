@@ -16,6 +16,9 @@ on:
       - 'site-worker.js'
       - 'test/control-*.test.mjs'
       - 'config/control-native-browser-surfaces.json'
+      - 'scripts/classify-control-native-guest-preflight.mjs'
+      - 'test/control-native-guest-preflight.test.mjs'
+      - '.github/workflows/ekodi-background-browser-worker.yml'
       - '.github/workflows/ekodi-control-native-preflight.yml'
   workflow_dispatch:
 
@@ -23,6 +26,18 @@ permissions:
   contents: read
 
 jobs:
+  classifier-contract:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify guest evidence cannot impersonate a production release
+        run: node --test test/control-native-guest-preflight.test.mjs
+
   desktop-native-guest:
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
