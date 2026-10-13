@@ -286,7 +286,7 @@ let voiceVerified=false;
 function voiceLogin(){
   const target=new URL(location.href);target.hash="";target.searchParams.set("compose","1");
   const auth=new URL("https://ekodi.kr/auth/");
-  auth.searchParams.set("site","portal");auth.searchParams.set("direct","1");
+  auth.searchParams.set("site","seonammedi");auth.searchParams.set("direct","1");
   auth.searchParams.set("return_to",target.href);
   auth.searchParams.set("purpose","seonammedi-board-write");
   location.assign(auth.href);

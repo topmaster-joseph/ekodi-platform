@@ -113,10 +113,12 @@ test('YouTube Data API disabled is a Google project blocker not another OAuth pe
   assert.equal(youtubeDataApiCloudUrl(error),'https://console.cloud.google.com/apis/library/youtube.googleapis.com?project=483044030492');
   assert.equal(youtubeDataApiDisabledProject('invalid_grant'),null);
   const html=renderMallSocialSetup({platform:{youtubeConfigured:true},registeredAccounts:[{provider:'youtube',status:'error',lastError:error}]});
-  assert.match(html,/Google Cloud API 사용 설정 필요/);
+  assert.match(html,/이전 YouTube API 오류 기록/);
   assert.match(html,/project=483044030492/);
-  assert.match(html,/재연결보다 API 활성화를 먼저 확인/);
+  assert.match(html,/저장된 오류만으로 현재 API 사용 설정 여부를 판정할 수 없습니다/);
   assert.doesNotMatch(html,/has not been used in project/);
+  assert.match(html,/Google 공식 인증 시작/);
+  assert.doesNotMatch(html,/YouTube Data API v3를 활성화한 뒤/);
 });
 test('no YouTube project setup warning if an actual active OAuth channel is connected',()=>{
   const html=renderMallSocialSetup({platform:{youtubeConfigured:true},registeredAccounts:[{provider:'youtube',status:'error',lastError:'YOUTUBE_DATA_API_DISABLED:483044030492'}],connections:[{provider:'youtube',status:'active',external_id:'UC-live'}]});
