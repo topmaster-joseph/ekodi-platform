@@ -545,9 +545,34 @@ async function startCommonsPipeline(env,ctx,auth,input,fingerprint){
     else if(finished?.state==='approval_required')await updateIdeaGroup(env,fingerprint,{status:'sandboxed',updated_at:now()});else await updateIdeaGroup(env,fingerprint,{status:'triaged',updated_at:now()});
   }catch{await updateIdeaGroup(env,fingerprint,{status:'triaged',updated_at:now()});}})();if(ctx?.waitUntil)ctx.waitUntil(work);return task;
 }
+// Show the true development task outcome to the super administrator only.
+ // Never return task prompts, provider output, raw error messages or secrets.
+function commonsTaskIssue(row){
+  const error=clean(row?.error).slice(0,160);
+  if(error==='no_provider_available'||error==='origin_response_provider_unavailable')return'provider_unavailable';
+  if(error==='all_providers_failed'||error.startsWith('origin_synthesis_failed:'))return'provider_failed';
+  if(error==='free_quota_exhausted_paid_decision_required')return'paid_decision_required';
+  if(error==='branch_allocator_not_configured'||/^branch_allocator_[0-9]{3}$/.test(error))return'branch_allocator_unavailable';
+  if(error.startsWith('mission_policy:'))return'policy_blocked';
+  return String(row?.state)==='failed'?'task_failed':'';
+}
+async function adminCommonsRequests(env){
+  const ideas=await aggregateCommonsIdeas(env,200,adminIdeaView);
+  const ids=[...new Set(ideas.map(item=>item.developmentTaskId).filter(Boolean))];
+  if(!ids.length)return ideas.map(item=>({...item,taskState:'not_started',taskIssue:''}));
+  // One bounded read query rather than an N+1 task lookup; no mutations or retries.
+  const sql='SELECT id,state,error,updated_at FROM ai_control_tasks WHERE id IN ('+ids.map(()=>'?').join(',')+')';
+  const rows=await env.DB.prepare(sql).bind(...ids).all();
+  const byId=new Map((rows.results||[]).map(row=>[row.id,row]));
+  return ideas.map(item=>{
+    const task=byId.get(item.developmentTaskId);
+    return {...item,taskState:task?clean(task.state).slice(0,48):(item.developmentTaskId?'missing':'not_started'),
+      taskIssue:task?commonsTaskIssue(task):'',taskUpdatedAt:task?clean(task.updated_at).slice(0,40):''};
+  });
+}
 async function handleCommonsAdmin(request,env,url){
   const auth=await requireCommonsSuperAdmin(request,env);if(auth.error)return auth.error;if(!dbReady(env))return json({error:'state_store_unavailable'},503);
-  if(request.method==='GET'&&url.pathname==='/api/commons/admin/requests')return json({requests:await aggregateCommonsIdeas(env,200,adminIdeaView),finalPublishAuthority:'super_admin'});
+  if(request.method==='GET'&&url.pathname==='/api/commons/admin/requests')return json({requests:await adminCommonsRequests(env),finalPublishAuthority:'super_admin'});
   const match=url.pathname.match(/^\/api\/commons\/admin\/requests\/([a-f0-9]{64})\/decision$/);if(request.method==='POST'&&match){
     const input=await body(request)||{};const decision=clean(input.decision).toLowerCase();const fingerprint=match[1];const rows=await aggregateCommonsIdeas(env,200,adminIdeaView);const idea=rows.find(item=>item.fingerprint===fingerprint);if(!idea)return json({error:'request_not_found'},404);
     if(decision==='publish'){if(!canFinalPublish(idea.status))return json({error:'request_not_staged'},409);await updateIdeaGroup(env,fingerprint,{status:'shared',review_decision:'publish',reviewed_by:auth.user.email,reviewed_at:now(),published_service_id:clean(input.serviceId),updated_at:now()});}
