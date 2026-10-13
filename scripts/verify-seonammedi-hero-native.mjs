@@ -53,6 +53,13 @@ try {
     });
     try{
       const response=await page.goto(origin+rootPath,{waitUntil:'domcontentloaded',timeout:30000});
+      // Compare actual document response bytes with the rendered DOM to locate prefix injection.
+      const responseBytes=response?await response.body():Buffer.alloc(0);
+      entry.responsePrefixUtf8=responseBytes.subarray(0,160).toString('utf8');
+      entry.responsePrefixHex=responseBytes.subarray(0,48).toString('hex');
+      entry.responseContentType=response?.headers()['content-type']||'';
+      entry.responseStartsWithEscapedNewline=/^\\\\[nrt]/.test(entry.responsePrefixUtf8.trimStart());
+      entry.responseStartsWithDoctype=/^<!doctype\\s+html/i.test(entry.responsePrefixUtf8.trimStart());
       entry.httpStatus=response?.status()??null;
       must(response?.ok(),'page_not_http_2xx_'+entry.httpStatus);
       await page.locator('.campaign-hero-image').waitFor({state:'visible',timeout:12000});
@@ -86,6 +93,8 @@ try {
           mobileHint:!!document.querySelector('.campaign-hero-mobile-hint'),
           brand:document.querySelector('.brand')?.textContent?.trim().slice(0,100),
           leadingVisibleText:(document.body?.innerText||'').slice(0,140),
+          initialBodyNodes:Array.from(document.body?.childNodes||[]).slice(0,5).map(n=>({type:n.nodeType,name:n.nodeName,text:(n.textContent||'').slice(0,90)})),
+          initialHtmlNodes:Array.from(document.documentElement?.childNodes||[]).slice(0,5).map(n=>({type:n.nodeType,name:n.nodeName,text:n.nodeType===3?(n.textContent||'').slice(0,90):''})),
           leadingEscapedNewlines:/^\\[nrt]/.test((document.body?.innerText||'').trimStart())
         };
       });
