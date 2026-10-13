@@ -9,6 +9,20 @@ const ROOTS=[
 ];
 const ROUTES=['/','/board/voices','/board/notices','/board/finance','/minutes/','/admin/'];
 const DEVICES=[{name:'desktop',width:1440,height:900},{name:'mobile',width:390,height:844}];
+// Public read and signed-out permission boundaries are checked with the same
+// isolated first-party Chromium contexts used to verify the live pages.
+// Never attach a real account token or persist response bodies.
+const GUEST_API_CHECKS=Object.freeze([
+  {name:'citizen_opinions_public',path:'/board/api/posts',status:200,public:true},
+  {name:'notices_public',path:'/board/api/notices',status:200,public:true},
+  {name:'google_session_required',path:'/board/api/auth/session',status:401,error:'google_login_required'},
+  {name:'member_finance_summary',path:'/board/api/finance/summary',status:401,error:'google_login_required'},
+  {name:'private_finance_details',path:'/board/api/finance',status:403,error:'finance_detail_admin_only'},
+  {name:'admin_citizen_opinions',path:'/board/api/admin/posts',status:403,error:'voices_forbidden'},
+  {name:'admin_notices',path:'/board/api/admin/notices',status:403,error:'notices_forbidden'},
+  {name:'admin_finance',path:'/board/api/admin/finance',status:403,error:'finance_forbidden'},
+  {name:'invalid_google_token',path:'/board/api/auth/session',status:401,error:'google_login_required',invalidBearer:true}
+]);
 const out=path.resolve(process.env.EKODI_NAV_AUDIT_OUTPUT||'artifacts/seonammedi-nav-guest');
 await fs.mkdir(out,{recursive:true});
 const report={policy:'EKODI-SEONAMMEDI-NAV-GUEST-001',owner:'ekodi-native-browser',readOnly:true,startedAt:new Date().toISOString(),expectedLabels:LABELS,results:[],errors:[],passed:false};
@@ -132,6 +146,34 @@ try {
         }
         await pause(device.name==='mobile'?1300:600);
       }
+      const authChecks=[];
+      for(const check of GUEST_API_CHECKS){
+        const result={name:check.name,path:check.path,expected:check.status,method:'GET'};
+        authChecks.push(result);
+        try{
+          // context.request uses the isolated Chromium context's cookie jar,
+          // and this browser context starts empty with no login credentials.
+          // All probes are GET-only; no post, comment, or account mutation.
+          const url=root.origin+root.prefix+check.path;
+          const options={timeout:20000,failOnStatusCode:false,headers:{
+            'cache-control':'no-cache',
+            ...(check.invalidBearer?{authorization:'Bearer ekodi-native-invalid-canary-token'}:{})
+          }};
+          const response=await context.request.get(url,options);
+          result.status=response.status();
+          const payload=await response.json().catch(()=>null);
+          result.ok=(result.status===check.status)
+            &&(check.public?payload?.ok===true&&Array.isArray(payload?.items):payload?.error===check.error)
+            &&(check.public||/no-store/i.test(response.headers()['cache-control']||''));
+          if(!result.ok)report.errors.push(root.name+'/'+device.name+'/api/'+check.name+': expected '+check.status+' '+(check.error||'public_items')+'; got '+result.status);
+          // Never record returned user data, e-mail addresses, or JWTs.
+        }catch(error){
+          result.ok=false;
+          result.reason=String(error?.message||error).slice(0,180);
+          report.errors.push(root.name+'/'+device.name+'/api/'+check.name+': '+result.reason);
+        }
+      }
+      report.results.push({origin:root.name,device:device.name,path:'api-guest-boundary',kind:'security',checks:authChecks,ok:authChecks.every(x=>x.ok)});
     }finally{
       report.results.filter(x=>x.origin===root.name&&x.device===device.name).forEach(x=>{
         x.jsErrors=jsErrors.slice(0,5);x.blockedMutations=mutations.length;
@@ -145,7 +187,7 @@ finally{
   report.passed=report.errors.length===0;
   report.finishedAt=new Date().toISOString();
   await fs.writeFile(path.join(out,'report.json'),JSON.stringify(report,null,2));
-  console.log(JSON.stringify({passed:report.passed,surfaceCount:report.results.length,successCount:report.results.filter(x=>x.ok).length,errors:report.errors,artifactPath:out}));
+  console.log(JSON.stringify({passed:report.passed,surfaceCount:report.results.filter(x=>x.kind!=='security').length,successCount:report.results.filter(x=>x.kind!=='security'&&x.ok).length,authCheckCount:report.results.filter(x=>x.kind==='security').reduce((n,x)=>n+x.checks.length,0),authSuccessCount:report.results.filter(x=>x.kind==='security').reduce((n,x)=>n+x.checks.filter(c=>c.ok).length,0),errors:report.errors,artifactPath:out}));
   if(!report.passed)process.exitCode=1;
 }
 // Post-merge read-only audit rerun for guarded release PR #4627.
