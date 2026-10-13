@@ -29,7 +29,13 @@ const adminCsp=(siteWorker.match(/const admin_csp\s*=\s*([^;]+);/i)||[])[1]||sit
 if(adminCsp.includes(retired))fail('Admin CSP widened to retired API host');
 
 const aiControl=read('ai-control-worker.js');
-if(!aiControl.includes("clean(env.CONTROL_API_URL)||'https://ekodi.kr'"))fail('AI control central-session fallback is not apex canonical');
+if(!aiControl.includes("new Request('https://ekodi.kr/api/session'"))fail('AI control central-session target must remain the canonical apex');
+if(!aiControl.includes('env.CONTROL_API.fetch(sessionRequest)'))fail('AI control central Admin verification must use internal Control API service binding');
+if(aiControl.includes('clean(env.CONTROL_API_URL)'))fail('AI control must not fall back to public fetch for privileged identity');
+for(const filename of ['wrangler.ai.toml','wrangler.ai.release.toml']){
+  const config=read(filename);
+  if(!config.includes('binding = "CONTROL_API"\\nservice = "ekodi-auth-api"'))fail(`${filename} missing central Control API Worker service binding`);
+}
 
 const postbuild=read('scripts/admin-performance-postbuild.mjs');
 for(const asset of policy.fingerprintRequiredAssets||[]){
