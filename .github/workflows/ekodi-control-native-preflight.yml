@@ -1,0 +1,56 @@
+name: EKODI Control Native Browser Preflight
+
+# First-party EKODI virtualized browser: no third-party computer-use provider.
+# This is a read-only GUEST baseline against the currently deployed apex site,
+# not proof that draft Control sources were released to production.
+on:
+  pull_request:
+    paths:
+      - 'control.js'
+      - 'control.html'
+      - 'control.css'
+      - 'admin-control-frame.js'
+      - 'admin-sidebar.js'
+      - 'admin-shell.html'
+      - 'platform-router-entry-worker.js'
+      - 'site-worker.js'
+      - 'test/control-*.test.mjs'
+      - 'config/control-native-browser-surfaces.json'
+      - 'scripts/classify-control-native-guest-preflight.mjs'
+      - 'test/control-native-guest-preflight.test.mjs'
+      - '.github/workflows/ekodi-background-browser-worker.yml'
+      - '.github/workflows/ekodi-control-native-preflight.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  classifier-contract:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify guest evidence cannot impersonate a production release
+        run: node --test test/control-native-guest-preflight.test.mjs
+
+  desktop-native-guest:
+    uses: ./.github/workflows/ekodi-background-browser-worker.yml
+    with:
+      surface_path: '/admin/'
+      surface_paths: '/admin/,/admin/control,/control'
+      surface_registry: 'config/control-native-browser-surfaces.json'
+      device_profile: desktop
+      church_locale_diagnostic: false
+  mobile-native-guest:
+    uses: ./.github/workflows/ekodi-background-browser-worker.yml
+    with:
+      surface_path: '/admin/'
+      surface_paths: '/admin/,/admin/control,/control'
+      surface_registry: 'config/control-native-browser-surfaces.json'
+      device_profile: mobile-portrait
+      church_locale_diagnostic: false
