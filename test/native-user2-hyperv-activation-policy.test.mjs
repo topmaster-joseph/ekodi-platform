@@ -23,3 +23,4 @@ test('commands map to fixed USER2-only functions, not arbitrary shell',()=>{
  assert.match(agent,/'computer\.hyperv\.preflight' \{ return Invoke-EkodiUser2HyperVFeature -Enable \$false \}/);
  assert.match(agent,/'computer\.hyperv\.enable' \{ return Invoke-EkodiUser2HyperVFeature -Enable \$true \}/);
 });
+// Official owner-authored guarded convergence trigger for USER2 Hyper-V feature policy.
