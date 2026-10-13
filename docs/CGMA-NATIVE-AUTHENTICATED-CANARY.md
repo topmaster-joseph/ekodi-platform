@@ -54,3 +54,19 @@ consent, isolated device identity, bounded lease, and authoritative board
 audit events. Never accept client-supplied attestation booleans as proof.
 A grant reference with nonce is not a bearer credential and never grants
 native agents direct access to protected CGMA write endpoints.
+
+## D1 authoritative audit verification milestone (not an enabled native writer)
+
+New server-only module cgma-native-audit-evidence.js validates a native
+canary receipt against independently queried D1 grant, exact test post,
+soft-delete state, and post.create -> post.edit -> post.delete audit IDs,
+actors and timestamps. It enforces the two-minute consumed lease and
+compares audit references to actual server rows; device-provided evidence
+alone cannot pass. In-memory SQLite tests cover valid and forged receipts,
+missing rows, wrong author/content, nondeleted posts and expired lease.
+
+The agent queue still returns AUTH_REQUIRED. The code does not provide a
+public grant issuer, a trusted device-to-server grant consumer, audited
+production data migration, or a legitimate authenticated production
+session. Remaining server integration must verify board-local authorization
+and user consent and must never trust client-supplied attestation booleans.
