@@ -24,9 +24,31 @@ test('news taxonomy replaces vague committee/history filters, exposes linked soc
   assert.match(js,/item\.name\|\|'연결 채널'/);
   for(const label of ['신문','잡지','방송','유튜브','블로그','대학','정부·공공기관','페이스북','인스타그램','틱톡'])assert.ok(js.includes("'"+label+"'"),'news source '+label);
   assert.doesNotMatch(js,/const TIMELINE_FILTERS=\[[^\]]*비대위 활동이력/);
-  assert.match(js,/const relatedRows=publicTimelineEntries\.filter\(item=>!isCommitteeRecord\(item\)\)/);
+  assert.match(js,/const relatedRows=publicTimelineEntries\.filter\(item=>!isCommitteeRecord\(item\)&&!isCommitteeRelatedNews\(item\)\)/);
   assert.match(js,/if\(isCommitteeRecord\(row\)\)return false/);
   assert.match(js,/renderRelatedChannelLinks\(\)/);
+});
+
+test('committee-related news panel and its management form belong only to the activity history view',async()=>{
+  const [html,js]=await Promise.all([
+    read('sites/seonammedi/public/index.html'),
+    read('sites/seonammedi/public/app.js')
+  ]);
+  const activity=html.indexOf('<section id="committee-activity"');
+  const related=html.indexOf('<section id="timeline"');
+  const panel=html.indexOf('<section class="committee-news-section"');
+  assert.ok(activity>=0&&related>activity&&panel>activity&&panel<related,'committee feed must live inside the activity view');
+  assert.equal(html.split('id="committeeNewsList"').length-1,1,'only one committee news list');
+  assert.equal(html.split('id="committeeNewsManageToggle"').length-1,1,'only one committee news manager');
+  const activityMarkup=html.slice(activity,related);
+  const newsMarkup=html.slice(related);
+  for(const id of ['committeeActivityList','committeeNewsList','committeeNewsForm','committeeNewsManageToggle'])
+    assert.ok(activityMarkup.includes('id="'+id+'"'),'missing from activity view '+id);
+  assert.ok(!newsMarkup.includes('id="committeeNewsList"'),'committee news list duplicated in related-news view');
+  assert.ok(!newsMarkup.includes('id="committeeNewsForm"'),'committee form duplicated in related-news view');
+  assert.match(js,/const relatedRows=publicTimelineEntries\\.filter\\(item=>!isCommitteeRecord\\(item\\)&&!isCommitteeRelatedNews\\(item\\)\\)/);
+  assert.match(js,/publicTimelineEntries\\.filter\\(isCommitteeRelatedNews\\)\\.slice\\(\\)\\.sort\\(timelineDescending\\)/);
+  assert.match(js,/if\\(admin\\.has\\('timeline'\\)\\)bindCommitteeNewsAdmin\\(\\)/);
 });
 
 test('committee manager can search, filter, add, update, hide, delete, and reclassify legacy records with explicit scope',async()=>{
