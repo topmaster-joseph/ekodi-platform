@@ -70,15 +70,15 @@ test('central Admin handoff checks explicit authenticated response',()=>{
 test('AI control returns service unavailable instead of false invalid_session on central 503',async()=>{
   const original=globalThis.fetch;
   const requests=[];
-  globalThis.fetch=async(url)=>{
-    requests.push(String(url));
-    if(String(url).endsWith('/api/session'))return respond({error:'upstream_busy'},503);
+  const centralFetch=async(url)=>{
+    requests.push(url.url);
+    if(url.url.endsWith('/api/session'))return respond({error:'upstream_busy'},503);
     throw new Error('must not attempt legacy auth after central 503');
   };
   try{
     const response=await aiWorker.fetch(new Request('https://ai.internal/api/status',{
       headers:{authorization:'Bearer central-session'}
-    }),{SUPABASE_URL:'https://not-used.example',SUPABASE_PUBLISHABLE_KEY:'not-used'},{waitUntil(){}});
+    }),{SUPABASE_URL:'https://not-used.example',SUPABASE_PUBLISHABLE_KEY:'not-used',CONTROL_API:{fetch:centralFetch}},{waitUntil(){}});
     assert.equal(response.status,503);
     assert.equal((await response.json()).error,'central_identity_unavailable');
     assert.deepEqual(requests,['https://ekodi.kr/api/session']);
@@ -86,11 +86,11 @@ test('AI control returns service unavailable instead of false invalid_session on
 });
 test('AI control returns service unavailable when central verification throws network error',async()=>{
   const original=globalThis.fetch;
-  globalThis.fetch=async()=>{throw new Error('network down')};
+  const centralFetch=async()=>{throw new Error('network down')};
   try{
     const response=await aiWorker.fetch(new Request('https://ai.internal/api/status',{
       headers:{authorization:'Bearer central-session'}
-    }),{},{waitUntil(){}});
+    }),{CONTROL_API:{fetch:centralFetch}},{waitUntil(){}});
     assert.equal(response.status,503);
     assert.equal((await response.json()).error,'central_identity_unavailable');
   }finally{globalThis.fetch=original}

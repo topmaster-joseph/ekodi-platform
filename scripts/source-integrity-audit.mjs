@@ -90,12 +90,57 @@ if (!changedFiles.length) {
   if (has(/(?:^|\/)(?:auth|admin-google|google-admin|customer|client-access|api-worker|wrangler\.api)/i)) for (const file of ['test/auth-worker.test.mjs','test/business-contract.test.mjs','test/client-access.test.mjs','test/control-api.test.mjs','test/customer-auth-contract.test.mjs','test/google-admin-auth-contract.test.mjs']) addTest(file);
   if (has(/(?:control-center|admin-compact|policies)/i)) for (const file of ['test/admin-compact-build.test.mjs','test/admin-compact-contract.test.mjs','test/admin-compact-navigation.test.mjs','test/policies-page-contract.test.mjs','test/static-app.test.mjs']) addTest(file);
   if (has(/finance/i)) addTest('test/finance-worker.test.mjs'); if (has(/(?:monitor|service-registry)/i)) addTest('test/monitor.test.mjs'); if (has(/(?:responsive|site-worker|\.html$|\.css$)/i)) { addTest('test/responsive-standard.test.mjs'); addTest('test/static-app.test.mjs'); }
-  if (testFiles.size) { const args = ['--test', ...[...testFiles].sort()]; const result = command(process.execPath, args); report.tests.push({ command: `node ${args.join(' ')}`, ok: result.ok, output: result.output }); if (!result.ok) report.errors.push({ type: 'tests', detail: result.output }); }
+  if (testFiles.size) {
+    const generate = command(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'generate:user-services']);
+    report.tests.push({ command: 'npm run generate:user-services', ok: generate.ok, output: generate.output });
+    if (!generate.ok) {
+      report.errors.push({ type: 'generated-runtime-precondition', detail: generate.output });
+    } else {
+      const args = ['--test', ...[...testFiles].sort()];
+      const result = command(process.execPath, args);
+      report.tests.push({ command: `node ${args.join(' ')}`, ok: result.ok, output: result.output });
+      if (!result.ok) report.errors.push({ type: 'tests', detail: result.output });
+    }
+  }
   if (changedFiles.some(file => file.startsWith('books/'))) { const result = command(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'validate:books']); report.tests.push({ command: 'npm run validate:books', ok: result.ok, output: result.output }); if (!result.ok) report.errors.push({ type: 'books-validation', detail: result.output }); }
   const runtimeFiles = trackedFiles.filter(file => !file.startsWith('docs/') && !file.startsWith('test/') && !file.startsWith('migrations/') && !file.startsWith('dist/') && !ignoredFiles.has(file) && (/\.(?:js|mjs|html|toml|json|yml|yaml)$/i.test(file) || file === 'service-registry.json'));
   let legacyDomains = new Set(); try { const constitution = JSON.parse(await readFile('governance/constitution/constitution.json', 'utf8')); legacyDomains = new Set(constitution.legacyDomainAllowlist || []); } catch {}
   const diffText = gitDiffForFiles(`${base}...${head}`, changedFiles); const addedLines = diffText.split('\n').filter(line => line.startsWith('+') && !line.startsWith('+++')).map(line => line.slice(1)); const removedLines = diffText.split('\n').filter(line => line.startsWith('-') && !line.startsWith('---')).map(line => line.slice(1)); const addedUrls = unique(addedLines.flatMap(extractUrls)); const removedUrls = unique(removedLines.flatMap(extractUrls)); const addedHosts = new Set(addedUrls.map(hostOf).filter(isEkodiHost)); const removedHosts = unique(removedUrls.map(hostOf).filter(host => isEkodiHost(host) && legacyDomains.has(host) && !addedHosts.has(host)));
-  if (removedHosts.length) { const ignoreLegacyLine = /\b(?:legacy|deprecated|retire|remove|delete|cleanup|grep|redirect|alias|compat|old[_-]?)\b/i; for (const oldHost of removedHosts) { const stale = []; for (const file of runtimeFiles) { let content = ''; try { content = await readFile(file, 'utf8'); } catch { continue; } content.split('\n').forEach((line, index) => { if (!line.includes(oldHost) || ignoreLegacyLine.test(line)) return; stale.push(`${file}:${index + 1}:${line.trim().slice(0, 220)}`); }); } if (stale.length) report.errors.push({ type: 'stale-domain-reference', host: oldHost, detail: stale.slice(0, 20) }); else report.checks.push({ name: `retired-domain:${oldHost}`, ok: true, detail: 'No active runtime/config references remain.' }); } }
+  if (removedHosts.length) {
+    const ignoreLegacyLine = /\b(?:legacy|deprecated|retire|remove|delete|cleanup|grep|redirect|alias|compat|old[_-]?)\b/i;
+    const changedFileSet = new Set(changedFiles);
+    for (const oldHost of removedHosts) {
+      const blocking = [];
+      const inherited = [];
+      for (const file of runtimeFiles) {
+        let content = '';
+        try { content = await readFile(file, 'utf8'); } catch { continue; }
+        content.split('\n').forEach((line, index) => {
+          if (!line.includes(oldHost) || ignoreLegacyLine.test(line)) return;
+          const ref = `${file}:${index + 1}:${line.trim().slice(0, 220)}`;
+          if (changedFileSet.has(file)) blocking.push(ref);
+          else inherited.push(ref);
+        });
+      }
+      if (blocking.length) {
+        report.errors.push({ type: 'stale-domain-reference', host: oldHost, detail: blocking.slice(0, 20) });
+      } else {
+        if (inherited.length) report.warnings.push({
+          type: 'legacy-domain-debt',
+          host: oldHost,
+          detail: inherited.slice(0, 20),
+          disposition: 'non-blocking inherited debt; any new or modified reference remains blocking',
+        });
+        report.checks.push({
+          name: `retired-domain:${oldHost}`,
+          ok: true,
+          detail: inherited.length
+            ? 'No stale reference was introduced or modified in this audit window.'
+            : 'No active runtime/config references remain.',
+        });
+      }
+    }
+  }
   let apiWorker='',wranglerApi='',customerAuth='',clientAuth='',centralAuth=''; try { apiWorker=await readFile('api-worker.js','utf8'); } catch {} try { wranglerApi=await readFile('wrangler.api.toml','utf8'); } catch {} try { customerAuth=await readFile('customer-auth.js','utf8'); } catch {} try { clientAuth=await readFile('auth-site/client-auth.js','utf8'); } catch {} try { centralAuth=await readFile('auth-site/auth.js','utf8'); } catch {}
   const activeClients = new Map(); for (const line of apiWorker.split('\n')) { const match=line.match(/id:\s*'client-([^']+)'[\s\S]*?domain:\s*'([^']+)'[\s\S]*?group:\s*'client'[\s\S]*?defaultState:\s*'active'/); if(match) activeClients.set(match[1],match[2]); }
   const allowedOriginsMatch=wranglerApi.match(/ALLOWED_ORIGINS\s*=\s*"([^"]*)"/); const allowedOrigins=new Set((allowedOriginsMatch?.[1]||'').split(',').map(v=>v.trim()).filter(Boolean)); for(const [slug,domain] of activeClients) check(`cors-origin:${slug}`,allowedOrigins.has(`https://${domain}`),`expected https://${domain} in wrangler.api.toml ALLOWED_ORIGINS`);

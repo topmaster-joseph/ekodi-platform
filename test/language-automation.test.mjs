@@ -1,4 +1,6 @@
 import test from 'node:test';
+import { EKODI_LANGUAGE_REGISTRY } from '../config/language-registry.js';
+import { EKODI_SERVICE_MANIFEST } from '../ekodi-service-manifest.js';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import {
@@ -43,32 +45,75 @@ test('automation probes only public non-planned user content',()=>{
   assert.equal(LANGUAGE_AUTOMATION_CONTRACT.publicationControl,'site-scoped-and-platform-aggregate');
 });
 
-test('public readiness endpoint exposes only published locales without mutation access',async()=>{
-  const response=await handleLanguageAutomationPublic(new Request('https://ekodi.kr/api/i18n/v1/status?service=community'),{});
+const SEED_VERSION=`${EKODI_LANGUAGE_REGISTRY.version}:${EKODI_SERVICE_MANIFEST.version}`;
+function languageRows(service='ekodi',published=['ko-KR']){
+  const enabled=new Set(published);
+  return EKODI_LANGUAGE_REGISTRY.languages.map(language=>({
+    service_id:service,locale:language.locale,
+    stage:language.locale==='ko-KR'?'source':enabled.has(language.locale)?'published':'queued',
+    publication_status:enabled.has(language.locale)?'published':'hidden'
+  }));
+}
+function databaseWithRows(rows){
+  return {prepare(){
+    return {
+      bind(){return this},
+      async first(){return {value:SEED_VERSION}},
+      async all(){return {results:rows}},
+      async run(){return {success:true}}
+    };
+  }};
+}
+test('LANG-UI-001: only authoritative D1-published locales appear on public readiness',async()=>{
+  const response=await handleLanguageAutomationPublic(
+    new Request('https://ekodi.kr/api/i18n/v1/status?service=ekodi'),
+    {DB:databaseWithRows(languageRows('ekodi',['ko-KR','en']))}
+  );
   assert.equal(response.status,200);
   const data=await response.json();
-  assert.deepEqual(data.publishedLocales,['ko-KR']);
-  assert.equal(data.languages.find(item=>item.locale==='en')?.public,false);
-  const blocked=await handleLanguageAutomationPublic(new Request('https://ekodi.kr/api/i18n/v1/status?service=community',{method:'POST'}),{});
+  assert.deepEqual(data.publishedLocales,['ko-KR','en']);
+  assert.equal(data.languages.find(item=>item.locale==='en')?.public,true);
+  assert.equal(data.languages.find(item=>item.locale==='ja')?.public,false);
+  const blocked=await handleLanguageAutomationPublic(
+    new Request('https://ekodi.kr/api/i18n/v1/status?service=community',{method:'POST'}),{}
+  );
   assert.equal(blocked.status,405);
 });
-test('public readiness endpoint falls back to the registry when runtime DB seed fails',async()=>{
-  const failingDb={
-    prepare(){
-      return {
-        bind(){return this},
-        async first(){throw new Error('schema_drift')},
-        async all(){throw new Error('schema_drift')},
-        async run(){throw new Error('schema_drift')}
-      };
-    }
-  };
-  const response=await handleLanguageAutomationPublic(new Request('https://ekodi.kr/api/i18n/v1/status?service=mission'),{DB:failingDb});
-  assert.equal(response.status,200);
-  const data=await response.json();
-  assert.equal(data.serviceId,'mission');
-  assert.ok(Array.isArray(data.publishedLocales));
-  assert.ok(data.publishedLocales.includes('ko-KR'));
+test('LANG-UI-001: missing D1 never advertises unverified registry multilingual defaults',async()=>{
+  for(const service of ['ekodi','journal','biz','cgma','community']){
+    const response=await handleLanguageAutomationPublic(
+      new Request(`https://ekodi.kr/api/i18n/v1/status?service=${service}`),{}
+    );
+    assert.equal(response.status,503,service);
+    const data=await response.json();
+    assert.equal(data.error,'language_readiness_unavailable');
+    assert.equal(data.serviceId,service);
+    assert.deepEqual(data.publishedLocales,['ko-KR'],service);
+    assert.equal(response.headers.get('cache-control'),'no-store');
+  }
+});
+test('LANG-UI-001: DB errors and incomplete publication rows are never treated as published',async()=>{
+  const failingDb={prepare(){
+    return {bind(){return this},async first(){throw new Error('schema_drift')},
+      async all(){throw new Error('schema_drift')},async run(){throw new Error('schema_drift')}};
+  }};
+  const full=languageRows('ekodi',['ko-KR','en','zh-CN','ja']);
+  const cases=[
+    {label:'schema error',db:failingDb},
+    {label:'empty result',db:databaseWithRows([])},
+    {label:'partial rows',db:databaseWithRows(full.slice(0,2))},
+    {label:'duplicate locale',db:databaseWithRows([...full.slice(0,-1),full[0]])},
+    {label:'unknown locale',db:databaseWithRows([...full.slice(0,-1),{...full[8],locale:'unsupported-x'}])}
+  ];
+  for(const {label,db} of cases){
+    const response=await handleLanguageAutomationPublic(
+      new Request('https://ekodi.kr/api/i18n/v1/status?service=ekodi'),{DB:db}
+    );
+    assert.equal(response.status,503,label);
+    const data=await response.json();
+    assert.equal(data.error,'language_readiness_unavailable',label);
+    assert.deepEqual(data.publishedLocales,['ko-KR'],label);
+  }
 });
 
 test('publication control uses an idempotent side table so partially applied legacy columns cannot block staging',async()=>{

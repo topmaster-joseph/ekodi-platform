@@ -287,10 +287,20 @@ async function publicServiceStatus(env,id){
   const service=platformService(id);if(!service)return null;
   const base=languageStatusSnapshot([...EKODI_SERVICE_MANIFEST.services,...MANAGED_LANGUAGE_SITES]).sites.find(site=>site.id===service.id);
   if(!base)return null;
-  if(!env.DB?.prepare)return base;
-  try{await seedLanguageAutomation(env)}catch{return base}
-  const rows=await stateRows(env,service.id).catch(()=>[]);
-  return rows.length?overlaySiteStatus(base,rows):base;
+  // LANG-UI-001: registry defaults are configuration, NOT proof of publication.
+  // Without authoritative D1 state, return a degraded readiness result instead
+  // of exposing any unverified language, even when the registry lists several.
+  const degraded=Object.freeze({readinessUnavailable:true,serviceId:service.id});
+  if(!env.DB?.prepare)return degraded;
+  try{
+    await seedLanguageAutomation(env);
+    const rows=await stateRows(env,service.id);
+    const supported=new Set(EKODI_LANGUAGE_REGISTRY.languages.map(language=>language.locale));
+    const seen=new Set(rows.map(row=>row.locale));
+    if(rows.length!==supported.size||seen.size!==supported.size||
+       [...seen].some(locale=>!supported.has(locale)))return degraded;
+    return overlaySiteStatus(base,rows);
+  }catch{return degraded}
 }
 const PUBLICATION_STATES=new Set(['published','hidden']);
 export async function languageSiteStatusForAdmin(env,id){
@@ -360,6 +370,11 @@ export async function handleLanguageAutomationPublic(request,env={}){
     const id=serviceId(url.searchParams.get('service')||'ekodi');
     const status=await publicServiceStatus(env,id);
     if(!status)return json({error:'service_not_found'},404);
+    if(status.readinessUnavailable){
+      // The shared header must remain Korean-only on D1 outages/partial records.
+      // Return a non-cacheable failure so the existing client fail-closed gate applies.
+      return json({error:'language_readiness_unavailable',serviceId:id,sourceLocale:SOURCE_LOCALE,publishedLocales:[SOURCE_LOCALE]},503);
+    }
     return json({schemaVersion:1,serviceId:id,sourceLocale:SOURCE_LOCALE,publishedLocales:status.publishedLocales,languages:status.languages.map(item=>({locale:item.locale,status:item.status,public:item.public}))},200,'public, max-age=30, stale-while-revalidate=120');
   }
   if(url.pathname===`${PREFIX}/catalog`){
