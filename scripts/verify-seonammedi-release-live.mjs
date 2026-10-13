@@ -36,6 +36,12 @@ for(let attempt=1;attempt<=attempts;attempt++){
       fetchText(origin+'/finance/?release_verify='+expected.release),
       fetchText(origin+'/notices/?release_verify='+expected.release)
     ]);
+    // Release verification must inspect the actual public HTML, not only release markers.
+    // A literal backslash-n in <head> closes the parser's head early and renders on screen.
+    const headMarkup=root.text.slice(0,root.text.toLowerCase().indexOf('</head>'));
+    const headWithoutScripts=headMarkup.replace(/<script\\b[^>]*>[\\s\\S]*?<\\/script>/gi,'');
+    if(/\\\\[nrt]/.test(headWithoutScripts))throw new Error('live_homepage_head_literal_escaped_whitespace');
+    if(!/<meta\\s+property="og:image"/i.test(headWithoutScripts))throw new Error('live_homepage_og_image_meta_missing');
     if(!root.response.ok)throw new Error('root_http_'+root.response.status);
     if(!admin.response.ok)throw new Error('admin_http_'+admin.response.status);
     if(!finance.response.ok)throw new Error('finance_http_'+finance.response.status);
