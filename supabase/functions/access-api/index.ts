@@ -194,7 +194,7 @@ function validHandoff(site:string,raw:string){
     const target=new URL(raw);
     if(target.protocol!=="https:"||target.username||target.password)return null;
     if(site==="marketing"&&validMarketingOrigin(target.origin))return target.href;
-    const platformPath=target.origin==="https://ekodi.kr"&&((site==="cgma"&&(target.pathname==="/cgma"||target.pathname.startsWith("/cgma/")))||(site==="mission"&&(target.pathname==="/ekodimission"||target.pathname.startsWith("/ekodimission/")))||(site==="church"&&(target.pathname==="/ekodichurch"||target.pathname.startsWith("/ekodichurch/"))));
+    const platformPath=target.origin==="https://ekodi.kr"&&((site==="cgma"&&(target.pathname==="/cgma"||target.pathname.startsWith("/cgma/")))||(site==="mission"&&(target.pathname==="/ekodimission"||target.pathname.startsWith("/ekodimission/")))||(site==="church"&&(target.pathname==="/ekodichurch"||target.pathname.startsWith("/ekodichurch/")))||(site==="seonammedi"&&(target.pathname==="/seonammedi"||target.pathname.startsWith("/seonammedi/"))));
     return (((origins[site]||[]).includes(target.origin)&&target.origin!=="https://ekodi.kr")||platformPath)?target.href:null;
   }catch{return null}
 }
