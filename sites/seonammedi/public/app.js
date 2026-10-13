@@ -108,6 +108,14 @@ const timelineCategoryLabel=value=>{
   return raw;
 };
 const isCommitteeRecord=item=>item?.recordScope==='committee';
+const isCommitteeRelatedNews=item=>{
+  if(isCommitteeRecord(item))return false;
+  if(item?.committeeRelated===true)return true;
+  const context=[item?.title,item?.summary].filter(Boolean).join(' ');
+  // Automatic records have already passed the server-side publication gate.
+  return /비상대책위원회|비상대책위|비대위|대책위원회/.test(context)
+    && /서남권|국립의대|의과대학|목포대|전남|의대/.test(context);
+};
 function relatedNewsCategory(item){
   const type=String(item?.sourceType||item?.source_type||'').toLowerCase();
   const source=[item?.evidence||'',item?.publisher||'',...(item?.links||[]).map(link=>[link.source,link.url].filter(Boolean).join(' '))].join(' ').toLowerCase();
@@ -194,6 +202,7 @@ function applyMonitorTimelineUpdates(items){
   renderTimelineFilters();
   renderPublicTimeline();
   renderCommitteeActivity();
+  renderCommitteeNews();
 }
 function renderTimelineFilters(){
   const host=el('timelineFilters');if(!host)return;
@@ -214,6 +223,20 @@ function renderPublicTimeline(){
   host.querySelectorAll('.timeline-toggle').forEach(button=>button.addEventListener('click',()=>{const card=button.closest('.timeline-item');const collapsed=card.classList.toggle('is-collapsed');button.setAttribute('aria-expanded',collapsed?'false':'true');button.textContent=collapsed?'자세히 보기':'접기'}));
   attachMonitorMedia(window.__SEONAM_MONITOR_ITEMS||[]);
 }
+function renderCommitteeNews(){
+  const host=el('committeeNewsList');if(!host)return;
+  const rows=publicTimelineEntries.filter(isCommitteeRelatedNews).slice().sort(timelineDescending);
+  host.innerHTML=rows.length?rows.map((item,index)=>{
+    const id=Number(item.id||0),auto=Boolean(item.autoCollected);
+    const actions=publicTimelineAdminMode&&!auto&&id>0?'<div class="timeline-admin-actions"><span class="source-type">'+(item.status==='published'?'공개':'비공개')+'</span><button type="button" data-committee-news-edit="'+id+'">수정</button><button type="button" data-committee-news-status="'+id+'">'+(item.status==='published'?'비공개로':'공개로')+'</button><button type="button" data-committee-news-delete="'+id+'">삭제</button></div>'
+      :publicTimelineAdminMode&&auto&&Number(item.monitorSourceId)>0?'<div class="timeline-admin-actions"><span class="source-type">자동수집</span><button type="button" data-committee-news-hide="'+Number(item.monitorSourceId)+'">공개 제외</button></div>':'';
+    return '<article class="timeline-item'+(index>2?' is-collapsed':'')+'"><div class="timeline-date">'+escapeHtml(item.date||'')+'</div><div class="timeline-content"><h3>'+escapeHtml(item.title||'')+'</h3><p class="timeline-summary">'+escapeHtml(item.summary||'')+'</p><div class="chips"><span class="chip">'+escapeHtml(relatedNewsCategory(item))+'</span><span class="chip">'+(auto?'출처 확인 · 자동수집':'등록 소식')+'</span></div><div class="timeline-detail">'+evidenceBlock(item)+'</div>'+actions+'<button class="timeline-toggle" type="button" aria-expanded="'+(index>2?'false':'true')+'">'+(index>2?'자세히 보기':'접기')+'</button></div></article>';
+  }).join(''):'<p class="muted">현재 공개가 확인된 비상대책위 관련소식이 없습니다. 출처가 검증된 자료가 수집되면 자동으로 표시됩니다.</p>';
+  host.querySelectorAll('.timeline-toggle').forEach(button=>button.addEventListener('click',()=>{
+    const card=button.closest('.timeline-item'),collapsed=card.classList.toggle('is-collapsed');
+    button.setAttribute('aria-expanded',collapsed?'false':'true');button.textContent=collapsed?'자세히 보기':'접기';
+  }));
+}
 function initializePublicTimeline(rows){
   basePublicTimelineEntries=Array.isArray(rows)?rows:[];
   publicTimelineEntries=basePublicTimelineEntries.slice();
@@ -221,6 +244,7 @@ function initializePublicTimeline(rows){
   renderTimelineFilters();
   renderPublicTimeline();
   renderCommitteeActivity();
+  renderCommitteeNews();
 }
 
 async function load(){
@@ -1039,7 +1063,7 @@ async function loadPublicTimelineAdmin(){
   basePublicTimelineEntries=Array.isArray(data.items)?data.items:[];publicTimelineAdminMode=true;
   publicTimelineEntries=mergeMonitorTimelineItems(basePublicTimelineEntries,window.__SEONAM_MONITOR_ITEMS||[]);
   if(window.__SEONAM_MEDI_DATA)window.__SEONAM_MEDI_DATA.timeline=publicTimelineEntries.filter(item=>item.status==='published');
-  renderTimelineFilters();renderPublicTimeline();renderCommitteeActivity();
+  renderTimelineFilters();renderPublicTimeline();renderCommitteeActivity();renderCommitteeNews();
 }
 function bindPublicTimelineLinkImport(){
   const toggle=el('timelineLinkToggle'),form=el('timelineLinkForm'),cancel=el('timelineLinkCancel');
