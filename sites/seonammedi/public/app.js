@@ -248,7 +248,7 @@ function renderCommitteeNews(){
 function initializePublicTimeline(rows){
   basePublicTimelineEntries=Array.isArray(rows)?rows:[];
   publicTimelineEntries=basePublicTimelineEntries.slice();
-  activeTimelineCategory='전체';
+  activeTimelineCategory=categoryFromMenuHash('timeline',TIMELINE_FILTERS);
   renderTimelineFilters();
   renderPublicTimeline();
   renderCommitteeActivity();
@@ -585,11 +585,19 @@ function showStatusTab(tab){
 document.querySelectorAll('.status-tabs').forEach(tabs=>tabs.addEventListener('click',event=>{const button=event.target.closest('[data-status-tab]');if(button)showStatusTab(button.dataset.statusTab)}));
 const viewAliases={status:'status',monitor:'status',organization:'organization',records:'status',timeline:'status',materials:'status',news:'status','public-posts':'status','committee-activity':'committee',committee:'committee',notices:'notices',voices:'voices',channels:'channels',finance:'finance'};
 const canonicalViewHash={committee:'committee-activity',status:'timeline',organization:'organization',notices:'notices',voices:'voices',channels:'channels',finance:'finance'};
+function categoryFromMenuHash(prefix,allowed){
+  const raw=location.hash.replace(/^#/,'');
+  if(!raw.startsWith(prefix+'/'))return '전체';
+  try{
+    const value=decodeURIComponent(raw.slice(prefix.length+1).split('/')[0]);
+    return allowed.includes(value)?value:'전체';
+  }catch{return '전체'}
+}
 function showView(view,{updateHash=false}={}){
   const key=viewAliases[view]||'';
   document.querySelectorAll('[data-view-section]').forEach(section=>{section.hidden=section.dataset.viewSection!==key});
   document.querySelectorAll('[data-view-link]').forEach(link=>{
-    const active=link.dataset.viewLink===key||(key==='channels'&&link.dataset.viewLink==='status');
+    const active=link.dataset.viewLink===key;
     if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
   });
   const financeNav=document.querySelector('.site-header nav a[href="board/finance"]');
@@ -610,6 +618,19 @@ function syncViewFromLocation(){
   const raw=location.hash.replace(/^#/,'');
   if(raw==='notices'){location.replace('/notices/');return}
   if(raw.includes('ekodi_token=')){showView(new URLSearchParams(location.search).get('compose')==='notice'?'notices':'',{updateHash:false});return}
+  if(raw==='timeline'||raw.startsWith('timeline/')){
+    activeTimelineCategory=categoryFromMenuHash('timeline',TIMELINE_FILTERS);
+    showView('status',{updateHash:false});
+    showStatusTab('timeline');
+    renderTimelineFilters();renderPublicTimeline();
+    return;
+  }
+  if(raw==='committee-activity'||raw.startsWith('committee-activity/')){
+    selectedCommitteeFilter=categoryFromMenuHash('committee-activity',COMMITTEE_FILTERS);
+    showView('committee',{updateHash:false});
+    renderCommitteeActivity();
+    return;
+  }
   if(raw==='channels'||raw.startsWith('channels/')){
     showView('channels',{updateHash:false});
     if(typeof activateChannelPlatform==='function'&&typeof publicChannels!=='undefined'&&publicChannels.length){
@@ -626,6 +647,16 @@ document.querySelector('.site-header nav')?.addEventListener('click',event=>{
   const link=event.target.closest('[data-view-link]');
   if(!link)return;
   event.preventDefault();
+  if(link.dataset.viewLink==='status'){
+    activeTimelineCategory='전체';
+    renderTimelineFilters();renderPublicTimeline();
+    showStatusTab('timeline');
+  }
+  if(link.dataset.viewLink==='committee'){
+    selectedCommitteeFilter='전체';
+    renderCommitteeActivity();
+  }
+  if(link.dataset.viewLink==='channels'&&publicChannels.length)activateChannelPlatform('all',{updateRoute:false});
   showView(link.dataset.viewLink,{updateHash:true});
 });
 window.addEventListener('popstate',syncViewFromLocation);
