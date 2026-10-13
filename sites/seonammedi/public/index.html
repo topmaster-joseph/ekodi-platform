@@ -48,18 +48,31 @@
 @media(max-width:700px){.site-header{max-width:100%;box-sizing:border-box}.ekodi-six-nav{gap:14px}.ekodi-six-nav>a{font-size:14px}.central-category-panel{padding:14px 12px}}
 </style>
   <script data-ekodi-leading-text-guard>
-  // Remove only accidental literal escaped newlines injected before the page header.
-  // Never modify the navigation, hero, or user-generated content.
+  // Keep the first rendered character of the page inside the real site header.
   (() => {
+    const stray = /^(?:\\s|\\\\[nrt])+$/;
     const clean = () => {
-      for (const node of Array.from(document.body?.childNodes || [])) {
+      const body = document.body;
+      if (!body) return;
+      for (const node of Array.from(body.childNodes)) {
         if (node.nodeType === Node.ELEMENT_NODE) break;
-        if (node.nodeType !== Node.TEXT_NODE) continue;
-        if (/^(?:\s|\\n|\\r|\\t)+$/.test(node.textContent || '')) node.remove();
+        if (node.nodeType === Node.TEXT_NODE && stray.test(node.textContent || '')) node.remove();
+      }
+      // Gateways may prepend escaped text outside the body before HTML parsing.
+      for (const node of Array.from(document.documentElement.childNodes)) {
+        if (node === document.head || node === body) break;
+        if (node.nodeType === Node.TEXT_NODE && stray.test(node.textContent || '')) node.remove();
       }
     };
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', clean, { once: true });
-    else clean();
+    const boot = () => {
+      clean();
+      const observer = new MutationObserver(clean);
+      observer.observe(document.documentElement, { childList: true });
+      observer.observe(document.body, { childList: true });
+      window.addEventListener('load', () => { clean(); observer.disconnect(); }, { once: true });
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
+    else boot();
   })();
   </script>
 </head>
