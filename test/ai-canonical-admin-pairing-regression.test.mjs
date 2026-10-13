@@ -25,13 +25,13 @@ test('canonical Admin AI controls call the existing /ai/api service routes, not 
 test('D1-backed central super-admin session can create pairing and read Commons review',async()=>{
   const previous=globalThis.fetch;
   const observed=[];
-  globalThis.fetch=async(input,options)=>{
-    observed.push({path:new URL(String(input)).pathname,authorization:options?.headers?.authorization});
+  const centralFetch=async(input)=>{
+    observed.push({path:new URL(input.url).pathname,authorization:input.headers.get('authorization')});
     return respond({authenticated:true,email:'admin@example.com',role:'super_admin',expiresAt:'2026-10-11T00:00:00Z'});
   };
   try{
     const headers={authorization:'Bearer known-central-session','content-type':'application/json'};
-    const env={DB:fakeDb()};
+    const env={DB:fakeDb(),CONTROL_API:{fetch:centralFetch}};
     const pairing=await aiWorker.fetch(new Request('https://ai.internal/api/nodes/pair',{method:'POST',headers,body:'{}'}),env,{waitUntil(){}});
     assert.equal(pairing.status,201);
     assert.match((await pairing.json()).code,/^[A-HJ-NP-Z2-9]{10}$/);
@@ -45,11 +45,11 @@ test('D1-backed central super-admin session can create pairing and read Commons 
 
 test('original central response never grants missing viewer capabilities',async()=>{
   const previous=globalThis.fetch;
-  globalThis.fetch=async()=>respond({authenticated:true,email:'viewer@example.com',role:'viewer'});
+  const centralFetch=async()=>respond({authenticated:true,email:'viewer@example.com',role:'viewer'});
   try{
     const response=await aiWorker.fetch(new Request('https://ai.internal/api/nodes/pair',{
       method:'POST',headers:{authorization:'Bearer viewer-session'},body:'{}'
-    }),{DB:fakeDb()},{waitUntil(){}});
+    }),{DB:fakeDb(),CONTROL_API:{fetch:centralFetch}},{waitUntil(){}});
     assert.notEqual(response.status,201);
   }finally{globalThis.fetch=previous}
 });
