@@ -200,8 +200,8 @@ export async function runSeonamMediHourlyCheck(env,{scheduledAt=null,force=false
   for(const query of QUERIES){
     const collected=[];
     try{
-      const items=parseRss(await fetchSeonamMediNewsRss(query.q),query.key,query.label);
-      checked+=1;seen+=items.length;collected.push(...items);
+      const items=parseRss(await fetchSeonamMediNewsRss(query.q),query.key,query.label);checked+=1;seen+=items.length;
+      collected.push(...items);
     }catch(error){errors.push(query.key+':news:'+clean(error?.message||error,160))}
     if(naverBlogConfigured(env)){
       try{

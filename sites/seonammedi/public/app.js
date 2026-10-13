@@ -405,7 +405,7 @@ function renderHomeMonitorUpdates(data,{failed=false}={}){
   const rows=monitorHomeRows(data?.items||[]);
   const run=data?.lastRun;
   const runAt=run?.completed_at||'';
-  if(updated)updated.textContent=runAt?'마지막 수집 '+new Date(runAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})+' · EKODI 자동갱신':'1시간마다 자동 갱신';
+  if(updated)updated.textContent=runAt?'마지막 갱신 '+new Date(runAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})+' · EKODI 자동갱신':'1시간마다 자동 갱신';
   if(!rows.length){
     const runLabel=run?.status==='ok'?'정상 수집':run?.status==='partial'?'일부 수집':run?.status==='failed'?'수집 실패':'상태 확인 중';
     const candidates=Number(data?.recentCandidateCount||0);
