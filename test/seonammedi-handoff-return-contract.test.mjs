@@ -13,7 +13,7 @@ function clientTarget(site,returnTo){
   assert.ok(first>=0&&last>first,'real login routing initializer must be found');
   const params=new URLSearchParams({site,return_to:returnTo});
   const script=authSource.slice(first,last)+'\n({site,returnTo})';
-  return runInNewContext(script,{URL,URLSearchParams,location:{search:'?'+params.toString()}});
+  return runInNewContext(script,{URL,URLSearchParams,ACCESS:'https://example.invalid/access-api',PERSON_WORKSPACE:'https://example.invalid/workspace-api',location:{search:'?'+params.toString()}});
 }
 function serverTarget(site,returnTo){
   const first=accessSource.indexOf('function validHandoff('),last=accessSource.indexOf('function tenantSlugBase(',first);
