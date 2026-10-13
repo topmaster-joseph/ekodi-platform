@@ -94,5 +94,13 @@ export async function finalizeSeonamMediRelease(output){
     if(!page.includes('data-ekodi-release-convergence'))page=page.replace('</head>',runtime+'\n</head>');
     await writeFile(siteDir+relative,page);
   }
+  // Publish final emitted bytes, not just the source fingerprint: live verification must
+  // reject an old or partially deployed HTML document even when the marker matches.
+  const publishedHtmlHashes={};
+  for(const page of ['index.html','admin/index.html','finance/index.html','notices/index.html']){
+    publishedHtmlHashes[page]=sha256(await readFile(siteDir+page));
+  }
+  manifest.publishedHtmlHashes=publishedHtmlHashes;
+  await writeFile(siteDir+'.well-known/ekodi-release.json',JSON.stringify(manifest,null,2)+'\n');
   return manifest;
 }
