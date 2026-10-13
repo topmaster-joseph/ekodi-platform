@@ -685,7 +685,7 @@ test('seonammedi activity history always renders in descending date order across
   const app=await readFile(new URL('app.js',root),'utf8');
   assert.match(app,/const timelineDateKey=value=>/);
   assert.match(app,/const timelineDescending=\(a,b\)=>timelineDateKey\(b\.date\)-timelineDateKey\(a\.date\)/);
-  assert.match(app,/const relatedRows=publicTimelineEntries\.filter\(item=>!isCommitteeRecord\(item\)\)/);
+  assert.match(app,/const relatedRows=publicTimelineEntries\.filter\(item=>!isCommitteeRecord\(item\)&&!isCommitteeRelatedNews\(item\)\)/);
   assert.match(app,/const relatedNewsFilterMatches=\(item,selected\)=>/);
   assert.match(app,/const rows=relatedRows\.filter\(item=>relatedNewsFilterMatches\(item,activeTimelineCategory\)\)\.slice\(\)\.sort\(timelineDescending\)/);
   assert.match(app,/committeeItems\(\)/);
