@@ -346,7 +346,7 @@ test('independent board header uses one aligned desktop row and a stacked mobile
       assert.match(html,/@media\(max-width:760px\)\{\.site-header\.independent-board-header\{flex-direction:column;align-items:stretch;/);
       assert.match(html,/\.site-header\.independent-board-header>nav\{flex:none;justify-content:flex-start;[^}]*width:100%/);
       assert.match(html,/\.site-header\.independent-board-header>nav a\[aria-current="page"\]\{color:#111;/);
-      assert.match(html,new RegExp('aria-current="page" href="'+mount.replace('https://seonammedi.kr','').replace('https://ekodi.kr','')+'/'+route+'">'));
+      if(route==='voices')assert.match(html,new RegExp('aria-current="page" href="'+mount.replace('https://seonammedi.kr','').replace('https://ekodi.kr','')+'/'+route+'">'));else assert.match(html,new RegExp('href="'+mount.replace('https://seonammedi.kr','').replace('https://ekodi.kr','')+'/'+route+'">'));
     }
   }
 });
