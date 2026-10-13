@@ -19,3 +19,7 @@ Production verification must prove that the actual HTTP responses for both `http
 ## Protected main synchronization
 
 EKODI synchronized the orchestrator-issued release branch with the protected main, producing merge source `9303020218aa441cc52ecb55431dd5f1356f1cb1`. The repository owner requests fresh required CI on this synchronized source. This owner-authored documentation update does not change the previously owner-approved executable fix, remove any safeguard, or imply production success. Guarded release and live verification remain mandatory.
+
+## Second current-main reconciliation
+
+The orchestrator merged the current protected main into its recovered branch at `ec78250d7134a9ddcc233e977fed09e0e70cf0d6`. This documentation-only owner action renews the existing approved source's required checks; it does not touch the executable fix or reduce required checks. The guarded release remains blocked until those checks pass on the exact new head.
