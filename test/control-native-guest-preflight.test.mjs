@@ -77,6 +77,16 @@ test('both responsive device receipts classify without relying on account creden
   }
 });
 
+test('native mobile admin overview redirect is accepted without relaxing Control routing proof',()=>{
+  const r=receipt();
+  r.deviceProfile='mobile-portrait';
+  r.results[1].url=origin+'/admin/summary/platform-overview';
+  const a=classify(r);
+  assert.equal(a.ok,true);
+  assert.equal(a.state,'LEGACY_ROUTES_OBSERVED');
+  assert.equal(a.productionReleaseVerified,false);
+});
+
 test('blocked mutations prove non-idempotent requests were prevented without invalidating guest reads',()=>{
   const r=receipt();
   r.blockedMutations=[{method:'POST',resourceType:'fetch'}];
