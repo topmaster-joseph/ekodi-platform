@@ -99,6 +99,7 @@ const COMMAND_POLICIES = Object.freeze({
   'software.localai.verify': { risk: 'observe' },
   'computer.browser.canary': { risk: 'maintain', confirm: true },
   'computer.browser.execute': { risk: 'maintain', confirm: true, payload: 'background-browser-task' },
+  'computer.browser.pr.observe': { risk: 'maintain', confirm: true, payload: 'github-pr-readonly' },
   'remote_desktop.recovery.enable': { risk: 'maintain', confirm: true },
   'remote_desktop.recovery.disable': { risk: 'maintain', confirm: true },
   'remote_desktop.recovery.run': { risk: 'maintain', confirm: true },
@@ -126,6 +127,7 @@ const COMMAND_CAPABILITIES = Object.freeze({
   'computer.desktop.session.canary': 'isolatedDesktopUiCanary',
   'computer.desktop.session.execute': 'isolatedDesktop',
   'computer.browser.execute': 'backgroundBrowser',
+  'computer.browser.pr.observe': 'backgroundBrowser',
   'network.diagnose': 'networkDiagnostics',
   'printers.diagnose': 'printerDiagnostics',
   'printing.image_preview.status': 'imagePrintPreview',
@@ -394,6 +396,21 @@ function sanitizeCommandPayload(type, rawPayload) {
       closeOwnedSurfaceOnComplete:true,
       closeOwnedSurfaceOnAuthRequired:true,
       preserveUserOwnedSurfaces:true,
+    };
+  }
+  if (policy.payload === 'github-pr-readonly') {
+    const rawPr=rawPayload?.pr;
+    const n=Number(rawPr);
+    if(!Number.isSafeInteger(n)||n<1||n>999999||String(rawPr)!==String(n)) throw new Error('BROWSER_GITHUB_PR_INVALID');
+    return {
+      pr:n,
+      executionMode:'background-only',
+      createUserBrowserTab:false,
+      closeOwnedSurfaceOnComplete:true,
+      closeOwnedSurfaceOnAuthRequired:true,
+      preserveUserOwnedSurfaces:true,
+      mutationMode:'read-only',
+      loginMode:'never',
     };
   }
   if (policy.payload === 'camera-stream') {

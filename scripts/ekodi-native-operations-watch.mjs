@@ -12,6 +12,7 @@ const BASE='https://api.github.com/repos/'+OWNER+'/'+REPO;
 const MONITOR='https://seonammedi.kr/api/seonammedi/monitor';
 const HEALTH='https://ekodi.kr/api/health';
 const CGMA_BOARD_HEALTH='https://ekodi.kr/cgma/board/api/health';
+const MALL_SNS_HEALTH='https://ekodi.kr/marketing-connect-api/health';
 const RELEASE_TASK='orch_recovery_f4624c3042fe9cd7054e31586f4613f2';
 const RELEASE_BRANCH='ai/gpt6/'+RELEASE_TASK;
 const RECEIPT='https://ekodi.kr/api/orchestrator/release-receipt?taskId='+RELEASE_TASK+'&branchRef='+encodeURIComponent(RELEASE_BRANCH);
@@ -39,6 +40,31 @@ export function classifySeonamMediMonitor(payload,nowMs=Date.now()){
   if(last.status!=='ok')return check('seonammedi-hourly','warning','run_not_yet_final',details);
   if(details.sourceChecks<1)return check('seonammedi-hourly','warning','no_sources_checked',details);
   return check('seonammedi-hourly','ok','',details);
+}
+
+export function classifyMallSnsReadiness(payload){
+  const name='mall-sns-readiness';
+  const infrastructure=payload?.ok===true&&payload?.schemaReady===true&&
+    payload?.oauthBroker===true&&payload?.encryptedVault===true;
+  const details={
+    youtubeConfigured:payload?.platform?.youtubeConfigured===true,
+    metaConfigured:payload?.platform?.metaConfigured===true,
+    threadsConfigured:payload?.platform?.threadsConfigured===true,
+    paidActivation:payload?.paidActivation===true,
+  };
+  if(!infrastructure)return check(name,'alert','oauth_infrastructure_not_ready',details);
+  const channels=payload?.mallPromotionAutomation?.channelReadiness;
+  if(typeof channels?.youtubeConnected!=='boolean'||typeof channels?.socialPublishReady!=='boolean')
+    return check(name,'warning','readiness_missing',details);
+  details.youtubeConnected=channels.youtubeConnected===true;
+  details.socialPublishReady=channels.socialPublishReady===true;
+  // Aggregate booleans only: never collect account emails, provider tokens, or connection identifiers.
+  if(!details.youtubeConfigured)return check(name,'warning','youtube_platform_setup_required',details);
+  if(!details.youtubeConnected)return check(name,'warning','youtube_oauth_connection_required',details);
+  if(!details.socialPublishReady)return check(name,'warning','publishing_not_ready',details);
+  if(!details.metaConfigured||!details.threadsConfigured)
+    return check(name,'warning','meta_threads_app_setup_required',details);
+  return check(name,'ok','',details);
 }
 
 export function classifyWorkflow(name,data,nowMs=Date.now()){
@@ -104,6 +130,10 @@ export async function collectEkodiNativeWatch({
   report.checks.push(cgmaHealthy?check('cgma-independent-board','ok'):
     check('cgma-independent-board','alert',cgma.reason||'board_identity_invalid'));
   if(cgma.circuitOpen){report.circuitOpen=true;report.result='deferred';return report}
+  const sns=await get(MALL_SNS_HEALTH);
+  report.checks.push(sns.ok?classifyMallSnsReadiness(sns.data):
+    check('mall-sns-readiness','warning',sns.reason));
+  if(sns.circuitOpen){report.circuitOpen=true;report.result='deferred';return report}
   const feed=await get(MONITOR);
   report.checks.push(feed.ok?classifySeonamMediMonitor(feed.data,nowMs):
     check('seonammedi-hourly','alert',feed.reason));
