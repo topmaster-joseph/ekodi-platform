@@ -245,7 +245,26 @@ const churchApiTouched=changedFiles.some(file=>
   file.startsWith('supabase/functions/church-pastor-api/')||
   file==='.github/workflows/deploy-church-pastor-api.yml'
 );
+// Signed-in Admin continuity must run after the E2E harness or dispatch wiring changes.
+const adminContinuityVerificationTouched=changedFiles.some(file=>
+  file==='scripts/verify-admin-login-continuity.mjs'||
+  file==='test/admin-login-continuity-contract.test.mjs'||
+  file==='.github/workflows/verify-admin-authenticated-production-e2e.yml'||
+  file==='.github/workflows/admin-authenticated-e2e.yml'||
+  file==='scripts/converge-orchestrated-pr-merge.mjs'
+);
 async function dispatchPostMergeDeploys(){
+  if(adminContinuityVerificationTouched){
+    const response=await api('/actions/workflows/verify-admin-authenticated-production-e2e.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main'})
+    });
+    if(!response.r.ok)fail('Authenticated Admin E2E dispatch failed '+response.r.status);
+    console.log(JSON.stringify({ok:true,action:'admin-login-e2e-dispatched',
+      workflow:'verify-admin-authenticated-production-e2e.yml',pr:pr.number,
+      taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+
   if(nativeUser4AcceptanceTouched){
     const dispatch=await api('/actions/workflows/device-agent-production-verification.yml/dispatches',{
       method:'POST',
