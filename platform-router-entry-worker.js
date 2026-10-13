@@ -216,7 +216,11 @@ async function routeEkodiBizAsset(request,env){
 }
 async function routeEkodiBizPublic(request,env){
   if(!env?.EKODIBIZ?.fetch)return workspaceServiceUnavailable();const upstream=await env.EKODIBIZ.fetch(workspaceUpstreamRequest(request,'/'));const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','ekodibiz-service-binding');
-  const rewrite=(element,name)=>{const v=element.getAttribute(name)||'';for(const asset of EKODIBIZ_ASSETS){const rootPath=`/${asset}`;if(v===rootPath||v.startsWith(`${rootPath}?`)){element.setAttribute(name,EKODIBIZ_ASSET_PREFIX+asset+v.slice(rootPath.length));break}}};const rewritten=new HTMLRewriter().on('link[href]',{element:e=>rewrite(e,'href')}).on('script[src]',{element:e=>rewrite(e,'src')}).transform(routed);return injectEkodiProgressiveHome(injectEkodiTenantReadability(rewritten));
+  const rewrite=(element,name)=>{const v=element.getAttribute(name)||'';for(const asset of EKODIBIZ_ASSETS){const rootPath=`/${asset}`;if(v===rootPath||v.startsWith(`${rootPath}?`)){element.setAttribute(name,EKODIBIZ_ASSET_PREFIX+asset+v.slice(rootPath.length));break}}};const rewritten=new HTMLRewriter().on('link[href]',{element:e=>rewrite(e,'href')}).on('script[src]',{element:e=>rewrite(e,'src')}).transform(routed);
+  // LANG-UI-001: EKODIBIZ is a public shared-proxy service. Adopt its existing
+  // header/footer; do not create duplicate chrome or expose unready locales.
+  const adopted=injectEkodiShell(rewritten,'biz','public',{existingHeader:true,existingFooter:true,contextKind:'public'});
+  return injectEkodiProgressiveHome(injectEkodiTenantReadability(adopted,{operatingSpace:false}));
 }
 async function routeEkodiBizApi(request,env){
   if(!env?.EKODIBIZ?.fetch)return workspaceServiceUnavailable();
