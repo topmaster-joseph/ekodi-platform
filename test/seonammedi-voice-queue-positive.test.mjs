@@ -152,5 +152,5 @@ test('stale token refresh network failure is handled and falls back to normal Go
   assert.match(html,/catch\{return false;\}/);
   assert.match(html,/if\(allowRefresh&&await refreshVoiceToken\(\)\)return verifyVoiceAccount\(false\)/);
   assert.match(html,/voiceLogin\(\);return false;/);
-  assert.match(html,/auth.searchParams.set\("site","portal"\)/);
+  assert.match(html,/auth.searchParams.set\("site","seonammedi"\)/);
 });

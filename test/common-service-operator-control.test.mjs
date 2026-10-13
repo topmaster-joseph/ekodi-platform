@@ -96,8 +96,8 @@ test('AI runtime exposes public Commons health and protects detailed operator st
 
 test('AI runtime accepts central Admin authority with ai:read without a service-local session', async () => {
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = async input => {
-    assert.match(String(input), /https:\/\/ekodi\.kr\/api\/session/);
+  const centralFetch = async input => {
+    assert.equal(input.url, 'https://ekodi.kr/api/session');
     return new Response(JSON.stringify({
       authenticated:true,
       email:'operator@example.com',
@@ -106,7 +106,7 @@ test('AI runtime accepts central Admin authority with ai:read without a service-
     }), {status:200,headers:{'content-type':'application/json'}});
   };
   try {
-    const response = await aiWorker.fetch(new Request('https://ai.internal/api/session', {headers:{authorization:'Bearer central-admin-token'}}), {}, { waitUntil() {} });
+    const response = await aiWorker.fetch(new Request('https://ai.internal/api/session', {headers:{authorization:'Bearer central-admin-token'}}), {CONTROL_API:{fetch:centralFetch}}, { waitUntil() {} });
     assert.equal(response.status, 200);
     const data = await response.json();
     assert.equal(data.authoritySource, 'central-admin');
@@ -119,14 +119,14 @@ test('AI runtime accepts central Admin authority with ai:read without a service-
 
 test('read-only central Admin authority cannot perform AI operator mutations', async () => {
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = async () => new Response(JSON.stringify({
+  const centralFetch = async () => new Response(JSON.stringify({
     authenticated:true,
     email:'viewer@example.com',
     role:'viewer',
     authority:{kind:'admin',role:'viewer',capabilities:['ai:read'],deniedCapabilities:[]},
   }), {status:200,headers:{'content-type':'application/json'}});
   try {
-    const response = await aiWorker.fetch(new Request('https://ai.internal/api/nodes/pair', {method:'POST',headers:{authorization:'Bearer central-admin-token','content-type':'application/json'},body:'{}'}), {}, { waitUntil() {} });
+    const response = await aiWorker.fetch(new Request('https://ai.internal/api/nodes/pair', {method:'POST',headers:{authorization:'Bearer central-admin-token','content-type':'application/json'},body:'{}'}), {CONTROL_API:{fetch:centralFetch}}, { waitUntil() {} });
     assert.equal(response.status, 403);
     assert.deepEqual(await response.json(), { error:'capability_required', capability:'ai:operate' });
   } finally {

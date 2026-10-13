@@ -23,11 +23,23 @@ const services={
   energy:{name:'Energy AI',tenant:null,role:'member',returnTo:'https://energy.ekodi.kr',origins:['https://energy.ekodi.kr'],requestable:false},
   admin:{name:'EKODI 관리자',tenant:null,role:'platform_admin',returnTo:'https://ekodi.kr/admin/',origins:['https://ekodi.kr','https://admin.ekodi.kr'],requestable:false},
   oauth:{name:'EKODI AI 연결',tenant:null,role:'member',returnTo:'https://ekodi.kr/auth/oauth/consent',origins:['https://ekodi.kr','https://auth.ekodi.kr'],requestable:false},
+  seonammedi:{name:'서남권 국립의대 소통센터',tenant:null,role:'member',returnTo:'https://seonammedi.kr/board/voices',origins:['https://seonammedi.kr','https://www.seonammedi.kr',new URL('https://서남권국립의대.kr').origin,new URL('https://www.서남권국립의대.kr').origin],requestable:false},
   portal:{name:'EKODI',tenant:null,role:'member',returnTo:'https://ekodi.kr',origins:['https://ekodi.kr','https://seonammedi.kr',new URL('https://서남권국립의대.kr').origin],requestable:false}
 };
 const PERSON_SCOPED_SITES=new Set(['social','energy']);
 const params=new URLSearchParams(location.search);
-const site=Object.hasOwn(services,params.get('site'))?params.get('site'):'portal';
+// Legacy board clients used site=portal for a SeonamMedi return URL.
+// Preserve their intent without opening the portal to arbitrary redirects.
+const requestedSite=String(params.get('site')||'');
+const requestedReturn=String(params.get('return_to')||'');
+function legacySeonamReturn(){
+  if(requestedSite!=='portal')return false;
+  try{const u=new URL(requestedReturn);return u.protocol==='https:'&&!u.username&&!u.password&&(
+    ['seonammedi.kr','www.seonammedi.kr',new URL('https://서남권국립의대.kr').hostname,new URL('https://www.서남권국립의대.kr').hostname].includes(u.hostname)
+    ||(u.hostname==='ekodi.kr'&&(u.pathname==='/seonammedi'||u.pathname.startsWith('/seonammedi/')))
+  )}catch{return false}
+}
+const site=legacySeonamReturn()?'seonammedi':(Object.hasOwn(services,requestedSite)?requestedSite:'portal');
 const config=services[site];
 const requestedWorkspace=String(params.get('workspace')||'').trim();
 const SERVICE_API=PERSON_SCOPED_SITES.has(site)?PERSON_WORKSPACE:ACCESS;
@@ -40,7 +52,7 @@ function isMarketingReturnOrigin(origin){
   if(config.origins.includes(origin))return true;
   try{const u=new URL(origin);return u.protocol==='https:'&&/^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(u.hostname)&&u.origin===origin}catch{return false}
 }
-const safeReturn=raw=>{try{const target=new URL(raw||config.returnTo);if(target.protocol!=='https:'||target.username||target.password)return config.returnTo;const platformPath=target.origin==='https://ekodi.kr'&&((site==='cgma'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/')))||(site==='mission'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')))||(site==='church'&&(target.pathname==='/ekodichurch'||target.pathname.startsWith('/ekodichurch/')))||(site==='portal'&&((target.pathname==='/seonammedi/admin'||target.pathname.startsWith('/seonammedi/admin/'))||(target.pathname==='/seonammedi'||target.pathname.startsWith('/seonammedi/')))));return ((config.origins.includes(target.origin)&&target.origin!=='https://ekodi.kr')||platformPath||(marketing&&isMarketingReturnOrigin(target.origin)))?target.href:config.returnTo}catch{return config.returnTo}};
+const safeReturn=raw=>{try{const target=new URL(raw||config.returnTo);if(target.protocol!=='https:'||target.username||target.password)return config.returnTo;const platformPath=target.origin==='https://ekodi.kr'&&((site==='cgma'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/')))||(site==='mission'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')))||(site==='church'&&(target.pathname==='/ekodichurch'||target.pathname.startsWith('/ekodichurch/')))||((site==='portal'||site==='seonammedi')&&(target.pathname==='/seonammedi'||target.pathname.startsWith('/seonammedi/'))));return ((config.origins.includes(target.origin)&&target.origin!=='https://ekodi.kr')||platformPath||(marketing&&isMarketingReturnOrigin(target.origin)))?target.href:config.returnTo}catch{return config.returnTo}};
 const returnTo=safeReturn(params.get('return_to'));
 const sb=createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{detectSessionInUrl:true,persistSession:true}});
 const $=id=>document.getElementById(id);
@@ -309,15 +321,23 @@ async function renderInteractiveAccess(s,workspaces){
 
 async function renderAccess(s){
   if(routing&&!interactiveMode)return;
+  // Public citizen writing needs a verified Google session, not workspace membership.
+  // Handoff directly to the allowlisted SeonamMedi board before workspace queries.
+  if(site==='seonammedi'){
+    routing=true;
+    showProcessing('Google 인증이 완료되었습니다. 시민의견 화면으로 돌아가는 중입니다.');
+    try{await handoffToService();return;}
+    catch(e){routing=false;console.error('seonammedi board handoff',e);showAccessFallback(s,'로그인 인증 복귀에 실패했습니다. 다시 시도해 주세요.','error');return;}
+  }
   try{
     const workspaces=await loadWorkspaces();
     if(interactiveMode){await renderInteractiveAccess(s,workspaces);return;}
     const authorized=authorizedWorkspaces(workspaces);fallbackWorkspaceKey=authorized[0]?.workspace_key||null;
     const requested=authorized.find(item=>item.workspace_key===requestedWorkspace);
 
-    if(site==='portal'){
+    if(site==='portal'||site==='seonammedi'){
       const target=new URL(returnTo);
-      const seonamMediHandoff=target.origin==='https://seonammedi.kr'||target.origin===new URL('https://서남권국립의대.kr').origin;
+      const seonamMediHandoff=site==='seonammedi'||['https://seonammedi.kr','https://www.seonammedi.kr',new URL('https://서남권국립의대.kr').origin,new URL('https://www.서남권국립의대.kr').origin].includes(target.origin);
       if(seonamMediHandoff){
         routing=true;showProcessing('Google 인증이 완료되었습니다. 서남권 국립의대 소통센터로 안전하게 돌아가는 중입니다.');
         try{await handoffToService();return;}
