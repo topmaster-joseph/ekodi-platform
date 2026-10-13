@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { createHash } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -42,6 +43,10 @@ test('release fingerprint changes when only homepage HTML changes',async()=>{
     assert.equal(a.inputHtmlHashes['admin/index.html'],b.inputHtmlHashes['admin/index.html']);
     const html=await readFile(path.join(first.root,'index.html'),'utf8');
     assert.ok(html.includes('content="'+a.release+'"'));
+    assert.equal(a.publishedHtmlHashes['index.html'],createHash('sha256').update(html).digest('hex'));
+    const published=JSON.parse(await readFile(path.join(first.root,'.well-known/ekodi-release.json'),'utf8'));
+    assert.deepEqual(published.publishedHtmlHashes,a.publishedHtmlHashes);
+    assert.equal(published.rendererSha256,a.rendererSha256);
   }finally{await rm(first.output,{recursive:true,force:true});await rm(second.output,{recursive:true,force:true})}
 });
 
