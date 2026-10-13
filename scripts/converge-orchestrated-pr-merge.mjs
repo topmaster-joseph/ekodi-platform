@@ -248,7 +248,10 @@ const churchApiTouched=changedFiles.some(file=>
 // Signed-in Admin continuity must run after the E2E harness or dispatch wiring changes.
 const adminContinuityVerificationTouched=changedFiles.some(file=>
   file==='scripts/verify-admin-login-continuity.mjs'||
+  file==='scripts/admin-authenticated-e2e-retry.mjs'||
+  file==='scripts/admin-authenticated-e2e-menu-worker.mjs'||
   file==='test/admin-login-continuity-contract.test.mjs'||
+  file==='test/admin-authenticated-e2e-readiness.test.mjs'||
   file==='.github/workflows/verify-admin-authenticated-production-e2e.yml'||
   file==='.github/workflows/admin-authenticated-e2e.yml'||
   file==='scripts/converge-orchestrated-pr-merge.mjs'
