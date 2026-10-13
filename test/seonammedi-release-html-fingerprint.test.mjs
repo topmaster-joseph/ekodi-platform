@@ -84,3 +84,12 @@ test('homepage source has real metadata newlines and no DOM text-masking workaro
   assert.doesNotMatch(source, /<meta name="twitter:card" content="summary_large_image">\\n/);
   assert.doesNotMatch(source, /data-ekodi-leading-text-guard/);
 });
+
+
+test('guarded release tests candidate HTML linebreak before promotion',async()=>{
+  const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+  const request=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/seonammedi/');
+  assert.ok(request,'SeonamMedi 0% candidate probe must exist');
+  assert.ok(request.expect.includes('<meta name="twitter:card" content="summary_large_image">\n  <meta property="og:image"'));
+  assert.notEqual(request.candidateVerify,false);
+});
