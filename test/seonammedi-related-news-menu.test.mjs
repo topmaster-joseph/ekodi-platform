@@ -8,7 +8,11 @@ test('committee history precedes related news, but original #timeline and #chann
   const committeeLink='href="#committee-activity" data-view-link="committee">활동이력</a>';
   const newsLink='href="#timeline" data-view-link="status">관련소식</a>';
   assert.ok(html.indexOf(committeeLink)>0&&html.indexOf(newsLink)>html.indexOf(committeeLink));
-  assert.doesNotMatch(html,/<a href="#channels" data-view-link="channels">소통채널<\/a>/);
+  assert.match(html,/<a href="#channels" data-view-link="channels">소통채널<\/a>/);
+  assert.ok(html.indexOf('>소통채널</a>')>html.indexOf(newsLink),'social channels follow related news');
+  for(const route of ['#timeline/%EC%8B%A0%EB%AC%B8','#timeline/%EB%B0%A9%EC%86%A1','#channels/facebook','#channels/instagram','#channels/youtube'])
+    assert.ok(html.includes('href="'+route+'"'),'menu deep link '+route);
+  assert.match(js,/categoryFromMenuHash\('timeline',TIMELINE_FILTERS\)/);
   assert.match(html,/id="committee-activity"[^>]*data-view-section="committee"/);
   assert.match(html,/id="timeline"[^>]*data-view-section="status"/);
   assert.match(html,/id="channels"[^>]*data-view-section="channels"/);
