@@ -321,7 +321,7 @@ test('seonammedi admin utilities live above the left menu and content starts nea
 
 test('seonammedi public and admin menus keep the agreed content-first order',async()=>{
   const [html,adminHtml]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('admin/index.html',root),'utf8')]);
-  const publicOrder=['활동이력','관련소식','시민의견','회계','공지','조직'];
+  const publicOrder=['활동이력','관련소식','소통채널','시민의견','공지','조직'];
   let cursor=-1;for(const label of publicOrder){const next=html.indexOf('>'+label+'</a>',cursor+1);assert.ok(next>cursor,'public menu order: '+label);cursor=next}
   assert.doesNotMatch(html,/data-view-link="records"|data-view-link="timeline"|data-view-link="materials"/);
   assert.match(html,/id="timeline"[^>]*data-view-section="status"/);
@@ -329,8 +329,8 @@ test('seonammedi public and admin menus keep the agreed content-first order',asy
   assert.doesNotMatch(html,/<h2>현재상황<\/h2>|CURRENT STATUS|출처 검증형/);
   assert.match(html,/data-status-tab="news"[^>]*>관련보도<\/button>/);
   assert.match(html,/data-status-tab="official"[^>]*>공식기록<\/button>/);
-  assert.match(html,/href="#committee-activity" data-view-link="committee">활동이력<\/a>/);
-  assert.match(html,/href="#timeline" data-view-link="status">관련소식<\/a>/);
+  assert.match(html,/href="#committee-activity"[^>]*>활동이력<\/a>/);
+  assert.match(html,/href="#timeline"[^>]*>관련소식<\/a>/);
   assert.match(html,/id="timeline"[^>]*class="section activity-list-only"/);
   assert.doesNotMatch(html,/id="timeline"[\s\S]*?<div class="section-head">[\s\S]*?<h2>활동이력<\/h2>/);
   assert.doesNotMatch(html,/id="timeline"[\s\S]*?id="statusTabs"/);
@@ -436,7 +436,7 @@ test('seonammedi exposes seeded related channels on public and admin surfaces',a
     readFile(new URL('../migrations/0118_seonammedi_channel_seed.sql',import.meta.url),'utf8')
   ]);
   assert.match(html,/id="relatedChannelLinks"/);
-  assert.doesNotMatch(html,/data-view-link="channels"/);
+  assert.match(html,/href="#channels" data-view-link="channels">소통채널<\/a>/);
   assert.match(html,/id="channels"[^>]*data-view-section="channels"/);
   assert.match(html,/id="publicChannelTabs"/);
   assert.match(html,/id="channelPreview"/);
@@ -805,7 +805,7 @@ test('seonammedi voices finance and notices use sibling standalone board routes'
   assert.match(worker,/boardPath\(req,'notices'\)/);
   assert.match(worker,/function financePage\(req\)/);
   assert.match(worker,/function noticesPage\(req\)/);
-  assert.match(worker,/sitePath\(req,'\/#organization'\)/);
+  assert.match(worker,/home\('#organization'\)/);
 });
 
 
