@@ -180,3 +180,81 @@
 .related-facebook-source a:hover,.related-facebook-source a:focus-visible{text-decoration:underline}
 .related-facebook-source small{color:#64748b;line-height:1.55}
 @media(max-width:760px){.committee-toolbar{align-items:stretch}.related-linked-channels{padding:12px}.related-channel-links{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.related-channel-link{display:grid;gap:2px}}
+
+
+/* Campaign homepage: preserve the submitted artwork and its Korean copy without cropping. */
+.hero.campaign-hero,
+.hero.campaign-hero.has-spotlight {
+  display:block;
+  width:100%;
+  max-width:none;
+  margin:0;
+  padding:0;
+  background:#fff;
+}
+.campaign-visually-hidden {
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  padding:0!important;
+  margin:-1px!important;
+  overflow:hidden!important;
+  clip-path:inset(50%)!important;
+  white-space:nowrap!important;
+  border:0!important;
+}
+.campaign-hero-artwork {
+  display:block;
+  width:100%;
+  background:#050505;
+  text-decoration:none;
+  line-height:0;
+}
+.campaign-hero-artwork:focus-visible {
+  outline:4px solid #c9a335;
+  outline-offset:-5px;
+}
+.campaign-hero-image {
+  display:block;
+  width:100%;
+  max-width:1903px;
+  height:auto;
+  margin-inline:auto;
+  object-fit:contain;
+}
+.hero.campaign-hero > .campaign-hero-mobile-hint {
+  display:none;
+}
+.campaign-hero-updates {
+  width:min(100%,1120px);
+  margin:0 auto;
+  padding:24px 20px 32px;
+}
+.campaign-hero-updates:not(:has(> :not([hidden]))) {
+  display:none;
+}
+.hero.campaign-hero .home-latest-updates {
+  margin-top:0;
+}
+.hero.campaign-hero .home-spotlight:not([hidden]) + .home-latest-updates:not([hidden]) {
+  margin-top:18px;
+}
+@media (max-width:760px) {
+  .hero.campaign-hero,
+  .hero.campaign-hero.has-spotlight {
+    padding:0;
+  }
+  .hero.campaign-hero > .campaign-hero-mobile-hint {
+    display:block;
+    margin:0;
+    max-width:none;
+    padding:9px 16px;
+    color:#596475;
+    font-size:12px;
+    text-align:center;
+    background:#fff;
+  }
+  .campaign-hero-updates {
+    padding:18px 16px 24px;
+  }
+}
