@@ -42,8 +42,23 @@ export function eligibleUser4Agent(device,{now=Date.now()}={}){
     Number.isFinite(seen) && seen<=now && now-seen<=90000;
 }
 
+function validBrowserReceipt(receipt,{now=Date.now(),evidenceFloor=0,maxAgeMs=15*60*1000}={}) {
+  if(receipt?.type!==CANARY||receipt?.status!=='succeeded')return null;
+  const completed=when(receipt.completedAt);
+  if(!Number.isFinite(completed)||completed>now||now-completed>maxAgeMs)return null;
+  if(Number.isFinite(Number(evidenceFloor))&&Number(evidenceFloor)>0&&completed<Number(evidenceFloor))return null;
+  const proof=receipt.result?.browserCanary;
+  if(!proof||proof.ok!==true||proof.mode!=='native-cdp'||
+    proof.url!=='https://ekodi.kr/'||!(Number(proof.contentBytes)>0)||
+    proof.dedicatedAutomationProfile!==true||proof.focusIsolated!==true||
+    proof.clipboardShared!==false||proof.userInputInjection!==false)return null;
+  return {targetAlias:'user4',commandType:CANARY,commandId:receipt.id,
+    receiptStatus:'succeeded',mode:'native-cdp',domBytes:Number(proof.contentBytes),
+    completedAt:receipt.completedAt||null};
+}
+
 export async function verifyUser4Browser({token,fetchImpl=fetch,clock=()=>Date.now(),
-  sleepFn=wait,maxPoll=35,pollMs=4000}={}){
+  sleepFn=wait,maxPoll=35,pollMs=4000,evidenceFloor=0,recentReceiptMaxAgeMs=15*60*1000}={}){
   if(typeof token!=='string'||token.trim().length<20)throw new Error('trusted_admin_session_required');
   async function request(endpoint,method='GET',body){
     const response=await fetchImpl(BASE+endpoint,{
@@ -67,6 +82,14 @@ export async function verifyUser4Browser({token,fetchImpl=fetch,clock=()=>Date.n
     .sort((a,b)=>when(b.lastSeenAt)-when(a.lastSeenAt))[0];
   if(!eligible||typeof eligible.id!=='string'||!eligible.id)
     throw new Error('user4_native_agent_not_healthy');
+  const recentVerified=(eligible.recentCommands||[])
+    .map(receipt=>validBrowserReceipt(receipt,{now:clock(),evidenceFloor,maxAgeMs:recentReceiptMaxAgeMs}))
+    .filter(Boolean)
+    .sort((a,b)=>when(b.completedAt)-when(a.completedAt))[0];
+  if(recentVerified){
+    return {...recentVerified,reusedRecentReceipt:true,
+      verifiedAt:new Date(clock()).toISOString()};
+  }
   const pending=(eligible.recentCommands||[]).find(c=>c.type===CANARY &&
     ['queued','claimed'].includes(c.status) &&
     Number.isFinite(when(c.issuedAt)) && clock()-when(c.issuedAt)>=0 &&
@@ -144,7 +167,7 @@ export async function ensureUser4AgentUpdated({
   ).sort((a,b)=>when(b.completedAt)-when(a.completedAt))[0];
   if(existing)return {targetAlias:'user4',commandType:UPDATE,
     updateCommandId:existing.id,updatePerformed:false,
-    recentOfficialUpdateVerified:true};
+    recentOfficialUpdateVerified:true,completedAt:existing.completedAt};
   const inFlight=(initial.recentCommands||[]).filter(c=>['queued','claimed'].includes(c.status));
   const already=inFlight.find(c=>c.type===UPDATE && Number.isFinite(when(c.issuedAt)) &&
     clock()-when(c.issuedAt)>=0 && clock()-when(c.issuedAt)<120000);
@@ -184,7 +207,8 @@ export async function ensureUser4AgentUpdated({
     if(Number.isFinite(doneAt) && eligibleUser4Agent(current,{now:clock()}) &&
       when(current.lastSeenAt)>=doneAt){
       return {targetAlias:'user4',commandType:UPDATE,updateCommandId:command.id,
-        updatePerformed:true,recentOfficialUpdateVerified:true};
+        updatePerformed:true,recentOfficialUpdateVerified:true,
+        completedAt:new Date(doneAt).toISOString()};
     }
   }
   throw new Error(versionProjectionUnavailable
@@ -205,6 +229,17 @@ export async function verifyUser4BrowserWithRetry(options={}, verify=verifyUser4
   }
 }
 
+export async function verifyUser4LocalAiWithRetry(options={}, verify=verifyNativeLocalAi) {
+  try { return await verify({...options,hostname:'user4'}); }
+  catch(error) {
+    if(String(error?.message||'')!=='native_localai_inference_not_ready')throw error;
+    const delay=Math.min(Math.max(Number(options.localAiRetryDelayMs)||15000,1000),30000);
+    await (options.sleepFn||wait)(delay);
+    const result=await verify({...options,hostname:'user4'});
+    return {...result,transientLocalAiRetryUsed:true};
+  }
+}
+
 export async function verifyUser4Acceptance(options={}){
   // USER4's small Ollama model was ready before two simultaneous Browser/AI
   // runs returned native_localai_inference_not_ready. Avoid competing for memory
@@ -213,7 +248,7 @@ export async function verifyUser4Acceptance(options={}){
   const outcomes=[null,null];
   try {
     outcomes[1]={status:'fulfilled',
-      value:await verifyNativeLocalAi({...options,hostname:'user4'})};
+      value:await verifyUser4LocalAiWithRetry(options)};
   } catch (reason) {
     outcomes[1]={status:'rejected',reason};
   }
@@ -250,7 +285,7 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
   const token=process.env.E2E_ADMIN_TOKEN;
   ensureUser4AgentUpdated({token})
     .then(async update=>{
-      const result=await verifyUser4Acceptance({token});
+      const result=await verifyUser4Acceptance({token,evidenceFloor:when(update.completedAt)});
       return {...result,agentUpdate:update,
         nativeAgentUpdateVerified:update.recentOfficialUpdateVerified===true,
         ownerRefreshFloor:new Date(USER4_CDP_FIX_FLOOR).toISOString()};
