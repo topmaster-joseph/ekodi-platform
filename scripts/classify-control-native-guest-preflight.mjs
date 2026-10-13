@@ -18,9 +18,11 @@ export function classifyControlNativeGuestPreflight(report){
      report?.hostInputInjection!==false || report?.allowMutation!==false){
     return fail('native_isolation_proof_missing');
   }
+  // Blocked network mutations demonstrate read-only enforcement; they are
+  // expected on some guest pages, not proof of a forbidden executed request.
   if(!Array.isArray(report.results)||!Array.isArray(report.pageErrors)||
-     report.pageErrors.length||!Array.isArray(report.blockedMutations)||
-     report.blockedMutations.length)return fail('incomplete_or_unsafe_worker_result');
+     report.pageErrors.length||!Array.isArray(report.blockedMutations))
+    return fail('incomplete_or_unsafe_worker_result');
   const expected=['/admin/','/admin/control','/control'];
   const snapshots=report.results.filter(x=>x?.type==='snapshot');
   const navigations=report.results.filter(x=>x?.type==='goto');
