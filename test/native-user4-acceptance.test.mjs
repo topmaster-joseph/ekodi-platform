@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {classifyUser4BrowserFailure,eligibleUser4Agent,verifyUser4Browser,verifyUser4BrowserWithRetry,verifyUser4Acceptance,ensureUser4AgentUpdated,USER4_CDP_FIX_FLOOR,USER4_CDP_WORKER_AGENT_VERSION}
+import {classifyUser4BrowserFailure,eligibleUser4Agent,verifyUser4Browser,verifyUser4BrowserWithRetry,verifyUser4LocalAiWithRetry,verifyUser4Acceptance,ensureUser4AgentUpdated,USER4_CDP_FIX_FLOOR,USER4_CDP_WORKER_AGENT_VERSION}
   from '../scripts/verify-native-user4-acceptance.mjs';
 const now=Date.parse('2026-10-11T06:30:00.000Z');
 const good={id:'device-4',hostname:'USER4',status:'online',revokedAt:null,
@@ -41,6 +41,64 @@ test('USER4 browser issues exactly one approved CDP canary with authenticated re
   assert.equal(calls.filter(c=>c.method==='POST').length,1);
   assert.equal(calls.every(c=>c.url.startsWith('https://ekodi.kr/api/control/devices')),true);
 });
+test('fresh post-update native CDP receipt is reused without launching another browser',async()=>{
+  let writes=0;
+  const completed=now-2000;
+  const floor=now-5000;
+  const receipt={
+    id:'fresh-browser-proof',type:'computer.browser.canary',status:'succeeded',
+    completedAt:new Date(completed).toISOString(),
+    result:{browserCanary:{ok:true,mode:'native-cdp',url:'https://ekodi.kr/',
+      contentBytes:2048,dedicatedAutomationProfile:true,focusIsolated:true,
+      clipboardShared:false,userInputInjection:false}}
+  };
+  const fetchImpl=async(url,init)=>{
+    if(init.method==='POST')writes++;
+    return new Response(JSON.stringify({devices:[{...good,recentCommands:[receipt]}]}),{status:200});
+  };
+  const result=await verifyUser4Browser({
+    token:'authorized-admin-session-token-abcdef',clock:()=>now,fetchImpl,
+    evidenceFloor:floor,sleepFn:async()=>{},maxPoll:2
+  });
+  assert.equal(result.reusedRecentReceipt,true);
+  assert.equal(result.commandId,'fresh-browser-proof');
+  assert.equal(result.domBytes,2048);
+  assert.equal(writes,0);
+});
+
+test('browser receipt older than the verified Agent update floor is never reused',async()=>{
+  let writes=0;let issued=false;
+  const floor=now-3000;
+  const stale={
+    id:'stale-browser-proof',type:'computer.browser.canary',status:'succeeded',
+    completedAt:new Date(now-5000).toISOString(),
+    result:{browserCanary:{ok:true,mode:'native-cdp',url:'https://ekodi.kr/',
+      contentBytes:2048,dedicatedAutomationProfile:true,focusIsolated:true,
+      clipboardShared:false,userInputInjection:false}}
+  };
+  const fresh={
+    id:'fresh-command',type:'computer.browser.canary',status:'succeeded',
+    completedAt:new Date(now).toISOString(),
+    result:{browserCanary:{ok:true,mode:'native-cdp',url:'https://ekodi.kr/',
+      contentBytes:4096,dedicatedAutomationProfile:true,focusIsolated:true,
+      clipboardShared:false,userInputInjection:false}}
+  };
+  const fetchImpl=async(url,init)=>{
+    if(init.method==='POST'){
+      writes++;issued=true;
+      return new Response(JSON.stringify({command:{id:'fresh-command',type:'computer.browser.canary',status:'queued'}}),{status:200});
+    }
+    return new Response(JSON.stringify({devices:[{...good,recentCommands:issued?[fresh,stale]:[stale]}]}),{status:200});
+  };
+  const result=await verifyUser4Browser({
+    token:'authorized-admin-session-token-abcdef',clock:()=>now,fetchImpl,
+    evidenceFloor:floor,sleepFn:async()=>{},maxPoll:2
+  });
+  assert.equal(result.reusedRecentReceipt,undefined);
+  assert.equal(result.commandId,'fresh-command');
+  assert.equal(writes,1);
+});
+
 test('no command is sent to USER3 when USER4 unavailable',async()=>{
   let writes=0;
   const fetchImpl=async(url,init)=>{
@@ -118,28 +176,31 @@ test('USER4 finishes local AI before launching resource-intensive CDP Browser Wo
   assert.equal(result.localAi.targetAlias,'user4');
 });
 
-test('browser proof is still collected if USER4 local AI fails, without reporting full success',async()=>{
-  const posted=[];
+test('browser proof is still collected if USER4 local AI fails after its one bounded retry',async()=>{
+  const posted=[];let seq=0;
   const fetchImpl=async(url,init)=>{
     if(init.method==='POST'){
       const type=JSON.parse(init.body).type;
-      posted.push(type);
-      return new Response(JSON.stringify({command:{id:type,type,status:'queued'}}),{status:200});
+      const id=type+'-'+(++seq);
+      posted.push({type,id});
+      return new Response(JSON.stringify({command:{id,type,status:'queued'}}),{status:200});
     }
-    const recentCommands=posted.map(type=>({
-      id:type,type,status:'succeeded',completedAt:new Date(now).toISOString(),
+    const recentCommands=posted.map(({type,id})=>({
+      id,type,status:'succeeded',completedAt:new Date(now).toISOString(),
       result:type==='software.localai.verify'
         ? {localAiProof:{ollamaApi:'ready',inference:'not_ready',
             credentialCollection:false,executionMode:'fixed_loopback_api'}}
         : {browserCanary:{ok:true,mode:'native-cdp',url:'https://ekodi.kr/',
             contentBytes:3700,dedicatedAutomationProfile:true,
             focusIsolated:true,clipboardShared:false,userInputInjection:false}}
-    }));
+    })).reverse();
     return new Response(JSON.stringify({devices:[{...good,capabilities:{localAiVerify:true},recentCommands}]}),{status:200});
   };
   const result=await verifyUser4Acceptance({token:'authorized-admin-session-token-abcdef',
-    clock:()=>now,fetchImpl,sleepFn:async()=>{},maxPoll:4});
-  assert.deepEqual(posted,['software.localai.verify','computer.browser.canary']);
+    clock:()=>now,fetchImpl,sleepFn:async()=>{},maxPoll:4,localAiRetryDelayMs:1000});
+  assert.deepEqual(posted.map(x=>x.type),[
+    'software.localai.verify','software.localai.verify','computer.browser.canary'
+  ]);
   assert.equal(result.ok,false);
   assert.equal(result.browserVerified,true);
   assert.equal(result.localAiVerified,false);
@@ -189,6 +250,7 @@ test('USER4 official update only when current pinned CDP worker has not been rec
     clock:()=>at,fetchImpl,sleepFn:async()=>{},maxPoll:3});
   assert.equal(result.recentOfficialUpdateVerified,true);
   assert.equal(result.updatePerformed,true);
+  assert.equal(result.completedAt,new Date(at-1000).toISOString());
   assert.equal(methods.filter(x=>x==='POST').length,1);
 });
 test('USER4 previous successful official update after fixed CDP patch prevents reinstall loop',async()=>{
@@ -207,6 +269,7 @@ test('USER4 previous successful official update after fixed CDP patch prevents r
     clock:()=>at,fetchImpl});
   assert.equal(proof.updatePerformed,false);
   assert.equal(proof.recentOfficialUpdateVerified,true);
+  assert.equal(proof.completedAt,new Date(at-5000).toISOString());
   assert.equal(writes,0);
 });
 test('USER4 official update refuses offline, other host, and concurrent commands',async()=>{
@@ -266,6 +329,38 @@ test('USER4 prior-day Agent update cannot satisfy 2026-10-12 owner refresh reque
   assert.equal(posts,1);
   assert.equal(proof.updatePerformed,true);
   assert.equal(proof.recentOfficialUpdateVerified,true);
+});
+
+test('transient USER4 local-AI inference-not-ready permits one delayed fresh retry',async()=>{
+  let attempts=0;const delays=[];
+  const verify=async options=>{
+    attempts++;
+    assert.equal(options.hostname,'user4');
+    if(attempts===1)throw Error('native_localai_inference_not_ready');
+    return {targetAlias:'user4',receiptStatus:'succeeded',ollamaApi:'ready',
+      inference:'passed',credentialCollection:false};
+  };
+  const proof=await verifyUser4LocalAiWithRetry({
+    sleepFn:async ms=>{delays.push(ms);},localAiRetryDelayMs:12000
+  },verify);
+  assert.equal(attempts,2);
+  assert.deepEqual(delays,[12000]);
+  assert.equal(proof.transientLocalAiRetryUsed,true);
+});
+
+test('local-AI policy, auth, and command failures are never retried',async()=>{
+  for(const reason of [
+    'native_localai_unapproved_diagnostic_mode',
+    'trusted_admin_session_required',
+    'native_localai_command_failed',
+    'no_healthy_localai_verify_user3_agent'
+  ]){
+    let attempts=0;
+    await assert.rejects(()=>verifyUser4LocalAiWithRetry({sleepFn:async()=>{}},async()=>{
+      attempts++;throw Error(reason);
+    }),e=>e.message===reason);
+    assert.equal(attempts,1,reason);
+  }
 });
 
 test('exact transient CDP early-exit zero permits one fresh USER4 canary retry',async()=>{
