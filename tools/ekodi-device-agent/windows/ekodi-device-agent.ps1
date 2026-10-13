@@ -1376,6 +1376,7 @@ function Invoke-EkodiHeadlessScreenshot(
     $port = [int]$portLines[0]
 
     $targets = Invoke-RestMethod -Uri "http://127.0.0.1:$port/json/list" -Method Get -TimeoutSec 10
+    $ownedTabCount = @($targets | Where-Object { $_.type -eq 'page' }).Count
     $page = @($targets | Where-Object { $_.type -eq 'page' } | Select-Object -First 1)[0]
     if (-not $page -or -not $page.webSocketDebuggerUrl) { throw 'cdp_page_target_missing' }
 
@@ -1410,6 +1411,9 @@ function Invoke-EkodiHeadlessScreenshot(
 
     $captureProof = @{
       processId = $process.Id
+      ownedTabId = [string]$page.id
+      ownedTabsObserved = [int]$ownedTabCount
+      ownedTabsClosed = 0
       browserProcessClosed = $false
       browserExitCode = $null
       cdpPort = $port
@@ -1442,7 +1446,10 @@ function Invoke-EkodiHeadlessScreenshot(
       $treeClosed = (-not $started -or $process.HasExited) -and
         @(Find-EkodiOwnedProfileBrowsers $TaskProfile).Count -eq 0
     } catch { $treeClosed = $false }
-    if ($captureProof) { $captureProof.browserProcessClosed = [bool]$treeClosed }
+    if ($captureProof) {
+      $captureProof.browserProcessClosed = [bool]$treeClosed
+      $captureProof.ownedTabsClosed = $(if ($treeClosed) { [int]$captureProof.ownedTabsObserved } else { 0 })
+    }
     if ($started) {
       try { [void]$stdoutTask.GetAwaiter().GetResult() } catch { }
       try { [void]$stderrTask.GetAwaiter().GetResult() } catch { }
@@ -1634,6 +1641,10 @@ function Invoke-BackgroundBrowserWorker($Payload) {
       cdpPortAssigned = [bool]($capture.cdpPort -gt 0)
       browserProcessIdObserved = [bool]($capture.processId -gt 0)
       browserProcessClosed = [bool]($capture.browserProcessClosed)
+      ownedBrowserProcessId = [int]$capture.processId
+      ownedTabId = [string]$capture.ownedTabId
+      ownedTabsObserved = [int]$capture.ownedTabsObserved
+      ownedTabsClosed = [int]$capture.ownedTabsClosed
       contentBytes = [Text.Encoding]::UTF8.GetByteCount($stdout)
       contentSha256 = Get-Sha256String $stdout
       screenshotBytes = [long]$shot.Length
@@ -2804,7 +2815,15 @@ function Finish-EkodiBrowserTaskAudit($Record, [string]$State, $Result = $null) 
   $Record.profileRemoved = ($null -ne $proof -and $proof.profileRemoved -eq $true -and $proof.screenshotArtifactRemoved -eq $true)
   $Record.cleanupVerified = ($Record.browserProcessClosed -and $Record.profileRemoved)
   # No closure attestation from another runner is classified as unverified.
-  $Record.state = if ($State -eq 'completed' -and -not $Record.cleanupVerified) { 'cleanup_unverified' } else { $State }
+  $Record.state = if ($State -eq 'completed' -and -not $Record.cleanupVerified) { 'cleanup_unverified' }
+    elseif ($State -eq 'completed' -and $proof -and $proof.authRequired -eq $true) { 'auth_required' }
+    else { $State }
+  if ($proof) {
+    $Record.ownedBrowserProcessId = [int]$proof.ownedBrowserProcessId
+    $Record.ownedTabId = [string]$proof.ownedTabId
+    $Record.ownedTabsObserved = [int]$proof.ownedTabsObserved
+    $Record.ownedTabsClosed = [int]$proof.ownedTabsClosed
+  }
   if ($proof -and $proof.browser) { $Record.browser = [string]$proof.browser }
   if ($proof -and $proof.taskId) { $Record.browserTaskId = [string]$proof.taskId }
   $Record.finishedAt = (Get-Date).ToUniversalTime().ToString('o')
@@ -2818,12 +2837,18 @@ function Get-EkodiBrowserTaskAuditSummary {
         $entry = Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
         if ($entry.schema -ne 'ekodi-native-browser-task-v1') { continue }
         $items += @{
+          commandKey = [string]$entry.commandKey
           commandType = [string]$entry.commandType
-          state = [string]$entry.state
+          launcher = [string]$entry.launcher
+          state = $(if ($entry.state -eq 'running' -and $entry.startedAt -and (Get-Date).ToUniversalTime().Subtract(([datetime]$entry.startedAt).ToUniversalTime()).TotalMinutes -gt 10) { 'interrupted_unverified' } else { [string]$entry.state })
           startedAt = [string]$entry.startedAt
           finishedAt = [string]$entry.finishedAt
           browser = [string]$entry.browser
           cleanupVerified = [bool]$entry.cleanupVerified
+          ownedBrowserProcessId = [int]$entry.ownedBrowserProcessId
+          ownedTabId = [string]$entry.ownedTabId
+          ownedTabsObserved = [int]$entry.ownedTabsObserved
+          ownedTabsClosed = [int]$entry.ownedTabsClosed
         }
       } catch { }
     }
