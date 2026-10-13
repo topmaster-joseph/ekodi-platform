@@ -83,4 +83,5 @@ test('Owner-scoped repo event for native parity execution cannot be launched by 
   assert.match(workflow,/environment: production/);
   assert.match(workflow,/read_only=true/);
   assert.doesNotMatch(workflow,/pull_request_target:/);
+  assert.doesNotMatch(workflow,/^\s+(?:push|pull_request|workflow_run):/m,'Catalog credential must not be available to non-owner events');
 });
