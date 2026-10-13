@@ -350,3 +350,31 @@ test('independent board header uses one aligned desktop row and a stacked mobile
     }
   }
 });
+
+test('standalone boards share the site header menu, labels, and stylesheet on both mounts',async()=>{
+  const site=await read('sites/seonammedi/public/index.html');
+  const worker=await read('services/independent-board/worker.js');
+  const stylesheetVersion=site.match(/\\/seonammedi\\/app\\.css\\?v=([^"]+)/)?.[1];
+  assert.ok(stylesheetVersion,'main site stylesheet version');
+  assert.ok(worker.includes('/app.css?v='+stylesheetVersion),'board uses main site stylesheet version');
+  const rootNav=site.match(/<nav aria-label="주요 메뉴">([\\s\\S]*?)<\\/nav>/)?.[1]||'';
+  for(const label of ['활동이력','관련소식','시민의견','회계','공지','조직'])assert.ok(rootNav.includes('>'+label+'</a>'),'root menu '+label);
+  assert.doesNotMatch(worker,/independent-board-header/);
+  const mod=await import(new URL('../services/independent-board/worker.js?header-parity='+Date.now(),import.meta.url));
+  for(const [origin,prefix] of [['https://seonammedi.kr',''],['https://ekodi.kr','/seonammedi']]){
+    for(const route of ['voices','finance','notices']){
+      const res=await mod.default.fetch(new Request(origin+prefix+'/board/'+route),{});
+      assert.equal(res.status,200,route);
+      const html=await res.text();
+      assert.match(html,/<header class="site-header">/);
+      assert.ok(html.includes('href="'+prefix+'/#committee-activity">활동이력</a>'),'committee link '+route);
+      assert.ok(html.includes('href="'+prefix+'/#timeline">관련소식</a>'),'related-news link '+route);
+      assert.ok(html.includes('href="'+prefix+'/board/voices">시민의견</a>'),'voices link '+route);
+      assert.ok(html.includes('href="'+prefix+'/board/finance">회계</a>'),'finance link '+route);
+      assert.ok(html.includes('href="'+prefix+'/board/notices">공지</a>'),'notices link '+route);
+      assert.ok(html.includes('href="'+prefix+'/#organization">조직</a>'),'organization link '+route);
+      assert.doesNotMatch(html,/소통채널/);
+      assert.ok(html.includes('app.css?v='+stylesheetVersion));
+    }
+  }
+});
