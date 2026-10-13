@@ -5,7 +5,7 @@ import { chromium } from 'playwright';
 
 const ARG=Object.fromEntries(process.argv.slice(2).map(s=>{
   const split=s.indexOf('=');
-  return split<0?[s.replace(/^--/,''):'',true]:[s.slice(2,split),s.slice(split+1)];
+  return split<0?[s.replace(/^--/,''),true]:[s.slice(2,split),s.slice(split+1)];
 }));
 const origin=String(ARG.origin||'https://ekodi.kr').replace(/\/+$/,'');
 const allowed=new Set(['https://ekodi.kr','https://seonammedi.kr','http://127.0.0.1:8765','http://localhost:8765']);
