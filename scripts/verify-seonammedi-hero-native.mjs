@@ -88,7 +88,12 @@ try {
         };
       });
       Object.assign(entry,evidence);
-      must(new URL(entry.imageSrc).pathname===assetPath,'hero_asset_path_changed');
+      // The preserved customer-domain gateway strips the internal /seonammedi mount
+      // from browser-visible image URLs. Accept that documented alias, never other assets.
+      const expectedBrowserPath=origin==='https://seonammedi.kr'
+        ?new Set([assetPath,assetPath.replace(/^\/seonammedi/,'')])
+        :new Set([assetPath]);
+      must(expectedBrowserPath.has(new URL(entry.imageSrc).pathname),'hero_asset_path_changed');
       must(entry.naturalWidth===1903&&entry.naturalHeight===735,'hero_source_dimensions_mismatch_or_not_loaded');
       must(entry.alt.includes('국립의대'),'hero_accessibility_alt_missing');
       must(entry.heroDisplay==='block','hero_style_missing');
