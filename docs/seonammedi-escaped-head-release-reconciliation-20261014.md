@@ -15,3 +15,7 @@ Campaign image commit `c88180d9c98bc23976658f0f202c06eb5e6dc324` wrote literal `
 The orchestrator-created recovery PR may initially have `action_required` on bot-authored checks. This *documentation-only owner-authored validation record* requests fresh normal CI under the existing authorization path, without changing the approved executable code. All mandatory security, authentication, parallel change, Cloudflare staging, guarded Worker deployment, and rollback controls remain intact. Do not infer CI success from this document.
 
 Production verification must prove that the actual HTTP responses for both `https://ekodi.kr/seonammedi/` and `https://seonammedi.kr/` have real newlines between `twitter:card` and `og:image`, no literal `\\n` in the HTML head, and no leading text above the visible header on desktop/mobile. Complete only when first-party production evidence confirms this.
+
+## Protected main synchronization
+
+EKODI synchronized the orchestrator-issued release branch with the protected main, producing merge source `9303020218aa441cc52ecb55431dd5f1356f1cb1`. The repository owner requests fresh required CI on this synchronized source. This owner-authored documentation update does not change the previously owner-approved executable fix, remove any safeguard, or imply production success. Guarded release and live verification remain mandatory.
