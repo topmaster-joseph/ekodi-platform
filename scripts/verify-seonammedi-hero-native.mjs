@@ -100,7 +100,11 @@ try {
           mobileHint:!!document.querySelector('.campaign-hero-mobile-hint'),
           brand:document.querySelector('.brand')?.textContent?.trim().slice(0,100),
           leadingVisibleText:(document.body?.innerText||'').slice(0,140),
-          initialBodyNodes:Array.from(document.body?.childNodes||[]).slice(0,5).map(n=>({type:n.nodeType,name:n.nodeName,text:(n.textContent||'').slice(0,90)})),
+          initialBodyNodes:Array.from(document.body?.childNodes||[]).slice(0,16).map(n=>({type:n.nodeType,name:n.nodeName,text:(n.textContent||'').slice(0,90),html:n.nodeType===1?n.outerHTML.slice(0,260):'',parent:n.parentElement?.tagName||''})),
+          leadingBodyTextNode:document.body?.firstChild?.textContent?.slice(0,200),
+          allMetaInBody:Array.from(document.body?.querySelectorAll('meta')||[]).slice(0,8).map(n=>n.outerHTML.slice(0,260)),
+          bodyMarkupPrefix:document.body?.innerHTML.slice(0,1100),
+          scriptsInBody:Array.from(document.body?.querySelectorAll('script')||[]).slice(0,10).map(n=>({src:n.src||'',id:n.id||'',inlinePrefix:n.src?'':n.textContent.slice(0,90)})),
           initialHtmlNodes:Array.from(document.documentElement?.childNodes||[]).slice(0,5).map(n=>({type:n.nodeType,name:n.nodeName,text:n.nodeType===3?(n.textContent||'').slice(0,90):''})),
           leadingEscapedNewlines:/^\\[nrt]/.test((document.body?.innerText||'').trimStart())
         };
