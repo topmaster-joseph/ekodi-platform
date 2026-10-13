@@ -4,13 +4,13 @@
   width:min(100%,1380px); max-width:1380px;
   height:clamp(560px,calc(100dvh - 155px),900px);
   margin:54px auto 12px; padding:0; border-radius:22px;
-  border:1px solid #dae3ef; background:#0b1626;
+  border:1px solid #dae3ef; background:#fff;
   box-shadow:0 14px 42px rgba(13,35,65,.09);
 }
 #adminControlHome[hidden] { display:none!important; }
 #adminControlFrame {
   display:block; flex:1 1 auto; min-height:0; width:100%;
-  border:0; background:#0b1626;
+  border:0; background:#fff;
 }
 #adminControlHome .admin-control-home-foot {
   display:flex; flex:0 0 auto; align-items:center;
@@ -53,12 +53,12 @@ html body:has(#adminControlHome:not([hidden])) [data-ekodi-control-entry]{
 #adminControlFrameNotice.admin-control-frame-notice{
   flex:1 1 auto;display:flex;flex-direction:column;align-items:center;
   justify-content:center;gap:12px;padding:34px 26px;
-  color:#f2f7ff;background:#0b1626;text-align:center;
+  color:#243954;background:#fff;text-align:center;
 }
 #adminControlFrameNotice[hidden]{display:none!important}
-#adminControlFrameNotice strong{font-size:18px;color:#fff}
-#adminControlFrameNotice p{max-width:480px;font-size:13px;color:#aebfd3;line-height:1.6}
+#adminControlFrameNotice strong{font-size:18px;color:#17253d}
+#adminControlFrameNotice p{max-width:480px;font-size:13px;color:#52647c;line-height:1.6}
 #adminControlFrameNotice a{
   display:inline-block;border-radius:9px;padding:10px 15px;
-  background:#fff;color:#1f3960;font-size:13px;font-weight:700;
+  background:#eaf1ff;color:#174ea6;font-size:13px;font-weight:700;
 }
