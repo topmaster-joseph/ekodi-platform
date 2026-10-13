@@ -81,6 +81,7 @@ test('Owner-scoped repo event for native parity execution cannot be launched by 
   assert.match(workflow,/github\.event\.comment\.user\.login == 'topmaster-joseph'/);
   assert.match(workflow,/startsWith\(github\.event\.comment\.body, 'EKODI-MISSION-PARITY-RUN:'/);
   assert.match(workflow,/environment: production/);
+  assert.match(workflow,/permissions:\s*\n\s+contents: read/,'GitHub token must not have write permissions');
   assert.match(workflow,/read_only=true/);
   assert.doesNotMatch(workflow,/pull_request_target:/);
   assert.doesNotMatch(workflow,/^\s+schedule:/m,'No unapproved recurring use of production management credential');
