@@ -4,7 +4,12 @@ on:
   push:
     branches:
       - main
-      - ai/gpt6/seonammedi-native-hero-e2e-20261013
+    paths:
+      - 'sites/seonammedi/public/**'
+      - 'scripts/verify-seonammedi-hero-native.mjs'
+      - 'test/seonammedi-hero-native.test.mjs'
+      - '.github/workflows/verify-seonammedi-hero-native.yml'
+  pull_request:
     paths:
       - 'sites/seonammedi/public/**'
       - 'scripts/verify-seonammedi-hero-native.mjs'
@@ -72,6 +77,7 @@ jobs:
           retention-days: 14
 
   production-native-browser:
+    continue-on-error: ${{ github.event_name == 'pull_request' }}
     if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     timeout-minutes: 12
