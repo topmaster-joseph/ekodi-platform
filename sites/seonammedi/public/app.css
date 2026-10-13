@@ -160,6 +160,13 @@
 .committee-toolbar label{display:grid;gap:5px;flex:1 1 260px;font-weight:600}
 .committee-toolbar input{width:100%;min-height:40px;border:1px solid #cbd5e1;border-radius:10px;padding:9px 12px;background:#fff}
 #committeeActivityFilters{margin:12px 0 18px;flex-wrap:wrap}
+.committee-news-section{padding:20px 0 24px;margin:8px 0 28px;border-bottom:1px solid #dce3ea}
+.committee-news-section>.section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.committee-news-section>.section-head h3{font-size:clamp(21px,3vw,26px);margin:0 0 8px}
+.committee-news-section>.section-head .note{max-width:880px}
+.committee-news-section .timeline{margin-top:16px}
+.inline-manage-form label.check input[type=checkbox]{width:auto;margin-right:6px}
+@media(max-width:760px){.committee-news-section>.section-head{flex-wrap:wrap}.committee-news-section>.section-head .section-head-actions{width:100%}}
 .related-linked-channels{margin:16px 0 24px;padding:14px 16px;background:#f8fafc;border:1px solid #e0e7ef;border-radius:14px}
 .related-linked-channels h3{margin:0 0 5px;font-size:1.04rem;color:#142945}
 .related-linked-channels p{margin:0 0 12px;font-size:.88rem}
