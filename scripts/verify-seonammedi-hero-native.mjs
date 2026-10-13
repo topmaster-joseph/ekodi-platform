@@ -55,6 +55,13 @@ try {
       const response=await page.goto(origin+rootPath,{waitUntil:'domcontentloaded',timeout:30000});
       // Compare actual document response bytes with the rendered DOM to locate prefix injection.
       const responseBytes=response?await response.body():Buffer.alloc(0);
+      const responseHtml=responseBytes.toString('utf8');
+      const firstEscaped=responseHtml.search(/\\\\[nrt]/);
+      entry.rawEscapedFirstOffset=firstEscaped;
+      entry.rawEscapedContext=firstEscaped>=0?responseHtml.slice(Math.max(0,firstEscaped-100),firstEscaped+140):'';
+      entry.rawHeadCloseOffset=responseHtml.toLowerCase().indexOf('</head>');
+      entry.rawBodyOpenOffset=responseHtml.toLowerCase().indexOf('<body');
+      entry.rawHeadBeforeBody=responseHtml.slice(Math.max(0,entry.rawBodyOpenOffset-150),entry.rawBodyOpenOffset+70);
       entry.responsePrefixUtf8=responseBytes.subarray(0,160).toString('utf8');
       entry.responsePrefixHex=responseBytes.subarray(0,48).toString('hex');
       entry.responseContentType=response?.headers()['content-type']||'';
