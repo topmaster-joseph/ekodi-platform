@@ -39,6 +39,8 @@ async function waitForAdmin(page){
     const auth=sessionStorage.getItem('ekodi-auth-token');
     return auth===expected && Boolean(window.EKODIAdminCore) &&
       app?.hidden===false && login?.hidden===true &&
+      document.documentElement.dataset.ekodiAdminReady==='true' &&
+      getComputedStyle(app).visibility!=='hidden' &&
       document.querySelector('#apiState')?.textContent?.includes('정상');
   },token,{timeout:20000});
   if(!sameAdminSurface(page.url()))throw new Error('ADMIN_SURFACE_LOST');
@@ -52,6 +54,7 @@ try{
   const page=await context.newPage();
   page.on('framenavigated',frame=>{
     if(frame!==page.mainFrame())return;
+    if(frame.url()==='about:blank')return;
     const u=new URL(frame.url());
     if(u.origin!==origin||u.pathname.startsWith('/auth'))deniedRedirects++;
   });
