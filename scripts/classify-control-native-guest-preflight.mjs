@@ -38,7 +38,9 @@ export function classifyControlNativeGuestPreflight(report){
        url.search || url.hash)return fail('noncanonical_snapshot_url');
     paths.push(url.pathname);
   }
-  if(paths[0]!=='/admin/' && paths[0]!=='/admin')return fail('admin_home_unexpected_route');
+  // Mobile navigation may canonicalize /admin/ to its platform overview.
+  if(!['/admin','/admin/','/admin/summary/platform-overview'].includes(paths[0]))
+    return fail('admin_home_unexpected_route');
   // Prevent mistaken proof if the browser task visited other surfaces or used
   // URLs unrelated to the required Control preflight targets.
   const requested=report.results.filter(x=>x?.type==='initial-goto'||x?.type==='goto');
