@@ -59,7 +59,6 @@ test('native isolation, read-only mode and origin protections fail closed',()=>{
     r=>{r.headless=false},
     r=>{r.canonicalOrigin='https://other.example'},
     r=>{r.pageErrors=[{message:'unexpected'}]},
-    r=>{r.blockedMutations=[{url:'x'}]},
     r=>{r.results[1].url='https://evil.example/admin/'},
     r=>{r.results[1].horizontalOverflow=true},
     r=>{r.results.pop()},
@@ -76,4 +75,13 @@ test('both responsive device receipts classify without relying on account creden
     assert.equal(a.deviceProfile,device);
     assert.equal(JSON.stringify(a).includes('Bearer '),false);
   }
+});
+
+test('blocked mutations prove non-idempotent requests were prevented without invalidating guest reads',()=>{
+  const r=receipt();
+  r.blockedMutations=[{method:'POST',resourceType:'fetch'}];
+  const a=classify(r);
+  assert.equal(a.ok,true);
+  assert.equal(a.state,'LEGACY_ROUTES_OBSERVED');
+  assert.equal(a.productionReleaseVerified,false);
 });
