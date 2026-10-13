@@ -59,6 +59,13 @@ const cgmaApexTouched=changedFiles.some(file=>[
   'site-board-control.js',
   'scripts/converge-orchestrated-pr-merge.mjs',
 ].includes(file));
+// The Access API owns the Google handoff allowlist. GitHub-token merges do not
+// emit main push events, so its guarded Supabase deploy must be dispatched.
+const accessApiTouched=changedFiles.some(file=>
+  file.startsWith('supabase/functions/access-api/')||
+  file.startsWith('supabase/functions/_shared/')||
+  file==='.github/workflows/deploy-access-api.yml'
+);
 const independentBoardTouched=changedFiles.some(file=>
   file.startsWith('services/independent-board/')||
   file==='wrangler.independent-board.toml'||
@@ -432,6 +439,14 @@ async function dispatchPostMergeDeploys(){
     });
     if(!dispatch.r.ok)fail('My EKODI deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
     console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-my.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+  if(accessApiTouched){
+    const dispatch=await api('/actions/workflows/deploy-access-api.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('Access API deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-access-api.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
   if(independentBoardTouched){
     const dispatch=await api('/actions/workflows/deploy-independent-board.yml/dispatches',{
