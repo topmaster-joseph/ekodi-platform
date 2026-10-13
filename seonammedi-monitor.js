@@ -67,7 +67,15 @@ export async function fetchSeonamMediNewsRss(query,{fetchImpl=fetch,wait=ms=>new
   }
   throw lastError;
 }
+// A successful HTTP status is not proof of a valid RSS feed. Upstream
+// gateways sometimes return HTML error pages with HTTP 200.
+export function isValidSeonamMediRssDocument(xml){
+  const body=String(xml||'').trim();
+  return /<rss(?:\s[^>]*)?>/i.test(body)&&/<channel(?:\s[^>]*)?>/i.test(body)&&
+    /<\/channel\s*>/i.test(body)&&/<\/rss\s*>/i.test(body);
+}
 function parseRss(xml,key,label){
+  if(!isValidSeonamMediRssDocument(xml))throw new Error('invalid_rss_document');
   const now=Date.now(),floor=now-RECENT_DAYS*86400000;
   return [...String(xml||'').matchAll(/<item>([\s\S]*?)<\/item>/gi)].slice(0,MAX_ITEMS_PER_QUERY).map(match=>{
     const block=match[1];const title=tag(block,'title');const url=tag(block,'link');const publishedRaw=tag(block,'pubDate');const publisher=sourceTag(block)||'Google News';const publishedMs=Date.parse(publishedRaw);
@@ -190,9 +198,10 @@ export async function handleSeonamMediMonitorApi(request,env){
     ]);
     // Apply the same publication gate to ALL historical rows at read time:
     // previously collected but never content-confirmed items disappear now.
-    const publicItems=(rows?.results||[]).filter(isPublicSeonamMediSource).slice(0,48)
+    const recentCandidates=rows?.results||[];
+    const publicItems=recentCandidates.filter(isPublicSeonamMediSource).slice(0,48)
       .map(item=>({...item,content_match:item.review_state==='verified'?'editor_verified':'source_confirmed'}));
     const mediaCandidateCount=publicItems.filter(item=>item.media_state==='candidate'&&['photo','video'].includes(item.media_type)).length;
-    return json({ok:true,siteOwned:true,aiProvider:false,schedule:'hourly Asia/Seoul',scheduler:'existing-control-cron',channels:{news:true,naverBlog:naverBlogConfigured(env)},lastRun:lastRun||null,mediaCandidateCount,items:publicItems},200,'no-store');
+    return json({ok:true,siteOwned:true,aiProvider:false,schedule:'hourly Asia/Seoul',scheduler:'existing-control-cron',channels:{news:true,naverBlog:naverBlogConfigured(env)},lastRun:lastRun||null,mediaCandidateCount,recentCandidateCount:recentCandidates.length,verifiedPublicCount:publicItems.length,items:publicItems},200,'no-store');
   }catch(error){return json({ok:false,error:'monitor_schema_unavailable',message:'사이트 자동점검 저장소 준비 중입니다.',lastRun:null,items:[]},503,'no-store')}
 }
