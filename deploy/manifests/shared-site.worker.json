@@ -138,7 +138,8 @@
         "redirect": "manual",
         "expect": [
           "#adminControlHome",
-          "#adminControlFrameNotice"
+          "#adminControlFrameNotice",
+          "#adminControlFrameNotice strong{font-size:18px;color:#17253d}"
         ],
         "rollbackVerify": false
       },
@@ -162,7 +163,8 @@
         "redirect": "manual",
         "expect": [
           ".control-rail",
-          ".composer-wrap"
+          ".composer-wrap",
+          "EKODI white embedded Control contract"
         ],
         "headerExpect": [
           "x-ekodi-canonical-surface: control",
