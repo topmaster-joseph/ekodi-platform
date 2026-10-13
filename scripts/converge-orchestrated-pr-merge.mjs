@@ -125,6 +125,14 @@ const spaceTouched=changedFiles.some(file=>
   file==='.github/workflows/deploy-space.yml'
 );
 const mallSiteTouched=changedFiles.some(file=>file.startsWith('sites/ekodi-mall/')||file==='.github/workflows/deploy-ekodi-mall.yml');
+const ekodibizPublicTouched=changedFiles.some(file=>
+  file.startsWith('ekodibiz/')||
+  file==='ekodibiz-worker.js'||
+  file==='wrangler.ekodibiz.toml'||
+  file==='wrangler.ekodibiz-staging.toml'||
+  file==='deploy/manifests/ekodibiz.worker.json'||
+  file==='.github/workflows/deploy-ekodibiz.yml'
+);
 const labHomepageTouched=changedFiles.some(file=>
   file.startsWith('sites/ekodi-lab/')||
   file==='deploy/manifests/ekodilab.pages.json'||
@@ -453,6 +461,14 @@ async function dispatchPostMergeDeploys(){
     });
     if(!dispatch.r.ok)fail('Church Pages deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
     console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-ekodi-church-homepage.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+  if(ekodibizPublicTouched){
+    const dispatch=await api('/actions/workflows/deploy-ekodibiz.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('EKODIBIZ guarded public deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-ekodibiz.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
   if(sharedSiteTouched){
     const dispatch=await api('/actions/workflows/deploy-site-core.yml/dispatches',{

@@ -577,7 +577,9 @@
         "headerExpect": [
           "x-ekodi-workspace-gateway: ekodibiz-service-binding",
           "x-ekodi-tenant-readability: v1",
-          "x-ekodi-operating-space-label: v1"
+          "x-ekodi-shell: v2",
+          "x-ekodi-user-ui: v1",
+          "x-ekodi-user-footer: service"
         ],
         "rollbackVerify": false
       },

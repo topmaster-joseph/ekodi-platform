@@ -112,7 +112,7 @@ class ShellHeadInjector{
 }
 
 class UserUiHtmlInjector{
-  constructor(serviceId,surface,uiSurface,progressiveHome=false){this.serviceId=serviceId;this.surface=surface;this.uiSurface=uiSurface;this.progressiveHome=progressiveHome;this.visualSeed=visualLoadSeed();}
+  constructor(serviceId,surface,uiSurface,progressiveHome=false,existingFooter=false){this.serviceId=serviceId;this.surface=surface;this.uiSurface=uiSurface;this.progressiveHome=progressiveHome;this.existingFooter=existingFooter;this.visualSeed=visualLoadSeed();}
   element(element){
     const service=cleanServiceId(this.serviceId)||'ekodi';
     element.setAttribute('data-ekodi-user-ui',USER_UI_VERSION);
@@ -124,7 +124,7 @@ class UserUiHtmlInjector{
     element.setAttribute('data-ekodi-visual-state','pending');
     element.setAttribute('data-ekodi-visual-seed',this.visualSeed);
     element.setAttribute('data-ekodi-ready-locales',readyLocalesForService(service));
-    if(serviceOwnsFooter(service))element.setAttribute('data-ekodi-footer-mode','service');
+    if(serviceOwnsFooter(service)||this.existingFooter)element.setAttribute('data-ekodi-footer-mode','service');
   }
 }
 class UserUiHeadInjector{element(element){element.append(`<meta name="google" content="notranslate" data-ekodi-browser-translation="native-i18n"><link rel="stylesheet" href="${SHELL_USER_UI_STYLE}" data-ekodi-user-ui-style="${USER_UI_VERSION}"><link rel="stylesheet" href="${SHELL_CHARACTER_STYLE}" data-ekodi-user-character-style="v1">`,{html:true});}}
@@ -155,10 +155,10 @@ class UserFooterCanonicalizer{
   }
 }
 class UserChromeInjector{
-  constructor(serviceId,addFallbackHeader=true){this.serviceId=serviceId;this.addFallbackHeader=addFallbackHeader;}
+  constructor(serviceId,addFallbackHeader=true,existingFooter=false){this.serviceId=serviceId;this.addFallbackHeader=addFallbackHeader;this.existingFooter=existingFooter;}
   element(element){
     if(this.addFallbackHeader)element.prepend(fallbackHeader(this.serviceId),{html:true});
-    if(!serviceOwnsFooter(this.serviceId))element.append(renderEkodiUserFooter(),{html:true});
+    if(!serviceOwnsFooter(this.serviceId)&&!this.existingFooter)element.append(renderEkodiUserFooter(),{html:true});
   }
 }
 
@@ -256,12 +256,12 @@ export function injectEkodiUserUi(response,serviceId='ekodi',surface='public',op
   headers.set('x-ekodi-user-layout',USER_LAYOUT_VERSION);
   if(progressiveHome)headers.set('x-ekodi-home-focus-request','v1');else headers.delete('x-ekodi-home-focus-request');
   headers.set('x-ekodi-ready-locales',readyLocalesForService(serviceId));
-  headers.set('x-ekodi-user-footer',serviceOwnsFooter(serviceId)?'service':'shared');
+  headers.set('x-ekodi-user-footer',serviceOwnsFooter(serviceId)||options?.existingFooter===true?'service':'shared');
   headers.set(USER_CHROME_HEADER,USER_UI_VERSION);
   const headerAdopter=new UserHeaderAdopter();
   const canvasAdopter=new UserCanvasAdopter();
   let rewriter=new HTMLRewriter()
-    .on('html',new UserUiHtmlInjector(serviceId,resolved,uiSurface,progressiveHome))
+    .on('html',new UserUiHtmlInjector(serviceId,resolved,uiSurface,progressiveHome,options?.existingFooter===true))
     .on('head',new UserUiHeadInjector())
     .on('main',canvasAdopter)
     .on('[role="main"]',canvasAdopter)
@@ -275,7 +275,7 @@ export function injectEkodiUserUi(response,serviceId='ekodi',surface='public',op
     const addFallbackHeader=options?.existingHeader!==true;
     rewriter=rewriter
       .on('footer',new UserFooterCanonicalizer(serviceId))
-      .on('body',new UserChromeInjector(serviceId,addFallbackHeader));
+      .on('body',new UserChromeInjector(serviceId,addFallbackHeader,options?.existingFooter===true));
   }
   return rewriter.transform(new Response(response.body,{status:response.status,statusText:response.statusText,headers}));
 }

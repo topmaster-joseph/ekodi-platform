@@ -99,7 +99,10 @@ test('EKODIBIZ canonical workspace root is backed by the EKODIBIZ service',async
   assert.ok(rootProbe.forbid.includes('data-ekodi-operating-space-label'));
   assert.ok(rootProbe.headerExpect.includes('x-ekodi-workspace-gateway: ekodibiz-service-binding'));
   assert.ok(rootProbe.headerExpect.includes('x-ekodi-tenant-readability: v1'));
-  assert.ok(rootProbe.headerExpect.includes('x-ekodi-operating-space-label: v1'));
+  assert.ok(rootProbe.headerExpect.includes('x-ekodi-shell: v2'));
+  assert.ok(rootProbe.headerExpect.includes('x-ekodi-user-ui: v1'));
+  assert.ok(rootProbe.headerExpect.includes('x-ekodi-user-footer: service'));
+  assert.ok(!rootProbe.headerExpect.includes('x-ekodi-operating-space-label: v1'));
   assert.ok(deployWorkflow.includes("grep -Fq 'WHAT WE DO'"));
   assert.ok(!deployWorkflow.includes("grep -Fq '프로그램 개발'"));
 });
