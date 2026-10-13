@@ -321,6 +321,14 @@ async function renderInteractiveAccess(s,workspaces){
 
 async function renderAccess(s){
   if(routing&&!interactiveMode)return;
+  // Public citizen writing needs a verified Google session, not workspace membership.
+  // Handoff directly to the allowlisted SeonamMedi board before workspace queries.
+  if(site==='seonammedi'){
+    routing=true;
+    showProcessing('Google 인증이 완료되었습니다. 시민의견 화면으로 돌아가는 중입니다.');
+    try{await handoffToService();return;}
+    catch(e){routing=false;console.error('seonammedi board handoff',e);showAccessFallback(s,'로그인 인증 복귀에 실패했습니다. 다시 시도해 주세요.','error');return;}
+  }
   try{
     const workspaces=await loadWorkspaces();
     if(interactiveMode){await renderInteractiveAccess(s,workspaces);return;}
