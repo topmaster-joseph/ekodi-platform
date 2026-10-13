@@ -55,8 +55,8 @@ export async function fetchSeonamMediNewsRss(query,{fetchImpl=fetch,wait=ms=>new
       const body=await response.text();
       // A CDN or anti-abuse page can respond 200 with HTML instead of RSS.
       // Never count such a response as a successful source check.
-      if(!/<rss(?:\\s|>)/i.test(body)||!/<channel(?:\\s|>)/i.test(body)||
-         !/<\\/channel\\s*>/i.test(body)||!/<\\/rss\\s*>/i.test(body)){
+      if(!/<rss(?:\s|>)/i.test(body)||!/<channel(?:\s|>)/i.test(body)||
+         !/<\/channel\s*>/i.test(body)||!/<\/rss\s*>/i.test(body)){
         throw new Error('invalid_rss_document');
       }
       return body;
