@@ -43,3 +43,18 @@ test('legacy domain debt blocks only when the current audit window modifies the 
   assert.match(source,/non-blocking inherited debt; any new or modified reference remains blocking/);
   assert.match(source,/type: 'stale-domain-reference'/);
 });
+
+
+test('audit infrastructure changes self-validate on PR without production probes',()=>{
+  assert.match(workflow,/pull_request:\s*\n\s*paths:/);
+  for(const path of [
+    '.github/workflows/source-integrity-audit.yml',
+    'scripts/source-integrity-audit.mjs',
+    'test/source-integrity-audit.test.mjs',
+    'release/**',
+  ]) assert.ok(workflow.includes(`- '${path}'`));
+  assert.match(workflow,/github\.event_name == 'pull_request' && github\.event\.pull_request\.head\.sha \|\| github\.sha/);
+  assert.match(workflow,/GITHUB_EVENT_NAME.*pull_request/);
+  assert.match(workflow,/echo "live=0"/);
+  assert.match(workflow,/source-integrity-\$\{\{ github\.event_name \}\}-\$\{\{ github\.event\.pull_request\.number \|\| 'main' \}\}/);
+});
