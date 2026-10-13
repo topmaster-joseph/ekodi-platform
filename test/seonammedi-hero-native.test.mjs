@@ -18,6 +18,8 @@ test('submitted campaign banner is preserved as a byte-identical local site asse
   assert.equal(image.readUInt32BE(20),735);
   assert.match(html,/class="campaign-hero-image" src="\/seonammedi\/assets\/campaign-reconsideration-20261013\.png"/);
   assert.match(html,/fetchpriority="high"/);
+  assert.match(html,/property="og:image:width" content="1903"/);
+  assert.match(html,/property="og:image:height" content="735"/);
   assert.match(html,/id="homeSpotlight"/);
   assert.match(html,/id="homeLatestUpdates"/);
 });
