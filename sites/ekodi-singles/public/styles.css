@@ -72,3 +72,15 @@
 }
 @media(prefers-reduced-motion:reduce){.romantic-links a{transition:none}.romantic-links a:hover{transform:none}}
 /* EKODI guarded release recovery trigger · task 20261013-singles-photo-hero · no visual or auth policy change. */
+
+/* EKODI Donghaeng: service-specific privacy review information, no live signup. */
+.singles-privacy{max-width:900px;margin:28px auto 80px;padding:clamp(20px,4vw,50px);background:#fffdfb;border:1px solid #f2e3df;border-radius:28px;color:#573f3a}
+.singles-privacy h1{font-size:clamp(30px,4vw,48px);letter-spacing:-.04em;margin:8px 0 15px}
+.singles-privacy-review{display:inline-block;background:#fff1e9;color:#8b5048;border-radius:22px;padding:11px 18px;font-weight:650}
+.singles-privacy-item{margin-top:27px;padding-top:15px;border-top:1px solid #f2e3df}
+.singles-privacy-item h2{font-size:clamp(18px,2vw,23px);margin:0 0 8px}
+.singles-privacy-item p{line-height:1.8;color:#765f57;word-break:keep-all}
+.singles-privacy-links{display:flex;gap:12px;flex-wrap:wrap;margin-top:32px}
+.singles-consent-context{background:#fff9f6;color:#694d45;border-radius:13px;padding:12px;font-size:14px;line-height:1.6}
+.singles-consent-context a{color:#995649;text-decoration:underline;text-underline-offset:3px}
+@media(max-width:610px){.singles-privacy{margin:14px 8px 42px;padding:18px;border-radius:20px}.singles-privacy-links a{flex:1 1 auto;text-align:center}}
