@@ -57,3 +57,5 @@ test('guarded production release has an automatic first-party browser witness',(
   assert.match(workflow,/actions\/upload-artifact@v4/);
   assert.match(workflow,/node --test test\/seonammedi-hero-native\.test\.mjs/);
 });
+
+// Post-merge read-only native browser acceptance requested for release PR #4620.
