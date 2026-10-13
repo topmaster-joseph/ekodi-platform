@@ -92,7 +92,9 @@ function renderPublicFinance(rows,adminMode=false){
   }).join(''):'<p class="muted">'+(adminMode?'등록된 회계내역이 없습니다.':'공개된 회계내역이 없습니다.')+'</p>';
 }
 
-const TIMELINE_FILTERS=['전체','신문','잡지','방송','통신사','유튜브','블로그','대학','정부·공공기관','공식기록','페이스북','인스타그램','틱톡','시민·단체','기타'];
+const TIMELINE_FILTERS=['전체','신문','잡지','방송','통신사','유튜브','블로그','대학','정부·공공기관','공식기록','페이스북','페이스북 그룹','인스타그램','틱톡','시민·단체','기타'];
+// Curated external source. Facebook group posts are not auto-published without independent verification.
+const RELATED_FACEBOOK_GROUP=Object.freeze({id:'2299276407568855',url:'https://www.facebook.com/groups/2299276407568855'});
 const COMMITTEE_FILTERS=['전체','회의·의결','성명·입장 발표','기자회견','집회·캠페인','면담·협의','공문·요청','행사·연대활동','기타 활동'];
 let selectedCommitteeFilter='전체';let committeeSearchText='';
 let basePublicTimelineEntries=[];
@@ -120,6 +122,7 @@ function relatedNewsCategory(item){
   const type=String(item?.sourceType||item?.source_type||'').toLowerCase();
   const source=[item?.evidence||'',item?.publisher||'',...(item?.links||[]).map(link=>[link.source,link.url].filter(Boolean).join(' '))].join(' ').toLowerCase();
   const category=String(item?.category||'');
+  if(new RegExp('facebook\\.com/groups/'+RELATED_FACEBOOK_GROUP.id+'(?:[/?#]|$)','i').test(source))return'페이스북 그룹';
   if(TIMELINE_FILTERS.includes(category)&&category!=='전체')return category;
   if(type==='blog'||/blog\.naver\.com|brunch\.co\.kr|tistory\.com|블로그/.test(source))return'블로그';
   if(/youtube\.com|youtu\.be|유튜브|youtube/i.test(source))return'유튜브';
@@ -208,14 +211,19 @@ function renderTimelineFilters(){
     host.addEventListener('click',event=>{const button=event.target.closest('button[data-cat]');if(!button)return;activeTimelineCategory=button.dataset.cat;renderTimelineFilters();renderPublicTimeline();});
   }
 }
+const relatedNewsFilterMatches=(item,selected)=>{
+  if(selected==='전체')return true;
+  const category=relatedNewsCategory(item);
+  return category===selected||(selected==='페이스북'&&category==='페이스북 그룹');
+};
 function renderPublicTimeline(){
   const host=el('timelineList');if(!host)return;
   const relatedRows=publicTimelineEntries.filter(item=>!isCommitteeRecord(item));
-  const rows=(activeTimelineCategory==='전체'?relatedRows:relatedRows.filter(item=>relatedNewsCategory(item)===activeTimelineCategory)).slice().sort(timelineDescending);
+  const rows=relatedRows.filter(item=>relatedNewsFilterMatches(item,activeTimelineCategory)).slice().sort(timelineDescending);
   host.innerHTML=rows.length?rows.map((item,index)=>{
     const adminActions=publicTimelineAdminMode&&!item.autoCollected?'<div class="timeline-admin-actions"><span class="source-type '+(item.status==='published'?'':'is-private')+'">'+(item.status==='published'?'공개':'비공개')+'</span><button type="button" data-timeline-edit="'+Number(item.id)+'">수정</button><button type="button" data-timeline-status="'+Number(item.id)+'">'+(item.status==='published'?'비공개로':'공개로')+'</button><button type="button" data-timeline-delete="'+Number(item.id)+'">삭제</button></div>':publicContentInlineMode&&item.autoCollected&&Number(item.monitorSourceId)>0?'<div class="timeline-admin-actions"><span class="source-type">자동수집 기사</span><button type="button" data-monitor-hide="'+Number(item.monitorSourceId)+'">이 자료 삭제</button></div>':'';
     return '<article class="timeline-item'+(index>2?' is-collapsed':'')+'" data-event-date="'+escapeHtml(item.date)+'"><div class="timeline-date">'+escapeHtml(item.date)+'</div><div class="timeline-content"><h3>'+escapeHtml(item.title)+'</h3><p class="timeline-summary">'+escapeHtml(item.summary)+'</p><div class="chips"><span class="chip">'+escapeHtml(relatedNewsCategory(item))+'</span><span class="chip">'+escapeHtml(item.evidence)+'</span></div><div class="timeline-detail">'+evidenceBlock(item)+'</div>'+adminActions+'<button class="timeline-toggle" type="button" aria-expanded="'+(index>2?'false':'true')+'">'+(index>2?'자세히 보기':'접기')+'</button></div></article>';
-  }).join(''):'<p class="muted">표시할 활동이력이 없습니다.</p>';
+  }).join(''):(activeTimelineCategory==='페이스북 그룹'?'<p class="muted">검증되어 공개된 그룹 게시물이 없습니다. 위의 페이스북 그룹 원문 링크를 확인해 주세요.</p>':'<p class="muted">이 분류에 공개된 관련소식이 없습니다.</p>');
   host.querySelectorAll('.timeline-toggle').forEach(button=>button.addEventListener('click',()=>{const card=button.closest('.timeline-item');const collapsed=card.classList.toggle('is-collapsed');button.setAttribute('aria-expanded',collapsed?'false':'true');button.textContent=collapsed?'자세히 보기':'접기'}));
   attachMonitorMedia(window.__SEONAM_MONITOR_ITEMS||[]);
 }
