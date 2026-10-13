@@ -39,14 +39,14 @@ test('orchestrator-dispatched Control API deployment owns PC Agent heartbeat han
   assert.ok(source.includes('inputs:{release_branch_ref:branch,release_task_id:taskId}'));
 });
 
-test('AI Commons approval UI and task runtime use their respective official release paths',()=>{
+test('AI Commons admin UI and runtime use their respective official deployment paths',()=>{
   const source=text('scripts/converge-orchestrated-pr-merge.mjs');
   const ai=source.slice(source.indexOf('const aiControlTouched='),source.indexOf('const trafficCollectorTouched='));
   const site=source.slice(source.indexOf('const sharedSiteTouched='),source.indexOf('const churchPagesTouched='));
-  assert.match(ai,/file==='ai-commons\\.js'/);
-  assert.match(ai,/file==='ai-control-worker\\.js'/);
-  assert.match(site,/file==='ai-commons-admin\\.js'/);
-  assert.match(source,/if\\(sharedSiteTouched\\)\\{/);
-  assert.match(source,/\/actions\/workflows\/deploy-site-core\\.yml\/dispatches/);
-  assert.match(source,/release_branch_ref:branch,release_task_id:taskId/);
+  assert.ok(ai.includes("file==='ai-commons.js'"));
+  assert.ok(ai.includes("file==='ai-control-worker.js'"));
+  assert.ok(site.includes("file==='ai-commons-admin.js'"));
+  assert.ok(source.includes('if(sharedSiteTouched){'));
+  assert.ok(source.includes('/actions/workflows/deploy-site-core.yml/dispatches'));
+  assert.ok(source.includes('release_branch_ref:branch,release_task_id:taskId'));
 });
