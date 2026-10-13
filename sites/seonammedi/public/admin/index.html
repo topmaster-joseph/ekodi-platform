@@ -68,7 +68,7 @@
             <input type="hidden" name="id">
             <h2 id="timelineFormTitle">활동이력 추가</h2>
             <div class="form-row"><label>일자<input name="date" maxlength="40" placeholder="2026.09.30" required></label><label>출처 분류<input name="category" list="adminNewsCategories" maxlength="80" placeholder="신문 · 방송 · 대학 등" required></label></div>
-            <label>자료 구분<select name="recordScope"><option value="news">관련소식</option><option value="committee">비상대책위 활동이력</option></select></label><label>제목<input name="title" maxlength="220" required></label>
+            <label>자료 구분<select name="recordScope"><option value="news">관련소식</option><option value="committee">비상대책위 활동이력</option></select></label><label><input type="checkbox" name="committeeRelated"> 비상대책위 관련소식으로도 표시</label><label>제목<input name="title" maxlength="220" required></label>
             <label>요약<textarea name="summary" maxlength="8000" rows="6"></textarea></label>
             <label>근거 표시<input name="evidence" maxlength="500" placeholder="공식자료 · 언론보도 등"></label>
             <div class="form-row"><label>정렬<input name="sortOrder" type="number" min="0" max="9999" value="0"></label><label>상태<select name="status"><option value="published">공개</option><option value="draft">비공개</option></select></label></div>
