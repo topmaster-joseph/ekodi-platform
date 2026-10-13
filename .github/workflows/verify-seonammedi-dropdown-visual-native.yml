@@ -1,0 +1,59 @@
+name: SeonamMedi Dropdown Post-deploy Visual Proof
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/verify-seonammedi-dropdown-visual-native.mjs'
+      - '.github/workflows/verify-seonammedi-dropdown-visual-native.yml'
+  workflow_dispatch:
+  workflow_run:
+    workflows: ['Deploy EKODI Shared Site Core', 'Deploy Independent Board']
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seonammedi-dropdown-visual-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-script:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check scripts/verify-seonammedi-dropdown-visual-native.mjs
+
+  deployed-native-visual-proof:
+    if: >-
+      github.event_name != 'pull_request' &&
+      (github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_repository.full_name == github.repository))
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Verify shared dropdowns on 16 production PC/mobile surfaces
+        run: node scripts/verify-seonammedi-dropdown-visual-native.mjs
+      - name: Preserve read-only visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seonammedi-dropdown-visual-${{ github.run_id }}
+          path: artifacts/seonammedi-dropdown-visual
+          retention-days: 14
+          if-no-files-found: warn
