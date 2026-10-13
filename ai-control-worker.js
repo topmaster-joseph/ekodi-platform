@@ -74,9 +74,15 @@ function capabilityGranted(authority,required){
 }
 async function centralAdminSession(request,env,requiredCapability='ai:read'){
   const token=bearer(request);if(!token)return null;
-  const base=(clean(env.CONTROL_API_URL)||'https://ekodi.kr').replace(/\/+$/,'');
+  // Same-zone Worker-to-Worker auth must use the authenticated Control API service binding.
+  // Public fetch('https://ekodi.kr/api/session') can fail as an intra-zone Worker subrequest.
+  // Never fall back to the public route or accept an unverified browser identity.
+  if(typeof env?.CONTROL_API?.fetch!=='function')return{error:json({error:'central_identity_unavailable'},503)};
   try{
-    const response=await fetch(`${base}/api/session`,{headers:{accept:'application/json',authorization:`Bearer ${token}`},cache:'no-store'});
+    const sessionRequest=new Request('https://ekodi.kr/api/session',{
+      method:'GET',headers:{accept:'application/json',authorization:`Bearer ${token}`},redirect:'manual'
+    });
+    const response=await env.CONTROL_API.fetch(sessionRequest);
     if(response.status>=500)return{error:json({error:'central_identity_unavailable'},503)};
     if(!response.ok)return null; // Only a definitive non-5xx central rejection can try legacy tokens.
     const data=await response.json().catch(()=>({}));
