@@ -13,7 +13,7 @@ on:
       - 'scripts/verify-seonammedi-nav-guest-native.mjs'
   workflow_dispatch:
   workflow_run:
-    workflows: ['Deploy EKODI Shared Site Core', 'Deploy EKODI Independent Board']
+    workflows: ['Deploy EKODI Shared Site Core', 'Deploy Independent Board']
     types: [completed]
     branches: [main]
 
