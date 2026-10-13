@@ -13,9 +13,10 @@ const notice=(h,value)=>h.append(text('p',value,'notice'));
 function showGuest(){
  $('sectionTitle').textContent=labels[page]||'처음';
  $('serviceStage').textContent='소개 공개 · 회원서비스 준비';
- $('contentDescription').textContent=page===''?'로그인 전에는 누구나 EKODI 동행의 소개와 이용 원칙을 볼 수 있습니다.':'공개 소개는 누구나 볼 수 있습니다. 행사 목록, 프로필 및 동행 찾기는 로그인 후 제공됩니다.';
+ document.querySelectorAll('[data-guest-nav]').forEach(link=>{link.href=loginUrl()});
+ $('contentDescription').textContent=page===''?'서로를 존중하며 천천히 알아가는 동행입니다.':'로그인 후 이용 가능한 기능은 개통 상태에 따라 달라집니다.';
  if(page!==''){
-   const h=$('publicPanel');h.append(button('EKODI Google로 시작',()=>location.assign(loginUrl()),'primary'));
+   const h=$('publicPanel');if(!h.querySelector('[data-donghaeng-login]')){const c=button('EKODI Google로 시작',()=>location.assign(loginUrl()),'primary');c.dataset.donghaengLogin='1';h.append(c);}
  }
 }
 async function sessionToken(){
@@ -463,6 +464,12 @@ async function showBrokerageReadiness(h){
  }catch(e){if(e?.status===403)notice(h,'인허가 관리 권한이 없습니다. 검증된 EKODI 계정에 운영자 역할이 필요합니다.');else notice(h,'인허가 준비자료를 조회하지 못했습니다.')}
 }
 async function signedIn(status){
+ if(!status?.onboarding_enabled){
+  document.querySelectorAll('[data-guest-nav]').forEach(link=>{link.hidden=true});
+  $('serviceStage').textContent='로그인 확인 · 회원서비스 준비 중';
+  const h=holder();notice(h,'EKODI 계정 로그인은 확인했습니다. 회원가입·프로필·행사·메시지·결제는 안전 검증을 마친 후 열립니다.');
+  return;
+ }
  document.querySelectorAll('[data-member-nav]').forEach(link=>{link.hidden=false});
  document.querySelectorAll('[data-guest-nav]').forEach(link=>{link.hidden=true});
  $('serviceStage').textContent='로그인 완료';
@@ -491,7 +498,11 @@ async function main(){
  catch{return}
  state.status=status;
  const prelaunchAdmin=page==='/admin'&&status?.admin_preparation_enabled===true&&status?.onboarding_enabled===false;
- if((!status?.onboarding_enabled&&!prelaunchAdmin)||!status?.auth?.supabase_url||!status?.auth?.publishable_key)return;
+ // Public first-party EKODI identity settings are the same as the canonical auth hub.
+ // Only the publishable browser key is used; membership and payment remain server-gated.
+ const identityUrl=status?.auth?.supabase_url||'https://renzehysxirjilvdxacv.supabase.co';
+ const identityKey=status?.auth?.publishable_key||'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
+ if(!identityUrl||!identityKey)return;
  if(typeof window.supabase?.createClient!=='function'){
   const ready=await new Promise(resolve=>{
    const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
@@ -500,7 +511,7 @@ async function main(){
   });
   if(!ready){$('serviceStage').textContent='로그인 모듈 점검 중';return}
  }
- state.client=window.supabase.createClient(status.auth.supabase_url,status.auth.publishable_key,
+ state.client=window.supabase.createClient(identityUrl,identityKey,
  {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
  // Existing EKODI community bridge uses a short-lived OTP hash in the fragment.
  if(tokenHash){
@@ -508,7 +519,7 @@ async function main(){
  }
  const {data}=await state.client.auth.getSession();
  state.session=data?.session;
- if(!state.session){showGuest();return}
+ if(!state.session)return;
  if(prelaunchAdmin){
   document.querySelectorAll('[data-guest-nav]').forEach(link=>{link.hidden=true});
   $('serviceStage').textContent='운영 준비 · 회원서비스 미개통';
