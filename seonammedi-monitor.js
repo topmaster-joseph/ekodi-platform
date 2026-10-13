@@ -51,7 +51,16 @@ export async function fetchSeonamMediNewsRss(query,{fetchImpl=fetch,wait=ms=>new
       await wait(300*(attempt+1));
       continue;
     }
-    if(response.ok)return response.text();
+    if(response.ok){
+      const body=await response.text();
+      // A CDN or anti-abuse page can respond 200 with HTML instead of RSS.
+      // Never count such a response as a successful source check.
+      if(!/<rss(?:\\s|>)/i.test(body)||!/<channel(?:\\s|>)/i.test(body)||
+         !/<\\/channel\\s*>/i.test(body)||!/<\\/rss\\s*>/i.test(body)){
+        throw new Error('invalid_rss_document');
+      }
+      return body;
+    }
     lastError=new Error('HTTP '+response.status);
     if(!RSS_RETRYABLE_STATUSES.has(response.status)||attempt===RSS_RETRY_ATTEMPTS-1)break;
     const retryAfter=rssRetryAfterMs(response.headers?.get?.('retry-after'),now());
