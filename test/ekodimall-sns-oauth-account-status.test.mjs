@@ -59,11 +59,11 @@ test('same Google email belonging to unrelated registry must not mark the accoun
 test('Google project-wide YouTube API disablement shows setup instead of misleading account re-login',()=>{
   const googleError='YouTube Data API v3 has not been used in project 483044030492 before or it is disabled. Enable it by visiting a Google Cloud API link';
   const html=renderAccountRows([ {...account,id:12,status:'error',lastError:googleError}, {...account,id:15,status:'error',lastError:googleError} ],[]);
-  assert.match(html,/YouTube API 설정 필요/);
-  assert.match(html,/프로젝트 설정을 먼저 확인/);
+  assert.match(html,/이전 YouTube API 오류 · 상태 확인 필요/);
+  assert.match(html,/현재 사용 설정 상태를 단정할 수 없습니다/);
   assert.match(html,/project=483044030492/);
-  assert.match(html,/설정 후 연결 재시도/);
-  assert.equal((html.match(/YouTube API 사용 설정/g)||[]).length,2);
+  assert.match(html,/연결 상태 확인 후 재시도/);
+  assert.equal((html.match(/Google API 현재 상태 보기/g)||[]).length,2);
   assert.doesNotMatch(html,/has not been used in project/);
   assert.doesNotMatch(html,/>재연결</);
 });
