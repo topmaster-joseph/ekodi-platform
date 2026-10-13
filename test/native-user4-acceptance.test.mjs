@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {classifyUser4BrowserFailure,eligibleUser4Agent,verifyUser4Browser,verifyUser4BrowserWithRetry,verifyUser4Acceptance,ensureUser4AgentUpdated,USER4_CDP_FIX_FLOOR,USER4_CDP_WORKER_AGENT_VERSION}
+import {classifyUser4LocalAiError,classifyUser4BrowserFailure,eligibleUser4Agent,verifyUser4Browser,verifyUser4BrowserWithRetry,verifyUser4Acceptance,ensureUser4AgentUpdated,USER4_CDP_FIX_FLOOR,USER4_CDP_WORKER_AGENT_VERSION}
   from '../scripts/verify-native-user4-acceptance.mjs';
 const now=Date.parse('2026-10-11T06:30:00.000Z');
 const good={id:'device-4',hostname:'USER4',status:'online',revokedAt:null,
@@ -369,4 +369,19 @@ test('Windows native CDP worker propagates allowlisted receipt categories withou
 test('USER4 upgrade release requires new 2.5.5 Agent and an updated official receipt',()=>{
   assert.equal(USER4_CDP_WORKER_AGENT_VERSION,'2.5.5');
   assert.equal(USER4_CDP_FIX_FLOOR,Date.parse('2026-10-12T18:00:00.000Z'));
+});
+
+test('USER4 native Ollama diagnostic codes are allowlisted and never leak raw failures',()=>{
+  const expected=[
+    'native_localai_api_unavailable','native_localai_approved_model_missing',
+    'native_localai_api_error_or_timeout','native_localai_empty_or_incomplete_response',
+    'native_localai_not_checked','native_localai_inference_not_ready'
+  ];
+  for(const code of expected)assert.equal(classifyUser4LocalAiError(code),code);
+  assert.equal(classifyUser4LocalAiError('no_healthy_localai_verify_user3_agent'),
+    'user4_agent_heartbeat_or_verify_capability_unavailable');
+  assert.equal(classifyUser4LocalAiError('native_localai_error: token=SECRET'),
+    'native_localai_verification_failed');
+  assert.equal(classifyUser4LocalAiError('C:\\Users\\SECRET\\my-file.txt'),
+    'native_localai_verification_failed');
 });
