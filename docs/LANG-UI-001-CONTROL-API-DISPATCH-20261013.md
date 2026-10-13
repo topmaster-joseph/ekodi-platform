@@ -20,3 +20,9 @@ The corresponding official deployment workflow already owns these sources in PR/
 This documentation-only owner commit requests official `converge-orchestrated-pr-merge.yml` for the original D1-issued branch. Do not bypass branch protections, security checks, quota/429 stop conditions or translation validation. Only a protected merge, verified Control API staging/production release and post-release read-only runtime check can confirm live D1 outage fail-closed behavior.
 
 Actual source Korean-only service tests must remain valid. Do not mark entire multilingual UI certified until a real public 2+ language page is observed by EKODI-owned Chromium. Open tracking issue: #4365.
+
+## Owner CI renewal after protected-main base synchronization
+
+EKODI protected Convergent Merge [run #38328069798](https://github.com/topmaster-joseph/ekodi-platform/actions/runs/38328069798) verified release provenance and synchronized the official integration candidate #4534 to latest main, producing GitHub Actions-authored head `7a4fbf75c9219b06ed2dbbbaa090ee423db065a7`. That generated source update must not be treated as passing author-triggered required CI when GitHub marks new checks `action_required`.
+
+This documentation-only owner record causes a fresh validation of the identical runtime and deployment dispatcher, without relaxing required checks, mutating translation state, bypassing quota or replacing the D1-issued Orchestrator task.
