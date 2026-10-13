@@ -8,6 +8,8 @@ test('Actions executor is super-admin-only and cannot use inventory credentials 
   const source = await read('cloudflare-secret-control.js');
   assert.match(source, /const auth = await sessionCheck\(request, env\)/);
   assert.match(source, /SECRET_MANAGER_FORBIDDEN/);
+  assert.match(source, /ACTIONS_SUPER_ADMIN_REQUIRED/);
+  assert.match(source, /auth\.session\.role/);
   assert.match(source, /GITHUB_ACTIONS_DISPATCH_TOKEN/);
   const credentialFunction = source.slice(source.indexOf('function actionsCredential('), source.indexOf('function actionsConnectionStatus('));
   assert.doesNotMatch(credentialFunction, /GITHUB_CONTROL_TOKEN|CLOUDFLARE_API_TOKEN|CF_API_TOKEN/);
