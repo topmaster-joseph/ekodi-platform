@@ -74,6 +74,12 @@ const myTouched=changedFiles.some(file=>
 );
 // Release targets are selected only from the verified, merged PR file list.
 const controlApiTouched=changedFiles.some(file=>[
+  // LANG-UI-001: public language status is served by api-worker.js via
+  // language-automation.js. A GITHUB_TOKEN merge does not fire main push CI,
+  // so this requires the same receipt-bound Control API deployment.
+  'language-automation.js',
+  'config/language-registry.js',
+  'config/managed-language-sites.js',
   'affiliate-control.js',
   'affiliate-marketplace.js',
   'coupang-partners-automation.js',
