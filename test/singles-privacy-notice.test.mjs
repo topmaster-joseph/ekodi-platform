@@ -26,6 +26,8 @@ test('main and consent shell link to privacy review but launch gates remain clos
  }
  assert.equal((await routeSinglesSurface(req('/singles/api/me'),env)).status,503);
  assert.equal((await routeSinglesSurface(req('/singles/api/discover'),env)).status,503);
+ const native=await readFile(new URL('../.github/workflows/verify-singles-native-browser.yml',import.meta.url),'utf8');
+ assert.equal((native.match(/\\/singles\\/privacy/g)||[]).length,2,'both native profiles must inspect the privacy draft');
  const source=await readFile(new URL('../singles-surface.js',import.meta.url),'utf8');
  assert.match(source,/SINGLES_M1_ENABLED==='true'/);
  assert.match(source,/paid_brokerage_enabled:false/);
