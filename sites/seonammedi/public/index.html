@@ -97,7 +97,7 @@
 </section>
 
 <section id="timeline" class="section activity-list-only" data-view-section="status" data-status-pane="timeline" hidden>
-  <div class="section-head section-view-title"><div><p class="eyebrow">RELATED NEWS &amp; SOURCES</p><h2>관련소식</h2><p class="note">신문·잡지·방송·대학·공식기록과 연결된 소셜채널을 출처별로 확인할 수 있습니다.</p></div></div>
+  <div class="section-head section-view-title"><div><p class="eyebrow">RELATED NEWS &amp; SOURCES</p><h2>관련소식</h2><p class="note">서남권 국립의대 관련 소식을 발행일이 최신인 순서로 자동 정렬하고, 검증된 과거 기록까지 출처별로 확인할 수 있습니다.</p></div></div>
   <div class="activity-toolbar"><div class="filters" id="timelineFilters" aria-label="관련소식 출처별 세부 분류"></div><button id="timelineManageToggle" class="ekodi-public-admin-inline" type="button" hidden aria-expanded="false" aria-controls="timelineManageForm">관련소식 관리</button><button id="timelineLinkToggle" class="ekodi-public-admin-inline" type="button" hidden aria-expanded="false" aria-controls="timelineLinkForm">링크로 등록</button></div>
   <form id="timelineLinkForm" class="panel module-compose inline-manage-form" hidden>
     <strong>링크만으로 관련소식 등록</strong>
@@ -119,7 +119,9 @@
   </form>
   <div class="related-linked-channels"><h3>연결된 소셜채널</h3><p class="muted">채널명을 누르면 기존 소통채널 화면과 원문 링크로 이동합니다.</p><div id="relatedChannelLinks" class="related-channel-links" aria-label="연결된 채널 링크"></div></div>
   <datalist id="publicNewsCategories"><option value="신문"><option value="잡지"><option value="방송"><option value="통신사"><option value="유튜브"><option value="블로그"><option value="대학"><option value="정부·공공기관"><option value="공식기록"><option value="시민·단체"></datalist>
+  <p id="timelineFeedStatus" class="muted" role="status" aria-live="polite">최신 발행일순 · 관련소식을 불러오는 중입니다.</p>
   <div id="timelineList" class="timeline"></div>
+  <div id="timelineFeedMore" class="timeline-feed-more" hidden><button id="timelineLoadMore" type="button" class="secondary">이전 소식 더 보기</button></div>
 </section>
 
 <section id="notices" class="section module-section" data-view-section="notices" hidden>
