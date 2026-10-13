@@ -9,3 +9,5 @@ The trusted recovery workflow issued this exact-SHA branch, but GitHub Actions w
 After official merge-base refresh, GitHub classified bot-authored merge checks as action_required. Owner-authored documentation-only refresh requests genuine CI on the synchronized head without changing executable logic. All required checks and release receipts remain required.
 
 The trusted orchestrator synchronized the branch again to avoid a competing main merge (branch-updated outcome). Owner-authored protected CI refresh on this head; runtime source and required gates are unchanged.
+
+Another trusted base synchronization moved the GitHub merge ref during full CI. On this new up-to-date head, owner refresh restarts genuine protected checks while leaving application code and security gates unchanged.
