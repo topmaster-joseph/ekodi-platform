@@ -62,9 +62,11 @@ export function extractSeonamMediArticle(html,sourceUrl){
   // context. A search result or headline alone is never publication proof.
   const relevant=Boolean(evidence)&&hasRegionalMedicalContext(evidence)
     &&(hasRegionalMedicalContext(title)||committeeRelated);
-  const category=/(?:헬로비전|방송|티비|tv|kbs|mbc|sbs|ytn|jtbc)/i.test(publisher)?'방송':'신문';
-  // Store an original metadata-only summary, not publisher article text.
-  const summary=relevant?'서남권 국립의대 신설 관련 보도입니다. 자세한 내용은 해당 언론사 원문을 확인하세요.':'';
+  const legacyCategory=/후보대학|후보 대학|선정 절차|심사자료/.test(title+' '+evidence)?'후보대학 선정':/비대위|대책위|시민대회|상경투쟁|기자회견|집회|결의대회/.test(title+' '+evidence)?'비대위 활동이력':'정부·대학';
+  const category=committeeRelated?(/(?:헬로비전|방송|티비|tv|kbs|mbc|sbs|ytn|jtbc)/i.test(publisher)?'방송':'신문'):legacyCategory;
+  // For committee news use an original metadata-only summary, never a
+  // verbatim excerpt of the external publisher article.
+  const summary=committeeRelated?'서남권 국립의대 신설 관련 보도입니다. 자세한 내용은 해당 언론사 원문을 확인하세요.':clean(evidence,240);
   return {title,summary,publisher,date,category,sourceUrl,committeeRelated:relevant&&committeeRelated,relevant,ready:relevant&&Boolean(date)};
 }
 export async function fetchSeonamMediLinkPreview(input,{fetchImpl=fetch}={}){

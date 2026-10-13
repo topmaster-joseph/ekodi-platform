@@ -17,6 +17,7 @@ test('link-only import extracts verified headline body date source without manua
   assert.equal(result.title,'전남 국립의대 신설, 목포대·순천대 논의');
   assert.equal(result.date,'2026.10.09');
   assert.equal(result.publisher,'지역보도');
+  assert.equal(result.category,'정부·대학'); // Existing noncommittee classifications stay unchanged.
   assert.equal(result.relevant,true);assert.equal(result.ready,true);
   assert.match(result.summary,/국립의대 신설/);
 });
