@@ -66,7 +66,12 @@ test('central EKODI Google handoff can verify identity in prelaunch without bypa
   assert.match(app,/searchParams\.set\('site','singles'\)/);
   assert.match(app,/searchParams\.set\('return_to','https:\/\/ekodi\.kr\/singles'/);
   assert.match(auth,/singles:\{name:'EKODI 동행',returnTo:'https:\/\/ekodi\.kr\/singles\/'/);
-  assert.match(app,/if\(!status\?\.auth\?\.supabase_url\|\|!status\?\.auth\?\.publishable_key\)return/);
+  assert.match(app,/const identityUrl=status\?\.auth\?\.supabase_url\|\|/);
+  assert.match(app,/const identityKey=status\?\.auth\?\.publishable_key\|\|/);
+  const authUrl=auth.match(/const SUPABASE_URL='([^']+)'/);
+  const authKey=auth.match(/const PUBLISHABLE_KEY='([^']+)'/);
+  assert.ok(authUrl&&authKey);
+  assert.ok(app.includes(authUrl[1])&&app.includes(authKey[1]),'fallback browser identity config must match canonical public auth hub');
   assert.match(app,/if\(!status\?\.onboarding_enabled\)\{/);
   assert.match(app,/회원가입·프로필·행사·메시지·결제는 안전 검증을 마친 후 열립니다/);
   assert.match(app,/if\(!h\.querySelector\('\[data-donghaeng-login\]'\)\)/);
