@@ -205,24 +205,6 @@ export async function verifyUser4BrowserWithRetry(options={}, verify=verifyUser4
   }
 }
 
-// Export fixed, non-secret categories only. Native Ollama errors must never
-// reflect untrusted provider output, HTTP response bodies or Windows paths.
-export function classifyUser4LocalAiError(message) {
-  const raw=typeof message==='string'?message.slice(0,240):'';
-  if(raw==='no_healthy_localai_verify_user3_agent')
-    return 'user4_agent_heartbeat_or_verify_capability_unavailable';
-  const allowed=new Set([
-    'native_localai_api_unavailable','native_localai_approved_model_missing',
-    'native_localai_api_error_or_timeout','native_localai_empty_or_incomplete_response',
-    'native_localai_nonmatching_response','native_localai_not_checked',
-    'native_localai_inference_not_ready','native_localai_missing_real_windows_proof',
-    'native_localai_command_failed','native_localai_command_cancelled',
-    'native_localai_command_timeout','native_localai_unapproved_diagnostic_mode',
-    'native_localai_heartbeat_lost_after_command'
-  ]);
-  return allowed.has(raw)?raw:'native_localai_verification_failed';
-}
-
 export async function verifyUser4Acceptance(options={}){
   // USER4's small Ollama model was ready before two simultaneous Browser/AI
   // runs returned native_localai_inference_not_ready. Avoid competing for memory
@@ -248,7 +230,8 @@ export async function verifyUser4Acceptance(options={}){
     if(result.status!=='rejected')continue;
     const label=i===0?'browser':'localAi';
     const raw=String(result.reason?.message||'failed');
-    const code=label==='localAi'?classifyUser4LocalAiError(raw):raw;
+    const code=label==='localAi'&&raw==='no_healthy_localai_verify_user3_agent'
+      ? 'user4_agent_heartbeat_or_verify_capability_unavailable' : raw;
     failures.push(label+':'+code.slice(0,100));
   }
   const browserVerified=browser?.targetAlias==='user4' &&
