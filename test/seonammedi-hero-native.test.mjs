@@ -39,6 +39,8 @@ test('EKODI-owned native browser checks image bytes and geometry on two viewport
   assert.match(browser,/naturalWidth===1903&&entry\.naturalHeight===735/);
   assert.match(browser,/assetSha256===expectedSha/);
   assert.match(browser,/horizontalOverflow/);
+  assert.match(browser,/expectedBrowserPath/);
+  assert.match(browser,/assetPath\.replace\(\/\^\\\/seonammedi\//);
   assert.match(browser,/await page\.screenshot/);
   assert.match(browser,/readOnly:true/);
   assert.doesNotMatch(browser,/tinyfish|selenium-grid|userDataDir|persistentContext|remoteDesktop/i);
