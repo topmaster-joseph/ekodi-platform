@@ -7,7 +7,7 @@ const ROOTS=[
   {name:'canonical',origin:'https://ekodi.kr',prefix:'/seonammedi'},
   {name:'customer',origin:'https://seonammedi.kr',prefix:''}
 ];
-const ROUTES=['/','/board/voices','/board/notices','/board/finance'];
+const ROUTES=['/','/board/voices','/board/notices','/board/finance','/minutes/','/admin/'];
 const DEVICES=[{name:'desktop',width:1440,height:900},{name:'mobile',width:390,height:844}];
 const out=path.resolve(process.env.EKODI_NAV_AUDIT_OUTPUT||'artifacts/seonammedi-nav-guest');
 await fs.mkdir(out,{recursive:true});
@@ -70,19 +70,28 @@ try {
               heroLoaded:(()=>{const img=document.querySelector('.campaign-hero-image');return !!img?.complete&&img.naturalWidth===1903&&img.naturalHeight===735})(),
               writeButtonVisible:(()=>{const b=document.getElementById('writeToggle');return !!b&&b.getBoundingClientRect().width>0})(),
               editorShownWithoutLogin:(()=>{const el=document.getElementById('writeForm');return !!el&&!el.hidden&&getComputedStyle(el).display!=='none'})(),
-              authButtonVisible:!!document.querySelector('#adminLogin')
+              authButtonVisible:!!document.querySelector('#adminLogin'),
+              minutesGuestGate:!!document.querySelector('#viewerForm'),
+              minutesPrivateContentHidden:(()=>{const el=document.querySelector('#minutes');return !!el?.hidden})(),
+              adminLoginPrompt:!!document.querySelector('#adminIdentity')
             };
           });
           Object.assign(record,observed);
+          const violations=[];
           const actualLabels=record.top.map(x=>x.label);
+          const publicSurface=!['/minutes/','/admin/'].includes(suffix);
           record.topLevelMatches=JSON.stringify(actualLabels)===JSON.stringify(LABELS);
-          if(!record.topLevelMatches)throw Error('menu_labels_mismatch: '+JSON.stringify(actualLabels));
-          if(record.horizontalOverflow)throw Error('horizontal_overflow');
-          if(!record.groups.find(x=>x.parent==='공지')?.entries.some(x=>x.label==='회계'))throw Error('finance_not_under_notices');
-          if(!record.groups.find(x=>x.parent==='공지')?.entries.some(x=>x.label==='회의록'))throw Error('minutes_not_under_notices');
-          if(record.groups.find(x=>x.parent==='소통채널')?.entries.some(x=>x.label==='유튜브')!==true)throw Error('social_submenus_missing');
-          if(suffix==='/'&&(!record.heroOriginalPresent||!record.heroLoaded))throw Error('original_campaign_hero_regression');
-          if(suffix==='/board/voices'&&record.editorShownWithoutLogin)throw Error('guest_composer_exposed');
+          if(publicSurface&&!record.topLevelMatches)violations.push('menu_labels_mismatch: '+JSON.stringify(actualLabels));
+          if(record.horizontalOverflow)violations.push('horizontal_overflow');
+          if(publicSurface&&!record.groups.find(x=>x.parent==='공지')?.entries.some(x=>x.label==='회계'))violations.push('finance_not_under_notices');
+          if(publicSurface&&!record.groups.find(x=>x.parent==='공지')?.entries.some(x=>x.label==='회의록'))violations.push('minutes_not_under_notices');
+          if(publicSurface&&record.groups.find(x=>x.parent==='소통채널')?.entries.some(x=>x.label==='유튜브')!==true)violations.push('social_submenus_missing');
+          if(suffix==='/'&&(!record.heroOriginalPresent||!record.heroLoaded))violations.push('original_campaign_hero_regression');
+          if(suffix==='/board/voices'&&record.editorShownWithoutLogin)violations.push('guest_composer_exposed');
+          if(suffix==='/board/voices'&&record.authButtonVisible)violations.push('guest_login_button_before_write');
+          if(suffix==='/minutes/'&&(!record.minutesGuestGate||!record.minutesPrivateContentHidden))violations.push('minutes_guest_privacy_gate_missing');
+          record.violations=violations;
+          if(violations.length)throw Error(violations.join('; '));
           record.ok=true;
           if(i===0||i===1){
             const file=root.name+'-'+device.name+'-'+(i===0?'home':'voices')+'.png';
