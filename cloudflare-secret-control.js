@@ -336,11 +336,19 @@ export async function handleCloudflareSecretControl(request, env) {
     }, 200, auth.response.headers);
   }
 
-  if (url.pathname === `${BASE_PATH}/actions` && request.method === 'GET') {
-    return json(actionsConnectionStatus(env), 200, auth.response.headers);
-  }
-  if (url.pathname === `${BASE_PATH}/actions/dispatch` && request.method === 'POST') {
-    return actionDispatch(request, env, auth);
+  if (url.pathname === `${BASE_PATH}/actions` || url.pathname === `${BASE_PATH}/actions/dispatch`) {
+    // The existing secrets owner allowlist is required but not sufficient:
+    // direct Actions execution must also have an actual platform super-admin role.
+    if (String(auth.session.role || '').toLowerCase() !== 'super_admin') {
+      return json({ error:'플랫폼 최고관리자 권한이 필요합니다.', code:'ACTIONS_SUPER_ADMIN_REQUIRED' }, 403, auth.response.headers);
+    }
+    if (url.pathname === `${BASE_PATH}/actions` && request.method === 'GET') {
+      return json(actionsConnectionStatus(env), 200, auth.response.headers);
+    }
+    if (url.pathname === `${BASE_PATH}/actions/dispatch` && request.method === 'POST') {
+      return actionDispatch(request, env, auth);
+    }
+    return json({ error:'허용되지 않은 요청 방식입니다.', code:'ACTIONS_METHOD_NOT_ALLOWED' }, 405, auth.response.headers);
   }
 
   if (url.pathname === `${BASE_PATH}/providers` && request.method === 'GET') {
