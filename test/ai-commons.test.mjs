@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import vm from 'node:vm';
 import registry from '../config/capability-registry.json' with {type:'json'};
 import {AI_COMMONS_POLICY,adminIdeaView,canFinalPublish,canPromoteIdeaStatus,executionCatalogSnapshot,listExecutionServices,memberIdeaView,normalizeAiIdeaInput,publicRequestView,rankCommonCapabilities,rankPublicExecutionServices,resolveExecutionServiceEntry,suggestedIdeaState,userIdeaStatus} from '../ai-commons.js';
 
@@ -173,4 +174,41 @@ test('all executable service entries stay under /ai/ and advanced access uses ce
   assert.equal(resolveExecutionServiceEntry('/ai/interpreter/',registry)?.deliveryMode,'direct');
   assert.equal(resolveExecutionServiceEntry('/ai/use/common-device-observe/',registry),null);
   assert.ok(projected.filter(item=>item.usableNow).every(item=>item.targetUrl));
+});
+
+test('admin Commons diagnosis derives bounded task state without leaking raw errors or prompts',()=>{
+  const worker=fs.readFileSync(new URL('../ai-control-worker.js',import.meta.url),'utf8');
+  const begin=worker.indexOf('function commonsTaskIssue(row){');
+  const end=worker.indexOf('async function adminCommonsRequests(env){',begin);
+  assert.ok(begin>=0&&end>begin,'task issue projector exists');
+  const fn=vm.runInNewContext('('+worker.slice(begin,end).trim()+')',{
+    clean:value=>String(value??'').trim()
+  });
+  assert.equal(fn({state:'failed',error:'no_provider_available'}),'provider_unavailable');
+  assert.equal(fn({state:'failed',error:'all_providers_failed'}),'provider_failed');
+  assert.equal(fn({state:'awaiting_paid_decision',error:'free_quota_exhausted_paid_decision_required'}),'paid_decision_required');
+  assert.equal(fn({state:'failed',error:'password: secret'}),'task_failed');
+  assert.doesNotMatch(fn({state:'failed',error:'authorization: Bearer SECRET'}),/SECRET/);
+  const handler=worker.slice(worker.indexOf('async function adminCommonsRequests(env){'),worker.indexOf('async function handleCommonsAdmin(request,env,url){'));
+  assert.match(handler,/SELECT id,state,error,updated_at FROM ai_control_tasks WHERE id IN/);
+  assert.match(handler,/const byId=new Map/);
+  assert.doesNotMatch(handler,/\.run\(|\.batch\(|DELETE FROM|UPDATE ai_control_tasks/);
+  const admin=worker.slice(worker.indexOf('async function handleCommonsAdmin(request,env,url){'));
+  assert.ok(admin.indexOf('requireCommonsSuperAdmin(request,env)')>=0);
+  assert.match(admin,/requests:await adminCommonsRequests\(env\)/);
+  assert.equal('taskState' in publicRequestView({development_task_id:'t1'}),false);
+});
+
+test('Commons review never reports a failed build as automatically running',()=>{
+  const ui=fs.readFileSync(new URL('../ai-commons-admin.js',import.meta.url),'utf8');
+  const begin=ui.indexOf('function actions(item){'),end=ui.indexOf('function row(item){',begin);
+  assert.ok(begin>=0&&end>begin);
+  const actions=vm.runInNewContext('('+ui.slice(begin,end).trim()+')');
+  assert.match(actions({status:'triaged',taskState:'failed'}),/AI 작업 실패/);
+  assert.match(actions({status:'triaged',taskState:'awaiting_paid_decision'}),/승인 대기/);
+  assert.match(actions({status:'triaged',taskState:'not_started'}),/실행 대기/);
+  assert.match(actions({status:'triaged',taskState:'running'}),/진행중/);
+  assert.doesNotMatch(actions({status:'triaged',taskState:'failed'}),/자동 진행중/);
+  assert.match(actions({status:'staged',taskState:'completed'}),/data-decision="publish"/);
+  assert.doesNotMatch(actions({status:'triaged',taskState:'failed'}),/data-decision=/);
 });
