@@ -13,6 +13,16 @@ preview_urls = false
 [vars]
 ENVIRONMENT = "production"
 TURNSTILE_PUBLIC_WRITE_ESCALATION = "enabled"
+# EKODI Singles public identity/admin preparation: all personal/social/paid launch gates stay OFF.
+# Publishable key is a PUBLIC browser key, not a service-role or management credential.
+SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
+SINGLES_API_URL = "https://renzehysxirjilvdxacv.supabase.co/functions/v1/singles-api"
+SINGLES_M1_ENABLED = "false"
+SINGLES_SOCIAL_ENABLED = "false"
+SINGLES_PAID_ACTIONS_ENABLED = "false"
+SINGLES_BANK_TRANSFER_ENABLED = "false"
+SINGLES_BANK_VERIFICATION_ENABLED = "false"
 # TURNSTILE_SECRET_KEY remains a Worker secret. TURNSTILE_SITE_KEY is optional public metadata and is not set until a widget is provisioned.
 
 [version_metadata]
