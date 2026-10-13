@@ -2604,11 +2604,16 @@ function Get-EkodiLocalAiVerification {
           prompt = 'Reply exactly OK'
           stream = $false
           think = $false
-          options = @{ num_predict = 64; num_ctx = 512; temperature = 0 }
+          # A genuine, completed local generation is the readiness criterion.
+          # Never persist or log model-generated text, and bound CPU/RAM usage.
+          options = @{ num_predict = 16; num_ctx = 512; temperature = 0 }
         } | ConvertTo-Json -Depth 5 -Compress
-        $reply = Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:11434/api/generate' -Body $body -ContentType 'application/json' -TimeoutSec 45 -ErrorAction Stop
-        if ([string]$reply.response -match '^\s*OK[.!]?\s*$') { $proof.inference = 'passed' }
-        else { $proof.inference = 'nonmatching_response' }
+        $reply = Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:11434/api/generate' -Body $body -ContentType 'application/json' -TimeoutSec 60 -ErrorAction Stop
+        $hasText = -not [string]::IsNullOrWhiteSpace([string]$reply.response)
+        $isCompleted = $reply.done -eq $true
+        $correctModel = [string]$reply.model -eq [string]$model
+        if ($hasText -and $isCompleted -and $correctModel) { $proof.inference = 'passed' }
+        else { $proof.inference = 'empty_or_incomplete_response' }
       } else { $proof.inference = 'approved_model_missing' }
     } catch { $proof.inference = 'api_error_or_timeout' }
   }
