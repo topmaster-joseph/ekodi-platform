@@ -59,6 +59,10 @@ try {
       const firstEscaped=responseHtml.search(/\\\\[nrt]/);
       entry.rawEscapedFirstOffset=firstEscaped;
       entry.rawEscapedContext=firstEscaped>=0?responseHtml.slice(Math.max(0,firstEscaped-100),firstEscaped+140):'';
+      const ogMarker=responseHtml.indexOf('<meta property="og:image"');
+      entry.rawOgMarkerOffset=ogMarker;
+      entry.rawBeforeOgMarker=ogMarker>=0?responseHtml.slice(Math.max(0,ogMarker-450),ogMarker+180):'';
+      entry.rawBeforeOgMarkerHex=ogMarker>=0?Buffer.from(responseHtml.slice(Math.max(0,ogMarker-35),ogMarker),'utf8').toString('hex'):'';
       entry.rawHeadCloseOffset=responseHtml.toLowerCase().indexOf('</head>');
       entry.rawBodyOpenOffset=responseHtml.toLowerCase().indexOf('<body');
       entry.rawHeadBeforeBody=responseHtml.slice(Math.max(0,entry.rawBodyOpenOffset-150),entry.rawBodyOpenOffset+70);
