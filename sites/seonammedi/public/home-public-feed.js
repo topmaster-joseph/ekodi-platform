@@ -1,20 +1,40 @@
-(()=>{'use strict';
+(()=>{
+'use strict';
 const root=document.getElementById('homePublicFeed');if(!root)return;
+const home=/(^|\.)seonammedi\.kr$/i.test(location.hostname)?'':'/seonammedi';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const date=x=>{const d=new Date(x||0);return Number.isNaN(d.getTime())?'':d.toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'})};
-const sort=(a,b)=>new Date(b.publishedAt||b.updatedAt||b.date||0)-new Date(a.publishedAt||a.updatedAt||a.date||0);
-const card=(x,label)=>'<a class="public-feed-row" href="'+esc(x.url)+'"><span class="public-feed-title">'+esc(x.title)+'</span><time>'+esc(date(x.publishedAt||x.updatedAt||x.date))+'</time><span aria-hidden="true">›</span></a>';
-const section=(label,rows,href,primary=false)=>rows.length?'<section class="public-feed-section'+(primary?' public-feed-primary':'')+'"><div class="public-feed-heading"><h2>'+esc(label)+'</h2><a href="'+esc(href)+'">더보기 ›</a></div><div class="public-feed-rows">'+rows.slice(0,primary?5:3).map(x=>card(x,label)).join('')+'</div></section>':'';
-const normalize=(rows,category,base)=>rows.filter(x=>x&&x.title&&x.id!=null&&x.visibility!=='private'&&x.status!=='draft').map(x=>({...x,url:base+encodeURIComponent(x.id),category}));
-const fetchJson=async url=>{const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw Error('fetch failed');return r.json()};
+const publicItem=x=>x&&x.visibility!=='private'&&x.isPublic!==false&&(x.status==null||x.status==='published')&&x.published!==false;
+const timestamp=value=>{
+ const raw=String(value||'').trim();
+ const normalized=/^\d{4}[.]\d{1,2}([.]\d{1,2})?$/.test(raw)?raw.replace(/\./g,'-'):raw;
+ const parsed=Date.parse(normalized);
+ return Number.isFinite(parsed)?parsed:0;
+};
+const time=x=>timestamp(x.publishedAt||x.createdAt||x.updatedAt||x.date);
+const sort=(a,b)=>time(b)-time(a);
+const displayDate=x=>{const t=time(x);return t?new Date(t).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):''};
+const row=x=>'<a class="public-feed-row" href="'+esc(x.url)+'"><span class="public-feed-title">'+esc(x.title)+'</span><time>'+esc(displayDate(x))+'</time><span aria-hidden="true">›</span></a>';
+const section=(label,items,href,primary=false)=>'<section class="public-feed-section'+(primary?' public-feed-primary':'')+'"><div class="public-feed-heading"><h2>'+esc(label)+'</h2><a href="'+esc(href)+'">더보기 ›</a></div><div class="public-feed-rows">'+(items.length?items.slice(0,primary?5:3).map(row).join(''):'<p class="public-feed-empty">공개된 게시물이 없거나 일시적으로 불러올 수 없습니다.</p>')+'</div></section>';
+const fetchJson=async url=>{const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);return r.json()};
+const items=(settled,key='items')=>settled.status==='fulfilled'?(Array.isArray(settled.value)?settled.value:Array.isArray(settled.value?.[key])?settled.value[key]:[]):[];
 (async()=>{
- const [noticeResult,boardResult]=await Promise.allSettled([fetchJson('/api/seonammedi/notices'),fetchJson('/board/api/posts')]);
- const notices=noticeResult.status==='fulfilled'&&noticeResult.value.ok?normalize(noticeResult.value.items||[],'공지','/seonammedi/notices/').sort(sort):[];
- const raw=boardResult.status==='fulfilled'?(Array.isArray(boardResult.value)?boardResult.value:boardResult.value.posts||boardResult.value.items||[]):[];
- const publicRows=raw.filter(x=>x&&x.id!=null&&x.visibility!=='private'&&x.status!=='draft');
- const classified=label=>publicRows.filter(x=>{const k=String(x.category||x.board||x.type||'').toLowerCase();return label==='활동이력'?/committee|activity|활동/.test(k):label==='관련소식'?/news|media|소식/.test(k):/voice|opinion|시민/.test(k)||(!k&&x.message)}).map(x=>({...x,title:x.title||String(x.message||'').slice(0,70),publishedAt:x.publishedAt||x.createdAt,url:label==='시민의견'?'/seonammedi/#voices':'/seonammedi/#'+(label==='활동이력'?'committee-activity':'timeline')})).sort(sort);
- const markup=section('공지사항',notices,'/seonammedi/notices/',true)+section('활동이력',classified('활동이력'),'/seonammedi/#committee-activity')+section('관련소식',classified('관련소식'),'/seonammedi/#timeline')+section('시민의견',classified('시민의견'),'/seonammedi/board/voices');
- root.innerHTML=markup||'<p class="public-feed-empty">표시할 공개 게시물이 없습니다.</p>';
+ const [noticeResult,boardResult,timelineResult,staticResult]=await Promise.allSettled([
+  fetchJson('/api/seonammedi/notices'),
+  fetchJson('/board/api/posts'),
+  fetchJson('/api/seonammedi/timeline'),
+  fetchJson('/seonammedi/data.json')
+ ]);
+ const notices=items(noticeResult).filter(x=>publicItem(x)&&x.id!=null&&x.title).map(x=>({...x,url:home+'/notices/'+encodeURIComponent(x.id)})).sort(sort);
+ const opinions=items(boardResult).filter(x=>publicItem(x)&&x.id!=null&&(x.title||x.message)).map(x=>({...x,title:String(x.title||x.message).slice(0,90),url:home+'/board/voices'})).sort(sort);
+ const liveTimeline=items(timelineResult);
+ const curatedTimeline=items(staticResult,'timeline');
+ const timeline=(liveTimeline.length?liveTimeline:curatedTimeline).filter(x=>publicItem(x)&&x.title);
+ const activities=timeline.filter(x=>x.recordScope==='committee').map(x=>({...x,url:home+'/#committee-activity'})).sort(sort);
+ const news=timeline.filter(x=>x.recordScope!=='committee').map(x=>({...x,url:home+'/#timeline'})).sort(sort);
+ root.innerHTML=section('공지사항',notices,home+'/board/notices',true)
+  +section('활동이력',activities,home+'/#committee-activity')
+  +section('관련소식',news,home+'/#timeline')
+  +section('시민의견',opinions,home+'/board/voices');
  root.hidden=false;
 })().catch(()=>{root.hidden=true});
 })();
