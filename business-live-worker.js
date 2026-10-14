@@ -1,5 +1,4 @@
 import baseWorker from './business-worker.js';
-import { dorajiOfficeResponse, isDorajiOfficePath } from './ekodibiz-doraji-office.js';
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 
 function securityHeaders(){return{
@@ -65,7 +64,6 @@ async function decide(request,env){const body=await readJson(request);return rpc
 
 export default{async fetch(request,env,ctx){
   const url=new URL(request.url);
-  if(isDorajiOfficePath(url.pathname)) return injectEkodiShell(dorajiOfficeResponse(request),'business');
   if(url.pathname==='/config.js')return new Response(`window.EKODI_BUSINESS_CONFIG=${JSON.stringify(config(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...securityHeaders()}});
   if(request.method==='POST'&&url.pathname==='/api/auth/exchange')return exchangeAuth(request,env);
   if(request.method==='POST'&&url.pathname==='/api/auth/refresh')return refreshAuth(request,env);
