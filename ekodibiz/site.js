@@ -13,6 +13,7 @@ const TEXT={
     businessAiOps:'AI · 디지털 운영',businessAiOpsSummary:'업무·고객·콘텐츠·데이터를 연결해 반복 가능한 디지털 운영 흐름을 설계합니다.',
     businessMarketing:'마케팅 · 커머스',businessMarketingSummary:'브랜드 메시지부터 콘텐츠와 판매 접점까지 하나의 성장 흐름으로 연결합니다.',
     businessInvest:'투자사업',businessInvestSummary:'사업 기회와 프로젝트를 검토하고 투자·협력 관계를 지속 가능한 실행 구조로 연결합니다.',
+    businessSeasonal:'계절근로자사업',businessSeasonalSummary:'지자체 협력, 해외 파트너, 농가 수요와 현장 지원을 체계적으로 준비합니다.',
     principleTitle:'공개 정보는 선명하게.<br>협업은 필요한 자리에서 깊게.',principleBody:'사업분야를 선택하면 상세 정보와 해당 분야 관계자 업무공간을 확인할 수 있습니다.',
     backToBusiness:'← 사업분야 전체 보기',areaInquiry:'이 분야 사업 문의',partnerLogin:'관계자 로그인',partnerLoginNote:'관계자 로그인은 공개 첫 화면이 아니라 선택한 사업분야의 상세 화면에서만 제공합니다.',
     detailStep1:'현황과 목표를 함께 확인합니다.',detailStep2:'실행 가능한 구조와 다음 행동을 설계합니다.',detailStep3:'운영 결과를 확인하고 필요한 개선을 이어갑니다.',
@@ -32,6 +33,7 @@ const TEXT={
     businessAiOps:'AI · Digital Operations',businessAiOpsSummary:'We connect work, customers, content and data into repeatable digital operations.',
     businessMarketing:'Marketing · Commerce',businessMarketingSummary:'We connect brand messaging, content and sales touchpoints into one growth flow.',
     businessInvest:'Investment',businessInvestSummary:'We review opportunities and projects and connect investment and collaboration into a sustainable execution structure.',
+    businessSeasonal:'Seasonal Workers',businessSeasonalSummary:'Coordinate local governments, overseas partners, farm demand and worker support responsibly.',
     principleTitle:'Keep public information clear.<br>Go deeper where collaboration begins.',principleBody:'Choose a business area to see its details and the workspace for authorized partners in that field.',
     backToBusiness:'← View all business areas',areaInquiry:'Inquire about this area',partnerLogin:'Partner Sign In',partnerLoginNote:'Partner sign-in is available only inside the selected business-area detail view, not on the public front page.',
     detailStep1:'We clarify the current situation and goal together.',detailStep2:'We design an executable structure and the next action.',detailStep3:'We review results and continue the improvements that matter.',
@@ -51,6 +53,7 @@ const TEXT={
     businessAiOps:'AI · 数字化运营',businessAiOpsSummary:'连接工作、客户、内容与数据，设计可重复运行的数字化流程。',
     businessMarketing:'营销 · 商务',businessMarketingSummary:'把品牌信息、内容和销售触点连接成一条增长链路。',
     businessInvest:'投资业务',businessInvestSummary:'评估商业机会与项目，并把投资和协作连接到可持续的执行结构。',
+    businessSeasonal:'季节性务工项目',businessSeasonalSummary:'有序准备地方政府合作、海外伙伴、农业用工需求和劳动者支持。',
     principleTitle:'公开信息保持清晰。<br>合作从需要深入的地方开始。',principleBody:'选择业务领域后，可以查看详细信息及该领域授权合作伙伴的工作空间。',
     backToBusiness:'← 查看全部业务领域',areaInquiry:'咨询此业务',partnerLogin:'合作伙伴登录',partnerLoginNote:'合作伙伴登录只出现在所选业务领域的详情页，不显示在公开首页。',
     detailStep1:'共同确认现状与目标。',detailStep2:'设计可执行的结构和下一步行动。',detailStep3:'复盘运营结果并持续改进。',
@@ -70,6 +73,7 @@ const TEXT={
     businessAiOps:'AI · デジタル運営',businessAiOpsSummary:'業務、顧客、コンテンツ、データをつなぎ、繰り返し運用できるデジタルフローを設計します。',
     businessMarketing:'マーケティング · コマース',businessMarketingSummary:'ブランドメッセージ、コンテンツ、販売接点を一つの成長フローにつなぎます。',
     businessInvest:'投資事業',businessInvestSummary:'事業機会とプロジェクトを検討し、投資と協業を持続可能な実行構造につなぎます。',
+    businessSeasonal:'季節労働者事業',businessSeasonalSummary:'自治体連携、海外パートナー、農業の人材需要と労働者支援を計画的に進めます。',
     principleTitle:'公開情報は明確に。<br>協業は必要な場所で深く。',principleBody:'事業分野を選ぶと、詳細情報とその分野の認可された関係者向けワークスペースを確認できます。',
     backToBusiness:'← 事業分野一覧へ',areaInquiry:'この分野について問い合わせる',partnerLogin:'関係者ログイン',partnerLoginNote:'関係者ログインは公開トップではなく、選択した事業分野の詳細画面にのみ表示されます。',
     detailStep1:'現状と目標を一緒に確認します。',detailStep2:'実行できる構造と次の行動を設計します。',detailStep3:'運営結果を確認し、必要な改善を続けます。',
@@ -89,6 +93,7 @@ const TEXT={
     businessAiOps:'AI · डिजिटल सञ्चालन',businessAiOpsSummary:'काम, ग्राहक, सामग्री र डाटालाई जोडेर दोहोर्याउन सकिने डिजिटल सञ्चालन बनाउँछौं।',
     businessMarketing:'मार्केटिङ · कमर्स',businessMarketingSummary:'ब्रान्ड सन्देश, सामग्री र बिक्री सम्पर्कलाई एउटै वृद्धि प्रवाहमा जोड्छौं।',
     businessInvest:'लगानी व्यवसाय',businessInvestSummary:'व्यवसाय अवसर र परियोजना समीक्षा गरी लगानी र सहकार्यलाई दिगो कार्यान्वयन संरचनामा जोड्छौं।',
+    businessSeasonal:'मौसमी कामदार परियोजना',businessSeasonalSummary:'स्थानीय निकाय, विदेशी साझेदार, कृषकको माग र कामदार सहयोग समन्वय गर्छौं।',
     principleTitle:'सार्वजनिक जानकारी स्पष्ट राख्छौं।<br>सहकार्य चाहिने ठाउँमा गहिरो हुन्छ।',principleBody:'व्यवसाय क्षेत्र छानेपछि विस्तृत जानकारी र अधिकृत साझेदार कार्यक्षेत्र हेर्न सकिन्छ।',
     backToBusiness:'← सबै व्यवसाय क्षेत्र',areaInquiry:'यस क्षेत्रबारे सोध्नुहोस्',partnerLogin:'साझेदार लगइन',partnerLoginNote:'साझेदार लगइन सार्वजनिक पहिलो पृष्ठमा होइन, छानिएको व्यवसाय क्षेत्रको विस्तृत पृष्ठमा मात्र उपलब्ध हुन्छ।',
     detailStep1:'हालको अवस्था र लक्ष्य सँगै स्पष्ट गर्छौं।',detailStep2:'कार्यान्वयनयोग्य संरचना र अर्को कदम डिजाइन गर्छौं।',detailStep3:'नतिजा समीक्षा गरी आवश्यक सुधार जारी राख्छौं।',
@@ -108,6 +113,7 @@ const TEXT={
     businessAiOps:'AI · Vận hành số',businessAiOpsSummary:'Kết nối công việc, khách hàng, nội dung và dữ liệu thành quy trình số có thể lặp lại.',
     businessMarketing:'Marketing · Thương mại',businessMarketingSummary:'Kết nối thông điệp thương hiệu, nội dung và điểm bán thành một dòng tăng trưởng thống nhất.',
     businessInvest:'Đầu tư',businessInvestSummary:'Đánh giá cơ hội và dự án, kết nối đầu tư và hợp tác thành cấu trúc triển khai bền vững.',
+    businessSeasonal:'Lao động thời vụ',businessSeasonalSummary:'Phối hợp địa phương, đối tác nước ngoài, nhu cầu nông nghiệp và hỗ trợ người lao động.',
     principleTitle:'Thông tin công khai rõ ràng.<br>Hợp tác đi sâu đúng nơi cần thiết.',principleBody:'Chọn một lĩnh vực để xem chi tiết và không gian làm việc dành cho đối tác được cấp quyền.',
     backToBusiness:'← Xem tất cả lĩnh vực',areaInquiry:'Liên hệ về lĩnh vực này',partnerLogin:'Đăng nhập đối tác',partnerLoginNote:'Đăng nhập đối tác chỉ hiển thị trong trang chi tiết của lĩnh vực đã chọn, không hiển thị ở trang đầu công khai.',
     detailStep1:'Cùng làm rõ hiện trạng và mục tiêu.',detailStep2:'Thiết kế cấu trúc có thể triển khai và hành động tiếp theo.',detailStep3:'Rà soát kết quả vận hành và tiếp tục cải thiện.',
@@ -125,7 +131,8 @@ const BUSINESS={
   publishing:{title:'businessPublishing',summary:'businessPublishingSummary'},
   'ai-ops':{title:'businessAiOps',summary:'businessAiOpsSummary'},
   marketing:{title:'businessMarketing',summary:'businessMarketingSummary'},
-  invest:{title:'businessInvest',summary:'businessInvestSummary',login:'invest'}
+  invest:{title:'businessInvest',summary:'businessInvestSummary',login:'invest'},
+  'seasonal-workers':{title:'businessSeasonal',summary:'businessSeasonalSummary',login:'seasonal-workers'}
 };
 const $=selector=>document.querySelector(selector);
 const escapeHtml=value=>String(value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -150,6 +157,7 @@ function partnerHref(slug){
   if(type==='trade')return 'https://ekodi.kr/ekodibiz/trade';
   if(type==='mall')return 'https://ekodi.kr/ekodibiz/ekodimall/admin/';
   if(type==='invest')return 'https://ekodi.kr/ekodibiz/invest/admin';
+  if(type==='seasonal-workers')return 'https://ekodi.kr/ekodibiz/seasonal-workers';
   return commonLogin(slug);
 }
 function persistLocale(){
