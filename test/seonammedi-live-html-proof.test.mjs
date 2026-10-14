@@ -60,5 +60,5 @@ test('production release verifier retains exact generated HTML byte provenance c
   assert.match(script,/expectedOffset:Number\.isInteger\(match\.expectedOffset\)/);
   assert.match(script,/actualOffset:Number\.isInteger\(match\.actualOffset\)/);
   assert.match(script,/name==='root'&&Number\.isInteger\(match\.expectedOffset\)/);
-  assert.match(script,/evidence=\+'\+JSON\.stringify\(evidence\)/);
+  assert.match(script,/evidence='\+JSON\.stringify\(evidence\)/);
 });
