@@ -1,5 +1,5 @@
 const REVENUE_OS_URL = 'https://ekodi.kr/ekodibiz';
-const PAYMENT_CORE_ORIGIN = 'https://pay.ekodi.kr';
+const PAYMENT_CORE_ORIGIN = 'https://ekodi.kr/ekodipay';
 const CANONICAL_GATEWAY = 'https://ekodi.kr/ekodibiz/pay';
 
 function headers(contentType = 'text/html; charset=utf-8') {
@@ -38,7 +38,7 @@ function approvedCoreCheckout(data) {
   if (data?.approvalRequired !== false || data?.status !== 'approved' || !data?.checkoutUrl) return null;
   try {
     const target = new URL(data.checkoutUrl);
-    if (target.origin !== PAYMENT_CORE_ORIGIN) return null;
+    if (target.origin !== new URL(PAYMENT_CORE_ORIGIN).origin || target.pathname !== '/ekodipay/checkout') return null;
     return target.toString();
   } catch {
     return null;
