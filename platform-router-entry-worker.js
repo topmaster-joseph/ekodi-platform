@@ -403,7 +403,7 @@ async function routeSeonamMediApi(request,env,ctx){
 
 async function routePlatform(request,env,ctx){
     const url=new URL(request.url);
-    const host=resolvedHost(request,env);
+    const host=resolvedHost(request,env);\n    if(host==='pay.ekodi.kr'||host==='pay.biz.ekodi.kr')return new Response('Gone',{status:410,headers:{'cache-control':'no-store','x-robots-tag':'noindex, nofollow, noarchive','x-content-type-options':'nosniff'}});\n    if(host===PUBLIC_HOST&&(url.pathname==='/pay'||url.pathname==='/pay/')){\n      if(!['GET','HEAD'].includes(request.method))return new Response(null,{status:405,headers:{allow:'GET, HEAD','cache-control':'no-store'}});\n      return new Response(null,{status:308,headers:{location:'https://ekodi.kr/ekodipay/','cache-control':'no-store','x-content-type-options':'nosniff'}});\n    }
     // Retired short aliases must never fall through to a different workspace storefront.
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){
       const legacySite=url.pathname.match(/^\/(ekodibooks|pgm)(\/.*)?$/i);
