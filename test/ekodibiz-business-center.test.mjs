@@ -28,7 +28,8 @@ test('first-party worker and worker-first route ship lazy assets',async()=>{
   assert.match(site,/businessCenterScript\(\)/);
   assert.match(canonical,/businessCenterScript\(\)/);
   assert.match(canonical,/businessCenterCss\(\)/);
-  assert.match(wrangler,/"\/ekodibiz\*"/);\n  assert.doesNotMatch(wrangler,/"\/ekodibiz-business-center\.\*"/);
+  assert.match(wrangler,/"\/ekodibiz\*"/);
+  assert.doesNotMatch(wrangler,/"\/ekodibiz-business-center\.\*"/);
   const response=businessCenterCss();
   assert.equal(response.headers.get('content-type'),'text/css; charset=utf-8');
   const style=await response.text();
