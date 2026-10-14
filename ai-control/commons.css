@@ -107,3 +107,43 @@ a.support-notice-title:hover,a.support-notice-title:focus-visible{color:var(--ac
   #chat,#support-programs,#serviceTitle,#requestTitle{scroll-margin-top:118px}
 }
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+/* Official opportunity details and EKODIBIZ pre-contract review: scoped, responsive, no modal overlays. */
+#support-detail[hidden]{display:none!important}
+.support-notice-detail{justify-self:start;border:1px solid #bad8c5;border-radius:9px;background:#f1f8f3;color:#165c3d;padding:10px 13px;font-size:.8rem;font-weight:800;cursor:pointer}
+.support-notice-detail:disabled{opacity:.55;cursor:not-allowed}
+.support-detail{scroll-margin-top:122px;margin:20px 0 8px;padding:clamp(16px,3vw,28px);border:1px solid #caddd0;border-radius:18px;background:white;box-shadow:0 8px 28px rgba(20,60,37,.045);min-width:0}
+.support-detail-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.support-detail-header h3,.support-detail-header h4,.support-assisted-heading h4{margin:0;font-size:clamp(1.1rem,2.6vw,1.4rem);word-break:keep-all}
+.support-secondary{border:1px solid #cfded4;border-radius:9px;background:#fff;color:#28553d;min-height:39px;padding:8px 13px;font:inherit;cursor:pointer;font-size:.8rem;font-weight:750}
+.support-detail-body{display:grid;gap:11px;margin:16px 0 24px;padding:16px;background:#f6faf7;border-radius:13px}
+.support-detail-body h4{margin:0;font-size:1.12rem;word-break:keep-all}
+.support-detail-body p{margin:0;color:#526a59;font-size:.85rem;line-height:1.75;word-break:keep-all}
+.support-detail-body a{color:#135e39;font-weight:800;overflow-wrap:anywhere}
+.support-assisted-heading{margin:16px 0}
+.support-assisted-heading p{margin:7px 0 0;color:var(--muted);font-size:.82rem;line-height:1.7;word-break:keep-all}
+.assistance-plans{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.assistance-plan{min-width:0;display:flex;align-items:flex-start;gap:10px;padding:14px;border:1px solid #dce7df;border-radius:13px;background:#fff;cursor:pointer;line-height:1.5;flex-wrap:wrap}
+.assistance-plan:has(input:checked){background:#f3faf5;border-color:#459169}
+.assistance-plan input{flex:none;width:18px;height:18px;accent-color:#146b43;margin:4px 0 0}
+.assistance-plan span{display:grid;flex:1 1 160px;min-width:0;gap:5px}
+.assistance-plan strong{font-size:.89rem;word-break:keep-all}
+.assistance-plan small{color:var(--muted);font-size:.74rem;word-break:keep-all}
+.assistance-plan b{display:block;flex:1 1 100%;padding-left:28px;color:#125d3b;font-size:.84rem;word-break:keep-all}
+.assistance-price-summary{padding:14px 16px;margin-top:12px;border-radius:10px;background:#eaf5ee;color:#205c3b;font-size:.84rem;font-weight:800;line-height:1.65}
+.assistance-contract-preview{display:grid;gap:13px;margin-top:20px;padding:19px;border:1px solid #dbe6de;border-radius:13px;background:#fbfcfb}
+.assistance-contract-text{white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere;background:white;border:1px solid #e2eae4;border-radius:11px;padding:16px;font-size:.82rem;color:#435b49;line-height:1.9}
+.assistance-request-form{display:grid;gap:11px}
+.assistance-request-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.assistance-request-fields label{display:grid;gap:5px;font-size:.78rem;font-weight:800}
+.assistance-request-fields input{width:100%;min-width:0;min-height:42px;padding:10px;border:1px solid #cfddd3;border-radius:9px;font:inherit}
+.assistance-consent{display:flex;align-items:flex-start;gap:9px;font-size:.77rem;line-height:1.65;word-break:keep-all;cursor:pointer}
+.assistance-consent input{flex:none;accent-color:#166b43;margin-top:5px}
+.assistance-form-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.assistance-form-actions button{border:0;border-radius:10px;min-height:45px;background:#166d43;color:white;padding:10px 20px;font:inherit;font-size:.85rem;font-weight:800;cursor:pointer}
+.assistance-form-actions button:disabled{opacity:.55;cursor:wait}
+.assistance-form-actions a{font-size:.82rem;color:#126642}
+.assistance-history{margin-top:18px;padding:15px;border:1px solid #e3e9e4;border-radius:12px}
+.assistance-history summary{cursor:pointer;font-size:.85rem;font-weight:800}
+.assistance-history-row{padding:8px 0;border-bottom:1px solid #eef1ee;font-size:.8rem;line-height:1.6;color:#536558;word-break:keep-all}
+@media(max-width:720px){.assistance-plans,.assistance-request-fields{grid-template-columns:minmax(0,1fr)}.support-detail{padding:14px}.assistance-contract-preview{padding:13px}.support-detail-body{padding:13px}}
