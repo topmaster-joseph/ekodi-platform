@@ -47,21 +47,6 @@
 .campaign-hero-image{display:block;width:100%;height:auto;max-width:100%;object-fit:contain}
 @media(max-width:700px){.site-header{max-width:100%;box-sizing:border-box}.ekodi-six-nav{gap:14px}.ekodi-six-nav>a{font-size:14px}.central-category-panel{padding:14px 12px}}
 </style>
-  <script data-ekodi-leading-text-guard>
-  // Remove only accidental literal escaped newlines injected before the page header.
-  // Never modify the navigation, hero, or user-generated content.
-  (() => {
-    const clean = () => {
-      for (const node of Array.from(document.body?.childNodes || [])) {
-        if (node.nodeType === Node.ELEMENT_NODE) break;
-        if (node.nodeType !== Node.TEXT_NODE) continue;
-        if (/^(?:\s|\\n|\\r|\\t)+$/.test(node.textContent || '')) node.remove();
-      }
-    };
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', clean, { once: true });
-    else clean();
-  })();
-  </script>
 </head>
 <body>
 <header class="site-header">

@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { assertSeonamMediAssetCachePolicy } from './seonammedi-cache-contract.mjs';
 
 const args=Object.fromEntries(process.argv.slice(2).map(arg=>{
@@ -36,12 +37,26 @@ for(let attempt=1;attempt<=attempts;attempt++){
       fetchText(origin+'/finance/?release_verify='+expected.release),
       fetchText(origin+'/notices/?release_verify='+expected.release)
     ]);
+    // Verify decoded HTML bytes, not only the release marker; ignore script/style contents.
+    const headMatch=root.text.match(/<head\b[^>]*>([\s\S]*?)<\/head\s*>/i);
+    if(!headMatch)throw new Error('live_homepage_html_head_missing');
+    const visibleHead=headMatch[1].replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi,'').replace(/<!--[\s\S]*?-->/g,'');
+    if(['\\n','\\r','\\t'].some(marker=>visibleHead.includes(marker)))throw new Error('live_homepage_head_literal_escaped_whitespace');
+    if(!/<meta\s+property="og:image"/i.test(visibleHead))throw new Error('live_homepage_og_image_meta_missing');
     if(!root.response.ok)throw new Error('root_http_'+root.response.status);
     if(!admin.response.ok)throw new Error('admin_http_'+admin.response.status);
     if(!finance.response.ok)throw new Error('finance_http_'+finance.response.status);
     if(!notices.response.ok)throw new Error('notices_http_'+notices.response.status);
+    const pageHashes=expected.publishedHtmlHashes;
+    if(!pageHashes||!live.publishedHtmlHashes)throw new Error('html_digest_manifest_missing');
+    if(JSON.stringify(live.publishedHtmlHashes)!==JSON.stringify(pageHashes))throw new Error('html_digest_manifest_mismatch');
+    const expectedNames={root:'index.html',admin:'admin/index.html',finance:'finance/index.html',notices:'notices/index.html'};
     for(const [name,page] of [['root',root],['admin',admin],['finance',finance],['notices',notices]]){
       if(releaseFromHtml(page.text)!==expected.release)throw new Error(name+'_html_release_mismatch');
+      const expectedHash=pageHashes[expectedNames[name]];
+      if(!expectedHash)throw new Error(name+'_html_digest_missing');
+      const actualHash=createHash('sha256').update(page.text).digest('hex');
+      if(actualHash!==expectedHash)throw new Error(name+'_html_digest_mismatch expected='+expectedHash+' actual='+actualHash);
       if(!page.text.includes('data-ekodi-release-convergence'))throw new Error(name+'_runtime_convergence_missing');
     }
     if(!finance.text.includes('/api/seonammedi/admin/finance'))throw new Error('finance_surface_contract_missing');

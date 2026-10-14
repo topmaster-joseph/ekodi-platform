@@ -855,7 +855,9 @@ jobs:
 
       - name: Verify SeonamMedi live release convergence
         if: steps.quota.outputs.skip_nonessential != 'true'
-        run: node scripts/verify-seonammedi-release-live.mjs --expected=dist/seonammedi/.well-known/ekodi-release.json --origin=https://seonammedi.kr --attempts=18 --delayMs=5000
+        run: |
+          node scripts/verify-seonammedi-release-live.mjs --expected=dist/seonammedi/.well-known/ekodi-release.json --origin=https://seonammedi.kr --attempts=18 --delayMs=5000
+          node scripts/verify-seonammedi-release-live.mjs --expected=dist/seonammedi/.well-known/ekodi-release.json --origin=https://ekodi.kr/seonammedi --attempts=18 --delayMs=5000
 
       - name: Verify stray SeonamMedi board URLs canonicalize
         shell: bash
