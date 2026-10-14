@@ -102,12 +102,17 @@ test('academic studio is same-origin, inline-script-free and publishes no upload
     read('wrangler.site.toml'),
   ]);
   assert.match(html,/src="\.\/studio\.js"/);
+  assert.match(html,/id="studioPresentation"/);
+  assert.match(html,/id="presentDraft"/);
   assert.match(html,/accept="\.txt,\.md,\.csv,\.json,\.docx,\.pptx,\.hwpx"/);
   assert.match(html,/서버나 AI 서비스로 전송/);
   assert.doesNotMatch(html,/<script(?![^>]*src=)[^>]*>/i);
   assert.match(js,/readMaterialFile/);assert.match(js,/serializeDraft/);
   assert.doesNotMatch(js,/\bfetch\s*\(|localStorage|sessionStorage|indexedDB/);
   assert.match(js,/reviewConfirm/);
+  assert.match(js,/showModal\(\)/);
+  assert.match(js,/drawPresentingSlide/);
+  assert.match(js,/presentingIndex/);
   assert.match(css,/@media\(max-width:530px\)/);
   assert.match(lecture,/href="\.\/studio\/"/);
   assert.match(registry,/prefix:'\/edu',binding:'EDUCATION'/);
