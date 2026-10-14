@@ -15,7 +15,7 @@ const serviceOrigins={
   biz:['https://biz.ekodi.kr'],
   trade:['https://ekodi.kr','https://trade.biz.ekodi.kr','https://trade.ekodi.kr'],
   mall:['https://ekodi.kr'],
-  pay:['https://pay.ekodi.kr'],
+  pay:['https://ekodi.kr'],
   books:['https://books.ekodi.kr'],
   church:['https://ekodi.kr'],
   lab:['https://lab.ekodi.kr'],

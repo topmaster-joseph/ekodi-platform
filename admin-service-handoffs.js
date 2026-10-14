@@ -21,6 +21,7 @@ const LEGACY_DOMAIN_IDS=Object.freeze({
   'ekodi.kr/ekodimall':'mall',
   'marketing.ekodi.kr':'marketing',
   'trade.ekodi.kr':'trade',
+  'ekodi.kr/ekodipay':'pay',
   'pay.ekodi.kr':'pay',
   'ekodi.kr/work':'work',
   'energy.ekodi.kr':'energy',

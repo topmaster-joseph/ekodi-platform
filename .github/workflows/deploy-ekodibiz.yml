@@ -133,7 +133,7 @@ jobs:
           grep -Fq 'finance_gatekeeper' <<<"$ops"
           grep -Fq '"tasks":4' <<<"$ops"
           grep -Fq 'approval_required' <<<"$checkout"
-          grep -Fq 'https://pay.ekodi.kr' <<<"$checkout"
+          grep -Fq 'https://ekodi.kr/ekodipay' <<<"$checkout"
           echo 'EKODIBIZ deployed to development and functional AI operations verified.'
 
   deploy-production:

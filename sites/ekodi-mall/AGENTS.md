@@ -16,7 +16,7 @@
 ## 플랫폼 격리 규칙
 
 1. Mall 기능 작업은 원칙적으로 `sites/ekodi-mall/**` 안에서 완결한다.
-2. `ekodi.kr/api`, `auth.ekodi.kr`, `pay.ekodi.kr`, `finance-ekodi.kr/api` 내부 DB를 Mall 편의를 위해 직접 수정하지 않는다.
+2. `ekodi.kr/api`, `auth.ekodi.kr`, `ekodi.kr/ekodipay`, `finance-ekodi.kr/api` 내부 DB를 Mall 편의를 위해 직접 수정하지 않는다.
 3. production은 Worker `ekodi-mall-api` + D1 `ekodi-mall`, staging은 Worker `ekodi-mall-api-staging` + D1 `ekodi-mall-staging`을 사용한다. 두 DB를 섞지 않는다.
 4. 루트에 별도 `mall-api-worker.js`/`wrangler.mall-api.toml` 같은 두 번째 Mall API를 만들지 않는다. `mall-ekodi.kr/api`는 `sites/ekodi-mall/api/entry.js` 단일 진입점만 사용한다.
 5. Google/Supabase 사용자 토큰은 Mall API가 Auth 서버에서 재검증한다. 브라우저가 보낸 이메일·회원등급을 신뢰하지 않는다.

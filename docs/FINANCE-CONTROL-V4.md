@@ -5,7 +5,7 @@
 `ekodi.kr` is the canonical root of the EKODI ecosystem.
 
 - `admin.ekodi.kr`: unified operations and monitoring console
-- `pay.ekodi.kr`: common payment gateway
+- `ekodi.kr/ekodipay`: common payment gateway
 - `trade.ekodi.kr`: canonical EKODI Trading address
 - `mail.ekodi.kr`: common mail lobby
 - `live.ekodi.kr`: common live-broadcast lobby
@@ -37,7 +37,7 @@ A payment outage therefore does not disable administrator authentication or the 
 
 ## 3. Payment safety boundary
 
-`pay.ekodi.kr` is a gateway, not a wallet and not a new PG company.
+`ekodi.kr/ekodipay` is a gateway, not a wallet and not a new PG company.
 
 - Existing commercial payments are attributed to the actual contracted business entity.
 - Toss server credentials are stored only as Cloudflare Worker secrets.
