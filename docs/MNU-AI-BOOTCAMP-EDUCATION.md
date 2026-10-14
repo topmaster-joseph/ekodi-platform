@@ -37,7 +37,7 @@ IMPORTANT: binary DOCX/PPTX/XLSX sources are NOT in public GitHub / Worker asset
 - Verify 4 × 6, 120 minutes, no private contact leaks, same-origin resource links, presentation keyboard interactions and CSV.
 - Visual PC/mobile at 320/390/768/1366/1440 widths; tables scroll inside their containers.
 - Protected checks + isolated staging via existing Education deploy workflow.
-- Production on canonical https://edu.ekodi.kr/study/ai-bootcamp/: page is real course (not app fallback), 4 sessions, 6 groups, six categories, presentation, copy, CSV, no console or network errors.
+- Production on canonical /study/ai-bootcamp/ (relative to the existing Education service): page is real course (not app fallback), 4 sessions, 6 groups, six categories, presentation, copy, CSV, no console or network errors.
 - Regression: Education home, Admission, Study, Shell, auth and existing security stay intact.
 - EKODI-native browser first, no paid external browser automation.
 - Do not claim production completion without timestamped functional and browser evidence.
