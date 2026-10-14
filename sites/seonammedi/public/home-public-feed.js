@@ -11,8 +11,8 @@ const fetchJson=async url=>{const r=await fetch(url,{cache:'no-store'});if(!r.ok
  const [noticeResult,boardResult]=await Promise.allSettled([fetchJson('/api/seonammedi/notices'),fetchJson('/board/api/posts')]);
  const notices=noticeResult.status==='fulfilled'&&noticeResult.value.ok?normalize(noticeResult.value.items||[],'공지','/seonammedi/notices/').sort(sort):[];
  const raw=boardResult.status==='fulfilled'?(Array.isArray(boardResult.value)?boardResult.value:boardResult.value.posts||boardResult.value.items||[]):[];
- const publicRows=raw.filter(x=>x&&x.title&&x.id!=null&&x.visibility!=='private'&&x.status!=='draft');
- const classified=label=>publicRows.filter(x=>{const k=String(x.category||x.board||x.type||'').toLowerCase();return label==='활동이력'?/committee|activity|활동/.test(k):label==='관련소식'?/news|media|소식/.test(k):/voice|opinion|시민/.test(k)}).map(x=>({...x,url:'/board/posts/'+encodeURIComponent(x.id)})).sort(sort);
+ const publicRows=raw.filter(x=>x&&x.id!=null&&x.visibility!=='private'&&x.status!=='draft');
+ const classified=label=>publicRows.filter(x=>{const k=String(x.category||x.board||x.type||'').toLowerCase();return label==='활동이력'?/committee|activity|활동/.test(k):label==='관련소식'?/news|media|소식/.test(k):/voice|opinion|시민/.test(k)||(!k&&x.message)}).map(x=>({...x,title:x.title||String(x.message||'').slice(0,70),publishedAt:x.publishedAt||x.createdAt,url:label==='시민의견'?'/seonammedi/#voices':'/seonammedi/#'+(label==='활동이력'?'committee-activity':'timeline')})).sort(sort);
  const markup=section('공지사항',notices,'/seonammedi/notices/',true)+section('활동이력',classified('활동이력'),'/seonammedi/#committee-activity')+section('관련소식',classified('관련소식'),'/seonammedi/#timeline')+section('시민의견',classified('시민의견'),'/seonammedi/board/voices');
  root.innerHTML=markup||'<p class="public-feed-empty">표시할 공개 게시물이 없습니다.</p>';
  root.hidden=false;
