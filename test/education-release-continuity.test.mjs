@@ -7,6 +7,7 @@ import {
   educationReleaseChanged,approvedEducationMerge
 } from '../scripts/education-release-continuity.mjs';
 import {ORIGIN,ROUTE,VIEWPORTS} from '../scripts/verify-education-bootcamp-native.mjs';
+import {EKODI_SERVICE_MANIFEST} from '../ekodi-service-manifest.js';
 
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const sha=value=>value.repeat(40);
@@ -75,7 +76,7 @@ test('Final approval remains required by the existing canonical Orchestrator rec
 });
 
 test('EKODI-native Chromium acceptance targets registered service with no persistent user browser',()=>{
-  assert.equal(ORIGIN,'https://edu.ekodi.kr');
+  assert.equal(ORIGIN,new URL(EKODI_SERVICE_MANIFEST.services.find(row=>row.id==='edu').url).origin);
   assert.equal(ROUTE,'/study/ai-bootcamp/');
   assert.deepEqual(VIEWPORTS.map(p=>p.width),[320,390,768,1366,1440]);
   const script=read('scripts/verify-education-bootcamp-native.mjs');
