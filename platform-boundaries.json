@@ -731,6 +731,9 @@
       "source": [
         "site-worker.js",
         "ekodibiz-invest-business.js",
+        "migrations/0130_ekodibiz_seasonal_office.sql",
+        "test/ekodibiz-seasonal-office.test.mjs",
+        "ekodibiz-seasonal-office.js",
         "ekodibiz-invest-admin-page.js",
         "index.html",
         "hub.html",
