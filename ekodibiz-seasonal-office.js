@@ -114,7 +114,7 @@ function browserApp(){
   const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
   let sb=null,records=[],source=null,role=null,tab='overview',editing=null,activity=[];
   const say=x=>$('notice').textContent=x;
-  const authUrl=()=>{const url=new URL('https://auth.ekodi.kr/');url.searchParams.set('site','biz');url.searchParams.set('return_to',location.origin+ROOT);location.assign(url.href)};
+  const authUrl=()=>{const url=new URL('https://ekodi.kr/auth/');url.searchParams.set('site','biz');url.searchParams.set('return_to',location.origin+ROOT);location.assign(url.href)};
   async function api(route,init={}){
     const {data}=await sb.auth.getSession();
     if(!data.session?.access_token)throw new Error('로그인이 필요합니다.');
