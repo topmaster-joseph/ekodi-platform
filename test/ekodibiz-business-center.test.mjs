@@ -40,6 +40,9 @@ test('business center uses server-side authorized records, no fake KPI or localS
     if(expected==='개인정보'||expected==='auth')continue; // fixed UI inventory is not a privacy notice
     assert.ok(src.includes(expected),expected);
   }
+  assert.match(src,/data-eb-check/);
+  assert.match(src,/data-eb-print-id/);
+  assert.match(src,/saved\.length!==1/);
   assert.doesNotMatch(src,/localStorage\.|sessionStorage\./);
   assert.match(src,/state\.ready=false/);
   assert.match(src,/state\.rows=\[\]/);
