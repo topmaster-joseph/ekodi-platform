@@ -5,6 +5,7 @@ import { legacyAdminAliasTarget } from './admin-address-policy.js';
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
 import { ekodiBizInvestBusinessPage, isEkodiBizInvestPath } from './ekodibiz-invest-business.js';
 import { ekodiBizInvestAdminPage, isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
+import { isSeasonalOfficePath, seasonalOfficePage, seasonalOfficeScript, seasonalOfficeApi } from './ekodibiz-seasonal-office.js';
 import { tenantAdminCommandHomeScript, tenantAdminCommandHomeCss } from './tenant-admin-command-home.js';
 import { decorateDiscoveryResponse } from './discovery-layer.js';
 import { realtimeTenantAdminFromPath, realtimeTenantFromPath } from './realtime-tenant-registry.js';
@@ -211,6 +212,7 @@ const PUBLIC_CSP = [
 ].join('; ');
 
 const LIVE_CSP = PUBLIC_CSP.replace("connect-src 'self'","connect-src 'self' https://renzehysxirjilvdxacv.supabase.co");
+const SEASONAL_OFFICE_CSP = "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'";
 
 const MALL_CSP = [
   "default-src 'self'",
@@ -705,6 +707,13 @@ export default {
       if (workspaceAdminAsset) {
         const response = await env.ASSETS.fetch(assetRequest(request, workspaceAdminAsset));
         return withHostSecurity(response, ADMIN_CSP, adminAssetCacheControl(url), 'admin-workspace-asset');
+      }
+      // Protected seasonal workers business office. API authorization is always server-side.
+      if (isSeasonalOfficePath(url.pathname)) {
+        if (url.pathname.includes('/api/')) return seasonalOfficeApi(request,env);
+        if (!['GET','HEAD'].includes(request.method)) return new Response('Method Not Allowed',{status:405,headers:{allow:'GET, HEAD','cache-control':'no-store'}});
+        const response=url.pathname.endsWith('/app.js')?seasonalOfficeScript():seasonalOfficePage();
+        return withHostSecurity(response,SEASONAL_OFFICE_CSP,'private, no-store','ekodibiz-seasonal-office');
       }
       if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestAdminPath(url.pathname)) {
         const page=ekodiBizInvestAdminPage(request);
