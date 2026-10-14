@@ -11,10 +11,10 @@ test('six-menu header shares one external responsive CSS without dropdowns',asyn
     source('services/independent-board/worker.js')
   ]);
   for(const selector of ['.site-header>.brand strong','.site-header>.ekodi-six-nav>a','@media(max-width:780px)'])assert.ok(css.includes(selector));
-  assert.match(main,/shared-site-header\\.css/);
-  assert.match(worker,/shared-site-header\\.css/);
-  assert.match(main,/href="\\/seonammedi\\/app\\.css\\?/);
-  assert.match(worker,/sitePath\\(req,'\\/app\\.css\\?/);
+  assert.match(main,/shared-site-header\.css/);
+  assert.match(worker,/shared-site-header\.css/);
+  assert.match(main,/href="\/seonammedi\/app\.css\?/);
+  assert.match(worker,/sitePath\(req,'\/app\.css\?/);
 });
 
 test('both external and internal independent board routes link the shared CSS and six-menu navigation',async()=>{
@@ -25,7 +25,8 @@ test('both external and internal independent board routes link the shared CSS an
       assert.equal(response.status,200);
       const html=await response.text();
       assert.match(html,/class="ekodi-six-nav"/);
-      assert.doesNotMatch(html,/<nav class="ekodi-six-nav"[^>]*>[\\s\\S]*?class="nav-submenu"/);\n      assert.match(html,/shared-site-header\\.css/);
+      assert.doesNotMatch(html,/<nav class="ekodi-six-nav"[^>]*>[\s\S]*?class="nav-submenu"/);
+      assert.match(html,/shared-site-header\.css/);
       assert.match(html,/\/app\.css\?v=/);
       for(const title of ['활동이력','관련소식','소통채널','시민의견','공지','조직'])
         assert.ok(html.includes(title),host+'/board/'+route+' missing '+title);
