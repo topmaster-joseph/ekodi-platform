@@ -12,7 +12,7 @@ async function api(path,options={}){
   const response=await fetch(apiUrl(path),{...options,headers,cache:'no-store'});const data=await response.json().catch(()=>({}));
   if(!response.ok)throw Object.assign(new Error(data.error||`http_${response.status}`),{status:response.status,data});return data;
 }
-function setSession(session){state.session=session||null;$('loginLink').hidden=Boolean(state.session);$('sessionState').textContent=state.session?'로그인됨':'로그인 없이 바로 사용';updateChatSession();void loadChatAvailability()}
+function setSession(session){state.session=session||null;$('loginLink').hidden=Boolean(state.session);$('sessionState').textContent=state.session?'로그인됨':'로그인 없이 바로 사용';updateChatSession();void loadChatAvailability();if($('assistanceHistory'))void loadAssistanceHistory();if($('assistanceAdminPanel'))void loadAssistanceAdmin()}
 function serviceStatusMeta(service){return [service.categoryLabel,service.availabilityLabel,service.deliveryLabel].filter(Boolean).join(' · ')||'운영 · 바로 실행'}
 function serviceButton(service){
   const link=document.createElement('a');link.className='service-button';link.href=service.launchUrl;
@@ -336,19 +336,147 @@ function assistanceRenderPlans(){
   }
   assistanceRenderContract();
 }
+// Merchant and customer contract review are kept separate from payment execution.
+// Displayed amounts and contract text always originate from server-approved quote snapshots.
+const assistanceQuoteState={requestId:null,digest:null,pending:false,adminRequest:null};
+function assistanceStageLabel(stage){
+  return ({review_requested:'견적 검토 대기',merchant_approved:'견적 발행 · 고객 확인 대기',
+    contract_pending:'고객 확인 완료 · 최종 계약 대기',payment_pending:'서버 결제검증 대기',
+    payment_confirmed:'PG 결제 확인',in_progress:'업무 진행',completed:'납품 완료',cancelled:'취소'})[stage]||stage;
+}
+function assistanceNode(tag,text,className){
+  const e=document.createElement(tag);e.textContent=String(text||'');if(className)e.className=className;return e;
+}
 async function loadAssistanceHistory(){
   const host=$('assistanceHistory');
   if(!state.session){host.textContent='로그인 후 조회할 수 있습니다.';return}
   try{
-    const result=await api('/api/commons/assistance/requests');
-    host.replaceChildren();
-    for(const request of result.requests||[]){
-      const row=document.createElement('p');row.className='assistance-history-row';
-      row.textContent=(request.createdAt||'').slice(0,10)+' · '+request.noticeTitle+' · '+(request.state==='review_requested'?'계약·견적 검토 대기':request.state)+' · '+(request.quoteRequired?'견적 대기':moneyKRW(request.amount));
-      host.append(row);
+    const result=await api('/api/commons/assistance/requests');host.replaceChildren();
+    for(const req of result.requests||[]){
+      const row=document.createElement('div');row.className='assistance-history-row';
+      row.append(assistanceNode('strong',req.noticeTitle),assistanceNode('span',(req.createdAt||'').slice(0,10)+' · '+assistanceStageLabel(req.state)+(req.quoteRequired?' · 최종 견적 대기':' · '+moneyKRW(req.amount))));
+      const view=document.createElement('button');view.type='button';view.className='support-secondary';view.textContent='내 견적·계약 상태 보기';
+      view.addEventListener('click',()=>void openAssistanceQuote(req.id));row.append(view);host.append(row);
     }
     if(!host.children.length)host.textContent='접수한 요청이 없습니다.';
   }catch{host.textContent='이력을 불러올 수 없습니다.'}
+}
+async function openAssistanceQuote(id){
+  if(!state.session)return;
+  const panel=$('assistanceQuotePanel'),text=$('assistanceQuoteText'),links=$('assistanceQuoteLegalLinks');
+  panel.hidden=false;text.textContent='견적 및 계약 상태를 불러오는 중입니다.';links.replaceChildren();
+  $('assistanceAcknowledgmentForm').hidden=true;
+  $('assistanceQuoteStatus').textContent='';
+  $('assistancePaymentReadiness').textContent='검증된 실제 결제 전에는 업무를 착수하지 않습니다.';
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+  try{
+    const data=await api('/api/commons/assistance/requests/'+encodeURIComponent(id));
+    assistanceQuoteState.requestId=data.request.id;
+    const q=data.quote;
+    if(!q){text.textContent=data.request.noticeTitle+' · '+assistanceStageLabel(data.request.state)+'\n현재 확정 견적과 계약조건은 아직 발행되지 않았습니다.';return}
+    assistanceQuoteState.digest=q.digest;
+    const v=q.snapshot;
+    const details=[
+      '계약서 검토용 최종 견적 · '+v.contractVersion,
+      '계약 제공자: '+v.merchant.name+' / 사업자등록번호 '+v.merchant.businessNumber,
+      '대표자: '+v.merchant.representative+' / 소재지: '+v.merchant.address,
+      '고객지원: '+v.merchant.customerService,
+      '공고명: '+v.request.noticeTitle+' / 공고 식별자: '+v.request.noticeId,
+      '신청자: '+v.request.applicantName,
+      '선택 서비스 및 개별비용:',
+      ...v.items.map(p=>'• '+p.label+' / '+moneyKRW(p.amount)+'\n  결과물: '+p.deliverables.join(' · ')+'\n  제외: '+p.limitations),
+      '합계: '+moneyKRW(v.totalAmount)+' (부가세 포함)',
+      '납품 예상: 실제 PG 결제 및 계약서 양측 서명 확인 후 '+v.deliveryDays+'일',
+      '견적 유효기간: '+q.expiresAt,
+      '계약 기록 보관 안내: '+v.documents.retentionDays+'일 (최종 개인정보처리방침 확인)',
+      '추가 협의사항: '+(v.notes||'없음'),
+      ...v.disclaimers
+    ];
+    text.textContent=details.join('\n');
+    for(const [label,href] of [['서비스 이용약관',v.documents.termsUrl],['취소·환불 규정',v.documents.refundUrl],['개인정보 처리방침',v.documents.privacyUrl]]){
+      const a=document.createElement('a');a.href=href;a.rel='noopener noreferrer';a.target='_blank';a.textContent=label+' ↗';links.append(a);
+    }
+    $('assistanceQuoteStatus').textContent=assistanceStageLabel(data.request.state)+' · 견적 ID '+q.id.slice(0,8)+' · 정책 '+v.documents.termsVersion;
+    $('assistancePaymentReadiness').textContent=data.payment?.message||'결제 활성화 전입니다.';
+    const open=q.status==='issued'&&Date.parse(q.expiresAt)>Date.now()&&data.request.state==='merchant_approved';
+    $('assistanceAcknowledgmentForm').hidden=!open;
+    if(!open){
+      const extra=document.createElement('p');extra.className='support-status';
+      extra.textContent=q.status==='acknowledged'?'견적·계약 내용 확인 기록이 보관되었습니다. 이는 계약 체결이나 결제 완료가 아닙니다.':
+        Date.parse(q.expiresAt)<=Date.now()?'유효기간이 만료된 견적입니다. 새 견적을 요청하세요.':'현재 서명·결제 단계는 진행할 수 없습니다.';
+      text.append(extra);
+    }
+  }catch{ text.textContent='견적 내용을 확인할 수 없습니다. 로그인 상태를 확인하세요.' }
+}
+async function loadAssistanceAdmin(){
+  const panel=$('assistanceAdminPanel');
+  if(!state.session){panel.hidden=true;return}
+  try{
+    const data=await api('/api/commons/admin/assistance/requests');
+    panel.hidden=false;const host=$('assistanceAdminList');host.replaceChildren();
+    $('assistanceAdminStatus').textContent=data.contractPolicy.ready?'관리자 전용 · 발행된 견적은 고객이 검토할 수 있습니다.':'최종 견적 발행을 위한 사업자정보·약관·환불·개인정보 운영 승인이 필요합니다. ('+data.contractPolicy.blockers.join(', ')+')';
+    for(const req of data.requests){
+      const row=document.createElement('div');row.className='assistance-history-row';
+      row.append(assistanceNode('strong',req.noticeTitle+' · '+req.applicantName),assistanceNode('span',assistanceStageLabel(req.state)+' · '+req.plans.map(p=>p.label).join(' / ')));
+      if(req.state==='review_requested'){
+        const btn=document.createElement('button');btn.type='button';btn.className='support-secondary';btn.textContent='견적서 작성';
+        btn.disabled=!data.contractPolicy.ready;btn.addEventListener('click',()=>selectAssistanceAdminRequest(req));row.append(btn);
+      }
+      host.append(row);
+    }
+    if(!data.requests.length)host.textContent='접수된 요청이 없습니다.';
+  }catch{panel.hidden=true}
+}
+function selectAssistanceAdminRequest(req){
+  assistanceQuoteState.adminRequest=req;
+  const form=$('assistanceMerchantQuoteForm');form.hidden=false;
+  $('assistanceMerchantSelectedTitle').textContent=req.noticeTitle+' · '+req.applicantName;
+  const holder=$('assistanceMerchantLines');holder.replaceChildren();
+  for(const p of req.plans){
+    const label=document.createElement('label');label.className='assistance-merchant-line';
+    label.textContent=p.label+' · 최종 금액(원, 부가세 포함)';
+    const inp=document.createElement('input');inp.type='number';inp.min='0';inp.max='100000000';inp.step='1';inp.required=true;inp.value=p.id==='information'?'0':'';
+    inp.dataset.planId=p.id;label.append(inp);holder.append(label);
+  }
+  const expire=new Date(Date.now()+7*86400000);
+  const local=new Date(expire.getTime()-expire.getTimezoneOffset()*60000);
+  $('assistanceMerchantExpires').value=local.toISOString().slice(0,16);
+  form.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function initAssistanceAgreement(){
+  $('assistanceAdminRefresh').addEventListener('click',()=>void loadAssistanceAdmin());
+  $('assistanceAcknowledgmentForm').addEventListener('submit',async event=>{
+    event.preventDefault();const button=$('assistanceAcknowledgmentSubmit');
+    if(assistanceQuoteState.pending||!assistanceQuoteState.requestId||!assistanceQuoteState.digest)return;
+    assistanceQuoteState.pending=true;button.disabled=true;
+    try{
+      const result=await api('/api/commons/assistance/requests/'+encodeURIComponent(assistanceQuoteState.requestId)+'/acknowledge',
+        {method:'POST',body:JSON.stringify({digest:assistanceQuoteState.digest,typedName:$('assistanceTypedSigner').value,
+          termsAccepted:$('assistanceFinalScopeConsent').checked,refundAcknowledged:$('assistanceFinalRefundConsent').checked,
+          privacyAcknowledged:$('assistanceFinalPrivacyConsent').checked,nonBindingAcknowledged:$('assistanceFinalNonBindingConsent').checked})});
+      $('assistanceQuoteStatus').textContent='견적 검토 기록 완료 · 정식 계약 및 PG 결제 확인은 별도 진행';
+      $('assistancePaymentReadiness').textContent=result.payment?.message||'PG 결제 준비 대기';
+      $('assistanceAcknowledgmentForm').hidden=true;
+      void loadAssistanceHistory();
+    }catch(error){$('assistanceQuoteStatus').textContent='검토 동의 저장 실패: '+(error.message||'다시 확인하세요')}
+    finally{assistanceQuoteState.pending=false;button.disabled=false}
+  });
+  $('assistanceMerchantQuoteForm').addEventListener('submit',async event=>{
+    event.preventDefault();
+    const req=assistanceQuoteState.adminRequest,button=$('assistanceMerchantSubmit');
+    if(!req||assistanceQuoteState.pending)return;
+    assistanceQuoteState.pending=true;button.disabled=true;
+    try{
+      const items=[...$('assistanceMerchantLines').querySelectorAll('input[data-plan-id]')].map(e=>({id:e.dataset.planId,amount:Number(e.value)}));
+      const response=await api('/api/commons/admin/assistance/requests/'+encodeURIComponent(req.id)+'/quote',
+        {method:'POST',body:JSON.stringify({lineItems:items,vatIncluded:$('assistanceMerchantVat').checked,
+          deliveryDays:Number($('assistanceMerchantDays').value),expiresAt:new Date($('assistanceMerchantExpires').value).toISOString(),
+          notes:$('assistanceMerchantNotes').value})});
+      $('assistanceAdminStatus').textContent='견적 발행 완료: '+moneyKRW(response.totalAmount)+' · 신청자 온라인 검토 대기';
+      $('assistanceMerchantQuoteForm').hidden=true;await loadAssistanceAdmin();
+    }catch(error){$('assistanceAdminStatus').textContent='견적 발행 실패: '+(error.message||'계약 정책·승인설정을 확인하세요.')}
+    finally{assistanceQuoteState.pending=false;button.disabled=false}
+  });
 }
 async function openSupportDetail(item,pushHistory=true){
   if(!item||!supportSafeUrl(item.url))return;
@@ -398,6 +526,7 @@ function initAssistanceRequest(){
   });
 }
 
+initAssistanceAgreement();
 initAssistanceRequest();
 initSupportFeed();
 initChat();
