@@ -26,8 +26,12 @@ try{
   const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth).catch(()=>10000);
   const links=await page.locator('main a[href]').count();
   await page.screenshot({path:output+'/'+device.name+'.png',fullPage:true,animations:'disabled'});
-  const item={device:device.name,status,title,heading,overflow,links,errors,
-    ok:status===200&&title.includes('EKODI Pay')&&heading.includes('결제')&&overflow<=2&&links>=3&&errors.length===0};
+  // Cloudflare's injected web analytics beacon is intentionally denied by the payment CSP.
+  // Preserve the evidence; do not loosen CSP or ignore unrelated browser errors.
+  const blockedAnalytics=errors.filter(e=>e.startsWith('Refused to load the script')&&e.includes('static.cloudflareinsights.com/beacon.min.js'));
+  const unexpectedErrors=errors.filter(e=>!blockedAnalytics.includes(e));
+  const item={device:device.name,status,title,heading,overflow,links,errors,blockedAnalytics,unexpectedErrors,
+    ok:status===200&&title.includes('EKODI Pay')&&heading.includes('결제')&&overflow<=2&&links>=3&&unexpectedErrors.length===0};
   if(!item.ok)failed=true;
   results.push(item);
   await context.close();
