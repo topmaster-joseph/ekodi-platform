@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { assertSeonamMediAssetCachePolicy } from './seonammedi-cache-contract.mjs';
 import {dirname, join} from 'node:path';
 import {compareSeonamMediPublishedHtml} from './seonammedi-release-html-alias.mjs';
+import {normalizeSeonamMediLiveHtml} from './seonammedi-live-html-proof.mjs';
 
 const args=Object.fromEntries(process.argv.slice(2).map(arg=>{
   const m=arg.match(/^--([^=]+)=(.*)$/);
@@ -55,18 +56,23 @@ for(let attempt=1;attempt<=attempts;attempt++){
     const expectedNames={root:'index.html',admin:'admin/index.html',finance:'finance/index.html',notices:'notices/index.html'};
     for(const [name,page] of [['root',root],['admin',admin],['finance',finance],['notices',notices]]){
       if(releaseFromHtml(page.text)!==expected.release)throw new Error(name+'_html_release_mismatch');
-      const expectedHash=pageHashes[expectedNames[name]];
+      const relative=expectedNames[name];
+      const expectedHash=pageHashes[relative];
       if(!expectedHash)throw new Error(name+'_html_digest_missing');
-      const actualHash=createHash('sha256').update(page.text).digest('hex');
+      // Validate the original release artifact before any permitted edge projection.
+      const published=await readFile(join(dirname(dirname(expectedPath)),relative),'utf8');
+      if(createHash('sha256').update(published).digest('hex')!==expectedHash)
+        throw new Error(name+'_published_artifact_digest_mismatch');
+      // Ignore only strictly identified first-party publication-admin and
+      // Cloudflare Web Analytics injections. Unknown HTML changes fail.
+      const normalized=normalizeSeonamMediLiveHtml(page.text,{origin,page:relative});
+      const actualHash=createHash('sha256').update(normalized.html).digest('hex');
       if(actualHash!==expectedHash){
         const customerHost=new URL(origin).hostname.toLowerCase();
         const isCustomer=['seonammedi.kr','www.seonammedi.kr','xn--3e0b8b58jw4co4mnpll3k.kr','www.xn--3e0b8b58jw4co4mnpll3k.kr'].includes(customerHost);
         if(!isCustomer)throw new Error(name+'_html_digest_mismatch expected='+expectedHash+' actual='+actualHash);
-        const published=await readFile(join(dirname(dirname(expectedPath)),expectedNames[name]),'utf8');
-        if(createHash('sha256').update(published).digest('hex')!==expectedHash)
-          throw new Error(name+'_published_artifact_digest_mismatch');
         const allowlisted=[...Object.values(expected.assets||{}).map(asset=>asset.path).filter(Boolean),'assets/campaign-reconsideration-20261013.png'];
-        const match=compareSeonamMediPublishedHtml(published,page.text,allowlisted);
+        const match=compareSeonamMediPublishedHtml(published,normalized.html,allowlisted);
         if(!match.matched)throw new Error(name+'_html_digest_mismatch expected='+expectedHash+' actual='+actualHash+' reason='+match.reason);
         console.log('SeonamMedi verified domain path aliases:',JSON.stringify({page:name,count:match.aliases.length,paths:[...new Set(match.aliases)]}));
       }
