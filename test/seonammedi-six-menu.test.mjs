@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import board from '../services/independent-board/worker.js';
 
-const expected=['활동이력','관련소식','소통채널','시민의견','공지','조직'];
+const expected=['공지','활동이력','관련소식','소통채널','시민의견','조직'];
 const html=path=>readFile(new URL('../sites/seonammedi/public/'+path,import.meta.url),'utf8');
 function primaryMenu(htmlText){
   const nav=htmlText.match(/<nav class="ekodi-six-nav" aria-label="주요 메뉴">([\s\S]*?)<\/nav>/)?.[1];
