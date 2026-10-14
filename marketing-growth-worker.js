@@ -4,6 +4,8 @@ import { ownedTenantAutopostSubject, runOwnedTenantAutopostCycle } from './owned
 import { d1SchemaReady } from './d1-schema-readiness.js';
 import { mallGrowthDashboardSnapshot } from './mall-growth-dashboard.js';
 import { channelCatalogSnapshot } from './channel-publishing-catalog.js';
+import { selectAuthorizedYouTubeChannels } from './youtube-brand-channel-verification.js';
+import { youtubeDataApiDisabledProject } from './youtube-data-api-readiness.js';
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const WRITE_ROLES = new Set(['tenant_admin','admin','workspace_admin','store_owner','hq_manager','client_admin','client_editor','marketing_manager','marketer','manager','owner']);
@@ -221,10 +223,11 @@ async function markRegistryActive(env,state,{connectionIds=[],actualIdentity=''}
   await env.DB.prepare("UPDATE external_account_connections SET status='active',credential_ref=?,metadata_json=?,last_verified_at=?,last_error='',updated_at=? WHERE id=? AND workspace_slug=?").bind(credentialRef,safeJson(metadata),stamp,stamp,id,workspaceSlug).run();
   await env.DB.prepare('INSERT INTO external_account_audit(id,connection_id,workspace_slug,actor_user_id,actor_email,action,detail_json,created_at) VALUES(?,?,?,?,?,?,?,?)').bind(`xaa_${crypto.randomUUID().replaceAll('-','')}`,id,workspaceSlug,state.actor_id,state.actor_email,'oauth.connected',safeJson({provider:state.provider,connectionIds}),stamp).run();
 }
+function youtubeFailureCode(error){const diagnosis=youtubeDataApiDisabledProject(error);return diagnosis?'YOUTUBE_DATA_API_DISABLED'+(diagnosis.projectId?':'+diagnosis.projectId:''):clean(error?.message||error,160);}
 async function markRegistryFailure(env,state,error){
   const id=clean(state?.registry_connection_id,120);if(!id)return;
   const workspaceSlug=await registryWorkspaceSlug(env,{type:state.subject_type,key:state.subject_key});if(!workspaceSlug)return;
-  const stamp=nowIso(),message=clean(error?.message||error,500);
+  const stamp=nowIso(),message=state?.provider==='youtube'?youtubeFailureCode(error):clean(error?.message||error,500);
   await env.DB.prepare("UPDATE external_account_connections SET status=CASE WHEN status='active' THEN 'reconnect_required' ELSE 'error' END,credential_ref='',last_error=?,updated_at=? WHERE id=? AND workspace_slug=?").bind(message,stamp,id,workspaceSlug).run();
   await env.DB.prepare('INSERT INTO external_account_audit(id,connection_id,workspace_slug,actor_user_id,actor_email,action,detail_json,created_at) VALUES(?,?,?,?,?,?,?,?)').bind(`xaa_${crypto.randomUUID().replaceAll('-','')}`,id,workspaceSlug,state.actor_id,state.actor_email,'oauth.failed',safeJson({provider:state.provider,error:message}),stamp).run();
 }
@@ -288,9 +291,13 @@ async function startYouTube(request, env, identity, subject) {
   const requestedHint = clean(body.accountHint||registry?.login_hint||registry?.provider_account_id,180).trim().toLowerCase();
   const accountHint = youtubeTargetAccount(subject,requestedHint);
   if(registry&&!accountHint) return json(request,env,{error:'YOUTUBE_ACCOUNT_EMAIL_REQUIRED'},400);
+  // An explicit Mall Brand Account choice binds to the authenticated YouTube channel ID,
+  // not to Google userinfo.email, which need not represent the selected Brand Account.
+  const brandAccountMode=body.youtubeBrandAccountMode===true;
+  if(brandAccountMode&&(!registry?.id||subject.type!=='tenant'||subject.key!=='ekodimall')) return json(request,env,{error:'YOUTUBE_BRAND_ACCOUNT_SCOPE_FORBIDDEN'},403);
   const state = await createOAuthState(env,YOUTUBE_PROVIDER,'publish',identity,subject,body.returnUrl,registry?.id||'');
-  const broker=await env.GOOGLE_OAUTH_BROKER.startYouTubeOAuth({state,accountHint});
-  return json(request,env,{authorizationUrl:String(broker.authorizationUrl||''),provider:'youtube',mode:'publish',targetAccount:accountHint});
+  const broker=await env.GOOGLE_OAUTH_BROKER.startYouTubeOAuth({state,accountHint:brandAccountMode?'':accountHint});
+  return json(request,env,{authorizationUrl:String(broker.authorizationUrl||''),provider:'youtube',mode:'publish',targetAccount:accountHint,channelSelection:brandAccountMode?'brand_account':'google_email'});
 }
 async function fetchJson(url, init = {}) {
   const response = await fetch(url,init);
@@ -479,21 +486,20 @@ async function youtubeCallback(request, env) {
     if (targetAccount && authorizedEmail !== targetAccount) throw new Error('YOUTUBE_TARGET_ACCOUNT_MISMATCH');
     const channels = await fetchJson('https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true&maxResults=50',{headers:{authorization:`Bearer ${accessToken}`}});
     const subject = {type:state.subject_type,key:state.subject_key};
-    const discoveredChannels = (channels.items || []).filter(channel => channel?.id);
-    const selectedChannels = discoveredChannels;
-    if (!selectedChannels.length) throw new Error('YOUTUBE_CHANNEL_NOT_FOUND');
+    const brandAccountMode=!targetAccount&&Boolean(state.registry_connection_id)&&state.subject_type==='tenant'&&state.subject_key==='ekodimall';
+    const selectedChannels=selectAuthorizedYouTubeChannels(channels,{brandAccountMode,registryConnectionId:state.registry_connection_id});
     const expiresAt = Number(tokenData.expires_in || 0) > 0 ? new Date(Date.now() + Number(tokenData.expires_in) * 1000).toISOString() : '';
     let count = 0;
     const connectionIds=[];
     for (const channel of selectedChannels) {
       const display = clean(channel.snippet?.title || 'YouTube',120);
       const token = safeJson({accessToken,refreshToken,expiresAt});
-      const row = await upsertConnection(env,subject,{provider:'youtube',resourceType:'channel',externalId:String(channel.id),displayName:display,token,expiresAt,scopes:['youtube.upload','youtube.readonly'],metadata:{source:'google_oauth',authorizedEmail,targetAccount,registryConnectionId:state.registry_connection_id||''}});
+      const row = await upsertConnection(env,subject,{provider:'youtube',resourceType:'channel',externalId:String(channel.id),displayName:display,token,expiresAt,scopes:['youtube.upload','youtube.readonly'],metadata:{source:'google_oauth',authorizedEmail,targetAccount,channelSelection:brandAccountMode?'brand_account':'google_email',registryConnectionId:state.registry_connection_id||''}});
       if (row?.id) { await upsertPublishChannel(env,subject,{provider:'youtube',channelType:'channel',displayName:display,externalId:String(channel.id),connectionId:Number(row.id)}); connectionIds.push(Number(row.id)); count += 1; }
     }
-    await markRegistryActive(env,state,{connectionIds,actualIdentity:authorizedEmail});
+    await markRegistryActive(env,state,{connectionIds,actualIdentity:brandAccountMode?String(selectedChannels[0].id):authorizedEmail});
     return redirectResult(state.return_url,{ekodi_connect:'success',provider:'youtube',connections:count});
-  } catch (error) { await markRegistryFailure(env,state,error); return redirectResult(state.return_url,{ekodi_connect:'error',provider:'youtube',reason:clean(error.message,160)}); }
+  } catch (error) { await markRegistryFailure(env,state,error); return redirectResult(state.return_url,{ekodi_connect:'error',provider:'youtube',reason:youtubeFailureCode(error)}); }
 }
 
 async function listConnections(request, env, subject) {

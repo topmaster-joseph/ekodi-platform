@@ -8,8 +8,11 @@ test('two independent feature gates block unapproved enrollment and matching',()
   assert.match(worker,/SINGLES_M1_ENABLED.*'true'/);
   assert.match(api,/SINGLES_ONBOARDING_ENABLED.*"true"/);
   assert.match(worker,/matching_enabled:false,messaging_enabled:socialEnabled\(env\),messages_require_subscription:true,paid_brokerage_enabled:false/);
-  assert.match(worker,/if\(!enabled\(env\)\)return json\(\{error:'singles_enrollment_not_launched'\},503\)/);
-  assert.match(api,/if \(!enabled\(\)\) return reply\(req, \{ error: "singles_enrollment_not_launched" \}, 503\)/);
+  assert.match(worker,/const adminPreparation=sub==='\/api\/bank\/admin\/brokerage-readiness'/);
+  assert.match(worker,/if\(!enabled\(env\)&&!adminPreparation\)return json\(\{error:'singles_enrollment_not_launched'\},503\)/);
+  assert.match(worker,/if\(social&&!socialEnabled\(env\)&&!adminPreparation\)return json\(\{error:'singles_social_not_launched'\},503\)/);
+  assert.match(api,/if \(!enabled\(\) && !prelaunchAdmin\) return reply\(req, \{ error: "singles_enrollment_not_launched" \}, 503\)/);
+  assert.match(api,/db\(\)\.auth\.getUser\(bearer\)/);
 });
 test('development schema is server-only, RLS enabled, and public discovery forced false',()=>{
   for(const name of ['singles_memberships','singles_sensitive_profiles','singles_public_cards','singles_consent_receipts']){

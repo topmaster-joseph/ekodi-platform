@@ -107,7 +107,10 @@ export async function verifyUser4Browser({token,fetchImpl=fetch,clock=()=>Date.n
 
 // Latest diagnostics-capable Chrome/Edge CDP worker requires a new official USER4 Agent update after 11:29 UTC.
 // Never infer that an older USER4 Agent has loaded it from an earlier heartbeat.
-export const USER4_CDP_FIX_FLOOR = Date.parse('2026-10-11T11:29:00.000Z');
+// Owner-requested USER4 safe Agent refresh (2026-10-12 22:18 KST). A prior
+// successful update does not satisfy this one-time release floor.
+export const USER4_CDP_WORKER_AGENT_VERSION = '2.5.5';
+export const USER4_CDP_FIX_FLOOR = Date.parse('2026-10-12T18:00:00.000Z');
 const UPDATE='agent.self_update';
 export async function ensureUser4AgentUpdated({
   token,fetchImpl=fetch,clock=()=>Date.now(),sleepFn=wait,pollMs=4000,maxPoll=65
@@ -135,6 +138,7 @@ export async function ensureUser4AgentUpdated({
   const deviceId=initial.id;
   const existing=(initial.recentCommands||[]).filter(c=>
     c.type===UPDATE && c.status==='succeeded' &&
+    c.result?.version===USER4_CDP_WORKER_AGENT_VERSION &&
     Number.isFinite(when(c.completedAt)) && when(c.completedAt)>=USER4_CDP_FIX_FLOOR &&
     when(initial.lastSeenAt)>=when(c.completedAt)
   ).sort((a,b)=>when(b.completedAt)-when(a.completedAt))[0];
@@ -155,6 +159,7 @@ export async function ensureUser4AgentUpdated({
       throw new Error('user4_official_update_enqueue_invalid');
   }
   let doneAt=NaN;
+  let versionProjectionUnavailable=false;
   for(let n=0;n<maxPoll;n++){
     if(n>0)await sleepFn(pollMs);
     const current=(await list()).find(d=>d.id===deviceId);
@@ -163,6 +168,14 @@ export async function ensureUser4AgentUpdated({
     if(receipt && ['failed','cancelled'].includes(receipt.status))
       throw new Error('user4_agent_official_update_'+receipt.status);
     if(receipt?.status==='succeeded'){
+      // The official Control API may still be promoting the scoped version
+      // projection when this command finishes. Wait, but never infer success.
+      if(receipt.result?.version===undefined || receipt.result?.version===null){
+        versionProjectionUnavailable=true;
+        continue;
+      }
+      if(receipt.result.version!==USER4_CDP_WORKER_AGENT_VERSION)
+        throw new Error('user4_agent_update_version_mismatch');
       const completedAt=when(receipt.completedAt);
       if(!Number.isFinite(completedAt)||completedAt<USER4_CDP_FIX_FLOOR)
         throw new Error('user4_agent_update_receipt_stale');
@@ -174,17 +187,41 @@ export async function ensureUser4AgentUpdated({
         updatePerformed:true,recentOfficialUpdateVerified:true};
     }
   }
-  throw new Error('user4_agent_update_reconnect_timeout');
+  throw new Error(versionProjectionUnavailable
+    ? 'user4_agent_update_version_projection_unavailable'
+    : 'user4_agent_update_reconnect_timeout');
+}
+
+// A one-time retry is permitted only for a browser launcher that exited zero
+// before producing a CDP session. Never retry policy/access/credential failures.
+// Each attempt still needs an independent exact-USER4 successful command receipt.
+export async function verifyUser4BrowserWithRetry(options={}, verify=verifyUser4Browser) {
+  try { return await verify(options); }
+  catch(error) {
+    if(String(error?.message||'')!=='user4_browser_failed:CDP_BROWSER_EARLY_EXIT_ZERO')
+      throw error;
+    const result=await verify(options);
+    return {...result,transientBrowserRetryUsed:true};
+  }
 }
 
 export async function verifyUser4Acceptance(options={}){
-  // Dispatch both independent canaries while the exact USER4 Agent heartbeat is
-  // fresh; a slow browser task must not delay Ollama eligibility discovery.
-  // EKODI Device Agent owns scheduling and may execute commands sequentially.
-  const outcomes=await Promise.allSettled([
-    verifyUser4Browser(options),
-    verifyNativeLocalAi({...options,hostname:'user4'})
-  ]);
+  // USER4's small Ollama model was ready before two simultaneous Browser/AI
+  // runs returned native_localai_inference_not_ready. Avoid competing for memory
+  // and CPU: finish local inference first, then run the independently validated
+  // CDP browser. Even on AI failure, collect the browser receipt fail-closed.
+  const outcomes=[null,null];
+  try {
+    outcomes[1]={status:'fulfilled',
+      value:await verifyNativeLocalAi({...options,hostname:'user4'})};
+  } catch (reason) {
+    outcomes[1]={status:'rejected',reason};
+  }
+  try {
+    outcomes[0]={status:'fulfilled',value:await verifyUser4BrowserWithRetry(options)};
+  } catch (reason) {
+    outcomes[0]={status:'rejected',reason};
+  }
   const browser=outcomes[0].status==='fulfilled'?outcomes[0].value:null;
   const localAi=outcomes[1].status==='fulfilled'?outcomes[1].value:null;
   const failures=[];
@@ -214,7 +251,9 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
   ensureUser4AgentUpdated({token})
     .then(async update=>{
       const result=await verifyUser4Acceptance({token});
-      return {...result,agentUpdate:update};
+      return {...result,agentUpdate:update,
+        nativeAgentUpdateVerified:update.recentOfficialUpdateVerified===true,
+        ownerRefreshFloor:new Date(USER4_CDP_FIX_FLOOR).toISOString()};
     })
     .then(result=>{
       console.log('[EKODI][USER4-NATIVE-ACCEPTANCE] '+JSON.stringify(result));

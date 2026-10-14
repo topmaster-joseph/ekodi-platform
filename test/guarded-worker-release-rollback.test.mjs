@@ -59,6 +59,7 @@ if (enabled) {
   const logPath = process.env.EKODI_ROLLBACK_PROOF_COMMAND_LOG;
   let active = previous;
   let rollbackAttempts = 0;
+  let statusAttempts = 0;
   const realSpawnSync = childProcess.spawnSync;
   const realSetTimeout = globalThis.setTimeout;
 
@@ -80,7 +81,13 @@ if (enabled) {
       let status = 0;
 
       if (rendered.includes('deployments status')) {
-        stdout = JSON.stringify({ versions: [{ version_id: active, percentage: 100 }] });
+        statusAttempts += 1;
+        if (statusAttempts === 1) {
+          status = 1;
+          stderr = 'simulated transient deployment status read failure\\n';
+        } else {
+          stdout = JSON.stringify({ versions: [{ version_id: active, percentage: 100 }] });
+        }
       } else if (rendered.includes('versions upload')) {
         stdout = 'Worker Version ID: ' + candidate + '\\n';
       } else if (rendered.includes('versions deploy')) {
@@ -149,11 +156,14 @@ if (enabled) {
 
     const output = `${result.stdout || ''}\n${result.stderr || ''}`;
     assert.equal(result.status, 1, `fault-injected release must fail closed after verified rollback:\n${output}`);
+    assert.match(output, /Read-only Wrangler deployment status attempt 1\/3 failed; retrying safely\./);
     assert.match(output, /Rolling back ekodi-rollback-proof to 11111111-1111-4111-8111-111111111111 at 100%\./);
     assert.match(output, /Transient Wrangler transport failure during rollback attempt 1\/3; retrying safely\./);
     assert.match(output, /Automatic rollback verified against the stable rollback contract\./);
 
     const commands = fs.readFileSync(commandLogPath, 'utf8').trim().split(/\r?\n/).filter(Boolean);
+    const statusCommands = commands.filter(line => line.includes('deployments status'));
+    assert.equal(statusCommands.length, 2, `transient deployment status read must cause exactly one bounded retry: ${commands.join('\\n')}`);
     const attachIndex = commands.findIndex(line => line.includes(`${PREVIOUS_VERSION}@100%`) && line.includes(`${CANDIDATE_VERSION}@0%`));
     const promoteIndex = commands.findIndex(line => line.includes(`${CANDIDATE_VERSION}@100%`) && !line.includes(`${PREVIOUS_VERSION}@100%`));
     const rollbackIndex = commands.findIndex((line, index) => index > promoteIndex && line.includes(`${PREVIOUS_VERSION}@100%`) && !line.includes(`${CANDIDATE_VERSION}@0%`));

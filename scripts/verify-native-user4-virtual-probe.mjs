@@ -1,0 +1,76 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {ensureUser4EditionProbeAgent} from './ensure-user4-edition-probe-agent.mjs';
+
+// Receipt-gated, read-only USER4 native Hyper-V readiness probe; never touches user desktop.
+const API='https://ekodi.kr/api/control/devices';
+const COMMAND='computer.desktop.probe';
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const parse=t=>Date.parse(String(t||''));
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+async function persistProbeEvidence(value){
+  const dir=path.join(root,'artifacts');
+  await fs.mkdir(dir,{recursive:true});
+  await fs.writeFile(path.join(dir,'native-user4-virtual-probe.json'),JSON.stringify(value,null,2)+'\n','utf8');
+}
+async function run(){
+ const token=String(process.env.E2E_ADMIN_TOKEN||'');
+ if(token.length<20)throw Error('trusted_admin_session_required');
+ // Agent-only official signed update, guarded by actual USER4 heartbeat, release
+ // cutover and command receipt. No Windows OS feature change or reboot is issued.
+ const update=await ensureUser4EditionProbeAgent({token});
+ console.log('[EKODI][USER4-EDITION-AGENT-UPDATE] '+JSON.stringify(update));
+ async function req(path,method='GET',body){
+  const r=await fetch(API+path,{method,redirect:'error',cache:'no-store',
+   headers:{authorization:'Bearer '+token,accept:'application/json',...(body?{'content-type':'application/json'}:{})},
+   ...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(15000)});
+  if(!r.ok)throw Error('api_http_'+r.status);
+  return r.json();
+ }
+ const devices=async()=>{const d=await req('');if(!Array.isArray(d.devices))throw Error('device_contract');return d.devices;};
+ const list=await devices();
+ const choices=list.filter(d=>String(d.hostname||'').toLowerCase()==='user4'&&
+  d.revokedAt==null&&d.status==='online'&&d.management?.source==='agent'&&
+  d.management?.type==='pc'&&/win/i.test(String(d.platform||''))&&
+  Number.isFinite(parse(d.lastSeenAt))&&Date.now()-parse(d.lastSeenAt)>=0&&Date.now()-parse(d.lastSeenAt)<=90000)
+  .sort((a,b)=>parse(b.lastSeenAt)-parse(a.lastSeenAt));
+ const device=choices[0];
+ if(!device?.id)throw Error('user4_native_agent_not_healthy');
+ const existing=(device.recentCommands||[]).find(c=>c.type===COMMAND&&
+  ['queued','claimed'].includes(c.status)&&Number.isFinite(parse(c.issuedAt))&&
+  Date.now()-parse(c.issuedAt)>=0&&Date.now()-parse(c.issuedAt)<120000);
+ const out=existing|| (await req('/'+encodeURIComponent(device.id)+'/commands','POST',{type:COMMAND,payload:{},confirmed:false})).command;
+ if(!out?.id)throw Error('probe_command_not_queued');
+ for(let i=0;i<24;i++){
+  if(i)await sleep(4000);
+  const current=(await devices()).find(d=>d.id===device.id);
+  const c=(current?.recentCommands||[]).find(x=>x.id===out.id);
+  if(c?.status==='failed'||c?.status==='cancelled')throw Error('probe_'+c.status);
+  if(c?.status!=='succeeded')continue;
+  const proof=c.result?.desktopProbe;
+  if(!proof)throw Error('missing_native_hyperv_probe');
+  const evidence={
+    targetAlias:'user4',commandId:out.id,receiptStatus:'succeeded',
+    backendReady:proof.headlessBackendReady===true,
+    backend:'hyper-v-ekodi-base',userDesktopAttached:false,
+    windowsEditionClass:['home','pro','enterprise','education','server'].includes(proof.windowsEditionClass)
+      ? proof.windowsEditionClass : 'unknown',
+    windowsBuild:Number.isSafeInteger(proof.windowsBuild) && proof.windowsBuild>0 && proof.windowsBuild<=99999
+      ? proof.windowsBuild : 0,
+    virtualizationFirmwareEnabled:proof.virtualizationFirmwareEnabled===true,
+    hyperVState:['Enabled','Disabled','EnablePending','DisablePending'].includes(proof.hyperVState)?proof.hyperVState:'unknown',
+    hyperVPowerShellAvailable:proof.hyperVPowerShellAvailable===true,
+    baseVmPresent:proof.baseVmPresent===true,
+    gapReason:['native-capability-unavailable','native-capability-not-production-ready','required-capability-not-yet-implemented','native-capacity-or-runtime-failure'].includes(proof.gapReason)?proof.gapReason:'unknown',
+    completedAt:c.completedAt||null,observedAt:new Date().toISOString()
+  };
+  await persistProbeEvidence(evidence);
+  console.log('[EKODI][USER4-NATIVE-VIRTUAL-PROBE] '+JSON.stringify(evidence));
+  if(proof.headlessBackendReady!==true)throw Error('user4_hyperv_backend_not_ready');
+  return;
+ }
+ throw Error('user4_native_probe_timeout');
+}
+run().catch(e=>{console.error('[EKODI][USER4-NATIVE-VIRTUAL-PROBE] '+String(e.message).slice(0,110));process.exitCode=1;});
+

@@ -14,3 +14,14 @@
 
 /* monochrome admin hierarchy */
 .sidebar button.active{background:#171717!important;color:#fff!important}.sidebar button:hover:not(.active){background:#f0f0f0!important;color:#171717!important}.primary,.org-admin-tabs button.active{background:#171717!important;border-color:#171717!important;color:#fff!important}.tag.live,.tag.official,.tag.warn,.tag.error{background:#f0f0f0!important;color:#171717!important;border:1px solid #d4d4d4!important}.message.error,.item-actions .danger{color:#171717!important;text-decoration:underline}.eyebrow{color:#555!important}.metrics article,.card,.item,.health-row{box-shadow:none!important}.site-publication-slot{filter:grayscale(1)}
+
+/* URL-only source registration: readable review before public publication */
+.link-import-preview{display:grid;gap:6px;padding:14px 16px;margin:10px 0;border:1px solid #cbd5e1;border-radius:12px;background:#f8fafc;overflow-wrap:anywhere}
+.link-import-preview strong{color:#142945;font-size:1.02rem;line-height:1.45}
+.link-import-preview small{color:#4b647f}
+.link-import-preview p{margin:4px 0 0;white-space:pre-wrap;color:#334155}
+.link-import-form{margin-bottom:16px}
+.link-import-form>label{display:grid;gap:6px;margin:10px 0}
+.link-import-form input,.link-import-form select{width:100%;max-width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:9px}
+.link-import-form button:disabled,.inline-manage-form button:disabled{opacity:.52;cursor:not-allowed}
+@media(max-width:760px){.link-import-preview{padding:12px}.activity-toolbar{flex-wrap:wrap}.activity-toolbar .ekodi-public-admin-inline{max-width:100%}}

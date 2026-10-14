@@ -1,5 +1,5 @@
 {
-  "version": 104,
+  "version": 105,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -2722,7 +2722,8 @@
           "시민의견",
           "회계",
           "공지",
-          "조직"
+          "조직",
+          "<meta name=\"twitter:card\" content=\"summary_large_image\">\n  <meta property=\"og:image\""
         ],
         "rollbackVerify": false,
         "bodyIncludes": [

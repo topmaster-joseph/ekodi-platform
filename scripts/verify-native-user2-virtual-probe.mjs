@@ -1,4 +1,7 @@
-// Receipt-gated, read-only USER2 native Hyper-V readiness probe; never touches user desktop.
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+// Receipt-gated, read-only USER2 native Hyper-V readiness probe; always use same-device readiness evidence from release workflow.
 const API='https://ekodi.kr/api/control/devices';
 const COMMAND='computer.desktop.probe';
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -35,7 +38,7 @@ async function run(){
   if(c?.status!=='succeeded')continue;
   const proof=c.result?.desktopProbe;
   if(!proof)throw Error('missing_native_hyperv_probe');
-  console.log('[EKODI][USER2-NATIVE-VIRTUAL-PROBE] '+JSON.stringify({
+  const evidence={
     targetAlias:'user2',commandId:out.id,receiptStatus:'succeeded',
     backendReady:proof.headlessBackendReady===true,
     backend:'hyper-v-ekodi-base',userDesktopAttached:false,
@@ -44,7 +47,12 @@ async function run(){
     hyperVPowerShellAvailable:proof.hyperVPowerShellAvailable===true,
     baseVmPresent:proof.baseVmPresent===true,
     gapReason:['native-capability-unavailable','native-capability-not-production-ready','required-capability-not-yet-implemented','native-capacity-or-runtime-failure'].includes(proof.gapReason)?proof.gapReason:'unknown',
-    completedAt:c.completedAt||null,observedAt:new Date().toISOString()}));
+    completedAt:c.completedAt||null,observedAt:new Date().toISOString()};
+  const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+  const dir=path.join(root,'artifacts');
+  await fs.mkdir(dir,{recursive:true});
+  await fs.writeFile(path.join(dir,'native-user2-virtual-probe.json'),JSON.stringify(evidence,null,2)+'\n','utf8');
+  console.log('[EKODI][USER2-NATIVE-VIRTUAL-PROBE] '+JSON.stringify(evidence));
   if(proof.headlessBackendReady!==true)throw Error('user2_hyperv_backend_not_ready');
   return;
  }
@@ -59,3 +67,7 @@ run().catch(e=>{console.error('[EKODI][USER2-NATIVE-VIRTUAL-PROBE] '+String(e.me
 // Revalidate after official protected base synchronization.
 
 // Owner-authored CI following protected base refresh.
+
+// Owner-triggered guarded post-observer-fix convergence.
+
+// Owner-authored protected CI after Orchestrator main synchronization.

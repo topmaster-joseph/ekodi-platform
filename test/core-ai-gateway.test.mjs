@@ -151,3 +151,46 @@ test('execution capability becomes verified only after adapter effect and post-e
   assert.equal(result.evidence.verificationEvidence.executionId, result.evidence.executionReceipt.executionId);
   assert.deepEqual(effects.map(item => item[0]), ['execute', 'verify']);
 });
+
+
+test('executor_ready handoff reaches bounded capability execution without MCP', async () => {
+  const effects = [];
+  const adapter = {
+    id: 'github-connector',
+    lane: 'github_connector',
+    async execute(context) {
+      effects.push(['execute', context.capabilityId, context.taskId]);
+      return { effectPerformed: true, rollbackTarget: 'branch-before' };
+    },
+    async verify(context) {
+      effects.push(['verify', context.capabilityId, context.taskId]);
+      return { passed: true, method: 'deterministic-branch-observation' };
+    },
+    async rollback() {
+      return { succeeded: true, rollbackId: 'rollback-executor-ready' };
+    },
+  };
+  const gateway = buildCoreAiGateway({
+    AI_PROVIDER: 'NONE',
+    EKODI_CAPABILITY_ADAPTERS: { 'core.automation': adapter },
+  }, [reviewProvider('disabled-provider')]);
+
+  const result = await gateway.command({
+    taskId: 'executor-ready-without-mcp',
+    goal: 'Continue through the internal execution lane when AI consultation is unavailable.',
+    mutation: true,
+    target: { workspaceId: 'workspace-test', capability: 'core.automation' },
+    authority: automationAuthority,
+    delegation: reversibleDelegation,
+    context: {
+      deploymentRequested: true,
+      branchRef: 'ai/chatgpt/orch_executor_ready_without_mcp',
+    },
+  });
+
+  assert.equal(result.state, 'verified');
+  assert.equal(result.execution.state, 'verified');
+  assert.equal(result.evidence.executionReceipt.adapterId, 'github-connector');
+  assert.equal(result.evidence.verificationEvidence.passed, true);
+  assert.deepEqual(effects.map(item => item[0]), ['execute', 'verify']);
+});

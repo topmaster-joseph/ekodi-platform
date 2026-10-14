@@ -16,8 +16,8 @@ test('YouTube OAuth supports repeated account selection and does not hard-lock E
   assert.match(broker, /prompt:'consent select_account'/);
   assert.ok(worker.includes("const requestedHint = clean(body.accountHint||registry?.login_hint||registry?.provider_account_id,180)"));
   assert.match(worker,/registryConnectionId/);
-  assert.match(worker, /const selectedChannels = discoveredChannels/);
-  assert.match(worker, /YOUTUBE_CHANNEL_NOT_FOUND/);
+  assert.match(worker,/selectAuthorizedYouTubeChannels\(channels/);
+  assert.match(worker,/YOUTUBE_BRAND_ACCOUNT_SCOPE_FORBIDDEN/);
   assert.doesNotMatch(worker, /EKODIMALL_YOUTUBE_CHANNEL_NOT_FOUND/);
   assert.doesNotMatch(worker, /selectedChannels = discoveredChannels\.filter/);
 });

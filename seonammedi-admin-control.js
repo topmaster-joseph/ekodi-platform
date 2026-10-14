@@ -2,6 +2,7 @@ import authWorker from './auth-worker.js';
 import { principalFromSupabaseRequest } from './ekodi-principal.js';
 import { accessGrantIsActive, effectiveAccessCapabilities } from './access-governance.js';
 import { runSeonamMediHourlyCheck } from './seonammedi-monitor.js';
+import { fetchSeonamMediLinkPreview } from './seonammedi-link-import.js';
 import { createBoardAdapter, handleBoardAdapter } from './common-board-adapter.js';
 import { createBoardRuntimeGuard } from './board-runtime-guard.js';
 
@@ -24,6 +25,9 @@ const PLATFORM_AUTHORITY_URL=SUPABASE_URL+'/functions/v1/access-api/platform-aut
 const VOICE_STATES=new Set(['received','reviewing','answered','published','archived']);
 const VOICE_CATEGORIES=new Set(['question','proposal','experience','factcheck','tip','other']);
 const TIMELINE_STATES=new Set(['draft','published']);
+// Only committee-led activities explicitly attributed to the southwest emergency committee.
+// Student unions, councils and other organizations remain related news, not committee work.
+const VERIFIED_COMMITTEE_SEEDS=Object.freeze({'seed-bidaewee-20260908':'집회·캠페인','seed-bidaewee-20260909':'기자회견','seed-bidaewee-20260921':'집회·캠페인','seed-bidaewee-20260922':'집회·캠페인'});
 const TIMELINE_SEED=[{"legacyKey":"seed-001","date":"1990.05","category":"장기연혁","title":"목포대 의과대학 신설 건의 시작","summary":"목포시 공식 추진사항은 국립목포대가 1990년 5월 정부에 의대 신설을 건의하기 시작했다고 정리합니다.","evidence":"목포시 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":0},{"legacyKey":"seed-002","date":"2007","category":"장기연혁","title":"의대 신설 관련 대통령 공약 반영","summary":"목포시 공식 추진사항은 2007년 제17대 대통령 선거 과정에서 목포대 의대 신설이 공약에 반영됐다고 기록합니다.","evidence":"목포시 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":1},{"legacyKey":"seed-003","date":"2012","category":"장기연혁","title":"의대 신설 관련 공약·지역 서명운동","summary":"목포시 공식자료는 2012년 제18대 대통령 선거 공약 반영을 기록하고, 국립목포대 총장백서는 같은 해 도민결의대회와 서명운동 추진 이력을 소개합니다.","evidence":"공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":2},{"legacyKey":"seed-004","date":"2018.07–2019.11","category":"정부·대학","title":"목포대 의과대학 설립 타당성 연구용역","summary":"목포시 공식 추진사항은 교육부 주관 타당성 연구용역이 이 기간 진행됐다고 정리합니다.","evidence":"목포시 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":3},{"legacyKey":"seed-005","date":"2023.01.19","category":"정부·대학","title":"권역별 국립대학교 의과대학 설립 공동 포럼","summary":"국립목포대 연혁에 공동 포럼 개최와 공동건의문 발표가 기록돼 있습니다.","evidence":"국립목포대 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":4},{"legacyKey":"seed-006","date":"2024.03.14","category":"정부·대학","title":"전남 국립의대 신설 추진 발표","summary":"목포시 공식 추진사항은 당시 정부가 전남 국립의대 신설 추진을 발표했다고 기록합니다.","evidence":"목포시 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":5},{"legacyKey":"seed-007","date":"2024.11.15","category":"정부·대학","title":"목포대·순천대 대학통합을 통한 국립의대 추진 합의","summary":"목포시 공식 추진사항에 양 대학 총장의 통합 추진 합의가 기록돼 있습니다.","evidence":"목포시 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":6},{"legacyKey":"seed-008","date":"2024.11.22","category":"정부·대학","title":"통합대학교 국립의대 정부 추천","summary":"목포시 공식 추진사항은 전라남도가 통합대학교 국립의과대학을 정부에 추천했다고 기록합니다.","evidence":"목포시 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":7},{"legacyKey":"seed-009","date":"2025.05.26","category":"정부·대학","title":"통합의대 설립 공동준비위원회 출범","summary":"양 대학 공동준비위원회 출범 이력이 목포시 공식 추진사항에 포함돼 있습니다.","evidence":"목포시 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":8},{"legacyKey":"seed-010","date":"2026.02.10","category":"정부·대학","title":"의사인력 양성규모 발표","summary":"목포시 공식 추진사항은 보건복지부 발표와 함께 의대 없는 지역 신설 시 2030년 개교·정원 100명 고려 내용을 기록합니다.","evidence":"목포시 공식자료","links":[],"media":[],"monitorKeywords":[],"sortOrder":9},{"legacyKey":"seed-011","date":"2026.07.02","category":"정부·대학","title":"국립의대 신설 중재안 제안","summary":"전남광주대전환기획위가 목포대·순천대의 국립의대 신설과 관련한 중재안을 제안한 것으로 당시 일지 보도에 정리돼 있습니다.","evidence":"언론보도","links":[],"media":[],"monitorKeywords":[],"sortOrder":10},{"legacyKey":"seed-012","date":"2026.07.14","category":"정부·대학","title":"양 대학 자율협의·통합신청서 제출 요구","summary":"전남광주대전환기획위가 양 대학 회신 결과를 발표하고 자율 협의를 통한 통합신청서 제출을 요구한 것으로 당시 일지 보도에 정리돼 있습니다.","evidence":"언론보도","links":[],"media":[],"monitorKeywords":[],"sortOrder":11},{"legacyKey":"seed-013","date":"2026.07.20","category":"정부·대학","title":"지역 완결형 필수·공공의료체계 권고안","summary":"전남광주대전환기획위가 지역 완결형 필수·공공의료체계 구축 권고안을 발표한 것으로 당시 일지 보도에 정리돼 있습니다.","evidence":"언론보도","links":[],"media":[],"monitorKeywords":[],"sortOrder":12},{"legacyKey":"seed-014","date":"2026.07.27","category":"정부·대학","title":"공공의료혁신추진단 구성 발표","summary":"전남광주통합특별시가 공공의료혁신추진단 구성과 초광역 통합의료벨트 구축을 발표한 것으로 당시 일지 보도에 정리돼 있습니다.","evidence":"언론보도","links":[],"media":[],"monitorKeywords":[],"sortOrder":13},{"legacyKey":"seed-015","date":"2026.08.02","category":"정부·대학","title":"통합 국립의대 긴급 조정회의","summary":"통합 국립의대 설립 및 초광역 통합의료벨트 구축을 위한 긴급 조정회의가 열린 것으로 당시 일지 보도에 정리돼 있습니다.","evidence":"언론보도","links":[],"media":[],"monitorKeywords":[],"sortOrder":14},{"legacyKey":"seed-016","date":"2026.08.06","category":"정부·대학","title":"교육부, 지역 의대 신설 추진계획서 제출 요청","summary":"교육부가 지역 의과대학 신설 추진계획서 제출을 요청한 것으로 당시 일지 보도에 정리돼 있습니다.","evidence":"언론보도","links":[],"media":[],"monitorKeywords":[],"sortOrder":15},{"legacyKey":"seed-017","date":"2026.08.20","category":"정부·대학","title":"의과대학 신설 추진계획서 교육부 제출","summary":"전남광주통합특별시가 의과대학 신설 추진계획서를 교육부에 제출한 것으로 당시 일지 보도에 정리돼 있습니다.","evidence":"언론보도","links":[],"media":[],"monitorKeywords":[],"sortOrder":16},{"legacyKey":"seed-018","date":"2026.08.26","category":"정부·대학","title":"교육부, 지역 의대 신설 추진계획서 재제출 요청","summary":"교육부가 지역 의과대학 신설 추진계획서 재제출을 요청한 것으로 당시 일지 보도에 정리돼 있습니다.","evidence":"언론보도","links":[],"media":[],"monitorKeywords":[],"sortOrder":17},{"legacyKey":"seed-019","date":"2026.08.30","category":"후보대학 선정","title":"전남광주특별시 국립의대 후보대학 선정 결과 발표","summary":"전남광주특별시는 순천대를 후보대학으로 선정했으며 보도된 평가점수는 순천대 89.15점, 목포대 87.85점입니다.","evidence":"공식발표·언론보도","links":[{"label":"후보대학 선정 보도","source":"뉴시스","url":"https://www.newsis.com/view/NISX20260830_0003768417"}],"media":[{"type":"photo","label":"후보대학 선정 관련 현장·발표 사진이 포함된 보도","source":"뉴시스","date":"2026-08-30","url":"https://www.newsis.com/view/NISX20260830_0003768417"}],"monitorKeywords":["후보대학","순천대","선정","목포대"],"sortOrder":18},{"legacyKey":"seed-bidaewee-20260902","date":"2026.09.02","category":"비대위 활동","title":"목포대 총학생회 선정 절차 공개·재검토 요구","summary":"국립목포대학교 총학생회는 후보대학 선정 과정의 세부 채점 내역과 심사자료 공개, 선정 절차 재검토를 요구하는 입장을 발표했다. 이후 지역 시민사회와 대학 구성원의 공동 대응이 확대됐다.","evidence":"당사자 발표·언론보도","links":[{"label":"목포대 총학생회 입장 보도","source":"뉴시스","url":"https://www.newsis.com/view/NISX20260902_0003773352"},{"label":"총학생회 공개·재검토 요구 보도","source":"목포MBC","url":"https://www.mpmbc.co.kr/NewsArticle/1535177"}],"media":[],"monitorKeywords":["총학생회","심사자료","재검토","목포대","9월2일"],"sortOrder":19},{"legacyKey":"seed-bidaewee-20260903","date":"2026.09.03","category":"비대위 활동","title":"광주청사 릴레이 시위·청와대 상경집회 준비","summary":"목포시의회 의원들의 광주청사 앞 릴레이 1인 시위와 시민사회의 상경집회 준비가 이어졌다. 관련 보도에서는 후보대학 선정 과정의 자료 공개와 재검증 요구가 지역 단위 공동행동으로 확대된 것으로 전했다.","evidence":"언론보도","links":[{"label":"청와대 상경집회 준비와 지역 시위 보도","source":"쿠키뉴스","url":"https://m.kukinews.com/article/view/kuk202609030113"},{"label":"목포 시민연대 상경집회 예고 보도","source":"뉴스핌","url":"https://www.newspim.com/news/view/20260903000831"}],"media":[],"monitorKeywords":["광주청사","릴레이 시위","청와대","상경집회","재검증"],"sortOrder":20},{"legacyKey":"seed-bidaewee-20260904","date":"2026.09.04","category":"비대위 활동","title":"지역 공동 기자회견·재심사 요구와 법적 대응 본격화","summary":"목포 지역 정치권·시민사회는 전남광주특별시 무안청사와 국회에서 후보대학 선정 과정의 자료 공개와 재검토를 요구했다. 같은 날 목포대는 후보대학 선정·추천 처분 취소 소송과 효력정지 신청 절차에 나섰다.","evidence":"언론보도·당사자 발표","links":[{"label":"목포대·지역사회 반발 및 법적 대응 보도","source":"연합뉴스","url":"https://www.yna.co.kr/view/AKR20260904092551054"}],"media":[{"type":"photo","label":"국립의대 추천안 전면 재검토 촉구 현장 사진","source":"연합뉴스","date":"2026-09-04","url":"https://www.yna.co.kr/view/AKR20260904092551054"}],"monitorKeywords":["목포대","재심사","무안청사","국립의대","소송"],"sortOrder":21},{"legacyKey":"seed-bidaewee-20260905","date":"2026.09.05","category":"비대위 활동","title":"청와대 앞 재심사 촉구와 삭발 행동","summary":"목포·서남권 지역 정치인과 목포대 교수 등 참가자들이 청와대 앞에서 후보대학 선정 재심사를 요구했고 일부 참가자들이 삭발했다. 이후 지역사회 집회와 비상대책 활동이 이어졌다.","evidence":"언론보도","links":[{"label":"청와대 앞 재심사 촉구·삭발 행동 관련 보도","source":"연합뉴스","url":"https://www.yna.co.kr/amp/view/AKR20260914107500054"}],"media":[],"monitorKeywords":["청와대","삭발","재심사","목포대","서남권"],"sortOrder":22},{"legacyKey":"seed-bidaewee-20260907","date":"2026.09.07","category":"비대위 활동","title":"목포 평화광장 서남권 총궐기대회","summary":"서남권 의대 비상대책 활동에 참여한 시민들이 목포 평화광장에 모여 후보대학 선정 과정의 공개와 재검증을 요구했다. 보도에는 목포·무안·신안·영암·해남·진도·완도 등 서남권 주민과 시민사회가 참여한 것으로 전해졌다.","evidence":"현장보도","links":[{"label":"서남권 대규모 총궐기 보도","source":"목포MBC","url":"https://www.mpmbc.co.kr/NewsArticle/1535848"},{"label":"평화광장 총궐기 현장보도","source":"더파워","url":"https://www.thepowernews.co.kr/view.php?ud=202609072141157121caa2b7671d_7"}],"media":[{"type":"photo","label":"목포 평화광장 총궐기 현장 사진","source":"더파워","date":"2026-09-07","url":"https://www.thepowernews.co.kr/view.php?ud=202609072141157121caa2b7671d_7"}],"monitorKeywords":["평화광장","총궐기","서남권","재검증","목포대"],"sortOrder":23},{"legacyKey":"seed-bidaewee-20260908","date":"2026.09.08","category":"비대위 활동","title":"전남광주특별시의회 본회의장 앞 항의","summary":"서남권 의대 비상대책위원회 관계자와 시민들은 전남광주통합특별시의회 본회의가 열린 날 후보대학 선정 과정의 공개와 소통을 요구하며 현장에서 항의했다.","evidence":"언론보도","links":[{"label":"특별시의회 본회의장 앞 항의 보도","source":"쿠키뉴스","url":"https://www.kukinews.com/article/view/kuk202609080075"}],"media":[{"type":"photo","label":"특별시의회 현장 사진","source":"쿠키뉴스","date":"2026-09-08","url":"https://www.kukinews.com/article/view/kuk202609080075"}],"monitorKeywords":["특별시의회","민형배","비상대책위원회","심사결과","소통"],"sortOrder":24},{"legacyKey":"seed-bidaewee-20260909","date":"2026.09.09","category":"비대위 활동","title":"교육부 앞 공동 기자회견·건의서 및 공개서한 전달","summary":"서남권 의대 비상대책위원회와 목포대학교 교수평의회는 세종시 교육부 앞에서 공동 기자회견을 열고 후보대학 추천 절차의 중단과 객관적 재검증을 요구했다. 관련 건의서와 교육부 장관 대상 공개서한 전달도 진행됐다.","evidence":"언론보도·비대위 보도자료","links":[{"label":"교육부 재검증 요구 기자회견 보도","source":"전자신문","url":"https://www.etnews.com/20260909000413"}],"media":[],"monitorKeywords":["교육부","공동 기자회견","건의서","공개서한","재검증"],"sortOrder":25},{"legacyKey":"seed-bidaewee-20260914","date":"2026.09.14","category":"비대위 활동","title":"목포대 학생 광주청사 피켓 시위","summary":"목포대 총학생회와 단과대 학생회 참가자들이 전남광주통합특별시 광주청사 앞에서 후보대학 심사 과정의 재검토와 자료 공개를 요구하는 피켓 시위를 진행했다. 비대위 활동과 병행된 대학 구성원 연대 행동으로 기록한다.","evidence":"언론보도","links":[{"label":"목포대 학생 광주청사 피켓 시위 보도","source":"연합뉴스","url":"https://www.yna.co.kr/amp/view/AKR20260914107500054"}],"media":[{"type":"photo","label":"목포대 학생 광주청사 피켓 시위 사진","source":"연합뉴스","date":"2026-09-14","url":"https://www.yna.co.kr/amp/view/AKR20260914107500054"}],"monitorKeywords":["광주청사","총학생회","피켓","재검토","목포대"],"sortOrder":26},{"legacyKey":"seed-bidaewee-20260921","date":"2026.09.21","category":"비대위 활동","title":"국회·민주당사·청와대 상경투쟁","summary":"서남권 의대 비상대책위원회는 시민 40여 명이 참여한 상경투쟁을 진행했다. 국회 소통관 기자회견, 국회 정문 앞 호소, 더불어민주당사 앞 기자회견과 항의서한 전달, 청와대 앞 기자회견과 대통령 공개서한 전달이 진행됐다고 비대위 보도자료와 관련 보도가 전했다.","evidence":"비대위 보도자료·언론보도","links":[{"label":"상경투쟁 보도자료","source":"서남권 의대 비상대책위원회","url":"https://dudlsen.tistory.com/2263"},{"label":"국회 기자회견 보도","source":"청년의사","url":"https://www.docdocdoc.co.kr/news/articleView.html?idxno=3042961"}],"media":[{"type":"photo","label":"국회 기자회견 사진이 포함된 보도","source":"청년의사 · 사진출처 국회인터넷의사중계시스템","date":"2026-09-21","url":"https://www.docdocdoc.co.kr/news/articleView.html?idxno=3042961"}],"monitorKeywords":["국회","민주당사","청와대","상경투쟁","공개서한"],"sortOrder":27},{"legacyKey":"seed-bidaewee-20260922","date":"2026.09.22","category":"비대위 활동","title":"광주지법 기자회견·차량행진·제4차 서남권 시민대회","summary":"서남권 의대 비상대책위원회는 광주지방법원 앞에서 집행정지 관련 기자회견을 연 뒤 목포에서 차량 약 70대가 참여한 도심 행진을 진행했다. 이어 목포 평화광장에서 제4차 서남권 시민대회를 열어 심사자료 공개와 독립적 재검증, 교육부 후속 절차 중단 등을 요구했다.","evidence":"언론보도","links":[{"label":"집행정지 첫 심문·차량행진·시민대회 보도","source":"뉴시스","url":"https://www.newsis.com/view/NISX20260922_0003800353"},{"label":"차량행진·총궐기 보도","source":"한국경제","url":"https://www.hankyung.com/article/202609221413h"}],"media":[{"type":"photo","label":"서남권 의대 비대위 차량행진 현장 사진","source":"뉴시스","date":"2026-09-22","url":"https://www.newsis.com/view/NISX20260922_0003800353"}],"monitorKeywords":["광주지법","차량행진","평화광장","시민대회","집행정지"],"sortOrder":28}];
 const CONTENT_STATES=new Set(['candidate','published','rejected']);
 const CONTENT_CATEGORIES=new Set(['official','news']);
@@ -121,6 +125,9 @@ async function ensurePublicContentSchema(db){
     links_json TEXT NOT NULL DEFAULT '[]',
     media_json TEXT NOT NULL DEFAULT '[]',
     monitor_keywords_json TEXT NOT NULL DEFAULT '[]',
+    record_scope TEXT NOT NULL DEFAULT 'news',
+    committee_kind TEXT NOT NULL DEFAULT '',
+    committee_related INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'published',
     sort_order INTEGER NOT NULL DEFAULT 0,
     created_by TEXT NOT NULL DEFAULT '',
@@ -130,7 +137,7 @@ async function ensurePublicContentSchema(db){
   const repair=[
     ['seonammedi_notices','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','body',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','status',"TEXT NOT NULL DEFAULT 'draft'"],['seonammedi_notices','pinned','INTEGER NOT NULL DEFAULT 0'],['seonammedi_notices','published_at','TEXT'],['seonammedi_notices','image_key',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','image_type',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','image_keys_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_notices','image_types_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_notices','notice_kind',"TEXT NOT NULL DEFAULT 'notice'"],['seonammedi_notices','featured','INTEGER NOT NULL DEFAULT 0'],['seonammedi_notices','event_start','TEXT'],['seonammedi_notices','event_end','TEXT'],['seonammedi_notices','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_notices','updated_at',"TEXT NOT NULL DEFAULT ''"],
     ['seonammedi_channels','platform',"TEXT NOT NULL DEFAULT 'other'"],['seonammedi_channels','name',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','url',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','category',"TEXT NOT NULL DEFAULT 'other'"],['seonammedi_channels','official','INTEGER NOT NULL DEFAULT 0'],['seonammedi_channels','visible','INTEGER NOT NULL DEFAULT 1'],['seonammedi_channels','sort_order','INTEGER NOT NULL DEFAULT 0'],['seonammedi_channels','note',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_channels','updated_at',"TEXT NOT NULL DEFAULT ''"],
-    ['seonammedi_timeline','legacy_key','TEXT'],['seonammedi_timeline','event_date',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','category',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','summary',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','evidence',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','links_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','media_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','monitor_keywords_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','status',"TEXT NOT NULL DEFAULT 'published'"],['seonammedi_timeline','sort_order','INTEGER NOT NULL DEFAULT 0'],['seonammedi_timeline','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','updated_at',"TEXT NOT NULL DEFAULT ''"]
+    ['seonammedi_timeline','legacy_key','TEXT'],['seonammedi_timeline','event_date',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','category',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','title',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','summary',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','evidence',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','links_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','media_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','monitor_keywords_json',"TEXT NOT NULL DEFAULT '[]'"],['seonammedi_timeline','record_scope',"TEXT NOT NULL DEFAULT 'news'"],['seonammedi_timeline','committee_kind',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','committee_related','INTEGER NOT NULL DEFAULT 0'],['seonammedi_timeline','status',"TEXT NOT NULL DEFAULT 'published'"],['seonammedi_timeline','sort_order','INTEGER NOT NULL DEFAULT 0'],['seonammedi_timeline','created_by',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','created_at',"TEXT NOT NULL DEFAULT ''"],['seonammedi_timeline','updated_at',"TEXT NOT NULL DEFAULT ''"]
   ];
   for(const [table,column,definition] of repair)await addColumnIfMissing(db,table,column,definition);
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_seonammedi_notices_public ON seonammedi_notices(status,pinned,published_at,updated_at)').run();
@@ -263,8 +270,18 @@ async function ensureSchema(db){
     VALUES('seonammedi','서남권 국립의대 소통센터','ekodi.kr/seonammedi','active',CURRENT_TIMESTAMP);`);
 }
 
+async function ensureTimelineScope(db){
+  await addColumnIfMissing(db,'seonammedi_timeline','record_scope',"TEXT NOT NULL DEFAULT 'news'");
+  await addColumnIfMissing(db,'seonammedi_timeline','committee_kind',"TEXT NOT NULL DEFAULT ''");
+  await addColumnIfMissing(db,'seonammedi_timeline','committee_related','INTEGER NOT NULL DEFAULT 0');
+}
 async function ensureTimelineSeed(db){
   const seedKey='timeline-v1';
+  await ensureTimelineScope(db);
+  // Tombstones protect administrator deletions from automatic seed restoration.
+  await db.prepare(`CREATE TABLE IF NOT EXISTS seonammedi_timeline_deleted (
+    legacy_key TEXT PRIMARY KEY,deleted_by TEXT NOT NULL,deleted_at TEXT NOT NULL
+  )`).run();
   // Public timeline requests can reach this function without ensureSchema().
   // Create the seed-state table here so recovery never fails on a fresh/partial DB.
   await db.prepare(`CREATE TABLE IF NOT EXISTS seonammedi_seed_state (
@@ -276,19 +293,21 @@ async function ensureTimelineSeed(db){
   // cleared, partially migrated, or created after the marker was written.
   const now=new Date().toISOString();
   for(const item of TIMELINE_SEED){
+    const suppressed=await db.prepare('SELECT legacy_key FROM seonammedi_timeline_deleted WHERE legacy_key=?').bind(item.legacyKey).first();
+    if(suppressed)continue;
     const existing=await db.prepare('SELECT id,created_by FROM seonammedi_timeline WHERE legacy_key=? LIMIT 1').bind(item.legacyKey).first().catch(()=>null);
     if(existing?.id){
       if(String(existing.created_by||'')!=='system-seed')continue;
       await db.prepare(`UPDATE seonammedi_timeline SET
-        event_date=?,category=?,title=?,summary=?,evidence=?,links_json=?,media_json=?,monitor_keywords_json=?,status='published',sort_order=?,updated_at=?
+        event_date=?,category=?,title=?,summary=?,evidence=?,links_json=?,media_json=?,monitor_keywords_json=?,record_scope=?,committee_kind=?,status='published',sort_order=?,updated_at=?
         WHERE id=?`)
-        .bind(item.date,item.category,item.title,item.summary,item.evidence,JSON.stringify(item.links||[]),JSON.stringify(item.media||[]),JSON.stringify(item.monitorKeywords||[]),item.sortOrder,now,existing.id).run();
+        .bind(item.date,item.category,item.title,item.summary,item.evidence,JSON.stringify(item.links||[]),JSON.stringify(item.media||[]),JSON.stringify(item.monitorKeywords||[]),VERIFIED_COMMITTEE_SEEDS[item.legacyKey]?'committee':'news',VERIFIED_COMMITTEE_SEEDS[item.legacyKey]||'',item.sortOrder,now,existing.id).run();
       continue;
     }
     await db.prepare(`INSERT INTO seonammedi_timeline(
-      legacy_key,event_date,category,title,summary,evidence,links_json,media_json,monitor_keywords_json,status,sort_order,created_by,created_at,updated_at
-    ) VALUES(?,?,?,?,?,?,?,?,?,'published',?,'system-seed',?,?)`)
-      .bind(item.legacyKey,item.date,item.category,item.title,item.summary,item.evidence,JSON.stringify(item.links||[]),JSON.stringify(item.media||[]),JSON.stringify(item.monitorKeywords||[]),item.sortOrder,now,now).run();
+      legacy_key,event_date,category,title,summary,evidence,links_json,media_json,monitor_keywords_json,record_scope,committee_kind,status,sort_order,created_by,created_at,updated_at
+    ) VALUES(?,?,?,?,?,?,?,?,?,? ,?,'published',?,'system-seed',?,?)`)
+      .bind(item.legacyKey,item.date,item.category,item.title,item.summary,item.evidence,JSON.stringify(item.links||[]),JSON.stringify(item.media||[]),JSON.stringify(item.monitorKeywords||[]),VERIFIED_COMMITTEE_SEEDS[item.legacyKey]?'committee':'news',VERIFIED_COMMITTEE_SEEDS[item.legacyKey]||'',item.sortOrder,now,now).run();
   }
   await db.prepare('INSERT OR REPLACE INTO seonammedi_seed_state(seed_key,applied_at) VALUES(?,?)').bind(seedKey,now).run();
 }
@@ -883,11 +902,13 @@ async function deleteNotice(env,auth,id){
 
 const parseJsonArray=value=>{try{const v=JSON.parse(String(value||'[]'));return Array.isArray(v)?v:[]}catch{return[]}};
 function timelineRow(row,admin=false){
-  const item={id:Number(row.id),date:row.event_date,category:row.category,title:row.title,summary:row.summary||'',evidence:row.evidence||'',links:parseJsonArray(row.links_json),media:parseJsonArray(row.media_json),monitorKeywords:parseJsonArray(row.monitor_keywords_json),sortOrder:Number(row.sort_order||0)};
+  const confirmedSeed=row.created_by==='system-seed'?VERIFIED_COMMITTEE_SEEDS[row.legacy_key]:null;
+  const item={id:Number(row.id),date:row.event_date,category:row.category,title:row.title,summary:row.summary||'',evidence:row.evidence||'',links:parseJsonArray(row.links_json),media:parseJsonArray(row.media_json),monitorKeywords:parseJsonArray(row.monitor_keywords_json),sortOrder:Number(row.sort_order||0),recordScope:row.record_scope==='committee'||confirmedSeed?'committee':'news',committeeKind:row.committee_kind||confirmedSeed||'',committeeRelated:row.record_scope!=='committee'&&Number(row.committee_related||0)===1};
   if(admin){item.status=row.status;item.createdBy=row.created_by||'';item.createdAt=row.created_at;item.updatedAt=row.updated_at}
   return item;
 }
 async function listPublicTimeline(env){
+  await ensureTimelineScope(env.DB);
   const rows=await env.DB.prepare("SELECT * FROM seonammedi_timeline WHERE status='published' ORDER BY sort_order ASC,id ASC LIMIT 300").all();
   return json({ok:true,items:(rows.results||[]).map(row=>timelineRow(row,false))});
 }
@@ -904,30 +925,47 @@ function timelineInput(body,existing={}){
   const links=Array.isArray(body?.links)?body.links:parseJsonArray(existing.links_json);
   const media=Array.isArray(body?.media)?body.media:parseJsonArray(existing.media_json);
   const monitorKeywords=Array.isArray(body?.monitorKeywords)?body.monitorKeywords:parseJsonArray(existing.monitor_keywords_json);
+  const scope=clean(body?.recordScope??existing.record_scope??'news',24);
+  if(!['news','committee'].includes(scope))return null;
+  const committeeKind=scope==='committee'?clean(body?.committeeKind??existing.committee_kind??'기타 활동',60):'';
+  const committeeRelated=scope==='news'&&safeBool(body?.committeeRelated??existing.committee_related??false)?1:0;
   if(!date||!category||!title)return null;
-  return{date,category,title,summary,evidence,status,sortOrder,links,media,monitorKeywords};
+  return{date,category,title,summary,evidence,status,sortOrder,links,media,monitorKeywords,recordScope:scope,committeeKind,committeeRelated};
 }
 async function createTimeline(request,env,auth){
   if(!can(auth,TIMELINE_CAP))return json({ok:false,error:'timeline_forbidden'},403);
+  await ensureTimelineScope(env.DB);
   const body=await request.json().catch(()=>null),value=timelineInput(body);if(!value)return json({ok:false,error:'invalid_timeline'},400);
   const now=new Date().toISOString();
-  const result=await env.DB.prepare(`INSERT INTO seonammedi_timeline(legacy_key,event_date,category,title,summary,evidence,links_json,media_json,monitor_keywords_json,status,sort_order,created_by,created_at,updated_at)
-    VALUES(NULL,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(value.date,value.category,value.title,value.summary,value.evidence,JSON.stringify(value.links),JSON.stringify(value.media),JSON.stringify(value.monitorKeywords),value.status,value.sortOrder,auth.email,now,now).run();
+  const result=await env.DB.prepare(`INSERT INTO seonammedi_timeline(legacy_key,event_date,category,title,summary,evidence,links_json,media_json,monitor_keywords_json,record_scope,committee_kind,committee_related,status,sort_order,created_by,created_at,updated_at)
+    VALUES(NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(value.date,value.category,value.title,value.summary,value.evidence,JSON.stringify(value.links),JSON.stringify(value.media),JSON.stringify(value.monitorKeywords),value.recordScope,value.committeeKind,value.committeeRelated,value.status,value.sortOrder,auth.email,now,now).run();
   const id=Number(result?.meta?.last_row_id||0);await audit(env,auth,'create','timeline',id,{title:value.title,status:value.status,category:value.category});return json({ok:true,id},201);
 }
 async function updateTimeline(request,env,auth,id){
   if(!can(auth,TIMELINE_CAP))return json({ok:false,error:'timeline_forbidden'},403);
+  await ensureTimelineScope(env.DB);
   const existing=await env.DB.prepare('SELECT * FROM seonammedi_timeline WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
   const body=await request.json().catch(()=>null),value=timelineInput(body,existing);if(!value)return json({ok:false,error:'invalid_timeline'},400);
   const now=new Date().toISOString();
-  await env.DB.prepare(`UPDATE seonammedi_timeline SET event_date=?,category=?,title=?,summary=?,evidence=?,links_json=?,media_json=?,monitor_keywords_json=?,status=?,sort_order=?,updated_at=? WHERE id=?`)
-    .bind(value.date,value.category,value.title,value.summary,value.evidence,JSON.stringify(value.links),JSON.stringify(value.media),JSON.stringify(value.monitorKeywords),value.status,value.sortOrder,now,id).run();
+  await env.DB.prepare(`UPDATE seonammedi_timeline SET event_date=?,category=?,title=?,summary=?,evidence=?,links_json=?,media_json=?,monitor_keywords_json=?,record_scope=?,committee_kind=?,committee_related=?,status=?,sort_order=?,updated_at=?,
+      created_by=CASE WHEN created_by='system-seed' THEN ? ELSE created_by END WHERE id=?`)
+    .bind(value.date,value.category,value.title,value.summary,value.evidence,JSON.stringify(value.links),JSON.stringify(value.media),JSON.stringify(value.monitorKeywords),value.recordScope,value.committeeKind,value.committeeRelated,value.status,value.sortOrder,now,auth.email,id).run();
   await audit(env,auth,'update','timeline',id,{title:value.title,status:value.status,category:value.category});return json({ok:true,id});
 }
 async function deleteTimeline(env,auth,id){
   if(!can(auth,TIMELINE_CAP))return json({ok:false,error:'timeline_forbidden'},403);
-  const existing=await env.DB.prepare('SELECT id,title FROM seonammedi_timeline WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
-  await env.DB.prepare('DELETE FROM seonammedi_timeline WHERE id=?').bind(id).run();await audit(env,auth,'delete','timeline',id,{title:existing.title});return json({ok:true,id});
+  const existing=await env.DB.prepare('SELECT id,title,legacy_key,created_by FROM seonammedi_timeline WHERE id=?').bind(id).first();
+  if(!existing)return json({ok:false,error:'not_found'},404);
+  if(existing.legacy_key&&existing.created_by==='system-seed'){
+    await env.DB.prepare(`CREATE TABLE IF NOT EXISTS seonammedi_timeline_deleted (
+      legacy_key TEXT PRIMARY KEY,deleted_by TEXT NOT NULL,deleted_at TEXT NOT NULL
+    )`).run();
+    await env.DB.prepare('INSERT OR IGNORE INTO seonammedi_timeline_deleted(legacy_key,deleted_by,deleted_at) VALUES(?,?,?)')
+      .bind(existing.legacy_key,auth.email,new Date().toISOString()).run();
+  }
+  await env.DB.prepare('DELETE FROM seonammedi_timeline WHERE id=?').bind(id).run();
+  await audit(env,auth,'delete','timeline',id,{title:existing.title,legacyKey:existing.legacy_key||null});
+  return json({ok:true,id});
 }
 
 function voiceRow(row){return{id:Number(row.id),category:row.category,displayName:row.display_name||'',contact:row.contact||'',message:row.message||'',publicConsent:Boolean(row.public_consent),privacyConsent:Boolean(row.privacy_consent),status:VOICE_STATES.has(row.review_status)?row.review_status:'received',createdAt:row.created_at,updatedAt:row.updated_at}}
@@ -966,6 +1004,50 @@ async function deleteAdminVoiceReply(env,auth,voiceId,replyId){
   const existing=await env.DB.prepare('SELECT id,voice_id,display_name FROM seonammedi_civic_voice_replies WHERE id=? AND voice_id=?').bind(replyId,voiceId).first();if(!existing)return json({ok:false,error:'not_found'},404);
   await env.DB.prepare('DELETE FROM seonammedi_civic_voice_replies WHERE id=? AND voice_id=?').bind(replyId,voiceId).run();
   await audit(env,auth,'delete','civic_voice_reply',replyId,{voiceId,displayName:existing.display_name||''});return json({ok:true,id:replyId,voiceId});
+}
+
+async function importTimelineFromLink(request,env,auth,{preview=false}={}){
+  if(!can(auth,TIMELINE_CAP))return json({ok:false,error:'timeline_forbidden'},403);
+  await ensureTimelineScope(env.DB);
+  const body=await request.json().catch(()=>null);
+  const sourceUrl=String(body?.url||'').trim();
+  if(!sourceUrl||sourceUrl.length>2048)return json({ok:false,error:'invalid_source_url'},400);
+  let item;
+  try{item=await fetchSeonamMediLinkPreview(sourceUrl)}
+  catch(error){
+    const code=String(error?.message||'source_unavailable');
+    const badInput=/^(?:invalid_source_url|unsafe_source_redirect|source_redirect_loop|source_too_many_redirects)$/.test(code);
+    return json({ok:false,error:code},badInput?400:422);
+  }
+  if(preview)return json({ok:true,item});
+  if(!item.ready)return json({ok:false,error:!item.relevant?'source_not_relevant':'source_date_unavailable',item},422);
+  const status=String(body?.status)==='draft'?'draft':'published';
+  const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(item.sourceUrl));
+  const legacyKey='link-'+[...new Uint8Array(hash)].map(byte=>byte.toString(16).padStart(2,'0')).join('').slice(0,48);
+  const previous=await env.DB.prepare('SELECT id,status FROM seonammedi_timeline WHERE legacy_key=? LIMIT 1').bind(legacyKey).first();
+  if(previous)return json({ok:true,id:Number(previous.id),duplicate:true,status:previous.status,item},200);
+  const now=new Date().toISOString();
+  const links=[{url:item.sourceUrl,label:item.publisher+' 원문',source:item.publisher}];
+  const result=await env.DB.prepare(`INSERT OR IGNORE INTO seonammedi_timeline
+    (legacy_key,event_date,category,title,summary,evidence,links_json,media_json,monitor_keywords_json,record_scope,committee_kind,status,sort_order,created_by,created_at,updated_at)
+    VALUES(?,?,?,?,?,?,?,'[]','[]','news','',?,0,?,?,?)`)
+    .bind(legacyKey,item.date,item.category,item.title,item.summary,item.publisher+' · 원문 내용 확인',JSON.stringify(links),status,auth.email,now,now).run();
+  const id=Number(result?.meta?.last_row_id||0);
+  if(!id){
+    const concurrent=await env.DB.prepare('SELECT id,status FROM seonammedi_timeline WHERE legacy_key=?').bind(legacyKey).first();
+    return json({ok:true,id:Number(concurrent?.id||0),duplicate:true,status:concurrent?.status||'draft',item});
+  }
+  await audit(env,auth,'link_import','timeline',id,{url:item.sourceUrl,status,publisher:item.publisher});
+  return json({ok:true,id,status,item},201);
+}
+
+async function hideAutoTimelineSource(env,auth,id){
+  if(!(can(auth,TIMELINE_CAP)||can(auth,CONTENT_CAP)))return json({ok:false,error:'timeline_forbidden'},403);
+  const source=await env.DB.prepare('SELECT id,title,review_state FROM seonammedi_monitor_items WHERE id=?').bind(id).first();
+  if(!source)return json({ok:false,error:'not_found'},404);
+  await env.DB.prepare("UPDATE seonammedi_monitor_items SET review_state='rejected' WHERE id=?").bind(id).run();
+  await audit(env,auth,'hide','monitored_timeline_source',id,{title:source.title,previousState:source.review_state});
+  return json({ok:true,id,hidden:true});
 }
 
 async function listAdminContent(env,auth){
@@ -1176,6 +1258,10 @@ export async function handleSeonamMediAdminApi(request,env){
   let match=url.pathname.match(/^\/api\/seonammedi\/admin\/notices\/(\d+)$/);
   if(match&&request.method==='PUT')return updateNotice(request,env,auth,Number(match[1]));
   if(match&&request.method==='DELETE')return deleteNotice(env,auth,Number(match[1]));
+  const monitoredSource=url.pathname.match(/^\/api\/seonammedi\/admin\/timeline\/auto-source\/(\d+)$/);
+  if(monitoredSource&&request.method==='DELETE')return hideAutoTimelineSource(env,auth,Number(monitoredSource[1]));
+  if(url.pathname===PREFIX+'/admin/timeline/link-preview'&&request.method==='POST')return importTimelineFromLink(request,env,auth,{preview:true});
+  if(url.pathname===PREFIX+'/admin/timeline/link-import'&&request.method==='POST')return importTimelineFromLink(request,env,auth);
   if(url.pathname===PREFIX+'/admin/timeline'&&request.method==='GET')return listAdminTimeline(env,auth);
   if(url.pathname===PREFIX+'/admin/timeline'&&request.method==='POST')return createTimeline(request,env,auth);
   let timelineMatch=url.pathname.match(/^\/api\/seonammedi\/admin\/timeline\/(\d+)$/);

@@ -8,7 +8,7 @@ const PERSON_SCOPED_SITES=new Set(['social','energy']);
 const params=new URLSearchParams(location.search);
 const site=String(params.get('site')||'').trim().toLowerCase();
 const requested=String(params.get('workspace')||'').trim();
-const serviceDefaults={cgma:'https://ekodi.kr/cgma/',mission:'https://ekodi.kr/ekodimission/'};
+const serviceDefaults={cgma:'https://ekodi.kr/cgma/',mission:'https://ekodi.kr/ekodimission/',church:'https://ekodi.kr/ekodichurch/'};
 const serviceOrigins={
   cgma:['https://ekodi.kr','https://cgma.or.kr','https://cgma.ekodi.kr'],
   marketing:['https://marketing.ekodi.kr','https://jadam.ekodi.kr','https://pizzamaru.ekodi.kr','https://yogurt.ekodi.kr','https://yogurtpurple.ekodi.kr'],
@@ -17,7 +17,7 @@ const serviceOrigins={
   mall:['https://ekodi.kr'],
   pay:['https://pay.ekodi.kr'],
   books:['https://books.ekodi.kr'],
-  church:['https://church.ekodi.kr'],
+  church:['https://ekodi.kr'],
   lab:['https://lab.ekodi.kr'],
   mission:['https://ekodi.kr'],
   community:['https://ekodi.kr'],
@@ -31,7 +31,7 @@ const fallback=serviceDefaults[site]||`${origins[0]}/`;
 if(!origins.length||!requested||requested.length>180||!/^[a-z]+:[a-zA-Z0-9:_-]+$/.test(requested))throw new Error('target_workspace_not_applicable');
 
 function safeReturn(raw){
-  try{const target=new URL(raw||fallback);const platformPath=target.origin==='https://ekodi.kr'&&((site==='cgma'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/')))||(site==='mission'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/'))));return target.protocol==='https:'&&((origins.includes(target.origin)&&target.origin!=='https://ekodi.kr')||platformPath)?target.href:fallback;}
+  try{const target=new URL(raw||fallback);const platformPath=target.origin==='https://ekodi.kr'&&((site==='cgma'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/')))||(site==='mission'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')))||(site==='church'&&(target.pathname==='/ekodichurch'||target.pathname.startsWith('/ekodichurch/'))));return target.protocol==='https:'&&((origins.includes(target.origin)&&target.origin!=='https://ekodi.kr')||platformPath)?target.href:fallback;}
   catch{return fallback;}
 }
 const returnTo=safeReturn(params.get('return_to'));

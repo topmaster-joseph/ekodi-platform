@@ -74,6 +74,8 @@ const COMMAND_POLICIES = Object.freeze({
   'computer.process.list': { risk: 'observe' },
   'computer.agent.status': { risk: 'observe' },
   'computer.desktop.probe': { risk: 'observe' },
+  'computer.hyperv.preflight': { risk: 'observe' },
+  'computer.hyperv.enable': { risk: 'privileged', confirm: true },
   'computer.desktop.canary': { risk: 'maintain', confirm: true },
   'computer.desktop.guest.canary': { risk: 'maintain', confirm: true },
   'computer.desktop.ui.canary': { risk: 'maintain', confirm: true },
@@ -97,6 +99,7 @@ const COMMAND_POLICIES = Object.freeze({
   'software.localai.verify': { risk: 'observe' },
   'computer.browser.canary': { risk: 'maintain', confirm: true },
   'computer.browser.execute': { risk: 'maintain', confirm: true, payload: 'background-browser-task' },
+  'computer.browser.pr.observe': { risk: 'maintain', confirm: true, payload: 'github-pr-readonly' },
   'remote_desktop.recovery.enable': { risk: 'maintain', confirm: true },
   'remote_desktop.recovery.disable': { risk: 'maintain', confirm: true },
   'remote_desktop.recovery.run': { risk: 'maintain', confirm: true },
@@ -124,6 +127,7 @@ const COMMAND_CAPABILITIES = Object.freeze({
   'computer.desktop.session.canary': 'isolatedDesktopUiCanary',
   'computer.desktop.session.execute': 'isolatedDesktop',
   'computer.browser.execute': 'backgroundBrowser',
+  'computer.browser.pr.observe': 'backgroundBrowser',
   'network.diagnose': 'networkDiagnostics',
   'printers.diagnose': 'printerDiagnostics',
   'printing.image_preview.status': 'imagePrintPreview',
@@ -394,6 +398,21 @@ function sanitizeCommandPayload(type, rawPayload) {
       preserveUserOwnedSurfaces:true,
     };
   }
+  if (policy.payload === 'github-pr-readonly') {
+    const rawPr=rawPayload?.pr;
+    const n=Number(rawPr);
+    if(!Number.isSafeInteger(n)||n<1||n>999999||String(rawPr)!==String(n)) throw new Error('BROWSER_GITHUB_PR_INVALID');
+    return {
+      pr:n,
+      executionMode:'background-only',
+      createUserBrowserTab:false,
+      closeOwnedSurfaceOnComplete:true,
+      closeOwnedSurfaceOnAuthRequired:true,
+      preserveUserOwnedSurfaces:true,
+      mutationMode:'read-only',
+      loginMode:'never',
+    };
+  }
   if (policy.payload === 'camera-stream') {
     const externalId=safeText(rawPayload?.externalId,100).toLowerCase();
     const sessionId=safeText(rawPayload?.sessionId,80).toLowerCase();
@@ -520,8 +539,11 @@ function deviceHealth(settings = {}, diagnostics = {}) {
   };
 }
 
-function summarizeCommandResult(result = {}) {
+function summarizeCommandResult(result = {}, commandType = '') {
   const summary = {};
+  // Expose only a bounded version for approved native Agent self-update receipts.
+  if (commandType === 'agent.self_update' && result?.version !== undefined)
+    summary.version = safeText(result.version, 32);
   const finiteNumber = value => value === null || value === undefined || value === ''
     ? null
     : (Number.isFinite(Number(value)) ? Number(value) : null);
@@ -746,6 +768,25 @@ function summarizeCommandResult(result = {}) {
       checkedAt: safeText(result.desktopCanary.checkedAt, 64),
     };
   }
+  if (result.hyperVPreparation && typeof result.hyperVPreparation === 'object') {
+    const proof = result.hyperVPreparation;
+    summary.hyperVPreparation = {
+      schemaVersion: proof.schemaVersion === 1 ? 1 : 0,
+      targetAlias: proof.targetAlias === 'user2' ? 'user2' : '',
+      firmwareVirtualizationEnabled: proof.firmwareVirtualizationEnabled === true,
+      hyperVState: ['Enabled','Disabled','EnablePending','DisablePending','Unavailable'].includes(proof.hyperVState)
+        ? proof.hyperVState : 'unknown',
+      hyperVModuleAvailable: proof.hyperVModuleAvailable === true,
+      baseVmPresent: proof.baseVmPresent === true,
+      administrator: proof.administrator === true,
+      featureEnableRequested: proof.featureEnableRequested === true,
+      featureChanged: proof.featureChanged === true,
+      rebootPerformed: proof.rebootPerformed === true,
+      rebootMayBeRequired: proof.rebootMayBeRequired === true,
+      guestExecutionAuthorized: proof.guestExecutionAuthorized === true,
+      checkedAt: safeText(proof.checkedAt, 64),
+    };
+  }
   if (result.desktopProbe && typeof result.desktopProbe === 'object') {
     summary.desktopProbe = {
       ok: result.desktopProbe.ok === true,
@@ -851,6 +892,30 @@ function summarizeCommandResult(result = {}) {
       isolatedDesktopReady: result.agent.isolatedDesktopReady === true,
       minimizedWindowCountsAsIsolation: result.agent.minimizedWindowCountsAsIsolation === true,
     };
+    const audit = result.agent.browserTaskAudit;
+    if (audit && typeof audit === 'object') {
+      const allow = new Set(['computer.browser.canary','computer.browser.execute','computer.browser.pr.observe']);
+      const states = new Set(['running','completed','auth_required','cleanup_unverified','interrupted_unverified','failed']);
+      const entries = Array.isArray(audit.recent) ? audit.recent.slice(0,20) : [];
+      summary.agent.browserTaskAudit = {
+        checkedAt: safeText(audit.checkedAt,64),
+        count: entries.length,
+        recent: entries.filter(item => allow.has(String(item?.commandType || ''))).map(item => ({
+          commandKey: /^[a-f0-9]{64}$/.test(String(item.commandKey || '')) ? item.commandKey.slice(0,12) : '',
+          commandType: safeText(item.commandType,48),
+          launcher: item.launcher === 'ekodi-device-agent' ? 'ekodi-device-agent' : 'unknown',
+          state: states.has(String(item.state || '')) ? item.state : 'cleanup_unverified',
+          startedAt: safeText(item.startedAt,64),
+          finishedAt: safeText(item.finishedAt,64),
+          browser: ['chrome.exe','msedge.exe'].includes(String(item.browser || '').toLowerCase()) ? String(item.browser).toLowerCase() : '',
+          cleanupVerified: item.cleanupVerified === true,
+          ownedBrowserProcessId: Math.max(0, Math.trunc(Number(item.ownedBrowserProcessId) || 0)),
+          ownedTabId: /^[a-f0-9]{1,64}$/i.test(String(item.ownedTabId || '')) ? String(item.ownedTabId) : '',
+          ownedTabsObserved: Math.min(20, Math.max(0, Math.trunc(Number(item.ownedTabsObserved) || 0))),
+          ownedTabsClosed: Math.min(20, Math.max(0, Math.trunc(Number(item.ownedTabsClosed) || 0))),
+        })),
+      };
+    }
   }
   if (result.system && typeof result.system === 'object') {
     summary.system = {
@@ -995,7 +1060,7 @@ async function listDevices(env) {
       issuedAt: command.issued_at,
       claimedAt: command.claimed_at,
       completedAt: command.completed_at,
-      result: summarizeCommandResult(parseJson(command.result_json)),
+      result: summarizeCommandResult(parseJson(command.result_json), command.command_type),
     });
   }
   const agentDevices = (devices.results || []).map(row => {
@@ -1619,3 +1684,5 @@ export async function handleDeviceControl(request, env) {
   if (path.startsWith(ADMIN_PREFIX)) return handleAdmin(request, env);
   return handleAgent(request, env);
 }
+
+// Protected USER2 native Hyper-V receipt projection convergence.

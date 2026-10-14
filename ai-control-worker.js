@@ -74,10 +74,17 @@ function capabilityGranted(authority,required){
 }
 async function centralAdminSession(request,env,requiredCapability='ai:read'){
   const token=bearer(request);if(!token)return null;
-  const base=(clean(env.CONTROL_API_URL)||'https://ekodi.kr').replace(/\/+$/,'');
+  // Same-zone Worker-to-Worker auth must use the authenticated Control API service binding.
+  // Public fetch('https://ekodi.kr/api/session') can fail as an intra-zone Worker subrequest.
+  // Never fall back to the public route or accept an unverified browser identity.
+  if(typeof env?.CONTROL_API?.fetch!=='function')return{error:json({error:'central_identity_unavailable'},503)};
   try{
-    const response=await fetch(`${base}/api/session`,{headers:{accept:'application/json',authorization:`Bearer ${token}`},cache:'no-store'});
-    if(!response.ok)return null;
+    const sessionRequest=new Request('https://ekodi.kr/api/session',{
+      method:'GET',headers:{accept:'application/json',authorization:`Bearer ${token}`},redirect:'manual'
+    });
+    const response=await env.CONTROL_API.fetch(sessionRequest);
+    if(response.status>=500)return{error:json({error:'central_identity_unavailable'},503)};
+    if(!response.ok)return null; // Only a definitive non-5xx central rejection can try legacy tokens.
     const data=await response.json().catch(()=>({}));
     if(data?.authenticated!==true)return null;
     const role=clean(data.role||data.authority?.role).toLowerCase();
@@ -91,7 +98,7 @@ async function centralAdminSession(request,env,requiredCapability='ai:read'){
     if(!capabilityGranted(data.authority,requiredCapability)&&role!=='super_admin')return{error:json({error:'capability_required',capability:requiredCapability},403)};
     const email=clean(data.email).toLowerCase();if(!email)return{error:json({error:'admin_identity_missing'},403)};
     return{user:{id:email,email,role,authority:data.authority},source:'central-admin'};
-  }catch(error){console.warn('central admin session unavailable',clean(error?.message||error));return null}
+  }catch(error){console.warn('central admin session unavailable',clean(error?.message||error));return{error:json({error:'central_identity_unavailable'},503)}}
 }
 async function legacySupabaseAdmin(request,env){
   const token=bearer(request);if(!token)return{error:json({error:'authentication_required'},401)};
@@ -151,10 +158,18 @@ async function createPairing(env,email){
 }
 async function enrollNode(request,env){
   if(!dbReady(env))return json({error:'state_store_unavailable'},503);const input=await body(request)||{};const code=clean(input.code).toUpperCase();const id=safeId(input.nodeId);const name=clean(input.name).slice(0,120)||id;const providers=safeProviders(input.providers);
-  if(!code||!id||!providers.length)return json({error:'invalid_enrollment'},400);const hash=await sha256(code);const pairing=await env.DB.prepare("SELECT * FROM ai_control_node_pairings WHERE code_hash=? AND used_at='' AND expires_at>=?").bind(hash,now()).first();
-  if(!pairing)return json({error:'pairing_invalid_or_expired'},401);const token=randomToken();const stamp=now();
+  if(!code||!id||!providers.length)return json({error:'invalid_enrollment'},400);
+  const hash=await sha256(code);const stamp=now();
+  // Redeem before node creation with a conditional write. A SELECT followed by
+  // an unconditional UPDATE permits two concurrent enrollments with the same code.
+  // D1 updates are serialized; exactly one caller can change used_at from ''.
+  const redeemed=await env.DB.prepare("UPDATE ai_control_node_pairings SET used_at=? WHERE code_hash=? AND used_at='' AND expires_at>=?").bind(stamp,hash,stamp).run();
+  if(Number(redeemed?.meta?.changes??0)!==1)return json({error:'pairing_invalid_or_expired'},401);
+  // Fail closed if node insertion fails: request a fresh administrator code.
+  // Never restore or disclose a redeemed code or a node secret in error output.
+  const token=randomToken();
   await env.DB.prepare("INSERT INTO ai_control_nodes (id,name,secret_hash,providers,state,created_at,updated_at,last_seen_at) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,secret_hash=excluded.secret_hash,providers=excluded.providers,state='online',updated_at=excluded.updated_at,last_seen_at=excluded.last_seen_at").bind(id,name,await sha256(token),JSON.stringify(providers),'online',stamp,stamp,stamp).run();
-  await env.DB.prepare('UPDATE ai_control_node_pairings SET used_at=? WHERE code_hash=?').bind(stamp,hash).run();return json({ok:true,nodeId:id,nodeToken:token,providers},201);
+  return json({ok:true,nodeId:id,nodeToken:token,providers},201);
 }
 
 async function insertTask(env,task){

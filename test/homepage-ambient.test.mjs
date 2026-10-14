@@ -58,8 +58,9 @@ test('quick launch respects homepage presentation and recommends only visible se
 });
 
 test('homepage locale handling keeps Korean English Chinese and Japanese paths', () => {
-  assert.match(js, /ekodi_user_locale/);
-  assert.match(js, /ekodi\.locale/);
+  assert.match(js, /window\.EKODIUserLanguage/);
+  assert.match(js, /publishedHomepageLocale/);
+  assert.match(js, /isLocaleReady/);
   assert.match(js, /'ko-KR'/);
   assert.match(js, /'zh-CN'/);
   assert.match(js, /en:/);

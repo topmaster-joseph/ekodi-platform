@@ -55,7 +55,12 @@ Deno.serve(async req => {
     return reply(req, { error: "origin_not_allowed" }, 403);
   if (req.method === "GET" && p === "/health")
     return reply(req, { ok: true, enrollment_enabled: enabled(), version: VERSION });
-  if (!enabled()) return reply(req, { error: "singles_enrollment_not_launched" }, 503);
+  // Administrative preparation is independent of public enrollment and payment activation.
+  // Only this exact operator-scoped allowlist is reachable before launch.
+  const prelaunchAdmin = p === "/bank/admin/brokerage-readiness" && ["GET", "PUT"].includes(req.method) ||
+    p === "/bank/admin/catalog" && req.method === "GET" ||
+    /^\/bank\/admin\/catalog\/[a-z][a-z0-9_]{2,49}$/.test(p) && req.method === "PUT";
+  if (!enabled() && !prelaunchAdmin) return reply(req, { error: "singles_enrollment_not_launched" }, 503);
   const socialRoute = !["/me", "/withdraw"].includes(p);
   if (!socialRoute && !["/me", "/withdraw"].includes(p)) return reply(req, { error: "not_found" }, 404);
   if (!socialRoute && !((p === "/me" && ["GET", "PUT"].includes(req.method)) || (p === "/withdraw" && req.method === "DELETE")))

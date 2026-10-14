@@ -45,7 +45,7 @@ jobs:
       - name: Validate standalone board contract
         run: |
           node --check services/independent-board/worker.js
-          node --test test/independent-board-seonammedi.test.mjs
+          node --test test/independent-board-seonammedi.test.mjs test/seonammedi-voice-queue-positive.test.mjs test/seonammedi-voice-login-session.test.mjs test/seonammedi-voice-google-write-gate.test.mjs
 
   deploy:
     needs: validate
@@ -165,24 +165,58 @@ jobs:
           verify_contains "voices write control" 'id="writeToggle"' "$voices"
           verify_contains "voices search control" 'id="searchToggle"' "$voices"
           verify_contains "voices list" 'id="voiceList"' "$voices"
+          verify_contains "verified Google account badge" 'id="voiceAuthStatus"' "$voices"
+          verify_contains "account verification before composer" 'byId("writeToggle").onclick=async()=>{if(!await requireVoiceAccount())return' "$voices"
+          verify_contains "account verification before post submit" 'write.onsubmit=async e=>{e.preventDefault();if(!await requireVoiceAccount())return' "$voices"
+          verify_contains "authenticated session endpoint" '/board/api/auth/session' "$voices"
+          verify_contains "Google handoff preserving compose intent" 'target.searchParams.set("compose","1")' "$voices"
           verify_contains "voices active nav" 'aria-current="page" href="/board/voices">시민의견' "$voices"
-          verify_contains "finance active nav" 'aria-current="page" href="/board/finance">회계' "$finance"
+          verify_contains "finance active nav" 'href="/board/finance">회계' "$finance"
           verify_contains "finance summary" 'id="raised"' "$finance"
-          verify_contains "notices active nav" 'aria-current="page" href="/board/notices">공지' "$notices"
+          verify_contains "notices active nav" 'href="/board/notices">공지' "$notices"
           verify_contains "notices heading" 'NOTICE BOARD' "$notices"
           verify_contains "internal voices route" 'aria-current="page" href="/seonammedi/board/voices">시민의견' "$internal_voices"
-          verify_contains "internal finance route" 'aria-current="page" href="/seonammedi/board/finance">회계' "$internal_finance"
-          verify_contains "internal notices route" 'aria-current="page" href="/seonammedi/board/notices">공지' "$internal_notices"
+          verify_contains "internal finance route" 'href="/seonammedi/board/finance">회계' "$internal_finance"
+          verify_contains "internal notices route" 'href="/seonammedi/board/notices">공지' "$internal_notices"
           verify_contains "external voices slash parity" 'aria-current="page" href="/board/voices">시민의견' "$voices_slash"
-          verify_contains "external finance slash parity" 'aria-current="page" href="/board/finance">회계' "$finance_slash"
-          verify_contains "external notices slash parity" 'aria-current="page" href="/board/notices">공지' "$notices_slash"
+          verify_contains "external finance slash parity" 'href="/board/finance">회계' "$finance_slash"
+          verify_contains "external notices slash parity" 'href="/board/notices">공지' "$notices_slash"
           verify_contains "internal voices slash parity" 'aria-current="page" href="/seonammedi/board/voices">시민의견' "$internal_voices_slash"
-          verify_contains "internal finance slash parity" 'aria-current="page" href="/seonammedi/board/finance">회계' "$internal_finance_slash"
-          verify_contains "internal notices slash parity" 'aria-current="page" href="/seonammedi/board/notices">공지' "$internal_notices_slash"
+          verify_contains "internal finance slash parity" 'href="/seonammedi/board/finance">회계' "$internal_finance_slash"
+          verify_contains "internal notices slash parity" 'href="/seonammedi/board/notices">공지' "$internal_notices_slash"
           for html in "$voices" "$voices_slash" "$finance" "$finance_slash" "$notices" "$notices_slash" "$internal_voices" "$internal_voices_slash" "$internal_finance" "$internal_finance_slash" "$internal_notices" "$internal_notices_slash"; do
             grep -q '서남권 의대 설립 비상대책위원회 관련 공개 기록·소통 채널' <<<"$html"
             grep -q '자료의 성격과 출처를 구분해 보존합니다' <<<"$html"
+            # Verify the actual nested menu contract, rather than assuming
+            # that notices/finance are independent top-level active links.
+            for label in '활동이력' '관련소식' '소통채널' '시민의견' '공지' '조직'; do
+              verify_contains "board six-menu $label" ">$label</a>" "$html"
+            done
+            verify_contains "board six-menu navigation" 'class="ekodi-six-nav"' "$html"
+            verify_contains "notices nested ledger" '>회계</a>' "$html"
+            verify_contains "notices nested minutes" '>회의록</a>' "$html"
+            verify_contains "notices nested announcement" '>공지사항</a>' "$html"
           done
+      - name: Verify production Google login-first API without credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          for origin in https://seonammedi.kr/board https://ekodi.kr/seonammedi/board; do
+            body="$(mktemp)"
+            headers="$(mktemp)"
+            status="$(curl -sS --connect-timeout 8 --max-time 25 -D "$headers" -o "$body" -w '%{http_code}' "$origin/api/auth/session")"
+            if [[ "$status" != "401" ]]; then
+              cat "$body" >&2
+              rm -f "$body" "$headers"
+              echo "Login-first session gate must be 401 when signed out at $origin; received $status" >&2
+              exit 1
+            fi
+            jq -e '.authenticated==false and .error=="google_login_required"' "$body" >/dev/null
+            grep -Eiq '^cache-control:.*no-store' "$headers"
+            rm -f "$body" "$headers"
+            echo "Verified unauthenticated Google session is denied: $origin"
+          done
+
       - name: Production queue-create-list-reply canary and cleanup
         env:
           BOARD_CANARY_GOOGLE_TOKEN: ${{ secrets.SEONAMMEDI_BOARD_CANARY_GOOGLE_TOKEN }}

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {classifyUser4BrowserFailure,eligibleUser4Agent,verifyUser4Browser,verifyUser4Acceptance,ensureUser4AgentUpdated,USER4_CDP_FIX_FLOOR}
+import {readFileSync} from 'node:fs';
+import {classifyUser4BrowserFailure,eligibleUser4Agent,verifyUser4Browser,verifyUser4BrowserWithRetry,verifyUser4Acceptance,ensureUser4AgentUpdated,USER4_CDP_FIX_FLOOR,USER4_CDP_WORKER_AGENT_VERSION}
   from '../scripts/verify-native-user4-acceptance.mjs';
 const now=Date.parse('2026-10-11T06:30:00.000Z');
 const good={id:'device-4',hostname:'USER4',status:'online',revokedAt:null,
@@ -79,33 +80,37 @@ test('aggregate outcome is not successful if both live receipts are absent',asyn
   assert.equal(result.mode,'ekodi-native-receipt-gated');
 });
 
-test('USER4 CDP and Ollama commands are both queued before either waits for completion',async()=>{
-  const posted=new Set();
+test('USER4 finishes local AI before launching resource-intensive CDP Browser Worker',async()=>{
+  const posted=[];
   const browserType='computer.browser.canary';
   const aiType='software.localai.verify';
   const fetchImpl=async(url,init)=>{
     if(init.method==='POST'){
       const {type}=JSON.parse(init.body);
       assert([browserType,aiType].includes(type));
-      posted.add(type);
+      posted.push(type);
       return new Response(JSON.stringify({command:{type,id:type,status:'queued'}}),{status:200});
     }
-    const recentCommands=posted.size===2?[
-      {id:browserType,type:browserType,status:'succeeded',completedAt:new Date(now).toISOString(),
-        result:{browserCanary:{ok:true,mode:'native-cdp',url:'https://ekodi.kr/',
-          contentBytes:3700,dedicatedAutomationProfile:true,focusIsolated:true,
-          clipboardShared:false,userInputInjection:false}}},
-      {id:aiType,type:aiType,status:'succeeded',completedAt:new Date(now).toISOString(),
-        result:{localAiProof:{ollamaApi:'ready',inference:'passed',
-          credentialCollection:false,executionMode:'fixed_loopback_api',
-          selectedModel:'qwen3:0.6b',claudeCli:'not_visible_to_agent'}}}
-    ]:[];
+    const recentCommands=[
+      ...(posted.includes(browserType)?[
+        {id:browserType,type:browserType,status:'succeeded',completedAt:new Date(now).toISOString(),
+          result:{browserCanary:{ok:true,mode:'native-cdp',url:'https://ekodi.kr/',
+            contentBytes:3700,dedicatedAutomationProfile:true,focusIsolated:true,
+            clipboardShared:false,userInputInjection:false}}}
+      ]:[]),
+      ...(posted.includes(aiType)?[
+        {id:aiType,type:aiType,status:'succeeded',completedAt:new Date(now).toISOString(),
+          result:{localAiProof:{ollamaApi:'ready',inference:'passed',
+            credentialCollection:false,executionMode:'fixed_loopback_api',
+            selectedModel:'qwen3:0.6b',claudeCli:'not_visible_to_agent'}}}
+      ]:[])
+    ];
     const device={...good,capabilities:{localAiVerify:true},recentCommands};
     return new Response(JSON.stringify({devices:[device]}),{status:200});
   };
   const result=await verifyUser4Acceptance({token:'authorized-admin-session-token-abcdef',
     clock:()=>now,fetchImpl,sleepFn:async()=>{},maxPoll:4});
-  assert.deepEqual([...posted].sort(),[browserType,aiType].sort());
+  assert.deepEqual(posted,[aiType,browserType]);
   assert.equal(result.ok,true);
   assert.equal(result.browserVerified,true);
   assert.equal(result.localAiVerified,true);
@@ -113,6 +118,33 @@ test('USER4 CDP and Ollama commands are both queued before either waits for comp
   assert.equal(result.localAi.targetAlias,'user4');
 });
 
+test('browser proof is still collected if USER4 local AI fails, without reporting full success',async()=>{
+  const posted=[];
+  const fetchImpl=async(url,init)=>{
+    if(init.method==='POST'){
+      const type=JSON.parse(init.body).type;
+      posted.push(type);
+      return new Response(JSON.stringify({command:{id:type,type,status:'queued'}}),{status:200});
+    }
+    const recentCommands=posted.map(type=>({
+      id:type,type,status:'succeeded',completedAt:new Date(now).toISOString(),
+      result:type==='software.localai.verify'
+        ? {localAiProof:{ollamaApi:'ready',inference:'not_ready',
+            credentialCollection:false,executionMode:'fixed_loopback_api'}}
+        : {browserCanary:{ok:true,mode:'native-cdp',url:'https://ekodi.kr/',
+            contentBytes:3700,dedicatedAutomationProfile:true,
+            focusIsolated:true,clipboardShared:false,userInputInjection:false}}
+    }));
+    return new Response(JSON.stringify({devices:[{...good,capabilities:{localAiVerify:true},recentCommands}]}),{status:200});
+  };
+  const result=await verifyUser4Acceptance({token:'authorized-admin-session-token-abcdef',
+    clock:()=>now,fetchImpl,sleepFn:async()=>{},maxPoll:4});
+  assert.deepEqual(posted,['software.localai.verify','computer.browser.canary']);
+  assert.equal(result.ok,false);
+  assert.equal(result.browserVerified,true);
+  assert.equal(result.localAiVerified,false);
+  assert.match(result.failures.join(','),/native_localai_inference_not_ready/);
+});
 
 test('USER4 browser failure diagnostics are an allowlisted category without raw data',()=>{
   assert.equal(classifyUser4BrowserFailure('CDP_NODE_RUNTIME_REQUIRED'),'CDP_NODE_RUNTIME_REQUIRED');
@@ -147,7 +179,7 @@ test('USER4 official update only when current pinned CDP worker has not been rec
     }
     const recentCommands=issued?[{
       id:'update-user4',type:'agent.self_update',status:'succeeded',
-      completedAt:new Date(at-1000).toISOString()
+      result:{version:USER4_CDP_WORKER_AGENT_VERSION},completedAt:new Date(at-1000).toISOString()
     }]:[];
     const device={...good,capabilities:{agentStatus:true,localAiVerify:true},
       lastSeenAt:new Date(at-100).toISOString(),recentCommands};
@@ -168,7 +200,7 @@ test('USER4 previous successful official update after fixed CDP patch prevents r
       lastSeenAt:new Date(at-1000).toISOString(),
       capabilities:{agentStatus:true},recentCommands:[{
         id:'already-installed',type:'agent.self_update',status:'succeeded',
-        completedAt:new Date(at-5000).toISOString()
+        result:{version:USER4_CDP_WORKER_AGENT_VERSION},completedAt:new Date(at-5000).toISOString()
       }]}]}),{status:200});
   };
   const proof=await ensureUser4AgentUpdated({token:'authorized-admin-session-token-abcdef',
@@ -204,4 +236,137 @@ test('USER4 browser error classifier accepts only bounded diagnostic categories'
   assert.equal(classifyUser4BrowserFailure('CDP_BROWSER_EARLY_EXIT_ZERO'), 'CDP_BROWSER_EARLY_EXIT_ZERO');
   assert.equal(classifyUser4BrowserFailure('CDP_BROWSER_EARLY_EXIT_UNKNOWN'), 'CDP_BROWSER_EARLY_EXIT_UNKNOWN');
   assert.equal(classifyUser4BrowserFailure('C:\\Users\\Sensitive\\private.log'), 'BROWSER_FAILURE_UNCLASSIFIED');
+});
+
+test('USER4 prior-day Agent update cannot satisfy 2026-10-12 owner refresh request',async()=>{
+  const now=USER4_CDP_FIX_FLOOR+120000;
+  let posts=0;
+  const before=new Date(USER4_CDP_FIX_FLOOR-3600000).toISOString();
+  const fetchImpl=async(url,init)=>{
+    if(init.method==='POST'){
+      posts++;
+      assert.equal(JSON.parse(init.body).type,'agent.self_update');
+      return new Response(JSON.stringify({command:{
+        type:'agent.self_update',id:'owner-refresh-user4',status:'queued'
+      }}),{status:200});
+    }
+    const recentCommands=[
+      {id:'old-success',type:'agent.self_update',status:'succeeded',completedAt:before},
+      ...(posts?[{id:'owner-refresh-user4',type:'agent.self_update',status:'succeeded',
+        result:{version:USER4_CDP_WORKER_AGENT_VERSION},completedAt:new Date(now-1000).toISOString()}]:[])
+    ];
+    return new Response(JSON.stringify({devices:[{...good,
+      capabilities:{agentStatus:true,localAiVerify:true},
+      lastSeenAt:new Date(now-100).toISOString(),recentCommands}]}),{status:200});
+  };
+  const proof=await ensureUser4AgentUpdated({
+    token:'authorized-admin-session-token-abcdef',clock:()=>now,fetchImpl,
+    sleepFn:async()=>{},maxPoll:3
+  });
+  assert.equal(posts,1);
+  assert.equal(proof.updatePerformed,true);
+  assert.equal(proof.recentOfficialUpdateVerified,true);
+});
+
+test('exact transient CDP early-exit zero permits one fresh USER4 canary retry',async()=>{
+  let attempts=0;
+  const verify=async()=>{
+    attempts++;
+    if(attempts===1)throw Error('user4_browser_failed:CDP_BROWSER_EARLY_EXIT_ZERO');
+    return {targetAlias:'user4',receiptStatus:'succeeded',mode:'native-cdp',domBytes:512};
+  };
+  const proof=await verifyUser4BrowserWithRetry({},verify);
+  assert.equal(attempts,2);
+  assert.equal(proof.transientBrowserRetryUsed,true);
+  assert.equal(proof.targetAlias,'user4');
+});
+test('security, policy or auth browser failure never triggers another attempt',async()=>{
+  for(const reason of [
+    'user4_browser_failed:CDP_BROWSER_EARLY_EXIT_ACCESS',
+    'user4_browser_failed:CDP_BROWSER_EARLY_EXIT_POLICY',
+    'user4_browser_failed:CDP_BROWSER_EARLY_EXIT_SANDBOX',
+    'trusted_admin_session_required',
+    'user4_native_agent_not_healthy'
+  ]){
+    let attempts=0;
+    await assert.rejects(()=>verifyUser4BrowserWithRetry({},async()=>{
+      attempts++;throw Error(reason);
+    }),e=>e.message===reason);
+    assert.equal(attempts,1,reason);
+  }
+});
+test('repeat early exit remains failure and never produces an artificial success',async()=>{
+  let attempts=0;
+  await assert.rejects(()=>verifyUser4BrowserWithRetry({},async()=>{
+    attempts++;throw Error('user4_browser_failed:CDP_BROWSER_EARLY_EXIT_ZERO');
+  }),/CDP_BROWSER_EARLY_EXIT_ZERO/);
+  assert.equal(attempts,2);
+});
+
+test('USER4 previous-version successful update cannot masquerade as reviewed CDP worker install',async()=>{
+  const at=USER4_CDP_FIX_FLOOR+600000;
+  let queued=0;
+  const fetchImpl=async(url,init)=>{
+    if(init.method==='POST'){
+      queued++;
+      return new Response(JSON.stringify({command:{type:'agent.self_update',id:'new-update',status:'queued'}}),{status:200});
+    }
+    const stale={id:'older-update',type:'agent.self_update',status:'succeeded',
+      result:{version:'2.5.3'},completedAt:new Date(at-60000).toISOString()};
+    const current={id:'new-update',type:'agent.self_update',status:'succeeded',
+      result:{version:USER4_CDP_WORKER_AGENT_VERSION},completedAt:new Date(at-1000).toISOString()};
+    return new Response(JSON.stringify({devices:[{...good,
+      lastSeenAt:new Date(at-100).toISOString(),capabilities:{agentStatus:true},
+      recentCommands:queued?[current,stale]:[stale]}]}),{status:200});
+  };
+  const result=await ensureUser4AgentUpdated({token:'authorized-admin-session-token-abcdef',
+    fetchImpl,clock:()=>at,sleepFn:async()=>{},maxPoll:3});
+  assert.equal(result.updatePerformed,true);
+  assert.equal(queued,1);
+});
+
+test('Control API exposes only Agent self-update version needed for source pin attestation',()=>{
+  const code=readFileSync(new URL('../device-control.js',import.meta.url),'utf8');
+  assert.match(code,/function summarizeCommandResult\(result = \{\}, commandType = ''\)/);
+  assert.match(code,/commandType === 'agent\.self_update'/);
+  assert.match(code,/summary\.version = safeText\(result\.version, 32\)/);
+  assert.match(code,/summarizeCommandResult\(parseJson\(command\.result_json\), command\.command_type\)/);
+});
+
+test('USER4 refuses to infer updated Agent version while Control API projection is unavailable',async()=>{
+  const at=USER4_CDP_FIX_FLOOR+600000;
+  let posted=0;
+  const fetchImpl=async(url,init)=>{
+    if(init.method==='POST'){
+      posted++;
+      return new Response(JSON.stringify({command:{type:'agent.self_update',id:'update',status:'queued'}}),{status:200});
+    }
+    const device={...good,capabilities:{agentStatus:true},
+      lastSeenAt:new Date(at-100).toISOString(),
+      recentCommands:posted?[{id:'update',type:'agent.self_update',status:'succeeded',
+        completedAt:new Date(at-1000).toISOString(),result:{message:'success'}}]:[]};
+    return new Response(JSON.stringify({devices:[device]}),{status:200});
+  };
+  await assert.rejects(()=>ensureUser4AgentUpdated({
+    token:'authorized-admin-session-token-abcdef',clock:()=>at,fetchImpl,
+    sleepFn:async()=>{},maxPoll:2
+  }),/user4_agent_update_version_projection_unavailable/);
+  assert.equal(posted,1);
+});
+
+
+test('Windows native CDP worker propagates allowlisted receipt categories without raw stderr',()=>{
+  const source=readFileSync(new URL('../tools/ekodi-device-agent/windows/ekodi-device-agent.ps1',import.meta.url),'utf8');
+  assert.match(source,/foreach \(\$line in/);
+  assert.match(source,/\$value \| ConvertFrom-Json -ErrorAction Stop/);
+  assert.match(source,/\$failure\.ok -eq \$false -and \$allowedCodes -ccontains \$candidate/);
+  assert.match(source,/throw \$failureCode/);
+  assert.doesNotMatch(source,/throw \('CDP_WORKER_FAILED: ' \+ \$stderr/);
+  for(const code of ['CDP_BROWSER_EARLY_EXIT_ZERO','CDP_BROWSER_EARLY_EXIT_POLICY','CDP_PORT_TIMEOUT','CDP_WORKER_WATCHDOG_TIMEOUT'])
+    assert(source.includes("'"+code+"'"),code);
+});
+
+test('USER4 upgrade release requires new 2.5.5 Agent and an updated official receipt',()=>{
+  assert.equal(USER4_CDP_WORKER_AGENT_VERSION,'2.5.5');
+  assert.equal(USER4_CDP_FIX_FLOOR,Date.parse('2026-10-12T18:00:00.000Z'));
 });

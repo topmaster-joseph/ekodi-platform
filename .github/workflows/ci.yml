@@ -6,6 +6,8 @@ on:
     paths-ignore:
       - 'monitor-status.json'
   pull_request:
+  merge_group:
+    types: [checks_requested]
 
 permissions:
   contents: read
@@ -176,3 +178,30 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node scripts/recover-required-status-drift.mjs
+
+      - name: Revoke premature legacy success if late recovery step fails
+        if: always() && github.event_name == 'pull_request' && failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STATUS_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          STATUS_PR_NUMBER: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          merge_sha=$(curl --fail-with-body -sS \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls/${STATUS_PR_NUMBER}" \
+            | python -c "import json,sys; print(json.load(sys.stdin).get('merge_commit_sha') or '')")
+          for sha in "$STATUS_HEAD_SHA" "$merge_sha"; do
+            [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || continue
+            payload=$(jq -cn --arg state failure --arg context test \
+              --arg description 'Late CI recovery failed' \
+              --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+              '{state:$state,context:$context,description:$description,target_url:$target_url}')
+            curl --fail-with-body -sS -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H 'Accept: application/vnd.github+json' \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${sha}" \
+              -d "$payload" >/dev/null
+          done

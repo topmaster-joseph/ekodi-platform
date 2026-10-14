@@ -1,0 +1,51 @@
+name: EKODI Board Anonymous Write Live Canary
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/verify-board-write-gate-production.mjs'
+      - 'test/board-write-gate-production.test.mjs'
+      - '.github/workflows/board-anonymous-write-live-canary.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/verify-board-write-gate-production.mjs'
+      - 'test/board-write-gate-production.test.mjs'
+      - '.github/workflows/board-anonymous-write-live-canary.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '17 23 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: board-anonymous-write-live-canary-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  negative-auth-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify anonymous 401 probe stays non-persistent and credential-free
+        run: node --test test/board-write-gate-production.test.mjs
+      - name: Require real public boards to reject unauthenticated post and comment requests
+        run: node scripts/verify-board-write-gate-production.mjs
+      - name: Record tested boundaries
+        if: success()
+        run: |
+          {
+            echo '## EKODI Board Anonymous Write Live Canary'
+            echo '- Common boards: cgma, cheonggye, ekodimission, ekodichurch'
+            echo '- Standalone board: seonammedi.kr'
+            echo '- Expected: HTTP 401 for enabled post/comment/reply endpoints; HTTP 409 for disabled comments'
+            echo '- Requests use only invalid empty JSON objects and no credentials'
+            echo '- Public GET access and anonymous config disabled are required'
+          } >> "$GITHUB_STEP_SUMMARY"

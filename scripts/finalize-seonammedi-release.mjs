@@ -4,6 +4,32 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 const shortHash=value=>createHash('sha256').update(value).digest('hex').slice(0,12);
 const sha256=value=>createHash('sha256').update(value).digest('hex');
 
+
+/**
+ * Normalize incorrectly escaped whitespace only between HTML head tags.
+ * Script/style bodies and HTML comments are preserved byte-for-byte.
+ * Unrecognized escapes are rejected rather than silently deleting content.
+ */
+export function repairSeonamMediHeadMarkup(html){
+  const match=html.match(/<head\b[^>]*>[\s\S]*?<\/head\s*>/i);
+  if(!match)throw new Error('seonammedi_homepage_html_head_missing');
+  const preserved=[];
+  let head=match[0].replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>|<!--[\s\S]*?-->/gi,fragment=>{
+    const index=preserved.push(fragment)-1;
+    return '__EKODI_HEAD_PRESERVED_'+index+'__';
+  });
+  let repaired=0;
+  head=head.replace(/>([ \t]*(?:\\[nrt][ \t]*)+)(?=<)/g,(_,spacing)=>{
+    repaired++;
+    return '>'+spacing.replace(/\\n/g,'\n').replace(/\\r/g,'\r').replace(/\\t/g,'\t');
+  });
+  if(['\\n','\\r','\\t'].some(marker=>head.includes(marker))){
+    throw new Error('seonammedi_homepage_head_unrepairable_literal_escaped_whitespace');
+  }
+  head=head.replace(/__EKODI_HEAD_PRESERVED_(\d+)__/g,(_,index)=>preserved[Number(index)]);
+  return {html:html.slice(0,match.index)+head+html.slice(match.index+match[0].length),repaired};
+}
+
 export async function finalizeSeonamMediRelease(output){
   const siteDir=output+'seonammedi/';
   const specs=[
@@ -25,8 +51,14 @@ export async function finalizeSeonamMediRelease(output){
     assets[key]={path:fingerprinted,sha256:sha256(body)};
   }
   const routes={home:'/',timeline:'/#timeline',channels:'/#channels',voices:'/board',finance:'/finance/',notices:'/notices/',organization:'/#organization',admin:'/admin/'};
-  const release=shortHash(JSON.stringify({assets,routes}));
-  const manifest={schemaVersion:1,site:'seonammedi',release,assets,routes};
+  // HTML-only changes must create a new release; otherwise convergence can confirm stale markup.
+  const inputHtmlHashes={};
+  for(const page of ['index.html','admin/index.html','finance/index.html','notices/index.html']){
+    inputHtmlHashes[page]=sha256(await readFile(siteDir+page));
+  }
+  const rendererSha256=sha256(await readFile(new URL(import.meta.url)));
+  const release=shortHash(JSON.stringify({assets,routes,inputHtmlHashes,rendererSha256}));
+  const manifest={schemaVersion:1,site:'seonammedi',release,assets,routes,inputHtmlHashes,rendererSha256};
   await mkdir(siteDir+'.well-known/',{recursive:true});
   await writeFile(siteDir+'.well-known/ekodi-release.json',JSON.stringify(manifest,null,2)+'\n');
 
@@ -43,6 +75,10 @@ export async function finalizeSeonamMediRelease(output){
     .replace(/\/seonammedi\/app\.js(?:\?[^"']*)?/g,'/seonammedi/'+assets['app.js'].path)
     .replace(/\/seonammedi\/voice-public-admin\.js(?:\?[^"']*)?/g,'/seonammedi/'+assets['voice-public-admin.js'].path);
   if(!html.includes('data-ekodi-release-convergence'))html=html.replace('</head>',runtime+'\n</head>');
+  // Repair the known two-character HTML newline leak; do not ship a broken document.
+  const fixed=repairSeonamMediHeadMarkup(html);
+  html=fixed.html;
+  if(fixed.repaired)console.warn('[EKODI] repaired '+fixed.repaired+' escaped whitespace sequences in SeonamMedi HTML head');
   await writeFile(siteDir+'index.html',html);
 
   let admin=await readFile(siteDir+'admin/index.html','utf8');
@@ -58,5 +94,13 @@ export async function finalizeSeonamMediRelease(output){
     if(!page.includes('data-ekodi-release-convergence'))page=page.replace('</head>',runtime+'\n</head>');
     await writeFile(siteDir+relative,page);
   }
+  // Publish final emitted bytes, not just the source fingerprint: live verification must
+  // reject an old or partially deployed HTML document even when the marker matches.
+  const publishedHtmlHashes={};
+  for(const page of ['index.html','admin/index.html','finance/index.html','notices/index.html']){
+    publishedHtmlHashes[page]=sha256(await readFile(siteDir+page));
+  }
+  manifest.publishedHtmlHashes=publishedHtmlHashes;
+  await writeFile(siteDir+'.well-known/ekodi-release.json',JSON.stringify(manifest,null,2)+'\n');
   return manifest;
 }
