@@ -1,0 +1,57 @@
+name: EKODI Education Guarded Release Continuity
+
+on:
+  workflow_run:
+    workflows: ["EKODI Orchestrated PR Convergent Merge"]
+    types: [completed]
+  pull_request:
+    paths:
+      - 'scripts/education-release-continuity.mjs'
+      - 'test/education-release-continuity.test.mjs'
+      - '.github/workflows/education-release-continuity.yml'
+
+permissions:
+  contents: read
+  actions: write
+  pull-requests: read
+  statuses: read
+
+concurrency:
+  group: education-release-continuity-${{ github.event.workflow_run.head_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate read-only release continuity
+        run: |
+          node --check scripts/education-release-continuity.mjs
+          node --test test/education-release-continuity.test.mjs
+
+  reconcile:
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.repository == 'topmaster-joseph/ekodi-platform'
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout trusted EKODI main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify official receipt, exact merge, and dispatch guarded Education workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/education-release-continuity.mjs
