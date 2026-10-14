@@ -22,8 +22,8 @@ test('business center module is syntactically valid and lazily mounted behind EK
 });
 
 test('first-party worker and worker-first route ship lazy assets',async()=>{
-  const [site,canonical,wrangler,css]=await Promise.all([
-    read('site-worker.js'),read('platform-router-entry-worker.js'),read('wrangler.site.toml'),businessCenterCss().then?Promise.resolve(null):Promise.resolve(null)
+  const [site,canonical,wrangler]=await Promise.all([
+    read('site-worker.js'),read('platform-router-entry-worker.js'),read('wrangler.site.toml')
   ]);
   assert.match(site,/businessCenterScript\(\)/);
   assert.match(canonical,/businessCenterScript\(\)/);
