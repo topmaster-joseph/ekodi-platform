@@ -5,7 +5,7 @@
   "changeClass": "C2",
   "taskId": "ekodipay-canonical-path-20261014",
   "summary": "Retire all public EKODI Pay subdomain entry points and make https://ekodi.kr/ekodipay/ the sole user-facing EKODI payment entry.",
-  "approvalBasis": "The platform owner explicitly requested that EKODI no longer use pay.ekodi.kr or other public payment subdomains, that they be private, and that EKODI Pay be built beneath ekodi.kr/ekodipay with EKODI coordination.",
+  "approvalBasis": "The platform owner explicitly requested that previously public payment subdomains no longer be used, that they be private, and that EKODI Pay be built under the canonical ekodi.kr/ekodipay path with EKODI coordination.",
   "implementation": [
     "Remove retired payment hostname entries from constitution public legacy-domain allowlist and canonical-host mappings.",
     "Add /ekodipay canonical platform route and isolated path-scoped Worker on the ekodi.kr apex zone.",
