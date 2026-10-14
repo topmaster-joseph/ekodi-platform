@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import siteWorker from '../platform-router-entry-worker.js';
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 test('guarded /pay legacy probes match exact safe 308 to canonical /ekodipay without financial execution',async()=>{
   const [manifestText,router]=await Promise.all([
