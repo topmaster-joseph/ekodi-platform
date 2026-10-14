@@ -273,11 +273,10 @@ function nav(active,req){
   const group=(href,label,items)=>'<div class="nav-group"><a href="'+href+'">'+label+'</a><button type="button" aria-label="'+label+' 세부메뉴 열기" aria-expanded="false" onclick="const g=this.parentElement;const open=g.dataset.open!==\'true\';g.dataset.open=open;this.setAttribute(\'aria-expanded\',String(open))">▾</button><div class="nav-submenu">'+items.map(item=>'<a href="'+item[0]+'">'+item[1]+'</a>').join('')+'</div></div>';
   const home=(hash)=>sitePath(req,'/'+hash);
   return '<header class="site-header independent-board-header"><a class="brand" href="'+sitePath(req)+'"><strong>서남권 국립의대 소통센터</strong><small>서남권 의대 설립 비상대책위원회 관련 공개 기록·소통 채널</small></a><nav class="ekodi-six-nav" aria-label="주요 메뉴">'+
-    group(home('#committee-activity'),'활동이력',[[home('#committee-activity'),'비대위 활동'],[home('#committee-activity/'+encodeURIComponent('성명·입장 발표')),'공식 성명·추진 경과']])+
-    group(home('#timeline'),'관련소식',[[home('#timeline'),'전체 소식'],[home('#timeline/'+encodeURIComponent('신문')),'신문·인터넷 언론'],[home('#timeline/'+encodeURIComponent('방송')),'방송']])+
-    group(home('#channels'),'소통채널',[[home('#channels/facebook'),'페이스북'],[home('#channels/facebook'),'페이스북 그룹'],[home('#channels/instagram'),'인스타그램'],[home('#channels/youtube'),'유튜브'],[home('#channels/other'),'기타 소통채널']])+
-    link(boardPath(req,'voices'),'시민의견','voices')+
     group(boardPath(req,'notices'),'공지',[[boardPath(req,'notices'),'공지사항'],[sitePath(req,'/minutes/'),'회의록'],[boardPath(req,'finance'),'회계']])+
+    group(home('#committee-activity'),'활동이력',[[home('#committee-activity'),'비대위 활동'],[home('#committee-activity/'+encodeURIComponent('성명·입장 발표')),'공식 성명·추진 경과']])+
+    group(home('#timeline'),'관련소식',[[home('#timeline'),'전체 소식'],[home('#timeline/'+encodeURIComponent('신문')),'신문·인터넷 언론'],[home('#timeline/'+encodeURIComponent('방송')),'방송'],[home('#channels/facebook'),'페이스북'],[home('#channels/instagram'),'인스타그램'],[home('#channels/youtube'),'유튜브']])+
+    link(boardPath(req,'voices'),'시민의견','voices')+
     '<a href="'+home('#organization')+'">조직</a></nav></header>';
 }
 
