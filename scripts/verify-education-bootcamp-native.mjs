@@ -2,8 +2,10 @@
 // Read-only; no user profile, external browser provider, account, secrets or background persistence.
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import {EKODI_SERVICE_MANIFEST} from '../ekodi-service-manifest.js';
 
-export const ORIGIN='https://edu.ekodi.kr';
+// Reuse the existing registered Education boundary; never mint a new hostname.
+export const ORIGIN=new URL(EKODI_SERVICE_MANIFEST.services.find(row=>row.id==='edu').url).origin;
 export const ROUTE='/study/ai-bootcamp/';
 export const VIEWPORTS=Object.freeze([
   {name:'compact-mobile',width:320,height:640,mobile:true},
