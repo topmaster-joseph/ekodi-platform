@@ -42,12 +42,26 @@ function analyzePrefixAliases(canonical,customer){
 }
 const prefixAnalysis=analyzePrefixAliases(a?.html,b?.html);
 const excerpt=(input,i)=>i<0?'':String(input||'').slice(Math.max(0,i-100),i+200);
+const additionalSurfaces=[];
+for(const pathname of ['/admin/','/finance/','/notices/']){
+  try{
+    const [canonical,customer]=await Promise.all([
+      fetch('https://ekodi.kr/seonammedi'+pathname,{cache:'no-store',signal:AbortSignal.timeout(25000)}),
+      fetch('https://seonammedi.kr'+pathname,{cache:'no-store',signal:AbortSignal.timeout(25000)})
+    ]);
+    const [canonHtml,customerHtml]=await Promise.all([canonical.text(),customer.text()]);
+    additionalSurfaces.push({pathname,status:[canonical.status,customer.status],hashes:[sha256(canonHtml),sha256(customerHtml)],
+      releases:[canonHtml.match(/<meta name="ekodi-release" content="([^"]+)"/)?.[1]||'',customerHtml.match(/<meta name="ekodi-release" content="([^"]+)"/)?.[1]||''],
+      differences:analyzePrefixAliases(canonHtml,customerHtml)});
+  }catch(error){additionalSurfaces.push({pathname,error:String(error.message||error)})}
+}
 const report={
   readOnly:true,
   sameRelease:!!a?.release&&a.release===b?.release,
   byteIdentical:firstDifference===-1&&a?.html!==undefined&&b?.html!==undefined,
   firstDifference,
   prefixAnalysis,
+  additionalSurfaces,
   snippets:firstDifference<0?null:{canonical:excerpt(a.html,firstDifference),customer:excerpt(b.html,firstDifference)},
   results:results.map(({html,...rest})=>rest)
 };
