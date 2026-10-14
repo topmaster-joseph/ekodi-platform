@@ -19,6 +19,14 @@ test('shared-site canary tests legacy Pay redirects without treating retired Pay
   assert.equal(item.redirect,'manual');
   assert.ok(item.headerExpect.includes('location: https://ekodi.kr/ekodipay/'));
   assert.deepEqual(item.expect,[]);
+  if(path==='/pay'){
+   assert.deepEqual(item.rollbackStatuses,[308]);
+   assert.ok(item.rollbackHeaderExpect.includes('location: https://ekodi.kr/pay/'));
+  }else{
+   assert.deepEqual(item.rollbackStatuses,[200]);
+   assert.ok(item.rollbackExpect.includes("title:'EKODI Pay'"));
+   assert.ok(item.rollbackHeaderExpect.includes('x-ekodi-canonical-path: /pay'));
+  }
  }
  const router=readFileSync(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
  assert.match(router,/url\.pathname==='\/pay'/);
