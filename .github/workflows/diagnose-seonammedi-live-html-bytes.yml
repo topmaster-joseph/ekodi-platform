@@ -100,3 +100,25 @@ jobs:
             }
           }
           NODE
+
+      - name: Install first-party Chromium for read-only production proof
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Verify both public domains and PC/mobile with native Chromium
+        shell: bash
+        run: |
+          set +e
+          node scripts/verify-seonammedi-hero-native.mjs --origin=https://ekodi.kr --out=artifacts/live-byte-audit-canonical
+          canonical=$?
+          node scripts/verify-seonammedi-hero-native.mjs --origin=https://seonammedi.kr --out=artifacts/live-byte-audit-customer
+          customer=$?
+          if [[ "$canonical" != "0" || "$customer" != "0" ]]; then exit 1; fi
+      - name: Preserve first-party read-only Chromium evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seonammedi-live-byte-audit
+          path: artifacts/live-byte-audit-*
+          retention-days: 14
+          if-no-files-found: warn
