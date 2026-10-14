@@ -82,7 +82,7 @@ async function main(){
  }
  const history=await api('/actions/workflows/deploy-education.yml/runs?event=workflow_dispatch&per_page=100');
  const duplicate=(history.workflow_runs||[]).some(item=>
-   item.head_sha===decision.mergeSha&&['queued','in_progress','completed','waiting'].includes(item.status));
+   item.head_sha===decision.mergeSha&&(item.status==='queued'||item.status==='in_progress'||item.status==='waiting'||(item.status==='completed'&&item.conclusion==='success')));
  if(duplicate){log('previous_dispatch_exists',{pr:pr.number,mergeSha:decision.mergeSha});return;}
  await api('/actions/workflows/deploy-education.yml/dispatches',{method:'POST',body:JSON.stringify({
   ref:'main',inputs:{release_branch_ref:decision.branch,release_task_id:decision.taskId,release_sha:decision.mergeSha}
