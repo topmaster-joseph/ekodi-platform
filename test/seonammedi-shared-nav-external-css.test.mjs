@@ -17,6 +17,11 @@ test('six-menu dropdown is styled by shared external CSS, not by a board-only in
   assert.match(css,/\.site-header nav\.ekodi-six-nav>\.nav-group\[data-open="true"\]>\.nav-submenu\{display:grid!important;/);
   assert.match(css,/\.site-header nav\.ekodi-six-nav>\.nav-group>button\{appearance:none;background:transparent!important;border:0!important;/);
   assert.match(css,/@media\(max-width:760px\)\{\.site-header nav\.ekodi-six-nav/);
+  // Independent-board inline CSS declares flex-wrap:nowrap later in the cascade.
+  // The shared stylesheet must use !important at <=760px, or mobile overflows.
+  assert.match(css,/@media\(max-width:760px\)\{\.site-header nav\.ekodi-six-nav\{[^}]*flex-wrap:wrap!important;/);
+  assert.match(worker,/\.site-header\.independent-board-header>nav\{display:flex;[^}]*flex-wrap:nowrap;/);
+
   assert.match(main,/href="\/seonammedi\/app\.css\?/);
   assert.match(worker,/sitePath\(req,'\/app\.css\?/);
 });
