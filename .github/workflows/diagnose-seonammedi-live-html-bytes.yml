@@ -63,3 +63,37 @@ jobs:
             }catch(error){console.error('LIVE_BYTE_DIFF_ERROR',origin,String(error))}
           }
           NODE
+
+      - name: Prove allowlisted gateway rewrite equivalence for every released HTML page
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import {readFile} from 'node:fs/promises';
+          import {createHash} from 'node:crypto';
+          const sha=body=>createHash('sha256').update(body).digest('hex');
+          const beaconRe=/\n<script type="module" src="https:\/\/static\.cloudflareinsights\.com\/beacon\.min\.js\/[a-zA-Z0-9]+" integrity="sha512-[a-zA-Z0-9+/=]+" data-cf-beacon='([^']+)' crossorigin="anonymous"><\/script>(?=\n<\/body>)/g;
+          const paths=['index.html','admin/index.html','finance/index.html','notices/index.html'];
+          for(const origin of ['https://ekodi.kr/seonammedi/','https://seonammedi.kr/']){
+            for(const relative of paths){
+              try{
+                const expected=(await readFile('dist/seonammedi/'+relative)).toString('utf8');
+                const customer=origin==='https://seonammedi.kr/';
+                let attrRewrites=0;
+                const localized=customer?expected.replace(/((?:href|src)=["'])\/seonammedi\//g,(_,prefix)=>{attrRewrites++;return prefix+'/'}):expected;
+                const url=origin+(relative==='index.html'?'':relative.slice(0,-'index.html'.length))+'?audit=20261014';
+                const res=await fetch(url,{headers:{'cache-control':'no-cache'},signal:AbortSignal.timeout(15000)});
+                const actual=await res.text();
+                let beaconCount=0,beaconTrusted=true;
+                const normalized=actual.replace(beaconRe,(_,metadata)=>{
+                  let payload={};try{payload=JSON.parse(metadata)}catch{}
+                  if(!/^[a-f0-9]{32}$/.test(String(payload.token||''))||!/^\d{4}\.\d{2}\.\d{1,2}$/.test(String(payload.version||'')))beaconTrusted=false;
+                  beaconCount++;
+                  return '';
+                });
+                let i=0;while(i<Math.min(localized.length,normalized.length)&&localized[i]===normalized[i])i++;
+                const identical=localized===normalized&&beaconTrusted&&beaconCount<=1;
+                console.log('NORMALIZED_HTML_DIFF',JSON.stringify({origin,relative,status:res.status,identical,beaconTrusted,beaconCount,attrRewrites,expectedLocalizedSha:sha(localized),observedNormalizedSha:sha(normalized),expectedLength:localized.length,actualLength:actual.length,normalizedLength:normalized.length,firstDiff:identical?-1:i,expectedAround:identical?'':localized.slice(Math.max(0,i-50),i+130),actualAround:identical?'':normalized.slice(Math.max(0,i-50),i+130)}));
+              }catch(err){console.error('NORMALIZED_HTML_ERROR',origin,relative,String(err))}
+            }
+          }
+          NODE
