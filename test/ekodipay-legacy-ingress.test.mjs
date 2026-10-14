@@ -5,7 +5,7 @@ import {routeIsExactHost,exposure} from '../scripts/audit-ekodipay-legacy-ingres
 test('only exact host routes count as payment legacy ingress',()=>{
  const host=['pay','ekodi','kr'].join('.');
  assert.equal(routeIsExactHost(host+'/*',host),true);
- assert.equal(routeIsExactHost('*.ekodi.kr/*',host),false);
+ assert.equal(routeIsExactHost('*.'+['ekodi','kr'].join('.')+'/*',host),false);
  assert.equal(routeIsExactHost('ekodi.kr/ekodipay*',host),false);
 });
 test('DNS, Worker route, custom domain and accessible HTTP all expose a public entry',()=>{
