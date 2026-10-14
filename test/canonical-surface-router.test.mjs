@@ -330,7 +330,7 @@ test('connect cannot be claimed as a workspace slug',async()=>{
 
 test('shared-site release probes honor canonical slash parity',async()=>{
   const manifest=JSON.parse(await fs.promises.readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
-  for(const root of ['/live','/pay','/cloud']){
+  for(const root of ['/live','/cloud']){
     const slashless=manifest.worker.requests.find(item=>item.url===`https://ekodi.kr${root}`);
     const canonical=manifest.worker.requests.find(item=>item.url===`https://ekodi.kr${root}/`);
     assert.ok(slashless,`missing slashless probe for ${root}`);
@@ -339,5 +339,13 @@ test('shared-site release probes honor canonical slash parity',async()=>{
     assert.ok(slashless.headerExpect?.includes(`location: https://ekodi.kr${root}/`));
     assert.ok(canonical,`missing canonical trailing-slash probe for ${root}`);
     assert.deepEqual(canonical.statuses,[200]);
+  }
+  // EKODI Pay has moved from the legacy /pay hub to an independent /ekodipay/ worker.
+  for(const root of ['/pay','/pay/']){
+    const retired=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr'+root);
+    assert.ok(retired,'missing retired Pay alias probe for '+root);
+    assert.deepEqual(retired.statuses,[308]);
+    assert.equal(retired.redirect,'manual');
+    assert.ok(retired.headerExpect?.includes('location: https://ekodi.kr/ekodipay/'));
   }
 });
