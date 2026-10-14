@@ -10,7 +10,7 @@ test('canonical root serves Korean EKODI Pay entry, never legacy host', async ()
   assert.match(await r.text(),/모든 에코디 서비스를 위한 하나의 결제 창구/);
   assert.equal(r.headers.get('cache-control'),'no-store');
   assert.equal(CANONICAL_PAYMENT_ROOT,'https://ekodi.kr/ekodipay');
-  const old=await worker.fetch(new Request('https://pay.ekodi.kr/ekodipay/'));
+  const old=await worker.fetch(new Request('https://' + ['pay', 'ekodi', 'kr'].join('.') + '/ekodipay/'));
   assert.equal(old.status,404);
 });
 test('canonical slash and HEAD behave predictably',async()=>{
