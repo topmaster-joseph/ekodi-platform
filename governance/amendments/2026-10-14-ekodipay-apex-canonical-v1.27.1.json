@@ -1,0 +1,41 @@
+{
+  "amendmentId": "EKODIPAY-APEX-PATH-CANONICAL-20261014",
+  "constitutionVersion": "1.27.1",
+  "approvedAt": "2026-10-14",
+  "changeClass": "C2",
+  "taskId": "ekodipay-canonical-path-20261014",
+  "summary": "Retire all public EKODI Pay subdomain entry points and make https://ekodi.kr/ekodipay/ the sole user-facing EKODI payment entry.",
+  "approvalBasis": "The platform owner explicitly requested that EKODI no longer use pay.ekodi.kr or other public payment subdomains, that they be private, and that EKODI Pay be built beneath ekodi.kr/ekodipay with EKODI coordination.",
+  "implementation": [
+    "Remove retired payment hostname entries from constitution public legacy-domain allowlist and canonical-host mappings.",
+    "Add /ekodipay canonical platform route and isolated path-scoped Worker on the ekodi.kr apex zone.",
+    "Update service manifest, admin menus, authentication return paths, business checkout intent and Finance monitoring to the single canonical payment path.",
+    "Retain protected fail-closed money movement and require contracted PG, server-side verification, guarded production rollout and explicit financial approval before enabling real charges.",
+    "Retire legacy public ingress safely with 410/noindex/no-store; do not create payment-subdomain redirects."
+  ],
+  "mandatoryRules": [
+    "Public payment entry is https://ekodi.kr/ekodipay/ only.",
+    "Do not reinstate a public payment subdomain without owner-approved constitution change.",
+    "No card data, payment secrets or unverified payment-success claims may reach browser code.",
+    "Production money movement remains disabled until financial-owner approval and PCI/PG readiness checks.",
+    "CI, security, zero-subdomain guard, protected merge, rollback, operational and PC/mobile validation remain mandatory."
+  ],
+  "validation": [
+    "EKODI Constitution Check",
+    "EKODI Zero-Subdomain Guard",
+    "EKODI AI Orchestration Gate",
+    "node --test test/ekodipay-canonical.test.mjs",
+    "node --test test/ekodibiz-payment-architecture.test.mjs",
+    "production canonical route and retired host responses"
+  ],
+  "rollback": "Restore the prior internal worker version and disable newly introduced payment entry if issues arise; never restore retired public payment-subdomain access without a newly approved policy change.",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalEvidence": {
+    "explicitOwnerInstruction": true,
+    "ownerInstructionDate": "2026-10-14",
+    "pullRequest": 4710,
+    "requiredPullRequestLabel": "constitution-approved",
+    "approvalLabel": "constitution-approved"
+  }
+}
