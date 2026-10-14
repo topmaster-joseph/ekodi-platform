@@ -17,7 +17,7 @@ export function fileExtension(filename){
 export function describeMaterial(filename,size){
   const ext=fileExtension(filename);
   if(!SUPPORTED_MATERIAL_EXTENSIONS.includes(ext)){
-    reject('이 형식은 직접 읽을 수 없습니다. HWP/PDF/XLSX는 검토 가능한 TXT·DOCX·PPTX·CSV 또는 구조화 JSON으로 변환해 주세요.');
+    reject('지원되지 않는 형식입니다. HWP/PDF/XLSX는 검토 가능한 TXT·DOCX·PPTX·CSV 또는 구조화 JSON으로 변환해 주세요.');
   }
   if(!Number.isFinite(size)||size<0||size>MAX_SOURCE_BYTES)reject('개별 자료는 최대 8MB까지 읽을 수 있습니다.');
   return {extension:ext,filename:cleanString(String(filename||'').split(/[/\\]/).pop(),150),size};
