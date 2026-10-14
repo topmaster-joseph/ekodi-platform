@@ -1,6 +1,7 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { canonicalTrackingQueryRedirect } from './canonical-query-policy.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
+import { businessCenterCss, businessCenterScript } from './ekodibiz-business-center.js';
 import { legacyAdminAliasTarget } from './admin-address-policy.js';
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
 import { ekodiBizInvestBusinessPage, isEkodiBizInvestPath } from './ekodibiz-invest-business.js';
@@ -698,6 +699,8 @@ export default {
       if (url.pathname === '/tenant-live-admin.js') return tenantLiveAdminScript();
       if (url.pathname === '/workspace-admin.css') return workspaceAdminCss();
       if (url.pathname === '/workspace-admin.js') return workspaceAdminScript();
+      if (['GET','HEAD'].includes(request.method) && url.pathname === '/ekodibiz-business-center.js') return businessCenterScript();
+      if (['GET','HEAD'].includes(request.method) && url.pathname === '/ekodibiz-business-center.css') return businessCenterCss();
       if (url.pathname.startsWith('/api/control/storage/google/cheonggye-members')) return proxyAdminStorage(request, env);
       if (url.pathname === ADMIN_PERSONAL_FINANCE_PATH) return proxyAdminPersonalFinance(request, env);
       if (url.pathname === '/church-pastor-admin.js') return churchPastorAdminScript();
