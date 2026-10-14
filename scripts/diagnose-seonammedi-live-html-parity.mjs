@@ -30,7 +30,7 @@ function analyzePrefixAliases(canonical,customer){
   let i=0,j=0;const aliases=[];
   while(i<canonical.length&&j<customer.length){
     if(canonical[i]===customer[j]){i++;j++;continue}
-    if(canonical.startsWith('/seonammedi/',i)&&customer[j]==='/'&&canonical.slice(i+11,i+31)===customer.slice(j,j+20)){
+    if(canonical.startsWith('seonammedi/',i)&&canonical[i-1]==='/'&&canonical.slice(i+11,i+31)===customer.slice(j,j+20)){
       const token=customer.slice(j).match(/^\/[^\s"'<>]+/)?.[0]||'';
       aliases.push({canonicalOffset:i,customerOffset:j,customerPath:token.slice(0,160)});
       i+=11;
