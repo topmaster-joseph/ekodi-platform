@@ -18,7 +18,7 @@ function config(env={}){
     integrationsEnabled,
     executionEnabled:env.EXECUTION_ENABLED==='true',
     readiness:Number(env.READINESS||62),
-    authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F',
+    authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=business&return_to=https%3A%2F%2Fekodi.kr%2Fekodibiz%2Fdoraji%2F',
     policy:'observe-discern-suggest-approve-act-verify-report',
     defaultWorkspace:'ekodibiz',
     dataEnabled,

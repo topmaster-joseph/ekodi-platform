@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {chromium} from 'playwright';
 
-const LABELS=['활동이력','관련소식','소통채널','시민의견','공지','조직'];
+const LABELS=['공지','활동이력','관련소식','소통채널','시민의견','조직'];
 const ROOTS=[
   {name:'canonical',origin:'https://ekodi.kr',prefix:'/seonammedi'},
   {name:'customer',origin:'https://seonammedi.kr',prefix:''}
@@ -87,7 +87,7 @@ try {
           record.topLevelMatches=JSON.stringify(actualLabels)===JSON.stringify(LABELS);
           if(publicSurface&&!record.topLevelMatches)violations.push('menu_labels_mismatch: '+JSON.stringify(actualLabels));
           if(record.horizontalOverflow)violations.push('horizontal_overflow');
-          // Home uses central content tabs; standalone boards keep grouped navigation.
+          // Home and independent boards expose central content tabs; legacy dropdowns remain supported.
           // Both layouts must expose real notice, minutes, finance and social links.
           const noticeGroup=record.groups.find(x=>x.parent==='공지');
           const socialGroup=record.groups.find(x=>x.parent==='소통채널');
@@ -100,7 +100,7 @@ try {
           if(publicSurface&&!socialEntries.some(x=>x.label==='유튜브'))violations.push('social_submenus_missing');
           if(publicSurface&&!socialEntries.some(x=>x.label==='인스타그램'))violations.push('instagram_link_missing');
           if(publicSurface&&!socialEntries.some(x=>x.label==='페이스북'||x.label==='페이스북 그룹'))violations.push('facebook_link_missing');
-          if(suffix==='/'&&centralValid){
+          if((suffix==='/'||suffix.startsWith('/board/'))&&centralValid){
             try{
               await page.locator('header.site-header nav [data-category-menu="공지"]').click({timeout:5000});
               record.centralNoticeOpen=await page.evaluate(()=>{
