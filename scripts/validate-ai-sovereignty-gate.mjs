@@ -55,6 +55,8 @@ assert.match(submit,/deploymentAuthorized:false/);
 assert.equal(isSameOriginAdminMutation(new Request('https://ekodi.kr/api/control/ai/v8/orchestrator/submit',{method:'POST',headers:{origin:'https://ekodi.kr'}})),true);
 assert.equal(isSameOriginAdminMutation(new Request('https://ekodi.kr/api/control/ai/v8/orchestrator/submit',{method:'POST',headers:{origin:'https://evil.test'}})),false);
 assert.equal(isSameOriginAdminMutation(new Request('https://ekodi.kr/api/control/ai/v8/orchestrator/submit',{method:'POST'})),false);
+assert.equal(isSameOriginAdminMutation(new Request('https://ekodi.kr/api/control/ai/v8/orchestrator/submit',{method:'POST',headers:{origin:'https://ekodi.kr','sec-fetch-site':'cross-site'}})),false);
+assert.equal(isSameOriginAdminMutation(new Request('https://ekodi.kr/api/control/ai/v8/orchestrator/submit',{method:'POST',headers:{origin:'https://ekodi.kr','sec-fetch-site':'same-origin'}})),true);
 const valid={intent:'Safely validate EKODI AI production delivery',risk:'high',deploymentRequested:true,idempotencyKey:'repeatable-unique-123',service:'ekodi'};
 const prepared=prepareAdminOrchestratorSubmission({...valid,target:{capability:'admin:*',role:'super_admin'},paidApproved:true});
 assert.equal(prepared.target.service,'ekodi');
