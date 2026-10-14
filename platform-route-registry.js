@@ -1,7 +1,7 @@
 export const PLATFORM_ROUTE_REGISTRY=Object.freeze({
   canonical:Object.freeze(['admin','my','auth','api','mcp','webhooks','health','connect']),
   platformServices:Object.freeze([
-    'ai','author','bible','books','business','cafe','cloud','community','cmpmyi','delivery','dev','developer','education','energy','ekodilab','ekodimall','ekodimission','ekodipay','event','experience','finance-api','give','history','insurance','invest','journal','lab','life','live','local-commerce','login','logout','mail','mall','management','marketing','marketing-api','marketing-connect-api','marketing-publish-api','media','messenger','mission','money','pay','personal-finance-api','preview','privacy','publish','publishing','shell','singles','social','status','storage','stores','support','tax','terms','trade','try','work','workspace-api','www'
+    'ai','author','bible','books','business','cafe','cloud','community','cmpmyi','delivery','dev','developer','edu','education','energy','ekodilab','ekodimall','ekodimission','ekodipay','event','experience','finance-api','give','history','insurance','invest','journal','lab','life','live','local-commerce','login','logout','mail','mall','management','marketing','marketing-api','marketing-connect-api','marketing-publish-api','media','messenger','mission','money','pay','personal-finance-api','preview','privacy','publish','publishing','shell','singles','social','status','storage','stores','support','tax','terms','trade','try','work','workspace-api','www'
   ]),
   retiredIdentityPrefixes:Object.freeze(['group','org','personal','project','space','user']),
 });
@@ -20,6 +20,8 @@ export const PLATFORM_EXECUTION_SURFACES=Object.freeze([
   Object.freeze({id:'books',prefix:'/books',binding:'BOOKS',virtualHost:platformHost('books')}),
   Object.freeze({id:'business',prefix:'/business',binding:'BUSINESS',virtualHost:platformHost('business'),host:platformHost('business')}),
   Object.freeze({id:'community',prefix:'/community',binding:'COMMUNITY',virtualHost:platformHost('community')}),
+  // Reuse the existing Education Worker; apex /edu is a path alias, not a new tenant.
+  Object.freeze({id:'education-academic-alias',prefix:'/edu',binding:'EDUCATION'}),
   Object.freeze({id:'education',prefix:'/education',binding:'EDUCATION',virtualHost:platformHost('edu')}),
   Object.freeze({id:'energy',prefix:'/energy',binding:'ENERGY',virtualHost:platformHost('energy')}),
   Object.freeze({id:'experience',prefix:'/experience',binding:'EXPERIENCE',virtualHost:platformHost('exp')}),
