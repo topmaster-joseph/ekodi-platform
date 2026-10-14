@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {isDorajiOfficePath,dorajiOfficeResponse} from '../ekodibiz-doraji-office.js';
-const get=p=>new Request('https://business.ekodi.kr'+p);
+import {BUSINESS_OS_STAGE} from '../business-os-core.js';
+const get=p=>new Request('https://ekodi.kr'+p);
 test('business unit owns only the doraji office prefix',()=>{
  assert.equal(isDorajiOfficePath('/ekodibiz/doraji'),true);
  assert.equal(isDorajiOfficePath('/ekodibiz/doraji/budget'),true);
@@ -26,5 +27,7 @@ test('calculations remain client only with a separate first-party script',async(
 });
 test('unknown routes and mutating methods are rejected',()=>{
  assert.equal(dorajiOfficeResponse(get('/ekodibiz/doraji/not-a-tab')).status,404);
- assert.equal(dorajiOfficeResponse(new Request('https://business.ekodi.kr/ekodibiz/doraji',{method:'POST'})).status,405);
+ assert.equal(dorajiOfficeResponse(new Request('https://ekodi.kr/ekodibiz/doraji',{method:'POST'})).status,405);
 });
+
+test('the office reuses the shared Business OS project stages',()=>{assert.equal(BUSINESS_OS_STAGE.length,6)});
