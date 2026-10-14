@@ -165,7 +165,7 @@ jobs:
             [[ "$REQUESTED_BRANCH" =~ ^ai/[a-z0-9][a-z0-9._-]{0,31}/orch_[a-z0-9][a-z0-9_-]{15,120}$ ]] || { echo 'Orchestrator-issued branch required'; exit 1; }
             [[ "$REQUESTED_TASK" == "${REQUESTED_BRANCH##*/}" ]] || { echo 'Orchestrator task and branch differ'; exit 1; }
             associated=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" \
-              --jq '[.[] | select(.merged_at != null and .base.ref == "main" and .head.ref == env.REQUESTED_BRANCH)] | length')
+              | jq --arg branch "$REQUESTED_BRANCH" '[.[] | select(.merged_at != null and .base.ref == "main" and .head.ref == $branch)] | length')
             [[ "$associated" =~ ^[0-9]+$ && "$associated" -ge 1 ]] || { echo 'No merged PR for this exact orchestrator branch and SHA'; exit 1; }
             echo "EKODI_RELEASE_BRANCH_REF=$REQUESTED_BRANCH" >> "$GITHUB_ENV"
             echo "EKODI_RELEASE_TASK_ID=$REQUESTED_TASK" >> "$GITHUB_ENV"
