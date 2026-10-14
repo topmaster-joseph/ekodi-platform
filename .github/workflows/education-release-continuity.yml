@@ -9,6 +9,10 @@ on:
       - 'scripts/education-release-continuity.mjs'
       - 'test/education-release-continuity.test.mjs'
       - '.github/workflows/education-release-continuity.yml'
+      - 'education/study/ai-bootcamp/studio/**'
+      - 'education/study/ai-bootcamp/material-source.js'
+      - 'scripts/verify-education-material-studio-native.mjs'
+      - 'test/education-material-studio.test.mjs'
 
 permissions:
   contents: read
@@ -53,11 +57,14 @@ jobs:
             sleep 1
           done
           node scripts/verify-education-bootcamp-native.mjs
+          node scripts/verify-education-material-studio-native.mjs
       - uses: actions/upload-artifact@v4
         if: always() && github.event_name == 'pull_request'
         with:
           name: education-preapproval-browser-${{ github.run_id }}
-          path: artifacts/education-native/
+          path: |
+            artifacts/education-native/
+            artifacts/education-studio-native/
           retention-days: 7
 
   reconcile:
