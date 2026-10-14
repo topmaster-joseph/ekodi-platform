@@ -23,7 +23,7 @@ concurrency:
 jobs:
   contract:
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    timeout-minutes: 13
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -33,6 +33,32 @@ jobs:
         run: |
           node --check scripts/education-release-continuity.mjs
           node --test test/education-release-continuity.test.mjs
+      - name: Install EKODI-native disposable Chromium for pre-approval preview
+        if: github.event_name == 'pull_request'
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Pre-approval synthetic classroom browser acceptance (five widths)
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          EKODI_EDUCATION_PREVIEW_MODE: 'true'
+        run: |
+          set -euo pipefail
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory education >/tmp/ekodi-edu-preview.log 2>&1 &
+          preview_pid=$!
+          trap 'kill "$preview_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent 'http://127.0.0.1:8765/study/ai-bootcamp/' >/dev/null; then break; fi
+            sleep 1
+          done
+          node scripts/verify-education-bootcamp-native.mjs
+      - uses: actions/upload-artifact@v4
+        if: always() && github.event_name == 'pull_request'
+        with:
+          name: education-preapproval-browser-${{ github.run_id }}
+          path: artifacts/education-native/
+          retention-days: 7
 
   reconcile:
     if: >-
