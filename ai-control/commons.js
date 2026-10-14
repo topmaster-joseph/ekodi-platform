@@ -228,6 +228,8 @@ function renderSupportNotice(item){
   period.textContent='신청 기간: '+(item.applicationPeriod||'원문 확인');
   card.append(title,meta,period);
   if(item.summary){const desc=document.createElement('p');desc.className='support-notice-desc';desc.textContent=String(item.summary).slice(0,190);card.append(desc)}
+  const detail=document.createElement('button');detail.type='button';detail.className='support-notice-detail';detail.textContent='상세 보기 · 지원 요청 →';detail.disabled=!url;
+  detail.addEventListener('click',()=>openSupportDetail(item,true));card.append(detail);
   return card;
 }
 function renderSupportFeed(){
@@ -270,6 +272,8 @@ async function loadSupportFeed(){
     supportState.loaded=true;
     supportState.fetchedAt=new Date().toLocaleString('ko-KR',{timeZone:'Asia/Seoul',hour12:false});
     renderSupportFeed();
+    const requested=new URL(location.href).searchParams.get('support_notice');
+    if(requested){const notice=supportState.items.find(item=>supportNoticeKey(item)===requested);if(notice)void openSupportDetail(notice,false);else $('supportStatus').textContent+=' · 링크된 공고는 현재 수집 목록에서 확인되지 않습니다.'}
   }catch{
     $('supportStatus').textContent='공식 공고 연결을 확인하지 못했습니다. 새로고침하거나 기존 지원사업 AI에서 직접 검색해 주세요.';
     if(!supportState.loaded){$('supportNotices').replaceChildren();const p=document.createElement('p');p.className='support-empty';p.textContent='공고 정보를 불러오지 못했습니다. 확인되지 않은 공고는 임의로 표시하지 않습니다.';$('supportNotices').append(p)}
@@ -286,6 +290,115 @@ function initSupportFeed(){
   }else void loadSupportFeed();
 }
 
+
+// Per-notice independent EKODIBIZ assistance: review draft only, never a client-authoritative contract or payment.
+const assistanceState={notice:null,catalog:null,chosen:new Set(),busy:false};
+function supportNoticeKey(item){return [String(item.source||'official'),String(item.id||'')].join(':')}
+function moneyKRW(amount){return new Intl.NumberFormat('ko-KR',{style:'currency',currency:'KRW',maximumFractionDigits:0}).format(amount)}
+function assistanceSelectedPlans(){return(assistanceState.catalog?.plans||[]).filter(plan=>assistanceState.chosen.has(plan.id))}
+async function loadAssistanceCatalog(){
+  if(assistanceState.catalog)return assistanceState.catalog;
+  const result=await api('/api/commons/assistance/catalog');
+  if(!Array.isArray(result.plans))throw new Error('assistance_catalog_unavailable');
+  assistanceState.catalog=result;return result;
+}
+function assistanceRenderContract(){
+  const plans=assistanceSelectedPlans(),sum=$('assistancePriceSummary'),contract=$('assistanceContractText');
+  if(!plans.length){sum.textContent='서비스를 선택하면 비용을 계산합니다.';contract.textContent='서비스를 선택하면 계약서 초안이 생성됩니다.';return}
+  const quoted=plans.some(p=>p.price.amount===null);
+  const total=quoted?null:plans.reduce((a,p)=>a+p.price.amount,0);
+  sum.textContent=quoted?'선택 항목 중 개별 견적 서비스가 있습니다. 최종 가격과 부가세 포함 여부는 별도 승인 견적서에서 확정합니다.':'공개된 선택 항목 합계 '+moneyKRW(total)+' · 최종 계약 및 결제는 에코디비즈 승인 후';
+  contract.textContent=[
+    '지원사업 업무지원 계약 검토용 초안 (체결·서명 문서 아님)',
+    '계약 제공주체: EKODIBIZ (정식 사업자정보는 계약 확정 전 고지)',
+    '계약 요청인: 아래 입력한 신청인 (본인확인 및 당사자 확인 필요)',
+    '관련 공고: '+(assistanceState.notice?.title||''),
+    '선택 서비스: '+plans.map(p=>p.label).join(', '),
+    '업무 범위·결과물: '+plans.map(p=>p.label+' — '+p.deliverables.join(' / ')).join('; '),
+    '비용: '+(total===null?'개별 서면 견적 후 확정':moneyKRW(total)+' (최종 검토 전 안내 금액)'),
+    '업무기간 및 납품·수정 범위: 최종 계약 시 서면 확정',
+    '취소·환불·지급조건·개인정보 보유기간: 최종 계약서 및 개인정보처리 안내에서 별도 고지·승인',
+    '정부·수행기관 신청과 무관한 독립 지원서비스로, 사업 선정이나 지급액은 보장하지 않습니다.',
+    '전자서명, 상호 계약승인, PG 결제 검증이 완료되기 전에는 업무 착수하지 않습니다.'
+  ].join('\n');
+}
+function assistanceRenderPlans(){
+  const host=$('assistancePlanList');host.replaceChildren();
+  for(const plan of assistanceState.catalog?.plans||[]){
+    const label=document.createElement('label');label.className='assistance-plan';
+    const check=document.createElement('input');check.type='checkbox';check.value=plan.id;check.checked=assistanceState.chosen.has(plan.id);
+    check.addEventListener('change',()=>{if(check.checked)assistanceState.chosen.add(plan.id);else assistanceState.chosen.delete(plan.id);assistanceRenderContract()});
+    const wrap=document.createElement('span'),title=document.createElement('strong'),desc=document.createElement('small'),outputs=document.createElement('small'),cost=document.createElement('b');
+    title.textContent=plan.label;desc.textContent=plan.description;outputs.textContent='제공: '+plan.deliverables.join(' · ');
+    cost.textContent=plan.price.kind==='quote_required'?'비용: 상담 후 개별 견적':plan.price.kind==='free'?'비용: 무료':
+      '비용: '+moneyKRW(plan.price.amount)+(plan.price.vatIncluded?' (부가세 포함)':' (부가세 별도)');
+    wrap.append(title,desc,outputs);label.append(check,wrap,cost);host.append(label);
+  }
+  assistanceRenderContract();
+}
+async function loadAssistanceHistory(){
+  const host=$('assistanceHistory');
+  if(!state.session){host.textContent='로그인 후 조회할 수 있습니다.';return}
+  try{
+    const result=await api('/api/commons/assistance/requests');
+    host.replaceChildren();
+    for(const request of result.requests||[]){
+      const row=document.createElement('p');row.className='assistance-history-row';
+      row.textContent=(request.createdAt||'').slice(0,10)+' · '+request.noticeTitle+' · '+(request.state==='review_requested'?'계약·견적 검토 대기':request.state)+' · '+(request.quoteRequired?'견적 대기':moneyKRW(request.amount));
+      host.append(row);
+    }
+    if(!host.children.length)host.textContent='접수한 요청이 없습니다.';
+  }catch{host.textContent='이력을 불러올 수 없습니다.'}
+}
+async function openSupportDetail(item,pushHistory=true){
+  if(!item||!supportSafeUrl(item.url))return;
+  assistanceState.notice=item;assistanceState.chosen=new Set();
+  const pane=$('support-detail');pane.hidden=false;
+  const body=$('supportDetailBody');body.replaceChildren();
+  const title=document.createElement('h4');title.textContent=item.title||'공고';
+  const link=document.createElement('a');link.href=supportSafeUrl(item.url);link.target='_blank';link.rel='noopener noreferrer';link.textContent='공식 공고 원문 보기 ↗';
+  const facts=document.createElement('p');facts.textContent='출처: '+(item.sourceName||item.source||'공식 출처')+' · 주관기관: '+(item.agency||'원문 확인')+' · 신청 기간: '+(item.applicationPeriod||'원문 확인')+' · 상태: '+supportNoticeStatus(item).label;
+  const desc=document.createElement('p');desc.textContent=item.summary||'공고 내용과 제출 요건은 원문에서 직접 확인하세요.';
+  body.append(title,facts,desc,link);
+  $('assistancePlanList').textContent='지원 유형 및 공개된 비용 정보를 확인하고 있습니다.';
+  $('assistanceRequestStatus').textContent='업무계약은 EKODIBIZ 승인 및 실제 결제 확인 후에만 진행합니다.';
+  if(pushHistory){const u=new URL(location.href);u.searchParams.set('support_notice',supportNoticeKey(item));u.hash='support-detail';history.pushState(null,'',u)}
+  pane.scrollIntoView({behavior:'smooth',block:'start'});
+  try{await loadAssistanceCatalog();if(assistanceState.notice===item)assistanceRenderPlans()}catch{
+    $('assistancePlanList').textContent='지원서비스 가격정보를 불러올 수 없습니다. 계약 요청을 진행할 수 없습니다.';
+    $('assistanceRequestSubmit').disabled=true;
+  }
+  void loadAssistanceHistory();
+}
+function closeSupportDetail(){
+  $('support-detail').hidden=true;assistanceState.notice=null;assistanceState.chosen.clear();
+  const u=new URL(location.href);u.searchParams.delete('support_notice');u.hash='support-programs';history.pushState(null,'',u);
+}
+function initAssistanceRequest(){
+  $('supportDetailClose').addEventListener('click',closeSupportDetail);
+  $('assistanceRequestForm').addEventListener('submit',async event=>{
+    event.preventDefault();
+    const submit=$('assistanceRequestSubmit');if(assistanceState.busy||!assistanceState.notice)return;
+    if(!state.session){$('assistanceRequestStatus').textContent='지원 요청을 저장하려면 로그인해야 합니다.';$('assistanceLoginLink').hidden=false;return}
+    const plans=assistanceSelectedPlans();
+    if(!plans.length){$('assistanceRequestStatus').textContent='지원 유형을 한 개 이상 선택하세요.';return}
+    assistanceState.busy=true;submit.disabled=true;
+    try{
+      const item=assistanceState.notice;
+      const body={noticeId:String(item.id||''),noticeTitle:item.title,noticeSource:item.source||item.sourceName,
+        noticeUrl:supportSafeUrl(item.url),planIds:plans.map(p=>p.id),
+        applicantName:$('assistanceApplicant').value,organization:$('assistanceOrganization').value,
+        scopeAcknowledged:$('assistanceScopeConsent').checked,privacyAcknowledged:$('assistancePrivacyConsent').checked,
+        precontractAcknowledged:$('assistancePrecontractConsent').checked};
+      const result=await api('/api/commons/assistance/requests',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+      $('assistanceRequestStatus').textContent=result.message||'검토 요청 접수 · 계약과 결제는 별도 확인 후 진행됩니다.';
+      $('assistanceRequestForm').reset();void loadAssistanceHistory();
+    }catch(error){$('assistanceRequestStatus').textContent='요청 저장 실패: '+(error.message==='assistance_schema_unavailable'?'서버 저장소 준비가 필요합니다.':'입력 또는 로그인 상태를 확인하세요.')}
+    finally{assistanceState.busy=false;submit.disabled=false}
+  });
+}
+
+initAssistanceRequest();
 initSupportFeed();
 initChat();
 boot().catch(error=>{$('sessionState').textContent=`초기화 실패: ${error.message}`});
