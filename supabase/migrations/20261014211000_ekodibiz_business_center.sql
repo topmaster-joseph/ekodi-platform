@@ -74,6 +74,8 @@ begin
           case when tg_op='INSERT' then null else to_jsonb(old) end,to_jsonb(new));
   return new;
 end $$;
+revoke all on function public.ekodibiz_ops_stamp() from public,anon,authenticated;
+revoke all on function public.ekodibiz_ops_audit_change() from public,anon,authenticated;
 drop trigger if exists ekodibiz_ops_stamp_trg on public.ekodibiz_ops_items;
 create trigger ekodibiz_ops_stamp_trg before insert or update on public.ekodibiz_ops_items
 for each row execute function public.ekodibiz_ops_stamp();
