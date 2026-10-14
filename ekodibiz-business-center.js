@@ -1,50 +1,50 @@
 // EKODIBIZ Business Center is loaded only inside an authenticated workspace-admin view.
 // The SQL migration provides tenant-bound RLS and append-only audit, not browser storage.
-export const BIZ_CENTER_VERSION = '20261014-v1';
+export const BIZ_CENTER_VERSION = '20261014-compact-v2';
 
 const STYLE = String.raw`
-.ebiz{color:#18323e;font-size:15px;line-height:1.55;display:grid;gap:17px;min-width:0}
+.ebiz{color:#18323e;font-size:14px;line-height:1.3;display:grid;gap:9px;min-width:0}
 .ebiz *{box-sizing:border-box}
 .ebiz h2,.ebiz h3,.ebiz p{margin:0}
-.ebiz .ebiz-title{font-size:22px;letter-spacing:-.035em}
+.ebiz .ebiz-title{font-size:21px;letter-spacing:-.035em;line-height:1.22}
 .ebiz .ebiz-sub{font-size:13px;color:#6e8088}
-.ebiz .ebiz-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
-.ebiz .ebiz-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.ebiz .ebiz-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px}
+.ebiz .ebiz-actions{display:flex;align-items:center;flex-wrap:wrap;gap:5px}
 .ebiz button,.ebiz input,.ebiz select,.ebiz textarea{font:inherit}
-.ebiz .ebiz-btn{min-height:43px;border:1px solid #ccdcd9;background:#fff;color:#254b49;border-radius:9px;padding:9px 13px;cursor:pointer;text-align:center;font-weight:700}
+.ebiz .ebiz-btn{min-height:40px;border:1px solid #ccdcd9;background:#fff;color:#254b49;border-radius:8px;padding:7px 11px;cursor:pointer;text-align:center;font-weight:700}
 .ebiz .ebiz-btn.primary{background:#245d50;color:#fff;border-color:#245d50}
 .ebiz .ebiz-btn:disabled{opacity:.55;cursor:not-allowed}
 .ebiz .ebiz-btn:focus-visible,.ebiz input:focus-visible,.ebiz select:focus-visible{outline:3px solid #75bfa5;outline-offset:2px}
-.ebiz .ebiz-nav{display:flex;gap:7px;overflow-x:auto;padding:3px 0 9px;border-bottom:1px solid #e5ecea;scrollbar-width:thin}
-.ebiz .ebiz-tab{border:1px solid #dce7e4;background:#fff;color:#426267;border-radius:9px;padding:10px 13px;min-height:43px;white-space:nowrap;cursor:pointer}
+.ebiz .ebiz-nav{display:flex;gap:5px;overflow-x:auto;padding:1px 0 5px;border-bottom:1px solid #e5ecea;scrollbar-width:thin}
+.ebiz .ebiz-tab{border:1px solid #dce7e4;background:#fff;color:#426267;border-radius:8px;padding:7px 11px;min-height:40px;white-space:nowrap;cursor:pointer}
 .ebiz .ebiz-tab[aria-current="page"]{color:#fff;background:#25584f;border-color:#25584f;font-weight:800}
-.ebiz .ebiz-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
-.ebiz .ebiz-stat{border:1px solid #e0e8e6;border-radius:12px;padding:16px;background:#fff}
+.ebiz .ebiz-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.ebiz .ebiz-stat{border:1px solid #e0e8e6;border-radius:10px;padding:11px;background:#fff}
 .ebiz .ebiz-stat small{display:block;color:#6b8087;font-size:12px}
-.ebiz .ebiz-stat strong{display:block;margin-top:7px;font-size:27px;letter-spacing:-.05em;line-height:1.2}
-.ebiz .ebiz-card{background:#fff;border:1px solid #e0e8e6;border-radius:12px;padding:17px}
-.ebiz .ebiz-cols{display:grid;grid-template-columns:1.3fr 1fr;gap:12px}
-.ebiz .ebiz-line{display:flex;align-items:start;justify-content:space-between;gap:11px;padding:12px 0;border-bottom:1px solid #ecf1ef}
+.ebiz .ebiz-stat strong{display:block;margin-top:3px;font-size:25px;letter-spacing:-.05em;line-height:1.1}
+.ebiz .ebiz-card{background:#fff;border:1px solid #e0e8e6;border-radius:10px;padding:12px}
+.ebiz .ebiz-cols{display:grid;grid-template-columns:1.3fr 1fr;gap:8px}
+.ebiz .ebiz-line{display:flex;align-items:start;justify-content:space-between;gap:7px;padding:7px 0;border-bottom:1px solid #ecf1ef}
 .ebiz .ebiz-line:last-child{border:0}
 .ebiz .ebiz-line strong{display:block;font-size:14px}
-.ebiz .ebiz-line small{display:block;color:#809198;font-size:12px;margin-top:3px}
+.ebiz .ebiz-line small{display:block;color:#809198;font-size:12px;margin-top:1px}
 .ebiz .ebiz-chip{display:inline-flex;background:#e9f4ec;color:#29694c;border-radius:6px;padding:3px 8px;font-size:11px;white-space:nowrap}
 .ebiz .ebiz-chip.warn{background:#fcf3e3;color:#956323}
 .ebiz .ebiz-chip.neutral{background:#f0f3f4;color:#677e86}
-.ebiz .ebiz-note{padding:13px;border:1px solid #d3e8de;background:#eff7f1;border-radius:9px;color:#356c57;font-size:13px}
-.ebiz .ebiz-warning{padding:13px;border:1px solid #e7c9a6;background:#fff8e9;border-radius:9px;color:#825b30}
-.ebiz .ebiz-empty{padding:27px 12px;color:#758891;text-align:center;font-size:13px}
-.ebiz .ebiz-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}
+.ebiz .ebiz-note{padding:8px 10px;border:1px solid #d3e8de;background:#eff7f1;border-radius:8px;color:#356c57;font-size:13px}
+.ebiz .ebiz-warning{padding:8px 10px;border:1px solid #e7c9a6;background:#fff8e9;border-radius:8px;color:#825b30}
+.ebiz .ebiz-empty{padding:15px 8px;color:#758891;text-align:center;font-size:13px}
+.ebiz .ebiz-tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:7px 0}
 .ebiz .ebiz-tools input{min-height:42px;flex:1 1 190px;border:1px solid #d5e1df;border-radius:8px;padding:9px 11px}
 .ebiz .ebiz-tablewrap{overflow-x:auto}
 .ebiz table{width:100%;border-collapse:collapse;min-width:610px}
-.ebiz th,.ebiz td{text-align:left;border-bottom:1px solid #e8eeec;padding:12px 9px;vertical-align:middle;white-space:normal}
+.ebiz th,.ebiz td{text-align:left;border-bottom:1px solid #e8eeec;padding:7px 8px;vertical-align:middle;white-space:normal;line-height:1.3}
 .ebiz th{font-size:12px;color:#627a83;background:#f7faf8}
 .ebiz td{font-size:13px;color:#2d4955}
 .ebiz td small{display:block;color:#8b9ba1}
 .ebiz .ebiz-input,.ebiz select,.ebiz textarea{width:100%;min-height:42px;border:1px solid #d2dfdc;border-radius:8px;background:#fff;color:#17313a;padding:9px}
-.ebiz label{display:grid;gap:5px;color:#4b6873;font-size:13px;font-weight:650}
-.ebiz .ebiz-form{display:grid;grid-template-columns:1fr 1fr;gap:11px;padding:16px;border:1px solid #dce8e4;background:#f7faf8;border-radius:10px}
+.ebiz label{display:grid;gap:3px;color:#4b6873;font-size:13px;font-weight:650}
+.ebiz .ebiz-form{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:11px;border:1px solid #dce8e4;background:#f7faf8;border-radius:9px}
 .ebiz .ebiz-wide{grid-column:1/-1}
 .ebiz .ebiz-form-actions{display:flex;gap:8px;flex-wrap:wrap}
 .ebiz .ebiz-mini{min-height:35px!important;font-size:12px!important;padding:5px 8px!important}
@@ -55,7 +55,7 @@ const STYLE = String.raw`
 .ebiz .ebiz-print-frame{background:#eff2f2;border-radius:11px;padding:15px;width:min(750px,100%)}
 .ebiz .ebiz-print-tools{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .ebiz #ebiz-print-sheet{padding:44px;background:#fff;color:#122b34;min-height:700px}
-.ebiz #ebiz-print-sheet h2{text-align:center;font-size:22px;margin:35px 0 24px}
+.ebiz #ebiz-print-sheet h2{text-align:center;font-size:20px;margin:18px 0 12px;line-height:1.25}
 .ebiz #ebiz-print-sheet table{min-width:0;font-size:11px}
 .ebiz #ebiz-print-sheet td,.ebiz #ebiz-print-sheet th{font-size:11px}
 .ebiz #ebiz-print-sheet .ebiz-print-heading{font-weight:800;border-bottom:2px solid #23424a;padding-bottom:12px}
@@ -96,7 +96,7 @@ function mountBusinessCenter({target,summaryTarget,accessToken,supabaseUrl,supab
   const sections=['home','admin','project','education','finance','document','task','history'];
   const state={section:'home',rows:[],audit:[],ready:false,busy:false,filter:'',openForm:false};
   if(!document.getElementById('ebiz-business-center-style')){
-    const link=document.createElement('link');link.id='ebiz-business-center-style';link.rel='stylesheet';link.href='/ekodibiz-business-center.css?v=20261014-v1';document.head.append(link);
+    const link=document.createElement('link');link.id='ebiz-business-center-style';link.rel='stylesheet';link.href='/ekodibiz-business-center.css?v=20261014-compact-v2';document.head.append(link);
   }
   summaryTarget.replaceChildren();
   target.classList.add('ebiz');
