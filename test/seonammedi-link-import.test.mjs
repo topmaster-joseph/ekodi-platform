@@ -17,6 +17,7 @@ test('link-only import extracts verified headline body date source without manua
   assert.equal(result.title,'전남 국립의대 신설, 목포대·순천대 논의');
   assert.equal(result.date,'2026.10.09');
   assert.equal(result.publisher,'지역보도');
+  assert.equal(result.category,'정부·대학'); // Existing noncommittee classifications stay unchanged.
   assert.equal(result.relevant,true);assert.equal(result.ready,true);
   assert.match(result.summary,/국립의대 신설/);
 });
@@ -96,4 +97,32 @@ test('link import uses URL hash for duplicate control and always re-fetches on s
   assert.match(api,/fetchSeonamMediLinkPreview\(sourceUrl\)/);
   assert.match(api,/if\(!item\.ready\)/);
   assert.match(api,/audit\(env,auth,'link_import'/);
+});
+
+test('verified original publisher committee article is news, not committee activity, with source-only summary',async()=>{
+  const html=[
+    '<html><head>',
+    '<meta property="og:title" content="서남권 의대 비대위, 의대 추천 절차의 공정성 문제 제기">',
+    '<meta name="og:description" content="전남 국립의대 공모에서 목포대 재심사를 요구하는 비상대책위원회 입장입니다.">',
+    '<meta property="article:published_time" content="2026-10-12T16:08:00+09:00">',
+    '<meta property="og:site_name" content="LG헬로비전">',
+    '</head><body><article>서남권 의대 비상대책위원회는 전남 국립의대 후보 선정과 재심사에 대해 의견을 발표했다. 별도의 시민 의견과 근거자료는 원문에서 확인할 수 있다.</article></body></html>'
+  ].join('');
+  const item=extractSeonamMediArticle(html,'https://news.lghellovision.net/news/articleView.html?idxno=557927');
+  assert.equal(item.ready,true);
+  assert.equal(item.committeeRelated,true);
+  assert.equal(item.category,'방송');
+  assert.equal(item.date,'2026.10.12');
+  assert.equal(item.summary.includes('별도의 시민 의견과 근거자료'),false);
+  const api=await readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8');
+  assert.match(api,/record_scope,committee_kind,committee_related,status/);
+  assert.match(api,/item\.committeeRelated\?1:0/);
+  assert.match(api,/if\(!can\(auth,TIMELINE_CAP\)\)return json\(\{ok:false,error:'timeline_forbidden'/);
+});
+
+test('committee headline without regional publisher-body evidence remains unpublishable',()=>{
+  const html='<html><head><meta property="og:title" content="서남권 의대 비대위, 의대 추천 절차 공정성 문제 제기"><meta property="article:published_time" content="2026-10-12"></head><body><article>해외 아이스하키 리그 참가 선수 명단 분석이다. 전혀 관련 없는 스포츠 내용만 확인된다.</article></body></html>';
+  const item=extractSeonamMediArticle(html,'https://publisher.example.kr/article');
+  assert.equal(item.ready,false);
+  assert.equal(item.committeeRelated,false);
 });

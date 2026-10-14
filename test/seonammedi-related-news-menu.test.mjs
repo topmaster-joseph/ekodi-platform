@@ -83,8 +83,9 @@ test('related news cannot silently claim committee acts based on search headline
   ]);
   assert.match(js,/const isCommitteeRecord=item=>item\?\.recordScope==='committee'/);
   assert.match(js,/if\(isCommitteeRecord\(row\)\)return false/);
-  assert.match(api,/record_scope,committee_kind,status/);
-  assert.match(api,/'news','',\?,0/);
+  assert.match(api,/record_scope,committee_kind,committee_related,status/);
+  assert.match(api,/'news','',\?,\?,0/);
+  assert.match(api,/item\.committeeRelated\?1:0/);
   assert.match(monitor,/isPublicSeonamMediSource/);
 });
 
