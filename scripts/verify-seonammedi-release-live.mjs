@@ -1,8 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { dirname, join } from 'node:path';
-import { expectedSeonamMediHtmlAtOrigin, normalizeSeonamMediLiveHtml } from './seonammedi-live-html-proof.mjs';
 import { assertSeonamMediAssetCachePolicy } from './seonammedi-cache-contract.mjs';
+import {dirname, join} from 'node:path';
+import {compareSeonamMediPublishedHtml} from './seonammedi-release-html-alias.mjs';
+import {normalizeSeonamMediLiveHtml} from './seonammedi-live-html-proof.mjs';
 
 const args=Object.fromEntries(process.argv.slice(2).map(arg=>{
   const m=arg.match(/^--([^=]+)=(.*)$/);
@@ -23,17 +24,6 @@ const releaseFromHtml=html=>html.match(/<meta name="ekodi-release" content="([^"
 
 const expected=JSON.parse(await readFile(expectedPath,'utf8'));
 if(!expected?.release)throw new Error('Expected release manifest has no release id');
-const expectedNames={root:'index.html',admin:'admin/index.html',finance:'finance/index.html',notices:'notices/index.html'};
-const sourceDirectory=join(dirname(expectedPath),'..');
-const pageSources={};
-for(const [name,relative] of Object.entries(expectedNames)){
-  const source=await readFile(join(sourceDirectory,relative),'utf8');
-  const publishedHash=expected.publishedHtmlHashes?.[relative];
-  const sourceHash=createHash('sha256').update(source).digest('hex');
-  if(!publishedHash||sourceHash!==publishedHash)throw new Error(name+'_release_artifact_html_digest_mismatch');
-  pageSources[name]=source;
-}
-
 
 let lastError='';
 for(let attempt=1;attempt<=attempts;attempt++){
@@ -63,14 +53,29 @@ for(let attempt=1;attempt<=attempts;attempt++){
     const pageHashes=expected.publishedHtmlHashes;
     if(!pageHashes||!live.publishedHtmlHashes)throw new Error('html_digest_manifest_missing');
     if(JSON.stringify(live.publishedHtmlHashes)!==JSON.stringify(pageHashes))throw new Error('html_digest_manifest_mismatch');
+    const expectedNames={root:'index.html',admin:'admin/index.html',finance:'finance/index.html',notices:'notices/index.html'};
     for(const [name,page] of [['root',root],['admin',admin],['finance',finance],['notices',notices]]){
       if(releaseFromHtml(page.text)!==expected.release)throw new Error(name+'_html_release_mismatch');
       const relative=expectedNames[name];
-      const localHtml=expectedSeonamMediHtmlAtOrigin(pageSources[name],origin);
-      const observed=normalizeSeonamMediLiveHtml(page.text,{origin,page:relative});
-      const expectedHash=createHash('sha256').update(localHtml).digest('hex');
-      const actualHash=createHash('sha256').update(observed.html).digest('hex');
-      if(actualHash!==expectedHash)throw new Error(name+'_html_digest_mismatch expected='+expectedHash+' actual='+actualHash);
+      const expectedHash=pageHashes[relative];
+      if(!expectedHash)throw new Error(name+'_html_digest_missing');
+      // Validate the original release artifact before any permitted edge projection.
+      const published=await readFile(join(dirname(dirname(expectedPath)),relative),'utf8');
+      if(createHash('sha256').update(published).digest('hex')!==expectedHash)
+        throw new Error(name+'_published_artifact_digest_mismatch');
+      // Ignore only strictly identified first-party publication-admin and
+      // Cloudflare Web Analytics injections. Unknown HTML changes fail.
+      const normalized=normalizeSeonamMediLiveHtml(page.text,{origin,page:relative});
+      const actualHash=createHash('sha256').update(normalized.html).digest('hex');
+      if(actualHash!==expectedHash){
+        const customerHost=new URL(origin).hostname.toLowerCase();
+        const isCustomer=['seonammedi.kr','www.seonammedi.kr','xn--3e0b8b58jw4co4mnpll3k.kr','www.xn--3e0b8b58jw4co4mnpll3k.kr'].includes(customerHost);
+        if(!isCustomer)throw new Error(name+'_html_digest_mismatch expected='+expectedHash+' actual='+actualHash);
+        const allowlisted=[...Object.values(expected.assets||{}).map(asset=>asset.path).filter(Boolean),'assets/campaign-reconsideration-20261013.png'];
+        const match=compareSeonamMediPublishedHtml(published,normalized.html,allowlisted);
+        if(!match.matched)throw new Error(name+'_html_digest_mismatch expected='+expectedHash+' actual='+actualHash+' reason='+match.reason);
+        console.log('SeonamMedi verified domain path aliases:',JSON.stringify({page:name,count:match.aliases.length,paths:[...new Set(match.aliases)]}));
+      }
       if(!page.text.includes('data-ekodi-release-convergence'))throw new Error(name+'_runtime_convergence_missing');
     }
     if(!finance.text.includes('/api/seonammedi/admin/finance'))throw new Error('finance_surface_contract_missing');

@@ -47,6 +47,7 @@
 .campaign-hero-image{display:block;width:100%;height:auto;max-width:100%;object-fit:contain}
 @media(max-width:700px){.site-header{max-width:100%;box-sizing:border-box}.ekodi-six-nav{gap:14px}.ekodi-six-nav>a{font-size:14px}.central-category-panel{padding:14px 12px}}
 </style>
+<link rel="stylesheet" href="./central-category-menu.css">
 </head>
 <body>
 <header class="site-header">
@@ -160,13 +161,6 @@
     <div class="inline-manage-grid"><label>근거 표시<input name="evidence" maxlength="500" placeholder="공식자료 · 언론보도 등"></label><label>상태<select name="status"><option value="published">공개</option><option value="draft">비공개</option></select></label></div>
     <div class="form-actions"><button type="submit">저장</button><button id="timelineManageCancel" type="button" class="secondary">취소</button><span id="timelineManageMessage" class="muted" role="status"></span></div>
   </form>
-  <div class="related-linked-channels"><h3>연결된 소셜채널</h3><p class="muted">채널명을 누르면 기존 소통채널 화면과 원문 링크로 이동합니다.</p><div id="relatedChannelLinks" class="related-channel-links" aria-label="연결된 채널 링크"></div>
-    <div class="related-facebook-source">
-      <span class="source-type">페이스북 · 그룹</span>
-      <a href="https://www.facebook.com/groups/2299276407568855" target="_blank" rel="noopener noreferrer" aria-label="페이스북 그룹 2299276407568855 원문 열기">페이스북 그룹 · 2299276407568855 <span aria-hidden="true">↗</span></a>
-      <small>관련소식의 ‘페이스북 그룹’ 세부 분류입니다. 게시물 열람에는 Facebook 로그인 또는 그룹 가입이 필요할 수 있으며, 확인되지 않은 게시물은 자동 공개하지 않습니다.</small>
-    </div>
-  </div>
   <datalist id="publicNewsCategories"><option value="신문"><option value="잡지"><option value="방송"><option value="통신사"><option value="유튜브"><option value="블로그"><option value="대학"><option value="정부·공공기관"><option value="공식기록"><option value="페이스북"><option value="페이스북 그룹"><option value="시민·단체"></datalist>
   <p id="timelineFeedStatus" class="muted" role="status" aria-live="polite">최신 발행일순 · 관련소식을 불러오는 중입니다.</p>
   <div id="timelineList" class="timeline"></div>
@@ -204,7 +198,7 @@
 </section>
 
 <section id="channels" class="section" data-view-section="channels" hidden>
-  <div class="section-head"><div><p class="eyebrow">RELATED NEWS · SOCIAL CHANNELS</p><h2>관련소식 · 연결 채널</h2></div><div class="section-head-actions"><button id="channelManageToggle" class="ekodi-public-admin-inline" type="button" hidden aria-expanded="false" aria-controls="channelManageForm">연결채널 바로 수정</button></div></div>
+  <div class="section-head"><div><p class="eyebrow">RELATED NEWS · SOCIAL CHANNELS</p><h2>소통채널</h2></div><div class="section-head-actions"><button id="channelManageToggle" class="ekodi-public-admin-inline" type="button" hidden aria-expanded="false" aria-controls="channelManageForm">연결채널 바로 수정</button></div></div>
   <p class="muted">플랫폼 탭을 선택한 뒤 연결된 계정·채널을 고르면 아래 화면에서 바로 확인할 수 있습니다. 외부 서비스가 전체 화면 삽입을 제한하면 공식 임베드 또는 공개 요약과 원문 링크로 전환합니다.</p>
   <form id="channelManageForm" class="panel module-compose inline-manage-form" hidden>
     <input type="hidden" name="id">
@@ -270,5 +264,5 @@
 <script src="/seonammedi/app.js?v=20261013-campaign-hero-1" defer></script>
 <script src="/seonammedi/voice-public-admin.js?v=20261006-domain-routing-2" defer></script>
 
-<script id="central-category-menu-script">(function(){const categories={"활동이력":[{"href":"#committee-activity","label":"비대위 활동"},{"href":"#committee-activity/%EC%84%B1%EB%AA%85%C2%B7%EC%9E%85%EC%9E%A5%20%EB%B0%9C%ED%91%9C","label":"공식 성명·추진 경과"}],"관련소식":[{"href":"#timeline","label":"전체 소식"},{"href":"#timeline/%EC%8B%A0%EB%AC%B8","label":"신문·인터넷 언론"},{"href":"#timeline/%EB%B0%A9%EC%86%A1","label":"방송"}],"소통채널":[{"href":"#channels/facebook","label":"페이스북"},{"href":"#channels/instagram","label":"인스타그램"},{"href":"#channels/youtube","label":"유튜브"}],"공지":[{"href":"board/notices","label":"공지사항"},{"href":"minutes/","label":"회의록"},{"href":"board/finance","label":"회계"}]};const panel=document.getElementById('central-category-panel'),title=document.getElementById('central-category-title'),buttons=document.getElementById('central-category-buttons'),triggers=[...document.querySelectorAll('.ekodi-six-nav > a')].filter(t=>categories[t.textContent.trim()]).map(t=>{t.dataset.categoryMenu=t.textContent.trim();t.setAttribute('aria-controls','central-category-panel');t.setAttribute('aria-expanded','false');return t});function close(){panel.hidden=true;triggers.forEach(t=>t.setAttribute('aria-expanded','false'))}triggers.forEach(t=>t.addEventListener('click',function(e){e.preventDefault();const name=t.dataset.categoryMenu;if(!panel.hidden&&title.textContent===name){panel.scrollIntoView({block:"start",behavior:"smooth"});return}title.textContent=name;buttons.replaceChildren();(categories[name]||[]).forEach(item=>{const link=document.createElement('a');link.href=item.href;link.textContent=item.label;buttons.append(link)});panel.hidden=false;triggers.forEach(x=>x.setAttribute('aria-expanded',String(x===t)));if(name==='소통채널'){const first=buttons.querySelector('a[href="#channels/facebook"]');if(first){first.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));}}else{const social=document.getElementById('central-social-links');if(social)social.hidden=true}panel.scrollIntoView({block:'start',behavior:'smooth'})}));buttons.addEventListener('click',e=>{const link=e.target.closest('a');if(!link)return;buttons.querySelectorAll('a').forEach(a=>a.removeAttribute('aria-current'));link.setAttribute('aria-current','true');const href=link.getAttribute('href')||'';const social=document.getElementById('central-social-links'),socialLink=document.getElementById('central-social-link');if(title.textContent==='소통채널'&&social&&socialLink){social.hidden=false;const platform=href.split('/').pop();const urls={facebook:'https://www.facebook.com/groups/2299276407568855/posts/2317435212419641/',instagram:'https://www.instagram.com/wonokoh/',youtube:'https://www.youtube.com/@Mokpo-tv'};socialLink.href=urls[platform]||href;socialLink.textContent=link.textContent+' 원본 열기';socialLink.setAttribute('aria-label',link.textContent+' 채널 원본 열기');const embed=document.getElementById('central-social-embed'),fallback=document.getElementById('central-social-fallback');embed.replaceChildren();if(platform==='facebook'){const frame=document.createElement('iframe');frame.title='페이스북 공개 게시물';frame.loading='lazy';frame.referrerPolicy='strict-origin-when-cross-origin';frame.setAttribute('allow','encrypted-media');frame.src='https://www.facebook.com/plugins/post.php?href='+encodeURIComponent(urls.facebook)+'&show_text=true&width=500';embed.append(frame);embed.hidden=false;fallback.textContent='게시물 공개 범위 또는 페이스북 정책에 따라 미리보기가 표시되지 않을 수 있습니다.';}else if(platform==='instagram'){embed.hidden=true;fallback.textContent='인스타그램 프로필은 공식 임베드 대상이 아니므로 아래 원본 링크에서 사진과 게시물을 확인할 수 있습니다.';}else if(platform==='youtube'){embed.hidden=true;fallback.textContent='유튜브 채널 주소만으로는 영상 임베드를 생성할 수 없습니다. 아래 원본 링크에서 채널의 영상을 확인할 수 있습니다.';}else{embed.hidden=true;fallback.textContent='공개 게시물 주소가 등록되면 이곳에 내용을 표시합니다.';}}else if(social){social.hidden=true}if(!href.startsWith('#'))close()});document.querySelectorAll('.ekodi-six-nav > a:not([data-category-menu])').forEach(t=>t.addEventListener('click',close));document.addEventListener('keydown',e=>{if(e.key==='Escape')close()})})();</script>
+<script src="./central-category-runtime.js" defer></script>
 </body></html>

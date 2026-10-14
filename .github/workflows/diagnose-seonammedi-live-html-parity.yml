@@ -1,0 +1,32 @@
+name: SeonamMedi Read-only HTML Parity Diagnosis
+on:
+  pull_request:
+    paths:
+      - 'scripts/diagnose-seonammedi-live-html-parity.mjs'
+      - '.github/workflows/diagnose-seonammedi-live-html-parity.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compare-public-html:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify read-only diagnostic syntax
+        run: node --check scripts/diagnose-seonammedi-live-html-parity.mjs
+      - name: Compare public released homepage responses (read-only)
+        run: node scripts/diagnose-seonammedi-live-html-parity.mjs
+      - name: Preserve sanitized response parity evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seonammedi-html-parity-${{ github.run_id }}
+          path: artifacts/seonammedi-html-parity/report.json
+          retention-days: 7
+          if-no-files-found: warn

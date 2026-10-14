@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="description" content="교직원 AI 부트캠프 4회차·6세트 실습형 강의실 — EKODI Education">
+  <meta name="ekodi-ui-type" content="USER">
+  <title>교직원 AI 부트캠프 강의실 | EKODI Education</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="./classroom.css">
+</head>
+<body data-ekodi-ui="USER">
+<header class="topbar">
+  <a class="brand" href="/"><span class="mark">E</span><span><strong>EKODI Education</strong><small>AI Bootcamp Classroom</small></span></a>
+  <nav aria-label="상위 경로"><a href="/">교육 홈</a><a href="/study/">학습·유학</a><a href="./" aria-current="page">AI 부트캠프</a></nav>
+  <a class="secondary" href="/study/">학습으로 돌아가기</a>
+</header>
+<main class="classroom-main">
+  <section class="classroom-heading" aria-labelledby="courseTitle">
+    <p class="eyebrow">EKODI EDUCATION · MNU STAFF AI</p>
+    <h1 id="courseTitle">AI로 바꾸는 대학의 일</h1>
+    <p class="course-lead">생성형 AI 기초 → 대학 행정·데이터 → 교수학습·연구 → 업무자동화. 강의, 시연, 실습, 오류 검증을 한 화면에서 진행합니다.</p>
+    <p class="status-note"><strong>제안 교육과정</strong> · 국립목포대학교 AI부트캠프사업단 공식 확정 일정·강의료·수료기준이 아닙니다. 예시 인물·날짜·수치는 가상입니다.</p>
+    <div class="stat-grid" aria-label="교육 규모"><span><b>4회</b> / 세트</span><span><b>120분</b> / 회</span><span><b>6세트</b> 반복</span><span><b>24회 · 48시간</b> 전체</span></div>
+  </section>
+  <div class="classroom-layout">
+    <aside class="classroom-sidebar" aria-label="강의실 메뉴">
+      <p class="side-label">강의실 분류</p>
+      <div class="view-menu" role="group" aria-label="자료 카테고리">
+        <button type="button" data-view="overview" class="is-current">과정 안내</button>
+        <button type="button" data-view="lecture">회차별 강의안</button>
+        <button type="button" data-view="practice">실습·프롬프트</button>
+        <button type="button" data-view="resources">자료실·체크리스트</button>
+        <button type="button" data-view="operations">6세트 운영관리</button>
+        <button type="button" data-view="instructor">강사·운영 안내</button>
+      </div>
+      <div class="side-help">강의 중에는 회차를 선택한 다음 <strong>발표 모드</strong>를 누르세요. ← → 키로 화면을 넘길 수 있습니다.</div>
+    </aside>
+    <section class="classroom-workspace" aria-labelledby="currentView">
+      <div class="workspace-bar">
+        <div class="workspace-heading"><p class="eyebrow">LIVE CLASSROOM</p><h2 id="currentView">과정 안내</h2></div>
+        <div class="workspace-actions">
+          <label for="lessonPicker">회차 <select id="lessonPicker" aria-label="강의 회차 선택"><option value="1">1회차</option><option value="2">2회차</option><option value="3">3회차</option><option value="4">4회차</option></select></label>
+          <label for="batchPicker">세트 <select id="batchPicker" aria-label="교육 세트 선택"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option><option value="E">E</option><option value="F">F</option></select></label>
+          <button id="presentButton" class="primary" type="button">발표 모드</button>
+          <button id="printButton" class="ghost" type="button">인쇄</button>
+        </div>
+      </div>
+      <div id="classroomContent" aria-live="polite"><p>강의 자료를 불러오는 중입니다.</p></div>
+      <p id="actionStatus" class="live-status" role="status" aria-live="polite"></p>
+    </section>
+  </div>
+  <section class="safety-banner"><h2>실습의 기본 원칙</h2><p>개인정보(학생·직원 실명, 학번, 인사평가, 연락처)와 비공개 연구자료·시험문항·계약자료는 공개형 AI에 입력하지 않습니다. 대학이 승인한 도구와 보안정책을 우선하며, 결과의 정확성·출처·저작권과 대외발송은 사람이 검토합니다.</p></section>
+</main>
+<dialog id="presentDialog" class="present-dialog" aria-label="강의 발표 모드">
+  <div class="slide-shell">
+    <header class="slide-toolbar"><strong id="slideLessonName"></strong><span id="slideCounter"></span><button type="button" id="fullButton">전체화면</button><button type="button" id="closeSlideButton" aria-label="발표 종료">종료 ×</button></header>
+    <div id="slideContent" class="slide-content"></div>
+    <footer class="slide-controls"><button type="button" id="prevSlideButton">← 이전</button><span>키보드 ← / → 이동, Esc 종료</span><button type="button" id="nextSlideButton">다음 →</button></footer>
+  </div>
+</dialog>
+<footer><strong>EKODI Education · AI Bootcamp</strong><span>교직원 AI 실무교육 제안안 · 가상 실습자료만 공개</span><a href="/study/">Study ↗</a></footer>
+<script type="module" src="./classroom.js"></script>
+</body>
+</html>
