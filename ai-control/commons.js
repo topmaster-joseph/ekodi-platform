@@ -381,13 +381,14 @@ async function openAssistanceQuote(id){
       '계약 제공자: '+v.merchant.name+' / 사업자등록번호 '+v.merchant.businessNumber,
       '대표자: '+v.merchant.representative+' / 소재지: '+v.merchant.address,
       '고객지원: '+v.merchant.customerService,
-      '공고명: '+data.request.noticeTitle,
-      '신청자: '+data.request.applicantName,
+      '공고명: '+v.request.noticeTitle+' / 공고 식별자: '+v.request.noticeId,
+      '신청자: '+v.request.applicantName,
       '선택 서비스 및 개별비용:',
       ...v.items.map(p=>'• '+p.label+' / '+moneyKRW(p.amount)+'\n  결과물: '+p.deliverables.join(' · ')+'\n  제외: '+p.limitations),
       '합계: '+moneyKRW(v.totalAmount)+' (부가세 포함)',
       '납품 예상: 실제 PG 결제 및 계약서 양측 서명 확인 후 '+v.deliveryDays+'일',
       '견적 유효기간: '+q.expiresAt,
+      '계약 기록 보관 안내: '+v.documents.retentionDays+'일 (최종 개인정보처리방침 확인)',
       '추가 협의사항: '+(v.notes||'없음'),
       ...v.disclaimers
     ];
