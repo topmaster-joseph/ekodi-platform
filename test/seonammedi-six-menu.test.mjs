@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import board from '../services/independent-board/worker.js';
 
-const expected=['공지','활동이력','관련소식','시민의견','조직'];
+const expected=['공지','활동이력','관련소식','소통채널','시민의견','조직'];
 const html=path=>readFile(new URL('../sites/seonammedi/public/'+path,import.meta.url),'utf8');
 function primaryMenu(htmlText){
   const nav=htmlText.match(/<nav class="ekodi-six-nav" aria-label="주요 메뉴">([\s\S]*?)<\/nav>/)?.[1];
@@ -21,7 +21,7 @@ function assertMenu(htmlText){
 
 
 }
-test('main and standalone public notice/finance headers share the exact five-menu hierarchy',async()=>{
+test('main and standalone public notice/finance headers share the exact six-menu hierarchy',async()=>{
   for(const name of ['index.html','notices/index.html','finance/index.html'])assertMenu(await html(name));
 });
 test('independent board routes share the same menu on canonical and mounted domains',async()=>{
