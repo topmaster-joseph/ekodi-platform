@@ -1,0 +1,54 @@
+name: EKODI Pay Native PC Mobile Verification
+on:
+  pull_request:
+    paths:
+      - 'scripts/verify-ekodipay-native.mjs'
+      - '.github/workflows/verify-ekodipay-native.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/verify-ekodipay-native.mjs'
+      - '.github/workflows/verify-ekodipay-native.yml'
+  workflow_run:
+    workflows: [Deploy EKODI Pay Canonical Entry]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ekodipay-native-${{ github.run_id }}
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify read-only native Chromium source
+        run: |
+          node --check scripts/verify-ekodipay-native.mjs
+          if grep -E 'process.env.(TOSS|PORTONE|PAYMENT_SECRET)' scripts/verify-ekodipay-native.mjs; then
+            echo 'Payment secrets are forbidden in browser verification.'
+            exit 1
+          fi
+      - name: Install first-party isolated Chromium
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Verify actual canonical PC and mobile screens and no-charge checkout
+        run: node scripts/verify-ekodipay-native.mjs
+      - name: Upload screenshots and JSON evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekodipay-native-${{ github.run_id }}
+          path: artifacts/ekodipay-native
+          retention-days: 14
+          if-no-files-found: warn
