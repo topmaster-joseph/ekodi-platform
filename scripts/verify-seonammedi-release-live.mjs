@@ -1,5 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { dirname, join } from 'node:path';
+import { expectedSeonamMediHtmlAtOrigin, normalizeSeonamMediLiveHtml } from './seonammedi-live-html-proof.mjs';
 import { assertSeonamMediAssetCachePolicy } from './seonammedi-cache-contract.mjs';
 
 const args=Object.fromEntries(process.argv.slice(2).map(arg=>{
@@ -21,6 +23,17 @@ const releaseFromHtml=html=>html.match(/<meta name="ekodi-release" content="([^"
 
 const expected=JSON.parse(await readFile(expectedPath,'utf8'));
 if(!expected?.release)throw new Error('Expected release manifest has no release id');
+const expectedNames={root:'index.html',admin:'admin/index.html',finance:'finance/index.html',notices:'notices/index.html'};
+const sourceDirectory=join(dirname(expectedPath),'..');
+const pageSources={};
+for(const [name,relative] of Object.entries(expectedNames)){
+  const source=await readFile(join(sourceDirectory,relative),'utf8');
+  const publishedHash=expected.publishedHtmlHashes?.[relative];
+  const sourceHash=createHash('sha256').update(source).digest('hex');
+  if(!publishedHash||sourceHash!==publishedHash)throw new Error(name+'_release_artifact_html_digest_mismatch');
+  pageSources[name]=source;
+}
+
 
 let lastError='';
 for(let attempt=1;attempt<=attempts;attempt++){
@@ -50,12 +63,13 @@ for(let attempt=1;attempt<=attempts;attempt++){
     const pageHashes=expected.publishedHtmlHashes;
     if(!pageHashes||!live.publishedHtmlHashes)throw new Error('html_digest_manifest_missing');
     if(JSON.stringify(live.publishedHtmlHashes)!==JSON.stringify(pageHashes))throw new Error('html_digest_manifest_mismatch');
-    const expectedNames={root:'index.html',admin:'admin/index.html',finance:'finance/index.html',notices:'notices/index.html'};
     for(const [name,page] of [['root',root],['admin',admin],['finance',finance],['notices',notices]]){
       if(releaseFromHtml(page.text)!==expected.release)throw new Error(name+'_html_release_mismatch');
-      const expectedHash=pageHashes[expectedNames[name]];
-      if(!expectedHash)throw new Error(name+'_html_digest_missing');
-      const actualHash=createHash('sha256').update(page.text).digest('hex');
+      const relative=expectedNames[name];
+      const localHtml=expectedSeonamMediHtmlAtOrigin(pageSources[name],origin);
+      const observed=normalizeSeonamMediLiveHtml(page.text,{origin,page:relative});
+      const expectedHash=createHash('sha256').update(localHtml).digest('hex');
+      const actualHash=createHash('sha256').update(observed.html).digest('hex');
       if(actualHash!==expectedHash)throw new Error(name+'_html_digest_mismatch expected='+expectedHash+' actual='+actualHash);
       if(!page.text.includes('data-ekodi-release-convergence'))throw new Error(name+'_runtime_convergence_missing');
     }
