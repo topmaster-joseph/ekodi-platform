@@ -2,7 +2,7 @@
 // The SQL migration provides tenant-bound RLS and append-only audit, not browser storage.
 export const BIZ_CENTER_VERSION = '20261014-v1';
 
-const STYLE = String.raw\`
+const STYLE = String.raw`
 .ebiz{color:#18323e;font-size:15px;line-height:1.55;display:grid;gap:17px;min-width:0}
 .ebiz *{box-sizing:border-box}
 .ebiz h2,.ebiz h3,.ebiz p{margin:0}
@@ -71,7 +71,7 @@ const STYLE = String.raw\`
   .ebiz #ebiz-print-sheet{min-height:0!important;padding:0!important}
   .ebiz #ebiz-print-sheet tr{break-inside:avoid}
 }
-\`;
+`;
 
 export function businessCenterCss() {
   return new Response(STYLE, {headers:{
