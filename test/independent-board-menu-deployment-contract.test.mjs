@@ -5,7 +5,7 @@ import board from '../services/independent-board/worker.js';
 
 const workflow=await readFile(new URL('../.github/workflows/deploy-independent-board.yml',import.meta.url),'utf8');
 const roots=['https://seonammedi.kr','https://ekodi.kr/seonammedi'];
-const menu=['활동이력','관련소식','소통채널','시민의견','공지','조직'];
+const menu=['공지','활동이력','관련소식','소통채널','시민의견','조직'];
 
 test('deployed board smoke checks actual nested notice and ledger links, not retired top-level active links',()=>{
   assert.match(workflow,/Verify production board UI/);
