@@ -1,12 +1,9 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { canonicalTrackingQueryRedirect } from './canonical-query-policy.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
-import { businessCenterCss, businessCenterScript } from './ekodibiz-business-center.js';
 import { legacyAdminAliasTarget } from './admin-address-policy.js';
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
 import { ekodiBizInvestBusinessPage, isEkodiBizInvestPath } from './ekodibiz-invest-business.js';
-import { dorajiOfficeResponse, isDorajiOfficePath } from './ekodibiz-doraji-office.js';
-import { businessOsCommonResponse, isBusinessOsCommonPath } from './business-os-public-api.js';
 import { ekodiBizInvestAdminPage, isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
 import { tenantAdminCommandHomeScript, tenantAdminCommandHomeCss } from './tenant-admin-command-home.js';
 import { decorateDiscoveryResponse } from './discovery-layer.js';
@@ -701,8 +698,6 @@ export default {
       if (url.pathname === '/tenant-live-admin.js') return tenantLiveAdminScript();
       if (url.pathname === '/workspace-admin.css') return workspaceAdminCss();
       if (url.pathname === '/workspace-admin.js') return workspaceAdminScript();
-      if (['GET','HEAD'].includes(request.method) && url.pathname === '/ekodibiz-business-center.js') return businessCenterScript();
-      if (['GET','HEAD'].includes(request.method) && url.pathname === '/ekodibiz-business-center.css') return businessCenterCss();
       if (url.pathname.startsWith('/api/control/storage/google/cheonggye-members')) return proxyAdminStorage(request, env);
       if (url.pathname === ADMIN_PERSONAL_FINANCE_PATH) return proxyAdminPersonalFinance(request, env);
       if (url.pathname === '/church-pastor-admin.js') return churchPastorAdminScript();
@@ -729,8 +724,6 @@ export default {
       if (['GET','HEAD'].includes(request.method) && (url.pathname === '/ekodi-church' || url.pathname.startsWith('/ekodi-church/'))) { const target=new URL(request.url); target.pathname=url.pathname.replace(/^\/ekodi-church(?=\/|$)/i,'/ekodichurch'); return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}}); }
       if (['GET','HEAD'].includes(request.method) && isChurchPastorAdminPath(url.pathname)) return injectEkodiShell(churchPastorAdminPage(), 'church', 'admin');
       if (isWorkspaceAdminPath(url.pathname)) return injectEkodiShell(workspaceAdminPage(), 'space', 'admin');
-      if (isBusinessOsCommonPath(url.pathname)) return withHostSecurity(await businessOsCommonResponse(request), PUBLIC_CSP, 'no-store', 'public-ekodibiz-business-os');
-      if (isDorajiOfficePath(url.pathname)) return injectEkodiShell(withHostSecurity(dorajiOfficeResponse(request), PUBLIC_CSP, 'no-store', 'public-ekodibiz-doraji'), 'biz', 'public');
       if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestPath(url.pathname)) {
         const page=ekodiBizInvestBusinessPage(request);
         const secured=withHostSecurity(page, PUBLIC_CSP, 'public, max-age=0, must-revalidate', 'public-ekodibiz-invest');

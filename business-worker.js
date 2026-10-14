@@ -1,4 +1,3 @@
-import { businessOsGate, BUSINESS_OS_CORE_VERSION } from './business-os-core.js';
 function securityHeaders(){return{'x-content-type-options':'nosniff','referrer-policy':'strict-origin-when-cross-origin','permissions-policy':'camera=(), microphone=(), geolocation=(), payment=()','content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"}}
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...securityHeaders()}})}
 function withHeaders(response){const headers=new Headers(response.headers);for(const [key,value]of Object.entries(securityHeaders()))headers.set(key,value);if(!headers.has('cache-control'))headers.set('cache-control',response.headers.get('content-type')?.includes('text/html')?'no-cache':'public, max-age=300');return new Response(response.body,{status:response.status,statusText:response.statusText,headers})}
@@ -79,9 +78,8 @@ function checkAction(env,body={}){
   const cfg=runtimeConfig(env);const action=String(body.action||'').trim();const workspace=getWorkspace(body.workspace);
   if(body.workspace&&!workspace)return{decision:'blocked',reason:'unknown_workspace',executable:false,message:'등록되지 않은 워크스페이스에서는 행동을 준비하지 않습니다.'};
   if(!action)return{decision:'blocked',reason:'action_required',executable:false,message:'행동 종류가 필요합니다.'};
-  const sharedGate=businessOsGate(action);
-  if(sharedGate.reason==='high_impact_human_only'||blockedActions.has(action))return{decision:'blocked',reason:'high_impact_human_only',executable:false,message:'금전·법률·보험 확정·고용 종료 등 고영향 결정은 AI가 대신 확정할 수 없습니다.'};
-  if(sharedGate.decision==='human_review'||humanReviewActions.has(action))return{decision:'human_review',reason:'explicit_human_approval_required',executable:false,message:'외부 발송, 가격·예산 변경 등은 사람의 명시적 승인 후 별도 실행 어댑터를 통해 처리해야 합니다.'};
+  if(blockedActions.has(action))return{decision:'blocked',reason:'high_impact_human_only',executable:false,message:'금전·법률·보험 확정·고용 종료 등 고영향 결정은 AI가 대신 확정할 수 없습니다.'};
+  if(humanReviewActions.has(action))return{decision:'human_review',reason:'explicit_human_approval_required',executable:false,message:'외부 발송, 가격·예산 변경 등은 사람의 명시적 승인 후 별도 실행 어댑터를 통해 처리해야 합니다.'};
   if(draftOnlyActions.has(action))return{decision:'draft_only',reason:cfg.executionEnabled?'bounded_draft_capability':'execution_adapter_disabled',executable:false,message:'AI가 초안·추천·업무 준비까지 할 수 있습니다. 현재 운영면에서는 실제 외부 실행을 하지 않습니다.'};
   return{decision:'blocked',reason:'unsupported_action',executable:false,message:'등록되지 않은 행동은 기본적으로 실행하지 않습니다.'};
 }
@@ -91,7 +89,7 @@ async function workspaceIndex(request,env){const assetUrl=new URL(request.url);a
 export default{async fetch(request,env){
   const url=new URL(request.url);const cfg=runtimeConfig(env);
   if(url.pathname==='/config.js')return new Response(`window.EKODI_BUSINESS_CONFIG=${JSON.stringify(cfg)};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...securityHeaders()}});
-  if(url.pathname==='/health')return json({ok:true,service:'ekodi-business-os',stage:cfg.mode,integrationsEnabled:cfg.integrationsEnabled,executionEnabled:cfg.executionEnabled,policy:cfg.policy,coreVersion:BUSINESS_OS_CORE_VERSION,readiness:cfg.readiness,workspaces:Object.keys(WORKSPACES)});
+  if(url.pathname==='/health')return json({ok:true,service:'ekodi-business-os',stage:cfg.mode,integrationsEnabled:cfg.integrationsEnabled,executionEnabled:cfg.executionEnabled,policy:cfg.policy,readiness:cfg.readiness,workspaces:Object.keys(WORKSPACES)});
   if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/business',307);
   if(request.method==='GET'&&url.pathname==='/api/workspaces')return json({workspaces:workspaceList(),defaultWorkspace:cfg.defaultWorkspace});
   if(request.method==='GET'&&url.pathname.startsWith('/api/workspace/')){const workspace=getWorkspace(decodeURIComponent(url.pathname.slice('/api/workspace/'.length)));return workspace?json({workspace,metrics:{sales:null,salesDelta:null,customers:null,newCustomers:null,repeatRate:null,targetRepeatRate:null,openActions:null,pendingApprovals:null},dataState:workspace.dataState,dataMessage:workspace.dataMessage}):json({error:'workspace_not_found'},404)}
