@@ -162,7 +162,7 @@ function mountBusinessCenter({target,summaryTarget,accessToken,supabaseUrl,supab
   }
   function listView(){
     const view=state.section,rows=state.rows.filter(r=>r.kind===view && r.status!=='archived'&&(!state.filter||(r.title+' '+r.details).toLowerCase().includes(state.filter))).slice(0,250);
-    return '<section class="ebiz-card"><div class="ebiz-head"><div><h3>'+esc(labels[view])+' 관리대장</h3><p class="ebiz-sub">기록된 업무를 검색·편집하고 변경이력을 보존합니다.</p></div><button class="ebiz-btn primary" data-eb-action="new">새 항목 등록</button></div><div class="ebiz-tools"><input id="ebiz-filter" type="search" aria-label="업무 검색" placeholder="제목이나 설명 검색" value="'+esc(state.filter)+'"><span class="ebiz-sub">'+number(rows.length)+'건 표시</span></div>'+form(state.rows.find(r=>r.id===state.openForm)||null)+(rows.length?table(rows):'<div class="ebiz-empty">등록된 항목이 없습니다.</div>')+'</section>'+((view==='finance')?externalLinks():'');
+    return '<section class="ebiz-card"><div class="ebiz-head"><div><h3>'+esc(labels[view])+' 관리대장</h3><p class="ebiz-sub">기록된 업무를 검색·편집하고 변경이력을 보존합니다.</p></div><button class="ebiz-btn primary" data-eb-action="new">새 항목 등록</button></div><div class="ebiz-tools"><input id="ebiz-filter" type="search" aria-label="업무 검색" placeholder="제목이나 설명 검색" value="'+esc(state.filter)+'"><span class="ebiz-sub">'+number(rows.length)+'건 표시</span></div>'+form(state.rows.find(r=>r.id===state.openForm)||null)+'<div id="ebiz-list-results">'+(rows.length?table(rows):'<div class="ebiz-empty">등록된 항목이 없습니다.</div>')+'</div></section>'+((view==='finance')?externalLinks():'');
   }
   function paint(){
     nav();
@@ -220,7 +220,7 @@ function mountBusinessCenter({target,summaryTarget,accessToken,supabaseUrl,supab
     const btn=ev.target.closest('[data-eb-action]');if(!btn)return;
     const action=btn.dataset.ebAction;
     try{
-      if(action==='new'){state.openForm='new';paint()}
+      if(action==='new'){if(state.section==='home'||state.section==='history')state.section='task';state.openForm='new';paint()}
       if(action==='cancel'){state.openForm=false;paint()}
       if(action==='refresh')await refresh();
       if(action==='seed')await seed();
@@ -243,8 +243,8 @@ function mountBusinessCenter({target,summaryTarget,accessToken,supabaseUrl,supab
     const view=state.section;
     const rows=state.rows.filter(r=>r.kind===view&&r.status!=='archived'&&(!state.filter||(r.title+' '+r.details).toLowerCase().includes(state.filter)));
     const panel=ev.target.closest('.ebiz-card');
-    const table=panel?.querySelector('.ebiz-tablewrap');
-    if(table)table.outerHTML=rows.length?tableMarkup(rows):'<div class="ebiz-empty">검색 결과가 없습니다.</div>';
+    const results=panel?.querySelector('#ebiz-list-results');
+    if(results)results.innerHTML=rows.length?tableMarkup(rows):'<div class="ebiz-empty">검색 결과가 없습니다.</div>';
     const counter=ev.target.parentElement?.querySelector('span');
     if(counter)counter.textContent=number(rows.length)+'건 표시';
     ev.target.setSelectionRange(index,index);
