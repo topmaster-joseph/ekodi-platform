@@ -66,7 +66,7 @@ async function check(browser,profile){
       name:'safe-practice.txt',mimeType:'text/plain',
       buffer:Buffer.from('가상 교육 실습 원문입니다. 공식 출처와 원문을 확인합니다.','utf8')
     });
-    if(!await p.locator('#sourceExtracted').inputValue().then(v=>v.includes('가상 교육 실습 원문')))fail('source text not extracted');
+    await p.waitForFunction(()=>(document.querySelector('#sourceExtracted')?.value||'').includes('가상 교육 실습 원문'),null,{timeout:15000});
     await p.locator('#sourceTarget').selectOption('sample');
     await p.locator('#applySource').click();
     await p.locator('[data-preview-tab="practice"]').click();
