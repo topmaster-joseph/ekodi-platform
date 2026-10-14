@@ -52,8 +52,8 @@ test('unrecognized beacons and malformed trusted metadata are not silently strip
 test('production release verifier retains exact generated HTML byte provenance checks',async()=>{
   const script=await readFile(new URL('../scripts/verify-seonammedi-release-live.mjs',import.meta.url),'utf8');
   assert.match(script,/publishedHtmlHashes/);
-  assert.match(script,/release_artifact_html_digest_mismatch/);
-  assert.match(script,/expectedSeonamMediHtmlAtOrigin/);
+  assert.match(script,/published_artifact_digest_mismatch/);
+  assert.match(script,/compareSeonamMediPublishedHtml/);
   assert.match(script,/normalizeSeonamMediLiveHtml/);
   assert.match(script,/html_digest_mismatch/);
   assert.match(script,/live_homepage_head_literal_escaped_whitespace/);
