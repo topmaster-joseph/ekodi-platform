@@ -35,12 +35,12 @@ test('live-rendered board headers share one six-menu hierarchy on both mounts an
       previous=loc;
     }
     assert.doesNotMatch(nav,/nav-group|nav-submenu|<button/,'header navigation is flat');
-    const nested=html.match(/<template id="legacy-category-links">([\\s\\S]*?)<\\/template>/)?.[1]||'';
+    const nested=html.match(/<template id="legacy-category-links">([\s\S]*?)<\/template>/)?.[1]||'';
     const prefix=root.includes('ekodi.kr')?'/seonammedi':'';
     assert.ok(nested.includes('href="'+prefix+'/board/finance">회계</a>'));
     assert.ok(nested.includes('href="'+prefix+'/board/notices">공지사항</a>'));
     assert.ok(nested.includes('href="'+prefix+'/minutes/">회의록</a>'));
-    assert.equal((nav.match(/>회계<\\/a>/g)||[]).length,0,'no top-level finance');
+    assert.equal((nav.match(/>회계<\/a>/g)||[]).length,0,'no top-level finance');
     assert.ok(html.includes('id="writeToggle"')||route!=='voices');
     assert.ok(html.includes('return_to')||route!=='voices','guest writes must retain Google login return');
   }
