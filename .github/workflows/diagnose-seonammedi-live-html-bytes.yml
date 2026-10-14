@@ -56,6 +56,8 @@ jobs:
                 expectedContext:firstDifference<0?'':context(expected,index),
                 actualContext:firstDifference<0?'':context(actual,index),
                 metaGap:JSON.stringify(observedMetaGap),
+                actualTail:actual.toString('utf8').slice(-1000),
+                expectedTail:expected.toString('utf8').slice(-350),
                 literalEscapes:(headText.match(/\\[nrt]/g)||[]).length,
               }));
             }catch(error){console.error('LIVE_BYTE_DIFF_ERROR',origin,String(error))}
