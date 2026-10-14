@@ -21,7 +21,7 @@ export const PLATFORM_EXECUTION_SURFACES=Object.freeze([
   Object.freeze({id:'business',prefix:'/business',binding:'BUSINESS',virtualHost:platformHost('business'),host:platformHost('business')}),
   Object.freeze({id:'community',prefix:'/community',binding:'COMMUNITY',virtualHost:platformHost('community')}),
   // Reuse the existing Education Worker; apex /edu is a path alias, not a new tenant.
-  Object.freeze({id:'education-academic-alias',prefix:'/edu',binding:'EDUCATION',virtualHost:platformHost('edu')}),
+  Object.freeze({id:'education-academic-alias',prefix:'/edu',binding:'EDUCATION'}),
   Object.freeze({id:'education',prefix:'/education',binding:'EDUCATION',virtualHost:platformHost('edu')}),
   Object.freeze({id:'energy',prefix:'/energy',binding:'ENERGY',virtualHost:platformHost('energy')}),
   Object.freeze({id:'experience',prefix:'/experience',binding:'EXPERIENCE',virtualHost:platformHost('exp')}),
