@@ -161,13 +161,6 @@
     <div class="inline-manage-grid"><label>근거 표시<input name="evidence" maxlength="500" placeholder="공식자료 · 언론보도 등"></label><label>상태<select name="status"><option value="published">공개</option><option value="draft">비공개</option></select></label></div>
     <div class="form-actions"><button type="submit">저장</button><button id="timelineManageCancel" type="button" class="secondary">취소</button><span id="timelineManageMessage" class="muted" role="status"></span></div>
   </form>
-  <div class="related-linked-channels"><h3>연결된 소셜채널</h3><p class="muted">채널명을 누르면 기존 소통채널 화면과 원문 링크로 이동합니다.</p><div id="relatedChannelLinks" class="related-channel-links" aria-label="연결된 채널 링크"></div>
-    <div class="related-facebook-source">
-      <span class="source-type">페이스북 · 그룹</span>
-      <a href="https://www.facebook.com/groups/2299276407568855" target="_blank" rel="noopener noreferrer" aria-label="페이스북 그룹 2299276407568855 원문 열기">페이스북 그룹 · 2299276407568855 <span aria-hidden="true">↗</span></a>
-      <small>관련소식의 ‘페이스북 그룹’ 세부 분류입니다. 게시물 열람에는 Facebook 로그인 또는 그룹 가입이 필요할 수 있으며, 확인되지 않은 게시물은 자동 공개하지 않습니다.</small>
-    </div>
-  </div>
   <datalist id="publicNewsCategories"><option value="신문"><option value="잡지"><option value="방송"><option value="통신사"><option value="유튜브"><option value="블로그"><option value="대학"><option value="정부·공공기관"><option value="공식기록"><option value="페이스북"><option value="페이스북 그룹"><option value="시민·단체"></datalist>
   <p id="timelineFeedStatus" class="muted" role="status" aria-live="polite">최신 발행일순 · 관련소식을 불러오는 중입니다.</p>
   <div id="timelineList" class="timeline"></div>
@@ -205,7 +198,7 @@
 </section>
 
 <section id="channels" class="section" data-view-section="channels" hidden>
-  <div class="section-head"><div><p class="eyebrow">RELATED NEWS · SOCIAL CHANNELS</p><h2>관련소식 · 연결 채널</h2></div><div class="section-head-actions"><button id="channelManageToggle" class="ekodi-public-admin-inline" type="button" hidden aria-expanded="false" aria-controls="channelManageForm">연결채널 바로 수정</button></div></div>
+  <div class="section-head"><div><p class="eyebrow">RELATED NEWS · SOCIAL CHANNELS</p><h2>소통채널</h2></div><div class="section-head-actions"><button id="channelManageToggle" class="ekodi-public-admin-inline" type="button" hidden aria-expanded="false" aria-controls="channelManageForm">연결채널 바로 수정</button></div></div>
   <p class="muted">플랫폼 탭을 선택한 뒤 연결된 계정·채널을 고르면 아래 화면에서 바로 확인할 수 있습니다. 외부 서비스가 전체 화면 삽입을 제한하면 공식 임베드 또는 공개 요약과 원문 링크로 전환합니다.</p>
   <form id="channelManageForm" class="panel module-compose inline-manage-form" hidden>
     <input type="hidden" name="id">

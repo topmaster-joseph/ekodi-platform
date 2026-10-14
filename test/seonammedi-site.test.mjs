@@ -435,7 +435,7 @@ test('seonammedi exposes seeded related channels on public and admin surfaces',a
     readFile(new URL('admin/index.html',root),'utf8'),
     readFile(new URL('../migrations/0118_seonammedi_channel_seed.sql',import.meta.url),'utf8')
   ]);
-  assert.match(html,/id="relatedChannelLinks"/);
+  assert.doesNotMatch(html,/id="relatedChannelLinks"/);
   assert.match(html,/href="#channels" data-view-link="channels">소통채널<\/a>/);
   assert.match(html,/id="channels"[^>]*data-view-section="channels"/);
   assert.match(html,/id="publicChannelTabs"/);
