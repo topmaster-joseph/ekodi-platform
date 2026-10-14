@@ -111,5 +111,5 @@ test('academic studio is same-origin, inline-script-free and publishes no upload
   assert.match(css,/@media\(max-width:530px\)/);
   assert.match(lecture,/href="\.\/studio\/"/);
   assert.match(registry,/prefix:'\/edu',binding:'EDUCATION'/);
-  assert.match(site,/run_worker_first = \["\/edu\*"/);
+  assert.doesNotMatch(site,/run_worker_first = \["\/edu\*"/);
 });
