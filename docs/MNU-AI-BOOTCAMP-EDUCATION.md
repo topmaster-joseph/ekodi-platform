@@ -54,3 +54,5 @@ All 21 Supreme Attributes assessed: static local assets preserve independence, r
 - EKODI-issued recovery task: orch_recovery_08f0272aefb8910b6d5c5b2578160cf0.
 - Official recovery branch: ai/chatgpt/orch_recovery_08f0272aefb8910b6d5c5b2578160cf0; integration PR #4689.
 - This documentation-only continuity update restarts checks under the existing provenance receipt without modifying classroom behavior, security, auth or release rules. Production still requires all protected checks and native browser proof.
+
+- After EKODI orchestrator synchronized branch at 5302f71c36198b54f9bcf2176633f3be0830f964, owner-authored docs-only continuity refresh requests new GitHub checks on the synchronized code. Exact source approval and receipt unchanged; no gate bypass.
