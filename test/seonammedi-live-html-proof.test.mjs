@@ -57,4 +57,8 @@ test('production release verifier retains exact generated HTML byte provenance c
   assert.match(script,/normalizeSeonamMediLiveHtml/);
   assert.match(script,/html_digest_mismatch/);
   assert.match(script,/live_homepage_head_literal_escaped_whitespace/);
+  assert.match(script,/expectedOffset:Number\.isInteger\(match\.expectedOffset\)/);
+  assert.match(script,/actualOffset:Number\.isInteger\(match\.actualOffset\)/);
+  assert.match(script,/name==='root'&&Number\.isInteger\(match\.expectedOffset\)/);
+  assert.match(script,/evidence=\+'\+JSON\.stringify\(evidence\)/);
 });
