@@ -2030,11 +2030,14 @@
         "redirect": "manual",
         "expect": [],
         "headerExpect": [
-          "location: https://ekodi.kr/ekodipay/",
-          "cache-control: no-store",
-          "x-content-type-options: nosniff"
+          "location: https://ekodi.kr/ekodipay/"
         ],
-        "rollbackVerify": false
+        "rollbackStatuses": [
+          308
+        ],
+        "rollbackHeaderExpect": [
+          "location: https://ekodi.kr/pay/"
+        ]
       },
       {
         "url": "https://ekodi.kr/pay/",
@@ -2044,11 +2047,22 @@
         "redirect": "manual",
         "expect": [],
         "headerExpect": [
-          "location: https://ekodi.kr/ekodipay/",
-          "cache-control: no-store",
-          "x-content-type-options: nosniff"
+          "location: https://ekodi.kr/ekodipay/"
         ],
-        "rollbackVerify": false
+        "rollbackStatuses": [
+          200
+        ],
+        "rollbackExpect": [
+          "path === '/pay'",
+          "title:'EKODI Pay'",
+          "https://ekodi.kr/admin/#finance"
+        ],
+        "rollbackHeaderExpect": [
+          "x-ekodi-route: hub",
+          "x-ekodi-shell: v2",
+          "x-ekodi-canonical-surface: pay",
+          "x-ekodi-canonical-path: /pay"
+        ]
       },
       {
         "url": "https://ekodi.kr/cloud",
