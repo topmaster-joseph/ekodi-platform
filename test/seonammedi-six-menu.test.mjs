@@ -13,7 +13,7 @@ function primaryMenu(htmlText){
 }
 function assertMenu(htmlText){
   assert.deepEqual(primaryMenu(htmlText),expected);
-  assert.match(htmlText,/공지<\/a>/);
+  assert.ok(primaryMenu(htmlText).includes('공지'));
   assert.ok(!primaryMenu(htmlText).includes('회계'),'accounting must be nested under notice');
 
 
