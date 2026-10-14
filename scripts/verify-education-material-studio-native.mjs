@@ -79,6 +79,14 @@ async function check(browser,profile){
     await p.locator('[data-preview-tab="slides"]').click();
     if(await p.locator('#localPreview .slidecard').count()!==9)fail('exact nine slide previews missing');
     entry.checks.push('nine-slide lecturer preview');
+    await p.locator('#presentDraft').click();
+    if(!await p.locator('#studioPresentation').evaluate(el=>el.open))fail('draft presentation did not open');
+    if(await p.locator('#studioSlideCounter').innerText()!=='01 / 09')fail('presentation initial counter incorrect');
+    for(let i=2;i<=9;i++)await p.keyboard.press('ArrowRight');
+    if(await p.locator('#studioSlideCounter').innerText()!=='09 / 09')fail('presentation did not reach slide nine');
+    await p.locator('#studioSlideClose').click();
+    if(await p.locator('#studioPresentation').evaluate(el=>el.open))fail('draft presentation did not close');
+    entry.checks.push('draft-based interactive nine-screen lecture presentation');
     await p.locator('#reviewConfirm').check();
     if(await p.locator('#exportDraft').isDisabled())fail('valid draft with instructor review should enable JSON download');
     const [download]=await Promise.all([p.waitForEvent('download'),p.locator('#exportDraft').click()]);
