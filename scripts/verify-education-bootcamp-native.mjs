@@ -3,6 +3,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {EKODI_SERVICE_MANIFEST} from '../ekodi-service-manifest.js';
+import {classifyConsoleSecurityBlock,classifyRequestSecurityBlock,
+  classifyMutationSecurityBlock,verifyKnownSecurityBlocks
+} from './education-native-security-observations.mjs';
 
 // Reuse the existing registered Education boundary; never mint a new hostname.
 export const ORIGIN=new URL(EKODI_SERVICE_MANIFEST.services.find(row=>row.id==='edu').url).origin;
@@ -28,7 +31,7 @@ const report={taskId:trim(process.env.EKODI_RELEASE_TASK_ID||'education-classroo
   sourceSha:trim(process.env.GITHUB_SHA||'unknown',80),origin:TARGET_ORIGIN,
   evidenceScope:previewAllowed?'synthetic-local-preview':'real-production',readOnly:true,
   authenticated:false,ephemeral:true,startedAt:new Date().toISOString(),profiles:[],
-  captures:[],consoleErrors:[],pageErrors:[],httpErrors:[],requestFailures:[],blockedMutations:[],ok:false};
+  captures:[],consoleErrors:[],pageErrors:[],httpErrors:[],requestFailures:[],blockedMutations:[],observedSecurityBlocks:[],ok:false};
 const record=(kind,profile,detail)=>report[kind].push({profile:profile.name,...detail});
 
 async function checkAssets(page){
@@ -47,14 +50,27 @@ async function checkProfile(browser,profile){
     locale:'ko-KR',colorScheme:'dark'
   });
   const page=await context.newPage();
-  page.on('console',message=>{if(message.type()==='error')record('consoleErrors',profile,{message:trim(message.text())})});
+  page.on('console',message=>{
+    if(message.type()!=='error')return;
+    const value=trim(message.text(),850);
+    const security=classifyConsoleSecurityBlock(value);
+    record(security?'observedSecurityBlocks':'consoleErrors',profile,
+      security?{type:'console',reason:security,message:value}:{message:value});
+  });
   page.on('pageerror',error=>record('pageErrors',profile,{message:trim(error?.message)}));
-  page.on('requestfailed',request=>record('requestFailures',profile,{url:trim(request.url()),failure:trim(request.failure()?.errorText)}));
+  page.on('requestfailed',request=>{
+    const info={url:trim(request.url(),700),failure:trim(request.failure()?.errorText,150)};
+    const security=classifyRequestSecurityBlock(info.url,info.failure);
+    record(security?'observedSecurityBlocks':'requestFailures',profile,
+      security?{type:'request',reason:security,...info}:info);
+  });
   page.on('response',response=>{if(response.status()>=400)record('httpErrors',profile,{url:trim(response.url()),status:response.status(),resourceType:trim(response.request().resourceType(),60)})});
   await page.route('**/*',route=>{
     const req=route.request(),method=req.method().toUpperCase();
     if(!['GET','HEAD','OPTIONS'].includes(method)){
-      record('blockedMutations',profile,{method,url:trim(req.url())});
+      const security=classifyMutationSecurityBlock(method,req.url());
+      record('blockedMutations',profile,{method,url:trim(req.url(),700)});
+      if(security)record('observedSecurityBlocks',profile,{type:'mutation',reason:security,method,url:trim(req.url(),700)});
       return route.abort('blockedbyclient');
     }
     return route.continue();
@@ -110,10 +126,18 @@ async function checkProfile(browser,profile){
       if(await dialog.evaluate(el=>el.open))fail('presentation dialog did not close');
       slideCounts.push(9);
     }
+    const known=report.observedSecurityBlocks.filter(x=>x.profile===profile.name);
+    const securityResult=verifyKnownSecurityBlocks({
+      consoleBlocks:known.filter(x=>x.type==='console').map(x=>({message:x.message})),
+      requestBlocks:known.filter(x=>x.type==='request').map(x=>({url:x.url,failure:x.failure})),
+      mutations:report.blockedMutations.filter(x=>x.profile===profile.name)
+    });
+    if(!securityResult.ok)fail(profile.name+' '+securityResult.reason);
+    if(report.requestFailures.some(x=>x.profile===profile.name))fail('unexpected network failure on '+profile.name);
     if(report.pageErrors.some(x=>x.profile===profile.name))fail('page script exceptions on '+profile.name);
     if(report.consoleErrors.some(x=>x.profile===profile.name))fail('console errors on '+profile.name);
     if(report.httpErrors.some(x=>x.profile===profile.name))fail('HTTP 4xx/5xx on '+profile.name);
-    report.profiles.push({name:profile.name,viewport:{width:profile.width,height:profile.height},categories:6,lessons:4,batches:6,sessionRows:24,slideCounts,assets,overflow,passed:true});
+    report.profiles.push({name:profile.name,viewport:{width:profile.width,height:profile.height},categories:6,lessons:4,batches:6,sessionRows:24,slideCounts,assets,overflow,securityBlocks:known.length,passed:true});
   }finally{
     await context.close();
   }
