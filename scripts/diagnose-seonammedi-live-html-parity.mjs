@@ -23,12 +23,31 @@ if(a?.html!==undefined&&b?.html!==undefined){
   while(i<Math.min(a.html.length,b.html.length)&&a.html[i]===b.html[i])i++;
   if(i!==a.html.length||i!==b.html.length)firstDifference=i;
 }
+// Compare the two exact HTML documents while allowing ONLY path-prefix removal.
+// This is diagnostic evidence, not a release acceptance shortcut.
+function analyzePrefixAliases(canonical,customer){
+  if(typeof canonical!=='string'||typeof customer!=='string')return {aliasOnly:false,aliases:[],otherDifference:'missing_html'};
+  let i=0,j=0;const aliases=[];
+  while(i<canonical.length&&j<customer.length){
+    if(canonical[i]===customer[j]){i++;j++;continue}
+    if(canonical.startsWith('/seonammedi/',i)&&customer[j]==='/'&&canonical.slice(i+11,i+31)===customer.slice(j,j+20)){
+      const token=customer.slice(j).match(/^\/[^\s"'<>]+/)?.[0]||'';
+      aliases.push({canonicalOffset:i,customerOffset:j,customerPath:token.slice(0,160)});
+      i+=11;
+      continue;
+    }
+    return {aliasOnly:false,aliases,otherDifference:{canonicalOffset:i,customerOffset:j}};
+  }
+  return {aliasOnly:i===canonical.length&&j===customer.length,aliases,otherDifference:i===canonical.length&&j===customer.length?null:{canonicalOffset:i,customerOffset:j}};
+}
+const prefixAnalysis=analyzePrefixAliases(a?.html,b?.html);
 const excerpt=(input,i)=>i<0?'':String(input||'').slice(Math.max(0,i-100),i+200);
 const report={
   readOnly:true,
   sameRelease:!!a?.release&&a.release===b?.release,
   byteIdentical:firstDifference===-1&&a?.html!==undefined&&b?.html!==undefined,
   firstDifference,
+  prefixAnalysis,
   snippets:firstDifference<0?null:{canonical:excerpt(a.html,firstDifference),customer:excerpt(b.html,firstDifference)},
   results:results.map(({html,...rest})=>rest)
 };
