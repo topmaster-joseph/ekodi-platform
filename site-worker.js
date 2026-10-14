@@ -54,8 +54,6 @@ const ADMIN_MARKETING_PUBLISHING_PREFIX = '/api/control/marketing-publishing';
 const ADMIN_COMMON_SERVICE_AI_PREFIX = '/api/control/common-services/ai/';
 
 const HUB_HOSTS = new Set([
-  'pay.ekodi.kr',
-  'pay.biz.ekodi.kr',
   'mail.ekodi.kr',
   'mail.biz.ekodi.kr',
   'mail.church.ekodi.kr',
@@ -614,6 +612,10 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const host = url.hostname.toLowerCase();
+    // Retired payment subdomains are never public entry points.
+    if (host === 'pay.ekodi.kr' || host === 'pay.biz.ekodi.kr') {
+      return new Response('Gone', {status:410, headers:{'cache-control':'no-store','x-robots-tag':'noindex, nofollow, noarchive','x-content-type-options':'nosniff'}});
+    }
 
     const canonicalQueryRedirect = canonicalTrackingQueryRedirect(request);
     if (canonicalQueryRedirect) {
