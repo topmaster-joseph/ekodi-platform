@@ -148,7 +148,7 @@ function mountBusinessCenter({target,summaryTarget,accessToken,supabaseUrl,supab
   function actionText(action){return ({created:'업무 등록',updated:'업무 변경',print_requested:'인쇄·PDF 화면 요청',csv_requested:'CSV 내보내기 요청'})[action]||'기록'}
   function table(rows){
     return '<div class="ebiz-tablewrap"><table><thead><tr><th>제목·설명</th><th>기한</th><th>상태</th><th>기록일</th><th>수정</th></tr></thead><tbody>'+
-      rows.map(r=>'<tr><td><strong>'+esc(r.title)+'</strong><small>'+esc((r.details||'').slice(0,120))+'</small></td><td>'+esc(dte(r.due_on))+'</td><td><span class="ebiz-chip '+(r.status==='done'?'':'neutral')+'">'+esc(statusText[r.status])+'</span></td><td>'+esc(dte(r.updated_at))+'</td><td><button class="ebiz-btn ebiz-mini" data-eb-edit="'+esc(r.id)+'">편집</button></td></tr>').join('')+
+      rows.map(r=>'<tr><td><strong>'+esc(r.title)+'</strong><small>'+esc((r.details||'').slice(0,120))+'</small></td><td>'+esc(dte(r.due_on))+'</td><td><span class="ebiz-chip '+(r.status==='done'?'':'neutral')+'">'+esc(statusText[r.status])+'</span></td><td>'+esc(dte(r.updated_at))+'</td><td><div class="ebiz-actions"><button class="ebiz-btn ebiz-mini" data-eb-edit="'+esc(r.id)+'">편집</button><button class="ebiz-btn ebiz-mini" data-eb-print-id="'+esc(r.id)+'">인쇄</button>'+(r.kind==='task'?'<button class="ebiz-btn ebiz-mini" data-eb-check="'+esc(r.id)+'">'+(r.status==='done'?'다시 진행':'완료 체크')+'</button>':'')+'</div></td></tr>').join('')+
       '</tbody></table></div>';
   }
   function history(){
@@ -178,7 +178,8 @@ function mountBusinessCenter({target,summaryTarget,accessToken,supabaseUrl,supab
     if(!allKinds.includes(kind)||!Object.keys(statusText).includes(statusValue)||title.length<2||title.length>200)throw new Error('입력 항목을 확인하세요.');
     const body={kind,status:statusValue,title,details,reference,due_on};
     state.busy=true;try{
-      await request('/rest/v1/ekodibiz_ops_items'+(id?'?id=eq.'+encodeURIComponent(id):''),{method:id?'PATCH':'POST',body});
+      const saved=await request('/rest/v1/ekodibiz_ops_items'+(id?'?id=eq.'+encodeURIComponent(id):''),{method:id?'PATCH':'POST',body});
+      if(!Array.isArray(saved)||saved.length!==1)throw new Error('업무 저장 결과를 확인할 수 없습니다. 다시 조회하세요.');
       state.openForm=false;state.filter='';await refresh();status('서버 원장에 저장하고 변경이력을 기록했습니다.');
     }finally{state.busy=false}
   }
@@ -194,14 +195,14 @@ function mountBusinessCenter({target,summaryTarget,accessToken,supabaseUrl,supab
     }finally{state.busy=false}
   }
   async function logOutput(action){await request('/rest/v1/rpc/ekodibiz_ops_log_output',{method:'POST',body:{p_action:action}})}
-  function reportHtml(){
-    const rows=state.rows.filter(r=>r.status!=='archived'&&(state.section==='home'||state.section==='history'||r.kind===state.section)).slice(0,250);
+  function reportHtml(recordId=null){
+    const rows=state.rows.filter(r=>r.status!=='archived'&&(recordId?r.id===recordId:(state.section==='home'||state.section==='history'||r.kind===state.section))).slice(0,250);
     const dt=new Date().toLocaleDateString('ko-KR');
-    const name=state.section==='home'||state.section==='history'?'종합 경영보고서':labels[state.section]+' 현황표';
+    const name=recordId?'개별 업무 기록서':state.section==='home'||state.section==='history'?'종합 경영보고서':labels[state.section]+' 현황표';
     const body=rows.map((r,i)=>'<tr><td>'+number(i+1)+'</td><td>'+esc(labels[r.kind])+'</td><td>'+esc(r.title)+'</td><td>'+esc(statusText[r.status])+'</td><td>'+esc(dte(r.due_on))+'</td></tr>').join('');
     return '<div class="ebiz-print-heading">EKODIBIZ · BUSINESS CENTER</div><h2>'+esc(name)+'</h2><p>사업자: 에코디비즈　|　작성 기준: '+esc(dt)+'</p><p>관리기록: '+number(rows.length)+'건 (최근 최대 250건)　|　작성 상태: 조회 시점 보고서</p><div class="ebiz-tablewrap"><table><thead><tr><th>No.</th><th>분야</th><th>제목</th><th>상태</th><th>기한</th></tr></thead><tbody>'+body+'</tbody></table></div><p>※ 원장에 등록된 관리 기록을 기준으로 생성합니다. 금융·세무 확정자료를 대체하지 않습니다.</p>';
   }
-  async function openReport(){if(!state.ready)return status('업무 원장 연결 후 출력할 수 있습니다.',true);await logOutput('print_requested');$('#ebiz-print-sheet').innerHTML=reportHtml();$('#ebiz-print-preview').hidden=false;$('#ebiz-print-preview').querySelector('[data-eb-action="close"]')?.focus()}
+  async function openReport(recordId=null){if(!state.ready)return status('업무 원장 연결 후 출력할 수 있습니다.',true);if(recordId&&!state.rows.some(r=>r.id===recordId))throw new Error('인쇄할 업무 기록을 찾을 수 없습니다.');await logOutput('print_requested');$('#ebiz-print-sheet').innerHTML=reportHtml(recordId);$('#ebiz-print-preview').hidden=false;$('#ebiz-print-preview').querySelector('[data-eb-action="close"]')?.focus()}
   function closeReport(){$('#ebiz-print-preview').hidden=true;}
   function csvSafe(value){let s=String(value??'');if(/^[\s]*[=+\-@\t\r]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"'}
   async function csv(){
@@ -217,6 +218,8 @@ function mountBusinessCenter({target,summaryTarget,accessToken,supabaseUrl,supab
   target.addEventListener('click',async ev=>{
     const section=ev.target.closest('[data-eb-section]');if(section){state.section=section.dataset.ebSection;state.filter='';state.openForm=false;paint();return}
     const edit=ev.target.closest('[data-eb-edit]');if(edit){state.openForm=edit.dataset.ebEdit;paint();$('#ebiz-editor')?.scrollIntoView({block:'nearest'});return}
+    const printRecord=ev.target.closest('[data-eb-print-id]');if(printRecord){try{await openReport(printRecord.dataset.ebPrintId)}catch(err){status(err.message,true)}return}
+    const check=ev.target.closest('[data-eb-check]');if(check){try{if(state.busy)return;const row=state.rows.find(r=>r.id===check.dataset.ebCheck&&r.kind==='task');if(!row)throw new Error('업무 원장을 다시 조회하세요.');state.busy=true;const saved=await request('/rest/v1/ekodibiz_ops_items?id=eq.'+encodeURIComponent(row.id),{method:'PATCH',body:{status:row.status==='done'?'in_progress':'done'}});if(!Array.isArray(saved)||saved.length!==1)throw new Error('업무 상태 변경이 저장되지 않았습니다.');await refresh();status('점검 완료 상태 및 이력이 저장되었습니다.')}catch(err){status(err.message,true)}finally{state.busy=false}return}
     const btn=ev.target.closest('[data-eb-action]');if(!btn)return;
     const action=btn.dataset.ebAction;
     try{
