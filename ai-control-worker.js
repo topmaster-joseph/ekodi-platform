@@ -549,6 +549,10 @@ async function startCommonsPipeline(env,ctx,auth,input,fingerprint){
 }
 async function handleCommonsAdmin(request,env,url){
   const auth=await requireCommonsSuperAdmin(request,env);if(auth.error)return auth.error;if(!dbReady(env))return json({error:'state_store_unavailable'},503);
+  if(url.pathname.startsWith('/api/commons/admin/assistance/')){
+    const quoteApprovers=clean(env.EKODIBIZ_ASSISTANCE_QUOTE_APPROVERS).split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
+    if(!quoteApprovers.length||!quoteApprovers.includes(clean(auth.user.email).toLowerCase()))return json({error:'merchant_quote_role_required'},403);
+  }
   if(request.method==='GET'&&url.pathname==='/api/commons/admin/assistance/requests'){
     try{
       const rows=await env.DB.prepare("SELECT r.id,r.notice_title,r.applicant_name,r.organization,r.plans_json,r.state,r.created_at,q.id quote_id,q.status quote_status FROM ai_assistance_requests r LEFT JOIN ai_assistance_quotes q ON q.request_id=r.id ORDER BY r.created_at DESC LIMIT 50").all();
