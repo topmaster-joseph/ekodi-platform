@@ -48,3 +48,5 @@ test('both standalone and EKODI subpath notice mounts retain six menu navigation
 
 // Owner-authored CI retrigger following exact-SHA EKODI Orchestrator provenance recovery.
 // No runtime, authorization, deployment, or production protection changes.
+
+// Owner-authored CI recheck after protected main synchronization; test behavior unchanged.
