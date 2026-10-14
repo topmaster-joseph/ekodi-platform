@@ -11,7 +11,7 @@ const services={
   biz:{name:'에코디비즈',tenant:'ekodibiz',role:'member',returnTo:'https://biz.ekodi.kr',origins:['https://biz.ekodi.kr'],requestable:true},
   trade:{name:'EKODI Global Trading',tenant:'ekoditrade',role:'member',returnTo:'https://ekodi.kr/ekodibiz/trade',origins:['https://ekodi.kr','https://trade.biz.ekodi.kr','https://trade.ekodi.kr'],requestable:false},
   mall:{name:'에코디몰',tenant:null,role:'member',returnTo:'https://ekodi.kr/ekodimall',origins:['https://ekodi.kr'],requestable:true},
-  pay:{name:'에코디결제',tenant:null,role:'member',returnTo:'https://ekodi.kr/ekodipay',origins:['https://ekodi.kr/ekodipay'],requestable:false},
+  pay:{name:'에코디결제',tenant:null,role:'member',returnTo:'https://ekodi.kr/ekodipay',origins:['https://ekodi.kr'],requestable:false},
   books:{name:'에코디북스',tenant:null,role:'member',returnTo:'https://books.ekodi.kr',origins:['https://books.ekodi.kr'],requestable:true},
   church:{name:'에코디교회',tenant:null,role:'member',returnTo:'https://ekodi.kr/ekodichurch/',origins:['https://ekodi.kr'],requestable:true},
   lab:{name:'에코디연구소',tenant:null,role:'member',returnTo:'https://lab.ekodi.kr',origins:['https://lab.ekodi.kr'],requestable:true},
