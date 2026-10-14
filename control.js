@@ -24,7 +24,7 @@
   function saveState(){try{sessionStorage.setItem(CONTROL_STATE,JSON.stringify({tasks:state.tasks.slice(0,40),results:state.results.slice(0,40)}))}catch{}}
   function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
   function title(text){const v=String(text||'').replace(/\s+/g,' ').trim();return v.length>46?v.slice(0,46)+'…':v||'새 작업'}
-  function statusLabel(v){return ({queued:'대기',running:'실행 중',verified:'완료',resolved:'완료',failed:'실패',blocked:'차단',core_only:'Core 처리',human_gate:'확인 필요',assist_only:'검토',ready_for_executor:'실행 대기',approved_pending_executor:'승인됨'})[v]||v||'진행'}
+  function statusLabel(v){return ({queued:'대기',running:'실행 중',verified:'완료',resolved:'완료',failed:'실패',blocked:'차단',core_only:'Core 처리',human_gate:'확인 필요',assigned:'배정됨',executing:'실행 중',production_verifying:'운영 검증 중',assist_only:'검토',ready_for_executor:'실행 대기',approved_pending_executor:'승인됨'})[v]||v||'진행'}
   function headers(json=false){const h={accept:'application/json'};if(token())h.authorization='Bearer '+token();if(json)h['content-type']='application/json';return h}
   async function api(path,options={}){
     const response=await fetch(API+path,{cache:'no-store',...options,headers:{...headers(Boolean(options.body)),...(options.headers||{})}});
@@ -52,12 +52,71 @@
     return '<article class="turn '+esc(m.role)+'"><div class="meta">'+esc(m.role==='user'?'사용자':'EKODI')+(meta?' · '+esc(meta):'')+'</div><div class="bubble">'+esc(m.text)+'</div>'+task+'</article>';
   }).join('');requestAnimationFrame(()=>{const c=$('#conversation');window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})})}
   function historyForAssist(){const s=state.sessions.find(x=>x.id===state.activeId);return (s?.messages||[]).filter(m=>m.role==='user'||m.role==='assistant').slice(-8).map(m=>({role:m.role,text:m.text}))}
+  async function previewAiRoute(){
+    const goal=String($('#commandInput')?.value||'').trim();
+    if(!goal){toast('먼저 점검할 명령을 입력해 주세요.');return}
+    if(state.busy)return;
+    state.busy=true;$('#sendButton').disabled=true;
+    try{
+      const result=await api('/api/control/ai/v8/sovereignty/preview',{
+        method:'POST',
+        body:JSON.stringify({goal,risk:'normal',sensitive:false})
+      });
+      if(result?.previewOnly!==true || result?.executionAuthorized!==false){
+        throw new Error('안전한 미리보기 결과를 확인하지 못했습니다.');
+      }
+      const route=result.decision?.path==='provider'
+        ?'AI 후보: '+String(result.decision.providerId||'확인 필요')
+        :result.decision?.path==='ekodi-capability'
+          ?'EKODI 자체 기능 후보: '+String(result.decision.capabilityId||'확인 필요')
+          :'현재 승인된 실행 경로가 없습니다.';
+      const matches=(Array.isArray(result.reusableSuggestions)?result.reusableSuggestions:[])
+        .slice(0,5).map(item=>String(item.name||item.id||'')).filter(Boolean);
+      const checked=(Array.isArray(result.connections)?result.connections:[])
+        .filter(item=>item.connected===true).map(item=>item.id);
+      const vault=result.credentialVault?.configured===true?'개인별 암호화 금고 설정됨':'개인별 암호화 금고 설정 미확인';
+      const reply='AI 실행 경로 사전 점검 (실행되지 않음)\\n'+route+
+        '\\n관련 자체서비스: '+(matches.join(', ')||'검색 결과 없음')+
+        '\\n건강검사 확인된 AI: '+(checked.join(', ')||'없음')+
+        '\\n'+vault+
+        '\\n실제 실행은 EKODI 권한·검증·비용 정책에 따라 별도로 진행됩니다.';
+      pushMessage('assistant',reply,{provider:'EKODI 사전 점검',status:'assist_only'});
+    }catch(error){pushMessage('assistant',String(error.message||'미리보기 실패'),{status:'failed'});}
+    finally{state.busy=false;$('#sendButton').disabled=false}
+  }
   async function submitCommand(value){
     if(state.busy)return;const message=String(value||'').trim();if(!message)return;
-    state.busy=true;$('#sendButton').disabled=true;const target=$('#executionTarget').value;const executeNow=$('#executeNow').checked;
+    state.busy=true;$('#sendButton').disabled=true;const target=$('#executionTarget').value;const executeNow=$('#executeNow').checked;const releaseMode=$('#orchestratorRelease')?.checked===true;
     const prior=historyForAssist();pushMessage('user',message,{target});$('#commandInput').value='';resizeInput();
     let queued=null;
     try{
+      if(releaseMode){
+        // Stable per conversation/message to prevent duplicate task creation on retries.
+        const bytes=new TextEncoder().encode(String(state.activeId||'session')+'\\0'+message);
+        const digest=await crypto.subtle.digest('SHA-256',bytes);
+        const idempotencyKey='control-'+Array.from(new Uint8Array(digest)).map(n=>n.toString(16).padStart(2,'0')).join('');
+        const submitted=await api('/api/control/ai/v8/orchestrator/submit',{method:'POST',body:JSON.stringify({
+          intent:message,risk:'high',deploymentRequested:true,idempotencyKey,service:'control'
+        })});
+        if(submitted?.accepted!==true || submitted?.deploymentAuthorized===true){
+          throw new Error('공식 오케스트레이터 접수 상태를 검증하지 못했습니다.');
+        }
+        const taskId=String(submitted.taskId||'');
+        const taskStatus=String(submitted.state||'queued');
+        // This opt-in applies to one submitted command only.
+        if($('#orchestratorRelease'))$('#orchestratorRelease').checked=false;
+        const reply='EKODI 공식 오케스트레이터 작업 접수: '+taskId+
+          '\n작업 브랜치: '+String(submitted.branchRef||'없음')+
+          '\n현재 상태: '+statusLabel(taskStatus)+
+          '\n보호된 승인·CI·스테이징·운영 검증이 끝나기 전에는 배포 완료가 아닙니다.';
+        state.tasks.unshift({id:taskId,title:title(message),status:taskStatus,target:'EKODI Orchestrator',at:now()});
+        state.tasks=state.tasks.slice(0,40);
+        state.results.unshift({title:title(message),summary:reply,provider:'EKODI Orchestrator',taskId,status:taskStatus,at:now()});
+        state.results=state.results.slice(0,40);saveState();
+        pushMessage('assistant',reply,{provider:'EKODI Orchestrator',target:'ekodi',status:taskStatus,taskId});
+        renderPanels();
+        return;
+      }
       if(executeNow){
         queued=await api('/api/control/ai/v8/pulse',{method:'POST',body:JSON.stringify({
           goal:message,risk:'normal',
@@ -87,6 +146,30 @@
     $('#workerCards').innerHTML=WORKERS.map(([id,name])=>card(name,'상태는 실행 시 확인',id+' 실행계층')).join('');
     $('#resultCards').innerHTML=state.results.length?state.results.map(r=>card(r.title,statusLabel(r.status),(r.provider||'EKODI')+(r.taskId?' · '+r.taskId:'')+'\n'+r.summary)).join(''):card('아직 결과가 없습니다','대기','명령 처리 후 검증된 결과가 이곳에 누적됩니다.');
   }
+  async function refreshOrchestratorTasks(){
+    const recent=state.tasks.filter(item=>item.target==='EKODI Orchestrator' && /^orch_[a-z0-9_-]{16,}$/i.test(item.id||'')).slice(0,10);
+    let updated=0,unavailable=0;
+    for(const row of recent){
+      try{
+        const response=await api('/api/control/ai/v8/orchestrator/tasks/'+encodeURIComponent(row.id));
+        const task=response?.task;
+        if(!task||task.taskId!==row.id)continue;
+        row.status=String(task.state||row.status);
+        row.at=now();
+        // A task state is NOT equivalent to independently verified production delivery.
+        row.productionEvidencePresent=Boolean(task.productionEvidence);
+        const result=state.results.find(item=>item.taskId===row.id);
+        if(result){
+          result.status=row.status;
+          result.summary='오케스트레이터 상태: '+statusLabel(row.status)+
+            ' · 운영 증빙: '+(row.productionEvidencePresent?'수신됨 (검증 별도)':'미확인');
+        }
+        updated++;
+      }catch{unavailable++}
+    }
+    saveState();renderPanels();
+    toast('오케스트레이터 상태 '+updated+'건 갱신'+(unavailable?' · '+unavailable+'건 조회 실패':''));
+  }
   function resizeInput(){const input=$('#commandInput');input.style.height='auto';input.style.height=Math.min(input.scrollHeight,190)+'px'}
   function newTask(){state.activeId=null;setView('chat');renderMessages();$('#commandInput').focus()}
   function closeRail(){$('#controlRail').classList.remove('open')}
@@ -94,10 +177,11 @@
     $$('.nav-item').forEach(b=>b.onclick=()=>setView(b.dataset.view));
     $('#newTask').onclick=newTask;$('#railOpen').onclick=()=>$('#controlRail').classList.add('open');$('#railClose').onclick=closeRail;
     $('#commandForm').addEventListener('submit',e=>{e.preventDefault();submitCommand($('#commandInput').value)});
+    $('#aiRoutePreview').addEventListener('click',()=>previewAiRoute());
     $('#commandInput').addEventListener('input',resizeInput);
     $('#commandInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#commandForm').requestSubmit()}});
     $$('[data-prompt]').forEach(b=>b.onclick=()=>{$('#commandInput').value=b.dataset.prompt;resizeInput();$('#commandInput').focus()});
-    $$('[data-refresh]').forEach(b=>b.onclick=()=>{renderPanels();toast('현재 Control 기록을 새로 표시했습니다.')});
+    $('[data-refresh]').forEach(b=>b.onclick=()=>{refreshOrchestratorTasks().catch(()=>toast('오케스트레이터 상태 갱신 실패'))});
   }
   async function boot(){
     bind();renderRecent();renderMessages();renderPanels();
