@@ -2030,34 +2030,21 @@
         "redirect": "manual",
         "expect": [],
         "headerExpect": [
-          "location: https://ekodi.kr/ekodipay/"
-        ],
-        "rollbackStatuses": [
-          308
-        ],
-        "rollbackHeaderExpect": [
           "location: https://ekodi.kr/pay/"
         ]
       },
       {
         "url": "https://ekodi.kr/pay/",
         "statuses": [
-          308
-        ],
-        "redirect": "manual",
-        "expect": [],
-        "headerExpect": [
-          "location: https://ekodi.kr/ekodipay/"
-        ],
-        "rollbackStatuses": [
           200
         ],
-        "rollbackExpect": [
+        "redirect": "manual",
+        "expect": [
           "path === '/pay'",
           "title:'EKODI Pay'",
           "https://ekodi.kr/admin/#finance"
         ],
-        "rollbackHeaderExpect": [
+        "headerExpect": [
           "x-ekodi-route: hub",
           "x-ekodi-shell: v2",
           "x-ekodi-canonical-surface: pay",
