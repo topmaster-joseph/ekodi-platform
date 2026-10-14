@@ -23,7 +23,7 @@ test('committee history precedes related news, but original #timeline and #chann
 
 test('news taxonomy replaces vague committee/history filters, exposes linked social channel names',async()=>{
   const [html,js]=await Promise.all([read('sites/seonammedi/public/index.html'),read('sites/seonammedi/public/app.js')]);
-  assert.match(html,/id="relatedChannelLinks"/);
+  assert.doesNotMatch(html,/id="relatedChannelLinks"/);
   assert.match(js,/function renderRelatedChannelLinks/);
   assert.match(js,/item\.name\|\|'연결 채널'/);
   for(const label of ['신문','잡지','방송','유튜브','블로그','대학','정부·공공기관','페이스북','인스타그램','틱톡'])assert.ok(js.includes("'"+label+"'"),'news source '+label);

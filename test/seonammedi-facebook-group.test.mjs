@@ -5,15 +5,16 @@ import {runInNewContext} from 'node:vm';
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 const GROUP_URL='https://www.facebook.com/groups/2299276407568855';
 
-test('related-news group source is a real safe external link independent of Facebook login',async()=>{
+test('social group source is managed in communication channels without duplicate related-news card',async()=>{
   const [html,css,admin]=await Promise.all([
     read('sites/seonammedi/public/index.html'),
     read('sites/seonammedi/public/app.css'),
     read('sites/seonammedi/public/admin/index.html')
   ]);
-  assert.match(html,/<a href="https:\/\/www\.facebook\.com\/groups\/2299276407568855" target="_blank" rel="noopener noreferrer"/);
-  assert.match(html,/페이스북 그룹 · 2299276407568855/);
-  assert.match(html,/Facebook 로그인 또는 그룹 가입이 필요할 수 있으며/);
+  assert.doesNotMatch(html,/class="related-linked-channels"/);
+  assert.doesNotMatch(html,/class="related-facebook-source"/);
+  assert.match(html,/id="channels" class="section"/);
+  assert.match(html,/id="publicChannelTabs"/);
   assert.match(html,/id="publicNewsCategories"[^>]*>[\s\S]*?<option value="페이스북 그룹">/);
   assert.match(html,/name="category"[^>]*>[\s\S]*?<option>페이스북 그룹<\/option>/);
   assert.match(admin,/<option value="페이스북 그룹">/);
@@ -51,6 +52,6 @@ test('group source does not fabricate published timeline entries or pretend scra
   ]);
   assert.match(js,/const relatedRows=publicTimelineEntries\.filter\(item=>!isCommitteeRecord\(item\)&&!isCommitteeRelatedNews\(item\)\)/);
   assert.match(js,/filter\(item=>relatedNewsFilterMatches\(item,activeTimelineCategory\)\)/);
-  assert.match(html,/확인되지 않은 게시물은 자동 공개하지 않습니다/);
-  assert.match(html,/related-facebook-source/);
+  assert.doesNotMatch(html,/class="related-facebook-source"/);
+  assert.match(html,/id="publicChannelAccounts"/);
 });
