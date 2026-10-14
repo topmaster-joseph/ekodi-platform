@@ -1,8 +1,7 @@
 // EKODI-owned, read-only Chromium acceptance for the Education material studio.
 // No external browser provider, user profile persistence or server-side file upload.
 import {chromium} from 'playwright';
-import {mkdtemp,mkdir,writeFile,rm} from 'node:fs/promises';
-import os from 'node:os';
+import {mkdir,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {EKODI_SERVICE_MANIFEST} from '../ekodi-service-manifest.js';
 
@@ -11,8 +10,8 @@ const isPreview=process.env.EKODI_EDUCATION_PREVIEW_MODE==='true';
 if(isPreview&&(process.env.CI!=='true'||process.env.GITHUB_EVENT_NAME!=='pull_request')){
   throw new Error('Only read-only pull-request CI may request local preview');
 }
-const host=isPreview?'http://127.0.0.1:8765':registered;
-const route=isPreview?'/study/ai-bootcamp/studio/':'/study/ai-bootcamp/studio/';
+const host=isPreview?'http://127.0.0.1:8765':'https://ekodi.kr';
+const route=isPreview?'/study/ai-bootcamp/studio/':'/edu/study/ai-bootcamp/studio/';
 const profiles=[
   {name:'mobile-320',viewport:{width:320,height:680},isMobile:true},
   {name:'mobile-390',viewport:{width:390,height:844},isMobile:true},
@@ -41,6 +40,13 @@ async function check(browser,profile){
     return r.continue();
   });
   try{
+    // In production both the canonical apex and legacy worker must remain usable.
+    // The apex /edu alias requires a separately guarded shared-site release.
+    if(!isPreview){
+      const legacy=await p.request.get(registered+'/study/ai-bootcamp/studio/',{timeout:15000});
+      if(legacy.status()!==200)fail('registered legacy Education studio not reachable');
+      entry.checks.push('legacy Education worker preserved');
+    }
     const response=await p.goto(host+route,{waitUntil:'networkidle',timeout:45000});
     if(!response||response.status()!==200)fail(profile.name+' studio HTTP '+response?.status());
     await p.locator('h1').getByText('강의자료 편집 스튜디오').waitFor({timeout:15000});
