@@ -14,11 +14,11 @@ test('EKODIBIZ keeps shared payment core separate from canonical gateway', async
     read('ekodibiz-pay-gateway-worker.js')
   ]);
   const all = [adapter, prod, staging, gatewayConfig, gateway].join('\n');
-  assert.match(adapter, /https:\/\/pay\.ekodi\.kr/);
+  assert.match(adapter, /https:\/\/ekodi\.kr\/ekodipay/);
   assert.match(adapter, /https:\/\/ekodi\.kr\/ekodibiz\/pay/);
-  assert.match(prod, /PAYMENT_CORE_URL = "https:\/\/pay\.ekodi\.kr"/);
+  assert.match(prod, /PAYMENT_CORE_URL = "https:\/\/ekodi\.kr\/ekodipay"/);
   assert.match(prod, /PAYMENT_GATEWAY_URL = "https:\/\/ekodi\.kr\/ekodibiz\/pay"/);
-  assert.match(staging, /PAYMENT_CORE_URL = "https:\/\/pay\.ekodi\.kr"/);
+  assert.match(staging, /PAYMENT_CORE_URL = "https:\/\/ekodi\.kr\/ekodipay"/);
   assert.match(gatewayConfig, /pattern = "ekodi\.kr\/ekodibiz\/pay\*"/);
   assert.doesNotMatch(all, /pay\.biz\.ekodi\.kr/);
 });
