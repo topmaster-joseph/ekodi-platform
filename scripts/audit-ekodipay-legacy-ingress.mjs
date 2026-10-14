@@ -67,5 +67,5 @@ async function run(){
  }
  if(!healthy)process.exitCode=1;
 }
-if(import.meta.url.endsWith('/audit-ekodipay-legacy-ingress.mjs'))
+if(process.argv[1] && import.meta.url === new URL('file://' + process.argv[1]).href)
  run().catch(e=>{console.error(String(e.message||e));process.exitCode=1;});
