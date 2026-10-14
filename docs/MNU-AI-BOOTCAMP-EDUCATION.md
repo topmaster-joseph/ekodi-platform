@@ -61,3 +61,5 @@ All 21 Supreme Attributes assessed: static local assets preserve independence, r
 - Human-approved immutable source: PR #4691 @ 83060c08d19a469dce5bca0418e018720326fb1a, approval comment #6167763300.
 - Official orchestrator recovery PR #4693 on branch ai/chatgpt/orch_recovery_83060c08d19a469dce5bca0418e01872.
 - Re-run all protected checks and isolated Education staging from this official provenance. Do not bypass CSP, authentication, domain and privacy restrictions. Production remains contingent on protected merge, existing deployment gate and native Chromium evidence.
+
+- After official base synchronization at 8592c6a058a8c1bf1e45eb48beb4803450411033, re-run all immutable-HEAD tests from the orchestrator branch. This documentation-only reconciliation does not relax production gate, source owner approval, Cloudflare Access, CSP or identity protections.
