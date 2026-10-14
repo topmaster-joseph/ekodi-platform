@@ -185,5 +185,107 @@ function initChat(){
   void loadChatAvailability();
 }
 
+// Official public notices are read only from the owning SUPPORT service contract.
+// No third-party page scraping or provider credentials run in the browser.
+const SUPPORT_FEED_URL='/support/api/opportunities?source=combined&limit=100';
+const AI_NOTICE_PATTERN=/(?:^|[^a-z])ai(?:[^a-z]|$)|인공지능|생성형|딥러닝|머신러닝|초거대|지능형|llm|대규모언어모델/i;
+const SUPPORT_TOPIC_PATTERNS=Object.freeze({
+  education:/교육|인재|훈련|역량|수강|교육생|인력양성|캠프|아카데미/i,
+  startup:/창업|사업화|스타트업|기업육성|엑셀러레이팅|상용화|기업지원/i,
+  research:/연구개발|R&D|실증|기술개발|과제|연구과제|테스트베드|고도화/i,
+  adoption:/도입|전환|바우처|활용|보급|디지털혁신|디지털 전환/i,
+});
+const supportState={loaded:false,busy:false,items:[],fetchedAt:'',sources:[]};
+function supportKoreaDate(){return new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'})}
+function supportNoticeStatus(item,today=supportKoreaDate()){
+  const period=String(item.applicationPeriod||'');
+  const dates=(period.match(/20\d{2}[-./]\d{1,2}[-./]\d{1,2}/g)||[]).map(value=>value.replace(/[./]/g,'-').split('-').map((part,i)=>i?part.padStart(2,'0'):part).join('-'));
+  if(dates.length){
+    const from=dates.length>1?dates[0]:null,end=dates[dates.length-1];
+    if(from&&today<from)return{kind:'upcoming',label:'접수 예정',deadline:end};
+    if(today>end)return{kind:'closed',label:'마감',deadline:end};
+    const days=Math.round((Date.parse(end+'T00:00:00Z')-Date.parse(today+'T00:00:00Z'))/86400000);
+    if(days>=0&&days<=7)return{kind:'soon',label:days===0?'오늘 마감':'마감 '+days+'일 전',deadline:end};
+    return{kind:'open',label:'접수중',deadline:end};
+  }
+  if(/상시|수시/.test(period))return{kind:'permanent',label:'상시 접수',deadline:''};
+  return{kind:'unknown',label:'기간 확인 필요',deadline:''};
+}
+function supportNoticeText(item){return [item.title,item.summary,item.category,item.target,item.region,item.agency,item.operator,...(Array.isArray(item.tags)?item.tags:[])].join(' ')}
+function supportSafeUrl(value){try{const url=new URL(String(value||''));return url.protocol==='https:'?url.toString():''}catch{return''}}
+function renderSupportNotice(item){
+  const card=document.createElement('article');card.className='support-notice';
+  const url=supportSafeUrl(item.url);
+  const title=document.createElement(url?'a':'strong');title.className='support-notice-title';title.textContent=item.title||'공고명 미확인';
+  if(url){title.href=url;title.target='_blank';title.rel='noopener noreferrer'}
+  const status=supportNoticeStatus(item);
+  const meta=document.createElement('div');meta.className='support-notice-meta';
+  const chip=document.createElement('span');chip.className='support-chip '+status.kind;chip.textContent=status.label;meta.append(chip);
+  const source=document.createElement('span');source.textContent=item.sourceName||item.agency||'공식 지원사업';meta.append(source);
+  if(item.agency&&item.agency!==item.sourceName){const agency=document.createElement('span');agency.textContent='· '+item.agency;meta.append(agency)}
+  if(item.region){const region=document.createElement('span');region.textContent='· '+item.region;meta.append(region)}
+  const period=document.createElement('div');period.className='support-notice-meta';
+  period.textContent='신청 기간: '+(item.applicationPeriod||'원문 확인');
+  card.append(title,meta,period);
+  if(item.summary){const desc=document.createElement('p');desc.className='support-notice-desc';desc.textContent=String(item.summary).slice(0,190);card.append(desc)}
+  return card;
+}
+function renderSupportFeed(){
+  const target=$('supportNotices');target.replaceChildren();
+  const search=$('supportSearch').value.trim().toLocaleLowerCase('ko-KR');
+  const topic=$('supportTopic').value,statusFilter=$('supportStatusFilter').value;
+  const items=supportState.items.filter(item=>{
+    const full=supportNoticeText(item);
+    if(search&&!full.toLocaleLowerCase('ko-KR').includes(search))return false;
+    if(topic!=='all'&&!SUPPORT_TOPIC_PATTERNS[topic]?.test(full))return false;
+    const status=supportNoticeStatus(item).kind;
+    if(statusFilter==='open'&&!['open','soon','permanent'].includes(status))return false;
+    if(statusFilter==='soon'&&status!=='soon')return false;
+    return true;
+  });
+  const priority={soon:0,open:1,permanent:2,upcoming:3,unknown:4,closed:5};
+  items.sort((a,b)=>{
+    const diff=(priority[supportNoticeStatus(a).kind]??6)-(priority[supportNoticeStatus(b).kind]??6);
+    return diff||String(b.publishedAt||'').localeCompare(String(a.publishedAt||''))||String(a.title||'').localeCompare(String(b.title||''));
+  });
+  for(const item of items.slice(0,36))target.append(renderSupportNotice(item));
+  if(!items.length){const p=document.createElement('p');p.className='support-empty';
+    p.textContent=supportState.loaded?'현재 수집된 공고에 해당하는 AI 지원사업이 없습니다. 검색 조건을 조정하거나 원문 사이트를 확인해 주세요.':'공식 공고를 조회 중입니다.';
+    target.append(p);
+  }
+  if(supportState.loaded)$('supportStatus').textContent='공식 공고 '+supportState.items.length+'건 중 '+items.length+'건 표시'+(items.length>36?' (상위 36건)':'')+' · 확인 시각 '+supportState.fetchedAt+' · 수집 범위: 기업마당 및 연결된 검증 기관';
+}
+async function loadSupportFeed(){
+  if(supportState.busy)return;
+  supportState.busy=true;$('supportRefresh').disabled=true;
+  $('supportStatus').textContent='에코디 지원사업 AI의 공식 공고를 확인하고 있습니다.';
+  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);
+  try{
+    const response=await fetch(SUPPORT_FEED_URL,{headers:{accept:'application/json'},credentials:'omit',cache:'no-store',signal:controller.signal});
+    if(!response.ok)throw new Error('http_'+response.status);
+    const result=await response.json();
+    if(result.ok!==true||!Array.isArray(result.items))throw new Error('invalid_official_feed');
+    supportState.items=result.items.filter(item=>item&&item.official===true&&AI_NOTICE_PATTERN.test(supportNoticeText(item))&&item.title);
+    supportState.sources=Array.isArray(result.sources)?result.sources:[];
+    supportState.loaded=true;
+    supportState.fetchedAt=new Date().toLocaleString('ko-KR',{timeZone:'Asia/Seoul',hour12:false});
+    renderSupportFeed();
+  }catch{
+    $('supportStatus').textContent='공식 공고 연결을 확인하지 못했습니다. 새로고침하거나 기존 지원사업 AI에서 직접 검색해 주세요.';
+    if(!supportState.loaded){$('supportNotices').replaceChildren();const p=document.createElement('p');p.className='support-empty';p.textContent='공고 정보를 불러오지 못했습니다. 확인되지 않은 공고는 임의로 표시하지 않습니다.';$('supportNotices').append(p)}
+  }finally{clearTimeout(timeout);supportState.busy=false;$('supportRefresh').disabled=false}
+}
+function initSupportFeed(){
+  $('supportFilters').addEventListener('submit',event=>event.preventDefault());
+  for(const id of ['supportSearch','supportTopic','supportStatusFilter'])$(''+id).addEventListener(id==='supportSearch'?'input':'change',renderSupportFeed);
+  $('supportRefresh').addEventListener('click',()=>void loadSupportFeed());
+  const section=$('support-programs');
+  if('IntersectionObserver' in window){
+    const observer=new IntersectionObserver(entries=>{if(entries.some(entry=>entry.isIntersecting)){observer.disconnect();void loadSupportFeed()}},{rootMargin:'240px'});
+    observer.observe(section);
+  }else void loadSupportFeed();
+}
+
+initSupportFeed();
 initChat();
 boot().catch(error=>{$('sessionState').textContent=`초기화 실패: ${error.message}`});
