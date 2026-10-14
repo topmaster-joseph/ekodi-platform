@@ -330,7 +330,9 @@ test('connect cannot be claimed as a workspace slug',async()=>{
 
 test('shared-site release probes honor canonical slash parity',async()=>{
   const manifest=JSON.parse(await fs.promises.readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
-  for(const root of ['/live','/pay','/cloud']){
+  // /pay is no longer a trailing-slash hub: approved canonical Pay migration
+  // redirects both legacy spellings to /ekodipay/ (covered by its own probe test).
+  for(const root of ['/live','/cloud']){
     const slashless=manifest.worker.requests.find(item=>item.url===`https://ekodi.kr${root}`);
     const canonical=manifest.worker.requests.find(item=>item.url===`https://ekodi.kr${root}/`);
     assert.ok(slashless,`missing slashless probe for ${root}`);
