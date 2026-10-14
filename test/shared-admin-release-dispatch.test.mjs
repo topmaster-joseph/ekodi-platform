@@ -5,7 +5,7 @@ import test from 'node:test';
 const script=await readFile(new URL('../scripts/converge-orchestrated-pr-merge.mjs',import.meta.url),'utf8');
 const ownership=script.slice(script.indexOf('const sharedSiteTouched='),script.indexOf('async function dispatchPostMergeDeploys()'));
 test('every shared Admin lazy runtime asset triggers a guarded Site Core production deployment',()=>{
- for(const file of ['admin-demand-loader.js','release-control-admin.js','admin-menu-layout.js','admin-menu-layout.compact.js','system-health-admin.js']){
+ for(const file of ['admin-demand-loader.js','release-control-admin.js','admin-menu-layout.js','admin-menu-layout.compact.js','system-health-admin.js','ekodibiz-business-center.js']){
    assert.ok(ownership.includes("'"+file+"'"),'missing production dispatch owner '+file);
  }
 });
