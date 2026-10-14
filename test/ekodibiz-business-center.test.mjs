@@ -31,7 +31,11 @@ test('first-party worker and worker-first route ship lazy assets',async()=>{
   assert.match(wrangler,/"\/ekodibiz-business-center\.\*"/);
   const response=businessCenterCss();
   assert.equal(response.headers.get('content-type'),'text/css; charset=utf-8');
-  assert.match(await response.text(),/@media print/);
+  const style=await response.text();
+  assert.match(style,/\.ebiz\{[^}]*line-height:1\.3;display:grid;gap:9px/);
+  assert.match(style,/\.ebiz \.ebiz-line\{[^}]*padding:7px 0/);
+  assert.match(style,/\.ebiz th,\.ebiz td\{[^}]*padding:7px 8px/);
+  assert.match(style,/@media print/);
 });
 
 test('business center uses server-side authorized records, no fake KPI or localStorage as a ledger',async()=>{
