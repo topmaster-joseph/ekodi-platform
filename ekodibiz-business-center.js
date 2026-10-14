@@ -82,7 +82,7 @@ export function businessCenterCss() {
 
 // Serialized as a first-party on-demand module; never bundled into every admin page.
 export function businessCenterScript() {
-  return new Response('export const mountBusinessCenter = '+mountBusinessCenter.toString()+';\n', {
+  return new Response('const __name=(fn,name)=>Object.defineProperty(fn,"name",{value:name,configurable:true});\nexport const mountBusinessCenter = '+mountBusinessCenter.toString()+';\n', {
     headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}
   });
 }
