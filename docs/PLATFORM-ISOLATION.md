@@ -1,5 +1,7 @@
 # EKODI Platform Isolation Architecture
 
+> Canonical payment entry as of 2026-10-14: https://ekodi.kr/ekodipay/. Payment subdomain ingress is retired; references below describe historical topology.
+
 ## 목적
 
 EKODI 생태계의 각 사이트와 서비스는 단순 페이지가 아니라 독립적인 플랫폼 또는 특수 기능입니다. 따라서 하나의 플랫폼 소스 수정이 다른 플랫폼의 배포, 인증, 결제, 데이터, 운영 상태에 불필요한 영향을 주지 않는 것을 기본 원칙으로 합니다.
