@@ -7,6 +7,10 @@ import {EKODI_SERVICE_MANIFEST} from '../ekodi-service-manifest.js';
 // Reuse the existing registered Education boundary; never mint a new hostname.
 export const ORIGIN=new URL(EKODI_SERVICE_MANIFEST.services.find(row=>row.id==='edu').url).origin;
 export const ROUTE='/study/ai-bootcamp/';
+const wantsPreview=process.env.EKODI_EDUCATION_PREVIEW_MODE==='true';
+const previewAllowed=wantsPreview&&process.env.GITHUB_EVENT_NAME==='pull_request'&&process.env.CI==='true';
+if(wantsPreview&&!previewAllowed)throw new Error('Local preview is restricted to isolated CI pull requests');
+const TARGET_ORIGIN=previewAllowed?'http://127.0.0.1:8765':ORIGIN;
 export const VIEWPORTS=Object.freeze([
   {name:'compact-mobile',width:320,height:640,mobile:true},
   {name:'mobile',width:390,height:844,mobile:true},
@@ -21,7 +25,8 @@ const trim=(value,max=400)=>String(value??'').trim().slice(0,max);
 const artifactRoot=path.resolve(process.env.EKODI_EDUCATION_NATIVE_ARTIFACT_DIR||'artifacts/education-native');
 const report={taskId:trim(process.env.EKODI_RELEASE_TASK_ID||'education-classroom-production',150),
   owner:'ekodi-background-browser-worker',implementation:'ekodi-owned-ephemeral-chromium',
-  sourceSha:trim(process.env.GITHUB_SHA||'unknown',80),origin:ORIGIN,readOnly:true,
+  sourceSha:trim(process.env.GITHUB_SHA||'unknown',80),origin:TARGET_ORIGIN,
+  evidenceScope:previewAllowed?'synthetic-local-preview':'real-production',readOnly:true,
   authenticated:false,ephemeral:true,startedAt:new Date().toISOString(),profiles:[],
   captures:[],consoleErrors:[],pageErrors:[],httpErrors:[],requestFailures:[],blockedMutations:[],ok:false};
 const record=(kind,profile,detail)=>report[kind].push({profile:profile.name,...detail});
@@ -29,7 +34,7 @@ const record=(kind,profile,detail)=>report[kind].push({profile:profile.name,...d
 async function checkAssets(page){
   const results=[];
   for(const file of FILES){
-    const response=await page.request.get(ORIGIN+ROUTE+file,{timeout:15000});
+    const response=await page.request.get(TARGET_ORIGIN+ROUTE+file,{timeout:15000});
     if(response.status()!==200)fail('asset '+file+' returned HTTP '+response.status());
     results.push({file,status:response.status(),type:response.headers()['content-type']||''});
   }
@@ -55,9 +60,9 @@ async function checkProfile(browser,profile){
     return route.continue();
   });
   try{
-    const response=await page.goto(ORIGIN+ROUTE,{waitUntil:'domcontentloaded',timeout:35000});
+    const response=await page.goto(TARGET_ORIGIN+ROUTE,{waitUntil:'domcontentloaded',timeout:35000});
     if(!response||response.status()!==200)fail(profile.name+' classroom returned HTTP '+response?.status());
-    if(new URL(page.url()).origin!==ORIGIN)fail('redirect escaped Education origin');
+    if(new URL(page.url()).origin!==TARGET_ORIGIN)fail('redirect escaped Education origin');
     await page.locator('[data-view="overview"]').waitFor({state:'visible',timeout:15000});
     await page.locator('.course-cards .lesson-card').first().waitFor({state:'visible',timeout:15000});
     if(await page.locator('.course-cards .lesson-card').count()!==4)fail('not exactly four lesson cards');
