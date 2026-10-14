@@ -43,8 +43,8 @@ async function checkProfile(browser,profile){
   });
   const page=await context.newPage();
   page.on('console',message=>{if(message.type()==='error')record('consoleErrors',profile,{message:trim(message.text())})});
-  page.on('pageerror',error=>record('pageErrors',profile,{message:trim(error?.message)})});
-  page.on('requestfailed',request=>record('requestFailures',profile,{url:trim(request.url()),failure:trim(request.failure()?.errorText)})});
+  page.on('pageerror',error=>record('pageErrors',profile,{message:trim(error?.message)}));
+  page.on('requestfailed',request=>record('requestFailures',profile,{url:trim(request.url()),failure:trim(request.failure()?.errorText)}));
   page.on('response',response=>{if(response.status()>=400)record('httpErrors',profile,{url:trim(response.url()),status:response.status(),resourceType:trim(response.request().resourceType(),60)})});
   await page.route('**/*',route=>{
     const req=route.request(),method=req.method().toUpperCase();
