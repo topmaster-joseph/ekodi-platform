@@ -147,3 +147,22 @@ a.support-notice-title:hover,a.support-notice-title:focus-visible{color:var(--ac
 .assistance-history summary{cursor:pointer;font-size:.85rem;font-weight:800}
 .assistance-history-row{padding:8px 0;border-bottom:1px solid #eef1ee;font-size:.8rem;line-height:1.6;color:#536558;word-break:keep-all}
 @media(max-width:720px){.assistance-plans,.assistance-request-fields{grid-template-columns:minmax(0,1fr)}.support-detail{padding:14px}.assistance-contract-preview{padding:13px}.support-detail-body{padding:13px}}
+
+/* EKODIBIZ post-review quote and gated online contract acknowledgement */
+#assistanceQuotePanel[hidden],#assistanceAdminPanel[hidden],#assistanceMerchantQuoteForm[hidden],#assistanceAcknowledgmentForm[hidden]{display:none!important}
+.assistance-quote-legal{display:flex;flex-wrap:wrap;gap:12px}
+.assistance-quote-legal a{font-size:.8rem;font-weight:700;color:#14643e;text-decoration:underline;text-underline-offset:3px}
+.assistance-history-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;border-bottom:1px solid #e7eee8;padding:11px 0}
+.assistance-history-row strong{flex:1 1 230px;font-size:.85rem}
+.assistance-history-row span{flex:2 1 260px;font-size:.76rem;color:#52685b}
+.assistance-history-row button{flex:none;min-height:36px}
+.assistance-contract-preview h4{font-size:1.03rem;margin:0}
+.assistance-request-form>label:not(.assistance-consent){display:grid;gap:6px;font-size:.82rem;font-weight:700}
+.assistance-request-form input[type="text"],.assistance-request-form input[type="datetime-local"],.assistance-request-form input[type="number"],.assistance-request-form textarea{width:100%;min-width:0;border:1px solid #ceddcf;background:#fff;color:inherit;border-radius:9px;padding:10px;font:inherit;min-height:42px}
+.assistance-request-form>button{justify-self:start;background:#166d43;border:0;border-radius:10px;color:#fff;font:inherit;font-weight:800;padding:12px 19px;cursor:pointer}
+.assistance-request-form>button:disabled{opacity:.55;cursor:progress}
+.assistance-admin-list{display:grid;gap:3px;max-height:440px;overflow-y:auto}
+.assistance-merchant-lines{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.assistance-merchant-line{display:grid;gap:7px;font-size:.8rem;font-weight:700;min-width:0}
+.assistance-contract-text{font-size:.8rem;line-height:1.8}
+@media(max-width:720px){.assistance-merchant-lines{grid-template-columns:minmax(0,1fr)}.assistance-history-row{display:grid}.assistance-history-row button{justify-self:start}}
