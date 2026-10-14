@@ -16,6 +16,7 @@ import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
 import { handleMailContactApi, mailContactPage } from './mail-contact.js';
 import { mailAdminPage } from './mail-admin-page.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
+import { businessCenterCss, businessCenterScript } from './ekodibiz-business-center.js';
 import { isOrganizationAdminPath, organizationAdminPage, organizationAdminCss, organizationAdminScript } from './organization-admin-page.js';
 import { legacyAdminAliasTarget } from './admin-address-policy.js';
 import { isStoreAdminPathShape, resolveStoreAdminRoute, storeAdminPage, storeAdminCss, storeAdminScript } from './store-admin-engine.js';
@@ -511,6 +512,8 @@ async function routePlatform(request,env,ctx){
         if(isOrganizationAdminPath(url.pathname))return injectEkodiShell(organizationAdminPage(url.pathname),'space','admin');
         if(url.pathname==='/workspace-admin.css')return workspaceAdminCss();
         if(url.pathname==='/workspace-admin.js')return workspaceAdminScript();
+        if(['GET','HEAD'].includes(request.method)&&url.pathname==='/ekodibiz-business-center.js')return businessCenterScript();
+        if(['GET','HEAD'].includes(request.method)&&url.pathname==='/ekodibiz-business-center.css')return businessCenterCss();
         if(url.pathname==='/workspace-trade-admin.js')return workspaceTradeAdminScript();
         if(url.pathname==='/church-pastor-admin.js')return churchPastorAdminScript();
         if(url.pathname==='/workspace-trade-portal.css')return tradePartnerCss();
