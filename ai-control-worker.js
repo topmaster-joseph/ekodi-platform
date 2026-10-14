@@ -1,3 +1,4 @@
+import {merchantContractReadiness,normalizeMerchantQuote,quoteDigest,normalizeQuoteAcknowledgment,paymentReadiness} from './support/assistance-contract.js';
 import {assistanceCatalogue,normalizeAssistanceRequest} from './support/assistance-catalog.js';
 import {AI_CONTROL_POLICY,buildExecutionPlan,buildOriginSynthesisPrompt,createTaskId,evaluateTaskMissionPolicy,isOriginPreserved,normalizeTaskInput,resolveOriginResponseProvider,rolePrompt,summarizeRuns,taskOrigin} from './ai-control-core.js';
 import {invokeProviderWithMeta,providerCapabilities,providerStatus} from './ai-control-provider-router.js';
@@ -548,6 +549,35 @@ async function startCommonsPipeline(env,ctx,auth,input,fingerprint){
 }
 async function handleCommonsAdmin(request,env,url){
   const auth=await requireCommonsSuperAdmin(request,env);if(auth.error)return auth.error;if(!dbReady(env))return json({error:'state_store_unavailable'},503);
+  if(request.method==='GET'&&url.pathname==='/api/commons/admin/assistance/requests'){
+    try{
+      const rows=await env.DB.prepare("SELECT r.id,r.notice_title,r.applicant_name,r.organization,r.plans_json,r.state,r.created_at,q.id quote_id,q.status quote_status FROM ai_assistance_requests r LEFT JOIN ai_assistance_quotes q ON q.request_id=r.id ORDER BY r.created_at DESC LIMIT 50").all();
+      return json({requests:(rows.results||[]).map(r=>({id:r.id,noticeTitle:r.notice_title,applicantName:r.applicant_name,organization:r.organization,plans:JSON.parse(r.plans_json||'[]').map(p=>({id:p.id,label:p.label})),state:r.state,createdAt:r.created_at,quoteId:r.quote_id||null,quoteStatus:r.quote_status||null})),contractPolicy:merchantContractReadiness(env),payment:paymentReadiness()});
+    }catch{return json({error:'assistance_schema_unavailable'},503)}
+  }
+  const quoteRequest=url.pathname.match(/^\/api\/commons\/admin\/assistance\/requests\/([a-f0-9-]{36})\/quote$/);
+  if(quoteRequest&&request.method==='POST'){
+    const input=await body(request);
+    const requestId=quoteRequest[1];
+    const row=await env.DB.prepare('SELECT id,user_id,plans_json,state FROM ai_assistance_requests WHERE id=?').bind(requestId).first();
+    if(!row)return json({error:'request_not_found'},404);
+    if(row.state!=='review_requested')return json({error:'request_not_quoteable'},409);
+    let quote;
+    try{quote=normalizeMerchantQuote(input||{},JSON.parse(row.plans_json),env,now())}
+    catch(e){return json({error:clean(e.message)||'invalid_quote'},400)}
+    const digest=await quoteDigest(quote),quoteId=crypto.randomUUID(),stamp=now();
+    try{
+      const result=await env.DB.batch([
+        env.DB.prepare("UPDATE ai_assistance_requests SET state='merchant_approved',updated_at=? WHERE id=? AND state='review_requested'").bind(stamp,requestId),
+        env.DB.prepare("INSERT INTO ai_assistance_quotes (id,request_id,user_id,digest,snapshot_json,total_krw,status,approved_by,issued_at,expires_at) VALUES (?,?,?,?,?,?,'issued',?,?,?)")
+          .bind(quoteId,requestId,row.user_id,digest,JSON.stringify(quote),quote.totalAmount,auth.user.id,stamp,quote.expiresAt),
+        env.DB.prepare('INSERT INTO ai_assistance_events (id,request_id,actor_id,kind,event_json,created_at) VALUES (?,?,?,?,?,?)')
+          .bind(crypto.randomUUID(),requestId,auth.user.id,'quote_issued',JSON.stringify({quoteId,digest}),stamp)
+      ]);
+      if(result[0]?.meta?.changes!==1)throw new Error('request_state_race');
+      return json({ok:true,quoteId,status:'issued',totalAmount:quote.totalAmount,currency:'KRW',contractExecuted:false,paymentEnabled:false},201);
+    }catch(e){console.warn('assistance quote atomic publish',clean(e?.message||e).slice(0,130));return json({error:'quote_conflict_or_unavailable'},409)}
+  }
   if(request.method==='GET'&&url.pathname==='/api/commons/admin/requests')return json({requests:await aggregateCommonsIdeas(env,200,adminIdeaView),finalPublishAuthority:'super_admin'});
   const match=url.pathname.match(/^\/api\/commons\/admin\/requests\/([a-f0-9]{64})\/decision$/);if(request.method==='POST'&&match){
     const input=await body(request)||{};const decision=clean(input.decision).toLowerCase();const fingerprint=match[1];const rows=await aggregateCommonsIdeas(env,200,adminIdeaView);const idea=rows.find(item=>item.fingerprint===fingerprint);if(!idea)return json({error:'request_not_found'},404);
@@ -570,6 +600,44 @@ async function handleCommonsApi(request,env,ctx){
         plans:catalog,checkoutEnabled:false,agreementExecutionEnabled:false,
         paymentStatus:'merchant_and_payment_verification_required',
         message:'가격·약관은 에코디비즈 승인 후 확정합니다. 정부 공고와 별도의 민간 지원서비스입니다.'});
+    }
+    const quoteDetail=url.pathname.match(/^\/api\/commons\/assistance\/requests\/([a-f0-9-]{36})$/);
+    const quoteAccept=url.pathname.match(/^\/api\/commons\/assistance\/requests\/([a-f0-9-]{36})\/acknowledge$/);
+    if(quoteDetail||quoteAccept){
+      const auth=await requireCommonsMember(request,env);if(auth.error)return auth.error;
+      if(!dbReady(env))return json({error:'state_store_unavailable'},503);
+      const id=(quoteDetail||quoteAccept)[1];
+      let record;
+      try{
+        record=await env.DB.prepare('SELECT r.id,r.user_id,r.applicant_name,r.notice_title,r.state,q.id quote_id,q.user_id quote_user_id,q.snapshot_json,q.digest,q.status quote_status,q.expires_at,q.issued_at,q.acknowledged_at,q.total_krw FROM ai_assistance_requests r LEFT JOIN ai_assistance_quotes q ON q.request_id=r.id WHERE r.id=? AND r.user_id=?').bind(id,auth.user.id).first();
+      }catch{return json({error:'assistance_schema_unavailable'},503)}
+      if(!record)return json({error:'request_not_found'},404);
+      if(quoteDetail&&request.method==='GET'){
+        let quote=null;
+        if(record.quote_id){quote={id:record.quote_id,status:record.quote_status,digest:record.digest,snapshot:JSON.parse(record.snapshot_json),issuedAt:record.issued_at,expiresAt:record.expires_at,acknowledgedAt:record.acknowledged_at};}
+        return json({request:{id:record.id,noticeTitle:record.notice_title,applicantName:record.applicant_name,state:record.state},quote,payment:paymentReadiness(),merchantContractExecuted:false});
+      }
+      if(quoteAccept&&request.method==='POST'){
+        if(!record.quote_id||record.state!=='merchant_approved')return json({error:'quote_not_ready'},409);
+        const input=await body(request);
+        let accepted;
+        try{accepted=normalizeQuoteAcknowledgment(input||{},{id:record.quote_id,user_id:record.quote_user_id,status:record.quote_status,expires_at:record.expires_at,digest:record.digest,applicant_name:record.applicant_name},record.user_id,auth.user.id)}
+        catch(e){return json({error:clean(e.message)||'quote_not_acceptable'},409)}
+        const stamp=now();
+        try{
+          const results=await env.DB.batch([
+            env.DB.prepare("UPDATE ai_assistance_quotes SET status='acknowledged',acknowledged_at=?,acknowledged_by=?,acknowledgment_type=? WHERE id=? AND user_id=? AND digest=? AND status='issued'")
+              .bind(stamp,auth.user.id,accepted.acknowledgmentType,record.quote_id,auth.user.id,record.digest),
+            env.DB.prepare("UPDATE ai_assistance_requests SET state='contract_pending',updated_at=? WHERE id=? AND user_id=? AND state='merchant_approved'")
+              .bind(stamp,id,auth.user.id),
+            env.DB.prepare('INSERT INTO ai_assistance_events (id,request_id,actor_id,kind,event_json,created_at) VALUES (?,?,?,?,?,?)')
+              .bind(crypto.randomUUID(),id,auth.user.id,'quote_acknowledged',JSON.stringify({quoteId:record.quote_id,digest:record.digest,kind:accepted.acknowledgmentType}),stamp)
+          ]);
+          if(results[0]?.meta?.changes!==1||results[1]?.meta?.changes!==1)throw new Error('quote_conflict');
+          return json({ok:true,state:'contract_pending',customerReviewAcknowledged:true,contractExecuted:false,paymentConfirmed:false,workStarted:false,payment:paymentReadiness()});
+        }catch{return json({error:'quote_conflict'},409)}
+      }
+      return json({error:'method_not_allowed'},405);
     }
     if(url.pathname==='/api/commons/assistance/requests'){
       const auth=await requireCommonsMember(request,env);if(auth.error)return auth.error;
