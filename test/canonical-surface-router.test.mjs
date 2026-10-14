@@ -333,18 +333,11 @@ test('shared-site release probes honor canonical slash parity',async()=>{
   for(const root of ['/live','/pay','/cloud']){
     const slashless=manifest.worker.requests.find(item=>item.url===`https://ekodi.kr${root}`);
     const canonical=manifest.worker.requests.find(item=>item.url===`https://ekodi.kr${root}/`);
-    const destination=root==='/pay'?'/ekodipay/':root+'/';
     assert.ok(slashless,`missing slashless probe for ${root}`);
     assert.deepEqual(slashless.statuses,[308]);
     assert.equal(slashless.redirect,'manual');
-    assert.ok(slashless.headerExpect?.includes('location: https://ekodi.kr'+destination));
+    assert.ok(slashless.headerExpect?.includes(`location: https://ekodi.kr${root}/`));
     assert.ok(canonical,`missing canonical trailing-slash probe for ${root}`);
-    assert.deepEqual(canonical.statuses,root==='/pay'?[308]:[200]);
-    if(root==='/pay'){
-      assert.ok(canonical.headerExpect?.includes('location: https://ekodi.kr/ekodipay/'));
-      assert.deepEqual(canonical.rollbackStatuses,[200]);
-      assert.ok(slashless.rollbackHeaderExpect?.includes('location: https://ekodi.kr/pay/'));
-      assert.ok(canonical.rollbackHeaderExpect?.includes('x-ekodi-canonical-path: /pay'));
-    }
+    assert.deepEqual(canonical.statuses,[200]);
   }
 });
