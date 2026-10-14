@@ -32,7 +32,7 @@ export function merchantContractReadiness(env={}){
   if(env.EKODIBIZ_ASSISTANCE_CONTRACT_APPROVED!=='true')blockers.push('merchant_contract_policy_not_approved');
   return {ready:blockers.length===0,merchant,documents,blockers};
 }
-export function normalizeMerchantQuote(input={},plans=[],env={},timestamp=new Date().toISOString()){
+export function normalizeMerchantQuote(input={},plans=[],env={},timestamp=new Date().toISOString(),originalRequest={}){
   const policy=merchantContractReadiness(env);
   if(!policy.ready)throw new Error('merchant_contract_configuration_required');
   if(!Array.isArray(plans)||plans.length<1||plans.length>6)throw new Error('request_plans_invalid');
@@ -56,6 +56,9 @@ export function normalizeMerchantQuote(input={},plans=[],env={},timestamp=new Da
   const remark=value(input.notes,1500);
   return Object.freeze({
     contractVersion:ASSISTANCE_CONTRACT_VERSION,
+    request:{id:req(originalRequest.id,'request_id',36),noticeId:req(originalRequest.notice_id,'notice_id',120),
+      noticeTitle:req(originalRequest.notice_title,'notice_title',250),applicantName:req(originalRequest.applicant_name,'applicant_name',80),
+      organization:value(originalRequest.organization,150)},
     merchant:policy.merchant,documents:policy.documents,
     items:selected,totalAmount:total,currency:'KRW',vatIncluded:true,
     deliveryDays:days,expiresAt,
