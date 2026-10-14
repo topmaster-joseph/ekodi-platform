@@ -238,11 +238,14 @@ jobs:
               && grep -Fq '"dataEnabled":true' /tmp/edu-config.js \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/edu-headers \
               && grep -Eiq '^location: https://ekodi\.kr/admin/?' /tmp/edu-admin-headers; then
-              classroom=$(curl -L -sS -o /tmp/edu-bootcamp.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://edu.ekodi.kr/study/ai-bootcamp/' || true)
-              catalog=$(curl -L -sS -o /tmp/edu-catalog.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://edu.ekodi.kr/study/ai-bootcamp/catalog.js' || true)
-              classroom_js=$(curl -L -sS -o /tmp/edu-classroom.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://edu.ekodi.kr/study/ai-bootcamp/classroom.js' || true)
-              classroom_css=$(curl -L -sS -o /tmp/edu-classroom.css -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://edu.ekodi.kr/study/ai-bootcamp/classroom.css' || true)
-              classroom_csv=$(curl -L -sS -o /tmp/edu-sample.csv -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://edu.ekodi.kr/study/ai-bootcamp/data/sample.csv' || true)
+              # Resolve only the already-registered Education origin; never create a new domain.
+              edu_origin=$(node --input-type=module -e "import {EKODI_SERVICE_MANIFEST} from './ekodi-service-manifest.js'; process.stdout.write(new URL(EKODI_SERVICE_MANIFEST.services.find(row=>row.id==='edu').url).origin)")
+              test -n "$edu_origin"
+              classroom=$(curl -L -sS -o /tmp/edu-bootcamp.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$edu_origin/study/ai-bootcamp/" || true)
+              catalog=$(curl -L -sS -o /tmp/edu-catalog.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$edu_origin/study/ai-bootcamp/catalog.js" || true)
+              classroom_js=$(curl -L -sS -o /tmp/edu-classroom.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$edu_origin/study/ai-bootcamp/classroom.js" || true)
+              classroom_css=$(curl -L -sS -o /tmp/edu-classroom.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "$edu_origin/study/ai-bootcamp/classroom.css" || true)
+              classroom_csv=$(curl -L -sS -o /tmp/edu-sample.csv -w '%{http_code}' --connect-timeout 5 --max-time 15 "$edu_origin/study/ai-bootcamp/data/sample.csv" || true)
               if [[ "$classroom" == 200 && "$catalog" == 200 && "$classroom_js" == 200 && "$classroom_css" == 200 && "$classroom_csv" == 200 ]] \
                 && grep -Fq '/study/ai-bootcamp/' /tmp/edu-study.html \
                 && grep -Fq 'id="presentDialog"' /tmp/edu-bootcamp.html \
