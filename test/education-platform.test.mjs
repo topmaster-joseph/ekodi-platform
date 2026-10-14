@@ -125,3 +125,19 @@ test('AI bootcamp keeps public classroom synthetic and CSP-compatible',async()=>
   assert.match(data,/만족도평균_가상/);
   assert.doesNotMatch(html+app+catalog,/\b010-\d{4}-\d{4}\b|cgma4989@gmail\.com|SUPABASE_SERVICE_ROLE_KEY|sk-[A-Za-z0-9]{16}/);
 });
+
+test('Education guarded Study release and rollback canaries match real stable page markers',async()=>{
+  const [manifestText,studyHtml]=await Promise.all([
+    read('deploy/manifests/education.worker.json'),
+    read('education/study/index.html'),
+  ]);
+  const manifest=JSON.parse(manifestText);
+  const probe=manifest.worker.requests.find(row=>row.url.endsWith('/study'));
+  assert.ok(probe,'Study canary required');
+  assert.deepEqual(probe.statuses,[200]);
+  for(const marker of probe.expect){
+    assert.ok(studyHtml.includes(marker),`Study canary must match actual HTML: ${marker}`);
+  }
+  assert.ok(probe.expect.includes('EKODI Education'));
+  assert.ok(!probe.expect.includes('EKODI Work'));
+});
