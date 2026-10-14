@@ -2,7 +2,7 @@ import { DurableObject } from 'cloudflare:workers';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
 const MAX_GOAL_LENGTH = 4000;
-const PAYMENT_URL = 'https://pay.ekodi.kr';
+const PAYMENT_URL = 'https://ekodi.kr/ekodipay';
 const STORE_NAME = 'ekodibiz-global';
 
 const CATALOG = [
@@ -82,7 +82,7 @@ function securityHeaders() {
     'x-frame-options': 'DENY',
     'referrer-policy': 'strict-origin-when-cross-origin',
     'permissions-policy': 'camera=(), microphone=(), geolocation=()',
-    'content-security-policy': "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://pay.ekodi.kr"
+    'content-security-policy': "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://ekodi.kr/ekodipay"
   };
 }
 

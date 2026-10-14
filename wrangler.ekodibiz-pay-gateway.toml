@@ -10,7 +10,7 @@ zone_name = "ekodi.kr"
 
 [vars]
 REVENUE_OS_URL = "https://biz.ekodi.kr"
-PAYMENT_CORE_URL = "https://pay.ekodi.kr"
+PAYMENT_CORE_URL = "https://ekodi.kr/ekodipay"
 CANONICAL_GATEWAY_URL = "https://ekodi.kr/ekodibiz/pay"
 
 [observability.logs]

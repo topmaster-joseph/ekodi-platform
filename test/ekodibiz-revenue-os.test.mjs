@@ -78,7 +78,7 @@ test('high impact actions are approval-gated and prices are not invented', () =>
   assert.match(worker, /approval_required/);
   assert.match(worker, /quote_required/);
   assert.match(worker, /amount: null/);
-  assert.match(worker, /https:\/\/pay\.ekodi\.kr/);
+  assert.match(worker, /https:\/\/ekodi\.kr\/ekodipay/);
   assert.match(adapter, /https:\/\/ekodi\.kr\/ekodibiz\/pay/);
 });
 

@@ -11,7 +11,7 @@ Use a first-level subdomain when the service is an ecosystem-wide brand, platfor
 | Business | `biz.ekodi.kr` |
 | Trading | `trade.ekodi.kr` |
 | Mall | `mall.ekodi.kr` |
-| Payments | `pay.ekodi.kr` |
+| Payments | `ekodi.kr/ekodipay` |
 | Books | `books.ekodi.kr` |
 | Lab | `lab.ekodi.kr` |
 | Church | `church.ekodi.kr` |
@@ -88,7 +88,7 @@ For Google Workspace, keep SPF, DKIM, and DMARC aligned with every domain that i
 
 Use a first-level domain when one service is shared across the whole ecosystem.
 
-- Shared payments: `pay.ekodi.kr`
+- Shared payments: `ekodi.kr/ekodipay`
 - Shared identity/admin: `admin.ekodi.kr`
 - Shared API gateway: `ekodi.kr/api`
 - Shared webmail entry: `mail.ekodi.kr`
@@ -147,7 +147,7 @@ Mail browser gateways:
 Reserved for future service deployment:
 
 - `trade.ekodi.kr`
-- `pay.ekodi.kr`
+- `ekodi.kr/ekodipay`
 - `ins.ekodi.kr`
 - `mission.ekodi.kr`
 - `community.ekodi.kr`

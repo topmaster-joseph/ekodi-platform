@@ -1,0 +1,17 @@
+name = "ekodi-pay-entry"
+main = "ekodipay-worker.js"
+compatibility_date = "2026-10-14"
+workers_dev = false
+preview_urls = false
+
+# Canonical customer-facing path. No pay.* subdomain route is created.
+[[routes]]
+pattern = "ekodi.kr/ekodipay*"
+zone_name = "ekodi.kr"
+
+[vars]
+PAYMENT_EXECUTION_MODE = "disabled-until-approved"
+
+[observability.logs]
+enabled = true
+invocation_logs = true

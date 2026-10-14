@@ -11,7 +11,7 @@ custom_domain = true
 
 [vars]
 EKODIBIZ_MODE = "operational-mvp"
-PAYMENT_CORE_URL = "https://pay.ekodi.kr"
+PAYMENT_CORE_URL = "https://ekodi.kr/ekodipay"
 PAYMENT_GATEWAY_URL = "https://ekodi.kr/ekodibiz/pay"
 HIGH_IMPACT_APPROVAL = "required"
 AI_OPERATIONS_MODE = "rules-first-event-driven"
