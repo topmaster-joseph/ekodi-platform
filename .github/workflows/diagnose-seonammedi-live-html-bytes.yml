@@ -90,9 +90,12 @@ jobs:
                   beaconCount++;
                   return '';
                 });
-                let i=0;while(i<Math.min(localized.length,normalized.length)&&localized[i]===normalized[i])i++;
-                const identical=localized===normalized&&beaconTrusted&&beaconCount<=1;
-                console.log('NORMALIZED_HTML_DIFF',JSON.stringify({origin,relative,status:res.status,identical,beaconTrusted,beaconCount,attrRewrites,expectedLocalizedSha:sha(localized),observedNormalizedSha:sha(normalized),expectedLength:localized.length,actualLength:actual.length,normalizedLength:normalized.length,firstDiff:identical?-1:i,expectedAround:identical?'':localized.slice(Math.max(0,i-50),i+130),actualAround:identical?'':normalized.slice(Math.max(0,i-50),i+130)}));
+                const adminInjector='<link rel="stylesheet" href="/site-publication-admin.css" data-ekodi-site-publication-admin-style><script src="/site-publication-admin.js" defer data-ekodi-site-publication-admin data-site-id="seonammedi"></script>';
+                const injectedCount=relative==='admin/index.html'?normalized.split(adminInjector).length-1:0;
+                const canonicalized=relative==='admin/index.html'?normalized.replace(adminInjector,''):normalized;
+                let i=0;while(i<Math.min(localized.length,canonicalized.length)&&localized[i]===canonicalized[i])i++;
+                const identical=localized===canonicalized&&beaconTrusted&&beaconCount<=1&&(relative!=='admin/index.html'||injectedCount===1);
+                console.log('NORMALIZED_HTML_DIFF',JSON.stringify({origin,relative,status:res.status,identical,beaconTrusted,beaconCount,attrRewrites,injectedCount,expectedLocalizedSha:sha(localized),observedNormalizedSha:sha(canonicalized),expectedLength:localized.length,actualLength:actual.length,normalizedLength:canonicalized.length,firstDiff:identical?-1:i,expectedAround:identical?'':localized.slice(Math.max(0,i-50),i+130),actualAround:identical?'':canonicalized.slice(Math.max(0,i-50),i+130)}));
               }catch(err){console.error('NORMALIZED_HTML_ERROR',origin,relative,String(err))}
             }
           }
