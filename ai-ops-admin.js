@@ -15,7 +15,7 @@
     { domain:'mall.ekodi.kr', name:'에코디몰', group:'Business & Commerce', role:'상품·판매·셀러 운영', manage:'services' },
     { domain:'marketing.ekodi.kr', name:'마케팅 AI', group:'Business & Commerce', role:'마케팅·자동화·Workspace', manage:'services' },
     { domain:'trade.ekodi.kr', name:'에코디 트레이딩', group:'Business & Commerce', role:'무역·견적·계약·거래', manage:'organization' },
-    { domain:'pay.ekodi.kr', name:'에코디 페이', group:'Business & Commerce', role:'결제·정산·귀속', manage:'finance', critical:true },
+    { domain:'ekodi.kr/ekodipay', name:'에코디 페이', group:'Business & Commerce', role:'결제·정산·귀속', manage:'finance', critical:true },
     { domain:'books.ekodi.kr', name:'에코디서점', group:'Knowledge & Content', role:'출판·배포·인세·콘텐츠', manage:'books' },
     { domain:'lab.ekodi.kr', name:'에코디연구소', group:'Knowledge & Content', role:'연구·교육·프로젝트', manage:'services' },
     { domain:'mail.ekodi.kr', name:'에코디 메일', group:'Communication & Cloud', role:'메일 허브·조직 연결', manage:'communication' },

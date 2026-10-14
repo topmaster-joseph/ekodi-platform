@@ -11,6 +11,12 @@ test('business center module is syntactically valid and lazily mounted behind EK
   const src=await read('workspace-admin-page.js');
   const script=await businessCenterScript().text();
   assert.doesNotThrow(()=>new Script(script.replace('export const mountBusinessCenter = ','const mountBusinessCenter = ')));
+  // The Worker bundler rewrites nested arrow functions using __name(...).
+  // The lazy module executes in a separate realm and must carry its own helper.
+  assert.match(script,/^const __name=\(fn,name\)=>Object\.defineProperty\(fn,"name",\{value:name,configurable:true\}\);\nexport const mountBusinessCenter = /);
+  const helper=script.slice(0,script.indexOf('export const mountBusinessCenter = '));
+  const generatedName=new Script(helper+'\n__name(()=>0,"generated-esbuild-helper").name').runInNewContext({});
+  assert.equal(generatedName,'generated-esbuild-helper');
   assert.match(src,/business-center.*POLICY\.capabilities\.operations/);
   assert.match(src,/hasFullWorkspaceAdminScope\(role\)/);
   assert.match(src,/await import\('\/ekodibiz-business-center\.js\?v=/);
@@ -28,7 +34,8 @@ test('first-party worker and worker-first route ship lazy assets',async()=>{
   assert.match(site,/businessCenterScript\(\)/);
   assert.match(canonical,/businessCenterScript\(\)/);
   assert.match(canonical,/businessCenterCss\(\)/);
-  assert.match(wrangler,/"\/ekodibiz-business-center\.\*"/);
+  assert.match(wrangler,/"\/ekodibiz\*"/);
+  assert.doesNotMatch(wrangler,/"\/ekodibiz-business-center\.\*"/);
   const response=businessCenterCss();
   assert.equal(response.headers.get('content-type'),'text/css; charset=utf-8');
   const style=await response.text();
