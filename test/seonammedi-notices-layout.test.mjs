@@ -45,3 +45,6 @@ test('both standalone and EKODI subpath notice mounts retain six menu navigation
     assert.equal((html.match(/class="site-header independent-board-header"/g)||[]).length,1,url);
   }
 });
+
+// Owner-authored CI retrigger following exact-SHA EKODI Orchestrator provenance recovery.
+// No runtime, authorization, deployment, or production protection changes.
