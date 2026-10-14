@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {isDorajiOfficePath,dorajiOfficeResponse} from '../ekodibiz-doraji-office.js';
 import {BUSINESS_OS_STAGE} from '../business-os-core.js';
 const get=p=>new Request('https://ekodi.kr'+p);
@@ -31,3 +32,12 @@ test('unknown routes and mutating methods are rejected',()=>{
 });
 
 test('the office reuses the shared Business OS project stages',()=>{assert.equal(BUSINESS_OS_STAGE.length,6)});
+
+test('canonical apex router keeps both EKODIBIZ Business OS handlers wired after unrelated site merges',()=>{
+ const source=readFileSync(new URL('../site-worker.js',import.meta.url),'utf8');
+ assert.match(source,/import \{ dorajiOfficeResponse, isDorajiOfficePath \} from '\.\/ekodibiz-doraji-office\.js'/);
+ assert.match(source,/import \{ businessOsCommonResponse, isBusinessOsCommonPath \} from '\.\/business-os-public-api\.js'/);
+ assert.match(source,/if \(isDorajiOfficePath\(url\.pathname\)\)/);
+ assert.match(source,/if \(isBusinessOsCommonPath\(url\.pathname\)\)/);
+ assert.match(source,/PUBLIC_CSP/);
+});
