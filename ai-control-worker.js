@@ -563,11 +563,11 @@ async function handleCommonsAdmin(request,env,url){
   if(quoteRequest&&request.method==='POST'){
     const input=await body(request);
     const requestId=quoteRequest[1];
-    const row=await env.DB.prepare('SELECT id,user_id,plans_json,state FROM ai_assistance_requests WHERE id=?').bind(requestId).first();
+    const row=await env.DB.prepare('SELECT id,user_id,notice_id,notice_title,applicant_name,organization,plans_json,state FROM ai_assistance_requests WHERE id=?').bind(requestId).first();
     if(!row)return json({error:'request_not_found'},404);
     if(row.state!=='review_requested')return json({error:'request_not_quoteable'},409);
     let quote;
-    try{quote=normalizeMerchantQuote(input||{},JSON.parse(row.plans_json),env,now())}
+    try{quote=normalizeMerchantQuote(input||{},JSON.parse(row.plans_json),env,now(),row)}
     catch(e){return json({error:clean(e.message)||'invalid_quote'},400)}
     const digest=await quoteDigest(quote),quoteId=crypto.randomUUID(),stamp=now();
     try{
