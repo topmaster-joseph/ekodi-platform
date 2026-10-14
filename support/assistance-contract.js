@@ -22,11 +22,13 @@ export function merchantContractReadiness(env={}){
     termsUrl:https(env.EKODIBIZ_ASSISTANCE_TERMS_URL),
     refundUrl:https(env.EKODIBIZ_ASSISTANCE_REFUND_URL),
     privacyUrl:https(env.EKODIBIZ_PRIVACY_POLICY_URL),
-    termsVersion:value(env.EKODIBIZ_ASSISTANCE_TERMS_VERSION,60)
+    termsVersion:value(env.EKODIBIZ_ASSISTANCE_TERMS_VERSION,60),
+    retentionDays:Number(env.EKODIBIZ_ASSISTANCE_RETENTION_DAYS)
   };
   const blockers=[];
   if(!merchant.name||!merchant.representative||!merchant.address||!merchant.customerService||!/^\d{10}$/.test(merchant.businessNumber.replace(/-/g,'')))blockers.push('merchant_identity_incomplete');
   if(!documents.termsUrl||!documents.refundUrl||!documents.privacyUrl||!documents.termsVersion)blockers.push('legal_documents_unapproved');
+  if(!Number.isSafeInteger(documents.retentionDays)||documents.retentionDays<30||documents.retentionDays>365)blockers.push('privacy_retention_policy_missing');
   if(env.EKODIBIZ_ASSISTANCE_CONTRACT_APPROVED!=='true')blockers.push('merchant_contract_policy_not_approved');
   return {ready:blockers.length===0,merchant,documents,blockers};
 }
