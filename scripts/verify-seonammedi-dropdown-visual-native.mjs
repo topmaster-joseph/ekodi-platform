@@ -34,8 +34,12 @@ try{
           entry.styles=await page.evaluate(()=>{
             const nav=document.querySelector('header.site-header nav.ekodi-six-nav');
             const groups=nav?Array.from(nav.querySelectorAll(':scope > .nav-group')):[];
+            const centralPanel=document.querySelector('#central-category-panel');
+            const centralContract=document.querySelector('#central-category-link-contract');
+            const centralLinks=centralContract?Array.from(centralContract.content.querySelectorAll('a')).map(a=>a.textContent.trim()):[];
             return {
               exists:!!nav,
+              central:{exists:!!centralPanel,initiallyHidden:!!centralPanel?.hidden,trigger:!!nav?.querySelector('[data-category-menu="공지"]'),links:centralLinks},
               labels:nav?Array.from(nav.children).map(child=>child.matches('a')?child.textContent.trim():child.querySelector(':scope > a')?.textContent.trim()).filter(Boolean):[],
               dropdowns:groups.map(group=>{
                 const button=group.querySelector(':scope > button'),submenu=group.querySelector(':scope > .nav-submenu');
@@ -46,15 +50,32 @@ try{
           });
           if(!entry.styles.exists)throw Error('missing_six_menu_header');
           if(entry.styles.labels.join('|')!=='활동이력|관련소식|소통채널|시민의견|공지|조직')throw Error('six_menu_labels_mismatch');
-          if(entry.styles.dropdowns.length!==4)throw Error('dropdown_group_count_mismatch');
-          if(entry.styles.dropdowns.some(group=>group.display!=='none'))throw Error('closed_submenu_visible:'+JSON.stringify(entry.styles.dropdowns));
-          if(entry.styles.dropdowns.some(group=>!['transparent','rgba(0, 0, 0, 0)'].includes(group.background)))throw Error('dark_dropdown_toggle:'+JSON.stringify(entry.styles.dropdowns));
+          entry.menuMode=entry.styles.dropdowns.length?'dropdown':'central-tabs';
+          if(entry.menuMode==='dropdown'){
+            if(entry.styles.dropdowns.length!==4)throw Error('dropdown_group_count_mismatch');
+            if(entry.styles.dropdowns.some(group=>group.display!=='none'))throw Error('closed_submenu_visible:'+JSON.stringify(entry.styles.dropdowns));
+            if(entry.styles.dropdowns.some(group=>!['transparent','rgba(0, 0, 0, 0)'].includes(group.background)))throw Error('dark_dropdown_toggle:'+JSON.stringify(entry.styles.dropdowns));
+          }else{
+            const central=entry.styles.central;
+            if(!central.exists||!central.trigger||!central.initiallyHidden)throw Error('central_category_panel_not_initially_hidden_or_trigger_missing');
+            for(const name of ['공지사항','회의록','회계'])if(!central.links.includes(name))throw Error('central_notice_link_missing:'+name);
+          }
           if(entry.styles.horizontalOverflow)throw Error('page_horizontal_overflow');
-          const toggle=page.getByRole('button',{name:'공지 세부메뉴 열기'});
-          const group=toggle.locator('xpath=..');
-          await toggle.click({timeout:5000});
-          const open=await group.locator(':scope > .nav-submenu').evaluate(el=>getComputedStyle(el).display!=='none');
-          if(!open)throw Error('dropdown_does_not_open');
+          let open=false;
+          if(entry.menuMode==='dropdown'){
+            const toggle=page.getByRole('button',{name:'공지 세부메뉴 열기'});
+            const group=toggle.locator('xpath=..');
+            await toggle.click({timeout:5000});
+            open=await group.locator(':scope > .nav-submenu').evaluate(el=>getComputedStyle(el).display!=='none');
+          }else{
+            await page.locator('header.site-header nav.ekodi-six-nav [data-category-menu="공지"]').click({timeout:5000});
+            open=await page.evaluate(()=>{
+              const panel=document.querySelector('#central-category-panel');
+              const labels=Array.from(panel?.querySelectorAll('#central-category-buttons a')||[]).map(a=>a.textContent.trim());
+              return !!panel&&!panel.hidden&&['공지사항','회의록','회계'].every(name=>labels.includes(name));
+            });
+          }
+          if(!open)throw Error('notice_category_does_not_open_with_required_links');
           entry.openOnActivation=open;
           entry.ok=true;
         }catch(error){

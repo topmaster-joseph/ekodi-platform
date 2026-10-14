@@ -25,11 +25,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  preflight-native-verifier:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check trusted read-only verifier syntax before deploying UI
+        run: node --check scripts/verify-seonammedi-nav-guest-native.mjs
   native-public-guest-audit:
     if: >-
-      github.event_name != 'workflow_run' ||
+      github.event_name != 'pull_request' &&
+      (github.event_name != 'workflow_run' ||
       (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_repository.full_name == github.repository)
+       github.event.workflow_run.head_repository.full_name == github.repository))
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:

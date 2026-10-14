@@ -64,7 +64,11 @@ try {
               entries:Array.from(group.querySelectorAll('.nav-submenu a')).map(a=>({label:a.textContent.trim(),href:a.getAttribute('href')})),
               button:!!group.querySelector(':scope > button[aria-expanded]')
             })):[];
-            return {top,groups,
+            const centralPanel=document.querySelector('#central-category-panel');
+            const centralContract=document.querySelector('#central-category-link-contract');
+            const centralLinks=centralContract?Array.from(centralContract.content.querySelectorAll('a')).map(a=>({label:a.textContent.trim(),href:a.getAttribute('href')})):[];
+            const centralCategory={present:!!centralPanel,initiallyHidden:!!centralPanel?.hidden,noticeTrigger:!!nav?.querySelector('[data-category-menu="공지"]'),entries:centralLinks};
+            return {top,groups,centralCategory,
               horizontalOverflow:document.documentElement.scrollWidth>document.documentElement.clientWidth+1,
               heroOriginalPresent:!!document.querySelector('.campaign-hero-image'),
               heroLoaded:(()=>{const img=document.querySelector('.campaign-hero-image');return !!img?.complete&&img.naturalWidth===1903&&img.naturalHeight===735})(),
@@ -83,9 +87,30 @@ try {
           record.topLevelMatches=JSON.stringify(actualLabels)===JSON.stringify(LABELS);
           if(publicSurface&&!record.topLevelMatches)violations.push('menu_labels_mismatch: '+JSON.stringify(actualLabels));
           if(record.horizontalOverflow)violations.push('horizontal_overflow');
-          if(publicSurface&&!record.groups.find(x=>x.parent==='공지')?.entries.some(x=>x.label==='회계'))violations.push('finance_not_under_notices');
-          if(publicSurface&&!record.groups.find(x=>x.parent==='공지')?.entries.some(x=>x.label==='회의록'))violations.push('minutes_not_under_notices');
-          if(publicSurface&&record.groups.find(x=>x.parent==='소통채널')?.entries.some(x=>x.label==='유튜브')!==true)violations.push('social_submenus_missing');
+          // Home uses central content tabs; standalone boards keep grouped navigation.
+          // Both layouts must expose real notice, minutes, finance and social links.
+          const noticeGroup=record.groups.find(x=>x.parent==='공지');
+          const socialGroup=record.groups.find(x=>x.parent==='소통채널');
+          const centralValid=record.centralCategory.present&&record.centralCategory.initiallyHidden&&record.centralCategory.noticeTrigger;
+          const noticeEntries=noticeGroup?.entries||(centralValid?record.centralCategory.entries:[]);
+          const socialEntries=socialGroup?.entries||(centralValid?record.centralCategory.entries:[]);
+          if(publicSurface&&!noticeEntries.some(x=>x.label==='회계'))violations.push('finance_not_under_notices_or_central_tabs');
+          if(publicSurface&&!noticeEntries.some(x=>x.label==='회의록'))violations.push('minutes_not_under_notices_or_central_tabs');
+          if(publicSurface&&!noticeEntries.some(x=>x.label==='공지사항'))violations.push('notice_submenu_missing');
+          if(publicSurface&&!socialEntries.some(x=>x.label==='유튜브'))violations.push('social_submenus_missing');
+          if(publicSurface&&!socialEntries.some(x=>x.label==='인스타그램'))violations.push('instagram_link_missing');
+          if(publicSurface&&!socialEntries.some(x=>x.label==='페이스북'||x.label==='페이스북 그룹'))violations.push('facebook_link_missing');
+          if(suffix==='/'&&centralValid){
+            try{
+              await page.locator('header.site-header nav [data-category-menu="공지"]').click({timeout:5000});
+              record.centralNoticeOpen=await page.evaluate(()=>{
+                const panel=document.querySelector('#central-category-panel');
+                const links=Array.from(panel?.querySelectorAll('#central-category-buttons a')||[]).map(a=>a.textContent.trim());
+                return !!panel&&!panel.hidden&&['공지사항','회의록','회계'].every(label=>links.includes(label));
+              });
+              if(!record.centralNoticeOpen)violations.push('central_notice_category_not_open_with_links');
+            }catch(error){violations.push('central_notice_category_click_failed:'+String(error.message||error).slice(0,160))}
+          }
           if(suffix==='/'&&(!record.heroOriginalPresent||!record.heroLoaded))violations.push('original_campaign_hero_regression');
           if(suffix==='/board/voices'&&record.editorShownWithoutLogin)violations.push('guest_composer_exposed');
           if(suffix==='/board/voices'&&record.authButtonVisible)violations.push('guest_login_button_before_write');

@@ -1,6 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { assertSeonamMediAssetCachePolicy } from './seonammedi-cache-contract.mjs';
+import {dirname, join} from 'node:path';
+import {compareSeonamMediPublishedHtml} from './seonammedi-release-html-alias.mjs';
 
 const args=Object.fromEntries(process.argv.slice(2).map(arg=>{
   const m=arg.match(/^--([^=]+)=(.*)$/);
@@ -56,7 +58,18 @@ for(let attempt=1;attempt<=attempts;attempt++){
       const expectedHash=pageHashes[expectedNames[name]];
       if(!expectedHash)throw new Error(name+'_html_digest_missing');
       const actualHash=createHash('sha256').update(page.text).digest('hex');
-      if(actualHash!==expectedHash)throw new Error(name+'_html_digest_mismatch expected='+expectedHash+' actual='+actualHash);
+      if(actualHash!==expectedHash){
+        const customerHost=new URL(origin).hostname.toLowerCase();
+        const isCustomer=['seonammedi.kr','www.seonammedi.kr','xn--3e0b8b58jw4co4mnpll3k.kr','www.xn--3e0b8b58jw4co4mnpll3k.kr'].includes(customerHost);
+        if(!isCustomer)throw new Error(name+'_html_digest_mismatch expected='+expectedHash+' actual='+actualHash);
+        const published=await readFile(join(dirname(dirname(expectedPath)),expectedNames[name]),'utf8');
+        if(createHash('sha256').update(published).digest('hex')!==expectedHash)
+          throw new Error(name+'_published_artifact_digest_mismatch');
+        const allowlisted=[...Object.values(expected.assets||{}).map(asset=>asset.path).filter(Boolean),'assets/campaign-reconsideration-20261013.png'];
+        const match=compareSeonamMediPublishedHtml(published,page.text,allowlisted);
+        if(!match.matched)throw new Error(name+'_html_digest_mismatch expected='+expectedHash+' actual='+actualHash+' reason='+match.reason);
+        console.log('SeonamMedi verified domain path aliases:',JSON.stringify({page:name,count:match.aliases.length,paths:[...new Set(match.aliases)]}));
+      }
       if(!page.text.includes('data-ekodi-release-convergence'))throw new Error(name+'_runtime_convergence_missing');
     }
     if(!finance.text.includes('/api/seonammedi/admin/finance'))throw new Error('finance_surface_contract_missing');
