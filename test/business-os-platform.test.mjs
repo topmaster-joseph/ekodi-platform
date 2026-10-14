@@ -88,7 +88,8 @@ test('Business OS staging stays isolated while production enables only read aggr
   assert.match(staging,/EXECUTION_ENABLED = "false"/);
   assert.match(production,/main = "business-live-worker\.js"/);
   assert.match(production,/workers_dev = false/);
-  assert.doesNotMatch(production,/\[\[routes\]\]|custom_domain = true/);
+  assert.equal(production.includes('[[routes]]'),false);
+  assert.equal(production.includes('custom_domain = true'),false);
   assert.match(production,/BUSINESS_MODE = "production-readonly-mvp"/);
   assert.match(production,/INTEGRATIONS_ENABLED = "true"/);
   assert.match(production,/EXECUTION_ENABLED = "false"/);
