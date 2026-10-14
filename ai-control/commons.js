@@ -258,7 +258,7 @@ function renderSupportFeed(){
 async function loadSupportFeed(){
   if(supportState.busy)return;
   supportState.busy=true;$('supportRefresh').disabled=true;
-  $('supportStatus').textContent='에코디 지원사업 AI의 공식 공고를 확인하고 있습니다.';
+  $('supportStatus').textContent='지원사업 AI의 공식 공고를 확인하고 있습니다.';
   const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);
   try{
     const response=await fetch(SUPPORT_FEED_URL,{headers:{accept:'application/json'},credentials:'omit',cache:'no-store',signal:controller.signal});
