@@ -4,12 +4,12 @@ import { readFile } from 'node:fs/promises';
 
 const html = await readFile(new URL('../sites/seonammedi/public/index.html', import.meta.url), 'utf8');
 
-test('SeonamMedi public header uses flat five-item navigation without dropdown controls', () => {
+test('SeonamMedi public header uses flat six-item navigation without dropdown controls', () => {
   const nav = html.match(/<nav class="ekodi-six-nav"[^>]*>([\s\S]*?)<\/nav>/)?.[1];
-  assert.ok(nav, 'five-item navigation must exist');
-  assert.equal((nav.match(/<a\s/g) || []).length, 5);
+  assert.ok(nav, 'six-item navigation must exist');
+  assert.equal((nav.match(/<a\s/g) || []).length, 6);
   assert.doesNotMatch(nav, /<button|nav-group|nav-submenu|dropdown/i);
-  for (const label of ['공지', '활동이력', '관련소식', '시민의견', '조직']) {
+  for (const label of ['공지', '활동이력', '관련소식', '소통채널', '시민의견', '조직']) {
     assert.ok(nav.includes(label), 'missing navigation label: ' + label);
   }
 });
