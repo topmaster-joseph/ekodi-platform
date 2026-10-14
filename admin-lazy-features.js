@@ -32,7 +32,7 @@
     { domain:'mall.ekodi.kr', name:'에코디몰', group:'Business & Commerce', role:'상품·판매·셀러 운영', aliases:['에코디몰','몰','mall'] },
     { domain:'marketing.ekodi.kr', name:'마케팅 AI', group:'Business & Commerce', role:'마케팅·자동화·Workspace', aliases:['마케팅ai','마케팅 ai','마케팅','marketing ai','marketing'] },
     { domain:'trade.ekodi.kr', name:'에코디 트레이딩', group:'Business & Commerce', role:'무역·견적·계약·거래', aliases:['트레이딩','무역','trading','trade'] },
-    { domain:'pay.ekodi.kr', name:'에코디 페이', group:'Business & Commerce', role:'결제·정산·귀속', aliases:['에코디페이','결제','pay'] },
+    { domain:'ekodi.kr/ekodipay', name:'에코디 페이', group:'Business & Commerce', role:'결제·정산·귀속', aliases:['에코디페이','결제','pay'] },
     { domain:'books.ekodi.kr', name:'에코디서점', group:'Knowledge & Content', role:'출판·배포·인세·콘텐츠', aliases:['에코디북스','북스','출판','books','book'] },
     { domain:'lab.ekodi.kr', name:'에코디연구소', group:'Knowledge & Content', role:'연구·교육·프로젝트', aliases:['에코디연구소','연구소','lab'] },
     { domain:'mail.ekodi.kr', name:'에코디 메일', group:'Communication & Cloud', role:'메일 허브·조직 연결', aliases:['에코디메일','메일','mail'] },
@@ -357,7 +357,7 @@
       items.push({ name:'Chief AI', conclusion:'전체 Site AI 상태를 모아 우선순위와 영향범위를 판단합니다.' });
     }
     if (/(로그인|인증|권한|보안|token|토큰|auth)/i.test(text) || site?.domain === 'auth.ekodi.kr') items.push({ name:'Security AI', conclusion:'인증·권한·토큰 노출 여부를 우선 확인하고 비밀정보를 브라우저에 남기지 않는 경계를 적용합니다.' });
-    if (/(결제|요금|가격|정산|회계|pay|finance)/i.test(text) || site?.domain === 'pay.ekodi.kr') items.push({ name:'Finance AI', conclusion:'결제·정산·비용 영향은 별도 검토하며 정책 변경은 Decision Gate를 거칩니다.' });
+    if (/(결제|요금|가격|정산|회계|pay|finance)/i.test(text) || site?.domain === 'ekodi.kr/ekodipay') items.push({ name:'Finance AI', conclusion:'결제·정산·비용 영향은 별도 검토하며 정책 변경은 Decision Gate를 거칩니다.' });
     if (classification !== 'INFO' || status?.key === 'critical' || /(배포|수정|고쳐|복구|장애|오류)/i.test(text)) items.push({ name:'Release AI', conclusion:'수정이 필요하면 staging → CI → guarded release → 실제 도메인 검증 순서를 유지합니다.' });
     items.push({ name:'Platform AI', conclusion:'API·네트워크·공통 인프라와 서비스 상태를 함께 비교합니다.' });
     return items.slice(0, 4);
@@ -426,7 +426,7 @@
       let overview = latestOverview;
       try { overview = await fetchOverview(false); } catch {}
       const issues = overviewIssues(overview);
-      const critical = issues.filter(item => ['admin','auth','api','pay'].includes(String(item.id||'').toLowerCase()) || ['admin.ekodi.kr','auth.ekodi.kr','pay.ekodi.kr'].includes(String(item.domain||'').toLowerCase()));
+      const critical = issues.filter(item => ['admin','auth','api','pay'].includes(String(item.id||'').toLowerCase()) || ['admin.ekodi.kr','auth.ekodi.kr','ekodi.kr/ekodipay'].includes(String(item.domain||'').toLowerCase()));
       return {
         role:'assistant', classification:critical.length ? 'DECISION' : 'INFO',
         content:critical.length
@@ -476,10 +476,10 @@
         if (service?.stats24h) content += `\n24시간 가용률: ${service.stats24h.availabilityPercent ?? '—'}% · 평균응답 ${service.stats24h.averageResponseTime ?? '—'}ms`;
         if (!service) content += '\n\n이 사이트는 AI Ops에는 등록되어 있지만 Control API 실시간 점검 레지스트리에는 아직 직접 연결되지 않았습니다. 상태판에서는 “연결 대기”로 표시합니다.';
         return {
-          role:'assistant', classification:status?.key === 'critical' && ['admin.ekodi.kr','auth.ekodi.kr','pay.ekodi.kr'].includes(site.domain) ? 'DECISION' : status?.key === 'critical' || status?.key === 'attention' ? 'REPORT' : 'INFO',
+          role:'assistant', classification:status?.key === 'critical' && ['admin.ekodi.kr','auth.ekodi.kr','ekodi.kr/ekodipay'].includes(site.domain) ? 'DECISION' : status?.key === 'critical' || status?.key === 'attention' ? 'REPORT' : 'INFO',
           content,
           council:councilFor(site, status, input, status?.key === 'healthy' ? 'INFO' : 'REPORT'),
-          actions:actionSet(site, { includeReview:!force, includeDecision:status?.key === 'critical' && ['admin.ekodi.kr','auth.ekodi.kr','pay.ekodi.kr'].includes(site.domain) }),
+          actions:actionSet(site, { includeReview:!force, includeDecision:status?.key === 'critical' && ['admin.ekodi.kr','auth.ekodi.kr','ekodi.kr/ekodipay'].includes(site.domain) }),
         };
       }
       const issues = overviewIssues(overview);

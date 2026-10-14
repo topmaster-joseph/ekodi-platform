@@ -439,8 +439,8 @@
     {
       "id": "pay",
       "name": "EKODI Pay",
-      "domain": "pay.ekodi.kr",
-      "url": "https://pay.ekodi.kr/",
+      "domain": "ekodi.kr/ekodipay",
+      "url": "https://ekodi.kr/ekodipay/",
       "status": "offline",
       "httpStatus": 429,
       "responseTime": 179,
