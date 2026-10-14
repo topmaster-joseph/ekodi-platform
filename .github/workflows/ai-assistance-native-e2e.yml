@@ -1,0 +1,67 @@
+name: EKODI AI Assistance Native Production Evidence
+
+on:
+  push:
+    branches:
+      - ai/chatgpt/20261015-ai-assistance-native-e2e
+    paths:
+      - .github/workflows/ai-assistance-native-e2e.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Check actual EKODI production routes and anonymous write isolation
+        shell: bash
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          const base='https://ekodi.kr';
+          async function get(path){
+            const response=await fetch(base+path,{headers:{'accept':'*/*','cache-control':'no-cache'},redirect:'manual',signal:AbortSignal.timeout(15000)});
+            const text=await response.text();
+            return {response,text};
+          }
+          const home=await get('/ai/');
+          assert.equal(home.response.status,200,'/ai/ public homepage status');
+          for(const id of ['support-programs','support-detail','supportNotices','assistanceRequestForm','assistanceContractText','assistancePriceSummary']){
+            assert.ok(home.text.includes('id="'+id+'"'),'/ai/ missing '+id);
+          }
+          const css=await get('/ai/api/commons/style');
+          assert.equal(css.response.status,200,'/ai/ CSS status');
+          assert.ok(css.text.includes('.assistance-plan'),'production CSS does not include assistance');
+          const js=await get('/ai/api/commons/client');
+          assert.equal(js.response.status,200,'/ai/ browser client status');
+          assert.ok(js.text.includes('openSupportDetail'),'production browser JS does not include assistance');
+          const catalog=await get('/ai/api/commons/assistance/catalog');
+          assert.equal(catalog.response.status,200,'assistance catalog public API');
+          const data=JSON.parse(catalog.text);
+          assert.equal(data.merchant,'EKODIBIZ');
+          assert.equal(data.plans?.length,6);
+          assert.equal(data.checkoutEnabled,false);
+          assert.equal(data.agreementExecutionEnabled,false);
+          assert.equal(data.plans.find(p=>p.id==='information').price.amount,0);
+          for(const p of data.plans.filter(p=>p.id!=='information')) assert.equal(p.price.kind,'quote_required');
+          const privateList=await get('/ai/api/commons/assistance/requests');
+          assert.equal(privateList.response.status,401,'anonymous user must not read assistance requests');
+          console.log(JSON.stringify({ok:true,origin:base,home:home.response.status,css:css.response.status,js:js.response.status,catalog:catalog.response.status,planCount:data.plans.length,anonymousRequests:privateList.response.status,contractSigned:false,paymentExecuted:false}));
+          JS
+
+  native-browser:
+    strategy:
+      fail-fast: false
+      matrix:
+        device_profile: [desktop, mobile-portrait]
+    uses: ./.github/workflows/ekodi-background-browser-worker.yml
+    with:
+      surface_path: /ai/
+      surface_paths: /ai/
+      device_profile: ${{ matrix.device_profile }}
