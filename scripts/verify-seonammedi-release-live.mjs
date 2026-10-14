@@ -73,7 +73,23 @@ for(let attempt=1;attempt<=attempts;attempt++){
         if(!isCustomer)throw new Error(name+'_html_digest_mismatch expected='+expectedHash+' actual='+actualHash);
         const allowlisted=[...Object.values(expected.assets||{}).map(asset=>asset.path).filter(Boolean),'assets/campaign-reconsideration-20261013.png'];
         const match=compareSeonamMediPublishedHtml(published,normalized.html,allowlisted);
-        if(!match.matched)throw new Error(name+'_html_digest_mismatch expected='+expectedHash+' actual='+actualHash+' reason='+match.reason);
+        if(!match.matched){
+          // Preserve the fail-closed hash contract. Evidence only describes the
+          // first public homepage difference; never print auth/admin HTML.
+          const evidence={
+            reason:match.reason,
+            expectedOffset:Number.isInteger(match.expectedOffset)?match.expectedOffset:null,
+            actualOffset:Number.isInteger(match.actualOffset)?match.actualOffset:null,
+            expectedLength:published.length,
+            actualLength:normalized.html.length
+          };
+          if(name==='root'&&Number.isInteger(match.expectedOffset)&&Number.isInteger(match.actualOffset)){
+            const clipped=(html,offset)=>html.slice(Math.max(0,offset-48),offset+96);
+            evidence.expectedContext=clipped(published,match.expectedOffset);
+            evidence.actualContext=clipped(normalized.html,match.actualOffset);
+          }
+          throw new Error(name+'_html_digest_mismatch expected='+expectedHash+' actual='+actualHash+' reason='+match.reason+' evidence='+JSON.stringify(evidence));
+        }
         console.log('SeonamMedi verified domain path aliases:',JSON.stringify({page:name,count:match.aliases.length,paths:[...new Set(match.aliases)]}));
       }
       if(!page.text.includes('data-ekodi-release-convergence'))throw new Error(name+'_runtime_convergence_missing');
