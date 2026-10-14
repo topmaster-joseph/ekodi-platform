@@ -1,3 +1,4 @@
+import {assistanceCatalogue,normalizeAssistanceRequest} from './support/assistance-catalog.js';
 import {AI_CONTROL_POLICY,buildExecutionPlan,buildOriginSynthesisPrompt,createTaskId,evaluateTaskMissionPolicy,isOriginPreserved,normalizeTaskInput,resolveOriginResponseProvider,rolePrompt,summarizeRuns,taskOrigin} from './ai-control-core.js';
 import {invokeProviderWithMeta,providerCapabilities,providerStatus} from './ai-control-provider-router.js';
 import {AI_FREE_QUOTA_POLICY,configuredFreeProviderIds,ensureFreePoolDecisionAlert,freePoolSnapshot,hasAlternateZeroCostExecution,listOpenAiCostAlerts,quotaCapabilities,recordFreeProviderOutcome} from './ai-free-quota.js';
@@ -562,6 +563,38 @@ async function handleCommonsApi(request,env,ctx){
   const url=new URL(request.url);if(!url.pathname.startsWith('/api/commons/'))return null;
   if(url.pathname.startsWith('/api/commons/admin/'))return handleCommonsAdmin(request,env,url);
   if(url.pathname.startsWith('/api/commons/chat')){const response=await handleCommonsChat(request,env,url);if(response)return response;}
+  if(url.pathname.startsWith('/api/commons/assistance/')){
+    const catalog=assistanceCatalogue(env);
+    if(request.method==='GET'&&url.pathname==='/api/commons/assistance/catalog'){
+      return json({merchant:'EKODIBIZ',role:'independent_paid_assistance',affiliatedWithIssuingAgency:false,
+        plans:catalog,checkoutEnabled:false,agreementExecutionEnabled:false,
+        paymentStatus:'merchant_and_payment_verification_required',
+        message:'가격·약관은 에코디비즈 승인 후 확정합니다. 정부 공고와 별도의 민간 지원서비스입니다.'});
+    }
+    if(url.pathname==='/api/commons/assistance/requests'){
+      const auth=await requireCommonsMember(request,env);if(auth.error)return auth.error;
+      if(!dbReady(env))return json({error:'state_store_unavailable'},503);
+      if(request.method==='GET'){
+        try{
+          const result=await env.DB.prepare('SELECT id,notice_title,notice_source,plans_json,amount_krw,quote_required,legal_version,merchant,state,created_at FROM ai_assistance_requests WHERE user_id=? ORDER BY created_at DESC LIMIT 30').bind(auth.user.id).all();
+          return json({requests:(result.results||[]).map(row=>({id:row.id,noticeTitle:row.notice_title,source:row.notice_source,planIds:JSON.parse(row.plans_json).map(p=>p.id),amount:row.amount_krw,quoteRequired:Boolean(row.quote_required),legalVersion:row.legal_version,merchant:row.merchant,state:row.state,createdAt:row.created_at}))});
+        }catch{return json({error:'assistance_schema_unavailable'},503)}
+      }
+      if(request.method==='POST'){
+        const input=await body(request);
+        let draft;try{draft=normalizeAssistanceRequest(input||{},catalog)}catch(error){return json({error:clean(error.message)||'invalid_request'},400)}
+        const id=crypto.randomUUID(),timestamp=now();
+        try{
+          await env.DB.prepare('INSERT INTO ai_assistance_requests (id,user_id,notice_id,notice_title,notice_source,notice_url,applicant_name,organization,plans_json,amount_krw,quote_required,legal_version,merchant,state,scope_acknowledged_at,privacy_acknowledged_at,precontract_acknowledged_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+            .bind(id,auth.user.id,draft.noticeId,draft.noticeTitle,draft.noticeSource,draft.noticeUrl,draft.applicantName,draft.organization,JSON.stringify(draft.selected.plans.map(p=>({id:p.id,label:p.label,deliverables:p.deliverables,price:p.price}))),draft.selected.amount,draft.selected.quoteRequired?1:0,draft.legalVersion,draft.merchant,draft.state,timestamp,timestamp,timestamp,timestamp,timestamp).run();
+          return json({ok:true,id,state:'review_requested',merchant:'EKODIBIZ',quoteRequired:draft.selected.quoteRequired,
+            paymentInitiated:false,agreementExecuted:false,
+            message:'요청서 초안을 접수했습니다. 에코디비즈의 견적·약관 검토와 별도 계약 승인 이전에는 결제 및 업무가 진행되지 않습니다.'},201);
+        }catch(error){console.error('ai assistance request persistence',clean(error?.message||error).slice(0,100));return json({error:'assistance_schema_unavailable'},503)}
+      }
+    }
+    return json({error:'not_found'},404);
+  }
   if(['GET','HEAD'].includes(request.method)&&url.pathname==='/api/commons/client')return commonsBrowserAsset(request,env,'commons.js','text/javascript; charset=utf-8');
   if(['GET','HEAD'].includes(request.method)&&url.pathname==='/api/commons/style')return commonsBrowserAsset(request,env,'commons.css','text/css; charset=utf-8');
   if(request.method==='GET'&&url.pathname==='/api/commons/config')return json(commonsConfig(env));
