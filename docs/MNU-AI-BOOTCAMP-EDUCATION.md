@@ -87,3 +87,7 @@ Requested canonical deep link: `https://ekodi.kr/edu/study/ai-bootcamp/`. The ex
 - Unit test material allowlist, boundaries, lesson/cohort isolation, malicious JSON and ZIP extraction, no private-storage backend, strict 8MB/1MB source limits.
 - Canary /edu and /education compatibility with common Auth and Cloudflare CSP.
 - Native Chromium desktop/mobile input, editing, lesson preview and export without horizontal overflow or network upload; do not claim until actual evidence is attached.
+
+## Official owner-approved classroom studio recovery (2026-10-15)
+- Exact owner-approved source: PR #4712 at 0cdc5a1024ffb17490c73eba6198fb11e6f138e5 (GitHub approval comment #6172868245).
+- The official Orchestrator recovery PR #4739 is used for fresh protected CI, shared-site apex /edu route and Education Worker release checks. No direct merge, CI bypass or production success claim is authorized. Both existing guarded Worker release paths and real desktop/mobile verification remain mandatory.
