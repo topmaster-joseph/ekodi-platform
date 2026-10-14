@@ -20,6 +20,11 @@ const EKODIBIZ_ADMIN_SCOPE_DEFINITIONS = [
     adminHref: '/ekodibiz/invest/admin', publicHref: '/ekodibiz/invest', kind: 'module',
   },
   {
+    id: 'seasonal', label: '계절근로자사업', shortLabel: '계절근로',
+    description: '지자체 협의·해외 파트너·수요조사·현장관리와 자료 근거를 관리하는 관계자 웹오피스입니다.',
+    adminHref: '/ekodibiz/seasonal-workers', publicHref: '/ekodibiz/seasonal-workers', kind: 'module',
+  },
+  {
     id: 'tax', label: '세금·증빙', shortLabel: '세금',
     description: '에코디비즈 전자세금계산서·공급자·거래처·발행대장을 관리합니다.',
     adminHref: '/tax', publicHref: '/tax', kind: 'service',
@@ -49,6 +54,7 @@ export function ekodiBizAdminScopeForPath(pathname = '') {
   if (/^\/ekodimall\/admin(?:\/|$)/i.test(path)) return 'mall';
   if (/^\/ekodibiz\/trade\/admin(?:\/|$)/i.test(path)) return 'trade';
   if (/^\/ekodibiz\/invest\/admin(?:\/|$)/i.test(path)) return 'invest';
+  if (/^\/ekodibiz\/seasonal-workers(?:\/|$)/i.test(path)) return 'seasonal';
   if (/^\/tax(?:\/|$)/i.test(path)) return 'tax';
   if (/^\/books\/admin(?:\/|$)/i.test(path)) return 'books';
   if (/^\/(?:ekodi-lab|ekodilab)\/admin(?:\/|$)/i.test(path)) return 'lab';

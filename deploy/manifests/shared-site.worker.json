@@ -2885,6 +2885,37 @@
           "x-ekodi-surface-context: person-digital-card",
           "x-robots-tag: noindex, nofollow, noarchive"
         ]
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/seasonal-workers",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "계절근로자사업 웹오피스",
+          "data-ekodi-business-unit=\"seasonal-workers\""
+        ],
+        "headerExpect": [
+          "x-ekodi-route: ekodibiz-seasonal-office",
+          "cache-control: private, no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/seasonal-workers/api/records",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "WORKSPACE_LOGIN_REQUIRED"
+        ],
+        "headerExpect": [
+          "cache-control: private, no-store"
+        ],
+        "rollbackVerify": false
       }
     ],
     "attestationPath": "/__ekodi/version"
