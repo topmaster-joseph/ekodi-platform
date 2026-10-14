@@ -36,7 +36,7 @@ test('both external and internal independent board routes link the shared CSS an
       assert.match(html,/class="ekodi-six-nav"/);
       assert.match(html,/class="nav-submenu"/);
       assert.match(html,/\/app\.css\?v=/);
-      for(const title of ['활동이력','관련소식','소통채널','시민의견','공지','조직'])
+      for(const title of ['공지','활동이력','관련소식','소통채널','시민의견','조직'])
         assert.ok(html.includes(title),host+'/board/'+route+' missing '+title);
     }
   }
