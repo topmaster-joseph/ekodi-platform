@@ -32,7 +32,7 @@ jobs:
           }
           const home=await get('/ai/');
           assert.equal(home.response.status,200,'/ai/ public homepage status');
-          for(const id of ['support-programs','support-detail','supportNotices','assistanceRequestForm','assistanceContractText','assistancePriceSummary']){
+          for(const id of ['support-programs','support-detail','supportNotices','assistanceRequestForm','assistanceContractText','assistancePriceSummary','assistanceQuotePanel','assistanceAdminPanel','assistanceAcknowledgmentForm','assistanceMerchantQuoteForm']){
             assert.ok(home.text.includes('id="'+id+'"'),'/ai/ missing '+id);
           }
           const css=await get('/ai/api/commons/style');
@@ -41,6 +41,8 @@ jobs:
           const js=await get('/ai/api/commons/client');
           assert.equal(js.response.status,200,'/ai/ browser client status');
           assert.ok(js.text.includes('openSupportDetail'),'production browser JS does not include assistance');
+          assert.ok(js.text.includes('openAssistanceQuote'),'production JS missing contract review');
+          assert.ok(js.text.includes('loadAssistanceAdmin'),'production JS missing approved-quote management');
           const catalog=await get('/ai/api/commons/assistance/catalog');
           assert.equal(catalog.response.status,200,'assistance catalog public API');
           const data=JSON.parse(catalog.text);
@@ -51,8 +53,12 @@ jobs:
           assert.equal(data.plans.find(p=>p.id==='information').price.amount,0);
           for(const p of data.plans.filter(p=>p.id!=='information')) assert.equal(p.price.kind,'quote_required');
           const privateList=await get('/ai/api/commons/assistance/requests');
+          const privateQuote=await get('/ai/api/commons/assistance/requests/00000000-0000-0000-0000-000000000000');
+          assert.equal(privateQuote.response.status,401,'anonymous user must not inspect quote detail');
+          const merchantList=await get('/ai/api/commons/admin/assistance/requests');
+          assert.equal(merchantList.response.status,401,'anonymous user must not view merchant quote management');
           assert.equal(privateList.response.status,401,'anonymous user must not read assistance requests');
-          console.log(JSON.stringify({ok:true,origin:base,home:home.response.status,css:css.response.status,js:js.response.status,catalog:catalog.response.status,planCount:data.plans.length,anonymousRequests:privateList.response.status,contractSigned:false,paymentExecuted:false}));
+          console.log(JSON.stringify({ok:true,origin:base,home:home.response.status,css:css.response.status,js:js.response.status,catalog:catalog.response.status,planCount:data.plans.length,anonymousRequests:privateList.response.status,anonymousQuote:privateQuote.response.status,anonymousMerchant:merchantList.response.status,contractSigned:false,paymentExecuted:false}));
           JS
 
   native-browser:
