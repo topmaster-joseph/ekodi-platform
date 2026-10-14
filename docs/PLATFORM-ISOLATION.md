@@ -1,6 +1,6 @@
 # EKODI Platform Isolation Architecture
 
-> Canonical payment entry as of 2026-10-14: https://ekodi.kr/ekodipay/. Payment subdomain ingress is retired; references below describe historical topology.
+> Canonical payment entry as of 2026-10-14: https://ekodi.kr/ekodipay/. Legacy payment-domain ingress is retired; references below describe historical topology.
 
 ## 목적
 
