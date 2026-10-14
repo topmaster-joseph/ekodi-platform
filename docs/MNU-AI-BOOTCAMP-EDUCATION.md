@@ -47,3 +47,10 @@ Revert course subdirectory and Study link through guarded PR; there is no schema
 
 ## Supreme-attribute impact
 All 21 Supreme Attributes assessed: static local assets preserve independence, replaceability, modularity, standards, simplicity, economic sustainability; nested existing boundary preserves interoperability and consistency; synthetic-only inputs preserve security, data sovereignty and agency; responsive UI and six role groups support collaboration, adaptability and creativity; additive structure and rollback support agility, evolvability, reversibility and resilience; tests, deployment gates and native browser evidence support observability, verifiability and governed autonomous operation; no new backend is introduced and static rendering supports scale.
+
+## Protected release recovery evidence (2026-10-14)
+- Source PR #4688; owner-approved source SHA: 08f0272aefb8910b6d5c5b2578160cf072cda41b.
+- Human approval comment #6167074209 with exact-SHA approval marker and release-provenance label.
+- EKODI-issued recovery task: orch_recovery_08f0272aefb8910b6d5c5b2578160cf0.
+- Official recovery branch: ai/chatgpt/orch_recovery_08f0272aefb8910b6d5c5b2578160cf0; integration PR #4689.
+- This documentation-only continuity update restarts checks under the existing provenance receipt without modifying classroom behavior, security, auth or release rules. Production still requires all protected checks and native browser proof.
