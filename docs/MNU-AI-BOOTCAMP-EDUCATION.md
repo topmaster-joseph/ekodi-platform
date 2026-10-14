@@ -56,3 +56,8 @@ All 21 Supreme Attributes assessed: static local assets preserve independence, r
 - This documentation-only continuity update restarts checks under the existing provenance receipt without modifying classroom behavior, security, auth or release rules. Production still requires all protected checks and native browser proof.
 
 - After EKODI orchestrator synchronized branch at 5302f71c36198b54f9bcf2176633f3be0830f964, owner-authored docs-only continuity refresh requests new GitHub checks on the synchronized code. Exact source approval and receipt unchanged; no gate bypass.
+
+## Education final-gate provenance (2026-10-14)
+- Human-approved immutable source: PR #4691 @ 83060c08d19a469dce5bca0418e018720326fb1a, approval comment #6167763300.
+- Official orchestrator recovery PR #4693 on branch ai/chatgpt/orch_recovery_83060c08d19a469dce5bca0418e01872.
+- Re-run all protected checks and isolated Education staging from this official provenance. Do not bypass CSP, authentication, domain and privacy restrictions. Production remains contingent on protected merge, existing deployment gate and native Chromium evidence.
