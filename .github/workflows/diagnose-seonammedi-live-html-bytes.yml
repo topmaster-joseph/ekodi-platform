@@ -1,0 +1,63 @@
+name: Diagnose SeonamMedi LIVE HTML byte provenance
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/diagnose-seonammedi-live-html-bytes.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compare-exact-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout exact previously merged guarded release source
+        uses: actions/checkout@v7
+        with:
+          ref: 2ce792b5ddb7f996fc077c8c4714a9bb665bf62d
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Rebuild exact release locally without changing production
+        run: npm run build
+      - name: Compare decoded production HTML bytes against finalized dist
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import {readFile} from 'node:fs/promises';
+          import {createHash} from 'node:crypto';
+          const sha=body=>createHash('sha256').update(body).digest('hex');
+          const expected=await readFile('dist/seonammedi/index.html');
+          const manifest=JSON.parse(await readFile('dist/seonammedi/.well-known/ekodi-release.json','utf8'));
+          const context=(bytes,offset)=>bytes.subarray(Math.max(0,offset-100),Math.min(bytes.length,offset+220)).toString('utf8');
+          console.log('EXPECTED_RELEASE',JSON.stringify({commit:'2ce792b5ddb7f996fc077c8c4714a9bb665bf62d',release:manifest.release,htmlSha256:sha(expected),manifestSha256:manifest.publishedHtmlHashes?.['index.html'],length:expected.length}));
+          for(const origin of ['https://seonammedi.kr/','https://ekodi.kr/seonammedi/']){
+            try{
+              const response=await fetch(origin+'?ekodi_byte_audit=20261014',{headers:{'cache-control':'no-cache',accept:'text/html'},signal:AbortSignal.timeout(18000)});
+              const actual=Buffer.from(await response.arrayBuffer());
+              let index=0;
+              while(index<Math.min(expected.length,actual.length)&&expected[index]===actual[index])index++;
+              const firstDifference=index===expected.length&&index===actual.length?-1:index;
+              const headText=actual.toString('utf8').split(/<\/head>/i)[0].replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi,'');
+              const observedMetaGap=headText.match(/<meta name="twitter:card" content="summary_large_image">([\s\S]{0,12})<meta property="og:image"/i)?.[1]||'';
+              console.log('LIVE_BYTE_DIFF',JSON.stringify({
+                origin,httpStatus:response.status,redirected:response.redirected,
+                xEkodiRoute:response.headers.get('x-ekodi-route'),
+                contentType:response.headers.get('content-type'),
+                contentEncoding:response.headers.get('content-encoding'),
+                cacheControl:response.headers.get('cache-control'),
+                cfCacheStatus:response.headers.get('cf-cache-status'),
+                observedRelease:actual.toString('utf8').match(/<meta name="ekodi-release" content="([^"]+)"/)?.[1]||'',
+                sha256:sha(actual),length:actual.length,
+                firstDifference,
+                expectedHex:firstDifference<0?'':expected.subarray(Math.max(0,index-16),index+96).toString('hex'),
+                actualHex:firstDifference<0?'':actual.subarray(Math.max(0,index-16),index+96).toString('hex'),
+                expectedContext:firstDifference<0?'':context(expected,index),
+                actualContext:firstDifference<0?'':context(actual,index),
+                metaGap:JSON.stringify(observedMetaGap),
+                literalEscapes:(headText.match(/\\[nrt]/g)||[]).length,
+              }));
+            }catch(error){console.error('LIVE_BYTE_DIFF_ERROR',origin,String(error))}
+          }
+          NODE
