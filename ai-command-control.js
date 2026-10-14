@@ -1,4 +1,8 @@
 ﻿import authWorker from './auth-worker.js';
+import { chooseEkodiExecution, sanitizeAiConnectionStatus } from './ekodi-ai-sovereignty-gate.js';
+import { providerStatus } from './ai-control-provider-router.js';
+import { findReusableComposition } from './ekodi-capability-ecosystem.js';
+import { isSameOriginAdminMutation, prepareAdminOrchestratorSubmission, evaluateAdminOrchestratorSubmission } from './ekodi-ai-orchestrator-admin-handoff.js';
 import { getCoreAiGatewayStatus } from './core-ai-gateway.js';
 import { adminAuthorityForRole, hasEkodiCapability } from './ekodi-authorization.js';
 import {
@@ -20,6 +24,8 @@ import {
   approveOrchestratorTaskForPlatformAdmin,
   getOrchestratorTaskStatusForPlatformAdmin,
   listOrchestratorHumanGatesForPlatformAdmin,
+  submitOrchestratorTask,
+  resolveOrchestratorPlatformAdminIdentity,
 } from './ekodi-orchestrator-task-adapter.js';
 import { collectPlatformRuntimeObservations } from './ekodi-platform-observer.js';
 import { runRuntimeAutonomicControlPlane } from './ekodi-autonomic-control-plane.js';
@@ -155,6 +161,93 @@ export async function handleEkodiV8CommandControl(request, env) {
     if (!sessionCapabilityGranted(auth.session, requiredCapability)) return json(request, env, { error:'capability_required', capability:requiredCapability }, 403);
     return null;
   };
+
+  // Read-only decision preview; never runs AI, issues tokens, or grants execution rights.
+  if (request.method === 'POST' && url.pathname === `${PREFIX}/sovereignty/preview`) {
+    const denied = requirePlatformSuperAdmin('ai:read'); if (denied) return denied;
+    const body = await readJson(request);
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return json(request, env, { ok:false, code:'INVALID_SOVEREIGNTY_PREVIEW' }, 400);
+    }
+    const statuses = providerStatus(env).filter(item => item?.id && item?.kind === 'official-api');
+    const readiness = await getEkodiProviderOperationalReadiness(env);
+    const idAliases = { 'openai-api':'openai', 'anthropic-api':'anthropic', 'gemini-free':'gemini' };
+    const healthById = new Map((readiness.providers || []).map(item => [item.id, item]));
+    const healthy = id => readiness.readinessBasis === 'verified-provider-health'
+      && healthById.get(idAliases[id] || id)?.operational === true;
+    const providers = statuses.map(item => ({
+      id:item.id, available:item.available === true && healthy(item.id), automationAllowed:true,
+      trustClass:'external', costClass:item.costClass, priority:100,
+    }));
+    const suggestions = findReusableComposition(text(body.goal || body.capabilityId, 500), 5)
+      .map(item => ({ id:item.capability.id, name:item.capability.name, score:item.score }));
+    const decision = chooseEkodiExecution({
+      capabilityId:text(body.capabilityId,120),
+      // Never trust client-supplied "verified" capability claims.
+      capabilities:[],
+      risk:text(body.risk || 'normal',20),
+      sensitive:body.sensitive === true,
+      paidApproved:false,
+      providers,
+    });
+    const connections = statuses.map(item => sanitizeAiConnectionStatus({
+      id:item.id, available:item.available === true, configured:item.configured === true,
+      healthVerified:healthy(item.id),
+      authMethod:item.configured ? 'api-key' : 'unconfigured',
+    }));
+    const credentialVault = Object.freeze({
+      configured: Boolean(String(env.USER_AI_CREDENTIAL_ENCRYPTION_KEY || '').trim()),
+      scope:'per-user',
+      sharingWithPlatformOrchestrator:false,
+      supportedProviderIds:['gemini-api','openai-api','claude-api'],
+      credentialValuesReturned:false,
+    });
+    return json(request, env, { ok:true, previewOnly:true, executionAuthorized:false,
+      decision, connections, reusableSuggestions:suggestions, credentialVault,
+      notice:'Provider configured status is not proof of healthy connection. Reuse suggestions are not execution authority. Local provider verification is not yet wired.' });
+  }
+
+  // Official first-party task submission; creates a genuine Orchestrator task/branch
+  // but never authorizes a merge, deployment, payment, or human-gate bypass.
+  if (request.method === 'POST' && url.pathname === `${PREFIX}/orchestrator/submit`) {
+    const denied = requirePlatformSuperAdmin('ai:operate'); if (denied) return denied;
+    if (!isSameOriginAdminMutation(request)) {
+      return json(request, env, { ok:false, code:'ORCHESTRATOR_SAME_ORIGIN_REQUIRED' }, 403);
+    }
+    if (!(request.headers.get('content-type') || '').toLowerCase().startsWith('application/json')) {
+      return json(request, env, { ok:false, code:'JSON_CONTENT_TYPE_REQUIRED' }, 415);
+    }
+    const body = await readJson(request);
+    let input;
+    try {
+      input = prepareAdminOrchestratorSubmission(body);
+    } catch (error) {
+      return json(request, env, { ok:false, code:text(error?.message || 'INVALID_ORCHESTRATOR_SUBMISSION',100) }, 400);
+    }
+    try {
+      const identity = await resolveOrchestratorPlatformAdminIdentity(env, auth.session);
+      if (!identity) {
+        return json(request, env, { ok:false, code:'ORCHESTRATOR_CANONICAL_ADMIN_REQUIRED' }, 403);
+      }
+      const task = await submitOrchestratorTask(env, identity, input);
+      const receipt = evaluateAdminOrchestratorSubmission(task);
+      if (!receipt.accepted) {
+        return json(request, env, {
+          ok:false, code:'ORCHESTRATOR_TASK_NOT_ACCEPTED',
+          taskId:receipt.taskId, state:receipt.state,
+          deploymentAuthorized:false, executionAuthorized:false,
+        }, 409);
+      }
+      return json(request, env, {
+        ok:true, code:'EKODI_ORCHESTRATOR_TASK_SUBMITTED',
+        ...receipt,
+        notice:'Task accepted, but official release receipt, human gates, CI and production verification remain required.',
+      }, 202);
+    } catch (error) {
+      console.error('EKODI admin Orchestrator submission failed', error?.message || 'error');
+      return json(request, env, { ok:false, code:'ORCHESTRATOR_SUBMISSION_UNAVAILABLE' }, 503);
+    }
+  }
 
   if (request.method === 'GET' && url.pathname === `${PREFIX}/orchestrator/human-gates`) {
     const denied = requirePlatformSuperAdmin('ai:read'); if (denied) return denied;
@@ -304,5 +397,5 @@ export async function handleEkodiV8CommandControl(request, env) {
 export const EKODI_V8_COMMAND_CONTROL = Object.freeze({
   version: '1.3.0',
   prefix: PREFIX,
-  surfaces: Object.freeze(['status', 'tasks', 'tasks/:taskId/consultation', 'orchestrator/human-gates', 'orchestrator/tasks/:taskId', 'orchestrator/tasks/:taskId/approve', 'pulse', 'drain', 'collaboration-settings', 'collaboration-settings/audit']),
+  surfaces: Object.freeze(['status', 'tasks', 'tasks/:taskId/consultation', 'orchestrator/human-gates', 'orchestrator/tasks/:taskId', 'orchestrator/tasks/:taskId/approve', 'pulse', 'drain', 'collaboration-settings', 'collaboration-settings/audit', 'sovereignty/preview', 'orchestrator/submit']),
 });

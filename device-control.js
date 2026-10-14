@@ -892,6 +892,30 @@ function summarizeCommandResult(result = {}, commandType = '') {
       isolatedDesktopReady: result.agent.isolatedDesktopReady === true,
       minimizedWindowCountsAsIsolation: result.agent.minimizedWindowCountsAsIsolation === true,
     };
+    const audit = result.agent.browserTaskAudit;
+    if (audit && typeof audit === 'object') {
+      const allow = new Set(['computer.browser.canary','computer.browser.execute','computer.browser.pr.observe']);
+      const states = new Set(['running','completed','auth_required','cleanup_unverified','interrupted_unverified','failed']);
+      const entries = Array.isArray(audit.recent) ? audit.recent.slice(0,20) : [];
+      summary.agent.browserTaskAudit = {
+        checkedAt: safeText(audit.checkedAt,64),
+        count: entries.length,
+        recent: entries.filter(item => allow.has(String(item?.commandType || ''))).map(item => ({
+          commandKey: /^[a-f0-9]{64}$/.test(String(item.commandKey || '')) ? item.commandKey.slice(0,12) : '',
+          commandType: safeText(item.commandType,48),
+          launcher: item.launcher === 'ekodi-device-agent' ? 'ekodi-device-agent' : 'unknown',
+          state: states.has(String(item.state || '')) ? item.state : 'cleanup_unverified',
+          startedAt: safeText(item.startedAt,64),
+          finishedAt: safeText(item.finishedAt,64),
+          browser: ['chrome.exe','msedge.exe'].includes(String(item.browser || '').toLowerCase()) ? String(item.browser).toLowerCase() : '',
+          cleanupVerified: item.cleanupVerified === true,
+          ownedBrowserProcessId: Math.max(0, Math.trunc(Number(item.ownedBrowserProcessId) || 0)),
+          ownedTabId: /^[a-f0-9]{1,64}$/i.test(String(item.ownedTabId || '')) ? String(item.ownedTabId) : '',
+          ownedTabsObserved: Math.min(20, Math.max(0, Math.trunc(Number(item.ownedTabsObserved) || 0))),
+          ownedTabsClosed: Math.min(20, Math.max(0, Math.trunc(Number(item.ownedTabsClosed) || 0))),
+        })),
+      };
+    }
   }
   if (result.system && typeof result.system === 'object') {
     summary.system = {

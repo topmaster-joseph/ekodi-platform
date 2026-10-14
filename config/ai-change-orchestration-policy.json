@@ -184,7 +184,21 @@
     "aiConsultation": "advisory-not-serial-prerequisite",
     "consultationMayBlockCodeExecution": false,
     "corePlanOwnsExecution": true,
-    "githubBranchMutationIsDefault": true
+    "githubBranchMutationIsDefault": true,
+    "recoveryContinuity": {
+      "policyId": "EKODI-RECOVERY-CONTINUITY-001",
+      "status": "enforced",
+      "scope": "platform-wide",
+      "onFailure": "diagnose-repair-retry-and-resume",
+      "discoverExistingAuthorizedRecovery": true,
+      "requireExactShaAndAuthorization": true,
+      "retryTransientErrors": true,
+      "doNotBlindlyRetryPermanentErrors": true,
+      "resumeAtFailedStage": true,
+      "preserveSecurityAndProvenance": true,
+      "preserveHumanGates": true,
+      "completionRequiresLiveEvidence": true
+    }
   },
   "consultationDecision": {
     "policyId": "AI-CONSULT-001",
@@ -568,5 +582,30 @@
       "orchestrator-provenance",
       "production-verification"
     ]
+  },
+  "deploymentMinimumFriction": {
+    "policyId": "EKODI-MINIMUM-FRICTION-GUARDED-RELEASE-001",
+    "status": "enforced",
+    "appliesPlatformWide": true,
+    "defaultChangeRisk": "classify-before-release",
+    "lowRiskExamples": [
+      "copy",
+      "styling",
+      "navigation"
+    ],
+    "deduplicateEquivalentChecks": true,
+    "minimumNecessaryChecksOnly": true,
+    "automaticProgressionAfterRequiredGates": true,
+    "automaticRetryTransientFailures": true,
+    "permanentFailureDisposition": "repair-root-cause-and-resume-failed-stage",
+    "orchestratorIssuedProvenanceMandatory": true,
+    "doNotForgeReleaseReceipts": true,
+    "doNotBypassHumanSecurityOrPrivacyGates": true,
+    "protectedMainMandatory": true,
+    "immutableReleaseArtifactMandatory": true,
+    "rollbackEvidenceMandatory": true,
+    "liveProductionVerificationMandatory": true,
+    "highRiskChangesRequireRelevantExpandedChecks": true,
+    "completionRequiresVerifiedLiveEvidence": true
   }
 }

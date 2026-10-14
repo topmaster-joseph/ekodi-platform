@@ -902,8 +902,11 @@ function renderChannelRecent(item,data={}){
 }
 
 async function showChannelPreview(index,{updateRoute=true}={}){
-  const item=publicChannels[index];if(!item)return;
-  if(updateRoute)writeChannelRoute(item);
+  const selected=publicChannels[index];if(!selected)return;
+  // The public Facebook submenu always opens the committee's selected post in the central preview.
+  const item=String(selected.platform||'').toLowerCase()==='facebook'
+    ?{...selected,url:'https://www.facebook.com/groups/2299276407568855/posts/2317435212419641/'}:selected;
+  if(updateRoute)writeChannelRoute(selected);
   const seq=++channelPreviewSeq;
   const preview=el('channelPreview'),frame=el('channelPreviewFrame'),fallback=el('channelPreviewFallback'),title=el('channelPreviewTitle'),metaHost=el('channelPreviewMeta'),open=el('channelPreviewOpen');
   const url=safeUrl(item.url);
@@ -1016,7 +1019,7 @@ async function loadChannels(){
     const route=channelRouteFromHash();
     const routeItem=route?.id?publicChannels.find(item=>Number(item.id)===route.id):null;
     const routePlatform=routeItem?String(routeItem.platform||'all').toLowerCase():(route?.platform&&channelsForPlatform(route.platform).length?route.platform:'all');
-    activateChannelPlatform(routePlatform,{preferredId:routeItem?.id||0,updateRoute:Boolean(routeItem)});
+    activateChannelPlatform(routePlatform,{preferredId:routeItem?.id||0,updateRoute:false});
   }catch(error){
     publicChannels=[];
     host.innerHTML='<span class="muted">'+escapeHtml(error.message||'채널 목록을 불러오지 못했습니다.')+'</span>';

@@ -57,3 +57,13 @@ test('guarded production release has an automatic first-party browser witness',(
   assert.match(workflow,/actions\/upload-artifact@v4/);
   assert.match(workflow,/node --test test\/seonammedi-hero-native\.test\.mjs/);
 });
+
+
+test('native Chromium validates raw HTML head and visible leading text, not only hero image',()=>{
+  assert.match(browser,/rawEscapedHeadMarkers===0/);
+  assert.match(browser,/socialMetaRealLineBreak/);
+  assert.match(browser,/!entry\.leadingEscapedText/);
+  assert.match(browser,/await response\.body\(\)/);
+  assert.match(html,/<meta name="twitter:card" content="summary_large_image">\n\s*<meta property="og:image"/);
+  assert.doesNotMatch(html, /data-ekodi-leading-text-guard/);
+});
