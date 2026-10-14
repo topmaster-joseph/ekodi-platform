@@ -137,6 +137,7 @@ on:
       - 'marketing-canonical-projection.js'
       - 'workspace-route-policy.js'
       - 'workspace-admin-page.js'
+      - 'ekodibiz-business-center.js'
       - 'mall-social-setup.js'
       - 'test/ekodimall-sns-oauth-loop.test.mjs'
       - 'test/ekodimall-one-screen-sns.test.mjs'
