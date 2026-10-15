@@ -16,6 +16,9 @@ test('the canonical release dispatcher includes every directly used Control API 
   ]){
     assert.ok(control.includes("'"+file+"'"),file+' must dispatch protected Control API release');
   }
+  assert.ok(control.includes("file.startsWith('migrations/')"),'Control API release must dispatch canonical D1 migrations');
+  assert.ok(control.includes("file.endsWith('.sql')"),'D1 release trigger must be limited to SQL migration files');
+  assert.ok(!control.includes("file.startsWith('migrations/')||["),'D1 ownership condition must remain explicit');
   assert.ok(site.includes("'seonammedi-monitor.js'"),'RSS monitor must also release Site Core');
   assert.match(converge,/deploy-control-api\.yml\/dispatches/);
   assert.match(converge,/if\(controlApiTouched\)/);
