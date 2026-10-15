@@ -105,11 +105,17 @@ test('standalone board supports both customer-domain and internal seonammedi mou
   const internal=await mod.default.fetch(new Request('https://ekodi.kr/seonammedi/board/voices'),{});
   const externalHtml=await external.text(),internalHtml=await internal.text();
   assert.match(externalHtml,/href="\/board\/voices"/);
-  assert.match(externalHtml,/href="\/board\/finance"/);
+  assert.match(externalHtml,/href="\/board\/notices"/);
   assert.match(internalHtml,/href="\/seonammedi\/board\/voices"/);
-  assert.match(internalHtml,/href="\/seonammedi\/board\/finance"/);
+  assert.match(internalHtml,/href="\/seonammedi\/board\/notices"/);
   assert.match(internalHtml,/href="\/seonammedi\/#timeline"/);
   assert.doesNotMatch(internalHtml,/MY OPERATING SPACES|내 운영공간/);
+  // Finance remains a working sibling route, but is not a seventh top-level menu.
+  for(const url of ['https://seonammedi.kr/board/finance','https://ekodi.kr/seonammedi/board/finance']){
+    const response=await mod.default.fetch(new Request(url),{});
+    assert.equal(response.status,200,url);
+    assert.match(await response.text(),/id="summaryPanel"/);
+  }
 });
 
 test('all three board pages share the SeonamMedi header and footer contract',async()=>{
@@ -117,9 +123,18 @@ test('all three board pages share the SeonamMedi header and footer contract',asy
   assert.match(worker,/서남권 의대 설립 비상대책위원회 관련 공개 기록·소통 채널/);
   assert.match(worker,/자료의 성격과 출처를 구분해 보존합니다/);
   assert.match(worker,/boardPath\(req,'voices'\)/);
-  assert.match(worker,/boardPath\(req,'finance'\)/);
+  assert.match(worker,/if\(\(path==='\/finance'/);
   assert.match(worker,/boardPath\(req,'notices'\)/);
-  assert.match(worker,/id="adminLink" href="\/admin\/">관리/);
+  assert.match(worker,/sitePath\(req,'\/admin\/'\)/);
+  const mod=await import(new URL('../services/independent-board/worker.js?admin-footer='+Date.now(),import.meta.url));
+  for(const [url,href] of [
+    ['https://seonammedi.kr/board/finance','/admin/'],
+    ['https://ekodi.kr/seonammedi/board/finance','/seonammedi/admin/']
+  ]){
+    const response=await mod.default.fetch(new Request(url),{});
+    assert.equal(response.status,200,url);
+    assert.ok((await response.text()).includes('id="adminLink" href="'+href+'">관리</a>'),url);
+  }
   assert.match(worker,/document\.getElementById\("adminLink"\)\?\.addEventListener\("click",[\s\S]*login\(\)/);
 });
 
@@ -347,7 +362,10 @@ test('independent board header uses one aligned desktop row and a stacked mobile
       assert.match(html,/@media\(max-width:760px\)\{\.site-header\.independent-board-header\{flex-direction:column;align-items:stretch;/);
       assert.match(html,/\.site-header\.independent-board-header>nav\{flex:none;justify-content:flex-start;[^}]*width:100%/);
       assert.match(html,/\.site-header\.independent-board-header>nav a\[aria-current="page"\]\{color:#111;/);
-      if(route==='voices')assert.match(html,new RegExp('aria-current="page" href="'+mount.replace('https://seonammedi.kr','').replace('https://ekodi.kr','')+'/'+route+'">'));else assert.match(html,new RegExp('href="'+mount.replace('https://seonammedi.kr','').replace('https://ekodi.kr','')+'/'+route+'">'));
+      const menuRoute=route==='finance'?'notices':route;
+      if(route==='voices')assert.match(html,new RegExp('aria-current="page" href="'+mount.replace('https://seonammedi.kr','').replace('https://ekodi.kr','')+'/'+menuRoute+'">'));else assert.match(html,new RegExp('href="'+mount.replace('https://seonammedi.kr','').replace('https://ekodi.kr','')+'/'+menuRoute+'">'));
+      const nav=html.match(/<nav class="ekodi-six-nav" aria-label="주요 메뉴">([\s\S]*?)<\/nav>/)?.[1]||'';
+      assert.doesNotMatch(nav,/>회계<\/a>/,'finance must not become a seventh top-level menu');
     }
   }
 });
