@@ -801,7 +801,7 @@ test('seonammedi voices finance and notices use sibling standalone board routes'
   assert.doesNotMatch(html,/href="board\/finance"[^>]*>회계<\/a>/);
   assert.match(html,/href="board\/notices"[^>]*>공지<\/a>/);
   assert.match(worker,/boardPath\(req,'voices'\)/);
-  assert.match(worker,/boardPath\(req,'finance'\)/);
+  assert.match(worker,/if\(\(path==='\/finance'/);
   assert.match(worker,/boardPath\(req,'notices'\)/);
   assert.match(worker,/function financePage\(req\)/);
   assert.match(worker,/function noticesPage\(req\)/);
