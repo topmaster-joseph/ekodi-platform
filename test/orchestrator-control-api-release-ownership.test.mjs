@@ -23,6 +23,19 @@ test('the canonical release dispatcher includes every directly used Control API 
   assert.match(converge,/deploy-control-api\.yml\/dispatches/);
   assert.match(converge,/if\(controlApiTouched\)/);
 });
+test('release dispatch selects canonical D1 grant SQL but excludes unrelated migration and docs',async()=>{
+  const converge=await readFile(new URL('../scripts/converge-orchestrated-pr-merge.mjs',import.meta.url),'utf8');
+  const start=converge.indexOf('const controlApiTouched=');
+  const end=converge.indexOf('const marketingGrowthTouched=',start);
+  assert.ok(start>=0&&end>start,'Control API ownership predicate missing');
+  const evaluate=new Function('changedFiles',converge.slice(start,end)+'\\nreturn controlApiTouched;');
+  assert.equal(evaluate(['migrations/0198_seonammedi_linuxceo_board_admin.sql']),true,'board admin grant must trigger D1 deployment');
+  assert.equal(evaluate(['migrations/0181_messenger_schema.sql']),false,'unrelated messenger data must not trigger Control API deployment');
+  assert.equal(evaluate(['migrations/README.md']),false,'migration documentation must not trigger D1 deployment');
+  assert.equal(evaluate(['docs/operations/readme.md']),false,'unrelated docs must not trigger Control API deployment');
+  assert.equal(evaluate(['seonammedi-monitor.js']),true,'existing runtime owner must remain supported');
+});
+
 test('Control API entry imports the completion adapter; deploy workflow owns its changed-file path',async()=>{
   const entry=await readFile(new URL('../mission-control-entry-worker.js',import.meta.url),'utf8');
   const deploy=await readFile(new URL('../.github/workflows/deploy-control-api.yml',import.meta.url),'utf8');
