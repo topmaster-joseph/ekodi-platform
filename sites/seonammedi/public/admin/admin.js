@@ -504,9 +504,32 @@ $('runSiteHealth')?.addEventListener('click',async()=>{
 });
 $('refreshAll').addEventListener('click',()=>init(true));$('changeAccount').addEventListener('click',()=>{sessionStorage.removeItem(PLATFORM_TOKEN_KEY);clearSession();try{localStorage.removeItem(CENTRAL_SESSION_KEY)}catch{}location.assign(authUrl())});
 
+function setupBoardAccountRegistration(){
+  const form=$('boardAccountForm'),panel=$('boardAccountRegistration'),status=$('boardAccountStatus');
+  if(!form||!panel)return;
+  // Visibility is advisory; the existing tenant access API independently checks grant management authority.
+  panel.hidden=!state.me?.platform;
+  if(form.dataset.bound==='true')return;
+  form.dataset.bound='true';
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const email=String($('boardAccountEmail')?.value||'').trim().toLowerCase();
+    if(!email||!$('boardAccountEmail').checkValidity())return;
+    const button=form.querySelector('button[type="submit"]');button.disabled=true;
+    text(status,'계정 권한을 저장하고 있습니다.');
+    try{
+      const result=await api('/api/customers/tenants/seonammedi/pre-register',{
+        method:'POST',body:JSON.stringify({email,role:'board_admin',principalType:'member',capabilities:['seonammedi.notice.manage','seonammedi.voice.manage'],deniedCapabilities:['tenant.access.manage','tenant.finance.read','tenant.finance.manage','platform.admin','platform.production.deploy','seonammedi.finance.manage','seonammedi.page.manage']})
+      });
+      text(status,result?.ok===false?'등록 결과를 확인해 주세요.':email+' 계정 등록 완료. 해당 계정으로 Google 로그인하면 관리 권한이 즉시 적용됩니다.');
+    }catch(error){text(status,'등록 실패: '+String(error.message||error));}
+    finally{button.disabled=false;}
+  });
+}
+
 async function init(refresh=false){
   try{
-    state.me=await api('/api/seonammedi/admin/me');if(location.hash.includes('ekodi_token='))history.replaceState(null,'',location.pathname+location.search);updateDashboard();
+    state.me=await api('/api/seonammedi/admin/me');if(location.hash.includes('ekodi_token='))history.replaceState(null,'',location.pathname+location.search);updateDashboard();setupBoardAccountRegistration();
     await Promise.all([loadSiteHealth(),state.me.permissions?.pages?loadStatusPage():Promise.resolve(),state.me.permissions?.pages?loadOrganization():Promise.resolve(),state.me.permissions?.timeline?loadTimeline():Promise.resolve(),state.me.permissions?.voices?loadVoices():Promise.resolve(),state.me.permissions?.content?loadContent():Promise.resolve(),state.me.permissions?.channels?loadChannels():Promise.resolve()]);
     restoreAdminRoute({replace:true});
     if(refresh)text($('scopeSummary'),state.me.platform?'최고관리자 권한으로 최신 상태를 확인했습니다.':'게시판 관리자 권한으로 최신 상태를 확인했습니다.');
