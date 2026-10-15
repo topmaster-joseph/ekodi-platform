@@ -360,6 +360,24 @@ test('Exact-SHA provenance recovery dispatches the guarded My Worker after prote
   assert.match(workflow,/node "\$GITHUB_WORKSPACE\/scripts\/validate-ekodi-ai-change-orchestration\.mjs" --release/);
 });
 
+
+test('My release proves Journey and Approvals before promotion without inventing old rollback coverage',async()=>{
+  const manifest=JSON.parse(await read('deploy/manifests/my.worker.json'));
+  const requests=manifest.worker.requests;
+  for(const [pathname,marker] of [
+    ['/my/journey/','MY JOURNEY · PERSON FIRST'],
+    ['/my/approvals/','MY APPROVAL · DECISION INBOX']
+  ]){
+    const request=requests.find(x=>new URL(x.url).pathname===pathname);
+    assert.ok(request,'missing protected route '+pathname);
+    assert.ok(request.expect.includes(marker),pathname+' must verify the correct service');
+    assert.equal(request.rollbackVerify,false,'legacy stable Worker may not support new route checks');
+  }
+  const docs=requests.find(x=>new URL(x.url).pathname==='/my/docs/');
+  assert.ok(docs?.expect.includes('EKODI Docs AI'),'existing Docs release contract must remain strict');
+  assert.notEqual(docs.rollbackVerify,false,'existing Docs rollback verification must stay enforced');
+});
+
 test('My EKODI defers secondary feature bundles until after the critical startup path',async()=>{
   const [html,loader]=await Promise.all([read('my/index.html'),read('my/secondary-feature-loader.js')]);
   assert.match(html,/secondary-feature-loader\.js\?v=20261008-startup-defer-v1/);
