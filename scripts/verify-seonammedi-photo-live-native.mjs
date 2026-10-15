@@ -90,7 +90,7 @@ try{
     // Read-only bootstrap asset response evidence: if the home layout is absent,
     // distinguish HTTP routing, content-type, CSP and JavaScript runtime errors.
     if(profile.name==='pc'){
-      const scriptUrl=origin+base+'board-central-category.js?v=20261015-photo-shell-1';
+      const scriptUrl=origin+base+'board/ui/central-category.js';
       try{
         const asset=await context.request.get(scriptUrl,{timeout:12000,failOnStatusCode:false});
         const sample=(await asset.text()).slice(0,160);
@@ -106,13 +106,13 @@ try{
       const page=await context.newPage();
       const entry={page:item.name,key:item.key,uri:base+item.path,scriptResponses:[],pageErrors:[]};
       page.on('response',response=>{
-        if(response.url().includes('board-central-category.js')){
+        if(response.url().includes('board/ui/central-category.js')){
           entry.scriptResponses.push({url:response.url(),status:response.status(),
             contentType:response.headers()['content-type']||''});
         }
       });
       page.on('requestfailed',request=>{
-        if(request.url().includes('board-central-category.js'))
+        if(request.url().includes('board/ui/central-category.js'))
           entry.scriptRequestFailure=String(request.failure()?.errorText||'unknown').slice(0,180);
       });
       page.on('pageerror',error=>entry.pageErrors.push(String(error?.message||error).slice(0,280)));
@@ -143,7 +143,7 @@ try{
           initialized:document.documentElement.dataset.seonamVisualInitialized||'',
           bodyClass:document.body?.className||'',
           categoryScripts:[...document.querySelectorAll('script[src]')]
-            .map(node=>node.src).filter(src=>src.includes('board-central-category.js'))
+            .map(node=>node.src).filter(src=>src.includes('board/ui/central-category.js'))
         })).catch(()=>null);
         report.failures.push(profile.name+'/'+item.key+': '+entry.reason+
           ' scripts='+JSON.stringify(entry.scriptResponses)+
