@@ -20,15 +20,15 @@ test('the canonical release dispatcher includes every directly used Control API 
   assert.ok(control.includes("file.endsWith('.sql')"),'D1 release trigger must be limited to SQL migration files');
   assert.ok(!control.includes("file.startsWith('migrations/')||["),'D1 ownership condition must remain explicit');
   assert.ok(site.includes("'seonammedi-monitor.js'"),'RSS monitor must also release Site Core');
-  assert.match(converge,/deploy-control-api\.yml\/dispatches/);
-  assert.match(converge,/if\(controlApiTouched\)/);
+  assert.ok(converge.includes('deploy-control-api.yml/dispatches'));
+  assert.ok(converge.includes('if(controlApiTouched)'));
 });
 test('canonical D1 changes invoke the guarded Control API release owner',async()=>{
   const converge=await readFile(new URL('../scripts/converge-orchestrated-pr-merge.mjs',import.meta.url),'utf8');
   const control=converge.slice(converge.indexOf('const controlApiTouched='),converge.indexOf('const marketingGrowthTouched='));
   assert.ok(control.includes("(file.startsWith('migrations/')&&file.endsWith('.sql')&&!file.includes('messenger'))"),'D1 SQL migration selector must exclude messenger changes');
-  assert.match(converge,/if\\(controlApiTouched\\)/);
-  assert.match(converge,/deploy-control-api\\.yml\\/dispatches/);
+  assert.ok(converge.includes('if(controlApiTouched)'));
+  assert.ok(converge.includes('deploy-control-api.yml/dispatches'));
 });
 
 test('Control API entry imports the completion adapter; deploy workflow owns its changed-file path',async()=>{
