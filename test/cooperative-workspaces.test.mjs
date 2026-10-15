@@ -9,6 +9,7 @@ import { routeCooperative, cooperativeRoute } from '../cooperative-control.js';
 import { cooperativeCharter } from '../cooperative-charter.js';
 import { sitePublicationAuthority } from '../site-publication-runtime.js';
 import sharedSiteWorker from '../platform-router-entry-worker.js';
+import { releaseHeaderMatches } from '../scripts/release-header-contract.mjs';
 
 import { fixture, authFetch } from './helpers/cooperative-fixture.mjs';
 
@@ -28,8 +29,7 @@ test('cooperative release probes match final Shared Site headers and keep every 
     const response=await sharedSiteWorker.fetch(new Request(url),{},{});
     assert.equal(response.status,200,path);
     assert.ok(response.headers.get('cache-control').split(',').map(value=>value.trim()).includes('no-store'),path);
-    const finalHeaders=[...response.headers].map(([key,value])=>key+': '+value).join('\n').toLowerCase();
-    for(const marker of probe.headerExpect||[])assert.ok(finalHeaders.includes(marker.toLowerCase()),path+': '+marker);
+    for(const marker of probe.headerExpect||[])assert.ok(releaseHeaderMatches(response.headers,marker),path+': '+marker);
     if(path.includes('/admin')||path.includes('business-coop'))assert.match(response.headers.get('x-robots-tag'),/noindex/,path);
     await response.body?.cancel();
   }

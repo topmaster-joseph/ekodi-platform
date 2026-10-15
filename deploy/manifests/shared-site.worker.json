@@ -3104,7 +3104,7 @@
           "data-coop-surface=\"hub\""
         ],
         "headerExpect": [
-          "cache-control: no-store"
+          "cache-control: <no-store-directive>"
         ],
         "rollbackVerify": false
       },

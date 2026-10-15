@@ -3,6 +3,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { isQuotaCircuitBreak } from './cloudflare-quota-guard-lib.mjs';
+import { releaseHeaderMatches } from './release-header-contract.mjs';
 
 const args = process.argv.slice(2);
 const readArg = (name, fallback = '') => {
@@ -299,8 +300,7 @@ async function fetchCheck(request, overrideVersion = '', phase = 'standard') {
         if (body.includes(marker)) throw new Error(`forbidden body marker: ${marker}; ${diagnostic}`);
       }
       for (const marker of headerExpect) {
-        const normalized = [...response.headers.entries()].map(([key, value]) => `${key}: ${value}`).join('\n').toLowerCase();
-        if (!normalized.includes(String(marker).toLowerCase())) throw new Error(`missing header marker: ${marker}; ${diagnostic}`);
+        if (!releaseHeaderMatches(response.headers,marker)) throw new Error(`missing header marker: ${marker}; ${diagnostic}`);
       }
       console.log(`✅ ${overrideVersion ? 'candidate' : 'production'} verified: ${targetUrl}`);
       return;

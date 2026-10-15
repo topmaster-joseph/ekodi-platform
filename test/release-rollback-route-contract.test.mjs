@@ -1,3 +1,4 @@
+import {releaseHeaderMatches,NO_STORE_DIRECTIVE_MARKER} from '../scripts/release-header-contract.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -23,6 +24,13 @@ test('Cooperative administration still requires no-store and route headers, hub 
   assert.ok(admin?.headerExpect?.some(marker=>marker.includes('no-store')));
  }
  const hub=probe('/business-coop/');
- assert.ok(hub?.headerExpect?.includes('cache-control: no-store'));
+ assert.ok(hub?.headerExpect?.includes(NO_STORE_DIRECTIVE_MARKER));
  assert.notEqual(hub?.rollbackVerify,true,'Candidate-only cooperative hub must not invalidate existing rollback');
+});
+
+test('no-store contract reads the actual Cache-Control header and fails closed on absent or misleading directives',()=>{
+ const marker=NO_STORE_DIRECTIVE_MARKER;
+ for(const value of ['no-store','private, no-store','public, max-age=0, no-store'])assert.equal(releaseHeaderMatches(new Headers({'cache-control':value}),marker),true,value);
+ for(const value of ['','private, no-cache','no-store-not','no-store=maybe'])assert.equal(releaseHeaderMatches(new Headers({'cache-control':value,'x-debug':'no-store'}),marker),false,value);
+ assert.equal(releaseHeaderMatches(new Headers({'x-debug':'cache-control: no-store'}),marker),false);
 });
