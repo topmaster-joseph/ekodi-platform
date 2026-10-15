@@ -7,13 +7,23 @@ const workflow=await readFile(new URL('../.github/workflows/deploy-independent-b
 const roots=['https://seonammedi.kr','https://ekodi.kr/seonammedi'];
 const menu=['공지','활동이력','관련소식','소통채널','시민의견','조직'];
 
-test('deployed board smoke checks actual nested notice and ledger links, not retired top-level active links',()=>{
+test('deployed board smoke validates finance content on both mounts without retired top-level nav',()=>{
   assert.match(workflow,/Verify production board UI/);
   assert.match(workflow,/verify_contains "board six-menu navigation"/);
   for(const label of menu)assert.ok(workflow.includes("'"+label+"'"),label);
   assert.doesNotMatch(workflow,/'aria-current="page" href="\/board\/finance">회계'/);
   assert.doesNotMatch(workflow,/'aria-current="page" href="\/seonammedi\/board\/finance">회계'/);
-  assert.match(workflow,/"finance active nav" 'href="\/board\/finance">회계'/);
+  // A finance page stays accessible as a sibling route, not as a seventh header link.
+  for(const label of [
+    'finance route renders finance page',
+    'internal finance page',
+    'external finance slash page parity',
+    'internal finance slash page parity',
+    'finance uses six-menu notices link',
+    'internal finance notices link',
+    'external finance slash notices link',
+    'internal finance slash notices link'
+  ])assert.ok(workflow.includes('verify_contains "'+label+'"'),label);
   assert.match(workflow,/Verify production Google login-first API without credentials/);
   assert.match(workflow,/Production queue-create-list-reply canary and cleanup/);
   assert.match(workflow,/Anonymous board write must return 401/);
