@@ -44,5 +44,5 @@ jobs:
           node --test test/reconcile-independent-board-release.test.mjs
       - name: Dispatch missing approved board release through existing production gate
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: node scripts/reconcile-independent-board-release.mjs
