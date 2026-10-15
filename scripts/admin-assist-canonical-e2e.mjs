@@ -87,6 +87,9 @@ try {
       welcomeText: welcome ? String(welcome.textContent || '').trim() : '',
       contextTabsPresent: Boolean(contextTabs),
       commandEntryPresent: Boolean(commandEntry),
+      // Missing nodes are not visible. Existing nodes must be display:none.
+      contextTabsDisplay: contextTabs ? getComputedStyle(contextTabs).display : 'none',
+      commandEntryDisplay: commandEntry ? getComputedStyle(commandEntry).display : 'none',
       targetValue: target ? String(target.value || '').trim() : '',
       targetWidth: target ? Math.round(target.getBoundingClientRect().width) : null,
       assistLeft: assist ? Math.round(assist.getBoundingClientRect().left) : null,
