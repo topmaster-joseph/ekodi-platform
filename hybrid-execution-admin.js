@@ -239,7 +239,7 @@
     const online = node.online ? '온라인' : '오프라인';
     return `<article class="hybrid-node" data-device-id="${escapeHtml(node.deviceId)}">
       <div class="hybrid-row"><div><strong>${escapeHtml(node.label || node.hostname || node.deviceId)}</strong>
-      <small>${escapeHtml(node.hostname || '')} · ${online} · 부하 ${Number(node.currentLoad) || 0}% · 실행 ${Number(node.activeJobs) || 0}/${Number(node.maxConcurrency) || 1}</small></div>
+      <small>${escapeHtml(node.hostname || '')} · EKODI Agent ${online} · 마지막 heartbeat ${escapeHtml(node.lastHeartbeatAt ? timeLabel(node.lastHeartbeatAt) : '미확인')} · 부하 ${Number(node.currentLoad) || 0}% · 실행 ${Number(node.activeJobs) || 0}/${Number(node.maxConcurrency) || 1}</small></div>
       <span class="hybrid-pill">${escapeHtml(node.deviceGroup || 'default')}</span></div>
       <div class="hybrid-controls">
         <label><input type="checkbox" data-auto ${auto}> 자동 실행</label>
