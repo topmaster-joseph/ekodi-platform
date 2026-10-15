@@ -121,6 +121,13 @@ jobs:
           const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1440,height:900},isMobile:mobile,hasTouch:mobile});
           const page=await context.newPage();
           const blocked=[];
+          await page.route('**/*',route=>{
+            if(!['GET','HEAD','OPTIONS'].includes(route.request().method())){
+              blocked.push(route.request().method()+' '+route.request().url());
+              return route.abort('blockedbyclient');
+            }
+            return route.continue();
+          });
           // Synthetic notice *only inside this disposable Chromium profile*.
           // Public feed availability is independently diagnosed in public-contract above.
           // Never claim a synthetic fixture is a real government announcement.
@@ -133,13 +140,6 @@ jobs:
               agency:'브라우저 자동검사',applicationPeriod:'상시',publishedAt:'2026-10-15'
             }]})
           }));
-          await page.route('**/*',route=>{
-            if(!['GET','HEAD','OPTIONS'].includes(route.request().method())){
-              blocked.push(route.request().method()+' '+route.request().url());
-              return route.abort('blockedbyclient');
-            }
-            return route.continue();
-          });
           try{
             await page.goto('https://ekodi.kr/ai/#support-programs',{waitUntil:'domcontentloaded',timeout:30000});
             await page.locator('#support-programs').scrollIntoViewIfNeeded();
