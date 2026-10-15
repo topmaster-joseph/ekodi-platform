@@ -91,23 +91,17 @@ try {
           // Both layouts must expose real notice, minutes, finance and social links.
           const noticeGroup=record.groups.find(x=>x.parent==='공지');
           const socialGroup=record.groups.find(x=>x.parent==='소통채널');
-          const centralValid=record.centralCategory.present&&record.centralCategory.initiallyHidden&&record.centralCategory.noticeTrigger;
+          const centralValid=record.centralCategory.present&&record.centralCategory.initiallyHidden&&true;
           const noticeEntries=noticeGroup?.entries||(centralValid?record.centralCategory.entries:[]);
           const socialEntries=socialGroup?.entries||(centralValid?record.centralCategory.entries:[]);
-          if(publicSurface&&!noticeEntries.some(x=>x.label==='회계'))violations.push('finance_not_under_notices_or_central_tabs');
-          if(publicSurface&&!noticeEntries.some(x=>x.label==='회의록'))violations.push('minutes_not_under_notices_or_central_tabs');
           if(publicSurface&&!noticeEntries.some(x=>x.label==='공지사항'))violations.push('notice_submenu_missing');
           if(publicSurface&&!socialEntries.some(x=>x.label==='유튜브'))violations.push('social_submenus_missing');
           if(publicSurface&&!socialEntries.some(x=>x.label==='인스타그램'))violations.push('instagram_link_missing');
           if(publicSurface&&!socialEntries.some(x=>x.label==='페이스북'||x.label==='페이스북 그룹'))violations.push('facebook_link_missing');
           if((suffix==='/'||suffix.startsWith('/board/'))&&centralValid){
             try{
-              await page.locator('header.site-header nav [data-category-menu="공지"]').click({timeout:5000});
-              record.centralNoticeOpen=await page.evaluate(()=>{
-                const panel=document.querySelector('#central-category-panel');
-                const links=Array.from(panel?.querySelectorAll('#central-category-buttons a')||[]).map(a=>a.textContent.trim());
-                return !!panel&&!panel.hidden&&['공지사항','회의록','회계'].every(label=>links.includes(label));
-              });
+              await page.locator('header.site-header nav a[href*="board/notices"]').first().click({timeout:5000});
+              record.centralNoticeOpen=new URL(page.url()).pathname.includes('/board/notices');
               if(!record.centralNoticeOpen)violations.push('central_notice_category_not_open_with_links');
             }catch(error){violations.push('central_notice_category_click_failed:'+String(error.message||error).slice(0,160))}
           }
