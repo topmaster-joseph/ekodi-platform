@@ -787,14 +787,11 @@ const PAGE_KEYS=new Set(['status','organization']);
 const parseJsonObject=value=>{try{const parsed=JSON.parse(String(value||'{}'));return parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{}}catch{return{}}};
 function pageRow(row){return{key:row.section_key,data:parseJsonObject(row.body_json),visible:Boolean(row.visible),updatedBy:row.updated_by||'',updatedAt:row.updated_at||''}}
 async function listPublicPageData(env){
-  const [sections,finance]=await Promise.all([
-    env.DB.prepare('SELECT section_key,body_json,visible,updated_by,updated_at FROM seonammedi_page_sections WHERE visible=1').all(),
-    env.DB.prepare('SELECT id,entry_date,entry_type,amount,purpose,related_event,evidence_status,public_note FROM seonammedi_finance_entries WHERE visible=1 ORDER BY entry_date DESC,id DESC LIMIT 300').all()
-  ]);
+  // Finance ledgers and totals are administrator-only. Public page data must never
+  // return finance rows, including those carrying a legacy visible=1 flag.
+  const sections=await env.DB.prepare('SELECT section_key,body_json,visible,updated_by,updated_at FROM seonammedi_page_sections WHERE visible=1').all();
   const page={};for(const row of sections.results||[])page[row.section_key]=parseJsonObject(row.body_json);
-  const entries=(finance.results||[]).map(row=>({id:Number(row.id),date:row.entry_date,type:row.entry_type,amount:Number(row.amount||0),purpose:row.purpose,event:row.related_event||'',evidenceStatus:row.evidence_status||'none',note:row.public_note||''}));
-  let raised=0,spent=0;for(const row of entries){if(row.type==='income')raised+=row.amount;else spent+=row.amount}
-  return json({ok:true,page,finance:{raised,spent,balance:raised-spent,entries}});
+  return json({ok:true,page,finance:{raised:null,spent:null,balance:null,entries:[]}});
 }
 function canManagePages(auth){return can(auth,PAGE_CAP)||can(auth,CONTENT_CAP)}
 async function getAdminPage(env,auth,key){
