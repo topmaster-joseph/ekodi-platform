@@ -1014,3 +1014,23 @@ test('seonammedi timeline and channels are managed inline on the public user sur
   assert.match(css,/\.inline-manage-form/);
   assert.match(css,/\.inline-manage-list/);
 });
+
+test('seonammedi public finance API and legacy static page disclose no ledger values',async()=>{
+  const [api,legacy,admin,board]=await Promise.all([
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
+    readFile(new URL('finance/index.html',root),'utf8'),
+    readFile(new URL('admin/index.html',root),'utf8'),
+    readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8')
+  ]);
+  const a=api.indexOf('async function listPublicPageData(env){');
+  const b=api.indexOf('function canManagePages(auth)',a);
+  assert.ok(a>=0&&b>a,'public page-data handler must exist');
+  const publicSource=api.slice(a,b);
+  assert.doesNotMatch(publicSource,/seonammedi_finance_entries/,'public API must never SELECT finance rows');
+  assert.match(publicSource,/finance:\{raised:null,spent:null,balance:null,entries:\[\]\}/);
+  assert.doesNotMatch(legacy,/<script|id="ledger"|id="raised"/,'legacy public route must not display ledger');
+  assert.match(legacy,/https:\/\/ekodi\.kr\/seonammedi\/admin\/\?panel=finance/);
+  assert.match(admin,/id="financeForm"/,'finance CRUD must remain in protected admin');
+  assert.match(admin,/id="financeList"/);
+  assert.match(board,/const gate=await requirePermission\(req,'finance'\);if\(!gate\.ok\)return gate\.response/);
+});
