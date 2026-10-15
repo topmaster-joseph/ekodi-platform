@@ -64,10 +64,10 @@ export async function routeCooperative(request, env) {
   const hubPath = url.pathname.replace(/\/+$/, '');
   if (['/business-coop/assets/app.css', '/business-coop/assets/app.js'].includes(hubPath) && ['GET', 'HEAD'].includes(request.method)) {
     const css = hubPath.endsWith('.css');
-    return new Response(request.method === 'HEAD' ? null : css ? cooperativeCss() : cooperativeScript(), { headers: headers(css ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8') });
+    return new Response(request.method === 'HEAD' ? null : css ? cooperativeCss() : cooperativeScript(), { headers: { ...headers(css ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8'), 'cache-control': 'no-store' } });
   }
   if (['/business-coop', '/business-coop/admin', '/admin/workspaces/cooperatives'].includes(hubPath) && ['GET', 'HEAD'].includes(request.method)) {
-    const h = new Headers(headers('text/html; charset=utf-8')); h.set('x-robots-tag', 'noindex, nofollow, noarchive'); h.set('x-ekodi-route', 'cooperative-operations');
+    const h = new Headers(headers('text/html; charset=utf-8')); h.set('cache-control','no-store'); h.set('x-robots-tag', 'noindex, nofollow, noarchive'); h.set('x-ekodi-route', 'cooperative-operations');
     return new Response(request.method === 'HEAD' ? null : cooperativeOperationsPage(hubPath.startsWith('/admin/')), { headers: h });
   }
   if (['/api/cooperatives/overview', '/api/control/cooperatives/overview'].includes(hubPath)) {

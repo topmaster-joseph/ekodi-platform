@@ -2036,7 +2036,8 @@
           308
         ],
         "rollbackHeaderExpect": [
-          "location: https://ekodi.kr/pay/"
+          "location: https://ekodi.kr/ekodipay/",
+          "cache-control: no-store"
         ]
       },
       {
@@ -2050,18 +2051,11 @@
           "location: https://ekodi.kr/ekodipay/"
         ],
         "rollbackStatuses": [
-          200
-        ],
-        "rollbackExpect": [
-          "path === '/pay'",
-          "title:'EKODI Pay'",
-          "https://ekodi.kr/admin/#finance"
+          308
         ],
         "rollbackHeaderExpect": [
-          "x-ekodi-route: hub",
-          "x-ekodi-shell: v2",
-          "x-ekodi-canonical-surface: pay",
-          "x-ekodi-canonical-path: /pay"
+          "location: https://ekodi.kr/ekodipay/",
+          "cache-control: no-store"
         ]
       },
       {
@@ -3111,7 +3105,7 @@
           "data-coop-surface=\"hub\""
         ],
         "headerExpect": [
-          "cache-control: private, no-store"
+          "cache-control: no-store"
         ],
         "rollbackVerify": false
       },
@@ -3193,7 +3187,7 @@
         ],
         "headerExpect": [
           "content-type: text/css",
-          "cache-control: private, no-store"
+          "cache-control: no-store"
         ],
         "rollbackVerify": false
       },
@@ -3208,7 +3202,7 @@
         ],
         "headerExpect": [
           "content-type: text/javascript",
-          "cache-control: private, no-store"
+          "cache-control: no-store"
         ],
         "rollbackVerify": false
       },
