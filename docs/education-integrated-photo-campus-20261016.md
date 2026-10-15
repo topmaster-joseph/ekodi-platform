@@ -18,7 +18,7 @@ Images are external Unsplash HTTPS backgrounds, permitted by the existing `img-s
 
 ## Database deployment sequence (MANDATORY)
 1. Development Supabase project migration `20261016010000_education_online_campus_rls.sql` was applied and verified separately in DEV only (3 RLS-enabled tables, 11 policies, role RPC).
-2. Retain `EDUCATION_LMS_ENABLED` unset/false in Education Worker until a reviewed production database migration has been applied through an approved, protected process and read-only production role/RLS checks have passed. Worker exposes `lmsEnabled:false` by default; UI does not attempt speculative REST requests.
+2. Retain `EDUCATION_LMS_ENABLED` unset/false in Education Worker until a both reviewed production database migrations have been applied through an approved, protected process and read-only production role/RLS checks have passed. Worker exposes `lmsEnabled:false` by default; UI does not attempt speculative REST requests.
 3. Activate the flag **only after** authentic production migration evidence, granted role setup, `anon` published-read checks, anonymous write denial, authenticated own-user isolation, instructor no-publish, admin publish and enrollment review are all green. No direct SQL or cloud release bypass.
 4. The public Education Worker release is separate from Site Core canonical /edu routing; preserve original protected release and Chromium desktop/mobile acceptance, strict CSP, auth, privacy, rollback.
 
