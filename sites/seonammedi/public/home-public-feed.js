@@ -18,13 +18,17 @@ const section=(label,items,href,primary=false)=>'<section class="public-feed-sec
 const fetchJson=async url=>{const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);return r.json()};
 const items=(settled,key='items')=>settled.status==='fulfilled'?(Array.isArray(settled.value)?settled.value:Array.isArray(settled.value?.[key])?settled.value[key]:[]):[];
 (async()=>{
- const [noticeResult,boardResult,timelineResult,staticResult]=await Promise.allSettled([
+ const [boardNoticeResult,noticeResult,boardResult,timelineResult,staticResult]=await Promise.allSettled([
+  fetchJson('/board/api/notices'),
   fetchJson('/api/seonammedi/notices'),
   fetchJson('/board/api/posts'),
   fetchJson('/api/seonammedi/timeline'),
   fetchJson('/seonammedi/data.json')
  ]);
- const notices=items(noticeResult).filter(x=>publicItem(x)&&x.id!=null&&x.title).map(x=>({...x,url:home+'/notices/'+encodeURIComponent(x.id)})).sort(sort);
+ const notices=[
+  ...items(boardNoticeResult).map(x=>({...x,url:home+'/board/notices?id='+encodeURIComponent(x.id)})),
+  ...items(noticeResult).map(x=>({...x,url:home+'/notices/'+encodeURIComponent(x.id)}))
+ ].filter(x=>publicItem(x)&&x.id!=null&&x.title).sort(sort);
  const opinions=items(boardResult).filter(x=>publicItem(x)&&x.id!=null&&(x.title||x.message)).map(x=>({...x,title:String(x.title||x.message).slice(0,90),url:home+'/board/voices'})).sort(sort);
  const liveTimeline=items(timelineResult);
  const curatedTimeline=items(staticResult,'timeline');
