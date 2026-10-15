@@ -13,6 +13,9 @@ const SERVICES=[
  ['church','에코디교회','https://ekodi.kr/ekodichurch'],['biz','에코디비즈','https://ekodi.kr/ekodibiz'],['books','출판','https://books.ekodi.kr'],['author','Creator AI','https://author.ekodi.kr'],['lab','에코디연구소','https://ekodi.kr/ekodilab'],['community','커뮤니티','https://ekodi.kr/community'],['work','에코디워크 · 구인구직','https://ekodi.kr/work'],['social','EKODI Social','https://social.ekodi.kr'],['energy','Energy AI','https://energy.ekodi.kr'],['business','Business OS','https://ekodi.kr/business'],['mall','에코디몰','https://ekodi.kr/ekodimall'],['marketing','Marketing AI','https://ekodi.kr/ekodibiz/marketing-ai']
 ];
 const OPEN_SSO_SITES=new Set(['social','energy']);
+// Registered customer-owned entry points are eligible for credential handoff recovery,
+// never for an unrequested cross-site navigation.
+const SEONAMMEDI_RETURN_ORIGINS=new Set(['https://seonammedi.kr','https://www.seonammedi.kr','https://xn--3e0b8b58jw4co4mnpll3k.kr','https://www.xn--3e0b8b58jw4co4mnpll3k.kr']);
 const SSO_SITES=new Set(['church','biz','books','author','lab','community','work','business','mall','marketing','social','energy']);
 const TARGETABLE_WORKSPACE_SITES=new Set(['church','biz','books','lab','mall','marketing','social','energy']);
 const WORKSPACE_ENTRY_PRIORITY=['biz','marketing','mall','church','books','lab','business','community','work','author','social','energy'];
@@ -62,6 +65,7 @@ function requestedReturnTarget(){
  if(!raw)return null;
  try{
   const target=new URL(raw);
+  if(target.protocol==='https:'&&!target.username&&!target.password&&SEONAMMEDI_RETURN_ORIGINS.has(target.origin))return{id:'seonammedi',url:target.href};
   const service=SERVICES.find(([, ,url])=>new URL(url).origin===target.origin);
   return service?{id:service[0],url:target.href}:null;
  }catch{return null}
@@ -80,7 +84,7 @@ function misroutedServiceReturn(){
  try{
   const target=new URL(raw);
   const hostname=target.hostname.toLowerCase();
-  const trusted=target.protocol==='https:'&&!target.username&&!target.password&&(hostname==='ekodi.kr'||hostname.endsWith('.ekodi.kr')||hostname==='cgma.or.kr');
+  const trusted=target.protocol==='https:'&&!target.username&&!target.password&&(hostname==='ekodi.kr'||hostname.endsWith('.ekodi.kr')||hostname==='cgma.or.kr'||SEONAMMEDI_RETURN_ORIGINS.has(target.origin));
   if(!trusted)return null;
   if(target.origin==='https://ekodi.kr'&&(target.pathname==='/my'||target.pathname.startsWith('/my/')))return null;
   target.hash=location.hash;

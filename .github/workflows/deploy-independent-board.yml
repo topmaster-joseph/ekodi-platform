@@ -173,7 +173,14 @@ jobs:
           verify_contains "voices active nav" 'aria-current="page" href="/board/voices">시민의견' "$voices"
           verify_contains "finance route renders finance page" '<body class="board-finance">' "$finance"
           verify_contains "finance uses six-menu notices link" 'href="/board/notices">공지' "$finance"
-          verify_contains "finance summary" 'id="raised"' "$finance"
+          verify_contains "finance administrator-only notice" 'id="financeAdminOnly"' "$finance"
+          for html in "$finance" "$finance_slash" "$internal_finance" "$internal_finance_slash"; do
+            verify_contains "finance authorization boundary" '회계 자료는 관리자 권한으로 로그인한 후 열람할 수 있습니다.' "$html"
+            if grep -Eq 'id="raised"|id="spent"|id="balance"|id="summaryPanel"|id="adminDetail"' <<<"$html"; then
+              echo 'Production board must not render finance balances without administrator authorization' >&2
+              exit 1
+            fi
+          done
           verify_contains "notices active nav" 'href="/board/notices">공지' "$notices"
           verify_contains "notices heading" 'NOTICE BOARD' "$notices"
           verify_contains "internal voices route" 'aria-current="page" href="/seonammedi/board/voices">시민의견' "$internal_voices"
@@ -198,6 +205,19 @@ jobs:
             done
             verify_contains "board six-menu navigation" 'class="ekodi-six-nav"' "$html"
             verify_contains "notices nested announcement" '>공지사항</a>' "$html"
+          done
+      - name: Verify finance summary requires finance administrator authority
+        run: |
+          set -euo pipefail
+          for origin in https://seonammedi.kr/board https://ekodi.kr/seonammedi/board; do
+            response="$(mktemp)"
+            status="$(curl -sS -o "$response" -w '%{http_code}' --connect-timeout 8 --max-time 25 "$origin/api/finance/summary")"
+            if [[ "$status" != "403" ]] || ! jq -e '.ok==false and .error=="finance_forbidden"' "$response" >/dev/null; then
+              echo "Public finance summary access unexpectedly allowed or misconfigured at $origin (HTTP $status)" >&2
+              rm -f "$response"
+              exit 1
+            fi
+            rm -f "$response"
           done
       - name: Verify production Google login-first API without credentials
         shell: bash

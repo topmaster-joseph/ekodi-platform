@@ -2733,10 +2733,15 @@
           "활동이력",
           "소통채널",
           "시민의견",
-          "회계",
           "공지",
           "조직",
           "<meta name=\"twitter:card\" content=\"summary_large_image\">\n  <meta property=\"og:image\""
+        ],
+        "forbid": [
+          "전체 회계내역",
+          "id=\"financeManageForm\"",
+          "id=\"financeList\"",
+          "href=\"board/finance\""
         ],
         "rollbackVerify": false,
         "bodyIncludes": [
@@ -2756,7 +2761,8 @@
           "운영홈",
           "내부 회의록",
           "권한·관리자",
-          "사용자 화면에서 바로 관리 도구가 표시됩니다"
+          "class=\"admin-finance-link\"",
+          "id=\"boardAccountRegistration\""
         ],
         "forbid": [
           "/admin/sites/workspace",

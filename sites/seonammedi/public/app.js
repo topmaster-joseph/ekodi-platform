@@ -594,6 +594,7 @@ function categoryFromMenuHash(prefix,allowed){
   }catch{return '전체'}
 }
 function showView(view,{updateHash=false}={}){
+  if(view==='finance'){location.assign('https://ekodi.kr/seonammedi/admin/?panel=finance');return}
   const key=viewAliases[view]||'';
   document.querySelectorAll('[data-view-section]').forEach(section=>{section.hidden=section.dataset.viewSection!==key});
   document.querySelectorAll('[data-view-link]').forEach(link=>{
@@ -622,6 +623,7 @@ function showView(view,{updateHash=false}={}){
 function syncViewFromLocation(){
   const raw=location.hash.replace(/^#/,'');
   if(raw==='notices'){location.replace('/notices/');return}
+  if(raw==='finance'){location.replace('https://ekodi.kr/seonammedi/admin/?panel=finance');return}
   if(raw.includes('ekodi_token=')){showView(new URLSearchParams(location.search).get('compose')==='notice'?'notices':'',{updateHash:false});return}
   if(raw==='timeline'||raw.startsWith('timeline/')){
     activeTimelineCategory=categoryFromMenuHash('timeline',TIMELINE_FILTERS);

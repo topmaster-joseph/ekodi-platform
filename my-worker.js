@@ -298,6 +298,15 @@ async function routedMyHome(request,env,route=null){
 
 export default{
   async fetch(request,env){
+    // Canonical Site Core ordinarily strips /my before the service binding call.
+    // Accept an intact mount prefix as well, so routing transitions can never
+    // turn a valid /my/health or /my/docs/ request into a static-asset 404.
+    const incoming=new URL(request.url);
+    if(incoming.pathname==='/my'||incoming.pathname.startsWith('/my/')){
+      const forwarded=new URL(incoming);
+      forwarded.pathname=incoming.pathname.slice('/my'.length)||'/';
+      request=new Request(forwarded.toString(),request);
+    }
     const url=new URL(request.url);
     const investMyResponse=await investMyRoute(request,env);
     if(investMyResponse)return withHeaders(env,investMyResponse);

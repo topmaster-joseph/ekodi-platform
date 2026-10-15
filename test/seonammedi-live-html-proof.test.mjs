@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {expectedSeonamMediHtmlAtOrigin,normalizeSeonamMediLiveHtml} from '../scripts/seonammedi-live-html-proof.mjs';
+import {compareSeonamMediPublishedHtml} from '../scripts/seonammedi-release-html-alias.mjs';
 
 const canonical='https://ekodi.kr/seonammedi';
 const customer='https://seonammedi.kr';
@@ -29,6 +30,21 @@ test('canonical and customer homepage HTML are byte identical after allowlisted 
     assert.equal(normalized.html,expected);
     // The repair must not disguise a regression of a literal backslash-n in head.
     assert.notEqual(normalizeSeonamMediLiveHtml(expected.replace('summary_large_image">\n','summary_large_image">\\n'),{origin,page:'index.html'}).html,expected);
+  }
+});
+
+test('finance admin links stay byte-identical and tenant-local on both public mounts',async()=>{
+  const finance=await readFile(new URL('../sites/seonammedi/public/finance/index.html',import.meta.url),'utf8');
+  assert.equal((finance.match(/href="\.\.\/admin\/\?panel=finance"/g)||[]).length,2);
+  assert.doesNotMatch(finance,/href="https:\/\/ekodi\.kr\/seonammedi\/admin\/\?panel=finance"/);
+  for(const origin of [canonical,customer]){
+    const projected=expectedSeonamMediHtmlAtOrigin(finance,origin);
+    assert.equal((projected.match(/href="\.\.\/admin\/\?panel=finance"/g)||[]).length,2,'gateway must preserve both tenant-local finance links');
+    assert.equal(normalizeSeonamMediLiveHtml(projected,{origin,page:'finance/index.html'}).html,projected,'normalizer must not hide HTML changes');
+    const exact=compareSeonamMediPublishedHtml(finance,projected,['shared-site-header.css']);
+    assert.equal(exact.matched,true,'finance must differ solely by the audited shared header mount alias: '+exact.reason);
+    const url=new URL('../admin/?panel=finance',origin+'/finance/');
+    assert.equal(url.href,origin+'/admin/?panel=finance');
   }
 });
 
