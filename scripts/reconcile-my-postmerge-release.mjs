@@ -64,7 +64,7 @@ async function execute(){
   const pr=await api('/pulls/'+merged[0].number);
   const changed=await api('/pulls/'+pr.number+'/files?per_page=100');
   if(!Array.isArray(changed)||changed.length>=100)fail('changed files not exhaustive');
-  const history=await api('/actions/workflows/deploy-my.yml/runs?event=workflow_dispatch&per_page=100');
+  const history=await api('/actions/workflows/deploy-my.yml/runs?event=workflow_dispatch&head_sha='+mainSha+'&per_page=100');
   if(!Array.isArray(history.workflow_runs)||history.workflow_runs.length>=100)
     fail('My workflow history not exhaustive: preserve fail-closed duplicate prevention');
   const decision=classifyMyRelease({pr,mainSha,changedFiles:changed.map(x=>x.filename),
@@ -76,7 +76,7 @@ async function execute(){
   // Reconfirm main and history immediately before dispatch (no approval authority is minted).
   const fresh=await api('/git/ref/heads/main');
   if(fresh.object?.sha!==mainSha)fail('main moved before release dispatch');
-  const newer=await api('/actions/workflows/deploy-my.yml/runs?event=workflow_dispatch&per_page=100');
+  const newer=await api('/actions/workflows/deploy-my.yml/runs?event=workflow_dispatch&head_sha='+mainSha+'&per_page=100');
   if(!Array.isArray(newer.workflow_runs)||newer.workflow_runs.length>=100)
     fail('cannot certify latest deployment history');
   const verified=classifyMyRelease({pr,mainSha,changedFiles:changed.map(x=>x.filename),
