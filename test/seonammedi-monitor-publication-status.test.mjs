@@ -17,8 +17,9 @@ test('an HTTP 200 page requires RSS root and channel to count as a valid source'
 test('RSS validation failure is recorded before counting a source as checked',async()=>{
   const source=await readFile(new URL('../seonammedi-monitor.js',import.meta.url),'utf8');
   assert.match(source,/if\(!isValidSeonamMediRssDocument\(xml\)\)throw new Error\('invalid_rss_document'\)/);
-  assert.match(source,/const items=parseRss\(await fetchSeonamMediNewsRss\(query\.q\)/);
-  assert.match(source,/parseRss\([^;]+;checked\+=1;seen\+=items\.length/);
+  assert.match(source,/newsItems=parseRss\(await fetchSeonamMediNewsRss\(query\.q\)/);
+  assert.match(source,/newsItems=parseRss\(await fetchSeonamMediBingNewsRss\(query\.q\)/);
+  assert.match(source,/checked\+=1;seen\+=newsItems\.length/);
 });
 
 test('the public API distinguishes candidate records from publishable news',async()=>{
