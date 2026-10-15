@@ -2946,7 +2946,7 @@
         ],
         "headerExpect": [
           "x-ekodi-route: cooperative-admin",
-          "cache-control: private, no-store"
+          "cache-control: no-store"
         ],
         "rollbackVerify": false
       },
@@ -3019,7 +3019,7 @@
         ],
         "headerExpect": [
           "x-ekodi-route: cooperative-admin",
-          "cache-control: private, no-store"
+          "cache-control: no-store"
         ],
         "rollbackVerify": false
       },
@@ -3111,7 +3111,7 @@
           "data-coop-surface=\"hub\""
         ],
         "headerExpect": [
-          "cache-control: no-store"
+          "cache-control: private, no-store"
         ],
         "rollbackVerify": false
       },
