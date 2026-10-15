@@ -198,7 +198,11 @@ export async function ensureUser4AgentUpdated({
 export async function verifyUser4BrowserWithRetry(options={}, verify=verifyUser4Browser) {
   try { return await verify(options); }
   catch(error) {
-    if(String(error?.message||'')!=='user4_browser_failed:CDP_BROWSER_EARLY_EXIT_ZERO')
+    // Retry once only for an early clean exit or transient CDP command timeout.
+    // Every attempt still requires its own genuine signed USER4 command receipt.
+    const transient=String(error?.message||'');
+    if(!['user4_browser_failed:CDP_BROWSER_EARLY_EXIT_ZERO',
+          'user4_browser_failed:CDP_COMMAND_TIMEOUT'].includes(transient))
       throw error;
     const result=await verify(options);
     return {...result,transientBrowserRetryUsed:true};
