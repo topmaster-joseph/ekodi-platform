@@ -94,7 +94,7 @@ async function boot(){
   const params=new URLSearchParams(location.search);state.sourceServiceId=escText(params.get('source')).toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,80);const handoff=escText(params.get('q')).slice(0,600);
   const [config,catalog,requests]=await Promise.all([api('/api/commons/config'),api('/api/commons/services'),api('/api/commons/requests').catch(()=>({requests:[]}))]);
   state.config=config;renderServices(catalog.categories||[]);renderRequests(requests.requests||[]);
-  const loginUrl=new URL(config.authUrl||'/auth/?site=ai',location.origin);loginUrl.searchParams.set('return_to',location.href.split('#')[0]);$('loginLink').href=loginUrl.toString();
+  updateAssistanceLoginLinks();
   if(config.supabaseUrl&&config.supabasePublishableKey){state.client=createClient(config.supabaseUrl,config.supabasePublishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});const {data}=await state.client.auth.getSession();setSession(data.session);await refreshMyIdeas();state.client.auth.onAuthStateChange((_event,session)=>{setSession(session);void refreshMyIdeas()})}else setSession(null);
   if(handoff){$('wantInput').value=handoff;if(params.get('auto')==='1')await submitWanted(handoff);}
 }
@@ -284,6 +284,8 @@ function initSupportFeed(){
   for(const id of ['supportSearch','supportTopic','supportStatusFilter'])$(''+id).addEventListener(id==='supportSearch'?'input':'change',renderSupportFeed);
   $('supportRefresh').addEventListener('click',()=>void loadSupportFeed());
   const section=$('support-programs');
+  // Auth callbacks and shared deep links must load immediately, even when off-screen.
+  if(new URL(location.href).searchParams.has('support_notice')){void loadSupportFeed();return}
   if('IntersectionObserver' in window){
     const observer=new IntersectionObserver(entries=>{if(entries.some(entry=>entry.isIntersecting)){observer.disconnect();void loadSupportFeed()}},{rootMargin:'240px'});
     observer.observe(section);
@@ -293,6 +295,53 @@ function initSupportFeed(){
 
 // Per-notice independent EKODIBIZ assistance: review draft only, never a client-authoritative contract or payment.
 const assistanceState={notice:null,catalog:null,chosen:new Set(),busy:false};
+// Preserve the precise originating notice, selected *non-personal* plans and request intent.
+// Names, organizations, consents, quotes, or payment data must never enter a login URL.
+function assistanceReturnHref(requestIntent=false){
+  const target=new URL(location.href);
+  if(assistanceState.notice){
+    target.searchParams.set('support_notice',supportNoticeKey(assistanceState.notice));
+    const ids=(assistanceState.catalog?.plans||[]).filter(p=>assistanceState.chosen.has(p.id)).map(p=>p.id);
+    if(ids.length)target.searchParams.set('support_plans',ids.join(','));
+    else target.searchParams.delete('support_plans');
+    target.hash='support-detail';
+    if(requestIntent)target.searchParams.set('support_intent','request');
+    else target.searchParams.delete('support_intent');
+  }
+  return target.href;
+}
+function assistanceLoginLink(requestIntent=false){
+  const url=new URL(state.config?.authUrl||'/auth/?site=ai',location.origin);
+  // The login and callback must remain on the canonical EKODI origin.
+  if(url.origin!==location.origin||url.pathname!=='/auth/')return null;
+  url.searchParams.set('site','ai');
+  url.searchParams.set('return_to',assistanceReturnHref(requestIntent));
+  return url.href;
+}
+function updateAssistanceLoginLinks(requestIntent=false){
+  const url=assistanceLoginLink(requestIntent);
+  if(!url){$('assistanceLoginLink').hidden=true;return false}
+  $('loginLink').href=assistanceLoginLink(false);
+  $('assistanceLoginLink').href=url;
+  return true;
+}
+function restoreAssistanceAfterLogin(item){
+  const target=new URL(location.href);
+  if(target.searchParams.get('support_notice')!==supportNoticeKey(item))return false;
+  const allowed=new Set((assistanceState.catalog?.plans||[]).map(p=>p.id));
+  const plans=(target.searchParams.get('support_plans')||'').split(',').filter(id=>allowed.has(id));
+  if(!plans.length&&target.searchParams.get('support_intent')!=='request')return false;
+  assistanceState.chosen=new Set(plans);
+  const requestIntent=target.searchParams.get('support_intent')==='request';
+  target.searchParams.delete('support_plans');
+  target.searchParams.delete('support_intent');
+  history.replaceState(null,'',target);
+  if(requestIntent){
+    $('assistanceRequestStatus').textContent='원래 공고와 지원유형을 복구했습니다. 계약 요청인의 이름·소속과 동의 사항은 보안상 저장하지 않았으므로 다시 확인 후 제출하세요.';
+    $('assistanceRequestForm').scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+  return true;
+}
 function supportNoticeKey(item){return [String(item.source||'official'),String(item.id||'')].join(':')}
 function moneyKRW(amount){return new Intl.NumberFormat('ko-KR',{style:'currency',currency:'KRW',maximumFractionDigits:0}).format(amount)}
 function assistanceSelectedPlans(){return(assistanceState.catalog?.plans||[]).filter(plan=>assistanceState.chosen.has(plan.id))}
@@ -327,7 +376,7 @@ function assistanceRenderPlans(){
   for(const plan of assistanceState.catalog?.plans||[]){
     const label=document.createElement('label');label.className='assistance-plan';
     const check=document.createElement('input');check.type='checkbox';check.value=plan.id;check.checked=assistanceState.chosen.has(plan.id);
-    check.addEventListener('change',()=>{if(check.checked)assistanceState.chosen.add(plan.id);else assistanceState.chosen.delete(plan.id);assistanceRenderContract()});
+    check.addEventListener('change',()=>{if(check.checked)assistanceState.chosen.add(plan.id);else assistanceState.chosen.delete(plan.id);assistanceRenderContract();updateAssistanceLoginLinks()});
     const wrap=document.createElement('span'),title=document.createElement('strong'),desc=document.createElement('small'),outputs=document.createElement('small'),cost=document.createElement('b');
     title.textContent=plan.label;desc.textContent=plan.description;outputs.textContent='제공: '+plan.deliverables.join(' · ');
     cost.textContent=plan.price.kind==='quote_required'?'비용: 상담 후 개별 견적':plan.price.kind==='free'?'비용: 무료':
@@ -547,9 +596,10 @@ async function openSupportDetail(item,pushHistory=true){
   body.append(title,facts,desc,link);
   $('assistancePlanList').textContent='지원 유형 및 공개된 비용 정보를 확인하고 있습니다.';
   $('assistanceRequestStatus').textContent='업무계약은 EKODIBIZ 승인 및 실제 결제 확인 후에만 진행합니다.';
-  if(pushHistory){const u=new URL(location.href);u.searchParams.set('support_notice',supportNoticeKey(item));u.hash='support-detail';history.pushState(null,'',u)}
+  if(pushHistory){const u=new URL(location.href);u.searchParams.set('support_notice',supportNoticeKey(item));u.searchParams.delete('support_plans');u.searchParams.delete('support_intent');u.hash='support-detail';history.pushState(null,'',u)}
+  updateAssistanceLoginLinks();
   pane.scrollIntoView({behavior:'smooth',block:'start'});
-  try{await loadAssistanceCatalog();if(assistanceState.notice===item)assistanceRenderPlans()}catch{
+  try{await loadAssistanceCatalog();if(assistanceState.notice===item){restoreAssistanceAfterLogin(item);assistanceRenderPlans();updateAssistanceLoginLinks()}}catch{
     $('assistancePlanList').textContent='지원서비스 가격정보를 불러올 수 없습니다. 계약 요청을 진행할 수 없습니다.';
     $('assistanceRequestSubmit').disabled=true;
   }
@@ -557,14 +607,17 @@ async function openSupportDetail(item,pushHistory=true){
 }
 function closeSupportDetail(){
   $('support-detail').hidden=true;assistanceState.notice=null;assistanceState.chosen.clear();
-  const u=new URL(location.href);u.searchParams.delete('support_notice');u.hash='support-programs';history.pushState(null,'',u);
+  const u=new URL(location.href);u.searchParams.delete('support_notice');u.searchParams.delete('support_plans');u.searchParams.delete('support_intent');u.hash='support-programs';history.pushState(null,'',u);
+  $('assistanceLoginLink').hidden=true;updateAssistanceLoginLinks();
 }
 function initAssistanceRequest(){
   $('supportDetailClose').addEventListener('click',closeSupportDetail);
+  $('loginLink').addEventListener('click',()=>updateAssistanceLoginLinks());
+  $('assistanceLoginLink').addEventListener('click',()=>updateAssistanceLoginLinks(true));
   $('assistanceRequestForm').addEventListener('submit',async event=>{
     event.preventDefault();
     const submit=$('assistanceRequestSubmit');if(assistanceState.busy||!assistanceState.notice)return;
-    if(!state.session){$('assistanceRequestStatus').textContent='지원 요청을 저장하려면 로그인해야 합니다.';$('assistanceLoginLink').hidden=false;return}
+    if(!state.session){$('assistanceRequestStatus').textContent='지원 요청을 저장하려면 로그인해야 합니다. 로그인 후 공고·선택한 지원유형으로 돌아오며, 개인정보 입력과 동의는 다시 확인해야 합니다.';if(updateAssistanceLoginLinks(true))$('assistanceLoginLink').hidden=false;return}
     const plans=assistanceSelectedPlans();
     if(!plans.length){$('assistanceRequestStatus').textContent='지원 유형을 한 개 이상 선택하세요.';return}
     assistanceState.busy=true;submit.disabled=true;

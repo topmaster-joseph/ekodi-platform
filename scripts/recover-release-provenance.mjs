@@ -186,7 +186,19 @@ const shellRuntimeTouched=sourceFiles.some(file=>
    '.github/workflows/deploy-ekodi-shell.yml',
    'scripts/verify-ekodi-shell-live.mjs'].includes(file)
 );
-
+// Exact-SHA recovery may merge immediately with GITHUB_TOKEN; that merge does
+// not fire the regular main-push or orchestrated-convergence workflows.
+const adminContinuityTouched=sourceFiles.some(file=>[
+  'scripts/recover-release-provenance.mjs',
+  'scripts/converge-orchestrated-pr-merge.mjs',
+  'scripts/verify-admin-login-continuity.mjs',
+  'scripts/admin-authenticated-e2e-menu-worker.mjs',
+  'scripts/admin-authenticated-e2e-retry.mjs',
+  'scripts/admin-assist-canonical-e2e.mjs',
+  'test/recovery-admin-e2e-dispatch.test.mjs',
+  'test/admin-assist-production-dispatch-20261016.test.mjs',
+  '.github/workflows/verify-admin-authenticated-production-e2e.yml'
+].includes(file));
 
 await github(`/repos/${repo}/issues/${prNumber}/comments`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({body:`EKODI automatic release-provenance recovery created #${recoveryNumber} on \`${branchRef}\` (task \`${taskId}\`). This PR is superseded by the orchestrator-issued branch.`})});
 await github(`/repos/${repo}/pulls/${prNumber}`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({state:'closed'})});
@@ -262,6 +274,34 @@ if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched)){
     }
     out('shell_dispatch','accepted');
   }
+}
+
+// The immediate-merge path must run the same issued-session Chromium checks as
+// the trusted converger. Only the exact approved, verified merged HEAD qualifies.
+if(merge.response.ok&&adminContinuityTouched){
+  if(merge.data?.merged!==true||!/^[a-f0-9]{40}$/i.test(text(merge.data?.sha,80))){
+    fail('authenticated Admin E2E needs verified protected merge SHA');
+  }
+  const main=await github(`/repos/${repo}/branches/main`);
+  if(!main.response.ok)fail('cannot verify protected main before authenticated Admin E2E');
+  const mergedSha=text(merge.data.sha,80);
+  const mainSha=text(main.data?.commit?.sha,80);
+  if(mainSha!==mergedSha){
+    // Concurrent approved changes may advance main; require proof that it still
+    // contains the exact tested/merged recovery commit before verifying live.
+    const ancestry=await github(`/repos/${repo}/compare/${mergedSha}...${mainSha}`);
+    if(!ancestry.response.ok||Number(ancestry.data?.behind_by)!==0||
+      !['ahead','identical'].includes(ancestry.data?.status)){
+      fail('approved Admin recovery merge is not in current main ancestry');
+    }
+  }
+  const result=await github(`/repos/${repo}/actions/workflows/verify-admin-authenticated-production-e2e.yml/dispatches`,{
+    method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ref:'main'})
+  });
+  if(result.response.status!==204){
+    fail('authenticated Admin E2E dispatch failed: HTTP '+result.response.status);
+  }
+  out('admin_e2e_dispatch','accepted');
 }
 
 if(!merge.response.ok){
