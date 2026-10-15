@@ -5,8 +5,9 @@ import {PayOrderStore} from '../ekodipay-order-store.js';
 import {paymentMode} from '../ekodipay-provider-toss.js';
 const ID='EB-'+'M'.repeat(30);
 const TOKEN='SECURE-SERVER-SERVICE-KEY-EXAMPLE-ONLY-'.repeat(2);
+const EXPIRES=Date.now()+3600000;
 const fakeOrder=()=>({orderId:ID,merchant:'ekodibiz',service:'ekodibiz',
- approved:true,approvalRef:'APP-VALIDATED-QUOTE-1234',currency:'KRW',amount:150000,orderName:'승인 견적 테스트'});
+ approved:true,approvalRef:'APP-VALIDATED-QUOTE-1234',currency:'KRW',amount:150000,orderName:'승인 견적 테스트',expiresAt:EXPIRES});
 class FakeStorage{
  map=new Map();
  async get(k){return this.map.get(k)}
@@ -30,7 +31,9 @@ test('production money movement is fail-closed until all independent owner and P
  EKODIPAY_PG_CONTRACT_VERIFIED:'YES',EKODIPAY_SETTLEMENT_OWNER_VERIFIED:'YES'}).ready,false);
  assert.equal(paymentMode({...env,PAYMENT_EXECUTION_MODE:'live',EKODIPAY_LIVE_OWNER_GATE:'APPROVED',
  EKODIPAY_PG_CONTRACT_VERIFIED:'YES',EKODIPAY_SETTLEMENT_OWNER_VERIFIED:'YES',
- TOSS_LIVE_CLIENT_KEY:'live_ck_fixture',TOSS_LIVE_SECRET_KEY:'live_sk_fixture'}).ready,true);
+ TOSS_LIVE_CLIENT_KEY:'live_ck_fixture',TOSS_LIVE_SECRET_KEY:'live_sk_fixture',
+ EKODIPAY_REFUND_POLICY_VERIFIED:'YES',EKODIPAY_RECONCILIATION_VERIFIED:'YES',
+ EKODIPAY_APPROVED_ORDER_ISSUER_VERIFIED:'YES',EKODIPAY_DELAYED_METHODS_DISABLED:'YES'}).ready,true);
 });
 test('external clients cannot forge or register an order, and ready mode still trusts only signed service orders',async()=>{
  const {env}=harness(true);
