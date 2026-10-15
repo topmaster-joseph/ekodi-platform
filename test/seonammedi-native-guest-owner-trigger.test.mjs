@@ -22,4 +22,6 @@ test('SeonamMedi Chromium guest audit preserves desktop/mobile and two-domain co
   const source=await readFile(new URL('../scripts/verify-seonammedi-nav-guest-native.mjs',import.meta.url),'utf8');
   for(const origin of ['https://seonammedi.kr','https://ekodi.kr'])assert.ok(source.includes(origin),origin);
   for(const name of ["name:'desktop'","name:'mobile'","record.noticeAfterCategory","notice_direct_path_mismatch","notice_category_click_interception"])assert.ok(source.includes(name),name);
+  for(const token of ['financePrivateGate','finance_guest_admin_only_marker_missing','financeGuestApiStatuses','finance_guest_api_access_contract_',"'/board/api/finance'","'/board/api/finance/summary'","'/board/api/admin/finance'",'status!==401&&status!==403'])assert.ok(source.includes(token),'finance guest privacy probe missing: '+token);
+  assert.ok(source.includes('maxRedirects:0'),'guest test must not follow redirects to unrelated surfaces');
 });
