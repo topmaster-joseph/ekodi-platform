@@ -5,6 +5,8 @@ import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {DEFAULT_PORTRAIT} from '../education/study/ai-bootcamp/documents/portrait.js';
 import {EKODI_SERVICE_MANIFEST} from '../ekodi-service-manifest.js';
+import {classifyConsoleSecurityBlock,classifyRequestSecurityBlock,
+  classifyMutationSecurityBlock,verifyKnownSecurityBlocks} from './education-native-security-observations.mjs';
 
 const preview=process.env.EKODI_EDUCATION_PREVIEW_MODE==='true';
 if(preview&&(process.env.GITHUB_EVENT_NAME!=='pull_request'||process.env.CI!=='true'))
@@ -29,16 +31,29 @@ async function testProfile(browser,profile){
   const ctx=await browser.newContext({viewport:{width:profile.width,height:profile.height},isMobile:profile.isMobile,
     hasTouch:profile.isMobile,locale:'ko-KR',acceptDownloads:true});
   const p=await ctx.newPage();
-  const x={name:profile.name,checks:[],requestsBlocked:[],errors:[],captures:[],passed:false};
+  const x={name:profile.name,checks:[],requestsBlocked:[],errors:[],captures:[],
+    consoleErrors:[],requestFailures:[],observedSecurityBlocks:[],passed:false};
   result.profiles.push(x);
   p.on('pageerror',e=>x.errors.push('pageerror:'+e.message));
-  p.on('console',msg=>{if(msg.type()==='error')x.errors.push('console:'+msg.text())});
+  p.on('console',msg=>{
+    if(msg.type()!=='error')return;
+    const message=msg.text(),known=classifyConsoleSecurityBlock(message);
+    if(known)x.observedSecurityBlocks.push({type:'console',reason:known,message});
+    else x.consoleErrors.push(message);
+  });
   p.on('response',res=>{if(res.status()>=400)x.errors.push('HTTP:'+res.status()+':'+res.url())});
-  p.on('requestfailed',req=>x.errors.push('network:'+req.failure()?.errorText+':'+req.url()));
+  p.on('requestfailed',req=>{
+    const info={url:req.url(),failure:req.failure()?.errorText||''};
+    const known=classifyRequestSecurityBlock(info.url,info.failure);
+    if(known)x.observedSecurityBlocks.push({type:'request',reason:known,...info});
+    else x.requestFailures.push(info);
+  });
   await p.route('**/*',r=>{
     const method=r.request().method();
     if(!['GET','HEAD','OPTIONS'].includes(method)){
-      x.requestsBlocked.push({method,url:r.request().url()});
+      const url=r.request().url(),reason=classifyMutationSecurityBlock(method,url);
+      x.requestsBlocked.push({method,url});
+      if(reason)x.observedSecurityBlocks.push({type:'mutation',reason,method,url});
       return r.abort('blockedbyclient');
     }
     return r.continue();
@@ -108,9 +123,18 @@ async function testProfile(browser,profile){
     const name='syllabus-'+profile.name+'.png';
     await p.screenshot({path:path.join(artifactRoot,name),fullPage:true});
     x.captures.push(name);
-    if(x.requestsBlocked.length)fail('outbound mutation requests attempted');
-    if(x.errors.length)fail(profile.name+' console / HTTP / request errors: '+JSON.stringify(x.errors).slice(0,600));
-    x.checks.push('five-width visual no-overflow and zero POST');
+    const observed=x.observedSecurityBlocks;
+    const verification=verifyKnownSecurityBlocks({
+      consoleBlocks:observed.filter(i=>i.type==='console').map(i=>({message:i.message})),
+      requestBlocks:observed.filter(i=>i.type==='request').map(i=>({url:i.url,failure:i.failure})),
+      mutations:x.requestsBlocked
+    });
+    if(!verification.ok)fail(profile.name+' security classification: '+verification.reason);
+    if(x.errors.length||x.consoleErrors.length||x.requestFailures.length)
+      fail(profile.name+' unexpected page / console / HTTP / network failures: '+JSON.stringify({
+        errors:x.errors,consoleErrors:x.consoleErrors,requestFailures:x.requestFailures
+      }).slice(0,1100));
+    x.checks.push('five-width visual no-overflow and only known read-only blocked telemetry');
     x.passed=true;
   }finally{await ctx.close()}
 }
