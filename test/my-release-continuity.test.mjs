@@ -35,6 +35,7 @@ test('never dispatch a foreign branch, unmerged revision, stale merge or changed
   assert.equal(decide({changedFiles:['README.md']}).dispatch,false);
   assert.equal(myReleaseChange(['.github/workflows/deploy-my.yml']),true);
   assert.equal(myReleaseChange(['my-worker.js']),true);
+  assert.equal(myReleaseChange(['my/person-digital-card.js']),true);
 });
 test('do not duplicate in-flight, successful or failed guarded releases',()=>{
   for(const [status,conclusion] of [
