@@ -126,6 +126,6 @@ test('guest and learner must never visually receive the authority-only menu',asy
   ]);
   assert.match(page,/id="manageNav" hidden/);
   assert.match(css,/#manageNav\[hidden\]/);
-  assert.match(css,/\.workspace-sidebar button\[hidden\][^\n]*display:none!important/);
+  assert.match(css,/\.workspace-sidebar button\[hidden\],#manageNav\[hidden\],[\s\S]*?\{display:none!important\}/);
   assert.match(script,/\$\('manageNav'\)\.hidden=!roles\.includes\(role\)/);
 });
