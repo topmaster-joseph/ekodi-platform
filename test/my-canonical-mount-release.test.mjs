@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync,readdirSync} from 'node:fs';
 import myWorker from '../my-worker.js';
 
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
@@ -53,6 +53,30 @@ test('digital card short handles do not shadow reserved My endpoints',async()=>{
    if(key==='health')assert.equal(shortResponse.status,200);
    if(key==='docs')assert.equal(shortResponse.status,307);
  }
+});
+
+test('all top-level My folders are protected from digital-card short aliases',async()=>{
+  const routeSource=read('my/person-digital-card.js');
+  const reservedDeclaration=routeSource.match(/const RESERVED_MY_PATHS=new Set\\((\\[[^;]+\\])\\);/);
+  assert.ok(reservedDeclaration,'runtime route protection list must be explicit');
+  const reserved=new Set(JSON.parse(reservedDeclaration[1].replace(/'/g,'"')));
+  const directories=readdirSync(new URL('../my/',import.meta.url),{withFileTypes:true})
+    .filter(item=>item.isDirectory()).map(item=>item.name);
+  assert.ok(directories.includes('journey'));
+  assert.ok(directories.includes('device-care'));
+  for(const folder of directories){
+    assert.ok(reserved.has(folder),'missing My route reservation: '+folder);
+    const paths=[];
+    const response=await myWorker.fetch(new Request('https://ekodi.kr/my/'+folder+'/'),{
+      ...env,ASSETS:{fetch:async request=>{
+        paths.push(new URL(request.url).pathname);
+        return new Response('service-folder-ok',{headers:{'content-type':'text/plain'}});
+      }}
+    });
+    assert.equal(response.status,200,'My service folder '+folder+' must never route to public card');
+    assert.equal(response.headers.get('x-ekodi-surface-context'),null,folder);
+    assert.deepEqual(paths,['/'+folder+'/'],folder);
+  }
 });
 
 test('My mount normalization is exact and leaves unrelated paths alone',()=>{
