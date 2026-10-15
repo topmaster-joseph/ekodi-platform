@@ -84,3 +84,23 @@ test('SNS admin UI changes trigger guarded Shared Site release and run OAuth reg
   assert.match(workflow,/node --test test\/ekodimall-sns-oauth-loop\.test\.mjs test\/ekodimall-one-screen-sns\.test\.mjs/);
   assert.match(workflow,/Refuse stale rerun production promotion/);
 });
+
+test('SeonamMedi production manifest requires public finance information to remain absent', () => {
+  const home=manifest.worker.requests.find(request=>request.url==='https://ekodi.kr/seonammedi/');
+  assert.ok(home,'live SeonamMedi homepage must remain guarded');
+  assert.ok(!home.expect.includes('회계'),'retired public finance label must not be required');
+  for(const marker of ['전체 회계내역','id="financeManageForm"','id="financeList"','href="board/finance"']){
+    assert.ok(home.forbid?.includes(marker),'public finance disclosure forbidden by production manifest: '+marker);
+  }
+  assert.equal(home.rollbackVerify,false,'existing rollback verification policy remains unchanged');
+  assert.ok(manifest.worker.requests.some(request=>request.url==='https://ekodi.kr/seonammedi/admin/'),'dedicated admin route must remain guarded');
+});
+
+test('SeonamMedi finance release contract keeps notices direct and minutes under admin', async () => {
+  const html=await readFile(new URL('../sites/seonammedi/public/index.html',import.meta.url),'utf8');
+  const admin=await readFile(new URL('../sites/seonammedi/public/admin/index.html',import.meta.url),'utf8');
+  assert.match(html,/href="board\/notices"\s*>공지<\/a>/,'public notices should directly open the board');
+  assert.doesNotMatch(html,/>회계<\/a>|href="board\/finance"|id="financeManageForm"/,'finance must not reappear on public homepage');
+  assert.match(admin,/data-panel="minutes"/,'internal minutes must remain administrator-managed');
+  assert.match(admin,/href="\?panel=finance"/,'finance entry should remain in protected administrator panel');
+});
