@@ -16,6 +16,7 @@ create table if not exists public.ekodibiz_webdev_events (
  tenant_id uuid not null references public.tenants(id),
  doc_id uuid not null references public.ekodibiz_webdev_docs(id),
  action text not null check (action in ('registered','revised','print_requested','compose_requested','sent_reported')),
+ actor_id uuid references auth.users(id),
  version int not null,
  content text not null,
  meta jsonb not null default '{}'::jsonb,
@@ -27,7 +28,9 @@ create or replace function public.ekodibiz_webdev_log_change()
 returns trigger language plpgsql security definer set search_path=''
 as $$
 begin
- if tg_op='UPDATE' then
+ if tg_op='INSERT' then
+   new.version:=1;
+ elsif tg_op='UPDATE' then
    if new.id is distinct from old.id or new.tenant_id is distinct from old.tenant_id
       or new.code is distinct from old.code or new.version is distinct from old.version then
      raise exception 'webdev_immutable_identity';
@@ -41,8 +44,8 @@ create or replace function public.ekodibiz_webdev_snapshot()
 returns trigger language plpgsql security definer set search_path=''
 as $$
 begin
- insert into public.ekodibiz_webdev_events(tenant_id,doc_id,action,version,content)
- values(new.tenant_id,new.id,case when tg_op='INSERT' then 'registered' else 'revised' end,new.version,new.content);
+ insert into public.ekodibiz_webdev_events(tenant_id,doc_id,action,actor_id,version,content)
+ values(new.tenant_id,new.id,case when tg_op='INSERT' then 'registered' else 'revised' end,auth.uid(),new.version,new.content);
  return new;
 end $$;
 revoke all on function public.ekodibiz_webdev_log_change(),public.ekodibiz_webdev_snapshot() from public,anon,authenticated;
@@ -80,8 +83,8 @@ begin
  raise exception 'delivery_report_needs_evidence';end if;
  select * into v_doc from public.ekodibiz_webdev_docs where id=p_id and tenant_id=v_tenant;
  if not found then raise exception 'document_not_found';end if;
- insert into public.ekodibiz_webdev_events(tenant_id,doc_id,action,version,content,meta)
- values(v_tenant,p_id,p_action,v_doc.version,v_doc.content,p_meta);
+ insert into public.ekodibiz_webdev_events(tenant_id,doc_id,action,actor_id,version,content,meta)
+ values(v_tenant,p_id,p_action,auth.uid(),v_doc.version,v_doc.content,p_meta);
 end $$;
 revoke all on function public.ekodibiz_webdev_log_request(uuid,text,jsonb) from public,anon;
 grant execute on function public.ekodibiz_webdev_log_request(uuid,text,jsonb) to authenticated;
