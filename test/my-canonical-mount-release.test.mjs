@@ -39,6 +39,20 @@ test('My canonical mounted docs are served by same assets as unmounted docs',asy
   assert.deepEqual(paths,['/docs/','/docs/']);
 });
 
+test('digital card short handles do not shadow reserved My endpoints',async()=>{
+ const reserved=['health','docs','approvals','admin','api','creator','personal-brand','config','w'];
+ const route=read('my/person-digital-card.js');
+ for(const key of reserved)assert.match(route,new RegExp("'"+key+"'"));
+ for(const key of ['health','docs']){
+   const shortResponse=await myWorker.fetch(new Request('https://ekodi.kr/my/'+key),{
+     ...env,ASSETS:{fetch:async()=>new Response('missing',{status:404})}
+   });
+   assert.notEqual(shortResponse.headers.get('x-ekodi-surface-context'),'person-digital-card');
+   if(key==='health')assert.equal(shortResponse.status,200);
+   if(key==='docs')assert.equal(shortResponse.status,307);
+ }
+});
+
 test('My mount normalization is exact and leaves unrelated paths alone',()=>{
   const source=read('my-worker.js');
   assert.match(source,/incoming\.pathname==='\/my'\|\|incoming\.pathname\.startsWith\('\/my\/'\)/);
