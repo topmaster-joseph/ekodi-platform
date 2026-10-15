@@ -1,3 +1,5 @@
+import {paymentRoute, paymentMode} from './ekodipay-provider-toss.js';
+export { PayOrderStore } from './ekodipay-order-store.js';
 // EKODI Pay public entry and non-financial experience demo.
 // This Worker NEVER makes PG requests, stores transactions, or confirms payment.
 export const CANONICAL_PAYMENT_ROOT = 'https://ekodi.kr/ekodipay';
@@ -185,10 +187,12 @@ function checkout(request,url) {
     '<a href="'+back+'">에코디비즈 견적·결제 상태 확인</a></section></main>',request.method);
 }
 export default {
-  async fetch(request) {
+  async fetch(request,env) {
     const url=new URL(request.url);
     const path=url.pathname;
     if(url.hostname!=='ekodi.kr')return new Response('Not Found',{status:404,headers:{...headers('text/plain; charset=utf-8'),'x-robots-tag':'noindex'}});
+    const payment=await paymentRoute(request,env,shell);
+    if(payment)return payment;
     if(!['GET','HEAD'].includes(request.method))
       return new Response(null,{status:405,headers:{...headers('text/plain; charset=utf-8'),allow:'GET, HEAD'}});
     if(path===PREFIX)return new Response(null,{status:308,headers:{location:PREFIX+'/','cache-control':'no-store'}});
@@ -196,7 +200,8 @@ export default {
     if(path===PREFIX+'/api/health')return new Response(request.method==='HEAD'?null:JSON.stringify({
       service:'ekodipay',canonical:CANONICAL_PAYMENT_ROOT,status:'public-entry-ready',
       realMoneyProcessing:'disabled-until-human-approved-pg-activation',
-      demoMode:'read-only-no-transactions',paymentSecretsExposed:false
+      demoMode:'read-only-no-transactions',paymentSecretsExposed:false,
+      paymentGatewayMode:paymentMode(env).requested,paymentGatewayReady:paymentMode(env).ready
     }),{status:200,headers:headers('application/json; charset=utf-8')});
     if(path===PREFIX+'/demo')return demo(request,url);
     if(path===PREFIX+'/checkout')return checkout(request,url);
