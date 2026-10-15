@@ -349,7 +349,7 @@ async function verifyPublicSiteControls(tab, alreadyActive, started) {
   const badge = String(await form.locator('[data-public-site-status-badge]').textContent() || '').trim();
   const message = String(await page.locator('#publicSiteControlsPanel [data-public-site-message]').textContent() || '').replace(/\s+/g, ' ').trim();
   if (!state.panelFound || !state.selected || state.busy) throw new Error(`public-site-controls panel invalid: ${JSON.stringify(state)}`);
-  if (!domainText.includes('cgma.or.kr')) throw new Error(`public-site-controls: CGMA domain missing: ${domainText}`);
+  if (!domainText.includes('ekodi.kr/cgma')) throw new Error(`public-site-controls: CGMA canonical path missing: ${domainText}`);
   if (!['public', 'maintenance'].includes(publicStatus)) throw new Error(`public-site-controls: invalid publicStatus ${publicStatus}`);
   if (!['default', 'url'].includes(maintenanceDisplayType)) throw new Error(`public-site-controls: invalid maintenanceDisplayType ${maintenanceDisplayType}`);
   if (!['button', 'auto'].includes(redirectMode)) throw new Error(`public-site-controls: invalid redirectMode ${redirectMode}`);
