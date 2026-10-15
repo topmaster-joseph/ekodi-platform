@@ -4,6 +4,9 @@ import {chromium} from 'playwright';
 import {mkdir,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {EKODI_SERVICE_MANIFEST} from '../ekodi-service-manifest.js';
+import {classifyConsoleSecurityBlock,classifyRequestSecurityBlock,
+  classifyMutationSecurityBlock,verifyKnownSecurityBlocks
+} from './education-native-security-observations.mjs';
 
 const registered=new URL(EKODI_SERVICE_MANIFEST.services.find(s=>s.id==='edu').url).origin;
 const isPreview=process.env.EKODI_EDUCATION_PREVIEW_MODE==='true';
@@ -26,15 +29,30 @@ function fail(message){throw new Error('[EKODI MATERIAL STUDIO] '+message)}
 async function check(browser,profile){
   const ctx=await browser.newContext({...profile,acceptDownloads:true,locale:'ko-KR'});
   const p=await ctx.newPage();
-  const entry={name:profile.name,passed:false,screenshots:[],checks:[],consoleErrors:[],requestsBlocked:[]};
+  const entry={name:profile.name,passed:false,screenshots:[],checks:[],consoleErrors:[],requestsBlocked:[],requestFailures:[],observedSecurityBlocks:[]};
   report.profiles.push(entry);
   p.on('pageerror',e=>entry.consoleErrors.push('pageerror: '+e.message));
-  p.on('console',msg=>{if(msg.type()==='error')entry.consoleErrors.push(msg.text())});
+  p.on('console',msg=>{
+    if(msg.type()!=='error')return;
+    const message=msg.text();
+    const expected=classifyConsoleSecurityBlock(message);
+    if(expected)entry.observedSecurityBlocks.push({type:'console',reason:expected,message});
+    else entry.consoleErrors.push(message);
+  });
+  p.on('requestfailed',req=>{
+    const info={url:req.url(),failure:req.failure()?.errorText||''};
+    const expected=classifyRequestSecurityBlock(info.url,info.failure);
+    if(expected)entry.observedSecurityBlocks.push({type:'request',reason:expected,...info});
+    else entry.requestFailures.push(info);
+  });
   p.on('response',res=>{if(res.status()>=400)entry.consoleErrors.push('HTTP '+res.status()+' '+res.url())});
   await p.route('**/*',r=>{
     const method=r.request().method();
     if(!['GET','HEAD','OPTIONS'].includes(method)){
-      entry.requestsBlocked.push(method+' '+r.request().url());
+      const address=r.request().url();
+      entry.requestsBlocked.push({method,url:address});
+      const expected=classifyMutationSecurityBlock(method,address);
+      if(expected)entry.observedSecurityBlocks.push({type:'mutation',reason:expected,method,url:address});
       return r.abort('blockedbyclient');
     }
     return r.continue();
@@ -105,7 +123,15 @@ async function check(browser,profile){
     await p.screenshot({path:path.join(folder,filename),fullPage:true});
     entry.screenshots.push(filename);
     entry.checks.push('responsive no-overflow screenshot');
-    if(entry.consoleErrors.length||entry.requestsBlocked.length)fail(profile.name+' browser errors or unexpected request mutations');
+    const observed=entry.observedSecurityBlocks;
+    const verification=verifyKnownSecurityBlocks({
+      consoleBlocks:observed.filter(x=>x.type==='console').map(x=>({message:x.message})),
+      requestBlocks:observed.filter(x=>x.type==='request').map(x=>({url:x.url,failure:x.failure})),
+      mutations:entry.requestsBlocked
+    });
+    if(!verification.ok)fail(profile.name+' '+verification.reason);
+    if(entry.consoleErrors.length||entry.requestFailures.length)
+      fail(profile.name+' unexpected browser script, console or network errors');
     entry.passed=true;
   }finally{await ctx.close()}
 }

@@ -178,7 +178,10 @@ jobs:
       - name: EKODI AI Orchestration Gate
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Validate AI bootcamp native verification harness
-        run: node --check scripts/verify-education-bootcamp-native.mjs
+        run: |
+          node --check scripts/verify-education-bootcamp-native.mjs
+          node --check scripts/verify-education-material-studio-native.mjs
+          node --test test/education-native-security-observations.test.mjs
       - name: Wait for Shell and central auth Education contract
         shell: bash
         run: |
@@ -274,11 +277,15 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Verify actual Education classroom on desktop and mobile with EKODI-owned Chromium
         run: node scripts/verify-education-bootcamp-native.mjs
+      - name: Verify actual canonical /edu material studio desktop and mobile
+        run: node scripts/verify-education-material-studio-native.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: ekodi-education-native-${{ github.run_id }}
-          path: artifacts/education-native/
+          path: |
+            artifacts/education-native/
+            artifacts/education-studio-native/
           retention-days: 7
       - name: Publish Education production status
         if: always()
