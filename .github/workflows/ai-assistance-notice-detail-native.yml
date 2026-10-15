@@ -1,0 +1,43 @@
+name: EKODI AI Support Notice Detail Native E2E
+
+on:
+  push:
+    branches:
+      - ai/chatgpt/20261015-ai-assistance-native-e2e
+    paths:
+      - 'scripts/verify-ai-assistance-details-live.mjs'
+      - '.github/workflows/ai-assistance-notice-detail-native.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-notice-detail:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [desktop, mobile-portrait]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Install EKODI isolated Chromium
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Inspect production official AI notice to assistance contract flow (read-only)
+        run: node scripts/verify-ai-assistance-details-live.mjs "${{ matrix.device }}"
+      - name: Validate test artifacts
+        run: |
+          test -f "artifacts/ai-support-detail-${{ matrix.device }}.json"
+          jq -e '.ok == true and .feedConnected == true and .pageErrors == [] and .blockedMutations == []' "artifacts/ai-support-detail-${{ matrix.device }}.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ekodi-ai-assistance-detail-${{ matrix.device }}-${{ github.run_id }}
+          path: artifacts
+          retention-days: 7
