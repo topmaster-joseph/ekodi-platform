@@ -105,6 +105,7 @@ try {
               {label:'활동이력',selector:'a[data-view-link="committee"]'},
               {label:'관련소식',selector:'a[data-view-link="status"]'},
               {label:'소통채널',selector:'a[data-view-link="channels"]'},
+              {label:'시민의견',selector:'a[href*="board/voices"]'},
               {label:'조직',selector:'a[data-view-link="organization"]'}
             ];
             const expectedPath=root.prefix+'/board/notices';
