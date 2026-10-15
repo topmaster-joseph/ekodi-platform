@@ -18,7 +18,8 @@ export function paymentMode(env){
  if(live&&(env.EKODIPAY_LIVE_OWNER_GATE!=='APPROVED'||
    env.EKODIPAY_PG_CONTRACT_VERIFIED!=='YES'||env.EKODIPAY_SETTLEMENT_OWNER_VERIFIED!=='YES'||
    env.EKODIPAY_REFUND_POLICY_VERIFIED!=='YES'||env.EKODIPAY_RECONCILIATION_VERIFIED!=='YES'||
-   env.EKODIPAY_APPROVED_ORDER_ISSUER_VERIFIED!=='YES'||env.EKODIPAY_DELAYED_METHODS_DISABLED!=='YES'))
+   env.EKODIPAY_APPROVED_ORDER_ISSUER_VERIFIED!=='YES'||env.EKODIPAY_DELAYED_METHODS_DISABLED!=='YES'||
+   String(env.EKODIPAY_OPERATOR_TOKEN||'').length<32))
    return {...disabled,reason:'owner_contract_or_settlement_verification_required'};
  const client=String(live?env.TOSS_LIVE_CLIENT_KEY||'':env.TOSS_TEST_CLIENT_KEY||'');
  const secret=String(live?env.TOSS_LIVE_SECRET_KEY||'':env.TOSS_TEST_SECRET_KEY||'');
