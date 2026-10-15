@@ -34,6 +34,14 @@ function serviceAuthorized(request,env){
  let delta=0;for(let i=0;i<a.length;i++)delta|=a[i]^b[i];
  return delta===0;
 }
+function operatorAuthorized(request,env){
+ const supplied=request.headers.get('authorization')||'';
+ const secret=String(env?.EKODIPAY_OPERATOR_TOKEN||'');
+ if(secret.length<32||supplied.length!==7+secret.length)return false;
+ const a=new TextEncoder().encode(supplied),b=new TextEncoder().encode('Bearer '+secret);
+ let delta=0;for(let i=0;i<a.length;i++)delta|=a[i]^b[i];
+ return delta===0;
+}
 function orderStub(env,id){return env.PAY_ORDERS.get(env.PAY_ORDERS.idFromName(id));}
 async function orderApi(env,id,path,data){
  const res=await orderStub(env,id).fetch(new Request('https://store.internal'+path,{
@@ -164,6 +172,34 @@ export async function paymentRoute(request,env,shell){
    return shell('결제 인증 미완료','<main class="wrap demo"><h1>결제 인증이 완료되지 않았습니다</h1>'+
      '<p>결제 취소·실패 안내입니다. 실제 승인 여부는 판매자에게 확인해주세요.</p>'+
      '<a href="/ekodipay/">결제 홈</a></main>');
+ if(path===root+'/api/operator/reconcile'&&method==='POST'){
+   if(!operatorAuthorized(request,env))return json({error:'operator_auth_required'},401);
+   if(!mode.ready)return json({error:'financial_gate_closed'},503);
+   const body=await parseBody(request);
+   if(!body||!validId(body.orderId)||Object.keys(body).some(k=>k!=='orderId'))
+     return json({error:'invalid_reconcile_request'},400);
+   const local=await orderApi(env,body.orderId,'/read');
+   if(local.status!==200)return json({error:'unknown_order'},404);
+   let provider;
+   try{
+     const res=await fetch('https://api.tosspayments.com/v1/payments/orders/'+encodeURIComponent(body.orderId),{
+       method:'GET',headers:{authorization:'Basic '+btoa(mode.secret+':')},
+       signal:AbortSignal.timeout(8500)});
+     provider=res.ok?await res.json():null;
+   }catch{return json({error:'provider_lookup_unavailable',status:'requires_reconciliation'},503)}
+   if(!provider)return json({error:'provider_lookup_failed',status:'requires_reconciliation'},502);
+   if(provider.orderId!==body.orderId||provider.totalAmount!==local.payload.order.amount||
+      !/^[a-zA-Z0-9_-]{6,200}$/.test(String(provider.paymentKey||'')))
+     return json({error:'provider_order_mismatch',status:'requires_reconciliation'},409);
+   const reconciliation=await orderApi(env,body.orderId,'/reconcile',{
+     orderId:body.orderId,amount:local.payload.order.amount,
+     paymentKey:provider.paymentKey,providerStatus:provider.status});
+   return json({status:reconciliation.payload.status||'requires_reconciliation',
+      verifiedBy:'provider_server_requery',orderId:body.orderId},
+     reconciliation.status===200&&reconciliation.payload.ok?200:409);
+ }
+ if(path===root+'/api/operator/refund'&&method==='POST')
+   return json({error:'refund_requires_dual_approval_and_pg_admin_until_audited_api_ready'},423);
  if(path===root+'/api/webhooks/toss'&&method==='POST')
    return json({error:'requires_provider_authenticated_requery_before_enabling'},503);
  return null;
