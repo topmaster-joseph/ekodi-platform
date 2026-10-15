@@ -117,3 +117,15 @@ test('protected Education production deployment runs native 5-viewport campus po
   assert.match(script,/education-campus-native/);
   check('scripts/verify-education-campus-native.mjs');
 });
+
+test('guest and learner must never visually receive the authority-only menu',async()=>{
+  const [page,css,script]=await Promise.all([
+    read('education/portal/index.html'),
+    read('education/portal/portal.css'),
+    read('education/portal/portal.js')
+  ]);
+  assert.match(page,/id="manageNav" hidden/);
+  assert.match(css,/#manageNav\[hidden\]/);
+  assert.match(css,/\.workspace-sidebar button\[hidden\][^\n]*display:none!important/);
+  assert.match(script,/\$\('manageNav'\)\.hidden=!roles\.includes\(role\)/);
+});
