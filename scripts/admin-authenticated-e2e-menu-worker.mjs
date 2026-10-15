@@ -40,7 +40,27 @@ async function waitForReady() {
   stage('ready-token');
   await page.waitForFunction(() => sessionStorage.getItem('ekodi-auth-token'), null, { timeout: 15_000 });
   stage('ready-app');
-  await page.waitForSelector('#app:not([hidden])', { timeout: 15_000 });
+  try {
+    await page.waitForSelector('#app:not([hidden])', { timeout: 15_000 });
+  } catch (error) {
+    // Fail closed, with bounded non-sensitive evidence to distinguish a hidden
+    // app shell from a missing app, incomplete JS hydration or an auth gate.
+    const readiness = await page.evaluate(() => {
+      const app = document.querySelector('#app');
+      return {
+        pathname: window.location.pathname,
+        documentReadyState: document.readyState,
+        appPresent: Boolean(app),
+        appHidden: Boolean(app?.hasAttribute('hidden')),
+        appAriaHidden: app?.getAttribute('aria-hidden') === 'true',
+        adminPanelsReady: Boolean(window.EKODIAdminPanels),
+        adminSidebarReady: Boolean(window.EKODIAdminSidebar),
+        loginFormPresent: Boolean(document.querySelector('form[action*="login"], #loginForm, #authForm')),
+      };
+    }).catch(() => ({ unavailable: true }));
+    console.error(`[E2E:${menuId}] ready-app evidence=${JSON.stringify(readiness)} pageErrors=${pageErrors.length} failedAdminAssets=${failedAdminAssets.length}`);
+    throw error;
+  }
   stage('ready-runtime');
   await page.waitForFunction(() => window.EKODIAdminPanels && window.EKODIAdminSidebar, null, { timeout: 15_000 });
   stage('ready-session');
