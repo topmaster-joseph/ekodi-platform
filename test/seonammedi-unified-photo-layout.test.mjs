@@ -53,6 +53,7 @@ test('three-column shell is responsive and does not change user authorization co
   assert.match(css,/grid-template-columns:minmax\(190px,230px\) minmax\(0,1fr\) minmax\(210px,260px\)/);
   assert.match(css,/@media\(max-width:760px\)/);
   assert.match(css,/body\.seonam-visual-ready\.board-notices \.board-panel input\[type="checkbox"\]/);
+  assert.doesNotMatch(css,/body\.seonam-visual-ready\s*\{[^}]*overflow-x\s*:\s*hidden/,'mobile overflow must be fixed at the element, not hidden at body level');
   assert.match(css,/\.seonam-visual-side-nav a\[aria-current="page"\]/);
   assert.match(css,/body\[data-seonammedi-image-mode="inner"\]\.seonam-visual-ready/);
   assert.doesNotMatch(ui,/(?:localStorage|sessionStorage|auth\/v1\/|Bearer )/);
