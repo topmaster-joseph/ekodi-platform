@@ -20,6 +20,8 @@ export default{
     if(url.pathname==='/admission'||url.pathname==='/admission/')response=await assetFor(request,env,'/admission/');
     else if(url.pathname==='/study'||url.pathname==='/study/')response=await assetFor(request,env,'/study/');
     else response=await env.ASSETS.fetch(request);
-    return injectEkodiShell(withHeaders(response),'edu');
+    // Education pages already own their visible header; preserve the EKODI shared
+    // Shell/Auth/CSP without adding a second, redundant fallback header.
+    return injectEkodiShell(withHeaders(response),'edu','',{existingHeader:true});
   }
 };
