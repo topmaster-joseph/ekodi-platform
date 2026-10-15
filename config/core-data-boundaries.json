@@ -15,7 +15,8 @@
     "customer-federated-auth.js",
     "customer-google-prereg.js",
     "customer-member-directory.js",
-    "membership-billing.js"
+    "membership-billing.js",
+    "cooperative-core-access.js"
   ],
   "platformRoots": [
     "books",

@@ -1,0 +1,53 @@
+name: Cooperative Workspace Source UI
+
+on:
+  pull_request:
+    paths:
+      - 'cooperative-*.js'
+      - 'platform-router-entry-worker.js'
+      - 'site-publication-runtime.js'
+      - 'wrangler.site.toml'
+      - 'deploy/manifests/shared-site.worker.json'
+      - 'migrations/0133_cooperative_distribution_workspaces.sql'
+      - 'migrations/0134_cooperative_jubilee_name.sql'
+      - 'sites/business-cooperative/**'
+      - 'test/cooperative-workspaces.test.mjs'
+      - 'test/helpers/cooperative-fixture.mjs'
+      - 'scripts/verify-cooperative-source-ui.mjs'
+      - '.github/workflows/verify-cooperative-workspaces.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cooperative-source-ui-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate EKODI source orchestration
+        run: node scripts/validate-ekodi-ai-change-orchestration.mjs --ci
+      - name: Verify storage and tenant authorization
+        run: node --test test/cooperative-workspaces.test.mjs
+      - name: Prepare isolated Chromium test dependency
+        run: |
+          npm install --no-save --package-lock=false playwright@1.62.1
+          npx playwright install --with-deps chromium
+      - name: Verify responsive source UI with all requests intercepted
+        run: node scripts/verify-cooperative-source-ui.mjs
+      - name: Preserve source-only screenshots and receipt
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cooperative-source-ui-${{ github.run_id }}
+          path: artifacts/cooperative-source-ui/
+          if-no-files-found: ignore
+          retention-days: 7

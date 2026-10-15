@@ -1,3 +1,4 @@
+import { routeCooperative } from './cooperative-control.js';
 import legacyPlatformRouter from './platform-router-worker.js';
 import { canonicalTrackingQueryRedirect } from './canonical-query-policy.js';
 import financeEntryWorker from './finance-entry-worker.js';
@@ -419,6 +420,7 @@ async function routePlatform(request,env,ctx){
         return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'legacy-service-canonical'}});
       }
     }
+    if(host===PUBLIC_HOST){const cooperative=await routeCooperative(request,env);if(cooperative)return cooperative;}
     const legacySurface=legacySurfaceRedirect(request);if(legacySurface)return legacySurface;
     const legacyStores=legacyStoreGatewayRedirect(request);if(legacyStores)return legacyStores;
     const seonamBoard=legacySeonamBoardRedirect(request);if(seonamBoard)return seonamBoard;

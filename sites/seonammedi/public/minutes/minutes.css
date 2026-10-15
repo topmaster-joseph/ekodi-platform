@@ -2,3 +2,8 @@
 /* Internal minutes are a linked subpage, not the homepage. */
 main :is(img,picture,svg,canvas,video,iframe,object,embed){display:none!important}
 main *{background-image:none!important}
+
+.minutes-link-help{padding:12px 0 4px;font-size:14px;line-height:1.65;color:#405169}
+.minutes-link-help a{display:inline-block;margin:6px 18px 6px 0;color:#195b8d;font-weight:700;text-decoration:none}
+#viewerForm[hidden],#minutesLinkHelp[hidden]{display:none!important}
+.minutes-site-header .ekodi-six-nav>a{white-space:nowrap}

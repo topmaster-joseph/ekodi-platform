@@ -1,1 +1,21 @@
 .central-category-panel{box-sizing:border-box;width:100%;margin:auto;padding:20px 16px;text-align:center;background:#fff;border-bottom:1px solid #e2e8f0}.central-category-panel[hidden],.central-category-buttons[hidden],.central-social-links[hidden]{display:none!important}.central-category-buttons{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;max-width:850px;margin:auto}.central-category-buttons a{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:10px 18px;border:1px solid #cbd5e1;border-radius:999px;background:#fff;color:#183d59;text-decoration:none}.central-category-buttons a:hover,.central-category-buttons a:focus-visible,.central-category-buttons a[aria-current=true]{background:#194c70;color:#fff;border-color:#194c70}.central-social-links{margin:14px auto 0;padding:14px;border:1px solid #dbe4eb;border-radius:12px;background:#f8fafc}.central-social-links a{color:#164f7b;font-weight:700;overflow-wrap:anywhere}@media(max-width:700px){.central-category-panel{padding:16px 12px}.central-category-buttons{gap:8px}.central-category-buttons a{padding:9px 13px;font-size:14px}}
+/* Text-only published notices appear directly below the central category tabs. */
+.central-category-preview[hidden]{display:none!important}
+.central-category-preview{width:min(920px,100%);margin:18px auto 0;padding:16px 20px;text-align:left;border:1px solid #dce5ef;border-radius:12px;background:#fff}
+.central-category-preview-head{display:flex;gap:12px;align-items:center;justify-content:space-between}
+.central-category-preview-head h3{font-size:17px;line-height:1.5;margin:0;color:#162b40}
+.central-category-preview-head a{color:#174f83;text-decoration:none;font-size:13px;font-weight:700}
+.central-category-preview-list{margin-top:10px}
+.central-category-preview-row{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:12px 2px;border-top:1px solid #edf1f5;color:#263a4c;text-decoration:none}
+.central-category-preview-row:hover,.central-category-preview-row:focus-visible{background:#f7fbff}
+.central-category-preview-row span{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.central-category-preview-row time{flex:none;font-size:12px;color:#718197;white-space:nowrap}
+.central-category-preview-message{font-size:14px;color:#68778a;margin:14px 0 0}
+@media(max-width:700px){.central-category-preview{padding:12px}.central-category-preview-row{gap:8px;font-size:14px}.central-category-preview-row time{font-size:11px}}
+
+/* Match the centered main shell; no duplicated filter rows in the body. */
+.central-category-panel:not([hidden]){width:min(1120px,calc(100% - 32px))!important;max-width:1120px!important;margin:14px auto 6px!important;padding:14px 20px!important}
+.central-category-panel .central-category-buttons{max-width:1080px!important;gap:6px!important}
+.central-category-panel .central-category-buttons a{padding:7px 12px;min-height:34px;font-size:13px}
+.central-category-panel .central-category-buttons a[aria-current="true"]{background:#194c70;color:white;border-color:#194c70}
+@media(max-width:780px){.central-category-panel:not([hidden]){padding:12px!important;margin:10px auto 4px!important}.central-category-panel .central-category-buttons a{min-height:38px;padding:7px 10px}}
