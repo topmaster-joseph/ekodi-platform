@@ -82,7 +82,10 @@ function safeReturn(raw){
     const allowedOrigins=new Set(config.origins||[fallback.origin]);
     const hostname=target.hostname.toLowerCase();
     const cgmaPlatform=config.kind==='cgma-client'&&target.origin==='https://ekodi.kr'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/'));
-    const internalEkodi=config.kind==='cgma-client'?cgmaPlatform:(hostname==='ekodi.kr'||hostname.endsWith('.ekodi.kr'));
+    const seonammediCanonical=config.kind==='seonammedi'&&target.origin==='https://ekodi.kr'&&(target.pathname==='/seonammedi'||target.pathname.startsWith('/seonammedi/'));
+    // A site-specific login may return only to that site's registered host or canonical mount.
+    // Never silently accept /my or another EKODI workspace as a SeonamMedi return target.
+    const internalEkodi=config.kind==='seonammedi'?seonammediCanonical:(config.kind==='cgma-client'?cgmaPlatform:(hostname==='ekodi.kr'||hostname.endsWith('.ekodi.kr')));
     const missionPath=config.kind!=='mission'||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')));
     const churchPath=config.kind!=='church'||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodichurch'||target.pathname.startsWith('/ekodichurch/')));
     if(target.protocol!=='https:'||target.username||target.password||(!allowedOrigins.has(target.origin)&&!internalEkodi)||!missionPath||!churchPath)return fallback.href;
