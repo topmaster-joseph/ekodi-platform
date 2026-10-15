@@ -145,6 +145,8 @@ const aiControlTouched=changedFiles.some(file=>
   file.startsWith('ai-control-')||
   file==='deploy/manifests/ai-control.worker.json'||
   file==='wrangler.ai.toml'||
+  /^migrations\/013\d_ai_assistance_.*\.sql$/.test(file)||
+  /^support\/assistance-[^/]+\.js$/.test(file)||
   file==='.github/workflows/deploy-ai-control.yml'||
   file==='scripts/converge-orchestrated-pr-merge.mjs'
 );
