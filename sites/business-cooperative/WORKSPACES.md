@@ -1,16 +1,15 @@
 # Distribution cooperative workspaces
 
-The existing generic `/business-coop` preparation tool remains available. The
+The former `/business-coop/` preparation entry is now the cooperative operations hub. Existing browser drafts remain at `/business-coop/drafts/`. The
 two new cooperatives use one Shared Site application with distinct immutable
 workspace IDs, server records and tenant access grants.
 
 | Cooperative | Public homepage | Member portal | Local administration |
 | --- | --- | --- | --- |
-| 희년세상유통조합 | `/jubilee-distribution/` | `/jubilee-distribution/members` | `/jubilee-distribution/admin` |
+| 희년세상협동조합 | `/jubilee-distribution/` | `/jubilee-distribution/members` | `/jubilee-distribution/admin` |
 | 열린유통협동조합 | `/open-distribution/` | `/open-distribution/members` | `/open-distribution/admin` |
 
-The Jubilee display name remains as requested. Its formation charter uses
-`희년세상유통협동조합` as a proposed legal name. Both workspaces are formation
+The Jubilee display and draft charter names are both `희년세상협동조합`, as most recently requested. Both workspaces are formation
 projects, not evidence of legal incorporation, elected officers, business
 registration, contribution payment or signed consent.
 
@@ -44,7 +43,7 @@ Run `node --test test/cooperative-workspaces.test.mjs` for SQLite and API checks
 mobile and compact mobile. All browser requests are intercepted into disposable
 fixtures: its receipt explicitly says `productionVerified: false`.
 
-The additive `0133_cooperative_distribution_workspaces.sql` migration must be
+The additive `0133_cooperative_distribution_workspaces.sql` and versioned `0134_cooperative_jubilee_name.sql` migrations must be
 applied by the guarded Control API migration lane before Shared Site promotion.
 Candidate/production canaries require `/api/public` to return `source: server`
 and the exact workspace ID; static fallback does not establish readiness.
@@ -54,3 +53,5 @@ guarded release. After publication, use the native Background Browser Worker
 on both public roots, member portals and administrator pages in desktop/mobile
 profiles. Real Google login, roster account linking and account-role operations
 require separately verified production evidence.
+
+The local operations overview `/api/cooperatives/overview` lists only workspaces with active `tenant.site.manage` grants. The explicit platform overview `/admin/workspaces/cooperatives` uses `/api/control/cooperatives/overview` and verifies a platform session. No browser draft is automatically imported or used as authorization.

@@ -12,6 +12,20 @@
   Cache-Control: no-store
   Access-Control-Allow-Origin: *
 
+/business-coop
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+  ! Cache-Control
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/business-coop/*
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+  ! Cache-Control
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow, noarchive
+
 /ekodimall
   Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline'; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; object-src 'none'
   Cache-Control: no-cache

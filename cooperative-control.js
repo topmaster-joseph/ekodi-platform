@@ -1,7 +1,7 @@
-import { cooperativeBySlug, cooperativeInitialState, cooperativePublicProjection } from './cooperative-registry.js';
+import { COOPERATIVES, cooperativeBySlug, cooperativeInitialState, cooperativePublicProjection } from './cooperative-registry.js';
 import { cooperativeIdentity, cooperativeGrantForEmail, cooperativeGrantDecision, resolveCooperativeAccess } from './cooperative-core-access.js';
 import { loadCooperativeProject, saveCooperativeProject, normalizeCooperativeState, cooperativeMemberProjection } from './cooperative-store.js';
-import { cooperativePage } from './cooperative-page.js';
+import { cooperativePage, cooperativeOperationsPage } from './cooperative-page.js';
 import { cooperativeCss, cooperativeScript } from './cooperative-ui.js';
 import { cooperativeCharter } from './cooperative-charter.js';
 
@@ -61,6 +61,38 @@ async function application(request, env, coop) {
 export async function routeCooperative(request, env) {
   const url = new URL(request.url);
   if (url.hostname !== 'ekodi.kr') return null;
+  const hubPath = url.pathname.replace(/\/+$/, '');
+  if (['/business-coop/assets/app.css', '/business-coop/assets/app.js'].includes(hubPath) && ['GET', 'HEAD'].includes(request.method)) {
+    const css = hubPath.endsWith('.css');
+    return new Response(request.method === 'HEAD' ? null : css ? cooperativeCss() : cooperativeScript(), { headers: headers(css ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8') });
+  }
+  if (['/business-coop', '/business-coop/admin', '/admin/workspaces/cooperatives'].includes(hubPath) && ['GET', 'HEAD'].includes(request.method)) {
+    const h = new Headers(headers('text/html; charset=utf-8')); h.set('x-robots-tag', 'noindex, nofollow, noarchive'); h.set('x-ekodi-route', 'cooperative-operations');
+    return new Response(request.method === 'HEAD' ? null : cooperativeOperationsPage(hubPath.startsWith('/admin/')), { headers: h });
+  }
+  if (['/api/cooperatives/overview', '/api/control/cooperatives/overview'].includes(hubPath)) {
+    if (request.method !== 'GET') return json({ ok: false, code: 'METHOD_NOT_ALLOWED' }, 405);
+    if (!env.DB?.prepare) return json({ ok: false, code: 'COOP_DATABASE_UNAVAILABLE' }, 503);
+    try {
+    const identity = await cooperativeIdentity(request, env);
+    if (!identity) return json({ ok: false, code: 'COOP_LOGIN_REQUIRED' }, 401);
+    const platformContext = hubPath.startsWith('/api/control/');
+    const cooperatives = [];
+      for (const coop of COOPERATIVES) {
+        const access = await resolveCooperativeAccess(request, env, coop, { administrative: true, platformContext });
+        if (!access.allowed) continue;
+        const project = await loadCooperativeProject(env.DB, coop);
+        cooperatives.push({ workspaceId: coop.workspaceId, slug: coop.slug, name: project.state.profile.name,
+          chair: project.state.profile.chair, status: 'formation', revision: project.revision, updatedAt: project.updatedAt,
+          representatives: project.state.founders.length, businessesRegistered: project.state.founders.filter(f => f.business).length,
+          documentsReviewed: Object.values(project.state.documents).filter(d => d.status === 'reviewed').length,
+          documentsTotal: Object.keys(project.state.documents).length,
+          adminPath: platformContext ? '/admin/workspaces/cooperatives/' + coop.slug : '/' + coop.slug + '/admin' });
+      }
+      if (!cooperatives.length) return json({ ok: false, code: platformContext ? 'PLATFORM_ADMIN_REQUIRED' : 'COOP_ADMIN_REQUIRED' }, 403);
+      return json({ ok: true, authority: { scope: platformContext ? 'platform' : 'tenant' }, cooperatives });
+    } catch { return json({ ok: false, code: 'COOP_SERVICE_UNAVAILABLE' }, 503); }
+  }
   const route = cooperativeRoute(url.pathname);
   if (!route) return null;
   const { coop, path, platformContext } = route;

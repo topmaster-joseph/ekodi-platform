@@ -13,12 +13,13 @@ test('business cooperative site is independently built under the canonical path'
   assert.ok(publicHtml.includes('data-coop-status="private-review"'));
   assert.ok(publicHtml.includes('data-coop-mode="multi-project"'));
   assert.ok(publicHtml.includes('noindex,nofollow,noarchive'));
-  assert.ok(adminHtml.includes('data-coop-admin="formation-v2"'));
-  assert.ok(adminHtml.includes('주민등록번호'));
+  assert.ok(adminHtml.includes('data-coop-admin="operations-v1"'));
+  assert.ok(adminHtml.includes('협동조합 운영관리자 공간'));
+  assert.ok(adminHtml.includes('/business-coop/drafts/'));
 });
 
 test('cooperative admin uses the shared EKODI member gate', () => {
-  const adminHtml = read('../sites/business-cooperative/public/admin/index.html');
+  const adminHtml = read('../sites/business-cooperative/public/drafts/index.html');
   assert.ok(adminHtml.includes('https://ekodi.kr/shell/shell.js'));
   assert.ok(adminHtml.includes('data-ekodi-service="business"'));
   assert.ok(adminHtml.includes('data-ekodi-surface="admin"'));
@@ -47,7 +48,7 @@ test('formation workflow carries 2026 legal timing and filing-document guardrail
 });
 
 test('admin supports multiple isolated cooperative formation projects with v1 migration', () => {
-  const html = read('../sites/business-cooperative/public/admin/index.html');
+  const html = read('../sites/business-cooperative/public/drafts/index.html');
   const js = read('../sites/business-cooperative/public/admin/admin.js');
   assert.ok(html.includes('id="projectSelect"'));
   assert.ok(html.includes('id="newProject"'));
@@ -75,7 +76,7 @@ test('basic-setting duplication never copies founders, documents, dates or suppo
 });
 
 test('draft admin avoids collecting high-risk identity and credential fields', () => {
-  const html = read('../sites/business-cooperative/public/admin/index.html');
+  const html = read('../sites/business-cooperative/public/drafts/index.html');
   const js = read('../sites/business-cooperative/public/admin/admin.js');
   for (const banned of ['name="residentNumber"', 'name="bankPassword"', 'name="accountPassword"', 'name="personalAddress"']) {
     assert.equal(html.includes(banned), false, banned);

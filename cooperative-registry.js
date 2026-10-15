@@ -2,8 +2,8 @@
 export const COOPERATIVES = Object.freeze([
   Object.freeze({
     workspaceId: 'c88205a8-9a6c-4c51-ae52-508c087a2d50',
-    slug: 'jubilee-distribution', name: '희년세상유통조합',
-    legalName: '희년세상유통협동조합', chair: '정찬균', mark: '희', tone: 'jubilee',
+    slug: 'jubilee-distribution', name: '희년세상협동조합',
+    legalName: '희년세상협동조합', chair: '정찬균', mark: '희', tone: 'jubilee',
     representatives: Object.freeze(['정찬균', '박은희', '최병천', '정양기', '조인식']),
   }),
   Object.freeze({
