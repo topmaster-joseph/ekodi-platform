@@ -21,7 +21,17 @@ export function eligibleNativeLocalAiDevice(d,{hostname='user3',now=Date.now()}=
 
 // Only fixed diagnostic categories may leave the authenticated Device Control lane.
 export function nativeLocalAiFailureCode(proof) {
-  if(proof?.ollamaApi!=='ready')return 'native_localai_api_unavailable';
+  if(proof?.ollamaApi!=='ready') {
+    // Only agent-generated categorical evidence may be reported. No process
+    // arguments, local IPs, exception messages or environment fields escape.
+    const safe=new Set([
+      'process_not_running','loopback_port_not_listening','wrong_bind',
+      'port_bound_unresponsive','api_timeout','version_response_invalid',
+      'api_unavailable_unclassified'
+    ]);
+    const code=String(proof?.diagnosticCode||'');
+    return safe.has(code)?'native_localai_'+code:'native_localai_api_unavailable';
+  }
   const allowed=new Set([
     'approved_model_missing','api_error_or_timeout',
     'empty_or_incomplete_response','nonmatching_response','not_checked'
