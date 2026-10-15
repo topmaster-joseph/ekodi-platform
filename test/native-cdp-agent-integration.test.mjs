@@ -64,3 +64,5 @@ test('Windows PowerShell CDP stderr splitter preserves entire JSON lines',()=>{
   assert.deepEqual(lines,['Chromium warning','{"ok":false,"code":"CDP_PORT_TIMEOUT"}']);
   assert.equal(JSON.parse(lines[1]).code,'CDP_PORT_TIMEOUT');
 });
+
+// Official EKODI Orchestrator recovery: CI retrigger after exact-SHA owner approval; no runtime changes.
