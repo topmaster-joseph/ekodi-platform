@@ -16,7 +16,7 @@ test('signed-in CGMA admin E2E checks the official canonical workspace path, not
   const expected=new URL(site.canonicalUrl);
   const display=expected.host+expected.pathname;
   assert.ok(worker.includes("domainText.includes('"+display+"')"),'authenticated browser must check currently displayed canonical path');
-  assert.ok(worker.includes('form[data-public-site-id=\\\"cgma\\\"]'),'must retain real CGMA form assertion');
+  assert.ok(worker.includes('form[data-public-site-id="cgma"]'),'must retain real CGMA form assertion');
   assert.ok(worker.includes("response.status !== 200"),'must keep live API authentication success required');
   assert.ok(worker.includes('publicStatus'), 'must retain public-status checks');
   assert.ok(worker.includes('maintenanceDisplayType'), 'must retain maintenance mode checks');
