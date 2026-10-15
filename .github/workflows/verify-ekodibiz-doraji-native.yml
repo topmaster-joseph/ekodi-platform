@@ -1,0 +1,74 @@
+name: Verify EKODIBIZ Doraji Native Production
+
+on:
+  workflow_run:
+    workflows: ["Deploy EKODI Shared Site Core"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodibiz-doraji-native-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  canonical-readonly:
+    name: Canonical Doraji & Business OS read-only preflight
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify live apex routes without mutations
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module - <<'NODE'
+          const root='https://ekodi.kr';
+          const targets=[
+            {path:'/ekodibiz/doraji',html:['data-ekodi-business-unit="doraji"','사업총괄','EKODIBIZ']},
+            {path:'/ekodibiz/doraji/budget',html:['예산·손익','calculator.js']},
+            {path:'/ekodibiz/doraji/contracts',html:['수매계약']},
+            {path:'/ekodibiz/business-os/capabilities',json:true},
+          ];
+          for(const item of targets){
+            const ctrl=new AbortController();
+            const limit=setTimeout(()=>ctrl.abort(),15000);
+            let response;
+            try{response=await fetch(root+item.path,{method:'GET',redirect:'manual',signal:ctrl.signal,headers:{'accept':'text/html, application/json'}})}
+            finally{clearTimeout(limit)}
+            if(response.status!==200)throw Error(item.path+' returned '+response.status+' instead of 200; no redirects or bypasses permitted');
+            const body=await response.text();
+            if(item.json){
+              if(!response.headers.get('content-type')?.includes('application/json'))throw Error('Business OS capability type mismatch');
+              const payload=JSON.parse(body);
+              if(payload.persistentData!==false||!Array.isArray(payload.workflow)||payload.workflow.length===0)throw Error('Business OS capability disclosure mismatch');
+            }else{
+              if(!response.headers.get('content-type')?.includes('text/html'))throw Error(item.path+' is not HTML');
+              for(const marker of item.html)if(!body.includes(marker))throw Error(item.path+' missing '+marker);
+              if(!response.headers.get('content-security-policy')?.includes("script-src 'self'"))throw Error(item.path+' missing public CSP');
+            }
+            console.log('verified read-only',item.path,response.status);
+          }
+          NODE
+
+  desktop:
+    name: EKODI-owned Chromium PC
+    needs: canonical-readonly
+    uses: ./.github/workflows/ekodi-background-browser-worker.yml
+    with:
+      device_profile: desktop
+      surface_paths: /ekodibiz/doraji,/ekodibiz/doraji/overview,/ekodibiz/doraji/projects,/ekodibiz/doraji/cultivation,/ekodibiz/doraji/budget,/ekodibiz/doraji/contracts,/ekodibiz/doraji/delivery,/ekodibiz/doraji/documents
+
+  mobile:
+    name: EKODI-owned Chromium mobile
+    needs: canonical-readonly
+    uses: ./.github/workflows/ekodi-background-browser-worker.yml
+    with:
+      device_profile: mobile-portrait
+      surface_paths: /ekodibiz/doraji,/ekodibiz/doraji/overview,/ekodibiz/doraji/projects,/ekodibiz/doraji/cultivation,/ekodibiz/doraji/budget,/ekodibiz/doraji/contracts,/ekodibiz/doraji/delivery,/ekodibiz/doraji/documents
