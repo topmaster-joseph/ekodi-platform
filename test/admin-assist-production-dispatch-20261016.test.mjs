@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 
 const source=readFileSync(new URL('../scripts/converge-orchestrated-pr-merge.mjs',import.meta.url),'utf8');
 const workflow=readFileSync(new URL('../.github/workflows/verify-admin-authenticated-production-e2e.yml',import.meta.url),'utf8');
+const retry=readFileSync(new URL('../scripts/admin-authenticated-e2e-retry.mjs',import.meta.url),'utf8');
 
 test('canonical Assist verification changes trigger full genuine-session Admin E2E',()=>{
   const start=source.indexOf('const adminContinuityVerificationTouched=');
@@ -27,4 +28,17 @@ test('protected real-session sweep issues and revokes a temporary session',()=>{
   assert.ok(workflow.includes('Click and render every authenticated admin menu'));
   assert.ok(workflow.includes('Revoke short-lived E2E session'));
   assert.ok(workflow.includes('always()'));
+});
+
+
+test('full production replay executes canonical Assist and publishes its evidence',()=>{
+  assert.ok(retry.includes("function runCanonicalAssist()"));
+  assert.ok(retry.includes("scripts/admin-assist-canonical-e2e.mjs"));
+  assert.ok(retry.includes("aggregate.assistProbe = assist"));
+  assert.ok(retry.includes("aggregate.assistProbe?.passed === true"));
+  assert.ok(retry.includes("aggregate.assistProbe?.visualContractVerified === true"));
+  assert.ok(workflow.includes('Assist passed: \\(.assistProbe.passed // false)'));
+  assert.ok(workflow.includes('Assist visual contract: \\(.assistProbe.visualContractVerified // false)'));
+  assert.ok(workflow.includes('Assist API status: \\(.assistProbe.apiStatus // "n/a")'));
+  assert.ok(workflow.includes('Assist reply length: \\(.assistProbe.replyLength // 0)'));
 });
