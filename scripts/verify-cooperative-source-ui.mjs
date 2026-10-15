@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { normalizeTask } from './ekodi-background-browser-worker.mjs';
 import { COOPERATIVES } from '../cooperative-registry.js';
+import { COOPERATIVE_HERO_IMAGES, COOPERATIVE_IMAGE_PATHS } from '../cooperative-media.js';
 import { routeCooperative } from '../cooperative-control.js';
 import { fixture, authFetch } from '../test/helpers/cooperative-fixture.mjs';
 import { loadCooperativeProject } from '../cooperative-store.js';
@@ -21,6 +22,12 @@ assert.equal(bundledClient.productionMutation, false);
 assert.equal(bundledClient.serializedNameHelperCalls, true, 'Pinned Wrangler bundle must exercise preserved client function names');
 await fs.writeFile(path.join(artifactRoot, 'bundled-client.js'), bundledClient.script);
 const f = fixture();
+f.env.ASSETS = { async fetch(request) {
+  const pathname = new URL(request.url).pathname;
+  assert.ok(COOPERATIVE_IMAGE_PATHS.has(pathname), 'Only declared public photos can enter source image delivery');
+  const bytes = await fs.readFile(new URL('../sites/business-cooperative/public' + pathname.slice('/business-coop'.length), import.meta.url));
+  return new Response(request.method === 'HEAD' ? null : bytes, { headers: { 'content-type': 'image/webp' } });
+} };
 const tokens = { 'admin-jub': 'chair-jub@example.test', 'member-jub': 'member-jub@example.test', 'admin-open': 'chair-open@example.test' };
 f.grant(COOPERATIVES[0], tokens['admin-jub'], 'owner');
 f.grant(COOPERATIVES[0], tokens['member-jub'], 'member');
@@ -60,8 +67,7 @@ async function contextFor(width, token = '') {
     const response = await routeCooperative(request, f.env);
     if (!response) return intercepted.fulfill({ status: 404, body: 'Source QA route not found' });
     if (response.status >= 500) responseErrors.push({ path: url.pathname, status: response.status });
-    const sourceBody = await response.text();
-    const body = url.pathname.endsWith('/assets/app.js') ? bundledClient.script : sourceBody;
+    const body = url.pathname.endsWith('/assets/app.js') ? bundledClient.script : Buffer.from(await response.arrayBuffer());
     return intercepted.fulfill({ status: response.status, headers: Object.fromEntries(response.headers), body });
   });
   context.on('page', page => { page.on('pageerror', error => pageErrors.push(error.message)); });
@@ -94,8 +100,14 @@ try {
       assert.ok(await page.locator('.brand').innerText().then(text => text.includes(coop.name)));
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, coop.slug + ' public horizontal overflow');
       assert.equal(await page.locator('body').innerText().then(text => text.includes(coop.representatives[1])), false);
+      const image = await page.locator('.hero-photo').evaluate(async img => { await img.decode(); return { url: img.currentSrc, width: img.naturalWidth, complete: img.complete }; });
+      const expected = COOPERATIVE_HERO_IMAGES[coop.slug];
+      assert.ok(image.complete && image.width >= 640, 'Homepage photo must decode');
+      assert.ok([expected.small, expected.large].includes(new URL(image.url).pathname));
+      assert.equal(new URL(image.url).origin, 'https://ekodi.kr');
+      assert.ok((await page.locator('figcaption').innerText()).includes('AI 생성 이미지'));
       await screenshot(page, coop.slug + '-public-' + width);
-      checks.push({ surface: 'public', slug: coop.slug, width, passed: true });
+      checks.push({ surface: 'public', slug: coop.slug, width, image, passed: true });
       for (const surface of ['members', 'admin']) {
         await page.goto('https://ekodi.kr/' + coop.slug + '/' + surface);
         await page.waitForSelector('#gate:not([hidden])');

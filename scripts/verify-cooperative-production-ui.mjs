@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { normalizeTask } from './ekodi-background-browser-worker.mjs';
 import { COOPERATIVES } from '../cooperative-registry.js';
+import { COOPERATIVE_HERO_IMAGES } from '../cooperative-media.js';
 
 const require=createRequire(import.meta.url);
 const {chromium}=require('playwright');
@@ -38,6 +39,13 @@ try{
         assert.equal(response.status(),200);assert.equal(new URL(page.url()).hostname,'ekodi.kr');
         if(surface==='public'){
           await page.waitForFunction(name=>document.querySelector('#publicName')?.textContent===name,coop.name);
+          const image=await page.locator('.hero-photo').evaluate(async img=>{await img.decode();return {url:img.currentSrc,width:img.naturalWidth,complete:img.complete};});
+          const expected=COOPERATIVE_HERO_IMAGES[coop.slug];
+          assert.ok(image.complete&&image.width>=640,'Homepage photo must decode');
+          assert.equal(new URL(image.url).origin,'https://ekodi.kr');
+          assert.ok([expected.small,expected.large].includes(new URL(image.url).pathname));
+          assert.ok((await page.locator('figcaption').innerText()).includes('AI 생성 이미지'));
+          checks.push({url:image.url,surface:'homepage-photo-decoded',width,image,passed:true});
         }else{
           await page.waitForSelector('#gate:not([hidden])');assert.equal(await page.locator('#workspace').isVisible(),false);
           const login=new URL(await page.locator('#loginLink').getAttribute('href'));

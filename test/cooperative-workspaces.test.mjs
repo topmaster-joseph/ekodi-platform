@@ -9,6 +9,7 @@ import { routeCooperative, cooperativeRoute } from '../cooperative-control.js';
 import { cooperativeCharter } from '../cooperative-charter.js';
 import { sitePublicationAuthority } from '../site-publication-runtime.js';
 import sharedSiteWorker from '../platform-router-entry-worker.js';
+import { COOPERATIVE_IMAGE_PATHS } from '../cooperative-media.js';
 
 import { fixture, authFetch } from './helpers/cooperative-fixture.mjs';
 
@@ -16,6 +17,36 @@ const req = (coop, path, token = '', method = 'GET', body = undefined, origin = 
   method, headers: { ...(token ? { authorization: 'Bearer ' + token } : {}), ...(body ? { origin, 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined,
 });
 const [jubilee, open] = COOPERATIVES;
+
+test('public photos preserve binary bytes and HEAD semantics and fail closed on missing assets',async()=>{
+  const calls=[];
+  const env={ASSETS:{async fetch(request){
+    const pathname=new URL(request.url).pathname;calls.push(pathname);
+    for(const name of ['if-match','if-none-match','if-modified-since','if-unmodified-since','if-range','range'])assert.equal(request.headers.has(name),false,name);
+    const file=new URL('../sites/business-cooperative/public'+pathname.slice('/business-coop'.length),import.meta.url);
+    return new Response(fs.readFileSync(file),{headers:{'content-type':'image/webp'}});
+  }}};
+  for(const path of COOPERATIVE_IMAGE_PATHS){
+    const expected=fs.readFileSync(new URL('../sites/business-cooperative/public'+path.slice('/business-coop'.length),import.meta.url));
+    for(const method of ['GET','HEAD']){
+      const response=await sharedSiteWorker.fetch(new Request('https://ekodi.kr'+path,{method,headers:{'if-match':'old','if-none-match':'cached','if-modified-since':'Wed, 14 Oct 2026 00:00:00 GMT','if-unmodified-since':'Wed, 14 Oct 2026 00:00:00 GMT','if-range':'old','range':'bytes=0-10'}}),env,{});
+      assert.equal(response.status,200);assert.equal(response.headers.get('content-type'),'image/webp');
+      assert.equal(response.headers.get('cache-control'),'public, max-age=31536000, immutable');
+      assert.equal(response.headers.get('x-content-type-options'),'nosniff');
+      assert.deepEqual(Buffer.from(await response.arrayBuffer()),method==='HEAD'?Buffer.alloc(0):expected);
+    }
+  }
+  const path=[...COOPERATIVE_IMAGE_PATHS][0],url='https://ekodi.kr'+path;
+  const before=calls.length;
+  assert.equal((await routeCooperative(new Request(url,{method:'POST'}),env)).status,405);
+  assert.equal((await routeCooperative(new Request('https://ekodi.kr/business-coop/images/unknown.webp'),env)).status,404);
+  assert.equal(calls.length,before);
+  assert.equal((await routeCooperative(new Request(url),{})).status,503);
+  for(const asset of [new Response('missing',{status:404}),new Response('<html>fallback</html>',{headers:{'content-type':'text/html'}})]){
+    const response=await routeCooperative(new Request(url),{ASSETS:{fetch:async()=>asset}});
+    assert.equal(response.status,404);assert.equal(response.headers.get('cache-control'),'private, no-store');
+  }
+});
 
 test('cooperative hub pages and generated assets reach the Worker within its routing budget',()=>{
   const config=fs.readFileSync(new URL('../wrangler.site.toml',import.meta.url),'utf8');
