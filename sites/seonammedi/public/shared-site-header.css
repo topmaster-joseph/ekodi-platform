@@ -57,7 +57,7 @@ body[data-seonammedi-central-topic="channels"] #channels{display:none!important}
 
 /* SEONAMMEDI-PHOTO-SHELL-20261015: shared six-menu photo-first design.
    Separate presentation only; retain existing forms, permissions and route contract. */
-body.seonam-visual-ready{background:#f8fafc!important;overflow-x:hidden}
+body.seonam-visual-ready{background:#f8fafc!important}
 body.seonam-visual-ready>.site-header{position:sticky!important;top:0!important;z-index:50!important;box-shadow:0 1px 12px #122c4712}
 body.seonam-visual-ready>.site-header>.brand{max-width:350px!important}
 body.seonam-visual-ready>.site-header>.brand strong{color:#0f2f56!important}
