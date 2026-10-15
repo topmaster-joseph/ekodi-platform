@@ -33,7 +33,7 @@ jobs:
           }
           const home=await get('/ai/');
           assert.equal(home.response.status,200,'/ai/ public homepage status');
-          for(const id of ['support-programs','support-detail','supportNotices','assistanceRequestForm','assistanceContractText','assistancePriceSummary','assistanceQuotePanel','assistanceAdminPanel','assistanceAcknowledgmentForm','assistanceMerchantQuoteForm']){
+          for(const id of ['support-programs','support-detail','supportNotices','assistanceRequestForm','assistanceContractText','assistancePriceSummary','assistanceQuotePanel','assistanceAdminPanel','assistanceAcknowledgmentForm','assistanceMerchantQuoteForm','assistancePricingSection','assistancePricebookForm','assistancePricebookRows']){
             assert.ok(home.text.includes('id="'+id+'"'),'/ai/ missing '+id);
           }
           const css=await get('/ai/api/commons/style');
@@ -44,6 +44,7 @@ jobs:
           assert.ok(js.text.includes('openSupportDetail'),'production browser JS does not include assistance');
           assert.ok(js.text.includes('openAssistanceQuote'),'production JS missing contract review');
           assert.ok(js.text.includes('loadAssistanceAdmin'),'production JS missing approved-quote management');
+          assert.ok(js.text.includes('loadAssistancePricebook'),'production JS missing approved standard-price management');
           const catalog=await get('/ai/api/commons/assistance/catalog');
           assert.equal(catalog.response.status,200,'assistance catalog public API');
           const data=JSON.parse(catalog.text);
@@ -52,14 +53,24 @@ jobs:
           assert.equal(data.checkoutEnabled,false);
           assert.equal(data.agreementExecutionEnabled,false);
           assert.equal(data.plans.find(p=>p.id==='information').price.amount,0);
-          for(const p of data.plans.filter(p=>p.id!=='information')) assert.equal(p.price.kind,'quote_required');
+          for(const plan of data.plans.filter(p=>p.id!=='information')){
+            assert.ok(['quote_required','fixed'].includes(plan.price.kind),'unexpected published price state');
+            if(plan.price.kind==='fixed'){
+              assert.equal(plan.price.currency,'KRW');
+              assert.equal(plan.price.vatIncluded,true);
+              assert.ok(Number.isSafeInteger(plan.price.amount)&&plan.price.amount>=0);
+              assert.ok(plan.price.policyVersion);
+            }else assert.equal(plan.price.amount,null);
+          }
           const privateList=await get('/ai/api/commons/assistance/requests');
           const privateQuote=await get('/ai/api/commons/assistance/requests/00000000-0000-0000-0000-000000000000');
           assert.equal(privateQuote.response.status,401,'anonymous user must not inspect quote detail');
           const merchantList=await get('/ai/api/commons/admin/assistance/requests');
+          const merchantPrices=await get('/ai/api/commons/admin/assistance/pricebook');
+          assert.equal(merchantPrices.response.status,401,'anonymous user must not access merchant standard-price approval');
           assert.equal(merchantList.response.status,401,'anonymous user must not view merchant quote management');
           assert.equal(privateList.response.status,401,'anonymous user must not read assistance requests');
-          console.log(JSON.stringify({ok:true,origin:base,home:home.response.status,css:css.response.status,js:js.response.status,catalog:catalog.response.status,planCount:data.plans.length,anonymousRequests:privateList.response.status,anonymousQuote:privateQuote.response.status,anonymousMerchant:merchantList.response.status,contractSigned:false,paymentExecuted:false}));
+          console.log(JSON.stringify({ok:true,origin:base,home:home.response.status,css:css.response.status,js:js.response.status,catalog:catalog.response.status,planCount:data.plans.length,anonymousRequests:privateList.response.status,anonymousQuote:privateQuote.response.status,anonymousMerchant:merchantList.response.status,anonymousMerchantPricebook:merchantPrices.response.status,contractSigned:false,paymentExecuted:false}));
           JS
 
   native-browser:
