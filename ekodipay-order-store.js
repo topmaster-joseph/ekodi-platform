@@ -2,7 +2,8 @@
 // No card numbers, bank details, or customer PII may be stored in this ledger.
 const ORDER_RE=/^EB-[A-Z0-9-]{18,60}$/;
 const validOrder=x=>x&&ORDER_RE.test(String(x.orderId||''))&&x.merchant==='ekodibiz'&&
-  x.service==='ekodibiz'&&x.approved===true&&x.currency==='KRW'&&
+  x.service==='ekodibiz'&&x.approved===true&&x.currency==='KRW'&&['test','live'].includes(x.pgMode)&&
+  Number.isSafeInteger(x.expiresAt)&&x.expiresAt>Date.now()+60000&&x.expiresAt<Date.now()+30*86400000&&
   Number.isSafeInteger(x.amount)&&x.amount>=100&&x.amount<=10000000&&
   typeof x.orderName==='string'&&x.orderName.trim().length>=2&&x.orderName.length<=80;
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
@@ -18,12 +19,12 @@ export class PayOrderStore {
       if(!validOrder(data))return json({ok:false,error:'invalid_approved_order'},400);
       const current=await this.storage.get('order');
       if(current){
-        const same=['orderId','merchant','service','currency','amount','orderName'].every(k=>current[k]===data[k]);
+        const same=['orderId','merchant','service','currency','amount','orderName','pgMode','expiresAt'].every(k=>current[k]===data[k]);
         return same?json({ok:true,orderId:current.orderId,status:current.status,idempotent:true}):
           json({ok:false,error:'immutable_order_conflict'},409);
       }
       const order={orderId:data.orderId,merchant:data.merchant,service:data.service,
-        currency:'KRW',amount:data.amount,orderName:data.orderName.trim(),
+        currency:'KRW',amount:data.amount,orderName:data.orderName.trim(),pgMode:data.pgMode,expiresAt:data.expiresAt,
         status:'ready',createdAt:Date.now(),approvalRef:String(data.approvalRef||'').slice(0,100),
         providerKey:null,checkoutToken:null,sessionExpires:0};
       await this.storage.put('order',order);
@@ -35,7 +36,8 @@ export class PayOrderStore {
       return json({ok:true,order:{orderId:order.orderId,merchant:order.merchant,service:order.service,
         amount:order.amount,currency:order.currency,orderName:order.orderName,status:order.status}});
     if(action==='/session'&&request.method==='POST'){
-      if(order.status!=='ready')return json({ok:false,error:'order_not_ready'},409);
+      if(order.status!=='ready'||Date.now()>order.expiresAt)return json({ok:false,error:'order_not_ready_or_expired'},409);
+      if(order.checkoutToken&&Date.now()<order.sessionExpires)return json({ok:false,error:'session_already_active'},409);
       const token=crypto.randomUUID()+'-'+crypto.randomUUID();
       order.checkoutToken=token;order.sessionExpires=Date.now()+10*60*1000;
       await this.storage.put('order',order);
@@ -46,7 +48,7 @@ export class PayOrderStore {
       if(order.status!=='ready')return json({ok:false,error:'order_already_reserved'},409);
       if(data.token!==order.checkoutToken||Date.now()>order.sessionExpires)
         return json({ok:false,error:'checkout_session_expired'},403);
-      if(data.orderId!==order.orderId||data.amount!==order.amount||
+      if(data.orderId!==order.orderId||data.amount!==order.amount||data.pgMode!==order.pgMode||Date.now()>order.expiresAt||
         !/^[a-zA-Z0-9_-]{6,200}$/.test(String(data.paymentKey||'')))
         return json({ok:false,error:'payment_auth_mismatch'},400);
       order.status='confirming';order.providerKey=data.paymentKey;order.reservedAt=Date.now();
