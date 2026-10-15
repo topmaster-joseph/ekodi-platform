@@ -56,8 +56,19 @@ test('shared-site staging and governance checks stay apex-path-only', () => {
 
 
 test('shared-site manual release propagates exact orchestrator provenance into staging', () => {
-  assert.match(workflow,/staging_gate:[\s\S]*with:[\s\S]*release_branch_ref: \$\{\{ inputs\.release_branch_ref \}\}/);
-  assert.match(workflow,/release_task_id: \$\{\{ inputs\.release_task_id \}\}/);
+  assert.ok(workflow.includes('release_branch_ref: ${{ needs.scheduled_release_gate.outputs.release_branch_ref || inputs.release_branch_ref }}'));
+  assert.ok(workflow.includes('release_task_id: ${{ needs.scheduled_release_gate.outputs.release_task_id || inputs.release_task_id }}'));
+  assert.match(workflow,/Recover signed source branch before staging/);
+  assert.match(workflow,/commits\/\$GITHUB_SHA\/pulls/);
+  assert.match(workflow,/Cannot prove a repository-orchestrated source for staging/);
+  assert.match(workflow,/Orchestrator task mismatch before staging/);
+  assert.ok(workflow.includes('if [[ ! "$branch" =~ ^ai/[^/]+/(orch_'),'source recovery must fail closed on unverified branches');
+  assert.ok(workflow.includes('echo "release_branch_ref=$branch" >> "$GITHUB_OUTPUT"'));
+  assert.ok(workflow.includes('echo "release_task_id=${requested_task:-$derived_task}" >> "$GITHUB_OUTPUT"'));
+
+  assert.match(workflow,/Verify no public SeonamMedi finance totals or ledger entries/);
+  assert.match(workflow,/\.finance\.raised==null and \.finance\.spent==null/);
+  assert.match(workflow,/\.finance\.entries\|type=="array" and length==0/);
   assert.match(stagingWorkflow,/workflow_call:[\s\S]*inputs:[\s\S]*release_branch_ref:/);
   assert.match(stagingWorkflow,/release_task_id:/);
   assert.match(stagingWorkflow,/Apply exact orchestrator provenance from release caller/);
