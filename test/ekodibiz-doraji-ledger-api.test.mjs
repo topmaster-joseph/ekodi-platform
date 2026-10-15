@@ -46,7 +46,7 @@ test('anonymous, missing DB, malicious Origin and retired business domain fail c
  const get=path=>new Request(URL+path);
  assert.equal((await dorajiLedgerApiResponse(get('/projects'),{DB:{}})).status,401);
  assert.equal((await dorajiLedgerApiResponse(get('/projects'),{})).status,503);
- assert.equal((await dorajiLedgerApiResponse(new Request('https://business.ekodi.kr/ekodibiz/doraji/api/v1/projects'),{DB:{}})).status,403);
+ assert.equal((await dorajiLedgerApiResponse(new Request('https://retired.example.invalid/ekodibiz/doraji/api/v1/projects'),{DB:{}})).status,403);
  assert.equal((await dorajiLedgerApiResponse(new Request(URL+'/projects',{headers:{origin:'https://evil.example'}}),{DB:{}})).status,403);
  assert.equal((await dorajiLedgerApiResponse(new Request(URL+'/projects',{method:'OPTIONS'}),{DB:{}})).status,405);
  assert.equal((await dorajiLedgerApiResponse(new Request(URL+'/projects',{headers:{authorization:'Bearer fake'}}),{DB:{prepare(){throw Error('D1 cannot verify')}}},{resolveSession:async()=>{throw Error('Auth unavailable')}})).status,503);
