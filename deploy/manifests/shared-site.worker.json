@@ -3181,6 +3181,81 @@
           "COOP_LOGIN_REQUIRED"
         ],
         "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/assets/app.css",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          ".site-header"
+        ],
+        "headerExpect": [
+          "content-type: text/css",
+          "cache-control: private, no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/assets/app.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "data-managed-cooperative"
+        ],
+        "headerExpect": [
+          "content-type: text/javascript",
+          "cache-control: private, no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/app.css",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          ":root"
+        ],
+        "headerExpect": [
+          "content-type: text/css",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/legal-data.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "COOP_LEGAL"
+        ],
+        "headerExpect": [
+          "content-type: text/javascript",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/admin/admin.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "/business-coop/legal-data.js"
+        ],
+        "headerExpect": [
+          "content-type: text/javascript",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
       }
     ],
     "attestationPath": "/__ekodi/version"
