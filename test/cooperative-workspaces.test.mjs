@@ -6,6 +6,7 @@ import { cooperativeGrantDecision, resolveCooperativeAccess } from '../cooperati
 import { normalizeCooperativeState, loadCooperativeProject, saveCooperativeProject } from '../cooperative-store.js';
 import { routeCooperative, cooperativeRoute } from '../cooperative-control.js';
 import { cooperativeCharter } from '../cooperative-charter.js';
+import { sitePublicationAuthority } from '../site-publication-runtime.js';
 
 import { fixture, authFetch } from './helpers/cooperative-fixture.mjs';
 
@@ -84,6 +85,47 @@ test('disabled and expired cooperative grants stay denied at actual API boundary
     f.grant(jubilee,'member@example.test','owner',extra);
     assert.equal((await routeCooperative(req(jubilee,'/me','member'),f.env)).status,403);
   }
+});
+
+test('publication uses the same active local capability and never falls back past an authoritative denial', async t => {
+  const f=fixture();t.after(()=>f.sqlite.close());
+  let legacyCalls=0;
+  const identity=authFetch({admin:'admin@example.test'});
+  t.mock.method(globalThis,'fetch',async(url,options)=>{
+    if(String(url).includes('/functions/v1/access-api/')){
+      legacyCalls++;
+      return new Response(JSON.stringify({allowed:true,role:'tenant_admin'}));
+    }
+    return identity(url,options);
+  });
+  const env={...f.env,MY_SUPABASE_URL:'https://identity.example.test',MY_SUPABASE_PUBLISHABLE_KEY:'source-public-key'};
+  const tenant=f.sqlite.prepare('SELECT id FROM customer_tenants WHERE slug=?').get(jubilee.slug);
+  const site={id:jubilee.slug,tenantId:tenant.id,tenantSlug:jubilee.slug};
+  for(const [role,extra] of [['owner',{enabled:0}],['owner',{expiresAt:'2000-01-01'}],['owner',{denied:['tenant.site.manage']}],['member',{}]]){
+    f.grant(jubilee,'admin@example.test',role,extra);
+    const result=await sitePublicationAuthority(req(jubilee,'/project','admin'),env,site);
+    assert.equal(result.status,403);
+  }
+  f.grant(jubilee,'admin@example.test','owner');
+  assert.equal((await sitePublicationAuthority(req(jubilee,'/project','admin'),env,site)).ok,true);
+  const other=f.sqlite.prepare('SELECT id FROM customer_tenants WHERE slug=?').get(open.slug);
+  assert.equal((await sitePublicationAuthority(req(open,'/project','admin'),env,{id:open.slug,tenantId:other.id,tenantSlug:open.slug})).status,403);
+  assert.equal(legacyCalls,0);
+});
+
+test('a revoked historical account does not block unrelated preparation saves or regain access',async t=>{
+  const f=fixture();t.after(()=>f.sqlite.close());
+  t.mock.method(globalThis,'fetch',authFetch({admin:'admin@example.test',former:'former@example.test'}));
+  f.grant(jubilee,'admin@example.test','owner');f.grant(jubilee,'former@example.test','member',{enabled:0});
+  const project=await loadCooperativeProject(f.db,jubilee);project.state.founders[1].accountEmail='former@example.test';
+  await saveCooperativeProject(f.db,jubilee,project.state,1,{identity:{id:'fixture'},scope:'tenant'});
+  const response=await routeCooperative(req(jubilee,'/project','admin','PUT',{revision:2,state:{profile:{purpose:'계정 회수 후에도 설립 준비 계속'}}}),f.env);
+  assert.equal(response.status,200);
+  assert.equal((await routeCooperative(req(jubilee,'/me','former'),f.env)).status,403);
+  const current=await loadCooperativeProject(f.db,jubilee);
+  assert.equal(current.state.founders[1].accountEmail,'former@example.test');
+  current.state.founders[2].accountEmail='former@example.test';current.state.founders[1].accountEmail=null;
+  assert.equal((await routeCooperative(req(jubilee,'/project','admin','PUT',{revision:3,state:{founders:current.state.founders}}),f.env)).status,400);
 });
 
 test('same-origin versioned admin save persists across reads, stays isolated and records one scoped audit', async t => {

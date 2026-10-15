@@ -39,6 +39,7 @@ async function contextFor(width, token = '') {
   assert.equal(task.path, '/');
   const context = await browser.newContext({ viewport: { width, height: width < 500 ? 844 : 950 }, isMobile: width < 500, hasTouch: width < 500, acceptDownloads: true });
   if (token) await context.addInitScript(value => {
+    if (location.origin !== 'https://ekodi.kr' || window !== window.top) return;
     sessionStorage.setItem('ekodi-cooperative-auth.v1', JSON.stringify({ accessToken: value, refreshToken: value + '-refresh', expiresAt: Math.floor(Date.now()/1000)+3600 }));
   }, token);
   await context.route('**/*', async intercepted => {
@@ -61,6 +62,7 @@ async function contextFor(width, token = '') {
 }
 
 async function screenshot(page, name) {
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: path.join(artifactRoot, name + '.png'), fullPage: true });
 }
 

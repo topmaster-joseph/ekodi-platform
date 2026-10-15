@@ -1,5 +1,6 @@
 import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
 import { realtimeTenantList } from './realtime-tenant-registry.js';
+import { tenantGrantCapabilityDecision } from './tenant-access-authority.js';
 
 export const SITE_PUBLICATION_POLICY_ID='EKODI-SITE-PUBLICATION-001';
 export const SITE_PUBLICATION_STATUSES=Object.freeze(['public','private','maintenance']);
@@ -346,9 +347,10 @@ async function accessApiAllows(who,env,site){
   return Boolean(response?.ok&&data.authenticated===true&&['active','pre_registered'].includes(String(data.status||''))&&MANAGE_ROLES.has(String(data.role||'').toLowerCase()));
 }
 async function d1GrantAllows(env,who,site){
-  const tenant=await customerTenantForSite(env,site);if(!tenant||!env?.DB?.prepare)return false;
-  let grant;try{grant=await env.DB.prepare('SELECT role,enabled FROM customer_access_grants WHERE tenant_id=? AND lower(trim(email))=?').bind(tenant.id,who.email).first()}catch{return false}
-  return Boolean(grant&&Number(grant.enabled)===1&&MANAGE_ROLES.has(String(grant.role||'').toLowerCase()));
+  const tenant=await customerTenantForSite(env,site);if(!tenant)return null;
+  if(!env?.DB?.prepare)return false;
+  let grant;try{grant=await env.DB.prepare('SELECT role,enabled,expires_at,capabilities_json,denied_capabilities_json FROM customer_access_grants WHERE tenant_id=? AND lower(trim(email))=?').bind(tenant.id,who.email).first()}catch{return false}
+  return Boolean(grant&&tenantGrantCapabilityDecision(grant,'tenant.site.manage').allowed);
 }
 
 export async function sitePublicationAuthority(request,env,site,{platformSessionCheck}={}){
@@ -357,7 +359,10 @@ export async function sitePublicationAuthority(request,env,site,{platformSession
     if(platform?.session?.authenticated!==false&&platform?.session?.role==='super_admin')return{ok:true,scope:'platform',role:'super_admin',actor:platform.session.email||'super_admin',platformSession:platform.session};
   }
   const who=await supabaseIdentity(request,env);if(!who)return{ok:false,status:401,error:'login_required'};
-  if(await d1GrantAllows(env,who,site)||await accessApiAllows(who,env,site))return{ok:true,scope:'site',role:'site_admin',actor:who.email};
+  // A registered customer tenant's Core grant is authoritative, including denial.
+  // Legacy access-api authority applies only when no customer tenant owns the site.
+  const local=await d1GrantAllows(env,who,site);
+  if(local===true||(local===null&&await accessApiAllows(who,env,site)))return{ok:true,scope:'site',role:'site_admin',actor:who.email};
   return{ok:false,status:403,error:'site_admin_required'};
 }
 

@@ -105,7 +105,8 @@ export async function routeCooperative(request, env) {
       const body = await inputJson(request);
       if (Object.keys(body).some(key => !['revision', 'state'].includes(key))) return json({ ok: false, code: 'COOP_IMMUTABLE_IDENTITY' }, 400);
       const state = normalizeCooperativeState(body.state, coop, project.state);
-      for (const f of state.founders) if (f.accountEmail) {
+      const existingAccounts = new Map(project.state.founders.map(f => [f.id, f.accountEmail]));
+      for (const f of state.founders) if (f.accountEmail && f.accountEmail !== existingAccounts.get(f.id)) {
         const grant = await cooperativeGrantForEmail(env, coop, f.accountEmail);
         if (!cooperativeGrantDecision(grant).allowed) return json({ ok: false, code: 'COOP_ACCOUNT_GRANT_REQUIRED' }, 400);
       }
