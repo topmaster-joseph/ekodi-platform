@@ -3,64 +3,89 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="description" content="입시와 학습·유학을 하나의 교육 여정으로 이어주는 EKODI Education">
+  <meta name="description" content="EKODI AI 교육과정 · 온라인 사이버 강의실·실습실·수강관리 통합 교육 홈페이지">
   <meta name="ekodi-ui-type" content="USER">
-  <title>EKODI Education | 에코디교육</title>
-  <link rel="stylesheet" href="/styles.css?v=20260822-edu-1">
+  <meta name="theme-color" content="#0b2554">
+  <title>EKODI AI 교육과정 | 온라인 강의·실습·학습관리</title>
+  <link rel="stylesheet" href="./campus.css?v=20261016">
 </head>
-<body data-area="home" data-ekodi-ui="USER">
-<header class="topbar">
-  <a class="brand" href="/"><span class="mark">E</span><span><strong>EKODI Education</strong><small>에코디교육</small></span></a>
-  <nav aria-label="주요 메뉴"><a href="/admission">Admission</a><a href="/study">Study</a><a href="#today">오늘</a><a href="https://ekodi.kr/my/journey/">My Journey</a></nav>
-  <button id="authButton" class="ghost" type="button">Google로 시작</button>
+<body class="edu-campus" data-ekodi-ui="USER" data-area="home">
+<a class="skip-link" href="#main">본문 바로가기</a>
+<header class="campus-header">
+  <div class="campus-header-inner">
+    <a class="campus-brand" href="./" aria-label="EKODI AI 교육과정 홈">EKODI <span>AI 교육과정</span></a>
+    <nav class="campus-nav" aria-label="교육 홈페이지 주요 메뉴">
+      <a href="#about">교육소개</a>
+      <a href="./study/ai-bootcamp/">강의실</a>
+      <a href="./study/ai-bootcamp/studio/">실습자료</a>
+      <a href="#faculty">강사소개</a>
+      <a class="nav-enroll" href="./portal/#enroll">수강신청</a>
+    </nav>
+    <div class="campus-account">
+      <a class="account-link" href="./portal/">나의 강의실</a>
+      <button id="authButton" type="button" class="account-button">Google 로그인</button>
+    </div>
+    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobileNav" aria-label="전체 메뉴 열기">☰</button>
+  </div>
+  <nav id="mobileNav" class="campus-mobile-nav" aria-label="모바일 주요 메뉴" hidden>
+    <a href="#about">교육소개</a><a href="./study/ai-bootcamp/">강의실</a>
+    <a href="./study/ai-bootcamp/studio/">실습자료</a><a href="#faculty">강사소개</a>
+    <a href="./portal/#enroll">수강신청</a><a href="./portal/">나의 강의실·운영</a>
+  </nav>
 </header>
-<main>
-  <section class="hero">
-    <div class="hero-copy">
-      <p class="eyebrow">USER UI · EDUCATION PLATFORM</p>
-      <h1>입시에서 끝나지 않고,<br><span>배움의 다음까지 이어집니다.</span></h1>
-      <p class="lead">EKODI Education은 Admission과 Study를 한 플랫폼 안에서 연결합니다. 학교·과정 탐색과 지원 준비, 합격 이후의 학습·학사·장학·생활 준비를 같은 교육 맥락에서 이어가되, 공식 근거 확인과 사용자의 최종 판단을 항상 우선합니다.</p>
-      <div class="hero-actions"><a class="primary" href="/admission">입시 준비 시작</a><a class="secondary" href="/study">학습·유학 보기</a><a class="secondary" href="https://ekodi.kr/my/journey/">My Journey로 돌아가기</a></div>
-    </div>
-    <aside class="identity-card">
-      <small>EKODI USER AI</small>
-      <strong id="identityName">로그인 전</strong>
-      <p>Education은 진로를 대신 결정하지 않습니다. 필요한 공식 자료와 다음 행동을 정리하고, 제출·결제·계약 같은 중요한 행동은 사용자가 최종 확인합니다.</p>
-      <code>Education → Admission + Study</code>
-    </aside>
-  </section>
-
-  <section class="summary" aria-label="Education 요약">
-    <article><span id="taskCount">0</span><small>진행 중 할 일</small></article>
-    <article><span id="shortlistCount">0</span><small>지원 후보</small></article>
-    <article><span id="studyCount">0</span><small>학습 준비 항목</small></article>
-  </section>
-
-  <section class="section">
-    <div class="section-head"><div><p class="eyebrow">TWO AREAS · ONE EDUCATION CONTEXT</p><h2>두 업무영역, 하나의 교육 플랫폼</h2></div><p>Admission과 Study는 사용자 여정상 구분되지만 학교·과정·학력·언어·일정·장학·상담 같은 공통 맥락이 많아 처음부터 플랫폼을 둘로 쪼개지 않습니다.</p></div>
-    <div class="journey-grid">
-      <a class="journey-card" href="/admission"><small>ADMISSION</small><h3>입시</h3><p>학교·과정 탐색, 지원 적합도 검토, 공식 모집요강 확인, 서류·면접·지원 일정 관리.</p><strong>입시 업무영역 열기 →</strong></a>
-      <a class="journey-card" href="/study"><small>STUDY</small><h3>학습·유학</h3><p>합격 이후 등록·수강·학사·장학·학습 계획과 국내외 유학 생활 준비를 연결.</p><strong>학습·유학 업무영역 열기 →</strong></a>
+<main id="main">
+  <section class="campus-hero" aria-labelledby="heroTitle">
+    <div class="hero-photo" role="img" aria-label="노트북을 사용하며 협업하는 성인 학습자의 실제 교육 현장 이미지"></div>
+    <div class="hero-shade"></div>
+    <div class="hero-inner">
+      <p class="hero-kicker">EKODI.KR / EDU · ONLINE CAMPUS</p>
+      <h1 id="heroTitle">AI 교육과정</h1>
+      <p class="hero-subtitle">실무 중심의 생성형 AI · 데이터 분석 · 업무 자동화 교육</p>
+      <p class="hero-description">배우는 데서 끝나지 않고, 직접 실습하고 결과를 검증하는 온라인 강의실.<br>강의자료와 학습 기록을 하나의 교육공간에서 관리합니다.</p>
+      <div class="hero-buttons">
+        <a class="campus-button primary" href="./study/ai-bootcamp/">강의실 바로가기 <span aria-hidden="true">→</span></a>
+        <a class="campus-button outline" href="./study/ai-bootcamp/studio/">실습자료 보기 <span aria-hidden="true">↗</span></a>
+      </div>
+      <p class="hero-proposal">현재 공개된 AI 부트캠프는 교육 제안 과정이며, 실제 개강·수강료·수료 여부는 별도 확정됩니다.</p>
     </div>
   </section>
-
-  <section id="today" class="section">
-    <div class="section-head"><div><p class="eyebrow">TODAY · MAX 3</p><h2>지금 할 일</h2></div><p>해야 할 일을 길게 쌓지 않고, 기한이 가까운 미완료 항목 최대 3개만 우선 보여줍니다.</p></div>
-    <div id="todayList" class="task-list"><div class="empty"><strong>지금 등록된 할 일이 없습니다.</strong></div></div>
-  </section>
-
-  <section class="section">
-    <div class="section-head"><div><p class="eyebrow">OFFICIAL SOURCE FIRST</p><h2>AI보다 공식 근거가 먼저</h2></div><p>전형일정, 자격, 비자, 장학, 등록 같은 고위험 정보는 AI 기억이 아니라 공식 기관·대학의 최신 안내를 기준으로 확인합니다.</p></div>
-    <div class="source-grid">
-      <article class="source-card"><small>UNIVERSITY</small><h3>학교·대학원 공식 모집요강</h3><p>지원하려는 기관의 공식 입학 페이지와 해당 연도 모집요강을 최우선 근거로 사용합니다.</p></article>
-      <article class="source-card"><small>STUDY IN KOREA</small><h3>국가 유학정보</h3><p>한국 유학 관련 공공 정보를 확인할 때 활용합니다.</p><a href="https://www.studyinkorea.go.kr/" target="_blank" rel="noreferrer">공식 사이트 ↗</a></article>
-      <article class="source-card"><small>HIKOREA</small><h3>체류·출입국 정보</h3><p>외국인 사용자의 체류·출입국 정보는 필요한 경우 공식 출입국 안내로 별도 확인합니다.</p><a href="https://www.hikorea.go.kr/" target="_blank" rel="noreferrer">공식 사이트 ↗</a></article>
-    </div>
-    <p class="privacy-note">현재 첫 릴리스는 민감한 여권·성적표·재정증빙 파일을 저장하지 않습니다. 개인 계획 메모와 할 일은 이 브라우저에만 저장됩니다.</p>
-  </section>
+  <div class="campus-wrap">
+    <section id="about" class="course-overview" aria-labelledby="aboutTitle">
+      <div class="section-eyebrow">LEARN · PRACTICE · APPLY</div>
+      <div class="section-heading"><h2 id="aboutTitle">현장에서 바로 활용하는 AI 교육</h2><p>실제 운영 중인 4회차 강의안과 가상 실습자료를 연결합니다.</p></div>
+      <div class="program-grid">
+        <a class="program-card" href="./study/ai-bootcamp/"><span class="program-photo photo-ai" aria-hidden="true"></span><span class="program-content"><span class="program-icon" aria-hidden="true">✳</span><strong>생성형 AI 실무</strong><span>프롬프트 구성부터 사실 검증까지</span><small>AI 리터러시·프롬프트 강의 →</small></span></a>
+        <a class="program-card" href="./study/ai-bootcamp/"><span class="program-photo photo-data" aria-hidden="true"></span><span class="program-content"><span class="program-icon" aria-hidden="true">▥</span><strong>데이터 분석</strong><span>가상 CSV·업무 문서·검산 실습</span><small>데이터 생산성 강의 →</small></span></a>
+        <a class="program-card" href="./study/ai-bootcamp/"><span class="program-photo photo-automation" aria-hidden="true"></span><span class="program-content"><span class="program-icon" aria-hidden="true">↗</span><strong>업무 자동화</strong><span>사람의 승인과 복구가 있는 AI 활용</span><small>AI 에이전트 강의 →</small></span></a>
+        <a class="program-card" href="./study/ai-bootcamp/studio/"><span class="program-photo photo-project" aria-hidden="true"></span><span class="program-content"><span class="program-icon" aria-hidden="true">◎</span><strong>프로젝트 실습</strong><span>회차별 교안 편집과 결과물 검토</span><small>실습자료 편집실 →</small></span></a>
+      </div>
+    </section>
+    <section class="campus-activity-grid" aria-label="교육 안내와 강사진">
+      <div class="notice-board" id="noticeBoard">
+        <div class="board-header"><div class="board-tabs" aria-label="공지 및 자료"><button type="button" class="active" data-board="notice" aria-pressed="true">최근 공지</button><button type="button" data-board="resource" aria-pressed="false">자료실</button></div><a href="./portal/#materials">전체보기 →</a></div>
+        <div id="boardList" class="board-list" aria-live="polite"><p class="board-empty">등록된 공식 공지사항을 확인하는 중입니다.</p></div>
+      </div>
+      <div id="faculty" class="faculty-panel">
+        <div class="faculty-photo" role="img" aria-label="강사와 학습자의 교육 현장 이미지"></div>
+        <div class="faculty-scrim"></div>
+        <div class="faculty-copy"><p class="section-eyebrow">ACADEMIC & PRACTICAL TRAINING</p><h2>강사소개</h2><p>이론과 실무를 연결하는 교육.<br>담당 강사와 확정 일정은 공식 교육공고에서 안내합니다.</p><a class="faculty-button" href="./portal/#materials">강의·운영 안내 →</a></div>
+      </div>
+    </section>
+    <section class="campus-tools" aria-label="학습 및 운영 공간">
+      <div><p class="section-eyebrow">ONE CAMPUS · TWO WORKSPACES</p><h2>사용자와 관리자가 함께 쓰는 통합 교육공간</h2><p>학습자는 수강신청과 진도를 관리하고, 권한을 가진 강사·관리자는 동일한 공간에서 공지·교안·수강 요청을 운영합니다.</p></div>
+      <div class="tool-links"><a href="./portal/">나의 강의실 / 운영관리 →</a><a href="./study/ai-bootcamp/">강의실·발표 모드 →</a><a href="./study/ai-bootcamp/studio/">실습·교안 편집실 →</a></div>
+    </section>
+    <section class="campus-legacy" aria-label="기존 교육서비스">
+      <p class="section-eyebrow">TWO AREAS · ONE EDUCATION CONTEXT</p>
+      <h2>기존 교육서비스 계속 이용하기</h2>
+      <div><a href="./study/">학습·유학 준비</a><a href="./admission/">입시 준비</a><a href="https://ekodi.kr/my/journey/">My Journey</a></div>
+      <p>기존 Admission·Study 기능과 브라우저 내 개인계획 정보는 삭제하거나 다른 공간으로 자동 이동하지 않습니다. 현재 첫 릴리스는 민감한 여권·성적표·재정증빙 파일을 저장하지 않습니다.</p>
+    </section>
+  </div>
 </main>
-<footer><strong>EKODI Education</strong><span>Admission + Study · User agency first</span><a href="https://ekodi.kr/my/journey/">My Journey ↗</a><a href="/admin">Admin ↗</a></footer>
-<script src="/config.js"></script>
-<script type="module" src="/app.js?v=20260822-edu-1"></script>
+<footer class="campus-footer"><strong>EKODI Education · AI 교육과정</strong><span>© EKODI · 교육 자료의 권리 및 개인정보 보호</span><a href="./portal/">강의실·운영관리</a><a href="https://ekodi.kr/privacy">개인정보처리방침</a></footer>
+<script src="./config.js"></script>
+<script type="module" src="./app.js"></script>
+<script type="module" src="./campus.js"></script>
 </body>
 </html>

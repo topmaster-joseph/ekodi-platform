@@ -279,6 +279,8 @@ jobs:
         run: node scripts/verify-education-bootcamp-native.mjs
       - name: Verify actual canonical /edu material studio desktop and mobile
         run: node scripts/verify-education-material-studio-native.mjs
+      - name: Verify real photo-led Education campus and learner/operator portal at five viewports
+        run: node scripts/verify-education-campus-native.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -286,6 +288,7 @@ jobs:
           path: |
             artifacts/education-native/
             artifacts/education-studio-native/
+            artifacts/education-campus-native/
           retention-days: 7
       - name: Publish Education production status
         if: always()
