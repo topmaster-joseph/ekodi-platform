@@ -165,6 +165,7 @@ jobs:
         run: |
           $path = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
           . $path
+          Write-Host '[EKODI][AGENT-CANARY] PowerShell module sourced, beginning required native canary'
           try {
             $canary = Invoke-BackgroundBrowserCanary
           } catch {
