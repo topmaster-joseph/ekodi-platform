@@ -11,7 +11,7 @@ const inline='Refused to apply inline style because it violates the following Co
 const beacon="Refused to load the script '"+BEACON_PREFIX+"v4bc70e2c01a94c73b74392e4234840661791215815920' because it violates the following Content Security Policy directive: \"script-src 'self' https://cdn.jsdelivr.net https://ekodi.kr\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback.";
 const blocked='Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector';
 const inlineChromium156="Applying inline style violates the following Content Security Policy directive 'style-src 'self' https://ekodi.kr https://ekodi.kr/shell'. Either the 'unsafe-inline' keyword, a hash ('sha256-6VVFqLR4PDJXyCW7LUvhdS2zhZdIHiNuwZA+lh0G6zI='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.";
-const beaconChromium156="Loading the script '"+BEACON_PREFIX+"v4bc70e2c01a94c73b74392e4234840661791215815920' violates the following Content Security Policy directive: \\"script-src 'self' https://cdn.jsdelivr.net https://ekodi.kr\\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.";
+const beaconChromium156="Loading the script '"+BEACON_PREFIX+"v4bc70e2c01a94c73b74392e4234840661791215815920' violates the following Content Security Policy directive: \"script-src 'self' https://cdn.jsdelivr.net https://ekodi.kr\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.";
 const telemetry={method:'POST',url:TELEMETRY_URL};
 
 test('actual captured security blocks remain rejected by the browser, but are reported separately',()=>{
