@@ -89,7 +89,8 @@ test('shared-site guarded release invokes native browser verification after prod
   assert.equal(boardRegistry.policyId,'EKODI-BOARD-NATIVE-VERIFY-001');
   assert.equal(boardRegistry.readOnly,true);
   assert.deepEqual(boardRegistry.devices,['desktop','mobile-portrait']);
-  for(const path of ['/seonammedi/#voices','/seonammedi/#notices','/community/','/journal'])assert.ok(boardRegistry.surfaces.some(item=>item.enabled!==false&&item.path===path),path);
+  for(const path of ['/seonammedi/board/voices','/seonammedi/board/notices','/community/','/journal'])assert.ok(boardRegistry.surfaces.some(item=>item.enabled!==false&&item.path===path),path);
+  for(const retired of ['/seonammedi/#voices','/seonammedi/#notices'])assert.ok(!boardRegistry.surfaces.some(item=>item.enabled!==false&&item.path===retired),'retired hash-based board surface must not substitute for real board: '+retired);
   assert.match(sharedRelease,/authenticated_admin_surface_verification:/);
   assert.match(sharedRelease,/verify-admin-production-ui-e2e\.yml/);
   for (const verifierPath of [
