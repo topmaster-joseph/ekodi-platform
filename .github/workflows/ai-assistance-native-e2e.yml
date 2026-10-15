@@ -88,3 +88,82 @@ jobs:
       surface_path: /ai/
       surface_paths: /ai/
       device_profile: ${{ matrix.device_profile }}
+
+  login-return-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        device_profile: [desktop, mobile-portrait]
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Install EKODI isolated Chromium
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Check canonical notice → service selection → Google return_to → restored choice without live authentication
+        shell: bash
+        env:
+          DEVICE: ${{ matrix.device_profile }}
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import {chromium} from 'playwright';
+          const browser=await chromium.launch({headless:true});
+          const mobile=process.env.DEVICE==='mobile-portrait';
+          const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1440,height:900},isMobile:mobile,hasTouch:mobile});
+          const page=await context.newPage();
+          const blocked=[];
+          await page.route('**/*',route=>{
+            if(!['GET','HEAD','OPTIONS'].includes(route.request().method())){
+              blocked.push(route.request().method()+' '+route.request().url());
+              return route.abort('blockedbyclient');
+            }
+            return route.continue();
+          });
+          try{
+            await page.goto('https://ekodi.kr/ai/#support-programs',{waitUntil:'domcontentloaded',timeout:30000});
+            await page.locator('#support-programs').scrollIntoViewIfNeeded();
+            await page.locator('.support-notice-detail:not([disabled])').first().waitFor({timeout:45000});
+            await page.locator('.support-notice-detail:not([disabled])').first().click();
+            await page.locator('#assistancePlanList input[value="eligibility"]').waitFor({timeout:15000});
+            await page.locator('#assistancePlanList input[value="eligibility"]').check();
+            const before=new URL(page.url());
+            assert.equal(before.pathname,'/ai/');
+            assert.ok(before.searchParams.get('support_notice'));
+            assert.equal(before.hash,'#support-detail');
+            // Observe the existing click handler's true URL without performing a login,
+            // writing personal data, or contacting a paid provider.
+            const authHref=await page.evaluate(()=>{
+              const link=document.getElementById('assistanceLoginLink');
+              link.addEventListener('click',event=>event.preventDefault(),{capture:true,once:true});
+              link.click();
+              return link.href;
+            });
+            const auth=new URL(authHref);
+            assert.equal(auth.origin,'https://ekodi.kr');
+            assert.equal(auth.pathname,'/auth/');
+            const ret=new URL(auth.searchParams.get('return_to'));
+            assert.equal(ret.origin,'https://ekodi.kr');
+            assert.equal(ret.pathname,'/ai/');
+            assert.equal(ret.hash,'#support-detail');
+            assert.equal(ret.searchParams.get('support_notice'),before.searchParams.get('support_notice'));
+            assert.equal(ret.searchParams.get('support_plans'),'eligibility');
+            assert.equal(ret.searchParams.get('support_intent'),'request');
+            assert.doesNotMatch(ret.href,/applicantName|organization|privacyAcknowledged|typedName|paymentConfirmed/);
+            // Simulate a successful authentication callback to the public route,
+            // without forging a login or using any real user profile.
+            await page.goto(ret.href,{waitUntil:'domcontentloaded',timeout:30000});
+            await page.locator('#assistancePlanList input[value="eligibility"]').waitFor({timeout:45000});
+            assert.equal(await page.locator('#assistancePlanList input[value="eligibility"]').isChecked(),true);
+            assert.equal(await page.locator('#assistanceScopeConsent').isChecked(),false);
+            assert.equal(await page.locator('#assistanceApplicant').inputValue(),'');
+            assert.equal(new URL(page.url()).searchParams.has('support_intent'),false);
+            assert.equal(new URL(page.url()).searchParams.has('support_plans'),false);
+            assert.equal(blocked.length,0,'read-only proof attempted a write');
+            console.log(JSON.stringify({ok:true,device:process.env.DEVICE,noticePreserved:true,plansRestored:['eligibility'],requestIntentPreserved:true,personalFieldsStored:false,realAuth:false,realPayment:false}));
+          }finally{await context.close();await browser.close()}
+          JS
