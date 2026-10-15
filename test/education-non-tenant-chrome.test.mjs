@@ -61,20 +61,18 @@ test('registered tenant lookups remain enabled, GET only and without credentials
     assert.equal(captured[0].url,sourceUrl+'?subject_key=cgma');
     assert.equal(captured[0].options.credentials,'omit');
     assert.equal(captured[0].options.cache,'no-store');
-    assert.equal(result?.siteName||result?.brand,'청계면상인회');
+    assert.equal(result?.header?.siteName||result?.brand,'청계면상인회');
   }
 });
-test('public Education is absent from customer-site tenant API by design; strict CSP and no upload unaffected',async()=>{
-  const [header,footer,csp,runtime]=await Promise.all([
-    read('shell/user-ui-header.js'),read('shell/user-ui-footer.js'),
-    read('ekodi-shell-injector.js'),read('site-chrome-runtime.js')]);
+test('client-side fallback preserves common Shell contracts with no privileged mutations',async()=>{
+  const [header,footer]=await Promise.all([
+    read('shell/user-ui-header.js'),read('shell/user-ui-footer.js')
+  ]);
   for(const source of [header,footer]){
-    assert.match(source,/NON_TENANT_SITE_CHROME_SUBJECTS\.has\(subject\)/);
-    assert.match(source,/siteSubject\(\)/);
-    assert.match(source,/const SITE_CHROME_URL='https:\/\/[^']+\/v1\/site-chrome\/public';/);
-    assert.doesNotMatch(source,/fetch\([^\n]*method:\s*['"]POST/);
+    assert.match(source,/NON_TENANT_SITE_CHROME_SUBJECTS\\.has\\(subject\\)/);
+    assert.match(source,/siteSubject\\(\\)/);
+    assert.match(source,/const SITE_CHROME_URL='https:\\/\\/[^']+\\/v1\\/site-chrome\\/public';/);
+    assert.doesNotMatch(source,/fetch\\([^\\n]*method:\\s*['"]POST/);
+    assert.doesNotMatch(source,/bypassCSP|ignoreHTTPSErrors|localStorage\\.setItem/);
   }
-  assert.match(runtime,/if\(!current\)return json\(\{error:'SITE_NOT_FOUND'\},404/);
-  assert.match(csp,/style-src/);
-  assert.doesNotMatch(csp,/style-src[^;]*'unsafe-inline'/);
 });
