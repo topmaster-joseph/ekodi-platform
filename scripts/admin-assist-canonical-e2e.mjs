@@ -109,6 +109,7 @@ try {
       contextTabsPresent: Boolean(contextTabs),
       commandEntryPresent: Boolean(commandEntry),
       targetValue: target ? String(target.value || '').trim() : '',
+      targetLabel: target ? String(target.selectedOptions?.[0]?.textContent || '').trim() : '',
       targetWidth: target ? Math.round(target.getBoundingClientRect().width) : null,
       assistLeft: assist ? Math.round(assist.getBoundingClientRect().left) : null,
       sidebarWidth: sidebar ? Math.round(sidebar.getBoundingClientRect().width) : null,
@@ -132,8 +133,9 @@ try {
   if (visual?.contextTabsPresent || visual?.commandEntryPresent) {
     throw new Error(`Admin redundant navigation chrome is visible: contextTabs=${visual?.contextTabsPresent ? 'present' : 'absent'} commandEntry=${visual?.commandEntryPresent ? 'present' : 'absent'}`);
   }
-  if (visual?.targetValue !== 'EKODI' || Number(visual?.targetWidth || 0) < 150) {
-    throw new Error(`Admin bottom command target is clipped or incorrect: target=${visual?.targetValue || 'missing'} width=${visual?.targetWidth || 0}`);
+  // The select option value is the lowercase routing key, while its visible label is EKODI.
+  if (visual?.targetValue !== 'ekodi' || visual?.targetLabel !== 'EKODI' || Number(visual?.targetWidth || 0) < 150) {
+    throw new Error(`Admin bottom command target is clipped or incorrect: value=${visual?.targetValue || 'missing'} label=${visual?.targetLabel || 'missing'} width=${visual?.targetWidth || 0}`);
   }
   if (visual?.railDisplay !== 'none') {
     throw new Error(`Admin home recent-command rail must be hidden: ${visual?.railDisplay || 'missing'}`);
