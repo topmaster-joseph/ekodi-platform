@@ -886,9 +886,8 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
   assert.match(html,/COMMITTEE ACTIVITIES<\/p><h2>활동이력<\/h2>/);
   assert.match(html,/RELATED NEWS &amp; SOURCES<\/p><h2>관련소식<\/h2>/);
   assert.doesNotMatch(html,/세부 메뉴 준비중/);
-  assert.match(html,/전체 회계내역/);
-  assert.match(html,/financeManageToggle[^>]*hidden/);
-  assert.match(html,/financeManageForm[^>]*hidden/);
+  assert.doesNotMatch(html,/전체 회계내역|financeManageToggle|financeManageForm/);
+  assert.match(adminHtml,/id="financeForm"/);
   assert.match(app,/const actions=adminMode\?/);
   assert.match(app,/renderPublicFinance\(publicFinanceEntries,false\)/);
   assert.doesNotMatch(app,/raw==='finance'.*location\.replace\('\/finance\/'\)/);
