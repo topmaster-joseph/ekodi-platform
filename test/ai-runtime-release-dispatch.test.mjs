@@ -38,3 +38,15 @@ test('orchestrator-dispatched Control API deployment owns PC Agent heartbeat han
   assert.ok(source.includes('/actions/workflows/deploy-control-api.yml/dispatches'));
   assert.ok(source.includes('inputs:{release_branch_ref:branch,release_task_id:taskId}'));
 });
+
+test('EKODI AI assistance migrations and merchant contract modules dispatch guarded production release after protected merge',()=>{
+  const orchestrator=text('scripts/converge-orchestrated-pr-merge.mjs');
+  const deploy=text('.github/workflows/deploy-ai-control.yml');
+  assert.match(orchestrator,/\/\^migrations\\\/013\\d_ai_assistance_\.\*\\\.sql\$\//);
+  assert.match(orchestrator,/\/\^support\\\/assistance-\[\^\/\]\+\\\.js\$\//);
+  assert.equal((deploy.match(/'migrations\/013\?_ai_assistance_\*\.sql'/g)||[]).length,2,
+    'pull_request and main push both include grant assistance migrations');
+  assert.equal((deploy.match(/'support\/assistance-\*\.js'/g)||[]).length,2);
+  assert.match(orchestrator,/if\(aiControlTouched\)\{/);
+  assert.match(orchestrator,/\/actions\/workflows\/deploy-ai-control\.yml\/dispatches/);
+});
