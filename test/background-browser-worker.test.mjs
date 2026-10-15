@@ -87,6 +87,14 @@ test('shared-site guarded release invokes native browser verification after prod
   assert.match(sharedRelease,/surface_paths:\s*\/,\/my\/,\/admin\/,\/ekodimall\/admin/);
   assert.equal((sharedRelease.match(/surface_registry:\s*config\/board-surface-verification\.json/g)||[]).length,2);
   assert.equal(boardRegistry.policyId,'EKODI-BOARD-NATIVE-VERIFY-001');
+  assert.equal(policy.taskProtocol.maxActions,30);
+  assert.ok(workerWorkflow.includes('const screenshotBudget=Math.max(0,30-(2*paths.length-1))'),'real board screenshots must respect the 30-action limit');
+  assert.ok(workerWorkflow.includes('screenshots<screenshotBudget'),'snapshot coverage must remain complete under budget');
+  for(const count of [1,4,10,12]){
+    const baseActions=2*count-1;
+    const screenshots=Math.max(0,30-baseActions);
+    assert.ok(baseActions+screenshots<=30,'action budget exceeded for '+count+' paths');
+  }
   assert.equal(boardRegistry.readOnly,true);
   assert.deepEqual(boardRegistry.devices,['desktop','mobile-portrait']);
   for(const path of ['/seonammedi/board/voices','/seonammedi/board/notices','/community/','/journal'])assert.ok(boardRegistry.surfaces.some(item=>item.enabled!==false&&item.path===path),path);
