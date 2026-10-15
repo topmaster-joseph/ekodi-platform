@@ -18,6 +18,7 @@ const artifactRoot = path.resolve('artifacts/cooperative-source-ui');
 await fs.mkdir(artifactRoot, { recursive: true });
 const bundledClient = await loadBundledCooperativeClient();
 assert.equal(bundledClient.productionMutation, false);
+assert.equal(bundledClient.serializedNameHelperCalls, true, 'Pinned Wrangler bundle must exercise preserved client function names');
 await fs.writeFile(path.join(artifactRoot, 'bundled-client.js'), bundledClient.script);
 const f = fixture();
 const tokens = { 'admin-jub': 'chair-jub@example.test', 'member-jub': 'member-jub@example.test', 'admin-open': 'chair-open@example.test' };
