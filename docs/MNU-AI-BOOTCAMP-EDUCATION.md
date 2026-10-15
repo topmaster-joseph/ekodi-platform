@@ -91,3 +91,24 @@ Requested canonical deep link: `https://ekodi.kr/edu/study/ai-bootcamp/`. The ex
 ## Official owner-approved classroom studio recovery (2026-10-15)
 - Exact owner-approved source: PR #4712 at 0cdc5a1024ffb17490c73eba6198fb11e6f138e5 (GitHub approval comment #6172868245).
 - The official Orchestrator recovery PR #4739 is used for fresh protected CI, shared-site apex /edu route and Education Worker release checks. No direct merge, CI bypass or production success claim is authorized. Both existing guarded Worker release paths and real desktop/mobile verification remain mandatory.
+
+## Uploaded six-program curriculum collection (2026-10-15)
+
+Source: user-uploaded `AI부트캠프 교육프로그램 안내자료(1).hwpx`, extracted from six structured HWPX tables (4 teaching sessions each, 24 total). Source only includes session headings and specific activities/experiments; it does **not** provide class minutes, actual dates, cohort enrollment, equipment sponsorship, costs or final institutional authorization. None of those fields are fabricated.
+
+New route: `https://ekodi.kr/edu/study/ai-bootcamp/programs/`. The original `/edu/study/ai-bootcamp/` continues to display the independent MNU faculty/staff 4-lecture x 6-cohort plan and now links to the public six-program collection. The six documents should not replace, mix into, or imply approval of the MNU staff course.
+
+| Source index | Program title | Stated audience | Sessions |
+|---|---|---|---|
+| 1 | 슬기로운 AI 윤리 생활 | 초등 | 4 |
+| 2 | AIoT 스마트 가로등 | 초등 · 아두이노 기초 | 4 |
+| 3 | 똑똑한 드로잉 로봇 | 로봇 초급 | 4 |
+| 4 | 절대 지지 않는 가위바위보 | 로봇 중급 | 4 |
+| 5 | 모두의 스마트팜 | 중·고등 | 4 |
+| 6 | 바이브코딩으로 만드는 아두이노 스마트팜 | 청년 | 4 |
+
+Per-session details in `education/study/ai-bootcamp/programs/catalog.js` preserve all 24 source session contents with normalized whitespace and bullet punctuation. The intermediate robot's session 4 lacks an original session topic; the UI explicitly marks it as missing rather than inventing a title. The last task of smart-farm session 4 contains `완성하고및` in the source and is retained rather than silently corrected.
+
+Public read-only UI supports filtering the 6 curricula, switching four lesson topics, original-detail reading, a four-screen in-browser presenter, print view, and stable bookmarkable deep links. No original private Word/HWPX file, personal information, external API upload, attendance records, live tool accounts or course enrollment is made public. Practical demonstrations involving hardware, identifiable faces, and copyrighted images must follow safety, child-privacy, licensing and supervision rules.
+
+Predeployment acceptance: `node --test test/education-ai-programs.test.mjs`, full repository CI, and `scripts/verify-education-ai-programs-native.mjs` using EKODI-owned ephemeral Chromium (320,390,768,1366,1440px), both synthetic PR preview and actual `ekodi.kr/edu/study/ai-bootcamp/programs/` production after guarded release. Older staff 4x6 course and instructor material studio must continue functioning. Publish only after fresh official Orchestrator receipt, exact-SHA human approval, protected merge and guarded Education + shared Site Core safety gates; do not claim production before real evidence.
