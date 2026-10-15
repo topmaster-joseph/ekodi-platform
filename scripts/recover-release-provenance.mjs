@@ -182,6 +182,13 @@ const shellRuntimeTouched=sourceFiles.some(file=>
    '.github/workflows/deploy-ekodi-shell.yml',
    'scripts/verify-ekodi-shell-live.mjs'].includes(file)
 );
+// My EKODI is a separately guarded Worker. A GitHub-token recovery merge
+// does not emit a main push, so source-only recovery must dispatch it explicitly.
+const myTouched=sourceFiles.some(file=>
+  file.startsWith('my/')||
+  ['my-worker.js','wrangler.my.toml','wrangler.my.staging.toml',
+   'deploy/manifests/my.worker.json','.github/workflows/deploy-my.yml'].includes(file)
+);
 
 
 await github(`/repos/${repo}/issues/${prNumber}/comments`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({body:`EKODI automatic release-provenance recovery created #${recoveryNumber} on \`${branchRef}\` (task \`${taskId}\`). This PR is superseded by the orchestrator-issued branch.`})});
@@ -226,7 +233,7 @@ const mergeDisposition=merge.response.ok?'merged-immediately':`guarded-pending-h
 // Only a successfully merged, exactly owner-approved recovery PR may dispatch
 // the existing guarded production workflow. That workflow still enforces its
 // own orchestrator receipt, CI, auth boundary, and live production checks.
-if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched)){
+if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched||myTouched)){
   if(merge.data?.merged!==true||!/^[a-f0-9]{40}$/i.test(text(merge.data?.sha,80))){
     fail('guarded merge did not return a verifiable commit SHA');
   }
@@ -257,6 +264,19 @@ if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched)){
       fail('guarded Shell Worker dispatch failed: HTTP '+shellDispatch.response.status);
     }
     out('shell_dispatch','accepted');
+  }
+  if(myTouched){
+    // The exact source SHA was owner-approved and the recovery receipt was
+    // already validated. Deploy My only through the existing guarded workflow.
+    const myDispatch=await github(`/repos/${repo}/actions/workflows/deploy-my.yml/dispatches`,{
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branchRef,release_task_id:taskId}})
+    });
+    if(myDispatch.response.status!==204){
+      fail('guarded My EKODI dispatch failed: HTTP '+myDispatch.response.status);
+    }
+    out('my_dispatch','accepted');
   }
 }
 
