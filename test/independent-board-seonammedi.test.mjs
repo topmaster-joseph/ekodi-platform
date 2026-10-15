@@ -191,10 +191,11 @@ test('SeonamMedi board admin login preserves the initiating external or internal
   assert.match(worker,/location\.pathname\.startsWith\(\"\/seonammedi\/board\"\)/);
   assert.match(worker,/ekodi_auth_return/);
   assert.match(worker,/auth\/v1\/verify/);
-  for(const route of ['voices','finance','notices']){
+  for(const route of ['voices','notices']){
     assert.match(site,new RegExp('href="board/'+route+'"'));
     assert.match(adminSite,new RegExp('href="\\.\\./board/'+route+'"'));
   }
+  assert.doesNotMatch(site,/href="board\/finance"/);
   assert.doesNotMatch(site,/href="https:\/\/seonammedi\.kr\/board\//);
   assert.doesNotMatch(adminSite,/href="https:\/\/seonammedi\.kr\/board\//);
   assert.match(auth,/seonamMediHandoff/);
