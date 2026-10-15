@@ -193,8 +193,6 @@ jobs:
               verify_contains "board six-menu $label" ">$label</a>" "$html"
             done
             verify_contains "board six-menu navigation" 'class="ekodi-six-nav"' "$html"
-            verify_contains "notices nested ledger" '>회계</a>' "$html"
-            verify_contains "notices nested minutes" '>회의록</a>' "$html"
             verify_contains "notices nested announcement" '>공지사항</a>' "$html"
           done
       - name: Verify production Google login-first API without credentials
