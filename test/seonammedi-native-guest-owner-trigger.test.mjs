@@ -12,6 +12,8 @@ test('SeonamMedi guest Chromium live audit is owner-triggerable without granting
   assert.ok(workflow.includes("github.event.comment.body == 'EKODI-SEONAM-NATIVE-AUDIT:RUN'"),'command must use an exact non-ambiguous marker');
   assert.ok(workflow.includes("github.event_name != 'pull_request'"),'untrusted PR must remain preflight-only');
   assert.ok(workflow.includes("github.event.workflow_run.conclusion == 'success'"),'normal post-release checks must fail closed');
+  assert.ok(workflow.includes('github.event.issue.number || github.event.pull_request.number || github.ref'),'unrelated PR comments must not share the same Chromium audit queue');
+  assert.ok(workflow.includes("cancel-in-progress: ${{ github.event_name != 'issue_comment' }}"),'owner-triggered audits must not be canceled by unrelated bot comments');
   assert.ok(workflow.includes('  contents: read'),'audit must be read only');
   assert.ok(!workflow.includes('  contents: write'),'audit must not grant repository write');
   assert.ok(workflow.includes('node scripts/verify-seonammedi-nav-guest-native.mjs'),'run real Chromium navigation, not syntax only');
