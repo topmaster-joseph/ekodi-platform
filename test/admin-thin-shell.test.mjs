@@ -32,6 +32,10 @@ test('post-auth startup contains only the minimal shell/navigation/demand loader
   assert.doesNotMatch(shell, /'device-control-admin\.js'/);
   assert.doesNotMatch(shell, /'system-health-admin\.js'/);
   assert.match(deferredBlock, /'admin-release-convergence\.js'/);
+  const convergenceKick = shell.indexOf("void loadScript('admin-release-convergence.js')");
+  const criticalLoad = shell.indexOf('for(const src of criticalPostAuthScripts)');
+  assert.ok(convergenceKick >= 0 && convergenceKick < criticalLoad, 'stale Admin release convergence must start before navigation boot');
+  assert.doesNotMatch(shell, /await loadScript\('admin-release-convergence\.js'\)/);
   const convergence = await read('admin-release-convergence.js');
   assert.match(convergence, /const RELEASE_CHECK_MS=60000/);
   assert.match(convergence, /function versionFrom\(html\)/);
