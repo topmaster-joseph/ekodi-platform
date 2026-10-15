@@ -3,7 +3,7 @@
 공식 주소: `https://ekodi.kr/ekodibiz/doraji`. 구형 Business OS 서브도메인은 사용하지 않는다.
 
 ## 이번 단계
-- 기존 Cloudflare D1 `ekodi-auth`에 `migrations/0133_doraji_operations_draft_ledger.sql`을 추가한다.
+- 기존 Cloudflare D1 `ekodi-auth`에 `schemas/ekodibiz/doraji-draft-ledger.sql`을 추가한다.
 - 기존 에코디 관리자의 중앙 Bearer 세션으로만 `/ekodibiz/doraji/api/v1/*`에 접근한다. 인증 또는 D1이 없으면 거부한다.
 - 관리자 소유 프로젝트 생성·조회·수정, 프로젝트별 재배·예산·수매계약·납품·문서 **초안** 기록 생성·조회·수정, 감사 이력 조회.
 - 프로젝트 소유자와 명시적으로 할당된 열람자·편집자만 프로젝트 원장을 볼 수 있다. 다른 사업단위의 자료 조회는 404로 차단한다.
@@ -33,3 +33,5 @@
 5. 기존 재배 계산기·공개 사이트는 무인증 읽기 전용으로 유지하고, 실제 회계/금융 데이터와 혼동하지 않는다.
 
 이 파일과 코드 병합만으로 DB 마이그레이션이 적용되거나 실제 계약·납품이 체결되었다고 보고해서는 안 된다.
+
+**릴리스 격리:** `schemas/ekodibiz/doraji-draft-ledger.sql`은 자동 적용되는 `migrations/**` 밖에 보관한다. 실제 이행은 데이터 백업·운영자 최종 승인·별도 보호된 PR에서 `migrations/`에 편입하는 경우에만 가능하다.
