@@ -45,25 +45,25 @@ test('exact-SHA recovery does not strand approved independent-board production r
     read('scripts/recover-release-provenance.mjs'),
     read('.github/workflows/recover-release-provenance.yml')
   ]);
-  assert.match(workflow,/permissions:[\\s\\S]*actions: write/);
+  assert.match(workflow,/permissions:[\s\S]*actions: write/);
   assert.match(workflow,/independent_board_dispatch/);
   assert.match(script,/source file inspection failed before guarded merge/);
-  assert.match(script,/sourceFiles\\.some\\(file=>/);
+  assert.match(script,/sourceFiles\.some\(file=>/);
   for(const owner of [
     "file.startsWith('services/independent-board/')",
     "file==='wrangler.independent-board.toml'",
     "file==='sites/seonammedi/public/app.js'",
     "file==='.github/workflows/deploy-independent-board.yml'"
   ]) assert.ok(script.includes(owner),owner);
-  assert.match(script,/if\\(merge\\.response\\.ok&&independentBoardTouched\\)\\{/);
-  assert.match(script,/merge\\.data\\?\\.merged!==true/);
-  assert.match(script,/main\\.data\\?\\.commit\\?\\.sha/);
+  assert.match(script,/if\(merge\.response\.ok&&independentBoardTouched\)\{/);
+  assert.match(script,/merge\.data\?\.merged!==true/);
+  assert.match(script,/main\.data\?\.commit\?\.sha/);
   assert.match(script,/main changed before exact board dispatch/);
-  assert.match(script,/actions\\/workflows\\/deploy-independent-board\\.yml\\/dispatches/);
+  assert.match(script,/actions\/workflows\/deploy-independent-board\.yml\/dispatches/);
   assert.match(script,/release_branch_ref:branchRef,release_task_id:taskId/);
-  assert.match(script,/dispatch\\.response\\.status!==204/);
+  assert.match(script,/dispatch\.response\.status!==204/);
   const guarded=script.indexOf('if(merge.response.ok&&independentBoardTouched){');
   const dispatch=script.indexOf('/actions/workflows/deploy-independent-board.yml/dispatches');
   assert.ok(guarded>=0&&dispatch>guarded,'dispatch must be behind verified immediate merge');
-  assert.doesNotMatch(script,/sourceFiles\\.some\\([\\s\\S]*?\\)\\s*\\?\\s*await\\s+github\\(/);
+  assert.doesNotMatch(script,/sourceFiles\.some\([\s\S]*?\)\s*\?\s*await\s+github\(/);
 });
