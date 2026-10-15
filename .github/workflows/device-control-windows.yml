@@ -155,7 +155,15 @@ jobs:
         run: |
           $path = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
           . $path
-          $canary = Invoke-BackgroundBrowserCanary
+          try {
+            $canary = Invoke-BackgroundBrowserCanary
+          } catch {
+            # A CDP timeout may be transient on the shared Windows runner.
+            # Only one retry, with a new isolated browser profile and real DOM proof.
+            if ([string]$_.Exception.Message -ne 'CDP_COMMAND_TIMEOUT') { throw }
+            Start-Sleep -Seconds 2
+            $canary = Invoke-BackgroundBrowserCanary
+          }
           if (-not $canary.browserCanary.ok) { throw 'Native browser canary did not pass.' }
           $worker = Invoke-BackgroundBrowserWorker ([pscustomobject]@{
             path = '/'
