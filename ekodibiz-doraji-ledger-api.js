@@ -80,8 +80,10 @@ async function projectAccess(env,projectId,adminId){
  FROM doraji_projects p WHERE p.id=?`).bind(adminId,adminId,projectId).first();
  return row?.access_role?row:null;
 }
-async function audit(env,projectId,adminId,action,resourceId){
- return env.DB.prepare('INSERT INTO doraji_audit_events(id,project_id,actor_admin_id,action,resource_id,description,created_at) VALUES(?,?,?,?,?,?,?)')
+async function conditionalAudit(env,projectId,adminId,action,resourceId){
+ // D1.batch executes both statements in one SQLite transaction/connection.
+ // changes() prevents an audit entry if optimistic version matching changed no rows.
+ return env.DB.prepare('INSERT INTO doraji_audit_events(id,project_id,actor_admin_id,action,resource_id,description,created_at) SELECT ?,?,?,?,?,?,? WHERE changes()=1')
   .bind(uuid(),projectId,adminId,action,resourceId,'draft_ledger',now());
 }
 const resultList=r=>r?.results||[];
@@ -129,11 +131,11 @@ export async function dorajiLedgerApiResponse(request,env,{resolveSession=princi
    if(!canWrite)return bad('forbidden',403);
    const value=validateDorajiProjectInput(await readPayload(request),{partial:true});
    if(!value)return bad('invalid_project',400);
-   const result=await env.DB.prepare(`UPDATE doraji_projects SET name=?,region=?,greenhouse_count=?,area_sqm=?,status=?,version=version+1,updated_at=?
+   const write=env.DB.prepare(`UPDATE doraji_projects SET name=?,region=?,greenhouse_count=?,area_sqm=?,status=?,version=version+1,updated_at=?
  WHERE id=? AND version=?`)
-     .bind(value.name??project.name,value.region??project.region,value.greenhouseCount??project.greenhouse_count,value.areaSqm??project.area_sqm,value.status??project.status,now(),projectId,value.version).run();
+     .bind(value.name??project.name,value.region??project.region,value.greenhouseCount??project.greenhouse_count,value.areaSqm??project.area_sqm,value.status??project.status,now(),projectId,value.version);
+   const [result]=await env.DB.batch([write,await conditionalAudit(env,projectId,adminId,'project_updated',projectId)]);
    if(result.meta?.changes!==1)return bad('version_conflict',409);
-   await (await audit(env,projectId,adminId,'project_updated',projectId)).run();
    return json({ok:true,version:value.version+1,status:'draft_data_only'});
   }
   if(section==='audit'){
@@ -171,11 +173,11 @@ export async function dorajiLedgerApiResponse(request,env,{resolveSession=princi
    if(!value)return bad('invalid_record',400);
    const old=await env.DB.prepare('SELECT * FROM doraji_records WHERE id=? AND project_id=?').bind(recordId,projectId).first();
    if(!old)return bad('not_found',404);
-   const changed=await env.DB.prepare(`UPDATE doraji_records SET record_date=?,title=?,note=?,quantity_kg=?,amount_krw=?,counterparty=?,reference=?,version=version+1,updated_at=?
+   const write=env.DB.prepare(`UPDATE doraji_records SET record_date=?,title=?,note=?,quantity_kg=?,amount_krw=?,counterparty=?,reference=?,version=version+1,updated_at=?
     WHERE id=? AND project_id=? AND version=? AND state='draft'`)
-    .bind(value.date??old.record_date,value.title??old.title,value.note??old.note,value.quantityKg??old.quantity_kg,value.amountKRW??old.amount_krw,value.counterparty??old.counterparty,value.reference??old.reference,now(),recordId,projectId,value.version).run();
+    .bind(value.date??old.record_date,value.title??old.title,value.note??old.note,value.quantityKg??old.quantity_kg,value.amountKRW??old.amount_krw,value.counterparty??old.counterparty,value.reference??old.reference,now(),recordId,projectId,value.version);
+   const [changed]=await env.DB.batch([write,await conditionalAudit(env,projectId,adminId,'record_updated',recordId)]);
    if(changed.meta?.changes!==1)return bad('version_conflict',409);
-   await (await audit(env,projectId,adminId,'record_updated',recordId)).run();
    return json({ok:true,id:recordId,state:'draft',version:value.version+1});
   }
   return bad('method_not_allowed',405);
