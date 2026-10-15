@@ -275,7 +275,7 @@ function nav(active,req){
   const home=(hash)=>sitePath(req,'/'+hash);
   const hiddenLinks='<template id="legacy-category-links"><a href="'+boardPath(req,'notices')+'">공지사항</a><a href="'+sitePath(req,'/minutes/')+'">회의록</a><a href="'+boardPath(req,'finance')+'">회계</a><a href="'+home('#timeline/'+encodeURIComponent('신문'))+'">신문·인터넷 언론</a><a href="'+home('#timeline/'+encodeURIComponent('방송'))+'">방송</a><a href="'+home('#channels/facebook')+'">페이스북</a><a href="'+home('#channels/instagram')+'">인스타그램</a><a href="'+home('#channels/youtube')+'">유튜브</a></template>';
   return '<header class="site-header independent-board-header"><a class="brand" href="'+sitePath(req)+'"><strong>서남권 국립의대 소통센터</strong><small>서남권 의대 설립 비상대책위원회 관련 공개 기록·소통 채널</small></a><nav class="ekodi-six-nav" aria-label="주요 메뉴">'+
-    '<a href="'+boardPath(req,'notices')+'" data-category-menu="공지" aria-controls="central-category-panel" aria-expanded="false">공지</a>'+
+    '<a href="'+boardPath(req,'notices')+'">공지</a>'+
     link(home('#committee-activity'),'활동이력','committee')+
     link(home('#timeline'),'관련소식','timeline')+
     '<a href="'+home('#channels')+'" data-category-menu="소통채널" aria-controls="central-category-panel" aria-expanded="false">소통채널</a>'+
