@@ -40,3 +40,5 @@ test('artifacts survive failed tests and do not deploy production',()=>{
 });
 
 // Owner-authorized CI retrigger on official EKODI Orchestrator provenance recovery branch; runtime behavior unchanged.
+
+// Requeue canonical orchestrated convergence after global merge concurrency finished; no test logic changes.
