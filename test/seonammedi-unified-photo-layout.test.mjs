@@ -67,7 +67,7 @@ test('board routes preserve the unified header and original board APIs',async()=
       assert.equal(res.status,200,origin+route);
       const html=await res.text();
       assert.match(html,/class="site-header independent-board-header"/);
-      assert.match(html,/board\\/ui\\/central-category\\.js/);
+      assert.ok(html.includes('board/ui/central-category.js'));
       assert.match(html,/shared-site-header\.css/);
       const mountedAsset=origin+prefix+'/board/ui/central-category.js';
       const asset=await board.fetch(new Request(mountedAsset),{});
