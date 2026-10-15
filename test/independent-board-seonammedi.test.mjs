@@ -130,7 +130,9 @@ test('all three board pages share the SeonamMedi header and footer contract',asy
   const mod=await import(new URL('../services/independent-board/worker.js?admin-footer='+Date.now(),import.meta.url));
   for(const [url,href] of [
     ['https://seonammedi.kr/board/finance','https://ekodi.kr/seonammedi/admin/'],
-    ['https://ekodi.kr/seonammedi/board/finance','/seonammedi/admin/']
+    ['https://seonammedi.kr/board/notices','https://ekodi.kr/seonammedi/admin/'],
+    ['https://ekodi.kr/seonammedi/board/finance','/seonammedi/admin/'],
+    ['https://ekodi.kr/seonammedi/board/notices','/seonammedi/admin/']
   ]){
     const response=await mod.default.fetch(new Request(url),{});
     assert.equal(response.status,200,url);
