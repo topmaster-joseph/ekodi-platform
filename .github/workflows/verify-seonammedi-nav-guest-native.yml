@@ -23,8 +23,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: seonammedi-native-nav-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Issue comments across unrelated PRs must never cancel a real owner Chromium audit.
+  # Still coalesce ordinary push/workflow_run changes to avoid stale release probes.
+  group: seonammedi-native-nav-${{ github.event_name }}-${{ github.event.issue.number || github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'issue_comment' }}
 
 jobs:
   preflight-native-verifier:
