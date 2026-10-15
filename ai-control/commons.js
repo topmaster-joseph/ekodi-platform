@@ -408,12 +408,38 @@ async function openAssistanceQuote(id){
     }
   }catch{ text.textContent='견적 내용을 확인할 수 없습니다. 로그인 상태를 확인하세요.' }
 }
+async function loadAssistancePricebook(){
+  const status=$('assistancePricebookStatus');
+  if(!state.session)return;
+  try{
+    const data=await api('/api/commons/admin/assistance/pricebook');
+    const host=$('assistancePricebookRows');host.replaceChildren();
+    const current=new Map((data.active?.items||[]).map(item=>[item.id,item]));
+    for(const plan of data.plans||[]){
+      const label=document.createElement('label');label.className='assistance-merchant-line';
+      label.textContent=plan.label+' · 표준요금 (원, 부가세 포함)';
+      const inp=document.createElement('input');
+      inp.type='number';inp.step='1';inp.min='0';inp.max='100000000';
+      inp.dataset.planId=plan.id;inp.dataset.free=plan.free?'true':'false';
+      inp.placeholder=plan.free?'무료':'미지정: 개별 견적';
+      inp.value=plan.free?'0':current.get(plan.id)?.amount??'';
+      inp.readOnly=Boolean(plan.free);
+      label.append(inp);host.append(label);
+    }
+    status.textContent=data.active?
+      '현재 공개 버전: '+data.active.policyVersion+' · 승인일: '+(data.active.approvedAt||'').slice(0,10)+
+      ' · 새 버전을 승인하면 기존 요금표는 변경 없이 이력에 보존됩니다.':
+      '승인된 표준요금표가 없습니다. 무료 안내 외에는 개별 견적이며, 새 버전 승인 후 공개됩니다.';
+  }catch{
+    status.textContent='가격 정책을 확인할 수 없습니다. 관리자 인증 또는 데이터 저장소 상태를 확인하세요.';
+  }
+}
 async function loadAssistanceAdmin(){
   const panel=$('assistanceAdminPanel');
   if(!state.session){panel.hidden=true;return}
   try{
     const data=await api('/api/commons/admin/assistance/requests');
-    panel.hidden=false;const host=$('assistanceAdminList');host.replaceChildren();
+    panel.hidden=false;void loadAssistancePricebook();const host=$('assistanceAdminList');host.replaceChildren();
     $('assistanceAdminStatus').textContent=data.contractPolicy.ready?'관리자 전용 · 발행된 견적은 고객이 검토할 수 있습니다.':'최종 견적 발행을 위한 사업자정보·약관·환불·개인정보 운영 승인이 필요합니다. ('+data.contractPolicy.blockers.join(', ')+')';
     for(const req of data.requests){
       const row=document.createElement('div');row.className='assistance-history-row';
@@ -445,6 +471,37 @@ function selectAssistanceAdminRequest(req){
 }
 function initAssistanceAgreement(){
   $('assistanceAdminRefresh').addEventListener('click',()=>void loadAssistanceAdmin());
+  $('assistancePricebookForm').addEventListener('submit',async event=>{
+    event.preventDefault();
+    const submit=$('assistancePricebookPublish');
+    if(assistanceQuoteState.pending)return;
+    assistanceQuoteState.pending=true;submit.disabled=true;
+    const status=$('assistancePricebookStatus');
+    try{
+      const items=[...$('assistancePricebookRows').querySelectorAll('input[data-plan-id]')].map(inp=>({
+        id:inp.dataset.planId,amount:inp.value===''?null:Number(inp.value),vatIncluded:true,currency:'KRW'
+      }));
+      if(items.length!==6)throw Error('6개 서비스 요금 정보가 모두 필요합니다.');
+      const body={
+        policyVersion:$('assistancePricebookVersion').value.trim(),items,
+        merchantApproved:$('assistancePriceApproved').checked,
+        publicDisclosureApproved:$('assistancePricePublic').checked,
+        noGuaranteeAcknowledged:$('assistancePriceNoGuarantee').checked
+      };
+      const issued=await api('/api/commons/admin/assistance/pricebook',{method:'POST',body:JSON.stringify(body)});
+      status.textContent='표준요금 공개 완료 · '+issued.policyVersion+' · 금전거래/계약 확정 기능은 비활성화 상태입니다.';
+      $('assistancePricebookForm').reset();
+      assistanceState.catalog=null;
+      await loadAssistancePricebook();
+      if(assistanceState.notice){
+        await loadAssistanceCatalog();
+        assistanceRenderPlans();
+      }
+    }catch(error){
+      status.textContent='요금표 발행 실패: '+(error?.message||'승인 권한, 금액 또는 버전을 확인하세요.');
+    }finally{assistanceQuoteState.pending=false;submit.disabled=false;}
+  });
+
   $('assistanceAcknowledgmentForm').addEventListener('submit',async event=>{
     event.preventDefault();const button=$('assistanceAcknowledgmentSubmit');
     if(assistanceQuoteState.pending||!assistanceQuoteState.requestId||!assistanceQuoteState.digest)return;
