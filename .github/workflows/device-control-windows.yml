@@ -159,6 +159,9 @@ jobs:
           $diagnostic = (& node.exe $worker 2>&1 | Out-String)
           $code = if ($diagnostic -match '"code":"(CDP_[A-Z0-9_]+)"') { $Matches[1] } elseif ($diagnostic -match '"ok":true') { 'CDP_DOM_PROOF' } else { 'CDP_DIAGNOSTIC_UNCLASSIFIED' }
           Write-Host ('[EKODI][NATIVE-CDP-ISOLATED-DIAGNOSTIC] ' + $code)
+          # This preliminary category-only probe is intentionally non-gating. PowerShell's
+          # native LASTEXITCODE must not prevent the separate required real-browser canary.
+          $global:LASTEXITCODE = 0
           # No raw stderr, paths, cookies, user browser access or page content in logs.
       - name: Run native Background Browser Worker on Windows runner
         shell: pwsh
