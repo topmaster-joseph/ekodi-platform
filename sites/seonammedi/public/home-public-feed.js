@@ -19,9 +19,9 @@ const fetchJson=async url=>{const r=await fetch(url,{cache:'no-store'});if(!r.ok
 const items=(settled,key='items')=>settled.status==='fulfilled'?(Array.isArray(settled.value)?settled.value:Array.isArray(settled.value?.[key])?settled.value[key]:[]):[];
 (async()=>{
  const [boardNoticeResult,noticeResult,boardResult,timelineResult,staticResult]=await Promise.allSettled([
-  fetchJson('/board/api/notices'),
+  fetchJson(home+'/board/api/notices'),
   fetchJson('/api/seonammedi/notices'),
-  fetchJson('/board/api/posts'),
+  fetchJson(home+'/board/api/posts'),
   fetchJson('/api/seonammedi/timeline'),
   fetchJson('/seonammedi/data.json')
  ]);

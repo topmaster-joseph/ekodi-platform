@@ -71,7 +71,10 @@ for(let attempt=1;attempt<=attempts;attempt++){
         const customerHost=new URL(origin).hostname.toLowerCase();
         const isCustomer=['seonammedi.kr','www.seonammedi.kr','xn--3e0b8b58jw4co4mnpll3k.kr','www.xn--3e0b8b58jw4co4mnpll3k.kr'].includes(customerHost);
         if(!isCustomer)throw new Error(name+'_html_digest_mismatch expected='+expectedHash+' actual='+actualHash);
-        const allowlisted=[...Object.values(expected.assets||{}).map(asset=>asset.path).filter(Boolean),'assets/campaign-reconsideration-20261013.png'];
+        const allowlisted=[...Object.values(expected.assets||{}).map(asset=>asset.path).filter(Boolean),
+          'assets/campaign-reconsideration-20261013.png',
+          // Published shell asset paths; only the customer-domain mount prefix may change.
+          'shared-site-header.css','home-public-feed.css','home-public-feed.js'];
         const match=compareSeonamMediPublishedHtml(published,normalized.html,allowlisted);
         if(!match.matched){
           const around=(value,pos)=>typeof pos==='number'?JSON.stringify(String(value).slice(Math.max(0,pos-48),Math.min(String(value).length,pos+96))):'unavailable';
