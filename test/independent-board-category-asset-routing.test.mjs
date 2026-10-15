@@ -14,6 +14,8 @@ test('independent board serves its own CSP-safe category script from both mounts
     assert.equal(response.headers.get('x-content-type-options'),'nosniff');
     assert.equal(response.headers.get('cache-control'),'no-store');
     assert.equal(await response.text(),expected,'same source on both native mounts');
+    assert.ok(expected.includes('document.querySelectorAll'), 'board category JS must bind same-origin navigation');
+    assert.ok(!expected.includes('localStorage')&&!expected.includes('Authorization'), 'public category script must not access credentials');
     for(const route of ['notices','voices']){
       const page=await board.fetch(new Request(root+'/board/'+route),{});
       assert.equal(page.status,200,root+'/'+route);
