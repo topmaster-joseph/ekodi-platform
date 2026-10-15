@@ -7,6 +7,9 @@ test('Doraji verification runs only after successful protected site-core release
  assert.match(text,/Deploy EKODI Shared Site Core/);
  assert.match(text,/workflow_run\.conclusion == 'success'/);
  assert.match(text,/workflow_dispatch:/);
+ assert.match(text,/push:/);
+ assert.match(text,/branches: \[main\]/);
+ assert.match(text,/github.event_name == 'push'/);
  assert.match(text,/needs: canonical-readonly/g);
 });
 test('live checks use canonical apex GET, deny redirects, and require CSP',()=>{
