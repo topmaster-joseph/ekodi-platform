@@ -12,7 +12,10 @@ test('shared-site production gate verifies SeonamMedi live release convergence',
   assert.match(script,/release_mismatch/);
   assert.match(script,/\['root',root\],\['admin',admin\],\['finance',finance\],\['notices',notices\]/);
   assert.match(script,/name\+'_html_release_mismatch'/);
-  assert.match(script,/finance_surface_contract_missing/);
+  assert.match(script,/finance_admin_route_missing/);
+  assert.match(script,/finance_admin_asset_missing/);
+  assert.match(script,/finance_admin_api_contract_missing/);
+  assert.match(script,/\/api\/seonammedi\/admin\/finance/);
   assert.match(script,/notices_surface_contract_missing/);
   assert.match(script,/assertSeonamMediAssetCachePolicy\(key,assetResult\.response\.headers\)/);
   assert.match(cacheContract,/max-age=31536000/);
