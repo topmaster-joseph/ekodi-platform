@@ -53,3 +53,79 @@ body:is(.board-notices,.board-voices,.board-finance) main * {
 body[data-seonammedi-central-topic="committee"] #committeeActivityFilters,
 body[data-seonammedi-central-topic="news"] #timelineFilters,
 body[data-seonammedi-central-topic="channels"] #channels{display:none!important}
+
+
+/* SEONAMMEDI-PHOTO-SHELL-20261015: shared six-menu photo-first design.
+   Separate presentation only; retain existing forms, permissions and route contract. */
+body.seonam-visual-ready{background:#f8fafc!important;overflow-x:hidden}
+body.seonam-visual-ready>.site-header{position:sticky!important;top:0!important;z-index:50!important;box-shadow:0 1px 12px #122c4712}
+body.seonam-visual-ready>.site-header>.brand{max-width:350px!important}
+body.seonam-visual-ready>.site-header>.brand strong{color:#0f2f56!important}
+body.seonam-visual-ready>.site-header>.ekodi-six-nav>a[aria-current="page"],
+body.seonam-visual-ready>.site-header>.ekodi-six-nav>a:hover{color:#1d5fc3!important}
+.seonam-visual-hero{position:relative;isolation:isolate;display:flex;align-items:center;min-height:224px;height:clamp(224px,24vw,304px);overflow:hidden;background:linear-gradient(115deg,#0e345f,#3b79ae);color:#fff}
+.seonam-visual-hero>.seonam-visual-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 51%;z-index:-2}
+.seonam-visual-hero:before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(6,33,64,.91) 0%,rgba(11,52,95,.74) 34%,rgba(12,46,88,.26) 73%,rgba(6,35,70,.14))}
+.seonam-visual-hero-copy{width:min(1430px,calc(100% - 48px));margin:auto;padding:18px 0 34px}
+.seonam-visual-overline{display:block;font-size:11px;letter-spacing:.18em;font-weight:700;color:#e0efff}
+.seonam-visual-hero-copy h1{max-width:660px;margin:12px 0 10px;font-size:clamp(23px,3vw,39px);line-height:1.34;font-weight:800;letter-spacing:-.045em;word-break:keep-all}
+.seonam-visual-hero-copy p{margin:0;font-size:clamp(13px,1.25vw,16px);line-height:1.6;color:#f0f6ff}
+.seonam-visual-photo-credit{position:absolute;bottom:7px;right:max(16px,calc((100vw - 1430px)/2));font-size:10px;text-align:right;color:#fff;background:rgba(5,31,59,.65);border-radius:4px;padding:3px 6px}
+.seonam-visual-photo-credit a{color:#fff;text-underline-offset:2px}
+body.seonam-visual-ready main.seonam-visual-layout{display:grid!important;grid-template-columns:minmax(190px,230px) minmax(0,1fr) minmax(210px,260px);align-items:start;gap:22px;width:min(1430px,calc(100% - 48px))!important;max-width:none!important;margin:22px auto 45px!important;padding:0!important;min-height:55vh;overflow:visible!important}
+body.seonam-visual-ready main.seonam-visual-layout>.seonam-visual-content{min-width:0;max-width:100%;min-height:340px;border:1px solid #e0e7ef;border-radius:12px;background:#fff;padding:clamp(14px,2.1vw,28px);box-shadow:0 4px 18px #193d6110;overflow-wrap:anywhere}
+body.seonam-visual-ready main.seonam-visual-layout>.seonam-visual-left,
+body.seonam-visual-ready main.seonam-visual-layout>.seonam-visual-right{position:sticky;top:96px;min-width:0;display:grid;gap:12px}
+.seonam-visual-side-nav{display:grid;gap:4px;padding:10px;background:#fff;border:1px solid #e0e7ef;border-radius:12px;box-shadow:0 4px 18px #193d6110}
+.seonam-visual-side-nav a{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:46px;padding:10px 13px;border-radius:8px;text-decoration:none;color:#233d5a;font-size:14px;font-weight:700}
+.seonam-visual-side-nav a:after{content:"›";font-size:21px;line-height:1;font-weight:400;color:#8ea2ba}
+.seonam-visual-side-nav a[aria-current="page"],.seonam-visual-side-nav a:hover,.seonam-visual-side-nav a:focus-visible{background:#1e62c6;color:#fff}
+.seonam-visual-side-nav a[aria-current="page"]:after,.seonam-visual-side-nav a:hover:after{color:#fff}
+.seonam-visual-side-card{padding:20px 16px;border:1px solid #d8e7fa;border-radius:12px;background:linear-gradient(160deg,#e5f0ff,#f8fbff);color:#10365f}
+.seonam-visual-side-card strong{font-size:18px;line-height:1.45;word-break:keep-all}
+.seonam-visual-side-card p{font-size:13px;line-height:1.65}
+.seonam-visual-side-card a{display:inline-flex;padding:9px 12px;border:1px solid #2264b8;border-radius:8px;text-decoration:none;color:#164a88;background:#fff;font-size:13px;font-weight:700}
+.seonam-visual-info-card{padding:17px 15px;border:1px solid #e0e7ef;border-radius:12px;background:#fff;box-shadow:0 4px 18px #193d6110}
+.seonam-visual-info-card h2{font-size:16px;line-height:1.4;margin:0 0 12px;color:#142c46}
+.seonam-visual-recent-notices{list-style:none;margin:0 0 10px;padding:0}
+.seonam-visual-recent-notices li{padding:8px 0;border-bottom:1px solid #edf2f7;font-size:13px;line-height:1.5;color:#617087;word-break:keep-all}
+.seonam-visual-recent-notices a{display:block;color:#243e5a;text-decoration:none}
+.seonam-visual-recent-notices a:hover{text-decoration:underline}
+.seonam-visual-info-card>a{font-size:12px;color:#1d5fb0;font-weight:700}
+.seonam-visual-quick{display:grid;gap:8px}
+.seonam-visual-quick a{display:block;padding:10px 12px;border-radius:8px;background:#f0f5fc;color:#20568d;text-decoration:none;font-size:13px;font-weight:700}
+.seonam-visual-quick a:hover{background:#e0edff}
+body.seonam-visual-ready .seonam-visual-content>.central-category-panel{max-width:100%!important;width:100%!important;margin:0 0 12px!important;text-align:left!important}
+body.seonam-visual-ready .seonam-visual-content>.campaign-hero{width:100%!important;max-width:100%!important;margin:0!important;overflow:hidden}
+body.seonam-visual-ready .seonam-visual-content>.campaign-hero .campaign-hero-artwork,
+body.seonam-visual-ready .seonam-visual-content>.campaign-hero .campaign-hero-image{max-width:100%!important;width:100%!important}
+body.seonam-visual-ready .seonam-visual-content>.section{max-width:100%!important;width:100%!important;margin-left:0!important;margin-right:0!important}
+body[data-seonammedi-image-mode="inner"].seonam-visual-ready .seonam-visual-content>.campaign-hero,
+body[data-seonammedi-image-mode="inner"].seonam-visual-ready .seonam-visual-content>#homePublicFeed{display:none!important}
+body.seonam-visual-ready.board-notices .board-panel label:has(input[type="checkbox"]){display:flex;align-items:center;gap:9px}
+body.seonam-visual-ready.board-notices .board-panel input[type="checkbox"]{width:17px!important;height:17px!important;margin:0!important;flex:0 0 auto}
+body.seonam-visual-ready.board-notices .board-head h1{font-size:26px}
+body.seonam-visual-ready.board-notices .board-row{padding:15px 0!important}
+body.seonam-visual-ready.board-notices .row-body{font-size:14px!important;line-height:1.5!important}
+@media(max-width:1150px){
+  body.seonam-visual-ready main.seonam-visual-layout{grid-template-columns:minmax(165px,205px) minmax(0,1fr)!important;gap:16px}
+  body.seonam-visual-ready main.seonam-visual-layout>.seonam-visual-right{grid-column:1/-1;position:static;grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:760px){
+  body.seonam-visual-ready>.site-header{position:sticky!important;top:0!important}
+  .seonam-visual-hero{height:225px;min-height:225px}
+  .seonam-visual-hero-copy{width:calc(100% - 32px);padding:10px 0 34px}
+  .seonam-visual-hero-copy h1{font-size:24px;max-width:380px}
+  .seonam-visual-hero-copy p{max-width:350px;font-size:12px}
+  .seonam-visual-photo-credit{left:16px;right:16px;text-align:left;font-size:9px}
+  body.seonam-visual-ready main.seonam-visual-layout{display:flex!important;flex-direction:column!important;width:calc(100% - 24px)!important;gap:12px!important;margin:12px auto 28px!important}
+  body.seonam-visual-ready main.seonam-visual-layout>.seonam-visual-left,
+  body.seonam-visual-ready main.seonam-visual-layout>.seonam-visual-right{width:100%;position:static;display:block}
+  .seonam-visual-side-nav{display:flex;gap:5px;overflow-x:auto;scrollbar-width:thin;white-space:nowrap;padding:7px}
+  .seonam-visual-side-nav a{flex:none;min-height:40px;padding:8px 12px;font-size:13px}
+  .seonam-visual-side-nav a:after{display:none}
+  .seonam-visual-side-card{display:none}
+  body.seonam-visual-ready main.seonam-visual-layout>.seonam-visual-content{width:100%;padding:15px;min-height:250px}
+  body.seonam-visual-ready main.seonam-visual-layout>.seonam-visual-right{display:grid;grid-template-columns:1fr;gap:10px}
+}
+@media(prefers-reduced-motion:reduce){.seonam-visual-hero *{scroll-behavior:auto!important;transition:none!important}}
