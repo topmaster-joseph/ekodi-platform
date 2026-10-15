@@ -1,3 +1,4 @@
+import {dorajiOperatorScript} from './ekodibiz-doraji-operator.js';
 const ROOT='/ekodibiz/doraji';
 const JS_PATH=ROOT+'/office.js';
 const PAGE_PATH=ROOT+'/office';
@@ -7,7 +8,7 @@ export function dorajiOperatorResponse(request){
  const path=new URL(request.url).pathname;
  if(!isDorajiOperatorPath(path))return null;
  if(request.method!=='GET'&&request.method!=='HEAD')return new Response(null,{status:405,headers:{allow:'GET, HEAD','cache-control':'no-store'}});
- if(path===JS_PATH)return new Response('',{status:503}); // Script source is served by the static asset pipeline after the route check.
+ if(path===JS_PATH)return new Response(dorajiOperatorScript,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'private, no-store','x-content-type-options':'nosniff','x-robots-tag':'noindex, nofollow, noarchive'}});
  return new Response(`<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>사업 업무원장 | EKODIBIZ 도라지</title>
 <style>
