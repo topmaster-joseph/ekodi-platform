@@ -2733,10 +2733,15 @@
           "활동이력",
           "소통채널",
           "시민의견",
-          "회계",
           "공지",
           "조직",
           "<meta name=\"twitter:card\" content=\"summary_large_image\">\n  <meta property=\"og:image\""
+        ],
+        "forbid": [
+          "전체 회계내역",
+          "id=\"financeManageForm\"",
+          "id=\"financeList\"",
+          "href=\"board/finance\""
         ],
         "rollbackVerify": false,
         "bodyIncludes": [
