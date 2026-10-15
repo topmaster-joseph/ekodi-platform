@@ -35,7 +35,11 @@ test('cooperative hub and assets reject all storage without relying on a private
     const cc=String(response.headers.get('cache-control')||'');
     assert.ok(cc.split(',').map(x=>x.trim()).includes('no-store'),path);
     const normalized=[...response.headers].map(([k,v])=>k+': '+v).join('\n').toLowerCase();
-    for(const marker of probe.headerExpect)assert.ok(normalized.includes(marker.toLowerCase()),path+': '+marker);
+    for(const marker of probe.headerExpect){
+      if(marker.toLowerCase()==='cache-control: no-store'){
+        assert.ok(cc.split(',').map(x=>x.trim()).includes('no-store'),path+': '+marker);
+      }else assert.ok(normalized.includes(marker.toLowerCase()),path+': '+marker);
+    }
     await response.body?.cancel();
   }
 });

@@ -39,7 +39,13 @@ test('cooperative release probes match final Shared Site headers and keep every 
     assert.equal(response.status,200,path);
     assert.ok(response.headers.get('cache-control').split(',').map(value=>value.trim()).includes('no-store'),path);
     const finalHeaders=[...response.headers].map(([key,value])=>key+': '+value).join('\n').toLowerCase();
-    for(const marker of probe.headerExpect||[])assert.ok(finalHeaders.includes(marker.toLowerCase()),path+': '+marker);
+    for(const marker of probe.headerExpect||[]){
+      // The actual Shared Site edge may normalize "private, no-store" to "no-store".
+      // Check the mandatory no-store directive semantically without relaxing other headers.
+      if(marker.toLowerCase()==='cache-control: no-store'){
+        assert.ok(response.headers.get('cache-control').split(',').map(value=>value.trim()).includes('no-store'),path+': '+marker);
+      }else assert.ok(finalHeaders.includes(marker.toLowerCase()),path+': '+marker);
+    }
     if(response.headers.get('content-type').includes('text/html')&&(path.includes('/admin')||path.includes('business-coop')))assert.match(response.headers.get('x-robots-tag'),/noindex/,path);
     await response.body?.cancel();
   }
