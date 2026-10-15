@@ -24,3 +24,11 @@
 @media(max-width:1000px){.classroom-layout{grid-template-columns:1fr}.classroom-sidebar{position:static}.view-menu{grid-template-columns:repeat(3,minmax(0,1fr))}.side-help{display:none}.classroom-heading{padding:22px}}
 @media(max-width:650px){.classroom-main{width:calc(100% - 20px)}.view-menu{grid-template-columns:repeat(2,minmax(0,1fr))}.view-menu button{padding:10px;font-size:.86rem}.course-cards,.two-col{grid-template-columns:1fr}.workspace-bar{align-items:stretch}.workspace-actions{align-items:stretch}.workspace-actions button{flex:1}.slide-toolbar{flex-wrap:wrap}.slide-controls span{display:none}.slide-content li{margin-bottom:12px}.classroom-heading{padding:18px}.classroom-sidebar{padding:10px}}
 @media print{.topbar,.classroom-sidebar,.workspace-actions,.slide-controls,.safety-banner,footer,.btnline,.live-status{display:none!important}body{background:white;color:black}.classroom-main{width:100%;padding:0}.classroom-heading{border:0;background:none;padding:0}.classroom-layout{display:block}.info-card,.lesson-card,.resource-card{break-inside:avoid;border:1px solid #aaa;color:black}.info-card p,.lesson-card p,.resource-card p,.course-lead{color:#333}.wide-scroll{overflow:visible}.status-note{color:#333}}
+/* Source-derived six-program preview cards; separate from the MNU staff lesson grid. */
+.program-brief-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0}
+.program-brief-card{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:15px;min-width:0}
+.program-brief-card h4{margin:6px 0 8px;font-size:1rem;line-height:1.5;word-break:keep-all}
+.program-brief-card p{font-size:.82rem;line-height:1.6;margin:8px 0}
+.program-brief-card a{display:inline-block;color:var(--accent);font-size:.85rem;text-decoration:underline;text-underline-offset:3px}
+@media(max-width:940px){.program-brief-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:490px){.program-brief-grid{grid-template-columns:1fr}}
