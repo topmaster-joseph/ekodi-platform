@@ -13,7 +13,8 @@ export const ROUTE='/study/ai-bootcamp/';
 const wantsPreview=process.env.EKODI_EDUCATION_PREVIEW_MODE==='true';
 const previewAllowed=wantsPreview&&process.env.GITHUB_EVENT_NAME==='pull_request'&&process.env.CI==='true';
 if(wantsPreview&&!previewAllowed)throw new Error('Local preview is restricted to isolated CI pull requests');
-const TARGET_ORIGIN=previewAllowed?'http://127.0.0.1:8765':ORIGIN;
+const TARGET_ORIGIN=previewAllowed?'http://127.0.0.1:8765':'https://ekodi.kr';
+const TARGET_ROUTE=previewAllowed?ROUTE:'/edu'+ROUTE;
 export const VIEWPORTS=Object.freeze([
   {name:'compact-mobile',width:320,height:640,mobile:true},
   {name:'mobile',width:390,height:844,mobile:true},
@@ -37,7 +38,7 @@ const record=(kind,profile,detail)=>report[kind].push({profile:profile.name,...d
 async function checkAssets(page){
   const results=[];
   for(const file of FILES){
-    const response=await page.request.get(TARGET_ORIGIN+ROUTE+file,{timeout:15000});
+    const response=await page.request.get(TARGET_ORIGIN+TARGET_ROUTE+file,{timeout:15000});
     if(response.status()!==200)fail('asset '+file+' returned HTTP '+response.status());
     results.push({file,status:response.status(),type:response.headers()['content-type']||''});
   }
@@ -76,7 +77,11 @@ async function checkProfile(browser,profile){
     return route.continue();
   });
   try{
-    const response=await page.goto(TARGET_ORIGIN+ROUTE,{waitUntil:'domcontentloaded',timeout:35000});
+    if(!previewAllowed){
+      const legacy=await page.request.get(ORIGIN+ROUTE,{timeout:15000});
+      if(legacy.status()!==200)fail('legacy Education classroom compatibility failed HTTP '+legacy.status());
+    }
+    const response=await page.goto(TARGET_ORIGIN+TARGET_ROUTE,{waitUntil:'domcontentloaded',timeout:35000});
     if(!response||response.status()!==200)fail(profile.name+' classroom returned HTTP '+response?.status());
     if(new URL(page.url()).origin!==TARGET_ORIGIN)fail('redirect escaped Education origin');
     await page.locator('[data-view="overview"]').waitFor({state:'visible',timeout:15000});
