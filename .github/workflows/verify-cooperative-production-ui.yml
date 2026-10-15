@@ -1,0 +1,43 @@
+name: Verify Cooperative Production UI
+
+on:
+  workflow_run:
+    workflows: [Deploy EKODI Shared Site Core]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cooperative-production-ui
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate source orchestration
+        run: node scripts/validate-ekodi-ai-change-orchestration.mjs --ci
+      - name: Prepare isolated Chromium
+        run: |
+          npm install --no-save --package-lock=false playwright@1.62.1
+          npx playwright install --with-deps chromium
+      - name: Verify real public and guest member/admin pages without mutations
+        run: node scripts/verify-cooperative-production-ui.mjs
+      - name: Preserve precise production evidence scope
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cooperative-production-ui-${{ github.run_id }}
+          path: artifacts/cooperative-production-ui/
+          if-no-files-found: ignore
+          retention-days: 7
