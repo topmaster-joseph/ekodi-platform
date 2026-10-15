@@ -9,3 +9,5 @@ Authenticated run #38762727975 proved all 45 of 45 Admin menu renders and tempor
 This is a documentation-only convergence nudge after the approved recovery PR became mergeable. It changes no authentication, browser harness, release gate, production service or secret handling. CI, protected merge, receipt-bound deployment, actual Assist round-trip and temporary session cleanup remain mandatory. Interactive Google OAuth validation is independent and outstanding.
 
 Protected-CI reconciliation: the orchestrator refreshed this branch to the latest main; the bot-created update commit yielded `action_required` without executing checks. Re-request full CI from the owner-authored branch. This record changes no executable code, approval scope or release rules.
+
+Second protected reconciliation: main advanced while the trusted converger was waiting for required checks. Re-run the owner-authored CI on the just-refreshed branch; no runtime, session or release-policy change. Only fully verified protected status may merge.
