@@ -258,6 +258,9 @@ const adminContinuityVerificationTouched=changedFiles.some(file=>
   // Re-run genuine signed-in production E2E when the isolated menu harness changes.
   file==='scripts/admin-authenticated-e2e-menu-worker.mjs'||
   file==='scripts/admin-authenticated-e2e-retry.mjs'||
+  // Strict canonical Assist UI verification is part of the authenticated sweep.
+  file==='scripts/admin-assist-canonical-e2e.mjs'||
+  file==='test/admin-assist-visual-state-20261016.test.mjs'||
   file==='test/admin-authenticated-e2e-readiness.test.mjs'||
   file==='.github/workflows/verify-admin-authenticated-production-e2e.yml'||
   file==='.github/workflows/admin-authenticated-e2e.yml'||
