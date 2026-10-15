@@ -12,16 +12,16 @@ test('central category interactions run as same-origin external JS, preserving s
     read('_headers')
   ]);
   assert.doesNotMatch(home,/<script id="central-category-menu-script">/);
-  assert.match(home,/<script src="\\.\\/central-category-runtime\\.js\\?v=20261015-notice-direct-all-1" defer><\\/script>/);
+  assert.ok(home.includes('<script src="./central-category-runtime.js?v=20261015-notice-direct-all-1" defer></script>'));
   assert.match(home,/<link rel="stylesheet" href="\.\/central-category-menu\.css">/);
   assert.match(home,/id="central-category-panel"[^>]*hidden/);
   assert.match(home,/id="central-category-buttons"/);
   assert.match(script,/const categories=\{/);
   for(const text of ['활동이력','관련소식','소통채널','페이스북','인스타그램','유튜브'])
     assert.ok(script.includes(text),'missing dynamic category '+text);
-  assert.doesNotMatch(script,/"공지"\\s*:/);
+  assert.ok(!script.includes('"공지":'));
   assert.doesNotMatch(script,/noticePreview|renderNoticePreview/);
-  assert.match(script,/panel\\.hidden=false/);
+  assert.ok(script.includes('panel.hidden=false'));
   assert.match(script,/buttons\.replaceChildren\(\)/);
   assert.match(css,/\.central-category-buttons\{display:flex;flex-wrap:wrap/);
   assert.match(headers,/\/seonammedi\/\*[\s\S]*?script-src 'self'/);
