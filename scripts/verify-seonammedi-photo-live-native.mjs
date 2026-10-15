@@ -8,10 +8,15 @@ const args=Object.fromEntries(process.argv.slice(2).map(arg=>{
   return m?[m[1],m[2]]:[arg.replace(/^--/,''),'true'];
 }));
 const origin=String(args.origin||'').replace(/\/+$/,'');
-if(!['https://seonammedi.kr','https://ekodi.kr'].includes(origin)){
+const sourceMode=args['source-mode']==='true';
+const approvedProduction=['https://seonammedi.kr','https://ekodi.kr'];
+const approvedLocal='http://127.0.0.1:8765';
+if(sourceMode ? origin!==approvedLocal : !approvedProduction.includes(origin)){
   throw Error('read_only_photo_verifier_disallows_unapproved_origin');
 }
-const base=origin.endsWith('ekodi.kr')?'/seonammedi/':'/';
+// The source preview checks only homepage/hash categories. Standalone boards
+// must always be inspected against their actual deployed Worker in live mode.
+const base=sourceMode||origin==='https://ekodi.kr'?'/seonammedi/':'/';
 const output=path.resolve(String(args.out||'artifacts/seonammedi-production-photo-proof'));
 const labels=['공지','활동이력','관련소식','소통채널','시민의견','조직'];
 const checks=[
@@ -23,7 +28,9 @@ const checks=[
   {key:'organization',name:'조직',path:'#organization'}
 ];
 await fs.mkdir(output,{recursive:true});
-const report={policy:'EKODI-SEONAMMEDI-PHOTO-LIVE-001',origin,readOnly:true,profiles:[],failures:[],checkedAt:new Date().toISOString(),success:false};
+const report={policy:sourceMode?'EKODI-SEONAMMEDI-PHOTO-SOURCE-001':'EKODI-SEONAMMEDI-PHOTO-LIVE-001',
+  origin,mode:sourceMode?'source-preview':'production',readOnly:true,profiles:[],failures:[],
+  checkedAt:new Date().toISOString(),success:false};
 let browser;
 function required(ok,reason){if(!ok)throw Error(reason);}
 async function inspect(page,where){
@@ -99,7 +106,8 @@ try{
       }catch(err){row.assetProbe={error:String(err?.message||err).slice(0,220)};}
       console.log('SEONAM-PHOTO-ASSET-PROBE '+JSON.stringify({origin,scriptUrl,...row.assetProbe}));
     }
-    const all=[{key:'home',name:'첫 화면',path:''},...checks];
+    const all=[{key:'home',name:'첫 화면',path:''},
+      ...checks.filter(item=>!sourceMode||item.path.startsWith('#'))];
     for(const item of all){
       // New tab for every route: hash-only navigations otherwise return a null
       // response and can conceal the actual HTTP result for a subpage.
@@ -162,7 +170,7 @@ finally{
   const reportPath=path.join(output,'production-photo-evidence.json');
   await fs.writeFile(reportPath,JSON.stringify(report,null,2));
   console.log(JSON.stringify({policy:report.policy,origin:report.origin,success:report.success,
-    total:report.profiles.reduce((n,p)=>n+p.results.length,0),
+    mode:report.mode,total:report.profiles.reduce((n,p)=>n+p.results.length,0),
     passed:report.profiles.reduce((n,p)=>n+p.results.filter(x=>x.ok).length,0),
     failures:report.failures,reportPath}));
   if(!report.success)process.exitCode=1;
