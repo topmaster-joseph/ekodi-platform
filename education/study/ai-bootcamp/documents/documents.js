@@ -115,9 +115,10 @@ function boot(){
       const bitmap=await createImageBitmap(file);
       const scale=Math.min(1,1400/Math.max(bitmap.width,bitmap.height));
       const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));
-      const ctx=canvas.getContext('2d');ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();
+      const ctx=canvas.getContext('2d');ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
       let encoded=canvas.toDataURL('image/jpeg',.80);
       if(encoded.length>800000){canvas.width=Math.max(1,Math.round(canvas.width*.65));canvas.height=Math.max(1,Math.round(canvas.height*.65));ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);encoded=canvas.toDataURL('image/jpeg',.68);}
+      bitmap.close();
       if(encoded.length>800000)throw Error('사진 파일이 너무 큽니다.');
       state.portrait=encoded;render();
       status('editorStatus','사진 교체 완료 · 서버로 전송하지 않았습니다. JSON을 백업해 두세요.');
