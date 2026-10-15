@@ -112,8 +112,8 @@ try {
             for(const item of contexts){
               await page.locator('header.site-header nav '+item.selector).first().click({timeout:6000});
               await page.locator('header.site-header nav a[href*="board/notices"]').first().click({timeout:8000});
-              await page.waitForURL(url=>url.origin===root.origin&&url.pathname.replace(/\\/$/,'')===expectedPath,{timeout:10000});
-              const actualPath=new URL(page.url()).pathname.replace(/\\/$/,'');
+              await page.waitForURL(url=>url.origin===root.origin&&url.pathname.replace(/[/]$/,'')===expectedPath,{timeout:10000});
+              const actualPath=new URL(page.url()).pathname.replace(/[/]$/,'');
               const ok=actualPath===expectedPath;
               record.noticeAfterCategory.push({from:item.label,path:actualPath,ok});
               if(!ok)throw Error('notice_after_'+item.label+'_unexpected_path_'+actualPath);
