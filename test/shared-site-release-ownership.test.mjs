@@ -62,7 +62,7 @@ test('shared-site manual release propagates exact orchestrator provenance into s
   assert.match(workflow,/commits\/\$GITHUB_SHA\/pulls/);
   assert.match(workflow,/Cannot prove a repository-orchestrated source for staging/);
   assert.match(workflow,/Orchestrator task mismatch before staging/);
-  assert.match(workflow,/if \[\[ ! "\$branch" =~ \^ai\/\[\^\/\]\+\/\(orch_/,'source recovery must fail closed on unverified branches');
+  assert.ok(workflow.includes('if [[ ! "$branch" =~ ^ai/[^/]+/(orch_'),'source recovery must fail closed on unverified branches');
   assert.ok(workflow.includes('echo "release_branch_ref=$branch" >> "$GITHUB_OUTPUT"'));
   assert.ok(workflow.includes('echo "release_task_id=${requested_task:-$derived_task}" >> "$GITHUB_OUTPUT"'));
 
