@@ -102,11 +102,27 @@ jobs:
         if: always() && steps.canonical.outcome != 'skipped'
         run: |
           node scripts/verify-seonammedi-hero-native.mjs --origin=https://seonammedi.kr --out=artifacts/native-hero-customer
+      - name: Verify six-menu real photo on both production domains
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          node scripts/verify-seonammedi-photo-live-native.mjs --origin=https://ekodi.kr --out=artifacts/native-photo-proof-canonical
+          canonical_result=$?
+          node scripts/verify-seonammedi-photo-live-native.mjs --origin=https://seonammedi.kr --out=artifacts/native-photo-proof-customer
+          customer_result=$?
+          if [ "$canonical_result" -ne 0 ] || [ "$customer_result" -ne 0 ]; then
+            echo 'Production photo shell verification failed; deployment is NOT visually proven.' >&2
+            exit 1
+          fi
+          echo 'Production photo shell verification succeeded for both domains, PC and mobile.'
       - name: Preserve production evidence and screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: seonammedi-native-hero-production-${{ github.run_id }}
-          path: artifacts/native-hero-*
+          path: |
+            artifacts/native-hero-*
+            artifacts/native-photo-proof-*
           if-no-files-found: warn
           retention-days: 14
