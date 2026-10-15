@@ -262,6 +262,9 @@ const adminContinuityVerificationTouched=changedFiles.some(file=>
   file==='scripts/admin-assist-canonical-e2e.mjs'||
   file==='test/admin-assist-production-dispatch-20261016.test.mjs'||
   file==='test/admin-authenticated-e2e-readiness.test.mjs'||
+  // Also cover changes to the release-provenance immediate-merge dispatch path.
+  file==='scripts/recover-release-provenance.mjs'||
+  file==='test/recovery-admin-e2e-dispatch.test.mjs'||
   file==='.github/workflows/verify-admin-authenticated-production-e2e.yml'||
   file==='.github/workflows/admin-authenticated-e2e.yml'||
   file==='scripts/converge-orchestrated-pr-merge.mjs'
