@@ -150,7 +150,7 @@ export function renderMnuBizPublicPage(){
       <span class="mnubiz-brand__text"><strong class="mnubiz-brand__name" data-ekodi-header-site-name>${esc(name)}</strong><span class="mnubiz-brand__sub">BUSINESS ALUMNI</span></span>
     </a>
     <nav class="mnubiz-nav" data-ekodi-header-actions aria-label="동문회 주요 메뉴">
-      <a href="#about">소개</a><a href="#network">동문 네트워크</a><a href="#news">소식 · 행사</a>
+      <a href="#about">소개</a><a href="#network">동문 네트워크</a><a href="#news">소식 · 행사</a><a href="#research">연구사업 · 자료실</a>
     </nav>
   </div>
 </header>
@@ -195,6 +195,16 @@ export function renderMnuBizPublicPage(){
     <div class="mnubiz-shell">
       <div class="mnubiz-section__head"><div><p class="mnubiz-section__eyebrow">NEWS & EVENTS</p><h2>소식 · 행사</h2></div><p class="mnubiz-section__desc">동문회에서 확인한 공지와 일정을 공개하며, 행사 신청과 참여 기록도 같은 흐름에서 연결합니다.</p></div>
       <div class="mnubiz-empty"><span class="mnubiz-empty__date">READY</span><div><strong>공개된 동문회 공지·행사를 준비하고 있습니다.</strong><p>운영자가 확인한 내용부터 순서대로 표시됩니다.</p></div></div>
+    </div>
+  </section>
+  <section class="mnubiz-section" id="research" aria-labelledby="mnubiz-research-title">
+    <div class="mnubiz-shell">
+      <div class="mnubiz-section__head"><div><p class="mnubiz-section__eyebrow">RESEARCH & ARCHIVE</p><h2 id="mnubiz-research-title">연구사업 · 자료실</h2></div><p class="mnubiz-section__desc">연구세미나와 후속 회의를 하나의 과제 흐름으로 관리합니다. 회의록·참석자·회계증빙은 인증과 권한 검증을 거쳐 열람·편집하도록 준비합니다.</p></div>
+      <div class="mnubiz-grid">
+        <article class="mnubiz-card"><span class="mnubiz-card__index">01 · SEMINAR</span><h3>제주 연구세미나</h3><p>2026년 8월 개최 행사와 발표자료·결과 기록을 연결합니다. 원본 자료 확인 후 등록합니다.</p></article>
+        <article class="mnubiz-card"><span class="mnubiz-card__index">02 · FOLLOW-UP</span><h3>후속 연구회의</h3><p>2026년 10월 21일 예정 · 회의계획, 참석자 확인, 안건 및 회의록을 연계합니다.</p></article>
+        <article class="mnubiz-card"><span class="mnubiz-card__index">03 · ACCESS</span><h3>권한 기반 자료관리</h3><p>회원별 담당 권한에 따라 웹 편집과 증빙 열람을 제공할 예정입니다. 현재 이 화면은 공개 안내이며 편집 기능은 활성화되지 않았습니다.</p></article>
+      </div>
     </div>
   </section>
 </main>
