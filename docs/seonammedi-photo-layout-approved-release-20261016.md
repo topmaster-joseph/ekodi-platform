@@ -9,3 +9,9 @@
 - This documentation-only owner-authored reconciliation touch retriggers ordinary GitHub Actions required checks after automated recovery-branch creation. It changes no application source, session, password, authorization, CSP, database, or production workflow.
 - Required: authentic CI and AI orchestration checks, protected main convergence without force updates, guarded Site Core and independent board deployments, rollback, native Chromium PC/mobile on both `seonammedi.kr` and `ekodi.kr/seonammedi`.
 - A created PR, passing CI, or an orchestrator task is *not* production verification. Deployment may only be described as completed with live release proof.
+
+## Integration priority reconciliation
+- Related PR #4902 merged first on protected main `66cbdebf46ecde4f7bcb3164bafa39fa150b6078` (verified through GitHub PR state), preserving long-title and notice-body mobile overflow safety.
+- PR #4906 has the stored `[EKODI RELATED CHANGE REVIEW]` review and `related-change-review-complete` label; it is no longer allowed to take priority over #4902.
+- This owner-authored **documentation-only** touch starts authentic normal PR CI after the priority winner closed. The existing receipt-bound EKODI Convergent Merge workflow, not this document, must perform GitHub's safe `update-branch` operation and verify resulting CI before protected merge.
+- No executable board source, authorization, secret, image, deploy or rollback guard has been changed in this reconciliation.
