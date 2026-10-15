@@ -972,6 +972,7 @@ function Get-BackgroundBrowserCanaryState {
 }
 
 function Invoke-EkodiNativeCdpCanary {
+  if ($env:GITHUB_ACTIONS -eq 'true') { Write-Host '[EKODI][CDP-STAGE] entered' }
   $nodeCommand = Get-Command node.exe -ErrorAction SilentlyContinue
   if (-not $nodeCommand) { throw 'CDP_NODE_RUNTIME_REQUIRED' }
   $nodeExe = [string]$nodeCommand.Source
@@ -989,6 +990,7 @@ function Invoke-EkodiNativeCdpCanary {
     $candidate = Get-Content -LiteralPath $download -Raw -Encoding UTF8
     if ($candidate -notmatch 'CDP_DOM_EVIDENCE_MISSING' -or $candidate -notmatch 'CDP_TARGET_FORBIDDEN') { throw 'CDP_WORKER_SOURCE_INVALID' }
     Move-Item -LiteralPath $download -Destination $workerPath -Force
+    if ($env:GITHUB_ACTIONS -eq 'true') { Write-Host '[EKODI][CDP-STAGE] reviewed-worker-ready' }
   } finally {
     Remove-Item -LiteralPath $download -Force -ErrorAction SilentlyContinue
   }
@@ -1002,6 +1004,7 @@ function Invoke-EkodiNativeCdpCanary {
     RedirectStandardError = $true
   }
   [void]$process.Start()
+  if ($env:GITHUB_ACTIONS -eq 'true') { Write-Host '[EKODI][CDP-STAGE] node-child-started' }
   $stdoutTask = $process.StandardOutput.ReadToEndAsync()
   $stderrTask = $process.StandardError.ReadToEndAsync()
   if (-not $process.WaitForExit(35000)) {
