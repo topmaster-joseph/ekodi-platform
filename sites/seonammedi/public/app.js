@@ -604,6 +604,9 @@ function showView(view,{updateHash=false}={}){
   if(financeNav){if(key==='finance')financeNav.setAttribute('aria-current','page');else financeNav.removeAttribute('aria-current')}
   const hero=document.querySelector('.hero');
   if(hero)hero.hidden=Boolean(key);
+  // The homepage is the only place where campaign and content imagery is visible.
+  const categoryPanel=document.getElementById('central-category-panel');
+  document.body.dataset.seonammediImageMode=key||categoryPanel&&!categoryPanel.hidden?'inner':'home';
   if(updateHash){
     const next=key?'#'+(canonicalViewHash[key]||key):location.pathname;
     history.pushState({view:key},'',next);
