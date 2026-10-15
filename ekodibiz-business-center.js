@@ -1,6 +1,6 @@
 // EKODIBIZ Business Center is loaded only inside an authenticated workspace-admin view.
 // The SQL migration provides tenant-bound RLS and append-only audit, not browser storage.
-export const BIZ_CENTER_VERSION = '20261014-compact-v2';
+export const BIZ_CENTER_VERSION = '20261015-webdev-library-v1';
 
 const STYLE = String.raw`
 .ebiz{color:#18323e;font-size:14px;line-height:1.3;display:grid;gap:9px;min-width:0}
@@ -50,6 +50,9 @@ const STYLE = String.raw`
 .ebiz .ebiz-mini{min-height:35px!important;font-size:12px!important;padding:5px 8px!important}
 .ebiz .ebiz-links{display:flex;gap:8px;flex-wrap:wrap}
 .ebiz .ebiz-links a{border:1px solid #dce6e5;border-radius:8px;padding:10px 12px;color:#315d56;text-decoration:none;font-weight:650}
+.ebiz .ebiz-webdoc-item{display:flex;justify-content:space-between;align-items:center;width:100%;margin-top:7px;gap:8px}
+.ebiz .ebiz-webdoc-body{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.65;margin:14px 0;font-size:13px}
+.ebiz .ebiz-webdoc-item small{font-weight:500}
 .ebiz .ebiz-print-shade[hidden]{display:none!important}
 .ebiz .ebiz-print-shade{position:fixed;inset:0;background:#092129b8;z-index:2147483600;display:flex;justify-content:center;align-items:start;overflow:auto;padding:20px}
 .ebiz .ebiz-print-frame{background:#eff2f2;border-radius:11px;padding:15px;width:min(750px,100%)}
@@ -91,10 +94,10 @@ function mountBusinessCenter({target,summaryTarget,accessToken,supabaseUrl,supab
   const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const number=value=>new Intl.NumberFormat('ko-KR').format(value);
   const dte=value=>value?String(value).slice(0,10):'—';
-  const labels={admin:'사업자·행정',project:'사업·프로젝트',education:'교육·강의',finance:'재무·증빙',document:'문서·인쇄',task:'점검·승인',history:'보고·이력'};
+  const labels={admin:'사업자·행정',project:'사업·프로젝트',education:'교육·강의',finance:'재무·증빙',document:'문서·인쇄',webdev:'홈페이지 개발',task:'점검·승인',history:'보고·이력'};
   const statusText={planned:'준비',in_progress:'진행',review:'검토',done:'완료',archived:'보관'};
-  const sections=['home','admin','project','education','finance','document','task','history'];
-  const state={section:'home',rows:[],audit:[],ready:false,busy:false,filter:'',openForm:false};
+  const sections=['home','admin','project','education','finance','document','webdev','task','history'];
+  const state={section:'home',rows:[],audit:[],ready:false,busy:false,filter:'',openForm:false,webDocs:[],webEvents:[],webLoaded:false,webSelected:'',webEditing:false,webBusy:false};
   if(!document.getElementById('ebiz-business-center-style')){
     const link=document.createElement('link');link.id='ebiz-business-center-style';link.rel='stylesheet';link.href='/ekodibiz-business-center.css?v=20261014-compact-v2';document.head.append(link);
   }
@@ -164,10 +167,97 @@ function mountBusinessCenter({target,summaryTarget,accessToken,supabaseUrl,supab
     const view=state.section,rows=state.rows.filter(r=>r.kind===view && r.status!=='archived'&&(!state.filter||(r.title+' '+r.details).toLowerCase().includes(state.filter))).slice(0,250);
     return '<section class="ebiz-card"><div class="ebiz-head"><div><h3>'+esc(labels[view])+' 관리대장</h3><p class="ebiz-sub">기록된 업무를 검색·편집하고 변경이력을 보존합니다.</p></div><button class="ebiz-btn primary" data-eb-action="new">새 항목 등록</button></div><div class="ebiz-tools"><input id="ebiz-filter" type="search" aria-label="업무 검색" placeholder="제목이나 설명 검색" value="'+esc(state.filter)+'"><span class="ebiz-sub">'+number(rows.length)+'건 표시</span></div>'+form(state.rows.find(r=>r.id===state.openForm)||null)+'<div id="ebiz-list-results">'+(rows.length?table(rows):'<div class="ebiz-empty">등록된 항목이 없습니다.</div>')+'</div></section>'+((view==='finance')?externalLinks():'');
   }
+
+  async function fetchWebdev(){
+    status('에코디비즈 홈페이지 개발 자료실 조회 중');
+    try{
+      const docs=await request('/rest/v1/ekodibiz_webdev_docs?select=id,code,title,content,version,state,source_note,modified_at&order=modified_at.desc&limit=100');
+      const events=await request('/rest/v1/ekodibiz_webdev_events?select=id,doc_id,action,version,content,meta,recorded_at&order=recorded_at.desc&limit=250');
+      state.webDocs=Array.isArray(docs)?docs:[];
+      state.webEvents=Array.isArray(events)?events:[];
+      state.webLoaded=true;
+      if(!state.webDocs.some(d=>d.id===state.webSelected))state.webSelected=state.webDocs[0]?.id||'';
+      status('');paint();
+    }catch(e){
+      state.webLoaded=false;state.webDocs=[];state.webEvents=[];
+      status('홈페이지 개발 자료실을 조회하지 못했습니다: '+e.message,true);paint();
+    }
+  }
+  function webdev(){
+    if(!state.webLoaded)return '<section class="ebiz-card"><h3>홈페이지 개발 자료실</h3><p class="ebiz-sub">관리자 전용 원장을 확인하고 있습니다. 실패 시 화면 상단 오류를 확인하세요.</p></section>';
+    const current=state.webDocs.find(r=>r.id===state.webSelected)||null;
+    const rows=state.webDocs.filter(r=>r.state!=='archived');
+    const label={registered:'등록',revised:'수정·버전 추가',print_requested:'인쇄/PDF 준비',compose_requested:'이메일 작성 화면 열기',sent_reported:'관리자 발송 보고(실제 전송 확인 아님)'};
+    let intro='<section class="ebiz-card"><div class="ebiz-head"><div><h3>홈페이지 개발 자료실</h3><p class="ebiz-sub">홈페이지 개발 · 비교표 · 견적서 · 청구서 · 버전 · 발송 준비</p></div><div class="ebiz-actions"><button class="ebiz-btn" data-eb-webdev="reload">자료 새로고침</button><button class="ebiz-btn primary" data-eb-webdev="new">새 문서</button></div></div><p class="ebiz-sub">문서는 에코디비즈 관리자에게만 표시되며, 발송/출력 요청과 실제 완료 여부를 구분합니다. 원본 PDF·Word 파일은 별도 보관하고, 여기에는 웹 편집본을 등록합니다.</p></section>';
+    const list='<section class="ebiz-card"><h3>등록 문서</h3>'+ (rows.length?rows.map(d=>'<button class="ebiz-btn ebiz-webdoc-item '+(current?.id===d.id?'primary':'')+'" data-eb-webdev="select" data-web-id="'+esc(d.id)+'"><strong>'+esc(d.title)+'</strong> <small>v'+number(d.version)+' · '+esc(d.state)+'</small></button>').join(''):'<p class="ebiz-empty">등록된 홈페이지 개발 문서가 없습니다.</p>')+'</section>';
+    if(!current&&!state.webEditing)return intro+list;
+    const showForm=state.webEditing;
+    const doc=current||{id:'',code:'',title:'',content:'',state:'draft',version:0,source_note:''};
+    const editable='<form id="ebiz-webdev-editor" class="ebiz-form"><input type="hidden" name="id" value="'+esc(doc.id)+'"><input type="hidden" name="version" value="'+esc(doc.version)+'"><label>문서 코드<input name="code" class="ebiz-input" pattern="[a-z0-9-]{5,80}" '+(doc.id?'readonly':'required')+' value="'+esc(doc.code||'')+'" placeholder="homepage-client-yyyymmdd"></label><label>상태<select name="state">'+['draft','review','ready','archived'].map(x=>'<option value="'+x+'" '+(doc.state===x?'selected':'')+'>'+({draft:'초안',review:'검토',ready:'발송 준비',archived:'보관'}[x])+'</option>').join('')+'</select></label><label class="ebiz-wide">제목<input name="title" class="ebiz-input" required maxlength="200" value="'+esc(doc.title)+'"></label><label class="ebiz-wide">문서 본문<textarea name="content" rows="20" maxlength="30000" required>'+esc(doc.content)+'</textarea></label><label class="ebiz-wide">원본·보관 출처<input name="source_note" class="ebiz-input" maxlength="500" value="'+esc(doc.source_note||'')+'"></label><div class="ebiz-form-actions ebiz-wide"><button class="ebiz-btn primary" type="submit">서버 저장 · 버전 추가</button><button class="ebiz-btn" type="button" data-eb-webdev="cancel">취소</button></div></form>';
+    let content='';
+    if(showForm)content='<section class="ebiz-card">'+editable+'</section>';
+    else{
+      const subj=encodeURIComponent('[에코디비즈] '+doc.title);
+      const body=encodeURIComponent('청계면상인회 홈페이지 개발 문서 전달드립니다.\n\n'+doc.content.slice(0,3800)+'\n\n※ 견적서·청구서 PDF/Word 원본은 파일 첨부 후 발송해 주세요.');
+      const gmail='https://mail.google.com/mail/?view=cm&fs=1&su='+subj+'&body='+body;
+      content='<section class="ebiz-card"><div class="ebiz-head"><div><h3>'+esc(doc.title)+'</h3><p class="ebiz-sub">버전 '+number(doc.version)+' · '+esc(doc.state)+' · '+esc(dte(doc.modified_at))+'</p></div><div class="ebiz-actions"><button class="ebiz-btn" data-eb-webdev="edit">수정</button><button class="ebiz-btn" data-eb-webdev="print">인쇄 · PDF 저장</button><a class="ebiz-btn primary" target="_blank" rel="noopener noreferrer" data-eb-webdev-compose="'+esc(doc.id)+'" href="'+esc(gmail)+'">Gmail에서 작성</a></div></div><div class="ebiz-webdoc-body">'+esc(doc.content)+'</div><p class="ebiz-sub">원본: '+esc(doc.source_note||'웹 편집본')+'</p></section>';
+    }
+    let events=state.webEvents.filter(e=>e.doc_id===doc.id).slice(0,40);
+    const eventList='<section class="ebiz-card"><h3>문서 변경·발송 기록</h3><p class="ebiz-sub">이전 버전 보기는 읽기 전용입니다. 발송 보고는 관리자 수동 기록으로, Gmail의 실제 전송 확인을 대체하지 않습니다.</p>'+ (events.length?events.map(e=>'<div class="ebiz-line"><div><strong>'+esc(label[e.action]||e.action)+' · v'+number(e.version)+'</strong><small>'+esc(new Date(e.recorded_at).toLocaleString('ko-KR'))+(e.action==='sent_reported'?' · 수신자 '+esc(e.meta?.recipient||''):'')+'</small></div>'+(e.action==='registered'||e.action==='revised'?'<button class="ebiz-btn ebiz-mini" data-eb-webdev="history" data-history-id="'+esc(e.id)+'">이 버전 보기</button>':'')+'</div>').join(''):'<div class="ebiz-empty">기록이 없습니다.</div>')+'</section>';
+    const send=doc.id&&!showForm?'<section class="ebiz-card"><h3>실제 발송 후 관리자 기록</h3><form id="ebiz-webdev-report" class="ebiz-form"><label>수신 이메일<input type="email" name="recipient" class="ebiz-input" required placeholder="수신처 이메일"></label><label>발송 증빙<input name="evidence" class="ebiz-input" minlength="6" maxlength="220" required placeholder="Gmail 메시지 ID 또는 보낸편지함 확인정보"></label><p class="ebiz-sub ebiz-wide">이 기록은 관리자 확인에 의한 수동 발송 보고입니다. 전송 여부를 자동 검증하지 않습니다.</p><button class="ebiz-btn primary ebiz-wide" type="submit">발송했다고 보고하기</button></form></section>':'';
+    return intro+list+content+eventList+send;
+  }
+  async function webdevLog(r,action,meta={}){
+    return request('/rest/v1/rpc/ekodibiz_webdev_log_request',{method:'POST',body:{p_id:r.id,p_action:action,p_meta:meta}});
+  }
+  async function saveWebdev(form){
+    if(state.webBusy)return;
+    const values=new FormData(form),id=String(values.get('id')||''),title=String(values.get('title')||'').trim(),content=String(values.get('content')||'').trim();
+    const code=String(values.get('code')||''),docState=String(values.get('state')||'draft'),source_note=String(values.get('source_note')||'').trim(),version=Number(values.get('version')||0);
+    if(title.length<3||content.length<1||content.length>30000||!['draft','review','ready','archived'].includes(docState)||!/^[a-z0-9-]{5,80}$/.test(code))throw new Error('문서 제목·코드·내용을 확인하세요.');
+    state.webBusy=true;
+    try{
+      const body={title,content,state:docState,source_note,...(!id?{code}:{})};
+      const path='/rest/v1/ekodibiz_webdev_docs'+(id?'?id=eq.'+encodeURIComponent(id)+'&version=eq.'+version:'');
+      const saved=await request(path,{method:id?'PATCH':'POST',body});
+      if(!Array.isArray(saved)||saved.length!==1)throw new Error('다른 작업자가 먼저 수정했거나 저장되지 않았습니다. 원장을 다시 불러오세요.');
+      state.webEditing=false;state.webSelected=saved[0].id;await fetchWebdev();status('서버에 저장했습니다. 이전 문서 내용은 버전 기록에 보존됩니다.');
+    }finally{state.webBusy=false;}
+  }
+  async function reportWebdev(form){
+    const current=state.webDocs.find(d=>d.id===state.webSelected);
+    if(!current)throw new Error('문서를 먼저 선택하세요.');
+    const fd=new FormData(form),recipient=String(fd.get('recipient')||'').trim(),evidence=String(fd.get('evidence')||'').trim();
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(recipient)||evidence.length<6)throw new Error('수신자 이메일과 발송 증빙을 입력하세요.');
+    await webdevLog(current,'sent_reported',{recipient,evidence});
+    await fetchWebdev();status('관리자의 발송 보고를 기록했습니다. 메일 전송 확인은 별도로 필요합니다.');
+  }
+  async function webdevAction(button){
+    const action=button.dataset.ebWebdev;
+    if(action==='reload')return fetchWebdev();
+    if(action==='new'){state.webSelected='';state.webEditing=true;return paint();}
+    if(action==='select'){state.webSelected=button.dataset.webId;state.webEditing=false;return paint();}
+    if(action==='cancel'){state.webEditing=false;return paint();}
+    if(action==='edit'){state.webEditing=true;return paint();}
+    const current=state.webDocs.find(d=>d.id===state.webSelected);
+    if(!current)throw new Error('문서를 선택하세요.');
+    if(action==='print'){
+      await webdevLog(current,'print_requested');
+      $('#ebiz-print-sheet').innerHTML='<div class="ebiz-print-heading">EKODIBIZ · 홈페이지 개발 자료실 · v'+number(current.version)+'</div><h2>'+esc(current.title)+'</h2><div class="ebiz-webdoc-body">'+esc(current.content)+'</div><p>※ 이 화면은 관리자 자료실의 웹 편집본입니다. 세금계산서와 발송 증명서를 대신하지 않습니다.</p>';
+      $('#ebiz-print-preview').hidden=false;return;
+    }
+    if(action==='history'){
+      const snapshot=state.webEvents.find(e=>String(e.id)===button.dataset.historyId&&e.doc_id===current.id);
+      if(!snapshot)return status('이전 버전을 찾지 못했습니다.',true);
+      $('#ebiz-print-sheet').innerHTML='<div class="ebiz-print-heading">EKODIBIZ · 이전 버전 (읽기 전용)</div><h2>'+esc(current.title)+' · v'+number(snapshot.version)+'</h2><div class="ebiz-webdoc-body">'+esc(snapshot.content)+'</div>';
+      $('#ebiz-print-preview').hidden=false;
+    }
+  }
+
   function paint(){
     nav();
     if(!state.ready){$('#ebiz-content').innerHTML='<section class="ebiz-card"><h3>업무 원장 연결 필요</h3><p class="ebiz-sub">운영 데이터를 확인할 수 있을 때만 기록과 보고서를 표시합니다. 임시 수치로 대체하지 않습니다.</p></section>';return}
-    $('#ebiz-content').innerHTML=state.section==='home'?home():state.section==='history'?history():listView();
+    $('#ebiz-content').innerHTML=state.section==='home'?home():state.section==='history'?history():state.section==='webdev'?webdev():listView();
   }
   async function save(formElement){
     if(state.busy)return;
@@ -216,7 +306,9 @@ function mountBusinessCenter({target,summaryTarget,accessToken,supabaseUrl,supab
     status('CSV 내려받기 요청을 기록했습니다.');
   }
   target.addEventListener('click',async ev=>{
-    const section=ev.target.closest('[data-eb-section]');if(section){state.section=section.dataset.ebSection;state.filter='';state.openForm=false;paint();return}
+    const section=ev.target.closest('[data-eb-section]');if(section){state.section=section.dataset.ebSection;state.filter='';state.openForm=false;paint();if(state.section==='webdev')await fetchWebdev();return}
+    const wButton=ev.target.closest('[data-eb-webdev]');if(wButton){try{await webdevAction(wButton)}catch(error){status(error.message,true)}return}
+    const composer=ev.target.closest('[data-eb-webdev-compose]');if(composer){const row=state.webDocs.find(d=>d.id===composer.dataset.ebWebdevCompose);if(row)webdevLog(row,'compose_requested').catch(error=>status('작성 화면은 열렸지만 요청 이력 저장에 실패했습니다: '+error.message,true));return}
     const edit=ev.target.closest('[data-eb-edit]');if(edit){state.openForm=edit.dataset.ebEdit;paint();$('#ebiz-editor')?.scrollIntoView({block:'nearest'});return}
     const printRecord=ev.target.closest('[data-eb-print-id]');if(printRecord){try{await openReport(printRecord.dataset.ebPrintId)}catch(err){status(err.message,true)}return}
     const check=ev.target.closest('[data-eb-check]');if(check){try{if(state.busy)return;const row=state.rows.find(r=>r.id===check.dataset.ebCheck&&r.kind==='task');if(!row)throw new Error('업무 원장을 다시 조회하세요.');state.busy=true;const saved=await request('/rest/v1/ekodibiz_ops_items?id=eq.'+encodeURIComponent(row.id),{method:'PATCH',body:{status:row.status==='done'?'in_progress':'done'}});if(!Array.isArray(saved)||saved.length!==1)throw new Error('업무 상태 변경이 저장되지 않았습니다.');await refresh();status('점검 완료 상태 및 이력이 저장되었습니다.')}catch(err){status(err.message,true)}finally{state.busy=false}return}
@@ -234,6 +326,9 @@ function mountBusinessCenter({target,summaryTarget,accessToken,supabaseUrl,supab
     }catch(err){status(err?.message||'처리 중 오류가 발생했습니다.',true)}
   });
   target.addEventListener('submit',async ev=>{
+    if(ev.target.id==='ebiz-webdev-editor'||ev.target.id==='ebiz-webdev-report'){
+      ev.preventDefault();try{if(ev.target.id==='ebiz-webdev-editor')await saveWebdev(ev.target);else await reportWebdev(ev.target)}catch(error){status(error.message,true)}return;
+    }
     if(ev.target.id!=='ebiz-editor')return;
     ev.preventDefault();
     try{await save(ev.target)}catch(error){status(error.message,true)}
