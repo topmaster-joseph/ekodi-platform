@@ -1,4 +1,4 @@
-export const dorajiLedgerClientScript=String.raw\`(()=>{
+export const dorajiLedgerClientScript=String.raw`(()=>{
 'use strict';
 const root=document.querySelector('[data-ekodi-doraji-ledger]');
 if(!root)return;
@@ -143,4 +143,4 @@ recordForm.addEventListener('submit',async event=>{
 });
 $('record-date').value=new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'});
 initialize();
-})();\`;
+})();`;
