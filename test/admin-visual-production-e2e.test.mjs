@@ -39,7 +39,9 @@ test('canonical Assist E2E proves the rendered light workbench before command de
   assert.match(source, /commandEntryPresent/);
   assert.match(source, /visual\?\.contextTabsPresent \|\| visual\?\.commandEntryPresent/);
   assert.doesNotMatch(source, /contextTabsDisplay|commandEntryDisplay/);
-  assert.match(source, /targetValue !== 'EKODI'/);
+  assert.match(source,/targetValue !== 'ekodi'/);
+  assert.match(source,/targetLabel !== 'EKODI'/);
+  assert.match(source,/target\.selectedOptions\?\.\[0\]\?\.textContent/);
   assert.match(source, /targetWidth \|\| 0\) < 150/);
   assert.match(source, /composerRadius !== '30px'/);
   assert.match(source, /#ekodiAssistBootstrap \.ekodi-assist-bootstrap-form/);
