@@ -349,7 +349,7 @@ async function verifyPublicSiteControls(tab, alreadyActive, started) {
   const badge = String(await form.locator('[data-public-site-status-badge]').textContent() || '').trim();
   const message = String(await page.locator('#publicSiteControlsPanel [data-public-site-message]').textContent() || '').replace(/\s+/g, ' ').trim();
   if (!state.panelFound || !state.selected || state.busy) throw new Error(`public-site-controls panel invalid: ${JSON.stringify(state)}`);
-  if (!domainText.includes('cgma.or.kr')) throw new Error(`public-site-controls: CGMA domain missing: ${domainText}`);
+  if (!domainText.includes('ekodi.kr/cgma')) throw new Error(`public-site-controls: CGMA canonical path missing: ${domainText}`);
   if (!['public', 'maintenance'].includes(publicStatus)) throw new Error(`public-site-controls: invalid publicStatus ${publicStatus}`);
   if (!['default', 'url'].includes(maintenanceDisplayType)) throw new Error(`public-site-controls: invalid maintenanceDisplayType ${maintenanceDisplayType}`);
   if (!['button', 'auto'].includes(redirectMode)) throw new Error(`public-site-controls: invalid redirectMode ${redirectMode}`);
@@ -655,6 +655,18 @@ try {
   if (serious.length) throw new Error(`Serious console errors: ${serious.join(' | ')}`);
 } catch (error) {
   fatal = error;
+  if (currentStage.startsWith('ready-') && page) {
+    const state = await page.evaluate(() => ({
+      route: location.pathname,
+      hasSessionToken: Boolean(sessionStorage.getItem('ekodi-auth-token')),
+      appHidden: document.querySelector('#app')?.hidden ?? null,
+      loginHidden: document.querySelector('#loginScreen')?.hidden ?? null,
+      adminReady: document.documentElement.dataset.ekodiAdminReady === 'true',
+      sessionVerified: Boolean(document.querySelector('#apiState')?.textContent?.includes('정상')),
+      coreLoaded: Boolean(window.EKODIAdminCore),
+    })).catch(() => ({unavailable:true}));
+    console.error(`[E2E:${menuId}] safe readiness state ${JSON.stringify(state)}`);
+  }
   console.error(`[E2E:${menuId}] fatal stage=${currentStage} ${error?.stack || error}`);
 } finally {
   const report = {
