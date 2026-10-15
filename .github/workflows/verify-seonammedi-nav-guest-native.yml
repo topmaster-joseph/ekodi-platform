@@ -12,6 +12,8 @@ on:
       - 'services/independent-board/worker.js'
       - 'scripts/verify-seonammedi-nav-guest-native.mjs'
   workflow_dispatch:
+  issue_comment:
+    types: [created]
   workflow_run:
     workflows: ['Deploy EKODI Shared Site Core', 'Deploy Independent Board']
     types: [completed]
@@ -36,11 +38,18 @@ jobs:
       - name: Check trusted read-only verifier syntax before deploying UI
         run: node --check scripts/verify-seonammedi-nav-guest-native.mjs
   native-public-guest-audit:
+    # Owner-only post-merge read-only probe. Issue comments run from trusted default main,
+    # never from a contributor-controlled PR head and never receive write credentials.
     if: >-
-      github.event_name != 'pull_request' &&
-      (github.event_name != 'workflow_run' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_repository.full_name == github.repository))
+      (github.event_name == 'issue_comment' &&
+       github.event.comment.user.login == github.repository_owner &&
+       github.event.issue.pull_request != null &&
+       github.event.comment.body == 'EKODI-SEONAM-NATIVE-AUDIT:RUN') ||
+      (github.event_name != 'issue_comment' &&
+       github.event_name != 'pull_request' &&
+       (github.event_name != 'workflow_run' ||
+        (github.event.workflow_run.conclusion == 'success' &&
+         github.event.workflow_run.head_repository.full_name == github.repository)))
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
