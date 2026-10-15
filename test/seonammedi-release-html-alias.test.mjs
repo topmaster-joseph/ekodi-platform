@@ -51,3 +51,30 @@ test('matching initial characters do not conceal approved customer-domain mount 
  assert.equal(compareSeonamMediPublishedHtml(expected,customer.replace('home-public-feed.js','untrusted.js'),allowed).matched,false);
  assert.equal(compareSeonamMediPublishedHtml(expected,customer,['shared-site-header.css','home-public-feed.css']).matched,false);
 });
+
+
+test('photo-shell live HTML permits only the existing first-party board category script mount alias',async()=>{
+  const {readFile}=await import('node:fs/promises');
+  const [homepage,script,verifier]=await Promise.all([
+    readFile(new URL('../sites/seonammedi/public/index.html',import.meta.url),'utf8'),
+    readFile(new URL('../sites/seonammedi/public/board-central-category.js',import.meta.url),'utf8'),
+    readFile(new URL('../scripts/verify-seonammedi-release-live.mjs',import.meta.url),'utf8')
+  ]);
+  assert.match(homepage,/<script src="\/seonammedi\/board-central-category\.js\?v=[^"]+" defer><\/script>/);
+  assert.match(script,/Central category tabs on standalone SeonamMedi boards/);
+  assert.match(verifier,/'board-central-category\.js'/);
+  const canonical='<html><script src="/seonammedi/board-central-category.js?v=photo-shell-1" defer></script></html>';
+  const customer='<html><script src="/board-central-category.js?v=photo-shell-1" defer></script></html>';
+  const approved=['board-central-category.js'];
+  const result=compareSeonamMediPublishedHtml(canonical,customer,approved);
+  assert.equal(result.matched,true,JSON.stringify(result));
+  assert.deepEqual(result.aliases,approved);
+  assert.equal(compareSeonamMediPublishedHtml(canonical,canonical,approved).matched,true);
+  assert.equal(compareSeonamMediPublishedHtml(canonical,customer,[]).matched,false);
+  for(const changed of [
+    customer.replace('photo-shell-1','photo-shell-2'),
+    customer.replace('board-central-category.js','untrusted.js'),
+    customer.replace(' defer',''),
+    customer.replace('</html>','<script src="/other.js"></script></html>')
+  ])assert.equal(compareSeonamMediPublishedHtml(canonical,changed,approved).matched,false,changed);
+});
