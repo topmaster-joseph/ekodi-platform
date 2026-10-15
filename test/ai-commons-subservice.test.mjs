@@ -44,7 +44,8 @@ test('super-admin governance shows which subservices generated demand',()=>{
 
 test('subservice handoff survives login and immediately resolves the original request',()=>{
   const client=read('ai-control/commons.js');
-  assert.match(client,/loginUrl\.searchParams\.set\('return_to',location\.href/);
+  assert.match(client,/url\.searchParams\.set\('return_to',assistanceReturnHref\(requestIntent\)\)/);
+  assert.match(client,/return target\.href;/);
   assert.match(client,/if\(handoff\).*submitWanted\(handoff\)/s);
 });
 
