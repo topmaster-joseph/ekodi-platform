@@ -954,7 +954,8 @@ test('seonammedi static surfaces declare route parity contract and preserve moun
   for(const route of ['voices','notices'])assert.match(html,new RegExp('href="board/'+route+'"'));
   assert.doesNotMatch(html,/href="board\/finance"/);
   assert.match(html,/href="admin\/">관리<\/a>/);
-  for(const route of ['voices','finance','notices'])assert.match(adminHtml,new RegExp('href="\.\.\/board/'+route+'"'));
+  for(const route of ['voices','notices'])assert.match(adminHtml,new RegExp('href="\.\.\/board/'+route+'"'));
+  assert.match(adminHtml,/href="\?panel=finance"/);
   assert.match(adminJs,/searchParams\.set\('site','seonammedi'\)/);
   assert.doesNotMatch(adminJs,/searchParams\.set\('site','portal'\)/);
 });
