@@ -1,4 +1,4 @@
-(()=>{
+export const dorajiOperatorScript=String.raw`(()=>{
 'use strict';
 const BASE='/ekodibiz/doraji/api/v1',TOKEN_KEY='ekodi-auth-token';
 const $=id=>document.getElementById(id);
@@ -88,4 +88,4 @@ function init(){
  if(state.token)execute(loadProjects);else message('에코디 중앙 관리자 로그인 후 이 화면으로 돌아오세요.');
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
-})();
+})();`;
