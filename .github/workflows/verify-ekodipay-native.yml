@@ -38,6 +38,10 @@ jobs:
             echo 'Payment secrets are forbidden in browser verification.'
             exit 1
           fi
+      - name: Verify local canonical entry and simulated payment protocol
+        run: |
+          node --check ekodipay-worker.js
+          node --test test/ekodipay-canonical.test.mjs test/ekodipay-demo-flow.test.mjs
       - name: Install first-party isolated Chromium
         run: |
           npm install --no-save --package-lock=false playwright@1.55.0
