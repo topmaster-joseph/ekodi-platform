@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {isDorajiLedgerApiPath,validateDorajiProjectInput,validateDorajiRecordInput,dorajiLedgerApiResponse} from '../ekodibiz-doraji-ledger-api.js';
 
 const BASE_URL='https://ekodi.kr/ekodibiz/doraji/api/v1';
-const schema=readFileSync(new URL('../migrations/0133_doraji_operations_draft_ledger.sql',import.meta.url),'utf8');
+const schema=readFileSync(new URL('../schemas/ekodibiz/doraji-draft-ledger.sql',import.meta.url),'utf8');
 const site=readFileSync(new URL('../site-worker.js',import.meta.url),'utf8');
 
 test('private api belongs to Doraji module and site guards it ahead of public HTML',()=>{
