@@ -12,3 +12,10 @@
 .central-category-preview-row time{flex:none;font-size:12px;color:#718197;white-space:nowrap}
 .central-category-preview-message{font-size:14px;color:#68778a;margin:14px 0 0}
 @media(max-width:700px){.central-category-preview{padding:12px}.central-category-preview-row{gap:8px;font-size:14px}.central-category-preview-row time{font-size:11px}}
+
+/* Match the centered main shell; no duplicated filter rows in the body. */
+.central-category-panel:not([hidden]){width:min(1120px,calc(100% - 32px))!important;max-width:1120px!important;margin:14px auto 6px!important;padding:14px 20px!important}
+.central-category-panel .central-category-buttons{max-width:1080px!important;gap:6px!important}
+.central-category-panel .central-category-buttons a{padding:7px 12px;min-height:34px;font-size:13px}
+.central-category-panel .central-category-buttons a[aria-current="true"]{background:#194c70;color:white;border-color:#194c70}
+@media(max-width:780px){.central-category-panel:not([hidden]){padding:12px!important;margin:10px auto 4px!important}.central-category-panel .central-category-buttons a{min-height:38px;padding:7px 10px}}
