@@ -313,5 +313,7 @@ function clientMain(documents) {
 }
 
 export function cooperativeScript() {
-  return `(${clientMain.toString()})(${JSON.stringify(COOP_DOCUMENTS)});`;
+  // Wrangler preserves function names with a lexical __name helper. Serialized
+  // client functions need the same helper inside their browser-only scope.
+  return `(()=>{const __name=(target,value)=>Object.defineProperty(target,'name',{value,configurable:true});\n(${clientMain.toString()})(${JSON.stringify(COOP_DOCUMENTS)});})();`;
 }
