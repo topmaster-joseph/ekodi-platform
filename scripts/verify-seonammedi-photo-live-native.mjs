@@ -138,7 +138,7 @@ try{
         entry.viewportWidth=state.width;
         if(item.key!=='home')required(state.active.includes(item.key),'selected_side_menu_not_active_'+item.key);
         required(profile.isMobile?state.layoutDisplay==='flex':state.layoutDisplay==='grid','responsive_columns_mismatch_'+item.key);
-        const filename=[origin.replace(/^https?:\/\//,''),profile.name,item.key].join('-')+'.png';
+        const filename=[origin.replace(/^https?:\/\//,'').replace(/[^a-zA-Z0-9.-]/g,'-'),profile.name,item.key].join('-')+'.png';
         await page.screenshot({path:path.join(output,filename),animations:'disabled',fullPage:false});
         entry.image=filename;
         entry.ok=true;
@@ -167,7 +167,7 @@ try{
 finally{
   if(browser)await browser.close().catch(()=>{});
   report.success=report.failures.length===0;
-  const reportPath=path.join(output,'production-photo-evidence.json');
+  const reportPath=path.join(output,sourceMode?'source-photo-evidence.json':'production-photo-evidence.json');
   await fs.writeFile(reportPath,JSON.stringify(report,null,2));
   console.log(JSON.stringify({policy:report.policy,origin:report.origin,success:report.success,
     mode:report.mode,total:report.profiles.reduce((n,p)=>n+p.results.length,0),
