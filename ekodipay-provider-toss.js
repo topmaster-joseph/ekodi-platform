@@ -16,7 +16,9 @@ export function paymentMode(env){
    return {...disabled,reason:'order_store_or_authorized_service_missing'};
  const live=requested==='live';
  if(live&&(env.EKODIPAY_LIVE_OWNER_GATE!=='APPROVED'||
-   env.EKODIPAY_PG_CONTRACT_VERIFIED!=='YES'||env.EKODIPAY_SETTLEMENT_OWNER_VERIFIED!=='YES'))
+   env.EKODIPAY_PG_CONTRACT_VERIFIED!=='YES'||env.EKODIPAY_SETTLEMENT_OWNER_VERIFIED!=='YES'||
+   env.EKODIPAY_REFUND_POLICY_VERIFIED!=='YES'||env.EKODIPAY_RECONCILIATION_VERIFIED!=='YES'||
+   env.EKODIPAY_APPROVED_ORDER_ISSUER_VERIFIED!=='YES'||env.EKODIPAY_DELAYED_METHODS_DISABLED!=='YES'))
    return {...disabled,reason:'owner_contract_or_settlement_verification_required'};
  const client=String(live?env.TOSS_LIVE_CLIENT_KEY||'':env.TOSS_TEST_CLIENT_KEY||'');
  const secret=String(live?env.TOSS_LIVE_SECRET_KEY||'':env.TOSS_TEST_SECRET_KEY||'');
@@ -87,7 +89,7 @@ export async function paymentRoute(request,env,shell){
    if(!body||!validId(body.orderId)||body.merchant!=='ekodibiz'||body.service!=='ekodibiz'||
       body.approved!==true||!/^APP-[A-Z0-9-]{10,64}$/.test(String(body.approvalRef||'')))
       return json({error:'approved_order_required'},400);
-   const record=await orderApi(env,body.orderId,'/register',body);
+   const record=await orderApi(env,body.orderId,'/register',{...body,pgMode:mode.requested});
    return json(record.payload,record.status);
  }
  if(path===root+'/api/payments/confirm'&&method==='POST'){
@@ -100,7 +102,7 @@ export async function paymentRoute(request,env,shell){
    if(!session.startsWith(prefix)||session.length<prefix.length+65)
      return json({error:'checkout_session_required'},403);
    const reserve=await orderApi(env,body.orderId,'/reserve',{token:session.slice(prefix.length),
-     orderId:body.orderId,paymentKey:body.paymentKey,amount:body.amount});
+     orderId:body.orderId,paymentKey:body.paymentKey,amount:body.amount,pgMode:mode.requested});
    if(reserve.status!==200)return json({error:reserve.payload.error||'reservation_denied'},reserve.status);
    try{
      const pg=await confirmToss(body.paymentKey,body.orderId,reserve.payload.amount,mode.secret);
