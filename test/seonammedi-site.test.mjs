@@ -1029,7 +1029,14 @@ test('seonammedi public finance API and legacy static page disclose no ledger va
   assert.doesNotMatch(publicSource,/seonammedi_finance_entries/,'public API must never SELECT finance rows');
   assert.match(publicSource,/finance:\{raised:null,spent:null,balance:null,entries:\[\]\}/);
   assert.doesNotMatch(legacy,/<script|id="ledger"|id="raised"/,'legacy public route must not display ledger');
-  assert.match(legacy,/https:\/\/ekodi\.kr\/seonammedi\/admin\/\?panel=finance/);
+  assert.equal((legacy.match(/href="\.\.\/admin\/\?panel=finance"/g)||[]).length,2,'finance links must use the current domain admin route');
+  for(const origin of ['https://seonammedi.kr/finance/','https://ekodi.kr/seonammedi/finance/']){
+    const href='../admin/?panel=finance';
+    const target=new URL(href,origin);
+    assert.equal(target.origin,new URL(origin).origin,'finance links must not switch tenant domain');
+    assert.equal(target.pathname,origin.includes('/seonammedi/')?'/seonammedi/admin/':'/admin/');
+    assert.equal(target.search,'?panel=finance');
+  }
   assert.match(admin,/id="financeForm"/,'finance CRUD must remain in protected admin');
   assert.match(admin,/id="financeList"/);
   assert.match(board,/const gate=await requirePermission\(req,'finance'\);if\(!gate\.ok\)return gate\.response/);
