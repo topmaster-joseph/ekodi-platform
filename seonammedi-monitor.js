@@ -25,6 +25,7 @@ const tag=(block,name)=>{const m=String(block||'').match(new RegExp('<'+name+'(?
 const sourceTag=block=>{const m=String(block||'').match(/<source(?:\s[^>]*)?>([\s\S]*?)<\/source>/i);return m?xmlText(m[1]):''};
 async function digest(value){const bytes=new TextEncoder().encode(String(value||''));const hash=await crypto.subtle.digest('SHA-256',bytes);return [...new Uint8Array(hash)].map(v=>v.toString(16).padStart(2,'0')).join('')}
 function rssUrl(query){const q=encodeURIComponent(query);return 'https://news.google.com/rss/search?q='+q+'&hl=ko&gl=KR&ceid=KR:ko'}
+function bingRssUrl(query){const q=encodeURIComponent(query);return 'https://www.bing.com/news/search?q='+q+'&format=RSS&setlang=ko-kr'}
 // Cloudflare and upstream RSS gateways can briefly return 429/5xx.
 // Keep retries small, honour Retry-After, and never publish an unverified result.
 const RSS_RETRYABLE_STATUSES=new Set([429,500,502,503,504]);
@@ -67,6 +68,16 @@ export async function fetchSeonamMediNewsRss(query,{fetchImpl=fetch,wait=ms=>new
   }
   throw lastError;
 }
+export async function fetchSeonamMediBingNewsRss(query,{fetchImpl=fetch}={}){
+  const response=await fetchImpl(bingRssUrl(query),{
+    headers:{'user-agent':'EKODI-SeonamMedi-Monitor/1.2','accept':'application/rss+xml, application/xml;q=0.9, text/xml;q=0.8'},
+    cf:{cacheTtl:0,cacheEverything:false}
+  });
+  if(!response.ok)throw new Error('Bing HTTP '+response.status);
+  const xml=await response.text();
+  if(!isValidSeonamMediRssDocument(xml))throw new Error('bing_invalid_rss_document');
+  return xml;
+}
 // A successful HTTP status is not proof of a valid RSS feed. Upstream
 // gateways sometimes return HTML error pages with HTTP 200.
 export function isValidSeonamMediRssDocument(xml){
@@ -74,11 +85,11 @@ export function isValidSeonamMediRssDocument(xml){
   return /<rss(?:\s[^>]*)?>/i.test(body)&&/<channel(?:\s[^>]*)?>/i.test(body)&&
     /<\/channel\s*>/i.test(body)&&/<\/rss\s*>/i.test(body);
 }
-function parseRss(xml,key,label){
+function parseRss(xml,key,label,{defaultPublisher='Google News'}={}){
   if(!isValidSeonamMediRssDocument(xml))throw new Error('invalid_rss_document');
   const now=Date.now(),floor=now-RECENT_DAYS*86400000;
   return [...String(xml||'').matchAll(/<item>([\s\S]*?)<\/item>/gi)].slice(0,MAX_ITEMS_PER_QUERY).map(match=>{
-    const block=match[1];const title=tag(block,'title');const url=tag(block,'link');const publishedRaw=tag(block,'pubDate');const publisher=sourceTag(block)||'Google News';const publishedMs=Date.parse(publishedRaw);
+    const block=match[1];const title=tag(block,'title');const url=tag(block,'link');const publishedRaw=tag(block,'pubDate');const publisher=sourceTag(block)||defaultPublisher;const publishedMs=Date.parse(publishedRaw);
     return {queryKey:key,queryLabel:label,title,url,publisher,publishedAt:Number.isFinite(publishedMs)?new Date(publishedMs).toISOString():null,publishedMs,resolvedUrl:'',mediaType:'',mediaUrl:'',mediaSource:'',mediaPublishedAt:'',mediaState:'none',sourceType:'news',summaryText:'',sourceVerified:false};
   }).filter(item=>item.title&&/^https:\/\//i.test(item.url)&&(!Number.isFinite(item.publishedMs)||item.publishedMs>=floor));
 }
@@ -167,13 +178,26 @@ export async function runSeonamMediHourlyCheck(env,{scheduledAt=null,force=false
     runId=run?.meta?.last_row_id||null;
   }catch(error){return {ok:false,error:'schema_unavailable',message:clean(error?.message,300)}}
   for(const query of QUERIES){
+    let newsItems=null;
+    let googleError=null;
     try{
-      const items=parseRss(await fetchSeonamMediNewsRss(query.q),query.key,query.label);checked+=1;seen+=items.length;
-      for(let item of items){
+      newsItems=parseRss(await fetchSeonamMediNewsRss(query.q),query.key,query.label);
+    }catch(error){
+      googleError=error;
+      try{
+        newsItems=parseRss(await fetchSeonamMediBingNewsRss(query.q),query.key,query.label,{defaultPublisher:'Bing News'});
+      }catch(fallbackError){
+        errors.push(query.key+':news:'+clean(error?.message||error,100)+' -> bing:'+clean(fallbackError?.message||fallbackError,100));
+      }
+    }
+    if(Array.isArray(newsItems)){
+      checked+=1;seen+=newsItems.length;
+      for(let item of newsItems){
         if(mediaBudget>0&&hasRegionalMedicalContext(item.title)){item=await enrichMedia(item);mediaBudget-=1;if(item.mediaState==='candidate')mediaCandidates+=1}
         if(await insertItem(env,item,startedAt))added+=1;
       }
-    }catch(error){errors.push(query.key+':news:'+clean(error?.message||error,160))}
+      if(googleError)errors.push(query.key+':google_degraded:'+clean(googleError?.message||googleError,120));
+    }
     if(naverBlogConfigured(env)){
       try{
         const blogItems=await fetchNaverBlogItems(env,query);checked+=1;seen+=blogItems.length;
