@@ -27,7 +27,7 @@ const report={policy:'EKODI-SEONAMMEDI-PHOTO-LIVE-001',origin,readOnly:true,prof
 let browser;
 function required(ok,reason){if(!ok)throw Error(reason);}
 async function inspect(page,where){
-  await page.locator('body.seonam-visual-ready main.seonam-visual-layout').waitFor({state:'attached',timeout:20000});
+  await page.locator('body.seonam-visual-ready main.seonam-visual-layout').waitFor({state:'attached',timeout:4000});
   await page.waitForFunction(()=>{
     const img=document.querySelector('.seonam-visual-hero img.seonam-visual-photo');
     return img?.complete===true;
@@ -92,7 +92,18 @@ try{
       // New tab for every route: hash-only navigations otherwise return a null
       // response and can conceal the actual HTTP result for a subpage.
       const page=await context.newPage();
-      const entry={page:item.name,key:item.key,uri:base+item.path};
+      const entry={page:item.name,key:item.key,uri:base+item.path,scriptResponses:[],pageErrors:[]};
+      page.on('response',response=>{
+        if(response.url().includes('board-central-category.js')){
+          entry.scriptResponses.push({url:response.url(),status:response.status(),
+            contentType:response.headers()['content-type']||''});
+        }
+      });
+      page.on('requestfailed',request=>{
+        if(request.url().includes('board-central-category.js'))
+          entry.scriptRequestFailure=String(request.failure()?.errorText||'unknown').slice(0,180);
+      });
+      page.on('pageerror',error=>entry.pageErrors.push(String(error?.message||error).slice(0,280)));
       row.results.push(entry);
       try{
         const url=origin+base+item.path;
@@ -114,7 +125,18 @@ try{
       }catch(error){
         entry.ok=false;
         entry.reason=String(error?.message||error).slice(0,430);
-        report.failures.push(profile.name+'/'+item.key+': '+entry.reason);
+        entry.bootstrap=await page.evaluate(()=>({
+          header:!!document.querySelector('body > header.site-header'),
+          main:!!document.querySelector('body > main'),
+          initialized:document.documentElement.dataset.seonamVisualInitialized||'',
+          bodyClass:document.body?.className||'',
+          categoryScripts:[...document.querySelectorAll('script[src]')]
+            .map(node=>node.src).filter(src=>src.includes('board-central-category.js'))
+        })).catch(()=>null);
+        report.failures.push(profile.name+'/'+item.key+': '+entry.reason+
+          ' scripts='+JSON.stringify(entry.scriptResponses)+
+          ' errors='+JSON.stringify(entry.pageErrors)+
+          ' bootstrap='+JSON.stringify(entry.bootstrap));
       }finally{
         await page.close().catch(()=>{});
       }
