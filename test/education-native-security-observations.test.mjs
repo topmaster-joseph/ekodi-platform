@@ -53,6 +53,9 @@ test('actual native runners keep strict no-mutation isolation, error logs and en
     assert.match(source,/chromium\.launch\(\{headless:true\}\)/);
     assert.doesNotMatch(source,/launchPersistentContext|connectOverCDP|ignoreHTTPSErrors:\s*true|bypassCSP:\s*true/);
   }
+  assert.match(classroom,/TARGET_ROUTE=previewAllowed\?ROUTE:'\/edu'\+ROUTE/);
+  assert.match(classroom,/const legacy=await page\.request\.get\(ORIGIN\+ROUTE/);
+  assert.match(classroom,/TARGET_ORIGIN\+TARGET_ROUTE/);
   assert.match(classroom,/sessionRows:24/);
   assert.match(classroom,/slideCounts/);
   assert.match(studio,/studioSlideCounter/);
