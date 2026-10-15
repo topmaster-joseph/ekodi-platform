@@ -4,6 +4,10 @@ on:
   pull_request:
     paths:
       - 'cooperative-*.js'
+      - 'platform-router-entry-worker.js'
+      - 'site-publication-runtime.js'
+      - 'wrangler.site.toml'
+      - 'deploy/manifests/shared-site.worker.json'
       - 'migrations/0133_cooperative_distribution_workspaces.sql'
       - 'test/cooperative-workspaces.test.mjs'
       - 'test/helpers/cooperative-fixture.mjs'
