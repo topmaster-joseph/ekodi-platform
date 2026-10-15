@@ -19,7 +19,7 @@ try {
   throw '[EKODI:EKA-299][crypto] Windows DPAPI assembly is unavailable: ' + $_.Exception.Message
 }
 
-$AgentVersion = '2.5.5'
+$AgentVersion = '2.5.6'
 # Some remote/managed Windows sessions omit ProgramData from the process environment.
 # Resolve the canonical system data directory without changing machine-wide settings.
 if ([string]::IsNullOrWhiteSpace($env:ProgramData)) {
@@ -1026,7 +1026,8 @@ function Invoke-EkodiNativeCdpCanary {
       'CDP_SOCKET_TIMEOUT','CDP_COMMAND_TIMEOUT','CDP_DOM_EVIDENCE_MISSING',
       'CDP_WORKER_WATCHDOG_TIMEOUT','CDP_BROWSER_UNEXPECTED_ERROR'
     )
-    foreach ($line in @([string]$stderr -split "[\\r\\n]+")) {
+    # PowerShell -split expects single regex escapes; doubling them mangles JSON error lines.
+    foreach ($line in @([string]$stderr -split '\r?\n|\r')) {
       $value = ([string]$line).Trim()
       if ($value.Length -gt 180 -or -not $value.StartsWith('{')) { continue }
       try {

@@ -47,5 +47,22 @@ test('native Agent forwards only fixed CDP categories when browser stderr contai
   assert.match(wrapper,/CDP_BROWSER_SPAWN/);
   assert.match(wrapper,/throw \$failureCode/);
   assert.doesNotMatch(wrapper,/throw \('CDP_WORKER_FAILED: ' \+ \$stderr/);
-  assert.match(agent,/AgentVersion = '2\.5\.5'/);
+  assert.match(agent,/AgentVersion = '2\.5\.6'/);
 });
+
+
+test('Windows PowerShell CDP stderr splitter preserves entire JSON lines',()=>{
+  const start=agent.indexOf('function Invoke-EkodiNativeCdpCanary');
+  const end=agent.indexOf('function Invoke-BackgroundBrowserCanary',start);
+  const wrapper=agent.slice(start,end);
+  // PowerShell Regex -split must receive a single backslash before r/n.
+  assert.ok(wrapper.includes(String.raw`-split '\r?\n|\r'`));
+  assert.ok(!wrapper.includes(String.raw`-split "[\\r\\n]+"`));
+  // A malformed splitter formerly broke JSON on the letters r and n.
+  const text=['Chromium warning','{"ok":false,"code":"CDP_PORT_TIMEOUT"}'].join('\r\n');
+  const lines=text.split(/\r?\n|\r/);
+  assert.deepEqual(lines,['Chromium warning','{"ok":false,"code":"CDP_PORT_TIMEOUT"}']);
+  assert.equal(JSON.parse(lines[1]).code,'CDP_PORT_TIMEOUT');
+});
+
+// Official EKODI Orchestrator recovery: CI retrigger after exact-SHA owner approval; no runtime changes.
