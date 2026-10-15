@@ -38,3 +38,5 @@ test('artifacts survive failed tests and do not deploy production',()=>{
   assert.ok(!flow.includes('wrangler deploy'));
   assert.ok(!flow.includes('secrets.'));
 });
+
+// Owner-authorized CI retrigger on official EKODI Orchestrator provenance recovery branch; runtime behavior unchanged.
