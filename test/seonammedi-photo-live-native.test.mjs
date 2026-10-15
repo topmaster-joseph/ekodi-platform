@@ -71,5 +71,7 @@ test('local source proof is isolated from live production and cannot fake board 
   assert.ok(workflow.includes('artifacts/native-photo-source'));
   assert.ok(workflow.includes('artifacts/native-photo-proof-canonical'));
   assert.ok(workflow.includes('artifacts/native-photo-proof-customer'));
+  assert.ok(script.includes(".replace(/[^a-zA-Z0-9.-]/g,'-')"),'source screenshot names must not contain host port colons');
+  assert.ok(script.includes("sourceMode?'source-photo-evidence.json':'production-photo-evidence.json'"),'source and production evidence must remain distinguishable');
   assert.doesNotMatch(script,/sourceMode\s*\?\s*true\s*:/,'source preview must never unconditionally pass checks');
 });
