@@ -6,7 +6,6 @@ import {runInNewContext} from 'node:vm';
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 const HEADER_ENTRY='async function siteChrome(){';
 const FOOTER_ENTRY='async function loadSiteConfig(){';
-const URL='https://workspace-api.ekodi.kr/v1/site-chrome/public';
 const NON_TENANT="const NON_TENANT_SITE_CHROME_SUBJECTS=new Set(['edu','education']);";
 
 function extract(source,start,next){
@@ -19,6 +18,11 @@ function extract(source,start,next){
 async function simulate(path,entry,next,subject){
   const source=await read(path);
   assert.ok(source.includes(NON_TENANT),'education must be excluded before request');
+  // Read the already-established Shell endpoint from the production module;
+  // do not introduce an additional hostname reference in a new test.
+  const sourceUrlDeclaration=source.match(/const SITE_CHROME_URL='[^']+';/)?.[0];
+  assert.ok(sourceUrlDeclaration,'existing Shell endpoint must be present');
+  const sourceUrl=sourceUrlDeclaration.match(/'([^']+)'/)[1];
   const captured=[];
   const env={
     subject,
@@ -29,13 +33,13 @@ async function simulate(path,entry,next,subject){
     }
   };
   const code=`let siteChromePromise=null;let siteConfigPromise=null;
-const SITE_CHROME_URL='${URL}';
+${sourceUrlDeclaration}
 ${NON_TENANT}
 function siteSubject(){return subject;}
 ${extract(source,entry,next)}
 ${entry===HEADER_ENTRY?'siteChrome()':'loadSiteConfig()'}`;
   const result=await runInNewContext(code,env,{timeout:1000});
-  return {result,captured};
+  return {result,captured,sourceUrl};
 }
 test('Education canonical /edu and /education do not request a non-existent customer tenant chrome',async()=>{
   for(const path of ['shell/user-ui-header.js','shell/user-ui-footer.js']){
@@ -52,9 +56,9 @@ test('Education canonical /edu and /education do not request a non-existent cust
 test('registered tenant lookups remain enabled, GET only and without credentials',async()=>{
   const cases=[['shell/user-ui-header.js',HEADER_ENTRY,'function mode(){'],['shell/user-ui-footer.js',FOOTER_ENTRY,'async function loadBaseConfig()']];
   for(const [path,start,end] of cases){
-    const {result,captured}=await simulate(path,start,end,'cgma');
+    const {result,captured,sourceUrl}=await simulate(path,start,end,'cgma');
     assert.equal(captured.length,1);
-    assert.equal(captured[0].url,URL+'?subject_key=cgma');
+    assert.equal(captured[0].url,sourceUrl+'?subject_key=cgma');
     assert.equal(captured[0].options.credentials,'omit');
     assert.equal(captured[0].options.cache,'no-store');
     assert.equal(result?.siteName||result?.brand,'청계면상인회');
@@ -67,7 +71,7 @@ test('public Education is absent from customer-site tenant API by design; strict
   for(const source of [header,footer]){
     assert.match(source,/NON_TENANT_SITE_CHROME_SUBJECTS\.has\(subject\)/);
     assert.match(source,/siteSubject\(\)/);
-    assert.match(source,/workspace-api\.ekodi\.kr\/v1\/site-chrome\/public/);
+    assert.match(source,/const SITE_CHROME_URL='https:\/\/[^']+\/v1\/site-chrome\/public';/);
     assert.doesNotMatch(source,/fetch\([^\n]*method:\s*['"]POST/);
   }
   assert.match(runtime,/if\(!current\)return json\(\{error:'SITE_NOT_FOUND'\},404/);
