@@ -7,7 +7,7 @@ const dock=readFileSync(new URL('../admin-assist-dock.js',import.meta.url),'utf8
 const bootstrap=readFileSync(new URL('../admin-assist-bootstrap.js',import.meta.url),'utf8');
 
 test('canonical Assist execution target compares machine value and visible label independently',()=>{
-  assert.match(dock, /<option value=\\?"ekodi\\?">EKODI<\\/option>/);
+  assert.ok(dock.includes('<option value="ekodi">EKODI</option>'));
   assert.match(e2e,/targetValue: target \? String\(target\.value/);
   assert.match(e2e,/targetLabel: target \? String\(target\.selectedOptions\?\.\[0\]\?\.textContent/);
   assert.match(e2e,/visual\?\.targetValue !== 'ekodi'/);
