@@ -14,7 +14,7 @@ test('SeonamMedi guest Chromium live audit is owner-triggerable without granting
   assert.ok(workflow.includes('  contents: read'),'audit must be read only');
   assert.ok(!workflow.includes('  contents: write'),'audit must not grant repository write');
   assert.ok(workflow.includes('node scripts/verify-seonammedi-nav-guest-native.mjs'),'run real Chromium navigation, not syntax only');
-  assert.ok(workflow.includes("github.event_name == 'workflow_run' && 'main' || github.sha"),'probe must run trusted source');
+  assert.ok(workflow.includes("(github.event_name == 'workflow_run' || github.event_name == 'issue_comment') && 'main' || github.sha"),'probe must run trusted source');
 });
 
 test('SeonamMedi Chromium guest audit preserves desktop/mobile and two-domain coverage',async()=>{
