@@ -127,6 +127,10 @@
 
   const content=el('div','seonam-visual-content');
   while(main.firstChild) content.append(main.firstChild);
+  // Standalone boards render their category tabs next to the header; move that
+  // existing node into the center column without recreating it or its listeners.
+  const outsideCategory=document.querySelector('body > #central-category-panel');
+  if(outsideCategory)content.prepend(outsideCategory);
   main.classList.add('seonam-visual-layout');
   main.append(left,content,right);
   document.body.classList.add('seonam-visual-ready');
