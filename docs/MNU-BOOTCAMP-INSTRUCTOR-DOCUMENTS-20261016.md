@@ -26,3 +26,11 @@
 - CSP-compatible external scripts and CSS, `img-src data:` already supported; same-origin routing; preserve original Google Auth return-to-origin behavior.
 - Run `node --test test/education-bootcamp-documents.test.mjs`, full `npm test`, static checks and responsive browser testing. Publish only through protected EKODI CI, guarded merge, staging, rollback, and native Chromium PC/mobile checks.
 - The PR provides browser-side editing and manual email handoff, **not** authenticated server-side editing, cloud persistence, or direct Gmail sending. Those require a separate authorization/RLS and audited mail handoff change.
+
+
+## Official orchestrator convergence (2026-10-16)
+- Human-approved immutable source: PR #4925, `d404ee5d1b821fcf7ae5f7342138ce759a56f93a`.
+- Issued EKODI release task/branch: `orch_recovery_d404ee5d1b821fcf7ae5f7342138ce75`, PR #4945.
+- Approved source SHA remains a parent of the official synchronized branch commit; current main included with no overlapping file edits.
+- This documentation-only synchronization checkpoint requests genuine protected GitHub Actions checks. It is not a deploy authorization, CI bypass, production-verification claim, or automatic email-send enablement.
+- Require guarded Education staging and first-party Chromium PC/mobile production evidence before reporting completion.
