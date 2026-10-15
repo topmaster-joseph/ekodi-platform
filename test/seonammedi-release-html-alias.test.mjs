@@ -39,3 +39,15 @@ test('unapproved asset path alias fails closed, even if byte-for-byte otherwise'
   const source='<a href="/seonammedi/unregistered.js">read</a>';
   assert.equal(compareSeonamMediPublishedHtml(source,'<a href="/unregistered.js">read</a>',allowed).matched,false);
 });
+
+test('matching initial characters do not conceal approved customer-domain mount aliases',()=>{
+ const expected='<link href="/seonammedi/shared-site-header.css"><link href="/seonammedi/home-public-feed.css?v=2"><script src="/seonammedi/home-public-feed.js?v=2"></script>';
+ const customer=expected.replaceAll('"/seonammedi/','"/');
+ const allowed=['shared-site-header.css','home-public-feed.css','home-public-feed.js'];
+ const result=compareSeonamMediPublishedHtml(expected,customer,allowed);
+ assert.equal(result.matched,true,JSON.stringify(result));
+ assert.deepEqual(result.aliases,allowed);
+ assert.equal(compareSeonamMediPublishedHtml(expected,expected,allowed).matched,true);
+ assert.equal(compareSeonamMediPublishedHtml(expected,customer.replace('home-public-feed.js','untrusted.js'),allowed).matched,false);
+ assert.equal(compareSeonamMediPublishedHtml(expected,customer,['shared-site-header.css','home-public-feed.css']).matched,false);
+});

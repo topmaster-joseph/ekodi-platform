@@ -32,3 +32,19 @@ test('SeonamMedi landing preview uses real timeline and board sources with four 
  assert.ok(markup.indexOf("공식 공지")<markup.indexOf("이전 공지"),"notices must be chronological");
 });
 test('landing-only preview is hidden while a central category is selected',()=>assert.match(css,/\.hero\[hidden\]\s*~\s*#homePublicFeed/));
+
+test('EKODI path mount uses site-scoped independent board APIs and links',async()=>{
+ const root={hidden:true,innerHTML:''};
+ const requested=[];
+ const fetch=async path=>{
+  requested.push(path);
+  const items=path==='/seonammedi/board/api/notices'?[{id:4,title:'실제 공지',createdAt:'2026-10-08',status:'published'}]:[];
+  return {ok:true,json:async()=>({ok:true,items})};
+ };
+ vm.runInNewContext(source,{document:{getElementById:id=>id==='homePublicFeed'?root:null},location:{hostname:'ekodi.kr'},fetch,Date,Promise,encodeURIComponent});
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.ok(requested.includes('/seonammedi/board/api/notices'));
+ assert.ok(requested.includes('/seonammedi/board/api/posts'));
+ assert.match(root.innerHTML,/실제 공지/);
+ assert.match(root.innerHTML,/href="\/seonammedi\/board\/notices\?id=4"/);
+});
