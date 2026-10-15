@@ -86,7 +86,14 @@ for(let attempt=1;attempt<=attempts;attempt++){
       }
       if(!page.text.includes('data-ekodi-release-convergence'))throw new Error(name+'_runtime_convergence_missing');
     }
-    if(!finance.text.includes('/api/seonammedi/admin/finance'))throw new Error('finance_surface_contract_missing');
+    // Finance is admin-only: verify the public page links to the protected editor.
+    if(!finance.text.includes('admin/?panel=finance'))throw new Error('finance_admin_route_missing');
+    // Verify the private finance API is referenced by the authenticated admin asset.
+    const financeAdminAsset=live.assets?.['admin/admin.js'];
+    if(!financeAdminAsset?.path)throw new Error('finance_admin_asset_missing');
+    const financeAdminScript=await fetchText(origin+'/'+financeAdminAsset.path.replace(/^\//,'')+'?release_verify='+expected.release);
+    if(!financeAdminScript.response.ok)throw new Error('finance_admin_asset_http_'+financeAdminScript.response.status);
+    if(!financeAdminScript.text.includes('/api/seonammedi/admin/finance'))throw new Error('finance_admin_api_contract_missing');
     if(!notices.text.includes('/api/seonammedi/notices'))throw new Error('notices_surface_contract_missing');
 
     for(const key of ['app.js','app.css','admin/admin.js','admin/admin.css']){
