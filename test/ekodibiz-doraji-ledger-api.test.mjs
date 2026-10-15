@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {isDorajiLedgerApiPath,validateDorajiProjectInput,validateDorajiRecordInput,dorajiLedgerApiResponse} from '../ekodibiz-doraji-ledger-api.js';
 
-const URL='https://ekodi.kr/ekodibiz/doraji/api/v1';
+const BASE_URL='https://ekodi.kr/ekodibiz/doraji/api/v1';
 const schema=readFileSync(new URL('../migrations/0133_doraji_operations_draft_ledger.sql',import.meta.url),'utf8');
 const site=readFileSync(new URL('../site-worker.js',import.meta.url),'utf8');
 
@@ -43,13 +43,13 @@ test('cultivation, budget, buyer contract, delivery and document records can be 
 });
 
 test('anonymous, missing DB, malicious Origin and retired business domain fail closed',async()=>{
- const get=path=>new Request(URL+path);
+ const get=path=>new Request(BASE_URL+path);
  assert.equal((await dorajiLedgerApiResponse(get('/projects'),{DB:{}})).status,401);
  assert.equal((await dorajiLedgerApiResponse(get('/projects'),{})).status,503);
  assert.equal((await dorajiLedgerApiResponse(new Request('https://retired.example.invalid/ekodibiz/doraji/api/v1/projects'),{DB:{}})).status,403);
- assert.equal((await dorajiLedgerApiResponse(new Request(URL+'/projects',{headers:{origin:'https://evil.example'}}),{DB:{}})).status,403);
- assert.equal((await dorajiLedgerApiResponse(new Request(URL+'/projects',{method:'OPTIONS'}),{DB:{}})).status,405);
- assert.equal((await dorajiLedgerApiResponse(new Request(URL+'/projects',{headers:{authorization:'Bearer fake'}}),{DB:{prepare(){throw Error('D1 cannot verify')}}},{resolveSession:async()=>{throw Error('Auth unavailable')}})).status,503);
+ assert.equal((await dorajiLedgerApiResponse(new Request(BASE_URL+'/projects',{headers:{origin:'https://evil.example'}}),{DB:{}})).status,403);
+ assert.equal((await dorajiLedgerApiResponse(new Request(BASE_URL+'/projects',{method:'OPTIONS'}),{DB:{}})).status,405);
+ assert.equal((await dorajiLedgerApiResponse(new Request(BASE_URL+'/projects',{headers:{authorization:'Bearer fake'}}),{DB:{prepare(){throw Error('D1 cannot verify')}}},{resolveSession:async()=>{throw Error('Auth unavailable')}})).status,503);
 });
 
 test('D1 schema only stores draft records and has project owner ACL and audit',()=>{
