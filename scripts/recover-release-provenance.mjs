@@ -158,11 +158,49 @@ if(!recoveryPr){
 const recoveryNumber=Number(recoveryPr?.number||0);
 if(!recoveryNumber)fail('recovery PR number missing');
 
+const sourceFiles=[];
+for(let page=1;page<=20;page++){
+  const response=await github(`/repos/${repo}/pulls/${prNumber}/files?per_page=100&page=${page}`);
+  if(!response.response.ok||!Array.isArray(response.data))fail('source file inspection failed before guarded merge');
+  sourceFiles.push(...response.data.map(item=>text(item?.filename,300)));
+  if(response.data.length<100)break;
+  if(page===20)fail('source file list exceeds bounded dispatch inspection');
+}
+const independentBoardTouched=sourceFiles.some(file=>
+  file.startsWith('services/independent-board/')||
+  file==='wrangler.independent-board.toml'||
+  file==='sites/seonammedi/public/app.js'||
+  file==='.github/workflows/deploy-independent-board.yml'
+);
+
 await github(`/repos/${repo}/issues/${prNumber}/comments`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({body:`EKODI automatic release-provenance recovery created #${recoveryNumber} on \`${branchRef}\` (task \`${taskId}\`). This PR is superseded by the orchestrator-issued branch.`})});
 await github(`/repos/${repo}/pulls/${prNumber}`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({state:'closed'})});
 
 const merge=await github(`/repos/${repo}/pulls/${recoveryNumber}/merge`,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({merge_method:'squash'})});
 const mergeDisposition=merge.response.ok?'merged-immediately':`guarded-pending-http-${merge.response.status}`;
+// GitHub-token merges do not necessarily emit a main push workflow event.
+// Only a successfully merged, exactly owner-approved recovery PR may dispatch
+// the existing guarded production workflow. That workflow still enforces its
+// own orchestrator receipt, CI, auth boundary, and live production checks.
+if(merge.response.ok&&independentBoardTouched){
+  if(merge.data?.merged!==true||!/^[a-f0-9]{40}$/i.test(text(merge.data?.sha,80))){
+    fail('guarded merge did not return a verifiable commit SHA');
+  }
+  const main=await github(`/repos/${repo}/branches/main`);
+  if(!main.response.ok||text(main.data?.commit?.sha,80)!==text(merge.data.sha,80)){
+    fail('main changed before exact board dispatch; do not launch a stale release');
+  }
+  const dispatch=await github(`/repos/${repo}/actions/workflows/deploy-independent-board.yml/dispatches`,{
+    method:'POST',
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branchRef,release_task_id:taskId}})
+  });
+  if(dispatch.response.status!==204){
+    fail('guarded independent board dispatch failed: HTTP '+dispatch.response.status);
+  }
+  out('independent_board_dispatch','accepted');
+}
+
 if(!merge.response.ok){
   await github(`/repos/${repo}/issues/${recoveryNumber}/comments`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({body:'EKODI recovery branch issued successfully. Merge remains guarded by required checks; production deployment will continue after the repository gate allows merge.'})});
 }
