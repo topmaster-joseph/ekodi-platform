@@ -8,12 +8,16 @@ on:
       - 'sites/seonammedi/public/**'
       - 'scripts/verify-seonammedi-hero-native.mjs'
       - 'test/seonammedi-hero-native.test.mjs'
+      - 'scripts/verify-seonammedi-photo-live-native.mjs'
+      - 'test/seonammedi-photo-live-native.test.mjs'
       - '.github/workflows/verify-seonammedi-hero-native.yml'
   pull_request:
     paths:
       - 'sites/seonammedi/public/**'
       - 'scripts/verify-seonammedi-hero-native.mjs'
       - 'test/seonammedi-hero-native.test.mjs'
+      - 'scripts/verify-seonammedi-photo-live-native.mjs'
+      - 'test/seonammedi-photo-live-native.test.mjs'
       - '.github/workflows/verify-seonammedi-hero-native.yml'
   workflow_run:
     workflows:
