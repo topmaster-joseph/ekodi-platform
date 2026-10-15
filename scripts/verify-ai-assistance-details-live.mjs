@@ -19,6 +19,7 @@ await page.route('**/*',async route=>{
   await route.continue();
 });
 const output={device:profile,origin:'https://ekodi.kr',checkedAt:new Date().toISOString(),blockedMutations,requestFailures,pageErrors:errors};
+await fs.mkdir('artifacts',{recursive:true});
 try{
   const response=await page.goto('https://ekodi.kr/ai/#support-programs',{waitUntil:'domcontentloaded',timeout:25000});
   assert.equal(response.status(),200);
