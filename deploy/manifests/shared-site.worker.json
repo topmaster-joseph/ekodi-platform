@@ -3262,6 +3262,62 @@
           "cache-control: no-store"
         ],
         "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/images/jubilee-hero-640-ec98e7d14c.webp",
+        "method": "HEAD",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "content-type: image/webp",
+          "cache-control: public, max-age=31536000, immutable",
+          "x-ekodi-route: cooperative-public-image"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/images/jubilee-hero-1280-bb3fdd3958.webp",
+        "method": "HEAD",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "content-type: image/webp",
+          "cache-control: public, max-age=31536000, immutable",
+          "x-ekodi-route: cooperative-public-image"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/images/open-hero-640-44e3f897ef.webp",
+        "method": "HEAD",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "content-type: image/webp",
+          "cache-control: public, max-age=31536000, immutable",
+          "x-ekodi-route: cooperative-public-image"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/images/open-hero-1280-90d31bae48.webp",
+        "method": "HEAD",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "content-type: image/webp",
+          "cache-control: public, max-age=31536000, immutable",
+          "x-ekodi-route: cooperative-public-image"
+        ],
+        "rollbackVerify": false
       }
     ],
     "attestationPath": "/__ekodi/version"
