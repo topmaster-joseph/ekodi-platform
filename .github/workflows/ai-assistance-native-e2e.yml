@@ -75,6 +75,10 @@ jobs:
           assert.equal(merchantPrices.response.status,401,'anonymous user must not access merchant standard-price approval');
           assert.equal(merchantList.response.status,401,'anonymous user must not view merchant quote management');
           assert.equal(privateList.response.status,401,'anonymous user must not read assistance requests');
+          const officialFeed=await get('/support/api/opportunities?source=combined&limit=100');
+          let feed={};try{feed=JSON.parse(officialFeed.text)}catch{}
+          const matches=(feed.items||[]).filter(item=>item?.official===true&&/(?:^|[^a-z])ai(?:[^a-z]|$)|인공지능|생성형|딥러닝|머신러닝|초거대|지능형|llm|대규모언어모델/i.test([item.title,item.summary,item.tags?.join(' '),item.category].join(' ')));
+          console.log(JSON.stringify({officialFeedDiagnostic:true,status:officialFeed.response.status,ok:feed.ok===true,itemCount:Array.isArray(feed.items)?feed.items.length:null,matchingAiNotices:matches.length,sources:feed.sources||[],firstTitles:(feed.items||[]).slice(0,4).map(item=>item.title),testDoesNotAlterFeed:true}));
           console.log(JSON.stringify({ok:true,origin:base,home:home.response.status,css:css.response.status,js:js.response.status,catalog:catalog.response.status,planCount:data.plans.length,anonymousRequests:privateList.response.status,anonymousQuote:privateQuote.response.status,anonymousMerchant:merchantList.response.status,anonymousMerchantPricebook:merchantPrices.response.status,contractSigned:false,paymentExecuted:false}));
           JS
 
@@ -117,6 +121,18 @@ jobs:
           const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1440,height:900},isMobile:mobile,hasTouch:mobile});
           const page=await context.newPage();
           const blocked=[];
+          // Synthetic notice *only inside this disposable Chromium profile*.
+          // Public feed availability is independently diagnosed in public-contract above.
+          // Never claim a synthetic fixture is a real government announcement.
+          await page.route('**/support/api/opportunities?source=combined&limit=100',route=>route.fulfill({
+            status:200,contentType:'application/json',
+            body:JSON.stringify({ok:true,source:'isolated-test-fixture',items:[{
+              id:'synthetic-ai-login-only',source:'synthetic-test',sourceName:'가상 검증 데이터',
+              official:true,title:'가상 AI 지원사업 로그인 복귀 동선 테스트 (실제 공고 아님)',
+              url:'https://www.bizinfo.go.kr/',summary:'실제 지원사업 신청이나 결제에 사용하지 않는 브라우저 검증용 가상 데이터',
+              agency:'브라우저 자동검사',applicationPeriod:'상시',publishedAt:'2026-10-15'
+            }]})
+          }));
           await page.route('**/*',route=>{
             if(!['GET','HEAD','OPTIONS'].includes(route.request().method())){
               blocked.push(route.request().method()+' '+route.request().url());
@@ -164,6 +180,6 @@ jobs:
             assert.equal(new URL(page.url()).searchParams.has('support_intent'),false);
             assert.equal(new URL(page.url()).searchParams.has('support_plans'),false);
             assert.equal(blocked.length,0,'read-only proof attempted a write');
-            console.log(JSON.stringify({ok:true,device:process.env.DEVICE,noticePreserved:true,plansRestored:['eligibility'],requestIntentPreserved:true,personalFieldsStored:false,realAuth:false,realPayment:false}));
+            console.log(JSON.stringify({ok:true,device:process.env.DEVICE,mode:'isolated-synthetic-official-feed-fixture',noticePreserved:true,plansRestored:['eligibility'],requestIntentPreserved:true,personalFieldsStored:false,realGovernmentNoticeVerified:false,realAuth:false,realPayment:false}));
           }finally{await context.close();await browser.close()}
           JS
