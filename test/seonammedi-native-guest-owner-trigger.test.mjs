@@ -36,3 +36,10 @@ test('unique owner audit comment does not remove main-ref deduplication or read-
   assert.ok(section.includes('cancel-in-progress: true'),'stale overlapping non-comment audits remain cancellable');
   assert.ok(workflow.includes('  contents: read'),'the isolated audit must remain read only');
 });
+
+test('owner audit comments use separate concurrency keys while normal pushes share their branch',()=>{
+  const group=workflow.split('concurrency:')[1]?.split('jobs:')[0]||'';
+  assert.ok(group.includes("github.event.comment.id || github.ref"),'unique comment identifiers must select the issue-comment concurrency key');
+  assert.ok(group.includes("github.event_name == 'issue_comment'"),'only comments should use per-event keys');
+  assert.ok(group.includes('cancel-in-progress: true'),'keep existing stale-run cancellation for non-comment events');
+});
