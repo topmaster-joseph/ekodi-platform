@@ -5,6 +5,10 @@ on:
     workflows: ["Deploy EKODI Shared Site Core"]
     types: [completed]
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-ekodibiz-doraji-native.yml'
 
 permissions:
   contents: read
@@ -16,7 +20,7 @@ concurrency:
 jobs:
   canonical-readonly:
     name: Canonical Doraji & Business OS read-only preflight
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     timeout-minutes: 4
     steps:
