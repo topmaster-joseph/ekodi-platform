@@ -34,7 +34,8 @@ test('production money movement is fail-closed until all independent owner and P
  EKODIPAY_PG_CONTRACT_VERIFIED:'YES',EKODIPAY_SETTLEMENT_OWNER_VERIFIED:'YES',
  TOSS_LIVE_CLIENT_KEY:'live_ck_fixture',TOSS_LIVE_SECRET_KEY:'live_sk_fixture',
  EKODIPAY_REFUND_POLICY_VERIFIED:'YES',EKODIPAY_RECONCILIATION_VERIFIED:'YES',
- EKODIPAY_APPROVED_ORDER_ISSUER_VERIFIED:'YES',EKODIPAY_DELAYED_METHODS_DISABLED:'YES'}).ready,true);
+ EKODIPAY_APPROVED_ORDER_ISSUER_VERIFIED:'YES',EKODIPAY_DELAYED_METHODS_DISABLED:'YES',
+ EKODIPAY_OPERATOR_TOKEN:'OPERATOR-KEY-EXAMPLE-0123456789-ABCDEF'}).ready,true);
 });
 test('external clients cannot forge or register an order, and ready mode still trusts only signed service orders',async()=>{
  const {env}=harness(true);
