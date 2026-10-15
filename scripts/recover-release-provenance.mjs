@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import {findExactHumanGateApproval} from './release-human-gate-evidence.mjs';
 
 const repo=String(process.env.GITHUB_REPOSITORY||'').trim();
 const eventName=String(process.env.GITHUB_EVENT_NAME||'').trim();
@@ -61,16 +62,18 @@ if(!labels.includes(APPROVAL_LABEL)){
 const approvalMarker=`${APPROVAL_MARKER_PREFIX}${headSha}`;
 const comments=await github(`/repos/${repo}/issues/${prNumber}/comments?per_page=100`);
 if(!comments.response.ok)fail(`failed to verify exact-SHA Human Gate approval: HTTP ${comments.response.status}`);
-const approvalComment=(Array.isArray(comments.data)?comments.data:[]).find(item=>{
-  const login=text(item?.user?.login,120);
-  const body=String(item?.body||'');
-  return policyOwners.has(login)&&body.includes(approvalMarker);
+const labelEvents=await github(`/repos/${repo}/issues/${prNumber}/events?per_page=100`);
+if(!labelEvents.response.ok)fail(`failed to verify Human Gate label chronology: HTTP ${labelEvents.response.status}`);
+const approvalEvidence=findExactHumanGateApproval({
+  comments:comments.data,events:labelEvents.data,policyOwners:[...policyOwners],
+  approvalMarker,approvalLabel:APPROVAL_LABEL
 });
-if(!approvalComment){
-  out('action','waiting-exact-sha-human-approval');
+if(!approvalEvidence){
+  out('action','waiting-exact-sha-human-approval-after-comment-label');
   out('approval_marker',approvalMarker);
   process.exit(0);
 }
+const approvalComment=approvalEvidence.approvalComment;
 const approvalActor=text(approvalComment.user?.login,120);
 const humanApproval=Object.freeze({
   kind:'release-provenance-human-gate-approval',
@@ -79,6 +82,7 @@ const humanApproval=Object.freeze({
   sourceSha:headSha,
   approvedBy:approvalActor,
   approvedAt:text(approvalComment.created_at,80),
+  labelAppliedAt:text(approvalEvidence.labelEvent.created_at,80),
   marker:approvalMarker,
   label:APPROVAL_LABEL,
   scope:'exact-source-sha',

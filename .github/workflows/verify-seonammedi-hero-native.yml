@@ -8,12 +8,16 @@ on:
       - 'sites/seonammedi/public/**'
       - 'scripts/verify-seonammedi-hero-native.mjs'
       - 'test/seonammedi-hero-native.test.mjs'
+      - 'scripts/verify-seonammedi-photo-live-native.mjs'
+      - 'test/seonammedi-photo-live-native.test.mjs'
       - '.github/workflows/verify-seonammedi-hero-native.yml'
   pull_request:
     paths:
       - 'sites/seonammedi/public/**'
       - 'scripts/verify-seonammedi-hero-native.mjs'
       - 'test/seonammedi-hero-native.test.mjs'
+      - 'scripts/verify-seonammedi-photo-live-native.mjs'
+      - 'test/seonammedi-photo-live-native.test.mjs'
       - '.github/workflows/verify-seonammedi-hero-native.yml'
   workflow_run:
     workflows:
@@ -44,7 +48,8 @@ jobs:
       - name: Validate hero source contract and image bytes
         run: |
           node --check scripts/verify-seonammedi-hero-native.mjs
-          node --test test/seonammedi-hero-native.test.mjs
+          node --check scripts/verify-seonammedi-photo-live-native.mjs
+          node --test test/seonammedi-hero-native.test.mjs test/seonammedi-photo-live-native.test.mjs
       - name: Install first-party Chromium harness
         run: |
           npm install --no-save --package-lock=false playwright@1.55.0
@@ -55,11 +60,10 @@ jobs:
           set -euo pipefail
           mkdir -p .tmp/native-hero-site/seonammedi
           cp -a sites/seonammedi/public/. .tmp/native-hero-site/seonammedi/
-          # The published home requests a Board Worker-owned JS route, not a Site Core static file.
-          # Recreate precisely that read-only route in this local static harness.
+          # Mirror the already contract-tested independent-board public GET script only
+          # for the local static source harness; live tests call the real Worker.
           mkdir -p .tmp/native-hero-site/seonammedi/board/ui
           cp sites/seonammedi/public/board-central-category.js .tmp/native-hero-site/seonammedi/board/ui/central-category.js
-          cmp sites/seonammedi/public/board-central-category.js .tmp/native-hero-site/seonammedi/board/ui/central-category.js
           (
             cd .tmp/native-hero-site
             nohup python3 -m http.server 8765 --bind 127.0.0.1 > ../native-hero-http.log 2>&1 </dev/null &
@@ -72,18 +76,26 @@ jobs:
       - name: Run EKODI-owned desktop and mobile Chromium against source
         run: |
           node scripts/verify-seonammedi-hero-native.mjs --origin=http://127.0.0.1:8765 --out=artifacts/native-hero-local
+      - name: Verify six-menu photographic homepage against actual local source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/verify-seonammedi-photo-live-native.mjs --origin=http://127.0.0.1:8765 --source-mode=true --out=artifacts/native-photo-source
       - name: Preserve local browser evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: seonammedi-native-hero-local-${{ github.run_id }}
-          path: artifacts/native-hero-local
+          path: |
+            artifacts/native-hero-local
+            artifacts/native-photo-source
           if-no-files-found: warn
           retention-days: 14
 
   production-native-browser:
-    continue-on-error: ${{ github.event_name == 'pull_request' }}
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    # The live proof is authoritative only after successful Site Core promotion,
+    # or when explicitly invoked by an operator. A source PR is not deployed.
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -107,11 +119,27 @@ jobs:
         if: always() && steps.canonical.outcome != 'skipped'
         run: |
           node scripts/verify-seonammedi-hero-native.mjs --origin=https://seonammedi.kr --out=artifacts/native-hero-customer
+      - name: Verify six-menu real photo on both production domains
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          node scripts/verify-seonammedi-photo-live-native.mjs --origin=https://ekodi.kr --out=artifacts/native-photo-proof-canonical
+          canonical_result=$?
+          node scripts/verify-seonammedi-photo-live-native.mjs --origin=https://seonammedi.kr --out=artifacts/native-photo-proof-customer
+          customer_result=$?
+          if [ "$canonical_result" -ne 0 ] || [ "$customer_result" -ne 0 ]; then
+            echo 'Production photo shell verification failed; deployment is NOT visually proven.' >&2
+            exit 1
+          fi
+          echo 'Production photo shell verification succeeded for both domains, PC and mobile.'
       - name: Preserve production evidence and screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: seonammedi-native-hero-production-${{ github.run_id }}
-          path: artifacts/native-hero-*
+          path: |
+            artifacts/native-hero-*
+            artifacts/native-photo-proof-*
           if-no-files-found: warn
           retention-days: 14
