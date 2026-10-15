@@ -1,5 +1,11 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import platformRouter from '../platform-router-entry-worker.js';
+import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import {spawnSync} from 'node:child_process';import {fileURLToPath} from 'node:url';import platformRouter from '../platform-router-entry-worker.js';
 const root=new URL('../sites/seonammedi/public/',import.meta.url);
+test('seonammedi Admin browser JS remains syntax-valid in ordinary CI',()=>{
+  const file=fileURLToPath(new URL('admin/admin.js',root));
+  const result=spawnSync(process.execPath,['--check',file],{encoding:'utf8'});
+  assert.equal(result.status,0,result.stderr||result.stdout);
+});
+
 test('seonammedi notice login uses central EKODI auth and preserves customer-domain return',async()=>{const [app,auth,policy]=await Promise.all([readFile(new URL('app.js',root),'utf8'),readFile(new URL('../auth-site/auth.js',import.meta.url),'utf8'),readFile(new URL('../config/site-execution-enforcement.json',import.meta.url),'utf8')]);assert.match(app,/new URL\('https:\/\/ekodi\.kr\/auth\/'\)/);assert.doesNotMatch(app,/new URL\('\/auth\/',location\.origin\)/);assert.match(app,/return_to',location\.origin\+'\/\?compose=notice#notices'/);assert.match(auth,/https:\/\/seonammedi\.kr/);assert.match(auth,/서남권국립의대\.kr/);const parsed=JSON.parse(policy);assert.equal(parsed.authenticationEntry?.status,'enforced');assert.equal(parsed.authenticationEntry?.siteLocalAuthPathForbidden,true);assert.equal(parsed.authenticationEntry?.perSiteOptOutAllowed,false);});
 
 
