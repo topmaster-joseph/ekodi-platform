@@ -125,17 +125,20 @@ test('all three board pages share the SeonamMedi header and footer contract',asy
   assert.match(worker,/boardPath\(req,'voices'\)/);
   assert.match(worker,/if\(\(path==='\/finance'/);
   assert.match(worker,/boardPath\(req,'notices'\)/);
-  assert.match(worker,/sitePath\(req,'\/admin\/'\)/);
+  assert.match(worker,/function adminPath\(req\)/);
+  assert.match(worker,/https:\/\/ekodi\.kr\/seonammedi\/admin\//);
   const mod=await import(new URL('../services/independent-board/worker.js?admin-footer='+Date.now(),import.meta.url));
   for(const [url,href] of [
-    ['https://seonammedi.kr/board/finance','/admin/'],
-    ['https://ekodi.kr/seonammedi/board/finance','/seonammedi/admin/']
+    ['https://seonammedi.kr/board/finance','https://ekodi.kr/seonammedi/admin/'],
+    ['https://seonammedi.kr/board/notices','https://ekodi.kr/seonammedi/admin/'],
+    ['https://ekodi.kr/seonammedi/board/finance','/seonammedi/admin/'],
+    ['https://ekodi.kr/seonammedi/board/notices','/seonammedi/admin/']
   ]){
     const response=await mod.default.fetch(new Request(url),{});
     assert.equal(response.status,200,url);
     assert.ok((await response.text()).includes('id="adminLink" href="'+href+'">관리</a>'),url);
   }
-  assert.match(worker,/document\.getElementById\("adminLink"\)\?\.addEventListener\("click",[\s\S]*login\(\)/);
+  assert.doesNotMatch(worker,/document\.getElementById\("adminLink"\)\?\.addEventListener/,'footer management link must use dedicated protected administrator URL, not return to board login');
 });
 
 test('independent board deployment provisions its own storage and verifies real CRUD',async()=>{
