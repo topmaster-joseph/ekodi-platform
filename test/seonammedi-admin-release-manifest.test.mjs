@@ -52,5 +52,9 @@ test('SeonamMedi access panel deep link survives organization data refresh',asyn
   const loader=source.slice(start,end);
   assert.match(loader,/showOrgAdminTab\(form\.elements\.orgKey\.value\|\|'bidae',\{route:false\}\)/,'background organization load must not rewrite ?panel=access or other login-return routes');
   assert.match(source,/const ADMIN_ROUTE_PANELS=new Set\([^;]*'access'/,'access is a supported admin deep link');
+  const admin=await readFile(new URL('../sites/seonammedi/public/admin/index.html',import.meta.url),'utf8');
+  assert.match(admin,/<section class="panel-page" data-panel="access" hidden>/,'registration must remain in the access panel');
+  assert.match(admin,/id="boardAccountRegistration" hidden/,'registration remains gated until platform authority is verified');
+  assert.match(source,/panel\.hidden=!state\.me\?\.platform/,'grant form must remain hidden without platform administrator authority');
   assert.match(source,/restoreAdminRoute\(\{replace:true\}\)/,'initialize the selected panel after background data loads');
 });
