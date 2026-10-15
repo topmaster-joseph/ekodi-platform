@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="필요한 AI는 바로 쓰고, 없으면 함께 만드는 EKODI 모두의 AI">
   <title>EKODI 모두의 AI</title>
-  <link rel="stylesheet" href="/ai/api/commons/style?v=20261015-ai-assistance-1">
+  <link rel="stylesheet" href="/ai/api/commons/style?v=20261016-ai-merchant-pricebook-1">
 </head>
 <body>
   <header class="site-header">
@@ -122,6 +122,19 @@
           <div class="support-detail-header"><h4 id="assistanceAdminTitle">에코디비즈 관리자 · 지원 요청 견적 관리</h4><button id="assistanceAdminRefresh" type="button" class="support-secondary">목록 새로고침</button></div>
           <p id="assistanceAdminStatus" class="support-status" role="status"></p>
           <div id="assistanceAdminList" class="assistance-admin-list"></div>
+          <details id="assistancePricingSection" class="assistance-history">
+            <summary>서비스별 표준요금 관리 · 관리자 승인 후 공개</summary>
+            <p class="support-status">에코디비즈의 민간 지원서비스 표준요금입니다. 저장과 동시에 공개되므로 최종 금액·부가세·정책 버전을 검토하세요. 금액 미지정 상품은 개별 견적을 유지합니다.</p>
+            <p id="assistancePricebookStatus" class="support-status" role="status" aria-live="polite">최종 승인된 요금표를 확인하는 중입니다.</p>
+            <form id="assistancePricebookForm" class="assistance-request-form">
+              <label>새 요금표 버전 (중복 불가)<input id="assistancePricebookVersion" required maxlength="64" autocomplete="off" placeholder="ekodibiz-2026-10-v1"></label>
+              <div id="assistancePricebookRows" class="assistance-merchant-lines"></div>
+              <label class="assistance-consent"><input id="assistancePriceApproved" type="checkbox" required><span>에코디비즈의 승인권자로서 입력한 항목별 요금을 최종 승인합니다.</span></label>
+              <label class="assistance-consent"><input id="assistancePricePublic" type="checkbox" required><span>부가세 포함 금액의 고객 공개와 버전별 변경이력을 승인합니다.</span></label>
+              <label class="assistance-consent"><input id="assistancePriceNoGuarantee" type="checkbox" required><span>정부·공공기관과 무관한 민간 서비스이며 선정이나 보조금 지급을 보장하지 않음을 확인합니다.</span></label>
+              <button id="assistancePricebookPublish" type="submit">최종 승인한 표준요금 공개</button>
+            </form>
+          </details>
           <form id="assistanceMerchantQuoteForm" class="assistance-request-form" hidden>
             <h4 id="assistanceMerchantSelectedTitle">신청자 요청서</h4>
             <div id="assistanceMerchantLines" class="assistance-merchant-lines"></div>
@@ -182,6 +195,6 @@
 
     <footer><span>EKODI 모두의 AI</span><a href="../">ekodi.kr</a></footer>
   </main>
-  <script type="module" src="/ai/api/commons/client?v=20261015-ai-assistance-1"></script>
+  <script type="module" src="/ai/api/commons/client?v=20261016-ai-merchant-pricebook-1"></script>
 </body>
 </html>
