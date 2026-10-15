@@ -129,3 +129,9 @@ body.seonam-visual-ready.board-notices .row-body{font-size:14px!important;line-h
   body.seonam-visual-ready main.seonam-visual-layout>.seonam-visual-right{display:grid;grid-template-columns:1fr;gap:10px}
 }
 @media(prefers-reduced-motion:reduce){.seonam-visual-hero *{scroll-behavior:auto!important;transition:none!important}}
+
+/* Preserve original homepage campaign artwork bytes and full-viewport proportions. */
+body.seonam-visual-ready>.campaign-hero{width:100%!important;max-width:none!important;margin:0!important;padding:0!important;min-height:0!important;overflow:hidden!important;background:#fff}
+body.seonam-visual-ready>.campaign-hero .campaign-hero-artwork{display:block!important;width:100%!important;max-width:none!important}
+body.seonam-visual-ready>.campaign-hero .campaign-hero-image{display:block!important;width:100%!important;max-width:none!important;height:auto!important;object-fit:contain!important}
+body[data-seonammedi-image-mode="inner"].seonam-visual-ready>.campaign-hero{display:none!important}
