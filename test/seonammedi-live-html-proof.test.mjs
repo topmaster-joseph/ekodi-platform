@@ -74,6 +74,7 @@ test('production release convergence requires private finance, not the retired p
   assert.ok(!verifier.includes('finance_surface_contract_missing'),'retired public API must not block release');
   assert.ok(finance.includes('공개 회계 조회는 제공하지 않습니다.'));
   assert.equal(finance.split('href="../admin/?panel=finance"').length-1,2);
+  assert.ok(finance.includes('href="../board/notices">공지</a>'),'Notice must still open the public board directly from finance fallback');
   for(const secret of ['/api/seonammedi/admin/finance','id="ledger"','id="raised"','id="spent"'])assert.ok(!finance.includes(secret),'no finance payload in public HTML: '+secret);
   assert.ok(verifier.includes('notices_surface_contract_missing'),'notice contract must remain enforced');
 });
