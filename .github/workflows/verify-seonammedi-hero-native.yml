@@ -48,7 +48,8 @@ jobs:
       - name: Validate hero source contract and image bytes
         run: |
           node --check scripts/verify-seonammedi-hero-native.mjs
-          node --test test/seonammedi-hero-native.test.mjs
+          node --check scripts/verify-seonammedi-photo-live-native.mjs
+          node --test test/seonammedi-hero-native.test.mjs test/seonammedi-photo-live-native.test.mjs
       - name: Install first-party Chromium harness
         run: |
           npm install --no-save --package-lock=false playwright@1.55.0
