@@ -13,7 +13,7 @@ const [home,css,ui,worker]=await Promise.all([
 
 test('six-menu home loads the same read-only visual shell as independent boards',()=>{
   assert.match(home,/<script src="\/seonammedi\/board-central-category\.js\?v=20261015-photo-shell-1" defer><\/script>/);
-  assert.ok(worker.includes("sitePath(req,'/board-central-category.js')"));
+  assert.ok(worker.includes("boardPath(req,'ui/central-category.js')"));
   assert.match(home,/id="organization"/);
   assert.match(home,/id="committee-activity"/);
   for(const label of ['공지','활동이력','관련소식','소통채널','시민의견','조직'])
