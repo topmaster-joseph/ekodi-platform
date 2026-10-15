@@ -12,6 +12,7 @@ class FakeStorage{
  map=new Map();
  async get(k){return this.map.get(k)}
  async put(k,v){this.map.set(k,structuredClone(v))}
+ async transaction(fn){return fn(this)}
 }
 function harness(operational=true){
  const store=new PayOrderStore({storage:new FakeStorage()});
