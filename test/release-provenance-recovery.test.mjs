@@ -55,14 +55,14 @@ test('exact-SHA recovery does not strand approved independent-board production r
     "file==='sites/seonammedi/public/app.js'",
     "file==='.github/workflows/deploy-independent-board.yml'"
   ]) assert.ok(script.includes(owner),owner);
-  assert.match(script,/if\(merge\.response\.ok&&\(independentBoardTouched\|\|shellRuntimeTouched\)\)\{/);
+  assert.match(script,/if\(merge\.response\.ok&&\(independentBoardTouched\|\|shellRuntimeTouched\|\|myTouched\)\)\{/);
   assert.match(script,/merge\.data\?\.merged!==true/);
   assert.match(script,/main\.data\?\.commit\?\.sha/);
   assert.match(script,/main changed before exact board dispatch/);
   assert.match(script,/actions\/workflows\/deploy-independent-board\.yml\/dispatches/);
   assert.match(script,/release_branch_ref:branchRef,release_task_id:taskId/);
   assert.match(script,/dispatch\.response\.status!==204/);
-  const guarded=script.indexOf('if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched)){');
+  const guarded=script.indexOf('if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched||myTouched)){');
   const dispatch=script.indexOf('/actions/workflows/deploy-independent-board.yml/dispatches');
   assert.ok(guarded>=0&&dispatch>guarded,'dispatch must be behind verified immediate merge');
   assert.doesNotMatch(script,/sourceFiles\.some\([\s\S]*?\)\s*\?\s*await\s+github\(/);
@@ -89,7 +89,7 @@ test('recovery immediate merge requires authentic exact SHA CI and source contai
 test('receipt-bound immediate Shell dispatch occurs only after confirmed protected main merge',async()=>{
   const script=await read('scripts/recover-release-provenance.mjs');
   const orchestration=script.indexOf('const shellRuntimeTouched=sourceFiles.some');
-  const merged=script.indexOf('if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched)){');
+  const merged=script.indexOf('if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched||myTouched)){');
   const checkMain=script.indexOf('main changed before exact board dispatch');
   const shell=script.indexOf('if(shellRuntimeTouched){',merged);
   const dispatch=script.indexOf('/actions/workflows/deploy-ekodi-shell.yml/dispatches',shell);

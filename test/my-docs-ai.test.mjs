@@ -38,12 +38,14 @@ test('My guarded release smoke-tests the internal Worker candidate and defers ca
   const candidate=requests.find(item=>item.url==='https://ekodi-my.topmaster-joseph.workers.dev/');
   assert.ok(candidate);assert.deepEqual(candidate.statuses,[200]);assert.equal(candidate.redirect,'manual');assert.ok(candidate.expect.includes('My EKODI'));
   const canonical=requests.filter(item=>item.url.startsWith('https://ekodi.kr/my/'));
-  assert.equal(canonical.length,6);
+  assert.equal(canonical.length,8);
   for(const url of [
     'https://ekodi.kr/my/',
     'https://ekodi.kr/my/health',
     'https://ekodi.kr/my/w/person:deployment-probe/social',
     'https://ekodi.kr/my/docs/',
+    'https://ekodi.kr/my/journey/',
+    'https://ekodi.kr/my/approvals/',
     'https://ekodi.kr/my/private-workspace-router.js',
     'https://ekodi.kr/my/access-context.js',
   ])assert.ok(canonical.some(item=>item.url===url),url);

@@ -152,6 +152,25 @@
         ]
       },
       {
+        "url": "https://ekodi.kr/my/journey/",
+        "expect": [
+          "MY JOURNEY · PERSON FIRST",
+          "외국인만을 위한 경로가 아니라"
+        ],
+        "rollbackVerify": false,
+        "candidateVerify": false,
+        "candidateVerifyReason": "Canonical My service route is verified after promotion; the candidate is smoke-tested on the internal Worker URL before promotion."
+      },
+      {
+        "url": "https://ekodi.kr/my/approvals/",
+        "expect": [
+          "MY APPROVAL · DECISION INBOX"
+        ],
+        "rollbackVerify": false,
+        "candidateVerify": false,
+        "candidateVerifyReason": "Canonical My service route is verified after promotion; the candidate is smoke-tested on the internal Worker URL before promotion."
+      },
+      {
         "url": "https://ekodi.kr/my/docs/",
         "statuses": [
           200
