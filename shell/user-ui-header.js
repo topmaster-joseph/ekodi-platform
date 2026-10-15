@@ -5,6 +5,8 @@ window.__EKODI_USER_UI_HEADER_BOOTED=true;
 
 const VERSION=7;
 const SITE_CHROME_URL='https://workspace-api.ekodi.kr/v1/site-chrome/public';
+// Education has no customer-site chrome configuration; keep the shared fallback.
+const NON_TENANT_SITE_CHROME_SUBJECTS=new Set(['edu','education']);
 const STYLE_ID='ekodi-user-ui-header-style';
 const USER_SURFACES=new Set(['public','workspace']);
 const DISABLED_MODES=new Set(['off','hidden','immersive']);
@@ -212,7 +214,7 @@ function ensureOperatingSpaceLabel(header,target=operatingSpaceTarget(header)){
   return badge;
 }
 function siteSubject(){const explicit=String(document.documentElement.dataset.ekodiSiteSubject||document.body?.dataset?.ekodiSiteSubject||'').trim().toLowerCase();if(explicit)return explicit;const service=serviceId();const owned={church:'ekodi-church',biz:'ekodi-biz',lab:'ekodi-lab',trade:'ekodi-trade',cafe:'ekodi-cafe'};if(owned[service])return owned[service];const first=location.pathname.split('/').filter(Boolean)[0]||'';const aliases={ekodibiz:'ekodi-biz',biz:'ekodi-biz',ekodichurch:'ekodi-church',church:'ekodi-church',ekodilab:'ekodi-lab',lab:'ekodi-lab',cheonggye:'cgma','cheonggye-merchants':'cgma','cheonggye-merchant-association':'cgma'};return aliases[first]||first}
-async function siteChrome(){const subject=siteSubject();if(!subject||['admin','auth','privacy','terms','api'].includes(subject))return null;if(!siteChromePromise)siteChromePromise=fetch(`${SITE_CHROME_URL}?subject_key=${encodeURIComponent(subject)}`,{credentials:'omit',cache:'no-store'}).then(async r=>r.ok?r.json():null).catch(()=>null);return siteChromePromise}
+async function siteChrome(){const subject=siteSubject();if(!subject||NON_TENANT_SITE_CHROME_SUBJECTS.has(subject)||['admin','auth','privacy','terms','api'].includes(subject))return null;if(!siteChromePromise)siteChromePromise=fetch(`${SITE_CHROME_URL}?subject_key=${encodeURIComponent(subject)}`,{credentials:'omit',cache:'no-store'}).then(async r=>r.ok?r.json():null).catch(()=>null);return siteChromePromise}
 function mode(){
   const htmlMode=String(document.documentElement.dataset.ekodiUserHeader||'').toLowerCase();
   const bodyMode=String(document.body?.dataset?.ekodiUserHeader||'').toLowerCase();
