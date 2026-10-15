@@ -186,6 +186,7 @@ jobs:
             }
           }
           if (-not $canary.browserCanary.ok) { throw 'Native browser canary did not pass.' }
+          Write-Host '[EKODI][AGENT-CANARY] dedicated native CDP receipt verified'
           $worker = Invoke-BackgroundBrowserWorker ([pscustomobject]@{
             path = '/'
             deviceProfile = 'desktop'
@@ -196,6 +197,7 @@ jobs:
             preserveUserOwnedSurfaces = $true
           })
           $proof = $worker.browserWorker
+          Write-Host '[EKODI][AGENT-CANARY] background worker receipt received'
           if (-not $proof.ok) { throw 'Native browser worker did not return ok.' }
           if ($proof.virtualizationProvider -ne 'ekodi-native-remote-computer') { throw 'Unexpected native virtualization provider.' }
           if ($proof.routingPolicy -ne 'EKODI-VIRTUALIZATION-ROUTING-001') { throw 'Virtualization routing policy evidence missing.' }
