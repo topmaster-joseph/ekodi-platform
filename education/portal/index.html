@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="ekodi-ui-type" content="USER">
+  <meta name="description" content="EKODI AI 교육과정 수강신청·학습진도·강의자료·강사용 운영 통합 사이버 캠퍼스">
+  <title>나의 강의실·운영관리 | EKODI AI 교육과정</title>
+  <link rel="stylesheet" href="./portal.css?v=20261016">
+</head>
+<body class="edu-workspace" data-ekodi-ui="USER">
+<a class="skip" href="#workMain">본문 바로가기</a>
+<header class="workspace-topbar">
+  <a class="workspace-brand" href="../">EKODI <span>AI 교육과정</span></a>
+  <nav aria-label="교육 상단 메뉴"><a href="../">교육 홈</a><a href="../study/ai-bootcamp/">강의실</a><a href="../study/ai-bootcamp/studio/">실습실</a></nav>
+  <span id="identityLabel" class="identity-label">로그인 전</span>
+  <button type="button" id="portalAuthButton" class="login-button">Google 로그인</button>
+</header>
+<div class="workspace-layout">
+  <aside class="workspace-sidebar" aria-label="사이버 강의실 메뉴">
+    <p>ONLINE CAMPUS</p>
+    <button type="button" data-panel="dashboard" class="current" aria-current="page">내 학습 대시보드</button>
+    <button type="button" data-panel="enroll">수강신청 · 승인상태</button>
+    <button type="button" data-panel="materials">공지사항 · 자료실</button>
+    <button type="button" data-panel="practice">온라인 실습실</button>
+    <button type="button" data-panel="manage" id="manageNav" hidden>강사·관리자 운영</button>
+    <div class="sidebar-note">과정 내용은 공개 제안안이며, 수강신청 승인은 실제 운영 과정 개설 후 진행됩니다.</div>
+  </aside>
+  <main id="workMain" class="workspace-main">
+    <div class="workspace-breadcrumb">EKODI / EDUCATION / ONLINE CAMPUS</div>
+    <section id="authNotice" class="workspace-alert" role="status" aria-live="polite">로그인하면 등록된 수강신청과 진도 정보를 확인할 수 있습니다. 비로그인 상태에서도 공개 강의·실습을 열 수 있습니다.</section>
+    <section id="panel-dashboard" class="workspace-panel" aria-labelledby="dashboardTitle">
+      <div class="workspace-section-head"><div><p class="kicker">LEARNING DASHBOARD</p><h1 id="dashboardTitle">나의 강의실</h1><p>이미 공개된 4개 강의의 발표·실습을 이어서 진행하고 내 학습 상태를 관리합니다.</p></div><a class="action-link" href="../study/ai-bootcamp/">전체 강의실 열기 →</a></div>
+      <div class="stat-strip"><article><strong id="totalLessons">4</strong><span>공개 강의 회차</span></article><article><strong id="completedLessons">0</strong><span>나의 학습 완료</span></article><article><strong id="batchSummary">미신청</strong><span>수강신청 상태</span></article></div>
+      <div id="lessonList" class="lesson-stack" aria-live="polite"></div>
+      <div class="help-banner"><strong>학습 운영 안내</strong><p>진도는 로그인된 계정에 서버 동기화될 수 있습니다. 동기화가 준비되지 않은 경우에는 이 기기에서만 임시로 기록하며 수료·평가·출석으로 인정되지 않습니다.</p></div>
+    </section>
+    <section id="panel-enroll" class="workspace-panel" aria-labelledby="enrollTitle" hidden>
+      <div class="workspace-section-head"><div><p class="kicker">COURSE ENROLLMENT</p><h1 id="enrollTitle">수강신청</h1><p>현재 공개 강의는 운영 제안안입니다. 신청 제출은 실제 과정 운영 승인 및 서버 등록 기능이 활성화된 경우에만 가능합니다.</p></div></div>
+      <div class="workspace-card">
+        <h2>AI로 바꾸는 대학의 일</h2><p>4회차 × 120분 · 6개 교육 대상 그룹 · 일정·정원·수강료 및 수료 인정 여부 미확정</p>
+        <form id="enrollForm" class="workspace-form">
+          <label for="enrollBatch">학습 그룹 선택<select id="enrollBatch" name="batch" required><option value="A">A · 기획·총무·행정</option><option value="B">B · 교무·학사·교육지원</option><option value="C">C · 교수·교수학습</option><option value="D">D · 연구·산학·사업단</option><option value="E">E · 학생지원·국제·대외협력</option><option value="F">F · 통합·관리자·심화</option></select></label>
+          <label class="consent-line"><input name="confirm" id="enrollConfirm" type="checkbox" required> 현재 과정이 제안안이며 정식 수강확정·결제·수료증 발급이 아님을 확인했습니다.</label>
+          <button type="submit" id="enrollSubmit" class="primary-action" disabled>수강신청 요청</button>
+        </form>
+        <p id="enrollStatus" class="form-status" role="status" aria-live="polite">Google 로그인과 교육 운영 서버의 활성화가 필요합니다.</p>
+      </div>
+    </section>
+    <section id="panel-materials" class="workspace-panel" aria-labelledby="materialsTitle" hidden>
+      <div class="workspace-section-head"><div><p class="kicker">NEWS & LEARNING LIBRARY</p><h1 id="materialsTitle">공지사항 · 자료실</h1><p>공식 관리자가 승인·게시한 내용만 공개됩니다. 비공개 초안이나 첨부파일은 노출하지 않습니다.</p></div></div>
+      <div class="library-columns"><article class="workspace-card"><h2>운영 공지</h2><div id="noticeList" class="library-rows" aria-live="polite">공식 공지 등록 전입니다.</div></article><article class="workspace-card"><h2>강의·실습자료</h2><div id="resourceList" class="library-rows"><a href="../study/ai-bootcamp/">4회차 AI 강의실 열기 →</a><a href="../study/ai-bootcamp/data/sample.csv" download>가상 실습자료 CSV 받기 →</a><a href="../study/ai-bootcamp/studio/">강의자료 편집 스튜디오 →</a></div></article></div>
+    </section>
+    <section id="panel-practice" class="workspace-panel" aria-labelledby="practiceTitle" hidden>
+      <div class="workspace-section-head"><div><p class="kicker">PRACTICE LAB</p><h1 id="practiceTitle">온라인 실습실</h1><p>가상 자료로 실습하고, 프롬프트와 검증 결과를 확인합니다. 실제 학생·직원 개인정보는 입력하지 마세요.</p></div><a class="action-link" href="../study/ai-bootcamp/studio/">자료 편집실 →</a></div>
+      <div class="workspace-card">
+        <label for="practiceLesson">실습할 강의 회차<select id="practiceLesson"></select></label>
+        <h2 id="practiceHeading">실습 주제</h2>
+        <p id="practiceQuestion" class="practice-question"></p>
+        <div class="workspace-actions"><a id="practiceClassroom" class="primary-action" href="../study/ai-bootcamp/">강의실 실습·발표 모드</a><button id="practiceCopy" type="button" class="secondary-action">실습 프롬프트 복사</button></div>
+        <h3>결과 검증 체크리스트</h3><div id="practiceChecks" class="check-list"></div>
+        <p class="form-status">아래 체크는 이 기기의 교육용 자기점검 기록입니다. 실제 과제 제출·성적·출석 처리 기능이 아닙니다.</p>
+      </div>
+    </section>
+    <section id="panel-manage" class="workspace-panel" aria-labelledby="manageTitle" hidden>
+      <div class="workspace-section-head"><div><p class="kicker">INSTRUCTOR & OPERATOR</p><h1 id="manageTitle">강사·관리자 운영</h1><p>교육 자료 초안 작성, 공지 승인 게시, 신청자 상태 관리를 동일한 교육공간에서 수행합니다. 모든 변경은 서버 권한으로 검증됩니다.</p></div></div>
+      <div id="manageUnavailable" class="workspace-alert">관리자 계정 및 교육 운영 데이터베이스 활성화가 필요합니다. 일반 사용자는 운영 화면에 접근할 수 없습니다.</div>
+      <div id="manageContent" hidden>
+        <div class="workspace-card">
+          <h2>공지·강의자료 작성과 게시</h2>
+          <form id="postForm" class="workspace-form">
+            <input type="hidden" name="postId" id="postId">
+            <label for="postKind">자료 분류<select name="kind" id="postKind"><option value="notice">공지</option><option value="resource">자료</option><option value="lesson">강의안 안내</option><option value="exercise">실습 안내</option></select></label>
+            <label for="postTitle">제목<input id="postTitle" name="title" required minlength="2" maxlength="160" placeholder="공식 교육안내 또는 실습자료 제목"></label>
+            <label for="postBody">내용 (텍스트만, HTML 미지원)<textarea id="postBody" name="body" required minlength="2" maxlength="6000" rows="6" placeholder="개인정보·비공개 자료를 포함하지 마세요."></textarea></label>
+            <label for="postUrl">공식 자료 URL (선택)<input id="postUrl" name="url" type="url" placeholder="https://..." maxlength="700"></label>
+            <label for="postStatus">상태<select id="postStatus" name="status"><option value="draft">비공개 초안</option><option value="published">공식 게시</option></select></label>
+            <div class="workspace-actions"><button class="primary-action" type="submit" id="postSave">서버 저장</button><button class="secondary-action" type="reset" id="postReset">새 문서</button></div>
+          </form>
+          <p id="postMessage" class="form-status" role="status" aria-live="polite"></p>
+          <div id="operatorPosts" class="operator-posts" aria-label="운영 자료 목록"></div>
+        </div>
+        <div class="workspace-card" id="enrollManageCard">
+          <h2>수강신청 요청 관리</h2><p class="small-note">수강 신청자의 실제 개인정보는 공개하지 않습니다. 관리자만 내부 식별자와 신청 상태를 조회합니다.</p>
+          <div id="operatorEnrollments" class="operator-enrollments" aria-live="polite"></div>
+        </div>
+        <div class="help-banner"><a href="../study/ai-bootcamp/studio/">회차별 교안 편집·첨부자료 로컬 검토 스튜디오 열기 →</a><p>원본 파일은 서버로 자동 업로드되지 않습니다. 승인된 문서 게시 기능과 수강 데이터만 서버가 관리합니다.</p></div>
+      </div>
+    </section>
+  </main>
+</div>
+<footer class="workspace-footer">EKODI AI 교육과정 · 공식 자료만 게시 · <a href="../">교육 첫 화면</a> · <a href="https://ekodi.kr/privacy">개인정보처리방침</a></footer>
+<script src="../config.js"></script>
+<script type="module" src="./portal.js"></script>
+</body></html>
