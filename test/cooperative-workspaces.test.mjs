@@ -8,6 +8,7 @@ import { normalizeCooperativeState, loadCooperativeProject, saveCooperativeProje
 import { routeCooperative, cooperativeRoute } from '../cooperative-control.js';
 import { cooperativeCharter } from '../cooperative-charter.js';
 import { sitePublicationAuthority } from '../site-publication-runtime.js';
+import sharedSiteWorker from '../platform-router-entry-worker.js';
 
 import { fixture, authFetch } from './helpers/cooperative-fixture.mjs';
 
@@ -15,6 +16,24 @@ const req = (coop, path, token = '', method = 'GET', body = undefined, origin = 
   method, headers: { ...(token ? { authorization: 'Bearer ' + token } : {}), ...(body ? { origin, 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined,
 });
 const [jubilee, open] = COOPERATIVES;
+
+test('cooperative release probes match final Shared Site headers and keep every page non-storable',async()=>{
+  const manifest=JSON.parse(fs.readFileSync(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+  const paths=COOPERATIVES.flatMap(coop=>['/','/members','/admin'].map(suffix=>'/'+coop.slug+suffix));
+  paths.push('/business-coop/','/business-coop/admin/','/admin/workspaces/cooperatives');
+  for(const path of paths){
+    const url='https://ekodi.kr'+path;
+    const probe=manifest.worker.requests.find(probe=>probe.url===url);
+    assert.ok(probe,'guarded release probe exists for '+path);
+    const response=await sharedSiteWorker.fetch(new Request(url),{},{});
+    assert.equal(response.status,200,path);
+    assert.ok(response.headers.get('cache-control').split(',').map(value=>value.trim()).includes('no-store'),path);
+    const finalHeaders=[...response.headers].map(([key,value])=>key+': '+value).join('\n').toLowerCase();
+    for(const marker of probe.headerExpect||[])assert.ok(finalHeaders.includes(marker.toLowerCase()),path+': '+marker);
+    if(path.includes('/admin')||path.includes('business-coop'))assert.match(response.headers.get('x-robots-tag'),/noindex/,path);
+    await response.body?.cancel();
+  }
+});
 
 test('operations hub lists only locally manageable workspaces and separates explicit platform authority', async t => {
   const f=fixture();t.after(()=>f.sqlite.close());t.mock.method(globalThis,'fetch',authFetch({owner:'owner@example.test',member:'member@example.test'}));
