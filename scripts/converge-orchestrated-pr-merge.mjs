@@ -255,6 +255,10 @@ const churchApiTouched=changedFiles.some(file=>
 const adminContinuityVerificationTouched=changedFiles.some(file=>
   file==='scripts/verify-admin-login-continuity.mjs'||
   file==='test/admin-login-continuity-contract.test.mjs'||
+  // Re-run genuine signed-in production E2E when the isolated menu harness changes.
+  file==='scripts/admin-authenticated-e2e-menu-worker.mjs'||
+  file==='scripts/admin-authenticated-e2e-retry.mjs'||
+  file==='test/admin-authenticated-e2e-readiness.test.mjs'||
   file==='.github/workflows/verify-admin-authenticated-production-e2e.yml'||
   file==='.github/workflows/admin-authenticated-e2e.yml'||
   file==='scripts/converge-orchestrated-pr-merge.mjs'
