@@ -38,7 +38,9 @@ test('post-deploy workflow asserts both origins and collects original and new sc
   assert.match(workflow,/cp sites\/seonammedi\/public\/board-central-category\.js \.tmp\/native-hero-site\/seonammedi\/board\/ui\/central-category\.js/);
   assert.match(workflow,/workflow_run:/);
   assert.match(workflow,/Deploy EKODI Shared Site Core/);
-  assert.match(workflow,/continue-on-error: \$\{\{ github\.event_name == 'pull_request' \}\}/);
+  assert.ok(workflow.includes("if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')"));
+  assert.doesNotMatch(workflow,/continue-on-error:/,'live production failures must remain fatal');
+  assert.ok(workflow.includes("ref: ${{ github.event_name == 'workflow_run' && 'main' || github.ref }}"));
 });
 
 test('live photo failure receipts preserve script HTTP status and browser bootstrap evidence',()=>{
