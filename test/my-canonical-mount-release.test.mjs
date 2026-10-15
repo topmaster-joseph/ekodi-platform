@@ -28,7 +28,9 @@ test('My canonical mounted docs are served by same assets as unmounted docs',asy
   const context={...env,ASSETS:{fetch:async request=>{
     const path=new URL(request.url).pathname;
     paths.push(path);
-    if(path==='/docs/')return new Response('<!doctype html><title>EKODI Docs AI</title><main>Docs</main>',{headers:{'content-type':'text/html'}});
+    // Use plain text in the Node route contract: Cloudflare's HTMLRewriter is
+    // exercised separately by the Chromium/live browser checks, not this mock.
+    if(path==='/docs/')return new Response('EKODI Docs AI route fixture',{headers:{'content-type':'text/plain'}});
     return new Response('missing',{status:404});
   }}};
   for(const pathname of ['/docs/','/my/docs/']){
