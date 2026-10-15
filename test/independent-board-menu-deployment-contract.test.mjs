@@ -10,8 +10,6 @@ const menu=['공지','활동이력','관련소식','소통채널','시민의견'
 test('deployed board smoke checks actual nested notice and ledger links, not retired top-level active links',()=>{
   assert.match(workflow,/Verify production board UI/);
   assert.match(workflow,/verify_contains "board six-menu navigation"/);
-  assert.match(workflow,/verify_contains "notices nested ledger"/);
-  assert.match(workflow,/verify_contains "notices nested minutes"/);
   for(const label of menu)assert.ok(workflow.includes("'"+label+"'"),label);
   assert.doesNotMatch(workflow,/'aria-current="page" href="\/board\/finance">회계'/);
   assert.doesNotMatch(workflow,/'aria-current="page" href="\/seonammedi\/board\/finance">회계'/);
@@ -37,10 +35,12 @@ test('live-rendered board headers share one six-menu hierarchy on both mounts an
     assert.doesNotMatch(nav,/nav-group|nav-submenu|<button/,'header navigation is flat');
     const nested=html.match(/<template id="central-category-link-contract">([\s\S]*?)<\/template>/)?.[1]||'';
     const prefix=root.includes('ekodi.kr')?'/seonammedi':'';
-    assert.ok(nested.includes('href="'+prefix+'/board/finance">회계</a>'));
+    assert.ok(!nested.includes('>회계</a>'));
     assert.ok(nested.includes('href="'+prefix+'/board/notices">공지사항</a>'));
-    assert.ok(nested.includes('href="'+prefix+'/minutes/">회의록</a>'));
+    assert.ok(!nested.includes('>회의록</a>'));
     assert.equal((nav.match(/>회계<\/a>/g)||[]).length,0,'no top-level finance');
+    assert.doesNotMatch(nav,/data-category-menu="공지"/);
+    assert.match(nav,/href="[^"]*\/board\/notices">공지<\/a>/);
     assert.ok(html.includes('id="writeToggle"')||route!=='voices');
     assert.ok(html.includes('return_to')||route!=='voices','guest writes must retain Google login return');
   }
