@@ -95,3 +95,12 @@ test('SeonamMedi production manifest requires public finance information to rema
   assert.equal(home.rollbackVerify,false,'existing rollback verification policy remains unchanged');
   assert.ok(manifest.worker.requests.some(request=>request.url==='https://ekodi.kr/seonammedi/admin/'),'dedicated admin route must remain guarded');
 });
+
+test('SeonamMedi finance release contract keeps notices direct and minutes under admin', async () => {
+  const html=await readFile(new URL('../sites/seonammedi/public/index.html',import.meta.url),'utf8');
+  const admin=await readFile(new URL('../sites/seonammedi/public/admin/index.html',import.meta.url),'utf8');
+  assert.match(html,/href="board\/notices">공지<\/a>/,'public notices should directly open the board');
+  assert.doesNotMatch(html,/>회계<\/a>|href="board\/finance"|id="financeManageForm"/,'finance must not reappear on public homepage');
+  assert.match(admin,/data-panel="minutes"/,'internal minutes must remain administrator-managed');
+  assert.match(admin,/href="\?panel=finance"/,'finance entry should remain in protected administrator panel');
+});
