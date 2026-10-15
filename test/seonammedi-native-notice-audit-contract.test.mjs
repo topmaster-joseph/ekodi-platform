@@ -15,6 +15,8 @@ test('native guest audit requires a direct Notice link and rejects stale categor
   assert.ok(audit.includes("new URL(noticeLink.href,target).pathname"));
   assert.ok(audit.includes("notice_direct_path_mismatch"));
   assert.ok(audit.includes("notice_category_click_interception"));
+  assert.ok(audit.includes('if(publicSurface&&resolvedNoticePath!==expectedNoticePath)'),'direct Notice path must be checked on every public surface');
+  assert.ok(audit.includes('if(publicSurface&&record.centralCategory.noticeTrigger)'),'stale click interception must fail native audit');
   assert.ok(!audit.includes('notice_submenu_missing'));
   assert.ok(!audit.includes("noticeEntries.some"));
   assert.ok(home.includes('href="board/notices" >공지</a>'));
