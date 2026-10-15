@@ -43,3 +43,14 @@ function visitPay(node){
   }
   return null;
 }
+
+test('SeonamMedi access panel deep link survives organization data refresh',async()=>{
+  const source=await readFile(new URL('../sites/seonammedi/public/admin/admin.js',import.meta.url),'utf8');
+  const start=source.indexOf('async function loadOrganization(){');
+  const end=source.indexOf("$('organizationForm')?.addEventListener",start);
+  assert.ok(start>=0&&end>start,'organization loader must exist');
+  const loader=source.slice(start,end);
+  assert.match(loader,/showOrgAdminTab\(form\.elements\.orgKey\.value\|\|'bidae',\{route:false\}\)/,'background organization load must not rewrite ?panel=access or other login-return routes');
+  assert.match(source,/const ADMIN_ROUTE_PANELS=new Set\([^;]*'access'/,'access is a supported admin deep link');
+  assert.match(source,/restoreAdminRoute\(\{replace:true\}\)/,'initialize the selected panel after background data loads');
+});
