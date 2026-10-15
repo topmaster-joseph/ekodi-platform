@@ -12,7 +12,7 @@ test('owner-approved exact-SHA immediate recovery triggers authenticated product
     assert.ok(selector.includes("'"+file+"'"),file);
   }
   const guard=recovery.indexOf('if(merge.response.ok&&adminContinuityTouched){');
-  const mainCheck=recovery.indexOf("main changed before authenticated Admin E2E dispatch");
+  const mainCheck=recovery.indexOf("cannot verify protected main before authenticated Admin E2E");
   const dispatch=recovery.indexOf('actions/workflows/verify-admin-authenticated-production-e2e.yml/dispatches',guard);
   const accepted=recovery.indexOf("out('admin_e2e_dispatch','accepted')",dispatch);
   assert.ok(guard>0&&mainCheck>guard&&dispatch>mainCheck&&accepted>dispatch);
