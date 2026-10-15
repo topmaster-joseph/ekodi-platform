@@ -56,4 +56,6 @@ jobs:
             echo "- recovery PR: ${{ steps.recover.outputs.recovery_pr || 'n/a' }}"
             echo "- merge: ${{ steps.recover.outputs.merge_disposition || 'n/a' }}"
             echo "- independent board dispatch: ${{ steps.recover.outputs.independent_board_dispatch || 'not-required' }}"
+            echo "- Shell Worker dispatch: ${{ steps.recover.outputs.shell_dispatch || 'not-required-or-not-authorized' }}"
+            echo "- protected merge condition: ${{ steps.recover.outputs.merge_condition || 'verified-or-normal-gate' }}"
           } >> "$GITHUB_STEP_SUMMARY"
