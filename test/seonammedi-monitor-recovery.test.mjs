@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {fetchSeonamMediNewsRss} from '../seonammedi-monitor.js';
+import {fetchSeonamMediNewsRss,fetchSeonamMediBingNewsRss} from '../seonammedi-monitor.js';
 import {isPublicSeonamMediSource} from '../seonammedi-relevance.js';
 
 function mocked(items){
@@ -61,6 +61,34 @@ test('transient transport failures retry, persistent 503 propagates to failure s
   const failures=mocked([new Response('',{status:503}),new Response('',{status:503}),new Response('',{status:503})]);
   await assert.rejects(fetchSeonamMediNewsRss('서남권 국립의대',{fetchImpl:failures.fetchImpl,wait:async()=>{}}),/HTTP 503/);
   assert.equal(failures.calls.length,3);
+});
+
+test('Bing RSS fallback is bounded and validates RSS before use',async()=>{
+  const valid='<?xml version="1.0"?><rss version="2.0"><channel><title>news</title><item><title>서남권 국립의대</title><link>https://publisher.example.kr/a</link></item></channel></rss>';
+  const calls=[];
+  const xml=await fetchSeonamMediBingNewsRss('서남권 국립의대',{fetchImpl:async(url,options)=>{
+    calls.push({url:String(url),options});
+    return new Response(valid,{status:200,headers:{'content-type':'application/rss+xml'}});
+  }});
+  assert.equal(xml,valid);
+  assert.equal(calls.length,1);
+  assert.match(calls[0].url,/^https:\/\/www\.bing\.com\/news\/search\?/);
+  assert.match(calls[0].url,/format=RSS/);
+  assert.ok(calls[0].options.headers.accept.includes('application/rss+xml'));
+
+  await assert.rejects(
+    fetchSeonamMediBingNewsRss('서남권 국립의대',{fetchImpl:async()=>new Response('<html>temporary</html>',{status:200})}),
+    /bing_invalid_rss_document/
+  );
+});
+
+test('hourly collector source keeps Google primary and Bing only as fallback',async()=>{
+  const source=await readFile(new URL('../seonammedi-monitor.js',import.meta.url),'utf8');
+  assert.match(source,/fetchSeonamMediNewsRss\(query\.q\)/);
+  assert.match(source,/fetchSeonamMediBingNewsRss\(query\.q\)/);
+  assert.match(source,/google_degraded/);
+  assert.match(source,/newsItems=parseRss/);
+  assert.match(source,/checked\+=1;seen\+=newsItems\.length/);
 });
 
 test('hourly collector change dispatches BOTH canonical runtime owners',async()=>{
