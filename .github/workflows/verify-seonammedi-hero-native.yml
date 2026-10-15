@@ -75,12 +75,19 @@ jobs:
       - name: Run EKODI-owned desktop and mobile Chromium against source
         run: |
           node scripts/verify-seonammedi-hero-native.mjs --origin=http://127.0.0.1:8765 --out=artifacts/native-hero-local
+      - name: Verify six-menu photographic homepage against actual local source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/verify-seonammedi-photo-live-native.mjs --origin=http://127.0.0.1:8765 --source-mode=true --out=artifacts/native-photo-source
       - name: Preserve local browser evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: seonammedi-native-hero-local-${{ github.run_id }}
-          path: artifacts/native-hero-local
+          path: |
+            artifacts/native-hero-local
+            artifacts/native-photo-source
           if-no-files-found: warn
           retention-days: 14
 
