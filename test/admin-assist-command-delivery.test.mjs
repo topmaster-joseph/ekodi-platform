@@ -79,7 +79,8 @@ test('production verification submits the real bottom command on canonical ekodi
   assert.match(probe,/EXPECTED_DESKTOP_SIDEBAR_WIDTH = 228/);
   assert.match(probe,/contextTabsPresent/);
   assert.match(probe,/commandEntryPresent/);
-  assert.match(probe,/targetValue !== 'EKODI'/);
+  assert.match(probe,/targetValue !== 'ekodi'/);
+  assert.match(probe,/targetLabel !== 'EKODI'/);
   assert.match(probe,/targetWidth \|\| 0\) < 150/);
   assert.match(probe,/composerRadius !== '30px'/);
   assert.match(probe,/radial-gradient/);
