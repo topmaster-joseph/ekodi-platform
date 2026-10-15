@@ -13,6 +13,8 @@ on:
       - 'education/study/ai-bootcamp/documents/**'
       - 'scripts/verify-education-documents-native.mjs'
       - 'test/education-bootcamp-documents.test.mjs'
+      - 'test/education-native-security-observations.test.mjs'
+      - 'scripts/education-native-security-observations.mjs'
       - 'education/study/ai-bootcamp/material-source.js'
       - 'scripts/verify-education-material-studio-native.mjs'
       - 'test/education-material-studio.test.mjs'
@@ -39,7 +41,9 @@ jobs:
       - name: Validate read-only release continuity
         run: |
           node --check scripts/education-release-continuity.mjs
-          node --test test/education-release-continuity.test.mjs
+          node --check scripts/education-native-security-observations.mjs
+          node --check scripts/verify-education-documents-native.mjs
+          node --test test/education-release-continuity.test.mjs test/education-native-security-observations.test.mjs
       - name: Install EKODI-native disposable Chromium for pre-approval preview
         if: github.event_name == 'pull_request'
         run: |
