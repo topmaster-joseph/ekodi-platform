@@ -36,7 +36,7 @@ test('live-rendered board headers share one six-menu hierarchy on both mounts an
     const nested=html.match(/<template id="central-category-link-contract">([\s\S]*?)<\/template>/)?.[1]||'';
     const prefix=root.includes('ekodi.kr')?'/seonammedi':'';
     assert.ok(!nested.includes('>회계</a>'));
-    assert.ok(nested.includes('href="'+prefix+'/board/notices">공지사항</a>'));
+    assert.ok(!nested.includes('>회계</a>')&&!nested.includes('>회의록</a>'));
     assert.ok(!nested.includes('>회의록</a>'));
     assert.equal((nav.match(/>회계<\/a>/g)||[]).length,0,'no top-level finance');
     assert.doesNotMatch(nav,/data-category-menu="공지"/);
