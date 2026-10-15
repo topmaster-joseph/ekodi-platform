@@ -13,6 +13,7 @@ test('customer-domain published photo shell can strip only its approved exact mo
   assert.equal(compareSeonamMediPublishedHtml(expected,customer,[]).matched,false);
   assert.equal(compareSeonamMediPublishedHtml(expected,customer.replace('photo-shell-1','photo-shell-2'),allowed).matched,false);
   assert.equal(compareSeonamMediPublishedHtml(expected,customer.replace('board-central-category','untrusted-script'),allowed).matched,false);
+  assert.equal(compareSeonamMediPublishedHtml(expected,customer.replace('src="/','src="//'),allowed).matched,false,'protocol-relative script rewrite remains forbidden');
 });
 
 test('protected live-release verifier uses exact photo-shell path, not arbitrary alias patterns',async()=>{
