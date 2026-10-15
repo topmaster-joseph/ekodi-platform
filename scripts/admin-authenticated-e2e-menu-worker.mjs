@@ -655,6 +655,18 @@ try {
   if (serious.length) throw new Error(`Serious console errors: ${serious.join(' | ')}`);
 } catch (error) {
   fatal = error;
+  if (currentStage.startsWith('ready-') && page) {
+    const state = await page.evaluate(() => ({
+      route: location.pathname,
+      hasSessionToken: Boolean(sessionStorage.getItem('ekodi-auth-token')),
+      appHidden: document.querySelector('#app')?.hidden ?? null,
+      loginHidden: document.querySelector('#loginScreen')?.hidden ?? null,
+      adminReady: document.documentElement.dataset.ekodiAdminReady === 'true',
+      sessionVerified: Boolean(document.querySelector('#apiState')?.textContent?.includes('정상')),
+      coreLoaded: Boolean(window.EKODIAdminCore),
+    })).catch(() => ({unavailable:true}));
+    console.error(`[E2E:${menuId}] safe readiness state ${JSON.stringify(state)}`);
+  }
   console.error(`[E2E:${menuId}] fatal stage=${currentStage} ${error?.stack || error}`);
 } finally {
   const report = {
