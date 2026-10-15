@@ -43,7 +43,7 @@ body:is(.board-notices,.board-voices,.board-finance) main * {
 
 /* Align the brand and six main links to the centered 1120px public content shell.
    The public hero stays full-bleed; only the header's inner content is constrained. */
-:root{--seonam-central-content-width:1080px}
+.site-header{--seonam-central-content-width:1080px}
 .site-header{padding:12px max(16px,calc((100vw - var(--seonam-central-content-width))/2))!important;gap:clamp(10px,2vw,28px)!important}
 .site-header>.brand{max-width:320px!important}
 .site-header>.ekodi-six-nav{margin-left:auto!important;justify-content:flex-end!important;gap:clamp(9px,1.1vw,19px)!important}
