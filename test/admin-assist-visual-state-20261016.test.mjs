@@ -45,3 +45,15 @@ test('Assist E2E still requires hidden chrome, authenticated session, and API re
   assert.ok(source.includes('apiRequestVerified'));
   assert.ok(source.includes('visualContractVerified'));
 });
+
+test('trusted orchestrator dispatches genuine Admin E2E when Assist verifier changes',()=>{
+  const convergence=readFileSync(new URL('../scripts/converge-orchestrated-pr-merge.mjs',import.meta.url),'utf8');
+  const begin=convergence.indexOf('const adminContinuityVerificationTouched=');
+  const end=convergence.indexOf('async function dispatchPostMergeDeploys()',begin);
+  assert.ok(begin>=0&&end>begin);
+  const selector=convergence.slice(begin,end);
+  assert.ok(selector.includes("file==='scripts/admin-assist-canonical-e2e.mjs'"));
+  assert.ok(selector.includes("file==='test/admin-assist-visual-state-20261016.test.mjs'"));
+  assert.ok(convergence.includes("'/actions/workflows/verify-admin-authenticated-production-e2e.yml/dispatches'"));
+  assert.ok(convergence.includes("if(adminContinuityVerificationTouched){"));
+});
