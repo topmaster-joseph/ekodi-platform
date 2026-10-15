@@ -34,3 +34,8 @@
 - Approved source SHA remains a parent of the official synchronized branch commit; current main included with no overlapping file edits.
 - This documentation-only synchronization checkpoint requests genuine protected GitHub Actions checks. It is not a deploy authorization, CI bypass, production-verification claim, or automatic email-send enablement.
 - Require guarded Education staging and first-party Chromium PC/mobile production evidence before reporting completion.
+
+
+### Genuine Actions replay after GitHub update-branch (2026-10-16)
+- The official EKODI converger returned `branch-updated` for PR #4945; GitHub's bot-created synchronized head `cf8225dc31d7d64be009a0eea30fcc1f37d38fd4` produced `action_required` without executable PR test jobs.
+- This owner-authored documentation-only commit requests fresh, real GitHub Actions checks on current main ancestry. It does not replace human approval of immutable source `d404ee5d1b821fcf7ae5f7342138ce759a56f93a`, change public UI, bypass mandatory checks, or claim staging/production success.
