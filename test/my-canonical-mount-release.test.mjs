@@ -57,7 +57,7 @@ test('digital card short handles do not shadow reserved My endpoints',async()=>{
 
 test('all top-level My folders are protected from digital-card short aliases',async()=>{
   const routeSource=read('my/person-digital-card.js');
-  const reservedDeclaration=routeSource.match(/const RESERVED_MY_PATHS=new Set\\((\\[[^;]+\\])\\);/);
+  const reservedDeclaration=routeSource.split('\n').find(line=>line.startsWith('const RESERVED_MY_PATHS=new Set('))?.match(/\[[^\]]+\]/);
   assert.ok(reservedDeclaration,'runtime route protection list must be explicit');
   const reserved=new Set(JSON.parse(reservedDeclaration[1].replace(/'/g,'"')));
   const directories=readdirSync(new URL('../my/',import.meta.url),{withFileTypes:true})
