@@ -20,3 +20,7 @@ Current main advanced after approved source with Cooperative, EKODI Pay, Doraji,
 Protected merge is not a release. Independently verify the current shared Site Core route `/edu/` before the Education Worker guarded rollout. Verify the canonical classroom and material authoring studio at `https://ekodi.kr/edu/study/ai-bootcamp/` and `https://ekodi.kr/edu/study/ai-bootcamp/studio/` in EKODI-owned ephemeral Chromium PC and mobile, five viewport sizes when applicable, privacy/redaction and review-gated JSON handoff, 4 lessons/6 cohorts/9 slides, legacy Education origin, `/education/`, Shell/Auth, strict CSP, stable rollback and no unsupported mutations. Evidence must reference live deployments, not just local preview.
 
 This file is an orchestration evidence/wake-up document, not authorization to bypass any check, deploy directly or claim production success.
+
+## Official latest-main synchronization
+
+EKODI convergent-merge workflow run #38676420194 synchronized the official branch with main while preserving approved source ancestry (reported `branch-updated`). GitHub then placed bot-generated head PR checks into `action_required` without executing jobs. This owner-authored documentation-only touch on that synchronized head requests real tests again; no executable course, verifier, Worker, policy or rollback source is modified. Do not merge until new actual checks succeed.
