@@ -74,6 +74,24 @@ export class PayOrderStore {
       }
       return json({ok:true,status:order.status});
     }
+    if(action==='/reconcile'&&request.method==='POST'){
+      if(!['ready','confirming','requires_reconciliation','paid'].includes(order.status))
+        return json({ok:false,error:'invalid_reconcile_state'},409);
+      if(data.orderId!==order.orderId||data.amount!==order.amount||
+         !/^[a-zA-Z0-9_-]{6,200}$/.test(String(data.paymentKey||''))||
+         (order.providerKey&&order.providerKey!==data.paymentKey))
+        return json({ok:false,error:'provider_ledger_mismatch'},400);
+      if(!['DONE','CANCELED','PARTIAL_CANCELED'].includes(String(data.providerStatus||'')))
+        return json({ok:false,error:'unsupported_pg_status'},409);
+      if(data.providerStatus!=='DONE'){
+        order.status='requires_reconciliation';order.lastProviderStatus=data.providerStatus;
+      }else{
+        order.status='paid';order.providerKey=data.paymentKey;order.confirmedAt=Date.now();
+      }
+      order.lastReconciledAt=Date.now();
+      await this.storage.put('order',order);
+      return json({ok:data.providerStatus==='DONE',status:order.status});
+    }
     if(action==='/refund-finalize'&&request.method==='POST'){
       if(order.status!=='paid'&&order.status!=='refund_review')return json({ok:false,error:'invalid_refund_state'},409);
       if(data.paymentKey!==order.providerKey||data.orderId!==order.orderId)return json({ok:false,error:'payment_mismatch'},400);
