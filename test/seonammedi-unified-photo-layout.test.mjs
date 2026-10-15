@@ -39,6 +39,9 @@ test('central content is moved without replacing forms or mutation handlers',()=
   assert.match(ui,/while\(main\.firstChild\) content\.append\(main\.firstChild\)/);
   assert.match(ui,/content\.prepend\(outsideCategory\)/);
   assert.match(ui,/main\.append\(left,content,right\)/);
+  assert.match(ui,/main\.insertAdjacentElement\('afterend',preservedCampaign\)/);
+  assert.match(css,/body\.seonam-visual-ready>\.campaign-hero \.campaign-hero-image/);
+  assert.match(css,/body\[data-seonammedi-image-mode="inner"\]\.seonam-visual-ready>\.campaign-hero/);
   assert.match(ui,/fetch\(base\+'board\/api\/notices',\{method:'GET',cache:'no-store'\}\)/);
   assert.doesNotMatch(ui,/fetch\([^)]*\{method:'(?:POST|PUT|DELETE)'/);
   assert.match(worker,/function noticesPage\(req\)/);
