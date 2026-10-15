@@ -35,6 +35,7 @@ test('post-deploy workflow asserts both origins and collects original and new sc
   assert.match(workflow,/node scripts\/verify-seonammedi-photo-live-native\.mjs --origin=https:\/\/seonammedi\.kr/);
   assert.match(workflow,/if \[ "\$canonical_result" -ne 0 \] \|\| \[ "\$customer_result" -ne 0 \]/);
   assert.match(workflow,/artifacts\/native-photo-proof-\*/);
+  assert.match(workflow,/cp sites\/seonammedi\/public\/board-central-category\.js \.tmp\/native-hero-site\/seonammedi\/board\/ui\/central-category\.js/);
   assert.match(workflow,/workflow_run:/);
   assert.match(workflow,/Deploy EKODI Shared Site Core/);
   assert.match(workflow,/continue-on-error: \$\{\{ github\.event_name == 'pull_request' \}\}/);
