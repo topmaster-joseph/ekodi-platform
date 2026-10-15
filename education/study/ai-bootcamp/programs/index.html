@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="에코디 AI부트캠프 교육프로그램 안내: 초등·중고등·청년 대상 AI 윤리, 로봇, AIoT 및 스마트팜 6개 과정 24차시.">
+<meta name="ekodi-ui-type" content="USER">
+<title>AI 교육프로그램 6종 · 24차시 | EKODI Education</title>
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="./programs.css">
+</head>
+<body data-ekodi-ui="USER">
+<header class="program-topbar">
+ <a class="program-brand" href="../"><span class="program-mark">E</span><span><strong>EKODI <i>EDUCATION</i></strong><small>ACADEMIC PROGRAM COLLECTION</small></span></a>
+ <nav aria-label="교육 상위 메뉴">
+  <a href="../../">교육 과정</a>
+  <a href="../">교직원 AI부트캠프</a>
+  <a href="./" aria-current="page">프로그램 6종</a>
+ </nav>
+</header>
+<main class="program-container">
+ <div class="program-path">EDUCATION / STUDY / AI BOOTCAMP / PROGRAM COLLECTION</div>
+ <section class="program-hero">
+  <div>
+   <p class="program-kicker">CURRICULUM LIBRARY · SOURCE BASED</p>
+   <h1>AI 교육프로그램 <em>컬렉션</em></h1>
+   <p>제공된 교육프로그램 안내자료를 기준으로 초등·중고등·청년 대상 여섯 개 교육과정을 차시별로 정리했습니다. 강의 및 실습 진행 시 원문 내용을 확인할 수 있습니다.</p>
+  </div>
+  <div class="program-stats"><span><b>06</b><small>PROGRAMS</small></span><span><b>24</b><small>SESSIONS</small></span></div>
+ </section>
+ <div class="program-source-note" role="note"><strong>자료 반영 범위</strong> · 첨부 HWPX의 6개 프로그램 × 4차시 내용입니다. 원문에 교육시간·실시일·교육비·교구 제공 조건은 기재되지 않았습니다. 기존 국립목포대학교 교직원 AI부트캠프 4회차·6세트 강의와는 별도 과정입니다.</div>
+ <div class="program-layout">
+  <aside class="program-selector" aria-label="프로그램 선택">
+   <p class="program-kicker">CHOOSE A PROGRAM</p>
+   <h2>교육과정 6종</h2>
+   <div id="programOptions" class="program-options" role="group" aria-label="교육과정"></div>
+   <a class="program-backlink" href="../">기존 교직원 AI부트캠프 강의실 ↗</a>
+  </aside>
+  <section class="program-main" aria-labelledby="selectedTitle">
+   <div class="program-current-head">
+    <div><p id="programAudience" class="program-kicker">AUDIENCE</p><h2 id="selectedTitle">교육과정 불러오는 중</h2><p id="selectedSummary"></p></div>
+    <div class="program-actions"><button type="button" id="programPresent">강의 발표 모드</button><button type="button" id="programPrint" class="secondary">차시 전체 인쇄</button></div>
+   </div>
+   <div id="sessionOptions" class="session-options" role="group" aria-label="차시별 주제"></div>
+   <article class="program-lesson" aria-live="polite">
+    <div class="lesson-heading"><span id="lessonIndex"></span><h3 id="lessonTitle"></h3><p id="lessonTitleNote" class="source-exception" hidden></p></div>
+    <div class="lesson-content"><p class="program-kicker">CURRICULUM CONTENT · SOURCE TEXT</p><ol id="lessonDetails"></ol></div>
+    <div class="lesson-actions"><button type="button" id="prevSession">← 이전 차시</button><button type="button" id="nextSession">다음 차시 →</button></div>
+   </article>
+   <div class="program-footer-note"><strong>실습 안전</strong> · 학생·학부모 실명이나 사진 등 개인정보를 공개 AI 도구에 입력하지 않습니다. 실물 센서·로봇·외부 도구 이용 전에는 지도자 감독과 기관의 안전·저작권 정책을 확인하세요.</div>
+  </section>
+ </div>
+ <section class="program-source-meta">
+  <h2>자료 출처와 활용 안내</h2>
+  <p>반영 원본: <strong>AI부트캠프 교육프로그램 안내자료(1).hwpx</strong> · 6개 과정 × 각 4차시. 원본의 활동 순서와 사용 도구명(티처블머신, 캔바, 엔트리, 아두이노, 카미봇, mBlock 등)을 유지했습니다.</p>
+  <p>원문에 주제명이 누락된 차시는 그 사실을 표시하고, 확정되지 않은 수업시간이나 일정은 임의로 보충하지 않았습니다. 원본 서식과 이미지는 이 목록에 게시하지 않습니다.</p>
+ </section>
+</main>
+<dialog id="programPresentation" class="program-presentation" aria-label="차시 강의 발표 화면">
+ <div class="present-shell">
+  <header class="present-bar"><strong id="presentCourseName">EKODI EDUCATION</strong><span id="presentCounter">1 / 4</span><button type="button" id="closePresentation">종료 ×</button></header>
+  <div class="present-body"><p id="presentAudience" class="program-kicker"></p><h2 id="presentTitle"></h2><ol id="presentDetails"></ol></div>
+  <footer class="present-foot"><button type="button" id="presentPrev">← 이전 차시</button><span>좌·우 방향키로 차시 이동</span><button type="button" id="presentNext">다음 차시 →</button></footer>
+ </div>
+</dialog>
+<div id="programPrintAll" class="program-print-all" aria-hidden="true"></div>
+<footer class="program-sitefooter"><span>EKODI Education · AI Program Collection</span><a href="../">교직원 AI부트캠프 강의실</a></footer>
+<script type="module" src="./programs.js"></script>
+</body>
+</html>
