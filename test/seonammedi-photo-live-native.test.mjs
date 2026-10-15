@@ -57,3 +57,19 @@ test('live photo failure receipts preserve script HTTP status and browser bootst
   assert.match(script,/state:'attached',timeout:4000/);
   assert.doesNotMatch(script,/page\.route\([^)]*\)\.fulfill/,'diagnostics must not mock production assets');
 });
+
+test('local source proof is isolated from live production and cannot fake board Worker pages',()=>{
+  assert.ok(script.includes("const approvedLocal='http://127.0.0.1:8765'"));
+  assert.ok(script.includes("const sourceMode=args['source-mode']==='true'"));
+  assert.ok(script.includes("sourceMode ? origin!==approvedLocal : !approvedProduction.includes(origin)"));
+  assert.ok(script.includes("sourceMode||origin==='https://ekodi.kr'"));
+  assert.ok(script.includes("'EKODI-SEONAMMEDI-PHOTO-SOURCE-001'"));
+  assert.ok(script.includes("mode:sourceMode?'source-preview':'production'"));
+  assert.ok(script.includes("checks.filter(item=>!sourceMode||item.path.startsWith('#'))"));
+  assert.match(workflow,/name: Verify six-menu photographic homepage against actual local source/);
+  assert.ok(workflow.includes('--origin=http://127.0.0.1:8765 --source-mode=true'));
+  assert.ok(workflow.includes('artifacts/native-photo-source'));
+  assert.ok(workflow.includes('artifacts/native-photo-proof-canonical'));
+  assert.ok(workflow.includes('artifacts/native-photo-proof-customer'));
+  assert.doesNotMatch(script,/sourceMode\s*\?\s*true\s*:/,'source preview must never unconditionally pass checks');
+});
