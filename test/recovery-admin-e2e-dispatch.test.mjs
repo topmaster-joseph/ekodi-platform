@@ -18,6 +18,9 @@ test('owner-approved exact-SHA immediate recovery triggers authenticated product
   assert.ok(guard>0&&mainCheck>guard&&dispatch>mainCheck&&accepted>dispatch);
   assert.match(recovery,/merge\.data\?\.merged!==true/);
   assert.match(recovery,/main\.data\?\.commit\?\.sha/);
+  assert.ok(recovery.includes("['ahead','identical'].includes(ancestry.data?.status)"));
+  assert.ok(recovery.includes("Number(ancestry.data?.behind_by)!==0"));
+  assert.ok(recovery.includes("approved Admin recovery merge is not in current main ancestry"));
   assert.match(recovery,/authenticated Admin E2E dispatch failed: HTTP/);
   assert.match(recovery,/status!==204/);
   assert.match(recovery,/const merge=checksReady&&upToDate/);
