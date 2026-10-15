@@ -295,6 +295,24 @@ test('security, policy or auth browser failure never triggers another attempt',a
     assert.equal(attempts,1,reason);
   }
 });
+test('single bounded CDP command timeout may retry using a new command receipt',async()=>{
+  let calls=0;
+  const result=await verifyUser4BrowserWithRetry({},async()=>{
+    calls++;
+    if(calls===1)throw Error('user4_browser_failed:CDP_COMMAND_TIMEOUT');
+    return {targetAlias:'user4',receiptStatus:'succeeded',mode:'native-cdp',domBytes:896};
+  });
+  assert.equal(calls,2);
+  assert.equal(result.transientBrowserRetryUsed,true);
+});
+test('repeated CDP command timeout fails rather than forging a result',async()=>{
+  let calls=0;
+  await assert.rejects(()=>verifyUser4BrowserWithRetry({},async()=>{
+    calls++;
+    throw Error('user4_browser_failed:CDP_COMMAND_TIMEOUT');
+  }),/CDP_COMMAND_TIMEOUT/);
+  assert.equal(calls,2);
+});
 test('repeat early exit remains failure and never produces an artificial success',async()=>{
   let attempts=0;
   await assert.rejects(()=>verifyUser4BrowserWithRetry({},async()=>{
