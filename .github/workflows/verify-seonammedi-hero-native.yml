@@ -93,8 +93,9 @@ jobs:
           retention-days: 14
 
   production-native-browser:
-    continue-on-error: ${{ github.event_name == 'pull_request' }}
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    # The live proof is authoritative only after successful Site Core promotion,
+    # or when explicitly invoked by an operator. A source PR is not deployed.
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
