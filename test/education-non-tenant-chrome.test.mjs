@@ -69,10 +69,10 @@ test('client-side fallback preserves common Shell contracts with no privileged m
     read('shell/user-ui-header.js'),read('shell/user-ui-footer.js')
   ]);
   for(const source of [header,footer]){
-    assert.match(source,/NON_TENANT_SITE_CHROME_SUBJECTS\\.has\\(subject\\)/);
-    assert.match(source,/siteSubject\\(\\)/);
-    assert.match(source,/const SITE_CHROME_URL='https:\\/\\/[^']+\\/v1\\/site-chrome\\/public';/);
-    assert.doesNotMatch(source,/fetch\\([^\\n]*method:\\s*['"]POST/);
-    assert.doesNotMatch(source,/bypassCSP|ignoreHTTPSErrors|localStorage\\.setItem/);
+    assert.match(source,/NON_TENANT_SITE_CHROME_SUBJECTS\.has\(subject\)/);
+    assert.match(source,/siteSubject\(\)/);
+    assert.match(source,/const SITE_CHROME_URL='https:\/\/[^']+\/v1\/site-chrome\/public';/);
+    assert.doesNotMatch(source,/fetch\([^\n]*method:\s*['"]POST/);
+    assert.doesNotMatch(source,/bypassCSP|ignoreHTTPSErrors|localStorage\.setItem/);
   }
 });
