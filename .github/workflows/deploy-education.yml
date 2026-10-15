@@ -181,6 +181,8 @@ jobs:
         run: |
           node --check scripts/verify-education-bootcamp-native.mjs
           node --check scripts/verify-education-material-studio-native.mjs
+          node --check scripts/verify-education-ai-programs-native.mjs
+          node --test test/education-ai-programs.test.mjs
           node --test test/education-native-security-observations.test.mjs
       - name: Wait for Shell and central auth Education contract
         shell: bash
@@ -279,6 +281,8 @@ jobs:
         run: node scripts/verify-education-bootcamp-native.mjs
       - name: Verify actual canonical /edu material studio desktop and mobile
         run: node scripts/verify-education-material-studio-native.mjs
+      - name: Verify six-program curriculum library on canonical /edu five-viewpoint native Chromium
+        run: node scripts/verify-education-ai-programs-native.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -286,6 +290,7 @@ jobs:
           path: |
             artifacts/education-native/
             artifacts/education-studio-native/
+            artifacts/education-programs-native/
           retention-days: 7
       - name: Publish Education production status
         if: always()
