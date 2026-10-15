@@ -9,12 +9,16 @@ import { COOPERATIVES } from '../cooperative-registry.js';
 import { routeCooperative } from '../cooperative-control.js';
 import { fixture, authFetch } from '../test/helpers/cooperative-fixture.mjs';
 import { loadCooperativeProject } from '../cooperative-store.js';
+import { loadBundledCooperativeClient } from './cooperative-bundle-client.mjs';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES
   ? path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES, 'playwright') : 'playwright');
 const artifactRoot = path.resolve('artifacts/cooperative-source-ui');
 await fs.mkdir(artifactRoot, { recursive: true });
+const bundledClient = await loadBundledCooperativeClient();
+assert.equal(bundledClient.productionMutation, false);
+await fs.writeFile(path.join(artifactRoot, 'bundled-client.js'), bundledClient.script);
 const f = fixture();
 const tokens = { 'admin-jub': 'chair-jub@example.test', 'member-jub': 'member-jub@example.test', 'admin-open': 'chair-open@example.test' };
 f.grant(COOPERATIVES[0], tokens['admin-jub'], 'owner');
@@ -55,7 +59,9 @@ async function contextFor(width, token = '') {
     const response = await routeCooperative(request, f.env);
     if (!response) return intercepted.fulfill({ status: 404, body: 'Source QA route not found' });
     if (response.status >= 500) responseErrors.push({ path: url.pathname, status: response.status });
-    return intercepted.fulfill({ status: response.status, headers: Object.fromEntries(response.headers), body: await response.text() });
+    const sourceBody = await response.text();
+    const body = url.pathname.endsWith('/assets/app.js') ? bundledClient.script : sourceBody;
+    return intercepted.fulfill({ status: response.status, headers: Object.fromEntries(response.headers), body });
   });
   context.on('page', page => { page.on('pageerror', error => pageErrors.push(error.message)); });
   return context;
@@ -164,7 +170,7 @@ try {
   assert.ok(refreshCount >= 4);
   assert.deepEqual(pageErrors, []);
   assert.deepEqual(responseErrors, []);
-  const report = { ok: true, evidenceScope: 'source-only', productionVerified: false, engine: 'EKODI Chromium browser task policy', liveRequestsAllowed: false, checks, refreshCount, pageErrors, responseErrors };
+  const report = { ok: true, evidenceScope: 'source-only', productionVerified: false, engine: 'EKODI Chromium browser task policy', bundle: { wranglerVersion: bundledClient.wranglerVersion, serializedNameHelperCalls: bundledClient.serializedNameHelperCalls }, liveRequestsAllowed: false, checks, refreshCount, pageErrors, responseErrors };
   await fs.writeFile(path.join(artifactRoot, 'result.json'), JSON.stringify(report, null, 2));
   console.log(JSON.stringify({ ok: true, evidenceScope: report.evidenceScope, checks: checks.length, refreshCount, artifactRoot }));
 } finally {
