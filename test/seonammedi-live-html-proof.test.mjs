@@ -32,6 +32,19 @@ test('canonical and customer homepage HTML are byte identical after allowlisted 
   }
 });
 
+test('finance admin links stay byte-identical and tenant-local on both public mounts',async()=>{
+  const finance=await readFile(new URL('../sites/seonammedi/public/finance/index.html',import.meta.url),'utf8');
+  assert.equal((finance.match(/href="\.\.\/admin\/\?panel=finance"/g)||[]).length,2);
+  assert.doesNotMatch(finance,/href="https:\/\/ekodi\.kr\/seonammedi\/admin\/\?panel=finance"/);
+  for(const origin of [canonical,customer]){
+    const projected=expectedSeonamMediHtmlAtOrigin(finance,origin);
+    assert.equal(projected,finance,'allowed gateway mount projection must not change relative admin links');
+    assert.equal(normalizeSeonamMediLiveHtml(projected,{origin,page:'finance/index.html'}).html,finance);
+    const url=new URL('../admin/?panel=finance',origin+'/finance/');
+    assert.equal(url.href,origin+'/admin/?panel=finance');
+  }
+});
+
 test('admin HTML normalizer accepts only the EKODI-owned publication module injector',()=>{
   const original='<html><head><title>Admin</title></head><body>Admin</body></html>';
   const injected=original.replace('</head>',adminExtension+'</head>');
