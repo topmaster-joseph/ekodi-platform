@@ -80,7 +80,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
           const around=(value,pos)=>typeof pos==='number'?JSON.stringify(String(value).slice(Math.max(0,pos-48),Math.min(String(value).length,pos+96))):'unavailable';
           throw new Error(name+'_html_digest_mismatch expected='+expectedHash+' actual='+actualHash+' reason='+match.reason
             +' expectedOffset='+String(match.expectedOffset??'unknown')+' actualOffset='+String(match.actualOffset??'unknown')
-            +' expectedFragment='+around(published,match.expectedOffset)+' actualFragment='+around(normalized.html,match.actualOffset));
+            +' expectedFragment='+(name==='root'?around(published,match.expectedOffset):'[redacted]')+' actualFragment='+(name==='root'?around(normalized.html,match.actualOffset):'[redacted]'));
         }
         console.log('SeonamMedi verified domain path aliases:',JSON.stringify({page:name,count:match.aliases.length,paths:[...new Set(match.aliases)]}));
       }
