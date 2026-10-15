@@ -24,7 +24,7 @@ test('16-screen post-deploy native verifier matches actual notice-first six-menu
     "boardPath(req,'notices')+'\">공지</a>",
     "link(home('#committee-activity'),'활동이력'",
     "link(home('#timeline'),'관련소식'",
-    "data-category-menu=\\\"소통채널\\\"",
+    'data-category-menu="소통채널"',
     "link(boardPath(req,'voices'),'시민의견'",
     "link(home('#organization'),'조직'"
   ];
