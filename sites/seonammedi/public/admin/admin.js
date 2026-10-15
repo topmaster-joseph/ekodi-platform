@@ -266,7 +266,8 @@ async function loadOrganization(){
   state.organization=org;
   const form=$('organizationForm');
   normalizeOrgGroups(org).forEach(group=>fillOrgGroup(form,group));
-  showOrgAdminTab(form.elements.orgKey.value||'bidae');
+  // Loading organization data must not replace an explicitly requested admin panel.
+  showOrgAdminTab(form.elements.orgKey.value||'bidae',{route:false});
   text($('organizationMessage'),'');
 }
 $('organizationForm')?.addEventListener('submit',async event=>{
