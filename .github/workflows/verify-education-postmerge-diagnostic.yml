@@ -1,0 +1,51 @@
+name: EKODI Education Post-Merge Live Diagnostic
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/verify-education-postmerge-diagnostic.yml'
+      - 'docs/education-postmerge-diagnostic-20261015.md'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-education-postmerge-diagnostic-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  actual-live-native:
+    if: github.repository == 'topmaster-joseph/ekodi-platform'
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Check out unprivileged diagnostic branch
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate the existing production verifier
+        run: |
+          node --check scripts/verify-education-bootcamp-native.mjs
+          node --check scripts/verify-education-material-studio-native.mjs
+          node --test test/education-native-security-observations.test.mjs test/education-non-tenant-chrome.test.mjs
+      - name: Install ephemeral EKODI-owned Chromium
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Verify real canonical classroom on PC and mobile
+        run: node scripts/verify-education-bootcamp-native.mjs
+      - name: Verify real material studio, export and privacy on PC and mobile
+        if: success()
+        run: node scripts/verify-education-material-studio-native.mjs
+      - name: Preserve first-party evidence even on a failed acceptance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekodi-edu-readonly-live-${{ github.run_id }}
+          path: |
+            artifacts/education-native/
+            artifacts/education-studio-native/
+          retention-days: 7
