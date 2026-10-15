@@ -1,3 +1,4 @@
+import {approveAssistancePricebook,catalogFromApprovedPricebook,loadApprovedAssistancePricebook} from './support/assistance-pricebook.js';
 import {merchantContractReadiness,normalizeMerchantQuote,quoteDigest,normalizeQuoteAcknowledgment,paymentReadiness} from './support/assistance-contract.js';
 import {assistanceCatalogue,normalizeAssistanceRequest} from './support/assistance-catalog.js';
 import {AI_CONTROL_POLICY,buildExecutionPlan,buildOriginSynthesisPrompt,createTaskId,evaluateTaskMissionPolicy,isOriginPreserved,normalizeTaskInput,resolveOriginResponseProvider,rolePrompt,summarizeRuns,taskOrigin} from './ai-control-core.js';
@@ -553,6 +554,30 @@ async function handleCommonsAdmin(request,env,url){
     const quoteApprovers=clean(env.EKODIBIZ_ASSISTANCE_QUOTE_APPROVERS).split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
     if(!quoteApprovers.length||!quoteApprovers.includes(clean(auth.user.email).toLowerCase()))return json({error:'merchant_quote_role_required'},403);
   }
+  if(url.pathname==='/api/commons/admin/assistance/pricebook'){
+    if(request.method==='GET'){
+      const current=await loadApprovedAssistancePricebook(env);
+      return json({merchant:'EKODIBIZ',active:current?
+        {policyVersion:current.policy_version,approvedAt:current.approved_at,items:JSON.parse(current.items_json).items}:null,
+        plans:assistanceCatalogue(env).map(p=>({id:p.id,label:p.label,free:Boolean(p.free)})),
+        paymentEnabled:false,contractExecuted:false});
+    }
+    if(request.method==='POST'){
+      const input=await body(request);
+      let approved;
+      try{approved=approveAssistancePricebook(input||{})}
+      catch(error){return json({error:clean(error.message)||'pricebook_invalid'},400)}
+      if(!dbReady(env))return json({error:'state_store_unavailable'},503);
+      const stamped=now();
+      try{
+        await env.DB.prepare("INSERT INTO ai_assistance_pricebooks (id,policy_version,items_json,status,approved_by,approved_at) VALUES (?,?,?,'approved',?,?)")
+          .bind(crypto.randomUUID(),approved.policyVersion,JSON.stringify(approved),auth.user.email,stamped).run();
+        return json({ok:true,policyVersion:approved.policyVersion,approvedAt:stamped,
+          publishedPrices:approved.items,checkoutEnabled:false,contractExecuted:false},201);
+      }catch{return json({error:'pricebook_version_conflict_or_unavailable'},409)}
+    }
+    return json({error:'method_not_allowed'},405);
+  }
   if(request.method==='GET'&&url.pathname==='/api/commons/admin/assistance/requests'){
     try{
       const rows=await env.DB.prepare("SELECT r.id,r.notice_title,r.applicant_name,r.organization,r.plans_json,r.state,r.created_at,q.id quote_id,q.status quote_status FROM ai_assistance_requests r LEFT JOIN ai_assistance_quotes q ON q.request_id=r.id ORDER BY r.created_at DESC LIMIT 50").all();
@@ -598,7 +623,7 @@ async function handleCommonsApi(request,env,ctx){
   if(url.pathname.startsWith('/api/commons/admin/'))return handleCommonsAdmin(request,env,url);
   if(url.pathname.startsWith('/api/commons/chat')){const response=await handleCommonsChat(request,env,url);if(response)return response;}
   if(url.pathname.startsWith('/api/commons/assistance/')){
-    const catalog=assistanceCatalogue(env);
+    const catalog=catalogFromApprovedPricebook(env,await loadApprovedAssistancePricebook(env));
     if(request.method==='GET'&&url.pathname==='/api/commons/assistance/catalog'){
       return json({merchant:'EKODIBIZ',role:'independent_paid_assistance',affiliatedWithIssuingAgency:false,
         plans:catalog,checkoutEnabled:false,agreementExecutionEnabled:false,
