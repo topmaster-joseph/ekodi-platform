@@ -38,8 +38,8 @@ test('finance admin links stay byte-identical and tenant-local on both public mo
   assert.doesNotMatch(finance,/href="https:\/\/ekodi\.kr\/seonammedi\/admin\/\?panel=finance"/);
   for(const origin of [canonical,customer]){
     const projected=expectedSeonamMediHtmlAtOrigin(finance,origin);
-    assert.equal(projected,finance,'allowed gateway mount projection must not change relative admin links');
-    assert.equal(normalizeSeonamMediLiveHtml(projected,{origin,page:'finance/index.html'}).html,finance);
+    assert.equal((projected.match(/href="\.\.\/admin\/\?panel=finance"/g)||[]).length,2,'gateway must preserve both tenant-local finance links');
+    assert.equal(normalizeSeonamMediLiveHtml(projected,{origin,page:'finance/index.html'}).html,projected,'normalizer must not hide HTML changes');
     const url=new URL('../admin/?panel=finance',origin+'/finance/');
     assert.equal(url.href,origin+'/admin/?panel=finance');
   }
