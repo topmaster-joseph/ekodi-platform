@@ -20,3 +20,8 @@
 - The trusted EKODI Convergent Merge updated the recovery branch to `d388276444ab7d5a1cb1ac07377084811abe32d1`, already including protected main and mobile notice overflow fixes.
 - GitHub classified bot-created update-branch pull-request checks as `action_required`; this owner-authored documentation-only commit starts fresh authentic required CI on the synchronized tree.
 - Independent board client JavaScript still exactly matches the public site asset, and preserved mobile wrapping has been inspected. No service code, auth grants, protected test, deployment workflow or production secret is altered by this note.
+
+## Subsequent protected main convergence
+- The official release converger synchronized a newer protected main and created `a563ffbd7269f75c1e44ab7c0333a04bbc888160` without changing the approved SeonamMedi feature source.
+- Revalidated in repository: the independent board serves byte-identical common photo JS; notice mobile long-title `overflow-wrap:anywhere` remains present.
+- GitHub generated `action_required` for the bot's new PR checks. This small owner-only documentation update requests authentic full CI before any protected merge. No authentication, authorization, production service or guardrail is bypassed.
