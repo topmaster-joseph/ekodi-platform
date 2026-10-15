@@ -91,6 +91,7 @@ function boot(){
     $('portraitEditor').src=state.portrait;
     for(const input of document.querySelectorAll('[data-'+d+']'))input.value=state[d][input.getAttribute('data-'+d)]||'';
     $('mailSubject').value=d==='resume'?'AI 부트캠프 강사 이력서 제출 — '+state.resume.name:'AI 부트캠프 강의계획서 제출';
+    $('makeEml').textContent=d==='resume'?'증명사진 포함 이메일 초안 (.eml)':'강의계획서 이메일 초안 (.eml)';
     $('mailReview').checked=false;enableMail();
   }
   function enableMail(){
@@ -101,6 +102,7 @@ function boot(){
     const type=el.hasAttribute('data-resume')?'resume':'syllabus';const key=el.getAttribute('data-'+type);
     state[type][key]=el.value.slice(0,Math.min(LIMITS[type],Number(el.maxLength)>0?Number(el.maxLength):LIMITS[type]));
     if(type===state.doc){$('documentPreview').innerHTML=documentBody(type,state[type],state.portrait);}
+    $('mailReview').checked=false;enableMail();
     status('editorStatus','편집 중 · 현재 브라우저에만 반영되었습니다. 백업 JSON으로 보관하세요.');
   });
   for(const b of document.querySelectorAll('[data-doc]'))b.addEventListener('click',()=>{
@@ -114,7 +116,10 @@ function boot(){
       const scale=Math.min(1,1400/Math.max(bitmap.width,bitmap.height));
       const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));
       const ctx=canvas.getContext('2d');ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();
-      state.portrait=canvas.toDataURL('image/jpeg',.84);render();
+      let encoded=canvas.toDataURL('image/jpeg',.80);
+      if(encoded.length>800000){canvas.width=Math.max(1,Math.round(canvas.width*.65));canvas.height=Math.max(1,Math.round(canvas.height*.65));ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);encoded=canvas.toDataURL('image/jpeg',.68);}
+      if(encoded.length>800000)throw Error('사진 파일이 너무 큽니다.');
+      state.portrait=encoded;render();
       status('editorStatus','사진 교체 완료 · 서버로 전송하지 않았습니다. JSON을 백업해 두세요.');
     }catch{status('editorStatus','선택한 이미지를 처리하지 못했습니다.');}
   });
@@ -128,6 +133,7 @@ function boot(){
     if(file.size>900000||!file.name.toLowerCase().endsWith('.json')){status('editorStatus','900KB 이하의 JSON 백업만 불러올 수 있습니다.');return;}
     try{
       const data=JSON.parse(await file.text());if(data.schema!=='ekodi-bootcamp-documents-v1')throw Error('지원하지 않는 백업 버전');
+      const checked={};
       for(const type of ['resume','syllabus']){
         if(!data[type]||typeof data[type]!=='object')throw Error('문서 필드가 없습니다');
         const next={};
@@ -135,10 +141,10 @@ function boot(){
           if(typeof data[type][key]!=='string'||data[type][key].length>LIMITS[type])throw Error(key+' 필드 형식 오류');
           next[key]=data[type][key];
         }
-        state[type]=next;
+        checked[type]=next;
       }
       if(!/^data:image\/jpeg;base64,[A-Za-z0-9+/=]{100,800000}$/.test(data.portrait))throw Error('사진 형식 오류');
-      state.portrait=data.portrait;render();status('editorStatus','JSON 백업을 불러왔습니다. 개인정보와 사실관계를 검토하세요.');
+      state.resume=checked.resume;state.syllabus=checked.syllabus;state.portrait=data.portrait;render();status('editorStatus','JSON 백업을 불러왔습니다. 개인정보와 사실관계를 검토하세요.');
     }catch(err){status('editorStatus','불러오기 실패: '+err.message);}
   });
   $('resetDoc').addEventListener('click',()=>{
@@ -153,8 +159,7 @@ function boot(){
       documentHtml(state.doc,state[state.doc],state.portrait),'text/html;charset=utf-8');
     status('editorStatus','현재 문서를 HTML로 내려받았습니다. PDF가 필요하면 인쇄 → PDF 저장을 사용하세요.');
   });
-  $('recipient').addEventListener('input',enableMail);
-  $('mailSubject').addEventListener('input',enableMail);
+  for(const id of ['recipient','mailSubject','mailMessage'])$(id).addEventListener('input',()=>{$('mailReview').checked=false;enableMail();});
   $('mailReview').addEventListener('change',enableMail);
   $('makeEml').addEventListener('click',()=>{
     if($('makeEml').disabled)return;
