@@ -27,3 +27,12 @@ test('SeonamMedi Chromium guest audit preserves desktop/mobile and two-domain co
   for(const token of ['financePrivateGate','finance_guest_admin_only_marker_missing','financeGuestApiStatuses','finance_guest_api_access_contract_',"'/board/api/finance'","'/board/api/finance/summary'","'/board/api/admin/finance'",'status!==401&&status!==403'])assert.ok(source.includes(token),'finance guest privacy probe missing: '+token);
   assert.ok(source.includes('maxRedirects:0'),'guest test must not follow redirects to unrelated surfaces');
 });
+
+test('unique owner audit comment does not remove main-ref deduplication or read-only scope',()=>{
+  const section=workflow.split('concurrency:')[1]?.split('jobs:')[0]||'';
+  assert.ok(section.includes("github.event_name == 'issue_comment'"),'issue comments must be isolated');
+  assert.ok(section.includes('github.event.comment.id'),'each issue comment must have a unique concurrency key');
+  assert.ok(section.includes('|| github.ref'),'normal pushes and workflow runs retain their ref-based group');
+  assert.ok(section.includes('cancel-in-progress: true'),'stale overlapping non-comment audits remain cancellable');
+  assert.ok(workflow.includes('  contents: read'),'the isolated audit must remain read only');
+});
