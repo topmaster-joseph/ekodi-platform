@@ -1,4 +1,5 @@
 import { COURSE } from './catalog.js';
+import { PROGRAMS } from './programs/catalog.js';
 
 const $ = selector => document.querySelector(selector);
 const all = selector => Array.from(document.querySelectorAll(selector));
@@ -18,8 +19,11 @@ const head = label => '<div class="session-head"><span class="badge-soft">'+less
 const status = value => { const el=$('#actionStatus'); if(el) el.textContent=value; };
 
 function overview(){
+  const programCards=PROGRAMS.map(p=>'<article class="program-brief-card"><p class="section-kicker">PROGRAM '+String(p.number).padStart(2,'0')+' · '+esc(p.audience)+'</p><h4>'+esc(p.title)+'</h4><p>원문 4차시 · 대상별 별도 교육과정</p><a href="./programs/?program='+encodeURIComponent(p.id)+'&session=1">차시별 안내 보기 →</a></article>').join('');
   const items=COURSE.lessons.map(item=>'<article class="lesson-card"><p class="section-kicker">SESSION 0'+item.id+' · 120 MIN</p><h3>'+esc(item.title)+'</h3><p>'+esc(item.sub)+'</p><p><strong>산출물</strong> · '+esc(item.outcome)+'</p><button type="button" class="chip" data-lesson="'+item.id+'" data-view-target="lecture">강의안 열기 →</button></article>').join('');
-  return card('COURSE MAP','4회차 × 6세트 = 24회 · 48시간','<p>동일한 4회 기본과정을 여섯 집단에 반복하는 운영 제안입니다. 세트별로 직무 사례를 바꿉니다. 실제 일정과 참가자 배정은 사업단 협의 이후 확정합니다.</p>')+
+  return card('NEW PROGRAM COLLECTION','첨부 교육프로그램 안내자료 · 6개 과정 / 24차시',
+    '<p>초등 AI 윤리·AIoT 가로등, 드로잉 로봇, 가위바위보 로봇, 중고등 스마트팜, 청년 바이브코딩 스마트팜. 제공된 HWPX 원문 내용만 정리한 별도의 교육과정이며, 아래 교직원 교육 제안과 혼동하지 않습니다.</p><div class="program-brief-grid">'+programCards+'</div><div class="btnline"><a href="./programs/">6개 교육프로그램 전체 보기 →</a></div>')+
+    card('COURSE MAP','4회차 × 6세트 = 24회 · 48시간','<p>동일한 4회 기본과정을 여섯 집단에 반복하는 운영 제안입니다. 세트별로 직무 사례를 바꿉니다. 실제 일정과 참가자 배정은 사업단 협의 이후 확정합니다.</p>')+
     '<div class="course-cards">'+items+'</div>'+
     card('LEARNING METHOD','강의 30% · 시연 20% · 실습 40% · 공유 10%','<p>단순히 AI의 기능을 소개하는 과정이 아니라, 가상 사례로 직접 만들어 보고 확인할 수 있는 결과물을 남기는 과정입니다. 모든 실습은 공개형 AI에 개인정보를 입력하지 않는 것을 전제로 합니다.</p>')+
     card('BEFORE CLASS','강의 시작 전 준비','<p>사업단 승인 AI 계정·인터넷·화면 공유·가상 데이터 배포를 확인합니다. 접속에 문제가 생기면 동일 학습목표의 오프라인 오류 점검 활동으로 전환합니다.</p>');
