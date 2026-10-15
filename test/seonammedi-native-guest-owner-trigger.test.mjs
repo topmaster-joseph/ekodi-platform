@@ -8,6 +8,7 @@ test('SeonamMedi guest Chromium live audit is owner-triggerable without granting
   assert.ok(workflow.includes('  issue_comment:\n    types: [created]'),'owner command must trigger from the trusted default branch');
   assert.ok(workflow.includes("github.event.comment.user.login == github.repository_owner"),'comment must be from repository owner');
   assert.ok(workflow.includes("github.event.issue.pull_request != null"),'command must originate from a PR');
+  assert.ok(workflow.includes("github.event.issue.state == 'closed'"),'audit command must be accepted only after the release PR closes');
   assert.ok(workflow.includes("github.event.comment.body == 'EKODI-SEONAM-NATIVE-AUDIT:RUN'"),'command must use an exact non-ambiguous marker');
   assert.ok(workflow.includes("github.event_name != 'pull_request'"),'untrusted PR must remain preflight-only');
   assert.ok(workflow.includes("github.event.workflow_run.conclusion == 'success'"),'normal post-release checks must fail closed');
