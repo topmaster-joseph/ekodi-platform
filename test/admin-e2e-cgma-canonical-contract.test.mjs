@@ -22,3 +22,10 @@ test('signed-in CGMA admin E2E checks the official canonical workspace path, not
   assert.ok(worker.includes('maintenanceDisplayType'), 'must retain maintenance mode checks');
   assert.ok(worker.includes('redirectMode'), 'must retain redirect checks');
 });
+
+test('menu bootstrap timeout emits categorical readiness state',()=>{
+  assert.ok(worker.includes("currentStage.startsWith('ready-')"));
+  assert.ok(worker.includes('hasSessionToken'));
+  assert.ok(worker.includes('safe readiness state'));
+  assert.ok(worker.includes('route: location.pathname'));
+});
