@@ -67,8 +67,12 @@ test('board routes preserve the unified header and original board APIs',async()=
       assert.equal(res.status,200,origin+route);
       const html=await res.text();
       assert.match(html,/class="site-header independent-board-header"/);
-      assert.match(html,/board-central-category\.js/);
+      assert.match(html,/board\\/ui\\/central-category\\.js/);
       assert.match(html,/shared-site-header\.css/);
+      const mountedAsset=origin+prefix+'/board/ui/central-category.js';
+      const asset=await board.fetch(new Request(mountedAsset),{});
+      assert.equal(asset.status,200,mountedAsset);
+      assert.equal(await asset.text(),ui,'board must serve identical photo UI on both mounts');
       for(const text of ['공지','활동이력','관련소식','소통채널','시민의견','조직'])assert.ok(html.includes(text),text);
     }
   }
