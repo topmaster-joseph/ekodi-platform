@@ -382,3 +382,22 @@ test('guarded board deployment verifies denied finance totals on both mounts',as
   assert.match(workflow,/status" != "403"/,'production must reject non-admin finance summary requests');
   assert.doesNotMatch(workflow,/verify_contains "finance summary" 'id="raised"'/);
 });
+
+
+test('mobile notices wrap long titles and body content without clipping or widening the viewport',async()=>{
+  const mod=await import(new URL('../services/independent-board/worker.js?notice-mobile-wrap='+Date.now(),import.meta.url));
+  for(const url of [
+    'https://seonammedi.kr/board/notices',
+    'https://ekodi.kr/seonammedi/board/notices'
+  ]){
+    const response=await mod.default.fetch(new Request(url),{});
+    assert.equal(response.status,200,url);
+    const html=await response.text();
+    assert.match(html,/<body class="board-notices">/);
+    assert.match(html,/body\.board-notices \.board-row\{min-width:0;max-width:100%;/);
+    assert.match(html,/body\.board-notices \.row-head strong\{min-width:0;max-width:100%;overflow-wrap:anywhere;/);
+    assert.match(html,/body\.board-notices \.row-body\{min-width:0;max-width:min\(100%,95ch\);overflow-wrap:anywhere;/);
+    assert.match(html,/body\.board-notices \.notice-search input\{width:min\(440px,100%\);min-width:0;max-width:100%;/);
+    assert.doesNotMatch(html,/body\.board-notices(?: main)?\{[^}]*overflow-x:hidden/,'do not conceal mobile overflow by clipping content');
+  }
+});
