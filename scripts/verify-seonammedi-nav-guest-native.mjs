@@ -70,6 +70,11 @@ try {
             const centralCategory={present:!!centralPanel,initiallyHidden:!!centralPanel?.hidden,noticeTrigger:!!nav?.querySelector('[data-category-menu="공지"]'),entries:centralLinks};
             return {top,groups,centralCategory,
               horizontalOverflow:document.documentElement.scrollWidth>document.documentElement.clientWidth+1,
+              // Report only geometry and class/id names, never private page text.
+              overflowGeometry:Array.from(document.body.querySelectorAll('*'))
+                .map(el=>({el,box:el.getBoundingClientRect()}))
+                .filter(x=>x.box.width>0&&x.box.right>document.documentElement.clientWidth+2)
+                .slice(0,8).map(x=>({tag:x.el.tagName.toLowerCase(),id:String(x.el.id||'').slice(0,45),className:typeof x.el.className==='string'?x.el.className.slice(0,70):'',right:Math.round(x.box.right),width:Math.round(x.box.width)})),
               heroOriginalPresent:!!document.querySelector('.campaign-hero-image'),
               heroLoaded:(()=>{const img=document.querySelector('.campaign-hero-image');return !!img?.complete&&img.naturalWidth===1903&&img.naturalHeight===735})(),
               writeButtonVisible:(()=>{const b=document.getElementById('writeToggle');return !!b&&b.getBoundingClientRect().width>0})(),
@@ -86,7 +91,7 @@ try {
           const publicSurface=!['/minutes/','/admin/'].includes(suffix);
           record.topLevelMatches=JSON.stringify(actualLabels)===JSON.stringify(LABELS);
           if(publicSurface&&!record.topLevelMatches)violations.push('menu_labels_mismatch: '+JSON.stringify(actualLabels));
-          if(record.horizontalOverflow)violations.push('horizontal_overflow');
+          if(record.horizontalOverflow)violations.push('horizontal_overflow: '+JSON.stringify(record.overflowGeometry||[]).slice(0,420));
           // Home and independent boards expose central content tabs; legacy dropdowns remain supported.
           // Both layouts must expose real notice, minutes, finance and social links.
           const noticeGroup=record.groups.find(x=>x.parent==='공지');
