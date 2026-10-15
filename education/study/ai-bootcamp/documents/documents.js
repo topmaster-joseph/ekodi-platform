@@ -62,7 +62,7 @@ export function makeEmailDraft({kind,model,portrait,to,subject,message}){
   const name=kind==='resume'?'EKODI_Instructor_Resume.html':'EKODI_AI_Bootcamp_Syllabus.html';
   const boundary=MIME_BOUNDARY;
   const alternative=boundary+'_ALT';
-  const headers=['To: '+to,'Subject: =?UTF-8?B?'+utf8Base64(subject)+'?=','MIME-Version: 1.0','Date: '+new Date().toUTCString(),'Content-Type: multipart/mixed; boundary="'+boundary+'"','','This is a multipart MIME message.'];
+  const headers=['To: '+to,'Subject: =?UTF-8?B?'+utf8Base64(subject)+'?=','X-Unsent: 1','MIME-Version: 1.0','Date: '+new Date().toUTCString(),'Content-Type: multipart/mixed; boundary="'+boundary+'"','','This is a multipart MIME message.'];
   const part=(marker,contentType,encoding,data,extra=[])=>['--'+marker,'Content-Type: '+contentType,'Content-Transfer-Encoding: '+encoding,...extra,'',data].join('\r\n');
   const wrap=b64=>b64.match(/.{1,76}/g)?.join('\r\n')||'';
   const body=[
