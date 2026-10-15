@@ -1,0 +1,41 @@
+name: EKODI My Guarded Post-Merge Release Continuity
+
+on:
+  workflow_run:
+    workflows: ['EKODI Release Provenance Auto Recovery']
+    types: [completed]
+  schedule:
+    - cron: '13,43 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: write
+
+concurrency:
+  group: ekodi-my-postmerge-release-continuity
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - name: Checkout trusted canonical main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate fail-closed My release reconciliation contract
+        run: |
+          node --check scripts/reconcile-my-postmerge-release.mjs
+          node --test test/my-release-continuity.test.mjs
+      - name: Dispatch only officially approved missing My Worker deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/reconcile-my-postmerge-release.mjs
