@@ -258,7 +258,13 @@ const adminContinuityVerificationTouched=changedFiles.some(file=>
   // Re-run genuine signed-in production E2E when the isolated menu harness changes.
   file==='scripts/admin-authenticated-e2e-menu-worker.mjs'||
   file==='scripts/admin-authenticated-e2e-retry.mjs'||
+  // Changes to the canonical Assist probe must re-run the full signed-in menu + Assist E2E.
+  file==='scripts/admin-assist-canonical-e2e.mjs'||
+  file==='test/admin-assist-production-dispatch-20261016.test.mjs'||
   file==='test/admin-authenticated-e2e-readiness.test.mjs'||
+  // Also cover changes to the release-provenance immediate-merge dispatch path.
+  file==='scripts/recover-release-provenance.mjs'||
+  file==='test/recovery-admin-e2e-dispatch.test.mjs'||
   file==='.github/workflows/verify-admin-authenticated-production-e2e.yml'||
   file==='.github/workflows/admin-authenticated-e2e.yml'||
   file==='scripts/converge-orchestrated-pr-merge.mjs'
