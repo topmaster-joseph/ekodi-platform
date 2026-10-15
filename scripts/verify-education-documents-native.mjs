@@ -55,6 +55,9 @@ async function testProfile(browser,profile){
     if(!await p.locator('#portraitEditor').evaluate(el=>el.complete&&el.naturalWidth>0))fail('Drive portrait not rendered');
     if(!await p.locator('#documentPreview').getByText(/경영학박사 학위 취득/).isVisible())fail('verified degree date not displayed');
     x.checks.push('Drive portrait and corrected doctorate');
+    await mkdir(artifactRoot,{recursive:true});
+    await p.screenshot({path:path.join(artifactRoot,'resume-'+profile.name+'.png'),fullPage:true});
+    x.captures.push('resume-'+profile.name+'.png');
     await p.locator('[data-resume="name"]').fill('검증 강사');
     if(!await p.locator('#documentPreview h3').getByText('검증 강사').isVisible())fail('resume edit not previewed');
     await p.locator('[data-resume="summary"]').fill('<script>alert(1)</script> 실습 결과');
@@ -102,7 +105,7 @@ async function testProfile(browser,profile){
     const overflow=await p.evaluate(()=>({scrollWidth:document.documentElement.scrollWidth,clientWidth:document.documentElement.clientWidth}));
     if(overflow.scrollWidth>overflow.clientWidth+2)fail(profile.name+' horizontal overflow '+JSON.stringify(overflow));
     await mkdir(artifactRoot,{recursive:true});
-    const name=profile.name+'.png';
+    const name='syllabus-'+profile.name+'.png';
     await p.screenshot({path:path.join(artifactRoot,name),fullPage:true});
     x.captures.push(name);
     if(x.requestsBlocked.length)fail('outbound mutation requests attempted');
