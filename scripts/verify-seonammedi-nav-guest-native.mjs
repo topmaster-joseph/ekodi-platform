@@ -82,7 +82,8 @@ try {
               authButtonVisible:!!document.querySelector('#adminLogin'),
               minutesGuestGate:!!document.querySelector('#viewerForm'),
               minutesPrivateContentHidden:(()=>{const el=document.querySelector('#minutes');return !!el?.hidden})(),
-              adminLoginPrompt:!!document.querySelector('#adminIdentity')
+              adminLoginPrompt:!!document.querySelector('#adminIdentity'),
+              financePrivateGate:!!document.getElementById('financeAdminOnly')
             };
           });
           Object.assign(record,observed);
@@ -92,14 +93,18 @@ try {
           record.topLevelMatches=JSON.stringify(actualLabels)===JSON.stringify(LABELS);
           if(publicSurface&&!record.topLevelMatches)violations.push('menu_labels_mismatch: '+JSON.stringify(actualLabels));
           if(record.horizontalOverflow)violations.push('horizontal_overflow: '+JSON.stringify(record.overflowGeometry||[]).slice(0,420));
-          // Home and independent boards expose central content tabs; legacy dropdowns remain supported.
-          // Both layouts must expose real notice, minutes, finance and social links.
-          const noticeGroup=record.groups.find(x=>x.parent==='공지');
+          // Notice is a direct standalone-board link on every public entry, never a category/dropdown.
+          // Other central categories continue to show their own valid social shortcuts.
+          const noticeLink=record.top.find(x=>x.label==='공지');
+          const expectedNoticePath=root.prefix+'/board/notices';
+          let resolvedNoticePath='';
+          try{if(noticeLink?.href)resolvedNoticePath=new URL(noticeLink.href,target).pathname.replace(/[/]$/,'')}catch{}
+          record.directNoticePath=resolvedNoticePath;
+          if(publicSurface&&resolvedNoticePath!==expectedNoticePath)violations.push('notice_direct_path_mismatch');
+          if(publicSurface&&record.centralCategory.noticeTrigger)violations.push('notice_category_click_interception');
           const socialGroup=record.groups.find(x=>x.parent==='소통채널');
-          const centralValid=record.centralCategory.present&&record.centralCategory.initiallyHidden&&true;
-          const noticeEntries=noticeGroup?.entries||(centralValid?record.centralCategory.entries:[]);
+          const centralValid=record.centralCategory.present&&record.centralCategory.initiallyHidden;
           const socialEntries=socialGroup?.entries||(centralValid?record.centralCategory.entries:[]);
-          if(publicSurface&&!noticeEntries.some(x=>x.label==='공지사항'))violations.push('notice_submenu_missing');
           if(publicSurface&&!socialEntries.some(x=>x.label==='유튜브'))violations.push('social_submenus_missing');
           if(publicSurface&&!socialEntries.some(x=>x.label==='인스타그램'))violations.push('instagram_link_missing');
           if(publicSurface&&!socialEntries.some(x=>x.label==='페이스북'||x.label==='페이스북 그룹'))violations.push('facebook_link_missing');
@@ -140,6 +145,26 @@ try {
             }catch(error){violations.push('central_notice_category_click_failed:'+String(error.message||error).slice(0,160))}
           }
           if(suffix==='/'&&(!record.heroOriginalPresent||!record.heroLoaded))violations.push('original_campaign_hero_regression');
+          // Finance rows and totals are never available to anonymous visitors,
+          // regardless of the legacy URL or which customer-domain mount is used.
+          // Read-only GET probes keep the audit credential-free and record only status codes.
+          if(suffix==='/board/finance'){
+            if(!record.financePrivateGate)violations.push('finance_guest_admin_only_marker_missing');
+            record.financeGuestApiStatuses={};
+            for(const endpoint of ['/board/api/finance','/board/api/finance/summary','/board/api/admin/finance']){
+              let status=0;
+              try{
+                for(let attempt=0;attempt<2;attempt++){
+                  const response=await page.request.get(root.origin+root.prefix+endpoint,{timeout:12000,maxRedirects:0});
+                  status=response.status();
+                  if(![429,502,503,504].includes(status)||attempt===1)break;
+                  await pause(3000);
+                }
+              }catch{status=0}
+              record.financeGuestApiStatuses[endpoint]=status;
+              if(status!==401&&status!==403)violations.push('finance_guest_api_access_contract_'+endpoint+'_'+status);
+            }
+          }
           if(suffix==='/board/voices'&&record.editorShownWithoutLogin)violations.push('guest_composer_exposed');
           if(suffix==='/board/voices'&&record.authButtonVisible)violations.push('guest_login_button_before_write');
           if(suffix==='/minutes/'&&(!record.minutesGuestGate||!record.minutesPrivateContentHidden))violations.push('minutes_guest_privacy_gate_missing');
