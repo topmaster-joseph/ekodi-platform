@@ -78,3 +78,24 @@ test('the material studio remains local-first, unpublished until reviewed',async
   assert.match(js,/reviewConfirm/);
   assert.doesNotMatch(js,/\bfetch\(/);
 });
+
+test('public edu role RPC is invoker; elevated registry lookup stays in private schema',async()=>{
+  const hardened=await read('supabase/migrations/20261016011500_education_role_private_wrapper.sql');
+  assert.match(hardened,/create schema if not exists education_private/);
+  assert.match(hardened,/create or replace function education_private\.actor_role\(\)/);
+  assert.match(hardened,/security definer/);
+  assert.match(hardened,/create or replace function public\.education_actor_role\(\)/);
+  assert.match(hardened,/security invoker/);
+  assert.match(hardened,/revoke all on function public\.education_actor_role\(\) from public, anon/);
+  assert.match(hardened,/grant execute on function public\.education_actor_role\(\) to authenticated/);
+  assert.doesNotMatch(hardened,/grant execute on function education_private\.actor_role\(\) to anon/);
+});
+test('single fixed education header remains adopted by shared Shell, with no duplicate fallback',async()=>{
+  const [worker,html,portal]=await Promise.all([
+    read('education-worker.js'),read('education/index.html'),
+    read('education/portal/index.html')
+  ]);
+  assert.match(worker,/injectEkodiShell\(withHeaders\(response\),'edu','',\{existingHeader:true\}\)/);
+  assert.match(html,/class="campus-header"/);
+  assert.match(portal,/class="workspace-topbar"/);
+});
