@@ -62,6 +62,10 @@ test('shared-site manual release propagates exact orchestrator provenance into s
   assert.match(workflow,/commits\/\$GITHUB_SHA\/pulls/);
   assert.match(workflow,/Cannot prove a repository-orchestrated source for staging/);
   assert.match(workflow,/Orchestrator task mismatch before staging/);
+  assert.match(workflow,/if \[\[ ! "\$branch" =~ \^ai\/\[\^\/\]\+\/\(orch_/,'source recovery must fail closed on unverified branches');
+  assert.ok(workflow.includes('echo "release_branch_ref=$branch" >> "$GITHUB_OUTPUT"'));
+  assert.ok(workflow.includes('echo "release_task_id=${requested_task:-$derived_task}" >> "$GITHUB_OUTPUT"'));
+
   assert.match(workflow,/Verify no public SeonamMedi finance totals or ledger entries/);
   assert.match(workflow,/\.finance\.raised==null and \.finance\.spent==null/);
   assert.match(workflow,/\.finance\.entries\|type=="array" and length==0/);
