@@ -39,3 +39,20 @@ test('post-deploy workflow asserts both origins and collects original and new sc
   assert.match(workflow,/Deploy EKODI Shared Site Core/);
   assert.match(workflow,/continue-on-error: \$\{\{ github\.event_name == 'pull_request' \}\}/);
 });
+
+test('live photo failure receipts preserve script HTTP status and browser bootstrap evidence',()=>{
+  for(const token of [
+    "scriptResponses:[],pageErrors:[]",
+    "response.url().includes('board-central-category.js')",
+    "status:response.status()",
+    "request.failure()?.errorText",
+    "page.on('pageerror'",
+    "entry.bootstrap=await page.evaluate",
+    "document.documentElement.dataset.seonamVisualInitialized",
+    "categoryScripts:",
+    "scripts='+JSON.stringify(entry.scriptResponses)",
+    "errors='+JSON.stringify(entry.pageErrors)"
+  ])assert.ok(script.includes(token),token);
+  assert.match(script,/state:'attached',timeout:4000/);
+  assert.doesNotMatch(script,/page\.route\([^)]*\)\.fulfill/,'diagnostics must not mock production assets');
+});
