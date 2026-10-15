@@ -86,7 +86,7 @@ async function validate(browser,[name,width,height]){
     if(await page.locator('#programPrintAll section').count()!==4)fail('print lacks four sessions');
     sample.checks.push('four-session print outline');
     await page.goto(url+'?program=vibe-arduino-youth&session=2',{waitUntil:'domcontentloaded'});
-    await page.locator('#selectedTitle').getByText('바이브코딩으로 만드는 아두이노 스마트팜').waitFor({timeout:10000});
+    await page.waitForFunction(()=>document.querySelector('#selectedTitle')?.textContent==='바이브코딩으로 만드는 아두이노 스마트팜',null,{timeout:10000});
     if(await page.locator('#lessonIndex').innerText()!=='SESSION 02 / 04')fail('deep-link session not restored');
     sample.checks.push('stable direct deep links');
     const measure=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,client:document.documentElement.clientWidth}));
