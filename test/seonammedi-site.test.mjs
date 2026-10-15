@@ -1041,3 +1041,5 @@ test('seonammedi public finance API and legacy static page disclose no ledger va
   assert.match(admin,/id="financeList"/);
   assert.match(board,/const gate=await requirePermission\(req,'finance'\);if\(!gate\.ok\)return gate\.response/);
 });
+
+test('seonammedi public latest updates follow hourly monitor and expose collected news',async()=>{const app=await readFile(new URL('app.js',root),'utf8');assert.match(app,/renderHomeMonitorUpdates\(data\)/);assert.match(app,/source_type==='news'\?'자동수집 · 공개보도'/);assert.match(app,/60\*60\*1000/);});
