@@ -118,3 +118,15 @@ test('shared-site guarded release invokes native browser verification after prod
   assert.match(desktop,/needs:\s*deploy/);
   assert.match(mobile,/needs:\s*deploy/);
 });
+
+test('SeonamMedi real native browser board routes match direct Notice and citizen voice links',()=>{
+  const home=fs.readFileSync(new URL('../sites/seonammedi/public/index.html',import.meta.url),'utf8');
+  const menu=fs.readFileSync(new URL('../sites/seonammedi/public/central-category-runtime.js',import.meta.url),'utf8');
+  const routes=new Map(boardRegistry.surfaces.filter(item=>item.enabled!==false).map(item=>[item.id,item.path]));
+  assert.equal(routes.get('seonammedi.notice'),'/seonammedi/board/notices');
+  assert.equal(routes.get('seonammedi.citizen_voice'),'/seonammedi/board/voices');
+  assert.ok(home.includes('href="board/notices" >공지</a>'),'home Notice must navigate to actual board');
+  assert.ok(home.includes('href="board/voices"'),'citizen opinion link must target actual board');
+  assert.ok(!menu.includes('"공지":'),'old dynamic category handler must not intercept Notice');
+  assert.ok(!menu.includes('noticePreview'),'old central notice preview must not mask actual board');
+});
