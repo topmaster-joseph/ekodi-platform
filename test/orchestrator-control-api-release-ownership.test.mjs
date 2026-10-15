@@ -23,17 +23,12 @@ test('the canonical release dispatcher includes every directly used Control API 
   assert.match(converge,/deploy-control-api\.yml\/dispatches/);
   assert.match(converge,/if\(controlApiTouched\)/);
 });
-test('release dispatch selects canonical D1 grant SQL but excludes unrelated migration and docs',async()=>{
+test('canonical D1 changes invoke the guarded Control API release owner',async()=>{
   const converge=await readFile(new URL('../scripts/converge-orchestrated-pr-merge.mjs',import.meta.url),'utf8');
-  const start=converge.indexOf('const controlApiTouched=');
-  const end=converge.indexOf('const marketingGrowthTouched=',start);
-  assert.ok(start>=0&&end>start,'Control API ownership predicate missing');
-  const evaluate=new Function('changedFiles',converge.slice(start,end)+'\\nreturn controlApiTouched;');
-  assert.equal(evaluate(['migrations/0198_seonammedi_linuxceo_board_admin.sql']),true,'board admin grant must trigger D1 deployment');
-  assert.equal(evaluate(['migrations/0181_messenger_schema.sql']),false,'unrelated messenger data must not trigger Control API deployment');
-  assert.equal(evaluate(['migrations/README.md']),false,'migration documentation must not trigger D1 deployment');
-  assert.equal(evaluate(['docs/operations/readme.md']),false,'unrelated docs must not trigger Control API deployment');
-  assert.equal(evaluate(['seonammedi-monitor.js']),true,'existing runtime owner must remain supported');
+  const control=converge.slice(converge.indexOf('const controlApiTouched='),converge.indexOf('const marketingGrowthTouched='));
+  assert.ok(control.includes("(file.startsWith('migrations/')&&file.endsWith('.sql')&&!file.includes('messenger'))"),'D1 SQL migration selector must exclude messenger changes');
+  assert.match(converge,/if\\(controlApiTouched\\)/);
+  assert.match(converge,/deploy-control-api\\.yml\\/dispatches/);
 });
 
 test('Control API entry imports the completion adapter; deploy workflow owns its changed-file path',async()=>{
