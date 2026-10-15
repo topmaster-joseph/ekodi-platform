@@ -12,8 +12,8 @@ const original = () => ({
   head: { ref: branch, sha, repo: { full_name: repo } },
   updated_at: '2026-10-12T08:00:00Z',
 });
-const run = (conclusion, event = 'push', date = '2026-10-12T08:00:00Z') => ({
-  head_sha: sha, status: 'completed', conclusion, event, created_at: date,
+const run = (conclusion, event = 'push', date = '2026-10-12T08:00:00Z', id = 101, runAttempt = 1) => ({
+  id, head_sha: sha, status: 'completed', conclusion, event, created_at: date, updated_at: date, run_attempt: runAttempt,
 });
 
 test('replays a missed authorized orchestration trigger after a grace period', () => {
@@ -30,8 +30,12 @@ test('does not replay when the push event can still arrive', () => {
 });
 
 test('only transient cancellation or timeout may be replayed', () => {
-  assert.equal(decideContinuityReplay(original(), [run('cancelled')], now, repo).replay, true);
-  assert.equal(decideContinuityReplay(original(), [run('timed_out')], now, repo).replay, true);
+  const cancelled = decideContinuityReplay(original(), [run('cancelled', 'push', '2026-10-12T08:00:00Z', 501)], now, repo);
+  const timedOut = decideContinuityReplay(original(), [run('timed_out', 'push', '2026-10-12T08:00:00Z', 502)], now, repo);
+  assert.equal(cancelled.replay, true);
+  assert.equal(cancelled.runId, 501);
+  assert.equal(timedOut.replay, true);
+  assert.equal(timedOut.runId, 502);
   assert.equal(decideContinuityReplay(original(), [run('failure')], now, repo).replay, false);
   assert.equal(decideContinuityReplay(original(), [run('success')], now, repo).replay, false);
   assert.equal(decideContinuityReplay(original(), [run('action_required')], now, repo).reason, 'not-a-transient-run-conclusion');
@@ -41,8 +45,11 @@ test('does not interfere with running jobs or replay more than twice per SHA', (
   const active = { ...run(null), status: 'in_progress' };
   assert.equal(decideContinuityReplay(original(), [active], now, repo).reason, 'existing-run-active');
   assert.equal(decideContinuityReplay(original(), [
-    run('cancelled', 'workflow_dispatch', '2026-10-12T07:00:00Z'),
-    run('cancelled', 'workflow_dispatch', '2026-10-12T08:00:00Z'),
+    run('cancelled', 'workflow_dispatch', '2026-10-12T07:00:00Z', 201),
+    run('cancelled', 'workflow_dispatch', '2026-10-12T08:00:00Z', 202),
+  ], now, repo).reason, 'replay-budget-exhausted');
+  assert.equal(decideContinuityReplay(original(), [
+    run('cancelled', 'push', '2026-10-12T08:00:00Z', 203, 3),
   ], now, repo).reason, 'replay-budget-exhausted');
 });
 
@@ -74,6 +81,10 @@ test('continuity workflow is receipt-gated, bounded, and never bypasses guarded 
   assert.match(script, /current\.head\?\.sha !== planned\.sha/);
   assert.match(script, /MAX_DISPATCH_ATTEMPTS_PER_SHA = 2/);
   assert.match(script, /MAX_DISPATCHES_PER_SWEEP = 3/);
+  assert.match(script, /\/actions\/runs\/.*\/rerun/);
+  assert.match(script, /rerun-existing-run/);
+  assert.match(script, /workflow-dispatch-unavailable/);
+  assert.match(script, /transient-run-rerun-unavailable/);
   assert.doesNotMatch(script, /\/pulls\/.*\/merge/);
   assert.doesNotMatch(script, /guarded-worker-release|guarded-pages-release|wrangler deploy/);
 });
