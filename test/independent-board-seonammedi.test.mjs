@@ -76,7 +76,7 @@ test('finance and notice boards are first-class standalone board routes',async()
   assert.match(migration,/CREATE TABLE IF NOT EXISTS finance_posts/);
   assert.match(migration,/CREATE TABLE IF NOT EXISTS notice_posts/);
   assert.match(site,/href="board\/voices">시민의견/);
-  assert.match(site,/href="board\/finance">회계/);
+  assert.doesNotMatch(site,/href="board\/finance">회계/);
   assert.match(site,/href="board\/notices">공지/);
 });
 
