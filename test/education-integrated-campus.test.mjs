@@ -99,3 +99,21 @@ test('single fixed education header remains adopted by shared Shell, with no dup
   assert.match(html,/class="campus-header"/);
   assert.match(portal,/class="workspace-topbar"/);
 });
+
+test('protected Education production deployment runs native 5-viewport campus portal smoke after studio checks',async()=>{
+  const [workflow,script]=await Promise.all([
+    read('.github/workflows/deploy-education.yml'),
+    read('scripts/verify-education-campus-native.mjs')
+  ]);
+  assert.match(workflow,/node scripts\/verify-education-campus-native\.mjs/);
+  assert.match(workflow,/artifacts\/education-campus-native\//);
+  assert.ok(workflow.indexOf('node scripts/verify-education-material-studio-native.mjs')<
+    workflow.indexOf('node scripts/verify-education-campus-native.mjs'));
+  assert.match(script,/const BASE='https:\/\/ekodi\.kr\/edu\/'/);
+  assert.match(script,/\[320,390,768,1366,1440\]/);
+  assert.match(script,/page\.route\('\*\*\/\*'/);
+  assert.match(script,/if\(await page\.locator\('#enrollSubmit'\)\.isEnabled\(\)\)/);
+  assert.match(script,/if\(await page\.locator\('#manageNav'\)\.isVisible\(\)\)/);
+  assert.match(script,/education-campus-native/);
+  check('scripts/verify-education-campus-native.mjs');
+});
