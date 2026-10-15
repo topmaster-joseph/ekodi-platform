@@ -80,24 +80,18 @@ test('finance and notice boards are first-class standalone board routes',async()
   assert.match(site,/href="board\/notices">공지/);
 });
 
-test('finance access tiers expose summary to signed-in Google users and details only to admins',async()=>{
+test('finance summary and details require administrator permission, not just Google login',async()=>{
   const worker=await read('services/independent-board/worker.js');
-  assert.match(worker,/async function signedInGoogle\(req\)/);
-  assert.match(worker,/providers\.includes\('google'\)/);
-  assert.match(worker,/async function requireSignedInGoogle\(req\)/);
-  assert.match(worker,/Google 로그인 후 총괄내역을 확인할 수 있습니다/);
-  assert.match(worker,/\/api\/finance\/summary/);
+  assert.match(worker,/async function memberFinanceSummary\(req,env\)/);
+  assert.match(worker,/const gate=await requirePermission\(req,'finance'\);if\(!gate\.ok\)return gate\.response/);
+  assert.match(worker,/viewer:'finance-admin'/);
   assert.match(worker,/finance_detail_admin_only/);
-  assert.match(worker,/세부 회계내역은 관리자만 볼 수 있습니다/);
-  assert.match(worker,/관리자만 볼 수 있습니다/);
-  assert.match(worker,/관리자 권한 · 총괄내역과 세부내역 확인 가능/);
-  assert.match(worker,/writeToggle\.hidden=true/);
-  assert.match(worker,/writeToggle\.hidden=false/);
+  assert.match(worker,/id="financeAdminOnly"/);
+  assert.doesNotMatch(worker,/id="summaryPanel"/,'legacy public finance board must not render a summary');
   assert.match(worker,/\/board\/api\/admin\/finance/);
   assert.match(worker,/method:id\?"PUT":"POST"/);
   assert.match(worker,/method:"DELETE"/);
 });
-
 
 test('standalone board supports both customer-domain and internal seonammedi mounts',async()=>{
   const mod=await import(new URL('../services/independent-board/worker.js?dual-mount='+Date.now(),import.meta.url));
@@ -114,7 +108,9 @@ test('standalone board supports both customer-domain and internal seonammedi mou
   for(const url of ['https://seonammedi.kr/board/finance','https://ekodi.kr/seonammedi/board/finance']){
     const response=await mod.default.fetch(new Request(url),{});
     assert.equal(response.status,200,url);
-    assert.match(await response.text(),/id="summaryPanel"/);
+    const financeHtml=await response.text();
+    assert.match(financeHtml,/id="financeAdminOnly"/);
+    assert.doesNotMatch(financeHtml,/id="summaryPanel"|id="adminDetail"|id="writeForm"/);
   }
 });
 
