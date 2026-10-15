@@ -33,7 +33,14 @@ try{
    const photo=await page.locator('.hero-photo').evaluate(el=>getComputedStyle(el).backgroundImage);
    if(!photo.includes('images.unsplash.com'))throw Error('photographic hero asset missing');
    const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+2);
-   if(overflow)throw Error('horizontal scroll on homepage');
+   if(overflow){
+    const offenders=await page.evaluate(()=>Array.from(document.querySelectorAll('body *'))
+      .map(el=>({tag:el.tagName.toLowerCase(),name:el.className?.toString().slice(0,75),
+        right:Math.round(el.getBoundingClientRect().right),width:Math.round(el.getBoundingClientRect().width)}))
+      .filter(x=>x.right>innerWidth+2).slice(0,12));
+    await page.screenshot({path:path.join(folder,'overflow-home-'+width+'.png'),fullPage:true});
+    throw Error('horizontal scroll on homepage '+JSON.stringify(offenders));
+   }
    const filename='home-'+width+'.png';
    await page.screenshot({path:path.join(folder,filename),fullPage:true});
    evidence.screenshots.push(filename);
