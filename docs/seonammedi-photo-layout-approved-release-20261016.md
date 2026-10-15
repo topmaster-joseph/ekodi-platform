@@ -15,3 +15,8 @@
 - PR #4906 has the stored `[EKODI RELATED CHANGE REVIEW]` review and `related-change-review-complete` label; it is no longer allowed to take priority over #4902.
 - This owner-authored **documentation-only** touch starts authentic normal PR CI after the priority winner closed. The existing receipt-bound EKODI Convergent Merge workflow, not this document, must perform GitHub's safe `update-branch` operation and verify resulting CI before protected merge.
 - No executable board source, authorization, secret, image, deploy or rollback guard has been changed in this reconciliation.
+
+## Protected update-branch CI restart
+- The trusted EKODI Convergent Merge updated the recovery branch to `d388276444ab7d5a1cb1ac07377084811abe32d1`, already including protected main and mobile notice overflow fixes.
+- GitHub classified bot-created update-branch pull-request checks as `action_required`; this owner-authored documentation-only commit starts fresh authentic required CI on the synchronized tree.
+- Independent board client JavaScript still exactly matches the public site asset, and preserved mobile wrapping has been inspected. No service code, auth grants, protected test, deployment workflow or production secret is altered by this note.
