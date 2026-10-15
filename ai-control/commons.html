@@ -102,7 +102,36 @@
             <p id="assistanceRequestStatus" class="support-status" role="status" aria-live="polite">결제는 계약 조건이 확정된 뒤 인증된 에코디비즈 결제창에서만 진행합니다.</p>
           </form>
         </section>
-        <details class="assistance-history"><summary>내 지원 요청 이력</summary><div id="assistanceHistory">로그인하면 확인할 수 있습니다.</div></details>
+        <details class="assistance-history" open><summary>내 지원 요청·견적·계약 검토 이력</summary><div id="assistanceHistory">로그인하면 확인할 수 있습니다.</div></details>
+        <section id="assistanceQuotePanel" class="assistance-contract-preview" aria-labelledby="assistanceQuoteTitle" hidden>
+          <h4 id="assistanceQuoteTitle">최종 견적·계약조건 확인</h4>
+          <p id="assistanceQuoteStatus" class="support-status" role="status"></p>
+          <div id="assistanceQuoteText" class="assistance-contract-text"></div>
+          <div id="assistanceQuoteLegalLinks" class="assistance-quote-legal"></div>
+          <form id="assistanceAcknowledgmentForm" class="assistance-request-form">
+            <label>계약 요청인 이름 재입력<input id="assistanceTypedSigner" maxlength="80" required autocomplete="name" placeholder="견적 요청서의 이름과 동일하게 입력"></label>
+            <label class="assistance-consent"><input type="checkbox" id="assistanceFinalScopeConsent" required><span>업무 범위·결과물·최종 금액·수행 일정·선정 비보장 내용을 확인했습니다.</span></label>
+            <label class="assistance-consent"><input type="checkbox" id="assistanceFinalRefundConsent" required><span>취소·환불 규정과 이용약관을 열어 확인했습니다.</span></label>
+            <label class="assistance-consent"><input type="checkbox" id="assistanceFinalPrivacyConsent" required><span>개인정보 처리기준과 계약기록 이용 목적을 확인했습니다.</span></label>
+            <label class="assistance-consent"><input type="checkbox" id="assistanceFinalNonBindingConsent" required><span>이 동의는 견적·계약내용 확인 기록일 뿐 전자서명·계약 체결·결제 완료는 아니며, 실제 계약과 업무 착수에는 별도 확인이 필요함을 이해합니다.</span></label>
+            <button type="submit" id="assistanceAcknowledgmentSubmit">견적 및 계약조건 확인 기록</button>
+          </form>
+          <p id="assistancePaymentReadiness" class="support-status" aria-live="polite">전자서명과 결제 승인 전에는 업무가 시작되지 않습니다.</p>
+        </section>
+        <section id="assistanceAdminPanel" class="assistance-contract-preview" aria-labelledby="assistanceAdminTitle" hidden>
+          <div class="support-detail-header"><h4 id="assistanceAdminTitle">에코디비즈 관리자 · 지원 요청 견적 관리</h4><button id="assistanceAdminRefresh" type="button" class="support-secondary">목록 새로고침</button></div>
+          <p id="assistanceAdminStatus" class="support-status" role="status"></p>
+          <div id="assistanceAdminList" class="assistance-admin-list"></div>
+          <form id="assistanceMerchantQuoteForm" class="assistance-request-form" hidden>
+            <h4 id="assistanceMerchantSelectedTitle">신청자 요청서</h4>
+            <div id="assistanceMerchantLines" class="assistance-merchant-lines"></div>
+            <label>견적 유효기간 종료<input id="assistanceMerchantExpires" type="datetime-local" required></label>
+            <label>결제 확인 후 결과물 제공 예정 기간 (일)<input id="assistanceMerchantDays" type="number" min="1" max="180" value="14" required></label>
+            <label>계약서에 표시할 추가 협의사항<textarea id="assistanceMerchantNotes" rows="3" maxlength="1500" placeholder="수정횟수, 세부납품 형태 등"></textarea></label>
+            <label class="assistance-consent"><input id="assistanceMerchantVat" type="checkbox" checked required><span>각 항목의 금액은 부가세가 포함된 최종 견적 금액입니다.</span></label>
+            <button type="submit" id="assistanceMerchantSubmit">검토된 최종 견적 발행</button>
+          </form>
+        </section>
       </section>
 
       <p class="support-disclaimer">공식 원문 링크만 제공합니다. 신청은 수행기관에서 진행하며, 현재 자동 수집 범위 밖의 기관 공고는 표시되지 않을 수 있습니다.</p>
