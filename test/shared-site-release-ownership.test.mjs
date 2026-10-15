@@ -56,8 +56,8 @@ test('shared-site staging and governance checks stay apex-path-only', () => {
 
 
 test('shared-site manual release propagates exact orchestrator provenance into staging', () => {
-  assert.match(workflow,/release_branch_ref: \$\\{\\{ needs\\.scheduled_release_gate\\.outputs\\.release_branch_ref \\|\\| inputs\\.release_branch_ref \$\\}\\}/);
-  assert.match(workflow,/release_task_id: \$\\{\\{ needs\\.scheduled_release_gate\\.outputs\\.release_task_id \\|\\| inputs\\.release_task_id \$\\}\\}/);
+  assert.ok(workflow.includes('release_branch_ref: ${{ needs.scheduled_release_gate.outputs.release_branch_ref || inputs.release_branch_ref }}'));
+  assert.ok(workflow.includes('release_task_id: ${{ needs.scheduled_release_gate.outputs.release_task_id || inputs.release_task_id }}'));
   assert.match(workflow,/Recover signed source branch before staging/);
   assert.match(workflow,/commits\/\$GITHUB_SHA\/pulls/);
   assert.match(workflow,/Cannot prove a repository-orchestrated source for staging/);
