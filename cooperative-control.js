@@ -4,6 +4,7 @@ import { loadCooperativeProject, saveCooperativeProject, normalizeCooperativeSta
 import { cooperativePage, cooperativeOperationsPage } from './cooperative-page.js';
 import { cooperativeCss, cooperativeScript } from './cooperative-ui.js';
 import { cooperativeCharter } from './cooperative-charter.js';
+import { COOPERATIVE_IMAGE_PATHS } from './cooperative-media.js';
 
 const headers = (type = 'application/json; charset=utf-8') => ({
   'content-type': type, 'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff',
@@ -62,6 +63,25 @@ export async function routeCooperative(request, env) {
   const url = new URL(request.url);
   if (url.hostname !== 'ekodi.kr') return null;
   const hubPath = url.pathname.replace(/\/+$/, '');
+  if (COOPERATIVE_IMAGE_PATHS.has(url.pathname)) {
+    if (!['GET', 'HEAD'].includes(request.method)) return json({ ok: false, code: 'METHOD_NOT_ALLOWED' }, 405);
+    if (!env.ASSETS?.fetch) return json({ ok: false, code: 'COOP_ASSETS_UNAVAILABLE' }, 503);
+    // This endpoint validates and serves a complete WebP. Avoid conditional or
+    // range responses from ASSETS being mistaken for a missing/HTML asset.
+    const assetHeaders = new Headers(request.headers);
+    for (const name of ['if-match', 'if-none-match', 'if-modified-since', 'if-unmodified-since', 'if-range', 'range']) assetHeaders.delete(name);
+    const asset = await env.ASSETS.fetch(new Request(request, { headers: assetHeaders }));
+    if (asset.status !== 200 || asset.headers.get('content-type')?.split(';')[0].trim().toLowerCase() !== 'image/webp') {
+      await asset.body?.cancel();
+      return json({ ok: false, code: 'COOP_IMAGE_UNAVAILABLE' }, 404);
+    }
+    const h = new Headers(asset.headers);
+    h.set('cache-control', 'public, max-age=31536000, immutable');
+    h.set('x-content-type-options', 'nosniff');
+    h.set('x-ekodi-route', 'cooperative-public-image');
+    if (request.method === 'HEAD') await asset.body?.cancel();
+    return new Response(request.method === 'HEAD' ? null : asset.body, { status: 200, headers: h });
+  }
   if (['/business-coop/assets/app.css', '/business-coop/assets/app.js'].includes(hubPath) && ['GET', 'HEAD'].includes(request.method)) {
     const css = hubPath.endsWith('.css');
     return new Response(request.method === 'HEAD' ? null : css ? cooperativeCss() : cooperativeScript(), { headers: headers(css ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8') });
