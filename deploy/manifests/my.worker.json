@@ -85,6 +85,26 @@
           "identityShareContexts",
           "messengerContactSharing",
           "contactExchange"
+        ],
+        "rollbackExpect": [
+          "ekodi-my",
+          "my-ekodi",
+          "creatorPortfolio",
+          "person-scoped",
+          "private-first",
+          "privateWorkspaceRouting",
+          "documentWorkspace",
+          "/docs/",
+          "core.documents",
+          "ekodi.documents.v2",
+          "documentHwpx",
+          "documentVersionHistory",
+          "digitalCard",
+          "digitalCardPath",
+          "digitalCardQrCenter",
+          "identityShareContexts",
+          "messengerContactSharing",
+          "contactExchange"
         ]
       },
       {
