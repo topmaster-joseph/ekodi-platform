@@ -1,0 +1,48 @@
+name: EKODI Independent Board Release Reconciliation
+
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+  actions: write
+
+concurrency:
+  group: ekodi-independent-board-release-reconciliation
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    if: >-
+      github.event_name != 'issue_comment' ||
+      (github.event.issue.number == 4759 &&
+       github.event.issue.pull_request == null &&
+       github.event.comment.user.login == 'topmaster-joseph' &&
+       startsWith(github.event.comment.body, 'EKODI-BOARD-DEPLOY-RECOVER:'))
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - name: Checkout trusted canonical main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate native release-reconciliation contract
+        run: |
+          set -euo pipefail
+          node --check scripts/reconcile-independent-board-release.mjs
+          node --test test/reconcile-independent-board-release.test.mjs
+      - name: Dispatch missing approved board release through existing production gate
+        env:
+          GH_TOKEN: \${{ github.token }}
+        run: node scripts/reconcile-independent-board-release.mjs
