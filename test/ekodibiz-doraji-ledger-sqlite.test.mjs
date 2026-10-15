@@ -8,7 +8,7 @@ test('Doraji draft ledger migration applies to isolated SQLite and enforces draf
  try{
   db.exec('PRAGMA foreign_keys=ON;CREATE TABLE admins(id INTEGER PRIMARY KEY,email TEXT NOT NULL)');
   db.prepare('INSERT INTO admins(id,email) VALUES (?,?)').run(1,'fixture@example.invalid');
-  db.exec(fs.readFileSync(new URL('../migrations/0133_doraji_operations_draft_ledger.sql',import.meta.url),'utf8'));
+  db.exec(fs.readFileSync(new URL('../schemas/ekodibiz/doraji-draft-ledger.sql',import.meta.url),'utf8'));
   const id='11111111-1111-4111-8111-111111111111';
   const stamp='2026-10-15T00:00:00.000Z';
   db.prepare("INSERT INTO doraji_projects(id,owner_admin_id,name,region,created_at,updated_at) VALUES(?,?,?,?,?,?)").run(id,1,'테스트 하우스','전남',stamp,stamp);
