@@ -43,7 +43,7 @@ test('post-deploy workflow asserts both origins and collects original and new sc
 test('live photo failure receipts preserve script HTTP status and browser bootstrap evidence',()=>{
   for(const token of [
     "scriptResponses:[],pageErrors:[]",
-    "response.url().includes('board-central-category.js')",
+    "response.url().includes('board/ui/central-category.js')",
     "status:response.status()",
     "request.failure()?.errorText",
     "page.on('pageerror'",
