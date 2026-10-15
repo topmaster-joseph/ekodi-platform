@@ -31,6 +31,8 @@ test('SeonamMedi production candidate checks current administrator route rather 
   const pay=visitPay(manifest);
   assert.ok(pay,'EKODI Pay rollback protection must be retained');
   assert.ok(pay.rollbackHeaderExpect?.includes('location: https://ekodi.kr/pay/'),'Pay rollback redirect guard must remain intact');
+  assert.ok(pay.headerExpect?.includes('location: https://ekodi.kr/ekodipay/'),'Pay production canonical redirect guard must remain intact');
+  assert.ok(pay.rollbackStatuses?.includes(308),'Pay rollback status checks must remain active');
 });
 
 function visitPay(node){
