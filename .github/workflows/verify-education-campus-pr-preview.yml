@@ -1,0 +1,54 @@
+name: EKODI Education Photo Campus PR Preview
+
+on:
+  pull_request:
+    paths:
+      - 'education/**'
+      - 'scripts/verify-education-campus-preview.mjs'
+      - '.github/workflows/verify-education-campus-pr-preview.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: education-campus-safe-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  isolated-native-preview:
+    if: github.repository == 'topmaster-joseph/ekodi-platform'
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - name: Checkout pull request without persisted credentials
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify immutable first-party read-only harness
+        run: |
+          node --check scripts/verify-education-campus-preview.mjs
+          node --check education/portal/portal.js
+          node --check education/campus.js
+          node --test test/education-integrated-campus.test.mjs test/education-lms-mutation-hardening.test.mjs
+      - name: Install isolated Chromium
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Serve synthetic, guest-only education static assets
+        run: |
+          printf 'window.EKODI_EDU_CONFIG={dataEnabled:false,lmsEnabled:false};\n' > education/config.js
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory education > /tmp/ekodi-campus-preview.log 2>&1 &
+          sleep 2
+          curl --fail --silent --show-error http://127.0.0.1:8765/ > /dev/null
+      - name: Verify photo home and unified campus at 5 desktop/mobile widths
+        run: node scripts/verify-education-campus-preview.mjs
+      - name: Save visual screenshots and negative security evidence on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: education-campus-pr-preview-${{ github.run_id }}
+          path: artifacts/education-campus-preview/
+          retention-days: 7
