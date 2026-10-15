@@ -175,6 +175,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   // Shared administrator menu, canonical route registry and design contracts are production Site Core assets.
   ['admin-menu-registry.js','admin-sidebar.js','admin-canonical-routes.js','admin-menu-layout.js','admin-menu-layout.compact.js','admin-menu-runtime.js','admin-demand-loader.js','release-control-admin.js','system-health-admin.js','admin-design-engine.js','config/design-engine.json','config/admin-role-navigation.json'].includes(file)||
   file==='workspace-admin-page.js'||
+  // Lazy EKODIBIZ Business Center is part of the same shared Site Core Worker.
+  file==='ekodibiz-business-center.js'||
   // AI Provider administrator bundle and shared provider client are owned by the Site Core.
   file==='admin-provider-control.js'||
   // AI membership is compiled into the shared ai-ops-admin.js bundle.
