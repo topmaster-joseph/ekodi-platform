@@ -26,8 +26,9 @@ export function decideContinuityReplay(pr, runs = [], now = Date.now(), reposito
     // A failed validator needs source repair; repeating the same failing build is not recovery.
     return { replay: false, reason: 'run-completed-needs-no-blind-retry' };
   }
-  const dispatchCount = matching.filter(run => run.event === 'workflow_dispatch').length;
-  if (dispatchCount >= MAX_DISPATCH_ATTEMPTS_PER_SHA) {
+  const replayCount = matching.filter(run => run.event === 'workflow_dispatch').length
+    + matching.reduce((sum, run) => sum + Math.max(0, Number(run.run_attempt || 1) - 1), 0);
+  if (replayCount >= MAX_DISPATCH_ATTEMPTS_PER_SHA) {
     return { replay: false, reason: 'replay-budget-exhausted' };
   }
   // A run cancelled moments ago must not be replayed simply because it was queued long ago.
@@ -39,7 +40,14 @@ export function decideContinuityReplay(pr, runs = [], now = Date.now(), reposito
   if (newest && !['cancelled', 'timed_out', 'startup_failure'].includes(newest.conclusion)) {
     return { replay: false, reason: 'not-a-transient-run-conclusion' };
   }
-  return { replay: true, reason: newest ? 'recover-transient-run' : 'recover-missed-trigger', branch, taskId: match[2], sha };
+  return {
+    replay: true,
+    reason: newest ? 'recover-transient-run' : 'recover-missed-trigger',
+    branch,
+    taskId: match[2],
+    sha,
+    runId: newest?.id ? Number(newest.id) : null,
+  };
 }
 
 async function githubApi(repository, token, path, init = {}) {
@@ -116,12 +124,35 @@ async function main() {
         report.push({ pr: pr.number, state: 'deferred', reason: 'pr-changed' });
         continue;
       }
-      // Dispatch once only. If the request outcome is ambiguous, do not retry here.
-      await githubApi(repo, token, '/actions/workflows/' + WORKFLOW + '/dispatches', {
-        method: 'POST', body: JSON.stringify({ ref: planned.branch }),
-      });
-      dispatched++;
-      report.push({ pr: pr.number, state: 'dispatched', reason: planned.reason, headSha: planned.sha });
+      // Prefer replaying the exact transient run. This keeps recovery independent
+      // from workflow_dispatch metadata on older workflow revisions.
+      if (planned.reason === 'recover-transient-run' && planned.runId) {
+        try {
+          await githubApi(repo, token, '/actions/runs/' + planned.runId + '/rerun', { method: 'POST' });
+          dispatched++;
+          report.push({ pr: pr.number, state: 'dispatched', reason: planned.reason, mode: 'rerun-existing-run', runId: planned.runId, headSha: planned.sha });
+        } catch (error) {
+          report.push({ pr: pr.number, state: 'deferred', reason: 'transient-run-rerun-unavailable', runId: planned.runId });
+        }
+        continue;
+      }
+
+      // A genuinely missed trigger has no run to replay. Dispatch at most once here;
+      // if GitHub reports stale workflow metadata, defer instead of failing the sweep.
+      try {
+        await githubApi(repo, token, '/actions/workflows/' + WORKFLOW + '/dispatches', {
+          method: 'POST', body: JSON.stringify({ ref: planned.branch }),
+        });
+        dispatched++;
+        report.push({ pr: pr.number, state: 'dispatched', reason: planned.reason, mode: 'workflow-dispatch', headSha: planned.sha });
+      } catch (error) {
+        const message = String(error?.message || error);
+        if (message.includes('GitHub HTTP 422') && message.includes('workflow_dispatch')) {
+          report.push({ pr: pr.number, state: 'deferred', reason: 'workflow-dispatch-unavailable', headSha: planned.sha });
+          continue;
+        }
+        throw error;
+      }
     }
     if (prs.length < 100) break;
   }

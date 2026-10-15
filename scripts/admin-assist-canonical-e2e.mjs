@@ -108,8 +108,8 @@ try {
   if (Number(visual?.sidebarWidth) !== EXPECTED_DESKTOP_SIDEBAR_WIDTH) {
     throw new Error(`Admin sidebar width mismatch: ${visual?.sidebarWidth || 'missing'} expected=${EXPECTED_DESKTOP_SIDEBAR_WIDTH}`);
   }
-  if (visual?.contextTabsDisplay !== 'none' || visual?.commandEntryDisplay !== 'none') {
-    throw new Error(`Admin redundant navigation chrome is visible: contextTabs=${visual?.contextTabsDisplay || 'missing'} commandEntry=${visual?.commandEntryDisplay || 'missing'}`);
+  if (visual?.contextTabsPresent || visual?.commandEntryPresent) {
+    throw new Error(`Admin redundant navigation chrome is visible: contextTabs=${visual?.contextTabsPresent ? 'present' : 'absent'} commandEntry=${visual?.commandEntryPresent ? 'present' : 'absent'}`);
   }
   if (visual?.targetValue !== 'EKODI' || Number(visual?.targetWidth || 0) < 150) {
     throw new Error(`Admin bottom command target is clipped or incorrect: target=${visual?.targetValue || 'missing'} width=${visual?.targetWidth || 0}`);
