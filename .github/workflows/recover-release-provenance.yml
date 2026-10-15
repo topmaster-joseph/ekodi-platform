@@ -9,6 +9,8 @@ permissions:
   pull-requests: write
   issues: write
   actions: write
+  checks: read
+  statuses: read
 
 concurrency:
   group: ekodi-release-provenance-recovery-${{ github.event.pull_request.number }}
