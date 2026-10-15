@@ -7,6 +7,8 @@ const VERSION=7;
 const STYLE_ID='ekodi-user-ui-footer-style';
 const CONFIG_URL='https://ekodi.kr/shell/user-footer.json';
 const SITE_CHROME_URL='https://workspace-api.ekodi.kr/v1/site-chrome/public';
+// Education has no customer-site chrome configuration; keep the shared fallback.
+const NON_TENANT_SITE_CHROME_SUBJECTS=new Set(['edu','education']);
 const USER_SURFACES=new Set(['public','workspace']);
 const SERVICE_OWNED_FOOTER_SERVICES=new Set();
 const FOOTER_ATTR='data-ekodi-user-footer';
@@ -124,7 +126,7 @@ function applyServiceContext(footer){
 function validConfig(value){return Boolean(value&&typeof value==='object'&&Number(value.version)>=3&&value.operator&&value.contact&&Array.isArray(value.legalLinks));}
 async function loadSiteConfig(){
   const subject=siteSubject();
-  if(!subject||['admin','auth','privacy','terms','api'].includes(subject))return null;
+  if(!subject||NON_TENANT_SITE_CHROME_SUBJECTS.has(subject)||['admin','auth','privacy','terms','api'].includes(subject))return null;
   if(!siteConfigPromise)siteConfigPromise=fetch(`${SITE_CHROME_URL}?subject_key=${encodeURIComponent(subject)}`,{credentials:'omit',cache:'no-store'}).then(async response=>{if(!response.ok)return null;const data=await response.json();return data?.footer||null}).catch(()=>null);
   return siteConfigPromise;
 }
