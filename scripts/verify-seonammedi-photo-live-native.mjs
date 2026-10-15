@@ -87,6 +87,18 @@ try{
     });
     await context.route('**/*',route=>['GET','HEAD','OPTIONS'].includes(route.request().method().toUpperCase())
       ?route.continue():route.abort('blockedbyclient'));
+    // Read-only bootstrap asset response evidence: if the home layout is absent,
+    // distinguish HTTP routing, content-type, CSP and JavaScript runtime errors.
+    if(profile.name==='pc'){
+      const scriptUrl=origin+base+'board-central-category.js?v=20261015-photo-shell-1';
+      try{
+        const asset=await context.request.get(scriptUrl,{timeout:12000,failOnStatusCode:false});
+        const sample=(await asset.text()).slice(0,160);
+        row.assetProbe={status:asset.status(),contentType:asset.headers()['content-type']||'',
+          hasCategoryScript:sample.includes('Central category tabs'),sample:sample.replace(/\s+/g,' ').slice(0,80)};
+      }catch(err){row.assetProbe={error:String(err?.message||err).slice(0,220)};}
+      console.log('SEONAM-PHOTO-ASSET-PROBE '+JSON.stringify({origin,scriptUrl,...row.assetProbe}));
+    }
     const all=[{key:'home',name:'첫 화면',path:''},...checks];
     for(const item of all){
       // New tab for every route: hash-only navigations otherwise return a null
