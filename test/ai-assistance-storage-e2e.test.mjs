@@ -3,12 +3,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
 import worker from '../ai-control-worker.js';
+import {ASSISTANCE_PLANS} from '../support/assistance-catalog.js';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const migrations=[
   'migrations/0130_ai_assistance_requests.sql',
   'migrations/0131_ai_assistance_quotes.sql',
-  'migrations/0132_ai_assistance_quote_integrity.sql'
+  'migrations/0132_ai_assistance_quote_integrity.sql',
+  'migrations/0133_ai_assistance_pricebooks.sql'
 ];
 const merchantEmail='merchant-test@example.invalid';
 const envConfig={
@@ -108,6 +110,37 @@ test('live Worker API with synthetic Supabase/central identities and actual isol
     assert.equal(adminList.status,200,JSON.stringify(adminList));
     assert.equal(adminList.data.requests.length,1);
     assert.equal(adminList.data.contractPolicy.ready,true);
+    const pricebookPath='/api/commons/admin/assistance/pricebook';
+    assert.equal((await invoke(env,'GET',pricebookPath)).status,401);
+    assert.equal((await invoke(env,'GET',pricebookPath,'synthetic-member-a')).status,403);
+    const initialPrices=await invoke(env,'GET',base+'/catalog');
+    assert.equal(initialPrices.status,200);
+    assert.equal(initialPrices.data.plans.find(p=>p.id==='eligibility').price.kind,'quote_required');
+    const version='synthetic-test-2026-10-v1';
+    const merchantPrices={
+      policyVersion:version,
+      merchantApproved:true,publicDisclosureApproved:true,noGuaranteeAcknowledged:true,
+      items:ASSISTANCE_PLANS.map(p=>({id:p.id,currency:'KRW',vatIncluded:true,
+        amount:p.free?0:p.id==='eligibility'?275000:p.id==='document'?480000:null}))
+    };
+    assert.equal((await invoke(env,'POST',pricebookPath,'synthetic-member-a',merchantPrices)).status,403);
+    assert.equal((await invoke(env,'POST',pricebookPath,'synthetic-admin',
+      {...merchantPrices,publicDisclosureApproved:false})).status,400);
+    const published=await invoke(env,'POST',pricebookPath,'synthetic-admin',merchantPrices);
+    assert.equal(published.status,201,JSON.stringify(published));
+    assert.equal(published.data.checkoutEnabled,false);
+    assert.equal((await invoke(env,'POST',pricebookPath,'synthetic-admin',merchantPrices)).status,409);
+    const priced=await invoke(env,'GET',base+'/catalog');
+    assert.equal(priced.status,200,JSON.stringify(priced));
+    assert.equal(priced.data.plans.find(p=>p.id==='eligibility').price.amount,275000);
+    assert.equal(priced.data.plans.find(p=>p.id==='document').price.amount,480000);
+    assert.equal(priced.data.plans.find(p=>p.id==='presentation').price.kind,'quote_required');
+    assert.equal(priced.data.checkoutEnabled,false);
+    assert.equal((await invoke(env,'GET',pricebookPath,'synthetic-admin')).data.active.policyVersion,version);
+    assert.throws(()=>sql.prepare('UPDATE ai_assistance_pricebooks SET status=? WHERE policy_version=?')
+      .run('void',version),/approved_pricebook_is_immutable/);
+    assert.throws(()=>sql.prepare('DELETE FROM ai_assistance_pricebooks WHERE policy_version=?')
+      .run(version),/approved_pricebook_is_immutable/);
     const expiresAt=new Date(Date.now()+7*86400000).toISOString();
     const quoteRequest={lineItems:[{id:'eligibility',amount:330000},{id:'information',amount:0}],
       vatIncluded:true,deliveryDays:14,expiresAt,notes:'가상 데이터 테스트'};
@@ -139,6 +172,9 @@ test('live Worker API with synthetic Supabase/central identities and actual isol
     const second=await invoke(env,'POST',base+'/requests','synthetic-member-b',payload);
     assert.equal(second.status,201,JSON.stringify(second));
     const id2=second.data.id;
+    const secondList=await invoke(env,'GET',base+'/requests','synthetic-member-b');
+    assert.equal(secondList.data.requests.find(r=>r.id===id2).amount,275000);
+    assert.equal(secondList.data.requests.find(r=>r.id===id2).quoteRequired,false);
     assert.throws(()=>sql.prepare("UPDATE ai_assistance_requests SET state='contract_pending' WHERE id=?").run(id2),
       /assistance_contract_pending_requires_review/);
     assert.throws(()=>sql.prepare("INSERT INTO ai_assistance_events(id,request_id,actor_id,kind,event_json,created_at) VALUES('unauthorized',?,'user-b','quote_acknowledged','{}',?)").run(id2,new Date().toISOString()),
@@ -147,6 +183,6 @@ test('live Worker API with synthetic Supabase/central identities and actual isol
     assert.ok(history.includes('quote_issued')&&history.includes('quote_acknowledged'));
     console.log(JSON.stringify({ok:true,mode:'isolated-d1-real-worker-synthetic-identity',
       requestAndHistory:201,quoteIssue:201,customerReview:200,crossMemberRead:404,anonymousRead:401,
-      customerSigned:false,payment:false,workStarted:false,d1IntegrityTriggers:true}));
+      customerSigned:false,payment:false,workStarted:false,d1IntegrityTriggers:true,merchantPricebook:true}));
   }finally{globalThis.fetch=oldFetch;sql.close()}
 });
