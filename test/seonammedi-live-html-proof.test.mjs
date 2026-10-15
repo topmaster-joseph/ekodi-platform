@@ -57,4 +57,6 @@ test('production release verifier retains exact generated HTML byte provenance c
   assert.match(script,/normalizeSeonamMediLiveHtml/);
   assert.match(script,/html_digest_mismatch/);
   assert.match(script,/live_homepage_head_literal_escaped_whitespace/);
+  assert.match(script,/name==='root'\?around\(published,match\.expectedOffset\):'\[redacted\]'/);
+  assert.match(script,/name==='root'\?around\(normalized\.html,match\.actualOffset\):'\[redacted\]'/);
 });
