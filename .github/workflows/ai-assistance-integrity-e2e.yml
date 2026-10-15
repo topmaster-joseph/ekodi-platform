@@ -4,14 +4,15 @@ on:
   pull_request:
     paths:
       - 'test/ai-assistance-storage-e2e.test.mjs'
-      - 'migrations/0132_ai_assistance_quote_integrity.sql
-      - 'migrations/0133_ai_assistance_pricebooks.sql''
+      - 'migrations/0132_ai_assistance_quote_integrity.sql'
+      - 'migrations/0133_ai_assistance_pricebooks.sql'
       - '.github/workflows/ai-assistance-integrity-e2e.yml'
   push:
     branches: [main]
     paths:
       - 'test/ai-assistance-storage-e2e.test.mjs'
       - 'migrations/0132_ai_assistance_quote_integrity.sql'
+      - 'migrations/0133_ai_assistance_pricebooks.sql'
       - '.github/workflows/ai-assistance-integrity-e2e.yml'
   workflow_dispatch:
 
