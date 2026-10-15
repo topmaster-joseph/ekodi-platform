@@ -50,10 +50,44 @@ try{
  results.push({device:'checkout-and-health',health:api.status(),apiSafe,
    amountRejected:denied.status(),postRejected:mutation.status(),nominal:nominal.status(),paymentsSafe});
  if(!apiSafe||!paymentsSafe)failed=true;
+ const demoAvailable=json?.demoMode==='read-only-no-transactions';
+ const demoRequired=process.env.EKODI_REQUIRE_PAY_DEMO==='1';
+ if(demoRequired&&!demoAvailable)failed=true;
+ results.push({device:'demo-release-readiness',demoAvailable,demoRequired,
+   status:demoAvailable?'deployed':'awaiting-guarded-deployment'});
+ if(demoAvailable){
+  for(const viewport of [
+   {name:'desktop',width:1440,height:900,isMobile:false},
+   {name:'mobile',width:390,height:844,isMobile:true},
+  ]){
+   const context=await browser.newContext({viewport:{width:viewport.width,height:viewport.height},isMobile:viewport.isMobile});
+   const page=await context.newPage();
+   const review=await page.goto(base+'/demo?service=edu&step=review',{waitUntil:'domcontentloaded',timeout:20000});
+   const reviewText=await page.locator('main').innerText();
+   const reviewOverflow=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
+   await page.screenshot({path:output+'/'+viewport.name+'-demo-review.png',fullPage:true,animations:'disabled'});
+   const result=await page.goto(base+'/demo?service=edu&step=result&method=card',{waitUntil:'domcontentloaded',timeout:20000});
+   const resultText=await page.locator('main').innerText();
+   const resultOverflow=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
+   await page.screenshot({path:output+'/'+viewport.name+'-demo-result.png',fullPage:true,animations:'disabled'});
+   const ok=review?.status()===200&&result?.status()===200&&
+     reviewText.includes('가상 결제 정보 확인')&&reviewText.includes('50,000')&&
+     resultText.includes('실제 결제는 실행되지 않았습니다')&&reviewOverflow<=2&&resultOverflow<=2;
+   if(!ok)failed=true;
+   results.push({device:viewport.name+'-demo',review:review?.status(),result:result?.status(),
+     reviewOverflow,resultOverflow,ok});
+   await context.close();
+  }
+  const illegal=await request.request.get(base+'/demo?service=edu&step=review&amount=1',{timeout:20000});
+  const fake=await request.request.post(base+'/demo',{data:'purchase',timeout:20000});
+  const demoSafe=illegal.status()===400&&fake.status()===405;
+  if(!demoSafe)failed=true;
+  results.push({device:'demo-mutation-protection',illegal:illegal.status(),post:fake.status(),demoSafe});
+ }
  await request.close();
 }finally{await browser.close();}
 const report={policy:'EKODIPAY-NATIVE-001',origin:base,readOnly:true,realMoneyProcessing:'not-invoked',
-  screenshots:['desktop.png','mobile.png'],passed:!failed,results};
+  screenshots:['desktop.png','mobile.png','desktop-demo-review.png','mobile-demo-review.png','desktop-demo-result.png','mobile-demo-result.png'],passed:!failed,results};
 await fs.writeFile(output+'/report.json',JSON.stringify(report,null,2)+'\n');
 console.log(JSON.stringify({policy:report.policy,passed:report.passed,results:report.results}));
 if(failed)process.exitCode=1;
