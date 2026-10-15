@@ -1,0 +1,50 @@
+name: EKODI Education Read-only Production Chromium Proof
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/verify-education-production-readonly.yml'
+      - 'docs/education-live-proof-after-shell-20261015.md'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-education-proof-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  native-live-acceptance:
+    if: github.repository == 'topmaster-joseph/ekodi-platform'
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout source with no persisted credentials
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Check existing first-party Education verifier and strict privacy guards
+        run: |
+          node --check scripts/verify-education-bootcamp-native.mjs
+          node --check scripts/verify-education-material-studio-native.mjs
+          node --test test/education-native-security-observations.test.mjs test/education-non-tenant-chrome.test.mjs
+      - name: Install ephemeral Chromium
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Read-only live classroom PC/mobile and five viewport acceptance
+        run: node scripts/verify-education-bootcamp-native.mjs
+      - name: Read-only live instructor material studio acceptance
+        run: node scripts/verify-education-material-studio-native.mjs
+      - name: Preserve both real production evidence outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekodi-edu-live-after-shell-${{ github.run_id }}
+          path: |
+            artifacts/education-native/
+            artifacts/education-studio-native/
+          retention-days: 7
