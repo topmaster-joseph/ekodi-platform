@@ -19,14 +19,14 @@
 4. 테스트: 실제 PG 테스트 MID로 카드·간편결제·계좌이체(계약 범위 내), 실패, 중복 승인, 금액 조작, 쿠키 만료, PC·모바일, 콜백/정산 대조, CSP, 결제 취소 및 롤백 검증.
 5. 라이브 전 독립 검증: 판매 사업자/MID 계약, PG 정산 계좌, 세금 처리, 개인정보·약관, 상점관리자 환불/민원 처리, 금융 사고·중복 청구 복구와 2인 승인, 사용자 권한, 운영 모니터링 완료 증명.
 6. 별도 계약 라이브키 TOSS_LIVE_CLIENT_KEY, TOSS_LIVE_SECRET_KEY 를 서버 암호화 비밀값으로 입력. 검증된 PG 판매자/MID 동일성을 확인.
-7. 기존의 기본 비활성화 값을 해제하려면 새로운 정확한 SHA 및 재무 최종 승인을 거친 보호된 릴리스에서 PAYMENT_EXECUTION_MODE=live, EKODIPAY_PG_CONTRACT_VERIFIED=YES, EKODIPAY_SETTLEMENT_OWNER_VERIFIED=YES 를 설정. EKODIPAY_LIVE_OWNER_GATE=APPROVED 도 운영 비밀값으로 설정. 어느 조건 하나라도 빠지면 금전 거래 불허.
+7. 기존의 기본 비활성화 값을 해제하려면 새로운 정확한 SHA 및 재무 최종 승인을 거친 보호된 릴리스에서 PAYMENT_EXECUTION_MODE=live, EKODIPAY_PG_CONTRACT_VERIFIED=YES, EKODIPAY_SETTLEMENT_OWNER_VERIFIED=YES 를 설정. 운영자 전용 대조키 EKODIPAY_OPERATOR_TOKEN (32자 이상)도 별도 암호화 비밀값으로 지정하고, 승인 불확실 거래를 PG 주문 조회로 복구하는 권한과 절차를 점검합니다. 또한 EKODIPAY_REFUND_POLICY_VERIFIED=YES, EKODIPAY_RECONCILIATION_VERIFIED=YES, EKODIPAY_APPROVED_ORDER_ISSUER_VERIFIED=YES, EKODIPAY_DELAYED_METHODS_DISABLED=YES 가 모두 필요합니다. EKODIPAY_LIVE_OWNER_GATE=APPROVED 도 운영 비밀값으로 설정. 어느 조건 하나라도 빠지면 금전 거래 불허.
 8. 정상 배포 뒤에도 실제 소액 거래, 취소 및 정산은 명시적인 재무 승인과 본인 확인 후 실증. 단순 배포 성공만으로 금전거래 완료 보고 금지.
 
 ## 아직 운영 전 반드시 보완할 기능
 - 실제 서비스의 서버 승인 견적·주문 발급과 고객 인증/유효기간.
-- PG 주문별 결제 조회(GET /v1/payments/orders/{orderId}) 및 결과 불확실 거래 수동 재대조, 이력/회계 보고서.
+- 운영자 인증을 요구하는 POST /ekodipay/api/operator/reconcile 은 PG 주문 조회(GET /v1/payments/orders/{orderId})로 승인 불확실 거래를 재대조할 수 있습니다. 실제 테스트키·주문 발급·회계 보고서는 아직 검증 대상입니다.
 - 정품 PG 웹훅 재조회, 중복 이벤트 방지, 비동기 입금·취소 반영.
-- 별도 운영자 검증·2인 승인·멱등키를 포함한 전액/부분 환불, 정산/부가세 대조.
+- POST /ekodipay/api/operator/refund 는 현재 423으로 차단합니다. 별도 운영자 검증·2인 승인·멱등키를 포함한 전액/부분 환불, 정산/부가세 대조 기능이 추가되기 전까지 PG 콘솔을 사용해야 합니다.
 - 에코디몰/교육/기타 사업자의 판매자별 PG·원장·정산 분리.
 - PC/모바일 실제 PG SDK와 인증 정책/접근성/개인정보 관리 실증.
 
