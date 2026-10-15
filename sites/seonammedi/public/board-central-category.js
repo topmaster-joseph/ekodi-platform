@@ -133,6 +133,11 @@
   if(outsideCategory)content.prepend(outsideCategory);
   main.classList.add('seonam-visual-layout');
   main.append(left,content,right);
+  // The original campaign image has a protected full-width, uncropped
+  // presentation contract. Keep it below the overview rather than shrink
+  // it into the center column or change its source bytes.
+  const preservedCampaign=content.querySelector(':scope > .campaign-hero');
+  if(preservedCampaign)main.insertAdjacentElement('afterend',preservedCampaign);
   document.body.classList.add('seonam-visual-ready');
 
   function active(){
