@@ -61,15 +61,20 @@ export function makeEmailDraft({kind,model,portrait,to,subject,message}){
   if(hasPhoto)html=html.replace('src="'+portrait+'"','src="cid:ekodi-instructor-photo"');
   const name=kind==='resume'?'EKODI_Instructor_Resume.html':'EKODI_AI_Bootcamp_Syllabus.html';
   const boundary=MIME_BOUNDARY;
+  const alternative=boundary+'_ALT';
   const headers=['To: '+to,'Subject: =?UTF-8?B?'+utf8Base64(subject)+'?=','MIME-Version: 1.0','Date: '+new Date().toUTCString(),'Content-Type: multipart/mixed; boundary="'+boundary+'"','','This is a multipart MIME message.'];
-  const part=(contentType,encoding,data,extra=[])=>['--'+boundary,'Content-Type: '+contentType,'Content-Transfer-Encoding: '+encoding,...extra,'',data].join('\r\n');
+  const part=(marker,contentType,encoding,data,extra=[])=>['--'+marker,'Content-Type: '+contentType,'Content-Transfer-Encoding: '+encoding,...extra,'',data].join('\r\n');
   const wrap=b64=>b64.match(/.{1,76}/g)?.join('\r\n')||'';
   const body=[
-    part('text/plain; charset=UTF-8','base64',wrap(utf8Base64(message||'AI 부트캠프 교육 제안자료를 첨부합니다.'))),
-    part('text/html; charset=UTF-8','base64',wrap(utf8Base64(html))),
-    part('text/html; name="'+name+'"','base64',wrap(utf8Base64(documentHtml(kind,model,portrait))),['Content-Disposition: attachment; filename="'+name+'"'])
+    '--'+boundary,
+    'Content-Type: multipart/alternative; boundary="'+alternative+'"',
+    '',
+    part(alternative,'text/plain; charset=UTF-8','base64',wrap(utf8Base64(message||'AI 부트캠프 교육 제안자료를 첨부합니다.'))),
+    part(alternative,'text/html; charset=UTF-8','base64',wrap(utf8Base64(html))),
+    '--'+alternative+'--',
+    part(boundary,'text/html; name="'+name+'"','base64',wrap(utf8Base64(documentHtml(kind,model,portrait))),['Content-Disposition: attachment; filename="'+name+'"'])
   ];
-  if(hasPhoto)body.push(part('image/jpeg; name="instructor-photo.jpg"','base64',wrap(portrait.split(',')[1]),['Content-ID: <ekodi-instructor-photo>','Content-Disposition: inline; filename="instructor-photo.jpg"']));
+  if(hasPhoto)body.push(part(boundary,'image/jpeg; name="instructor-photo.jpg"','base64',wrap(portrait.split(',')[1]),['Content-ID: <ekodi-instructor-photo>','Content-Disposition: inline; filename="instructor-photo.jpg"']));
   return [...headers,...body,'--'+boundary+'--',''].join('\r\n');
 }
 function saveFile(name,content,type){
