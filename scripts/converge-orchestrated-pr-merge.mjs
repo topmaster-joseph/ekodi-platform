@@ -80,7 +80,11 @@ const myTouched=changedFiles.some(file=>
   file==='.github/workflows/deploy-my.yml'
 );
 // Release targets are selected only from the verified, merged PR file list.
-const controlApiTouched=changedFiles.some(file=>[
+const controlApiTouched=changedFiles.some(file=>
+  // Guarded Control API deploy applies canonical ekodi-auth D1 migrations.
+  // GitHub-token PR merges do not emit push workflows; never strand new grants.
+  (file.startsWith('migrations/')&&file.endsWith('.sql')&&!file.includes('messenger'))||[
+
   // LANG-UI-001: public language status is served by api-worker.js via
   // language-automation.js. A GITHUB_TOKEN merge does not fire main push CI,
   // so this requires the same receipt-bound Control API deployment.
