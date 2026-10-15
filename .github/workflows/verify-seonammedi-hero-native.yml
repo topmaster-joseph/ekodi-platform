@@ -55,6 +55,11 @@ jobs:
           set -euo pipefail
           mkdir -p .tmp/native-hero-site/seonammedi
           cp -a sites/seonammedi/public/. .tmp/native-hero-site/seonammedi/
+          # The published home requests a Board Worker-owned JS route, not a Site Core static file.
+          # Recreate precisely that read-only route in this local static harness.
+          mkdir -p .tmp/native-hero-site/seonammedi/board/ui
+          cp sites/seonammedi/public/board-central-category.js .tmp/native-hero-site/seonammedi/board/ui/central-category.js
+          cmp sites/seonammedi/public/board-central-category.js .tmp/native-hero-site/seonammedi/board/ui/central-category.js
           (
             cd .tmp/native-hero-site
             nohup python3 -m http.server 8765 --bind 127.0.0.1 > ../native-hero-http.log 2>&1 </dev/null &
