@@ -74,7 +74,9 @@ for(let attempt=1;attempt<=attempts;attempt++){
         const allowlisted=[...Object.values(expected.assets||{}).map(asset=>asset.path).filter(Boolean),
           'assets/campaign-reconsideration-20261013.png',
           // Published shell asset paths; only the customer-domain mount prefix may change.
-          'shared-site-header.css','home-public-feed.css','home-public-feed.js'];
+          'shared-site-header.css','home-public-feed.css','home-public-feed.js',
+          // First-party photo-shell script, published on both mounts. Only its mount prefix may differ.
+          'board-central-category.js'];
         const match=compareSeonamMediPublishedHtml(published,normalized.html,allowlisted);
         if(!match.matched){
           const around=(value,pos)=>typeof pos==='number'?JSON.stringify(String(value).slice(Math.max(0,pos-48),Math.min(String(value).length,pos+96))):'unavailable';
