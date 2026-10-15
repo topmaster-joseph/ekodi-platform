@@ -338,6 +338,28 @@ test('Convergent merge dispatches My EKODI production release with the orchestra
 });
 
 
+test('Exact-SHA provenance recovery dispatches the guarded My Worker after protected merge',async()=>{
+  const [recovery,workflow]=await Promise.all([
+    read('scripts/recover-release-provenance.mjs'),
+    read('.github/workflows/deploy-my.yml')
+  ]);
+  // Source PR #4855 was protected-merged as #4856, but a GitHub-token
+  // recovery merge did not trigger My's normal main-push release workflow.
+  assert.match(recovery,/const myTouched=sourceFiles\.some\(file=>/);
+  assert.match(recovery,/file\.startsWith\('my\/'\)/);
+  assert.match(recovery,/my-worker\.js/);
+  assert.match(recovery,/if\(merge\.response\.ok&&\(independentBoardTouched\|\|shellRuntimeTouched\|\|myTouched\)\)/);
+  assert.match(recovery,/main\.data\?\.commit\?\.sha,80\)!==text\(merge\.data\.sha,80\)/);
+  assert.match(recovery,/if\(myTouched\)\{[\s\S]{0,600}deploy-my\.yml\/dispatches/);
+  assert.match(recovery,/body:JSON\.stringify\(\{ref:'main',inputs:\{release_branch_ref:branchRef,release_task_id:taskId\}\}\)/);
+  assert.match(recovery,/myDispatch\.response\.status!==204/);
+  assert.match(recovery,/out\('my_dispatch','accepted'\)/);
+  assert.match(recovery,/if\(!receipt\.response\.ok\|\|receipt\.data\?\.authorized!==true\)/);
+  assert.match(workflow,/release_branch_ref:/);
+  assert.match(workflow,/release_task_id:/);
+  assert.match(workflow,/node "\$GITHUB_WORKSPACE\/scripts\/validate-ekodi-ai-change-orchestration\.mjs" --release/);
+});
+
 test('My EKODI defers secondary feature bundles until after the critical startup path',async()=>{
   const [html,loader]=await Promise.all([read('my/index.html'),read('my/secondary-feature-loader.js')]);
   assert.match(html,/secondary-feature-loader\.js\?v=20261008-startup-defer-v1/);
