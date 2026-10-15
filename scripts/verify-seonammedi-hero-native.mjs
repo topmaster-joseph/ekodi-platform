@@ -123,6 +123,38 @@ try {
       must(entry.siteHeader&&entry.latestUpdates&&entry.spotlight,'homepage_functionality_missing');
       must(!entry.leadingEscapedText,'literal_escaped_newline_visible_above_header');
       must(entry.mobileHint,'mobile_magnification_instruction_missing');
+      // The source-only probe additionally asserts the new shell truly mounted.
+      // Production still verifies the incumbent release until protected deployment.
+      if(origin==='http://127.0.0.1:8765'||origin==='http://localhost:8765'){
+        await page.locator('body.seonam-visual-ready main.seonam-visual-layout').waitFor({state:'attached',timeout:12000});
+        const visual=await page.evaluate(()=>{
+          const banner=document.querySelector('body > .seonam-visual-hero');
+          const main=document.querySelector('main.seonam-visual-layout');
+          const menu=[...document.querySelectorAll('.seonam-visual-side-nav a[data-seonam-visual-key]')];
+          const left=document.querySelector('.seonam-visual-left');
+          const center=document.querySelector('.seonam-visual-content');
+          const right=document.querySelector('.seonam-visual-right');
+          return {
+            photographicBanner:Boolean(banner?.querySelector('img.seonam-visual-photo[src^="https://images.unsplash.com/"]')),
+            sidebarMenu:menu.map(a=>a.textContent.trim()),
+            layoutColumns:getComputedStyle(main).gridTemplateColumns,
+            layoutDisplay:getComputedStyle(main).display,
+            leftVisible:Boolean(left?.getBoundingClientRect().width),
+            centerVisible:Boolean(center?.getBoundingClientRect().width),
+            rightVisible:Boolean(right?.getBoundingClientRect().width),
+            rightReadsRealNotices:!!right?.querySelector('.seonam-visual-recent-notices'),
+            mobileWidth:document.documentElement.scrollWidth,
+            clientWidth:document.documentElement.clientWidth
+          };
+        });
+        entry.visualShell=visual;
+        must(visual.photographicBanner,'photo_banner_not_mounted');
+        must(JSON.stringify(visual.sidebarMenu)===JSON.stringify(['공지','활동이력','관련소식','소통채널','시민의견','조직']),'visual_six_menu_mismatch');
+        must(visual.leftVisible&&visual.centerVisible&&visual.rightVisible,'visual_columns_missing');
+        must(visual.rightReadsRealNotices,'public_notice_panel_missing');
+        must(profile.isMobile?visual.layoutDisplay==='flex':visual.layoutDisplay==='grid','responsive_layout_mismatch');
+        must(visual.mobileWidth<=visual.clientWidth+1,'visual_shell_horizontal_overflow');
+      }
       const shot=path.join(screenshotsPath,safeName+'-'+profile.name+'.png');
       await page.screenshot({path:shot,fullPage:true,animations:'disabled'});
       entry.screenshot=path.basename(shot);
