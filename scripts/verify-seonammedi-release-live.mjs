@@ -86,11 +86,12 @@ for(let attempt=1;attempt<=attempts;attempt++){
       }
       if(!page.text.includes('data-ekodi-release-convergence'))throw new Error(name+'_runtime_convergence_missing');
     }
-    // Finance is now administrator-only. A public finance page must show the
-    // privacy notice and tenant-local admin handoff, never an embedded ledger/API.
+    // Finance is administrator-only: preserve the notice and private handoff.
     if(!finance.text.includes('공개 회계 조회는 제공하지 않습니다.'))throw new Error('finance_private_surface_notice_missing');
-    if((finance.text.match(/href="\\.\\.\\/admin\\/\\?panel=finance"/g)||[]).length!==2)throw new Error('finance_private_admin_handoff_missing');
-    if(/\\/api\\/seonammedi\\/admin\\/finance|id="ledger"|id="raised"|id="spent"/.test(finance.text))throw new Error('finance_private_ledger_exposure_detected');
+    if(finance.text.split('href="../admin/?panel=finance"').length-1!==2)throw new Error('finance_private_admin_handoff_missing');
+    for(const forbidden of ['/api/seonammedi/admin/finance','id="ledger"','id="raised"','id="spent"']){
+      if(finance.text.includes(forbidden))throw new Error('finance_private_ledger_exposure_detected');
+    }
     if(!notices.text.includes('/api/seonammedi/notices'))throw new Error('notices_surface_contract_missing');
 
     for(const key of ['app.js','app.css','admin/admin.js','admin/admin.css']){
