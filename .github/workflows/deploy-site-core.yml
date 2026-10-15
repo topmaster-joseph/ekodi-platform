@@ -28,6 +28,7 @@ on:
       - 'scripts/converge-orchestrated-pr-merge.mjs'
       - 'site-worker.js'
       - 'cooperative-*.js'
+      - 'sites/business-cooperative/**'
       - 'migrations/0133_cooperative_distribution_workspaces.sql'
       - 'migrations/0134_cooperative_jubilee_name.sql'
       - 'test/cooperative-workspaces.test.mjs'

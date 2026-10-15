@@ -65,6 +65,20 @@ test('unrecognized beacons and malformed trusted metadata are not silently strip
   assert.throws(()=>normalizeSeonamMediLiveHtml(source,{origin:canonical,page:'other.html'}),/unexpected_seonammedi_html_verification_page/);
 });
 
+test('production release convergence requires private finance, not the retired public ledger API',async()=>{
+  const verifier=await readFile(new URL('../scripts/verify-seonammedi-release-live.mjs',import.meta.url),'utf8');
+  const finance=await readFile(new URL('../sites/seonammedi/public/finance/index.html',import.meta.url),'utf8');
+  assert.ok(verifier.includes('finance_private_surface_notice_missing'));
+  assert.ok(verifier.includes('finance_private_admin_handoff_missing'));
+  assert.ok(verifier.includes('finance_private_ledger_exposure_detected'));
+  assert.ok(!verifier.includes('finance_surface_contract_missing'),'retired public API must not block release');
+  assert.ok(finance.includes('공개 회계 조회는 제공하지 않습니다.'));
+  assert.equal(finance.split('href="../admin/?panel=finance"').length-1,2);
+  assert.ok(finance.includes('href="../board/notices">공지</a>'),'Notice must still open the public board directly from finance fallback');
+  for(const secret of ['/api/seonammedi/admin/finance','id="ledger"','id="raised"','id="spent"'])assert.ok(!finance.includes(secret),'no finance payload in public HTML: '+secret);
+  assert.ok(verifier.includes('notices_surface_contract_missing'),'notice contract must remain enforced');
+});
+
 test('production release verifier retains exact generated HTML byte provenance checks',async()=>{
   const script=await readFile(new URL('../scripts/verify-seonammedi-release-live.mjs',import.meta.url),'utf8');
   assert.match(script,/publishedHtmlHashes/);

@@ -70,6 +70,11 @@ try {
             const centralCategory={present:!!centralPanel,initiallyHidden:!!centralPanel?.hidden,noticeTrigger:!!nav?.querySelector('[data-category-menu="공지"]'),entries:centralLinks};
             return {top,groups,centralCategory,
               horizontalOverflow:document.documentElement.scrollWidth>document.documentElement.clientWidth+1,
+              // Report only geometry and class/id names, never private page text.
+              overflowGeometry:Array.from(document.body.querySelectorAll('*'))
+                .map(el=>({el,box:el.getBoundingClientRect()}))
+                .filter(x=>x.box.width>0&&x.box.right>document.documentElement.clientWidth+2)
+                .slice(0,8).map(x=>({tag:x.el.tagName.toLowerCase(),id:String(x.el.id||'').slice(0,45),className:typeof x.el.className==='string'?x.el.className.slice(0,70):'',right:Math.round(x.box.right),width:Math.round(x.box.width)})),
               heroOriginalPresent:!!document.querySelector('.campaign-hero-image'),
               heroLoaded:(()=>{const img=document.querySelector('.campaign-hero-image');return !!img?.complete&&img.naturalWidth===1903&&img.naturalHeight===735})(),
               writeButtonVisible:(()=>{const b=document.getElementById('writeToggle');return !!b&&b.getBoundingClientRect().width>0})(),
@@ -86,18 +91,51 @@ try {
           const publicSurface=!['/minutes/','/admin/'].includes(suffix);
           record.topLevelMatches=JSON.stringify(actualLabels)===JSON.stringify(LABELS);
           if(publicSurface&&!record.topLevelMatches)violations.push('menu_labels_mismatch: '+JSON.stringify(actualLabels));
-          if(record.horizontalOverflow)violations.push('horizontal_overflow');
-          // Home and independent boards expose central content tabs; legacy dropdowns remain supported.
-          // Both layouts must expose real notice, minutes, finance and social links.
-          const noticeGroup=record.groups.find(x=>x.parent==='공지');
+          if(record.horizontalOverflow)violations.push('horizontal_overflow: '+JSON.stringify(record.overflowGeometry||[]).slice(0,420));
+          // Notice is a direct standalone-board link on every public entry, never a category/dropdown.
+          // Other central categories continue to show their own valid social shortcuts.
+          const noticeLink=record.top.find(x=>x.label==='공지');
+          const expectedNoticePath=root.prefix+'/board/notices';
+          let resolvedNoticePath='';
+          try{if(noticeLink?.href)resolvedNoticePath=new URL(noticeLink.href,target).pathname.replace(/[/]$/,'')}catch{}
+          record.directNoticePath=resolvedNoticePath;
+          if(publicSurface&&resolvedNoticePath!==expectedNoticePath)violations.push('notice_direct_path_mismatch');
+          if(publicSurface&&record.centralCategory.noticeTrigger)violations.push('notice_category_click_interception');
           const socialGroup=record.groups.find(x=>x.parent==='소통채널');
-          const centralValid=record.centralCategory.present&&record.centralCategory.initiallyHidden&&true;
-          const noticeEntries=noticeGroup?.entries||(centralValid?record.centralCategory.entries:[]);
+          const centralValid=record.centralCategory.present&&record.centralCategory.initiallyHidden;
           const socialEntries=socialGroup?.entries||(centralValid?record.centralCategory.entries:[]);
-          if(publicSurface&&!noticeEntries.some(x=>x.label==='공지사항'))violations.push('notice_submenu_missing');
           if(publicSurface&&!socialEntries.some(x=>x.label==='유튜브'))violations.push('social_submenus_missing');
           if(publicSurface&&!socialEntries.some(x=>x.label==='인스타그램'))violations.push('instagram_link_missing');
           if(publicSurface&&!socialEntries.some(x=>x.label==='페이스북'||x.label==='페이스북 그룹'))violations.push('facebook_link_missing');
+          // Exercise real top-menu transitions before Notice, not only the isolated Notice link.
+          // Every action stays read-only and uses the same first-party Chromium context.
+          if(suffix==='/'&&centralValid){
+            const contexts=[
+              {label:'활동이력',selector:'a[data-view-link="committee"]'},
+              {label:'관련소식',selector:'a[data-view-link="status"]'},
+              {label:'소통채널',selector:'a[data-view-link="channels"]'},
+              {label:'시민의견',selector:'a[href*="board/voices"]'},
+              {label:'조직',selector:'a[data-view-link="organization"]'}
+            ];
+            const expectedPath=root.prefix+'/board/notices';
+            record.noticeAfterCategory=[];
+            for(const item of contexts){
+              await page.locator('header.site-header nav '+item.selector).first().click({timeout:6000});
+              await page.locator('header.site-header nav a[href*="board/notices"]').first().click({timeout:8000});
+              await page.waitForURL(url=>url.origin===root.origin&&url.pathname.replace(/[/]$/,'')===expectedPath,{timeout:10000});
+              const actualPath=new URL(page.url()).pathname.replace(/[/]$/,'');
+              const ok=actualPath===expectedPath;
+              record.noticeAfterCategory.push({from:item.label,path:actualPath,ok});
+              if(!ok)throw Error('notice_after_'+item.label+'_unexpected_path_'+actualPath);
+              let homeResponse;
+              for(let attempt=0;attempt<2;attempt++){
+                homeResponse=await page.goto(target,{waitUntil:'domcontentloaded',timeout:25000});
+                if(![429,502,503,504].includes(homeResponse?.status()))break;
+                if(attempt===0)await pause(3000);
+              }
+              if(!homeResponse?.ok())throw Error('notice_context_return_home_http_'+String(homeResponse?.status()||0));
+            }
+          }
           if((suffix==='/'||suffix.startsWith('/board/'))&&centralValid){
             try{
               await page.locator('header.site-header nav a[href*="board/notices"]').first().click({timeout:5000});

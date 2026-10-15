@@ -37,6 +37,8 @@ test('canonical Assist E2E proves the rendered light workbench before command de
   assert.match(source, /EXPECTED_DESKTOP_SIDEBAR_WIDTH = 228/);
   assert.match(source, /contextTabsPresent/);
   assert.match(source, /commandEntryPresent/);
+  assert.match(source, /visual\?\.contextTabsPresent \|\| visual\?\.commandEntryPresent/);
+  assert.doesNotMatch(source, /contextTabsDisplay|commandEntryDisplay/);
   assert.match(source, /targetValue !== 'EKODI'/);
   assert.match(source, /targetWidth \|\| 0\) < 150/);
   assert.match(source, /composerRadius !== '30px'/);

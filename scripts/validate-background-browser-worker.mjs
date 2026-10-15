@@ -49,9 +49,11 @@ if(!sharedRelease.includes('surface_paths: /,/my/,/admin/')) fail('shared-site p
 if(boardRegistry.policyId!=='EKODI-BOARD-NATIVE-VERIFY-001'||boardRegistry.status!=='enforced'||boardRegistry.owner!=='ekodi-orchestrator') fail('board native verification registry identity/status drifted');
 if(boardRegistry.canonicalOrigin!=='https://ekodi.kr'||boardRegistry.readOnly!==true||Number(boardRegistry.maxPaths)!==12) fail('board native verification registry safety contract drifted');
 const boardPaths=(boardRegistry.surfaces||[]).filter(item=>item?.enabled!==false).map(item=>item.path);
-for(const requiredPath of ['/seonammedi/#voices','/seonammedi/#notices','/community/','/journal']) if(!boardPaths.includes(requiredPath)) fail('board native verification path missing: '+requiredPath);
+for(const requiredPath of ['/seonammedi/board/voices','/seonammedi/board/notices','/community/','/journal']) if(!boardPaths.includes(requiredPath)) fail('board native verification path missing: '+requiredPath);
+for(const retiredPath of ['/seonammedi/#voices','/seonammedi/#notices']) if(boardPaths.includes(retiredPath)) fail('retired hash-based SeonamMedi route cannot replace board navigation: '+retiredPath);
 if(!workerWorkflow.includes('INPUT_REGISTRY')||!workerWorkflow.includes('surface registry must stay inside the checked-out repository')) fail('background browser workflow must load board verification registry safely');
 if(!workerWorkflow.includes('const remaining=Math.max(0,maxPaths-basePaths.length)')||!workerWorkflow.includes('.slice(0,remaining)')) fail('background browser workflow must preserve requested surfaces and bound registry growth to the remaining path budget');
+if(!workerWorkflow.includes('const screenshotBudget=Math.max(0,30-(2*paths.length-1))')||!workerWorkflow.includes('screenshots<screenshotBudget')||!workerWorkflow.includes("actions.length>30")) fail('native browser snapshots and screenshots must stay inside the verified 30-action budget');
 if((sharedRelease.match(/surface_registry:\s*config\/board-surface-verification\.json/g)||[]).length<2) fail('desktop and mobile shared-site verification must consume the board surface registry');
 if(!sharedRelease.includes('authenticated_admin_surface_verification:')||!sharedRelease.includes('verify-admin-production-ui-e2e.yml')) fail('shared-site production release must run authenticated Admin UI verification after deploy');
 

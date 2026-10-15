@@ -74,7 +74,10 @@ for(let attempt=1;attempt<=attempts;attempt++){
         const allowlisted=[...Object.values(expected.assets||{}).map(asset=>asset.path).filter(Boolean),
           'assets/campaign-reconsideration-20261013.png',
           // Published shell asset paths; only the customer-domain mount prefix may change.
-          'shared-site-header.css','home-public-feed.css','home-public-feed.js'];
+          'shared-site-header.css','home-public-feed.css','home-public-feed.js',
+          // New CSP-safe photo/category shell is an existing site-owned static asset.
+          // Permit only this named file, never arbitrary customer-domain redirects.
+          'board-central-category.js'];
         const match=compareSeonamMediPublishedHtml(published,normalized.html,allowlisted);
         if(!match.matched){
           const around=(value,pos)=>typeof pos==='number'?JSON.stringify(String(value).slice(Math.max(0,pos-48),Math.min(String(value).length,pos+96))):'unavailable';
@@ -86,7 +89,12 @@ for(let attempt=1;attempt<=attempts;attempt++){
       }
       if(!page.text.includes('data-ekodi-release-convergence'))throw new Error(name+'_runtime_convergence_missing');
     }
-    if(!finance.text.includes('/api/seonammedi/admin/finance'))throw new Error('finance_surface_contract_missing');
+    // Finance is administrator-only: preserve the notice and private handoff.
+    if(!finance.text.includes('공개 회계 조회는 제공하지 않습니다.'))throw new Error('finance_private_surface_notice_missing');
+    if(finance.text.split('href="../admin/?panel=finance"').length-1!==2)throw new Error('finance_private_admin_handoff_missing');
+    for(const forbidden of ['/api/seonammedi/admin/finance','id="ledger"','id="raised"','id="spent"']){
+      if(finance.text.includes(forbidden))throw new Error('finance_private_ledger_exposure_detected');
+    }
     if(!notices.text.includes('/api/seonammedi/notices'))throw new Error('notices_surface_contract_missing');
 
     for(const key of ['app.js','app.css','admin/admin.js','admin/admin.css']){
