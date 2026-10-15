@@ -1,7 +1,7 @@
 import {paymentRoute, paymentMode} from './ekodipay-provider-toss.js';
 export { PayOrderStore } from './ekodipay-order-store.js';
 // EKODI Pay public entry and non-financial experience demo.
-// This Worker NEVER makes PG requests, stores transactions, or confirms payment.
+// Financial PG endpoints are separately guarded; production money movement remains disabled until independent approval and credentials.
 export const CANONICAL_PAYMENT_ROOT = 'https://ekodi.kr/ekodipay';
 const PREFIX = '/ekodipay';
 const ORDER_ID = /^EB-[A-Z0-9-]{6,80}$/;
