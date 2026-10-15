@@ -57,6 +57,11 @@ async function findMergedPayPr() {
   }
   const check=classifyMergedPayRelease({pr,files,branch,
     sha:verifyOnly?'':process.env.GITHUB_SHA});
+  // Normal unrelated orchestrator releases are successful no-ops.
+  if(!check.eligible&&!verifyOnly&&check.payFiles.length===0){
+    console.log('No EKODI Pay source changes in merged PR #'+pr.number+'; skip.');
+    return null;
+  }
   assert(check.eligible,'merged PR is not a canonical EKODI Pay source change');
   assert(/^[a-f0-9]{40}$/i.test(String(pr.merge_commit_sha||'')),'merged commit SHA unavailable');
   const behind=await gh('/compare/'+encodeURIComponent(pr.merge_commit_sha)+'...main');
@@ -75,6 +80,7 @@ async function main(){
   }
   await verifyOrchestratorReleaseReceipt(task.branchRef,{explicitTaskId:task.taskId});
   const evidence=await findMergedPayPr();
+  if(!evidence)return;
   if(verifyOnly){
     console.log('EKODI Pay release scope validated: PR #'+evidence.prNumber+
       '; merged into main; task '+task.taskId+'; protected source evidence');
