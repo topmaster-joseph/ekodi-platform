@@ -6,6 +6,7 @@ import { legacyAdminAliasTarget } from './admin-address-policy.js';
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
 import { ekodiBizInvestBusinessPage, isEkodiBizInvestPath } from './ekodibiz-invest-business.js';
 import { dorajiOfficeResponse, isDorajiOfficePath } from './ekodibiz-doraji-office.js';
+import { dorajiOperatorResponse, isDorajiOperatorPath } from './ekodibiz-doraji-operator-ui.js';
 import { dorajiLedgerApiResponse, isDorajiLedgerApiPath } from './ekodibiz-doraji-ledger-api.js';
 import { businessOsCommonResponse, isBusinessOsCommonPath } from './business-os-public-api.js';
 import { ekodiBizInvestAdminPage, isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
@@ -735,6 +736,10 @@ export default {
       // Keep EKODIBIZ business-unit routes owned by the shared apex shell, even after Pay routing changes.
       if (isBusinessOsCommonPath(url.pathname)) return withHostSecurity(await businessOsCommonResponse(request), PUBLIC_CSP, 'no-store', 'public-ekodibiz-business-os');
       if (isDorajiLedgerApiPath(url.pathname)) return withHostSecurity(await dorajiLedgerApiResponse(request,env), PUBLIC_CSP, 'private, no-store', 'private-ekodibiz-doraji-ledger');
+      if (isDorajiOperatorPath(url.pathname)) {
+        const secured=withHostSecurity(dorajiOperatorResponse(request), PUBLIC_CSP, 'private, no-store', 'private-ekodibiz-doraji-operator');
+        return url.pathname.endsWith('.js')?secured:injectEkodiShell(secured,'biz','public');
+      }
       if (isDorajiOfficePath(url.pathname)) return injectEkodiShell(withHostSecurity(dorajiOfficeResponse(request), PUBLIC_CSP, 'no-store', 'public-ekodibiz-doraji'), 'biz', 'public');
       if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestPath(url.pathname)) {
         const page=ekodiBizInvestBusinessPage(request);
