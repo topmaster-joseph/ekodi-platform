@@ -5,7 +5,7 @@ export const DEFAULT_RESUME=Object.freeze({
   name:'정찬균',
   headline:'AI 실무활용 · 디지털전환 · 경영정보시스템(MIS) · 기술수용 · 디지털콘텐츠',
   summary:'경영정보시스템의 기술수용 연구와 현장 디지털전환 프로젝트를 연결하는 연구자이자 실무 기획자. 에코디 플랫폼을 통한 생성형 AI 활용, 업무 오케스트레이션, 디지털콘텐츠 및 지역상권 컨설팅 사례를 대학 교직원의 실용적인 AI 활용 교육으로 전환합니다.',
-  education:'국립목포대학교 일반대학원 경영학박사 — 2026년 8월 취득예정으로 작성된 기존 이력서 기준. 최종 학위 수여일 확인 후 수정\n국립목포대학교 대학원 경영학석사 — 2013.08\n호남신학대학교 교역학석사(M.Div.) — 2020.08\n목포대학교 경영학과 학사 — 2003.02',
+  education:'국립목포대학교 일반대학원 경영학박사 — 2026.08.20 경영학박사 학위 취득 (국립목포대학교 학위기 확인)\n국립목포대학교 대학원 경영학석사 — 2013.08\n호남신학대학교 교역학석사(M.Div.) — 2020.08\n목포대학교 경영학과 학사 — 2003.02',
   experience:'에코디비즈 대표 · EKODI 플랫폼 및 AI 서비스 구축 기획\n생성형 AI 업무 자동화와 디지털 콘텐츠 개발 실무\n소상공인·지역상권 현장 디지털전환 연구 및 컨설팅',
   research:'Yoon, C., Jeong, C., & Rolland, E. (2015). Understanding individual adoption of mobile instant messaging: A multiple perspectives approach. Information Technology and Management, 16(2), 139–151. DOI: 10.1007/s10799-014-0202-4\n석사학위논문(2013): 모바일 인스턴트 메세징 서비스 수용에 관한 연구\n박사연구: 소상공인의 지능형 서비스로봇 사용의도에 관한 연구 (최종 논문 제목·수여 확인)',
   skills:'정보처리기사 (2005, 증빙 확인 필요)\n사무자동화산업기사 (2004, 증빙 확인 필요)\n전자상거래관리사 2급 (2002, 증빙 확인 필요)\n교직원 대상 프롬프트 설계·행정문서·데이터·연구지원·AI 윤리 교육 설계',
@@ -40,7 +40,7 @@ export function documentBody(kind,model,portrait){
   if(kind==='resume'){
     return '<div class="paper-top"><div><p class="eyebrow">INSTRUCTOR CURRICULUM VITAE</p><h3>'+escapeHtml(model.name)+'</h3><p class="meta">'+escapeHtml(model.headline)+'</p></div><img src="'+portrait+'" alt="강사 증명사진"></div>'+
       '<h4>전문 소개</h4><p>'+escapeHtml(model.summary)+'</p>'+listSection('학력',model.education)+listSection('주요 경력 및 프로젝트',model.experience)+listSection('연구 및 논문',model.research)+listSection('자격 및 교육 역량',model.skills)+
-      (model.contact?'<h4>제출용 연락처</h4><p>'+escapeHtml(model.contact)+'</p>':'')+'<p class="small">최종 학위·자격증 및 경력 증빙은 제출 전에 확인해야 합니다.</p>';
+      (model.contact?'<h4>제출용 연락처</h4><p>'+escapeHtml(model.contact)+'</p>':'')+'<p class="small">자격증·경력 실적은 제출 전에 최종 증빙을 확인해야 합니다.</p>';
   }
   return '<p class="eyebrow">AI BOOTCAMP · TEACHING PROPOSAL</p><h3>'+escapeHtml(model.title)+'</h3><p class="meta">'+escapeHtml(model.audience)+'</p><p class="banner">'+escapeHtml(model.schedule)+'</p>'+
     listSection('교육 목표',model.goals)+listSection('1회차',model.session1)+listSection('2회차',model.session2)+listSection('3회차',model.session3)+listSection('4회차',model.session4)+listSection('교수학습 방법',model.method)+listSection('윤리 · 보안 · 운영',model.security)+
@@ -59,7 +59,6 @@ export function makeEmailDraft({kind,model,portrait,to,subject,message}){
   const hasPhoto=kind==='resume'&&/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(portrait);
   let html=documentHtml(kind,model,hasPhoto?portrait:'');
   if(hasPhoto)html=html.replace('src="'+portrait+'"','src="cid:ekodi-instructor-photo"');
-  const plain=escapeHtml(message||'AI 부트캠프 교육 제안자료를 첨부합니다.');
   const name=kind==='resume'?'EKODI_Instructor_Resume.html':'EKODI_AI_Bootcamp_Syllabus.html';
   const boundary=MIME_BOUNDARY;
   const headers=['To: '+to,'Subject: =?UTF-8?B?'+utf8Base64(subject)+'?=','MIME-Version: 1.0','Date: '+new Date().toUTCString(),'Content-Type: multipart/mixed; boundary="'+boundary+'"','','This is a multipart MIME message.'];
@@ -131,7 +130,6 @@ function boot(){
       const data=JSON.parse(await file.text());if(data.schema!=='ekodi-bootcamp-documents-v1')throw Error('지원하지 않는 백업 버전');
       for(const type of ['resume','syllabus']){
         if(!data[type]||typeof data[type]!=='object')throw Error('문서 필드가 없습니다');
-        const defaults=type==='resume'?DEFAULT_RESUME:DEFAULT_SYLLABUS;
         const next={};
         for(const key of KEY_LIST[type]){
           if(typeof data[type][key]!=='string'||data[type][key].length>LIMITS[type])throw Error(key+' 필드 형식 오류');
