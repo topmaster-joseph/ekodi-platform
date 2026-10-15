@@ -69,7 +69,7 @@ test('finance and notice boards are first-class standalone board routes',async()
   assert.match(worker,/function noticesPage\(req\)/);
   assert.match(worker,/path==='\/finance'/);
   assert.match(worker,/path==='\/notices'/);
-  assert.match(worker,/\/board\/api\/admin\/finance/);
+  assert.match(worker,/path==='\/api\/admin\/finance'/);
   assert.match(worker,/\/board\/api\/admin\/notices/);
   assert.match(worker,/requirePermission\(req,'finance'\)/);
   assert.match(worker,/requirePermission\(req,'notices'\)/);
@@ -88,7 +88,7 @@ test('finance summary and details require administrator permission, not just Goo
   assert.match(worker,/finance_detail_admin_only/);
   assert.match(worker,/id="financeAdminOnly"/);
   assert.doesNotMatch(worker,/id="summaryPanel"/,'legacy public finance board must not render a summary');
-  assert.match(worker,/\/board\/api\/admin\/finance/);
+  assert.match(worker,/path==='\/api\/admin\/finance'/);
   assert.match(worker,/method:id\?"PUT":"POST"/);
   assert.match(worker,/method:"DELETE"/);
 });
@@ -224,10 +224,10 @@ test('standalone board preserves slash parity on external and internal mounts',a
   const mod=await import(new URL('../services/independent-board/worker.js?slash-parity='+Date.now(),import.meta.url));
   const pairs=[
     ['https://seonammedi.kr/board/voices','https://seonammedi.kr/board/voices/','시민의견'],
-    ['https://seonammedi.kr/board/finance','https://seonammedi.kr/board/finance/','회계'],
+    ['https://seonammedi.kr/board/finance','https://seonammedi.kr/board/finance/','회계 관리'],
     ['https://seonammedi.kr/board/notices','https://seonammedi.kr/board/notices/','공지'],
     ['https://ekodi.kr/seonammedi/board/voices','https://ekodi.kr/seonammedi/board/voices/','시민의견'],
-    ['https://ekodi.kr/seonammedi/board/finance','https://ekodi.kr/seonammedi/board/finance/','회계'],
+    ['https://ekodi.kr/seonammedi/board/finance','https://ekodi.kr/seonammedi/board/finance/','회계 관리'],
     ['https://ekodi.kr/seonammedi/board/notices','https://ekodi.kr/seonammedi/board/notices/','공지']
   ];
   for(const [slashless,trailing,label] of pairs){
