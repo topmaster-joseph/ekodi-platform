@@ -15,7 +15,7 @@ test('Drive portrait is a valid inlined JPG, no additional identity documents',(
 });
 test('editable resume and syllabus use factual proposal state',()=>{
   assert.match(DEFAULT_RESUME.name,/정찬균/);
-  assert.match(DEFAULT_RESUME.education,/확인 후 수정/);
+  assert.match(DEFAULT_RESUME.education,/2026\.08\.20 경영학박사 학위 취득/);
   assert.match(DEFAULT_SYLLABUS.schedule,/24회 · 48시간/);
   assert.match(DEFAULT_SYLLABUS.security,/개인정보/);
   assert.match(file('index.html'),/id="portraitEditor"/);
