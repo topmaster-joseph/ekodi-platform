@@ -10,7 +10,7 @@ test('independent board serves its own CSP-safe category script from both mounts
     const asset=root+'/board/ui/central-category.js';
     const response=await board.fetch(new Request(asset),{});
     assert.equal(response.status,200,asset);
-    assert.match(response.headers.get('content-type')||'',/application\\/javascript/);
+    assert.ok((response.headers.get('content-type')||'').includes('application/javascript'),'Worker JS must have executable MIME type');
     assert.equal(response.headers.get('x-content-type-options'),'nosniff');
     assert.equal(response.headers.get('cache-control'),'no-store');
     assert.equal(await response.text(),expected,'same source on both native mounts');
