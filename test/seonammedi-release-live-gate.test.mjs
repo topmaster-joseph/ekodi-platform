@@ -15,6 +15,8 @@ test('shared-site production gate verifies SeonamMedi live release convergence',
   // The finance route is no longer a public ledger; test the new fail-closed checks.
   assert.match(script,/finance_private_surface_notice_missing/);
   assert.match(script,/finance_private_admin_handoff_missing/);
+  assert.ok(script.includes("finance.text.split('href=\\\"../admin/?panel=finance\\\"')"),'tenant-relative finance admin link should remain a mandatory live check');
+
   assert.match(script,/finance_private_ledger_exposure_detected/);
   assert.doesNotMatch(script,/finance_surface_contract_missing/);
   assert.match(script,/notices_surface_contract_missing/);
