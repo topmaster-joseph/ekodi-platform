@@ -127,7 +127,9 @@ test('Human Gate rejects quoted markers and ensures exact owner approval precede
   assert.equal(verify([comment(marker)],[]),null);
   assert.equal(verify([comment(marker,'owner','2026-10-15T12:00:00Z','2026-10-15T12:02:00Z')],later),null);
   assert.equal(verify([comment(marker.slice(0,-1)+'0')],later),null);
-  const approved=verify([comment(' '+marker+' ')],later);
+  assert.equal(verify([comment(' '+marker+' ')],later),null);
+  assert.equal(verify([comment(marker+'\n')],later),null);
+  const approved=verify([comment(marker)],later);
   assert.equal(approved?.approvalComment?.user?.login,'owner');
   assert.equal(approved?.labelEvent?.created_at,'2026-10-15T12:01:00Z');
 });
