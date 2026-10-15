@@ -10,6 +10,9 @@ on:
       - 'test/education-release-continuity.test.mjs'
       - '.github/workflows/education-release-continuity.yml'
       - 'education/study/ai-bootcamp/studio/**'
+      - 'education/study/ai-bootcamp/documents/**'
+      - 'scripts/verify-education-documents-native.mjs'
+      - 'test/education-bootcamp-documents.test.mjs'
       - 'education/study/ai-bootcamp/material-source.js'
       - 'scripts/verify-education-material-studio-native.mjs'
       - 'test/education-material-studio.test.mjs'
@@ -40,7 +43,7 @@ jobs:
       - name: Install EKODI-native disposable Chromium for pre-approval preview
         if: github.event_name == 'pull_request'
         run: |
-          npm install --no-save --package-lock=false playwright@1.55.0
+          npm install --no-save --package-lock=false playwright@1.64.1
           npx playwright install --with-deps chromium
       - name: Pre-approval synthetic classroom browser acceptance (five widths)
         if: github.event_name == 'pull_request'
@@ -58,6 +61,7 @@ jobs:
           done
           node scripts/verify-education-bootcamp-native.mjs
           node scripts/verify-education-material-studio-native.mjs
+          node scripts/verify-education-documents-native.mjs
       - uses: actions/upload-artifact@v4
         if: always() && github.event_name == 'pull_request'
         with:
@@ -65,6 +69,7 @@ jobs:
           path: |
             artifacts/education-native/
             artifacts/education-studio-native/
+            artifacts/education-documents-native/
           retention-days: 7
 
   reconcile:
