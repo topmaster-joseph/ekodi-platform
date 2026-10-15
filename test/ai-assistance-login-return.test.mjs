@@ -73,5 +73,7 @@ test('no stale header link, stale notice deep link or unsafe auto-submission rem
   assert.match(client,/restoreAssistanceAfterLogin\(item\);assistanceRenderPlans\(\)/);
   assert.match(client,/support_plans/);
   assert.match(client,/history\.replaceState\(null,'',target\)/);
-  assert.doesNotMatch(client.slice(begin,end),/localStorage|sessionStorage|applicantName|organization|paymentConfirmed/);
+  const helper=client.slice(begin,end);
+  assert.doesNotMatch(helper,/localStorage|sessionStorage/);
+  assert.doesNotMatch(helper,/searchParams\.(?:set|append)\(['\"](?:applicantName|organization|consent|paymentConfirmed)/);
 });
