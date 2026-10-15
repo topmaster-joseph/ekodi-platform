@@ -45,6 +45,11 @@ jobs:
           assert.ok(js.text.includes('openAssistanceQuote'),'production JS missing contract review');
           assert.ok(js.text.includes('loadAssistanceAdmin'),'production JS missing approved-quote management');
           assert.ok(js.text.includes('loadAssistancePricebook'),'production JS missing approved standard-price management');
+          assert.ok(js.text.includes('function assistanceReturnHref('),'login must return to originating notice and work intent');
+          assert.ok(js.text.includes("url.searchParams.set('return_to',assistanceReturnHref(requestIntent))"),'login must preserve exact current hash and query');
+          assert.ok(js.text.includes('restoreAssistanceAfterLogin(item)'),'post-login service selection restoration missing');
+          assert.ok(js.text.includes('support_plans'),'non-personal selected service IDs must be restored');
+          assert.ok(!js.text.includes("location.href.split('#')[0]"),'login return URL must not discard the hash');
           const catalog=await get('/ai/api/commons/assistance/catalog');
           assert.equal(catalog.response.status,200,'assistance catalog public API');
           const data=JSON.parse(catalog.text);
