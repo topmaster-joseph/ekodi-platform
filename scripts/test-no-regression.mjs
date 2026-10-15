@@ -51,6 +51,16 @@ console.log(`PR test regression gate: current failing tests=${currentTotal}, bas
 if(base.status===0||newFailures.length||currentTotal>baseTotal){
   console.error('New or worsened test failures detected.');
   for(const item of newFailures.slice(0,50)) console.error(`- ${item}`);
+  // Show only bounded TAP diagnostics for newly introduced regressions.
+  // Never print the complete test log (it may include unrelated fixture context).
+  const lines=normalize(currentText).split(/\r?\n/);
+  for(const name of [...cur.keys()].filter(name=>(cur.get(name)||0)>(old.get(name)||0)).slice(0,12)){
+    const at=lines.findIndex(line=>/^not ok \d+ - /.test(line)&&line.endsWith(' - '+name));
+    if(at<0)continue;
+    console.error('--- New regression diagnostic: '+name+' ---');
+    const detail=lines.slice(at,at+28).filter(line=>!/(?:authorization:|access_token|refresh_token|secret|password|api[_-]?key)/i.test(line));
+    for(const line of detail)console.error(line.slice(0,500));
+  }
   process.exit(1);
 }
 console.log('No new test failures versus base branch. Existing base failures remain visible technical debt.');

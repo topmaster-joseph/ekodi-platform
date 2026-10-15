@@ -6,7 +6,7 @@ const EXCHANGE_RE=/^\/([a-z0-9][a-z0-9._-]{2,39})\/card\/exchange\/?$/;
 const QR_RE=/^\/([a-z0-9][a-z0-9._-]{2,39})\/qr\/?$/;
 const SHORT_CARD_RE=/^\/([a-z0-9][a-z0-9_-]{2,39})\/?$/;
 // Short public-card handles never override existing My EKODI service endpoints.
-const RESERVED_MY_PATHS=new Set(['health','docs','approvals','admin','api','creator','personal-brand','config','service-manifest','workspace-packs','capability-registry','life-channels','app','w']);
+const RESERVED_MY_PATHS=new Set(['health','docs','approvals','journey','device-care','vendor','admin','api','creator','personal-brand','config','service-manifest','workspace-packs','capability-registry','life-channels','app','w']);
 const MAX_BODY_BYTES=8192;
 const encoder=new TextEncoder();
 
