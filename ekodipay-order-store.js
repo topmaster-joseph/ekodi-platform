@@ -36,25 +36,34 @@ export class PayOrderStore {
       return json({ok:true,order:{orderId:order.orderId,merchant:order.merchant,service:order.service,
         amount:order.amount,currency:order.currency,orderName:order.orderName,status:order.status}});
     if(action==='/session'&&request.method==='POST'){
-      if(order.status!=='ready'||Date.now()>order.expiresAt)return json({ok:false,error:'order_not_ready_or_expired'},409);
-      if(order.checkoutToken&&Date.now()<order.sessionExpires)return json({ok:false,error:'session_already_active'},409);
-      const token=crypto.randomUUID()+'-'+crypto.randomUUID();
-      order.checkoutToken=token;order.sessionExpires=Date.now()+10*60*1000;
-      await this.storage.put('order',order);
-      return json({ok:true,token,expiresAt:order.sessionExpires,
-        order:{orderId:order.orderId,amount:order.amount,currency:'KRW',orderName:order.orderName}});
+      return this.storage.transaction(async tx=>{
+        const fresh=await tx.get('order');
+        if(fresh.status!=='ready'||Date.now()>fresh.expiresAt)
+          return json({ok:false,error:'order_not_ready_or_expired'},409);
+        if(fresh.checkoutToken&&Date.now()<fresh.sessionExpires)
+          return json({ok:false,error:'session_already_active'},409);
+        const token=crypto.randomUUID()+'-'+crypto.randomUUID();
+        fresh.checkoutToken=token;fresh.sessionExpires=Date.now()+10*60*1000;
+        await tx.put('order',fresh);
+        return json({ok:true,token,expiresAt:fresh.sessionExpires,
+          order:{orderId:fresh.orderId,amount:fresh.amount,currency:'KRW',orderName:fresh.orderName}});
+      });
     }
     if(action==='/reserve'&&request.method==='POST'){
-      if(order.status!=='ready')return json({ok:false,error:'order_already_reserved'},409);
-      if(data.token!==order.checkoutToken||Date.now()>order.sessionExpires)
-        return json({ok:false,error:'checkout_session_expired'},403);
-      if(data.orderId!==order.orderId||data.amount!==order.amount||data.pgMode!==order.pgMode||Date.now()>order.expiresAt||
-        !/^[a-zA-Z0-9_-]{6,200}$/.test(String(data.paymentKey||'')))
-        return json({ok:false,error:'payment_auth_mismatch'},400);
-      order.status='confirming';order.providerKey=data.paymentKey;order.reservedAt=Date.now();
-      order.checkoutToken=null;
-      await this.storage.put('order',order);
-      return json({ok:true,orderId:order.orderId,amount:order.amount});
+      return this.storage.transaction(async tx=>{
+        const fresh=await tx.get('order');
+        if(fresh.status!=='ready')return json({ok:false,error:'order_already_reserved'},409);
+        if(data.token!==fresh.checkoutToken||Date.now()>fresh.sessionExpires)
+          return json({ok:false,error:'checkout_session_expired'},403);
+        if(data.orderId!==fresh.orderId||data.amount!==fresh.amount||
+          data.pgMode!==fresh.pgMode||Date.now()>fresh.expiresAt||
+          !/^[a-zA-Z0-9_-]{6,200}$/.test(String(data.paymentKey||'')))
+          return json({ok:false,error:'payment_auth_mismatch'},400);
+        fresh.status='confirming';fresh.providerKey=data.paymentKey;fresh.reservedAt=Date.now();
+        fresh.checkoutToken=null;
+        await tx.put('order',fresh);
+        return json({ok:true,orderId:fresh.orderId,amount:fresh.amount});
+      });
     }
     if(action==='/settle'&&request.method==='POST'){
       if(order.status!=='confirming'||order.providerKey!==data.paymentKey)
