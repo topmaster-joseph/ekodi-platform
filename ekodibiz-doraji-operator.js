@@ -72,17 +72,17 @@ function init(){
  $('refresh').addEventListener('click',()=>execute(loadProjects));
  $('project-select').addEventListener('change',()=>{state.selected=$('project-select').value;$('record-form').hidden=!state.selected;execute(loadRecords)});
  $('record-kind').addEventListener('change',()=>execute(loadRecords));
- $('project-form').addEventListener('submit',event=>{event.preventDefault();execute(async()=>{
-  const fd=new FormData(event.currentTarget);
+ $('project-form').addEventListener('submit',event=>{event.preventDefault();const form=event.currentTarget;execute(async()=>{
+  const fd=new FormData(form);
   const project={name:String(fd.get('name')||''),region:String(fd.get('region')||''),greenhouseCount:Number(fd.get('greenhouseCount')),areaSqm:Number(fd.get('areaSqm'))};
-  const created=await call('/projects','POST',project);state.selected=created.id;event.currentTarget.reset();await loadProjects();message('새 사업의 초안만 저장했습니다.','success');
+  const created=await call('/projects','POST',project);state.selected=created.id;form.reset();await loadProjects();message('새 사업의 초안만 저장했습니다.','success');
  })});
- $('record-form').addEventListener('submit',event=>{event.preventDefault();execute(async()=>{
+ $('record-form').addEventListener('submit',event=>{event.preventDefault();const form=event.currentTarget;execute(async()=>{
   if(!state.selected)throw new Error('단위사업을 먼저 선택해 주세요.');
-  const fd=new FormData(event.currentTarget);
+  const fd=new FormData(form);
   const record={kind:$('record-kind').value,date:String(fd.get('date')||''),title:String(fd.get('title')||''),note:String(fd.get('note')||''),quantityKg:Number(fd.get('quantityKg')||0),amountKRW:Number(fd.get('amountKRW')||0),counterparty:String(fd.get('counterparty')||''),reference:String(fd.get('reference')||'')};
   await call('/projects/'+encodeURIComponent(state.selected)+'/records','POST',record);
-  event.currentTarget.reset();$('record-date').value=new Date().toISOString().slice(0,10);await loadRecords();message('업무 초안 저장 완료 · 법적 계약이나 정산 승인이 아닙니다.','success');
+  form.reset();$('record-date').value=new Date().toISOString().slice(0,10);await loadRecords();message('업무 초안 저장 완료 · 법적 계약이나 정산 승인이 아닙니다.','success');
  })});
  $('record-date').value=new Date().toISOString().slice(0,10);
  if(state.token)execute(loadProjects);else message('에코디 중앙 관리자 로그인 후 이 화면으로 돌아오세요.');
