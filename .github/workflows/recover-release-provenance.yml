@@ -8,6 +8,7 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
+  actions: write
 
 concurrency:
   group: ekodi-release-provenance-recovery-${{ github.event.pull_request.number }}
@@ -52,4 +53,5 @@ jobs:
             echo "- branch: ${{ steps.recover.outputs.branch_ref || 'n/a' }}"
             echo "- recovery PR: ${{ steps.recover.outputs.recovery_pr || 'n/a' }}"
             echo "- merge: ${{ steps.recover.outputs.merge_disposition || 'n/a' }}"
+            echo "- independent board dispatch: ${{ steps.recover.outputs.independent_board_dispatch || 'not-required' }}"
           } >> "$GITHUB_STEP_SUMMARY"
