@@ -23,6 +23,8 @@ test('protected live-release verifier uses exact photo-shell path, not arbitrary
   assert.ok(verifier.includes("'board-central-category.js'"),'published photo shell must be included in strict alias list');
   assert.ok(verifier.includes('compareSeonamMediPublishedHtml(published,normalized.html,allowlisted)'),'strict byte-by-byte comparison must remain');
   assert.ok(alias.includes('unapproved_domain_alias'),'unregistered paths must fail closed');
-  assert.ok(page.includes('/seonammedi/board-central-category.js?v=20261015-photo-shell-1'),'actual published page must use the registered path');
+  assert.ok(page.includes('/seonammedi/board/ui/central-category.js?v=20261016-home-photo-worker-1'),'actual published home must use the verified Worker route');
+  assert.ok(verifier.includes("'board/ui/central-category.js'"),'published Worker path must be included in the strict alias list');
+  assert.ok(!page.includes('src="/seonammedi/board-central-category.js'),'deprecated static script path must not reappear');
   assert.ok(!verifier.includes('allowAllPathAliases'),'no broad alias bypass');
 });
