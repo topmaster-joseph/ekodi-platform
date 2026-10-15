@@ -23,7 +23,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: seonammedi-native-nav-${{ github.event_name }}-${{ github.ref }}
+  # Unrelated issue comments must never cancel the owner's post-merge live audit.
+  group: seonammedi-native-nav-${{ github.event_name }}-${{ github.event_name == 'issue_comment' && github.event.comment.id || github.ref }}
   cancel-in-progress: true
 
 jobs:
