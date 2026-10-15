@@ -3,6 +3,12 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
+const runsWorkerFirst = (config, path) => {
+  const patterns = JSON.parse(config.match(/run_worker_first\s*=\s*(\[[^\]]*\])/s)[1]);
+  const matches = pattern => new RegExp('^' + pattern.split('*').map(part => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*') + '$').test(path);
+  return patterns.some(pattern => !pattern.startsWith('!') && matches(pattern))
+    && !patterns.some(pattern => pattern.startsWith('!') && matches(pattern.slice(1)));
+};
 
 test('central admin handoff reveals a safe static shell once and validates session in background', async () => {
   const handoff = await read('admin-central-handoff.js');
@@ -166,7 +172,7 @@ test('shared admin menu modules use the secured immutable admin asset route', as
     assert.match(worker, new RegExp(`/${asset.replaceAll('.', '\\.')}`));
   }
   for (const asset of ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js']) {
-    assert.match(wrangler, new RegExp(`/${asset.replaceAll('.', '\\.')}`));
+    assert.equal(runsWorkerFirst(wrangler, '/' + asset), true, asset);
   }
   assert.match(wrangler, /"\/ekodibiz\*"/);
   assert.doesNotMatch(wrangler, /"\/ekodibiz-admin-registry\.js"/);
@@ -189,7 +195,7 @@ test('versioned admin startup graph runs Worker-first so cache policy is not byp
     '/admin-lazy-features.js',
     '/system-health-admin.js',
     '/system-health-admin.css',
-  ]) assert.match(wrangler, new RegExp(asset.replaceAll('.', '\\.').replaceAll('/', '\\/')));
+  ]) assert.equal(runsWorkerFirst(wrangler, asset), true, asset);
   assert.match(wrangler, /run_worker_first\s*=\s*\[[\s\S]*"\/ai"/);
   assert.match(wrangler, /run_worker_first\s*=\s*\[[\s\S]*"\/ai\/\*"/);
   assert.doesNotMatch(wrangler, /"\/ai\*"/);

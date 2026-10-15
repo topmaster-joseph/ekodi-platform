@@ -93,6 +93,21 @@ export async function routeCooperative(request, env) {
       return json({ ok: true, authority: { scope: platformContext ? 'platform' : 'tenant' }, cooperatives });
     } catch { return json({ ok: false, code: 'COOP_SERVICE_UNAVAILABLE' }, 503); }
   }
+  // Keep the retained browser drafts and their original modules out of generic
+  // tenant/SPACE routing when the operations namespace is Worker-first.
+  if (hubPath === '/business-coop' || hubPath.startsWith('/business-coop/')) {
+    if (!['GET', 'HEAD'].includes(request.method)) return json({ ok: false, code: 'METHOD_NOT_ALLOWED' }, 405);
+    const retained = new Set(['/business-coop/drafts', '/business-coop/drafts/index.html', '/business-coop/app.css', '/business-coop/legal-data.js', '/business-coop/admin/admin.js']);
+    if (!retained.has(hubPath)) return json({ ok: false, code: 'COOP_ROUTE_NOT_FOUND' }, 404);
+    if (!env.ASSETS?.fetch) return json({ ok: false, code: 'COOP_ASSETS_UNAVAILABLE' }, 503);
+    const asset = await env.ASSETS.fetch(request);
+    const response = new Response(asset.body, asset);
+    response.headers.set('cache-control', 'no-store');
+    response.headers.set('x-robots-tag', 'noindex, nofollow, noarchive');
+    response.headers.set('x-content-type-options', 'nosniff');
+    response.headers.set('x-ekodi-route', 'cooperative-retained-drafts');
+    return response;
+  }
   const route = cooperativeRoute(url.pathname);
   if (!route) return null;
   const { coop, path, platformContext } = route;

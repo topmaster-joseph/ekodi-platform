@@ -17,10 +17,20 @@ const req = (coop, path, token = '', method = 'GET', body = undefined, origin = 
 });
 const [jubilee, open] = COOPERATIVES;
 
+test('cooperative hub pages and generated assets reach the Worker within its routing budget',()=>{
+  const config=fs.readFileSync(new URL('../wrangler.site.toml',import.meta.url),'utf8');
+  const patterns=JSON.parse(config.match(/run_worker_first\s*=\s*(\[[^\]]*\])/s)[1]);
+  const matches=(pattern,path)=>new RegExp('^'+pattern.split('*').map(part=>part.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('.*')+'$').test(path);
+  const workerFirst=path=>patterns.some(pattern=>!pattern.startsWith('!')&&matches(pattern,path))&&!patterns.some(pattern=>pattern.startsWith('!')&&matches(pattern.slice(1),path));
+  assert.ok(patterns.length<=100,'Cloudflare Worker-first pattern limit');
+  for(const path of ['/business-coop','/business-coop/','/business-coop/admin/','/business-coop/assets/app.css','/business-coop/assets/app.js','/business-coop/drafts/','/admin-menu-layout.js','/admin-menu-registry.js','/admin-menu-runtime.js'])assert.equal(workerFirst(path),true,path);
+  assert.equal(workerFirst('/admin/unrelated.css'),false,'ordinary static admin modules stay asset-first');
+});
+
 test('cooperative release probes match final Shared Site headers and keep every page non-storable',async()=>{
   const manifest=JSON.parse(fs.readFileSync(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
   const paths=COOPERATIVES.flatMap(coop=>['/','/members','/admin'].map(suffix=>'/'+coop.slug+suffix));
-  paths.push('/business-coop/','/business-coop/admin/','/admin/workspaces/cooperatives');
+  paths.push('/business-coop/','/business-coop/admin/','/admin/workspaces/cooperatives','/business-coop/assets/app.css','/business-coop/assets/app.js');
   for(const path of paths){
     const url='https://ekodi.kr'+path;
     const probe=manifest.worker.requests.find(probe=>probe.url===url);
@@ -30,9 +40,28 @@ test('cooperative release probes match final Shared Site headers and keep every 
     assert.ok(response.headers.get('cache-control').split(',').map(value=>value.trim()).includes('no-store'),path);
     const finalHeaders=[...response.headers].map(([key,value])=>key+': '+value).join('\n').toLowerCase();
     for(const marker of probe.headerExpect||[])assert.ok(finalHeaders.includes(marker.toLowerCase()),path+': '+marker);
-    if(path.includes('/admin')||path.includes('business-coop'))assert.match(response.headers.get('x-robots-tag'),/noindex/,path);
+    if(response.headers.get('content-type').includes('text/html')&&(path.includes('/admin')||path.includes('business-coop')))assert.match(response.headers.get('x-robots-tag'),/noindex/,path);
     await response.body?.cancel();
   }
+});
+
+test('Worker-first hub preserves archived drafts and original modules instead of delegating them to SPACE',async()=>{
+  const files={'/business-coop/drafts/':'drafts/index.html','/business-coop/drafts/index.html':'drafts/index.html','/business-coop/app.css':'app.css','/business-coop/legal-data.js':'legal-data.js','/business-coop/admin/admin.js':'admin/admin.js'};
+  const calls=[];
+  const env={SPACE:{fetch(){throw new Error('Retained drafts must never enter SPACE');}},ASSETS:{async fetch(request){
+    const path=new URL(request.url).pathname;calls.push(path);const file=files[path];assert.ok(file,path);
+    const type=file.endsWith('.html')?'text/html':file.endsWith('.css')?'text/css':'text/javascript';
+    return new Response(fs.readFileSync(new URL('../sites/business-cooperative/public/'+file,import.meta.url),'utf8'),{headers:{'content-type':type+'; charset=utf-8'}});
+  }}};
+  for(const [path,file] of Object.entries(files)){
+    const response=await sharedSiteWorker.fetch(new Request('https://ekodi.kr'+path),env,{});
+    assert.equal(response.status,200,path);assert.equal(response.headers.get('cache-control'),'no-store',path);assert.match(response.headers.get('x-robots-tag'),/noindex/,path);
+    assert.equal(await response.text(),fs.readFileSync(new URL('../sites/business-cooperative/public/'+file,import.meta.url),'utf8'),path);
+  }
+  assert.deepEqual(calls,Object.keys(files));
+  assert.equal((await sharedSiteWorker.fetch(new Request('https://ekodi.kr/business-coop/unknown'),env,{})).status,404);
+  assert.equal((await sharedSiteWorker.fetch(new Request('https://ekodi.kr/business-coop/drafts/',{method:'POST'}),env,{})).status,405);
+  assert.equal(calls.length,Object.keys(files).length,'unknown paths and mutations never reach assets');
 });
 
 test('operations hub lists only locally manageable workspaces and separates explicit platform authority', async t => {
