@@ -92,14 +92,18 @@ try {
           record.topLevelMatches=JSON.stringify(actualLabels)===JSON.stringify(LABELS);
           if(publicSurface&&!record.topLevelMatches)violations.push('menu_labels_mismatch: '+JSON.stringify(actualLabels));
           if(record.horizontalOverflow)violations.push('horizontal_overflow: '+JSON.stringify(record.overflowGeometry||[]).slice(0,420));
-          // Home and independent boards expose central content tabs; legacy dropdowns remain supported.
-          // Both layouts must expose real notice, minutes, finance and social links.
-          const noticeGroup=record.groups.find(x=>x.parent==='공지');
+          // Notice is a direct standalone-board link on every public entry, never a category/dropdown.
+          // Other central categories continue to show their own valid social shortcuts.
+          const noticeLink=record.top.find(x=>x.label==='공지');
+          const expectedNoticePath=root.prefix+'/board/notices';
+          let resolvedNoticePath='';
+          try{if(noticeLink?.href)resolvedNoticePath=new URL(noticeLink.href,target).pathname.replace(/[/]$/,'')}catch{}
+          record.directNoticePath=resolvedNoticePath;
+          if(publicSurface&&resolvedNoticePath!==expectedNoticePath)violations.push('notice_direct_path_mismatch');
+          if(publicSurface&&record.centralCategory.noticeTrigger)violations.push('notice_category_click_interception');
           const socialGroup=record.groups.find(x=>x.parent==='소통채널');
-          const centralValid=record.centralCategory.present&&record.centralCategory.initiallyHidden&&true;
-          const noticeEntries=noticeGroup?.entries||(centralValid?record.centralCategory.entries:[]);
+          const centralValid=record.centralCategory.present&&record.centralCategory.initiallyHidden;
           const socialEntries=socialGroup?.entries||(centralValid?record.centralCategory.entries:[]);
-          if(publicSurface&&!noticeEntries.some(x=>x.label==='공지사항'))violations.push('notice_submenu_missing');
           if(publicSurface&&!socialEntries.some(x=>x.label==='유튜브'))violations.push('social_submenus_missing');
           if(publicSurface&&!socialEntries.some(x=>x.label==='인스타그램'))violations.push('instagram_link_missing');
           if(publicSurface&&!socialEntries.some(x=>x.label==='페이스북'||x.label==='페이스북 그룹'))violations.push('facebook_link_missing');
