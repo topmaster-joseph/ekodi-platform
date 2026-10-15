@@ -39,3 +39,66 @@ test('trusted recovery workflow requires approval label and executes only defaul
   assert.match(workflow,/node scripts\/recover-release-provenance\.mjs/);
   assert.doesNotMatch(workflow,/ref: \$\{\{ github\.event\.pull_request\.head\.sha \}\}/);
 });
+
+test('exact-SHA recovery does not strand approved independent-board production release after token merge',async()=>{
+  const [script,workflow]=await Promise.all([
+    read('scripts/recover-release-provenance.mjs'),
+    read('.github/workflows/recover-release-provenance.yml')
+  ]);
+  assert.match(workflow,/permissions:[\s\S]*actions: write/);
+  assert.match(workflow,/independent_board_dispatch/);
+  assert.match(script,/source file inspection failed before guarded merge/);
+  assert.match(script,/sourceFiles\.some\(file=>/);
+  for(const owner of [
+    "file.startsWith('services/independent-board/')",
+    "file==='wrangler.independent-board.toml'",
+    "file==='sites/seonammedi/public/app.js'",
+    "file==='.github/workflows/deploy-independent-board.yml'"
+  ]) assert.ok(script.includes(owner),owner);
+  assert.match(script,/if\(merge\.response\.ok&&\(independentBoardTouched\|\|shellRuntimeTouched\)\)\{/);
+  assert.match(script,/merge\.data\?\.merged!==true/);
+  assert.match(script,/main\.data\?\.commit\?\.sha/);
+  assert.match(script,/main changed before exact board dispatch/);
+  assert.match(script,/actions\/workflows\/deploy-independent-board\.yml\/dispatches/);
+  assert.match(script,/release_branch_ref:branchRef,release_task_id:taskId/);
+  assert.match(script,/dispatch\.response\.status!==204/);
+  const guarded=script.indexOf('if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched)){');
+  const dispatch=script.indexOf('/actions/workflows/deploy-independent-board.yml/dispatches');
+  assert.ok(guarded>=0&&dispatch>guarded,'dispatch must be behind verified immediate merge');
+  assert.doesNotMatch(script,/sourceFiles\.some\([\s\S]*?\)\s*\?\s*await\s+github\(/);
+});
+
+test('recovery immediate merge requires authentic exact SHA CI and source containing current protected main',async()=>{
+  const [script,workflow]=await Promise.all([
+    read('scripts/recover-release-provenance.mjs'),
+    read('.github/workflows/recover-release-provenance.yml')
+  ]);
+  assert.match(workflow,/checks: read/);
+  assert.match(workflow,/statuses: read/);
+  assert.match(script,/commits\/\$\{headSha\}\/status/);
+  assert.match(script,/commits\/\$\{headSha\}\/check-runs\?per_page=100/);
+  assert.match(script,/run\.app\?\.slug==='github-actions'/);
+  assert.match(script,/requiredChecks=\['test','EKODI AI Orchestration Gate'\]/);
+  assert.match(script,/Number\(currentBase\.data\?\.behind_by\)===0/);
+  assert.match(script,/const merge=checksReady&&upToDate/);
+  assert.match(script,/status:412/);
+  assert.match(script,/guarded-pending-http/);
+  assert.doesNotMatch(script,/if\(!checksReady\)\s*merge=await github/);
+});
+
+test('receipt-bound immediate Shell dispatch occurs only after confirmed protected main merge',async()=>{
+  const script=await read('scripts/recover-release-provenance.mjs');
+  const orchestration=script.indexOf('const shellRuntimeTouched=sourceFiles.some');
+  const merged=script.indexOf('if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched)){');
+  const checkMain=script.indexOf('main changed before exact board dispatch');
+  const shell=script.indexOf('if(shellRuntimeTouched){',merged);
+  const dispatch=script.indexOf('/actions/workflows/deploy-ekodi-shell.yml/dispatches',shell);
+  const accepted=script.indexOf("out('shell_dispatch','accepted')",dispatch);
+  assert.ok(orchestration>0&&merged>orchestration&&checkMain>merged&&shell>checkMain&&dispatch>shell&&accepted>dispatch);
+  assert.match(script,/file\.startsWith\('shell\/'\)/);
+  assert.match(script,/release_branch_ref:branchRef,release_task_id:taskId/);
+  assert.match(script,/shellDispatch\.response\.status!==204/);
+  assert.match(script,/if\(merge\.data\?\.merged!==true/);
+  assert.match(script,/out\('independent_board_dispatch','accepted'\)/);
+  assert.doesNotMatch(script,/method:'POST'[^\n]*https:\/\/api\.cloudflare\.com\/client\/v4\/accounts\/[^\n]*workers/);
+});

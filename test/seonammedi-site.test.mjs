@@ -47,7 +47,7 @@ test('seonammedi finance stays public-read and admin-write without legacy update
     readFile(new URL('app.js',root),'utf8'),
     readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8')
   ]);
-  assert.match(html,/href="board\/finance">회계<\/a>/);
+  assert.doesNotMatch(html,/href="board\/finance">회계<\/a>/);
   assert.match(html,/id="financeManageToggle"[^>]*hidden/);
   assert.match(html,/id="financeManageForm"[^>]*hidden/);
   assert.match(html,/전체 회계내역/);
@@ -798,10 +798,10 @@ test('seonammedi voices finance and notices use sibling standalone board routes'
     readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8')
   ]);
   assert.match(html,/href="board\/voices"[^>]*>시민의견<\/a>/);
-  assert.match(html,/href="board\/finance"[^>]*>회계<\/a>/);
+  assert.doesNotMatch(html,/href="board\/finance"[^>]*>회계<\/a>/);
   assert.match(html,/href="board\/notices"[^>]*>공지<\/a>/);
   assert.match(worker,/boardPath\(req,'voices'\)/);
-  assert.match(worker,/boardPath\(req,'finance'\)/);
+  assert.match(worker,/if\(\(path==='\/finance'/);
   assert.match(worker,/boardPath\(req,'notices'\)/);
   assert.match(worker,/function financePage\(req\)/);
   assert.match(worker,/function noticesPage\(req\)/);
@@ -881,7 +881,7 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
   assert.ok(minutes.includes("location.origin+'/minutes/?token='"));
   assert.match(css,/min-height:100dvh;display:flex;flex-direction:column/);
   assert.match(css,/footer{margin-top:auto/);
-  assert.match(html,/href="board\/finance">회계<\/a>/);
+  assert.doesNotMatch(html,/href="board\/finance">회계<\/a>/);
   assert.match(app,/financeLink=event\.target\.closest\('a\[href="board\/finance"\]\'\)/);
   assert.match(html,/COMMITTEE ACTIVITIES<\/p><h2>활동이력<\/h2>/);
   assert.match(html,/RELATED NEWS &amp; SOURCES<\/p><h2>관련소식<\/h2>/);
@@ -952,7 +952,8 @@ test('seonammedi static surfaces declare route parity contract and preserve moun
   for(const source of [html,adminHtml]){
     assert.match(source,/name="ekodi-route-contract" content="CANONICAL-PATH-MOUNT-PARITY-001 CANONICAL-ROUTE-SLASH-PARITY-001"/);
   }
-  for(const route of ['voices','finance','notices'])assert.match(html,new RegExp('href="board/'+route+'"'));
+  for(const route of ['voices','notices'])assert.match(html,new RegExp('href="board/'+route+'"'));
+  assert.doesNotMatch(html,/href="board\/finance"/);
   assert.match(html,/href="admin\/">관리<\/a>/);
   for(const route of ['voices','finance','notices'])assert.match(adminHtml,new RegExp('href="\.\.\/board/'+route+'"'));
   assert.match(adminJs,/searchParams\.set\('site','seonammedi'\)/);

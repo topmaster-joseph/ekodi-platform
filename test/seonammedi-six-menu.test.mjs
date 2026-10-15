@@ -44,7 +44,7 @@ test('main site menu supports direct news source and channel deep links without 
   }
   assert.match(app,/categoryFromMenuHash\('timeline',TIMELINE_FILTERS\)/);
   assert.match(app,/showStatusTab\('timeline'\)/);
-  assert.match(page,/href="minutes\/"/);
+  assert.doesNotMatch(page,/href="minutes\/"/);
   const minutes=await html('minutes/index.html');
   assert.match(minutes,/내부 회의록 확인/);
   assert.match(minutes,/name="name"/);

@@ -57,8 +57,8 @@ try{
             if(entry.styles.dropdowns.some(group=>!['transparent','rgba(0, 0, 0, 0)'].includes(group.background)))throw Error('dark_dropdown_toggle:'+JSON.stringify(entry.styles.dropdowns));
           }else{
             const central=entry.styles.central;
-            if(!central.exists||!central.trigger||!central.initiallyHidden)throw Error('central_category_panel_not_initially_hidden_or_trigger_missing');
-            for(const name of ['공지사항','회의록','회계'])if(!central.links.includes(name))throw Error('central_notice_link_missing:'+name);
+            if(!central.exists||!central.initiallyHidden)throw Error('central_category_panel_not_initially_hidden_or_trigger_missing');
+            for(const name of ['공지사항'])if(!central.links.includes(name))throw Error('central_notice_link_missing:'+name);
           }
           if(entry.styles.horizontalOverflow)throw Error('page_horizontal_overflow');
           let open=false;
@@ -68,12 +68,8 @@ try{
             await toggle.click({timeout:5000});
             open=await group.locator(':scope > .nav-submenu').evaluate(el=>getComputedStyle(el).display!=='none');
           }else{
-            await page.locator('header.site-header nav.ekodi-six-nav [data-category-menu="공지"]').click({timeout:5000});
-            open=await page.evaluate(()=>{
-              const panel=document.querySelector('#central-category-panel');
-              const labels=Array.from(panel?.querySelectorAll('#central-category-buttons a')||[]).map(a=>a.textContent.trim());
-              return !!panel&&!panel.hidden&&['공지사항','회의록','회계'].every(name=>labels.includes(name));
-            });
+            await page.locator('header.site-header nav.ekodi-six-nav a[href*="board/notices"]').first().click({timeout:5000});
+            open=new URL(page.url()).pathname.includes('/board/notices');
           }
           if(!open)throw Error('notice_category_does_not_open_with_required_links');
           entry.openOnActivation=open;

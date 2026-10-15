@@ -7,7 +7,6 @@
   if(!panel||!template||!buttons||!title)return;
   const entries=Array.from(template.content.querySelectorAll('a'));
   const groups={
-    '공지':['공지사항','회의록','회계'],
     '소통채널':['페이스북','인스타그램','유튜브']
   };
   document.querySelectorAll('.site-header nav [data-category-menu]').forEach(trigger=>{
