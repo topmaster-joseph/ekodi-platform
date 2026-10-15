@@ -5,7 +5,7 @@ import {readFile} from 'node:fs/promises';
 test('SeonamMedi production candidate checks current administrator route rather than retired copy',async()=>{
   const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
   const admin=await readFile(new URL('../sites/seonammedi/public/admin/index.html',import.meta.url),'utf8');
-  const routes=manifest.worker?.verification?.routes||manifest.worker?.verification?.requests||[];
+  assert.ok(admin.includes('id="boardAccountForm"'),'admin account grant form must remain visible in source under owner authorization');
   // Find route within the manifest without relaxing its existing security requirements.
   const visit=node=>{
     if(!node||typeof node!=='object')return null;
