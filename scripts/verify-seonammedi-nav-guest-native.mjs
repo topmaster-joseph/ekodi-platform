@@ -98,6 +98,34 @@ try {
           if(publicSurface&&!socialEntries.some(x=>x.label==='유튜브'))violations.push('social_submenus_missing');
           if(publicSurface&&!socialEntries.some(x=>x.label==='인스타그램'))violations.push('instagram_link_missing');
           if(publicSurface&&!socialEntries.some(x=>x.label==='페이스북'||x.label==='페이스북 그룹'))violations.push('facebook_link_missing');
+          // Exercise real top-menu transitions before Notice, not only the isolated Notice link.
+          // Every action stays read-only and uses the same first-party Chromium context.
+          if(suffix==='/'&&centralValid){
+            const contexts=[
+              {label:'활동이력',selector:'a[data-view-link="committee"]'},
+              {label:'관련소식',selector:'a[data-view-link="status"]'},
+              {label:'소통채널',selector:'a[data-view-link="channels"]'},
+              {label:'조직',selector:'a[data-view-link="organization"]'}
+            ];
+            const expectedPath=root.prefix+'/board/notices';
+            record.noticeAfterCategory=[];
+            for(const item of contexts){
+              await page.locator('header.site-header nav '+item.selector).first().click({timeout:6000});
+              await page.locator('header.site-header nav a[href*="board/notices"]').first().click({timeout:8000});
+              await page.waitForURL(url=>url.origin===root.origin&&url.pathname.replace(/\\/$/,'')===expectedPath,{timeout:10000});
+              const actualPath=new URL(page.url()).pathname.replace(/\\/$/,'');
+              const ok=actualPath===expectedPath;
+              record.noticeAfterCategory.push({from:item.label,path:actualPath,ok});
+              if(!ok)throw Error('notice_after_'+item.label+'_unexpected_path_'+actualPath);
+              let homeResponse;
+              for(let attempt=0;attempt<2;attempt++){
+                homeResponse=await page.goto(target,{waitUntil:'domcontentloaded',timeout:25000});
+                if(![429,502,503,504].includes(homeResponse?.status()))break;
+                if(attempt===0)await pause(3000);
+              }
+              if(!homeResponse?.ok())throw Error('notice_context_return_home_http_'+String(homeResponse?.status()||0));
+            }
+          }
           if((suffix==='/'||suffix.startsWith('/board/'))&&centralValid){
             try{
               await page.locator('header.site-header nav a[href*="board/notices"]').first().click({timeout:5000});
