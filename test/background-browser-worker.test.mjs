@@ -87,9 +87,18 @@ test('shared-site guarded release invokes native browser verification after prod
   assert.match(sharedRelease,/surface_paths:\s*\/,\/my\/,\/admin\/,\/ekodimall\/admin/);
   assert.equal((sharedRelease.match(/surface_registry:\s*config\/board-surface-verification\.json/g)||[]).length,2);
   assert.equal(boardRegistry.policyId,'EKODI-BOARD-NATIVE-VERIFY-001');
+  assert.equal(policy.taskProtocol.maxActions,30);
+  assert.ok(workerWorkflow.includes('const screenshotBudget=Math.max(0,30-(2*paths.length-1))'),'real board screenshots must respect the 30-action limit');
+  assert.ok(workerWorkflow.includes('screenshots<screenshotBudget'),'snapshot coverage must remain complete under budget');
+  for(const count of [1,4,10,12]){
+    const baseActions=2*count-1;
+    const screenshots=Math.max(0,30-baseActions);
+    assert.ok(baseActions+screenshots<=30,'action budget exceeded for '+count+' paths');
+  }
   assert.equal(boardRegistry.readOnly,true);
   assert.deepEqual(boardRegistry.devices,['desktop','mobile-portrait']);
-  for(const path of ['/seonammedi/#voices','/seonammedi/#notices','/community/','/journal'])assert.ok(boardRegistry.surfaces.some(item=>item.enabled!==false&&item.path===path),path);
+  for(const path of ['/seonammedi/board/voices','/seonammedi/board/notices','/community/','/journal'])assert.ok(boardRegistry.surfaces.some(item=>item.enabled!==false&&item.path===path),path);
+  for(const retired of ['/seonammedi/#voices','/seonammedi/#notices'])assert.ok(!boardRegistry.surfaces.some(item=>item.enabled!==false&&item.path===retired),'retired hash-based board surface must not substitute for real board: '+retired);
   assert.match(sharedRelease,/authenticated_admin_surface_verification:/);
   assert.match(sharedRelease,/verify-admin-production-ui-e2e\.yml/);
   for (const verifierPath of [
@@ -108,4 +117,16 @@ test('shared-site guarded release invokes native browser verification after prod
   const mobile=sharedRelease.match(/native_surface_verification_mobile:[\s\S]*?(?=\n\s{2}[a-zA-Z0-9_-]+:|$)/)?.[0]||'';
   assert.match(desktop,/needs:\s*deploy/);
   assert.match(mobile,/needs:\s*deploy/);
+});
+
+test('SeonamMedi real native browser board routes match direct Notice and citizen voice links',()=>{
+  const home=fs.readFileSync(new URL('../sites/seonammedi/public/index.html',import.meta.url),'utf8');
+  const menu=fs.readFileSync(new URL('../sites/seonammedi/public/central-category-runtime.js',import.meta.url),'utf8');
+  const routes=new Map(boardRegistry.surfaces.filter(item=>item.enabled!==false).map(item=>[item.id,item.path]));
+  assert.equal(routes.get('seonammedi.notice'),'/seonammedi/board/notices');
+  assert.equal(routes.get('seonammedi.citizen_voice'),'/seonammedi/board/voices');
+  assert.ok(home.includes('href="board/notices" >공지</a>'),'home Notice must navigate to actual board');
+  assert.ok(home.includes('href="board/voices"'),'citizen opinion link must target actual board');
+  assert.ok(!menu.includes('"공지":'),'old dynamic category handler must not intercept Notice');
+  assert.ok(!menu.includes('noticePreview'),'old central notice preview must not mask actual board');
 });
