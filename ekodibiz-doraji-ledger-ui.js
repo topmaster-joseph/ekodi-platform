@@ -8,7 +8,7 @@ const banner=$('status'),login=$('login'),panel=$('panel'),projectSelector=$('pr
 const projectForm=$('project-form'),recordForm=$('record-form'),records=$('records'),recordKind=$('record-kind');
 const kinds={projects:'cultivation',cultivation:'cultivation',budget:'budget',contracts:'contract',delivery:'delivery',documents:'document'};
 const initialKind=kinds[root.dataset.activeTab]||'cultivation';
-let accessToken='',selectedProject='';
+let accessToken='',selectedProject='',editingRecord=null;
 function say(message){banner.textContent=message;}
 function element(tag,text){const node=document.createElement(tag);if(text!==undefined)node.textContent=String(text);return node;}
 function accessTokenFromUrl(){
@@ -56,9 +56,26 @@ function renderRecord(item){
  const details=element('p',item.note||'작성된 메모 없음');
  const footer=element('small','초안 · '+item.kind+' · '+Number(item.quantity_kg||0).toLocaleString('ko-KR')+' kg · '+Number(item.amount_krw||0).toLocaleString('ko-KR')+' 원');
  card.append(name,details,footer);
+ const editButton=element('button','초안 수정');
+ editButton.type='button';
+ editButton.addEventListener('click',()=>{
+  editingRecord=item;
+  recordKind.value=item.kind;
+  $('record-date').value=item.record_date;
+  $('record-title').value=item.title;
+  $('record-note').value=item.note||'';
+  $('record-quantity').value=String(item.quantity_kg||0);
+  $('record-amount').value=String(item.amount_krw||0);
+  $('record-party').value=item.counterparty||'';
+  recordForm.querySelector('[type="submit"]').textContent='수정사항 저장';
+  recordForm.scrollIntoView({behavior:'smooth',block:'nearest'});
+ });
+ card.append(editButton);
  return card;
 }
 async function loadRecords(){
+ editingRecord=null;
+ recordForm.querySelector('[type="submit"]').textContent='업무자료 초안 저장';
  records.replaceChildren();
  if(!selectedProject)return;
  const result=await request('/projects/'+selectedProject+'/records?kind='+encodeURIComponent(recordKind.value));
@@ -134,7 +151,11 @@ recordForm.addEventListener('submit',async event=>{
  if(!data.title||!data.date){say('일자와 제목을 입력하세요.');return;}
  const submit=recordForm.querySelector('[type="submit"]');submit.disabled=true;
  try{
-  await request('/projects/'+selectedProject+'/records',{method:'POST',body:data});
+  if(editingRecord){
+   const update={...data,version:editingRecord.version};
+   delete update.kind;
+   await request('/projects/'+selectedProject+'/records/'+editingRecord.id,{method:'PATCH',body:update});
+  }else await request('/projects/'+selectedProject+'/records',{method:'POST',body:data});
   recordForm.reset();recordKind.value=data.kind;
   $('record-date').value=new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'});
   await loadRecords();say('초안을 저장했습니다. 승인·계약 서명·대금 지급과는 무관합니다.');
