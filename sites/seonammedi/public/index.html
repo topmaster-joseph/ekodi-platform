@@ -50,6 +50,15 @@
 <link rel="stylesheet" href="./central-category-menu.css">
 <link rel="stylesheet" href="/seonammedi/shared-site-header.css">
 <link rel="stylesheet" href="/seonammedi/home-public-feed.css?v=20261015-2">
+<style>
+.home-notice-first{max-width:1120px;margin:0 auto;padding:18px 20px 12px}
+.home-notice-first h2{font-size:1.25rem;margin:0 0 12px}
+.home-notice-first .notice-first-row{display:flex;gap:14px;align-items:baseline;padding:12px 2px;border-bottom:1px solid #e4e7eb;text-decoration:none;color:inherit}
+.home-notice-first .notice-first-row strong{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:1rem}
+.home-notice-first .notice-first-row time{font-size:.82rem;color:#667085;white-space:nowrap}
+.home-notice-first .notice-first-more{display:block;text-align:right;padding:12px 2px;font-size:.9rem}
+@media(max-width:600px){.home-notice-first{padding:16px 18px}.home-notice-first .notice-first-row{gap:8px}.home-notice-first .notice-first-row strong{font-size:.94rem}}
+</style>
 </head>
 <body>
 <header class="site-header">
@@ -76,6 +85,7 @@
   </div>
 </section>
 
+<section id="homeNoticeFirst" class="home-notice-first" aria-label="최신 공지사항" hidden></section>
 <section id="homePublicFeed" class="home-public-feed" aria-label="최근 공개 게시물" hidden></section>
 <section id="organization" class="section" data-view-section="organization" hidden>
   <div class="section-head"><div><h2>조직</h2></div><div class="section-head-actions"><button id="organizationManageToggle" class="ekodi-public-admin-inline" type="button" hidden aria-expanded="false" aria-controls="organizationManageForm">조직 바로 수정</button></div></div>
@@ -245,4 +255,5 @@
 
 <script src="./central-category-runtime.js?v=20261015-notice-direct-all-1" defer></script>
 <script src="/seonammedi/home-public-feed.js?v=20261015-2" defer></script>
+<script src="/seonammedi/home-notice-first.js" defer></script>
 </body></html>
