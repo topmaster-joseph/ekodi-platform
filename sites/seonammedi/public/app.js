@@ -604,6 +604,9 @@ function showView(view,{updateHash=false}={}){
   if(financeNav){if(key==='finance')financeNav.setAttribute('aria-current','page');else financeNav.removeAttribute('aria-current')}
   const hero=document.querySelector('.hero');
   if(hero)hero.hidden=Boolean(key);
+  // The homepage is the only place where campaign and content imagery is visible.
+  const categoryPanel=document.getElementById('central-category-panel');
+  document.body.dataset.seonammediImageMode=key||categoryPanel&&!categoryPanel.hidden?'inner':'home';
   if(updateHash){
     const next=key?'#'+(canonicalViewHash[key]||key):location.pathname;
     history.pushState({view:key},'',next);
@@ -611,7 +614,9 @@ function showView(view,{updateHash=false}={}){
   if(key==='status')showStatusTab(activeStatusTab);
   if(key){
     const first=document.querySelector('[data-view-section="'+CSS.escape(key)+'"]');
-    first?.scrollIntoView({block:'start'});
+    const topic=document.body.dataset.seonammediCentralTopic;
+    if(categoryPanel&&!categoryPanel.hidden&&((key==='committee'&&topic==='committee')||(key==='status'&&topic==='news')||(key==='channels'&&topic==='channels')))categoryPanel.scrollIntoView({block:'start'});
+    else first?.scrollIntoView({block:'start'});
   }else window.scrollTo({top:0});
 }
 function syncViewFromLocation(){
@@ -1022,7 +1027,27 @@ async function loadChannels(){
     activateChannelPlatform(routePlatform,{preferredId:routeItem?.id||0,updateRoute:false});
   }catch(error){
     publicChannels=[];
-    host.innerHTML='<span class="muted">'+escapeHtml(error.message||'채널 목록을 불러오지 못했습니다.')+'</span>';
+    // The channels API may be unavailable independently of these previously registered URLs.
+    // Keep text-only public navigation usable without misrepresenting cached content as live.
+    host.replaceChildren();
+    const fallbackMessage=document.createElement('p');
+    fallbackMessage.className='muted';
+    fallbackMessage.textContent='채널의 자동 목록을 일시적으로 불러올 수 없습니다. 아래 원문 링크는 이용할 수 있습니다.';
+    host.append(fallbackMessage);
+    const fallbackLinks=[
+      ['페이스북','https://www.facebook.com/groups/2299276407568855/posts/2317435212419641/'],
+      ['인스타그램','https://www.instagram.com/wonokoh/'],
+      ['유튜브','https://www.youtube.com/@Mokpo-tv']
+    ];
+    for(const [label,url] of fallbackLinks){
+      const link=document.createElement('a');
+      link.href=url;
+      link.target='_blank';
+      link.rel='noopener noreferrer';
+      link.className='channel-text-fallback-link';
+      link.textContent=label+' 원문 열기';
+      host.append(link);
+    }
     const accounts=el('publicChannelAccounts');if(accounts)accounts.innerHTML='';
     const preview=el('channelPreview');if(preview)preview.hidden=true;
   }

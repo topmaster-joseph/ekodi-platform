@@ -17,3 +17,39 @@
 .central-category-buttons a{display:inline-flex;align-items:center;min-height:40px;padding:8px 16px;border:1px solid #cbd5e1;border-radius:8px;color:#194c76;text-decoration:none;font-size:14px;font-weight:600;background:#f8fafc}
 .central-category-buttons a:hover,.central-category-buttons a:focus-visible{border-color:#2563eb;background:#eff6ff}
 @media(max-width:780px){.central-category-panel:not([hidden]){margin:12px auto;padding:16px}.central-category-buttons a{min-height:44px}}
+
+
+/* SEONAMMEDI-HOME-IMAGERY-ONLY: text and links stay accessible in every subview. */
+body[data-seonammedi-image-mode="inner"] main > .hero,
+body[data-seonammedi-image-mode="inner"] main > #homePublicFeed {
+  display:none!important;
+}
+body[data-seonammedi-image-mode="inner"] main :is(img,picture,svg,canvas,video,iframe,object,embed),
+body.board-notices main :is(img,picture,svg,canvas,video,iframe,object,embed),
+body.board-voices main :is(img,picture,svg,canvas,video,iframe,object,embed),
+body.board-finance main :is(img,picture,svg,canvas,video,iframe,object,embed) {
+  display:none!important;
+}
+body[data-seonammedi-image-mode="inner"] main :is(.notice-images,.notice-detail-images,.notice-image-preview,.image-preview,.voice-images),
+body.board-notices main :is(.notice-images,.notice-detail-images,.notice-image-preview,.image-preview,.voice-images),
+body.board-voices main :is(.notice-images,.notice-detail-images,.notice-image-preview,.image-preview,.voice-images),
+body.board-finance main :is(.notice-images,.notice-detail-images,.notice-image-preview,.image-preview,.voice-images) {
+  display:none!important;
+}
+body[data-seonammedi-image-mode="inner"] main *,
+body:is(.board-notices,.board-voices,.board-finance) main * {
+  background-image:none!important;
+}
+
+/* Align the brand and six main links to the centered 1120px public content shell.
+   The public hero stays full-bleed; only the header's inner content is constrained. */
+.site-header{--seonam-central-content-width:1080px}
+.site-header{padding:12px max(16px,calc((100vw - var(--seonam-central-content-width))/2))!important;gap:clamp(10px,2vw,28px)!important}
+.site-header>.brand{max-width:320px!important}
+.site-header>.ekodi-six-nav{margin-left:auto!important;justify-content:flex-end!important;gap:clamp(9px,1.1vw,19px)!important}
+@media(max-width:780px){.site-header{padding:11px 16px!important;gap:8px!important}.site-header>.brand{max-width:none!important}.site-header>.ekodi-six-nav{margin-left:0!important;width:100%!important;justify-content:flex-start!important}}
+/* The category ribbon is the single visible filter control when it is expanded.
+   Original controls remain mounted for app events, URL state and accessibility fallback. */
+body[data-seonammedi-central-topic="committee"] #committeeActivityFilters,
+body[data-seonammedi-central-topic="news"] #timelineFilters,
+body[data-seonammedi-central-topic="channels"] #channels{display:none!important}

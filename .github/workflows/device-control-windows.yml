@@ -150,12 +150,41 @@ jobs:
             if (-not $content.Contains($nativeBrowserGuard)) { throw "Missing native browser safety guard: $nativeBrowserGuard" }
           }
           Write-Host 'Windows agent command and privacy boundary OK.'
+      - name: Diagnose reviewed native CDP worker (category-only, non-gating)
+        shell: pwsh
+        run: |
+          # Diagnostic only: preserve the separate required Agent browser acceptance.
+          $ErrorActionPreference = 'Continue'
+          $worker = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-native-browser-cdp.mjs'
+          $diagnostic = (& node.exe $worker 2>&1 | Out-String)
+          $code = if ($diagnostic -match '"code":"(CDP_[A-Z0-9_]+)"') { $Matches[1] } elseif ($diagnostic -match '"ok":true') { 'CDP_DOM_PROOF' } else { 'CDP_DIAGNOSTIC_UNCLASSIFIED' }
+          Write-Host ('[EKODI][NATIVE-CDP-ISOLATED-DIAGNOSTIC] ' + $code)
+          # No raw stderr, paths, cookies, user browser access or page content in logs.
       - name: Run native Background Browser Worker on Windows runner
         shell: pwsh
         run: |
           $path = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
           . $path
-          $canary = Invoke-BackgroundBrowserCanary
+          Write-Host '[EKODI][AGENT-CANARY] PowerShell module sourced, beginning required native canary'
+          try {
+            $canary = Invoke-BackgroundBrowserCanary
+          } catch {
+            # A CDP timeout may be transient on the shared Windows runner.
+            # Only one retry, with a new isolated browser profile and real DOM proof.
+            $reason = [string]$_.Exception.Message
+            $safeCode = if ($reason -cmatch '^(CDP_[A-Z0-9_]+|background_browser_timeout|supported_browser_not_found)$') { $Matches[1] } else { 'CDP_CANARY_UNCLASSIFIED' }
+            Write-Host ('[EKODI][CDP-CANARY] first_attempt=' + $safeCode)
+            if ($reason -ne 'CDP_COMMAND_TIMEOUT') { throw }
+            Start-Sleep -Seconds 2
+            try {
+              $canary = Invoke-BackgroundBrowserCanary
+            } catch {
+              $retryReason = [string]$_.Exception.Message
+              $retryCode = if ($retryReason -cmatch '^(CDP_[A-Z0-9_]+|background_browser_timeout|supported_browser_not_found)$') { $Matches[1] } else { 'CDP_CANARY_UNCLASSIFIED' }
+              Write-Host ('[EKODI][CDP-CANARY] retry=' + $retryCode)
+              throw
+            }
+          }
           if (-not $canary.browserCanary.ok) { throw 'Native browser canary did not pass.' }
           $worker = Invoke-BackgroundBrowserWorker ([pscustomobject]@{
             path = '/'
