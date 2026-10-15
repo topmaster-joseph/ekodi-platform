@@ -74,3 +74,26 @@ test('database migration enforces tenant RLS, immutable audit and no client dele
   assert.match(sql,/p_action not in \('print_requested','csv_requested'\)/);
   assert.doesNotMatch(sql,/grant\s+delete\b/i);
 });
+
+test('website development archive is server backed, tenant-private and sends only via Gmail compose',async()=>{
+ const ui=await read('ekodibiz-business-center.js');
+ const db=await read('supabase/migrations/20261015130000_ekodibiz_webdev_docs.sql');
+ const script=await businessCenterScript().text();
+ assert.doesNotThrow(()=>new Script(script.replace('export const mountBusinessCenter = ','const mountBusinessCenter = ')));
+ for(const s of ['홈페이지 개발','ekodibiz_webdev_docs','ekodibiz_webdev_events','ekodibiz_webdev_log_request','Gmail에서 작성','관리자 발송 보고','다른 작업자가 먼저 수정했거나'])assert.ok(ui.includes(s),s);
+ assert.match(ui,/version=eq\./);
+ assert.match(ui,/return=representation/);
+ assert.match(ui,/encodeURIComponent/);
+ assert.match(ui,/sent_reported/);
+ assert.match(ui,/white-space:pre-wrap/);
+ assert.doesNotMatch(ui,/Gmail API.*send/);
+ assert.match(db,/enable row level security/g);
+ assert.match(db,/ekodibiz_ops_active_tenant\(\)/);
+ assert.match(db,/for select to authenticated/);
+ assert.match(db,/for update to authenticated/);
+ assert.match(db,/revoke all on public\.ekodibiz_webdev_docs,public\.ekodibiz_webdev_events from public,anon,authenticated/);
+ assert.match(db,/grant select on public\.ekodibiz_webdev_events to authenticated/);
+ assert.doesNotMatch(db,/grant\s+(?:delete|insert|update)\s+on public\.ekodibiz_webdev_events/i);
+ assert.match(db,/new\.version:=old\.version\+1/);
+ assert.match(db,/action in \('registered','revised','print_requested','compose_requested','sent_reported'\)/);
+});
