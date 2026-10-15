@@ -2906,7 +2906,7 @@
         ],
         "redirect": "manual",
         "expect": [
-          "희년세상유통조합",
+          "희년세상협동조합",
           "함께 여는 유통",
           "/jubilee-distribution/assets/app.js"
         ],
@@ -2923,7 +2923,7 @@
         ],
         "redirect": "manual",
         "expect": [
-          "희년세상유통조합",
+          "희년세상협동조합",
           "조합원 공간",
           "/jubilee-distribution/assets/app.js"
         ],
@@ -2940,7 +2940,7 @@
         ],
         "redirect": "manual",
         "expect": [
-          "희년세상유통조합",
+          "희년세상협동조합",
           "조합 운영관리",
           "/jubilee-distribution/assets/app.js"
         ],
@@ -3078,7 +3078,8 @@
         "expect": [
           "\"source\":\"server\"",
           "\"workspaceId\":\"c88205a8-9a6c-4c51-ae52-508c087a2d50\"",
-          "\"status\":\"formation\""
+          "\"status\":\"formation\"",
+          "희년세상협동조합"
         ],
         "rollbackVerify": false,
         "candidateVerify": true,
@@ -3098,6 +3099,88 @@
         "rollbackVerify": false,
         "candidateVerify": true,
         "candidateVerifyReason": "Require cooperative schema and seed availability before publishing the candidate. Static fallback is not production readiness."
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "협동조합 운영관리자 공간",
+          "data-coop-surface=\"hub\""
+        ],
+        "headerExpect": [
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/admin/",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "협동조합 운영관리자 공간",
+          "/business-coop/drafts/"
+        ],
+        "headerExpect": [
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/drafts/",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "기존 협동조합 준비자료",
+          "formation-v2"
+        ],
+        "headerExpect": [
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/admin/workspaces/cooperatives",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "협동조합 운영관리자 공간",
+          "data-coop-platform=\"true\""
+        ],
+        "headerExpect": [
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/cooperatives/overview",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "COOP_LOGIN_REQUIRED"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/control/cooperatives/overview",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "COOP_LOGIN_REQUIRED"
+        ],
+        "rollbackVerify": false
       }
     ],
     "attestationPath": "/__ekodi/version"

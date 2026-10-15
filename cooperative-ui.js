@@ -16,8 +16,9 @@ function clientMain(documents) {
   const slug = root.dataset.coopSlug;
   const surface = root.dataset.coopSurface;
   const platform = root.dataset.coopPlatform === 'true';
-  const base = `/${slug}`;
-  const apiBase = platform ? `/api/control/cooperatives/${slug}` : `${base}/api`;
+  const hub = surface === 'hub';
+  const base = hub ? '/business-coop' : `/${slug}`;
+  const apiBase = hub ? (platform ? '/api/control/cooperatives' : '/api/cooperatives') : platform ? `/api/control/cooperatives/${slug}` : `${base}/api`;
   const $ = selector => document.querySelector(selector);
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const won = value => Number(value || 0).toLocaleString('ko-KR') + '원';
@@ -196,9 +197,15 @@ function clientMain(documents) {
     finally { saving = false; $('#workspace').querySelectorAll('button,input,textarea,select').forEach(el => { el.disabled = false; }); }
   }
   async function load() {
-    project = await request(surface === 'admin' ? '/project' : '/me');
+    project = await request(hub ? '/overview' : surface === 'admin' ? '/project' : '/me');
     dirtyForms.clear(); editingRecords.clear();
-    $('#gate').hidden = true; $('#application').hidden = true; $('#workspace').hidden = false;
+    $('#gate').hidden = true; if ($('#application')) $('#application').hidden = true; $('#workspace').hidden = false;
+    if (hub) {
+      const rows = project.cooperatives;
+      $('#workspace').innerHTML = `<div class="toolbar"><p>${rows.length}개 조합 · ${platform ? '명시적 플랫폼 관리' : '등록된 조합별 관리 권한'}</p><div class="actions"><button class="quiet" id="reload" type="button">새로 불러오기</button><button class="quiet" id="print" type="button">인쇄</button></div></div><div class="member-grid">${rows.map(c => `<article class="card" data-managed-cooperative="${esc(c.slug)}"><span class="badge">설립 준비</span><h2>${esc(c.name)}</h2><p>조합장 예정 · ${esc(c.chair)}</p><p class="form-help">구성원 ${c.representatives}명 · 사업자명 ${c.businessesRegistered}/${c.representatives} · 서류 검토 ${c.documentsReviewed}/${c.documentsTotal}</p><p class="form-help">${c.updatedAt ? '최근 저장 ' + esc(new Date(c.updatedAt).toLocaleString('ko-KR')) : '저장공간 준비 완료'}</p><div class="actions"><a class="button primary" href="${esc(c.adminPath)}">운영관리 열기</a><a class="button secondary" href="/${esc(c.slug)}/">홈페이지</a><a class="button secondary" href="/${esc(c.slug)}/members">조합원 공간</a></div></article>`).join('')}</div>`;
+      setStatus('관리 권한 확인 · 각 조합의 서버 자료를 불러왔습니다.');
+      return;
+    }
     if (surface === 'admin') renderAdmin(); else renderMember();
     setStatus(`접근 확인 · ${surface === 'admin' ? '관리자' : '조합원'} · 이 조합의 서버 데이터를 불러왔습니다.`);
     document.querySelectorAll('[data-coop-name]').forEach(el => { el.textContent = project.state?.profile?.name || project.profile.name; });
@@ -261,7 +268,7 @@ function clientMain(documents) {
         }
       } catch (error) { if (!authenticationFailure(error)) setStatus(error.message, true); }
     });
-    $('#applicationForm').addEventListener('submit', async event => {
+    $('#applicationForm')?.addEventListener('submit', async event => {
       event.preventDefault();
       const form = event.target;
       const button = form.querySelector('button'); button.disabled = true;
@@ -294,7 +301,7 @@ function clientMain(documents) {
       $('#workspace').hidden = true; $('#gate').hidden = false;
       if (error.status === 401) { sessionStorage.removeItem(SESSION_KEY); setStatus('로그인이 만료되었습니다. 다시 로그인해 주세요.'); }
       else if (error.status === 403) {
-        $('#gateTitle').textContent = surface === 'admin' ? '이 조합의 관리자 권한을 확인해 주세요' : '조합원 등록 확인이 필요합니다';
+        $('#gateTitle').textContent = hub ? '협동조합 관리 권한을 확인해 주세요' : surface === 'admin' ? '이 조합의 관리자 권한을 확인해 주세요' : '조합원 등록 확인이 필요합니다';
         $('#gateMessage').textContent = '로그인 계정과 이 조합의 접근권한은 별도로 확인합니다. 이름만으로 권한이 부여되지는 않습니다.';
         $('#loginLink').hidden = true;
         if (!platform && surface === 'members') $('#application').hidden = false;

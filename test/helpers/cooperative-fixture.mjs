@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
+import { COOPERATIVES, cooperativeInitialState } from '../../cooperative-registry.js';
 
 export function fixture() {
   const sqlite = new DatabaseSync(':memory:');
@@ -9,6 +10,9 @@ export function fixture() {
     CREATE TABLE admins(id INTEGER PRIMARY KEY, email TEXT, role TEXT);
     CREATE TABLE sessions(token_hash TEXT PRIMARY KEY,admin_id INTEGER,expires_at TEXT,created_at TEXT);`);
   sqlite.exec(fs.readFileSync(new URL('../../migrations/0133_cooperative_distribution_workspaces.sql', import.meta.url), 'utf8'));
+  // Behavioral fixtures start at revision 1 with current seed names. The
+  // historical, versioned rename migration is tested separately before/after.
+  for (const coop of COOPERATIVES) sqlite.prepare('UPDATE cooperative_projects SET snapshot_json=? WHERE workspace_id=?').run(JSON.stringify(cooperativeInitialState(coop)), coop.workspaceId);
   const statement = (sql, params = []) => ({
     sql, params,
     bind(...values) { return statement(sql, values); },
