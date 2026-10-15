@@ -332,7 +332,7 @@ async function supabaseIdentity(request,env){
 async function customerTenantForSite(env,site){
   if(site.tenantId)return{id:site.tenantId,slug:site.tenantSlug||site.id};
   if(!env?.DB?.prepare)return null;
-  let rows;try{rows=await env.DB.prepare("SELECT id,slug,name,domain,status FROM customer_tenants WHERE status='active'").all()}catch{return null}
+  let rows;try{rows=await env.DB.prepare("SELECT id,slug,name,domain,status FROM customer_tenants WHERE status='active'").all()}catch{return{unavailable:true}}
   return (rows.results||[]).find(row=>pathForTenant(row.slug)===site.canonicalPath||String(row.slug).toLowerCase()===site.tenantSlug||String(row.slug).toLowerCase()===site.id)||null;
 }
 async function accessApiAllows(who,env,site){
@@ -348,7 +348,7 @@ async function accessApiAllows(who,env,site){
 }
 async function d1GrantAllows(env,who,site){
   const tenant=await customerTenantForSite(env,site);if(!tenant)return null;
-  if(!env?.DB?.prepare)return false;
+  if(tenant.unavailable||!env?.DB?.prepare)return false;
   let grant;try{grant=await env.DB.prepare('SELECT role,enabled,expires_at,capabilities_json,denied_capabilities_json FROM customer_access_grants WHERE tenant_id=? AND lower(trim(email))=?').bind(tenant.id,who.email).first()}catch{return false}
   return Boolean(grant&&tenantGrantCapabilityDecision(grant,'tenant.site.manage').allowed);
 }

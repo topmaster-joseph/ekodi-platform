@@ -110,7 +110,11 @@ test('publication uses the same active local capability and never falls back pas
   assert.equal((await sitePublicationAuthority(req(jubilee,'/project','admin'),env,site)).ok,true);
   const other=f.sqlite.prepare('SELECT id FROM customer_tenants WHERE slug=?').get(open.slug);
   assert.equal((await sitePublicationAuthority(req(open,'/project','admin'),env,{id:open.slug,tenantId:other.id,tenantSlug:open.slug})).status,403);
+  const unavailable={...env,DB:{prepare(){throw new Error('source DB unavailable')}}};
+  assert.equal((await sitePublicationAuthority(req(jubilee,'/project','admin'),unavailable,{id:jubilee.slug,canonicalPath:'/jubilee-distribution'})).status,403);
   assert.equal(legacyCalls,0);
+  assert.equal((await sitePublicationAuthority(req(jubilee,'/project','admin'),env,{id:'legacy-source',canonicalPath:'/legacy-source',tenantSlug:'legacy-source'})).ok,true);
+  assert.equal(legacyCalls,1);
 });
 
 test('a revoked historical account does not block unrelated preparation saves or regain access',async t=>{
