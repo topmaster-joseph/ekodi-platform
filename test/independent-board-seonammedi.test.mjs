@@ -368,3 +368,17 @@ test('independent board header uses one aligned desktop row and a stacked mobile
     }
   }
 });
+
+test('guarded board deployment verifies denied finance totals on both mounts',async()=>{
+  const workflow=await read('.github/workflows/deploy-independent-board.yml');
+  assert.match(workflow,/finance administrator-only notice/);
+  assert.match(workflow,/finance authorization boundary/);
+  assert.match(workflow,/Public finance summary access unexpectedly allowed or misconfigured/);
+  assert.match(workflow,/\.error=="finance_forbidden"/);
+  assert.match(workflow,/id="raised"\|id="spent"\|id="balance"/);
+  for(const variant of ['"$finance"', '"$finance_slash"', '"$internal_finance"', '"$internal_finance_slash"']){
+    assert.ok(workflow.includes(variant),'all finance mounts and slash variants must be verified: '+variant);
+  }
+  assert.match(workflow,/status" != "403"/,'production must reject non-admin finance summary requests');
+  assert.doesNotMatch(workflow,/verify_contains "finance summary" 'id="raised"'/);
+});
