@@ -279,8 +279,17 @@ if(merge.response.ok&&adminContinuityTouched){
     fail('authenticated Admin E2E needs verified protected merge SHA');
   }
   const main=await github(`/repos/${repo}/branches/main`);
-  if(!main.response.ok||text(main.data?.commit?.sha,80)!==text(merge.data.sha,80)){
-    fail('main changed before authenticated Admin E2E dispatch; do not test a stale release');
+  if(!main.response.ok)fail('cannot verify protected main before authenticated Admin E2E');
+  const mergedSha=text(merge.data.sha,80);
+  const mainSha=text(main.data?.commit?.sha,80);
+  if(mainSha!==mergedSha){
+    // Concurrent approved changes may advance main; require proof that it still
+    // contains the exact tested/merged recovery commit before verifying live.
+    const ancestry=await github(`/repos/${repo}/compare/${mergedSha}...${mainSha}`);
+    if(!ancestry.response.ok||Number(ancestry.data?.behind_by)!==0||
+      !['ahead','identical'].includes(ancestry.data?.status)){
+      fail('approved Admin recovery merge is not in current main ancestry');
+    }
   }
   const result=await github(`/repos/${repo}/actions/workflows/verify-admin-authenticated-production-e2e.yml/dispatches`,{
     method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ref:'main'})
