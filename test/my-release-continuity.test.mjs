@@ -59,6 +59,7 @@ test('the release continuity workflow invokes only the guarded My deploy and nev
   assert.match(source,/release_branch_ref:decision\.branch/);
   assert.match(source,/release_task_id:decision\.taskId/);
   assert.match(source,/workflows\/deploy-my\.yml\/dispatches/);
+  assert.match(source,/runs\?event=workflow_dispatch&head_sha=/);
   assert.doesNotMatch(source,/wrangler deploy|wrangler versions deploy|CLOUDFLARE_API_TOKEN/);
   assert.doesNotMatch(workflow,/wrangler deploy|CLOUDFLARE_API_TOKEN/);
 });
