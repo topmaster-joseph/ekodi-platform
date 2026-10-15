@@ -67,6 +67,16 @@ async function screenshot(page, name) {
 }
 
 try {
+  for(const width of [1440,390]){
+    const guest=await contextFor(width);const page=await guest.newPage();
+    await page.goto('https://ekodi.kr/business-coop/');await page.waitForSelector('#gate:not([hidden])');assert.equal(await page.locator('#workspace').isVisible(),false);await guest.close();
+    const owner=await contextFor(width,'admin-jub');const admin=await owner.newPage();
+    await admin.goto('https://ekodi.kr/business-coop/');await admin.waitForSelector('[data-managed-cooperative]');assert.equal(await admin.locator('[data-managed-cooperative]').count(),1);
+    assert.ok((await admin.locator('#workspace').innerText()).includes(COOPERATIVES[0].name));assert.equal((await admin.locator('#workspace').innerText()).includes(COOPERATIVES[1].name),false);
+    assert.equal(await admin.locator('[data-managed-cooperative] a').first().getAttribute('href'),'/jubilee-distribution/admin');
+    assert.equal(await admin.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+    await screenshot(admin,'cooperative-operations-'+width);checks.push({surface:'operations-hub-guest-and-scoped-owner',width,passed:true});await owner.close();
+  }
   for (const width of [1440, 390, 320]) {
     const context = await contextFor(width);
     const page = await context.newPage();

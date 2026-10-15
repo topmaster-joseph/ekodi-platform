@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
 import { COOPERATIVES, cooperativeInitialState, cooperativePublicProjection } from '../cooperative-registry.js';
 import { cooperativeGrantDecision, resolveCooperativeAccess } from '../cooperative-core-access.js';
 import { normalizeCooperativeState, loadCooperativeProject, saveCooperativeProject } from '../cooperative-store.js';
@@ -14,6 +15,43 @@ const req = (coop, path, token = '', method = 'GET', body = undefined, origin = 
   method, headers: { ...(token ? { authorization: 'Bearer ' + token } : {}), ...(body ? { origin, 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined,
 });
 const [jubilee, open] = COOPERATIVES;
+
+test('operations hub lists only locally manageable workspaces and separates explicit platform authority', async t => {
+  const f=fixture();t.after(()=>f.sqlite.close());t.mock.method(globalThis,'fetch',authFetch({owner:'owner@example.test',member:'member@example.test'}));
+  f.grant(jubilee,'owner@example.test','owner');f.grant(open,'owner@example.test','member');f.grant(jubilee,'member@example.test','member');
+  const hub=token=>new Request('https://ekodi.kr/api/cooperatives/overview',{headers:token?{authorization:'Bearer '+token}:{}});
+  assert.equal((await routeCooperative(hub(),f.env)).status,401);
+  assert.equal((await routeCooperative(hub('member'),f.env)).status,403);
+  const response=await routeCooperative(hub('owner'),f.env);assert.equal(response.status,200);
+  const body=await response.json();assert.deepEqual(body.cooperatives.map(c=>c.workspaceId),[jubilee.workspaceId]);
+  assert.equal(body.cooperatives[0].name,'희년세상협동조합');assert.equal(JSON.stringify(body).includes('accountEmail'),false);
+  f.grant(jubilee,'owner@example.test','owner',{denied:['tenant.site.manage']});assert.equal((await routeCooperative(hub('owner'),f.env)).status,403);
+  f.sqlite.prepare('INSERT INTO admins(id,email,role) VALUES(1,?,?)').run('platform@example.test','super_admin');
+  f.sqlite.prepare('INSERT INTO sessions(token_hash,admin_id,expires_at,created_at) VALUES(?,1,?,?)').run(crypto.createHash('sha256').update('platform-token').digest('hex'),'2099-01-01','2026-01-01');
+  assert.equal((await routeCooperative(hub('platform-token'),f.env)).status,403);
+  const platform=await routeCooperative(new Request('https://ekodi.kr/api/control/cooperatives/overview',{headers:{authorization:'Bearer platform-token'}}),f.env);
+  assert.equal(platform.status,200);assert.equal((await platform.json()).cooperatives.length,2);
+});
+
+test('renaming preserves existing cooperative data, identity and the other cooperative and is idempotent',async t=>{
+  const f=fixture();t.after(()=>f.sqlite.close());
+  const before=await loadCooperativeProject(f.db,jubilee);before.state.profile.name='희년세상유통조합';before.state.profile.legalName='희년세상유통협동조합';before.state.founders[1].business='보존할 기존 사업체';
+  f.sqlite.prepare('UPDATE cooperative_projects SET snapshot_json=? WHERE workspace_id=?').run(JSON.stringify(before.state),jubilee.workspaceId);
+  const other=await loadCooperativeProject(f.db,open);
+  const sql=fs.readFileSync(new URL('../migrations/0134_cooperative_jubilee_name.sql',import.meta.url),'utf8');f.sqlite.exec(sql);
+  const after=await loadCooperativeProject(f.db,jubilee);
+  assert.equal(after.state.profile.name,'희년세상협동조합');assert.equal(after.state.profile.legalName,'희년세상협동조합');assert.equal(after.state.founders[1].business,'보존할 기존 사업체');assert.equal(after.revision,before.revision+1);
+  assert.deepEqual(await loadCooperativeProject(f.db,open),other);
+  f.sqlite.exec(sql);assert.equal((await loadCooperativeProject(f.db,jubilee)).revision,after.revision);
+  assert.equal(f.sqlite.prepare("SELECT COUNT(*) AS n FROM cooperative_audit WHERE action='profile.rename'").get().n,1);
+});
+
+test('former preparation entries are private operations hubs with access to retained browser drafts',async()=>{
+  for(const path of ['/business-coop/','/business-coop/admin/','/admin/workspaces/cooperatives']){
+    const response=await routeCooperative(new Request('https://ekodi.kr'+path),{});
+    const html=await response.text();assert.equal(response.status,200);assert.ok(html.includes('협동조합 운영관리자 공간'));assert.ok(html.includes('/business-coop/drafts/'));assert.ok(html.includes('data-coop-surface="hub"'));assert.equal(html.includes('박은희'),false);assert.match(response.headers.get('x-robots-tag'),/noindex/);
+  }
+});
 
 test('two new workspaces contain exactly the requested representatives and no assumed business, consent, capital or account records', () => {
   assert.deepEqual(cooperativeInitialState(jubilee).founders.map(f => f.representative), ['정찬균','박은희','최병천','정양기','조인식']);
