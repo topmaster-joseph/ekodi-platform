@@ -6,7 +6,7 @@ import { chromium } from 'playwright';
 // No production mutation, credential import, user browser, or third-party browser service.
 const args=Object.fromEntries(process.argv.slice(2).map(x=>{
   const i=x.indexOf('=');
-  return i<0?[x.replace(/^--/,''):'true']:[x.slice(2,i).replace(/^--/,''),x.slice(i+1)];
+  return i<0?[x.replace(/^--/,''),'true']:[x.slice(2,i).replace(/^--/,''),x.slice(i+1)];
 }));
 const origin=String(args.origin||'https://seonammedi.kr').replace(/\/+$/,'');
 const paths=Object.freeze({
