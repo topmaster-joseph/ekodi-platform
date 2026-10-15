@@ -158,11 +158,108 @@ if(!recoveryPr){
 const recoveryNumber=Number(recoveryPr?.number||0);
 if(!recoveryNumber)fail('recovery PR number missing');
 
+const sourceFiles=[];
+for(let page=1;page<=20;page++){
+  const response=await github(`/repos/${repo}/pulls/${prNumber}/files?per_page=100&page=${page}`);
+  if(!response.response.ok||!Array.isArray(response.data))fail('source file inspection failed before guarded merge');
+  sourceFiles.push(...response.data.map(item=>text(item?.filename,300)));
+  if(response.data.length<100)break;
+  if(page===20)fail('source file list exceeds bounded dispatch inspection');
+}
+const independentBoardTouched=sourceFiles.some(file=>
+  file.startsWith('services/independent-board/')||
+  file==='wrangler.independent-board.toml'||
+  file==='sites/seonammedi/public/app.js'||
+  file==='.github/workflows/deploy-independent-board.yml'
+);
+// First-party Shell is an independent guarded Worker. GitHub-token recovery
+// merges do not produce a regular main push event, so a successful immediate
+// recovery merge must dispatch the existing receipt-bound Shell workflow.
+const shellRuntimeTouched=sourceFiles.some(file=>
+  file.startsWith('shell/')||
+  ['ekodi-service-manifest.js','ekodi-shell-worker.js','ekodi-shell-injector.js',
+   'wrangler.shell.toml','wrangler.shell.staging.toml',
+   '.github/workflows/deploy-ekodi-shell.yml',
+   'scripts/verify-ekodi-shell-live.mjs'].includes(file)
+);
+
+
 await github(`/repos/${repo}/issues/${prNumber}/comments`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({body:`EKODI automatic release-provenance recovery created #${recoveryNumber} on \`${branchRef}\` (task \`${taskId}\`). This PR is superseded by the orchestrator-issued branch.`})});
 await github(`/repos/${repo}/pulls/${prNumber}`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({state:'closed'})});
 
-const merge=await github(`/repos/${repo}/pulls/${recoveryNumber}/merge`,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({merge_method:'squash'})});
+// The protected-recovery source is already exact-SHA owner approved. Never
+// attempt immediate merge without both authentic GitHub Actions checks and
+// a source revision that contains the current main. If these are not ready,
+// leave the official recovery PR open for existing convergent CI/merge handling.
+const sourceStatus=await github(`/repos/${repo}/commits/${headSha}/status`);
+if(!sourceStatus.response.ok)fail('cannot inspect exact approved source commit statuses');
+const statuses=new Map((sourceStatus.data?.statuses||[]).map(entry=>[entry.context,entry.state]));
+const sourceChecks=await github(`/repos/${repo}/commits/${headSha}/check-runs?per_page=100`);
+if(!sourceChecks.response.ok)fail('cannot inspect authentic source CI checks');
+const authenticChecks=Array.isArray(sourceChecks.data?.check_runs)?sourceChecks.data.check_runs:[];
+const requiredChecks=['test','EKODI AI Orchestration Gate'];
+const checksReady=requiredChecks.every(context=>
+  statuses.get(context)==='success'&&authenticChecks.some(run=>
+    run.name===context&&run.app?.slug==='github-actions'&&
+    run.status==='completed'&&run.conclusion==='success'
+  )
+);
+const mainRef=await github(`/repos/${repo}/git/ref/heads/main`);
+if(!mainRef.response.ok)fail('cannot verify latest main before approved recovery merge');
+const mainSha=text(mainRef.data?.object?.sha,80);
+const currentBase=await github(`/repos/${repo}/compare/${mainSha}...${headSha}`);
+if(!currentBase.response.ok)fail('cannot inspect source relationship to protected main');
+const upToDate=Number(currentBase.data?.behind_by)===0;
+if(!checksReady||!upToDate){
+  const reason=!checksReady?'authentic_required_checks_not_green':'latest_main_not_in_source_ancestry';
+  out('merge_condition',reason);
+  await github(`/repos/${repo}/issues/${recoveryNumber}/comments`,{
+    method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({body:`EKODI release-provenance recovery parked at protected convergence: ${reason}. No immediate merge, no deployment. Source exact SHA \`${headSha}\`; main \`${mainSha}\`. Existing protected CI/update-branch gate must complete before any release.`})
+  });
+}
+const merge=checksReady&&upToDate
+  ?await github(`/repos/${repo}/pulls/${recoveryNumber}/merge`,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({merge_method:'squash'})})
+  :{response:{ok:false,status:412},data:{}};
 const mergeDisposition=merge.response.ok?'merged-immediately':`guarded-pending-http-${merge.response.status}`;
+// GitHub-token merges do not necessarily emit a main push workflow event.
+// Only a successfully merged, exactly owner-approved recovery PR may dispatch
+// the existing guarded production workflow. That workflow still enforces its
+// own orchestrator receipt, CI, auth boundary, and live production checks.
+if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched)){
+  if(merge.data?.merged!==true||!/^[a-f0-9]{40}$/i.test(text(merge.data?.sha,80))){
+    fail('guarded merge did not return a verifiable commit SHA');
+  }
+  const main=await github(`/repos/${repo}/branches/main`);
+  if(!main.response.ok||text(main.data?.commit?.sha,80)!==text(merge.data.sha,80)){
+    fail('main changed before exact board dispatch; do not launch a stale release');
+  }
+  if(independentBoardTouched){
+    const dispatch=await github(`/repos/${repo}/actions/workflows/deploy-independent-board.yml/dispatches`,{
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branchRef,release_task_id:taskId}})
+    });
+    if(dispatch.response.status!==204){
+      fail('guarded independent board dispatch failed: HTTP '+dispatch.response.status);
+    }
+    out('independent_board_dispatch','accepted');
+  }
+  if(shellRuntimeTouched){
+    // The canonical shared Site Core already exists; this dispatch only
+    // releases Shell via its own staging, auth, provenance and rollback gates.
+    const shellDispatch=await github(`/repos/${repo}/actions/workflows/deploy-ekodi-shell.yml/dispatches`,{
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branchRef,release_task_id:taskId}})
+    });
+    if(shellDispatch.response.status!==204){
+      fail('guarded Shell Worker dispatch failed: HTTP '+shellDispatch.response.status);
+    }
+    out('shell_dispatch','accepted');
+  }
+}
+
 if(!merge.response.ok){
   await github(`/repos/${repo}/issues/${recoveryNumber}/comments`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({body:'EKODI recovery branch issued successfully. Merge remains guarded by required checks; production deployment will continue after the repository gate allows merge.'})});
 }
