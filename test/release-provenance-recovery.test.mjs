@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import {findExactHumanGateApproval} from '../scripts/release-human-gate-evidence.mjs';
 
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 
@@ -20,7 +21,10 @@ test('release provenance recovery requires exact-SHA policy-owner Human Gate evi
     "existing recovery branch does not match the exact approved source SHA",
   ]) assert.ok(source.includes(marker),marker);
   assert.match(source,/issues\/\$\{prNumber\}\/comments\?per_page=100/);
-  assert.match(source,/policyOwners\.has\(login\).*body\.includes\(approvalMarker\)/s);
+  assert.match(source,/findExactHumanGateApproval\(/);
+  assert.match(source,/issues\/\$\{prNumber\}\/events\?per_page=100/);
+  assert.match(source,/labelAppliedAt/);
+  assert.doesNotMatch(source,/body\.includes\(approvalMarker\)/);
   assert.match(source,/github-owner:\$\{approvalActor\}/);
   assert.doesNotMatch(source,/intent,target,'normal','delegated'/);
   assert.doesNotMatch(source,/policyOwners\.has\(actor\)/);
@@ -101,4 +105,29 @@ test('receipt-bound immediate Shell dispatch occurs only after confirmed protect
   assert.match(script,/if\(merge\.data\?\.merged!==true/);
   assert.match(script,/out\('independent_board_dispatch','accepted'\)/);
   assert.doesNotMatch(script,/method:'POST'[^\n]*https:\/\/api\.cloudflare\.com\/client\/v4\/accounts\/[^\n]*workers/);
+});
+
+test('Human Gate rejects quoted markers and ensures exact owner approval precedes a real label event',()=>{
+  const marker='EKODI-HUMAN-GATE-APPROVE:'+'a'.repeat(40);
+  const comment=(body,user='owner',created='2026-10-15T12:00:00Z',updated=created)=>({
+    body,user:{login:user,type:'User'},created_at:created,updated_at:updated
+  });
+  const label=(created,event='labeled')=>({
+    event,label:{name:'orchestrator-human-gate-approved'},created_at:created
+  });
+  const verify=(comments,events)=>findExactHumanGateApproval({
+    comments,events,policyOwners:['owner'],approvalMarker:marker,
+    approvalLabel:'orchestrator-human-gate-approved'
+  });
+  const later=[label('2026-10-15T12:01:00Z')];
+  assert.equal(verify([comment('Please enter '+marker+' yourself.')],later),null);
+  assert.equal(verify([comment(marker,'non-owner')],later),null);
+  assert.equal(verify([comment(marker+'\\nextra text')],later),null);
+  assert.equal(verify([comment(marker)],[label('2026-10-15T11:59:00Z')]),null);
+  assert.equal(verify([comment(marker)],[]),null);
+  assert.equal(verify([comment(marker,'owner','2026-10-15T12:00:00Z','2026-10-15T12:02:00Z')],later),null);
+  assert.equal(verify([comment(marker.slice(0,-1)+'0')],later),null);
+  const approved=verify([comment(' '+marker+' ')],later);
+  assert.equal(approved?.approvalComment?.user?.login,'owner');
+  assert.equal(approved?.labelEvent?.created_at,'2026-10-15T12:01:00Z');
 });
