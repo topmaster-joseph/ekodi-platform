@@ -8,7 +8,7 @@ export function findExactHumanGateApproval({comments,events,policyOwners,approva
   );
   for(const comment of comments){
     if(!owners.has(comment?.user?.login)||comment?.user?.type==='Bot')continue;
-    if(typeof comment?.body!=='string'||comment.body.trim()!==approvalMarker)continue;
+    if(typeof comment?.body!=='string'||comment.body!==approvalMarker)continue;
     const created=Date.parse(comment.created_at||'');
     const edited=Date.parse(comment.updated_at||comment.created_at||'');
     if(!Number.isFinite(created)||!Number.isFinite(edited))continue;
