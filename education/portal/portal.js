@@ -17,6 +17,7 @@ const roles=['admin','instructor'];
 let session=null,role='learner',posts=[],enrollments=[],currentEnrollment=null,progress={},progressServer=false;
 let showing='dashboard';
 const STORE='ekodi_education_learning_progress_v1';
+const storageKey=()=>STORE+':'+(session?.user?.id||'guest');
 const allowedPanels=new Set(['dashboard','enroll','materials','practice','manage']);
 const restrict=value=>String(value??'').trim();
 const errorMessage=error=>String(error?.message||'요청을 처리할 수 없습니다.').slice(0,280);
@@ -25,12 +26,12 @@ const status=(id,message,bad=false)=>{
 };
 const localProgress=()=>{
   try{
-    const data=JSON.parse(localStorage.getItem(STORE)||'{}');
+    const data=JSON.parse(localStorage.getItem(storageKey())||'{}');
     return data&&typeof data==='object'?data:{};
   }catch{return{}}
 };
 function saveLocal(){
-  try{localStorage.setItem(STORE,JSON.stringify(progress))}catch{
+  try{localStorage.setItem(storageKey(),JSON.stringify(progress))}catch{
     status('authNotice','브라우저 저장공간 사용이 제한되어 학습 진행 상태를 저장하지 못했습니다.',true);
   }
 }
@@ -47,7 +48,7 @@ function renderIdentity(){
 }
 function loginUrl(){
   const address=new URL(cfg.authUrl||'https://ekodi.kr/auth/?site=edu');
-  if(address.origin!=='https://ekodi.kr'&&address.origin!=='https://auth.ekodi.kr')throw new Error('등록되지 않은 인증 경로');
+  if(address.protocol!=='https:'||address.username||address.password)throw new Error('안전하지 않은 인증 경로');
   address.searchParams.set('site','edu');
   // The identity provider performs identity verification only. Return to the
   // exact learner/manager route and preserve the intended tab and query.
