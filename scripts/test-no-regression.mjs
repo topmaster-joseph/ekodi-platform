@@ -53,9 +53,9 @@ if(base.status===0||newFailures.length||currentTotal>baseTotal){
   for(const item of newFailures.slice(0,50)) console.error(`- ${item}`);
   // Show only bounded TAP diagnostics for newly introduced regressions.
   // Never print the complete test log (it may include unrelated fixture context).
-  const lines=normalize(currentText).split(/\\r?\\n/);
+  const lines=normalize(currentText).split(/\r?\n/);
   for(const name of [...cur.keys()].filter(name=>(cur.get(name)||0)>(old.get(name)||0)).slice(0,12)){
-    const at=lines.findIndex(line=>/^not ok \\d+ - /.test(line)&&line.endsWith(' - '+name));
+    const at=lines.findIndex(line=>/^not ok \d+ - /.test(line)&&line.endsWith(' - '+name));
     if(at<0)continue;
     console.error('--- New regression diagnostic: '+name+' ---');
     const detail=lines.slice(at,at+28).filter(line=>!/(?:authorization:|access_token|refresh_token|secret|password|api[_-]?key)/i.test(line));
