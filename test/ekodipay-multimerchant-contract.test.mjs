@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {createHmac} from 'node:crypto';
+import {authenticateIssuerOrder,issuerOrderCanonicalPayload} from '../ekodipay-order-attestation.js';
 import {
  validMerchantProfile,indexMerchantProfiles,merchantReadiness,selectServerApprovedMerchant,
  verifyProviderOwnership,publicMerchantSummary
@@ -24,6 +26,15 @@ const approved=(p)=>({source:'trusted_order_issuer',approved:true,orderId:'EB-OR
  merchantId:p.merchantId,service:p.services[0],issuerRef:p.issuerRefs[p.services[0]],
  amount:50000,currency:'KRW',issuerProofRef:'ISSUERPROOF_001',
  approvedAt:Date.now()-1_000,expiresAt:Date.now()+15*60*1_000});
+const issuerSecret=Uint8Array.from({length:32},(_,i)=>i+1);
+const signatureNonce='AUTH_APPROVED_ORDERV1_0123456789';
+async function attest(order,mode='test',secret=issuerSecret){
+ const input=issuerOrderCanonicalPayload(order,{mode,nonce:signatureNonce});
+ const signature=createHmac('sha256',secret).update(input).digest('base64url');
+ const checked=await authenticateIssuerOrder({order,mode,nonce:signatureNonce,signature,issuerSecret:secret});
+ assert.equal(checked.ok,true);
+ return checked.order;
+}
 const envFor=p=>Object.fromEntries([
  [p.credentialRefs.test.client,'test_gck_mock'],
  [p.credentialRefs.test.secret,'test_gsk_mock'],
@@ -46,9 +57,9 @@ test('merchant registry detects globally duplicated MID, secrets and tenant IDs'
  assert.equal(validMerchantProfile({...a,settlement:{...a.settlement,accountNumber:'0123456'}}),false);
  assert.throws(()=>indexMerchantProfiles([{...a,settlement:{...a.settlement,accountLast4:'123'}}]),/invalid_private_merchant_profile/);
 });
-test('merchant route is server-approved and issuer+service+tenant pinned; never picks a global fallback',()=>{
+test('merchant route is server-approved and issuer+service+tenant pinned; never picks a global fallback',async()=>{
  const a=fixture(),b=fixture('ekodiedu','merchantB','ekodiedu'),ix=indexMerchantProfiles([a,b]);
- let chosen=selectServerApprovedMerchant(ix,approved(a),{mode:'test',env:envFor(a)});
+ let chosen=selectServerApprovedMerchant(ix,await attest(approved(a)),{mode:'test',env:envFor(a)});
  assert.equal(chosen.ok,true);
  assert.equal(chosen.privateContext.mid,a.midByMode.test);
  const paid={mId:a.midByMode.test,currency:'KRW',orderId:'EB-ORDER000000001',
@@ -63,12 +74,12 @@ test('merchant route is server-approved and issuer+service+tenant pinned; never 
  assert.equal(selectServerApprovedMerchant(ix,{...approved(a),issuerRef:'issuer_attacker'},{mode:'test',env:envFor(a)}).ok,false);
  assert.equal(selectServerApprovedMerchant(ix,{...approved(a),source:'http_browser'},{mode:'test',env:envFor(a)}).ok,false);
  assert.equal(selectServerApprovedMerchant(ix,{...approved(a),approved:false},{mode:'test',env:envFor(a)}).ok,false);
- assert.equal(selectServerApprovedMerchant(ix,approved(a),{mode:'test',env:envFor(b)}).ok,false);
+ assert.equal(selectServerApprovedMerchant(ix,await attest(approved(a)),{mode:'test',env:envFor(b)}).ok,false);
  assert.equal(JSON.stringify(publicMerchantSummary(a)).includes('merchantA'),false);
  assert.equal(JSON.stringify(publicMerchantSummary(a)).includes('1234'),false);
  assert.equal(JSON.stringify(publicMerchantSummary(a)).includes('aaaaa'),false);
 });
-test('private merchant resolver rejects implicit environment, expired/forged issuer evidence and oversized order identifiers',()=>{
+test('private merchant resolver rejects implicit environment, expired/forged issuer evidence and oversized order identifiers',async()=>{
  const a=fixture(),ix=indexMerchantProfiles([a]),order=approved(a),env=envFor(a);
  assert.deepEqual(selectServerApprovedMerchant(ix,order,{env}),{ok:false,reason:'explicit_payment_mode_required'});
  const invalid=[
@@ -80,17 +91,39 @@ test('private merchant resolver rejects implicit environment, expired/forged iss
   {...order,amount:1},
  ];
  for(const o of invalid){const x=selectServerApprovedMerchant(ix,o,{mode:'test',env});assert.equal(x.ok,false);}
- assert.equal(selectServerApprovedMerchant(ix,order,{mode:'test',env}).ok,true);
+ assert.equal(selectServerApprovedMerchant(ix,await attest(order),{mode:'test',env}).ok,true);
 });
-test('live merchant readiness requires independent evidence and owner gate, not a private key prefix alone',()=>{
+test('live merchant readiness requires independent evidence and owner gate, not a private key prefix alone',async()=>{
  const a=fixture(),ix=indexMerchantProfiles([a]);
  assert.equal(merchantReadiness(a,{mode:'live'}).ready,false);
  assert.equal(merchantReadiness(a,{mode:'live',ownerGate:'APPROVED'}).ready,true);
  assert.equal(merchantReadiness({...a,evidence:{...a.evidence,pg_contract:{status:'pending'}}},{mode:'live',ownerGate:'APPROVED'}).ready,false);
  assert.equal(merchantReadiness({...a,state:'suspended'},{mode:'test'}).ready,false);
- const res=selectServerApprovedMerchant(ix,approved(a),{mode:'live',ownerGate:'DISABLED',env:envFor(a)});
+ const res=selectServerApprovedMerchant(ix,await attest(approved(a),'live'),{mode:'live',ownerGate:'DISABLED',env:envFor(a)});
  assert.equal(res.ok,false);
- assert.equal(selectServerApprovedMerchant(ix,approved(a),{mode:'live',ownerGate:'APPROVED',env:envFor(a)}).ok,true);
+ assert.equal(selectServerApprovedMerchant(ix,await attest(approved(a),'live'),{mode:'live',ownerGate:'APPROVED',env:envFor(a)}).ok,true);
+});
+test('cryptographic issuer binding rejects unsigned, tampered, mode-switched and wrong-key orders',async()=>{
+ const merchant=fixture(),index=indexMerchantProfiles([merchant]),raw=approved(merchant),env=envFor(merchant);
+ assert.deepEqual(selectServerApprovedMerchant(index,raw,{mode:'test',env}),{ok:false,reason:'issuer_signature_required'});
+ const good=await attest(raw,'test');
+ assert.equal(selectServerApprovedMerchant(index,good,{mode:'test',env}).ok,true);
+ assert.equal(selectServerApprovedMerchant(index,good,{mode:'live',ownerGate:'APPROVED',env}).ok,false);
+ assert.equal(selectServerApprovedMerchant(index,{...good},{mode:'test',env}).ok,false);
+ const nonce=signatureNonce;
+ const signature=createHmac('sha256',issuerSecret)
+    .update(issuerOrderCanonicalPayload(raw,{mode:'test',nonce})).digest('base64url');
+ for(const order of [{...raw,amount:raw.amount+100},{...raw,merchantId:'ekodiedu'},{...raw,issuerRef:'issuer_other'}]){
+  const result=await authenticateIssuerOrder({order,mode:'test',nonce,signature,issuerSecret});
+  assert.equal(result.ok,false);
+ }
+ const otherSecret=Uint8Array.from({length:32},(_,i)=>i+50);
+ const wrongKey=await authenticateIssuerOrder({order:raw,mode:'test',nonce,signature,issuerSecret:otherSecret});
+ assert.equal(wrongKey.ok,false);
+ const expired=await authenticateIssuerOrder({order:{...raw,expiresAt:Date.now()-1},mode:'test',nonce,signature,issuerSecret});
+ assert.equal(expired.ok,false);
+ const malformed=await authenticateIssuerOrder({order:raw,mode:'test',nonce,signature:'x',issuerSecret});
+ assert.equal(malformed.ok,false);
 });
 const local=(merchantId='ekodibiz',mid='merchantA')=>({
  merchantId,pgMode:'live',mId:mid,status:'DONE',transactionKey:'transaction001',
