@@ -132,6 +132,9 @@ jobs:
           check_upstream 'https://cheonggye-market.pages.dev/admin' 'data-admin-tab="today"'
           check_upstream 'https://cheonggye-market.pages.dev/member-admin' 'MOVED TO ADMIN CONSOLE'
           check_upstream 'https://cheonggye-market.pages.dev/api/resources' '"items"'
+          # Confirm the tenant-owned survey assets exist before promoting the apex gateway.
+          check_upstream 'https://cheonggye-market.pages.dev/ai-education/' '우리 가게에 필요한 AI 교육을 찾아보세요'
+          check_upstream 'https://cheonggye-market.pages.dev/ai-education/app.js' 'const questions = ['
       - name: Deploy route-less CGMA board service before edge delegation
         shell: bash
         run: |
