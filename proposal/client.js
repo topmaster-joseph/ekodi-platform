@@ -1,5 +1,8 @@
 import {PROPOSAL_DOMAINS,PROPOSAL_GOALS,createProposalDraft,selectedStages,reviewProposalDraft,draftToMarkdown,validImportedDraft,normalizeReferenceUrl} from './core.js';
 import {analyzeProposalSources,makeGuidedProposalDraft,calculateProposalBudget,reviewProposalBudget,parseKrwAmount,proposalToPrintHtml,proposalToPresentationMd,proposalBudgetToCsv,proposalToMarkdownWithBudget} from './analysis.js';
+import {buildProposalDocx} from './docx.js';
+import {buildProposalBudgetXlsx} from './xlsx.js';
+import {buildProposalPptx} from './pptx.js';
 const byId=id=>document.getElementById(id);
 let project=null;
 let sources=[];
@@ -276,6 +279,27 @@ byId('exportSlides').addEventListener('click',()=>{
     download(basename()+'_발표구성.md',proposalToPresentationMd(project),'text/markdown;charset=utf-8');
     status('발표 구성 Markdown을 저장했습니다. 실제 PPTX 생성은 아직 지원하지 않습니다.');
   }catch(error){status('발표구성 생성 실패: '+error.message);}
+});
+
+function exportOffice(id,suffix,builder,mime){
+ byId(id).addEventListener('click',()=>{
+  if(!snapshot())return status('먼저 제안서 구조를 만들어 주세요.');
+  try{
+   const bytes=builder(project);
+   download(basename()+suffix,bytes,mime);
+   status('기본 OOXML 파일을 다운로드했습니다. 원본 양식 적합성·자료 사실성과 앱 호환성은 사용자가 최종 확인해야 합니다.');
+  }catch(error){status('파일 생성 실패: '+error.message);}
+ });
+}
+exportOffice('exportDocx','_검토용.docx',buildProposalDocx,'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+exportOffice('exportPptx','_발표초안.pptx',buildProposalPptx,'application/vnd.openxmlformats-officedocument.presentationml.presentation');
+byId('exportXlsx').addEventListener('click',()=>{
+ if(!snapshot())return status('먼저 제안서 구조를 만들어 주세요.');
+ try{
+  if(!project.budgetRows?.length||project.budgetRows.some(row=>row.quantity===''||row.unitCost===''))throw new Error('예산 항목과 수량·단가를 먼저 입력하세요.');
+  download(basename()+'_예산.xlsx',buildProposalBudgetXlsx(project.budgetRows),'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  status('입력한 예산을 기본 Excel XLSX로 저장했습니다. 회계·견적 검증은 별도입니다.');
+ }catch(error){status('Excel 생성 실패: '+error.message);}
 });
 
 byId('exportJson').addEventListener('click',()=>{
