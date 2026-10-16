@@ -39,3 +39,12 @@
 ### Genuine Actions replay after GitHub update-branch (2026-10-16)
 - The official EKODI converger returned `branch-updated` for PR #4945; GitHub's bot-created synchronized head `cf8225dc31d7d64be009a0eea30fcc1f37d38fd4` produced `action_required` without executable PR test jobs.
 - This owner-authored documentation-only commit requests fresh, real GitHub Actions checks on current main ancestry. It does not replace human approval of immutable source `d404ee5d1b821fcf7ae5f7342138ce759a56f93a`, change public UI, bypass mandatory checks, or claim staging/production success.
+
+
+## Production post-merge Chromium diagnostic and correction (2026-10-16)
+- Official owner-approved PR #4925 -> recovery PR #4945 -> guarded merge `08010078504b8f07662451dc4a6c39f44bd0dc47`.
+- Guarded Education production deploy run [38823019127](https://github.com/topmaster-joseph/ekodi-platform/actions/runs/38823019127) verified the existing Worker hostname, classroom assets, and authenticated boundary, but the final Chromium classroom step failed on the first mobile profile.
+- Read-only artifact `ekodi-education-native-38823019127/education-native/result.json` shows zero browser page exceptions, zero HTTP failures, zero unexpected network failures. Chrome 156 reported known, browser-blocked Shell inline styles as `Applying inline style violates ...` and the rejected Cloudflare beacon as `Loading the script ... violates ...` where the existing strict classifier expected only earlier `Refused to ...` messages.
+- This correction **does not allow inline styles or external beacons** and **does not weaken CSP**: it classifies only the exact observed directive and third-party beacon prefix as expected rejected resources; any other console, HTTP, script, resource or mutating request remains fatal.
+- Extend guarded production-native acceptance to the new lecturer CV/syllabus/photo/email draft page across five widths, including no unauthorized POST, no live email send, JSON/HTML exports, and review-gated MIME draft attachment.
+- Production completion requires a new source PR and exact-SHA owner approval, protected integration, guarded Education release and timestamped native Chromium results for classroom, material studio, and document editor.
