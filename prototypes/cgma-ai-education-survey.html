@@ -1,23 +1,8 @@
 <!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>상인 AI 교육 수요조사 | 청계면상인회</title><style>
 :root{font-family:system-ui,sans-serif;color:#111;background:#fff}body{max-width:780px;margin:auto;padding:16px;line-height:1.5}h1{font-size:1.65rem}fieldset{border:1px solid #ddd;border-radius:8px;margin:12px 0;padding:14px}legend{font-weight:700}label{display:block;padding:8px 2px}input[type=checkbox],input[type=radio]{width:20px;height:20px;vertical-align:middle}button{padding:13px 20px;border-radius:8px;border:1px solid #111;background:#111;color:white;font-size:1rem;cursor:pointer}button.secondary{background:white;color:#111}textarea{width:100%;min-height:75px}#result{white-space:pre-wrap;background:#f4f4f4;padding:16px;border-radius:8px}small{color:#555}</style></head>
-<body><header><p>청계면상인회 · 교육 수요조사 시제품</p><h1>우리 가게에 필요한 AI 교육을 찾아보세요</h1><p>응답 시간 약 3~5분 · 익명 설문 · 스마트폰 참여 가능</p></header>
+<body><header><p>청계면상인회 · 교육 수요조사 시제품</p><h1>우리 가게에 필요한 AI 교육을 찾아보세요</h1><p><a href="/cgma/">청계면상인회 홈으로</a></p><p>응답 시간 약 3~5분 · 익명 설문 · 스마트폰 참여 가능</p></header>
 <form id="survey"><div id="questions"></div><fieldset><legend>추가 의견 (선택)</legend><textarea id="comment" maxlength="1000" placeholder="우리 가게에서 AI로 해결하고 싶은 일"></textarea></fieldset><button type="submit">교육과정 추천 보기</button></form>
 <section id="result" hidden aria-live="polite"></section><p><button class="secondary" id="export" type="button" hidden>내 응답 CSV 저장</button></p>
 <small>이 화면은 검토용 시제품입니다. 응답은 서버에 전송되거나 브라우저 저장소에 보관되지 않습니다. 화면을 닫거나 새로고침하면 입력 내용이 사라집니다. 정식 운영 전에는 개인정보 처리방침, 접근 통제, 서버 저장 및 동의 절차를 별도로 검증해야 합니다.</small>
-<script>
-const qs=[
-['운영 업종','음식점·카페','식품·농수산물','소매·잡화','미용·생활서비스','숙박·관광','기타'],
-['AI 사용 경험','처음 들어봄','알지만 미사용','몇 번 사용','가끔 활용','자주 활용'],
-['운영 중 어려운 점','신규 고객 확보','상품 홍보','온라인 판매','단골 관리','매출·재고 관리','서류·행정업무'],
-['배우고 싶은 AI 활용','ChatGPT 기초','홍보 이미지·전단지','SNS·블로그 홍보','홍보영상 제작','고객·리뷰 관리','매출·재고·엑셀','지원사업 신청'],
-['희망 교육 방식','스마트폰 실습','노트북 실습','업종별 소그룹','가게별 문제 해결'],
-['희망 시간','평일 오전','평일 오후','평일 저녁','주말'],
-['희망 교육 횟수','1회 2시간','2회 4시간','4회 8시간','정기교육']
-];
-const multi=new Set([2,3,5]);const root=document.getElementById('questions');
-qs.forEach((q,i)=>{const f=document.createElement('fieldset');const l=document.createElement('legend');l.textContent=(i+1)+'. '+q[0]+(multi.has(i)?' (복수 선택)':'');f.append(l);q.slice(1).forEach((v,j)=>{const lab=document.createElement('label');const input=document.createElement('input');input.type=multi.has(i)?'checkbox':'radio';input.name='q'+i;input.value=v;input.required=!multi.has(i);lab.append(input,document.createTextNode(' '+v));f.append(lab)});root.append(f)});
-let last=null;
-document.getElementById('survey').addEventListener('submit',e=>{e.preventDefault();const data=qs.map((q,i)=>[q[0],Array.from(document.querySelectorAll('[name=q'+i+']:checked')).map(x=>x.value)]);const topics=data[3][1];if(!data[2][1].length){alert('운영 중 어려운 점을 하나 이상 선택해주세요.');return}if(!topics.length){alert('배우고 싶은 AI 활용을 하나 이상 선택해주세요.');return}const map=[['ChatGPT 기초','AI 첫걸음'],['홍보 이미지·전단지','AI 홍보 디자인'],['SNS·블로그 홍보','AI 온라인 마케팅'],['홍보영상 제작','AI 홍보영상'],['고객·리뷰 관리','AI 고객관리'],['매출·재고·엑셀','AI 매장경영'],['지원사업 신청','AI 행정·지원사업']];const recommended=map.filter(([k])=>topics.includes(k)).map(x=>x[1]);last={data,comment:document.getElementById('comment').value,recommended};const result=document.getElementById('result');result.hidden=false;result.textContent='추천 교육과정\n'+recommended.map((x,i)=>(i+1)+'. '+x).join('\n')+'\n\n※ 이 결과는 선택한 관심 분야에 따른 단순 추천이며, 교육 신청이 접수된 것은 아닙니다.';document.getElementById('export').hidden=false;result.scrollIntoView({behavior:'smooth'})});
-document.getElementById('export').addEventListener('click',()=>{if(!last)return;const rows=[['문항','응답'],...last.data.map(([k,v])=>[k,v.join('; ')]),['추가 의견',last.comment],['추천 교육',last.recommended.join('; ')]];const csv='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='merchant-ai-survey.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});
-</script></body></html>
+<script src="/cgma/ai-education/app.js" defer></script></body></html>
