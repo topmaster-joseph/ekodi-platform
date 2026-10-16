@@ -19,7 +19,7 @@ try {
   throw '[EKODI:EKA-299][crypto] Windows DPAPI assembly is unavailable: ' + $_.Exception.Message
 }
 
-$AgentVersion = '2.5.7'
+$AgentVersion = '2.5.8'
 # Some remote/managed Windows sessions omit ProgramData from the process environment.
 # Resolve the canonical system data directory without changing machine-wide settings.
 if ([string]::IsNullOrWhiteSpace($env:ProgramData)) {
