@@ -15,5 +15,5 @@ test('USER4 acceptance output independently discloses confirmed safe agent refre
   assert.match(source,/ensureUser4AgentUpdated\(\{token\}\)/);
   assert.match(source,/nativeAgentUpdateVerified:update\.recentOfficialUpdateVerified===true/);
   assert.match(source,/ownerRefreshFloor:new Date\(USER4_CDP_FIX_FLOOR\)\.toISOString\(\)/);
-  assert.match(source,/USER4_CDP_FIX_FLOOR = Date\.parse\('2026-10-12T18:00:00\.000Z'\)/);
+  assert.match(source,/USER4_CDP_FIX_FLOOR = Date\.parse\('2026-10-16T00:00:00\.000Z'\)/);
 });
