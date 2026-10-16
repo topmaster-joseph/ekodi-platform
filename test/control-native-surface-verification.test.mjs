@@ -50,4 +50,7 @@ test('Control route and both guarded actions remain available as first-party ass
   assert.match(ui, /\/api\/control\/ai\/v8\/orchestrator\/submit/);
   assert.match(ui, /executionAuthorized!==false/);
   assert.match(ui, /submitted\?\.accepted!==true/);
+  assert.ok(ui.includes("$('[data-refresh]').forEach"),'querySelectorAll required for refresh buttons');
+  assert.doesNotMatch(ui, /(?<!\$)\$\('[^']+'\)\.forEach/);
+
 });
