@@ -19,3 +19,6 @@ test('budget CSV exports exact figures',()=>{const csv=proposalBudgetToCsv([{nam
 
 import {proposalToMarkdownWithBudget} from '../proposal/analysis.js';
 test('cross-document budget remains identical',()=>{const draft=createProposalDraft({title:'예산 검증'});draft.budgetRows=[{name:'장비',quantity:2,unit:'개',unitCost:8000}];const html=proposalToPrintHtml(draft);const md=proposalToMarkdownWithBudget(draft);const slides=proposalToPresentationMd(draft);assert.ok(html.includes('16000'));assert.ok(md.includes('16000'));assert.ok(slides.includes('16,000원'));});
+
+import {reviewProposalDraft} from '../proposal/core.js';
+test('guided draft is never submission-ready until generated placeholders have been replaced',()=>{const p=createProposalDraft({title:'검토'});const made=makeGuidedProposalDraft(p).draft;assert.equal(reviewProposalDraft(made).submissionReady,false);assert.ok(reviewProposalDraft(made).issues.some(x=>x.includes('작성 가이드')));});
