@@ -18,35 +18,44 @@ export function validMerchantProfile(p){
     !STATES.has(p.state)||p.provider!=='tosspayments'||!Array.isArray(p.services)||
     !p.services.length||!p.services.every(x=>validString(x,ID))||
     new Set(p.services).size!==p.services.length)return false;
- if(!p.settlement||['accountNumber','holderName','accountHolder','routingNumber'].some(k=>Object.hasOwn(p.settlement,k))||
+ const complete=p.state==='verified';
+ if(p.settlement!=null&&(['accountNumber','holderName','accountHolder','routingNumber'].some(k=>Object.hasOwn(p.settlement,k))||
     !validString(p.settlement.bankCode,/^[A-Za-z0-9]{2,12}$/)||
     !validString(p.settlement.accountLast4,/^[0-9]{4}$/)||
     !validString(p.settlement.fingerprint,SHA256)||
-    !validString(p.settlement.proofRef,/^[A-Z0-9_-]{8,100}$/))return false;
+    !validString(p.settlement.proofRef,/^[A-Z0-9_-]{8,100}$/)))return false;
+ if(complete&&!p.settlement)return false;
  if(!p.midByMode||!p.credentialRefs||!p.issuerRefs||
    typeof p.issuerRefs!=='object'||Array.isArray(p.issuerRefs))return false;
  for(const mode of MODES){
-   if(!validString(p.midByMode[mode],MID)||
-      !validString(p.credentialRefs[mode]?.client,BINDING)||
-      !validString(p.credentialRefs[mode]?.secret,BINDING))return false;
+   const mid=p.midByMode[mode],refs=p.credentialRefs[mode];
+   if(mid){if(!validString(mid,MID)||!validString(refs?.client,BINDING)||
+      !validString(refs?.secret,BINDING))return false;}
+   else if(complete||refs?.client||refs?.secret)return false;
  }
- if(p.credentialRefs.test.client===p.credentialRefs.live.client||
-    p.credentialRefs.test.secret===p.credentialRefs.live.secret)return false;
- if(!p.services.every(service=>validString(p.issuerRefs[service],ID)))return false;
+ if(p.credentialRefs.test?.client&&p.credentialRefs.test.client===p.credentialRefs.live?.client)return false;
+ if(p.credentialRefs.test?.secret&&p.credentialRefs.test.secret===p.credentialRefs.live?.secret)return false;
+ if(complete&&!p.services.every(service=>validString(p.issuerRefs[service],ID)))return false;
  return true;
 }
 export function indexMerchantProfiles(profiles){
  if(!Array.isArray(profiles)||profiles.length>1000)throw Error('invalid_private_merchant_registry');
- const merchants=new Map(), midOwner=new Map(), bindingOwner=new Map(), serviceOwners=new Map();
+ const merchants=new Map(), midOwner=new Map(), bindingOwner=new Map(), serviceOwners=new Map(),accountOwner=new Map();
  for(const p of profiles){
    if(!validMerchantProfile(p))throw Error('invalid_private_merchant_profile');
    if(merchants.has(p.merchantId))throw Error('duplicate_merchant');
    merchants.set(p.merchantId,p);
+   if(p.settlement){
+     const used=accountOwner.get(p.settlement.fingerprint);
+     if(used&&used!==p.merchantId)throw Error('cross_merchant_settlement_account_collision');
+     accountOwner.set(p.settlement.fingerprint,p.merchantId);
+   }
    for(const service of p.services){
      const owners=serviceOwners.get(service)||new Set();
      owners.add(p.merchantId);serviceOwners.set(service,owners);
    }
    for(const mode of MODES){
+     if(!p.midByMode[mode])continue;
      const key='tosspayments:'+mode+':'+p.midByMode[mode];
      if(midOwner.has(key))throw Error('cross_merchant_mid_collision');
      midOwner.set(key,p.merchantId);
@@ -69,6 +78,7 @@ export function merchantReadiness(profile,{mode='test',ownerGate='DISABLED'}={})
  if(!validMerchantProfile(profile))return {...DISABLED,reason:'invalid_merchant_profile'};
  if(!MODES.has(mode))return {...DISABLED,reason:'payment_execution_disabled'};
  if(profile.state!=='verified')return {...DISABLED,reason:'merchant_not_verified'};
+ if(!validString(profile.midByMode[mode],MID))return {...DISABLED,reason:'merchant_mid_missing'};
  const required=mode==='live'?ONBOARDING:ONBOARDING.slice(0,5);
  const missing=required.filter(name=>!gatePassed(profile,name));
  if(missing.length)return {...DISABLED,reason:'missing_evidence',missing};
