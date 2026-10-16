@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko">
+<head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+ <meta name="description" content="지원사업별·대상별·주제별·기간별로 실습 중심 교육과 온라인 컨설팅을 설계하는 EKODI Education Academy">
+ <meta name="ekodi-ui-type" content="USER">
+ <title>맞춤형 AI 강의실 · 컨설팅 | EKODI Education</title>
+ <link rel="stylesheet" href="/styles.css">
+ <link rel="stylesheet" href="./academy.css">
+</head>
+<body data-ekodi-ui="USER">
+ <header class="topbar">
+  <a class="brand" href="/"><span class="mark">E</span><span><strong>EKODI Education</strong><small>Practice Academy</small></span></a>
+  <nav aria-label="교육 상위 메뉴"><a href="/">교육 홈</a><a href="/study/">학습·유학</a><a href="/study/ai-bootcamp/">교직원 부트캠프</a></nav>
+  <a class="secondary" href="#consulting">온라인 컨설팅</a>
+ </header>
+ <main class="academy-main">
+  <section class="academy-hero">
+   <div><p class="eyebrow">EKODI EDUCATION · INSTRUCTOR WORKSPACE</p>
+    <h1>교육 수요에 맞춰 설계하고,<br>강의실에서 직접 실습합니다.</h1>
+    <p>지원사업별 · 대상별 · 교육내용별 · 기간별 맞춤형 강의안을 구성하고, 발표·실습·검증·온라인 컨설팅 안내까지 이어갑니다.</p>
+    <div class="academy-nav"><a href="#builder">교육 설계</a><a href="#classroom">실습 강의실</a><a href="#consulting">컨설팅 안내</a></div>
+   </div>
+   <aside class="academy-note"><strong>수업 운영 초안 · 안전한 공개 기능</strong><p>실제 일정·비용·수강신청·상담예약이 확정된 과정은 아닙니다. 현재 설계와 실습 결과는 이 페이지에서만 처리되며 서버에 저장하지 않습니다.</p><a href="/learn/">공통 학습 진도 시스템 보기 →</a></aside>
+  </section>
+  <section class="audience-section" aria-labelledby="audienceTitle">
+   <div class="academy-heading"><div><p class="eyebrow">AUDIENCE-FIRST</p><h2 id="audienceTitle">대상별 교육 설계</h2></div><p>아래 대상을 선택하면 강의목표·사례·실습과제가 함께 바뀝니다.</p></div>
+   <div id="audienceGrid" class="audience-grid" role="group" aria-label="교육 대상 선택"></div>
+  </section>
+  <div class="academy-layout">
+   <aside class="academy-sidebar" aria-label="강사 도구">
+    <strong>강사 워크스페이스</strong>
+    <a href="#builder">01 · 과정 설계</a><a href="#classroom">02 · 강의·실습</a><a href="#consulting">03 · 컨설팅</a>
+    <p>교육 설계 → 회차별 학습 → 실습 검증 → 자료 내보내기</p>
+    <div class="side-actions"><button id="exportMarkdown" type="button">강의계획서 MD 저장</button><button id="exportJson" type="button">과정 설정 JSON 저장</button><label class="import-label" for="importJson">과정 설정 가져오기</label><input id="importJson" type="file" accept=".json,application/json"></div>
+   </aside>
+   <div class="academy-work">
+    <section id="builder" class="academy-panel">
+     <div class="academy-heading"><div><p class="eyebrow">01 · COURSE BUILDER</p><h2>교육과정 자동 구성</h2></div><p>기관·지원사업 조건에 맞춰 회차와 실습 비율을 바꿉니다.</p></div>
+     <form id="builderForm" class="academy-form">
+      <label>교육대상<select id="audience" name="audience"></select></label>
+      <label>교육 제목<input id="title" name="title" maxlength="100" placeholder="예: 현장 중심 생성형 AI 활용"></label>
+      <label>지원사업·사업구분<input id="program" name="program" maxlength="120" placeholder="예: 지자체 위탁교육 / 자체교육"></label>
+      <label>의뢰·주관 기관<input id="host" name="host" maxlength="100" placeholder="예: 대학교 · 소상공인지원기관"></label>
+      <label class="wide">맞춤 강의 주제·요구사항<textarea id="topic" name="topic" maxlength="180" placeholder="예: 스마트폰 초급, 매출분석 집중, 공모사업 결과물 중심"></textarea></label>
+      <label>진행 방식<select id="delivery" name="delivery"><option value="online">온라인</option><option value="onsite">대면</option><option value="hybrid">혼합</option></select></label>
+      <label>회차 수<input id="sessions" name="sessions" type="number" min="1" max="24" step="1" value="4"></label>
+      <label>회당 시간 (분)<input id="minutes" name="minutes" type="number" min="40" max="240" step="10" value="120"></label>
+      <label>실습 비중<select id="practicePercent" name="practicePercent"><option value="50">50%</option><option value="60">60%</option><option value="70" selected>70%</option><option value="80">80%</option></select></label>
+      <label>시작 예정일<input id="start" name="start" type="date"></label><label>종료 예정일<input id="end" name="end" type="date"></label>
+      <div class="wide form-controls"><button class="academy-primary" type="submit">과정 다시 구성</button><span id="builderStatus" role="status" aria-live="polite">조건을 입력하면 강의실이 즉시 구성됩니다.</span></div>
+     </form>
+     <div id="planSummary" class="plan-summary" aria-live="polite"></div>
+    </section>
+    <section id="classroom" class="academy-panel">
+     <div class="academy-heading"><div><p class="eyebrow">02 · INTERACTIVE LAB</p><h2>고급 실습 강의실</h2></div><p>강사 화면과 학습 실습을 같은 공간에서 진행합니다.</p></div>
+     <div class="class-controls"><label for="sessionPicker">회차 선택</label><select id="sessionPicker"></select><button id="presentationButton" type="button" class="academy-primary">발표 모드</button><button id="promptCopy" type="button">프롬프트 복사</button></div>
+     <div id="lessonView" aria-live="polite"></div>
+     <div class="lab-grid"><div><label for="practiceInput">실습 메모 · 검증할 가상 입력자료</label><textarea id="practiceInput" rows="7" maxlength="4000" placeholder="실습 내용을 직접 작성하세요. 학생 실명·연락처·기밀문서는 입력하지 마세요."></textarea></div><div><label for="practiceOutput">실습 결과 · 개선할 점</label><textarea id="practiceOutput" rows="7" maxlength="4000" placeholder="프롬프트 실행 결과 또는 검증 후 수정한 내용을 기록하세요. 서버에는 제출되지 않습니다."></textarea></div></div>
+     <div class="form-controls"><button id="checkPractice" type="button">실습 점검</button><button id="exportPractice" type="button">내 실습 기록 저장</button><span id="practiceStatus" role="status" aria-live="polite"></span></div>
+     <p class="fineprint">AI 명령문은 복사해 기관 승인 도구에서 실행합니다. 이 화면은 실제 AI 실행·화상 송출·출결·성적 저장과 연결되지 않은 강의실 설계 및 로컬 실습 도구입니다.</p>
+    </section>
+    <section id="consulting" class="academy-panel">
+     <div class="academy-heading"><div><p class="eyebrow">03 · ONLINE CONSULTING</p><h2>온라인 교육·컨설팅 안내</h2></div><p>교육 기획부터 현장 적용까지 상담 유형을 고르고 문의 초안을 만듭니다.</p></div>
+     <div id="consultTypes" class="consult-grid"></div>
+     <form id="consultForm" class="academy-form consult-form">
+      <label>상담 유형<select id="consultType" name="type"></select></label>
+      <label>진행 방식<select id="consultDelivery" name="delivery"><option value="online">온라인</option><option value="onsite">대면</option><option value="hybrid">혼합</option></select></label>
+      <label class="wide">현재 해결하려는 교육·업무 과제<textarea id="consultQuestion" name="question" maxlength="600" placeholder="기관, 대상, 강의 조건, 현장에서 해결하고 싶은 일"></textarea></label>
+      <div class="wide form-controls"><button class="academy-primary" type="submit">컨설팅 문의서 만들기</button><button id="copyConsulting" type="button">문의서 복사</button></div>
+     </form>
+     <pre id="consultDraft" class="draft-box" aria-live="polite">상담 유형과 해결 과제를 입력하면 문의 초안이 표시됩니다.</pre>
+     <p class="fineprint">실제 접수·예약·결제·계약·영상회의 개설은 아직 연결되지 않았습니다. 개인정보 입력 없이 상담 의뢰 내용을 준비하는 안내 기능입니다.</p>
+    </section>
+   </div>
+  </div>
+ </main>
+ <dialog id="presentationDialog" aria-label="교육 발표 화면">
+  <div class="presentation-frame"><header><strong id="presentationTitle">EKODI 교육 발표</strong><button type="button" id="closePresentation">발표 종료 ×</button></header><div class="presentation-content"><p id="presentationCount"></p><h2 id="presentationHeading"></h2><p id="presentationBody"></p></div><footer><button type="button" id="previousSlide">← 이전</button><span>← / → 이동, Esc 종료</span><button type="button" id="nextSlide">다음 →</button></footer></div>
+ </dialog>
+ <footer><strong>EKODI Education Academy</strong><span>기관별 교육 설계·실습·컨설팅 안내</span><a href="/study/ai-bootcamp/">기존 교직원 강의실 ↗</a><a href="/study/">Study ↗</a></footer>
+ <script type="module" src="./academy.js"></script>
+</body>
+</html>
