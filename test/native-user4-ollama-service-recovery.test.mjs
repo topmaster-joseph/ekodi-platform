@@ -25,7 +25,9 @@ test('USER4 existing stopped service with fresh signed device receipt is eligibl
     {...device,recentCommands:[{...latest,result:{localAiProof:{...modelProof,ollamaProcess:'running'}}}]},
     {...device,recentCommands:[{...latest,result:{localAiProof:{...modelProof,ollamaBind:'other_address_only'}}}]},
     {...device,recentCommands:[{...latest,result:{localAiProof:{...modelProof,ollamaApi:'ready'}}}]},
-    {...device,recentCommands:[latest,{type:'computer.browser.canary',status:'claimed'}]}
+    {...device,recentCommands:[latest,{type:'computer.browser.canary',status:'claimed'}]},
+    {...device,recentCommands:[latest,{...latest,id:'failed-newer',status:'failed',
+      issuedAt:new Date(now-1000).toISOString()}]}
   ])assert.equal(safeUser4ServiceRecoveryCandidate(invalid,now),null);
 });
 test('recovery submits exactly one confirmed fixed command and requires post-recovery inference',async()=>{
