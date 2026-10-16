@@ -46,3 +46,27 @@ test('account-selection intent is one-time and cannot cause post-auth compose lo
   assert.match(entry,/params\.get\('select_account'\) === '1'/);
   assert.match(router,/params\.get\('select_account'\)==='1'/);
 });
+
+test('SeonamMedi account chooser keeps the compact single-card login layout',async()=>{
+  const [router,html,bootstrap]=await Promise.all([
+    read('auth-site/auth-router.js'),
+    read('auth-site/index.html'),
+    read('auth-site/auth-bootstrap.js')
+  ]);
+  const rule=router.match(/document\\.documentElement\\.dataset\\.seamlessSso=([^;]+);/)?.[1];
+  assert.ok(rule,'auth router must declare a seamless-Sso layout rule');
+  const layout=(query)=>{
+    const params=new URLSearchParams(query);
+    const manageMode=params.get('manage')==='1';
+    const reviewMode=params.get('review')==='1';
+    return Function('params','manageMode','reviewMode','return '+rule)(params,manageMode,reviewMode);
+  };
+  assert.equal(layout('site=seonammedi&select_account=1&purpose=seonammedi-board-write'),'1');
+  assert.equal(layout('site=seonammedi&select_account=1&manage=1'),'0');
+  assert.equal(layout('site=seonammedi&review=1'),'0');
+  assert.match(bootstrap,/document\\.documentElement\\.dataset\\.seamlessSso = interactive \\? '0' : '1'/);
+  assert.match(html,/html\\[data-seamless-sso="1"\\] \\.intro,/);
+  assert.match(html,/html\\[data-seamless-sso="1"\\] \\.principles,/);
+  assert.match(html,/html\\[data-seamless-sso="1"\\] \\.auth-card\\{width:min\\(100%,440px\\)/);
+  assert.match(html,/html\\[data-seamless-sso="1"\\] \\.auth-card \\.micro\\{display:none!important\\}/);
+});
