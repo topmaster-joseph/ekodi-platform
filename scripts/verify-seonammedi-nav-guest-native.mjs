@@ -122,6 +122,29 @@ try {
             record.noticeAfterCategory=[];
             for(const item of contexts){
               await page.locator('header.site-header nav '+item.selector).first().click({timeout:6000});
+              // The 24-route guest audit must assert the actual rendered middle-menu
+              // visibility, not merely that the top navigation has six links.
+              // Preserve the working social preview when the Channels tab opens.
+              if(['활동이력','관련소식','소통채널'].includes(item.label)){
+                const middleMenu=await page.evaluate(()=>{
+                  const title=document.getElementById('central-category-title');
+                  const buttons=document.getElementById('central-category-buttons');
+                  const social=document.getElementById('central-social-links');
+                  const link=document.getElementById('central-social-link');
+                  return {
+                    titleHidden:!!title&&getComputedStyle(title).display==='none',
+                    buttonsHidden:!!buttons&&getComputedStyle(buttons).display==='none',
+                    socialPreviewVisible:!!social&&!social.hidden&&getComputedStyle(social).display!=='none',
+                    socialLinkSafe:!!link&&link.protocol==='https:'
+                  };
+                });
+                record.middleMenuVisualChecks??=[];
+                record.middleMenuVisualChecks.push({menu:item.label,...middleMenu});
+                if(!middleMenu.titleHidden||!middleMenu.buttonsHidden)
+                  violations.push('duplicate_middle_menu_visible_'+item.label);
+                if(item.label==='소통채널'&&(!middleMenu.socialPreviewVisible||!middleMenu.socialLinkSafe))
+                  violations.push('social_preview_regressed_when_middle_menu_hidden');
+              }
               await page.locator('header.site-header nav a[href*="board/notices"]').first().click({timeout:8000});
               await page.waitForURL(url=>url.origin===root.origin&&url.pathname.replace(/[/]$/,'')===expectedPath,{timeout:10000});
               const actualPath=new URL(page.url()).pathname.replace(/[/]$/,'');
