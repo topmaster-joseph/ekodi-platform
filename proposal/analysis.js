@@ -149,8 +149,16 @@ export function proposalToPrintHtml(model){
   const checked=reviewProposalDraft(model);
   const metadata=Object.entries(LABELS).map(([key,label])=>'<tr><th>'+esc(label)+'</th><td>'+esc(model.decisions?.[key]||'확인 필요')+'</td></tr>').join('');
   const sections=model.sections.map((s,i)=>'<section><h2>'+(i+1)+'. '+esc(s.name)+'</h2><div class="body">'+esc(s.body||'작성 내용 확인 필요')+'</div></section>').join('');
+  const rows=Array.isArray(model.budgetRows)?model.budgetRows:[];
+  let budgetHtml='';
+  if(rows.length){
+    const c=calculateProposalBudget(rows);
+    budgetHtml='<section><h2>예산 산출표 (사용자 입력)</h2><table><tr><th>항목</th><th>수량</th><th>단위</th><th>단가(원)</th><th>금액(원)</th></tr>';
+    for(const r of c.items)budgetHtml+='<tr><td>'+esc(r.name)+'</td><td>'+r.quantity+'</td><td>'+esc(r.unit)+'</td><td>'+r.unitCost+'</td><td>'+r.amount+'</td></tr>';
+    budgetHtml+='<tr><td>입력 합계</td><td></td><td></td><td></td><td>'+c.total+'</td></tr></table></section>';
+  }
   const warning=checked.issues.length?'<p class="warn">제출 전 확인 '+checked.issues.length+'건: '+esc(checked.issues.slice(0,8).join(' · '))+'</p>':'<p class="warn">기초 항목 검사 통과: 사실·양식·예산·인증 최종 검증은 별도입니다.</p>';
-  return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(model.title)+' — EKODI 검토용 제안서</title><style>@page{size:A4;margin:18mm}body{font-family:system-ui,Arial,sans-serif;color:#111;max-width:820px;margin:30px auto;padding:12px;font-size:14px;line-height:1.7}h1{font-size:27px;letter-spacing:-.04em}h2{font-size:17px;margin-top:32px;padding-bottom:6px;border-bottom:1px solid #222}small,.muted{color:#666}.warn{border:1px solid #bbb;padding:12px;background:#fafafa;font-size:12px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:8px;text-align:left}th{background:#f5f5f5;width:22%}.body{white-space:pre-wrap;overflow-wrap:anywhere}section{break-inside:avoid-page}@media print{body{margin:0;padding:0}.warn{background:white}}</style></head><body><small>EKODI PROPOSAL STUDIO | 검토용 초안 · 자동 제출 금지</small><h1>'+esc(model.title)+'</h1><p class="muted">분야 '+esc(model.domain)+' · 목적 '+esc(model.goal)+'</p>'+warning+'<h2>사업 기본정보</h2><table>'+metadata+'</table>'+sections+'<p class="muted">출처·원본 양식·수치의 사실성에 대해 사용자 최종 검증이 필요합니다.</p></body></html>';
+  return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(model.title)+' — EKODI 검토용 제안서</title><style>@page{size:A4;margin:18mm}body{font-family:system-ui,Arial,sans-serif;color:#111;max-width:820px;margin:30px auto;padding:12px;font-size:14px;line-height:1.7}h1{font-size:27px;letter-spacing:-.04em}h2{font-size:17px;margin-top:32px;padding-bottom:6px;border-bottom:1px solid #222}small,.muted{color:#666}.warn{border:1px solid #bbb;padding:12px;background:#fafafa;font-size:12px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:8px;text-align:left}th{background:#f5f5f5;width:22%}.body{white-space:pre-wrap;overflow-wrap:anywhere}section{break-inside:avoid-page}@media print{body{margin:0;padding:0}.warn{background:white}}</style></head><body><small>EKODI PROPOSAL STUDIO | 검토용 초안 · 자동 제출 금지</small><h1>'+esc(model.title)+'</h1><p class="muted">분야 '+esc(model.domain)+' · 목적 '+esc(model.goal)+'</p>'+warning+'<h2>사업 기본정보</h2><table>'+metadata+'</table>'+budgetHtml+sections+'<p class="muted">출처·원본 양식·수치의 사실성에 대해 사용자 최종 검증이 필요합니다.</p></body></html>';
 }
 
 export function proposalToPresentationMd(model){
