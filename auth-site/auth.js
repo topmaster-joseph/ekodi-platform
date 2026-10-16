@@ -47,6 +47,7 @@ const marketing=site==='marketing';
 const reviewMode=marketing&&params.get('review')==='1';
 const explicitPro=marketing&&(params.get('plan')==='pro'||params.get('intent')==='pro');
 const manageMode=params.get('manage')==='1';
+const chooseAccount=site==='seonammedi'&&params.get('choose_account')==='1';
 const interactiveMode=reviewMode||explicitPro||manageMode;
 function isMarketingReturnOrigin(origin){
   if(config.origins.includes(origin))return true;
@@ -407,5 +408,5 @@ $('continueService').addEventListener('click',async()=>{
 });
 
 const {data:{session:initial}}=await sb.auth.getSession();
-if(initial){cleanUrl();await renderAccess(initial)}else await prepareGoogle();
+if(chooseAccount){window.google?.accounts?.id?.disableAutoSelect?.();if(initial)await sb.auth.signOut({scope:'local'});await prepareGoogle();}else if(initial){cleanUrl();await renderAccess(initial)}else await prepareGoogle();
 sb.auth.onAuthStateChange(async(event,s)=>{if(event==='SIGNED_IN'&&s){cleanUrl();await renderAccess(s)}if(event==='SIGNED_OUT'){routing=false;show('signedIn',false);show('signedOut',true);show('reviewConsole',false);show('identityPanel',false)}});
