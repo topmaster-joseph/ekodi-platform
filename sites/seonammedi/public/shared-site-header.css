@@ -135,3 +135,6 @@ body.seonam-visual-ready>.campaign-hero{width:100%!important;max-width:none!impo
 body.seonam-visual-ready>.campaign-hero .campaign-hero-artwork{display:block!important;width:100%!important;max-width:none!important}
 body.seonam-visual-ready>.campaign-hero .campaign-hero-image{display:block!important;width:100%!important;max-width:none!important;height:auto!important;object-fit:contain!important}
 body[data-seonammedi-image-mode="inner"].seonam-visual-ready>.campaign-hero{display:none!important}
+
+/* Home-only artwork: never expose a legacy external shared photo banner. */
+body.seonam-visual-ready > .seonam-visual-hero{display:none!important}
