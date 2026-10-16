@@ -37,3 +37,15 @@
 .seonam-calendar-form-actions .seonam-calendar-cancel{border-color:#cbd5e1;background:#fff;color:#334155}
 .seonam-calendar-feedback{margin:0;font-size:12px;color:#8d2d35;line-height:1.5}
 @media(max-width:940px){body.seonam-visual-ready .seonam-visual-right .seonam-calendar-week span{font-size:12px}.seonam-calendar-day{min-height:40px;font-size:13px}}
+
+/* Compact and accessible today's schedule immediately under the main calendar. */
+.seonam-calendar-manage{appearance:none;border:1px solid #cbd5e1;border-radius:6px;background:#fff;color:#1f3e5c;padding:6px 11px;min-height:32px;font-size:12px;font-weight:700;cursor:pointer}
+.seonam-calendar-manage:hover,.seonam-calendar-manage:focus-visible{border-color:#1c5c9e;background:#eff6ff;outline-offset:2px}
+.seonam-calendar-today-agenda{margin-top:12px;padding-top:10px;border-top:1px solid #d8e4f0}
+.seonam-calendar-today-agenda[hidden]{display:none!important}
+.seonam-calendar-today-heading{margin:0 0 5px!important;color:#183b63;font-size:13px;font-weight:800;line-height:1.5}
+.seonam-calendar-today-event{padding:7px 0;border-top:1px solid #e8eef6;overflow-wrap:anywhere}
+.seonam-calendar-today-event:first-child{border-top:none}
+.seonam-calendar-today-event strong{display:block;font-size:12px;line-height:1.5;color:#182e45}
+.seonam-calendar-today-event small{display:block;margin-top:3px;font-size:11px;color:#4b6380}
+.seonam-calendar-today-event p{margin:5px 0 0;font-size:12px;line-height:1.5;white-space:pre-wrap;color:#35485c;overflow-wrap:anywhere}
