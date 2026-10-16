@@ -80,7 +80,7 @@ export async function seasonalOperationsResponse(request,env,{resolveAdmin=defau
     return row?json({ok:true,item:redact(row),allocationConfirmed:false}):error('not_found',404);
    }
    const result=await env.DB.prepare('SELECT * FROM seasonal_farm_demands WHERE tenant_id=? ORDER BY created_at DESC LIMIT 100').bind(tenantId).all();
-   return json({ok:true,items:rows(result).map(redact),allocationConfirmed:false});
+   return json({ok:true,items:rows(result).map(redact),permissions:{canWrite:role==='municipal_operator'},allocationConfirmed:false});
   }
   if(role!=='municipal_operator')return error('forbidden',403);
   if(!env.PLATFORM_SENSITIVE_RATE_LIMITER?.limit)return error('rate_limit_unavailable',503);
