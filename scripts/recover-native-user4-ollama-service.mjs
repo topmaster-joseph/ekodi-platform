@@ -16,8 +16,9 @@ export function safeUser4ServiceRecoveryCandidate(device, now=Date.now()) {
   const busy=(device.recentCommands||[]).some(c=>['queued','claimed','assigned'].includes(c.status));
   if(busy)return null;
   const prior=(device.recentCommands||[])
-    .filter(c=>c.type===VERIFY&&c.status==='succeeded')
-    .sort((a,b)=>stamp(b.completedAt)-stamp(a.completedAt))[0];
+    .filter(c=>c.type===VERIFY)
+    .sort((a,b)=>stamp(b.issuedAt||b.completedAt)-stamp(a.issuedAt||a.completedAt))[0];
+  if(prior?.status!=='succeeded')return null;
   const done=stamp(prior?.completedAt);
   if(!Number.isFinite(done)||done>now||now-done>300000)return null;
   const proof=prior?.result?.localAiProof;
