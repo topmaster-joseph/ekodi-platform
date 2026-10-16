@@ -1,4 +1,5 @@
 import {PROPOSAL_DOMAINS,PROPOSAL_GOALS,createProposalDraft,selectedStages,reviewProposalDraft,draftToMarkdown,validImportedDraft,normalizeReferenceUrl} from './core.js';
+import {analyzeProposalSources,makeGuidedProposalDraft,calculateProposalBudget,reviewProposalBudget,parseKrwAmount,proposalToPrintHtml,proposalToPresentationMd} from './analysis.js';
 const byId=id=>document.getElementById(id);
 let project=null;
 let sources=[];
@@ -73,6 +74,7 @@ function snapshot(){
     const section=project.sections.find(item=>item.id===element.dataset.section);
     if(section)section.body=element.value.slice(0,50000);
   }
+  project.budgetRows=collectBudgetRows();
   return project;
 }
 function draw(){
@@ -103,6 +105,9 @@ function draw(){
     li.append(make('b',String(step.id).padStart(2,'0')),make('span',step.name));
     list.append(li);
   }
+  renderBudgetRows();
+  byId('analysisResult').replaceChildren();
+  byId('budgetResult').replaceChildren();
   byId('reviewResult').replaceChildren();
   status('제안서 목차가 구성됐습니다. 모든 항목은 비어 있는 초안이며 수치·사실을 자동 생성하지 않았습니다.');
 }
@@ -120,14 +125,121 @@ byId('generateBtn').addEventListener('click',()=>{
     draw();byId('editor').scrollIntoView({behavior:'smooth',block:'start'});
   }catch(error){status(error.message);}
 });
+
+function makeBudgetInput(className,type,value='',placeholder=''){
+  const input=make('input');input.className=className;input.type=type;
+  input.placeholder=placeholder;input.value=String(value??'');
+  input.setAttribute('aria-label',placeholder||className);
+  if(type==='number'){input.min='0';input.step=className==='budget-quantity'?'0.0001':'1';}
+  return input;
+}
+function appendBudgetRow(values={}){
+  const host=byId('budgetRows');
+  if(host.children.length>=50)return status('예산 항목은 최대 50건입니다.');
+  const row=make('tr');row.className='budget-row';
+  const data=[
+    makeBudgetInput('budget-name','text',values.name||'','예산 항목명'),
+    makeBudgetInput('budget-quantity','number',values.quantity??'','수량'),
+    makeBudgetInput('budget-unit','text',values.unit||'식','단위'),
+    makeBudgetInput('budget-unitcost','number',values.unitCost??'','단가 원')
+  ];
+  for(const input of data){
+    const td=make('td');td.append(input);row.append(td);
+  }
+  const td=make('td');const remove=make('button','삭제','remove-budget');remove.type='button';
+  remove.addEventListener('click',()=>{row.remove();if(!host.children.length)appendBudgetRow();});
+  td.append(remove);row.append(td);host.append(row);
+}
+function renderBudgetRows(){
+  byId('budgetRows').replaceChildren();
+  const rows=Array.isArray(project?.budgetRows)?project.budgetRows:[];
+  for(const item of rows.slice(0,50))appendBudgetRow(item);
+  if(!rows.length)appendBudgetRow();
+}
+function collectBudgetRows(){
+  return Array.from(byId('budgetRows').querySelectorAll('tr')).map(tr=>({
+    name:tr.querySelector('.budget-name')?.value.trim().slice(0,120)||'',
+    unit:tr.querySelector('.budget-unit')?.value.trim().slice(0,20)||'식',
+    quantity:tr.querySelector('.budget-quantity')?.value||'',
+    unitCost:tr.querySelector('.budget-unitcost')?.value||''
+  })).filter(r=>r.name||r.quantity||r.unitCost);
+}
+byId('addBudgetRow').addEventListener('click',()=>appendBudgetRow());
+function showBudgetSummary(){
+  if(!snapshot())return status('먼저 제안서를 생성하세요.');
+  const host=byId('budgetResult');host.replaceChildren();
+  try{
+    const rows=project.budgetRows;
+    if(rows.some(row=>row.quantity===''||row.unitCost===''))throw new Error('각 예산 항목의 수량과 단가(0원 포함)를 입력하세요.');
+    const calculation=calculateProposalBudget(rows);
+    host.append(make('p','사용자 입력 산출 합계: '+calculation.total.toLocaleString('ko-KR')+'원','budget-amount'));
+    const detail=make('ul',undefined,'analysis-list');
+    for(const item of calculation.items){
+      detail.append(make('li',item.name+' · '+item.quantity+item.unit+' × '+item.unitCost.toLocaleString('ko-KR')+'원 = '+item.amount.toLocaleString('ko-KR')+'원'));
+    }
+    host.append(detail);
+    const review=reviewProposalBudget(project);
+    for(const warning of review.warnings)host.append(make('p',warning,'muted'));
+    if(review.matched)host.append(make('p','입력된 총사업비와 예산 합계가 일치합니다. 실제 견적 여부는 별도 확인이 필요합니다.'));
+    status('입력한 예산의 산술 합계를 검증했습니다. 실제 비용은 검증하지 않았습니다.');
+    return calculation;
+  }catch(error){
+    host.append(make('p',error.message));
+    status('예산 입력을 확인하세요: '+error.message);
+    return null;
+  }
+}
+byId('calculateBudget').addEventListener('click',showBudgetSummary);
+byId('applyBudget').addEventListener('click',()=>{
+  const result=showBudgetSummary();if(!result)return;
+  const field=document.querySelector('[data-decision="totalBudget"]');
+  const existing=field.value.trim();
+  const existingNumber=parseKrwAmount(existing);
+  if(existing&&existingNumber!==result.total)return status('기존 총사업비와 합계가 다릅니다. 수동으로 확인한 뒤 기존 입력값을 변경해 주세요.');
+  field.value=result.total.toLocaleString('ko-KR')+'원';
+  project.decisions.totalBudget=field.value;
+  status('사용자가 계산한 합계를 총사업비 필드에 반영했습니다. 실제 견적·재원 검증은 남아 있습니다.');
+});
+function showSourceAnalysis(data){
+  const host=byId('analysisResult');host.replaceChildren();
+  host.append(make('strong','참고자료 '+data.sourceCount+'건 · 출처 확인된 자료 '+data.verifiedCount+'건'));
+  const notes=make('ul',undefined,'analysis-list');
+  for(const item of data.flags.slice(0,22))notes.append(make('li',item));
+  if(data.excerpts.length){
+    notes.append(make('li','입력 텍스트에서 발췌된 문장 '+data.excerpts.length+'건(문맥·진위 미검증)'));
+    for(const entry of data.excerpts.slice(0,8)){
+      notes.append(make('li','['+entry.source+'] '+entry.text));
+    }
+  }
+  host.append(notes);
+}
+byId('analyzeBtn').addEventListener('click',()=>{
+  if(!snapshot())return status('먼저 제안서를 생성하세요.');
+  showSourceAnalysis(analyzeProposalSources(project));
+  status('브라우저 내 텍스트와 참고자료 등록 상태를 분석했습니다. 인터넷 원문 확인은 수행하지 않았습니다.');
+});
+byId('scaffoldBtn').addEventListener('click',()=>{
+  if(!snapshot())return status('먼저 제안서를 생성하세요.');
+  try{
+    const prepared=makeGuidedProposalDraft(project);
+    project=prepared.draft;draw();showSourceAnalysis(prepared.sourceAnalysis);
+    status(prepared.changed+'개 빈 항목에 검토용 작성 가이드를 넣었습니다. 기존 작성 내용은 유지했습니다.');
+  }catch(error){status('초안 구성 실패: '+error.message);}
+});
+
 byId('reviewBtn').addEventListener('click',()=>{
   if(!snapshot())return;
   const summary=reviewProposalDraft(project);
   const panel=byId('reviewResult');panel.replaceChildren(make('strong',summary.checked));
   const ul=make('ul');for(const item of summary.issues)ul.append(make('li',item));
   panel.append(ul);
+  try{
+    const budget=reviewProposalBudget(project);
+    for(const note of budget.warnings)ul.append(make('li','예산: '+note));
+    if(budget.applicable&&budget.matched)panel.append(make('p','예산 합계는 일치합니다. 견적·재원·출처의 사실성은 별도 확인해야 합니다.'));
+  }catch(error){ul.append(make('li','예산 계산 오류: '+error.message));}
   if(summary.submissionReady)panel.append(make('p','항목 입력 여부만 확인됨. 원자료와 수치 및 실제 양식은 별도 검증해야 합니다.'));
-  status(summary.issues.length+'개 항목의 검토 사항을 확인했습니다.');
+  status('제출 전 필수항목 및 예산 산술 검토 결과를 표시했습니다.');
 });
 function download(name,body,mime){
   const blob=new Blob([body],{type:mime});
@@ -141,6 +253,22 @@ byId('exportMd').addEventListener('click',()=>{
   download(basename()+'_초안.md',draftToMarkdown(project),'text/markdown;charset=utf-8');
   status('제안서 Markdown 초안을 다운로드했습니다. 최종 제출 문서는 아닙니다.');
 });
+
+byId('exportHtml').addEventListener('click',()=>{
+  if(!snapshot())return status('먼저 제안서를 생성하세요.');
+  try{
+    download(basename()+'_검토용인쇄.html',proposalToPrintHtml(project),'text/html;charset=utf-8');
+    status('A4 인쇄용 HTML을 저장했습니다. 파일을 브라우저에서 열어 인쇄하면 PDF로 저장할 수 있습니다.');
+  }catch(error){status('인쇄본 생성 실패: '+error.message);}
+});
+byId('exportSlides').addEventListener('click',()=>{
+  if(!snapshot())return status('먼저 제안서를 생성하세요.');
+  try{
+    download(basename()+'_발표구성.md',proposalToPresentationMd(project),'text/markdown;charset=utf-8');
+    status('발표 구성 Markdown을 저장했습니다. 실제 PPTX 생성은 아직 지원하지 않습니다.');
+  }catch(error){status('발표구성 생성 실패: '+error.message);}
+});
+
 byId('exportJson').addEventListener('click',()=>{
   if(!snapshot())return status('먼저 제안서 구조를 만들어 주세요.');
   download(basename()+'_프로젝트.json',JSON.stringify(project,null,2),'application/json;charset=utf-8');
