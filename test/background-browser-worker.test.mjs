@@ -78,7 +78,7 @@ test('shared-site guarded release invokes native browser verification after prod
   assert.match(workerWorkflow,/github\.event_name == 'pull_request'[\s\S]*'\/,\/my\/,\/admin\/,\/control'/);
   assert.match(workerWorkflow,/uses:\s*actions\/upload-artifact@v4\r?\n\s*if:\s*always\(\)/);
   assert.match(workerWorkflow,/device_profile:/);
-  assert.match(workerWorkflow,/group:\s*ekodi-background-browser-worker-\$\{\{ github\.workflow \}\}-\$\{\{ github\.event\.workflow_run\.head_sha \|\| github\.sha \}\}-\$\{\{ inputs\.device_profile \|\| 'desktop' \}\}/);
+  assert.match(workerWorkflow,/group:\s*ekodi-background-browser-worker-\$\{\{ github\.ref \}\}-\$\{\{ inputs\.device_profile \|\| 'desktop' \}\}/);
   assert.match(sharedRelease,/native_surface_verification_desktop:/);
   assert.match(sharedRelease,/native_surface_verification_mobile:/);
   assert.match(sharedRelease,/uses:\s*\.\/\.github\/workflows\/ekodi-background-browser-worker\.yml/);
