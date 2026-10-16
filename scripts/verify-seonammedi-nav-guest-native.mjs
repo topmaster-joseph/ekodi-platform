@@ -280,24 +280,13 @@ try {
               }catch(error){violations.push('guest_write_login_click_failed: '+String(error.message||error).slice(0,160))}
               finally{page.off('framenavigated',observe);page.off('request',observeAuthRequest)}
             }
-            // Test the distinct administrator intent without credentials, POST or mutation.
-            const manageNavigations=[];
-            const onManageNav=frame=>{if(frame===page.mainFrame())manageNavigations.push(frame.url())};
-            try{
-              await page.goto(target,{waitUntil:'domcontentloaded',timeout:25000});
-              page.on('framenavigated',onManageNav);
-              await page.locator('#voiceAdminLogin').click({timeout:6000});
-              // Include the final location in addition to observed navigation events.
-              manageNavigations.push(page.url());
-              await pause(2200);
-              const expectedManage=root.origin+root.prefix+'/board/voices?manage=1';
-              record.manageReturnMatches=manageNavigations.some(url=>{
-                try{const u=new URL(url);return u.origin==='https://ekodi.kr'&&u.pathname==='/auth/'&&
-                  u.searchParams.get('site')==='seonammedi'&&u.searchParams.get('return_to')===expectedManage}catch{return false}
-              });
-              if(!record.manageReturnMatches)violations.push('guest_manage_original_return_lost');
-            }catch(error){violations.push('guest_manage_login_click_failed: '+String(error.message||error).slice(0,160))}
-            finally{page.off('framenavigated',onManageNav)}
+            // Citizens and administrators use the same identity flow.
+            // The separate guest administrator API check above still requires 401/403.
+            await page.goto(target,{waitUntil:'domcontentloaded',timeout:25000});
+            record.singleLoginControl=(await page.locator('#voiceAdminLogin').count())===0 &&
+              (await page.locator('#voiceManageToggle').count())===0 &&
+              (await page.locator('#writeToggle').count())===1;
+            if(!record.singleLoginControl)violations.push('duplicate_voice_login_or_manage_control');
           }
           record.violations=violations;
           if(violations.length)throw Error(violations.join('; '));
