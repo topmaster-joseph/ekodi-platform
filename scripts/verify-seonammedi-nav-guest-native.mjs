@@ -187,7 +187,7 @@ try {
               const expectedReturn=root.origin+root.prefix+'/board/voices?compose=1';
               const requestIntent={login:false,returnPath:false,purpose:false,complete:false};
               // Record only non-sensitive boolean diagnostics for the outbound auth request.
-              const composeRequestHints={requests:0,returnToPresent:false,purposePresent:false,returnOriginMatches:false,returnPathMatches:false,composeFlagPresent:false};
+              const composeRequestHints={requests:0,returnToPresent:false,purposePresent:false,returnOriginMatches:false,returnPathMatches:false,composeFlagPresent:false,returnPathCategory:'not-observed',purposeCategory:'not-observed'};
               const observe=frame=>{
                 if(frame===page.mainFrame())loginNavigations.push(frame.url());
               };
@@ -209,9 +209,26 @@ try {
                     composeRequestHints.requests+=1;
                     composeRequestHints.returnToPresent ||= u.searchParams.has('return_to');
                     composeRequestHints.purposePresent ||= u.searchParams.has('purpose');
+                    // Fixed allowlist categories only: never retain raw purpose, return URL or path.
+                    if(composeRequestHints.purposeCategory==='not-observed'){
+                      const purpose=u.searchParams.get('purpose');
+                      composeRequestHints.purposeCategory=purpose==='seonammedi-board-write'?'write':
+                        purpose==='seonammedi-board-admin'?'admin':purpose?'other':'missing';
+                    }
                     const returnTo=u.searchParams.get('return_to');
                     if(returnTo)try{
                       const dest=new URL(returnTo),expected=new URL(expectedReturn);
+                      // Distinguish a trailing slash from the wrong domain-specific board prefix.
+                      // All report fields are allowlisted labels; no untrusted path leaves the runner.
+                      if(composeRequestHints.returnPathCategory==='not-observed'){
+                        const stripSlash=pathname=>pathname.replace(/\/+$/,'')||'/';
+                        const expectedPath=stripSlash(expected.pathname),actualPath=stripSlash(dest.pathname);
+                        const oppositePath=expectedPath.startsWith('/seonammedi/')?'/board/voices':'/seonammedi/board/voices';
+                        composeRequestHints.returnPathCategory=dest.pathname===expected.pathname?'exact':
+                          actualPath===expectedPath?'trailing-slash':
+                          actualPath===oppositePath?'alternate-origin-route':
+                          actualPath.endsWith('/board/voices')?'other-voice-prefix':'other';
+                      }
                       composeRequestHints.returnOriginMatches ||= dest.origin===expected.origin;
                       composeRequestHints.returnPathMatches ||= dest.pathname===expected.pathname;
                       composeRequestHints.composeFlagPresent ||= dest.searchParams.get('compose')==='1';
