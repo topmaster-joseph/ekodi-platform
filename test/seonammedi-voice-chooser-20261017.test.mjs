@@ -44,7 +44,7 @@ test('account-selection intent is one-time and cannot cause post-auth compose lo
   assert.match(client,/if\(CHOOSE_ACCOUNT\)googleButtonOptions\.use_fedcm_for_button=false/);
   assert.match(client,/&&s&&!routing&&!handlingCredential&&!CHOOSE_ACCOUNT/);
   assert.match(entry,/params\.get\('select_account'\) === '1'/);
-  assert.match(router,/params\.get\('select_account'\)==='1'/);
+  assert.match(router,/firstPartyClientSites\.has\(site\)/);
 });
 
 test('SeonamMedi account chooser keeps the compact single-card login layout',async()=>{
