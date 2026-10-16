@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS ekodipay_merchant_mid (
   verified_at INTEGER,
   proof_ref TEXT,
   PRIMARY KEY(merchant_id,pg_provider,pg_mode),
+  UNIQUE(merchant_id,pg_provider,pg_mode,mid),
   UNIQUE(pg_provider,pg_mode,mid),
   UNIQUE(client_secret_binding_ref),
   UNIQUE(server_secret_binding_ref)
@@ -69,8 +70,18 @@ CREATE TABLE IF NOT EXISTS ekodipay_approved_orders (
   UNIQUE(merchant_id,order_id),
   UNIQUE(merchant_id,order_id,pg_mode,mid),
   FOREIGN KEY(merchant_id,service_id,issuer_ref)
-    REFERENCES ekodipay_merchant_service_issuers(merchant_id,service_id,issuer_ref)
+    REFERENCES ekodipay_merchant_service_issuers(merchant_id,service_id,issuer_ref),
+  FOREIGN KEY(merchant_id,pg_provider,pg_mode,mid)
+    REFERENCES ekodipay_merchant_mid(merchant_id,pg_provider,pg_mode,mid)
 );
+CREATE TRIGGER IF NOT EXISTS ekodipay_approved_order_enabled_issuer
+BEFORE INSERT ON ekodipay_approved_orders
+WHEN NOT EXISTS (
+  SELECT 1 FROM ekodipay_merchant_service_issuers i
+   WHERE i.merchant_id=NEW.merchant_id AND i.service_id=NEW.service_id
+    AND i.issuer_ref=NEW.issuer_ref AND i.is_enabled=1
+)
+BEGIN SELECT RAISE(ABORT,'approved_order_issuer_not_enabled'); END;
 CREATE INDEX IF NOT EXISTS idx_ekodipay_orders_tenant
  ON ekodipay_approved_orders(merchant_id,service_id,pg_mode,status);
 CREATE TRIGGER IF NOT EXISTS ekodipay_approved_order_immutable
