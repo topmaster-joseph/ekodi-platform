@@ -1212,7 +1212,7 @@ jobs:
     needs: deploy
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
-      surface_paths: /,/my/,/admin/,/ekodimall/admin
+      surface_paths: /,/my/,/admin/,/ekodimall/admin,/control
       surface_registry: config/board-surface-verification.json
       device_profile: desktop
 
@@ -1221,7 +1221,7 @@ jobs:
     needs: deploy
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
-      surface_paths: /,/my/,/admin/,/ekodimall/admin
+      surface_paths: /,/my/,/admin/,/ekodimall/admin,/control
       surface_registry: config/board-surface-verification.json
       device_profile: mobile-portrait
 
