@@ -29,6 +29,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts
+      - run: npm install --no-save --ignore-scripts playwright@1.60.0
       - run: npx playwright install --with-deps chromium
       - name: Measure production /control idle and local-only draft input
         run: node scripts/verify-control-jitter-native.mjs
