@@ -82,6 +82,32 @@ WHEN NOT EXISTS (
     AND i.issuer_ref=NEW.issuer_ref AND i.is_enabled=1
 )
 BEGIN SELECT RAISE(ABORT,'approved_order_issuer_not_enabled'); END;
+-- Durable replay protection: a signed issuer claim may reference exactly one
+-- immutable approved order. Use atomic INSERT in the protected tenant D1 before
+-- any PG confirmation; a HMAC signature alone is never payment authorization.
+CREATE TABLE IF NOT EXISTS ekodipay_issuer_nonce_claims (
+  merchant_id TEXT NOT NULL REFERENCES ekodipay_merchants(merchant_id),
+  issuer_ref TEXT NOT NULL,
+  pg_mode TEXT NOT NULL CHECK(pg_mode IN ('test','live')),
+  nonce TEXT NOT NULL CHECK(length(nonce) BETWEEN 16 AND 96),
+  order_id TEXT NOT NULL UNIQUE REFERENCES ekodipay_approved_orders(order_id),
+  payload_digest TEXT NOT NULL CHECK(length(payload_digest)=64),
+  claimed_at INTEGER NOT NULL,
+  PRIMARY KEY(merchant_id,issuer_ref,pg_mode,nonce)
+);
+CREATE TRIGGER IF NOT EXISTS ekodipay_nonce_claim_order_matches
+BEFORE INSERT ON ekodipay_issuer_nonce_claims
+WHEN NOT EXISTS (
+  SELECT 1 FROM ekodipay_approved_orders o
+  WHERE o.order_id=NEW.order_id AND o.merchant_id=NEW.merchant_id
+    AND o.issuer_ref=NEW.issuer_ref AND o.pg_mode=NEW.pg_mode
+    AND o.status='approved' AND o.created_at<=NEW.claimed_at
+    AND o.expires_at>NEW.claimed_at
+)
+BEGIN SELECT RAISE(ABORT,'issuer_nonce_order_mismatch'); END;
+CREATE TRIGGER IF NOT EXISTS ekodipay_nonce_claim_immutable
+BEFORE UPDATE ON ekodipay_issuer_nonce_claims
+BEGIN SELECT RAISE(ABORT,'issuer_nonce_immutable'); END;
 CREATE INDEX IF NOT EXISTS idx_ekodipay_orders_tenant
  ON ekodipay_approved_orders(merchant_id,service_id,pg_mode,status);
 CREATE TRIGGER IF NOT EXISTS ekodipay_approved_order_immutable
