@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {assessResearch,cleanResearchInput} from '../research/planner.js';
+import {assessResearch,cleanResearchInput} from '../education/research/planner.js';
 import worker from '../research-worker.js';
 
 const read=(path)=>readFile(new URL('../'+path,import.meta.url),'utf8');
@@ -49,8 +49,8 @@ test('private workspace is fail-closed without storage and verified identity',as
 
 test('public UI maintains accessible responsive layout and no fake paid/AI claims',async()=>{
  const [html,css,app,prod,stage,sql]=await Promise.all([
-  read('research/index.html'),read('research/app.css'),read('research/app.js'),
-  read('wrangler.research.toml'),read('wrangler.research.staging.toml'),
+  read('education/research/index.html'),read('education/research/app.css'),read('education/research/app.js'),
+  read('wrangler.education.toml'),read('wrangler.education.staging.toml'),
   read('research/migrations/0001_init.sql')
  ]);
  assert.match(html,/id="diagnosisForm"/);
@@ -61,7 +61,7 @@ test('public UI maintains accessible responsive layout and no fake paid/AI claim
  assert.match(css,/@media\(max-width:730px\)/);
  assert.match(css,/word-break:keep-all/);
  assert.match(app,/localStorage/);
- assert.match(prod,/ekodi\.kr\/research\*/);
+ assert.match(await read('platform-route-registry.js'),/prefix:'\/research',binding:'EDUCATION',preservePrefix:true/);
  assert.match(stage,/isolated-staging/);
  assert.match(sql,/owner_id TEXT NOT NULL/);
  assert.doesNotMatch(html,/onclick=|<script(?![^>]*src=)/i);

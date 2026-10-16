@@ -54,6 +54,32 @@
           "\"submissionExecution\":false",
           "\"ekodiShell\":true"
         ]
+      },
+      {
+        "url": "https://edu.ekodi.kr/research/",
+        "statuses": [
+          200
+        ],
+        "redirect": "follow",
+        "expect": [
+          "EKODI Research",
+          "무료 연구진단",
+          "나의 연구실"
+        ],
+        "headerExpect": [
+          "x-ekodi-shell: v2"
+        ]
+      },
+      {
+        "url": "https://edu.ekodi.kr/research/health",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "ekodi-research",
+          "\"phase\":\"foundation\"",
+          "\"privateDocuments\":false"
+        ]
       }
     ]
   }

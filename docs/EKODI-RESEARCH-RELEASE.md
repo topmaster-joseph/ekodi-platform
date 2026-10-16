@@ -5,12 +5,12 @@ Branch: ai/chatgpt/research-mvp-20261017-0331
 Canonical planned route: https://ekodi.kr/research/
 
 ## Included in source
-- Standalone Research Worker, Korean responsive public portal, diagnosis form and project planning workspace.
+- Research capability routed through the registered Education Worker, Korean responsive public portal, diagnosis form and project planning workspace.
 - Free **rule-based** research guidance (not an LLM, plagiarism detector or verified literature service).
 - Working non-sensitive local-only project planning with clear disclosure.
 - Optional server-backed project/consultation APIs, fail-closed until isolated D1 and EKODI Supabase verification are correctly provisioned.
 - Isolated migration and scoped ownership checks; never infer admin capability from a client-side role.
-- Dedicated staging/production Worker configuration and smoke/unit test.
+- Education Worker staging/production validation and Research unit test.
 
 ## Explicitly not yet enabled
 - Manuscript uploads or private document access.
@@ -19,7 +19,7 @@ Canonical planned route: https://ekodi.kr/research/
 - Nothing here is evidence of deployment, operational readiness or real-user verification.
 
 ## Migration/activation requirements
-1. Provision isolated D1 \`ekodi-research\` and apply \`research/migrations/0001_init.sql\`.
+1. After reviewed database isolation requirements, provision isolated D1 \`ekodi-research\` and apply \`research/migrations/0001_init.sql\`.
 2. Add \`RESEARCH_DB\` binding and approved existing Supabase Auth public URL/key to Research Worker (never the service-role key).
 3. Verify Google SSO \`return_to\` restores exact \`/research/\` route; no fallback to \`/my\` or redirect loops.
 4. Ensure public signup and consent terms precede production consultation intake. Account owners only read their own projects.
@@ -31,3 +31,6 @@ Canonical planned route: https://ekodi.kr/research/
 
 ## Guardrail
 No hosted data, consultation submission, payment or AI capability may be presented as live until its underlying server permissions and integrations are verified. Public homepage is not a claim of a completed commercial platform.
+
+## Constitutional adjustment: existing capability delivery
+Mandatory CAPABILITY-BEFORE-SERVICE-001 requires verified Foundry samples and EKODI Platform Super Administrator packaging review before a new canonical service is registered. Research is **not** independently registered at this stage. The public `/research/` alias uses the existing Education Worker and approved Education release pipeline. Research's UI and domain logic are isolated modules; any future independent service creation awaits genuine required evidence and approval rather than fabricated receipts.
