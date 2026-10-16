@@ -4,8 +4,10 @@ on:
   pull_request:
     paths:
       - 'seasonal-workforce/**'
+      - 'schemas/ekodibiz/seasonal-workforce-inactive.sql'
       - 'platform-router-entry-worker.js'
       - 'test/seasonal-workforce-route.test.mjs'
+      - 'test/seasonal-workforce-operations.test.mjs'
       - '.github/workflows/seasonal-workforce-check.yml'
   workflow_dispatch:
 
@@ -27,9 +29,10 @@ jobs:
           node --check seasonal-workforce/route.mjs
           node --check seasonal-workforce/demand-domain.mjs
           node --check seasonal-workforce/tenant-domain.mjs
+          node --check seasonal-workforce/operations-api.mjs
       - name: Seasonal workforce unit and routing tests
         run: |
-          node --test seasonal-workforce/demand-domain.test.mjs seasonal-workforce/tenant-domain.test.mjs test/seasonal-workforce-route.test.mjs
+          node --test seasonal-workforce/demand-domain.test.mjs seasonal-workforce/tenant-domain.test.mjs test/seasonal-workforce-route.test.mjs test/seasonal-workforce-operations.test.mjs
       - name: No active submissions in prototype
         run: |
           grep -Fq "applications_not_enabled" seasonal-workforce/route.mjs
