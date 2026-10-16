@@ -82,17 +82,17 @@
     <button id="reviewBtn" class="secondary" type="button">검토 항목 확인</button><div id="reviewResult" class="review" role="status" aria-live="polite"></div>
   </section>
   <section class="panel" aria-labelledby="exportTitle"><div class="sectionhead"><h2 id="exportTitle">산출물 내려받기</h2><span class="stepcount">05 / 백업</span></div>
-   <div class="actions"><button id="exportMd" class="primary" type="button">초안 Markdown 저장</button><button id="exportHtml" class="secondary" type="button">인쇄·PDF용 HTML 저장</button><button id="exportBudget" class="secondary" type="button">예산 CSV 저장</button><button id="exportSlides" class="secondary" type="button">발표 구성 MD 저장</button><button id="exportJson" class="secondary" type="button">프로젝트 JSON 백업</button></div>
-   <p class="muted">인쇄·PDF용 HTML은 내려받아 브라우저에서 열고 인쇄해야 합니다. 실제 HWPX·PPTX 파일 생성은 아직 지원하지 않습니다. 내보내기는 사용자 기기에서만 처리하며 자동 제출·공유·이메일 전송하지 않습니다. 탭을 닫으면 입력이 사라질 수 있으므로 JSON을 백업하세요.</p>
+   <div class="actions"><button id="exportMd" class="primary" type="button">초안 Markdown 저장</button><button id="exportHtml" class="secondary" type="button">인쇄·PDF용 HTML 저장</button><button id="exportBudget" class="secondary" type="button">예산 CSV 저장</button><button id="exportDocx" class="primary" type="button">Word DOCX 저장</button><button id="exportXlsx" class="secondary" type="button">Excel XLSX 저장</button><button id="exportPptx" class="secondary" type="button">PowerPoint PPTX 저장</button><button id="exportSlides" class="secondary" type="button">발표 구성 MD 저장</button><button id="exportJson" class="secondary" type="button">프로젝트 JSON 백업</button></div>
+   <p class="muted">인쇄·PDF용 HTML은 내려받아 브라우저에서 열고 인쇄해야 합니다. DOCX·XLSX·PPTX는 기본 OOXML 신규 문서로 저장되며, 업로드된 외부 서식을 복제하지 않습니다. HWPX 및 PDF 직접 파일 생성은 지원하지 않습니다. 내보내기는 사용자 기기에서만 처리하며 자동 제출·공유·이메일 전송하지 않습니다. 탭을 닫으면 입력이 사라질 수 있으므로 JSON을 백업하세요.</p>
   </section>
  </div>
- <p id="status" class="notice" role="status" aria-live="polite">브라우저 내에서만 작업합니다. 자동 AI 조사·실제 문서 제작 기능은 후속 단계입니다.</p>
+ <p id="status" class="notice" role="status" aria-live="polite">브라우저 내에서만 작업합니다. 자동 AI 조사·HWPX 제작 기능은 후속 단계입니다. DOCX·XLSX·PPTX 기본 새 문서를 브라우저에서 생성할 수 있습니다.</p>
 </main>
 <aside class="assistant-panel" aria-label="제안서 안내">
  <div class="assistant-card"><span class="overline">YOUR WORKFLOW</span><h2>제안서 작성 여정</h2>
-  <ol><li><strong>입력 이해</strong><small>주제·파일·링크 정리</small></li><li><strong>전략 설계</strong><small>분야별 필수 목차 구성</small></li><li><strong>제안서 편집</strong><small>내용·예산·성과 항목 입력</small></li><li><strong>제출 전 확인</strong><small>누락·근거 상태 점검</small></li><li><strong>내보내기</strong><small>Markdown · JSON 백업</small></li></ol>
+  <ol><li><strong>입력 이해</strong><small>주제·파일·링크 정리</small></li><li><strong>전략 설계</strong><small>분야별 필수 목차 구성</small></li><li><strong>제안서 편집</strong><small>내용·예산·성과 항목 입력</small></li><li><strong>제출 전 확인</strong><small>누락·근거 상태 점검</small></li><li><strong>내보내기</strong><small>DOCX · XLSX · PPTX · JSON</small></li></ol>
  </div>
- <div class="assistant-card next"><span class="overline">UPCOMING</span><h3>후속 연동 기능</h3><p>HWPX·DOCX 원본양식 반영, Excel 예산 연결, AI 사실조사, PPTX 제작, 사용자별 클라우드 저장.</p><span class="coming">아직 비활성</span></div>
+ <div class="assistant-card next"><span class="overline">UPCOMING</span><h3>후속 연동 기능</h3><p>HWPX·기존 DOCX/PPTX 원본양식 반영, AI 사실조사, 사용자별 클라우드 저장.</p><span class="coming">아직 비활성</span></div>
 </aside>
 </div>
 <footer class="footer">EKODI · 작업 초안은 대외 제출용 최종본이 아닙니다.</footer>
