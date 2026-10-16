@@ -7,7 +7,7 @@ const money=n=>Number.isSafeInteger(n)&&Math.abs(n)<=10_000_000_000;
 const mask=k=>typeof k==='string'?k.slice(0,3)+'…'+k.slice(-3):'unknown';
 export function reconcileMerchantSettlements({
  merchantId,mid,mode,localTransactions,pgSettlements,
- sourceVerified=false,paginationComplete=false,bankCreditVerified=false
+ sourceVerified=false,paginationComplete=false,bankEvidence=null,expectedAccountFingerprint=''
 }={}){
  if(!/^[a-z][a-z0-9_-]{2,39}$/.test(merchantId||'')||
    !/^[A-Za-z0-9_-]{4,14}$/.test(mid||'')||!['test','live'].includes(mode)||
@@ -59,9 +59,18 @@ export function reconcileMerchantSettlements({
  // PG paidOutAmount and paidOutDate are NOT bank account deposit confirmation.
  const pgReconciled=issues.length===0&&matched.length===localTransactions.length&&
    matched.length===pgSettlements.length;
+ // A PG payout schedule is not evidence of a bank credit. Accept a separate
+ // authenticated bank-statement attestation for the same merchant and HMAC account.
+ const bankDepositVerified=pgReconciled&&bankEvidence?.source==='authenticated_bank_statement'&&
+   bankEvidence?.verified===true&&bankEvidence?.merchantId===merchantId&&
+   /^[a-f0-9]{64}$/i.test(expectedAccountFingerprint)&&
+   bankEvidence?.accountFingerprint===expectedAccountFingerprint&&
+   bankEvidence?.currency==='KRW'&&bankEvidence?.amount===providerPayout&&
+   typeof bankEvidence?.proofRef==='string'&&/^[A-Z0-9_-]{8,100}$/.test(bankEvidence.proofRef)&&
+   Number.isSafeInteger(bankEvidence?.verifiedAt)&&bankEvidence.verifiedAt>0;
  return Object.freeze({
-   merchantId,mode,pgReconciled,bankDepositVerified:pgReconciled&&bankCreditVerified===true,
-   disposition:!pgReconciled?'requires_review':bankCreditVerified===true?'bank_verified':'bank_deposit_pending',
+   merchantId,mode,pgReconciled,bankDepositVerified:!!bankDepositVerified,
+   disposition:!pgReconciled?'requires_review':bankDepositVerified?'bank_verified':'bank_deposit_pending',
    totals:{localAmount,providerAmount,localPayout,providerPayout},
    matchedCount:matched.length,pgRows:pgSettlements.length,localRows:localTransactions.length,
    issues,matched
