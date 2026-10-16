@@ -34,7 +34,10 @@ test('account-selection intent is one-time and cannot cause post-auth compose lo
   assert.match(worker,/if\(composeRequested&&allowed\)\{write\.hidden=false/);
   assert.match(client,/const CHOOSE_ACCOUNT=site==='seonammedi'&&params\.get\('select_account'\)==='1'/);
   assert.match(client,/if\(CHOOSE_ACCOUNT\)\{await renderGoogle\(\);return\}/);
-  assert.match(client,/if\(DIRECT_LOGIN&&!CHOOSE_ACCOUNT\)/);
+  assert.match(client,/if\(DIRECT_LOGIN\)/);
+  assert.match(client,/auto_select:false/);
+  assert.match(client,/button_auto_select:false/);
+  assert.match(client,/window\.google\.accounts\.id\.prompt/);
   assert.match(client,/use_fedcm_for_button:true/);
   assert.match(client,/if\(CHOOSE_ACCOUNT\)googleButtonOptions\.use_fedcm_for_button=false/);
   assert.match(client,/&&s&&!routing&&!handlingCredential&&!CHOOSE_ACCOUNT/);
