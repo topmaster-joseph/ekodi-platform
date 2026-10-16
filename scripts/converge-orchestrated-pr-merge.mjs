@@ -88,6 +88,9 @@ const controlApiTouched=changedFiles.some(file=>
   // LANG-UI-001: public language status is served by api-worker.js via
   // language-automation.js. A GITHUB_TOKEN merge does not fire main push CI,
   // so this requires the same receipt-bound Control API deployment.
+  'site-publication-runtime.js',
+  'cooperative-registry.js',
+  'cooperative-locator.js',
   'language-automation.js',
   'config/language-registry.js',
   'config/managed-language-sites.js',

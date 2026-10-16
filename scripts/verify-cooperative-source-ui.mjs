@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { normalizeTask } from './ekodi-background-browser-worker.mjs';
 import { COOPERATIVES } from '../cooperative-registry.js';
-import { COOPERATIVE_HERO_IMAGES, COOPERATIVE_IMAGE_PATHS } from '../cooperative-media.js';
+import { COOPERATIVE_HERO_IMAGES, COOPERATIVE_BUSINESS_IMAGES, COOPERATIVE_IMAGE_PATHS } from '../cooperative-media.js';
 import { routeCooperative } from '../cooperative-control.js';
 import { fixture, authFetch } from '../test/helpers/cooperative-fixture.mjs';
 import { loadCooperativeProject } from '../cooperative-store.js';
@@ -43,6 +43,7 @@ globalThis.fetch = authFetch(tokens);
 const checks = [];
 const pageErrors = [];
 const responseErrors = [];
+const navigations = [];
 let refreshCount = 0;
 const browser = await chromium.launch({ headless: true, ...(process.env.EKODI_CHROMIUM_EXECUTABLE ? { executablePath: process.env.EKODI_CHROMIUM_EXECUTABLE } : {}) });
 
@@ -65,11 +66,16 @@ async function contextFor(width, token = '') {
     const headers = new Headers(await incoming.allHeaders());
     const request = new Request(incoming.url(), { method: incoming.method(), headers, ...(!['GET','HEAD'].includes(incoming.method()) ? { body: incoming.postData() } : {}) });
     const response = await routeCooperative(request, f.env);
+    if (incoming.isNavigationRequest()) navigations.push({ url: incoming.url(), status: response?.status, type: response?.headers.get('content-type') });
     if (!response) return intercepted.fulfill({ status: 404, body: 'Source QA route not found' });
     if (response.status >= 500) responseErrors.push({ path: url.pathname, status: response.status });
     const body = url.pathname.endsWith('/assets/app.js') ? bundledClient.script : Buffer.from(await response.arrayBuffer());
     return intercepted.fulfill({ status: response.status, headers: Object.fromEntries(response.headers), body });
   });
+  // Redirect hops can bypass Playwright's request interception. Keep the
+  // disposable source browser offline; HTTP alias contracts are tested at the
+  // Worker boundary and real redirect navigation in the production runner.
+  await context.setOffline(true);
   context.on('page', page => { page.on('pageerror', error => pageErrors.push(error.message)); });
   return context;
 }
@@ -86,7 +92,7 @@ try {
     const owner=await contextFor(width,'admin-jub');const admin=await owner.newPage();
     await admin.goto('https://ekodi.kr/business-coop/');await admin.waitForSelector('[data-managed-cooperative]');assert.equal(await admin.locator('[data-managed-cooperative]').count(),1);
     assert.ok((await admin.locator('#workspace').innerText()).includes(COOPERATIVES[0].name));assert.equal((await admin.locator('#workspace').innerText()).includes(COOPERATIVES[1].name),false);
-    assert.equal(await admin.locator('[data-managed-cooperative] a').first().getAttribute('href'),'/jubilee-distribution/admin');
+    assert.deepEqual(await admin.locator('[data-managed-cooperative] a').evaluateAll(links=>links.map(link=>link.getAttribute('href'))),['/jubilee/admin','/jubilee/','/jubilee/members']);
     assert.equal(await admin.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
     await screenshot(admin,'cooperative-operations-'+width);checks.push({surface:'operations-hub-guest-and-scoped-owner',width,passed:true});await owner.close();
   }
@@ -94,8 +100,9 @@ try {
     const context = await contextFor(width);
     const page = await context.newPage();
     for (const coop of COOPERATIVES) {
-      await page.goto('https://ekodi.kr/' + coop.slug + '/');
+      await page.goto('https://ekodi.kr/' + coop.publicSlug + '/');
       await page.waitForSelector('#publicShare');
+      assert.equal(await page.locator('link[rel=canonical]').getAttribute('href'),'https://ekodi.kr/' + coop.publicSlug + '/');
       assert.ok((await page.locator('h1').innerText()).includes('함께 여는 유통'));
       assert.ok(await page.locator('.brand').innerText().then(text => text.includes(coop.name)));
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, coop.slug + ' public horizontal overflow');
@@ -106,15 +113,30 @@ try {
       assert.ok([expected.small, expected.large].includes(new URL(image.url).pathname));
       assert.equal(new URL(image.url).origin, 'https://ekodi.kr');
       assert.ok((await page.locator('figcaption').innerText()).includes('AI 생성 이미지'));
+      assert.equal(await page.locator('.business-photo').count(),3);
+      for(let index=0;index<COOPERATIVE_BUSINESS_IMAGES.length;index++){
+        const photo=page.locator('.business-photo').nth(index);await photo.scrollIntoViewIfNeeded();
+        const decoded=await photo.evaluate(async img=>{await img.decode();return {url:img.currentSrc,width:img.naturalWidth};});
+        const business=COOPERATIVE_BUSINESS_IMAGES[index];
+        assert.ok(decoded.width>0);assert.equal(new URL(decoded.url).origin,'https://ekodi.kr');
+        assert.ok([business.small,business.large].includes(new URL(decoded.url).pathname));
+      }
+      assert.ok((await page.locator('.business-photo-caption').innerText()).includes('정관 초안'));
+      await page.evaluate(()=>scrollTo(0,0));
       await screenshot(page, coop.slug + '-public-' + width);
       checks.push({ surface: 'public', slug: coop.slug, width, image, passed: true });
       for (const surface of ['members', 'admin']) {
-        await page.goto('https://ekodi.kr/' + coop.slug + '/' + surface);
+        await page.goto('https://ekodi.kr/' + coop.publicSlug + '/' + surface);
         await page.waitForSelector('#gate:not([hidden])');
         assert.equal(await page.locator('#workspace').isVisible(), false);
         const login = new URL(await page.locator('#loginLink').getAttribute('href'));
-        assert.equal(login.searchParams.get('return_to'), 'https://ekodi.kr/' + coop.slug + '/' + surface);
+        assert.equal(login.searchParams.get('return_to'), 'https://ekodi.kr/' + coop.publicSlug + '/' + surface);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+        await page.goto('https://ekodi.kr/' + coop.publicSlug + '/' + surface + '?from=legacy');
+        await page.waitForSelector('#gate:not([hidden])');
+        assert.equal(page.url(),'https://ekodi.kr/' + coop.publicSlug + '/' + surface + '?from=legacy');
+        const legacyLogin=new URL(await page.locator('#loginLink').getAttribute('href'));
+        assert.equal(legacyLogin.searchParams.get('return_to'),page.url());
         checks.push({ surface: surface + '-guest-gate', slug: coop.slug, width, passed: true });
       }
     }
@@ -126,7 +148,7 @@ try {
       const coop = COOPERATIVES[index];
       const context = await contextFor(width, token);
       const page = await context.newPage();
-      await page.goto('https://ekodi.kr/' + coop.slug + '/admin');
+      await page.goto('https://ekodi.kr/' + coop.publicSlug + '/admin');
       await page.waitForSelector('#workspace:not([hidden])');
       assert.ok(await page.locator('#workspace').innerText().then(text => text.includes('서버 저장')));
       await page.getByRole('tab', { name: '조합정보', exact: true }).click();
@@ -165,17 +187,17 @@ try {
 
   const context = await contextFor(390, 'member-jub');
   const page = await context.newPage();
-  await page.goto('https://ekodi.kr/jubilee-distribution/members');
+  await page.goto('https://ekodi.kr/jubilee/members');
   await page.waitForSelector('#myBusinessForm');
   await page.locator('#myBusinessForm [name="business"]').fill('조합원 직접 등록 사업체');
   await page.locator('#myBusinessForm button[type="submit"]').click();
   await page.waitForFunction(() => document.querySelector('#status').textContent.includes('나의 사업정보가 저장'));
   assert.equal((await loadCooperativeProject(f.db, COOPERATIVES[0])).state.founders[1].business, '조합원 직접 등록 사업체');
   await screenshot(page, 'jubilee-distribution-member-390');
-  await page.goto('https://ekodi.kr/open-distribution/members');
+  await page.goto('https://ekodi.kr/open/members');
   await page.waitForSelector('#gate:not([hidden])');
   assert.equal(await page.locator('#workspace').isVisible(), false);
-  await page.goto('https://ekodi.kr/jubilee-distribution/admin');
+  await page.goto('https://ekodi.kr/jubilee/admin');
   await page.waitForSelector('#gate:not([hidden])');
   assert.equal(await page.locator('#workspace').isVisible(), false);
   checks.push({ surface: 'member-self-edit-cross-coop-and-admin-denied', width: 390, passed: true });
@@ -186,6 +208,14 @@ try {
   const report = { ok: true, evidenceScope: 'source-only', productionVerified: false, engine: 'EKODI Chromium browser task policy', bundle: { wranglerVersion: bundledClient.wranglerVersion, serializedNameHelperCalls: bundledClient.serializedNameHelperCalls }, liveRequestsAllowed: false, checks, refreshCount, pageErrors, responseErrors };
   await fs.writeFile(path.join(artifactRoot, 'result.json'), JSON.stringify(report, null, 2));
   console.log(JSON.stringify({ ok: true, evidenceScope: report.evidenceScope, checks: checks.length, refreshCount, artifactRoot }));
+} catch(error) {
+  const pages=browser.contexts().flatMap(context=>context.pages());
+  for(let index=0;index<pages.length;index++){
+    await fs.writeFile(path.join(artifactRoot,'failure-'+index+'.html'),await pages[index].content()).catch(()=>{});
+    await pages[index].screenshot({path:path.join(artifactRoot,'failure-'+index+'.png'),fullPage:true}).catch(()=>{});
+  }
+  await fs.writeFile(path.join(artifactRoot,'failure.json'),JSON.stringify({ok:false,evidenceScope:'source-only',productionVerified:false,error:String(error),navigations,pageErrors,responseErrors},null,2));
+  throw error;
 } finally {
   await browser.close(); globalThis.fetch = originalFetch; f.sqlite.close();
 }
