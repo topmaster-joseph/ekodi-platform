@@ -13,3 +13,6 @@ test('declared and calculated budget mismatch is identified',()=>{const draft=cr
 
 import {proposalToPrintHtml,proposalToPresentationMd} from '../proposal/analysis.js';
 test('print and presentation assets label the document as a draft',()=>{const draft=createProposalDraft({title:'교육사업'});draft.sections.find(x=>x.id==='strategy').body='사용자 승인 대기';const html=proposalToPrintHtml(draft);const md=proposalToPresentationMd(draft);assert.ok(html.includes('A4'));assert.ok(html.includes('제출 전 확인'));assert.ok(md.includes('슬라이드'));assert.ok(md.includes('사용자 승인 대기'));});
+
+import {proposalBudgetToCsv} from '../proposal/analysis.js';
+test('budget CSV exports exact figures',()=>{const csv=proposalBudgetToCsv([{name:'교재',quantity:2,unit:'권',unitCost:5000}]);assert.ok(csv.includes('10000'));assert.ok(csv.includes('5000'));assert.ok(csv.startsWith('\uFEFF'));});
