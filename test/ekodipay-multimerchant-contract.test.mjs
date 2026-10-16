@@ -57,6 +57,19 @@ test('merchant registry detects globally duplicated MID, secrets and tenant IDs'
  assert.equal(validMerchantProfile({...a,settlement:{...a.settlement,accountNumber:'0123456'}}),false);
  assert.throws(()=>indexMerchantProfiles([{...a,settlement:{...a.settlement,accountLast4:'123'}}]),/invalid_private_merchant_profile/);
 });
+test('test-only contracted merchant onboards safely before live MID or live secret exists',async()=>{
+ const full=fixture();
+ const sandbox={...full,midByMode:{test:full.midByMode.test,live:''},
+   credentialRefs:{test:full.credentialRefs.test,live:{client:'',secret:''}}};
+ assert.equal(validMerchantProfile(sandbox),true);
+ assert.equal(merchantReadiness(sandbox,{mode:'test'}).ready,true);
+ assert.equal(merchantReadiness(sandbox,{mode:'live',ownerGate:'APPROVED'}).ready,false);
+ const index=indexMerchantProfiles([sandbox]);
+ const verified=await attest(approved(sandbox),'test');
+ const testRoute=selectServerApprovedMerchant(index,verified,{mode:'test',env:envFor(full)});
+ assert.equal(testRoute.ok,true);
+ assert.equal(selectServerApprovedMerchant(index,verified,{mode:'live',ownerGate:'APPROVED',env:envFor(full)}).ok,false);
+});
 test('merchant route is server-approved and issuer+service+tenant pinned; never picks a global fallback',async()=>{
  const a=fixture(),b=fixture('ekodiedu','merchantB','ekodiedu'),ix=indexMerchantProfiles([a,b]);
  let chosen=selectServerApprovedMerchant(ix,await attest(approved(a)),{mode:'test',env:envFor(a)});
