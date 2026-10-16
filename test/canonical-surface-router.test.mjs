@@ -342,11 +342,13 @@ test('shared-site release probes honor canonical slash parity',async()=>{
     assert.deepEqual(canonical.statuses,root==='/pay'?[308]:[200]);
     if(root==='/pay'){
       assert.ok(canonical.headerExpect?.includes('location: https://ekodi.kr/ekodipay/'));
-      assert.deepEqual(slashless.rollbackStatuses,[308]);
-      assert.ok(slashless.rollbackHeaderExpect?.includes('location: https://ekodi.kr/pay/'));
-      assert.deepEqual(canonical.rollbackStatuses,[200]);
-      assert.ok(canonical.rollbackExpect?.includes("title:'EKODI Pay'"));
-      assert.ok(canonical.rollbackHeaderExpect?.includes('x-ekodi-canonical-path: /pay'));
+      for(const probe of [slashless,canonical]){
+        assert.deepEqual(probe.rollbackStatuses,[308]);
+        assert.deepEqual(probe.rollbackExpect,[]);
+        assert.ok(probe.rollbackHeaderExpect?.includes('location: https://ekodi.kr/ekodipay/'));
+        assert.ok(probe.rollbackHeaderExpect?.includes('cache-control: no-store'));
+        assert.notEqual(probe.rollbackVerify,false);
+      }
     }
   }
 });

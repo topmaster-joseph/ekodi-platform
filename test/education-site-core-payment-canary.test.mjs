@@ -14,13 +14,15 @@ test('canonical Pay 308 canaries retain explicit verified stable rollback requir
    assert.ok(probe.headerExpect.includes('location: https://ekodi.kr/ekodipay/'));
    assert.notEqual(probe.rollbackVerify,false,'Stable rollback checks must not be bypassed');
  }
- const oldBare=probes.find(x=>x.url==='https://ekodi.kr/pay');
- const oldSlash=probes.find(x=>x.url==='https://ekodi.kr/pay/');
- assert.deepEqual(oldBare.rollbackStatuses,[308]);
- assert.ok(oldBare.rollbackHeaderExpect.includes('location: https://ekodi.kr/pay/'));
- assert.deepEqual(oldSlash.rollbackStatuses,[200]);
- assert.ok(oldSlash.rollbackExpect.includes("title:'EKODI Pay'"));
- assert.ok(oldSlash.rollbackHeaderExpect.includes('x-ekodi-canonical-path: /pay'));
+ // Both live and stable fallback URLs must use the current canonical payment hub.
+ // Do not skip rollback checks or accept the superseded /pay page as a successful rollback.
+ for(const probe of probes){
+   assert.deepEqual(probe.rollbackStatuses,[308]);
+   assert.deepEqual(probe.rollbackExpect,[]);
+   assert.ok(probe.rollbackHeaderExpect.includes('location: https://ekodi.kr/ekodipay/'));
+   assert.ok(probe.rollbackHeaderExpect.includes('cache-control: no-store'));
+   assert.notEqual(probe.rollbackVerify,false);
+ }
  assert.match(router,/url\.pathname==='\/pay'/);
  assert.match(router,/https:\/\/ekodi\.kr\/ekodipay\//);
  assert.match(router,/status:308/);
