@@ -45,6 +45,7 @@ test('Control route and both guarded actions remain available as first-party ass
   assert.match(worker, /CONTROL_ASSETS = new Set\(\['\/control\.css','\/control\.js'\]\)/);
   assert.match(html, /id="aiRoutePreview"/);
   assert.match(html, /id="orchestratorRelease"/);
+  assert.doesNotMatch(html, /<input[^>]*id="orchestratorRelease"[^>]*\schecked(?:\s|>|=)/, 'production release request must remain opt-in');
   assert.match(ui, /async function previewAiRoute\(\)/);
   assert.match(ui, /\/api\/control\/ai\/v8\/sovereignty\/preview/);
   assert.match(ui, /\/api\/control\/ai\/v8\/orchestrator\/submit/);
