@@ -32,3 +32,12 @@ test('image and embedded visual elements are absent across six menu routes and b
  assert.match(minutes,/main :is\(img,picture,svg,canvas,video,iframe,object,embed\)\{display:none!important\}/);
  assert.doesNotMatch(shared,/:root\s*\{/);
 });
+
+test('home campaign is placed directly after header, without another shared image',async()=>{
+ const ui=await read('sites/seonammedi/public/board-central-category.js');
+ const worker=await read('services/independent-board/worker.js');
+ assert.match(ui,/header\\.insertAdjacentElement\\('afterend',preservedCampaign\\)/);
+ assert.doesNotMatch(ui,/images\\.unsplash\\.com/);
+ assert.ok(worker.includes('const BOARD_CATEGORY_CLIENT_JS='+JSON.stringify(ui)+';'),'board Worker serves identical route implementation');
+ assert.match(shared,/body\\[data-seonammedi-image-mode="inner"\\]\\.seonam-visual-ready>\\.campaign-hero\\{display:none!important\\}/);
+});
