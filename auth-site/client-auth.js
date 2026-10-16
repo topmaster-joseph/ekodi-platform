@@ -322,7 +322,9 @@ async function renderGoogle(){
     await loadGoogleLibrary();
     window.google.accounts.id.disableAutoSelect?.();
     window.google.accounts.id.initialize({client_id:challenge.clientId,nonce:challenge.nonce,auto_select:false,use_fedcm_for_button:false,button_auto_select:false,ux_mode:'popup',context:'signin',...(EXPECTED_ACCOUNT?{login_hint:EXPECTED_ACCOUNT}:{}),callback:r=>void handleCredential(r,challenge)});
-    window.google.accounts.id.renderButton(host,{type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340)),use_fedcm_for_button:!CHOOSE_ACCOUNT});
+    const googleButtonOptions={type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340)),use_fedcm_for_button:true};
+    if(CHOOSE_ACCOUNT)googleButtonOptions.use_fedcm_for_button=false;
+    window.google.accounts.id.renderButton(host,googleButtonOptions);
     if(DIRECT_LOGIN&&!CHOOSE_ACCOUNT){
       notice('Google 계정 선택창을 여는 중입니다.');
       window.google.accounts.id.prompt(notification=>{
