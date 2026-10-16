@@ -37,3 +37,24 @@ test('read-only merchant schema locks issuer, mode and MID to same immutable app
   insert.run('test','TESTMID_001','TX_03');
  }finally{db.close()}
 });
+
+test('issuer signature nonce is durably claimed once for the immutable tenant order and cannot cross tenants',()=>{
+ const db=database();
+ try{
+  merchant(db,'merchant_a');merchant(db,'merchant_b');
+  for(const id of ['merchant_a','merchant_b']){
+   db.prepare("INSERT INTO ekodipay_merchant_mid(merchant_id,pg_provider,pg_mode,mid,client_secret_binding_ref,server_secret_binding_ref) VALUES (?,'tosspayments','test',?,?,?)").run(id,'MID_'+id,'PAY_'+id+'_CLIENT','PAY_'+id+'_SECRET');
+   db.prepare("INSERT INTO ekodipay_merchant_service_issuers(merchant_id,service_id,issuer_ref,is_enabled) VALUES (?,'ekodibiz','issuer_a',1)").run(id);
+   db.prepare("INSERT INTO ekodipay_approved_orders(order_id,merchant_id,service_id,issuer_ref,pg_provider,pg_mode,mid,amount,expires_at,issuer_proof_ref,created_at) VALUES (? ,?,'ekodibiz','issuer_a','tosspayments','test',?,50000,1790005000000,'ISSUERPROOF_001',1790000000000)").run('ORDER_'+id,id,'MID_'+id);
+  }
+  const claim=db.prepare("INSERT INTO ekodipay_issuer_nonce_claims(merchant_id,issuer_ref,pg_mode,nonce,order_id,payload_digest,claimed_at) VALUES (?,?,?,?,?,?,?)");
+  claim.run('merchant_a','issuer_a','test','RANDOMNONCE1234567','ORDER_merchant_a','a'.repeat(64),1790001000000);
+  assert.throws(()=>claim.run('merchant_a','issuer_a','test','RANDOMNONCE1234567','ORDER_merchant_a','a'.repeat(64),1790001000000),/UNIQUE constraint failed/);
+  assert.throws(()=>claim.run('merchant_a','issuer_a','test','RANDOMNONCE1234568','ORDER_merchant_a','a'.repeat(64),1790001000000),/UNIQUE constraint failed/);
+  assert.throws(()=>claim.run('merchant_b','issuer_a','test','RANDOMNONCE1234569','ORDER_merchant_a','b'.repeat(64),1790001000000),/issuer_nonce_order_mismatch/);
+  assert.throws(()=>claim.run('merchant_b','issuer_a','live','RANDOMNONCE1234570','ORDER_merchant_b','b'.repeat(64),1790001000000),/issuer_nonce_order_mismatch/);
+  assert.throws(()=>claim.run('merchant_b','issuer_a','test','RANDOMNONCE1234571','ORDER_merchant_b','b'.repeat(64),1790006000000),/issuer_nonce_order_mismatch/);
+  claim.run('merchant_b','issuer_a','test','RANDOMNONCE1234572','ORDER_merchant_b','b'.repeat(64),1790001000000);
+  assert.throws(()=>db.exec("UPDATE ekodipay_issuer_nonce_claims SET nonce='FAKENONCE12345678' WHERE merchant_id='merchant_a'"),/issuer_nonce_immutable/);
+ }finally{db.close()}
+});
