@@ -16,12 +16,12 @@ test('both public board mounts show one parseable composer and explicit inline A
     assert.equal(scripts.length,1);
     assert.doesNotThrow(()=>new Script(scripts[0][1]));
     assert.match(html,/id="voiceAdminLogin"/);
-    assert.match(html,/id="voiceManageToggle"[^>]*hidden/);
+    assert.doesNotMatch(html,/id="voiceManageToggle"/);
     assert.match(html,/requireVoiceAccount\("manage"\)/);
     assert.match(html,/voiceLogin\(intent="compose"\)/);
     assert.match(html,/target\.searchParams\.set\("manage","1"\)/);
     assert.match(html,/auth\.searchParams\.set\("return_to",target.href\)/);
-    assert.match(html,/if\(manageRequested\)\{adminMode=true/);
+    assert.match(html,/adminItems=data\.items\|\|\[\];render\(adminItems,true\)/);
     assert.match(html,/관리 권한을 확인하지 못했습니다/);
     assert.match(html,/data-edit=/);
     assert.match(html,/data-delete=/);
