@@ -8,6 +8,8 @@ const workflow=readFileSync(new URL('../.github/workflows/verify-seonammedi-nav-
 test('native Chromium guest audit confirms compose return and single identity flow',()=>{
   for(const marker of [
     "root.origin+root.prefix+'/board/voices?compose=1'",
+    "record.citizenVoiceLinkMatches",
+    "citizen_voice_chooser_destination_mismatch",
     "record.composeReturnMatches",
     "record.singleLoginControl",
     "guest_compose_original_return_lost",
@@ -19,6 +21,8 @@ test('native Chromium guest audit confirms compose return and single identity fl
   assert.ok(verifier.includes("name:'desktop'") && verifier.includes("name:'mobile'"));
   assert.ok(verifier.includes("origin:'https://seonammedi.kr'"));
   assert.ok(verifier.includes("origin:'https://ekodi.kr'"));
+  assert.doesNotMatch(verifier,/\{label:'시민의견',selector:'a\[href\*="board\/voices"\]'\}/,
+    'Google account chooser must not be treated as a same-page category during notice traversal');
 });
 
 test('native guest audit checks both server authorization gates without credentials or mutation',()=>{
