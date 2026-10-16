@@ -169,6 +169,15 @@ try {
           if(suffix==='/board/voices'&&record.authButtonVisible)violations.push('guest_login_button_before_write');
           if(suffix==='/minutes/'&&(!record.minutesGuestGate||!record.minutesPrivateContentHidden))violations.push('minutes_guest_privacy_gate_missing');
           if(suffix==='/board/voices'){
+            // Verify actual public server authorization on both mounts without credentials.
+            record.guestVoiceApiStatuses={};
+            for(const endpoint of ['/board/api/auth/session','/board/api/admin/posts']){
+              let status=0;
+              try{status=(await page.request.get(root.origin+root.prefix+endpoint,{timeout:12000,maxRedirects:0})).status()}catch{}
+              record.guestVoiceApiStatuses[endpoint]=status;
+              if(endpoint.endsWith('/auth/session')&&status!==401)violations.push('guest_voice_session_gate_'+status);
+              if(endpoint.endsWith('/admin/posts')&&status!==401&&status!==403)violations.push('guest_voice_admin_gate_'+status);
+            }
             if(!record.writeButtonVisible){
               violations.push('guest_write_entry_missing');
             } else {
@@ -191,9 +200,34 @@ try {
                     u.pathname.startsWith('/auth/')&&u.searchParams.get('site')==='seonammedi'}catch{return false}
                 });
                 if(!record.guestLoginRedirect)violations.push('guest_write_did_not_open_canonical_login');
+                const expectedReturn=root.origin+root.prefix+'/board/voices?compose=1';
+                record.composeReturnMatches=loginNavigations.some(url=>{
+                  try{const u=new URL(url);return u.origin==='https://ekodi.kr'&&u.pathname==='/auth/'&&
+                    u.searchParams.get('site')==='seonammedi'&&u.searchParams.get('return_to')===expectedReturn&&
+                    u.searchParams.get('purpose')==='seonammedi-board-write'}catch{return false}
+                });
+                if(!record.composeReturnMatches)violations.push('guest_compose_original_return_lost');
               }catch(error){violations.push('guest_write_login_click_failed: '+String(error.message||error).slice(0,160))}
               finally{page.off('framenavigated',observe)}
             }
+            // Test the distinct administrator intent without credentials, POST or mutation.
+            const manageNavigations=[];
+            const onManageNav=frame=>{if(frame===page.mainFrame())manageNavigations.push(frame.url())};
+            try{
+              await page.goto(target,{waitUntil:'domcontentloaded',timeout:25000});
+              page.on('framenavigated',onManageNav);
+              await page.locator('#voiceAdminLogin').click({timeout:6000});
+              // Include the final location in addition to observed navigation events.
+              manageNavigations.push(page.url());
+              await pause(2200);
+              const expectedManage=root.origin+root.prefix+'/board/voices?manage=1';
+              record.manageReturnMatches=manageNavigations.some(url=>{
+                try{const u=new URL(url);return u.origin==='https://ekodi.kr'&&u.pathname==='/auth/'&&
+                  u.searchParams.get('site')==='seonammedi'&&u.searchParams.get('return_to')===expectedManage}catch{return false}
+              });
+              if(!record.manageReturnMatches)violations.push('guest_manage_original_return_lost');
+            }catch(error){violations.push('guest_manage_login_click_failed: '+String(error.message||error).slice(0,160))}
+            finally{page.off('framenavigated',onManageNav)}
           }
           record.violations=violations;
           if(violations.length)throw Error(violations.join('; '));
