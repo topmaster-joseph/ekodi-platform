@@ -65,7 +65,7 @@ const SUPABASE_SESSION_KEY='sb-renzehysxirjilvdxacv-auth-token';
 function authReturnHtml(session,path){
   const payload=JSON.stringify(session).replace(/</g,'\\u003c').replace(/>/g,'\\u003e').replace(/&/g,'\\u0026');
   const target=JSON.stringify(path||'/board/voices');
-  return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><title>로그인 복귀</title></head><body><p>로그인 정보를 확인하고 있습니다.</p><script>(()=>{const session='+payload+',target='+target+',value=JSON.stringify(session);let saved=false;try{localStorage.setItem("'+SUPABASE_SESSION_KEY+'",value);saved=true}catch{}if(!saved)try{sessionStorage.setItem("'+SUPABASE_SESSION_KEY+'",value);saved=true}catch{}if(saved){try{sessionStorage.removeItem("ekodi-auth-token")}catch{}}history.replaceState(null,"",target);if(saved)location.replace(target);else document.body.textContent="브라우저에서 로그인 정보를 저장하지 못했습니다. 사이트 저장소를 허용한 후 다시 로그인해 주세요."})()</script></body></html>';
+  return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><title>로그인 복귀</title></head><body><p>로그인 정보를 확인하고 있습니다.</p><script>(()=>{const session='+payload+',target='+target+',value=JSON.stringify(session);let saved=false;try{localStorage.setItem("'+SUPABASE_SESSION_KEY+'",value);saved=true}catch{}if(!saved)try{sessionStorage.setItem("'+SUPABASE_SESSION_KEY+'",value);saved=true}catch{}history.replaceState(null,"",target);if(saved)location.replace(target);else document.body.textContent="브라우저에서 로그인 정보를 저장하지 못했습니다. 사이트 저장소를 허용한 후 다시 로그인해 주세요."})()</script></body></html>';
 }
 async function boardAuthReturn(req){
   if(req.method!=='POST')return null;
