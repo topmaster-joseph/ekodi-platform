@@ -1,4 +1,6 @@
 import fs from 'node:fs/promises';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
 
 const ROOTS=new Set(['canonical','customer']);
 const DEVICES=new Set(['desktop','mobile']);
@@ -38,7 +40,7 @@ export function safeAuditComment(report,runId){
  lines.push('No credentials, user identifiers, page text, query strings, or bearer tokens are included.');
  return lines.join('\n').slice(0,6500);
 }
-const main=process.argv[1]&&import.meta.url===new URL('file://'+process.argv[1]).href;
+const main=process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href;
 if(main){
  const issue=String(process.env.AUDIT_ISSUE_NUMBER||'');
  const repo=String(process.env.GITHUB_REPOSITORY||'');
