@@ -29,6 +29,13 @@ test('Control native probes are immutable isolated EKODI browser checks', () => 
   assert.match(native, /\.pageErrors \| length == 0/);
   assert.match(native, /horizontalOverflow == true/);
   assert.match(native, /maxActions=30/);
+  assert.match(native, /\.path == "\/control"/);
+  assert.match(native, /\.type == "snapshot"/);
+  assert.match(native, /\.bodyText \/\/ ""/);
+  assert.ok(native.includes('contains("AI 경로 점검")'));
+  assert.ok(native.includes('contains("보호된 배포 요청")'));
+  assert.ok(native.includes('test("^https://ekodi[.]kr/control/?$")'));
+
 });
 
 test('Control route and both guarded actions remain available as first-party assets', () => {
