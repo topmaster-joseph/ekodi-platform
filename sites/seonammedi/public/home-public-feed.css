@@ -2,3 +2,11 @@
 /* The preview belongs to the landing page only, never to category views. */
 .hero[hidden] ~ #homePublicFeed,.home-public-feed[hidden]{display:none!important}
 .public-feed-rows .public-feed-empty{margin:8px 0;color:#67748a;font-size:.9rem}
+
+/* Notices are a compact list, not a nested card. Other feeds keep their layout. */
+.home-public-feed .public-feed-primary{background:#fff;border:0;border-radius:0;box-shadow:none;padding:0;}
+.home-public-feed .public-feed-primary .public-feed-heading{margin:0;padding:8px 0 10px;border-bottom:1px solid #d9dee5;}
+.home-public-feed .public-feed-primary .public-feed-rows{margin:0;}
+.home-public-feed .public-feed-primary .public-feed-row{padding:12px 0;gap:10px;min-width:0;}
+.home-public-feed .public-feed-primary .public-feed-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+@media(max-width:760px){.home-public-feed .public-feed-primary .public-feed-row{gap:7px;padding:11px 0;}.home-public-feed .public-feed-primary .public-feed-row time{font-size:.75rem;}}
