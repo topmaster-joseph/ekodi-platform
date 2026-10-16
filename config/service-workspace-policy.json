@@ -290,6 +290,15 @@
   "authenticationReturnPolicy": {
     "policyId": "AUTH-RETURN-CONTINUITY-001",
     "exactPreLoginUrlFirst": true,
+    "mandatoryForExistingAndFutureSites": true,
+    "requireInitiatingHrefOnLoginLink": true,
+    "trustedReferrerRecoveryIfMissing": true,
+    "preserveExactPathAndQuery": true,
+    "blockCrossServiceRedirect": true,
+    "noAutomaticMyEkodiTransfer": true,
+    "compactGoogleChooserSurface": true,
+    "nativeGoogleAccountDialogControlledByProvider": true,
+    "regressionTestsRequired": true,
     "siteLocalContextRequired": true,
     "fallbackOrder": [
       "trusted_return_to",
