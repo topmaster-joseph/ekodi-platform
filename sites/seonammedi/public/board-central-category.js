@@ -86,7 +86,7 @@
   left.append(campaign);
 
   const right=el('aside','seonam-visual-right');
-  right.setAttribute('aria-label','주요일정 달력과 날짜별 일정');
+  right.setAttribute('aria-label','주요일정 및 날짜별 일정');
   const newsBox=el('section','seonam-visual-info-card');
   newsBox.append(el('h2','','주요일정'),el('p','seonam-calendar-status','일정을 불러오는 중입니다.'));
   const quick=el('section','seonam-visual-info-card');
