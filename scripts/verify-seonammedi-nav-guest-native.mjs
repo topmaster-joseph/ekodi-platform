@@ -201,12 +201,16 @@ try {
                 });
                 if(!record.guestLoginRedirect)violations.push('guest_write_did_not_open_canonical_login');
                 const expectedReturn=root.origin+root.prefix+'/board/voices?compose=1';
-                record.composeReturnMatches=loginNavigations.some(url=>{
-                  try{const u=new URL(url);return u.origin==='https://ekodi.kr'&&u.pathname==='/auth/'&&
-                    u.searchParams.get('site')==='seonammedi'&&u.searchParams.get('return_to')===expectedReturn&&
-                    u.searchParams.get('purpose')==='seonammedi-board-write'}catch{return false}
+                const composeAuthUrls=loginNavigations.flatMap(url=>{
+                  try{const u=new URL(url);return u.origin==='https://ekodi.kr'&&u.pathname==='/auth/'&&u.searchParams.get('site')==='seonammedi'?[u]:[]}catch{return[]}
                 });
-                if(!record.composeReturnMatches)violations.push('guest_compose_original_return_lost');
+                // Only record safe boolean checks, never the OAuth URL, tokens or private query.
+                record.composeReturnPathMatches=composeAuthUrls.some(u=>u.searchParams.get('return_to')===expectedReturn);
+                record.composePurposeMatches=composeAuthUrls.some(u=>u.searchParams.get('purpose')==='seonammedi-board-write');
+                record.composeReturnMatches=composeAuthUrls.some(u=>
+                  u.searchParams.get('return_to')===expectedReturn&&u.searchParams.get('purpose')==='seonammedi-board-write'
+                );
+                if(!record.composeReturnMatches)violations.push(record.composeReturnPathMatches?'guest_compose_purpose_mismatch':'guest_compose_original_return_lost');
               }catch(error){violations.push('guest_write_login_click_failed: '+String(error.message||error).slice(0,160))}
               finally{page.off('framenavigated',observe)}
             }
