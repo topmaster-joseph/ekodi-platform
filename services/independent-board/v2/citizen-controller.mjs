@@ -68,6 +68,21 @@ export async function createVoiceController({href,storage,fetcher=fetch,now,exch
     const data=await r.json();
     return Array.isArray(data.items)?data.items:[];
   }
+  async function publication(data,{attempts=12,intervalMs=750,sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms))}={}){
+    if(data?.id)return {published:true,id:data.id};
+    if(!data?.queued||!data?.submissionId||typeof data.statusUrl!=='string')throw Error('invalid_submission');
+    const statusUrl=data.statusUrl;
+    if(!/^\\/board\\/api\\/submissions\\/[a-f0-9-]{36}$/i.test(statusUrl))throw Error('invalid_submission_url');
+    for(let i=0;i<attempts;i++){
+      await sleep(intervalMs);
+      const response=await fetcher(mounted(statusUrl,current.pathname),{cache:'no-store'});
+      if(!response.ok)continue;
+      const state=await response.json().catch(()=>null);
+      if(state?.status==='published'&&state.id)return {published:true,id:state.id};
+      if(state?.status==='failed')throw Error('publication_failed');
+    }
+    return {published:false,pending:true};
+  }
   async function write(message,extras={}){
     const identity=await verified();
     if(!identity)return {ok:false,loginUrl:authUrl(href)};
@@ -78,5 +93,5 @@ export async function createVoiceController({href,storage,fetcher=fetch,now,exch
     if(!r.ok||data.ok===false)throw Error(data.error||'write_failed');
     return {ok:true,...data};
   }
-  return {initialize,verified,list,write};
+  return {initialize,verified,list,write,publication};
 }
