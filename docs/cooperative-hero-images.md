@@ -1,4 +1,22 @@
-Both images were created with the built-in image generation tool for the cooperative homepage update on 2026-10-15. They are illustrative AI-generated scenes, not documentary evidence of these cooperatives or their members. Each public homepage labels the image `AI 생성 이미지`.
+The original two hero images were created with the built-in image generation tool for the cooperative homepage update on 2026-10-15. They are illustrative AI-generated scenes, not documentary evidence of these cooperatives or their members. Each public homepage labels the image `AI 생성 이미지`.
+
+
+## Charter business images · 2026-10-16
+
+Three new editorial photographs illustrate the common draft charter business clauses (§§2–3, §9 and §61): agriculture/fisheries processing and distribution; mail-order/joint sales and packing; education, information, inter-cooperative and community cooperation. Both sites use these shared clause illustrations beside their existing distinct hero photos. All captions identify AI generation. No photograph depicts actual cooperative members or facilities.
+
+### 농수산물 가공·유통
+
+Use case: photorealistic-natural. Asset type: wide editorial photo for a Korean cooperative homepage business card about agriculture, fisheries, processing and wholesale distribution. Create a high-quality convincingly real documentary photograph in landscape 3:2 composition. In a clean modest Korean wholesale distribution sorting area, foreground a work-gloved person's hands checking sealed clear chilled packages of fresh fish on a stainless-steel counter; in a separate dry sorting area further behind are crates of fresh green vegetables and apples. Keep seafood and vegetables physically separate, appropriate cold-chain handling, authentic small-business scale, not an industrial fantasy. Natural soft morning daylight, understated neutral tones with fresh greens, real textures and camera depth of field. Center the essential subject so it works as a small 370x230 website image. Anonymous cropped workers with no visible faces, no actual named cooperative facility or identifiable member. No readable labels, text, brands, watermarks, graphics, logos or UI. Photographic realism, no illustration. Opaque background.
+
+### 통신판매·공동판매
+
+Use case: photorealistic-natural. Asset type: wide editorial photo for a Korean cooperative homepage business card about online joint sales, shared purchasing, shared brand and fulfillment. Create a convincingly real professional documentary photograph in landscape 3:2 composition. A modest Korean small-business fulfillment studio with a tidy wooden packing table: a laptop with indistinct blurred screen, a smartphone face down, plain kraft parcels, unbranded packaged local produce and simple household goods. Anonymous workers' natural hands collaboratively check an order and tape a parcel, no handshakes. Focus on the tangible connection between online sales and preparing shared shipments. Soft natural window light, warm cardboard and restrained navy-neutral tones, true-to-life textures, authentic everyday scale. Main subjects centered for a 370x230 card crop. No actual business, identifiable member, readable screen content, letters, shipping addresses, labels, brands, watermark, UI graphics or illustration. Opaque background.
+
+### 교육·협력
+
+Use case: photorealistic-natural. Asset type: wide editorial photo for a Korean cooperative homepage business card about member education, training, information sharing, cooperative collaboration and community. Create a convincingly real candid professional documentary photograph in landscape 3:2 composition. Four or five adult Korean small-business owners in a bright modest community learning room, viewed from a natural side/back angle around a shared table with notebooks and two laptops, discussing a practical business workshop. Warm attentive collaboration, one person pointing to a simple notebook while others listen; natural poses and hands, anonymous generic people, no prominent front-facing portraits, not a formal signing ceremony. Soft window daylight, muted earthy green and cream colors, realistic materials, quietly welcoming atmosphere. Center essential activity for a small 370x230 card crop. No actual cooperative members, named venue, readable notes or screens, signs, text, logos, brands, watermark or illustration. Opaque background.
+
 
 ## 희년세상협동조합
 

@@ -1,4 +1,4 @@
-import { routeCooperative } from './cooperative-control.js';
+import { routeCooperative, cooperativeLocatorGuard } from './cooperative-control.js';
 import { isCgmaAiEducationPath, routeCgmaAiEducation } from './cgma-ai-education-route.js';
 import legacyPlatformRouter from './platform-router-worker.js';
 import { canonicalTrackingQueryRedirect } from './canonical-query-policy.js';
@@ -634,6 +634,8 @@ export default {
     if(canonicalQueryRedirect)return finalize(canonicalQueryRedirect);
     const publicationAsset=sitePublicationAdminAsset(request);
     if(publicationAsset)return finalize(publicationAsset);
+    const cooperativeGuard=await cooperativeLocatorGuard(request,env);
+    if(cooperativeGuard)return finalize(cooperativeGuard);
     const publicationGuard=await sitePublicationGuard(request,env);
     if(publicationGuard)return finalize(publicationGuard);
     const adminPublicationSite=await resolvePublicationSiteForRequest(request,env,{admin:true});
