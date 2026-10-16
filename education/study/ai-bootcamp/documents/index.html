@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="EKODI AI 부트캠프 강사 이력서 및 강의계획서 편집 · 이메일 제출">
+<meta name="ekodi-ui-type" content="USER">
+<title>강사 이력서 · 강의계획서 | EKODI Education</title>
+<link rel="stylesheet" href="./documents.css">
+</head><body data-ekodi-ui="USER">
+<header class="mast"><a class="brand" href="../"><span class="mark">E</span><span><strong>EKODI Education</strong><small>MNU AI BOOTCAMP · DOCUMENT STUDIO</small></span></a><nav aria-label="상위 메뉴"><a href="../">강의실</a><a href="../studio/">강의자료 편집실</a><a aria-current="page" href="./">강사 제출서류</a></nav></header>
+<main class="shell">
+<div class="crumb">EDUCATION / AI BOOTCAMP / INSTRUCTOR DOCUMENTS</div>
+<section class="intro"><div><p class="eyebrow">INSTRUCTOR DOCUMENT STUDIO</p><h1>강사의 이력과 교육의 설계,<br>한곳에서 완성합니다.</h1><p>국립목포대학교 AI부트캠프 교직원 교육 제안자료를 기반으로 편집·인쇄·이메일 초안을 준비합니다.</p></div><div class="seal"><span>AI</span><small>BOOTCAMP</small></div></section>
+<div class="privacy" role="note"><strong>편집 안전 안내</strong> 이 화면의 수정사항은 현재 브라우저에서만 유지됩니다. 서버 자동 저장이나 자동 공개·발송은 하지 않습니다. 수정본은 <b>JSON 백업</b>으로 저장하고, 실제 이메일은 발송 전에 메일 앱에서 확인하세요. 사진과 연락처가 포함된 파일은 개인 정보로 취급합니다.</div>
+<div class="tabs" role="tablist" aria-label="편집 문서"><button id="resumeTab" type="button" aria-selected="true" class="active" data-doc="resume">강사 이력서</button><button id="planTab" type="button" aria-selected="false" data-doc="syllabus">강의계획서</button></div>
+<div class="layout">
+<section class="editor panel" aria-labelledby="editTitle"><div class="panel-heading"><span class="eyebrow">01 / EDIT</span><h2 id="editTitle">강사 이력서 편집</h2></div>
+<div id="resumeEditor">
+<div class="photo-edit"><img id="portraitEditor" alt="강사 증명사진 미리보기" width="114" height="134"><div><strong>증명사진</strong><p>구글드라이브의 ‘정찬균_기준사진_비자사진.jpg’ 원본 반영. 사진을 선택하면 이 브라우저에서 교체됩니다.</p><label class="file-button" for="photoInput">사진 교체 (JPG·PNG·WebP)<input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp"></label><button id="restorePhoto" class="subtle" type="button">원본 사진 복원</button></div></div>
+<label>성명<input data-resume="name" maxlength="80"></label><label>전문 분야<input data-resume="headline" maxlength="250"></label><label>강사 소개 및 주요 활동<textarea data-resume="summary" rows="4" maxlength="2400"></textarea></label>
+<label>학력 (한 줄에 하나)<textarea data-resume="education" rows="5" maxlength="2800"></textarea></label>
+<label>주요 경력 및 프로젝트<textarea data-resume="experience" rows="5" maxlength="2800"></textarea></label>
+<label>연구 · 논문 실적<textarea data-resume="research" rows="5" maxlength="3500"></textarea></label>
+<label>자격 · 교육 역량<textarea data-resume="skills" rows="4" maxlength="2800"></textarea></label>
+<label>제출용 연락처 (선택, 공개 페이지에는 별도 게시하지 않음)<input data-resume="contact" maxlength="250" placeholder="이메일 또는 연락처"></label>
+</div>
+<div id="syllabusEditor" hidden>
+<label>과정명<input data-syllabus="title" maxlength="180"></label><label>교육 대상<input data-syllabus="audience" maxlength="300"></label><label>교육 운영 규모<input data-syllabus="schedule" maxlength="350"></label>
+<label>교육 목표<textarea data-syllabus="goals" rows="5" maxlength="2400"></textarea></label><label>1회차<textarea data-syllabus="session1" rows="3" maxlength="1400"></textarea></label><label>2회차<textarea data-syllabus="session2" rows="3" maxlength="1400"></textarea></label><label>3회차<textarea data-syllabus="session3" rows="3" maxlength="1400"></textarea></label><label>4회차<textarea data-syllabus="session4" rows="3" maxlength="1400"></textarea></label>
+<label>교수학습 방법<textarea data-syllabus="method" rows="3" maxlength="1800"></textarea></label><label>보안 및 운영 유의사항<textarea data-syllabus="security" rows="4" maxlength="2000"></textarea></label>
+</div>
+<div class="actions"><button id="exportJson" type="button" class="primary">편집본 백업 (JSON)</button><label class="import-label">백업 불러오기<input id="importJson" type="file" accept=".json,application/json"></label><button id="resetDoc" class="subtle" type="button">현재 문서 초기화</button></div>
+<p id="editorStatus" class="status" role="status" aria-live="polite"></p></section>
+<aside class="preview panel" aria-labelledby="previewHeading"><div class="panel-heading"><span class="eyebrow">02 / PREVIEW</span><h2 id="previewHeading">이력서 미리보기</h2></div><article id="documentPreview" class="paper" aria-live="polite"></article><div class="actions"><button id="printDoc" type="button" class="primary">인쇄 · PDF로 저장</button><button id="downloadHtml" type="button">HTML 문서 저장</button></div></aside>
+</div>
+<section class="send panel" aria-labelledby="sendHeading"><div class="panel-heading"><span class="eyebrow">03 / EMAIL HANDOFF</span><h2 id="sendHeading">이메일로 제출하기</h2></div><p class="help">현재 선택한 문서를 제출용 HTML과 증명사진(이력서 선택 시)을 포함한 이메일 초안으로 만듭니다. 수신자는 직접 지정하며 이 사이트는 메일을 자동 발송하지 않습니다.</p>
+<div class="send-grid"><label>수신자 이메일<input id="recipient" inputmode="email" autocomplete="off" type="email" placeholder="recipient@example.org" maxlength="254"></label><label>이메일 제목<input id="mailSubject" maxlength="180"></label></div>
+<label>보낼 말씀<textarea id="mailMessage" rows="3" maxlength="2000"></textarea></label>
+<label class="consent"><input id="mailReview" type="checkbox"><span>이력서·사진·연락처와 수신자 정보를 확인했습니다. 발송 전에 메일 앱에서 최종 검토하겠습니다.</span></label>
+<div class="actions"><button id="makeEml" type="button" class="primary" disabled>사진 첨부 이메일 초안 (.eml)</button><button id="openMail" type="button" disabled>메일 앱에서 작성</button></div>
+<p id="mailStatus" class="status" role="status" aria-live="polite"></p><p class="footnote">.eml 파일을 메일 프로그램으로 열면 주소·본문·문서가 포함된 초안을 확인할 수 있습니다. 프로그램에 따라 첨부 표시 방식이 다를 수 있습니다. ‘메일 앱에서 작성’은 자동 첨부가 지원되지 않으므로 저장한 문서를 직접 첨부해야 합니다.</p>
+</section>
+</main><footer class="footer"><span>EKODI Education · AI Bootcamp</span><span>기존 인증·공개 승인·개인정보 보호 정책 유지</span></footer>
+<script type="module" src="./documents.js"></script>
+</body></html>

@@ -177,3 +177,17 @@ test('Orchestrator human-gate admin routes are super-admin and state-version gat
   assert.match(adapter, /listOrchestratorHumanGatesForPlatformAdmin/);
   assert.match(adapter, /humanGate\?\.required===true/);
 });
+
+
+test('live production proof recognizes executor_ready and audits legacy core_only handoff dead-ends', () => {
+  const workflow = fs.readFileSync(new URL('../.github/workflows/verify-ekodi-orchestrator-live-e2e.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /verified\|degraded\|core_only\|executor_ready\|failed\|human_gate\|ignored/);
+  assert.match(workflow, /Audit command ledger for legacy core_only deployment dead-ends/);
+  assert.match(workflow, /state='core_only'/);
+  assert.match(workflow, /deploymentRequested/);
+  assert.match(workflow, /branchRef/);
+  assert.match(workflow, /state='executor_ready'/);
+  assert.match(workflow, /test "\$dead_ends" -eq 0/);
+  assert.match(workflow, /MCP connectivity is not required/);
+  assert.match(workflow, /case "\$terminal" in[\s\S]*verified\|degraded\)/);
+});

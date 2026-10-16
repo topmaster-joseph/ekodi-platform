@@ -5,15 +5,26 @@ export const TELEMETRY_URL='https://ekodi.kr/api/telemetry/visit';
 export const BEACON_PREFIX='https://static.cloudflareinsights.com/beacon.min.js/';
 export function classifyConsoleSecurityBlock(message){
   const value=String(message||'').trim();
-  if(value.startsWith('Refused to apply inline style because it violates the following Content Security Policy directive: "style-src ')
+  // Chromium 156 updated its CSP console wording. Match only the exact,
+  // previously observed Education/Shell policy and blocked third-party beacon;
+  // never relax the browser CSP or classify unrelated violations as benign.
+  const legacyInline = value.startsWith('Refused to apply inline style because it violates the following Content Security Policy directive: "style-src ');
+  const modernInline = value.startsWith('Applying inline style violates the following Content Security Policy directive ');
+  const knownInlineStyle = legacyInline || modernInline;
+  if(knownInlineStyle
       && value.includes("style-src 'self' https://ekodi.kr https://ekodi.kr/shell")
-      && value.includes('Either the ')
-      && value.includes('nonce')){
+      && value.includes("Either the 'unsafe-inline' keyword")
+      && value.includes("nonce (")
+      && (legacyInline ? value.includes("required to enable inline execution") : value.includes("The action has been blocked"))){
     return 'inline-style-rejected-by-strict-CSP';
   }
-  if(value.startsWith("Refused to load the script '"+BEACON_PREFIX)
-      && value.includes('because it violates the following Content Security Policy directive: ')
-      && value.includes("script-src 'self' https://cdn.jsdelivr.net https://ekodi.kr")){
+  const legacyBeacon=value.startsWith("Refused to load the script '"+BEACON_PREFIX);
+  const modernBeacon=value.startsWith("Loading the script '"+BEACON_PREFIX);
+  const knownBeacon=legacyBeacon || modernBeacon;
+  if(knownBeacon
+      && value.includes('violates the following Content Security Policy directive')
+      && value.includes("script-src 'self' https://cdn.jsdelivr.net https://ekodi.kr")
+      && (legacyBeacon ? value.includes("script-src-elem") : value.includes("The action has been blocked"))){
     return 'unapproved-cloudflare-beacon-blocked-by-CSP';
   }
   if(value==='Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector')
