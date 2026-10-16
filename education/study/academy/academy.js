@@ -2,7 +2,7 @@ import {AUDIENCES,FORMATS,CONSULTING,audienceFor,buildPlan,planMarkdown,consulta
 
 const $=id=>document.getElementById(id);
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-const FORM_IDS=['audience','title','program','host','topic','delivery','sessions','minutes','practicePercent','start','end'];
+const FORM_IDS=['audience','title','program','host','topic','curriculum','requirements','delivery','sessions','minutes','practicePercent','start','end'];
 let plan=null,slideIndex=0,consultText='';
 const lesson=()=>plan?.lessons[Number($('sessionPicker').value)||0];
 function settings(){const result={};for(const id of FORM_IDS)result[id]=$(id).value;return result;}
@@ -102,7 +102,7 @@ function init(){
    const values=imported.settings;
    if(!AUDIENCES.some(a=>a.id===values.audience))throw Error('알 수 없는 교육 대상입니다.');
    if(!FORMATS.some(f=>f.id===values.delivery))throw Error('알 수 없는 강의 방식입니다.');
-   for(const id of FORM_IDS)if(typeof values[id]==='string')$(id).value=values[id].slice(0,180);
+   for(const id of FORM_IDS)if(typeof values[id]==='string')$(id).value=values[id].slice(0,id==='curriculum'?2400:id==='requirements'?400:180);
    renderAudience();renderPlan();
    notice('builderStatus','교육 설정 JSON을 불러왔습니다. 내용과 기간을 다시 검토하세요.');
   }catch(e){notice('builderStatus','불러오기 실패: '+e.message);}finally{event.target.value='';}
