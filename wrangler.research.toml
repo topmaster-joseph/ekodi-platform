@@ -1,0 +1,23 @@
+name = "ekodi-research"
+main = "research-worker.js"
+compatibility_date = "2026-10-01"
+workers_dev = false
+preview_urls = false
+
+[[routes]]
+pattern = "ekodi.kr/research*"
+zone_name = "ekodi.kr"
+
+[vars]
+DATA_MODE = "local-planning-only"
+# Auth settings and RESEARCH_DB binding are activated only after isolated D1 provisioning.
+# No payment or external AI credentials are provisioned in this phase.
+
+[assets]
+directory = "./research"
+binding = "ASSETS"
+run_worker_first = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true

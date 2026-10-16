@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="AI 논문 연구지원과 전문가 컨설팅을 연결하는 EKODI Research">
+<meta name="ekodi-ui-type" content="USER"><title>EKODI Research | 논문 컨설팅</title>
+<link rel="stylesheet" href="./app.css">
+</head>
+<body data-ekodi-ui="USER" data-ekodi-surface="public">
+<header class="site-header">
+ <a class="brand" href="./"><strong>EKODI <span>Research</span></strong><small>AI RESEARCH CONSULTING</small></a>
+ <button id="menuToggle" type="button" class="menu-toggle" aria-controls="siteNav" aria-expanded="false">메뉴</button>
+ <nav id="siteNav" aria-label="주요 메뉴"><a href="#diagnosis">무료 연구진단</a><a href="#workspace">나의 연구실</a><a href="#consulting">전문가 컨설팅</a><a href="#academy">논문 아카데미</a><a href="#operations">운영 안내</a></nav>
+ <button id="authButton" class="login" type="button" hidden>Google 로그인</button>
+</header>
+<main>
+ <section class="hero" id="home">
+  <p class="eyebrow">AI × RESEARCH × HUMAN EXPERTISE</p>
+  <h1>연구의 길을 밝히는<br>지적인 동행</h1>
+  <p class="lead">석·박사 학위논문부터 학술연구까지. 연구자 스스로의 판단과 연구윤리를 지키면서 AI 도구와 전문가의 도움을 받습니다.</p>
+  <div class="actions"><a class="primary" href="#diagnosis">무료 연구진단</a><a class="secondary" href="#workspace">나의 연구실</a></div>
+  <p class="caution">대필·논문 게재 보장 서비스를 제공하지 않습니다. 상담·유료결제·원고 업로드는 단계적으로 준비합니다.</p>
+ </section>
+ <section class="feature-row" aria-label="핵심 서비스">
+  <article><span>01</span><h2>연구진단</h2><p>연구단계별 보완 과제와 다음 행동 정리</p></article>
+  <article><span>02</span><h2>연구실</h2><p>논문 프로젝트와 일정의 체계적 관리</p></article>
+  <article><span>03</span><h2>전문가</h2><p>연구방법론·논문 구조 검토와 단계별 코칭</p></article>
+ </section>
+ <section class="section" id="diagnosis">
+  <div class="section-heading"><p class="eyebrow">RESEARCH DIAGNOSIS</p><h2>무료 연구진단</h2><p>개인정보나 원고를 제출하지 않고 필요한 연구 단계를 확인합니다. 현재는 규칙 기반 안내이며 AI 논문 분석은 연결되지 않았습니다.</p></div>
+  <form id="diagnosisForm" class="form-card">
+   <div class="form-grid">
+    <label>연구자 구분<select name="degree"><option value="master">석사 과정</option><option value="doctor">박사 과정</option><option value="researcher">교수·연구자</option><option value="other">기타</option></select></label>
+    <label>현재 연구단계<select name="stage"><option value="idea">연구주제 선정</option><option value="literature">선행연구 조사</option><option value="design">연구설계</option><option value="analysis">자료수집·분석</option><option value="writing">논문 작성·수정</option><option value="submission">심사·투고 준비</option></select></label>
+    <label>연구분야<input name="field" maxlength="80" placeholder="예: 교육학"></label>
+    <label>연구방법<select name="method"><option value="undecided">미정</option><option value="quantitative">양적 연구</option><option value="qualitative">질적 연구</option><option value="mixed">혼합 연구</option></select></label>
+    <label class="wide">연구주제 (민감한 원고·개인정보 입력 금지)<input name="theme" maxlength="140" placeholder="예: 소상공인의 AI 활용과 경영성과"></label>
+    <label class="wide">현재 가장 어려운 점<select name="hurdle"><option value="topic">주제·연구질문</option><option value="literature">선행연구·인용</option><option value="method">연구설계·방법론</option><option value="statistics">통계·자료분석</option><option value="writing">논문 구성·문장</option><option value="submission">심사·투고</option></select></label>
+   </div>
+   <button class="primary" type="submit">연구 로드맵 보기</button><p id="diagnosisStatus" class="status" role="status"></p>
+  </form>
+  <article id="diagnosisResult" class="result" hidden aria-live="polite"></article>
+ </section>
+ <section class="section" id="workspace">
+  <div class="section-heading"><p class="eyebrow">MY RESEARCH WORKSPACE</p><h2>나의 연구실</h2><p>진행 중인 프로젝트와 다음 행동을 관리합니다. 연구 원고나 민감한 연구데이터는 아직 업로드할 수 없습니다.</p></div>
+  <div id="workspaceMode" class="notice" role="status">연구실 연결상태 확인 중</div>
+  <form id="projectForm" class="form-card">
+   <div class="form-grid">
+    <label class="wide">프로젝트명<input name="title" required minlength="3" maxlength="120" placeholder="논문 제목 또는 연구 계획"></label>
+    <label>연구분야<input name="field" maxlength="80" placeholder="예: 경영학"></label>
+    <label>유형<select name="kind"><option value="thesis">학위논문</option><option value="journal">학술논문</option><option value="report">연구보고서</option></select></label>
+    <label>진행 단계<select name="stage"><option value="idea">주제 선정</option><option value="literature">선행연구</option><option value="design">연구설계</option><option value="analysis">분석</option><option value="writing">원고 작성</option><option value="submission">투고 준비</option></select></label>
+    <label class="wide">다음 행동 (민감정보 제외)<input name="next_step" maxlength="300" placeholder="예: 연구 질문 3개 구체화"></label>
+   </div>
+   <button class="primary" type="submit">연구 프로젝트 등록</button><p id="projectStatus" class="status" role="status"></p>
+  </form>
+  <div class="split-heading"><h3>프로젝트 목록</h3><span id="projectCount">0개</span></div>
+  <div id="projectList" class="project-list"><p class="empty">등록된 프로젝트가 없습니다.</p></div>
+ </section>
+ <section class="section" id="consulting">
+  <div class="section-heading"><p class="eyebrow">EXPERT CONSULTING</p><h2>전문가 컨설팅</h2><p>분야별 자문과 단계별 코칭을 준비 중입니다. 실제 전문가의 경력·일정·가격은 확인 후 공개합니다.</p></div>
+  <div class="service-grid">
+   <article><h3>연구계획·설계</h3><p>연구주제, 문제·가설, 연구모형, 표본·측정 구성 검토</p><strong>상담 상품 준비 중</strong></article>
+   <article><h3>연구방법론·통계</h3><p>양적·질적·혼합 연구설계, 분석방법 교육과 해석 검토</p><strong>상담 상품 준비 중</strong></article>
+   <article><h3>원고·투고 준비</h3><p>목차·논리·인용 정리, 심사의견 대응계획 상담</p><strong>상담 상품 준비 중</strong></article>
+  </div>
+  <form id="consultingForm" class="form-card" hidden>
+   <h3>상담 신청</h3>
+   <label>상담 분야<select name="service"><option value="diagnosis">연구계획·설계</option><option value="methodology">연구방법론·통계</option><option value="coaching">종합 연구코칭</option><option value="manuscript_review">원고 검토</option></select></label>
+   <label>상담 주제<textarea name="topic" minlength="6" maxlength="240" required placeholder="개인정보·미공개 연구자료를 포함하지 마세요."></textarea></label>
+   <label>희망 상담 시간<input name="preferred_time" maxlength="90" placeholder="예: 평일 오후"></label>
+   <label class="consent"><input type="checkbox" name="consent" required>상담 요청 내용의 처리 및 서비스 연락에 동의합니다. 자세한 조건은 별도 안내 후 확정됩니다.</label>
+   <button type="submit" class="primary">상담 요청 접수</button><p id="consultingStatus" class="status" role="status"></p>
+  </form>
+  <p id="consultingUnavailable" class="notice">실제 접수·결제는 보안 저장소와 인증이 준비된 뒤 활성화합니다.</p>
+ </section>
+ <section class="section" id="academy"><div class="section-heading"><p class="eyebrow">RESEARCH ACADEMY</p><h2>논문 아카데미</h2><p>연구주제 설정, 문헌검색, 연구방법론, 통계분석, 학술지 투고 준비까지 실습 중심 교육을 제공합니다. 개설 강좌는 추후 공개합니다.</p></div><div class="service-grid"><article><h3>논문 작성 기초</h3><p>연구 문제와 논리 구성 실습</p></article><article><h3>문헌검색과 인용</h3><p>DOI·참고문헌 확인 및 연구윤리</p></article><article><h3>방법론 실습</h3><p>자료의 특성에 따른 분석 설계</p></article></div></section>
+ <section class="section ethics" id="operations"><p class="eyebrow">TRUST & RESEARCH INTEGRITY</p><h2>연구윤리를 지키는 플랫폼</h2><p>연구결과 조작, 대필, 허위 인용, 논문 게재 보장을 제공하지 않습니다. 본인 연구에 관한 학술적 판단과 책임은 연구자에게 있습니다. 개인정보 및 미공개 자료는 본 기능의 범위가 확보되기 전까지 입력하지 마세요.</p><p>운영자 전용 별도 중복 화면 대신, 검증된 운영 권한이 부여되면 연구실 내 관리 기능을 단계적으로 제공합니다. 공개 화면에서 모든 프로젝트와 파일은 노출되지 않습니다.</p></section>
+</main>
+<footer><strong>EKODI Research</strong><span>Research integrity · Human agency · Confidentiality</span><span>© EKODI</span></footer>
+<script src="./config.js"></script><script type="module" src="./app.js"></script>
+</body></html>
