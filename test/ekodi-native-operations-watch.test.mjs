@@ -94,6 +94,22 @@ test('CGMA scheduled watch missing or delayed beyond four hours is a real alert'
   assert.equal(classifyWorkflow('system-health-analytics.yml',{workflow_runs:[]},now).status,'warning');
 });
 
+test('data-store hourly schedule detects missing and stale evidence without mutating D1',()=>{
+  const name='data-store-readonly-watch.yml';
+  assert.equal(classifyWorkflow(name,{workflow_runs:[]},now).status,'alert');
+  assert.equal(classifyWorkflow(name,{workflow_runs:[
+    {event:'workflow_run',status:'completed',conclusion:'success',created_at:'2026-10-12T12:39:00Z'}
+  ]},now).reason,'no_scheduled_run_evidence');
+  const stale=classifyWorkflow(name,{workflow_runs:[
+    {id:123,event:'schedule',status:'completed',conclusion:'success',created_at:'2026-10-12T08:00:00Z'}
+  ]},now);
+  assert.equal(stale.status,'alert');
+  assert.equal(stale.reason,'scheduled_run_stale');
+  assert.equal(stale.ageHours,4);
+  assert.equal(classifyWorkflow(name,workflowRuns,now).status,'ok');
+  assert.equal(classifyWorkflow('system-health-analytics.yml',{workflow_runs:[]},now).status,'warning');
+});
+
 test('CGMA board health verifies identity, not just a misleading ok flag',async()=>{
   const {fetchImpl}=fakeFetch();
   const bogus=async(url,options)=>url.endsWith('/cgma/board/api/health')?
