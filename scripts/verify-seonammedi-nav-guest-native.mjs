@@ -148,6 +148,22 @@ try {
           // Finance rows and totals are never available to anonymous visitors,
           // regardless of the legacy URL or which customer-domain mount is used.
           // Read-only GET probes keep the audit credential-free and record only status codes.
+          // Category/Notice navigation above can leave the page on the NOTICE board.
+          // Restore the actual citizen-voice page before exercising its write login:
+          // both boards expose #writeToggle, but Notice uses admin purpose by design.
+          if(suffix==='/board/voices'){
+            const expectedVoiceUrl=root.origin+root.prefix+'/board/voices';
+            const current=new URL(page.url());
+            const correctContext=current.origin===root.origin&&current.pathname===root.prefix+'/board/voices';
+            if(!correctContext){
+              const restored=await page.goto(expectedVoiceUrl,{waitUntil:'domcontentloaded',timeout:25000});
+              if(!restored?.ok())throw Error('guest_voice_context_restore_http_'+String(restored?.status()||0));
+            }
+            if(!await page.locator('body.board-voices #writeToggle').isVisible().catch(()=>false)){
+              throw Error('guest_voice_context_not_restored');
+            }
+            record.voiceContextRestored=true;
+          }
           if(suffix==='/board/finance'){
             if(!record.financePrivateGate)violations.push('finance_guest_admin_only_marker_missing');
             record.financeGuestApiStatuses={};
@@ -239,7 +255,7 @@ try {
               page.on('framenavigated',observe);
               page.on('request',observeAuthRequest);
               try {
-                await page.locator('#writeToggle').click({timeout:5000});
+                await page.locator('body.board-voices #writeToggle').click({timeout:5000});
                 await pause(2200);
                 record.loginNavigations=loginNavigations.slice(-6).map(url=>{
                   // Strip any auth query payloads from retained evidence.
