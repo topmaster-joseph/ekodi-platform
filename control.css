@@ -49,3 +49,41 @@ html[data-ekodi-control="v2"] :is(.ekodi-main-ekodian,.ekodi-user-ai-entry,.ekod
   html[data-ekodi-control="v2"] .composer-row .send{min-width:68px}
   html[data-ekodi-control="v2"] .composer-note{text-align:left;line-height:1.35}
 }
+
+
+/* CONTROL-STEADY-001: bounded scrolling, stable viewport, no motion/repaint loop.
+ * Only the active conversation scrolls. The fixed command composer never
+ * participates in document scrolling or causes the window to animate. */
+html[data-ekodi-control="v2"]{scrollbar-gutter:stable;scroll-behavior:auto!important}
+html[data-ekodi-control="v2"] body{overflow-x:hidden;scroll-behavior:auto!important}
+html[data-ekodi-control="v2"] .control-shell,
+html[data-ekodi-control="v2"] .control-main{min-height:100svh!important}
+html[data-ekodi-control="v2"] .control-main .view.active[data-view-panel="chat"]{
+  height:calc(100svh - 58px)!important;
+  min-height:0!important;
+  overflow:hidden!important
+}
+html[data-ekodi-control="v2"] .control-main .conversation{
+  height:100%!important;
+  min-height:0!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  overscroll-behavior-y:contain;
+  scrollbar-gutter:stable;
+  scroll-behavior:auto!important
+}
+html[data-ekodi-control="v2"] .composer textarea{
+  max-height:160px!important;
+  overflow-y:auto;
+  resize:none;
+  overscroll-behavior:contain
+}
+html[data-ekodi-control="v2"] :is(.control-main,.control-rail,.topbar,.conversation,.composer-wrap,.composer,.composer textarea){
+  animation:none!important;
+  transition:none!important
+}
+@media(max-width:760px){
+  html[data-ekodi-control="v2"] .control-main .view.active[data-view-panel="chat"]{
+    height:calc(100svh - 56px)!important
+  }
+}
