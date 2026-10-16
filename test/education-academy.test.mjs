@@ -13,6 +13,19 @@ test('five audience tracks and four consultation methods are available',()=>{
  assert.equal(CONSULTING.length,4);
 });
 
+test('canonical cross-service learning link is not rewritten by /edu HTML proxy',async()=>{
+ const html=await read('education/study/academy/index.html');
+ assert.match(html,/href="https:\/\/ekodi\.kr\/learn\/"/);
+ assert.doesNotMatch(html,/href="\/learn\/"/);
+});
+test('audience names use correct Korean object particles',()=>{
+ assert.equal(suggestedCourseTitle('merchant'),'소상공인을 위한 AI 실습교육');
+ assert.equal(suggestedCourseTitle('staff'),'교직원을 위한 AI 실습교육');
+ assert.equal(suggestedCourseTitle('resident'),'지역주민·무안군민을 위한 AI 실습교육');
+ assert.equal(suggestedCourseTitle('employee'),'재직자를 위한 AI 실습교육');
+ assert.equal(suggestedCourseTitle('student'),'학생을 위한 AI 실습교육');
+});
+
 test('MNU-style 4 sessions times 6 sets remains possible without altering existing classroom',async()=>{
  const p=buildPlan({audience:'staff',title:'교직원 AI 실무',sessions:4,minutes:120,practicePercent:70,program:'AI부트캠프'});
  assert.equal(p.sessions,4);assert.equal(p.minutes,120);assert.equal(p.totalMinutes,480);
