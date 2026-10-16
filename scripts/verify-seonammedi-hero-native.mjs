@@ -135,7 +135,7 @@ try {
           const center=document.querySelector('.seonam-visual-content');
           const right=document.querySelector('.seonam-visual-right');
           return {
-            photographicBanner:Boolean(banner?.querySelector('img.seonam-visual-photo[src^="https://images.unsplash.com/"]')),
+            noSharedStockBanner:!banner,
             sidebarMenu:menu.map(a=>a.textContent.trim()),
             layoutColumns:getComputedStyle(main).gridTemplateColumns,
             layoutDisplay:getComputedStyle(main).display,
@@ -148,7 +148,7 @@ try {
           };
         });
         entry.visualShell=visual;
-        must(visual.photographicBanner,'photo_banner_not_mounted');
+        must(visual.noSharedStockBanner,'unexpected_shared_stock_banner');
         must(JSON.stringify(visual.sidebarMenu)===JSON.stringify(['공지','활동이력','관련소식','소통채널','시민의견','조직']),'visual_six_menu_mismatch');
         must(visual.leftVisible&&visual.centerVisible&&visual.rightVisible,'visual_columns_missing');
         must(visual.rightReadsRealNotices,'public_notice_panel_missing');

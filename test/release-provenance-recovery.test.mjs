@@ -107,6 +107,27 @@ test('receipt-bound immediate Shell dispatch occurs only after confirmed protect
   assert.doesNotMatch(script,/method:'POST'[^\n]*https:\/\/api\.cloudflare\.com\/client\/v4\/accounts\/[^\n]*workers/);
 });
 
+test('owner-approved immediate CGMA apex recovery dispatches only exact scoped source after protected merge',async()=>{
+  const [script,workflow]=await Promise.all([
+    read('scripts/recover-release-provenance.mjs'),
+    read('.github/workflows/recover-release-provenance.yml')
+  ]);
+  const scope=script.indexOf("const cgmaApexTouched=sourceFiles.includes('.github/workflows/deploy-cgma-apex-edge.yml')");
+  const verified=script.indexOf('if(merge.response.ok&&cgmaApexTouched){');
+  const mainCheck=script.indexOf('main changed before exact CGMA apex dispatch',verified);
+  const dispatch=script.indexOf('/actions/workflows/deploy-cgma-apex-edge.yml/dispatches',verified);
+  const accepted=script.indexOf("out('cgma_apex_dispatch','accepted')",dispatch);
+  assert.ok(scope>0&&verified>scope&&mainCheck>verified&&dispatch>mainCheck&&accepted>dispatch);
+  assert.ok(script.includes('merge.data?.merged!==true'));
+  assert.ok(script.includes('cgmaDispatch.response.status!==204'));
+  assert.ok(script.includes('release_branch_ref:branchRef,release_task_id:taskId'));
+  assert.ok(script.includes('if(merge.response.ok&&cgmaApexTouched){'));
+  assert.match(workflow,/actions: write/);
+  assert.match(workflow,/cgma_apex_dispatch/);
+  assert.doesNotMatch(script,/const cgmaApexTouched=true/);
+  assert.ok(!script.includes('if(!merge.response.ok&&cgmaApexTouched){'));
+});
+
 test('Human Gate rejects quoted markers and ensures exact owner approval precedes a real label event',()=>{
   const marker='EKODI-HUMAN-GATE-APPROVE:'+'a'.repeat(40);
   const comment=(body,user='owner',created='2026-10-15T12:00:00Z',updated=created)=>({
