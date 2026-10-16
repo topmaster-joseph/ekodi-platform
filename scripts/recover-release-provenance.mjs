@@ -185,6 +185,7 @@ const independentBoardTouched=sourceFiles.some(file=>
 const sharedSiteTouched=sourceFiles.some(file=>
   file.startsWith('sites/seonammedi/public/')||
   ['site-worker.js','seonammedi-admin-control.js',
+   'control.html','control.css','control.js',
    'platform-router-entry-worker.js','.github/workflows/deploy-site-core.yml'].includes(file)
 );
 // First-party Shell is an independent guarded Worker. GitHub-token recovery
