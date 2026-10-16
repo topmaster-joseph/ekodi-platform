@@ -22,7 +22,7 @@ test('both public board mounts share the writer login and show protected inline 
     assert.doesNotMatch(html,/target\.searchParams\.set\("manage","1"\)/);
     assert.match(html,/auth\.searchParams\.set\("return_to",target.href\)/);
     assert.match(html,/adminItems=data\.items\|\|\[\];render\(adminItems,true\)/);
-    assert.match(html,/관리 권한을 확인하지 못했습니다/);
+    assert.match(html,/catch\(error\)\{\/\* A signed-in visitor without admin permission keeps the public list\. \*\//);
     assert.match(html,/data-edit=/);
     assert.match(html,/data-delete=/);
   }
