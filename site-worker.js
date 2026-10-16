@@ -672,7 +672,7 @@ export default {
           redirected.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
           return redirected;
         }
-        const allowed=new Set(['/proposal/','/proposal/index.html','/proposal/app.css','/proposal/client.js','/proposal/core.js','/proposal/analysis.js']);
+        const allowed=new Set(['/proposal/','/proposal/index.html','/proposal/app.css','/proposal/client.js','/proposal/core.js','/proposal/analysis.js','/proposal/zip.js','/proposal/docx.js','/proposal/xlsx.js','/proposal/pptx.js']);
         if (!allowed.has(url.pathname)) {
           const absent=withHostSecurity(new Response('Not Found',{status:404}),PUBLIC_CSP,'no-store','proposal-not-found');
           absent.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
