@@ -93,5 +93,24 @@ export async function createVoiceController({href,storage,fetcher=fetch,now,exch
     if(!r.ok||data.ok===false)throw Error(data.error||'write_failed');
     return {ok:true,...data};
   }
-  return {initialize,verified,list,write,publication};
+  async function adminRequest(method,path='',payload){
+    const identity=await verified();
+    if(!identity)throw Error('login_required');
+    const route=endpoint('/admin/posts'+path);
+    const response=await fetcher(route,{
+      method,cache:'no-store',
+      headers:{authorization:'Bearer '+identity.access_token,...(payload?{'content-type':'application/json'}:{})},
+      ...(payload?{body:JSON.stringify(payload)}:{})
+    });
+    if(response.status===401||response.status===403)throw Error('admin_forbidden');
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||data.ok===false)throw Error(data.error||'admin_request_failed');
+    return data;
+  }
+  const admin={
+    list:()=>adminRequest('GET'),
+    update:(id,message)=>{if(!Number.isSafeInteger(id)||id<1)throw Error('invalid_post');return adminRequest('PUT','/'+id,{message:String(message||'').trim().slice(0,12000)})},
+    remove:id=>{if(!Number.isSafeInteger(id)||id<1)throw Error('invalid_post');return adminRequest('DELETE','/'+id)}
+  };
+  return {initialize,verified,list,write,publication,admin};
 }
