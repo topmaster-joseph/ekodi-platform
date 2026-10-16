@@ -1,5 +1,5 @@
 import {PROPOSAL_DOMAINS,PROPOSAL_GOALS,createProposalDraft,selectedStages,reviewProposalDraft,draftToMarkdown,validImportedDraft,normalizeReferenceUrl} from './core.js';
-import {analyzeProposalSources,makeGuidedProposalDraft,calculateProposalBudget,reviewProposalBudget,parseKrwAmount,proposalToPrintHtml,proposalToPresentationMd,proposalBudgetToCsv} from './analysis.js';
+import {analyzeProposalSources,makeGuidedProposalDraft,calculateProposalBudget,reviewProposalBudget,parseKrwAmount,proposalToPrintHtml,proposalToPresentationMd,proposalBudgetToCsv,proposalToMarkdownWithBudget} from './analysis.js';
 const byId=id=>document.getElementById(id);
 let project=null;
 let sources=[];
@@ -250,7 +250,7 @@ function download(name,body,mime){
 function basename(){const raw=(project?.title||'proposal').replace(/[\\/:*?"<>|\x00-\x1f]/g,'_').slice(0,45).trim();return raw||'proposal';}
 byId('exportMd').addEventListener('click',()=>{
   if(!snapshot())return status('먼저 제안서 구조를 만들어 주세요.');
-  download(basename()+'_초안.md',draftToMarkdown(project),'text/markdown;charset=utf-8');
+  download(basename()+'_초안.md',proposalToMarkdownWithBudget(project),'text/markdown;charset=utf-8');
   status('제안서 Markdown 초안을 다운로드했습니다. 최종 제출 문서는 아닙니다.');
 });
 
