@@ -109,7 +109,7 @@ export async function createVoiceController({href,storage,fetcher=fetch,now,exch
   }
   const admin={
     list:()=>adminRequest('GET'),
-    update:(id,message)=>{if(!Number.isSafeInteger(id)||id<1)throw Error('invalid_post');return adminRequest('PUT','/'+id,{message:String(message||'').trim().slice(0,12000)})},
+    update:(item,message)=>{const id=Number(item?.id);if(!Number.isSafeInteger(id)||id<1||typeof item?.displayName!=='string')throw Error('invalid_post');return adminRequest('PUT','/'+id,{message:String(message||'').trim().slice(0,12000),displayName:item.displayName,contact:String(item.contact||''),category:String(item.category||'other'),status:String(item.status||'published')})},
     remove:id=>{if(!Number.isSafeInteger(id)||id<1)throw Error('invalid_post');return adminRequest('DELETE','/'+id)}
   };
   return {initialize,verified,list,write,publication,admin};
