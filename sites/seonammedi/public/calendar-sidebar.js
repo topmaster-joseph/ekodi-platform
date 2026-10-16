@@ -72,7 +72,9 @@
     const next=appendButton(navigation,'›',()=>navigate(1),'seonam-calendar-arrow');
     next.setAttribute('aria-label','다음 달');
     const today=appendButton(navigation,'오늘',()=>{selected=localToday();month=selected.slice(0,7);load();},'seonam-calendar-today');
-    navigation.appendChild(today);
+    // Calendar toolbar order: year/month, previous arrow, TODAY, next arrow.
+    // Keeping today centered between the arrows also makes month selection clear.
+    navigation.replaceChildren(current,previous,today,next);
     const week=make('div','seonam-calendar-week');
     WEEK.forEach(day=>week.append(make('span','',day)));
     const calendar=make('div','seonam-calendar-grid');
