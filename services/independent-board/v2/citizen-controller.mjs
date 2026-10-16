@@ -72,7 +72,7 @@ export async function createVoiceController({href,storage,fetcher=fetch,now,exch
     if(data?.id)return {published:true,id:data.id};
     if(!data?.queued||!data?.submissionId||typeof data.statusUrl!=='string')throw Error('invalid_submission');
     const statusUrl=data.statusUrl;
-    if(!/^\\/board\\/api\\/submissions\\/[a-f0-9-]{36}$/i.test(statusUrl))throw Error('invalid_submission_url');
+    if(!/^\/board\/api\/submissions\/[a-f0-9-]{36}$/i.test(statusUrl))throw Error('invalid_submission_url');
     for(let i=0;i<attempts;i++){
       await sleep(intervalMs);
       const response=await fetcher(mounted(statusUrl,current.pathname),{cache:'no-store'});
