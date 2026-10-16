@@ -59,14 +59,14 @@ test('exact-SHA recovery does not strand approved independent-board production r
     "file==='sites/seonammedi/public/app.js'",
     "file==='.github/workflows/deploy-independent-board.yml'"
   ]) assert.ok(script.includes(owner),owner);
-  assert.match(script,/if\(merge\.response\.ok&&\(independentBoardTouched\|\|shellRuntimeTouched\)\)\{/);
+  assert.match(script,/if\(merge\.response\.ok&&\(independentBoardTouched\|\|shellRuntimeTouched\|\|sharedSiteTouched\)\)\{/);
   assert.match(script,/merge\.data\?\.merged!==true/);
   assert.match(script,/main\.data\?\.commit\?\.sha/);
-  assert.match(script,/main changed before exact board dispatch/);
+  assert.match(script,/main changed before exact service dispatch/);
   assert.match(script,/actions\/workflows\/deploy-independent-board\.yml\/dispatches/);
   assert.match(script,/release_branch_ref:branchRef,release_task_id:taskId/);
   assert.match(script,/dispatch\.response\.status!==204/);
-  const guarded=script.indexOf('if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched)){');
+  const guarded=script.indexOf('if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched||sharedSiteTouched)){');
   const dispatch=script.indexOf('/actions/workflows/deploy-independent-board.yml/dispatches');
   assert.ok(guarded>=0&&dispatch>guarded,'dispatch must be behind verified immediate merge');
   assert.doesNotMatch(script,/sourceFiles\.some\([\s\S]*?\)\s*\?\s*await\s+github\(/);
@@ -93,8 +93,8 @@ test('recovery immediate merge requires authentic exact SHA CI and source contai
 test('receipt-bound immediate Shell dispatch occurs only after confirmed protected main merge',async()=>{
   const script=await read('scripts/recover-release-provenance.mjs');
   const orchestration=script.indexOf('const shellRuntimeTouched=sourceFiles.some');
-  const merged=script.indexOf('if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched)){');
-  const checkMain=script.indexOf('main changed before exact board dispatch');
+  const merged=script.indexOf('if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched||sharedSiteTouched)){');
+  const checkMain=script.indexOf('main changed before exact service dispatch');
   const shell=script.indexOf('if(shellRuntimeTouched){',merged);
   const dispatch=script.indexOf('/actions/workflows/deploy-ekodi-shell.yml/dispatches',shell);
   const accepted=script.indexOf("out('shell_dispatch','accepted')",dispatch);
@@ -153,4 +153,27 @@ test('Human Gate rejects quoted markers and ensures exact owner approval precede
   const approved=verify([comment(marker)],later);
   assert.equal(approved?.approvalComment?.user?.login,'owner');
   assert.equal(approved?.labelEvent?.created_at,'2026-10-15T12:01:00Z');
+});
+
+test('exact-approved immediate merge deploys shared Site Core through guarded receipt-bound workflow',async()=>{
+  const [script,workflow]=await Promise.all([
+    read('scripts/recover-release-provenance.mjs'),
+    read('.github/workflows/recover-release-provenance.yml')
+  ]);
+  const source=script.indexOf('const sharedSiteTouched=sourceFiles.some');
+  const protectedMerge=script.indexOf('if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched||sharedSiteTouched)){');
+  const verifyMain=script.indexOf('main changed before exact service dispatch',protectedMerge);
+  const dispatch=script.indexOf('/actions/workflows/deploy-site-core.yml/dispatches',verifyMain);
+  const receipt=script.indexOf('release_branch_ref:branchRef,release_task_id:taskId',dispatch);
+  const responseCheck=script.indexOf('siteDispatch.response.status!==204',receipt);
+  const output=script.indexOf("out('shared_site_dispatch','accepted')",responseCheck);
+  assert.ok(source>0&&protectedMerge>source&&verifyMain>protectedMerge&&dispatch>verifyMain&&receipt>dispatch&&responseCheck>receipt&&output>responseCheck);
+  assert.match(script,/file\.startsWith\('sites\/seonammedi\/public\/'\)/);
+  assert.match(script,/file==='seonammedi-admin-control.js'/);
+  assert.match(script,/file==='wrangler.independent-board.toml'/);
+  assert.match(script,/merge\.data\?\.merged!==true/);
+  assert.match(script,/main\.data\?\.commit\?\.sha/);
+  assert.match(script,/sharedSiteTouched\)\)\{/);
+  assert.match(workflow,/shared_site_dispatch/);
+  assert.doesNotMatch(script,/const sharedSiteTouched=true/);
 });
