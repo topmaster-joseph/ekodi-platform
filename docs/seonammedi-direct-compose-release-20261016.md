@@ -14,3 +14,7 @@ The runtime change remains limited to the approved source: the top-level Citizen
 
 Completion still requires genuine required CI, protected merge, guarded Shared Site / Independent Board release as applicable, rollback protection, and live verification on both `seonammedi.kr` and `ekodi.kr/seonammedi` in desktop and mobile. Anonymous guest checks cannot substitute for a real authorized Google session. Positive post/reply, scoped administrator edit/delete, unprivileged denial, canary cleanup and short-lived session revocation must be evidenced without logging tokens or personal data.
 - Convergence recheck: owner-authorized workflow replay after protected branch update.
+
+## GitHub Actions reconciliation (2026-10-16)
+
+The authoritative recovery branch was synchronized with the protected current `main` branch by `github-actions[bot]`. GitHub marked the bot-authored merge-commit pull-request workflow suite as `action_required` (CI run `38920118832`), and its REST failed-job retry returned `403 This workflow run cannot be retried`. This owner-authored documentation-only update requests ordinary, authentic pull-request checks on the same orchestrator-issued branch; it does **not** approve any changed runtime SHA, bypass source receipts, weaken branch protection, or claim production deployment. Merge and release remain blocked unless all required checks are green and GitHub permits a protected merge.
