@@ -154,7 +154,7 @@ try {
           if(suffix==='/board/voices'){
             const expectedVoiceUrl=root.origin+root.prefix+'/board/voices';
             const current=new URL(page.url());
-            const correctContext=current.origin===root.origin&&current.pathname.replace(/\\/+$/,'')===root.prefix+'/board/voices';
+            const correctContext=current.origin===root.origin&&current.pathname===root.prefix+'/board/voices';
             if(!correctContext){
               const restored=await page.goto(expectedVoiceUrl,{waitUntil:'domcontentloaded',timeout:25000});
               if(!restored?.ok())throw Error('guest_voice_context_restore_http_'+String(restored?.status()||0));
