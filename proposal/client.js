@@ -1,5 +1,5 @@
 import {PROPOSAL_DOMAINS,PROPOSAL_GOALS,createProposalDraft,selectedStages,reviewProposalDraft,draftToMarkdown,validImportedDraft,normalizeReferenceUrl} from './core.js';
-import {analyzeProposalSources,makeGuidedProposalDraft,calculateProposalBudget,reviewProposalBudget,parseKrwAmount,proposalToPrintHtml,proposalToPresentationMd} from './analysis.js';
+import {analyzeProposalSources,makeGuidedProposalDraft,calculateProposalBudget,reviewProposalBudget,parseKrwAmount,proposalToPrintHtml,proposalToPresentationMd,proposalBudgetToCsv} from './analysis.js';
 const byId=id=>document.getElementById(id);
 let project=null;
 let sources=[];
@@ -252,6 +252,15 @@ byId('exportMd').addEventListener('click',()=>{
   if(!snapshot())return status('먼저 제안서 구조를 만들어 주세요.');
   download(basename()+'_초안.md',draftToMarkdown(project),'text/markdown;charset=utf-8');
   status('제안서 Markdown 초안을 다운로드했습니다. 최종 제출 문서는 아닙니다.');
+});
+
+byId('exportBudget').addEventListener('click',()=>{
+  if(!snapshot())return status('먼저 제안서를 생성하세요.');
+  try{
+    if(project.budgetRows.some(row=>row.quantity===''||row.unitCost===''))throw new Error('모든 예산 항목의 수량·단가 입력이 필요합니다.');
+    download(basename()+'_예산.csv',proposalBudgetToCsv(project.budgetRows),'text/csv;charset=utf-8');
+    status('입력한 예산 내역을 Excel에서 열 수 있는 CSV로 저장했습니다. 실제 XLSX 파일은 아닙니다.');
+  }catch(error){status('예산 CSV 생성 실패: '+error.message);}
 });
 
 byId('exportHtml').addEventListener('click',()=>{
