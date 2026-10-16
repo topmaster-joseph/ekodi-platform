@@ -1,3 +1,4 @@
+import {municipalOfficeHtml,municipalOfficeScript} from './office-surface.mjs';
 // EKODI Biz Seasonal Workforce demonstration surface: explicitly NO submissions.
 // Canonical apex routing; no separate login, database, personal-data collection or server writes.
 export const SEASONAL_PORTAL_ROOT='/ekodibiz/seasonal-workers';
@@ -24,8 +25,11 @@ export function seasonalPortalResponse(request) {
  const suffix=path.slice(SEASONAL_PORTAL_ROOT.length);
  const types={'/': [homepage,'text/html; charset=utf-8'],
  '/survey-demo':[surveyPage,'text/html; charset=utf-8'],
- '/survey-demo.js':[surveyScript,'text/javascript; charset=utf-8']};
+ '/survey-demo.js':[surveyScript,'text/javascript; charset=utf-8'],
+ '/office':[municipalOfficeHtml,'text/html; charset=utf-8'],
+ '/office.js':[municipalOfficeScript,'text/javascript; charset=utf-8']};
  const page=types[suffix];
  if(!page)return new Response('Not Found',{status:404,headers:hdr});
- return new Response(request.method==='HEAD'?null:page[0],{status:200,headers:{...hdr,'content-type':page[1]}});
+ const pageHeaders=suffix==='/office'||suffix==='/office.js'?{...hdr,'content-security-policy':hdr['content-security-policy'].replace("connect-src 'none'","connect-src 'self'")}:hdr;
+ return new Response(request.method==='HEAD'?null:page[0],{status:200,headers:{...pageHeaders,'content-type':page[1]}});
 }
