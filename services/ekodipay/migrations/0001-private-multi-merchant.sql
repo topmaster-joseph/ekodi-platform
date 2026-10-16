@@ -148,6 +148,40 @@ CREATE TABLE IF NOT EXISTS ekodipay_reconciliation_runs (
   created_at INTEGER NOT NULL,
   PRIMARY KEY(merchant_id,batch_ref)
 );
+-- Authenticated bank evidence is distinct from PG payout schedules.
+-- A private operator must independently verify every source statement.
+CREATE TABLE IF NOT EXISTS ekodipay_bank_credit_proofs (
+  merchant_id TEXT NOT NULL REFERENCES ekodipay_merchants(merchant_id),
+  batch_ref TEXT NOT NULL,
+  pg_mode TEXT NOT NULL CHECK(pg_mode IN ('test','live')),
+  statement_transaction_ref TEXT NOT NULL,
+  account_hmac_fingerprint TEXT NOT NULL CHECK(length(account_hmac_fingerprint)=64),
+  currency TEXT NOT NULL CHECK(currency='KRW'),
+  credit_direction TEXT NOT NULL CHECK(credit_direction='CREDIT'),
+  amount INTEGER NOT NULL CHECK(amount>0),
+  verified_by_ref TEXT NOT NULL,
+  evidence_ref TEXT NOT NULL,
+  verified_at INTEGER NOT NULL,
+  PRIMARY KEY(merchant_id,statement_transaction_ref),
+  UNIQUE(account_hmac_fingerprint,statement_transaction_ref),
+  FOREIGN KEY(merchant_id,batch_ref)
+    REFERENCES ekodipay_reconciliation_runs(merchant_id,batch_ref)
+);
+CREATE TRIGGER IF NOT EXISTS ekodipay_bank_credit_requires_pg_and_owner
+BEFORE INSERT ON ekodipay_bank_credit_proofs
+WHEN NOT EXISTS (
+  SELECT 1 FROM ekodipay_reconciliation_runs r
+  JOIN ekodipay_merchant_bank_verification b ON b.merchant_id=r.merchant_id
+  WHERE r.merchant_id=NEW.merchant_id AND r.batch_ref=NEW.batch_ref
+    AND r.pg_mode=NEW.pg_mode
+    AND r.pg_reconciled=1 AND r.api_pagination_complete=1
+    AND b.review_state='verified'
+    AND b.account_hmac_fingerprint=NEW.account_hmac_fingerprint
+)
+BEGIN SELECT RAISE(ABORT,'bank_credit_evidence_not_authorized'); END;
+CREATE TRIGGER IF NOT EXISTS ekodipay_bank_credit_immutable
+BEFORE UPDATE ON ekodipay_bank_credit_proofs
+BEGIN SELECT RAISE(ABORT,'bank_credit_evidence_immutable'); END;
 -- Never store full bank account numbers, holder PII, PG secret values or CVV.
 -- Actual bank credit confirmation requires independent authenticated statement
 -- from the same merchant's authorized bank account, not PG projected payout alone.
