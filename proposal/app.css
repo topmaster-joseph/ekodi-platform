@@ -44,3 +44,20 @@ input::placeholder,textarea::placeholder{color:#a0a0a0}textarea{resize:vertical;
 [hidden]{display:none!important}
 @media(max-width:1240px){.workspace{grid-template-columns:184px minmax(0,1fr)}.assistant-panel{display:none}.layout{padding:22px 26px 55px}.side{padding-left:11px}}
 @media(max-width:750px){.workspace{display:block}.side{position:static;min-height:0;border-right:0;border-bottom:1px solid #eee;padding:8px 12px}.side-top,.side-note{display:none}.side-nav{display:flex;gap:4px;overflow-x:auto}.side-nav a{padding:8px 9px;white-space:nowrap;gap:5px;font-size:10px}.side-nav a span{font-size:11px}.layout{padding:18px 13px 36px}.intro{padding:4px 0 22px;margin-bottom:14px}.intro h1{font-size:30px}.panel{padding:17px;margin-bottom:12px}.fields{grid-template-columns:1fr;gap:12px}.input-guide{font-size:11px}.urlrow{flex-wrap:wrap}.urlrow input{flex-basis:100%}.urlrow button{width:100%}.inputfiles{align-items:flex-start;flex-direction:column}.actions>*{flex:1}.stagegrid{grid-template-columns:repeat(2,minmax(0,1fr))}.brand span{font-size:12px}.stage{font-size:10px}.headwrap{padding:10px 12px}.sectionhead h2{font-size:19px}}
+
+
+/* Proposal Studio Phase B: editable financial worksheet and evidence analysis. */
+.toolline{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 2px;align-items:center}
+.toolline button{max-width:100%}
+.budget-scroll{overflow-x:auto;margin:14px 0;border:1px solid #e5e5e5;border-radius:8px}
+.budget-table{border-collapse:collapse;width:100%;font-size:13px;min-width:540px}
+.budget-table th{font-weight:700;font-size:12px;color:#666;text-align:left;background:#f7f7f7;padding:10px;border-bottom:1px solid #e5e5e5}
+.budget-table td{border-top:1px solid #ededed;padding:5px}
+.budget-table input{margin:0;width:100%;padding:9px 10px;font-size:13px}
+.budget-table td:nth-child(1){width:36%}.budget-table td:nth-child(2){width:14%}
+.budget-table td:nth-child(3){width:13%}.budget-table td:nth-child(4){width:23%}
+.budget-table .remove-budget{font-size:12px;padding:7px 8px;border:1px solid #ddd;border-radius:5px;background:#fff}
+.budget-amount{font-size:21px;letter-spacing:-.02em;font-weight:800;margin:10px 0}
+.analysis-list{margin:9px 0;padding-left:20px}
+.analysis-list li{font-size:12px;margin:5px 0;overflow-wrap:anywhere}
+@media(max-width:750px){.toolline button{flex:1;white-space:normal;font-size:12px;padding:8px}}
