@@ -401,3 +401,16 @@ test('mobile notices wrap long titles and body content without clipping or widen
     assert.doesNotMatch(html,/body\.board-notices(?: main)?\{[^}]*overflow-x:hidden/,'do not conceal mobile overflow by clipping content');
   }
 });
+
+test('notice board starts as title/date list and expands details without losing admin actions',async()=>{
+  const worker=await read('services/independent-board/worker.js');
+  assert.match(worker,/<details class="board-row notice-list-item"/);
+  assert.match(worker,/<summary class="row-head">/);
+  assert.match(worker,/<\/summary><p class="row-body">/);
+  assert.match(worker,/<\/div><\/details>/);
+  assert.match(worker,/el\.open=true;el\.classList\.add\("shared-target"\)/);
+  assert.match(worker,/notice-list-item>summary:focus-visible/);
+  assert.match(worker,/data-share/);
+  assert.match(worker,/data-edit/);
+  assert.match(worker,/data-delete/);
+});
