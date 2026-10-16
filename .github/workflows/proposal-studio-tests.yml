@@ -32,6 +32,10 @@ jobs:
           node --check proposal/core.js
           node --check proposal/client.js
           node --check proposal/analysis.js
+          node --check proposal/zip.js
+          node --check proposal/docx.js
+          node --check proposal/xlsx.js
+          node --check proposal/pptx.js
           node --check site-worker.js
       - name: Proposal unit and privacy tests
         run: node --test test/proposal-studio*.test.mjs
