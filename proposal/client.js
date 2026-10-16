@@ -1,4 +1,4 @@
-import {PROPOSAL_DOMAINS,PROPOSAL_GOALS,createProposalDraft,selectedStages,reviewProposalDraft,draftToMarkdown,validImportedDraft} from './core.js';
+import {PROPOSAL_DOMAINS,PROPOSAL_GOALS,createProposalDraft,selectedStages,reviewProposalDraft,draftToMarkdown,validImportedDraft,normalizeReferenceUrl} from './core.js';
 const byId=id=>document.getElementById(id);
 let project=null;
 let sources=[];
@@ -50,13 +50,9 @@ function addReferenceUrl(){
   const raw=element.value.trim();
   if(!raw)return status('등록할 참고자료 웹주소를 입력하세요.');
   if(raw.length>1200)return status('참고자료 주소는 1,200자 이하만 등록할 수 있습니다.');
-  let parsed;
-  try{parsed=new URL(raw);}catch{return status('올바른 웹주소를 입력하세요.');}
-  if(parsed.protocol!=='https:'||!parsed.hostname||parsed.username||parsed.password){
-    return status('개인정보 보호를 위해 사용자정보 없는 HTTPS 주소만 등록할 수 있습니다.');
-  }
+  let safe;
+  try{safe=normalizeReferenceUrl(raw);}catch(error){return status(error.message);}
   if(sources.length>=20)return status('프로젝트당 자료는 최대 20개까지만 등록할 수 있습니다.');
-  const safe=parsed.toString();
   if(sources.some(item=>item.name===safe))return status('이미 등록한 웹주소입니다.');
   sources.push({name:safe,kind:'url',excerpt:''});
   element.value='';
