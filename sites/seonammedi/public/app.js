@@ -719,13 +719,21 @@ function showNoticeDetail(item){
   detail.querySelector('.notice-delete')?.addEventListener('click',()=>deleteNotice(item));
 }
 function renderFeaturedNotice(rows){
-  const host=el('homeSpotlight');if(!host)return;const now=Date.now(),recent=[...rows].sort((a,b)=>String(b.publishedAt||b.updatedAt||'').localeCompare(String(a.publishedAt||a.updatedAt||'')));
-  const activeEvents=recent.filter(item=>item.kind==='event'&&(!item.eventEnd||new Date(item.eventEnd).getTime()>=now));
-  const priority=recent.filter(item=>item.featured&&item.kind!=='event'),latestNotices=recent.filter(item=>item.kind!=='event');
-  const selected=[];for(const item of [...activeEvents,...priority,...latestNotices])if(!selected.some(x=>x.id===item.id))selected.push(item);const items=selected.slice(0,4);
-  host.hidden=!items.length;host.innerHTML=items.map(item=>'<a class="spotlight-card" href="'+noticePermalink(item.id)+'">'+(item.imageUrl?'<img src="'+escapeHtml(item.imageUrl)+'" alt="" loading="eager">':'<span class="spotlight-placeholder">공지</span>')+'<span class="spotlight-copy"><small>'+(item.kind==='event'?'행사·일정':'최근 게시글')+'</small><strong>'+escapeHtml(item.title||'공지')+'</strong><em>게시글 보기</em></span></a>').join('');
-  document.querySelector('.hero')?.classList.toggle('has-spotlight',items.length>0);
+  const host=el('homeSpotlight');if(!host)return;
+  // The homepage uses actual public notice records, not placeholder cards or category tabs.
+  const notices=(Array.isArray(rows)?rows:[])
+    .filter(item=>item&&item.id&&item.title&&item.kind!=='event'&&item.visibility!=='private'&&item.status!=='draft')
+    .sort((a,b)=>String(b.publishedAt||b.updatedAt||'').localeCompare(String(a.publishedAt||a.updatedAt||'')))
+    .slice(0,6);
+  host.hidden=!notices.length;
+  host.innerHTML=notices.length
+    ?'<div class="home-notice-preview"><div class="home-notice-preview-head"><h2>공지사항</h2><a href="/seonammedi/board/notices">전체 공지 보기 →</a></div><ul class="home-notice-preview-list">'+notices.map(item=>
+      '<li><a href="'+escapeHtml(noticePermalink(item.id))+'"><strong>'+escapeHtml(item.title)+'</strong><time>'+escapeHtml(noticeDate(item))+'</time></a></li>'
+    ).join('')+'</ul></div>'
+    :'';
+  document.querySelector('.hero')?.classList.toggle('has-spotlight',notices.length>0);
 }
+
 async function loadNotices(){
   const host=el('noticeList');if(!host)return;
   try{
