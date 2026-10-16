@@ -74,7 +74,7 @@ test('today agenda, management login, and calendar toolbar remain separate from 
   ]);
   assert.match(layout,/주요일정/);
   assert.doesNotMatch(layout,/일정 달력/);
-  assert.ok(layout.includes('20261017-today-1'),'updated calendar assets must break stale caches');
+  assert.ok(layout.includes('20261017-live-2'),'published calendar JS and CSS must bypass old cached bundles');
   assert.ok(js.includes("heading.append(make('h2','','주요일정'))"));
   assert.ok(js.includes("appendButton(heading,'관리'"));
   assert.ok(js.includes("navigation.replaceChildren(current,previous,today,next)"));
