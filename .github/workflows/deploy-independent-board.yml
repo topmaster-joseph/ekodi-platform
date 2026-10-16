@@ -170,7 +170,7 @@ jobs:
           verify_contains "account verification before post submit" 'write.onsubmit=async e=>{e.preventDefault();if(!await requireVoiceAccount())return' "$voices"
           verify_contains "authenticated session endpoint" '/board/api/auth/session' "$voices"
           verify_contains "Google handoff preserving compose intent" 'target.searchParams.set("compose","1")' "$voices"
-          verify_contains "voices active nav" 'aria-current="page" href="/board/voices">시민의견' "$voices"
+          verify_contains "voices active nav compose intent" 'aria-current="page" href="/board/voices?compose=1">시민의견' "$voices"
           verify_contains "finance route renders finance page" '<body class="board-finance">' "$finance"
           verify_contains "finance uses six-menu notices link" 'href="/board/notices">공지' "$finance"
           verify_contains "finance administrator-only notice" 'id="financeAdminOnly"' "$finance"

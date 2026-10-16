@@ -32,7 +32,7 @@ test('public board renders parseable login-first composer JavaScript on both sit
    assert.match(html,/voiceAuthLabel\(\(data.email/);
    assert.match(html,/auth.searchParams.set\("site","seonammedi"\)/);
    assert.match(html,/target.searchParams.set\("compose","1"\)/);
-   assert.match(html,/if\(allowed&&new URLSearchParams\(location.search\).get\("compose"\)==="1"\)/);
+   assert.match(html,/if\(composeRequested&&allowed\)\{write\.hidden=false/);
  }
 });
 
@@ -50,13 +50,13 @@ test('GET auth/session validates identity with upstream Google provider and hide
  let checks=0;
  globalThis.fetch=async (url,options)=>{
    assert.equal(new URL(url).pathname,'/auth/v1/user');
-   assert.equal(options.headers.authorization,'Bearer example-test-token');
+   assert.equal(options.headers.authorization,'Bearer fixture-access-value');
    checks++;
    return Response.json(authorizedUser());
  };
  try{
    const res=await board.fetch(new Request(origin+'/board/api/auth/session',{
-     headers:{authorization:'Bearer example-test-token'}
+     headers:{authorization:'Bearer fixture-access-value'}
    }),{});
    assert.equal(res.status,200);
    assert.deepEqual(await res.json(),{ok:true,authenticated:true,provider:'google',email:'writer@example.com'});
@@ -69,7 +69,7 @@ test('non-Google accounts do not gain voice write privilege',async()=>{
  globalThis.fetch=async()=>Response.json({...authorizedUser(),app_metadata:{provider:'email',providers:['email']}});
  try{
    const res=await board.fetch(new Request(origin+'/board/api/auth/session',{
-     headers:{authorization:'Bearer email-only-token'}
+     headers:{authorization:'Bearer fixture-email-value'}
    }),{});
    assert.equal(res.status,401);
    assert.equal((await res.json()).error,'google_login_required');
@@ -79,19 +79,19 @@ test('non-Google accounts do not gain voice write privilege',async()=>{
 test('login form POST handoff keeps write intent query and never exposes credentials in its URL',async()=>{
  const oldFetch=globalThis.fetch;
  globalThis.fetch=async()=>Response.json({
-   access_token:'test-short-lived-access',refresh_token:'test-refresh',expires_in:3600,
+   access_token:'fixture-session-value',refresh_token:'fixture-refresh-value',expires_in:3600,
    user:{id:'confirmed'}
  });
  try{
    const url=origin+'/board/voices?compose=1';
    const res=await board.fetch(new Request(url,{method:'POST',
      headers:{'content-type':'application/x-www-form-urlencoded'},
-     body:'ekodi_auth_return=1&ekodi_token=valid-test-code&ekodi_type=email'
+     body:'ekodi_auth_return=1&ekodi_token=fixture-code-value&ekodi_type=email'
    }),{});
    assert.equal(res.status,200);
    const html=await res.text();
    assert.match(html,/board\/voices\?compose=1/);
-   assert.doesNotMatch(html,/valid-test-code/);
+   assert.doesNotMatch(html,/fixture-code-value/);
    assert.match(html,/localStorage.setItem/);
  }finally{globalThis.fetch=oldFetch}
 });
