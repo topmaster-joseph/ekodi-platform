@@ -95,6 +95,11 @@ function safeReturn(raw){
   }catch{return fallback.href}
 }
 const RETURN_TO=safeReturn(params.get('return_to')||params.get('returnTo'));
+function cancelledLoginTarget(){
+  const target=new URL(RETURN_TO);
+  if(CHOOSE_ACCOUNT)target.searchParams.delete('compose');
+  return target.href;
+}
 const $=id=>document.getElementById(id);
 const show=(id,on=true)=>$(id)?.classList.toggle('hide',!on);
 function notice(text,type=''){const el=$('authStatus');if(!el)return;el.textContent=text;el.className=`notice${type?` ${type}`:''}`;el.classList.remove('hide')}
@@ -325,6 +330,7 @@ async function renderGoogle(){
     const googleButtonOptions={type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340)),use_fedcm_for_button:true};
     if(CHOOSE_ACCOUNT)googleButtonOptions.use_fedcm_for_button=false;
     window.google.accounts.id.renderButton(host,googleButtonOptions);
+    if(CHOOSE_ACCOUNT)show('cancelSignedOut',true);
     if(DIRECT_LOGIN){
       notice('Google 계정 선택창을 여는 중입니다.');
       window.google.accounts.id.prompt(notification=>{
@@ -361,7 +367,7 @@ async function prepare(){
 }
 
 $('googleRetry')?.addEventListener('click',prepare);
-$('cancelSignedOut')?.addEventListener('click',()=>location.assign(RETURN_TO));
+$('cancelSignedOut')?.addEventListener('click',()=>location.assign(cancelledLoginTarget()));
 $('cancelSignedIn')?.addEventListener('click',()=>location.assign(RETURN_TO));
 $('logout')?.addEventListener('click',async()=>{try{await timeout(sb.auth.signOut(),8000,'logout_timeout')}catch(error){console.warn(error)}await prepare()});
 
