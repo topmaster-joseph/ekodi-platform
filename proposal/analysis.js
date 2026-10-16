@@ -1,5 +1,5 @@
 // Phase B: deterministic, evidence-aware helpers. No network, provider, storage or generated facts.
-import {reviewProposalDraft,validImportedDraft} from './core.js';
+import {reviewProposalDraft,validImportedDraft,draftToMarkdown} from './core.js';
 
 const clean=(value,max=50000)=>String(value??'').replace(/\u0000/g,'').slice(0,max);
 const esc=value=>clean(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -93,6 +93,21 @@ export function calculateProposalBudget(rows){
   return {currency:'KRW',items,total,assurance:'사용자가 입력한 산식 검증만 완료. 실제 견적 또는 재원 확정 아님'};
 }
 
+
+export function proposalToMarkdownWithBudget(model){
+  let output=draftToMarkdown(model);
+  const rows=Array.isArray(model.budgetRows)?model.budgetRows:[];
+  if(!rows.length)return output;
+  const calc=calculateProposalBudget(rows);
+  output+='\n## 사용자 입력 예산 산출표\n\n| 항목 | 수량 | 단위 | 단가(원) | 금액(원) |\n|---|---:|---|---:|---:|\n';
+  const plain=v=>String(v??'').replace(/\|/g,'\\|').replace(/[\r\n]/g,' ');
+  for(const item of calc.items)output+='| '+plain(item.name)+' | '+item.quantity+' | '+plain(item.unit)+' | '+item.unitCost+' | '+item.amount+' |\n';
+  output+='| **입력 합계** | | | | **'+calc.total+'** |\n\n';
+  const check=reviewProposalBudget(model);
+  for(const warning of check.warnings)output+='> 예산 확인: '+plain(warning)+'\n';
+  output+='> 실제 견적 및 재원 확인 전의 계산값입니다.\n';
+  return output;
+}
 
 export function proposalBudgetToCsv(rows){
   const calc=calculateProposalBudget(rows);
