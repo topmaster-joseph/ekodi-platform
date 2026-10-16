@@ -17,7 +17,7 @@ test('citizen voice is one simple message form and optional details on both host
     assert.match(html,/name="images"/);
     assert.match(html,/name="message"/);
     assert.match(html,/id="imagePreview"/);
-    assert.doesNotMatch(html,/id="voiceManageToggle"/);
+    assert.doesNotMatch(html,/id="voiceManageToggle"|id="voiceAdminLogin"/);
     assert.doesNotMatch(html,/claimComposeAutoAuth|VOICE_COMPOSE_AUTH_ONCE_KEY/);
     const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
     assert.equal(scripts.length,1);
