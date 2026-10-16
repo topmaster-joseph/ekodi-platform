@@ -53,6 +53,8 @@ test('CGMA edge workflow pins board delegation source and verifies independent b
   assert.match(cgmaWorkflow, /persist-credentials: false/);
   assert.match(cgmaWorkflow, /grep -Fq 'service = "shy-thunder-39a4"'/);
   assert.match(cgmaWorkflow, /grep -Fq 'board\.internal\.ekodi' cgma-root-gateway\.js/);
+  assert.match(cgmaWorkflow,/check_upstream 'https:\/\/cheonggye-market\.pages\.dev\/ai-education\/' '우리 가게에 필요한 AI 교육을 찾아보세요'/);
+  assert.match(cgmaWorkflow,/check_upstream 'https:\/\/cheonggye-market\.pages\.dev\/ai-education\/app\.js' 'const questions = \\['/);
   assert.match(cgmaWorkflow, /check_board '\/cgma\/board'/);
   assert.match(cgmaWorkflow, /x-ekodi-board-independent: true/);
   assert.match(cgmaWorkflow, /x-ekodi-board-id: site:cgma:main/);
