@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<title>EKODI 제안서 작업실 · Proposal Studio</title>
+<link rel="stylesheet" href="/proposal/app.css">
+<script type="module" src="/proposal/client.js"></script>
+</head>
+<body>
+<header class="header">
+ <div class="headwrap"><a class="brand" href="/proposal/" aria-label="제안서 작업실 첫 화면">EKODI <span>Proposal Studio</span></a><span class="stage">초안 작업실 · 서버 저장 없음</span></div>
+</header>
+<main class="layout">
+ <section class="intro" aria-labelledby="pageTitle">
+  <p class="eyebrow">AI 제안서 공통 엔진 · 1차 기능</p>
+  <h1 id="pageTitle">아이디어 한 줄에서 제안서 구조까지</h1>
+  <p>주제·아이디어와 자료를 바탕으로 분야별 목차를 만들고 직접 편집합니다. 외부 AI 조사·자동 작성은 아직 연동하지 않았으며, 확인되지 않은 수치와 사실은 생성하지 않습니다.</p>
+ </section>
+ <section class="panel start" aria-labelledby="startTitle">
+  <div class="sectionhead"><h2 id="startTitle">새 제안서 작성</h2><span class="stepcount">01 / 입력</span></div>
+  <div class="fields">
+   <label>제안 주제 또는 사업명<input id="titleInput" type="text" maxlength="160" placeholder="예: 지역 상인 AI 활용 교육 지원사업"></label>
+   <label>분야<select id="domainInput"></select></label>
+   <label>제안 목적<select id="goalInput"></select></label>
+   <label class="full">아이디어·현황·요구사항<textarea id="ideaInput" rows="5" maxlength="20000" placeholder="아이디어, 해결하려는 문제, 추진 주체, 제출처 등을 자유롭게 입력하세요."></textarea></label>
+  </div>
+  <div class="inputfiles">
+   <div><strong>자료 첨부</strong><p>TXT·MD·CSV·JSON은 브라우저에서 읽어 참고자료로 표시합니다. PDF·HWPX·DOCX·XLSX는 후속 변환 모듈 연결 전까지 내용 분석을 지원하지 않습니다.</p></div>
+   <label class="filebtn">파일 선택<input id="sourceInput" type="file" multiple accept=".txt,.md,.csv,.json,.pdf,.hwpx,.docx,.xlsx,.pptx"></label>
+  </div>
+  <ul id="sourceList" class="sourcelist" aria-live="polite"></ul>
+  <div class="actions"><button id="generateBtn" class="primary" type="button">제안서 구조 만들기</button><label class="secondary filebtn">기존 프로젝트 가져오기<input id="importInput" type="file" accept=".json,application/json"></label></div>
+ </section>
+ <div id="editor" hidden>
+  <section class="panel" aria-labelledby="workflowTitle"><div class="sectionhead"><h2 id="workflowTitle">맞춤 작업 단계</h2><span class="stepcount">02 / 자동 구성</span></div>
+   <p class="muted">첨부된 16단계를 기반으로 관련 작업만 표시합니다. 단계 표시만 제공하며 AI·외부 조사·문서 렌더링은 자동 실행되지 않습니다.</p>
+   <ol id="stageList" class="stagegrid"></ol>
+  </section>
+  <section class="panel" aria-labelledby="editTitle">
+   <div class="sectionhead"><h2 id="editTitle">제안서 웹 편집</h2><span class="stepcount">03 / 작성</span></div>
+   <p id="projectMeta" class="muted"></p>
+   <div class="fields decisions">
+    <label>사업기간<input data-decision="period" placeholder="사용자가 확정한 기간"></label>
+    <label>총사업비<input data-decision="totalBudget" placeholder="확정 금액과 단위"></label>
+    <label>추진주체<input data-decision="owner" placeholder="주관기관 또는 제안자"></label>
+    <label>사업대상<input data-decision="target" placeholder="대상자 및 지역"></label>
+    <label class="full">성과지표<input data-decision="measures" placeholder="측정 방법을 포함해 입력"></label>
+   </div>
+   <div id="sectionEditor" class="sectionedit"></div>
+  </section>
+  <section class="panel" aria-labelledby="reviewTitle"><div class="sectionhead"><h2 id="reviewTitle">기본 제출 전 점검</h2><span class="stepcount">04 / 검토</span></div>
+    <p class="muted">필수 입력·자료 검증 상태를 확인하는 초기 점검입니다. 출처의 진위, 예산 합계, 양식 레이아웃, HWPX/PPTX 교차검증을 대신하지 않습니다.</p>
+    <button id="reviewBtn" class="secondary" type="button">검토 항목 확인</button><div id="reviewResult" class="review" role="status" aria-live="polite"></div>
+  </section>
+  <section class="panel" aria-labelledby="exportTitle"><div class="sectionhead"><h2 id="exportTitle">산출물 내려받기</h2><span class="stepcount">05 / 백업</span></div>
+   <div class="actions"><button id="exportMd" class="primary" type="button">초안 Markdown 저장</button><button id="exportJson" class="secondary" type="button">프로젝트 JSON 백업</button></div>
+   <p class="muted">내보내기는 사용자 기기에서만 처리하며 자동 제출·공유·이메일 전송하지 않습니다. 탭을 닫으면 입력이 사라질 수 있으므로 JSON을 백업하세요.</p>
+  </section>
+ </div>
+ <p id="status" class="notice" role="status" aria-live="polite">브라우저 내에서만 작업합니다. 자동 AI 조사·실제 문서 제작 기능은 후속 단계입니다.</p>
+</main>
+<footer class="footer">EKODI · 작업 초안은 대외 제출용 최종본이 아닙니다.</footer>
+</body>
+</html>
