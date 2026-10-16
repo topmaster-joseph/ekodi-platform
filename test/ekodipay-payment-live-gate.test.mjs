@@ -35,6 +35,7 @@ test('production money movement is fail-closed until all independent owner and P
  TOSS_LIVE_CLIENT_KEY:'live_ck_fixture',TOSS_LIVE_SECRET_KEY:'live_sk_fixture',
  EKODIPAY_REFUND_POLICY_VERIFIED:'YES',EKODIPAY_RECONCILIATION_VERIFIED:'YES',
  EKODIPAY_APPROVED_ORDER_ISSUER_VERIFIED:'YES',EKODIPAY_DELAYED_METHODS_DISABLED:'YES',
+ EKODIPAY_TOSS_MID:'merchant01',
  EKODIPAY_OPERATOR_TOKEN:'OPERATOR-KEY-EXAMPLE-0123456789-ABCDEF'}).ready,true);
 });
 test('external clients cannot forge or register an order, and ready mode still trusts only signed service orders',async()=>{
@@ -89,7 +90,7 @@ test('successful provider confirmation settles exactly once without financial da
    assert.equal(opts.headers['Idempotency-Key'],ID);
    const b=JSON.parse(opts.body);
    assert.deepEqual(b,{paymentKey:'payment_key_0123456789',orderId:ID,amount:150000});
-   return new Response(JSON.stringify({...b,totalAmount:b.amount,status:'DONE'}),{status:200,headers:{'content-type':'application/json'}});
+   return new Response(JSON.stringify({...b,totalAmount:b.amount,status:'DONE',method:'카드',currency:'KRW'}),{status:200,headers:{'content-type':'application/json'}});
  };
  try{
    let res=await post('/api/payments/confirm',env,
@@ -115,4 +116,48 @@ test('webhook and callback cannot directly declare a payment paid',async()=>{
  const readiness=await endpoint('/api/payment-readiness',env);
  const info=await readiness.json();
  assert.equal(info.mode,'test');assert.equal(info.ready,true);assert.equal(info.live,false);
+});
+
+test('live merchant MID is mandatory even after every other approval flag is set',()=>{
+ const {env}=harness(false);
+ const flags={...env,PAYMENT_EXECUTION_MODE:'live',EKODIPAY_LIVE_OWNER_GATE:'APPROVED',
+   EKODIPAY_PG_CONTRACT_VERIFIED:'YES',EKODIPAY_SETTLEMENT_OWNER_VERIFIED:'YES',
+   TOSS_LIVE_CLIENT_KEY:'live_ck_fixture',TOSS_LIVE_SECRET_KEY:'live_sk_fixture',
+   EKODIPAY_REFUND_POLICY_VERIFIED:'YES',EKODIPAY_RECONCILIATION_VERIFIED:'YES',
+   EKODIPAY_APPROVED_ORDER_ISSUER_VERIFIED:'YES',EKODIPAY_DELAYED_METHODS_DISABLED:'YES',
+   EKODIPAY_OPERATOR_TOKEN:'OPERATOR-KEY-EXAMPLE-0123456789-ABCDEF'};
+ assert.equal(paymentMode(flags).ready,false);
+ assert.equal(paymentMode({...flags,EKODIPAY_TOSS_MID:'merchant01'}).ready,true);
+});
+test('non-immediate virtual account is not accepted as a completed charged order',async()=>{
+ const {env,store}=harness(true);
+ await post('/api/merchant/orders',env,fakeOrder(),{authorization:'Bearer '+TOKEN});
+ const page=await endpoint('/pay-now?orderId='+ID,env);
+ const cookie=page.headers.get('set-cookie');
+ const prior=globalThis.fetch;
+ globalThis.fetch=async (_url,options)=>{
+  const b=JSON.parse(options.body);
+  return new Response(JSON.stringify({...b,totalAmount:b.amount,status:'DONE',
+    method:'가상계좌',currency:'KRW'}),{status:200,headers:{'content-type':'application/json'}});
+ };
+ try{
+  const res=await post('/api/payments/confirm',env,{paymentKey:'payment_key_0123456789',
+    orderId:ID,amount:150000},{origin:'https://ekodi.kr',cookie});
+  assert.equal(res.status,502);
+  assert.equal((await store.storage.get('order')).status,'requires_reconciliation');
+ }finally{globalThis.fetch=prior}
+});
+test('operator cannot reconcile an unapproved provider method as paid',async()=>{
+ const {env,store}=harness(true);
+ env.EKODIPAY_OPERATOR_TOKEN='OPERATOR-KEY-EXAMPLE-0123456789-ABCDEF';
+ await post('/api/merchant/orders',env,fakeOrder(),{authorization:'Bearer '+TOKEN});
+ const prior=globalThis.fetch;
+ globalThis.fetch=async()=>new Response(JSON.stringify({orderId:ID,totalAmount:150000,
+  status:'DONE',paymentKey:'payment_key_0123456789',method:'가상계좌',currency:'KRW'}),{status:200});
+ try{
+  const res=await post('/api/operator/reconcile',env,{orderId:ID},
+    {authorization:'Bearer '+env.EKODIPAY_OPERATOR_TOKEN});
+  assert.equal(res.status,409);
+  assert.equal((await store.storage.get('order')).status,'ready');
+ }finally{globalThis.fetch=prior}
 });
