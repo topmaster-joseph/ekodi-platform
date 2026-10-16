@@ -36,7 +36,7 @@ test('merchant registry detects globally duplicated MID, secrets and tenant IDs'
  assert.throws(()=>indexMerchantProfiles([a,a]),/duplicate_merchant/);
  assert.throws(()=>indexMerchantProfiles([a,{...b,midByMode:{test:a.midByMode.test,live:b.midByMode.live}}]),/mid_collision/);
  assert.throws(()=>indexMerchantProfiles([a,{...b,credentialRefs:{...b.credentialRefs,test:{client:a.credentialRefs.test.client,secret:b.credentialRefs.test.secret}}}]),/credential_collision/);
- assert.equal(validMerchantProfile({...a,settlement:{...a.settlement,accountNumber:'0123456'}}),true);
+ assert.equal(validMerchantProfile({...a,settlement:{...a.settlement,accountNumber:'0123456'}}),false);
  assert.throws(()=>indexMerchantProfiles([{...a,settlement:{...a.settlement,accountLast4:'123'}}]),/invalid_private_merchant_profile/);
 });
 test('merchant route is server-approved and issuer+service+tenant pinned; never picks a global fallback',()=>{
