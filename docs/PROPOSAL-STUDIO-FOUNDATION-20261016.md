@@ -10,3 +10,7 @@
 - **Ownership:** Shared Site asset deployment; no new hostname, OAuth scope, database, production secret or billing setting.
 - **Release:** run `node --test test/proposal-studio.test.mjs`, `npm run build`, full mandatory CI, protected PR review and guarded staging. Verify PC/mobile Chromium, open/new/edit/export/import/unsafe input/unsupported file/method denial, and no unexpected network POST. Production status only after authenticated release evidence and a live visit.
 - **Future:** EKODI user-authenticated workspace persistence and original-location login return; document ingestion pipeline; governed AI research/drafting; sources and budget math; HWPX and PPTX render/QA. All future write/external action paths require explicit authorization and audit.
+
+## Phase B (2026-10-17)
+
+Code now provides evidence-labeled guided drafts, entered-value budget reconciliation, A4 HTML print output, a presentation Markdown outline and Excel-compatible budget CSV. The browser does not invoke an AI model, query URLs, save documents to EKODI cloud, or render real HWPX/PPTX/XLSX. Release remains subject to EKODI Orchestrator receipt and protected live verification.
