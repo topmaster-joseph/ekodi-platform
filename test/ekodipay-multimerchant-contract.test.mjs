@@ -50,9 +50,14 @@ test('merchant route is server-approved and issuer+service+tenant pinned; never 
  let chosen=selectServerApprovedMerchant(ix,approved(a),{mode:'test',env:envFor(a)});
  assert.equal(chosen.ok,true);
  assert.equal(chosen.privateContext.mid,a.midByMode.test);
- assert.equal(verifyProviderOwnership(chosen,{mId:a.midByMode.test,currency:'KRW',orderId:'EB-ORDER000000001'}),true);
- assert.equal(verifyProviderOwnership(chosen,{mId:b.midByMode.test,currency:'KRW',orderId:'EB-ORDER000000001'}),false);
- assert.equal(verifyProviderOwnership(chosen,{mId:a.midByMode.test,currency:'KRW',orderId:'EB-ATTACK000000000'}),false);
+ const paid={mId:a.midByMode.test,currency:'KRW',orderId:'EB-ORDER000000001',
+    totalAmount:50000,status:'DONE',method:'카드',paymentKey:'payment_ABCDEFG'};
+ assert.equal(verifyProviderOwnership(chosen,paid),true);
+ assert.equal(verifyProviderOwnership(chosen,{...paid,mId:b.midByMode.test}),false);
+ assert.equal(verifyProviderOwnership(chosen,{...paid,orderId:'EB-ATTACK000000000'}),false);
+ assert.equal(verifyProviderOwnership(chosen,{...paid,totalAmount:1}),false);
+ assert.equal(verifyProviderOwnership(chosen,{...paid,status:'WAITING_FOR_DEPOSIT'}),false);
+ assert.equal(verifyProviderOwnership(chosen,{...paid,method:'가상계좌'}),false);
  assert.equal(selectServerApprovedMerchant(ix,{...approved(a),merchantId:'ekodiedu'},{mode:'test',env:envFor(a)}).ok,false);
  assert.equal(selectServerApprovedMerchant(ix,{...approved(a),issuerRef:'issuer_attacker'},{mode:'test',env:envFor(a)}).ok,false);
  assert.equal(selectServerApprovedMerchant(ix,{...approved(a),source:'http_browser'},{mode:'test',env:envFor(a)}).ok,false);
