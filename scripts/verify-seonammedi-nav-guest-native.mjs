@@ -184,10 +184,29 @@ try {
               // No credentials entered, no posting. Click only to confirm that
               // anonymous writers are first handed to the canonical login gate.
               const loginNavigations=[];
+              const expectedReturn=root.origin+root.prefix+'/board/voices?compose=1';
+              const requestIntent={login:false,returnPath:false,purpose:false,complete:false};
               const observe=frame=>{
                 if(frame===page.mainFrame())loginNavigations.push(frame.url());
               };
+              // Capture the *outgoing navigation request* before the auth app
+              // rewrites its address. Only booleans survive in the report.
+              const observeAuthRequest=request=>{
+                try{
+                  if(!request.isNavigationRequest()||request.frame()!==page.mainFrame())return;
+                  const u=new URL(request.url());
+                  if(u.origin!=='https://ekodi.kr'||u.pathname!=='/auth/'||
+                     u.searchParams.get('site')!=='seonammedi')return;
+                  const matchesReturn=u.searchParams.get('return_to')===expectedReturn;
+                  const matchesPurpose=u.searchParams.get('purpose')==='seonammedi-board-write';
+                  requestIntent.login=true;
+                  requestIntent.returnPath ||= matchesReturn;
+                  requestIntent.purpose ||= matchesPurpose;
+                  requestIntent.complete ||= matchesReturn&&matchesPurpose;
+                }catch{}
+              };
               page.on('framenavigated',observe);
+              page.on('request',observeAuthRequest);
               try {
                 await page.locator('#writeToggle').click({timeout:5000});
                 await pause(2200);
@@ -195,20 +214,23 @@ try {
                   // Strip any auth query payloads from retained evidence.
                   const u=new URL(url);return u.origin+u.pathname+(u.searchParams.get('site')?'?site='+u.searchParams.get('site'):'');
                 });
-                record.guestLoginRedirect=loginNavigations.some(url=>{
+                record.guestLoginRedirect=requestIntent.login||loginNavigations.some(url=>{
                   try{const u=new URL(url);return u.origin==='https://ekodi.kr'&&
                     u.pathname.startsWith('/auth/')&&u.searchParams.get('site')==='seonammedi'}catch{return false}
                 });
                 if(!record.guestLoginRedirect)violations.push('guest_write_did_not_open_canonical_login');
-                const expectedReturn=root.origin+root.prefix+'/board/voices?compose=1';
-                record.composeReturnMatches=loginNavigations.some(url=>{
-                  try{const u=new URL(url);return u.origin==='https://ekodi.kr'&&u.pathname==='/auth/'&&
-                    u.searchParams.get('site')==='seonammedi'&&u.searchParams.get('return_to')===expectedReturn&&
-                    u.searchParams.get('purpose')==='seonammedi-board-write'}catch{return false}
+                const composeAuthUrls=loginNavigations.flatMap(url=>{
+                  try{const u=new URL(url);return u.origin==='https://ekodi.kr'&&u.pathname==='/auth/'&&u.searchParams.get('site')==='seonammedi'?[u]:[]}catch{return[]}
                 });
-                if(!record.composeReturnMatches)violations.push('guest_compose_original_return_lost');
+                // Only record safe boolean checks, never the OAuth URL, tokens or private query.
+                record.composeReturnPathMatches=requestIntent.returnPath||composeAuthUrls.some(u=>u.searchParams.get('return_to')===expectedReturn);
+                record.composePurposeMatches=requestIntent.purpose||composeAuthUrls.some(u=>u.searchParams.get('purpose')==='seonammedi-board-write');
+                record.composeReturnMatches=requestIntent.complete||composeAuthUrls.some(u=>
+                  u.searchParams.get('return_to')===expectedReturn&&u.searchParams.get('purpose')==='seonammedi-board-write'
+                );
+                if(!record.composeReturnMatches)violations.push(record.composeReturnPathMatches?'guest_compose_purpose_mismatch':'guest_compose_original_return_lost');
               }catch(error){violations.push('guest_write_login_click_failed: '+String(error.message||error).slice(0,160))}
-              finally{page.off('framenavigated',observe)}
+              finally{page.off('framenavigated',observe);page.off('request',observeAuthRequest)}
             }
             // Test the distinct administrator intent without credentials, POST or mutation.
             const manageNavigations=[];
