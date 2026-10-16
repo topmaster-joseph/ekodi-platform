@@ -186,6 +186,8 @@ try {
               const loginNavigations=[];
               const expectedReturn=root.origin+root.prefix+'/board/voices?compose=1';
               const requestIntent={login:false,returnPath:false,purpose:false,complete:false};
+              // Record only non-sensitive boolean diagnostics for the outbound auth request.
+              const composeRequestHints={requests:0,returnToPresent:false,purposePresent:false,returnOriginMatches:false,returnPathMatches:false,composeFlagPresent:false};
               const observe=frame=>{
                 if(frame===page.mainFrame())loginNavigations.push(frame.url());
               };
@@ -203,6 +205,18 @@ try {
                   requestIntent.returnPath ||= matchesReturn;
                   requestIntent.purpose ||= matchesPurpose;
                   requestIntent.complete ||= matchesReturn&&matchesPurpose;
+                  if(typeof composeRequestHints!=='undefined'){
+                    composeRequestHints.requests+=1;
+                    composeRequestHints.returnToPresent ||= u.searchParams.has('return_to');
+                    composeRequestHints.purposePresent ||= u.searchParams.has('purpose');
+                    const returnTo=u.searchParams.get('return_to');
+                    if(returnTo)try{
+                      const dest=new URL(returnTo),expected=new URL(expectedReturn);
+                      composeRequestHints.returnOriginMatches ||= dest.origin===expected.origin;
+                      composeRequestHints.returnPathMatches ||= dest.pathname===expected.pathname;
+                      composeRequestHints.composeFlagPresent ||= dest.searchParams.get('compose')==='1';
+                    }catch{}
+                  }
                 }catch{}
               };
               page.on('framenavigated',observe);
@@ -223,6 +237,7 @@ try {
                   try{const u=new URL(url);return u.origin==='https://ekodi.kr'&&u.pathname==='/auth/'&&u.searchParams.get('site')==='seonammedi'?[u]:[]}catch{return[]}
                 });
                 // Only record safe boolean checks, never the OAuth URL, tokens or private query.
+                record.composeAuthSignals={...composeRequestHints};
                 record.composeReturnPathMatches=requestIntent.returnPath||composeAuthUrls.some(u=>u.searchParams.get('return_to')===expectedReturn);
                 record.composePurposeMatches=requestIntent.purpose||composeAuthUrls.some(u=>u.searchParams.get('purpose')==='seonammedi-board-write');
                 record.composeReturnMatches=requestIntent.complete||composeAuthUrls.some(u=>
