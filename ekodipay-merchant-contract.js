@@ -32,7 +32,7 @@ export function validMerchantProfile(p){
    const mid=p.midByMode[mode],refs=p.credentialRefs[mode];
    if(mid){if(!validString(mid,MID)||!validString(refs?.client,BINDING)||
       !validString(refs?.secret,BINDING))return false;}
-   else if(complete||refs?.client||refs?.secret)return false;
+   else if(refs?.client||refs?.secret)return false;
  }
  if(p.credentialRefs.test?.client&&p.credentialRefs.test.client===p.credentialRefs.live?.client)return false;
  if(p.credentialRefs.test?.secret&&p.credentialRefs.test.secret===p.credentialRefs.live?.secret)return false;
