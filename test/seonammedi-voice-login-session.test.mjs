@@ -100,8 +100,8 @@ test('write entry requires successful live identity check, not cached token pres
  const response=await board.fetch(new Request(origin+'/board/voices'),{});
  const html=await response.text();
  assert.match(html,/byId\("writeToggle"\)\.onclick=async\(\)=>\{\s*if\(!await requireVoiceAccount\(\)\)return/);
- assert.match(html,/write\.onsubmit=async e=>\{e\.preventDefault\(\);if\(!await requireVoiceAccount\(\)\)return/);
- assert.match(html,/list\.addEventListener\("submit",async e=>[\s\S]*?if\(!await requireVoiceAccount\(\)\)return/);
- assert.match(html,/await awaitVoicePublication\(accepted\)/);
- assert.match(html,/await awaitVoicePublication\(result\)/);
+ assert.match(html,/write\.onsubmit=async event=>\{\s*event\.preventDefault\(\);[\s\S]*?if\(!await requireVoiceAccount\(\)\)return/);
+ assert.match(html,/if\(reply\)\{\s*if\(!await requireVoiceAccount\(\)\)return/);
+ assert.match(html,/const published=await awaitVoicePublication\(saved\)/);
+ assert.match(html,/if\(await awaitVoicePublication\(saved\)\)/);
 });
