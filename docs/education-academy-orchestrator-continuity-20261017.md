@@ -27,3 +27,9 @@ The official branch was issued by trusted GitHub Actions from the exact approved
 5. Orchestrator receipt/evidence must settle final `completed`; source PR, merged PR or staging alone does not establish success.
 
 **This file creates no authority to bypass EKODI release gates.**
+## Protected main synchronization check (after orchestrated merge update)
+- Official convergent merge workflow: [run #38940890072](https://github.com/topmaster-joseph/ekodi-platform/actions/runs/38940890072), outcome success.
+- Orchestrator-synchronized head before this documentation refresh: `a81ea8f267d6e10d01e91b875e6ebf07be9cb7d4`.
+- Main baseline at synchronization: `b52ea83fd7decc16ea3483f524a8fbfd6c136bd5`.
+- Source `9b8e0b326983a47d01bb68576b7976bed7e9855d` remains an ancestor of this synchronized branch; no classroom implementation file modified here.
+- GitHub marked auto-generated synchronized-head checks `action_required`; this owner documentation-only follow-up reruns full checks on the real merged-tree source. Do not treat previous-head checks as current-head checks or claim production deployment.
