@@ -79,7 +79,16 @@ test('PG settlement match never implies actual bank credit',()=>{
  const m=reconcile();
  assert.equal(m.pgReconciled,true);assert.equal(m.bankDepositVerified,false);
  assert.equal(m.disposition,'bank_deposit_pending');assert.equal(m.totals.localPayout,48350);
- assert.equal(reconcile([local()],[pg()],{bankCreditVerified:true}).disposition,'bank_verified');
+ const fingerprint='a'.repeat(64);
+ assert.equal(reconcile([local()],[pg()],{bankCreditVerified:true}).disposition,'bank_deposit_pending');
+ assert.equal(reconcile([local()],[pg()],{expectedAccountFingerprint:fingerprint,
+   bankEvidence:{source:'authenticated_bank_statement',verified:true,merchantId:'ekodibiz',
+     accountFingerprint:fingerprint,currency:'KRW',amount:48350,
+     proofRef:'BANK_CREDIT_001',verifiedAt:1790000000000}}).disposition,'bank_verified');
+ assert.equal(reconcile([local()],[pg()],{expectedAccountFingerprint:fingerprint,
+   bankEvidence:{source:'authenticated_bank_statement',verified:true,merchantId:'ekodiedu',
+     accountFingerprint:fingerprint,currency:'KRW',amount:48350,
+     proofRef:'BANK_CREDIT_001',verifiedAt:1790000000000}}).bankDepositVerified,false);
 });
 test('settlement is fail-closed for MID, key, amount, payout, duplicate, missing, foreign or untrusted PG data',()=>{
  const faults=[
