@@ -3,6 +3,7 @@
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {eligibleNativeLocalAiDevice,verifyNativeLocalAi} from './verify-native-localai.mjs';
+import {ensureUser4AgentUpdated} from './verify-native-user4-acceptance.mjs';
 
 const API='https://ekodi.kr/api/control/devices';
 const VERIFY='software.localai.verify';
@@ -96,7 +97,10 @@ export async function recoverUser4ExistingOllama({token,fetchImpl=fetch,clock=()
 }
 
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
-  recoverUser4ExistingOllama({token:process.env.E2E_ADMIN_TOKEN})
+  ensureUser4AgentUpdated({token:process.env.E2E_ADMIN_TOKEN})
+    .then(update=>recoverUser4ExistingOllama({token:process.env.E2E_ADMIN_TOKEN})
+      .then(result=>({...result,agentUpdateVerified:update.recentOfficialUpdateVerified===true,
+        agentUpdateCommandId:update.updateCommandId})))
     .then(r=>console.log('[EKODI][USER4-SERVICE-RECOVERY] '+JSON.stringify(r)))
     .catch(e=>{console.error('[EKODI][USER4-SERVICE-RECOVERY] '+String(e.message||'failed').slice(0,110));process.exitCode=1;});
 }
