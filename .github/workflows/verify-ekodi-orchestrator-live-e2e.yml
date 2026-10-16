@@ -121,6 +121,54 @@ jobs:
             echo '- EKODI Core remains provider-independent; operational reserve was preserved.'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Audit command ledger for legacy core_only deployment dead-ends
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+
+          cf_query() {
+            local db="$1" sql="$2"
+            curl -fsS --retry 2 --retry-delay 1               -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$db/query"               -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN"               -H 'Content-Type: application/json'               --data "$(jq -nc --arg sql "$sql" '{sql:$sql}')"
+          }
+
+          databases=$(curl -fsS --retry 2 --retry-delay 1             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database?per_page=100"             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          echo "$databases" | jq -e '.success == true' >/dev/null
+
+          ledger_db=''
+          while IFS= read -r db; do
+            [ -n "$db" ] || continue
+            schema=$(cf_query "$db" "SELECT name FROM sqlite_master WHERE type='table' AND name='ai_command_tasks'" || true)
+            if echo "$schema" | jq -e '.success == true and ([.result[]?.results[]?.name] | index("ai_command_tasks") != null)' >/dev/null 2>&1; then
+              ledger_db="$db"
+              break
+            fi
+          done < <(echo "$databases" | jq -r '.result[]? | (.uuid // .id // empty)')
+          test -n "$ledger_db"
+
+          audit=$(cf_query "$ledger_db" "SELECT
+              SUM(CASE WHEN state='core_only'
+                AND COALESCE(json_extract(context_json,'$.deploymentRequested'),0)=1
+                AND COALESCE(json_extract(context_json,'$.branchRef'),'')<>'' THEN 1 ELSE 0 END) AS legacy_dead_ends,
+              SUM(CASE WHEN state='executor_ready' THEN 1 ELSE 0 END) AS executor_ready_count
+            FROM ai_command_tasks")
+          echo "$audit" | jq -e '.success == true' >/dev/null
+
+          dead_ends=$(echo "$audit" | jq -r '.result[]?.results[0]?.legacy_dead_ends // 0' | head -1)
+          executor_ready_count=$(echo "$audit" | jq -r '.result[]?.results[0]?.executor_ready_count // 0' | head -1)
+          [[ "$dead_ends" =~ ^[0-9]+$ ]]
+          [[ "$executor_ready_count" =~ ^[0-9]+$ ]]
+          test "$dead_ends" -eq 0
+
+          {
+            echo '## EKODI command-ledger executor handoff audit'
+            echo
+            echo "- Legacy deployment core_only dead-ends: $dead_ends"
+            echo "- executor_ready rows: $executor_ready_count"
+            echo '- MCP connectivity is not required for this audit or deterministic executor handoff.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Issue short-lived genuine production admin session
         if: steps.budget.outputs.allowed == 'true'
         shell: bash
@@ -242,7 +290,7 @@ jobs:
             state=$(echo "$response" | jq -r '.task.state // empty')
             echo "task=$TASK_ID state=$state attempt=$attempt"
             case "$state" in
-              verified|degraded|core_only|failed|human_gate|ignored)
+              verified|degraded|core_only|executor_ready|failed|human_gate|ignored)
                 printf '%s' "$response" > "$RUNNER_TEMP/ekodi-orchestrator-task.json"
                 terminal="$state"
                 break
