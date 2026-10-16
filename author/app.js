@@ -2,7 +2,12 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
-const LOGIN_URL = 'https://auth.ekodi.kr/?site=author&return_to=https%3A%2F%2Fauthor.ekodi.kr%2F';
+function authorLoginUrl(){
+  const auth=new URL('https://ekodi.kr/auth/');
+  auth.searchParams.set('site','author');
+  auth.searchParams.set('return_to',location.href.split('#')[0]);
+  return auth.href;
+}
 const FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`;
 const MY_EKODI_URL = 'https://ekodi.kr/my/';
 const sb = createClient(SUPABASE_URL, PUBLISHABLE_KEY, { auth: { detectSessionInUrl: true, persistSession: true } });
@@ -198,7 +203,7 @@ function authState() {
   }
 }
 async function loginOrOut() {
-  if (!session) { location.assign(LOGIN_URL); return; }
+  if (!session) { location.assign(authorLoginUrl()); return; }
   await sb.auth.signOut();
   session = null; workspace = null; projects = []; membership = freeMembership();
   authState(); renderMembership(); renderProjects();
@@ -252,7 +257,7 @@ function renderConcepts(concepts, source) {
   });
 }
 async function saveConcept(concept, source, card) {
-  if (!session) { location.assign(LOGIN_URL); return; }
+  if (!session) { location.assign(authorLoginUrl()); return; }
   card.classList.add('selected');
   const now = new Date().toISOString();
   const payload = {
@@ -306,7 +311,7 @@ function renderProjects(error = '') {
   host.querySelectorAll('[data-open]').forEach(button => button.addEventListener('click', () => openProject(button.dataset.open)));
 }
 async function openProject(id) {
-  if (!session) { location.assign(LOGIN_URL); return; }
+  if (!session) { location.assign(authorLoginUrl()); return; }
   const project = projects.find(item => item.id === id) || (await sb.from('author_projects').select('*').eq('id', id).single()).data;
   if (!project) return;
   const info = modeInfo(project);

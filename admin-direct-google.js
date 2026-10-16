@@ -17,7 +17,7 @@ function canonicalAuthUrl(anchor){
 }
 function openBridge(auth){
   const bridge=new URL(BRIDGE_PATH,auth.origin);
-  return window.open(bridge.href,'ekodi_google_origin_bridge','popup,width=520,height=680,resizable=yes,scrollbars=yes');
+  return window.open(bridge.href,'ekodi_google_origin_bridge','popup,width=420,height=580,resizable=yes,scrollbars=yes');
 }
 document.addEventListener('click',event=>{
   if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||!adminSurface())return;

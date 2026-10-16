@@ -20,7 +20,7 @@ if (!interactive) {
 }
 
 async function loadAuthRouter() {
-  return import('./auth-router.js?v=20260923-space-admin-return-2');
+  return import('./auth-router.js?v=20261017-exact-origin-1');
 }
 
 if (repeated) {

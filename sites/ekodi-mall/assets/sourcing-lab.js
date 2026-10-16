@@ -153,7 +153,7 @@
     document.querySelectorAll('#sourceRegister fieldset,#autoSource fieldset,#sourceRegister button,#autoSource button').forEach((el) => { el.disabled = !signed; });
   }
 
-  login?.addEventListener('click', () => { location.href = 'https://auth.ekodi.kr/?site=mall-seller&returnTo=https%3A%2F%2Fmall.ekodi.kr%2Fsourcing'; });
+  login?.addEventListener('click', () => { const auth=new URL('https://ekodi.kr/auth/'); auth.searchParams.set('site','mall-seller'); auth.searchParams.set('return_to',location.href.split('#')[0]); location.assign(auth.href); });
   logout?.addEventListener('click', async () => { await sb.auth.signOut(); session = null; syncSessionUi(); setStatus('로그아웃했습니다.'); });
   sourceForm?.addEventListener('submit', createSource);
   planForm?.addEventListener('submit', runPlan);

@@ -52,7 +52,28 @@ function isMarketingReturnOrigin(origin){
   if(config.origins.includes(origin))return true;
   try{const u=new URL(origin);return u.protocol==='https:'&&/^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(u.hostname)&&u.origin===origin}catch{return false}
 }
-const safeReturn=raw=>{try{const target=new URL(raw||config.returnTo);if(target.protocol!=='https:'||target.username||target.password)return config.returnTo;const platformPath=target.origin==='https://ekodi.kr'&&((site==='cgma'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/')))||(site==='mission'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')))||(site==='church'&&(target.pathname==='/ekodichurch'||target.pathname.startsWith('/ekodichurch/')))||((site==='portal'||site==='seonammedi')&&(target.pathname==='/seonammedi'||target.pathname.startsWith('/seonammedi/'))));return ((config.origins.includes(target.origin)&&target.origin!=='https://ekodi.kr')||platformPath||(marketing&&isMarketingReturnOrigin(target.origin)))?target.href:config.returnTo}catch{return config.returnTo}};
+const SERVICE_CANONICAL_MOUNTS=Object.freeze({
+  cgma:['/cgma'],trade:['/ekodibiz/trade'],mall:['/ekodimall'],
+  pay:['/ekodipay'],church:['/ekodichurch'],mission:['/ekodimission'],
+  community:['/community'],edu:['/edu'],biz:['/ekodibiz'],
+  social:['/social'],energy:['/energy'],lab:['/ekodilab'],
+  books:['/books'],media:['/media'],admin:['/admin'],
+  seonammedi:['/seonammedi'],oauth:['/auth/oauth/consent']
+});
+const safeReturn=raw=>{
+  try{
+    const target=new URL(raw||config.returnTo);
+    if(target.protocol!=='https:'||target.username||target.password)return config.returnTo;
+    const siteOrigin=config.origins.includes(target.origin)&&target.origin!=='https://ekodi.kr';
+    const platformOrigin=target.origin==='https://ekodi.kr';
+    const serviceRoots=SERVICE_CANONICAL_MOUNTS[site]||[];
+    const platformPath=platformOrigin&&(
+      site==='portal'?!['/auth','/api'].some(root=>target.pathname===root||target.pathname.startsWith(root+'/')):
+      serviceRoots.some(root=>target.pathname===root||target.pathname.startsWith(root+'/'))
+    );
+    return (siteOrigin||platformPath||(marketing&&isMarketingReturnOrigin(target.origin)))?target.href:config.returnTo;
+  }catch{return config.returnTo}
+};
 const returnTo=safeReturn(params.get('return_to'));
 const sb=createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{detectSessionInUrl:true,persistSession:true}});
 const $=id=>document.getElementById(id);
@@ -78,7 +99,7 @@ function cleanUrl(){const q=new URLSearchParams({site,return_to:returnTo});if(re
 function fmtDate(value){const d=new Date(value);return Number.isNaN(d.getTime())?'확인 필요':d.toLocaleString('ko-KR')}
 function escText(value){return String(value??'')}
 function cancelToService(){location.assign(returnTo)}
-function marketingFreeTarget(){
+function marketingFreeTarget(){if(params.has('return_to'))return returnTo;
   try{
     const target=new URL(returnTo);
     if(target.origin==='https://marketing.ekodi.kr'){
@@ -140,7 +161,7 @@ async function prepareGoogle(){
   try{
     const [challenge]=await Promise.all([identity('/challenge',{method:'POST'}),loadGoogleLibrary()]);
     window.google.accounts.id.initialize({client_id:challenge.clientId,nonce:challenge.nonce,auto_select:false,use_fedcm_for_prompt:true,callback:r=>handleGoogleCredential(r,challenge)});
-    window.google.accounts.id.renderButton(host,{type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340))});
+    window.google.accounts.id.renderButton(host,{type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(320,Math.max(240,host.clientWidth||320))});
     notice('authStatus',marketing?'Google 계정으로 본인을 확인하면 개인 Marketing AI 공간을 바로 이용할 수 있습니다.':'Google 계정으로 본인을 확인해 주세요.');
   }catch(e){
     console.error('prepare google identity',e);
