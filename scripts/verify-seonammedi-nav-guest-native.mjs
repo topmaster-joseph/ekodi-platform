@@ -215,9 +215,9 @@ try {
             const onManageNav=frame=>{if(frame===page.mainFrame())manageNavigations.push(frame.url())};
             try{
               await page.goto(target,{waitUntil:'domcontentloaded',timeout:25000});
-              await page.locator('#voiceAdminLogin').click({timeout:6000});
               page.on('framenavigated',onManageNav);
-              // The first-party login handoff may already have begun; include current URL.
+              await page.locator('#voiceAdminLogin').click({timeout:6000});
+              // Include the final location in addition to observed navigation events.
               manageNavigations.push(page.url());
               await pause(2200);
               const expectedManage=root.origin+root.prefix+'/board/voices?manage=1';
