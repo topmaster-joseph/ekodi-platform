@@ -20,3 +20,8 @@ GitHub created the recovery PR using an Actions bot, and its first CI, orchestra
 - PC and mobile on both `seonammedi.kr` and `ekodi.kr/seonammedi/`: actually authenticate as an authorized Google admin and prove calendar schedule create, read, edit and delete.
 - Existing notice and schedule rows must remain intact.
 - If credentials, deployment permission, production proof or any gate remain blocked, leave this task pending and record the actual blocker. No CI/merge/production-complete assertion is implied by this document.
+
+## Protected main synchronization checkpoint
+- Official convergent merge synchronized protected `main` at commit `f787c8df3a47086731aac6b6de1bb8374c26a3cb` before required checks completed.
+- The sync-generated PR event again returned `action_required` for checks. This owner-authored, document-only follow-up retriggers native CI without changing executable, auth, database, secret, deployment or rollback code.
+- The originally approved executable SHA remains `e73a888a2aba67c122e8a51b0411380958085a7f`; do not treat re-synchronized HEAD alone as production authorization.
