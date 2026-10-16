@@ -53,7 +53,8 @@ test('SeonamMedi account chooser keeps the compact single-card login layout',asy
     read('auth-site/index.html'),
     read('auth-site/auth-bootstrap.js')
   ]);
-  const rule=router.match(/document\\.documentElement\\.dataset\\.seamlessSso=([^;]+);/)?.[1];
+  const prefix='document.documentElement.dataset.seamlessSso=';
+  const rule=router.split('\n').find(line=>line.startsWith(prefix))?.slice(prefix.length).split(';')[0];
   assert.ok(rule,'auth router must declare a seamless-Sso layout rule');
   const layout=(query)=>{
     const params=new URLSearchParams(query);
@@ -64,9 +65,9 @@ test('SeonamMedi account chooser keeps the compact single-card login layout',asy
   assert.equal(layout('site=seonammedi&select_account=1&purpose=seonammedi-board-write'),'1');
   assert.equal(layout('site=seonammedi&select_account=1&manage=1'),'0');
   assert.equal(layout('site=seonammedi&review=1'),'0');
-  assert.match(bootstrap,/document\\.documentElement\\.dataset\\.seamlessSso = interactive \\? '0' : '1'/);
-  assert.match(html,/html\\[data-seamless-sso="1"\\] \\.intro,/);
-  assert.match(html,/html\\[data-seamless-sso="1"\\] \\.principles,/);
-  assert.match(html,/html\\[data-seamless-sso="1"\\] \\.auth-card\\{width:min\\(100%,440px\\)/);
-  assert.match(html,/html\\[data-seamless-sso="1"\\] \\.auth-card \\.micro\\{display:none!important\\}/);
+  assert.ok(bootstrap.includes("document.documentElement.dataset.seamlessSso = interactive ? '0' : '1';"));
+  assert.ok(html.includes('html[data-seamless-sso="1"] .intro,'));
+  assert.ok(html.includes('html[data-seamless-sso="1"] .principles,'));
+  assert.ok(html.includes('html[data-seamless-sso="1"] .auth-card{width:min(100%,440px)'));
+  assert.ok(html.includes('html[data-seamless-sso="1"] .auth-card .micro{display:none!important}'));
 });
