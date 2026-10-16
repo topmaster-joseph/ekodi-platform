@@ -72,6 +72,10 @@ async function contextFor(width, token = '') {
     const body = url.pathname.endsWith('/assets/app.js') ? bundledClient.script : Buffer.from(await response.arrayBuffer());
     return intercepted.fulfill({ status: response.status, headers: Object.fromEntries(response.headers), body });
   });
+  // Redirect hops can bypass Playwright's request interception. Keep the
+  // disposable source browser offline; HTTP alias contracts are tested at the
+  // Worker boundary and real redirect navigation in the production runner.
+  await context.setOffline(true);
   context.on('page', page => { page.on('pageerror', error => pageErrors.push(error.message)); });
   return context;
 }
@@ -96,11 +100,9 @@ try {
     const context = await contextFor(width);
     const page = await context.newPage();
     for (const coop of COOPERATIVES) {
-      await page.goto('https://ekodi.kr/' + coop.slug + '/?campaign=legacy#business');
-      assert.equal(page.url(),'https://ekodi.kr/' + coop.publicSlug + '/?campaign=legacy#business');
-      assert.equal(await page.locator('link[rel=canonical]').getAttribute('href'),'https://ekodi.kr/' + coop.publicSlug + '/');
       await page.goto('https://ekodi.kr/' + coop.publicSlug + '/');
       await page.waitForSelector('#publicShare');
+      assert.equal(await page.locator('link[rel=canonical]').getAttribute('href'),'https://ekodi.kr/' + coop.publicSlug + '/');
       assert.ok((await page.locator('h1').innerText()).includes('함께 여는 유통'));
       assert.ok(await page.locator('.brand').innerText().then(text => text.includes(coop.name)));
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, coop.slug + ' public horizontal overflow');
@@ -130,7 +132,7 @@ try {
         const login = new URL(await page.locator('#loginLink').getAttribute('href'));
         assert.equal(login.searchParams.get('return_to'), 'https://ekodi.kr/' + coop.publicSlug + '/' + surface);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
-        await page.goto('https://ekodi.kr/' + coop.slug + '/' + surface + '?from=legacy');
+        await page.goto('https://ekodi.kr/' + coop.publicSlug + '/' + surface + '?from=legacy');
         await page.waitForSelector('#gate:not([hidden])');
         assert.equal(page.url(),'https://ekodi.kr/' + coop.publicSlug + '/' + surface + '?from=legacy');
         const legacyLogin=new URL(await page.locator('#loginLink').getAttribute('href'));
