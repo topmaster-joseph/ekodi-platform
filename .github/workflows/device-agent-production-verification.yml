@@ -21,6 +21,7 @@ on:
           - user4-virtual-probe
           - user2-upgrade-localai
           - user4-acceptance
+          - user4-ollama-service-recover
       release_branch_ref:
         description: 'Orchestrator release branch, required in verify mode'
         required: false
@@ -161,7 +162,7 @@ jobs:
           node-version: '24'
 
       - name: EKODI AI Orchestration Gate for mutating verification
-        if: github.event_name == 'workflow_dispatch' && (inputs.execution_mode == 'verify' || inputs.execution_mode == 'status' || inputs.execution_mode == 'localai' || inputs.execution_mode == 'user3-upgrade-localai' || inputs.execution_mode == 'user2-localai' || inputs.execution_mode == 'user2-virtual-probe' || inputs.execution_mode == 'user2-browser-acceptance' || inputs.execution_mode == 'user2-hyperv-enable' || inputs.execution_mode == 'user4-virtual-probe' || inputs.execution_mode == 'user2-upgrade-localai' || inputs.execution_mode == 'user4-acceptance')
+        if: github.event_name == 'workflow_dispatch' && (inputs.execution_mode == 'verify' || inputs.execution_mode == 'status' || inputs.execution_mode == 'localai' || inputs.execution_mode == 'user3-upgrade-localai' || inputs.execution_mode == 'user2-localai' || inputs.execution_mode == 'user2-virtual-probe' || inputs.execution_mode == 'user2-browser-acceptance' || inputs.execution_mode == 'user2-hyperv-enable' || inputs.execution_mode == 'user4-virtual-probe' || inputs.execution_mode == 'user2-upgrade-localai' || inputs.execution_mode == 'user4-acceptance' || inputs.execution_mode == 'user4-ollama-service-recover')
         env:
           EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
           EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
@@ -301,6 +302,10 @@ jobs:
         env:
           DEVICE_TARGET_HOSTNAME: 'user2'
         run: node scripts/verify-native-user2-localai.mjs
+
+      - name: Recover USER4 already-installed stopped Ollama service with fresh native proof
+        if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user4-ollama-service-recover'
+        run: node scripts/recover-native-user4-ollama-service.mjs
 
       - name: Verify USER4 native CDP and Ollama receipts through EKODI Device Agent
         if: github.event_name == 'workflow_dispatch' && inputs.execution_mode == 'user4-acceptance'
