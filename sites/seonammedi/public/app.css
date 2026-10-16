@@ -277,3 +277,30 @@
 /* Reliable text links for social channels when the published channel API is unavailable. */
 .channel-text-fallback-link{display:inline-flex;align-items:center;margin:6px 8px 8px 0;padding:9px 13px;border:1px solid #b9cadd;border-radius:8px;background:#fff;color:#174a72;font-size:14px;font-weight:700;text-decoration:none}
 .channel-text-fallback-link:hover,.channel-text-fallback-link:focus-visible{background:#f0f6fc;border-color:#2f669a}
+
+/* SeonamMedi compact public history/news titles: show only titles until explicitly expanded. */
+.timeline-item.timeline-compact .timeline-content{min-width:0}
+.timeline-item.timeline-compact .timeline-content h3{margin:0}
+.timeline-item.timeline-compact .timeline-title-toggle{
+  appearance:none;display:block;width:100%;min-height:38px;padding:5px 0;
+  border:0;background:transparent;box-shadow:none;color:#152d45;
+  font:inherit;font-weight:800;line-height:1.5;text-align:left;white-space:normal;
+  overflow-wrap:anywhere;cursor:pointer
+}
+.timeline-item.timeline-compact .timeline-title-toggle:hover{text-decoration:underline}
+.timeline-item.timeline-compact .timeline-title-toggle:focus-visible{
+  outline:2px solid #205eaf;outline-offset:3px;border-radius:3px
+}
+.timeline-item.timeline-compact.is-collapsed{
+  display:grid;grid-template-columns:minmax(0,1fr);gap:0;padding:8px 16px
+}
+.timeline-item.timeline-compact.is-collapsed .timeline-date,
+.timeline-item.timeline-compact.is-collapsed .timeline-summary,
+.timeline-item.timeline-compact.is-collapsed .chips,
+.timeline-item.timeline-compact.is-collapsed .timeline-detail,
+.timeline-item.timeline-compact.is-collapsed .timeline-admin-actions,
+.timeline-item.timeline-compact.is-collapsed .timeline-toggle{display:none!important}
+@media(max-width:760px){
+  .timeline-item.timeline-compact.is-collapsed{padding:8px 12px}
+  .timeline-item.timeline-compact .timeline-title-toggle{font-size:16px}
+}
