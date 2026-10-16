@@ -25,6 +25,8 @@ if(changed)history.replaceState({},document.title,url.href);
 const manageMode=params.get('manage')==='1';
 const reviewMode=params.get('review')==='1';
 document.documentElement.dataset.identityManage=manageMode?'1':'0';
+// Account selection is interactive, but it should still use the single-card login view.
+// Only the identity management and review workspaces require the full layout.
 document.documentElement.dataset.seamlessSso=manageMode||reviewMode?'0':'1';
 const site=params.get('site')||'portal';
 const targetedWorkspace=targetableWorkspaceSites.has(site)&&Boolean(params.get('workspace'));

@@ -77,7 +77,9 @@ for(let attempt=1;attempt<=attempts;attempt++){
           'shared-site-header.css','home-public-feed.css','home-public-feed.js',
           // New CSP-safe photo/category shell is an existing site-owned static asset.
           // Permit only this named file, never arbitrary customer-domain redirects.
-          'board-central-category.js'];
+          'board-central-category.js',
+          // Board Worker serves the same audited script on both domain mounts.
+          'board/ui/central-category.js'];
         const match=compareSeonamMediPublishedHtml(published,normalized.html,allowlisted);
         if(!match.matched){
           const around=(value,pos)=>typeof pos==='number'?JSON.stringify(String(value).slice(Math.max(0,pos-48),Math.min(String(value).length,pos+96))):'unavailable';

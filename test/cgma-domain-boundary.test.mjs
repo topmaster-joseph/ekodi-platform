@@ -36,9 +36,13 @@ test('Shared Site candidate smoke excludes the independently routed CGMA public 
 
 test('CGMA edge workflow pins board delegation source and verifies independent board', async () => {
   const cgmaWorkflow=await readFile(new URL('../.github/workflows/deploy-cgma-apex-edge.yml',import.meta.url),'utf8');
-  assert.match(cgmaWorkflow, /CGMA_SOURCE_REF: 'a0171e0d4a77d702ca7c3ad3904d760a791a51db'/);
+  assert.match(cgmaWorkflow, /CGMA_SOURCE_REF: '8ae2b47d8f9f6f943f30fac1df0eb68b9657fe6b'/);
   assert.match(cgmaWorkflow, /grep -Fq 'isBoardPath' cgma-root-gateway\.js/);
   assert.match(cgmaWorkflow, /grep -Fq 'delegatedBoardResponse' cgma-root-gateway\.js/);
+  assert.match(cgmaWorkflow, /grep -Fq 'isAiEducationPath' cgma-root-gateway\.js/);
+  assert.match(cgmaWorkflow, /grep -Fq 'delegatedAiEducationResponse' cgma-root-gateway\.js/);
+  assert.match(cgmaWorkflow, /check_cgma '\/cgma\/ai-education\/' '우리 가게에 필요한 AI 교육을 찾아보세요' 'cgma-ai-education-survey'/);
+  assert.match(cgmaWorkflow, /check_cgma '\/cgma\/ai-education\/app\.js' 'const questions = \[' 'cgma-ai-education-survey'/);
   assert.match(cgmaWorkflow, /grep -Fq 'x-ekodi-cgma-board-diagnostic' cgma-root-gateway\.js/);
   assert.match(cgmaWorkflow,/binding = "EKODI_BOARD"/);
   assert.match(cgmaWorkflow,/service = "ekodi-cgma-board-internal"/);
@@ -49,6 +53,16 @@ test('CGMA edge workflow pins board delegation source and verifies independent b
   assert.match(cgmaWorkflow, /persist-credentials: false/);
   assert.match(cgmaWorkflow, /grep -Fq 'service = "shy-thunder-39a4"'/);
   assert.match(cgmaWorkflow, /grep -Fq 'board\.internal\.ekodi' cgma-root-gateway\.js/);
+  assert.ok(cgmaWorkflow.includes("check_upstream 'https://cheonggye-market.pages.dev/ai-education/' '우리 가게에 필요한 AI 교육을 찾아보세요'"));
+  assert.ok(cgmaWorkflow.includes("check_upstream 'https://cheonggye-market.pages.dev/ai-education/app.js' 'const questions = ['"));
+  assert.ok(cgmaWorkflow.includes("check_upstream 'https://cheonggye-market.pages.dev/ai-education/questions.mjs' 'export const SURVEY_QUESTIONS'"));
+  assert.ok(cgmaWorkflow.includes("check_upstream 'https://cheonggye-market.pages.dev/ai-education/report/' 'AI 교육 수요조사 통계'"));
+  assert.ok(cgmaWorkflow.includes("check_cgma '/cgma/ai-education/questions.mjs' 'export const SURVEY_QUESTIONS' 'cgma-ai-education-survey'"));
+  assert.ok(cgmaWorkflow.includes("check_cgma '/cgma/ai-education/report/' 'AI 교육 수요조사 통계' 'cgma-ai-education-survey'"));
+  assert.match(cgmaWorkflow,/survey_stats_code/);
+  assert.match(cgmaWorkflow,/survey_share_code/);
+  assert.match(cgmaWorkflow,/share_expired_or_revoked/);
+  assert.match(cgmaWorkflow,/login_required/);
   assert.match(cgmaWorkflow, /check_board '\/cgma\/board'/);
   assert.match(cgmaWorkflow, /x-ekodi-board-independent: true/);
   assert.match(cgmaWorkflow, /x-ekodi-board-id: site:cgma:main/);

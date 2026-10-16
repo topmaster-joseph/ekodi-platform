@@ -42,7 +42,7 @@ test('platform and tenant auth both consume a preopened Google bridge without sh
   assert.match(adminAuth, /const preopenedRequested=directEntry&&params\.get\('bridge'\)==='preopened'/);
   assert.match(adminAuth, /dataset\.adminDirectBridge='1'/);
   assert.match(adminAuth, /ekodi-google-origin-bridge-start/);
-  assert.match(clientAuth, /const PREOPENED_BRIDGE=DIRECT_LOGIN&&params\.get\('bridge'\)==='preopened'/);
+  assert.match(clientAuth, /const PREOPENED_BRIDGE=DIRECT_LOGIN&&!CHOOSE_ACCOUNT&&params\.get\('bridge'\)==='preopened'/);
   assert.match(clientAuth, /dataset\.adminDirectBridge='1'/);
   assert.match(clientAuth, /ekodi-google-origin-bridge-ready/);
   assert.match(clientAuth, /ekodi-google-origin-bridge-start/);

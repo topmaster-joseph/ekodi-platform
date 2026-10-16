@@ -14,6 +14,9 @@ on:
   pull_request:
     paths:
       - 'api-worker.js'
+      - 'site-publication-runtime.js'
+      - 'cooperative-registry.js'
+      - 'cooperative-locator.js'
       - 'payment-receipt-confirmation-control.js'
       - 'test/payment-receipt-confirmation.test.mjs'
       - 'platform-maturity-control.js'
@@ -224,6 +227,9 @@ on:
     branches: [main]
     paths:
       - 'api-worker.js'
+      - 'site-publication-runtime.js'
+      - 'cooperative-registry.js'
+      - 'cooperative-locator.js'
       - 'payment-receipt-confirmation-control.js'
       - 'test/payment-receipt-confirmation.test.mjs'
       - 'platform-maturity-control.js'
@@ -778,6 +784,33 @@ jobs:
           echo "bookmark=$BOOKMARK" >> "$GITHUB_OUTPUT"
       - name: Apply production migrations after isolated staging success
         run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.api.toml "$WRANGLER_VERSION"
+      - name: Audit SeonamMedi limited board-admin grant in canonical D1 (read only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          audit_file="$(mktemp)"
+          trap 'rm -f "$audit_file"' EXIT
+          sql=$(cat <<'SQL'
+          SELECT CASE WHEN COUNT(*)=1 THEN 1 ELSE 0 END AS scoped_grant_verified
+          FROM customer_access_grants AS g
+          JOIN customer_tenants AS t ON t.id=g.tenant_id
+          WHERE t.slug='seonammedi' AND t.status='active'
+            AND lower(trim(g.email))='linuxceo@gmail.com'
+            AND g.enabled=1 AND g.role='board_admin' AND g.principal_type='member'
+            AND (g.expires_at IS NULL OR g.expires_at>CURRENT_TIMESTAMP)
+            AND json_valid(g.capabilities_json)=1 AND json_valid(g.denied_capabilities_json)=1
+            AND EXISTS (SELECT 1 FROM json_each(g.capabilities_json) WHERE value='seonammedi.notice.manage')
+            AND EXISTS (SELECT 1 FROM json_each(g.capabilities_json) WHERE value='seonammedi.voice.manage')
+            AND NOT EXISTS (SELECT 1 FROM json_each(g.capabilities_json) WHERE value IN ('platform.admin','tenant.finance.manage','tenant.access.manage'))
+            AND EXISTS (SELECT 1 FROM json_each(g.denied_capabilities_json) WHERE value='platform.admin');
+          SQL
+          )
+          if npx --yes wrangler@$WRANGLER_VERSION d1 execute ekodi-auth --remote --config wrangler.api.toml --json --command "$sql" >"$audit_file" 2>/dev/null && node scripts/verify-seonammedi-admin-grant-output.mjs "$audit_file"; then
+            echo "SeonamMedi scoped board administrator: VERIFIED in canonical D1; actual Google login and PUT/DELETE remain separately unverified." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::SeonamMedi scoped board administrator cannot be verified in canonical D1."
+            echo "SeonamMedi scoped board administrator: UNVERIFIED in canonical D1; do not claim admin CRUD proof." >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Guarded 0-percent Control candidate then promote
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/control-api.worker.json
       - name: Deploy production routes and Cron triggers

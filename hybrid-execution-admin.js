@@ -217,6 +217,7 @@
         <div class="hybrid-incidents" id="hybridIncidentList"><div class="hybrid-empty">감시 상태를 불러오는 중입니다.</div></div>
         <div class="hybrid-monitor-note">노드 heartbeat 5분, 작업 대기 15분, 최근 30분 실패·재배정, 운영 API health와 관리자 Hybrid 자산을 자동 점검합니다.</div>
       </section>
+      <div class="hybrid-monitor-note" role="note">이 화면의 온라인 노드는 EKODI 자체 Agent의 서버 등록·heartbeat 기준입니다. 외부 원격제어 프로그램의 연결 상태와는 별개이며, 온라인 표시만으로 실제 작업 성공을 보장하지 않습니다. 작업 완료 여부는 아래 실행 기록에서 확인하세요.</div>
       <div class="hybrid-metrics">
         <article><small>온라인 노드</small><strong id="hybridOnlineNodes">0</strong></article>
         <article><small>자동실행 가능</small><strong id="hybridAutoNodes">0</strong></article>
@@ -279,7 +280,7 @@
     const online = node.online ? '온라인' : '오프라인';
     return `<article class="hybrid-node" data-device-id="${escapeHtml(node.deviceId)}">
       <div class="hybrid-row"><div><strong>${escapeHtml(node.label || node.hostname || node.deviceId)}</strong>
-      <small>${escapeHtml(node.hostname || '')} · ${online} · 부하 ${Number(node.currentLoad) || 0}% · 실행 ${Number(node.activeJobs) || 0}/${Number(node.maxConcurrency) || 1}</small></div>
+      <small>${escapeHtml(node.hostname || '')} · EKODI Agent ${online} · 마지막 heartbeat ${escapeHtml(node.lastHeartbeatAt ? timeLabel(node.lastHeartbeatAt) : '미확인')} · 부하 ${Number(node.currentLoad) || 0}% · 실행 ${Number(node.activeJobs) || 0}/${Number(node.maxConcurrency) || 1}</small></div>
       <span class="hybrid-pill">${escapeHtml(node.deviceGroup || 'default')}</span></div>
       <div class="hybrid-controls">
         <label><input type="checkbox" data-auto ${auto}> 자동 실행</label>

@@ -1,1 +1,89 @@
 :root{color-scheme:light;--bg:#fff;--soft:#f6f6f6;--line:#e7e7e7;--text:#111;--muted:#666;--rail:244px;--radius:14px;font-family:Inter,Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text)}button,textarea,select{font:inherit}button,a,select{color:inherit}.control-shell{min-height:100vh}.control-rail{position:fixed;inset:0 auto 0 0;width:var(--rail);border-right:1px solid var(--line);background:#fafafa;padding:14px 12px;display:flex;flex-direction:column;z-index:20}.brand{display:flex;align-items:center;justify-content:space-between;height:42px;padding:0 6px}.brand-mark{font-weight:800;letter-spacing:.03em;text-decoration:none}.icon-btn{border:0;background:transparent;font-size:22px;cursor:pointer}.new-task{width:100%;margin:10px 0 8px;padding:10px 12px;text-align:left;border:1px solid var(--line);background:#fff;border-radius:10px;font-weight:700;cursor:pointer}.rail-nav{display:grid;gap:2px}.nav-item{border:0;background:transparent;text-align:left;border-radius:9px;padding:9px 10px;cursor:pointer}.nav-item:hover,.nav-item.active{background:#ededed;font-weight:750}.recent{min-height:0;flex:1;margin-top:14px;overflow:hidden;display:flex;flex-direction:column}.section-title{font-size:12px;color:var(--muted);padding:6px 10px}.recent-list{overflow:auto}.recent-item{width:100%;border:0;background:transparent;text-align:left;padding:9px 10px;border-radius:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font-size:13px}.recent-item:hover{background:#eee}.rail-foot{border-top:1px solid var(--line);padding:10px 8px 2px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted)}.admin-link{text-decoration:none;color:#222;font-weight:650}.control-main{margin-left:var(--rail);min-height:100vh}.topbar{height:60px;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 22px;gap:12px;position:sticky;top:0;background:rgba(255,255,255,.96);z-index:10}.topbar>div:nth-child(2){display:grid;gap:1px}.topbar small{color:var(--muted);font-size:12px}.top-actions{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:12px}.status-dot:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#888;margin-right:6px}.status-dot.ok:before{background:#111}.ghost-link{text-decoration:none;border:1px solid var(--line);padding:7px 9px;border-radius:8px}.view{display:none}.view.active{display:block}.conversation{max-width:880px;margin:0 auto;padding:52px 24px 180px;min-height:calc(100vh - 60px)}.empty-state{text-align:center;padding-top:15vh}.empty-state h1{font-size:32px;margin:0 0 12px}.empty-state p{color:var(--muted);margin:0 auto 26px;max-width:620px}.suggestions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}.suggestions button,.secondary{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 11px;cursor:pointer}.messages{display:grid;gap:22px}.turn{display:grid;gap:7px}.turn.user{justify-items:end}.turn .meta{font-size:11px;color:var(--muted)}.bubble{max-width:min(760px,92%);white-space:pre-wrap;line-height:1.65}.turn.user .bubble{background:var(--soft);padding:11px 14px;border-radius:16px}.turn.assistant .bubble{width:100%}.execution-card{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px;background:#fcfcfc;font-size:12px}.execution-card strong{display:block;margin-bottom:4px}.composer-wrap{position:fixed;left:var(--rail);right:0;bottom:0;padding:18px 24px 16px;background:linear-gradient(180deg,rgba(255,255,255,0),#fff 26%,#fff);z-index:12}.composer{max-width:880px;margin:0 auto;border:1px solid #cfcfcf;border-radius:18px;background:#fff;padding:10px 12px;box-shadow:0 8px 30px rgba(0,0,0,.06)}.composer textarea{display:block;width:100%;border:0;outline:0;resize:none;min-height:52px;max-height:190px;padding:8px 5px}.composer-row{display:flex;align-items:center;gap:10px}.target-label{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:9px;padding:5px 8px;font-size:12px}.target-label select{border:0;background:transparent;outline:0}.toggle{font-size:12px;color:var(--muted);display:flex;gap:5px;align-items:center}.send{margin-left:auto;border:0;background:#111;color:#fff;border-radius:10px;padding:8px 15px;font-weight:700;cursor:pointer}.send:disabled{opacity:.45;cursor:wait}.composer-note{display:block;max-width:880px;margin:7px auto 0;color:var(--muted);font-size:11px;text-align:center}.panel-head{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid var(--line);padding:28px 30px 18px}.panel-head h2{margin:0 0 5px}.panel-head p{margin:0;color:var(--muted);font-size:13px}.cards{padding:20px 30px;display:grid;gap:10px;max-width:1100px}.card{border:1px solid var(--line);border-radius:12px;padding:13px 14px;background:#fff}.card-head{display:flex;justify-content:space-between;gap:12px}.card p{margin:6px 0 0;color:var(--muted);font-size:12px}.badge{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:3px 7px;height:max-content}.toast{position:fixed;right:18px;bottom:18px;z-index:50;background:#111;color:#fff;padding:10px 12px;border-radius:10px;font-size:12px}.mobile-only{display:none}@media(max-width:760px){:root{--rail:86vw}.mobile-only{display:inline-flex}.control-rail{transform:translateX(-100%);transition:transform .18s ease}.control-rail.open{transform:none}.control-main{margin-left:0}.topbar{height:56px;padding:0 12px}.topbar small,.ghost-link{display:none}.composer-wrap{left:0;padding:12px 10px}.conversation{padding:34px 16px 168px}.empty-state{padding-top:12vh}.empty-state h1{font-size:27px}.composer-row{gap:6px}.toggle{display:none}.target-label{max-width:64%}.target-label select{max-width:145px}.panel-head{padding:22px 16px 14px}.cards{padding:14px 16px}}
+
+/* EKODI Control is an authenticated operations workspace, not a public landing page.
+ * Make its palette and geometry independent of shared public Shell adornments,
+ * accessibility theme overrides and dark-mode inheritance. */
+html[data-ekodi-control="v2"]{color-scheme:light;--rail:220px;--bg:#fff;--soft:#f6f7f8;--line:#dfe3e8;--text:#101820;--muted:#475467}
+html[data-ekodi-control="v2"] body{color:#101820!important;background:#fff!important;line-height:1.45}
+html[data-ekodi-control="v2"] .control-shell{width:100%;min-height:100dvh;background:#fff;color:#101820}
+html[data-ekodi-control="v2"] .control-rail{background:#f8f9fa!important;color:#101820!important;border-color:#dfe3e8!important;z-index:40}
+html[data-ekodi-control="v2"] .control-main{width:auto!important;max-width:none!important;margin:0 0 0 var(--rail)!important;min-height:100dvh;background:#fff!important;color:#101820!important}
+html[data-ekodi-control="v2"] .control-main .view{width:100%!important;max-width:none!important;background:#fff!important;color:#101820!important}
+html[data-ekodi-control="v2"] .control-main .view.active{display:block!important}
+html[data-ekodi-control="v2"] .topbar{position:sticky!important;inset:0 auto auto 0!important;width:100%!important;max-width:none!important;height:58px!important;min-height:58px!important;padding:0 20px!important;background:rgba(255,255,255,.98)!important;border-bottom:1px solid #dfe3e8!important;color:#101820!important;z-index:35!important}
+html[data-ekodi-control="v2"] .topbar strong{font-size:16px;font-weight:800;color:#101820!important}
+html[data-ekodi-control="v2"] .topbar small,html[data-ekodi-control="v2"] .top-actions,html[data-ekodi-control="v2"] .status-dot{color:#475467!important}
+html[data-ekodi-control="v2"] .conversation{box-sizing:border-box;width:100%!important;max-width:900px!important;min-height:calc(100dvh - 58px);margin-inline:auto!important;padding:30px 24px 194px!important;background:#fff!important;color:#101820!important}
+html[data-ekodi-control="v2"] .empty-state{padding-top:clamp(36px,9vh,110px)!important;color:#101820!important}
+html[data-ekodi-control="v2"] .empty-state h1{font-size:clamp(24px,2.4vw,30px);color:#101820!important}
+html[data-ekodi-control="v2"] .empty-state p{color:#475467!important;font-size:14px;line-height:1.6}
+html[data-ekodi-control="v2"] :is(.brand-mark,.nav-item,.new-task,.recent-item,.admin-link,.section-title,.rail-foot,.target-label,.toggle,.bubble,.card,.panel-head){color:#101820!important}
+html[data-ekodi-control="v2"] :is(.section-title,.rail-foot,.turn .meta,.panel-head p,.card p,.composer-note){color:#475467!important}
+html[data-ekodi-control="v2"] :is(.new-task,.suggestions button,.secondary,.target-label,.ghost-link){background:#fff!important;color:#101820!important;border:1px solid #cbd2d9!important}
+html[data-ekodi-control="v2"] .nav-item.active{color:#101820!important;background:#e9edf1!important;font-weight:800}
+html[data-ekodi-control="v2"] .nav-item:hover,html[data-ekodi-control="v2"] .recent-item:hover{background:#e9edf1!important}
+html[data-ekodi-control="v2"] .composer-wrap{left:var(--rail)!important;right:0!important;bottom:0!important;padding:12px 18px 12px!important;background:linear-gradient(to bottom,rgba(255,255,255,0),#fff 25%,#fff 100%)!important;z-index:45}
+html[data-ekodi-control="v2"] .composer{max-width:900px!important;background:#fff!important;color:#101820!important;border:1px solid #aeb8c4!important;box-shadow:0 8px 30px rgba(16,24,32,.10)!important}
+html[data-ekodi-control="v2"] .composer textarea{min-height:62px!important;color:#101820!important;background:#fff!important;caret-color:#101820!important;opacity:1!important;font-size:15px}
+html[data-ekodi-control="v2"] .composer textarea::placeholder{color:#596574!important;opacity:1}
+html[data-ekodi-control="v2"] .target-label select{color:#101820!important;background:#fff!important}
+html[data-ekodi-control="v2"] .composer .send{background:#101820!important;color:#fff!important;border:1px solid #101820!important;opacity:1}
+html[data-ekodi-control="v2"] .composer .send:disabled{opacity:.55!important}
+html[data-ekodi-control="v2"] .cards .card{background:#fff!important;color:#101820!important}
+html[data-ekodi-control="v2"] .toast[hidden]{display:none!important}
+html[data-ekodi-control="v2"] :is(.ekodi-main-ekodian,.ekodi-user-ai-entry,.ekodi-user-ui-footer,.ekodi-user-ui-fallback-header,.ekodi-user-ui-header-fallback,.ekodi-user-ui-header,[data-ekodi-operating-space-label]){display:none!important}
+/* Ensure the operational command remains available on mobile; do not hide the
+ * protected-release checkbox merely because the viewport is narrow. */
+@media(max-width:760px){
+  html[data-ekodi-control="v2"]{--rail:86vw}
+  html[data-ekodi-control="v2"] .control-main{margin-left:0!important}
+  html[data-ekodi-control="v2"] .control-rail{transform:translateX(-100%)}
+  html[data-ekodi-control="v2"] .control-rail.open{transform:none}
+  html[data-ekodi-control="v2"] .topbar{height:56px!important;min-height:56px!important;padding:0 12px!important}
+  html[data-ekodi-control="v2"] .conversation{padding:22px 16px 212px!important}
+  html[data-ekodi-control="v2"] .composer-wrap{left:0!important;padding:10px 9px!important}
+  html[data-ekodi-control="v2"] .composer-row{flex-wrap:wrap;row-gap:8px}
+  html[data-ekodi-control="v2"] .composer-row .toggle{display:flex!important}
+  html[data-ekodi-control="v2"] .composer-row .target-label{max-width:none;flex:1 1 135px}
+  html[data-ekodi-control="v2"] .composer-row .target-label select{max-width:100%}
+  html[data-ekodi-control="v2"] .composer-row .send{min-width:68px}
+  html[data-ekodi-control="v2"] .composer-note{text-align:left;line-height:1.35}
+}
+
+
+/* CONTROL-STEADY-001: bounded scrolling, stable viewport, no motion/repaint loop.
+ * Only the active conversation scrolls. The fixed command composer never
+ * participates in document scrolling or causes the window to animate. */
+html[data-ekodi-control="v2"]{scrollbar-gutter:stable;scroll-behavior:auto!important}
+html[data-ekodi-control="v2"] body{overflow-x:hidden;scroll-behavior:auto!important}
+html[data-ekodi-control="v2"] .control-shell,
+html[data-ekodi-control="v2"] .control-main{min-height:100svh!important}
+html[data-ekodi-control="v2"] .control-main .view.active[data-view-panel="chat"]{
+  height:calc(100svh - 58px)!important;
+  min-height:0!important;
+  overflow:hidden!important
+}
+html[data-ekodi-control="v2"] .control-main .conversation{
+  height:100%!important;
+  min-height:0!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  overscroll-behavior-y:contain;
+  scrollbar-gutter:stable;
+  scroll-behavior:auto!important
+}
+html[data-ekodi-control="v2"] .composer textarea{
+  max-height:160px!important;
+  overflow-y:auto;
+  resize:none;
+  overscroll-behavior:contain
+}
+html[data-ekodi-control="v2"] :is(.control-main,.control-rail,.topbar,.conversation,.composer-wrap,.composer,.composer textarea){
+  animation:none!important;
+  transition:none!important
+}
+@media(max-width:760px){
+  html[data-ekodi-control="v2"] .control-main .view.active[data-view-panel="chat"]{
+    height:calc(100svh - 56px)!important
+  }
+}

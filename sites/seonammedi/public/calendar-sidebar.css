@@ -1,0 +1,54 @@
+
+/* Compact accessible calendar for the right column of the SeonamMedi page shell. */
+.seonam-calendar-card,.seonam-calendar-details{min-width:0}
+.seonam-calendar-heading,.seonam-calendar-detail-heading{display:flex;align-items:center;justify-content:space-between;gap:7px;flex-wrap:wrap}
+.seonam-calendar-heading h2,.seonam-calendar-detail-heading h2{margin:0!important}
+.seonam-calendar-add{appearance:none;border:1px solid #234e85;background:#234e85;color:#fff;border-radius:7px;padding:6px 8px;font-size:12px;font-weight:700;cursor:pointer}
+.seonam-calendar-nav{display:flex;align-items:center;gap:5px;margin:15px 0 11px}
+.seonam-calendar-nav strong{flex:1;text-align:left;font-size:14px;color:#14283b;white-space:nowrap}
+.seonam-calendar-arrow,.seonam-calendar-today{appearance:none;background:#fff;border:1px solid #d7e0eb;border-radius:6px;color:#244b71;font-weight:700;min-height:29px;min-width:30px;padding:2px 6px;cursor:pointer}
+.seonam-calendar-today{font-size:12px}
+.seonam-calendar-week,.seonam-calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px}
+.seonam-calendar-week span{text-align:center;font-size:11px;font-weight:700;color:#64748b;padding:5px 0}
+.seonam-calendar-grid{margin-top:2px}
+.seonam-calendar-day{appearance:none;position:relative;display:flex;justify-content:center;align-items:flex-start;padding:7px 0 13px;min-height:36px;min-width:0;border:1px solid transparent;border-radius:6px;background:#fff;color:#223c55;font-size:12px;cursor:pointer}
+.seonam-calendar-day:hover,.seonam-calendar-day:focus-visible{background:#eaf2ff;border-color:#a8c6ec;outline-offset:1px}
+.seonam-calendar-day.is-today{border-color:#9fb9d7;font-weight:800}
+.seonam-calendar-day.is-selected{background:#185eae;color:#fff;font-weight:800}
+.seonam-calendar-day.has-events .seonam-calendar-dot{position:absolute;bottom:1px;left:50%;transform:translateX(-50%);display:grid;place-items:center;min-width:14px;min-height:13px;border-radius:7px;background:#d7e8ff;color:#0b468b;font-size:9px;line-height:1;font-weight:700}
+.seonam-calendar-day.is-selected .seonam-calendar-dot{background:#fff;color:#185eae}
+.seonam-calendar-status,.seonam-calendar-empty{margin:10px 0 0;font-size:12px;color:#64748b;line-height:1.5}
+.seonam-calendar-status:empty{display:none}
+.seonam-calendar-selected{display:block;margin:10px 0 5px;font-size:13px;color:#205080}
+.seonam-calendar-event{border-top:1px solid #e5edf5;padding:10px 0;overflow-wrap:anywhere}
+.seonam-calendar-event strong{display:block;font-size:13px;line-height:1.45;color:#182e45}
+.seonam-calendar-event small{display:block;margin:3px 0;color:#64748b;font-size:11px;line-height:1.4}
+.seonam-calendar-event p{margin:6px 0 0;font-size:12px;line-height:1.6;color:#35485c;white-space:pre-wrap;overflow-wrap:anywhere}
+.seonam-calendar-actions{display:flex;gap:6px;margin-top:9px}
+.seonam-calendar-actions button{border:1px solid #bacfe6;background:#fff;border-radius:6px;padding:5px 8px;color:#234b79;font-size:12px;cursor:pointer}
+.seonam-calendar-actions .seonam-calendar-danger{border-color:#dfb5ba;color:#982c33}
+.seonam-calendar-form{display:grid;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid #dce5ef}
+.seonam-calendar-form[hidden]{display:none!important}
+.seonam-calendar-form h3{margin:0;font-size:14px}
+.seonam-calendar-form label{display:grid;gap:5px;font-size:12px;font-weight:700;color:#324a61}
+.seonam-calendar-form input,.seonam-calendar-form textarea{box-sizing:border-box;width:100%;min-width:0;background:#fff;color:#1b3045;border:1px solid #cbd5e1;border-radius:7px;padding:8px;font:inherit;font-size:13px}
+.seonam-calendar-form-actions{display:flex;gap:7px}
+.seonam-calendar-form-actions button{border:1px solid #185eae;border-radius:6px;padding:8px 11px;background:#185eae;color:#fff;font-size:12px;cursor:pointer}
+.seonam-calendar-form-actions .seonam-calendar-cancel{border-color:#cbd5e1;background:#fff;color:#334155}
+.seonam-calendar-feedback{margin:0;font-size:12px;color:#8d2d35;line-height:1.5}
+@media(max-width:940px){body.seonam-visual-ready .seonam-visual-right .seonam-calendar-week span{font-size:12px}.seonam-calendar-day{min-height:40px;font-size:13px}}
+
+/* Compact and accessible today's schedule immediately under the main calendar. */
+.seonam-calendar-manage{appearance:none;border:1px solid #cbd5e1;border-radius:6px;background:#fff;color:#1f3e5c;padding:6px 11px;min-height:32px;font-size:12px;font-weight:700;cursor:pointer}
+.seonam-calendar-manage:hover,.seonam-calendar-manage:focus-visible{border-color:#1c5c9e;background:#eff6ff;outline-offset:2px}
+.seonam-calendar-today-agenda{margin-top:12px;padding-top:10px;border-top:1px solid #d8e4f0}
+.seonam-calendar-today-agenda[hidden]{display:none!important}
+.seonam-calendar-today-heading{margin:0 0 5px!important;color:#183b63;font-size:13px;font-weight:800;line-height:1.5}
+.seonam-calendar-today-event{padding:7px 0;border-top:1px solid #e8eef6;overflow-wrap:anywhere}
+.seonam-calendar-today-event:first-child{border-top:none}
+.seonam-calendar-today-event strong{display:block;font-size:12px;line-height:1.5;color:#182e45}
+.seonam-calendar-today-event small{display:block;margin-top:3px;font-size:11px;color:#4b6380}
+.seonam-calendar-today-event p{margin:5px 0 0;font-size:12px;line-height:1.5;white-space:pre-wrap;color:#35485c;overflow-wrap:anywhere}
+
+.seonam-calendar-nav .seonam-calendar-today{min-width:44px;text-align:center}
+.seonam-calendar-nav .seonam-calendar-month{margin-right:auto}

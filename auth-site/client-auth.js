@@ -44,7 +44,8 @@ const realms={
 const params=new URLSearchParams(location.search);
 const site=params.get('site')||'portal';
 const DIRECT_LOGIN=params.get('direct')==='1'&&params.get('manage')!=='1'&&params.get('review')!=='1';
-const PREOPENED_BRIDGE=DIRECT_LOGIN&&params.get('bridge')==='preopened';
+const CHOOSE_ACCOUNT=site==='seonammedi'&&params.get('select_account')==='1';
+const PREOPENED_BRIDGE=DIRECT_LOGIN&&!CHOOSE_ACCOUNT&&params.get('bridge')==='preopened';
 const GOOGLE_BRIDGE_ORIGIN=location.origin;
 if(PREOPENED_BRIDGE)document.documentElement.dataset.adminDirectBridge='1';
 const EXPECTED_ACCOUNT=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(params.get('expected_account')||'').trim())?String(params.get('expected_account')).trim().toLowerCase():'';
@@ -94,6 +95,11 @@ function safeReturn(raw){
   }catch{return fallback.href}
 }
 const RETURN_TO=safeReturn(params.get('return_to')||params.get('returnTo'));
+function cancelledLoginTarget(){
+  const target=new URL(RETURN_TO);
+  if(CHOOSE_ACCOUNT)target.searchParams.delete('compose');
+  return target.href;
+}
 const $=id=>document.getElementById(id);
 const show=(id,on=true)=>$(id)?.classList.toggle('hide',!on);
 function notice(text,type=''){const el=$('authStatus');if(!el)return;el.textContent=text;el.className=`notice${type?` ${type}`:''}`;el.classList.remove('hide')}
@@ -321,13 +327,16 @@ async function renderGoogle(){
     await loadGoogleLibrary();
     window.google.accounts.id.disableAutoSelect?.();
     window.google.accounts.id.initialize({client_id:challenge.clientId,nonce:challenge.nonce,auto_select:false,use_fedcm_for_button:false,button_auto_select:false,ux_mode:'popup',context:'signin',...(EXPECTED_ACCOUNT?{login_hint:EXPECTED_ACCOUNT}:{}),callback:r=>void handleCredential(r,challenge)});
-    window.google.accounts.id.renderButton(host,{type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340)),use_fedcm_for_button:true});
+    const googleButtonOptions={type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340)),use_fedcm_for_button:true};
+    if(CHOOSE_ACCOUNT)googleButtonOptions.use_fedcm_for_button=false;
+    window.google.accounts.id.renderButton(host,googleButtonOptions);
+    if(CHOOSE_ACCOUNT)show('cancelSignedOut',true);
     if(DIRECT_LOGIN){
       notice('Google 계정 선택창을 여는 중입니다.');
       window.google.accounts.id.prompt(notification=>{
         if(notification?.isNotDisplayed?.()||notification?.isSkippedMoment?.())notice('Google 계정 선택창을 바로 열 수 없습니다. 아래 Google 버튼으로 계속해 주세요.');
       });
-    }else notice('처음 한 번만 Google 계정으로 본인을 확인합니다.');
+    }else notice(CHOOSE_ACCOUNT?'아래 Google 버튼을 눌러 사용할 계정을 선택해 주세요. 자동 로그인은 진행하지 않습니다.':'처음 한 번만 Google 계정으로 본인을 확인합니다.');
   }catch(error){
     console.error('prepare central identity',error);
     if(PREOPENED_BRIDGE)document.documentElement.dataset.adminDirectBridge='fallback';
@@ -340,6 +349,7 @@ async function prepare(){
   $('serviceBadge').textContent='확인 중';notice('로그인 상태를 확인하고 있습니다.');
   let existing=null;
   try{existing=await session()}catch(error){console.warn('central session bootstrap',error)}
+  if(CHOOSE_ACCOUNT){await renderGoogle();return}
   if(existing){
     if(FORCE_ACCOUNT&&String(existing.user?.email||'').trim().toLowerCase()!==EXPECTED_ACCOUNT){await clearStaleSession();await renderGoogle();return}
     if(await handoffExistingSession(existing))return;
@@ -357,12 +367,12 @@ async function prepare(){
 }
 
 $('googleRetry')?.addEventListener('click',prepare);
-$('cancelSignedOut')?.addEventListener('click',()=>location.assign(RETURN_TO));
+$('cancelSignedOut')?.addEventListener('click',()=>location.assign(cancelledLoginTarget()));
 $('cancelSignedIn')?.addEventListener('click',()=>location.assign(RETURN_TO));
 $('logout')?.addEventListener('click',async()=>{try{await timeout(sb.auth.signOut(),8000,'logout_timeout')}catch(error){console.warn(error)}await prepare()});
 
 await prepare();
 sb.auth.onAuthStateChange((event,s)=>{
-  if((event==='SIGNED_IN'||event==='TOKEN_REFRESHED')&&s&&!routing&&!handlingCredential)queueMicrotask(()=>void handoffExistingSession(s));
+  if((event==='SIGNED_IN'||event==='TOKEN_REFRESHED')&&s&&!routing&&!handlingCredential&&!CHOOSE_ACCOUNT)queueMicrotask(()=>void handoffExistingSession(s));
   if(event==='SIGNED_OUT'){routing=false;}
 });

@@ -116,6 +116,12 @@ jobs:
       - name: Validate Supabase DEV PROD boundary
         if: github.event_name != 'pull_request' || steps.scope.outputs.my_only != 'true'
         run: node scripts/validate-supabase-environment-boundary.mjs
+      - name: Test AI Bootcamp document and email attachments
+        if: github.event_name != 'pull_request' || steps.scope.outputs.my_only != 'true'
+        run: |
+          node --check education/study/ai-bootcamp/documents/portrait.js
+          node --check education/study/ai-bootcamp/documents/documents.js
+          node --test test/education-bootcamp-documents.test.mjs
       - name: Run static policy and code checks
         if: github.event_name != 'pull_request' || steps.scope.outputs.my_only != 'true'
         env:

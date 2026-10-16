@@ -18,3 +18,10 @@ test('execution records state the metadata-only privacy boundary', () => {
   assert.match(admin, /입력한 문자·비밀번호·메시지 내용은 수집하지 않습니다/);
   assert.doesNotMatch(admin, /keydown|keypress|keyup|KeyboardEvent|event\.key/);
 });
+
+test('node status distinguishes EKODI-native heartbeat from remote desktop and shows missing timestamps', () => {
+  assert.match(admin, /외부 원격제어 프로그램의 연결 상태와는 별개/);
+  assert.match(admin, /EKODI Agent \$\{online\}/);
+  assert.match(admin, /node\.lastHeartbeatAt \? timeLabel\(node\.lastHeartbeatAt\) : '미확인'/);
+  assert.match(admin, /작업 완료 여부는 아래 실행 기록에서 확인하세요/);
+});

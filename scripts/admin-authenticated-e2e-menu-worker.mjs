@@ -27,6 +27,7 @@ const results = [];
 let browser;
 let page;
 let fatal = null;
+let adminEntryTransport = null;
 let currentStage = 'bootstrap';
 const stage = value => { currentStage = value; console.log(`[E2E:${menuId}] stage=${value}`); };
 const interactionReadyTimeoutMs = 15_000;
@@ -606,7 +607,17 @@ try {
   });
 
   stage('navigation');
-  await page.goto(authenticatedEntryUrl, { waitUntil: 'domcontentloaded', timeout: 15_000 });
+  const entryResponse = await page.goto(authenticatedEntryUrl, { waitUntil: 'domcontentloaded', timeout: 15_000 });
+  const entryHeaders = entryResponse?.headers() || {};
+  // Only bounded transport metadata. Never record the URL, query, token, headers or HTML body.
+  adminEntryTransport = {
+    status: entryResponse?.status() ?? null,
+    contentType: String(entryHeaders['content-type'] || '').split(';')[0].slice(0, 80),
+    cfCacheStatus: String(entryHeaders['cf-cache-status'] || '').slice(0, 40),
+  };
+  if ([401, 403].includes(adminEntryTransport.status)) {
+    throw new Error('Admin entry rejected by production authentication boundary');
+  }
   await waitForReady();
   stage('registry');
   const productionOrder = await page.evaluate(() => window.EKODIAdminPanels?.visibleMenuOrder || []);
@@ -665,14 +676,14 @@ try {
       sessionVerified: Boolean(document.querySelector('#apiState')?.textContent?.includes('정상')),
       coreLoaded: Boolean(window.EKODIAdminCore),
     })).catch(() => ({unavailable:true}));
-    console.error(`[E2E:${menuId}] safe readiness state ${JSON.stringify(state)}`);
+    console.error(`[E2E:${menuId}] safe readiness state ${JSON.stringify({...state, transport:adminEntryTransport})}`);
   }
   console.error(`[E2E:${menuId}] fatal stage=${currentStage} ${error?.stack || error}`);
 } finally {
   const report = {
     generatedAt: new Date().toISOString(), baseUrl, menuId, expectedMenuCount: 1,
     checkedMenuCount: results.length, passed: !fatal, lastStage: currentStage, results,
-    diagnostics: { pageErrors, consoleErrors: consoleErrors.slice(-40), failedAdminAssets },
+    diagnostics: { pageErrors, consoleErrors: consoleErrors.slice(-40), failedAdminAssets, adminEntryTransport },
     error: fatal ? String(fatal?.stack || fatal?.message || fatal) : null,
   };
   await fs.writeFile(reportPath, JSON.stringify(report, null, 2));

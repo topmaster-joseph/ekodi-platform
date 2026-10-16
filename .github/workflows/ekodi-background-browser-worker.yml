@@ -85,7 +85,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: ekodi-background-browser-worker-${{ github.ref }}-${{ inputs.device_profile || 'desktop' }}
+  # Scope cancellation to the same caller workflow + exact source revision + device.
+  # Different production verifiers must not cancel one another just because they
+  # happen to use the same desktop/mobile browser profile on main.
+  group: ekodi-background-browser-worker-${{ github.workflow }}-${{ github.event.workflow_run.head_sha || github.sha }}-${{ inputs.device_profile || 'desktop' }}
   cancel-in-progress: true
 
 jobs:
@@ -190,7 +193,7 @@ jobs:
           paths.forEach((p,index)=>{
             if(index>0) actions.push({type:'goto',path:p});
             actions.push({type:'snapshot'});
-            if((index===0||p.split('/').includes('board'))&&screenshots<screenshotBudget){
+            if((index===0||p==='/control'||p.split('/').includes('board'))&&screenshots<screenshotBudget){
               actions.push({type:'screenshot',name:'surface-'+shotName(p,index),fullPage:true});
               screenshots++;
             }
@@ -231,6 +234,12 @@ jobs:
           jq -e '.pageErrors | length == 0' "$result" >/dev/null
           jq -e '.httpErrorResponses | type == "array"' "$result" >/dev/null
           jq -e '.screenshots | length >= 1' "$result" >/dev/null
+          # Control must be visible and crash-free after production publication;
+          # PR smoke does not request the as-yet-unreleased Control route.
+          if jq -e '(.path == "/control" or any(.actions[]?; .type == "goto" and .path == "/control"))' artifacts/browser-task.json >/dev/null; then
+            jq -e '[.results[] | select(.type == "snapshot" and ((.url // "") | test("^https://ekodi[.]kr/control/?$"))) | select(((.bodyText // "") | contains("AI 경로 점검")) and ((.bodyText // "") | contains("보호된 배포 요청")))] | length >= 1' "$result" >/dev/null
+            echo '- Control guarded preview/release UI visible at canonical /control' >> "$GITHUB_STEP_SUMMARY"
+          fi
           echo '## EKODI Background Browser Worker' >> "$GITHUB_STEP_SUMMARY"
           jq -r '"- Result: \(.ok)\n- Final URL: \(.finalUrl)\n- Device: \(.deviceProfile) \(.viewport.width)x\(.viewport.height)\n- Headless/ephemeral: \(.headless)/\(.ephemeralContext)\n- Blocked mutations: \(.blockedMutations|length)\n- Page errors: \(.pageErrors|length)\n- HTTP 4xx/5xx responses: \(.httpErrorResponses|length)\n- Horizontal overflow snapshots: \([.results[] | select(.type == "snapshot" and .horizontalOverflow == true)] | length)\n- Screenshots: \(.screenshots|length)"' "$result" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4

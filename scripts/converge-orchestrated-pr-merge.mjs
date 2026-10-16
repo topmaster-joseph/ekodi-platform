@@ -88,6 +88,9 @@ const controlApiTouched=changedFiles.some(file=>
   // LANG-UI-001: public language status is served by api-worker.js via
   // language-automation.js. A GITHUB_TOKEN merge does not fire main push CI,
   // so this requires the same receipt-bound Control API deployment.
+  'site-publication-runtime.js',
+  'cooperative-registry.js',
+  'cooperative-locator.js',
   'language-automation.js',
   'config/language-registry.js',
   'config/managed-language-sites.js',
@@ -176,6 +179,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   // The EKODI public homepage is compiled into the shared Site Core. GITHUB_TOKEN
   // merges do not trigger main push workflows: dispatch its guarded release here.
   ['index.html','homepage-ambient.js','homepage-ambient.css'].includes(file)||
+  // Control is a first-party Site Core surface, never a separate public Shell release.
+  ['control.html','control.css','control.js'].includes(file)||
   // Shared administrator menu, canonical route registry and design contracts are production Site Core assets.
   ['admin-menu-registry.js','admin-sidebar.js','admin-canonical-routes.js','admin-menu-layout.js','admin-menu-layout.compact.js','admin-menu-runtime.js','admin-demand-loader.js','release-control-admin.js','system-health-admin.js','admin-design-engine.js','config/design-engine.json','config/admin-role-navigation.json'].includes(file)||
   file==='workspace-admin-page.js'||
@@ -251,6 +256,19 @@ const churchApiTouched=changedFiles.some(file=>
   file.startsWith('supabase/functions/church-pastor-api/')||
   file==='.github/workflows/deploy-church-pastor-api.yml'
 );
+// Core/Orchestrator execution-path changes must trigger the read-only live production E2E
+// because GITHUB_TOKEN merges do not emit ordinary main push workflow events.
+const orchestratorLiveVerificationTouched=changedFiles.some(file=>[
+  '.github/workflows/verify-ekodi-orchestrator-live-e2e.yml',
+  'ekodi-command-plane.js',
+  'ekodi-command-ledger.js',
+  'ekodi-pulse-runtime.js',
+  'ekodi-orchestrator-task-adapter.js',
+  'core-ai-gateway.js',
+  'ai-command-control.js',
+  'scripts/converge-orchestrated-pr-merge.mjs',
+].includes(file));
+
 // Signed-in Admin continuity must run after the E2E harness or dispatch wiring changes.
 const adminContinuityVerificationTouched=changedFiles.some(file=>
   file==='scripts/verify-admin-login-continuity.mjs'||
@@ -270,6 +288,17 @@ const adminContinuityVerificationTouched=changedFiles.some(file=>
   file==='scripts/converge-orchestrated-pr-merge.mjs'
 );
 async function dispatchPostMergeDeploys(){
+  if(orchestratorLiveVerificationTouched){
+    const response=await api('/actions/workflows/verify-ekodi-orchestrator-live-e2e.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main'})
+    });
+    if(!response.r.ok)fail('Orchestrator live production E2E dispatch failed '+response.r.status);
+    console.log(JSON.stringify({ok:true,action:'orchestrator-live-e2e-dispatched',
+      workflow:'verify-ekodi-orchestrator-live-e2e.yml',pr:pr.number,
+      taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+
   if(adminContinuityVerificationTouched){
     const response=await api('/actions/workflows/verify-admin-authenticated-production-e2e.yml/dispatches',{
       method:'POST',

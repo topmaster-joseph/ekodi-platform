@@ -27,6 +27,12 @@ async function appendOutputSources(targetAsset, sourceSpecs, { targetMarker = ''
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await Promise.all(assets.map(asset => cp(`${root}${asset}`, `${output}${asset}`)));
+// CGMA survey remains a tenant-owned, anonymous static entrypoint (no write API).
+await mkdir(`${output}cgma/ai-education/`,{recursive:true});
+await Promise.all([
+  cp(`${root}prototypes/cgma-ai-education-survey.html`,`${output}cgma/ai-education/index.html`),
+  cp(`${root}prototypes/cgma-ai-education-survey.js`,`${output}cgma/ai-education/app.js`),
+]);
 await Promise.all([
   cp(`${root}pizzamaru-mokpodae.html`, `${output}pizzamaru-mokpodae.html`),
   cp(`${root}pizzamaru-mokpodae.css`, `${output}pizzamaru-mokpodae.css`),

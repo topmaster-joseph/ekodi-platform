@@ -49,13 +49,20 @@
 </style>
 <link rel="stylesheet" href="./central-category-menu.css">
 <link rel="stylesheet" href="/seonammedi/shared-site-header.css">
-<script src="/seonammedi/board-central-category.js?v=20261015-photo-shell-1" defer></script>
+<script src="/seonammedi/board/ui/central-category.js?v=20261016-home-photo-worker-1" defer></script>
 <link rel="stylesheet" href="/seonammedi/home-public-feed.css?v=20261015-2">
+
+<style id="ekodi-remove-duplicate-middle-menu">
+/* The header is the sole primary navigation; preserve the social preview. */
+#central-category-panel:has(#central-category-buttons):not(:has(#central-social-links:not([hidden]))){display:none!important}
+#central-category-title,#central-category-buttons{display:none!important}
+#central-category-panel:has(#central-social-links:not([hidden])){padding:0!important;border:0!important;background:transparent!important}
+</style>
 </head>
 <body>
 <header class="site-header">
   <a class="brand" href="./"><strong>서남권 국립의대 소통센터</strong><small>서남권 의대 설립 비상대책위원회 관련 공개 기록·소통 채널</small></a>
-  <nav class="ekodi-six-nav" aria-label="주요 메뉴"><a href="board/notices" >공지</a><a href="#committee-activity" data-view-link="committee">활동이력</a><a href="#timeline" data-view-link="status">관련소식</a><a href="#channels" data-view-link="channels">소통채널</a><a href="board/voices">시민의견</a><a href="#organization" data-view-link="organization">조직</a></nav>
+  <nav class="ekodi-six-nav" aria-label="주요 메뉴"><a href="board/notices" >공지</a><a href="#committee-activity" data-view-link="committee">활동이력</a><a href="#timeline" data-view-link="status">관련소식</a><a href="#channels" data-view-link="channels">소통채널</a><a href="board/voices?compose=1&choose_account=1">시민의견</a><a href="#organization" data-view-link="organization">조직</a></nav>
 
 
 </header>

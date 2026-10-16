@@ -7,6 +7,14 @@
   Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src data:; script-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; object-src 'none'
   Cache-Control: public, max-age=300, s-maxage=86400, stale-while-revalidate=604800
 
+/cgma/ai-education/*
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'
+  ! Cache-Control
+  Cache-Control: no-store
+  X-EKODI-Route: cgma-ai-education-survey
+  X-Robots-Tag: noindex, nofollow
+
 /ops/health.json
   ! Cache-Control
   Cache-Control: no-store
