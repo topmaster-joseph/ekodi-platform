@@ -1,8 +1,10 @@
 import {createVoiceController,consumeComposeIntent,SESSION_KEY} from './citizen-controller.mjs';
+import {exchangeGoogleReturn,refreshGoogleSession} from './google-handoff.mjs';
 const $=id=>document.getElementById(id);
 const editor=$('editor'),message=$('message'),status=$('status'),posts=$('posts'),write=$('write');
 const storage={getItem:key=>{try{return localStorage.getItem(key)||sessionStorage.getItem(key)}catch{return null}}};
-const controller=await createVoiceController({href:location.href,storage});
+const stores={local:localStorage,session:sessionStorage};
+const controller=await createVoiceController({href:location.href,storage,exchange:()=>exchangeGoogleReturn({href:location.href,storage:stores,replace:path=>history.replaceState(null,'',path)}),refresh:()=>refreshGoogleSession({storage:stores})});
 let adminAllowed=false;
 const report=text=>{status.textContent=text};
 function render(items){
