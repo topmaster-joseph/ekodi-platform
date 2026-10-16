@@ -76,7 +76,7 @@
     if (logout) logout.hidden = !signed;
     if (reload) reload.disabled = !signed;
   }
-  login?.addEventListener('click', () => { location.href = 'https://auth.ekodi.kr/?site=mall-seller&returnTo=https%3A%2F%2Fmall.ekodi.kr%2Ffulfillment'; });
+  login?.addEventListener('click', () => { const auth=new URL('https://ekodi.kr/auth/'); auth.searchParams.set('site','mall-seller'); auth.searchParams.set('return_to',location.href.split('#')[0]); location.assign(auth.href); });
   logout?.addEventListener('click', async () => { await sb.auth.signOut(); session = null; syncSessionUi(); render([]); setStatus('로그아웃했습니다.'); });
   reload?.addEventListener('click', () => load().catch((error) => setStatus(error.message, true)));
 
