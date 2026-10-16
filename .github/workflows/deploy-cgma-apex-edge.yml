@@ -30,7 +30,7 @@ concurrency:
 env:
   WRANGLER_VERSION: '4.119.0'
   CGMA_SOURCE_REPO: topmaster-joseph/cheonggye-market
-  CGMA_SOURCE_REF: 'cf628097606d06325f425ea04fbf8b5ae0b1448f'
+  CGMA_SOURCE_REF: '8ae2b47d8f9f6f943f30fac1df0eb68b9657fe6b'
   EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
   EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
 
@@ -135,6 +135,13 @@ jobs:
           # Confirm the tenant-owned survey assets exist before promoting the apex gateway.
           check_upstream 'https://cheonggye-market.pages.dev/ai-education/' '우리 가게에 필요한 AI 교육을 찾아보세요'
           check_upstream 'https://cheonggye-market.pages.dev/ai-education/app.js' 'const questions = ['
+          check_upstream 'https://cheonggye-market.pages.dev/ai-education/questions.mjs' 'export const SURVEY_QUESTIONS'
+          check_upstream 'https://cheonggye-market.pages.dev/ai-education/report/' 'AI 교육 수요조사 통계'
+          check_upstream 'https://cheonggye-market.pages.dev/admin' 'educationSurveyManager'
+          # Read-only proof that tenant D1 is reachable and an invalid public share is rejected.
+          d1_code=$(curl -sS --max-time 20 -o /tmp/cgma.ai.share.preflight -w '%{http_code}' 'https://cheonggye-market.pages.dev/api/ai-education-share?token=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || true)
+          test "$d1_code" = '404'
+          grep -Fq 'share_expired_or_revoked' /tmp/cgma.ai.share.preflight
       - name: Deploy route-less CGMA board service before edge delegation
         shell: bash
         run: |
@@ -269,6 +276,18 @@ jobs:
           check_cgma '/cgma/api/resources' '"items"' 'cgma-root-gateway'
           check_cgma '/cgma/ai-education/' '우리 가게에 필요한 AI 교육을 찾아보세요' 'cgma-ai-education-survey'
           check_cgma '/cgma/ai-education/app.js' 'const questions = [' 'cgma-ai-education-survey'
+          check_cgma '/cgma/ai-education/questions.mjs' 'export const SURVEY_QUESTIONS' 'cgma-ai-education-survey'
+          check_cgma '/cgma/ai-education/report/' 'AI 교육 수요조사 통계' 'cgma-ai-education-survey'
+          check_cgma '/cgma/ai-education/report/app.js' 'stats.sections' 'cgma-ai-education-survey'
+          # Read-only privacy and D1 proof; no artificial production survey responses.
+          survey_stats_code=$(curl -sS --max-time 20 -D /tmp/cgma.ai.stats.headers -o /tmp/cgma.ai.stats.body -w '%{http_code}' "https://ekodi.kr/cgma/ai-education/api/stats?edge_release=${GITHUB_SHA}" || true)
+          test "$survey_stats_code" = '401'
+          grep -Fq 'login_required' /tmp/cgma.ai.stats.body
+          grep -Fiq 'x-ekodi-route: cgma-ai-education-api' /tmp/cgma.ai.stats.headers
+          survey_share_code=$(curl -sS --max-time 20 -D /tmp/cgma.ai.share.headers -o /tmp/cgma.ai.share.body -w '%{http_code}' "https://ekodi.kr/cgma/ai-education/api/share?token=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&edge_release=${GITHUB_SHA}" || true)
+          test "$survey_share_code" = '404'
+          grep -Fq 'share_expired_or_revoked' /tmp/cgma.ai.share.body
+          grep -Fiq 'x-ekodi-route: cgma-ai-education-api' /tmp/cgma.ai.share.headers
           check_cgma '/cgma/admin/member' 'EKODI Workspace Admin' 'workspace-admin'
           check_cgma '/cgma/admin/publishing' 'EKODI Workspace Admin' 'workspace-admin'
           check_board '/cgma/board'

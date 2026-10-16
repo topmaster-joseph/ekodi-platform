@@ -101,6 +101,19 @@ try {
           try{if(noticeLink?.href)resolvedNoticePath=new URL(noticeLink.href,target).pathname.replace(/[/]$/,'')}catch{}
           record.directNoticePath=resolvedNoticePath;
           if(publicSurface&&resolvedNoticePath!==expectedNoticePath)violations.push('notice_direct_path_mismatch');
+          // Citizen Voice is an intentional Google-auth navigation, not an in-page category.
+          // Check its exact destination here; the voice route audit below tests actual login.
+          const voiceLink=record.top.find(x=>x.label==='시민의견');
+          let voiceLinkMatches=false;
+          try{
+            const u=new URL(voiceLink?.href||'',target);
+            voiceLinkMatches=u.origin===root.origin &&
+              u.pathname.replace(/[/]$/,'')===root.prefix+'/board/voices' &&
+              u.searchParams.get('compose')==='1' &&
+              u.searchParams.get('choose_account')==='1';
+          }catch{}
+          record.citizenVoiceLinkMatches=voiceLinkMatches;
+          if(publicSurface&&!voiceLinkMatches)violations.push('citizen_voice_chooser_destination_mismatch');
           if(publicSurface&&record.centralCategory.noticeTrigger)violations.push('notice_category_click_interception');
           const socialGroup=record.groups.find(x=>x.parent==='소통채널');
           const centralValid=record.centralCategory.present&&record.centralCategory.initiallyHidden;
@@ -115,7 +128,8 @@ try {
               {label:'활동이력',selector:'a[data-view-link="committee"]'},
               {label:'관련소식',selector:'a[data-view-link="status"]'},
               {label:'소통채널',selector:'a[data-view-link="channels"]'},
-              {label:'시민의견',selector:'a[href*="board/voices"]'},
+              // Do not click 시민의견 here: it deliberately navigates to Google auth.
+              // The board/voices guest case validates that redirect and return_to.
               {label:'조직',selector:'a[data-view-link="organization"]'}
             ];
             const expectedPath=root.prefix+'/board/notices';
@@ -280,24 +294,13 @@ try {
               }catch(error){violations.push('guest_write_login_click_failed: '+String(error.message||error).slice(0,160))}
               finally{page.off('framenavigated',observe);page.off('request',observeAuthRequest)}
             }
-            // Test the distinct administrator intent without credentials, POST or mutation.
-            const manageNavigations=[];
-            const onManageNav=frame=>{if(frame===page.mainFrame())manageNavigations.push(frame.url())};
-            try{
-              await page.goto(target,{waitUntil:'domcontentloaded',timeout:25000});
-              page.on('framenavigated',onManageNav);
-              await page.locator('#voiceAdminLogin').click({timeout:6000});
-              // Include the final location in addition to observed navigation events.
-              manageNavigations.push(page.url());
-              await pause(2200);
-              const expectedManage=root.origin+root.prefix+'/board/voices?manage=1';
-              record.manageReturnMatches=manageNavigations.some(url=>{
-                try{const u=new URL(url);return u.origin==='https://ekodi.kr'&&u.pathname==='/auth/'&&
-                  u.searchParams.get('site')==='seonammedi'&&u.searchParams.get('return_to')===expectedManage}catch{return false}
-              });
-              if(!record.manageReturnMatches)violations.push('guest_manage_original_return_lost');
-            }catch(error){violations.push('guest_manage_login_click_failed: '+String(error.message||error).slice(0,160))}
-            finally{page.off('framenavigated',onManageNav)}
+            // Citizens and administrators use the same identity flow.
+            // The separate guest administrator API check above still requires 401/403.
+            await page.goto(target,{waitUntil:'domcontentloaded',timeout:25000});
+            record.singleLoginControl=(await page.locator('#voiceAdminLogin').count())===0 &&
+              (await page.locator('#voiceManageToggle').count())===0 &&
+              (await page.locator('#writeToggle').count())===1;
+            if(!record.singleLoginControl)violations.push('duplicate_voice_login_or_manage_control');
           }
           record.violations=violations;
           if(violations.length)throw Error(violations.join('; '));

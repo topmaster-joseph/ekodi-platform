@@ -22,7 +22,7 @@ test('six-menu home loads the same read-only visual shell as independent boards'
     assert.ok(ui.includes("label:'"+label+"'"),label);
   assert.match(ui,/location\.pathname\.startsWith\('\/seonammedi\/'\)/);
   assert.match(ui,/base\+'board\/notices'/);
-  assert.match(ui,/base\+'board\/voices'/);
+  assert.match(ui,/base\+'board\/voices\?compose=1&choose_account=1'/);
   assert.match(ui,/base\+'#committee-activity'/);
   assert.match(ui,/base\+'#organization'/);
 });
@@ -42,7 +42,9 @@ test('central content is moved without replacing forms or mutation handlers',()=
   assert.match(ui,/header\.insertAdjacentElement\('afterend',preservedCampaign\)/);
   assert.match(css,/body\.seonam-visual-ready>\.campaign-hero \.campaign-hero-image/);
   assert.match(css,/body\[data-seonammedi-image-mode="inner"\]\.seonam-visual-ready>\.campaign-hero/);
-  assert.match(ui,/fetch\(base\+'board\/api\/notices',\{method:'GET',cache:'no-store'\}\)/);
+  assert.match(ui,/calendar-sidebar\.js/);
+  assert.match(ui,/SeonamMediCalendar\?\.mount/);
+  assert.doesNotMatch(ui,/fetch\(base\+'board\/api\/notices'/);
   assert.doesNotMatch(ui,/fetch\([^)]*\{method:'(?:POST|PUT|DELETE)'/);
   assert.match(worker,/function noticesPage\(req\)/);
   assert.match(worker,/function boardPage\(req\)/);

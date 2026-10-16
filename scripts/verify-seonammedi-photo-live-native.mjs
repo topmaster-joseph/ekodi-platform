@@ -60,7 +60,7 @@ async function inspect(page,where){
       rightWidth:right?.getBoundingClientRect().width||0,
       width:document.documentElement.clientWidth,
       scrollWidth:document.documentElement.scrollWidth,
-      noticeWidget:!!right?.querySelector('.seonam-visual-recent-notices'),
+      calendarWidget:!!right?.querySelector('.seonam-calendar-grid'),
       publicLinks:[...document.querySelectorAll('.site-header .ekodi-six-nav a')].map(a=>a.textContent.trim())
     };
   });
@@ -74,7 +74,7 @@ async function inspect(page,where){
   required(JSON.stringify(state.sideLabels)===JSON.stringify(labels),'six_side_menu_labels_mismatch_'+where);
   required(state.headerSticky,'site_header_not_sticky_'+where);
   required(state.leftWidth>0&&state.centerWidth>0&&state.rightWidth>0,'layout_region_missing_'+where);
-  required(state.noticeWidget,'live_notice_panel_missing_'+where);
+  required(state.calendarWidget,'live_schedule_calendar_missing_'+where);
   required(state.scrollWidth<=state.width+1,'horizontal_overflow_'+where);
   return state;
 }

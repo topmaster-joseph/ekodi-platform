@@ -23,18 +23,22 @@ test('native guest audit requires a direct Notice link and rejects stale categor
   assert.ok(!runtime.includes('"공지":'));
   assert.ok(!board.includes("'공지':['"));
   assert.ok(board.includes("{key:'notices',label:'공지',href:base+'board/notices'}"));
-  assert.ok(board.includes("link('공지사항',base+'board/notices')"),'right-side public notice shortcut must remain direct');
-  assert.ok(board.includes("link('전체 공지 보기 →',base+'board/notices')"),'all-notices card must go to board directly');
+  assert.ok(board.includes("{key:'notices',label:'공지',href:base+'board/notices'}"),'notice remains a direct menu route');
+  assert.ok(board.includes("window.SeonamMediCalendar?.mount"),'sidebar now renders calendar and date detail rather than unrelated shortcuts');
 });
 
-test('native browser still checks Notice after all other menus on both origins and mobile/desktop',async()=>{
+test('native browser checks Notice after in-page menus and audits citizen Google chooser separately',async()=>{
   const audit=await read('scripts/verify-seonammedi-nav-guest-native.mjs');
-  for(const label of ['활동이력','관련소식','소통채널','시민의견','조직'])
+  for(const label of ['활동이력','관련소식','소통채널','조직'])
     assert.ok(audit.includes("label:'"+label+"'"),'missing source menu '+label);
   for(const origin of ['https://seonammedi.kr','https://ekodi.kr'])
     assert.ok(audit.includes(origin),'missing canonical origin '+origin);
   assert.ok(audit.includes("name:'desktop'")&&audit.includes("name:'mobile'"));
   assert.ok(audit.includes('record.noticeAfterCategory'));
+  assert.ok(audit.includes('record.citizenVoiceLinkMatches'));
+  assert.ok(audit.includes('citizen_voice_chooser_destination_mismatch'));
+  assert.ok(audit.includes('composeReturnMatches'));
+  assert.doesNotMatch(audit,/\{label:'시민의견',selector:'a\[href\*="board\/voices"\]'\}/);
   assert.ok(audit.includes("await page.waitForURL"));
   assert.ok(audit.includes("readOnly:true"));
   assert.ok(audit.includes("guest_write_did_not_open_canonical_login"));
