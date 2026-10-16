@@ -161,3 +161,21 @@ test('operator cannot reconcile an unapproved provider method as paid',async()=>
   assert.equal((await store.storage.get('order')).status,'ready');
  }finally{globalThis.fetch=prior}
 });
+
+test('public setup page exposes actionable onboarding without accepting keys or enabling a charge',async()=>{
+ const {env}=harness(false);
+ const response=await endpoint('/setup',env);
+ assert.equal(response.status,200);
+ const html=await response.text();
+ for(const needle of ['실제 결제 운영 준비','가맹점 계약','Cloudflare','청구 비활성화','환불','실결제 준비']){
+   assert.ok(html.includes(needle),needle);
+ }
+ assert.equal(response.headers.get('cache-control'),'no-store');
+ assert.match(response.headers.get('content-security-policy')||'',/default-src 'none'/);
+ assert.doesNotMatch(html,/test_sk_our_dummy_secret|SECURE-SERVER-SERVICE-KEY/);
+ assert.doesNotMatch(html,/<form\b|type="password"|<input\b/i);
+ let res=await endpoint('/setup',env,{method:'POST',body:'approved=true'});
+ assert.equal(res.status,405);
+ res=await endpoint('/api/payment-readiness',env);
+ assert.equal((await res.json()).ready,false);
+});
