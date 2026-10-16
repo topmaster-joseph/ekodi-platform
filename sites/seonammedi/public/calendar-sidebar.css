@@ -5,7 +5,7 @@
 .seonam-calendar-heading h2,.seonam-calendar-detail-heading h2{margin:0!important}
 .seonam-calendar-add{appearance:none;border:1px solid #234e85;background:#234e85;color:#fff;border-radius:7px;padding:6px 8px;font-size:12px;font-weight:700;cursor:pointer}
 .seonam-calendar-nav{display:flex;align-items:center;gap:5px;margin:15px 0 11px}
-.seonam-calendar-nav strong{flex:1;text-align:center;font-size:14px;color:#14283b;white-space:nowrap}
+.seonam-calendar-nav strong{flex:1;text-align:left;font-size:14px;color:#14283b;white-space:nowrap}
 .seonam-calendar-arrow,.seonam-calendar-today{appearance:none;background:#fff;border:1px solid #d7e0eb;border-radius:6px;color:#244b71;font-weight:700;min-height:29px;min-width:30px;padding:2px 6px;cursor:pointer}
 .seonam-calendar-today{font-size:12px}
 .seonam-calendar-week,.seonam-calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px}
@@ -49,3 +49,6 @@
 .seonam-calendar-today-event strong{display:block;font-size:12px;line-height:1.5;color:#182e45}
 .seonam-calendar-today-event small{display:block;margin-top:3px;font-size:11px;color:#4b6380}
 .seonam-calendar-today-event p{margin:5px 0 0;font-size:12px;line-height:1.5;white-space:pre-wrap;color:#35485c;overflow-wrap:anywhere}
+
+.seonam-calendar-nav .seonam-calendar-today{min-width:44px;text-align:center}
+.seonam-calendar-nav .seonam-calendar-month{margin-right:auto}
