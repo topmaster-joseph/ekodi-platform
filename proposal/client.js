@@ -2,7 +2,7 @@ import {PROPOSAL_DOMAINS,PROPOSAL_GOALS,createProposalDraft,selectedStages,revie
 const byId=id=>document.getElementById(id);
 let project=null;
 let sources=[];
-const LABEL={text:'텍스트 확인 가능',unsupported:'내용 분석 미지원',tooLarge:'허용 용량 초과'};
+const LABEL={text:'텍스트 미리보기',url:'웹주소 · 미검증',unsupported:'내용 분석 미지원',tooLarge:'허용 용량 초과'};
 function status(message){byId('status').textContent=message;}
 function make(tag,content,className){
   const element=document.createElement(tag);
@@ -45,6 +45,29 @@ async function addSources(files){
   renderSourceList();status('자료 '+sources.length+'건을 브라우저에서 분류했습니다. 실제 근거 확인과 문서 변환은 수행하지 않았습니다.');
 }
 byId('sourceInput').addEventListener('change',event=>{addSources(event.target.files).catch(()=>status('첨부 자료를 읽지 못했습니다.'));event.target.value='';});
+function addReferenceUrl(){
+  const element=byId('sourceUrlInput');
+  const raw=element.value.trim();
+  if(!raw)return status('등록할 참고자료 웹주소를 입력하세요.');
+  if(raw.length>1200)return status('참고자료 주소는 1,200자 이하만 등록할 수 있습니다.');
+  let parsed;
+  try{parsed=new URL(raw);}catch{return status('올바른 웹주소를 입력하세요.');}
+  if(parsed.protocol!=='https:'||!parsed.hostname||parsed.username||parsed.password){
+    return status('개인정보 보호를 위해 사용자정보 없는 HTTPS 주소만 등록할 수 있습니다.');
+  }
+  if(sources.length>=20)return status('프로젝트당 자료는 최대 20개까지만 등록할 수 있습니다.');
+  const safe=parsed.toString();
+  if(sources.some(item=>item.name===safe))return status('이미 등록한 웹주소입니다.');
+  sources.push({name:safe,kind:'url',excerpt:''});
+  element.value='';
+  renderSourceList();
+  status('웹주소를 참고 목록에 추가했습니다. 링크에 접근하거나 검증하지 않았습니다.');
+}
+byId('addUrlBtn').addEventListener('click',addReferenceUrl);
+byId('sourceUrlInput').addEventListener('keydown',event=>{
+  if(event.key==='Enter'){event.preventDefault();addReferenceUrl();}
+});
+
 function snapshot(){
   if(!project)return null;
   project.title=byId('titleInput').value.trim().slice(0,160)||project.title;
@@ -89,8 +112,14 @@ function draw(){
 }
 byId('generateBtn').addEventListener('click',()=>{
   try{
-    const title=byId('titleInput').value,idea=byId('ideaInput').value;
-    project=createProposalDraft({title,idea,domain:byId('domainInput').value,goal:byId('goalInput').value,sourceNames:sources.map(s=>s.name)});
+    const inputTitle=byId('titleInput').value.trim();
+    const inputIdea=byId('ideaInput').value.trim();
+    // A source-only project is allowed, but source contents are never treated as verified facts.
+    const firstSource=sources[0]?.name||'';
+    const sourceTitle=firstSource.replace(/^https:\/\//,'').split('/').filter(Boolean).pop()?.replace(/\.(?:txt|md|csv|json|pdf|hwpx|docx|xlsx|pptx)$/i,'')||'참고자료 기반 제안서';
+    const title=inputTitle||(!inputIdea&&firstSource?sourceTitle:'');
+    project=createProposalDraft({title,idea:inputIdea,domain:byId('domainInput').value,goal:byId('goalInput').value,sourceNames:sources.map(s=>s.name)});
+    if(!inputTitle&&title)byId('titleInput').value=project.title;
     project.sources.forEach((row,index)=>{row.excerpt=sources[index]?.excerpt||'';row.readStatus=sources[index]?.kind||'unsupported';});
     draw();byId('editor').scrollIntoView({behavior:'smooth',block:'start'});
   }catch(error){status(error.message);}
@@ -133,7 +162,7 @@ byId('importInput').addEventListener('change',async event=>{
     byId('ideaInput').value=project.idea||'';
     byId('domainInput').value=PROPOSAL_DOMAINS.some(item=>item.id===project.domain)?project.domain:'auto';
     byId('goalInput').value=PROPOSAL_GOALS.some(item=>item.id===project.goal)?project.goal:'proposal';
-    sources=(project.sources||[]).slice(0,20).map(item=>({name:String(item.name||'자료').slice(0,240),kind:'unsupported',excerpt:''}));
+    sources=(project.sources||[]).slice(0,20).map(item=>({name:String(item.name||'자료').slice(0,1200),kind:/^https:\/\//.test(String(item.name||''))?'url':'unsupported',excerpt:''}));
     renderSourceList();draw();status('백업 프로젝트를 복구했습니다. 원본 파일 내용은 다시 첨부해야 합니다.');
   }catch(error){status('프로젝트 가져오기 실패: '+error.message);}
 });
