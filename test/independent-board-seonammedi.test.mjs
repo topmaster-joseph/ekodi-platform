@@ -159,8 +159,10 @@ test('independent board deployment provisions its own storage and verifies real 
   assert.match(workflow,/commits\/\$GITHUB_SHA\/pulls/);
   assert.match(workflow,/Requested release task does not match orchestrator branch/);
   assert.match(workflow,/Production queue-create-list-reply canary and cleanup/);
-  assert.match(workflow,/DELETE FROM board_replies WHERE post_id=\$post_id/);
-  assert.match(workflow,/DELETE FROM board_posts WHERE id=\$post_id/);
+  assert.match(workflow,/INSERT INTO board_canary_cleanup_tombstones\(marker,post_id\)/);
+  assert.match(workflow,/DELETE FROM board_replies WHERE post_id IN \(SELECT id FROM board_posts WHERE body=/);
+  assert.match(workflow,/DELETE FROM board_posts WHERE body=/);
+  assert.doesNotMatch(workflow,/DELETE FROM board_posts WHERE id=\$post_id/);
 });
 
 test('board schema keeps private contact out of the public read model',async()=>{
