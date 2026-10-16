@@ -1,0 +1,42 @@
+name: EKODI Control Native Jitter Diagnostic
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/verify-control-jitter-native.mjs'
+      - '.github/workflows/verify-control-jitter-native.yml'
+      - 'control.css'
+      - 'control.html'
+      - 'control.js'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-control-native-jitter-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  chromium-geometry:
+    name: Independent desktop/mobile geometry (read-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - name: Measure production /control idle and local-only draft input
+        run: node scripts/verify-control-jitter-native.mjs
+      - name: Upload anonymous motion and geometry evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: control-native-jitter-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/control-jitter
+          retention-days: 7
+          if-no-files-found: warn
