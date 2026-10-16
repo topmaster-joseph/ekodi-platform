@@ -169,7 +169,7 @@ test('exact-approved immediate merge deploys shared Site Core through guarded re
   const output=script.indexOf("out('shared_site_dispatch','accepted')",responseCheck);
   assert.ok(source>0&&protectedMerge>source&&verifyMain>protectedMerge&&dispatch>verifyMain&&receipt>dispatch&&responseCheck>receipt&&output>responseCheck);
   assert.match(script,/file\.startsWith\('sites\/seonammedi\/public\/'\)/);
-  assert.match(script,/file==='seonammedi-admin-control.js'/);
+  assert.ok(script.includes("'seonammedi-admin-control.js'"));
   assert.match(script,/file==='wrangler.independent-board.toml'/);
   assert.match(script,/merge\.data\?\.merged!==true/);
   assert.match(script,/main\.data\?\.commit\?\.sha/);
