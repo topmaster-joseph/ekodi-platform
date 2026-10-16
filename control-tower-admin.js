@@ -79,7 +79,12 @@
     });
     if (!response.ok) throw new Error(`GitHub Actions ${response.status}`);
     const data = await response.json();
-    return (data.workflow_runs || []).filter(run => RELEASE_WORKFLOWS.has(String(run.path || '').split('/').pop())).slice(0, 30);
+    const all = Array.isArray(data.workflow_runs) ? data.workflow_runs.slice(0,40) : [];
+    return {
+      releases: all.filter(run => RELEASE_WORKFLOWS.has(String(run.path || '').split('/').pop())).slice(0,30),
+      all,
+      reportedTotal: Number.isFinite(Number(data.total_count)) ? Number(data.total_count) : null,
+    };
   }
   function summarize(overview, runs) {
     const services = serviceList(overview);
@@ -93,6 +98,18 @@
     const failed = runs.filter(run => run.status === 'completed' && run.conclusion && run.conclusion !== 'success' && run.conclusion !== 'skipped').length;
     const authData = classifyServices(services,['auth','api','d1','database','supabase','storage']);
     return { services, operational, ok, warn, bad, running, queued, failed, authData };
+  }
+  function githubRunSnapshot(payload) {
+    if (!payload) return {available:false, sampled:0, reportedTotal:null, failed:0, active:0, skipped:0};
+    const items = Array.isArray(payload.all) ? payload.all : [];
+    return {
+      available:true,
+      sampled:items.length,
+      reportedTotal:payload.reportedTotal ?? null,
+      failed:items.filter(run => run.status === 'completed' && ['failure','timed_out','cancelled','action_required','startup_failure'].includes(run.conclusion)).length,
+      active:items.filter(run => ['in_progress','queued','requested','waiting','pending'].includes(run.status)).length,
+      skipped:items.filter(run => run.status === 'completed' && run.conclusion === 'skipped').length,
+    };
   }
   function navigate(section) {
     if (window.EKODIAdminPanels?.activate) {
@@ -278,8 +295,25 @@
       linkCard('장애·보안 이벤트','오류·경고·보안 사건과 자동조치 이력을 확인합니다.','aiops','사건 원장')
     );
   }
-  function renderCost(panel) {
+  function renderCost(panel, github) {
     panel.replaceChildren();
+    const block=el('div','','ct-block');
+    block.append(el('div','GitHub Actions 최근 실행 현황','ct-block-title'));
+    if (!github?.available) {
+      block.append(el('div','GitHub 실행 기록을 확인할 수 없습니다. 정상 또는 실패 0건으로 판단하지 않습니다.','ct-empty'));
+    } else {
+      const cards=el('div','','ct-inline-summary');
+      cards.append(
+        metric('최근 표본',github.sampled,'최대 40건','muted'),
+        metric('진행·대기',github.active,'실행 상태',github.active ? 'warn':'muted'),
+        metric('실패·취소',github.failed,'최근 표본',github.failed ? 'bad':'ok')
+      );
+      block.append(cards,el('div','이 수치는 최근 실행 기록의 표본입니다. 청구 요금·Runner 사용 시간·월간 전체 사용량이 아닙니다.','ct-empty'));
+    }
+    const open=el('button','GitHub Actions 실행 기록 열기 →','ct-more');
+    open.type='button';
+    open.addEventListener('click',()=>window.open('https://github.com/'+REPOSITORY+'/actions','_blank','noopener'));
+    block.append(open);
     const cards=el('div','','ct-link-grid');
     cards.append(
       linkCard('사용량·비용','API·AI Provider와 운영 사용량을 확인합니다.','api-cost','비용 관제'),
@@ -287,11 +321,11 @@
       linkCard('보관함·저장소','저장소 정책과 연결 상태를 확인합니다.','storage','저장'),
       linkCard('플랫폼 성숙도','운영·보안·복구·품질 기준의 증거를 확인합니다.','maturity','가드레일')
     );
-    panel.append(cards);
+    panel.append(block,cards);
   }
-  function render(tower, overview, runs) {
+  function render(tower, overview, runs, github) {
     const summary = summarize(overview,runs);
-    snapshot = { overview,runs,summary };
+    snapshot = { overview,runs,summary,github };
     renderDock(summary);
     renderStatusbar(tower,summary);
     renderSummary(tower.querySelector('[data-ct-panel="summary"]'),summary);
@@ -299,7 +333,7 @@
     renderServices(tower.querySelector('[data-ct-panel="services"]'),summary);
     renderData(tower.querySelector('[data-ct-panel="data"]'),summary);
     renderTraffic(tower.querySelector('[data-ct-panel="traffic"]'));
-    renderCost(tower.querySelector('[data-ct-panel="cost"]'));
+    renderCost(tower.querySelector('[data-ct-panel="cost"]'),github);
     tower.querySelector('[data-ct-updated]').textContent = `최근 확인 ${new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}`;
   }
   function setMode(sectionId = window.EKODIAdminPanels?.current?.() || '') {
@@ -315,11 +349,13 @@
     if (refresh) refresh.disabled = true;
     loadPromise = Promise.allSettled([getOverview(),getRuns()]).then(results => {
       const overview = results[0].status === 'fulfilled' ? results[0].value : {};
-      const runs = results[1].status === 'fulfilled' ? results[1].value : [];
+      const payload = results[1].status === 'fulfilled' ? results[1].value : null;
+      const runs = payload?.releases || [];
+      const github = githubRunSnapshot(payload);
       const summary = summarize(overview,runs);
-      snapshot = { overview,runs,summary };
+      snapshot = { overview,runs,summary,github };
       renderDock(summary);
-      if (tower) render(tower,overview,runs);
+      if (tower) render(tower,overview,runs,github);
       const errors = results.filter(item => item.status === 'rejected').map(item => item.reason?.message).filter(Boolean);
       if (tower && errors.length) tower.querySelector('[data-ct-updated]').textContent = `일부 원본 확인 필요 · ${errors.join(' · ')}`;
       return snapshot;
