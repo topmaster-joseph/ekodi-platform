@@ -20,7 +20,7 @@ function render(items){
       edit.addEventListener('click',async()=>{
         const proposed=prompt('수정할 의견을 입력해 주세요.',String(item.message||''));
         if(proposed===null||!proposed.trim())return;
-        try{await controller.admin.update(Number(item.id),proposed);report('수정했습니다.');await load();}
+        try{await controller.admin.update(item,proposed);report('수정했습니다.');await load();}
         catch{report('수정 권한 또는 저장 상태를 확인하지 못했습니다.');}
       });
       remove.addEventListener('click',async()=>{
