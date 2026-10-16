@@ -61,8 +61,12 @@ export function reconcileMerchantSettlements({
    matched.length===pgSettlements.length;
  // A PG payout schedule is not evidence of a bank credit. Accept a separate
  // authenticated bank-statement attestation for the same merchant and HMAC account.
- const bankDepositVerified=pgReconciled&&bankEvidence?.source==='authenticated_bank_statement'&&
+ const bankDepositVerified=pgReconciled&&matched.length>0&&
+   bankEvidence?.source==='authenticated_bank_statement'&&
    bankEvidence?.verified===true&&bankEvidence?.merchantId===merchantId&&
+   bankEvidence?.creditDirection==='CREDIT'&&
+   typeof bankEvidence?.statementTransactionRef==='string'&&
+   /^[A-Z0-9_-]{8,100}$/.test(bankEvidence.statementTransactionRef)&&
    /^[a-f0-9]{64}$/i.test(expectedAccountFingerprint)&&
    bankEvidence?.accountFingerprint===expectedAccountFingerprint&&
    bankEvidence?.currency==='KRW'&&bankEvidence?.amount===providerPayout&&
