@@ -24,7 +24,7 @@ test('voice UI keeps free reading and sharing but sends bearer token on both wri
   const page=await board.fetch(new Request('https://seonammedi.kr/board/voices'),{});
   assert.equal(page.status,200);
   const html=await page.text();
-  assert.match(html,/누구나 열람·공유할 수 있으며, 시민의견과 답글은 Google 로그인 후 작성/);
+  assert.match(html,/누구나 읽고 공유할 수 있습니다\. Google 로그인 후 간단히 의견을 작성하세요/);
   assert.doesNotMatch(html,/누구나 로그인 없이 등록하고 답글/);
   assert.match(html,/async function verifyVoiceAccount\(allowRefresh=true\)/);
   assert.match(html,/\/board\/api\/auth\/session/);

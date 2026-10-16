@@ -5,16 +5,14 @@ import {readFileSync} from 'node:fs';
 const verifier=readFileSync(new URL('../scripts/verify-seonammedi-nav-guest-native.mjs',import.meta.url),'utf8');
 const workflow=readFileSync(new URL('../.github/workflows/verify-seonammedi-nav-guest-native.yml',import.meta.url),'utf8');
 
-test('native Chromium guest audit confirms original compose and admin return intent',()=>{
+test('native Chromium guest audit confirms compose return and single identity flow',()=>{
   for(const marker of [
     "root.origin+root.prefix+'/board/voices?compose=1'",
-    "root.origin+root.prefix+'/board/voices?manage=1'",
     "record.composeReturnMatches",
-    "record.manageReturnMatches",
+    "record.singleLoginControl",
     "guest_compose_original_return_lost",
-    "guest_manage_original_return_lost",
+    "duplicate_voice_login_or_manage_control",
     "u.searchParams.get('return_to')===expectedReturn",
-    "u.searchParams.get('return_to')===expectedManage",
     "u.searchParams.get('site')==='seonammedi'",
     "root.name+'-'+device.name",
   ])assert.ok(verifier.includes(marker),marker);

@@ -38,10 +38,10 @@ test('top-level citizen voices enters one-shot Google compose flow without login
   ]);
   assert.match(site,/href="board\/voices\?compose=1&choose_account=1">시민의견/);
   assert.match(worker,/link\(boardPath\(req,'voices'\)\+'\?compose=1&choose_account=1','시민의견','voices'\)/);
-  assert.match(worker,/VOICE_COMPOSE_AUTH_ONCE_KEY/);
-  assert.match(worker,/function claimComposeAutoAuth\(\)/);
-  assert.match(worker,/sessionStorage\.getItem\(key\)==="1"/);
-  assert.match(worker,/if\(composeRequested&&!allowed\)\{if\(claimComposeAutoAuth\(\)\)\{voiceLogin\("compose"\);return\}/);
+  assert.doesNotMatch(worker,/VOICE_COMPOSE_AUTH_ONCE_KEY/);
+  assert.doesNotMatch(worker,/function claimComposeAutoAuth\(\)/);
+  assert.doesNotMatch(worker,/sessionStorage\.getItem\(key\)==="1"/);
+  assert.match(worker,/if\(composeRequested&&!allowed\)\{if\(!status\.textContent\)status\.textContent="로그인 후 글을 쓸 수 있습니다/);
   assert.match(worker,/if\(composeRequested&&allowed\)\{write\.hidden=false/);
   assert.match(worker,/u\.searchParams\.delete\("compose"\)/);
   assert.match(worker,/auth\.searchParams\.set\("return_to",target\.href\)/);
