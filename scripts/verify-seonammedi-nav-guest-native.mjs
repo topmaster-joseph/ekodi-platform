@@ -115,7 +115,6 @@ try {
               {label:'활동이력',selector:'a[data-view-link="committee"]'},
               {label:'관련소식',selector:'a[data-view-link="status"]'},
               {label:'소통채널',selector:'a[data-view-link="channels"]'},
-              {label:'시민의견',selector:'a[href*="board/voices"]'},
               {label:'조직',selector:'a[data-view-link="organization"]'}
             ];
             const expectedPath=root.prefix+'/board/notices';
@@ -136,6 +135,26 @@ try {
               }
               if(!homeResponse?.ok())throw Error('notice_context_return_home_http_'+String(homeResponse?.status()||0));
             }
+            // Citizen Voices intentionally leaves the site for Google account
+            // choice. Never click Notice after the auth redirect: it has no site nav.
+            await page.locator('header.site-header nav a[href*="board/voices"]').first()
+              .click({timeout:6000,noWaitAfter:true});
+            await page.waitForURL(url=>{
+              if(url.origin!=='https://ekodi.kr'||url.pathname!=='/auth/'||
+                 url.searchParams.get('site')!=='seonammedi'||
+                 url.searchParams.get('select_account')!=='1')return false;
+              try{
+                const back=new URL(url.searchParams.get('return_to')||'');
+                return back.origin===root.origin &&
+                  back.pathname===root.prefix+'/board/voices' &&
+                  back.searchParams.get('compose')==='1' &&
+                  !back.searchParams.has('choose_account');
+              }catch{return false;}
+            },{timeout:13000});
+            record.citizenMenuAuthRedirect=true;
+            // Return via a read-only GET; do not select a Google identity.
+            const afterAuth=await page.goto(target,{waitUntil:'domcontentloaded',timeout:25000});
+            if(!afterAuth?.ok())throw Error('notice_context_return_home_after_auth_http_'+String(afterAuth?.status()||0));
           }
           if((suffix==='/'||suffix.startsWith('/board/'))&&centralValid){
             try{
