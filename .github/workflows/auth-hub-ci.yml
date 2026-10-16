@@ -37,7 +37,7 @@ jobs:
           node --check auth-site/author-auth.js
           node --check auth-site/business-auth.js
           node --check site-worker.js
-          node --test test/admin-auth-cache-boundary.test.mjs
+          node --test test/admin-auth-cache-boundary.test.mjs test/auth-return-continuity.test.mjs test/auth-return-continuity-20261017.test.mjs test/seonammedi-voice-chooser-20261017.test.mjs
       - name: Verify One Login and invisible auth contract
         shell: bash
         run: |
