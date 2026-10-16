@@ -38,6 +38,8 @@ test('account-selection intent is one-time and cannot cause post-auth compose lo
   assert.match(client,/auto_select:false/);
   assert.match(client,/button_auto_select:false/);
   assert.match(client,/window\.google\.accounts\.id\.prompt/);
+  assert.match(client,/if\(CHOOSE_ACCOUNT\)show\('cancelSignedOut',true\)/);
+  assert.match(client,/if\(CHOOSE_ACCOUNT\)target\.searchParams\.delete\('compose'\)/);
   assert.match(client,/use_fedcm_for_button:true/);
   assert.match(client,/if\(CHOOSE_ACCOUNT\)googleButtonOptions\.use_fedcm_for_button=false/);
   assert.match(client,/&&s&&!routing&&!handlingCredential&&!CHOOSE_ACCOUNT/);
