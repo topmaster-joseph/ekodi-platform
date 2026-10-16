@@ -390,7 +390,7 @@ async function listPublicNotices(request,env){
 // Month-scoped reads avoid the 40-item limit of the ordinary recent-notices feed.
 async function listPublicCalendar(request,env){
   const month=new URL(request.url).searchParams.get('month')||new Date().toISOString().slice(0,7);
-  if(!/^(20\\d{2}|2100)-(0[1-9]|1[0-2])$/.test(month))return json({ok:false,error:'invalid_month'},400);
+  if(!/^(20[0-9]{2}|2100)-(0[1-9]|1[0-2])$/.test(month))return json({ok:false,error:'invalid_month'},400);
   const [year,number]=month.split('-').map(Number);
   const start=month+'-01',end=new Date(Date.UTC(year,number,0)).toISOString().slice(0,10);
   const projection=await noticePublicProjection(env);
