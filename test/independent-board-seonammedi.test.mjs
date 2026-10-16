@@ -31,6 +31,23 @@ test('SeonamMedi citizen voices use the standalone board API directly',async()=>
   assert.match(worker,/data-reply-delete/);
 });
 
+test('top-level citizen voices enters one-shot Google compose flow without login loops',async()=>{
+  const [site,worker]=await Promise.all([
+    read('sites/seonammedi/public/index.html'),
+    read('services/independent-board/worker.js')
+  ]);
+  assert.match(site,/href="board\/voices\?compose=1">시민의견/);
+  assert.match(worker,/link\(boardPath\(req,'voices'\)\+'\?compose=1','시민의견','voices'\)/);
+  assert.match(worker,/VOICE_COMPOSE_AUTH_ONCE_KEY/);
+  assert.match(worker,/function claimComposeAutoAuth\(\)/);
+  assert.match(worker,/sessionStorage\.getItem\(key\)==="1"/);
+  assert.match(worker,/if\(composeRequested&&!allowed\)\{if\(claimComposeAutoAuth\(\)\)\{voiceLogin\("compose"\);return\}/);
+  assert.match(worker,/if\(composeRequested&&allowed\)\{write\.hidden=false/);
+  assert.match(worker,/u\.searchParams\.delete\("compose"\)/);
+  assert.match(worker,/auth\.searchParams\.set\("return_to",target\.href\)/);
+  assert.match(worker,/auth\.searchParams\.set\("purpose","seonammedi-board-write"\)/);
+});
+
 test('standalone public writes are rate-limited, queue-first and idempotent',async()=>{
   const [worker,config,migration,workflow]=await Promise.all([
     read('services/independent-board/worker.js'),
