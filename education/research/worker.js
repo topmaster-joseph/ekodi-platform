@@ -74,8 +74,8 @@ async function privateApi(request,env,path){
   if(!previous)return fail(404,'project_not_found');
   const title=limited(body?.title,120);if(title.length<3)return fail(400,'title_too_short');
   const stage=states.has(body?.stage)?body.stage:'idea';
-  await db.prepare("UPDATE research_projects SET title=?,stage=?,next_step=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND owner_id=?")
-   .bind(title,stage,limited(body?.next_step,300),p[1],owner).run();
+  await db.prepare("UPDATE research_projects SET title=?,field=?,kind=?,stage=?,next_step=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND owner_id=?")
+   .bind(title,limited(body?.field,80),types.has(body?.kind)?body.kind:'thesis',stage,limited(body?.next_step,300),p[1],owner).run();
   return json({ok:true,id:p[1]});
  }
  if(p&&method==='DELETE'){

@@ -3,7 +3,7 @@ const config=window.EKODI_RESEARCH_CONFIG||{dataEnabled:false};
 const $=q=>document.querySelector(q);
 const storageKey='ekodi_research_non_sensitive_plans_v1';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const state={projects:[],session:null,client:null};
+const state={projects:[],session:null,client:null,editingId:null};
 const fields=['title','field','kind','stage','next_step'];
 function localRead(){try{const v=JSON.parse(localStorage.getItem(storageKey)||'[]');return Array.isArray(v)?v.filter(x=>x&&typeof x.id==='string').slice(0,100):[]}catch{return []}}
 function localWrite(){localStorage.setItem(storageKey,JSON.stringify(state.projects))}
@@ -22,9 +22,11 @@ function render(){
   const advance=document.createElement('button');advance.type='button';advance.textContent='다음 단계';
   advance.disabled=RESEARCH_STAGES.findIndex(x=>x.id===p.stage)===RESEARCH_STAGES.length-1;
   advance.addEventListener('click',()=>advanceProject(p.id));
+  const edit=document.createElement('button');edit.type='button';edit.textContent='수정';
+  edit.addEventListener('click',()=>startEditProject(p.id));
   const remove=document.createElement('button');remove.type='button';remove.textContent='삭제';
   remove.addEventListener('click',()=>deleteProject(p.id));
-  controls.append(advance,remove);card.append(meta,title,next,controls);host.append(card);
+  controls.append(edit,advance,remove);card.append(meta,title,next,controls);host.append(card);
  }
 }
 function authUrl(){const url=new URL(config.authUrl||'https://ekodi.kr/auth/?site=research');url.searchParams.set('site','edu');url.searchParams.set('return_to',location.href);return url.toString()}
@@ -44,6 +46,33 @@ async function createProject(data){
  if(config.dataEnabled){await api('projects','POST',data);await loadProjects()}
  else{state.projects.unshift({...data,id:crypto.randomUUID(),created_at:new Date().toISOString()});state.projects=state.projects.slice(0,100);localWrite();render()}
 }
+function resetEdit(){
+ state.editingId=null;$('#projectForm').reset();$('#projectSubmit').textContent='연구 프로젝트 등록';$('#cancelProjectEdit').hidden=true;
+}
+function startEditProject(id){
+ const project=state.projects.find(x=>x.id===id);if(!project)return;
+ state.editingId=id;
+ const form=$('#projectForm');
+ for(const field of fields){const control=form.elements.namedItem(field);if(control)control.value=project[field]||'';}
+ $('#projectSubmit').textContent='프로젝트 변경 저장';$('#cancelProjectEdit').hidden=false;
+ message('#projectStatus','연구계획을 수정하고 변경 저장을 누르세요.');
+ form.scrollIntoView({behavior:'smooth',block:'center'});
+ form.elements.namedItem('title')?.focus({preventScroll:true});
+}
+async function saveEditProject(data){
+ const id=state.editingId;const project=state.projects.find(x=>x.id===id);
+ if(!id||!project)throw Error('수정할 프로젝트를 찾을 수 없습니다.');
+ if(config.dataEnabled){await api('projects/'+encodeURIComponent(id),'PATCH',data);await loadProjects();}
+ else{Object.assign(project,data);localWrite();render();}
+}
+$('#cancelProjectEdit').addEventListener('click',()=>{resetEdit();message('#projectStatus','프로젝트 수정을 취소했습니다.');});
+$('#exportPlans').addEventListener('click',()=>{
+ if(config.dataEnabled)return;
+ const payload={format:'ekodi-research-plans-v1',sensitivity:'non-sensitive-planning-only',exportedAt:new Date().toISOString(),projects:state.projects.map(x=>Object.fromEntries(['id',...fields,'created_at'].map(k=>[k,String(x[k]||'')])) )};
+ const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+ const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='ekodi-research-plan-backup.json';document.body.append(link);link.click();link.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),1000);message('#projectStatus','비민감 연구계획을 백업했습니다. 원고·개인정보는 입력하지 마세요.');
+});
 async function advanceProject(id){
  const project=state.projects.find(x=>x.id===id);if(!project)return;
  const index=RESEARCH_STAGES.findIndex(x=>x.id===project.stage);if(index>=5)return;
@@ -58,6 +87,7 @@ async function deleteProject(id){
  try{
   if(config.dataEnabled){await api('projects/'+encodeURIComponent(id),'DELETE');await loadProjects()}
   else{state.projects=state.projects.filter(x=>x.id!==id);localWrite();render()}
+  if(state.editingId===id)resetEdit();
  }catch(error){message('#projectStatus',error.message)}
 }
 $('#menuToggle').addEventListener('click',()=>{const nav=$('#siteNav');const open=nav.classList.toggle('open');$('#menuToggle').setAttribute('aria-expanded',String(open))});
@@ -87,7 +117,7 @@ $('#projectForm').addEventListener('submit',async event=>{
  if(!String(value.title||'').trim()||value.title.trim().length<3){message('#projectStatus','프로젝트명은 3자 이상 입력하세요.');return}
  if(config.dataEnabled&&!state.session){location.assign(authUrl());return}
  const payload=Object.fromEntries(fields.map(f=>[f,String(value[f]||'').trim()]));
- try{await createProject(payload);form.reset();message('#projectStatus','프로젝트를 등록했습니다.')}catch(error){message('#projectStatus',error.message)}
+ try{const editing=Boolean(state.editingId);if(editing)await saveEditProject(payload);else await createProject(payload);resetEdit();message('#projectStatus',editing?'프로젝트 변경사항을 저장했습니다.':'프로젝트를 등록했습니다.')}catch(error){message('#projectStatus',error.message)}
 });
 $('#consultingForm').addEventListener('submit',async event=>{
  event.preventDefault();const f=new FormData(event.currentTarget);
@@ -99,6 +129,7 @@ $('#consultingForm').addEventListener('submit',async event=>{
 async function setupAuth(){
  if(!config.dataEnabled){
   $('#workspaceMode').textContent='현재는 브라우저 임시 연구계획 모드입니다. 연구제목·일정만 저장되며 다른 기기와 동기화되지 않습니다. 원고와 개인정보는 입력하지 마세요.';
+  $('#exportPlans').hidden=false;
   await loadProjects();return;
  }
  $('#workspaceMode').textContent='EKODI Google 로그인으로 연구실을 연결합니다. 모든 연구자료 열람은 서버에서 다시 검증합니다.';

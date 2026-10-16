@@ -61,6 +61,13 @@ test('public UI maintains accessible responsive layout and no fake paid/AI claim
  assert.match(css,/@media\(max-width:730px\)/);
  assert.match(css,/word-break:keep-all/);
  assert.match(app,/localStorage/);
+ assert.match(css,/\[hidden\]\{display:none!important\}/);
+ assert.match(html,/id="cancelProjectEdit"/);
+ assert.match(html,/id="exportPlans"/);
+ assert.match(app,/function startEditProject/);
+ assert.match(app,/saveEditProject/);
+ assert.match(app,/sensitivity:'non-sensitive-planning-only'/);
+ assert.match(await read('education/research/worker.js'),/UPDATE research_projects SET title=\?,field=\?,kind=\?,stage=\?/);
  assert.match(await read('platform-route-registry.js'),/prefix:'\/research',binding:'EDUCATION',preservePrefix:true/);
  assert.match(stage,/isolated-staging/);
  assert.match(sql,/owner_id TEXT NOT NULL/);
