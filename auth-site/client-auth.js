@@ -325,7 +325,7 @@ async function renderGoogle(){
     const googleButtonOptions={type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340)),use_fedcm_for_button:true};
     if(CHOOSE_ACCOUNT)googleButtonOptions.use_fedcm_for_button=false;
     window.google.accounts.id.renderButton(host,googleButtonOptions);
-    if(DIRECT_LOGIN&&!CHOOSE_ACCOUNT){
+    if(DIRECT_LOGIN){
       notice('Google 계정 선택창을 여는 중입니다.');
       window.google.accounts.id.prompt(notification=>{
         if(notification?.isNotDisplayed?.()||notification?.isSkippedMoment?.())notice('Google 계정 선택창을 바로 열 수 없습니다. 아래 Google 버튼으로 계속해 주세요.');
