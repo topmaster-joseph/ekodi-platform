@@ -30,7 +30,7 @@ test('office has no worker registration, identity document intake or payment con
  assert.match(municipalOfficeHtml,/공식 인력 배정/);
  assert.match(municipalOfficeHtml,/id="office-data" hidden/);
 });
-test('office JavaScript only fetches same-origin scoped demand API',()=>{
+test('office JavaScript only fetches same-origin scoped demand API',async()=>{
  const response=seasonalPortalResponse(new Request(origin+'office.js'));
  assert.equal(response.status,200);
  const body=await response.text();
