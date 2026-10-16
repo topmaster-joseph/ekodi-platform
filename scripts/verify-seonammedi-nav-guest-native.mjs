@@ -101,6 +101,16 @@ try {
           try{if(noticeLink?.href)resolvedNoticePath=new URL(noticeLink.href,target).pathname.replace(/[/]$/,'')}catch{}
           record.directNoticePath=resolvedNoticePath;
           if(publicSurface&&resolvedNoticePath!==expectedNoticePath)violations.push('notice_direct_path_mismatch');
+          const voiceHeaderLink=record.top.find(x=>x.label==='시민의견');
+          if(publicSurface){
+            try{
+              const candidate=new URL(voiceHeaderLink?.href,target);
+              if(candidate.origin!==root.origin||
+                 candidate.pathname.replace(/[/]$/,'')!==root.prefix+'/board/voices'||
+                 candidate.searchParams.get('compose')!=='1')
+                violations.push('citizen_header_compose_intent_missing');
+            }catch{violations.push('citizen_header_compose_intent_missing')}
+          }
           if(publicSurface&&record.centralCategory.noticeTrigger)violations.push('notice_category_click_interception');
           const socialGroup=record.groups.find(x=>x.parent==='소통채널');
           const centralValid=record.centralCategory.present&&record.centralCategory.initiallyHidden;
@@ -121,7 +131,29 @@ try {
             const expectedPath=root.prefix+'/board/notices';
             record.noticeAfterCategory=[];
             for(const item of contexts){
-              await page.locator('header.site-header nav '+item.selector).first().click({timeout:6000});
+              if(item.label==='시민의견'){
+                const voiceHeader=page.locator('header.site-header nav '+item.selector).first();
+                const expectedVoice=root.origin+root.prefix+'/board/voices?compose=1';
+                const rawHref=await voiceHeader.getAttribute('href');
+                if(!rawHref||new URL(rawHref,target).href!==expectedVoice)
+                  violations.push('citizen_header_compose_intent_missing');
+                const authRequest=page.waitForRequest(request=>{
+                  if(!request.isNavigationRequest()||request.frame()!==page.mainFrame())return false;
+                  const u=new URL(request.url());
+                  return u.origin==='https://ekodi.kr'&&u.pathname==='/auth/'&&
+                    u.searchParams.get('site')==='seonammedi'&&
+                    u.searchParams.get('return_to')===expectedVoice&&
+                    u.searchParams.get('purpose')==='seonammedi-board-write';
+                },{timeout:12000}).then(()=>true).catch(()=>false);
+                await voiceHeader.click({timeout:6000});
+                record.voiceHeaderAuthMatches=await authRequest;
+                if(!record.voiceHeaderAuthMatches)
+                  violations.push('citizen_header_google_return_or_purpose_mismatch');
+                const restored=await page.goto(target,{waitUntil:'domcontentloaded',timeout:25000});
+                if(!restored?.ok())throw Error('citizen_header_context_restore_failed');
+              }else{
+                await page.locator('header.site-header nav '+item.selector).first().click({timeout:6000});
+              }
               // The 24-route guest audit must assert the actual rendered middle-menu
               // visibility, not merely that the top navigation has six links.
               // Preserve the working social preview when the Channels tab opens.
