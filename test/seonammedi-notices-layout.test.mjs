@@ -41,6 +41,8 @@ test('both standalone and EKODI subpath notice mounts retain six menu navigation
     assert.ok(html.includes('aria-controls="central-category-panel"'),url);
     assert.ok(html.includes('noticeLogin()'),url);
     assert.ok(html.includes('공지 작성'),url);
+    assert.ok(html.includes('<button id="writeToggle" aria-label="공지 작성"><span>공지</span><span>작성</span></button>'),url);
+    assert.ok(html.includes('body.board-notices #writeToggle{display:grid;grid-template-rows:auto auto;'),url);
     assert.ok(html.includes('noticeImageUrl'),url);
     assert.equal((html.match(/class="site-header independent-board-header"/g)||[]).length,1,url);
   }
