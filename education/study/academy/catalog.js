@@ -47,7 +47,7 @@ export function buildPlan(input={}){
  const title=safe(input.title,100)||audience.name+' AI 실습교육';
  const program=safe(input.program,120)||'자체·위탁 교육',host=safe(input.host,100)||'기관 협의 전',topic=safe(input.topic,180)||audience.sub;
  const delivery=FORMATS.find(row=>row.id===input.delivery)||FORMATS[0],start=safe(input.start,10),end=safe(input.end,10);
- const requirements=safe(input.requirements,400),customTopics=String(input.curriculum??'').split(/\\r?\\n/).map(item=>safe(item,120)).filter(Boolean).slice(0,24);
+ const requirements=safe(input.requirements,400),customTopics=String(input.curriculum??'').split(/\r?\n/).map(item=>safe(item,120)).filter(Boolean).slice(0,24);
  const practical=Math.round(minutes*practicePercent/100),theory=minutes-practical;
  const lessons=Array.from({length:sessions},(_,i)=>{const module=audience.modules[i%audience.modules.length],custom=customTopics[i];return {number:i+1,title:custom||module[0],scenario:module[1],prompt:custom?'이번 회차 주제는 '+custom+'입니다. '+module[2]:module[2],artifact:module[3],checkpoint:module[4],focus:topic,minutes,practiceMinutes:practical};});
  return {audience:audience.name,audienceId:audience.id,title,program,host,topic,requirements,delivery:delivery.name,start,end,sessions,minutes,practicePercent,practical,theory,totalMinutes:minutes*sessions,lessons,provisional:true};
