@@ -42,6 +42,7 @@ test('form-post handoff stores session with isolated fallback and never echoes t
     assert.ok(html.includes('if(saved)location.replace(target)'));
     assert.ok(html.includes('브라우저에서 로그인 정보를 저장하지 못했습니다'));
     assert.ok(!html.includes('one-use-test-code'));
+    assert.ok(!html.includes('sessionStorage.removeItem("ekodi-auth-token")'),'board handoff must not expire the unrelated central Admin session');
     assert.ok(html.includes('board/voices?compose=1'));
   }finally{globalThis.fetch=oldFetch;}
 });
