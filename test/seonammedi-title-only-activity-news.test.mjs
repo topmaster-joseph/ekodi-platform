@@ -10,18 +10,16 @@ const [app,css,html]=await Promise.all([
   read('sites/seonammedi/public/index.html')
 ]);
 
-const start=app.indexOf('function bindCompactTimelineToggles(host){');
-const end=app.indexOf('function bindCommitteeActivityAdmin(){',start);
-assert.ok(start>=0&&end>start,'public timeline display functions must be intact');
-const publicStart=app.indexOf('function renderPublicTimeline(){',start);
-const newsStart=app.indexOf('function renderCommitteeNews(){',publicStart);
-const activityStart=app.indexOf('function renderCommitteeActivity(){',newsStart);
-assert.ok(publicStart>start&&newsStart>publicStart&&activityStart>newsStart,'separate renderer boundaries must remain stable');
-// Include only the three listing renderers, not unrelated paging/timer bootstraps.
-const publicRenderers=app.slice(start,publicStart)
-  +app.slice(publicStart,newsStart)
-  +app.slice(newsStart,activityStart)
-  +app.slice(activityStart,end);
+const functionSource=name=>{
+  const start=app.indexOf('function '+name+'(');
+  assert.ok(start>=0,'expected public renderer '+name);
+  const end=app.indexOf('\nfunction ',start+1);
+  assert.ok(end>start,'expected next top-level function after '+name);
+  return app.slice(start,end);
+};
+// Evaluate the four pure UI handlers, never unrelated network or timer initialization.
+const publicRenderers=['bindCompactTimelineToggles','renderPublicTimeline','renderCommitteeNews','renderCommitteeActivity']
+  .map(functionSource).join('\n');
 
 test('activity, news and committee-related news render only title visible at first visit',()=>{
   const hosts=Object.fromEntries(['timelineList','committeeActivityList','committeeNewsList'].map(id=>
