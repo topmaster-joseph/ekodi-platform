@@ -28,14 +28,22 @@ test('both public board mounts show one parseable composer and explicit inline A
   }
 });
 
-test('board auth handoff falls back to isolated sessionStorage and fails visibly without storage',async()=>{
-  const r=await board.fetch(new Request('https://seonammedi.kr/board/voices?compose=1',{method:'POST',
-    headers:{'content-type':'application/x-www-form-urlencoded'},
-    body:'ekodi_auth_return=1&ekodi_token=one-use-test-code&ekodi_type=email'
-  }),{});
-  // The mocked Supabase response is installed in the surrounding test below; this
-  // assertion uses the rendered page when upstream token verification is stubbed.
-  assert.ok(r.status>=200);
+test('form-post handoff stores session with isolated fallback and never echoes token hash',async()=>{
+  const oldFetch=globalThis.fetch;
+  globalThis.fetch=async()=>Response.json({access_token:'example-access',refresh_token:'example-refresh',expires_in:3600,user:{id:'verified'}});
+  try{
+    const r=await board.fetch(new Request('https://seonammedi.kr/board/voices?compose=1',{method:'POST',
+      headers:{'content-type':'application/x-www-form-urlencoded'},
+      body:'ekodi_auth_return=1&ekodi_token=one-use-test-code&ekodi_type=email'
+    }),{});
+    assert.equal(r.status,200);
+    const html=await r.text();
+    assert.ok(html.includes('sessionStorage.setItem('));
+    assert.ok(html.includes('if(saved)location.replace(target)'));
+    assert.ok(html.includes('브라우저에서 로그인 정보를 저장하지 못했습니다'));
+    assert.ok(!html.includes('one-use-test-code'));
+    assert.ok(html.includes('board/voices?compose=1'));
+  }finally{globalThis.fetch=oldFetch;}
 });
 
 test('canonical Site Core is authoritative for board admin permissions, not board domain',async()=>{
