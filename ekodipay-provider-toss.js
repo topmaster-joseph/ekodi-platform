@@ -98,6 +98,33 @@ async function confirmToss(paymentKey,orderId,amount,secret){
 export async function paymentRoute(request,env,shell){
  const url=new URL(request.url),path=url.pathname,method=request.method;
  const mode=paymentMode(env);
+ if(path===root+'/setup'&&method==='GET'){
+   // Read-only public onboarding. Never expose secrets, actual MID or settlement account details.
+   const status=mode.ready?(mode.live?'운영 결제 게이트 확인됨':'PG 테스트 연결 가능'):
+     '실결제 준비 중 · 청구 비활성화';
+   const requirements=[
+     ['1','사업자·가맹점 계약','판매자 사업자등록과 PG 심사·MID 및 정산계좌 명의 대조'],
+     ['2','테스트·운영 키','토스페이먼츠 MID별 키를 Cloudflare 암호화 비밀값으로 등록'],
+     ['3','주문 발급기','서버가 승인한 주문금액·만료시간·주문번호·판매자 연결 및 인증'],
+     ['4','기술 실증','PG 테스트 승인·실패·재요청·금액 위변조·PC와 모바일 검증'],
+     ['5','소비자 보호·정산','취소·환불·정산 대조·민원 연락처·이용약관·개인정보 정책'],
+     ['6','운영 최종 승인','승인된 사업자·PG 운영키·재무 책임자 검증 후 별도 배포 승인']
+   ];
+   const cards=requirements.map(([n,title,description])=>
+      '<article class="card"><span class="eyebrow">STEP '+n+'/6</span><h3>'+esc(title)+
+      '</h3><p>'+esc(description)+'</p></article>').join('');
+   const body='<main class="wrap demo"><div class="breadcrumbs"><a href="/ekodipay/">EKODI Pay</a> / 결제 운영 준비</div>'+
+     '<span class="eyebrow">MERCHANT ONBOARDING</span><h1>실제 결제 운영 준비</h1>'+
+     '<p class="demo-lead">실제 결제 전 확인해야 할 단계입니다. 이 공개 화면은 금융 설정을 변경하거나 결제를 활성화하지 않습니다.</p>'+
+     '<section class="card"><span class="label">'+esc(status)+'</span><h2>현재 운영 상태</h2>'+
+     '<p>화면 시연과 실제 금전 결제는 별도입니다. PG 정식 연동에는 계약과 결제·정산 안전성 검증이 선행됩니다.</p>'+
+     '<div class="actions"><a class="primary" href="/ekodipay/demo">청구 없는 결제 체험</a>'+
+     '<a class="secondary" href="https://developers.tosspayments.com/" rel="noopener noreferrer">토스페이먼츠 개발자센터</a></div></section>'+
+     '<section class="section"><h2>결제 운영 준비 6단계</h2><div class="grid">'+cards+'</div>'+
+     '<div class="notice">PG 시크릿키와 계좌정보는 채팅·공개 사이트·GitHub에 공유하지 마세요. 제한된 Cloudflare Secret으로만 관리하세요.</div>'+
+     '</section></main>';
+   return shell('실제 결제 운영 준비',body,method);
+ }
  if(path===root+'/api/payment-readiness'&&method==='GET')
    return json({provider:'tosspayments',mode:mode.requested,merchant:mode.merchant,
     live:mode.live&&mode.ready,ready:mode.ready,reason:mode.reason,
