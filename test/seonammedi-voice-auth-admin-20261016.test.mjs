@@ -7,7 +7,7 @@ import board from '../services/independent-board/worker.js';
 const worker=readFileSync(new URL('../services/independent-board/worker.js',import.meta.url),'utf8');
 const urls=['https://seonammedi.kr/board/voices','https://ekodi.kr/seonammedi/board/voices'];
 
-test('both public board mounts show one parseable composer and explicit inline Admin login',async()=>{
+test('both public board mounts share the writer login and show protected inline Admin controls automatically',async()=>{
   for(const url of urls){
     const r=await board.fetch(new Request(url),{});
     assert.equal(r.status,200);
@@ -15,11 +15,11 @@ test('both public board mounts show one parseable composer and explicit inline A
     const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
     assert.equal(scripts.length,1);
     assert.doesNotThrow(()=>new Script(scripts[0][1]));
-    assert.match(html,/id="voiceAdminLogin"/);
+    assert.doesNotMatch(html,/id="voiceAdminLogin"/);
     assert.doesNotMatch(html,/id="voiceManageToggle"/);
-    assert.match(html,/requireVoiceAccount\("manage"\)/);
-    assert.match(html,/voiceLogin\(intent="compose"\)/);
-    assert.match(html,/target\.searchParams\.set\("manage","1"\)/);
+    assert.doesNotMatch(html,/requireVoiceAccount\("manage"\)/);
+    assert.match(html,/function voiceLogin\(\)/);
+    assert.doesNotMatch(html,/target\.searchParams\.set\("manage","1"\)/);
     assert.match(html,/auth\.searchParams\.set\("return_to",target.href\)/);
     assert.match(html,/adminItems=data\.items\|\|\[\];render\(adminItems,true\)/);
     assert.match(html,/관리 권한을 확인하지 못했습니다/);
