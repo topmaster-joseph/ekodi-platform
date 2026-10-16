@@ -56,6 +56,7 @@ jobs:
             echo "- recovery PR: ${{ steps.recover.outputs.recovery_pr || 'n/a' }}"
             echo "- merge: ${{ steps.recover.outputs.merge_disposition || 'n/a' }}"
             echo "- independent board dispatch: ${{ steps.recover.outputs.independent_board_dispatch || 'not-required' }}"
+            echo "- shared Site Core dispatch: ${{ steps.recover.outputs.shared_site_dispatch || 'not-required' }}"
             echo "- Shell Worker dispatch: ${{ steps.recover.outputs.shell_dispatch || 'not-required-or-not-authorized' }}"
             echo "- CGMA apex edge dispatch: ${{ steps.recover.outputs.cgma_apex_dispatch || 'not-required-or-not-authorized' }}"
             echo "- authenticated Admin E2E: ${{ steps.recover.outputs.admin_e2e_dispatch || 'not-required-or-not-authorized' }}"

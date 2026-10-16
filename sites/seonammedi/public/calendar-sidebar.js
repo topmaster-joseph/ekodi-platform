@@ -318,14 +318,22 @@
     load();checkAdmin();
     // The home-page auth handoff completes asynchronously after deferred scripts load.
     setTimeout(checkAdmin,1800);
-    // Refresh the public schedule and the Korean-local calendar day without a reload.
+    // Check the Korean date every minute without causing a D1 read for
+    // every active visitor each minute. Refresh public data at most every
+    // fifteen minutes while a tab stays open; writes and focus refresh now.
+    let lastBackgroundRefresh=Date.now();
     setInterval(()=>{
       const currentDate=localToday();
       if(currentDate!==now){
         now=currentDate;
+        lastBackgroundRefresh=Date.now();
         if(month===now.slice(0,7))load();
         else {renderDays();refreshToday();}
-      }else if(month===now.slice(0,7))load();
+        return;
+      }
+      if(Date.now()-lastBackgroundRefresh<15*60*1000)return;
+      lastBackgroundRefresh=Date.now();
+      if(month===now.slice(0,7))load();
       else refreshToday();
     },60000);
   }

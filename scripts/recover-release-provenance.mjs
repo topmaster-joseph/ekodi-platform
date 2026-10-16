@@ -179,6 +179,14 @@ const independentBoardTouched=sourceFiles.some(file=>
   file==='sites/seonammedi/public/app.js'||
   file==='.github/workflows/deploy-independent-board.yml'
 );
+// A token-mediated exact-SHA recovery merge does NOT fire the main push path
+// filter for Site Core. Use only source paths owned by the existing Site Core
+// workflow and only its receipt-bound, staged, guarded workflow_dispatch.
+const sharedSiteTouched=sourceFiles.some(file=>
+  file.startsWith('sites/seonammedi/public/')||
+  ['site-worker.js','seonammedi-admin-control.js',
+   'platform-router-entry-worker.js','.github/workflows/deploy-site-core.yml'].includes(file)
+);
 // First-party Shell is an independent guarded Worker. GitHub-token recovery
 // merges do not produce a regular main push event, so a successful immediate
 // recovery merge must dispatch the existing receipt-bound Shell workflow.
@@ -245,13 +253,13 @@ const mergeDisposition=merge.response.ok?'merged-immediately':`guarded-pending-h
 // Only a successfully merged, exactly owner-approved recovery PR may dispatch
 // the existing guarded production workflow. That workflow still enforces its
 // own orchestrator receipt, CI, auth boundary, and live production checks.
-if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched)){
+if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched||sharedSiteTouched)){
   if(merge.data?.merged!==true||!/^[a-f0-9]{40}$/i.test(text(merge.data?.sha,80))){
     fail('guarded merge did not return a verifiable commit SHA');
   }
   const main=await github(`/repos/${repo}/branches/main`);
   if(!main.response.ok||text(main.data?.commit?.sha,80)!==text(merge.data.sha,80)){
-    fail('main changed before exact board dispatch; do not launch a stale release');
+    fail('main changed before exact service dispatch; do not launch a stale release');
   }
   if(independentBoardTouched){
     const dispatch=await github(`/repos/${repo}/actions/workflows/deploy-independent-board.yml/dispatches`,{
@@ -276,6 +284,17 @@ if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched)){
       fail('guarded Shell Worker dispatch failed: HTTP '+shellDispatch.response.status);
     }
     out('shell_dispatch','accepted');
+  }
+  if(sharedSiteTouched){
+    const siteDispatch=await github(`/repos/${repo}/actions/workflows/deploy-site-core.yml/dispatches`,{
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({ref:'main',inputs:{sync_domains:'false',release_branch_ref:branchRef,release_task_id:taskId}})
+    });
+    if(siteDispatch.response.status!==204){
+      fail('guarded shared Site Core dispatch failed: HTTP '+siteDispatch.response.status);
+    }
+    out('shared_site_dispatch','accepted');
   }
 }
 
