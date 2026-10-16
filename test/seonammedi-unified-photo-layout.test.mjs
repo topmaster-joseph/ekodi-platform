@@ -22,7 +22,7 @@ test('six-menu home loads the same read-only visual shell as independent boards'
     assert.ok(ui.includes("label:'"+label+"'"),label);
   assert.match(ui,/location\.pathname\.startsWith\('\/seonammedi\/'\)/);
   assert.match(ui,/base\+'board\/notices'/);
-  assert.match(ui,/base\+'board\/voices'/);
+  assert.match(ui,/base\+'board\/voices\?compose=1&choose_account=1'/);
   assert.match(ui,/base\+'#committee-activity'/);
   assert.match(ui,/base\+'#organization'/);
 });

@@ -25,7 +25,7 @@ if(changed)history.replaceState({},document.title,url.href);
 const manageMode=params.get('manage')==='1';
 const reviewMode=params.get('review')==='1';
 document.documentElement.dataset.identityManage=manageMode?'1':'0';
-document.documentElement.dataset.seamlessSso=manageMode||reviewMode?'0':'1';
+document.documentElement.dataset.seamlessSso=manageMode||reviewMode||(params.get('site')==='seonammedi'&&params.get('select_account')==='1')?'0':'1';
 const site=params.get('site')||'portal';
 const targetedWorkspace=targetableWorkspaceSites.has(site)&&Boolean(params.get('workspace'));
 
