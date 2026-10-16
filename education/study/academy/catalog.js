@@ -47,12 +47,13 @@ export function buildPlan(input={}){
  const title=safe(input.title,100)||audience.name+' AI 실습교육';
  const program=safe(input.program,120)||'자체·위탁 교육',host=safe(input.host,100)||'기관 협의 전',topic=safe(input.topic,180)||audience.sub;
  const delivery=FORMATS.find(row=>row.id===input.delivery)||FORMATS[0],start=safe(input.start,10),end=safe(input.end,10);
+ const requirements=safe(input.requirements,400),customTopics=String(input.curriculum??'').split(/\\r?\\n/).map(item=>safe(item,120)).filter(Boolean).slice(0,24);
  const practical=Math.round(minutes*practicePercent/100),theory=minutes-practical;
- const lessons=Array.from({length:sessions},(_,i)=>{const module=audience.modules[i%audience.modules.length];return {number:i+1,title:module[0],scenario:module[1],prompt:module[2],artifact:module[3],checkpoint:module[4],focus:topic,minutes,practiceMinutes:practical};});
- return {audience:audience.name,audienceId:audience.id,title,program,host,topic,delivery:delivery.name,start,end,sessions,minutes,practicePercent,practical,theory,totalMinutes:minutes*sessions,lessons,provisional:true};
+ const lessons=Array.from({length:sessions},(_,i)=>{const module=audience.modules[i%audience.modules.length],custom=customTopics[i];return {number:i+1,title:custom||module[0],scenario:module[1],prompt:custom?'이번 회차 주제는 '+custom+'입니다. '+module[2]:module[2],artifact:module[3],checkpoint:module[4],focus:topic,minutes,practiceMinutes:practical};});
+ return {audience:audience.name,audienceId:audience.id,title,program,host,topic,requirements,delivery:delivery.name,start,end,sessions,minutes,practicePercent,practical,theory,totalMinutes:minutes*sessions,lessons,provisional:true};
 }
 export function planMarkdown(p){
- const lines=['# '+p.title,'','- 대상: '+p.audience,'- 사업·지원사업: '+p.program,'- 의뢰·주관기관: '+p.host,'- 주제: '+p.topic,'- 형식: '+p.delivery,'- 기간: '+(p.start||'미정')+' ~ '+(p.end||'미정'),'- 총 '+p.sessions+'회 × '+p.minutes+'분 ('+p.totalMinutes+'분)','- 실습 비율: '+p.practicePercent+'% ('+p.practical+'분/회)','- 상태: 교육 설계 초안 · 사업 확정안 아님','','## 회차별 운영안'];
+ const lines=['# '+p.title,'','- 대상: '+p.audience,'- 사업·지원사업: '+p.program,'- 의뢰·주관기관: '+p.host,'- 주제: '+p.topic,'- 형식: '+p.delivery,'- 기간: '+(p.start||'미정')+' ~ '+(p.end||'미정'),'- 총 '+p.sessions+'회 × '+p.minutes+'분 ('+p.totalMinutes+'분)','- 실습 비율: '+p.practicePercent+'% ('+p.practical+'분/회)','- 상태: 교육 설계 초안 · 사업 확정안 아님','- 성과·납품 요건: '+(p.requirements||'기관 협의 후 확정'),'','## 회차별 운영안'];
  for(const lesson of p.lessons)lines.push('','### '+lesson.number+'회차 · '+lesson.title,'- 실습 상황: '+lesson.scenario,'- 실습 결과물: '+lesson.artifact,'- 검증: '+lesson.checkpoint,'- 실습 프롬프트: '+lesson.prompt);
  lines.push('','## 운영·보안','- 가상자료만 공개 사용하고 실제 개인정보·기밀은 별도 승인 없이 입력하지 않습니다.','- 출결·점수·증빙·수료증은 별도 인증된 운영 시스템 연결 전까지 생성·저장하지 않습니다.','- 기관 최종 승인 후 일정·강사료·지원사업 정산기준을 확정합니다.');
  return lines.join('\n');
