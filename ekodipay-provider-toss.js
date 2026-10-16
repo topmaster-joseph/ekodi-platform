@@ -36,7 +36,7 @@ export function paymentMode(env){
    return {...disabled,reason:'owner_contract_or_settlement_verification_required'};
  const client=String(live?env.TOSS_LIVE_CLIENT_KEY||'':env.TOSS_TEST_CLIENT_KEY||'');
  const secret=String(live?env.TOSS_LIVE_SECRET_KEY||'':env.TOSS_TEST_SECRET_KEY||'');
- if(!client.startsWith(live?'live_ck_':'test_ck_')||!secret.startsWith(live?'live_sk_':'test_sk_'))
+ if(!client.startsWith(live?'live_gck_':'test_gck_')||!secret.startsWith(live?'live_gsk_':'test_gsk_'))
    return {...disabled,reason:'matching_pg_keys_required'};
  return {requested,merchant:'ekodibiz',ready:true,live,mid,client,secret,reason:'ready'};
 }
