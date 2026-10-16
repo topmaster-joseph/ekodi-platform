@@ -48,3 +48,43 @@ test('device canary retries empty Chrome DOM on Edge with an isolated profile an
   assert.match(deviceAgent, /Invoke-BackgroundBrowserCanary -PreferEdge \$true/);
   assert.match(deviceAgent, /\$process\.ExitCode -eq 0 -and \$stdout\.Length -gt 0/);
 });
+
+
+test('native agent journals every allowlisted browser command from its central dispatcher', () => {
+  assert.match(deviceAgent, /function Start-EkodiBrowserTaskAudit/);
+  assert.match(deviceAgent, /function Finish-EkodiBrowserTaskAudit/);
+  assert.match(deviceAgent, /function Get-EkodiBrowserTaskAuditSummary/);
+  assert.match(deviceAgent, /browserTaskAudit = Get-EkodiBrowserTaskAuditSummary/);
+  assert.match(deviceAgent, /'computer\.browser\.canary','computer\.browser\.execute','computer\.browser\.pr\.observe'/);
+  assert.match(deviceAgent, /Start-EkodiBrowserTaskAudit \$response\.command/);
+  assert.match(deviceAgent, /Finish-EkodiBrowserTaskAudit \$audit 'completed' \$result/);
+  assert.match(deviceAgent, /Finish-EkodiBrowserTaskAudit \$audit 'failed'/);
+  assert.match(deviceAgent, /commandKey = Get-Sha256String \$id/);
+  assert.match(deviceAgent, /schema = 'ekodi-native-browser-task-v1'/);
+  assert.match(deviceAgent, /state = 'running'/);
+  assert.match(deviceAgent, /'cleanup_unverified'/);
+  assert.doesNotMatch(deviceAgent, /Stop-Process\s+-Name\s+(?:opera|chrome|msedge)/i);
+});
+
+test('native screenshot closes only owned process tree and checks unique profile orphans', () => {
+  assert.match(deviceAgent, /function Find-EkodiOwnedProfileBrowsers/);
+  assert.match(deviceAgent, /Task-'\s*$/m);
+  assert.match(deviceAgent, /Get-CimInstance Win32_Process/);
+  assert.match(deviceAgent, /--user-data-dir=/);
+  assert.match(deviceAgent, /taskkill\.exe \/PID \$process\.Id \/T \/F/);
+  assert.match(deviceAgent, /Find-EkodiOwnedProfileBrowsers \$TaskProfile/);
+  assert.match(deviceAgent, /browserProcessClosed = \[bool\]\$treeClosed/);
+  assert.match(deviceAgent, /background_browser_process_cleanup_unverified/);
+  assert.match(deviceAgent, /background_browser_profile_cleanup_failed/);
+});
+
+
+test('native-owned CDP tab and PID evidence is persisted independently of user Opera tabs', () => {
+  assert.match(deviceAgent, /ownedTabId = \[string\]\$page\.id/);
+  assert.match(deviceAgent, /ownedTabsObserved = \[int\]\$ownedTabCount/);
+  assert.match(deviceAgent, /ownedTabsClosed =/);
+  assert.match(deviceAgent, /ownedBrowserProcessId = \[int\]\$capture\.processId/);
+  assert.match(deviceAgent, /browserProcessClosed = \[bool\]\$treeClosed/);
+  assert.match(deviceAgent, /interrupted_unverified/);
+  assert.match(deviceAgent, /userTabsTouched = \$false/);
+});

@@ -2,12 +2,12 @@ import revenueWorker, { RevenueStore } from './ekodibiz-worker.js';
 
 export { RevenueStore };
 
-const PAYMENT_CORE_URL = 'https://pay.ekodi.kr';
+const PAYMENT_CORE_URL = 'https://ekodi.kr/ekodipay';
 const PAYMENT_GATEWAY_URL = 'https://ekodi.kr/ekodibiz/pay';
 
 function paymentSecurityHeaders(headers) {
   const next = new Headers(headers);
-  next.set('content-security-policy', "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://ekodi.kr https://pay.ekodi.kr");
+  next.set('content-security-policy', "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://ekodi.kr https://ekodi.kr/ekodipay");
   return next;
 }
 

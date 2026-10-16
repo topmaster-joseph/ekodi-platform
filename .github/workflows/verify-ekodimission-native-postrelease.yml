@@ -1,0 +1,49 @@
+name: Verify EKODI Mission Native Postrelease Surfaces
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/verify-ekodimission-native-postrelease.yml'
+      - 'test/ekodimission-native-postrelease.test.mjs'
+      - 'config/ekodimission-native-postrelease-surfaces.json'
+  workflow_dispatch: {}
+  workflow_run:
+    workflows:
+      - Deploy Activity Public Share Schema
+      - Deploy EKODI Operating Space
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-mission-native-postrelease-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-mobile:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && (github.event.workflow_run.event == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')))
+    uses: ./.github/workflows/ekodi-background-browser-worker.yml
+    with:
+      surface_paths: '/ekodimission,/ekodimission/activities,/ekodimission/history,/ekodimission/stories,/ekodimission/partners,/ekodimission/activities/260926-chuseok-open-table/archive'
+      device_profile: mobile-portrait
+      surface_registry: config/ekodimission-native-postrelease-surfaces.json
+
+  native-desktop:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && (github.event.workflow_run.event == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')))
+    uses: ./.github/workflows/ekodi-background-browser-worker.yml
+    with:
+      surface_paths: '/ekodimission,/ekodimission/activities,/ekodimission/history,/ekodimission/stories,/ekodimission/partners,/ekodimission/activities/260926-chuseok-open-table/archive'
+      device_profile: desktop
+      surface_registry: config/ekodimission-native-postrelease-surfaces.json
+
+  verify-contract:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Confirm readonly EKODI-owned browser canary contract
+        run: node --test test/ekodimission-native-postrelease.test.mjs

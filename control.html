@@ -76,10 +76,12 @@
                 </select>
               </label>
               <label class="toggle"><input type="checkbox" id="executeNow" checked><span>실행 포함</span></label>
+              <button type="button" class="secondary" id="aiRoutePreview">AI 경로 점검</button>
+              <label class="toggle"><input type="checkbox" id="orchestratorRelease"><span>보호된 배포 요청</span></label>
               <button type="submit" class="send" id="sendButton">실행</button>
             </div>
           </form>
-          <small class="composer-note">민감정보와 고위험 변경은 EKODI 권한·정책 경계를 그대로 적용합니다.</small>
+          <small class="composer-note">보호된 배포 요청을 선택하면 공식 오케스트레이터에 접수하며 승인 및 실서비스 검증 전에는 배포 완료로 표시하지 않습니다.</small>
         </footer>
       </section>
 

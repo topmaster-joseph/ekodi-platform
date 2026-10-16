@@ -92,5 +92,5 @@ test('queue, admin UI and Windows Agent are wired but default closed',()=>{
  assert.match(agent, /workspaceSlidesAudio = \[bool\]\(Get-WorkspaceSlidesAudioState\)\.verified/);
  assert.match(agent, /workspace_audio_canary_required/);
  assert.match(agent, /Invoke-WorkspaceSlidesAudioTask \$payload/);
- assert.match(agent, /\$AgentVersion = '2\.5\.3'/);
+ assert.match(agent, /\$AgentVersion = '2\.5\.7'/);
 });

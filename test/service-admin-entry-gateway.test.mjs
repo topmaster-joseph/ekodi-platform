@@ -5,7 +5,7 @@ import worker from '../service-admin-entry-worker.js';
 
 const expectedHosts = [
   'ai.ekodi.kr','auth.ekodi.kr','cloud.ekodi.kr','live.ekodi.kr','live.biz.ekodi.kr','live.church.ekodi.kr','live.lab.ekodi.kr',
-  'mail.biz.ekodi.kr','mail.church.ekodi.kr','pay.ekodi.kr','pay.biz.ekodi.kr','trade.ekodi.kr','trade.biz.ekodi.kr',
+  'mail.biz.ekodi.kr','mail.church.ekodi.kr','trade.ekodi.kr','trade.biz.ekodi.kr',
   'invest.ekodi.kr','messenger.ekodi.kr','management.ekodi.kr','marketing-api.ekodi.kr'
 ];
 
@@ -42,4 +42,12 @@ test('staging health is secret-free and non-cacheable', async () => {
   const body = await response.json();
   assert.deepEqual(body, { ok: true, service: 'ekodi-service-admin-entry', mode: 'central-handoff-v1' });
   assert.equal(response.headers.get('cache-control'), 'no-store');
+});
+
+
+test('retired payment admin routes must not remain in the independent gateway', () => {
+  const config = fs.readFileSync('wrangler.service-admin-entry.toml', 'utf8');
+  for (const host of [['pay','ekodi','kr'], ['pay','biz','ekodi','kr']].map(parts => parts.join('.'))) {
+    assert.equal(config.includes(`pattern = "${host}/admin*"`), false);
+  }
 });

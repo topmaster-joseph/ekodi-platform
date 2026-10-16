@@ -25,3 +25,11 @@ test('navigation retry cannot falsely pass invisible panels or expand fake permi
   assert.match(retry,/page\.waitForFunction\(section => window\.EKODIAdminPanels\?\.current\?\.\(\) === section, id, \{ timeout: 20000 \}\)/);
   assert.match(source,/if \(activeCount !== expectedCount\) throw new Error/);
 });
+
+
+test('production E2E requests one bounded shared-sidebar resync before declaring a menu missing',()=>{
+  const resolver=source.slice(source.indexOf('async function resolveMenuTrigger'),source.indexOf('const results = [];'));
+  assert.match(resolver,/window\.EKODIAdminSidebar\?\.sync\?\.\(document\)/);
+  assert.match(resolver,/if \(await detail\.isVisible\(\)\.catch\(\(\) => false\)\) return detail/);
+  assert.doesNotMatch(resolver,/route\.fulfill|bypassCSP|ignoreHTTPSErrors|\.catch\(\(\)=>true\)/);
+});

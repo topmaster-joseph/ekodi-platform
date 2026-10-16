@@ -62,3 +62,14 @@ test('authenticated Admin E2E requires the Personal Finance control payload, not
   assert.match(worker, /personal-finance control failed/);
   assert.match(worker, /menuId === 'personal-finance'[\s\S]*verifyPersonalFinance\(trigger, alreadyActive, started\)/);
 });
+
+
+test('authenticated Admin menu sweep preseeds the already-verified short-lived session instead of replaying handoff 45 times', async () => {
+  const worker = await read('scripts/admin-authenticated-e2e-menu-worker.mjs');
+  assert.match(worker, /await context\.addInitScript\(value => \{[\s\S]*sessionStorage\.setItem\('ekodi-auth-token', value\)/);
+  assert.match(worker, /const authenticatedEntryUrl = `\$\{baseUrl\}\?route=finance`;/);
+  assert.doesNotMatch(worker, /authenticatedEntryUrl = .*ekodi_admin_token/);
+  const workflow = await read('.github/workflows/admin-authenticated-e2e.yml');
+  assert.match(workflow, /verify-admin-login-continuity\.mjs/);
+  assert.match(workflow, /admin-authenticated-e2e-retry\.mjs/);
+});

@@ -72,7 +72,7 @@
     return data;
   }
   function el(tag,className,text){const node=document.createElement(tag);if(className)node.className=className;if(text!==undefined)node.textContent=esc(text);return node}
-  function statusLabel(value){const map={waiting_human:'담당자 확인 대기',open:'AI 응답',resolved:'완료',archived:'보관',accepted:'담당자 응답 중',requested:'연결 대기',awaiting_human:'승인 대기',verified:'완료',ready_for_executor:'실행 대기',assist_only:'검토',blocked:'차단',failed:'실패',approved_pending_executor:'승인됨',queued:'실행 큐 등록',running:'실행 중',retry:'재시도 대기',degraded:'실행 경로 확인 필요',core_only:'핵심 경로 처리',human_gate:'승인 대기',ignored:'처리 제외'};return map[value]||value||'확인'}
+  function statusLabel(value){const map={waiting_human:'담당자 확인 대기',open:'AI 응답',resolved:'완료',archived:'보관',accepted:'담당자 응답 중',requested:'연결 대기',awaiting_human:'승인 대기',verified:'완료',ready_for_executor:'실행 대기',executor_ready:'실행 대기',assist_only:'검토',blocked:'차단',failed:'실패',approved_pending_executor:'승인됨',queued:'실행 큐 등록',running:'실행 중',retry:'재시도 대기',degraded:'실행 경로 확인 필요',core_only:'핵심 경로 처리',human_gate:'승인 대기',ignored:'처리 제외'};return map[value]||value||'확인'}
   function priorityLabel(value){if(value==='urgent')return'긴급';if(value==='review')return'확인 필요';return'일반'}
   function positionWorkbench(){
     const sidebar=document.querySelector('.sidebar');

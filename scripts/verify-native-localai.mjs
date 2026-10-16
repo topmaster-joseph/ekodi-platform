@@ -19,6 +19,27 @@ export function eligibleNativeLocalAiDevice(d,{hostname='user3',now=Date.now()}=
   );
 }
 
+// Only fixed diagnostic categories may leave the authenticated Device Control lane.
+export function nativeLocalAiFailureCode(proof) {
+  if(proof?.ollamaApi!=='ready') {
+    // Only agent-generated categorical evidence may be reported. No process
+    // arguments, local IPs, exception messages or environment fields escape.
+    const safe=new Set([
+      'process_not_running','loopback_port_not_listening','wrong_bind',
+      'port_bound_unresponsive','api_timeout','version_response_invalid',
+      'api_unavailable_unclassified'
+    ]);
+    const code=String(proof?.diagnosticCode||'');
+    return safe.has(code)?'native_localai_'+code:'native_localai_api_unavailable';
+  }
+  const allowed=new Set([
+    'approved_model_missing','api_error_or_timeout',
+    'empty_or_incomplete_response','nonmatching_response','not_checked'
+  ]);
+  const status=String(proof?.inference||'');
+  return allowed.has(status)?'native_localai_'+status:'native_localai_inference_not_ready';
+}
+
 export async function verifyNativeLocalAi({token,hostname='user3',fetchImpl=fetch,
   clock=()=>Date.now(),sleepFn=wait,maxPoll=24,pollMs=4000}={}){
   if(typeof token!=='string'||token.trim().length<20)throw new Error('trusted_admin_session_required');
@@ -68,7 +89,7 @@ export async function verifyNativeLocalAi({token,hostname='user3',fetchImpl=fetc
     if(proof.credentialCollection!==false||proof.executionMode!=='fixed_loopback_api')
       throw new Error('native_localai_unapproved_diagnostic_mode');
     if(proof.ollamaApi!=='ready'||proof.inference!=='passed')
-      throw new Error('native_localai_inference_not_ready');
+      throw new Error(nativeLocalAiFailureCode(proof));
     if(current.status!=='online')throw new Error('native_localai_heartbeat_lost_after_command');
     return {
       schemaVersion:1,targetAlias:target,commandType:COMMAND,commandId:command.id,

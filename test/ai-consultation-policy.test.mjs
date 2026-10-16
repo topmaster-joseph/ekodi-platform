@@ -28,3 +28,27 @@ test('high-impact categories cannot silently skip consultation', () => {
     assert.equal(forced.has(category), true, category);
   }
 });
+
+
+test('owner-facing deployment validation uses three gates without removing detailed verification', () => {
+  const model = policy.deploymentGateModel;
+  assert.equal(model.policyId, 'EKODI-DEPLOY-3GATE-001');
+  assert.deepEqual(model.publicSequence, ['build', 'release', 'production']);
+  assert.equal(model.detailedLifecycleRemainsAuditable, true);
+  assert.equal(model.duplicateChecksMustBeDeduplicated, true);
+  assert.equal(model.samePurposeChecksRunInsideOneGate, true);
+  assert.deepEqual(model.riskRouting.low.publicGates, ['build', 'production']);
+  assert.deepEqual(model.riskRouting.normal.publicGates, ['build', 'release', 'production']);
+  assert.equal(model.riskRouting.high.independentVerificationRequired, true);
+  assert.equal(model.riskRouting.critical.independentVerificationRequired, true);
+});
+
+test('three-gate simplification preserves production completion and safety boundaries', () => {
+  const model = policy.deploymentGateModel;
+  assert.equal(model.completion.productionEvidenceRequiredWhenDeploymentRequested, true);
+  assert.equal(model.completion.liveFunctionalVerificationRequired, true);
+  assert.equal(model.completion.deployCommandAloneNeverMeansDone, true);
+  for (const item of ['human-gates','security-boundaries','data-integrity','rollback-readiness','orchestrator-provenance','production-verification']) {
+    assert.equal(model.preservation.includes(item), true, item);
+  }
+});

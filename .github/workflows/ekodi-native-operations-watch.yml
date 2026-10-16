@@ -1,0 +1,67 @@
+name: EKODI Native Operations Watch
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Hourly, staggered from the existing DB watch (+07) and orchestrator (+15).
+    - cron: '37 * * * *'
+    # EKODI daily summary evidence at 08:45 Asia/Seoul.
+    - cron: '45 23 * * *'
+  pull_request:
+    paths:
+      - '.github/workflows/ekodi-native-operations-watch.yml'
+      - 'scripts/ekodi-native-operations-watch.mjs'
+      - 'config/ekodi-native-monitoring-ownership.json'
+      - 'test/ekodi-native-operations-watch.test.mjs'
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: ekodi-native-operations-watch-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'operations' }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify owned, read-only monitoring contract
+        run: |
+          node --check scripts/ekodi-native-operations-watch.mjs
+          node --test test/ekodi-native-operations-watch.test.mjs
+
+  observe:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      EKODI_WATCH_MODE: ${{ github.event.schedule == '45 23 * * *' && 'daily' || 'hourly' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Collect EKODI-owned read-only operational evidence
+        run: |
+          node scripts/ekodi-native-operations-watch.mjs \
+            --mode="$EKODI_WATCH_MODE" \
+            --output=ekodi-native-operations-evidence.json
+      - name: Preserve privacy-safe evidence, including failures
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ekodi-native-operations-${{ github.run_id }}
+          path: ekodi-native-operations-evidence.json
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,0 +1,79 @@
+name: SeonamMedi Native Menu and Guest Audit
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/verify-seonammedi-nav-guest-native.mjs'
+      - '.github/workflows/verify-seonammedi-nav-guest-native.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'sites/seonammedi/public/**'
+      - 'services/independent-board/worker.js'
+      - 'scripts/verify-seonammedi-nav-guest-native.mjs'
+  workflow_dispatch:
+  issue_comment:
+    types: [created]
+  workflow_run:
+    workflows: ['Deploy EKODI Shared Site Core', 'Deploy Independent Board']
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  # Unrelated issue comments must never cancel the owner's post-merge live audit.
+  group: seonammedi-native-nav-${{ github.event_name }}-${{ github.event_name == 'issue_comment' && github.event.comment.id || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preflight-native-verifier:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check trusted read-only verifier syntax before deploying UI
+        run: node --check scripts/verify-seonammedi-nav-guest-native.mjs
+  native-public-guest-audit:
+    # Owner-only post-merge read-only probe. Issue comments run from trusted default main,
+    # never from a contributor-controlled PR head and never receive write credentials.
+    if: >-
+      (github.event_name == 'issue_comment' &&
+       github.event.comment.user.login == github.repository_owner &&
+       github.event.issue.pull_request != null &&
+       github.event.issue.state == 'closed' &&
+       github.event.comment.body == 'EKODI-SEONAM-NATIVE-AUDIT:RUN') ||
+      (github.event_name != 'issue_comment' &&
+       github.event_name != 'pull_request' &&
+       (github.event_name != 'workflow_run' ||
+        (github.event.workflow_run.conclusion == 'success' &&
+         github.event.workflow_run.head_repository.full_name == github.repository)))
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ (github.event_name == 'workflow_run' || github.event_name == 'issue_comment') && 'main' || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check trusted read-only verifier syntax
+        run: node --check scripts/verify-seonammedi-nav-guest-native.mjs
+      - name: Install EKODI Chromium harness
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Check canonical and customer public surfaces on PC/mobile
+        run: node scripts/verify-seonammedi-nav-guest-native.mjs
+      - name: Upload screenshot and structured evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seonammedi-native-nav-guest-${{ github.run_id }}
+          path: artifacts/seonammedi-nav-guest
+          retention-days: 14
+          if-no-files-found: warn

@@ -5,7 +5,7 @@ import { auditDataStoreTopology, declaredBindings, declaredVar } from '../script
 
 const root = new URL('../', import.meta.url);
 const topology = JSON.parse(readFileSync(new URL('config/data-store-topology.json', root), 'utf8'));
-const contents = Object.fromEntries([...new Set(topology.stores.map(s => s.source))]
+const contents = Object.fromEntries([...new Set(topology.stores.flatMap(s => [s.source, s.resolverWorkflow].filter(Boolean)))]
   .map(file => [file, readFileSync(new URL(file, root), 'utf8')]));
 
 test('production source manifests are registered without claiming live verification', () => {
@@ -14,6 +14,7 @@ test('production source manifests are registered without claiming live verificat
   assert.equal(result.inventory.length, topology.stores.length);
   assert.ok(result.inventory.every(s => s.liveVerified === false));
   assert.ok(result.warnings.some(w => w.includes('independent-board-d1')));
+  assert.ok(result.inventory.some(s => s.id === 'independent-board-d1' && s.state === 'deployment-time-binding'));
 });
 
 test('ready store rejects unresolved identifiers', () => {
@@ -56,4 +57,15 @@ test('full Wrangler D1 inventory includes site manifests without leaking provide
   assert.ok(inventory.stores.some(s => s.source === 'wrangler.independent-board.toml' &&
     s.binding === 'BOARD_DB' && s.readiness === 'placeholder'));
   assert.ok(inventory.stores.every(s => !('database_id' in s)));
+});
+
+test('deployment-time placeholder requires the registered release resolver', () => {
+  const altered = structuredClone(topology);
+  const board = altered.stores.find(x => x.id === 'independent-board-d1');
+  assert.equal(board.state,'runtime-resolved');
+  const withoutResolver = {...contents,[board.resolverWorkflow]:'deployment without D1 mapping'};
+  assert.equal(auditDataStoreTopology(altered,withoutResolver).ok,false);
+  const wrongPlaceholder = {...contents,[board.source]:contents[board.source].replace(
+    'REPLACE_WITH_INDEPENDENT_BOARD_D1_ID','REPLACE_WITH_UNKNOWN_ID')};
+  assert.equal(auditDataStoreTopology(altered,wrongPlaceholder).ok,false);
 });

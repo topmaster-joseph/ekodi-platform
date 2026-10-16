@@ -399,6 +399,49 @@
 
     result.append(agentCard, systemCard);
 
+    const browserAudit = agent?.browserTaskAudit;
+    const auditWrap = document.createElement('div');
+    auditWrap.className = 'device-remote-processes';
+    const auditHead = document.createElement('div');
+    auditHead.className = 'device-subhead';
+    auditHead.innerHTML = '<h3>에코디 브라우저 작업 원장</h3><span>자체 실행기 작업만 표시 · 사용자 Opera 탭 제외</span>';
+    auditWrap.append(auditHead);
+    const records = Array.isArray(browserAudit?.recent) ? browserAudit.recent : [];
+    if (!records.length) {
+      const empty = document.createElement('p');
+      empty.className = 'device-command-empty';
+      empty.textContent = browserAudit
+        ? '기록된 자체 브라우저 작업이 없습니다.'
+        : 'Agent 상태를 조회하면 작업 생성 주체와 종료 검증 기록이 표시됩니다.';
+      auditWrap.append(empty);
+    } else {
+      const list = document.createElement('div');
+      list.className = 'device-remote-process-list';
+      const labels = {
+        completed:'완료·정리 확인',auth_required:'인증 필요·정리 확인',
+        cleanup_unverified:'종료 확인 필요',interrupted_unverified:'중단·정리 미확인',
+        running:'실행 중',failed:'실패'
+      };
+      records.forEach(item => {
+        const row = document.createElement('div');
+        const title = document.createElement('strong');
+        title.textContent = item.commandType || '브라우저 작업';
+        const state = document.createElement('span');
+        state.textContent = labels[item.state] || '확인 필요';
+        const times = document.createElement('span');
+        times.textContent = (item.startedAt || '시작 미확인') + ' → ' + (item.finishedAt || '종료 미확인');
+        const origin = document.createElement('span');
+        origin.textContent = '실행기 ' + (item.launcher || '확인 필요') + ' · 브라우저 ' +
+          (item.browser || '미확인') + ' · PID ' + (item.ownedBrowserProcessId || '미확인') +
+          ' · 관측 탭 ' + (item.ownedTabsObserved || 0) + ' / 닫힘 ' +
+          (item.ownedTabsClosed || 0) + ' · 작업 ' + (item.commandKey || '미확인');
+        row.append(title, state, times, origin);
+        list.append(row);
+      });
+      auditWrap.append(list);
+    }
+    result.append(auditWrap);
+
     if (processes) {
       const processWrap = document.createElement('div');
       processWrap.className = 'device-remote-processes';

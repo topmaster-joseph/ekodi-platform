@@ -16,7 +16,7 @@ const CANONICAL_AUTH_ORIGIN=runtime.authOrigin;
 const GOOGLE_BRIDGE_ORIGIN=runtime.authOrigin;
 const defaultReturn=runtime.environment==='production'?'https://ekodi.kr/admin/':runtime.authOrigin?runtime.authOrigin+'/admin/':'https://ekodi.kr/admin/';
 const rawReturn=params.get('return_to')||defaultReturn;
-const safeReturn=(()=>{try{const u=new URL(rawReturn);if(u.protocol!=='https:'&&!/^http:\/\/(localhost|127\.0\.0\.1)(?::\d+)?$/.test(u.origin))return defaultReturn;if(runtime.environment!=='production'&&u.origin===runtime.authOrigin&&u.pathname.startsWith('/admin'))return u.href;if(u.origin==='https://ekodi.kr'&&u.pathname.startsWith('/admin'))return u.href;if(u.origin==='https://ekodi.kr'&&(u.pathname==='/ai'||u.pathname==='/ai/'))return u.href;if(u.origin==='https://ekodi.kr'&&(u.pathname==='/tax'||u.pathname==='/tax/'))return u.href;if(u.origin==='https://ekodi.kr'&&(u.pathname==='/live/admin'||u.pathname==='/live/admin/'||u.pathname.startsWith('/live/admin/')))return u.href;if(u.origin==='https://ekodi.kr'&&(u.pathname==='/ekodimall/admin'||u.pathname==='/ekodimall/admin/'||u.pathname.startsWith('/ekodimall/admin/')))return u.href;return defaultReturn}catch{return defaultReturn}})();
+const safeReturn=(()=>{try{const u=new URL(rawReturn);if(u.protocol!=='https:'&&!/^http:\/\/(localhost|127\.0\.0\.1)(?::\d+)?$/.test(u.origin))return defaultReturn;if(runtime.environment!=='production'&&u.origin===runtime.authOrigin&&u.pathname.startsWith('/admin'))return u.href;if(u.origin==='https://ekodi.kr'&&u.pathname.startsWith('/admin'))return u.href;if(u.origin==='https://ekodi.kr'&&(u.pathname==='/ai'||u.pathname==='/ai/'))return u.href;if(u.origin==='https://ekodi.kr'&&(u.pathname==='/tax'||u.pathname==='/tax/'))return u.href;if(u.origin==='https://ekodi.kr'&&(u.pathname==='/live/admin'||u.pathname==='/live/admin/'||u.pathname.startsWith('/live/admin/')))return u.href;if(u.origin==='https://ekodi.kr'&&(u.pathname==='/ekodimall/admin'||u.pathname==='/ekodimall/admin/'||u.pathname.startsWith('/ekodimall/admin/')))return u.href;if(u.origin==='https://ekodi.kr'&&(u.pathname==='/ekodibiz/doraji'||u.pathname==='/ekodibiz/doraji/'||u.pathname.startsWith('/ekodibiz/doraji/'))&&u.pathname!=='/ekodibiz/doraji/api'&&!u.pathname.startsWith('/ekodibiz/doraji/api/'))return u.href;return defaultReturn}catch{return defaultReturn}})();
 const $=id=>document.getElementById(id);
 $('serviceName').textContent='EKODI 관리자';
 $('serviceBadge').textContent='관리자 전용';
@@ -89,6 +89,9 @@ async function completeGoogleLogin(credential,challenge){
   // This prevents a silent login loop when session persistence or routing has failed.
   const verified=await request('/api/session',{headers:{authorization:`Bearer ${result.token}`}});
   if(verified.authenticated!==true)throw new Error('admin_session_not_ready');
+  // Store the verified token only for this origin and tab before same-tab navigation.
+  // Keep the existing fragment fallback when sessionStorage is unavailable.
+  try{sessionStorage.setItem('ekodi-auth-token',result.token)}catch{}
   navigateToAdmin(result);
 }
 function renderOriginBridgeButton(host,config,challenge){

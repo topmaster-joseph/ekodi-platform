@@ -152,7 +152,7 @@ async function loadSiteHealth(){
   const staticHost=$('staticHealthList'),dynamicHost=$('dynamicHealthList');if(!staticHost||!dynamicHost)return;
   staticHost.innerHTML='<p class="empty">정적 상태를 확인 중입니다.</p>';dynamicHost.innerHTML='<p class="empty">동적 상태를 확인 중입니다.</p>';
   const [home,css,script,data,monitor,pageData,notices,channels]=await Promise.all([
-    healthFetch('/seonammedi/',{inspect:body=>body.includes('<link rel="canonical" href="https://ekodi.kr/seonammedi/">')&&!body.includes('id="monitorBadge"')?'사용자 화면과 관리자 점검 분리됨':false}),
+    healthFetch('/seonammedi/',{inspect:body=>body.includes('<link rel="canonical" href="https://seonammedi.kr/">')&&!body.includes('id="monitorBadge"')?'사용자 화면과 관리자 점검 분리됨':false}),
     healthFetch('/seonammedi/app.css'),healthFetch('/seonammedi/app.js'),
     healthFetch('/seonammedi/data.json',{inspect:body=>{try{return Boolean(JSON.parse(body)?.updatedAt)}catch{return false}}}),
     healthFetch('/api/seonammedi/monitor'),healthFetch('/api/seonammedi/page-data'),healthFetch('/api/seonammedi/notices'),healthFetch('/api/seonammedi/channels')
@@ -266,7 +266,8 @@ async function loadOrganization(){
   state.organization=org;
   const form=$('organizationForm');
   normalizeOrgGroups(org).forEach(group=>fillOrgGroup(form,group));
-  showOrgAdminTab(form.elements.orgKey.value||'bidae');
+  // Loading organization data must not replace an explicitly requested admin panel.
+  showOrgAdminTab(form.elements.orgKey.value||'bidae',{route:false});
   text($('organizationMessage'),'');
 }
 $('organizationForm')?.addEventListener('submit',async event=>{
@@ -293,8 +294,8 @@ function resetFinance(){const form=$('financeForm');form.reset();form.elements.i
 function editFinance(item){const form=$('financeForm');form.elements.id.value=item.id;form.elements.date.value=item.date||'';form.elements.type.value=item.type||'income';form.elements.amount.value=String(item.amount||0);form.elements.purpose.value=item.purpose||'';form.elements.event.value=item.event||'';form.elements.evidenceStatus.value=item.evidenceStatus||'none';form.elements.note.value=item.note||'';form.elements.visible.checked=Boolean(item.visible);text($('financeFormTitle'),'회계내역 수정');showPanel('finance')}
 async function deleteFinance(item){if(!confirm('이 회계내역을 삭제할까요?'))return;try{await api('/api/seonammedi/admin/finance/'+item.id,{method:'DELETE'});await loadFinance();text($('financeMessage'),'삭제했습니다.')}catch(error){text($('financeMessage'),error.message)}}
 function renderFinance(){
-  const host=$('financeList');host.replaceChildren();let income=0,expense=0;for(const item of state.finance){if(item.visible){if(item.type==='income')income+=item.amount;else expense+=item.amount}}
-  text($('financeSummary'),'공개합계 · 수입 '+moneyText(income)+' · 지출 '+moneyText(expense)+' · 잔액 '+moneyText(income-expense));
+  const host=$('financeList');host.replaceChildren();let income=0,expense=0;for(const item of state.finance){if(item.type==='income')income+=Number(item.amount||0);else expense+=Number(item.amount||0)}
+  text($('financeSummary'),'내부합계 · 수입 '+moneyText(income)+' · 지출 '+moneyText(expense)+' · 잔액 '+moneyText(income-expense));
   if(!state.finance.length){host.append(empty('등록된 회계내역이 없습니다.'));return}
   for(const item of state.finance){const article=document.createElement('article');article.className='item';const head=document.createElement('div');head.className='item-head';const left=document.createElement('div');const title=document.createElement('div');title.className='item-title';title.textContent=(item.type==='income'?'수입 ':'지출 ')+moneyText(item.amount)+' · '+item.purpose;const meta=document.createElement('div');meta.className='item-meta';meta.textContent=[item.date,item.event,item.evidenceStatus].filter(Boolean).join(' · ');left.append(title,meta);const flags=document.createElement('div');flags.append(tag(item.visible?'공개':'비공개',item.visible?'live':''));head.append(left,flags);article.append(head);if(item.note){const p=document.createElement('p');p.className='item-body';p.textContent=item.note;article.append(p)}const actions=document.createElement('div');actions.className='item-actions';actions.append(button('수정',()=>editFinance(item)),button('삭제',()=>deleteFinance(item),'danger'));article.append(actions);host.append(article)}
 }
@@ -315,10 +316,10 @@ async function loadVoices(){
 
 
 function resetTimeline(){
-  const form=$('timelineForm');form.reset();form.elements.id.value='';form.elements.status.value='published';form.elements.sortOrder.value=String(state.timeline.length);text($('timelineFormTitle'),'활동이력 추가');text($('timelineMessage'),'');
+  const form=$('timelineForm');form.reset();form.elements.id.value='';form.elements.recordScope.value='news';form.elements.committeeRelated.checked=false;form.elements.status.value='published';form.elements.sortOrder.value=String(state.timeline.length);text($('timelineFormTitle'),'활동이력 추가');text($('timelineMessage'),'');
 }
 function editTimeline(item){
-  const form=$('timelineForm');form.elements.id.value=item.id;form.elements.date.value=item.date||'';form.elements.category.value=item.category||'';form.elements.title.value=item.title||'';form.elements.summary.value=item.summary||'';form.elements.evidence.value=item.evidence||'';form.elements.sortOrder.value=String(item.sortOrder??0);form.elements.status.value=item.status||'draft';text($('timelineFormTitle'),'활동이력 수정');showPanel('status');selectRecordsAdminTab('timeline');form.elements.title.focus();
+  const form=$('timelineForm');form.elements.id.value=item.id;form.elements.date.value=item.date||'';form.elements.category.value=item.category||'';form.elements.recordScope.value=item.recordScope||'news';form.elements.committeeRelated.checked=Boolean(item.committeeRelated);form.elements.title.value=item.title||'';form.elements.summary.value=item.summary||'';form.elements.evidence.value=item.evidence||'';form.elements.sortOrder.value=String(item.sortOrder??0);form.elements.status.value=item.status||'draft';text($('timelineFormTitle'),'활동이력 수정');showPanel('status');selectRecordsAdminTab('timeline');form.elements.title.focus();
 }
 async function deleteTimeline(item){
   if(!confirm('이 활동이력을 삭제할까요?'))return;
@@ -331,7 +332,7 @@ function renderTimeline(){
     const head=document.createElement('div');head.className='item-head';
     const left=document.createElement('div');const titleNode=document.createElement('div');titleNode.className='item-title';titleNode.textContent=item.title||'제목 없음';
     const meta=document.createElement('div');meta.className='item-meta';meta.textContent=[item.date,item.category,item.evidence].filter(Boolean).join(' · ');left.append(titleNode,meta);
-    const flags=document.createElement('div');flags.append(tag(item.status==='published'?'공개':'비공개',item.status==='published'?'live':''));head.append(left,flags);article.append(head);
+    const flags=document.createElement('div');flags.append(tag(item.status==='published'?'공개':'비공개',item.status==='published'?'live':''));if(item.committeeRelated)flags.append(tag('비대위 소식','live'));head.append(left,flags);article.append(head);
     if(item.summary){const p=document.createElement('p');p.className='item-body';p.textContent=item.summary.length>500?item.summary.slice(0,500)+'…':item.summary;article.append(p)}
     const actions=document.createElement('div');actions.className='item-actions';actions.append(button('수정',()=>editTimeline(item)),button(item.status==='published'?'비공개로':'공개로',async()=>{try{await api('/api/seonammedi/admin/timeline/'+item.id,{method:'PUT',body:JSON.stringify({status:item.status==='published'?'draft':'published'})});await loadTimeline()}catch(error){text($('timelineMessage'),error.message)}}),button('삭제',()=>deleteTimeline(item),'danger'));article.append(actions);host.append(article);
   }
@@ -431,8 +432,44 @@ function renderChannels(){
 }
 async function loadChannels(){if(!state.me?.permissions?.channels)return;const data=await api('/api/seonammedi/admin/channels');state.channels=data.items||[];renderChannels();updateDashboard()}
 
+function bindAdminTimelineLinkImport(){
+  const form=$('adminTimelineLinkForm'),preview=$('adminTimelineLinkPreview');
+  const message=$('adminTimelineLinkMessage'),check=$('adminTimelineLinkPreviewButton'),save=$('adminTimelineLinkSaveButton');
+  if(!form||!preview)return;
+  let verifiedUrl='';
+  const reset=()=>{verifiedUrl='';save.disabled=true;preview.replaceChildren();preview.hidden=true;text(message,'')};
+  form.elements.url.addEventListener('input',reset);
+  check.addEventListener('click',async()=>{
+    const url=String(form.elements.url.value||'').trim();reset();
+    if(!url||!form.elements.url.checkValidity()){text(message,'유효한 HTTPS 기사 링크를 넣어주세요.');return}
+    check.disabled=true;text(message,'기사 원문을 확인하는 중입니다…');
+    try{
+      const result=await api('/api/seonammedi/admin/timeline/link-preview',{method:'POST',body:JSON.stringify({url})});
+      if(url!==String(form.elements.url.value||'').trim())return;
+      const item=result.item||{},heading=document.createElement('strong'),metadata=document.createElement('small'),body=document.createElement('p');
+      heading.textContent=item.title||'제목 추출 실패';metadata.textContent=[item.publisher,item.date||'발행일 확인 불가',item.category].filter(Boolean).join(' · ');
+      body.textContent=item.summary||'본문 근거를 확인하지 못했습니다.';
+      preview.replaceChildren(heading,metadata,body);preview.hidden=false;
+      if(item.ready){verifiedUrl=url;save.disabled=false;text(message,'관련성·발행일 확인 완료. 등록할 수 있습니다.')}
+      else text(message,item.relevant?'발행일이 확인되지 않아 자동등록할 수 없습니다. 수동 등록을 이용하세요.':'제목과 본문의 국립의대 관련성이 확인되지 않아 자동등록할 수 없습니다.');
+    }catch(error){text(message,'링크 확인 실패: '+error.message)}
+    finally{check.disabled=false}
+  });
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();const url=String(form.elements.url.value||'').trim();
+    if(url!==verifiedUrl){text(message,'링크 미리보기를 먼저 확인해주세요.');return}
+    save.disabled=true;text(message,'원문 재검증 후 저장 중…');
+    try{
+      const result=await api('/api/seonammedi/admin/timeline/link-import',{method:'POST',body:JSON.stringify({url,status:form.elements.status.value})});
+      form.reset();reset();await loadTimeline();
+      text(message,result.duplicate?'이미 등록되어 있습니다.':'링크만으로 활동이력을 등록했습니다.');
+    }catch(error){text(message,'등록 실패: '+error.message);save.disabled=false}
+  });
+}
+bindAdminTimelineLinkImport();
+
 $('timelineForm').addEventListener('submit',async event=>{
-  event.preventDefault();const form=event.currentTarget,id=form.elements.id.value;const payload={date:form.elements.date.value,category:form.elements.category.value,title:form.elements.title.value,summary:form.elements.summary.value,evidence:form.elements.evidence.value,sortOrder:Number(form.elements.sortOrder.value||0),status:form.elements.status.value};
+  event.preventDefault();const form=event.currentTarget,id=form.elements.id.value;const payload={date:form.elements.date.value,category:form.elements.category.value,recordScope:form.elements.recordScope.value,committeeRelated:form.elements.committeeRelated.checked,title:form.elements.title.value,summary:form.elements.summary.value,evidence:form.elements.evidence.value,sortOrder:Number(form.elements.sortOrder.value||0),status:form.elements.status.value};
   const msg=$('timelineMessage');msg.classList.remove('error');text(msg,'저장 중…');
   try{await api(id?'/api/seonammedi/admin/timeline/'+id:'/api/seonammedi/admin/timeline',{method:id?'PUT':'POST',body:JSON.stringify(payload)});text(msg,'저장했습니다.');resetTimeline();await loadTimeline()}catch(error){msg.classList.add('error');text(msg,error.message)}
 });
@@ -468,10 +505,33 @@ $('runSiteHealth')?.addEventListener('click',async()=>{
 });
 $('refreshAll').addEventListener('click',()=>init(true));$('changeAccount').addEventListener('click',()=>{sessionStorage.removeItem(PLATFORM_TOKEN_KEY);clearSession();try{localStorage.removeItem(CENTRAL_SESSION_KEY)}catch{}location.assign(authUrl())});
 
+function setupBoardAccountRegistration(){
+  const form=$('boardAccountForm'),panel=$('boardAccountRegistration'),status=$('boardAccountStatus');
+  if(!form||!panel)return;
+  // Visibility is advisory; the existing tenant access API independently checks grant management authority.
+  panel.hidden=!state.me?.platform;
+  if(form.dataset.bound==='true')return;
+  form.dataset.bound='true';
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const email=String($('boardAccountEmail')?.value||'').trim().toLowerCase();
+    if(!email||!$('boardAccountEmail').checkValidity())return;
+    const button=form.querySelector('button[type="submit"]');button.disabled=true;
+    text(status,'계정 권한을 저장하고 있습니다.');
+    try{
+      const result=await api('/api/customers/tenants/seonammedi/pre-register',{
+        method:'POST',body:JSON.stringify({email,role:'board_admin',principalType:'member',capabilities:['seonammedi.notice.manage','seonammedi.voice.manage'],deniedCapabilities:['tenant.access.manage','tenant.finance.read','tenant.finance.manage','platform.admin','platform.production.deploy','seonammedi.finance.manage','seonammedi.page.manage']})
+      });
+      text(status,result?.ok===false?'등록 결과를 확인해 주세요.':email+' 계정 등록 완료. 해당 계정으로 Google 로그인하면 관리 권한이 즉시 적용됩니다.');
+    }catch(error){text(status,'등록 실패: '+String(error.message||error));}
+    finally{button.disabled=false;}
+  });
+}
+
 async function init(refresh=false){
   try{
-    state.me=await api('/api/seonammedi/admin/me');if(location.hash.includes('ekodi_token='))history.replaceState(null,'',location.pathname+location.search);updateDashboard();
-    await Promise.all([loadSiteHealth(),state.me.permissions?.pages?loadStatusPage():Promise.resolve(),state.me.permissions?.pages?loadOrganization():Promise.resolve(),state.me.permissions?.timeline?loadTimeline():Promise.resolve(),state.me.permissions?.voices?loadVoices():Promise.resolve(),state.me.permissions?.content?loadContent():Promise.resolve(),state.me.permissions?.channels?loadChannels():Promise.resolve()]);
+    state.me=await api('/api/seonammedi/admin/me');if(location.hash.includes('ekodi_token='))history.replaceState(null,'',location.pathname+location.search);updateDashboard();setupBoardAccountRegistration();
+    await Promise.all([loadSiteHealth(),state.me.permissions?.pages?loadStatusPage():Promise.resolve(),state.me.permissions?.pages?loadOrganization():Promise.resolve(),state.me.permissions?.timeline?loadTimeline():Promise.resolve(),state.me.permissions?.finance?loadFinance():Promise.resolve(),state.me.permissions?.voices?loadVoices():Promise.resolve(),state.me.permissions?.content?loadContent():Promise.resolve(),state.me.permissions?.channels?loadChannels():Promise.resolve()]);
     restoreAdminRoute({replace:true});
     if(refresh)text($('scopeSummary'),state.me.platform?'최고관리자 권한으로 최신 상태를 확인했습니다.':'게시판 관리자 권한으로 최신 상태를 확인했습니다.');
   }catch(error){

@@ -1,3 +1,6 @@
+import {approveAssistancePricebook,catalogFromApprovedPricebook,loadApprovedAssistancePricebook} from './support/assistance-pricebook.js';
+import {merchantContractReadiness,normalizeMerchantQuote,quoteDigest,normalizeQuoteAcknowledgment,paymentReadiness} from './support/assistance-contract.js';
+import {assistanceCatalogue,normalizeAssistanceRequest} from './support/assistance-catalog.js';
 import {AI_CONTROL_POLICY,buildExecutionPlan,buildOriginSynthesisPrompt,createTaskId,evaluateTaskMissionPolicy,isOriginPreserved,normalizeTaskInput,resolveOriginResponseProvider,rolePrompt,summarizeRuns,taskOrigin} from './ai-control-core.js';
 import {invokeProviderWithMeta,providerCapabilities,providerStatus} from './ai-control-provider-router.js';
 import {AI_FREE_QUOTA_POLICY,configuredFreeProviderIds,ensureFreePoolDecisionAlert,freePoolSnapshot,hasAlternateZeroCostExecution,listOpenAiCostAlerts,quotaCapabilities,recordFreeProviderOutcome} from './ai-free-quota.js';
@@ -74,10 +77,17 @@ function capabilityGranted(authority,required){
 }
 async function centralAdminSession(request,env,requiredCapability='ai:read'){
   const token=bearer(request);if(!token)return null;
-  const base=(clean(env.CONTROL_API_URL)||'https://ekodi.kr').replace(/\/+$/,'');
+  // Same-zone Worker-to-Worker auth must use the authenticated Control API service binding.
+  // Public fetch('https://ekodi.kr/api/session') can fail as an intra-zone Worker subrequest.
+  // Never fall back to the public route or accept an unverified browser identity.
+  if(typeof env?.CONTROL_API?.fetch!=='function')return{error:json({error:'central_identity_unavailable'},503)};
   try{
-    const response=await fetch(`${base}/api/session`,{headers:{accept:'application/json',authorization:`Bearer ${token}`},cache:'no-store'});
-    if(!response.ok)return null;
+    const sessionRequest=new Request('https://ekodi.kr/api/session',{
+      method:'GET',headers:{accept:'application/json',authorization:`Bearer ${token}`},redirect:'manual'
+    });
+    const response=await env.CONTROL_API.fetch(sessionRequest);
+    if(response.status>=500)return{error:json({error:'central_identity_unavailable'},503)};
+    if(!response.ok)return null; // Only a definitive non-5xx central rejection can try legacy tokens.
     const data=await response.json().catch(()=>({}));
     if(data?.authenticated!==true)return null;
     const role=clean(data.role||data.authority?.role).toLowerCase();
@@ -91,7 +101,7 @@ async function centralAdminSession(request,env,requiredCapability='ai:read'){
     if(!capabilityGranted(data.authority,requiredCapability)&&role!=='super_admin')return{error:json({error:'capability_required',capability:requiredCapability},403)};
     const email=clean(data.email).toLowerCase();if(!email)return{error:json({error:'admin_identity_missing'},403)};
     return{user:{id:email,email,role,authority:data.authority},source:'central-admin'};
-  }catch(error){console.warn('central admin session unavailable',clean(error?.message||error));return null}
+  }catch(error){console.warn('central admin session unavailable',clean(error?.message||error));return{error:json({error:'central_identity_unavailable'},503)}}
 }
 async function legacySupabaseAdmin(request,env){
   const token=bearer(request);if(!token)return{error:json({error:'authentication_required'},401)};
@@ -151,10 +161,18 @@ async function createPairing(env,email){
 }
 async function enrollNode(request,env){
   if(!dbReady(env))return json({error:'state_store_unavailable'},503);const input=await body(request)||{};const code=clean(input.code).toUpperCase();const id=safeId(input.nodeId);const name=clean(input.name).slice(0,120)||id;const providers=safeProviders(input.providers);
-  if(!code||!id||!providers.length)return json({error:'invalid_enrollment'},400);const hash=await sha256(code);const pairing=await env.DB.prepare("SELECT * FROM ai_control_node_pairings WHERE code_hash=? AND used_at='' AND expires_at>=?").bind(hash,now()).first();
-  if(!pairing)return json({error:'pairing_invalid_or_expired'},401);const token=randomToken();const stamp=now();
+  if(!code||!id||!providers.length)return json({error:'invalid_enrollment'},400);
+  const hash=await sha256(code);const stamp=now();
+  // Redeem before node creation with a conditional write. A SELECT followed by
+  // an unconditional UPDATE permits two concurrent enrollments with the same code.
+  // D1 updates are serialized; exactly one caller can change used_at from ''.
+  const redeemed=await env.DB.prepare("UPDATE ai_control_node_pairings SET used_at=? WHERE code_hash=? AND used_at='' AND expires_at>=?").bind(stamp,hash,stamp).run();
+  if(Number(redeemed?.meta?.changes??0)!==1)return json({error:'pairing_invalid_or_expired'},401);
+  // Fail closed if node insertion fails: request a fresh administrator code.
+  // Never restore or disclose a redeemed code or a node secret in error output.
+  const token=randomToken();
   await env.DB.prepare("INSERT INTO ai_control_nodes (id,name,secret_hash,providers,state,created_at,updated_at,last_seen_at) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,secret_hash=excluded.secret_hash,providers=excluded.providers,state='online',updated_at=excluded.updated_at,last_seen_at=excluded.last_seen_at").bind(id,name,await sha256(token),JSON.stringify(providers),'online',stamp,stamp,stamp).run();
-  await env.DB.prepare('UPDATE ai_control_node_pairings SET used_at=? WHERE code_hash=?').bind(stamp,hash).run();return json({ok:true,nodeId:id,nodeToken:token,providers},201);
+  return json({ok:true,nodeId:id,nodeToken:token,providers},201);
 }
 
 async function insertTask(env,task){
@@ -532,6 +550,63 @@ async function startCommonsPipeline(env,ctx,auth,input,fingerprint){
 }
 async function handleCommonsAdmin(request,env,url){
   const auth=await requireCommonsSuperAdmin(request,env);if(auth.error)return auth.error;if(!dbReady(env))return json({error:'state_store_unavailable'},503);
+  if(url.pathname.startsWith('/api/commons/admin/assistance/')){
+    const quoteApprovers=clean(env.EKODIBIZ_ASSISTANCE_QUOTE_APPROVERS).split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
+    if(!quoteApprovers.length||!quoteApprovers.includes(clean(auth.user.email).toLowerCase()))return json({error:'merchant_quote_role_required'},403);
+  }
+  if(url.pathname==='/api/commons/admin/assistance/pricebook'){
+    if(request.method==='GET'){
+      const current=await loadApprovedAssistancePricebook(env);
+      return json({merchant:'EKODIBIZ',active:current?
+        {policyVersion:current.policy_version,approvedAt:current.approved_at,items:JSON.parse(current.items_json).items}:null,
+        plans:assistanceCatalogue(env).map(p=>({id:p.id,label:p.label,free:Boolean(p.free)})),
+        paymentEnabled:false,contractExecuted:false});
+    }
+    if(request.method==='POST'){
+      const input=await body(request);
+      let approved;
+      try{approved=approveAssistancePricebook(input||{})}
+      catch(error){return json({error:clean(error.message)||'pricebook_invalid'},400)}
+      if(!dbReady(env))return json({error:'state_store_unavailable'},503);
+      const stamped=now();
+      try{
+        await env.DB.prepare("INSERT INTO ai_assistance_pricebooks (id,policy_version,items_json,status,approved_by,approved_at) VALUES (?,?,?,'approved',?,?)")
+          .bind(crypto.randomUUID(),approved.policyVersion,JSON.stringify(approved),auth.user.email,stamped).run();
+        return json({ok:true,policyVersion:approved.policyVersion,approvedAt:stamped,
+          publishedPrices:approved.items,checkoutEnabled:false,contractExecuted:false},201);
+      }catch{return json({error:'pricebook_version_conflict_or_unavailable'},409)}
+    }
+    return json({error:'method_not_allowed'},405);
+  }
+  if(request.method==='GET'&&url.pathname==='/api/commons/admin/assistance/requests'){
+    try{
+      const rows=await env.DB.prepare("SELECT r.id,r.notice_title,r.applicant_name,r.organization,r.plans_json,r.state,r.created_at,q.id quote_id,q.status quote_status FROM ai_assistance_requests r LEFT JOIN ai_assistance_quotes q ON q.request_id=r.id ORDER BY r.created_at DESC LIMIT 50").all();
+      return json({requests:(rows.results||[]).map(r=>({id:r.id,noticeTitle:r.notice_title,applicantName:r.applicant_name,organization:r.organization,plans:JSON.parse(r.plans_json||'[]').map(p=>({id:p.id,label:p.label})),state:r.state,createdAt:r.created_at,quoteId:r.quote_id||null,quoteStatus:r.quote_status||null})),contractPolicy:merchantContractReadiness(env),payment:paymentReadiness()});
+    }catch{return json({error:'assistance_schema_unavailable'},503)}
+  }
+  const quoteRequest=url.pathname.match(/^\/api\/commons\/admin\/assistance\/requests\/([a-f0-9-]{36})\/quote$/);
+  if(quoteRequest&&request.method==='POST'){
+    const input=await body(request);
+    const requestId=quoteRequest[1];
+    const row=await env.DB.prepare('SELECT id,user_id,notice_id,notice_title,applicant_name,organization,plans_json,state FROM ai_assistance_requests WHERE id=?').bind(requestId).first();
+    if(!row)return json({error:'request_not_found'},404);
+    if(row.state!=='review_requested')return json({error:'request_not_quoteable'},409);
+    let quote;
+    try{quote=normalizeMerchantQuote(input||{},JSON.parse(row.plans_json),env,now(),row)}
+    catch(e){return json({error:clean(e.message)||'invalid_quote'},400)}
+    const digest=await quoteDigest(quote),quoteId=crypto.randomUUID(),stamp=now();
+    try{
+      const result=await env.DB.batch([
+        env.DB.prepare("UPDATE ai_assistance_requests SET state='merchant_approved',updated_at=? WHERE id=? AND state='review_requested'").bind(stamp,requestId),
+        env.DB.prepare("INSERT INTO ai_assistance_quotes (id,request_id,user_id,digest,snapshot_json,total_krw,status,approved_by,issued_at,expires_at) VALUES (?,?,?,?,?,?,'issued',?,?,?)")
+          .bind(quoteId,requestId,row.user_id,digest,JSON.stringify(quote),quote.totalAmount,auth.user.id,stamp,quote.expiresAt),
+        env.DB.prepare('INSERT INTO ai_assistance_events (id,request_id,actor_id,kind,event_json,created_at) VALUES (?,?,?,?,?,?)')
+          .bind(crypto.randomUUID(),requestId,auth.user.id,'quote_issued',JSON.stringify({quoteId,digest}),stamp)
+      ]);
+      if(result[0]?.meta?.changes!==1)throw new Error('request_state_race');
+      return json({ok:true,quoteId,status:'issued',totalAmount:quote.totalAmount,currency:'KRW',contractExecuted:false,paymentEnabled:false},201);
+    }catch(e){console.warn('assistance quote atomic publish',clean(e?.message||e).slice(0,130));return json({error:'quote_conflict_or_unavailable'},409)}
+  }
   if(request.method==='GET'&&url.pathname==='/api/commons/admin/requests')return json({requests:await aggregateCommonsIdeas(env,200,adminIdeaView),finalPublishAuthority:'super_admin'});
   const match=url.pathname.match(/^\/api\/commons\/admin\/requests\/([a-f0-9]{64})\/decision$/);if(request.method==='POST'&&match){
     const input=await body(request)||{};const decision=clean(input.decision).toLowerCase();const fingerprint=match[1];const rows=await aggregateCommonsIdeas(env,200,adminIdeaView);const idea=rows.find(item=>item.fingerprint===fingerprint);if(!idea)return json({error:'request_not_found'},404);
@@ -547,6 +622,76 @@ async function handleCommonsApi(request,env,ctx){
   const url=new URL(request.url);if(!url.pathname.startsWith('/api/commons/'))return null;
   if(url.pathname.startsWith('/api/commons/admin/'))return handleCommonsAdmin(request,env,url);
   if(url.pathname.startsWith('/api/commons/chat')){const response=await handleCommonsChat(request,env,url);if(response)return response;}
+  if(url.pathname.startsWith('/api/commons/assistance/')){
+    const catalog=catalogFromApprovedPricebook(env,await loadApprovedAssistancePricebook(env));
+    if(request.method==='GET'&&url.pathname==='/api/commons/assistance/catalog'){
+      return json({merchant:'EKODIBIZ',role:'independent_paid_assistance',affiliatedWithIssuingAgency:false,
+        plans:catalog,checkoutEnabled:false,agreementExecutionEnabled:false,
+        paymentStatus:'merchant_and_payment_verification_required',
+        message:'가격·약관은 에코디비즈 승인 후 확정합니다. 정부 공고와 별도의 민간 지원서비스입니다.'});
+    }
+    const quoteDetail=url.pathname.match(/^\/api\/commons\/assistance\/requests\/([a-f0-9-]{36})$/);
+    const quoteAccept=url.pathname.match(/^\/api\/commons\/assistance\/requests\/([a-f0-9-]{36})\/acknowledge$/);
+    if(quoteDetail||quoteAccept){
+      const auth=await requireCommonsMember(request,env);if(auth.error)return auth.error;
+      if(!dbReady(env))return json({error:'state_store_unavailable'},503);
+      const id=(quoteDetail||quoteAccept)[1];
+      let record;
+      try{
+        record=await env.DB.prepare('SELECT r.id,r.user_id,r.applicant_name,r.notice_title,r.state,q.id quote_id,q.user_id quote_user_id,q.snapshot_json,q.digest,q.status quote_status,q.expires_at,q.issued_at,q.acknowledged_at,q.total_krw FROM ai_assistance_requests r LEFT JOIN ai_assistance_quotes q ON q.request_id=r.id WHERE r.id=? AND r.user_id=?').bind(id,auth.user.id).first();
+      }catch{return json({error:'assistance_schema_unavailable'},503)}
+      if(!record)return json({error:'request_not_found'},404);
+      if(quoteDetail&&request.method==='GET'){
+        let quote=null;
+        if(record.quote_id){quote={id:record.quote_id,status:record.quote_status,digest:record.digest,snapshot:JSON.parse(record.snapshot_json),issuedAt:record.issued_at,expiresAt:record.expires_at,acknowledgedAt:record.acknowledged_at};}
+        return json({request:{id:record.id,noticeTitle:record.notice_title,applicantName:record.applicant_name,state:record.state},quote,payment:paymentReadiness(),merchantContractExecuted:false});
+      }
+      if(quoteAccept&&request.method==='POST'){
+        if(!record.quote_id||record.state!=='merchant_approved')return json({error:'quote_not_ready'},409);
+        const input=await body(request);
+        let accepted;
+        try{accepted=normalizeQuoteAcknowledgment(input||{},{id:record.quote_id,user_id:record.quote_user_id,status:record.quote_status,expires_at:record.expires_at,digest:record.digest,applicant_name:record.applicant_name},record.user_id,auth.user.id)}
+        catch(e){return json({error:clean(e.message)||'quote_not_acceptable'},409)}
+        const stamp=now();
+        try{
+          const results=await env.DB.batch([
+            env.DB.prepare("UPDATE ai_assistance_quotes SET status='acknowledged',acknowledged_at=?,acknowledged_by=?,acknowledgment_type=? WHERE id=? AND user_id=? AND digest=? AND status='issued'")
+              .bind(stamp,auth.user.id,accepted.acknowledgmentType,record.quote_id,auth.user.id,record.digest),
+            env.DB.prepare("UPDATE ai_assistance_requests SET state='contract_pending',updated_at=? WHERE id=? AND user_id=? AND state='merchant_approved'")
+              .bind(stamp,id,auth.user.id),
+            env.DB.prepare('INSERT INTO ai_assistance_events (id,request_id,actor_id,kind,event_json,created_at) VALUES (?,?,?,?,?,?)')
+              .bind(crypto.randomUUID(),id,auth.user.id,'quote_acknowledged',JSON.stringify({quoteId:record.quote_id,digest:record.digest,kind:accepted.acknowledgmentType}),stamp)
+          ]);
+          if(results[0]?.meta?.changes!==1||results[1]?.meta?.changes!==1)throw new Error('quote_conflict');
+          return json({ok:true,state:'contract_pending',customerReviewAcknowledged:true,contractExecuted:false,paymentConfirmed:false,workStarted:false,payment:paymentReadiness()});
+        }catch{return json({error:'quote_conflict'},409)}
+      }
+      return json({error:'method_not_allowed'},405);
+    }
+    if(url.pathname==='/api/commons/assistance/requests'){
+      const auth=await requireCommonsMember(request,env);if(auth.error)return auth.error;
+      if(!dbReady(env))return json({error:'state_store_unavailable'},503);
+      if(request.method==='GET'){
+        try{
+          const result=await env.DB.prepare('SELECT id,notice_title,notice_source,plans_json,amount_krw,quote_required,legal_version,merchant,state,created_at FROM ai_assistance_requests WHERE user_id=? ORDER BY created_at DESC LIMIT 30').bind(auth.user.id).all();
+          return json({requests:(result.results||[]).map(row=>({id:row.id,noticeTitle:row.notice_title,source:row.notice_source,planIds:JSON.parse(row.plans_json).map(p=>p.id),amount:row.amount_krw,quoteRequired:Boolean(row.quote_required),legalVersion:row.legal_version,merchant:row.merchant,state:row.state,createdAt:row.created_at}))});
+        }catch{return json({error:'assistance_schema_unavailable'},503)}
+      }
+      if(request.method==='POST'){
+        const input=await body(request);
+        let draft;try{draft=normalizeAssistanceRequest(input||{},catalog)}catch(error){return json({error:clean(error.message)||'invalid_request'},400)}
+        const id=crypto.randomUUID(),timestamp=now();
+        try{
+          await env.DB.prepare('INSERT INTO ai_assistance_requests (id,user_id,notice_id,notice_title,notice_source,notice_url,applicant_name,organization,plans_json,amount_krw,quote_required,legal_version,merchant,state,scope_acknowledged_at,privacy_acknowledged_at,precontract_acknowledged_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+            .bind(id,auth.user.id,draft.noticeId,draft.noticeTitle,draft.noticeSource,draft.noticeUrl,draft.applicantName,draft.organization,JSON.stringify(draft.selected.plans.map(p=>({id:p.id,label:p.label,deliverables:p.deliverables,price:p.price}))),draft.selected.amount,draft.selected.quoteRequired?1:0,draft.legalVersion,draft.merchant,draft.state,timestamp,timestamp,timestamp,timestamp,timestamp).run();
+          return json({ok:true,id,state:'review_requested',merchant:'EKODIBIZ',quoteRequired:draft.selected.quoteRequired,
+            paymentInitiated:false,agreementExecuted:false,
+            message:'요청서 초안을 접수했습니다. 에코디비즈의 견적·약관 검토와 별도 계약 승인 이전에는 결제 및 업무가 진행되지 않습니다.'},201);
+        }catch(error){console.error('ai assistance request persistence',clean(error?.message||error).slice(0,100));return json({error:'assistance_schema_unavailable'},503)}
+      }
+    }
+    return json({error:'not_found'},404);
+  }
   if(['GET','HEAD'].includes(request.method)&&url.pathname==='/api/commons/client')return commonsBrowserAsset(request,env,'commons.js','text/javascript; charset=utf-8');
   if(['GET','HEAD'].includes(request.method)&&url.pathname==='/api/commons/style')return commonsBrowserAsset(request,env,'commons.css','text/css; charset=utf-8');
   if(request.method==='GET'&&url.pathname==='/api/commons/config')return json(commonsConfig(env));

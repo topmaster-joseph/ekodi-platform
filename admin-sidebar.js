@@ -640,6 +640,9 @@ export function mountAdminSidebar(root = document, options = {}) {
     const group = global.dataset.adminGlobalGroup || '';
     nav.dataset.adminFocusedGroup = group;
     const currentSection = activeSection(nav);
+    // Render the selected work area's real submenu immediately, before any
+    // delegated/lazy panel activation can race with the sidebar state.
+    syncWorkbenchState(nav, readAdminSidebarLocale(), currentSection);
     if (currentSection === 'command-home' || getAdminMenuGroupForSection(currentSection) !== group) {
       const defaultSection = getAdminMenuGroupDefault(group);
       const defaultDefinition = getAdminMenuItem(defaultSection);

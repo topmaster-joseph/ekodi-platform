@@ -6,7 +6,7 @@
   const START_KEY = 'ekodi-governance-cockpit-started-v1';
   const OVERVIEW_TTL_MS = 5 * 60 * 1000;
   const CORE_SERVICE_IDS = new Set(['admin','auth','api','pay']);
-  const CORE_DOMAINS = new Set(['admin.ekodi.kr','auth.ekodi.kr','pay.ekodi.kr']);
+  const CORE_DOMAINS = new Set(['admin.ekodi.kr','auth.ekodi.kr','ekodi.kr/ekodipay']);
   const PRIMARY_ROUTES = [
     { key:'overview', label:'Overview', icon:'◈', focus:'overview' },
     { key:'decisions', label:'Decisions', icon:'✓', focus:'decisions' },

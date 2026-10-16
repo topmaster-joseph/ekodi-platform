@@ -153,7 +153,7 @@ test('admin quick connect downloads one bounded enrollment connector without req
 });
 
 test('existing registered devices upgrade transactionally and preserve registration', () => {
-  assert.match(agent, /\$AgentVersion = '2\.5\.3'/);
+  assert.match(agent, /\$AgentVersion = '2\.5\.7'/);
   assert.match(agent, /Invoke-AgentUpgradeTransaction/);
   assert.match(agent, /Assert-AgentCandidate/);
   assert.match(agent, /New-AgentUpgradeSnapshot/);
@@ -467,4 +467,39 @@ test('bounded isolated desktop session is payload-sanitized and capability-gated
   assert.match(agent, /isolatedDesktopSessionCanary = \[bool\]\(Get-IsolatedDesktopSessionCanaryState\)\.verified/);
   assert.match(agent, /isolatedDesktop = \[bool\]\(Get-IsolatedDesktopSessionCanaryState\)\.verified/);
   assert.doesNotMatch(agent, /isolatedDesktop = \$true/);
+});
+
+
+test('native registered Windows Agent self-recovers after process exit without losing same-user DPAPI', () => {
+  const first = agent.indexOf('function Ensure-AgentTask {');
+  const last = agent.indexOf('function Copy-SelfToAgentPath', first);
+  assert.ok(first >= 0 && last > first);
+  const task = agent.slice(first, last);
+  assert.match(task, /New-ScheduledTaskTrigger -AtLogOn -User \$userId/);
+  assert.match(task, /New-ScheduledTaskTrigger -Once .* -RepetitionInterval \(New-TimeSpan -Minutes 5\)/);
+  assert.match(task, /New-ScheduledTaskPrincipal -UserId \$userId -LogonType Interactive/);
+  assert.match(task, /-MultipleInstances IgnoreNew/);
+  assert.match(task, /-RestartCount 3 -RestartInterval \(New-TimeSpan -Minutes 1\)/);
+  assert.match(task, /-ExecutionTimeLimit \(\[TimeSpan\]::Zero\)/);
+  assert.match(task, /-Trigger @\(\$logonTrigger, \$recoveryTrigger\)/);
+  assert.doesNotMatch(task, /-UserId 'SYSTEM'|-LogonType ServiceAccount|-ExecutionPolicy Unrestricted/);
+  assert.match(agent, /Global\\EKODI_Device_Agent_V2/);
+  assert.match(agent, /api\/device-agent\/heartbeat" -TimeoutSec 15/);
+  assert.match(agent, /api\/device-agent\/commands\/next" -TimeoutSec 15/);
+  assert.match(agent, /protectedToken = Protect-LocalSecret/);
+});
+
+
+test('browser task journal crosses Device Control sanitization and is shown without raw arguments', () => {
+  assert.match(api, /const audit = result\.agent\.browserTaskAudit/);
+  assert.match(api, /new Set\(\['computer\.browser\.canary','computer\.browser\.execute','computer\.browser\.pr\.observe'\]\)/);
+  assert.match(api, /summary\.agent\.browserTaskAudit =/);
+  assert.match(api, /audit\.recent\.slice\(0,20\)/);
+  assert.match(api, /ownedBrowserProcessId: Math\.max/);
+  assert.match(api, /ownedTabsClosed: Math\.min/);
+  assert.match(admin, /에코디 브라우저 작업 원장/);
+  assert.match(admin, /관측 탭/);
+  assert.match(admin, /닫힘/);
+  assert.match(admin, /item\.commandType/);
+  assert.doesNotMatch(admin, /item\.commandLine|item\.profilePath/);
 });

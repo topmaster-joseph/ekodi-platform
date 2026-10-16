@@ -34,18 +34,27 @@ function Invoke-RestMethod {
     }
     '/api/generate$' {
       if ($script:TestScenario -eq 'generate_error') { throw 'synthetic inference timeout' }
-      if ($Method -ne 'Post' -or $TimeoutSec -gt 45) { throw 'unexpected method or unbounded timeout' }
+      if ($Method -ne 'Post' -or $TimeoutSec -gt 60) { throw 'unexpected method or unbounded timeout' }
       $request = $Body | ConvertFrom-Json
       if ($request.model -ne 'qwen2.5-coder:1.5b' -or $request.stream -ne $false) {
         throw 'unexpected model or streaming'
       }
-      if ($request.options.num_predict -gt 64 -or $request.options.num_ctx -gt 512 -or $request.think -ne $false) {
+      if ($request.options.num_predict -gt 16 -or $request.options.num_ctx -gt 512 -or $request.think -ne $false) {
         throw 'unbounded local inference'
       }
       if ($script:TestScenario -eq 'wrong_reply') {
-        return [pscustomobject]@{ response = 'not the expected answer' }
+        return [pscustomobject]@{ response = 'Here is another valid response'; done = $true; model = 'qwen2.5-coder:1.5b' }
       }
-      return [pscustomobject]@{ response = 'OK' }
+      if ($script:TestScenario -eq 'unfinished_reply') {
+        return [pscustomobject]@{ response = 'OK'; done = $false; model = 'qwen2.5-coder:1.5b' }
+      }
+      if ($script:TestScenario -eq 'empty_reply') {
+        return [pscustomobject]@{ response = ''; done = $true; model = 'qwen2.5-coder:1.5b' }
+      }
+      if ($script:TestScenario -eq 'wrong_model') {
+        return [pscustomobject]@{ response = 'OK'; done = $true; model = 'unapproved:model' }
+      }
+      return [pscustomobject]@{ response = 'OK'; done = $true; model = 'qwen2.5-coder:1.5b' }
     }
     default { throw 'unexpected endpoint' }
   }
@@ -99,7 +108,14 @@ Assert-Equals 'offline short-circuit' $script:TestRequests.Count 1
 $script:TestScenario = 'wrong_reply'
 $script:TestRequests = @()
 $wrong = Get-EkodiLocalAiVerification
-Assert-Equals 'response mismatch is not success' $wrong.localAiProof.inference 'nonmatching_response'
+Assert-Equals 'non-exact but complete generated text is real inference' $wrong.localAiProof.inference 'passed'
+
+foreach ($scenario in @('unfinished_reply', 'empty_reply', 'wrong_model')) {
+  $script:TestScenario = $scenario
+  $script:TestRequests = @()
+  $invalid = Get-EkodiLocalAiVerification
+  Assert-Equals ('reject ' + $scenario) $invalid.localAiProof.inference 'empty_or_incomplete_response'
+}
 
 $script:TestScenario = 'generate_error'
 $script:TestRequests = @()

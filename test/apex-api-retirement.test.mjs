@@ -90,7 +90,14 @@ test('canonical apex API execution policy blocks retired browser and Admin host 
   assert.match(controlPlane,/const API='https:\/\/ekodi\.kr'/);
   assert.match(commonServices,/const CONTROL='https:\/\/ekodi\.kr'/);
   assert.match(providerControl,/const API='https:\/\/ekodi\.kr'/);
-  assert.match(aiControl,/clean\(env\.CONTROL_API_URL\)\|\|'https:\/\/ekodi\.kr'/);
+  assert.match(aiControl,/new Request\('https:\/\/ekodi\.kr\/api\/session'/);
+  assert.match(aiControl,/env\.CONTROL_API\.fetch\(sessionRequest\)/);
+  assert.doesNotMatch(aiControl,/clean\(env\.CONTROL_API_URL\)/);
+  for(const file of ['wrangler.ai.toml','wrangler.ai.release.toml']){
+    const wrangler=read(file);
+    assert.match(wrangler,/binding = "CONTROL_API"/);
+    assert.match(wrangler,/service = "ekodi-auth-api"/);
+  }
   assert.match(postbuild,/admin-ai-control-plane\.js/);
   assert.match(postbuild,/common-services-admin\.js/);
   assert.match(postbuild,/ai-ops-admin\.js/);

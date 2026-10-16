@@ -14,7 +14,7 @@ if (!menuIds.includes(menuId)) throw new Error(`Unknown Admin menu: ${menuId}`);
 const group = getAdminMenuGroupForSection(menuId);
 const adminOrigin = 'https://ekodi.kr';
 const baseUrl = `${adminOrigin}/admin/`;
-const authenticatedEntryUrl = `${baseUrl}?route=finance#ekodi_admin_token=${token}`;
+const authenticatedEntryUrl = `${baseUrl}?route=finance`;
 const isCanonicalAdminUrl = url => url.hostname === 'ekodi.kr' && (url.pathname === '/admin' || url.pathname.startsWith('/admin/'));
 const artifactsDir = path.resolve('artifacts/admin-authenticated-e2e');
 const reportPath = path.join(artifactsDir, `menu-${menuId.replace(/[^a-z0-9_-]/gi, '_')}.json`);
@@ -27,6 +27,7 @@ const results = [];
 let browser;
 let page;
 let fatal = null;
+let adminEntryTransport = null;
 let currentStage = 'bootstrap';
 const stage = value => { currentStage = value; console.log(`[E2E:${menuId}] stage=${value}`); };
 const interactionReadyTimeoutMs = 15_000;
@@ -349,7 +350,7 @@ async function verifyPublicSiteControls(tab, alreadyActive, started) {
   const badge = String(await form.locator('[data-public-site-status-badge]').textContent() || '').trim();
   const message = String(await page.locator('#publicSiteControlsPanel [data-public-site-message]').textContent() || '').replace(/\s+/g, ' ').trim();
   if (!state.panelFound || !state.selected || state.busy) throw new Error(`public-site-controls panel invalid: ${JSON.stringify(state)}`);
-  if (!domainText.includes('cgma.or.kr')) throw new Error(`public-site-controls: CGMA domain missing: ${domainText}`);
+  if (!domainText.includes('ekodi.kr/cgma')) throw new Error(`public-site-controls: CGMA canonical path missing: ${domainText}`);
   if (!['public', 'maintenance'].includes(publicStatus)) throw new Error(`public-site-controls: invalid publicStatus ${publicStatus}`);
   if (!['default', 'url'].includes(maintenanceDisplayType)) throw new Error(`public-site-controls: invalid maintenanceDisplayType ${maintenanceDisplayType}`);
   if (!['button', 'auto'].includes(redirectMode)) throw new Error(`public-site-controls: invalid redirectMode ${redirectMode}`);
@@ -593,6 +594,9 @@ try {
   stage('browser');
   browser = await chromium.launch({ headless: true, timeout: 20_000 });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
+  await context.addInitScript(value => {
+    sessionStorage.setItem('ekodi-auth-token', value);
+  }, token);
   context.setDefaultTimeout(5_000);
   context.setDefaultNavigationTimeout(15_000);
   page = await context.newPage();
@@ -603,7 +607,17 @@ try {
   });
 
   stage('navigation');
-  await page.goto(authenticatedEntryUrl, { waitUntil: 'domcontentloaded', timeout: 15_000 });
+  const entryResponse = await page.goto(authenticatedEntryUrl, { waitUntil: 'domcontentloaded', timeout: 15_000 });
+  const entryHeaders = entryResponse?.headers() || {};
+  // Only bounded transport metadata. Never record the URL, query, token, headers or HTML body.
+  adminEntryTransport = {
+    status: entryResponse?.status() ?? null,
+    contentType: String(entryHeaders['content-type'] || '').split(';')[0].slice(0, 80),
+    cfCacheStatus: String(entryHeaders['cf-cache-status'] || '').slice(0, 40),
+  };
+  if ([401, 403].includes(adminEntryTransport.status)) {
+    throw new Error('Admin entry rejected by production authentication boundary');
+  }
   await waitForReady();
   stage('registry');
   const productionOrder = await page.evaluate(() => window.EKODIAdminPanels?.visibleMenuOrder || []);
@@ -652,12 +666,24 @@ try {
   if (serious.length) throw new Error(`Serious console errors: ${serious.join(' | ')}`);
 } catch (error) {
   fatal = error;
+  if (currentStage.startsWith('ready-') && page) {
+    const state = await page.evaluate(() => ({
+      route: location.pathname,
+      hasSessionToken: Boolean(sessionStorage.getItem('ekodi-auth-token')),
+      appHidden: document.querySelector('#app')?.hidden ?? null,
+      loginHidden: document.querySelector('#loginScreen')?.hidden ?? null,
+      adminReady: document.documentElement.dataset.ekodiAdminReady === 'true',
+      sessionVerified: Boolean(document.querySelector('#apiState')?.textContent?.includes('정상')),
+      coreLoaded: Boolean(window.EKODIAdminCore),
+    })).catch(() => ({unavailable:true}));
+    console.error(`[E2E:${menuId}] safe readiness state ${JSON.stringify({...state, transport:adminEntryTransport})}`);
+  }
   console.error(`[E2E:${menuId}] fatal stage=${currentStage} ${error?.stack || error}`);
 } finally {
   const report = {
     generatedAt: new Date().toISOString(), baseUrl, menuId, expectedMenuCount: 1,
     checkedMenuCount: results.length, passed: !fatal, lastStage: currentStage, results,
-    diagnostics: { pageErrors, consoleErrors: consoleErrors.slice(-40), failedAdminAssets },
+    diagnostics: { pageErrors, consoleErrors: consoleErrors.slice(-40), failedAdminAssets, adminEntryTransport },
     error: fatal ? String(fatal?.stack || fatal?.message || fatal) : null,
   };
   await fs.writeFile(reportPath, JSON.stringify(report, null, 2));

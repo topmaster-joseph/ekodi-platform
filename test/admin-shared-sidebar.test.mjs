@@ -250,3 +250,15 @@ test('stale lazy demand completion cannot override a newer sidebar choice', () =
     /if \(demandTarget && window\.EKODIAdminDemand\?\.activate\) \{[\s\S]*?Promise\.resolve\(window\.EKODIAdminDemand\.activate\(section\)\)\.then\(\(\) => \{[\s\S]*?if \(!isLatestActivation\(nav, epoch\)\) return;[\s\S]*?window\.EKODIAdminPanels\.activate\(section\)/,
   );
 });
+
+
+test('focused work area renders its submenu synchronously before lazy panel activation', () => {
+  const clickStart=sidebar.indexOf("const group = global.dataset.adminGlobalGroup || ''");
+  const clickEnd=sidebar.indexOf('closeDrawer();',clickStart);
+  assert.ok(clickStart>=0&&clickEnd>clickStart);
+  const click=sidebar.slice(clickStart,clickEnd);
+  const focus=click.indexOf('nav.dataset.adminFocusedGroup = group');
+  const sync=click.indexOf('syncWorkbenchState(nav, readAdminSidebarLocale(), currentSection)');
+  const activate=click.indexOf('activateSection(nav, defaultSection)');
+  assert.ok(focus>=0&&sync>focus&&activate>sync);
+});

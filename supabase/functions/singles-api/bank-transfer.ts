@@ -99,6 +99,30 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   if(error)return reply(req,{error:action==='report'?'report_not_allowed':'acknowledgment_not_allowed'},409);
   return reply(req,{reference,status:data});
  }
+ if(path==='/bank/admin/brokerage-readiness'&&method==='GET'){
+  const role=await operator(admin,userId);
+  if(!role||role.can_configure!==true)return reply(req,{error:'readiness_operator_capability_required'},403);
+  const items=await many(admin.from('singles_brokerage_readiness')
+   .select('regime,code,requirement,progress,evidence_ref,updated_at').order('regime').order('code'));
+  return reply(req,{items,brokerage_mode:'disabled',application_submitted_by_platform:false});
+ }
+ if(path==='/bank/admin/brokerage-readiness'&&method==='PUT'){
+  const role=await operator(admin,userId);
+  if(!role||role.can_configure!==true)return reply(req,{error:'readiness_operator_capability_required'},403);
+  const v=await payload(req);
+  if(!v||typeof v!=='object'||Array.isArray(v)||
+    Object.keys(v).some(k=>!['regime','code','progress','evidence_ref'].includes(k))||
+    !['domestic','international'].includes(v.regime)||
+    !/^[a-z][a-z0-9_]{2,48}$/.test(v.code||'')||
+    !['not_started','collecting','ready_for_review','submitted'].includes(v.progress)||
+    typeof v.evidence_ref!=='string'||v.evidence_ref.length>240)
+   return reply(req,{error:'invalid_readiness_request'},400);
+  const {data,error}=await admin.rpc('singles_brokerage_update_readiness',{
+    p_regime:v.regime,p_code:v.code,p_progress:v.progress,
+    p_evidence_ref:v.evidence_ref,p_actor:userId});
+  if(error)return reply(req,{error:'readiness_update_rejected'},409);
+  return reply(req,{saved:true,item:data,brokerage_mode:'disabled'});
+ }
  if(path==='/bank/admin/catalog'&&method==='GET'){
   const role=await operator(admin,userId);
   if(!role||role.can_configure!==true)return reply(req,{error:'price_admin_required'},403);

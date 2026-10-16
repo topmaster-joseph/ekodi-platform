@@ -1,0 +1,67 @@
+import { BUSINESS_OS_STAGE, businessOsBudget } from './business-os-core.js';
+import { dorajiLedgerClientScript } from './ekodibiz-doraji-ledger-ui.js';
+const ROOT='/ekodibiz/doraji';
+const tabs=[
+ ['overview','사업총괄'],['projects','단위사업'],['cultivation','재배관리'],['budget','예산·손익'],['contracts','수매계약'],['delivery','납품·정산'],['documents','문서·보고']
+];
+const stage=BUSINESS_OS_STAGE;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function page(tab){
+ const current=tabs.some(([k])=>k===tab)?tab:'overview';
+ const nav=tabs.map(([k,n])=>`<a href="${ROOT}/${k}" ${current===k?'aria-current="page"':''}>${n}</a>`).join('');
+ const officeLink=`<a href="${ROOT}/office">업무원장 · 관리자</a>`;
+ const intro={
+ overview:['사업총괄','생산부터 수매대금 입금까지 한 흐름으로 관리합니다.'],
+ projects:['단위사업','재배지역과 하우스별 투자·생산·계약을 분리합니다.'],
+ cultivation:['재배관리','실제 재배일지·생육상태·시설점검 기록을 관리할 운영 항목입니다.'],
+ budget:['예산·손익','수익과 비용에 대한 가정치를 입력하여 손익을 계산합니다.'],
+ contracts:['수매계약','전량 수매의 조건과 검수기준을 계약 전에 확인합니다.'],
+ delivery:['납품·정산','검수 통과 물량과 대금회수를 구분하여 관리합니다.'],
+ documents:['문서·보고','계약서와 증빙·작업일보·보고서의 원장 연결 기준입니다.']
+ };
+ const [heading,sub]=intro[current];
+ const summary=businessOsBudget({houses:1,sqm:500,yieldKg:1,acceptance:90,unitPrice:5000,capex:12000000,supplies:1600000,labor:2200000,transport:400000,cycles:4});
+ const tasks={
+ projects:[['사업단위 ID','연도·지역·재배단지 단위로 구분'],['시설현황','하우스 동수, 폭·길이, 면적(㎡)'],['책임자','재배책임·계약책임·재무책임 지정'],['사업 게이트','시설비 승인 → 계약검토 → 재배착수']],
+ cultivation:[['재배계획','품종, 종근·종자 공급처 및 입고검수'],['재배일지','정식일, 관수, 온습도, 병해충, 투입자재'],['시설점검','환기·온도·관수·피복 및 보수 이력'],['생산예측','재배기간 및 수확 예상량은 현장 데이터로 검증']],
+ contracts:[['수매상대방','사업자정보·담당자·계약서 원본 확인'],['전량 매입','총수확량과 적격품 전량의 차이를 명시'],['규격·검수','수분, 크기, 잔류농약, 이물, 불합격 처리'],['가격조건','등급별 단가, 가격변경 조건, 운송비'],['대금지급','검수 확정일, 계산서 발행, 지급기한, 연체 처리']],
+ delivery:[['출하계획','수확 로트별 납품일·운송방법'],['검수결과','출하량, 인수량, 반품량, 폐기량 구분'],['정산원장','인수 확정 kg × 등급별 계약단가'],['입금관리','청구액, 입금액, 미수금, 지급기한']],
+ documents:[['계약서','초안·검토·서명완료 버전과 첨부파일'],['견적·증빙','시설비 견적, 세금계산서, 영수증'],['생산일지','재배일자·담당자·증빙사진'],['보고서','월별 예산대비 실제 집행 및 위험 보고']]
+ };
+ const section=current==='overview'?`<div class="grid three"><article class="tile"><small>사업단위</small><strong>미등록</strong><span>실제 사업정보 입력 전</span></article><article class="tile"><small>수매계약</small><strong>미등록</strong><span>계약서 확정 전</span></article><article class="tile"><small>정산상태</small><strong>미연결</strong><span>실제 회계원장 미연결</span></article></div><h2>사업 단계</h2><div class="stages">${stage.map((s,i)=>`<div><small>${String(i+1).padStart(2,'0')}</small><b>${s}</b></div>`).join('')}</div><div class="grid two"><article class="tile"><h3>우선 실행 업무</h3><ol><li>재배면적·하우스 구조·사업기간 확정</li><li>구매처 의향 및 수매 조건 검증</li><li>시설 투자비와 연간 운영비 산정</li><li>종근 공급·재배기술·수확주기 검토</li><li>전량납품 계약 조건 법률 검토</li></ol></article><article class="tile"><h3>재무 시뮬레이션</h3><p>가정치를 직접 바꾸어 예상 매출·이익·손익분기 단가를 계산할 수 있습니다. 공통 Business OS 엔진의 예시 계산 매출 ${Math.round(summary.revenue).toLocaleString('ko-KR')}원은 확정 수치가 아닙니다.</p><a class="cta" href="${ROOT}/budget">사업 예산 계산하기 →</a></article></div>`:
+ current==='budget'?`<article class="tile calc"><h2>사업별 손익 계산기</h2><p class="muted">모든 값은 입력한 가정치이며, 실제 계약·투자금·수익이 아닙니다. 이 계산은 브라우저 안에서만 수행되며 서버에 저장되지 않습니다.</p><div class="fields"><label>하우스 수 (동)<input id="houses" type="number" min="1" value="1"></label><label>동당 재배면적 (㎡)<input id="sqm" type="number" min="1" value="500"></label><label>예상 수확량 (kg/㎡·수확기)<input id="yield" type="number" min="0" step=".01" value="1"></label><label>검수 인수율 (%)<input id="accept" type="number" min="0" max="100" value="90"></label><label>수매단가 (원/kg)<input id="price" type="number" min="0" value="5000"></label><label>시설 투자비 (원)<input id="capex" type="number" min="0" value="12000000"></label><label>종근·자재비 (원)<input id="seed" type="number" min="0" value="1600000"></label><label>인건·운영비 (원)<input id="labor" type="number" min="0" value="2200000"></label><label>운송·검수비 (원)<input id="ship" type="number" min="0" value="400000"></label><label>시설투자비 회수기간 (수확기)<input id="cycles" type="number" min="1" value="4"></label></div><div class="results"><div><small>예상 매출</small><strong id="rev">—</strong></div><div><small>수확기당 총비용</small><strong id="cost">—</strong></div><div><small>예상 영업 잔여</small><strong id="profit">—</strong></div><div><small>손익분기 수매단가</small><strong id="breakeven">—</strong></div></div><button id="print" type="button">계산 결과 인쇄</button></article>`:
+ `<div class="grid two">${(tasks[current]||[]).map(([a,b])=>`<article class="tile"><h3>${esc(a)}</h3><p>${esc(b)}</p></article>`).join('')}</div><article class="tile notice"><b>운영 원장 연결 전</b><p>이 페이지는 등록·관리할 항목을 정의한 초기 화면입니다. 계약, 재배일지, 납품 및 회계의 서버 저장·권한·결재 기능은 아직 활성화되지 않았습니다.</p></article>`;
+
+ const ledgerMarkup=`<section class="tile ledger-workspace" data-ekodi-doraji-ledger data-active-tab="${esc(current)}">
+  <h2>사업 업무자료 관리</h2><p class="muted">에코디 관리자 인증과 프로젝트 권한 확인 후 초안만 등록할 수 있습니다. 실제 계약 체결·정산 확정·송금은 지원하지 않습니다.</p>
+  <p class="ledger-status" data-ledger="status" role="status" aria-live="polite">관리자 업무자료 서비스의 준비 상태를 확인합니다.</p>
+  <button type="button" data-ledger="login">이 화면에서 관리자 로그인</button>
+  <div data-ledger="panel" hidden>
+   <div class="ledger-row"><label>사업단위 선택<select data-ledger="project-select" aria-label="사업단위"></select></label></div>
+   <details><summary>사업단위 신규 등록</summary><form data-ledger="project-form" class="ledger-fields">
+    <label>사업단위명<input data-ledger="project-name" required maxlength="160"></label>
+    <label>재배지역<input data-ledger="project-region" maxlength="160"></label>
+    <label>하우스 동수<input data-ledger="project-houses" type="number" min="0" max="100000" value="0"></label>
+    <label>재배면적(㎡)<input data-ledger="project-area" type="number" min="0" max="100000000" step="0.01" value="0"></label>
+    <button type="submit">사업단위 초안 등록</button>
+   </form></details>
+   <form data-ledger="record-form" class="ledger-fields" hidden>
+    <label>업무 구분<select data-ledger="record-kind">
+     <option value="cultivation">재배일지</option><option value="budget">예산·비용</option><option value="contract">수매계약 초안</option><option value="delivery">납품·검수 초안</option><option value="document">문서대장</option>
+    </select></label>
+    <label>작성일자<input data-ledger="record-date" type="date" required></label>
+    <label>제목<input data-ledger="record-title" required maxlength="160"></label>
+    <label>거래처(선택)<input data-ledger="record-party" maxlength="160"></label>
+    <label>물량(kg)·초안<input data-ledger="record-quantity" type="number" min="0" max="1000000000" step="0.01" value="0"></label>
+    <label>금액(원)·초안<input data-ledger="record-amount" type="number" min="0" max="9000000000000000" step="1" value="0"></label>
+    <label class="ledger-span">기록 및 검토 메모<textarea data-ledger="record-note" maxlength="2000" rows="3"></textarea></label>
+    <button type="submit">업무자료 초안 저장</button>
+   </form>
+   <div class="ledger-records" data-ledger="records" aria-live="polite"></div>
+  </div>
+ </section>`;
+ return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(heading)} | EKODIBIZ 도라지 계약재배</title><style>:root{font-family:system-ui,"Noto Sans KR",sans-serif;color:#24332b;background:#f7f8f5}*{box-sizing:border-box}body{margin:0}a{color:inherit}.shell{max-width:1200px;margin:auto;padding:26px 22px 72px}.top{display:flex;justify-content:space-between;align-items:center;gap:16px}.brand{font-weight:800;text-decoration:none;letter-spacing:.05em}.eyebrow{font-size:12px;font-weight:750;letter-spacing:.12em;color:#497257}.hero{padding:60px 0 32px}.hero h1{font-size:clamp(30px,4.2vw,54px);line-height:1.17;letter-spacing:-.045em;margin:12px 0}.hero p{color:#607166;font-size:17px}.pill{font-size:12px;border:1px solid #ced7cc;padding:8px 11px;border-radius:40px}.nav{display:flex;flex-wrap:wrap;gap:6px;padding:12px;background:white;border-radius:16px;border:1px solid #e3e9e1}.nav a{padding:10px 12px;border-radius:9px;text-decoration:none;font-size:14px}.nav a[aria-current=page]{background:#234932;color:white}.grid{display:grid;gap:16px;margin:20px 0}.three{grid-template-columns:repeat(3,minmax(0,1fr))}.two{grid-template-columns:repeat(2,minmax(0,1fr))}.tile{background:white;border:1px solid #e1e8df;border-radius:16px;padding:25px}.tile small,.results small{color:#66776b;display:block}.tile strong{display:block;font-size:28px;margin:12px 0 6px}.tile span,.tile p{color:#647467}.tile h3{margin:0 0 10px}.tile h2{margin-top:0}h2{font-size:21px;margin-top:35px}.stages{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}.stages>div{background:#eaf0e9;padding:18px 12px;border-radius:12px;min-height:92px}.stages small{display:block;color:#56735e;margin-bottom:12px}.stages b{font-size:13px}.cta,button{display:inline-block;background:#234932;color:#fff;border:0;border-radius:9px;text-decoration:none;padding:11px 15px;cursor:pointer}.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.fields label{font-size:13px;font-weight:650}.fields input{display:block;width:100%;margin-top:6px;padding:12px;border:1px solid #cad5cc;border-radius:8px;font-size:15px}.results{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:24px 0}.results>div{background:#eaf0e9;padding:15px;border-radius:10px}.results strong{font-size:20px;overflow-wrap:anywhere}.muted,footer{color:#728076}.notice{margin-top:20px;border-left:4px solid #75947d}.ledger-workspace{margin-top:22px}.ledger-workspace[hidden],.ledger-workspace [hidden]{display:none!important}.ledger-status{background:#f2f6f0;padding:11px;border-radius:8px}.ledger-row{display:flex;gap:10px;margin:12px 0}.ledger-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}.ledger-fields input,.ledger-fields select,.ledger-fields textarea,.ledger-row select{display:block;width:100%;margin-top:5px;padding:10px;border:1px solid #c7d3c9;border-radius:8px;font:inherit}.ledger-fields label,.ledger-row label{font-size:13px;font-weight:650}.ledger-span{grid-column:1/-1}.ledger-records{display:grid;gap:7px}.ledger-item{border:1px solid #e0e7df;padding:10px 14px;border-radius:9px}.ledger-item p{margin:7px 0}.ledger-item small{font-size:12px}.ledger-workspace summary{cursor:pointer;font-weight:650;margin:15px 0}footer{padding-top:45px;font-size:12px}@media(max-width:750px){.three,.two,.results{grid-template-columns:1fr 1fr}.stages{grid-template-columns:repeat(3,1fr)}.hero{padding-top:34px}}@media(max-width:520px){.ledger-fields{grid-template-columns:1fr}.three,.two,.results,.fields{grid-template-columns:1fr}.stages{grid-template-columns:repeat(2,1fr)}.shell{padding:15px 14px 48px}}@media print{.nav,.top,.cta,button{display:none}.shell{padding:0}}</style></head><body><main class="shell" data-ekodi-workspace="ekodibiz" data-ekodi-business-unit="doraji"><header class="top"><a class="brand" href="https://ekodi.kr/ekodibiz">EKODIBIZ</a><span class="pill">시설재배 · 전량 계약납품</span></header><div class="hero"><div class="eyebrow">AGRICULTURE BUSINESS OFFICE</div><h1>${esc(heading)}</h1><p>${esc(sub)}</p></div><nav class="nav" aria-label="업무 메뉴">${nav}${officeLink}</nav>${section}${ledgerMarkup}<footer>EKODIBIZ · 도라지 계약재배 사업 · 초기 기획/시뮬레이션 화면 · 실제 계약 및 정산 데이터 미연결</footer></main>${current==='budget'?`<script src="${ROOT}/calculator.js" defer></script>`:''}<script src="${ROOT}/ledger-ui.js" defer></script></body></html>`;
+}
+const calculator=`(()=>{const ids=['houses','sqm','yield','accept','price','capex','seed','labor','ship','cycles'];const fmt=x=>Number.isFinite(x)?Math.round(x).toLocaleString('ko-KR'):'—';function update(){const v=Object.fromEntries(ids.map(k=>[k,Number(document.getElementById(k).value)]));const kg=v.houses*v.sqm*v.yield*v.accept/100;const cost=v.capex/Math.max(v.cycles,1)+v.seed+v.labor+v.ship;const rev=kg*v.price;document.getElementById('rev').textContent=fmt(rev)+' 원';document.getElementById('cost').textContent=fmt(cost)+' 원';document.getElementById('profit').textContent=fmt(rev-cost)+' 원';document.getElementById('breakeven').textContent=kg?fmt(cost/kg)+' 원/kg':'산출 불가';}ids.forEach(id=>document.getElementById(id).addEventListener('input',update));document.getElementById('print').addEventListener('click',()=>window.print());update();})();`;
+export function isDorajiOfficePath(path){return path===ROOT||path===ROOT+'/'||path.startsWith(ROOT+'/')}
+export function dorajiOfficeResponse(request){const path=new URL(request.url).pathname;if(!isDorajiOfficePath(path))return null;if(request.method!=='GET'&&request.method!=='HEAD')return new Response('Method Not Allowed',{status:405,headers:{Allow:'GET, HEAD'}});if(path===ROOT+'/ledger-ui.js')return new Response(dorajiLedgerClientScript,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});if(path===ROOT+'/calculator.js')return new Response(calculator,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});const name=path.slice(ROOT.length).replace(/^\/|\/$/g,'')||'overview';if(!tabs.some(([k])=>k===name))return new Response('Not Found',{status:404});return new Response(page(name),{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'self'; frame-ancestors 'none'"}})}

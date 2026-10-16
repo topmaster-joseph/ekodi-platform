@@ -13,11 +13,11 @@ const realms={
   ai:{name:'EKODI AI',returnTo:'https://ekodi.kr/ai/',origins:['https://ekodi.kr'],open:true,kind:'ai'},
   community:{name:'Community',returnTo:'https://ekodi.kr/community/',open:true,kind:'community'},
   singles:{name:'EKODI 동행',returnTo:'https://ekodi.kr/singles/',origins:['https://ekodi.kr'],open:true,kind:'singles'},
-  church:{name:'EKODI Church',returnTo:'https://church.ekodi.kr/',open:true,kind:'church'},
+  church:{name:'EKODI Church',returnTo:'https://ekodi.kr/ekodichurch/',origins:['https://ekodi.kr'],open:true,kind:'church'},
   biz:{name:'EKODI Biz',returnTo:'https://biz.ekodi.kr/',open:true,kind:'biz'},
   trade:{name:'EKODI Trading',returnTo:'https://trade.ekodi.kr/',open:true,kind:'trade'},
   mall:{name:'EKODI Mall',returnTo:'https://ekodi.kr/ekodimall',origins:['https://ekodi.kr'],open:true,kind:'mall'},
-  pay:{name:'EKODI Pay',returnTo:'https://pay.ekodi.kr/',open:true,kind:'pay'},
+  pay:{name:'EKODI Pay',returnTo:'https://ekodi.kr/ekodipay/',open:true,kind:'pay'},
   books:{name:'EKODI Books',returnTo:'https://books.ekodi.kr/',open:true,kind:'books'},
   lab:{name:'EKODI Lab',returnTo:'https://lab.ekodi.kr/',open:true,kind:'lab'},
   mission:{name:'EKODI Mission',returnTo:'https://ekodi.kr/ekodimission/',adminReturnTo:'https://ekodi.kr/ekodimission/admin',origins:['https://ekodi.kr'],open:true,kind:'mission'},
@@ -82,9 +82,13 @@ function safeReturn(raw){
     const allowedOrigins=new Set(config.origins||[fallback.origin]);
     const hostname=target.hostname.toLowerCase();
     const cgmaPlatform=config.kind==='cgma-client'&&target.origin==='https://ekodi.kr'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/'));
-    const internalEkodi=config.kind==='cgma-client'?cgmaPlatform:(hostname==='ekodi.kr'||hostname.endsWith('.ekodi.kr'));
+    const seonammediCanonical=config.kind==='seonammedi'&&target.origin==='https://ekodi.kr'&&(target.pathname==='/seonammedi'||target.pathname.startsWith('/seonammedi/'));
+    // A site-specific login may return only to that site's registered host or canonical mount.
+    // Never silently accept /my or another EKODI workspace as a SeonamMedi return target.
+    const internalEkodi=config.kind==='seonammedi'?seonammediCanonical:(config.kind==='cgma-client'?cgmaPlatform:(hostname==='ekodi.kr'||hostname.endsWith('.ekodi.kr')));
     const missionPath=config.kind!=='mission'||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')));
-    if(target.protocol!=='https:'||target.username||target.password||(!allowedOrigins.has(target.origin)&&!internalEkodi)||!missionPath)return fallback.href;
+    const churchPath=config.kind!=='church'||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodichurch'||target.pathname.startsWith('/ekodichurch/')));
+    if(target.protocol!=='https:'||target.username||target.password||(!allowedOrigins.has(target.origin)&&!internalEkodi)||!missionPath||!churchPath)return fallback.href;
     target.hash='';
     return target.href;
   }catch{return fallback.href}

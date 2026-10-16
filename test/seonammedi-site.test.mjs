@@ -41,26 +41,25 @@ test('seonammedi post-selection timeline migration reconciles production D1',asy
   assert.match(control,/system-seed/);
 });
 
-test('seonammedi finance stays public-read and admin-write without legacy update-label crashes',async()=>{
+test('seonammedi finance is removed from public UI and public API while remaining admin-write',async()=>{
   const [html,app,control]=await Promise.all([
     readFile(new URL('index.html',root),'utf8'),
     readFile(new URL('app.js',root),'utf8'),
     readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8')
   ]);
-  assert.match(html,/href="board\/finance">회계<\/a>/);
-  assert.match(html,/id="financeManageToggle"[^>]*hidden/);
-  assert.match(html,/id="financeManageForm"[^>]*hidden/);
-  assert.match(html,/전체 회계내역/);
+  assert.doesNotMatch(html,/href="board\/finance">회계<\/a>/);
+  assert.doesNotMatch(html,/id="financeManageToggle"|id="financeManageForm"|id="financeList"/);
   assert.match(app,/renderPublicFinance\(publicFinanceEntries,false\)/);
   assert.match(app,/renderPublicFinance\(publicFinanceEntries,true\)/);
   assert.match(app,/admin\.has\('finance'\)\)bindPublicFinanceAdmin\(\)/);
   assert.match(app,/legacyLastUpdated=el\('lastUpdated'\);if\(legacyLastUpdated\)/);
   assert.doesNotMatch(app,/el\('lastUpdated'\)\.textContent/);
-  assert.match(control,/SELECT id,entry_date,entry_type,amount,purpose,related_event,evidence_status,public_note FROM seonammedi_finance_entries WHERE visible=1/);
+  assert.doesNotMatch(control,/FROM seonammedi_finance_entries WHERE visible=1/);
+  assert.match(control,/finance:\{raised:null,spent:null,balance:null,entries:\[\]\}/);
   assert.match(control,/if\(!can\(auth,FINANCE_CAP\)\)return json\(\{ok:false,error:'finance_forbidden'\},403\)/);
 });
 
-test('seonammedi civic channel keeps source attribution, media evidence and privacy boundaries',async()=>{const [html,data,app]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('data.json',root),'utf8'),readFile(new URL('app.js',root),'utf8')]);assert.match(html,/사실은 출처와 함께/);assert.match(html,/<h2>회계<\/h2>/);assert.match(html,/개인정보/);const parsed=JSON.parse(data);assert.ok(parsed.timeline.length>=10);assert.ok(parsed.sources.every(s=>s.publisher&&s.url));assert.equal(parsed.finance.raised,null);assert.equal(parsed.mediaPolicy.mode,'source-link-first');for(const row of parsed.timeline){assert.ok(Array.isArray(row.links));assert.ok(Array.isArray(row.media));for(const media of row.media){assert.ok(['photo','video'].includes(media.type));assert.match(media.url,/^https:\/\//);assert.ok(media.source)}}assert.ok(parsed.timeline.some(row=>row.media.some(media=>media.type==='photo')));assert.match(app,/mediaLabel/);assert.match(app,/safeUrl/);});
+test('seonammedi civic channel keeps source attribution, media evidence and privacy boundaries',async()=>{const [html,data,app]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('data.json',root),'utf8'),readFile(new URL('app.js',root),'utf8')]);assert.match(html,/사실은 출처와 함께/);assert.doesNotMatch(html,/<h2>회계<\/h2>/);assert.match(html,/소통채널/);const parsed=JSON.parse(data);assert.ok(parsed.timeline.length>=10);assert.ok(parsed.sources.every(s=>s.publisher&&s.url));assert.equal(parsed.finance.raised,null);assert.equal(parsed.mediaPolicy.mode,'source-link-first');for(const row of parsed.timeline){assert.ok(Array.isArray(row.links));assert.ok(Array.isArray(row.media));for(const media of row.media){assert.ok(['photo','video'].includes(media.type));assert.match(media.url,/^https:\/\//);assert.ok(media.source)}}assert.ok(parsed.timeline.some(row=>row.media.some(media=>media.type==='photo')));assert.match(app,/mediaLabel/);assert.match(app,/safeUrl/);});
 
 test('canonical path, assets and feedback API use seonammedi',async()=>{const [html,app,build,router,wrangler]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('../scripts/build.mjs',import.meta.url),'utf8'),readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8'),readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8')]);assert.match(html,/https:\/\/seonammedi\.kr\//);assert.match(html,/\/seonammedi\/app\.css/);assert.match(app,/\/board\/api\/posts/);assert.match(build,/sites\/seonammedi\/public/);assert.match(router,/SEONAMMEDI_PREFIX='\/seonammedi'/);assert.match(router,/DELETED_SEONAM_PREFIXES/);const workerFirst=(wrangler.match(/run_worker_first = \[(.*?)\]/s)?.[1].match(/\"[^\"]+\"/g)||[]);assert.ok(workerFirst.length<=100);assert.doesNotMatch(wrangler,/\"\/seonammedi\\\*\"/);assert.doesNotMatch(wrangler,/\"\/seonam-med\\\*\"/);assert.doesNotMatch(wrangler,/crons\s*=/);assert.doesNotMatch(html,/사이트 일일점검|monitorBadge|id="monitor"/);assert.match(app,/\/api\/seonammedi\/monitor/);});
 
@@ -88,7 +87,7 @@ test('Shared Site router serves seonammedi assets before generic workspace routi
   for(const deletedPath of ['/seonam-medi','/seonam-med']){const old=await platformRouter.fetch(new Request('https://ekodi.kr'+deletedPath+'/app.css?v=1'),env,{});assert.equal(old.status,404);assert.equal(old.headers.get('x-ekodi-route'),'seonammedi-deleted');}
 });
 
-test('site hourly monitor is runtime-owned, source-only and media-evidence aware',async()=>{const [monitor,migration,mediaMigration,canonicalMigration,sourceMigration,app,data]=await Promise.all([readFile(new URL('../seonammedi-monitor.js',import.meta.url),'utf8'),readFile(new URL('../migrations/0104_seonam_medi_monitor.sql',import.meta.url),'utf8'),readFile(new URL('../migrations/0105_seonam_medi_media_evidence.sql',import.meta.url),'utf8'),readFile(new URL('../migrations/0106_seonammedi_canonical_names.sql',import.meta.url),'utf8'),readFile(new URL('../migrations/0107_seonammedi_source_metadata.sql',import.meta.url),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('data.json',root),'utf8')]);assert.match(monitor,/runSeonamMediHourlyCheck/);assert.match(monitor,/aiProvider:false/);assert.match(monitor,/source_only/);assert.match(monitor,/news\.google\.com\/rss\/search/);assert.match(monitor,/enrichMedia/);assert.match(monitor,/og:video/);assert.match(monitor,/og:image/);assert.match(monitor,/mediaCandidateCount/);assert.match(monitor,/openapi\.naver\.com\/v1\/search\/blog\.json/);assert.match(monitor,/NAVER_CLIENT_ID/);assert.match(monitor,/sourceType:'blog'/);assert.match(migration,/seonam_medi_monitor_runs/);assert.match(migration,/seonam_medi_monitor_items/);assert.match(canonicalMigration,/CREATE TABLE IF NOT EXISTS seonammedi_monitor_runs/);assert.match(canonicalMigration,/CREATE TABLE IF NOT EXISTS seonammedi_monitor_items/);assert.match(canonicalMigration,/INSERT OR IGNORE INTO seonammedi_monitor_runs/);assert.match(canonicalMigration,/INSERT OR IGNORE INTO seonammedi_monitor_items/);assert.doesNotMatch(canonicalMigration,/RENAME TO|DROP TABLE/);assert.match(sourceMigration,/source_type/);assert.match(sourceMigration,/summary_text/);assert.match(mediaMigration,/media_type/);assert.match(mediaMigration,/media_state/);assert.match(app,/attachMonitorMedia/);assert.match(app,/monitorMatches/);assert.match(app,/원문 확인 필요/);const parsed=JSON.parse(data);assert.ok(parsed.timeline.some(row=>Array.isArray(row.monitorKeywords)&&row.monitorKeywords.length));assert.match(parsed.mediaPolicy.autoLinkRule,/근거자료 후보/);assert.ok(Array.isArray(parsed.publicPosts)&&parsed.publicPosts.length>=5);assert.ok(parsed.publicPosts.every(item=>item.date&&item.sourceType&&item.summary&&item.url));assert.match(app,/materialFilters/);});
+test('site hourly monitor is runtime-owned, source-only and media-evidence aware',async()=>{const [monitor,migration,mediaMigration,canonicalMigration,sourceMigration,app,data]=await Promise.all([readFile(new URL('../seonammedi-monitor.js',import.meta.url),'utf8'),readFile(new URL('../migrations/0104_seonam_medi_monitor.sql',import.meta.url),'utf8'),readFile(new URL('../migrations/0105_seonam_medi_media_evidence.sql',import.meta.url),'utf8'),readFile(new URL('../migrations/0106_seonammedi_canonical_names.sql',import.meta.url),'utf8'),readFile(new URL('../migrations/0107_seonammedi_source_metadata.sql',import.meta.url),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('data.json',root),'utf8')]);assert.match(monitor,/runSeonamMediHourlyCheck/);assert.match(monitor,/aiProvider:false/);assert.match(monitor,/source_only/);assert.match(monitor,/news\.google\.com\/rss\/search/);assert.match(monitor,/www\.bing\.com\/news\/search/);assert.match(monitor,/enrichMedia/);assert.match(monitor,/og:video/);assert.match(monitor,/og:image/);assert.match(monitor,/mediaCandidateCount/);assert.match(monitor,/openapi\.naver\.com\/v1\/search\/blog\.json/);assert.match(monitor,/NAVER_CLIENT_ID/);assert.match(monitor,/sourceType:'blog'/);assert.match(migration,/seonam_medi_monitor_runs/);assert.match(migration,/seonam_medi_monitor_items/);assert.match(canonicalMigration,/CREATE TABLE IF NOT EXISTS seonammedi_monitor_runs/);assert.match(canonicalMigration,/CREATE TABLE IF NOT EXISTS seonammedi_monitor_items/);assert.match(canonicalMigration,/INSERT OR IGNORE INTO seonammedi_monitor_runs/);assert.match(canonicalMigration,/INSERT OR IGNORE INTO seonammedi_monitor_items/);assert.doesNotMatch(canonicalMigration,/RENAME TO|DROP TABLE/);assert.match(sourceMigration,/source_type/);assert.match(sourceMigration,/summary_text/);assert.match(mediaMigration,/media_type/);assert.match(mediaMigration,/media_state/);assert.match(app,/attachMonitorMedia/);assert.match(app,/monitorMatches/);assert.match(app,/원문 확인 필요/);const parsed=JSON.parse(data);assert.ok(parsed.timeline.some(row=>Array.isArray(row.monitorKeywords)&&row.monitorKeywords.length));assert.match(parsed.mediaPolicy.autoLinkRule,/근거자료 후보/);assert.ok(Array.isArray(parsed.publicPosts)&&parsed.publicPosts.length>=5);assert.ok(parsed.publicPosts.every(item=>item.date&&item.sourceType&&item.summary&&item.url));assert.match(app,/materialFilters/);});
 
 test('hourly monitor results automatically refresh the public homepage without auto-publishing blogs as facts',async()=>{const [html,app,css]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('app.css',root),'utf8')]);assert.match(html,/id="homeLatestUpdates"/);assert.match(html,/id="homeLatestList"/);assert.match(html,/1시간마다 자동 갱신/);assert.match(app,/function monitorHomeRows/);assert.match(app,/item\.source_type!=='blog'/);assert.match(app,/selected\.some\(prev=>\(url&&prev\.url===url\)\|\|\(date&&prev\.date===date&&timelineTitleSimilarity\(prev\.title,title\)>=0\.72\)\)/);assert.match(app,/자동수집 · 원문 확인/);assert.match(app,/siteReady\.finally\(\(\)=>loadMonitor\(\)\)/);assert.match(app,/15\*60\*1000/);assert.match(app,/EKODI 자동갱신/);assert.match(css,/\.home-latest-list/);assert.match(css,/\.home-latest-card/);});
 
@@ -321,7 +320,7 @@ test('seonammedi admin utilities live above the left menu and content starts nea
 
 test('seonammedi public and admin menus keep the agreed content-first order',async()=>{
   const [html,adminHtml]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('admin/index.html',root),'utf8')]);
-  const publicOrder=['활동이력','소통채널','시민의견','회계','공지','조직'];
+  const publicOrder=['공지','활동이력','관련소식','소통채널','시민의견','조직'];
   let cursor=-1;for(const label of publicOrder){const next=html.indexOf('>'+label+'</a>',cursor+1);assert.ok(next>cursor,'public menu order: '+label);cursor=next}
   assert.doesNotMatch(html,/data-view-link="records"|data-view-link="timeline"|data-view-link="materials"/);
   assert.match(html,/id="timeline"[^>]*data-view-section="status"/);
@@ -329,7 +328,8 @@ test('seonammedi public and admin menus keep the agreed content-first order',asy
   assert.doesNotMatch(html,/<h2>현재상황<\/h2>|CURRENT STATUS|출처 검증형/);
   assert.match(html,/data-status-tab="news"[^>]*>관련보도<\/button>/);
   assert.match(html,/data-status-tab="official"[^>]*>공식기록<\/button>/);
-  assert.match(html,/href="#timeline" data-view-link="status">활동이력<\/a>/);
+  assert.match(html,/href="#committee-activity"[^>]*>활동이력<\/a>/);
+  assert.match(html,/href="#timeline"[^>]*>관련소식<\/a>/);
   assert.match(html,/id="timeline"[^>]*class="section activity-list-only"/);
   assert.doesNotMatch(html,/id="timeline"[\s\S]*?<div class="section-head">[\s\S]*?<h2>활동이력<\/h2>/);
   assert.doesNotMatch(html,/id="timeline"[\s\S]*?id="statusTabs"/);
@@ -367,12 +367,13 @@ test('seonammedi full public-menu administration covers status organization mate
   assert.match(app,/ORG_GROUP_META/);
   assert.match(app,/renderOrganizationGroup\('bidae'\)/);
   assert.match(app,/function showStatusTab\(tab\)/);
-  assert.match(app,/const canonicalViewHash=\{status:'timeline'/);
+  assert.match(app,/const canonicalViewHash=\{committee:'committee-activity',status:'timeline'/);
   assert.match(app,/canonicalViewHash\[key\]\|\|key/);
   assert.match(app,/renderMaterialsForStatus\?\.\(isNews\?'관련보도':'공식자료'\)/);
-  assert.doesNotMatch(adminHtml,/id="financeForm"/);
-  assert.match(adminHtml,/회계 관리 권한이 확인되면 공개 회계 화면/);
-  assert.match(html,/id="financeManageForm"/);
+  assert.match(adminHtml,/id="financeForm"/);
+  assert.match(adminHtml,/id="financeSummary"/);
+  assert.match(adminHtml,/id="financeList"/);
+  assert.doesNotMatch(html,/id="financeManageForm"/);
   assert.match(app,/bindPublicFinanceAdmin/);
   assert.match(app,/\/api\/seonammedi\/admin\/finance/);
   assert.match(adminJs,/\/api\/seonammedi\/admin\/pages\/status/);
@@ -381,7 +382,7 @@ test('seonammedi full public-menu administration covers status organization mate
   assert.match(control,/FINANCE_CAP='seonammedi\.finance\.manage'/);
   assert.match(control,/PREFIX\+'\/page-data'/);
   assert.match(app,/\/api\/seonammedi\/page-data/);
-  assert.match(html,/id="financeList"/);
+  assert.doesNotMatch(html,/id="financeList"/);
   assert.match(migration,/CREATE TABLE IF NOT EXISTS seonammedi_page_sections/);
   assert.match(migration,/CREATE TABLE IF NOT EXISTS seonammedi_finance_entries/);
   assert.match(migration,/seonammedi\.finance\.manage/);
@@ -434,7 +435,8 @@ test('seonammedi exposes seeded related channels on public and admin surfaces',a
     readFile(new URL('admin/index.html',root),'utf8'),
     readFile(new URL('../migrations/0118_seonammedi_channel_seed.sql',import.meta.url),'utf8')
   ]);
-  assert.match(html,/data-view-link="channels"/);
+  assert.doesNotMatch(html,/id="relatedChannelLinks"/);
+  assert.match(html,/href="#channels" data-view-link="channels">소통채널<\/a>/);
   assert.match(html,/id="channels"[^>]*data-view-section="channels"/);
   assert.match(html,/id="publicChannelTabs"/);
   assert.match(html,/id="channelPreview"/);
@@ -443,6 +445,7 @@ test('seonammedi exposes seeded related channels on public and admin surfaces',a
   assert.match(app,/\/api\/seonammedi\/channels/);
   assert.match(app,/\/preview/);
   assert.match(app,/channels:'channels'/);
+  assert.match(app,/renderRelatedChannelLinks/);
   assert.match(app,/async function showChannelPreview\(index,\{updateRoute=true\}=\{\}\)/);
   assert.match(app,/renderChannelFallback/);
   assert.match(app,/channelRouteFromHash/);
@@ -565,9 +568,17 @@ test('seonammedi site admin delegates automatic checks to the platform super adm
 
 test('seonammedi monitor D1 insert keeps column and value arity aligned',async()=>{
   const monitor=await readFile(new URL('../seonammedi-monitor.js',import.meta.url),'utf8');
-  assert.match(monitor,/INSERT INTO seonammedi_monitor_items \(fingerprint,title,url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,resolved_url,media_type,media_url,media_source,media_published_at,media_state,source_type,summary_text\) VALUES \(\?,\?,\?,\?,\?,\?,\?,'source_only',\?,\?,\?,\?,\?,\?,\?,\?,\?,\?\)/);
+  const sql=monitor.match(/INSERT INTO seonammedi_monitor_items \(([^)]+)\) VALUES \(([^)]+)\)/);
+  assert.ok(sql,'canonical monitor insert must be present');
+  const columns=sql[1].split(',').map(s=>s.trim());
+  const values=sql[2].split(',').map(s=>s.trim());
+  assert.equal(columns.length,19);
+  assert.equal(values.length,columns.length);
+  assert.equal(values.filter(v=>v==='?').length,18);
+  assert.equal(columns.at(-1),'source_verified');
+  assert.equal(values[7],"'source_only'");
+  assert.match(monitor,/\.bind\(fingerprint,item\.title,item\.url,item\.publisher,item\.publishedAt,item\.queryKey,item\.queryLabel,seenAt,seenAt,item\.resolvedUrl,item\.mediaType,item\.mediaUrl,item\.mediaSource,item\.mediaPublishedAt,item\.mediaState,item\.sourceType\|\|'web',item\.summaryText\|\|'',item\.sourceVerified\?1:0\)\.run\(\)/);
 });
-
 
 
 test('seonammedi notices are an authenticated public board with image and sharing support',async()=>{
@@ -589,7 +600,7 @@ test('current status exposes non-overlapping immediate subcategory tabs',async()
     readFile(new URL('index.html',root),'utf8'),
     readFile(new URL('app.js',root),'utf8')
   ]);
-  assert.match(html,/활동이력 세부 분류/);
+  assert.match(html,/관련소식 출처별 세부 분류/);
   assert.match(html,/id="statusMaterialFilterLabel">관련보도 세부 분류/);
   assert.match(html,/id="materialFilters" aria-label="관련보도 세부 분류"/);
   assert.doesNotMatch(html,/id="materialFilters"[^>]*hidden/);
@@ -631,7 +642,7 @@ test('seonammedi public site uses shared authenticated inline admin without dupl
   assert.match(app,/authEndpoint:'\/api\/seonammedi\/admin\/me'/);
   assert.match(app,/await admin\.authorize\(\)/);
   assert.doesNotMatch(app,/admin\.attach/);
-  for(const label of ['조직 바로 수정','활동이력 바로 수정','소통채널 바로 수정'])assert.match(html,new RegExp(label));
+  for(const label of ['조직 바로 수정','관련소식 관리','연결채널 바로 수정'])assert.match(html,new RegExp(label));
   assert.match(app,/공지 작성/);
   assert.match(app,/bindPublicFinanceAdmin/);
   assert.match(app,/if\(admin\.has\('notices'\)\).*loadNotices\(\)/);
@@ -674,7 +685,10 @@ test('seonammedi activity history always renders in descending date order across
   const app=await readFile(new URL('app.js',root),'utf8');
   assert.match(app,/const timelineDateKey=value=>/);
   assert.match(app,/const timelineDescending=\(a,b\)=>timelineDateKey\(b\.date\)-timelineDateKey\(a\.date\)/);
-  assert.match(app,/\(activeTimelineCategory==='전체'\?publicTimelineEntries:publicTimelineEntries\.filter\([^;]+\)\)\.slice\(\)\.sort\(timelineDescending\)/);
+  assert.match(app,/const relatedRows=publicTimelineEntries\.filter\(item=>!isCommitteeRecord\(item\)&&!isCommitteeRelatedNews\(item\)\)/);
+  assert.match(app,/const relatedNewsFilterMatches=\(item,selected\)=>/);
+  assert.match(app,/const rows=relatedRows\.filter\(item=>relatedNewsFilterMatches\(item,activeTimelineCategory\)\)\.slice\(\)\.sort\(timelineDescending\)/);
+  assert.match(app,/committeeItems\(\)/);
 });
 
 // descending activity-history order is enforced for every public category filter
@@ -767,7 +781,9 @@ test('seonammedi citizen opinions hand off to the standalone board-owned UI',asy
   assert.match(worker,/의견 등록/);
   assert.match(worker,/답글 등록/);
   assert.match(worker,/\/api\/admin\/posts/);
-  assert.match(worker,/adminLogin\.hidden=false;await load\(\)/);
+  assert.doesNotMatch(worker,/adminLogin\.hidden=false;await load\(\)/);
+  assert.match(worker,/if\(q\|\|!voiceVerified\)/);
+  assert.match(worker,/manageToggle\.hidden=false/);
   const authEntry=await readFile(new URL('../auth-site/auth-entry.js',import.meta.url),'utf8');
   assert.match(authEntry,/purpose'\) === 'seonammedi-board-admin'/);
   assert.match(config,/database_name = "ekodi-independent-board"/);
@@ -782,14 +798,14 @@ test('seonammedi voices finance and notices use sibling standalone board routes'
     readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8')
   ]);
   assert.match(html,/href="board\/voices"[^>]*>시민의견<\/a>/);
-  assert.match(html,/href="board\/finance"[^>]*>회계<\/a>/);
+  assert.doesNotMatch(html,/href="board\/finance"[^>]*>회계<\/a>/);
   assert.match(html,/href="board\/notices"[^>]*>공지<\/a>/);
   assert.match(worker,/boardPath\(req,'voices'\)/);
-  assert.match(worker,/boardPath\(req,'finance'\)/);
+  assert.match(worker,/if\(\(path==='\/finance'/);
   assert.match(worker,/boardPath\(req,'notices'\)/);
   assert.match(worker,/function financePage\(req\)/);
   assert.match(worker,/function noticesPage\(req\)/);
-  assert.match(worker,/sitePath\(req,'\/#organization'\)/);
+  assert.match(worker,/home\('#organization'\)/);
 });
 
 
@@ -857,21 +873,21 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
   assert.ok(!app.includes("latest.textContent='마지막 갱신 '"));
   assert.match(css,/\.site-footer-copy\{display:grid;gap:2px/);
   assert.match(css,/footer>a\{flex:0 0 auto;margin-left:auto/);
-  for(const hash of ['timeline','channels','organization'])assert.match(adminHtml,new RegExp('href="\.\.\/#'+hash+'"'));
+  for(const hash of ['committee-activity','timeline','channels','organization'])assert.match(adminHtml,new RegExp('href="\.\.\/#'+hash+'"'));
   assert.match(adminHtml,/href="\.\.\/board\/voices">시민의견 관리/);
-  assert.match(adminHtml,/href="\.\.\/board\/finance">회계 관리/);
+  assert.match(adminHtml,/href="\?panel=finance"[^>]*>회계 관리/);
   assert.match(adminHtml,/href="\.\.\/board\/notices">공지 관리/);
   assert.match(app,/\^\(\?:\\\/seonammedi\)\?\\\/notices/);
   assert.ok(minutes.includes("location.origin+'/minutes/?token='"));
   assert.match(css,/min-height:100dvh;display:flex;flex-direction:column/);
   assert.match(css,/footer{margin-top:auto/);
-  assert.match(html,/href="board\/finance">회계<\/a>/);
+  assert.doesNotMatch(html,/href="board\/finance">회계<\/a>/);
   assert.match(app,/financeLink=event\.target\.closest\('a\[href="board\/finance"\]\'\)/);
-  assert.match(html,/ACTIVITY HISTORY<\/p><h2>활동이력<\/h2>/);
+  assert.match(html,/COMMITTEE ACTIVITIES<\/p><h2>활동이력<\/h2>/);
+  assert.match(html,/RELATED NEWS &amp; SOURCES<\/p><h2>관련소식<\/h2>/);
   assert.doesNotMatch(html,/세부 메뉴 준비중/);
-  assert.match(html,/전체 회계내역/);
-  assert.match(html,/financeManageToggle[^>]*hidden/);
-  assert.match(html,/financeManageForm[^>]*hidden/);
+  assert.doesNotMatch(html,/전체 회계내역|financeManageToggle|financeManageForm/);
+  assert.match(adminHtml,/id="financeForm"/);
   assert.match(app,/const actions=adminMode\?/);
   assert.match(app,/renderPublicFinance\(publicFinanceEntries,false\)/);
   assert.doesNotMatch(app,/raw==='finance'.*location\.replace\('\/finance\/'\)/);
@@ -887,11 +903,13 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
 
 test('seonammedi customer domain cache-busts public and admin static assets',async()=>{
   const [html,adminHtml]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('admin/index.html',root),'utf8')]);
-  assert.ok(html.includes('/seonammedi/app.css?v=20261006-domain-routing-2'));
-  assert.ok(html.includes('/seonammedi/app.js?v=20261006-domain-routing-2'));
+  const cssVersion=html.match(/\/seonammedi\/app\.css\?v=(20261013-[a-z0-9-]+)/)?.[1];
+  const jsVersion=html.match(/\/seonammedi\/app\.js\?v=(20261013-[a-z0-9-]+)/)?.[1];
+  assert.ok(cssVersion,'public stylesheet must carry an explicit release cache-buster');
+  assert.equal(jsVersion,cssVersion,'public script and stylesheet must share one cache-buster');
   assert.ok(adminHtml.includes('<a class="brand" href="./">'));
   assert.ok(adminHtml.includes('<a href="../" target="_blank" rel="noopener">공개페이지</a>'));
-  assert.ok(adminHtml.includes('/seonammedi/admin/admin.js?v=20261006-domain-routing-2'));
+  assert.ok(adminHtml.includes('/seonammedi/admin/admin.js?v=20261013-committee-news-1'));
   assert.ok(adminHtml.includes('/seonammedi/admin/admin-minutes.js?v=20261006-domain-routing-2'));
 });
 
@@ -933,9 +951,11 @@ test('seonammedi static surfaces declare route parity contract and preserve moun
   for(const source of [html,adminHtml]){
     assert.match(source,/name="ekodi-route-contract" content="CANONICAL-PATH-MOUNT-PARITY-001 CANONICAL-ROUTE-SLASH-PARITY-001"/);
   }
-  for(const route of ['voices','finance','notices'])assert.match(html,new RegExp('href="board/'+route+'"'));
+  for(const route of ['voices','notices'])assert.match(html,new RegExp('href="board/'+route+'"'));
+  assert.doesNotMatch(html,/href="board\/finance"/);
   assert.match(html,/href="admin\/">관리<\/a>/);
-  for(const route of ['voices','finance','notices'])assert.match(adminHtml,new RegExp('href="\.\.\/board/'+route+'"'));
+  for(const route of ['voices','notices'])assert.match(adminHtml,new RegExp('href="\.\.\/board/'+route+'"'));
+  assert.match(adminHtml,/href="\?panel=finance"/);
   assert.match(adminJs,/searchParams\.set\('site','seonammedi'\)/);
   assert.doesNotMatch(adminJs,/searchParams\.set\('site','portal'\)/);
 });
@@ -993,4 +1013,31 @@ test('seonammedi timeline and channels are managed inline on the public user sur
   assert.doesNotMatch(app,/admin\.attach\(el\('channels'\)/);
   assert.match(css,/\.inline-manage-form/);
   assert.match(css,/\.inline-manage-list/);
+});
+
+test('seonammedi public finance API and legacy static page disclose no ledger values',async()=>{
+  const [api,legacy,admin,board]=await Promise.all([
+    readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
+    readFile(new URL('finance/index.html',root),'utf8'),
+    readFile(new URL('admin/index.html',root),'utf8'),
+    readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8')
+  ]);
+  const a=api.indexOf('async function listPublicPageData(env){');
+  const b=api.indexOf('function canManagePages(auth)',a);
+  assert.ok(a>=0&&b>a,'public page-data handler must exist');
+  const publicSource=api.slice(a,b);
+  assert.doesNotMatch(publicSource,/seonammedi_finance_entries/,'public API must never SELECT finance rows');
+  assert.match(publicSource,/finance:\{raised:null,spent:null,balance:null,entries:\[\]\}/);
+  assert.doesNotMatch(legacy,/<script|id="ledger"|id="raised"/,'legacy public route must not display ledger');
+  assert.equal((legacy.match(/href="\.\.\/admin\/\?panel=finance"/g)||[]).length,2,'finance links must use the current domain admin route');
+  for(const origin of ['https://seonammedi.kr/finance/','https://ekodi.kr/seonammedi/finance/']){
+    const href='../admin/?panel=finance';
+    const target=new URL(href,origin);
+    assert.equal(target.origin,new URL(origin).origin,'finance links must not switch tenant domain');
+    assert.equal(target.pathname,origin.includes('/seonammedi/')?'/seonammedi/admin/':'/admin/');
+    assert.equal(target.search,'?panel=finance');
+  }
+  assert.match(admin,/id="financeForm"/,'finance CRUD must remain in protected admin');
+  assert.match(admin,/id="financeList"/);
+  assert.match(board,/const gate=await requirePermission\(req,'finance'\);if\(!gate\.ok\)return gate\.response/);
 });

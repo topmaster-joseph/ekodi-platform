@@ -1,0 +1,56 @@
+name: EKODI Education Live Native After Shell
+
+on:
+  workflow_run:
+    workflows: ["Deploy EKODI Shell"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-education-after-shell-native
+  cancel-in-progress: false
+
+jobs:
+  canonical-readonly:
+    if: >-
+      github.repository == 'topmaster-joseph/ekodi-platform' &&
+      ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+       (github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout trusted main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate existing EKODI native browser runners
+        run: |
+          node --check scripts/verify-education-bootcamp-native.mjs
+          node --check scripts/verify-education-material-studio-native.mjs
+          node --test test/education-native-security-observations.test.mjs test/education-non-tenant-chrome.test.mjs
+      - name: Install first-party disposable Chromium
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Verify live Site Core /edu classroom and legacy Worker in five viewports
+        run: node scripts/verify-education-bootcamp-native.mjs
+      - name: Verify live Education materials studio, privacy, export and mobile
+        run: node scripts/verify-education-material-studio-native.mjs
+      - name: Preserve independent live PC/mobile evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekodi-education-after-shell-native-${{ github.run_id }}
+          path: |
+            artifacts/education-native/
+            artifacts/education-studio-native/
+          retention-days: 7

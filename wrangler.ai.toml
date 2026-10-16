@@ -49,6 +49,11 @@ EKODI_GROQ_FREE_DAILY_CALL_LIMIT = "900"
 # Optional legacy/external adapters: AI_WORKER_URL, AI_WORKER_TOKEN
 # Account CLI nodes (Codex/Gemini CLI/Claude Code) keep their account auth only on each node.
 
+# Privileged central identity validation must use a same-account Worker service binding.
+[[services]]
+binding = "CONTROL_API"
+service = "ekodi-auth-api"
+
 [ai]
 binding = "AI"
 

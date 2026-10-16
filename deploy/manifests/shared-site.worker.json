@@ -1,5 +1,5 @@
 {
-  "version": 104,
+  "version": 108,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -2030,21 +2030,34 @@
         "redirect": "manual",
         "expect": [],
         "headerExpect": [
+          "location: https://ekodi.kr/ekodipay/"
+        ],
+        "rollbackStatuses": [
+          308
+        ],
+        "rollbackHeaderExpect": [
           "location: https://ekodi.kr/pay/"
         ]
       },
       {
         "url": "https://ekodi.kr/pay/",
         "statuses": [
-          200
+          308
         ],
         "redirect": "manual",
-        "expect": [
+        "expect": [],
+        "headerExpect": [
+          "location: https://ekodi.kr/ekodipay/"
+        ],
+        "rollbackStatuses": [
+          200
+        ],
+        "rollbackExpect": [
           "path === '/pay'",
           "title:'EKODI Pay'",
           "https://ekodi.kr/admin/#finance"
         ],
-        "headerExpect": [
+        "rollbackHeaderExpect": [
           "x-ekodi-route: hub",
           "x-ekodi-shell: v2",
           "x-ekodi-canonical-surface: pay",
@@ -2720,9 +2733,15 @@
           "활동이력",
           "소통채널",
           "시민의견",
-          "회계",
           "공지",
-          "조직"
+          "조직",
+          "<meta name=\"twitter:card\" content=\"summary_large_image\">\n  <meta property=\"og:image\""
+        ],
+        "forbid": [
+          "전체 회계내역",
+          "id=\"financeManageForm\"",
+          "id=\"financeList\"",
+          "href=\"board/finance\""
         ],
         "rollbackVerify": false,
         "bodyIncludes": [
@@ -2742,7 +2761,8 @@
           "운영홈",
           "내부 회의록",
           "권한·관리자",
-          "사용자 화면에서 바로 관리 도구가 표시됩니다"
+          "class=\"admin-finance-link\"",
+          "id=\"boardAccountRegistration\""
         ],
         "forbid": [
           "/admin/sites/workspace",
@@ -2884,6 +2904,420 @@
           "x-ekodi-surface-context: person-digital-card",
           "x-robots-tag: noindex, nofollow, noarchive"
         ]
+      },
+      {
+        "url": "https://ekodi.kr/jubilee-distribution/",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "희년세상협동조합",
+          "함께 여는 유통",
+          "/jubilee-distribution/assets/app.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: cooperative-public",
+          "cache-control: private, no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/jubilee-distribution/members",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "희년세상협동조합",
+          "조합원 공간",
+          "/jubilee-distribution/assets/app.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: cooperative-members",
+          "cache-control: private, no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/jubilee-distribution/admin",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "희년세상협동조합",
+          "조합 운영관리",
+          "/jubilee-distribution/assets/app.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: cooperative-admin",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/jubilee-distribution/api/me",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "COOP_LOGIN_REQUIRED"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/jubilee-distribution/api/project",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "COOP_LOGIN_REQUIRED"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/open-distribution/",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "열린유통협동조합",
+          "함께 여는 유통",
+          "/open-distribution/assets/app.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: cooperative-public",
+          "cache-control: private, no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/open-distribution/members",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "열린유통협동조합",
+          "조합원 공간",
+          "/open-distribution/assets/app.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: cooperative-members",
+          "cache-control: private, no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/open-distribution/admin",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "열린유통협동조합",
+          "조합 운영관리",
+          "/open-distribution/assets/app.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: cooperative-admin",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/open-distribution/api/me",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "COOP_LOGIN_REQUIRED"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/open-distribution/api/project",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "COOP_LOGIN_REQUIRED"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/jubilee-distribution",
+        "statuses": [
+          308
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://ekodi.kr/jubilee-distribution/",
+          "x-ekodi-route: cooperative-canonical-root"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/open-distribution",
+        "statuses": [
+          308
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://ekodi.kr/open-distribution/",
+          "x-ekodi-route: cooperative-canonical-root"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/jubilee-distribution/api/public",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"source\":\"server\"",
+          "\"workspaceId\":\"c88205a8-9a6c-4c51-ae52-508c087a2d50\"",
+          "\"status\":\"formation\"",
+          "희년세상협동조합"
+        ],
+        "rollbackVerify": false,
+        "candidateVerify": true,
+        "candidateVerifyReason": "Require cooperative schema and seed availability before publishing the candidate. Static fallback is not production readiness."
+      },
+      {
+        "url": "https://ekodi.kr/open-distribution/api/public",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"source\":\"server\"",
+          "\"workspaceId\":\"ac8c6bf7-f5e6-4e5a-86cb-9a5bc9391a54\"",
+          "\"status\":\"formation\""
+        ],
+        "rollbackVerify": false,
+        "candidateVerify": true,
+        "candidateVerifyReason": "Require cooperative schema and seed availability before publishing the candidate. Static fallback is not production readiness."
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "협동조합 운영관리자 공간",
+          "data-coop-surface=\"hub\""
+        ],
+        "headerExpect": [
+          "cache-control: private, no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/admin/",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "협동조합 운영관리자 공간",
+          "/business-coop/drafts/"
+        ],
+        "headerExpect": [
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/drafts/",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "기존 협동조합 준비자료",
+          "formation-v2"
+        ],
+        "headerExpect": [
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/admin/workspaces/cooperatives",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "협동조합 운영관리자 공간",
+          "data-coop-platform=\"true\""
+        ],
+        "headerExpect": [
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/cooperatives/overview",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "COOP_LOGIN_REQUIRED"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/control/cooperatives/overview",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "COOP_LOGIN_REQUIRED"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/assets/app.css",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          ".site-header"
+        ],
+        "headerExpect": [
+          "content-type: text/css",
+          "cache-control: private, no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/assets/app.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "data-managed-cooperative"
+        ],
+        "headerExpect": [
+          "content-type: text/javascript",
+          "cache-control: private, no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/app.css",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          ":root"
+        ],
+        "headerExpect": [
+          "content-type: text/css",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/legal-data.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "COOP_LEGAL"
+        ],
+        "headerExpect": [
+          "content-type: text/javascript",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/admin/admin.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "/business-coop/legal-data.js"
+        ],
+        "headerExpect": [
+          "content-type: text/javascript",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/images/jubilee-hero-640-ec98e7d14c.webp",
+        "method": "HEAD",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "content-type: image/webp",
+          "cache-control: public, max-age=31536000, immutable",
+          "x-ekodi-route: cooperative-public-image"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/images/jubilee-hero-1280-bb3fdd3958.webp",
+        "method": "HEAD",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "content-type: image/webp",
+          "cache-control: public, max-age=31536000, immutable",
+          "x-ekodi-route: cooperative-public-image"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/images/open-hero-640-44e3f897ef.webp",
+        "method": "HEAD",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "content-type: image/webp",
+          "cache-control: public, max-age=31536000, immutable",
+          "x-ekodi-route: cooperative-public-image"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/images/open-hero-1280-90d31bae48.webp",
+        "method": "HEAD",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "content-type: image/webp",
+          "cache-control: public, max-age=31536000, immutable",
+          "x-ekodi-route: cooperative-public-image"
+        ],
+        "rollbackVerify": false
       }
     ],
     "attestationPath": "/__ekodi/version"

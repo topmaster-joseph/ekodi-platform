@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import {findExactHumanGateApproval} from './release-human-gate-evidence.mjs';
 
 const repo=String(process.env.GITHUB_REPOSITORY||'').trim();
 const eventName=String(process.env.GITHUB_EVENT_NAME||'').trim();
@@ -61,16 +62,18 @@ if(!labels.includes(APPROVAL_LABEL)){
 const approvalMarker=`${APPROVAL_MARKER_PREFIX}${headSha}`;
 const comments=await github(`/repos/${repo}/issues/${prNumber}/comments?per_page=100`);
 if(!comments.response.ok)fail(`failed to verify exact-SHA Human Gate approval: HTTP ${comments.response.status}`);
-const approvalComment=(Array.isArray(comments.data)?comments.data:[]).find(item=>{
-  const login=text(item?.user?.login,120);
-  const body=String(item?.body||'');
-  return policyOwners.has(login)&&body.includes(approvalMarker);
+const labelEvents=await github(`/repos/${repo}/issues/${prNumber}/events?per_page=100`);
+if(!labelEvents.response.ok)fail(`failed to verify Human Gate label chronology: HTTP ${labelEvents.response.status}`);
+const approvalEvidence=findExactHumanGateApproval({
+  comments:comments.data,events:labelEvents.data,policyOwners:[...policyOwners],
+  approvalMarker,approvalLabel:APPROVAL_LABEL
 });
-if(!approvalComment){
-  out('action','waiting-exact-sha-human-approval');
+if(!approvalEvidence){
+  out('action','waiting-exact-sha-human-approval-after-comment-label');
   out('approval_marker',approvalMarker);
   process.exit(0);
 }
+const approvalComment=approvalEvidence.approvalComment;
 const approvalActor=text(approvalComment.user?.login,120);
 const humanApproval=Object.freeze({
   kind:'release-provenance-human-gate-approval',
@@ -79,6 +82,7 @@ const humanApproval=Object.freeze({
   sourceSha:headSha,
   approvedBy:approvalActor,
   approvedAt:text(approvalComment.created_at,80),
+  labelAppliedAt:text(approvalEvidence.labelEvent.created_at,80),
   marker:approvalMarker,
   label:APPROVAL_LABEL,
   scope:'exact-source-sha',
@@ -121,14 +125,27 @@ receiptUrl.searchParams.set('taskId',taskId);receiptUrl.searchParams.set('branch
 const receipt=await request(receiptUrl,{headers:{accept:'application/json','user-agent':'ekodi-release-provenance-recovery'}});
 if(!receipt.response.ok||receipt.data?.authorized!==true)fail(`recovery receipt not authorized: HTTP ${receipt.response.status} ${JSON.stringify(receipt.data)}`);
 
-const refPath=`/repos/${repo}/git/refs`;
-const ref=await github(refPath,{method:'POST','headers':{'content-type':'application/json'},body:JSON.stringify({ref:`refs/heads/${branchRef}`,sha:headSha})});
-if(!ref.response.ok){
-  if(ref.response.status!==422)fail(`failed to create recovery branch: HTTP ${ref.response.status} ${JSON.stringify(ref.data)}`);
-  const existing=await github(`/repos/${repo}/git/ref/heads/${encodeURIComponent(branchRef)}`);
-  if(!existing.response.ok||text(existing.data?.object?.sha,80)!==headSha){
+// Check an existing exactly approved orchestrator branch before attempting any GitHub write.
+// This also supports delegated owner creation when GITHUB_TOKEN cannot create protected refs.
+const existingRefPath=`/repos/${repo}/git/ref/heads/${branchRef.split('/').map(encodeURIComponent).join('/')}`;
+const existing=await github(existingRefPath);
+if(existing.response.ok){
+  if(text(existing.data?.object?.sha,80)!==headSha){
     fail('existing recovery branch does not match the exact approved source SHA');
   }
+}else if(existing.response.status===404){
+  const refPath=`/repos/${repo}/git/refs`;
+  const ref=await github(refPath,{method:'POST','headers':{'content-type':'application/json'},body:JSON.stringify({ref:`refs/heads/${branchRef}`,sha:headSha})});
+  if(!ref.response.ok){
+    // Accept only a verified exact-SHA concurrent creation, not a generic 403 bypass.
+    if(ref.response.status!==422)fail(`failed to create recovery branch: HTTP ${ref.response.status} ${JSON.stringify(ref.data)}`);
+    const raced=await github(existingRefPath);
+    if(!raced.response.ok||text(raced.data?.object?.sha,80)!==headSha){
+      fail('existing recovery branch does not match the exact approved source SHA');
+    }
+  }
+}else{
+  fail(`failed to inspect existing recovery branch: HTTP ${existing.response.status}`);
 }
 
 const pulls=await github(`/repos/${repo}/pulls?state=open&head=${encodeURIComponent(repo.split('/')[0]+':'+branchRef)}&base=main`);
@@ -145,11 +162,148 @@ if(!recoveryPr){
 const recoveryNumber=Number(recoveryPr?.number||0);
 if(!recoveryNumber)fail('recovery PR number missing');
 
+const sourceFiles=[];
+for(let page=1;page<=20;page++){
+  const response=await github(`/repos/${repo}/pulls/${prNumber}/files?per_page=100&page=${page}`);
+  if(!response.response.ok||!Array.isArray(response.data))fail('source file inspection failed before guarded merge');
+  sourceFiles.push(...response.data.map(item=>text(item?.filename,300)));
+  if(response.data.length<100)break;
+  if(page===20)fail('source file list exceeds bounded dispatch inspection');
+}
+const independentBoardTouched=sourceFiles.some(file=>
+  file.startsWith('services/independent-board/')||
+  file==='wrangler.independent-board.toml'||
+  file==='sites/seonammedi/public/app.js'||
+  file==='.github/workflows/deploy-independent-board.yml'
+);
+// First-party Shell is an independent guarded Worker. GitHub-token recovery
+// merges do not produce a regular main push event, so a successful immediate
+// recovery merge must dispatch the existing receipt-bound Shell workflow.
+const shellRuntimeTouched=sourceFiles.some(file=>
+  file.startsWith('shell/')||
+  ['ekodi-service-manifest.js','ekodi-shell-worker.js','ekodi-shell-injector.js',
+   'wrangler.shell.toml','wrangler.shell.staging.toml',
+   '.github/workflows/deploy-ekodi-shell.yml',
+   'scripts/verify-ekodi-shell-live.mjs'].includes(file)
+);
+// Exact-SHA recovery may merge immediately with GITHUB_TOKEN; that merge does
+// not fire the regular main-push or orchestrated-convergence workflows.
+const adminContinuityTouched=sourceFiles.some(file=>[
+  'scripts/recover-release-provenance.mjs',
+  'scripts/converge-orchestrated-pr-merge.mjs',
+  'scripts/verify-admin-login-continuity.mjs',
+  'scripts/admin-authenticated-e2e-menu-worker.mjs',
+  'scripts/admin-authenticated-e2e-retry.mjs',
+  'scripts/admin-assist-canonical-e2e.mjs',
+  'test/recovery-admin-e2e-dispatch.test.mjs',
+  'test/admin-assist-production-dispatch-20261016.test.mjs',
+  '.github/workflows/verify-admin-authenticated-production-e2e.yml'
+].includes(file));
+
 await github(`/repos/${repo}/issues/${prNumber}/comments`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({body:`EKODI automatic release-provenance recovery created #${recoveryNumber} on \`${branchRef}\` (task \`${taskId}\`). This PR is superseded by the orchestrator-issued branch.`})});
 await github(`/repos/${repo}/pulls/${prNumber}`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({state:'closed'})});
 
-const merge=await github(`/repos/${repo}/pulls/${recoveryNumber}/merge`,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({merge_method:'squash'})});
+// The protected-recovery source is already exact-SHA owner approved. Never
+// attempt immediate merge without both authentic GitHub Actions checks and
+// a source revision that contains the current main. If these are not ready,
+// leave the official recovery PR open for existing convergent CI/merge handling.
+const sourceStatus=await github(`/repos/${repo}/commits/${headSha}/status`);
+if(!sourceStatus.response.ok)fail('cannot inspect exact approved source commit statuses');
+const statuses=new Map((sourceStatus.data?.statuses||[]).map(entry=>[entry.context,entry.state]));
+const sourceChecks=await github(`/repos/${repo}/commits/${headSha}/check-runs?per_page=100`);
+if(!sourceChecks.response.ok)fail('cannot inspect authentic source CI checks');
+const authenticChecks=Array.isArray(sourceChecks.data?.check_runs)?sourceChecks.data.check_runs:[];
+const requiredChecks=['test','EKODI AI Orchestration Gate'];
+const checksReady=requiredChecks.every(context=>
+  statuses.get(context)==='success'&&authenticChecks.some(run=>
+    run.name===context&&run.app?.slug==='github-actions'&&
+    run.status==='completed'&&run.conclusion==='success'
+  )
+);
+const mainRef=await github(`/repos/${repo}/git/ref/heads/main`);
+if(!mainRef.response.ok)fail('cannot verify latest main before approved recovery merge');
+const mainSha=text(mainRef.data?.object?.sha,80);
+const currentBase=await github(`/repos/${repo}/compare/${mainSha}...${headSha}`);
+if(!currentBase.response.ok)fail('cannot inspect source relationship to protected main');
+const upToDate=Number(currentBase.data?.behind_by)===0;
+if(!checksReady||!upToDate){
+  const reason=!checksReady?'authentic_required_checks_not_green':'latest_main_not_in_source_ancestry';
+  out('merge_condition',reason);
+  await github(`/repos/${repo}/issues/${recoveryNumber}/comments`,{
+    method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({body:`EKODI release-provenance recovery parked at protected convergence: ${reason}. No immediate merge, no deployment. Source exact SHA \`${headSha}\`; main \`${mainSha}\`. Existing protected CI/update-branch gate must complete before any release.`})
+  });
+}
+const merge=checksReady&&upToDate
+  ?await github(`/repos/${repo}/pulls/${recoveryNumber}/merge`,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({merge_method:'squash'})})
+  :{response:{ok:false,status:412},data:{}};
 const mergeDisposition=merge.response.ok?'merged-immediately':`guarded-pending-http-${merge.response.status}`;
+// GitHub-token merges do not necessarily emit a main push workflow event.
+// Only a successfully merged, exactly owner-approved recovery PR may dispatch
+// the existing guarded production workflow. That workflow still enforces its
+// own orchestrator receipt, CI, auth boundary, and live production checks.
+if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched)){
+  if(merge.data?.merged!==true||!/^[a-f0-9]{40}$/i.test(text(merge.data?.sha,80))){
+    fail('guarded merge did not return a verifiable commit SHA');
+  }
+  const main=await github(`/repos/${repo}/branches/main`);
+  if(!main.response.ok||text(main.data?.commit?.sha,80)!==text(merge.data.sha,80)){
+    fail('main changed before exact board dispatch; do not launch a stale release');
+  }
+  if(independentBoardTouched){
+    const dispatch=await github(`/repos/${repo}/actions/workflows/deploy-independent-board.yml/dispatches`,{
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branchRef,release_task_id:taskId}})
+    });
+    if(dispatch.response.status!==204){
+      fail('guarded independent board dispatch failed: HTTP '+dispatch.response.status);
+    }
+    out('independent_board_dispatch','accepted');
+  }
+  if(shellRuntimeTouched){
+    // The canonical shared Site Core already exists; this dispatch only
+    // releases Shell via its own staging, auth, provenance and rollback gates.
+    const shellDispatch=await github(`/repos/${repo}/actions/workflows/deploy-ekodi-shell.yml/dispatches`,{
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branchRef,release_task_id:taskId}})
+    });
+    if(shellDispatch.response.status!==204){
+      fail('guarded Shell Worker dispatch failed: HTTP '+shellDispatch.response.status);
+    }
+    out('shell_dispatch','accepted');
+  }
+}
+
+// The immediate-merge path must run the same issued-session Chromium checks as
+// the trusted converger. Only the exact approved, verified merged HEAD qualifies.
+if(merge.response.ok&&adminContinuityTouched){
+  if(merge.data?.merged!==true||!/^[a-f0-9]{40}$/i.test(text(merge.data?.sha,80))){
+    fail('authenticated Admin E2E needs verified protected merge SHA');
+  }
+  const main=await github(`/repos/${repo}/branches/main`);
+  if(!main.response.ok)fail('cannot verify protected main before authenticated Admin E2E');
+  const mergedSha=text(merge.data.sha,80);
+  const mainSha=text(main.data?.commit?.sha,80);
+  if(mainSha!==mergedSha){
+    // Concurrent approved changes may advance main; require proof that it still
+    // contains the exact tested/merged recovery commit before verifying live.
+    const ancestry=await github(`/repos/${repo}/compare/${mergedSha}...${mainSha}`);
+    if(!ancestry.response.ok||Number(ancestry.data?.behind_by)!==0||
+      !['ahead','identical'].includes(ancestry.data?.status)){
+      fail('approved Admin recovery merge is not in current main ancestry');
+    }
+  }
+  const result=await github(`/repos/${repo}/actions/workflows/verify-admin-authenticated-production-e2e.yml/dispatches`,{
+    method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ref:'main'})
+  });
+  if(result.response.status!==204){
+    fail('authenticated Admin E2E dispatch failed: HTTP '+result.response.status);
+  }
+  out('admin_e2e_dispatch','accepted');
+}
+
 if(!merge.response.ok){
   await github(`/repos/${repo}/issues/${recoveryNumber}/comments`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({body:'EKODI recovery branch issued successfully. Merge remains guarded by required checks; production deployment will continue after the repository gate allows merge.'})});
 }

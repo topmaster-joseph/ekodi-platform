@@ -13,9 +13,10 @@ const notice=(h,value)=>h.append(text('p',value,'notice'));
 function showGuest(){
  $('sectionTitle').textContent=labels[page]||'처음';
  $('serviceStage').textContent='소개 공개 · 회원서비스 준비';
- $('contentDescription').textContent=page===''?'로그인 전에는 누구나 EKODI 동행의 소개와 이용 원칙을 볼 수 있습니다.':'공개 소개는 누구나 볼 수 있습니다. 행사 목록, 프로필 및 동행 찾기는 로그인 후 제공됩니다.';
+ document.querySelectorAll('[data-guest-nav]').forEach(link=>{link.href=loginUrl()});
+ $('contentDescription').textContent=page===''?'서로를 존중하며 천천히 알아가는 동행입니다.':'로그인 후 이용 가능한 기능은 개통 상태에 따라 달라집니다.';
  if(page!==''){
-   const h=$('publicPanel');h.append(button('EKODI Google로 시작',()=>location.assign(loginUrl()),'primary'));
+   const h=$('publicPanel');if(!h.querySelector('[data-donghaeng-login]')){const c=button('EKODI Google로 시작',()=>location.assign(loginUrl()),'primary');c.dataset.donghaengLogin='1';h.append(c);}
  }
 }
 async function sessionToken(){
@@ -427,9 +428,48 @@ async function showAllPricing(h){
    }),msg);box.append(field);
   }
   h.append(box);
- }catch(e){if(e?.status!==403)notice(h,'가격관리 권한이 필요합니다.')}
+ }catch(e){if(e?.status===403)notice(h,'가격관리 역할이 발급되지 않았습니다.');else notice(h,'가격관리 설정을 불러오지 못했습니다.')}
+}
+async function showBrokerageReadiness(h){
+ try{
+  const data=await api('/bank/admin/brokerage-readiness');
+  const panel=text('section','','member-card');
+  panel.append(text('h3','국내·국제결혼중개업 신고·등록 준비'));
+  paragraph(panel,'현재 결혼중개 영업은 비활성입니다. 진행 상태 저장은 행정기관 신고 수리 또는 등록을 의미하지 않습니다.');
+  const official=text('a','정부24 공식 민원 안내 · 국내 신고 / 국제 등록 ↗','outline');
+  official.href='https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13510000012';
+  official.target='_blank';official.rel='noopener noreferrer';panel.append(official);
+  for(const regime of ['domestic','international']){
+   const group=text('section','','member-card');
+   group.append(text('h4',regime==='domestic'?'국내결혼중개업 신고':'국제결혼중개업 등록'));
+   for(const item of data.items||[]){
+    if(item.regime!==regime)continue;
+    const field=text('div','','field');field.append(text('label',item.requirement));
+    const progress=document.createElement('select');
+    for(const [value,label] of [['not_started','준비 전'],['collecting','자료 수집'],['ready_for_review','검토 준비'],['submitted','관할기관 제출']]){
+     const opt=document.createElement('option');opt.value=value;opt.textContent=label;progress.append(opt);
+    }
+    progress.value=item.progress;
+    const evidence=document.createElement('input');evidence.type='text';evidence.maxLength=240;
+    evidence.placeholder='내부 증빙 문서번호(주민등록번호 입력 금지)';evidence.value=item.evidence_ref||'';
+    const feedback=text('p','','status-text');
+    field.append(progress,evidence,button('진행상태 저장',async()=>{
+     try{await api('/bank/admin/brokerage-readiness',{method:'PUT',body:{regime,code:item.code,progress:progress.value,evidence_ref:evidence.value.trim()}});feedback.textContent='저장됨 · 인허가 완료를 의미하지 않음'}
+     catch(e){feedback.textContent=errorText(e)}
+    }),feedback);group.append(field);
+   }
+   panel.append(group);
+  }
+  h.append(panel);
+ }catch(e){if(e?.status===403)notice(h,'인허가 관리 권한이 없습니다. 검증된 EKODI 계정에 운영자 역할이 필요합니다.');else notice(h,'인허가 준비자료를 조회하지 못했습니다.')}
 }
 async function signedIn(status){
+ if(!status?.onboarding_enabled){
+  document.querySelectorAll('[data-guest-nav]').forEach(link=>{link.hidden=true});
+  $('serviceStage').textContent='로그인 확인 · 회원서비스 준비 중';
+  const h=holder();notice(h,'EKODI 계정 로그인은 확인했습니다. 회원가입·프로필·행사·메시지·결제는 안전 검증을 마친 후 열립니다.');
+  return;
+ }
  document.querySelectorAll('[data-member-nav]').forEach(link=>{link.hidden=false});
  document.querySelectorAll('[data-guest-nav]').forEach(link=>{link.hidden=true});
  $('serviceStage').textContent='로그인 완료';
@@ -441,7 +481,7 @@ async function signedIn(status){
  else if(page==='/discover')await showDiscover(h);
  else if(page==='/messages')await showMessages(h);
  else if(page==='/subscribe')await showSubscription(h);
- else if(page==='/admin'){await showBankAdmin(h);await showEventPricing(h);await showAllPricing(h);}
+ else if(page==='/admin'){await showBankAdmin(h);await showEventPricing(h);await showAllPricing(h);await showBrokerageReadiness(h);}
  else if(page==='/groups')paragraph(h,'지역 공동체·소그룹 기능을 준비하고 있습니다. 행사 목록을 먼저 확인해 주세요.');
  else {paragraph(h,'반갑습니다. 나의 프로필, 공개 행사, 동행 찾기를 살펴보세요.');const row=text('div','','actions');for(const [name,href] of [['프로필 등록','/singles/my'],['공개 행사','/singles/events'],['동행 찾기','/singles/discover']]){const a=text('a',name,'outline');a.href=href;row.append(a)}h.append(row)}
 }
@@ -457,7 +497,12 @@ async function main(){
  try{status=await fetch('/singles/api/status',{cache:'no-store'}).then(r=>r.json())}
  catch{return}
  state.status=status;
- if(!status?.onboarding_enabled||!status?.auth?.supabase_url||!status?.auth?.publishable_key)return;
+ const prelaunchAdmin=page==='/admin'&&status?.admin_preparation_enabled===true&&status?.onboarding_enabled===false;
+ // Public first-party EKODI identity settings are the same as the canonical auth hub.
+ // Only the publishable browser key is used; membership and payment remain server-gated.
+ const identityUrl=status?.auth?.supabase_url||'https://renzehysxirjilvdxacv.supabase.co';
+ const identityKey=status?.auth?.publishable_key||'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
+ if(!identityUrl||!identityKey)return;
  if(typeof window.supabase?.createClient!=='function'){
   const ready=await new Promise(resolve=>{
    const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
@@ -466,7 +511,7 @@ async function main(){
   });
   if(!ready){$('serviceStage').textContent='로그인 모듈 점검 중';return}
  }
- state.client=window.supabase.createClient(status.auth.supabase_url,status.auth.publishable_key,
+ state.client=window.supabase.createClient(identityUrl,identityKey,
  {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
  // Existing EKODI community bridge uses a short-lived OTP hash in the fragment.
  if(tokenHash){
@@ -474,7 +519,16 @@ async function main(){
  }
  const {data}=await state.client.auth.getSession();
  state.session=data?.session;
- if(!state.session){showGuest();return}
+ if(!state.session)return;
+ if(prelaunchAdmin){
+  document.querySelectorAll('[data-guest-nav]').forEach(link=>{link.hidden=true});
+  $('serviceStage').textContent='운영 준비 · 회원서비스 미개통';
+  const h=holder();
+  notice(h,'회원가입·메시지·결제는 아직 중단돼 있습니다. 별도 권한이 확인된 관리자만 가격 및 인허가 준비 상태를 수정할 수 있습니다.');
+  await showBrokerageReadiness(h);
+  await showAllPricing(h);
+  return;
+ }
  await signedIn(status);
 }
 main().catch(()=>{$('serviceStage').textContent='연결 점검 중'});

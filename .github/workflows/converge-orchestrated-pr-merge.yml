@@ -4,16 +4,18 @@ on:
   push:
     branches:
       - 'ai/*/orch_*'
+  workflow_dispatch:
 
 permissions:
   contents: write
   pull-requests: write
   statuses: write
+  checks: read
   actions: write
 
 concurrency:
-  group: ekodi-orchestrated-merge-${{ github.ref }}
-  cancel-in-progress: true
+  group: ekodi-orchestrated-merge
+  cancel-in-progress: false
 
 jobs:
   converge:

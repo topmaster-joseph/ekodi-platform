@@ -38,6 +38,11 @@ EKODI_OPENROUTER_FREE_DAILY_CALL_LIMIT = "45"
 EKODI_PROVIDER_GROQ_FREE_ENABLED = "true"
 EKODI_GROQ_FREE_DAILY_CALL_LIMIT = "900"
 
+# Privileged central identity validation must use a same-account Worker service binding.
+[[services]]
+binding = "CONTROL_API"
+service = "ekodi-auth-api"
+
 [ai]
 binding = "AI"
 

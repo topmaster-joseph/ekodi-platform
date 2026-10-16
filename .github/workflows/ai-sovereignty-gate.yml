@@ -1,0 +1,35 @@
+name: EKODI AI Sovereignty Gate
+on:
+  pull_request:
+    paths:
+      - 'ekodi-ai-sovereignty-gate.js'
+      - 'ekodi-ai-orchestrator-admin-handoff.js'
+      - 'ai-command-control.js'
+      - 'ekodi-orchestrator-task-adapter.js'
+      - 'control.js'
+      - 'control.html'
+      - 'scripts/validate-ai-sovereignty-gate.mjs'
+      - '.github/workflows/ai-sovereignty-gate.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check module syntax
+        run: |
+          node --check ekodi-ai-sovereignty-gate.js
+          node --check ekodi-ai-orchestrator-admin-handoff.js
+          node --check ai-command-control.js
+          node --check ekodi-orchestrator-task-adapter.js
+          node --check control.js
+      - name: Run fail-closed policy assertions
+        run: node scripts/validate-ai-sovereignty-gate.mjs
