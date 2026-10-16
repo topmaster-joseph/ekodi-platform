@@ -181,7 +181,7 @@ test('standalone boards reuse EKODI authentication and own their mutations',asyn
     read('sites/seonammedi/public/voice-public-admin.js'),
     read('sites/seonammedi/public/admin/admin.js')
   ]);
-  assert.match(worker,/new URL\('\/api\/seonammedi\/admin\/me'/);
+  assert.match(worker,/new URL\('https:\/\/ekodi\.kr\/api\/seonammedi\/admin\/me'\)/);
   assert.match(worker,/auth\.permissions\?\.\[permission\]/);
   assert.match(worker,/path==='\/api\/admin\/posts'/);
   assert.match(worker,/createFinance\(req,env\)/);
