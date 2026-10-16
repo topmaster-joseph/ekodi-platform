@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>시민의견 V2 검증 화면</title>
+<style>
+:root{color-scheme:light}*{box-sizing:border-box}body{margin:0;background:#fff;color:#111;font:16px/1.5 system-ui,"Noto Sans KR",sans-serif}main{max-width:800px;margin:auto;padding:14px}header{border-bottom:1px solid #ddd;padding:10px 14px;font-weight:800}h1{font-size:24px;margin:8px 0}.notice{color:#555;font-size:14px}button,a.action{border:1px solid #111;background:#111;color:white;border-radius:6px;padding:9px 13px;cursor:pointer;font:inherit}button.secondary{background:white;color:#111}textarea{width:100%;min-height:140px;padding:12px;border:1px solid #999;border-radius:6px;font:inherit}form{display:grid;gap:10px;margin:16px 0}article{padding:12px 0;border-top:1px solid #ddd;overflow-wrap:anywhere}article p{white-space:pre-wrap}small{color:#555}#status{min-height:25px}#editor[hidden]{display:none}
+</style></head><body><header>서남권 국립의대 시민소통센터</header><main><h1>시민의견</h1>
+<p class="notice">누구나 의견을 읽을 수 있습니다. Google 로그인 후 의견을 작성할 수 있습니다.</p>
+<div><button id="write" type="button">글쓰기</button> <button id="reload" class="secondary" type="button">새로고침</button></div>
+<form id="editor" hidden><label for="message">의견 내용</label><textarea id="message" maxlength="12000" required placeholder="의견을 자유롭게 작성해 주세요."></textarea><div><button type="submit">등록</button> <button type="button" class="secondary" id="cancel">취소</button></div></form>
+<p id="status" role="status" aria-live="polite"></p><section id="posts" aria-label="시민의견 목록"></section></main>
+<script type="module" src="./citizen-app.mjs"></script></body></html>
