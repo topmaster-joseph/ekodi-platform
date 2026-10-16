@@ -27,7 +27,10 @@ test('account-selection intent is one-time and cannot cause post-auth compose lo
   const client=await read('auth-site/client-auth.js');
   const entry=await read('auth-site/auth-entry.js');
   const router=await read('auth-site/auth-router.js');
-  assert.match(worker,/get\("choose_account"\)==="1"\)\{voiceLogin\(\);return\}/);
+  assert.match(worker,/get\("choose_account"\)==="1"\)\{let alreadySignedIn=false/);
+  assert.match(worker,/alreadySignedIn=await verifyVoiceAccount\(\)/);
+  assert.match(worker,/if\(!alreadySignedIn\)\{voiceLogin\(\);return\}/);
+  assert.match(worker,/cleaned\.searchParams\.delete\("choose_account"\)/);
   assert.match(worker,/target\.searchParams\.delete\("choose_account"\)/);
   assert.match(worker,/auth\.searchParams\.set\("return_to",target\.href\)/);
   assert.match(worker,/auth\.searchParams\.set\("select_account","1"\)/);
