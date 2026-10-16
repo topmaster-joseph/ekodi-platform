@@ -44,7 +44,8 @@
     "evidence-gated-external-knowledge",
     "automatic-execution-background-only-enforced",
     "public-by-default-site-publication-control",
-    "native-browser-execution-order-enforced"
+    "native-browser-execution-order-enforced",
+    "mandatory-site-operational-isolation"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -1314,5 +1315,23 @@
       "production-verification"
     ],
     "exceptionPolicy": "constitutional-amendment-required"
+  },
+  "siteOperationalIsolationPolicy": {
+    "id": "SITE-ISOLATION-001",
+    "status": "mandatory",
+    "identityAuthentication": "shared",
+    "siteAuthorization": "site-scoped",
+    "siteBusinessData": "logically-isolated",
+    "siteAdministration": "site-scoped",
+    "crossSitePrivateDataAccessForbidden": true,
+    "implicitCrossSiteRoleInheritanceForbidden": true,
+    "sharedInfrastructureAllowedOnlyWithVerifiedIsolation": true,
+    "physicalServicePerSiteRequired": false,
+    "authenticationReturn": "validated-origin-url-and-action",
+    "independentReleaseAndRollbackRequired": true,
+    "sharedChangeRequiresImpactRegression": true,
+    "siteFailureContainmentRequired": true,
+    "productionVerificationRequired": true,
+    "governanceChangeControl": "C2/C3"
   }
 }
