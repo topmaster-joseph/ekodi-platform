@@ -50,3 +50,22 @@ test('both standalone and EKODI subpath notice mounts retain six menu navigation
 // No runtime, authorization, deployment, or production protection changes.
 
 // Owner-authored CI recheck after protected main synchronization; test behavior unchanged.
+
+test('public notices render a compact title/date list, with accessible expandable detail and permalink',async()=>{
+  const mod=await import(new URL('../services/independent-board/worker.js?notice-list-only='+Date.now(),import.meta.url));
+  for(const url of ['https://seonammedi.kr/board/notices','https://ekodi.kr/seonammedi/board/notices']){
+    const response=await mod.default.fetch(new Request(url),{});
+    assert.equal(response.status,200,url);
+    const html=await response.text();
+    assert.ok(html.includes('<details class="board-row notice-record"'),url);
+    assert.ok(html.includes('<summary class="row-head"><strong>'),url);
+    assert.ok(html.includes('</small></summary><p class="row-body">'),url);
+    assert.ok(html.includes('</div></details>'),url);
+    assert.ok(html.includes('if(el){el.open=true;el.classList.add'),url);
+    assert.ok(html.includes('data-share='),url);
+    assert.ok(html.includes('data-edit='),url);
+    assert.ok(html.includes('data-delete='),url);
+    assert.ok(html.includes('body.board-notices details.notice-record'),url);
+    assert.ok(!html.includes('<article class="board-row" id="notice-'),url);
+  }
+});
