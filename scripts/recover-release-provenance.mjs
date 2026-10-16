@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import {findExactHumanGateApproval} from './release-human-gate-evidence.mjs';
+import {assessExactRecoveryBranch} from './release-recovery-branch-evidence.mjs';
 
 const repo=String(process.env.GITHUB_REPOSITORY||'').trim();
 const eventName=String(process.env.GITHUB_EVENT_NAME||'').trim();
@@ -128,24 +129,31 @@ if(!receipt.response.ok||receipt.data?.authorized!==true)fail(`recovery receipt 
 // Check an existing exactly approved orchestrator branch before attempting any GitHub write.
 // This also supports delegated owner creation when GITHUB_TOKEN cannot create protected refs.
 const existingRefPath=`/repos/${repo}/git/ref/heads/${branchRef.split('/').map(encodeURIComponent).join('/')}`;
-const existing=await github(existingRefPath);
-if(existing.response.ok){
-  if(text(existing.data?.object?.sha,80)!==headSha){
-    fail('existing recovery branch does not match the exact approved source SHA');
-  }
-}else if(existing.response.status===404){
+const existingBranchPath=`/repos/${repo}/branches/${encodeURIComponent(branchRef)}`;
+async function existingExactRecoveryBranch(){
+  const ref=await github(existingRefPath);
+  // A protected GitHub integration may report 404 for git/ref even when the
+  // exact owner-issued branch exists. Verify through the independent branch
+  // endpoint, never using a failed POST as authorization.
+  const branch=ref.response.ok||![403,404].includes(ref.response.status)
+    ?null:await github(existingBranchPath);
+  try {
+    return assessExactRecoveryBranch({
+      gitRef:{ok:ref.response.ok,status:ref.response.status,sha:text(ref.data?.object?.sha,80)},
+      branch:branch?{ok:branch.response.ok,status:branch.response.status,sha:text(branch.data?.commit?.sha,80)}:null,
+      expectedSha:headSha
+    });
+  }catch(error){fail(error?.message||String(error))}
+}
+if(!await existingExactRecoveryBranch()){
   const refPath=`/repos/${repo}/git/refs`;
   const ref=await github(refPath,{method:'POST','headers':{'content-type':'application/json'},body:JSON.stringify({ref:`refs/heads/${branchRef}`,sha:headSha})});
-  if(!ref.response.ok){
-    // Accept only a verified exact-SHA concurrent creation, not a generic 403 bypass.
-    if(ref.response.status!==422)fail(`failed to create recovery branch: HTTP ${ref.response.status} ${JSON.stringify(ref.data)}`);
-    const raced=await github(existingRefPath);
-    if(!raced.response.ok||text(raced.data?.object?.sha,80)!==headSha){
-      fail('existing recovery branch does not match the exact approved source SHA');
-    }
-  }
-}else{
-  fail(`failed to inspect existing recovery branch: HTTP ${existing.response.status}`);
+  // A 403 or 422 is NOT permission to bypass branch checks: only a separate
+  // positive, exact-SHA read of an already-existing branch may proceed.
+  if(!ref.response.ok&&![403,422].includes(ref.response.status))
+    fail(`failed to create recovery branch: HTTP ${ref.response.status} ${JSON.stringify(ref.data)}`);
+  if(!await existingExactRecoveryBranch())
+    fail(`failed to create or verify exact-SHA recovery branch: HTTP ${ref.response.status}`);
 }
 
 const pulls=await github(`/repos/${repo}/pulls?state=open&head=${encodeURIComponent(repo.split('/')[0]+':'+branchRef)}&base=main`);
