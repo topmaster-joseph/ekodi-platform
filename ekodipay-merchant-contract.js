@@ -98,7 +98,7 @@ export function selectServerApprovedMerchant(index,approvedOrder,{mode,ownerGate
    return {ok:false,reason:'isolated_provider_keys_missing'};
  // Do NOT include keys, MID, bank fingerprint, or full account details in public responses.
  // Private credentials may be consumed only by the existing confirmed PG backend.
- return {ok:true,merchantId:profile.merchantId,mode,
+ return {ok:true,merchantId:profile.merchantId,orderId:approvedOrder.orderId,mode,
    privateContext:{merchantId:profile.merchantId,mid:profile.midByMode[mode],
      clientKey:env[bindings.client],secretKey:env[bindings.secret],
      settlementFingerprint:profile.settlement.fingerprint}};
