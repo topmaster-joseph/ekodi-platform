@@ -71,9 +71,9 @@ test('legacy workspace login likewise restores paths and rejects other-service t
 
 test('system-level return policy, minimized chooser and versioned auth are guarded',()=>{
   for(const k of ['mandatoryForExistingAndFutureSites','requireInitiatingHrefOnLoginLink','trustedReferrerRecoveryIfMissing','preserveExactPathAndQuery','blockCrossServiceRedirect','noAutomaticMyEkodiTransfer','compactGoogleChooserSurface','regressionTestsRequired'])assert.equal(policy[k],true,k);
-  assert.match(source('auth-site/index.html'),/width:min\\(100%,360px\\)/);
+  assert.match(source('auth-site/index.html'),/width:min\(100%,360px\)/);
   assert.match(source('admin-direct-google.js'),/width=420,height=580/);
-  assert.match(source('auth-site/index.html'),/auth-bootstrap\\.js\\?v=20261017-exact-origin-1/);
-  assert.match(source('auth-site/auth-entry.js'),/auth-router\\.js\\?v=20261017-exact-origin-1/);
-  assert.match(source('auth-site/auth-router.js'),/client-auth\\.js\\?v=20261017-exact-origin-1/);
+  assert.match(source('auth-site/index.html'),/auth-bootstrap\.js\?v=20261017-exact-origin-1/);
+  assert.match(source('auth-site/auth-entry.js'),/auth-router\.js\?v=20261017-exact-origin-1/);
+  assert.match(source('auth-site/auth-router.js'),/client-auth\.js\?v=20261017-exact-origin-1/);
 });
