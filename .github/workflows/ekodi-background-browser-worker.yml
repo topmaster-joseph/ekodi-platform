@@ -231,6 +231,13 @@ jobs:
           jq -e '.pageErrors | length == 0' "$result" >/dev/null
           jq -e '.httpErrorResponses | type == "array"' "$result" >/dev/null
           jq -e '.screenshots | length >= 1' "$result" >/dev/null
+          # When Control is explicitly requested, prove BOTH guarded controls are
+          # visibly rendered at the canonical route. A generic successful page load
+          # or snapshot of a login/error page must never count as Control proof.
+          if jq -e '(.path == "/control" or any(.actions[]?; .type == "goto" and .path == "/control"))' artifacts/browser-task.json >/dev/null; then
+            jq -e '[.results[] | select(.type == "snapshot" and ((.url // "") | test("^https://ekodi[.]kr/control/?$"))) | select(((.bodyText // "") | contains("AI 경로 점검")) and ((.bodyText // "") | contains("보호된 배포 요청")))] | length >= 1' "$result" >/dev/null
+            echo '- Control guarded preview and release controls: visibly rendered at /control' >> "$GITHUB_STEP_SUMMARY"
+          fi
           echo '## EKODI Background Browser Worker' >> "$GITHUB_STEP_SUMMARY"
           jq -r '"- Result: \(.ok)\n- Final URL: \(.finalUrl)\n- Device: \(.deviceProfile) \(.viewport.width)x\(.viewport.height)\n- Headless/ephemeral: \(.headless)/\(.ephemeralContext)\n- Blocked mutations: \(.blockedMutations|length)\n- Page errors: \(.pageErrors|length)\n- HTTP 4xx/5xx responses: \(.httpErrorResponses|length)\n- Horizontal overflow snapshots: \([.results[] | select(.type == "snapshot" and .horizontalOverflow == true)] | length)\n- Screenshots: \(.screenshots|length)"' "$result" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
