@@ -3,6 +3,7 @@ const $=id=>document.getElementById(id);
 const editor=$('editor'),message=$('message'),status=$('status'),posts=$('posts'),write=$('write');
 const storage={getItem:key=>{try{return localStorage.getItem(key)||sessionStorage.getItem(key)}catch{return null}}};
 const controller=await createVoiceController({href:location.href,storage});
+let adminAllowed=false;
 const report=text=>{status.textContent=text};
 function render(items){
   posts.replaceChildren();
@@ -11,10 +12,35 @@ function render(items){
     const article=document.createElement('article'),meta=document.createElement('small'),body=document.createElement('p');
     meta.textContent=[item.displayName||'익명',item.createdAt?new Date(item.createdAt).toLocaleString('ko-KR'):''].filter(Boolean).join(' · ');
     body.textContent=String(item.message||'');
-    article.append(meta,body);posts.append(article);
+    article.append(meta,body);
+    if(adminAllowed&&Number.isSafeInteger(Number(item.id))){
+      const edit=document.createElement('button'),remove=document.createElement('button');
+      edit.type=remove.type='button';edit.textContent='수정';remove.textContent='삭제';
+      edit.className=remove.className='secondary';
+      edit.addEventListener('click',async()=>{
+        const proposed=prompt('수정할 의견을 입력해 주세요.',String(item.message||''));
+        if(proposed===null||!proposed.trim())return;
+        try{await controller.admin.update(Number(item.id),proposed);report('수정했습니다.');await load();}
+        catch{report('수정 권한 또는 저장 상태를 확인하지 못했습니다.');}
+      });
+      remove.addEventListener('click',async()=>{
+        if(!confirm('해당 의견을 삭제하시겠습니까?'))return;
+        try{await controller.admin.remove(Number(item.id));report('삭제했습니다.');await load();}
+        catch{report('삭제 권한 또는 저장 상태를 확인하지 못했습니다.');}
+      });
+      article.append(edit,document.createTextNode(' '),remove);
+    }
+    posts.append(article);
   }
 }
-async function load(){try{render(await controller.list())}catch{report('목록을 불러오지 못했습니다. 잠시 후 새로고침해 주세요.')}}
+async function load(){
+  try{
+    let items=await controller.list();adminAllowed=false;
+    try{const result=await controller.admin.list();if(Array.isArray(result.items)){items=result.items;adminAllowed=true;}}
+    catch{ /* public visitors retain read-only access */ }
+    render(items);
+  }catch{report('목록을 불러오지 못했습니다. 잠시 후 새로고침해 주세요.')}
+}
 function openComposer(){editor.hidden=false;message.focus();}
 async function beginCompose(){
   report('');
