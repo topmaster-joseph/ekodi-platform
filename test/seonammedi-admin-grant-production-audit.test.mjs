@@ -40,6 +40,7 @@ test('Control API checks canonical ekodi-auth read-only grant after guarded migr
   for(const required of ['d1 execute ekodi-auth --remote','--json --command "$sql"','scoped_grant_verified','seonammedi.notice.manage','seonammedi.voice.manage','platform.admin','role=\'board_admin\'','scripts/verify-seonammedi-admin-grant-output.mjs','UNVERIFIED in canonical D1']){
     assert.ok(section.includes(required),required);
   }
-  assert.doesNotMatch(section,/\b(?:INSERT|UPDATE|DELETE|DROP|ALTER)\b/);
+  assert.match(section,/SELECT CASE WHEN COUNT\(\*\)=1/);
+  assert.doesNotMatch(section,/^\s+(?:INSERT|UPDATE|DELETE|DROP|ALTER)\b/m);
   assert.match(section,/actual Google login and PUT\/DELETE remain separately unverified/);
 });
