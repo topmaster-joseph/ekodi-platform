@@ -7,10 +7,11 @@ import { cooperativeGrantDecision, resolveCooperativeAccess } from '../cooperati
 import { normalizeCooperativeState, loadCooperativeProject, saveCooperativeProject } from '../cooperative-store.js';
 import { routeCooperative, cooperativeRoute } from '../cooperative-control.js';
 import { cooperativeCharter } from '../cooperative-charter.js';
-import { sitePublicationAuthority } from '../site-publication-runtime.js';
+import { sitePublicationAuthority, resolvePublicationSiteForRequest, sitePublicationGuard } from '../site-publication-runtime.js';
 import sharedSiteWorker from '../platform-router-entry-worker.js';
 import { COOPERATIVE_IMAGE_PATHS } from '../cooperative-media.js';
 
+import { cooperativeLocatorAvailability } from '../cooperative-locator.js';
 import { fixture, authFetch } from './helpers/cooperative-fixture.mjs';
 
 const req = (coop, path, token = '', method = 'GET', body = undefined, origin = 'https://ekodi.kr') => new Request(`https://ekodi.kr/${coop.slug}/api${path}`, {
@@ -58,15 +59,16 @@ test('cooperative hub pages and generated assets reach the Worker within its rou
   assert.equal(workerFirst('/admin/unrelated.css'),false,'ordinary static admin modules stay asset-first');
 });
 
-test('cooperative release probes match final Shared Site headers and keep every page non-storable',async()=>{
+test('cooperative release probes match final Shared Site headers and keep every page non-storable',async t=>{
+  const f=fixture();t.after(()=>f.sqlite.close());
   const manifest=JSON.parse(fs.readFileSync(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
-  const paths=COOPERATIVES.flatMap(coop=>['/','/members','/admin'].map(suffix=>'/'+coop.slug+suffix));
+  const paths=COOPERATIVES.flatMap(coop=>['/','/members','/admin'].map(suffix=>'/'+coop.publicSlug+suffix));
   paths.push('/business-coop/','/business-coop/admin/','/admin/workspaces/cooperatives','/business-coop/assets/app.css','/business-coop/assets/app.js');
   for(const path of paths){
     const url='https://ekodi.kr'+path;
     const probe=manifest.worker.requests.find(probe=>probe.url===url);
     assert.ok(probe,'guarded release probe exists for '+path);
-    const response=await sharedSiteWorker.fetch(new Request(url),{},{});
+    const response=await sharedSiteWorker.fetch(new Request(url),f.env,{});
     assert.equal(response.status,200,path);
     assert.ok(response.headers.get('cache-control').split(',').map(value=>value.trim()).includes('no-store'),path);
     const finalHeaders=[...response.headers].map(([key,value])=>key+': '+value).join('\n').toLowerCase();
@@ -316,24 +318,116 @@ test('input validates legal names, real calendar dates and the 30 percent capita
   assert.throws(()=>normalizeCooperativeState({founders},jubilee));
 });
 
-test('all six page entries serve individual branding and private skeletons contain no roster data', async () => {
+test('all six page entries serve individual branding and private skeletons contain no roster data', async t => {
+  const f=fixture();t.after(()=>f.sqlite.close());
   for(const coop of COOPERATIVES)for(const suffix of ['/', '/members', '/admin']){
-    const response=await routeCooperative(new Request('https://ekodi.kr/'+coop.slug+suffix),{});
+    const response=await routeCooperative(new Request('https://ekodi.kr/'+coop.publicSlug+suffix),f.env);
     assert.equal(response.status,200);assert.ok((await response.text()).includes(coop.name));
     if(suffix!=='/')assert.equal(response.headers.get('x-robots-tag'),'noindex, nofollow, noarchive');
   }
 });
 
 
-test('canonical cooperative roots use a method-preserving trailing-slash redirect with functional queries intact', async () => {
-  for(const method of ['GET','HEAD','POST']){
-    const response=await routeCooperative(new Request('https://ekodi.kr/jubilee-distribution?campaign=source',{method}),{});
-    assert.equal(response.status,308);assert.equal(response.headers.get('location'),'https://ekodi.kr/jubilee-distribution/?campaign=source');
+test('short roots and all old human links canonicalize with queries and HEAD intact; APIs keep their request bodies', async t => {
+  const f=fixture();t.after(()=>f.sqlite.close());
+  t.mock.method(globalThis,'fetch',authFetch({admin:'admin@example.test'}));f.grant(jubilee,'admin@example.test','owner');
+  for(const coop of COOPERATIVES){
+    for(const method of ['GET','HEAD'])for(const suffix of ['', '/', '/members', '/members/', '/admin', '/admin/']){
+      const response=await routeCooperative(new Request('https://ekodi.kr/'+coop.slug+suffix+'?campaign=source',{method}),f.env);
+      assert.equal(response.status,308);assert.equal(response.headers.get('location'),'https://ekodi.kr/'+coop.publicSlug+(suffix.replace(/\/$/,'')||'/')+'?campaign=source');
+      assert.equal(await response.text(),'');
+    }
+    for(const method of ['GET','HEAD','POST']){
+      const response=await routeCooperative(new Request('https://ekodi.kr/'+coop.publicSlug+'?campaign=source',{method}),f.env);
+      assert.equal(response.status,308);assert.equal(response.headers.get('location'),'https://ekodi.kr/'+coop.publicSlug+'/?campaign=source');
+    }
+    const old=await (await routeCooperative(req(coop,'/public'),f.env)).json();
+    const short=await (await routeCooperative(new Request('https://ekodi.kr/'+coop.publicSlug+'/api/public'),f.env)).json();
+    assert.deepEqual(short,old);assert.equal(short.workspaceId,coop.workspaceId);
+    const platform=await routeCooperative(new Request('https://ekodi.kr/admin/workspaces/cooperatives/'+coop.slug),f.env);
+    assert.equal(platform.status,200);assert.equal(platform.headers.has('location'),false);
+    assert.match(await platform.text(),/data-coop-platform="true"/);
   }
+  // Existing PUT integrations are never redirected or assigned a new identity.
+  assert.equal((await routeCooperative(req(jubilee,'/project','admin','PUT',{revision:1,state:{profile:{purpose:'기존 주소 저장'}}}),f.env)).status,200);
+  const read=await routeCooperative(new Request('https://ekodi.kr/jubilee/api/project',{headers:{authorization:'Bearer admin'}}),f.env);
+  const current=await read.json();assert.equal(current.workspaceId,jubilee.workspaceId);assert.equal(current.revision,2);assert.equal(current.state.profile.purpose,'기존 주소 저장');
+  assert.equal((await loadCooperativeProject(f.db,open)).revision,1);
 });
 
 test('charter reflects edited purpose, industries, business scope and jurisdiction',()=>{
   const state=cooperativeInitialState(jubilee);Object.assign(state.profile,{purpose:'검토 목적',industries:'검토 업종',businesses:'검토 사업',jurisdiction:'전라남도'});
   const text=cooperativeCharter(jubilee,state);
   for(const value of ['검토 목적','검토 업종','검토 사업','전라남도'])assert.ok(text.includes(value),value);
+});
+
+test('short locators reject private, inactive, domain and SPACE alias occupants and fail closed on unavailable reads',async t=>{
+  const f=fixture();t.after(()=>f.sqlite.close());
+  for(const coop of COOPERATIVES){
+    assert.equal((await cooperativeLocatorAvailability(f.env,coop)).ok,true);
+    for(const status of ['active','inactive','paused']){
+      f.sqlite.prepare('INSERT INTO customer_tenants(slug,name,domain,status) VALUES(?,?,?,?)').run(coop.publicSlug,'다른 공간','elsewhere.test',status);
+      assert.equal((await cooperativeLocatorAvailability(f.env,coop)).code,'COOP_LOCATOR_CONFLICT');
+      assert.equal((await routeCooperative(new Request('https://ekodi.kr/'+coop.publicSlug+'/'),f.env)).status,503);
+      f.sqlite.prepare('DELETE FROM customer_tenants WHERE slug=?').run(coop.publicSlug);
+    }
+    f.sqlite.prepare('INSERT INTO customer_tenants(slug,domain,status) VALUES(?,?,?)').run('other','https://EKODI.KR/'+coop.publicSlug+'/nested/','inactive');
+    assert.equal((await cooperativeLocatorAvailability(f.env,coop)).ok,false);
+    f.sqlite.prepare('DELETE FROM customer_tenants WHERE slug=?').run('other');
+    f.sqlite.prepare('INSERT INTO public_site_controls(site_id,workspace_id,domain,public_status) VALUES(?,?,?,?)').run('other','different-uuid','ekodi.kr/'+coop.publicSlug+'/','private');
+    assert.equal((await cooperativeLocatorAvailability(f.env,coop)).ok,false);
+    f.sqlite.prepare('DELETE FROM public_site_controls WHERE site_id=?').run('other');
+  }
+  // A longer first segment is distinct from /open.
+  f.sqlite.prepare('INSERT INTO customer_tenants(slug,domain,status) VALUES(?,?,?)').run('openai-customer','ekodi.kr/openai-customer','inactive');
+  assert.equal((await cooperativeLocatorAvailability(f.env,open)).ok,true);
+  const env={...f.env,ENVIRONMENT:'production',SUPABASE_URL:'https://source.invalid',SUPABASE_PUBLISHABLE_KEY:'public-source-key'};
+  for(const [payload,code] of [[null,undefined],[{canonical_slug:'other',status:'paused',aliases:['open']},'COOP_LOCATOR_CONFLICT'],[[],'COOP_LOCATOR_UNAVAILABLE'],['invalid','COOP_LOCATOR_UNAVAILABLE']]){
+    const mock=t.mock.method(globalThis,'fetch',async(url,options)=>{
+      assert.equal(url,'https://source.invalid/rest/v1/rpc/store_user_site_public_profile');assert.equal(JSON.parse(options.body).p_slug,'open');
+      return Response.json(payload);
+    });
+    const result=await cooperativeLocatorAvailability(env,open);assert.equal(result.code,code);assert.equal(result.ok,code===undefined);mock.mock.restore();
+  }
+  const bad=t.mock.method(globalThis,'fetch',async()=>new Response('unavailable',{status:503}));
+  assert.equal((await cooperativeLocatorAvailability(env,open)).ok,false);bad.mock.restore();
+  assert.equal((await cooperativeLocatorAvailability({ENVIRONMENT:'production',...f.env},open)).ok,false);
+  assert.equal((await cooperativeLocatorAvailability({DB:{prepare(){throw new Error('offline')}}},open)).ok,false);
+});
+
+test('short and legacy URLs retain exactly the same private publication state and immutable authority',async t=>{
+  const f=fixture();t.after(()=>f.sqlite.close());
+  for(const coop of COOPERATIVES){
+    f.sqlite.prepare('UPDATE public_site_controls SET public_status=? WHERE site_id=?').run('private',coop.slug);
+    for(const locator of [coop.publicSlug,coop.slug]){
+      const request=new Request('https://ekodi.kr/'+locator+'/');
+      const site=await resolvePublicationSiteForRequest(request,f.env);
+      assert.equal(site.id,coop.slug);
+      if(locator===coop.publicSlug)assert.equal(site.workspaceId,coop.workspaceId);
+      const response=await sitePublicationGuard(request,f.env);assert.equal(response.status,404);assert.equal(response.headers.get('x-ekodi-site-publication'),'private');
+      assert.equal(await sitePublicationGuard(new Request('https://ekodi.kr/'+locator+'/admin'),f.env),null);
+    }
+  }
+});
+
+test('broader Worker-first short prefixes preserve existing OpenAI admin modules as static files',async()=>{
+  for(const path of ['/openai-workspace-admin.js','/openai-workspace-admin.css']){
+    assert.equal(cooperativeRoute(path),null);
+    const response=await sharedSiteWorker.fetch(new Request('https://ekodi.kr'+path),{ASSETS:{fetch:async()=>new Response('existing module',{headers:{'content-type':path.endsWith('.js')?'text/javascript':'text/css'}})}},{});
+    assert.equal(response.status,200);assert.equal(await response.text(),'existing module');
+  }
+});
+
+test('an intermittent locator failure never bypasses private publication and one request shares exactly one decision',async t=>{
+  const f=fixture();t.after(()=>f.sqlite.close());
+  const env={...f.env,ENVIRONMENT:'production',SUPABASE_URL:'https://source.invalid',SUPABASE_PUBLISHABLE_KEY:'public-source-key'};
+  f.sqlite.prepare('UPDATE public_site_controls SET public_status=? WHERE site_id=?').run('private',open.slug);
+  let calls=0;t.mock.method(globalThis,'fetch',async()=>++calls===1?new Response('unavailable',{status:503}):Response.json(null));
+  const failed=await sharedSiteWorker.fetch(new Request('https://ekodi.kr/open/'),env,{});
+  assert.equal(failed.status,503);assert.equal(calls,1);assert.equal((await failed.json()).code,'COOP_LOCATOR_UNAVAILABLE');
+  const recovered=await sharedSiteWorker.fetch(new Request('https://ekodi.kr/open/'),env,{});
+  assert.equal(recovered.status,404);assert.equal(recovered.headers.get('x-ekodi-site-publication'),'private');assert.equal(calls,2);
+  f.sqlite.prepare('UPDATE public_site_controls SET public_status=? WHERE site_id=?').run('public',open.slug);
+  const published=await sharedSiteWorker.fetch(new Request('https://ekodi.kr/open/'),env,{});
+  assert.equal(published.status,200);assert.equal(calls,3);assert.match(await published.text(),/열린유통협동조합/);
 });
