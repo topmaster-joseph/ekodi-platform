@@ -33,6 +33,6 @@ test('citizen uses Google-only protected writer, while admin write requires voic
   assert.match(src,/if\(path==='\/api\/posts'&&req\.method==='POST'\)\{/);
   assert.match(src,/if\(!await signedInGoogle\(req\)\)return json/);
   assert.match(src,/async function requireVoiceAdmin\(req\)\{return requirePermission\(req,'voices'\)\}/);
-  assert.match(src,/body:JSON\.stringify\(\{message:updated,displayName:item\.displayName,contact:item\.contact\|\|""/);
+  assert.match(src,/displayName:item\.displayName/); assert.match(src,/contact:item\.contact/); assert.match(src,/status:item\.status/);
   assert.doesNotMatch(src,/DROP TABLE board_posts|DELETE FROM board_posts\s*;/i);
 });
