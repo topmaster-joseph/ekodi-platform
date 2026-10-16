@@ -1,3 +1,4 @@
+import {hasVerifiedIssuerOrder} from './ekodipay-order-attestation.js';
 // EKODI Pay: PRIVATE multi-merchant contract and binding selector.
 // This module intentionally makes no PG, bank, database, or money-moving calls.
 // Only trusted server-side merchant profiles and approved-order issuer records are accepted.
@@ -92,6 +93,7 @@ export function selectServerApprovedMerchant(index,approvedOrder,{mode,ownerGate
    return {ok:false,reason:'trusted_order_required'};
  if(!MODES.has(mode)||!Number.isSafeInteger(now)||now<=0)
    return {ok:false,reason:'explicit_payment_mode_required'};
+ if(!hasVerifiedIssuerOrder(approvedOrder,mode))return {ok:false,reason:'issuer_signature_required'};
  // This function is ONLY called AFTER order issuer bearer/service binding validation.
  // Do not call on raw HTTP JSON. The caller must supply an approved immutable order.
  if(approvedOrder.source!=='trusted_order_issuer'||approvedOrder.approved!==true||
