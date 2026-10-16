@@ -93,6 +93,20 @@ export function calculateProposalBudget(rows){
   return {currency:'KRW',items,total,assurance:'사용자가 입력한 산식 검증만 완료. 실제 견적 또는 재원 확정 아님'};
 }
 
+
+export function proposalBudgetToCsv(rows){
+  const calc=calculateProposalBudget(rows);
+  function cell(v){
+    const raw=String(v??'').replace(/[\r\n\t]+/g,' ').slice(0,250);
+    const safe=/^[\s]*[=+@-]/.test(raw)?"'"+raw:raw;
+    return '"'+safe.replace(/"/g,'""')+'"';
+  }
+  const lines=[['항목','수량','단위','단가(원)','금액(원)'].map(cell).join(',')];
+  for(const r of calc.items)lines.push([r.name,r.quantity,r.unit,r.unitCost,r.amount].map(cell).join(','));
+  lines.push(['사용자 입력 합계','','','',calc.total].map(cell).join(','));
+  return '\uFEFF'+lines.join('\r\n')+'\r\n';
+}
+
 export function parseKrwAmount(raw){
   const value=clean(raw,80).trim();
   const match=value.match(/^([\d,]+(?:\.\d+)?)\s*(억원|만원|원)?$/);
