@@ -1,0 +1,36 @@
+name: Seasonal Workforce Portal checks
+
+on:
+  pull_request:
+    paths:
+      - 'seasonal-workforce/**'
+      - 'platform-router-entry-worker.js'
+      - 'test/seasonal-workforce-route.test.mjs'
+      - '.github/workflows/seasonal-workforce-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax checks
+        run: |
+          node --check platform-router-entry-worker.js
+          node --check seasonal-workforce/route.mjs
+          node --check seasonal-workforce/demand-domain.mjs
+          node --check seasonal-workforce/tenant-domain.mjs
+      - name: Seasonal workforce unit and routing tests
+        run: |
+          node --test seasonal-workforce/demand-domain.test.mjs seasonal-workforce/tenant-domain.test.mjs test/seasonal-workforce-route.test.mjs
+      - name: No active submissions in prototype
+        run: |
+          grep -Fq "applications_not_enabled" seasonal-workforce/route.mjs
+          grep -Fq "connect-src 'none'" seasonal-workforce/route.mjs
