@@ -14,8 +14,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Read-only evidence must also run after releases with unrelated post-check failures.
+  # This never promotes a candidate or changes deployment gate outcomes.
   verify:
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:

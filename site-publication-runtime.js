@@ -1,6 +1,8 @@
 import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
 import { realtimeTenantList } from './realtime-tenant-registry.js';
 import { tenantGrantCapabilityDecision } from './tenant-access-authority.js';
+import { COOPERATIVES, cooperativeBySlug } from './cooperative-registry.js';
+import { cooperativeLocatorAvailability } from './cooperative-locator.js';
 
 export const SITE_PUBLICATION_POLICY_ID='EKODI-SITE-PUBLICATION-001';
 export const SITE_PUBLICATION_STATUSES=Object.freeze(['public','private','maintenance']);
@@ -26,6 +28,10 @@ const TENANT_PATH_ALIASES=Object.freeze({
   yogurtpurple:'/yogurt',
 });
 const SPECIAL_SITES=Object.freeze([
+  // Keep the existing publication/grant ID and immutable workspace UUID.
+  ...COOPERATIVES.map(coop=>Object.freeze({id:coop.slug,workspaceId:coop.workspaceId,name:coop.name,
+    canonicalUrl:'https://ekodi.kr/'+coop.publicSlug+'/',canonicalPath:'/'+coop.publicSlug,
+    adminUrl:'https://ekodi.kr/'+coop.publicSlug+'/admin',tenantSlug:coop.slug,authoritySiteKey:coop.slug})),
   Object.freeze({id:'ekodi',workspaceId:'platform',name:'EKODI',canonicalUrl:'https://ekodi.kr/',canonicalPath:'/',adminUrl:'https://ekodi.kr/admin/',exactRoot:true,authoritySiteKey:'ekodi'}),
   Object.freeze({id:'seonammedi',workspaceId:'seonammedi',name:'서남권 국립의대 소통센터',canonicalUrl:'https://ekodi.kr/seonammedi/',canonicalPath:'/seonammedi',adminUrl:'https://ekodi.kr/seonammedi/admin/',aliases:['seonammedi.kr','www.seonammedi.kr','xn--3e0b8b58jw4co4mnpll3k.kr','www.xn--3e0b8b58jw4co4mnpll3k.kr'],authoritySiteKey:'seonammedi'}),
   Object.freeze({id:'pyeonggongmok',workspaceId:'pyeonggongmok',name:'평생공부하는 목회자 모임',canonicalUrl:'https://ekodi.kr/pyeonggongmok/',canonicalPath:'/pyeonggongmok',adminUrl:'https://ekodi.kr/pyeonggongmok/admin/',authoritySiteKey:'pyeonggongmok'}),
@@ -281,6 +287,8 @@ export async function resolvePublicationSiteForRequest(request,env,{admin=false}
     return path===site.canonicalPath||path.startsWith(site.canonicalPath+'/');
   };
   let candidates=staticSitePublicationCatalog().filter(matches).sort((a,b)=>b.canonicalPath.length-a.canonicalPath.length);
+  const cooperative=cooperativeBySlug(candidates[0]?.id);
+  if(cooperative&&!(await cooperativeLocatorAvailability(env,cooperative)).ok)candidates=[];
   if(!candidates.length){
     const dynamic=host==='ekodi.kr'?await tenantSiteForFirstSegment(env,path):await tenantSiteForDomain(env,host);
     if(dynamic&&matches(dynamic))candidates=[dynamic];
