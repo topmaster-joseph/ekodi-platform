@@ -49,7 +49,7 @@
     {key:'committee',label:'활동이력',href:base+'#committee-activity'},
     {key:'timeline',label:'관련소식',href:base+'#timeline'},
     {key:'channels',label:'소통채널',href:base+'#channels'},
-    {key:'voices',label:'시민의견',href:base+'board/voices'},
+    {key:'voices',label:'시민의견',href:base+'board/voices?compose=1&choose_account=1'},
     {key:'organization',label:'조직',href:base+'#organization'}
   ];
   const el = (tag, className, value) => {
@@ -81,7 +81,7 @@
   campaign.append(
     el('strong','','함께 만들어가는 건강한 미래'),
     el('p','','국립의대 설립과 지역 의료의 미래를 위한 소식과 의견을 모읍니다.'),
-    link('시민의견 바로가기 →',base+'board/voices')
+    link('시민의견 바로가기 →',base+'board/voices?compose=1&choose_account=1')
   );
   left.append(campaign);
 
@@ -100,7 +100,7 @@
     link('공지사항',base+'board/notices'),
     link('활동이력',base+'#committee-activity'),
     link('관련소식',base+'#timeline'),
-    link('시민의견 등록',base+'board/voices')
+    link('시민의견 등록',base+'board/voices?compose=1&choose_account=1')
   );
   quick.append(quickNav);
   right.append(newsBox,quick);
