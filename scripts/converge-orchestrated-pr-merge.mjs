@@ -251,15 +251,49 @@ const churchApiTouched=changedFiles.some(file=>
   file.startsWith('supabase/functions/church-pastor-api/')||
   file==='.github/workflows/deploy-church-pastor-api.yml'
 );
+// Core/Orchestrator execution-path changes must trigger the read-only live production E2E
+// because GITHUB_TOKEN merges do not emit ordinary main push workflow events.
+const orchestratorLiveVerificationTouched=changedFiles.some(file=>[
+  '.github/workflows/verify-ekodi-orchestrator-live-e2e.yml',
+  'ekodi-command-plane.js',
+  'ekodi-command-ledger.js',
+  'ekodi-pulse-runtime.js',
+  'ekodi-orchestrator-task-adapter.js',
+  'core-ai-gateway.js',
+  'ai-command-control.js',
+  'scripts/converge-orchestrated-pr-merge.mjs',
+].includes(file));
+
 // Signed-in Admin continuity must run after the E2E harness or dispatch wiring changes.
 const adminContinuityVerificationTouched=changedFiles.some(file=>
   file==='scripts/verify-admin-login-continuity.mjs'||
   file==='test/admin-login-continuity-contract.test.mjs'||
+  // Re-run genuine signed-in production E2E when the isolated menu harness changes.
+  file==='scripts/admin-authenticated-e2e-menu-worker.mjs'||
+  file==='scripts/admin-authenticated-e2e-retry.mjs'||
+  // Changes to the canonical Assist probe must re-run the full signed-in menu + Assist E2E.
+  file==='scripts/admin-assist-canonical-e2e.mjs'||
+  file==='test/admin-assist-production-dispatch-20261016.test.mjs'||
+  file==='test/admin-authenticated-e2e-readiness.test.mjs'||
+  // Also cover changes to the release-provenance immediate-merge dispatch path.
+  file==='scripts/recover-release-provenance.mjs'||
+  file==='test/recovery-admin-e2e-dispatch.test.mjs'||
   file==='.github/workflows/verify-admin-authenticated-production-e2e.yml'||
   file==='.github/workflows/admin-authenticated-e2e.yml'||
   file==='scripts/converge-orchestrated-pr-merge.mjs'
 );
 async function dispatchPostMergeDeploys(){
+  if(orchestratorLiveVerificationTouched){
+    const response=await api('/actions/workflows/verify-ekodi-orchestrator-live-e2e.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main'})
+    });
+    if(!response.r.ok)fail('Orchestrator live production E2E dispatch failed '+response.r.status);
+    console.log(JSON.stringify({ok:true,action:'orchestrator-live-e2e-dispatched',
+      workflow:'verify-ekodi-orchestrator-live-e2e.yml',pr:pr.number,
+      taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+
   if(adminContinuityVerificationTouched){
     const response=await api('/actions/workflows/verify-admin-authenticated-production-e2e.yml/dispatches',{
       method:'POST',

@@ -5,12 +5,14 @@ on:
     paths:
       - 'test/ai-assistance-storage-e2e.test.mjs'
       - 'migrations/0132_ai_assistance_quote_integrity.sql'
+      - 'migrations/0133_ai_assistance_pricebooks.sql'
       - '.github/workflows/ai-assistance-integrity-e2e.yml'
   push:
     branches: [main]
     paths:
       - 'test/ai-assistance-storage-e2e.test.mjs'
       - 'migrations/0132_ai_assistance_quote_integrity.sql'
+      - 'migrations/0133_ai_assistance_pricebooks.sql'
       - '.github/workflows/ai-assistance-integrity-e2e.yml'
   workflow_dispatch:
 
@@ -30,13 +32,13 @@ jobs:
         run: node --test test/ai-assistance-storage-e2e.test.mjs
       - name: Verify additive and guarded D1 migrations
         run: node scripts/validate-additive-migrations.mjs migrations
-      - name: Apply three assistance migrations to isolated Wrangler D1 (never remote)
+      - name: Apply four assistance migrations to isolated Wrangler D1 (never remote)
         shell: bash
         run: |
           set -euo pipefail
           state="${RUNNER_TEMP}/ekodi-ai-assistance-isolated-d1"
           mkdir -p "$state"
-          for file in migrations/0130_ai_assistance_requests.sql migrations/0131_ai_assistance_quotes.sql migrations/0132_ai_assistance_quote_integrity.sql; do
+          for file in migrations/0130_ai_assistance_requests.sql migrations/0131_ai_assistance_quotes.sql migrations/0132_ai_assistance_quote_integrity.sql migrations/0133_ai_assistance_pricebooks.sql; do
             npx --yes wrangler@4.127.1 d1 execute ekodi-auth \
               --local --config wrangler.ai.toml --persist-to="$state" --file "$file"
           done
@@ -44,7 +46,7 @@ jobs:
             --local --config wrangler.ai.toml --persist-to="$state" \
             --command "SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE 'ai_assistance_%' ORDER BY name;" \
             > "${RUNNER_TEMP}/assistance-d1-triggers.txt"
-          for trigger in ai_assistance_quote_requires_approved_request ai_assistance_ack_requires_owner_and_live_request ai_assistance_contract_pending_requires_review ai_assistance_audit_requires_real_quote; do
+          for trigger in ai_assistance_quote_requires_approved_request ai_assistance_ack_requires_owner_and_live_request ai_assistance_contract_pending_requires_review ai_assistance_audit_requires_real_quote ai_assistance_pricebooks_no_update ai_assistance_pricebooks_no_delete; do
             grep -Fq "$trigger" "${RUNNER_TEMP}/assistance-d1-triggers.txt"
           done
       - name: Record isolated test scope
@@ -56,5 +58,5 @@ jobs:
             echo '- Synthetic identities only; no real member credentials.'
             echo '- Ephemeral SQLite and local Cloudflare D1 only.'
             echo '- No remote D1 mutation, paid PG transaction, or signed legal contract.'
-            echo '- Schema triggers prevent stale/concurrent record state and audit drift.'
+            echo '- Schema triggers prevent stale/concurrent record state and audit drift, plus immutable merchant price history.'
           } >> "$GITHUB_STEP_SUMMARY"

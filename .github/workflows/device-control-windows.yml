@@ -159,6 +159,9 @@ jobs:
           $diagnostic = (& node.exe $worker 2>&1 | Out-String)
           $code = if ($diagnostic -match '"code":"(CDP_[A-Z0-9_]+)"') { $Matches[1] } elseif ($diagnostic -match '"ok":true') { 'CDP_DOM_PROOF' } else { 'CDP_DIAGNOSTIC_UNCLASSIFIED' }
           Write-Host ('[EKODI][NATIVE-CDP-ISOLATED-DIAGNOSTIC] ' + $code)
+          # This preliminary category-only probe is intentionally non-gating. PowerShell's
+          # native LASTEXITCODE must not prevent the separate required real-browser canary.
+          $global:LASTEXITCODE = 0
           # No raw stderr, paths, cookies, user browser access or page content in logs.
       - name: Run native Background Browser Worker on Windows runner
         shell: pwsh
@@ -186,6 +189,7 @@ jobs:
             }
           }
           if (-not $canary.browserCanary.ok) { throw 'Native browser canary did not pass.' }
+          Write-Host '[EKODI][AGENT-CANARY] dedicated native CDP receipt verified'
           $worker = Invoke-BackgroundBrowserWorker ([pscustomobject]@{
             path = '/'
             deviceProfile = 'desktop'
@@ -196,6 +200,7 @@ jobs:
             preserveUserOwnedSurfaces = $true
           })
           $proof = $worker.browserWorker
+          Write-Host '[EKODI][AGENT-CANARY] background worker receipt received'
           if (-not $proof.ok) { throw 'Native browser worker did not return ok.' }
           if ($proof.virtualizationProvider -ne 'ekodi-native-remote-computer') { throw 'Unexpected native virtualization provider.' }
           if ($proof.routingPolicy -ne 'EKODI-VIRTUALIZATION-ROUTING-001') { throw 'Virtualization routing policy evidence missing.' }
@@ -225,6 +230,14 @@ jobs:
             ('- User input injection: ' + $proof.userInputInjection),
             ('- Mutation mode: ' + $proof.mutationMode)
           ) | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+          # The PowerShell Actions wrapper exits with a stale native LASTEXITCODE
+          # even after every browser/DOM/screenshot/profile/privacy assertion passed.
+          # Normalize only AFTER all evidence checks and summary persistence.
+          if ($null -ne $LASTEXITCODE -and [int]$LASTEXITCODE -ne 0) {
+            Write-Host '[EKODI][AGENT-CANARY] reset stale native exit status after complete verified proof'
+            $global:LASTEXITCODE = 0
+          }
+          Write-Host '[EKODI][AGENT-CANARY] all native proof assertions passed'
       - name: Probe EKODI isolated desktop backend without activation
         shell: pwsh
         run: |

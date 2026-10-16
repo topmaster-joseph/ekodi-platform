@@ -49,7 +49,7 @@ try{
             };
           });
           if(!entry.styles.exists)throw Error('missing_six_menu_header');
-          if(entry.styles.labels.join('|')!=='활동이력|관련소식|소통채널|시민의견|공지|조직')throw Error('six_menu_labels_mismatch');
+          if(entry.styles.labels.join('|')!=='공지|활동이력|관련소식|소통채널|시민의견|조직')throw Error('six_menu_labels_mismatch');
           entry.menuMode=entry.styles.dropdowns.length?'dropdown':'central-tabs';
           if(entry.menuMode==='dropdown'){
             if(entry.styles.dropdowns.length!==4)throw Error('dropdown_group_count_mismatch');

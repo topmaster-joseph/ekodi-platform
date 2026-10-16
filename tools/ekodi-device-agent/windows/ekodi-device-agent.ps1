@@ -19,7 +19,7 @@ try {
   throw '[EKODI:EKA-299][crypto] Windows DPAPI assembly is unavailable: ' + $_.Exception.Message
 }
 
-$AgentVersion = '2.5.6'
+$AgentVersion = '2.5.7'
 # Some remote/managed Windows sessions omit ProgramData from the process environment.
 # Resolve the canonical system data directory without changing machine-wide settings.
 if ([string]::IsNullOrWhiteSpace($env:ProgramData)) {
@@ -2723,6 +2723,50 @@ function Invoke-IsolatedDesktopSessionExecute($Payload) {
   }
 }
 
+function Get-EkodiOllamaLoopbackDiagnostic {
+  # No process arguments, identity, paths, environment, user sessions or text payload.
+  $status = [ordered]@{
+    processState = 'unknown'
+    socketState = 'unknown'
+    bindState = 'unknown'
+    serviceState = 'unknown'
+  }
+  try {
+    $names = @('ollama', 'ollama app')
+    $running = @(Get-Process -Name $names -ErrorAction SilentlyContinue)
+    $status.processState = $(if ($running.Count -gt 0) { 'running' } else { 'not_running' })
+  } catch { }
+  try {
+    $service = Get-Service -Name 'Ollama' -ErrorAction SilentlyContinue
+    $status.serviceState = if (-not $service) { 'not_registered' }
+      elseif ($service.Status -eq 'Running') { 'running' } else { 'stopped' }
+  } catch { }
+  # A bounded, read-only TCP connection to the fixed IPv4 loopback endpoint.
+  $client = [System.Net.Sockets.TcpClient]::new()
+  try {
+    $pending = $client.BeginConnect('127.0.0.1', 11434, $null, $null)
+    if ($pending.AsyncWaitHandle.WaitOne(1200)) {
+      try {
+        $client.EndConnect($pending)
+        if ($client.Connected) { $status.socketState = 'listening' }
+        else { $status.socketState = 'not_listening' }
+      } catch { $status.socketState = 'not_listening' }
+    } else { $status.socketState = 'timeout' }
+  } catch { $status.socketState = 'not_listening' }
+  finally { $client.Dispose() }
+  # Other-address listener is observable without exporting an IP, PID or executable path.
+  try {
+    $listeners = @(Get-NetTCPConnection -LocalPort 11434 -State Listen -ErrorAction Stop)
+    if ($listeners.Count -eq 0) { $status.bindState = 'not_listening' }
+    elseif (@($listeners | Where-Object {
+      [string]$_.LocalAddress -notin @('127.0.0.1','0.0.0.0','::')
+    }).Count -gt 0 -and $status.socketState -ne 'listening') {
+      $status.bindState = 'other_address_only'
+    } else { $status.bindState = 'listener_present' }
+  } catch { }
+  return $status
+}
+
 function Get-EkodiLocalAiVerification {
   # Bounded native diagnostic: no arbitrary command arguments, no credentials.
   # VM UI canaries do not establish local host AI readiness.
@@ -2736,14 +2780,38 @@ function Get-EkodiLocalAiVerification {
     claudeAuth = 'requires_interactive_user_verification'
     executionMode = 'fixed_loopback_api'
     credentialCollection = $false
+    diagnosticCode = 'not_checked'
+    ollamaProcess = 'unknown'
+    ollamaSocket = 'unknown'
+    ollamaBind = 'unknown'
+    ollamaService = 'unknown'
   }
+  $diagnostic = Get-EkodiOllamaLoopbackDiagnostic
+  $proof.ollamaProcess = [string]$diagnostic.processState
+  $proof.ollamaSocket = [string]$diagnostic.socketState
+  $proof.ollamaBind = [string]$diagnostic.bindState
+  $proof.ollamaService = [string]$diagnostic.serviceState
   try {
     $version = Invoke-RestMethod -Method Get -Uri 'http://127.0.0.1:11434/api/version' -TimeoutSec 5 -ErrorAction Stop
     if ($version.version) {
       $proof.ollamaApi = 'ready'
       $proof.ollamaVersion = [string]$version.version
-    }
-  } catch { }
+      $proof.diagnosticCode = 'api_ready'
+    } else { $proof.diagnosticCode = 'version_response_invalid' }
+  } catch {
+    # Inspect exception type locally but never return the exception, URL or message.
+    $timeout = $_.Exception -is [System.TimeoutException] -or
+      [string]$_.Exception.Message -match '(?i)timed?[ -]?out|timeout'
+    if ($proof.ollamaSocket -eq 'listening') {
+      $proof.diagnosticCode = $(if ($timeout) { 'api_timeout' } else { 'port_bound_unresponsive' })
+    } elseif ($proof.ollamaBind -eq 'other_address_only') {
+      $proof.diagnosticCode = 'wrong_bind'
+    } elseif ($proof.ollamaProcess -eq 'not_running') {
+      $proof.diagnosticCode = 'process_not_running'
+    } elseif ($proof.ollamaSocket -eq 'not_listening') {
+      $proof.diagnosticCode = 'loopback_port_not_listening'
+    } else { $proof.diagnosticCode = 'api_unavailable_unclassified' }
+  }
   if ($proof.ollamaApi -eq 'ready') {
     try {
       $tags = Invoke-RestMethod -Method Get -Uri 'http://127.0.0.1:11434/api/tags' -TimeoutSec 8 -ErrorAction Stop

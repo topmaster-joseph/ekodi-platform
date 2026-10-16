@@ -49,7 +49,15 @@
 </style>
 <link rel="stylesheet" href="./central-category-menu.css">
 <link rel="stylesheet" href="/seonammedi/shared-site-header.css">
+<script src="/seonammedi/board/ui/central-category.js?v=20261016-home-photo-worker-1" defer></script>
 <link rel="stylesheet" href="/seonammedi/home-public-feed.css?v=20261015-2">
+
+<style id="ekodi-remove-duplicate-middle-menu">
+/* The header is the sole primary navigation; preserve the social preview. */
+#central-category-panel:has(#central-category-buttons):not(:has(#central-social-links:not([hidden]))){display:none!important}
+#central-category-title,#central-category-buttons{display:none!important}
+#central-category-panel:has(#central-social-links:not([hidden])){padding:0!important;border:0!important;background:transparent!important}
+</style>
 </head>
 <body>
 <header class="site-header">
