@@ -16,3 +16,6 @@ test('print and presentation assets label the document as a draft',()=>{const dr
 
 import {proposalBudgetToCsv} from '../proposal/analysis.js';
 test('budget CSV exports exact figures',()=>{const csv=proposalBudgetToCsv([{name:'교재',quantity:2,unit:'권',unitCost:5000}]);assert.ok(csv.includes('10000'));assert.ok(csv.includes('5000'));assert.ok(csv.startsWith('\uFEFF'));});
+
+import {proposalToMarkdownWithBudget} from '../proposal/analysis.js';
+test('cross-document budget remains identical',()=>{const draft=createProposalDraft({title:'예산 검증'});draft.budgetRows=[{name:'장비',quantity:2,unit:'개',unitCost:8000}];const html=proposalToPrintHtml(draft);const md=proposalToMarkdownWithBudget(draft);const slides=proposalToPresentationMd(draft);assert.ok(html.includes('16000'));assert.ok(md.includes('16000'));assert.ok(slides.includes('16,000원'));});
