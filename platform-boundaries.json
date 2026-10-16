@@ -289,9 +289,6 @@
       "kind": "independent-platform",
       "source": [
         "education/**",
-        "research-worker.js",
-        "research/migrations/**",
-        "test/research-platform.test.mjs",
         "education-worker.js",
         "wrangler.education.toml",
         "wrangler.education.staging.toml",

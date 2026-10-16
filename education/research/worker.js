@@ -1,5 +1,5 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
-import { assessResearch, cleanResearchInput } from './education/research/planner.js';
+import { assessResearch, cleanResearchInput } from './planner.js';
 
 const HEADERS = Object.freeze({
   'x-content-type-options':'nosniff',

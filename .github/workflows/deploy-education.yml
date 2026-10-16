@@ -19,7 +19,6 @@ on:
     paths:
       - 'education/**'
       - 'education-worker.js'
-      - 'research-worker.js'
       - 'research/migrations/**'
       - 'test/research-platform.test.mjs'
       - 'platform-route-registry.js'
@@ -41,7 +40,6 @@ on:
     paths:
       - 'education/**'
       - 'education-worker.js'
-      - 'research-worker.js'
       - 'research/migrations/**'
       - 'test/research-platform.test.mjs'
       - 'platform-route-registry.js'
@@ -83,7 +81,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check education-worker.js
-          node --check research-worker.js
+          node --check education/research/worker.js
           node --check education/research/planner.js
           node --check education/research/app.js
           node --check education/app.js

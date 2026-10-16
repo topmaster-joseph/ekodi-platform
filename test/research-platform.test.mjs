@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {assessResearch,cleanResearchInput} from '../education/research/planner.js';
-import worker from '../research-worker.js';
+import worker from '../education/research/worker.js';
 
 const read=(path)=>readFile(new URL('../'+path,import.meta.url),'utf8');
 

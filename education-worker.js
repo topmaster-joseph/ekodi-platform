@@ -1,5 +1,5 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
-import researchWorker from './research-worker.js';
+import researchWorker from './education/research/worker.js';
 
 const SECURITY_HEADERS={
   'x-content-type-options':'nosniff',
