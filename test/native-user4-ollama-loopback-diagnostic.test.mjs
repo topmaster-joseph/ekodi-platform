@@ -10,7 +10,7 @@ const end=agent.indexOf('# Audit only browser jobs',verificationStart);
 const diagnostic=agent.slice(diagnosticStart,verificationStart);
 const verification=agent.slice(verificationStart,end);
 
-test('USER4 native Agent 2.5.7 reads fixed Ollama loopback without execution or private data',()=>{
+test('USER4 native Agent 2.5.8 reads fixed Ollama loopback without execution or private data',()=>{
   assert.ok(diagnosticStart>0&&verificationStart>diagnosticStart&&end>verificationStart);
   assert.match(agent,/\$AgentVersion = '2\.5\.7'/);
   assert.match(diagnostic,/Get-Process -Name \$names -ErrorAction SilentlyContinue/);
