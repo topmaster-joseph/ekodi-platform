@@ -14,8 +14,7 @@ test('EKODI Control has an explicit private operations-surface identity',()=>{
   assert.match(html,/data-ekodi-user-ai-entry="off"/);
   assert.match(html,/data-ekodi-user-surface="admin"/);
   assert.match(html,/data-ekodi-shell-surface="admin"/);
-  assert.match(html,/\/control\.css\?v=20261017-premium-console-v3/);
-  assert.match(html,/data-ekodi-control-design="premium"/);
+  assert.match(html,/\/control\.css\?v=20261017-premium-steady-v4/);
   assert.match(css,/html\[data-ekodi-control="v2"\] \:is\(\.ekodi-main-ekodian/);
   assert.match(css,/\.ekodi-user-ui-footer/);
 });

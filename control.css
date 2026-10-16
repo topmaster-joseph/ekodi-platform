@@ -51,6 +51,43 @@ html[data-ekodi-control="v2"] :is(.ekodi-main-ekodian,.ekodi-user-ai-entry,.ekod
 }
 
 
+/* CONTROL-STEADY-001: bounded scrolling, stable viewport, no motion/repaint loop.
+ * Only the active conversation scrolls. The fixed command composer never
+ * participates in document scrolling or causes the window to animate. */
+html[data-ekodi-control="v2"]{scrollbar-gutter:stable;scroll-behavior:auto!important}
+html[data-ekodi-control="v2"] body{overflow-x:hidden;scroll-behavior:auto!important}
+html[data-ekodi-control="v2"] .control-shell,
+html[data-ekodi-control="v2"] .control-main{min-height:100svh!important}
+html[data-ekodi-control="v2"] .control-main .view.active[data-view-panel="chat"]{
+  height:calc(100svh - 58px)!important;
+  min-height:0!important;
+  overflow:hidden!important
+}
+html[data-ekodi-control="v2"] .control-main .conversation{
+  height:100%!important;
+  min-height:0!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  overscroll-behavior-y:contain;
+  scrollbar-gutter:stable;
+  scroll-behavior:auto!important
+}
+html[data-ekodi-control="v2"] .composer textarea{
+  max-height:160px!important;
+  overflow-y:auto;
+  resize:none;
+  overscroll-behavior:contain
+}
+html[data-ekodi-control="v2"] :is(.control-main,.control-rail,.topbar,.conversation,.composer-wrap,.composer,.composer textarea){
+  animation:none!important;
+  transition:none!important
+}
+@media(max-width:760px){
+  html[data-ekodi-control="v2"] .control-main .view.active[data-view-panel="chat"]{
+    height:calc(100svh - 56px)!important
+  }
+}
+
 
 /* Premium Control console — isolated presentation, no authentication/dispatch changes.
    Explicit colors and scoped selectors prevent dark Shell chrome from obscuring actions. */
@@ -72,7 +109,7 @@ html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .control-rail
   border-right:1px solid #dce2e9!important;
 }
 html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .control-main{
-  margin-left:var(--rail)!important;min-height:100dvh!important;max-width:none!important;
+  margin-left:var(--rail)!important;min-height:100svh!important;max-width:none!important;
 }
 html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .brand{
   height:auto!important;min-height:54px!important;justify-content:space-between;
@@ -191,7 +228,7 @@ html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .composer-hea
   color:#657385!important;font-size:11px;
 }
 html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .composer textarea{
-  display:block;width:100%!important;min-height:64px!important;max-height:190px!important;
+  display:block;width:100%!important;min-height:64px!important;max-height:160px!important;
   padding:8px 5px 10px!important;background:#fff!important;color:#14202b!important;
   line-height:1.6!important;font-size:15px!important;
 }
@@ -316,5 +353,32 @@ html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] :is(button,a,
   html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] *::before,
   html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] *::after{
     scroll-behavior:auto!important;transition-duration:.01ms!important;
+  }
+}
+
+
+
+/* Premium + steady merge: keep browser viewport motion contained to the chat pane.
+   These are the definitive scoped geometry contracts for 68px/58px premium headers. */
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .control-main{
+  min-height:100svh!important;
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .control-main .view.active[data-view-panel="chat"]{
+  height:calc(100svh - 68px)!important;
+  min-height:0!important;
+  overflow:hidden!important;
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .control-main .conversation{
+  height:100%!important;min-height:0!important;
+  overflow-x:hidden!important;overflow-y:auto!important;
+  overscroll-behavior-y:contain;scrollbar-gutter:stable;
+  scroll-behavior:auto!important;
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .composer textarea{
+  max-height:160px!important;overflow-y:auto!important;
+}
+@media(max-width:760px){
+  html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .control-main .view.active[data-view-panel="chat"]{
+    height:calc(100svh - 58px)!important;
   }
 }
