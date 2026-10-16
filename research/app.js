@@ -27,7 +27,7 @@ function render(){
   controls.append(advance,remove);card.append(meta,title,next,controls);host.append(card);
  }
 }
-function authUrl(){const url=new URL(config.authUrl||'https://ekodi.kr/auth/?site=research');url.searchParams.set('site','research');url.searchParams.set('return_to',location.href.split('#')[0]);return url.toString()}
+function authUrl(){const url=new URL(config.authUrl||'https://ekodi.kr/auth/?site=research');url.searchParams.set('site','research');url.searchParams.set('return_to',location.href);return url.toString()}
 async function api(path,method='GET',body=null){
  if(!state.session)throw Error('로그인이 필요합니다.');
  const response=await fetch('./api/'+path,{method,headers:{authorization:'Bearer '+state.session.access_token,...(body?{'content-type':'application/json'}:{})},body:body?JSON.stringify(body):undefined,cache:'no-store'});
