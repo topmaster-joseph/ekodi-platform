@@ -111,7 +111,7 @@ export function reviewProposalDraft(model){
     if(!String(model.decisions?.[key]||'').trim())issues.push(label+' 확인이 필요합니다.');
   }
   if((model.sources||[]).some(s=>s.verification!=='verified'))issues.push('첨부 또는 참고 자료의 사실·출처 검증이 남아 있습니다.');
-  if(model.phase==='guided_draft_unverified')issues.push('작성 가이드가 포함된 미확인 초안은 제출 준비 완료가 아닙니다.');
+  if(model.sections?.some(s=>String(s.body||'').includes('[검토용 자동 구성 · 사실 미확인]')))issues.push('작성 가이드가 포함된 미확인 초안은 제출 준비 완료가 아닙니다.');
   return {submissionReady:issues.length===0,issues,checked:issues.length===0?'초안 필드 충족. 대외 제출은 사람의 최종 확인 필요.':'제출 전 검토 필요'};
 }
 function safeText(value){return String(value??'').replace(/\u0000/g,'').slice(0,50000);}
