@@ -246,6 +246,7 @@ const nativeUser4VirtualProbeTouched=changedFiles.some(file=>
   file==='scripts/verify-native-user4-virtual-probe.mjs' ||
   file==='scripts/select-native-user4-execution-route.mjs');
 const nativeUser4AcceptanceTouched=changedFiles.some(file=>file==='scripts/verify-native-user4-acceptance.mjs');
+const nativeUser4OllamaServiceRecoveryTouched=changedFiles.some(file=>file==='scripts/recover-native-user4-ollama-service.mjs');
 // Supabase Church API is an independent guarded release boundary, not a Site Core asset.
 const churchApiTouched=changedFiles.some(file=>
   file.startsWith('supabase/functions/church-pastor-api/')||
@@ -270,6 +271,21 @@ const adminContinuityVerificationTouched=changedFiles.some(file=>
   file==='scripts/converge-orchestrated-pr-merge.mjs'
 );
 async function dispatchPostMergeDeploys(){
+  if(nativeUser4OllamaServiceRecoveryTouched){
+    // Mutating recovery only after the canonical Orchestrator's protected merge.
+    // The runner requires fresh USER4-only read-only proof before command dispatch.
+    const dispatch=await api('/actions/workflows/device-agent-production-verification.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{
+        execution_mode:'user4-ollama-service-recover',
+        release_branch_ref:branch,release_task_id:taskId
+      }})
+    });
+    if(!dispatch.r.ok)fail('USER4 native Ollama service recovery dispatch failed '+dispatch.r.status);
+    console.log(JSON.stringify({ok:true,action:'native-user4-ollama-service-recovery-dispatched',
+      workflow:'device-agent-production-verification.yml',pr:pr.number,taskId,branch,
+      authority:'ekodi-orchestrator'}));
+  }
   if(adminContinuityVerificationTouched){
     const response=await api('/actions/workflows/verify-admin-authenticated-production-e2e.yml/dispatches',{
       method:'POST',
