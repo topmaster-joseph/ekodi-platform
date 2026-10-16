@@ -49,11 +49,11 @@ async function manifestService(id){
   }catch{return null}
 }
 async function loadMarketingAuth(){
-  try{return await import('./marketing-auth-hotfix.js?v=20260824-return-origin-1')}
+  try{return await import('./marketing-auth-hotfix.js?v=20261017-exact-origin-1')}
   catch(error){console.warn('Versioned Marketing auth load failed; retrying canonical asset.',error);return await import('./marketing-auth-hotfix.js')}
 }
 async function loadClientAuth(){
-  try{return await import('./client-auth.js?v=20260923-space-admin-return-2')}
+  try{return await import('./client-auth.js?v=20261017-exact-origin-1')}
   catch(error){console.warn('Versioned universal identity auth load failed; retrying canonical asset.',error);return await import('./client-auth.js')}
 }
 
@@ -69,7 +69,7 @@ else{
   const trustedEkodiReturn=hasTrustedEkodiReturn();
   if(!targetedWorkspace&&site!=='marketing'&&(site==='portal'||isRegistryUserService||firstPartyClientSites.has(site)||trustedEkodiReturn))await loadClientAuth();
   else{
-    await import('./auth.js?v=20260824-return-origin-1');
+    await import('./auth.js?v=20261017-exact-origin-1');
     if(targetedWorkspace)await import('./auth-workspace-target.js?v=20260817-all-sites-1');
     if(site==='marketing')await import('./marketing-onboarding.js?v=20260817-workspace-label-1');
     await import('./membership-ui.js');
