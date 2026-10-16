@@ -21,9 +21,9 @@ test('admin edit and deletion only use validated numeric item identifiers',async
     return {ok:true,json:async()=>url.endsWith('/auth/session')?{ok:true,authenticated:true,provider:'google'}:{ok:true}};
   }});
   await assert.rejects(controller.admin.remove(-1),/invalid_post/);
-  await controller.admin.update(17,'corrected');
+  await controller.admin.update({id:17,displayName:'Original',contact:'private-contact',category:'proposal',status:'published'},'corrected');
   await controller.admin.remove(17);
   const mutations=calls.filter(x=>x.url.endsWith('/admin/posts/17'));
   assert.deepEqual(mutations.map(x=>x.options.method),['PUT','DELETE']);
-  assert.equal(JSON.parse(mutations[0].options.body).message,'corrected');
+  assert.deepEqual(JSON.parse(mutations[0].options.body),{message:'corrected',displayName:'Original',contact:'private-contact',category:'proposal',status:'published'});
 });
