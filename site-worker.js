@@ -1,3 +1,4 @@
+import { isMokdaehumunPath, mokdaehumunPage } from './mokdaehumun-public-page.js';
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { canonicalTrackingQueryRedirect } from './canonical-query-policy.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
@@ -690,6 +691,7 @@ export default {
         secured.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
         return secured;
       }
+      if (['GET','HEAD'].includes(request.method) && isMokdaehumunPath(url.pathname)) return withHostSecurity(mokdaehumunPage(), PUBLIC_CSP, 'public, max-age=60', 'public-mokdaehumun');
       if (url.pathname === '/ai' || url.pathname.startsWith('/ai/')) return proxyPublicAi(request, env);
       if (url.pathname === '/' || url.pathname === '/index.html') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/'));
