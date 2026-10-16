@@ -386,6 +386,21 @@ async function listPublicNotices(request,env){
   return json({ok:true,items:(rows.results||[]).map(row=>publicNotice(row,{canManage:Boolean(admin)||Boolean(email&&lower(row.created_by)===email)}))});
 }
 
+// Public calendar is backed by published event notices, never by private drafts.
+// Month-scoped reads avoid the 40-item limit of the ordinary recent-notices feed.
+async function listPublicCalendar(request,env){
+  const month=new URL(request.url).searchParams.get('month')||new Date().toISOString().slice(0,7);
+  if(!/^(20\\d{2}|2100)-(0[1-9]|1[0-2])$/.test(month))return json({ok:false,error:'invalid_month'},400);
+  const [year,number]=month.split('-').map(Number);
+  const start=month+'-01',end=new Date(Date.UTC(year,number,0)).toISOString().slice(0,10);
+  const projection=await noticePublicProjection(env);
+  const rows=await env.DB.prepare(`SELECT ${projection} FROM seonammedi_notices
+    WHERE status='published' AND notice_kind='event' AND event_start IS NOT NULL
+      AND substr(event_start,1,10)<=?
+      AND COALESCE(NULLIF(substr(event_end,1,10),''),substr(event_start,1,10))>=?
+    ORDER BY event_start ASC,id ASC LIMIT 300`).bind(end,start).all();
+  return json({ok:true,month,items:(rows.results||[]).map(row=>publicNotice(row))});
+}
 async function noticeManageContext(request,env){
   const principal=await principalFromSupabaseRequest(request).catch(()=>null);
   const email=lower(principal?.email||'');
@@ -1183,6 +1198,10 @@ export async function handleSeonamMediAdminApi(request,env){
   }
   if(url.pathname===PREFIX+'/timeline'&&request.method==='GET'){
     if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);return publicStorageRead('timeline',()=>listPublicTimeline(env));
+  }
+  if(url.pathname===PREFIX+'/calendar'&&request.method==='GET'){
+    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable'},503);
+    return publicStorageRead('calendar',()=>listPublicCalendar(request,env));
   }
   if(url.pathname===PREFIX+'/notices/health'&&request.method==='GET'){
     return handleBoardAdapter(seonamNoticeBoard,{action:'health',request,env});
