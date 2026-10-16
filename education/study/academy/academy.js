@@ -22,7 +22,7 @@ function renderAudience(){
 function setAudience(id,keepTitle=false){
  const audience=audienceFor(id);
  $('audience').value=audience.id;
- if(!keepTitle)$('title').value=audience.name+'를 위한 AI 실습교육';
+ if(!keepTitle)$('title').value=suggestedCourseTitle(audience.id);
  if(!$('topic').value||!keepTitle)$('topic').value=audience.sub;
  renderAudience();renderPlan();
 }
