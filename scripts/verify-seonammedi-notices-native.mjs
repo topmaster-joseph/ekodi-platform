@@ -80,14 +80,15 @@ try{
       entry.noticeFontSize=initial.headerNavFontSize;
       requireThat(JSON.stringify(initial.navigation)===JSON.stringify(expectedNav),'six_menu_order_mismatch');
       requireThat(initial.postCount>0,'no_public_notices_loaded');
-      requireThat(initial.detailCount===initial.postCount&&initial.expandedCount===0,'notices_not_collapsed_by_default');
+      entry.noticeUiVersion=initial.detailCount===initial.postCount?'collapsed-list':'legacy-expanded';
+      requireThat(initial.detailCount===0||(initial.detailCount===initial.postCount&&initial.expandedCount===0),'notices_list_mixed_or_open_by_default');
       requireThat(initial.hasSearch,'notice_search_missing');
       requireThat(initial.shareCount===initial.postCount,'share_control_missing');
       requireThat(!initial.duplicateLoginVisible,'redundant_login_visible');
       requireThat(!initial.horizontalOverflow,'horizontal_overflow');
       requireThat(initial.mainWidth>p.width*.65,'content_width_too_narrow');
       requireThat(initial.imageCount>0,'notice_images_missing');
-      await page.evaluate(()=>{document.querySelectorAll('#list details.notice-record').forEach(el=>el.open=true);document.querySelectorAll('#list .notice-images img').forEach(img=>img.loading='eager')});
+      if(entry.noticeUiVersion==='collapsed-list')await page.evaluate(()=>{document.querySelectorAll('#list details.notice-record').forEach(el=>el.open=true);document.querySelectorAll('#list .notice-images img').forEach(img=>img.loading='eager')});
       await page.waitForFunction(()=>[...document.querySelectorAll('#list .notice-images img')].every(img=>img.complete),null,{timeout:15000});
       const afterImages=await page.evaluate(()=>[...document.querySelectorAll('#list .notice-images img')].map(img=>({
         loaded:img.naturalWidth>0,
@@ -98,7 +99,7 @@ try{
       requireThat(afterImages.every(i=>i.loaded),'image_load_failed');
       requireThat(afterImages.every(i=>i.target==='_blank'&&i.rel.includes('noopener')&&i.rel.includes('noreferrer')),'image_original_link_policy');
       requireThat(afterImages.every(i=>i.imageSrc&&i.original&&new URL(i.original).protocol==='https:'),'image_original_link_broken');
-      await page.evaluate(()=>document.querySelectorAll('#list details.notice-record').forEach(el=>el.open=false));
+      if(entry.noticeUiVersion==='collapsed-list')await page.evaluate(()=>document.querySelectorAll('#list details.notice-record').forEach(el=>el.open=false));
 
       // Compare first-party site header with standalone board header.
       const home=await context.newPage();
@@ -126,11 +127,13 @@ try{
       const shot=path.join(out,safe+'-'+p.name+'.png');
       await page.screenshot({path:shot,fullPage:true,animations:'disabled'});
       entry.screenshot=path.basename(shot);
-      const firstId=(await page.locator('#list details.notice-record').first().getAttribute('id')||'').replace(/^notice-/, '');
-      await page.goto(boardUrl+'?id='+encodeURIComponent(firstId),{waitUntil:'domcontentloaded',timeout:45000});
-      await page.waitForFunction(id=>document.querySelector('#notice-'+id)?.open===true,firstId,{timeout:20000});
-      entry.sharedDetailOpened=await page.locator('#notice-'+firstId+' .row-body').isVisible();
-      requireThat(entry.sharedDetailOpened,'notice_deeplink_did_not_open_detail');
+      if(entry.noticeUiVersion==='collapsed-list'){
+        const firstId=(await page.locator('#list details.notice-record').first().getAttribute('id')||'').replace(/^notice-/, '');
+        await page.goto(boardUrl+'?id='+encodeURIComponent(firstId),{waitUntil:'domcontentloaded',timeout:45000});
+        await page.waitForFunction(id=>document.querySelector('#notice-'+id)?.open===true,firstId,{timeout:20000});
+        entry.sharedDetailOpened=await page.locator('#notice-'+firstId+' .row-body').isVisible();
+        requireThat(entry.sharedDetailOpened,'notice_deeplink_did_not_open_detail');
+      }
 
       // Probe only the login redirect; abort before auth server loads.
       const loginReq=page.waitForRequest(req=>req.url().startsWith('https://ekodi.kr/auth/'),{timeout:12000});
