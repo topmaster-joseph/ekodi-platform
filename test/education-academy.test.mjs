@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {AUDIENCES,CONSULTING,buildPlan,planMarkdown,consultationDraft} from '../education/study/academy/catalog.js';
+import {AUDIENCES,CONSULTING,suggestedCourseTitle,buildPlan,planMarkdown,consultationDraft} from '../education/study/academy/catalog.js';
 
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 
