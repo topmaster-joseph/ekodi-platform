@@ -94,8 +94,8 @@ for (const [siteSlug, contract] of Object.entries(policy.marketing?.tenants || {
 function gitDiff() {
   const base = String(process.env.ZERO_SUBDOMAIN_BASE_SHA || '').trim();
   try {
-    if (base && !/^0+$/.test(base)) return execFileSync('git', ['diff', '--unified=0', `${base}...HEAD`], { cwd: root, encoding: 'utf8' });
-    return execFileSync('git', ['diff', '--unified=0', 'HEAD~1', 'HEAD'], { cwd: root, encoding: 'utf8' });
+    if (base && !/^0+$/.test(base)) return execFileSync('git', ['diff', '--unified=0', `${base}...HEAD`], { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+    return execFileSync('git', ['diff', '--unified=0', 'HEAD~1', 'HEAD'], { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   } catch (error) {
     fail(`unable to inspect git diff: ${error.message}`);
     return '';
