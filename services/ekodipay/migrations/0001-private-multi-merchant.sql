@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS ekodipay_merchant_bank_verification (
   merchant_id TEXT PRIMARY KEY REFERENCES ekodipay_merchants(merchant_id),
   bank_code TEXT NOT NULL,
   account_last4 TEXT NOT NULL CHECK(length(account_last4)=4),
-  account_hmac_fingerprint TEXT NOT NULL CHECK(length(account_hmac_fingerprint)=64),
+  account_hmac_fingerprint TEXT NOT NULL UNIQUE CHECK(length(account_hmac_fingerprint)=64),
   proof_ref TEXT NOT NULL,
   verified_by_ref TEXT NOT NULL,
   verified_at INTEGER NOT NULL,
@@ -66,7 +66,10 @@ CREATE TABLE IF NOT EXISTS ekodipay_approved_orders (
   expires_at INTEGER NOT NULL,
   issuer_proof_ref TEXT NOT NULL,
   created_at INTEGER NOT NULL,
-  UNIQUE(merchant_id,order_id)
+  UNIQUE(merchant_id,order_id),
+  UNIQUE(merchant_id,order_id,pg_mode,mid),
+  FOREIGN KEY(merchant_id,service_id,issuer_ref)
+    REFERENCES ekodipay_merchant_service_issuers(merchant_id,service_id,issuer_ref)
 );
 CREATE INDEX IF NOT EXISTS idx_ekodipay_orders_tenant
  ON ekodipay_approved_orders(merchant_id,service_id,pg_mode,status);
@@ -87,7 +90,8 @@ CREATE TABLE IF NOT EXISTS ekodipay_settlement_snapshots (
   provider_evidence_digest TEXT NOT NULL,
   created_at INTEGER NOT NULL,
   PRIMARY KEY(merchant_id,pg_mode,transaction_key),
-  FOREIGN KEY(merchant_id,order_id) REFERENCES ekodipay_approved_orders(merchant_id,order_id)
+  FOREIGN KEY(merchant_id,order_id,pg_mode,mid)
+    REFERENCES ekodipay_approved_orders(merchant_id,order_id,pg_mode,mid)
 );
 CREATE INDEX IF NOT EXISTS idx_ekodipay_settlement_day
  ON ekodipay_settlement_snapshots(merchant_id,pg_mode,paid_out_date);
