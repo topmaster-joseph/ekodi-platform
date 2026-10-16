@@ -14,3 +14,11 @@
 ## Phase B (2026-10-17)
 
 Code now provides evidence-labeled guided drafts, entered-value budget reconciliation, A4 HTML print output, a presentation Markdown outline and Excel-compatible budget CSV. The browser does not invoke an AI model, query URLs, save documents to EKODI cloud, or render real HWPX/PPTX/XLSX. Release remains subject to EKODI Orchestrator receipt and protected live verification.
+
+## Phase C (2026-10-17): in-browser OOXML creation
+
+- Browser-local generated Word DOCX, Excel XLSX with formula-backed budget calculation, and 16:9 presentation PPTX. These create clean new files, not a pixel-perfect import of user-provided templates.
+- Bounded dependency-free ZIP packaging, XML character escaping, strict source limits and no external conversion calls.
+- CI tests unzip archive entries and parse Office XML with standard Python tools. Passing structural ZIP/XML tests does **not** prove compatibility with every Office or Hancom version; first-party viewer and template integration remain unverified.
+- HTML print-to-PDF stays a user browser action. Direct HWPX creation and AI research/model integrations are NOT delivered.
+- Production release remains blocked until official orchestrator receipt, policy-owner exact-head Human Gate evidence, guarded protected merge and actual desktop/mobile live validation.
