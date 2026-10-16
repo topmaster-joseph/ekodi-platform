@@ -1,4 +1,4 @@
-import {AUDIENCES,FORMATS,CONSULTING,audienceFor,buildPlan,planMarkdown,consultationDraft} from './catalog.js';
+import {AUDIENCES,FORMATS,CONSULTING,audienceFor,suggestedCourseTitle,buildPlan,planMarkdown,consultationDraft} from './catalog.js';
 
 const $=id=>document.getElementById(id);
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
