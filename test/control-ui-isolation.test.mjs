@@ -40,3 +40,21 @@ test('command controls, deployment confirmation and mobile layout remain accessi
   assert.match(worker,/url\.pathname === '\/control'/);
   assert.match(router,/x-ekodi-canonical-surface','control/);
 });
+
+
+test('Control updates dispatch the guarded shared Site Core through every sanctioned release lane',async()=>{
+  const [converge,recovery,workflow]=await Promise.all([
+    read('scripts/converge-orchestrated-pr-merge.mjs'),
+    read('scripts/recover-release-provenance.mjs'),
+    read('.github/workflows/deploy-site-core.yml'),
+  ]);
+  for(const path of ['control.html','control.css','control.js']){
+    assert.ok(converge.includes("'"+path+"'"),path+' must trigger orchestrated convergence');
+    assert.ok(recovery.includes("'"+path+"'"),path+' must trigger exact-SHA recovery release');
+    assert.ok(workflow.includes("      - '"+path+"'"),path+' must trigger guarded main-push fallback');
+  }
+  assert.match(converge,/if\(sharedSiteTouched\)\{/);
+  assert.match(recovery,/if\(sharedSiteTouched\)\{/);
+  assert.match(workflow,/release_branch_ref:/);
+  assert.match(workflow,/release_task_id:/);
+});
