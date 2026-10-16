@@ -176,6 +176,11 @@ export function proposalToPresentationMd(model){
     if(!matches.length)continue;
     parts.push('','## 슬라이드 '+i+': '+heading,'');
     for(const s of matches)parts.push('**'+clean(s.name,100)+'**','',clean(s.body,1200)||'구체적 내용 작성 및 확인 필요','');
+    if(heading==='예산·재원'&&Array.isArray(model.budgetRows)&&model.budgetRows.length){
+      const calc=calculateProposalBudget(model.budgetRows);
+      parts.push('사용자 입력 예산 합계: '+calc.total.toLocaleString('ko-KR')+'원');
+      for(const row of calc.items)parts.push('- '+clean(row.name,100)+': '+row.amount.toLocaleString('ko-KR')+'원');
+    }
     parts.push('발표 메모: 수치, 인용, 지원요건의 원자료 검증 필요.');i++;
   }
   return parts.join('\n')+'\n';
