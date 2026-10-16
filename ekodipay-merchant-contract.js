@@ -18,7 +18,8 @@ export function validMerchantProfile(p){
     !STATES.has(p.state)||p.provider!=='tosspayments'||!Array.isArray(p.services)||
     !p.services.length||!p.services.every(x=>validString(x,ID))||
     new Set(p.services).size!==p.services.length)return false;
- if(!p.settlement||!validString(p.settlement.bankCode,/^[A-Za-z0-9]{2,12}$/)||
+ if(!p.settlement||['accountNumber','holderName','accountHolder','routingNumber'].some(k=>Object.hasOwn(p.settlement,k))||
+    !validString(p.settlement.bankCode,/^[A-Za-z0-9]{2,12}$/)||
     !validString(p.settlement.accountLast4,/^[0-9]{4}$/)||
     !validString(p.settlement.fingerprint,SHA256)||
     !validString(p.settlement.proofRef,/^[A-Z0-9_-]{8,100}$/))return false;
