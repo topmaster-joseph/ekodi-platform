@@ -58,3 +58,22 @@ test('issuer signature nonce is durably claimed once for the immutable tenant or
   assert.throws(()=>db.exec("UPDATE ekodipay_issuer_nonce_claims SET nonce='FAKENONCE12345678' WHERE merchant_id='merchant_a'"),/issuer_nonce_immutable/);
  }finally{db.close()}
 });
+
+test('bank statement evidence cannot verify another merchant, unsettled PG batch or recycled deposit',()=>{
+ const db=database();
+ try{
+  merchant(db,'merchant_a');merchant(db,'merchant_b');
+  bank(db,'merchant_a','a'.repeat(64));bank(db,'merchant_b','b'.repeat(64));
+  const run=db.prepare("INSERT INTO ekodipay_reconciliation_runs(merchant_id,batch_ref,pg_mode,from_date,through_date,api_pagination_complete,pg_reconciled,created_at) VALUES (?,'BATCH_0001','live','2026-10-01','2026-10-02',1,?,1790000000000)");
+  run.run('merchant_a',0);run.run('merchant_b',1);
+  const insert=db.prepare("INSERT INTO ekodipay_bank_credit_proofs(merchant_id,batch_ref,pg_mode,statement_transaction_ref,account_hmac_fingerprint,currency,credit_direction,amount,verified_by_ref,evidence_ref,verified_at) VALUES (?,'BATCH_0001','live',?,?,'KRW','CREDIT',48350,'verifier_a','BANK_PROOF_0001',1790000100000)");
+  assert.throws(()=>insert.run('merchant_a','BANKTX_001','a'.repeat(64)),/bank_credit_evidence_not_authorized/);
+  db.exec("UPDATE ekodipay_reconciliation_runs SET pg_reconciled=1 WHERE merchant_id='merchant_a'");
+  assert.throws(()=>insert.run('merchant_a','BANKTX_001','b'.repeat(64)),/bank_credit_evidence_not_authorized/);
+  assert.throws(()=>insert.run('merchant_b','BANKTX_002','a'.repeat(64)),/bank_credit_evidence_not_authorized/);
+  insert.run('merchant_a','BANKTX_001','a'.repeat(64));
+  assert.throws(()=>insert.run('merchant_a','BANKTX_001','a'.repeat(64)),/UNIQUE constraint failed/);
+  insert.run('merchant_b','BANKTX_003','b'.repeat(64));
+  assert.throws(()=>db.exec("UPDATE ekodipay_bank_credit_proofs SET amount=1 WHERE merchant_id='merchant_a'"),/bank_credit_evidence_immutable/);
+ }finally{db.close()}
+});
