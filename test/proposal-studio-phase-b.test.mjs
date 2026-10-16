@@ -10,3 +10,6 @@ test('budget totals are user-entered arithmetic',()=>{const result=calculateProp
 import {analyzeProposalSources,reviewProposalBudget} from '../proposal/analysis.js';
 test('reference URLs are not treated as read files',()=>{const draft=createProposalDraft({title:'정책',sourceNames:['https://example.org/data']});draft.sources[0].readStatus='url';const report=analyzeProposalSources(draft);assert.equal(report.excerpts.length,0);assert.equal(report.verifiedCount,0);});
 test('declared and calculated budget mismatch is identified',()=>{const draft=createProposalDraft({title:'계획'});draft.budgetRows=[{name:'교육',quantity:2,unitCost:5000}];draft.decisions.totalBudget='5만원';const qa=reviewProposalBudget(draft);assert.equal(qa.matched,false);assert.equal(draft.decisions.totalBudget,'5만원');});
+
+import {proposalToPrintHtml,proposalToPresentationMd} from '../proposal/analysis.js';
+test('print and presentation assets label the document as a draft',()=>{const draft=createProposalDraft({title:'교육사업'});draft.sections.find(x=>x.id==='strategy').body='사용자 승인 대기';const html=proposalToPrintHtml(draft);const md=proposalToPresentationMd(draft);assert.ok(html.includes('A4'));assert.ok(html.includes('제출 전 확인'));assert.ok(md.includes('슬라이드'));assert.ok(md.includes('사용자 승인 대기'));});
