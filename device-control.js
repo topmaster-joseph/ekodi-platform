@@ -97,6 +97,8 @@ const COMMAND_POLICIES = Object.freeze({
   'agent.self_update': { risk: 'maintain', confirm: true },
   'software.localai.install': { risk: 'maintain', confirm: true },
   'software.localai.verify': { risk: 'observe' },
+  'software.codex.check': { risk: 'observe' },
+  'software.codex.install': { risk: 'maintain', confirm: true },
   'computer.browser.canary': { risk: 'maintain', confirm: true },
   'computer.browser.execute': { risk: 'maintain', confirm: true, payload: 'background-browser-task' },
   'computer.browser.pr.observe': { risk: 'maintain', confirm: true, payload: 'github-pr-readonly' },
@@ -120,6 +122,8 @@ const COMMAND_CAPABILITIES = Object.freeze({
   'computer.agent.status': 'agentStatus',
   'software.localai.install': 'localAiInstall',
   'software.localai.verify': 'localAiVerify',
+  'software.codex.check': 'codexToolchainCheck',
+  'software.codex.install': 'codexToolchainInstall',
   'computer.desktop.probe': 'isolatedDesktopProbe',
   'computer.desktop.canary': 'isolatedDesktopProbe',
   'computer.desktop.guest.canary': 'isolatedDesktopCanary',
@@ -565,6 +569,26 @@ function summarizeCommandResult(result = {}, commandType = '') {
       claudeAuth: 'requires_interactive_user_verification',
       credentialCollection: proof.credentialCollection === true,
       executionMode: 'fixed_loopback_api',
+    };
+  }
+  if (result.codexToolchainProof && typeof result.codexToolchainProof === 'object') {
+    const proof = result.codexToolchainProof;
+    const tools = {};
+    for (const name of ['git','python','uv','node','npm','codex']) {
+      const item = proof.tools?.[name] || {};
+      tools[name] = {
+        status:item.status === 'ready' ? 'ready' : 'missing',
+        version:safeText(item.version, 90),
+      };
+    }
+    summary.codexToolchainProof = {
+      checkedAt:safeText(proof.checkedAt, 45),
+      state:proof.state === 'ready' ? 'ready' : 'incomplete',
+      readyCount:Math.max(0,Math.min(6,Number(proof.readyCount)||0)),
+      authorization:'interactive_user_login_required',
+      executionContext:'agent_user',
+      credentialCollection:false,
+      tools,
     };
   }
   if (result.desktopSessionCanary && typeof result.desktopSessionCanary === 'object') {

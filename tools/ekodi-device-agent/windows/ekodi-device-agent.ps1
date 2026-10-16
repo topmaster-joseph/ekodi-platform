@@ -19,7 +19,7 @@ try {
   throw '[EKODI:EKA-299][crypto] Windows DPAPI assembly is unavailable: ' + $_.Exception.Message
 }
 
-$AgentVersion = '2.5.7'
+$AgentVersion = '2.5.8'
 # Some remote/managed Windows sessions omit ProgramData from the process environment.
 # Resolve the canonical system data directory without changing machine-wide settings.
 if ([string]::IsNullOrWhiteSpace($env:ProgramData)) {
@@ -832,6 +832,53 @@ function Invoke-AgentUpgradeTransaction([string]$CandidatePath, [switch]$DeferRe
     $code = if ($codes.ContainsKey($stage)) { $codes[$stage] } else { 'EKA-199' }
     Throw-AgentStageError $code $stage 'Agent 설치·업그레이드를 중단하고 이전 상태로 롤백했습니다.' $failure
   }
+}
+
+
+function Get-EkodiCodexToolchainProof {
+  $base=if($env:LOCALAPPDATA){Join-Path $env:LOCALAPPDATA 'EKODI\CodexToolchain'}else{''}
+  $paths=@{
+    git=@($(if($base){Join-Path $base 'git\cmd\git.exe'}),$(if($base){Join-Path $base 'git\mingw64\bin\git.exe'}))
+    python=@($(if($env:USERPROFILE){Join-Path $env:USERPROFILE '.local\bin\python.exe'}))
+    uv=@($(if($base){Join-Path $base 'uv\uv.exe'}))
+    node=@($(if($base){Join-Path $base 'node\node.exe'}))
+    npm=@($(if($base){Join-Path $base 'node\npm.cmd'}))
+    codex=@($(if($base){Join-Path $base 'npm\codex.cmd'}),$(if($env:APPDATA){Join-Path $env:APPDATA 'npm\codex.cmd'}))
+  }
+  $names=@{git='git.exe';python='python.exe';uv='uv.exe';node='node.exe';npm='npm.cmd';codex='codex.cmd'}
+  $tools=@{}
+  foreach($name in @('git','python','uv','node','npm','codex')){
+    $exe=''
+    foreach($candidate in @($paths[$name])){if($candidate -and (Test-Path -LiteralPath $candidate -PathType Leaf)){$exe=$candidate;break}}
+    if(-not $exe){$c=Get-Command $names[$name] -ErrorAction SilentlyContinue|Select-Object -First 1;if($c){$exe=[string]$c.Source}}
+    $v=''
+    if($exe){try{$o=(& $exe --version 2>$null|Out-String).Trim();if($LASTEXITCODE -eq 0 -and $o){$v=[string]($o -split '\r?\n')[0];if($v.Length -gt 90){$v=$v.Substring(0,90)}}}catch{}}
+    $tools[$name]=@{status=$(if($v){'ready'}else{'missing'});version=$v}
+  }
+  $count=@($tools.Values|Where-Object {$_.status -eq 'ready'}).Count
+  return @{checkedAt=(Get-Date).ToUniversalTime().ToString('o');state=$(if($count -eq 6){'ready'}else{'incomplete'});readyCount=$count;tools=$tools;authorization='interactive_user_login_required';executionContext='agent_user';credentialCollection=$false}
+}
+function Install-EkodiCodexToolchain {
+  $url='https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/tools/ekodi-device-agent/windows/ekodi-codex-toolchain-install.ps1'
+  $expected='80F630FB7BAF2FAD42853EE4A1D41F57A4B5BEDAC4D34C1BAC1D12BC735B28CF'
+  $candidate=Join-Path $env:TEMP ('ekodi-codex-'+[guid]::NewGuid().ToString('N')+'.ps1')
+  $receipt=Join-Path $env:TEMP ('ekodi-codex-receipt-'+[guid]::NewGuid().ToString('N')+'.json')
+  try{
+    Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $candidate -TimeoutSec 90
+    if((Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash -ne $expected){throw 'CODEX_INSTALLER_HASH_MISMATCH'}
+    $t=$null;$e=$null
+    [void][Management.Automation.Language.Parser]::ParseFile($candidate,[ref]$t,[ref]$e)
+    if($e.Count -gt 0){throw 'CODEX_INSTALLER_SYNTAX_INVALID'}
+    $p=Start-Process 'powershell.exe' -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',('"'+$candidate+'"'),'-ReceiptPath',('"'+$receipt+'"')) -WindowStyle Hidden -PassThru
+    if(-not $p.WaitForExit(1500000)){try{$p.Kill()}catch{};throw 'CODEX_INSTALL_TIMEOUT'}
+    if($p.ExitCode -ne 0){throw 'CODEX_INSTALL_FAILED_OR_PARTIAL'}
+    if(-not (Test-Path -LiteralPath $receipt)){throw 'CODEX_INSTALL_RECEIPT_MISSING'}
+    try{$result=Get-Content -LiteralPath $receipt -Raw -Encoding UTF8|ConvertFrom-Json -ErrorAction Stop}catch{throw 'CODEX_INSTALL_RECEIPT_INVALID'}
+    if([string]$result.state -ne 'installed_and_verified'){throw 'CODEX_INSTALL_NOT_VERIFIED'}
+    $proof=Get-EkodiCodexToolchainProof
+    if($proof.state -ne 'ready'){throw 'CODEX_POSTINSTALL_PROOF_INCOMPLETE'}
+    return @{message='Codex toolchain installed and verified in EKODI Agent user context.';codexToolchainProof=$proof}
+  }finally{Remove-Item -LiteralPath $candidate,$receipt -Force -ErrorAction SilentlyContinue}
 }
 
 function Install-EkodiLocalAI {
@@ -3167,6 +3214,8 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     'agent.self_update' { return Update-AgentFromOfficialSource }
     'software.localai.install' { return Install-EkodiLocalAI }
     'software.localai.verify' { return Get-EkodiLocalAiVerification }
+    'software.codex.check' { return @{message='Codex toolchain status checked.';codexToolchainProof=(Get-EkodiCodexToolchainProof)} }
+    'software.codex.install' { return Install-EkodiCodexToolchain }
     'computer.browser.canary' { return Invoke-BackgroundBrowserCanary }
     'computer.browser.execute' { return Invoke-BackgroundBrowserWorker $payload }
     'computer.browser.pr.observe' { return Invoke-EkodiOwnedGithubPrObserve $payload }
@@ -3256,7 +3305,7 @@ function Send-Heartbeat($Config) {
     capabilities = @{
       powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
       diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
-      networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true
+      networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true; codexToolchainCheck = $true; codexToolchainInstall = $true
       computerRead = $true; processRead = $true; agentStatus = $true
       isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktopProbe = $true; isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified; isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified; isolatedDesktopUiCanary = [bool](Get-IsolatedDesktopUiCanaryState).verified; isolatedDesktopSessionCanary = [bool](Get-IsolatedDesktopSessionCanaryState).verified; isolatedDesktop = [bool](Get-IsolatedDesktopSessionCanaryState).verified
       workspaceSlidesAudio = [bool](Get-WorkspaceSlidesAudioState).verified
@@ -3372,7 +3421,7 @@ function Install-Agent {
       capabilities = @{
         powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
         diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
-        networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true
+        networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true; codexToolchainCheck = $true; codexToolchainInstall = $true
         arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
       }
     } | ConvertTo-Json -Depth 8
