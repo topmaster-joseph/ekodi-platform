@@ -18,7 +18,8 @@ test('release provenance recovery requires exact-SHA policy-owner Human Gate evi
     "intent,target,'high'",
     "human_gate_required",
     "exact_sha_human_gate_approved",
-    "existing recovery branch does not match the exact approved source SHA",
+    "assessExactRecoveryBranch",
+    "existingExactRecoveryBranch",
   ]) assert.ok(source.includes(marker),marker);
   assert.match(source,/issues\/\$\{prNumber\}\/comments\?per_page=100/);
   assert.match(source,/findExactHumanGateApproval\(/);
@@ -26,6 +27,8 @@ test('release provenance recovery requires exact-SHA policy-owner Human Gate evi
   assert.match(source,/labelAppliedAt/);
   assert.doesNotMatch(source,/body\.includes\(approvalMarker\)/);
   assert.match(source,/github-owner:\$\{approvalActor\}/);
+  const evidence=await read('scripts/release-recovery-branch-evidence.mjs');
+  assert.match(evidence,/existing recovery branch does not match the exact approved source SHA/);
   assert.doesNotMatch(source,/intent,target,'normal','delegated'/);
   assert.doesNotMatch(source,/policyOwners\.has\(actor\)/);
 });
