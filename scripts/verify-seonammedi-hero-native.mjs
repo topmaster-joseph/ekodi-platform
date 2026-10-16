@@ -142,7 +142,7 @@ try {
             leftVisible:Boolean(left?.getBoundingClientRect().width),
             centerVisible:Boolean(center?.getBoundingClientRect().width),
             rightVisible:Boolean(right?.getBoundingClientRect().width),
-            rightReadsRealNotices:!!right?.querySelector('.seonam-visual-recent-notices'),
+            calendarWidget:!!right?.querySelector('.seonam-calendar-grid'),
             mobileWidth:document.documentElement.scrollWidth,
             clientWidth:document.documentElement.clientWidth
           };
@@ -151,7 +151,7 @@ try {
         must(visual.noSharedStockBanner,'unexpected_shared_stock_banner');
         must(JSON.stringify(visual.sidebarMenu)===JSON.stringify(['공지','활동이력','관련소식','소통채널','시민의견','조직']),'visual_six_menu_mismatch');
         must(visual.leftVisible&&visual.centerVisible&&visual.rightVisible,'visual_columns_missing');
-        must(visual.rightReadsRealNotices,'public_notice_panel_missing');
+        must(visual.calendarWidget,'public_schedule_calendar_missing');
         must(profile.isMobile?visual.layoutDisplay==='flex':visual.layoutDisplay==='grid','responsive_layout_mismatch');
         must(visual.mobileWidth<=visual.clientWidth+1,'visual_shell_horizontal_overflow');
       }
