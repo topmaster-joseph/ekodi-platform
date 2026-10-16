@@ -54,6 +54,20 @@ export const PROPOSAL_STAGES=Object.freeze([
   {id:15,name:'발표 연습 음성',when:'presentation'},
   {id:16,name:'최종 산출물 검증',when:'always'}
 ]);
+export function normalizeReferenceUrl(value){
+  const raw=String(value??'').trim();
+  if(!raw||raw.length>1200)throw new Error('웹주소는 1~1200자 이내로 입력하세요.');
+  let url;
+  try{url=new URL(raw);}catch{throw new Error('유효한 HTTPS 웹주소가 아닙니다.');}
+  if(url.protocol!=='https:'||!url.hostname||url.username||url.password){
+    throw new Error('사용자정보 없는 HTTPS 주소만 입력할 수 있습니다.');
+  }
+  if(url.hostname==='localhost'||url.hostname.endsWith('.local')||/^127\./.test(url.hostname)){
+    throw new Error('내부망·로컬 웹주소는 등록할 수 없습니다.');
+  }
+  url.hash='';
+  return url.toString();
+}
 const ids=new Set(PROPOSAL_DOMAINS.map(item=>item.id));
 const goals=new Set(PROPOSAL_GOALS.map(item=>item.id));
 export function inferDomain(value=''){
@@ -83,7 +97,7 @@ export function createProposalDraft({title,idea='',domain='auto',goal='proposal'
     title:cleanTitle||cleanIdea.split(/[\n.!?]/)[0].slice(0,80),
     idea:cleanIdea,domain:finalDomain,goal:finalGoal,
     phase:'working_draft',sections,
-    sources:sourceNames.slice(0,20).map(item=>({name:String(item).slice(0,240),verification:'not_verified'})),
+    sources:sourceNames.slice(0,20).map(item=>({name:String(item).slice(0,String(item).startsWith('https://')?1200:240),verification:'not_verified'})),
     decisions:{period:'',totalBudget:'',owner:'',target:'',measures:''}
   };
 }
