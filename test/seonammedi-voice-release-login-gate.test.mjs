@@ -14,7 +14,7 @@ test('standalone board release fails if login-first public UI markers disappear'
   assert.match(release,/Google handoff preserving compose intent/);
   assert.match(worker,/function voiceWriteAuthScript\(\)/);
   assert.match(worker,/async function verifyVoiceAccount\(allowRefresh=true\)/);
-  assert.match(worker,/async function requireVoiceAccount\(\)/);
+  assert.match(worker,/async function requireVoiceAccount\(intent="compose"\)/);
 });
 
 test('release validates signed-out API across both public and internal site mounts',async()=>{
