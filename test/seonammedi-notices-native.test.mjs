@@ -18,8 +18,21 @@ test('EKODI runs 4 isolated desktop/mobile browser proof cases',()=>{
     'search_nonmatch_did_not_empty',
     'auth_compose_return_mismatch',
     'six_menu_order_mismatch',
-    'homepage_header_menu_mismatch'
+    'homepage_header_menu_mismatch',
+    'notice_compose_button_not_two_lines',
+    'signed_out_notice_admin_actions_visible',
+    'signed_out_notice_admin_api_not_denied'
   ])assert.ok(script.includes(needle),needle);
+});
+test('visible button layout and admin access are verified without any privileged mutation',()=>{
+  assert.ok(script.includes("composeLines:labelLines.map(span=>span.textContent.trim())"));
+  assert.ok(script.includes("getBoundingClientRect().top"));
+  assert.ok(script.includes("adminResponse.status()===403"));
+  assert.ok(script.includes("adminPayload.error==='notices_forbidden'"));
+  assert.ok(script.includes("page.request.get("));
+  assert.ok(!script.includes("page.request.post("));
+  assert.ok(!script.includes("page.request.put("));
+  assert.ok(!script.includes("page.request.delete("));
 });
 test('read-only browser policy and no credential authority',()=>{
   assert.ok(script.includes("['GET','HEAD','OPTIONS'].includes"));

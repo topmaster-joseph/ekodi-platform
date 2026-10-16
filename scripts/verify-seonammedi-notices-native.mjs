@@ -61,9 +61,18 @@ try{
           rel:img.closest('a')?.rel||''
         }));
         const body=document.querySelector('main')?.getBoundingClientRect();
+        const compose=document.querySelector('#writeToggle');
+        const labelLines=[...(compose?.querySelectorAll('span')||[])];
+        const composeRect=compose?.getBoundingClientRect();
+        const composeVisible=compose&&getComputedStyle(compose).display!=='none';
+        const adminActionsVisible=[...document.querySelectorAll('#list [data-edit],#list [data-delete]')].some(el=>getComputedStyle(el).display!=='none');
         return {
           navigation:nav,postCount:rows.length,detailCount:document.querySelectorAll('#list details.notice-record').length,expandedCount:document.querySelectorAll('#list details.notice-record[open]').length,imageCount:images.length,images,
           shareCount:document.querySelectorAll('#list button[data-share]').length,
+          composeText:compose?.getAttribute('aria-label')||'',composeVisible:Boolean(composeVisible),
+          composeLines:labelLines.map(span=>span.textContent.trim()),
+          composeLineOffsets:labelLines.map(span=>Math.round(span.getBoundingClientRect().top-(composeRect?.top||0))),
+          adminActionsVisible,
           hasSearch:!!document.querySelector('input#noticeSearch'),
           duplicateLoginVisible:[...document.querySelectorAll('#adminLogin')].some(x=>getComputedStyle(x).display!=='none'),
           mainWidth:body?.width||0,
@@ -83,6 +92,16 @@ try{
       entry.noticeUiVersion=initial.detailCount===initial.postCount?'collapsed-list':'legacy-expanded';
       requireThat(initial.detailCount===0||(initial.detailCount===initial.postCount&&initial.expandedCount===0),'notices_list_mixed_or_open_by_default');
       requireThat(initial.hasSearch,'notice_search_missing');
+      entry.composeText=initial.composeText;
+      entry.composeLines=initial.composeLines;
+      entry.composeTwoRows=initial.composeLineOffsets.length===2&&initial.composeLineOffsets[1]>initial.composeLineOffsets[0]+6;
+      requireThat(initial.composeVisible&&initial.composeText==='공지 작성','notice_compose_button_inaccessible');
+      requireThat(JSON.stringify(initial.composeLines)===JSON.stringify(['공지','작성'])&&entry.composeTwoRows,'notice_compose_button_not_two_lines');
+      requireThat(!initial.adminActionsVisible,'signed_out_notice_admin_actions_visible');
+      const adminResponse=await page.request.get(origin+paths[origin].board.replace('/notices','/api/admin/notices'),{timeout:15000});
+      const adminPayload=await adminResponse.json().catch(()=>({}));
+      entry.unauthenticatedAdminDenied=adminResponse.status()===403&&adminPayload.error==='notices_forbidden';
+      requireThat(entry.unauthenticatedAdminDenied,'signed_out_notice_admin_api_not_denied');
       requireThat(initial.shareCount===initial.postCount,'share_control_missing');
       requireThat(!initial.duplicateLoginVisible,'redundant_login_visible');
       requireThat(!initial.horizontalOverflow,'horizontal_overflow');
