@@ -125,13 +125,26 @@ async function list(env,url){
     replies:replies.filter(r=>Number(r.post_id)===Number(p.id)).map(r=>({id:Number(r.id),displayName:r.author_name||'익명',message:r.body||'',createdAt:r.created_at}))
   }))});
 }
+// A canary may be accepted by the queue just before the protected release exits.
+// A durable D1 tombstone, checked atomically with insert, prevents late test posts
+// and replies from being recreated after marker-scoped cleanup.
+// This branch NEVER applies cancellation to normal citizen content.
+const CANARY_POST_MARKER=/^EKODI-BOARD-CANARY-[0-9]+$/;
+const CANARY_REPLY_MARKER=/^reply-canary-[0-9]+$/;
 async function persistQueuedPost(env,payload){
   const existing=await env.BOARD_DB.prepare("SELECT id FROM board_posts WHERE submission_key=? LIMIT 1").bind(payload.submissionId).first();
   if(existing?.id)return Number(existing.id);
   const imageJson=JSON.stringify(imageKeys(payload.imageKeys));
+  const canary=CANARY_POST_MARKER.test(String(payload.content||''));
+  // The NOT EXISTS subquery and INSERT form ONE atomic D1 statement.
+  const sql=canary
+    ? 'INSERT INTO board_posts(author_name,category,private_contact,title,body,image_keys,submission_key,created_at,updated_at) SELECT ?,?,?,?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM board_canary_cleanup_tombstones WHERE marker=?)'
+    : 'INSERT INTO board_posts(author_name,category,private_contact,title,body,image_keys,submission_key,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)';
+  const params=[payload.name||'익명',payload.category||'other',payload.contact||'',payload.title||payload.name||'시민의견',payload.content,imageJson,payload.submissionId,payload.createdAt,payload.createdAt];
+  if(canary)params.push(payload.content);
   try{
-    const r=await env.BOARD_DB.prepare('INSERT INTO board_posts(author_name,category,private_contact,title,body,image_keys,submission_key,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)')
-      .bind(payload.name||'익명',payload.category||'other',payload.contact||'',payload.title||payload.name||'시민의견',payload.content,imageJson,payload.submissionId,payload.createdAt,payload.createdAt).run();
+    const r=await env.BOARD_DB.prepare(sql).bind(...params).run();
+    if(canary&&Number(r?.meta?.changes||0)===0)return 0; // Tombstoned; acknowledge queue delivery.
     if(Number(r?.meta?.last_row_id||0))return Number(r.meta.last_row_id);
   }catch(error){
     const duplicate=await env.BOARD_DB.prepare("SELECT id FROM board_posts WHERE submission_key=? LIMIT 1").bind(payload.submissionId).first().catch(()=>null);
@@ -142,11 +155,23 @@ async function persistQueuedPost(env,payload){
 async function persistQueuedReply(env,payload){
   const existing=await env.BOARD_DB.prepare("SELECT id FROM board_replies WHERE submission_key=? LIMIT 1").bind(payload.submissionId).first();
   if(existing?.id)return Number(existing.id);
+  const canary=CANARY_REPLY_MARKER.test(String(payload.content||''));
+  // The parent may already have been deleted by cleanup. Avoid endlessly
+  // retrying such a canary reply; preserve ordinary reply retry semantics.
+  if(canary){
+    const cancelled=await env.BOARD_DB.prepare("SELECT marker FROM board_canary_cleanup_tombstones WHERE post_id=? LIMIT 1").bind(payload.postId).first();
+    if(cancelled)return 0;
+  }
   const post=await env.BOARD_DB.prepare("SELECT id FROM board_posts WHERE id=? AND status='published'").bind(payload.postId).first();
   if(!post?.id)throw new Error('reply_parent_unavailable');
+  const sql=canary
+    ? 'INSERT INTO board_replies(post_id,author_name,body,submission_key,created_at) SELECT ?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM board_canary_cleanup_tombstones WHERE post_id=?)'
+    : 'INSERT INTO board_replies(post_id,author_name,body,submission_key,created_at) VALUES(?,?,?,?,?)';
+  const params=[post.id,payload.name||'익명',payload.content,payload.submissionId,payload.createdAt];
+  if(canary)params.push(post.id);
   try{
-    const r=await env.BOARD_DB.prepare('INSERT INTO board_replies(post_id,author_name,body,submission_key,created_at) VALUES(?,?,?,?,?)')
-      .bind(post.id,payload.name||'익명',payload.content,payload.submissionId,payload.createdAt).run();
+    const r=await env.BOARD_DB.prepare(sql).bind(...params).run();
+    if(canary&&Number(r?.meta?.changes||0)===0)return 0;
     if(Number(r?.meta?.last_row_id||0))return Number(r.meta.last_row_id);
   }catch(error){
     const duplicate=await env.BOARD_DB.prepare("SELECT id FROM board_replies WHERE submission_key=? LIMIT 1").bind(payload.submissionId).first().catch(()=>null);

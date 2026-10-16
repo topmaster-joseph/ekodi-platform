@@ -21,6 +21,9 @@ test('positive production CRUD is authenticated and never silently falls back to
  assert.match(canary,/authorization: Bearer \$BOARD_CANARY_GOOGLE_TOKEN/);
  assert.equal((canary.match(/authorization: Bearer \$BOARD_CANARY_GOOGLE_TOKEN/g)||[]).length,2);
  assert.match(canary,/authenticated production CRUD canary SKIPPED/);
- assert.match(canary,/DELETE FROM board_replies WHERE post_id=\$post_id/);
- assert.match(canary,/DELETE FROM board_posts WHERE id=\$post_id/);
+ assert.match(canary,/INSERT INTO board_canary_cleanup_tombstones\(marker,post_id\)/);
+ assert.match(canary,/DELETE FROM board_replies WHERE post_id IN \(SELECT id FROM board_posts WHERE body=/);
+ assert.match(canary,/DELETE FROM board_posts WHERE body=/);
+ assert.match(canary,/trap cleanup_canary EXIT/);
+ assert.doesNotMatch(canary,/DELETE FROM board_posts WHERE id=\$post_id/);
 });
