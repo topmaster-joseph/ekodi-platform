@@ -48,26 +48,42 @@ try{
       });
       await page.waitForTimeout(1200); // settle fonts/first paint before measuring
       await page.evaluate(()=>{
-        const stats={layoutShifts:[],mutations:0,resizeEvents:0,scrollEvents:0,visibilityChanges:0};
+        const stats={layoutShifts:[],shiftSources:{},mutations:0,mutationNodes:{},mutationAttributes:{},htmlAttributes:{},resizeEvents:0,scrollEvents:0,visibilityChanges:0};
         window.__ekodiControlLayoutProbe=stats;
         if('PerformanceObserver' in window){
           try{
             const observer=new PerformanceObserver(list=>{
               for(const e of list.getEntries()){
-                if(!e.hadRecentInput)stats.layoutShifts.push({
-                  value:Math.round(e.value*1000000)/1000000,
-                  when:Math.round(e.startTime)
-                });
+                if(!e.hadRecentInput){
+                  const current={value:Math.round(e.value*1000000)/1000000,when:Math.round(e.startTime)};
+                  if(stats.layoutShifts.length<24)stats.layoutShifts.push(current);
+                  stats.layoutShiftCount=(stats.layoutShiftCount||0)+1;
+                  stats.layoutShiftSum=(stats.layoutShiftSum||0)+current.value;
+                  for(const source of e.sources||[]){
+                    const node=source.node;
+                    const key=node?(node.tagName?.toLowerCase()||'node')+(node.id?'#'+node.id:'')+(node.classList?.length?'.'+[...node.classList].slice(0,2).join('.'):''):'unknown';
+                    stats.shiftSources[key]=(stats.shiftSources[key]||0)+1;
+                  }
+                }
               }
             });
             observer.observe({type:'layout-shift',buffered:false});
             stats.observer=observer;
           }catch{}
         }
-        const mount=document.querySelector('.control-shell');
+        const mount=document.documentElement;
         if(mount){
-          stats.domObserver=new MutationObserver(batch=>{stats.mutations+=batch.length});
-          stats.domObserver.observe(mount,{attributes:true,childList:true,subtree:true});
+          stats.domObserver=new MutationObserver(batch=>{
+            stats.mutations+=batch.length;
+            for(const mutation of batch){
+              const node=mutation.target;
+              const key=(node.nodeName||'node').toLowerCase()+(node.id?'#'+node.id:'');
+              stats.mutationNodes[key]=(stats.mutationNodes[key]||0)+1;
+              const attribute=mutation.type==='attributes'?mutation.attributeName:mutation.type;
+              stats.mutationAttributes[attribute]=(stats.mutationAttributes[attribute]||0)+1;
+            }
+          });
+          stats.domObserver.observe(mount,{attributes:true,childList:true,subtree:true,characterData:true});
         }
         const tick=()=>stats.resizeEvents++;
         window.addEventListener('resize',tick,{passive:true});
@@ -115,7 +131,13 @@ try{
       entry.diagnostics=await page.evaluate(()=>{
         const s=window.__ekodiControlLayoutProbe||{};
         s.observer?.disconnect();s.domObserver?.disconnect();
-        return{layoutShifts:s.layoutShifts||[],mutations:s.mutations||0,
+        return{
+          layoutShifts:s.layoutShifts||[],layoutShiftCount:s.layoutShiftCount||0,
+          layoutShiftSum:s.layoutShiftSum||0,shiftSources:s.shiftSources||{},
+          mutations:s.mutations||0,mutationNodes:s.mutationNodes||{},
+          mutationAttributes:s.mutationAttributes||{},
+          htmlAttributes:[...document.documentElement.attributes].map(x=>x.name+'='+x.value.slice(0,80)),
+          scriptSources:[...document.scripts].map(x=>x.src||'[inline]').slice(0,24),
           resizeEvents:s.resizeEvents||0,scrollEvents:s.scrollEvents||0,
           visibilityChanges:s.visibilityChanges||0};
       });
@@ -145,8 +167,7 @@ try{
       );
       const idleScroll=entry.idleSummary.scrollY>1||entry.idleSummary.scrollX>1;
       const idleViewport=entry.idleSummary.innerHeight>1||entry.idleSummary.visualViewportHeight>1;
-      const idleShifts=entry.diagnostics.layoutShifts.filter(x=>x.when<=entry.idle.samples.at(-1).t)
-        .reduce((sum,x)=>sum+x.value,0);
+      const idleShifts=entry.diagnostics.layoutShiftSum;
       entry.verdict={idleDrift,idleScroll,idleViewport,layoutShiftScore:compact(idleShifts)};
       entry.ok=!idleDrift&&!idleScroll&&!idleViewport&&!entry.errors.length;
       if(!entry.ok)errors++;
