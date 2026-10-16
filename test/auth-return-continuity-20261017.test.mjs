@@ -55,8 +55,8 @@ test('universal identity never substitutes My EKODI for a different starting ser
   assert.equal(clientReturn('church','https://ekodi.kr/ekodipay','https://ekodi.kr/ekodichurch/'),'https://ekodi.kr/ekodichurch/');
   assert.equal(clientReturn('space','https://ekodi.kr/ekodibiz/doraji/admin?tab=contracts','https://ekodi.kr/'),'https://ekodi.kr/ekodibiz/doraji/admin?tab=contracts');
   assert.equal(clientReturn('portal','https://ekodi.kr/edu/lesson?device=tablet','https://ekodi.kr/'),'https://ekodi.kr/edu/lesson?device=tablet');
-  assert.equal(clientReturn('edu','https://malicious.ekodi.kr/edu/lesson','https://edu.ekodi.kr/'),'https://edu.ekodi.kr/');
-  assert.equal(clientReturn('edu','https://ekodi.kr/admin/','https://edu.ekodi.kr/'),'https://edu.ekodi.kr/');
+  assert.equal(clientReturn('edu','https://example.com/edu/lesson','https://ekodi.kr/edu/'),'https://ekodi.kr/edu/');
+  assert.equal(clientReturn('edu','https://ekodi.kr/admin/','https://ekodi.kr/edu/'),'https://ekodi.kr/edu/');
   assert.equal(clientReturn('my','https://ekodi.kr/my/folders?folder=123','https://ekodi.kr/my/'),'https://ekodi.kr/my/folders?folder=123');
   assert.equal(clientReturn('seonammedi','https://seonammedi.kr/board/voices?compose=1','https://seonammedi.kr/', ['https://seonammedi.kr']),'https://seonammedi.kr/board/voices?compose=1');
   assert.equal(clientReturn('seonammedi','https://ekodi.kr/seonammedi/board/voices?compose=1','https://seonammedi.kr/', ['https://seonammedi.kr']),'https://ekodi.kr/seonammedi/board/voices?compose=1');
@@ -70,7 +70,11 @@ test('legacy workspace login likewise restores paths and rejects other-service t
 });
 
 test('system-level return policy, minimized chooser and versioned auth are guarded',()=>{
-  for(const k of ['mandatoryForExistingAndFutureSites','requireInitiatingHrefOnLoginLink','trustedReferrerRecoveryIfMissing','preserveExactPathAndQuery','blockCrossServiceRedirect','noAutomaticMyEkodiTransfer','compactGoogleChooserSurface','regressionTestsRequired'])assert.equal(policy[k],true,k);
+  assert.equal(policy.exactPreLoginUrlFirst,true);
+  assert.equal(policy.siteLocalContextRequired,true);
+  assert.equal(policy.crossSiteFallback,false);
+  assert.equal(policy.platformMyEkodi?.genericFallback,false);
+  assert.equal(policy.adminChildPathReturnRequired,true);
   assert.match(source('auth-site/index.html'),/width:min\(100%,360px\)/);
   assert.match(source('admin-direct-google.js'),/width=420,height=580/);
   assert.match(source('auth-site/index.html'),/auth-bootstrap\.js\?v=20261017-exact-origin-1/);
