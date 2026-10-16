@@ -3,7 +3,7 @@ import { mountPresenceOperator } from '/ekodimission/assets/presence-operator.js
 const URL='https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const API=URL+'/functions/v1/presence-attendance-api';
-const LOGIN='https://ekodi.kr/auth/?site=mission&direct=1&return_to='+encodeURIComponent(location.origin+location.pathname);
+const LOGIN='https://ekodi.kr/auth/?site=mission&direct=1&return_to='+encodeURIComponent(location.href.split('#')[0]);
 const $=s=>document.querySelector(s);
 $('#login').href=LOGIN;
 
