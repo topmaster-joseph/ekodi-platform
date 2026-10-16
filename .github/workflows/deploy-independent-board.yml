@@ -260,20 +260,35 @@ jobs:
             exit 0
           fi
           marker="EKODI-BOARD-CANARY-${GITHUB_RUN_ID}"
-          # The canary may fail after queuing a post but before discovering its id.
-          # Cleanup uses only this numeric-run, unique test marker and always runs on EXIT.
+          # Queue writes are asynchronous. Before deleting anything, persist the
+          # unique run marker as a cancellation tombstone. The Worker checks this
+          # tombstone atomically inside the INSERT that consumes late queue messages.
+          # This prevents a post/reply from reappearing after cleanup even if the
+          # Google-authenticated POST response was lost or the queue was delayed.
+          if [[ ! "$GITHUB_RUN_ID" =~ ^[0-9]+$ ]]; then
+            echo "::error::Invalid numeric release canary id" >&2
+            exit 1
+          fi
           cleanup_canary() {
-            status=$?
+            result=$?
             trap - EXIT
             if [[ "${canary_started:-false}" == "true" ]]; then
-              npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-independent-board --remote --config "$GITHUB_WORKSPACE/.wrangler.independent-board.runtime.toml" --command "DELETE FROM board_replies WHERE post_id IN (SELECT id FROM board_posts WHERE message='${marker}'); DELETE FROM board_posts WHERE message='${marker}';" || status=1
-              if ! curl -fsS https://seonammedi.kr/board/api/posts | jq -e --arg marker "$marker" '[.items[] | select(.message==$marker)] | length==0' >/dev/null; then
+              # Marker comes ONLY from validated GitHub numeric run id.
+              # The insert and delete target the isolated board's own tables.
+              # Preserve the post id for any reply still waiting in the queue.
+              sql="INSERT INTO board_canary_cleanup_tombstones(marker,post_id) VALUES('${marker}',(SELECT id FROM board_posts WHERE body='${marker}' ORDER BY id DESC LIMIT 1)) ON CONFLICT(marker) DO UPDATE SET post_id=COALESCE(excluded.post_id,board_canary_cleanup_tombstones.post_id); DELETE FROM board_replies WHERE post_id IN (SELECT id FROM board_posts WHERE body='${marker}'); DELETE FROM board_posts WHERE body='${marker}';"
+              if ! npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-independent-board --remote --config "$GITHUB_WORKSPACE/.wrangler.independent-board.runtime.toml" --command "$sql"; then
+                echo "::error::Durable canary tombstone or marker-scoped cleanup failed" >&2
+                result=1
+              fi
+              if ! curl -fsS https://seonammedi.kr/board/api/posts |
+                jq -e --arg marker "$marker" '[.items[] | select(.message==$marker)] | length==0' >/dev/null; then
                 echo "::error::Canary cleanup verification failed" >&2
-                status=1
+                result=1
               fi
             fi
             rm -f "$probe_body"
-            exit "$status"
+            exit "$result"
           }
           trap cleanup_canary EXIT
           canary_started=true
