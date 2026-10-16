@@ -84,11 +84,11 @@ const CANONICAL_MOUNTS=Object.freeze({
   biz:['/ekodibiz'],trade:['/ekodibiz/trade'],books:['/books'],
   lab:['/ekodilab'],media:['/media'],social:['/social'],
   energy:['/energy'],invest:['/invest'],cloud:['/cloud'],
-  cafe:['/cafe'],publishing:['/publishing']
+  cafe:['/cafe'],publishing:['/publishing'],'cgma-client':['/cgma/client']
 });
 function isOwnMount(target){
   if(target.origin!=='https://ekodi.kr')return true;
-  if(site==='portal'||site==='space')return !(/^\\/(auth|api)(?:\\/|$)/.test(target.pathname));
+  if(site==='portal'||site==='space')return !['/auth','/api'].some(root=>target.pathname===root||target.pathname.startsWith(root+'/'));
   if(site==='my')return target.pathname==='/my'||target.pathname.startsWith('/my/');
   const mounts=CANONICAL_MOUNTS[site]||['/'+site];
   return mounts.some(root=>target.pathname===root||target.pathname.startsWith(root+'/'));
@@ -104,7 +104,7 @@ function safeReturn(raw){
     const seonammediCanonical=config.kind==='seonammedi'&&target.origin==='https://ekodi.kr'&&(target.pathname==='/seonammedi'||target.pathname.startsWith('/seonammedi/'));
     // A site-specific login may return only to that site's registered host or canonical mount.
     // Never silently accept /my or another EKODI workspace as a SeonamMedi return target.
-    const internalEkodi=config.kind==='seonammedi'?seonammediCanonical:(config.kind==='cgma-client'?cgmaPlatform:(hostname==='ekodi.kr'||hostname.endsWith('.ekodi.kr')));
+    const internalEkodi=config.kind==='seonammedi'?seonammediCanonical:(config.kind==='cgma-client'?cgmaPlatform:target.origin==='https://ekodi.kr');
     const missionPath=config.kind!=='mission'||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')));
     const churchPath=config.kind!=='church'||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodichurch'||target.pathname.startsWith('/ekodichurch/')));
     if(target.protocol!=='https:'||target.username||target.password||(!allowedOrigins.has(target.origin)&&!internalEkodi)||!missionPath||!churchPath||!isOwnMount(target))return fallback.href;
