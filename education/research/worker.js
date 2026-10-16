@@ -1,4 +1,4 @@
-import { injectEkodiShell } from './ekodi-shell-injector.js';
+import { injectEkodiShell } from '../../ekodi-shell-injector.js';
 import { assessResearch, cleanResearchInput } from './planner.js';
 
 const HEADERS = Object.freeze({
