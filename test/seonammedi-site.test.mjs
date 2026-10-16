@@ -774,7 +774,7 @@ test('seonammedi citizen opinions hand off to the standalone board-owned UI',asy
     readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8'),
     readFile(new URL('../wrangler.independent-board.toml',import.meta.url),'utf8')
   ]);
-  assert.match(html,/href="board\/voices"[^>]*>시민의견<\/a>/);
+  assert.match(html,/href="board\/voices\?compose=1"[^>]*>시민의견<\/a>/);
   assert.doesNotMatch(html,/id="voices"|id="publicVoiceList"|id="voiceComposeToggle"/);
   assert.match(worker,/function boardPage\(req\)/);
   assert.match(worker,/env\.BOARD_DB/);
@@ -797,7 +797,7 @@ test('seonammedi voices finance and notices use sibling standalone board routes'
     readFile(new URL('index.html',root),'utf8'),
     readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8')
   ]);
-  assert.match(html,/href="board\/voices"[^>]*>시민의견<\/a>/);
+  assert.match(html,/href="board\/voices\?compose=1"[^>]*>시민의견<\/a>/);
   assert.doesNotMatch(html,/href="board\/finance"[^>]*>회계<\/a>/);
   assert.match(html,/href="board\/notices"[^>]*>공지<\/a>/);
   assert.match(worker,/boardPath\(req,'voices'\)/);
