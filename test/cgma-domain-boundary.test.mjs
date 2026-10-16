@@ -36,9 +36,13 @@ test('Shared Site candidate smoke excludes the independently routed CGMA public 
 
 test('CGMA edge workflow pins board delegation source and verifies independent board', async () => {
   const cgmaWorkflow=await readFile(new URL('../.github/workflows/deploy-cgma-apex-edge.yml',import.meta.url),'utf8');
-  assert.match(cgmaWorkflow, /CGMA_SOURCE_REF: 'a0171e0d4a77d702ca7c3ad3904d760a791a51db'/);
+  assert.match(cgmaWorkflow, /CGMA_SOURCE_REF: 'cf628097606d06325f425ea04fbf8b5ae0b1448f'/);
   assert.match(cgmaWorkflow, /grep -Fq 'isBoardPath' cgma-root-gateway\.js/);
   assert.match(cgmaWorkflow, /grep -Fq 'delegatedBoardResponse' cgma-root-gateway\.js/);
+  assert.match(cgmaWorkflow, /grep -Fq 'isAiEducationPath' cgma-root-gateway\.js/);
+  assert.match(cgmaWorkflow, /grep -Fq 'delegatedAiEducationResponse' cgma-root-gateway\.js/);
+  assert.match(cgmaWorkflow, /check_cgma '\/cgma\/ai-education\/' '우리 가게에 필요한 AI 교육을 찾아보세요' 'cgma-ai-education-survey'/);
+  assert.match(cgmaWorkflow, /check_cgma '\/cgma\/ai-education\/app\.js' 'const questions = \[' 'cgma-ai-education-survey'/);
   assert.match(cgmaWorkflow, /grep -Fq 'x-ekodi-cgma-board-diagnostic' cgma-root-gateway\.js/);
   assert.match(cgmaWorkflow,/binding = "EKODI_BOARD"/);
   assert.match(cgmaWorkflow,/service = "ekodi-cgma-board-internal"/);

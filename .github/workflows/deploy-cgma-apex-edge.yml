@@ -30,7 +30,7 @@ concurrency:
 env:
   WRANGLER_VERSION: '4.119.0'
   CGMA_SOURCE_REPO: topmaster-joseph/cheonggye-market
-  CGMA_SOURCE_REF: 'a0171e0d4a77d702ca7c3ad3904d760a791a51db'
+  CGMA_SOURCE_REF: 'cf628097606d06325f425ea04fbf8b5ae0b1448f'
   EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
   EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
 
@@ -70,6 +70,8 @@ jobs:
           grep -Fq 'delegatedOwnerAdminResponse' cgma-root-gateway.js
           grep -Fq 'isLivePath' cgma-root-gateway.js
           grep -Fq 'delegatedLiveResponse' cgma-root-gateway.js
+          grep -Fq 'isAiEducationPath' cgma-root-gateway.js
+          grep -Fq 'delegatedAiEducationResponse' cgma-root-gateway.js
           grep -Fq 'isBoardPath' cgma-root-gateway.js
           grep -Fq 'delegatedBoardResponse' cgma-root-gateway.js
           # Keep the safely bounded upstream identity/status diagnostic in release builds.
@@ -262,6 +264,8 @@ jobs:
           check_cgma '/cgma' '청계면상인회 | 오늘도 청계에서 만나요' 'cgma-root-gateway'
           check_cgma '/cgma/admin' 'data-admin-tab="today"' 'cgma-root-gateway'
           check_cgma '/cgma/api/resources' '"items"' 'cgma-root-gateway'
+          check_cgma '/cgma/ai-education/' '우리 가게에 필요한 AI 교육을 찾아보세요' 'cgma-ai-education-survey'
+          check_cgma '/cgma/ai-education/app.js' 'const questions = [' 'cgma-ai-education-survey'
           check_cgma '/cgma/admin/member' 'EKODI Workspace Admin' 'workspace-admin'
           check_cgma '/cgma/admin/publishing' 'EKODI Workspace Admin' 'workspace-admin'
           check_board '/cgma/board'
