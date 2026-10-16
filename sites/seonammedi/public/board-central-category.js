@@ -178,3 +178,14 @@
     })
     .catch(()=>recent.replaceChildren(el('li','','전체 공지에서 최신 소식을 확인해 주세요.')));
 })();
+
+/* Only a clicked top-level Voices entry starts the login-first composer. */
+(() => {
+  const voiceLink=[...document.querySelectorAll('.site-header nav a')]
+    .find(a=>a.textContent.trim()==='시민의견');
+  if(!voiceLink||!location.href)return;
+  const target=new URL(voiceLink.href,location.href);
+  if(target.origin!==location.origin||!/\/board\/voices\/?$/.test(target.pathname))return;
+  target.searchParams.set('compose','1');
+  voiceLink.href=target.href;
+})();
