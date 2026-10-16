@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { normalizeTask } from './ekodi-background-browser-worker.mjs';
 import { COOPERATIVES } from '../cooperative-registry.js';
-import { COOPERATIVE_HERO_IMAGES } from '../cooperative-media.js';
+import { COOPERATIVE_HERO_IMAGES, COOPERATIVE_BUSINESS_IMAGES } from '../cooperative-media.js';
 
 const require=createRequire(import.meta.url);
 const {chromium}=require('playwright');
@@ -26,12 +26,22 @@ try{
     page.on('console',message=>{if(message.type()==='error'&&consoleErrors.length<30)consoleErrors.push(message.text().slice(0,600));});
     page.on('response',response=>{if(response.status()>=400&&resourceFailures.length<30){const url=new URL(response.url());resourceFailures.push({url:url.origin+url.pathname,status:response.status()});}});
     for(const coop of COOPERATIVES){
-      const root='https://ekodi.kr/'+coop.slug;
+      const root='https://ekodi.kr/'+coop.publicSlug;
       const canonical=await context.request.get(root,{maxRedirects:0});
       assert.equal(canonical.status(),308);assert.equal(canonical.headers().location,root+'/');
       const data=await context.request.get(root+'/api/public');
       assert.equal(data.status(),200);const body=await data.json();
       assert.equal(body.source,'server');assert.equal(body.workspaceId,coop.workspaceId);assert.equal(body.name,coop.name);
+      const oldData=await context.request.get('https://ekodi.kr/'+coop.slug+'/api/public');
+      assert.equal(oldData.status(),200);assert.equal((await oldData.json()).workspaceId,coop.workspaceId);
+      for(const suffix of ['/','/members','/admin'])for(const method of ['GET','HEAD']){
+        const oldUrl='https://ekodi.kr/'+coop.slug+suffix+'?from=legacy';
+        const redirect=await context.request.fetch(oldUrl,{method,maxRedirects:0});
+        assert.equal(redirect.status(),308);assert.equal(redirect.headers().location,root+suffix+'?from=legacy');
+        checks.push({url:oldUrl,surface:'legacy-canonical-redirect',width,method,passed:true});
+      }
+      await page.goto('https://ekodi.kr/'+coop.slug+'/?from=legacy#business',{waitUntil:'networkidle',timeout:45000});
+      assert.equal(page.url(),root+'/?from=legacy#business');
       for(const surface of ['public','members','admin']){
         const url=root+(surface==='public'?'/':'/'+surface);
         activeUrl=url;
@@ -45,11 +55,26 @@ try{
           assert.equal(new URL(image.url).origin,'https://ekodi.kr');
           assert.ok([expected.small,expected.large].includes(new URL(image.url).pathname));
           assert.ok((await page.locator('figcaption').innerText()).includes('AI 생성 이미지'));
+          assert.equal(await page.locator('.business-photo').count(),3);
+          for(let index=0;index<COOPERATIVE_BUSINESS_IMAGES.length;index++){
+            const photo=page.locator('.business-photo').nth(index);await photo.scrollIntoViewIfNeeded();
+            const decoded=await photo.evaluate(async img=>{await img.decode();return {url:img.currentSrc,width:img.naturalWidth};});
+            const business=COOPERATIVE_BUSINESS_IMAGES[index];
+            assert.ok(decoded.width>0);assert.equal(new URL(decoded.url).origin,'https://ekodi.kr');
+            assert.ok([business.small,business.large].includes(new URL(decoded.url).pathname));
+          }
+          assert.ok((await page.locator('.business-photo-caption').innerText()).includes('정관 초안'));
+          await page.evaluate(()=>scrollTo(0,0));
           checks.push({url:image.url,surface:'homepage-photo-decoded',width,image,passed:true});
         }else{
           await page.waitForSelector('#gate:not([hidden])');assert.equal(await page.locator('#workspace').isVisible(),false);
           const login=new URL(await page.locator('#loginLink').getAttribute('href'));
           assert.equal(login.origin,'https://ekodi.kr');assert.equal(login.pathname,'/auth/');assert.equal(login.searchParams.get('return_to'),url);
+          await page.goto('https://ekodi.kr/'+coop.slug+'/'+surface+'?from=legacy',{waitUntil:'networkidle',timeout:45000});
+          await page.waitForSelector('#gate:not([hidden])');
+          assert.equal(page.url(),url+'?from=legacy');
+          const continued=new URL(await page.locator('#loginLink').getAttribute('href'));
+          assert.equal(continued.searchParams.get('return_to'),url+'?from=legacy');
         }
         assert.ok((await page.locator('.brand').innerText()).includes(coop.name));
         assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);

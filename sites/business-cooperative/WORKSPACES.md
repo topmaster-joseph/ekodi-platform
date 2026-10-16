@@ -6,8 +6,8 @@ workspace IDs, server records and tenant access grants.
 
 | Cooperative | Public homepage | Member portal | Local administration |
 | --- | --- | --- | --- |
-| 희년세상협동조합 | `/jubilee-distribution/` | `/jubilee-distribution/members` | `/jubilee-distribution/admin` |
-| 열린유통협동조합 | `/open-distribution/` | `/open-distribution/members` | `/open-distribution/admin` |
+| 희년세상협동조합 | `/jubilee/` | `/jubilee/members` | `/jubilee/admin` |
+| 열린유통협동조합 | `/open/` | `/open/members` | `/open/admin` |
 
 The Jubilee display and draft charter names are both `희년세상협동조합`, as most recently requested. Both workspaces are formation
 projects, not evidence of legal incorporation, elected officers, business
@@ -55,3 +55,27 @@ profiles. Real Google login, roster account linking and account-role operations
 require separately verified production evidence.
 
 The local operations overview `/api/cooperatives/overview` lists only workspaces with active `tenant.site.manage` grants. The explicit platform overview `/admin/workspaces/cooperatives` uses `/api/control/cooperatives/overview` and verifies a platform session. No browser draft is automatically imported or used as authorization.
+
+## Short public locators and charter imagery
+
+`/jubilee/` and `/open/` are public locators only. The legacy tenant keys
+`jubilee-distribution` / `open-distribution`, immutable workspace UUIDs,
+customer grant IDs, project snapshots, revisions, publication IDs and browser
+auth storage keys are unchanged. Existing human GET/HEAD links use a same-host
+308 and preserve functional queries and browser fragments; legacy APIs/assets
+continue without redirecting writes. Explicit platform administration remains
+under `/admin/workspaces/cooperatives/{legacy-slug}`.
+
+Before accepting a short locator, the shared runtime checks all D1 tenant
+states and publication domains, platform-reserved roots and SPACE's existing
+`store_user_site_public_profile` RPC (including paused aliases). An error or
+occupant blocks serving/promotion; only successful literal null means a free
+SPACE alias. This is collision detection, not a new tenant or grant registry.
+
+Both charter drafts cover agriculture/fisheries processing and distribution,
+mail-order sales, joint purchasing/sales/brand, packing/delivery support,
+education/information and inter-cooperative/community cooperation. Three
+responsive photographic business cards illustrate those clauses alongside
+the existing distinct hero photos. Captions and alt text identify all images
+as AI-generated; they do not claim actual facilities, members or completed
+operations. No charter provisions are amended by this visual update.

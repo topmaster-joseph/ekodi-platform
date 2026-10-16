@@ -35,13 +35,10 @@ let browser;
 function required(ok,reason){if(!ok)throw Error(reason);}
 async function inspect(page,where){
   await page.locator('body.seonam-visual-ready main.seonam-visual-layout').waitFor({state:'attached',timeout:4000});
-  await page.waitForFunction(()=>{
-    const img=document.querySelector('.seonam-visual-hero img.seonam-visual-photo');
-    return img?.complete===true;
-  },null,{timeout:18000});
+  if(where.endsWith('-home'))await page.locator('body > .campaign-hero .campaign-hero-image').waitFor({state:'visible',timeout:18000});
   const state=await page.evaluate(()=>{
-    const hero=document.querySelector('body > .seonam-visual-hero');
-    const img=hero?.querySelector('img.seonam-visual-photo');
+    const sharedHero=document.querySelector('body > .seonam-visual-hero');
+    const img=document.querySelector('body > .campaign-hero .campaign-hero-image');
     const nav=document.querySelector('.seonam-visual-side-nav');
     const main=document.querySelector('main.seonam-visual-layout');
     const left=document.querySelector('.seonam-visual-left');
@@ -49,12 +46,11 @@ async function inspect(page,where){
     const right=document.querySelector('.seonam-visual-right');
     const header=document.querySelector('body > header.site-header');
     return {
-      heroExists:!!hero,
-      photoSrc:img?.currentSrc||'',
-      photoNaturalWidth:img?.naturalWidth||0,
-      photoNaturalHeight:img?.naturalHeight||0,
-      photoVisible:Boolean(img?.getBoundingClientRect().height&&getComputedStyle(img).display!=='none'),
-      caption:hero?.querySelector('.seonam-visual-photo-credit')?.textContent||'',
+      sharedPhotoPresent:!!sharedHero,
+      campaignSrc:img?.currentSrc||'',
+      campaignNaturalWidth:img?.naturalWidth||0,
+      campaignNaturalHeight:img?.naturalHeight||0,
+      campaignVisible:Boolean(img?.getBoundingClientRect().height&&getComputedStyle(img).display!=='none'),
       sideLabels:[...nav?.querySelectorAll('a[data-seonam-visual-key]')||[]].map(a=>a.textContent.trim()),
       active:[...nav?.querySelectorAll('[aria-current="page"]')||[]].map(a=>a.dataset.seonamVisualKey),
       headerSticky:getComputedStyle(header).position==='sticky',
@@ -64,19 +60,21 @@ async function inspect(page,where){
       rightWidth:right?.getBoundingClientRect().width||0,
       width:document.documentElement.clientWidth,
       scrollWidth:document.documentElement.scrollWidth,
-      noticeWidget:!!right?.querySelector('.seonam-visual-recent-notices'),
+      calendarWidget:!!right?.querySelector('.seonam-calendar-grid'),
       publicLinks:[...document.querySelectorAll('.site-header .ekodi-six-nav a')].map(a=>a.textContent.trim())
     };
   });
-  required(state.heroExists,'photo_hero_missing_'+where);
-  required(state.photoSrc.startsWith('https://images.unsplash.com/'),'photo_source_missing_'+where);
-  required(state.photoNaturalWidth>0&&state.photoNaturalHeight>0,'photo_not_rendered_'+where);
-  required(state.photoVisible,'photo_not_visible_'+where);
-  required(state.caption.includes('설립 예정 시설 아님'),'photo_reference_disclosure_missing_'+where);
+  required(!state.sharedPhotoPresent,'unexpected_shared_photo_'+where);
+  const isHome=where.endsWith('-home');
+  required(state.campaignVisible===isHome,'home_only_campaign_visibility_mismatch_'+where);
+  if(isHome){
+    required(state.campaignSrc.includes('campaign-reconsideration-20261013.png'),'incorrect_home_campaign_source_'+where);
+    required(state.campaignNaturalWidth===1903&&state.campaignNaturalHeight===735,'home_campaign_dimensions_mismatch_'+where);
+  }
   required(JSON.stringify(state.sideLabels)===JSON.stringify(labels),'six_side_menu_labels_mismatch_'+where);
   required(state.headerSticky,'site_header_not_sticky_'+where);
   required(state.leftWidth>0&&state.centerWidth>0&&state.rightWidth>0,'layout_region_missing_'+where);
-  required(state.noticeWidget,'live_notice_panel_missing_'+where);
+  required(state.calendarWidget,'live_schedule_calendar_missing_'+where);
   required(state.scrollWidth<=state.width+1,'horizontal_overflow_'+where);
   return state;
 }
@@ -131,7 +129,7 @@ try{
         entry.status=response?.status()??null;
         required(response?.ok(),'page_http_'+entry.status);
         const state=await inspect(page,profile.name+'-'+item.key);
-        entry.photoNaturalWidth=state.photoNaturalWidth;
+        entry.campaignNaturalWidth=state.campaignNaturalWidth;
         entry.layoutDisplay=state.layoutDisplay;
         entry.active=state.active;
         entry.scrollWidth=state.scrollWidth;

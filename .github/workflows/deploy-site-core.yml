@@ -27,6 +27,9 @@ on:
       - '.github/workflows/deploy-site-core.yml'
       - 'scripts/converge-orchestrated-pr-merge.mjs'
       - 'site-worker.js'
+      - 'control.html'
+      - 'control.css'
+      - 'control.js'
       - 'cooperative-*.js'
       - 'sites/business-cooperative/**'
       - 'migrations/0133_cooperative_distribution_workspaces.sql'
@@ -1212,7 +1215,7 @@ jobs:
     needs: deploy
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
-      surface_paths: /,/my/,/admin/,/ekodimall/admin
+      surface_paths: /,/my/,/admin/,/ekodimall/admin,/control
       surface_registry: config/board-surface-verification.json
       device_profile: desktop
 
@@ -1221,7 +1224,7 @@ jobs:
     needs: deploy
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
-      surface_paths: /,/my/,/admin/,/ekodimall/admin
+      surface_paths: /,/my/,/admin/,/ekodimall/admin,/control
       surface_registry: config/board-surface-verification.json
       device_profile: mobile-portrait
 

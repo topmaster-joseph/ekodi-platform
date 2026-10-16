@@ -774,7 +774,7 @@ test('seonammedi citizen opinions hand off to the standalone board-owned UI',asy
     readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8'),
     readFile(new URL('../wrangler.independent-board.toml',import.meta.url),'utf8')
   ]);
-  assert.match(html,/href="board\/voices"[^>]*>시민의견<\/a>/);
+  assert.match(html,/href="board\/voices\?compose=1&choose_account=1"[^>]*>시민의견<\/a>/);
   assert.doesNotMatch(html,/id="voices"|id="publicVoiceList"|id="voiceComposeToggle"/);
   assert.match(worker,/function boardPage\(req\)/);
   assert.match(worker,/env\.BOARD_DB/);
@@ -783,7 +783,7 @@ test('seonammedi citizen opinions hand off to the standalone board-owned UI',asy
   assert.match(worker,/\/api\/admin\/posts/);
   assert.doesNotMatch(worker,/adminLogin\.hidden=false;await load\(\)/);
   assert.match(worker,/if\(q\|\|!voiceVerified\)/);
-  assert.match(worker,/manageToggle\.hidden=false/);
+  assert.match(worker,/adminItems=data\.items\|\|\[\];render\(adminItems,true\)/);
   const authEntry=await readFile(new URL('../auth-site/auth-entry.js',import.meta.url),'utf8');
   assert.match(authEntry,/purpose'\) === 'seonammedi-board-admin'/);
   assert.match(config,/database_name = "ekodi-independent-board"/);
@@ -797,7 +797,7 @@ test('seonammedi voices finance and notices use sibling standalone board routes'
     readFile(new URL('index.html',root),'utf8'),
     readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8')
   ]);
-  assert.match(html,/href="board\/voices"[^>]*>시민의견<\/a>/);
+  assert.match(html,/href="board\/voices\?compose=1&choose_account=1"[^>]*>시민의견<\/a>/);
   assert.doesNotMatch(html,/href="board\/finance"[^>]*>회계<\/a>/);
   assert.match(html,/href="board\/notices"[^>]*>공지<\/a>/);
   assert.match(worker,/boardPath\(req,'voices'\)/);
@@ -951,7 +951,8 @@ test('seonammedi static surfaces declare route parity contract and preserve moun
   for(const source of [html,adminHtml]){
     assert.match(source,/name="ekodi-route-contract" content="CANONICAL-PATH-MOUNT-PARITY-001 CANONICAL-ROUTE-SLASH-PARITY-001"/);
   }
-  for(const route of ['voices','notices'])assert.match(html,new RegExp('href="board/'+route+'"'));
+  assert.match(html,/href="board\/voices\?compose=1&choose_account=1"/);
+  assert.match(html,/href="board\/notices"/);
   assert.doesNotMatch(html,/href="board\/finance"/);
   assert.match(html,/href="admin\/">관리<\/a>/);
   for(const route of ['voices','notices'])assert.match(adminHtml,new RegExp('href="\.\.\/board/'+route+'"'));
@@ -968,13 +969,13 @@ test('seonammedi auth bridge falls back to the registered Supabase public endpoi
   globalThis.fetch=async (url,options={})=>{
     called=String(url);
     assert.equal(options.method,'POST');
-    return new Response(JSON.stringify({access_token:'session-token',refresh_token:'refresh-token',expires_at:9999999999,user:{id:'u1',email:'admin@example.com'}}),{status:200,headers:{'content-type':'application/json'}});
+    return new Response(JSON.stringify({access_token:'fixture-session-value',refresh_token:'fixture-refresh-value',expires_at:9999999999,user:{id:'u1',email:'admin@example.com'}}),{status:200,headers:{'content-type':'application/json'}});
   };
   try{
-    const response=await mod.handleSeonamMediAdminApi(new Request('https://seonammedi.kr/api/seonammedi/admin/auth/exchange',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token_hash:'handoff-token',type:'email'})}),{});
+    const response=await mod.handleSeonamMediAdminApi(new Request('https://seonammedi.kr/api/seonammedi/admin/auth/exchange',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token_hash:'fixture-handoff-value',type:'email'})}),{});
     assert.equal(response.status,200);
     const data=await response.json();
-    assert.equal(data.access_token,'session-token');
+    assert.equal(data.access_token,'fixture-session-value');
     assert.match(called,/^https:\/\/renzehysxirjilvdxacv\.supabase\.co\/auth\/v1\/verify$/);
   }finally{globalThis.fetch=original}
 });

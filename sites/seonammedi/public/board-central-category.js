@@ -34,7 +34,7 @@
   });
 })();
 
-// Shared photographic presentation for the public home and independent boards.
+// Shared, image-free navigation layout for the public home and independent boards.
 // This does not change authorization, persistence, existing menus or form handlers.
 (() => {
   if (document.documentElement.dataset.seonamVisualInitialized === '1') return;
@@ -49,7 +49,7 @@
     {key:'committee',label:'활동이력',href:base+'#committee-activity'},
     {key:'timeline',label:'관련소식',href:base+'#timeline'},
     {key:'channels',label:'소통채널',href:base+'#channels'},
-    {key:'voices',label:'시민의견',href:base+'board/voices'},
+    {key:'voices',label:'시민의견',href:base+'board/voices?compose=1&choose_account=1'},
     {key:'organization',label:'조직',href:base+'#organization'}
   ];
   const el = (tag, className, value) => {
@@ -64,28 +64,8 @@
     return node;
   };
 
-  const hero = el('section','seonam-visual-hero');
-  hero.setAttribute('aria-label','소통센터 공통 사진 안내');
-  const photograph = el('img','seonam-visual-photo');
-  photograph.src='https://images.unsplash.com/photo-1764885449332-7eb941d53b7e?auto=format&fit=crop&w=1800&q=80';
-  photograph.alt='나무와 현대 의료시설이 보이는 실제 사진. 서남권 국립의대 설립 예정지 또는 완공 시설의 사진은 아닙니다.';
-  photograph.decoding='async';
-  photograph.loading='eager';
-  photograph.addEventListener('error', () => hero.classList.add('seonam-visual-photo-unavailable'));
-  const overlay = el('div','seonam-visual-hero-copy');
-  overlay.append(
-    el('span','seonam-visual-overline','SEONAM NATIONAL MEDICAL SCHOOL'),
-    el('h1','', '서남권에 국립의대를, 지역의 미래를 함께 만듭니다.'),
-    el('p','', '시민과 전문가가 함께 기록하고 소통하는 열린 공간입니다.')
-  );
-  const credit=el('small','seonam-visual-photo-credit');
-  credit.append('사진: LEDC / Unsplash · 실제 의료시설 참고 사진 (설립 예정 시설 아님) ');
-  const creditLink=link('출처 보기','https://unsplash.com/photos/modern-hospital-building-with-trees-in-foreground-aYvI1HC7wM0');
-  creditLink.target='_blank';
-  creditLink.rel='noopener noreferrer';
-  credit.append(creditLink);
-  hero.append(photograph,overlay,credit);
-  header.insertAdjacentElement('afterend',hero);
+  // The original campaign poster is the only main image, on the home route.
+  // Inner routes remain content-first; do not inject a shared stock photo.
 
   const left=el('aside','seonam-visual-left');
   left.setAttribute('aria-label','사이트 바로가기');
@@ -101,29 +81,28 @@
   campaign.append(
     el('strong','','함께 만들어가는 건강한 미래'),
     el('p','','국립의대 설립과 지역 의료의 미래를 위한 소식과 의견을 모읍니다.'),
-    link('시민의견 바로가기 →',base+'board/voices')
+    link('시민의견 바로가기 →',base+'board/voices?compose=1&choose_account=1')
   );
   left.append(campaign);
 
   const right=el('aside','seonam-visual-right');
-  right.setAttribute('aria-label','공지와 관련 바로가기');
+  right.setAttribute('aria-label','주요일정 및 날짜별 일정');
   const newsBox=el('section','seonam-visual-info-card');
-  newsBox.append(el('h2','','최근 공지'));
-  const recent=el('ul','seonam-visual-recent-notices');
-  recent.append(el('li','','공지를 불러오는 중입니다.'));
-  newsBox.append(recent,link('전체 공지 보기 →',base+'board/notices'));
+  newsBox.append(el('h2','','주요일정'),el('p','seonam-calendar-status','일정을 불러오는 중입니다.'));
   const quick=el('section','seonam-visual-info-card');
-  quick.append(el('h2','','관련 바로가기'));
-  const quickNav=el('nav','seonam-visual-quick');
-  quickNav.setAttribute('aria-label','관련 바로가기');
-  quickNav.append(
-    link('공지사항',base+'board/notices'),
-    link('활동이력',base+'#committee-activity'),
-    link('관련소식',base+'#timeline'),
-    link('시민의견 등록',base+'board/voices')
-  );
-  quick.append(quickNav);
+  quick.append(el('h2','','선택 날짜 일정'));
   right.append(newsBox,quick);
+  const calendarStyle=el('link');
+  calendarStyle.rel='stylesheet';
+  calendarStyle.href='/seonammedi/calendar-sidebar.css?v=20261017-live-2';
+  document.head.append(calendarStyle);
+  const calendarScript=el('script');
+  calendarScript.src='/seonammedi/calendar-sidebar.js?v=20261017-live-2';
+  calendarScript.addEventListener('load',()=>window.SeonamMediCalendar?.mount({newsBox,quick}));
+  calendarScript.addEventListener('error',()=>{
+    newsBox.querySelector('.seonam-calendar-status').textContent='일정표를 불러오지 못했습니다. 새로고침해 주세요.';
+  });
+  document.head.append(calendarScript);
 
   const content=el('div','seonam-visual-content');
   while(main.firstChild) content.append(main.firstChild);
@@ -137,7 +116,7 @@
   // presentation contract. Keep it below the overview rather than shrink
   // it into the center column or change its source bytes.
   const preservedCampaign=content.querySelector(':scope > .campaign-hero');
-  if(preservedCampaign)main.insertAdjacentElement('afterend',preservedCampaign);
+  if(preservedCampaign)header.insertAdjacentElement('afterend',preservedCampaign);
   document.body.classList.add('seonam-visual-ready');
 
   function active(){
@@ -161,20 +140,4 @@
   window.addEventListener('hashchange',updateActive);
   window.addEventListener('popstate',updateActive);
 
-  // Read-only public API: never replace actual posts with design-sample records.
-  fetch(base+'board/api/notices',{method:'GET',cache:'no-store'})
-    .then(r=>{if(!r.ok)throw new Error('notice-api');return r.json();})
-    .then(data=>{
-      recent.replaceChildren();
-      const items=Array.isArray(data.items)?data.items.slice(0,5):[];
-      if(!items.length){recent.append(el('li','','등록된 공지가 없습니다.'));return;}
-      for(const item of items){
-        if(!item || !item.title || !Number.isSafeInteger(Number(item.id))) continue;
-        const li=el('li');
-        li.append(link(String(item.title),base+'board/notices?id='+encodeURIComponent(item.id)));
-        recent.append(li);
-      }
-      if(!recent.children.length)recent.append(el('li','','등록된 공지가 없습니다.'));
-    })
-    .catch(()=>recent.replaceChildren(el('li','','전체 공지에서 최신 소식을 확인해 주세요.')));
 })();
