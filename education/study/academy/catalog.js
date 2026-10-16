@@ -42,6 +42,13 @@ export const CONSULTING=Object.freeze([
 const safe=(v,max=180)=>String(v??'').replace(/[\u0000-\u001f\u007f]/g,' ').trim().slice(0,max);
 const number=(v,min,max,fallback)=>{const n=Number(v);return Number.isFinite(n)?Math.max(min,Math.min(max,Math.round(n))):fallback;};
 export function audienceFor(id){return AUDIENCES.find(a=>a.id===id)||AUDIENCES[0];}
+// Choose the correct Korean object particle for the final syllable of each audience.
+export function suggestedCourseTitle(id){
+ const name=audienceFor(id).name;
+ const last=name.codePointAt(name.length-1);
+ const hasBatchim=last>=0xAC00&&last<=0xD7A3&&(last-0xAC00)%28!==0;
+ return name+(hasBatchim?'을':'를')+' 위한 AI 실습교육';
+}
 export function buildPlan(input={}){
  const audience=audienceFor(input.audience),sessions=number(input.sessions,1,24,4),minutes=number(input.minutes,40,240,120),practicePercent=number(input.practicePercent,40,85,70);
  const title=safe(input.title,100)||audience.name+' AI 실습교육';
