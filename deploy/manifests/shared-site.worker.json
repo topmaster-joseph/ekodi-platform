@@ -1,5 +1,5 @@
 {
-  "version": 108,
+  "version": 109,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -2906,7 +2906,7 @@
         ]
       },
       {
-        "url": "https://ekodi.kr/jubilee-distribution/",
+        "url": "https://ekodi.kr/jubilee/",
         "statuses": [
           200
         ],
@@ -2914,7 +2914,7 @@
         "expect": [
           "희년세상협동조합",
           "함께 여는 유통",
-          "/jubilee-distribution/assets/app.js"
+          "/jubilee/assets/app.js"
         ],
         "headerExpect": [
           "x-ekodi-route: cooperative-public",
@@ -2923,7 +2923,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://ekodi.kr/jubilee-distribution/members",
+        "url": "https://ekodi.kr/jubilee/members",
         "statuses": [
           200
         ],
@@ -2931,7 +2931,7 @@
         "expect": [
           "희년세상협동조합",
           "조합원 공간",
-          "/jubilee-distribution/assets/app.js"
+          "/jubilee/assets/app.js"
         ],
         "headerExpect": [
           "x-ekodi-route: cooperative-members",
@@ -2940,7 +2940,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://ekodi.kr/jubilee-distribution/admin",
+        "url": "https://ekodi.kr/jubilee/admin",
         "statuses": [
           200
         ],
@@ -2948,7 +2948,7 @@
         "expect": [
           "희년세상협동조합",
           "조합 운영관리",
-          "/jubilee-distribution/assets/app.js"
+          "/jubilee/assets/app.js"
         ],
         "headerExpect": [
           "x-ekodi-route: cooperative-admin",
@@ -2957,7 +2957,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://ekodi.kr/jubilee-distribution/api/me",
+        "url": "https://ekodi.kr/jubilee/api/me",
         "statuses": [
           401
         ],
@@ -2968,7 +2968,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://ekodi.kr/jubilee-distribution/api/project",
+        "url": "https://ekodi.kr/jubilee/api/project",
         "statuses": [
           401
         ],
@@ -2979,7 +2979,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://ekodi.kr/open-distribution/",
+        "url": "https://ekodi.kr/open/",
         "statuses": [
           200
         ],
@@ -2987,7 +2987,7 @@
         "expect": [
           "열린유통협동조합",
           "함께 여는 유통",
-          "/open-distribution/assets/app.js"
+          "/open/assets/app.js"
         ],
         "headerExpect": [
           "x-ekodi-route: cooperative-public",
@@ -2996,7 +2996,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://ekodi.kr/open-distribution/members",
+        "url": "https://ekodi.kr/open/members",
         "statuses": [
           200
         ],
@@ -3004,7 +3004,7 @@
         "expect": [
           "열린유통협동조합",
           "조합원 공간",
-          "/open-distribution/assets/app.js"
+          "/open/assets/app.js"
         ],
         "headerExpect": [
           "x-ekodi-route: cooperative-members",
@@ -3013,7 +3013,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://ekodi.kr/open-distribution/admin",
+        "url": "https://ekodi.kr/open/admin",
         "statuses": [
           200
         ],
@@ -3021,7 +3021,7 @@
         "expect": [
           "열린유통협동조합",
           "조합 운영관리",
-          "/open-distribution/assets/app.js"
+          "/open/assets/app.js"
         ],
         "headerExpect": [
           "x-ekodi-route: cooperative-admin",
@@ -3030,7 +3030,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://ekodi.kr/open-distribution/api/me",
+        "url": "https://ekodi.kr/open/api/me",
         "statuses": [
           401
         ],
@@ -3041,7 +3041,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://ekodi.kr/open-distribution/api/project",
+        "url": "https://ekodi.kr/open/api/project",
         "statuses": [
           401
         ],
@@ -3052,31 +3052,31 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://ekodi.kr/jubilee-distribution",
+        "url": "https://ekodi.kr/jubilee",
         "statuses": [
           308
         ],
         "redirect": "manual",
         "headerExpect": [
-          "location: https://ekodi.kr/jubilee-distribution/",
+          "location: https://ekodi.kr/jubilee/",
           "x-ekodi-route: cooperative-canonical-root"
         ],
         "rollbackVerify": false
       },
       {
-        "url": "https://ekodi.kr/open-distribution",
+        "url": "https://ekodi.kr/open",
         "statuses": [
           308
         ],
         "redirect": "manual",
         "headerExpect": [
-          "location: https://ekodi.kr/open-distribution/",
+          "location: https://ekodi.kr/open/",
           "x-ekodi-route: cooperative-canonical-root"
         ],
         "rollbackVerify": false
       },
       {
-        "url": "https://ekodi.kr/jubilee-distribution/api/public",
+        "url": "https://ekodi.kr/jubilee/api/public",
         "statuses": [
           200
         ],
@@ -3092,7 +3092,7 @@
         "candidateVerifyReason": "Require cooperative schema and seed availability before publishing the candidate. Static fallback is not production readiness."
       },
       {
-        "url": "https://ekodi.kr/open-distribution/api/public",
+        "url": "https://ekodi.kr/open/api/public",
         "statuses": [
           200
         ],
@@ -3318,6 +3318,150 @@
           "x-ekodi-route: cooperative-public-image"
         ],
         "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/jubilee-distribution/",
+        "headerExpect": [
+          "location: https://ekodi.kr/jubilee/"
+        ],
+        "rollbackVerify": false,
+        "statuses": [
+          308
+        ],
+        "redirect": "manual"
+      },
+      {
+        "url": "https://ekodi.kr/jubilee-distribution/members",
+        "headerExpect": [
+          "location: https://ekodi.kr/jubilee/members"
+        ],
+        "rollbackVerify": false,
+        "statuses": [
+          308
+        ],
+        "redirect": "manual"
+      },
+      {
+        "url": "https://ekodi.kr/jubilee-distribution/admin",
+        "headerExpect": [
+          "location: https://ekodi.kr/jubilee/admin"
+        ],
+        "rollbackVerify": false,
+        "statuses": [
+          308
+        ],
+        "redirect": "manual"
+      },
+      {
+        "url": "https://ekodi.kr/open-distribution/",
+        "headerExpect": [
+          "location: https://ekodi.kr/open/"
+        ],
+        "rollbackVerify": false,
+        "statuses": [
+          308
+        ],
+        "redirect": "manual"
+      },
+      {
+        "url": "https://ekodi.kr/open-distribution/members",
+        "headerExpect": [
+          "location: https://ekodi.kr/open/members"
+        ],
+        "rollbackVerify": false,
+        "statuses": [
+          308
+        ],
+        "redirect": "manual"
+      },
+      {
+        "url": "https://ekodi.kr/open-distribution/admin",
+        "headerExpect": [
+          "location: https://ekodi.kr/open/admin"
+        ],
+        "rollbackVerify": false,
+        "statuses": [
+          308
+        ],
+        "redirect": "manual"
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/images/agri-fish-640-b5afa995ee.webp",
+        "method": "HEAD",
+        "headerExpect": [
+          "content-type: image/webp",
+          "x-ekodi-route: cooperative-public-image"
+        ],
+        "rollbackVerify": false,
+        "statuses": [
+          200
+        ],
+        "redirect": "manual"
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/images/agri-fish-960-06f299657d.webp",
+        "method": "HEAD",
+        "headerExpect": [
+          "content-type: image/webp",
+          "x-ekodi-route: cooperative-public-image"
+        ],
+        "rollbackVerify": false,
+        "statuses": [
+          200
+        ],
+        "redirect": "manual"
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/images/joint-sales-640-8eeb4376e1.webp",
+        "method": "HEAD",
+        "headerExpect": [
+          "content-type: image/webp",
+          "x-ekodi-route: cooperative-public-image"
+        ],
+        "rollbackVerify": false,
+        "statuses": [
+          200
+        ],
+        "redirect": "manual"
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/images/joint-sales-960-249584ff76.webp",
+        "method": "HEAD",
+        "headerExpect": [
+          "content-type: image/webp",
+          "x-ekodi-route: cooperative-public-image"
+        ],
+        "rollbackVerify": false,
+        "statuses": [
+          200
+        ],
+        "redirect": "manual"
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/images/learning-640-b6d2474bb2.webp",
+        "method": "HEAD",
+        "headerExpect": [
+          "content-type: image/webp",
+          "x-ekodi-route: cooperative-public-image"
+        ],
+        "rollbackVerify": false,
+        "statuses": [
+          200
+        ],
+        "redirect": "manual"
+      },
+      {
+        "url": "https://ekodi.kr/business-coop/images/learning-960-498ffabc71.webp",
+        "method": "HEAD",
+        "headerExpect": [
+          "content-type: image/webp",
+          "x-ekodi-route: cooperative-public-image"
+        ],
+        "rollbackVerify": false,
+        "statuses": [
+          200
+        ],
+        "redirect": "manual"
       }
     ],
     "attestationPath": "/__ekodi/version"
