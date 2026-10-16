@@ -92,7 +92,7 @@ try {
     const owner=await contextFor(width,'admin-jub');const admin=await owner.newPage();
     await admin.goto('https://ekodi.kr/business-coop/');await admin.waitForSelector('[data-managed-cooperative]');assert.equal(await admin.locator('[data-managed-cooperative]').count(),1);
     assert.ok((await admin.locator('#workspace').innerText()).includes(COOPERATIVES[0].name));assert.equal((await admin.locator('#workspace').innerText()).includes(COOPERATIVES[1].name),false);
-    assert.equal(await admin.locator('[data-managed-cooperative] a').first().getAttribute('href'),'/jubilee/admin');
+    assert.deepEqual(await admin.locator('[data-managed-cooperative] a').evaluateAll(links=>links.map(link=>link.getAttribute('href'))),['/jubilee/admin','/jubilee/','/jubilee/members']);
     assert.equal(await admin.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
     await screenshot(admin,'cooperative-operations-'+width);checks.push({surface:'operations-hub-guest-and-scoped-owner',width,passed:true});await owner.close();
   }
