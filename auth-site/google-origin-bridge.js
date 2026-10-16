@@ -45,7 +45,7 @@
           setTimeout(()=>window.close(),120);
         }});
         host.replaceChildren();
-        google.accounts.id.renderButton(host,{type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:320});
+        google.accounts.id.renderButton(host,{type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:286});
         status.textContent='Google 계정 선택창을 여는 중입니다. 열리지 않으면 아래 버튼을 눌러 주세요.';
         try{
           google.accounts.id.prompt(notification=>{
