@@ -179,3 +179,12 @@ test('public setup page exposes actionable onboarding without accepting keys or 
  res=await endpoint('/api/payment-readiness',env);
  assert.equal((await res.json()).ready,false);
 });
+
+test('Toss SDK v2 requires the matching widget gck/gsk family, rejects legacy individual API ck/sk keys',()=>{
+ const {env}=harness(true);
+ assert.equal(paymentMode(env).ready,true);
+ assert.equal(paymentMode({...env,TOSS_TEST_CLIENT_KEY:'test_ck_legacy_client'}).ready,false);
+ assert.equal(paymentMode({...env,TOSS_TEST_SECRET_KEY:'test_sk_legacy_secret'}).ready,false);
+ assert.equal(paymentMode({...env,TOSS_TEST_CLIENT_KEY:'live_gck_mixed_environment'}).ready,false);
+ assert.equal(paymentMode({...env,TOSS_TEST_SECRET_KEY:'live_gsk_mixed_environment'}).ready,false);
+});
