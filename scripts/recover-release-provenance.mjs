@@ -170,6 +170,9 @@ for(let page=1;page<=20;page++){
   if(response.data.length<100)break;
   if(page===20)fail('source file list exceeds bounded dispatch inspection');
 }
+// CGMA's independently owned apex edge needs a receipt-bound release even when
+// an exact-SHA owner-approved recovery PR merges immediately with GITHUB_TOKEN.
+const cgmaApexTouched=sourceFiles.includes('.github/workflows/deploy-cgma-apex-edge.yml');
 const independentBoardTouched=sourceFiles.some(file=>
   file.startsWith('services/independent-board/')||
   file==='wrangler.independent-board.toml'||
@@ -274,6 +277,28 @@ if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched)){
     }
     out('shell_dispatch','accepted');
   }
+}
+
+// This branch is narrowly scoped: only a merged change to the CGMA edge
+// workflow may dispatch the existing guarded CGMA release. GitHub-token
+// immediate merges emit no main-push event, unlike the convergent merger.
+if(merge.response.ok&&cgmaApexTouched){
+  if(merge.data?.merged!==true||!/^[a-f0-9]{40}$/i.test(text(merge.data?.sha,80))){
+    fail('CGMA apex dispatch needs verified protected merge SHA');
+  }
+  const main=await github(`/repos/${repo}/branches/main`);
+  if(!main.response.ok||text(main.data?.commit?.sha,80)!==text(merge.data.sha,80)){
+    fail('main changed before exact CGMA apex dispatch; do not launch a stale release');
+  }
+  const cgmaDispatch=await github(`/repos/${repo}/actions/workflows/deploy-cgma-apex-edge.yml/dispatches`,{
+    method:'POST',
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branchRef,release_task_id:taskId}})
+  });
+  if(cgmaDispatch.response.status!==204){
+    fail('guarded CGMA apex dispatch failed: HTTP '+cgmaDispatch.response.status);
+  }
+  out('cgma_apex_dispatch','accepted');
 }
 
 // The immediate-merge path must run the same issued-session Chromium checks as
