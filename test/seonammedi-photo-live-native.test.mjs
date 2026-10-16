@@ -18,8 +18,9 @@ test('production read-only visual proof covers both public origins and all six m
   assert.match(script,/route\.request\(\)\.method\(\)/);
 });
 
-test('live proof fails on photo errors, broken layout, horizontal overflow and false campus-photo claims',()=>{
-  for(const fail of ['photo_not_rendered_','photo_not_visible_','photo_reference_disclosure_missing_',
+test('live proof rejects a duplicate stock banner and requires the campaign only on home',()=>{
+  for(const fail of ['unexpected_shared_photo_','home_only_campaign_visibility_mismatch_',
+    'incorrect_home_campaign_source_','home_campaign_dimensions_mismatch_',
     'six_side_menu_labels_mismatch_','site_header_not_sticky_','layout_region_missing_',
     'horizontal_overflow_','responsive_columns_mismatch_','selected_side_menu_not_active_'])
     assert.ok(script.includes(fail),fail);
