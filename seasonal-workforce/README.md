@@ -12,6 +12,14 @@ Canonical route (after protected release): `https://ekodi.kr/ekodibiz/seasonal-w
 - Narrow GitHub Actions check workflow (`.github/workflows/seasonal-workforce-check.yml`). Its execution and passing status must be independently verified.
 
 
+## Inactive municipal operations screen
+- `/ekodibiz/seasonal-workers/office`: responsive public shell, **private information loads only from the authenticated API** after explicit operator assignment.
+- `/ekodibiz/seasonal-workers/office.js`: same-origin API client, protected `sessionStorage` admin token convention, farm-demand plan input, list and administrative review.
+- Login builds `/auth/?site=admin&return_to=` from the **current full office URL**, preserving nested path and query; it never redirects intentionally to My EKODI.
+- Office browser UI cannot create operator/municipal authorization or turn on the Worker feature flag. With the current OFF flag it displays a preparation message and does not save records. Audit logs are stored only after formal activation.
+- Client-side editing uses safe DOM `textContent` for untrusted API data; there are no external scripts, trackers, ID/passport fields, worker placement controls or payment buttons.
+- `test/seasonal-workforce-office.test.mjs` and `test/seasonal-workforce-operations.test.mjs` cover browser script syntax, scoped API behavior and default-deny policy.
+
 ## Inactive municipal planning API added (code only)
 - `/ekodibiz/seasonal-workers/api/v1/tenants/{slug}/demands` supports GET/POST, and `/demands/{id}` supports GET/PATCH **only if activated by the official operator**.
 - `/ekodibiz/seasonal-workers/api/v1/tenants/{slug}/statistics` aggregates administrative demand counts.
