@@ -21,9 +21,9 @@ test('public board renders parseable login-first composer JavaScript on both sit
    assert.match(html,/id="voiceAuthStatus"[^>]*hidden/,'anonymous status must not prompt for login');
    assert.doesNotMatch(html,/id="adminLogin"|id="voiceAdminLogin"/,'no duplicate administrator login control');
    assert.doesNotMatch(html,/id="voiceManageToggle"/,'redundant management toggle removed');
-   assert.match(html,/if\(q\|\|!voiceVerified\)/,'unverified visitors cannot see management');
+   assert.match(html,/if\(search\.value\.trim\(\)\|\|!voiceVerified\)/,'unverified visitors cannot see management');
    assert.match(html,/\/board\/api\/admin\/posts/,'server-side admin permission is checked');
-   assert.match(html,/adminItems=data\.items\|\|\[\];render\(adminItems,true\)/,'protected admin API success directly displays management actions');
+   assert.match(html,/adminItems=data\.items\|\|\[\];admin=true;render\(adminItems,true\)/,'protected admin API success directly displays management actions');
    assert.doesNotMatch(html,/manageToggle\.onclick/,'no extra click required for management');
    assert.match(html,/if\(adminLink\)adminLink\.hidden=true/,'admin link is initially hidden');
    assert.match(html,/render\(publicItems,false\)/,'public cards always load before protected admin check');
@@ -32,7 +32,7 @@ test('public board renders parseable login-first composer JavaScript on both sit
    assert.match(html,/voiceAuthLabel\("Google 로그인 완료"\)/);
    assert.match(html,/auth.searchParams.set\("site","seonammedi"\)/);
    assert.match(html,/target.searchParams.set\("compose","1"\)/);
-   assert.match(html,/if\(composeRequested&&allowed\)\{write\.hidden=false/);
+   assert.match(html,/if\(composeRequested&&allowed\)\{showEditor\(\);clearComposeQuery\(\);return\}/);
  }
 });
 
@@ -99,9 +99,9 @@ test('login form POST handoff keeps write intent query and never exposes credent
 test('write entry requires successful live identity check, not cached token presence',async()=>{
  const response=await board.fetch(new Request(origin+'/board/voices'),{});
  const html=await response.text();
- assert.match(html,/byId\("writeToggle"\)\.onclick=async\(\)=>\{if\(!await requireVoiceAccount\(\)\)return/);
- assert.match(html,/write\.onsubmit=async e=>\{e\.preventDefault\(\);if\(!await requireVoiceAccount\(\)\)return/);
- assert.match(html,/list\.addEventListener\("submit",async e=>[\s\S]*?if\(!await requireVoiceAccount\(\)\)return/);
- assert.match(html,/await awaitVoicePublication\(accepted\)/);
- assert.match(html,/await awaitVoicePublication\(result\)/);
+ assert.match(html,/byId\("writeToggle"\)\.onclick=async\(\)=>\{\s*if\(!await requireVoiceAccount\(\)\)return/);
+ assert.match(html,/write\.onsubmit=async event=>\{\s*event\.preventDefault\(\);[\s\S]*?if\(!await requireVoiceAccount\(\)\)return/);
+ assert.match(html,/if\(reply\)\{\s*if\(!await requireVoiceAccount\(\)\)return/);
+ assert.match(html,/const published=await awaitVoicePublication\(saved\)/);
+ assert.match(html,/if\(await awaitVoicePublication\(saved\)\)/);
 });
