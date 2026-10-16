@@ -56,12 +56,51 @@ test('shared-site staging and governance checks stay apex-path-only', () => {
 
 
 test('shared-site manual release propagates exact orchestrator provenance into staging', () => {
-  assert.match(workflow,/staging_gate:[\s\S]*with:[\s\S]*release_branch_ref: \$\{\{ inputs\.release_branch_ref \}\}/);
-  assert.match(workflow,/release_task_id: \$\{\{ inputs\.release_task_id \}\}/);
+  assert.ok(workflow.includes('release_branch_ref: ${{ needs.scheduled_release_gate.outputs.release_branch_ref || inputs.release_branch_ref }}'));
+  assert.ok(workflow.includes('release_task_id: ${{ needs.scheduled_release_gate.outputs.release_task_id || inputs.release_task_id }}'));
+  assert.match(workflow,/Recover signed source branch before staging/);
+  assert.match(workflow,/commits\/\$GITHUB_SHA\/pulls/);
+  assert.match(workflow,/Cannot prove a repository-orchestrated source for staging/);
+  assert.match(workflow,/Orchestrator task mismatch before staging/);
+  assert.ok(workflow.includes('if [[ ! "$branch" =~ ^ai/[^/]+/(orch_'),'source recovery must fail closed on unverified branches');
+  assert.ok(workflow.includes('echo "release_branch_ref=$branch" >> "$GITHUB_OUTPUT"'));
+  assert.ok(workflow.includes('echo "release_task_id=${requested_task:-$derived_task}" >> "$GITHUB_OUTPUT"'));
+
+  assert.match(workflow,/Verify no public SeonamMedi finance totals or ledger entries/);
+  assert.match(workflow,/\.finance\.raised==null and \.finance\.spent==null/);
+  assert.match(workflow,/\.finance\.entries\|type=="array" and length==0/);
   assert.match(stagingWorkflow,/workflow_call:[\s\S]*inputs:[\s\S]*release_branch_ref:/);
   assert.match(stagingWorkflow,/release_task_id:/);
   assert.match(stagingWorkflow,/Apply exact orchestrator provenance from release caller/);
   assert.match(stagingWorkflow,/EKODI_RELEASE_BRANCH_REF=\$branch/);
   assert.match(stagingWorkflow,/EKODI_RELEASE_TASK_ID=\$\{requested_task:-\$derived_task\}/);
   assert.match(stagingWorkflow,/GITHUB_TOKEN: \$\{\{ github\.token \}\}/);
+});
+
+test('SNS admin UI changes trigger guarded Shared Site release and run OAuth regression tests', () => {
+  for (const file of ['workspace-admin-page.js', 'mall-social-setup.js', 'test/ekodimall-sns-oauth-loop.test.mjs', 'test/ekodimall-one-screen-sns.test.mjs']) {
+    assert.ok(workflow.includes("      - '"+file+"'"), 'Shared Site workflow must watch '+file);
+  }
+  assert.match(workflow,/node --test test\/ekodimall-sns-oauth-loop\.test\.mjs test\/ekodimall-one-screen-sns\.test\.mjs/);
+  assert.match(workflow,/Refuse stale rerun production promotion/);
+});
+
+test('SeonamMedi production manifest requires public finance information to remain absent', () => {
+  const home=manifest.worker.requests.find(request=>request.url==='https://ekodi.kr/seonammedi/');
+  assert.ok(home,'live SeonamMedi homepage must remain guarded');
+  assert.ok(!home.expect.includes('회계'),'retired public finance label must not be required');
+  for(const marker of ['전체 회계내역','id="financeManageForm"','id="financeList"','href="board/finance"']){
+    assert.ok(home.forbid?.includes(marker),'public finance disclosure forbidden by production manifest: '+marker);
+  }
+  assert.equal(home.rollbackVerify,false,'existing rollback verification policy remains unchanged');
+  assert.ok(manifest.worker.requests.some(request=>request.url==='https://ekodi.kr/seonammedi/admin/'),'dedicated admin route must remain guarded');
+});
+
+test('SeonamMedi finance release contract keeps notices direct and minutes under admin', async () => {
+  const html=await readFile(new URL('../sites/seonammedi/public/index.html',import.meta.url),'utf8');
+  const admin=await readFile(new URL('../sites/seonammedi/public/admin/index.html',import.meta.url),'utf8');
+  assert.match(html,/href="board\/notices"\s*>공지<\/a>/,'public notices should directly open the board');
+  assert.doesNotMatch(html,/>회계<\/a>|href="board\/finance"|id="financeManageForm"/,'finance must not reappear on public homepage');
+  assert.match(admin,/data-panel="minutes"/,'internal minutes must remain administrator-managed');
+  assert.match(admin,/href="\?panel=finance"/,'finance entry should remain in protected administrator panel');
 });

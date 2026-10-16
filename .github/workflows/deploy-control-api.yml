@@ -5,11 +5,11 @@ on:
     inputs:
       release_branch_ref:
         description: 'Verified orchestrator source branch'
-        required: false
+        required: true
         type: string
       release_task_id:
         description: 'Verified orchestrator task id'
-        required: false
+        required: true
         type: string
   pull_request:
     paths:
@@ -778,6 +778,33 @@ jobs:
           echo "bookmark=$BOOKMARK" >> "$GITHUB_OUTPUT"
       - name: Apply production migrations after isolated staging success
         run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.api.toml "$WRANGLER_VERSION"
+      - name: Audit SeonamMedi limited board-admin grant in canonical D1 (read only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          audit_file="$(mktemp)"
+          trap 'rm -f "$audit_file"' EXIT
+          sql=$(cat <<'SQL'
+          SELECT CASE WHEN COUNT(*)=1 THEN 1 ELSE 0 END AS scoped_grant_verified
+          FROM customer_access_grants AS g
+          JOIN customer_tenants AS t ON t.id=g.tenant_id
+          WHERE t.slug='seonammedi' AND t.status='active'
+            AND lower(trim(g.email))='linuxceo@gmail.com'
+            AND g.enabled=1 AND g.role='board_admin' AND g.principal_type='member'
+            AND (g.expires_at IS NULL OR g.expires_at>CURRENT_TIMESTAMP)
+            AND json_valid(g.capabilities_json)=1 AND json_valid(g.denied_capabilities_json)=1
+            AND EXISTS (SELECT 1 FROM json_each(g.capabilities_json) WHERE value='seonammedi.notice.manage')
+            AND EXISTS (SELECT 1 FROM json_each(g.capabilities_json) WHERE value='seonammedi.voice.manage')
+            AND NOT EXISTS (SELECT 1 FROM json_each(g.capabilities_json) WHERE value IN ('platform.admin','tenant.finance.manage','tenant.access.manage'))
+            AND EXISTS (SELECT 1 FROM json_each(g.denied_capabilities_json) WHERE value='platform.admin');
+          SQL
+          )
+          if npx --yes wrangler@$WRANGLER_VERSION d1 execute ekodi-auth --remote --config wrangler.api.toml --json --command "$sql" >"$audit_file" 2>/dev/null && node scripts/verify-seonammedi-admin-grant-output.mjs "$audit_file"; then
+            echo "SeonamMedi scoped board administrator: VERIFIED in canonical D1; actual Google login and PUT/DELETE remain separately unverified." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::SeonamMedi scoped board administrator cannot be verified in canonical D1."
+            echo "SeonamMedi scoped board administrator: UNVERIFIED in canonical D1; do not claim admin CRUD proof." >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Guarded 0-percent Control candidate then promote
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/control-api.worker.json
       - name: Deploy production routes and Cron triggers
@@ -846,6 +873,25 @@ jobs:
           grep -Fq '"code":"PF_ADMIN_AUTH_REQUIRED"' /tmp/personal-finance.json
           grep -Fq '"publishedLocales":["ko-KR"]' /tmp/i18n.json
           grep -Fq '"inheritedDefault":true' /tmp/catalog.json
+      - name: Verify canonical traffic telemetry version without writing visitor data
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4; do
+            status=$(curl --silent --show-error --connect-timeout 5 --max-time 15 \
+              -X OPTIONS -H 'Origin: https://ekodi.kr' \
+              -H 'Access-Control-Request-Method: POST' \
+              -D /tmp/ekodi-traffic-telemetry.headers \
+              -o /dev/null -w '%{http_code}' \
+              "https://ekodi.kr/api/telemetry/visit?deploy-verification=${GITHUB_SHA}-${attempt}" || true)
+            if [ "$status" = '204' ] && grep -Eiq '^x-ekodi-traffic-telemetry:[[:space:]]*site-scoped-v2' /tmp/ekodi-traffic-telemetry.headers; then
+              echo 'Verified canonical telemetry version via read-only preflight'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Canonical telemetry API version missing or stale" >&2
+          exit 1
       - name: Verify Realtime SFU production health
         run: node scripts/provision-realtime-sfu.mjs --verify
       - name: Record recovery point

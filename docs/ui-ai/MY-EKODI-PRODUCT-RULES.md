@@ -64,3 +64,7 @@ My EKODI는 계정 관리 페이지가 아니라 EKODI User AI가 작동하는 �
 - 개인 AI Provider 연결·API 키·사용 방식은 홈에 노출하지 않고 **내 정보 → AI 연결**에서만 관리한다.
 - AI 연결 화면에서도 Provider 전체 목록은 기본 접힘 상태로 두고 사용자가 **AI 연결하기/변경**을 눌렀을 때만 펼친다.
 
+## Hash routing visibility contract
+- `#platforms`, `#activity`, `#account` 같은 1차 탭 hash가 선택되면 다른 1차 탭의 `hidden` 상태가 모든 표현용 `display` 규칙보다 우선해야 한다.
+- My EKODI가 자체 에코디언 Hero를 제공하는 동안 공통 Shell 캐릭터는 중복 렌더링하지 않는다.
+

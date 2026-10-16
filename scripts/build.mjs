@@ -27,12 +27,19 @@ async function appendOutputSources(targetAsset, sourceSpecs, { targetMarker = ''
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await Promise.all(assets.map(asset => cp(`${root}${asset}`, `${output}${asset}`)));
+// CGMA survey remains a tenant-owned, anonymous static entrypoint (no write API).
+await mkdir(`${output}cgma/ai-education/`,{recursive:true});
+await Promise.all([
+  cp(`${root}prototypes/cgma-ai-education-survey.html`,`${output}cgma/ai-education/index.html`),
+  cp(`${root}prototypes/cgma-ai-education-survey.js`,`${output}cgma/ai-education/app.js`),
+]);
 await Promise.all([
   cp(`${root}pizzamaru-mokpodae.html`, `${output}pizzamaru-mokpodae.html`),
   cp(`${root}pizzamaru-mokpodae.css`, `${output}pizzamaru-mokpodae.css`),
   cp(`${root}pizzamaru-mokpodae.js`, `${output}pizzamaru-mokpodae.js`),
 ]);
 await cp(`${root}sites/ekodi-insurance/public`, `${output}insurance`, { recursive: true });
+await cp(`${root}sites/ekodi-singles/public`, `${output}singles`, { recursive: true });
 await cp(`${root}sites/business-cooperative/public`, `${output}business-coop`, { recursive: true });
 await cp(`${root}sites/seonammedi/public`, `${output}seonammedi`, { recursive: true });
 await finalizeSeonamMediRelease(output);
@@ -144,6 +151,8 @@ await writeFile(`${output}release-control-admin.js`, `${releaseJs}\n${timelineJs
 
 const adminStaticMirrorDir = `${output}admin/`;
 await mkdir(adminStaticMirrorDir, { recursive: true });
+await mkdir(`${adminStaticMirrorDir}desktop/bootstrap`, { recursive: true });
+await cp(`${root}admin/desktop/bootstrap/index.html`, `${adminStaticMirrorDir}desktop/bootstrap/index.html`);
 const adminStaticMirrorAssets = assets.filter(asset =>
   !['control.css','control.js'].includes(asset) && !asset.endsWith('.html') && /\.(?:css|js|cmd|json|map|svg|png|webp|ico)$/i.test(asset)
 );

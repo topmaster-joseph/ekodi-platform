@@ -184,7 +184,21 @@
     "aiConsultation": "advisory-not-serial-prerequisite",
     "consultationMayBlockCodeExecution": false,
     "corePlanOwnsExecution": true,
-    "githubBranchMutationIsDefault": true
+    "githubBranchMutationIsDefault": true,
+    "recoveryContinuity": {
+      "policyId": "EKODI-RECOVERY-CONTINUITY-001",
+      "status": "enforced",
+      "scope": "platform-wide",
+      "onFailure": "diagnose-repair-retry-and-resume",
+      "discoverExistingAuthorizedRecovery": true,
+      "requireExactShaAndAuthorization": true,
+      "retryTransientErrors": true,
+      "doNotBlindlyRetryPermanentErrors": true,
+      "resumeAtFailedStage": true,
+      "preserveSecurityAndProvenance": true,
+      "preserveHumanGates": true,
+      "completionRequiresLiveEvidence": true
+    }
   },
   "consultationDecision": {
     "policyId": "AI-CONSULT-001",
@@ -278,7 +292,43 @@
     "branchDeletion": false,
     "integrationBranches": [
       "development"
-    ]
+    ],
+    "preMergeReadinessRecovery": {
+      "policyId": "PREMERGE-READINESS-RECOVERY-001",
+      "status": "enforced",
+      "appliesPlatformWide": true,
+      "requiredChecksSource": "config/github-governance.json",
+      "requiredLoop": [
+        "discover-protected-branch-required-contexts",
+        "compare-head-and-merge-base-check-results",
+        "diagnose-missing-pending-failed-or-stale-checks",
+        "repair-trigger-or-branch-identity-without-bypass",
+        "refresh-branch-against-current-base-when-strict-up-to-date-required",
+        "rerun-or-retrigger-required-workflows",
+        "recheck-exact-head-sha-and-mergeability",
+        "continue-until-all-required-checks-green-and-merge-ready"
+      ],
+      "automaticRetryWithBackoff": true,
+      "automaticSafeAlternatives": true,
+      "neverWeakenBranchProtection": true,
+      "neverForgeStatuses": true,
+      "neverBypassHumanOrSecurityGate": true,
+      "mergeOnlyAfterRequiredChecks": true,
+      "postMergeRequired": [
+        "guarded-deployment",
+        "production-host-verification",
+        "mobile-viewport-verification",
+        "route-and-admin-regression"
+      ],
+      "completionRequiresProductionEvidence": true,
+      "terminalWaitOnlyFor": [
+        "external-required-check-running",
+        "human-authority-required",
+        "irreversible-or-security-risk",
+        "all-safe-alternatives-exhausted"
+      ],
+      "auditEachAttempt": true
+    }
   },
   "mutationBoundary": {
     "orchestrationGateRequiredBeforeMutation": true,
@@ -468,5 +518,94 @@
     "claimScopeMustMatchEvidenceScope": true,
     "materialKnowledgeCitationRequired": true,
     "finalResponseGuardRequired": true
+  },
+  "deploymentGateModel": {
+    "policyId": "EKODI-DEPLOY-3GATE-001",
+    "status": "enforced",
+    "principle": "preserve-detailed-verification-collapse-owner-facing-stages",
+    "publicSequence": [
+      "build",
+      "release",
+      "production"
+    ],
+    "detailedLifecycleRemainsAuditable": true,
+    "duplicateChecksMustBeDeduplicated": true,
+    "samePurposeChecksRunInsideOneGate": true,
+    "parallelizeIndependentChecks": true,
+    "riskRouting": {
+      "low": {
+        "publicGates": [
+          "build",
+          "production"
+        ],
+        "collapsedGates": [
+          "release"
+        ]
+      },
+      "normal": {
+        "publicGates": [
+          "build",
+          "release",
+          "production"
+        ],
+        "collapsedGates": []
+      },
+      "high": {
+        "publicGates": [
+          "build",
+          "release",
+          "production"
+        ],
+        "collapsedGates": [],
+        "independentVerificationRequired": true
+      },
+      "critical": {
+        "publicGates": [
+          "build",
+          "release",
+          "production"
+        ],
+        "collapsedGates": [],
+        "independentVerificationRequired": true
+      }
+    },
+    "completion": {
+      "productionEvidenceRequiredWhenDeploymentRequested": true,
+      "liveFunctionalVerificationRequired": true,
+      "deployCommandAloneNeverMeansDone": true
+    },
+    "preservation": [
+      "human-gates",
+      "security-boundaries",
+      "data-integrity",
+      "rollback-readiness",
+      "orchestrator-provenance",
+      "production-verification"
+    ]
+  },
+  "deploymentMinimumFriction": {
+    "policyId": "EKODI-MINIMUM-FRICTION-GUARDED-RELEASE-001",
+    "status": "enforced",
+    "appliesPlatformWide": true,
+    "defaultChangeRisk": "classify-before-release",
+    "lowRiskExamples": [
+      "copy",
+      "styling",
+      "navigation"
+    ],
+    "deduplicateEquivalentChecks": true,
+    "minimumNecessaryChecksOnly": true,
+    "automaticProgressionAfterRequiredGates": true,
+    "automaticRetryTransientFailures": true,
+    "permanentFailureDisposition": "repair-root-cause-and-resume-failed-stage",
+    "orchestratorIssuedProvenanceMandatory": true,
+    "doNotForgeReleaseReceipts": true,
+    "doNotBypassHumanSecurityOrPrivacyGates": true,
+    "protectedMainMandatory": true,
+    "immutableReleaseArtifactMandatory": true,
+    "rollbackEvidenceMandatory": true,
+    "liveProductionVerificationMandatory": true,
+    "highRiskChangesRequireRelevantExpandedChecks": true,
+    "completionRequiresVerifiedLiveEvidence": true
   }
 }

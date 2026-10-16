@@ -11,6 +11,33 @@ const failures=[];
 const fail=message=>failures.push(message);
 
 if(policy.schemaVersion<3)fail('completion policy schema must include OIDC backstop and fair candidate rotation');
+
+const native=policy.requiredEvidence?.githubActionsOnlyRelease;
+if(policy.schemaVersion<4)fail('completion policy must include pinned schedule-only release contract');
+if(native?.taskId!=='orch_recovery_dcf5dace563ac6da0488a29708afcf21')fail('native release task must remain pinned');
+if(native?.branchRef!=='ai/gpt6/orch_recovery_dcf5dace563ac6da0488a29708afcf21')fail('native release branch mismatch');
+if(native?.mergedPrNumber!==4383||native?.scope!=='explicitly-approved-native-monitoring-task-only')fail('native release PR and scope mismatch');
+if(native?.workflowName!=='EKODI Native Operations Watch'||native?.workflowPath!=='.github/workflows/ekodi-native-operations-watch.yml')fail('native release workflow mismatch');
+if(native?.normalDeploymentsStillRequireStagingAndProduction!==true||
+   native?.runMustBeSuccessfulAfterMerge!==true||native?.artifactMustBeNonExpiredAndNonEmpty!==true)
+  fail('native release must preserve fail-closed post-merge evidence');
+for(const key of ['.github/workflows/ekodi-native-operations-watch.yml',
+  'config/ekodi-native-monitoring-ownership.json','scripts/ekodi-native-operations-watch.mjs','test/ekodi-native-operations-watch.test.mjs']){
+  if(!native?.allowedPrFiles?.includes(key))fail('native release allowed file contract missing: '+key);
+}
+if(native?.allowedPrFiles?.length!==4||native?.requiredRunEvents?.length!==2||native?.requiredJob!=='observe')
+  fail('native release exact scope, events and observe job must stay pinned');
+for(const marker of ['collectNativeWatchEvidence','listWorkflowRunArtifacts','listWorkflowRuns','getWorkflow',
+  'listFiles','native_observe_success_missing','native_evidence_artifact_missing',
+  'native_release_file_scope_invalid','github-actions-native-operations-verified']){
+  if(!evidence.includes(marker))fail('native collector must verify real operational evidence: '+marker);
+}
+for(const marker of ['deliveryKind===\'github-actions-schedule\'',
+   'orch_recovery_dcf5dace563ac6da0488a29708afcf21',
+   'nativeWorkflow','artifactBytes','verifiedSteps']){
+  if(!adapter.includes(marker))fail('native evidence OIDC shape guard missing: '+marker);
+}
+
 if(policy.policyId!=='EKODI-ORCHESTRATOR-COMPLETION-001'||policy.status!=='enforced')fail('completion policy must remain enforced');
 if(policy.owner!=='ekodi-orchestrator')fail('EKODI Orchestrator must own completion');
 
@@ -33,6 +60,9 @@ const cgmaStagingEquivalent=policy.requiredEvidence?.workflowSpecificStagingEqui
 if(cgmaStagingEquivalent?.job!=='validate')fail('CGMA staging-equivalent must use validate job');
 if(!cgmaStagingEquivalent?.requiredSteps?.includes('Validate CGMA edge contract'))fail('CGMA staging-equivalent must require the edge contract step');
 if(cgmaStagingEquivalent?.scope!=='cgma-edge-only')fail('CGMA staging-equivalent scope must remain CGMA-only');
+const boardStagingEquivalent=policy.requiredEvidence?.workflowSpecificStagingEquivalents?.['Deploy Independent Board'];
+if(boardStagingEquivalent?.job!=='validate'||!boardStagingEquivalent?.requiredSteps?.includes('Validate standalone board contract')||boardStagingEquivalent?.scope!=='independent-board-only')fail('independent board staging-equivalent must require its exact validate contract');
+if(!evidence.includes("'Deploy Independent Board'"))fail('authenticated collector must verify independent board staging-equivalent');
 
 for(const key of [
   'mergedPullRequestToMain',
@@ -68,7 +98,7 @@ for(const key of [
   if(policy.reconciliation?.[key]!==true)fail('reconciliation rule missing: '+key);
 }
 if(policy.reconciliation?.candidateBatchLimit!==50)fail('completion reconciliation candidate batch limit must remain bounded at 50');
-for(const name of ['Deploy Control API','Deploy EKODI Shared Site Core','Deploy CGMA Apex Edge','Deploy Business OS']){
+for(const name of ['Deploy Control API','Deploy EKODI Shared Site Core','Deploy CGMA Apex Edge','Deploy Business OS','Deploy Independent Board']){
   if(!policy.reconciliation?.workflowRunTriggerWorkflows?.includes(name))fail('completion workflow trigger missing from policy: '+name);
   if(!workflow.includes('- '+name))fail('completion workflow trigger missing: '+name);
 }

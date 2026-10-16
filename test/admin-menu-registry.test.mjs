@@ -15,11 +15,11 @@ import {
   normalizeAdminLocale,
 } from '../admin-menu-registry.js';
 
-const WORK_AREAS = ['summary', 'sites', 'people', 'services', 'content', 'status', 'settings-records'];
+const WORK_AREAS = ['summary', 'sites', 'people', 'services', 'content', 'finance', 'status', 'releases', 'devices-agent', 'settings-records', 'security-audit'];
 
-test('admin navigation has exactly seven canonical EKODI areas', () => {
+test('admin navigation has eleven nonoverlapping EKODI areas', () => {
   assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.id), WORK_AREAS);
-  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.labels.en), ['Platform Overview','Sites & Brands','Users, Admins & Access','Services & AI','Content, Events & Communication','Operations, Releases & Incidents','Settings, Security & Audit']);
+  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.labels.en), ['Platform Dashboard', 'Sites & Brands', 'Members, Admins & Access', 'Services & AI', 'Content, Events & Communication', 'Payments, Accounting & Costs', 'Health, Performance & Checks', 'Releases & Incidents', 'Devices & Agents', 'Settings, Integrations & Storage', 'Security & Audit']);
   for (const group of ADMIN_MENU_GROUPS) {
     assert.ok(group.defaultSection, `${group.id} missing defaultSection`);
     assert.equal(getAdminMenuGroupForSection(group.defaultSection), group.id);
@@ -44,7 +44,7 @@ test('every public admin subservice belongs to one canonical area', () => {
   assert.equal(getAdminMenuLabel('social', 'ko'), '방송·채널·자동게시');
   assert.equal(getAdminMenuLabel('social', 'en'), 'Broadcast, Channels & Autopost');
   assert.equal(getAdminMenuGroupForSection('marketing-ai'), 'services');
-  assert.equal(getAdminMenuGroupForSection('finance'), 'content');
+  assert.equal(getAdminMenuGroupForSection('finance'), 'finance');
   assert.equal(getAdminMenuGroupForSection('workspace'), 'sites');
   assert.equal(getAdminMenuGroupForSection('community'), 'content');
   assert.equal(getAdminMenuGroupForSection('ai-membership'), 'people');
@@ -53,11 +53,11 @@ test('every public admin subservice belongs to one canonical area', () => {
   assert.equal(getAdminMenuGroupForSection('storage'), 'settings-records');
   assert.equal(getAdminMenuLabel('devices', 'ko'), '실행 인프라');
   assert.equal(getAdminMenuLabel('devices', 'en'), 'Execution Infrastructure');
-  assert.equal(getAdminMenuGroupForSection('devices'), 'status');
+  assert.equal(getAdminMenuGroupForSection('devices'), 'devices-agent');
   assert.equal(getAdminMenuLabel('pos-agent', 'ko'), 'POS Agent 설치·관리');
   assert.equal(getAdminMenuLabel('pos-agent', 'en'), 'POS Agent Install & Management');
-  assert.equal(getAdminMenuGroupForSection('pos-agent'), 'status');
-  assert.equal(getAdminMenuCategory('pos-agent'), 'status');
+  assert.equal(getAdminMenuGroupForSection('pos-agent'), 'devices-agent');
+  assert.equal(getAdminMenuCategory('pos-agent'), 'devices');
   const posAgent = ADMIN_MENU_REGISTRY.find(item => item.id === 'pos-agent');
   assert.equal(posAgent?.href, undefined);
   assert.equal(posAgent?.adminHandoff, undefined);

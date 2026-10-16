@@ -51,12 +51,22 @@ if (repeated) {
   }, { once: true });
 
   cancel?.addEventListener('click', () => {
-    let target = 'https://ekodi.kr/';
+    // The loop guard must not send a customer site to the platform home or My EKODI.
+    // Preserve the exact initiating URL, including the user's compose/query context.
+    let target = null;
     try {
       const url = new URL(returnTo);
-      if (url.protocol === 'https:' && (url.hostname === 'ekodi.kr' || url.hostname.endsWith('.ekodi.kr'))) target = url.href;
+      const ekodiOrigin = url.hostname === 'ekodi.kr' || url.hostname.endsWith('.ekodi.kr');
+      const customerOrigin = (site === 'seonammedi' || site === 'portal') &&
+        ['seonammedi.kr','www.seonammedi.kr','xn--3e0b8b58jw4co4mnpll3k.kr','www.xn--3e0b8b58jw4co4mnpll3k.kr'].includes(url.hostname);
+      const foreignMy = site !== 'my' && site !== 'portal' &&
+        url.origin === 'https://ekodi.kr' && (url.pathname === '/my' || url.pathname.startsWith('/my/'));
+      if (url.protocol === 'https:' && !url.username && !url.password &&
+          (ekodiOrigin || customerOrigin) && !foreignMy) target = url.href;
     } catch {}
-    location.assign(target);
+    if (!target && site === 'seonammedi') target = 'https://seonammedi.kr/board/voices';
+    if (target) location.assign(target);
+    else if (status) status.textContent = '원래 서비스 복귀 주소를 확인하지 못했습니다. 로그인 시작 사이트에서 다시 시도해 주세요.';
   }, { once: true });
 } else {
   await loadAuthRouter();

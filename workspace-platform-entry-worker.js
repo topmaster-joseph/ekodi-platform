@@ -5,6 +5,7 @@ import { drainMessengerOutbox } from './messenger-outbox.js';
 import { handleProfileEvidenceApi, profileSchemaReady } from './profile-evidence-runtime.js';
 import { createOfficialProfileDataBinding, officialDataConnections } from './profile-official-data-adapter.js';
 import { handleInvestPersonalizationApi } from './invest-personalization-runtime.js';
+import { handleInvestCommonAnalysisApi } from './invest-common-analysis-runtime.js';
 import { handleInvestAutomationApi } from './invest-automation-runtime.js';
 import { handleInvestLifecycleApi } from './invest-lifecycle-runtime.js';
 import { handleDesignProfileApi } from './design-profile-runtime.js';
@@ -44,6 +45,10 @@ export default {
     }
     if(url.pathname.startsWith('/v1/invest/automation/')){
       const response=await handleInvestAutomationApi(request,env);
+      if(response)return response;
+    }
+    if(url.pathname.replace(/\/+$/,'')==='/v1/invest/common-analysis'){
+      const response=await handleInvestCommonAnalysisApi(request,env);
       if(response)return response;
     }
     if(['/v1/invest/context','/v1/invest/data-connections','/v1/invest/subjects'].includes(url.pathname)){

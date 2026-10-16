@@ -1,0 +1,99 @@
+name: EKODI Education Guarded Release Continuity
+
+on:
+  workflow_run:
+    workflows: ["EKODI Orchestrated PR Convergent Merge"]
+    types: [completed]
+  pull_request:
+    paths:
+      - 'scripts/education-release-continuity.mjs'
+      - 'test/education-release-continuity.test.mjs'
+      - '.github/workflows/education-release-continuity.yml'
+      - 'education/study/ai-bootcamp/studio/**'
+      - 'education/study/ai-bootcamp/documents/**'
+      - 'scripts/verify-education-documents-native.mjs'
+      - 'test/education-bootcamp-documents.test.mjs'
+      - 'test/education-native-security-observations.test.mjs'
+      - 'scripts/education-native-security-observations.mjs'
+      - 'education/study/ai-bootcamp/material-source.js'
+      - 'scripts/verify-education-material-studio-native.mjs'
+      - 'test/education-material-studio.test.mjs'
+
+permissions:
+  contents: read
+  actions: write
+  pull-requests: read
+  statuses: read
+
+concurrency:
+  group: education-release-continuity-${{ github.event.workflow_run.head_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 13
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate read-only release continuity
+        run: |
+          node --check scripts/education-release-continuity.mjs
+          node --check scripts/education-native-security-observations.mjs
+          node --check scripts/verify-education-documents-native.mjs
+          node --test test/education-release-continuity.test.mjs test/education-native-security-observations.test.mjs
+      - name: Install EKODI-native disposable Chromium for pre-approval preview
+        if: github.event_name == 'pull_request'
+        run: |
+          npm install --no-save --package-lock=false playwright@1.64.1
+          npx playwright install --with-deps chromium
+      - name: Pre-approval synthetic classroom browser acceptance (five widths)
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          EKODI_EDUCATION_PREVIEW_MODE: 'true'
+        run: |
+          set -euo pipefail
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory education >/tmp/ekodi-edu-preview.log 2>&1 &
+          preview_pid=$!
+          trap 'kill "$preview_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent 'http://127.0.0.1:8765/study/ai-bootcamp/' >/dev/null; then break; fi
+            sleep 1
+          done
+          node scripts/verify-education-bootcamp-native.mjs
+          node scripts/verify-education-material-studio-native.mjs
+          node scripts/verify-education-documents-native.mjs
+      - uses: actions/upload-artifact@v4
+        if: always() && github.event_name == 'pull_request'
+        with:
+          name: education-preapproval-browser-${{ github.run_id }}
+          path: |
+            artifacts/education-native/
+            artifacts/education-studio-native/
+            artifacts/education-documents-native/
+          retention-days: 7
+
+  reconcile:
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.repository == 'topmaster-joseph/ekodi-platform'
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout trusted EKODI main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify official receipt, exact merge, and dispatch guarded Education workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/education-release-continuity.mjs

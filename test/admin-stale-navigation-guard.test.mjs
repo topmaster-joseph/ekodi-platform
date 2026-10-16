@@ -1,0 +1,76 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+// Contract: only the newest selected section may commit a queued legacy-nav click.
+const source = readFileSync(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
+
+test('deferred admin navigation validates the latest requested section before applying a panel', () => {
+  assert.match(source, /requestedSection=section;\s*\/\/ A prior menu click[\s\S]*?window\.setTimeout\(\(\)=>\{\s*if\(requestedSection!==section\)return;\s*if\(!activatePanel\(section\)\)requestDemand\(section\);\s*\},0\);/);
+  assert.match(source, /requestedSection=section;return activatePanel\(section\)\|\|requestDemand\(section\);/);
+});
+
+test('prior security click cannot override more recent audit-records click', () => {
+  // Models the guarded deferred callback from the checked-in runtime.
+  const callbacks = [];
+  const activations = [];
+  let requestedSection = '';
+  const scheduleLegacyClick = section => {
+    requestedSection = section;
+    callbacks.push(() => {
+      if (requestedSection !== section) return;
+      activations.push(section);
+    });
+  };
+  scheduleLegacyClick('security');
+  // Delegated audit-records activation updates requestedSection synchronously.
+  requestedSection = 'audit-records';
+  activations.push('audit-records');
+  for (const callback of callbacks) callback();
+  assert.deepEqual(activations, ['audit-records']);
+});
+
+test('latest queued navigation remains active when no newer menu was selected', () => {
+  const callbacks = [];
+  const activations = [];
+  let requestedSection = '';
+  const scheduleLegacyClick = section => {
+    requestedSection = section;
+    callbacks.push(() => {
+      if (requestedSection !== section) return;
+      activations.push(section);
+    });
+  };
+  scheduleLegacyClick('security');
+  scheduleLegacyClick('audit-records');
+  for (const callback of callbacks) callback();
+  assert.deepEqual(activations, ['audit-records']);
+});
+
+test('compact Admin entrypoint applies the same newest-selection and native-handoff invariants', () => {
+  const compact = readFileSync(new URL('../admin-menu-layout.compact.js', import.meta.url), 'utf8');
+  assert.match(compact, /v=i,!\(t\.matches\("a\.nav\[href\]"\)&&!L\(i\)\)&&window\.setTimeout\(\(\)=>\{v===i&&\(q\(i\)\|\|x\(i\)\)\},0\)/);
+  assert.doesNotMatch(compact, /v=i,window\.setTimeout\(\(\)=>\{q\(i\)\|\|x\(i\)\},0\)/);
+});
+
+
+test('shared sidebar invalidates stale asynchronous demand activations', () => {
+  const sidebar = readFileSync(new URL('../admin-sidebar.js', import.meta.url), 'utf8');
+  assert.match(sidebar, /const activationEpoch = new WeakMap\(\)/);
+  assert.match(sidebar, /function beginActivation\(nav\)/);
+  assert.match(sidebar, /const epoch = beginActivation\(nav\)/);
+  assert.match(sidebar, /if \(!isLatestActivation\(nav, epoch\)\) return/);
+
+  // Model the production race: selecting the security-audit group starts a
+  // lazy default Security load; Audit Records is selected before Security
+  // finishes. The stale Security completion must not become visible later.
+  let epoch = 0;
+  let current = '';
+  const begin = () => ++epoch;
+  const finish = (token, section) => { if (token === epoch) current = section; };
+  const security = begin();
+  const auditRecords = begin();
+  finish(auditRecords, 'audit-records');
+  finish(security, 'security');
+  assert.equal(current, 'audit-records');
+});

@@ -4,23 +4,25 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('Platform Admin uses seven explicit control areas with active direct-task navigation', async () => {
+test('Platform Admin uses eleven distinct control areas with active direct-task navigation', async () => {
   const [registry, sidebar] = await Promise.all([
     read('admin-menu-registry.js'),
     read('admin-sidebar.js'),
   ]);
-  for (const marker of [
-    "id: 'summary'", "id: 'services'", "id: 'sites'", "id: 'people'",
-    "id: 'content'", "id: 'status'", "id: 'settings-records'",
-  ]) assert.ok(registry.includes(marker), marker);
+  for (const marker of ["id: 'summary'","id: 'sites'","id: 'people'","id: 'services'","id: 'content'","id: 'finance'","id: 'status'","id: 'releases'","id: 'devices-agent'","id: 'settings-records'","id: 'security-audit'"])
+    assert.ok(registry.includes(marker), marker);
   for (const marker of [
     "summary: ['platform-overview']",
     "sites: ['sites-all', 'sites-business', 'sites-clients', 'sites-community', 'sites-core', 'sites-preparing']",
-    "people: ['users-access', 'admins', 'ai-membership', 'security']",
+    "people: ['users-access', 'admins', 'ai-membership']",
     "services: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview']",
     "content: ['work', 'communication', 'community', 'books', 'social']",
-    "status: ['health', 'site-health', 'deployments', 'aiops', 'devices', 'pos-agent', 'api-cost', 'architecture', 'maturity']",
-    "'settings-records': ['public-site-controls', 'language-status', 'ai-settings', 'storage', 'ai-module-spec', 'audit-records']",
+    "finance: ['finance', 'api-cost']",
+    "status: ['health', 'site-health', 'architecture', 'maturity']",
+    "releases: ['deployments', 'aiops']",
+    "'devices-agent': ['devices', 'pos-agent']",
+    "'settings-records': ['public-site-controls', 'language-status', 'ai-settings', 'storage', 'ai-module-spec']",
+    "'security-audit': ['security', 'audit-records']",
   ]) assert.ok(sidebar.includes(marker), marker);
   assert.match(sidebar, /nav\.querySelector\(':scope>\.admin-command-entry'\)\?\.remove\(\)/);
   assert.match(sidebar, /main\?\.querySelector\(':scope>\.admin-context-tabs-shell'\)\?\.remove\(\)/);

@@ -145,14 +145,14 @@ test('desktop root keeps command console while mobile root opens the operational
   assert.doesNotMatch(menu, /setInterval\(/);
 });
 
-test('admin menu governance uses seven platform control areas with role-projected direct tasks', async () => {
+test('admin menu governance uses eleven platform control areas with role-projected direct tasks', async () => {
   const registry = await read('admin-menu-registry.js');
   const sidebar = await read('admin-sidebar.js');
   assert.match(registry, /ADMIN_MENU_GROUPS/);
-  for (const group of ['summary', 'sites', 'people', 'services', 'content', 'status', 'settings-records']) {
+  for (const group of ['summary', 'sites', 'people', 'services', 'content', 'finance', 'status', 'releases', 'devices-agent', 'settings-records', 'security-audit']) {
     assert.match(registry, new RegExp(`id: '${group}'`));
   }
-  for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'ai', 'business', 'data', 'site-management', 'access', 'security-audit', 'settings']) {
+  for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'ai', 'business', 'data', 'site-management', 'access', 'settings']) {
     assert.doesNotMatch(registry, new RegExp(`id: '${retired}', icon:`));
   }
   assert.match(registry, /id: 'campus', group: 'sites'/);
@@ -164,9 +164,9 @@ test('admin menu governance uses seven platform control areas with role-projecte
   assert.match(registry, /id: 'books', group: 'content'/);
   assert.match(registry, /id: 'devotional', group: 'content'/);
   assert.match(registry, /id: 'life-ai', group: 'services'/);
-  assert.match(registry, /id: 'security', group: 'people'/);
+  assert.match(registry, /id: 'security', group: 'security-audit'/);
   assert.match(registry, /id: 'capabilities', group: 'services'/);
-  assert.match(registry, /id: 'devices', group: 'status'/);
+  assert.match(registry, /id: 'devices', group: 'devices-agent'/);
   assert.match(registry, /id: 'health', group: 'status'/);
   assert.match(sidebar, /function pruneNonRegistryItems\(nav\)/);
   assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);

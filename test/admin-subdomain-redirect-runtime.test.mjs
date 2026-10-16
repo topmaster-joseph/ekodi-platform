@@ -6,7 +6,6 @@ const siteOwnedHosts = [
   'auth.ekodi.kr',
   'cloud.ekodi.kr',
   'live.ekodi.kr',
-  'pay.ekodi.kr',
   'trade.ekodi.kr',
   'messenger.ekodi.kr',
   'invest.ekodi.kr',
@@ -25,3 +24,12 @@ for (const host of siteOwnedHosts) {
     assert.match(response.headers.get('x-robots-tag') || '', /noindex/i);
   });
 }
+
+test('retired payment host denies /admin rather than redirecting to a public admin', async () => {
+  const host = ['pay', 'ekodi', 'kr'].join('.');
+  const response = await worker.fetch(new Request(`https://${host}/admin`), {});
+  assert.equal(response.status, 410);
+  assert.equal(response.headers.get('location'), null);
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  assert.match(response.headers.get('x-robots-tag') || '', /noindex/i);
+});

@@ -53,10 +53,31 @@ try {
   await page.waitForFunction(() => document.querySelector('#apiState')?.textContent?.includes('정상'));
 
   console.log('[ASSIST-E2E] verify canonical light conversation home');
-  await page.goto(canonicalBaseUrl, { waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => Boolean(sessionStorage.getItem('ekodi-auth-token')));
-  await page.waitForSelector('#app:not([hidden])');
-  await page.waitForFunction(() => document.querySelector('#apiState')?.textContent?.includes('정상'));
+  // A transient edge HTML response may omit the Admin shell altogether.
+  // Retry ONLY this token-free, same-origin canonical page once; never reenter OAuth,
+  // forge authentication, or bypass the central /api/session readiness check.
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const response = await page.goto(canonicalBaseUrl, { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => Boolean(sessionStorage.getItem('ekodi-auth-token')));
+    try {
+      await page.waitForSelector('#app:not([hidden])', { timeout: 15_000 });
+      await page.waitForFunction(() => document.querySelector('#apiState')?.textContent?.includes('정상'), null, { timeout: 15_000 });
+      break;
+    } catch (error) {
+      // Deliberately avoid URLs with queries, hashes, login data and response bodies.
+      const state = await page.evaluate(() => ({
+        path: location.pathname,
+        hasApp: Boolean(document.querySelector('#app')),
+        hasLogin: Boolean(document.querySelector('#loginScreen')),
+        hasCore: Boolean(window.EKODIAdminCore),
+        hasSession: Boolean(sessionStorage.getItem('ekodi-auth-token')),
+      })).catch(() => ({ unavailable: true }));
+      const status = response?.status() ?? null;
+      const contentType = String(response?.headers()?.['content-type'] || '').split(';')[0];
+      console.error(`[ASSIST-E2E] canonical-home-ready attempt ${attempt}/2 ${JSON.stringify({status,contentType,...state})}`);
+      if (attempt === 2 || [401, 403].includes(status) || state.path !== '/admin/') throw error;
+    }
+  }
   await page.waitForFunction(() => (
     document.body.classList.contains('admin-compact')
     && document.body.classList.contains('admin-command-home')
@@ -108,8 +129,8 @@ try {
   if (Number(visual?.sidebarWidth) !== EXPECTED_DESKTOP_SIDEBAR_WIDTH) {
     throw new Error(`Admin sidebar width mismatch: ${visual?.sidebarWidth || 'missing'} expected=${EXPECTED_DESKTOP_SIDEBAR_WIDTH}`);
   }
-  if (visual?.contextTabsDisplay !== 'none' || visual?.commandEntryDisplay !== 'none') {
-    throw new Error(`Admin redundant navigation chrome is visible: contextTabs=${visual?.contextTabsDisplay || 'missing'} commandEntry=${visual?.commandEntryDisplay || 'missing'}`);
+  if (visual?.contextTabsPresent || visual?.commandEntryPresent) {
+    throw new Error(`Admin redundant navigation chrome is visible: contextTabs=${visual?.contextTabsPresent ? 'present' : 'absent'} commandEntry=${visual?.commandEntryPresent ? 'present' : 'absent'}`);
   }
   if (visual?.targetValue !== 'EKODI' || Number(visual?.targetWidth || 0) < 150) {
     throw new Error(`Admin bottom command target is clipped or incorrect: target=${visual?.targetValue || 'missing'} width=${visual?.targetWidth || 0}`);

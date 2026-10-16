@@ -120,7 +120,7 @@ test('known paid API cost class cannot be relabeled as free by runtime profiles'
 
 
 test('free-first provider chain keeps paid APIs behind all zero-marginal routes',()=>{
-  assert.deepEqual(AI_CONTROL_POLICY.providerOrder.slice(0,10),[
+  assert.deepEqual(AI_CONTROL_POLICY.providerOrder.slice(0,11),[
     'cloudflare-workers-ai',
     'gemini-free',
     'openrouter-free',
@@ -129,6 +129,7 @@ test('free-first provider chain keeps paid APIs behind all zero-marginal routes'
     'node:codex',
     'node:gemini-cli',
     'node:claude-code',
+    'node:ollama-local',
     'openai-api',
     'anthropic-api',
   ]);

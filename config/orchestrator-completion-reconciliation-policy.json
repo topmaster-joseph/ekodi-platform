@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "policyId": "EKODI-ORCHESTRATOR-COMPLETION-001",
   "status": "enforced",
   "owner": "ekodi-orchestrator",
@@ -35,7 +35,41 @@
           "Validate CGMA edge contract"
         ],
         "scope": "cgma-edge-only"
+      },
+      "Deploy Independent Board": {
+        "job": "validate",
+        "requiredSteps": [
+          "Validate standalone board contract"
+        ],
+        "scope": "independent-board-only"
       }
+    },
+    "githubActionsOnlyRelease": {
+      "scope": "explicitly-approved-native-monitoring-task-only",
+      "taskId": "orch_recovery_dcf5dace563ac6da0488a29708afcf21",
+      "branchRef": "ai/gpt6/orch_recovery_dcf5dace563ac6da0488a29708afcf21",
+      "mergedPrNumber": 4383,
+      "workflowName": "EKODI Native Operations Watch",
+      "workflowPath": ".github/workflows/ekodi-native-operations-watch.yml",
+      "allowedPrFiles": [
+        ".github/workflows/ekodi-native-operations-watch.yml",
+        "config/ekodi-native-monitoring-ownership.json",
+        "scripts/ekodi-native-operations-watch.mjs",
+        "test/ekodi-native-operations-watch.test.mjs"
+      ],
+      "requiredRunEvents": [
+        "schedule",
+        "workflow_dispatch"
+      ],
+      "requiredJob": "observe",
+      "requiredSteps": [
+        "Collect EKODI-owned read-only operational evidence",
+        "Preserve privacy-safe evidence, including failures"
+      ],
+      "artifactPrefix": "ekodi-native-operations-",
+      "runMustBeSuccessfulAfterMerge": true,
+      "artifactMustBeNonExpiredAndNonEmpty": true,
+      "normalDeploymentsStillRequireStagingAndProduction": true
     }
   },
   "reconciliation": {
@@ -60,7 +94,8 @@
       "Deploy Control API",
       "Deploy EKODI Shared Site Core",
       "Deploy CGMA Apex Edge",
-      "Deploy Business OS"
+      "Deploy Business OS",
+      "Deploy Independent Board"
     ]
   },
   "oidcBoundary": {

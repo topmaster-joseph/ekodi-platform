@@ -1,0 +1,78 @@
+name: EKODI Mission Media Security Post-Merge Replay
+
+on:
+  workflow_run:
+    workflows: ['EKODI Orchestrated PR Convergent Merge']
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: write
+  pull-requests: read
+  issues: read
+
+concurrency:
+  group: ekodi-mission-media-security-postmerge-replay
+  cancel-in-progress: false
+
+jobs:
+  replay:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPAIR_BRANCH: ${{ github.event.workflow_run.head_branch }}
+    steps:
+      - name: Validate exact repaired orchestrator release and previously merged security source
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo="$GITHUB_REPOSITORY"
+          repair_branch="$REPAIR_BRANCH"
+          [[ "$repair_branch" =~ ^ai/[a-zA-Z0-9._-]+/orch_[a-zA-Z0-9_-]+$ ]] || exit 0
+          owner="${repo%%/*}"
+          encoded_head="$(printf '%s' "$owner:$repair_branch" | jq -sRr @uri)"
+          repair_pr="$(gh api "repos/$repo/pulls?state=all&base=main&head=$encoded_head&per_page=30" | jq -c --arg branch "$repair_branch" '[.[] | select(.head.ref == $branch and .merged_at != null)][0] // empty')"
+          [ -n "$repair_pr" ] || exit 0
+          repair_number="$(jq -r '.number' <<< "$repair_pr")"
+          repair_files="$(gh api "repos/$repo/pulls/$repair_number/files?per_page=100")"
+          jq -e 'any(.[]; .filename == ".github/workflows/reconcile-mission-media-moderation-release.yml")' <<< "$repair_files" >/dev/null || exit 0
+
+          # The repair PR is not allowed to change the security target.
+          prior="$(gh api "repos/$repo/pulls/4336")"
+          jq -e '.merged == true and .base.ref == "main" and (.head.ref|startswith("ai/"))' <<< "$prior" >/dev/null
+          source_branch="$(jq -r '.head.ref' <<< "$prior")"
+          [[ "$source_branch" =~ ^ai/[a-zA-Z0-9._-]+/orch_[a-zA-Z0-9_-]+$ ]]
+          source_sha="$(jq -r '.head.sha' <<< "$prior")"
+          source_task="${source_branch##*/}"
+          repair_task="${repair_branch##*/}"
+          for pair in "$repair_branch|$repair_task" "$source_branch|$source_task"; do
+            branch="${pair%%|*}"
+            task="${pair##*|}"
+            encoded_branch="$(printf '%s' "$branch" | jq -sRr @uri)"
+            encoded_task="$(printf '%s' "$task" | jq -sRr @uri)"
+            curl --fail-with-body -sS --retry 2 --max-time 15 \
+              "https://ekodi.kr/api/orchestrator/release-receipt?taskId=$encoded_task&branchRef=$encoded_branch" \
+              | jq -e --arg t "$task" --arg b "$branch" \
+                  '.ok == true and .authorized == true and .taskId == $t and .branchRef == $b and .authority == "ekodi-orchestrator"' >/dev/null
+          done
+
+          # Every one of the reviewed SQL guard files must be present in the
+          # previously protected-merged PR and byte-identical on current main.
+          files="$(gh api "repos/$repo/pulls/4336/files?per_page=100")"
+          for sql in \
+            supabase/migrations/20261012060200_activity_media_moderation_guard.sql \
+            supabase/migrations/20261012060300_activity_photo_reservation_moderation_guard.sql \
+            supabase/migrations/20261012060400_activity_photo_finalize_moderation_guard.sql; do
+            jq -e --arg path "$sql" 'any(.[]; .filename == $path)' <<< "$files" >/dev/null
+            original="$(gh api "repos/$repo/contents/$sql?ref=$source_sha" --jq .sha)"
+            current="$(gh api "repos/$repo/contents/$sql?ref=main" --jq .sha)"
+            [ "$original" = "$current" ] || { echo "Reviewed SQL changed: $sql"; exit 1; }
+          done
+
+          tracker="$(gh api "repos/$repo/issues/4265" --jq .state)"
+          [ "$tracker" = open ] || { echo 'Mission security release already closed; no replay'; exit 0; }
+          gh api --method POST "repos/$repo/actions/workflows/reconcile-mission-media-moderation-release.yml/dispatches" \
+            -f ref=main -f "inputs[release_branch_ref]=$source_branch" -f "inputs[release_task_id]=$source_task"
+          echo "Dispatched verified security release for previous merged PR #4336 using repaired official workflow."

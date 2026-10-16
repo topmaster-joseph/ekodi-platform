@@ -80,7 +80,7 @@ async function routeForOrder(env, orderId) {
     organization_id: 'EKODIBIZ',
     business_unit_id: 'PAY',
     project_id: null,
-    source_domain: 'pay.ekodi.kr'
+    source_domain: 'ekodi.kr'
   };
 }
 
@@ -157,7 +157,7 @@ async function financeOverview(env) {
       tossSecretConfigured: Boolean(env.TOSS_SECRET_KEY),
       tossLiveKey: String(env.TOSS_SECRET_KEY || '').startsWith('live_'),
       tossMidConfigured: Boolean(env.TOSS_MID),
-      paymentDomain: 'https://pay.ekodi.kr',
+      paymentDomain: 'https://ekodi.kr/ekodipay',
       webhookUrl: 'https://finance-api.ekodi.kr/webhooks/toss'
     }
   };

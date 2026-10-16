@@ -22,8 +22,8 @@ function legacyRecorder(){
 }
 
 test('public execution surface roots canonicalize slashless URLs to the same trailing-slash route',async()=>{
-  const publicRoots=PLATFORM_EXECUTION_SURFACES.filter(spec=>!spec.exact&&!spec.id.endsWith('-api')&&!spec.prefix.includes('/api/'));
-  assert.ok(publicRoots.some(spec=>spec.id==='ai'));
+  const publicRoots=PLATFORM_EXECUTION_SURFACES.filter(spec=>spec.id!=='ai'&&!spec.exact&&!spec.id.endsWith('-api')&&!spec.prefix.includes('/api/'));
+  assert.ok(PLATFORM_EXECUTION_SURFACES.some(spec=>spec.id==='ai'));
   for(const spec of publicRoots){
     const response=await routeCanonicalSurface(new Request(`https://ekodi.kr${spec.prefix}`),{});
     assert.equal(response.status,308,`${spec.id} slashless root must redirect`);
@@ -33,12 +33,59 @@ test('public execution surface roots canonicalize slashless URLs to the same tra
   }
 });
 
+test('AI slashless and trailing slash paths both serve directly without a redirect',async()=>{
+  for(const entry of ['canonical','site']){
+    const service=binding('EKODI AI direct root','text/html');
+    for(const path of ['/ai','/ai/']){
+      const request=new Request('https://ekodi.kr'+path+'?source=test');
+      const response=entry==='canonical'
+        ? await routeCanonicalSurface(request,{AI:service})
+        : await siteWorker.fetch(request,{AI:service});
+      assert.equal(response.status,200,entry+' '+path);
+      assert.equal(response.headers.get('location'),null,entry+' '+path);
+      assert.equal(response.headers.get('x-ekodi-canonical-surface'),'ai',entry+' '+path);
+      assert.equal(response.headers.get('x-ekodi-canonical-path'),'/ai',entry+' '+path);
+      assert.equal(await response.text(),'EKODI AI direct root',entry+' '+path);
+    }
+    assert.deepEqual(service.calls.map(item=>item.pathname),['/','/']);
+  }
+});
+
 test('canonical surface roots normalize with trailing slashes',async()=>{
   for(const path of ['/my','/admin','/auth']){
     const response=await routeCanonicalSurface(new Request(`https://ekodi.kr${path}`),{});
     assert.equal(response.status,308);assert.equal(new URL(response.headers.get('location')).pathname,`${path}/`);
   }
 });
+test('Desktop Bootstrap admin aliases bypass generic canonical shell rewriting at the true apex entry',async()=>{
+  const legacy=legacyRecorder();
+  for(const path of ['/admin/desktop/bootstrap','/admin/desktop/bootstrap/','/admin/desktop/bootstrap/index.html']){
+    for(const entry of [
+      () => routeCanonicalSurface(new Request(`https://ekodi.kr${path}?sensitive=discard`),{}, {legacyFetch:legacy.fetch}),
+      () => platformEntry.fetch(new Request(`https://ekodi.kr${path}?sensitive=discard`),{},{}),
+    ]){
+      const response=await entry();
+      assert.equal(response.status,307,path);
+      assert.equal(response.headers.get('location'),'/admin/status/devices',path);
+      assert.equal(response.headers.get('cache-control'),'no-store',path);
+      assert.equal(response.headers.get('x-ekodi-route'),'desktop-bootstrap-canonical',path);
+      assert.equal(response.headers.get('x-robots-tag'),'noindex, nofollow, noarchive',path);
+    }
+  }
+  assert.equal(legacy.calls.length,0,'the admin shell must not swallow the bootstrap alias');
+  const rejected=await platformEntry.fetch(new Request('https://ekodi.kr/admin/desktop/bootstrap/',{method:'POST'}),{},{});
+  assert.equal(rejected.status,405);
+  assert.equal(rejected.headers.get('allow'),'GET, HEAD');
+});
+
+test('a canonical apex admin routing change dispatches the guarded shared-site deployment',()=>{
+  const orchestrator=fs.readFileSync(new URL('../scripts/converge-orchestrated-pr-merge.mjs',import.meta.url),'utf8');
+  assert.match(orchestrator,/file==='canonical-surface-router\.js'/);
+  assert.match(orchestrator,/if\(sharedSiteTouched\)/);
+  assert.match(orchestrator,/\/actions\/workflows\/deploy-site-core\.yml\/dispatches/);
+  assert.match(orchestrator,/release_branch_ref:branch,release_task_id:taskId/);
+});
+
 test('My and system paths preserve the internal execution boundary',async()=>{
   const my=binding(),control=binding();
   let response=await routeCanonicalSurface(new Request('https://ekodi.kr/my/docs/app.js'),{MY:my,CONTROL_API:control});
@@ -169,7 +216,7 @@ test('legacy Admin entry host still converges while Auth has no legacy host cont
   assert.equal(response.status,308);const target=new URL(response.headers.get('location'));assert.equal(target.pathname,'/admin/');assert.equal(target.searchParams.get('route'),'books');
 });
 
-test('Admin canonical route registry mirrors the seven management areas and migrates legacy groups',()=>{
+test('Admin canonical route registry mirrors the eleven management areas and migrates legacy groups',()=>{
   const source=fs.readFileSync(new URL('../admin-canonical-routes.js',import.meta.url),'utf8');
   const location={href:'https://ekodi.kr/admin/',hostname:'ekodi.kr',pathname:'/admin/',search:'',hash:''};
   const window={location};vm.runInNewContext(source,{window,URL,URLSearchParams,Object,Set,String});
@@ -183,7 +230,7 @@ test('Admin canonical route registry mirrors the seven management areas and migr
   assert.equal(routes.pathFor('devotional'),'/admin/content/devotional');
   assert.equal(routes.pathFor('workspace'),'/admin/sites/workspace');
   assert.equal(routes.pathFor('clients'),'/admin/sites/clients');
-  assert.equal(routes.pathFor('aiops'),'/admin/status/aiops');
+  assert.equal(routes.pathFor('aiops'),'/admin/releases/aiops');
   assert.equal(routes.sectionFromPath('/admin/system/security'),'security');
   assert.equal(routes.sectionFromPath('/admin/home/campus'),'campus');
   assert.equal(routes.sectionFromPath('/admin/system/campus'),'campus');
@@ -286,11 +333,20 @@ test('shared-site release probes honor canonical slash parity',async()=>{
   for(const root of ['/live','/pay','/cloud']){
     const slashless=manifest.worker.requests.find(item=>item.url===`https://ekodi.kr${root}`);
     const canonical=manifest.worker.requests.find(item=>item.url===`https://ekodi.kr${root}/`);
+    const destination=root==='/pay'?'/ekodipay/':root+'/';
     assert.ok(slashless,`missing slashless probe for ${root}`);
     assert.deepEqual(slashless.statuses,[308]);
     assert.equal(slashless.redirect,'manual');
-    assert.ok(slashless.headerExpect?.includes(`location: https://ekodi.kr${root}/`));
+    assert.ok(slashless.headerExpect?.includes('location: https://ekodi.kr'+destination));
     assert.ok(canonical,`missing canonical trailing-slash probe for ${root}`);
-    assert.deepEqual(canonical.statuses,[200]);
+    assert.deepEqual(canonical.statuses,root==='/pay'?[308]:[200]);
+    if(root==='/pay'){
+      assert.ok(canonical.headerExpect?.includes('location: https://ekodi.kr/ekodipay/'));
+      assert.deepEqual(slashless.rollbackStatuses,[308]);
+      assert.ok(slashless.rollbackHeaderExpect?.includes('location: https://ekodi.kr/pay/'));
+      assert.deepEqual(canonical.rollbackStatuses,[200]);
+      assert.ok(canonical.rollbackExpect?.includes("title:'EKODI Pay'"));
+      assert.ok(canonical.rollbackHeaderExpect?.includes('x-ekodi-canonical-path: /pay'));
+    }
   }
 });

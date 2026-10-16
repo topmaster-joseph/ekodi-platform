@@ -12,6 +12,17 @@ import {
 const LOCALE_KEY = 'ekodi-admin-locale';
 const LOCALE_COOKIE = 'ekodi_admin_locale';
 const mounted = new WeakMap();
+const activationEpoch = new WeakMap();
+
+function beginActivation(nav) {
+  const next = (activationEpoch.get(nav) || 0) + 1;
+  activationEpoch.set(nav, next);
+  return next;
+}
+
+function isLatestActivation(nav, epoch) {
+  return activationEpoch.get(nav) === epoch;
+}
 const RETIRED_MENU_SECTIONS = new Set(['overview']);
 const GLOBAL_CLASS = 'admin-global-navs';
 const SOURCE_CLASS = 'admin-context-source';
@@ -30,11 +41,15 @@ const FLAT_DETAIL_GROUPS = new Set(['services']);
 const PRIMARY_SECTIONS = Object.freeze({
   summary: ['platform-overview'],
   sites: ['sites-all', 'sites-business', 'sites-clients', 'sites-community', 'sites-core', 'sites-preparing'],
-  people: ['users-access', 'admins', 'ai-membership', 'security'],
+  people: ['users-access', 'admins', 'ai-membership'],
   services: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'],
   content: ['work', 'communication', 'community', 'books', 'social'],
-  status: ['health', 'site-health', 'deployments', 'aiops', 'devices', 'pos-agent', 'api-cost', 'architecture', 'maturity'],
-  'settings-records': ['public-site-controls', 'language-status', 'ai-settings', 'storage', 'ai-module-spec', 'audit-records'],
+  finance: ['finance', 'api-cost'],
+  status: ['health', 'site-health', 'architecture', 'maturity'],
+  releases: ['deployments', 'aiops'],
+  'devices-agent': ['devices', 'pos-agent'],
+  'settings-records': ['public-site-controls', 'language-status', 'ai-settings', 'storage', 'ai-module-spec'],
+  'security-audit': ['security', 'audit-records'],
 });
 
 export function adminSidebarSectionOf(item) {
@@ -397,6 +412,7 @@ function syncWorkbenchState(nav, locale, preferredSection = '') {
 
 function activateSection(nav, section) {
   if (!section) return false;
+  const epoch = beginActivation(nav);
   const definition = getAdminMenuItem(section);
   const fallback = [...navItems(nav)].find(item => adminSidebarSectionOf(item) === section);
   if (definition?.delegateSection) {
@@ -416,11 +432,16 @@ function activateSection(nav, section) {
   const demandTarget = [...navItems(nav)].find(item => item.dataset.demandFeature === section);
   if (demandTarget && window.EKODIAdminDemand?.activate) {
     Promise.resolve(window.EKODIAdminDemand.activate(section)).then(() => {
+      // A newer submenu/work-area selection always wins. Never allow an
+      // earlier lazy demand load (for example security) to overwrite a later
+      // delegated selection (for example audit-records) after it finishes.
+      if (!isLatestActivation(nav, epoch)) return;
       if (window.EKODIAdminPanels?.activate) {
         window.EKODIAdminPanels.activate(section);
         return;
       }
       const installed = [...navItems(nav)].find(item => adminSidebarSectionOf(item) === section && !item.hasAttribute('data-demand-feature'));
+      if (!isLatestActivation(nav, epoch)) return;
       installed?.click?.();
     }).catch(error => console.warn(`[EKODI Admin] visible navigation demand activation failed: ${section}`, error));
     return true;
@@ -619,12 +640,18 @@ export function mountAdminSidebar(root = document, options = {}) {
     const group = global.dataset.adminGlobalGroup || '';
     nav.dataset.adminFocusedGroup = group;
     const currentSection = activeSection(nav);
+    // Render the selected work area's real submenu immediately, before any
+    // delegated/lazy panel activation can race with the sidebar state.
+    syncWorkbenchState(nav, readAdminSidebarLocale(), currentSection);
     if (currentSection === 'command-home' || getAdminMenuGroupForSection(currentSection) !== group) {
       const defaultSection = getAdminMenuGroupDefault(group);
       const defaultDefinition = getAdminMenuItem(defaultSection);
       if (defaultDefinition?.adminHandoff !== true) {
-        activateSection(nav, defaultSection);
-        delete nav.dataset.adminFocusedGroup;
+        // Demand-loaded panels may take several seconds to mount. Keep the
+        // selected work area visible immediately; sectionChanged clears this
+        // temporary focus only after the target panel actually activates.
+        const activationAccepted = activateSection(nav, defaultSection);
+        if (!activationAccepted) delete nav.dataset.adminFocusedGroup;
       }
     }
     closeDrawer();

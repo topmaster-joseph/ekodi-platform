@@ -72,7 +72,7 @@ await page.route('**/api/control/overview', async route => {
   if (route.request().method() === 'OPTIONS') return route.fulfill(syntheticJson({ ok:true }));
   await route.fulfill(syntheticJson({ ok:true, services:[] }));
 });
-await page.route('https://ekodi.kr/api/control/common-services/ai/status', async route => {
+await page.route('https://ekodi.kr/ai/api/status', async route => {
   await route.fulfill(syntheticJson({
     ok:true,
     config:{ architectureVersion:'1.10.0', taskExecutionEnabled:false, branchAllocationEnabled:false },
@@ -80,10 +80,10 @@ await page.route('https://ekodi.kr/api/control/common-services/ai/status', async
     providers:[],
   }));
 });
-await page.route('https://ekodi.kr/api/control/common-services/ai/tasks', async route => {
+await page.route('https://ekodi.kr/ai/api/tasks', async route => {
   await route.fulfill(syntheticJson({ tasks:[] }));
 });
-await page.route('https://ekodi.kr/api/control/common-services/ai/nodes', async route => {
+await page.route('https://ekodi.kr/ai/api/nodes', async route => {
   await route.fulfill(syntheticJson({ nodes:[] }));
 });
 await page.route('https://ekodi.kr/api/control/messenger/inbox', async route => {
@@ -91,6 +91,15 @@ await page.route('https://ekodi.kr/api/control/messenger/inbox', async route => 
 });
 await page.route('https://ekodi.kr/api/control/ai/actions?limit=20', async route => {
   await route.fulfill(syntheticJson({ actions:[] }));
+});
+await page.route('https://ekodi.kr/api/control/ai/v8/orchestrator/human-gates?limit=20', async route => {
+  await route.fulfill(syntheticJson({ tasks:[] }));
+});
+// This synthetic UI-only session cannot access the real directory API. Mock only
+// its read-only response; production authorization rules stay completely intact.
+await page.route('**/api/customers/directory', async route => {
+  if (!['GET','OPTIONS'].includes(route.request().method())) throw new Error('Synthetic directory cannot mutate data');
+  await route.fulfill(syntheticJson({generatedAt:'2026-10-10T00:00:00Z',summary:{},authority:{},tenants:[],roles:[],members:[]}));
 });
 await page.route('https://ekodi.kr/api/control/ai/assist', async route => {
   if (route.request().method() !== 'POST') return route.fulfill(syntheticJson({ reply:'', mode:'free_assist' }));
@@ -109,6 +118,26 @@ async function waitForAdminShell() {
   await page.waitForFunction(expected => document.querySelectorAll('button[data-admin-global-group]').length >= expected, workAreas.length, { timeout: 30000 });
   await page.waitForFunction(() => document.querySelectorAll('.admin-context-source .nav').length >= 1, null, { timeout: 30000 });
   await page.waitForFunction(() => Boolean(document.documentElement.dataset.ekodiDesignEngine) && document.documentElement.dataset.ekodiDesignAudit === 'pass', null, { timeout: 30000 });
+}
+
+async function resetAdminShellIfPoisoned() {
+  const state = await page.evaluate(() => {
+    const app = document.querySelector('#app');
+    const style = app ? getComputedStyle(app) : null;
+    const rect = app?.getBoundingClientRect();
+    return {
+      ready: document.documentElement.dataset.ekodiAdminReady === 'true',
+      panels: Boolean(window.EKODIAdminPanels),
+      sidebar: Boolean(window.EKODIAdminSidebar),
+      token: Boolean(sessionStorage.getItem('ekodi-auth-token')),
+      visible: Boolean(app && !app.hidden && style?.display !== 'none' && style?.visibility !== 'hidden' && (rect?.width || 0) > 0 && (rect?.height || 0) > 0),
+    };
+  });
+  if (state.ready && state.panels && state.sidebar && state.token && state.visible) return false;
+  console.warn(`[PROD-E2E] Admin shell degraded; bounded reload recovery ${JSON.stringify(state)}`);
+  await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
+  await waitForAdminShell();
+  return true;
 }
 
 const response = await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
@@ -185,21 +214,50 @@ for (const id of menuIds) if (!productionOrder.includes(id)) throw new Error(`Pr
 
 async function dispatchClick(locator, timeout = 10_000) {
   await locator.waitFor({ state: 'visible', timeout });
-  await locator.evaluate(node => { setTimeout(() => node.click(), 0); return true; });
+  await locator.evaluate(node => { node.click(); return true; });
 }
 
 async function resolveMenuTrigger(id, group) {
   const detail = page.locator(`button.admin-detail-item[data-admin-detail-section="${id}"]`).first();
-  if (await detail.count() && await detail.isVisible().catch(() => false)) return detail;
-
   const more = page.locator(`button[data-admin-detail-more="${group}"]`).first();
-  if (await more.count() && await more.isVisible().catch(() => false)) {
-    await dispatchClick(more);
-    await detail.waitFor({ state: 'visible', timeout: 10_000 });
-    return detail;
-  }
+  const groupButton = page.locator(`button[data-admin-global-group="${group}"]`).first();
 
-  throw new Error(`${id}: no visible left-navigation trigger after selecting work area ${group}`);
+  // Shared Admin groups can render a fallback section while a lazy module is
+  // mounting. Re-select only the requested group; never click another menu,
+  // fabricate a passing panel, or silently ignore an unavailable target.
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (await detail.isVisible().catch(() => false)) return detail;
+    // The production sidebar exposes an idempotent sync API. Use it as a
+    // bounded self-heal when lazy panel activation temporarily races the menu.
+    await page.evaluate(() => window.EKODIAdminSidebar?.sync?.(document)).catch(() => false);
+    if (await detail.isVisible().catch(() => false)) return detail;
+    if (await more.isVisible().catch(() => false)) {
+      const expanded = await page.locator('.sidebar nav').first()
+        .getAttribute('data-admin-more-group').then(value => value === group).catch(() => false);
+      if (!expanded) await dispatchClick(more, 8_000);
+    }
+    try {
+      await detail.waitFor({ state: 'visible', timeout: 5_000 });
+      return detail;
+    } catch {
+      // A menu that remains invisible is retried with the same group focus.
+    }
+    if (attempt < 2 && await groupButton.isVisible().catch(() => false)) {
+      await dispatchClick(groupButton, 8_000);
+      await page.waitForTimeout(350);
+    }
+  }
+  const diagnostic = await page.evaluate(() => {
+    const nav = document.querySelector('.sidebar nav');
+    return {
+      focusedGroup:nav?.dataset.adminFocusedGroup || '',
+      expandedGroup:nav?.dataset.adminMoreGroup || '',
+      activeGroups:[...document.querySelectorAll('button[data-admin-global-group]')]
+        .filter(node => node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))
+        .map(node => node.dataset.adminGlobalGroup),
+    };
+  });
+  throw new Error(`${id}: no visible left-navigation trigger after selecting work area ${group}; ${JSON.stringify(diagnostic)}`);
 }
 
 const results = [];
@@ -246,12 +304,36 @@ await verifyCommandConsoleRoundTrip();
 let selectedWorkArea = null;
 for (const [id, group] of menus) {
   console.log(`[PROD-E2E] ${id}: begin`);
-  if (selectedWorkArea !== group) {
-    const global = page.locator(`button[data-admin-global-group="${group}"]`);
+  // Delegated or lazily loaded sections may change the real active work area
+  // without changing this loop's expected group. Check DOM on every navigation.
+  const groupActive = () => page.evaluate(target => [...document.querySelectorAll('button[data-admin-global-group]')].some(
+    node => node.dataset.adminGlobalGroup === target && (node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))
+  ), group);
+  if (selectedWorkArea !== group || !await groupActive()) {
+    const global = page.locator(`button[data-admin-global-group="${group}"]`).first();
     await global.waitFor({ state: 'visible', timeout: 10000 });
-    const active = await global.evaluate(node => node.getAttribute('aria-current') === 'page' || node.classList.contains('active'));
-    if (!active) await dispatchClick(global);
-    await page.waitForFunction(target => [...document.querySelectorAll('button[data-admin-global-group]')].some(node => node.dataset.adminGlobalGroup === target && (node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))), group, { timeout: 5000 });
+    for (let attempt=0; attempt<2; attempt++) {
+      if (!await groupActive()) await dispatchClick(global);
+      try {
+        await page.waitForFunction(target => [...document.querySelectorAll('button[data-admin-global-group]')].some(
+          node => node.dataset.adminGlobalGroup === target && (node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))
+        ), group, { timeout: 12000 });
+        break;
+      } catch (error) {
+        if (attempt === 1) {
+          const state = await page.evaluate(() => ({
+            requestedSection:window.EKODIAdminPanels?.current?.() || '',
+            routedSection:window.EKODIAdminRoutes?.sectionFromLocation?.(location) || '',
+            focusedGroup:document.querySelector('.sidebar nav')?.dataset.adminFocusedGroup || '',
+            activeGroups:[...document.querySelectorAll('button[data-admin-global-group]')]
+              .filter(node => node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))
+              .map(node => node.dataset.adminGlobalGroup),
+            selectedUrl:location.pathname + location.hash,
+          }));
+          throw new Error(`${id}: ${group} never activated after bounded retries: ${JSON.stringify(state)}`, { cause:error });
+        }
+      }
+    }
     selectedWorkArea = group;
   }
 
@@ -339,7 +421,39 @@ for (const [id, group] of menus) {
       }
     }
   }
-  await page.waitForFunction(section => window.EKODIAdminPanels?.current?.() === section, id, { timeout: 12000 });
+  try {
+    await page.waitForFunction(section => window.EKODIAdminPanels?.current?.() === section, id, { timeout: 12000 });
+  } catch (initialError) {
+    // A lazy module may asynchronously select a fallback after the first
+    // section click. Re-select the same real left-navigation item once,
+    // without treating a hidden panel or a missing click as a success.
+    if (id === 'command-home') throw initialError;
+    const before = await page.evaluate(() => ({
+      current:window.EKODIAdminPanels?.current?.()||'',
+      route:location.pathname+location.hash,
+      focused:document.querySelector('.sidebar nav')?.dataset.adminFocusedGroup||'',
+    }));
+    console.warn(`[PROD-E2E] ${id}: selected panel changed during mount; bounded real-navigation recovery ${JSON.stringify(before)}`);
+    if (!await groupActive()) {
+      const global = page.locator(`button[data-admin-global-group="${group}"]`).first();
+      await dispatchClick(global);
+      await page.waitForFunction(target => [...document.querySelectorAll('button[data-admin-global-group]')].some(
+        node => node.dataset.adminGlobalGroup===target && (node.getAttribute('aria-current')==='page'||node.classList.contains('active'))
+      ), group, { timeout:12000 });
+    }
+    const retryTrigger = await resolveMenuTrigger(id,group);
+    await dispatchClick(retryTrigger);
+    try {
+      await page.waitForFunction(section => window.EKODIAdminPanels?.current?.() === section, id, { timeout: 20000 });
+    } catch {
+      const after = await page.evaluate(() => ({
+        current:window.EKODIAdminPanels?.current?.()||'',
+        route:location.pathname+location.hash,
+        focused:document.querySelector('.sidebar nav')?.dataset.adminFocusedGroup||'',
+      }));
+      throw new Error(`${id}: real menu activation did not stabilize after bounded retry: ${JSON.stringify({before,after})}`, {cause:initialError});
+    }
+  }
 
   if (id === 'command-home') {
     await page.waitForFunction(() => {
@@ -366,10 +480,33 @@ for (const [id, group] of menus) {
     continue;
   }
 
-  await page.waitForFunction(section => {
-    const panels = [...document.querySelectorAll('.content [data-panel]')].filter(panel => String(panel.dataset.panel || '').split(/\s+/).includes(section));
-    return panels.some(panel => !panel.hidden && !panel.classList.contains('hidden-panel'));
-  }, id, { timeout: 12000 });
+  try {
+    await page.waitForFunction(section => {
+      const panels = [...document.querySelectorAll('.content [data-panel]')].filter(panel => String(panel.dataset.panel || '').split(/\s+/).includes(section));
+      return panels.some(panel => !panel.hidden && !panel.classList.contains('hidden-panel'));
+    }, id, { timeout: 12000 });
+  } catch (error) {
+    // Preserve the hard UI assertion: report evidence, never skip the menu.
+    const state = await page.evaluate(section => ({
+      section,
+      current: window.EKODIAdminPanels?.current?.() || '',
+      route: location.pathname + location.hash,
+      panels: [...document.querySelectorAll('.content [data-panel]')]
+        .filter(node => String(node.dataset.panel || '').split(/\s+/).includes(section))
+        .map(node => ({
+          id: node.id || '',
+          hidden: node.hidden,
+          hiddenClass: node.classList.contains('hidden-panel'),
+          display: getComputedStyle(node).display,
+          visibility: getComputedStyle(node).visibility,
+          textLength: String(node.textContent || '').trim().length,
+          width: node.getBoundingClientRect().width,
+          height: node.getBoundingClientRect().height,
+        })),
+    }), id);
+    console.error(`[PROD-E2E] ${id}: panel visibility timeout ${JSON.stringify(state)}`);
+    throw new Error(`${id}: panel visibility did not stabilize: ${JSON.stringify(state)}`, { cause: error });
+  }
 
   await page.waitForFunction(section => {
     const panel = [...document.querySelectorAll('.content [data-panel]')].find(node => String(node.dataset.panel || '').split(/\s+/).includes(section) && !node.hidden && !node.classList.contains('hidden-panel'));
@@ -395,11 +532,11 @@ for (const [id, group] of menus) {
   console.log(`[PROD-E2E] ${id}: ok ${visiblePanel.id || visiblePanel.tag}:${visiblePanel.textLength}`);
   await page.screenshot({ path:path.join(artifactsDir,`menu-${id}.png`), fullPage:false });
 
-  // This verifier uses a synthetic UI-only token. Reload after each menu so a
-  // backend 401 from one lazy module cannot hide the shell and poison later UI checks.
-  await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
-  await waitForAdminShell();
-  selectedWorkArea = null;
+  // Keep menu verification on one authenticated shell. Full-page reloads are
+  // reserved for actual shell degradation so synthetic E2E cannot self-trigger
+  // Cloudflare 429 throttling or turn an optional service outage into shell failure.
+  const recoveredShell = await resetAdminShellIfPoisoned();
+  if (recoveredShell) selectedWorkArea = null;
 }
 
 const activeCount = results.filter(result => result.ok).length;

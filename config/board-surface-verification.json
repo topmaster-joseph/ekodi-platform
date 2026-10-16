@@ -13,13 +13,13 @@
   "surfaces": [
     {
       "id": "seonammedi.citizen_voice",
-      "path": "/seonammedi/#voices",
+      "path": "/seonammedi/board/voices",
       "enabled": true,
       "kind": "board"
     },
     {
       "id": "seonammedi.notice",
-      "path": "/seonammedi/#notices",
+      "path": "/seonammedi/board/notices",
       "enabled": true,
       "kind": "board"
     },

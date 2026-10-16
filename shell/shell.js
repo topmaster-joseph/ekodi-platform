@@ -131,7 +131,17 @@ function trafficDailySessionId(){
 function sendTrafficBeacon(){
   if(!service||navigator.globalPrivacyControl===true||navigator.doNotTrack==='1')return;
   if(surface==='admin'||surface==='data'||surface==='document'||surface==='form')return;
-  const sid=trafficDailySessionId();if(!sid)return;const body=JSON.stringify({sid,site_id:service.id,surface});
+  const sid=trafficDailySessionId();if(!sid)return;
+  const route=location.pathname.split('/').filter(Boolean);
+  // A user-controlled top-level slug may contain a name or private identifier.
+  // Report only canonical EKODI service roots; never transmit arbitrary paths.
+  const trafficKnownRoots=new Set('ai bible books community ekodichurch ekodimission ekodibiz ekodimall ekodilab cgma cheonggye seonammedi pgm jadam pizzamaru yogurt cmpmyi joseph live trade journal publishing invest money social author business delivery education energy support life management cafe messenger insurance work space experience lab pay stores'.split(' '));
+  const routeRoot=String(route[0]||'').toLowerCase();
+  const first=trafficKnownRoots.has(routeRoot)?routeRoot:'';
+  const child=first==='ekodibiz'&&['trade','marketing-ai','mall'].includes(String(route[1]||'').toLowerCase())
+    ?`/${route[1].toLowerCase()}`:'';
+  // Send only a known route prefix; do not transmit user IDs, queries or full paths.
+  const body=JSON.stringify({sid,site_id:service.id,site_path:first+child,surface});
   try{if(navigator.sendBeacon?.(TRAFFIC_TELEMETRY,body))return;}catch{}
   try{fetch(TRAFFIC_TELEMETRY,{method:'POST',mode:'cors',keepalive:true,headers:{'content-type':'text/plain;charset=UTF-8'},body}).catch(()=>{});}catch{}
 }

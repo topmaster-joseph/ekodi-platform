@@ -3,7 +3,7 @@ const params=url.searchParams;
 const legacySiteAliases=Object.freeze({'mall-seller':'mall'});
 const targetableWorkspaceSites=new Set(['cgma','marketing','biz','trade','mall','pay','books','church','lab','mission','community','edu','media','social','energy','messenger','invest']);
 const privateClientSites=new Set(['cgma-client','jadam-client','pizzamaru-client','yogurt-client']);
-const firstPartyClientSites=new Set(['ai','seonammedi']);
+const firstPartyClientSites=new Set(['ai','seonammedi','singles']);
 
 let changed=false;
 const requestedSite=params.get('site');

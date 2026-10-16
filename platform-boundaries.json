@@ -739,19 +739,25 @@
         "script.js",
         "responsive.css",
         "scripts/build.mjs",
-        "wrangler.site.toml"
+        "wrangler.site.toml",
+        "cooperative-registry.js",
+        "cooperative-core-access.js",
+        "cooperative-store.js",
+        "cooperative-page.js",
+        "cooperative-ui.js",
+        "cooperative-control.js",
+        "cooperative-charter.js"
       ],
       "domains": [
         "ekodi.kr",
         "www.ekodi.kr",
-        "pay.ekodi.kr",
         "trade.ekodi.kr",
         "mail.ekodi.kr",
         "live.ekodi.kr"
       ],
       "deployWorkflow": ".github/workflows/deploy-site-core.yml",
       "sharedDependencies": [],
-      "database": "none",
+      "database": "ekodi-auth D1 binding: cooperative_projects, cooperative_audit and cooperative_applications are workspace_id scoped; identity and access are mediated by cooperative-core-access.js",
       "note": "Temporary shared Worker. Split by domain family in isolation v2."
     },
     "service-proxy": {

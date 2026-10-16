@@ -11,7 +11,7 @@ test('Policies remains an internal compatibility route while audit records is hu
   const byId = new Map(ADMIN_MENU_REGISTRY.map(item => [item.id, item]));
   assert.equal(byId.get('policies')?.internal, true);
   assert.equal(adminMenuOrder().includes('policies'), false);
-  assert.equal(byId.get('audit-records')?.group, 'settings-records');
+  assert.equal(byId.get('audit-records')?.group, 'security-audit');
   assert.equal(byId.get('audit-records')?.delegateSection, 'aiops');
   assert.equal(adminMenuOrder().includes('audit-records'), true);
   assert.match(registrySource, /id: 'audit-records'[\s\S]*delegateSection: 'aiops'/);

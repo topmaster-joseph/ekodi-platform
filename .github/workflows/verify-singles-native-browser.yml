@@ -1,0 +1,37 @@
+# EKODI-owned isolated Chromium verification for Donghaeng public/user/admin shells.
+# Does not automate a real Google account picker or mutate member/payment records.
+name: EKODI Singles Native Browser Acceptance
+
+on:
+  workflow_run:
+    workflows: ["Deploy EKODI Shared Site Core"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-singles-native-browser-${{ github.event_name }}-${{ github.event.workflow_run.head_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  desktop:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    uses: ./.github/workflows/ekodi-background-browser-worker.yml
+    with:
+      surface_paths: '/singles,/singles/my,/singles/groups,/singles/events,/singles/discover,/singles/messages,/singles/subscribe,/singles/admin,/singles/privacy,/singles/api/status,/auth/?site=singles&return_to=https%3A%2F%2Fekodi.kr%2Fsingles%2Fmy'
+      device_profile: desktop
+
+  mobile:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    uses: ./.github/workflows/ekodi-background-browser-worker.yml
+    with:
+      surface_paths: '/singles,/singles/my,/singles/groups,/singles/events,/singles/discover,/singles/messages,/singles/subscribe,/singles/admin,/singles/privacy,/singles/api/status,/auth/?site=singles&return_to=https%3A%2F%2Fekodi.kr%2Fsingles%2Fmy'
+      device_profile: mobile-portrait

@@ -23,6 +23,14 @@ test('My EKODI is a unified private-first USER UI hub, not a second source of tr
   assert.match(userAi,/specialistDirectControl:false/);
 });
 
+test('My initial member render waits only for core access and defers enrichment',async()=>{
+  const app=await read('my/app.js');
+  assert.match(app,/await loadAccess\(\);[\s\S]{0,120}renderCoreMemberContext\(\)/);
+  assert.match(app,/Promise\.allSettled\(\[loadPortfolio\(\),loadProfile\(\),loadPersonalization\(\)\]\)/);
+  assert.match(app,/requestIdleCallback/);
+  assert.doesNotMatch(app,/Promise\.all\(\[loadAccess\(\),loadPortfolio\(\),loadProfile\(\),loadPersonalization\(\)\]\)/);
+});
+
 test('My EKODI has one visible workspace selector path and no dead hidden controls',async()=>{
   const [html,app]=await Promise.all([read('my/index.html'),read('my/app.js')]);
   assert.match(html,/id="workspaceList"/);
@@ -195,14 +203,16 @@ test('Production rollout preserves guarded My EKODI promotions and verifies the 
 
 
 test('My EKODI approval hub keeps unified visibility and person-scoped decision authority',async()=>{
-  const [home,approvalHtml,approvalApp,worker,migration]=await Promise.all([
+  const [home,loader,approvalHtml,approvalApp,worker,migration]=await Promise.all([
     read('my/index.html'),
+    read('my/secondary-feature-loader.js'),
     read('my/approvals/index.html'),
     read('my/approvals/app.js'),
     read('my-worker.js'),
     read('supabase/migrations/20260904150000_approval_core.sql')
   ]);
-  assert.match(home,/approval-brief\.js/);
+  assert.match(home,/secondary-feature-loader\.js/);
+  assert.match(loader,/approval-brief\.js/);
   assert.match(approvalHtml,/MY APPROVAL · DECISION INBOX/);
   assert.match(approvalHtml,/data-ekodi-ui="USER"/);
   assert.match(approvalApp,/my_approval_person_id/);
@@ -217,6 +227,14 @@ test('My EKODI approval hub keeps unified visibility and person-scoped decision 
   assert.match(migration,/create table if not exists public\.approval_executions/);
   assert.match(migration,/approval_not_assignee/);
   assert.doesNotMatch(approvalApp,/service_role|SUPABASE_SERVICE_ROLE_KEY/);
+});
+
+test('My guarded release manifest follows the lazy startup contract',async()=>{
+  const manifest=await read('deploy/manifests/my.worker.json');
+  assert.match(manifest,/app\.js\?v=20261009-hash-routing-v2/);
+  assert.match(manifest,/secondary-feature-loader\.js\?v=20261008-startup-defer-v1/);
+  assert.doesNotMatch(manifest,/church-marketing-ai\.js\?v=20260827-church-marketing-1/);
+  assert.doesNotMatch(manifest,/channel-automation\.js\?v=20260903-channel-automation-1/);
 });
 
 test('My production verification uses only the canonical apex path',async()=>{
@@ -269,14 +287,14 @@ test('My EKODI keeps the guest entry sparse and turns the signed-in root into a 
 
 
 test('My EKODI provides explicit privacy-first personal character selection',async()=>{
-  const [html,app,character,worker,profileApi]=await Promise.all([
-    read('my/index.html'),read('my/app.js'),read('my/character-identity.js'),read('my-worker.js'),read('supabase/functions/profile-api/index.ts')
+  const [html,loader,app,character,worker,profileApi]=await Promise.all([
+    read('my/index.html'),read('my/secondary-feature-loader.js'),read('my/app.js'),read('my/character-identity.js'),read('my-worker.js'),read('supabase/functions/profile-api/index.ts')
   ]);
   assert.match(html,/id="characterPreview"/);
   assert.match(html,/id="characterCanonical"/);
   assert.match(html,/id="characterPersonal"/);
   assert.match(html,/id="characterPortraitInput"/);
-  assert.match(html,/character-identity\.js/);
+  assert.match(loader,/character-identity\.js/);
   assert.match(app,/getUserId:\(\)=>String\(session\?\.user\?\.id\|\|''\)/);
   assert.match(character,/DB_NAME='ekodi-my-character-v1'/);
   assert.match(character,/indexedDB\.open/);
@@ -297,10 +315,11 @@ test('My EKODI provides explicit privacy-first personal character selection',asy
 
 test('My versioned assets use immutable browser caching while runtime data remains uncached',async()=>{
   const [html,worker]=await Promise.all([read('my/index.html'),read('my-worker.js')]);
-  assert.match(html,/app\.js\?v=20261008-traffic-resilience-v3/);
+  assert.match(html,/app\.js\?v=20261009-hash-routing-v2/);
   assert.match(worker,/searchParams\.has\('v'\)/);
   assert.match(worker,/public, max-age=31536000, immutable/);
   assert.match(worker,/manifest-fallback'[\s\S]{0,220}withVersionedAssetCache\(request/);
+  assert.match(worker,/manifestDrivenApp[\s\S]{0,1200}searchParams\.has\('v'\)\?'public, max-age=31536000, immutable':'no-store'/);
   assert.match(worker,/\/config\.js'[\s\S]{0,240}cache-control':'no-store'/);
 });
 
@@ -316,4 +335,22 @@ test('Convergent merge dispatches My EKODI production release with the orchestra
   assert.match(workflow,/release_task_id:/);
   assert.match(workflow,/EKODI_RELEASE_BRANCH_REF:/);
   assert.match(workflow,/EKODI_RELEASE_TASK_ID:/);
+});
+
+
+test('My EKODI defers secondary feature bundles until after the critical startup path',async()=>{
+  const [html,loader]=await Promise.all([read('my/index.html'),read('my/secondary-feature-loader.js')]);
+  assert.match(html,/secondary-feature-loader\.js\?v=20261008-startup-defer-v1/);
+  for(const asset of [
+    'public-profile.js','digital-card-admin.js','character-identity.js','approval-brief.js',
+    'personal-finance.js','life-communication.js','church-marketing-ai.js','channel-automation.js'
+  ]){
+    assert.doesNotMatch(html,new RegExp('<script[^>]+src="\\/my\\/'+asset.replaceAll('.','\\.')+''));
+    assert.match(loader,new RegExp('\\/my\\/'+asset.replaceAll('.','\\.')));
+  }
+  assert.match(loader,/requestIdleCallback/);
+  assert.match(loader,/window\.addEventListener\('load'/);
+  assert.match(loader,/data-finance-open/);
+  assert.match(loader,/a\[href="#account"\]/);
+  assert.match(loader,/Promise\.allSettled/);
 });

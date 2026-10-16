@@ -19,3 +19,13 @@
 .digital-card-public-links{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
 .digital-card-context-badge{display:inline-flex;align-items:center;width:max-content;margin-top:8px;padding:3px 8px;border-radius:999px;background:#edf4ec;color:#365641;font-size:10px;font-weight:800}
 @media(max-width:540px){.digital-card-context-options{display:grid;grid-template-columns:1fr 1fr;gap:5px 8px}.digital-card-public-links{display:grid}.digital-card-public-links .text-link{margin-top:0}}
+
+.digital-card-messengers{display:grid;gap:10px}
+.digital-card-messenger{display:grid;gap:8px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#f8faf8}
+.digital-card-messenger-top{display:grid;grid-template-columns:minmax(130px,.65fr) minmax(0,1fr) auto;gap:8px;align-items:center}
+.digital-card-messenger select,.digital-card-context select{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 10px;background:#fff;color:var(--ink)}
+.digital-card-row-controls{display:flex;align-items:center;gap:2px}
+.digital-card-context-messengers{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-top:8px;border-top:1px dashed var(--line)}
+.digital-card-context-messengers>strong{width:100%;font-size:11px;color:#516359}
+.digital-card-context-messenger-empty{font-size:11px;color:var(--muted)}
+@media(max-width:540px){.digital-card-messenger-top{grid-template-columns:1fr}.digital-card-row-controls{justify-content:flex-end}.digital-card-context-messengers{display:grid;grid-template-columns:1fr 1fr}.digital-card-context-messengers>strong,.digital-card-context-messenger-empty{grid-column:1/-1}}

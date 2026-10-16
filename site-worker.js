@@ -1,9 +1,14 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { canonicalTrackingQueryRedirect } from './canonical-query-policy.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
+import { businessCenterCss, businessCenterScript } from './ekodibiz-business-center.js';
 import { legacyAdminAliasTarget } from './admin-address-policy.js';
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
 import { ekodiBizInvestBusinessPage, isEkodiBizInvestPath } from './ekodibiz-invest-business.js';
+import { dorajiOfficeResponse, isDorajiOfficePath } from './ekodibiz-doraji-office.js';
+import { dorajiOperatorResponse, isDorajiOperatorPath } from './ekodibiz-doraji-operator-ui.js';
+import { dorajiLedgerApiResponse, isDorajiLedgerApiPath } from './ekodibiz-doraji-ledger-api.js';
+import { businessOsCommonResponse, isBusinessOsCommonPath } from './business-os-public-api.js';
 import { ekodiBizInvestAdminPage, isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
 import { tenantAdminCommandHomeScript, tenantAdminCommandHomeCss } from './tenant-admin-command-home.js';
 import { decorateDiscoveryResponse } from './discovery-layer.js';
@@ -53,8 +58,6 @@ const ADMIN_MARKETING_PUBLISHING_PREFIX = '/api/control/marketing-publishing';
 const ADMIN_COMMON_SERVICE_AI_PREFIX = '/api/control/common-services/ai/';
 
 const HUB_HOSTS = new Set([
-  'pay.ekodi.kr',
-  'pay.biz.ekodi.kr',
   'mail.ekodi.kr',
   'mail.biz.ekodi.kr',
   'mail.church.ekodi.kr',
@@ -525,6 +528,8 @@ async function proxyPublicAi(request, env) {
   const upstream=await env.AI.fetch(new Request(target.toString(),{method:request.method,headers,body,redirect:'manual'}));
   const response=new Response(upstream.body,upstream);
   response.headers.set('X-EKODI-AI-Entry','commons-v1');
+  response.headers.set('X-EKODI-Canonical-Surface','ai');
+  response.headers.set('X-EKODI-Canonical-Path','/ai');
   return response;
 }
 
@@ -611,6 +616,10 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const host = url.hostname.toLowerCase();
+    // Retired payment subdomains are never public entry points.
+    if (host === 'pay.ekodi.kr' || host === 'pay.biz.ekodi.kr') {
+      return new Response('Gone', {status:410, headers:{'cache-control':'no-store','x-robots-tag':'noindex, nofollow, noarchive','x-content-type-options':'nosniff'}});
+    }
 
     const canonicalQueryRedirect = canonicalTrackingQueryRedirect(request);
     if (canonicalQueryRedirect) {
@@ -622,6 +631,22 @@ export default {
     }
 
     if (PUBLIC_ALIAS_HOSTS.has(host)) return redirectToPublicCanonical(url);
+
+    // Desktop Bootstrap is a canonical entry alias, not a separate admin screen.
+    // It must precede the catch-all /admin/* shell fallback; static redirect HTML is not served there.
+    if (host === PUBLIC_HOST && /^\/admin\/desktop\/bootstrap(?:\/|\/index\.html)?$/.test(url.pathname)) {
+      if (!['GET', 'HEAD'].includes(request.method)) {
+        const response = new Response(null, {status:405, headers:{allow:'GET, HEAD', 'cache-control':'no-store'}});
+        applyBaseSecurityHeaders(response.headers);
+        response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+        return response;
+      }
+      const response = new Response(null, {status:307, headers:{location:'/admin/status/devices','cache-control':'no-store'}});
+      applyBaseSecurityHeaders(response.headers);
+      response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+      response.headers.set('X-EKODI-Route', 'desktop-bootstrap-canonical');
+      return response;
+    }
 
     if ((url.pathname === '/admin' || url.pathname === '/admin/') && host !== PUBLIC_HOST && !ADMIN_HOSTS.has(host)) {
       const target = new URL('https://ekodi.kr/admin/');
@@ -665,15 +690,7 @@ export default {
         secured.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
         return secured;
       }
-      if (url.pathname === '/ai') {
-        const target = new URL(request.url);
-        target.pathname = '/ai/';
-        const response = new Response(null, {status:308, headers:{location:target.toString(),'cache-control':'no-store'}});
-        applyBaseSecurityHeaders(response.headers);
-        response.headers.set('X-EKODI-AI-Canonical','/ai/');
-        return response;
-      }
-      if (url.pathname.startsWith('/ai/')) return proxyPublicAi(request, env);
+      if (url.pathname === '/ai' || url.pathname.startsWith('/ai/')) return proxyPublicAi(request, env);
       if (url.pathname === '/' || url.pathname === '/index.html') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/'));
         return withHostSecurity(response, PUBLIC_CSP, 'public, max-age=0', 'public-home');
@@ -688,6 +705,8 @@ export default {
       if (url.pathname === '/tenant-live-admin.js') return tenantLiveAdminScript();
       if (url.pathname === '/workspace-admin.css') return workspaceAdminCss();
       if (url.pathname === '/workspace-admin.js') return workspaceAdminScript();
+      if (['GET','HEAD'].includes(request.method) && url.pathname === '/ekodibiz-business-center.js') return businessCenterScript();
+      if (['GET','HEAD'].includes(request.method) && url.pathname === '/ekodibiz-business-center.css') return businessCenterCss();
       if (url.pathname.startsWith('/api/control/storage/google/cheonggye-members')) return proxyAdminStorage(request, env);
       if (url.pathname === ADMIN_PERSONAL_FINANCE_PATH) return proxyAdminPersonalFinance(request, env);
       if (url.pathname === '/church-pastor-admin.js') return churchPastorAdminScript();
@@ -714,6 +733,14 @@ export default {
       if (['GET','HEAD'].includes(request.method) && (url.pathname === '/ekodi-church' || url.pathname.startsWith('/ekodi-church/'))) { const target=new URL(request.url); target.pathname=url.pathname.replace(/^\/ekodi-church(?=\/|$)/i,'/ekodichurch'); return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}}); }
       if (['GET','HEAD'].includes(request.method) && isChurchPastorAdminPath(url.pathname)) return injectEkodiShell(churchPastorAdminPage(), 'church', 'admin');
       if (isWorkspaceAdminPath(url.pathname)) return injectEkodiShell(workspaceAdminPage(), 'space', 'admin');
+      // Keep EKODIBIZ business-unit routes owned by the shared apex shell, even after Pay routing changes.
+      if (isBusinessOsCommonPath(url.pathname)) return withHostSecurity(await businessOsCommonResponse(request), PUBLIC_CSP, 'no-store', 'public-ekodibiz-business-os');
+      if (isDorajiLedgerApiPath(url.pathname)) return withHostSecurity(await dorajiLedgerApiResponse(request,env), PUBLIC_CSP, 'private, no-store', 'private-ekodibiz-doraji-ledger');
+      if (isDorajiOperatorPath(url.pathname)) {
+        const secured=withHostSecurity(dorajiOperatorResponse(request), PUBLIC_CSP, 'private, no-store', 'private-ekodibiz-doraji-operator');
+        return url.pathname.endsWith('.js')?secured:injectEkodiShell(secured,'biz','public');
+      }
+      if (isDorajiOfficePath(url.pathname)) return injectEkodiShell(withHostSecurity(dorajiOfficeResponse(request), PUBLIC_CSP, 'no-store', 'public-ekodibiz-doraji'), 'biz', 'public');
       if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestPath(url.pathname)) {
         const page=ekodiBizInvestBusinessPage(request);
         const secured=withHostSecurity(page, PUBLIC_CSP, 'public, max-age=0, must-revalidate', 'public-ekodibiz-invest');

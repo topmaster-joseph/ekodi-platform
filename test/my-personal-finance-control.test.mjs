@@ -7,9 +7,9 @@ import {fileURLToPath} from 'node:url';
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
 test('My EKODI exposes a private personal finance control surface',async()=>{
-  const [html,worker,app]=await Promise.all([read('my/index.html'),read('my-worker.js'),read('my/personal-finance.js')]);
+  const [html,loader,worker,app]=await Promise.all([read('my/index.html'),read('my/secondary-feature-loader.js'),read('my-worker.js'),read('my/personal-finance.js')]);
   assert.match(html,/id="money"/);
-  assert.match(html,/personal-finance\.js/);
+  assert.match(loader,/personal-finance\.js/);
   assert.match(html,/personal-finance\.css/);
   assert.match(worker,/https:\/\/personal-finance-api\.ekodi\.kr/);
   assert.match(worker,/personalFinanceControl:true/);

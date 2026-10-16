@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process';
 
 const files={
   html:'my/index.html',
+  hubCss:'my/hub-shell.css',
   app:'my/app.js',
   personalization:'my/progressive-personalization.js',
   accessContext:'my/access-context.js',
@@ -26,6 +27,7 @@ const files={
   digitalCardVendor:'my/vendor/qrcode.min.js',
   digitalCardMigration:'supabase/migrations/20260930002300_person_digital_card_exchange.sql',
   identityShareMigration:'supabase/migrations/20261001034500_person_identity_share_contexts.sql',
+  messengerMigration:'supabase/migrations/20261008113036_person_messenger_contacts.sql',
   prod:'wrangler.my.toml',
   staging:'wrangler.my.staging.toml',
   auth:'auth-site/client-auth.js',
@@ -42,6 +44,9 @@ function mustNot(key,marker){if(content[key].includes(marker))throw new Error(`M
 
 for(const key of ['accessContext','digitalCardServer','digitalCardAdmin','digitalCardClient','digitalCardQr'])execFileSync(process.execPath,['--check',files[key]],{stdio:'inherit'});
 
+must('hubCss','body[data-auth-state="member"] .my-tab-section[hidden]');
+must('hubCss','html[data-ekodi-character="off"] body .ekodi-main-ekodian');
+// Hash routing hidden authority: selected tab must be the only visible primary surface.
 must('html','My EKODI');
 must('html','data-ekodi-ui="USER"');
 must('html','EKODI USER AI');
@@ -146,6 +151,10 @@ must('worker','ACCESS_CONTEXT_TAG');
 must('worker','/access-context.js');
 must('worker','accessContextGuidance:true');
 must('worker',"digitalCardPath:'/{handle}/card'");
+must('worker',"digitalCardShortPath:'/{handle}'");
+must('digitalCardAdmin','대표 공유주소 · ekodi.kr/');
+must('digitalCardServer','SHORT_CARD_RE');
+must('digitalCardServer',"utm_source','short");
 must('worker','contactExchange:true');
 must('digitalCardServer','routePersonDigitalCard');
 must('digitalCardServer','person_identity_share');
@@ -159,6 +168,13 @@ must('digitalCardAdmin','get_my_contact_exchanges');
 must('digitalCardAdmin','digitalCardQrLink');
 must('digitalCardClient','navigator.contacts');
 must('digitalCardClient','contextKey');
+must('digitalCardClient','navigator.share');
+must('digitalCardClient','NDEFReader');
+must('digitalCardClient',"recordType:'url'");
+mustNot('digitalCardClient','navigator.bluetooth');
+must('digitalCardServer','가까운 사람에게 보내기');
+must('digitalCardServer','NFC 태그 만들기');
+must('digitalCardServer','id="shareStatus"');
 must('digitalCardQr','new QRCode');
 must('digitalCardQr','downloadQr');
 must('digitalCardVendor','QRCode');
@@ -173,6 +189,16 @@ must('identityShareMigration','person_share_contexts_one_default_idx');
 must('identityShareMigration','public.person_identity_share');
 must('identityShareMigration','public.set_my_identity_share_config');
 must('identityShareMigration','public.submit_person_contact_exchange_v2');
+must('messengerMigration','private.person_messenger_contacts');
+must('messengerMigration','private.person_share_context_messengers');
+must('messengerMigration','public.set_my_identity_share_config_v2');
+must('messengerMigration','public.person_identity_share_capabilities');
+must('messengerMigration',"url ~ '^https://'");
+must('digitalCardAdmin','set_my_identity_share_config_v2');
+must('digitalCardAdmin','digitalCardMessengers');
+must('digitalCardServer','messengersHtml');
+must('html','id="digitalCardMessengers"');
+must('html','id="digitalCardAddMessenger"');
 must('html','id="digitalCardRoles"');
 must('html','id="digitalCardContexts"');
 must('html','id="digitalCardQrLink"');

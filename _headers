@@ -7,10 +7,32 @@
   Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src data:; script-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; object-src 'none'
   Cache-Control: public, max-age=300, s-maxage=86400, stale-while-revalidate=604800
 
+/cgma/ai-education/*
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'
+  ! Cache-Control
+  Cache-Control: no-store
+  X-EKODI-Route: cgma-ai-education-survey
+  X-Robots-Tag: noindex, nofollow
+
 /ops/health.json
   ! Cache-Control
   Cache-Control: no-store
   Access-Control-Allow-Origin: *
+
+/business-coop
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+  ! Cache-Control
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/business-coop/*
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+  ! Cache-Control
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow, noarchive
 
 /ekodimall
   Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline'; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; object-src 'none'

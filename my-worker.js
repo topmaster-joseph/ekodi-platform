@@ -4,6 +4,7 @@ import { routeIntent } from './capability-intent-runtime.js';
 import capabilityRegistry from './config/capability-registry.json' with { type: 'json' };
 import workspacePacks from './config/workspace-packs.json' with { type: 'json' };
 import { routePersonDigitalCard } from './my/person-digital-card.js';
+import { investMyRoute } from './invest-my-workspace.js';
 
 const WORKSPACE_KEY_RE=/^[a-z]+:[a-zA-Z0-9:_-]+$/;
 const SERVICE_ID_RE=/^[a-z][a-z0-9-]*$/;
@@ -266,7 +267,7 @@ async function manifestDrivenApp(request,env){
   const rewritten=source.replace(block,myServicePreamble());
   const headers=new Headers(asset.headers);
   headers.set('content-type','application/javascript; charset=utf-8');
-  headers.set('cache-control','no-store');
+  headers.set('cache-control',new URL(request.url).searchParams.has('v')?'public, max-age=31536000, immutable':'no-store');
   headers.set('x-ekodi-my-services','manifest-v1');
   return withHeaders(env,new Response(rewritten,{status:asset.status,statusText:asset.statusText,headers}));
 }
@@ -297,7 +298,18 @@ async function routedMyHome(request,env,route=null){
 
 export default{
   async fetch(request,env){
+    // Canonical Site Core ordinarily strips /my before the service binding call.
+    // Accept an intact mount prefix as well, so routing transitions can never
+    // turn a valid /my/health or /my/docs/ request into a static-asset 404.
+    const incoming=new URL(request.url);
+    if(incoming.pathname==='/my'||incoming.pathname.startsWith('/my/')){
+      const forwarded=new URL(incoming);
+      forwarded.pathname=incoming.pathname.slice('/my'.length)||'/';
+      request=new Request(forwarded.toString(),request);
+    }
     const url=new URL(request.url);
+    const investMyResponse=await investMyRoute(request,env);
+    if(investMyResponse)return withHeaders(env,investMyResponse);
     const digitalCardResponse=await routePersonDigitalCard(request,env);
     if(digitalCardResponse)return digitalCardResponse;
     const publicHandle=parsePublicPersonPath(url.pathname);
@@ -320,7 +332,7 @@ export default{
     if(url.pathname==='/life-channels.json')return json(env,{version:1,policy:'opt-in-least-privilege',proactiveLevels:['quiet','balanced','active'],outboundDefault:'human-approval',channels:[{id:'email',availability:'connector-ready'},{id:'sms',availability:'mobile-bridge-required'},{id:'kakao',availability:'official-api-limited'},{id:'instagram',availability:'provider-permission'},{id:'facebook',availability:'provider-permission'},{id:'slack',availability:'connector-ready'}]});
     if(url.pathname==='/health'){
       const cfg=runtimeConfig(env);
-      return json(env,{ok:true,service:'ekodi-my',product:'my-ekodi',identity:'person-scoped',creatorPortfolio:true,personalBrandMarketing:true,publicPersonPage:true,publicPersonPath:'/@{handle}',digitalCard:true,digitalCardPath:'/{handle}/card',digitalCardQrPath:'/{handle}/qr',digitalCardQrCenter:true,identityShareContexts:true,contactExchange:true,publicPersonManagement:'/my/#account',universalMembership:true,centralAiEntitlements:true,aiEntitlementManager:'/my/',ekodiShell:true,contextModel:'person-space-role',manifestDrivenServices:true,privateWorkspaceRouting:true,privateWorkspacePath:'/w/{workspace_key}/{service}',accessContextGuidance:true,lifeChannels:true,proactiveUserAi:true,progressivePersonalization:true,characterIdentityPersonalization:true,characterPortraitStorage:'local-device-only',intentOs:true,intentPlanContract:'ekodi.intent-plan.v1',intentExecutionBridge:true,intentExecutionContract:'ekodi.intent-execution.v1',capabilityRegistry:'universal-v3',personalizationPolicy:'detect-suggest-consent-activate-learn-fade',personalizationAuthority:'presentation-only',humanGatedOutbound:true,approvalHub:true,approvalPath:'/approvals/',documentWorkspace:true,documentPath:'/docs/',documentCapability:'core.documents',documentContract:'ekodi.documents.v2',documentHwpx:true,documentVersionHistory:true,documentStorage:'person-scoped-rls',documentFormats:{import:['txt','markdown','html','docx','hwpx'],export:['docx','hwpx','html','markdown','txt','pdf']},personalFinanceControl:true,personalFinanceBoundary:'dedicated-d1',serviceManifestVersion:EKODI_SERVICE_MANIFEST.version,visibleServices:visibleServices().length,privacy:'private-first',dataMode:cfg.dataMode,dataEnabled:cfg.dataEnabled});
+      return json(env,{ok:true,service:'ekodi-my',product:'my-ekodi',identity:'person-scoped',creatorPortfolio:true,personalBrandMarketing:true,publicPersonPage:true,publicPersonPath:'/@{handle}',digitalCard:true,digitalCardPath:'/{handle}/card',digitalCardShortPath:'/{handle}',digitalCardQrPath:'/{handle}/qr',digitalCardQrCenter:true,identityShareContexts:true,messengerContactSharing:true,contactExchange:true,publicPersonManagement:'/my/#account',universalMembership:true,centralAiEntitlements:true,aiEntitlementManager:'/my/',ekodiShell:true,contextModel:'person-space-role',manifestDrivenServices:true,privateWorkspaceRouting:true,privateWorkspacePath:'/w/{workspace_key}/{service}',accessContextGuidance:true,lifeChannels:true,proactiveUserAi:true,progressivePersonalization:true,characterIdentityPersonalization:true,characterPortraitStorage:'local-device-only',intentOs:true,intentPlanContract:'ekodi.intent-plan.v1',intentExecutionBridge:true,intentExecutionContract:'ekodi.intent-execution.v1',capabilityRegistry:'universal-v3',personalizationPolicy:'detect-suggest-consent-activate-learn-fade',personalizationAuthority:'presentation-only',humanGatedOutbound:true,approvalHub:true,approvalPath:'/approvals/',documentWorkspace:true,documentPath:'/docs/',documentCapability:'core.documents',documentContract:'ekodi.documents.v2',documentHwpx:true,documentVersionHistory:true,documentStorage:'person-scoped-rls',documentFormats:{import:['txt','markdown','html','docx','hwpx'],export:['docx','hwpx','html','markdown','txt','pdf']},personalFinanceControl:true,personalFinanceBoundary:'dedicated-d1',serviceManifestVersion:EKODI_SERVICE_MANIFEST.version,visibleServices:visibleServices().length,privacy:'private-first',dataMode:cfg.dataMode,dataEnabled:cfg.dataEnabled});
     }
     if(url.pathname==='/approvals')return Response.redirect(new URL('/approvals/',request.url).toString(),307);
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/workspaces/workspace?source=my',307);

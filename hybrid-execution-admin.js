@@ -73,6 +73,7 @@
       'startup.scan':'시작프로그램 확인',
       'maintenance.temp_cleanup':'임시파일 정리',
       'computer.browser.execute':'백그라운드 브라우저 자동실행',
+      'computer.workspace.slides.audio.insert':'Google Slides 원본 오디오 내장',
       'power.always_on':'항상 켜짐',
       'power.presentation':'프레젠테이션',
       'power.normal':'일반 모드',
@@ -144,6 +145,14 @@
       .hybrid-job-detail{display:grid;gap:5px;padding:8px 2px 2px;word-break:break-word}
       .hybrid-event[data-type="failed"]{border-color:rgba(180,35,35,.35)}
       .hybrid-event[data-type="completed"]{border-color:rgba(24,130,76,.28)}
+      .hybrid-native-browser{margin:14px 0;padding:14px;border:1px solid var(--line,#e0e4eb);border-radius:14px}
+      .hybrid-native-browser h4{margin:0 0 5px}
+      .hybrid-native-browser p{margin:0 0 10px;font-size:.87rem}
+      .hybrid-native-form{display:flex;align-items:end;gap:10px;flex-wrap:wrap}
+      .hybrid-native-form label{display:grid;gap:5px;flex:1;min-width:160px}
+      .hybrid-native-form label:first-child{flex:3;min-width:240px}
+      .hybrid-native-form input,.hybrid-native-form select{width:100%;box-sizing:border-box}
+      .hybrid-native-feedback{display:block;margin-top:8px;font-size:.86rem}
       .hybrid-privacy{margin:12px 0 0;font-size:.84rem;opacity:.76}
       @media(max-width:900px){.hybrid-automation-policy{grid-template-columns:1fr}.hybrid-metrics{grid-template-columns:repeat(3,1fr)}}
       @media(max-width:760px){.hybrid-grid{grid-template-columns:1fr}.hybrid-ledger{grid-column:auto}.hybrid-policy-grid{grid-template-columns:1fr}.hybrid-metrics{grid-template-columns:repeat(2,1fr)}}
@@ -174,6 +183,34 @@
           <div class="hybrid-policy-item" data-state="protected"><small>사용자 창·탭</small><strong>보존 · 자동종료 금지</strong></div>
           <div class="hybrid-policy-item"><small>전경 표시 예외</small><strong>OAuth · CAPTCHA · OS 권한</strong></div>
         </div>
+      </section>
+      <section class="hybrid-native-browser" id="hybridNativeBrowser" aria-label="EKODI 자체 브라우저 실행">
+        <div class="hybrid-row"><div><h4>자체 브라우저 실행 · MCP 불필요</h4><p>기존 EKODI Agent와 작업 큐를 사용합니다. 전용 백그라운드 프로필에서만 실행하며 사용자의 열린 탭과 입력을 건드리지 않습니다.</p></div><span class="hybrid-pill" id="hybridNativeReadiness" role="status">노드 확인 중</span></div>
+        <form class="hybrid-native-form" id="hybridNativeBrowserForm">
+          <label>EKODI 내부 경로<input name="path" value="/ai/" maxlength="600" required autocomplete="off" spellcheck="false"></label>
+          <label>화면<select name="deviceProfile"><option value="desktop">데스크톱</option><option value="compact-mobile">모바일</option><option value="tablet">태블릿</option></select></label>
+          <button type="submit" class="primary" id="enqueueHybridNativeBrowser" disabled>자체 실행 요청</button>
+          <button type="button" class="secondary" id="enqueueHybridCgmaBoard" disabled>CGMA 게시판 자체 점검</button>
+        </form>
+        <small class="hybrid-native-feedback" id="hybridNativeFeedback" role="status">온라인 자체 노드와 BG Browser Canary가 필요합니다. CGMA 버튼은 /cgma/board 공개 화면만 읽기 전용으로 점검합니다. 관리자 로그인·글쓰기·수정·삭제 성공을 뜻하지 않습니다.</small>
+      </section>
+      <section class="hybrid-native-browser" id="hybridCgmaAuthenticatedCrud" aria-label="CGMA 로그인 관리자 시험글 실증">
+        <div class="hybrid-row"><div><h4>CGMA 로그인 관리자 · 1회성 글쓰기 실증</h4>
+        <p>현재 EKODI 관리자 로그인 세션으로 <strong>시험글 한 건만</strong> 등록→수정→소프트삭제합니다. 기존 게시글이나 회원권한은 변경하지 않습니다. 자체 격리 브라우저의 공개 점검과 별개이며, 실제 쓰기 전 반드시 확인을 받습니다.</p>
+        </div><span class="hybrid-pill" id="hybridCgmaCrudReadiness" role="status">관리자 인증 확인 중</span></div>
+        <div class="hybrid-controls"><button type="button" class="secondary" id="runCgmaAuthenticatedCrud" disabled>관리자 권한 글쓰기 실증</button>
+        <a href="https://ekodi.kr/cgma/board" target="_blank" rel="noopener noreferrer">CGMA 게시판 확인</a></div>
+        <small class="hybrid-native-feedback" id="hybridCgmaCrudFeedback" role="status">인증된 관리자에서만 실행합니다. 실패한 시험글은 확인된 ID에 한해 정리하며, 작업 접수와 실제 완료는 구분합니다.</small>
+      </section>
+      <section class="hybrid-native-browser" id="hybridGoogleWorkspaceAudio" aria-label="Google Workspace 전용 오디오 실행">
+        <div class="hybrid-row"><div><h4>Google Workspace · 주일예배 오디오 삽입</h4>
+        <p>기존 261011 주일예배 Google Slides 42장 중 주기도문 5장, 다국어 설교 제목 3장에 등록된 MP3만 삽입합니다. EKODI 격리 전용 프로필의 실제 Google 로그인과 사전 Canary가 필요합니다.</p>
+        </div><span class="hybrid-pill" id="hybridWorkspaceAudioReadiness">실행기 준비 확인 중</span></div>
+        <div class="hybrid-controls">
+          <button type="button" class="primary" id="enqueueWorkspaceAudio" disabled>기존 원본에 MP3 8개 삽입 요청</button>
+          <a href="https://docs.google.com/presentation/d/1wJhndsrFK7GrwnJsmWMvarivlNCfgTE97RGQTRJ3CfI/edit" target="_blank" rel="noopener noreferrer">Google Slides 원본 열기</a>
+        </div>
+        <small class="hybrid-native-feedback" id="hybridWorkspaceAudioFeedback" role="status">로그인/권한이 없으면 작업하지 않습니다. 작업 접수는 실제 삽입 완료가 아닙니다.</small>
       </section>
       <section class="hybrid-watchdog" id="hybridWatchdog" data-status="unknown">
         <div class="hybrid-watchdog-head"><div><strong>운영 자동감시</strong><span class="hybrid-pill" id="hybridMonitorStatus">확인 전</span></div><small id="hybridMonitorTime">10분 주기 감시</small></div>
@@ -223,6 +260,10 @@
     panel.querySelector('#refreshHybrid')?.addEventListener('click', load);
     panel.querySelector('#toggleHybridFabric')?.addEventListener('click', toggleFabric);
     panel.querySelector('#enqueueHybridDiagnostic')?.addEventListener('click', enqueueDiagnostic);
+    panel.querySelector('#hybridNativeBrowserForm')?.addEventListener('submit', enqueueNativeBrowser);
+    panel.querySelector('#enqueueHybridCgmaBoard')?.addEventListener('click', enqueueNativeCgmaBoard);
+    panel.querySelector('#runCgmaAuthenticatedCrud')?.addEventListener('click', runCgmaAuthenticatedCrud);
+    panel.querySelector('#enqueueWorkspaceAudio')?.addEventListener('click', enqueueWorkspaceAudio);
     panel.querySelector('#hybridStatusFilter')?.addEventListener('change', renderJobs);
     panel.querySelector('#hybridJobSearch')?.addEventListener('input', renderJobs);
     load();
@@ -284,6 +325,72 @@
       button.textContent = enabled ? '실행망 일시중지' : '실행망 가동';
       button.className = enabled ? 'secondary' : 'primary';
     }
+  }
+
+  function eligibleNativeBrowserNodes() {
+    if (lastDashboard.fabric?.enabled === false) return [];
+    return (lastDashboard.nodes || []).filter(node =>
+      node.online && node.enabled && node.autoExecute
+      && node.capabilities?.backgroundBrowser === true
+      && Number(node.activeJobs || 0) < Number(node.maxConcurrency || 1));
+  }
+
+  function eligibleWorkspaceAudioNodes() {
+    if (lastDashboard.fabric?.enabled === false) return [];
+    return (lastDashboard.nodes || []).filter(node =>
+      node.online && node.enabled && node.autoExecute
+      && node.capabilities?.workspaceSlidesAudio === true
+      && Number(node.activeJobs || 0) < Number(node.maxConcurrency || 1));
+  }
+
+  function renderWorkspaceAudioStatus() {
+    const panel = document.querySelector('#hybridGoogleWorkspaceAudio');
+    if (!panel) return;
+    const eligible = eligibleWorkspaceAudioNodes();
+    const busy = (lastDashboard.jobs || []).some(job =>
+      job.taskType === 'computer.workspace.slides.audio.insert'
+      && ['pending','assigned','leased'].includes(job.status));
+    const button = panel.querySelector('#enqueueWorkspaceAudio');
+    button.disabled = !eligible.length || busy || lastDashboard.fabric?.canManage !== true;
+    panel.querySelector('#hybridWorkspaceAudioReadiness').textContent =
+      busy ? '동일 작업 진행 중' :
+      !eligible.length ? '전용 Google 인증·Canary 또는 노드 준비 필요' :
+      lastDashboard.fabric?.canManage !== true ? '최고관리자 전용' : `전용 실행 가능 노드 ${eligible.length}대`;
+  }
+
+  function renderNativeBrowserStatus() {
+    const panel = document.querySelector('#hybridNativeBrowser');
+    if (!panel) return;
+    const ready = eligibleNativeBrowserNodes();
+    const button = panel.querySelector('#enqueueHybridNativeBrowser');
+    button.disabled = ready.length === 0;
+    const cgmaButton = panel.querySelector('#enqueueHybridCgmaBoard');
+    if (cgmaButton) cgmaButton.disabled = ready.length === 0 || lastDashboard.fabric?.canManage !== true;
+    const crudButton = document.querySelector('#runCgmaAuthenticatedCrud');
+    if (crudButton && !crudButton.dataset.running) crudButton.disabled =
+      !sessionStorage.getItem(TOKEN_KEY) || lastDashboard.fabric?.canManage !== true;
+    const crudBadge = document.querySelector('#hybridCgmaCrudReadiness');
+    if (crudBadge) crudBadge.textContent = lastDashboard.fabric?.canManage === true && sessionStorage.getItem(TOKEN_KEY)
+      ? '관리자 세션 준비' : '로그인·최고관리자 권한 필요';
+    panel.querySelector('#hybridNativeReadiness').textContent = ready.length
+      ? `실행 가능 후보 ${ready.length}대`
+      : lastDashboard.fabric?.enabled === false ? '실행망 일시중지' : '실행 가능 노드 없음';
+  }
+
+  function normalizeNativeBrowserPath(input) {
+    const path = String(input || '').trim();
+    if (!path.startsWith('/') || path.startsWith('//') || /[\u0000-\u001f]/.test(path)) {
+      throw new Error('EKODI 내부 경로만 입력할 수 있습니다. 예: /ai/');
+    }
+    const target = new URL(path, API_BASE);
+    if (target.origin !== API_BASE || target.username || target.password || target.port) {
+      throw new Error('외부 사이트 주소는 허용하지 않습니다.');
+    }
+    if ([...target.searchParams.keys()].some(key => /(?:token|secret|password|credential|code|session|authorization|api.key)/i.test(key))) {
+      throw new Error('인증정보가 포함된 주소는 실행할 수 없습니다.');
+    }
+    if (target.hash) throw new Error('해시(#)를 제거한 내부 경로를 입력하세요.');
+    return target.pathname + target.search;
   }
 
   function renderMonitoring() {
@@ -394,6 +501,8 @@
       nodes.innerHTML = lastDashboard.nodes.length ? lastDashboard.nodes.map(nodeMarkup).join('') : '<div class="hybrid-empty">Agent가 다음 작업을 확인하면 실행 노드로 나타납니다.</div>';
       nodes.querySelectorAll('[data-save-node]').forEach(button => button.addEventListener('click', saveNode));
       renderFabric();
+      renderNativeBrowserStatus();
+      renderWorkspaceAudioStatus();
       renderMonitoring();
       renderJobs();
       renderEvents();
@@ -455,6 +564,171 @@
       await load();
     } catch (error) { alert(error.message); }
     finally { button.disabled = false; }
+  }
+
+  async function enqueueWorkspaceAudio() {
+    const button = document.querySelector('#enqueueWorkspaceAudio');
+    const feedback = document.querySelector('#hybridWorkspaceAudioFeedback');
+    if (!button || button.disabled) return;
+    if (!confirm('기존 261011 Google Slides 원본에 지정된 MP3 8개만 실제 오디오로 삽입할까요? 전용 Google 로그인/권한과 실행기 Canary가 사전 검증돼야 합니다.')) return;
+    button.disabled=true;
+    feedback.textContent='EKODI 자체 실행기 작업을 등록하고 있습니다.';
+    try {
+      if (!eligibleWorkspaceAudioNodes().length) throw new Error('전용 Google Workspace 노드 또는 Canary가 준비되지 않았습니다.');
+      const result=await request('/api/control/hybrid-execution/jobs',{
+        method:'POST',
+        body:JSON.stringify({
+          taskType:'computer.workspace.slides.audio.insert',
+          confirmed:true,maxAttempts:1,priority:60,
+          payload:{
+            pilotId:'261011-ekodi-sunday-service-8-mp3',
+            presentationId:'1wJhndsrFK7GrwnJsmWMvarivlNCfgTE97RGQTRJ3CfI',
+            operation:'insert-native-audio',
+          }
+        }),
+      });
+      feedback.textContent=`작업 접수 ${result.job?.id||'확인 필요'} · 8개 오디오 실제 삽입/재생 영수증이 있어야 완료됩니다.`;
+      await load();
+    } catch(error) {
+      feedback.textContent=`작업 등록 실패: ${error.message}`;
+    } finally {
+      renderWorkspaceAudioStatus();
+    }
+  }
+
+
+  // This is intentionally NOT an isolated-agent browser job: that profile cannot
+  // borrow the user's Google cookies. Only the current authenticated admin page
+  // can perform this consented, single-post production smoke without impersonation.
+  async function cgmaAuthenticatedApi(path, method = 'GET', data, expected = 200) {
+    if (!/^\/cgma\/board\/api\/(?:health|posts(?:\/[1-9]\d*)?)$/.test(path))
+      throw new Error('허용된 CGMA 시험글 API 경로가 아닙니다.');
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    if (!token) throw new Error('관리자 로그인 세션이 만료됐습니다.');
+    const response = await fetch(API_BASE + path, {
+      method,
+      headers: {
+        authorization:'Bearer ' + token,
+        accept:'application/json',
+        ...(data === undefined ? {} : {'content-type':'application/json'}),
+      },
+      ...(data === undefined ? {} : {body:JSON.stringify(data)}),
+      credentials:'same-origin',
+      cache:'no-store',
+      redirect:'error',
+      signal:AbortSignal.timeout(18000),
+    });
+    // No tokens, usernames, response body or private data are logged.
+    const payload = await response.json().catch(() => ({}));
+    if (response.status !== expected)
+      throw new Error('CGMA ' + method + ' ' + path.split('/').slice(0,5).join('/') +
+        ' HTTP ' + response.status + ' (필요 ' + expected + ')');
+    return payload;
+  }
+
+  async function runCgmaAuthenticatedCrud() {
+    const button = document.querySelector('#runCgmaAuthenticatedCrud');
+    const feedback = document.querySelector('#hybridCgmaCrudFeedback');
+    if (!button || !feedback || button.disabled || button.dataset.running) return;
+    if (lastDashboard.fabric?.canManage !== true || !sessionStorage.getItem(TOKEN_KEY)) {
+      feedback.textContent = '실제 EKODI 관리자 인증과 실행 권한이 필요합니다.';
+      return;
+    }
+    if (!confirm('CGMA 운영 게시판에 [EKODI 점검용] 글 한 건을 실제 등록한 뒤, 해당 글만 수정·소프트삭제하고 공개 목록 미노출까지 검사합니다. 기존 글은 변경하지 않습니다. 실행할까요?')) return;
+    button.dataset.running = 'true';
+    button.disabled = true;
+    let createdId = null;
+    let verifiedOwnPost = false;
+    let deleted = false;
+    const nonce = Date.now() + '-' + Math.random().toString(36).slice(2,10);
+    const title = '[EKODI 점검용] ' + nonce;
+    const body = 'EKODI 관리자 권한 1회성 자동 검증 글입니다. 시험 후 즉시 소프트삭제합니다.';
+    try {
+      feedback.textContent = '게시판 신원 및 현재 로그인 권한을 확인하고 있습니다.';
+      const health = await cgmaAuthenticatedApi('/cgma/board/api/health');
+      if (!health.ok || health.boardId !== 'site:cgma:main' || health.siteId !== 'cgma' || health.independent !== true)
+        throw new Error('CGMA 독립 게시판 신원 확인에 실패했습니다.');
+      const created = await cgmaAuthenticatedApi('/cgma/board/api/posts','POST',{title,body},201);
+      createdId = Number(created.id);
+      if (!Number.isSafeInteger(createdId) || createdId <= 0) {
+        createdId = null;
+        throw new Error('시험글 생성 ID 검증에 실패했습니다. 게시판 관리자 확인이 필요합니다.');
+      }
+      const itemPath = '/cgma/board/api/posts/' + createdId;
+      const read = await cgmaAuthenticatedApi(itemPath);
+      verifiedOwnPost = read.title === title && read.body === body;
+      if (!verifiedOwnPost) throw new Error('생성한 시험글의 신원 불일치로 후속 변경을 중지했습니다.');
+      feedback.textContent = '등록 확인 완료 · 시험글 수정 중 (' + createdId + ')';
+      const updatedTitle = title + ' / 수정 검증';
+      await cgmaAuthenticatedApi(itemPath, 'PATCH', {title:updatedTitle,body});
+      const updated = await cgmaAuthenticatedApi(itemPath);
+      if (updated.title !== updatedTitle || updated.body !== body)
+        throw new Error('시험글 수정 결과 검증에 실패했습니다.');
+      feedback.textContent = '수정 확인 완료 · 같은 시험글만 소프트삭제 중 (' + createdId + ')';
+      await cgmaAuthenticatedApi(itemPath,'DELETE');
+      deleted = true;
+      const removed = await cgmaAuthenticatedApi(itemPath, 'GET', undefined, 404);
+      if (removed.error !== 'not_found') throw new Error('시험글 삭제 뒤 404 검증에 실패했습니다.');
+      const list = await cgmaAuthenticatedApi('/cgma/board/api/posts');
+      if (!Array.isArray(list.items) || list.items.some(post => Number(post.id) === createdId))
+        throw new Error('소프트삭제한 시험글이 공개 목록에 남아 있습니다.');
+      feedback.textContent = '실서비스 검증 통과 · 시험글 #' + createdId +
+        ' 등록→수정→소프트삭제→공개 미노출 확인. 서버 감사기록은 별도 확인이 필요합니다.';
+    } catch(error) {
+      let cleanup = createdId ? '시험글 #' + createdId + ' 상태 확인 필요' : '시험글 ID 없음';
+      if (createdId && verifiedOwnPost && !deleted) {
+        try {
+          await cgmaAuthenticatedApi('/cgma/board/api/posts/' + createdId,'DELETE');
+          deleted = true;
+          cleanup = '시험글 #' + createdId + ' 정리 성공';
+        } catch {
+          cleanup = '시험글 #' + createdId + ' 정리 실패 — 관리자 수동 확인 필요';
+        }
+      }
+      feedback.textContent = '실증 실패: ' + (error?.message || '알 수 없는 오류') + ' · ' + cleanup;
+    } finally {
+      delete button.dataset.running;
+      renderNativeBrowserStatus();
+    }
+  }
+
+  async function enqueueNativeCgmaBoard() {
+    const form = document.querySelector('#hybridNativeBrowserForm');
+    const button = document.querySelector('#enqueueHybridCgmaBoard');
+    if (!form || !button || button.disabled || !eligibleNativeBrowserNodes().length) return;
+    // Existing admin-session queue, consent dialog, native-only capabilities and
+    // isolated browser profile remain authoritative; no login or write actions.
+    form.elements.path.value = '/cgma/board';
+    form.elements.deviceProfile.value = 'desktop';
+    await enqueueNativeBrowser({preventDefault(){},currentTarget:form});
+  }
+
+  async function enqueueNativeBrowser(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const button = form.querySelector('#enqueueHybridNativeBrowser');
+    const feedback = document.querySelector('#hybridNativeFeedback');
+    if (!button || button.disabled) return;
+    try {
+      if (!eligibleNativeBrowserNodes().length) throw new Error('온라인 노드 및 BG Browser Canary를 확인하세요.');
+      const path = normalizeNativeBrowserPath(form.elements.path.value);
+      const deviceProfile = form.elements.deviceProfile.value;
+      if (!['desktop','compact-mobile','tablet'].includes(deviceProfile)) throw new Error('허용되지 않은 화면 크기입니다.');
+      if (!confirm(`EKODI 자체 실행기로 ${path}를 백그라운드 점검할까요? 사용자 브라우저 탭은 조작하지 않습니다.`)) return;
+      button.disabled = true;
+      feedback.textContent = '실행 요청을 등록하는 중입니다.';
+      const result = await request('/api/control/hybrid-execution/jobs', {
+        method:'POST',
+        body:JSON.stringify({ taskType:'computer.browser.execute',
+          payload:{ path, deviceProfile }, priority:50, maxAttempts:1, confirmed:true }),
+      });
+      feedback.textContent = `작업 등록 ${result.job?.id || '확인 필요'} · 결과는 아래 실행 기록에서 확인하세요.`;
+      await load();
+    } catch (error) {
+      if (feedback) feedback.textContent = `실행 요청 실패: ${error.message}`;
+    } finally {
+      renderNativeBrowserStatus();
+    }
   }
 
   async function cancelJob(event) {

@@ -2,22 +2,64 @@
 'use strict';
 
 const shareButton=document.getElementById('shareCard');
+const nfcButton=document.getElementById('writeNfc');
+const shareStatus=document.getElementById('shareStatus');
 const form=document.getElementById('exchangeForm');
 const picker=document.getElementById('contactPicker');
 const status=document.getElementById('exchangeStatus');
 const submit=document.getElementById('exchangeSubmit');
 
+function cardUrl(){return location.href.split('#')[0]}
+function setShareStatus(message,kind=''){
+  if(!shareStatus)return;
+  shareStatus.className=kind;
+  shareStatus.textContent=message;
+}
+async function copyCardUrl(){
+  try{
+    await navigator.clipboard?.writeText(cardUrl());
+    setShareStatus('명함 주소를 복사했습니다.','success');
+    return true;
+  }catch{
+    setShareStatus('이 환경에서는 자동 복사를 지원하지 않습니다.','error');
+    return false;
+  }
+}
 if(shareButton){
   shareButton.addEventListener('click',async()=>{
-    const data={title:document.title,text:document.querySelector('.headline')?.textContent||document.querySelector('.name')?.textContent||'',url:location.href.split('#')[0]};
+    const data={title:document.title,text:document.querySelector('.headline')?.textContent||document.querySelector('.name')?.textContent||'',url:cardUrl()};
     try{
-      if(navigator.share)await navigator.share(data);
-      else{
-        await navigator.clipboard?.writeText(data.url);
-        const original=shareButton.textContent;shareButton.textContent='주소 복사됨';setTimeout(()=>{shareButton.textContent=original},1600);
+      if(navigator.share){
+        await navigator.share(data);
+        setShareStatus('휴대폰 공유창으로 명함을 보냈습니다.','success');
+      }else{
+        await copyCardUrl();
       }
-    }catch{}
+    }catch(error){
+      if(error?.name!=='AbortError')setShareStatus('공유를 시작하지 못했습니다. QR 또는 링크 복사를 이용해 주세요.','error');
+    }
   });
+}
+if(nfcButton){
+  if(typeof window.NDEFReader!=='function')nfcButton.hidden=true;
+  else{
+    nfcButton.hidden=false;
+    nfcButton.addEventListener('click',async()=>{
+      const original=nfcButton.textContent;
+      nfcButton.disabled=true;nfcButton.textContent='NFC 태그를 가까이 대세요';
+      setShareStatus('휴대폰 뒷면에 NFC 태그를 가까이 대세요.');
+      try{
+        const writer=new NDEFReader();
+        await writer.write({records:[{recordType:'url',data:cardUrl()}]});
+        setShareStatus('NFC 태그에 이 명함 주소를 기록했습니다.','success');
+      }catch(error){
+        const denied=error?.name==='NotAllowedError'||error?.name==='SecurityError';
+        setShareStatus(denied?'NFC 사용 권한이 허용되지 않았습니다.':'NFC 기록을 완료하지 못했습니다. QR 또는 시스템 공유를 이용해 주세요.','error');
+      }finally{
+        nfcButton.disabled=false;nfcButton.textContent=original;
+      }
+    });
+  }
 }
 function value(name,next){
   const input=form?.elements?.[name];if(input&&next)input.value=String(next).trim();

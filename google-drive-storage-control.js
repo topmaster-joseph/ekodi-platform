@@ -1,4 +1,5 @@
 import { superviseConnection } from './integration-connection-supervisor.js';
+import { marketingYouTubeOAuthErrorCode } from './marketing-youtube-oauth-error.js';
 import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 
 const BASE = '/api/control/storage/google';
@@ -298,14 +299,19 @@ export async function finishMarketingYouTubeOAuth(env,{state,code,error}={}) {
   if(!authCode) throw Object.assign(new Error('AUTHORIZATION_CODE_MISSING'),{code:'AUTHORIZATION_CODE_MISSING'});
   const redirectUri=String(payload.redirectUri||'').trim();
   if(!ALLOWED_MARKETING_GOOGLE_REDIRECT_URIS.has(redirectUri)) throw Object.assign(new Error('MARKETING_YOUTUBE_REDIRECT_URI_INVALID'),{code:'MARKETING_YOUTUBE_REDIRECT_URI_INVALID'});
-  const token=await tokenRequest(env,{client_id:googleClientId(env),client_secret:String(env.GOOGLE_DRIVE_CLIENT_SECRET),code:authCode,grant_type:'authorization_code',redirect_uri:redirectUri});
-  const targetAccount=String(payload.targetAccount||'').trim().toLowerCase();
-  const profileResponse=await fetch(GOOGLE_USERINFO,{headers:{authorization:`Bearer ${token.access_token}`}});
-  const profile=await profileResponse.json().catch(()=>({}));
-  const authorizedEmail=profileResponse.ok?String(profile.email||'').trim().toLowerCase():'';
-  if(targetAccount&&authorizedEmail!==targetAccount) throw Object.assign(new Error('YOUTUBE_TARGET_ACCOUNT_MISMATCH'),{code:'YOUTUBE_TARGET_ACCOUNT_MISMATCH',targetAccount,authorizedEmail});
-  const ticket=await createMarketingYouTubeTicket(env,{token,targetAccount,authorizedEmail});
-  return {marketingState,ticket,targetAccount,authorizedEmail};
+  try {
+    const token=await tokenRequest(env,{client_id:googleClientId(env),client_secret:String(env.GOOGLE_DRIVE_CLIENT_SECRET),code:authCode,grant_type:'authorization_code',redirect_uri:redirectUri});
+    const targetAccount=String(payload.targetAccount||'').trim().toLowerCase();
+    const profileResponse=await fetch(GOOGLE_USERINFO,{headers:{authorization:`Bearer ${token.access_token}`}});
+    const profile=await profileResponse.json().catch(()=>({}));
+    const authorizedEmail=profileResponse.ok?String(profile.email||'').trim().toLowerCase():'';
+    if(targetAccount&&authorizedEmail!==targetAccount) throw Object.assign(new Error('YOUTUBE_TARGET_ACCOUNT_MISMATCH'),{code:'YOUTUBE_TARGET_ACCOUNT_MISMATCH',targetAccount,authorizedEmail});
+    const ticket=await createMarketingYouTubeTicket(env,{token,targetAccount,authorizedEmail});
+    return {marketingState,ticket,targetAccount,authorizedEmail};
+  } catch (error) {
+    // OAuth state validation above remains fail-closed; never forward raw Google provider details.
+    return {marketingState,error:marketingYouTubeOAuthErrorCode(error)};
+  }
 }
 export async function consumeMarketingYouTubeTicket(env,{ticket}={}) {
   await ensureSchema(env.DB); const raw=String(ticket||'').trim(); if(!raw) throw new Error('GOOGLE_OAUTH_TICKET_REQUIRED');
@@ -509,9 +515,12 @@ export async function handleGoogleDriveStorageControl(request, env) {
     if (!ready(env)) return html('Google Drive OAuth 환경설정이 아직 준비되지 않았습니다.');
     const payload = await readState(env,url.searchParams.get('state'));
     const code = url.searchParams.get('code');
-    if (!payload || !code || Number(payload.exp || 0) < Date.now()) return html('연결 요청이 만료되었거나 올바르지 않습니다.');
+    if (!payload || Number(payload.exp || 0) < Date.now()) return html('연결 요청이 만료되었거나 올바르지 않습니다.');
     const redirectUri=stateGoogleOAuthRedirectUri(payload,env);
     if(payload.purpose==='marketing_youtube'){
+      const googleError=String(url.searchParams.get('error')||'').trim();
+      if(googleError)return marketingYouTubeResultRedirect(payload.marketingState,{error:googleError==='access_denied'?'GOOGLE_OAUTH_ACCESS_DENIED':'GOOGLE_OAUTH_EXCHANGE_FAILED'});
+      if(!code)return marketingYouTubeResultRedirect(payload.marketingState,{error:'AUTHORIZATION_CODE_MISSING'});
       try{
         const token=await tokenRequest(env,{client_id:googleClientId(env),client_secret:String(env.GOOGLE_DRIVE_CLIENT_SECRET),code,grant_type:'authorization_code',redirect_uri:redirectUri});
         if(!token.access_token||!token.refresh_token)return marketingYouTubeResultRedirect(payload.marketingState,{error:'YOUTUBE_REFRESH_TOKEN_MISSING'});
@@ -522,8 +531,9 @@ export async function handleGoogleDriveStorageControl(request, env) {
         if(targetAccount&&authorizedEmail!==targetAccount)return marketingYouTubeResultRedirect(payload.marketingState,{error:'YOUTUBE_TARGET_ACCOUNT_MISMATCH'});
         const ticket=await createMarketingYouTubeTicket(env,{token,targetAccount,authorizedEmail});
         return marketingYouTubeResultRedirect(payload.marketingState,{ticket});
-      }catch(error){console.error('Marketing YouTube OAuth broker callback failed',error);return marketingYouTubeResultRedirect(payload.marketingState,{error:String(error?.code||error?.message||'YOUTUBE_OAUTH_BROKER_FAILED')});}
+      }catch(error){const reason=marketingYouTubeOAuthErrorCode(error);console.warn('Marketing YouTube OAuth broker callback failed:',reason);return marketingYouTubeResultRedirect(payload.marketingState,{error:reason});}
     }
+    if(!code)return html('연결 요청이 만료되었거나 올바르지 않습니다.');
     const hash = await nonceHash(payload.nonce);
     const stateRow = await env.DB.prepare('SELECT * FROM storage_oauth_states WHERE nonce_hash=? AND expires_at>?').bind(hash,new Date().toISOString()).first();
     if (!stateRow) return html('이미 사용되었거나 만료된 연결 요청입니다.');

@@ -1,0 +1,121 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { decideContinuityReplay } from '../scripts/reconcile-orchestrated-pr-continuity.mjs';
+
+const now = Date.parse('2026-10-12T09:00:00Z');
+const sha = 'a'.repeat(40);
+const repo = 'topmaster-joseph/ekodi-platform';
+const branch = 'ai/chatgpt/orch_00000000-0000-4000-8000-000000000001';
+const original = () => ({
+  state: 'open', draft: false, base: { ref: 'main' },
+  head: { ref: branch, sha, repo: { full_name: repo } },
+  updated_at: '2026-10-12T08:00:00Z',
+});
+const run = (conclusion, event = 'push', date = '2026-10-12T08:00:00Z', id = 101, runAttempt = 1) => ({
+  id, head_sha: sha, status: 'completed', conclusion, event, created_at: date, updated_at: date, run_attempt: runAttempt,
+});
+
+test('replays a missed authorized orchestration trigger after a grace period', () => {
+  const result = decideContinuityReplay(original(), [], now, repo);
+  assert.equal(result.replay, true);
+  assert.equal(result.reason, 'recover-missed-trigger');
+  assert.equal(result.branch, branch);
+});
+
+test('does not replay when the push event can still arrive', () => {
+  const candidate = original();
+  candidate.updated_at = '2026-10-12T08:55:00Z';
+  assert.equal(decideContinuityReplay(candidate, [], now, repo).reason, 'within-event-grace-period');
+});
+
+test('only transient cancellation or timeout may be replayed', () => {
+  const cancelled = decideContinuityReplay(original(), [run('cancelled', 'push', '2026-10-12T08:00:00Z', 501)], now, repo);
+  const timedOut = decideContinuityReplay(original(), [run('timed_out', 'push', '2026-10-12T08:00:00Z', 502)], now, repo);
+  assert.equal(cancelled.replay, true);
+  assert.equal(cancelled.runId, 501);
+  assert.equal(timedOut.replay, true);
+  assert.equal(timedOut.runId, 502);
+  assert.equal(decideContinuityReplay(original(), [run('failure')], now, repo).replay, false);
+  assert.equal(decideContinuityReplay(original(), [run('success')], now, repo).replay, false);
+  assert.equal(decideContinuityReplay(original(), [run('action_required')], now, repo).reason, 'not-a-transient-run-conclusion');
+});
+
+test('does not interfere with running jobs or replay more than twice per SHA', () => {
+  const active = { ...run(null), status: 'in_progress' };
+  assert.equal(decideContinuityReplay(original(), [active], now, repo).reason, 'existing-run-active');
+  assert.equal(decideContinuityReplay(original(), [
+    run('cancelled', 'workflow_dispatch', '2026-10-12T07:00:00Z', 201),
+    run('cancelled', 'workflow_dispatch', '2026-10-12T08:00:00Z', 202),
+  ], now, repo).reason, 'replay-budget-exhausted');
+  assert.equal(decideContinuityReplay(original(), [
+    run('cancelled', 'push', '2026-10-12T08:00:00Z', 203, 3),
+  ], now, repo).reason, 'replay-budget-exhausted');
+});
+
+test('closed/draft/foreign/non-orchestrator changes never join replay', () => {
+  const variants = [
+    { ...original(), draft: true },
+    { ...original(), state: 'closed' },
+    { ...original(), head: { ...original().head, repo: { full_name: 'another/repo' } } },
+    { ...original(), head: { ...original().head, ref: 'ai/chatgpt/ordinary-feature' } },
+  ];
+  for (const candidate of variants) {
+    assert.equal(decideContinuityReplay(candidate, [], now, repo).replay, false);
+  }
+});
+
+test('continuity workflow is receipt-gated, bounded, and never bypasses guarded release', () => {
+  const script = readFileSync(new URL('../scripts/reconcile-orchestrated-pr-continuity.mjs', import.meta.url), 'utf8');
+  const watchdog = readFileSync(new URL('../.github/workflows/reconcile-orchestrated-pr-continuity.yml', import.meta.url), 'utf8');
+  const converger = readFileSync(new URL('../.github/workflows/converge-orchestrated-pr-merge.yml', import.meta.url), 'utf8');
+  assert.match(watchdog, /cron: '11,41 \* \* \* \*'/);
+  assert.match(watchdog, /ref: main/);
+  assert.match(watchdog, /actions: write/);
+  assert.match(converger, /workflow_dispatch:/);
+  assert.match(converger, /group: ekodi-orchestrated-merge\s*\n  cancel-in-progress: false/);
+  assert.match(script, /hasAuthorizedReceipt\(planned\.taskId, planned\.branch\)/);
+  assert.match(script, /result\.taskId === taskId/);
+  assert.match(script, /result\.branchRef === branch/);
+  assert.match(script, /result\.authority === 'ekodi-orchestrator'/);
+  assert.match(script, /current\.head\?\.sha !== planned\.sha/);
+  assert.match(script, /MAX_DISPATCH_ATTEMPTS_PER_SHA = 2/);
+  assert.match(script, /MAX_DISPATCHES_PER_SWEEP = 3/);
+  assert.match(script, /\/actions\/runs\/.*\/rerun/);
+  assert.match(script, /rerun-existing-run/);
+  assert.match(script, /workflow-dispatch-unavailable/);
+  assert.match(script, /transient-run-rerun-unavailable/);
+  assert.doesNotMatch(script, /\/pulls\/.*\/merge/);
+  assert.doesNotMatch(script, /guarded-worker-release|guarded-pages-release|wrangler deploy/);
+});
+
+test('replay grace period is measured from job completion rather than initial queue time', () => {
+  const justCompleted = {
+    ...run('cancelled', 'push', '2026-10-12T07:00:00Z'),
+    updated_at: '2026-10-12T08:55:00Z',
+  };
+  assert.equal(decideContinuityReplay(original(), [justCompleted], now, repo).reason, 'within-event-grace-period');
+  assert.equal(decideContinuityReplay(original(), [
+    { ...justCompleted, updated_at: '2026-10-12T08:00:00Z' },
+  ], now, repo).reason, 'recover-transient-run');
+});
+
+
+test('convergent merge grounds protected status projection in genuine Actions checks', () => {
+  const workflow = readFileSync(new URL('../.github/workflows/converge-orchestrated-pr-merge.yml', import.meta.url), 'utf8');
+  const converge = readFileSync(new URL('../scripts/converge-orchestrated-pr-merge.mjs', import.meta.url), 'utf8');
+  assert.match(workflow, /checks: read/);
+  assert.match(converge, /async function verifiedCheckRuns\(sha\)/);
+  assert.match(converge, /\/check-runs\?per_page=100/);
+  assert.match(converge, /run\.app\?\.slug==='github-actions'/);
+  assert.match(converge, /run\.status==='completed'/);
+  assert.match(converge, /\['success','neutral','skipped'\]\.includes\(run\.conclusion\)/);
+  const verifyIndex = converge.indexOf('if(!await verifiedCheckRuns(headSha))');
+  const updateIndex = converge.indexOf("/pulls/'+pr.number+'/update-branch");
+  const projectIndex = converge.indexOf("/statuses/'+mergeSha");
+  const mergeIndex = converge.indexOf("/pulls/'+pr.number+'/merge");
+  assert.ok(verifyIndex >= 0);
+  assert.ok(updateIndex > verifyIndex, 'base refresh must happen only after genuine head checks');
+  assert.ok(projectIndex > verifyIndex, 'merge-status projection must happen only after genuine head checks');
+  assert.ok(mergeIndex > verifyIndex, 'merge must happen only after genuine head checks');
+});

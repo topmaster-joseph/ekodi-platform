@@ -14,7 +14,7 @@ test('EKODI Mall YouTube settings are tenant-admin configurable across multiple 
   assert.match(growth,/saveChannelSettings/);
   assert.match(growth,/publish_privacy/);
   assert.match(growth,/channels\?part=brandingSettings/);
-  assert.match(growth,/const selectedChannels = discoveredChannels/);
+  assert.match(growth,/selectAuthorizedYouTubeChannels\(channels/);
   assert.doesNotMatch(growth,/EKODIMALL_YOUTUBE_CHANNEL_NOT_FOUND/);
   assert.match(ui,/설정 저장/);
   assert.match(ui,/저장 \+ YouTube 반영/);

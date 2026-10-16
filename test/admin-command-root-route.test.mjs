@@ -25,7 +25,7 @@ test('Admin roots resolve to command home while child routes remain independent'
   assert.equal(routes.pathFor('campus'),'/admin/sites/campus');
   assert.equal(routes.sectionFromPath('/admin/services/insurance'),'insurance');
   assert.equal(routes.sectionFromPath('/admin/operations/finance'),'finance');
-  assert.equal(routes.pathFor('finance'),'/admin/content/finance');
+  assert.equal(routes.pathFor('finance'),'/admin/finance/finance');
 });
 
 test('mobile admin root opens platform overview while explicit command home stays addressable',()=>{

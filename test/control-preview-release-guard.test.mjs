@@ -17,7 +17,7 @@ test('Control public preview smoke-tests the candidate through the canonical ser
   assert.equal(request.candidateUrl, undefined);
   assert.deepEqual(request.candidateStatuses, [200]);
   assert.ok(request.candidateExpect.includes('"schemaVersion":1'));
-  assert.ok(request.candidateHeaderExpect.includes('cache-control: public'));
+  assert.ok(request.candidateHeaderExpect.includes('cache-control: no-store'));
   assert.ok(request.candidateHeaderExpect.includes('x-content-type-options: nosniff'));
   assert.equal(request.rollbackVerify, false);
 });
@@ -26,6 +26,6 @@ test('Control public preview keeps canonical post-promotion cache and privacy ve
   const request = requestFor('https://ekodi.kr/api/public/preview/map?scope=ekodi&mode=platform');
   assert.ok(request.expect.includes('"secrets":false'));
   assert.ok(request.expect.includes('"personalData":false'));
-  assert.ok(request.headerExpect.includes('cache-control: public'));
+  assert.ok(request.headerExpect.includes('cache-control: no-store'));
   assert.ok(request.headerExpect.includes('x-content-type-options: nosniff'));
 });

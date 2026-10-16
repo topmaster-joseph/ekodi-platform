@@ -1,6 +1,11 @@
 (()=>{
   // Deployment sync: keep the published language-visibility contract aligned with ekodi-space assets.
   const sourceLocale='ko-KR';
+  // Redirect legacy year anchors formerly embedded in the news page.
+  if(location.pathname.replace(/\/+$/,'')==='/ekodimission/stories'&&/^#history-20\d{2}$/.test(location.hash)){
+    location.replace('/ekodimission/history'+location.hash);
+    return;
+  }
   const localeStorageKey='ekodi_user_locale';
   const localeCookieKey='ekodi_locale';
   const languageRegistryUrl='/shell/language-registry.json';
@@ -11,6 +16,7 @@
     release:'language-visibility-v1',
     links:Object.freeze([
       Object.freeze({href:'/ekodimission/activities',label:'활동'}),
+      Object.freeze({href:'/ekodimission/history',label:'연혁'}),
       Object.freeze({href:'/ekodimission/live',label:'라이브'}),
       Object.freeze({href:'/ekodimission/participate',label:'함께하기'}),
       Object.freeze({href:'/ekodimission/partners',label:'협력'}),
@@ -161,4 +167,30 @@
   }
   const mounted=mountNavigation();
   void initLanguage(mounted?.select);
+  // Private staff link: the platform API determines authority, never local UI state.
+  let presenceCheck=0;
+  async function checkPresenceStaff(){
+    const version=++presenceCheck;
+    const nav=mounted?.nav;
+    if(!nav)return;
+    nav.querySelector('[data-mission-presence-admin]')?.remove();
+    let token='';
+    try{token=sessionStorage.getItem('ekodi-auth-token')||window.EKODI_MY_AUTH?.getAccessToken?.()||''}catch{}
+    if(!token)return;
+    try{
+      const response=await fetch('https://renzehysxirjilvdxacv.supabase.co/functions/v1/presence-attendance-api?tenant=ekodimission',{
+        headers:{authorization:'Bearer '+token},cache:'no-store',signal:AbortSignal.timeout(7000)
+      });
+      if(!response.ok||version!==presenceCheck)return;
+      const link=document.createElement('a');
+      link.href='/ekodimission/presence';
+      link.textContent='현장 출결';
+      link.dataset.missionPresenceAdmin='';
+      nav.append(link);
+    }catch{}
+  }
+  void checkPresenceStaff();
+  window.addEventListener('ekodi:auth-success',()=>void checkPresenceStaff());
+  window.addEventListener('ekodi:auth-logout',()=>void checkPresenceStaff());
+  window.addEventListener('focus',()=>void checkPresenceStaff());
 })();

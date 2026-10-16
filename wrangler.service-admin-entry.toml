@@ -35,12 +35,6 @@ zone_name = "ekodi.kr"
 pattern = "mail.church.ekodi.kr/admin*"
 zone_name = "ekodi.kr"
 [[routes]]
-pattern = "pay.ekodi.kr/admin*"
-zone_name = "ekodi.kr"
-[[routes]]
-pattern = "pay.biz.ekodi.kr/admin*"
-zone_name = "ekodi.kr"
-[[routes]]
 pattern = "trade.ekodi.kr/admin*"
 zone_name = "ekodi.kr"
 [[routes]]

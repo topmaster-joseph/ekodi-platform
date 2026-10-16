@@ -142,4 +142,138 @@
 .inline-manage-form{margin:12px 0 18px;display:grid;gap:12px}.inline-manage-form[hidden]{display:none}.inline-manage-form>label,.inline-manage-grid label{display:grid;gap:6px;font-weight:700}.inline-manage-form input,.inline-manage-form select,.inline-manage-form textarea{width:100%;border:1px solid #cbd5df;border-radius:9px;padding:9px 10px;background:#fff;color:#111;font:inherit}.inline-manage-form textarea{resize:vertical}.inline-manage-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.inline-manage-checks{display:flex;gap:16px;flex-wrap:wrap}.inline-manage-checks .check{display:flex;align-items:center;gap:7px;font-weight:600}.inline-manage-checks .check input{width:auto}.inline-manage-list{display:grid;gap:8px;margin:0 0 14px}.inline-manage-list[hidden]{display:none}.inline-manage-item{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid #dce3ea;border-radius:11px;background:#fff;padding:10px 12px}.inline-manage-item>div:first-child{display:grid;gap:2px;min-width:0}.inline-manage-item small{color:#6b7785}.inline-manage-actions,.timeline-admin-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.inline-manage-actions button,.timeline-admin-actions button{border:1px solid #cbd5df;border-radius:8px;background:#fff;color:#15202b;padding:6px 9px;font:inherit;font-size:12px;cursor:pointer}.timeline-admin-actions{margin-top:10px}.source-type.is-private{border-color:#cbd5df;background:#f2f4f6;color:#687887}
 @media(max-width:760px){.inline-manage-grid{grid-template-columns:1fr}.inline-manage-item{align-items:flex-start;flex-direction:column}.inline-manage-actions{width:100%}.inline-manage-actions button{flex:1 1 auto}.timeline-admin-actions{align-items:stretch}.timeline-admin-actions button{flex:1 1 auto}}
 
-.section-view-title{margin-bottom:14px}.finance-preparing-note{max-width:760px;padding:22px 24px;border:1px solid #dce3ea;border-radius:14px;background:#fff}.finance-preparing-note strong{display:block;font-size:20px;color:#15202b}.finance-preparing-note p{margin:7px 0 0;color:#607080}.finance-preparing-section .finance-detail-content{display:none!important}@media(max-width:760px){.section{scroll-margin-top:118px}.section-view-title{margin-bottom:12px}.finance-preparing-note{padding:18px}}
+.section-view-title{margin-bottom:14px}.finance-public-main{width:100%;min-width:0}@media(max-width:760px){.section{scroll-margin-top:118px}.section-view-title{margin-bottom:12px}}
+
+/* URL-only source registration: readable review before public publication */
+.link-import-preview{display:grid;gap:6px;padding:14px 16px;margin:10px 0;border:1px solid #cbd5e1;border-radius:12px;background:#f8fafc;overflow-wrap:anywhere}
+.link-import-preview strong{color:#142945;font-size:1.02rem;line-height:1.45}
+.link-import-preview small{color:#4b647f}
+.link-import-preview p{margin:4px 0 0;white-space:pre-wrap;color:#334155}
+.link-import-form{margin-bottom:16px}
+.link-import-form>label{display:grid;gap:6px;margin:10px 0}
+.link-import-form input,.link-import-form select{width:100%;max-width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:9px}
+.link-import-form button:disabled,.inline-manage-form button:disabled{opacity:.52;cursor:not-allowed}
+@media(max-width:760px){.link-import-preview{padding:12px}.activity-toolbar{flex-wrap:wrap}.activity-toolbar .ekodi-public-admin-inline{max-width:100%}}
+
+/* Split committee activity ledger from the original #timeline related-news URL. */
+.committee-toolbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;margin:16px 0}
+.committee-toolbar label{display:grid;gap:5px;flex:1 1 260px;font-weight:600}
+.committee-toolbar input{width:100%;min-height:40px;border:1px solid #cbd5e1;border-radius:10px;padding:9px 12px;background:#fff}
+#committeeActivityFilters{margin:12px 0 18px;flex-wrap:wrap}
+.committee-news-section{padding:20px 0 24px;margin:8px 0 28px;border-bottom:1px solid #dce3ea}
+.committee-news-section>.section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.committee-news-section>.section-head h3{font-size:clamp(21px,3vw,26px);margin:0 0 8px}
+.committee-news-section>.section-head .note{max-width:880px}
+.committee-news-section .timeline{margin-top:16px}
+.inline-manage-form label.check input[type=checkbox]{width:auto;margin-right:6px}
+@media(max-width:760px){.committee-news-section>.section-head{flex-wrap:wrap}.committee-news-section>.section-head .section-head-actions{width:100%}}
+.related-linked-channels{margin:16px 0 24px;padding:14px 16px;background:#f8fafc;border:1px solid #e0e7ef;border-radius:14px}
+.related-linked-channels h3{margin:0 0 5px;font-size:1.04rem;color:#142945}
+.related-linked-channels p{margin:0 0 12px;font-size:.88rem}
+.related-channel-links{display:flex;flex-wrap:wrap;gap:9px}
+.related-channel-link{display:flex;align-items:center;gap:7px;border:1px solid #cbd5e1;border-radius:10px;padding:8px 11px;color:#163354;background:white;text-decoration:none;max-width:100%;overflow-wrap:anywhere}
+.related-channel-link span{font-size:.8rem;color:#64748b}
+.related-channel-link strong{font-size:.88rem;font-weight:650}
+.related-channel-link:hover,.related-channel-link:focus-visible{border-color:#315c8d;outline-offset:2px}
+.related-facebook-source{display:grid;justify-items:start;gap:7px;margin-top:12px;padding:12px 14px;background:#fff;border:1px solid #dbe4ee;border-radius:12px}
+.related-facebook-source a{font-size:.92rem;font-weight:750;color:#174e80;text-decoration:none;overflow-wrap:anywhere}
+.related-facebook-source a:hover,.related-facebook-source a:focus-visible{text-decoration:underline}
+.related-facebook-source small{color:#64748b;line-height:1.55}
+@media(max-width:760px){.committee-toolbar{align-items:stretch}.related-linked-channels{padding:12px}.related-channel-links{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.related-channel-link{display:grid;gap:2px}}
+
+
+/* Campaign homepage: preserve the submitted artwork and its Korean copy without cropping. */
+.hero.campaign-hero,
+.hero.campaign-hero.has-spotlight {
+  display:block;
+  width:100%;
+  max-width:none;
+  margin:0;
+  padding:0;
+  background:#fff;
+}
+.campaign-visually-hidden {
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  padding:0!important;
+  margin:-1px!important;
+  overflow:hidden!important;
+  clip-path:inset(50%)!important;
+  white-space:nowrap!important;
+  border:0!important;
+}
+.campaign-hero-artwork {
+  display:block;
+  width:100%;
+  background:#050505;
+  text-decoration:none;
+  line-height:0;
+}
+.campaign-hero-artwork:focus-visible {
+  outline:4px solid #c9a335;
+  outline-offset:-5px;
+}
+.campaign-hero-image {
+  display:block;
+  width:100%;
+  max-width:1903px;
+  height:auto;
+  margin-inline:auto;
+  object-fit:contain;
+}
+.hero.campaign-hero > .campaign-hero-mobile-hint {
+  display:none;
+}
+.campaign-hero-updates {
+  width:min(100%,1120px);
+  margin:0 auto;
+  padding:24px 20px 32px;
+}
+.campaign-hero-updates:not(:has(> :not([hidden]))) {
+  display:none;
+}
+.hero.campaign-hero .home-latest-updates {
+  margin-top:0;
+}
+.hero.campaign-hero .home-spotlight:not([hidden]) + .home-latest-updates:not([hidden]) {
+  margin-top:18px;
+}
+@media (max-width:760px) {
+  .hero.campaign-hero,
+  .hero.campaign-hero.has-spotlight {
+    padding:0;
+  }
+  .hero.campaign-hero > .campaign-hero-mobile-hint {
+    display:block;
+    margin:0;
+    max-width:none;
+    padding:9px 16px;
+    color:#596475;
+    font-size:12px;
+    text-align:center;
+    background:#fff;
+  }
+  .campaign-hero-updates {
+    padding:18px 16px 24px;
+  }
+}
+
+
+/* SEONAMMEDI-SHARED-SIX-NAV-DROPDOWN-001 */
+/* External stylesheet is shared by the home page and independent board shells.
+   Keep closed submenus hidden even if an inline board stylesheet is missing. */
+.site-header nav.ekodi-six-nav{display:flex;align-items:center;gap:10px;flex-wrap:wrap;overflow:visible;min-width:0}
+.site-header nav.ekodi-six-nav>a,.site-header nav.ekodi-six-nav>.nav-group>a{font-size:14px;white-space:nowrap;color:inherit;text-decoration:none}
+.site-header nav.ekodi-six-nav>.nav-group{position:relative;display:inline-flex;align-items:center;gap:3px;flex:none}
+.site-header nav.ekodi-six-nav>.nav-group>button{appearance:none;background:transparent!important;border:0!important;border-radius:6px;color:inherit;cursor:pointer;font:inherit;font-size:14px;padding:5px 6px;line-height:1.3;box-shadow:none!important}
+.site-header nav.ekodi-six-nav>.nav-group>button:hover,.site-header nav.ekodi-six-nav>.nav-group>button:focus-visible{background:#eef3f8!important}
+.site-header nav.ekodi-six-nav>.nav-group>.nav-submenu{display:none!important;position:absolute;z-index:1000;top:100%;left:0;min-width:170px;padding:7px;background:#fff;color:#222;border:1px solid #d8e0e7;border-radius:9px;box-shadow:0 8px 24px #0002;white-space:normal}
+.site-header nav.ekodi-six-nav>.nav-group:hover>.nav-submenu,.site-header nav.ekodi-six-nav>.nav-group:focus-within>.nav-submenu,.site-header nav.ekodi-six-nav>.nav-group[data-open="true"]>.nav-submenu{display:grid!important;gap:4px}
+.site-header nav.ekodi-six-nav>.nav-group>.nav-submenu>a{display:block;color:#222;padding:7px 9px;text-decoration:none;white-space:nowrap;border:0;font-weight:400}
+.site-header nav.ekodi-six-nav>.nav-group>.nav-submenu>a:hover,.site-header nav.ekodi-six-nav>.nav-group>.nav-submenu>a:focus-visible{background:#f1f5f9;border-radius:5px}
+@media(max-width:760px){.site-header nav.ekodi-six-nav{justify-content:flex-start;flex-wrap:wrap!important;overflow:visible!important;max-width:100%;min-width:0;gap:8px}.site-header nav.ekodi-six-nav>.nav-group>.nav-submenu{left:auto;right:0}}
+
+/* Reliable text links for social channels when the published channel API is unavailable. */
+.channel-text-fallback-link{display:inline-flex;align-items:center;margin:6px 8px 8px 0;padding:9px 13px;border:1px solid #b9cadd;border-radius:8px;background:#fff;color:#174a72;font-size:14px;font-weight:700;text-decoration:none}
+.channel-text-fallback-link:hover,.channel-text-fallback-link:focus-visible{background:#f0f6fc;border-color:#2f669a}

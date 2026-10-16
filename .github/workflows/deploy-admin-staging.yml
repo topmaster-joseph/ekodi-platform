@@ -144,7 +144,36 @@ jobs:
           }
 
       - name: Deploy isolated admin staging
-        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.admin.staging.toml
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Retry only transient Cloudflare 502/503/504 responses. Never retry
+          # account quota / 429 / 1027 / credential failures, and never promote
+          # a staging candidate without the following independent health checks.
+          for attempt in 1 2 3; do
+            logfile=$(mktemp)
+            if npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.admin.staging.toml 2>&1 | tee "$logfile"; then
+              rm -f "$logfile"
+              echo "Admin isolated staging deploy succeeded on attempt $attempt"
+              exit 0
+            fi
+            if grep -Eiq '(429|1027|rate.limit|quota.exceeded|insufficient.permissions|unauthorized|forbidden)' "$logfile"; then
+              echo 'Admin staging quota, access or authorization restriction: do not retry.' >&2
+              rm -f "$logfile"
+              exit 1
+            fi
+            if ! grep -Eiq '(502 Bad Gateway|503 Service Unavailable|504 Gateway Timeout|HTTP (502|503|504)|[[:space:]](502|503|504)[[:space:]])' "$logfile"; then
+              echo 'Admin staging failure is not a transient Cloudflare gateway response.' >&2
+              rm -f "$logfile"
+              exit 1
+            fi
+            rm -f "$logfile"
+            if [ "$attempt" -eq 3 ]; then
+              echo 'Admin staging gateway unavailable after three bounded attempts.' >&2
+              exit 1
+            fi
+            sleep "$((attempt * 8))"
+          done
 
       - name: Verify protected staging
         shell: bash

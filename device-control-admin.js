@@ -34,6 +34,7 @@
     'updates.install': '대기 중인 Windows 소프트웨어 업데이트를 설치합니다. EKODI는 자동 재부팅하지 않습니다. 진행할까요?',
     'profile.workstation.apply': '바탕화면과 시작 메뉴에 EKODI 업무 바로가기를 구성할까요?',
     'profile.workstation.restore': 'EKODI가 만든 업무 바로가기를 제거할까요?',
+    'software.localai.install': 'Ollama와 Claude Code CLI를 이 컴퓨터에 설치하고 로컬 경량 모델을 검증할까요?',
     'agent.self_update': '공식 EKODI Agent로 업데이트하고 원클릭 연결 프로토콜을 다시 등록할까요?',
     'computer.browser.canary': '사용자 화면·입력·클립보드를 건드리지 않는 전용 headless 브라우저 canary를 실행할까요?',
     'computer.desktop.canary': 'EKODI 자체 Hyper-V에서 임시 격리 VM을 생성·부팅·폐기하는 canary를 실행할까요? 사용자 화면과 입력은 사용하지 않습니다.',
@@ -50,6 +51,13 @@
   let deviceCatalog = Object.values(TYPE_FALLBACK);
   let currentDevices = [];
   let activeType = 'all';
+  let rosterStatus = 'all';
+  let rosterSearch = '';
+  let showRetiredGroups = false;
+  const openRosterGroups = new Set();
+  const openRosterRecords = new Set();
+  const closedRosterRecords = new Set();
+  const openRosterAdvanced = new Set();
 
   function authHeaders(json = false) {
     const token = sessionStorage.getItem(TOKEN_KEY) || '';
@@ -109,7 +117,7 @@
       'diagnostics.collect': '전체 진단', 'network.diagnose': '네트워크 진단', 'printers.diagnose': '프린터 진단', 'printing.image_preview.status': '인쇄 미리보기 점검', 'printing.image_preview.repair': '인쇄 미리보기 복구', 'printing.image_preview.restore': '인쇄 미리보기 원상복구', 'startup.scan': '시작프로그램 확인',
       'startup.disable': '시작프로그램 해제', 'startup.restore': '시작프로그램 복원', 'maintenance.temp_cleanup': '임시파일 정리',
       'updates.scan': '업데이트 확인', 'updates.install': '업데이트 설치', 'profile.workstation.apply': 'EKODI 업무환경',
-      'profile.workstation.restore': '업무환경 복원', 'agent.self_update': 'Agent 업데이트', 'computer.browser.canary': 'BG Browser Canary',
+      'profile.workstation.restore': '업무환경 복원', 'agent.self_update': 'Agent 업데이트', 'software.localai.install': 'Ollama·Claude 설치', 'software.localai.verify': '로컬 AI 실증', 'computer.browser.canary': 'BG Browser Canary',
       'computer.agent.status': 'Agent 상태', 'computer.system.read': '시스템 상태', 'computer.process.list': '프로세스 보기', 'computer.desktop.probe': '격리 데스크톱 점검', 'computer.desktop.canary': '격리 VM Canary', 'computer.desktop.guest.canary': 'Guest 실행 Canary', 'computer.desktop.ui.canary': 'Guest UI Canary', 'computer.desktop.session.canary': 'Session Canary', 'computer.desktop.session.execute': '격리 Session 실행',
     };
     return labels[type] || type;
@@ -152,11 +160,22 @@
     if (!/^EKD-[A-F0-9]{20}$/.test(code)) throw new Error('기기 연결 코드 형식이 올바르지 않습니다.');
     const ps = [
       "$ErrorActionPreference='Stop'",
-      "$p=Join-Path $env:TEMP 'ekodi-device-agent.ps1'",
-      "Invoke-WebRequest -UseBasicParsing '" + WINDOWS_AGENT_URL + "' -OutFile $p",
+      "$stage='download'",
+      "$p=Join-Path $env:TEMP ('ekodi-device-agent-'+[guid]::NewGuid().ToString('N')+'.ps1')",
+      "try {",
+      "Invoke-WebRequest -UseBasicParsing '" + WINDOWS_AGENT_URL + "' -OutFile $p -ErrorAction Stop",
+      "$stage='validate'",
+      "$source=Get-Content -LiteralPath $p -Raw -Encoding UTF8 -ErrorAction Stop",
+      "if($source -notmatch '\\$AgentVersion\\s*='){throw '[EKB-213][validate] Agent 파일 식별 검증 실패'}",
+      "$tokens=$null;$errors=$null",
+      "$null=[System.Management.Automation.Language.Parser]::ParseInput($source,[ref]$tokens,[ref]$errors)",
+      "if($errors.Count -gt 0){throw '[EKB-214][validate] Agent PowerShell 구문 검증 실패'}",
+      "$stage='install'",
       "& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $p -Install -EnrollmentCode '" + code + "' -ApiBase '" + API_BASE + "'",
-      "if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}",
-    ].join(';');
+      "if($LASTEXITCODE -ne 0){throw ('[EKB-215][install] 설치 프로세스 종료 코드 '+$LASTEXITCODE)}",
+      "} catch { Write-Host ('[EKB-219]['+$stage+'] '+$_.Exception.Message) -ForegroundColor Red;exit 1 }",
+      "finally { Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue }",
+    ].join('\n'); // Preserve the try/catch/finally grammar: ';finally' executes as a command on Windows PowerShell 5.1.
     const encoded = utf16leBase64(ps);
     return [
       '@echo off',
@@ -166,10 +185,26 @@
       'echo EKODI에 이 PC를 연결합니다.',
       'echo Windows 관리자 승인창이 나타나면 [예]를 누르세요.',
       'echo.',
+      'where powershell.exe >nul 2>&1',
+      'if errorlevel 1 (',
+      '  echo [EKB-210][powershell_missing] Windows PowerShell을 찾을 수 없습니다.',
+      '  echo Windows 관리자에게 PowerShell 설치 및 실행 정책을 확인하세요.',
+      '  pause',
+      '  exit /b 1',
+      ')',
+      'powershell.exe -NoProfile -NonInteractive -Command "exit 0" >nul 2>&1',
+      'if errorlevel 1 (',
+      '  echo [EKB-211][powershell_blocked] Windows 보안 또는 조직 정책이 PowerShell 시작을 거부했습니다.',
+      '  echo 앱 제어 및 Windows 보안 차단 기록을 확인하세요. 보안 설정을 해제하지 않습니다.',
+      '  pause',
+      '  exit /b 1',
+      ')',
       `powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand ${encoded}`,
       'if errorlevel 1 (',
       '  echo.',
-      '  echo PC 연결에 실패했습니다. 관리자 화면의 [연결 문제 해결]을 확인하세요.',
+      '  echo [EKB-212][enrollment] EKODI PC 연결 작업이 완료되지 않았습니다.',
+      '  echo 위쪽 EKA 단계 오류를 확인하고 다른 EKODI 설치 창을 닫은 뒤 다시 시도하세요.',
+      '  echo Windows 앱 제어 차단 기록을 확인하되 보안 기능을 해제하지 마세요.',
       '  pause',
       '  exit /b 1',
       ')',
@@ -364,6 +399,49 @@
 
     result.append(agentCard, systemCard);
 
+    const browserAudit = agent?.browserTaskAudit;
+    const auditWrap = document.createElement('div');
+    auditWrap.className = 'device-remote-processes';
+    const auditHead = document.createElement('div');
+    auditHead.className = 'device-subhead';
+    auditHead.innerHTML = '<h3>에코디 브라우저 작업 원장</h3><span>자체 실행기 작업만 표시 · 사용자 Opera 탭 제외</span>';
+    auditWrap.append(auditHead);
+    const records = Array.isArray(browserAudit?.recent) ? browserAudit.recent : [];
+    if (!records.length) {
+      const empty = document.createElement('p');
+      empty.className = 'device-command-empty';
+      empty.textContent = browserAudit
+        ? '기록된 자체 브라우저 작업이 없습니다.'
+        : 'Agent 상태를 조회하면 작업 생성 주체와 종료 검증 기록이 표시됩니다.';
+      auditWrap.append(empty);
+    } else {
+      const list = document.createElement('div');
+      list.className = 'device-remote-process-list';
+      const labels = {
+        completed:'완료·정리 확인',auth_required:'인증 필요·정리 확인',
+        cleanup_unverified:'종료 확인 필요',interrupted_unverified:'중단·정리 미확인',
+        running:'실행 중',failed:'실패'
+      };
+      records.forEach(item => {
+        const row = document.createElement('div');
+        const title = document.createElement('strong');
+        title.textContent = item.commandType || '브라우저 작업';
+        const state = document.createElement('span');
+        state.textContent = labels[item.state] || '확인 필요';
+        const times = document.createElement('span');
+        times.textContent = (item.startedAt || '시작 미확인') + ' → ' + (item.finishedAt || '종료 미확인');
+        const origin = document.createElement('span');
+        origin.textContent = '실행기 ' + (item.launcher || '확인 필요') + ' · 브라우저 ' +
+          (item.browser || '미확인') + ' · PID ' + (item.ownedBrowserProcessId || '미확인') +
+          ' · 관측 탭 ' + (item.ownedTabsObserved || 0) + ' / 닫힘 ' +
+          (item.ownedTabsClosed || 0) + ' · 작업 ' + (item.commandKey || '미확인');
+        row.append(title, state, times, origin);
+        list.append(row);
+      });
+      auditWrap.append(list);
+    }
+    result.append(auditWrap);
+
     if (processes) {
       const processWrap = document.createElement('div');
       processWrap.className = 'device-remote-processes';
@@ -457,9 +535,16 @@
       makeActionButton(device, 'network.diagnose', '네트워크 진단', 'ghost', {}, !capability(device, 'networkDiagnostics')),
       makeActionButton(device, 'updates.scan', '업데이트 확인', 'ghost', {}, !capability(device, 'windowsUpdate')),
       makeActionButton(device, 'agent.self_update', 'Agent 업데이트', 'secondary'),
+      makeActionButton(device, 'software.localai.install', 'Ollama·Claude 설치', 'secondary', {}, !capability(device, 'localAiInstall')),
+      makeActionButton(device, 'software.localai.verify', '로컬 AI 실증', 'primary', {}, !capability(device, 'localAiVerify')),
     );
 
     const advanced = document.createElement('details'); advanced.className = 'device-details device-advanced-control';
+    advanced.open = openRosterAdvanced.has(device.id);
+    advanced.addEventListener('toggle', () => {
+      if (!advanced.isConnected) return;
+      if (advanced.open) openRosterAdvanced.add(device.id); else openRosterAdvanced.delete(device.id);
+    });
     advanced.innerHTML = '<summary>세부 관리 · 고급 작업</summary>';
     const advancedBody = document.createElement('div'); advancedBody.className = 'device-advanced-control-body';
 
@@ -509,6 +594,14 @@
     foot.append(note, revoke);
 
     card.append(head, meta, health.firstElementChild, recommendationPanel(device), mainActions, advanced, foot);
+    const proofCommand = latestCommandByType(device, 'software.localai.verify');
+    const proof = proofCommand?.result?.localAiProof || device.diagnostics?.localAiProof;
+    if (proof) {
+      const summary = document.createElement('div');
+      summary.className = 'device-remote-summary-card';
+      summary.innerHTML = `<small>로컬 AI 실증 · ${timeLabel(proof.checkedAt || proofCommand?.completedAt || proofCommand?.issuedAt)}</small><strong>Ollama ${escapeHtml(proof.ollamaApi || '미확인')} · 추론 ${escapeHtml(proof.inference || '미확인')}</strong><span>모델 ${escapeHtml(proof.selectedModel || '없음')} · Claude CLI ${escapeHtml(proof.claudeCli || '미확인')} · Claude 계정 인증은 사용자 세션에서 별도 확인</span>`;
+      mainActions.after(summary);
+    }
     return card;
   }
 
@@ -533,38 +626,174 @@
     catch (error) { alert(error.message); } finally { submit.disabled = false; }
   }
 
+  // Presentation-only grouping: identical hostnames are NOT proof of shared hardware identity.
+  // Every original record and its deviceId remain reachable; no server mutation or token merger.
+  function rosterGroupKey(device) {
+    const id = String(device?.id || '').trim();
+    const type = String(device?.management?.type || 'pc').trim().toLowerCase();
+    const host = String(device?.hostname || '').trim().toLowerCase();
+    const platform = String(device?.platform || '').trim().toLowerCase();
+    if (platform !== 'windows' || !host || ['unknown', 'localhost', 'windows', 'pc', 'n/a', '-'].includes(host)) {
+      return 'id:' + id;
+    }
+    return 'host:windows:' + type + ':' + host;
+  }
+
+  function rosterRecordRank(device) {
+    return ({ online:0, stale:1, enrolled:2, offline:3, inventory:4, revoked:5 })[device.status] ?? 4;
+  }
+
+  function compareRosterRecords(a, b) {
+    const rank = rosterRecordRank(a) - rosterRecordRank(b);
+    if (rank) return rank;
+    const seen = (Date.parse(b.lastSeenAt || b.enrolledAt || '') || 0) - (Date.parse(a.lastSeenAt || a.enrolledAt || '') || 0);
+    if (seen) return seen;
+    return String(a.id || '').localeCompare(String(b.id || ''));
+  }
+
+  function groupRosterDevices(devices) {
+    const groups = new Map();
+    const seenIds = new Set();
+    for (const device of (Array.isArray(devices) ? devices : [])) {
+      const id = String(device?.id || '').trim();
+      if (!id || seenIds.has(id)) continue;
+      seenIds.add(id);
+      const key = rosterGroupKey(device);
+      if (!groups.has(key)) groups.set(key, { key, records:[] });
+      groups.get(key).records.push(device);
+    }
+    return Array.from(groups.values()).map(group => {
+      group.records.sort(compareRosterRecords);
+      const active = group.records.filter(device => device.status !== 'revoked');
+      group.retired = active.length === 0;
+      group.primary = active[0] || group.records[0];
+      group.activeCount = active.length;
+      return group;
+    }).sort((a, b) => compareRosterRecords(a.primary, b.primary) || a.key.localeCompare(b.key, 'ko'));
+  }
+
+  function hasRosterHealthScore(device) {
+    const score = device.health?.score;
+    return score !== null && score !== undefined && score !== '' && Number.isFinite(Number(score));
+  }
+
+  function rosterNeedsAttention(device) {
+    return ['stale', 'offline'].includes(device.status)
+      || (device.status === 'online' && hasRosterHealthScore(device) && Number(device.health.score) < 75);
+  }
+
+  function createRosterGroup(group) {
+    const primary = group.primary;
+    const type = typeInfo(primary);
+    const wrapper = document.createElement('details');
+    wrapper.className = 'device-roster-group';
+    wrapper.dataset.rosterKey = group.key;
+    wrapper.dataset.status = primary.status;
+    wrapper.open = openRosterGroups.has(group.key);
+    const heading = document.createElement('summary');
+    heading.className = 'device-roster-summary';
+    const name = document.createElement('span'); name.className = 'device-roster-name';
+    const title = document.createElement('strong'); title.textContent = primary.label || primary.hostname || type.label;
+    const host = document.createElement('small');
+    host.textContent = [type.label, primary.hostname && primary.hostname !== primary.label ? primary.hostname : '', primary.management?.locationLabel || ''].filter(Boolean).join(' · ');
+    name.append(title, host);
+    const status = document.createElement('span'); status.className = 'device-roster-state'; status.textContent = statusLabel(primary.status);
+    const seen = document.createElement('time'); seen.className = 'device-roster-seen';
+    seen.textContent = primary.status === 'inventory' ? '관찰 등록' : '최근 연결 ' + timeLabel(primary.lastSeenAt);
+    if (primary.lastSeenAt) seen.dateTime = primary.lastSeenAt;
+    const registrations = document.createElement('span'); registrations.className = 'device-roster-count';
+    registrations.textContent = group.records.length > 1 ? '동일 이름 기록 ' + group.records.length + '건' : '등록 1건';
+    heading.append(name, status, seen, registrations);
+    const body = document.createElement('div'); body.className = 'device-roster-body';
+
+    function populateBody() {
+      if (body.childNodes.length) return;
+      if (group.records.length > 1) {
+        const hint = document.createElement('p'); hint.className = 'device-roster-hint';
+        hint.textContent = '컴퓨터명이 같은 등록 기록을 한곳에 모았습니다. 실제 같은 PC인지 확인 전까지 기기 ID·권한은 각각 유지하며 자동 삭제하지 않습니다.';
+        body.append(hint);
+      }
+      for (const [index, device] of group.records.entries()) {
+        const row = document.createElement('details'); row.className = 'device-roster-record';
+        row.dataset.deviceId = device.id;
+        row.open = openRosterRecords.has(device.id) || (index === 0 && !closedRosterRecords.has(device.id));
+        const recordSummary = document.createElement('summary');
+        const date = device.lastSeenAt || device.enrolledAt;
+        const statusText = statusLabel(device.status);
+        recordSummary.textContent = [device.label || device.hostname || typeInfo(device).label, statusText, 'ID …' + String(device.id).slice(-8), date ? timeLabel(date) : '연결 정보 없음'].join(' · ');
+        const recordBody = document.createElement('div'); recordBody.className = 'device-roster-record-body';
+        function populateRecord() { if (!recordBody.childNodes.length) recordBody.append(deviceCard(device)); }
+        if (row.open) populateRecord();
+        row.addEventListener('toggle', () => {
+          if (!row.isConnected) return;
+          if (row.open) {
+            openRosterRecords.add(device.id); closedRosterRecords.delete(device.id);
+            populateRecord();
+          } else {
+            openRosterRecords.delete(device.id); closedRosterRecords.add(device.id);
+            recordBody.replaceChildren();
+          }
+        });
+        row.append(recordSummary, recordBody);
+        body.append(row);
+      }
+    }
+    if (wrapper.open) populateBody();
+    wrapper.addEventListener('toggle', () => {
+      if (!wrapper.isConnected) return;
+      if (wrapper.open) { openRosterGroups.add(group.key); populateBody(); }
+      else { openRosterGroups.delete(group.key); body.replaceChildren(); }
+    });
+    wrapper.append(heading, body);
+    return wrapper;
+  }
+
   function renderTypeFilters(devices) {
     const host = document.querySelector('#deviceTypeFilters');
     if (!host) return;
-    const counts = devices.reduce((map, device) => { const type = device.management?.type || 'pc'; map[type] = (map[type] || 0) + 1; return map; }, {});
-    const buttons = [{id:'all',label:'전체',icon:'◉'}, ...deviceCatalog].map(item => {
-      const count = item.id === 'all' ? devices.length : (counts[item.id] || 0);
-      return `<button type="button" class="device-type-filter${activeType === item.id ? ' active' : ''}" data-type-filter="${escapeHtml(item.id)}"><span>${escapeHtml(item.icon || '○')}</span><strong>${escapeHtml(item.label)}</strong><small>${count}</small></button>`;
+    const groups = groupRosterDevices(devices).filter(group => showRetiredGroups || !group.retired);
+    const counts = groups.reduce((map, group) => {
+      const type = group.primary.management?.type || 'pc';
+      map[type] = (map[type] || 0) + 1;
+      return map;
+    }, {});
+    host.innerHTML = [{id:'all',label:'전체',icon:'◉'}, ...deviceCatalog].map(item => {
+      const count = item.id === 'all' ? groups.length : (counts[item.id] || 0);
+      return `<button type="button" class="device-type-filter${activeType === item.id ? ' active' : ''}" data-type-filter="${escapeHtml(item.id)}" aria-pressed="${activeType === item.id}"><span>${escapeHtml(item.icon || '○')}</span><strong>${escapeHtml(item.label)}</strong><small>${count}</small></button>`;
     }).join('');
-    host.innerHTML = buttons;
-    host.querySelectorAll('[data-type-filter]').forEach(button => button.addEventListener('click', () => { activeType = button.dataset.typeFilter || 'all'; renderTypeFilters(currentDevices); renderDevices(currentDevices); }));
+    host.querySelectorAll('[data-type-filter]').forEach(button => button.addEventListener('click', () => {
+      activeType = button.dataset.typeFilter || 'all';
+      renderDevices(currentDevices);
+    }));
   }
 
-  function renderAttentionSummary(devices) {
+  function renderAttentionSummary(groups) {
     const host = document.querySelector('#deviceAttentionSummary');
     if (!host) return;
-    const issues = devices.filter(device => ['stale','offline'].includes(device.status) || (Number.isFinite(Number(device.health?.score)) && Number(device.health.score) < 75));
+    const issues = groups.filter(group => rosterNeedsAttention(group.primary));
     host.dataset.state = issues.length ? 'attention' : 'good';
-    if (!devices.length) {
-      host.innerHTML = '<div><strong>연결된 기기가 없습니다.</strong><span>아래 “기기 연결 · 자동 작업 설정”에서 첫 기기를 연결할 수 있습니다.</span></div>';
+    if (!groups.length) {
+      host.innerHTML = '<div><strong>관리 중인 기기가 없습니다.</strong><span>“이 PC 연결”로 기기를 등록하세요. 해제된 기록은 별도로 확인할 수 있습니다.</span></div>';
       return;
     }
     if (!issues.length) {
-      host.innerHTML = '<div><strong>현재 확인이 필요한 기기가 없습니다.</strong><span>온라인 상태와 건강점수가 정상 범위입니다.</span></div>';
+      host.innerHTML = '<div><strong>현재 확인이 필요한 기기가 없습니다.</strong><span>기기별 최근 연결과 상태는 아래 목록에서 확인하세요.</span></div>';
       return;
     }
-    const visible = issues.slice(0, 4).map(device => {
-      const score = Number.isFinite(Number(device.health?.score)) ? ` · 건강 ${Math.round(Number(device.health.score))}점` : '';
-      return `<button type="button" data-device-focus="${escapeHtml(device.id)}"><strong>${escapeHtml(device.label || device.hostname || typeInfo(device).label)}</strong><span>${escapeHtml(statusLabel(device.status))}${escapeHtml(score)}</span></button>`;
+    const visible = issues.slice(0, 4).map(group => {
+      const device = group.primary;
+      const score = device.status === 'online' && hasRosterHealthScore(device) ? ' · 건강 ' + Math.round(Number(device.health.score)) + '점' : '';
+      return `<button type="button" data-roster-focus="${escapeHtml(group.key)}"><strong>${escapeHtml(device.label || device.hostname || typeInfo(device).label)}</strong><span>${escapeHtml(statusLabel(device.status))}${escapeHtml(score)}</span></button>`;
     }).join('');
-    host.innerHTML = `<div><strong>확인 필요 ${issues.length}대</strong><span>오프라인·응답 지연·건강점수 75점 미만 기기를 우선 표시합니다.</span></div><div class="device-attention-items">${visible}</div>`;
-    host.querySelectorAll('[data-device-focus]').forEach(button => button.addEventListener('click', () => {
-      const target = document.querySelector(`[data-device-id="${CSS.escape(button.dataset.deviceFocus || '')}"]`);
+    host.innerHTML = `<div><strong>확인 필요 ${issues.length}개 그룹</strong><span>응답 지연·오프라인·건강점수 75점 미만 기기를 우선 표시합니다.</span></div><div class="device-attention-items">${visible}</div>`;
+    host.querySelectorAll('[data-roster-focus]').forEach(button => button.addEventListener('click', () => {
+      const key = button.dataset.rosterFocus || '';
+      activeType = 'all'; rosterStatus = 'all'; rosterSearch = '';
+      const search = document.querySelector('#deviceRosterSearch'); if (search) search.value = '';
+      const select = document.querySelector('#deviceRosterStatus'); if (select) select.value = 'all';
+      openRosterGroups.add(key);
+      renderDevices(currentDevices);
+      const target = Array.from(document.querySelectorAll('[data-roster-key]')).find(element => element.dataset.rosterKey === key);
       target?.scrollIntoView({ behavior:'smooth', block:'center' });
       target?.classList.add('is-focused');
       window.setTimeout(() => target?.classList.remove('is-focused'), 1600);
@@ -572,25 +801,52 @@
   }
 
   function renderDevices(devices) {
-    currentDevices = devices;
+    currentDevices = Array.isArray(devices) ? devices : [];
     const list = document.querySelector('#ekodiDeviceList');
-    const total = document.querySelector('#deviceMetricTotal'), online = document.querySelector('#deviceMetricOnline'), issues = document.querySelector('#deviceMetricIssues'), avgHealth = document.querySelector('#deviceMetricHealth');
     if (!list) return;
-    const scored = devices.filter(device => device.status === 'online' && Number.isFinite(Number(device.health?.score)));
-    total.textContent = String(devices.length);
-    online.textContent = String(devices.filter(device => device.status === 'online').length);
-    const issueCount = devices.filter(device => ['stale','offline'].includes(device.status) || (Number.isFinite(Number(device.health?.score)) && Number(device.health.score) < 75)).length;
-    const onlineCount = devices.filter(device => device.status === 'online').length;
-    issues.textContent = String(issueCount);
-    avgHealth.textContent = scored.length ? String(Math.round(scored.reduce((sum, device) => sum + Number(device.health.score), 0) / scored.length)) : '—';
+    const grouped = groupRosterDevices(currentDevices);
+    const current = grouped.filter(group => !group.retired);
+    const counted = showRetiredGroups ? grouped : current;
+    const onlineGroups = current.filter(group => group.primary.status === 'online');
+    const attentionGroups = current.filter(group => rosterNeedsAttention(group.primary));
+    const scored = onlineGroups.filter(group => hasRosterHealthScore(group.primary));
+    const total = document.querySelector('#deviceMetricTotal');
+    const online = document.querySelector('#deviceMetricOnline');
+    const issues = document.querySelector('#deviceMetricIssues');
+    const avgHealth = document.querySelector('#deviceMetricHealth');
+    if (total) total.textContent = String(current.length);
+    if (online) online.textContent = String(onlineGroups.length);
+    if (issues) issues.textContent = String(attentionGroups.length);
+    if (avgHealth) avgHealth.textContent = scored.length
+      ? String(Math.round(scored.reduce((sum, group) => sum + Number(group.primary.health.score), 0) / scored.length)) : '—';
+    const duplicates = grouped.filter(group => group.records.length > 1).length;
+    const registrations = grouped.reduce((sum, group) => sum + group.records.length, 0);
     const statusSummary = document.querySelector('#deviceStatusSummary');
-    if (statusSummary) statusSummary.textContent = !devices.length ? '연결된 기기 없음' : issueCount ? `등록 ${devices.length} · 확인 필요 ${issueCount}` : `등록 ${devices.length} · 온라인 ${onlineCount} · 정상`;
-    renderAttentionSummary(devices);
-    renderTypeFilters(devices);
-    const visible = activeType === 'all' ? devices : devices.filter(device => (device.management?.type || 'pc') === activeType);
-    list.textContent = '';
-    if (!visible.length) { list.innerHTML = `<div class="device-empty"><strong>${devices.length ? '이 유형에 등록된 기기가 없습니다.' : '아직 등록된 기기가 없습니다.'}</strong><p>Windows Agent 기기는 연결하고, 센서·로봇 등은 관찰 인벤토리로 먼저 등록할 수 있습니다.</p></div>`; return; }
-    visible.forEach(device => list.append(deviceCard(device)));
+    if (statusSummary) statusSummary.textContent = `관리 목록 ${current.length}개 · 등록기록 ${registrations}건${duplicates ? ' · 같은 이름 그룹 ' + duplicates : ''}`;
+    renderAttentionSummary(current);
+    renderTypeFilters(currentDevices);
+    const query = rosterSearch.trim().toLocaleLowerCase();
+    const visible = counted.filter(group => {
+      const device = group.primary;
+      if (activeType !== 'all' && (device.management?.type || 'pc') !== activeType) return false;
+      if (rosterStatus === 'online' && device.status !== 'online') return false;
+      if (rosterStatus === 'attention' && !rosterNeedsAttention(device)) return false;
+      if (rosterStatus === 'offline' && !['stale', 'offline', 'enrolled'].includes(device.status)) return false;
+      if (!query) return true;
+      return group.records.some(item => [item.label, item.hostname, item.management?.locationLabel, item.osVersion, item.id]
+        .some(value => String(value || '').toLocaleLowerCase().includes(query)));
+    });
+    const overview = document.querySelector('#deviceRosterOverview');
+    if (overview) overview.textContent = `표시 ${visible.length}개 / ${counted.length}개 · 원본 등록기록 ${registrations}건${duplicates ? ' · 같은 이름 ' + duplicates + '개 그룹' : ''}`;
+    // Avoid discarding inputs while an operator is changing a per-device management field.
+    if (list.contains(document.activeElement) && ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+    list.replaceChildren();
+    if (!visible.length) {
+      const empty = document.createElement('div'); empty.className = 'device-empty';
+      empty.innerHTML = '<strong>조건에 맞는 등록 기기가 없습니다.</strong><p>검색·상태·유형 필터를 바꾸거나 해제된 기록 표시를 확인하세요.</p>';
+      list.append(empty); return;
+    }
+    visible.forEach(group => list.append(createRosterGroup(group)));
   }
 
   async function loadDevices() {
@@ -647,16 +903,22 @@
         <div><p class="kicker">REMOTE WORK & DEVICE MANAGEMENT · LOCAL COMPUTERS · DEVICES</p><h2>로컬컴퓨터·기기</h2><p>현재 연결 상태와 이용현황을 먼저 보고, 문제가 있는 기기만 빠르게 찾아 조치합니다. 원격 작업·연결·자동작업·고급 설정은 필요할 때 펼쳐 사용합니다.</p></div>
         <div class="device-head-actions"><span id="deviceGeneratedAt">연결 상태 확인 전</span><button type="button" class="secondary" id="refreshDevices">↻ 새로고침</button></div>
       </div>
-      <details class="device-status-tools">
+      <details class="device-status-tools" open>
         <summary><strong>연결된 기기 · 상태 보기</strong><span id="deviceStatusSummary">상태 확인 중</span></summary>
         <div class="device-metrics" aria-label="기기 핵심 현황">
-          <article><small>등록 기기</small><strong id="deviceMetricTotal">—</strong><span>전체 자산</span></article>
-          <article><small>현재 온라인</small><strong id="deviceMetricOnline">—</strong><span>Agent 응답 기준</span></article>
-          <article><small>확인 필요</small><strong id="deviceMetricIssues">—</strong><span>오프라인·지연·건강 저하</span></article>
+          <article><small>관리 목록</small><strong id="deviceMetricTotal">—</strong><span>같은 컴퓨터명 묶음</span></article>
+          <article><small>현재 온라인</small><strong id="deviceMetricOnline">—</strong><span>목록별 최신 Agent</span></article>
+          <article><small>확인 필요</small><strong id="deviceMetricIssues">—</strong><span>응답 지연·건강 저하</span></article>
           <article><small>평균 건강점수</small><strong id="deviceMetricHealth">—</strong><span>현재 온라인·진단 가능 기기 기준</span></article>
           <article><small>배정 대기</small><strong id="deviceMetricQueued">—</strong><span>자동 작업 큐</span></article>
         </div>
         <div class="device-attention-summary" id="deviceAttentionSummary" data-state="good"><div><strong>기기 상태를 확인하는 중입니다.</strong><span>문제가 있는 기기를 우선 표시합니다.</span></div></div>
+        <div class="device-roster-toolbar" role="group" aria-label="등록 기기 목록 검색 및 필터">
+          <label class="device-roster-search-label"><span>기기 검색</span><input id="deviceRosterSearch" type="search" placeholder="컴퓨터명 · 위치 · 기기 ID" autocomplete="off"></label>
+          <label class="device-roster-status-label"><span>연결 상태</span><select id="deviceRosterStatus"><option value="all">전체 상태</option><option value="online">온라인</option><option value="attention">확인 필요</option><option value="offline">오프라인·지연</option></select></label>
+          <label class="device-roster-retired-label"><input id="deviceRosterShowRetired" type="checkbox"><span>해제된 기기 기록 포함</span></label>
+        </div>
+        <p class="device-roster-overview" id="deviceRosterOverview" aria-live="polite">등록 기록을 불러오는 중입니다.</p>
         <div class="device-type-filters" id="deviceTypeFilters" aria-label="기기 유형 필터"></div>
         <div class="ekodi-device-list" id="ekodiDeviceList"><div class="device-empty"><p>기기 목록을 불러오는 중입니다.</p></div></div>
       </details>
@@ -667,7 +929,7 @@
             <div>
               <p class="kicker">ONE CLICK CONNECT</p>
               <h3>이 PC를 EKODI에 연결</h3>
-              <p>복잡한 코드는 입력하지 않습니다. 버튼을 누른 뒤 Windows 승인창이 뜨면 허용만 하세요.</p>
+              <p>처음 연결은 이 버튼만 사용합니다. 다운로드한 연결파일 하나만 실행하고, Windows 관리자 승인창이 뜨면 허용하세요.</p>
               <details class="device-advanced-install">
                 <summary>다른 기기 유형 · 이름 · 위치 지정</summary>
                 <div class="device-onboarding-fields">
@@ -681,11 +943,11 @@
           </section>
           <div class="device-enrollment-result" id="deviceEnrollmentResult" hidden>
             <div><strong>연결 준비가 됐습니다.</strong><span data-enrollment-expiry></span></div>
-            <p><b>다운로드된 “EKODI_PC_연결.cmd” 파일을 열고 Windows 승인창에서 “예”만 누르세요.</b> 등록·Agent 실행·heartbeat 확인까지 자동으로 진행됩니다.</p>
+            <p><b>다운로드된 “EKODI_PC_연결.cmd” 파일 하나만 실행하세요. 다른 EKODI 설치 창이 열려 있으면 먼저 완료하거나 닫고 Windows 승인창에서 “예”를 누르세요.</b> 등록·Agent 실행·heartbeat 확인까지 자동으로 진행됩니다.</p>
             <div class="device-pair-actions"><button type="button" class="primary" id="downloadDeviceEnrollment">연결파일 다시 받기</button></div>
             <details class="device-advanced-install">
               <summary>연결 문제 해결</summary>
-              <p>자동 연결이 안 될 때만 연결 프로그램을 한 번 설치합니다.</p>
+              <p>연결 프로그램을 동시에 여러 개 실행하지 마세요. 기존 설치를 모두 종료한 후, 원클릭 프로토콜이 필요한 경우에만 아래 보조 설치를 별도로 수행합니다. 접근 거부가 나타나면 Windows 보안/앱 제어 차단 기록과 EKB/EKA 단계를 확인하세요.</p>
               <div class="device-pair-actions"><a class="button secondary" href="${BOOTSTRAP_URL}" download="EKODI_Device_연결프로그램.cmd">연결 프로그램 설치</a></div>
               <small>1회용 등록 코드</small><strong data-enrollment-code></strong>
               <code data-install-command></code><button type="button" class="secondary" id="copyDeviceInstallCommand">설치 명령 복사</button>
@@ -714,6 +976,9 @@
 
     button.addEventListener('click', showDevices);
     panel.querySelector('#refreshDevices').addEventListener('click', loadDevices);
+    panel.querySelector('#deviceRosterSearch').addEventListener('input', event => { rosterSearch = event.currentTarget.value; renderDevices(currentDevices); });
+    panel.querySelector('#deviceRosterStatus').addEventListener('change', event => { rosterStatus = event.currentTarget.value; renderDevices(currentDevices); });
+    panel.querySelector('#deviceRosterShowRetired').addEventListener('change', event => { showRetiredGroups = event.currentTarget.checked; renderDevices(currentDevices); });
     panel.querySelector('#deviceJobForm').addEventListener('submit', createAutoJob);
     panel.querySelector('#createDeviceEnrollment').addEventListener('click', createEnrollment);
     panel.querySelector('#deviceInventoryForm').addEventListener('submit', createInventory);

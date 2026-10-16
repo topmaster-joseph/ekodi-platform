@@ -14,7 +14,7 @@ const ORDER=Object.freeze(adminMenuOrder());
 const RANK=new Map(ORDER.map((section,index)=>[section,index+1]));
 const DEMAND_KEYS=new Map([
   ['campus','campus'],['public-site-controls','public-site-controls'],['language-status','language-status'],['aiops','aiops'],['ai-settings','ai-settings'],['openai','openai'],['devotional','devotional'],['ai-module-spec','ai-module-spec'],['ai-membership','aimembers'],
-  ['health','health'],['api-cost','api-cost'],['storage','storage'],['security','security'],['work','work'],
+  ['health','health'],['site-health','site-health'],['architecture','health'],['api-cost','api-cost'],['storage','storage'],['security','security'],['work','work'],
   ['clients','clients'],['community','community'],['books','books'],['social','social'],['supply-network','supply-network'],
   ['marketing-ai','marketing'],['devices','devices'],['life-ai','life-ai'],['personal-finance','personal-finance'],['deployments','deployments']
 ]);
@@ -211,7 +211,14 @@ nav.addEventListener('click',event=>{
   if(isInternalNav(item)){event.preventDefault();event.stopImmediatePropagation();return routeInternal();}
   const section=sectionOf(item);if(!section)return;dc=false;
   if(section==='sites'){event.preventDefault();event.stopImmediatePropagation();return openSites();}
-  requestedSection=section;window.setTimeout(()=>{if(!activatePanel(section))requestDemand(section);},0);
+  requestedSection=section;
+  // A prior menu click may still have a queued activation when a delegated
+  // audit-records/AI Ops section is selected synchronously. Never let the
+  // previous section's timeout override the newer requested route.
+  window.setTimeout(()=>{
+    if(requestedSection!==section)return;
+    if(!activatePanel(section))requestDemand(section);
+  },0);
 },true);
 content.addEventListener('click',event=>{
   const control=event.target.closest('[data-campus-section]');

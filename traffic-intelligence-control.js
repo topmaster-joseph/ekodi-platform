@@ -3,6 +3,7 @@ import {
   TRAFFIC_CLASSIFIER_VERSION,
   isAllowedTelemetryOrigin,
   trafficSiteIdForHost,
+  trafficSiteIdForVisit,
   normalizeTrafficHost,
 } from './traffic-intelligence.js';
 
@@ -14,6 +15,7 @@ function responseHeaders(origin = '') {
   const headers = new Headers({
     'cache-control':'no-store',
     'x-content-type-options':'nosniff',
+    'x-ekodi-traffic-telemetry':'site-scoped-v2',
     'vary':'Origin',
   });
   if (origin) headers.set('access-control-allow-origin', origin);
@@ -41,8 +43,10 @@ async function sessionCheck(request, env) {
   return { response, session:await response.clone().json() };
 }
 
-async function sessionHash(day, host, sid) {
-  const digest = await crypto.subtle.digest('SHA-256', encoder.encode(`${day}|${host}|${sid}`));
+async function sessionHash(day, host, siteId, sid) {
+  // Keep a single browser session isolated between sibling paths of ekodi.kr.
+  // This changes the anonymous hash only; raw URL, IP and UA are never persisted.
+  const digest = await crypto.subtle.digest('SHA-256', encoder.encode(`${day}|${host}|${siteId}|${sid}`));
   return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('').slice(0, 32);
 }
 
@@ -72,12 +76,11 @@ async function handleVisit(request, env) {
     if (!/^[A-Za-z0-9_-]{16,96}$/.test(sid)) return json({ error:'유효한 세션 식별자가 필요합니다.' }, 400, origin);
 
     const host = normalizeTrafficHost(new URL(origin).hostname);
-    const mappedSite = safeSiteId(trafficSiteIdForHost(host));
-    const siteId = mappedSite || safeSiteId(body?.site_id) || 'unknown';
+    const siteId = safeSiteId(trafficSiteIdForVisit(host, body?.site_path, body?.site_id)) || 'root';
     const day = new Date().toISOString().slice(0, 10);
     const countryRaw = String(request.cf?.country || request.headers.get('cf-ipcountry') || 'XX').toUpperCase();
     const country = /^[A-Z]{2}$/.test(countryRaw) ? countryRaw : 'XX';
-    const hash = await sessionHash(day, host, sid);
+    const hash = await sessionHash(day, host, siteId, sid);
     const now = new Date().toISOString();
 
     try {
@@ -124,6 +127,17 @@ function baseAggregate(key = '') {
     unclassifiedRequests:0,
     humanSessions:0,
   };
+}
+
+// Cloudflare Analytics is host-level; browser sessions can be service-level.
+export function trafficRequestScopeForHosts(requestHosts = []) {
+  if (!requestHosts.length) return 'not-measured';
+  if (requestHosts.some(host => normalizeTrafficHost(host) === 'ekodi.kr')) return 'shared-host';
+  return 'host-only';
+}
+
+export function trafficUtcDayStatus(day, now = new Date().toISOString()) {
+  return String(day) === String(now).slice(0, 10) ? 'partial' : 'complete';
 }
 
 function addTraffic(target, row) {
@@ -182,8 +196,8 @@ async function handleAdmin(request, env) {
       const day = byDay.get(row.day) || baseAggregate(row.day);
       addTraffic(day, row); byDay.set(row.day, day);
       const siteKey = row.site_id || trafficSiteIdForHost(row.host) || row.host;
-      const site = bySite.get(siteKey) || { ...baseAggregate(siteKey), siteId:siteKey, hosts:new Set() };
-      site.hosts.add(row.host); addTraffic(site, row); bySite.set(siteKey, site);
+      const site = bySite.get(siteKey) || { ...baseAggregate(siteKey), siteId:siteKey, hosts:new Set(), requestHosts:new Set() };
+      site.hosts.add(row.host); site.requestHosts.add(row.host); addTraffic(site, row); bySite.set(siteKey, site);
     }
 
     for (const row of humanRows) {
@@ -192,15 +206,27 @@ async function handleAdmin(request, env) {
       const day = byDay.get(row.day) || baseAggregate(row.day);
       day.humanSessions += sessions; byDay.set(row.day, day);
       const siteKey = row.site_id || trafficSiteIdForHost(row.host) || row.host;
-      const site = bySite.get(siteKey) || { ...baseAggregate(siteKey), siteId:siteKey, hosts:new Set() };
+      const site = bySite.get(siteKey) || { ...baseAggregate(siteKey), siteId:siteKey, hosts:new Set(), requestHosts:new Set() };
       site.hosts.add(row.host); site.humanSessions += sessions; bySite.set(siteKey, site);
       byCountry.set(row.country || 'XX', (byCountry.get(row.country || 'XX') || 0) + sessions);
     }
-    const sites = [...bySite.values()].map(item => finalizeAggregate({
-      ...item,
-      hosts:[...item.hosts].sort(),
-    })).sort((a, b) => b.requestTotal - a.requestTotal || b.humanSessions - a.humanSessions);
-    const series = [...byDay.values()].map(finalizeAggregate).sort((a, b) => a.key.localeCompare(b.key));
+    const sites = [...bySite.values()].map(item => {
+      const requestHosts = [...item.requestHosts].sort();
+      const requestScope = trafficRequestScopeForHosts(requestHosts);
+      return finalizeAggregate({
+        ...item,
+        hosts:[...item.hosts].sort(),
+        requestHosts,
+        requestScope,
+        // Unavailable service-specific request counts must never be presented as zero.
+        requestTotal:requestScope === 'not-measured' ? null : item.requestTotal,
+      });
+    }).sort((a, b) => b.humanSessions - a.humanSessions || Number(b.requestTotal || 0) - Number(a.requestTotal || 0));
+    const series = [...byDay.values()].map(item => ({
+      ...finalizeAggregate(item),
+      utcDayStatus:trafficUtcDayStatus(item.key),
+      requestScope:'host-only',
+    })).sort((a, b) => a.key.localeCompare(b.key));
     const countries = [...byCountry.entries()].map(([country, sessions]) => ({ country, sessions }))
       .sort((a, b) => b.sessions - a.sessions).slice(0, 20);
 
@@ -210,6 +236,13 @@ async function handleAdmin(request, env) {
       days,
       selectedSite:selectedSite || null,
       timeBasis:'UTC daily aggregates',
+      attribution:{
+        browserSessions:'site-scoped where shared-shell route telemetry is available',
+        cloudflareRequests:'host-scoped; ekodi.kr requests include all its child sites',
+        activeConcurrency:'not measured by this daily aggregate endpoint',
+        selectedSiteRequests:'not measured for shared ekodi.kr child routes; host-only requests are never subsite request counts',
+        utcCurrentDay:'partial browser-session data; Cloudflare collector uses the previous complete UTC day',
+      },
       privacy:{
         rawIpStored:false,
         rawUserAgentStored:false,
@@ -231,7 +264,9 @@ async function handleAdmin(request, env) {
       notes:[
         '실사용자는 개인 식별이 아닌 일일 브라우저 세션 신호입니다.',
         '검색·AI 크롤러와 EKODI 내부 자동화는 User-Agent 신호로 분류합니다.',
-        '확실하지 않은 요청은 사람으로 추정하지 않고 미분류로 남깁니다.'
+        '확실하지 않은 요청은 사람으로 추정하지 않고 미분류로 남깁니다.',
+        'Cloudflare 요청 수는 호스트 단위이며 ekodi.kr 하위 사이트별 요청 수가 아닙니다.',
+        '현재 UTC 일자의 브라우저 세션은 진행 중인 부분 집계입니다. 미측정은 0회 방문과 다릅니다.'
       ]
     });
   } catch (error) {

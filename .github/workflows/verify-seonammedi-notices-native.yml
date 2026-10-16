@@ -1,0 +1,50 @@
+name: SeonamMedi Native Notices Browser Verification
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/verify-seonammedi-notices-native.mjs'
+      - 'test/seonammedi-notices-native.test.mjs'
+      - '.github/workflows/verify-seonammedi-notices-native.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-native-notice-visual-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  live-chromium-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout EKODI-owned verifier
+        uses: actions/checkout@v7
+      - name: Node runtime
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Inspect native browser guardrails
+        run: |
+          node --check scripts/verify-seonammedi-notices-native.mjs
+          node --test test/seonammedi-notices-native.test.mjs
+      - name: Install first-party Playwright Chromium
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Customer-domain real browser desktop and mobile
+        if: always()
+        run: node scripts/verify-seonammedi-notices-native.mjs --origin=https://seonammedi.kr --out=artifacts/seonammedi-notices-customer
+      - name: EKODI internal-path real browser desktop and mobile
+        if: always()
+        run: node scripts/verify-seonammedi-notices-native.mjs --origin=https://ekodi.kr --out=artifacts/seonammedi-notices-ekodi
+      - name: Preserve screenshots and machine-verifiable evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seonammedi-notices-native-${{ github.run_id }}
+          path: artifacts/seonammedi-notices-*
+          if-no-files-found: error
+          retention-days: 14

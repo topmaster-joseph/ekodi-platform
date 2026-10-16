@@ -5,9 +5,25 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="필요한 AI는 바로 쓰고, 없으면 함께 만드는 EKODI 모두의 AI">
   <title>EKODI 모두의 AI</title>
-  <link rel="stylesheet" href="/ai/api/commons/style?v=20261006-ai-absolute-assets-1">
+  <link rel="stylesheet" href="/ai/api/commons/style?v=20261016-ai-merchant-pricebook-1">
 </head>
 <body>
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a class="site-brand" href="/ai/" aria-label="EKODI 모두의 AI 첫 화면">EKODI <strong>모두의 AI</strong></a>
+      <nav class="site-nav" aria-label="모두의 AI 주요 메뉴">
+        <a href="/ai/">홈</a>
+        <a href="/ai/#chat">AI 대화</a>
+        <a href="/ai/#serviceTitle">실행 서비스</a>
+        <a href="/ai/#support-programs">지원사업</a>
+        <a href="/ai/#requestTitle">개발 요청</a>
+      </nav>
+      <div class="session-bar">
+        <span id="sessionState">서비스를 확인하는 중입니다.</span>
+        <a id="loginLink" class="login" href="../auth/?site=ai">로그인</a>
+      </div>
+    </div>
+  </header>
   <main class="page">
     <header class="hero">
       <div class="hero-copy">
@@ -15,11 +31,24 @@
         <h1><span>필요한 AI는 바로 쓰고,</span><span>없으면 함께 만듭니다.</span></h1>
         <p class="principle">AI로 더 연결된, 더 나은 일상을 만드는 EKODI</p>
       </div>
-      <div class="session-bar">
-        <span id="sessionState">서비스를 확인하는 중입니다.</span>
-        <a id="loginLink" class="login" href="../auth/?site=ai">로그인</a>
-      </div>
     </header>
+
+    <section class="chat section" id="chat" aria-labelledby="chatTitle">
+      <div class="chat-heading">
+        <div><p class="kicker">AI 통합 대화</p><h2 id="chatTitle">무엇을 하고 싶으세요?</h2><p class="chat-subtitle">질문 하나로 시작하세요. EKODI가 연결된 AI 엔진으로 답합니다.</p></div>
+        <div class="chat-model"><label for="chatProvider">AI 엔진</label><select id="chatProvider" aria-label="AI 엔진 선택"><option value="auto">자동 · 무료 우선</option><option value="ollama">Ollama · 로컬</option><option value="gpt">GPT · API</option><option value="claude">Claude · API</option></select></div>
+      </div>
+      <div id="chatAvailability" class="chat-availability" aria-live="polite">모델 연결 상태를 확인하고 있습니다.</div>
+      <div id="chatMessages" class="chat-messages" role="log" aria-label="AI 대화" aria-live="polite">
+        <p class="chat-intro">문서 작성, 글 다듬기, 아이디어 정리, 코딩 질문 등 원하는 작업을 입력해 보세요.</p>
+      </div>
+      <form id="chatForm" class="chat-form">
+        <label class="visually-hidden" for="chatInput">AI에게 질문하기</label>
+        <textarea id="chatInput" rows="2" maxlength="1200" required placeholder="EKODI AI에게 무엇이든 물어보세요."></textarea>
+        <button type="submit" id="chatSubmit">보내기 ↗</button>
+      </form>
+      <p id="chatStatus" class="chat-status" role="status">로그인 후 대화할 수 있습니다. 사용량과 API 비용은 EKODI 운영 정책에 따라 제한됩니다.</p>
+    </section>
 
     <section class="services section" aria-labelledby="serviceTitle">
       <div class="section-title-row">
@@ -31,6 +60,94 @@
       </div>
       <div id="serviceTabs" class="service-tabs" role="tablist" aria-label="실행 서비스 분류"></div>
       <div id="servicePanel" class="service-panel" aria-live="polite"></div>
+    </section>
+
+    <section class="support-programs section" id="support-programs" aria-labelledby="supportTitle">
+      <div class="support-heading">
+        <div><p class="kicker">AI PUBLIC OPPORTUNITIES</p><h2 id="supportTitle">AI 지원사업</h2><p class="support-subtitle">정부·지자체·공공기관의 공식 공고를 연결합니다. 신청 조건과 정확한 마감 시각은 원문에서 확인하세요.</p></div>
+        <a class="support-workspace-link" href="/ai/support/">맞춤 지원사업 찾기 ↗</a>
+      </div>
+      <form id="supportFilters" class="support-filters" role="search">
+        <label for="supportSearch">공고 검색<input id="supportSearch" type="search" maxlength="80" placeholder="사업명·기관·지역 검색"></label>
+        <label for="supportTopic">지원 분야<select id="supportTopic"><option value="all">AI 전체</option><option value="education">교육·인재</option><option value="startup">창업·사업화</option><option value="research">연구개발·실증</option><option value="adoption">AI 도입·전환</option></select></label>
+        <label for="supportStatusFilter">접수 상태<select id="supportStatusFilter"><option value="all">전체</option><option value="open">접수중·상시</option><option value="soon">마감 임박</option></select></label>
+        <button id="supportRefresh" type="button">공고 새로고침</button>
+      </form>
+      <p id="supportStatus" class="support-status" role="status" aria-live="polite">공식 지원사업 목록을 불러올 준비가 되었습니다.</p>
+      <div id="supportNotices" class="support-notices" aria-live="polite"></div>
+      <section id="support-detail" class="support-detail" aria-labelledby="supportDetailTitle" hidden>
+        <div class="support-detail-header">
+          <div><p class="kicker">OFFICIAL NOTICE · INDEPENDENT ASSISTANCE</p><h3 id="supportDetailTitle">지원사업 상세 및 지원 요청</h3></div>
+          <button id="supportDetailClose" type="button" class="support-secondary">공고 목록으로</button>
+        </div>
+        <div id="supportDetailBody" class="support-detail-body"></div>
+        <div class="support-assisted-heading">
+          <h4>어떤 도움이 필요하세요?</h4>
+          <p>에코디비즈의 독립적인 민간 유료 지원서비스입니다. 공고 주관기관과 제휴하거나 선정 결과를 보장하지 않습니다.</p>
+        </div>
+        <div id="assistancePlanList" class="assistance-plans" aria-label="서비스 및 비용 선택"></div>
+        <div id="assistancePriceSummary" class="assistance-price-summary" aria-live="polite"></div>
+        <section class="assistance-contract-preview" aria-labelledby="assistanceContractTitle">
+          <div class="support-detail-header"><h4 id="assistanceContractTitle">온라인 계약서 검토 초안</h4><span class="support-chip">계약 확정 전</span></div>
+          <div id="assistanceContractText" class="assistance-contract-text" aria-live="polite">서비스를 선택하면 계약서 초안이 생성됩니다.</div>
+          <form id="assistanceRequestForm" class="assistance-request-form">
+            <div class="assistance-request-fields">
+              <label>계약 요청인 이름<input id="assistanceApplicant" maxlength="80" autocomplete="name" required placeholder="실제 계약 당사자 성명"></label>
+              <label>소속 또는 사업체명 (선택)<input id="assistanceOrganization" maxlength="150" autocomplete="organization" placeholder="회사·단체명"></label>
+            </div>
+            <label class="assistance-consent"><input id="assistanceScopeConsent" type="checkbox" required><span>선택 서비스의 업무 범위, 결과물, 비용 및 선정 비보장 조건을 확인했습니다.</span></label>
+            <label class="assistance-consent"><input id="assistancePrivacyConsent" type="checkbox" required><span>계약 검토를 위해 이름·소속·선택 서비스·공고 정보가 에코디에 저장되는 것에 동의합니다. 필요한 정보만 수집하며, 개인정보 처리 상세조건은 최종 계약 전에 안내받습니다.</span></label>
+            <label class="assistance-consent"><input id="assistancePrecontractConsent" type="checkbox" required><span>현재는 검토 요청 단계이며 에코디비즈의 최종 견적·약관 승인과 별도 전자서명·결제 확인 전에는 계약 체결 또는 업무 착수가 아님을 이해합니다.</span></label>
+            <div class="assistance-form-actions"><button id="assistanceRequestSubmit" type="submit">견적·계약서 검토 요청</button><a href="/auth/?site=ai" id="assistanceLoginLink" hidden>로그인 후 요청</a></div>
+            <p id="assistanceRequestStatus" class="support-status" role="status" aria-live="polite">결제는 계약 조건이 확정된 뒤 인증된 에코디비즈 결제창에서만 진행합니다.</p>
+          </form>
+        </section>
+        <details class="assistance-history" open><summary>내 지원 요청·견적·계약 검토 이력</summary><div id="assistanceHistory">로그인하면 확인할 수 있습니다.</div></details>
+        <section id="assistanceQuotePanel" class="assistance-contract-preview" aria-labelledby="assistanceQuoteTitle" hidden>
+          <h4 id="assistanceQuoteTitle">최종 견적·계약조건 확인</h4>
+          <p id="assistanceQuoteStatus" class="support-status" role="status"></p>
+          <div id="assistanceQuoteText" class="assistance-contract-text"></div>
+          <div id="assistanceQuoteLegalLinks" class="assistance-quote-legal"></div>
+          <form id="assistanceAcknowledgmentForm" class="assistance-request-form">
+            <label>계약 요청인 이름 재입력<input id="assistanceTypedSigner" maxlength="80" required autocomplete="name" placeholder="견적 요청서의 이름과 동일하게 입력"></label>
+            <label class="assistance-consent"><input type="checkbox" id="assistanceFinalScopeConsent" required><span>업무 범위·결과물·최종 금액·수행 일정·선정 비보장 내용을 확인했습니다.</span></label>
+            <label class="assistance-consent"><input type="checkbox" id="assistanceFinalRefundConsent" required><span>취소·환불 규정과 이용약관을 열어 확인했습니다.</span></label>
+            <label class="assistance-consent"><input type="checkbox" id="assistanceFinalPrivacyConsent" required><span>개인정보 처리기준과 계약기록 이용 목적을 확인했습니다.</span></label>
+            <label class="assistance-consent"><input type="checkbox" id="assistanceFinalNonBindingConsent" required><span>이 동의는 견적·계약내용 확인 기록일 뿐 전자서명·계약 체결·결제 완료는 아니며, 실제 계약과 업무 착수에는 별도 확인이 필요함을 이해합니다.</span></label>
+            <button type="submit" id="assistanceAcknowledgmentSubmit">견적 및 계약조건 확인 기록</button>
+          </form>
+          <p id="assistancePaymentReadiness" class="support-status" aria-live="polite">전자서명과 결제 승인 전에는 업무가 시작되지 않습니다.</p>
+        </section>
+        <section id="assistanceAdminPanel" class="assistance-contract-preview" aria-labelledby="assistanceAdminTitle" hidden>
+          <div class="support-detail-header"><h4 id="assistanceAdminTitle">에코디비즈 관리자 · 지원 요청 견적 관리</h4><button id="assistanceAdminRefresh" type="button" class="support-secondary">목록 새로고침</button></div>
+          <p id="assistanceAdminStatus" class="support-status" role="status"></p>
+          <div id="assistanceAdminList" class="assistance-admin-list"></div>
+          <details id="assistancePricingSection" class="assistance-history">
+            <summary>서비스별 표준요금 관리 · 관리자 승인 후 공개</summary>
+            <p class="support-status">에코디비즈의 민간 지원서비스 표준요금입니다. 저장과 동시에 공개되므로 최종 금액·부가세·정책 버전을 검토하세요. 금액 미지정 상품은 개별 견적을 유지합니다.</p>
+            <p id="assistancePricebookStatus" class="support-status" role="status" aria-live="polite">최종 승인된 요금표를 확인하는 중입니다.</p>
+            <form id="assistancePricebookForm" class="assistance-request-form">
+              <label>새 요금표 버전 (중복 불가)<input id="assistancePricebookVersion" required maxlength="64" autocomplete="off" placeholder="ekodibiz-2026-10-v1"></label>
+              <div id="assistancePricebookRows" class="assistance-merchant-lines"></div>
+              <label class="assistance-consent"><input id="assistancePriceApproved" type="checkbox" required><span>에코디비즈의 승인권자로서 입력한 항목별 요금을 최종 승인합니다.</span></label>
+              <label class="assistance-consent"><input id="assistancePricePublic" type="checkbox" required><span>부가세 포함 금액의 고객 공개와 버전별 변경이력을 승인합니다.</span></label>
+              <label class="assistance-consent"><input id="assistancePriceNoGuarantee" type="checkbox" required><span>정부·공공기관과 무관한 민간 서비스이며 선정이나 보조금 지급을 보장하지 않음을 확인합니다.</span></label>
+              <button id="assistancePricebookPublish" type="submit">최종 승인한 표준요금 공개</button>
+            </form>
+          </details>
+          <form id="assistanceMerchantQuoteForm" class="assistance-request-form" hidden>
+            <h4 id="assistanceMerchantSelectedTitle">신청자 요청서</h4>
+            <div id="assistanceMerchantLines" class="assistance-merchant-lines"></div>
+            <label>견적 유효기간 종료<input id="assistanceMerchantExpires" type="datetime-local" required></label>
+            <label>결제 확인 후 결과물 제공 예정 기간 (일)<input id="assistanceMerchantDays" type="number" min="1" max="180" value="14" required></label>
+            <label>계약서에 표시할 추가 협의사항<textarea id="assistanceMerchantNotes" rows="3" maxlength="1500" placeholder="수정횟수, 세부납품 형태 등"></textarea></label>
+            <label class="assistance-consent"><input id="assistanceMerchantVat" type="checkbox" checked required><span>각 항목의 금액은 부가세가 포함된 최종 견적 금액입니다.</span></label>
+            <button type="submit" id="assistanceMerchantSubmit">검토된 최종 견적 발행</button>
+          </form>
+        </section>
+      </section>
+
+      <p class="support-disclaimer">공식 원문 링크만 제공합니다. 신청은 수행기관에서 진행하며, 현재 자동 수집 범위 밖의 기관 공고는 표시되지 않을 수 있습니다.</p>
     </section>
 
     <section class="want section" aria-labelledby="wantTitle">
@@ -78,6 +195,6 @@
 
     <footer><span>EKODI 모두의 AI</span><a href="../">ekodi.kr</a></footer>
   </main>
-  <script type="module" src="/ai/api/commons/client?v=20261006-ai-absolute-assets-1"></script>
+  <script type="module" src="/ai/api/commons/client?v=20261016-ai-merchant-pricebook-1"></script>
 </body>
 </html>

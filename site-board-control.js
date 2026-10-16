@@ -170,16 +170,41 @@ async function ensureInstance(env,route){
   return env.DB.prepare('SELECT * FROM ekodi_board_instances WHERE board_id=? LIMIT 1').bind(id).first();
 }
 
+// The independent board accepts an EKODI administrator only after the internal
+// CONTROL_API validates the real bearer session. A claimed email, header or
+// platform role never grants board-local owner/admin/moderator permissions.
+async function verifiedAdminPrincipal(request,env){
+  if(!env?.CONTROL_API?.fetch)return null;
+  const authorization=String(request.headers.get('authorization')||'');
+  if(!/^Bearer [^\s]+$/.test(authorization)||authorization.length>8192)return null;
+  const url=new URL(request.url);
+  url.pathname='/api/session';
+  url.search='';
+  url.hash='';
+  const response=await env.CONTROL_API.fetch(new Request(url.toString(),{
+    method:'GET',headers:{authorization},redirect:'manual',
+  })).catch(()=>null);
+  if(!response?.ok)return null;
+  const session=await response.json().catch(()=>null);
+  if(session?.authenticated!==true||!['super_admin','admin'].includes(lower(session.role)))return null;
+  const email=lower(session.email);
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return null;
+  const personId='admin:'+email;
+  return Object.freeze({id:personId,email,subject:{key:personId}});
+}
+
 async function actor(request,env,instance){
-  const principal=await principalFromSupabaseRequest(request).catch(()=>null);
-  if(!principal?.id)return Object.freeze({authenticated:false,personId:'',email:'',role:'anonymous',manage:false});
+  const principal=await verifiedAdminPrincipal(request,env)
+    || await principalFromSupabaseRequest(request).catch(()=>null);
+  if(!principal?.id)return Object.freeze({authenticated:false,personId:'',email:'',role:'anonymous',boardMember:false,manage:false});
   const personId=clean(principal.subject?.key||principal.id,160);
   const email=lower(principal.email);
   const membership=await env.DB.prepare(`SELECT role,status FROM ekodi_board_memberships
     WHERE board_id=? AND person_id=? LIMIT 1`).bind(instance.board_id,personId).first().catch(()=>null);
-  const role=membership?.status==='active'?(lower(membership.role)||'member'):'member';
-  const manage=membership?.status==='active'&&BOARD_MANAGE_ROLES.has(role);
-  return Object.freeze({authenticated:true,personId,email,role,manage});
+  const boardMember=membership?.status==='active';
+  const role=boardMember?(lower(membership.role)||'member'):'member';
+  const manage=boardMember&&BOARD_MANAGE_ROLES.has(role);
+  return Object.freeze({authenticated:true,personId,email,role,boardMember,manage});
 }
 
 async function verifySuperAdminReauth(request,env,instance,scope){
@@ -308,6 +333,13 @@ export async function handleSiteBoardRequest(request,env){
 
   if(instance.status!=='active')return boardJson(instance,{error:'board_unavailable',status:instance.status},410);
 
+  // A members-only board must never expose posts, comments, attachments, search,
+  // or mutable operations to a logged-in person without an active board membership.
+  // Keep the health identity and non-sensitive visibility config publicly readable.
+  if(instance.visibility==='members'&&!who.boardMember&&sub!=='/api/health'&&sub!=='/api/config'){
+    return boardJson(instance,{error:who.authenticated?'board_membership_required':'authentication_required'},who.authenticated?403:401);
+  }
+
   if(method==='GET'&&sub==='/api/memberships'){
     if(!who.manage)return boardJson(instance,{error:'forbidden'},403);
     const rows=await env.DB.prepare('SELECT person_id,role,status,created_at,updated_at FROM ekodi_board_memberships WHERE board_id=? ORDER BY role,person_id').bind(instance.board_id).all();
@@ -356,7 +388,7 @@ export async function handleSiteBoardRequest(request,env){
   }
 
   if(method==='POST'&&sub==='/api/posts'){
-    if(!who.authenticated&&Number(instance.allow_anonymous_write)!==1)return boardJson(instance,{error:'authentication_required'},401);
+    if(!who.authenticated)return boardJson(instance,{error:'authentication_required'},401);
     const body=await parseBody(request),title=clean(body?.title,200),textBody=clean(body?.body,20000);
     if(!title||!textBody)return boardJson(instance,{error:'title_and_body_required'},400);
     const stamp=now();
@@ -405,7 +437,7 @@ export async function handleSiteBoardRequest(request,env){
   }
   if(method==='POST'&&commentsMatch){
     if(Number(instance.comments_enabled)!==1)return boardJson(instance,{error:'comments_disabled'},409);
-    if(!who.authenticated&&Number(instance.allow_anonymous_write)!==1)return boardJson(instance,{error:'authentication_required'},401);
+    if(!who.authenticated)return boardJson(instance,{error:'authentication_required'},401);
     const id=Number(commentsMatch[1]);
     const exists=await env.DB.prepare(`SELECT id FROM ekodi_board_posts WHERE board_id=? AND id=? AND status='published' LIMIT 1`).bind(instance.board_id,id).first();
     if(!exists)return boardJson(instance,{error:'not_found'},404);
@@ -517,12 +549,13 @@ export async function handleSiteBoardRequest(request,env){
     await audit(env,instance,who,'snapshot.create','snapshot',snapshotId,{reason});
     return boardJson(instance,{ok:true,snapshotId},201);
   }
-  if(method==='GET'&&sub==='/api/config')return boardJson(instance,{siteId:instance.site_id,visibility:instance.visibility,allowAnonymousWrite:Number(instance.allow_anonymous_write)===1,commentsEnabled:Number(instance.comments_enabled)===1});
+  if(method==='GET'&&sub==='/api/config')return boardJson(instance,{siteId:instance.site_id,visibility:instance.visibility,allowAnonymousWrite:false,commentsEnabled:Number(instance.comments_enabled)===1});
   if(method==='PATCH'&&sub==='/api/config'){
     if(!who.manage)return boardJson(instance,{error:'forbidden'},403);
     const body=await parseBody(request)||{};
     const visibility=['public','members'].includes(lower(body.visibility))?lower(body.visibility):instance.visibility;
-    const anonymous=body.allowAnonymousWrite===undefined?Number(instance.allow_anonymous_write):(body.allowAnonymousWrite?1:0);
+    if(body.allowAnonymousWrite!==undefined&&body.allowAnonymousWrite!==false)return boardJson(instance,{error:'anonymous_writes_disabled'},400);
+    const anonymous=0; // Legacy DB flag is write-disabled and normalized by authorized config updates.
     const comments=body.commentsEnabled===undefined?Number(instance.comments_enabled):(body.commentsEnabled?1:0);
     await env.DB.prepare('UPDATE ekodi_board_instances SET visibility=?,allow_anonymous_write=?,comments_enabled=?,updated_at=? WHERE board_id=?')
       .bind(visibility,anonymous,comments,now(),instance.board_id).run();

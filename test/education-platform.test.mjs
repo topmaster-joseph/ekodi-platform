@@ -79,3 +79,65 @@ test('Post-promotion Education code does not retain unused rollout hooks',async(
   assert.doesNotMatch(worker,/journeyUrl/);
   assert.doesNotMatch(production,/release workflow reconciles this custom-domain trigger/i);
 });
+
+
+test('MNU staff AI bootcamp is a nested Study course with 4 lessons and 6 groups',async()=>{
+  const {COURSE}=await import('../education/study/ai-bootcamp/catalog.js');
+  const [study,classroom,script]=await Promise.all([
+    read('education/study/index.html'),
+    read('education/study/ai-bootcamp/index.html'),
+    read('education/study/ai-bootcamp/classroom.js')
+  ]);
+  assert.match(study,/href="\/study\/ai-bootcamp\/"/);
+  assert.match(classroom,/교직원 AI 부트캠프 강의실/);
+  assert.match(classroom,/id="presentDialog"/);
+  assert.match(script,/showModal\(\)/);
+  assert.match(script,/navigator\.clipboard/);
+  assert.match(script,/data-export/);
+  assert.equal(COURSE.lessons.length,4);
+  assert.equal(COURSE.batches.length,6);
+  assert.equal(COURSE.lessons.every(row=>row.prompt&&row.verify.length===4&&row.steps.length>=4),true);
+  assert.equal(COURSE.schedule.reduce((total,entry)=>total+entry.minutes,0),120);
+  assert.equal(COURSE.lessons.length*COURSE.batches.length,24);
+  assert.equal(COURSE.lessons.length*COURSE.batches.length*120,2880);
+  execFileSync(process.execPath,['--check',fileURLToPath(new URL('../education/study/ai-bootcamp/catalog.js',import.meta.url))],{stdio:'pipe'});
+  execFileSync(process.execPath,['--check',fileURLToPath(new URL('../education/study/ai-bootcamp/classroom.js',import.meta.url))],{stdio:'pipe'});
+});
+
+test('AI bootcamp keeps public classroom synthetic and CSP-compatible',async()=>{
+  const [html,app,catalog,css,data]=await Promise.all([
+    read('education/study/ai-bootcamp/index.html'),
+    read('education/study/ai-bootcamp/classroom.js'),
+    read('education/study/ai-bootcamp/catalog.js'),
+    read('education/study/ai-bootcamp/classroom.css'),
+    read('education/study/ai-bootcamp/data/sample.csv')
+  ]);
+  assert.doesNotMatch(html,/<script(?![^>]*src=)[^>]*>/);
+  assert.doesNotMatch(html,/\sonclick=/);
+  assert.doesNotMatch(html,/<style[\s>]/);
+  assert.match(html,/\.\/classroom\.css/);
+  assert.match(html,/type="module" src="\.\/classroom\.js"/);
+  assert.match(html,/개인정보/);
+  assert.match(app,/URL\.createObjectURL/);
+  assert.match(app,/실제 운영 실적이 아닙니다/);
+  assert.match(catalog,/syntheticOnly": true/);
+  assert.match(css,/@media\(max-width:650px\)/);
+  assert.match(data,/만족도평균_가상/);
+  assert.doesNotMatch(html+app+catalog,/\b010-\d{4}-\d{4}\b|cgma4989@gmail\.com|SUPABASE_SERVICE_ROLE_KEY|sk-[A-Za-z0-9]{16}/);
+});
+
+test('Education guarded Study release and rollback canaries match real stable page markers',async()=>{
+  const [manifestText,studyHtml]=await Promise.all([
+    read('deploy/manifests/education.worker.json'),
+    read('education/study/index.html'),
+  ]);
+  const manifest=JSON.parse(manifestText);
+  const probe=manifest.worker.requests.find(row=>row.url.endsWith('/study'));
+  assert.ok(probe,'Study canary required');
+  assert.deepEqual(probe.statuses,[200]);
+  for(const marker of probe.expect){
+    assert.ok(studyHtml.includes(marker),`Study canary must match actual HTML: ${marker}`);
+  }
+  assert.ok(probe.expect.includes('EKODI Education'));
+  assert.ok(!probe.expect.includes('EKODI Work'));
+});

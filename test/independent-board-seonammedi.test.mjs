@@ -69,15 +69,28 @@ test('finance and notice boards are first-class standalone board routes',async()
   assert.match(worker,/function noticesPage\(req\)/);
   assert.match(worker,/path==='\/finance'/);
   assert.match(worker,/path==='\/notices'/);
-  assert.match(worker,/\/board\/api\/admin\/finance/);
+  assert.match(worker,/path==='\/api\/admin\/finance'/);
   assert.match(worker,/\/board\/api\/admin\/notices/);
   assert.match(worker,/requirePermission\(req,'finance'\)/);
   assert.match(worker,/requirePermission\(req,'notices'\)/);
   assert.match(migration,/CREATE TABLE IF NOT EXISTS finance_posts/);
   assert.match(migration,/CREATE TABLE IF NOT EXISTS notice_posts/);
   assert.match(site,/href="board\/voices">시민의견/);
-  assert.match(site,/href="board\/finance">회계/);
+  assert.doesNotMatch(site,/href="board\/finance">회계/);
   assert.match(site,/href="board\/notices">공지/);
+});
+
+test('finance summary and details require administrator permission, not just Google login',async()=>{
+  const worker=await read('services/independent-board/worker.js');
+  assert.match(worker,/async function memberFinanceSummary\(req,env\)/);
+  assert.match(worker,/const gate=await requirePermission\(req,'finance'\);if\(!gate\.ok\)return gate\.response/);
+  assert.match(worker,/viewer:'finance-admin'/);
+  assert.match(worker,/finance_detail_admin_only/);
+  assert.match(worker,/id="financeAdminOnly"/);
+  assert.doesNotMatch(worker,/id="summaryPanel"/,'legacy public finance board must not render a summary');
+  assert.match(worker,/path==='\/api\/admin\/finance'/);
+  assert.match(worker,/method:id\?"PUT":"POST"/);
+  assert.match(worker,/method:"DELETE"/);
 });
 
 test('standalone board supports both customer-domain and internal seonammedi mounts',async()=>{
@@ -86,11 +99,19 @@ test('standalone board supports both customer-domain and internal seonammedi mou
   const internal=await mod.default.fetch(new Request('https://ekodi.kr/seonammedi/board/voices'),{});
   const externalHtml=await external.text(),internalHtml=await internal.text();
   assert.match(externalHtml,/href="\/board\/voices"/);
-  assert.match(externalHtml,/href="\/board\/finance"/);
+  assert.match(externalHtml,/href="\/board\/notices"/);
   assert.match(internalHtml,/href="\/seonammedi\/board\/voices"/);
-  assert.match(internalHtml,/href="\/seonammedi\/board\/finance"/);
+  assert.match(internalHtml,/href="\/seonammedi\/board\/notices"/);
   assert.match(internalHtml,/href="\/seonammedi\/#timeline"/);
   assert.doesNotMatch(internalHtml,/MY OPERATING SPACES|내 운영공간/);
+  // Finance remains a working sibling route, but is not a seventh top-level menu.
+  for(const url of ['https://seonammedi.kr/board/finance','https://ekodi.kr/seonammedi/board/finance']){
+    const response=await mod.default.fetch(new Request(url),{});
+    assert.equal(response.status,200,url);
+    const financeHtml=await response.text();
+    assert.match(financeHtml,/id="financeAdminOnly"/);
+    assert.doesNotMatch(financeHtml,/id="summaryPanel"|id="adminDetail"|id="writeForm"/);
+  }
 });
 
 test('all three board pages share the SeonamMedi header and footer contract',async()=>{
@@ -98,10 +119,22 @@ test('all three board pages share the SeonamMedi header and footer contract',asy
   assert.match(worker,/서남권 의대 설립 비상대책위원회 관련 공개 기록·소통 채널/);
   assert.match(worker,/자료의 성격과 출처를 구분해 보존합니다/);
   assert.match(worker,/boardPath\(req,'voices'\)/);
-  assert.match(worker,/boardPath\(req,'finance'\)/);
+  assert.match(worker,/if\(\(path==='\/finance'/);
   assert.match(worker,/boardPath\(req,'notices'\)/);
-  assert.match(worker,/id="adminLink" href="\/admin\/">관리/);
-  assert.match(worker,/document\.getElementById\("adminLink"\)\?\.addEventListener\("click",[\s\S]*login\(\)/);
+  assert.match(worker,/function adminPath\(req\)/);
+  assert.match(worker,/https:\/\/ekodi\.kr\/seonammedi\/admin\//);
+  const mod=await import(new URL('../services/independent-board/worker.js?admin-footer='+Date.now(),import.meta.url));
+  for(const [url,href] of [
+    ['https://seonammedi.kr/board/finance','https://ekodi.kr/seonammedi/admin/'],
+    ['https://seonammedi.kr/board/notices','https://ekodi.kr/seonammedi/admin/'],
+    ['https://ekodi.kr/seonammedi/board/finance','/seonammedi/admin/'],
+    ['https://ekodi.kr/seonammedi/board/notices','/seonammedi/admin/']
+  ]){
+    const response=await mod.default.fetch(new Request(url),{});
+    assert.equal(response.status,200,url);
+    assert.ok((await response.text()).includes('id="adminLink" href="'+href+'">관리</a>'),url);
+  }
+  assert.doesNotMatch(worker,/document\.getElementById\("adminLink"\)\?\.addEventListener/,'footer management link must use dedicated protected administrator URL, not return to board login');
 });
 
 test('independent board deployment provisions its own storage and verifies real CRUD',async()=>{
@@ -148,7 +181,7 @@ test('standalone boards reuse EKODI authentication and own their mutations',asyn
     read('sites/seonammedi/public/voice-public-admin.js'),
     read('sites/seonammedi/public/admin/admin.js')
   ]);
-  assert.match(worker,/new URL\('\/api\/seonammedi\/admin\/me'/);
+  assert.match(worker,/new URL\('https:\/\/ekodi\.kr\/api\/seonammedi\/admin\/me'\)/);
   assert.match(worker,/auth\.permissions\?\.\[permission\]/);
   assert.match(worker,/path==='\/api\/admin\/posts'/);
   assert.match(worker,/createFinance\(req,env\)/);
@@ -172,10 +205,11 @@ test('SeonamMedi board admin login preserves the initiating external or internal
   assert.match(worker,/location\.pathname\.startsWith\(\"\/seonammedi\/board\"\)/);
   assert.match(worker,/ekodi_auth_return/);
   assert.match(worker,/auth\/v1\/verify/);
-  for(const route of ['voices','finance','notices']){
+  for(const route of ['voices','notices']){
     assert.match(site,new RegExp('href="board/'+route+'"'));
     assert.match(adminSite,new RegExp('href="\\.\\./board/'+route+'"'));
   }
+  assert.doesNotMatch(site,/href="board\/finance"/);
   assert.doesNotMatch(site,/href="https:\/\/seonammedi\.kr\/board\//);
   assert.doesNotMatch(adminSite,/href="https:\/\/seonammedi\.kr\/board\//);
   assert.match(auth,/seonamMediHandoff/);
@@ -190,10 +224,10 @@ test('standalone board preserves slash parity on external and internal mounts',a
   const mod=await import(new URL('../services/independent-board/worker.js?slash-parity='+Date.now(),import.meta.url));
   const pairs=[
     ['https://seonammedi.kr/board/voices','https://seonammedi.kr/board/voices/','시민의견'],
-    ['https://seonammedi.kr/board/finance','https://seonammedi.kr/board/finance/','회계'],
+    ['https://seonammedi.kr/board/finance','https://seonammedi.kr/board/finance/','회계 관리'],
     ['https://seonammedi.kr/board/notices','https://seonammedi.kr/board/notices/','공지'],
     ['https://ekodi.kr/seonammedi/board/voices','https://ekodi.kr/seonammedi/board/voices/','시민의견'],
-    ['https://ekodi.kr/seonammedi/board/finance','https://ekodi.kr/seonammedi/board/finance/','회계'],
+    ['https://ekodi.kr/seonammedi/board/finance','https://ekodi.kr/seonammedi/board/finance/','회계 관리'],
     ['https://ekodi.kr/seonammedi/board/notices','https://ekodi.kr/seonammedi/board/notices/','공지']
   ];
   for(const [slashless,trailing,label] of pairs){
@@ -310,4 +344,60 @@ test('standalone board media endpoint is restricted to board-owned R2 prefixes',
   const worker=await read('services/independent-board/worker.js');
   assert.match(worker,/\^seonammedi\\\/\(voices\|notices\)\\\//);
   assert.match(worker,/x-content-type-options','nosniff'/);
+});
+
+
+test('independent board header uses one aligned desktop row and a stacked mobile layout on every route',async()=>{
+  const mod=await import(new URL('../services/independent-board/worker.js?header-layout='+Date.now(),import.meta.url));
+  for(const mount of ['https://seonammedi.kr/board','https://ekodi.kr/seonammedi/board']){
+    for(const route of ['voices','finance','notices']){
+      const response=await mod.default.fetch(new Request(mount+'/'+route),{});
+      assert.equal(response.status,200,mount+'/'+route);
+      const html=await response.text();
+      assert.match(html,/<header class="site-header independent-board-header">/);
+      assert.match(html,/\.site-header\.independent-board-header\{display:flex;flex-direction:row;align-items:center;justify-content:space-between;/);
+      assert.match(html,/\.site-header\.independent-board-header>\.brand\{display:flex;flex:0 1 auto;flex-direction:column;/);
+      assert.match(html,/\.site-header\.independent-board-header>nav\{display:flex;flex:0 1 auto;align-items:center;justify-content:flex-end;[^}]*width:auto;/);
+      assert.match(html,/@media\(max-width:760px\)\{\.site-header\.independent-board-header\{flex-direction:column;align-items:stretch;/);
+      assert.match(html,/\.site-header\.independent-board-header>nav\{flex:none;justify-content:flex-start;[^}]*width:100%/);
+      assert.match(html,/\.site-header\.independent-board-header>nav a\[aria-current="page"\]\{color:#111;/);
+      const menuRoute=route==='finance'?'notices':route;
+      if(route==='voices')assert.match(html,new RegExp('aria-current="page" href="'+mount.replace('https://seonammedi.kr','').replace('https://ekodi.kr','')+'/'+menuRoute+'">'));else assert.match(html,new RegExp('href="'+mount.replace('https://seonammedi.kr','').replace('https://ekodi.kr','')+'/'+menuRoute+'">'));
+      const nav=html.match(/<nav class="ekodi-six-nav" aria-label="주요 메뉴">([\s\S]*?)<\/nav>/)?.[1]||'';
+      assert.doesNotMatch(nav,/>회계<\/a>/,'finance must not become a seventh top-level menu');
+    }
+  }
+});
+
+test('guarded board deployment verifies denied finance totals on both mounts',async()=>{
+  const workflow=await read('.github/workflows/deploy-independent-board.yml');
+  assert.match(workflow,/finance administrator-only notice/);
+  assert.match(workflow,/finance authorization boundary/);
+  assert.match(workflow,/Public finance summary access unexpectedly allowed or misconfigured/);
+  assert.match(workflow,/\.error=="finance_forbidden"/);
+  assert.match(workflow,/id="raised"\|id="spent"\|id="balance"/);
+  for(const variant of ['"$finance"', '"$finance_slash"', '"$internal_finance"', '"$internal_finance_slash"']){
+    assert.ok(workflow.includes(variant),'all finance mounts and slash variants must be verified: '+variant);
+  }
+  assert.match(workflow,/status" != "403"/,'production must reject non-admin finance summary requests');
+  assert.doesNotMatch(workflow,/verify_contains "finance summary" 'id="raised"'/);
+});
+
+
+test('mobile notices wrap long titles and body content without clipping or widening the viewport',async()=>{
+  const mod=await import(new URL('../services/independent-board/worker.js?notice-mobile-wrap='+Date.now(),import.meta.url));
+  for(const url of [
+    'https://seonammedi.kr/board/notices',
+    'https://ekodi.kr/seonammedi/board/notices'
+  ]){
+    const response=await mod.default.fetch(new Request(url),{});
+    assert.equal(response.status,200,url);
+    const html=await response.text();
+    assert.match(html,/<body class="board-notices">/);
+    assert.match(html,/body\.board-notices \.board-row\{min-width:0;max-width:100%;/);
+    assert.match(html,/body\.board-notices \.row-head strong\{min-width:0;max-width:100%;overflow-wrap:anywhere;/);
+    assert.match(html,/body\.board-notices \.row-body\{min-width:0;max-width:min\(100%,95ch\);overflow-wrap:anywhere;/);
+    assert.match(html,/body\.board-notices \.notice-search input\{width:min\(440px,100%\);min-width:0;max-width:100%;/);
+    assert.doesNotMatch(html,/body\.board-notices(?: main)?\{[^}]*overflow-x:hidden/,'do not conceal mobile overflow by clipping content');
+  }
 });

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import vm from 'node:vm';
 
 const [api, agent, admin, build, entry, security, bootstrap, startup] = await Promise.all([
   readFile(new URL('../device-control.js', import.meta.url), 'utf8'),
@@ -152,7 +153,7 @@ test('admin quick connect downloads one bounded enrollment connector without req
 });
 
 test('existing registered devices upgrade transactionally and preserve registration', () => {
-  assert.match(agent, /\$AgentVersion = '2\.5\.1'/);
+  assert.match(agent, /\$AgentVersion = '2\.5\.7'/);
   assert.match(agent, /Invoke-AgentUpgradeTransaction/);
   assert.match(agent, /Assert-AgentCandidate/);
   assert.match(agent, /New-AgentUpgradeSnapshot/);
@@ -173,6 +174,103 @@ test('agent self-update validates actual PowerShell command AST instead of raw g
   assert.match(agent, /CommandAst/);
   assert.match(agent, /ParseInput/);
   assert.match(agent, /\('Invoke-' \+ 'Expression'\)/);
+});
+
+test('one-click connection diagnoses Windows launch blocks and never runs two elevated installs concurrently', () => {
+  assert.match(bootstrap, /EKB-010/);
+  assert.match(bootstrap, /EKB-011/);
+  assert.match(bootstrap, /powershell_blocked/);
+  assert.match(admin, /EKB-210/);
+  assert.match(admin, /EKB-211/);
+  assert.match(admin, /EKB-212/);
+  assert.match(agent, /Enter-AgentInstallLock/);
+  assert.match(agent, /EKA-080/);
+  assert.match(agent, /concurrent_install/);
+  assert.match(agent, /Global\\EKODI_Device_Agent_Install_V1/);
+  assert.match(agent, /InstallMutex\.ReleaseMutex\(\)/);
+  assert.match(admin, /설치 창이 열려 있으면/);
+});
+
+test('one-click Windows installers isolate download paths and delete temporary scripts', async () => {
+  const css = await readFile(new URL('../device-control-admin.css', import.meta.url), 'utf8');
+  assert.match(admin, /ekodi-device-agent-.*NewGuid\(\)\.ToString/);
+  assert.match(bootstrap, /ekodi-device-agent-bootstrap-.*NewGuid\(\)\.ToString/);
+  assert.match(admin, /EKB-213/);
+  assert.match(admin, /EKB-214/);
+  assert.match(admin, /EKB-215/);
+  assert.match(admin, /EKB-219/);
+  assert.match(admin, /Parser\]::ParseInput/);
+  assert.match(admin, /Remove-Item -LiteralPath \$p -Force -ErrorAction SilentlyContinue/);
+  assert.match(bootstrap, /Remove-Item -LiteralPath \$agent -Force -ErrorAction SilentlyContinue/);
+  assert.doesNotMatch(admin, /Join-Path \$env:TEMP 'ekodi-device-agent\.ps1'/);
+  assert.doesNotMatch(bootstrap, /Join-Path \$env:TEMP 'ekodi-device-agent-bootstrap\.ps1'/);
+  assert.match(css, /DEVICE-BOOTSTRAP-WIDE-CANONICAL-20261009/);
+  assert.match(css, /\.app:has\(#deviceControlPanel:not\(\.hidden-panel\)\)/);
+  assert.match(css, /width:calc\(100vw - 220px\)!important/);
+  assert.match(css, /@media\(max-width:760px\)/);
+});
+
+test('downloaded one-click CMD embeds a parsed, race-free, stage-aware PowerShell launcher', () => {
+  const begin = admin.indexOf('  function utf16leBase64(value) {');
+  const end = admin.indexOf('  function downloadEnrollmentInstaller()', begin);
+  assert.ok(begin >= 0 && end > begin, 'installer function extraction must be anchored');
+  const ctx = {
+    WINDOWS_AGENT_URL: 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/tools/ekodi-device-agent/windows/ekodi-device-agent.ps1',
+    API_BASE: 'https://ekodi.kr',
+    btoa: text => Buffer.from(text, 'binary').toString('base64'),
+  };
+  vm.runInNewContext(admin.slice(begin, end) + "\nthis.installer = buildEnrollmentInstaller('EKD-0123456789ABCDEF0123');", ctx, {timeout:1000});
+  assert.match(ctx.installer, /@echo off/);
+  assert.match(ctx.installer, /EKB-210/);
+  const encoded = ctx.installer.match(/-EncodedCommand ([A-Za-z0-9+/=]+)/)?.[1];
+  assert.ok(encoded, 'one-click command must contain UTF-16LE PowerShell');
+  const ps = Buffer.from(encoded, 'base64').toString('utf16le');
+  assert.match(ps, /ekodi-device-agent-.*NewGuid\(\)\.ToString/);
+  assert.match(ps, /EKB-213/);
+  assert.match(ps, /EKB-214/);
+  assert.match(ps, /EKB-215/);
+  assert.match(ps, /EKB-219/);
+  assert.match(ps, /-Install -EnrollmentCode 'EKD-0123456789ABCDEF0123'/);
+  assert.match(ps, /finally\s*\{\s*Remove-Item -LiteralPath \$p/);
+  assert.doesNotMatch(ps, /Join-Path \$env:TEMP 'ekodi-device-agent\.ps1'/);
+  assert.doesNotMatch(ps, /Invoke-Expression|\biex\b/i);
+});
+
+test('device Admin and bootstrap changes automatically dispatch guarded shared-site release', async () => {
+  const release = await readFile(new URL('../scripts/converge-orchestrated-pr-merge.mjs', import.meta.url), 'utf8');
+  for (const file of ['device-control-admin.js','device-control-admin.css','ekodi-device-bootstrap.cmd']) {
+    assert.ok(release.includes("file==='" + file + "'"), "missing release target " + file);
+  }
+  assert.ok(release.includes("file==='scripts/converge-orchestrated-pr-merge.mjs'"), 'deployment controller changes must not silently skip production release');
+  assert.ok(release.includes('if(sharedSiteTouched)'));
+  assert.ok(release.includes('/actions/workflows/deploy-site-core.yml/dispatches'));
+  assert.ok(release.includes('release_branch_ref:branch,release_task_id:taskId'));
+});
+
+test('guarded shared-site candidate smoke verifies the deployed device connection assets', async () => {
+  const manifest = JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8'));
+  const requests = new Map(manifest.worker.requests.map(request => [request.url, request]));
+  const redirect = requests.get('https://ekodi.kr/admin/desktop/bootstrap/');
+  assert.deepEqual(redirect?.statuses, [307]);
+  assert.ok(redirect?.headerExpect?.includes('location: /admin/status/devices'));
+  assert.ok(redirect?.headerExpect?.includes('x-ekodi-route: desktop-bootstrap-canonical'));
+  const expected = [
+    ['device-control-admin.css','DEVICE-BOOTSTRAP-WIDE-CANONICAL-20261009'],
+    ['device-control-admin.js','EKB-219'],
+    ['ekodi-device-bootstrap.cmd','EKB-011'],
+  ];
+  for (const [file, marker] of expected) {
+    const entry = requests.get('https://ekodi.kr/' + file);
+    assert.deepEqual(entry?.statuses, [200], file + ' missing from candidate and promoted Worker smoke');
+    assert.ok(entry?.expect?.includes(marker), file + ' missing essential live version marker');
+    const source = await readFile(new URL('../' + file, import.meta.url), 'utf8');
+    assert.ok(source.includes(marker), file + ' test marker must exist in the built source');
+  }
+  const js = requests.get('https://ekodi.kr/device-control-admin.js');
+  assert.ok(js.expect.includes('function groupRosterDevices'), 'grouped enrolled-device roster must remain included');
+  const cmd = requests.get('https://ekodi.kr/ekodi-device-bootstrap.cmd');
+  assert.ok(cmd.expect.includes('ekodi-device-agent-bootstrap-'), 'GUID temp filename must be present');
+  assert.equal(redirect.rollbackVerify, false);
 });
 
 test('bootstrap elevates only when needed and keeps Boot/WOL separate', () => {
@@ -369,4 +467,39 @@ test('bounded isolated desktop session is payload-sanitized and capability-gated
   assert.match(agent, /isolatedDesktopSessionCanary = \[bool\]\(Get-IsolatedDesktopSessionCanaryState\)\.verified/);
   assert.match(agent, /isolatedDesktop = \[bool\]\(Get-IsolatedDesktopSessionCanaryState\)\.verified/);
   assert.doesNotMatch(agent, /isolatedDesktop = \$true/);
+});
+
+
+test('native registered Windows Agent self-recovers after process exit without losing same-user DPAPI', () => {
+  const first = agent.indexOf('function Ensure-AgentTask {');
+  const last = agent.indexOf('function Copy-SelfToAgentPath', first);
+  assert.ok(first >= 0 && last > first);
+  const task = agent.slice(first, last);
+  assert.match(task, /New-ScheduledTaskTrigger -AtLogOn -User \$userId/);
+  assert.match(task, /New-ScheduledTaskTrigger -Once .* -RepetitionInterval \(New-TimeSpan -Minutes 5\)/);
+  assert.match(task, /New-ScheduledTaskPrincipal -UserId \$userId -LogonType Interactive/);
+  assert.match(task, /-MultipleInstances IgnoreNew/);
+  assert.match(task, /-RestartCount 3 -RestartInterval \(New-TimeSpan -Minutes 1\)/);
+  assert.match(task, /-ExecutionTimeLimit \(\[TimeSpan\]::Zero\)/);
+  assert.match(task, /-Trigger @\(\$logonTrigger, \$recoveryTrigger\)/);
+  assert.doesNotMatch(task, /-UserId 'SYSTEM'|-LogonType ServiceAccount|-ExecutionPolicy Unrestricted/);
+  assert.match(agent, /Global\\EKODI_Device_Agent_V2/);
+  assert.match(agent, /api\/device-agent\/heartbeat" -TimeoutSec 15/);
+  assert.match(agent, /api\/device-agent\/commands\/next" -TimeoutSec 15/);
+  assert.match(agent, /protectedToken = Protect-LocalSecret/);
+});
+
+
+test('browser task journal crosses Device Control sanitization and is shown without raw arguments', () => {
+  assert.match(api, /const audit = result\.agent\.browserTaskAudit/);
+  assert.match(api, /new Set\(\['computer\.browser\.canary','computer\.browser\.execute','computer\.browser\.pr\.observe'\]\)/);
+  assert.match(api, /summary\.agent\.browserTaskAudit =/);
+  assert.match(api, /audit\.recent\.slice\(0,20\)/);
+  assert.match(api, /ownedBrowserProcessId: Math\.max/);
+  assert.match(api, /ownedTabsClosed: Math\.min/);
+  assert.match(admin, /에코디 브라우저 작업 원장/);
+  assert.match(admin, /관측 탭/);
+  assert.match(admin, /닫힘/);
+  assert.match(admin, /item\.commandType/);
+  assert.doesNotMatch(admin, /item\.commandLine|item\.profilePath/);
 });

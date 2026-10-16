@@ -64,16 +64,17 @@ test('YouTube adapter uses OAuth, channel discovery and resumable upload', async
   assert.match(adapter, /uploadType=resumable&part=snippet,status/);
 });
 test('My EKODI and workspace admin expose separate channel automation entry points', async () => {
-  const [myHtml,myApp,myChannel,workspace,worker] = await Promise.all([
-    read('my/index.html'), read('my/app.js'), read('my/channel-automation.js'),
+  const [myHtml,myLoader,myApp,myChannel,workspace,worker] = await Promise.all([
+    read('my/index.html'), read('my/secondary-feature-loader.js'), read('my/app.js'), read('my/channel-automation.js'),
     read('workspace-admin-page.js'), read('marketing-publishing-worker.js'),
   ]);
-  assert.match(myHtml, /channel-automation\.js\?v=20260903-channel-automation-1/);
+  assert.match(myHtml, /secondary-feature-loader\.js/);
+  assert.match(myLoader, /channel-automation\.js\?v=20260903-channel-automation-1/);
   assert.match(myApp, /window\.EKODI_MY_AUTH/);
   const myWorker=await read('my-worker.js'); assert.match(myWorker, /marketing-publish-api\.ekodi\.kr/);
   assert.match(myChannel, /subject_type=person/);
   assert.match(workspace, /\['publishing','채널·자동게시'\]/);
-  assert.match(workspace, /subject_type=workspace/);
+  assert.match(workspace, /subject_type=tenant/);
   assert.match(workspace, /CHANNEL_AUTOMATION='\/marketing-publish-api'/);
   assert.match(worker, /channelAutomationCore:automationReady/);
   assert.match(worker, /CHANNEL_PLAN_LIMIT_REACHED/);

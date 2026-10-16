@@ -10,12 +10,30 @@
   const form=document.querySelector('[data-event-application]');
   const meta=document.querySelector('[data-event-meta]');
   const applicationRecordKey=String(form?.querySelector('[name="eventKey"]')?.value||defaultEvent.applicationRecordKey);
-  const url=String(meta?.dataset.eventUrl||defaultEvent.url);
-  const title=String(meta?.dataset.eventTitle||defaultEvent.title);
-  const shareText=String(meta?.dataset.eventText||defaultEvent.text);
-  const invite=String(meta?.dataset.eventInvite||defaultEvent.invite)+' '+url;
+  const missionHome=Boolean(document.querySelector('.hero-split'))&&!form;
+  const url=missionHome?'https://ekodi.kr/ekodimission':String(meta?.dataset.eventUrl||defaultEvent.url);
+  const title=missionHome?'에코디선교회 · EKODI MISSION':String(meta?.dataset.eventTitle||defaultEvent.title);
+  const shareText=missionHome?'생명을 살리는 공동체, 말씀대로 살아내고 살려내는 공동체. 대학가의 청년·유학생·이웃과 말씀과 식탁으로 만납니다.':String(meta?.dataset.eventText||defaultEvent.text);
+  const invite=(missionHome?'에코디선교회의 말씀·식탁·장학·지역 봉사 사역을 함께 살펴보세요.':String(meta?.dataset.eventInvite||defaultEvent.invite))+' '+url;
   const api=`/ekodimission/api/activities/${encodeURIComponent(applicationRecordKey)}/applications`;
   const registrationApi=`/ekodimission/api/activities/${encodeURIComponent(applicationRecordKey)}/registration`;
+  // Public homepage is not an activity archive: expire the event at midnight KST.
+  // This is a UI fallback; archived events remain on their permanent routes.
+  const homeCards=[...document.querySelectorAll('[data-mission-home-event]')];
+  if(homeCards.length){
+    const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+    const day=kind=>parts.find(part=>part.type===kind)?.value||'';
+    const todayKst=[day('year'),day('month'),day('day')].join('-');
+    let visible=0;
+    for(const card of homeCards){
+      const endDay=String(card.dataset.eventLastDay||'');
+      const show=/^\d{4}-\d{2}-\d{2}$/.test(endDay)&&endDay>=todayKst;
+      card.hidden=!show;
+      if(show)visible++;
+    }
+    const empty=document.querySelector('[data-mission-home-empty]');
+    if(empty)empty.hidden=visible>0;
+  }
   const shareStatus=m=>document.querySelectorAll('[data-share-status]').forEach(el=>el.textContent=m);
   async function copy(v,m){try{await navigator.clipboard.writeText(v)}catch{const t=document.createElement('textarea');t.value=v;document.body.append(t);t.select();document.execCommand('copy');t.remove()}shareStatus(m)}
   const paymentSheet=document.querySelector('[data-mission-pay-sheet]');
@@ -76,33 +94,71 @@
   function missionAdminToken(){
     try{return sessionStorage.getItem('ekodi-auth-token')||''}catch{return''}
   }
+  let missionAdminController=null;
+  let missionAdminPending=null;
+  let missionAdminPendingToken='';
+  let missionAdminAuthorizedToken='';
+  const missionAdminButtons=new Set();
+  function clearMissionPublicAdmin(){
+    for(const button of missionAdminButtons)button.remove();
+    missionAdminButtons.clear();
+    missionAdminController?.reset();
+    missionAdminAuthorizedToken='';
+  }
   async function initMissionPublicAdmin(){
+    const token=missionAdminToken();
+    if(!token){clearMissionPublicAdmin();return false}
     const shared=window.EKODIPublicSurfaceAdmin;
-    if(!shared?.create||Number(shared.version||0)<2||!missionAdminToken())return;
-    const admin=shared.create({
+    if(!shared?.create||Number(shared.version||0)<2)return false;
+    if(missionAdminPending){
+      const pendingToken=missionAdminPendingToken;
+      const result=await missionAdminPending;
+      return pendingToken===token?result:initMissionPublicAdmin();
+    }
+    if(missionAdminAuthorizedToken&&missionAdminAuthorizedToken!==token)clearMissionPublicAdmin();
+    const admin=missionAdminController||(missionAdminController=shared.create({
       serviceId:'mission',
       adminPath:'/ekodimission/admin/activities',
       authEndpoint:'/ekodimission/api/admin/me',
       tokenProvider:missionAdminToken
-    });
-    try{
-      const me=await admin.authorize();
-      if(!me?.ok||!admin.has('activities'))return;
-      const listHead=document.querySelector('.mission-activity-index-head');
-      admin.attach(listHead,{label:'활동 · 참가자 관리',panel:'activities',permission:'activities',presentation:'window'});
-      for(const item of activityItems){
-        const activityKey=String(item.dataset.activityKey||'').trim();
-        if(!activityKey)continue;
-        const target=item.querySelector('.mission-activity-row-actions')||item;
-        admin.attach(target,{label:'참가자 관리',panel:'activities',permission:'activities',presentation:'window',params:{activity:activityKey}});
-      }
-      if(form){
-        const target=document.querySelector('.open-table-actions');
-        admin.attach(target,{label:'신청자 관리',panel:'activities',permission:'activities',presentation:'window',params:{activity:applicationRecordKey}});
-      }
-    }catch{}
+    }));
+    missionAdminPendingToken=token;
+    missionAdminPending=(async()=>{
+      try{
+        const me=await admin.authorize();
+        if(token!==missionAdminToken()||!me?.ok||!admin.has('activities')){
+          clearMissionPublicAdmin();return false;
+        }
+        const listHead=document.querySelector('.mission-activity-index-head');
+        const add=(target,options)=>{
+          const button=admin.attach(target,{panel:'activities',permission:'activities',presentation:'window',...options});
+          if(button)missionAdminButtons.add(button);
+        };
+        add(listHead,{label:'활동 · 참가자 관리'});
+        for(const item of activityItems){
+          const activityKey=String(item.dataset.activityKey||'').trim();
+          if(!activityKey)continue;
+          add(item.querySelector('.mission-activity-row-actions')||item,{label:'참가자 관리',params:{activity:activityKey}});
+        }
+        if(form)add(document.querySelector('.open-table-actions'),{label:'신청자 관리',params:{activity:applicationRecordKey}});
+        missionAdminAuthorizedToken=token;
+        return true;
+      }catch{clearMissionPublicAdmin();return false}
+    })();
+    try{return await missionAdminPending}
+    finally{
+      missionAdminPending=null;
+      missionAdminPendingToken='';
+      // An account can change while the previous authorization request is in flight.
+      if(missionAdminToken()&&missionAdminToken()!==token)queueMicrotask(()=>{initMissionPublicAdmin().catch(()=>{})});
+    }
   }
-  initMissionPublicAdmin();
+  const refreshMissionAdmin=()=>{initMissionPublicAdmin().catch(()=>{})};
+  window.addEventListener('ekodi:public-admin-runtime-ready',refreshMissionAdmin);
+  window.addEventListener('pageshow',refreshMissionAdmin);
+  window.addEventListener('focus',refreshMissionAdmin);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshMissionAdmin()});
+  refreshMissionAdmin();
   if(!form)return;
   const status=form.querySelector('[data-application-status]');const submit=form.querySelector('button[type="submit"]');
   const closeApplication=(data={})=>{

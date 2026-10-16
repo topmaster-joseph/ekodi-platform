@@ -1,0 +1,72 @@
+name: EKODI LANG-UI-001 Native Browser Acceptance
+
+on:
+  # EKODI-native weekly drift check, 03:27 KST Tuesday (UTC Monday 18:27).
+  schedule:
+    - cron: '27 18 * * 1'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/verify-language-selector-native.mjs'
+      - 'homepage-ambient.js'
+      - 'test/language-native-acceptance-contract.test.mjs'
+      - 'test/homepage-published-language-contract.test.mjs'
+      - '.github/workflows/verify-language-selector-native.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/verify-language-selector-native.mjs'
+      - 'homepage-ambient.js'
+      - 'test/language-native-acceptance-contract.test.mjs'
+      - 'test/homepage-published-language-contract.test.mjs'
+      - '.github/workflows/verify-language-selector-native.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-lang-ui-001-native-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-language-acceptance:
+    if: github.repository == 'topmaster-joseph/ekodi-platform'
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify read-only LANG-UI-001 native browser contract
+        run: |
+          node --check scripts/verify-language-selector-native.mjs
+          node --test test/language-native-acceptance-contract.test.mjs test/homepage-published-language-contract.test.mjs
+      - name: Install EKODI isolated Chromium harness
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Observe actual public pages and local synthetic readiness cases
+        env:
+          EKODI_LANGUAGE_EVIDENCE_FILE: artifacts/native-language-selector/report.json
+          # Only scheduled and manual post-release checks gate on real production.
+          # PR/push checks retain negative live evidence without blocking a fix for that drift.
+          EKODI_LANG_STRICT_LIVE: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'true' || 'false' }}
+        run: node scripts/verify-language-selector-native.mjs
+      - name: Validate machine-readable evidence boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -e '.policy == "LANG-UI-001" and .readOnly == true and .ephemeral == true and .realProductionAndSyntheticSeparated == true' artifacts/native-language-selector/report.json
+          jq -e '.production | type == "array"' artifacts/native-language-selector/report.json
+          if ! jq -e '.liveCertified == true' artifacts/native-language-selector/report.json >/dev/null; then
+            echo '::warning::LANG-UI-001 live certification incomplete: consult per-service inconclusive entries in the attached evidence.'
+          fi
+          echo '### LANG-UI-001 first-party native Chromium' >> "$GITHUB_STEP_SUMMARY"
+          jq -r '"- Synthetic fixture: \(.synthetic.status)\n- Live certification: \(.liveCertified)\n- Live observations: \([.production[] | "\(.service): \(.status) (\(.reason))"] | join(", "))"' artifacts/native-language-selector/report.json >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lang-ui-001-native-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/native-language-selector
+          retention-days: 7

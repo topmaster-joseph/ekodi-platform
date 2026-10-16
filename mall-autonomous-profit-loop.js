@@ -54,6 +54,7 @@ export function classifyMallAutonomousProfitLoop(input = {}) {
   if (!source.fresh) stale.push('sourcing');
   if (!feedback.fresh) stale.push('feedback');
   if (!intelligence.fresh) stale.push('intelligence');
+  if (stages.learn?.status === 'stale') stale.push('learning');
 
   let state = 'operating';
   if (blockers.length) state = 'blocked';
@@ -119,7 +120,8 @@ export async function getMallAutonomousProfitLoopStatus(env) {
     },
   };
   stages.curate = { status: top ? 'ranked' : 'waiting', fresh: intelligence?.run_date === today, topScore:n(top?.opportunity_score), topAction:clean(top?.recommended_action,20), productRowId:n(top?.product_row_id) };
-  stages.learn = { status: performance?.latest_metric_date ? 'observing' : 'cold_start', fresh:Boolean(performance?.latest_metric_date), latestMetricDate:performance?.latest_metric_date || null };
+  const learnFresh = metricAge <= MALL_AUTONOMOUS_PROFIT_LOOP.feedbackFreshHours;
+  stages.learn = { status: !performance?.latest_metric_date ? 'cold_start' : learnFresh ? 'observing' : 'stale', fresh:learnFresh, ageHours:Number.isFinite(metricAge) ? Math.round(metricAge * 10) / 10 : null, latestMetricDate:performance?.latest_metric_date || null };
   const economics = {
     orders30d:n(performance?.orders_30d),
     cancels30d:n(performance?.cancels_30d),

@@ -1,5 +1,6 @@
 import { getEkodiCommandTask, ingestEkodiPulse } from './ekodi-command-ledger.js';
 import { runEkodiCommandQueue } from './ekodi-pulse-runtime.js';
+import { projectDeploymentGate } from './execution-state-projector.js';
 import authCore from './auth-worker-core.js';
 import { verifyGitHubActionsOidc } from './github-actions-oidc.js';
 import { accessGrantIsActive, accessRolePreset, effectiveAccessCapabilities, parseCapabilityList } from './access-governance.js';
@@ -187,6 +188,28 @@ function completionEvidenceShapeValid(evidence,row){
     const item=required.find(entry=>entry?.name===name);
     if(!item||item.conclusion!=='success')return false;
   }
+  // The only allowed no-Worker release is the specifically Human-Gate approved
+  // native operations watch. OIDC collector must verify its actual main-branch
+  // scheduled/dispatch observe job and its non-empty evidence artifact.
+  if(evidence.deliveryKind==='github-actions-schedule'){
+    const w=evidence.nativeWorkflow||{};
+    if(text(row.task_id,160)!=='orch_recovery_dcf5dace563ac6da0488a29708afcf21')return false;
+    if(text(row.branch_ref,220)!=='ai/gpt6/orch_recovery_dcf5dace563ac6da0488a29708afcf21')return false;
+    if(evidence.source!=='github-actions-native-operations-verified')return false;
+    if(Number(evidence.pr?.number)!==4383||!/^\d{4}-\d{2}-\d{2}T/.test(text(evidence.pr?.mergedAt,80)))return false;
+    if(w.name!=='EKODI Native Operations Watch'||w.path!=='.github/workflows/ekodi-native-operations-watch.yml')return false;
+    if(!['schedule','workflow_dispatch'].includes(w.runEvent)||w.observeJob!=='observe')return false;
+    if(!Number.isSafeInteger(w.workflowId)||w.workflowId<1||!Number.isSafeInteger(w.runId)||w.runId<1)return false;
+    if(!Number.isSafeInteger(w.artifactId)||w.artifactId<1||!Number.isSafeInteger(w.artifactBytes)||w.artifactBytes<1)return false;
+    if(w.artifactName!=='ekodi-native-operations-'+w.runId)return false;
+    if(!/^[a-f0-9]{40}$/i.test(text(w.runHeadSha,80))||
+       !/^\d{4}-\d{2}-\d{2}T/.test(text(w.runCreatedAt,80))||
+       Date.parse(w.runCreatedAt)<=Date.parse(evidence.pr.mergedAt))return false;
+    if(!Array.isArray(w.verifiedSteps)||!
+      ['Collect EKODI-owned read-only operational evidence',
+       'Preserve privacy-safe evidence, including failures'].every(s=>w.verifiedSteps.includes(s)))return false;
+    return true;
+  }
   const deployments=Array.isArray(evidence.deployments)?evidence.deployments:[];
   if(!deployments.length)return false;
   if(!deployments.some(item=>Array.isArray(item?.stagingJobs)&&item.stagingJobs.length))return false;
@@ -336,6 +359,14 @@ function publicTask(row){
   const evidence=parseJson(row.evidence_json,[]);
   const commandMeta=evidence&&typeof evidence==='object'&&!Array.isArray(evidence)?evidence.commandLedger:null;
   const stateVersion=Number(row.state_version||1);
+  const deploymentRequested=Number(row.deployment_requested||0)===1;
+  const productionEvidence=parseJson(row.production_evidence_json,null);
+  const deploymentGate=deploymentRequested?projectDeploymentGate({
+    state:row.state,
+    risk:row.risk,
+    deploymentRequested,
+    productionEvidence,
+  }):null;
   const humanGate=row.state==='blocked'&&text(commandMeta?.state,40).toLowerCase()==='human_gate'
     ?Object.freeze({required:true,approvalTool:'approve_task',expectedStateVersion:stateVersion})
     :null;
@@ -350,7 +381,8 @@ function publicTask(row){
     assignedWorker:row.assigned_worker||null,
     branchRef:row.branch_ref||null,
     prRef:row.pr_ref||null,
-    deploymentRequested:Number(row.deployment_requested||0)===1,
+    deploymentRequested,
+    deploymentGate,
     commandState:commandMeta?.state||null,
     humanGate,
     attemptCount:Number(commandMeta?.attemptCount||0),
@@ -360,7 +392,7 @@ function publicTask(row){
     lastError:commandMeta?.lastError||'',
     result,
     evidence,
-    productionEvidence:parseJson(row.production_evidence_json,null),
+    productionEvidence,
     createdAt:row.created_at,
     updatedAt:row.updated_at,
     completedAt:row.completed_at||null,
@@ -376,6 +408,7 @@ function mapCommandState(state){
   if(value==='queued')return'assigned';
   if(value==='retry')return'assigned';
   if(value==='running')return'executing';
+  if(value==='executor_ready')return'assigned';
   if(value==='verified')return'completed';
   // core_only means AI consultation was unavailable; it is a deterministic
   // execution hand-off, never proof that the requested change completed.
@@ -543,6 +576,12 @@ async function platformAdminIdentityFromSession(db,session={}){
   const row=await db.prepare('SELECT id,role FROM admins WHERE lower(trim(email))=? LIMIT 1').bind(email).first().catch(()=>null);
   if(text(row?.role,80).toLowerCase()!=='super_admin'||!row?.id)return null;
   return Object.freeze({personId:`platform-admin:${row.id}`,email,ekodiId:null});
+}
+
+// Share exactly the same authoritative administrator identity across submit,
+// status and human approval. Never accept a requester identifier from the body.
+export async function resolveOrchestratorPlatformAdminIdentity(env,session={}){
+  return platformAdminIdentityFromSession(dbFrom(env),session);
 }
 
 export async function getOrchestratorTaskStatusForPlatformAdmin(env,session,id){
