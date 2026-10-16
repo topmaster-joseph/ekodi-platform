@@ -108,13 +108,36 @@ test('PG settlement match never implies actual bank credit',()=>{
  const fingerprint='a'.repeat(64);
  assert.equal(reconcile([local()],[pg()],{bankCreditVerified:true}).disposition,'bank_deposit_pending');
  assert.equal(reconcile([local()],[pg()],{expectedAccountFingerprint:fingerprint,
-   bankEvidence:{source:'authenticated_bank_statement',verified:true,merchantId:'ekodibiz',
+   bankEvidence:{source:'authenticated_bank_statement',verified:true,creditDirection:'CREDIT',statementTransactionRef:'BANKTX_000001',merchantId:'ekodibiz',
      accountFingerprint:fingerprint,currency:'KRW',amount:48350,
      proofRef:'BANK_CREDIT_001',verifiedAt:1790000000000}}).disposition,'bank_verified');
  assert.equal(reconcile([local()],[pg()],{expectedAccountFingerprint:fingerprint,
-   bankEvidence:{source:'authenticated_bank_statement',verified:true,merchantId:'ekodiedu',
+   bankEvidence:{source:'authenticated_bank_statement',verified:true,creditDirection:'CREDIT',statementTransactionRef:'BANKTX_000002',merchantId:'ekodiedu',
      accountFingerprint:fingerprint,currency:'KRW',amount:48350,
      proofRef:'BANK_CREDIT_001',verifiedAt:1790000000000}}).bankDepositVerified,false);
+});
+test('empty PG day cannot be promoted to verified bank deposit even with an attested zero amount',()=>{
+ const fingerprint='a'.repeat(64);
+ const v=reconcile([],[],{expectedAccountFingerprint:fingerprint,bankEvidence:{
+  source:'authenticated_bank_statement',verified:true,merchantId:'ekodibiz',
+  creditDirection:'CREDIT',statementTransactionRef:'BANKTX_EMPTY01',
+  accountFingerprint:fingerprint,currency:'KRW',amount:0,
+  proofRef:'BANK_CREDIT_001',verifiedAt:1790000000000}});
+ assert.equal(v.pgReconciled,true);
+ assert.equal(v.bankDepositVerified,false);
+ assert.equal(v.disposition,'bank_deposit_pending');
+});
+test('bank credit must have authenticated direction and unique statement transaction reference',()=>{
+ const fp='a'.repeat(64),common={source:'authenticated_bank_statement',verified:true,
+  merchantId:'ekodibiz',accountFingerprint:fp,currency:'KRW',amount:48350,
+  proofRef:'BANK_CREDIT_001',verifiedAt:1790000000000};
+ for(const attestation of [
+  {...common,statementTransactionRef:'BANKTX_000001'},
+  {...common,creditDirection:'DEBIT',statementTransactionRef:'BANKTX_000001'},
+  {...common,creditDirection:'CREDIT',statementTransactionRef:'short'},
+ ]){
+  assert.equal(reconcile([local()],[pg()],{expectedAccountFingerprint:fp,bankEvidence:attestation}).bankDepositVerified,false);
+ }
 });
 test('settlement is fail-closed for MID, key, amount, payout, duplicate, missing, foreign or untrusted PG data',()=>{
  const faults=[
