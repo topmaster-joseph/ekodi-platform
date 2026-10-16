@@ -85,18 +85,28 @@ export function merchantReadiness(profile,{mode='test',ownerGate='DISABLED'}={})
  if(mode==='live'&&ownerGate!=='APPROVED')return {...DISABLED,reason:'financial_owner_gate_closed'};
  return {ready:true,live:mode==='live',reason:'ready'};
 }
-export function selectServerApprovedMerchant(index,approvedOrder,{mode,ownerGate,env}={}){
+export function selectServerApprovedMerchant(index,approvedOrder,{mode,ownerGate,env,now=Date.now()}={}){
+ // Require an explicit environment: an absent mode must NEVER default to test
+ // and accidentally select credentials belonging to a different merchant.
  if(!index?.merchants||!approvedOrder||typeof approvedOrder!=='object')
    return {ok:false,reason:'trusted_order_required'};
+ if(!MODES.has(mode)||!Number.isSafeInteger(now)||now<=0)
+   return {ok:false,reason:'explicit_payment_mode_required'};
  // This function is ONLY called AFTER order issuer bearer/service binding validation.
  // Do not call on raw HTTP JSON. The caller must supply an approved immutable order.
  if(approvedOrder.source!=='trusted_order_issuer'||approvedOrder.approved!==true||
-    !validString(approvedOrder.orderId,/^[A-Z0-9_-]{12,80}$/)||
+    !validString(approvedOrder.orderId,/^[A-Z0-9_-]{12,64}$/)||
     !validString(approvedOrder.merchantId,ID)||
     !validString(approvedOrder.service,ID)||
     !validString(approvedOrder.issuerRef,ID)||
     !Number.isSafeInteger(approvedOrder.amount)||approvedOrder.amount<100||
-    approvedOrder.currency!=='KRW')return {ok:false,reason:'trusted_order_required'};
+    approvedOrder.amount>10_000_000_000||approvedOrder.currency!=='KRW'||
+    !validString(approvedOrder.issuerProofRef,/^[A-Z0-9_-]{8,100}$/)||
+    !Number.isSafeInteger(approvedOrder.approvedAt)||
+    !Number.isSafeInteger(approvedOrder.expiresAt)||
+    approvedOrder.approvedAt>now||approvedOrder.approvedAt<now-86_400_000||
+    approvedOrder.expiresAt<=now||approvedOrder.expiresAt>approvedOrder.approvedAt+86_400_000)
+   return {ok:false,reason:'trusted_order_required'};
  const profile=index.merchants.get(approvedOrder.merchantId);
  if(!profile||!profile.services.includes(approvedOrder.service)||
     profile.issuerRefs[approvedOrder.service]!==approvedOrder.issuerRef)
