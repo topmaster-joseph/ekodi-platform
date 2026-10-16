@@ -502,6 +502,14 @@ function setVoiceCompose(open){
   if(open)voiceComposeForm.querySelector('select,input,textarea')?.focus();
 }
 if(voiceComposeToggle)voiceComposeToggle.onclick=()=>setVoiceCompose(voiceComposeForm?.hidden!==false);
+// Open the editor after a safe, same-page authentication return.
+if(new URLSearchParams(location.search).get('compose')==='voice'){
+  setVoiceCompose(true);
+  const cleaned=new URL(location.href);
+  cleaned.searchParams.delete('compose');
+  history.replaceState(history.state,'',cleaned.pathname+cleaned.search+cleaned.hash);
+}
+
 if(voiceComposeCancel)voiceComposeCancel.onclick=()=>setVoiceCompose(false);
 async function waitForBoardSubmission(result){
   if(result?.id)return Number(result.id);
