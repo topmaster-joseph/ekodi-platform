@@ -47,7 +47,7 @@ test('native Agent forwards only fixed CDP categories when browser stderr contai
   assert.match(wrapper,/CDP_BROWSER_SPAWN/);
   assert.match(wrapper,/throw \$failureCode/);
   assert.doesNotMatch(wrapper,/throw \('CDP_WORKER_FAILED: ' \+ \$stderr/);
-  assert.match(agent,/AgentVersion = '2\.5\.7'/);
+  assert.match(agent,/AgentVersion = '2\.5\.(?:7|8)'/);
 });
 
 
