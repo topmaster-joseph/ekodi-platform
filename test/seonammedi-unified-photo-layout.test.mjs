@@ -28,11 +28,11 @@ test('six-menu home loads the same read-only visual shell as independent boards'
 });
 
 test('the campaign artwork is the only main banner and no stock photo is inserted',()=>{
-  assert.doesNotMatch(ui,/images\\.unsplash\\.com/);
-  assert.doesNotMatch(ui,/const hero = el\\('section','seonam-visual-hero'\\)/);
-  assert.match(ui,/header\\.insertAdjacentElement\\('afterend',preservedCampaign\\)/);
-  assert.match(css,/body\\.seonam-visual-ready>\\.campaign-hero \\.campaign-hero-image/);
-  assert.match(css,/body\\.seonam-visual-ready > \\.seonam-visual-hero\\{display:none!important\\}/);
+  assert.ok(!ui.includes('images.unsplash.com'));
+  assert.ok(!ui.includes("const hero = el('section','seonam-visual-hero')"));
+  assert.ok(ui.includes("header.insertAdjacentElement('afterend',preservedCampaign)"));
+  assert.ok(css.includes('body.seonam-visual-ready>.campaign-hero .campaign-hero-image'));
+  assert.ok(css.includes('body.seonam-visual-ready > .seonam-visual-hero{display:none!important}'));
 });
 
 test('central content is moved without replacing forms or mutation handlers',()=>{
