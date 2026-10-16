@@ -13,8 +13,15 @@ const [app,css,html]=await Promise.all([
 const start=app.indexOf('function bindCompactTimelineToggles(host){');
 const end=app.indexOf('function bindCommitteeActivityAdmin(){',start);
 assert.ok(start>=0&&end>start,'public timeline display functions must be intact');
-const publicRenderers=app.slice(start,end);
-const titleClass='class="timeline-title-toggle" aria-expanded="false"';
+const publicStart=app.indexOf('function renderPublicTimeline(){',start);
+const newsStart=app.indexOf('function renderCommitteeNews(){',publicStart);
+const activityStart=app.indexOf('function renderCommitteeActivity(){',newsStart);
+assert.ok(publicStart>start&&newsStart>publicStart&&activityStart>newsStart,'separate renderer boundaries must remain stable');
+// Include only the three listing renderers, not unrelated paging/timer bootstraps.
+const publicRenderers=app.slice(start,publicStart)
+  +app.slice(publicStart,newsStart)
+  +app.slice(newsStart,activityStart)
+  +app.slice(activityStart,end);
 
 test('activity, news and committee-related news render only title visible at first visit',()=>{
   const hosts=Object.fromEntries(['timelineList','committeeActivityList','committeeNewsList'].map(id=>
@@ -90,9 +97,10 @@ test('CSS conceals date, summary, chips, source and admin until explicitly expan
       'must hide '+className+' from default list');
   assert.match(css,/\.timeline-item\.timeline-compact\.is-collapsed \.timeline-toggle\{display:none!important\}/);
   assert.match(css,/\.timeline-title-toggle:focus-visible/);
+  assert.match(css,/\.timeline-item\.timeline-compact\.is-collapsed \.timeline-content > :not\(h3\)/);
   assert.match(css,/@media\(max-width:760px\)/);
-  assert.match(html,/\/seonammedi\/app\.css\?v=20261017-title-only-1/);
-  assert.match(html,/\/seonammedi\/app\.js\?v=20261017-title-only-1/);
+  assert.match(html,/\/seonammedi\/app\.css\?v=20261013-title-only-20261017-1/);
+  assert.match(html,/\/seonammedi\/app\.js\?v=20261013-title-only-20261017-1/);
   assert.match(html,/id="timelineList"/);
   assert.match(html,/id="committeeActivityList"/);
   assert.match(html,/id="committeeNewsList"/);
