@@ -42,12 +42,28 @@
     newsBox.classList.add('seonam-calendar-card');
     quick.classList.add('seonam-calendar-details');
 
-    const now=localToday();
+    let now=localToday();
     let selected=now,month=now.slice(0,7),events=[],admin=false,revision=0;
+    let todayItems=[],todayRequestVersion=0,autoManagePending=new URLSearchParams(location.search).get('manage')==='schedule';
     const heading=make('div','seonam-calendar-heading');
-    heading.append(make('h2','','일정 달력'));
-    const add=appendButton(heading,'+ 일정 등록',()=>editEvent(null),'seonam-calendar-add');
-    add.hidden=true;
+    heading.append(make('h2','','주요일정'));
+    const manage=appendButton(heading,'관리',async()=>{
+      if(!authToken()){
+        const target=new URL(location.href);
+        target.searchParams.set('manage','schedule');
+        const login=new URL('https://ekodi.kr/auth/');
+        login.searchParams.set('site','seonammedi');
+        login.searchParams.set('direct','1');
+        login.searchParams.set('return_to',target.href);
+        login.searchParams.set('purpose','seonammedi-board-admin');
+        location.assign(login.href);
+        return;
+      }
+      await checkAdmin();
+      if(admin)editEvent(null);
+      else status.textContent='일정 관리 권한이 없습니다. 관리자 계정으로 로그인해 주세요.';
+    },'seonam-calendar-manage');
+    manage.setAttribute('aria-label','주요일정 관리자 로그인 및 관리');
     const navigation=make('div','seonam-calendar-nav');
     const previous=appendButton(navigation,'‹',()=>navigate(-1),'seonam-calendar-arrow');
     previous.setAttribute('aria-label','이전 달');
@@ -56,7 +72,9 @@
     const next=appendButton(navigation,'›',()=>navigate(1),'seonam-calendar-arrow');
     next.setAttribute('aria-label','다음 달');
     const today=appendButton(navigation,'오늘',()=>{selected=localToday();month=selected.slice(0,7);load();},'seonam-calendar-today');
-    navigation.appendChild(today);
+    // Calendar toolbar order: year/month, previous arrow, TODAY, next arrow.
+    // Keeping today centered between the arrows also makes month selection clear.
+    navigation.replaceChildren(current,previous,today,next);
     const week=make('div','seonam-calendar-week');
     WEEK.forEach(day=>week.append(make('span','',day)));
     const calendar=make('div','seonam-calendar-grid');
@@ -64,7 +82,14 @@
     calendar.setAttribute('aria-label','날짜 선택');
     const status=make('p','seonam-calendar-status');
     status.setAttribute('role','status');
-    newsBox.append(heading,navigation,week,calendar,status);
+    const todayAgenda=make('section','seonam-calendar-today-agenda');
+    todayAgenda.hidden=true;
+    todayAgenda.setAttribute('aria-label','오늘의 일정');
+    const todayHeading=make('h3','seonam-calendar-today-heading','오늘의 일정');
+    const todayList=make('div','seonam-calendar-today-events');
+    todayList.setAttribute('aria-live','polite');
+    todayAgenda.append(todayHeading,todayList);
+    newsBox.append(heading,navigation,week,calendar,status,todayAgenda);
 
     const detailHeading=make('div','seonam-calendar-detail-heading');
     detailHeading.append(make('h2','','선택 날짜 일정'));
@@ -100,7 +125,48 @@
       const raw=String(value||'');
       return raw.length>=16?raw.slice(11,16):'';
     };
+    function renderToday(){
+      const date=localToday();
+      const hits=todayItems.filter(item=>item.kind==='event'&&item.eventStart&&spansDay(item,date));
+      todayList.replaceChildren();
+      todayAgenda.hidden=hits.length===0;
+      if(!hits.length)return;
+      todayHeading.textContent='오늘의 일정 ('+Number(date.slice(5,7))+'월 '+Number(date.slice(8,10))+'일 · '+hits.length+'건)';
+      for(const item of hits){
+        const article=make('article','seonam-calendar-today-event');
+        article.append(make('strong','',item.title||'일정'));
+        const startTime=displayTime(item.eventStart);
+        if(startTime){
+          const endTime=item.eventEnd?displayTime(item.eventEnd):'';
+          article.append(make('small','',startTime+(endTime?' ~ '+endTime:'')));
+        }
+        if(item.body)article.append(make('p','',item.body));
+        todayList.append(article);
+      }
+    }
+    async function refreshToday(){
+      const date=localToday();
+      const currentMonth=date.slice(0,7);
+      const version=++todayRequestVersion;
+      if(month===currentMonth){
+        todayItems=events;
+        renderToday();
+        return;
+      }
+      try{
+        const response=await fetch(API+'/calendar?month='+encodeURIComponent(currentMonth),{cache:'no-store'});
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok||!data.ok)throw new Error('today_calendar_unavailable');
+        if(version!==todayRequestVersion)return;
+        todayItems=Array.isArray(data.items)?data.items.filter(item=>item&&item.kind==='event'&&item.eventStart):[];
+      }catch{
+        if(version!==todayRequestVersion)return;
+        todayItems=[];
+      }
+      renderToday();
+    }
     function renderDays(){
+      now=localToday();
       current.textContent=month.replace('-','년 ')+'월';
       calendar.replaceChildren();
       const [year,n]=month.split('-').map(Number);
@@ -179,6 +245,7 @@
         status.textContent='일정을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
       }
       renderDays();renderSelected();
+      await refreshToday();
     }
     function editEvent(item){
       if(!admin)return;
@@ -205,15 +272,23 @@
     }
     async function checkAdmin(){
       const token=authToken();
-      if(!token){admin=false;add.hidden=true;renderSelected();return;}
+      if(!token){admin=false;renderSelected();return false;}
       try{
         const response=await fetch(API+'/admin/me',{headers:{authorization:'Bearer '+token},cache:'no-store'});
         const data=await response.json().catch(()=>({}));
         admin=Boolean(response.ok&&data.ok&&data.permissions?.notices===true);
       }catch{admin=false;}
-      add.hidden=!admin;
       if(!admin)form.hidden=true;
       renderSelected();
+      if(autoManagePending){
+        autoManagePending=false;
+        const target=new URL(location.href);
+        target.searchParams.delete('manage');
+        history.replaceState(history.state,'',target.href);
+        if(admin)editEvent(null);
+        else status.textContent='일정 관리 권한이 없습니다. 관리자 계정으로 로그인해 주세요.';
+      }
+      return admin;
     }
     async function removeEvent(item){
       if(!admin||!item?.id||!confirm('이 일정을 삭제하시겠습니까?'))return;
@@ -237,12 +312,22 @@
       }catch(error){feedback.textContent=error.message;}
       finally{save.disabled=false;}
     });
-    window.addEventListener('focus',checkAdmin);
+    window.addEventListener('focus',()=>{checkAdmin();if(month===localToday().slice(0,7))load();else refreshToday();});
     window.addEventListener('storage',checkAdmin);
     document.addEventListener('seonammedi:auth-ready',checkAdmin);
     load();checkAdmin();
     // The home-page auth handoff completes asynchronously after deferred scripts load.
     setTimeout(checkAdmin,1800);
+    // Refresh the public schedule and the Korean-local calendar day without a reload.
+    setInterval(()=>{
+      const currentDate=localToday();
+      if(currentDate!==now){
+        now=currentDate;
+        if(month===now.slice(0,7))load();
+        else {renderDays();refreshToday();}
+      }else if(month===now.slice(0,7))load();
+      else refreshToday();
+    },60000);
   }
   window.SeonamMediCalendar={mount};
 })();

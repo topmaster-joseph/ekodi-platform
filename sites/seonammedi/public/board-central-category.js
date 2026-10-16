@@ -86,18 +86,18 @@
   left.append(campaign);
 
   const right=el('aside','seonam-visual-right');
-  right.setAttribute('aria-label','일정 달력과 날짜별 일정');
+  right.setAttribute('aria-label','주요일정 및 날짜별 일정');
   const newsBox=el('section','seonam-visual-info-card');
-  newsBox.append(el('h2','','일정 달력'),el('p','seonam-calendar-status','일정을 불러오는 중입니다.'));
+  newsBox.append(el('h2','','주요일정'),el('p','seonam-calendar-status','일정을 불러오는 중입니다.'));
   const quick=el('section','seonam-visual-info-card');
   quick.append(el('h2','','선택 날짜 일정'));
   right.append(newsBox,quick);
   const calendarStyle=el('link');
   calendarStyle.rel='stylesheet';
-  calendarStyle.href='/seonammedi/calendar-sidebar.css?v=20261016-1';
+  calendarStyle.href='/seonammedi/calendar-sidebar.css?v=20261017-today-1';
   document.head.append(calendarStyle);
   const calendarScript=el('script');
-  calendarScript.src='/seonammedi/calendar-sidebar.js?v=20261016-1';
+  calendarScript.src='/seonammedi/calendar-sidebar.js?v=20261017-today-1';
   calendarScript.addEventListener('load',()=>window.SeonamMediCalendar?.mount({newsBox,quick}));
   calendarScript.addEventListener('error',()=>{
     newsBox.querySelector('.seonam-calendar-status').textContent='일정표를 불러오지 못했습니다. 새로고침해 주세요.';
