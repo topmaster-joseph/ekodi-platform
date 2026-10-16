@@ -22,7 +22,8 @@ const fixture=(id='ekodibiz',mid='merchantA',service='ekodibiz')=>({
 });
 const approved=(p)=>({source:'trusted_order_issuer',approved:true,orderId:'EB-ORDER000000001',
  merchantId:p.merchantId,service:p.services[0],issuerRef:p.issuerRefs[p.services[0]],
- amount:50000,currency:'KRW'});
+ amount:50000,currency:'KRW',issuerProofRef:'ISSUERPROOF_001',
+ approvedAt:Date.now()-1_000,expiresAt:Date.now()+15*60*1_000});
 const envFor=p=>Object.fromEntries([
  [p.credentialRefs.test.client,'test_gck_mock'],
  [p.credentialRefs.test.secret,'test_gsk_mock'],
@@ -66,6 +67,20 @@ test('merchant route is server-approved and issuer+service+tenant pinned; never 
  assert.equal(JSON.stringify(publicMerchantSummary(a)).includes('merchantA'),false);
  assert.equal(JSON.stringify(publicMerchantSummary(a)).includes('1234'),false);
  assert.equal(JSON.stringify(publicMerchantSummary(a)).includes('aaaaa'),false);
+});
+test('private merchant resolver rejects implicit environment, expired/forged issuer evidence and oversized order identifiers',()=>{
+ const a=fixture(),ix=indexMerchantProfiles([a]),order=approved(a),env=envFor(a);
+ assert.deepEqual(selectServerApprovedMerchant(ix,order,{env}),{ok:false,reason:'explicit_payment_mode_required'});
+ const invalid=[
+  {...order,expiresAt:Date.now()-1},
+  {...order,issuerProofRef:'client'},
+  {...order,approvedAt:Date.now()+60_000},
+  {...order,orderId:'X'.repeat(65)},
+  {...order,amount:10_000_000_001},
+  {...order,amount:1},
+ ];
+ for(const o of invalid){const x=selectServerApprovedMerchant(ix,o,{mode:'test',env});assert.equal(x.ok,false);}
+ assert.equal(selectServerApprovedMerchant(ix,order,{mode:'test',env}).ok,true);
 });
 test('live merchant readiness requires independent evidence and owner gate, not a private key prefix alone',()=>{
  const a=fixture(),ix=indexMerchantProfiles([a]);
