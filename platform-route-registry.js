@@ -20,6 +20,8 @@ export const PLATFORM_EXECUTION_SURFACES=Object.freeze([
   Object.freeze({id:'books',prefix:'/books',binding:'BOOKS',virtualHost:platformHost('books')}),
   Object.freeze({id:'business',prefix:'/business',binding:'BUSINESS',virtualHost:platformHost('business'),host:platformHost('business')}),
   Object.freeze({id:'community',prefix:'/community',binding:'COMMUNITY',virtualHost:platformHost('community')}),
+  // Research is an Education capability and shares the existing governed Worker.
+  Object.freeze({id:'education-research-alias',prefix:'/research',binding:'EDUCATION',preservePrefix:true,basePathAware:true}),
   // Reuse the existing Education Worker; apex /edu is a path alias, not a new tenant.
   Object.freeze({id:'education-academic-alias',prefix:'/edu',binding:'EDUCATION'}),
   Object.freeze({id:'education',prefix:'/education',binding:'EDUCATION',virtualHost:platformHost('edu')}),

@@ -2,16 +2,6 @@
   "version": 1,
   "principle": "A platform change deploys only that platform unless a declared shared dependency changes.",
   "platforms": {
-    "research": {
-      "kind": "independent-platform",
-      "source": ["research/**", "research-worker.js", "wrangler.research.toml", "wrangler.research.staging.toml", "test/research-platform.test.mjs", "docs/EKODI-RESEARCH-RELEASE.md"],
-      "domains": ["ekodi.kr", "ekodi-research-staging.workers.dev"],
-      "canonicalPath": "/research/",
-      "deployWorkflow": ".github/workflows/deploy-research.yml",
-      "sharedDependencies": ["central auth hub", "ekodi-shell", "EKODI Storage Gateway (future approved integration)"],
-      "database": "isolated Research D1; not provisioned in foundation release",
-      "note": "Public and local-only planning first. Authenticated storage, manuscript uploads, consultations, AI and payments remain off until protected provisioning."
-    },
     "ekodi-shell": {
       "kind": "shared-person-context-layer",
       "source": [
@@ -299,6 +289,9 @@
       "kind": "independent-platform",
       "source": [
         "education/**",
+        "research-worker.js",
+        "research/migrations/**",
+        "test/research-platform.test.mjs",
         "education-worker.js",
         "wrangler.education.toml",
         "wrangler.education.staging.toml",

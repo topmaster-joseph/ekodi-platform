@@ -229,15 +229,6 @@
         "rollbackPath": "Remove the ekodi.kr/local-commerce Worker route and service registry entry; shared Control API tables remain additive and inert until a later reviewed cleanup.",
         "owner": "EKODI 최고관리자",
         "observabilityPlan": "Worker health endpoint, Control API health endpoint, Cloudflare invocation logs, guarded release manifest and production verification status."
-      },
-      {
-        "id": "research",
-        "reason": "Research manuscript and potential human-subject research data have confidentiality and security isolation requirements distinct from public education content; isolate untrusted future upload handling while maintaining EKODI identity and storage gateways. The owner requested implementing the separately specified Research Worker platform on 2026-10-17. Production human and release gates remain mandatory.",
-        "expectedBenefit": "A dedicated Research path/worker limits failure and privacy blast radius while reusing SSO, platform Shell, persistent storage gateway and future payment/AI capabilities; the foundation has no manuscript storage.",
-        "incrementalMonthlyCost": "S0: no new paid subscription or fixed infrastructure cost authorized; use existing Worker quota, monitor measured request/storage costs and disable expansion if capacity costs exceed approved limits.",
-        "rollbackPath": "Use guarded Worker release rollback, remove only the /research route and hide registry discovery; other EKODI routes and data remain unchanged. Isolated Research DB is not provisioned and can remain inert.",
-        "owner": "EKODI 최고관리자 (task-level platform construction authorization; no paid or production gate bypass)",
-        "observabilityPlan": "Isolated Research Worker /health, Cloudflare invocation logs, identity errors, research API access audit upon DB activation, dedicated staging canary and production verification receipts."
       }
     ],
     "existingBoundaryAction": "review for convergence before expansion; do not split further without passing the gate"

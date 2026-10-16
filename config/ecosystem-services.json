@@ -348,21 +348,6 @@
       "status": "live"
     },
     {
-      "id": "research",
-      "name": "EKODI Research",
-      "nameEn": "EKODI Research",
-      "descriptionKo": "학위논문과 학술연구의 연구설계·연구계획·윤리적 상담을 지원하는 AI 연구 플랫폼",
-      "descriptionEn": "Research planning and ethical academic consultation support",
-      "url": "https://ekodi.kr/research/",
-      "label": "ekodi.kr/research",
-      "icon": "lab",
-      "category": "knowledge-creation",
-      "order": 115,
-      "homepage": false,
-      "productionVerified": false,
-      "status": "preparing"
-    },
-    {
       "id": "lab",
       "name": "에코디연구소",
       "nameEn": "EKODI Lab",

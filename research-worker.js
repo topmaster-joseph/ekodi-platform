@@ -1,5 +1,5 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
-import { assessResearch, cleanResearchInput } from './research/planner.js';
+import { assessResearch, cleanResearchInput } from './education/research/planner.js';
 
 const HEADERS = Object.freeze({
   'x-content-type-options':'nosniff',
@@ -17,7 +17,7 @@ const types=new Set(['thesis','journal','report']);
 const services=new Set(['diagnosis','methodology','coaching','manuscript_review']);
 function config(env){
  const dataEnabled=Boolean(env.RESEARCH_DB?.prepare&&env.SUPABASE_URL&&env.SUPABASE_PUBLISHABLE_KEY);
- return {dataEnabled,dataMode:dataEnabled?'authenticated-workspace':'local-planning-only',authUrl:'https://ekodi.kr/auth/?site=research',supabaseUrl:dataEnabled?env.SUPABASE_URL:'',supabasePublishableKey:dataEnabled?env.SUPABASE_PUBLISHABLE_KEY:''};
+ return {dataEnabled,dataMode:dataEnabled?'authenticated-workspace':'local-planning-only',authUrl:'https://ekodi.kr/auth/?site=edu',supabaseUrl:dataEnabled?env.SUPABASE_URL:'',supabasePublishableKey:dataEnabled?env.SUPABASE_PUBLISHABLE_KEY:''};
 }
 async function readJson(request,max=5000){
  if((request.headers.get('content-type')||'').split(';')[0].toLowerCase()!=='application/json')throw Object.assign(new Error('json_required'),{status:415});
@@ -119,13 +119,13 @@ export default {
   if(!['GET','HEAD'].includes(request.method))return fail(405,'method_not_allowed');
   if(path==='/admin'||path==='/admin/')return Response.redirect('https://ekodi.kr/research/#operations',307);
   if(!env.ASSETS?.fetch)return fail(503,'research_assets_unavailable');
-  const assetUrl=new URL(request.url);assetUrl.pathname=(path==='/'?'/index.html':path);
+  const assetUrl=new URL(request.url);assetUrl.pathname='/research'+(path==='/'?'/index.html':path);
   let response=await env.ASSETS.fetch(new Request(assetUrl,request));
   const headers=new Headers(response.headers);
   for(const [key,value] of Object.entries(HEADERS))headers.set(key,value);
   headers.set('cache-control',path==='/'?'no-cache':'public, max-age=300');
   response=new Response(response.body,{status:response.status,statusText:response.statusText,headers});
-  if(response.status===200&&headers.get('content-type')?.includes('text/html'))return injectEkodiShell(response,'research');
+  if(response.status===200&&headers.get('content-type')?.includes('text/html'))return injectEkodiShell(response,'edu');
   return response;
  }
 };
