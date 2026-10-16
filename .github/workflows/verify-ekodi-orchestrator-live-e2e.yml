@@ -9,6 +9,13 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/verify-ekodi-orchestrator-live-e2e.yml'
+      - 'scripts/converge-orchestrated-pr-merge.mjs'
+      - 'ekodi-command-plane.js'
+      - 'ekodi-command-ledger.js'
+      - 'ekodi-pulse-runtime.js'
+      - 'ekodi-orchestrator-task-adapter.js'
+      - 'core-ai-gateway.js'
+      - 'ai-command-control.js'
 
 permissions:
   contents: read
