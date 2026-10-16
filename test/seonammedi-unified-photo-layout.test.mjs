@@ -42,9 +42,9 @@ test('central content is moved without replacing forms or mutation handlers',()=
   assert.match(ui,/header\.insertAdjacentElement\('afterend',preservedCampaign\)/);
   assert.match(css,/body\.seonam-visual-ready>\.campaign-hero \.campaign-hero-image/);
   assert.match(css,/body\[data-seonammedi-image-mode="inner"\]\.seonam-visual-ready>\.campaign-hero/);
-  assert.match(ui,/calendar-sidebar\\.js/);
-  assert.match(ui,/SeonamMediCalendar\\?\\.mount/);
-  assert.doesNotMatch(ui,/fetch\\(base\\+'board\\/api\\/notices'/);
+  assert.match(ui,/calendar-sidebar\.js/);
+  assert.match(ui,/SeonamMediCalendar\?\.mount/);
+  assert.doesNotMatch(ui,/fetch\(base\+'board\/api\/notices'/);
   assert.doesNotMatch(ui,/fetch\([^)]*\{method:'(?:POST|PUT|DELETE)'/);
   assert.match(worker,/function noticesPage\(req\)/);
   assert.match(worker,/function boardPage\(req\)/);
