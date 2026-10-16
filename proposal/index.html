@@ -13,26 +13,43 @@
 <header class="header">
  <div class="headwrap"><a class="brand" href="/proposal/" aria-label="제안서 작업실 첫 화면">EKODI <span>Proposal Studio</span></a><span class="stage">초안 작업실 · 서버 저장 없음</span></div>
 </header>
+<div class="workspace">
+<aside class="side" aria-label="제안서 작업실 메뉴">
+  <div class="side-top"><span class="side-brand">PROPOSAL</span><span class="side-meta">WORKSPACE · BETA</span></div>
+  <nav class="side-nav" aria-label="페이지 이동">
+    <a class="side-active" href="#startTitle">01 <span>새 제안서</span></a>
+    <a href="#workflowTitle">02 <span>작업 단계</span></a>
+    <a href="#editTitle">03 <span>문서 편집</span></a>
+    <a href="#reviewTitle">04 <span>일관성 점검</span></a>
+    <a href="#exportTitle">05 <span>산출물</span></a>
+  </nav>
+  <div class="side-note"><strong>내 자료는 내 기기에</strong><p>현재 초안은 서버에 업로드하거나 자동 게시되지 않습니다.</p></div>
+</aside>
 <main class="layout">
- <section class="intro" aria-labelledby="pageTitle">
+ <section class="intro" aria-labelledby="pageTitle"><div class="intro-meta"><span>공통 제안서 시스템</span><span>아이디어 · 문서 · 데이터 · URL</span></div>
   <p class="eyebrow">AI 제안서 공통 엔진 · 1차 기능</p>
-  <h1 id="pageTitle">아이디어 한 줄에서 제안서 구조까지</h1>
-  <p>주제·아이디어와 자료를 바탕으로 분야별 목차를 만들고 직접 편집합니다. 외부 AI 조사·자동 작성은 아직 연동하지 않았으며, 확인되지 않은 수치와 사실은 생성하지 않습니다.</p>
+  <h1 id="pageTitle">어떤 아이디어든,<br>제안서의 시작이 되도록.</h1>
+  <p>분야가 달라도 작업 방식은 하나. 주제·자료를 입력하면 분야에 맞는 목차와 검토 흐름을 구성합니다. 현재는 브라우저 기반 편집 시안으로, AI 자동조사와 서버 저장은 연결 전입니다.</p>
  </section>
  <section class="panel start" aria-labelledby="startTitle">
-  <div class="sectionhead"><h2 id="startTitle">새 제안서 작성</h2><span class="stepcount">01 / 입력</span></div>
+  <div class="sectionhead"><div><span class="overline">CREATE NEW</span><h2 id="startTitle">새 제안서 만들기</h2></div><span class="stepcount">STEP 01 / 05</span></div><div class="input-guide"><span>01 주제 입력</span><span>02 관련 자료</span><span>03 목차 생성</span></div>
   <div class="fields">
    <label>제안 주제 또는 사업명<input id="titleInput" type="text" maxlength="160" placeholder="예: 지역 상인 AI 활용 교육 지원사업"></label>
    <label>분야<select id="domainInput"></select></label>
    <label>제안 목적<select id="goalInput"></select></label>
    <label class="full">아이디어·현황·요구사항<textarea id="ideaInput" rows="5" maxlength="20000" placeholder="아이디어, 해결하려는 문제, 추진 주체, 제출처 등을 자유롭게 입력하세요."></textarea></label>
   </div>
+  <div class="sourceurl">
+   <label for="sourceUrlInput">웹주소로 참고자료 추가</label>
+   <div class="urlrow"><input id="sourceUrlInput" type="url" maxlength="1200" placeholder="https://www.example.org/research" autocomplete="off"><button class="secondary" id="addUrlBtn" type="button">링크 추가</button></div>
+   <p class="muted">링크는 참고자료 목록에만 저장됩니다. 자동 수집·열람이나 출처 검증을 수행하지 않습니다.</p>
+  </div>
   <div class="inputfiles">
-   <div><strong>자료 첨부</strong><p>TXT·MD·CSV·JSON은 브라우저에서 읽어 참고자료로 표시합니다. PDF·HWPX·DOCX·XLSX는 후속 변환 모듈 연결 전까지 내용 분석을 지원하지 않습니다.</p></div>
+   <div><strong>파일로 참고자료 추가</strong><p>TXT·MD·CSV·JSON은 브라우저에서 읽어 참고자료로 표시합니다. PDF·HWPX·DOCX·XLSX는 후속 변환 모듈 연결 전까지 내용 분석을 지원하지 않습니다.</p></div>
    <label class="filebtn">파일 선택<input id="sourceInput" type="file" multiple accept=".txt,.md,.csv,.json,.pdf,.hwpx,.docx,.xlsx,.pptx"></label>
   </div>
   <ul id="sourceList" class="sourcelist" aria-live="polite"></ul>
-  <div class="actions"><button id="generateBtn" class="primary" type="button">제안서 구조 만들기</button><label class="secondary filebtn">기존 프로젝트 가져오기<input id="importInput" type="file" accept=".json,application/json"></label></div>
+  <div class="actions"><button id="generateBtn" class="primary" type="button">제안서 작업실 열기 →</button><label class="secondary filebtn">기존 프로젝트 가져오기<input id="importInput" type="file" accept=".json,application/json"></label></div>
  </section>
  <div id="editor" hidden>
   <section class="panel" aria-labelledby="workflowTitle"><div class="sectionhead"><h2 id="workflowTitle">맞춤 작업 단계</h2><span class="stepcount">02 / 자동 구성</span></div>
@@ -62,6 +79,13 @@
  </div>
  <p id="status" class="notice" role="status" aria-live="polite">브라우저 내에서만 작업합니다. 자동 AI 조사·실제 문서 제작 기능은 후속 단계입니다.</p>
 </main>
+<aside class="assistant-panel" aria-label="제안서 안내">
+ <div class="assistant-card"><span class="overline">YOUR WORKFLOW</span><h2>제안서 작성 여정</h2>
+  <ol><li><strong>입력 이해</strong><small>주제·파일·링크 정리</small></li><li><strong>전략 설계</strong><small>분야별 필수 목차 구성</small></li><li><strong>제안서 편집</strong><small>내용·예산·성과 항목 입력</small></li><li><strong>제출 전 확인</strong><small>누락·근거 상태 점검</small></li><li><strong>내보내기</strong><small>Markdown · JSON 백업</small></li></ol>
+ </div>
+ <div class="assistant-card next"><span class="overline">UPCOMING</span><h3>후속 연동 기능</h3><p>HWPX·DOCX 원본양식 반영, Excel 예산 연결, AI 사실조사, PPTX 제작, 사용자별 클라우드 저장.</p><span class="coming">아직 비활성</span></div>
+</aside>
+</div>
 <footer class="footer">EKODI · 작업 초안은 대외 제출용 최종본이 아닙니다.</footer>
 </body>
 </html>
