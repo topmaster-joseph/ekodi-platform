@@ -18,7 +18,7 @@ function harness(operational=true){
  const store=new PayOrderStore({storage:new FakeStorage()});
  const env={PAYMENT_EXECUTION_MODE:operational?'test':'disabled-until-approved',
   EKODIPAY_SERVICE_ORDER_TOKEN:TOKEN,
-  TOSS_TEST_CLIENT_KEY:'test_ck_our_dummy_client',TOSS_TEST_SECRET_KEY:'test_sk_our_dummy_secret',
+  TOSS_TEST_CLIENT_KEY:'test_gck_our_dummy_client',TOSS_TEST_SECRET_KEY:'test_gsk_our_dummy_secret',
   PAY_ORDERS:{idFromName:k=>k,get:k=>({fetch:req=>store.fetch(req)})}};
  return {env,store};
 }
@@ -32,7 +32,7 @@ test('production money movement is fail-closed until all independent owner and P
  EKODIPAY_PG_CONTRACT_VERIFIED:'YES',EKODIPAY_SETTLEMENT_OWNER_VERIFIED:'YES'}).ready,false);
  assert.equal(paymentMode({...env,PAYMENT_EXECUTION_MODE:'live',EKODIPAY_LIVE_OWNER_GATE:'APPROVED',
  EKODIPAY_PG_CONTRACT_VERIFIED:'YES',EKODIPAY_SETTLEMENT_OWNER_VERIFIED:'YES',
- TOSS_LIVE_CLIENT_KEY:'live_ck_fixture',TOSS_LIVE_SECRET_KEY:'live_sk_fixture',
+ TOSS_LIVE_CLIENT_KEY:'live_gck_fixture',TOSS_LIVE_SECRET_KEY:'live_gsk_fixture',
  EKODIPAY_REFUND_POLICY_VERIFIED:'YES',EKODIPAY_RECONCILIATION_VERIFIED:'YES',
  EKODIPAY_APPROVED_ORDER_ISSUER_VERIFIED:'YES',EKODIPAY_DELAYED_METHODS_DISABLED:'YES',
  EKODIPAY_TOSS_MID:'merchant01',
@@ -61,8 +61,8 @@ test('checkout state is private and one-time; confirming browser amount cannot b
  assert.equal(page.status,200);
  const html=await page.text();
  assert.match(html,/150,000/);
- assert.match(html,/test_ck_our_dummy_client/);
- assert.doesNotMatch(html,/test_sk_our_dummy_secret|SECURE-SERVER-SERVICE-KEY/);
+ assert.match(html,/test_gck_our_dummy_client/);
+ assert.doesNotMatch(html,/test_gsk_our_dummy_secret|SECURE-SERVER-SERVICE-KEY/);
  const cookie=page.headers.get('set-cookie');
  assert.match(cookie,/HttpOnly; Secure; SameSite=Lax/);
  let res=await post('/api/payments/confirm',env,
@@ -122,7 +122,7 @@ test('live merchant MID is mandatory even after every other approval flag is set
  const {env}=harness(false);
  const flags={...env,PAYMENT_EXECUTION_MODE:'live',EKODIPAY_LIVE_OWNER_GATE:'APPROVED',
    EKODIPAY_PG_CONTRACT_VERIFIED:'YES',EKODIPAY_SETTLEMENT_OWNER_VERIFIED:'YES',
-   TOSS_LIVE_CLIENT_KEY:'live_ck_fixture',TOSS_LIVE_SECRET_KEY:'live_sk_fixture',
+   TOSS_LIVE_CLIENT_KEY:'live_gck_fixture',TOSS_LIVE_SECRET_KEY:'live_gsk_fixture',
    EKODIPAY_REFUND_POLICY_VERIFIED:'YES',EKODIPAY_RECONCILIATION_VERIFIED:'YES',
    EKODIPAY_APPROVED_ORDER_ISSUER_VERIFIED:'YES',EKODIPAY_DELAYED_METHODS_DISABLED:'YES',
    EKODIPAY_OPERATOR_TOKEN:'OPERATOR-KEY-EXAMPLE-0123456789-ABCDEF'};
@@ -172,7 +172,7 @@ test('public setup page exposes actionable onboarding without accepting keys or 
  }
  assert.equal(response.headers.get('cache-control'),'no-store');
  assert.match(response.headers.get('content-security-policy')||'',/default-src 'none'/);
- assert.doesNotMatch(html,/test_sk_our_dummy_secret|SECURE-SERVER-SERVICE-KEY/);
+ assert.doesNotMatch(html,/test_gsk_our_dummy_secret|SECURE-SERVER-SERVICE-KEY/);
  assert.doesNotMatch(html,/<form\b|type="password"|<input\b/i);
  let res=await endpoint('/setup',env,{method:'POST',body:'approved=true'});
  assert.equal(res.status,405);
