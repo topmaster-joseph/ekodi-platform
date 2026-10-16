@@ -8,6 +8,14 @@ const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:
  'x-content-type-options':'nosniff','referrer-policy':'no-referrer'}});
 const validId=value=>/^EB-[A-Z0-9-]{18,60}$/.test(String(value||''));
 const supportedMode=env=>String(env?.PAYMENT_EXECUTION_MODE||'disabled-until-approved');
+const allowedCompletedMethods=new Set(['카드','CARD','간편결제','EASY_PAY','계좌이체','TRANSFER']);
+function approvedProviderPayment(provider,{orderId,amount,paymentKey,mode,requireDone=true}){
+ if(!provider||provider.orderId!==orderId||provider.totalAmount!==amount||
+   provider.paymentKey!==paymentKey||provider.currency!=='KRW'||
+   !allowedCompletedMethods.has(provider.method))return false;
+ if(mode.live&&provider.mId!==mode.mid)return false;
+ return !requireDone||provider.status==='DONE';
+}
 export function paymentMode(env){
  const requested=supportedMode(env);
  const disabled={requested,merchant:'ekodibiz',ready:false,live:false,reason:'financial_gate_disabled'};
@@ -15,6 +23,11 @@ export function paymentMode(env){
  if(!env?.PAY_ORDERS||String(env?.EKODIPAY_SERVICE_ORDER_TOKEN||'').length<32)
    return {...disabled,reason:'order_store_or_authorized_service_missing'};
  const live=requested==='live';
+ // A live key prefix does not prove the contracted settlement merchant identity.
+ // Verify the configured PG MID against every successful provider response.
+ const mid=String(env.EKODIPAY_TOSS_MID||'');
+ if(live&&!/^[A-Za-z0-9_-]{4,14}$/.test(mid))
+   return {...disabled,reason:'verified_merchant_mid_required'};
  if(live&&(env.EKODIPAY_LIVE_OWNER_GATE!=='APPROVED'||
    env.EKODIPAY_PG_CONTRACT_VERIFIED!=='YES'||env.EKODIPAY_SETTLEMENT_OWNER_VERIFIED!=='YES'||
    env.EKODIPAY_REFUND_POLICY_VERIFIED!=='YES'||env.EKODIPAY_RECONCILIATION_VERIFIED!=='YES'||
@@ -25,7 +38,7 @@ export function paymentMode(env){
  const secret=String(live?env.TOSS_LIVE_SECRET_KEY||'':env.TOSS_TEST_SECRET_KEY||'');
  if(!client.startsWith(live?'live_ck_':'test_ck_')||!secret.startsWith(live?'live_sk_':'test_sk_'))
    return {...disabled,reason:'matching_pg_keys_required'};
- return {requested,merchant:'ekodibiz',ready:true,live,client,secret,reason:'ready'};
+ return {requested,merchant:'ekodibiz',ready:true,live,mid,client,secret,reason:'ready'};
 }
 function serviceAuthorized(request,env){
  const supplied=request.headers.get('authorization')||'';
@@ -120,8 +133,8 @@ export async function paymentRoute(request,env,shell){
        return json({error:'provider_confirmation_unknown',status:'requires_reconciliation'},502);
      }
      const p=pg.data;
-     if(p.paymentKey!==body.paymentKey||p.orderId!==body.orderId||
-       p.totalAmount!==reserve.payload.amount){
+     if(!approvedProviderPayment(p,{orderId:body.orderId,paymentKey:body.paymentKey,
+       amount:reserve.payload.amount,mode})){
        await orderApi(env,body.orderId,'/hold',{});
        return json({error:'provider_result_mismatch',status:'requires_reconciliation'},502);
      }
@@ -189,7 +202,8 @@ export async function paymentRoute(request,env,shell){
      provider=res.ok?await res.json():null;
    }catch{return json({error:'provider_lookup_unavailable',status:'requires_reconciliation'},503)}
    if(!provider)return json({error:'provider_lookup_failed',status:'requires_reconciliation'},502);
-   if(provider.orderId!==body.orderId||provider.totalAmount!==local.payload.order.amount||
+   if(!approvedProviderPayment(provider,{orderId:body.orderId,amount:local.payload.order.amount,
+      paymentKey:provider.paymentKey,mode,requireDone:false})||
       !/^[a-zA-Z0-9_-]{6,200}$/.test(String(provider.paymentKey||'')))
      return json({error:'provider_order_mismatch',status:'requires_reconciliation'},409);
    const reconciliation=await orderApi(env,body.orderId,'/reconcile',{
