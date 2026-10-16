@@ -78,7 +78,7 @@ function shell(title,main,method='GET',status=200) {
     '<meta name="color-scheme" content="light"><title>',esc(title),' | EKODI Pay</title><style>',STYLES,'</style></head><body>',
     '<header class="top"><div class="wrap"><a class="brand" href="/ekodipay/" aria-label="에코디페이 홈">EKODI <b>Pay</b></a>',
     '<nav class="toplinks" aria-label="사이트 메뉴"><a href="/ekodipay/#services">서비스</a><a href="/ekodipay/#flow">이용방법</a>',
-    '<a href="/ekodipay/demo" class="pill-link">테스트 체험</a></nav></div></header>',
+    '<a href="/ekodipay/setup">실결제 준비</a><a href="/ekodipay/demo" class="pill-link">테스트 체험</a></nav></div></header>',
     main,
     '<footer class="foot"><div class="wrap">EKODI Pay · 공식 주소 ekodi.kr/ekodipay · 실제 결제는 별도 PG 계약·운영 승인 후 제공됩니다.</div></footer>',
     '</body></html>'].join('');
