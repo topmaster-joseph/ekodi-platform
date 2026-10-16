@@ -288,7 +288,7 @@ function nav(active,req){
     link(home('#organization'),'조직','organization')+'</nav></header><section id="central-category-panel" class="central-category-panel" hidden aria-live="polite"><h2 id="central-category-title"></h2><div id="central-category-buttons" class="central-category-buttons"></div></section><template id="central-category-link-contract">'+hiddenLinks.replace('<template id="legacy-category-links">','').replace('</template>','')+'</template>';
 }
 
-const footer='<footer class="footer-shell"><div class="footer-inner"><div class="footer-copy"><strong>서남권 국립의대 소통센터</strong><span>자료의 성격과 출처를 구분해 보존합니다.</span></div><a id="adminLink" href="/admin/">관리</a></div></footer>';
+const footer='<footer class="footer-shell"><div class="footer-inner site-footer-copy"><strong>서남권 국립의대 소통센터</strong><span>자료의 성격과 출처를 구분해 보존합니다.</span><a id="adminLink" href="/admin/">관리</a></div></footer>';
 function shell(req,active,title,eyebrow,note,controls,content,script){
   return new Response('<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+title+' · 서남권 국립의대 소통센터</title><link rel="stylesheet" href="'+sitePath(req,'/app.css?v=20261006-domain-routing-2')+'"><style>'+boardCss+(active==='notices'?noticeBoardCss:'')+'</style><link rel="stylesheet" href="'+sitePath(req,'/shared-site-header.css')+'"></head><body class="board-'+active+'">'+nav(active,req)+'<main><section class="board-head"><div><p class="eyebrow">'+eyebrow+'</p><h1>'+title+'</h1><p class="note">'+note+'</p></div><div class="board-actions">'+controls+'</div></section>'+content+'</main>'+(active==='voices'?footer.replace('id="adminLink"','id="adminLink" hidden'):footer).replace('href="/admin/"','href="'+adminPath(req)+'"')+'<script src="'+boardPath(req,'ui/central-category.js')+'" defer></script><script>'+script+'<\/script></body></html>',{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-ekodi-board-independent':'true'}});
 }
@@ -313,7 +313,7 @@ function voiceLogin(intent="compose"){
   const auth=new URL("https://ekodi.kr/auth/");
   auth.searchParams.set("site","seonammedi");auth.searchParams.set("direct","1");
   auth.searchParams.set("return_to",target.href);
-  auth.searchParams.set("purpose","seonammedi-board-write");
+  auth.searchParams.set("purpose","seonammedi-board-write");auth.searchParams.set("choose_account","1");
   location.assign(auth.href);
 }
 function voiceAuthLabel(label){const el=byId("voiceAuthStatus");if(el){el.textContent=label;el.hidden=!label;}}
