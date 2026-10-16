@@ -108,7 +108,7 @@ test('authorized notice/event schema repair adds only missing D1 columns without
         async all(){
           if(sql==='PRAGMA table_info(seonammedi_notices)')
             return {results:[...oldColumns].map(name=>({name}))};
-          const check=sql.match(/^SELECT (\\w+) FROM seonammedi_notices LIMIT 0$/);
+          const check=sql.match(/^SELECT (\w+) FROM seonammedi_notices LIMIT 0$/);
           if(check){
             if(!oldColumns.has(check[1]))throw new Error('no such column: '+check[1]);
             return {results:[]};
@@ -116,7 +116,7 @@ test('authorized notice/event schema repair adds only missing D1 columns without
           throw new Error('unexpected read: '+sql);
         },
         async run(){
-          const alter=sql.match(/^ALTER TABLE seonammedi_notices ADD COLUMN (\\w+) /);
+          const alter=sql.match(/^ALTER TABLE seonammedi_notices ADD COLUMN (\w+) /);
           if(!alter)throw new Error('unexpected write: '+sql);
           if(oldColumns.has(alter[1]))throw new Error('duplicate column name: '+alter[1]);
           oldColumns.add(alter[1]);
@@ -146,7 +146,7 @@ test('notice schema repair does not create or overwrite an absent notice table',
 test('calendar write schema reconciliation occurs only inside capability-gated notice operations',async()=>{
   const source=await readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8');
   for(const start of ['async function createNotice(', 'async function updateNotice(']){
-    const body=source.slice(source.indexOf(start),source.indexOf('\\nasync function ',source.indexOf(start)+1));
+    const body=source.slice(source.indexOf(start),source.indexOf('\nasync function ',source.indexOf(start)+1));
     assert.ok(body.includes('if(!can(auth,NOTICE_CAP))'),'write must check notice capability first');
     assert.ok(body.indexOf('if(!can(auth,NOTICE_CAP))')<body.indexOf('noticeWriteSchemaFailure(env)'),'repair cannot precede permission check');
   }
