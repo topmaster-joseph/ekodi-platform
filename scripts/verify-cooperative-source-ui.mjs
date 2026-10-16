@@ -43,6 +43,7 @@ globalThis.fetch = authFetch(tokens);
 const checks = [];
 const pageErrors = [];
 const responseErrors = [];
+const navigations = [];
 let refreshCount = 0;
 const browser = await chromium.launch({ headless: true, ...(process.env.EKODI_CHROMIUM_EXECUTABLE ? { executablePath: process.env.EKODI_CHROMIUM_EXECUTABLE } : {}) });
 
@@ -65,6 +66,7 @@ async function contextFor(width, token = '') {
     const headers = new Headers(await incoming.allHeaders());
     const request = new Request(incoming.url(), { method: incoming.method(), headers, ...(!['GET','HEAD'].includes(incoming.method()) ? { body: incoming.postData() } : {}) });
     const response = await routeCooperative(request, f.env);
+    if (incoming.isNavigationRequest()) navigations.push({ url: incoming.url(), status: response?.status, type: response?.headers.get('content-type') });
     if (!response) return intercepted.fulfill({ status: 404, body: 'Source QA route not found' });
     if (response.status >= 500) responseErrors.push({ path: url.pathname, status: response.status });
     const body = url.pathname.endsWith('/assets/app.js') ? bundledClient.script : Buffer.from(await response.arrayBuffer());
@@ -204,6 +206,14 @@ try {
   const report = { ok: true, evidenceScope: 'source-only', productionVerified: false, engine: 'EKODI Chromium browser task policy', bundle: { wranglerVersion: bundledClient.wranglerVersion, serializedNameHelperCalls: bundledClient.serializedNameHelperCalls }, liveRequestsAllowed: false, checks, refreshCount, pageErrors, responseErrors };
   await fs.writeFile(path.join(artifactRoot, 'result.json'), JSON.stringify(report, null, 2));
   console.log(JSON.stringify({ ok: true, evidenceScope: report.evidenceScope, checks: checks.length, refreshCount, artifactRoot }));
+} catch(error) {
+  const pages=browser.contexts().flatMap(context=>context.pages());
+  for(let index=0;index<pages.length;index++){
+    await fs.writeFile(path.join(artifactRoot,'failure-'+index+'.html'),await pages[index].content()).catch(()=>{});
+    await pages[index].screenshot({path:path.join(artifactRoot,'failure-'+index+'.png'),fullPage:true}).catch(()=>{});
+  }
+  await fs.writeFile(path.join(artifactRoot,'failure.json'),JSON.stringify({ok:false,evidenceScope:'source-only',productionVerified:false,error:String(error),navigations,pageErrors,responseErrors},null,2));
+  throw error;
 } finally {
   await browser.close(); globalThis.fetch = originalFetch; f.sqlite.close();
 }

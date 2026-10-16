@@ -26,6 +26,16 @@ export function cooperativeRoute(pathname) {
   return { coop, locator: slug, path: platform ? '/admin' : control ? '/api' + (control[2] || '') : local[2] || '/', platformContext: Boolean(platform || control) };
 }
 
+export async function cooperativeLocatorGuard(request, env) {
+  const url = new URL(request.url);
+  if (url.hostname !== 'ekodi.kr') return null;
+  const route = cooperativeRoute(url.pathname);
+  if (!route || route.platformContext) return null;
+  if (route.locator !== route.coop.publicSlug && !['/', '/members', '/admin'].includes(route.path)) return null;
+  const availability = await cooperativeLocatorAvailability(env, route.coop, request);
+  return availability.ok ? null : json({ ok: false, code: availability.code }, 503);
+}
+
 async function inputJson(request) {
   if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) throw Object.assign(new Error('JSON_REQUIRED'), { status: 415 });
   const origin = request.headers.get('origin');
@@ -135,10 +145,8 @@ export async function routeCooperative(request, env) {
   try {
     const humanPage = ['/', '/members', '/admin'].includes(path);
     const canonicalRoot = url.pathname === '/' + coop.publicSlug;
-    if (!platformContext && (locator === coop.publicSlug || humanPage)) {
-      const availability = await cooperativeLocatorAvailability(env, coop);
-      if (!availability.ok) return json({ ok: false, code: availability.code }, 503);
-    }
+    const locatorGuard = await cooperativeLocatorGuard(request, env);
+    if (locatorGuard) return locatorGuard;
     if (!platformContext && (canonicalRoot || (locator === coop.slug && humanPage && ['GET', 'HEAD'].includes(request.method)))) {
       const target = new URL(request.url); target.pathname = '/' + coop.publicSlug + (path === '/' ? '/' : path);
       return new Response(null, { status: 308, headers: { ...headers(), location: target.href, 'x-ekodi-route': 'cooperative-canonical-root' } });

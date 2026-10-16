@@ -6,12 +6,26 @@ const rootLocator = value => {
   try {
     const raw = String(value || '').trim();
     const url = new URL(raw.startsWith('/') ? raw : /^https?:\/\//i.test(raw) ? raw : 'https://' + raw, 'https://ekodi.kr');
-    return ['ekodi.kr', 'www.ekodi.kr'].includes(url.hostname.toLowerCase())
+    return url.hostname.toLowerCase().replace(/^www\./, '') === 'ekodi.kr'
       ? decodeURIComponent(url.pathname).split('/').filter(Boolean)[0]?.toLowerCase() || '' : '';
   } catch { return ''; }
 };
 
-export async function cooperativeLocatorAvailability(env, coop) {
+// Share one decision through publication and routing for this request only.
+// Never retry a failed lookup later in the same request and expose private HTML.
+const requestDecisions = new WeakMap();
+export function cooperativeLocatorAvailability(env, coop, request) {
+  if (!request) return checkAvailability(env, coop);
+  let decisions = requestDecisions.get(request);
+  if (!decisions) { decisions = new Map(); requestDecisions.set(request, decisions); }
+  const previous = decisions.get(coop.workspaceId);
+  if (previous?.env === env) return previous.result;
+  const result = checkAvailability(env, coop);
+  decisions.set(coop.workspaceId, { env, result });
+  return result;
+}
+
+async function checkAvailability(env, coop) {
   if (isReservedPlatformRoot(coop.publicSlug)) return { ok: false, code: 'COOP_LOCATOR_CONFLICT' };
   if (!env?.DB?.prepare) return { ok: false, code: 'COOP_LOCATOR_UNAVAILABLE' };
   try {

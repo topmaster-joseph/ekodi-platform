@@ -1,8 +1,7 @@
 import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
 import { realtimeTenantList } from './realtime-tenant-registry.js';
 import { tenantGrantCapabilityDecision } from './tenant-access-authority.js';
-import { COOPERATIVES, cooperativeBySlug } from './cooperative-registry.js';
-import { cooperativeLocatorAvailability } from './cooperative-locator.js';
+import { COOPERATIVES } from './cooperative-registry.js';
 
 export const SITE_PUBLICATION_POLICY_ID='EKODI-SITE-PUBLICATION-001';
 export const SITE_PUBLICATION_STATUSES=Object.freeze(['public','private','maintenance']);
@@ -287,8 +286,6 @@ export async function resolvePublicationSiteForRequest(request,env,{admin=false}
     return path===site.canonicalPath||path.startsWith(site.canonicalPath+'/');
   };
   let candidates=staticSitePublicationCatalog().filter(matches).sort((a,b)=>b.canonicalPath.length-a.canonicalPath.length);
-  const cooperative=cooperativeBySlug(candidates[0]?.id);
-  if(cooperative&&!(await cooperativeLocatorAvailability(env,cooperative)).ok)candidates=[];
   if(!candidates.length){
     const dynamic=host==='ekodi.kr'?await tenantSiteForFirstSegment(env,path):await tenantSiteForDomain(env,host);
     if(dynamic&&matches(dynamic))candidates=[dynamic];

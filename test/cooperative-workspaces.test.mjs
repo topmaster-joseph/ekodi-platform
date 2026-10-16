@@ -417,3 +417,17 @@ test('broader Worker-first short prefixes preserve existing OpenAI admin modules
     assert.equal(response.status,200);assert.equal(await response.text(),'existing module');
   }
 });
+
+test('an intermittent locator failure never bypasses private publication and one request shares exactly one decision',async t=>{
+  const f=fixture();t.after(()=>f.sqlite.close());
+  const env={...f.env,ENVIRONMENT:'production',SUPABASE_URL:'https://source.invalid',SUPABASE_PUBLISHABLE_KEY:'public-source-key'};
+  f.sqlite.prepare('UPDATE public_site_controls SET public_status=? WHERE site_id=?').run('private',open.slug);
+  let calls=0;t.mock.method(globalThis,'fetch',async()=>++calls===1?new Response('unavailable',{status:503}):Response.json(null));
+  const failed=await sharedSiteWorker.fetch(new Request('https://ekodi.kr/open/'),env,{});
+  assert.equal(failed.status,503);assert.equal(calls,1);assert.equal((await failed.json()).code,'COOP_LOCATOR_UNAVAILABLE');
+  const recovered=await sharedSiteWorker.fetch(new Request('https://ekodi.kr/open/'),env,{});
+  assert.equal(recovered.status,404);assert.equal(recovered.headers.get('x-ekodi-site-publication'),'private');assert.equal(calls,2);
+  f.sqlite.prepare('UPDATE public_site_controls SET public_status=? WHERE site_id=?').run('public',open.slug);
+  const published=await sharedSiteWorker.fetch(new Request('https://ekodi.kr/open/'),env,{});
+  assert.equal(published.status,200);assert.equal(calls,3);assert.match(await published.text(),/열린유통협동조합/);
+});
