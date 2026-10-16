@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {PROPOSAL_DOMAINS,PROPOSAL_GOALS,PROPOSAL_STAGES,inferDomain,selectedStages,createProposalDraft,reviewProposalDraft,draftToMarkdown,validImportedDraft} from '../proposal/core.js';
+import {PROPOSAL_DOMAINS,PROPOSAL_GOALS,PROPOSAL_STAGES,inferDomain,selectedStages,createProposalDraft,reviewProposalDraft,draftToMarkdown,validImportedDraft,normalizeReferenceUrl} from '../proposal/core.js';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 test('domains and goals are general-purpose and unique',()=>{
   assert.equal(PROPOSAL_DOMAINS.length,8);
@@ -37,6 +37,16 @@ test('proposal draft is structured but remains explicitly unverified',()=>{
   assert.doesNotMatch(draftToMarkdown(draft),/1인당 관광소비|1,000,000/);
   assert.equal(validImportedDraft(JSON.parse(JSON.stringify(draft))),true);
 });
+test('HTTPS sources can be recorded without silently fetching them',()=>{
+  assert.equal(normalizeReferenceUrl(' https://example.org/research?q=1#section '),'https://example.org/research?q=1');
+  for(const unsafe of ['javascript:alert(1)','http://example.org','https://user:pass@example.org/','https://localhost/a','https://127.0.0.1/admin','not a url']){
+    assert.throws(()=>normalizeReferenceUrl(unsafe),Error,unsafe);
+  }
+  const longUrl='https://example.org/'+('x'.repeat(270));
+  const draft=createProposalDraft({title:'공공사업',sourceNames:[normalizeReferenceUrl(longUrl)]});
+  assert.equal(draft.sources[0].name,longUrl);
+  assert.equal(draft.sources[0].verification,'not_verified');
+});
 test('project input and import schemas are bounded',()=>{
   assert.throws(()=>createProposalDraft({}),/필요/);
   const draft=createProposalDraft({idea:'공공사업'});
@@ -53,6 +63,9 @@ test('public editor is CSP-compatible, read-only at origin, and privacy-labeled'
   assert.match(html,/src="\/proposal\/client\.js"/);
   assert.match(html,/name="robots" content="noindex,nofollow,noarchive"/);
   assert.match(html,/서버 저장 없음/);
+  assert.match(html,/id="sourceUrlInput"/);
+  assert.match(html,/class="workspace"/);
+  assert.match(html,/제안서 작성 여정/);
   assert.doesNotMatch(html,/<script(?![^>]*src=)/i);
   assert.doesNotMatch(client,/\blocalStorage\b|\bsessionStorage\b|\beval\s*\(|\binnerHTML\s*=/);
   assert.doesNotMatch(client,/\bfetch\s*\(/);
