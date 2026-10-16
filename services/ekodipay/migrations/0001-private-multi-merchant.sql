@@ -65,7 +65,8 @@ CREATE TABLE IF NOT EXISTS ekodipay_approved_orders (
     ('approved','confirming','paid','hold','cancelled','expired')),
   expires_at INTEGER NOT NULL,
   issuer_proof_ref TEXT NOT NULL,
-  created_at INTEGER NOT NULL
+  created_at INTEGER NOT NULL,
+  UNIQUE(merchant_id,order_id)
 );
 CREATE INDEX IF NOT EXISTS idx_ekodipay_orders_tenant
  ON ekodipay_approved_orders(merchant_id,service_id,pg_mode,status);
@@ -85,7 +86,8 @@ CREATE TABLE IF NOT EXISTS ekodipay_settlement_snapshots (
   paid_out_date TEXT NOT NULL,
   provider_evidence_digest TEXT NOT NULL,
   created_at INTEGER NOT NULL,
-  PRIMARY KEY(merchant_id,pg_mode,transaction_key)
+  PRIMARY KEY(merchant_id,pg_mode,transaction_key),
+  FOREIGN KEY(merchant_id,order_id) REFERENCES ekodipay_approved_orders(merchant_id,order_id)
 );
 CREATE INDEX IF NOT EXISTS idx_ekodipay_settlement_day
  ON ekodipay_settlement_snapshots(merchant_id,pg_mode,paid_out_date);
