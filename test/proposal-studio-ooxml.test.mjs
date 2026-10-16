@@ -9,7 +9,7 @@ import {buildProposalPptx} from '../proposal/pptx.js';
 
 const validateZip=bytes=>{
  const script=[
-  'import io,sys,zipfile,xml.etree.ElementTree as E',
+  'import io,sys,zipfile,posixpath,xml.etree.ElementTree as E',
   'archive=zipfile.ZipFile(io.BytesIO(sys.stdin.buffer.read()))',
   'assert archive.testzip() is None',
   'names=archive.namelist()',
@@ -18,6 +18,15 @@ const validateZip=bytes=>{
   'for name in names:',
   '    if name.endswith(".xml") or name.endswith(".rels"):',
   '        E.fromstring(archive.read(name))',
+  'for name in names:',
+  '    if not name.endswith(".rels"): continue',
+  '    root=E.fromstring(archive.read(name))',
+  '    base="" if name=="_rels/.rels" else name.split("/_rels/")[0]',
+  '    for relation in root:',
+  '        if relation.attrib.get("TargetMode")=="External": continue',
+  '        target=relation.attrib.get("Target","")',
+  '        normalized=target.lstrip("/") if target.startswith("/") else posixpath.normpath(posixpath.join(base,target))',
+  '        assert normalized in names, (name,normalized)',
   'print(",".join(names))'
  ].join('\n');
  const r=spawnSync('python3',['-c',script],{input:Buffer.from(bytes),encoding:'utf8',maxBuffer:40000});
