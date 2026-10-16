@@ -29,6 +29,8 @@ test('Control native probes are immutable isolated EKODI browser checks', () => 
   assert.match(native, /\.pageErrors \| length == 0/);
   assert.match(native, /horizontalOverflow == true/);
   assert.match(native, /maxActions=30/);
+  assert.ok(native.includes("github.event_name == 'pull_request' && '/,/my/,/admin/,/control'"));
+  assert.ok(native.includes("index===0||p==='/control'||p.split('/').includes('board')"));
   assert.match(native, /\.path == "\/control"/);
   assert.match(native, /\.type == "snapshot"/);
   assert.match(native, /\.bodyText \/\/ ""/);
