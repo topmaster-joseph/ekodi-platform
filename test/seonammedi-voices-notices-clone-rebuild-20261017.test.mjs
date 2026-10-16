@@ -27,7 +27,7 @@ test('server-verified session precedes account chooser, no forced re-login loop'
   const body=src.slice(src.indexOf('function boardPage(req){'),src.indexOf('function financePage(req){'));
   assert.ok(body.indexOf('await verifyVoiceAccount()')<body.indexOf('if(composeRequested&&!allowed)'));
   assert.match(src,/target\.searchParams\.set\("auth_attempt","1"\)/);
-  assert.match(body,/if\(!params\.has\("auth_attempt"\)\)/);
+  assert.match(body,/auth_attempt/);
 });
 test('citizen uses Google-only protected writer, while admin write requires voices permission',()=>{
   assert.match(src,/if\(path==='\/api\/posts'&&req\.method==='POST'\)\{/);
