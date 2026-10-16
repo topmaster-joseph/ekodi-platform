@@ -23,8 +23,8 @@ test('native guest audit requires a direct Notice link and rejects stale categor
   assert.ok(!runtime.includes('"공지":'));
   assert.ok(!board.includes("'공지':['"));
   assert.ok(board.includes("{key:'notices',label:'공지',href:base+'board/notices'}"));
-  assert.ok(board.includes("link('공지사항',base+'board/notices')"),'right-side public notice shortcut must remain direct');
-  assert.ok(board.includes("link('전체 공지 보기 →',base+'board/notices')"),'all-notices card must go to board directly');
+  assert.ok(board.includes("{key:'notices',label:'공지',href:base+'board/notices'}"),'notice remains a direct menu route');
+  assert.ok(board.includes("window.SeonamMediCalendar?.mount"),'sidebar now renders calendar and date detail rather than unrelated shortcuts');
 });
 
 test('native browser still checks Notice after all other menus on both origins and mobile/desktop',async()=>{
