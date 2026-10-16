@@ -22,6 +22,7 @@ test('health exposes phase and disabled high-risk operations truthfully',async()
  assert.equal(data.phase,'foundation');
  assert.equal(data.dataMode,'local-planning-only');
  assert.equal(data.privateDocuments,false);
+ assert.equal(data.authoritativeData,false);
  assert.equal(data.payments,false);
  assert.equal(data.aiExecution,false);
  assert.equal(response.headers.get('cache-control'),'no-store');
@@ -41,9 +42,9 @@ test('private workspace is fail-closed without storage and verified identity',as
  const r=await worker.fetch(new Request('https://ekodi.kr/research/api/projects'),{});
  assert.equal(r.status,503);
  const fakeDB={prepare:()=>({})};
- const denied=await worker.fetch(new Request('https://ekodi.kr/research/api/projects'),{RESEARCH_DB:fakeDB,SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'public-key'});
+ const denied=await worker.fetch(new Request('https://ekodi.kr/research/api/projects'),{RESEARCH_STORAGE_ENABLED:'true',RESEARCH_DB:fakeDB,SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'public-key'});
  assert.equal(denied.status,401);
- const blocked=await worker.fetch(new Request('https://ekodi.kr/research/api/projects',{method:'POST',headers:{origin:'https://evil.test'}}),{RESEARCH_DB:fakeDB,SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'public-key'});
+ const blocked=await worker.fetch(new Request('https://ekodi.kr/research/api/projects',{method:'POST',headers:{origin:'https://evil.test'}}),{RESEARCH_STORAGE_ENABLED:'true',RESEARCH_DB:fakeDB,SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'public-key'});
  assert.equal(blocked.status,403);
 });
 
@@ -67,6 +68,8 @@ test('public UI maintains accessible responsive layout and no fake paid/AI claim
  assert.match(app,/function startEditProject/);
  assert.match(app,/saveEditProject/);
  assert.match(app,/sensitivity:'non-sensitive-planning-only'/);
+ assert.match(app,/config.consultationEnabled/);
+ assert.match(await read('education/research/worker.js'),/RESEARCH_CONSULTATION_ENABLED/);
  assert.match(await read('education/research/worker.js'),/UPDATE research_projects SET title=\?,field=\?,kind=\?,stage=\?/);
  assert.match(await read('platform-route-registry.js'),/prefix:'\/research',binding:'EDUCATION',preservePrefix:true/);
  assert.match(stage,/isolated-staging/);

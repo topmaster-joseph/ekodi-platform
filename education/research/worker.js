@@ -16,8 +16,8 @@ const states=new Set(['idea','literature','design','analysis','writing','submiss
 const types=new Set(['thesis','journal','report']);
 const services=new Set(['diagnosis','methodology','coaching','manuscript_review']);
 function config(env){
- const dataEnabled=Boolean(env.RESEARCH_DB?.prepare&&env.SUPABASE_URL&&env.SUPABASE_PUBLISHABLE_KEY);
- return {dataEnabled,dataMode:dataEnabled?'authenticated-workspace':'local-planning-only',authUrl:'https://ekodi.kr/auth/?site=edu',supabaseUrl:dataEnabled?env.SUPABASE_URL:'',supabasePublishableKey:dataEnabled?env.SUPABASE_PUBLISHABLE_KEY:''};
+ const dataEnabled=Boolean(env.RESEARCH_STORAGE_ENABLED==='true'&&env.RESEARCH_DB?.prepare&&env.SUPABASE_URL&&env.SUPABASE_PUBLISHABLE_KEY);
+ return {dataEnabled,consultationEnabled:dataEnabled&&env.RESEARCH_CONSULTATION_ENABLED==='true',dataMode:dataEnabled?'authenticated-workspace':'local-planning-only',authUrl:'https://ekodi.kr/auth/?site=edu',supabaseUrl:dataEnabled?env.SUPABASE_URL:'',supabasePublishableKey:dataEnabled?env.SUPABASE_PUBLISHABLE_KEY:''};
 }
 async function readJson(request,max=5000){
  if((request.headers.get('content-type')||'').split(';')[0].toLowerCase()!=='application/json')throw Object.assign(new Error('json_required'),{status:415});
@@ -40,7 +40,7 @@ async function identity(request,env){
  }catch{return null}
 }
 async function privateApi(request,env,path){
- if(!env.RESEARCH_DB?.prepare)return fail(503,'research_storage_not_configured');
+ if(env.RESEARCH_STORAGE_ENABLED!=='true'||!env.RESEARCH_DB?.prepare)return fail(503,'research_storage_not_configured');
  if(!env.SUPABASE_URL||!env.SUPABASE_PUBLISHABLE_KEY)return fail(503,'research_identity_not_configured');
  const method=request.method;
  if(!['GET','POST','PATCH','DELETE'].includes(method))return fail(405,'method_not_allowed');
@@ -87,6 +87,7 @@ async function privateApi(request,env,path){
   return json({ok:true,consultations:result.results||[]});
  }
  if(path==='/api/consultations'&&method==='POST'){
+  if(env.RESEARCH_CONSULTATION_ENABLED!=='true')return fail(503,'consultation_intake_not_enabled');
   const body=await readJson(request);
   if(body?.consent!==true)return fail(400,'privacy_consent_required');
   const service=services.has(body?.service)?body.service:'diagnosis';

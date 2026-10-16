@@ -142,10 +142,10 @@ async function setupAuth(){
  }
  const {data}=await state.client.auth.getSession();state.session=data.session;
  const button=$('#authButton');button.hidden=false;button.textContent=state.session?'로그아웃':'Google 로그인';
- button.addEventListener('click',async()=>{if(state.session){await state.client.auth.signOut();state.session=null;button.textContent='Google 로그인';await loadProjects()}else location.assign(authUrl())});
- state.client.auth.onAuthStateChange((_e,next)=>{state.session=next;button.textContent=next?'로그아웃':'Google 로그인';loadProjects()});
- $('#consultingForm').hidden=!state.session;
- $('#consultingUnavailable').hidden=Boolean(state.session);
+ button.addEventListener('click',async()=>{if(state.session){await state.client.auth.signOut();state.session=null;button.textContent='Google 로그인';syncConsulting();await loadProjects()}else location.assign(authUrl())});
+ const syncConsulting=()=>{$('#consultingForm').hidden=!(state.session&&config.consultationEnabled);$('#consultingUnavailable').hidden=Boolean(state.session&&config.consultationEnabled);};
+ state.client.auth.onAuthStateChange((_e,next)=>{state.session=next;button.textContent=next?'로그아웃':'Google 로그인';syncConsulting();loadProjects()});
+ syncConsulting();
  await loadProjects();
 }
 setupAuth().catch(error=>{message('#workspaceMode','로그인 연결에 문제가 있습니다. 연구자료를 제출하지 마세요.');message('#projectStatus',error.message)});

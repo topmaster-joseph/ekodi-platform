@@ -34,3 +34,8 @@ No hosted data, consultation submission, payment or AI capability may be present
 
 ## Constitutional adjustment: existing capability delivery
 Mandatory CAPABILITY-BEFORE-SERVICE-001 requires verified Foundry samples and EKODI Platform Super Administrator packaging review before a new canonical service is registered. Research is **not** independently registered at this stage. The public `/research/` alias uses the existing Education Worker and approved Education release pipeline. Research's UI and domain logic are isolated modules; any future independent service creation awaits genuine required evidence and approval rather than fabricated receipts.
+
+## Explicit feature activation gates
+- `RESEARCH_STORAGE_ENABLED=true` is required in addition to an isolated `RESEARCH_DB` and approved Supabase public client configuration. Merely binding a database or reusing Education credentials does **not** silently activate private storage.
+- `RESEARCH_CONSULTATION_ENABLED=true` is an additional independent gate before any consultation intake; published terms, contact and fulfillment readiness must be separately reviewed. The front-end will not display the form until this gate and verified login both exist.
+- No other feature flag automatically enables manuscript uploads, third-party AI, expert matching or financial transactions.
