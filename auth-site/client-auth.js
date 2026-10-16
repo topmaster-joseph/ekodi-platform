@@ -44,7 +44,7 @@ const realms={
 const params=new URLSearchParams(location.search);
 const site=params.get('site')||'portal';
 const DIRECT_LOGIN=params.get('direct')==='1'&&params.get('manage')!=='1'&&params.get('review')!=='1';
-const CHOOSE_ACCOUNT=site==='seonammedi'&&params.get('select_account')==='1';
+const CHOOSE_ACCOUNT=params.get('select_account')==='1';
 const PREOPENED_BRIDGE=DIRECT_LOGIN&&!CHOOSE_ACCOUNT&&params.get('bridge')==='preopened';
 const GOOGLE_BRIDGE_ORIGIN=location.origin;
 if(PREOPENED_BRIDGE)document.documentElement.dataset.adminDirectBridge='1';
@@ -75,6 +75,24 @@ const manifestConfig=await manifestRealm(site);
 const baseConfig=realms[site]||manifestConfig||implicitEkodiRealm(site)||realms.portal;
 const config={...baseConfig,operatingModel:manifestConfig?.operatingModel||baseConfig.operatingModel||'',userAccessPolicy:manifestConfig?.userAccessPolicy||baseConfig.userAccessPolicy||null};
 const commonServiceEntry=config.operatingModel==='shared-service';
+const CANONICAL_MOUNTS=Object.freeze({
+  ai:['/ai'],community:['/community'],singles:['/singles'],
+  church:['/ekodichurch'],mall:['/ekodimall'],pay:['/ekodipay'],
+  mission:['/ekodimission'],learn:['/learn'],work:['/work'],
+  messenger:['/messenger'],support:['/support'],money:['/money'],
+  mail:['/mail'],live:['/live'],cgma:['/cgma'],edu:['/edu'],
+  biz:['/ekodibiz'],trade:['/ekodibiz/trade'],books:['/books'],
+  lab:['/ekodilab'],media:['/media'],social:['/social'],
+  energy:['/energy'],invest:['/invest'],cloud:['/cloud'],
+  cafe:['/cafe'],publishing:['/publishing']
+});
+function isOwnMount(target){
+  if(target.origin!=='https://ekodi.kr')return true;
+  if(site==='portal'||site==='space')return !(/^\\/(auth|api)(?:\\/|$)/.test(target.pathname));
+  if(site==='my')return target.pathname==='/my'||target.pathname.startsWith('/my/');
+  const mounts=CANONICAL_MOUNTS[site]||['/'+site];
+  return mounts.some(root=>target.pathname===root||target.pathname.startsWith(root+'/'));
+}
 function safeReturn(raw){
   const fallback=new URL(config.kind==='mission'&&DIRECT_LOGIN&&config.adminReturnTo?config.adminReturnTo:config.returnTo);
   if(!raw)return fallback.href;
@@ -89,7 +107,7 @@ function safeReturn(raw){
     const internalEkodi=config.kind==='seonammedi'?seonammediCanonical:(config.kind==='cgma-client'?cgmaPlatform:(hostname==='ekodi.kr'||hostname.endsWith('.ekodi.kr')));
     const missionPath=config.kind!=='mission'||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')));
     const churchPath=config.kind!=='church'||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodichurch'||target.pathname.startsWith('/ekodichurch/')));
-    if(target.protocol!=='https:'||target.username||target.password||(!allowedOrigins.has(target.origin)&&!internalEkodi)||!missionPath||!churchPath)return fallback.href;
+    if(target.protocol!=='https:'||target.username||target.password||(!allowedOrigins.has(target.origin)&&!internalEkodi)||!missionPath||!churchPath||!isOwnMount(target))return fallback.href;
     target.hash='';
     return target.href;
   }catch{return fallback.href}
@@ -327,7 +345,7 @@ async function renderGoogle(){
     await loadGoogleLibrary();
     window.google.accounts.id.disableAutoSelect?.();
     window.google.accounts.id.initialize({client_id:challenge.clientId,nonce:challenge.nonce,auto_select:false,use_fedcm_for_button:false,button_auto_select:false,ux_mode:'popup',context:'signin',...(EXPECTED_ACCOUNT?{login_hint:EXPECTED_ACCOUNT}:{}),callback:r=>void handleCredential(r,challenge)});
-    const googleButtonOptions={type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340)),use_fedcm_for_button:true};
+    const googleButtonOptions={type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(320,Math.max(240,host.clientWidth||320)),use_fedcm_for_button:true};
     if(CHOOSE_ACCOUNT)googleButtonOptions.use_fedcm_for_button=false;
     window.google.accounts.id.renderButton(host,googleButtonOptions);
     if(CHOOSE_ACCOUNT)show('cancelSignedOut',true);
