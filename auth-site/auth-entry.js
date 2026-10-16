@@ -1,5 +1,5 @@
 const params = new URLSearchParams(location.search);
-const interactive = params.get('manage') === '1' || params.get('review') === '1' || params.get('purpose') === 'seonammedi-board-admin';
+const interactive = params.get('manage') === '1' || params.get('review') === '1' || ['seonammedi-board-admin','seonammedi-board-write'].includes(params.get('purpose'));
 const site = params.get('site') || 'portal';
 const returnTo = params.get('return_to') || params.get('returnTo') || '';
 const guardKey = `ekodi-auth-entry:${site}:${returnTo}`;
