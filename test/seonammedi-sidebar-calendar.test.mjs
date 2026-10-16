@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {handleSeonamMediAdminApi} from '../seonammedi-admin-control.js';
+import {handleSeonamMediAdminApi,ensureSeonamMediNoticeWriteColumns} from '../seonammedi-admin-control.js';
 
 const root=new URL('../sites/seonammedi/public/',import.meta.url);
 const sample={
@@ -95,4 +95,61 @@ test('today agenda, management login, and calendar toolbar remain separate from 
   assert.ok(css.includes('.seonam-calendar-today-agenda[hidden]'));
   assert.ok(css.includes('.seonam-calendar-manage'));
   assert.ok(css.includes('text-align:left'));
+});
+
+test('authorized notice/event schema repair adds only missing D1 columns without touching rows',async()=>{
+  const oldColumns=new Set(['id','title','body','status','pinned','published_at','image_key','image_type','created_by','created_at','updated_at']);
+  const initialRows=[{id:9,title:'기존 공지',body:'보존할 내용'}];
+  const statements=[];
+  const db={
+    prepare(sql){
+      statements.push(sql);
+      return {
+        async all(){
+          if(sql==='PRAGMA table_info(seonammedi_notices)')
+            return {results:[...oldColumns].map(name=>({name}))};
+          const check=sql.match(/^SELECT (\w+) FROM seonammedi_notices LIMIT 0$/);
+          if(check){
+            if(!oldColumns.has(check[1]))throw new Error('no such column: '+check[1]);
+            return {results:[]};
+          }
+          throw new Error('unexpected read: '+sql);
+        },
+        async run(){
+          const alter=sql.match(/^ALTER TABLE seonammedi_notices ADD COLUMN (\w+) /);
+          if(!alter)throw new Error('unexpected write: '+sql);
+          if(oldColumns.has(alter[1]))throw new Error('duplicate column name: '+alter[1]);
+          oldColumns.add(alter[1]);
+          return {success:true};
+        }
+      };
+    }
+  };
+  await ensureSeonamMediNoticeWriteColumns(db);
+  for(const col of ['image_keys_json','image_types_json','notice_kind','featured','event_start','event_end'])
+    assert.ok(oldColumns.has(col),'missing column: '+col);
+  assert.equal(statements.filter(sql=>sql.startsWith('ALTER TABLE')).length,6);
+  assert.deepEqual(initialRows,[{id:9,title:'기존 공지',body:'보존할 내용'}]);
+  statements.length=0;
+  await ensureSeonamMediNoticeWriteColumns(db);
+  assert.equal(statements.filter(sql=>sql.startsWith('ALTER TABLE')).length,0,'healthy schema must not mutate');
+});
+
+test('notice schema repair does not create or overwrite an absent notice table',async()=>{
+  const db={prepare(sql){
+    assert.equal(sql,'PRAGMA table_info(seonammedi_notices)');
+    return {async all(){return {results:[]}}};
+  }};
+  await assert.rejects(ensureSeonamMediNoticeWriteColumns(db),/notice_table_missing/);
+});
+
+test('calendar write schema reconciliation occurs only inside capability-gated notice operations',async()=>{
+  const source=await readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8');
+  for(const start of ['async function createNotice(', 'async function updateNotice(']){
+    const body=source.slice(source.indexOf(start),source.indexOf('\nasync function ',source.indexOf(start)+1));
+    assert.ok(body.includes('if(!can(auth,NOTICE_CAP))'),'write must check notice capability first');
+    assert.ok(body.indexOf('if(!can(auth,NOTICE_CAP))')<body.indexOf('noticeWriteSchemaFailure(env)'),'repair cannot precede permission check');
+  }
+  const publicCalendar=source.slice(source.indexOf('async function listPublicCalendar('),source.indexOf('async function noticeManageContext('));
+  assert.ok(!publicCalendar.includes('ensureSeonamMediNoticeWriteColumns'),'public calendar must remain read-only');
 });
