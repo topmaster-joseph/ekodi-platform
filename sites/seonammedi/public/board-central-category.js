@@ -34,7 +34,7 @@
   });
 })();
 
-// Shared photographic presentation for the public home and independent boards.
+// Shared, image-free navigation layout for the public home and independent boards.
 // This does not change authorization, persistence, existing menus or form handlers.
 (() => {
   if (document.documentElement.dataset.seonamVisualInitialized === '1') return;
@@ -64,28 +64,8 @@
     return node;
   };
 
-  const hero = el('section','seonam-visual-hero');
-  hero.setAttribute('aria-label','소통센터 공통 사진 안내');
-  const photograph = el('img','seonam-visual-photo');
-  photograph.src='https://images.unsplash.com/photo-1764885449332-7eb941d53b7e?auto=format&fit=crop&w=1800&q=80';
-  photograph.alt='나무와 현대 의료시설이 보이는 실제 사진. 서남권 국립의대 설립 예정지 또는 완공 시설의 사진은 아닙니다.';
-  photograph.decoding='async';
-  photograph.loading='eager';
-  photograph.addEventListener('error', () => hero.classList.add('seonam-visual-photo-unavailable'));
-  const overlay = el('div','seonam-visual-hero-copy');
-  overlay.append(
-    el('span','seonam-visual-overline','SEONAM NATIONAL MEDICAL SCHOOL'),
-    el('h1','', '서남권에 국립의대를, 지역의 미래를 함께 만듭니다.'),
-    el('p','', '시민과 전문가가 함께 기록하고 소통하는 열린 공간입니다.')
-  );
-  const credit=el('small','seonam-visual-photo-credit');
-  credit.append('사진: LEDC / Unsplash · 실제 의료시설 참고 사진 (설립 예정 시설 아님) ');
-  const creditLink=link('출처 보기','https://unsplash.com/photos/modern-hospital-building-with-trees-in-foreground-aYvI1HC7wM0');
-  creditLink.target='_blank';
-  creditLink.rel='noopener noreferrer';
-  credit.append(creditLink);
-  hero.append(photograph,overlay,credit);
-  header.insertAdjacentElement('afterend',hero);
+  // The original campaign poster is the only main image, on the home route.
+  // Inner routes remain content-first; do not inject a shared stock photo.
 
   const left=el('aside','seonam-visual-left');
   left.setAttribute('aria-label','사이트 바로가기');
@@ -137,7 +117,7 @@
   // presentation contract. Keep it below the overview rather than shrink
   // it into the center column or change its source bytes.
   const preservedCampaign=content.querySelector(':scope > .campaign-hero');
-  if(preservedCampaign)main.insertAdjacentElement('afterend',preservedCampaign);
+  if(preservedCampaign)header.insertAdjacentElement('afterend',preservedCampaign);
   document.body.classList.add('seonam-visual-ready');
 
   function active(){
