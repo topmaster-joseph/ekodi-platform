@@ -126,5 +126,9 @@ export function draftToMarkdown(model){
   return lines.join('\n')+'\n';
 }
 export function validImportedDraft(data){
+  if(data?.sources!==undefined&&(!Array.isArray(data.sources)||data.sources.length>20))return false;
+  if(data?.budgetRows!==undefined&&(!Array.isArray(data.budgetRows)||data.budgetRows.length>50))return false;
+  if(data?.sources?.some(s=>!s||typeof s.name!=='string'||s.name.length>1200))return false;
+  if(typeof data?.idea!=='string'||data.idea.length>20000)return false;
   return Boolean(data&&typeof data==='object'&&data.schema==='ekodi.proposal.draft.v1'&&Array.isArray(data.sections)&&data.sections.length>0&&data.sections.length<=30&&data.sections.every(s=>typeof s.id==='string'&&typeof s.name==='string'&&typeof s.body==='string'&&s.body.length<=50000)&&typeof data.title==='string'&&data.title.length<=160&&data.decisions&&typeof data.decisions==='object');
 }
