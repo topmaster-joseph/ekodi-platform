@@ -13,7 +13,7 @@ test('EKODI runs 4 isolated desktop/mobile browser proof cases',()=>{
     "name:'mobile',width:390",
     "await chromium.launch({headless:true})",
     'fullPage:true',
-    'image_load_failed',
+    'imagesDeferredByPagePolicy',
     'horizontal_overflow',
     'search_nonmatch_did_not_empty',
     'auth_compose_return_mismatch',
