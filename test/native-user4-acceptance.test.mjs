@@ -384,7 +384,7 @@ test('Windows native CDP worker propagates allowlisted receipt categories withou
     assert(source.includes("'"+code+"'"),code);
 });
 
-test('USER4 upgrade release requires new 2.5.7 Agent and an updated official receipt',()=>{
-  assert.equal(USER4_CDP_WORKER_AGENT_VERSION,'2.5.7');
-  assert.equal(USER4_CDP_FIX_FLOOR,Date.parse('2026-10-12T18:00:00.000Z'));
+test('USER4 upgrade release requires new 2.5.8 Agent and an updated official receipt',()=>{
+  assert.equal(USER4_CDP_WORKER_AGENT_VERSION,'2.5.8');
+  assert.equal(USER4_CDP_FIX_FLOOR,Date.parse('2026-10-16T00:00:00.000Z'));
 });
