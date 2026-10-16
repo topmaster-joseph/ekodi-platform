@@ -2844,6 +2844,55 @@ function Get-EkodiLocalAiVerification {
 }
 
 
+function Invoke-EkodiOllamaExistingServiceRecovery {
+  # Only an already-installed, explicitly registered Ollama Windows service.
+  # Never reinstall Ollama, download models, change startup policy, or launch
+  # a user-profile process under the Agent identity.
+  $before = Get-EkodiLocalAiVerification
+  if ($before.localAiProof.ollamaApi -eq 'ready') {
+    return @{
+      message = 'Ollama API already responding. No recovery attempted.'
+      localAiRecovery = @{ mode = 'registered_service_only'; attempted = $false; recovered = $true; reason = 'already_ready' }
+      localAiProof = $before.localAiProof
+    }
+  }
+  $state = Get-EkodiOllamaLoopbackDiagnostic
+  # Another Ollama process, port listener or non-loopback binding is strictly
+  # off-limits: do not interrupt it or start a competing instance.
+  if ($state.serviceState -ne 'stopped' -or
+      $state.processState -ne 'not_running' -or
+      $state.socketState -ne 'not_listening' -or
+      $state.bindState -eq 'other_address_only') {
+    throw 'LOCALAI_RECOVERY_REGISTERED_STOPPED_SERVICE_REQUIRED'
+  }
+  $service = Get-Service -Name 'Ollama' -ErrorAction SilentlyContinue
+  if (-not $service -or $service.Status -ne 'Stopped') {
+    throw 'LOCALAI_RECOVERY_SERVICE_NOT_STOPPED'
+  }
+  # A fixed Windows service operation, not a general shell or installer.
+  try { Start-Service -Name 'Ollama' -ErrorAction Stop }
+  catch { throw 'LOCALAI_RECOVERY_SERVICE_START_FAILED' }
+  $ready = $false
+  for ($attempt = 0; $attempt -lt 12; $attempt++) {
+    Start-Sleep -Seconds 2
+    try {
+      $version = Invoke-RestMethod -Method Get -Uri 'http://127.0.0.1:11434/api/version' -TimeoutSec 3 -ErrorAction Stop
+      if ($version.version) { $ready = $true; break }
+    } catch { }
+  }
+  if (-not $ready) { throw 'LOCALAI_RECOVERY_LOOPBACK_NOT_READY' }
+  $after = Get-EkodiLocalAiVerification
+  if ($after.localAiProof.ollamaApi -ne 'ready' -or $after.localAiProof.inference -ne 'passed') {
+    throw 'LOCALAI_RECOVERY_INFERENCE_NOT_READY'
+  }
+  return @{
+    message = 'Registered Ollama service started; existing model inference verified.'
+    localAiRecovery = @{ mode = 'registered_service_only'; attempted = $true; recovered = $true; reason = 'stopped_service_started' }
+    localAiProof = $after.localAiProof
+  }
+}
+
+
 # Audit only browser jobs dispatched through the authenticated Device Control queue.
 # User-owned Opera/Edge/Chrome sessions and externally launched tabs remain untouched.
 function Save-EkodiBrowserTaskAudit($Record) {
@@ -3167,6 +3216,7 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     'agent.self_update' { return Update-AgentFromOfficialSource }
     'software.localai.install' { return Install-EkodiLocalAI }
     'software.localai.verify' { return Get-EkodiLocalAiVerification }
+    'software.localai.recover' { return Invoke-EkodiOllamaExistingServiceRecovery }
     'computer.browser.canary' { return Invoke-BackgroundBrowserCanary }
     'computer.browser.execute' { return Invoke-BackgroundBrowserWorker $payload }
     'computer.browser.pr.observe' { return Invoke-EkodiOwnedGithubPrObserve $payload }
