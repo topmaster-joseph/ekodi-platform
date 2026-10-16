@@ -109,7 +109,7 @@ export function selectServerApprovedMerchant(index,approvedOrder,{mode,ownerGate
    return {ok:false,reason:'isolated_provider_keys_missing'};
  // Do NOT include keys, MID, bank fingerprint, or full account details in public responses.
  // Private credentials may be consumed only by the existing confirmed PG backend.
- return {ok:true,merchantId:profile.merchantId,orderId:approvedOrder.orderId,mode,
+ return {ok:true,merchantId:profile.merchantId,orderId:approvedOrder.orderId,amount:approvedOrder.amount,mode,
    privateContext:{merchantId:profile.merchantId,mid:profile.midByMode[mode],
      clientKey:env[bindings.client],secretKey:env[bindings.secret],
      settlementFingerprint:profile.settlement.fingerprint}};
@@ -117,7 +117,10 @@ export function selectServerApprovedMerchant(index,approvedOrder,{mode,ownerGate
 export function verifyProviderOwnership(context,payment){
  const mid=context?.privateContext?.mid;
  return context?.ok===true&&Boolean(mid)&&payment?.mId===mid&&
-   payment?.currency==='KRW'&&payment?.orderId===context.orderId;
+   payment?.currency==='KRW'&&payment?.orderId===context.orderId&&
+   payment?.totalAmount===context.amount&&payment?.status==='DONE'&&
+   ['카드','간편결제','계좌이체'].includes(payment?.method)&&
+   typeof payment?.paymentKey==='string'&&payment.paymentKey.length>5;
 }
 export function publicMerchantSummary(p){
  if(!validMerchantProfile(p))throw Error('invalid_merchant_profile');
