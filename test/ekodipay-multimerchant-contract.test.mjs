@@ -12,7 +12,7 @@ const fixture=(id='ekodibiz',mid='merchantA',service='ekodibiz')=>({
  midByMode:{test:'test'+mid,live:'live'+mid},
  credentialRefs:{test:{client:'PAY_'+id.toUpperCase()+'_TEST_CLIENT',secret:'PAY_'+id.toUpperCase()+'_TEST_SECRET'},
    live:{client:'PAY_'+id.toUpperCase()+'_LIVE_CLIENT',secret:'PAY_'+id.toUpperCase()+'_LIVE_SECRET'}},
- settlement:{bankCode:'088',accountLast4:'1234',fingerprint:'a'.repeat(64),proofRef:'BANK_PROOF_0001'},
+ settlement:{bankCode:'088',accountLast4:'1234',fingerprint:(id==='ekodibiz'?'a':'b').repeat(64),proofRef:'BANK_PROOF_0001'},
  evidence:{
   business_identity:proof('business'),pg_contract:proof('contract'),pg_mid:proof('mid'),
   settlement_account_owner:proof('bank'),order_issuer:proof('issuer'),
@@ -33,6 +33,12 @@ test('merchant registry detects globally duplicated MID, secrets and tenant IDs'
  const a=fixture(),b=fixture('ekodiedu','merchantB','ekodiedu');
  assert.equal(validMerchantProfile(a),true);
  assert.equal(indexMerchantProfiles([a,b]).merchants.size,2);
+ assert.throws(()=>indexMerchantProfiles([a,{...b,settlement:{...b.settlement,fingerprint:a.settlement.fingerprint}}]),/cross_merchant_settlement_account_collision/);
+ const pending={...b,state:'pending',settlement:null,midByMode:{test:'',live:''},
+   credentialRefs:{test:{client:'',secret:''},live:{client:'',secret:''}},issuerRefs:{}};
+ assert.equal(validMerchantProfile(pending),true);
+ assert.equal(indexMerchantProfiles([a,pending]).merchants.size,2);
+ assert.equal(merchantReadiness(pending,{mode:'test'}).ready,false);
  assert.throws(()=>indexMerchantProfiles([a,a]),/duplicate_merchant/);
  assert.throws(()=>indexMerchantProfiles([a,{...b,midByMode:{test:a.midByMode.test,live:b.midByMode.live}}]),/mid_collision/);
  assert.throws(()=>indexMerchantProfiles([a,{...b,credentialRefs:{...b.credentialRefs,test:{client:a.credentialRefs.test.client,secret:b.credentialRefs.test.secret}}}]),/credential_collision/);
