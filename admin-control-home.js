@@ -4,6 +4,10 @@
 const app=document.getElementById('app');
 const isAuthenticated=()=>{try{return Boolean(sessionStorage.getItem('ekodi-auth-token')&&app&&!app.hidden)}catch{return false}};
 function sync(){
+  if(!document.querySelector('link[data-ekodi-control-home-style]')){
+    const style=document.createElement('link');style.rel='stylesheet';style.href='/admin/admin-control-home.css?v='+encodeURIComponent(document.querySelector('script[src*="admin-authenticated-shell.js"]')?.src.split('v=')[1]||'1');
+    style.dataset.ekodiControlHomeStyle='true';document.head.appendChild(style);
+  }
   const atHome=isAuthenticated()&&window.EKODIAdminPanels?.current?.()==='command-home';
   let region=document.getElementById('ekodiControlHome');
   if(atHome&&!region){
