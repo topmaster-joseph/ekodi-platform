@@ -236,6 +236,27 @@
     $$('[data-prompt]').forEach(b=>b.onclick=()=>{$('#commandInput').value=b.dataset.prompt;resizeInput();$('#commandInput').focus({preventScroll:true})});
     $$('[data-refresh]').forEach(b=>b.onclick=()=>{refreshOrchestratorTasks().catch(()=>toast('오케스트레이터 상태 갱신 실패'))});
   }
+  async function acceptVerifiedAdminControlHandoff(){
+    // Google Admin returns to the exact Control deep-link with an ephemeral
+    // hash token. Remove the token from the visible URL before any network I/O.
+    const hash=new URLSearchParams(location.hash.replace(/^#/,''));
+    const candidate=hash.get('ekodi_admin_token');
+    if(!candidate)return false;
+    try{history.replaceState(history.state,document.title,location.pathname+location.search)}catch{}
+    if(candidate.length>8192)return false;
+    if(token()===candidate)return true;
+    try{
+      const response=await fetch(API+'/api/session',{
+        headers:{authorization:'Bearer '+candidate},
+        credentials:'same-origin',cache:'no-store'
+      });
+      if(!response.ok)return false;
+      const session=await response.json();
+      if(session?.authenticated!==true||session.role!=='super_admin')return false;
+      sessionStorage.setItem(TOKEN_KEY,candidate);
+      return token()===candidate;
+    }catch{return false;}
+  }
   function renderAdminControlLogin(logged){
     const status=$('#authState');
     if(!status)return;
@@ -253,6 +274,7 @@
     status.replaceChildren(link);
   }
   async function boot(){
+    await acceptVerifiedAdminControlHandoff();
     mountEmbeddedToolbar();
     bind();renderRecent();renderMessages();renderPanels();
     const logged=Boolean(token());renderAdminControlLogin(logged);$('#runtimeStatus').textContent=logged?'EKODI 연결 준비':'로그인 필요';$('#runtimeStatus').classList.toggle('ok',logged);
