@@ -1,4 +1,4 @@
-import {handleFreshVoiceApi} from './voices-fresh/api.mjs';
+import {handleFreshVoiceApi,FRESH_QUEUE_KIND,consumeFreshVoiceQueue} from './voices-fresh/api.mjs';
 import {renderFreshVoicePage} from './voices-fresh/page.mjs';
 const json=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff',...extra}});
 const text=v=>String(v??'').trim();
@@ -416,7 +416,7 @@ export default {async fetch(req,env){
   if((path==='/'||path==='/voices'||path==='/voices/')&&req.method==='GET')return renderFreshVoicePage(req,shell);
   if((path==='/finance'||path==='/finance/')&&req.method==='GET')return financePage(req);
   if((path==='/notices'||path==='/notices/')&&req.method==='GET')return noticesPage(req);
-  if(path==='/health'&&req.method==='GET')return json({ok:true,service:'independent-board',boardId:env.BOARD_ID,storage:'independent-board-d1',db:Boolean(env.BOARD_DB),files:Boolean(env.BOARD_FILES),queue:queueAvailable(env)?'ready':'unavailable',rateLimiter:Boolean(env.BOARD_PUBLIC_WRITE_RATE_LIMITER?.limit),auth:'ekodi',legacyQueue:'disabled',boards:['voices','finance','notices']});
+  if(path==='/health'&&req.method==='GET')return json({ok:true,service:'independent-board',boardId:env.BOARD_ID,storage:'independent-board-d1',db:Boolean(env.BOARD_DB),files:Boolean(env.BOARD_FILES),queue:queueAvailable(env)?'ready':'unavailable',rateLimiter:Boolean(env.BOARD_PUBLIC_WRITE_RATE_LIMITER?.limit),auth:'ekodi',legacyQueue:'disabled',freshQueue:queueAvailable(env)?'ready':'unavailable',boards:['voices','finance','notices']});
   // Legacy citizen API retired: prevent further writes or reads into old citizen records.
   if(path==='/api/posts'||/^\/api\/posts\/\d+\/replies$/.test(path)||/^\/api\/admin\/posts(?:\/\d+(?:\/replies\/\d+)?)?$/.test(path)||/^\/api\/submissions\/[a-f0-9-]{36}$/i.test(path))return json({ok:false,error:'legacy_citizen_board_retired'},410);
   if(path==='/api/posts'&&req.method==='GET')return list(env,url);
@@ -477,7 +477,9 @@ export default {async fetch(req,env){
 async queue(batch,env){
   for(const message of batch.messages){
     try{
-      // Old citizen queue envelopes are discarded after cutover; new board writes directly to fresh table.
+      // New citizen posts use a durable queue and idempotent fresh table.
+      if(message.body?.kind===FRESH_QUEUE_KIND){await consumeFreshVoiceQueue(env,message.body.payload||{});message.ack();continue}
+      // Old citizen queue envelopes are retired; no old records can reappear.
       if(message.body?.kind===POST_QUEUE_KIND||message.body?.kind===REPLY_QUEUE_KIND){message.ack();continue}
       const handled=await consumeBoardWrite(message.body,env);
       if(!handled)throw new Error('unknown_board_write_kind');
