@@ -28,6 +28,11 @@ export const freshVoiceClient = String.raw`
       item.st.setItem(KEY,JSON.stringify(next));return next.access_token;
     }catch{return ''}
   }
+  async function request(route,opts={}){
+    const r=await fetch(api+route,{cache:'no-store',...opts}),d=await r.json().catch(()=>({}));
+    if(!r.ok||d.ok===false)throw Error(d.error||'request_failed');
+    return d;
+  }
   const attemptKey='ekodi:seonammedi:voices:login-once:'+location.pathname;
   async function finishHandoff(){
     const params=new URLSearchParams(location.hash.replace(/^#/,''));
@@ -58,11 +63,6 @@ export const freshVoiceClient = String.raw`
       sessionStorage.setItem(attemptKey,'1');
     }catch{return false}
     beginLogin();return true;
-  }
-  async function request(route,opts={}){
-    const r=await fetch(api+route,{cache:'no-store',...opts}),d=await r.json().catch(()=>({}));
-    if(!r.ok||d.ok===false)throw Error(d.error||'request_failed');
-    return d;
   }
   async function session(){
     const token=await accessToken();
