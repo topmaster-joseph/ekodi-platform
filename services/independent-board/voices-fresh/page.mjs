@@ -52,7 +52,9 @@ export const freshVoiceClient = String.raw`
       expires_at:Number(data.expires_at||0)||Math.floor(Date.now()/1000)+Number(data.expires_in||3600),user:data.user||null
     });
     let saved=false;
-    for(const st of storageList())try{st.setItem(KEY,savedSession);saved=true;break}catch{}
+    // Keep both browser storage scopes in sync. A stale token in the other
+    // scope must not win over a fresh, Google-verified handoff after reload.
+    for(const st of storageList())try{st.setItem(KEY,savedSession);saved=true}catch{}
     if(!saved)throw Error('브라우저에서 로그인 정보를 저장할 수 없습니다. 사이트 저장소 설정을 확인해 주세요.');
     try{sessionStorage.removeItem(attemptKey)}catch{}
   }
@@ -66,8 +68,18 @@ export const freshVoiceClient = String.raw`
   }
   async function session(){
     const token=await accessToken();
-    if(!token)return null;
-    try{const r=await fetch(root+'/api/auth/session',{headers:{authorization:'Bearer '+token},cache:'no-store'});const d=await r.json().catch(()=>({}));return r.ok&&d?.authenticated===true&&d?.provider==='google'?token:null}catch{return null}
+    // Old EKODI/Supabase logins can coexist in local and session storage.
+    // Verify each candidate on the server instead of treating the first
+    // unexpired token as authoritative. Never infer privileges from storage.
+    const candidates=[token,...readSessions().map(item=>item.s.access_token)].filter(Boolean);
+    for(const candidate of new Set(candidates)){
+      try{
+        const r=await fetch(root+'/api/auth/session',{headers:{authorization:'Bearer '+candidate},cache:'no-store'});
+        const d=await r.json().catch(()=>({}));
+        if(r.ok&&d?.authenticated===true&&d?.provider==='google')return candidate;
+      }catch{}
+    }
+    return null;
   }
   function beginLogin(){
     const dest=new URL(location.href);
