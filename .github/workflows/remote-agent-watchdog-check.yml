@@ -46,7 +46,7 @@ jobs:
           if ($installer -notmatch "New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount") {
             throw 'Watchdog tasks must retain the isolated SYSTEM principal.'
           }
-          if ($watchdog -match 'ConvertFrom-Json\s+-AsHashtable') {
+          if ($watchdog -match '\|\s*ConvertFrom-Json\s+-AsHashtable') {
             throw 'Windows PowerShell 5.1 does not support ConvertFrom-Json -AsHashtable.'
           }
           $errors = @()
