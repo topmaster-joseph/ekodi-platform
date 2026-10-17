@@ -20,7 +20,8 @@ test('Sunday command parser supports full or short Korean dates and rejects non-
  assert.deepEqual(parse('2026년 10월 18일 주일모임 예배 및 유튜브 셋팅'),{date:'2026-10-18',youtube:true});
  assert.deepEqual(parse('10월 18일 주일모임 예배'),{date:'2026-10-18',youtube:false});
  assert.throws(()=>parse('2026년 10월 19일 주일모임 예배'),/일요일/);
- assert.throws(()=>parse('예배 셋팅'),/날짜/);
+ assert.throws(()=>parse('예배 셋팅'),/명령/);
+ assert.throws(()=>parse('다음 주일모임 예배를 준비해줘'),/날짜/);
 });
 test('AI command never claims static file generation or YouTube scheduling without evidence',()=>{
  assert.match(source,/materials\.json/);
