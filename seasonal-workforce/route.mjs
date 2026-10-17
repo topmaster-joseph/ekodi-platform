@@ -25,6 +25,9 @@ export function seasonalPortalResponse(request) {
  if(path.startsWith(SEASONAL_PORTAL_ROOT+'/api/'))return new Response(JSON.stringify({ok:false,error:'applications_not_enabled'}),{status:503,headers:{...hdr,'content-type':'application/json; charset=utf-8','allow':'GET, HEAD'}});
  if(!['GET','HEAD'].includes(request.method))return new Response('Method Not Allowed',{status:405,headers:{...hdr,allow:'GET, HEAD'}});
  const suffix=path.slice(SEASONAL_PORTAL_ROOT.length);
+const surveyStyled=surveyPage
+ .replace('</head>','<link rel="stylesheet" href="'+SITE_BASE+'/theme.css"></head>')
+ .replace('<body><main>','<body class="swp-legacy">'+publicHeader('/demand')+'<main>');
 const officePage=municipalOfficeHtml
  .replace('</head>','<link rel="stylesheet" href="'+SITE_BASE+'/theme.css"></head>')
  .replace('<body><main','<body class="swp-office">'+publicHeader('/office')+'<main')
@@ -32,7 +35,7 @@ const officePage=municipalOfficeHtml
  .replace('<h1>기관별 운영공간</h1>','<section class="swp-office-banner"><span class="swp-eyebrow">MUNICIPAL OPERATIONS · RESTRICTED</span><h1>기관별 운영공간</h1><p>행정 수요 관리와 기관별 접근권한을 함께 확인합니다. 공식 권한 등록 이전에는 저장 기능이 비활성화됩니다.</p></section>');
 const publicExtra=Object.fromEntries(Object.entries(PUBLIC_PAGES).filter(([path])=>path!=='/').map(([path,html])=>[path,[html,'text/html; charset=utf-8']]));
  const types={'/': [homepage,'text/html; charset=utf-8'],
- '/survey-demo':[surveyPage,'text/html; charset=utf-8'],
+ '/survey-demo':[surveyStyled,'text/html; charset=utf-8'],
  '/survey-demo.js':[surveyScript,'text/javascript; charset=utf-8'],
  '/office':[officePage,'text/html; charset=utf-8'],
  '/office.js':[municipalOfficeScript,'text/javascript; charset=utf-8'],
