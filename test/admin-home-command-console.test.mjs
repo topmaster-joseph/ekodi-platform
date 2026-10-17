@@ -101,12 +101,12 @@ test('admin root is a command-only workspace while Campus remains a child route'
   assert.match(e2eWorker,/stage\('command-workbench'\)/);
   assert.match(e2eWorker,/#ekodiControlHomeFrame/);
   assert.match(e2eWorker,/#commandInput/);
-  assert.match(e2eWorker,/admin-command-home/);
-  assert.match(e2eWorker,/pathname !== '\/admin\/'/);
+  assert.match(e2eWorker,/admin-control-home/);
+  assert.match(e2eWorker,/state\.pathname!=='\/admin\/'/);
   assert.match(e2eWorker,/function verifyCommandWorkbench\(started\)/);
   assert.match(e2eWorker,/frameRightOfSidebar/);
-  assert.match(e2eWorker,/currentSection !== 'command-home'/);
-  assert.match(e2eWorker,/EKODIAdminPanels\?\.current\?\.\(\) === 'command-home'/);
+  assert.match(e2eWorker,/state\.currentSection!=='command-home'/);
+  assert.match(e2eWorker,/EKODIAdminPanels\?\.current\?\.\(\)==='command-home'/);
   assert.doesNotMatch(e2eWorker,/admin-context-tab/);
   const commandBranch=e2eWorker.indexOf("if (menuId === 'command-home') {");
   const sidebarBranch=e2eWorker.indexOf("stage('sidebar-trigger')",commandBranch);
