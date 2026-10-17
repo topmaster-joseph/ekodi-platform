@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-CHEONGGYEPASS-BROWSER-SURFACE-001",
+  "status": "read-only",
+  "owner": "ekodi-orchestrator",
+  "canonicalOrigin": "https://ekodi.kr",
+  "maxPaths": 4,
+  "note": "Guest/redirect browser observation only; not Google login or private ZIP/R2/D1 CRUD evidence.",
+  "surfaces": [
+    {
+      "id": "cheonggyepass.public",
+      "path": "/cheonggyepass",
+      "kind": "public",
+      "enabled": true
+    },
+    {
+      "id": "cheonggyepass.admin.guest",
+      "path": "/cheonggyepass/admin",
+      "kind": "login-redirect",
+      "enabled": true
+    }
+  ]
+}
