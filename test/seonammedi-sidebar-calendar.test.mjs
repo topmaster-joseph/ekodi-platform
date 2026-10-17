@@ -224,9 +224,9 @@ test('public calendar sharing excludes registration, publication and edit dates'
     createdAt:'2026-08-01T09:00',registeredAt:'2026-08-02T11:00',
     publishedAt:'2026-08-03T12:00',updatedAt:'2026-08-04T13:00'};
   const message=helpers.shareMessage(item);
-  assert.equal(message,'서남권 국립의대 소통센터\\n시민 설명회\\n일정: 2026.10.18 14:30\\n일정 확인: https://seonammedi.kr/board/notices?schedule=25&date=2026-10-18');
+  assert.equal(message,'서남권 국립의대 소통센터\n시민 설명회\n일정: 2026.10.18 14:30\n일정 확인: https://seonammedi.kr/board/notices?schedule=25&date=2026-10-18');
   assert.doesNotMatch(message,/등록일|게시일|수정일|2026[-.]08[-.]0[1-4]/);
-  assert.equal(helpers.shareSummary(item),'서남권 국립의대 소통센터\\n시민 설명회\\n일정: 2026.10.18 14:30');
+  assert.equal(helpers.shareSummary(item),'서남권 국립의대 소통센터\n시민 설명회\n일정: 2026.10.18 14:30');
 });
 
 test('shared event titles are sanitized for readable, one-line messenger previews',()=>{
