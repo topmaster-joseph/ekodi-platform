@@ -3,6 +3,7 @@
   const API='https://ekodi.kr';
   const TOKEN_KEY='ekodi-auth-token';
   const HISTORY_KEY='ekodi-admin-command-history-v1';
+  const DRAFT_KEY='ekodi-control-command-draft-v1';
   const CONTROL_STATE='ekodi-control-state-v1';
   const AGENTS=[
     ['ekodi','EKODI Core','orchestrator'],
@@ -13,11 +14,51 @@
     ['qwen','Qwen','AI'],
   ];
   const WORKERS=[['cloud','Cloud Worker'],['browser','Browser Worker'],['local','Local Worker Pool']];
-  const state={sessions:loadHistory(),activeId:null,view:'chat',busy:false,tasks:loadState().tasks||[],results:loadState().results||[]};
+  const state={sessions:loadHistory(),activeId:null,view:'chat',busy:false,authorized:false,tasks:loadState().tasks||[],results:loadState().results||[]};
   const $=s=>document.querySelector(s);
   const $$=s=>[...document.querySelectorAll(s)];
   const now=()=>new Date().toISOString();
   function token(){try{return sessionStorage.getItem(TOKEN_KEY)||localStorage.getItem(TOKEN_KEY)||''}catch{return''}}
+  // Preserve the canonical page on return from Google sign-in, never a token in the URL.
+  function acceptCentralHandoff(){
+    const hash=String(location.hash||'');
+    if(!hash.startsWith('#ekodi_admin_token='))return false;
+    const incoming=new URLSearchParams(hash.slice(1)).get('ekodi_admin_token')||'';
+    try{history.replaceState(history.state,'',location.pathname+location.search)}catch{location.hash=''}
+    if(!incoming)return false;
+    try{sessionStorage.setItem(TOKEN_KEY,incoming);return true}catch{return false}
+  }
+  function renderAuth(authorized,label){
+    state.authorized=authorized===true;
+    $('#authState').textContent=label;
+    $('#runtimeStatus').textContent=state.authorized?'EKODI 연결 준비':label;
+    $('#runtimeStatus').classList.toggle('ok',state.authorized);
+    $('#controlLoginLink').hidden=state.authorized;
+  }
+  async function validateSession(){
+    acceptCentralHandoff();
+    if(!token()){renderAuth(false,'로그인 필요');return false}
+    renderAuth(false,'관리자 세션 확인 중');
+    try{
+      const session=await api('/api/session');
+      if(session?.authenticated!==true||session?.role!=='super_admin'){
+        renderAuth(false,'최고관리자 권한 필요');return false;
+      }
+      renderAuth(true,'최고관리자 세션');return true;
+    }catch(error){
+      renderAuth(false,error.auth?'로그인 필요':'세션 확인 실패');return false;
+    }
+  }
+  // A same-tab command draft survives the central Google account picker and return.
+  function saveDraft(){try{sessionStorage.setItem(DRAFT_KEY,$('#commandInput')?.value||'')}catch{}}
+  function restoreDraft(){
+    try{const draft=sessionStorage.getItem(DRAFT_KEY)||'';if(draft&&!$('#commandInput').value)$('#commandInput').value=draft}catch{}
+    resizeInput();
+  }
+  function clearSubmittedDraft(){
+    if($('#commandInput').value.trim()){saveDraft();return}
+    try{sessionStorage.removeItem(DRAFT_KEY)}catch{}
+  }
   function loadHistory(){try{const v=JSON.parse(sessionStorage.getItem(HISTORY_KEY)||'[]');return Array.isArray(v)?v.slice(0,24):[]}catch{return[]}}
   function saveHistory(){try{sessionStorage.setItem(HISTORY_KEY,JSON.stringify(state.sessions.slice(0,24)))}catch{}}
   function loadState(){try{return JSON.parse(sessionStorage.getItem(CONTROL_STATE)||'{}')||{}}catch{return{}}}
@@ -29,7 +70,7 @@
   async function api(path,options={}){
     const response=await fetch(API+path,{cache:'no-store',...options,headers:{...headers(Boolean(options.body)),...(options.headers||{})}});
     const data=await response.json().catch(()=>({}));
-    if(response.status===401||response.status===403)throw Object.assign(new Error('최고관리자 로그인이 필요합니다.'),{auth:true,status:response.status});
+    if(response.status===401||response.status===403){renderAuth(false,response.status===403?'최고관리자 권한 필요':'로그인 필요');throw Object.assign(new Error('최고관리자 로그인이 필요합니다.'),{auth:true,status:response.status});}
     if(!response.ok)throw new Error(data.error||data.message||('요청 실패 ('+response.status+')'));
     return data;
   }
@@ -59,6 +100,7 @@
   }
   function historyForAssist(){const s=state.sessions.find(x=>x.id===state.activeId);return (s?.messages||[]).filter(m=>m.role==='user'||m.role==='assistant').slice(-8).map(m=>({role:m.role,text:m.text}))}
   async function previewAiRoute(){
+    if(!state.authorized){toast('Google 최고관리자 로그인 후 진행해 주세요.');return}
     const goal=String($('#commandInput')?.value||'').trim();
     if(!goal){toast('먼저 점검할 명령을 입력해 주세요.');return}
     if(state.busy)return;
@@ -91,6 +133,7 @@
     finally{state.busy=false;$('#sendButton').disabled=false}
   }
   async function submitCommand(value){
+    if(!state.authorized){toast('Google 최고관리자 로그인 후 진행해 주세요.');return}
     if(state.busy)return;const message=String(value||'').trim();if(!message)return;
     state.busy=true;$('#sendButton').disabled=true;const target=$('#executionTarget').value;const executeNow=$('#executeNow').checked;const releaseMode=$('#orchestratorRelease')?.checked===true;
     const prior=historyForAssist();pushMessage('user',message,{target});$('#commandInput').value='';resizeInput();
@@ -120,7 +163,7 @@
         state.results.unshift({title:title(message),summary:reply,provider:'EKODI Orchestrator',taskId,status:taskStatus,at:now()});
         state.results=state.results.slice(0,40);saveState();
         pushMessage('assistant',reply,{provider:'EKODI Orchestrator',target:'ekodi',status:taskStatus,taskId});
-        renderPanels();
+        renderPanels();clearSubmittedDraft();
         return;
       }
       if(executeNow){
@@ -139,8 +182,10 @@
       const result=await api('/api/control/ai/assist',{method:'POST',body:JSON.stringify({message,history:prior,context:{source:'control-surface',pathname:'/control',executionTarget:target,taskId}})});
       const reply=String(result.reply||'응답을 받지 못했습니다.');
       pushMessage('assistant',reply,{provider:result.provider||'EKODI',target,status:taskStatus,taskId});
-      state.results.unshift({title:title(message),summary:reply.slice(0,280),provider:result.provider||'EKODI',taskId,status:taskStatus,at:now()});state.results=state.results.slice(0,40);saveState();renderPanels();
+      state.results.unshift({title:title(message),summary:reply.slice(0,280),provider:result.provider||'EKODI',taskId,status:taskStatus,at:now()});state.results=state.results.slice(0,40);saveState();renderPanels();clearSubmittedDraft();
     }catch(error){
+      if(!$('#commandInput').value.trim())$('#commandInput').value=message;
+      resizeInput();saveDraft();
       pushMessage('assistant',error.message,{status:'failed',target});
       if(error.auth)toast('최고관리자 로그인 후 /control로 돌아오세요.');
     }finally{state.busy=false;$('#sendButton').disabled=false;$('#commandInput').focus({preventScroll:true})}
@@ -190,15 +235,15 @@
     $('#newTask').onclick=newTask;$('#railOpen').onclick=()=>$('#controlRail').classList.add('open');$('#railClose').onclick=closeRail;
     $('#commandForm').addEventListener('submit',e=>{e.preventDefault();submitCommand($('#commandInput').value)});
     $('#aiRoutePreview').addEventListener('click',()=>previewAiRoute());
-    $('#commandInput').addEventListener('input',resizeInput);
+    $('#commandInput').addEventListener('input',()=>{resizeInput();saveDraft()});
     $('#commandInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#commandForm').requestSubmit()}});
-    $$('[data-prompt]').forEach(b=>b.onclick=()=>{$('#commandInput').value=b.dataset.prompt;resizeInput();$('#commandInput').focus({preventScroll:true})});
+    $$('[data-prompt]').forEach(b=>b.onclick=()=>{$('#commandInput').value=b.dataset.prompt;resizeInput();saveDraft();$('#commandInput').focus({preventScroll:true})});
     $$('[data-refresh]').forEach(b=>b.onclick=()=>{refreshOrchestratorTasks().catch(()=>toast('오케스트레이터 상태 갱신 실패'))});
   }
   async function boot(){
-    bind();renderRecent();renderMessages();renderPanels();
-    const logged=Boolean(token());$('#authState').textContent=logged?'최고관리자 세션':'로그인 필요';$('#runtimeStatus').textContent=logged?'EKODI 연결 준비':'로그인 필요';$('#runtimeStatus').classList.toggle('ok',logged);
-    if(!logged)toast('최고관리자 로그인 세션이 필요합니다.');
+    bind();restoreDraft();renderRecent();renderMessages();renderPanels();
+    const logged=await validateSession();
+    if(!logged)toast('최고관리자 인증이 필요합니다. 로그인 후 /control로 돌아옵니다.');
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();

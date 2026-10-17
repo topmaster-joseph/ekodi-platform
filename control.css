@@ -382,3 +382,8 @@ html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .composer tex
     height:calc(100svh - 58px)!important;
   }
 }
+
+/* Authenticated Control: show central sign-in only until server confirms the session. */
+html[data-ekodi-control="v2"] .control-login{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:9px 11px;border:1px solid #bdc8d3;border-radius:9px;background:#fff;color:#14202b;font-size:12px;font-weight:750;text-decoration:none}
+html[data-ekodi-control="v2"] .control-login[hidden]{display:none!important}
+html[data-ekodi-control="v2"] .control-login:focus-visible{outline:3px solid #617991;outline-offset:2px}

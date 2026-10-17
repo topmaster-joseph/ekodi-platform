@@ -97,6 +97,10 @@ jobs:
         shell: bash
         run: node scripts/verify-admin-login-continuity.mjs
 
+      - name: Verify Control Google handoff, desktop/mobile session and safe command reply
+        shell: bash
+        run: node scripts/verify-control-authenticated-e2e.mjs
+
       - name: Click and render every authenticated admin menu
         shell: bash
         run: node scripts/admin-authenticated-e2e-retry.mjs
@@ -121,6 +125,15 @@ jobs:
             jq -r '"- Passed: \(.passed)\n- Profiles checked: \(.checkedProfiles)/\(.expectedProfiles)\n- Target: \(.targetUrl)"' artifacts/admin-authenticated-e2e/service-modules-direct-route.json >> "$GITHUB_STEP_SUMMARY"
             jq -r '.results[] | "- \(.profile): direct=\(.direct.currentSection) reload=\(.reload.currentSection) cards=\(.direct.cardCount) common=\(.direct.commonCount) professional=\(.direct.professionalCount)"' artifacts/admin-authenticated-e2e/service-modules-direct-route.json >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Upload Control authenticated E2E evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: control-authenticated-e2e-${{ github.run_id }}
+          path: artifacts/admin-authenticated-e2e/control-auth-continuity.json
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Upload service modules E2E evidence
         if: always()
