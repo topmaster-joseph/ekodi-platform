@@ -63,10 +63,11 @@ test('mobile MOU table stays inside scroll container rather than widening the vi
  const page=PUBLIC_PAGES['/mou'];
  assert.match(page,/class="swp-table-wrap"/);
  assert.match(page,/class="swp-table"/);
- assert.match(css,/\\.swp-table-wrap\\{[^}]*max-width:100%;min-width:0;overflow-x:auto/);
- assert.match(css,/\\.swp-panel\\{min-width:0;/);
- assert.match(css,/@media\\(max-width:760px\\)\\{[^}]*\\.swp-two-column\\{grid-template-columns:minmax\\(0,1fr\\)\\}/);
- assert.match(css,/\\.swp-table\\{[^}]*min-width:520px/);
+ assert.match(css,/\.swp-table-wrap\{[^}]*max-width:100%;min-width:0;overflow-x:auto/);
+ assert.match(css,/\.swp-panel\{min-width:0;/);
+ const mobile=css.slice(css.indexOf('@media(max-width:760px)'),css.indexOf('@media(max-width:440px)'));
+ assert.match(mobile,/\.swp-two-column\{grid-template-columns:minmax\(0,1fr\)\}/);
+ assert.match(css,/\.swp-table\{[^}]*min-width:520px/);
 });
 test('education and housing checklists are client-only, no certification',()=>{
  assert.match(PUBLIC_PAGES['/learning'],/data-check-progress/);
