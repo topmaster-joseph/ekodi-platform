@@ -476,6 +476,11 @@ html[data-ekodi-control-embedded="admin"] .control-embedded-history .recent{
 html[data-ekodi-control-embedded="admin"] .control-embedded-history .recent-list{
   max-height:42vh;
 }
+/* Closed details must never reveal the history flyout, even when the shared
+ * Control theme applies an !important display rule to .recent. */
+html[data-ekodi-control-embedded="admin"] .control-embedded-history:not([open]) .recent{
+  display:none!important;
+}
 html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-control-embedded="admin"] .control-main .view.active[data-view-panel="chat"]{
   height:calc(100svh - 120px)!important;
 }
