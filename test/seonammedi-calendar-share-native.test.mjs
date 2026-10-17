@@ -39,6 +39,15 @@ test('fixture click verifies clipboard, Web Share payload, direct-link focus and
   assert.match(script,/realSystemShareSheet:false/);
   assert.match(script,/await page\.screenshot/);
 });
+test('post-deploy requires current sharing copy; predeploy accepts old or new but never registration metadata',()=>{
+  assert.match(script,/expectMode==='predeploy'\?\[shareText,legacyShareText\]:\[shareText\]/);
+  assert.match(script,/nativeArgs\.text===observedShareText/);
+  assert.match(script,/invalid_share_expectation_mode/);
+  assert.match(script,/shareExpectationMode:expectMode/);
+  assert.match(workflow,/github\.event_name == 'workflow_run' \|\| github\.event_name == 'workflow_dispatch'/);
+  assert.match(workflow,/--expect-mode="\$mode"/);
+});
+
 test('GitHub workflow runs source or post-deploy native Chromium on both domains with artifact evidence',()=>{
   assert.match(workflow,/workflow_run:/);
   assert.match(workflow,/Deploy EKODI Shared Site Core/);
