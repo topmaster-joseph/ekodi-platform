@@ -166,6 +166,14 @@
         "rollbackVerify": false
       },
       {
+        "url": "https://ekodi.kr/admin/control",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["EKODI Control","무엇을 수행할까요?","/control.css","/control.js","href=\"/admin/control\""],
+        "headerExpect": ["x-ekodi-canonical-surface: control","x-ekodi-canonical-path: /admin/control","x-ekodi-route: control-surface","cache-control: no-store","x-robots-tag: noindex, nofollow, noarchive"],
+        "rollbackVerify": false
+      },
+      {
         "url": "https://ekodi.kr/control",
         "statuses": [
           200
