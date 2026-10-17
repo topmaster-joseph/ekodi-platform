@@ -27,3 +27,16 @@ If `ExecutablePath` is omitted, the watchdog tries common installation paths. Fo
 
 ## Deployment prerequisite
 The first installation must occur while the PC is online or through another authorized local management channel. After installation, routine agent crashes and post-reboot recovery are automatic.
+
+## Invisible background execution and diagnosis
+The startup and two-minute monitor tasks use the isolated SYSTEM principal
+with PowerShell's `-NonInteractive -WindowStyle Hidden` flags. The monitor
+preserves the six-restarts-per-hour limit on Windows PowerShell 5.1.
+
+An observed blue PowerShell or black CMD window is **not proof** that this
+watchdog was responsible. On the affected PC, compare Windows Task Scheduler
+history, executable, task principal, and launch time before attributing
+the popup. Do not disable unrelated scheduled tasks or Windows security
+programs. After a protected release, rerun the installer locally through
+the authorized management channel to update existing task actions; a GitHub
+merge alone does not update scheduled tasks already registered on USER4.

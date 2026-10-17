@@ -13,3 +13,9 @@ This Pages release is not proof that the separate Supabase `church-pastor-api` E
 ## Synchronized release check
 
 After the Orchestrator updated this branch with the current protected `main`, the repository owner re-runs required statuses on the new head. This synchronization does not itself mean the static Church source was deployed; check Cloudflare release evidence and the exact `church-release.json` SHA before completion.
+
+## Automatic drift reconciliation (2026-10-17)
+
+The hourly reconciler and 15-minute watcher remain read-only on scheduled runs. A drift result is **not** deployment authority. The old watcher/cron dispatches omitted mandatory `release_branch_ref` and `release_task_id`, causing repeat invalid release attempts. Both now call `scripts/dispatch-guarded-church-release.mjs`; missing receipt yields an explicit pending notice without contacting the deployment endpoint. Authorized EKODI workflow_dispatch supplies the task/branch pair; the helper re-fetches the canonical release receipt and dispatches the existing guarded Pages workflow only after exact task, branch, authority and authorization match. The deployment workflow independently verifies provenance again.
+
+The guarded deployment must prove `church-release.json.sourceSha` equals current independent Church main *and* the 2026-10-18 worship page contains the correct scripture and stage/operator routes, not the homepage fallback. Never fake a release receipt or remove mandatory gates to advance the date-sensitive worship release.

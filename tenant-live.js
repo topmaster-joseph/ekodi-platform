@@ -34,7 +34,14 @@ async function loadExternalDestinations(){
   try{const data=await api(`/destinations/catalog?tenant=${encodeURIComponent(cfg.tenant)}`);state.destinationCatalogLoaded=true;renderExternalDestinations(data.channels||[]);return true}
   catch(error){state.destinationCatalogLoaded=false;const root=$('externalDestinations');if(root)root.innerHTML='<small>외부 채널을 불러오지 못했습니다. 내부 방송과 자동 저장은 정상적으로 사용할 수 있습니다.</small>';note(`외부 채널 확인 실패: ${error.message}`);return false}
 }
-async function createRoom(){const body={tenant:cfg.tenant,mode:cfg.roomMode,title:params.get('title')||cfg.defaultTitle,interactiveParticipants:6,languages:0,durationMinutes:180,recording:true,publicViewers:true,ai:true,...broadcastSelection()};try{return await api('/rooms',{method:'POST',body:JSON.stringify(body)})}catch(error){if(error.status===401){login();return null}if(error.status===402&&error.data?.subscriptionUrl){location.href=error.data.subscriptionUrl;return null}throw error}}
+// Site identity and permission remain server-owned. Query parameters only choose
+// a bounded activity label; they never grant hosting, channel or tenant access.
+function activityRoomMode(){
+  if(cfg.tenant!=='ekodichurch')return cfg.roomMode;
+  const activity=params.get('activity')||'sunday';
+  return ({sunday:'worship',prayer:'worship',fellowship:'meeting',event:'meeting',mission:'public_broadcast'})[activity]||'worship';
+}
+async function createRoom(){const body={tenant:cfg.tenant,mode:activityRoomMode(),title:(params.get('title')||'').slice(0,150)||cfg.defaultTitle,interactiveParticipants:6,languages:0,durationMinutes:180,recording:true,publicViewers:true,ai:true,...broadcastSelection()};try{return await api('/rooms',{method:'POST',body:JSON.stringify(body)})}catch(error){if(error.status===401){login();return null}if(error.status===402&&error.data?.subscriptionUrl){location.href=error.data.subscriptionUrl;return null}throw error}}
 async function createSession(roomId,role){const data=await api(`/rooms/${encodeURIComponent(roomId)}/sessions`,{method:'POST',body:JSON.stringify({role})});state.session=data.session;state.pc=new RTCPeerConnection({iceServers:data.iceServers||[]});state.pc.onconnectionstatechange=()=>{$('connectionState')&&($('connectionState').textContent=state.pc.connectionState)};return data}
 function liveRemoteTracks(){return state.remote.getTracks().filter(track=>track.readyState==='live')}
 async function waitForRemoteTracks(timeoutMs=5000){if(liveRemoteTracks().length)return liveRemoteTracks();const started=Date.now();while(Date.now()-started<timeoutMs){await new Promise(resolve=>setTimeout(resolve,150));if(liveRemoteTracks().length)return liveRemoteTracks()}return []}

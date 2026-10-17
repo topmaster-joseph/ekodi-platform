@@ -95,6 +95,22 @@ try{
      step('nonpersistent-demand-calculator',{personMonths:24,reset:true});
     }
     if(route==='/mou'){
+     const tableScroll=await page.evaluate(()=>{
+      const wrap=document.querySelector('.swp-table-wrap'),table=wrap?.querySelector('.swp-table');
+      const headers=table?.querySelectorAll('thead th').length||0;
+      const viewport=document.documentElement.clientWidth,documentWidth=document.documentElement.scrollWidth;
+      if(!wrap||!table)return {headers,viewport,documentWidth,scrollable:false,scrollLeft:0};
+      const scrollable=wrap.scrollWidth>wrap.clientWidth+4;
+      const original=wrap.scrollLeft;
+      if(scrollable)wrap.scrollLeft=wrap.scrollWidth;
+      const scrollLeft=wrap.scrollLeft;
+      wrap.scrollLeft=original;
+      return {headers,viewport,documentWidth,scrollable,scrollLeft};
+     });
+     must(tableScroll.headers===5,'mou_five_columns_missing_'+JSON.stringify(tableScroll));
+     must(tableScroll.documentWidth<=tableScroll.viewport+2,'mou_document_overflow_'+JSON.stringify(tableScroll));
+     if(device.mobile)must(tableScroll.scrollable&&tableScroll.scrollLeft>0,'mou_internal_scroll_failed_'+JSON.stringify(tableScroll));
+     step('mou-five-column-internal-scroll',{...tableScroll,actualSignedAgreements:false});
      await page.locator('[data-mou-filter="협약서"]').click();
      must(await page.locator('[data-mou-row]:visible').count()===1,'mou_filter_failed');
      await page.locator('[data-mou="협약서"]').click();

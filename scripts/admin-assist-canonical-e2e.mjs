@@ -87,7 +87,7 @@ try {
   await page.waitForSelector('.sidebar', {state:'visible'});
   const frame=page.frameLocator('#ekodiControlHomeFrame');
   await frame.locator('#commandInput').waitFor({state:'visible',timeout:15_000});
-  await frame.locator('#controlRail').waitFor({state:'visible',timeout:15_000});
+  await frame.locator('#controlEmbeddedToolbar').waitFor({state:'visible',timeout:15_000});
   report.visualState = await page.evaluate(() => {
     const sidebar=document.querySelector('.sidebar');
     const iframe=document.querySelector('#ekodiControlHomeFrame');

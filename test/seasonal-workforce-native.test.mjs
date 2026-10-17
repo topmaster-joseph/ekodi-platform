@@ -25,6 +25,9 @@ test('all nine subservice pages are checked as real HTTP 200 and mobile no-overf
  assert.match(script,/page\.screenshot\(/);
  assert.match(script,/layout\.navCount>=8&&layout\.stylesheet&&layout\.proposal/);
  assert.match(script,/!row\.pageErrors\.length/);
+ assert.match(script,/mou_internal_scroll_failed/);
+ assert.match(script,/tableScroll\.headers===5/);
+ assert.match(script,/tableScroll\.scrollLeft>0/);
 });
 
 test('all key subservice interactions verified without writes',()=>{
@@ -45,7 +48,7 @@ test('mobile scroll motion and calculator reset regression remain fixed',()=>{
  const js=readFileSync(new URL('../seasonal-workforce/public.js',import.meta.url),'utf8');
  assert.ok(css.includes('@media(max-width:760px){html{scroll-behavior:auto}}'));
  assert.ok(css.includes('.swp-two-column{grid-template-columns:minmax(0,1fr)}'));
- assert.ok(css.includes('.swp-table-wrap{min-width:0;max-width:100%;overflow-x:auto}'));
+ assert.ok(css.includes('.swp-table-wrap{max-width:100%;min-width:0;overflow-x:auto;'));
  const route=readFileSync(new URL('../seasonal-workforce/route.mjs',import.meta.url),'utf8');
  assert.ok(route.includes('이 화면은 제안용 시안입니다. 공식 권한 등록 이전에는'));
 
