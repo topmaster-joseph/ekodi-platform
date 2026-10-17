@@ -39,6 +39,8 @@ test('standalone canonical Control and legacy /control both retain CSP and noind
   const res=await siteWorker.fetch(new Request('https://ekodi.kr'+path),env,{});
   assert.equal(res.status,200,path);
   assert.equal(res.headers.get('x-ekodi-route'),'control-surface',path);
+  assert.equal(res.headers.get('x-ekodi-canonical-surface'),'control',path);
+  assert.equal(res.headers.get('x-ekodi-canonical-path'),'/admin/control',path);
   assert.equal(res.headers.get('cache-control'),'no-store',path);
   assert.match(res.headers.get('x-robots-tag'),/noindex/,path);
   assert.match(res.headers.get('content-security-policy'),/frame-ancestors 'none'/,path);
