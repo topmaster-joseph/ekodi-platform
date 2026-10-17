@@ -9,6 +9,10 @@ on:
       - 'seasonal-workforce/**'
       - 'deploy/manifests/shared-site.worker.json'
   workflow_dispatch:
+  workflow_run:
+    workflows: [Deploy EKODI Shared Site Core]
+    types: [completed]
+    branches: [main]
 
 permissions:
   contents: read
@@ -19,11 +23,14 @@ concurrency:
 
 jobs:
   native-public-readonly:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 22
     steps:
       - name: Checkout EKODI native verifier
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && 'main' || github.ref }}
       - name: Configure Node
         uses: actions/setup-node@v4
         with:
@@ -37,8 +44,12 @@ jobs:
         run: |
           npm install --no-save --package-lock=false playwright@1.55.0
           npx playwright install --with-deps chromium
-      - name: Test live public PC and mobile routes and interactions without writes
-        run: node scripts/verify-seasonal-workforce-native.mjs
+      - name: Test branch-source PC and mobile routes without writes
+        if: github.event_name == 'pull_request'
+        run: node scripts/verify-seasonal-workforce-native.mjs --mode=source
+      - name: Test live public PC and mobile routes after protected release
+        if: github.event_name != 'pull_request'
+        run: node scripts/verify-seasonal-workforce-native.mjs --mode=live
       - name: Save full-size screenshots and machine-readable evidence
         if: always()
         uses: actions/upload-artifact@v4
