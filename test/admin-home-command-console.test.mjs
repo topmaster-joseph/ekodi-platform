@@ -128,7 +128,7 @@ test('highest-level admin embeds the native Control workspace with same-origin-o
     read('site-worker.js')
   ]);
   assert.match(admin,/id='ekodiControlHome'/);
-  assert.match(admin,/frame\.src='\/control\?embedded=admin'/);
+  assert.match(admin,/frame\.src='\/admin\/control\?embedded=admin'/);
   assert.match(admin,/ekodi-admin-section-changed/);
   assert.match(admin,/isSuperAdmin\(\).*command-home/);
   assert.match(admin,/session\.role==='super_admin'/);
