@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
+import {runInNewContext} from 'node:vm';
 import {handleSeonamMediAdminApi,ensureSeonamMediNoticeWriteColumns} from '../seonammedi-admin-control.js';
 
 const root=new URL('../sites/seonammedi/public/',import.meta.url);
@@ -74,7 +75,7 @@ test('today agenda, management login, and calendar toolbar remain separate from 
   ]);
   assert.match(layout,/주요일정/);
   assert.doesNotMatch(layout,/일정 달력/);
-  assert.ok(layout.includes('20261017-live-2'),'published calendar JS and CSS must bypass old cached bundles');
+  assert.ok(layout.includes('20261017-live-3-share'),'published calendar JS and CSS must bypass old cached bundles');
   assert.ok(js.includes("heading.append(make('h2','','주요일정'))"));
   assert.ok(js.includes("appendButton(heading,'관리'"));
   assert.ok(js.includes("navigation.replaceChildren(current,previous,today,next)"));
@@ -152,4 +153,55 @@ test('calendar write schema reconciliation occurs only inside capability-gated n
   }
   const publicCalendar=source.slice(source.indexOf('async function listPublicCalendar('),source.indexOf('async function noticeManageContext('));
   assert.ok(!publicCalendar.includes('ensureSeonamMediNoticeWriteColumns'),'public calendar must remain read-only');
+});
+
+function loadShareHelpers(href){
+  const window={};
+  const location={href,search:new URL(href).search};
+  const script=awaitableCalendarCode;
+  runInNewContext(script,{window,location,URL,URLSearchParams,Date,Intl,console});
+  return window.SeonamMediCalendar;
+}
+const awaitableCalendarCode=await readFile(new URL('calendar-sidebar.js',root),'utf8');
+
+test('public schedule share links are host-appropriate, unique and do not carry login state',()=>{
+  const item={id:12,kind:'event',eventStart:'2026-10-16T09:00',title:'공개된 일정'};
+  const apex=loadShareHelpers('https://ekodi.kr/seonammedi/board/notices?manage=schedule&ekodi_token=secret#login');
+  assert.equal(apex.shareUrl(item),'https://ekodi.kr/seonammedi/board/notices?schedule=12&date=2026-10-16');
+  const sub=loadShareHelpers('https://seonammedi.kr/board/notices?compose=1&access_token=private#notices');
+  assert.equal(sub.shareUrl(item),'https://seonammedi.kr/board/notices?schedule=12&date=2026-10-16');
+  assert.equal(sub.parseSharedSchedule('?schedule=12&date=2026-10-16').id,12);
+  assert.equal(sub.parseSharedSchedule('?schedule=12&date=2026-10-16').date,'2026-10-16');
+});
+
+test('calendar share pointers reject malformed dates and ids rather than using untrusted routes',()=>{
+  const calendar=loadShareHelpers('https://seonammedi.kr/board/notices');
+  for(const query of ['?schedule=1%20OR%201=1&date=2026-10-16','?schedule=-1&date=2026-10-16','?schedule=0&date=2026-10-16','?schedule=12&date=2026-02-30','?schedule=12&date=2026-13-01','?schedule=123456789012345678&date=2026-10-16']){
+    assert.equal(calendar.parseSharedSchedule(query),null,query);
+  }
+  assert.equal(calendar.shareUrl({id:12,eventStart:'2026-02-30T11:00'}),'');
+  assert.equal(calendar.shareUrl({id:0,eventStart:'2026-10-16T09:00'}),'');
+});
+
+test('every public event list has accessible native share and copy actions, with exact published-event deep link',async()=>{
+  const js=await readFile(new URL('calendar-sidebar.js',root),'utf8');
+  const css=await readFile(new URL('calendar-sidebar.css',root),'utf8');
+  const loader=await readFile(new URL('board-central-category.js',root),'utf8');
+  assert.match(js,/attachSharing\(article,item\)/);
+  assert.equal((js.match(/attachSharing\(article,item\);/g)||[]).length,2,'both today and selected day must expose sharing');
+  assert.match(js,/navigator\.share\(/);
+  assert.match(js,/navigator\.clipboard\.writeText\(url\)/);
+  assert.match(js,/appendButton\(actions,'공유'/);
+  assert.match(js,/appendButton\(actions,'링크 복사'/);
+  assert.match(js,/shareTarget&&Number\(item\.id\)===shareTarget\.id/);
+  assert.match(js,/article\.scrollIntoView/);
+  assert.match(js,/공유된 일정이 없거나 공개되지 않았습니다/);
+  assert.match(js,/window\.SeonamMediCalendar=\{mount,shareUrl,parseSharedSchedule\}/);
+  const shareBuilder=js.slice(js.indexOf('  const shareUrl='),js.indexOf('  const make='));
+  assert.doesNotMatch(shareBuilder,/searchParams\.set\('(?:manage|auth|access_token|ekodi_token)'/);
+  assert.match(css,/\.seonam-calendar-event\.is-shared/);
+  assert.match(css,/\.seonam-calendar-share-actions/);
+  assert.match(loader,/calendar-sidebar\.js\?v=20261017-live-3-share/);
+  assert.match(loader,/calendar-sidebar\.css\?v=20261017-live-3-share/);
+  assert.match(js,/if\(!admin\)return;/);
 });
