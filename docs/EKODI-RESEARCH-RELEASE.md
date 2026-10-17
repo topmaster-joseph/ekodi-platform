@@ -46,3 +46,8 @@ Mandatory CAPABILITY-BEFORE-SERVICE-001 requires verified Foundry samples and EK
 - Official recovery branch: `ai/chatgpt/orch_recovery_8242c82185650b6abe483f1e043c2f52`; integration PR #5121.
 - Initial recovery PR checks returned `action_required` with zero executable jobs because the event was created by the GitHub Actions bot. This **documentation-only** owner-authored commit requests normal PR checks on the recovery branch.
 - No changes to executable application behavior, authentication, database schema, approvals, guardrails, payment or AI controls. Required CI, isolated staging, protected merge, guarded deployment, rollback, and real PC/mobile production evidence remain mandatory. No deployment or completion is asserted here.
+
+## Post-synchronization owner-authored validation refresh
+- Official EKODI orchestration synchronized recovery PR #5121 with current main at `cbd194fa04c4745bf4cb26d04fdfeb00a7082e01` after all checks passed on preceding `71f9da65687c0eb49e36039455d6462da7a92e7e`.
+- Synchronization commit checks again showed GitHub bot-created `action_required` status. This owner-authored documentation-only update requests authentic checks on the synchronized immutable source without altering functionality or approval scope.
+- Original exact-source owner approval stays PR #5091 SHA `8242c82185650b6abe483f1e043c2f525734f4e2` under the same authoritative EKODI recovery task. Production may proceed only upon verified up-to-date CI, guarded protected merge, Education release dispatch, rollback checks, and real PC/mobile functional verification.
