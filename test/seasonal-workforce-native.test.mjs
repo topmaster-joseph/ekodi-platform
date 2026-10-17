@@ -68,5 +68,11 @@ test('independent PR workflow publishes evidence and does not trigger release',(
  assert.match(workflow,/node scripts\/verify-seasonal-workforce-native\.mjs/);
  assert.match(workflow,/actions\/upload-artifact@v4/);
  assert.match(workflow,/artifacts\/seasonal-workforce-native/);
- assert.doesNotMatch(workflow,/wrangler deploy|workflow_run:|deploy:|contents: write|pull-requests: write/);
+ assert.match(workflow,/workflow_run:/);
+ assert.match(workflow,/github\.event\.workflow_run\.conclusion == 'success'/);
+ assert.match(workflow,/--mode=source/);
+ assert.match(workflow,/--mode=live/);
+ assert.match(script,/productionSiteVerified:MODE==='live'/);
+ assert.match(script,/sourceCodePreview:MODE==='source'/);
+ assert.doesNotMatch(workflow,/wrangler deploy|contents: write|pull-requests: write/);
 });
