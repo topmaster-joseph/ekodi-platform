@@ -44,8 +44,9 @@ test('post-deploy requires current sharing copy; predeploy accepts old or new bu
   assert.match(script,/nativeArgs\.text===observedShareText/);
   assert.match(script,/invalid_share_expectation_mode/);
   assert.match(script,/shareExpectationMode:expectMode/);
-  assert.match(workflow,/github\.event_name == 'workflow_run' \|\| github\.event_name == 'workflow_dispatch'/);
-  assert.match(workflow,/--expect-mode="\$mode"/);
+  assert.match(script,/githubEvent==='pull_request'\|\|githubEvent==='push'/);
+  assert.match(script,/expectMode=\(githubEvent/);
+  assert.doesNotMatch(workflow,/--expect-mode=/,'deploy workflow must not override native witness mode');
 });
 
 test('GitHub workflow runs source or post-deploy native Chromium on both domains with artifact evidence',()=>{
