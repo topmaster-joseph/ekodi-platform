@@ -14,12 +14,13 @@ test('Google login safely returns only to the canonical Control route',()=>{
   assert.ok(expr,'central admin safeReturn expression is present');
   function get(rawReturn){
     return vm.runInNewContext(expr+';safeReturn',{
-      URL,rawReturn,defaultReturn:'https://ekodi.kr/admin/',
+      URL,URLSearchParams,rawReturn,defaultReturn:'https://ekodi.kr/admin/',
       runtime:{environment:'production',authOrigin:'https://ekodi.kr'}
     });
   }
   assert.equal(get('https://ekodi.kr/control'),'https://ekodi.kr/control');
   assert.equal(get('https://ekodi.kr/control/'),'https://ekodi.kr/control');
+  assert.equal(get('https://ekodi.kr/control?view=tasks'),'https://ekodi.kr/control?view=tasks');
   assert.equal(get('https://ekodi.kr/control?access_token=SECRET#ekodi_admin_token=SECRET'),'https://ekodi.kr/control');
   assert.equal(get('https://evil.example/control'),'https://ekodi.kr/admin/');
   assert.equal(get('https://ekodi.kr/control/api'),'https://ekodi.kr/admin/');
@@ -53,4 +54,15 @@ test('Control cannot submit tasks until server validates super-admin session',()
   assert.match(css,/\.control-login\[hidden\]\{display:none!important\}/);
   assert.match(control,/\/api\/control\/ai\/v8\/pulse/);
   assert.match(control,/\/api\/control\/ai\/v8\/orchestrator\/submit/);
+});
+
+
+test('Control preserves a draft through central login and failed command retries',()=>{
+  assert.match(control,/DRAFT_KEY='ekodi-control-command-draft-v1'/);
+  assert.match(control,/function saveDraft\(\)/);
+  assert.match(control,/function restoreDraft\(\)/);
+  assert.match(control,/bind\(\);restoreDraft\(\);renderRecent\(\)/);
+  assert.match(control,/addEventListener\('input',\(\)=>\{resizeInput\(\);saveDraft\(\)\}\)/);
+  assert.match(control,/resizeInput\(\);saveDraft\(\);[\s\S]*?pushMessage\('assistant',error.message/);
+  assert.match(control,/function clearSubmittedDraft\(\)/);
 });
