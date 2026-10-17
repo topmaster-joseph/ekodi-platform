@@ -121,7 +121,7 @@ test('admin root is a command-only workspace while Campus remains a child route'
 
 test('highest-level admin embeds the native Control workspace with same-origin-only framing',async()=>{
   const [admin,adminCss,control,controlCss,worker]=await Promise.all([
-    read('admin-authenticated-shell.js'),
+    read('admin-control-home.js'),
     read('admin-shell.css'),
     read('control.js'),
     read('control.css'),
