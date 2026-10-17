@@ -1,0 +1,91 @@
+{
+  "schema": "ekodi.common-church-calendar.v1",
+  "year": 2026,
+  "denomination": "대한예수교장로회 통합",
+  "authority": "reference-pck-not-republished",
+  "source": "https://new.pck.or.kr/bbs/board.php?bo_table=SM02_03_12&wr_id=457",
+  "reference_page": "https://new.pck.or.kr/bbs/board.php?bo_table=SM01_01&wr_id=12",
+  "notes": "총회 2026년 목회달력은 원본 무단 재배포·상업적 이용 금지. EKODI는 원문을 저장하거나 배포하지 않고, 교회력 날짜 메타데이터를 독립 등록·승인한다. 일부 2026 날짜는 공식 달력 PDF 대조 전 단계라 관리자 검토 필요.",
+  "events": [
+    {
+      "id": "pck-2026-easter",
+      "date": "2026-04-05",
+      "endDate": "2026-04-05",
+      "name": "부활주일",
+      "category": "liturgical",
+      "approval": "provisional",
+      "bulletin": "부활주일: 그리스도의 부활과 새 생명의 복음을 기억합니다.",
+      "sermonFocus": "죽음보다 강한 부활의 소망"
+    },
+    {
+      "id": "pck-2026-pentecost",
+      "date": "2026-05-24",
+      "endDate": "2026-05-24",
+      "name": "성령강림주일",
+      "category": "liturgical",
+      "approval": "provisional",
+      "bulletin": "성령강림주일: 성령의 임재와 교회의 증언을 묵상합니다.",
+      "sermonFocus": "성령이 이루시는 연대와 파송"
+    },
+    {
+      "id": "pck-2026-workplace",
+      "date": "2026-10-18",
+      "endDate": "2026-10-18",
+      "name": "직장선교주일",
+      "category": "denominational",
+      "approval": "provisional",
+      "bulletin": "예장통합 교회력 참고: 10월 18일은 직장선교주일입니다. 일터에서 복음을 살아내며 일하는 이웃을 위해 기도합니다.",
+      "sermonFocus": "신명기 33:18–19의 삶의 자리, 일터·지역에서 누리는 소명과 이웃을 살리는 선교"
+    },
+    {
+      "id": "pck-2026-education-week",
+      "date": "2026-10-19",
+      "endDate": "2026-10-24",
+      "name": "기독교교육주간",
+      "category": "denominational",
+      "approval": "provisional",
+      "bulletin": "예장통합 교회력 참고: 10월 19–24일 기독교교육주간을 기억하며 다음 세대를 위한 배움과 환대를 위해 기도합니다.",
+      "sermonFocus": "가정·교회·지역이 함께 세우는 신앙교육과 다음 세대"
+    },
+    {
+      "id": "pck-2026-unity",
+      "date": "2026-10-25",
+      "endDate": "2026-10-25",
+      "name": "세계교회일치와 연대 주일",
+      "category": "denominational",
+      "approval": "provisional",
+      "bulletin": "세계교회일치와 연대 주일을 준비하며 그리스도 안의 일치와 이웃 교회를 위해 기도합니다.",
+      "sermonFocus": "그리스도 안에서 하나 된 공동체"
+    },
+    {
+      "id": "pck-2026-christking",
+      "date": "2026-11-22",
+      "endDate": "2026-11-22",
+      "name": "왕이신 그리스도 주일",
+      "category": "liturgical",
+      "approval": "provisional",
+      "bulletin": "왕이신 그리스도 주일: 십자가의 통치와 섬김의 왕권을 묵상합니다.",
+      "sermonFocus": "섬김으로 다스리시는 그리스도"
+    },
+    {
+      "id": "pck-2026-advent1",
+      "date": "2026-11-29",
+      "endDate": "2026-11-29",
+      "name": "대림절 첫째 주일",
+      "category": "liturgical",
+      "approval": "provisional",
+      "bulletin": "대림절 첫째 주일: 오시는 주님을 소망하며 깨어 기다립니다.",
+      "sermonFocus": "주님의 오심을 기다리는 희망과 깨어 있음"
+    },
+    {
+      "id": "pck-2026-christmas",
+      "date": "2026-12-25",
+      "endDate": "2026-12-25",
+      "name": "성탄절",
+      "category": "liturgical",
+      "approval": "provisional",
+      "bulletin": "성탄절: 낮은 곳에 오신 예수 그리스도의 사랑을 나눕니다.",
+      "sermonFocus": "성육신, 환대, 낮아짐"
+    }
+  ]
+}
