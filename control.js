@@ -244,7 +244,6 @@
     if(!candidate)return false;
     try{history.replaceState(history.state,document.title,location.pathname+location.search)}catch{}
     if(candidate.length>8192)return false;
-    if(token()===candidate)return true;
     try{
       const response=await fetch(API+'/api/session',{
         headers:{authorization:'Bearer '+candidate},
