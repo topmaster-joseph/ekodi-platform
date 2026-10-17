@@ -140,7 +140,7 @@
           goal:message,risk:'normal',
           target:{capability:'core.automation',service:'control',section:'command',surface:'control',providerHint:target},
           delegation:{allowed:true,reversible:true,audited:true,preflightVerified:false,verificationDefined:true},
-          context:{source:'control-surface',pathname:'/control',executionTarget:target,request:message},
+          context:{source:'control-surface',pathname:'/admin/control',executionTarget:target,request:message},
           event:{kind:'control_command',source:'control-surface',summary:message,changeClass:'yellow',actionable:true,requiresHumanDecision:false},
           executeNow:true
         })});
@@ -148,13 +148,13 @@
       const taskId=queued?.task?.id||queued?.execution?.results?.[0]?.taskId||'';
       const taskStatus=queued?.task?.state||queued?.execution?.results?.[0]?.state||(executeNow?'queued':'assist_only');
       if(taskId){state.tasks.unshift({id:taskId,title:title(message),status:taskStatus,target,at:now()});state.tasks=state.tasks.slice(0,40);saveState()}
-      const result=await api('/api/control/ai/assist',{method:'POST',body:JSON.stringify({message,history:prior,context:{source:'control-surface',pathname:'/control',executionTarget:target,taskId}})});
+      const result=await api('/api/control/ai/assist',{method:'POST',body:JSON.stringify({message,history:prior,context:{source:'control-surface',pathname:'/admin/control',executionTarget:target,taskId}})});
       const reply=String(result.reply||'응답을 받지 못했습니다.');
       pushMessage('assistant',reply,{provider:result.provider||'EKODI',target,status:taskStatus,taskId});
       state.results.unshift({title:title(message),summary:reply.slice(0,280),provider:result.provider||'EKODI',taskId,status:taskStatus,at:now()});state.results=state.results.slice(0,40);saveState();renderPanels();
     }catch(error){
       pushMessage('assistant',error.message,{status:'failed',target});
-      if(error.auth)toast('최고관리자 로그인 후 /control로 돌아오세요.');
+      if(error.auth)toast('최고관리자 로그인 후 /admin/control로 돌아오세요.');
     }finally{state.busy=false;$('#sendButton').disabled=false;$('#commandInput').focus({preventScroll:true})}
   }
   function card(titleText,status,description){return '<article class="card"><div class="card-head"><strong>'+esc(titleText)+'</strong><span class="badge">'+esc(status)+'</span></div><p>'+esc(description||'')+'</p></article>'}
