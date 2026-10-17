@@ -20,3 +20,6 @@ The public share message includes a published calendar event title, start date/t
 - KakaoTalk's URL-only Open Graph preview card requires independent server-side metadata and is not supplied by client-side `document.title` changes.
 
 This file is an auditable checkpoint, **not a completion declaration or a second Human Gate approval**.
+
+## Synced protected-main checkpoint
+The official orchestrator merged the latest protected `main` into this recovery branch at `59cd13c043d18ad41577bf02a63fe92584fc376e` after the first complete owner-triggered CI suite passed. GitHub marked that automated synchronization's freshly generated checks `action_required` instead of executing them. This second **documentation-only** owner checkpoint requests the genuine checks on the synced head. It does **not** alter runtime code, shared worker content, database records, auth or rollback rules. Original approved functional SHA remains `1ec194e6401dbaaab625abc056fac7d6d151fc77` in ancestry.
