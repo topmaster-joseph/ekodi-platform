@@ -152,6 +152,23 @@ function pastorClient(POLICY){
     $('mainPanel').innerHTML=`<div class="service-row"><div><strong>에코디교회 · 주일모임 전용 관리</strong><p>에코디선교회 토요모임은 별도 소속·관리권한으로 운영합니다. 공통본문 확정 전에는 초안으로 저장하세요.</p></div><a href="/ekodimission/admin/saturday">선교회 토요모임 →</a></div>
       <div class="table-wrap"><table><thead><tr><th>일자</th><th>공통본문</th><th>말씀 제목</th><th>상태</th><th>관리</th></tr></thead><tbody>${services.map((item,index)=>`<tr><td>${esc(item.service_date)}</td><td>${esc(item.scripture||'원본 미확인')}</td><td>${esc(item.title||'제목 미정')}</td><td>${item.is_published?'게시':'초안'}</td><td>${canWrite()?`<button type="button" class="button" data-worship-edit="${index}">편집</button>`:''}</td></tr>`).join('')}</tbody></table></div>${form}`;
     const f=$('worshipForm');
+    if(f){
+      const dateField=f.elements.namedItem('service_date');
+      const scriptureField=f.elements.namedItem('scripture');
+      async function refreshApprovedReading(){
+        const date=String(dateField?.value||'');
+        scriptureField.readOnly=date.startsWith('2026-10-');
+        if(!scriptureField.readOnly)return;
+        try{
+          const response=await fetch('/api/public/scripture/common?date='+encodeURIComponent(date),{cache:'no-store'});
+          if(!response.ok)throw new Error('공통본문 원본 조회 실패');
+          const common=await response.json();
+          if(!common.found||common.status!=='approved'||!common.passage)throw new Error('이 날짜에 승인된 공통본문이 없습니다.');
+          scriptureField.value=common.passage;
+          $('formFlash').textContent='EKODI 공통본문 레지스트리: '+common.passage;
+        }catch(error){scriptureField.value='';$('formFlash').textContent=error.message;}
+      }
+      dateField?.addEventListener('change',refreshApprovedReading);
     const commandForm=$('churchAiCommand');
     if(commandForm&&f){
       commandForm.onsubmit=async event=>{
@@ -195,23 +212,7 @@ function pastorClient(POLICY){
         }catch(error){status.textContent='자동 준비 중단: '+error.message;state('검토 필요');}
       };
     }
-    if(f){
-      const dateField=f.elements.namedItem('service_date');
-      const scriptureField=f.elements.namedItem('scripture');
-      async function refreshApprovedReading(){
-        const date=String(dateField?.value||'');
-        scriptureField.readOnly=date.startsWith('2026-10-');
-        if(!scriptureField.readOnly)return;
-        try{
-          const response=await fetch('/api/public/scripture/common?date='+encodeURIComponent(date),{cache:'no-store'});
-          if(!response.ok)throw new Error('공통본문 원본 조회 실패');
-          const common=await response.json();
-          if(!common.found||common.status!=='approved'||!common.passage)throw new Error('이 날짜에 승인된 공통본문이 없습니다.');
-          scriptureField.value=common.passage;
-          $('formFlash').textContent='EKODI 공통본문 레지스트리: '+common.passage;
-        }catch(error){scriptureField.value='';$('formFlash').textContent=error.message;}
-      }
-      dateField?.addEventListener('change',refreshApprovedReading);
+
       $('mainPanel').querySelectorAll('[data-worship-edit]').forEach(button=>button.onclick=()=>{
         const item=services[Number(button.dataset.worshipEdit)];if(!item)return;
         for(const name of ['service_date','service_time','scripture','title','preacher','songs','prayer','notice']){
