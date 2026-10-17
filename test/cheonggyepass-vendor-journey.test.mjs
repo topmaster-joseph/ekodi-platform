@@ -7,7 +7,7 @@ import { registerHooks } from 'node:module';
 // Mock ONLY the external identity resolver in this isolated Node test process.
 // All intake routing, SQL persistence, validation, authorization gates, and ZIP
 // upload code below are the unmodified production module.
-const authFixture=String.raw\`
+const authFixture=String.raw`
 export async function resolveRegionalAccess(request, env, scope) {
   if (scope !== 'cheonggye-pass') throw new Error('Unexpected tenant scope');
   const token = String(request.headers.get('authorization') || '').replace(/^Bearer /i, '');
@@ -19,7 +19,7 @@ export async function resolveRegionalAccess(request, env, scope) {
   };
   return subjects[token] || {ok:false,status:401,code:'REGION_AUTH_REQUIRED'};
 }
-\`;
+`;
 registerHooks({
   resolve(specifier,context,nextResolve) {
     if (specifier === './regional-access-control.js' &&
