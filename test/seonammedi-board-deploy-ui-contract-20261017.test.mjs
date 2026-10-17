@@ -20,8 +20,8 @@ test('both domains render independent fresh composer without legacy UI and verif
   const html=await response.text();
   for(const id of ['freshSearch','freshWrite','freshForm','freshList','freshMessage'])assert.ok(html.includes('id="'+id+'"'),id);
   assert.match(html,/const t=await session\(\);if\(!t\)/);
-  assert.match(html,/saved\.published!==true/);
-  assert.match(html,/posts\.some\(p=>p\.id===Number\(saved\.id\)\)/);
+  assert.match(html,/waitUntilPublished\(saved\)/);
+  assert.match(html,/posts\.some\(p=>p\.id===savedId\)/);
   assert.match(html,/adminAllowed/);
   assert.doesNotMatch(html,/id="writeToggle"|id="searchToggle"|id="voiceSearch"/);
  }
