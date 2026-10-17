@@ -96,7 +96,7 @@ test('trusted owner issue comment and hourly recovery never bypass canonical pro
   assert.match(board,/environment: production/);
   assert.match(board,/Verify production board UI/);
   assert.match(board,/Verify production Google login-first API without credentials/);
-  assert.match(board,/Production queue-create-list-reply canary and cleanup/);
+  assert.match(board,/Verify clean citizen authenticated write and legacy retirement/);
   assert.doesNotMatch(source,/wrangler deploy|--force|skip.required/i);
   assert.doesNotMatch(workflow,/pull_request_target:/);
 });

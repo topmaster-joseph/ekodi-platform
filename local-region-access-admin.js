@@ -35,7 +35,7 @@ function clientMain(){
   }
   function renderUsers(users){
     const host=$('[data-region-access-list]');if(!host)return;host.replaceChildren();
-    const administrators=(users||[]).filter(user=>ADMIN_ROLES.has(user.role));
+    const administrators=(users||[]).filter(user=>ADMIN_ROLES.has(user.role)||['external_vendor','external_developer'].includes(user.role));
     if(!administrators.length){const p=document.createElement('p');p.textContent='등록된 관리자가 없습니다.';host.append(p);return}
     const table=document.createElement('table');table.innerHTML='<thead><tr><th>관리자</th><th>권한</th><th>상태</th><th>최근 로그인</th><th>권한 설정</th></tr></thead>';const body=document.createElement('tbody');
     for(const user of administrators){

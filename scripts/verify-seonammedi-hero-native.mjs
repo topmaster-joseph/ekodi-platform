@@ -130,7 +130,7 @@ try {
         const visual=await page.evaluate(()=>{
           const banner=document.querySelector('body > .seonam-visual-hero');
           const main=document.querySelector('main.seonam-visual-layout');
-          const menu=[...document.querySelectorAll('.seonam-visual-side-nav a[data-seonam-visual-key]')];
+          const menu=[...document.querySelectorAll('.site-header .ekodi-six-nav > a')];
           const left=document.querySelector('.seonam-visual-left');
           const center=document.querySelector('.seonam-visual-content');
           const right=document.querySelector('.seonam-visual-right');
@@ -149,8 +149,8 @@ try {
         });
         entry.visualShell=visual;
         must(visual.noSharedStockBanner,'unexpected_shared_stock_banner');
-        must(JSON.stringify(visual.sidebarMenu)===JSON.stringify(['공지','활동이력','관련소식','소통채널','시민의견','조직']),'visual_six_menu_mismatch');
-        must(visual.leftVisible&&visual.centerVisible&&visual.rightVisible,'visual_columns_missing');
+        must(JSON.stringify(visual.sidebarMenu)===JSON.stringify(['공지','활동이력','관련소식','소통채널','시민의견','조직']),'header_six_menu_mismatch');
+        must(!visual.leftVisible&&visual.centerVisible&&visual.rightVisible,'content_or_calendar_missing_or_duplicate_menu');
         must(visual.calendarWidget,'public_schedule_calendar_missing');
         must(profile.isMobile?visual.layoutDisplay==='flex':visual.layoutDisplay==='grid','responsive_layout_mismatch');
         must(visual.mobileWidth<=visual.clientWidth+1,'visual_shell_horizontal_overflow');

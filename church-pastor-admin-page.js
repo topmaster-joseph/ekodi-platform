@@ -105,6 +105,22 @@ function pastorClient(POLICY){
   function staffCards(){return [card('운영공간','에코디교회','church tenant'),card('내 권한',roleLabel[staff?.role]||staff?.role||'-','least privilege')];}
   async function overview(){state('확인 중');const [members,newcomers,care,services]=await Promise.all([count('church_members','church_slug=eq.ekodi-church&status=eq.active'),count('church_members','church_slug=eq.ekodi-church&status=eq.newcomer'),count('church_care_tasks','church_slug=eq.ekodi-church&status=in.(open,in_progress)'),rest('church_services','church_slug=eq.ekodi-church&select=id,service_date,title,scripture,sermon_title,status&order=service_date.asc&limit=5')]);$('summaryCards').innerHTML=[card('활동 교인',fmt(members),'실제 등록 기준'),card('새가족',fmt(newcomers),'후속 연결 확인'),card('돌봄 후속',fmt(care),'열린 과제'),card('예배 준비',fmt(services.length),'최근/예정 기록'),card('내 권한',roleLabel[staff.role]||staff.role,'교회 로컬 권한')].join('');$('mainPanel').innerHTML=`<h2>오늘의 교회</h2><div class="service-list"><div class="service-row"><div><strong>사람이 숫자보다 앞섭니다</strong><p>새가족·돌봄·예배 준비에서 다음 행동이 필요한 사람을 먼저 확인합니다.</p></div><div class="actions"><a href="${base}/people">새가족 보기</a><a href="${base}/care">돌봄 보기</a></div></div>${services.length?services.map(s=>`<div class="service-row"><div><strong>${esc(s.title||'예배')}</strong><p>${esc(s.service_date||'')} · ${esc(s.scripture||'본문 미정')} · ${esc(s.sermon_title||'설교제목 미정')}</p></div><span class="tag ${s.status==='ready'?'live':''}">${esc(s.status||'draft')}</span></div>`).join(''):'<p class="empty">등록된 예배 기록이 없습니다.</p>'}</div>`;state('운영');}
   async function people(){state('불러오는 중');const rows=await rest('church_members','church_slug=eq.ekodi-church&select=id,full_name,preferred_name,phone,email,status,household_name,joined_on&order=full_name.asc&limit=100');$('summaryCards').innerHTML=[...staffCards(),card('등록 교인',fmt(rows.length),'현재 목록'),card('수정',canWrite()?'가능':'조회만','역할 기반')].join('');const form=canWrite()?`<form id="peopleForm" class="trade-form"><div class="trade-grid"><label>이름<input name="full_name" required maxlength="80"></label><label>부르는 이름<input name="preferred_name" maxlength="80"></label><label>연락처<input name="phone" maxlength="40"></label><label>이메일<input name="email" type="email" maxlength="254"></label><label>가정/가구<input name="household_name" maxlength="120"></label><label>상태<select name="status"><option value="active">등록</option><option value="newcomer">새가족</option><option value="inactive">비활동</option></select></label></div><div class="actions"><button class="button primary" type="submit">교인 등록</button></div><p id="formFlash" class="trade-flash"></p></form>`:'';$('mainPanel').innerHTML=`<h2>교인 · 가정</h2>${rows.length?`<div class="table-wrap"><table><thead><tr><th>이름</th><th>가정</th><th>연락처</th><th>상태</th></tr></thead><tbody>${rows.map(r=>`<tr><td><strong>${esc(r.preferred_name||r.full_name)}</strong><br><small>${esc(r.full_name)}</small></td><td>${esc(r.household_name||'-')}</td><td>${esc(r.phone||r.email||'-')}</td><td><span class="tag ${r.status==='active'?'live':''}">${esc(r.status)}</span></td></tr>`).join('')}</tbody></table></div>`:'<p class="empty">등록된 교인이 없습니다.</p>'}${form}`;const f=$('peopleForm');if(f)f.onsubmit=async e=>{e.preventDefault();try{state('저장 중');const body=Object.fromEntries(new FormData(f));body.church_slug=CHURCH;await rest('church_members','',{method:'POST',body});await people();}catch(err){$('formFlash').textContent=`저장 실패: ${err.message}`;state('확인 필요');}};state('운영');}
+
+  // Deterministic, auditable first stage of the EKODI AI command flow.
+  // External model generation and YouTube scheduling must be confirmed by their own backend receipts.
+  function churchWorshipDateFromCommand(command){
+    const source=String(command||'').normalize('NFKC').trim();
+    if(source.length<8||source.length>1600||!/주일|예배/.test(source))throw new Error('주일모임 예배 명령을 입력해 주세요.');
+    const match=source.match(/(20\d{2})[-.년\/ ]+(\d{1,2})[-.월\/ ]+(\d{1,2})/)||source.match(/(\d{1,2})월\s*(\d{1,2})일/);
+    let date='';
+    if(match?.length===4){date=match[1]+'-'+String(match[2]).padStart(2,'0')+'-'+String(match[3]).padStart(2,'0');}
+    else if(match?.length===3){const year=kstDate().slice(0,4);date=year+'-'+String(match[1]).padStart(2,'0')+'-'+String(match[2]).padStart(2,'0');}
+    else throw new Error('예배 날짜를 입력해 주세요. 예: 2026년 10월 18일 주일모임 예배 및 유튜브 셋팅');
+    const check=new Date(date+'T00:00:00Z');
+    if(!Number.isFinite(check.getTime())||check.toISOString().slice(0,10)!==date||check.getUTCDay()!==0)throw new Error('주일(일요일) 날짜만 자동 준비할 수 있습니다.');
+    return {date,youtube:/유튜브|YouTube|youtube|방송/.test(source)};
+  }
+
   async function worship(){
     state('주일모임 확인 중');
     const source=SUPABASE_URL+'/rest/v1/church_worship_materials';
@@ -127,8 +143,16 @@ function pastorClient(POLICY){
         <label>공지<textarea name="notice" rows="3" maxlength="2000"></textarea></label>
       </div><div class="actions"><button type="submit" name="meeting_action" value="draft" class="button">초안 저장</button><button type="submit" name="meeting_action" value="publish" class="button primary">검증 후 공개</button></div><p id="formFlash" class="trade-flash" role="status"></p>
     </form>`:'';
+    const aiWorshipPanel=canWrite()?`<section class="service-row" style="display:block;padding:16px;border:1px solid #e3e5d9;background:#fbfbf5;border-radius:12px;margin:0 0 16px">
+      <h2 style="margin:0 0 8px">에코디AI · 주일모임 준비</h2>
+      <p class="empty">한 문장으로 예배 날짜를 인식하고 승인된 공통본문 및 기존 주보·PPT 자료를 불러옵니다. 자료와 유튜브 예약은 검증 결과를 나누어 표시하며 실제 송출을 임의로 시작하지 않습니다.</p>
+      <form id="churchAiCommand" class="trade-form"><label for="churchAiPrompt">예배 준비 명령</label><textarea id="churchAiPrompt" name="command" maxlength="1600" rows="2" style="display:block;width:100%;padding:12px;margin:8px 0" placeholder="2026년 10월 18일 주일모임 예배 및 유튜브 셋팅" required></textarea><div class="actions"><button type="submit" class="button primary">날짜 분석 · 초안 준비</button><a href="/ekodichurch/" class="button">교회 사용자 화면</a></div></form>
+      <div id="churchAiCommandStatus" role="status" aria-live="polite" class="trade-flash">주보·PPT·방송 자료를 실제로 조회한 뒤 준비 단계를 표시합니다.</div>
+      <div id="churchAiCommandLinks" class="actions"></div>
+    </section>`:'';
     $('mainPanel').innerHTML=`<div class="service-row"><div><strong>에코디교회 · 주일모임 전용 관리</strong><p>에코디선교회 토요모임은 별도 소속·관리권한으로 운영합니다. 공통본문 확정 전에는 초안으로 저장하세요.</p></div><a href="/ekodimission/admin/saturday">선교회 토요모임 →</a></div>
-      <div class="table-wrap"><table><thead><tr><th>일자</th><th>공통본문</th><th>말씀 제목</th><th>상태</th><th>관리</th></tr></thead><tbody>${services.map((item,index)=>`<tr><td>${esc(item.service_date)}</td><td>${esc(item.scripture||'원본 미확인')}</td><td>${esc(item.title||'제목 미정')}</td><td>${item.is_published?'게시':'초안'}</td><td>${canWrite()?`<button type="button" class="button" data-worship-edit="${index}">편집</button>`:''}</td></tr>`).join('')}</tbody></table></div>${form}`;
+      ${aiWorshipPanel}<div class="table-wrap"><table><thead><tr><th>일자</th><th>공통본문</th><th>말씀 제목</th><th>상태</th><th>관리</th></tr></thead><tbody>${services.map((item,index)=>`<tr><td>${esc(item.service_date)}</td><td>${esc(item.scripture||'원본 미확인')}</td><td>${esc(item.title||'제목 미정')}</td><td>${item.is_published?'게시':'초안'}</td><td>${canWrite()?`<button type="button" class="button" data-worship-edit="${index}">편집</button>`:''}</td></tr>`).join('')}</tbody></table></div>${form}`;
+
     const f=$('worshipForm');
     if(f){
       const dateField=f.elements.namedItem('service_date');
@@ -147,6 +171,50 @@ function pastorClient(POLICY){
         }catch(error){scriptureField.value='';$('formFlash').textContent=error.message;}
       }
       dateField?.addEventListener('change',refreshApprovedReading);
+    const commandForm=$('churchAiCommand');
+    if(commandForm&&f){
+      commandForm.onsubmit=async event=>{
+        event.preventDefault();
+        const status=$('churchAiCommandStatus'),links=$('churchAiCommandLinks');
+        links.replaceChildren();
+        try{
+          const request=churchWorshipDateFromCommand(String(new FormData(commandForm).get('command')||''));
+          const dateField=f.elements.namedItem('service_date');
+          dateField.value=request.date;
+          const previous=services.find(item=>item.service_date===request.date);
+          if(previous){
+            for(const name of ['service_time','title','preacher','songs','prayer','notice']){
+              const input=f.elements.namedItem(name);if(input)input.value=String(previous[name]||'');
+            }
+          }else{
+            f.elements.namedItem('service_time').value='11:00';
+            f.elements.namedItem('preacher').value='정찬균 목사';
+          }
+          status.textContent=request.date+' · 승인된 공통본문 확인 중';
+          await refreshApprovedReading();
+          if(!f.elements.namedItem('scripture').value)throw new Error('공통본문이 승인되지 않아 자동 준비를 중단했습니다.');
+          const path='/ekodichurch/worship/'+request.date+'/';
+          const response=await fetch(path+'materials.json',{cache:'no-store'});
+          let packet=null;
+          if(response.ok){const body=await response.json();if(body.date===request.date)packet=body;}
+          if(packet&&!previous){
+            f.elements.namedItem('title').value=packet.title||'';
+            f.elements.namedItem('preacher').value=packet.preacher||'정찬균 목사';
+            f.elements.namedItem('service_time').value=packet.time||'11:00';
+          }
+          const addLink=(label,href)=>{const link=document.createElement('a');link.className='button';link.href=href;link.target='_blank';link.rel='noopener noreferrer';link.textContent=label;links.append(link);};
+          if(packet){
+            addLink('주보 확인',path);
+            addLink('PPT 16:9',path+'?view=stage');
+            addLink('방송 진행자',path+'?view=operator');
+          }
+          if(request.youtube)addLink('교회 YouTube Studio','https://studio.youtube.com/');
+          status.textContent=request.date+' · '+(packet?'기존 주보·발표자료 연결 완료':'자료 파일 생성/배포 대기')+' · '+(request.youtube?'YouTube 예약·채널 연결 미확인':'YouTube 준비 명령 없음')+' · 공개 전 반드시 검토 후 저장하세요.';
+          f.scrollIntoView({behavior:'smooth',block:'nearest'});
+        }catch(error){status.textContent='자동 준비 중단: '+error.message;state('검토 필요');}
+      };
+    }
+
       $('mainPanel').querySelectorAll('[data-worship-edit]').forEach(button=>button.onclick=()=>{
         const item=services[Number(button.dataset.worshipEdit)];if(!item)return;
         for(const name of ['service_date','service_time','scripture','title','preacher','songs','prayer','notice']){
