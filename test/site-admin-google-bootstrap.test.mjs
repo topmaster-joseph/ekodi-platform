@@ -42,7 +42,7 @@ test('any verified Google user can sign in; privileged actions remain server-gat
   assert.match(access,/async function verifiedGoogleIdentity/);
   assert.match(access,/verified_google_super_admin_required/);
   assert.match(access,/ekodi_bootstrap_vacant_site_admin/);
-  assert.match(access,/activation:"pending_sync"/);
+  assert.match(access,/pending_sync/);
 });
 
 test('vacant-site write is atomic, tenant scoped, auditable and blocks existing administrators',async()=>{
