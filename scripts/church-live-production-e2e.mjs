@@ -31,15 +31,19 @@ async function publicLive(){
   return response.json();
 }
 
+function safeRealtimePath(url){
+  const pathname=new URL(url).pathname;
+  return pathname.replace(/(\/api\/realtime\/management-cameras\/)[^/]+/,'$1[redacted]');
+}
 function observePage(page,actor){
   page.on('pageerror',error=>report.pageErrors.push({actor,message:String(error?.message||error).slice(0,500)}));
   page.on('requestfailed',request=>{
     if(!request.url().startsWith(api))return;
-    report.requestFailures.push({actor,method:request.method(),path:new URL(request.url()).pathname,error:request.failure()?.errorText||'request_failed'});
+    report.requestFailures.push({actor,method:request.method(),path:safeRealtimePath(request.url()),error:request.failure()?.errorText||'request_failed'});
   });
   page.on('response',async response=>{
     if(!response.url().startsWith(api))return;
-    const entry={actor,method:response.request().method(),path:new URL(response.url()).pathname,status:response.status()};
+    const entry={actor,method:response.request().method(),path:safeRealtimePath(response.url()),status:response.status()};
     if(response.status()>=400){
       try{
         const data=await response.json();
@@ -143,12 +147,12 @@ try{
   observePage(cameraPage,'synthetic-mobile-camera');
   await cameraPage.goto(cameraUrl,{waitUntil:'domcontentloaded',timeout:30000});
   await cameraPage.locator('#managementCameraConnect').click();
-  await cameraPage.locator('#managementCameraDeviceStatus').getByText('승인 대기',{exact:false}).waitFor({timeout:18000});
+  await cameraPage.waitForFunction(()=>document.querySelector('#managementCameraDeviceStatus')?.textContent?.includes('승인 대기'),null,{timeout:18000});
   const beforeApproval=await call(`/rooms/${encodeURIComponent(roomId)}/management-cameras`);
   assert.equal(beforeApproval.pairs?.find(p=>p.id===cameraPairId)?.status,'pending');
   await host.locator('#managementCameraPairs button').filter({hasText:'연결 승인'}).first().waitFor({timeout:14000});
   await host.locator('#managementCameraPairs button').filter({hasText:'연결 승인'}).first().click();
-  await cameraPage.locator('#managementCameraDeviceStatus').getByText('연결됨',{exact:false}).waitFor({timeout:45000});
+  await cameraPage.waitForFunction(()=>document.querySelector('#managementCameraDeviceStatus')?.textContent?.includes('연결됨'),null,{timeout:45000});
   report.camera.hostApproved=true;
   report.camera.syntheticDevicePublished=true;
 
@@ -191,6 +195,7 @@ try{
   const afterViewerTrack=await viewer.locator('#viewerVideo').evaluate(v=>v.srcObject?.getVideoTracks?.()[0]?.id||'');
   assert.equal(afterViewerTrack,viewerVideoTrack,'viewer_track_replaced_on_resize');
   report.camera.viewerTrackMaintained=true;
+  assert.equal(report.pageErrors.length,0,'native_camera_browser_page_errors');
 
   await call(`/rooms/${encodeURIComponent(roomId)}/management-cameras/${encodeURIComponent(cameraPairId)}`,{
     method:'PATCH',body:JSON.stringify({status:'revoked'})
