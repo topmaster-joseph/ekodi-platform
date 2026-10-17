@@ -143,8 +143,6 @@ function pastorClient(POLICY){
         <label>공지<textarea name="notice" rows="3" maxlength="2000"></textarea></label>
       </div><div class="actions"><button type="submit" name="meeting_action" value="draft" class="button">초안 저장</button><button type="submit" name="meeting_action" value="publish" class="button primary">검증 후 공개</button></div><p id="formFlash" class="trade-flash" role="status"></p>
     </form>`:'';
-    $('mainPanel').innerHTML=`<div class="service-row"><div><strong>에코디교회 · 주일모임 전용 관리</strong><p>에코디선교회 토요모임은 별도 소속·관리권한으로 운영합니다. 공통본문 확정 전에는 초안으로 저장하세요.</p></div><a href="/ekodimission/admin/saturday">선교회 토요모임 →</a></div>
-      ${aiWorshipPanel}<div class="table-wrap"><table><thead><tr><th>일자</th><th>공통본문</th><th>말씀 제목</th><th>상태</th><th>관리</th></tr></thead><tbody>${services.map((item,index)=>`<tr><td>${esc(item.service_date)}</td><td>${esc(item.scripture||'원본 미확인')}</td><td>${esc(item.title||'제목 미정')}</td><td>${item.is_published?'게시':'초안'}</td><td>${canWrite()?`<button type="button" class="button" data-worship-edit="${index}">편집</button>`:''}</td></tr>`).join('')}</tbody></table></div>${form}`;
     const aiWorshipPanel=canWrite()?`<section class="service-row" style="display:block;padding:16px;border:1px solid #e3e5d9;background:#fbfbf5;border-radius:12px;margin:0 0 16px">
       <h2 style="margin:0 0 8px">에코디AI · 주일모임 준비</h2>
       <p class="empty">한 문장으로 예배 날짜를 인식하고 승인된 공통본문 및 기존 주보·PPT 자료를 불러옵니다. 자료와 유튜브 예약은 검증 결과를 나누어 표시하며 실제 송출을 임의로 시작하지 않습니다.</p>
@@ -152,6 +150,9 @@ function pastorClient(POLICY){
       <div id="churchAiCommandStatus" role="status" aria-live="polite" class="trade-flash">주보·PPT·방송 자료를 실제로 조회한 뒤 준비 단계를 표시합니다.</div>
       <div id="churchAiCommandLinks" class="actions"></div>
     </section>`:'';
+    $('mainPanel').innerHTML=`<div class="service-row"><div><strong>에코디교회 · 주일모임 전용 관리</strong><p>에코디선교회 토요모임은 별도 소속·관리권한으로 운영합니다. 공통본문 확정 전에는 초안으로 저장하세요.</p></div><a href="/ekodimission/admin/saturday">선교회 토요모임 →</a></div>
+      ${aiWorshipPanel}<div class="table-wrap"><table><thead><tr><th>일자</th><th>공통본문</th><th>말씀 제목</th><th>상태</th><th>관리</th></tr></thead><tbody>${services.map((item,index)=>`<tr><td>${esc(item.service_date)}</td><td>${esc(item.scripture||'원본 미확인')}</td><td>${esc(item.title||'제목 미정')}</td><td>${item.is_published?'게시':'초안'}</td><td>${canWrite()?`<button type="button" class="button" data-worship-edit="${index}">편집</button>`:''}</td></tr>`).join('')}</tbody></table></div>${form}`;
+
     const f=$('worshipForm');
     if(f){
       const dateField=f.elements.namedItem('service_date');
