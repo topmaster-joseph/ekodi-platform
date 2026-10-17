@@ -32,3 +32,22 @@ test('Church Pages production proof checks newly authorized inline asset on real
   assert.match(w,/grep -Fq 'scope=worship-access' \/tmp\/church-worship-admin\.js/);
   assert.match(w,/CHURCH_SOURCE_SHA/);
 });
+
+test('Church weekly date manifest and context editing are verified by guarded release',async()=>{
+  const w=await read('.github/workflows/deploy-ekodi-church-homepage.yml');
+  assert.match(w,/church-weekly-worship\\.js/);
+  assert.match(w,/church-weekly-worship\\.css/);
+  assert.match(w,/worship\\/weekly\\.json/);
+  assert.match(w,/2026-10-18\\/materials\\.json/);
+  assert.match(w,/data-church-weekly/);
+  assert.match(w,/weekly_manifest/);
+  assert.match(w,/weekly_service/);
+  assert.match(w,/jq -e '.schema==/);
+  assert.match(w,/CHURCH_SOURCE_SHA/);
+});
+test('Church pastor admin changes dispatch guarded Shared Site Core after official orchestration merge',async()=>{
+  const s=await read('scripts/converge-orchestrated-pr-merge.mjs');
+  assert.match(s,/file==='church-pastor-admin-page\\.js'/);
+  assert.match(s,/if\\(sharedSiteTouched\\)/);
+  assert.match(s,/actions\\/workflows\\/deploy-site-core\\.yml\\/dispatches/);
+});
