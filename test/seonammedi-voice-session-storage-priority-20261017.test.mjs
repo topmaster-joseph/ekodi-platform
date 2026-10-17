@@ -3,39 +3,41 @@ import assert from 'node:assert/strict';
 import {runInNewContext,Script} from 'node:vm';
 import board from '../services/independent-board/worker.js';
 
-async function scriptFor(url){
-  const response=await board.fetch(new Request(url),{});
-  assert.equal(response.status,200);
-  const html=await response.text();
-  const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
-  assert.equal(scripts.length,1);
-  assert.doesNotThrow(()=>new Script(scripts[0][1]));
-  return scripts[0][1];
-}
-const session=(access,expires,refresh='')=>JSON.stringify({access_token:access,expires_at:expires,refresh_token:refresh});
 const key='sb-renzehysxirjilvdxacv-auth-token';
-
-test('expired local session cannot mask valid sessionStorage Google token on either host',async()=>{
-  for(const url of ['https://seonammedi.kr/board/voices','https://ekodi.kr/seonammedi/board/voices']){
-    const script=await scriptFor(url);
-    const start=script.indexOf('function token(){'),end=script.indexOf('function mounted(url)',start);
-    assert.ok(start>=0&&end>start);
-    const evaluate=(localValue,sessionValue)=>runInNewContext(script.slice(start,end)+'token()',{
-      localStorage:{getItem:k=>k===key?localValue:null},
-      sessionStorage:{getItem:k=>k===key?sessionValue:null}
-    });
-    assert.equal(evaluate(session('expired-local',1),session('valid-session',4102444800)),'valid-session');
-    assert.equal(evaluate(session('older-local',2300000000),session('newer-session',4102444800)),'newer-session');
-    assert.equal(evaluate(session('newer-local',4102444800),session('older-session',2300000000)),'newer-local');
-    assert.equal(evaluate('invalid-json',session('valid',4102444800)),'valid');
-    assert.equal(evaluate(session('expired',1),session('also-expired',1)),'');
-  }
+const serialized=(access,expires,refresh='')=>JSON.stringify({access_token:access,expires_at:expires,refresh_token:refresh});
+async function scriptFor(url){
+ const response=await board.fetch(new Request(url),{});
+ assert.equal(response.status,200);
+ const html=await response.text();
+ const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+ assert.equal(scripts.length,1);
+ assert.doesNotThrow(()=>new Script(scripts[0][1]));
+ return scripts[0][1];
+}
+async function storedToken(script,local,session,fetcher=async()=>{throw Error('refresh-unavailable')}){
+ const first=script.indexOf('const storageList=()=>'),last=script.indexOf('async function request(',first);
+ assert.ok(first>=0&&last>first);
+ const code=script.slice(first,last);
+ return await runInNewContext('(async()=>{'+code+'return await accessToken()})()',{
+  localStorage:{getItem:k=>k===key?local:null,setItem(){}},
+  sessionStorage:{getItem:k=>k===key?session:null,setItem(){}},
+  fetch:fetcher,Date,JSON,Math
+ });
+}
+test('stale local token does not conceal a newer Google return in session storage',async()=>{
+ for(const url of ['https://seonammedi.kr/board/voices','https://ekodi.kr/seonammedi/board/voices']){
+  const script=await scriptFor(url);
+  assert.equal(await storedToken(script,serialized('expired',1),serialized('valid',4102444800)),'valid');
+  assert.equal(await storedToken(script,serialized('older',2300000000),serialized('newer',4102444800)),'newer');
+  assert.equal(await storedToken(script,'bad-json',serialized('valid',4102444800)),'valid');
+  assert.equal(await storedToken(script,serialized('expired',1),serialized('expired-too',1)),'');
+ }
 });
-test('when all stored access tokens expire, browser attempts refresh before new account selection',async()=>{
-  const script=await scriptFor('https://seonammedi.kr/board/voices');
-  assert.match(script,/if\(!current&&allowRefresh&&await refreshVoiceToken\(\)\)return verifyVoiceAccount\(false\)/);
-  assert.match(script,/if\(composeRequested&&!allowed\)/);
-  assert.match(script,/if\(!params\.has\("auth_attempt"\)\)\{voiceLogin\(\);return\}/);
-  assert.match(script,/\/board\/api\/auth\/session/);
-  assert.match(script,/data\.authenticated===true&&data\.provider==="google"/);
+test('expired refresh failure returns empty token without accepting unverified identity',async()=>{
+ const script=await scriptFor('https://seonammedi.kr/board/voices');
+ const token=await storedToken(script,serialized('expired',1,'expired-refresh'),null,async()=>{throw Error('network unavailable')});
+ assert.equal(token,'');
+ assert.match(script,/d\?\.authenticated===true&&d\?\.provider==='google'/);
+ assert.match(script,/if\(await session\(\)\)/);
+ assert.match(script,/beginLogin\(\)/);
 });
