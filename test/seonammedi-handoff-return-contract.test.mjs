@@ -66,9 +66,9 @@ test('browser voice login uses SeonamMedi service identity and preserves compose
   const response=await board.fetch(new Request('https://seonammedi.kr/board/voices'),{});
   const html=await response.text();
   assert.equal(response.status,200);
-  assert.match(html,/auth.searchParams.set\("site","seonammedi"\)/);
-  assert.doesNotMatch(html,/auth.searchParams.set\("site","portal"\)/);
-  assert.match(html,/auth.searchParams.set\("return_to",target.href\)/);
+  assert.match(html,/url\.searchParams\.set\('site','seonammedi'\)/);
+  assert.doesNotMatch(html,/url\.searchParams\.set\('site','portal'\)/);
+  assert.match(html,/url\.searchParams\.set\('return_to',dest.href\)/);
   assert.match(html,/dest\.searchParams\.set\('compose','1'\)/);
   assert.match(html,/if\(await session\(\)\)/);
 });
