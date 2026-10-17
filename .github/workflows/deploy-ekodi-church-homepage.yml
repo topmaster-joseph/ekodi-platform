@@ -68,15 +68,20 @@ jobs:
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
-          for file in index.html script.js live/index.html live/live.js live/host-intent.js live/live.css church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-header-tune.css church-online-status.js church-worship-admin.js church-live-entry.css giving.js church-footer.css community-visual.css church-life-hub.js church-life-hub.css church-life-hub-i18n.js my/index.html my/app.js my/styles.css my/giving/index.html my/giving/app.js my/giving/styles.css my/attendance/index.html my/attendance/app.js my/attendance/styles.css; do
+          for file in index.html script.js live/index.html live/live.js live/host-intent.js live/live.css church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-header-tune.css church-online-status.js church-worship-admin.js church-weekly-worship.js church-weekly-worship.css worship/weekly.json worship/2026-10-18/materials.json church-live-entry.css giving.js church-footer.css community-visual.css church-life-hub.js church-life-hub.css church-life-hub-i18n.js my/index.html my/app.js my/styles.css my/giving/index.html my/giving/app.js my/giving/styles.css my/attendance/index.html my/attendance/app.js my/attendance/styles.css; do
             test -s "church/$file"
           done
-          for file in script.js live/live.js live/host-intent.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-online-status.js church-worship-admin.js giving.js church-life-hub.js church-life-hub-i18n.js my/app.js my/giving/app.js my/attendance/app.js; do
+          for file in script.js live/live.js live/host-intent.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-online-status.js church-worship-admin.js church-weekly-worship.js giving.js church-life-hub.js church-life-hub-i18n.js my/app.js my/giving/app.js my/attendance/app.js; do
             node --check "church/$file"
           done
           grep -Fq 'data-ekodi-life-hub' church/index.html
           grep -Fq 'data-church-worship-admin' church/index.html
           grep -Fq 'scope=worship-access' church/church-worship-admin.js
+          grep -Fq 'data-church-weekly' church/index.html
+          grep -Fq 'church-weekly-worship.js' church/index.html
+          grep -Fq 'church-weekly-worship.css' church/index.html
+          grep -Fq 'scope=worship-access' church/church-weekly-worship.js
+          jq -e '.schema=="ekodi.church.worship.index.v1" and (.services|any(.date=="2026-10-18"))' church/worship/weekly.json >/dev/null
           test -s church/_headers
           grep -Eq 'connect-src[^;]*https://renzehysxirjilvdxacv\.supabase\.co;' church/_headers
           grep -Fq 'church-life-hub.js' church/index.html
@@ -195,14 +200,22 @@ jobs:
             life_css=$(curl -L -sS -o /tmp/life.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-life-hub.css?release=${release}" || true)
             online_status=$(curl -L -sS -o /tmp/church-online-status.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-online-status.js?release=${release}" || true)
             worship_admin=$(curl -L -sS -o /tmp/church-worship-admin.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-worship-admin.js?release=${release}" || true)
+            weekly_js=$(curl -L -sS -o /tmp/church-weekly-worship.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-weekly-worship.js?release=${release}" || true)
+            weekly_css=$(curl -L -sS -o /tmp/church-weekly-worship.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-weekly-worship.css?release=${release}" || true)
+            weekly_manifest=$(curl -L -sS -o /tmp/church-weekly.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/worship/weekly.json?release=${release}" || true)
+            weekly_service=$(curl -L -sS -o /tmp/church-20261018.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/worship/2026-10-18/?release=${release}" || true)
             live_css=$(curl -L -sS -o /tmp/church-live-entry.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-live-entry.css?release=${release}" || true)
             live_js=$(curl -L -sS -o /tmp/church-live.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/live/live.js?release=${release}" || true)
             live_intent=$(curl -L -sS -o /tmp/church-live-host-intent.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/live/host-intent.js?release=${release}" || true)
             marker=$(curl -L -sS -o /tmp/church-release.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-release.json?release=${release}" || true)
-            if [[ "$root" == 200 && "$member" == 200 && "$giving_member" == 200 && "$giving_member_js" == 200 && "$attendance_member" == 200 && "$attendance_member_js" == 200 && "$life" == 200 && "$life_i18n" == 200 && "$life_css" == 200 && "$online_status" == 200 && "$worship_admin" == 200 && "$live_css" == 200 && "$live_js" == 200 && "$live_intent" == 200 && "$marker" == 200 ]] \
+            if [[ "$root" == 200 && "$member" == 200 && "$giving_member" == 200 && "$giving_member_js" == 200 && "$attendance_member" == 200 && "$attendance_member_js" == 200 && "$life" == 200 && "$life_i18n" == 200 && "$life_css" == 200 && "$online_status" == 200 && "$worship_admin" == 200 && "$weekly_js" == 200 && "$weekly_css" == 200 && "$weekly_manifest" == 200 && "$weekly_service" == 200 && "$live_css" == 200 && "$live_js" == 200 && "$live_intent" == 200 && "$marker" == 200 ]] \
               && grep -Fq 'data-ekodi-life-hub' /tmp/church.html \
               && grep -Fq 'data-church-worship-admin' /tmp/church.html \
               && grep -Fq 'scope=worship-access' /tmp/church-worship-admin.js \
+              && grep -Fq 'data-church-weekly' /tmp/church.html \
+              && grep -Fq 'scope=worship-access' /tmp/church-weekly-worship.js \
+              && jq -e '.schema=="ekodi.church.worship.index.v1" and (.services|any(.date=="2026-10-18"))' /tmp/church-weekly.json >/dev/null \
+              && grep -Fq '2026년 10월 18일' /tmp/church-20261018.html \
               && grep -Eiq '^content-security-policy:.*connect-src[^;]*https://renzehysxirjilvdxacv\.supabase\.co' /tmp/church-csp-headers \
               && ! grep -Fq 'data-ekodi-operating-space-label' /tmp/church.html \
               && ! grep -Fq '운영공간' /tmp/church.html \
@@ -237,7 +250,7 @@ jobs:
               break
             fi
             if [[ "$attempt" == 18 ]]; then
-              echo "Production did not converge: root=$root member=$member giving_member=$giving_member giving_member_js=$giving_member_js attendance_member=$attendance_member attendance_member_js=$attendance_member_js life=$life life_i18n=$life_i18n life_css=$life_css online_status=$online_status live_css=$live_css live_js=$live_js live_intent=$live_intent marker=$marker"
+              echo "Production did not converge: root=$root member=$member giving_member=$giving_member giving_member_js=$giving_member_js attendance_member=$attendance_member attendance_member_js=$attendance_member_js life=$life life_i18n=$life_i18n life_css=$life_css online_status=$online_status weekly_js=$weekly_js weekly_css=$weekly_css weekly_manifest=$weekly_manifest weekly_service=$weekly_service live_css=$live_css live_js=$live_js live_intent=$live_intent marker=$marker"
               exit 1
             fi
             sleep 5
