@@ -213,13 +213,17 @@ async function review(request,env,access,id){
   // This endpoint does not offer a scan-attestation bypass or any deployment action.
   if(row.delivery==='zip'&&state==='approved_for_testing')
     return error('INTAKE_SCAN_ATTESTATION_REQUIRED','ZIP은 별도 악성코드·의존성 검증 이후 공식 오케스트레이터에서만 테스트 승인이 가능합니다.',409);
+  if(row.delivery==='zip'&&!row.artifact_sha256&&state!=='rejected')
+    return error('INTAKE_UPLOAD_REQUIRED','ZIP 파일을 격리 업로드한 후에 검토할 수 있습니다.',409);
   const now=new Date().toISOString();
-  await env.DB.batch([
+  const outcomes=await env.DB.batch([
     env.DB.prepare('UPDATE cheonggyepass_vendor_submissions SET status=?,reviewer_email=?,review_note=?,updated_at=? WHERE id=? AND status=?')
       .bind(state,access.email,note,now,id,row.status),
-    env.DB.prepare('INSERT INTO cheonggyepass_vendor_events (id,submission_id,actor_email,event_type,created_at) VALUES (?,?,?,?,?)')
-      .bind(crypto.randomUUID(),id,access.email,'review:'+state,now),
+    env.DB.prepare("INSERT INTO cheonggyepass_vendor_events (id,submission_id,actor_email,event_type,created_at) SELECT ?,id,?,'review:'||?,? FROM cheonggyepass_vendor_submissions WHERE id=? AND status=? AND reviewer_email=? AND updated_at=?")
+      .bind(crypto.randomUUID(),access.email,state,now,id,state,access.email,now),
   ]);
+  if(Number(outcomes?.[0]?.meta?.changes||0)!==1)
+    return error('INTAKE_REVIEW_CONFLICT','다른 관리자가 먼저 검토 상태를 변경했습니다.',409);
   return json({ok:true,id,status:state,activation:false});
 }
 export async function handleCheonggyePassVendorIntake(request,env){
