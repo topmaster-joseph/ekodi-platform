@@ -6,25 +6,25 @@ const control = readFileSync(new URL('../control.js', import.meta.url), 'utf8');
 const html = readFileSync(new URL('../control.html', import.meta.url), 'utf8');
 
 test('Control no longer inserts guaranteed auto-blocked Pulse jobs for general commands', () => {
-  assert.doesNotMatch(control, /api\\/control\\/ai\\/v8\\/pulse/);
-  assert.match(control, /actionType:'ui.change_request'/);
-  assert.match(control, /area:'bounded_admin_change'/);
-  assert.match(control, /preflightVerified:false/);
-  assert.match(control, /api\\/control\\/ai\\/actions/);
-  assert.match(control, /Promise\\.allSettled/);
+  assert.ok(!control.includes("api('/api/control/ai/v8/pulse'"));
+  assert.ok(control.includes("actionType:'ui.change_request'"));
+  assert.ok(control.includes("area:'bounded_admin_change'"));
+  assert.ok(control.includes("preflightVerified:false"));
+  assert.ok(control.includes("api('/api/control/ai/actions'"));
+  assert.ok(control.includes("Promise.allSettled"));
 });
 
 test('read-only health verification is not promoted to arbitrary execution authority', () => {
-  assert.match(control, /actionType:'service.health_check'/);
-  assert.match(control, /healthReceipt\\?\\.status==='verified'/);
-  assert.match(control, /명령 접수와 AI 답변은 코드 변경·배포 완료 증거가 아닙니다/);
-  assert.match(control, /auto_blocked:'자동 실행 차단'/);
-  assert.match(html, /작업 접수·사전점검/);
+  assert.ok(control.includes("actionType:'service.health_check'"));
+  assert.ok(control.includes("healthReceipt?.status==='verified'"));
+  assert.ok(control.includes('명령 접수와 AI 답변은 코드 변경·배포 완료 증거가 아닙니다'));
+  assert.ok(control.includes("auto_blocked:'자동 실행 차단'"));
+  assert.ok(html.includes('작업 접수·사전점검'));
 });
 
 test('EKODI Control checks real API and administrator authority before showing connection', () => {
-  assert.match(control, /api\\('\\/api\\/session'\\)/);
-  assert.match(control, /session\\?\\.authenticated!==true\\|\\|session\\.role!=='super_admin'/);
-  assert.match(control, /api\\('\\/api\\/control\\/ai\\/provider-status'\\)/);
-  assert.match(control, /EKODI API 연결됨 · 실행 검증 별도/);
+  assert.ok(control.includes("api('/api/session')"));
+  assert.ok(control.includes("session?.authenticated!==true||session.role!=='super_admin'"));
+  assert.ok(control.includes("api('/api/control/ai/provider-status')"));
+  assert.ok(control.includes('EKODI API 연결됨 · 실행 검증 별도'));
 });
