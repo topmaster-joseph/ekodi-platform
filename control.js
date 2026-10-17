@@ -70,7 +70,7 @@
     if($('#orchestratorRelease')?.checked){
       node.textContent='보호 배포 접수: 즉시 배포하지 않고 공식 오케스트레이터의 승인 절차로 보냅니다.';
     }else if($('#executeNow')?.checked){
-      node.textContent='일반 실행: EKODI 작업 접수와 응답을 요청합니다. AI 경로 점검은 미리보기만 합니다.';
+      node.textContent='작업 접수·사전점검: EKODI 접수와 상태 확인을 요청합니다. 접수·AI 응답은 실제 실행 또는 배포 완료의 증거가 아닙니다.';
     }else{
       node.textContent='응답만 요청: 새로운 실행 작업은 접수하지 않습니다. AI 경로 점검은 미리보기만 합니다.';
     }
