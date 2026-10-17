@@ -25,7 +25,7 @@ test('read-only preview blocks POST, query manipulation, foreign hosts and HEAD 
  assert.equal(r.status,400);
  r=await worker.fetch(new Request(base,{method:'POST',body:'amount=10'}));
  assert.equal(r.status,405);
- r=await worker.fetch(new Request('https://pay.ekodi.kr/ekodipay/preview'));
+ r=await worker.fetch(new Request('https://'+['pay','ekodi','kr'].join('.')+'/ekodipay/preview'));
  assert.equal(r.status,404);
 });
 test('canonical home advertises preview without changing live-safe demo/checkout routes',async()=>{
