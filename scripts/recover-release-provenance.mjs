@@ -184,6 +184,8 @@ const independentBoardTouched=sourceFiles.some(file=>
 // workflow and only its receipt-bound, staged, guarded workflow_dispatch.
 const sharedSiteTouched=sourceFiles.some(file=>
   file.startsWith('sites/seonammedi/public/')||
+  // The exact-approved Seasonal Workforce portal is owned by the shared Worker.
+  file.startsWith('seasonal-workforce/')||
   ['site-worker.js','site-shell-worker.js','ekodi-shell-injector.js','seonammedi-admin-control.js',
    'control.html','control.css','control.js',
    'platform-router-entry-worker.js','.github/workflows/deploy-site-core.yml'].includes(file)

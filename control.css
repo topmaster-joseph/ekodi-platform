@@ -383,10 +383,122 @@ html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .composer tex
   }
 }
 
-/* Native admin embed: retain Control's task-specific navigation next to the platform sidebar. */
-html[data-ekodi-control-embedded="admin"]{--rail:208px}
-html[data-ekodi-control-embedded="admin"] .topbar .ghost-link,
-html[data-ekodi-control-embedded="admin"] .control-rail .admin-link{display:none!important}
+/* Same-origin privileged embed: one outer administrator sidebar. The native
+ * Control navigation buttons are moved, never duplicated, into a work-tab row.
+ * Standalone /control keeps its original full rail unchanged. */
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-control-embedded="admin"]{
+  --rail:0px!important;
+  scrollbar-gutter:auto;
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-control-embedded="admin"] .control-rail,
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-control-embedded="admin"] .control-rail[hidden]{
+  display:none!important;
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-control-embedded="admin"] .control-main{
+  width:100%!important;
+  margin:0!important;
+  min-width:0!important;
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-control-embedded="admin"] .composer-wrap{
+  left:0!important;
+}
+html[data-ekodi-control-embedded="admin"] #railOpen,
+html[data-ekodi-control-embedded="admin"] .topbar .ghost-link{
+  display:none!important;
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-control-embedded="admin"] .control-embedded-toolbar{
+  height:52px;
+  min-height:52px;
+  width:100%;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:5px 20px;
+  border-bottom:1px solid #e3e8ed;
+  background:#fff;
+  position:relative;
+  z-index:37;
+}
+html[data-ekodi-control-embedded="admin"] .control-embedded-toolbar .new-task{
+  flex:0 0 auto;
+  width:auto!important;
+  min-height:34px!important;
+  margin:0!important;
+  padding:7px 12px!important;
+}
+html[data-ekodi-control-embedded="admin"] .control-embedded-toolbar .rail-nav{
+  display:flex!important;
+  flex:1 1 auto;
+  min-width:0;
+  align-items:center;
+  gap:3px;
+  overflow-x:auto;
+  scrollbar-width:thin;
+}
+html[data-ekodi-control-embedded="admin"] .control-embedded-toolbar .nav-item{
+  flex:0 0 auto;
+  min-height:34px!important;
+  padding:7px 11px!important;
+  border-radius:8px;
+  white-space:nowrap;
+}
+html[data-ekodi-control-embedded="admin"] .control-embedded-toolbar .nav-item.active{
+  box-shadow:inset 0 -3px 0 #283747!important;
+}
+html[data-ekodi-control-embedded="admin"] .control-embedded-history{
+  flex:0 0 auto;
+  position:relative;
+  font-size:12px;
+}
+html[data-ekodi-control-embedded="admin"] .control-embedded-history>summary{
+  cursor:pointer;
+  padding:8px 10px;
+  border:1px solid #dce2e9;
+  border-radius:8px;
+  white-space:nowrap;
+}
+html[data-ekodi-control-embedded="admin"] .control-embedded-history .recent{
+  position:absolute;
+  right:0;top:calc(100% + 5px);
+  width:min(320px,80vw);
+  max-height:50vh;
+  min-height:0;
+  overflow-y:auto;
+  padding:8px;
+  margin:0!important;
+  border:1px solid #dce2e9;
+  border-radius:10px;
+  box-shadow:0 10px 30px rgba(16,24,32,.10);
+  background:#fff;
+  z-index:45;
+  display:block!important;
+}
+html[data-ekodi-control-embedded="admin"] .control-embedded-history .recent-list{
+  max-height:42vh;
+}
+/* Closed details must never reveal the history flyout, even when the shared
+ * Control theme applies an !important display rule to .recent. */
+html[data-ekodi-control-embedded="admin"] .control-embedded-history:not([open]) .recent{
+  display:none!important;
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-control-embedded="admin"] .control-main .view.active[data-view-panel="chat"]{
+  height:calc(100svh - 120px)!important;
+}
 @media(max-width:760px){
-  html[data-ekodi-control-embedded="admin"]{--rail:86vw}
+  html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-control-embedded="admin"] .control-embedded-toolbar{
+    height:48px;min-height:48px;
+    padding:4px 8px;gap:5px;
+  }
+  html[data-ekodi-control-embedded="admin"] .control-embedded-toolbar .new-task{
+    padding:7px 8px!important;
+  }
+  html[data-ekodi-control-embedded="admin"] .control-embedded-toolbar .nav-item{
+    padding:7px 8px!important;font-size:12px!important;
+  }
+  html[data-ekodi-control-embedded="admin"] .control-embedded-history>summary{
+    padding:7px 6px;
+  }
+  html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-control-embedded="admin"] .control-main .view.active[data-view-panel="chat"]{
+    height:calc(100svh - 106px)!important;
+  }
 }
