@@ -35,6 +35,9 @@ function create(options={}){
   let principal=null;
   let permissions=Object.freeze({});
   let drawer=null;
+  let authorizationSequence=0;
+  const ownedControls=new Set();
+  const panelPermissions=new Map();
 
   function has(permission){
     const key=clean(permission);
@@ -67,7 +70,9 @@ function create(options={}){
 
   function open(panel,label,params={},presentation='drawer'){
     const panelId=clean(panel);
-    if(!panelId)return null;
+    if(!panelId||!principal||!Object.values(permissions).some(Boolean))return null;
+    const required=panelPermissions.get(panelId);
+    if(required&&!Array.from(required).some(has))return null;
     const url=sameOriginUrl(adminBase.href);
     url.searchParams.set('panel',panelId);
     for(const [key,value] of Object.entries(safeParams(typeof params==='function'?params():params)))url.searchParams.set(key,value);
@@ -95,6 +100,9 @@ function create(options={}){
     if(!permission||!panel||!has(permission))return null;
     const selector='[data-ekodi-public-admin-panel="'+CSS.escape(panel)+'"]';
     if(target.querySelector?.(selector))return target.querySelector(selector);
+    const required=panelPermissions.get(panel)||new Set();
+    required.add(permission);
+    panelPermissions.set(panel,required);
     const button=document.createElement('button');
     button.type='button';
     button.className='ekodi-public-admin-inline';
@@ -103,47 +111,70 @@ function create(options={}){
     button.textContent=clean(descriptor.label)||'관리';
     button.setAttribute('aria-label',clean(descriptor.ariaLabel)||button.textContent);
     button.dataset.ekodiPublicAdminPresentation=clean(descriptor.presentation)||'drawer';
-    button.addEventListener('click',()=>open(panel,descriptor.label,descriptor.params||{},descriptor.presentation||'drawer'));
+    button.addEventListener('click',()=>{
+      if(!has(permission)||!ownedControls.has(button))return;
+      open(panel,descriptor.label,descriptor.params||{},descriptor.presentation||'drawer');
+    });
     if(descriptor.prepend===true&&target.prepend)target.prepend(button);else target.append(button);
+    ownedControls.add(button);
     return button;
   }
 
-  async function authorize(config={}){
-    const endpoint=sameOriginUrl(config.endpoint||options.authEndpoint||'/api/admin/me','/api/admin/me');
-    const tokenProvider=config.tokenProvider||options.tokenProvider;
-    if(typeof tokenProvider!=='function')return null;
-    const bearer=clean(await tokenProvider());
-    if(!bearer)return null;
-    const headers=new Headers(config.headers||{});
-    headers.set('authorization','Bearer '+bearer);
-    const response=await fetch(endpoint.pathname+endpoint.search,{
-      method:'GET',
-      headers,
-      cache:'no-store',
-      credentials:'same-origin',
-    });
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok||data?.ok===false)return null;
-    const nextPermissions=capabilityMap(data,permissionSelector);
-    if(!Object.values(nextPermissions).some(Boolean))return null;
-    principal=data;
-    permissions=nextPermissions;
-    document.documentElement.setAttribute(ROOT_MARKER,'v'+VERSION);
-    document.documentElement.dataset.ekodiPublicAdminService=serviceId;
-    document.body?.classList.add(ACTIVE_CLASS);
-    emit('ekodi:public-admin-ready',{serviceId,permissions:{...permissions}});
-    return data;
-  }
-
-  function reset(){
+  function clearAuthorization(){
     principal=null;
     permissions=Object.freeze({});
     close();
+    for(const button of ownedControls)button.remove();
+    ownedControls.clear();
+    panelPermissions.clear();
     document.body?.classList.remove(ACTIVE_CLASS);
     if(document.documentElement.dataset.ekodiPublicAdminService===serviceId){
       document.documentElement.removeAttribute(ROOT_MARKER);
       delete document.documentElement.dataset.ekodiPublicAdminService;
     }
+  }
+
+  async function authorize(config={}){
+    // Clear all previously rendered privileged controls before revalidation.
+    // A later authorize() or reset() always invalidates older in-flight responses.
+    const requestId=++authorizationSequence;
+    clearAuthorization();
+    try{
+      const endpoint=sameOriginUrl(config.endpoint||options.authEndpoint||'/api/admin/me','/api/admin/me');
+      const tokenProvider=config.tokenProvider||options.tokenProvider;
+      if(typeof tokenProvider!=='function')return null;
+      const bearer=clean(await tokenProvider());
+      if(requestId!==authorizationSequence||!bearer)return null;
+      const headers=new Headers(config.headers||{});
+      headers.set('authorization','Bearer '+bearer);
+      const response=await fetch(endpoint.pathname+endpoint.search,{
+        method:'GET',
+        headers,
+        cache:'no-store',
+        credentials:'same-origin',
+      });
+      if(requestId!==authorizationSequence)return null;
+      const data=await response.json().catch(()=>({}));
+      if(requestId!==authorizationSequence||!response.ok||data?.ok===false)return null;
+      const nextPermissions=capabilityMap(data,permissionSelector);
+      if(!Object.values(nextPermissions).some(Boolean))return null;
+      principal=data;
+      permissions=nextPermissions;
+      document.documentElement.setAttribute(ROOT_MARKER,'v'+VERSION);
+      document.documentElement.dataset.ekodiPublicAdminService=serviceId;
+      document.body?.classList.add(ACTIVE_CLASS);
+      emit('ekodi:public-admin-ready',{serviceId,permissions:{...permissions}});
+      return data;
+    }catch{
+      // A rejected token provider, network error, invalid headers or fetch
+      // rejection must not restore a previously privileged user interface.
+      return null;
+    }
+  }
+
+  function reset(){
+    ++authorizationSequence;
+    clearAuthorization();
   }
 
   return Object.freeze({
