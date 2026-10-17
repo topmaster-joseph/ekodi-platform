@@ -40,6 +40,13 @@ test('all key subservice interactions verified without writes',()=>{
  assert.doesNotMatch(script,/request\.post\(|request\.patch\(|request\.delete\(|page\.request\.post\(/);
 });
 
+test('mobile scroll motion and calculator reset regression remain fixed',()=>{
+ const css=readFileSync(new URL('../seasonal-workforce/theme.css',import.meta.url),'utf8');
+ const js=readFileSync(new URL('../seasonal-workforce/public.js',import.meta.url),'utf8');
+ assert.ok(css.includes('@media(max-width:760px){html{scroll-behavior:auto}}'));
+ assert.ok(js.includes("result.style.display='';result.hidden=true;result.textContent=''"));
+});
+
 test('no real Google login or tenant mutation; API remains disabled',()=>{
  assert.match(script,/realGoogleAuthentication:false/);
  assert.match(script,/municipalDataMutation:false/);
