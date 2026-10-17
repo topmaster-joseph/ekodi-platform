@@ -2,6 +2,7 @@
 CREATE TABLE IF NOT EXISTS citizen_voices_fresh (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   google_subject TEXT NOT NULL,
+  submission_key TEXT NOT NULL UNIQUE,
   body TEXT NOT NULL CHECK(length(body) BETWEEN 1 AND 12000),
   status TEXT NOT NULL DEFAULT 'published' CHECK(status IN ('published','deleted')),
   created_at TEXT NOT NULL,
