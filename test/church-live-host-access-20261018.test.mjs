@@ -52,8 +52,8 @@ test('tenant roles do not leak across independent Church and business broadcasti
   assert.equal(authorizationRole(outsider,'ekodichurch',{}),'');
 });
 test('Church studio checks server role before starting and offers account chooser without login loops',async()=>{
-  const [page,script,styles]=await Promise.all([
-    file('tenant-live-page.js'),file('tenant-live.js'),file('tenant-live.css')
+  const [page,script,styles,auth]=await Promise.all([
+    file('tenant-live-page.js'),file('tenant-live.js'),file('tenant-live.css'),file('auth-site/client-auth.js')
   ]);
   assert.match(page,/id="hostAccessStatus"/);
   assert.match(page,/id="hostAccessLogin"/);
@@ -62,6 +62,10 @@ test('Church studio checks server role before starting and offers account choose
   assert.match(script,/if\(!await verifyHostAccess\(\)\)return/);
   assert.match(script,/방송 진행 권한이 없습니다/);
   assert.match(script,/Google 계정/);
+  assert.match(script,/select_account=1&return_to/);
+  assert.match(auth,/site==='seonammedi'\|\|site==='church'/);
+  assert.match(auth,/if\(CHOOSE_ACCOUNT\)\{await renderGoogle\(\);return\}/);
+  assert.match(auth,/!CHOOSE_ACCOUNT\)queueMicrotask/);
   assert.match(styles,/\.studio>\.stage\{position:sticky/);
   assert.match(styles,/max-width:900px/);
 });
