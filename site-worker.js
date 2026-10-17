@@ -662,6 +662,30 @@ export default {
     }
 
     if (host === PUBLIC_HOST) {
+      // Browser-only proposal drafts: no upload API, persistence, public indexing or external execution.
+      if (url.pathname === '/proposal' || url.pathname.startsWith('/proposal/')) {
+        if (!['GET','HEAD'].includes(request.method)) {
+          const denied=withHostSecurity(new Response(null,{status:405,headers:{allow:'GET, HEAD'}}),PUBLIC_CSP,'no-store','proposal-method-blocked');
+          denied.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
+          return denied;
+        }
+        if (url.pathname === '/proposal') {
+          const target=new URL(request.url);target.pathname='/proposal/';
+          const redirected=withHostSecurity(new Response(null,{status:308,headers:{location:target.toString()}}),PUBLIC_CSP,'no-store','proposal-canonical');
+          redirected.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
+          return redirected;
+        }
+        const allowed=new Set(['/proposal/','/proposal/index.html','/proposal/app.css','/proposal/client.js','/proposal/core.js','/proposal/analysis.js','/proposal/zip.js','/proposal/docx.js','/proposal/xlsx.js','/proposal/pptx.js']);
+        if (!allowed.has(url.pathname)) {
+          const absent=withHostSecurity(new Response('Not Found',{status:404}),PUBLIC_CSP,'no-store','proposal-not-found');
+          absent.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
+          return absent;
+        }
+        const asset=await env.ASSETS.fetch(request);
+        const secured=withHostSecurity(asset,PUBLIC_CSP,'private, no-store','proposal-browser-draft');
+        secured.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
+        return secured;
+      }
       if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
       if (url.pathname === '/oauth/consent' || url.pathname === '/cgma/oauth/consent') {
         const target = new URL('https://ekodi.kr/auth/oauth/consent');
