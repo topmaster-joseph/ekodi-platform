@@ -143,7 +143,7 @@
           goal:message,risk:'normal',
           target:{capability:'core.automation',service:'control',section:'command',surface:'control',providerHint:target},
           delegation:{allowed:true,reversible:true,audited:true,preflightVerified:false,verificationDefined:true},
-          context:{source:'control-surface',pathname:'/control',executionTarget:target,request:message},
+          context:{source:'control-surface',pathname:location.pathname,executionTarget:target,request:message},
           event:{kind:'control_command',source:'control-surface',summary:message,changeClass:'yellow',actionable:true,requiresHumanDecision:false},
           executeNow:true
         })});
@@ -151,13 +151,13 @@
       const taskId=queued?.task?.id||queued?.execution?.results?.[0]?.taskId||'';
       const taskStatus=queued?.task?.state||queued?.execution?.results?.[0]?.state||(executeNow?'queued':'assist_only');
       if(taskId){state.tasks.unshift({id:taskId,title:title(message),status:taskStatus,target,at:now()});state.tasks=state.tasks.slice(0,40);saveState()}
-      const result=await api('/api/control/ai/assist',{method:'POST',body:JSON.stringify({message,history:prior,context:{source:'control-surface',pathname:'/control',executionTarget:target,taskId}})});
+      const result=await api('/api/control/ai/assist',{method:'POST',body:JSON.stringify({message,history:prior,context:{source:'control-surface',pathname:location.pathname,executionTarget:target,taskId}})});
       const reply=String(result.reply||'응답을 받지 못했습니다.');
       pushMessage('assistant',reply,{provider:result.provider||'EKODI',target,status:taskStatus,taskId});
       state.results.unshift({title:title(message),summary:reply.slice(0,280),provider:result.provider||'EKODI',taskId,status:taskStatus,at:now()});state.results=state.results.slice(0,40);saveState();renderPanels();
     }catch(error){
       pushMessage('assistant',error.message,{status:'failed',target});
-      if(error.auth)toast('최고관리자 로그인 후 /control로 돌아오세요.');
+      if(error.auth)toast('최고관리자 로그인 후 /admin/control로 돌아오세요.');
     }finally{state.busy=false;$('#sendButton').disabled=false;$('#commandInput').focus({preventScroll:true})}
   }
   function card(titleText,status,description){return '<article class="card"><div class="card-head"><strong>'+esc(titleText)+'</strong><span class="badge">'+esc(status)+'</span></div><p>'+esc(description||'')+'</p></article>'}
@@ -236,10 +236,47 @@
     $$('[data-prompt]').forEach(b=>b.onclick=()=>{$('#commandInput').value=b.dataset.prompt;resizeInput();$('#commandInput').focus({preventScroll:true})});
     $$('[data-refresh]').forEach(b=>b.onclick=()=>{refreshOrchestratorTasks().catch(()=>toast('오케스트레이터 상태 갱신 실패'))});
   }
+  async function acceptVerifiedAdminControlHandoff(){
+    // Google Admin returns to the exact Control deep-link with an ephemeral
+    // hash token. Remove the token from the visible URL before any network I/O.
+    const hash=new URLSearchParams(location.hash.replace(/^#/,''));
+    const candidate=hash.get('ekodi_admin_token');
+    if(!candidate)return false;
+    try{history.replaceState(history.state,document.title,location.pathname+location.search)}catch{}
+    if(candidate.length>8192)return false;
+    try{
+      const response=await fetch(API+'/api/session',{
+        headers:{authorization:'Bearer '+candidate},
+        credentials:'same-origin',cache:'no-store'
+      });
+      if(!response.ok)return false;
+      const session=await response.json();
+      if(session?.authenticated!==true||session.role!=='super_admin')return false;
+      sessionStorage.setItem(TOKEN_KEY,candidate);
+      return token()===candidate;
+    }catch{return false;}
+  }
+  function renderAdminControlLogin(logged){
+    const status=$('#authState');
+    if(!status)return;
+    if(logged){status.textContent='최고관리자 세션';return;}
+    // Identity is established by the existing Google Admin center. Never skip
+    // its server-side allowlist or change the control API authorization.
+    const auth=new URL('/auth/',API);
+    auth.searchParams.set('site','admin');
+    auth.searchParams.set('direct','1');
+    auth.searchParams.set('return_to','https://ekodi.kr/admin/control');
+    const link=document.createElement('a');
+    link.href=auth.toString();
+    link.textContent='관리자 Google 로그인';
+    link.setAttribute('aria-label','최고관리자 Google 로그인 후 EKODI Control로 복귀');
+    status.replaceChildren(link);
+  }
   async function boot(){
+    await acceptVerifiedAdminControlHandoff();
     mountEmbeddedToolbar();
     bind();renderRecent();renderMessages();renderPanels();
-    const logged=Boolean(token());$('#authState').textContent=logged?'최고관리자 세션':'로그인 필요';$('#runtimeStatus').textContent=logged?'EKODI 연결 준비':'로그인 필요';$('#runtimeStatus').classList.toggle('ok',logged);
+    const logged=Boolean(token());renderAdminControlLogin(logged);$('#runtimeStatus').textContent=logged?'EKODI 연결 준비':'로그인 필요';$('#runtimeStatus').classList.toggle('ok',logged);
     if(!logged)toast('최고관리자 로그인 세션이 필요합니다.');
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
