@@ -121,7 +121,24 @@ try{
           return{label,samples};
         },{selectors,milliseconds,label});
       };
-      entry.idle=await run('idle',9000);
+      // A 30-second idle interval catches delayed extension, Shell and layout loops
+      // missed by a short screenshot-based smoke test.
+      entry.idle=await run('idle',30000);
+      entry.idleRuntime=await page.evaluate(()=>{
+        const stats=window.__ekodiControlLayoutProbe||{};
+        const scripts=[...document.scripts].map(s=>s.src||'[inline]');
+        return{
+          shellSurface:document.documentElement.getAttribute('data-ekodi-shell-surface'),
+          injectedSharedShell:scripts.some(src=>/\/shell\/shell\.js(?:[?#]|$)/.test(src)),
+          scriptSources:scripts.slice(0,24),
+          layoutShiftCount:stats.layoutShiftCount||0,
+          layoutShiftSum:stats.layoutShiftSum||0,
+          mutations:stats.mutations||0,
+          headerMutationCount:Object.entries(stats.mutationNodes||{})
+            .filter(([name])=>name==='header'||name.startsWith('header#'))
+            .reduce((sum,[,value])=>sum+value,0),
+        };
+      });
       await page.screenshot({path:path.join(output,profile.name+'-idle.png'),animations:'disabled'});
       // This only changes the local unsent text, never calls the Control submit endpoint.
       await page.locator('#commandInput').fill('EKODI 화면 안정성 테스트 '+('가나다라마바사 '.repeat(15)));
@@ -168,8 +185,23 @@ try{
       const idleScroll=entry.idleSummary.scrollY>1||entry.idleSummary.scrollX>1;
       const idleViewport=entry.idleSummary.innerHeight>1||entry.idleSummary.visualViewportHeight>1;
       const idleShifts=entry.diagnostics.layoutShiftSum;
-      entry.verdict={idleDrift,idleScroll,idleViewport,layoutShiftScore:compact(idleShifts)};
-      entry.ok=!idleDrift&&!idleScroll&&!idleViewport&&!entry.errors.length;
+      entry.verdict={
+        idleDrift,idleScroll,idleViewport,
+        // Capture only the strictly idle interval, not synthetic draft input.
+        idleLayoutShiftCount:entry.idleRuntime.layoutShiftCount,
+        idleLayoutShiftScore:compact(entry.idleRuntime.layoutShiftSum),
+        idleMutationCount:entry.idleRuntime.mutations,
+        idleHeaderMutations:entry.idleRuntime.headerMutationCount,
+        sharedShellInjected:entry.idleRuntime.injectedSharedShell,
+        shellSurface:entry.idleRuntime.shellSurface,
+        layoutShiftScoreAllPhases:compact(idleShifts)
+      };
+      entry.ok=!idleDrift&&!idleScroll&&!idleViewport
+        &&entry.idleRuntime.layoutShiftCount===0
+        &&entry.idleRuntime.headerMutationCount===0
+        &&entry.idleRuntime.mutations<=10
+        &&entry.idleRuntime.shellSurface==='admin'
+        &&!entry.idleRuntime.injectedSharedShell&&!entry.errors.length;
       if(!entry.ok)errors++;
       // Do not upload input contents, cookies, origin response text or storage.
       for(const phase of ['idle','input','afterClear'])delete entry[phase];
@@ -187,7 +219,7 @@ report.finishedAt=new Date().toISOString();
 await fs.writeFile(path.join(output,'report.json'),JSON.stringify(report,null,2));
 for(const p of report.profiles){
   process.stdout.write(JSON.stringify({profile:p.profile,http:p.http,ok:p.ok,
-    verdict:p.verdict,idleSummary:p.idleSummary,diagnostics:p.diagnostics,
+    verdict:p.verdict,idleSummary:p.idleSummary,idleRuntime:p.idleRuntime,diagnostics:p.diagnostics,
     errors:p.errors})+'\n');
 }
 if(!report.success)process.exitCode=1;
