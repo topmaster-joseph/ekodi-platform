@@ -1,5 +1,17 @@
 (() => {
   'use strict';
+  // Only apply the compact presentation when framed by the same-origin /admin page.
+  // Authorization is still enforced by the existing Control APIs.
+  if(window.parent!==window&&new URLSearchParams(location.search).get('embedded')==='admin'){
+    try{
+      const parentLocation=window.parent.location;
+      if(parentLocation.origin===location.origin&&/^\\/admin(?:\\/|$)/.test(parentLocation.pathname)){
+        document.documentElement.dataset.ekodiControlEmbedded='admin';
+        document.querySelectorAll('a[href="/admin/"]').forEach(link=>link.target='_top');
+      }
+    }catch{ /* Third-party framing is never a supported embedded presentation. */ }
+  }
+
   const API='https://ekodi.kr';
   const TOKEN_KEY='ekodi-auth-token';
   const HISTORY_KEY='ekodi-admin-command-history-v1';
