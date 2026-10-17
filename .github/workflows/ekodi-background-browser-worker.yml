@@ -251,7 +251,7 @@ jobs:
           # The standalone Admin Control must render its actual Control surface,
           # not fall through to /admin shell. Check both canonical and legacy paths.
           if jq -e '(.path == "/admin/control" or any(.actions[]?; .type == "goto" and .path == "/admin/control"))' artifacts/browser-task.json >/dev/null; then
-            jq -e '[.results[] | select(.type == "snapshot" and (.url // "" | test("^https://ekodi[.]kr/admin/control/?$"))) | select(((.bodyText // "") | contains("EKODI Control")) and ((.bodyText // "") | contains("보호된 배포 요청")) and ((.bodyText // "") | contains("관리자 Google 로그인")))] | length >= 1' "$result" >/dev/null
+            jq -e '[.results[] | select(.type == "snapshot" and ((.url // "") | test("^https://ekodi[.]kr/admin/control/?$"))) | select(((.bodyText // "") | contains("EKODI Control")) and ((.bodyText // "") | contains("보호된 배포 요청")) and ((.bodyText // "") | contains("관리자 Google 로그인")))] | length >= 1' "$result" >/dev/null
             echo '- Independent canonical /admin/control UI + Google Admin login entry verified' >> "$GITHUB_STEP_SUMMARY"
           fi
           echo '## EKODI Background Browser Worker' >> "$GITHUB_STEP_SUMMARY"
