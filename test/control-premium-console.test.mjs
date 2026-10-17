@@ -9,7 +9,7 @@ const js = read('control.js');
 
 test('premium Control is explicitly scoped to its own administrative workspace', () => {
   assert.match(html, /data-ekodi-control="v2" data-ekodi-control-design="premium"/);
-  assert.match(html, /\/control\.css\?v=20261017-premium-steady-v4/);
+  assert.match(html, /\/control\.css\?v=20261017-control-auth-v5/);
   assert.match(css, /html\[data-ekodi-control="v2"\]\[data-ekodi-control-design="premium"\]/);
   assert.match(css, /color-scheme:light!important/);
   assert.match(css, /\.control-main \.view\.active/);
