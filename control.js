@@ -36,7 +36,7 @@
   function saveState(){try{sessionStorage.setItem(CONTROL_STATE,JSON.stringify({tasks:state.tasks.slice(0,40),results:state.results.slice(0,40)}))}catch{}}
   function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
   function title(text){const v=String(text||'').replace(/\s+/g,' ').trim();return v.length>46?v.slice(0,46)+'…':v||'새 작업'}
-  function statusLabel(v){return ({queued:'대기',running:'실행 중',verified:'완료',resolved:'완료',failed:'실패',blocked:'차단',core_only:'Core 처리',auto_blocked:'자동 실행 차단',executor_ready:'실행기 인계',degraded:'검증 필요',awaiting_human:'관리자 승인 대기',ready_for_executor:'실행기 대기',rejected:'승인 거절',receipt_unknown:'접수 확인 필요',human_gate:'확인 필요',assigned:'배정됨',executing:'실행 중',production_verifying:'운영 검증 중',assist_only:'검토',ready_for_executor:'실행 대기',approved_pending_executor:'승인됨'})[v]||v||'진행'}
+  function statusLabel(v){return ({queued:'대기',running:'실행 중',verified:'완료',resolved:'완료',failed:'실패',blocked:'차단',core_only:'Core 처리',auto_blocked:'자동 실행 차단',executor_ready:'실행기 인계',degraded:'검증 필요',awaiting_human:'관리자 승인 대기',rejected:'승인 거절',receipt_unknown:'접수 확인 필요',human_gate:'확인 필요',assigned:'배정됨',executing:'실행 중',production_verifying:'운영 검증 중',assist_only:'검토',ready_for_executor:'실행 대기',approved_pending_executor:'승인됨'})[v]||v||'진행'}
   function headers(json=false){const h={accept:'application/json'};if(token())h.authorization='Bearer '+token();if(json)h['content-type']='application/json';return h}
   async function api(path,options={}){
     const response=await fetch(API+path,{cache:'no-store',...options,headers:{...headers(Boolean(options.body)),...(options.headers||{})}});
@@ -174,16 +174,23 @@
       })});
       const advice=String(result.reply||'AI 응답을 받지 못했습니다.');
       const receipt=executeNow
-        ?'\\n\\nEKODI Action #'+(actionId||'미확인')+' · '+statusLabel(actionStatus)+
-          '\\n시스템 건강점검: '+(healthReceipt?.status==='verified'?'검증됨':'미확인 또는 실패')+
-          '\\n명령 접수와 AI 답변은 코드 변경·배포 완료 증거가 아닙니다. 실제 실행에는 별도 실행기 검증과 필요한 승인이 적용됩니다.'
+        ?'\n\nEKODI Action #'+(actionId||'미확인')+' · '+statusLabel(actionStatus)+
+          '\n시스템 건강점검: '+(healthReceipt?.status==='verified'?'검증됨':'미확인 또는 실패')+
+          '\n명령 접수와 AI 답변은 코드 변경·배포 완료 증거가 아닙니다. 실제 실행에는 별도 실행기 검증과 필요한 승인이 적용됩니다.'
         :'';
       const reply=advice+receipt;
       pushMessage('assistant',reply,{provider:result.provider||'EKODI',target,status:actionStatus,actionId});
       state.results.unshift({title:title(message),summary:reply.slice(0,400),provider:result.provider||'EKODI',actionId,status:actionStatus,at:now()});
       state.results=state.results.slice(0,40);saveState();renderPanels();
     }catch(error){
-      pushMessage('assistant',error.message,{status:'failed',target});
+      const actionId=queued?.id||'';
+      const recorded=Boolean(actionId);
+      const outcome=recorded
+        ?'EKODI Action #'+actionId+' 접수는 보존됐지만 AI 응답 확인에 실패했습니다. 중복 실행하지 말고 작업 상태를 확인하세요. '
+        :'';
+      pushMessage('assistant',outcome+String(error.message||'요청 실패'),{
+        status:recorded?(queued.status||'receipt_unknown'):'failed',target,actionId
+      });
       if(error.auth)toast('최고관리자 로그인 후 /admin/control로 돌아오세요.');
     }finally{state.busy=false;$('#sendButton').disabled=false;$('#commandInput').focus({preventScroll:true})}
   }
@@ -310,7 +317,10 @@
     if(logged){
       try{
         const session=await api('/api/session');
-        if(session?.authenticated!==true||session.role!=='super_admin')throw new Error('session_not_verified');
+        if(session?.authenticated!==true||session.role!=='super_admin'){
+          renderAdminControlLogin(false);
+          throw new Error('session_not_verified');
+        }
         const live=await api('/api/control/ai/provider-status');
         if(live?.ok!==true)throw new Error('provider_status_unavailable');
         runtime.textContent='EKODI API 연결됨 · 실행 검증 별도';
