@@ -96,7 +96,7 @@ test('shared interactive desktop is never treated as an isolated desktop', () =>
     focusIsolated:true, sharedInteractiveDesktop:true,
   });
   assert.equal(check.ok, false);
-  assert.ok(check.errors.includes('shared_interactive_desktop_forbidden'));
+  assert.ok(check.errors.includes('shared_interactive_desktop_must_be_disabled'));
 });
 
 test('foreground takeover cannot become an automatic fallback', () => {
