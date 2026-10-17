@@ -86,8 +86,8 @@ test('Cheonggye public experience is local-first, readable, communicative and pe
   assert.equal(response.headers.get('x-ekodi-user-chrome'),'v1');
   assert.equal(response.headers.get('x-ekodi-site-experience'),'local-conversational-adaptive-v1');
   assert.match(html,/class="site-header"/);
-  assert.match(html,/청계 지역 공통 플랫폼/);
-  assert.match(html,/오늘, 청계에서 무엇을 하시나요\?/);
+  assert.match(html,/청계 지역 통합 공유 허브/);
+  assert.match(html,/data-local-region-discovery-root/);
   assert.match(html,/청계에 말하기/);
   assert.match(html,/필요한 정보부터 간단하게/);
   assert.match(html,/로그인하지 않아도 기본 지역정보를 사용할 수 있습니다/);
