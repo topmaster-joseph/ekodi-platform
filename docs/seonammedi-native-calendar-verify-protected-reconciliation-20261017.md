@@ -12,3 +12,11 @@
 - Earlier live verifier reported `live_schedule_calendar_missing` because it read DOM before the asynchronous calendar mount. The approved functional change waits up to 15 seconds for the **real** calendar; an absent calendar must still fail.
 - Preserve every existing notice, activity, schedule, citizen content, OAuth behavior and administrator permission.
 - This note is not an authorization to deploy or merge directly; completion requires authentic protected CI and production evidence.
+
+## Official protected latest-main synchronization
+
+- EKODI's real convergent merge synchronized protected main into recovery #5166 as `f06d5b228e38cff588f6a087b8a4b77ca0f7646e`.
+- Original approved source `95c01f20958afebed5f1d8dbdda95cae82d18eeb` remains in this branch's ancestry.
+- The branch is now ahead of protected main with no behind commits; independent safety and service code remained identical to approved functional source.
+- The synchronized commit was GitHub-bot authored and GitHub classified automatically created PR checks as `action_required`; the CI is not counted as passing.
+- This owner-authored documentation-only checkpoint requests authentic tests on the newly synchronized head. Keep EKODI's protected convergence and release guards, without any fake status reports or bypasses.
