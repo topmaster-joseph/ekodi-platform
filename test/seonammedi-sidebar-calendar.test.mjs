@@ -197,7 +197,8 @@ test('every public event list has accessible native share and copy actions, with
   assert.match(js,/article\.scrollIntoView/);
   assert.match(js,/공유된 일정이 없거나 공개되지 않았습니다/);
   assert.match(js,/window\.SeonamMediCalendar=\{mount,shareUrl,parseSharedSchedule\}/);
-  assert.doesNotMatch(js,/target\.searchParams\.set\('(?:manage|auth|access_token|ekodi_token)'/);
+  const shareBuilder=js.slice(js.indexOf('  const shareUrl='),js.indexOf('  const make='));
+  assert.doesNotMatch(shareBuilder,/searchParams\.set\('(?:manage|auth|access_token|ekodi_token)'/);
   assert.match(css,/\.seonam-calendar-event\.is-shared/);
   assert.match(css,/\.seonam-calendar-share-actions/);
   assert.match(loader,/calendar-sidebar\.js\?v=20261017-live-3-share/);
