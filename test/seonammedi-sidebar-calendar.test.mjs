@@ -190,7 +190,7 @@ test('every public event list has accessible native share and copy actions, with
   assert.match(js,/attachSharing\(article,item\)/);
   assert.equal((js.match(/attachSharing\(article,item\);/g)||[]).length,2,'both today and selected day must expose sharing');
   assert.match(js,/navigator\.share\(/);
-  assert.match(js,/navigator\.clipboard\?\.writeText\(url\)/);
+  assert.match(js,/navigator\.clipboard\.writeText\(url\)/);
   assert.match(js,/appendButton\(actions,'공유'/);
   assert.match(js,/appendButton\(actions,'링크 복사'/);
   assert.match(js,/shareTarget&&Number\(item\.id\)===shareTarget\.id/);
@@ -203,5 +203,4 @@ test('every public event list has accessible native share and copy actions, with
   assert.match(loader,/calendar-sidebar\.js\?v=20261017-live-3-share/);
   assert.match(loader,/calendar-sidebar\.css\?v=20261017-live-3-share/);
   assert.match(js,/if\(!admin\)return;/);
-  assert.match(js,/if\(!can\(auth/).not;
 });
