@@ -387,6 +387,45 @@ jobs:
           fi
           echo "Verified October 18 worship on real production: $release"
 
+      - name: Verify director QR cameras and resizable live program on real Church Pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s church/live/management-camera-qr.js
+          node --check church/live/live.js
+          node --check church/live/management-camera-qr.js
+          grep -Fq 'id="openManagementCameraButton"' church/live/index.html
+          grep -Fq 'id="managementCameraDialog"' church/live/index.html
+          grep -Fq 'id="presenterResizeGrip"' church/live/index.html
+          grep -Fq "source.sourceRole==='management_camera'" church/live/live.js
+          grep -Fq 'function beginOverlayResize(' church/live/live.js
+          grep -Fq 'function beginPresenterResize(' church/live/live.js
+          grep -Fq 'function drawManagementCamera' church/live/management-camera-qr.js || grep -Fq 'qrMatrixV5' church/live/management-camera-qr.js
+          release="$CHURCH_SOURCE_SHA"
+          verified=false
+          for attempt in $(seq 1 12); do
+            page=$(curl -L -sS --connect-timeout 5 --max-time 20 -o /tmp/church-qr-studio.html -w '%{http_code}' "https://ekodi.kr/ekodichurch/live/?mode=studio&release=$release" || true)
+            js=$(curl -L -sS --connect-timeout 5 --max-time 20 -o /tmp/church-qr-live.js -w '%{http_code}' "https://ekodi.kr/ekodichurch/live/live.js?release=$release" || true)
+            qr=$(curl -L -sS --connect-timeout 5 --max-time 20 -o /tmp/church-qr.js -w '%{http_code}' "https://ekodi.kr/ekodichurch/live/management-camera-qr.js?release=$release" || true)
+            if [[ "$page" == 200 && "$js" == 200 && "$qr" == 200 ]] &&
+              grep -Fq 'id="managementCameraDialog"' /tmp/church-qr-studio.html &&
+              grep -Fq 'id="openManagementCameraButton"' /tmp/church-qr-studio.html &&
+              grep -Fq 'id="presenterResizeGrip"' /tmp/church-qr-studio.html &&
+              grep -Fq 'function createManagementCameraPair(' /tmp/church-qr-live.js &&
+              grep -Fq 'function beginOverlayResize(' /tmp/church-qr-live.js &&
+              grep -Fq 'function beginPresenterResize(' /tmp/church-qr-live.js &&
+              grep -Fq 'function qrMatrixV5(' /tmp/church-qr.js; then
+              verified=true
+              break
+            fi
+            sleep 5
+          done
+          if [[ "$verified" != true ]]; then
+            echo "::error::Director-only QR camera and on-program sizing not verified in Church Pages production."
+            exit 1
+          fi
+          echo "Verified director QR camera and overlay sizing assets in production: $release"
+
       - name: Verify linked EKODI services
         shell: bash
         run: |
