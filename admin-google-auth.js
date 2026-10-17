@@ -181,9 +181,12 @@ async function ensureSchema(db, env) {
       (email, required_hd, role, status, created_at, updated_at)
       VALUES (?, ?, 'super_admin', 'active', ?, ?)
       ON CONFLICT(email) DO UPDATE SET role='super_admin', status='active',
-        required_hd=excluded.required_hd, updated_at=excluded.updated_at`)
+        required_hd=excluded.required_hd, updated_at=excluded.updated_at
+      WHERE admin_google_accounts.role <> 'super_admin'
+         OR admin_google_accounts.status <> 'active'
+         OR admin_google_accounts.required_hd IS NOT excluded.required_hd`)
       .bind(email, requiredHd, now, now).run();
-    await db.prepare("UPDATE admins SET role='super_admin' WHERE lower(email)=?")
+    await db.prepare("UPDATE admins SET role='super_admin' WHERE lower(email)=? AND role <> 'super_admin'")
       .bind(email).run();
   }
 }
