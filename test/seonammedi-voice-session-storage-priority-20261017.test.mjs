@@ -21,7 +21,7 @@ async function storedToken(script,local,session,fetcher=async()=>{throw Error('r
  return await runInNewContext('(async()=>{'+code+'return await accessToken()})()',{
   localStorage:{getItem:k=>k===key?local:null,setItem(){}},
   sessionStorage:{getItem:k=>k===key?session:null,setItem(){}},
-  fetch:fetcher,Date,JSON,Math
+  fetch:fetcher,Date,JSON,Math,KEY:key
  });
 }
 test('stale local token does not conceal a newer Google return in session storage',async()=>{
