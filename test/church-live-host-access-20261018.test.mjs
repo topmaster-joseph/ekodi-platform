@@ -63,7 +63,8 @@ test('Church studio checks server role before starting and offers account choose
   assert.match(script,/방송 진행 권한이 없습니다/);
   assert.match(script,/Google 계정/);
   assert.match(script,/select_account=1&return_to/);
-  assert.match(auth,/site==='seonammedi'\|\|site==='church'/);
+  assert.match(auth,/const CHURCH_CHOOSE_ACCOUNT=site==='church'&&params\.get\('select_account'\)==='1'/);
+  assert.match(auth,/if\(CHURCH_CHOOSE_ACCOUNT\)\{await renderGoogle\(\);return\}/);
   assert.match(auth,/if\(CHOOSE_ACCOUNT\)\{await renderGoogle\(\);return\}/);
   assert.match(auth,/!CHOOSE_ACCOUNT\)queueMicrotask/);
   assert.match(styles,/\.studio>\.stage\{position:sticky/);
