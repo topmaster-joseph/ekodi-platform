@@ -99,12 +99,12 @@ test('admin root is a command-only workspace while Campus remains a child route'
 
   assert.match(e2eWorker,/menuId === 'command-home'/);
   assert.match(e2eWorker,/stage\('command-workbench'\)/);
-  assert.match(e2eWorker,/#ekodiAssistDock/);
-  assert.match(e2eWorker,/#ekodiAssistPanel/);
+  assert.match(e2eWorker,/#ekodiControlHomeFrame/);
+  assert.match(e2eWorker,/#commandInput/);
   assert.match(e2eWorker,/admin-command-home/);
   assert.match(e2eWorker,/pathname !== '\/admin\/'/);
   assert.match(e2eWorker,/function verifyCommandWorkbench\(started\)/);
-  assert.match(e2eWorker,/data-ekodi-main-conversation="true"/);
+  assert.match(e2eWorker,/frameRightOfSidebar/);
   assert.match(e2eWorker,/currentSection !== 'command-home'/);
   assert.match(e2eWorker,/EKODIAdminPanels\?\.current\?\.\(\) === 'command-home'/);
   assert.doesNotMatch(e2eWorker,/admin-context-tab/);
@@ -113,8 +113,8 @@ test('admin root is a command-only workspace while Campus remains a child route'
   assert.ok(commandBranch>=0&&sidebarBranch>commandBranch,'command-home must bypass visible-sidebar clicking and verify the full-screen command workbench directly');
 
   assert.match(productionE2e,/id === 'command-home'/);
-  assert.match(productionE2e,/#ekodiAssistDock/);
-  assert.match(productionE2e,/#ekodiAssistPanel/);
+  assert.match(productionE2e,/#ekodiControlHomeFrame/);
+  assert.match(productionE2e,/#commandInput/);
   assert.match(productionE2e,/kind:'command-workbench'/);
   assert.match(productionE2e,/command\.pathname !== '\/admin\/'/);
 });
@@ -130,7 +130,7 @@ test('highest-level admin embeds the native Control workspace with same-origin-o
   assert.match(admin,/id='ekodiControlHome'/);
   assert.match(admin,/frame\.src='\/control\?embedded=admin'/);
   assert.match(admin,/ekodi-admin-section-changed/);
-  assert.match(admin,/authenticated\(\).*command-home/);
+  assert.match(admin,/isAuthenticated\(\).*command-home/);
   assert.match(adminCss,/body\.admin-control-home #ekodiControlHome/);
   assert.match(adminCss,/\.ekodi-assist-bootstrap/);
   assert.match(control,/parentLocation\.origin===location\.origin/);
