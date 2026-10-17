@@ -399,3 +399,26 @@ html[data-ekodi-control-embedded="admin"] #railOpen{display:none!important}
 html[data-ekodi-control-embedded="admin"] .embedded-control-nav{display:flex!important;align-items:center;gap:4px;position:sticky;top:60px;z-index:12;width:100%;padding:5px 12px;overflow-x:auto;background:#fff;border-bottom:1px solid var(--line)}
 html[data-ekodi-control-embedded="admin"] .embedded-control-nav :is(.nav-item,.new-task){display:block;flex:0 0 auto;width:auto!important;margin:0!important;padding:7px 11px!important;white-space:nowrap;font-size:12px}
 @media(max-width:760px){html[data-ekodi-control-embedded="admin"] .embedded-control-nav{top:56px;padding:5px 8px}}
+
+/* Native Admin home uses the outer sidebar; Control's own navigation becomes one compact toolbar. */
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-control-embedded="admin"]{--rail:0px!important}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-control-embedded="admin"] .control-rail{
+  display:flex!important;position:sticky!important;inset:auto!important;top:0!important;
+  transform:none!important;width:100%!important;height:auto!important;min-height:0!important;
+  flex-direction:row!important;align-items:center!important;padding:6px 12px!important;
+  border-right:0!important;border-bottom:1px solid var(--line)!important;
+  background:#fff!important;z-index:25!important;
+}
+html[data-ekodi-control-embedded="admin"] .control-rail :is(.brand,.recent,.rail-foot){display:none!important}
+html[data-ekodi-control-embedded="admin"] .control-rail .rail-nav{
+  display:flex!important;flex-direction:row!important;align-items:center!important;
+  flex:1!important;gap:4px!important;overflow-x:auto!important;min-width:0!important;
+}
+html[data-ekodi-control-embedded="admin"] .control-rail :is(.nav-item,.new-task){
+  flex:0 0 auto!important;display:block!important;width:auto!important;
+  margin:0!important;padding:8px 11px!important;white-space:nowrap!important;font-size:12px!important;
+}
+html[data-ekodi-control-embedded="admin"] .control-rail .new-task{margin-right:8px!important}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-control-embedded="admin"] .control-main{margin-left:0!important;width:100%!important}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-control-embedded="admin"] .composer-wrap{left:0!important}
+html[data-ekodi-control-embedded="admin"] #railOpen{display:none!important}
