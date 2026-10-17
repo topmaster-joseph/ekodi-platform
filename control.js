@@ -3,6 +3,7 @@
   const API='https://ekodi.kr';
   const TOKEN_KEY='ekodi-auth-token';
   const HISTORY_KEY='ekodi-admin-command-history-v1';
+  const DRAFT_KEY='ekodi-control-command-draft-v1';
   const CONTROL_STATE='ekodi-control-state-v1';
   const AGENTS=[
     ['ekodi','EKODI Core','orchestrator'],
@@ -47,6 +48,16 @@
     }catch(error){
       renderAuth(false,error.auth?'로그인 필요':'세션 확인 실패');return false;
     }
+  }
+  // A same-tab command draft survives the central Google account picker and return.
+  function saveDraft(){try{sessionStorage.setItem(DRAFT_KEY,$('#commandInput')?.value||'')}catch{}}
+  function restoreDraft(){
+    try{const draft=sessionStorage.getItem(DRAFT_KEY)||'';if(draft&&!$('#commandInput').value)$('#commandInput').value=draft}catch{}
+    resizeInput();
+  }
+  function clearSubmittedDraft(){
+    if($('#commandInput').value.trim()){saveDraft();return}
+    try{sessionStorage.removeItem(DRAFT_KEY)}catch{}
   }
   function loadHistory(){try{const v=JSON.parse(sessionStorage.getItem(HISTORY_KEY)||'[]');return Array.isArray(v)?v.slice(0,24):[]}catch{return[]}}
   function saveHistory(){try{sessionStorage.setItem(HISTORY_KEY,JSON.stringify(state.sessions.slice(0,24)))}catch{}}
@@ -152,7 +163,7 @@
         state.results.unshift({title:title(message),summary:reply,provider:'EKODI Orchestrator',taskId,status:taskStatus,at:now()});
         state.results=state.results.slice(0,40);saveState();
         pushMessage('assistant',reply,{provider:'EKODI Orchestrator',target:'ekodi',status:taskStatus,taskId});
-        renderPanels();
+        renderPanels();clearSubmittedDraft();
         return;
       }
       if(executeNow){
@@ -171,8 +182,10 @@
       const result=await api('/api/control/ai/assist',{method:'POST',body:JSON.stringify({message,history:prior,context:{source:'control-surface',pathname:'/control',executionTarget:target,taskId}})});
       const reply=String(result.reply||'응답을 받지 못했습니다.');
       pushMessage('assistant',reply,{provider:result.provider||'EKODI',target,status:taskStatus,taskId});
-      state.results.unshift({title:title(message),summary:reply.slice(0,280),provider:result.provider||'EKODI',taskId,status:taskStatus,at:now()});state.results=state.results.slice(0,40);saveState();renderPanels();
+      state.results.unshift({title:title(message),summary:reply.slice(0,280),provider:result.provider||'EKODI',taskId,status:taskStatus,at:now()});state.results=state.results.slice(0,40);saveState();renderPanels();clearSubmittedDraft();
     }catch(error){
+      if(!$('#commandInput').value.trim())$('#commandInput').value=message;
+      resizeInput();saveDraft();
       pushMessage('assistant',error.message,{status:'failed',target});
       if(error.auth)toast('최고관리자 로그인 후 /control로 돌아오세요.');
     }finally{state.busy=false;$('#sendButton').disabled=false;$('#commandInput').focus({preventScroll:true})}
@@ -222,13 +235,13 @@
     $('#newTask').onclick=newTask;$('#railOpen').onclick=()=>$('#controlRail').classList.add('open');$('#railClose').onclick=closeRail;
     $('#commandForm').addEventListener('submit',e=>{e.preventDefault();submitCommand($('#commandInput').value)});
     $('#aiRoutePreview').addEventListener('click',()=>previewAiRoute());
-    $('#commandInput').addEventListener('input',resizeInput);
+    $('#commandInput').addEventListener('input',()=>{resizeInput();saveDraft()});
     $('#commandInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#commandForm').requestSubmit()}});
-    $$('[data-prompt]').forEach(b=>b.onclick=()=>{$('#commandInput').value=b.dataset.prompt;resizeInput();$('#commandInput').focus({preventScroll:true})});
+    $$('[data-prompt]').forEach(b=>b.onclick=()=>{$('#commandInput').value=b.dataset.prompt;resizeInput();saveDraft();$('#commandInput').focus({preventScroll:true})});
     $$('[data-refresh]').forEach(b=>b.onclick=()=>{refreshOrchestratorTasks().catch(()=>toast('오케스트레이터 상태 갱신 실패'))});
   }
   async function boot(){
-    bind();renderRecent();renderMessages();renderPanels();
+    bind();restoreDraft();renderRecent();renderMessages();renderPanels();
     const logged=await validateSession();
     if(!logged)toast('최고관리자 인증이 필요합니다. 로그인 후 /control로 돌아옵니다.');
   }
