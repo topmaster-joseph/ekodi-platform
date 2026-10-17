@@ -20,3 +20,9 @@ After current main is natively synchronized, real CI on the resulting current HE
 - Official orchestrator has natively synchronized main into recovery #5153; bot-created HEAD `0b48f42eb89d86741d94970e19522e0b656d7186` inherited original owner-approved functional source commit.
 - Verified post-sync Worker still serves the fresh citizen UI, HTTP 410 legacy citizen API, and old citizen queue retirement; fresh D1 migration is present.
 - Native GitHub check status on bot-created commit is `action_required`. This **documentation-only** continuation requests genuine required CI on the synchronized functional tree, with protected convergence retained. Do not count bot-generated skipped CI as passed.
+
+## Second main convergence after unrelated production deployment
+- Main changed to `4e5c088197dcd14a3e0e6b87ab48bb82824c2a34` while first verified-head CI was in progress. Orchestrator native refresh produced recovery HEAD `ed76fff5a37f6bf0fe37811cf7978cea7f59ef4d`.
+- The other board deploy `39025310356` was of existing main and still ran old queue-create-list-reply canary. Its success does NOT establish fresh citizen board deployment or deletion.
+- Checked synchronized recovery Worker still routes the clean V3 citizen board, retires old citizen APIs, and retains guarded legacy purge only in protected release workflow.
+- This document-only checkpoint triggers current SHA CI. Destructive purge must only run on production release after both domains' new board and old-API retirement are verified, and must not touch notice/finance data.
