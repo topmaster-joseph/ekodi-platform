@@ -16,7 +16,8 @@ const roots={
 if(!Object.hasOwn(roots,origin))throw new Error('Origin not on approved EKODI allowlist');
 // PR and main-push probes may run before protected deployment has published the new text.
 // Post-deploy probes MUST enforce the new exact message; no weak fallbacks in strict mode.
-const expectMode=String(args['expect-mode']||'strict');
+const githubEvent=String(process.env.GITHUB_EVENT_NAME||'');
+const expectMode=(githubEvent==='pull_request'||githubEvent==='push')?'predeploy':'strict';
 if(!['predeploy','strict'].includes(expectMode))throw new Error('invalid_share_expectation_mode');
 const output=path.resolve(String(args.out||'artifacts/seonammedi-calendar-share-native'));
 await fs.mkdir(output,{recursive:true});
