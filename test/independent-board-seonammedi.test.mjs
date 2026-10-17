@@ -10,8 +10,8 @@ test('SeonamMedi citizen voices use the standalone board API directly',async()=>
     read('services/independent-board/worker.js'),
     read('wrangler.independent-board.toml')
   ]);
-  assert.match(app,/fetch\('\/board\/api\/posts'/);
-  assert.match(app,/\/board\/api\/posts\/'\+voiceId\+'\/replies/);
+  assert.match(app,/fetch\('\/board\/api\/voices-fresh'/);
+  assert.doesNotMatch(app,/\/board\/api\/posts\/'\+voiceId\+'\/replies/);
   assert.doesNotMatch(app,/fetch\('\/api\/seonammedi\/voices'/);
   assert.match(worker,/env\.BOARD_DB/);
   assert.doesNotMatch(worker,/env\.DB\b/);
@@ -21,7 +21,7 @@ test('SeonamMedi citizen voices use the standalone board API directly',async()=>
   assert.match(config,/database_name = "ekodi-independent-board"/);
   assert.match(config,/pattern = "seonammedi\.kr\/board\*"/);
   assert.match(config,/pattern = "ekodi\.kr\/seonammedi\/board\*"/);
-  assert.match(worker,/function boardPage\(req\)/);
+  assert.match(worker,/renderFreshVoicePage\(req,shell\)/);
   assert.match(worker,/\/board\/voices/);
   assert.match(worker,/의견 등록/);
   assert.match(worker,/검색/);
