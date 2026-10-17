@@ -47,13 +47,14 @@ test('execution description distinguishes ordinary command, response-only and pr
  const label={textContent:''},boxes={executeNow:{checked:true},orchestratorRelease:{checked:false}};
  const context={state:{sessions:[],tasks:[]},$:selector=>selector==='#executionModeDescription'?label:boxes[selector.slice(1)]||null};
  const update=vm.runInNewContext(js.slice(start,end)+'\nupdateExecutionMode',context);
- update();assert.match(label.textContent,/일반 실행/);
+ update();assert.match(label.textContent,/작업 접수·사전점검/);
  boxes.executeNow.checked=false;update();assert.match(label.textContent,/응답만 요청/);
  boxes.orchestratorRelease.checked=true;update();
  assert.match(label.textContent,/즉시 배포하지 않고/);
  assert.match(label.textContent,/공식 오케스트레이터/);
  assert.match(html,/id="orchestratorRelease" aria-describedby="executionModeDescription"/);
  assert.match(html,/id="executeNow" checked aria-describedby="executionModeDescription"/);
+ assert.match(html,/작업 접수·사전점검/);
  assert.match(js,/idempotencyKey/);
  assert.match(js,/\/api\/control\/ai\/v8\/orchestrator\/submit/);
  assert.match(js,/\/api\/control\/ai\/v8\/pulse/);
