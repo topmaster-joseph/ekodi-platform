@@ -111,7 +111,7 @@ function pastorClient(POLICY){
     if(access.ok!==true||!access.role){staff=null;return null;}
     // Load the real staff record when available, while supporting the explicit
     // Google-superadmin / pre-registered church-administrator capability.
-    const q=`church_slug=eq.${encodeURIComponent(CHURCH)}&user_id=eq.${encodeURIComponent(session.user.id)}&active=eq.true&select=id,role,display_name&limit=1`;
+    const q=`church_slug=eq.${encodeURIComponent(CHURCH)}&user_id=eq.${encodeURIComponent(session.user.id)}&active=eq.true&select=id,user_id,role,display_name&limit=1`;
     const rows=await rest('church_staff',q);
     const storedStaff=Array.isArray(rows)?rows.find(row=>row.user_id===session.user.id):null;
     staff={...(storedStaff||{}),role:access.role,
