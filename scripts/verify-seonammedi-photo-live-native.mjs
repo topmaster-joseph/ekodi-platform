@@ -35,6 +35,10 @@ let browser;
 function required(ok,reason){if(!ok)throw Error(reason);}
 async function inspect(page,where){
   await page.locator('body.seonam-visual-ready main.seonam-visual-layout').waitFor({state:'attached',timeout:4000});
+  // Calendar mounts after the shared layout: observe the real widget instead of racing its defer-loaded script.
+  // Bounded readiness wait is not a fixture or a bypass: genuinely absent calendars still fail the live gate.
+  await page.locator('main.seonam-visual-layout .seonam-visual-right .seonam-calendar-grid')
+    .waitFor({state:'attached',timeout:15000});
   if(where.endsWith('-home'))await page.locator('body > .campaign-hero .campaign-hero-image').waitFor({state:'visible',timeout:18000});
   const state=await page.evaluate(()=>{
     const sharedHero=document.querySelector('body > .seonam-visual-hero');
