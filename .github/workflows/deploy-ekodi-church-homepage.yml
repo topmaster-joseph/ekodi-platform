@@ -68,7 +68,7 @@ jobs:
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
-          for file in index.html script.js live/index.html live/live.js live/host-intent.js live/live.css church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-header-tune.css church-online-status.js church-worship-admin.js church-weekly-worship.js church-weekly-worship.css worship/weekly.json worship/2026-10-18/materials.json church-live-entry.css giving.js church-footer.css community-visual.css church-life-hub.js church-life-hub.css church-life-hub-i18n.js my/index.html my/app.js my/styles.css my/giving/index.html my/giving/app.js my/giving/styles.css my/attendance/index.html my/attendance/app.js my/attendance/styles.css; do
+          for file in index.html script.js live/index.html live/live.js live/host-intent.js live/live.css church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-header-tune.css church-online-status.js church-worship-admin.js church-weekly-worship.js church-weekly-worship.css church-homepage-layout.css worship/weekly.json worship/2026-10-18/materials.json church-live-entry.css giving.js church-footer.css community-visual.css church-life-hub.js church-life-hub.css church-life-hub-i18n.js my/index.html my/app.js my/styles.css my/giving/index.html my/giving/app.js my/giving/styles.css my/attendance/index.html my/attendance/app.js my/attendance/styles.css; do
             test -s "church/$file"
           done
           for file in script.js live/live.js live/host-intent.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-online-status.js church-worship-admin.js church-weekly-worship.js giving.js church-life-hub.js church-life-hub-i18n.js my/app.js my/giving/app.js my/attendance/app.js; do
@@ -78,6 +78,14 @@ jobs:
           grep -Fq 'data-church-worship-admin' church/index.html
           grep -Fq 'scope=worship-access' church/church-worship-admin.js
           grep -Fq 'data-church-weekly' church/index.html
+          # Approved PR #114 public presentation only; preserve auth, giving, and worship.
+          grep -Fq '<link rel="stylesheet" href="church-homepage-layout.css">' church/index.html
+          grep -Fq 'href="#weekly-worship">예배자료</a>' church/index.html
+          grep -Fq 'online-triad--broadcast' church/index.html
+          grep -Fq 'href="/live/church/"' church/index.html
+          grep -Fq 'body:has(main :target) .hero{display:none!important}' church/church-homepage-layout.css
+          grep -Fq '.church-weekly-focus:target' church/church-homepage-layout.css
+          if grep -Eiq 'meet\.jit\.si|EKODIChurchLive' church/index.html; then echo 'Legacy video-meeting links must not return.'; exit 1; fi
           grep -Fq 'church-weekly-worship.js' church/index.html
           grep -Fq 'church-weekly-worship.css' church/index.html
           grep -Fq 'scope=worship-access' church/church-weekly-worship.js
@@ -342,6 +350,96 @@ jobs:
             await browser.close();
           }
           NODE
+
+      - name: Verify approved homepage on native Chromium across nine languages and PC/mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_BIN="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$CHROME_BIN"
+          mkdir -p /tmp/church-approved-layout-proof
+          CHROME_BIN="$CHROME_BIN" node --input-type=module <<'NODE'
+          import puppeteer from 'puppeteer-core';
+          import assert from 'node:assert/strict';
+          const browser=await puppeteer.launch({executablePath:process.env.CHROME_BIN,headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+          const release=process.env.CHURCH_SOURCE_SHA;
+          const origin='https://ekodi.kr/ekodichurch/';
+          const locales=['ko-KR','en','zh-CN','ja','my','kac','vi','mn','id'];
+          const proof=[];
+          try{
+            const page=await browser.newPage();
+            const failures=[];
+            page.on('pageerror',e=>failures.push(String(e)));
+            for(const device of [{name:'desktop',width:1440,height:900},{name:'mobile',width:390,height:844}]){
+              await page.setViewport({width:device.width,height:device.height,deviceScaleFactor:1});
+              for(const locale of locales){
+                const url=origin+'?lang='+encodeURIComponent(locale)+'&release='+release;
+                await page.goto(url,{waitUntil:'domcontentloaded',timeout:30000});
+                await page.waitForFunction(lang=>document.documentElement.lang===lang&&window.__EKODI_CHURCH_LIFE_HUB_I18N__===true,{timeout:20000},locale);
+                const initial=await page.evaluate(()=>{
+                  const box=el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,width:r.width}};
+                  return {
+                    language:document.documentElement.lang,
+                    header:box(document.querySelector('.site-header')),
+                    heroVisible:getComputedStyle(document.querySelector('.hero')).display!=='none',
+                    weeklyHidden:getComputedStyle(document.querySelector('[data-church-weekly]')).display==='none',
+                    layoutCss:[...document.styleSheets].some(x=>x.href?.includes('church-homepage-layout.css')),
+                    sharedLive:!!document.querySelector('a[href="/live/church/"]'),
+                    giving:!!document.querySelector('.giving-strip'),
+                    member:!!document.querySelector('a[href="/ekodichurch/my/"]')
+                  };
+                });
+                assert.equal(initial.language,locale);
+                assert.equal(initial.layoutCss,true,'approved CSS must load in '+locale+' '+device.name);
+                assert.equal(initial.heroVisible,true,'hero should only show on home');
+                assert.equal(initial.weeklyHidden,true,'weekly panel hidden until selected');
+                assert.equal(initial.sharedLive,true,'shared EKODI Live link retained');
+                assert.equal(initial.member,true,'site-local member navigation retained');
+                assert.ok(initial.header.left>=-2&&initial.header.right<=device.width+2,'header clipped '+locale+' '+device.name);
+                if(locale==='ko-KR'){
+                  await page.screenshot({path:'/tmp/church-approved-layout-proof/'+device.name+'-home.png',fullPage:false});
+                  await page.goto(url+'#weekly-worship',{waitUntil:'domcontentloaded',timeout:30000});
+                  const worship=await page.evaluate(()=>({
+                    hiddenHero:getComputedStyle(document.querySelector('.hero')).display==='none',
+                    visibleWeekly:getComputedStyle(document.querySelector('[data-church-weekly]')).display!=='none',
+                    bulletin:document.querySelector('[data-weekly-bulletin]')?.getAttribute('href'),
+                    editorHidden:document.querySelector('[data-weekly-editor]')?.hidden===true
+                  }));
+                  assert.equal(worship.hiddenHero,true);
+                  assert.equal(worship.visibleWeekly,true);
+                  assert.match(worship.bulletin||'',/^\/ekodichurch\/worship\//);
+                  assert.equal(worship.editorHidden,true,'guest admin editor must remain hidden');
+                  await page.screenshot({path:'/tmp/church-approved-layout-proof/'+device.name+'-worship.png',fullPage:false});
+                  await page.goto(url+'#online',{waitUntil:'domcontentloaded',timeout:30000});
+                  const live=await page.evaluate(()=>({
+                    hiddenHero:getComputedStyle(document.querySelector('.hero')).display==='none',
+                    cards:document.querySelectorAll('#online .online-triad--broadcast .ministry-card').length,
+                    liveLink:!!document.querySelector('#online a[href="/live/church/"]'),
+                    oldVideo:!!document.querySelector('a[href*="meet.jit.si"]')
+                  }));
+                  assert.equal(live.hiddenHero,true);
+                  assert.equal(live.cards,2);
+                  assert.equal(live.liveLink,true);
+                  assert.equal(live.oldVideo,false);
+                  await page.screenshot({path:'/tmp/church-approved-layout-proof/'+device.name+'-online.png',fullPage:false});
+                  proof.push({device:device.name,locale,initial,worship,live});
+                } else {
+                  proof.push({device:device.name,locale,initial});
+                }
+              }
+            }
+            assert.deepEqual(failures,[],'Chromium page script errors');
+            console.log('EKODI_CHURCH_APPROVED_LAYOUT_PROOF='+JSON.stringify({release,results:proof,pageErrors:failures}));
+          }finally{await browser.close()}
+          NODE
+      - name: Upload approved layout Chromium evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekodi-church-approved-layout-native
+          path: /tmp/church-approved-layout-proof/*.png
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Verify October 18 worship page, live stage routes and homepage entry
         shell: bash
