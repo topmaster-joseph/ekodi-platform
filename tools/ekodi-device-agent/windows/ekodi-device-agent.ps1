@@ -2925,6 +2925,53 @@ function Get-EkodiBrowserTaskAuditSummary {
   return @{ checkedAt = (Get-Date).ToUniversalTime().ToString('o'); recent = $items; count = $items.Count }
 }
 
+# Read-only, fixed-name Scheduled Task posture. Never exports command lines,
+# arguments, principal identities, arbitrary tasks, paths, or secrets.
+function Get-EkodiConsoleTaskPosture {
+  $taskNames = @('EKODI Device Agent', 'EKODI Remote Agent Watchdog', 'EKODI Remote Agent Watchdog Monitor', 'EKODI POS Agent')
+  $tasks = @()
+  foreach ($name in $taskNames) {
+    $summary = @{
+      name = $name; installed = $false; state = 'not_installed'
+      powerShellAction = $false; hiddenFlag = $false; nonInteractiveFlag = $false
+      interactivePrincipal = $false; systemPrincipal = $false
+      lastRunUtc = ''; lastResult = $null; actionCount = 0; queryStatus = 'ok'
+    }
+    try {
+      $task = @(Get-ScheduledTask -TaskPath '\' -TaskName $name -ErrorAction Stop | Select-Object -First 1)
+      if ($task.Count -eq 0) { $tasks += $summary; continue }
+      $current = $task[0]
+      $summary.installed = $true
+      $summary.state = [string]$current.State
+      $summary.interactivePrincipal = ([string]$current.Principal.LogonType -in @('Interactive','InteractiveOrPassword'))
+      $summary.systemPrincipal = ([string]$current.Principal.UserId -in @('SYSTEM','NT AUTHORITY\SYSTEM'))
+      $actions = @($current.Actions)
+      $summary.actionCount = $actions.Count
+      foreach ($action in $actions) {
+        $exeName = [IO.Path]::GetFileName([string]$action.Execute)
+        if ($exeName -notin @('powershell.exe', 'pwsh.exe')) { continue }
+        $summary.powerShellAction = $true
+        $argsText = [string]$action.Arguments
+        if ($argsText -match '(?i)(?:^|\s)-WindowStyle\s+(?:Hidden|1)(?:\s|$)') { $summary.hiddenFlag = $true }
+        if ($argsText -match '(?i)(?:^|\s)-NonInteractive(?:\s|$)') { $summary.nonInteractiveFlag = $true }
+      }
+      try {
+        $info = Get-ScheduledTaskInfo -TaskPath '\' -TaskName $name -ErrorAction Stop
+        if ($info) {
+          $summary.lastResult = [int]$info.LastTaskResult
+          if ($info.LastRunTime -and $info.LastRunTime.Year -gt 2000) {
+            $summary.lastRunUtc = $info.LastRunTime.ToUniversalTime().ToString('o')
+          }
+        }
+      } catch { $summary.queryStatus = 'task_info_unavailable' }
+    } catch {
+      $summary.queryStatus = 'task_unavailable_or_not_installed'
+    }
+    $tasks += $summary
+  }
+  return @{ schemaVersion = 1; mode = 'read-only'; checkedAt = (Get-Date).ToUniversalTime().ToString('o'); tasks = $tasks }
+}
+
 function Get-RemoteAgentStatus {
   $taskState = 'unknown'
   try {
@@ -2938,6 +2985,7 @@ function Get-RemoteAgentStatus {
     processId = $PID
     taskName = $TaskName
     taskState = $taskState
+    consoleTaskPosture = Get-EkodiConsoleTaskPosture
     persistentShell = $false
     directHostMutation = $false
     foregroundUserSessionProtected = $true

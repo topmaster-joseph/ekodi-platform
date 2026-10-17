@@ -1,0 +1,34 @@
+# USER4 console task diagnostics — official recovery and live acceptance
+
+## Authenticated approval and canonical task
+
+- Owner-approved source PR #5204, exact source SHA: `d26896fa29c4c2d93bfd2d0122c65a07b0bffbcb`.
+- Human Gate comment was authored by the authenticated repository owner before `orchestrator-human-gate-approved` was attached.
+- Official EKODI release provenance task: `orch_recovery_d26896fa29c4c2d93bfd2d0122c65a07`.
+- Official protected recovery PR: #5213, branch `ai/chatgpt/orch_recovery_d26896fa29c4c2d93bfd2d0122c65a07`.
+- Original source PR #5204 was closed as superseded by trusted automatic recovery.
+
+## Why this owner-authored, documentation-only checkpoint is necessary
+
+Trusted GitHub Actions generated the official recovery branch and new PR. GitHub classified initial pull_request jobs as `action_required` with **zero genuine test jobs executed**. This documentation-only owner change requests fresh, actual branch-head checks and starts the normal protected convergence workflow. It does not alter approved executable content, privileges, device enrollment, source-code gates, credentials or release workflow policies. Source-PR CI is not evidence that recovery-PR CI passed.
+
+## Accepted scope
+
+The existing allowlisted `computer.agent.status` will project only four fixed EKODI Windows task names, installation/run state, constrained run metadata, hidden/noninteractive flags and SYSTEM-versus-interactive principal booleans. Control API strips raw executable/command-line data, account identities, arbitrary task records and secrets. Node regression tests and Windows PowerShell syntax checks must pass. No new generic remote shell, browser tab, focus/clipboard action, privilege expansion, or unsolicited user popup is authorized.
+
+## Required release and production proof
+
+1. Verify fresh genuine CI, Windows Device Control parse, distributed runtime guards, security, conflict, constitutional checks, trusted Orchestrator release receipt and current main ancestry.
+2. Respect the normal protected merge, mandatory Control API staging and guarded production rollout with rollback. A GitHub merge alone does **not** update a Windows installation.
+3. Confirm USER4 online through its actual Agent heartbeat using timestamped first-party API evidence. Use only fixed allowlisted commands on its unique verified enrolled device ID.
+4. Update the Windows Agent transactionally **only when separately validated and authorized**; preserve device enrollment, scheduled tasks and live heartbeat with rollback proof. No direct registry or scheduled task mutation without evidence.
+5. Correlate task last-run timestamp with user-observed popup and Windows event/process history. A task whose flag is hidden is not proof it caused or resolved the popup.
+6. Prove no visible console, foreground focus theft, extra user tab, clipboard sharing or login loop over repeated startup/monitor intervals. Report production unresolved until real USER4 receipts exist.
+
+## Synchronized protected-main revalidation
+
+The official guarded converger synchronized the recovery branch against the latest `main` at head `401b9ee6579b9e4596ce8911cb1298f7099f13bc`. The GitHub Actions bot-authored update yielded `action_required` checks without real job execution. This additional owner-authored documentation-only change starts fresh required CI, real Windows syntax tests and an isolated Control API staging run on the synchronized source. It does not alter the approved Windows or Control API runtime logic, a security policy, the release receipt, or any live USER4 process. Successful staging alone is not a production deployment or native USER4 acceptance.
+
+## Guarded concurrency convergence checkpoint
+
+Latest official convergence synchronized the protected recovery branch to `18919ec4ef72acd9087f8991b19d89b6f89949c0` after the earlier Windows CI, full CI and isolated Control API staging succeeded. GitHub Actions marked the bot-authored synchronized head as `action_required` rather than executing genuine jobs. This owner-authored documentation-only commit asks for a new real test and staging cycle against the fully synchronized revision. Preserve every prior release gate, exact-source approval, task receipt, device identity constraint and production rollback. No USER4 task edit or successful popup suppression is claimed.
