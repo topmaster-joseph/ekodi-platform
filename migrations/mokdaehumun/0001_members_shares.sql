@@ -27,3 +27,5 @@ CREATE TABLE IF NOT EXISTS mokdaehumun_audit (
  target_id TEXT,
  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS mokdaehumun_admin_roles (admin_id TEXT PRIMARY KEY, role TEXT NOT NULL CHECK(role IN ('owner','manager')), created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
