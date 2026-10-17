@@ -8,7 +8,7 @@ function menu(html){const nav=html.match(/<nav class="ekodi-six-nav" aria-label=
 test('all public entry pages agree on the same six-menu order and typography contract',async()=>{
   const css=await read('shared-site-header.css');
   for(const selector of ['.site-header>.brand strong','.site-header>.brand small','.site-header>.ekodi-six-nav>a','@media(max-width:780px)'])assert.ok(css.includes(selector),selector);
-  for(const page of ['index.html','notices/index.html','finance/index.html']){const html=await read(page);assert.deepEqual(menu(html),order,page);assert.match(html,/href="\/seonammedi\/shared-site-header\.css(?:\?v=[^"]+)?"\/);}
+  for(const page of ['index.html','notices/index.html','finance/index.html']){const html=await read(page);assert.deepEqual(menu(html),order,page);assert.match(html,/href="\/seonammedi\/shared-site-header\.css(?:\?v=[^"]+)?"/);}
   for(const origin of ['https://seonammedi.kr','https://ekodi.kr']){const path=origin.includes('seonammedi.kr')?'/board':'/seonammedi/board';for(const category of ['voices','notices','finance']){const response=await board.fetch(new Request(origin+path+'/'+category),{});assert.equal(response.status,200);const html=await response.text();assert.deepEqual(menu(html),order);assert.match(html,/shared-site-header\.css/);assert.doesNotMatch(html,/campaign-hero-image/);}}
 });
 test('campaign hero exists on home only and routed views hide it',async()=>{
