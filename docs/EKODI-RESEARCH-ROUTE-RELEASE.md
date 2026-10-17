@@ -1,19 +1,29 @@
-# EKODI Research — Shared Site Core route release continuity
+# EKODI Research — guarded canonical route activation and proof
 
-Task: EKODI Research guarded public path release (follow-up to PR #5091 / recovery PR #5121).
+## Background
+- Human-approved Research source PR #5091 at `8242c82185650b6abe483f1e043c2f525734f4e2`.
+- Official recovery PR #5121 merged as `35f2d62f756ef95dca4a0e94dd20496fa135760b`.
+- Education Worker production protected release [38989516972](https://github.com/topmaster-joseph/ekodi-platform/actions/runs/38989516972) passed, including native Education-only PC and mobile checks.
+- A real browser visiting `https://ekodi.kr/research/` still displayed the unrelated existing 운영공간 surface. This is NOT a verified Research launch.
 
-## Verified failure and cause
-- The Education Worker was deployed through guarded run [38989516972](https://github.com/topmaster-joseph/ekodi-platform/actions/runs/38989516972) for official merged commit `35f2d62f756ef95dca4a0e94dd20496fa135760b`.
-- The user-facing `https://ekodi.kr/research/` was observed displaying the pre-existing workspace page, not the EKODI Research website. No claim of public route completion is warranted.
-- `platform-route-registry.js` was updated by the merged Research PR with `/research` -> `EDUCATION`, but the common `scripts/converge-orchestrated-pr-merge.mjs` release predicate `sharedSiteTouched` omitted this source path. A merge through GitHub Actions `GITHUB_TOKEN` does not trigger ordinary `push` workflows.
-- The `deploy-site-core.yml` push paths already include the route registry; the official release convergence predicate needs the matching path.
+## Cause and safer release scope
+`platform-route-registry.js` contains the correct `/research` -> `EDUCATION` alias on main, but the latest Site Core production was built before that merge. A GitHub-Actions-token protected merge does not generate a normal main push event; the common convergence release classifier does not currently include `platform-route-registry.js`.
 
-## Minimal source change
-- Add precisely `platform-route-registry.js` to the existing, receipt-bound `sharedSiteTouched` scope. No new domain, service, auth realm, database table or payment capability.
-- Add static contract regression tests for both auto-merge dispatch and direct main-push ownership.
+Instead of changing the shared convergence script and causing collateral Control API/Shell/CGMA dispatches, this minimal PR touches **only existing guarded Site Core release assets**:
+- Add `/research/` and `/research/health` as explicit verifiable canaries to `deploy/manifests/shared-site.worker.json`.
+- Use the existing `sharedSiteTouched` trigger for that exact manifest path. Receipt-bound deployment and rollback are unchanged.
+- Add two dedicated EKODI-owned native Chromium jobs, desktop and mobile, without displacing existing board checks.
+- Add static tests that assert route ownership, canary expectations, immutable orchestrator receipt requirements and native job contracts.
 
-## Guards
-- This modifies a common release orchestration script and therefore MUST follow the full EKODI Human Gate for an approved exact source SHA. Do not mark owner approval or assert deployment automatically.
-- Existing `EKODI AI Orchestration Gate`, required genuine CI, parallel conflict guard, staged and guarded production deployment, auto-rollback and live route verification remain mandatory.
-- The script's normal self-change predicate may also dispatch other guarded shared-release workflows. Check actual scope, cost and safety before approval.
-- Acceptance needs the exact `https://ekodi.kr/research/` landing page, `/research/health`, `/research/api/diagnosis`, empty-state project CRUD (synthetic non-sensitive only), hidden consultation intake, and PC+mobile viewport checks with real EKODI-owned Chromium.
+## Security / Human Gate
+This changes an existing production release manifest and workflow, therefore it is a new source revision requiring fresh, exact-SHA GitHub-owner Human Gate approval and official EKODI orchestration. Do not reuse the original PR #5091 approval marker. No manual or unguarded deployment is approved.
+
+## Required acceptance
+- All required GitHub CI, architecture, conflict, security, staging checks pass.
+- Official orchestrator issues a receipt-bound recovery branch.
+- Existing guarded Site Core production Worker release passes canary `https://ekodi.kr/research/` with Research-specific form markers, and `/research/health` confirms high-risk features off.
+- Distinct EKODI native browser desktop/mobile jobs succeed on the canonical Research route and retain proofs.
+- Do not claim Research researcher login/private DB, manuscript uploads, consultation intake, real external AI or payment functionality is live without separate verified server credentials and tests.
+
+## Residual prevention
+Generalizing the central convergence classifier to include every future route-registry change remains a distinct source-policy improvement. It is not silently authorized by this route-specific production repair.

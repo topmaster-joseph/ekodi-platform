@@ -3462,6 +3462,38 @@
           200
         ],
         "redirect": "manual"
+      },
+      {
+        "url": "https://ekodi.kr/research/",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "EKODI Research",
+          "id=\"diagnosisForm\"",
+          "id=\"projectForm\""
+        ],
+        "headerExpect": [
+          "x-ekodi-canonical-surface: education-research-alias",
+          "x-ekodi-canonical-path: /research"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/research/health",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"service\":\"ekodi-research\"",
+          "\"phase\":\"foundation\"",
+          "\"privateDocuments\":false",
+          "\"payments\":false",
+          "\"aiExecution\":false"
+        ],
+        "rollbackVerify": false
       }
     ],
     "attestationPath": "/__ekodi/version"
