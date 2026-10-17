@@ -22,3 +22,13 @@ Code now provides evidence-labeled guided drafts, entered-value budget reconcili
 - CI tests unzip archive entries and parse Office XML with standard Python tools. Passing structural ZIP/XML tests does **not** prove compatibility with every Office or Hancom version; first-party viewer and template integration remain unverified.
 - HTML print-to-PDF stays a user browser action. Direct HWPX creation and AI research/model integrations are NOT delivered.
 - Production release remains blocked until official orchestrator receipt, policy-owner exact-head Human Gate evidence, guarded protected merge and actual desktop/mobile live validation.
+
+
+## Official convergence checkpoint (2026-10-18)
+
+- Approved immutable source: PR #5095, SHA `c25df20f429c29eacecacecb4f654892a5b2d731`, policy-owner GitHub approval comment followed by Human Gate label.
+- Official task and receipt: `orch_recovery_c25df20f429c29eacecacecb4f654892`, `authorized=true` from first-party EKODI Orchestrator.
+- Recovery PR #5119 issued by original `EKODI Release Provenance Auto Recovery` workflow; final deployment remains gated.
+- The recovery branch now contains a GitHub-managed protected-base reconciliation commit. On the recovery PR head `6bcb77bc2bbd7fdc84ccc9120818de88385f4297`, dedicated Proposal Studio, EKODI Constitution, Orchestration Gate, CI and staging jobs passed after maintainer workflow approval.
+- Later protected `main` advanced independently. This documentation-only checkpoint must be processed through `.github/workflows/converge-orchestrated-pr-merge.yml`: compare current base, update branch via guarded GitHub API, run fresh required checks, merge through official orchestrator, dispatch receipt-bound Site Core deploy and verify `/proposal/` on the real production system.
+- No human approval is being claimed for a new executable source SHA; no force-push, direct production modification, or bypass of CI or rollout protections is authorized. If conflict or policy constraints persist, retain the PR open and report the specific unmet gate.
