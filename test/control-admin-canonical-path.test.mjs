@@ -52,7 +52,6 @@ test('visible Control links point at /admin/control and task/history authenticat
  assert.match(html,/href="\/control\.css/);
  assert.match(script,/HISTORY_KEY='ekodi-admin-command-history-v1'/);
  assert.match(script,/CONTROL_STATE='ekodi-control-state-v1'/);
- assert.match(script,/HISTORY_KEY='ekodi-admin-command-history-v1'/);
  assert.match(script,/TOKEN_KEY='ekodi-auth-token'/);
  assert.match(router,/path==='\/admin\/control'/);
  assert.match(worker,/url\.pathname === '\/admin\/control'/);
@@ -64,7 +63,7 @@ test('visible Control links point at /admin/control and task/history authenticat
 
 test('embedded Admin workbench retains exactly one sidebar, preserves all Control tab actions',()=>{
  const css=root('control.css'),ui=root('control.js'),home=root('admin-control-home.js');
- assert.match(home,/frame\.src='\\/control\\?embedded=admin'/);
+ assert.ok(home.includes("frame.src='/control?embedded=admin'"));
  assert.match(ui,/data\.ekodiControlEmbedded='admin'/);
  assert.match(css,/data-ekodi-control-embedded="admin"\] \.control-rail\{/);
  assert.match(css,/position:sticky!important/);
