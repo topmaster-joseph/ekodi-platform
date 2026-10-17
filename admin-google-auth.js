@@ -84,6 +84,11 @@ function configuredIdentityOrigin(env) {
 function workspaceDomain(env) {
   return String(env.ADMIN_WORKSPACE_DOMAIN || '').trim().toLowerCase();
 }
+function protectedBootstrapEmails(env) {
+  // Configured by the platform owner in each deployment environment, not by a caller.
+  return new Set(String(env.ADMIN_GOOGLE_BOOTSTRAP_EMAILS || '')
+    .split(',').map(normalizeEmail).filter(validEmail));
+}
 
 function isD1DailyReadLimit(error) {
   const code = String(error?.code || error?.cause?.code || '');
@@ -165,16 +170,24 @@ async function ensureSchema(db, env) {
     await db.prepare('ALTER TABLE admins ADD COLUMN password_iterations INTEGER NOT NULL DEFAULT 310000').run();
   }
 
-  const bootstrap = String(env.ADMIN_GOOGLE_BOOTSTRAP_EMAILS || '')
-    .split(',').map(normalizeEmail).filter(validEmail);
+  const bootstrap = [...protectedBootstrapEmails(env)];
   const hd = workspaceDomain(env);
   const now = new Date().toISOString();
   for (const email of bootstrap) {
     const requiredHd = hd && email.endsWith(`@${hd}`) ? hd : null;
-    await db.prepare(`INSERT OR IGNORE INTO admin_google_accounts
+    // The two deployment-designated recovery administrators must not silently
+    // disappear after an unrelated admin-account edit or a worker restart.
+    await db.prepare(`INSERT INTO admin_google_accounts
       (email, required_hd, role, status, created_at, updated_at)
-      VALUES (?, ?, 'super_admin', 'active', ?, ?)`)
+      VALUES (?, ?, 'super_admin', 'active', ?, ?)
+      ON CONFLICT(email) DO UPDATE SET role='super_admin', status='active',
+        required_hd=excluded.required_hd, updated_at=excluded.updated_at
+      WHERE admin_google_accounts.role <> 'super_admin'
+         OR admin_google_accounts.status <> 'active'
+         OR admin_google_accounts.required_hd IS NOT excluded.required_hd`)
       .bind(email, requiredHd, now, now).run();
+    await db.prepare("UPDATE admins SET role='super_admin' WHERE lower(email)=? AND role <> 'super_admin'")
+      .bind(email).run();
   }
 }
 
@@ -497,6 +510,9 @@ async function updateAccount(request, env, id) {
   if (!ADMIN_ROLES.has(role) || !['active', 'disabled'].includes(status)) return json({ error: '권한과 상태를 확인해 주세요.' }, 400, request, env);
   const target = await env.DB.prepare('SELECT * FROM admin_google_accounts WHERE id = ?').bind(id).first();
   if (!target) return json({ error: '관리자 계정을 찾을 수 없습니다.' }, 404, request, env);
+  if (protectedBootstrapEmails(env).has(normalizeEmail(target.email)) &&
+      (role !== 'super_admin' || status !== 'active'))
+    return json({ error: '지정된 최고관리자 복구 계정은 비활성화하거나 강등할 수 없습니다.', code: 'PROTECTED_SUPER_ADMIN' }, 409, request, env);
   if (target.email === gate.admin.email && status !== 'active') return json({ error: '현재 로그인한 최고관리자 계정은 비활성화할 수 없습니다.' }, 409, request, env);
   if (target.role === 'super_admin' && (role !== 'super_admin' || status !== 'active')) {
     const count = await env.DB.prepare(`SELECT COUNT(*) AS count FROM admin_google_accounts
@@ -523,6 +539,8 @@ async function removeAccount(request, env, id) {
   if (gate.error) return gate.error;
   const target = await env.DB.prepare('SELECT * FROM admin_google_accounts WHERE id = ?').bind(id).first();
   if (!target) return json({ error: '관리자 계정을 찾을 수 없습니다.' }, 404, request, env);
+  if (protectedBootstrapEmails(env).has(normalizeEmail(target.email)))
+    return json({ error: '지정된 최고관리자 복구 계정은 삭제할 수 없습니다.', code: 'PROTECTED_SUPER_ADMIN' }, 409, request, env);
   if (target.email === gate.admin.email) return json({ error: '현재 로그인한 최고관리자 자신의 권한은 제거할 수 없습니다.' }, 409, request, env);
   if (target.role === 'super_admin' && target.status === 'active') {
     const count = await env.DB.prepare("SELECT COUNT(*) AS count FROM admin_google_accounts WHERE role = 'super_admin' AND status = 'active' AND id <> ?").bind(id).first();
