@@ -451,7 +451,7 @@ for (const [id, group] of menus) {
       return { pathname:location.pathname,width:rect?.width||0,height:rect?.height||0,left:rect?.left||0,sidebarRight:nav?.right||0 };
     });
     if(command.pathname !== '/admin/'||command.width<300||command.height<300||command.left<command.sidebarRight-2)throw new Error('command-home did not render native EKODI Control right of sidebar: '+JSON.stringify(command));
-    await page.frameLocator('#ekodiControlHomeFrame').locator('#controlRail').waitFor({state:'visible',timeout:12000});
+    await page.frameLocator('#ekodiControlHomeFrame').locator('#controlEmbeddedToolbar').waitFor({state:'visible',timeout:12000});
     results.push({id,group,kind:'command-workbench',ok:true,detail:'native Control iframe and task rail'});
     await page.screenshot({path:path.join(artifactsDir,`menu-${id}.png`),fullPage:false});
     continue;
