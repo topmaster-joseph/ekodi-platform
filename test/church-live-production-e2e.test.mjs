@@ -25,3 +25,32 @@ test('Church Live E2E uses short-lived central admin auth and always revokes it'
   assert.match(workflow,/DELETE FROM sessions WHERE token_hash/);
   assert.match(workflow,/if: always\(\)/);
 });
+
+test('Native Church QR E2E uses isolated simulated mobile camera and owner approval without external browser',()=>{
+  for(const marker of [
+    "EKODI-owned isolated Chromium",
+    "cameraContext=await browser.newContext({viewport:{width:390,height:844}",
+    "await cameraPage.goto(cameraUrl",
+    "camera_without_device_key_allowed",
+    "cameraPairId=issued.id",
+    "hasText:'연결 승인'",
+    "report.camera.syntheticDevicePublished=true",
+    "report.camera.hostVideoReceived=true",
+    "management_camera:",
+    "director_video_resize_not_applied",
+    "director_chat_resize_not_applied",
+    "viewer_track_replaced_on_resize",
+    "status:'revoked'",
+    "cameraContext?.close()"
+  ])assert.ok(script.includes(marker),'missing EKODI native QR E2E marker: '+marker);
+  assert.doesNotMatch(script,/tinyfish|browserstack|sauce.?labs|external browser/i);
+});
+test('QR E2E reuses the existing secret-masked, expiring and revoked official Church session',()=>{
+  assert.match(workflow,/E2E_ADMIN_TOKEN=\$token/);
+  assert.match(workflow,/DELETE FROM sessions WHERE token_hash/);
+  assert.match(workflow,/Install Chromium harness/);
+  assert.match(workflow,/Run real Church Live publish and anonymous viewer pull/);
+  assert.match(script,/active_church_broadcast/);
+  assert.match(script,/viewerTracks/);
+  assert.match(script,/return/);
+});
