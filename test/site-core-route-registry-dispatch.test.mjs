@@ -32,6 +32,17 @@ test('Research canonical route has protected candidate and production verificati
  }
 });
 
+test('Research application JS and CSS remain on the canonical public route',()=>{
+ const files=['https://ekodi.kr/research/app.js','https://ekodi.kr/research/app.css'];
+ for(const url of files){
+  const canary=manifest.worker.requests.find(row=>row.url===url);
+  assert.ok(canary, 'missing research static asset candidate check for '+url);
+  assert.deepEqual(canary.statuses,[200]);
+  assert.equal(canary.redirect,'manual');
+  assert.ok(canary.headerExpect.includes('x-ekodi-canonical-surface: education-research-alias'));
+ }
+});
+
 test('Research has dedicated native desktop and mobile verification without taking board slots',()=>{
  for(const [name,device] of [
   ['native_research_verification_desktop','desktop'],
