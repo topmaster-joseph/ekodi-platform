@@ -94,10 +94,10 @@
   right.append(newsBox,quick);
   const calendarStyle=el('link');
   calendarStyle.rel='stylesheet';
-  calendarStyle.href='/seonammedi/calendar-sidebar.css?v=20261017-live-2';
+  calendarStyle.href='/seonammedi/calendar-sidebar.css?v=20261017-live-3-share';
   document.head.append(calendarStyle);
   const calendarScript=el('script');
-  calendarScript.src='/seonammedi/calendar-sidebar.js?v=20261017-live-2';
+  calendarScript.src='/seonammedi/calendar-sidebar.js?v=20261017-live-3-share';
   calendarScript.addEventListener('load',()=>window.SeonamMediCalendar?.mount({newsBox,quick}));
   calendarScript.addEventListener('error',()=>{
     newsBox.querySelector('.seonam-calendar-status').textContent='일정표를 불러오지 못했습니다. 새로고침해 주세요.';

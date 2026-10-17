@@ -21,8 +21,8 @@ test('both public board mounts share the writer login and show protected inline 
     assert.match(html,/function voiceLogin\(\)/);
     assert.doesNotMatch(html,/target\.searchParams\.set\("manage","1"\)/);
     assert.match(html,/auth\.searchParams\.set\("return_to",target.href\)/);
-    assert.match(html,/adminItems=data\.items\|\|\[\];render\(adminItems,true\)/);
-    assert.match(html,/catch\(error\)\{\/\* A signed-in visitor without admin permission keeps the public list\. \*\//);
+    assert.match(html,/adminItems=data\.items\|\|\[\];admin=true;render\(adminItems,true\)/);
+    assert.match(html,/catch\{admin=false\}/);
     assert.match(html,/data-edit=/);
     assert.match(html,/data-delete=/);
   }
