@@ -48,6 +48,27 @@ test('private workspace is fail-closed without storage and verified identity',as
  assert.equal(blocked.status,403);
 });
 
+test('canonical Research homepage never fetches /research/index.html and loops on a 307',async()=>{
+ const paths=[];
+ const env={ASSETS:{fetch:async request=>{
+  const url=new URL(request.url);paths.push(url.pathname);
+  if(url.pathname==='/research/index.html')return new Response(null,{status:307,headers:{location:'/research/'}});
+  if(url.pathname==='/research/')return new Response('research-home',{status:200,headers:{'content-type':'text/plain; charset=utf-8'}});
+  return new Response(null,{status:404});
+ }}};
+ const home=await worker.fetch(new Request('https://ekodi.kr/research/?source=nav'),env);
+ assert.equal(home.status,200);
+ assert.equal(await home.text(),'research-home');
+ assert.deepEqual(paths,['/research/']);
+ const explicit=await worker.fetch(new Request('https://ekodi.kr/research/index.html?source=nav'),env);
+ assert.equal(explicit.status,308);
+ assert.equal(explicit.headers.get('location'),'https://ekodi.kr/research/?source=nav');
+ assert.deepEqual(paths,['/research/'],'index.html must redirect without invoking the assets canonicalizer');
+ const slash=await worker.fetch(new Request('https://ekodi.kr/research?source=nav'),env);
+ assert.equal(slash.status,308);
+ assert.equal(slash.headers.get('location'),'https://ekodi.kr/research/?source=nav');
+});
+
 test('public UI maintains accessible responsive layout and no fake paid/AI claims',async()=>{
  const [html,css,app,prod,stage,sql]=await Promise.all([
   read('education/research/index.html'),read('education/research/app.css'),read('education/research/app.js'),
