@@ -166,8 +166,9 @@ function create(options={}){
       emit('ekodi:public-admin-ready',{serviceId,permissions:{...permissions}});
       return data;
     }catch{
-      // A rejected token provider, network error, invalid headers or fetch
-      // rejection must not restore a previously privileged user interface.
+      // A rejected provider, fetch, parser or event handler must fail closed.
+      // Never clear a newer request's successfully revalidated permissions.
+      if(requestId===authorizationSequence)clearAuthorization();
       return null;
     }
   }
