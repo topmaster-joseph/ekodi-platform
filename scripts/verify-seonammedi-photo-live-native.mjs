@@ -71,9 +71,10 @@ async function inspect(page,where){
     required(state.campaignSrc.includes('campaign-reconsideration-20261013.png'),'incorrect_home_campaign_source_'+where);
     required(state.campaignNaturalWidth===1903&&state.campaignNaturalHeight===735,'home_campaign_dimensions_mismatch_'+where);
   }
-  required(JSON.stringify(state.sideLabels)===JSON.stringify(labels),'six_side_menu_labels_mismatch_'+where);
+  required(state.sideLabels.length===0&&state.active.length===0,'duplicate_left_menu_found_'+where);
+  required(JSON.stringify(state.publicLinks)===JSON.stringify(labels),'header_six_menu_labels_mismatch_'+where);
   required(state.headerSticky,'site_header_not_sticky_'+where);
-  required(state.leftWidth>0&&state.centerWidth>0&&state.rightWidth>0,'layout_region_missing_'+where);
+  required(state.leftWidth===0&&state.centerWidth>0&&state.rightWidth>0,'content_or_calendar_missing_or_duplicate_menu_'+where);
   required(state.calendarWidget,'live_schedule_calendar_missing_'+where);
   required(state.scrollWidth<=state.width+1,'horizontal_overflow_'+where);
   return state;
