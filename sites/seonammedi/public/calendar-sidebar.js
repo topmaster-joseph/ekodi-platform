@@ -10,7 +10,7 @@
   };
   const dateOf=value=>String(value||'').slice(0,10);
   const validDate=value=>{
-    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(String(value||'')))return false;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(value||'')))return false;
     const parsed=new Date(value+'T00:00:00Z');
     return !Number.isNaN(parsed.getTime())&&parsed.toISOString().slice(0,10)===value;
   };
@@ -19,11 +19,11 @@
   const parseSharedSchedule=search=>{
     const params=new URLSearchParams(search||'');
     const id=params.get('schedule')||'',date=params.get('date')||'';
-    return /^[1-9]\\d{0,12}$/.test(id)&&validDate(date)?{id:Number(id),date}:null;
+    return /^[1-9]\d{0,12}$/.test(id)&&validDate(date)?{id:Number(id),date}:null;
   };
   const shareUrl=(item,currentUrl=location.href)=>{
     const id=String(item?.id||''),date=dateOf(item?.eventStart);
-    if(!/^[1-9]\\d{0,12}$/.test(id)||!validDate(date))return '';
+    if(!/^[1-9]\d{0,12}$/.test(id)||!validDate(date))return '';
     const url=new URL(currentUrl);
     url.pathname=url.pathname.startsWith('/seonammedi/')?'/seonammedi/board/notices':'/board/notices';
     url.search='';url.hash='';
