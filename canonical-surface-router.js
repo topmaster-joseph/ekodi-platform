@@ -300,6 +300,31 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
     const documentRedirect=authAssetDocumentRedirect(request,path);if(documentRedirect)return documentRedirect;
     return serveCanonicalAuth(request,env);
   }
+  // EKODI Control lives inside the canonical Admin URL space but keeps its
+  // independent secured HTML, assets and Admin session. Handle this before
+  // the generic /admin/* shell, otherwise it incorrectly shows Admin.
+  if(path==='/admin/control'||path==='/admin/control/'){
+    const headers={
+      'cache-control':'no-store',
+      'x-content-type-options':'nosniff',
+      'x-robots-tag':'noindex, nofollow, noarchive',
+      'x-ekodi-route':'control-surface',
+      'x-ekodi-canonical-surface':'control',
+      'x-ekodi-canonical-path':'/admin/control',
+    };
+    if(!['GET','HEAD'].includes(request.method))
+      return new Response(null,{status:405,headers:{...headers,allow:'GET, HEAD'}});
+    if(path==='/admin/control/'){
+      const target=new URL(request.url);target.pathname='/admin/control';
+      return new Response(null,{status:308,headers:{...headers,location:target.toString()}});
+    }
+    if(typeof legacyFetch!=='function')return serviceUnavailable('control');
+    const upstream=new URL(request.url);upstream.pathname='/control';
+    const response=await legacyFetch(cloneRequest(request,upstream));
+    const routed=new Response(response.body,response);
+    for(const [key,value] of Object.entries(headers))routed.headers.set(key,value);
+    return routed;
+  }
   // This exact admin entry is a route alias, not a new admin screen.
   // Intercept before proxyAdminShell rewrites every nested /admin/* path to legacy '/'.
   if(/^\/admin\/desktop\/bootstrap(?:\/|\/index\.html)?$/.test(path)){
