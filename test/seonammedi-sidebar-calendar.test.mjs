@@ -54,6 +54,8 @@ test('sidebar calendar replaces recent notices/quick links and guards administra
   assert.match(sidebar,/calendar-sidebar\.js/);
   assert.match(sidebar,/calendar-sidebar\.css/);
   assert.match(sidebar,/SeonamMediCalendar\?\.mount/);
+  assert.match(sidebar,/main\.append\(content,right\)/);
+  assert.doesNotMatch(sidebar,/seonam-visual-left|seonam-visual-side-nav|seonam-visual-side-card|leftNav/);
   assert.doesNotMatch(sidebar,/최근 공지|seonam-visual-recent-notices|관련 바로가기/);
   assert.match(calendar,/\/admin\/me/);
   assert.match(calendar,/data\.permissions\?\.notices===true/);
@@ -65,6 +67,22 @@ test('sidebar calendar replaces recent notices/quick links and guards administra
   assert.match(calendar,/endInput\.value<startInput\.value/);
   assert.match(css,/seonam-calendar-grid/);
   assert.match(css,/max-width:940px/);
+});
+
+test('public and board pages share a duplicate-free two-column shell',async()=>{
+  const [js,css,worker]=await Promise.all([
+    readFile(new URL('board-central-category.js',root),'utf8'),
+    readFile(new URL('shared-site-header.css',root),'utf8'),
+    readFile(new URL('../../../services/independent-board/worker.js',root),'utf8')
+  ]);
+  assert.match(js,/main\\.append\\(content,right\\)/);
+  assert.doesNotMatch(js,/seonam-visual-left|seonam-visual-side-nav|seonam-visual-side-card/);
+  assert.doesNotMatch(css,/seonam-visual-left|seonam-visual-side-nav|seonam-visual-side-card/);
+  assert.match(css,/grid-template-columns:minmax\\(0,1fr\\) minmax\\(210px,260px\\)/);
+  assert.match(css,/@media\\(max-width:760px\\)/);
+  assert.match(css,/flex-direction:column!important/);
+  assert.match(js,/calendarScript\\.addEventListener\\('load'/);
+  assert.ok(worker.includes('const BOARD_CATEGORY_CLIENT_JS='+JSON.stringify(js)+';'));
 });
 
 test('today agenda, management login, and calendar toolbar remain separate from selected-date listing',async()=>{
