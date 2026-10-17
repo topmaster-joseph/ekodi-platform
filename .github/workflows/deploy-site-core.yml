@@ -1233,6 +1233,26 @@ jobs:
       surface_registry: config/board-surface-verification.json
       device_profile: mobile-portrait
 
+  # Independent canonical Control smoke probes the new page on both device
+  # profiles without shrinking the existing site/board surface budget.
+  native_control_verification_desktop:
+    name: EKODI Control Canonical Verification · Desktop
+    needs: deploy
+    uses: ./.github/workflows/ekodi-background-browser-worker.yml
+    with:
+      verification_lane: control-canonical
+      surface_paths: /admin/control,/control
+      device_profile: desktop
+
+  native_control_verification_mobile:
+    name: EKODI Control Canonical Verification · Mobile
+    needs: deploy
+    uses: ./.github/workflows/ekodi-background-browser-worker.yml
+    with:
+      verification_lane: control-canonical
+      surface_paths: /admin/control,/control
+      device_profile: mobile-portrait
+
   native_research_verification_desktop:
     name: EKODI Research Native Verification · Desktop
     needs: deploy

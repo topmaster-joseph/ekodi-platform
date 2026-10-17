@@ -154,3 +154,36 @@ test('admin handoff token is scrubbed and only accepted after super-admin verifi
   assert.deepEqual(denied.replaced,['/admin/control?task=123']);
   assert.match(source,/await acceptVerifiedAdminControlHandoff\(\)/);
 });
+
+test('every Site Core promotion verifies canonical and legacy Control in independent desktop/mobile browsers',()=>{
+ const flow=read('.github/workflows/deploy-site-core.yml');
+ function jobText(name){
+  const lines=flow.split('\n');
+  const start=lines.indexOf('  '+name+':');
+  assert.ok(start>=0,name+' job is required');
+  const next=lines.findIndex((l,index)=>index>start && l.startsWith('  ') && l[2]!==' ' && l.trim().endsWith(':'));
+  return lines.slice(start,next<0?undefined:next).join('\n');
+ }
+ for(const [name,device] of [
+  ['native_control_verification_desktop','desktop'],
+  ['native_control_verification_mobile','mobile-portrait']
+ ]){
+  const job=jobText(name);
+  assert.ok(job.includes('needs: deploy'));
+  assert.ok(job.includes('uses: ./.github/workflows/ekodi-background-browser-worker.yml'));
+  assert.ok(job.includes('verification_lane: control-canonical'));
+  assert.ok(job.includes('surface_paths: /admin/control,/control'));
+  assert.ok(job.includes('device_profile: '+device));
+ }
+ // Existing Site Core board and service paths must remain unchanged.
+ for(const name of ['native_surface_verification_desktop','native_surface_verification_mobile']){
+  const job=jobText(name);
+  assert.ok(job.includes('surface_registry: config/board-surface-verification.json'));
+  assert.ok(job.includes('/ekodibiz/seasonal-workers/office'));
+ }
+ const worker=read('.github/workflows/ekodi-background-browser-worker.yml');
+ assert.ok(worker.includes('Independent canonical /admin/control UI'));
+ assert.ok(worker.includes('contains("관리자 Google 로그인")'));
+ assert.ok(worker.includes('contains("보호된 배포 요청")'));
+ assert.ok(worker.includes('^https://ekodi[.]kr/admin/control/?$'));
+});
