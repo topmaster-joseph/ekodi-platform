@@ -23,3 +23,10 @@ Run owner-triggered real CI, constitution, security, branch-conflict and officia
 Run first-party EKODI PC USER2 / USER3 / USER4 actual no-window canaries only on online, eligible, heartbeat/lease/capability-verified nodes. Record task ID, node identity, no new Opera/user tabs, no focus theft, cleanup of only EKODI-owned temporary resources, and 401/403 `AUTH_REQUIRED` fail-closed behavior. Missing or insufficient live device evidence remains **not verified**.
 
 This checkpoint is neither a second Human Gate approval nor a claim of production readiness.
+
+## Verified protected-main convergence
+- Official Orchestrator synchronized latest main into recovery PR #5147 at `9a67447558a5863cb0c4bdfb77fb54be707e8a9a`.
+- The first owner-authored recovery CI suite at `74d127f63d8671ae3d307f80c594585c31066121` passed all eight pull-request workflows. This is **not** permission to substitute old checks for the synchronized head.
+- GitHub marked all new orchestrator-authored synchronization checks `action_required`, so this second **documentation-only** GitHub-owner commit requests real protected checks on the synchronized source.
+- The originally human-approved source SHA remains in ancestry, and no authorized runtime implementation, privilege boundary, or production deployment is altered by this documentation change.
+- A final merge, deployment, PC/mobile validation and actual no-user-tab/no-focus-steal live receipt remain required before any success claim.
