@@ -216,7 +216,7 @@ async function adminJourney(page,state,profile){
   await pr.locator('select').selectOption('rejected');
   await pr.locator('input').fill('실제 공급업체 소스·라이선스 검증 대기');
   await pr.locator('button').click();
-  await page.waitForFunction(()=>[...document.querySelectorAll('[data-pass-intake-list] .pass-submission')].some(el=>el.textContent.includes('QA GitHub PR '+location.search.replace('?',''))),null,{timeout:1200}).catch(()=>{});
+  await page.waitForFunction(({name})=>[...document.querySelectorAll('[data-pass-intake-list] .pass-submission')].some(el=>el.textContent.includes(name)&&el.textContent.includes('반려')),{name:'QA GitHub PR '+profile.name},{timeout:12000});
   const item=state.items.find(entry=>entry.delivery==='github_pr'&&entry.vendorName==='QA GitHub PR '+profile.name);
   assert.equal(item?.status,'rejected');
   const zip=list.locator('.pass-submission').filter({hasText:'QA ZIP '+profile.name});
