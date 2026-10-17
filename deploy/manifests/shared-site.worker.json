@@ -2317,7 +2317,10 @@
           "직접 DB 접근",
           "외주사 연동 계약",
           "local-region-admin-auth.js",
-          "사용자 화면"
+          "사용자 화면",
+          "외부업체 소스·API 통합 접수",
+          "data-pass-intake-form",
+          "cheonggyepass-vendor-intake-ui.js"
         ],
         "headerExpect": [
           "x-ekodi-route: regional-commerce-program-admin",
@@ -2337,7 +2340,8 @@
           "외부 공급자",
           "직접 DB 접근",
           "외주사 연동 계약",
-          "local-region-admin-auth.js"
+          "local-region-admin-auth.js",
+          "data-pass-vendor-intake"
         ],
         "headerExpect": [
           "x-ekodi-route: regional-commerce-program-admin",
@@ -3602,6 +3606,23 @@
           "\"privateDocuments\":false",
           "\"payments\":false",
           "\"aiExecution\":false"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/cheonggyepass-vendor-intake-ui.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "data-pass-intake-form",
+          "x-ekodi-intake-request",
+          "ekodi:region-access-ready"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
       }

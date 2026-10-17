@@ -61,6 +61,7 @@ import { localRegionAccessAdminScript } from './local-region-access-admin.js';
 import { localRegionOperationsAdminScript } from './local-region-operations-admin.js';
 import { regionalCommerceProgramFromLocalRoute, regionalCommerceProgramFromPath } from './regional-commerce-program-registry.js';
 import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
+import { cheonggyePassVendorIntakeScript } from './cheonggyepass-vendor-intake-ui.js';
 import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './platform-security-policy.js';
 import { withPublicEdgeCache } from './public-edge-cache.js';
 import { applyTrafficResponsePolicy, assessTrafficTier, recordTrafficOutcome, trafficRequestGuard } from './traffic-governor.js';
@@ -503,6 +504,7 @@ async function routePlatform(request,env,ctx){
         if(url.pathname==='/cheonggye/local-region-forest-admin.js')return localRegionForestAdminScript();
         if(url.pathname==='/cheonggye/local-region-module-public.js')return localRegionModulePublicScript();
         if(url.pathname==='/cheonggye/local-region-module-admin.js')return localRegionModuleAdminScript();
+        if(url.pathname==='/cheonggye/cheonggyepass-vendor-intake-ui.js')return cheonggyePassVendorIntakeScript();
         if(url.pathname==='/tenant-admin-command-home.css')return tenantAdminCommandHomeCss();
         if(url.pathname==='/tenant-admin-command-home.js')return tenantAdminCommandHomeScript();
         if(['/store-admin.css','/jadam-admin.css','/pizzamaru-admin.css','/yogurt-admin.css'].includes(url.pathname))return storeAdminCss();
