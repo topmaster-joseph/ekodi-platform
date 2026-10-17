@@ -60,7 +60,7 @@ test('production verification submits the real bottom command on canonical ekodi
     assert.equal(parsed.status,0,parsed.stderr);
   }
   assert.match(probe,/https:\/\/ekodi\.kr\/admin\//);
-  assert.match(probe,/https:\/\/ekodi\.kr\/admin\/home\/campus/);
+  assert.match(probe,/https:\/\/ekodi\.kr\/admin\/sites\/campus/);
   assert.match(probe,/https:\/\/ekodi\.kr\/api\/control\/ai\/assist/);
   assert.doesNotMatch(probe,/api\.ekodi\.kr/);
   const dock=await read('admin-assist-dock.js');
@@ -86,7 +86,7 @@ test('production verification submits the real bottom command on canonical ekodi
   assert.match(probe,/Control\/sidebar alignment mismatch/);
   assert.match(retry,/scripts\/admin-assist-canonical-e2e\.mjs/);
   assert.match(retry,/baseUrl: 'https:\/\/ekodi\.kr\/admin\/'/);
-  assert.match(retry,/canonicalCampusUrl: 'https:\/\/ekodi\.kr\/admin\/home\/campus'/);
+  assert.match(retry,/canonicalCampusUrl: 'https:\/\/ekodi\.kr\/admin\/sites\/campus'/);
   assert.match(retry,/aggregate\.assistProbe\?\.passed === true/);
 });
 test('Admin Assist treats AI_ADMIN_TIMEOUT_MS as a bounded total multi-provider budget',async()=>{
