@@ -44,6 +44,8 @@ test('mobile scroll motion and calculator reset regression remain fixed',()=>{
  const css=readFileSync(new URL('../seasonal-workforce/theme.css',import.meta.url),'utf8');
  const js=readFileSync(new URL('../seasonal-workforce/public.js',import.meta.url),'utf8');
  assert.ok(css.includes('@media(max-width:760px){html{scroll-behavior:auto}}'));
+ assert.ok(css.includes('.swp-two-column{grid-template-columns:minmax(0,1fr)}'));
+ assert.ok(css.includes('.swp-table-wrap{min-width:0;max-width:100%;overflow-x:auto}'));
  assert.ok(js.includes("result.style.display='';result.hidden=true;result.textContent=''"));
 });
 
