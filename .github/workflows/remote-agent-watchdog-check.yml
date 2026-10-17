@@ -35,3 +35,26 @@ jobs:
             exit 1
           }
           Write-Host 'Remote Agent Watchdog PowerShell syntax: OK'
+      - name: Guard hidden scheduled execution and Windows PowerShell 5.1 compatibility
+        shell: powershell
+        run: |
+          $installer = Get-Content tools/remote-agent-watchdog/install-watchdog.ps1 -Raw
+          $watchdog = Get-Content tools/remote-agent-watchdog/watchdog.ps1 -Raw
+          if ($installer -notmatch "'-NonInteractive','-WindowStyle','Hidden'") {
+            throw 'Scheduled PowerShell tasks must run non-interactively with a hidden window.'
+          }
+          if ($installer -notmatch "New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount") {
+            throw 'Watchdog tasks must retain the isolated SYSTEM principal.'
+          }
+          if ($watchdog -match 'ConvertFrom-Json\s+-AsHashtable') {
+            throw 'Windows PowerShell 5.1 does not support ConvertFrom-Json -AsHashtable.'
+          }
+          $errors = @()
+          Get-ChildItem tools/remote-agent-watchdog -Filter *.ps1 | ForEach-Object {
+            $tokens = $null
+            $parseErrors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$parseErrors)
+            if ($parseErrors.Count) { $errors += $parseErrors }
+          }
+          if ($errors.Count) { throw ($errors | Out-String) }
+          Write-Host 'Watchdog launch contracts and Windows PowerShell 5.1 syntax: OK'
