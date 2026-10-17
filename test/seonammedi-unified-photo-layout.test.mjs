@@ -19,12 +19,10 @@ test('six-menu home loads the same read-only visual shell as independent boards'
   assert.match(home,/id="organization"/);
   assert.match(home,/id="committee-activity"/);
   for(const label of ['공지','활동이력','관련소식','소통채널','시민의견','조직'])
-    assert.ok(ui.includes("label:'"+label+"'"),label);
-  assert.match(ui,/location\.pathname\.startsWith\('\/seonammedi\/'\)/);
-  assert.match(ui,/base\+'board\/notices'/);
-  assert.match(ui,/base\+'board\/voices\?compose=1&choose_account=1'/);
-  assert.match(ui,/base\+'#committee-activity'/);
-  assert.match(ui,/base\+'#organization'/);
+    assert.ok(home.includes(label),label);
+  assert.match(home,/<nav class="ekodi-six-nav"/);
+  assert.doesNotMatch(ui,/seonam-visual-left|seonam-visual-side-nav|seonam-visual-side-card/);
+
 });
 
 test('the campaign artwork is the only main banner and no stock photo is inserted',()=>{
@@ -38,7 +36,7 @@ test('the campaign artwork is the only main banner and no stock photo is inserte
 test('central content is moved without replacing forms or mutation handlers',()=>{
   assert.match(ui,/while\(main\.firstChild\) content\.append\(main\.firstChild\)/);
   assert.match(ui,/content\.prepend\(outsideCategory\)/);
-  assert.match(ui,/main\.append\(left,content,right\)/);
+  assert.match(ui,/main\.append\(content,right\)/);
   assert.match(ui,/header\.insertAdjacentElement\('afterend',preservedCampaign\)/);
   assert.match(css,/body\.seonam-visual-ready>\.campaign-hero \.campaign-hero-image/);
   assert.match(css,/body\[data-seonammedi-image-mode="inner"\]\.seonam-visual-ready>\.campaign-hero/);
@@ -51,11 +49,11 @@ test('central content is moved without replacing forms or mutation handlers',()=
   assert.match(worker,/\/board\/api\/admin\/notices/);
 });
 
-test('three-column shell is responsive and does not change user authorization contracts',()=>{
-  assert.match(css,/grid-template-columns:minmax\(190px,230px\) minmax\(0,1fr\) minmax\(210px,260px\)/);
+test('two-column shell is responsive and does not change user authorization contracts',()=>{
+  assert.match(css,/grid-template-columns:minmax\(0,1fr\) minmax\(210px,260px\)/);
   assert.match(css,/@media\(max-width:760px\)/);
   assert.match(css,/body\.seonam-visual-ready\.board-notices \.board-panel input\[type="checkbox"\]/);
-  assert.match(css,/\.seonam-visual-side-nav a\[aria-current="page"\]/);
+  assert.doesNotMatch(css,/\.seonam-visual-side-nav/);
   assert.match(css,/body\[data-seonammedi-image-mode="inner"\]\.seonam-visual-ready/);
   assert.doesNotMatch(ui,/(?:localStorage|sessionStorage|auth\/v1\/|Bearer )/);
 });
