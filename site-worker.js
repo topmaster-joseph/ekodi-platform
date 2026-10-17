@@ -704,8 +704,6 @@ export default {
           : ADMIN_CSP;
         const secured = withHostSecurity(response, controlCsp, 'no-store', 'control-surface');
         if (sameOriginAdminEmbed) secured.headers.set('X-Frame-Options', 'SAMEORIGIN');
-        secured.headers.set('X-EKODI-Canonical-Surface','control');
-        secured.headers.set('X-EKODI-Canonical-Path','/admin/control');
         secured.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
         return secured;
       }
