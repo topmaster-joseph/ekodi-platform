@@ -17,3 +17,8 @@ GitHub classified the bot-generated initial PR check runs as `action_required` a
 4. PC/mobile live evidence must distinguish read-only page checks from real authorized Google admin create/edit/delete and public share button, clipboard, and direct-link checks. Production sharing must not be reported complete without a real published event and actual interaction.
 
 A successful CI or merge alone is **not** a complete production result.
+
+## Protected-main convergence checkpoint
+- EKODI native merge coordinator synchronized current protected `main` into the official recovery PR branch at `1cd50ee79993b17d680a4d7a852f57abde183c0b` after the initial owner-checkpoint CI passed.
+- Bot-generated synchronization pushed PR checks into GitHub `action_required` without executing them. This second owner-authored **documentation-only** update triggers actual required checks on the synchronized head.
+- No executable content, permissions, production data, workflow file or auth/rollback protection changed by this checkpoint. The original approved code SHA `df55521295c3decf9598c3258a98809d9ba8696f` stays the approved functional ancestor.
