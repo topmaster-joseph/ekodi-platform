@@ -48,6 +48,8 @@ ${header}
     <details class="delivery-settings compact-section"><summary>송출·저장</summary><div class="delivery-fixed"><span class="delivery-check" aria-hidden="true">✓</span><div><strong>EKODI · 자동 저장</strong></div><span class="delivery-default">기본</span></div><div class="external-head"><strong>외부 동시방송</strong><button id="refreshDestinationsButton" type="button">확인</button></div><div id="externalDestinations" class="destination-options"><small>로그인 후 확인</small></div></details>
 
     <div class="broadcast-actions"><button class="primary" id="goLiveButton">방송 시작</button><button class="danger hidden" id="endLiveButton" disabled>방송 종료</button></div>
+    <div id="hostAccessStatus" class="studio-host-status hidden" role="status" aria-live="polite"></div>
+    <a id="hostAccessLogin" class="studio-host-login hidden" href="#" rel="nofollow">Google 계정 선택 · 진행자 권한 확인</a>
     <div id="statusLog" class="status" aria-live="polite">준비</div>
   </aside>
 </section>
