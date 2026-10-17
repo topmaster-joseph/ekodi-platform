@@ -26,7 +26,7 @@ test('public root is a noindex, no-store demonstration',async()=>{
  assert.match(response.headers.get('x-robots-tag'),/noindex/);
  const body=await response.text();
  assert.match(body,/계절근로자/);
- assert.match(body,/신청을 접수하지 않습니다/);
+ assert.match(body,/실제 농가 신청이나 근로자 개인정보 접수는 하지 않습니다/);
  assert.match(body,/href="\/ekodibiz\/seasonal-workers\/demand"/);
  assert.doesNotMatch(body,/<script(?:\s|>)[^>]*>[^<]+<\/script>/);
 });
