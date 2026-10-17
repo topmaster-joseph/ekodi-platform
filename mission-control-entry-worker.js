@@ -34,6 +34,7 @@ import { handleOrchestratorReleaseReceipt, handleOrchestratorCompletionReconcili
 import { handleDevotionalControl } from './devotional-control.js';
 import { handlePublicChurchWorship } from './church-public-worship-control.js';
 import { handlePublicCommonScripture } from './common-scripture-registry.js';
+import {handleCommonChurchCalendar} from './common-church-calendar-registry.js';
 import { handleLearningControl } from './learning-control.js';
 import { handleLocalCommerceControl } from './local-commerce-control.js';
 import { handleExternalAccountControl, runExternalAccountHealthAudit } from './external-account-control.js';
@@ -151,6 +152,8 @@ export default {
     if (externalAccountPreflight) return externalAccountPreflight;
 
     const path = incoming.pathname;
+    const commonCalendarResponse=await handleCommonChurchCalendar(request,env);
+    if(commonCalendarResponse)return applyApiSecurityHeaders(commonCalendarResponse);
     const scriptureResponse=handlePublicCommonScripture(request);
     if(scriptureResponse)return applyApiSecurityHeaders(scriptureResponse);
     const publicWorship=await handlePublicChurchWorship(request,env);
