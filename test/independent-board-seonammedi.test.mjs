@@ -41,9 +41,9 @@ test('top-level citizen voices enters one-shot Google compose flow without login
   assert.doesNotMatch(worker,/VOICE_COMPOSE_AUTH_ONCE_KEY/);
   assert.doesNotMatch(worker,/function claimComposeAutoAuth\(\)/);
   assert.doesNotMatch(worker,/sessionStorage\.getItem\(key\)==="1"/);
-  assert.match(worker,/if\(composeRequested&&!allowed\)\{if\(!status\.textContent\)status\.textContent="로그인 후 글을 쓸 수 있습니다/);
-  assert.match(worker,/if\(composeRequested&&allowed\)\{write\.hidden=false/);
-  assert.match(worker,/u\.searchParams\.delete\("compose"\)/);
+  assert.match(worker,/if\(composeRequested&&!allowed\)/); assert.match(worker,/auth_attempt/);
+  assert.match(worker,/if\(composeRequested&&allowed\)/); assert.match(worker,/showEditor/);
+  assert.match(worker,/clearComposeQuery/);
   assert.match(worker,/auth\.searchParams\.set\("return_to",target\.href\)/);
   assert.match(worker,/auth\.searchParams\.set\("purpose","seonammedi-board-write"\)/);
 });

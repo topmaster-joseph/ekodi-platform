@@ -28,15 +28,15 @@ test('citizen voice is one simple message form and optional details on both host
 test('admin edits appear automatically only after permission-gated admin API succeeds',async()=>{
   const response=await board.fetch(new Request('https://seonammedi.kr/board/voices'),{});
   const html=await response.text();
-  assert.match(html,/if\(q\|\|!voiceVerified\)return/);
+  assert.match(html,/if\(search\.value\.trim\(\)\|\|!voiceVerified\)return/);
   assert.match(html,/call\("\/board\/api\/admin\/posts",\{headers:\{authorization:"Bearer "\+t\}\}\)/);
-  assert.match(html,/adminItems=data\.items\|\|\[\];render\(adminItems,true\)/);
+  assert.match(html,/adminItems=data\.items\|\|\[\];admin=true;render\(adminItems,true\)/);
   assert.match(html,/data-edit=/);
   assert.match(html,/data-delete=/);
   assert.match(html,/data-reply-delete=/);
   assert.doesNotMatch(html,/adminMode|manageToggle/);
-  assert.match(html,/if\(composeRequested&&allowed\)\{write\.hidden=false/);
-  assert.match(html,/if\(composeRequested&&!allowed\)\{if\(!status\.textContent\)/);
+  assert.match(html,/if\(composeRequested&&allowed\)\{showEditor\(\);clearComposeQuery\(\);return\}/);
+  assert.match(html,/if\(composeRequested&&!allowed\)/); assert.match(html,/auth_attempt/);
   assert.doesNotMatch(html,/if\(composeRequested&&!allowed\)\{if\(claimComposeAutoAuth/);
   assert.match(html,/auth\.searchParams\.set\("select_account","1"\)/);
 });

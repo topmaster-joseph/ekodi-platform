@@ -52,3 +52,14 @@
 
 .seonam-calendar-nav .seonam-calendar-today{min-width:44px;text-align:center}
 .seonam-calendar-nav .seonam-calendar-month{margin-right:auto}
+
+/* Public event sharing is always available, independent of admin permissions. */
+.seonam-calendar-share-actions{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}
+.seonam-calendar-share-actions button{appearance:none;min-height:31px;padding:5px 9px;border:1px solid #becddc;border-radius:6px;background:#fff;color:#193b5b;font-size:12px;font-weight:700;cursor:pointer}
+.seonam-calendar-share-actions button:hover,.seonam-calendar-share-actions button:focus-visible{background:#eff6ff;border-color:#235b91;outline-offset:2px}
+.seonam-calendar-share-feedback{display:block;min-height:0;font-size:11px;line-height:1.5;color:#244c70;overflow-wrap:anywhere}
+.seonam-calendar-share-feedback:empty{display:none}
+.seonam-calendar-event.is-shared{border:1px solid #8baeca;border-radius:8px;padding:10px;background:#f4f8fd;scroll-margin-top:90px;outline-offset:3px}
+.seonam-calendar-event.is-shared:focus{outline:2px solid #1e5b95}
+.seonam-calendar-today-event .seonam-calendar-share-actions{margin-top:6px}
+@media(max-width:680px){.seonam-calendar-share-actions button{min-height:38px;font-size:13px}}

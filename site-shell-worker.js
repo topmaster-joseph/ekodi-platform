@@ -39,9 +39,17 @@ function standaloneBrandPlacePath(pathname){
   return normalizedPath(pathname)==='/pizzamaru/mokpodae';
 }
 
+// First-party Control is a privileged standalone operations surface.
+ // Do not classify /control as a public workspace slug and never append the
+ // shared user Shell/header/character bundle to its HTML or static assets.
+export function isShellIsolatedControlPath(pathname){
+  const path=normalizedPath(pathname);
+  return path==='/control'||path==='/control.css'||path==='/control.js';
+}
 function rootInternalPath(pathname){
   const path=normalizedPath(pathname);
-  return path==='/admin'||path==='/admin.html'||path.startsWith('/admin/');
+  return isShellIsolatedControlPath(path)||
+    path==='/admin'||path==='/admin.html'||path.startsWith('/admin/');
 }
 
 export function isUserHomePath(pathname,serviceId='',workspaceSlug=''){

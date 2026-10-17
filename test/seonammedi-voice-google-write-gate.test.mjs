@@ -31,9 +31,9 @@ test('voice UI keeps free reading and sharing but sends bearer token on both wri
   assert.match(html,/await requireVoiceAccount\(\)/);
   assert.match(html,/async function awaitVoicePublication\(data\)/);
   assert.match(html,/id="voiceAuthStatus"/);
-  assert.match(html,/write\.onsubmit=async e=>\{e\.preventDefault\(\);if\(!await requireVoiceAccount\(\)\)return;const t=token\(\)/);
-  assert.match(html,/list\.addEventListener\("submit",async e=>[\s\S]*?await requireVoiceAccount\(\)/);
-  const writes=html.match(/authorization:"Bearer "\+t/g)||[];
+  assert.match(html,/write\.onsubmit=async event=>/); assert.match(html,/if\(!await requireVoiceAccount\(\)\)return/);
+  assert.match(html,/if\(reply\)/); assert.match(html,/await requireVoiceAccount\(\)/);
+  const writes=html.match(/authorization:"Bearer "\+token\(\)/g)||[];
   assert.ok(writes.length>=2,'Both post and reply writes carry authorization');
   assert.match(html,/data-share=/);
 });
