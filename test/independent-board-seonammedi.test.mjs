@@ -72,7 +72,7 @@ test('standalone public writes are rate-limited, queue-first and idempotent',asy
   assert.match(worker,/message\.retry\(\)/);
   assert.match(worker,/submissionStatus/);
   assert.match(workflow,/queues create ekodi-independent-board-write-ingress/);
-  assert.match(workflow,/Production queue-create-list-reply canary and cleanup/);
+  assert.match(workflow,/Verify clean citizen authenticated write and legacy retirement/);
   assert.match(workflow,/\.queued==true/);
 });
 
@@ -175,7 +175,7 @@ test('independent board deployment provisions its own storage and verifies real 
   assert.match(workflow,/REQUESTED_RELEASE_BRANCH_REF/);
   assert.match(workflow,/commits\/\$GITHUB_SHA\/pulls/);
   assert.match(workflow,/Requested release task does not match orchestrator branch/);
-  assert.match(workflow,/Production queue-create-list-reply canary and cleanup/);
+  assert.match(workflow,/Verify clean citizen authenticated write and legacy retirement/);
   assert.match(workflow,/DELETE FROM board_replies WHERE post_id=\$post_id/);
   assert.match(workflow,/DELETE FROM board_posts WHERE id=\$post_id/);
 });
