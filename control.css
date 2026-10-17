@@ -382,3 +382,11 @@ html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .composer tex
     height:calc(100svh - 58px)!important;
   }
 }
+
+/* Native admin embed: the parent owns navigation; /control still owns commands and status. */
+html[data-ekodi-control-embedded="admin"] .control-rail{display:none!important}
+html[data-ekodi-control-embedded="admin"] .control-main{margin-left:0!important;width:100%!important;min-width:0!important}
+html[data-ekodi-control-embedded="admin"] .composer-wrap{left:0!important}
+html[data-ekodi-control-embedded="admin"] .topbar .ghost-link,
+html[data-ekodi-control-embedded="admin"] .mobile-only{display:none!important}
+html[data-ekodi-control-embedded="admin"] .control-shell{min-width:0!important}
