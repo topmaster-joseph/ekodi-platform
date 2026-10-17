@@ -27,7 +27,7 @@ test('public root is a noindex, no-store demonstration',async()=>{
  const body=await response.text();
  assert.match(body,/계절근로자/);
  assert.match(body,/신청을 접수하지 않습니다/);
- assert.match(body,/href="\.\/survey-demo"/);
+ assert.match(body,/href="\/ekodibiz\/seasonal-workers\/demand"/);
  assert.doesNotMatch(body,/<script(?:\s|>)[^>]*>[^<]+<\/script>/);
 });
 test('survey page loads same-origin script rather than inline JavaScript',async()=>{
