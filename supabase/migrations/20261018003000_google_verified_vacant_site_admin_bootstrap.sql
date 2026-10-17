@@ -135,3 +135,17 @@ JOIN public.login_identities li ON li.auth_user_id=u.id
 WHERE t.slug='ekodi-church' AND t.status='active'
   AND u.email_confirmed_at IS NOT NULL
 ON CONFLICT(tenant_id,user_id) DO NOTHING;
+
+-- The two owner-designated platform recovery identities also receive an explicit
+-- Church-site grant for RLS-protected worship editing. Google sign-in and matching
+-- the real provider subject remain mandatory before the grant can be consumed.
+INSERT INTO public.site_access_registry
+  (email,site_key,tenant_id,role,status,source,note,plan,created_at,updated_at)
+SELECT a.email,'church',t.id,'tenant_admin'::public.app_role,'active',
+  'platform_super_admin_explicit_church',
+  'Owner-designated platform super administrator; Google identity required',
+  'standard',now(),now()
+FROM (VALUES ('topmaster.joseph@gmail.com'),('joseph@ekodi.kr')) AS a(email)
+JOIN public.tenants t ON t.slug='ekodi-church' AND t.status='active'
+ON CONFLICT(email,site_key,tenant_id,role) DO UPDATE
+SET status='active',source=excluded.source,note=excluded.note,updated_at=now();
