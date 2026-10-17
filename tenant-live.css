@@ -109,3 +109,12 @@
   .mission-live-intro .entry-actions button{flex:1;min-width:0;min-height:46px;font-size:15px;padding:10px 12px}
   .live-shell{width:min(100% - 16px,1500px);padding:14px 0 28px}.studio,.viewer{gap:7px}.studio .stage,.viewer .stage{border-radius:11px}.compact-panel,.viewer-panel{padding:9px;border-radius:12px}.studio-title h2,.viewer-panel h2{font-size:16px}.compact-controls{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}.compact-controls button{min-height:31px;padding:5px 3px;font-size:9px}.broadcast-actions{position:sticky;bottom:6px;z-index:8;background:#fffffff2;padding:5px;border-radius:10px;box-shadow:0 8px 24px #18312328}.compact-section>summary,.compact-settings>summary{padding:8px 9px}.camera-pair-dialog{padding:15px}.viewer-camera-box{grid-template-columns:1fr}.language-control select{min-height:38px}
 }
+
+/* Keep the broadcast preview visible while its longer production panel scrolls. */
+.studio-host-status{padding:9px 10px;margin-top:8px;background:#fff7e8;border:1px solid #e9d0a8;border-radius:9px;color:#704819;font-size:12px;line-height:1.5}
+.studio-host-login{display:block;margin-top:7px;padding:10px;border:1px solid #315b45;border-radius:9px;text-align:center;color:#315b45;font-size:12px;font-weight:800;text-decoration:none;background:#f4f9f4}
+.studio-host-login:focus-visible{outline:3px solid #4d8069;outline-offset:2px}
+@media(min-width:901px){
+  .studio>.stage{position:sticky;top:76px;align-self:start;max-height:calc(100dvh - 92px)}
+}
+@media(max-width:900px){.studio>.stage{position:relative;top:auto}}

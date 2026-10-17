@@ -15,6 +15,34 @@ function updateLiveElapsed(){const el=$('liveElapsed');if(el)el.textContent=stat
 function startLiveElapsed(){clearInterval(state.liveTimer);state.liveStartedAt=Date.now();updateLiveElapsed();state.liveTimer=setInterval(updateLiveElapsed,1000)}
 function stopLiveElapsed(){clearInterval(state.liveTimer);state.liveTimer=null;state.liveStartedAt=0;updateLiveElapsed()}
 function login(){const returnTo=location.href;location.href=`/auth/?site=${encodeURIComponent(cfg.authSite||cfg.tenant)}&return_to=${encodeURIComponent(returnTo)}`}
+function showHostAccessRecovery(message){
+  const status=$('hostAccessStatus'),loginButton=$('hostAccessLogin');
+  if(status){status.textContent=message;status.classList.remove('hidden')}
+  if(loginButton){loginButton.classList.remove('hidden');loginButton.href=`/auth/?site=${encodeURIComponent(cfg.authSite||cfg.tenant)}&select_account=1&return_to=${encodeURIComponent(location.href)}`}
+  note(message);
+}
+async function verifyHostAccess(){
+  if(!token()){
+    showHostAccessRecovery('Google 계정으로 로그인한 뒤 방송 진행자 권한을 확인해 주세요.');
+    return false;
+  }
+  try{
+    const result=await api('/host-access?tenant='+encodeURIComponent(cfg.tenant));
+    if(result.authorized!==true){showHostAccessRecovery('현재 계정에는 이 방송의 진행 권한이 없습니다.');return false}
+    $('hostAccessStatus')?.classList.add('hidden');
+    $('hostAccessLogin')?.classList.add('hidden');
+    return true;
+  }catch(error){
+    if(error.status===401||error.status===403){
+      showHostAccessRecovery(error.status===403
+        ?'이 Google 계정에는 방송 진행 권한이 없습니다. 에코디교회 관리자 계정을 선택해 다시 로그인하세요.'
+        :'Google 로그인이 만료됐습니다. 계정을 다시 선택해 주세요.');
+      return false;
+    }
+    note('방송 권한 확인 실패: '+error.message+' · 연결 상태를 확인하고 다시 시도하세요.');
+    return false;
+  }
+}
 async function waitIce(pc){if(pc.iceGatheringState==='complete')return;await new Promise(resolve=>{const timer=setTimeout(resolve,2500);pc.addEventListener('icegatheringstatechange',()=>{if(pc.iceGatheringState==='complete'){clearTimeout(timer);resolve()}},{once:false})})}
 function providerDescription(data){return data?.provider?.sessionDescription||data?.provider?.data?.sessionDescription||data?.sessionDescription||null}
 function broadcastSelection(){const destinationIds=[...document.querySelectorAll('#externalDestinations input[data-destination]:checked')].map(input=>input.value).filter(Boolean);return {broadcastMode:destinationIds.length?'ekodi+external':'ekodi',destinationIds,multistream:destinationIds.length>0}}
@@ -184,7 +212,15 @@ async function stopRecording(){
 async function prepareStudio(){show('studioView');note('준비 중');try{await acquireCamera();await refreshCameraDevices();state.studioPrepared=true;$('goLiveButton').disabled=false;await loadExternalDestinations();note('준비 완료');return true}catch(error){state.studioPrepared=false;$('goLiveButton').disabled=true;note(`준비 실패: ${error.message}`);return false}}
 async function startHost(){if(state.room&&state.session&&state.pc)return true;if(state.hosting)return false;state.hosting=true;show('studioView');note('연결 중');try{if(!state.room){const created=await createRoom();if(!created){state.hosting=false;return false}state.room=created.room}$('roomTitle').textContent=state.room.title;$('shareLink').value=`${location.origin}${cfg.livePath}?room=${encodeURIComponent(state.room.id)}`;$('roomLinks').classList.remove('hidden');const stream=state.local||await acquireCamera(),program=ensureProgram()||stream;await api(`/rooms/${state.room.id}/status`,{method:'POST',body:JSON.stringify({status:'starting'})});await createSession(state.room.id,'owner');await publishStream(program,'program');startChatPolling();startParticipantMonitoring();await refreshManagementCameraPairs();note('송출 준비 완료');return true}catch(error){state.hosting=false;$('goLiveButton').disabled=false;note(`연결 실패: ${error.message}`);return false}}
 async function goLive(){if(!state.room)return;try{await api(`/rooms/${state.room.id}/status`,{method:'POST',body:JSON.stringify({status:'live'})});state.isLive=true;$('programBadge').textContent='LIVE';$('liveState').textContent='방송 중';$('goLiveButton').disabled=true;$('goLiveButton').textContent='방송 중';$('endLiveButton').disabled=false;$('endLiveButton').classList.remove('hidden');startLiveElapsed();note('방송 중 · 자동 녹화');await startRecording()}catch(error){$('goLiveButton').disabled=false;note(`방송 시작 실패: ${error.message}`)}}
-async function startBroadcast(){if(!state.studioPrepared){const prepared=await prepareStudio();if(!prepared)return}if(!token())return login();$('goLiveButton').disabled=true;const ready=await startHost();if(!ready){$('goLiveButton').disabled=false;return}await goLive()}
+async function startBroadcast(){
+  // Check server-side tenant authority before allocating rooms, provider sessions,
+  // recording resources or any external broadcast destination.
+  if(!await verifyHostAccess())return;
+  if(!state.studioPrepared){const prepared=await prepareStudio();if(!prepared)return}
+  $('goLiveButton').disabled=true;
+  const ready=await startHost();if(!ready){$('goLiveButton').disabled=false;return}
+  await goLive();
+}
 async function endLive(){if(!state.room)return;state.closing=true;try{await api(`/rooms/${state.room.id}/status`,{method:'POST',body:JSON.stringify({status:'ending'})});await stopRecording();if(state.session)await api(`/rooms/${state.room.id}/sessions/${state.session.id}/leave`,{method:'POST',session:true,body:'{}'}).catch(()=>{});state.pc?.close();cleanupCollaboration();for(const id of [...state.extraCameras.keys()])disconnectExtraCamera(id);state.local?.getTracks().forEach(t=>t.stop());state.screen?.getTracks().forEach(t=>t.stop());state.canvasStream?.getTracks().forEach(t=>t.stop());cancelAnimationFrame(state.animationFrame);await api(`/rooms/${state.room.id}/status`,{method:'POST',body:JSON.stringify({status:'ended'})});state.isLive=false;stopLiveElapsed();setControlState('camera',false);setControlState('mic',false);setControlState('screen',false);$('programBadge').textContent='종료';$('liveState').textContent='방송 종료';$('endLiveButton').disabled=true;$('endLiveButton').classList.add('hidden');$('goLiveButton').textContent='방송 종료됨';if(!state.recording)note('방송이 종료되었습니다.')}catch(error){note(`방송 종료 처리 실패: ${error.message}`)}finally{state.closing=false}}
 async function shareScreen(){if(!state.local)return note('먼저 카메라를 준비해 주세요.');if(state.screen){state.screen.getTracks().forEach(track=>track.stop());state.screen=null;setSourceVideo('screenSource',null);state.presenterHidden=false;removeOverlay('presenter');setControlState('screen',false);return note('화면공유 종료')}try{const stream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:false});state.screen=stream;state.presenterHidden=false;setSourceVideo('screenSource',stream);setControlState('screen',true,'화면공유 중');const presenter=ensureOverlay('presenter',{type:'video',label:'발표자',stream:state.local});presenter.visible=true;syncOverlayHandles();renderSourceCards();stream.getVideoTracks()[0]?.addEventListener('ended',()=>{state.screen=null;state.presenterHidden=false;setSourceVideo('screenSource',null);removeOverlay('presenter');setControlState('screen',false)},{once:true});note('화면공유 중')}catch(error){if(error.name!=='NotAllowedError')note(`화면공유 실패: ${error.message}`)}}
 function renderChatMessages(){for(const id of ['studioChatMessages','viewerChatMessages']){const root=$(id);if(!root)continue;root.replaceChildren();for(const row of state.chatMessages.slice(-80)){const item=document.createElement('div');item.className='chat-message';const meta=document.createElement('span');meta.textContent=row.displayName||'참여자';const p=document.createElement('p');p.textContent=row.message||'';item.append(meta,p);root.append(item)}root.scrollTop=root.scrollHeight}}
