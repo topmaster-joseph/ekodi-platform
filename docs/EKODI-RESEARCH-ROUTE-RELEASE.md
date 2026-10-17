@@ -27,3 +27,8 @@ This changes an existing production release manifest and workflow, therefore it 
 
 ## Residual prevention
 Generalizing the central convergence classifier to include every future route-registry change remains a distinct source-policy improvement. It is not silently authorized by this route-specific production repair.
+
+## Owner-authored CI for official recovery branch
+- User-approved immutable source: PR #5125 at `748588a8dfd17b9958345f7b77ec8d66e0edbf2c` with GitHub owner comment [#6231571190](https://github.com/topmaster-joseph/ekodi-platform/pull/5125#issuecomment-6231571190) and subsequent `orchestrator-human-gate-approved` label.
+- Official EKODI recovery task `orch_recovery_748588a8dfd17b9958345f7b77ec8d66` and protected PR #5126 were issued by source verification workflow #39016335856.
+- Bot-created PR checks initially returned `action_required`. This owner-authored documentation-only commit regenerates genuine required checks without modifying any executable code, authorization, rollout or rollback policy. Do not merge without all real CI/check runs passing.
