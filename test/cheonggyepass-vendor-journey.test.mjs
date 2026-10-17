@@ -57,18 +57,16 @@ async function fixture(){
   const sqlDb={
     prepare(query){
       const statement=sqlite.prepare(query);
-      return {
-        bind(...argumentsList){
-          return {
-            async run(){
-              const output=statement.run(...argumentsList);
-              return {meta:{changes:Number(output.changes||0)}};
-            },
-            async all(){return {results:statement.all(...argumentsList)}},
-            async first(){return statement.get(...argumentsList)||null},
-          };
+      const execute=(argumentsList=[])=>({
+        async run(){
+          const output=statement.run(...argumentsList);
+          return {meta:{changes:Number(output.changes||0)}};
         },
-      };
+        async all(){return {results:statement.all(...argumentsList)}},
+        async first(){return statement.get(...argumentsList)||null},
+      });
+      // Cloudflare D1 supports both db.prepare(sql).all() and db.prepare(sql).bind(...).all().
+      return {...execute(),bind(...argumentsList){return execute(argumentsList)}};
     },
     async batch(queries){
       sqlite.exec('BEGIN');
@@ -220,7 +218,7 @@ test('complete vendor intake lifecycle: original PR, API metadata, quarantined Z
         body:{status:'approved_for_testing',note:'Trying to undo rejection'}});
       assert.equal(followup.status,409);
       assert.equal(followup.body.code,'INTAKE_REVIEW_STATE_INVALID');
-      const audit=sqlite.prepare('SELECT event_type FROM cheonggyepass_vendor_events WHERE submission_id=? ORDER BY created_at').all(prId);
+      const audit=sqlite.prepare('SELECT event_type FROM cheonggyepass_vendor_events WHERE submission_id=? ORDER BY rowid').all(prId);
       assert.deepEqual(audit.map(entry=>entry.event_type),['submitted','review:rejected']);
       const vendorView=await invoke('');
       assert.equal(vendorView.status,200);
