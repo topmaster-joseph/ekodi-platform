@@ -143,7 +143,7 @@ AFTER UPDATE ON ekodipay_merchant_bank_verification
 WHEN OLD.review_state='verified' AND NEW.review_state='revoked'
 BEGIN
  INSERT INTO ekodipay_bank_change_audit(merchant_id,request_ref,event_type,old_fingerprint,new_fingerprint,verified_by_ref,event_at)
- VALUES(NEW.merchant_id,NULL,'account_revoked',OLD.account_hmac_fingerprint,NEW.account_hmac_fingerprint,NEW.verified_by_ref,NEW.verified_at);
+ VALUES(NEW.merchant_id,NULL,'account_revoked',OLD.account_hmac_fingerprint,NEW.account_hmac_fingerprint,NEW.verified_by_ref,CAST(strftime('%s','now') AS INTEGER)*1000);
 END;
 
 -- Prevent staged requests being altered to retarget their approvals. Only the
