@@ -99,6 +99,15 @@ export const freshVoiceClient = String.raw`
     await request('/'+id,{method:'DELETE',headers:{authorization:'Bearer '+t}});
     await reload();
   }
+  async function waitUntilPublished(created){
+    if(!created?.queued||!/^[a-f0-9-]{36}$/i.test(created.submissionId||''))throw Error('저장 접수 확인 실패');
+    for(let attempt=0;attempt<20;attempt++){
+      await new Promise(resolve=>setTimeout(resolve,750));
+      const latest=await request('/submissions/'+created.submissionId);
+      if(latest.status==='published'&&Number.isSafeInteger(Number(latest.id))&&Number(latest.id)>0)return Number(latest.id);
+    }
+    throw Error('등록 요청은 접수됐지만 저장 완료를 아직 확인하지 못했습니다. 다시 등록하지 말고 잠시 후 목록을 확인해 주세요.');
+  }
   form.addEventListener('submit',async event=>{
     event.preventDefault();const submit=form.querySelector('button[type=submit]');submit.disabled=true;
     try{
@@ -106,9 +115,9 @@ export const freshVoiceClient = String.raw`
       const body=el('freshMessage').value.trim();if(!body)throw Error('의견을 입력해 주세요.');
       message('저장 중입니다.');
       const saved=await request('',{method:'POST',headers:{authorization:'Bearer '+t,'content-type':'application/json'},body:JSON.stringify({message:body})});
-      if(saved.published!==true||!Number.isSafeInteger(Number(saved.id)))throw Error('저장 확인 실패');
+      const savedId=await waitUntilPublished(saved);
       await reload();
-      if(!posts.some(p=>p.id===Number(saved.id)))throw Error('저장됐지만 목록에서 확인되지 않았습니다. 다시 등록하지 말고 목록을 새로고침해 주세요.');
+      if(!posts.some(p=>p.id===savedId))throw Error('저장됐지만 목록에서 확인되지 않았습니다. 다시 등록하지 말고 목록을 새로고침해 주세요.');
       closeEditor();message('의견이 저장됐습니다.');
     }catch(e){message(e.message||'저장 오류')}finally{submit.disabled=false}
   });
