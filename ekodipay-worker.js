@@ -1,5 +1,7 @@
+import {paymentRoute, paymentMode} from './ekodipay-provider-toss.js';
+export { PayOrderStore } from './ekodipay-order-store.js';
 // EKODI Pay public entry and non-financial experience demo.
-// This Worker NEVER makes PG requests, stores transactions, or confirms payment.
+// Financial PG endpoints are separately guarded; production money movement remains disabled until independent approval and credentials.
 export const CANONICAL_PAYMENT_ROOT = 'https://ekodi.kr/ekodipay';
 const PREFIX = '/ekodipay';
 const ORDER_ID = /^EB-[A-Z0-9-]{6,80}$/;
@@ -76,7 +78,7 @@ function shell(title,main,method='GET',status=200) {
     '<meta name="color-scheme" content="light"><title>',esc(title),' | EKODI Pay</title><style>',STYLES,'</style></head><body>',
     '<header class="top"><div class="wrap"><a class="brand" href="/ekodipay/" aria-label="에코디페이 홈">EKODI <b>Pay</b></a>',
     '<nav class="toplinks" aria-label="사이트 메뉴"><a href="/ekodipay/#services">서비스</a><a href="/ekodipay/#flow">이용방법</a>',
-    '<a href="/ekodipay/demo" class="pill-link">테스트 체험</a></nav></div></header>',
+    '<a href="/ekodipay/setup">실결제 준비</a><a href="/ekodipay/demo" class="pill-link">테스트 체험</a></nav></div></header>',
     main,
     '<footer class="foot"><div class="wrap">EKODI Pay · 공식 주소 ekodi.kr/ekodipay · 실제 결제는 별도 PG 계약·운영 승인 후 제공됩니다.</div></footer>',
     '</body></html>'].join('');
@@ -185,10 +187,12 @@ function checkout(request,url) {
     '<a href="'+back+'">에코디비즈 견적·결제 상태 확인</a></section></main>',request.method);
 }
 export default {
-  async fetch(request) {
+  async fetch(request,env) {
     const url=new URL(request.url);
     const path=url.pathname;
     if(url.hostname!=='ekodi.kr')return new Response('Not Found',{status:404,headers:{...headers('text/plain; charset=utf-8'),'x-robots-tag':'noindex'}});
+    const payment=await paymentRoute(request,env,shell);
+    if(payment)return payment;
     if(!['GET','HEAD'].includes(request.method))
       return new Response(null,{status:405,headers:{...headers('text/plain; charset=utf-8'),allow:'GET, HEAD'}});
     if(path===PREFIX)return new Response(null,{status:308,headers:{location:PREFIX+'/','cache-control':'no-store'}});
@@ -196,7 +200,8 @@ export default {
     if(path===PREFIX+'/api/health')return new Response(request.method==='HEAD'?null:JSON.stringify({
       service:'ekodipay',canonical:CANONICAL_PAYMENT_ROOT,status:'public-entry-ready',
       realMoneyProcessing:'disabled-until-human-approved-pg-activation',
-      demoMode:'read-only-no-transactions',paymentSecretsExposed:false
+      demoMode:'read-only-no-transactions',paymentSecretsExposed:false,
+      paymentGatewayMode:paymentMode(env).requested,paymentGatewayReady:paymentMode(env).ready
     }),{status:200,headers:headers('application/json; charset=utf-8')});
     if(path===PREFIX+'/demo')return demo(request,url);
     if(path===PREFIX+'/checkout')return checkout(request,url);

@@ -9,8 +9,20 @@ preview_urls = false
 pattern = "ekodi.kr/ekodipay*"
 zone_name = "ekodi.kr"
 
+# Production remains fail-closed. External PG keys and merchant tokens must be
+# provisioned ONLY as Cloudflare encrypted secrets, not in this file.
 [vars]
 PAYMENT_EXECUTION_MODE = "disabled-until-approved"
+EKODIPAY_PG_CONTRACT_VERIFIED = "NO"
+EKODIPAY_SETTLEMENT_OWNER_VERIFIED = "NO"
+
+[[durable_objects.bindings]]
+name = "PAY_ORDERS"
+class_name = "PayOrderStore"
+
+[[migrations]]
+tag = "ekodipay-ledger-v1"
+new_sqlite_classes = ["PayOrderStore"]
 
 [observability.logs]
 enabled = true

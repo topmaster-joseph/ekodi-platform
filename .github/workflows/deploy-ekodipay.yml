@@ -7,6 +7,10 @@ on:
       - 'wrangler.ekodipay.toml'
       - 'test/ekodipay-canonical.test.mjs'
       - 'test/ekodipay-demo-flow.test.mjs'
+      - 'ekodipay-provider-toss.js'
+      - 'ekodipay-order-store.js'
+      - 'ekodipay-payment-scripts.js'
+      - 'test/ekodipay-payment-live-gate.test.mjs'
       - '.github/workflows/deploy-ekodipay.yml'
   push:
     branches: [main]
@@ -15,6 +19,10 @@ on:
       - 'wrangler.ekodipay.toml'
       - 'test/ekodipay-canonical.test.mjs'
       - 'test/ekodipay-demo-flow.test.mjs'
+      - 'ekodipay-provider-toss.js'
+      - 'ekodipay-order-store.js'
+      - 'ekodipay-payment-scripts.js'
+      - 'test/ekodipay-payment-live-gate.test.mjs'
       - '.github/workflows/deploy-ekodipay.yml'
 permissions:
   contents: read
@@ -35,7 +43,10 @@ jobs:
       - name: Test payment paths and denied money movement
         run: |
           node --check ekodipay-worker.js
-          node --test test/ekodipay-canonical.test.mjs test/ekodipay-demo-flow.test.mjs
+          node --check ekodipay-provider-toss.js
+          node --check ekodipay-order-store.js
+          node --check ekodipay-payment-scripts.js
+          node --test test/ekodipay-canonical.test.mjs test/ekodipay-demo-flow.test.mjs test/ekodipay-payment-live-gate.test.mjs
           node scripts/constitution-check.mjs
       - name: Cloudflare bundle dry-run
         run: npx --yes wrangler@4.127.1 deploy --dry-run --config wrangler.ekodipay.toml --outdir /tmp/ekodipay-dry-run
@@ -68,12 +79,15 @@ jobs:
             demo=$(curl -sS -o /tmp/pay-demo.html -w '%{http_code}' --max-time 15 'https://ekodi.kr/ekodipay/demo?service=edu&step=review' || true)
             demo_result=$(curl -sS -o /tmp/pay-demo-result.html -w '%{http_code}' --max-time 15 'https://ekodi.kr/ekodipay/demo?service=edu&step=result&method=card' || true)
             demo_denied=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 'https://ekodi.kr/ekodipay/demo?service=edu&step=review&amount=1' || true)
+            readiness=$(curl -fsS --max-time 15 https://ekodi.kr/ekodipay/api/payment-readiness || true)
             if [[ "$code" == "200" && "$blocked" == "400" && "$demo" == "200" && "$demo_result" == "200" && "$demo_denied" == "400" ]] &&
                grep -Fq 'EKODI Pay' /tmp/pay-index.html &&
                grep -Fq '가상 결제 정보 확인' /tmp/pay-demo.html &&
                grep -Fq '실제 결제는 실행되지 않았습니다' /tmp/pay-demo-result.html &&
                grep -Fq '"realMoneyProcessing":"disabled-until-human-approved-pg-activation"' <<<"$health" &&
-               grep -Fq '"demoMode":"read-only-no-transactions"' <<<"$health"; then
+               grep -Fq '"demoMode":"read-only-no-transactions"' <<<"$health" &&
+               grep -Fq '"live":false' <<<"$readiness" &&
+               grep -Fq '"ready":false' <<<"$readiness"; then
               echo 'EKODI Pay public and simulated demo paths verified; no money movement.'
               exit 0
             fi
