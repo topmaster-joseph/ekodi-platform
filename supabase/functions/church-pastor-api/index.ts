@@ -72,10 +72,43 @@ async function rpc(name,body){
   const {url,key}=centralConfig();
   return fetch(`${url}/rest/v1/rpc/${name}`,{method:'POST',headers:{apikey:key,authorization:`Bearer ${key}`,'content-type':'application/json'},body:JSON.stringify(body),cache:'no-store'});
 }
-async function staffFor(userId){
+const PERMANENT_SUPER_ADMINS=new Set(['topmaster.joseph@gmail.com','joseph@ekodi.kr']);
+async function provenGoogleIdentity(userId,email){
+  const {url,key}=centralConfig();
+  const proof=new URL(url+'/rest/v1/login_identities');
+  proof.search=new URLSearchParams({
+    auth_user_id:'eq.'+userId,provider:'eq.google',status:'eq.active',
+    email:'eq.'+email,select:'provider_subject',limit:'1'
+  }).toString();
+  const response=await fetch(proof,{headers:{apikey:key,authorization:'Bearer '+key},cache:'no-store'});
+  if(!response.ok)throw new Error('GOOGLE_IDENTITY_LOOKUP_FAILED');
+  const identities=await response.json().catch(()=>[]);
+  return Array.isArray(identities)&&identities.some(row=>Boolean(row.provider_subject));
+}
+async function staffFor(userId,email){
   const r=await rpc('church_pastor_staff_for_user',{p_church_slug:CHURCH_SLUG,p_user_id:userId});
   if(!r.ok)throw new Error(`CHURCH_STAFF_LOOKUP_FAILED:${r.status}`);
-  return await r.json().catch(()=>null);
+  const stored=await r.json().catch(()=>null);
+  if(stored)return stored;
+  // Access is never inferred from an arbitrary Google email. It requires
+  // an active, server-verified Google identity and an explicit privileged grant.
+  const normalizedEmail=String(email||'').toLowerCase();
+  if(!await provenGoogleIdentity(userId,normalizedEmail))return null;
+  if(PERMANENT_SUPER_ADMINS.has(normalizedEmail))
+    return{user_id:userId,email:normalizedEmail,display_name:'EKODI 최고관리자',role:'senior_pastor',active:true,source:'platform_super_admin'};
+  const {url,key}=centralConfig();
+  const lookup=new URL(url+'/rest/v1/site_access_registry');
+  lookup.search=new URLSearchParams({
+    email:'eq.'+normalizedEmail,site_key:'eq.church',role:'eq.tenant_admin',
+    status:'eq.active',select:'source',limit:'10'
+  }).toString();
+  const response=await fetch(lookup,{headers:{apikey:key,authorization:'Bearer '+key},cache:'no-store'});
+  if(!response.ok)throw new Error('CHURCH_REGISTRY_LOOKUP_FAILED');
+  const grants=await response.json().catch(()=>[]);
+  const accepted=new Set(['church_google_additional_admin','super_admin_vacant_site_bootstrap']);
+  return Array.isArray(grants)&&grants.some(row=>accepted.has(row.source))
+    ?{user_id:userId,email:normalizedEmail,display_name:'에코디교회 관리자',role:'pastor',active:true,source:'verified_registry_admin'}
+    :null;
 }
 function allowed(role,list){return Array.isArray(list)&&list.includes(role);}
 function eqValue(value){const v=String(value||'').trim();return v.startsWith('eq.')?v.slice(3):v;}
@@ -126,7 +159,7 @@ Deno.serve(async req=>{
   if(req.method==='OPTIONS')return new Response(null,{status:204,headers:cors(origin)});
   if(!['GET','POST','PATCH'].includes(req.method))return json({error:'METHOD_NOT_ALLOWED'},405,origin);
   const identity=await centralIdentity(req);if(!identity)return json({error:'AUTH_REQUIRED'},401,origin);
-  let staff=null;try{staff=await staffFor(identity.id);}catch(error){return json({error:String(error?.message||error)},503,origin);}
+  let staff=null;try{staff=await staffFor(identity.id,identity.email);}catch(error){return json({error:String(error?.message||error)},503,origin);}
   const url=new URL(req.url);
   if(url.searchParams.get('scope')==='worship-access'){
     if(req.method!=='GET')return json({error:'METHOD_NOT_ALLOWED'},405,origin);
@@ -142,6 +175,10 @@ Deno.serve(async req=>{
     return json({ok:true,permissions:{worship:true},churchSlug:CHURCH_SLUG},200,origin);
   }
   if(!staff)return json({error:'CHURCH_STAFF_REQUIRED'},403,origin);
+  if(url.searchParams.get('scope')==='staff-access'){
+    if(req.method!=='GET')return json({error:'METHOD_NOT_ALLOWED'},405,origin);
+    return json({ok:true,role:staff.role,display_name:staff.display_name||'',email:identity.email,churchSlug:CHURCH_SLUG},200,origin);
+  }
   if(url.searchParams.get('scope')==='finance-access'){
     if(!FINANCE_ACCESS_ROLES.has(staff.role))return json({error:'ROLE_NOT_ALLOWED'},403,origin);
     return json({ok:true,role:staff.role,email:identity.email,userId:identity.id,churchSlug:CHURCH_SLUG},200,origin);
