@@ -28,3 +28,8 @@ No legacy citizen records or unrelated notices, schedules, finance, church, or o
 - Verified official convergence on PR #5183 synchronized to `f2d2c05a424b4e8d3f32a075b9119140121ec804`, preserving approved implementation SHA `248e2ed7bc8f278e9554dd94b606523320038928` in its ancestry.
 - Rechecked functional page blob `96f613d27e240a9186ff4b7963a8d89fa7bde165` and V3 Google handoff test blob `11380b63a82e3637f2236cc7304f752fa5e7d600`, both byte-identical to approved source.
 - This additional **documentation-only** owner-authored update addresses GitHub's `action_required` bot-commit CI by requesting authentic checks. It does not broaden approval or authorize manual merges, direct production writes, or release without verified live receipts.
+
+## Third safe CI renewal during independent main churn
+- Official EKODI convergence updated recovery PR #5183 to `8a8ff045e05af2a200e362f71ec12b29d1214546` after fresh full CI on preceding owner-only evidence commit passed.
+- The exact authorized functional ancestor `248e2ed7bc8f278e9554dd94b606523320038928` remains in the branch history; the V3 page and regression-test blobs are unchanged (`96f613d27e240a9186ff4b7963a8d89fa7bde165`, `11380b63a82e3637f2236cc7304f752fa5e7d600`).
+- This owner-authored documentation-only touch requests authentic CI following the bot-generated protected update-branch commit. Automatic merge remains contingent on the official receipt, genuine current-head checks, latest-main ancestry, protected mergeability, and guarded deployment. No bypass and no live success claim.
