@@ -9,7 +9,7 @@ const js = read('control.js');
 
 test('premium Control is explicitly scoped to its own administrative workspace', () => {
   assert.match(html, /data-ekodi-control="v2" data-ekodi-control-design="premium"/);
-  assert.match(html, /\/control\.css\?v=20261017-premium-steady-v4/);
+  assert.match(html, /\/control\.css\?v=20261018-command-receipt-v1/);
   assert.match(css, /html\[data-ekodi-control="v2"\]\[data-ekodi-control-design="premium"\]/);
   assert.match(css, /color-scheme:light!important/);
   assert.match(css, /\.control-main \.view\.active/);
@@ -33,8 +33,10 @@ test('primary desktop and mobile command controls stay visible and operable', ()
   assert.match(css, /left:0!important/);
 });
 
-test('command routing and guarded deployments remain untouched', () => {
-  assert.match(js, /\/api\/control\/ai\/v8\/pulse/);
+test('command receipts remain auditable and deployments stay protected', () => {
+  assert.match(js, /actionType:'ui.change_request'/);
+  assert.match(js, /preflightVerified:false/);
+  assert.match(js, /\/api\/control\/ai\/actions/);
   assert.match(js, /\/api\/control\/ai\/assist/);
   assert.match(js, /\/api\/control\/ai\/v8\/orchestrator\/submit/);
   assert.match(html, /id="orchestratorRelease"/);
