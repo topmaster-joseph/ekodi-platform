@@ -51,11 +51,9 @@ jobs:
         shell: bash
         run: |
           set +e
-          # PR / immediate main-push precedes guarded deployment; post-deploy or manual probes are strict.
-          mode="${{ (github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch') && 'strict' || 'predeploy' }}"
-          node scripts/verify-seonammedi-calendar-share-native.mjs --origin=https://seonammedi.kr --expect-mode="$mode" --out=artifacts/seonammedi-share-native/customer
+          node scripts/verify-seonammedi-calendar-share-native.mjs --origin=https://seonammedi.kr --out=artifacts/seonammedi-share-native/customer
           customer=$?
-          node scripts/verify-seonammedi-calendar-share-native.mjs --origin=https://ekodi.kr --expect-mode="$mode" --out=artifacts/seonammedi-share-native/canonical
+          node scripts/verify-seonammedi-calendar-share-native.mjs --origin=https://ekodi.kr --out=artifacts/seonammedi-share-native/canonical
           canonical=$?
           if [ "$customer" -ne 0 ] || [ "$canonical" -ne 0 ]; then
             echo 'Native browser fixture verification FAILED on one or both domains.' >&2
