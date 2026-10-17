@@ -57,7 +57,7 @@ test('execution description distinguishes ordinary command, response-only and pr
  assert.match(html,/작업 접수·사전점검/);
  assert.match(js,/idempotencyKey/);
  assert.match(js,/\/api\/control\/ai\/v8\/orchestrator\/submit/);
- assert.match(js,/\/api\/control\/ai\/v8\/pulse/);
+ assert.match(js,/\/api\/control\/ai\/actions/);
  assert.match(js,/id:'control-'/);
  assert.match(js,/renderWorkspaceSummary\(\)/);
 });
