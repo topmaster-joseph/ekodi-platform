@@ -33,6 +33,45 @@ test('public execution surface roots canonicalize slashless URLs to the same tra
   }
 });
 
+test('Research canonical route is owned by Education and never served by the workspace fallback',async()=>{
+ const calls=[];
+ const education={fetch:async request=>{
+  const url=new URL(request.url);
+  calls.push({path:url.pathname,search:url.search});
+  const payload=url.pathname==='/research/health'
+    ? JSON.stringify({ok:true,service:'ekodi-research',phase:'foundation'})
+    : 'EKODI Research';
+  return new Response(payload,{headers:{'content-type':url.pathname.endsWith('/health')?'application/json':'text/plain'}});
+ }};
+ for(const path of ['/research/','/research/health','/research/app.css']){
+  const response=await routeCanonicalSurface(new Request('https://ekodi.kr'+path+'?from=public'),{EDUCATION:education});
+  assert.equal(response.status,200,'Research route must return the Education response');
+  assert.equal(response.headers.get('x-ekodi-canonical-surface'),'education-research-alias');
+  assert.equal(response.headers.get('x-ekodi-canonical-path'),'/research');
+  assert.equal(response.headers.get('location'),null);
+ }
+ assert.deepEqual(calls.map(x=>x.path),['/research/','/research/health','/research/app.css']);
+ assert.ok(calls.every(x=>x.search==='?from=public'),'query string preserved exactly');
+ const absent=await routeCanonicalSurface(new Request('https://ekodi.kr/research/'),{});
+ assert.equal(absent.status,503,'a missing Education binding must fail closed');
+ assert.equal(absent.headers.get('x-ekodi-surface'),'education-research-alias');
+ assert.doesNotMatch(await absent.text(),/운영공간|<html/i);
+});
+
+test('Research route registry has a reserved destination and guarded Site Core dispatch',()=>{
+ const route=PLATFORM_EXECUTION_SURFACES.find(x=>x.prefix==='/research');
+ assert.equal(route?.id,'education-research-alias');
+ assert.equal(route?.binding,'EDUCATION');
+ assert.equal(route?.preservePrefix,true);
+ assert.equal(route?.basePathAware,true);
+ const source=fs.readFileSync(new URL('../canonical-surface-router.js',import.meta.url),'utf8');
+ assert.match(source,/if\(path==='\/research'\|\|path\.startsWith\('\/research\/'\)\)return serviceUnavailable\('research-route-unavailable'\)/);
+ const release=fs.readFileSync(new URL('../scripts/converge-orchestrated-pr-merge.mjs',import.meta.url),'utf8');
+ assert.match(release,/file==='canonical-surface-router\.js'/);
+ assert.match(release,/if\(sharedSiteTouched\)/);
+ assert.match(release,/release_branch_ref:branch,release_task_id:taskId/);
+});
+
 test('AI slashless and trailing slash paths both serve directly without a redirect',async()=>{
   for(const entry of ['canonical','site']){
     const service=binding('EKODI AI direct root','text/html');
