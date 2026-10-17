@@ -38,7 +38,8 @@
     const start=String(item?.eventStart||'');
     const date=dateOf(start).replaceAll('-','.');
     const time=start.length>=16?start.slice(11,16):'';
-    return '서남권 국립의대 소통센터 일정\n'+shareTitle(item)+'\n'+date+(time?' '+time:'');
+    // Registration, publication and edit dates are metadata, not event dates. Do not share them.
+    return '서남권 국립의대 소통센터\n'+shareTitle(item)+'\n일정: '+date+(time?' '+time:'');
   };
   const shareMessage=item=>{
     const url=shareUrl(item);
