@@ -21,8 +21,9 @@ test('production read-only visual proof covers both public origins and all six m
 test('live proof rejects a duplicate stock banner and requires the campaign only on home',()=>{
   for(const fail of ['unexpected_shared_photo_','home_only_campaign_visibility_mismatch_',
     'incorrect_home_campaign_source_','home_campaign_dimensions_mismatch_',
-    'six_side_menu_labels_mismatch_','site_header_not_sticky_','layout_region_missing_',
-    'horizontal_overflow_','responsive_columns_mismatch_','selected_side_menu_not_active_'])
+    'six_header_menu_labels_mismatch_','duplicate_left_menu_present_',
+    'site_header_not_sticky_','layout_region_missing_',
+    'horizontal_overflow_','responsive_columns_mismatch_'])
     assert.ok(script.includes(fail),fail);
   assert.match(script,/report\.success=report\.failures\.length===0/);
   assert.match(script,/if\(!report\.success\)process\.exitCode=1/);
