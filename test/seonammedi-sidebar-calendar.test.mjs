@@ -228,7 +228,7 @@ test('shared event titles are sanitized for readable, one-line messenger preview
 
 test('title-sharing assets stay byte-identical across the main Site Core and independent board',async()=>{
   const site=await readFile(new URL('board-central-category.js',root),'utf8');
-  const worker=await readFile(new URL('../services/independent-board/worker.js',root),'utf8');
+  const worker=await readFile(new URL('../../../services/independent-board/worker.js',root),'utf8');
   assert.ok(worker.includes('const BOARD_CATEGORY_CLIENT_JS='+JSON.stringify(site)+';'));
   assert.ok(site.includes('/seonammedi/calendar-sidebar.js?v=20261017-live-4-title'));
   assert.ok(site.includes('/seonammedi/calendar-sidebar.css?v=20261017-live-4-title'));
