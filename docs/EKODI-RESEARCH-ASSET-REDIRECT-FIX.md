@@ -25,3 +25,8 @@ The unrelated `/pay` rollback marker mismatch must be investigated separately; d
 - Verified owner comment [#6231747965](https://github.com/topmaster-joseph/ekodi-platform/pull/5129#issuecomment-6231747965), then `orchestrator-human-gate-approved` label.
 - Official EKODI recovery task `orch_recovery_504da350bf09532f9f25b2982676743c`, PR #5131.
 - Bot-created PR checks were `action_required`; this owner-authored documentation-only commit regenerates genuine checks without altering the approved executable code. Neither merge nor staging/production is declared complete.
+
+## Post-synchronization CI regeneration
+- The official EKODI PR convergence synchronized owner-verified source `0c1d733198202db495f29512a56050f5db8f1408` with current `main`, producing commit `a70f170f7c73e719ca342ae48c4575307b142686`.
+- Bot-created events returned `action_required` without execution. This **documentation-only** owner-authored followup causes genuine CI and staged checks to rerun against the synchronized HEAD. No executable Research change, storage flag, payment or rollback bypass.
+- Owner approval is anchored to original exact-SHA PR #5129 and official recovery task `orch_recovery_504da350bf09532f9f25b2982676743c`. Require protected merge and real release receipts before any production-complete assertion.
