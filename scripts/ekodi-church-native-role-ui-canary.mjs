@@ -88,11 +88,60 @@ try{
   assert.equal(landing?.status(),200,'live Church public homepage must respond 200');
   assert.equal(new URL(page.url()).origin,ORIGIN,'must remain at canonical EKODI origin');
   await page.waitForFunction(()=>document.readyState==='complete',null,{timeout:15000});
+  // Read-only real production checks: dated packet switching and responsive UI.
+  // No synthetic bearer is present until after these checks finish.
+  const weekly=page.locator('[data-church-weekly]');
+  await weekly.waitFor({state:'attached',timeout:12000});
+  const picker=weekly.locator('[data-weekly-date]');
+  await page.waitForFunction(()=>document.querySelector('[data-weekly-date]')?.options.length>=2,null,{timeout:15000});
+  const guestWorship=[];
+  for(const device of [{name:'mobile',width:390,height:844},{name:'desktop',width:1440,height:900}]){
+    await page.setViewportSize({width:device.width,height:device.height});
+    for(const entry of [
+      {date:'2026-10-11',title:'모두가 듣도록, 다음 세대까지'},
+      {date:'2026-10-18',title:'품 안에서, 세상으로'}
+    ]){
+      await picker.selectOption(entry.date);
+      await page.waitForFunction(({date,title})=>{
+        const select=document.querySelector('[data-weekly-date]');
+        const heading=document.querySelector('[data-weekly-title]');
+        const bulletin=document.querySelector('[data-weekly-bulletin]');
+        return select?.value===date&&heading?.textContent?.trim()===title&&bulletin?.getAttribute('href')==='/ekodichurch/worship/'+date+'/';
+      },entry,{timeout:12000});
+      const state=await page.evaluate(()=>{
+        const root=document.querySelector('[data-church-weekly]');
+        const area=root?.getBoundingClientRect();
+        const bulletin=root.querySelector('[data-weekly-bulletin]')?.getAttribute('href');
+        const stage=root.querySelector('[data-weekly-slides]')?.getAttribute('href');
+        const operator=root.querySelector('[data-weekly-broadcast]')?.getAttribute('href');
+        return {date:root.querySelector('[data-weekly-date]')?.value,
+          width:window.innerWidth,rootWidth:area?.width,
+          rootLeft:area?.left,rootRight:area?.right,
+          guestEditHidden:root.querySelector('[data-church-worship-admin]')?.hidden===true,
+          bulletin,stage,operator};
+      });
+      assert.equal(state.date,entry.date);
+      assert.equal(state.guestEditHidden,true,'guest edit capability must never appear when switching dates');
+      assert.ok(state.rootLeft>=-2&&state.rootRight<=state.width+2,'weekly panel must fit the '+device.name+' viewport');
+      assert.equal(state.bulletin,'/ekodichurch/worship/'+entry.date+'/');
+      assert.equal(state.stage,state.bulletin+'?view=stage');
+      assert.equal(state.operator,state.bulletin+'?view=operator');
+      guestWorship.push({device:device.name,...state});
+    }
+  }
+  await page.setViewportSize({width:390,height:844});
+  const release=await page.evaluate(async()=>{
+    const res=await fetch('/ekodichurch/church-release.json',{cache:'no-store'});
+    if(!res.ok)throw Error('Church production release marker unavailable');
+    return res.json();
+  });
+  assert.equal(release.sourceRepository,'topmaster-joseph/ekodi-church');
+  assert.match(release.sourceSha,/^[a-f0-9]{40}$/);
   const admin=page.locator('[data-church-worship-admin]');
   assert.equal(await admin.count(),1,'there must be one contextual manager link');
   assert.equal(await admin.getAttribute('href'),'/ekodichurch/admin/worship');
   assert.equal(await admin.evaluate(el=>el.hidden),true,'visitor must not see management');
-  checks.push({step:'real production guest UI',result:'hidden',intercepted});
+  checks.push({step:'real production guest UI',result:'hidden',intercepted,guestWorship,releaseSourceSha:release.sourceSha});
   await page.screenshot({path:path.join(artifactDir,'guest.png')});
 
   await page.evaluate(token=>{
@@ -156,7 +205,7 @@ try{
   await fs.writeFile(path.join(artifactDir,'result.json'),JSON.stringify({
     ok:true,mode:'ekodi-owned-headless-chromium',
     realUserAuthenticated:false,serverRoleResponsesSimulated:true,
-    origin:ORIGIN,checks,
+    origin:ORIGIN,checks,guestWorship,releaseSourceSha:release.sourceSha,
     unrelatedHttpErrors:httpErrors,scriptErrors:errors,
     screenshotNames:['guest.png','synthetic-allowed.png','synthetic-revoked.png'],
     limits:'Does not verify an actual Google account; production API real HTTP 401/403 are covered by separate live-canary.'
