@@ -236,10 +236,26 @@
     $$('[data-prompt]').forEach(b=>b.onclick=()=>{$('#commandInput').value=b.dataset.prompt;resizeInput();$('#commandInput').focus({preventScroll:true})});
     $$('[data-refresh]').forEach(b=>b.onclick=()=>{refreshOrchestratorTasks().catch(()=>toast('오케스트레이터 상태 갱신 실패'))});
   }
+  function renderAdminControlLogin(logged){
+    const status=$('#authState');
+    if(!status)return;
+    if(logged){status.textContent='최고관리자 세션';return;}
+    // Identity is established by the existing Google Admin center. Never skip
+    // its server-side allowlist or change the control API authorization.
+    const auth=new URL('/auth/',API);
+    auth.searchParams.set('site','admin');
+    auth.searchParams.set('direct','1');
+    auth.searchParams.set('return_to','https://ekodi.kr/admin/control');
+    const link=document.createElement('a');
+    link.href=auth.toString();
+    link.textContent='관리자 Google 로그인';
+    link.setAttribute('aria-label','최고관리자 Google 로그인 후 EKODI Control로 복귀');
+    status.replaceChildren(link);
+  }
   async function boot(){
     mountEmbeddedToolbar();
     bind();renderRecent();renderMessages();renderPanels();
-    const logged=Boolean(token());$('#authState').textContent=logged?'최고관리자 세션':'로그인 필요';$('#runtimeStatus').textContent=logged?'EKODI 연결 준비':'로그인 필요';$('#runtimeStatus').classList.toggle('ok',logged);
+    const logged=Boolean(token());renderAdminControlLogin(logged);$('#runtimeStatus').textContent=logged?'EKODI 연결 준비':'로그인 필요';$('#runtimeStatus').classList.toggle('ok',logged);
     if(!logged)toast('최고관리자 로그인 세션이 필요합니다.');
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
