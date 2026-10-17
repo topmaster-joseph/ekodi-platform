@@ -383,10 +383,10 @@ html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .composer tex
   }
 }
 
-/* Native admin embed: the parent owns navigation; /control still owns commands and status. */
-html[data-ekodi-control-embedded="admin"] .control-rail{display:none!important}
-html[data-ekodi-control-embedded="admin"] .control-main{margin-left:0!important;width:100%!important;min-width:0!important}
-html[data-ekodi-control-embedded="admin"] .composer-wrap{left:0!important}
+/* Native admin embed: retain Control's task-specific navigation next to the platform sidebar. */
+html[data-ekodi-control-embedded="admin"]{--rail:208px}
 html[data-ekodi-control-embedded="admin"] .topbar .ghost-link,
-html[data-ekodi-control-embedded="admin"] .mobile-only{display:none!important}
-html[data-ekodi-control-embedded="admin"] .control-shell{min-width:0!important}
+html[data-ekodi-control-embedded="admin"] .control-rail .admin-link{display:none!important}
+@media(max-width:760px){
+  html[data-ekodi-control-embedded="admin"]{--rail:86vw}
+}
