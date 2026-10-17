@@ -23,3 +23,7 @@
 ## Cancelled queue retry
 
 The first protected convergent merge Actions run `39055698068` was cancelled while GitHub scheduling was in progress, although all mandatory checks on `bda818f454c88ac6596fe5737de1259532049f05` had passed. This documentation-only owner-authored retry triggers a new official `EKODI Orchestrated PR Convergent Merge` run and requires fresh CI on its exact HEAD. Neither the source Google canary code nor the original owner-approved functional SHA is changed; do not merge outside the official orchestrator.
+
+## Official merge queue retry after external convergence
+
+As of this checkpoint the original #5218 SHA `f6eabc918f1ce034520b6aeccab56ee7141966a6` passed all real CI, security, Cloudflare boundary, constitution, conflict, and AI orchestration checks; the preceding official converge attempt was cancelled before obtaining a GitHub runner. Another EKODI official converge run `39056242553` subsequently completed successfully. This owner-authored documentation-only commit retriggers the original official `converge-orchestrated-pr-merge.yml` from the approved recovered branch. No functional source changes or Human Gate substitutions are made. Merge and any guarded dispatch must still be performed only by the EKODI orchestrator.
