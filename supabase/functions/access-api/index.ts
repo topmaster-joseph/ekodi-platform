@@ -305,12 +305,19 @@ Deno.serve(async(req)=>{
       const {data:targetUsers,error:targetError}=await admin.from("login_identities")
         .select("auth_user_id").eq("email",email).eq("provider","google").eq("status","active").limit(1);
       if(targetError)throw targetError;
+      let activationReady=!targetUsers?.[0]?.auth_user_id;
       if(targetUsers?.[0]?.auth_user_id){
-        const {error:syncError}=await admin.rpc("apply_preregistered_access",{p_user_id:targetUsers[0].auth_user_id});
-        if(syncError)throw syncError;
-        await syncPersonAccess(targetUsers[0].auth_user_id);
+        try{
+          const {error:syncError}=await admin.rpc("apply_preregistered_access",{p_user_id:targetUsers[0].auth_user_id});
+          if(syncError)throw syncError;
+          await syncPersonAccess(targetUsers[0].auth_user_id);
+          activationReady=true;
+        }catch(error){
+          console.error("site admin bootstrap: grant recorded but identity activation pending",error);
+        }
       }
-      return json(req,{...data,authentication:"google_required",audit:"recorded"},201);
+      return json(req,{...data,authentication:"google_required",audit:"recorded",
+        activation:activationReady?"ready_or_awaiting_google":"pending_sync"},201);
     }
 
     if(req.method==="GET"&&path==="/workspaces"){
