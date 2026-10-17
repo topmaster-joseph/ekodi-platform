@@ -85,10 +85,11 @@ async function provenGoogleIdentity(userId,email){
   const identities=await response.json().catch(()=>[]);
   return Array.isArray(identities)&&identities.some(row=>Boolean(row.provider_subject));
 }
-async function staffFor(userId,email){
+async function staffFor(userId,email,{allowRegistryFallback=true}={}){
   const r=await rpc('church_pastor_staff_for_user',{p_church_slug:CHURCH_SLUG,p_user_id:userId});
   if(!r.ok)throw new Error(`CHURCH_STAFF_LOOKUP_FAILED:${r.status}`);
   const stored=await r.json().catch(()=>null);
+  if(!allowRegistryFallback)return stored;
   // An existing local role cannot accidentally demote either owner-designated
   // platform super administrator. Google subject proof is still required.
   const normalizedEmail=String(email||'').toLowerCase();
@@ -162,6 +163,7 @@ Deno.serve(async req=>{
   if(!['GET','POST','PATCH'].includes(req.method))return json({error:'METHOD_NOT_ALLOWED'},405,origin);
   const identity=await centralIdentity(req);if(!identity)return json({error:'AUTH_REQUIRED'},401,origin);
   const url=new URL(req.url);
+  let staff=null;try{staff=await staffFor(identity.id,identity.email,{allowRegistryFallback:url.searchParams.get('scope')!=='worship-access'});}catch(error){return json({error:String(error?.message||error)},503,origin);}
   if(url.searchParams.get('scope')==='worship-access'){
     if(req.method!=='GET')return json({error:'METHOD_NOT_ALLOWED'},405,origin);
     // church_worship_materials INSERT/UPDATE/DELETE policies allow only active
@@ -175,7 +177,6 @@ Deno.serve(async req=>{
     if(!permitted)return json({error:'ROLE_NOT_ALLOWED'},403,origin);
     return json({ok:true,permissions:{worship:true},churchSlug:CHURCH_SLUG},200,origin);
   }
-  let staff=null;try{staff=await staffFor(identity.id,identity.email);}catch(error){return json({error:String(error?.message||error)},503,origin);}
   if(!staff)return json({error:'CHURCH_STAFF_REQUIRED'},403,origin);
   if(url.searchParams.get('scope')==='staff-access'){
     if(req.method!=='GET')return json({error:'METHOD_NOT_ALLOWED'},405,origin);
