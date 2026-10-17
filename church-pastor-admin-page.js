@@ -113,8 +113,9 @@ function pastorClient(POLICY){
     // Google-superadmin / pre-registered church-administrator capability.
     const q=`church_slug=eq.${encodeURIComponent(CHURCH)}&user_id=eq.${encodeURIComponent(session.user.id)}&active=eq.true&select=id,role,display_name&limit=1`;
     const rows=await rest('church_staff',q);
-    staff=(Array.isArray(rows)?rows.find(row=>row.user_id===session.user.id):null)||
-      {role:access.role,display_name:access.display_name||'',user_id:session.user.id};
+    const storedStaff=Array.isArray(rows)?rows.find(row=>row.user_id===session.user.id):null;
+    staff={...(storedStaff||{}),role:access.role,
+      display_name:access.display_name||storedStaff?.display_name||'',user_id:session.user.id};
     renderNav(staff.role);publishTenantContext();return staff;}
   function staffCards(){return [card('운영공간','에코디교회','church tenant'),card('내 권한',roleLabel[staff?.role]||staff?.role||'-','least privilege')];}
   async function overview(){state('확인 중');const [members,newcomers,care,services]=await Promise.all([count('church_members','church_slug=eq.ekodi-church&status=eq.active'),count('church_members','church_slug=eq.ekodi-church&status=eq.newcomer'),count('church_care_tasks','church_slug=eq.ekodi-church&status=in.(open,in_progress)'),rest('church_services','church_slug=eq.ekodi-church&select=id,service_date,title,scripture,sermon_title,status&order=service_date.asc&limit=5')]);$('summaryCards').innerHTML=[card('활동 교인',fmt(members),'실제 등록 기준'),card('새가족',fmt(newcomers),'후속 연결 확인'),card('돌봄 후속',fmt(care),'열린 과제'),card('예배 준비',fmt(services.length),'최근/예정 기록'),card('내 권한',roleLabel[staff.role]||staff.role,'교회 로컬 권한')].join('');$('mainPanel').innerHTML=`<h2>오늘의 교회</h2><div class="service-list"><div class="service-row"><div><strong>사람이 숫자보다 앞섭니다</strong><p>새가족·돌봄·예배 준비에서 다음 행동이 필요한 사람을 먼저 확인합니다.</p></div><div class="actions"><a href="${base}/people">새가족 보기</a><a href="${base}/care">돌봄 보기</a></div></div>${services.length?services.map(s=>`<div class="service-row"><div><strong>${esc(s.title||'예배')}</strong><p>${esc(s.service_date||'')} · ${esc(s.scripture||'본문 미정')} · ${esc(s.sermon_title||'설교제목 미정')}</p></div><span class="tag ${s.status==='ready'?'live':''}">${esc(s.status||'draft')}</span></div>`).join(''):'<p class="empty">등록된 예배 기록이 없습니다.</p>'}</div>`;state('운영');}
