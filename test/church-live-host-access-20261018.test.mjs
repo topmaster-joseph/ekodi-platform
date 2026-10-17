@@ -66,7 +66,7 @@ test('Church studio checks server role before starting and offers account choose
   assert.match(auth,/const CHURCH_CHOOSE_ACCOUNT=site==='church'&&params\.get\('select_account'\)==='1'/);
   assert.match(auth,/if\(CHURCH_CHOOSE_ACCOUNT\)\{await renderGoogle\(\);return\}/);
   assert.match(auth,/if\(CHOOSE_ACCOUNT\)\{await renderGoogle\(\);return\}/);
-  assert.match(auth,/!CHOOSE_ACCOUNT\)queueMicrotask/);
+  assert.match(auth,/!CHOOSE_ACCOUNT&&!CHURCH_CHOOSE_ACCOUNT\)queueMicrotask/);
   assert.match(styles,/\.studio>\.stage\{position:sticky/);
   assert.match(styles,/max-width:900px/);
 });
