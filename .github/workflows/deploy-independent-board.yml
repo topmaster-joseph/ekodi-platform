@@ -266,8 +266,16 @@ jobs:
           marker="EKODI-CITIZEN-FRESH-CANARY-${GITHUB_RUN_ID}"
           payload="$(jq -nc --arg message "$marker" '{message:$message}')"
           created="$(curl -fsS -X POST https://seonammedi.kr/board/api/voices-fresh -H 'content-type: application/json' -H "authorization: Bearer $BOARD_CANARY_GOOGLE_TOKEN" --data "$payload")"
-          post_id="$(jq -r 'select(.ok==true and .published==true) | .id // 0' <<<"$created")"
-          test "$post_id" -gt 0
+          submission_id="$(jq -r 'select(.ok==true and .queued==true) | .submissionId // ""' <<<"$created")"
+          [[ "$submission_id" =~ ^[0-9a-fA-F-]{36}$ ]] || { echo "durable queue did not accept citizen post" >&2; exit 1; }
+          post_id=0
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+            result="$(curl -fsS "https://seonammedi.kr/board/api/voices-fresh/submissions/$submission_id")"
+            post_id="$(jq -r 'select(.status=="published") | .id // 0' <<<"$result")"
+            [[ "$post_id" -gt 0 ]] && break
+            sleep 2
+          done
+          [[ "$post_id" -gt 0 ]] || { echo "durable queued post did not publish" >&2; exit 1; }
           curl -fsS https://seonammedi.kr/board/api/voices-fresh | jq -e --argjson id "$post_id" --arg message "$marker" '.items | any(.id==$id and .message==$message)' >/dev/null
           # Synthetic canary cleanup only; never touch arbitrary posts.
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-independent-board --remote --config "$GITHUB_WORKSPACE/.wrangler.independent-board.runtime.toml" --command "DELETE FROM citizen_voices_fresh WHERE id=$post_id AND body='$marker';"
