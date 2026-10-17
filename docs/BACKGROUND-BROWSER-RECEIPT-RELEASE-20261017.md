@@ -20,3 +20,10 @@ Bot-created recovery-branch PR checks were marked `action_required` and did not 
 Verify fresh exact-recovery-head Constitution, AI orchestration, CI, Windows CI, distributed runtime, dependency security, parallel conflict and Control API staging checks. The official EKODI Orchestrator must synchronize protected main and merge only after all guards pass. Apply only receipt-bound guarded Control API production deployment and independent rollback verification, then verify USER2/USER3/USER4 live enrolled heartbeat, first-party BG Browser Canary, headless task and actual zero-user-tab/focus/clipboard receipt.
 
 Proof from a GitHub-hosted Windows runner is **not** proof from user's three PCs. Offline/revoked/unverified devices remain deferred and unsafe background execution must remain blocked. Do not claim deployment or PC acceptance without verified live receipts.
+
+## Protected main synchronization and fresh CI
+- First owner-authored recovery commit `3097255b02893069e41dfe787fdc2c7b385346df` passed all 12 required workflows including `Deploy Control API` staging (production skipped appropriately).
+- Official Orchestrator synchronized recovery PR #5172 against latest protected main, creating `131499c49f0d2fce700ce9cdcc9f103bf9f0a4e0`.
+- GitHub again classified checks on the bot-authored sync commit `action_required`. This **second documentation-only owner change** requests fresh CI, Windows Agent CI, conflict/security, orchestration and guarded Control API staging on the actual synchronized head.
+- Original user-approved runtime source `c83d956a6e99ebb917b87dd5da951e9e5791d7b2` remains in ancestry unchanged. This is not a new executable approval, does not relax branch protection and does not perform production deployment.
+- Release completion still requires protected convergence, guarded Control API production run and actual PC-specific end-to-end receipts. No completed-production claim based on source or staging.
