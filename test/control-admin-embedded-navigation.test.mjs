@@ -17,6 +17,7 @@ test('admin embed reuses native Control work tabs without a duplicate global sid
  assert.match(css,/\.control-main\{\s*width:100%!important;\s*margin:0!important/);
  assert.match(css,/\.composer-wrap\{\s*left:0!important/);
  assert.match(css,/\.control-embedded-history/);
+ assert.match(css,/\.control-embedded-history:not\(\[open\]\) \.recent\{\s*display:none!important/);
  assert.match(css,/height:calc\(100svh - 120px\)!important/);
  assert.match(css,/height:calc\(100svh - 106px\)!important/);
  assert.match(html,/id="newTask"/);
