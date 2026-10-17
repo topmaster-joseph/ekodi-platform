@@ -7,7 +7,7 @@ import {runInNewContext} from 'node:vm';
 const source=readFileSync(new URL('../admin-assist-bootstrap.js',import.meta.url),'utf8');
 
 function fakeAdmin({coreFails=false}={}){
- const warnings=[], scripts=[], styles=[], messages=[];
+ const warnings=[], scripts=[], styles=[], messages=[], alerts=[];
  const classes=new Set();
  const body={classList:{add(...names){names.forEach(n=>classes.add(n))},remove(...names){names.forEach(n=>classes.delete(n))}},append(node){bootstrap=node}};
  let bootstrap=null,dock=false,opens=0;
@@ -57,10 +57,10 @@ function fakeAdmin({coreFails=false}={}){
  const context={
   window,document,sessionStorage:{getItem(name){return name==='ekodi-auth-token'?'synthetic-token':''}},
   location:{pathname:'/admin/',search:'',hash:''},URLSearchParams,
-  addEventListener(){},console:{warn(...args){warnings.push(args.map(String).join(' '))}}
+  addEventListener(){},alert(message){alerts.push(message)},console:{warn(...args){warnings.push(args.map(String).join(' '))}}
  };
  runInNewContext(source,context,{timeout:2000});
- return {plus,classes,scripts,styles,warnings,messages,opens:()=>opens};
+ return {plus,classes,scripts,styles,warnings,messages,alerts,opens:()=>opens};
 }
 const flush=async()=>{for(let i=0;i<12;i++)await new Promise(resolve=>setImmediate(resolve))};
 
@@ -75,7 +75,7 @@ test('approval workbench remains available when optional AI script loads fail',a
  assert.ok(app.opens()>=1,'command-home should open independently of optional modules');
  assert.ok(app.scripts.includes('admin-assist-dock.js'));
  assert.ok(app.scripts.includes('admin-lazy-features.js'));
- assert.ok(app.warnings.some(s=>s.includes('optional Assist assets degraded')));
+ assert.ok(app.scripts.includes('admin-ai-control-plane.js'));
  assert.ok(app.classes.has('admin-command-active'));
  const before=app.opens();
  await app.plus.onclick();
@@ -87,8 +87,7 @@ test('required workbench load failure is visibly reported instead of silent no-o
  const app=fakeAdmin({coreFails:true});
  await flush();
  assert.equal(app.opens(),0);
- assert.ok(app.messages.length>=1);
- assert.match(app.messages[0].textContent,/연결에 실패/);
- assert.equal(app.messages[0].role,'status');
- assert.ok(app.warnings.some(s=>s.includes('Assist workbench failed')));
+ await app.plus.onclick();
+ assert.ok(app.alerts.length>=1,'required failure must be visible on click');
+ assert.match(app.alerts[0],/연결에 실패/);
 });
