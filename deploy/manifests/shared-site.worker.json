@@ -217,7 +217,7 @@
         ],
         "redirect": "manual",
         "expect": [
-          "/api/control/ai/v8/pulse",
+          "/api/control/ai/actions",
           "/api/control/ai/assist",
           "control-surface"
         ],
