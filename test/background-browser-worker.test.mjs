@@ -117,7 +117,7 @@ test('shared-site guarded release invokes native browser verification after prod
   const desktop=sharedRelease.match(/native_surface_verification_desktop:[\s\S]*?(?=\n\s{2}[a-zA-Z0-9_-]+:|$)/)?.[0]||'';
   const mobile=sharedRelease.match(/native_surface_verification_mobile:[\s\S]*?(?=\n\s{2}[a-zA-Z0-9_-]+:|$)/)?.[0]||'';
   assert.match(desktop,/needs:\s*deploy/);
-  assert.match(mobile,/needs:\s*deploy/);
+  assert.match(mobile,/needs:\s*native_surface_verification_desktop/);
 });
 
 test('SeonamMedi real native browser board routes match direct Notice and citizen voice links',()=>{
