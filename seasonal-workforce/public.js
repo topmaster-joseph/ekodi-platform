@@ -30,7 +30,7 @@
    result.hidden=false;result.style.display='block';result.style.whiteSpace='pre-line';
    result.textContent=items.join('\n');result.scrollIntoView({block:'nearest'});
   });
-  demand.addEventListener('reset',()=>{result.hidden=true;result.textContent='';});
+  demand.addEventListener('reset',()=>{result.style.display='';result.hidden=true;result.textContent='';});
  }
  all('[data-mou-filter]').forEach(button=>button.addEventListener('click',()=>{
   const type=button.getAttribute('data-mou-filter');

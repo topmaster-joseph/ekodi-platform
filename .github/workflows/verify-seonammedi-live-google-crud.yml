@@ -1,0 +1,64 @@
+name: SeonamMedi Real Google Writer and Admin CRUD Canary
+
+on:
+  workflow_dispatch:
+
+# Manually run on trusted main only after both independently authorized Google
+# test accounts are configured in repository Actions secrets. This workflow
+# deploys nothing and cannot modify notices, finance, existing citizen posts,
+# Site Core access policy or application source.
+permissions:
+  contents: read
+
+concurrency:
+  group: seonammedi-real-google-crud-canary
+  cancel-in-progress: false
+
+jobs:
+  live-google-canary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SEONAMMEDI_BOARD_CANARY_GOOGLE_TOKEN: ${{ secrets.SEONAMMEDI_BOARD_CANARY_GOOGLE_TOKEN }}
+      SEONAMMEDI_BOARD_CANARY_ADMIN_GOOGLE_TOKEN: ${{ secrets.SEONAMMEDI_BOARD_CANARY_ADMIN_GOOGLE_TOKEN }}
+    steps:
+      - name: Require protected main and both scoped real Google identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "${GITHUB_REF}" == "refs/heads/main" ]] || {
+            echo "::error::Production canary must run against protected main only"
+            exit 1
+          }
+          if [[ -z "${SEONAMMEDI_BOARD_CANARY_GOOGLE_TOKEN:-}" || -z "${SEONAMMEDI_BOARD_CANARY_ADMIN_GOOGLE_TOKEN:-}" ]]; then
+            echo "::error::Live Google writer and admin tokens are not both configured as Actions secrets; no synthetic fallback"
+            exit 1
+          fi
+          [[ "${SEONAMMEDI_BOARD_CANARY_GOOGLE_TOKEN}" != "${SEONAMMEDI_BOARD_CANARY_ADMIN_GOOGLE_TOKEN}" ]] || {
+            echo "::error::Writer and administrator must use distinct accounts"
+            exit 1
+          }
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate fail-closed production canary syntax
+        run: node --check scripts/verify-seonammedi-live-google-crud-canary.mjs
+      - name: Verify real Google writer queue, readback, scoped admin edit and delete on both domains
+        run: node scripts/verify-seonammedi-live-google-crud-canary.mjs
+      - name: Record evidence boundary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## SeonamMedi real Google writer and admin canary'
+            echo '- Requires two independent, actually Google-authenticated accounts; writer has no voices admin permission and admin has voices admin permission.'
+            echo '- Runs only on protected main. No mock mode, no auth bypass, no arbitrary deletes.'
+            echo '- For each domain: Google proof -> writer POST -> durable queue published -> cross-domain readback -> authorized admin edit/readback -> soft delete/readback.'
+            echo '- Status is PASS only if the entire real-production operation exits successfully. A missing/expired token, denied rights, queue failure or failed cleanup is not a pass.'
+            echo '- The workflow never prints tokens, user emails or private admin records.'
+            echo '- On failure, inspect the uniquely named synthetic canary markers in the log; manual cleanup may be required for an asynchronous queue submission.'
+          } >> "$GITHUB_STEP_SUMMARY"
