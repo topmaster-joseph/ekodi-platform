@@ -86,6 +86,8 @@ test('guarded Shared Site release owns all seasonal pages and smoke-verifies rea
  const workflow=readFileSync(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8');
  const manifest=JSON.parse(readFileSync(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
  assert.match(workflow,/'seasonal-workforce\/\*\*'/);
+ const nativeRoutes='surface_paths: /,/my/,/admin/,/ekodimall/admin,/control,/ekodibiz/seasonal-workers/,/ekodibiz/seasonal-workers/demand,/ekodibiz/seasonal-workers/mou,/ekodibiz/seasonal-workers/office';
+ assert.equal(workflow.split(nativeRoutes).length-1,2,'desktop and mobile must both exercise seasonal portal routes');
  const expected=['/','/demand','/mou','/learning','/housing','/entry','/help','/reports','/office','/theme.css','/public.js'];
  for(const page of expected){
   const path='https://ekodi.kr'+SITE_BASE+page;
