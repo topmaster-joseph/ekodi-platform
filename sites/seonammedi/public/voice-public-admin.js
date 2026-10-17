@@ -155,7 +155,7 @@ async function authorize(){
   clearVoiceAdmin();
   controller=shared.create({serviceId:'seonammedi-voices-inline',adminPath:'/seonammedi/admin/',authEndpoint:'/api/seonammedi/admin/me',tokenProvider:token});
   const me=await controller.authorize().catch(()=>null);
-  if(token()!==bearer||!me?.ok||me?.permissions?.voices!==true){clearVoiceAdmin();return false}
+  if(token()!==bearer||!me?.ok||!(me?.permissions?.voices===true)){clearVoiceAdmin();return false}
   authorized=true;
   authorizedToken=bearer;
   try{
