@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
 import {routeCanonicalSurface} from '../canonical-surface-router.js';
 import siteWorker from '../site-worker.js';
 
@@ -74,4 +75,35 @@ test('guarded site production manifest tests new Control URL and keeps old URLs'
  assert.ok(entries.some(x=>x.url==='https://ekodi.kr/control'));
  assert.ok(entries.some(x=>x.url==='https://ekodi.kr/control.css'));
  assert.ok(entries.some(x=>x.url==='https://ekodi.kr/control.js'));
+});
+
+test('logged-out canonical Control offers Google Admin login returning to the exact page',()=>{
+  const source=read('control.js');
+  const start=source.indexOf('  function renderAdminControlLogin(logged){');
+  const end=source.indexOf('\n  async function boot()',start);
+  assert.ok(start>=0&&end>start,'expected focused login helper before Control boot');
+  const status={textContent:'',link:null,replaceChildren(node){this.link=node;}};
+  const document={
+    createElement(tag){
+      assert.equal(tag,'a');
+      return {href:'',textContent:'',attributes:{},setAttribute(key,value){this.attributes[key]=value;}};
+    }
+  };
+  const context={
+    API:'https://ekodi.kr',URL,document,
+    $:selector=>selector==='#authState'?status:null
+  };
+  const render=vm.runInNewContext(source.slice(start,end)+'\nrenderAdminControlLogin',context);
+  render(false);
+  assert.ok(status.link,'signed-out state needs an actionable Google login link');
+  assert.equal(status.link.textContent,'관리자 Google 로그인');
+  const auth=new URL(status.link.href);
+  assert.equal(auth.origin,'https://ekodi.kr');
+  assert.equal(auth.pathname,'/auth/');
+  assert.equal(auth.searchParams.get('site'),'admin');
+  assert.equal(auth.searchParams.get('direct'),'1');
+  assert.equal(auth.searchParams.get('return_to'),'https://ekodi.kr/admin/control');
+  assert.equal(status.link.attributes['aria-label'],'최고관리자 Google 로그인 후 EKODI Control로 복귀');
+  render(true);
+  assert.equal(status.textContent,'최고관리자 세션');
 });
