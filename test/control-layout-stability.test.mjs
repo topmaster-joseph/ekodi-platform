@@ -15,7 +15,7 @@ test('Control initial load and empty history never animate the entire page',()=>
   assert.doesNotMatch(js,/window\.scrollTo\(/);
   assert.doesNotMatch(js,/scrollIntoView\(/);
   assert.doesNotMatch(js,/behavior:'smooth'/);
-  assert.match(js,/bind\(\);renderRecent\(\);renderMessages\(\);renderPanels\(\)/);
+  assert.match(js,/bind\(\);restoreDraft\(\);renderRecent\(\);renderMessages\(\);renderPanels\(\)/);
   assert.match(js,/renderMessages\(\{scrollToEnd:true\}\)/);
 });
 
