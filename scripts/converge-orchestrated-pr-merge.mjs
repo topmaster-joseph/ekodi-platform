@@ -202,6 +202,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='seonammedi-relevance.js'||
   file==='wrangler.site.toml'||
   file==='platform-router-entry-worker.js'||
+  // Routing table edits must trigger the guarded Site Core release after a GitHub Actions merge.
+  file==='platform-route-registry.js'||
   file==='canonical-surface-router.js'||
   file==='admin-sidebar.js'||
   file==='scripts/verify-admin-production-ui-e2e.mjs'||
