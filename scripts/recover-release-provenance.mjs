@@ -226,12 +226,21 @@ const sourceChecks=await github(`/repos/${repo}/commits/${headSha}/check-runs?pe
 if(!sourceChecks.response.ok)fail('cannot inspect authentic source CI checks');
 const authenticChecks=Array.isArray(sourceChecks.data?.check_runs)?sourceChecks.data.check_runs:[];
 const requiredChecks=['test','EKODI AI Orchestration Gate'];
-const checksReady=requiredChecks.every(context=>
+// Never merge a Human-Gate-approved recovery on the strength of only two legacy
+// checks: the full parallel exact-file/semantic overlap guard is also mandatory.
+// GitHub reports that workflow as an authentic job check named 'overlap-guard',
+// not as a legacy commit status. Keep both attestation shapes independent.
+const parallelGuardReady=authenticChecks.some(run=>
+  run.name==='overlap-guard'&&run.app?.slug==='github-actions'&&
+  run.status==='completed'&&run.conclusion==='success'
+);
+const checksReady=parallelGuardReady&&requiredChecks.every(context=>
   statuses.get(context)==='success'&&authenticChecks.some(run=>
     run.name===context&&run.app?.slug==='github-actions'&&
     run.status==='completed'&&run.conclusion==='success'
   )
 );
+out('parallel_conflict_guard',parallelGuardReady?'passed':'pending_or_failed');
 const mainRef=await github(`/repos/${repo}/git/ref/heads/main`);
 if(!mainRef.response.ok)fail('cannot verify latest main before approved recovery merge');
 const mainSha=text(mainRef.data?.object?.sha,80);

@@ -177,3 +177,16 @@ test('exact-approved immediate merge deploys shared Site Core through guarded re
   assert.match(workflow,/shared_site_dispatch/);
   assert.doesNotMatch(script,/const sharedSiteTouched=true/);
 });
+
+
+test('approved recovery requires an authentic green parallel conflict guard before immediate merge',async()=>{
+  const source=await read('scripts/recover-release-provenance.mjs');
+  assert.match(source,/const parallelGuardReady=authenticChecks\.some\(run=>/);
+  assert.match(source,/run\.name==='overlap-guard'/);
+  assert.match(source,/run\.app\?\.slug==='github-actions'/);
+  assert.match(source,/run\.status==='completed'&&run\.conclusion==='success'/);
+  assert.match(source,/const checksReady=parallelGuardReady&&requiredChecks\.every/);
+  assert.match(source,/const merge=checksReady&&upToDate/);
+  assert.match(source,/const mergeDisposition=merge\.response\.ok\?'merged-immediately'/);
+  assert.match(source,/pending_or_failed/);
+});
