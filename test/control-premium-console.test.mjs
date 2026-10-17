@@ -33,8 +33,10 @@ test('primary desktop and mobile command controls stay visible and operable', ()
   assert.match(css, /left:0!important/);
 });
 
-test('command routing and guarded deployments remain untouched', () => {
-  assert.match(js, /\/api\/control\/ai\/v8\/pulse/);
+test('command receipts remain auditable and deployments stay protected', () => {
+  assert.match(js, /actionType:'ui.change_request'/);
+  assert.match(js, /preflightVerified:false/);
+  assert.match(js, /\/api\/control\/ai\/actions/);
   assert.match(js, /\/api\/control\/ai\/assist/);
   assert.match(js, /\/api\/control\/ai\/v8\/orchestrator\/submit/);
   assert.match(html, /id="orchestratorRelease"/);
