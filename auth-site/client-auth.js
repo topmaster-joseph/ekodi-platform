@@ -44,7 +44,7 @@ const realms={
 const params=new URLSearchParams(location.search);
 const site=params.get('site')||'portal';
 const DIRECT_LOGIN=params.get('direct')==='1'&&params.get('manage')!=='1'&&params.get('review')!=='1';
-const CHOOSE_ACCOUNT=site==='seonammedi'&&params.get('select_account')==='1';
+const CHOOSE_ACCOUNT=(site==='seonammedi'||site==='church')&&params.get('select_account')==='1';
 const PREOPENED_BRIDGE=DIRECT_LOGIN&&!CHOOSE_ACCOUNT&&params.get('bridge')==='preopened';
 const GOOGLE_BRIDGE_ORIGIN=location.origin;
 if(PREOPENED_BRIDGE)document.documentElement.dataset.adminDirectBridge='1';
