@@ -578,9 +578,16 @@ html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .composer-not
   max-width:1180px!important;margin:5px auto 0!important;
   text-align:left!important;font-size:11px;
 }
+/* Embedded Admin already has its own 52px Control tab row below the header. */
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-control-embedded="admin"] .control-main .view.active[data-view-panel="chat"]{
+  height:calc(100svh - 120px)!important;
+}
 @media(max-width:760px){
   html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .control-main .view.active[data-view-panel="chat"]{
     height:calc(100svh - 58px)!important;
+  }
+  html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-control-embedded="admin"] .control-main .view.active[data-view-panel="chat"]{
+    height:calc(100svh - 106px)!important;
   }
   html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .chat-workspace-head{
     min-height:45px;padding:6px 10px;gap:6px;
