@@ -1215,7 +1215,9 @@ jobs:
 
   native_surface_verification_desktop:
     name: EKODI Native Surface Verification · Desktop
-    needs: deploy
+    # Serialize browser canaries so Admin + native sweeps cannot self-trigger
+    # Cloudflare rate limits. A real HTTP 429 still fails in the browser worker.
+    needs: [deploy, authenticated_admin_surface_verification]
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
       surface_paths: /,/my/,/admin/,/ekodimall/admin,/control,/ekodibiz/seasonal-workers/,/ekodibiz/seasonal-workers/demand,/ekodibiz/seasonal-workers/mou,/ekodibiz/seasonal-workers/office
@@ -1224,7 +1226,7 @@ jobs:
 
   native_surface_verification_mobile:
     name: EKODI Native Surface Verification · Mobile
-    needs: deploy
+    needs: native_surface_verification_desktop
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
       surface_paths: /,/my/,/admin/,/ekodimall/admin,/control,/ekodibiz/seasonal-workers/,/ekodibiz/seasonal-workers/demand,/ekodibiz/seasonal-workers/mou,/ekodibiz/seasonal-workers/office
