@@ -15,3 +15,6 @@ The prior Shared Site Core deploy run https://github.com/topmaster-joseph/ekodi-
 
 ## Scope of this recovery
 PR #5234 only wires `ai-orchestrator-runtime.js` to the receipt-bound Control API deploy selector and adds a regression test. No direct deployment or privilege elevation is authorized. After source provenance, CI, protection and merge, Control API staged and production outcomes must be independently checked.
+
+## Synchronized-main authentic CI checkpoint
+The first-party protected converger advanced official release PR #5234 to merged-main synchronization commit `2401a87c192d29009047cfd4e59866ca69b033be` (base `bad0e6b92669ecfa67e032b5541ad1992bce3ce7`). GitHub ancestry proves original exact-approved executable SHA `8da0d3413fbd80fd0d9ca210e68137b5ecdd896e` remains a strict ancestor. Bot-authored synchronization did not produce authentic required check runs. This owner-authored **documentation-only** update requests native PR checks; it must not alter deployment scripts, privileges, production data or bypass separate Shared Site Core blocker PR #5237. Production success is still unverified.
