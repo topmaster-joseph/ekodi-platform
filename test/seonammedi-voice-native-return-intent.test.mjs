@@ -28,14 +28,18 @@ test('native Chromium guest audit confirms compose return and single identity fl
 test('native guest audit checks both server authorization gates without credentials or mutation',()=>{
   for(const marker of [
     "'/board/api/auth/session'",
+    "'/board/api/voices-fresh/admin'",
     "'/board/api/admin/posts'",
     "record.guestVoiceApiStatuses",
     "guest_voice_session_gate_",
     "guest_voice_admin_gate_",
+    "retired_citizen_admin_api_not_gone_",
     "maxRedirects:0",
     "route.abort('blockedbyclient')",
   ])assert.ok(verifier.includes(marker),marker);
-  assert.match(verifier,/status!==401\&\&status!==403/);
+  assert.match(verifier,/endpoint\.endsWith\('\/voices-fresh\/admin'\)\&\&status!==403/);
+  assert.match(verifier,/endpoint\.endsWith\('\/admin\/posts'\)\&\&status!==410/);
+  assert.doesNotMatch(verifier,/page\.locator\('body\.board-voices #writeToggle'\)/);
 });
 
 test('owner-driven native Chromium audit remains trusted and read-only',()=>{
