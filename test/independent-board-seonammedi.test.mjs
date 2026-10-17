@@ -73,7 +73,7 @@ test('standalone public writes are rate-limited, queue-first and idempotent',asy
   assert.match(worker,/submissionStatus/);
   assert.match(workflow,/queues create ekodi-independent-board-write-ingress/);
   assert.match(workflow,/Verify clean citizen authenticated write and legacy retirement/);
-  assert.match(workflow,/\.queued==true/);
+  assert.match(workflow,/\.published==true/);
 });
 
 test('finance and notice boards are first-class standalone board routes',async()=>{
@@ -176,8 +176,8 @@ test('independent board deployment provisions its own storage and verifies real 
   assert.match(workflow,/commits\/\$GITHUB_SHA\/pulls/);
   assert.match(workflow,/Requested release task does not match orchestrator branch/);
   assert.match(workflow,/Verify clean citizen authenticated write and legacy retirement/);
-  assert.match(workflow,/DELETE FROM board_replies WHERE post_id=\$post_id/);
-  assert.match(workflow,/DELETE FROM board_posts WHERE id=\$post_id/);
+  assert.match(workflow,/Remove old citizen records and referenced photos after cutover/);
+  assert.match(workflow,/DELETE FROM citizen_voices_fresh WHERE id=\$post_id/);
 });
 
 test('board schema keeps private contact out of the public read model',async()=>{
