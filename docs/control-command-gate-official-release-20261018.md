@@ -23,3 +23,6 @@ A green unit test or documentation commit is not evidence of production completi
 
 ## Synced-main checkpoint — owner CI regeneration
 The official guarded converger updated recovery PR #5227 to merge commit `bd230958ab4957ba7810824e3efe8bbbe84073d0` against protected main `07677512ce4b1e99bdd3a22913de7360352ef021`. The immutable owner-approved executable source `7ab216e0fc216ef5cfbd71db50fa5414484de124` remains a verified ancestor (GitHub comparison ahead 6, behind 0). This owner-authored documentation-only update restarts native GitHub checks on the synchronized head. It must **not** grant extra deployment authority, override pending PR #5217 integration precedence, or be interpreted as an authenticated operational check.
+
+## Integration winner merged — request protected source refresh
+GitHub confirms priority recovery PR #5217 merged at commit `9a4ab36a97623aa5442c6be7aa48cb8b870dc973` on 2026-10-17T18:16:30Z. This owner-authored document-only checkpoint requests the official PR #5227 converger to refresh from that protected main and rerun all required checks. The combined `control.html` MUST preserve #5217's `/admin/site-admins` registration link and #5227's stylesheet/script revision and command receipt label. No source feature logic, privileges, auth configuration or operational data are changed here. No automatic merge should occur on stale checks.
