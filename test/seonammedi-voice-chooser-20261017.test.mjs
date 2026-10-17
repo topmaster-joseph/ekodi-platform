@@ -12,7 +12,7 @@ test('citizen-voice menu explicitly requests account choice on both SeonamMedi m
   ]);
   assert.match(site,/href="board\/voices\?compose=1&choose_account=1">시민의견/);
   assert.match(workerSource,/link\(boardPath\(req,'voices'\)\+'\?compose=1&choose_account=1','시민의견','voices'\)/);
-  assert.match(layout,/board\/voices\?compose=1&choose_account=1/);
+  assert.doesNotMatch(layout,/seonam-visual-side-nav/,'the duplicate left-side login entry is removed');
   const {default:board}=await import('../services/independent-board/worker.js');
   for(const origin of ['https://seonammedi.kr/board/voices','https://ekodi.kr/seonammedi/board/voices']){
     const res=await board.fetch(new Request(origin),{});
