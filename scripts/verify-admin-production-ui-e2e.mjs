@@ -277,6 +277,15 @@ async function verifyCommandConsoleRoundTrip() {
   await frame.locator('#messages .turn.user .bubble').filter({hasText:'관리자 명령창 연결 확인'}).waitFor({state:'visible',timeout:12000});
   await frame.locator('#messages .turn.assistant .bubble').filter({hasText:'관리자 명령창 연결 정상'}).waitFor({state:'visible',timeout:12000});
   if(await input.inputValue()!=='')throw new Error('Control command input was not cleared');
+  const embeddedRail=await frame.locator('#controlRail').evaluate(node=>{
+    const box=node.getBoundingClientRect(),nav=node.querySelector('.rail-nav');
+    return {height:Math.round(box.height),width:Math.round(box.width),position:getComputedStyle(node).position,
+      hiddenBrand:getComputedStyle(node.querySelector('.brand')).display==='none',
+      horizontalNav:getComputedStyle(nav).flexDirection==='row'};
+  });
+  if(embeddedRail.height>100||!embeddedRail.hiddenBrand||!embeddedRail.horizontalNav||embeddedRail.position!=='sticky')
+    throw new Error('Duplicate Admin/Control sidebars detected: '+JSON.stringify(embeddedRail));
+
   const geometry=await page.evaluate(()=>{
     const sidebar=document.querySelector('.sidebar'),embedded=document.querySelector('#ekodiControlHomeFrame');
     const rect=embedded?.getBoundingClientRect(),nav=sidebar?.getBoundingClientRect();
