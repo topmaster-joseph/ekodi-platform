@@ -108,6 +108,7 @@ const ADMIN_ASSETS = new Set([
   '/admin-central-handoff.js',
   '/admin-authenticated-shell.js',
   '/admin-control-home.js',
+  '/admin-control-home.css',
   '/admin-release-convergence.js',
   '/admin-public-site-controls.js',
   '/admin-language-status.js',
