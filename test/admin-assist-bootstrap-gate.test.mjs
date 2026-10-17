@@ -40,7 +40,7 @@ function fakeAdmin({coreFails=false}={}){
   },
   createElement(name){
    if(name==='div'){
-    const result={querySelector(selector){
+    const result={dataset:{},setAttribute(name,value){this[name]=value},querySelector(selector){
      if(selector==='form')return form;
      if(selector==='button')return plus;
      if(selector==='input')return input;
