@@ -26,3 +26,7 @@ The correction only requires `cache-control: no-store` at the canonical release 
 6. Related Site Core native-mobile overflow in seasonal workforce MOU is a separate issue and must not be hidden by this narrowly scoped repair.
 
 This documentation commit does not authorize release unless all guards are satisfied.
+
+## Protected latest-main convergence, round 2
+
+GitHub's first-party convergence workflow merged protected main `14c71fe4e6e8b49443e08fb4370b6d917c4362db` into the approved recovery branch as `b87c0ceecac0b02b468dd4ece091fc781898476e`. The approved source remains an ancestor. This documentation-only touch requests authentic required checks on the updated official branch before guarded merge, without changing executable code or authorizations.
