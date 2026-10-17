@@ -48,3 +48,23 @@ Before live applications:
 - `GET /ekodibiz/seasonal-workers/survey-demo.js` -> JavaScript
 - `POST /ekodibiz/seasonal-workers/api/v1/demands` -> 503 with `applications_not_enabled`
 - Unexpected nested routes -> 404, non-apex origin -> 403
+
+## Public-sector + international design implementation (2026-10-17)
+The source image mockups are **design references**, not official municipal branding, live data or signed intergovernmental agreements. The implemented pages deliberately use EKODI BIZ branding and show explicit public-sector **proposal-only** labeling instead of using an unlicensed municipal seal.
+
+**Canonical public paths** (all anonymous, noindex, non-persistent, server writes disabled):
+- `/` — public-sector proposal homepage, international cooperation illustration and seven service tiles
+- `/demand` — anonymous farm demand **calculator** (crop, count, start, duration, housing, interpretation; browser only)
+- `/office` — existing authenticated municipal-office prototype, now with the consistent header/design. API remains OFF
+- `/mou` — document taxonomy, local-only category filters, template preview, review checklist; **no fabricated active MOUs**
+- `/learning` — orientation/education course directory mockup and local self-checklist; **not official training completion**
+- `/housing` — no-storage housing safety checklist
+- `/entry` — administrative procedure overview, no visa/placement decisions
+- `/help` — rights/grievance FAQ, **not a complaint intake**
+- `/reports` — zero-placeholder verified statistics and browser-only person-month calculator
+- `/survey-demo` — preserved original anonymous demonstration form for backward compatibility
+
+The new shared `theme.css` and `public.js` source files are mirrored byte-for-byte in `public-assets.mjs` for text serving by the canonical Worker. CI asserts asset parity; do not edit one without regenerating the other. Static illustration uses CSS and no external trackers or outside service dependencies.
+
+**Design guardrails:** No simulated government approval, fake local statistics, imaginary national MOU signatures, state emblems, legal authorization, data ingestion, worker personal details or cross-border recruitment. The applicant-facing forms still do **not** accept or retain real applications. Existing auth return URL and fail-closed D1 gate are unchanged.
+
