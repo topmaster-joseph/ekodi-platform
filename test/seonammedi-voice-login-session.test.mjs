@@ -90,8 +90,8 @@ test('fresh write form requires server verified Google session and checks confir
  const html=await response.text();
  assert.match(html,/const t=await session\(\);if\(!t\)/);
  assert.match(html,/\/api\/auth\/session/);
- assert.match(html,/saved\.published!==true/);
- assert.match(html,/posts\.some\(p=>p\.id===Number\(saved\.id\)\)/);
+ assert.match(html,/waitUntilPublished\(saved\)/);
+ assert.match(html,/posts\.some\(p=>p\.id===savedId\)/);
  assert.match(html,/beginLogin\(\)/);
 });
 
