@@ -45,6 +45,7 @@
     let now=localToday();
     let selected=now,month=now.slice(0,7),events=[],admin=false,revision=0;
     let todayItems=[],todayRequestVersion=0,autoManagePending=new URLSearchParams(location.search).get('manage')==='schedule';
+    const diagnosticMode=new URLSearchParams(location.search).get('calendar_test')==='1';
     const heading=make('div','seonam-calendar-heading');
     heading.append(make('h2','','주요일정'));
     const manage=appendButton(heading,'관리',async()=>{
@@ -64,6 +65,12 @@
       else status.textContent='일정 관리 권한이 없습니다. 관리자 계정으로 로그인해 주세요.';
     },'seonam-calendar-manage');
     manage.setAttribute('aria-label','주요일정 관리자 로그인 및 관리');
+    // Hidden by default; exposed only to an already authorized administrator
+    // who intentionally enters ?calendar_test=1. Never starts write tests automatically.
+    const diagnostic=diagnosticMode
+      ?appendButton(heading,'일정 저장 진단',()=>runWriteDiagnostic(),'seonam-calendar-diagnostic')
+      :null;
+    if(diagnostic)diagnostic.hidden=true;
     const navigation=make('div','seonam-calendar-nav');
     const previous=appendButton(navigation,'‹',()=>navigate(-1),'seonam-calendar-arrow');
     previous.setAttribute('aria-label','이전 달');
@@ -267,7 +274,11 @@
       if(options.body)headers.set('content-type','application/json');
       const response=await fetch(path,{...options,headers,cache:'no-store'});
       const data=await response.json().catch(()=>({}));
-      if(!response.ok||!data.ok)throw new Error(response.status===401||response.status===403?'관리자 권한을 확인해 주세요.':data.error||'저장에 실패했습니다.');
+      if(!response.ok||!data.ok){
+        if(response.status===401||response.status===403)throw new Error('관리자 인증 또는 일정 관리 권한 확인 실패 (HTTP '+response.status+').');
+        const code=String(data.error||'').replace(/[^a-z0-9_.-]/gi,'').slice(0,64);
+        throw new Error('일정 저장 요청 실패 (HTTP '+response.status+(code?', '+code:'')+').');
+      }
       return data;
     }
     async function checkAdmin(){
@@ -279,6 +290,7 @@
         admin=Boolean(response.ok&&data.ok&&data.permissions?.notices===true);
       }catch{admin=false;}
       if(!admin)form.hidden=true;
+      if(diagnostic)diagnostic.hidden=!admin;
       renderSelected();
       if(autoManagePending){
         autoManagePending=false;
@@ -289,6 +301,62 @@
         else status.textContent='일정 관리 권한이 없습니다. 관리자 계정으로 로그인해 주세요.';
       }
       return admin;
+    }
+
+    // One-click production CRUD proof using the user's EXISTING genuine admin
+    // browser session. No synthetic account, token export, bypass or background mutation.
+    // Every temporary published event is removed in finally, even if a probe fails.
+    async function readBack(month,id,predicate,phase){
+      for(let attempt=0;attempt<5;attempt++){
+        const response=await fetch(API+'/calendar?month='+encodeURIComponent(month),{cache:'no-store'});
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok||data.ok!==true||!Array.isArray(data.items))
+          throw new Error('달력 재조회 실패 ('+phase+', HTTP '+response.status+').');
+        const row=data.items.find(item=>Number(item.id)===id);
+        if(predicate(row))return;
+        if(attempt<4)await new Promise(resolve=>setTimeout(resolve,350));
+      }
+      throw new Error('달력 반영 확인 실패 ('+phase+').');
+    }
+    async function runWriteDiagnostic(){
+      if(!diagnostic||!admin||diagnostic.disabled)return;
+      // Public test row exists briefly: run only on explicit authorized click.
+      diagnostic.disabled=true;
+      const day=localToday(),probeMonth=day.slice(0,7);
+      const title='EKODI 임시 일정 검증 '+Date.now();
+      const payload={title,body:'일정 등록·수정·삭제 검증 후 자동 제거',status:'published',kind:'event',
+        pinned:false,featured:false,eventStart:day+'T12:10',eventEnd:day+'T12:20'};
+      let id=0,stage='등록',failure='',cleanupFailure='',cleaned=false;
+      try{
+        status.textContent='진단: 일정 등록 중…';
+        const created=await authorizedRequest(API+'/admin/notices',{method:'POST',body:JSON.stringify(payload)});
+        id=Number(created.id||0);
+        if(!Number.isSafeInteger(id)||id<=0)throw new Error('등록은 응답했으나 일정 번호가 없습니다.');
+        stage='등록 재조회';status.textContent='진단: 등록 후 달력 조회 중…';
+        await readBack(probeMonth,id,row=>Boolean(row&&row.title===title&&row.kind==='event'),stage);
+        stage='수정';status.textContent='진단: 일정 수정 중…';
+        const modified={...payload,title:title+' 수정됨',body:'일정 수정 결과 확인'};
+        await authorizedRequest(API+'/admin/notices/'+id,{method:'PUT',body:JSON.stringify(modified)});
+        stage='수정 재조회';status.textContent='진단: 수정 후 달력 조회 중…';
+        await readBack(probeMonth,id,row=>Boolean(row&&row.title===modified.title&&row.body===modified.body),stage);
+      }catch(error){failure=stage+': '+String(error?.message||'검증 실패').slice(0,180);}
+      finally{
+        if(id){
+          try{
+            status.textContent='진단: 임시 일정 삭제 및 반영 확인 중…';
+            await authorizedRequest(API+'/admin/notices/'+id,{method:'DELETE'});
+            await readBack(probeMonth,id,row=>!row,'삭제 재조회');
+            cleaned=true;
+          }catch(error){cleanupFailure=String(error?.message||'삭제 확인 실패').slice(0,180);}
+        }
+        diagnostic.disabled=false;
+        await load();
+        if(cleanupFailure)status.textContent='일정 진단 중단: '+(failure||'정리 단계 실패')+
+          ' / 임시 일정 #'+id+' 삭제 확인 불가: '+cleanupFailure+' (관리자 확인 필요)';
+        else if(failure)status.textContent='일정 진단 실패: '+failure+(cleaned?' / 임시 일정 정리 확인':'');
+        else if(cleaned)status.textContent='일정 진단 통과: 등록 → 조회 → 수정 → 재조회 → 삭제 → 삭제 확인';
+        else status.textContent='일정 진단 중단: 등록 번호를 받지 못했습니다. 공개 달력을 점검해 주세요.';
+      }
     }
     async function removeEvent(item){
       if(!admin||!item?.id||!confirm('이 일정을 삭제하시겠습니까?'))return;
@@ -306,9 +374,12 @@
       if(!payload.title||!payload.eventStart){feedback.textContent='일정명과 시작 일시를 입력해 주세요.';return;}
       feedback.textContent='저장 중입니다…';save.disabled=true;
       try{
-        await authorizedRequest(API+'/admin/notices'+(editingId?'/'+encodeURIComponent(editingId):''),{method:editingId?'PUT':'POST',body:JSON.stringify(payload)});
+        const result=await authorizedRequest(API+'/admin/notices'+(editingId?'/'+encodeURIComponent(editingId):''),{method:editingId?'PUT':'POST',body:JSON.stringify(payload)});
         selected=dateOf(payload.eventStart);month=selected.slice(0,7);
         form.hidden=true;await load();
+        const persisted=events.some(item=>Number(item.id)===Number(result.id)&&item.title===payload.title);
+        status.textContent=persisted?'일정 저장 및 달력 반영을 확인했습니다.':
+          '저장 API는 응답했으나 달력 재조회에 표시되지 않았습니다. 중복 등록하지 말고 새로고침 후 확인해 주세요.';
       }catch(error){feedback.textContent=error.message;}
       finally{save.disabled=false;}
     });
