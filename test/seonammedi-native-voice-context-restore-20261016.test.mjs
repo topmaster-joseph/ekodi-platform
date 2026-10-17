@@ -8,7 +8,7 @@ const start=src.indexOf("          if(suffix==='/board/voices'){\n            co
 const end=src.indexOf("          if(suffix==='/board/finance'){",start);
 assert.ok(start>=0&&end>start,'voice context restore must precede board finance and compose audit');
 const restore=src.slice(start,end);
-assert.ok(src.indexOf("await page.locator('body.board-voices #writeToggle').click(",end)>end,
+assert.ok(src.indexOf("await page.locator('body.board-voices #freshWrite').click(",end)>end,
   'compose click must be scoped to voice page only');
 
 async function run({origin='https://seonammedi.kr',prefix='',initial='/board/notices',http=200,visible=true}={}){
@@ -16,7 +16,7 @@ async function run({origin='https://seonammedi.kr',prefix='',initial='/board/not
   const page={
     url:()=>href,
     goto:async target=>{visits.push(target);href=target;return {ok:()=>http>=200&&http<400,status:()=>http};},
-    locator:selector=>({isVisible:async()=>selector==='body.board-voices #writeToggle'&&visible})
+    locator:selector=>({isVisible:async()=>selector==='body.board-voices #freshWrite'&&visible})
   };
   const record={};
   let failure='';
