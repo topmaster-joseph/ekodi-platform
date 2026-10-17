@@ -3494,6 +3494,39 @@
           "\"aiExecution\":false"
         ],
         "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/research/app.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "diagnosisForm",
+          "projectForm",
+          "localStorage"
+        ],
+        "headerExpect": [
+          "x-ekodi-canonical-surface: education-research-alias",
+          "x-ekodi-canonical-path: /research"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/research/app.css",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          ".hero{",
+          ".section{"
+        ],
+        "headerExpect": [
+          "x-ekodi-canonical-surface: education-research-alias",
+          "x-ekodi-canonical-path: /research"
+        ],
+        "rollbackVerify": false
       }
     ],
     "attestationPath": "/__ekodi/version"
