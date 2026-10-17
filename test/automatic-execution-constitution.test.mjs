@@ -70,10 +70,10 @@ test('runtime implementations retain the enforced no-user-tab and cleanup eviden
   }
   assert.match(hybrid, /createUserBrowserTab:false/);
   assert.match(hybrid, /authRequiredDisposition:'record-and-close'/);
-  assert.match(provider, /userBrowserTabCreated === true/);
+  assert.match(provider, /userBrowserTabCreated !== false/);
   assert.match(provider, /ownedSurfaceClosed !== true/);
   assert.match(provider, /userOwnedSurfacesPreserved !== true/);
-  assert.match(provider, /interactiveLoginOpened === true/);
+  assert.match(provider, /interactiveLoginOpened !== false/);
   assert.match(router, /userBrowserTabCreation:false/);
   assert.match(router, /ownedSurfaceAutoClose:true/);
   assert.match(router, /preserveUserOwnedSurfaces:true/);
