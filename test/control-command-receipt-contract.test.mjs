@@ -28,3 +28,15 @@ test('EKODI Control checks real API and administrator authority before showing c
   assert.ok(control.includes("api('/api/control/ai/provider-status')"));
   assert.ok(control.includes('EKODI API 연결됨 · 실행 검증 별도'));
 });
+
+test('Shared Site Core release verifies the new Control Action route without erasing legacy Assist probes', () => {
+  const manifest = JSON.parse(readFileSync(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8'));
+  const requests = manifest.worker?.requests || manifest.requests || [];
+  const control = requests.find(item => item.url === 'https://ekodi.kr/control.js');
+  assert.ok(control, 'Control JS deployment probe must exist');
+  assert.ok(control.expect.includes('/api/control/ai/actions'));
+  assert.ok(control.expect.includes('/api/control/ai/assist'));
+  assert.ok(!control.expect.includes('/api/control/ai/v8/pulse'), 'Removed Pulse is not used by new Control');
+  const lazy = requests.find(item => item.url === 'https://ekodi.kr/admin/admin-lazy-features.js?assist=v2');
+  assert.ok(lazy?.expect.includes('/api/control/ai/v8/pulse'), 'Unrelated Admin Assist probe stays intact');
+});
