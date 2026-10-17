@@ -130,7 +130,14 @@ test('highest-level admin embeds the native Control workspace with same-origin-o
   assert.match(admin,/id='ekodiControlHome'/);
   assert.match(admin,/frame\.src='\/control\?embedded=admin'/);
   assert.match(admin,/ekodi-admin-section-changed/);
-  assert.match(admin,/isAuthenticated\(\).*command-home/);
+  assert.match(admin,/isSuperAdmin\(\).*command-home/);
+  assert.match(admin,/session\.role==='super_admin'/);
+  assert.match(admin,/session\?\.authenticated===true/);
+  assert.match(admin,/await fetch\('\/api\/session'/);
+  assert.match(admin,/authorizedToken=token/);
+  assert.match(admin,/readToken\(\)!==token/);
+  assert.match(admin,/ekodi-session-validated/);
+  assert.match(admin,/authorizedToken=''/);
   assert.match(adminCss,/body\.admin-control-home #ekodiControlHome/);
   assert.match(adminCss,/\.ekodi-assist-bootstrap/);
   assert.match(control,/parentLocation\.origin===location\.origin/);
