@@ -2,6 +2,15 @@ name: Reconcile EKODI Church Production
 
 on:
   workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'EKODI Orchestrator-issued ai/<agent>/orch_<task> release branch'
+        required: false
+        type: string
+      release_task_id:
+        description: 'Matching EKODI Orchestrator release task ID'
+        required: false
+        type: string
   schedule:
     - cron: '17 * * * *'
 
@@ -38,7 +47,10 @@ jobs:
             echo "Church drift detected: source=$source_sha production=${deployed_sha:-missing}"
           fi
 
-      - name: Dispatch central Church production release
+      - name: Dispatch only with live EKODI Orchestrator receipt
         if: steps.compare.outputs.needs_deploy == 'true'
         shell: bash
-        run: gh workflow run deploy-ekodi-church-homepage.yml --repo "$GITHUB_REPOSITORY" --ref main
+        env:
+          EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+          EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
+        run: node scripts/dispatch-guarded-church-release.mjs
