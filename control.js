@@ -5,7 +5,7 @@
   if(window.parent!==window&&new URLSearchParams(location.search).get('embedded')==='admin'){
     try{
       const parentLocation=window.parent.location;
-      if(parentLocation.origin===location.origin&&/^\\/admin(?:\\/|$)/.test(parentLocation.pathname)){
+      if(parentLocation.origin===location.origin&&/^\/admin(?:\/|$)/.test(parentLocation.pathname)){
         document.documentElement.dataset.ekodiControlEmbedded='admin';
         document.querySelectorAll('a[href="/admin/"]').forEach(link=>link.target='_top');
       }
