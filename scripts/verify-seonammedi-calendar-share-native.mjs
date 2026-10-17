@@ -14,6 +14,10 @@ const roots={
   'https://ekodi.kr':'/seonammedi/board/notices'
 };
 if(!Object.hasOwn(roots,origin))throw new Error('Origin not on approved EKODI allowlist');
+// PR and main-push probes may run before protected deployment has published the new text.
+// Post-deploy probes MUST enforce the new exact message; no weak fallbacks in strict mode.
+const expectMode=String(args['expect-mode']||'strict');
+if(!['predeploy','strict'].includes(expectMode))throw new Error('invalid_share_expectation_mode');
 const output=path.resolve(String(args.out||'artifacts/seonammedi-calendar-share-native'));
 await fs.mkdir(output,{recursive:true});
 const FIXTURE=Object.freeze({
@@ -24,6 +28,8 @@ const FIXTURE=Object.freeze({
 const date=FIXTURE.eventStart.slice(0,10);
 const shareLink=origin+roots[origin]+'?schedule='+FIXTURE.id+'&date='+date;
 const shareText='서남권 국립의대 소통센터\n'+FIXTURE.title+'\n일정: 2026.10.15 18:00';
+const legacyShareText='서남권 국립의대 소통센터 일정\n'+FIXTURE.title+'\n2026.10.15 18:00';
+const acceptedShareTexts=expectMode==='predeploy'?[shareText,legacyShareText]:[shareText];
 const profiles=[
   {name:'desktop',width:1440,height:900,isMobile:false},
   {name:'mobile',width:390,height:844,isMobile:true}
@@ -31,7 +37,7 @@ const profiles=[
 const evidence={
   verification:'EKODI-CALENDAR-SHARE-NATIVE-FIXTURE-001',
   origin,checkedAt:new Date().toISOString(),browser:'EKODI-owned Chromium',
-  networkFixture:true,realPublishedEvent:false,
+  networkFixture:true,realPublishedEvent:false,shareExpectationMode:expectMode,
   realGoogleAuthentication:false,realSystemShareSheet:false,
   productionMutationsAllowed:false,results:[],ok:false
 };
@@ -95,12 +101,14 @@ try{
       must(fixtureRequests.includes('2026-10'),'fixture_calendar_not_requested');
       await article.locator('button.seonam-calendar-copy').click();
       const copied=await page.evaluate(()=>navigator.clipboard.readText());
-      row.clipboardMatches=copied===shareText+'\n일정 확인: '+shareLink;
+      const observedShareText=acceptedShareTexts.find(text=>copied===text+'\n일정 확인: '+shareLink);
+      row.clipboardMatches=Boolean(observedShareText);
+      row.shareFormat=observedShareText===shareText?'current':observedShareText===legacyShareText?'legacy':'unknown';
       must(row.clipboardMatches,'title_time_url_clipboard_mismatch');
       await article.locator('button.seonam-calendar-share').click();
       const nativeArgs=await page.evaluate(()=>window.__ekodiRecordedShare||null);
       row.webShareArgumentsMatch=Boolean(nativeArgs?.title?.includes(FIXTURE.title)
-        &&nativeArgs.text===shareText&&nativeArgs.url===shareLink);
+        &&nativeArgs.text===observedShareText&&nativeArgs.url===shareLink);
       must(row.webShareArgumentsMatch,'web_share_arguments_mismatch');
       row.fixtureCalendar=fixtureRequests.slice();
       row.mutatingRequestsBlocked=blockedMutations.length;
