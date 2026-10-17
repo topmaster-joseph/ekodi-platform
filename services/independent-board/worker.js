@@ -102,7 +102,24 @@ async function signedInGoogle(req){
     const response=await fetch(SUPABASE_VERIFY_URL.replace(/\/verify$/,'/user'),{headers:{apikey:SUPABASE_PUBLISHABLE_KEY,authorization:'Bearer '+token,'cache-control':'no-store'}});
     const user=await response.json().catch(()=>null);if(!response.ok||!user?.id||!user?.email_confirmed_at)return null;
     const providers=[user?.app_metadata?.provider,...(Array.isArray(user?.app_metadata?.providers)?user.app_metadata.providers:[]),...(Array.isArray(user?.identities)?user.identities.map(x=>x?.provider):[])].filter(Boolean).map(x=>String(x).toLowerCase());
-    return providers.includes('google')?{id:String(user.id),email:text(user.email).toLowerCase()}:null;
+    const identity={id:String(user.id),email:text(user.email).toLowerCase()};
+    if(providers.includes('google'))return identity;
+    // EKODI's canonical Google identity exchanges a verified Google credential
+    // for a Supabase email magiclink session. That session is provider=email.
+    // Only EKODI's server-side, active, *current-user* Google identity linkage
+    // may establish its Google provenance; an email session alone never does.
+    const proof=await fetch('https://renzehysxirjilvdxacv.supabase.co/functions/v1/identity-api/identities',{
+      method:'GET',
+      headers:{apikey:SUPABASE_PUBLISHABLE_KEY,authorization:'Bearer '+token,origin:'https://ekodi.kr','cache-control':'no-store'},
+      cache:'no-store',
+      signal:AbortSignal.timeout(8000)
+    });
+    if(!proof.ok)return null;
+    const linked=await proof.json().catch(()=>null);
+    const verified=Array.isArray(linked?.identities)&&linked.identities.some(x=>
+      x?.provider==='google'&&x?.status==='active'&&x?.is_current===true&&text(x?.email).toLowerCase()===identity.email
+    );
+    return verified?identity:null;
   }catch{return null}
 }
 async function requireSignedInGoogle(req){
