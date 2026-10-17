@@ -349,6 +349,10 @@ jobs:
           set -euo pipefail
           test -s church/worship/2026-10-18/index.html
           test -s church/worship/2026-10-18/materials.json
+          test -s church/live/worship-materials.js
+          grep -Fq '10.18–10.24' church/worship/2026-10-18/index.html
+          grep -Fq "fetch('/ekodichurch/worship/weekly.json'" church/live/worship-materials.js
+          grep -Fq 'resolveServiceDate()' church/live/worship-materials.js
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
           import assert from 'node:assert/strict';
@@ -363,11 +367,15 @@ jobs:
           for attempt in $(seq 1 18); do
             root=$(curl -L -sS --connect-timeout 5 --max-time 20 -o /tmp/church-oct18-home.html -w '%{http_code}' "https://ekodi.kr/ekodichurch/?release=$release" || true)
             worship=$(curl -L -sS --connect-timeout 5 --max-time 20 -o /tmp/church-oct18-worship.html -w '%{http_code}' "https://ekodi.kr/ekodichurch/worship/2026-10-18/?release=$release" || true)
-            if [[ "$root" == 200 && "$worship" == 200 ]] &&
+            live_materials=$(curl -L -sS --connect-timeout 5 --max-time 20 -o /tmp/church-oct18-live-materials.js -w '%{http_code}' "https://ekodi.kr/ekodichurch/live/worship-materials.js?release=$release" || true)
+            if [[ "$root" == 200 && "$worship" == 200 && "$live_materials" == 200 ]] &&
               grep -Fq '/ekodichurch/worship/2026-10-18/' /tmp/church-oct18-home.html &&
               grep -Fq '신명기 33:12–19' /tmp/church-oct18-worship.html &&
+              grep -Fq '10.18–10.24' /tmp/church-oct18-worship.html &&
               grep -Fq '?view=stage' /tmp/church-oct18-worship.html &&
-              grep -Fq '?view=operator' /tmp/church-oct18-worship.html; then
+              grep -Fq '?view=operator' /tmp/church-oct18-worship.html &&
+              grep -Fq "fetch('/ekodichurch/worship/weekly.json'" /tmp/church-oct18-live-materials.js &&
+              ! grep -Fq "query.get('date')||'2026-10-11'" /tmp/church-oct18-live-materials.js; then
               verified=true
               break
             fi
