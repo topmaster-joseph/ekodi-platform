@@ -22,8 +22,8 @@ test('native guest audit requires a direct Notice link and rejects stale categor
   assert.ok(home.includes('href="board/notices" >공지</a>'));
   assert.ok(!runtime.includes('"공지":'));
   assert.ok(!board.includes("'공지':['"));
-  assert.ok(board.includes("{key:'notices',label:'공지',href:base+'board/notices'}"));
-  assert.ok(board.includes("{key:'notices',label:'공지',href:base+'board/notices'}"),'notice remains a direct menu route');
+  assert.ok(!board.includes('seonam-visual-side-nav'),'redundant left navigation stays removed');
+  assert.ok(board.includes('main.append(content,right)'),'content and calendar remain mounted');
   assert.ok(board.includes("window.SeonamMediCalendar?.mount"),'sidebar now renders calendar and date detail rather than unrelated shortcuts');
 });
 
