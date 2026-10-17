@@ -49,3 +49,13 @@ test('Church admin edits trigger the guarded Site Core release',async()=>{
     'actions/workflows/deploy-site-core.yml/dispatches'
   ])assert.ok(source.includes(phrase),'missing release dispatch: '+phrase);
 });
+
+test('church guarded Pages release rejects the previous-week live default and date heading',async()=>{
+ const w=await read('.github/workflows/deploy-ekodi-church-homepage.yml');
+ assert.match(w,/test -s church\/live\/worship-materials\.js/);
+ assert.match(w,/grep -Fq '10\.18–10\.24' church\/worship\/2026-10-18\/index\.html/);
+ assert.match(w,/live_materials=\$\(curl/);
+ assert.match(w,/\/tmp\/church-oct18-live-materials\.js/);
+ assert.match(w,/resolveServiceDate/);
+ assert.match(w,/query\.get\('date'\)\|\|'2026-10-11'/);
+});
