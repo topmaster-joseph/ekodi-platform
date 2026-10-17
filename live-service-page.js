@@ -6,7 +6,8 @@ const AUTH_RETURN='https://ekodi.kr/live/admin';
 const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const cleanPath=value=>{const path=String(value||'/');return path.endsWith('/')&&path!=='/'?path.slice(0,-1):path};
 const adminPath=tenant=>cleanPath(tenant.home)+'/admin';
-const liveAdminPath=tenant=>cleanPath(tenant.path)+'/admin';
+const publicLivePath=tenant=>tenant.apiTenant==='ekodichurch'?'/live/church/':tenant.path;
+const liveAdminPath=tenant=>cleanPath(publicLivePath(tenant))+'/admin';
 const controlId=tenant=>CONTROL_PREFIX+String(tenant.apiTenant||tenant.id||'').toLowerCase();
 const modeLabel=mode=>({
   worship:'예배',
@@ -30,7 +31,7 @@ function headers(cache='no-store'){
 export function liveServicePage(){
   const tenants=realtimeTenantList();
   const cards=tenants.map(tenant=>`<article class="site-card">
-    <div class="site-head"><span class="site-mode">${esc(modeLabel(tenant.mode))}</span><span class="site-path">${esc(tenant.path)}</span></div>
+    <div class="site-head"><span class="site-mode">${esc(modeLabel(tenant.mode))}</span><span class="site-path">${esc(publicLivePath(tenant))}</span></div>
     <h2>${esc(tenant.name)}</h2>
     <p>${esc(tenant.title||tenant.name+' LIVE')}</p>
     <div class="site-actions"><a class="primary" href="${esc(tenant.path)}">라이브 보기</a><a href="${esc(tenant.home)}">사이트 보기</a></div>
