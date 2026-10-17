@@ -7,7 +7,7 @@ const loginScreen=document.querySelector('#loginScreen');
 const loginLink=document.querySelector('#centralAdminLogin');
 const postAuthStyles = ['admin-compact.css','admin-design-engine.css','google-admin-auth.css'];
 const criticalPostAuthScripts = ['admin-compact.js','admin-menu-layout.js','admin-demand-loader.js'];
-const deferredPostAuthScripts = ['ekodi-message-ui.js','google-admin-auth.js','admin-public-site-controls.js','site-health-admin.js','pos-agent-admin.js','admin-release-convergence.js'];
+const deferredPostAuthScripts = ['ekodi-message-ui.js','google-admin-auth.js','admin-public-site-controls.js','site-health-admin.js','pos-agent-admin.js','admin-release-convergence.js','admin-control-home.js'];
 let started=false;
 function token(){try{return sessionStorage.getItem(TOKEN_KEY)||''}catch{return''}}
 function authenticated(){return Boolean(token() && app && !app.hidden)}
@@ -35,36 +35,4 @@ async function startAuthenticatedShell(){recoverAuthenticatedSurface();if(starte
 function onStateChange(){recoverAuthenticatedSurface();if(authenticated())return startAuthenticatedShell();keepLoginInteractive();if(!started&&location.hash)document.documentElement.dataset.ekodiAdminPendingHash=location.hash.slice(1)}
 keepLoginInteractive();onStateChange();
 window.addEventListener('ekodi-authenticated',onStateChange);window.addEventListener('ekodi-session-validated',onStateChange);window.addEventListener('ekodi-nav-changed',()=>{installSharedAdminLayout()});window.addEventListener('ekodi-feature-installed',()=>{installSharedAdminLayout()});matchMedia('(max-width:760px)').addEventListener?.('change',installSharedAdminLayout)
-
-/* Keep one privileged command surface in the right-hand work area.
-   The existing sidebar remains the only navigation; no command/API logic is duplicated. */
-function syncControlHomeEmbed(){
-  const atHome=authenticated()&&window.EKODIAdminPanels?.current?.()==='command-home';
-  let region=document.getElementById('ekodiControlHome');
-  if(atHome&&!region){
-    const main=app?.querySelector('main');
-    if(!main)return;
-    region=document.createElement('section');
-    region.id='ekodiControlHome';
-    region.setAttribute('aria-label','EKODI Control 통합 작업영역');
-    region.hidden=true;
-    const frame=document.createElement('iframe');
-    frame.id='ekodiControlHomeFrame';
-    frame.title='EKODI Control 명령·작업·Agents·Workers·결과';
-    frame.src='/control?embedded=admin';
-    frame.setAttribute('referrerpolicy','no-referrer');
-    frame.setAttribute('loading','eager');
-    region.appendChild(frame);
-    main.appendChild(region);
-  }
-  document.body.classList.toggle('admin-control-home',Boolean(atHome));
-  if(region)region.hidden=!atHome;
-}
-window.addEventListener('ekodi-admin-ready',syncControlHomeEmbed);
-window.addEventListener('ekodi-admin-section-changed',syncControlHomeEmbed);
-window.addEventListener('popstate',()=>queueMicrotask(syncControlHomeEmbed));
-window.addEventListener('hashchange',()=>queueMicrotask(syncControlHomeEmbed));
-window.addEventListener('ekodi-authenticated',()=>queueMicrotask(syncControlHomeEmbed));
-document.getElementById('logoutButton')?.addEventListener('click',()=>{document.body.classList.remove('admin-control-home');const region=document.getElementById('ekodiControlHome');if(region)region.hidden=true});
-
 })();
