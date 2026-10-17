@@ -1,0 +1,9 @@
+# Citizen Voices V3 — Google handoff and CRUD release checkpoint (2026-10-18)
+
+- Human Gate source: PR #5202, exact owner-approved commit `f732706ff28d2cfeef3e32f4693285bcd88411d6`.
+- Official EKODI orchestrator recovery: PR #5206, task `orch_recovery_f732706ff28d2cfeef3e32f4693285bc`. This documentation-only reconciliation touch does not modify or reapprove functional source.
+- Approved behavior: authenticate Google on the shared login page, preserve original Citizen Voices return URL, verify the fresh Google session server-side, accept a message into the durable queue and confirm published readback. Admin edit/delete remains exclusive to server-verified Site Core `voices` permission, directly on the public user page.
+- Two host families: `https://seonammedi.kr/board/voices` and `https://ekodi.kr/seonammedi/board/voices`; verify PC and mobile independently.
+- Existing public notices, calendars, finance, non-voice services, existing submissions, and identity privileges must remain unchanged. Do not alter live data for synthetic testing.
+- Provenance and release gate: the approved source SHA remains in the recovered branch ancestry. Require actual GitHub Actions tests, security, constitution, orchestration gate, parallel-change conflict checks on the refreshed exact head; no acceptance of initial `action_required` or fabricated statuses. Official branch update/merge and rollback-protected Independent Board production deployment only.
+- Live authenticated Google writer publish and administrator edit/delete evidence is currently unavailable; report these separately and **do not** mistake mocked regression tests or guest Chromium for real authorized success.
