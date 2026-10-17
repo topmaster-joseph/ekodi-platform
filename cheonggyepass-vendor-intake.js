@@ -150,7 +150,7 @@ async function submit(request,env,access){
   ]);
   const found=await env.DB.prepare('SELECT * FROM cheonggyepass_vendor_submissions WHERE actor_email=? AND submission_key=? LIMIT 1').bind(access.email,key).first();
   if(!found)return error('INTAKE_WRITE_FAILED','접수 결과를 확인하지 못했습니다.',503);
-  if(found.delivery!==v.delivery||found.vendor_name!==v.vendorName||found.source_url!==v.sourceUrl||found.api_base_url!==v.apiBaseUrl){
+  if(found.delivery!==v.delivery||found.vendor_name!==v.vendorName||found.source_url!==v.sourceUrl||found.source_ref!==v.sourceRef||found.api_base_url!==v.apiBaseUrl||found.documentation_url!==v.documentationUrl||found.capabilities_json!==JSON.stringify(v.capabilities)){
     return error('IDEMPOTENCY_CONFLICT','이미 다른 내용으로 사용된 접수 고유번호입니다.',409);
   }
   return json({ok:true,reused:found.id!==id,item:rowPublic(found),next:found.delivery==='zip'?'upload_zip':'review'},found.id===id?201:200);
