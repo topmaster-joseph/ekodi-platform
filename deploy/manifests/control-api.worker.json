@@ -666,6 +666,23 @@
         "candidateVerify": false,
         "candidateVerifyReason": "Canonical SeonamMedi API reaches Control API through the Shared Site service binding; verify after guarded promotion.",
         "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/cheonggyepass/vendor-intake",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "REGION_AUTH_REQUIRED"
+        ],
+        "headerExpect": [
+          "cache-control: private, no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "Control API is accessed through the canonical Shared Site service binding; verify after protected promotion.",
+        "rollbackVerify": false
       }
     ]
   }

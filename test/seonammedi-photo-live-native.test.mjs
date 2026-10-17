@@ -21,8 +21,9 @@ test('production read-only visual proof covers both public origins and all six m
 test('live proof rejects a duplicate stock banner and requires the campaign only on home',()=>{
   for(const fail of ['unexpected_shared_photo_','home_only_campaign_visibility_mismatch_',
     'incorrect_home_campaign_source_','home_campaign_dimensions_mismatch_',
-    'six_side_menu_labels_mismatch_','site_header_not_sticky_','layout_region_missing_',
-    'horizontal_overflow_','responsive_columns_mismatch_','selected_side_menu_not_active_'])
+    'duplicate_left_menu_found_','header_six_menu_labels_mismatch_','site_header_not_sticky_',
+    'content_or_calendar_missing_or_duplicate_menu_',
+    'horizontal_overflow_','responsive_columns_mismatch_'])
     assert.ok(script.includes(fail),fail);
   assert.match(script,/report\.success=report\.failures\.length===0/);
   assert.match(script,/if\(!report\.success\)process\.exitCode=1/);
@@ -58,6 +59,13 @@ test('live photo failure receipts preserve script HTTP status and browser bootst
     "errors='+JSON.stringify(entry.pageErrors)"
   ])assert.ok(script.includes(token),token);
   assert.match(script,/state:'attached',timeout:4000/);
+  // Live verification must wait for the real async calendar, never mock it.
+  assert.ok(script.includes("main.seonam-visual-layout .seonam-visual-right .seonam-calendar-grid"));
+  assert.match(script,/\.waitFor\(\{state:'attached',timeout:15000\}\)/);
+  assert.ok(script.indexOf(".seonam-calendar-grid')")<script.indexOf('const state=await page.evaluate('),
+    'wait for actual calendar DOM before reading the visual state');
+  assert.ok(script.includes("required(state.calendarWidget,'live_schedule_calendar_missing_'"),
+    'a genuinely missing widget must still fail after the bounded wait');
   assert.doesNotMatch(script,/page\.route\([^)]*\)\.fulfill/,'diagnostics must not mock production assets');
 });
 

@@ -110,7 +110,13 @@ export function planRemoteComputerExecution({
       if (item.userBrowserTabCreation !== false) continue;
       if (item.ownedSurfaceAutoClose !== true) continue;
       if (item.preserveUserOwnedSurfaces !== true) continue;
-      if (item.interactiveLoginAllowed === true) continue;
+      if (item.interactiveLoginAllowed !== false) continue;
+      if (item.foregroundWindowAllowed !== false) continue;
+      if (item.focusIsolated !== true) continue;
+      if (item.dedicatedAutomationProfile !== true) continue;
+      if (item.clipboardShared !== false) continue;
+      if (item.userInputInjection !== false) continue;
+      if (item.activeUserProfileReused !== false) continue;
     }
 
     const providerId = safeText(item.id, 80);
@@ -174,9 +180,13 @@ export function validateRemoteComputerReceipt(receipt = {}) {
   if (receipt.operation === 'computer.browser.execute') {
     if (receipt.executionMode !== 'background-only') errors.push('browser_background_only_required');
     if (receipt.userBrowserTabCreated === true) errors.push('browser_user_tab_creation_forbidden');
+    else if (receipt.userBrowserTabCreated !== false) errors.push('browser_user_tab_creation_forbidden');
+    if (receipt.foregroundFocusStolen !== false) errors.push('browser_foreground_focus_proof_required');
+    if (receipt.activeUserBrowserProfileReused !== false) errors.push('browser_user_profile_isolation_proof_required');
     if (receipt.ownedSurfaceClosed !== true) errors.push('browser_owned_surface_cleanup_required');
     if (receipt.userOwnedSurfacesPreserved !== true) errors.push('browser_user_surface_preservation_required');
     if (receipt.interactiveLoginOpened === true) errors.push('browser_interactive_login_forbidden');
+    else if (receipt.interactiveLoginOpened !== false) errors.push('browser_interactive_login_forbidden');
   }
   return Object.freeze({ ok:errors.length === 0, errors });
 }

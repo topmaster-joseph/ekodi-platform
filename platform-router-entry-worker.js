@@ -1,3 +1,5 @@
+import {isSeasonalOperationsPath,seasonalOperationsResponse} from './seasonal-workforce/operations-api.mjs';
+import { isSeasonalPortalPath, seasonalPortalResponse } from './seasonal-workforce/route.mjs';
 import { routeCooperative, cooperativeLocatorGuard } from './cooperative-control.js';
 import { isCgmaAiEducationPath, routeCgmaAiEducation } from './cgma-ai-education-route.js';
 import legacyPlatformRouter from './platform-router-worker.js';
@@ -59,6 +61,7 @@ import { localRegionAccessAdminScript } from './local-region-access-admin.js';
 import { localRegionOperationsAdminScript } from './local-region-operations-admin.js';
 import { regionalCommerceProgramFromLocalRoute, regionalCommerceProgramFromPath } from './regional-commerce-program-registry.js';
 import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
+import { cheonggyePassVendorIntakeScript } from './cheonggyepass-vendor-intake-ui.js';
 import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './platform-security-policy.js';
 import { withPublicEdgeCache } from './public-edge-cache.js';
 import { applyTrafficResponsePolicy, assessTrafficTier, recordTrafficOutcome, trafficRequestGuard } from './traffic-governor.js';
@@ -479,6 +482,8 @@ async function routePlatform(request,env,ctx){
     if(CGMA_HOSTS.has(host)&&['GET','HEAD'].includes(request.method))return routeCgmaPublic(request,env);
 
     if(host===PUBLIC_HOST){
+      if(isSeasonalOperationsPath(url.pathname))return seasonalOperationsResponse(request,env);
+      if(isSeasonalPortalPath(url.pathname))return seasonalPortalResponse(request);
       if(['GET','HEAD'].includes(request.method)&&isStorePosAgentDownloadPath(url.pathname))return storePosAgentDownload(request);
       if(['GET','HEAD'].includes(request.method)&&isCgmaRoot(url.pathname)){const legacyResponse=await legacyPlatformRouter.fetch(request,env,ctx);return injectCgmaRegionalLinks(injectEkodiProgressiveHome(injectEkodiTenantReadability(legacyResponse)));}
       const mailApex=routeMailApex(request);if(mailApex)return mailApex;
@@ -499,6 +504,7 @@ async function routePlatform(request,env,ctx){
         if(url.pathname==='/cheonggye/local-region-forest-admin.js')return localRegionForestAdminScript();
         if(url.pathname==='/cheonggye/local-region-module-public.js')return localRegionModulePublicScript();
         if(url.pathname==='/cheonggye/local-region-module-admin.js')return localRegionModuleAdminScript();
+        if(url.pathname==='/cheonggye/cheonggyepass-vendor-intake-ui.js')return cheonggyePassVendorIntakeScript();
         if(url.pathname==='/tenant-admin-command-home.css')return tenantAdminCommandHomeCss();
         if(url.pathname==='/tenant-admin-command-home.js')return tenantAdminCommandHomeScript();
         if(['/store-admin.css','/jadam-admin.css','/pizzamaru-admin.css','/yogurt-admin.css'].includes(url.pathname))return storeAdminCss();

@@ -226,9 +226,9 @@ function renderPublicTimeline(){
   const rows=relatedRows.filter(item=>relatedNewsFilterMatches(item,activeTimelineCategory)).slice().sort(timelineDescending);
   host.innerHTML=rows.length?rows.map((item,index)=>{
     const adminActions=publicTimelineAdminMode&&!item.autoCollected?'<div class="timeline-admin-actions"><span class="source-type '+(item.status==='published'?'':'is-private')+'">'+(item.status==='published'?'공개':'비공개')+'</span><button type="button" data-timeline-edit="'+Number(item.id)+'">수정</button><button type="button" data-timeline-status="'+Number(item.id)+'">'+(item.status==='published'?'비공개로':'공개로')+'</button><button type="button" data-timeline-delete="'+Number(item.id)+'">삭제</button></div>':publicContentInlineMode&&item.autoCollected&&Number(item.monitorSourceId)>0?'<div class="timeline-admin-actions"><span class="source-type">자동수집 기사</span><button type="button" data-monitor-hide="'+Number(item.monitorSourceId)+'">이 자료 삭제</button></div>':'';
-    return '<article class="timeline-item'+(index>2?' is-collapsed':'')+'" data-event-date="'+escapeHtml(item.date)+'"><div class="timeline-date">'+escapeHtml(item.date)+'</div><div class="timeline-content"><h3>'+escapeHtml(item.title)+'</h3><p class="timeline-summary">'+escapeHtml(item.summary)+'</p><div class="chips"><span class="chip">'+escapeHtml(relatedNewsCategory(item))+'</span><span class="chip">'+escapeHtml(item.evidence)+'</span></div><div class="timeline-detail">'+evidenceBlock(item)+'</div>'+adminActions+'<button class="timeline-toggle" type="button" aria-expanded="'+(index>2?'false':'true')+'">'+(index>2?'자세히 보기':'접기')+'</button></div></article>';
+    return '<article class="timeline-item'+' is-collapsed'+'" data-event-date="'+escapeHtml(item.date)+'"><div class="timeline-date">'+escapeHtml(item.date)+'</div><div class="timeline-content"><h3><button type="button" class="timeline-toggle timeline-title-button" aria-expanded="false">'+escapeHtml(item.title)+'</button></h3><p class="timeline-summary">'+escapeHtml(item.summary)+'</p><div class="chips"><span class="chip">'+escapeHtml(relatedNewsCategory(item))+'</span><span class="chip">'+escapeHtml(item.evidence)+'</span></div><div class="timeline-detail">'+evidenceBlock(item)+'</div>'+adminActions+'</div></article>';
   }).join(''):(activeTimelineCategory==='페이스북 그룹'?'<p class="muted">검증되어 공개된 그룹 게시물이 없습니다. 위의 페이스북 그룹 원문 링크를 확인해 주세요.</p>':'<p class="muted">이 분류에 공개된 관련소식이 없습니다.</p>');
-  host.querySelectorAll('.timeline-toggle').forEach(button=>button.addEventListener('click',()=>{const card=button.closest('.timeline-item');const collapsed=card.classList.toggle('is-collapsed');button.setAttribute('aria-expanded',collapsed?'false':'true');button.textContent=collapsed?'자세히 보기':'접기'}));
+  host.querySelectorAll('.timeline-toggle').forEach(button=>button.addEventListener('click',()=>{const card=button.closest('.timeline-item');const collapsed=card.classList.toggle('is-collapsed');button.setAttribute('aria-expanded',collapsed?'false':'true');}));
   attachMonitorMedia(window.__SEONAM_MONITOR_ITEMS||[]);
 }
 function renderCommitteeNews(){
@@ -238,11 +238,11 @@ function renderCommitteeNews(){
     const id=Number(item.id||0),auto=Boolean(item.autoCollected);
     const actions=publicTimelineAdminMode&&!auto&&id>0?'<div class="timeline-admin-actions"><span class="source-type">'+(item.status==='published'?'공개':'비공개')+'</span><button type="button" data-committee-news-edit="'+id+'">수정</button><button type="button" data-committee-news-status="'+id+'">'+(item.status==='published'?'비공개로':'공개로')+'</button><button type="button" data-committee-news-delete="'+id+'">삭제</button></div>'
       :publicTimelineAdminMode&&auto&&Number(item.monitorSourceId)>0?'<div class="timeline-admin-actions"><span class="source-type">자동수집</span><button type="button" data-committee-news-hide="'+Number(item.monitorSourceId)+'">공개 제외</button></div>':'';
-    return '<article class="timeline-item'+(index>2?' is-collapsed':'')+'"><div class="timeline-date">'+escapeHtml(item.date||'')+'</div><div class="timeline-content"><h3>'+escapeHtml(item.title||'')+'</h3><p class="timeline-summary">'+escapeHtml(item.summary||'')+'</p><div class="chips"><span class="chip">'+escapeHtml(relatedNewsCategory(item))+'</span><span class="chip">'+(auto?'출처 확인 · 자동수집':'등록 소식')+'</span></div><div class="timeline-detail">'+evidenceBlock(item)+'</div>'+actions+'<button class="timeline-toggle" type="button" aria-expanded="'+(index>2?'false':'true')+'">'+(index>2?'자세히 보기':'접기')+'</button></div></article>';
+    return '<article class="timeline-item'+' is-collapsed'+'"><div class="timeline-date">'+escapeHtml(item.date||'')+'</div><div class="timeline-content"><h3><button type="button" class="timeline-toggle timeline-title-button" aria-expanded="false">'+escapeHtml(item.title||'')+'</button></h3><p class="timeline-summary">'+escapeHtml(item.summary||'')+'</p><div class="chips"><span class="chip">'+escapeHtml(relatedNewsCategory(item))+'</span><span class="chip">'+(auto?'출처 확인 · 자동수집':'등록 소식')+'</span></div><div class="timeline-detail">'+evidenceBlock(item)+'</div>'+actions+'</div></article>';
   }).join(''):'<p class="muted">현재 공개가 확인된 비상대책위 관련소식이 없습니다. 출처가 검증된 자료가 수집되면 자동으로 표시됩니다.</p>';
   host.querySelectorAll('.timeline-toggle').forEach(button=>button.addEventListener('click',()=>{
     const card=button.closest('.timeline-item'),collapsed=card.classList.toggle('is-collapsed');
-    button.setAttribute('aria-expanded',collapsed?'false':'true');button.textContent=collapsed?'자세히 보기':'접기';
+    button.setAttribute('aria-expanded',collapsed?'false':'true');
   }));
 }
 function initializePublicTimeline(rows){
@@ -470,99 +470,34 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 
 const voiceCategoryLabels={question:'질문',proposal:'정책제안',experience:'의료경험',factcheck:'사실확인 요청',tip:'자료제보',other:'기타'};
 const publicVoiceList=el('publicVoiceList');
-const publicVoiceDate=value=>{try{return new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',dateStyle:'medium',timeStyle:'short'}).format(new Date(value))}catch{return''}};
 function renderPublicVoices(items){
   if(!publicVoiceList)return;
-  if(!items.length){publicVoiceList.innerHTML='<p class="muted">아직 등록된 시민의견이 없습니다.</p>';return}
-  publicVoiceList.innerHTML=items.map(item=>`<article class="public-voice-card" data-voice-id="${Number(item.id)}">
-    <div class="public-voice-head"><div><strong>${escapeHtml(item.displayName||'익명')}</strong><span>${escapeHtml(voiceCategoryLabels[item.category]||'기타')}</span></div><time>${escapeHtml(publicVoiceDate(item.createdAt))}</time></div>
-    <p class="public-voice-message">${escapeHtml(item.message||'')}</p>
-    <div class="public-voice-replies">${(item.replies||[]).map(reply=>`<div class="public-voice-reply"><div><strong>${escapeHtml(reply.displayName||'익명')}</strong><time>${escapeHtml(publicVoiceDate(reply.createdAt))}</time></div><p>${escapeHtml(reply.message||'')}</p></div>`).join('')}</div>
-    <form class="voice-reply-form" data-voice-reply="${Number(item.id)}">
-      <input name="name" maxlength="80" placeholder="이름 또는 표시명 (익명 가능)">
-      <textarea name="message" maxlength="1500" rows="2" required placeholder="답글을 입력해 주세요"></textarea>
-      <div class="form-actions"><button type="submit">답글 등록</button><span role="status"></span></div>
-    </form>
-  </article>`).join('');
+  publicVoiceList.replaceChildren();
+  if(!items.length){const p=document.createElement('p');p.className='muted';p.textContent='등록된 시민의견이 없습니다.';publicVoiceList.append(p);return;}
+  for(const item of items){
+    const article=document.createElement('article');article.className='public-voice-card';
+    const title=document.createElement('strong');title.textContent=String(item.message||'').slice(0,80);
+    const body=document.createElement('p');body.className='public-voice-message';body.textContent=String(item.message||'');
+    article.append(title,body);publicVoiceList.append(article);
+  }
 }
 async function loadPublicVoices(){
   if(!publicVoiceList)return;
   try{
-    const response=await fetch('/board/api/posts',{cache:'no-store'});
-    const body=await response.json().catch(()=>({}));
-    if(!response.ok||body.ok!==true)throw new Error(body.message||body.error||'시민의견을 불러오지 못했습니다.');
-    renderPublicVoices(Array.isArray(body.items)?body.items:[]);
-  }catch(error){publicVoiceList.innerHTML='<p class="muted">'+escapeHtml(error.message||'시민의견을 불러오지 못했습니다.')+'</p>'}
+    const response=await fetch('/board/api/voices-fresh',{cache:'no-store'});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||data.ok!==true)throw Error('시민의견을 불러오지 못했습니다.');
+    renderPublicVoices(Array.isArray(data.items)?data.items:[]);
+  }catch{publicVoiceList.textContent='시민의견을 불러오지 못했습니다. 잠시 후 다시 확인해 주세요.'}
 }
 const voiceComposeToggle=el('voiceComposeToggle'),voiceComposeCancel=el('voiceComposeCancel'),voiceComposeForm=el('voiceForm');
 function setVoiceCompose(open){
-  if(!voiceComposeForm)return;
-  voiceComposeForm.hidden=!open;
-  voiceComposeToggle?.setAttribute('aria-expanded',open?'true':'false');
-  if(open)voiceComposeForm.querySelector('select,input,textarea')?.focus();
+  if(open){location.assign('board/voices?compose=1');return}
+  if(voiceComposeForm)voiceComposeForm.hidden=true;
 }
-if(voiceComposeToggle)voiceComposeToggle.onclick=()=>setVoiceCompose(voiceComposeForm?.hidden!==false);
+if(voiceComposeForm)voiceComposeForm.hidden=true;
+if(voiceComposeToggle)voiceComposeToggle.onclick=()=>setVoiceCompose(true);
 if(voiceComposeCancel)voiceComposeCancel.onclick=()=>setVoiceCompose(false);
-async function waitForBoardSubmission(result){
-  if(result?.id)return Number(result.id);
-  const statusUrl=String(result?.statusUrl||'');
-  if(!result?.submissionId||!statusUrl)return 0;
-  for(let attempt=0;attempt<8;attempt++){
-    await new Promise(resolve=>setTimeout(resolve,500));
-    const response=await fetch(statusUrl,{cache:'no-store'}).catch(()=>null);
-    if(!response?.ok)continue;
-    const body=await response.json().catch(()=>({}));
-    if(body.status==='published'&&body.id)return Number(body.id);
-  }
-  return 0;
-}
-
-publicVoiceList?.addEventListener('submit',async event=>{
-  const form=event.target.closest('[data-voice-reply]');if(!form)return;event.preventDefault();
-  const voiceId=Number(form.dataset.voiceReply||0),status=form.querySelector('[role="status"]'),button=form.querySelector('button[type="submit"]');
-  const data=new FormData(form),payload={name:data.get('name'),message:data.get('message')};
-  if(!String(payload.message||'').trim()){if(status)status.textContent='답글 내용을 입력해 주세요.';return}
-  if(button)button.disabled=true;if(status)status.textContent='등록 중…';
-  try{
-    const response=await fetch('/board/api/posts/'+voiceId+'/replies',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
-    const body=await response.json().catch(()=>({}));
-    if(!response.ok||body.ok!==true)throw new Error(body.message||body.error||'답글을 등록하지 못했습니다.');
-    const storedId=await waitForBoardSubmission(body);
-    form.reset();if(status)status.textContent=storedId?'답글이 등록되었습니다.':'답글이 접수되었습니다. 잠시 후 목록에 표시됩니다.';await loadPublicVoices();
-  }catch(error){if(status)status.textContent=error.message||'답글을 등록하지 못했습니다.'}
-  finally{if(button)button.disabled=false}
-});
-el('reloadVoices')?.addEventListener('click',loadPublicVoices);
-
-const voiceForm=el('voiceForm');
-if(voiceForm){
-  const status=el('voiceStatus'),submitButton=voiceForm.querySelector('button[type="submit"]');
-  voiceForm.addEventListener('input',()=>{status.textContent=''});
-  voiceForm.addEventListener('submit',async event=>{
-    event.preventDefault();
-    if(submitButton?.disabled)return;
-    const form=new FormData(voiceForm);
-    const payload={category:form.get('category'),name:form.get('name'),contact:form.get('contact'),message:form.get('message'),privacyConsent:form.get('privacyConsent')==='on'};
-    if(!String(payload.message||'').trim()){status.textContent='내용을 입력해 주세요.';return}
-    if(!payload.privacyConsent){status.textContent='개인정보 처리 동의가 필요합니다.';return}
-    if(submitButton)submitButton.disabled=true;
-    status.textContent='등록 중…';
-    try{
-      const response=await fetch('/board/api/posts',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
-      const body=await response.json().catch(()=>({}));
-      if(!response.ok||body.ok!==true||(!body.id&&!body.submissionId)){const detail=body.message||body.error||body.code||('HTTP '+response.status);throw new Error('등록하지 못했습니다. '+detail)}
-      const storedId=await waitForBoardSubmission(body);
-      voiceForm.reset();
-      status.textContent=storedId?(body.message||'등록되었습니다.'):'시민의견이 접수되었습니다. 잠시 후 목록에 표시됩니다.';
-      await loadPublicVoices();
-      setVoiceCompose(false);
-    }catch(error){
-      status.textContent=error.message||'등록하지 못했습니다. 잠시 후 다시 시도해 주세요.';
-    }finally{
-      if(submitButton)submitButton.disabled=false;
-    }
-  });
-}
 loadPublicVoices();
 
 let activeStatusTab='timeline';
@@ -1340,9 +1275,9 @@ function renderCommitteeActivity(){
   const rows=committeeItems();
   host.innerHTML=rows.length?rows.map((item,index)=>{
     const actions=publicTimelineAdminMode&&Number(item.id)>0?'<div class="timeline-admin-actions"><span class="source-type">'+(item.status==='published'?'공개':'비공개')+'</span><button type="button" data-committee-edit="'+Number(item.id)+'">수정</button><button type="button" data-committee-status="'+Number(item.id)+'">'+(item.status==='published'?'비공개로':'공개로')+'</button><button type="button" data-committee-delete="'+Number(item.id)+'">삭제</button></div>':'';
-    return '<article class="timeline-item'+(index>2?' is-collapsed':'')+'"><div class="timeline-date">'+escapeHtml(item.date||'')+'</div><div class="timeline-content"><h3>'+escapeHtml(item.title||'')+'</h3><p class="timeline-summary">'+escapeHtml(item.summary||'')+'</p><div class="chips"><span class="chip">'+escapeHtml(item.committeeKind||'기타 활동')+'</span><span class="chip">'+escapeHtml(item.evidence||'비상대책위 활동기록')+'</span></div><div class="timeline-detail">'+evidenceBlock(item)+'</div>'+actions+'<button type="button" class="timeline-toggle" aria-expanded="'+(index>2?'false':'true')+'">'+(index>2?'자세히 보기':'접기')+'</button></div></article>';
+    return '<article class="timeline-item'+' is-collapsed'+'"><div class="timeline-date">'+escapeHtml(item.date||'')+'</div><div class="timeline-content"><h3><button type="button" class="timeline-toggle timeline-title-button" aria-expanded="false">'+escapeHtml(item.title||'')+'</button></h3><p class="timeline-summary">'+escapeHtml(item.summary||'')+'</p><div class="chips"><span class="chip">'+escapeHtml(item.committeeKind||'기타 활동')+'</span><span class="chip">'+escapeHtml(item.evidence||'비상대책위 활동기록')+'</span></div><div class="timeline-detail">'+evidenceBlock(item)+'</div>'+actions+'</div></article>';
   }).join(''):'<p class="muted">해당 조건으로 확인된 비상대책위 활동기록이 없습니다.</p>';
-  host.querySelectorAll('.timeline-toggle').forEach(button=>button.addEventListener('click',()=>{const card=button.closest('.timeline-item'),closed=card.classList.toggle('is-collapsed');button.textContent=closed?'자세히 보기':'접기';button.setAttribute('aria-expanded',closed?'false':'true')}));
+  host.querySelectorAll('.timeline-toggle').forEach(button=>button.addEventListener('click',()=>{const card=button.closest('.timeline-item'),closed=card.classList.toggle('is-collapsed');button.setAttribute('aria-expanded',closed?'false':'true')}));
 }
 function bindCommitteeActivityAdmin(){
   const form=el('committeeActivityForm'),toggle=el('committeeActivityManageToggle'),host=el('committeeActivityList'),cancel=el('committeeActivityCancel');

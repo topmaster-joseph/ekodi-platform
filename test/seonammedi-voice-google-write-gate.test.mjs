@@ -3,44 +3,29 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import board from '../services/independent-board/worker.js';
 
-const source=await readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8');
-
-test('voice posts and replies require Google login before any rate limit, DB, upload or queue operation',async()=>{
-  for(const [route,payload] of [['/board/api/posts',{}],['/board/api/posts/1/replies',{}]]){
-    const response=await board.fetch(new Request('https://seonammedi.kr'+route,{
-      method:'POST',
-      headers:{'content-type':'application/json'},
-      body:JSON.stringify(payload)
-    }),{});
-    assert.equal(response.status,401,route);
-    const value=await response.json();
-    assert.equal(value.error,'google_login_required');
-  }
-  assert.match(source,/if\(path==='\/api\/posts'&&req\.method==='POST'\)\{\s*if\(!await signedInGoogle\(req\)\)/);
-  assert.match(source,/if\(reply&&req\.method==='POST'\)\{\s*if\(!await signedInGoogle\(req\)\)/);
+const worker=await readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8');
+const fresh=await readFile(new URL('../services/independent-board/voices-fresh/api.mjs',import.meta.url),'utf8');
+test('old citizen writers are retired and new citizen posts require Google before D1 access',async()=>{
+ for(const route of ['/board/api/posts','/board/api/posts/1/replies']){
+  const res=await board.fetch(new Request('https://seonammedi.kr'+route,{method:'POST',headers:{'content-type':'application/json'},body:'{}'}),{});
+  assert.equal(res.status,410);assert.equal((await res.json()).error,'legacy_citizen_board_retired');
+ }
+ const next=await board.fetch(new Request('https://seonammedi.kr/board/api/voices-fresh',{method:'POST',headers:{'content-type':'application/json'},body:'{"message":"anonymous"}'}),{BOARD_DB:{prepare(){throw Error('anonymous must not hit DB')}}});
+ assert.equal(next.status,401);assert.equal((await next.json()).error,'google_login_required');
+ assert.match(fresh,/const identity=await google\(req\)/);
+ assert.match(fresh,/if\(!identity\)return invalid\('google_login_required',401\)/);
+ assert.match(fresh,/const limiter=await limit\(req,env,'citizen-fresh'\)/);
 });
-
-test('voice UI keeps free reading and sharing but sends bearer token on both write requests',async()=>{
-  const page=await board.fetch(new Request('https://seonammedi.kr/board/voices'),{});
-  assert.equal(page.status,200);
-  const html=await page.text();
-  assert.match(html,/누구나 읽고 공유할 수 있습니다\. Google 로그인 후 간단히 의견을 작성하세요/);
-  assert.doesNotMatch(html,/누구나 로그인 없이 등록하고 답글/);
-  assert.match(html,/async function verifyVoiceAccount\(allowRefresh=true\)/);
-  assert.match(html,/\/board\/api\/auth\/session/);
-  assert.match(html,/await requireVoiceAccount\(\)/);
-  assert.match(html,/async function awaitVoicePublication\(data\)/);
-  assert.match(html,/id="voiceAuthStatus"/);
-  assert.match(html,/write\.onsubmit=async e=>\{e\.preventDefault\(\);if\(!await requireVoiceAccount\(\)\)return;const t=token\(\)/);
-  assert.match(html,/list\.addEventListener\("submit",async e=>[\s\S]*?await requireVoiceAccount\(\)/);
-  const writes=html.match(/authorization:"Bearer "\+t/g)||[];
-  assert.ok(writes.length>=2,'Both post and reply writes carry authorization');
-  assert.match(html,/data-share=/);
-});
-
-test('public board read, admin-only finance and notice boundaries remain independent',()=>{
-  assert.match(source,/if\(path==='\/api\/posts'&&req\.method==='GET'\)return list\(env,url\)/);
-  assert.match(source,/if\(path==='\/api\/finance'&&req\.method==='GET'\)return json\(\{ok:false,error:'finance_detail_admin_only'/);
-  assert.match(source,/if\(path==='\/api\/admin\/posts'&&req\.method==='GET'\)return adminList\(req,env\)/);
-  assert.match(source,/if\(path==='\/api\/admin\/notices'&&req\.method==='POST'\)return createNotice\(req,env\)/);
+test('public reading is independent and owner-only mutations remain protected',async()=>{
+ const external=await board.fetch(new Request('https://seonammedi.kr/board/voices'),{});
+ assert.equal(external.status,200);
+ const html=await external.text();
+ assert.match(html,/id="freshList"/);
+ assert.match(html,/\/api\/voices-fresh/);
+ assert.match(html,/authorization:'Bearer '\+t/);
+ assert.match(html,/await session\(\)/);
+ assert.doesNotMatch(html,/id="voiceMessage"|id="writeToggle"/);
+ assert.match(worker,/requirePermission\(req,'finance'\)/);
+ assert.match(worker,/requirePermission\(req,'notices'\)/);
+ assert.match(worker,/admin:requireVoiceAdmin/);
 });

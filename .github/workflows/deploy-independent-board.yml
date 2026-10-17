@@ -162,15 +162,24 @@ jobs:
           internal_finance_slash="$(fetch_board https://ekodi.kr/seonammedi/board/finance/)"
           internal_notices="$(fetch_board https://ekodi.kr/seonammedi/board/notices)"
           internal_notices_slash="$(fetch_board https://ekodi.kr/seonammedi/board/notices/)"
-          verify_contains "voices write control" 'id="writeToggle"' "$voices"
-          verify_contains "voices search control" 'id="searchToggle"' "$voices"
-          verify_contains "voices list" 'id="voiceList"' "$voices"
-          verify_contains "verified Google account badge" 'id="voiceAuthStatus"' "$voices"
-          verify_contains "account verification before composer" 'byId("writeToggle").onclick=async()=>{if(!await requireVoiceAccount())return' "$voices"
-          verify_contains "account verification before post submit" 'write.onsubmit=async e=>{e.preventDefault();if(!await requireVoiceAccount())return' "$voices"
-          verify_contains "authenticated session endpoint" '/board/api/auth/session' "$voices"
-          verify_contains "Google handoff preserving compose intent" 'target.searchParams.set("compose","1")' "$voices"
-          verify_contains "voices active nav compose intent" 'aria-current="page" href="/board/voices?compose=1&choose_account=1">시민의견' "$voices"
+          verify_contains "clean voices write control" 'id="freshWrite"' "$voices"
+          verify_contains "clean voices search control" 'id="freshSearch"' "$voices"
+          verify_contains "clean voices form" 'id="freshForm"' "$voices"
+          verify_contains "clean voices list" 'id="freshList"' "$voices"
+          verify_contains "server-verification before writing" "await session()" "$voices"
+          verify_contains "new isolated data API" "/api/voices-fresh" "$voices"
+          if grep -Fq 'id="writeToggle"' <<<"$voices"; then
+            echo "legacy citizen composer was unexpectedly served" >&2
+            exit 1
+          fi
+          for origin in https://seonammedi.kr/board https://ekodi.kr/seonammedi/board; do
+            status="$(curl -sS -o /dev/null -w '%{http_code}' "$origin/api/posts")"
+            if [[ "$status" != "410" ]]; then
+              echo "legacy citizen API must return HTTP 410, received $status" >&2
+              exit 1
+            fi
+            curl -fsS "$origin/health" | jq -e '.legacyQueue=="disabled"' >/dev/null
+          done
           verify_contains "finance route renders finance page" '<body class="board-finance">' "$finance"
           verify_contains "finance uses six-menu notices link" 'href="/board/notices">공지' "$finance"
           verify_contains "finance administrator-only notice" 'id="financeAdminOnly"' "$finance"
@@ -239,47 +248,39 @@ jobs:
             echo "Verified unauthenticated Google session is denied: $origin"
           done
 
-      - name: Production queue-create-list-reply canary and cleanup
+      - name: Verify clean citizen authenticated write and legacy retirement
         env:
           BOARD_CANARY_GOOGLE_TOKEN: ${{ secrets.SEONAMMEDI_BOARD_CANARY_GOOGLE_TOKEN }}
         run: |
           set -euo pipefail
-          # The public-read / authenticated-write boundary is always mandatory.
-          probe_body="$(mktemp)"
-          trap 'rm -f "$probe_body"' EXIT
-          for path in /board/api/posts /board/api/posts/1/replies; do
-            status="$(curl -sS -o "$probe_body" -w '%{http_code}' -X POST "https://seonammedi.kr$path" -H 'content-type: application/json' --data '{}')"
-            if [[ "$status" != "401" ]]; then echo "Anonymous board write must return 401 at $path; got $status" >&2; exit 1; fi
-            jq -e '.error=="google_login_required"' "$probe_body" >/dev/null
+          for origin in https://seonammedi.kr/board https://ekodi.kr/seonammedi/board; do
+            status="$(curl -sS -o /dev/null -w '%{http_code}' "$origin/api/posts")"
+            [[ "$status" = "410" ]] || { echo "legacy API not retired" >&2; exit 1; }
+            status="$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$origin/api/voices-fresh" -H 'content-type: application/json' --data '{"message":"anonymous"}')"
+            [[ "$status" = "401" ]] || { echo "anonymous new board write not denied" >&2; exit 1; }
           done
-          # Authorized CRUD canary requires a dedicated real Google session token.
-          # Never revert to anonymous writes or mint a synthetic production user.
           if [[ -z "${BOARD_CANARY_GOOGLE_TOKEN:-}" ]]; then
-            echo "::notice::Anonymous post/reply gate 401 passed. Authenticated CRUD canary not configured; positive-path probe not executed."
-            echo "Independent Board: anonymous write 401 PASS; authenticated production CRUD canary SKIPPED (no scoped test user token)." >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::Clean voices anonymous gate passed. Real Google writer test SKIPPED: no scoped test-account token."
             exit 0
           fi
-          marker="EKODI-BOARD-CANARY-${GITHUB_RUN_ID}"
-          payload="$(jq -nc --arg marker "$marker" '{name:"EKODI 검증",category:"other",message:$marker,privacyConsent:true}')"
-          created="$(curl -fsS -X POST https://seonammedi.kr/board/api/posts -H 'content-type: application/json' -H "authorization: Bearer $BOARD_CANARY_GOOGLE_TOKEN" --data "$payload")"
-          jq -e '.ok==true and .queued==true and (.submissionId|length)==36' <<<"$created" >/dev/null
+          marker="EKODI-CITIZEN-FRESH-CANARY-${GITHUB_RUN_ID}"
+          payload="$(jq -nc --arg message "$marker" '{message:$message}')"
+          created="$(curl -fsS -X POST https://seonammedi.kr/board/api/voices-fresh -H 'content-type: application/json' -H "authorization: Bearer $BOARD_CANARY_GOOGLE_TOKEN" --data "$payload")"
+          submission_id="$(jq -r 'select(.ok==true and .queued==true) | .submissionId // ""' <<<"$created")"
+          [[ "$submission_id" =~ ^[0-9a-fA-F-]{36}$ ]] || { echo "durable queue did not accept citizen post" >&2; exit 1; }
           post_id=0
-          for attempt in 1 2 3 4 5 6 7 8 9 10; do
-            listed="$(curl -fsS https://seonammedi.kr/board/api/posts)"
-            post_id="$(jq -r --arg marker "$marker" '[.items[] | select(.message==$marker)][0].id // 0' <<<"$listed")"
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+            result="$(curl -fsS "https://seonammedi.kr/board/api/voices-fresh/submissions/$submission_id")"
+            post_id="$(jq -r 'select(.status=="published") | .id // 0' <<<"$result")"
             [[ "$post_id" -gt 0 ]] && break
             sleep 2
           done
-          test "$post_id" -gt 0
-          reply_marker="reply-canary-${GITHUB_RUN_ID}"
-          reply_payload="$(jq -nc --arg message "$reply_marker" '{name:"EKODI 검증",message:$message}')"
-          reply="$(curl -fsS -X POST "https://seonammedi.kr/board/api/posts/$post_id/replies" -H 'content-type: application/json' -H "authorization: Bearer $BOARD_CANARY_GOOGLE_TOKEN" --data "$reply_payload")"
-          jq -e '.ok==true and .queued==true and (.submissionId|length)==36' <<<"$reply" >/dev/null
-          reply_seen=false
-          for attempt in 1 2 3 4 5 6 7 8 9 10; do
-            if curl -fsS https://seonammedi.kr/board/api/posts | jq -e --argjson post "$post_id" --arg message "$reply_marker" '.items[] | select(.id==$post) | .replies[] | select(.message==$message)' >/dev/null; then reply_seen=true; break; fi
-            sleep 2
-          done
-          test "$reply_seen" = true
-          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-independent-board --remote --config $GITHUB_WORKSPACE/.wrangler.independent-board.runtime.toml --command "DELETE FROM board_replies WHERE post_id=$post_id; DELETE FROM board_posts WHERE id=$post_id;"
-          curl -fsS https://seonammedi.kr/board/api/posts | jq -e --arg marker "$marker" '[.items[] | select(.message==$marker)] | length==0' >/dev/null
+          [[ "$post_id" -gt 0 ]] || { echo "durable queued post did not publish" >&2; exit 1; }
+          curl -fsS https://seonammedi.kr/board/api/voices-fresh | jq -e --argjson id "$post_id" --arg message "$marker" '.items | any(.id==$id and .message==$message)' >/dev/null
+          # Synthetic canary cleanup only; never touch arbitrary posts.
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-independent-board --remote --config "$GITHUB_WORKSPACE/.wrangler.independent-board.runtime.toml" --command "DELETE FROM citizen_voices_fresh WHERE id=$post_id AND body='$marker';"
+          curl -fsS https://seonammedi.kr/board/api/voices-fresh | jq -e --argjson id "$post_id" '.items | all(.id!=$id)' >/dev/null
+      - name: Remove old citizen records and referenced photos after cutover
+        run: |
+          set -euo pipefail
+          node services/independent-board/voices-fresh/purge-legacy.mjs --execute

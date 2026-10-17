@@ -80,6 +80,39 @@ async function addColumnIfMissing(db,table,column,definition){
   }
 }
 
+
+/**
+ * Reconcile the columns required by an authenticated notice/event write.
+ * Older D1 databases can contain a usable public notice table while lacking
+ * the optional columns introduced by later releases. Public calendar reads
+ * must remain read-only; repair happens only after notice capability checks.
+ */
+export async function ensureSeonamMediNoticeWriteColumns(db){
+  const info=await db.prepare('PRAGMA table_info(seonammedi_notices)').all();
+  const columns=new Set((info.results||[]).map(row=>String(row?.name||'')));
+  if(!columns.has('id')||!columns.has('title'))throw new Error('notice_table_missing');
+  const needed=[
+    ['image_key',"TEXT NOT NULL DEFAULT ''"],
+    ['image_type',"TEXT NOT NULL DEFAULT ''"],
+    ['image_keys_json',"TEXT NOT NULL DEFAULT '[]'"],
+    ['image_types_json',"TEXT NOT NULL DEFAULT '[]'"],
+    ['notice_kind',"TEXT NOT NULL DEFAULT 'notice'"],
+    ['featured','INTEGER NOT NULL DEFAULT 0'],
+    ['event_start','TEXT'],
+    ['event_end','TEXT']
+  ];
+  for(const [column,definition] of needed){
+    if(!columns.has(column))await addColumnIfMissing(db,'seonammedi_notices',column,definition);
+  }
+}
+async function noticeWriteSchemaFailure(env){
+  try{await ensureSeonamMediNoticeWriteColumns(env.DB);return null}
+  catch(error){
+    console.error('seonammedi notice schema repair failed',String(error?.message||error));
+    return json({ok:false,error:'notice_write_schema_unavailable'},503);
+  }
+}
+
 async function ensurePublicContentSchema(db){
   await db.exec(`CREATE TABLE IF NOT EXISTS seonammedi_notices (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -883,6 +916,7 @@ async function storeNoticeImage(env,image,principal){
 async function createNotice(request,env,auth){
   if(!can(auth,NOTICE_CAP))return json({ok:false,error:'notice_forbidden'},403);
   const body=await noticeAdminPayload(request);if(!body)return json({ok:false,error:'invalid_request'},400);if(body.error)return json({ok:false,error:body.error},400);if(!body.title)return json({ok:false,error:'title_required'},400);
+  const schemaFailure=await noticeWriteSchemaFailure(env);if(schemaFailure)return schemaFailure;
   const stored=[];try{for(const image of body.images)stored.push(await storeNoticeImage(env,image,auth))}catch(error){for(const item of stored)if(item?.imageKey)await deleteNoticeDriveKey(env,item.imageKey);return json({ok:false,error:error.message||'image_upload_failed'},error.status||500)}
   const keys=stored.map(x=>x?.imageKey).filter(Boolean),types=stored.map(x=>x?.imageType||''),now=new Date().toISOString(),publishedAt=body.status==='published'?now:null;
   try{const result=await env.DB.prepare('INSERT INTO seonammedi_notices(title,body,status,pinned,published_at,image_key,image_type,image_keys_json,image_types_json,notice_kind,featured,event_start,event_end,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
@@ -894,6 +928,7 @@ async function updateNotice(request,env,auth,id){
   if(!can(auth,NOTICE_CAP))return json({ok:false,error:'notice_forbidden'},403);
   const existing=await env.DB.prepare('SELECT * FROM seonammedi_notices WHERE id=?').bind(id).first();if(!existing)return json({ok:false,error:'not_found'},404);
   const body=await noticeAdminPayload(request,existing);if(!body)return json({ok:false,error:'invalid_request'},400);if(body.error)return json({ok:false,error:body.error},400);if(!body.title)return json({ok:false,error:'title_required'},400);
+  const schemaFailure=await noticeWriteSchemaFailure(env);if(schemaFailure)return schemaFailure;
   const oldKeys=noticeImageKeys(existing);let oldTypes=[];try{oldTypes=JSON.parse(String(existing.image_types_json||'[]'))}catch{}if(!Array.isArray(oldTypes)||!oldTypes.length)oldTypes=existing.image_type?[existing.image_type]:[];
   const stored=[];try{for(const image of body.images)stored.push(await storeNoticeImage(env,image,auth))}catch(error){for(const item of stored)if(item?.imageKey)await deleteNoticeDriveKey(env,item.imageKey);return json({ok:false,error:error.message||'image_upload_failed'},error.status||500)}
   const keys=body.images.length?stored.map(x=>x?.imageKey).filter(Boolean):oldKeys,types=body.images.length?stored.map(x=>x?.imageType||''):oldTypes;

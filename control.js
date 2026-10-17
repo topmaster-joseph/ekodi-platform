@@ -1,5 +1,17 @@
 (() => {
   'use strict';
+  // Only apply the compact presentation when framed by the same-origin /admin page.
+  // Authorization is still enforced by the existing Control APIs.
+  if(window.parent!==window&&new URLSearchParams(location.search).get('embedded')==='admin'){
+    try{
+      const parentLocation=window.parent.location;
+      if(parentLocation.origin===location.origin&&/^\/admin(?:\/|$)/.test(parentLocation.pathname)){
+        document.documentElement.dataset.ekodiControlEmbedded='admin';
+        document.querySelectorAll('a[href="/admin/"]').forEach(link=>link.target='_top');
+      }
+    }catch{ /* Third-party framing is never a supported embedded presentation. */ }
+  }
+
   const API='https://ekodi.kr';
   const TOKEN_KEY='ekodi-auth-token';
   const HISTORY_KEY='ekodi-admin-command-history-v1';
@@ -42,15 +54,21 @@
   }
   function pushMessage(role,text,extra={}){
     const s=ensureSession(text);s.messages=s.messages||[];s.messages.push({role,text:String(text||'').slice(0,12000),at:now(),...extra});s.updatedAt=now();if(extra.status)s.status=extra.status;
-    state.sessions=[s,...state.sessions.filter(x=>x.id!==s.id)].slice(0,24);saveHistory();renderRecent();renderMessages();
+    state.sessions=[s,...state.sessions.filter(x=>x.id!==s.id)].slice(0,24);saveHistory();renderRecent();renderMessages({scrollToEnd:true});
   }
   function setView(view){state.view=view;$$('[data-view]').forEach(n=>n.classList.toggle('active',n.dataset.view===view));$$('[data-view-panel]').forEach(n=>n.classList.toggle('active',n.dataset.viewPanel===view));if(view!=='chat')renderPanels();closeRail()}
-  function renderRecent(){const root=$('#recentTasks');const items=state.sessions.slice(0,14);root.innerHTML=items.length?items.map(s=>'<button type="button" class="recent-item" data-session="'+esc(s.id)+'">'+esc(s.title||'새 작업')+'</button>').join(''):'<div class="section-title">아직 작업이 없습니다.</div>';root.querySelectorAll('[data-session]').forEach(b=>b.onclick=()=>{state.activeId=b.dataset.session;setView('chat');renderMessages()})}
-  function renderMessages(){const s=state.sessions.find(x=>x.id===state.activeId);const messages=s?.messages||[];$('#emptyState').hidden=messages.length>0;$('#messages').innerHTML=messages.map(m=>{
+  function renderRecent(){const root=$('#recentTasks');const items=state.sessions.slice(0,14);root.innerHTML=items.length?items.map(s=>'<button type="button" class="recent-item" data-session="'+esc(s.id)+'">'+esc(s.title||'새 작업')+'</button>').join(''):'<div class="section-title">아직 작업이 없습니다.</div>';root.querySelectorAll('[data-session]').forEach(b=>b.onclick=()=>{state.activeId=b.dataset.session;setView('chat');renderMessages({scrollToEnd:true})})}
+  function renderMessages({scrollToEnd=false}={}){const s=state.sessions.find(x=>x.id===state.activeId);const messages=s?.messages||[];$('#emptyState').hidden=messages.length>0;$('#messages').innerHTML=messages.map(m=>{
     const meta=[m.provider,m.target,m.status&&statusLabel(m.status)].filter(Boolean).join(' · ');
     const task=m.taskId?'<div class="execution-card"><strong>EKODI Task '+esc(m.taskId)+'</strong><span>'+esc(statusLabel(m.status))+'</span></div>':'';
     return '<article class="turn '+esc(m.role)+'"><div class="meta">'+esc(m.role==='user'?'사용자':'EKODI')+(meta?' · '+esc(meta):'')+'</div><div class="bubble">'+esc(m.text)+'</div>'+task+'</article>';
-  }).join('');requestAnimationFrame(()=>{const c=$('#conversation');window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})})}
+  }).join('');
+    // Do not animate the window on initial load or during a background update.
+    // Message history has its own bounded scroll surface, separate from the fixed composer.
+    if(scrollToEnd && messages.length && state.view==='chat'){
+      requestAnimationFrame(()=>{const panel=$('#conversation');if(panel && state.view==='chat')panel.scrollTop=panel.scrollHeight});
+    }
+  }
   function historyForAssist(){const s=state.sessions.find(x=>x.id===state.activeId);return (s?.messages||[]).filter(m=>m.role==='user'||m.role==='assistant').slice(-8).map(m=>({role:m.role,text:m.text}))}
   async function previewAiRoute(){
     const goal=String($('#commandInput')?.value||'').trim();
@@ -137,7 +155,7 @@
     }catch(error){
       pushMessage('assistant',error.message,{status:'failed',target});
       if(error.auth)toast('최고관리자 로그인 후 /control로 돌아오세요.');
-    }finally{state.busy=false;$('#sendButton').disabled=false;$('#commandInput').focus()}
+    }finally{state.busy=false;$('#sendButton').disabled=false;$('#commandInput').focus({preventScroll:true})}
   }
   function card(titleText,status,description){return '<article class="card"><div class="card-head"><strong>'+esc(titleText)+'</strong><span class="badge">'+esc(status)+'</span></div><p>'+esc(description||'')+'</p></article>'}
   function renderPanels(){
@@ -170,8 +188,14 @@
     saveState();renderPanels();
     toast('오케스트레이터 상태 '+updated+'건 갱신'+(unavailable?' · '+unavailable+'건 조회 실패':''));
   }
-  function resizeInput(){const input=$('#commandInput');input.style.height='auto';input.style.height=Math.min(input.scrollHeight,190)+'px'}
-  function newTask(){state.activeId=null;setView('chat');renderMessages();$('#commandInput').focus()}
+  function resizeInput(){
+    const input=$('#commandInput');
+    input.style.height='auto';
+    const nextHeight=Math.min(input.scrollHeight,160);
+    input.style.height=nextHeight+'px';
+    input.style.overflowY=input.scrollHeight>160?'auto':'hidden';
+  }
+  function newTask(){state.activeId=null;setView('chat');renderMessages();$('#conversation').scrollTop=0;$('#commandInput').focus({preventScroll:true})}
   function closeRail(){$('#controlRail').classList.remove('open')}
   function bind(){
     $$('.nav-item').forEach(b=>b.onclick=()=>setView(b.dataset.view));
@@ -180,7 +204,7 @@
     $('#aiRoutePreview').addEventListener('click',()=>previewAiRoute());
     $('#commandInput').addEventListener('input',resizeInput);
     $('#commandInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#commandForm').requestSubmit()}});
-    $$('[data-prompt]').forEach(b=>b.onclick=()=>{$('#commandInput').value=b.dataset.prompt;resizeInput();$('#commandInput').focus()});
+    $$('[data-prompt]').forEach(b=>b.onclick=()=>{$('#commandInput').value=b.dataset.prompt;resizeInput();$('#commandInput').focus({preventScroll:true})});
     $$('[data-refresh]').forEach(b=>b.onclick=()=>{refreshOrchestratorTasks().catch(()=>toast('오케스트레이터 상태 갱신 실패'))});
   }
   async function boot(){

@@ -1,0 +1,71 @@
+name: SeonamMedi Calendar Sharing Native Fixture Verification
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/verify-seonammedi-calendar-share-native.mjs'
+      - 'test/seonammedi-calendar-share-native.test.mjs'
+      - '.github/workflows/verify-seonammedi-calendar-share-native.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/verify-seonammedi-calendar-share-native.mjs'
+      - 'test/seonammedi-calendar-share-native.test.mjs'
+      - '.github/workflows/verify-seonammedi-calendar-share-native.yml'
+  workflow_run:
+    workflows: ['Deploy EKODI Shared Site Core']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seonammedi-calendar-share-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  native-calendar-share-fixture:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - name: Checkout read-only first-party browser harness
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && 'main' || github.ref }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Assert no production write or credential injection
+        run: |
+          node --check scripts/verify-seonammedi-calendar-share-native.mjs
+          node --test test/seonammedi-calendar-share-native.test.mjs
+      - name: Install EKODI-owned Chromium
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Click copy and share in production page using only isolated fixture
+        shell: bash
+        run: |
+          set +e
+          node scripts/verify-seonammedi-calendar-share-native.mjs --origin=https://seonammedi.kr --out=artifacts/seonammedi-share-native/customer
+          customer=$?
+          node scripts/verify-seonammedi-calendar-share-native.mjs --origin=https://ekodi.kr --out=artifacts/seonammedi-share-native/canonical
+          canonical=$?
+          if [ "$customer" -ne 0 ] || [ "$canonical" -ne 0 ]; then
+            echo 'Native browser fixture verification FAILED on one or both domains.' >&2
+            exit 1
+          fi
+          echo 'Desktop/mobile clipboard, Web Share arguments, deep link, and browser title were verified with isolated synthetic calendar responses on both production domains.'
+          echo 'No real published event, Google login, or OS share sheet has been proven by this fixture test.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve screenshots and read-only evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seonammedi-share-native-${{ github.run_id }}
+          path: artifacts/seonammedi-share-native/
+          if-no-files-found: warn
+          retention-days: 14
