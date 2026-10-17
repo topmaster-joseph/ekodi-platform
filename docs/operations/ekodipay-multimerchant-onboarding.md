@@ -98,3 +98,20 @@
 - 본 SQL은 **참고용 추가 마이그레이션이며 운영 DB 미적용**입니다. 초기 사업자 계좌 등록·은행 명의확인·PG 계약 증빙의 신뢰성은 이 스키마만으로 증명되지 않으므로, 실제 적용 시 초기 등록 이중 승인 및 승인자 신원 보장까지 관리 API에서 구현·실증해야 합니다.
 
 검증: `node --test test/ekodipay-bank-change-dual-control.test.mjs` (실제 메모리 SQLite 사용). 이 검증의 통과는 외부 은행·PG 계좌 변경 완료 증명이 아닙니다.
+
+
+## 8. 읽기 전용 토스 정산 조회기 — 추가 구현
+
+`ekodipay-merchant-settlement-reader.js`는 사업자별 정산대사에 필요한 PG 원본을 **서버 환경에서만 GET**으로 조회하는 보호된 페이지 수집기입니다. 이 기능은 승인·취소·정산 요청, 실제 입금 확인, D1 쓰기를 실행하지 않습니다.
+
+1. 내부 작업자가 자신이 조회할 권한이 있는 `merchantId` 집합을 인증·인가 미들웨어에서 획득합니다. 브라우저의 `merchantId`나 `authorizedMerchantIds`를 그대로 믿어서는 안 됩니다.
+2. 비공개 판매자 레지스트리에서 해당 사업자의 `test` 또는 `live` MID와 전용 키 참조를 선택합니다. 다른 사업자의 비밀 바인딩으로 대체하지 않습니다. 비밀은 암호화한 Cloudflare 환경에서 런타임에만 조회합니다.
+3. `GET /v1/settlements`에 서버 소유 비밀키로 Basic 인증하고 ISO 날짜, 페이지 번호와 크기를 지정합니다. 이 GET의 조회 대상은 `api.tosspayments.com`으로 고정합니다. 페이지 크기 1~500, 최대 100쪽으로 경계를 두고 마지막 *부분 페이지*가 확인되지 않으면 조회 완료라고 보고하지 않습니다. 429·타임아웃·인증 실패·비정상 페이지는 **대사 중단**입니다.
+4. 각 원본 행의 `mId`를 요청 사업자의 MID와 비교합니다. 중복 `transactionKey` 또는 타 MID, 원화 이외 통화, 비정상 금액·수수료 자료가 있으면 대사를 중단합니다. 카드번호·구매자 식별정보·계좌 필드는 결과에서 제거합니다.
+5. 수집된 행은 **내부 승인 주문 원장과 별도로** `reconcileMerchantSettlements`로 대조해야 합니다. 원본 결제·정산 정보만으로 입금확인 상태를 기록하지 않으며, 은행의 별도 인증 명세와 계좌 HMAC 지문 대조가 필요합니다.
+
+이 모듈은 **배포된 PG 운영 호출기가 아닙니다.** 테스트에서는 가짜 HTTPS 응답만 사용하고, 아직 정식 스케줄러의 신원 검증, 운영 PG 시크릿 연결, API 호출 로그·재시도 감사, 실제 은행 연계가 없습니다. PG 수동 정산 요청은 `POST /v1/settlements`로 별개의 금융 행위이므로 이 코드에서 전혀 지원하지 않습니다. 실제 계좌 변경/정산/라이브 결제는 별도 Human Gate로 분리됩니다.
+
+검증 명령: `node --test test/ekodipay-merchant-settlement-reader.test.mjs`.
+
+PG 공식 문서: [정산 조회 GET, 페이지 크기·기간·429·응답 시간](https://docs.tosspayments.com/reference), [MID/테스트·라이브 키 분리](https://docs.tosspayments.com/reference/using-api/api-keys).
