@@ -54,3 +54,18 @@ node scripts/verify-cheonggyepass-native-ui.mjs
 이 작업 시점 Desktop Commander는 월간 실행 사용량을 모두 소진, Opera Browser Connector는 연결되지 않음, Browser 연결은 원래 브라우저 컨텍스트 밖에서 사용할 수 없었음. 따라서 본 문서는 실계정·서버 쓰기 실증을 완료했다고 주장하지 않는다.
 
 향후 자동화는 공식 오케스트레이터의 보안 검토를 거친 격리된 브라우저 실행환경에서만 수행할 것. 실계정/OAuth 세션을 CI의 일반 PR 워크플로에 삽입하지 말 것.
+
+
+## 1-A. 기존 공식 EKODI Background Browser Worker로 읽기 전용 확인
+
+별도 브라우저 서비스/새 워크플로가 없어도, 이미 등록된
+\`.github/workflows/ekodi-background-browser-worker.yml\`의 **Run workflow**를 이용한다. 보호 병합 후 \`main\`에서 다음 입력으로 각각 실행한다.
+
+- \`surface_path\`: \`/cheonggyepass/admin\`
+- \`surface_registry\`: \`config/cheonggyepass-browser-surface-registry.json\`
+- \`verification_lane\`: \`cheonggyepass-vendor-guest\`
+- \`device_profile\`: 먼저 \`desktop\`, 별도 실행으로 \`mobile-portrait\`
+
+이 실행기는 소스의 진짜 Chromium을 사용하되 익명·읽기 전용 브라우징이며 \`allowMutation=false\`이다. 성공하더라도 실제 Google 로그인 및 서버 원장 쓰기 완료의 증거가 아니며, 관리 경로의 로그인 리디렉션·읽기 전용 표면만 확인한다.
+
+실제 폼·모의 업체 권한·접수 UI 조작은 앞의 독립 \`scripts/verify-cheonggyepass-native-ui.mjs\`를 사용한다. 위 검증들은 서로 대체되지 않는다.
