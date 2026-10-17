@@ -1,3 +1,5 @@
+import {isSeasonalOperationsPath,seasonalOperationsResponse} from './seasonal-workforce/operations-api.mjs';
+import { isSeasonalPortalPath, seasonalPortalResponse } from './seasonal-workforce/route.mjs';
 import { routeCooperative, cooperativeLocatorGuard } from './cooperative-control.js';
 import { isCgmaAiEducationPath, routeCgmaAiEducation } from './cgma-ai-education-route.js';
 import legacyPlatformRouter from './platform-router-worker.js';
@@ -479,6 +481,8 @@ async function routePlatform(request,env,ctx){
     if(CGMA_HOSTS.has(host)&&['GET','HEAD'].includes(request.method))return routeCgmaPublic(request,env);
 
     if(host===PUBLIC_HOST){
+      if(isSeasonalOperationsPath(url.pathname))return seasonalOperationsResponse(request,env);
+      if(isSeasonalPortalPath(url.pathname))return seasonalPortalResponse(request);
       if(['GET','HEAD'].includes(request.method)&&isStorePosAgentDownloadPath(url.pathname))return storePosAgentDownload(request);
       if(['GET','HEAD'].includes(request.method)&&isCgmaRoot(url.pathname)){const legacyResponse=await legacyPlatformRouter.fetch(request,env,ctx);return injectCgmaRegionalLinks(injectEkodiProgressiveHome(injectEkodiTenantReadability(legacyResponse)));}
       const mailApex=routeMailApex(request);if(mailApex)return mailApex;
