@@ -1,0 +1,24 @@
+name: Mokdaehumun Cooperative Checks
+on:
+  pull_request:
+    paths:
+      - 'mokdaehumun-*.js'
+      - 'tests/mokdaehumun-*.mjs'
+      - 'migrations/mokdaehumun/**'
+      - '.github/workflows/mokdaehumun-checks.yml'
+  workflow_dispatch:
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check mokdaehumun-public-page.js
+      - run: node --check mokdaehumun-member-api.js
+      - run: node --check mokdaehumun-share-api.js
+      - run: node tests/mokdaehumun-smoke.test.mjs
+      - run: node tests/mokdaehumun-role-denial.test.mjs
