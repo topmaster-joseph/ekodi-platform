@@ -23,3 +23,8 @@ The original exactly approved functional SHA must remain an ancestor of any refr
 4. Uploaded images and replies visible, notice/finance routes unaffected, no private contact leaked in public HTML.
 
 A successful worker health check, README-only commit, code CI, or unauthenticated 401 check **cannot** substitute for real signed-in post/admin tests.
+
+## Native current-main convergence checkpoint
+- Official convergent merge run [#38995328268](https://github.com/topmaster-joseph/ekodi-platform/actions/runs/38995328268) returned `action=branch-updated` and synchronized the current protected `main` into official PR #5120 at `c67e5c7ef48f54366d36401e4137dbe693ad2815`.
+- The bot-generated synchronized head's workflows entered GitHub `action_required` without executing their checks. This document-only continuation requests actual owner-authored checks on the synchronized functional tree, then existing signed-receipt protected auto-merge. No functional code, configuration, roles, database or deployment workflow changed.
+- Source Human Gate approval remains pinned to original functional ancestor `36e9eb60d3e9de7a247b4727ddb28739cd4578b9`. Revalidation of the actual synchronized head remains mandatory, and no release succeeds on this note alone.
