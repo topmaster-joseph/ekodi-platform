@@ -15,7 +15,7 @@ $source = Join-Path $PSScriptRoot 'watchdog.ps1'
 $target = Join-Path $InstallDir 'watchdog.ps1'
 Copy-Item -Force $source $target
 
-$args = @('-NoProfile','-ExecutionPolicy','Bypass','-File',"`"$target`"",'-ProcessName',"`"$ProcessName`"")
+$args = @('-NoProfile','-NonInteractive','-WindowStyle','Hidden','-ExecutionPolicy','Bypass','-File',"`"$target`"",'-ProcessName',"`"$ProcessName`"")
 if ($ExecutablePath) { $args += @('-ExecutablePath',"`"$ExecutablePath`"") }
 $argumentString = $args -join ' '
 

@@ -17,7 +17,12 @@ function Write-WatchdogLog([string]$Message) {
 
 function Load-State {
   if (!(Test-Path $StatePath)) { return @{ restarts = @() } }
-  try { return (Get-Content $StatePath -Raw | ConvertFrom-Json -AsHashtable) }
+  # Windows PowerShell 5.1 has no ConvertFrom-Json -AsHashtable.
+  # Keep persisted restart limits effective on every supported Windows host.
+  try {
+    $stored = Get-Content -LiteralPath $StatePath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+    return @{ restarts = @($stored.restarts | Where-Object { $_ -is [string] -and $_.Trim() }) }
+  }
   catch { return @{ restarts = @() } }
 }
 
