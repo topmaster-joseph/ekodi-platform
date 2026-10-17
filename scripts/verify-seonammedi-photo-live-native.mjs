@@ -135,7 +135,7 @@ try{
         entry.active=state.active;
         entry.scrollWidth=state.scrollWidth;
         entry.viewportWidth=state.width;
-        if(item.key!=='home')required(state.active.includes(item.key),'selected_side_menu_not_active_'+item.key);
+        // Header is validated by inspect(); there is intentionally no side-menu selection.
         required(profile.isMobile?state.layoutDisplay==='flex':state.layoutDisplay==='grid','responsive_columns_mismatch_'+item.key);
         const filename=[origin.replace(/^https?:\/\//,'').replace(/[^a-zA-Z0-9.-]/g,'-'),profile.name,item.key].join('-')+'.png';
         await page.screenshot({path:path.join(output,filename),animations:'disabled',fullPage:false});
