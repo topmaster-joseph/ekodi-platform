@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Script} from 'node:vm';
-import {handleFreshVoiceApi} from '../services/independent-board/voices-fresh/api.mjs';
+import {handleFreshVoiceApi,consumeFreshVoiceQueue,FRESH_QUEUE_KIND} from '../services/independent-board/voices-fresh/api.mjs';
 import {renderFreshVoicePage} from '../services/independent-board/voices-fresh/page.mjs';
 import worker from '../services/independent-board/worker.js';
 
@@ -17,12 +17,12 @@ function fakeDb(){
         return {results:items.slice().sort((a,b)=>b.id-a.id).slice(0,100)}
       },
       async first(){
-        return state.posts.find(p=>p.id===Number(args[0])&&p.status==='published')||null;
+        return state.posts.find(p=>(sql.includes('submission_key')?p.submission_key===String(args[0]):p.id===Number(args[0]))&&p.status==='published')||null;
       },
       async run(){
         if(sql.startsWith('INSERT INTO citizen_voices_fresh')){
-          const [subject,body,created_at,updated_at]=args;
-          const id=next++;state.posts.push({id,google_subject:subject,body,status:'published',created_at,updated_at});
+          const [subject,submission_key,body,created_at,updated_at]=args;
+          const id=next++;state.posts.push({id,google_subject:subject,submission_key,body,status:'published',created_at,updated_at});
           return {meta:{last_row_id:id}};
         }
         if(sql.startsWith("UPDATE citizen_voices_fresh SET status='deleted'")){
@@ -53,10 +53,16 @@ test('fresh board rejects public writes and unauthorized administrator actions',
 });
 
 test('fresh API inserts, confirms, reads, updates and soft-deletes only the isolated table',async()=>{
- const db=fakeDb(),env={BOARD_DB:db};
+ const db=fakeDb(),queue=[],env={BOARD_DB:db,BOARD_WRITE_QUEUE:{async send(entry){queue.push(entry)}}};
  const created=await handleFreshVoiceApi(jsonRequest('','POST','새로운 시민의견'),env,'/api/voices-fresh',fakeAuth);
- assert.equal(created.status,201);
- const saved=await created.json();assert.equal(saved.published,true);assert.equal(saved.id,1);
+ assert.equal(created.status,202);
+ const saved=await created.json();assert.equal(saved.queued,true);assert.equal(queue.length,1);
+ assert.equal(queue[0].kind,FRESH_QUEUE_KIND);
+ await consumeFreshVoiceQueue(env,queue[0].payload);
+ await consumeFreshVoiceQueue(env,queue[0].payload);
+ assert.equal(db.state.posts.length,1,'at least once delivery must not duplicate posts');
+ const status=await handleFreshVoiceApi(new Request(base+'/submissions/'+saved.submissionId),env,'/api/voices-fresh/submissions/'+saved.submissionId,fakeAuth);
+ assert.equal((await status.json()).status,'published');
  const listed=await handleFreshVoiceApi(new Request(base),env,'/api/voices-fresh',fakeAuth);
  assert.equal((await listed.json()).items[0].message,'새로운 시민의견');
  const edited=await handleFreshVoiceApi(jsonRequest('/1','PUT','수정 의견'),env,'/api/voices-fresh/1',fakeAuth);
