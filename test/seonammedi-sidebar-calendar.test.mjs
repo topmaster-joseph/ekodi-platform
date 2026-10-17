@@ -75,7 +75,7 @@ test('today agenda, management login, and calendar toolbar remain separate from 
   ]);
   assert.match(layout,/주요일정/);
   assert.doesNotMatch(layout,/일정 달력/);
-  assert.ok(layout.includes('20261017-live-4-title'),'published calendar JS and CSS must bypass old cached bundles');
+  assert.ok(layout.includes('20261017-live-5-no-registration-date'),'published calendar JS and CSS must bypass old cached bundles');
   assert.ok(js.includes("heading.append(make('h2','','주요일정'))"));
   assert.ok(js.includes("appendButton(heading,'관리'"));
   assert.ok(js.includes("navigation.replaceChildren(current,previous,today,next)"));
@@ -202,20 +202,31 @@ test('every public event list has accessible native share and copy actions, with
   assert.doesNotMatch(shareBuilder,/searchParams\.set\('(?:manage|auth|access_token|ekodi_token)'/);
   assert.match(css,/\.seonam-calendar-event\.is-shared/);
   assert.match(css,/\.seonam-calendar-share-actions/);
-  assert.match(loader,/calendar-sidebar\.js\?v=20261017-live-4-title/);
-  assert.match(loader,/calendar-sidebar\.css\?v=20261017-live-4-title/);
+  assert.match(loader,/calendar-sidebar\.js\?v=20261017-live-5-no-registration-date/);
+  assert.match(loader,/calendar-sidebar\.css\?v=20261017-live-5-no-registration-date/);
   assert.match(js,/if\(!admin\)return;/);
 });
 
 test('copied schedule share message includes actual public event title, date, time and unchanged deep link',()=>{
   const item={id:12,kind:'event',eventStart:'2026-10-15T18:00',title:'평화광장 집회'};
-  const expectedHead='서남권 국립의대 소통센터 일정\n평화광장 집회\n2026.10.15 18:00\n일정 확인: ';
+  const expectedHead='서남권 국립의대 소통센터\n평화광장 집회\n일정: 2026.10.15 18:00\n일정 확인: ';
   const apex=loadShareHelpers('https://ekodi.kr/seonammedi/board/notices?auth=private#fragment');
   const sub=loadShareHelpers('https://seonammedi.kr/board/notices?access_token=secret#fragment');
   assert.equal(apex.shareMessage(item),expectedHead+'https://ekodi.kr/seonammedi/board/notices?schedule=12&date=2026-10-15');
   assert.equal(sub.shareMessage(item),expectedHead+'https://seonammedi.kr/board/notices?schedule=12&date=2026-10-15');
-  assert.equal(sub.shareSummary(item),'서남권 국립의대 소통센터 일정\n평화광장 집회\n2026.10.15 18:00');
+  assert.equal(sub.shareSummary(item),'서남권 국립의대 소통센터\n평화광장 집회\n일정: 2026.10.15 18:00');
   assert.ok(!sub.shareMessage(item).includes('access_token'));
+});
+
+test('public calendar sharing excludes registration, publication and edit dates',()=>{
+  const helpers=loadShareHelpers('https://seonammedi.kr/board/notices');
+  const item={id:25,title:'시민 설명회',kind:'event',eventStart:'2026-10-18T14:30',
+    createdAt:'2026-08-01T09:00',registeredAt:'2026-08-02T11:00',
+    publishedAt:'2026-08-03T12:00',updatedAt:'2026-08-04T13:00'};
+  const message=helpers.shareMessage(item);
+  assert.equal(message,'서남권 국립의대 소통센터\\n시민 설명회\\n일정: 2026.10.18 14:30\\n일정 확인: https://seonammedi.kr/board/notices?schedule=25&date=2026-10-18');
+  assert.doesNotMatch(message,/등록일|게시일|수정일|2026[-.]08[-.]0[1-4]/);
+  assert.equal(helpers.shareSummary(item),'서남권 국립의대 소통센터\\n시민 설명회\\n일정: 2026.10.18 14:30');
 });
 
 test('shared event titles are sanitized for readable, one-line messenger previews',()=>{
@@ -230,6 +241,6 @@ test('title-sharing assets stay byte-identical across the main Site Core and ind
   const site=await readFile(new URL('board-central-category.js',root),'utf8');
   const worker=await readFile(new URL('../../../services/independent-board/worker.js',root),'utf8');
   assert.ok(worker.includes('const BOARD_CATEGORY_CLIENT_JS='+JSON.stringify(site)+';'));
-  assert.ok(site.includes('/seonammedi/calendar-sidebar.js?v=20261017-live-4-title'));
-  assert.ok(site.includes('/seonammedi/calendar-sidebar.css?v=20261017-live-4-title'));
+  assert.ok(site.includes('/seonammedi/calendar-sidebar.js?v=20261017-live-5-no-registration-date'));
+  assert.ok(site.includes('/seonammedi/calendar-sidebar.css?v=20261017-live-5-no-registration-date'));
 });
