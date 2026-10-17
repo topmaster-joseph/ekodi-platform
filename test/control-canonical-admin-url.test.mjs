@@ -157,30 +157,33 @@ test('admin handoff token is scrubbed and only accepted after super-admin verifi
 
 test('every Site Core promotion verifies canonical and legacy Control in independent desktop/mobile browsers',()=>{
  const flow=read('.github/workflows/deploy-site-core.yml');
+ function jobText(name){
+  const lines=flow.split('\n');
+  const start=lines.indexOf('  '+name+':');
+  assert.ok(start>=0,name+' job is required');
+  const next=lines.findIndex((l,index)=>index>start && l.startsWith('  ') && l[2]!==' ' && l.trim().endsWith(':'));
+  return lines.slice(start,next<0?undefined:next).join('\n');
+ }
  for(const [name,device] of [
   ['native_control_verification_desktop','desktop'],
   ['native_control_verification_mobile','mobile-portrait']
  ]){
-  const start=flow.indexOf('  '+name+':');
-  assert.ok(start>=0,name+' job is required');
-  const rest=flow.slice(start+name.length+4);
-  const match=rest.match(/^[\\s\\S]*?(?=\\n  [a-zA-Z_][a-zA-Z0-9_-]*:|$)/);
-  const job=match?.[0]||'';
-  assert.match(job,/needs:\\s*deploy/);
-  assert.match(job,/uses: \\.\\/\\.github\\/workflows\\/ekodi-background-browser-worker\\.yml/);
-  assert.match(job,/verification_lane: control-canonical/);
-  assert.match(job,/surface_paths: \\/admin\\/control,\\/control/);
+  const job=jobText(name);
+  assert.ok(job.includes('needs: deploy'));
+  assert.ok(job.includes('uses: ./.github/workflows/ekodi-background-browser-worker.yml'));
+  assert.ok(job.includes('verification_lane: control-canonical'));
+  assert.ok(job.includes('surface_paths: /admin/control,/control'));
   assert.ok(job.includes('device_profile: '+device));
  }
- // Keep original site-core board and service route coverage unchanged.
+ // Existing Site Core board and service paths must remain unchanged.
  for(const name of ['native_surface_verification_desktop','native_surface_verification_mobile']){
-  const job=flow.split('  '+name+':')[1]?.split('\\n  native_')[0]||'';
-  assert.match(job,/surface_registry: config\\/board-surface-verification\\.json/);
-  assert.match(job,/\\/ekodibiz\\/seasonal-workers\\/office/);
+  const job=jobText(name);
+  assert.ok(job.includes('surface_registry: config/board-surface-verification.json'));
+  assert.ok(job.includes('/ekodibiz/seasonal-workers/office'));
  }
  const worker=read('.github/workflows/ekodi-background-browser-worker.yml');
- assert.match(worker,/Independent canonical \\/admin\\/control UI/);
- assert.match(worker,/contains\\("관리자 Google 로그인"\\)/);
- assert.match(worker,/contains\\("보호된 배포 요청"\\)/);
- assert.match(worker,/test\\("\\^https:\\/\\/ekodi\\[\\.\\]kr\\/admin\\/control\\/\\?\\$"\\)/);
+ assert.ok(worker.includes('Independent canonical /admin/control UI'));
+ assert.ok(worker.includes('contains("관리자 Google 로그인")'));
+ assert.ok(worker.includes('contains("보호된 배포 요청")'));
+ assert.ok(worker.includes('^https://ekodi[.]kr/admin/control/?$'));
 });
