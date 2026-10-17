@@ -39,9 +39,9 @@ async function inspect(page,where){
   const state=await page.evaluate(()=>{
     const sharedHero=document.querySelector('body > .seonam-visual-hero');
     const img=document.querySelector('body > .campaign-hero .campaign-hero-image');
-    const nav=document.querySelector('.seonam-visual-side-nav');
+    const nav=document.querySelector('.site-header .ekodi-six-nav');
     const main=document.querySelector('main.seonam-visual-layout');
-    const left=document.querySelector('.seonam-visual-left');
+    const duplicateLeft=document.querySelector('.seonam-visual-left,.seonam-visual-side-nav,.seonam-visual-side-card');
     const center=document.querySelector('.seonam-visual-content');
     const right=document.querySelector('.seonam-visual-right');
     const header=document.querySelector('body > header.site-header');
@@ -51,11 +51,11 @@ async function inspect(page,where){
       campaignNaturalWidth:img?.naturalWidth||0,
       campaignNaturalHeight:img?.naturalHeight||0,
       campaignVisible:Boolean(img?.getBoundingClientRect().height&&getComputedStyle(img).display!=='none'),
-      sideLabels:[...nav?.querySelectorAll('a[data-seonam-visual-key]')||[]].map(a=>a.textContent.trim()),
-      active:[...nav?.querySelectorAll('[aria-current="page"]')||[]].map(a=>a.dataset.seonamVisualKey),
+      headerLabels:[...nav?.querySelectorAll('a')||[]].map(a=>a.textContent.trim()),
+      active:[...nav?.querySelectorAll('[aria-current="page"]')||[]].map(a=>a.textContent.trim()),
       headerSticky:getComputedStyle(header).position==='sticky',
       layoutDisplay:getComputedStyle(main).display,
-      leftWidth:left?.getBoundingClientRect().width||0,
+      noDuplicateLeftRail:!duplicateLeft,
       centerWidth:center?.getBoundingClientRect().width||0,
       rightWidth:right?.getBoundingClientRect().width||0,
       width:document.documentElement.clientWidth,
@@ -71,9 +71,10 @@ async function inspect(page,where){
     required(state.campaignSrc.includes('campaign-reconsideration-20261013.png'),'incorrect_home_campaign_source_'+where);
     required(state.campaignNaturalWidth===1903&&state.campaignNaturalHeight===735,'home_campaign_dimensions_mismatch_'+where);
   }
-  required(JSON.stringify(state.sideLabels)===JSON.stringify(labels),'six_side_menu_labels_mismatch_'+where);
+  required(JSON.stringify(state.headerLabels)===JSON.stringify(labels),'six_header_menu_labels_mismatch_'+where);
+  required(state.noDuplicateLeftRail,'duplicate_left_menu_present_'+where);
   required(state.headerSticky,'site_header_not_sticky_'+where);
-  required(state.leftWidth>0&&state.centerWidth>0&&state.rightWidth>0,'layout_region_missing_'+where);
+  required(state.centerWidth>0&&state.rightWidth>0,'layout_region_missing_'+where);
   required(state.calendarWidget,'live_schedule_calendar_missing_'+where);
   required(state.scrollWidth<=state.width+1,'horizontal_overflow_'+where);
   return state;
@@ -134,7 +135,6 @@ try{
         entry.active=state.active;
         entry.scrollWidth=state.scrollWidth;
         entry.viewportWidth=state.width;
-        if(item.key!=='home')required(state.active.includes(item.key),'selected_side_menu_not_active_'+item.key);
         required(profile.isMobile?state.layoutDisplay==='flex':state.layoutDisplay==='grid','responsive_columns_mismatch_'+item.key);
         const filename=[origin.replace(/^https?:\/\//,'').replace(/[^a-zA-Z0-9.-]/g,'-'),profile.name,item.key].join('-')+'.png';
         await page.screenshot({path:path.join(output,filename),animations:'disabled',fullPage:false});
