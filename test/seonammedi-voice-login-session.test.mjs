@@ -9,30 +9,19 @@ function authorizedUser(){
    app_metadata:{provider:'google',providers:['google']}};
 }
 
-test('public board renders parseable login-first composer JavaScript on both site mounts',async()=>{
+test('fresh board renders parseable independent composer and protected admin path on both mounts',async()=>{
  for(const url of [origin+'/board/voices','https://ekodi.kr/seonammedi/board/voices']){
-   const page=await board.fetch(new Request(url),{});
-   assert.equal(page.status,200);
-   const html=await page.text();
-   const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x=>x[1]);
-   assert.equal(scripts.length,1,'board must have exactly one inline script');
-   assert.doesNotThrow(()=>new Script(scripts[0]),'browser script must parse');
-   assert.match(html,/id="voiceAuthStatus"[^>]*aria-live="polite"/);
-   assert.match(html,/id="voiceAuthStatus"[^>]*hidden/,'anonymous status must not prompt for login');
-   assert.doesNotMatch(html,/id="adminLogin"|id="voiceAdminLogin"/,'no duplicate administrator login control');
-   assert.doesNotMatch(html,/id="voiceManageToggle"/,'redundant management toggle removed');
-   assert.match(html,/if\(search\.value\.trim\(\)\|\|!voiceVerified\)/,'unverified visitors cannot see management');
-   assert.match(html,/\/board\/api\/admin\/posts/,'server-side admin permission is checked');
-   assert.match(html,/adminItems=data\.items\|\|\[\];admin=true;render\(adminItems,true\)/,'protected admin API success directly displays management actions');
-   assert.doesNotMatch(html,/manageToggle\.onclick/,'no extra click required for management');
-   assert.match(html,/if\(adminLink\)adminLink\.hidden=true/,'admin link is initially hidden');
-   assert.match(html,/render\(publicItems,false\)/,'public cards always load before protected admin check');
-
-   assert.match(html,/if\(!await requireVoiceAccount\(\)\)return/);
-   assert.match(html,/voiceAuthLabel\("Google 로그인 완료"\)/);
-   assert.match(html,/auth.searchParams.set\("site","seonammedi"\)/);
-   assert.match(html,/target.searchParams.set\("compose","1"\)/);
-   assert.match(html,/if\(composeRequested&&allowed\)\{showEditor\(\);clearComposeQuery\(\);return\}/);
+  const response=await board.fetch(new Request(url),{});
+  assert.equal(response.status,200);
+  const html=await response.text();
+  const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+  assert.equal(scripts.length,1);
+  assert.doesNotThrow(()=>new Script(scripts[0][1]));
+  for(const id of ['freshWrite','freshSearch','freshForm','freshList'])assert.ok(html.includes('id="'+id+'"'),id);
+  assert.match(html,/\/api\/auth\/session/);
+  assert.match(html,/adminAllowed/);
+  assert.match(html,/Google 로그인 상태가 확인되지 않았습니다/);
+  assert.doesNotMatch(html,/id="voiceAuthStatus"|id="writeToggle"|id="voiceManageToggle"/);
  }
 });
 
@@ -96,12 +85,13 @@ test('login form POST handoff keeps write intent query and never exposes credent
  }finally{globalThis.fetch=oldFetch}
 });
 
-test('write entry requires successful live identity check, not cached token presence',async()=>{
+test('fresh write form requires server verified Google session and checks confirmed saved post id',async()=>{
  const response=await board.fetch(new Request(origin+'/board/voices'),{});
  const html=await response.text();
- assert.match(html,/byId\("writeToggle"\)\.onclick=async\(\)=>\{\s*if\(!await requireVoiceAccount\(\)\)return/);
- assert.match(html,/write\.onsubmit=async event=>\{\s*event\.preventDefault\(\);[\s\S]*?if\(!await requireVoiceAccount\(\)\)return/);
- assert.match(html,/if\(reply\)\{\s*if\(!await requireVoiceAccount\(\)\)return/);
- assert.match(html,/const published=await awaitVoicePublication\(saved\)/);
- assert.match(html,/if\(await awaitVoicePublication\(saved\)\)/);
+ assert.match(html,/const t=await session\(\);if\(!t\)/);
+ assert.match(html,/\/api\/auth\/session/);
+ assert.match(html,/waitUntilPublished\(saved\)/);
+ assert.match(html,/posts\.some\(p=>p\.id===savedId\)/);
+ assert.match(html,/beginLogin\(\)/);
 });
+

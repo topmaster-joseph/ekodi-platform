@@ -382,3 +382,11 @@ html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .composer tex
     height:calc(100svh - 58px)!important;
   }
 }
+
+/* Native admin embed: retain Control's task-specific navigation next to the platform sidebar. */
+html[data-ekodi-control-embedded="admin"]{--rail:208px}
+html[data-ekodi-control-embedded="admin"] .topbar .ghost-link,
+html[data-ekodi-control-embedded="admin"] .control-rail .admin-link{display:none!important}
+@media(max-width:760px){
+  html[data-ekodi-control-embedded="admin"]{--rail:86vw}
+}

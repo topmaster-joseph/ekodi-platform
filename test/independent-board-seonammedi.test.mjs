@@ -10,8 +10,8 @@ test('SeonamMedi citizen voices use the standalone board API directly',async()=>
     read('services/independent-board/worker.js'),
     read('wrangler.independent-board.toml')
   ]);
-  assert.match(app,/fetch\('\/board\/api\/posts'/);
-  assert.match(app,/\/board\/api\/posts\/'\+voiceId\+'\/replies/);
+  assert.match(app,/fetch\('\/board\/api\/voices-fresh'/);
+  assert.doesNotMatch(app,/\/board\/api\/posts\/'\+voiceId\+'\/replies/);
   assert.doesNotMatch(app,/fetch\('\/api\/seonammedi\/voices'/);
   assert.match(worker,/env\.BOARD_DB/);
   assert.doesNotMatch(worker,/env\.DB\b/);
@@ -21,7 +21,7 @@ test('SeonamMedi citizen voices use the standalone board API directly',async()=>
   assert.match(config,/database_name = "ekodi-independent-board"/);
   assert.match(config,/pattern = "seonammedi\.kr\/board\*"/);
   assert.match(config,/pattern = "ekodi\.kr\/seonammedi\/board\*"/);
-  assert.match(worker,/function boardPage\(req\)/);
+  assert.match(worker,/renderFreshVoicePage\(req,shell\)/);
   assert.match(worker,/\/board\/voices/);
   assert.match(worker,/의견 등록/);
   assert.match(worker,/검색/);
@@ -72,8 +72,8 @@ test('standalone public writes are rate-limited, queue-first and idempotent',asy
   assert.match(worker,/message\.retry\(\)/);
   assert.match(worker,/submissionStatus/);
   assert.match(workflow,/queues create ekodi-independent-board-write-ingress/);
-  assert.match(workflow,/Production queue-create-list-reply canary and cleanup/);
-  assert.match(workflow,/\.queued==true/);
+  assert.match(workflow,/Verify clean citizen authenticated write and legacy retirement/);
+  assert.match(workflow,/\.status=="published"/);
 });
 
 test('finance and notice boards are first-class standalone board routes',async()=>{
@@ -175,9 +175,9 @@ test('independent board deployment provisions its own storage and verifies real 
   assert.match(workflow,/REQUESTED_RELEASE_BRANCH_REF/);
   assert.match(workflow,/commits\/\$GITHUB_SHA\/pulls/);
   assert.match(workflow,/Requested release task does not match orchestrator branch/);
-  assert.match(workflow,/Production queue-create-list-reply canary and cleanup/);
-  assert.match(workflow,/DELETE FROM board_replies WHERE post_id=\$post_id/);
-  assert.match(workflow,/DELETE FROM board_posts WHERE id=\$post_id/);
+  assert.match(workflow,/Verify clean citizen authenticated write and legacy retirement/);
+  assert.match(workflow,/Remove old citizen records and referenced photos after cutover/);
+  assert.match(workflow,/DELETE FROM citizen_voices_fresh WHERE id=\$post_id/);
 });
 
 test('board schema keeps private contact out of the public read model',async()=>{
