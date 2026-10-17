@@ -271,6 +271,12 @@ async function verifyCommandConsoleRoundTrip() {
   const frame=page.frameLocator('#ekodiControlHomeFrame');
   const input=frame.locator('#commandInput');
   await input.waitFor({state:'visible',timeout:15000});
+  await frame.locator('#controlEmbeddedToolbar').waitFor({state:'visible',timeout:15000});
+  await frame.locator('#controlRail').waitFor({state:'hidden',timeout:15000});
+  await frame.locator('#controlEmbeddedToolbar [data-view="tasks"]').click();
+  await frame.locator('#viewTasks').waitFor({state:'visible',timeout:5000});
+  await frame.locator('#controlEmbeddedToolbar [data-view="chat"]').click();
+  await input.waitFor({state:'visible',timeout:5000});
   await frame.locator('#executeNow').uncheck();
   await input.fill('관리자 명령창 연결 확인');
   await frame.locator('#sendButton').click();
@@ -452,7 +458,7 @@ for (const [id, group] of menus) {
     });
     if(command.pathname !== '/admin/'||command.width<300||command.height<300||command.left<command.sidebarRight-2)throw new Error('command-home did not render native EKODI Control right of sidebar: '+JSON.stringify(command));
     await page.frameLocator('#ekodiControlHomeFrame').locator('#controlEmbeddedToolbar').waitFor({state:'visible',timeout:12000});
-    results.push({id,group,kind:'command-workbench',ok:true,detail:'native Control iframe and task rail'});
+    results.push({id,group,kind:'command-workbench',ok:true,detail:'native Control iframe with horizontal work tabs, no second rail'});
     await page.screenshot({path:path.join(artifactsDir,`menu-${id}.png`),fullPage:false});
     continue;
   }
