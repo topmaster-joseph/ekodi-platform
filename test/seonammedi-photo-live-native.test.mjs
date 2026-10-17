@@ -59,6 +59,13 @@ test('live photo failure receipts preserve script HTTP status and browser bootst
     "errors='+JSON.stringify(entry.pageErrors)"
   ])assert.ok(script.includes(token),token);
   assert.match(script,/state:'attached',timeout:4000/);
+  // Live verification must wait for the real async calendar, never mock it.
+  assert.ok(script.includes("main.seonam-visual-layout .seonam-visual-right .seonam-calendar-grid"));
+  assert.match(script,/\.waitFor\(\{state:'attached',timeout:15000\}\)/);
+  assert.ok(script.indexOf(".seonam-calendar-grid')")<script.indexOf('const state=await page.evaluate('),
+    'wait for actual calendar DOM before reading the visual state');
+  assert.ok(script.includes("required(state.calendarWidget,'live_schedule_calendar_missing_'"),
+    'a genuinely missing widget must still fail after the bounded wait');
   assert.doesNotMatch(script,/page\.route\([^)]*\)\.fulfill/,'diagnostics must not mock production assets');
 });
 
