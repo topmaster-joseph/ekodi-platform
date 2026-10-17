@@ -22,3 +22,6 @@ The trusted EKODI provenance workflow created the recovery PR using GitHub Actio
 3. Preserve Windows logging and watch process parent IDs / scheduler task history. Do not suppress unrelated suspicious processes.
 4. On the real USER4 desktop verify no stray console, uninterrupted application focus, heartbeat continuity, successful watchdog recovery and no user tab/clipboard interference across multiple task intervals; record timestamps and evidence.
 5. Report any unavailable live user-device proof as pending; do not claim deployed or fixed until verified.
+
+## Official synchronized-main CI refresh
+GitHub's guarded converger attempted update-branch and reported a transient HTTP 504. A fresh independent PR/compare read confirmed the branch actually advanced to `22c6257a2348e012c2b7fce87292b9a2c596bfdd` with zero commits behind protected main. GitHub classified workflows for that bot-authored merge head as `action_required`, with no test execution. This additional owner-authored, documentation-only checkpoint requests genuine CI on the synchronized revision. Do not substitute either the old green CI or a bot-created check stub for real required checks. All protected merger, task receipt, release and user-device live-proof requirements remain enforced.
