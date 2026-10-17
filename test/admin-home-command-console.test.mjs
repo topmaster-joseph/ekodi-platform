@@ -118,3 +118,26 @@ test('admin root is a command-only workspace while Campus remains a child route'
   assert.match(productionE2e,/kind:'command-workbench'/);
   assert.match(productionE2e,/command\.pathname !== '\/admin\/'/);
 });
+
+test('highest-level admin embeds the native Control workspace with same-origin-only framing',async()=>{
+  const [admin,adminCss,control,controlCss,worker]=await Promise.all([
+    read('admin-authenticated-shell.js'),
+    read('admin-shell.css'),
+    read('control.js'),
+    read('control.css'),
+    read('site-worker.js')
+  ]);
+  assert.match(admin,/id='ekodiControlHome'/);
+  assert.match(admin,/frame\.src='\/control\?embedded=admin'/);
+  assert.match(admin,/ekodi-admin-section-changed/);
+  assert.match(admin,/authenticated\(\).*command-home/);
+  assert.match(adminCss,/body\.admin-control-home #ekodiControlHome/);
+  assert.match(adminCss,/\.ekodi-assist-bootstrap/);
+  assert.match(control,/parentLocation\.origin===location\.origin/);
+  assert.match(control,/parentLocation\.pathname/);
+  assert.match(controlCss,/data-ekodi-control-embedded="admin"/);
+  assert.match(worker,/sameOriginAdminEmbed = url\.searchParams\.get\('embedded'\) === 'admin'/);
+  assert.match(worker,/ADMIN_CSP\.replace\("frame-ancestors 'none'", "frame-ancestors 'self'"\)/);
+  assert.match(worker,/if \(sameOriginAdminEmbed\) secured\.headers\.set\('X-Frame-Options', 'SAMEORIGIN'\)/);
+  assert.match(worker,/withHostSecurity\(response, ADMIN_CSP, 'no-store', 'control-asset'\)/);
+});
