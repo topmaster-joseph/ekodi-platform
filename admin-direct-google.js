@@ -25,6 +25,10 @@ document.addEventListener('click',event=>{
   if(!anchor||anchor.target&&anchor.target!=='_self')return;
   let auth;try{auth=canonicalAuthUrl(anchor)}catch{return}
   if(!auth)return;
+  // Only the platform-admin handshake uses an eagerly opened bridge.
+  // Church and all other site logins must use the normal first-party Google
+  // account picker: preopening their bridge before auth can orphan the popup.
+  if(auth.searchParams.get('site')!=='admin')return;
   const returnTo=auth.searchParams.get('return_to')||auth.searchParams.get('returnTo')||'';
   let adminReturn=false;try{adminReturn=/(^|\/)admin(?:\/|$)/i.test(new URL(returnTo,location.href).pathname)}catch{}
   if(!adminReturn)return;

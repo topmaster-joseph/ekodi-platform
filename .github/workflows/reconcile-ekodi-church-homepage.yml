@@ -29,6 +29,10 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
+      - name: Checkout canonical EKODI orchestrator source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Compare Church main with production marker
         id: compare
         shell: bash

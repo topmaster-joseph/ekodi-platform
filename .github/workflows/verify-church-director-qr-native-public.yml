@@ -1,0 +1,42 @@
+name: EKODI Church Director Native Browser Canary
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/verify-church-director-qr-native-public.mjs'
+      - 'test/verify-church-director-qr-native-public.test.mjs'
+      - '.github/workflows/verify-church-director-qr-native-public.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-church-director-native-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  isolated-chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate first-party browser-only contract
+        run: |
+          node --check scripts/verify-church-director-qr-native-public.mjs
+          node --test test/verify-church-director-qr-native-public.test.mjs
+      - name: Install EKODI-owned isolated Chromium
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Check real Church studio in EKODI Chromium without sign-in or mutation
+        run: node scripts/verify-church-director-qr-native-public.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ekodi-church-director-native-browser
+          path: artifacts/church-director-native-browser/
+          retention-days: 7
