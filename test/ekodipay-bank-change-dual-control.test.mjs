@@ -43,7 +43,7 @@ test('bank change cannot update an already verified account without two independ
   assert.equal(audit.event_type,'account_changed');assert.equal(audit.request_ref,'BANKREQUEST_001');
   assert.equal(audit.old_fingerprint,fp('a'));assert.equal(audit.new_fingerprint,fp('b'));
   assert.equal(x.prepare("SELECT consumed_at FROM ekodipay_bank_change_requests").get().consumed_at,1790000300000);
-  assert.throws(()=>update(x),/bank_change_dual_approval_required/);
+  assert.throws(()=>update(x,'merchant_a',fp('d'),1790000310000),/bank_change_dual_approval_required/);
   assert.throws(()=>x.exec("DELETE FROM ekodipay_merchant_bank_verification WHERE merchant_id='merchant_a'"),/bank_account_deletion_forbidden/);
  }finally{x.close();}
 });
