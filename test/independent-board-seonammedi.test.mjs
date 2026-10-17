@@ -73,7 +73,7 @@ test('standalone public writes are rate-limited, queue-first and idempotent',asy
   assert.match(worker,/submissionStatus/);
   assert.match(workflow,/queues create ekodi-independent-board-write-ingress/);
   assert.match(workflow,/Verify clean citizen authenticated write and legacy retirement/);
-  assert.match(workflow,/\.published==true/);
+  assert.match(workflow,/\.status=="published"/);
 });
 
 test('finance and notice boards are first-class standalone board routes',async()=>{
