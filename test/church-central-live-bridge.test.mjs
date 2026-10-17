@@ -31,3 +31,11 @@ test('bounded Church activity modes never bypass tenant, channel readiness or se
  assert.match(page,/id="screenButton"/);
  assert.doesNotMatch(script,/streamKey\s*=/);
 });
+
+test('EKODI Live public hub and admin panel both select the canonical Church studio',async()=>{
+ const hub=await read('live-service-page.js');
+ assert.match(hub,/tenant\.apiTenant==='ekodichurch'\?'\/live\/church\/'/);
+ assert.match(hub,/const liveAdminPath=tenant=>cleanPath\(publicLivePath\(tenant\)\)\+'\/admin'/);
+ assert.equal((hub.match(/\$\{esc\(tenant\.path\)\}/g)||[]).length,0);
+ assert.ok((hub.match(/\$\{esc\(publicLivePath\(tenant\)\)\}/g)||[]).length>=4);
+});
