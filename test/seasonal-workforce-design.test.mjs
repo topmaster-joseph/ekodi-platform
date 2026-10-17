@@ -81,3 +81,18 @@ test('only exact canonical routes are served; arbitrary nested URL is rejected',
  assert.equal(seasonalPortalResponse(new Request(ROOT+'/mou',{method:'POST'})).status,405);
  assert.equal(seasonalPortalResponse(new Request('https://another.example'+SITE_BASE+'/mou')).status,403);
 });
+
+test('guarded Shared Site release owns all seasonal pages and smoke-verifies real HTML',()=>{
+ const workflow=readFileSync(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8');
+ const manifest=JSON.parse(readFileSync(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+ assert.match(workflow,/'seasonal-workforce\/\*\*'/);
+ const expected=['/','/demand','/mou','/learning','/housing','/entry','/help','/reports','/office','/theme.css','/public.js'];
+ for(const page of expected){
+  const path='https://ekodi.kr'+SITE_BASE+page;
+  const hits=manifest.worker.requests.filter(r=>r.url===path);
+  assert.equal(hits.length,1,'expected exact smoke route: '+path);
+  assert.deepEqual(hits[0].statuses,[200]);
+  assert.equal(hits[0].rollbackVerify,false);
+ }
+ assert.equal(manifest.worker.requests.some(r=>r.url==='https://ekodi.kr'+SITE_BASE+'/api/v1/tenants/muan/demands'),false);
+});
