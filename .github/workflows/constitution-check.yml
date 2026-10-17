@@ -31,6 +31,10 @@ jobs:
           node-version: '24'
       - name: Validate constitution
         run: node scripts/validate-constitution.mjs
+      - name: Validate inherited board contract
+        run: node scripts/validate-independent-board-policy.mjs
+      - name: Test independent board regression contract
+        run: node --test test/independent-board-policy.test.mjs
       - name: Validate existing platform boundaries
         run: node scripts/validate-platform-boundaries.mjs
       - name: Validate EKODI OS architecture
