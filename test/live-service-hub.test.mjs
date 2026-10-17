@@ -17,7 +17,7 @@ test('Live hub lists the registered tenant Live surfaces on the canonical apex p
   assert.match(html,/라이브 서비스 사이트/);
   assert.match(html,/href="\/live\/admin"/);
   for(const tenant of realtimeTenantList()){
-    assert.match(html,new RegExp(escapeRe(tenant.path)),tenant.id);
+    assert.match(html,new RegExp(escapeRe(tenant.apiTenant==='ekodichurch'?'/live/church/':tenant.path)),tenant.id);
     assert.match(html,new RegExp(escapeRe(tenant.name)),tenant.id);
   }
   assert.doesNotMatch(html,/https:\/\/live\.ekodi\.kr/);
@@ -33,7 +33,7 @@ test('Live admin preserves its own central-auth return target and exposes per-si
   assert.match(html,/return_to=https%3A%2F%2Fekodi.kr%2Flive%2Fadmin/);
   assert.match(html,/공개 여부 · 방송관리 · 하위관리자 메뉴/);
   for(const tenant of realtimeTenantList()){
-    const liveAdmin=tenant.path.replace(/\/$/,'')+'/admin';
+    const liveAdmin=(tenant.apiTenant==='ekodichurch'?'/live/church/':tenant.path).replace(/\/$/,'')+'/admin';
     const siteAdmin=tenant.home.replace(/\/$/,'')+'/admin';
     assert.match(html,new RegExp(escapeRe(liveAdmin)),tenant.id);
     assert.match(html,new RegExp(escapeRe(siteAdmin)),tenant.id);

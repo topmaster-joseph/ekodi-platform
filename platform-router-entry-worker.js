@@ -442,6 +442,17 @@ async function routePlatform(request,env,ctx){
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){
       const cameraPair=url.pathname.match(/^\/live\/c\/([A-Za-z0-9_-]{8,80})\/?$/);if(cameraPair)return managementCameraPage(cameraPair[1]);
       if(url.pathname==='/live'){const target=new URL(request.url);target.pathname='/live/';return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'live-canonical-slash'}})}
+      // EKODI Live's canonical Church tenant endpoint. Do not enter the legacy
+      // Cloudflare Pages /ekodichurch/live/ studio or share any other tenant state.
+      if(url.pathname==='/live/church'){const target=new URL(request.url);target.pathname='/live/church/';return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-route':'live-church-canonical'}})}
+      if(url.pathname==='/live/church/'||url.pathname==='/live/church/admin'||url.pathname==='/live/church/admin/'){
+        const church=realtimeTenantFromPath('/ekodichurch/live/');
+        if(!church||church.apiTenant!=='ekodichurch')return new Response('Church live tenant unavailable',{status:503,headers:{'cache-control':'no-store'}});
+        const canonicalChurch={...church,path:'/live/church/',dedicated:false};
+        if(url.pathname.includes('/admin'))return tenantLiveAdminPage(canonicalChurch);
+        if(await livePublicStatus(env,church)==='maintenance')return liveShell(liveServiceMaintenancePage(church));
+        return tenantLivePage(canonicalChurch);
+      }
       if(url.pathname==='/live/')return liveShell(liveServicePage());
       if(url.pathname==='/live/admin'||url.pathname==='/live/admin/')return liveShell(liveServiceAdminPage(),'admin');
       if(url.pathname==='/tenant-live-admin.css')return tenantLiveAdminCss();

@@ -6,7 +6,8 @@ const AUTH_RETURN='https://ekodi.kr/live/admin';
 const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const cleanPath=value=>{const path=String(value||'/');return path.endsWith('/')&&path!=='/'?path.slice(0,-1):path};
 const adminPath=tenant=>cleanPath(tenant.home)+'/admin';
-const liveAdminPath=tenant=>cleanPath(tenant.path)+'/admin';
+const publicLivePath=tenant=>tenant.apiTenant==='ekodichurch'?'/live/church/':tenant.path;
+const liveAdminPath=tenant=>cleanPath(publicLivePath(tenant))+'/admin';
 const controlId=tenant=>CONTROL_PREFIX+String(tenant.apiTenant||tenant.id||'').toLowerCase();
 const modeLabel=mode=>({
   worship:'예배',
@@ -30,10 +31,10 @@ function headers(cache='no-store'){
 export function liveServicePage(){
   const tenants=realtimeTenantList();
   const cards=tenants.map(tenant=>`<article class="site-card">
-    <div class="site-head"><span class="site-mode">${esc(modeLabel(tenant.mode))}</span><span class="site-path">${esc(tenant.path)}</span></div>
+    <div class="site-head"><span class="site-mode">${esc(modeLabel(tenant.mode))}</span><span class="site-path">${esc(publicLivePath(tenant))}</span></div>
     <h2>${esc(tenant.name)}</h2>
     <p>${esc(tenant.title||tenant.name+' LIVE')}</p>
-    <div class="site-actions"><a class="primary" href="${esc(tenant.path)}">라이브 보기</a><a href="${esc(tenant.home)}">사이트 보기</a></div>
+    <div class="site-actions"><a class="primary" href="${esc(publicLivePath(tenant))}">라이브 보기</a><a href="${esc(tenant.home)}">사이트 보기</a></div>
   </article>`).join('');
   return new Response(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#07111f"><title>EKODI Live · 라이브 방송 전문서비스</title><style>
   :root{font-family:Inter,Pretendard,"Noto Sans KR",system-ui,sans-serif;color:#edf4ff;background:#07111f}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 84% 2%,#173a60 0,transparent 34rem),linear-gradient(180deg,#07111f,#091626 58%,#07111f);min-height:100vh}a{color:inherit;text-decoration:none}.wrap{width:min(1180px,calc(100% - 36px));margin:auto;padding:26px 0 64px}.top{display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{font-weight:900;letter-spacing:.06em}.top-actions{display:flex;gap:8px;flex-wrap:wrap}.top-actions a,.site-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 13px;border:1px solid #29445f;border-radius:11px;color:#cfe3f7}.top-actions .admin{background:#f4f8ff;color:#07111f;border-color:#f4f8ff;font-weight:800}.hero{padding:68px 0 34px;max-width:850px}.eyebrow{color:#79baff;font-size:12px;font-weight:900;letter-spacing:.16em}.hero h1{font-size:clamp(38px,6vw,70px);line-height:1.02;letter-spacing:-.055em;margin:12px 0 18px}.hero p{margin:0;color:#a9bfd4;font-size:clamp(16px,2vw,19px);line-height:1.72;word-break:keep-all}.feature-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:20px 0 38px}.feature{padding:17px;border:1px solid #203a54;border-radius:15px;background:#0b1a2b}.feature b{display:block;font-size:14px}.feature span{display:block;color:#8da8c1;font-size:12px;line-height:1.55;margin-top:5px}.section-head{display:flex;align-items:end;justify-content:space-between;gap:18px;margin:0 0 14px}.section-head h2{margin:0;font-size:25px}.section-head p{margin:0;color:#7894ad;font-size:12px}.sites{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}.site-card{padding:19px;border:1px solid #203a54;border-radius:18px;background:linear-gradient(180deg,#0d1d30,#0a1726)}.site-head{display:flex;justify-content:space-between;gap:10px;align-items:center}.site-mode{font-size:10px;font-weight:850;letter-spacing:.08em;color:#8fc5ff}.site-path{font-size:10px;color:#68829a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.site-card h2{font-size:18px;margin:17px 0 6px}.site-card p{min-height:38px;color:#91a8bd;font-size:12px;line-height:1.55;margin:0}.site-actions{display:flex;gap:7px;margin-top:17px}.site-actions a{min-height:36px;font-size:11px}.site-actions .primary{background:#dcecff;color:#07111f;border-color:#dcecff;font-weight:800}.foot{margin-top:38px;padding-top:20px;border-top:1px solid #172e45;color:#617c95;font-size:11px}.note{margin-top:18px;padding:13px 15px;border-left:3px solid #5399df;background:#0c1a2b;color:#8faac2;font-size:12px;line-height:1.65}@media(max-width:900px){.feature-grid{grid-template-columns:repeat(2,1fr)}.sites{grid-template-columns:repeat(2,1fr)}}@media(max-width:620px){.wrap{width:min(100% - 24px,1180px)}.top{align-items:flex-start}.hero{padding-top:45px}.feature-grid,.sites{grid-template-columns:1fr}.section-head{display:block}.section-head p{margin-top:6px}.top-actions a:not(.admin){display:none}}
@@ -43,9 +44,9 @@ export function liveServicePage(){
 export function liveServiceAdminPage(){
   const tenants=realtimeTenantList();
   const rows=tenants.map(tenant=>`<article class="site-row" data-site-id="${esc(controlId(tenant))}">
-    <div class="site-main"><div><span class="mode">${esc(modeLabel(tenant.mode))}</span><h3>${esc(tenant.name)}</h3></div><a class="path" href="${esc(tenant.path)}" target="_blank" rel="noopener">${esc(tenant.path)} ↗</a></div>
+    <div class="site-main"><div><span class="mode">${esc(modeLabel(tenant.mode))}</span><h3>${esc(tenant.name)}</h3></div><a class="path" href="${esc(publicLivePath(tenant))}" target="_blank" rel="noopener">${esc(publicLivePath(tenant))} ↗</a></div>
     <div class="site-state"><span class="status pending" data-status>확인 중</span><button type="button" class="toggle" data-toggle disabled>공개 전환</button></div>
-    <nav class="site-menu" aria-label="${esc(tenant.name)} 관리 메뉴"><a href="${esc(tenant.path)}?mode=studio" target="_blank" rel="noopener">라이브 스튜디오</a><a href="${esc(liveAdminPath(tenant))}">방송 · 녹화</a><a href="${esc(adminPath(tenant))}">사이트 관리자</a><a href="${esc(tenant.home)}" target="_blank" rel="noopener">사용자 사이트</a></nav>
+    <nav class="site-menu" aria-label="${esc(tenant.name)} 관리 메뉴"><a href="${esc(publicLivePath(tenant))}?mode=studio" target="_blank" rel="noopener">라이브 스튜디오</a><a href="${esc(liveAdminPath(tenant))}">방송 · 녹화</a><a href="${esc(adminPath(tenant))}">사이트 관리자</a><a href="${esc(tenant.home)}" target="_blank" rel="noopener">사용자 사이트</a></nav>
   </article>`).join('');
   const authHref=`/auth/?site=admin&direct=1&return_to=${encodeURIComponent(AUTH_RETURN)}`;
   return new Response(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow,noarchive"><title>EKODI Live 관리자</title><style>
