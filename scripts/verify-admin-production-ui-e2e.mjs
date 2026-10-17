@@ -263,40 +263,34 @@ async function resolveMenuTrigger(id, group) {
 const results = [];
 
 async function verifyCommandConsoleRoundTrip() {
-  console.log('[PROD-E2E] command-home: begin');
-  await page.waitForFunction(() => window.EKODIAdminPanels?.current?.() === 'command-home', null, { timeout: 12000 });
-  const input = page.locator('#ekodiAssistBootstrap input').first();
-  const send = page.locator('#ekodiAssistBootstrap .ekodi-assist-bootstrap-send').first();
-  await input.waitFor({ state:'visible', timeout:12000 });
-  await send.waitFor({ state:'visible', timeout:12000 });
+  console.log('[PROD-E2E] command-home: native Control embed begin');
+  await page.waitForFunction(() =>
+    window.EKODIAdminPanels?.current?.() === 'command-home'
+    && document.body.classList.contains('admin-control-home')
+    && Boolean(document.querySelector('#ekodiControlHomeFrame')), null, { timeout: 15000 });
+  const frame=page.frameLocator('#ekodiControlHomeFrame');
+  const input=frame.locator('#commandInput');
+  await input.waitFor({state:'visible',timeout:15000});
+  await frame.locator('#controlEmbeddedToolbar').waitFor({state:'visible',timeout:15000});
+  await frame.locator('#controlRail').waitFor({state:'hidden',timeout:15000});
+  await frame.locator('#controlEmbeddedToolbar [data-view="tasks"]').click();
+  await frame.locator('#viewTasks').waitFor({state:'visible',timeout:5000});
+  await frame.locator('#controlEmbeddedToolbar [data-view="chat"]').click();
+  await input.waitFor({state:'visible',timeout:5000});
+  await frame.locator('#executeNow').uncheck();
   await input.fill('관리자 명령창 연결 확인');
-  await send.click({ timeout:10000 });
-  await page.waitForFunction(() => {
-    const body=document.body;
-    const panel=document.querySelector('#ekodiAssistPanel');
-    const assistant=[...document.querySelectorAll('.ekodi-assist-turn.assistant .ekodi-assist-bubble')].find(node=>String(node.textContent||'').includes('관리자 명령창 연결 정상'));
-    const user=[...document.querySelectorAll('.ekodi-assist-turn.user .ekodi-assist-bubble')].find(node=>String(node.textContent||'').includes('관리자 명령창 연결 확인'));
-    const bootstrap=document.querySelector('#ekodiAssistBootstrap input');
-    if(!body?.classList.contains('admin-command-home')||!body.classList.contains('admin-command-active'))return false;
-    if(!panel||panel.hidden||!assistant||!user)return false;
-    return String(bootstrap?.value||'')==='';
-  }, null, { timeout:12000 });
-  const state=await page.evaluate(() => {
-    const panel=document.querySelector('#ekodiAssistPanel');
-    const rect=panel?.getBoundingClientRect();
-    return {
-      current:window.EKODIAdminPanels?.current?.()||'',
-      panelVisible:Boolean(panel&&!panel.hidden&&rect&&rect.width>0&&rect.height>0),
-      bootstrapCleared:String(document.querySelector('#ekodiAssistBootstrap input')?.value||'')==='',
-      userTurn:Boolean([...document.querySelectorAll('.ekodi-assist-turn.user .ekodi-assist-bubble')].find(node=>String(node.textContent||'').includes('관리자 명령창 연결 확인'))),
-      assistantTurn:Boolean([...document.querySelectorAll('.ekodi-assist-turn.assistant .ekodi-assist-bubble')].find(node=>String(node.textContent||'').includes('관리자 명령창 연결 정상'))),
-    };
+  await frame.locator('#sendButton').click();
+  await frame.locator('#messages .turn.user .bubble').filter({hasText:'관리자 명령창 연결 확인'}).waitFor({state:'visible',timeout:12000});
+  await frame.locator('#messages .turn.assistant .bubble').filter({hasText:'관리자 명령창 연결 정상'}).waitFor({state:'visible',timeout:12000});
+  if(await input.inputValue()!=='')throw new Error('Control command input was not cleared');
+  const geometry=await page.evaluate(()=>{
+    const sidebar=document.querySelector('.sidebar'),embedded=document.querySelector('#ekodiControlHomeFrame');
+    const rect=embedded?.getBoundingClientRect(),nav=sidebar?.getBoundingClientRect();
+    return {pathname:location.pathname,frameWidth:rect?.width||0,frameHeight:rect?.height||0,frameLeft:rect?.left||0,sidebarRight:nav?.right||0,home:document.body.classList.contains('admin-control-home')};
   });
-  if(state.current!=='command-home'||!state.panelVisible||!state.bootstrapCleared||!state.userTurn||!state.assistantTurn){
-    throw new Error(`command-home round-trip failed: ${JSON.stringify(state)}`);
-  }
-  results.push({ id:'command-home', group:'summary', kind:'command-roundtrip', ok:true, detail:'bootstrap->assist->assistant' });
-  console.log('[PROD-E2E] command-home: ok command-roundtrip bootstrap->assist->assistant');
+  if(geometry.pathname!=='/admin/'||!geometry.home||geometry.frameWidth<300||geometry.frameHeight<300||geometry.frameLeft<geometry.sidebarRight-2)throw new Error('Control workbench not aligned to right: '+JSON.stringify(geometry));
+  results.push({id:'command-home',group:'summary',kind:'command-roundtrip',ok:true,detail:'native Control iframe command->reply'});
+  console.log('[PROD-E2E] command-home: native Control command roundtrip passed');
 }
 
 await verifyCommandConsoleRoundTrip();
@@ -456,27 +450,16 @@ for (const [id, group] of menus) {
   }
 
   if (id === 'command-home') {
-    await page.waitForFunction(() => {
-      const body = document.body;
-      const panel = document.querySelector('#ekodiAssistPanel');
-      const dock = document.querySelector('#ekodiAssistDock');
-      if (!body?.classList.contains('admin-command-home') || !body.classList.contains('admin-command-active')) return false;
-      if (!dock || !panel || panel.hidden) return false;
-      const style = getComputedStyle(panel);
-      const rect = panel.getBoundingClientRect();
-      const text = String(panel.innerText || panel.textContent || '').replace(/\s+/g, ' ').trim();
-      return window.EKODIAdminPanels?.current?.() === 'command-home' && text.length > 0 && style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
-    }, null, { timeout: 12000 });
-    const command = await page.evaluate(() => {
-      const panel = document.querySelector('#ekodiAssistPanel');
-      const rect = panel?.getBoundingClientRect();
-      const text = String(panel?.innerText || panel?.textContent || '').replace(/\s+/g, ' ').trim();
-      return { textLength:text.length, width:rect?.width || 0, height:rect?.height || 0, pathname:location.pathname };
+    await page.waitForSelector('#ekodiControlHomeFrame', { state:'visible',timeout:12000 });
+    const command=await page.evaluate(()=>{
+      const frame=document.querySelector('#ekodiControlHomeFrame'),sidebar=document.querySelector('.sidebar');
+      const rect=frame?.getBoundingClientRect(),nav=sidebar?.getBoundingClientRect();
+      return { pathname:location.pathname,width:rect?.width||0,height:rect?.height||0,left:rect?.left||0,sidebarRight:nav?.right||0 };
     });
-    if (command.pathname !== '/admin/' || command.textLength < 1 || command.width < 1 || command.height < 1) throw new Error(`command-home did not render the root workbench: ${JSON.stringify(command)}`);
-    results.push({ id, group, kind:'command-workbench', ok:true, detail:`ekodiAssistPanel:${command.textLength}` });
-    console.log(`[PROD-E2E] ${id}: ok command-workbench:${command.textLength}`);
-    await page.screenshot({ path:path.join(artifactsDir,`menu-${id}.png`), fullPage:false });
+    if(command.pathname !== '/admin/'||command.width<300||command.height<300||command.left<command.sidebarRight-2)throw new Error('command-home did not render native EKODI Control right of sidebar: '+JSON.stringify(command));
+    await page.frameLocator('#ekodiControlHomeFrame').locator('#controlEmbeddedToolbar').waitFor({state:'visible',timeout:12000});
+    results.push({id,group,kind:'command-workbench',ok:true,detail:'native Control iframe with horizontal work tabs, no second rail'});
+    await page.screenshot({path:path.join(artifactsDir,`menu-${id}.png`),fullPage:false});
     continue;
   }
 

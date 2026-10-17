@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   NON_DISRUPTIVE_EXECUTION_ORDER,
   AUTOMATION_SURFACE_LIFECYCLE,
+  API_ONLY_OBSERVATION_TASKS,
   planNonDisruptiveRemoteWork,
   validateBackgroundBrowserWorker,
   validateIsolatedDesktopSession,
@@ -47,6 +48,8 @@ test('background browser must use a dedicated isolated profile', () => {
     state:'online', verified:true, dedicatedAutomationProfile:true,
     focusIsolated:true, offscreenOrHeadless:true,
     clipboardShared:false, userInputInjection:false,
+    userBrowserTabCreation:false, foregroundWindowAllowed:false,
+    ownedSurfaceAutoClose:true, preserveUserOwnedSurfaces:true,
     profileId:'EKODI-Automation', activeUserProfileId:'Default',
   });
   assert.equal(valid.ok, true);
@@ -60,6 +63,8 @@ test('browser work routes to background browser without taking foreground focus'
       state:'online', verified:true, dedicatedAutomationProfile:true,
       focusIsolated:true, offscreenOrHeadless:true,
       clipboardShared:false, userInputInjection:false,
+      userBrowserTabCreation:false, foregroundWindowAllowed:false,
+      ownedSurfaceAutoClose:true, preserveUserOwnedSurfaces:true,
       profileId:'EKODI-Automation', activeUserProfileId:'Default',
     },
   });
@@ -91,7 +96,7 @@ test('shared interactive desktop is never treated as an isolated desktop', () =>
     focusIsolated:true, sharedInteractiveDesktop:true,
   });
   assert.equal(check.ok, false);
-  assert.ok(check.errors.includes('shared_interactive_desktop_forbidden'));
+  assert.ok(check.errors.includes('shared_interactive_desktop_must_be_disabled'));
 });
 
 test('foreground takeover cannot become an automatic fallback', () => {
@@ -126,4 +131,58 @@ test('API auth requirement is recorded and terminated without opening a user log
   assert.equal(plan.cleanupOwnedSurface, true);
   assert.equal(plan.automationSurfaceLifecycle.closeOwnedSurfaceOnAuthRequired, true);
   assert.equal(plan.automationSurfaceLifecycle.createUserBrowserTab, false);
+});
+
+test('background worker without explicit no-window and no-tab proof fails closed', () => {
+  const incomplete = validateBackgroundBrowserWorker({
+    state:'online', verified:true, dedicatedAutomationProfile:true,
+    focusIsolated:true, offscreenOrHeadless:true,
+    profileId:'EKODI-Automation', activeUserProfileId:'Default',
+  });
+  assert.equal(incomplete.ok, false);
+  for (const required of [
+    'shared_clipboard_must_be_disabled',
+    'user_input_injection_must_be_disabled',
+    'user_browser_tab_creation_must_be_disabled',
+    'foreground_window_must_be_disabled',
+    'owned_surface_cleanup_must_be_enabled',
+    'preserve_user_surfaces_required',
+  ]) assert.ok(incomplete.errors.includes(required), required);
+  assert.equal(validateIsolatedDesktopSession({
+    state:'online', verified:true, sessionType:'vm', focusIsolated:true,
+  }).ok, false);
+});
+
+test('GitHub Actions/CI/deploy observation never falls back to a browser or desktop', () => {
+  for (const taskKind of API_ONLY_OBSERVATION_TASKS) {
+    const blocked = planNonDisruptiveRemoteWork({
+      taskKind,
+      native,
+      backgroundBrowser:{
+        state:'online', verified:true, dedicatedAutomationProfile:true,
+        focusIsolated:true, offscreenOrHeadless:true,
+        clipboardShared:false, userInputInjection:false,
+        userBrowserTabCreation:false, foregroundWindowAllowed:false,
+        ownedSurfaceAutoClose:true, preserveUserOwnedSurfaces:true,
+        profileId:'EKODI-Automation', activeUserProfileId:'Default',
+      },
+      isolatedDesktop:{
+        state:'online', verified:true, sessionType:'vm', focusIsolated:true,
+        sharedInteractiveDesktop:false, userInputInjection:false,
+      },
+      foregroundTakeoverRequested:true,
+      localConsent:true,
+    });
+    assert.equal(blocked.ok, false);
+    assert.equal(blocked.mode, 'blocked');
+    assert.equal(blocked.code, 'API_REQUIRED');
+    assert.equal(blocked.requiresForeground, false);
+
+    const api = planNonDisruptiveRemoteWork({
+      taskKind, api:{available:true,authorized:true,providerId:'github-api'}, native,
+    });
+    assert.equal(api.ok, true);
+    assert.equal(api.mode, 'official-api');
+    assert.equal(api.requiresForeground, false);
+  }
 });

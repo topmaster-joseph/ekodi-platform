@@ -490,37 +490,30 @@ async function verifyRegistryHref(trigger, started) {
 async function verifyCommandWorkbench(started) {
   stage('command-workbench');
   await page.waitForFunction(() => {
-    const body = document.body;
-    const dock = document.querySelector('#ekodiAssistDock');
-    const panel = document.querySelector('#ekodiAssistPanel');
-    const chat = document.querySelector('#ekodiAssistChat[data-ekodi-main-conversation="true"]');
-    if (window.EKODIAdminPanels?.current?.() !== 'command-home') return false;
-    if (!body?.classList.contains('admin-command-home') || !body.classList.contains('admin-command-active')) return false;
-    if (!dock || !panel || !chat || panel.hidden) return false;
-    const panelStyle = getComputedStyle(panel);
-    const chatStyle = getComputedStyle(chat);
-    return panelStyle.display !== 'none' && panelStyle.visibility !== 'hidden' && chatStyle.display !== 'none' && chatStyle.visibility !== 'hidden';
-  }, null, { timeout: 10_000 });
-  const state = await page.evaluate(() => {
-    const panel = document.querySelector('#ekodiAssistPanel');
-    const chat = document.querySelector('#ekodiAssistChat[data-ekodi-main-conversation="true"]');
-    const text = String(panel?.innerText || '').replace(/\s+/g, ' ').trim();
-    const panelRect = panel?.getBoundingClientRect();
-    const chatRect = chat?.getBoundingClientRect();
+    const body=document.body;
+    const frame=document.querySelector('#ekodiControlHomeFrame');
+    return window.EKODIAdminPanels?.current?.()==='command-home'
+      && body.classList.contains('admin-control-home')
+      && Boolean(frame&&frame.getBoundingClientRect().height>100);
+  },null,{timeout:15000});
+  const frame=page.frameLocator('#ekodiControlHomeFrame');
+  await frame.locator('#commandInput').waitFor({state:'visible',timeout:15000});
+  await frame.locator('#controlEmbeddedToolbar').waitFor({state:'visible',timeout:15000});
+  const state=await page.evaluate(()=>{
+    const frame=document.querySelector('#ekodiControlHomeFrame');
+    const parentSidebar=document.querySelector('.sidebar');
+    const box=frame?.getBoundingClientRect(),left=parentSidebar?.getBoundingClientRect().right||0;
     return {
-      commandWorkbench: Boolean(panel && chat),
-      textLength: text.length,
-      selected: window.EKODIAdminPanels?.current?.() === 'command-home',
-      currentSection: window.EKODIAdminPanels?.current?.() || '',
-      pathname: location.pathname,
-      panelWidth: panelRect?.width || 0,
-      panelHeight: panelRect?.height || 0,
-      chatWidth: chatRect?.width || 0,
-      chatHeight: chatRect?.height || 0,
+      commandWorkbench:Boolean(frame),
+      selected:window.EKODIAdminPanels?.current?.()==='command-home',
+      currentSection:window.EKODIAdminPanels?.current?.()||'',
+      pathname:location.pathname,
+      frameWidth:box?.width||0,frameHeight:box?.height||0,
+      frameRightOfSidebar:Boolean(box&&box.left>=left-2),
     };
   });
-  if (!state.commandWorkbench || !state.selected || state.currentSection !== 'command-home' || state.textLength < 4 || state.pathname !== '/admin/' || state.panelWidth < 1 || state.panelHeight < 1 || state.chatWidth < 1 || state.chatHeight < 1) throw new Error(`command workbench invalid: ${JSON.stringify(state)}`);
-  results.push({ id: menuId, group, ok: true, durationMs: Date.now() - started, ...state });
+  if(!state.commandWorkbench||!state.selected||state.currentSection!=='command-home'||state.pathname!=='/admin/'||state.frameWidth<300||state.frameHeight<300||!state.frameRightOfSidebar)throw new Error('Native Control command workbench invalid: '+JSON.stringify(state));
+  results.push({id:menuId,group,ok:true,durationMs:Date.now()-started,...state});
 }
 
 async function verifyPersonalFinance(tab, alreadyActive, started) {

@@ -61,6 +61,7 @@ import { localRegionAccessAdminScript } from './local-region-access-admin.js';
 import { localRegionOperationsAdminScript } from './local-region-operations-admin.js';
 import { regionalCommerceProgramFromLocalRoute, regionalCommerceProgramFromPath } from './regional-commerce-program-registry.js';
 import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
+import { cheonggyePassVendorIntakeScript } from './cheonggyepass-vendor-intake-ui.js';
 import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './platform-security-policy.js';
 import { withPublicEdgeCache } from './public-edge-cache.js';
 import { applyTrafficResponsePolicy, assessTrafficTier, recordTrafficOutcome, trafficRequestGuard } from './traffic-governor.js';
@@ -441,6 +442,17 @@ async function routePlatform(request,env,ctx){
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){
       const cameraPair=url.pathname.match(/^\/live\/c\/([A-Za-z0-9_-]{8,80})\/?$/);if(cameraPair)return managementCameraPage(cameraPair[1]);
       if(url.pathname==='/live'){const target=new URL(request.url);target.pathname='/live/';return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'live-canonical-slash'}})}
+      // EKODI Live's canonical Church tenant endpoint. Do not enter the legacy
+      // Cloudflare Pages /ekodichurch/live/ studio or share any other tenant state.
+      if(url.pathname==='/live/church'){const target=new URL(request.url);target.pathname='/live/church/';return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-route':'live-church-canonical'}})}
+      if(url.pathname==='/live/church/'||url.pathname==='/live/church/admin'||url.pathname==='/live/church/admin/'){
+        const church=realtimeTenantFromPath('/ekodichurch/live/');
+        if(!church||church.apiTenant!=='ekodichurch')return new Response('Church live tenant unavailable',{status:503,headers:{'cache-control':'no-store'}});
+        const canonicalChurch={...church,path:'/live/church/',dedicated:false};
+        if(url.pathname.includes('/admin'))return tenantLiveAdminPage(canonicalChurch);
+        if(await livePublicStatus(env,church)==='maintenance')return liveShell(liveServiceMaintenancePage(church));
+        return tenantLivePage(canonicalChurch);
+      }
       if(url.pathname==='/live/')return liveShell(liveServicePage());
       if(url.pathname==='/live/admin'||url.pathname==='/live/admin/')return liveShell(liveServiceAdminPage(),'admin');
       if(url.pathname==='/tenant-live-admin.css')return tenantLiveAdminCss();
@@ -503,6 +515,7 @@ async function routePlatform(request,env,ctx){
         if(url.pathname==='/cheonggye/local-region-forest-admin.js')return localRegionForestAdminScript();
         if(url.pathname==='/cheonggye/local-region-module-public.js')return localRegionModulePublicScript();
         if(url.pathname==='/cheonggye/local-region-module-admin.js')return localRegionModuleAdminScript();
+        if(url.pathname==='/cheonggye/cheonggyepass-vendor-intake-ui.js')return cheonggyePassVendorIntakeScript();
         if(url.pathname==='/tenant-admin-command-home.css')return tenantAdminCommandHomeCss();
         if(url.pathname==='/tenant-admin-command-home.js')return tenantAdminCommandHomeScript();
         if(['/store-admin.css','/jadam-admin.css','/pizzamaru-admin.css','/yogurt-admin.css'].includes(url.pathname))return storeAdminCss();

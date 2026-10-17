@@ -81,78 +81,44 @@ try {
   await page.waitForFunction(() => (
     document.body.classList.contains('admin-compact')
     && document.body.classList.contains('admin-command-home')
-    && document.body.classList.contains('admin-command-active')
-  ));
-  await page.waitForSelector('.sidebar', { state: 'visible' });
-  await page.waitForSelector('#ekodiAssistPanel:not([hidden])', { timeout: 15_000 });
-  await page.waitForSelector('#ekodiAssistBootstrap .ekodi-assist-bootstrap-form', { state: 'visible', timeout: 15_000 });
-
+    && document.body.classList.contains('admin-control-home')
+    && Boolean(document.querySelector('#ekodiControlHomeFrame'))
+  ), null, {timeout: 15_000});
+  await page.waitForSelector('.sidebar', {state:'visible'});
+  const frame=page.frameLocator('#ekodiControlHomeFrame');
+  await frame.locator('#commandInput').waitFor({state:'visible',timeout:15_000});
+  await frame.locator('#controlEmbeddedToolbar').waitFor({state:'visible',timeout:15_000});
   report.visualState = await page.evaluate(() => {
-    const sidebar = document.querySelector('.sidebar');
-    const assist = document.querySelector('.ekodi-assist');
-    const rail = document.querySelector('.ekodi-assist-rail');
-    const composer = document.querySelector('#ekodiAssistBootstrap .ekodi-assist-bootstrap-form');
-    const welcome = document.querySelector('.ekodi-assist-welcome');
-    const contextTabs = document.querySelector('.admin-context-tabs-shell');
-    const commandEntry = document.querySelector('.admin-command-entry');
-    const target = document.querySelector('#ekodiAssistBootstrapTarget');
-    const bodyStyle = getComputedStyle(document.body);
+    const sidebar=document.querySelector('.sidebar');
+    const iframe=document.querySelector('#ekodiControlHomeFrame');
+    const main=document.querySelector('.app > main');
+    const contextTabs=document.querySelector('.admin-context-tabs-shell');
+    const commandEntry=document.querySelector('.admin-command-entry');
+    const style=getComputedStyle(document.body);
+    const nav=sidebar?.getBoundingClientRect();
+    const panel=iframe?.getBoundingClientRect();
     return {
-      colorScheme: bodyStyle.colorScheme,
-      bodyBackground: bodyStyle.backgroundColor,
-      sidebarBackground: sidebar ? getComputedStyle(sidebar).backgroundColor : null,
-      assistBackgroundImage: assist ? getComputedStyle(assist).backgroundImage : null,
-      railDisplay: rail ? getComputedStyle(rail).display : null,
-      composerBackground: composer ? getComputedStyle(composer).backgroundColor : null,
-      composerRadius: composer ? getComputedStyle(composer).borderRadius : null,
-      welcomeText: welcome ? String(welcome.textContent || '').trim() : '',
-      contextTabsPresent: Boolean(contextTabs),
-      commandEntryPresent: Boolean(commandEntry),
-      targetValue: target ? String(target.value || '').trim() : '',
-      targetWidth: target ? Math.round(target.getBoundingClientRect().width) : null,
-      assistLeft: assist ? Math.round(assist.getBoundingClientRect().left) : null,
-      sidebarWidth: sidebar ? Math.round(sidebar.getBoundingClientRect().width) : null,
-      sidebarRight: sidebar ? Math.round(sidebar.getBoundingClientRect().right) : null,
+      colorScheme:style.colorScheme,
+      bodyBackground:style.backgroundColor,
+      sidebarBackground:sidebar?getComputedStyle(sidebar).backgroundColor:null,
+      sidebarWidth:nav?.width||0,
+      sidebarRight:nav?.right||0,
+      frameLeft:panel?.left||0,
+      frameWidth:panel?.width||0,
+      frameHeight:panel?.height||0,
+      contextTabsPresent:Boolean(contextTabs),
+      commandEntryPresent:Boolean(commandEntry),
+      nestedControlRailPresent:Boolean(iframe),
+      mainHeight:main?.getBoundingClientRect().height||0,
     };
   });
-
-  const visual = report.visualState;
-  if (!String(visual?.colorScheme || '').includes('light')) {
-    throw new Error(`Admin home color scheme is not light: ${visual?.colorScheme || 'missing'}`);
-  }
-  if (visual?.bodyBackground !== 'rgb(255, 255, 255)') {
-    throw new Error(`Admin body is not white: ${visual?.bodyBackground || 'missing'}`);
-  }
-  if (visual?.sidebarBackground !== 'rgb(247, 248, 252)') {
-    throw new Error(`Admin sidebar light surface mismatch: ${visual?.sidebarBackground || 'missing'}`);
-  }
-  if (Number(visual?.sidebarWidth) !== EXPECTED_DESKTOP_SIDEBAR_WIDTH) {
-    throw new Error(`Admin sidebar width mismatch: ${visual?.sidebarWidth || 'missing'} expected=${EXPECTED_DESKTOP_SIDEBAR_WIDTH}`);
-  }
-  if (visual?.contextTabsPresent || visual?.commandEntryPresent) {
-    throw new Error(`Admin redundant navigation chrome is visible: contextTabs=${visual?.contextTabsPresent ? 'present' : 'absent'} commandEntry=${visual?.commandEntryPresent ? 'present' : 'absent'}`);
-  }
-  if (visual?.targetValue !== 'EKODI' || Number(visual?.targetWidth || 0) < 150) {
-    throw new Error(`Admin bottom command target is clipped or incorrect: target=${visual?.targetValue || 'missing'} width=${visual?.targetWidth || 0}`);
-  }
-  if (visual?.railDisplay !== 'none') {
-    throw new Error(`Admin home recent-command rail must be hidden: ${visual?.railDisplay || 'missing'}`);
-  }
-  if (visual?.composerBackground !== 'rgb(255, 255, 255)') {
-    throw new Error(`Admin home composer is not white: ${visual?.composerBackground || 'missing'}`);
-  }
-  if (visual?.composerRadius !== '30px') {
-    throw new Error(`Admin home composer radius mismatch: ${visual?.composerRadius || 'missing'}`);
-  }
-  if (!String(visual?.assistBackgroundImage || '').includes('radial-gradient')) {
-    throw new Error('Admin home conversation canvas gradient is missing');
-  }
-  if (!String(visual?.welcomeText || '').trim()) {
-    throw new Error('Admin home conversation welcome content is missing');
-  }
-  if (Math.abs(Number(visual?.assistLeft) - Number(visual?.sidebarRight)) > 2) {
-    throw new Error(`Admin workbench/sidebar alignment mismatch: ${visual?.assistLeft} vs ${visual?.sidebarRight}`);
-  }
+  const visual=report.visualState;
+  if(!String(visual?.colorScheme||'').includes('light'))throw new Error('Admin home color scheme is not light: '+visual?.colorScheme);
+  if(visual?.bodyBackground!=='rgb(255, 255, 255)')throw new Error('Admin body is not white: '+visual?.bodyBackground);
+  if(visual?.sidebarBackground!=='rgb(247, 248, 252)')throw new Error('Admin sidebar light surface mismatch: '+visual?.sidebarBackground);
+  if(Math.round(visual?.sidebarWidth||0)!==EXPECTED_DESKTOP_SIDEBAR_WIDTH)throw new Error('Admin sidebar width mismatch: '+visual?.sidebarWidth);
+  if(visual?.contextTabsPresent||visual?.commandEntryPresent)throw new Error('Admin redundant navigation chrome is visible');
+  if(visual?.frameWidth<300||visual?.frameHeight<300||Math.abs(visual.frameLeft-visual.sidebarRight)>2)throw new Error('Admin Control/sidebar alignment mismatch: '+JSON.stringify(visual));
   report.visualContractVerified = true;
   await page.screenshot({ path: path.join(artifactsDir, 'admin-home-visual.png'), fullPage: true });
 

@@ -27,23 +27,22 @@ test('automatic visual E2E keeps its session short-lived and always revokes it',
   assert.match(workflow, /if: always\(\) && env\.E2E_AUTH_DB_ID != '' && env\.E2E_TOKEN_HASH != ''/);
 });
 
-test('canonical Assist E2E proves the rendered light workbench before command delivery', async () => {
-  const source = await read('scripts/admin-assist-canonical-e2e.mjs');
-  assert.match(source, /visualContractVerified: false/);
-  assert.match(source, /admin-command-home/);
-  assert.match(source, /admin-command-active/);
-  assert.match(source, /bodyBackground !== 'rgb\(255, 255, 255\)'/);
-  assert.match(source, /sidebarBackground !== 'rgb\(247, 248, 252\)'/);
-  assert.match(source, /EXPECTED_DESKTOP_SIDEBAR_WIDTH = 228/);
-  assert.match(source, /contextTabsPresent/);
-  assert.match(source, /commandEntryPresent/);
-  assert.match(source, /visual\?\.contextTabsPresent \|\| visual\?\.commandEntryPresent/);
-  assert.doesNotMatch(source, /contextTabsDisplay|commandEntryDisplay/);
-  assert.match(source, /targetValue !== 'EKODI'/);
-  assert.match(source, /targetWidth \|\| 0\) < 150/);
-  assert.match(source, /composerRadius !== '30px'/);
-  assert.match(source, /#ekodiAssistBootstrap \.ekodi-assist-bootstrap-form/);
-  assert.match(source, /radial-gradient/);
-  assert.match(source, /admin-home-visual\.png/);
-  assert.match(source, /report\.visualContractVerified = true/);
+test('canonical Assist E2E verifies the native Control home frame before campus command delivery',async()=>{
+  const source=await read('scripts/admin-assist-canonical-e2e.mjs');
+  assert.match(source,/visualContractVerified: false/);
+  assert.match(source,/admin-command-home/);
+  assert.match(source,/admin-control-home/);
+  assert.match(source,/#ekodiControlHomeFrame/);
+  assert.match(source,/#commandInput/);
+  assert.match(source,/#controlEmbeddedToolbar/);
+  assert.match(source,/bodyBackground!=='rgb\(255, 255, 255\)'/);
+  assert.match(source,/sidebarBackground!=='rgb\(247, 248, 252\)'/);
+  assert.match(source,/EXPECTED_DESKTOP_SIDEBAR_WIDTH = 228/);
+  assert.match(source,/contextTabsPresent/);
+  assert.match(source,/commandEntryPresent/);
+  assert.match(source,/frameWidth<300/);
+  assert.match(source,/visual\.frameLeft-visual\.sidebarRight/);
+  assert.match(source,/admin-home-visual\.png/);
+  assert.match(source,/report\.visualContractVerified = true/);
+  assert.match(source,/#ekodiAssistBootstrap input/);
 });

@@ -27,6 +27,8 @@ on:
       - '.github/workflows/deploy-site-core.yml'
       - 'scripts/converge-orchestrated-pr-merge.mjs'
       - 'site-worker.js'
+      - 'site-shell-worker.js'
+      - 'ekodi-shell-injector.js'
       - 'control.html'
       - 'control.css'
       - 'control.js'
@@ -77,6 +79,7 @@ on:
       - 'invest-admin.js'
       - 'invest-admin.css'
       - 'platform-router-entry-worker.js'
+      - 'seasonal-workforce/**'
       - 'site-publication-runtime.js'
       - 'platform-security-policy.js'
       - 'public-edge-cache.js'
@@ -1215,7 +1218,8 @@ jobs:
     needs: deploy
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
-      surface_paths: /,/my/,/admin/,/ekodimall/admin,/control
+      verification_lane: site-core
+      surface_paths: /,/my/,/admin/,/ekodimall/admin,/control,/ekodibiz/seasonal-workers/,/ekodibiz/seasonal-workers/demand,/ekodibiz/seasonal-workers/mou,/ekodibiz/seasonal-workers/office
       surface_registry: config/board-surface-verification.json
       device_profile: desktop
 
@@ -1224,8 +1228,27 @@ jobs:
     needs: deploy
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
-      surface_paths: /,/my/,/admin/,/ekodimall/admin,/control
+      verification_lane: site-core
+      surface_paths: /,/my/,/admin/,/ekodimall/admin,/control,/ekodibiz/seasonal-workers/,/ekodibiz/seasonal-workers/demand,/ekodibiz/seasonal-workers/mou,/ekodibiz/seasonal-workers/office
       surface_registry: config/board-surface-verification.json
+      device_profile: mobile-portrait
+
+  native_research_verification_desktop:
+    name: EKODI Research Native Verification · Desktop
+    needs: deploy
+    uses: ./.github/workflows/ekodi-background-browser-worker.yml
+    with:
+      verification_lane: research
+      surface_paths: /research/
+      device_profile: desktop
+
+  native_research_verification_mobile:
+    name: EKODI Research Native Verification · Mobile
+    needs: deploy
+    uses: ./.github/workflows/ekodi-background-browser-worker.yml
+    with:
+      verification_lane: research
+      surface_paths: /research/
       device_profile: mobile-portrait
 
   authenticated_admin_surface_verification:

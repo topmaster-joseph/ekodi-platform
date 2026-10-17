@@ -172,6 +172,8 @@ test('browser fallback providers must prove background-only non-interactive exec
       operations:['computer.browser.execute'],quotaAvailable:true,
       executionMode:'background-only',headlessOrOffscreen:true,userBrowserTabCreation:false,
       ownedSurfaceAutoClose:true,preserveUserOwnedSurfaces:true,interactiveLoginAllowed:false,
+      foregroundWindowAllowed:false,focusIsolated:true,dedicatedAutomationProfile:true,
+      clipboardShared:false,userInputInjection:false,activeUserProfileReused:false,
     }],
   });
   assert.equal(background.ok,true);
@@ -184,6 +186,7 @@ test('browser receipts fail closed unless owned surfaces are closed and user sur
     requestId:'browser-ok',deviceId:'d1',operation:'computer.browser.execute',status:'ok',
     executionMode:'background-only',userBrowserTabCreated:false,ownedSurfaceClosed:true,
     userOwnedSurfacesPreserved:true,interactiveLoginOpened:false,
+    foregroundFocusStolen:false,activeUserBrowserProfileReused:false,
   });
   assert.equal(good.ok,true);
 
@@ -198,4 +201,48 @@ test('browser receipts fail closed unless owned surfaces are closed and user sur
   assert.ok(bad.errors.includes('browser_owned_surface_cleanup_required'));
   assert.ok(bad.errors.includes('browser_user_surface_preservation_required'));
   assert.ok(bad.errors.includes('browser_interactive_login_forbidden'));
+});
+
+test('external browser providers missing isolation or no-window evidence are rejected', () => {
+  const common={
+    id:'unproven',state:'online',securityEquivalent:true,
+    operations:['computer.browser.execute'],quotaAvailable:true,
+    executionMode:'background-only',headlessOrOffscreen:true,userBrowserTabCreation:false,
+    ownedSurfaceAutoClose:true,preserveUserOwnedSurfaces:true,
+  };
+  const base={
+    operation:'computer.browser.execute',
+    native:{state:'offline',serviceReady:false,capabilities:{}},
+    isolatedExecutorVerified:true,
+  };
+  assert.equal(planRemoteComputerExecution({...base,externalProviders:[common]}).ok,false);
+  for (const override of [
+    {interactiveLoginAllowed:true},{foregroundWindowAllowed:true},
+    {focusIsolated:false},{dedicatedAutomationProfile:false},
+    {clipboardShared:true},{userInputInjection:true},{activeUserProfileReused:true},
+  ]) {
+    const candidate={
+      ...common,interactiveLoginAllowed:false,foregroundWindowAllowed:false,
+      focusIsolated:true,dedicatedAutomationProfile:true,
+      clipboardShared:false,userInputInjection:false,activeUserProfileReused:false,
+      ...override,
+    };
+    assert.equal(planRemoteComputerExecution({...base,externalProviders:[candidate]}).ok,false);
+  }
+});
+
+test('missing negative evidence cannot prove a successful browser receipt', () => {
+  const receipt=validateRemoteComputerReceipt({
+    requestId:'browser-unproven',deviceId:'d1',
+    operation:'computer.browser.execute',status:'ok',
+    executionMode:'background-only',
+    ownedSurfaceClosed:true,userOwnedSurfacesPreserved:true,
+  });
+  assert.equal(receipt.ok,false);
+  for (const code of [
+    'browser_user_tab_creation_forbidden',
+    'browser_foreground_focus_proof_required',
+    'browser_user_profile_isolation_proof_required',
+    'browser_interactive_login_forbidden',
+  ]) assert.ok(receipt.errors.includes(code),code);
 });

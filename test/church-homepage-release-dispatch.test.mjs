@@ -32,3 +32,46 @@ test('Church Pages production proof checks newly authorized inline asset on real
   assert.match(w,/grep -Fq 'scope=worship-access' \/tmp\/church-worship-admin\.js/);
   assert.match(w,/CHURCH_SOURCE_SHA/);
 });
+
+test('Church weekly packet assets are guarded by release checks',async()=>{
+  const w=await read('.github/workflows/deploy-ekodi-church-homepage.yml');
+  for(const phrase of [
+    'church-weekly-worship.js','church-weekly-worship.css',
+    'worship/weekly.json','2026-10-18/materials.json',
+    'data-church-weekly','weekly_manifest','weekly_service','CHURCH_SOURCE_SHA'
+  ])assert.ok(w.includes(phrase),'missing guarded Church evidence: '+phrase);
+});
+test('Church admin edits trigger the guarded Site Core release',async()=>{
+  const source=await read('scripts/converge-orchestrated-pr-merge.mjs');
+  for(const phrase of [
+    "file==='church-pastor-admin-page.js'",
+    'if(sharedSiteTouched)',
+    'actions/workflows/deploy-site-core.yml/dispatches'
+  ])assert.ok(source.includes(phrase),'missing release dispatch: '+phrase);
+});
+
+test('church guarded Pages release rejects the previous-week live default and date heading',async()=>{
+ const w=await read('.github/workflows/deploy-ekodi-church-homepage.yml');
+ assert.match(w,/test -s church\/live\/worship-materials\.js/);
+ assert.match(w,/grep -Fq '10\.18–10\.24' church\/worship\/2026-10-18\/index\.html/);
+ assert.match(w,/live_materials=\$\(curl/);
+ assert.match(w,/\/tmp\/church-oct18-live-materials\.js/);
+ assert.match(w,/resolveServiceDate/);
+ assert.match(w,/query\.get\('date'\)\|\|'2026-10-11'/);
+});
+
+test('Church QR director camera and resizable program require real deployment canary',async()=>{
+ const w=await read('.github/workflows/deploy-ekodi-church-homepage.yml');
+ for(const marker of [
+  'Verify director QR cameras and resizable live program on real Church Pages',
+  'church/live/management-camera-qr.js',
+  'id="openManagementCameraButton"',
+  'id="managementCameraDialog"',
+  'id="presenterResizeGrip"',
+  'function createManagementCameraPair(',
+  'function beginOverlayResize(',
+  'function beginPresenterResize(',
+  'CHURCH_SOURCE_SHA'
+ ])assert.ok(w.includes(marker),'missing QR on-air canary '+marker);
+ assert.match(w,/Verified director QR camera and overlay sizing assets in production/);
+});

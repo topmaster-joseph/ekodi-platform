@@ -1,4 +1,5 @@
 import authWorker from './auth-worker.js';
+import { assessBackgroundBrowserReceipt } from './background-browser-proof.js';
 import { CGMA_NATIVE_CANARY, inspectCgmaCanaryPayload } from './cgma-native-canary-policy.js';
 import { normalizeSlidesAudioPilot, validateSlidesAudioPilotReceipt, SLIDES_AUDIO_ITEMS, SLIDES_AUDIO_PRESENTATION_ID } from './google-workspace-slides-audio-policy.js';
 import { compareLocalExecutionCandidates, localExecutionPolicySnapshot, localExecutionScore, normalizeLocalResource } from './local-execution-policy.js';
@@ -446,6 +447,17 @@ export async function handleHybridAgentResult(request, env, commandId) {
     ? parseJson(safeJson(body.result, 24000), {})
     : { message:safeText(body.message, 300) };
   const now = new Date().toISOString();
+  // The authenticated Agent's success flag alone must not complete native
+  // browser work. Missing isolation/cleanup receipts fail permanently.
+  const browserProof = job.task_type === 'computer.browser.execute' &&
+    (success || result.browserWorker?.authRequired === true)
+    ? assessBackgroundBrowserReceipt({ result, requestId:commandId, deviceId:device.id })
+    : null;
+  const browserProofInvalid = browserProof?.outcome === 'invalid';
+  if (browserProofInvalid) {
+    success = false;
+    result.message = 'BACKGROUND_BROWSER_PROOF_INVALID';
+  }
   if (job.task_type === 'computer.workspace.slides.audio.insert') {
     const proof = validateSlidesAudioPilotReceipt(result.workspaceSlidesAudio);
     if (!proof.ok) {
@@ -454,7 +466,7 @@ export async function handleHybridAgentResult(request, env, commandId) {
     }
   }
 
-  if ((job.task_type === 'computer.browser.execute' && result.browserWorker?.authRequired === true) ||
+  if ((job.task_type === 'computer.browser.execute' && browserProof?.outcome === 'auth_required') ||
       (job.task_type === 'computer.workspace.slides.audio.insert' && result.workspaceSlidesAudio?.status === 'auth_required')) {
     const update = await env.DB.prepare(`UPDATE hybrid_execution_jobs
       SET status='completed', result_json=?, last_error='AUTH_REQUIRED', lease_expires_at=NULL,
@@ -483,7 +495,7 @@ export async function handleHybridAgentResult(request, env, commandId) {
   }
 
   const errorMessage = safeText(result.message || body.message || 'agent_reported_failure', 500);
-  if (Number(job.attempt_count) < Number(job.max_attempts)) {
+  if (!browserProofInvalid && Number(job.attempt_count) < Number(job.max_attempts)) {
     const update = await env.DB.prepare(`UPDATE hybrid_execution_jobs
       SET status='pending', last_device_id=assigned_device_id, assigned_device_id=NULL,
           lease_expires_at=NULL, last_error=?, result_json=?, updated_at=?
@@ -501,7 +513,10 @@ export async function handleHybridAgentResult(request, env, commandId) {
     WHERE id=? AND assigned_device_id=? AND status='leased'`)
     .bind(errorMessage, safeJson(result, 24000), now, now, commandId, device.id).run();
   if (!update.meta?.changes) return json({ error:'작업 상태가 이미 변경되었습니다.' }, 409);
-  await event(env, commandId, device.id, 'failed', { reason:'agent_failure', terminal:true, attempt:Number(job.attempt_count) || 1 });
+  await event(env, commandId, device.id, 'failed', {
+    reason:browserProofInvalid ? 'background_browser_proof_invalid' : 'agent_failure',
+    terminal:true, attempt:Number(job.attempt_count) || 1,
+  });
   return json({ ok:true, commandId, status:'failed', completedAt:now }, 200);
 }
 

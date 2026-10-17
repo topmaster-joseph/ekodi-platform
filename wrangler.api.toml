@@ -89,6 +89,12 @@ namespace_id = "2102"
 binding = "LIVE_RECORDINGS_BUCKET"
 bucket_name = "ekodi-storage"
 
+# Dedicated private quarantine: never serve or execute untrusted vendor archives.
+# Provision 'ekodi-pass-vendor-quarantine' before protected Control API deployment.
+[[r2_buckets]]
+binding = "PASS_VENDOR_QUARANTINE"
+bucket_name = "ekodi-pass-vendor-quarantine"
+
 [[services]]
 binding = "STORAGE"
 service = "ekodi-storage-control"

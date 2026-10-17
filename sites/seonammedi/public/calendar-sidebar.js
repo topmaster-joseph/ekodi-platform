@@ -31,6 +31,20 @@
     url.searchParams.set('date',date);
     return url.href;
   };
+  // Provide a visible event title when users paste links into messengers.
+  // Only published public calendar rows are passed into these helpers.
+  const shareTitle=item=>String(item?.title||'일정').replace(/[\r\n\t\u2028\u2029]+/g,' ').replace(/\s+/g,' ').trim().slice(0,180)||'일정';
+  const shareSummary=item=>{
+    const start=String(item?.eventStart||'');
+    const date=dateOf(start).replaceAll('-','.');
+    const time=start.length>=16?start.slice(11,16):'';
+    // Registration, publication and edit dates are metadata, not event dates. Do not share them.
+    return '서남권 국립의대 소통센터\n'+shareTitle(item)+'\n일정: '+date+(time?' '+time:'');
+  };
+  const shareMessage=item=>{
+    const url=shareUrl(item);
+    return url?shareSummary(item)+'\n일정 확인: '+url:'';
+  };
   const make=(tag,cls,content)=>{
     const element=document.createElement(tag);
     if(cls)element.className=cls;
@@ -113,14 +127,19 @@
     const todayList=make('div','seonam-calendar-today-events');
     todayList.setAttribute('aria-live','polite');
     todayAgenda.append(todayHeading,todayList);
-    newsBox.append(heading,navigation,week,calendar,status,todayAgenda);
+    newsBox.append(heading,navigation,week,calendar,status);
 
-    const detailHeading=make('div','seonam-calendar-detail-heading');
-    detailHeading.append(make('h2','','선택 날짜 일정'));
+    // One compact calendar card: do not repeat the month/date heading in a second card.
+    // The original quick node and its handlers are preserved, only reparented.
+    quick.classList.remove('seonam-visual-info-card');
+    quick.classList.add('seonam-calendar-inline-details');
+    quick.setAttribute('role','region');
+    quick.setAttribute('aria-label','선택 날짜 일정');
     const dayLabel=make('strong','seonam-calendar-selected');
     const eventList=make('div','seonam-calendar-events');
     eventList.setAttribute('aria-live','polite');
-    quick.append(detailHeading,dayLabel,eventList);
+    quick.append(dayLabel,eventList);
+    newsBox.append(quick,todayAgenda);
     const form=make('form','seonam-calendar-form');
     form.hidden=true;
     const formTitle=make('h3','','일정 등록');
@@ -154,12 +173,12 @@
       if(!url){feedback.textContent='공유할 수 없는 일정입니다.';return;}
       try{
         if(!navigator.clipboard?.writeText)throw new Error('clipboard_unavailable');
-        await navigator.clipboard.writeText(url);
-        feedback.textContent='일정 링크를 복사했습니다.';
+        await navigator.clipboard.writeText(shareMessage(item));
+        feedback.textContent='일정 제목과 링크를 복사했습니다.';
       }catch{
         // Browser clipboard access can be unavailable outside secure contexts.
         // Keep a usable link even when clipboard permission is denied.
-        if(typeof window.prompt==='function')window.prompt('일정 링크를 복사해 주세요.',url);
+        if(typeof window.prompt==='function')window.prompt('일정 제목과 링크를 복사해 주세요.',shareMessage(item));
         feedback.textContent='공유 링크를 확인해 주세요.';
       }
     }
@@ -173,8 +192,8 @@
         if(typeof navigator.share!=='function'){await copyShareLink(item,feedback);return;}
         try{
           await navigator.share({
-            title:(item.title||'일정')+' · 서남권 국립의대 소통센터',
-            text:dateOf(item.eventStart)+' '+displayTime(item.eventStart)+' · '+(item.title||'일정'),
+            title:shareTitle(item)+' · 서남권 국립의대 소통센터',
+            text:shareSummary(item),
             url
           });
           feedback.textContent='공유를 완료했습니다.';
@@ -189,7 +208,8 @@
       const date=localToday();
       const hits=todayItems.filter(item=>item.kind==='event'&&item.eventStart&&spansDay(item,date));
       todayList.replaceChildren();
-      todayAgenda.hidden=hits.length===0;
+      // Never show the same date in both the selected-date list and today's list.
+      todayAgenda.hidden=hits.length===0||selected===date;
       if(!hits.length)return;
       todayHeading.textContent='오늘의 일정 ('+Number(date.slice(5,7))+'월 '+Number(date.slice(8,10))+'일 · '+hits.length+'건)';
       for(const item of hits){
@@ -253,9 +273,10 @@
     function renderSelected(){
       const [year,n,d]=selected.split('-').map(Number);
       const weekday=WEEK[(new Date(Date.UTC(year,n-1,d)).getUTCDay()+6)%7];
-      dayLabel.textContent=year+'년 '+n+'월 '+d+'일 ('+weekday+')';
-      eventList.replaceChildren();
       const hits=matches(selected);
+      dayLabel.textContent=d+'일 ('+weekday+')'+(hits.length?' · '+hits.length+'건':'');
+      dayLabel.setAttribute('aria-label',year+'년 '+n+'월 '+d+'일 ('+weekday+') · 일정 '+hits.length+'건');
+      eventList.replaceChildren();
       if(!hits.length){
         eventList.append(make('p','seonam-calendar-empty','등록된 일정이 없습니다.'));
         return;
@@ -269,6 +290,7 @@
         if(item.body)article.append(details);
         attachSharing(article,item);
         if(shareTarget&&Number(item.id)===shareTarget.id&&selected===shareTarget.date){
+          document.title=shareTitle(item)+' · 서남권 국립의대 소통센터';
           article.classList.add('is-shared');
           if(!shareFocused){
             shareFocused=true;
@@ -294,6 +316,7 @@
       form.hidden=true;
       renderDays();
       renderSelected();
+      renderToday();
     }
     function navigate(shift){
       const [year,n]=month.split('-').map(Number);
@@ -417,5 +440,5 @@
       else refreshToday();
     },60000);
   }
-  window.SeonamMediCalendar={mount,shareUrl,parseSharedSchedule};
+  window.SeonamMediCalendar={mount,shareUrl,parseSharedSchedule,shareSummary,shareMessage};
 })();
