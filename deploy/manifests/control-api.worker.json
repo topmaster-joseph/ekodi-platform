@@ -677,11 +677,11 @@
           "REGION_AUTH_REQUIRED"
         ],
         "headerExpect": [
-          "cache-control: private, no-store",
+          "cache-control: no-store",
           "x-content-type-options: nosniff"
         ],
         "candidateVerify": false,
-        "candidateVerifyReason": "Control API is accessed through the canonical Shared Site service binding; verify after protected promotion.",
+        "candidateVerifyReason": "Control API is served through canonical Shared Site binding. Response is uncachable with no-store; origin's private directive may be normalized by the gateway. Verify after protected promotion.",
         "rollbackVerify": false
       }
     ]
