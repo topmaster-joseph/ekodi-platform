@@ -169,6 +169,7 @@ let starting=null;
 async function start(){
   const root=document.getElementById(ROOT_ID);if(!root)return false;
   if(starting)return starting;
+  const startedWithToken=token();
   starting=(async()=>{
     if(!await authorize())return false;
     if(!observer){
@@ -178,7 +179,12 @@ async function start(){
     decorate();
     return true;
   })();
-  try{return await starting}finally{starting=null}
+  try{return await starting}finally{
+    starting=null;
+    // A different account may sign in while the previous request is pending.
+    // Retry only for an actual token switch, never loop on an unchanged denial.
+    if(token()&&token()!==startedWithToken)queueMicrotask(()=>start().catch(()=>{}));
+  }
 }
 // The first page load can precede both auth handoff and the shared Shell runtime.
 // Always subscribe, even when the first authorization attempt is denied.
