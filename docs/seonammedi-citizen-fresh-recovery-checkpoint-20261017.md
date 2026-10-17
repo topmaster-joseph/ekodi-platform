@@ -15,3 +15,8 @@
 
 ## Protected gate requirements
 After current main is natively synchronized, real CI on the resulting current HEAD, conflict/constitution/security checks, trusted receipt, owner exact-source-SHA marker, guarded orchestrator merge and Cloudflare deployment must pass. Do not fake checks, overwrite main or bypass branch protection. Preserve old source approval in ancestry and stop on a newly detected conflict.
+
+## Verified current-main native branch synchronization
+- Official orchestrator has natively synchronized main into recovery #5153; bot-created HEAD `0b48f42eb89d86741d94970e19522e0b656d7186` inherited original owner-approved functional source commit.
+- Verified post-sync Worker still serves the fresh citizen UI, HTTP 410 legacy citizen API, and old citizen queue retirement; fresh D1 migration is present.
+- Native GitHub check status on bot-created commit is `action_required`. This **documentation-only** continuation requests genuine required CI on the synchronized functional tree, with protected convergence retained. Do not count bot-generated skipped CI as passed.
