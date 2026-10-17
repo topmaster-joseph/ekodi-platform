@@ -24,3 +24,7 @@ The existing allowlisted `computer.agent.status` will project only four fixed EK
 4. Update the Windows Agent transactionally **only when separately validated and authorized**; preserve device enrollment, scheduled tasks and live heartbeat with rollback proof. No direct registry or scheduled task mutation without evidence.
 5. Correlate task last-run timestamp with user-observed popup and Windows event/process history. A task whose flag is hidden is not proof it caused or resolved the popup.
 6. Prove no visible console, foreground focus theft, extra user tab, clipboard sharing or login loop over repeated startup/monitor intervals. Report production unresolved until real USER4 receipts exist.
+
+## Synchronized protected-main revalidation
+
+The official guarded converger synchronized the recovery branch against the latest `main` at head `401b9ee6579b9e4596ce8911cb1298f7099f13bc`. The GitHub Actions bot-authored update yielded `action_required` checks without real job execution. This additional owner-authored documentation-only change starts fresh required CI, real Windows syntax tests and an isolated Control API staging run on the synchronized source. It does not alter the approved Windows or Control API runtime logic, a security policy, the release receipt, or any live USER4 process. Successful staging alone is not a production deployment or native USER4 acceptance.
