@@ -2944,7 +2944,7 @@ function Get-EkodiConsoleTaskPosture {
       $summary.installed = $true
       $summary.state = [string]$current.State
       $summary.interactivePrincipal = ([string]$current.Principal.LogonType -in @('Interactive','InteractiveOrPassword'))
-      $summary.systemPrincipal = ([string]$current.Principal.UserId -in @('SYSTEM','NT AUTHORITY\SYSTEM')
+      $summary.systemPrincipal = ([string]$current.Principal.UserId -in @('SYSTEM','NT AUTHORITY\SYSTEM'))
       $actions = @($current.Actions)
       $summary.actionCount = $actions.Count
       foreach ($action in $actions) {
