@@ -9,6 +9,7 @@ on:
       - 'test/seasonal-workforce-route.test.mjs'
       - 'test/seasonal-workforce-operations.test.mjs'
       - 'test/seasonal-workforce-office.test.mjs'
+      - 'test/seasonal-workforce-design.test.mjs'
       - '.github/workflows/seasonal-workforce-check.yml'
   workflow_dispatch:
 
@@ -32,9 +33,12 @@ jobs:
           node --check seasonal-workforce/tenant-domain.mjs
           node --check seasonal-workforce/operations-api.mjs
           node --check seasonal-workforce/office-surface.mjs
+          node --check seasonal-workforce/public-pages.mjs
+          node --check seasonal-workforce/public-assets.mjs
+          node --check seasonal-workforce/public.js
       - name: Seasonal workforce unit and routing tests
         run: |
-          node --test seasonal-workforce/demand-domain.test.mjs seasonal-workforce/tenant-domain.test.mjs test/seasonal-workforce-route.test.mjs test/seasonal-workforce-operations.test.mjs test/seasonal-workforce-office.test.mjs
+          node --test seasonal-workforce/demand-domain.test.mjs seasonal-workforce/tenant-domain.test.mjs test/seasonal-workforce-route.test.mjs test/seasonal-workforce-operations.test.mjs test/seasonal-workforce-office.test.mjs test/seasonal-workforce-design.test.mjs
       - name: No active submissions in prototype
         run: |
           grep -Fq "applications_not_enabled" seasonal-workforce/route.mjs
