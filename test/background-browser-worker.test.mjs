@@ -78,8 +78,15 @@ test('shared-site guarded release invokes native browser verification after prod
   assert.match(workerWorkflow,/github\.event_name == 'pull_request'[\s\S]*'\/,\/my\/,\/admin\/'/);
   assert.match(workerWorkflow,/uses:\s*actions\/upload-artifact@v4\r?\n\s*if:\s*always\(\)/);
   assert.match(workerWorkflow,/device_profile:/);
-  assert.match(workerWorkflow,/group:\s*ekodi-background-browser-worker-\$\{\{ github\.workflow \}\}-\$\{\{ github\.event\.workflow_run\.head_sha \|\| github\.sha \}\}-\$\{\{ inputs\.device_profile \|\| 'desktop' \}\}/);
+  assert.match(workerWorkflow,/group:\s*ekodi-background-browser-worker-\$\{\{ github\.workflow \}\}-\$\{\{ github\.event\.workflow_run\.head_sha \|\| github\.sha \}\}-\$\{\{ inputs\.verification_lane \|\| 'generic' \}\}-\$\{\{ inputs\.device_profile \|\| 'desktop' \}\}/);
   assert.match(workerWorkflow,/cancel-in-progress:\s*true/);
+  assert.match(workerWorkflow,/verification_lane:\s*\n\s*description: Stable caller lane/);
+  for(const [job,lane] of [['native_surface_verification_desktop','site-core'],['native_surface_verification_mobile','site-core'],['native_research_verification_desktop','research'],['native_research_verification_mobile','research']]){
+    const part=sharedRelease.slice(sharedRelease.indexOf('\n  '+job+':')+3);
+    const segment=part.split(/\n  [a-zA-Z0-9_-]+:/)[0];
+    assert.ok(segment.includes('verification_lane: '+lane),'verification lane missing for '+job);
+  }
+
   assert.match(sharedRelease,/native_surface_verification_desktop:/);
   assert.match(sharedRelease,/native_surface_verification_mobile:/);
   assert.match(sharedRelease,/uses:\s*\.\/\.github\/workflows\/ekodi-background-browser-worker\.yml/);
