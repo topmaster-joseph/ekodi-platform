@@ -5,6 +5,7 @@ import { handleFederatedCustomerAuth } from './customer-federated-auth.js';
 import { handleGoogleCustomerPreregistration } from './customer-google-prereg.js';
 import { handleRegionalAccessControl } from './regional-access-control.js';
 import { handleLocalRegionOperations } from './local-region-operations-control.js';
+import { handleCheonggyePassVendorIntake } from './cheonggyepass-vendor-intake.js';
 import { handleCustomerMemberDirectory } from './customer-member-directory.js';
 import { handleMembershipBilling, runMembershipBillingSchedule } from './membership-billing.js';
 import { handleAdminGoogleAuth } from './admin-google-auth.js';
@@ -272,6 +273,9 @@ export default {
           },
         });
       }
+    }
+    if (path.startsWith('/api/cheonggyepass/vendor-intake')) {
+      return handleCheonggyePassVendorIntake(request, env);
     }
     if (path.startsWith('/api/local-access/')) {
       try {
