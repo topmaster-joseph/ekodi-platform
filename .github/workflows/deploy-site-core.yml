@@ -79,6 +79,7 @@ on:
       - 'invest-admin.js'
       - 'invest-admin.css'
       - 'platform-router-entry-worker.js'
+      - 'seasonal-workforce/**'
       - 'site-publication-runtime.js'
       - 'platform-security-policy.js'
       - 'public-edge-cache.js'
@@ -1217,7 +1218,7 @@ jobs:
     needs: deploy
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
-      surface_paths: /,/my/,/admin/,/ekodimall/admin,/control
+      surface_paths: /,/my/,/admin/,/ekodimall/admin,/control,/ekodibiz/seasonal-workers/,/ekodibiz/seasonal-workers/demand,/ekodibiz/seasonal-workers/mou,/ekodibiz/seasonal-workers/office
       surface_registry: config/board-surface-verification.json
       device_profile: desktop
 
@@ -1226,7 +1227,7 @@ jobs:
     needs: deploy
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
-      surface_paths: /,/my/,/admin/,/ekodimall/admin,/control
+      surface_paths: /,/my/,/admin/,/ekodimall/admin,/control,/ekodibiz/seasonal-workers/,/ekodibiz/seasonal-workers/demand,/ekodibiz/seasonal-workers/mou,/ekodibiz/seasonal-workers/office
       surface_registry: config/board-surface-verification.json
       device_profile: mobile-portrait
 

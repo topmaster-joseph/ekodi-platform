@@ -16,6 +16,16 @@ export const AUTOMATION_SURFACE_LIFECYCLE = Object.freeze({
   foregroundFallbackAutomatic: false,
 });
 
+// Machine-readable CI and GitHub Actions status must never be inspected by
+// launching a desktop or browser surface as an automatic fallback.
+export const API_ONLY_OBSERVATION_TASKS = Object.freeze([
+  'github-actions-status',
+  'github-actions-logs',
+  'github-pr-status',
+  'ci-status',
+  'deployment-status',
+]);
+
 const safeText = (value, max = 120) => String(value ?? '').trim().slice(0, max);
 
 export function validateBackgroundBrowserWorker(worker = {}) {
@@ -25,8 +35,12 @@ export function validateBackgroundBrowserWorker(worker = {}) {
   if (worker.dedicatedAutomationProfile !== true) errors.push('dedicated_profile_required');
   if (worker.focusIsolated !== true) errors.push('focus_isolation_required');
   if (worker.offscreenOrHeadless !== true) errors.push('offscreen_or_headless_required');
-  if (worker.clipboardShared === true) errors.push('shared_clipboard_forbidden');
-  if (worker.userInputInjection === true) errors.push('user_input_injection_forbidden');
+  if (worker.clipboardShared !== false) errors.push('shared_clipboard_must_be_disabled');
+  if (worker.userInputInjection !== false) errors.push('user_input_injection_must_be_disabled');
+  if (worker.userBrowserTabCreation !== false) errors.push('user_browser_tab_creation_must_be_disabled');
+  if (worker.foregroundWindowAllowed !== false) errors.push('foreground_window_must_be_disabled');
+  if (worker.ownedSurfaceAutoClose !== true) errors.push('owned_surface_cleanup_must_be_enabled');
+  if (worker.preserveUserOwnedSurfaces !== true) errors.push('preserve_user_surfaces_required');
   const profileId = safeText(worker.profileId);
   const activeUserProfileId = safeText(worker.activeUserProfileId);
   if (profileId && activeUserProfileId && profileId === activeUserProfileId) errors.push('active_user_profile_reuse_forbidden');
@@ -39,8 +53,8 @@ export function validateIsolatedDesktopSession(session = {}) {
   if (session.verified !== true) errors.push('session_not_verified');
   if (!['windows-secondary-session','vm','sandbox'].includes(session.sessionType)) errors.push('unsupported_session_type');
   if (session.focusIsolated !== true) errors.push('focus_isolation_required');
-  if (session.sharedInteractiveDesktop === true) errors.push('shared_interactive_desktop_forbidden');
-  if (session.userInputInjection === true) errors.push('user_input_injection_forbidden');
+  if (session.sharedInteractiveDesktop !== false) errors.push('shared_interactive_desktop_must_be_disabled');
+  if (session.userInputInjection !== false) errors.push('user_input_injection_must_be_disabled');
   return Object.freeze({ ok: errors.length === 0, errors });
 }
 
@@ -81,6 +95,19 @@ export function planNonDisruptiveRemoteWork({
       reason: 'api_preferred',
       requiresForeground: false,
       candidate: Object.freeze({ providerId: safeText(api.providerId || 'official-api'), kind: 'api' }),
+      cleanupOwnedSurface: true,
+    });
+  }
+
+  // Missing API credentials or an outage never permits an interactive
+  // GitHub/CI/deploy log tab to be opened as a substitute.
+  if (API_ONLY_OBSERVATION_TASKS.includes(taskKind)) {
+    return frozenPlan({
+      ok: false,
+      mode: 'blocked',
+      reason: 'authorized_api_required_for_background_observation',
+      code: 'API_REQUIRED',
+      requiresForeground: false,
       cleanupOwnedSurface: true,
     });
   }
