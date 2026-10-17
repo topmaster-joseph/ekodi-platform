@@ -23,6 +23,11 @@ on:
         required: false
         type: string
         default: desktop
+      verification_lane:
+        description: Stable caller lane to avoid cross-service cancellations on the same device
+        required: false
+        type: string
+        default: generic
       church_locale_diagnostic:
         description: Run independent Church nine-language Chromium diagnostics
         required: false
@@ -58,6 +63,10 @@ on:
           - mobile-landscape
           - tablet
           - desktop
+      verification_lane:
+        description: Stable lane (e.g. site-core or research)
+        required: false
+        default: generic
   pull_request:
     paths:
       - 'scripts/ekodi-background-browser-worker.mjs'
@@ -85,10 +94,9 @@ permissions:
   contents: read
 
 concurrency:
-  # Scope cancellation to the same caller workflow + exact source revision + device.
-  # Different production verifiers must not cancel one another just because they
-  # happen to use the same desktop/mobile browser profile on main.
-  group: ekodi-background-browser-worker-${{ github.workflow }}-${{ github.event.workflow_run.head_sha || github.sha }}-${{ inputs.device_profile || 'desktop' }}
+  # Only the same caller, revision, surface lane and device can cancel an older run.
+  # Research and full-site mobile checks share a release SHA but MUST be independent.
+  group: ekodi-background-browser-worker-${{ github.workflow }}-${{ github.event.workflow_run.head_sha || github.sha }}-${{ inputs.verification_lane || 'generic' }}-${{ inputs.device_profile || 'desktop' }}
   cancel-in-progress: true
 
 jobs:
