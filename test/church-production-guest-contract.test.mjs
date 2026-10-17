@@ -26,3 +26,11 @@ test('independent CI is read-only and does not require Supabase management secre
   assert.doesNotMatch(workflow,/environment: production/);
   assert.doesNotMatch(workflow,/secrets\./);
 });
+
+test('public Church guest E2E remains separate from simulated admin browser permissions',()=>{
+  assert.ok(source.includes("const HOME='https://ekodi.kr/ekodichurch/'"));
+  assert.ok(source.includes("const worshipUrl=API+'?scope=worship-access'"));
+  assert.ok(source.includes("'401 guest worship'"));
+  assert.ok(source.includes("releaseSourceSha:marker.sourceSha"));
+  assert.ok(!source.includes('realUserAuthenticated:true'));
+});
