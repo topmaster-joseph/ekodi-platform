@@ -680,6 +680,19 @@ export default {
         response.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
         return response;
       }
+      // Canonical Admin Control is still the independent protected Control page.
+      // Legacy /control remains available during migration and for old bookmarks.
+      if (url.pathname === '/admin/control' || url.pathname === '/admin/control/') {
+        if (!['GET','HEAD'].includes(request.method)) {
+          return withHostSecurity(new Response(null,{status:405,headers:{allow:'GET, HEAD'}}), ADMIN_CSP, 'no-store', 'control-surface');
+        }
+        const response = await env.ASSETS.fetch(assetRequest(request, '/control'));
+        const secured = withHostSecurity(response, ADMIN_CSP, 'no-store', 'control-surface');
+        secured.headers.set('X-EKODI-Canonical-Surface','control');
+        secured.headers.set('X-EKODI-Canonical-Path','/admin/control');
+        secured.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
+        return secured;
+      }
       if (url.pathname === '/control' || url.pathname === '/control/') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/control'));
         // Only the explicit first-party admin embed variant is frameable.
