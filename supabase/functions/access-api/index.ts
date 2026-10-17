@@ -44,9 +44,31 @@ async function authClient(req:Request){
   if(error||!data.user)return null;
   return {db,user:data.user};
 }
+const BOOTSTRAP_SUPER_ADMIN_EMAILS=new Set(["topmaster.joseph@gmail.com","joseph@ekodi.kr"]);
+// Google sign-in is open to everyone. An active, verified Google identity is necessary
+// but never sufficient for privileged authorization.
+async function verifiedGoogleIdentity(user:any){
+  const email=String(user?.email??"").trim().toLowerCase();
+  if(!user?.id||!email||!user.email_confirmed_at)return false;
+  const {data,error}=await admin.from("login_identities")
+    .select("provider,provider_subject,email").eq("auth_user_id",user.id)
+    .eq("provider","google").eq("status","active").maybeSingle();
+  if(error)throw error;
+  return Boolean(data?.provider_subject&&String(data.email??"").trim().toLowerCase()===email);
+}
 async function platformAdmin(userId:string){
-  const {data}=await admin.from("profiles").select("platform_admin").eq("user_id",userId).maybeSingle();
-  return data?.platform_admin===true;
+  const {data,error}=await admin.from("profiles").select("platform_admin").eq("user_id",userId).maybeSingle();
+  if(error)throw error;
+  if(data?.platform_admin===true)return true;
+  const {data:identity, error:identityError}=await admin.from("login_identities")
+    .select("email,provider_subject").eq("auth_user_id",userId)
+    .eq("provider","google").eq("status","active").maybeSingle();
+  if(identityError)throw identityError;
+  if(!identity?.provider_subject||!BOOTSTRAP_SUPER_ADMIN_EMAILS.has(String(identity.email??"").toLowerCase()))return false;
+  const {data:verified,error:userError}=await admin.auth.admin.getUserById(userId);
+  if(userError)throw userError;
+  return Boolean(verified?.user?.email_confirmed_at&&
+    String(verified.user.email??"").toLowerCase()===String(identity.email??"").toLowerCase());
 }
 async function tenantReviewerAuthorization(userId:string,tenantId:string|null){
   if(await platformAdmin(userId))return {allowed:true,roles:["platform_admin"],authority:"platform",role:"platform_admin"};
@@ -255,6 +277,47 @@ Deno.serve(async(req)=>{
 
     if(req.method==="GET"&&path==="/platform-authority"){
       return json(req,{ok:true,platformAdmin:await platformAdmin(auth.user.id)});
+    }
+
+    if(req.method==="POST"&&path==="/site-admins/bootstrap"){
+      // Special recovery path for a site without a single active administrator.
+      // It is NOT an unrestricted role-grant endpoint; the database function
+      // serializes vacancy checks and enforces site/tenant binding a second time.
+      if(!await verifiedGoogleIdentity(auth.user)||!await platformAdmin(auth.user.id))
+        return json(req,{ok:false,error:"verified_google_super_admin_required"},403);
+      const body=await req.json().catch(()=>null);
+      const site=clip(body?.site,60).toLowerCase();
+      const tenant=clip(body?.tenant,80).toLowerCase();
+      const email=clip(body?.email,254).toLowerCase();
+      if(!/^[a-z0-9][a-z0-9_-]{1,59}$/.test(site)||
+         !/^[a-z0-9][a-z0-9_-]{1,79}$/.test(tenant)||
+         !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))
+        return json(req,{ok:false,error:"invalid_site_tenant_or_email"},400);
+      const {data,error}=await admin.rpc("ekodi_bootstrap_vacant_site_admin",{
+        p_actor_user_id:auth.user.id,p_tenant_slug:tenant,
+        p_site_key:site,p_target_email:email
+      });
+      if(error)throw error;
+      if(data?.ok!==true)return json(req,data??{ok:false,error:"bootstrap_denied"},
+        data?.code==="SITE_ALREADY_HAS_ADMIN"?409:403);
+      // If this Google identity already exists, update the derived workspace
+      // context without altering any other tenant.
+      const {data:targetUsers,error:targetError}=await admin.from("login_identities")
+        .select("auth_user_id").eq("email",email).eq("provider","google").eq("status","active").limit(1);
+      if(targetError)throw targetError;
+      let activationReady=!targetUsers?.[0]?.auth_user_id;
+      if(targetUsers?.[0]?.auth_user_id){
+        try{
+          const {error:syncError}=await admin.rpc("apply_preregistered_access",{p_user_id:targetUsers[0].auth_user_id});
+          if(syncError)throw syncError;
+          await syncPersonAccess(targetUsers[0].auth_user_id);
+          activationReady=true;
+        }catch(error){
+          console.error("site admin bootstrap: grant recorded but identity activation pending",error);
+        }
+      }
+      return json(req,{...data,authentication:"google_required",audit:"recorded",
+        activation:activationReady?"ready_or_awaiting_google":"pending_sync"},201);
     }
 
     if(req.method==="GET"&&path==="/workspaces"){

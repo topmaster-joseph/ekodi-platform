@@ -22,10 +22,11 @@ test('EKODI Control is an independent conversation-first command surface',async(
   assert.match(css,/@media\(max-width:760px\)/);
   assert.match(js,/TOKEN_KEY='ekodi-auth-token'/);
   assert.match(js,/HISTORY_KEY='ekodi-admin-command-history-v1'/);
-  assert.match(js,/\/api\/control\/ai\/v8\/pulse/);
+  assert.match(js,/actionType:'ui.change_request'/);
+  assert.match(js,/preflightVerified:false/);
   assert.match(js,/\/api\/control\/ai\/assist/);
   assert.match(js,/source:'control-surface'/);
-  assert.match(js,/providerHint:target/);
+  assert.match(js,/executionTarget:target/);
   assert.match(worker,/url\.pathname === '\/control'/);
   assert.match(worker,/CONTROL_ASSETS/);
   assert.match(router,/\['\/control','\/control\/','\/control\.css','\/control\.js'\]\.includes\(url\.pathname\)/);
