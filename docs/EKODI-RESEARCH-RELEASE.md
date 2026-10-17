@@ -39,3 +39,10 @@ Mandatory CAPABILITY-BEFORE-SERVICE-001 requires verified Foundry samples and EK
 - `RESEARCH_STORAGE_ENABLED=true` is required in addition to an isolated `RESEARCH_DB` and approved Supabase public client configuration. Merely binding a database or reusing Education credentials does **not** silently activate private storage.
 - `RESEARCH_CONSULTATION_ENABLED=true` is an additional independent gate before any consultation intake; published terms, contact and fulfillment readiness must be separately reviewed. The front-end will not display the form until this gate and verified login both exist.
 - No other feature flag automatically enables manuscript uploads, third-party AI, expert matching or financial transactions.
+
+## Owner-authored GitHub CI regeneration (2026-10-17)
+- Human-approved executable source: PR #5091 at `8242c82185650b6abe483f1e043c2f525734f4e2`, with owner-authored exact-SHA approval comment [#6227697586](https://github.com/topmaster-joseph/ekodi-platform/pull/5091#issuecomment-6227697586), followed by the Human Gate label.
+- EKODI-issued recovery task: `orch_recovery_8242c82185650b6abe483f1e043c2f52`.
+- Official recovery branch: `ai/chatgpt/orch_recovery_8242c82185650b6abe483f1e043c2f52`; integration PR #5121.
+- Initial recovery PR checks returned `action_required` with zero executable jobs because the event was created by the GitHub Actions bot. This **documentation-only** owner-authored commit requests normal PR checks on the recovery branch.
+- No changes to executable application behavior, authentication, database schema, approvals, guardrails, payment or AI controls. Required CI, isolated staging, protected merge, guarded deployment, rollback, and real PC/mobile production evidence remain mandatory. No deployment or completion is asserted here.
