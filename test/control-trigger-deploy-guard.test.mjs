@@ -36,3 +36,19 @@ test('Control production auto-runs after orchestrated main merges that touch its
   assert.match(pushBlock, /'seonammedi-admin-control\.js'/);
   assert.match(pushBlock, /'test\/control-trigger-deploy-guard\.test\.mjs'/);
 });
+
+test('AI orchestrator runtime changes dispatch the receipt-bound Control API on protected main merge', async () => {
+  const converger = await readFile(new URL('../scripts/converge-orchestrated-pr-merge.mjs', import.meta.url), 'utf8');
+  const start = converger.indexOf('const controlApiTouched=changedFiles.some(');
+  const end = converger.indexOf('const marketingGrowthTouched=', start);
+  assert.ok(start >= 0 && end > start, 'guarded Control API selector is required');
+  const selector = converger.slice(start, end);
+  assert.ok(selector.includes("'ai-orchestrator-runtime.js'"), 'AI runtime must auto-dispatch Control API');
+  assert.ok(selector.includes("'scripts/converge-orchestrated-pr-merge.mjs'"), 'guarded dispatch selector must stay self-triggered');
+  const pushStart = workflow.indexOf('  push:');
+  const pushEnd = workflow.indexOf(String.fromCharCode(10) + 'permissions:', pushStart);
+  assert.ok(pushStart >= 0 && pushEnd > pushStart);
+  assert.ok(workflow.slice(pushStart, pushEnd).includes("'ai-orchestrator-runtime.js'"), 'fallback push must monitor AI runtime');
+  assert.ok(workflow.includes('release_branch_ref:'));
+  assert.ok(workflow.includes('release_task_id:'));
+});
