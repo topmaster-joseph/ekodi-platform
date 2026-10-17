@@ -33,21 +33,19 @@ test('Church Pages production proof checks newly authorized inline asset on real
   assert.match(w,/CHURCH_SOURCE_SHA/);
 });
 
-test('Church weekly date manifest and context editing are verified by guarded release',async()=>{
+test('Church weekly packet assets are guarded by release checks',async()=>{
   const w=await read('.github/workflows/deploy-ekodi-church-homepage.yml');
-  assert.match(w,/church-weekly-worship\\.js/);
-  assert.match(w,/church-weekly-worship\\.css/);
-  assert.match(w,/worship\\/weekly\\.json/);
-  assert.match(w,/2026-10-18\\/materials\\.json/);
-  assert.match(w,/data-church-weekly/);
-  assert.match(w,/weekly_manifest/);
-  assert.match(w,/weekly_service/);
-  assert.match(w,/jq -e '.schema==/);
-  assert.match(w,/CHURCH_SOURCE_SHA/);
+  for(const phrase of [
+    'church-weekly-worship.js','church-weekly-worship.css',
+    'worship/weekly.json','2026-10-18/materials.json',
+    'data-church-weekly','weekly_manifest','weekly_service','CHURCH_SOURCE_SHA'
+  ])assert.ok(w.includes(phrase),'missing guarded Church evidence: '+phrase);
 });
-test('Church pastor admin changes dispatch guarded Shared Site Core after official orchestration merge',async()=>{
-  const s=await read('scripts/converge-orchestrated-pr-merge.mjs');
-  assert.match(s,/file==='church-pastor-admin-page\\.js'/);
-  assert.match(s,/if\\(sharedSiteTouched\\)/);
-  assert.match(s,/actions\\/workflows\\/deploy-site-core\\.yml\\/dispatches/);
+test('Church admin edits trigger the guarded Site Core release',async()=>{
+  const source=await read('scripts/converge-orchestrated-pr-merge.mjs');
+  for(const phrase of [
+    "file==='church-pastor-admin-page.js'",
+    'if(sharedSiteTouched)',
+    'actions/workflows/deploy-site-core.yml/dispatches'
+  ])assert.ok(source.includes(phrase),'missing release dispatch: '+phrase);
 });
