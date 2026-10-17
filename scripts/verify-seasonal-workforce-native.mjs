@@ -1,9 +1,13 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {chromium} from 'playwright';
+import {seasonalPortalResponse} from '../seasonal-workforce/route.mjs';
+import {seasonalOperationsResponse} from '../seasonal-workforce/operations-api.mjs';
 
 // First-party EKODI Chromium: read-only verification, no accounts, applicant data or writes.
 const ORIGIN='https://ekodi.kr',BASE='/ekodibiz/seasonal-workers';
+const MODE=process.argv.includes('--mode=source')?'source':process.argv.includes('--mode=live')?'live':null;
+if(!MODE)throw new Error('Explicit --mode=source (branch preview) or --mode=live (after release) is required');
 const OUT=path.resolve('artifacts/seasonal-workforce-native');
 const PROFILES=[{name:'desktop',width:1440,height:900,mobile:false},{name:'mobile',width:390,height:844,mobile:true}];
 const PAGES=[['/','농가의 일손과 근로자의 권리'],['/demand','농가 수요조사'],
@@ -14,7 +18,9 @@ const PAGES=[['/','농가의 일손과 근로자의 권리'],['/demand','농가 
 const must=(value,reason)=>{if(!value)throw Error(reason)};
 await fs.mkdir(OUT,{recursive:true});
 const evidence={policy:'EKODI-SEASONAL-NATIVE-PUBLIC-001',origin:ORIGIN,
- browser:'EKODI-owned Playwright Chromium',readOnly:true,realGoogleAuthentication:false,
+ browser:'EKODI-owned Playwright Chromium',mode:MODE,
+ productionSiteVerified:MODE==='live',sourceCodePreview:MODE==='source',
+ readOnly:true,realGoogleAuthentication:false,
  municipalDataMutation:false,legalGovernmentAuthorityVerified:false,
  at:new Date().toISOString(),profiles:[],success:false};
 let browser;
@@ -32,6 +38,17 @@ try{
    if(url.origin!==ORIGIN){row.blockedExternal.push(url.origin);return route.abort('blockedbyclient')}
    if(!['GET','HEAD','OPTIONS'].includes(method)){
     row.blockedWrites.push({method,path:url.pathname});return route.abort('blockedbyclient')
+   }
+   if(MODE==='source'){
+    if(!(url.pathname===BASE||url.pathname.startsWith(BASE+'/')))return route.abort('blockedbyclient');
+    const input=new Request(req.url(),{method});
+    const response=url.pathname.startsWith(BASE+'/api/')
+      ?await seasonalOperationsResponse(input,{})
+      :seasonalPortalResponse(input);
+    if(!response)return route.abort('blockedbyclient');
+    return route.fulfill({status:response.status,
+      headers:Object.fromEntries(response.headers.entries()),
+      body:await response.text()});
    }
    return route.continue();
   });
@@ -131,7 +148,8 @@ finally{
  await browser?.close().catch(()=>{});
  evidence.success=evidence.profiles.length===PROFILES.length&&evidence.profiles.every(x=>x.ok);
  await fs.writeFile(path.join(OUT,'evidence.json'),JSON.stringify(evidence,null,2)+'\n');
- console.log(JSON.stringify({policy:evidence.policy,success:evidence.success,
+ console.log(JSON.stringify({policy:evidence.policy,mode:MODE,
+  productionSiteVerified:evidence.productionSiteVerified,success:evidence.success,
   profiles:evidence.profiles.map(x=>({name:x.profile,steps:x.steps.length,ok:x.ok,
    error:x.error||null,blockedWrites:x.blockedWrites,pageErrors:x.pageErrors})),
   launchError:evidence.launchError||null}));
