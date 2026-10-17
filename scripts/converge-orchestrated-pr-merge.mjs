@@ -196,6 +196,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='ai-provider-control.js'||
   file==='mall-social-setup.js'||
   file.startsWith('sites/')||
+  // The Seasonal Workforce proposal portal is compiled into the same guarded Site Core.
+  file.startsWith('seasonal-workforce/')||
   file.startsWith('auth-site/')||
   file==='deploy/manifests/shared-site.worker.json'||
   file==='seonammedi-admin-control.js'||
