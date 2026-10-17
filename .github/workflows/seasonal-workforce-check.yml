@@ -6,6 +6,8 @@ on:
       - 'seasonal-workforce/**'
       - 'schemas/ekodibiz/seasonal-workforce-inactive.sql'
       - 'platform-router-entry-worker.js'
+      - 'deploy/manifests/shared-site.worker.json'
+      - '.github/workflows/deploy-site-core.yml'
       - 'test/seasonal-workforce-route.test.mjs'
       - 'test/seasonal-workforce-operations.test.mjs'
       - 'test/seasonal-workforce-office.test.mjs'
