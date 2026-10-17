@@ -159,7 +159,6 @@ Deno.serve(async req=>{
   if(req.method==='OPTIONS')return new Response(null,{status:204,headers:cors(origin)});
   if(!['GET','POST','PATCH'].includes(req.method))return json({error:'METHOD_NOT_ALLOWED'},405,origin);
   const identity=await centralIdentity(req);if(!identity)return json({error:'AUTH_REQUIRED'},401,origin);
-  let staff=null;try{staff=await staffFor(identity.id,identity.email);}catch(error){return json({error:String(error?.message||error)},503,origin);}
   const url=new URL(req.url);
   if(url.searchParams.get('scope')==='worship-access'){
     if(req.method!=='GET')return json({error:'METHOD_NOT_ALLOWED'},405,origin);
@@ -174,6 +173,7 @@ Deno.serve(async req=>{
     if(!permitted)return json({error:'ROLE_NOT_ALLOWED'},403,origin);
     return json({ok:true,permissions:{worship:true},churchSlug:CHURCH_SLUG},200,origin);
   }
+  let staff=null;try{staff=await staffFor(identity.id,identity.email);}catch(error){return json({error:String(error?.message||error)},503,origin);}
   if(!staff)return json({error:'CHURCH_STAFF_REQUIRED'},403,origin);
   if(url.searchParams.get('scope')==='staff-access'){
     if(req.method!=='GET')return json({error:'METHOD_NOT_ALLOWED'},405,origin);
