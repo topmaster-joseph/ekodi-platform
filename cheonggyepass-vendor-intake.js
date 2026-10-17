@@ -93,12 +93,32 @@ export function validateVendorSubmission(body){
   if(!capabilities.includes('health'))return {ok:false,code:'API_HEALTH_REQUIRED'};
   return {ok:true,value:{delivery,vendorName,sourceUrl:'',sourceRef:'',apiBaseUrl,documentationUrl,capabilities}};
 }
+async function readLimitedBody(request,maxBytes){
+  const reader=request.body?.getReader();
+  if(!reader)return new ArrayBuffer(0);
+  const chunks=[];let size=0;
+  try{
+    for(;;){
+      const {done,value}=await reader.read();
+      if(done)break;
+      size+=value.byteLength;
+      if(size>maxBytes){
+        await reader.cancel().catch(()=>{});
+        return null;
+      }
+      chunks.push(value);
+    }
+  }finally{reader.releaseLock()}
+  const output=new Uint8Array(size);let offset=0;
+  for(const chunk of chunks){output.set(chunk,offset);offset+=chunk.byteLength}
+  return output.buffer;
+}
 async function bodyJson(request){
   const length=Number(request.headers.get('content-length')||0);
   if(length>MAX_JSON_BYTES)return null;
-  const raw=await request.text();
-  if(new TextEncoder().encode(raw).byteLength>MAX_JSON_BYTES)return null;
-  try{return JSON.parse(raw)}catch{return null}
+  const buffer=await readLimitedBody(request,MAX_JSON_BYTES);
+  if(!buffer)return null;
+  try{return JSON.parse(new TextDecoder().decode(buffer))}catch{return null}
 }
 function rowPublic(row,{reviewer=false}={}){
   return {
@@ -168,8 +188,8 @@ async function upload(request,env,access,id){
   const type=String(request.headers.get('content-type')||'').split(';')[0].toLowerCase();
   if(!['application/zip','application/octet-stream'].includes(type))
     return error('INTAKE_ZIP_TYPE_REQUIRED','ZIP 파일만 업로드할 수 있습니다.',415);
-  const data=await request.arrayBuffer();
-  if(data.byteLength<22||data.byteLength>MAX_ZIP_BYTES)return error('INTAKE_ZIP_SIZE_INVALID','ZIP 파일 크기가 올바르지 않습니다.',413);
+  const data=await readLimitedBody(request,MAX_ZIP_BYTES);
+  if(!data||data.byteLength<22)return error('INTAKE_ZIP_SIZE_INVALID','ZIP 파일 크기가 올바르지 않습니다.',413);
   const bytes=new Uint8Array(data);
   if(bytes[0]!==0x50||bytes[1]!==0x4b||bytes[2]!==0x03||bytes[3]!==0x04)
     return error('INTAKE_ZIP_MAGIC_INVALID','정상적인 ZIP 헤더가 없습니다.',415);
