@@ -1,4 +1,5 @@
 import authWorker from './auth-worker.js';
+import { assessBackgroundBrowserReceipt } from './background-browser-proof.js';
 import { projectTapoDeviceForCloud, assertSafeTapoCloudProjection } from './tapo-provider-adapter.js';
 
 const ADMIN_PREFIX = '/api/control/devices';
@@ -1613,12 +1614,22 @@ async function commandResult(request, env, device, commandId) {
   if (!command) return json({ error: '처리 중인 명령을 찾을 수 없습니다.' }, 404, request, env);
 
   const body = await readJson(request) || {};
-  const success = body.success === true;
-  const status = success ? 'succeeded' : 'failed';
+  let success = body.success === true;
   const completedAt = new Date().toISOString();
   const result = body.result && typeof body.result === 'object'
     ? parseJson(safeJsonObject(body.result, 24000), {})
     : { message: safeText(body.message, 300) };
+  const browserProof = command.command_type === 'computer.browser.execute' &&
+    (success || result.browserWorker?.authRequired === true)
+    ? assessBackgroundBrowserReceipt({ result, requestId:commandId, deviceId:device.id })
+    : null;
+  const browserProofInvalid = browserProof?.outcome === 'invalid';
+  const browserAuthRequired = browserProof?.outcome === 'auth_required';
+  if (browserProofInvalid || browserAuthRequired) {
+    success = false;
+    result.message = browserAuthRequired ? 'AUTH_REQUIRED' : 'BACKGROUND_BROWSER_PROOF_INVALID';
+  }
+  const status = success ? 'succeeded' : 'failed';
   const update = await env.DB.prepare(`UPDATE device_commands
     SET status = ?, completed_at = ?, result_json = ?
     WHERE id = ? AND device_id = ? AND status = 'claimed'`)
@@ -1649,7 +1660,7 @@ async function commandResult(request, env, device, commandId) {
     if (success) {
       await env.DB.prepare(`UPDATE device_jobs SET status = 'succeeded', completed_at = ?, last_error = '' WHERE id = ?`)
         .bind(completedAt, job.id).run();
-    } else if (Number(job.attempts || 0) < 3) {
+    } else if (!browserProofInvalid && !browserAuthRequired && Number(job.attempts || 0) < 3) {
       await env.DB.prepare(`UPDATE device_jobs SET status = 'queued', assigned_device_id = NULL,
         assigned_command_id = NULL, assigned_at = NULL, last_error = ? WHERE id = ?`)
         .bind(safeText(result.message || '기기 작업 실패로 재배정', 300), job.id).run();
@@ -1658,7 +1669,10 @@ async function commandResult(request, env, device, commandId) {
         .bind(completedAt, safeText(result.message || '기기 작업 실패', 300), job.id).run();
     }
   }
-  return json({ ok: true, commandId, status, completedAt }, 200, request, env);
+  return json({ ok: true, commandId, status, completedAt,
+    ...(browserAuthRequired ? {code:'AUTH_REQUIRED',retrying:false} : {}),
+    ...(browserProofInvalid ? {code:'BACKGROUND_BROWSER_PROOF_INVALID',retrying:false} : {}),
+  }, 200, request, env);
 }
 
 async function handleAgent(request, env) {
