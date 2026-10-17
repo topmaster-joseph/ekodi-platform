@@ -62,7 +62,7 @@ test('vacant-site write is atomic, tenant scoped, auditable and blocks existing 
 test('church local API authenticates Google and resolves additional admin without global bypass',async()=>{
   const edge=await read('supabase/functions/church-pastor-api/index.ts');
   const page=await read('church-pastor-admin-page.js');
-  assert.match(edge,/function staffFor\(userId,email\)/);
+  assert.match(edge,/function staffFor\(userId,email,/);
   assert.match(edge,/provenGoogleIdentity\(userId,normalizedEmail\)/);
   assert.match(edge,/PERMANENT_SUPER_ADMINS/);
   assert.match(edge,/church_google_additional_admin/);
