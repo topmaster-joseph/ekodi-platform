@@ -89,13 +89,15 @@ async function staffFor(userId,email){
   const r=await rpc('church_pastor_staff_for_user',{p_church_slug:CHURCH_SLUG,p_user_id:userId});
   if(!r.ok)throw new Error(`CHURCH_STAFF_LOOKUP_FAILED:${r.status}`);
   const stored=await r.json().catch(()=>null);
-  if(stored)return stored;
-  // Access is never inferred from an arbitrary Google email. It requires
-  // an active, server-verified Google identity and an explicit privileged grant.
+  // An existing local role cannot accidentally demote either owner-designated
+  // platform super administrator. Google subject proof is still required.
   const normalizedEmail=String(email||'').toLowerCase();
-  if(!await provenGoogleIdentity(userId,normalizedEmail))return null;
-  if(PERMANENT_SUPER_ADMINS.has(normalizedEmail))
+  if(PERMANENT_SUPER_ADMINS.has(normalizedEmail)&&await provenGoogleIdentity(userId,normalizedEmail))
     return{user_id:userId,email:normalizedEmail,display_name:'EKODI 최고관리자',role:'senior_pastor',active:true,source:'platform_super_admin'};
+  if(stored&&normalizedEmail!=='ekodichurch@gmail.com')return stored;
+  // The additional church manager also requires an active first-party Google
+  // identity and an explicit church-scoped registration.
+  if(!await provenGoogleIdentity(userId,normalizedEmail))return stored||null;
   const {url,key}=centralConfig();
   const lookup=new URL(url+'/rest/v1/site_access_registry');
   lookup.search=new URLSearchParams({
@@ -108,7 +110,7 @@ async function staffFor(userId,email){
   const accepted=new Set(['church_google_additional_admin','super_admin_vacant_site_bootstrap']);
   return Array.isArray(grants)&&grants.some(row=>accepted.has(row.source))
     ?{user_id:userId,email:normalizedEmail,display_name:'에코디교회 관리자',role:'pastor',active:true,source:'verified_registry_admin'}
-    :null;
+    :stored||null;
 }
 function allowed(role,list){return Array.isArray(list)&&list.includes(role);}
 function eqValue(value){const v=String(value||'').trim();return v.startsWith('eq.')?v.slice(3):v;}
