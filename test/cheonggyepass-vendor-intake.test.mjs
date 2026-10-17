@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
+import { DatabaseSync } from 'node:sqlite';
 import {
   safePublicHttps,intakePermission,validateVendorSubmission,handleCheonggyePassVendorIntake,
 } from '../cheonggyepass-vendor-intake.js';
@@ -130,4 +131,29 @@ test('Control API, router and storage remain isolated from public and financial 
   assert.match(runtime,/financialExecutionEnabled:false/);
   assert.doesNotMatch(runtime,/fetch\(.*apiBaseUrl/);
   assert.doesNotMatch(runtime,/tenant\.production\.deploy/);
+});
+
+
+test('vendor schema applies to clean SQLite and enforces scope, unique intake and restricted statuses',async()=>{
+  const sql=await read('migrations/0151_cheonggyepass_vendor_intake.sql');
+  const db=new DatabaseSync(':memory:');
+  try{
+    db.exec('PRAGMA foreign_keys=ON;');
+    db.exec(sql);
+    const t='2026-10-17T00:00:00.000Z';
+    const insert=db.prepare(
+      'INSERT INTO cheonggyepass_vendor_submissions (id,submission_key,delivery,vendor_name,actor_email,source_url,capabilities_json,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)'
+    );
+    insert.run('s1','idem_000000000001','github_pr','업체 가','a@example.co.kr',
+      'https://github.com/example/vendor/pull/1','[]','submitted',t,t);
+    assert.equal(db.prepare('SELECT count(*) AS total FROM cheonggyepass_vendor_submissions').get().total,1);
+    assert.throws(()=>insert.run('s2','idem_000000000001','zip','업체 가','a@example.co.kr','','[]','submitted',t,t),/UNIQUE/i);
+    assert.doesNotThrow(()=>insert.run('s3','idem_000000000001','zip','업체 나','b@example.co.kr','','[]','quarantined',t,t));
+    assert.throws(()=>insert.run('s4','idem_000000000002','zip','업체 나','a@example.co.kr','','[]','deployed',t,t),/CHECK/i);
+    db.prepare('INSERT INTO cheonggyepass_vendor_events (id,submission_id,actor_email,event_type,created_at) VALUES (?,?,?,?,?)')
+      .run('e1','s1','a@example.co.kr','submitted',t);
+    assert.equal(db.prepare('SELECT count(*) AS total FROM cheonggyepass_vendor_events').get().total,1);
+    assert.throws(()=>db.prepare('INSERT INTO cheonggyepass_vendor_events (id,submission_id,actor_email,event_type,created_at) VALUES (?,?,?,?,?)')
+      .run('e2','not-found','a@example.co.kr','submitted',t),/FOREIGN KEY/i);
+  }finally{db.close()}
 });
