@@ -4,17 +4,21 @@ import {readFile} from 'node:fs/promises';
 
 const read=(path)=>readFile(new URL('../'+path,import.meta.url),'utf8');
 
-test('standalone board release fails if login-first public UI markers disappear',async()=>{
-  const release=await read('.github/workflows/deploy-independent-board.yml');
-  const worker=await read('services/independent-board/worker.js');
-  assert.match(release,/Verify production board UI/);
-  assert.match(release,/verified Google account badge/);
-  assert.match(release,/account verification before composer/);
-  assert.match(release,/account verification before post submit/);
-  assert.match(release,/Google handoff preserving compose intent/);
-  assert.match(worker,/function voiceWriteAuthScript\(\)/);
-  assert.match(worker,/async function verifyVoiceAccount\(allowRefresh=true\)/);
-  assert.match(worker,/async function requireVoiceAccount\(\)/);
+test('new board release rejects legacy UI and enforces fresh Google session before compose/submit',async()=>{
+ const release=await read('.github/workflows/deploy-independent-board.yml');
+ const worker=await read('services/independent-board/worker.js');
+ const page=await read('services/independent-board/voices-fresh/page.mjs');
+ assert.match(release,/Verify production board UI/);
+ assert.match(release,/clean voices write control/);
+ assert.match(release,/server-verification before writing/);
+ assert.match(release,/legacy citizen composer was unexpectedly served/);
+ assert.match(release,/api\/posts/);
+ assert.match(release,/legacyQueue/);
+ assert.match(page,/session\(\)/);
+ assert.match(page,/accessToken\(\)/);
+ assert.match(page,/Google 로그인 상태가 확인되지 않았습니다/);
+ assert.match(worker,/renderFreshVoicePage\(req,shell\)/);
+ assert.match(worker,/admin:requireVoiceAdmin/);
 });
 
 test('release validates signed-out API across both public and internal site mounts',async()=>{

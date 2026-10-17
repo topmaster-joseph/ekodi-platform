@@ -1,82 +1,64 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Script } from 'node:vm';
-import { readFileSync } from 'node:fs';
+import {Script} from 'node:vm';
+import {readFile} from 'node:fs/promises';
 import board from '../services/independent-board/worker.js';
 
-const worker=readFileSync(new URL('../services/independent-board/worker.js',import.meta.url),'utf8');
-const urls=['https://seonammedi.kr/board/voices','https://ekodi.kr/seonammedi/board/voices'];
-
-test('both public board mounts share the writer login and show protected inline Admin controls automatically',async()=>{
-  for(const url of urls){
-    const r=await board.fetch(new Request(url),{});
-    assert.equal(r.status,200);
-    const html=await r.text();
-    const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
-    assert.equal(scripts.length,1);
-    assert.doesNotThrow(()=>new Script(scripts[0][1]));
-    assert.doesNotMatch(html,/id="voiceAdminLogin"/);
-    assert.doesNotMatch(html,/id="voiceManageToggle"/);
-    assert.doesNotMatch(html,/requireVoiceAccount\("manage"\)/);
-    assert.match(html,/function voiceLogin\(\)/);
-    assert.doesNotMatch(html,/target\.searchParams\.set\("manage","1"\)/);
-    assert.match(html,/auth\.searchParams\.set\("return_to",target.href\)/);
-    assert.match(html,/adminItems=data\.items\|\|\[\];admin=true;render\(adminItems,true\)/);
-    assert.match(html,/catch\{admin=false\}/);
-    assert.match(html,/data-edit=/);
-    assert.match(html,/data-delete=/);
-  }
+test('fresh opinion page uses Google authentication and protected admin controls on both hosts',async()=>{
+ for(const url of ['https://seonammedi.kr/board/voices','https://ekodi.kr/seonammedi/board/voices']){
+  const r=await board.fetch(new Request(url),{});assert.equal(r.status,200);
+  const html=await r.text();
+  const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+  assert.equal(scripts.length,1);assert.doesNotThrow(()=>new Script(scripts[0][1]));
+  assert.match(html,/id="freshWrite"/);
+  assert.match(html,/id="freshForm"/);
+  assert.match(html,/url\.searchParams\.set\('site','seonammedi'\)/);
+  assert.match(html,/url\.searchParams\.set\('return_to',dest\.href\)/);
+  assert.match(html,/const t=await session\(\);if\(!t\)/);
+  assert.match(html,/adminAllowed/);
+  assert.match(html,/headers:\{authorization:'Bearer '\+token\}/);
+  assert.doesNotMatch(html,/id="voiceAdminLogin"|id="writeToggle"|id="voiceManageToggle"/);
+ }
 });
-
-test('form-post handoff stores session with isolated fallback and never echoes token hash',async()=>{
-  const oldFetch=globalThis.fetch;
-  globalThis.fetch=async()=>Response.json({access_token:'example-access',refresh_token:'example-refresh',expires_in:3600,user:{id:'verified'}});
-  try{
-    const r=await board.fetch(new Request('https://seonammedi.kr/board/voices?compose=1',{method:'POST',
-      headers:{'content-type':'application/x-www-form-urlencoded'},
-      body:'ekodi_auth_return=1&ekodi_token=one-use-test-code&ekodi_type=email'
-    }),{});
-    assert.equal(r.status,200);
-    const html=await r.text();
-    assert.ok(html.includes('sessionStorage.setItem('));
-    assert.ok(html.includes('if(saved)location.replace(target)'));
-    assert.ok(html.includes('브라우저에서 로그인 정보를 저장하지 못했습니다'));
-    assert.ok(!html.includes('one-use-test-code'));
-    assert.ok(!html.includes('sessionStorage.removeItem("ekodi-auth-token")'),'board handoff must not expire the unrelated central Admin session');
-    assert.ok(html.includes('board/voices?compose=1'));
-  }finally{globalThis.fetch=oldFetch;}
+test('form-post handoff stores the Google session without leaking the one-use proof',async()=>{
+ const oldFetch=globalThis.fetch;
+ globalThis.fetch=async()=>Response.json({access_token:'synthetic-access',refresh_token:'synthetic-refresh',expires_in:3600,user:{id:'test'}});
+ try{
+  const r=await board.fetch(new Request('https://seonammedi.kr/board/voices?compose=1',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:'ekodi_auth_return=1&ekodi_token=one-use-synthetic&ekodi_type=email'}),{});
+  assert.equal(r.status,200);
+  const html=await r.text();
+  assert.match(html,/sessionStorage\.setItem\(/);
+  assert.match(html,/if\(saved\)location\.replace\(target\)/);
+  assert.doesNotMatch(html,/one-use-synthetic/);
+  assert.match(html,/board\/voices\?compose=1/);
+ }finally{globalThis.fetch=oldFetch}
 });
-
-test('canonical Site Core is authoritative for board admin permissions, not board domain',async()=>{
-  const previous=globalThis.fetch;
-  const queries=[];
-  globalThis.fetch=async(url,opts)=>{
-    const target=new URL(url);
-    queries.push({url:target.href,authorization:opts?.headers?.authorization});
-    return Response.json({ok:true,permissions:{voices:true},platform:false});
-  };
-  const env={BOARD_DB:{prepare(sql){return{all:async()=>({results:[]})}}}};
-  try{
-    const r=await board.fetch(new Request('https://seonammedi.kr/board/api/admin/posts',
-      {headers:{authorization:'Bearer example-verified-admin'}}),env);
-    assert.equal(r.status,200);
-    assert.deepEqual((await r.json()).items,[]);
-    assert.equal(queries.length,1);
-    assert.equal(queries[0].url,'https://ekodi.kr/api/seonammedi/admin/me');
-    assert.equal(queries[0].authorization,'Bearer example-verified-admin');
-  }finally{globalThis.fetch=previous;}
+test('only canonical EKODI Site Core grants fresh board admin permission',async()=>{
+ const oldFetch=globalThis.fetch,queries=[];
+ globalThis.fetch=async(url,options)=>{queries.push({url:String(url),auth:options?.headers?.authorization});return Response.json({ok:true,permissions:{voices:true},platform:false})};
+ const env={BOARD_DB:{prepare(){return{all:async()=>({results:[]})}}}};
+ try{
+  const r=await board.fetch(new Request('https://seonammedi.kr/board/api/voices-fresh/admin',{headers:{authorization:'Bearer verified-test-admin'}}),env);
+  assert.equal(r.status,200);
+  assert.deepEqual((await r.json()).items,[]);
+  assert.equal(queries.length,1);
+  assert.equal(queries[0].url,'https://ekodi.kr/api/seonammedi/admin/me');
+  assert.equal(queries[0].auth,'Bearer verified-test-admin');
+ }finally{globalThis.fetch=oldFetch}
 });
-
-test('guest has no Admin edit/delete access even when login button is visible',async()=>{
-  const r=await board.fetch(new Request('https://seonammedi.kr/board/api/admin/posts'),{});
-  assert.equal(r.status,403);
-  assert.match((await r.text()),/forbidden/);
+test('visitors never gain administrator rights on fresh board or retired old API',async()=>{
+ const env={BOARD_DB:{prepare(){throw Error('guest must not query admin table')}}};
+ const denied=await board.fetch(new Request('https://seonammedi.kr/board/api/voices-fresh/admin'),env);
+ assert.equal(denied.status,403);
+ const old=await board.fetch(new Request('https://seonammedi.kr/board/api/admin/posts'),env);
+ assert.equal(old.status,410);
 });
-
-test('session fallback does not convert a public Google login into elevated Admin rights',()=>{
-  assert.match(worker,/sessionStorage\.setItem\(VOICE_SESSION_KEY,restored\)/);
-  assert.match(worker,/sessionStorage\.getItem\(VOICE_SESSION_KEY\)/);
-  assert.match(worker,/sessionStorage\.setItem\("'\+SUPABASE_SESSION_KEY\+'"/);
-  assert.match(worker,/requireVoiceAdmin\(req\)/);
-  assert.match(worker,/\/board\/api\/admin\/posts/);
+test('fresh board separates ordinary Google proof from permissions',async()=>{
+ const src=await readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8');
+ const page=await readFile(new URL('../services/independent-board/voices-fresh/page.mjs',import.meta.url),'utf8');
+ assert.match(src,/admin:requireVoiceAdmin/);
+ assert.match(src,/google:signedInGoogle/);
+ assert.match(page,/\/api\/auth\/session/);
+ assert.match(page,/data\.authenticated===true|d\?\.authenticated===true/);
+ assert.match(page,/\/api\/voices-fresh/);
 });

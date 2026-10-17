@@ -99,22 +99,52 @@ test('admin root is a command-only workspace while Campus remains a child route'
 
   assert.match(e2eWorker,/menuId === 'command-home'/);
   assert.match(e2eWorker,/stage\('command-workbench'\)/);
-  assert.match(e2eWorker,/#ekodiAssistDock/);
-  assert.match(e2eWorker,/#ekodiAssistPanel/);
-  assert.match(e2eWorker,/admin-command-home/);
-  assert.match(e2eWorker,/pathname !== '\/admin\/'/);
+  assert.match(e2eWorker,/#ekodiControlHomeFrame/);
+  assert.match(e2eWorker,/#commandInput/);
+  assert.match(e2eWorker,/admin-control-home/);
+  assert.match(e2eWorker,/state\.pathname!=='\/admin\/'/);
   assert.match(e2eWorker,/function verifyCommandWorkbench\(started\)/);
-  assert.match(e2eWorker,/data-ekodi-main-conversation="true"/);
-  assert.match(e2eWorker,/currentSection !== 'command-home'/);
-  assert.match(e2eWorker,/EKODIAdminPanels\?\.current\?\.\(\) === 'command-home'/);
+  assert.match(e2eWorker,/frameRightOfSidebar/);
+  assert.match(e2eWorker,/state\.currentSection!=='command-home'/);
+  assert.match(e2eWorker,/EKODIAdminPanels\?\.current\?\.\(\)==='command-home'/);
   assert.doesNotMatch(e2eWorker,/admin-context-tab/);
   const commandBranch=e2eWorker.indexOf("if (menuId === 'command-home') {");
   const sidebarBranch=e2eWorker.indexOf("stage('sidebar-trigger')",commandBranch);
   assert.ok(commandBranch>=0&&sidebarBranch>commandBranch,'command-home must bypass visible-sidebar clicking and verify the full-screen command workbench directly');
 
   assert.match(productionE2e,/id === 'command-home'/);
-  assert.match(productionE2e,/#ekodiAssistDock/);
-  assert.match(productionE2e,/#ekodiAssistPanel/);
+  assert.match(productionE2e,/#ekodiControlHomeFrame/);
+  assert.match(productionE2e,/#commandInput/);
   assert.match(productionE2e,/kind:'command-workbench'/);
   assert.match(productionE2e,/command\.pathname !== '\/admin\/'/);
+});
+
+test('highest-level admin embeds the native Control workspace with same-origin-only framing',async()=>{
+  const [admin,adminCss,control,controlCss,worker]=await Promise.all([
+    read('admin-control-home.js'),
+    read('admin-control-home.css'),
+    read('control.js'),
+    read('control.css'),
+    read('site-worker.js')
+  ]);
+  assert.match(admin,/id='ekodiControlHome'/);
+  assert.match(admin,/frame\.src='\/control\?embedded=admin'/);
+  assert.match(admin,/ekodi-admin-section-changed/);
+  assert.match(admin,/isSuperAdmin\(\).*command-home/);
+  assert.match(admin,/session\.role==='super_admin'/);
+  assert.match(admin,/session\?\.authenticated===true/);
+  assert.match(admin,/await fetch\('\/api\/session'/);
+  assert.match(admin,/authorizedToken=token/);
+  assert.match(admin,/readToken\(\)!==token/);
+  assert.match(admin,/ekodi-session-validated/);
+  assert.match(admin,/authorizedToken=''/);
+  assert.match(adminCss,/body\.admin-control-home #ekodiControlHome/);
+  assert.match(adminCss,/\.ekodi-assist-bootstrap/);
+  assert.match(control,/parentLocation\.origin===location\.origin/);
+  assert.match(control,/parentLocation\.pathname/);
+  assert.match(controlCss,/data-ekodi-control-embedded="admin"/);
+  assert.match(worker,/sameOriginAdminEmbed = url\.searchParams\.get\('embedded'\) === 'admin'/);
+  assert.match(worker,/ADMIN_CSP\.replace\("frame-ancestors 'none'", "frame-ancestors 'self'"\)/);
+  assert.match(worker,/if \(sameOriginAdminEmbed\) secured\.headers\.set\('X-Frame-Options', 'SAMEORIGIN'\)/);
+  assert.match(worker,/withHostSecurity\(response, ADMIN_CSP, 'no-store', 'control-asset'\)/);
 });

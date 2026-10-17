@@ -107,6 +107,8 @@ const ADMIN_ASSETS = new Set([
   '/admin-surface-labels.js',
   '/admin-central-handoff.js',
   '/admin-authenticated-shell.js',
+  '/admin-control-home.js',
+  '/admin-control-home.css',
   '/admin-release-convergence.js',
   '/admin-public-site-controls.js',
   '/admin-language-status.js',
@@ -680,7 +682,14 @@ export default {
       }
       if (url.pathname === '/control' || url.pathname === '/control/') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/control'));
-        const secured = withHostSecurity(response, ADMIN_CSP, 'no-store', 'control-surface');
+        // Only the explicit first-party admin embed variant is frameable.
+        // Standalone Control and every other administrator route remain unframeable.
+        const sameOriginAdminEmbed = url.searchParams.get('embedded') === 'admin';
+        const controlCsp = sameOriginAdminEmbed
+          ? ADMIN_CSP.replace("frame-ancestors 'none'", "frame-ancestors 'self'")
+          : ADMIN_CSP;
+        const secured = withHostSecurity(response, controlCsp, 'no-store', 'control-surface');
+        if (sameOriginAdminEmbed) secured.headers.set('X-Frame-Options', 'SAMEORIGIN');
         secured.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
         return secured;
       }

@@ -25,8 +25,8 @@ test('deployed board smoke validates finance content on both mounts without reti
     'internal finance slash notices link'
   ])assert.ok(workflow.includes('verify_contains "'+label+'"'),label);
   assert.match(workflow,/Verify production Google login-first API without credentials/);
-  assert.match(workflow,/Production queue-create-list-reply canary and cleanup/);
-  assert.match(workflow,/Anonymous board write must return 401/);
+  assert.match(workflow,/Verify clean citizen authenticated write and legacy retirement/);
+  assert.match(workflow,/anonymous new board write not denied/);
 });
 
 test('live-rendered board headers share one six-menu hierarchy on both mounts and slash variants',async()=>{
@@ -51,7 +51,7 @@ test('live-rendered board headers share one six-menu hierarchy on both mounts an
     assert.equal((nav.match(/>회계<\/a>/g)||[]).length,0,'no top-level finance');
     assert.doesNotMatch(nav,/data-category-menu="공지"/);
     assert.match(nav,/href="[^"]*\/board\/notices">공지<\/a>/);
-    assert.ok(html.includes('id="writeToggle"')||route!=='voices');
+    assert.ok(html.includes('id="freshWrite"')||route!=='voices');
     assert.ok(html.includes('return_to')||route!=='voices','guest writes must retain Google login return');
   }
 });
