@@ -391,15 +391,6 @@ html[data-ekodi-control-embedded="admin"] .control-rail .admin-link{display:none
   html[data-ekodi-control-embedded="admin"]{--rail:86vw}
 }
 
-html[data-ekodi-control-embedded="admin"]{--rail:0px!important}
-html[data-ekodi-control-embedded="admin"] .control-rail{display:none!important}
-html[data-ekodi-control-embedded="admin"] .control-main{margin-left:0!important;width:100%!important}
-html[data-ekodi-control-embedded="admin"] .composer-wrap{left:0!important}
-html[data-ekodi-control-embedded="admin"] #railOpen{display:none!important}
-html[data-ekodi-control-embedded="admin"] .embedded-control-nav{display:flex!important;align-items:center;gap:4px;position:sticky;top:60px;z-index:12;width:100%;padding:5px 12px;overflow-x:auto;background:#fff;border-bottom:1px solid var(--line)}
-html[data-ekodi-control-embedded="admin"] .embedded-control-nav :is(.nav-item,.new-task){display:block;flex:0 0 auto;width:auto!important;margin:0!important;padding:7px 11px!important;white-space:nowrap;font-size:12px}
-@media(max-width:760px){html[data-ekodi-control-embedded="admin"] .embedded-control-nav{top:56px;padding:5px 8px}}
-
 /* Native Admin home uses the outer sidebar; Control's own navigation becomes one compact toolbar. */
 html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-control-embedded="admin"]{--rail:0px!important}
 html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-control-embedded="admin"] .control-rail{
