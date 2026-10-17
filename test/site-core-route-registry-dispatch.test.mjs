@@ -20,8 +20,8 @@ test('canonical route registry is an exact guarded Site Core release trigger',()
 });
 
 test('research is routed through the existing Education Worker without adding a new service',()=>{
- assert.match(routeRegistry,/prefix:'\\/research',binding:'EDUCATION',preservePrefix:true/);
- assert.match(routeRegistry,/prefix:'\\/edu',binding:'EDUCATION'/);
+ assert.ok(routeRegistry.includes("prefix:'/research',binding:'EDUCATION',preservePrefix:true"));
+ assert.ok(routeRegistry.includes("prefix:'/edu',binding:'EDUCATION'"));
  const manifest=read('ekodi-service-manifest.js');
- assert.doesNotMatch(manifest,/\\{id:'research',name:/);
+ assert.ok(!manifest.includes("{id:'research',name:"));
 });
