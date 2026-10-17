@@ -7,6 +7,7 @@ export async function mokdaehumunShareResponse(request,env,{resolveSession=princ
  if(!isMokdaehumunSharePath(new URL(request.url).pathname))return null;
  if(new URL(request.url).origin!=='https://ekodi.kr')return json({error:'invalid_origin'},403);
  if(!['GET','POST'].includes(request.method))return json({error:'method_not_allowed'},405);
+ if(request.method!=='GET' && (request.headers.get('origin')!=='https://ekodi.kr' || request.headers.get('sec-fetch-site')==='cross-site'))return json({error:'same_origin_required'},403);
  if(!env.DB)return json({error:'storage_unavailable'},503);
  const {principal}=await resolveSession(request,env,authWorker);
  if(principal?.kind!=='admin'||!principal.email)return json({error:'authentication_required'},401);
