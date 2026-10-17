@@ -2,7 +2,7 @@
 // All example pages are educational / read-only. No live farm, worker or MOU data.
 export const SITE_BASE='/ekodibiz/seasonal-workers';
 const navItems=[
- ['/', '사업 소개'],['/demand','수요조사'],['/office','기관 운영'],['/entry','입국·배정'],
+ ['/', '사업 소개'],['/demand','수요조사'],['/office','기관 운영'],['/mou','국제협력'],['/entry','입국·배정'],
  ['/housing','숙소·교육'],['/help','민원·상담'],['/reports','통계·보고']
 ];
 const extras=[
