@@ -31,6 +31,6 @@ test('new board cannot silently fall back to queue or old post APIs',async()=>{
  const res=await board.fetch(new Request(origin+'/voices'),{});
  const html=await res.text();
  assert.match(html,/api=root\+'\/api\/voices-fresh'/);
- assert.match(html,/saved\.published!==true/);
+ assert.match(html,/waitUntilPublished\(saved\)/);
  assert.doesNotMatch(html,/awaitVoicePublication|POST_QUEUE_KIND|board\/api\/posts/);
 });
