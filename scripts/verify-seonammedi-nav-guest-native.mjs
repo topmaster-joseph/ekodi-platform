@@ -77,8 +77,8 @@ try {
                 .slice(0,8).map(x=>({tag:x.el.tagName.toLowerCase(),id:String(x.el.id||'').slice(0,45),className:typeof x.el.className==='string'?x.el.className.slice(0,70):'',right:Math.round(x.box.right),width:Math.round(x.box.width)})),
               heroOriginalPresent:!!document.querySelector('.campaign-hero-image'),
               heroLoaded:(()=>{const img=document.querySelector('.campaign-hero-image');return !!img?.complete&&img.naturalWidth===1903&&img.naturalHeight===735})(),
-              writeButtonVisible:(()=>{const b=document.getElementById('writeToggle');return !!b&&b.getBoundingClientRect().width>0})(),
-              editorShownWithoutLogin:(()=>{const el=document.getElementById('writeForm');return !!el&&!el.hidden&&getComputedStyle(el).display!=='none'})(),
+              writeButtonVisible:(()=>{const b=document.getElementById('freshWrite');return !!b&&b.getBoundingClientRect().width>0})(),
+              editorShownWithoutLogin:(()=>{const el=document.getElementById('freshForm');return !!el&&!el.hidden&&getComputedStyle(el).display!=='none'})(),
               authButtonVisible:!!document.querySelector('#adminLogin'),
               minutesGuestGate:!!document.querySelector('#viewerForm'),
               minutesPrivateContentHidden:(()=>{const el=document.querySelector('#minutes');return !!el?.hidden})(),
@@ -164,7 +164,7 @@ try {
           // Read-only GET probes keep the audit credential-free and record only status codes.
           // Category/Notice navigation above can leave the page on the NOTICE board.
           // Restore the actual citizen-voice page before exercising its write login:
-          // both boards expose #writeToggle, but Notice uses admin purpose by design.
+          // Fresh V3 exposes #freshWrite, whereas Notice uses a separate administrative control.
           if(suffix==='/board/voices'){
             const expectedVoiceUrl=root.origin+root.prefix+'/board/voices';
             const current=new URL(page.url());
@@ -173,7 +173,7 @@ try {
               const restored=await page.goto(expectedVoiceUrl,{waitUntil:'domcontentloaded',timeout:25000});
               if(!restored?.ok())throw Error('guest_voice_context_restore_http_'+String(restored?.status()||0));
             }
-            if(!await page.locator('body.board-voices #writeToggle').isVisible().catch(()=>false)){
+            if(!await page.locator('body.board-voices #freshWrite').isVisible().catch(()=>false)){
               throw Error('guest_voice_context_not_restored');
             }
             record.voiceContextRestored=true;
@@ -201,12 +201,13 @@ try {
           if(suffix==='/board/voices'){
             // Verify actual public server authorization on both mounts without credentials.
             record.guestVoiceApiStatuses={};
-            for(const endpoint of ['/board/api/auth/session','/board/api/admin/posts']){
+            for(const endpoint of ['/board/api/auth/session','/board/api/voices-fresh/admin','/board/api/admin/posts']){
               let status=0;
               try{status=(await page.request.get(root.origin+root.prefix+endpoint,{timeout:12000,maxRedirects:0})).status()}catch{}
               record.guestVoiceApiStatuses[endpoint]=status;
               if(endpoint.endsWith('/auth/session')&&status!==401)violations.push('guest_voice_session_gate_'+status);
-              if(endpoint.endsWith('/admin/posts')&&status!==401&&status!==403)violations.push('guest_voice_admin_gate_'+status);
+              if(endpoint.endsWith('/voices-fresh/admin')&&status!==403)violations.push('guest_voice_admin_gate_'+status);
+              if(endpoint.endsWith('/admin/posts')&&status!==410)violations.push('retired_citizen_admin_api_not_gone_'+status);
             }
             if(!record.writeButtonVisible){
               violations.push('guest_write_entry_missing');
@@ -269,7 +270,7 @@ try {
               page.on('framenavigated',observe);
               page.on('request',observeAuthRequest);
               try {
-                await page.locator('body.board-voices #writeToggle').click({timeout:5000});
+                await page.locator('body.board-voices #freshWrite').click({timeout:5000});
                 await pause(2200);
                 record.loginNavigations=loginNavigations.slice(-6).map(url=>{
                   // Strip any auth query payloads from retained evidence.
@@ -299,7 +300,9 @@ try {
             await page.goto(target,{waitUntil:'domcontentloaded',timeout:25000});
             record.singleLoginControl=(await page.locator('#voiceAdminLogin').count())===0 &&
               (await page.locator('#voiceManageToggle').count())===0 &&
-              (await page.locator('#writeToggle').count())===1;
+              (await page.locator('#writeToggle').count())===0 &&
+              (await page.locator('#freshWrite').count())===1 &&
+              (await page.locator('#freshForm').count())===1;
             if(!record.singleLoginControl)violations.push('duplicate_voice_login_or_manage_control');
           }
           record.violations=violations;
