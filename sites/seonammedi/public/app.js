@@ -1475,3 +1475,69 @@ async function initPublicAdminControls(){
 window.addEventListener('ekodi:public-admin-runtime-ready',()=>{initPublicAdminControls().catch(()=>{})});
 
 // EKODI release marker: notice-list authorized edit/delete actions verified on merged main.
+
+
+/* Six-menu central category navigation. Kept outside index.html so the
+ * independent HTML/head corruption recovery can ship without conflicts. */
+(function initSixMenuCentralTabs(){
+  const groups={
+    '활동이력':[['전체','#committee-activity'],['회의·의결','#committee-activity/회의·의결'],['성명·입장 발표','#committee-activity/성명·입장 발표'],['기자회견','#committee-activity/기자회견'],['집회·캠페인','#committee-activity/집회·캠페인'],['면담·협의','#committee-activity/면담·협의'],['공문·요청','#committee-activity/공문·요청'],['행사·연대활동','#committee-activity/행사·연대활동']],
+    '관련소식':[['전체 소식','#timeline'],['신문','#timeline/신문'],['방송','#timeline/방송'],['잡지','#timeline/잡지'],['유튜브','#timeline/유튜브'],['블로그','#timeline/블로그'],['대학','#timeline/대학'],['정부·공공기관','#timeline/정부·공공기관']],
+    '소통채널':[['페이스북','#channels/facebook'],['인스타그램','#channels/instagram'],['유튜브','#channels/youtube']],
+    '시민의견':[['시민의견 보기','board/voices']],
+    '공지':[['공지사항','board/notices'],['회의록','minutes/'],['회계','board/finance']],
+    '조직':[['조직 구성','#organization'],['참여단체','#organization']]
+  };
+  const panel=el('central-category-panel'),title=el('central-category-title'),buttons=el('central-category-buttons');
+  const nav=document.querySelector('.ekodi-six-nav');
+  if(!panel||!title||!buttons||!nav)return;
+  buttons.setAttribute('role','navigation');
+  buttons.setAttribute('aria-label','선택한 메뉴의 세부 분류');
+  const triggers=[...nav.querySelectorAll(':scope > a')];
+  const navigate=(href)=>{
+    if(!href.startsWith('#'))return;
+    if(location.hash===href)syncViewFromLocation();
+    else location.hash=href;
+  };
+  document.addEventListener('click',event=>{
+    const target=event.target instanceof Element?event.target.closest('.ekodi-six-nav > a'):null;
+    if(!target||!nav.contains(target))return;
+    const label=target.textContent.trim(),items=groups[label];
+    if(!items)return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    title.textContent=label;
+    buttons.replaceChildren();
+    for(const [name,href] of items){
+      const link=document.createElement('a');
+      link.textContent=name;
+      link.href=href.startsWith('#')?encodeURI(href):href;
+      buttons.append(link);
+    }
+    panel.hidden=false;
+    triggers.forEach(link=>{
+      link.dataset.categoryMenu=link.textContent.trim();
+      link.setAttribute('aria-controls','central-category-panel');
+      link.setAttribute('aria-expanded',String(link===target));
+    });
+    const social=el('central-social-links');
+    if(social)social.hidden=true;
+    if(items[0][1].startsWith('#'))navigate(encodeURI(items[0][1]));
+    panel.scrollIntoView({block:'start',behavior:'smooth'});
+  },true);
+  // Existing panel handler manages embedded public social links and navigation.
+  // Keep it intact; synchronize the activity filter when a category is selected.
+  buttons.addEventListener('click',event=>{
+    const link=event.target instanceof Element?event.target.closest('a'):null;
+    if(!link)return;
+    if(title.textContent==='활동이력'){
+      const kind=decodeURI(link.getAttribute('href')||'').split('/').slice(1).join('/');
+      selectedCommitteeFilter=COMMITTEE_FILTERS.includes(kind)?kind:'전체';
+      renderCommitteeActivity();
+    }
+    if(title.textContent==='조직'&&link.textContent==='참여단체'){
+      requestAnimationFrame(()=>el('participantOrganizations')?.scrollIntoView({block:'start',behavior:'smooth'}));
+    }
+  });
+})();
