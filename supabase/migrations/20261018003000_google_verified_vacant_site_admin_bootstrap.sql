@@ -147,5 +147,5 @@ SELECT a.email,'church',t.id,'tenant_admin'::public.app_role,'active',
   'standard',now(),now()
 FROM (VALUES ('topmaster.joseph@gmail.com'),('joseph@ekodi.kr')) AS a(email)
 JOIN public.tenants t ON t.slug='ekodi-church' AND t.status='active'
-ON CONFLICT(email,site_key,tenant_id,role) DO UPDATE
-SET status='active',source=excluded.source,note=excluded.note,updated_at=now();
+-- Keep already-active historic owner grants and their original audit provenance.
+ON CONFLICT(email,site_key,tenant_id,role) DO NOTHING;
