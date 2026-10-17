@@ -74,7 +74,7 @@ function discoveryMain(){
       if(group.status!=='fulfilled'){failed++;continue}
       for(const item of group.value){
         const url=safeUrl(item.targetUrl);
-        const key=url?'url:'+normalize(url.replace(/#.*$/,'')):'title:'+normalize(item.title);
+        const key=url?'url:'+normalize(url.replace(/#.*$/,'')):'title:'+normalize([item.title,item.startsOn,item.location].join('|'));
         if(seen.has(key))continue;
         seen.add(key);items.push(item);
       }
