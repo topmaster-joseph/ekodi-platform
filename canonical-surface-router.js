@@ -287,6 +287,10 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
     const rootRedirect=canonicalExecutionRootRedirect(request,executionSurface);if(rootRedirect)return rootRedirect;
     const response=await proxyExecutionSurface(request,env,executionSurface,legacyFetch,externalFetch);return executionSurface.id==='lab'?injectEkodiTenantReadability(response):response;
   }
+  // Reserved Research paths must never fall through to an authenticated workspace
+  // or public-person fallback when this worker is built with a stale route registry.
+  // A missing registry/binding must fail closed instead of rendering '내 운영공간'.
+  if(path==='/research'||path.startsWith('/research/'))return serviceUnavailable('research-route-unavailable');
   if(PUBLIC_PERSON_PATH_RE.test(path))return proxyBinding(request,env?.MY,'','person-public-profile');
   if(PERSON_DIGITAL_CARD_PATH_RE.test(path))return proxyBinding(request,env?.MY,'','person-digital-card');
   if(path===SURFACE_PREFIXES.my)return canonicalSlashRedirect(request,SURFACE_PREFIXES.my);
