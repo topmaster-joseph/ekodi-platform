@@ -104,7 +104,12 @@ try{
       must(row.webShareArgumentsMatch,'web_share_arguments_mismatch');
       row.fixtureCalendar=fixtureRequests.slice();
       row.mutatingRequestsBlocked=blockedMutations.length;
-      must(blockedMutations.length===0,'unexpected_production_mutating_request');
+      row.blockedRequestPaths=blockedMutations.map(x=>x.method+' '+x.path);
+      // Real sites may independently send analytics/impression POST requests.
+      // The network firewall blocks ALL of them. Distinguish that safe denial
+      // from the share UI itself attempting a protected record mutation.
+      must(!blockedMutations.some(x=>/^(?:\/api\/seonammedi\/admin(?:\/|$)|\/(?:seonammedi\/)?board\/api\/(?:posts|replies)(?:\/|$))/.test(x.path)),
+        'unexpected_calendar_or_board_mutation_attempt');
       row.horizontalOverflow=await page.evaluate(()=>
         document.documentElement.scrollWidth>document.documentElement.clientWidth+2);
       must(!row.horizontalOverflow,'horizontal_overflow');
@@ -116,6 +121,7 @@ try{
       row.error=String(error?.message||error).slice(0,850);
       row.fixtureCalendar=fixtureRequests.slice();
       row.mutatingRequestsBlocked=blockedMutations.length;
+      row.blockedRequestPaths=blockedMutations.map(x=>x.method+' '+x.path);
     }finally{
       await context.close();
     }
