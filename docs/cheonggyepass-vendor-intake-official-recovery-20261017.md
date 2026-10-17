@@ -22,3 +22,7 @@ This is a documentation-only CI re-trigger on the first-party EKODI Orchestrator
 8. Do not claim service completion without exact production evidence and authenticated functional proof.
 
 This document only triggers authentic checks and records safeguards; it does **not** approve executable modifications beyond the earlier exact source SHA.
+
+## Latest protected branch synchronization
+
+GitHub updated the official recovery branch with current protected main via merge commit `b5570ac3856ef1114201c76132ba635e9e8f6623` (parents `c0e19f1ce96824f8fba7b5ce2a4db49d91af6e5e` and `e8144c70a31a1c7c89990976a500a0e4ec8f3342`). This no-code document revision regenerates authentic CI for that updated source; the exact SHA user approval remains anchored to the original source ancestor.
