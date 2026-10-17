@@ -77,7 +77,7 @@ test('production verification submits the real bottom command on canonical ekodi
   assert.match(probe,/admin-control-home/);
   assert.match(probe,/#ekodiControlHomeFrame/);
   assert.match(probe,/#commandInput/);
-  assert.match(probe,/#controlRail/);
+  assert.match(probe,/#controlEmbeddedToolbar/);
   assert.match(probe,/rgb\(247, 248, 252\)/);
   assert.match(probe,/EXPECTED_DESKTOP_SIDEBAR_WIDTH = 228/);
   assert.match(probe,/contextTabsPresent/);
