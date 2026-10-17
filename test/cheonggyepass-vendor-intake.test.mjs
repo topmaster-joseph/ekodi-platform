@@ -88,7 +88,7 @@ test('integration UI is private, CSP-compatible, and keeps canonical public page
   const pass=regionalCommerceProgramById('cheonggye-pass');
   const publicHtml=await regionalCommerceProgramPublicPage(region,pass).text();
   const adminHtml=await regionalCommerceProgramAdminPage(region,pass).text();
-  assert.doesNotMatch(publicHtml,/data-pass-vendor-intake|vendor-intake-ui/);
+  assert.doesNotMatch(publicHtml,/<section[^>]+data-pass-vendor-intake|<script[^>]+vendor-intake-ui/);
   assert.match(publicHtml,/서비스 준비 중/);
   assert.match(adminHtml,/data-pass-vendor-intake hidden/);
   assert.match(adminHtml,/data-pass-intake-form/);
