@@ -1,3 +1,5 @@
+import {handleFreshVoiceApi} from './voices-fresh/api.mjs';
+import {renderFreshVoicePage} from './voices-fresh/page.mjs';
 const json=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff',...extra}});
 const text=v=>String(v??'').trim();
 const now=()=>new Date().toISOString();
@@ -409,6 +411,8 @@ export default {async fetch(req,env){
   const authReturn=await boardAuthReturn(req);if(authReturn)return authReturn;
   const url=new URL(req.url),path=pathOf(req);
   if(path==='/ui/central-category.js'&&req.method==='GET')return new Response(BOARD_CATEGORY_CLIENT_JS,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+  if((path==='/voices-fresh'||path==='/voices-fresh/')&&req.method==='GET')return renderFreshVoicePage(req,shell);
+  if(path.startsWith('/api/voices-fresh'))return handleFreshVoiceApi(req,env,path,{google:signedInGoogle,admin:requireVoiceAdmin,limit:publicWriteAllowed});
   if((path==='/'||path==='/voices'||path==='/voices/')&&req.method==='GET')return boardPage(req);
   if((path==='/finance'||path==='/finance/')&&req.method==='GET')return financePage(req);
   if((path==='/notices'||path==='/notices/')&&req.method==='GET')return noticesPage(req);
