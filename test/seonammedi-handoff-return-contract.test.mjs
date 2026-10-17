@@ -69,8 +69,8 @@ test('browser voice login uses SeonamMedi service identity and preserves compose
   assert.match(html,/auth.searchParams.set\("site","seonammedi"\)/);
   assert.doesNotMatch(html,/auth.searchParams.set\("site","portal"\)/);
   assert.match(html,/auth.searchParams.set\("return_to",target.href\)/);
-  assert.match(html,/target.searchParams.set\("compose","1"\)/);
-  assert.match(html,/history.replaceState\(null,"",location.pathname\+location.search\)/);
+  assert.match(html,/dest\.searchParams\.set\('compose','1'\)/);
+  assert.match(html,/if\(await session\(\)\)/);
 });
 
 test('client rejects unknown return origin for SeonamMedi identity',()=>{
