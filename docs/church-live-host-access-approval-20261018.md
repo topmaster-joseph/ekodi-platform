@@ -12,3 +12,8 @@
 - Latest approved-source recovery checks at `e7feadbf11f83536cf925cd903850dd3d6938ac8`: CI, Auth Hub CI, Supabase Local CI, EKODI AI Orchestration Gate, parallel conflict guard and stage-shell checks all green.
 - Current main has advanced while the official protected recovery branch is still behind. Re-trigger original `EKODI Orchestrated PR Convergent Merge` on a documentation-only push so the existing orchestrator performs its expected `update-branch`, fresh required checks, and guarded release in order.
 - No executable source change, no manual merge, no bypass or stream publication. The owner approved source SHA remains unchanged. The separately verified production Google Church grant is already provisioned.
+
+## Authentic CI after official latest-main update
+- Original EKODI orchestrator advanced the release branch to `5c016f56118ee780c4682044b686b14820a6c8ac`, which is now 0 commits behind latest main, using its protected update-branch operation.
+- That GitHub-token-generated update produced `action_required` placeholder PR check runs, which are **not** passing checks. This append-only, user-authorized documentation change requests actual GitHub Actions validation on the final combined base, without modifying the already-approved runtime or its identity/tenancy security behavior.
+- Do not merge until authentic CI, verified statuses, exact owner approval source receipt and automated conflict guard pass; do not publish test broadcasts except through the existing guarded real E2E harness.
