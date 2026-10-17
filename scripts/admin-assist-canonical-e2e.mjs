@@ -6,7 +6,7 @@ const token = String(process.env.E2E_ADMIN_TOKEN || '').trim();
 if (!token) throw new Error('E2E_ADMIN_TOKEN is required');
 
 const canonicalBaseUrl = 'https://ekodi.kr/admin/';
-const campusUrl = 'https://ekodi.kr/admin/home/campus';
+const campusUrl = 'https://ekodi.kr/admin/sites/campus';
 const authEntryUrl = `${canonicalBaseUrl}?route=finance#ekodi_admin_token=${token}`;
 const assistApiUrl = 'https://ekodi.kr/api/control/ai/assist';
 const prompt = 'EKODI E2E 확인: "정상"이라고 한 단어로 답해줘.';
@@ -128,7 +128,7 @@ try {
   await page.waitForSelector('#app:not([hidden])');
   await page.waitForFunction(() => document.querySelector('#apiState')?.textContent?.includes('정상'));
   const canonicalLocation = new URL(page.url());
-  if (canonicalLocation.hostname !== 'ekodi.kr' || canonicalLocation.pathname !== '/admin/home/campus') {
+  if (canonicalLocation.hostname !== 'ekodi.kr' || canonicalLocation.pathname !== '/admin/sites/campus') {
     throw new Error(`Canonical campus route mismatch: ${page.url()}`);
   }
 
