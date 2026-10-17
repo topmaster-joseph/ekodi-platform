@@ -501,7 +501,43 @@ function setVoiceCompose(open){
   voiceComposeToggle?.setAttribute('aria-expanded',open?'true':'false');
   if(open)voiceComposeForm.querySelector('select,input,textarea')?.focus();
 }
-if(voiceComposeToggle)voiceComposeToggle.onclick=()=>setVoiceCompose(voiceComposeForm?.hidden!==false);
+function voiceSessionToken(){
+  try{const value=sessionStorage.getItem('ekodi-auth-token');if(value)return value}catch{}
+  try{
+    const raw=localStorage.getItem('sb-renzehysxirjilvdxacv-auth-token');
+    const stored=raw&&JSON.parse(raw);
+    const session=stored?.currentSession||stored?.session||stored;
+    if(session?.access_token&&(!session.expires_at||Number(session.expires_at)>Date.now()/1000+30))return session.access_token;
+  }catch{}
+  return '';
+}
+function voiceLogin(){
+  const returnTo=new URL(location.href);
+  returnTo.searchParams.set('compose','voice');
+  const auth=new URL('https://ekodi.kr/auth/');
+  auth.searchParams.set('site','seonammedi');
+  auth.searchParams.set('direct','1');
+  auth.searchParams.set('return_to',returnTo.href);
+  location.assign(auth.href);
+}
+function voiceWriteHeaders(){
+  const headers={'content-type':'application/json'};
+  const token=voiceSessionToken();
+  if(token)headers.authorization='Bearer '+token;
+  return headers;
+}
+if(voiceComposeToggle)voiceComposeToggle.onclick=()=>{
+  if(!voiceSessionToken()){voiceLogin();return}
+  setVoiceCompose(voiceComposeForm?.hidden!==false);
+};
+// Open the editor after a safe, same-page authentication return.
+if(new URLSearchParams(location.search).get('compose')==='voice'){
+  setVoiceCompose(true);
+  const cleaned=new URL(location.href);
+  cleaned.searchParams.delete('compose');
+  history.replaceState(history.state,'',cleaned.pathname+cleaned.search+cleaned.hash);
+}
+
 if(voiceComposeCancel)voiceComposeCancel.onclick=()=>setVoiceCompose(false);
 async function waitForBoardSubmission(result){
   if(result?.id)return Number(result.id);
@@ -524,7 +560,7 @@ publicVoiceList?.addEventListener('submit',async event=>{
   if(!String(payload.message||'').trim()){if(status)status.textContent='답글 내용을 입력해 주세요.';return}
   if(button)button.disabled=true;if(status)status.textContent='등록 중…';
   try{
-    const response=await fetch('/board/api/posts/'+voiceId+'/replies',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+    const response=await fetch('/board/api/posts/'+voiceId+'/replies',{method:'POST',headers:voiceWriteHeaders(),credentials:'same-origin',body:JSON.stringify(payload)});
     const body=await response.json().catch(()=>({}));
     if(!response.ok||body.ok!==true)throw new Error(body.message||body.error||'답글을 등록하지 못했습니다.');
     const storedId=await waitForBoardSubmission(body);
@@ -548,7 +584,7 @@ if(voiceForm){
     if(submitButton)submitButton.disabled=true;
     status.textContent='등록 중…';
     try{
-      const response=await fetch('/board/api/posts',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+      const response=await fetch('/board/api/posts',{method:'POST',headers:voiceWriteHeaders(),credentials:'same-origin',body:JSON.stringify(payload)});
       const body=await response.json().catch(()=>({}));
       if(!response.ok||body.ok!==true||(!body.id&&!body.submissionId)){const detail=body.message||body.error||body.code||('HTTP '+response.status);throw new Error('등록하지 못했습니다. '+detail)}
       const storedId=await waitForBoardSubmission(body);
