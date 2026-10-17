@@ -95,12 +95,12 @@ async function fixture(){
   return {env:{DB:sqlDb,PASS_VENDOR_QUARANTINE:r2},sqlite,quarantined};
 }
 
-test('complete vendor intake lifecycle: original PR, API metadata, quarantined ZIP, scoped review and immutable audit',async t=>{
+test('complete vendor intake lifecycle: original PR, API metadata, quarantined ZIP, scoped review and immutable audit',async()=>{
   const {env,sqlite,quarantined}=await fixture();
   const invoke=async(path,options={})=>parsed(await handleCheonggyePassVendorIntake(request(path,options),env));
 
   try {
-    await t.test('anonymous and low-permission users cannot read or submit',async()=>{
+    { // anonymous and low-permission users cannot read or submit
       const anonymous=await invoke('',{actor:null});
       assert.equal(anonymous.status,401);
       assert.equal(anonymous.body.code,'REGION_AUTH_REQUIRED');
@@ -110,10 +110,10 @@ test('complete vendor intake lifecycle: original PR, API metadata, quarantined Z
       const invalidOrigin=await invoke('',{method:'POST',origin:'https://vendor.example',
         key:idem('origin'),body:{delivery:'zip',vendorName:'Test vendor'}});
       assert.equal(invalidOrigin.status,403);
-    });
+    }
 
     let prId,zipId,apiId;
-    await t.test('vendor A submits GitHub source and gets idempotent replays',async()=>{
+    { // vendor A submits GitHub source and gets idempotent replays
       const values={
         delivery:'github_pr',vendorName:'지역 외부개발사',
         sourceUrl:'https://github.com/acme/pass-vendor/pull/24',
@@ -135,9 +135,9 @@ test('complete vendor intake lifecycle: original PR, API metadata, quarantined Z
       assert.equal(disallowedURL.status,400);
       assert.equal(disallowedURL.body.code,'GITHUB_PR_URL_REQUIRED');
       assert.equal(sqlite.prepare("SELECT count(*) AS count FROM cheonggyepass_vendor_events WHERE submission_id=?").get(prId).count,1);
-    });
+    }
 
-    await t.test('vendor B cannot view, upload, or review vendor A entries',async()=>{
+    { // vendor B cannot view, upload, or review vendor A entries
       const onlyOwn=await invoke('',{actor:'fixture-vendor-b'});
       assert.equal(onlyOwn.status,200);
       assert.deepEqual(onlyOwn.body.items,[]);
@@ -147,9 +147,9 @@ test('complete vendor intake lifecycle: original PR, API metadata, quarantined Z
       const strangerUpload=await invoke('/'+prId+'/upload',{actor:'fixture-vendor-b',method:'POST',
         body:new Uint8Array([0x50,0x4b,3,4,...Array(28).fill(0)])});
       assert.equal(strangerUpload.status,403);
-    });
+    }
 
-    await t.test('external API contract is accepted without connecting to the supplied URL',async()=>{
+    { // external API contract is accepted without connecting to the supplied URL
       const next=await invoke('',{actor:'fixture-vendor-b',method:'POST',key:idem('api'),
         body:{delivery:'external_api',vendorName:'API 운영사',
           apiBaseUrl:'https://api.vendor.co.kr/v1',
@@ -165,9 +165,9 @@ test('complete vendor intake lifecycle: original PR, API metadata, quarantined Z
           capabilities:['health']}});
       assert.equal(disallowed.status,400);
       assert.equal(disallowed.body.code,'API_HTTPS_URL_REQUIRED');
-    });
+    }
 
-    await t.test('ZIP remains quarantined and cannot be promoted by review endpoint',async()=>{
+    { // ZIP remains quarantined and cannot be promoted by review endpoint
       const receipt=await invoke('',{method:'POST',key:idem('zip'),
         body:{delivery:'zip',vendorName:'별도 소스 납품사'}});
       assert.equal(receipt.status,201);
@@ -202,9 +202,9 @@ test('complete vendor intake lifecycle: original PR, API metadata, quarantined Z
       assert.equal(review.status,200);
       assert.equal(review.body.status,'review_pending');
       assert.equal(review.body.activation,false);
-    });
+    }
 
-    await t.test('authorized reviewer can view all vendors, reject source, and preserve audit events',async()=>{
+    { // authorized reviewer can view all vendors, reject source, and preserve audit events
       const reviewList=await invoke('',{actor:'fixture-owner'});
       assert.equal(reviewList.status,200);
       assert.equal(reviewList.body.canReview,true);
@@ -227,6 +227,6 @@ test('complete vendor intake lifecycle: original PR, API metadata, quarantined Z
       assert.equal(vendorView.body.items.length,2);
       assert.ok(vendorView.body.items.every(entry=>entry.vendorName!=='API 운영사'));
       assert.ok(!vendorView.body.items.some(entry=>'actorEmail' in entry));
-    });
+    }
   }finally{sqlite.close()}
 });
