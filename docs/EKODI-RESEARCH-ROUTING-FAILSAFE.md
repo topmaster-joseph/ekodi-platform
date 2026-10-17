@@ -14,3 +14,9 @@ This is a **new exact SHA** requiring its own Human Gate. Do not infer approval 
 
 ## No success claim
 No operational completion until `https://ekodi.kr/research/` serves EKODI Research, `/research/health` reports foundation, and the two native browser Research checks have verified success. Existing `/pay` rollback marker discrepancy in earlier run remains a separate unwaived issue.
+
+## Official recovery CI evidence restart (2026-10-17)
+- Source-approved PR #5134 at immutable SHA `86b967eca2fd720926bcda2176aba3d86e146665` by GitHub owner `topmaster-joseph`; exact comment [#6232163905](https://github.com/topmaster-joseph/ekodi-platform/pull/5134#issuecomment-6232163905) preceded the Human Gate label.
+- Official provenance task `orch_recovery_86b967eca2fd720926bcda2176aba3d8`, protected recovery PR #5136.
+- Bot-triggered PR events displayed `action_required`; this owner-authored **documentation-only** update requests normal verifiable CI against the official recovery branch. There are no application or policy modifications in this update.
+- Production release requires actual successful CI, guarded merge, required Site Core deployment, rollback and separate Research-specific real desktop/mobile verification. Do not infer completion from the documentation update.
