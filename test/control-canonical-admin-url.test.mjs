@@ -107,3 +107,50 @@ test('logged-out canonical Control offers Google Admin login returning to the ex
   render(true);
   assert.equal(status.textContent,'최고관리자 세션');
 });
+
+test('admin handoff token is scrubbed and only accepted after super-admin verification',async()=>{
+  const source=read('control.js');
+  const begin=source.indexOf('  async function acceptVerifiedAdminControlHandoff(){');
+  const end=source.indexOf('\n  function renderAdminControlLogin(logged){',begin);
+  assert.ok(begin>=0&&end>begin,'expected verified OAuth handoff helper');
+  const helper=source.slice(begin,end)+'\nacceptVerifiedAdminControlHandoff';
+
+  async function run(role){
+    const value='example-admin-handoff-token';
+    const location={pathname:'/admin/control',search:'?task=123',hash:'#ekodi_admin_token='+value};
+    const replaced=[];
+    const stored=new Map();
+    const network=[];
+    const context={
+      URLSearchParams,API:'https://ekodi.kr',TOKEN_KEY:'ekodi-auth-token',
+      location,document:{title:'EKODI Control'},
+      history:{state:{},replaceState(_state,_title,next){replaced.push(next);}},
+      token:()=>stored.get('ekodi-auth-token')||'',
+      sessionStorage:{setItem:(key,v)=>stored.set(key,v)},
+      fetch:async (url,options)=>{
+        network.push({url,options});
+        return new Response(JSON.stringify({authenticated:true,role}),{
+          status:200,headers:{'content-type':'application/json'}
+        });
+      }
+    };
+    const accept=vm.runInNewContext(helper,context);
+    const success=await accept();
+    return{success,stored,replaced,network,value};
+  }
+
+  const allowed=await run('super_admin');
+  assert.equal(allowed.success,true);
+  assert.equal(allowed.stored.get('ekodi-auth-token'),allowed.value);
+  assert.deepEqual(allowed.replaced,['/admin/control?task=123']);
+  assert.equal(allowed.network.length,1);
+  assert.equal(allowed.network[0].url,'https://ekodi.kr/api/session');
+  assert.equal(allowed.network[0].options.credentials,'same-origin');
+  assert.equal(allowed.network[0].options.headers.authorization,'Bearer '+allowed.value);
+
+  const denied=await run('viewer');
+  assert.equal(denied.success,false);
+  assert.equal(denied.stored.has('ekodi-auth-token'),false);
+  assert.deepEqual(denied.replaced,['/admin/control?task=123']);
+  assert.match(source,/await acceptVerifiedAdminControlHandoff\(\)/);
+});
