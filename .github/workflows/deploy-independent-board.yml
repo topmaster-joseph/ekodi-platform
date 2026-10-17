@@ -163,14 +163,26 @@ jobs:
           internal_notices="$(fetch_board https://ekodi.kr/seonammedi/board/notices)"
           internal_notices_slash="$(fetch_board https://ekodi.kr/seonammedi/board/notices/)"
           verify_contains "voices write control" 'id="writeToggle"' "$voices"
-          verify_contains "voices search control" 'id="searchToggle"' "$voices"
+          verify_contains "voices search control" 'id="voiceSearch"' "$voices"
           verify_contains "voices list" 'id="voiceList"' "$voices"
           verify_contains "verified Google account badge" 'id="voiceAuthStatus"' "$voices"
-          verify_contains "account verification before composer" 'byId("writeToggle").onclick=async()=>{if(!await requireVoiceAccount())return' "$voices"
-          verify_contains "account verification before post submit" 'write.onsubmit=async e=>{e.preventDefault();if(!await requireVoiceAccount())return' "$voices"
+          # Require actual server-verification-first guards in both event handlers;
+          # matching the button and a distant auth check separately is insufficient.
+          if ! grep -Pzq 'byId\("writeToggle"\)\.onclick=async\(\)=>\{\s*if\(!await requireVoiceAccount\(\)\)return' <<<"$voices"; then
+            echo "production board UI check failed: account verification before composer" >&2
+            exit 1
+          fi
+          if ! grep -Pzq 'write\.onsubmit=async event=>\{[\s\S]{0,400}if\(!await requireVoiceAccount\(\)\)return' <<<"$voices"; then
+            echo "production board UI check failed: account verification before post submit" >&2
+            exit 1
+          fi
+          verify_contains "one-shot login after server session check" 'allowed=await verifyVoiceAccount()' "$voices"
+          verify_contains "re-login loop circuit breaker" 'if(!params.has("auth_attempt")){voiceLogin();return}' "$voices"
+          verify_contains "post persisted before success" 'const published=await awaitVoicePublication(saved)' "$voices"
+          verify_contains "administrator permission-gated inline list" 'adminItems=data.items||[];admin=true;render(adminItems,true)' "$voices"
           verify_contains "authenticated session endpoint" '/board/api/auth/session' "$voices"
           verify_contains "Google handoff preserving compose intent" 'target.searchParams.set("compose","1")' "$voices"
-          verify_contains "voices active nav" 'aria-current="page" href="/board/voices">시민의견' "$voices"
+          verify_contains "voices active nav compose intent" 'aria-current="page" href="/board/voices?compose=1&choose_account=1">시민의견' "$voices"
           verify_contains "finance route renders finance page" '<body class="board-finance">' "$finance"
           verify_contains "finance uses six-menu notices link" 'href="/board/notices">공지' "$finance"
           verify_contains "finance administrator-only notice" 'id="financeAdminOnly"' "$finance"
@@ -183,15 +195,15 @@ jobs:
           done
           verify_contains "notices active nav" 'href="/board/notices">공지' "$notices"
           verify_contains "notices heading" 'NOTICE BOARD' "$notices"
-          verify_contains "internal voices route" 'aria-current="page" href="/seonammedi/board/voices">시민의견' "$internal_voices"
+          verify_contains "internal voices route" 'aria-current="page" href="/seonammedi/board/voices?compose=1&choose_account=1">시민의견' "$internal_voices"
           verify_contains "internal finance page" '<body class="board-finance">' "$internal_finance"
           verify_contains "internal finance notices link" 'href="/seonammedi/board/notices">공지' "$internal_finance"
           verify_contains "internal notices route" 'href="/seonammedi/board/notices">공지' "$internal_notices"
-          verify_contains "external voices slash parity" 'aria-current="page" href="/board/voices">시민의견' "$voices_slash"
+          verify_contains "external voices slash parity" 'aria-current="page" href="/board/voices?compose=1&choose_account=1">시민의견' "$voices_slash"
           verify_contains "external finance slash page parity" '<body class="board-finance">' "$finance_slash"
           verify_contains "external finance slash notices link" 'href="/board/notices">공지' "$finance_slash"
           verify_contains "external notices slash parity" 'href="/board/notices">공지' "$notices_slash"
-          verify_contains "internal voices slash parity" 'aria-current="page" href="/seonammedi/board/voices">시민의견' "$internal_voices_slash"
+          verify_contains "internal voices slash parity" 'aria-current="page" href="/seonammedi/board/voices?compose=1&choose_account=1">시민의견' "$internal_voices_slash"
           verify_contains "internal finance slash page parity" '<body class="board-finance">' "$internal_finance_slash"
           verify_contains "internal finance slash notices link" 'href="/seonammedi/board/notices">공지' "$internal_finance_slash"
           verify_contains "internal notices slash parity" 'href="/seonammedi/board/notices">공지' "$internal_notices_slash"

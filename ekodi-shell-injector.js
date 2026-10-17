@@ -282,6 +282,11 @@ export function injectEkodiUserUi(response,serviceId='ekodi',surface='public',op
 
 export function injectEkodiShell(response,serviceId,surface='',options={}){
   if(!response||!serviceId)return response;
+  // Defense in depth: no shared Shell rewriting of the independently routed
+  // Control operating console, even if a caller accidentally requests it.
+  const route=String(response.headers.get('x-ekodi-route')||'').toLowerCase();
+  const canonical=String(response.headers.get('x-ekodi-canonical-surface')||'').toLowerCase();
+  if(route==='control-surface'||canonical==='control')return response;
   const contentType=String(response.headers.get('content-type')||'').toLowerCase();
   if(!contentType.includes('text/html'))return response;
   const resolved=resolvedSurface(serviceId,surface);

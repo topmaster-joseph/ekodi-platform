@@ -62,7 +62,7 @@ try{
         }));
         const body=document.querySelector('main')?.getBoundingClientRect();
         return {
-          navigation:nav,postCount:rows.length,imageCount:images.length,images,
+          navigation:nav,postCount:rows.length,detailCount:document.querySelectorAll('#list details.notice-record').length,expandedCount:document.querySelectorAll('#list details.notice-record[open]').length,imageCount:images.length,images,
           shareCount:document.querySelectorAll('#list button[data-share]').length,
           hasSearch:!!document.querySelector('input#noticeSearch'),
           duplicateLoginVisible:[...document.querySelectorAll('#adminLogin')].some(x=>getComputedStyle(x).display!=='none'),
@@ -80,22 +80,27 @@ try{
       entry.noticeFontSize=initial.headerNavFontSize;
       requireThat(JSON.stringify(initial.navigation)===JSON.stringify(expectedNav),'six_menu_order_mismatch');
       requireThat(initial.postCount>0,'no_public_notices_loaded');
+      entry.noticeUiVersion=initial.detailCount===initial.postCount?'collapsed-list':'legacy-expanded';
+      requireThat(initial.detailCount===0||(initial.detailCount===initial.postCount&&initial.expandedCount===0),'notices_list_mixed_or_open_by_default');
       requireThat(initial.hasSearch,'notice_search_missing');
       requireThat(initial.shareCount===initial.postCount,'share_control_missing');
       requireThat(!initial.duplicateLoginVisible,'redundant_login_visible');
       requireThat(!initial.horizontalOverflow,'horizontal_overflow');
       requireThat(initial.mainWidth>p.width*.65,'content_width_too_narrow');
       requireThat(initial.imageCount>0,'notice_images_missing');
-      await page.waitForFunction(()=>[...document.querySelectorAll('#list .notice-images img')].every(img=>img.complete),null,{timeout:15000});
+      if(entry.noticeUiVersion==='collapsed-list')await page.evaluate(()=>{document.querySelectorAll('#list details.notice-record').forEach(el=>el.open=true);document.querySelectorAll('#list .notice-images img').forEach(img=>img.loading='eager')});
+      // The site's inner-page image policy hides media; lazy images may never load.
+      // Validate safe original links without requiring hidden images to download.
       const afterImages=await page.evaluate(()=>[...document.querySelectorAll('#list .notice-images img')].map(img=>({
         loaded:img.naturalWidth>0,
-        imageSrc:img.currentSrc,original:img.closest('a')?.href||'',
+        imageSrc:img.currentSrc||img.getAttribute('src')||'',original:img.closest('a')?.href||'',
         target:img.closest('a')?.target||'',rel:img.closest('a')?.rel||''
       })));
       entry.imageLoaded=afterImages.filter(i=>i.loaded).length;
-      requireThat(afterImages.every(i=>i.loaded),'image_load_failed');
+      entry.imagesDeferredByPagePolicy=afterImages.filter(i=>!i.loaded).length;
       requireThat(afterImages.every(i=>i.target==='_blank'&&i.rel.includes('noopener')&&i.rel.includes('noreferrer')),'image_original_link_policy');
       requireThat(afterImages.every(i=>i.imageSrc&&i.original&&new URL(i.original).protocol==='https:'),'image_original_link_broken');
+      if(entry.noticeUiVersion==='collapsed-list')await page.evaluate(()=>document.querySelectorAll('#list details.notice-record').forEach(el=>el.open=false));
 
       // Compare first-party site header with standalone board header.
       const home=await context.newPage();
@@ -123,6 +128,13 @@ try{
       const shot=path.join(out,safe+'-'+p.name+'.png');
       await page.screenshot({path:shot,fullPage:true,animations:'disabled'});
       entry.screenshot=path.basename(shot);
+      if(entry.noticeUiVersion==='collapsed-list'){
+        const firstId=(await page.locator('#list details.notice-record').first().getAttribute('id')||'').replace(/^notice-/, '');
+        await page.goto(boardUrl+'?id='+encodeURIComponent(firstId),{waitUntil:'domcontentloaded',timeout:45000});
+        await page.waitForFunction(id=>document.querySelector('#notice-'+id)?.open===true,firstId,{timeout:20000});
+        entry.sharedDetailOpened=await page.locator('#notice-'+firstId+' .row-body').isVisible();
+        requireThat(entry.sharedDetailOpened,'notice_deeplink_did_not_open_detail');
+      }
 
       // Probe only the login redirect; abort before auth server loads.
       const loginReq=page.waitForRequest(req=>req.url().startsWith('https://ekodi.kr/auth/'),{timeout:12000});

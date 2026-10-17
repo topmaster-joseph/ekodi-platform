@@ -1,4 +1,6 @@
-import { routeCooperative } from './cooperative-control.js';
+import {isSeasonalOperationsPath,seasonalOperationsResponse} from './seasonal-workforce/operations-api.mjs';
+import { isSeasonalPortalPath, seasonalPortalResponse } from './seasonal-workforce/route.mjs';
+import { routeCooperative, cooperativeLocatorGuard } from './cooperative-control.js';
 import { isCgmaAiEducationPath, routeCgmaAiEducation } from './cgma-ai-education-route.js';
 import legacyPlatformRouter from './platform-router-worker.js';
 import { canonicalTrackingQueryRedirect } from './canonical-query-policy.js';
@@ -479,6 +481,8 @@ async function routePlatform(request,env,ctx){
     if(CGMA_HOSTS.has(host)&&['GET','HEAD'].includes(request.method))return routeCgmaPublic(request,env);
 
     if(host===PUBLIC_HOST){
+      if(isSeasonalOperationsPath(url.pathname))return seasonalOperationsResponse(request,env);
+      if(isSeasonalPortalPath(url.pathname))return seasonalPortalResponse(request);
       if(['GET','HEAD'].includes(request.method)&&isStorePosAgentDownloadPath(url.pathname))return storePosAgentDownload(request);
       if(['GET','HEAD'].includes(request.method)&&isCgmaRoot(url.pathname)){const legacyResponse=await legacyPlatformRouter.fetch(request,env,ctx);return injectCgmaRegionalLinks(injectEkodiProgressiveHome(injectEkodiTenantReadability(legacyResponse)));}
       const mailApex=routeMailApex(request);if(mailApex)return mailApex;
@@ -634,6 +638,8 @@ export default {
     if(canonicalQueryRedirect)return finalize(canonicalQueryRedirect);
     const publicationAsset=sitePublicationAdminAsset(request);
     if(publicationAsset)return finalize(publicationAsset);
+    const cooperativeGuard=await cooperativeLocatorGuard(request,env);
+    if(cooperativeGuard)return finalize(cooperativeGuard);
     const publicationGuard=await sitePublicationGuard(request,env);
     if(publicationGuard)return finalize(publicationGuard);
     const adminPublicationSite=await resolvePublicationSiteForRequest(request,env,{admin:true});

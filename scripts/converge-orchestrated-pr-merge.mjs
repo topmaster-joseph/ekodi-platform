@@ -88,6 +88,9 @@ const controlApiTouched=changedFiles.some(file=>
   // LANG-UI-001: public language status is served by api-worker.js via
   // language-automation.js. A GITHUB_TOKEN merge does not fire main push CI,
   // so this requires the same receipt-bound Control API deployment.
+  'site-publication-runtime.js',
+  'cooperative-registry.js',
+  'cooperative-locator.js',
   'language-automation.js',
   'config/language-registry.js',
   'config/managed-language-sites.js',
@@ -176,6 +179,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   // The EKODI public homepage is compiled into the shared Site Core. GITHUB_TOKEN
   // merges do not trigger main push workflows: dispatch its guarded release here.
   ['index.html','homepage-ambient.js','homepage-ambient.css'].includes(file)||
+  // Control is a first-party Site Core surface, never a separate public Shell release.
+  ['control.html','control.css','control.js'].includes(file)||
   // Shared administrator menu, canonical route registry and design contracts are production Site Core assets.
   ['admin-menu-registry.js','admin-sidebar.js','admin-canonical-routes.js','admin-menu-layout.js','admin-menu-layout.compact.js','admin-menu-runtime.js','admin-demand-loader.js','release-control-admin.js','system-health-admin.js','admin-design-engine.js','config/design-engine.json','config/admin-role-navigation.json'].includes(file)||
   file==='workspace-admin-page.js'||

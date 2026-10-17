@@ -5,6 +5,7 @@ import { cooperativePage, cooperativeOperationsPage } from './cooperative-page.j
 import { cooperativeCss, cooperativeScript } from './cooperative-ui.js';
 import { cooperativeCharter } from './cooperative-charter.js';
 import { COOPERATIVE_IMAGE_PATHS } from './cooperative-media.js';
+import { cooperativeLocatorAvailability } from './cooperative-locator.js';
 
 const headers = (type = 'application/json; charset=utf-8') => ({
   'content-type': type, 'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff',
@@ -22,7 +23,17 @@ export function cooperativeRoute(pathname) {
   const slug = platform?.[1] || control?.[1] || local?.[1];
   const coop = cooperativeBySlug(slug);
   if (!coop) return null;
-  return { coop, path: platform ? '/admin' : control ? '/api' + (control[2] || '') : local[2] || '/', platformContext: Boolean(platform || control) };
+  return { coop, locator: slug, path: platform ? '/admin' : control ? '/api' + (control[2] || '') : local[2] || '/', platformContext: Boolean(platform || control) };
+}
+
+export async function cooperativeLocatorGuard(request, env) {
+  const url = new URL(request.url);
+  if (url.hostname !== 'ekodi.kr') return null;
+  const route = cooperativeRoute(url.pathname);
+  if (!route || route.platformContext) return null;
+  if (route.locator !== route.coop.publicSlug && !['/', '/members', '/admin'].includes(route.path)) return null;
+  const availability = await cooperativeLocatorAvailability(env, route.coop, request);
+  return availability.ok ? null : json({ ok: false, code: availability.code }, 503);
 }
 
 async function inputJson(request) {
@@ -102,12 +113,12 @@ export async function routeCooperative(request, env) {
         const access = await resolveCooperativeAccess(request, env, coop, { administrative: true, platformContext });
         if (!access.allowed) continue;
         const project = await loadCooperativeProject(env.DB, coop);
-        cooperatives.push({ workspaceId: coop.workspaceId, slug: coop.slug, name: project.state.profile.name,
+        cooperatives.push({ workspaceId: coop.workspaceId, slug: coop.slug, publicSlug: coop.publicSlug, name: project.state.profile.name,
           chair: project.state.profile.chair, status: 'formation', revision: project.revision, updatedAt: project.updatedAt,
           representatives: project.state.founders.length, businessesRegistered: project.state.founders.filter(f => f.business).length,
           documentsReviewed: Object.values(project.state.documents).filter(d => d.status === 'reviewed').length,
           documentsTotal: Object.keys(project.state.documents).length,
-          adminPath: platformContext ? '/admin/workspaces/cooperatives/' + coop.slug : '/' + coop.slug + '/admin' });
+          adminPath: platformContext ? '/admin/workspaces/cooperatives/' + coop.slug : '/' + coop.publicSlug + '/admin' });
       }
       if (!cooperatives.length) return json({ ok: false, code: platformContext ? 'PLATFORM_ADMIN_REQUIRED' : 'COOP_ADMIN_REQUIRED' }, 403);
       return json({ ok: true, authority: { scope: platformContext ? 'platform' : 'tenant' }, cooperatives });
@@ -130,10 +141,14 @@ export async function routeCooperative(request, env) {
   }
   const route = cooperativeRoute(url.pathname);
   if (!route) return null;
-  const { coop, path, platformContext } = route;
+  const { coop, locator, path, platformContext } = route;
   try {
-    if (!platformContext && url.pathname === '/' + coop.slug) {
-      const target = new URL(request.url); target.pathname += '/';
+    const humanPage = ['/', '/members', '/admin'].includes(path);
+    const canonicalRoot = url.pathname === '/' + coop.publicSlug;
+    const locatorGuard = await cooperativeLocatorGuard(request, env);
+    if (locatorGuard) return locatorGuard;
+    if (!platformContext && (canonicalRoot || (locator === coop.slug && humanPage && ['GET', 'HEAD'].includes(request.method)))) {
+      const target = new URL(request.url); target.pathname = '/' + coop.publicSlug + (path === '/' ? '/' : path);
       return new Response(null, { status: 308, headers: { ...headers(), location: target.href, 'x-ekodi-route': 'cooperative-canonical-root' } });
     }
     if (['GET', 'HEAD'].includes(request.method)) {

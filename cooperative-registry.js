@@ -2,13 +2,13 @@
 export const COOPERATIVES = Object.freeze([
   Object.freeze({
     workspaceId: 'c88205a8-9a6c-4c51-ae52-508c087a2d50',
-    slug: 'jubilee-distribution', name: '희년세상협동조합',
+    slug: 'jubilee-distribution', publicSlug: 'jubilee', name: '희년세상협동조합',
     legalName: '희년세상협동조합', chair: '정찬균', mark: '희', tone: 'jubilee',
     representatives: Object.freeze(['정찬균', '박은희', '최병천', '정양기', '조인식']),
   }),
   Object.freeze({
     workspaceId: 'ac8c6bf7-f5e6-4e5a-86cb-9a5bc9391a54',
-    slug: 'open-distribution', name: '열린유통협동조합',
+    slug: 'open-distribution', publicSlug: 'open', name: '열린유통협동조합',
     legalName: '열린유통협동조합', chair: '임동섭', mark: '열', tone: 'open',
     representatives: Object.freeze(['임동섭', '이상호', '이남현1', '이남현2', '이남현3']),
   }),
@@ -22,7 +22,8 @@ export const COOP_DOCUMENTS = Object.freeze([
 ]);
 
 export function cooperativeBySlug(slug) {
-  return COOPERATIVES.find(coop => coop.slug === String(slug || '').toLowerCase()) || null;
+  const locator = String(slug || '').toLowerCase();
+  return COOPERATIVES.find(coop => coop.slug === locator || coop.publicSlug === locator) || null;
 }
 
 export function cooperativeInitialState(coop) {
@@ -52,7 +53,7 @@ export function cooperativeInitialState(coop) {
 export function cooperativePublicProjection(coop, state = cooperativeInitialState(coop)) {
   const p = state.profile;
   return {
-    workspaceId: coop.workspaceId, slug: coop.slug, name: p.name,
+    workspaceId: coop.workspaceId, slug: coop.slug, publicSlug: coop.publicSlug, name: p.name,
     legalName: p.legalName, legalNameStatus: p.legalNameStatus, chair: p.chair,
     status: 'formation', purpose: p.purpose, industries: p.industries, businesses: p.businesses,
     office: p.officeConfirmed ? p.office : '', shareUnit: p.shareUnit,

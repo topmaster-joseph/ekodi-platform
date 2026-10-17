@@ -1,17 +1,19 @@
 <!doctype html>
-<html lang="ko">
+<html lang="ko" data-ekodi-control="v2" data-ekodi-control-design="premium" data-ekodi-character="off" data-ekodi-user-ai-entry="off" data-ekodi-shell-surface="admin" data-ekodi-user-surface="admin">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="theme-color" content="#ffffff">
   <title>EKODI Control</title>
-  <link rel="stylesheet" href="/control.css">
+  <link rel="stylesheet" href="/control.css?v=20261017-premium-steady-v4">
 </head>
 <body>
+  <a class="skip-link" href="#commandInput">명령 입력으로 바로가기</a>
   <div class="control-shell">
     <aside class="control-rail" id="controlRail" aria-label="EKODI Control 탐색">
       <div class="brand">
-        <a href="/control" class="brand-mark">EKODI</a>
+        <a href="/control" class="brand-mark" aria-label="EKODI Control 홈"><span class="brand-symbol" aria-hidden="true">E</span><span class="brand-wordmark">EKODI <small>CONTROL</small></span></a>
         <button type="button" class="icon-btn mobile-only" id="railClose" aria-label="메뉴 닫기">×</button>
       </div>
       <button type="button" class="new-task" id="newTask">＋ 새 작업</button>
@@ -23,12 +25,12 @@
         <button class="nav-item" type="button" data-view="results">결과</button>
       </nav>
       <section class="recent" aria-label="최근 작업">
-        <div class="section-title">최근 작업</div>
+        <div class="section-title">최근 작업 <span class="local-history-caption">· 이 브라우저</span></div>
         <div id="recentTasks" class="recent-list"></div>
       </section>
       <div class="rail-foot">
         <a href="/admin/" class="admin-link">최고관리자</a>
-        <span id="authState">세션 확인 중</span>
+        <span id="authState">인증 상태 확인 중</span>
       </div>
     </aside>
 
@@ -40,7 +42,7 @@
           <small>Orchestrator가 계획 · 병렬처리 · 검증 · 실행을 통제합니다.</small>
         </div>
         <div class="top-actions">
-          <span class="status-dot" id="runtimeStatus">연결 확인</span>
+          <span class="status-dot" id="runtimeStatus" role="status" aria-live="polite">실행 연결 대기</span>
           <a href="/admin/" class="ghost-link">최고관리자</a>
         </div>
       </header>
@@ -48,8 +50,9 @@
       <section class="view active" id="viewChat" data-view-panel="chat">
         <div class="conversation" id="conversation" aria-live="polite">
           <div class="empty-state" id="emptyState">
+            <div class="empty-eyebrow">EKODI OPERATIONS</div>
             <h1>무엇을 수행할까요?</h1>
-            <p>한 번 명령하면 EKODI가 필요한 AI와 Worker를 선택하고 작업을 나눠 처리합니다.</p>
+            <p>한 곳에서 명령하고, EKODI 오케스트레이터의 작업 접수부터 실행·검증 상태까지 확인합니다.</p>
             <div class="suggestions">
               <button type="button" data-prompt="전체 사이트 상태를 점검하고 핵심 장애만 우선순위로 정리해줘.">전체 사이트 상태 점검</button>
               <button type="button" data-prompt="현재 진행 중인 작업과 실패한 작업을 확인하고 재시도 대안을 제시해줘.">진행 작업 확인</button>
@@ -61,6 +64,7 @@
 
         <footer class="composer-wrap">
           <form class="composer" id="commandForm">
+            <div class="composer-heading"><strong>새 명령</strong><span>Enter 실행 · Shift+Enter 줄바꿈</span></div>
             <textarea id="commandInput" rows="1" maxlength="4000" placeholder="에코디에게 명령하거나 질문하세요" aria-label="EKODI 명령 입력"></textarea>
             <div class="composer-row">
               <label class="target-label">
@@ -104,6 +108,6 @@
     </main>
   </div>
   <div class="toast" id="toast" hidden></div>
-  <script src="/control.js" defer></script>
+  <script src="/control.js?v=20261017-premium-steady-v4" defer></script>
 </body>
 </html>
