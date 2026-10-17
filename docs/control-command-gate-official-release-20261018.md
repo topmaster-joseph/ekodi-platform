@@ -20,3 +20,6 @@ The parallel overlap gate records admin authentication/bootstrapping recovery PR
 4. Preserve existing `/control` compatibility, historic operations data and production users.
 
 A green unit test or documentation commit is not evidence of production completion.
+
+## Synced-main checkpoint — owner CI regeneration
+The official guarded converger updated recovery PR #5227 to merge commit `bd230958ab4957ba7810824e3efe8bbbe84073d0` against protected main `07677512ce4b1e99bdd3a22913de7360352ef021`. The immutable owner-approved executable source `7ab216e0fc216ef5cfbd71db50fa5414484de124` remains a verified ancestor (GitHub comparison ahead 6, behind 0). This owner-authored documentation-only update restarts native GitHub checks on the synchronized head. It must **not** grant extra deployment authority, override pending PR #5217 integration precedence, or be interpreted as an authenticated operational check.
