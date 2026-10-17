@@ -34,7 +34,7 @@ test('canonical Assist E2E verifies the native Control home frame before campus 
   assert.match(source,/admin-control-home/);
   assert.match(source,/#ekodiControlHomeFrame/);
   assert.match(source,/#commandInput/);
-  assert.match(source,/#controlRail/);
+  assert.match(source,/#controlEmbeddedToolbar/);
   assert.match(source,/bodyBackground!=='rgb\(255, 255, 255\)'/);
   assert.match(source,/sidebarBackground!=='rgb\(247, 248, 252\)'/);
   assert.match(source,/EXPECTED_DESKTOP_SIDEBAR_WIDTH = 228/);
