@@ -22,7 +22,9 @@ test('production is entirely read-only; calendar item is supplied only as a netw
   assert.match(script,/url\.pathname==='\/api\/seonammedi\/calendar'/);
   assert.match(script,/url\.searchParams\.has\('month'\)/);
   assert.match(script,/route\.fulfill\(\{/);
-  assert.match(script,/blockedMutations\.length===0/);
+  assert.match(script,/blockedMutations\.some/);
+  assert.match(script,/unexpected_calendar_or_board_mutation_attempt/);
+  assert.match(script,/row\.blockedRequestPaths/);
   assert.doesNotMatch(script,/localStorage\.setItem|sessionStorage\.setItem|POST[('"]|DELETE[('"]|PUT[('"]|E2E_ADMIN_TOKEN|BOARD_CANARY_GOOGLE_TOKEN/);
 });
 test('fixture click verifies clipboard, Web Share payload, direct-link focus and page title',()=>{
