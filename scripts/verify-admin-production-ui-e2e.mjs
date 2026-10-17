@@ -255,6 +255,11 @@ async function resolveMenuTrigger(id, group) {
       activeGroups:[...document.querySelectorAll('button[data-admin-global-group]')]
         .filter(node => node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))
         .map(node => node.dataset.adminGlobalGroup),
+      detailGroup:document.querySelector('.admin-global-details')?.dataset.adminDetailGroup || '',
+      renderedDetails:[...document.querySelectorAll('.admin-global-details [data-admin-detail-section]')]
+        .map(node => node.dataset.adminDetailSection)
+        .filter(Boolean),
+      pathname:location.pathname,
     };
   });
   throw new Error(`${id}: no visible left-navigation trigger after selecting work area ${group}; ${JSON.stringify(diagnostic)}`);

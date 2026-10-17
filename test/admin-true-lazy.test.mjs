@@ -109,8 +109,9 @@ test('shared admin navigation exposes eleven distinct areas with direct task rou
   assert.doesNotMatch(sidebar, /shortcut\.textContent = locale === 'en' \? '⚡ Capabilities' : '⚡ 기능'/);
   assert.match(sidebar, /admin-context-source/);
   assert.match(sidebar, /adminMenuGovernance = 'role-projected-sidebar-v4'/);
-  assert.match(sidebar, /observer\.observe\(nav, \{ childList: true, subtree: false \}\)/);
-  assert.doesNotMatch(sidebar, /subtree: true/);
+  assert.match(sidebar, /observer\.observe\(nav, \{ childList: true, subtree: true \}\)/);
+  assert.match(sidebar, /nestedDetailChanged && sidebarDetailsDrifted\(nav\)/);
+  assert.match(sidebar, /if \(queued \|\| syncing\) return/);
   assert.doesNotMatch(sidebar, /ekodi-admin-recent-sections|ekodi-admin-favorite-sections/);
   assert.match(postbuild, /admin-menu-registry\.js/);
   assert.match(postbuild, /admin-sidebar\.js/);

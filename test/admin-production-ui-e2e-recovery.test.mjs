@@ -33,3 +33,12 @@ test('production E2E requests one bounded shared-sidebar resync before declaring
   assert.match(resolver,/if \(await detail\.isVisible\(\)\.catch\(\(\) => false\)\) return detail/);
   assert.doesNotMatch(resolver,/route\.fulfill|bypassCSP|ignoreHTTPSErrors|\.catch\(\(\)=>true\)/);
 });
+
+
+test('production missing-menu diagnostics expose nested sidebar state without weakening checks',()=>{
+  const resolver=source.slice(source.indexOf('async function resolveMenuTrigger'),source.indexOf('const results = [];'));
+  assert.match(resolver,/detailGroup:document\.querySelector\('\.admin-global-details'\)/);
+  assert.match(resolver,/renderedDetails:\[\.\.\.document\.querySelectorAll\('\.admin-global-details \[data-admin-detail-section\]'\)\]/);
+  assert.match(resolver,/pathname:location\.pathname/);
+  assert.doesNotMatch(resolver,/catch\(\(\)=>true\)|route\.fulfill|ignoreHTTPSErrors/);
+});
