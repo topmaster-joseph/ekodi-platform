@@ -119,8 +119,11 @@ export default {
   }
   if(!['GET','HEAD'].includes(request.method))return fail(405,'method_not_allowed');
   if(path==='/admin'||path==='/admin/')return Response.redirect('https://ekodi.kr/research/#operations',307);
+  if(path==='/index.html')return Response.redirect(url.origin+'/research/'+url.search,308);
   if(!env.ASSETS?.fetch)return fail(503,'research_assets_unavailable');
-  const assetUrl=new URL(request.url);assetUrl.pathname='/research'+(path==='/'?'/index.html':path);
+  // Cloudflare Workers Static Assets redirects /research/index.html to /research/.
+  // Do not rewrite /research/ back to index.html or the browser loops on HTTP 307.
+  const assetUrl=new URL(request.url);assetUrl.pathname='/research'+(path==='/'?'/':path);
   let response=await env.ASSETS.fetch(new Request(assetUrl,request));
   const headers=new Headers(response.headers);
   for(const [key,value] of Object.entries(HEADERS))headers.set(key,value);
