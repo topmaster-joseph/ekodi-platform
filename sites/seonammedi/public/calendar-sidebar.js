@@ -9,6 +9,28 @@
     return get('year')+'-'+get('month')+'-'+get('day');
   };
   const dateOf=value=>String(value||'').slice(0,10);
+  const validDate=value=>{
+    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(String(value||'')))return false;
+    const parsed=new Date(value+'T00:00:00Z');
+    return !Number.isNaN(parsed.getTime())&&parsed.toISOString().slice(0,10)===value;
+  };
+  // Share URLs are public read-only pointers. No auth state, user data, or
+  // administrative flags may be added to these links.
+  const parseSharedSchedule=search=>{
+    const params=new URLSearchParams(search||'');
+    const id=params.get('schedule')||'',date=params.get('date')||'';
+    return /^[1-9]\\d{0,12}$/.test(id)&&validDate(date)?{id:Number(id),date}:null;
+  };
+  const shareUrl=(item,currentUrl=location.href)=>{
+    const id=String(item?.id||''),date=dateOf(item?.eventStart);
+    if(!/^[1-9]\\d{0,12}$/.test(id)||!validDate(date))return '';
+    const url=new URL(currentUrl);
+    url.pathname=url.pathname.startsWith('/seonammedi/')?'/seonammedi/board/notices':'/board/notices';
+    url.search='';url.hash='';
+    url.searchParams.set('schedule',id);
+    url.searchParams.set('date',date);
+    return url.href;
+  };
   const make=(tag,cls,content)=>{
     const element=document.createElement(tag);
     if(cls)element.className=cls;
@@ -42,8 +64,10 @@
     newsBox.classList.add('seonam-calendar-card');
     quick.classList.add('seonam-calendar-details');
 
+    const shareTarget=parseSharedSchedule(location.search);
     let now=localToday();
-    let selected=now,month=now.slice(0,7),events=[],admin=false,revision=0;
+    let selected=shareTarget?.date||now,month=selected.slice(0,7),events=[],admin=false,revision=0;
+    let shareResolved=false,shareFocused=false;
     let todayItems=[],todayRequestVersion=0,autoManagePending=new URLSearchParams(location.search).get('manage')==='schedule';
     const heading=make('div','seonam-calendar-heading');
     heading.append(make('h2','','주요일정'));
@@ -125,6 +149,42 @@
       const raw=String(value||'');
       return raw.length>=16?raw.slice(11,16):'';
     };
+    async function copyShareLink(item,feedback){
+      const url=shareUrl(item);
+      if(!url){feedback.textContent='공유할 수 없는 일정입니다.';return;}
+      try{
+        if(!navigator.clipboard?.writeText)throw new Error('clipboard_unavailable');
+        await navigator.clipboard.writeText(url);
+        feedback.textContent='일정 링크를 복사했습니다.';
+      }catch{
+        // Browser clipboard access can be unavailable outside secure contexts.
+        // Keep a usable link even when clipboard permission is denied.
+        if(typeof window.prompt==='function')window.prompt('일정 링크를 복사해 주세요.',url);
+        feedback.textContent='공유 링크를 확인해 주세요.';
+      }
+    }
+    function attachSharing(article,item){
+      if(!item?.id||!shareUrl(item))return;
+      const actions=make('div','seonam-calendar-share-actions');
+      const feedback=make('span','seonam-calendar-share-feedback');
+      feedback.setAttribute('role','status');
+      appendButton(actions,'공유',async()=>{
+        const url=shareUrl(item);
+        if(typeof navigator.share!=='function'){await copyShareLink(item,feedback);return;}
+        try{
+          await navigator.share({
+            title:(item.title||'일정')+' · 서남권 국립의대 소통센터',
+            text:dateOf(item.eventStart)+' '+displayTime(item.eventStart)+' · '+(item.title||'일정'),
+            url
+          });
+          feedback.textContent='공유를 완료했습니다.';
+        }catch(error){
+          if(error?.name!=='AbortError')await copyShareLink(item,feedback);
+        }
+      },'seonam-calendar-share');
+      appendButton(actions,'링크 복사',()=>copyShareLink(item,feedback),'seonam-calendar-copy');
+      article.append(actions,feedback);
+    }
     function renderToday(){
       const date=localToday();
       const hits=todayItems.filter(item=>item.kind==='event'&&item.eventStart&&spansDay(item,date));
@@ -141,6 +201,7 @@
           article.append(make('small','',startTime+(endTime?' ~ '+endTime:'')));
         }
         if(item.body)article.append(make('p','',item.body));
+        attachSharing(article,item);
         todayList.append(article);
       }
     }
@@ -206,6 +267,19 @@
         const schedule=make('small','',dateOf(item.eventStart).replaceAll('-','.')+' '+displayTime(item.eventStart)+(item.eventEnd?' ~ '+dateOf(item.eventEnd).replaceAll('-','.')+' '+displayTime(item.eventEnd):''));
         article.append(title,schedule);
         if(item.body)article.append(details);
+        attachSharing(article,item);
+        if(shareTarget&&Number(item.id)===shareTarget.id&&selected===shareTarget.date){
+          article.classList.add('is-shared');
+          if(!shareFocused){
+            shareFocused=true;
+            article.tabIndex=-1;
+            requestAnimationFrame(()=>{
+              if(!article.isConnected)return;
+              article.scrollIntoView({block:'center',behavior:'auto'});
+              article.focus({preventScroll:true});
+            });
+          }
+        }
         if(admin){
           const tools=make('div','seonam-calendar-actions');
           appendButton(tools,'수정',()=>editEvent(item));
@@ -239,6 +313,12 @@
         if(version!==revision)return;
         events=Array.isArray(data.items)?data.items.filter(row=>row&&row.kind==='event'&&row.eventStart):[];
         status.textContent='';
+        if(shareTarget&&!shareResolved){
+          shareResolved=true;
+          if(!events.some(item=>Number(item.id)===shareTarget.id&&spansDay(item,shareTarget.date))){
+            status.textContent='공유된 일정이 없거나 공개되지 않았습니다.';
+          }
+        }
       }catch{
         if(version!==revision)return;
         events=[];
@@ -337,5 +417,5 @@
       else refreshToday();
     },60000);
   }
-  window.SeonamMediCalendar={mount};
+  window.SeonamMediCalendar={mount,shareUrl,parseSharedSchedule};
 })();
