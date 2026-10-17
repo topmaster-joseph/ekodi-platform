@@ -21,3 +21,8 @@ Independent read-only production query before this release: both protected platf
 
 ## GitHub update-branch check regeneration (2026-10-18)
 The official EKODI orchestrator refreshed this release branch to `930fb57d8dc57a3baab614fbe919c79b38d30196`, but the GitHub-token-created commit received `action_required` status instead of executing authentic PR CI. This documentation-only, owner-authored continuation requests original GitHub Actions checks without changing any Google authorization, SQL migration, or Church Live executable code. The owner's immutable approval of source SHA `599b05510674d2b6feef60e8ae0660a9ac9f1e57` remains the underlying consent; merge, guarded release and real-user verification must still pass independently.
+
+## Latest verified main ancestry and first-party CI regeneration
+- Official orchestrator latest-main refresh head: `bf12cb3b08122fa3795b0661bb5bce3a9a7488af`. Comparison against the then-current protected main reported zero commits behind; this is not production verification.
+- This owner-authored documentation-only follow-up regenerates required first-party CI on the updated official branch after the GitHub-token update-branch event. Original approved source `599b05510674d2b6feef60e8ae0660a9ac9f1e57`, official task ID, protected reviewer labels and all runtime executables are unchanged.
+- Finish only through original EKODI orchestrator convergence and verified protected deployment; recheck latest main and reject stale merges.
