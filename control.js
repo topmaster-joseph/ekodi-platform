@@ -61,7 +61,8 @@
     const node=$('#workspaceCounts');
     if(!node)return;
     const blocked=state.tasks.filter(t=>t.status==='blocked'||t.status==='human_gate').length;
-    node.textContent='대화 '+state.sessions.length+'건 · 작업 '+state.tasks.length+'건'+(blocked?' · 승인 대기 '+blocked+'건':'');
+    node.textContent='이 브라우저 대화 '+state.sessions.length+'건 · 작업 '+state.tasks.length+'건'+(blocked?' · 차단 기록 '+blocked+'건':'');
+    node.title='저장된 기록입니다. 작업 상태 확인에서 새로고침하면 공식 상태를 확인할 수 있습니다.';
   }
   function updateExecutionMode(){
     const node=$('#executionModeDescription');
