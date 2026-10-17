@@ -2,6 +2,7 @@
 // NOT mounted on a public route. The owning Worker must inject independently
 // authenticated identity and tenant-scoped authorization callbacks.
 // This file neither changes D1 nor contacts a PG/bank nor enables payments.
+const WORKSPACE_ID=/^[A-Za-z0-9_-]{1,80}$/;
 const ROUTE=/^\/ekodipay\/private\/merchants\/([a-z][a-z0-9_-]{2,39})\/status$/;
 const BASE_HEADERS=Object.freeze({
   'content-type':'application/json; charset=utf-8',
@@ -31,6 +32,12 @@ SELECT m.merchant_id, m.state,
    WHERE e.merchant_id=m.merchant_id AND e.status='verified'
      AND e.proof_ref IS NOT NULL AND e.approved_at IS NOT NULL) AS evidence_count
 FROM ekodipay_merchants m WHERE m.merchant_id=?
+AND EXISTS (
+ SELECT 1 FROM ekodipay_merchant_workspace_bindings w
+ WHERE w.merchant_id=m.merchant_id AND w.workspace_id=?
+   AND w.status='active' AND w.verified_at IS NOT NULL
+   AND w.proof_ref IS NOT NULL
+)
 `.trim();
 
 function safeCount(value){const n=Number(value);return Number.isSafeInteger(n)&&n>=0?Math.min(n,100000):0;}
@@ -55,7 +62,14 @@ export function sanitizePrivateMerchantStatus(row) {
     readiness:'review-only-not-payment-authorization',
   };
 }
-export async function handlePrivateMerchantStatus(request,{db,authenticate,authorize}={}) {
+// authenticate() must verify an actual EKODI session server-side, never HTTP
+// JSON, an asserted admin role, or an unverified Google email alone.
+// resolveWorkspaceId() must independently obtain immutable customer_tenants.id
+// from the authenticated and ACTIVE tenant membership; NEVER use a URL slug,
+// request header, browser-supplied merchant id, or platform-admin shortcut.
+export async function handlePrivateMerchantStatus(
+  request,{db,authenticate,resolveWorkspaceId,authorize}={}
+) {
   const url=new URL(request.url);
   const match=url.pathname.match(ROUTE);
   if(!match)return null; // Caller must enforce 404 for unmounted/unknown paths.
@@ -65,16 +79,28 @@ export async function handlePrivateMerchantStatus(request,{db,authenticate,autho
     return reply(405,{error:'method_not_allowed'},false,{'allow':'GET, HEAD'});
   if(url.search)return reply(400,{error:'unexpected_query'},head);
   // A missing adapter is an outage, never a guest or platform-admin bypass.
-  if(typeof authenticate!=='function'||typeof authorize!=='function'||!db?.prepare)
+  if(typeof authenticate!=='function'||typeof resolveWorkspaceId!=='function'||
+     typeof authorize!=='function'||!db?.prepare)
     return reply(503,{error:'private_authority_unavailable'},head);
   const merchantId=match[1];
   try {
     const principal=await authenticate(request);
-    if(!principal||typeof principal.subjectRef!=='string'||!principal.subjectRef)
+    if(!principal||typeof principal.id!=='string'||!principal.id)
       return reply(401,{error:'authentication_required'},head);
-    const permitted=await authorize({principal,merchantId,capability:'ekodipay.merchant.status.read'});
+    // Platform-global roles may not implicitly read tenant-owned financial data.
+    if(principal.kind!=='user'||principal.authorityScope!=='tenant'||
+       principal.subject?.type!=='tenant'||!principal.subject.key)
+      return reply(403,{error:'explicit_tenant_membership_required'},head);
+    const workspaceId=await resolveWorkspaceId({principal,request});
+    if(typeof workspaceId!=='string'||!WORKSPACE_ID.test(workspaceId))
+      return reply(403,{error:'workspace_not_verified'},head);
+    const permitted=await authorize({
+      principal,merchantId,workspaceId,capability:'ekodipay.merchant.status.read'
+    });
     if(permitted!==true)return reply(403,{error:'forbidden'},head);
-    const row=await db.prepare(QUERY).bind(merchantId).first();
+    // SQL independently checks a verified mapping to the immutable workspace id.
+    // 404 deliberately avoids exposing whether another tenant's merchant exists.
+    const row=await db.prepare(QUERY).bind(merchantId,workspaceId).first();
     if(!row)return reply(404,{error:'merchant_not_found'},head);
     return reply(200,sanitizePrivateMerchantStatus(row),head);
   } catch {
