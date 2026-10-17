@@ -31,6 +31,19 @@
     url.searchParams.set('date',date);
     return url.href;
   };
+  // Provide a visible event title when users paste links into messengers.
+  // Only published public calendar rows are passed into these helpers.
+  const shareTitle=item=>String(item?.title||'일정').replace(/[\r\n\t\u2028\u2029]+/g,' ').replace(/\s+/g,' ').trim().slice(0,180)||'일정';
+  const shareSummary=item=>{
+    const start=String(item?.eventStart||'');
+    const date=dateOf(start).replaceAll('-','.');
+    const time=start.length>=16?start.slice(11,16):'';
+    return '서남권 국립의대 소통센터 일정\n'+shareTitle(item)+'\n'+date+(time?' '+time:'');
+  };
+  const shareMessage=item=>{
+    const url=shareUrl(item);
+    return url?shareSummary(item)+'\n일정 확인: '+url:'';
+  };
   const make=(tag,cls,content)=>{
     const element=document.createElement(tag);
     if(cls)element.className=cls;
@@ -154,12 +167,12 @@
       if(!url){feedback.textContent='공유할 수 없는 일정입니다.';return;}
       try{
         if(!navigator.clipboard?.writeText)throw new Error('clipboard_unavailable');
-        await navigator.clipboard.writeText(url);
-        feedback.textContent='일정 링크를 복사했습니다.';
+        await navigator.clipboard.writeText(shareMessage(item));
+        feedback.textContent='일정 제목과 링크를 복사했습니다.';
       }catch{
         // Browser clipboard access can be unavailable outside secure contexts.
         // Keep a usable link even when clipboard permission is denied.
-        if(typeof window.prompt==='function')window.prompt('일정 링크를 복사해 주세요.',url);
+        if(typeof window.prompt==='function')window.prompt('일정 제목과 링크를 복사해 주세요.',shareMessage(item));
         feedback.textContent='공유 링크를 확인해 주세요.';
       }
     }
@@ -173,8 +186,8 @@
         if(typeof navigator.share!=='function'){await copyShareLink(item,feedback);return;}
         try{
           await navigator.share({
-            title:(item.title||'일정')+' · 서남권 국립의대 소통센터',
-            text:dateOf(item.eventStart)+' '+displayTime(item.eventStart)+' · '+(item.title||'일정'),
+            title:shareTitle(item)+' · 서남권 국립의대 소통센터',
+            text:shareSummary(item),
             url
           });
           feedback.textContent='공유를 완료했습니다.';
@@ -269,6 +282,7 @@
         if(item.body)article.append(details);
         attachSharing(article,item);
         if(shareTarget&&Number(item.id)===shareTarget.id&&selected===shareTarget.date){
+          document.title=shareTitle(item)+' · 서남권 국립의대 소통센터';
           article.classList.add('is-shared');
           if(!shareFocused){
             shareFocused=true;
@@ -417,5 +431,5 @@
       else refreshToday();
     },60000);
   }
-  window.SeonamMediCalendar={mount,shareUrl,parseSharedSchedule};
+  window.SeonamMediCalendar={mount,shareUrl,parseSharedSchedule,shareSummary,shareMessage};
 })();

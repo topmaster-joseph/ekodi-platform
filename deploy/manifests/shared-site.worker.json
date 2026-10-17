@@ -5,6 +5,116 @@
     "config": "wrangler.site.toml",
     "requests": [
       {
+        "url": "https://ekodi.kr/ekodibiz/seasonal-workers/",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "계절근로자 통합 운영관리 포털"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/seasonal-workers/demand",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "swp-demand-form"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/seasonal-workers/mou",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "MOU 자료관리"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/seasonal-workers/learning",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "교육 · 오리엔테이션"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/seasonal-workers/housing",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "숙소 준비 점검표"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/seasonal-workers/entry",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "입국 · 배정 절차"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/seasonal-workers/help",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "민원 · 상담 안내"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/seasonal-workers/reports",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "운영자료 연결 전"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/seasonal-workers/office",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "기관별 운영공간"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/seasonal-workers/theme.css",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "--navy:#102b4f"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/seasonal-workers/public.js",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "swp-demand-form"
+        ],
+        "rollbackVerify": false
+      },
+      {
         "url": "https://ekodi.kr/admin/desktop/bootstrap/",
         "statuses": [
           307
