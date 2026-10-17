@@ -130,16 +130,16 @@ try {
         const visual=await page.evaluate(()=>{
           const banner=document.querySelector('body > .seonam-visual-hero');
           const main=document.querySelector('main.seonam-visual-layout');
-          const menu=[...document.querySelectorAll('.seonam-visual-side-nav a[data-seonam-visual-key]')];
-          const left=document.querySelector('.seonam-visual-left');
+          const menu=[...document.querySelectorAll('body > header.site-header .ekodi-six-nav a')];
+          const duplicateLeft=document.querySelector('.seonam-visual-left,.seonam-visual-side-nav,.seonam-visual-side-card');
           const center=document.querySelector('.seonam-visual-content');
           const right=document.querySelector('.seonam-visual-right');
           return {
             noSharedStockBanner:!banner,
-            sidebarMenu:menu.map(a=>a.textContent.trim()),
+            headerMenu:menu.map(a=>a.textContent.trim()),
             layoutColumns:getComputedStyle(main).gridTemplateColumns,
             layoutDisplay:getComputedStyle(main).display,
-            leftVisible:Boolean(left?.getBoundingClientRect().width),
+            noDuplicateLeftRail:!duplicateLeft,
             centerVisible:Boolean(center?.getBoundingClientRect().width),
             rightVisible:Boolean(right?.getBoundingClientRect().width),
             calendarWidget:!!right?.querySelector('.seonam-calendar-grid'),
@@ -149,8 +149,9 @@ try {
         });
         entry.visualShell=visual;
         must(visual.noSharedStockBanner,'unexpected_shared_stock_banner');
-        must(JSON.stringify(visual.sidebarMenu)===JSON.stringify(['공지','활동이력','관련소식','소통채널','시민의견','조직']),'visual_six_menu_mismatch');
-        must(visual.leftVisible&&visual.centerVisible&&visual.rightVisible,'visual_columns_missing');
+        must(JSON.stringify(visual.headerMenu)===JSON.stringify(['공지','활동이력','관련소식','소통채널','시민의견','조직']),'header_six_menu_mismatch');
+        must(visual.noDuplicateLeftRail,'duplicate_left_menu_present');
+        must(visual.centerVisible&&visual.rightVisible,'visual_columns_missing');
         must(visual.calendarWidget,'public_schedule_calendar_missing');
         must(profile.isMobile?visual.layoutDisplay==='flex':visual.layoutDisplay==='grid','responsive_layout_mismatch');
         must(visual.mobileWidth<=visual.clientWidth+1,'visual_shell_horizontal_overflow');
