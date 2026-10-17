@@ -37,7 +37,9 @@ test('Input focus cannot scroll the page, while command submission is preserved'
   assert.match(js,/Math\.min\(input\.scrollHeight,160\)/);
   assert.match(js,/\/api\/control\/ai\/v8\/orchestrator\/submit/);
   assert.match(js,/idempotencyKey/);
-  assert.match(js,/\/api\/control\/ai\/v8\/pulse/);
+  assert.match(js,/actionType:'ui.change_request'/);
+  assert.match(js,/preflightVerified:false/);
+  assert.match(js,/\/api\/control\/ai\/actions/);
   assert.match(html,/id="commandInput"/);
   assert.match(html,/id="orchestratorRelease"/);
   assert.match(html,/id="executeNow"/);
