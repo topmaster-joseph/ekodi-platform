@@ -36,9 +36,9 @@ test('current task counts include Human Gate blockers but do not invent approval
  const context={state,$:selector=>selector==='#workspaceCounts'?node:selector==='#executionModeDescription'?description:checkboxes[selector.slice(1)]||null};
  const funcs=vm.runInNewContext(js.slice(start,end)+'\n({renderWorkspaceSummary,updateExecutionMode})',context);
  funcs.renderWorkspaceSummary();
- assert.equal(node.textContent,'대화 2건 · 작업 3건 · 승인 대기 2건');
+ assert.equal(node.textContent,'이 브라우저 대화 2건 · 작업 3건 · 차단 기록 2건');
  state.tasks=[{status:'verified'}];funcs.renderWorkspaceSummary();
- assert.equal(node.textContent,'대화 2건 · 작업 1건');
+ assert.equal(node.textContent,'이 브라우저 대화 2건 · 작업 1건');
 });
 
 test('execution description distinguishes ordinary command, response-only and protected Human Gate',()=>{
