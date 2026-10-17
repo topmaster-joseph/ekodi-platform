@@ -32,7 +32,7 @@ try{
   evidence.profiles.push(row);
   const context=await browser.newContext({viewport:{width:device.width,height:device.height},
    isMobile:device.mobile,hasTouch:device.mobile,acceptDownloads:false,serviceWorkers:'block'});
-  await context.route('**/*',route=>{
+  await context.route('**/*',async route=>{
    const req=route.request(),method=req.method().toUpperCase();
    let url;try{url=new URL(req.url())}catch{return route.abort('blockedbyclient')}
    if(url.origin!==ORIGIN){row.blockedExternal.push(url.origin);return route.abort('blockedbyclient')}
