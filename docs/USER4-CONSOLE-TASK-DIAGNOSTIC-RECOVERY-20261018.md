@@ -28,3 +28,7 @@ The existing allowlisted `computer.agent.status` will project only four fixed EK
 ## Synchronized protected-main revalidation
 
 The official guarded converger synchronized the recovery branch against the latest `main` at head `401b9ee6579b9e4596ce8911cb1298f7099f13bc`. The GitHub Actions bot-authored update yielded `action_required` checks without real job execution. This additional owner-authored documentation-only change starts fresh required CI, real Windows syntax tests and an isolated Control API staging run on the synchronized source. It does not alter the approved Windows or Control API runtime logic, a security policy, the release receipt, or any live USER4 process. Successful staging alone is not a production deployment or native USER4 acceptance.
+
+## Guarded concurrency convergence checkpoint
+
+Latest official convergence synchronized the protected recovery branch to `18919ec4ef72acd9087f8991b19d89b6f89949c0` after the earlier Windows CI, full CI and isolated Control API staging succeeded. GitHub Actions marked the bot-authored synchronized head as `action_required` rather than executing genuine jobs. This owner-authored documentation-only commit asks for a new real test and staging cycle against the fully synchronized revision. Preserve every prior release gate, exact-source approval, task receipt, device identity constraint and production rollback. No USER4 task edit or successful popup suppression is claimed.
