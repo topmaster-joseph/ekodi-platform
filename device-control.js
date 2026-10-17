@@ -893,6 +893,36 @@ function summarizeCommandResult(result = {}, commandType = '') {
       isolatedDesktopReady: result.agent.isolatedDesktopReady === true,
       minimizedWindowCountsAsIsolation: result.agent.minimizedWindowCountsAsIsolation === true,
     };
+    // Strictly bounded projection of EKODI-only Windows task posture.
+    // Never include raw Scheduled Task arguments, executable paths, usernames, or other tasks.
+    const posture = result.agent.consoleTaskPosture;
+    if (posture?.mode === 'read-only' && Array.isArray(posture.tasks)) {
+      const allowedNames = new Set([
+        'EKODI Device Agent', 'EKODI Remote Agent Watchdog',
+        'EKODI Remote Agent Watchdog Monitor', 'EKODI POS Agent'
+      ]);
+      const allowedStates = new Set(['Ready','Running','Disabled','Queued','not_installed','unknown']);
+      const allowedQuery = new Set(['ok','task_info_unavailable','task_unavailable_or_not_installed']);
+      summary.agent.consoleTaskPosture = {
+        schemaVersion: 1,
+        mode: 'read-only',
+        checkedAt: safeText(posture.checkedAt,64),
+        tasks: posture.tasks.slice(0,4).filter(item => allowedNames.has(String(item?.name||''))).map(item => ({
+          name: String(item.name),
+          installed: item.installed === true,
+          state: allowedStates.has(String(item.state||'')) ? String(item.state) : 'unknown',
+          powerShellAction: item.powerShellAction === true,
+          hiddenFlag: item.hiddenFlag === true,
+          nonInteractiveFlag: item.nonInteractiveFlag === true,
+          interactivePrincipal: item.interactivePrincipal === true,
+          systemPrincipal: item.systemPrincipal === true,
+          lastRunUtc: safeText(item.lastRunUtc,64),
+          lastResult: Number.isInteger(item.lastResult) && Math.abs(item.lastResult) <= 2147483647 ? item.lastResult : null,
+          actionCount: Number.isInteger(item.actionCount) ? Math.max(0,Math.min(8,item.actionCount)) : 0,
+          queryStatus: allowedQuery.has(String(item.queryStatus||'')) ? String(item.queryStatus) : 'unknown',
+        })),
+      };
+    }
     const audit = result.agent.browserTaskAudit;
     if (audit && typeof audit === 'object') {
       const allow = new Set(['computer.browser.canary','computer.browser.execute','computer.browser.pr.observe']);
