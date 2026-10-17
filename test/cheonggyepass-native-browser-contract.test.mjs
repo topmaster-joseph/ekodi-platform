@@ -47,3 +47,26 @@ test('browser verification exercises both responsive form modes and separates lo
   assert.match(s,/report\.passed=report\.profiles\.every/);
   assert.doesNotMatch(s,/Google OAuth success|realAuthVerified:true|productionWrites:1/);
 });
+
+
+test('official EKODI background browser registry is canonical, read-only and bound to pass routes',async()=>{
+  const registry=JSON.parse(await read('config/cheonggyepass-browser-surface-registry.json'));
+  assert.equal(registry.canonicalOrigin,'https://ekodi.kr');
+  assert.ok(registry.maxPaths<=12);
+  assert.deepEqual(registry.surfaces.filter(s=>s.enabled!==false).map(s=>s.path),[
+    '/cheonggyepass','/cheonggyepass/admin'
+  ]);
+  assert.equal(registry.status,'read-only');
+  assert.ok(!JSON.stringify(registry).includes('bearer'));
+  const workflow=await read('.github/workflows/ekodi-background-browser-worker.yml');
+  assert.match(workflow,/surface_registry:/);
+  assert.match(workflow,/workflow_dispatch:/);
+  assert.match(workflow,/allowMutation:false/);
+});
+
+test('Chromium script is syntax-valid and does not require credentials to be parsed',async()=>{
+  const {execFileSync}=await import('node:child_process');
+  const {fileURLToPath}=await import('node:url');
+  const target=fileURLToPath(new URL('../scripts/verify-cheonggyepass-native-ui.mjs',import.meta.url));
+  execFileSync(process.execPath,['--check',target],{timeout:20000,stdio:'pipe'});
+});
