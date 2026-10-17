@@ -343,6 +343,42 @@ jobs:
           }
           NODE
 
+      - name: Verify October 18 worship page, live stage routes and homepage entry
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s church/worship/2026-10-18/index.html
+          test -s church/worship/2026-10-18/materials.json
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const packet=JSON.parse(fs.readFileSync('church/worship/2026-10-18/materials.json','utf8'));
+          assert.equal(packet.date,'2026-10-18');
+          assert.equal(packet.scripture,'신명기 33:12–19');
+          assert.equal(packet.slides.length,16);
+          assert.equal(packet.youtube.status,'metadata-prepared-not-scheduled');
+          NODE
+          release="$CHURCH_SOURCE_SHA"
+          verified=false
+          for attempt in $(seq 1 18); do
+            root=$(curl -L -sS --connect-timeout 5 --max-time 20 -o /tmp/church-oct18-home.html -w '%{http_code}' "https://ekodi.kr/ekodichurch/?release=$release" || true)
+            worship=$(curl -L -sS --connect-timeout 5 --max-time 20 -o /tmp/church-oct18-worship.html -w '%{http_code}' "https://ekodi.kr/ekodichurch/worship/2026-10-18/?release=$release" || true)
+            if [[ "$root" == 200 && "$worship" == 200 ]] &&
+              grep -Fq '/ekodichurch/worship/2026-10-18/' /tmp/church-oct18-home.html &&
+              grep -Fq '신명기 33:12–19' /tmp/church-oct18-worship.html &&
+              grep -Fq '?view=stage' /tmp/church-oct18-worship.html &&
+              grep -Fq '?view=operator' /tmp/church-oct18-worship.html; then
+              verified=true
+              break
+            fi
+            sleep 5
+          done
+          if [[ "$verified" != true ]]; then
+            echo "::error::October 18 worship release not reflected on real canonical host."
+            exit 1
+          fi
+          echo "Verified October 18 worship on real production: $release"
+
       - name: Verify linked EKODI services
         shell: bash
         run: |

@@ -123,10 +123,13 @@
         const taskStatus=String(submitted.state||'queued');
         // This opt-in applies to one submitted command only.
         if($('#orchestratorRelease'))$('#orchestratorRelease').checked=false;
+        const humanGateNotice=taskStatus==='blocked' && submitted.humanGate?.required===true
+          ?'\n현재 차단 사유: Human Gate 승인 대기. 최고관리자 권한으로 해당 작업의 승인 상태를 확인해야 합니다. 승인 없이 배포하지 않습니다.'
+          :taskStatus==='blocked'?'\n현재 차단 사유는 작업 상세에서 확인해야 합니다. 임의 승인이나 자동 재시도는 하지 않습니다.':'';
         const reply='EKODI 공식 오케스트레이터 작업 접수: '+taskId+
           '\n작업 브랜치: '+String(submitted.branchRef||'없음')+
           '\n현재 상태: '+statusLabel(taskStatus)+
-          '\n보호된 승인·CI·스테이징·운영 검증이 끝나기 전에는 배포 완료가 아닙니다.';
+          '\n보호된 승인·CI·스테이징·운영 검증이 끝나기 전에는 배포 완료가 아닙니다.'+humanGateNotice;
         state.tasks.unshift({id:taskId,title:title(message),status:taskStatus,target:'EKODI Orchestrator',at:now()});
         state.tasks=state.tasks.slice(0,40);
         state.results.unshift({title:title(message),summary:reply,provider:'EKODI Orchestrator',taskId,status:taskStatus,at:now()});
@@ -188,6 +191,32 @@
     saveState();renderPanels();
     toast('오케스트레이터 상태 '+updated+'건 갱신'+(unavailable?' · '+unavailable+'건 조회 실패':''));
   }
+  // The administrator sidebar already owns global navigation. Reuse Control's
+  // existing buttons in a compact top strip rather than rendering a second rail.
+  // Standalone /control keeps its complete original sidebar and history.
+  function mountEmbeddedToolbar(){
+    if(document.documentElement.dataset.ekodiControlEmbedded!=='admin')return;
+    if($('#controlEmbeddedToolbar'))return;
+    const rail=$('#controlRail');
+    const top=$('.control-main .topbar');
+    const nav=rail?.querySelector('.rail-nav');
+    const create=$('#newTask');
+    const recent=rail?.querySelector('.recent');
+    if(!rail||!top||!nav||!create||!recent)return;
+    const strip=document.createElement('div');
+    strip.id='controlEmbeddedToolbar';
+    strip.className='control-embedded-toolbar';
+    strip.setAttribute('role','group');
+    strip.setAttribute('aria-label','EKODI Control 작업 메뉴');
+    const history=document.createElement('details');
+    history.className='control-embedded-history';
+    const summary=document.createElement('summary');
+    summary.textContent='최근 작업';
+    history.append(summary,recent);
+    strip.append(create,nav,history);
+    top.after(strip);
+    rail.hidden=true;
+  }
   function resizeInput(){
     const input=$('#commandInput');
     input.style.height='auto';
@@ -208,6 +237,7 @@
     $$('[data-refresh]').forEach(b=>b.onclick=()=>{refreshOrchestratorTasks().catch(()=>toast('오케스트레이터 상태 갱신 실패'))});
   }
   async function boot(){
+    mountEmbeddedToolbar();
     bind();renderRecent();renderMessages();renderPanels();
     const logged=Boolean(token());$('#authState').textContent=logged?'최고관리자 세션':'로그인 필요';$('#runtimeStatus').textContent=logged?'EKODI 연결 준비':'로그인 필요';$('#runtimeStatus').classList.toggle('ok',logged);
     if(!logged)toast('최고관리자 로그인 세션이 필요합니다.');

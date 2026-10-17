@@ -33,3 +33,15 @@ test('real user authentication cannot be falsely claimed and role lifecycle is e
   assert.match(ci,/permissions:\s+contents: read/);
   assert.doesNotMatch(ci,/secrets\.|environment:\s+production|service_role/);
 });
+
+test('first-party Chromium checks dated worship on PC and mobile without making writes',()=>{
+  assert.match(src,/for\(const device of \[\{name:'mobile',width:390,height:844\},\{name:'desktop',width:1440,height:900\}\]\)/);
+  assert.match(src,/await picker\.selectOption\(entry\.date\)/);
+  assert.match(src,/guestEditHidden:root\.querySelector/);
+  assert.match(src,/state\.stage,state\.bulletin\+'\?view=stage'/);
+  assert.match(src,/state\.operator,state\.bulletin\+'\?view=operator'/);
+  assert.match(src,/state\.rootRight<=state\.width\+2/);
+  assert.match(src,/release\.sourceSha,/);
+  assert.match(src,/releaseSourceSha:release\.sourceSha/);
+  assert.match(src,/if\(!\['GET','HEAD','OPTIONS'\]\.includes\(method\)\)/);
+});

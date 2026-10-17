@@ -498,7 +498,7 @@ async function verifyCommandWorkbench(started) {
   },null,{timeout:15000});
   const frame=page.frameLocator('#ekodiControlHomeFrame');
   await frame.locator('#commandInput').waitFor({state:'visible',timeout:15000});
-  await frame.locator('#controlRail').waitFor({state:'visible',timeout:15000});
+  await frame.locator('#controlEmbeddedToolbar').waitFor({state:'visible',timeout:15000});
   const state=await page.evaluate(()=>{
     const frame=document.querySelector('#ekodiControlHomeFrame');
     const parentSidebar=document.querySelector('.sidebar');
