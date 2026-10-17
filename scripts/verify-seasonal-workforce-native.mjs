@@ -19,7 +19,8 @@ const must=(value,reason)=>{if(!value)throw Error(reason)};
 await fs.mkdir(OUT,{recursive:true});
 const evidence={policy:'EKODI-SEASONAL-NATIVE-PUBLIC-001',origin:ORIGIN,
  browser:'EKODI-owned Playwright Chromium',mode:MODE,
- productionSiteVerified:MODE==='live',sourceCodePreview:MODE==='source',
+ productionSiteVerified:false,sourceCodePreview:MODE==='source',
+ releaseCommit:process.env.GITHUB_SHA||null,releaseRun:process.env.GITHUB_RUN_ID||null,
  readOnly:true,realGoogleAuthentication:false,
  municipalDataMutation:false,legalGovernmentAuthorityVerified:false,
  at:new Date().toISOString(),profiles:[],success:false};
@@ -163,6 +164,7 @@ try{
 finally{
  await browser?.close().catch(()=>{});
  evidence.success=evidence.profiles.length===PROFILES.length&&evidence.profiles.every(x=>x.ok);
+ evidence.productionSiteVerified=MODE==='live'&&evidence.success;
  await fs.writeFile(path.join(OUT,'evidence.json'),JSON.stringify(evidence,null,2)+'\n');
  console.log(JSON.stringify({policy:evidence.policy,mode:MODE,
   productionSiteVerified:evidence.productionSiteVerified,success:evidence.success,
