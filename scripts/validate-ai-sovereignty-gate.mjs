@@ -85,7 +85,13 @@ assert.match(controlUi,/\/api\/control\/ai\/v8\/orchestrator\/submit/);
 assert.match(controlUi,/deploymentRequested:true/);
 assert.match(controlUi,/idempotencyKey/);
 assert.match(controlUi,/보호된 승인.*배포 완료가 아닙니다/);
-assert.match(controlUi,/\/api\/control\/ai\/v8\/pulse/); // ordinary mode unchanged
+// General admin commands now persist an auditable, non-authorizing Action;
+ // they must not emit a guaranteed auto-blocked Pulse or claim deployment.
+assert.doesNotMatch(controlUi,/\\/api\\/control\\/ai\\/v8\\/pulse/);
+assert.match(controlUi,/actionType:'ui.change_request'/);
+assert.match(controlUi,/preflightVerified:false/);
+assert.match(controlUi,/actionType:'service.health_check'/);
+assert.match(controlUi,/명령 접수와 AI 답변은 코드 변경·배포 완료 증거가 아닙니다/);
 assert.ok(controlUi.includes("'/api/control/ai/v8/orchestrator/tasks/'"));
 assert.ok(controlUi.includes('productionEvidencePresent'));
 assert.ok(controlUi.includes('수신됨 (검증 별도)'));
