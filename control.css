@@ -502,3 +502,124 @@ html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-co
     height:calc(100svh - 106px)!important;
   }
 }
+
+
+/* CONTROL-SPLIT-002: the whole visible workspace has three nonoverlapping
+ * rows. The conversation scrolls on its own, while the composer sits in its
+ * own bottom row. No viewport-fixed overlay or outer-page scroll is needed. */
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .control-main .view.active[data-view-panel="chat"]{
+  display:grid!important;
+  grid-template-rows:auto minmax(0,1fr) auto!important;
+  height:calc(100svh - 68px)!important;
+  min-height:0!important;
+  overflow:hidden!important;
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .chat-workspace-head{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  min-height:48px;padding:8px clamp(14px,3vw,52px);
+  border-bottom:1px solid #e0e6ec;background:#fafbfc;
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .chat-workspace-title{
+  display:flex;align-items:center;flex-wrap:wrap;gap:6px 14px;min-width:0;
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .chat-workspace-title strong{
+  font-size:13px;color:#14202b;font-weight:800;
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] #workspaceCounts{
+  font-size:12px;color:#526173;
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .chat-workspace-tasks{
+  flex:none;font-size:12px;padding:6px 10px!important;
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .control-main .conversation{
+  width:100%!important;max-width:none!important;height:auto!important;
+  min-height:0!important;margin:0!important;
+  padding:16px clamp(14px,3.5vw,58px)!important;
+  overflow-x:hidden!important;overflow-y:auto!important;
+  scrollbar-gutter:stable;overscroll-behavior-y:contain;
+  background:#fff!important;
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .messages,
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .empty-state{
+  width:100%;max-width:1180px;margin-inline:auto;
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .messages{gap:18px}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .turn.assistant .bubble{
+  max-width:100%;width:100%;
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .turn.user .bubble{
+  max-width:min(850px,94%);
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .empty-state{
+  padding-top:clamp(12px,5vh,56px)!important;
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .composer-wrap{
+  position:relative!important;left:0!important;right:auto!important;bottom:auto!important;
+  width:100%!important;margin:0!important;
+  padding:10px clamp(14px,3.5vw,58px) 8px!important;
+  border-top:1px solid #cfd8e2!important;
+  background:#fff!important;background-image:none!important;
+  box-shadow:0 -3px 12px rgba(18,32,45,.035);
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .composer{
+  width:100%;max-width:1180px!important;padding:10px 14px!important;
+  border-radius:13px!important;box-shadow:none!important;
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .composer textarea{
+  min-height:62px!important;max-height:160px!important;
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .composer-row{
+  flex-wrap:wrap;row-gap:8px;
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .execution-mode-description{
+  margin:7px 3px 0;font-size:12px;line-height:1.4;color:#526173;
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .composer-note{
+  max-width:1180px!important;margin:5px auto 0!important;
+  text-align:left!important;font-size:11px;
+}
+/* Embedded Admin already has its own 52px Control tab row below the header. */
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-control-embedded="admin"] .control-main .view.active[data-view-panel="chat"]{
+  height:calc(100svh - 120px)!important;
+}
+@media(max-width:760px){
+  html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .control-main .view.active[data-view-panel="chat"]{
+    height:calc(100svh - 58px)!important;
+  }
+  html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-control-embedded="admin"] .control-main .view.active[data-view-panel="chat"]{
+    height:calc(100svh - 106px)!important;
+  }
+  html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .chat-workspace-head{
+    min-height:45px;padding:6px 10px;gap:6px;
+  }
+  html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .chat-workspace-title{
+    display:grid;gap:1px;
+  }
+  html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] #workspaceCounts{
+    font-size:11px;
+  }
+  html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .chat-workspace-tasks{
+    padding:6px 8px!important;font-size:11px;
+  }
+  html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .control-main .conversation{
+    padding:12px 10px!important;
+  }
+  html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .composer-wrap{
+    padding:7px 9px max(7px,env(safe-area-inset-bottom))!important;
+  }
+  html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .composer{
+    padding:7px 9px!important;
+  }
+  html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .composer textarea{
+    min-height:48px!important;
+  }
+  html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .composer-heading span{
+    font-size:10px;
+  }
+  html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .execution-mode-description{
+    font-size:11px;line-height:1.3;
+  }
+  html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .composer-note{
+    font-size:10px;line-height:1.25;
+  }
+}

@@ -54,9 +54,27 @@
   }
   function pushMessage(role,text,extra={}){
     const s=ensureSession(text);s.messages=s.messages||[];s.messages.push({role,text:String(text||'').slice(0,12000),at:now(),...extra});s.updatedAt=now();if(extra.status)s.status=extra.status;
-    state.sessions=[s,...state.sessions.filter(x=>x.id!==s.id)].slice(0,24);saveHistory();renderRecent();renderMessages({scrollToEnd:true});
+    state.sessions=[s,...state.sessions.filter(x=>x.id!==s.id)].slice(0,24);saveHistory();renderRecent();renderMessages({scrollToEnd:true});renderWorkspaceSummary();
   }
   function setView(view){state.view=view;$$('[data-view]').forEach(n=>n.classList.toggle('active',n.dataset.view===view));$$('[data-view-panel]').forEach(n=>n.classList.toggle('active',n.dataset.viewPanel===view));if(view!=='chat')renderPanels();closeRail()}
+  function renderWorkspaceSummary(){
+    const node=$('#workspaceCounts');
+    if(!node)return;
+    const blocked=state.tasks.filter(t=>t.status==='blocked'||t.status==='human_gate').length;
+    node.textContent='이 브라우저 대화 '+state.sessions.length+'건 · 작업 '+state.tasks.length+'건'+(blocked?' · 차단 기록 '+blocked+'건':'');
+    node.title='저장된 기록입니다. 작업 상태 확인에서 새로고침하면 공식 상태를 확인할 수 있습니다.';
+  }
+  function updateExecutionMode(){
+    const node=$('#executionModeDescription');
+    if(!node)return;
+    if($('#orchestratorRelease')?.checked){
+      node.textContent='보호 배포 접수: 즉시 배포하지 않고 공식 오케스트레이터의 승인 절차로 보냅니다.';
+    }else if($('#executeNow')?.checked){
+      node.textContent='작업 접수·사전점검: EKODI 접수와 상태 확인을 요청합니다. 접수·AI 응답은 실제 실행 또는 배포 완료의 증거가 아닙니다.';
+    }else{
+      node.textContent='응답만 요청: 새로운 실행 작업은 접수하지 않습니다. AI 경로 점검은 미리보기만 합니다.';
+    }
+  }
   function renderRecent(){const root=$('#recentTasks');const items=state.sessions.slice(0,14);root.innerHTML=items.length?items.map(s=>'<button type="button" class="recent-item" data-session="'+esc(s.id)+'">'+esc(s.title||'새 작업')+'</button>').join(''):'<div class="section-title">아직 작업이 없습니다.</div>';root.querySelectorAll('[data-session]').forEach(b=>b.onclick=()=>{state.activeId=b.dataset.session;setView('chat');renderMessages({scrollToEnd:true})})}
   function renderMessages({scrollToEnd=false}={}){const s=state.sessions.find(x=>x.id===state.activeId);const messages=s?.messages||[];$('#emptyState').hidden=messages.length>0;$('#messages').innerHTML=messages.map(m=>{
     const meta=[m.provider,m.target,m.status&&statusLabel(m.status)].filter(Boolean).join(' · ');
@@ -122,7 +140,7 @@
         const taskId=String(submitted.taskId||'');
         const taskStatus=String(submitted.state||'queued');
         // This opt-in applies to one submitted command only.
-        if($('#orchestratorRelease'))$('#orchestratorRelease').checked=false;
+        if($('#orchestratorRelease'))$('#orchestratorRelease').checked=false;updateExecutionMode();
         const humanGateNotice=taskStatus==='blocked' && submitted.humanGate?.required===true
           ?'\n현재 차단 사유: Human Gate 승인 대기. 최고관리자 권한으로 해당 작업의 승인 상태를 확인해야 합니다. 승인 없이 배포하지 않습니다.'
           :taskStatus==='blocked'?'\n현재 차단 사유는 작업 상세에서 확인해야 합니다. 임의 승인이나 자동 재시도는 하지 않습니다.':'';
@@ -196,6 +214,7 @@
   }
   function card(titleText,status,description){return '<article class="card"><div class="card-head"><strong>'+esc(titleText)+'</strong><span class="badge">'+esc(status)+'</span></div><p>'+esc(description||'')+'</p></article>'}
   function renderPanels(){
+    renderWorkspaceSummary();
     $('#taskCards').innerHTML=state.tasks.length?state.tasks.map(t=>card(t.title,statusLabel(t.status),(t.id||'')+' · '+(t.target||'auto'))).join(''):card('아직 실행 작업이 없습니다','대기','대화에서 실행을 시작하면 Task가 표시됩니다.');
     $('#agentCards').innerHTML=AGENTS.map(([id,name,kind])=>card(name,id==='ekodi'?'최종 통제':'연결 대상',kind+' · EKODI 라우팅/권한 정책 적용')).join('');
     $('#workerCards').innerHTML=WORKERS.map(([id,name])=>card(name,'상태는 실행 시 확인',id+' 실행계층')).join('');
@@ -263,6 +282,10 @@
   function bind(){
     $$('.nav-item').forEach(b=>b.onclick=()=>setView(b.dataset.view));
     $('#newTask').onclick=newTask;$('#railOpen').onclick=()=>$('#controlRail').classList.add('open');$('#railClose').onclick=closeRail;
+    $('#openTaskList').onclick=()=>setView('tasks');
+    $('#executeNow').addEventListener('change',updateExecutionMode);
+    $('#orchestratorRelease').addEventListener('change',updateExecutionMode);
+    updateExecutionMode();
     $('#commandForm').addEventListener('submit',e=>{e.preventDefault();submitCommand($('#commandInput').value)});
     $('#aiRoutePreview').addEventListener('click',()=>previewAiRoute());
     $('#commandInput').addEventListener('input',resizeInput);
