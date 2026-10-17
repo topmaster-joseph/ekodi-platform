@@ -75,7 +75,7 @@ test('today agenda, management login, and calendar toolbar remain separate from 
   ]);
   assert.match(layout,/주요일정/);
   assert.doesNotMatch(layout,/일정 달력/);
-  assert.ok(layout.includes('20261017-live-3-share'),'published calendar JS and CSS must bypass old cached bundles');
+  assert.ok(layout.includes('20261017-live-4-title'),'published calendar JS and CSS must bypass old cached bundles');
   assert.ok(js.includes("heading.append(make('h2','','주요일정'))"));
   assert.ok(js.includes("appendButton(heading,'관리'"));
   assert.ok(js.includes("navigation.replaceChildren(current,previous,today,next)"));
@@ -190,18 +190,46 @@ test('every public event list has accessible native share and copy actions, with
   assert.match(js,/attachSharing\(article,item\)/);
   assert.equal((js.match(/attachSharing\(article,item\);/g)||[]).length,2,'both today and selected day must expose sharing');
   assert.match(js,/navigator\.share\(/);
-  assert.match(js,/navigator\.clipboard\.writeText\(url\)/);
+  assert.match(js,/navigator\.clipboard\.writeText\(shareMessage\(item\)\)/);
   assert.match(js,/appendButton\(actions,'공유'/);
   assert.match(js,/appendButton\(actions,'링크 복사'/);
   assert.match(js,/shareTarget&&Number\(item\.id\)===shareTarget\.id/);
   assert.match(js,/article\.scrollIntoView/);
   assert.match(js,/공유된 일정이 없거나 공개되지 않았습니다/);
-  assert.match(js,/window\.SeonamMediCalendar=\{mount,shareUrl,parseSharedSchedule\}/);
+  assert.match(js,/window\.SeonamMediCalendar=\{mount,shareUrl,parseSharedSchedule,shareSummary,shareMessage\}/);
+  assert.match(js,/document\.title=shareTitle\(item\)/);
   const shareBuilder=js.slice(js.indexOf('  const shareUrl='),js.indexOf('  const make='));
   assert.doesNotMatch(shareBuilder,/searchParams\.set\('(?:manage|auth|access_token|ekodi_token)'/);
   assert.match(css,/\.seonam-calendar-event\.is-shared/);
   assert.match(css,/\.seonam-calendar-share-actions/);
-  assert.match(loader,/calendar-sidebar\.js\?v=20261017-live-3-share/);
-  assert.match(loader,/calendar-sidebar\.css\?v=20261017-live-3-share/);
+  assert.match(loader,/calendar-sidebar\.js\?v=20261017-live-4-title/);
+  assert.match(loader,/calendar-sidebar\.css\?v=20261017-live-4-title/);
   assert.match(js,/if\(!admin\)return;/);
+});
+
+test('copied schedule share message includes actual public event title, date, time and unchanged deep link',()=>{
+  const item={id:12,kind:'event',eventStart:'2026-10-15T18:00',title:'평화광장 집회'};
+  const expectedHead='서남권 국립의대 소통센터 일정\n평화광장 집회\n2026.10.15 18:00\n일정 확인: ';
+  const apex=loadShareHelpers('https://ekodi.kr/seonammedi/board/notices?auth=private#fragment');
+  const sub=loadShareHelpers('https://seonammedi.kr/board/notices?access_token=secret#fragment');
+  assert.equal(apex.shareMessage(item),expectedHead+'https://ekodi.kr/seonammedi/board/notices?schedule=12&date=2026-10-15');
+  assert.equal(sub.shareMessage(item),expectedHead+'https://seonammedi.kr/board/notices?schedule=12&date=2026-10-15');
+  assert.equal(sub.shareSummary(item),'서남권 국립의대 소통센터 일정\n평화광장 집회\n2026.10.15 18:00');
+  assert.ok(!sub.shareMessage(item).includes('access_token'));
+});
+
+test('shared event titles are sanitized for readable, one-line messenger previews',()=>{
+  const calendar=loadShareHelpers('https://seonammedi.kr/board/notices');
+  const item={id:3,eventStart:'2026-11-09T09:30',title:'  평화광장\n집회\t안내  '};
+  assert.equal(calendar.shareMessage(item).split('\n')[1],'평화광장 집회 안내');
+  assert.equal(calendar.shareSummary({id:3,eventStart:'2026-11-09T09:30',title:'  '}).split('\n')[1],'일정');
+  assert.equal(calendar.shareMessage({id:0,title:'없는 일정',eventStart:'2026-11-09T09:30'}),'');
+});
+
+test('title-sharing assets stay byte-identical across the main Site Core and independent board',async()=>{
+  const site=await readFile(new URL('board-central-category.js',root),'utf8');
+  const worker=await readFile(new URL('../../../services/independent-board/worker.js',root),'utf8');
+  assert.ok(worker.includes('const BOARD_CATEGORY_CLIENT_JS='+JSON.stringify(site)+';'));
+  assert.ok(site.includes('/seonammedi/calendar-sidebar.js?v=20261017-live-4-title'));
+  assert.ok(site.includes('/seonammedi/calendar-sidebar.css?v=20261017-live-4-title'));
 });
