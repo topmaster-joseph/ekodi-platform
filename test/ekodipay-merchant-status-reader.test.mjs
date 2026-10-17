@@ -15,12 +15,13 @@ const merchantRow=Object.freeze({
   proof_ref:'PROOF_NEVER_EXPORT',buyer_email:'BUYER_NEVER_EXPORT',
 });
 function fixture({authenticated=true,permitted=true,row=merchantRow,dbFails=false,
-  authFails=false,authorizationFails=false}={}) {
+  authFails=false,authorizationFails=false,invalidScope=false,workspaceId='workspace123',
+  workspaceFails=false}={}) {
   const calls=[];
   const db={prepare(sql) {
     calls.push(['prepare',sql]);
-    return {bind(merchantId) {
-      calls.push(['bind',merchantId]);
+    return {bind(merchantId,dbWorkspaceId) {
+      calls.push(['bind',merchantId,dbWorkspaceId]);
       return {async first() {
         calls.push(['first']);
         if(dbFails)throw Error('SENSITIVE_DATABASE_FAILURE');
@@ -31,14 +32,23 @@ function fixture({authenticated=true,permitted=true,row=merchantRow,dbFails=fals
   const authenticate=async()=> {
     calls.push(['authenticate']);
     if(authFails)throw Error('SENSITIVE_AUTH_FAILURE');
-    return authenticated?{subjectRef:'member_approved'}:null;
+    return authenticated?{
+      id:'customer:member_approved',kind:invalidScope?'admin':'user',
+      authorityScope:invalidScope?'platform':'tenant',
+      subject:{type:invalidScope?'person':'tenant',key:'merchant-site'},
+    }:null;
   };
-  const authorize=async({principal,merchantId,capability})=> {
-    calls.push(['authorize',principal.subjectRef,merchantId,capability]);
+  const resolveWorkspaceId=async({principal})=> {
+    calls.push(['resolveWorkspaceId',principal.id]);
+    if(workspaceFails)throw Error('SENSITIVE_WORKSPACE_FAILURE');
+    return workspaceId;
+  };
+  const authorize=async({principal,merchantId,workspaceId,capability})=> {
+    calls.push(['authorize',principal.id,merchantId,workspaceId,capability]);
     if(authorizationFails)throw Error('SENSITIVE_AUTHORIZATION_FAILURE');
     return permitted;
   };
-  return {calls,options:{db,authenticate,authorize}};
+  return {calls,options:{db,authenticate,resolveWorkspaceId,authorize}};
 }
 const call=(opts,method='GET',url=uri)=>
   handlePrivateMerchantStatus(new Request(url,{method}),opts);
@@ -61,11 +71,14 @@ test('authenticated tenant-scoped status reader uses parameterized query and exp
   for(const secret of ['MID_NEVER_EXPORT','ENTITY_NEVER_EXPORT','4321',
     'FINGERPRINT_NEVER_EXPORT','SECRET_BINDING_NEVER_EXPORT',
     'PROOF_NEVER_EXPORT','BUYER_NEVER_EXPORT'])assert.ok(!body.includes(secret),secret);
-  assert.ok(f.calls.some(c=>c[0]==='authorize'&&c[2]==='abcmerchant'
-    &&c[3]==='ekodipay.merchant.status.read'));
+  assert.ok(f.calls.some(c=>c[0]==='authorize'&&c[2]==='abcmerchant'&&c[3]==='workspace123'
+    &&c[4]==='ekodipay.merchant.status.read'));
   const prepared=f.calls.find(c=>c[0]==='prepare');
   assert.ok(prepared[1].includes('WHERE m.merchant_id=?'));
-  assert.deepEqual(f.calls.find(c=>c[0]==='bind'),['bind','abcmerchant']);
+  assert.ok(prepared[1].includes('w.workspace_id=?'));
+  assert.ok(prepared[1].includes("w.status='active'"));
+  assert.ok(prepared[1].includes('w.verified_at IS NOT NULL'));
+  assert.deepEqual(f.calls.find(c=>c[0]==='bind'),['bind','abcmerchant','workspace123']);
 });
 test('guest or missing identity never queries merchant data',async()=>{
   const f=fixture({authenticated:false});
@@ -84,10 +97,25 @@ test('explicit tenant capability is required, not a truthy string or global role
     assert.ok(!f.calls.some(c=>c[0]==='prepare'));
   }
 });
+test('only a verified tenant context can read a merchant record',async()=>{
+  const platform=fixture({invalidScope:true});
+  assert.equal((await call(platform.options)).status,403);
+  assert.ok(!platform.calls.some(c=>c[0]==='resolveWorkspaceId'));
+  assert.ok(!platform.calls.some(c=>c[0]==='prepare'));
+  for(const workspaceId of ['', '../another-tenant','https://fake/tenant',null]) {
+    const scope=fixture({workspaceId});
+    assert.equal((await call(scope.options)).status,403);
+    assert.ok(!scope.calls.some(c=>c[0]==='authorize'));
+    assert.ok(!scope.calls.some(c=>c[0]==='prepare'));
+  }
+  const lacking=fixture();
+  assert.equal((await call({...lacking.options,resolveWorkspaceId:undefined})).status,503);
+  assert.ok(!lacking.calls.some(c=>c[0]==='prepare'));
+});
 test('unknown merchant and provider errors remain private',async()=>{
   const none=await call(fixture({row:null}).options);
   assert.equal(none.status,404);
-  for(const opts of [{dbFails:true},{authFails:true},{authorizationFails:true}]) {
+  for(const opts of [{dbFails:true},{authFails:true},{authorizationFails:true},{workspaceFails:true}]) {
     const res=await call(fixture(opts).options);
     assert.equal(res.status,503);
     const text=await res.text();
