@@ -18,7 +18,8 @@ test('production signed-in write is verified or transparently skipped',()=>{
  assert.match(canary,/BOARD_CANARY_GOOGLE_TOKEN: \$\{\{ secrets\.SEONAMMEDI_BOARD_CANARY_GOOGLE_TOKEN \}\}/);
  assert.match(canary,/authorization: Bearer \$BOARD_CANARY_GOOGLE_TOKEN/);
  assert.match(canary,/Real Google writer test SKIPPED/);
- assert.match(canary,/\.published==true/);
+ assert.match(canary,/\.queued==true/);
+ assert.match(canary,/\.status=="published"/);
  assert.match(canary,/DELETE FROM citizen_voices_fresh WHERE id=\$post_id/);
  assert.match(canary,/Remove old citizen records and referenced photos after cutover/);
  assert.match(canary,/node services\/independent-board\/voices-fresh\/purge-legacy\.mjs --execute/);
