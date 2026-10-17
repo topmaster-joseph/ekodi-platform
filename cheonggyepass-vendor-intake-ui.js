@@ -117,6 +117,11 @@ function clientMain(){
     finally{button.disabled=false}
   });
   function ready(){
+    const access=document.documentElement.__EKODI_REGION_ACCESS__||{};
+    const caps=new Set(access.capabilities||[]);
+    const allowed=Boolean(access.platform)||caps.has('*')||caps.has('tenant.integration.inspect')||
+      caps.has('tenant.pr.create')||caps.has('tenant.operations.manage')||Boolean(access.canManageAccess);
+    if(!allowed)return;
     root.hidden=false;renderFields();
     refresh().catch(err=>setText(status,err.message));
   }
