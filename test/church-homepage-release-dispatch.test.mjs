@@ -59,3 +59,19 @@ test('church guarded Pages release rejects the previous-week live default and da
  assert.match(w,/resolveServiceDate/);
  assert.match(w,/query\.get\('date'\)\|\|'2026-10-11'/);
 });
+
+test('Church QR director camera and resizable program require real deployment canary',async()=>{
+ const w=await read('.github/workflows/deploy-ekodi-church-homepage.yml');
+ for(const marker of [
+  'Verify director QR cameras and resizable live program on real Church Pages',
+  'church/live/management-camera-qr.js',
+  'id="openManagementCameraButton"',
+  'id="managementCameraDialog"',
+  'id="presenterResizeGrip"',
+  'function createManagementCameraPair(',
+  'function beginOverlayResize(',
+  'function beginPresenterResize(',
+  'CHURCH_SOURCE_SHA'
+ ])assert.ok(w.includes(marker),'missing QR on-air canary '+marker);
+ assert.match(w,/Verified director QR camera and overlay sizing assets in production/);
+});
