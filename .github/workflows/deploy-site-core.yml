@@ -27,6 +27,8 @@ on:
       - '.github/workflows/deploy-site-core.yml'
       - 'scripts/converge-orchestrated-pr-merge.mjs'
       - 'site-worker.js'
+      - 'site-shell-worker.js'
+      - 'ekodi-shell-injector.js'
       - 'control.html'
       - 'control.css'
       - 'control.js'
