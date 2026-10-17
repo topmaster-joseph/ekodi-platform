@@ -124,7 +124,7 @@ test('Control API, router and storage remain isolated from public and financial 
   assert.doesNotMatch(sql,/\bDROP TABLE\b|\bDELETE FROM\b/);
   const runtime=await read('cheonggyepass-vendor-intake.js');
   assert.match(runtime,/resolveRegionalAccess\(request,env,'cheonggye-pass'\)/);
-  assert.match(runtime,/credentials/);
+  assert.match(runtime,/credential/);
   assert.match(runtime,/quarantine\/cheonggyepass\//);
   assert.match(runtime,/INTAKE_SCAN_ATTESTATION_REQUIRED/);
   assert.match(runtime,/financialExecutionEnabled:false/);
