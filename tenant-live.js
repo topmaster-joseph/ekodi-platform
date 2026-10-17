@@ -18,7 +18,7 @@ function login(){const returnTo=location.href;location.href=`/auth/?site=${encod
 function showHostAccessRecovery(message){
   const status=$('hostAccessStatus'),loginButton=$('hostAccessLogin');
   if(status){status.textContent=message;status.classList.remove('hidden')}
-  if(loginButton){loginButton.classList.remove('hidden');loginButton.href=`/auth/?site=${encodeURIComponent(cfg.authSite||cfg.tenant)}&return_to=${encodeURIComponent(location.href)}`}
+  if(loginButton){loginButton.classList.remove('hidden');loginButton.href=`/auth/?site=${encodeURIComponent(cfg.authSite||cfg.tenant)}&select_account=1&return_to=${encodeURIComponent(location.href)}`}
   note(message);
 }
 async function verifyHostAccess(){
