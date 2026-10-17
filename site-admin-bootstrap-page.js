@@ -1,7 +1,7 @@
 // Protected site administration recovery. The page itself grants no authority;
 // every read/write uses the verified first-party Google session and Access API.
 export function siteAdminBootstrapPage(){
-  return new Response(\`<!doctype html>
+  return new Response(`<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive">
 <title>사이트 관리자 등록 · EKODI</title>
@@ -32,7 +32,7 @@ button:disabled{opacity:.45;cursor:not-allowed}.subtle{font-size:13px;color:#666
 <p class="subtle">기존 관리자가 한 명이라도 활성 상태이면 등록되지 않습니다. 대상 계정은 실제 Google 본인 인증을 완료해야 권한을 사용할 수 있습니다.</p>
 <button id="submitBootstrap" type="submit" disabled>관리자 공석 확인 및 등록</button>
 </form></section>
-</main><script src="/site-admin-bootstrap.js" defer></script></body></html>\`,{
+</main><script src="/site-admin-bootstrap.js" defer></script></body></html>`,{
     headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store',
       'x-content-type-options':'nosniff','x-robots-tag':'noindex, nofollow, noarchive',
       'x-frame-options':'DENY',
@@ -40,7 +40,7 @@ button:disabled{opacity:.45;cursor:not-allowed}.subtle{font-size:13px;color:#666
   });
 }
 export function siteAdminBootstrapScript(){
-  return new Response(String.raw\`(() => {
+  return new Response(String.raw`(() => {
   'use strict';
   const SUPABASE='https://renzehysxirjilvdxacv.supabase.co';
   const API=SUPABASE+'/functions/v1/access-api';
@@ -104,7 +104,7 @@ export function siteAdminBootstrapScript(){
       '등록 실패: '+error.message);submit.disabled=false;}
   });
   init().catch(error=>{show('인증 확인 실패: '+error.message);try{sessionStorage.removeItem(KEY)}catch{}});
-})();\`,{
+})();`,{
     headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',
       'x-content-type-options':'nosniff'}
   });
