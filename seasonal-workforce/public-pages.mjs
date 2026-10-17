@@ -91,3 +91,5 @@ export const PUBLIC_PAGES=Object.freeze({
  '/help':help(),
  '/reports':reports()
 });
+
+export {header as publicHeader};
