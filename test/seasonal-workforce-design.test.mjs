@@ -58,6 +58,16 @@ test('MOU preview and filters are templates, never fabricated signed agreements'
  assert.match(mou,/공식 협약 자료 확인 전/);
  assert.doesNotMatch(mou,/2024\.10\.16|비엔티안주.*유효/);
 });
+test('mobile MOU table stays inside scroll container rather than widening the viewport',()=>{
+ const css=portalCss;
+ const page=PUBLIC_PAGES['/mou'];
+ assert.match(page,/class="swp-table-wrap"/);
+ assert.match(page,/class="swp-table"/);
+ assert.match(css,/\\.swp-table-wrap\\{[^}]*max-width:100%;min-width:0;overflow-x:auto/);
+ assert.match(css,/\\.swp-panel\\{min-width:0;/);
+ assert.match(css,/@media\\(max-width:760px\\)\\{[^}]*\\.swp-two-column\\{grid-template-columns:minmax\\(0,1fr\\)\\}/);
+ assert.match(css,/\\.swp-table\\{[^}]*min-width:520px/);
+});
 test('education and housing checklists are client-only, no certification',()=>{
  assert.match(PUBLIC_PAGES['/learning'],/data-check-progress/);
  assert.match(PUBLIC_PAGES['/housing'],/data-housing-check/);
