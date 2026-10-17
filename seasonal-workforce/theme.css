@@ -6,3 +6,4 @@
 
 /* Preserve the older survey-demo route while aligning its visual language. */
 .swp-legacy{background:var(--bg);color:var(--ink)}.swp-legacy main{max-width:900px;margin:26px auto 55px;border-color:var(--line);box-shadow:0 5px 17px #123d5b0a}.swp-legacy main h1{color:#133c60}.swp-legacy button{background:#155b96;border-radius:7px}.swp-legacy .note{background:#ecf4fa;border-color:#1479af}.swp-legacy main input,.swp-legacy main select{border-color:#c2d6e3}.swp-legacy main a{color:#115c91}@media(max-width:760px){.swp-legacy main{margin:15px 12px 35px;padding:17px}}
+@media(max-width:760px){html{scroll-behavior:auto}}

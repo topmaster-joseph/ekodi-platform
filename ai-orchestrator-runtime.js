@@ -133,6 +133,18 @@ export function buildAiOrchestrationPlan(input = {}, providers = []) {
   });
 }
 
+// Supply explicit non-empty task instructions to both prompt-native adapters and
+// context-native providers. Never serialize the whole context (may contain secrets).
+function promptForTask(taskName, context = {}) {
+  const source = [
+    context?.prompt, context?.message, context?.commandGoal,
+    context?.request, context?.pulseEvent?.summary, context?.goal,
+  ].find(value => typeof value === 'string' && value.trim());
+  const goal = text(source || taskName, 4000);
+  const objective = text(context?.commandPlane?.objective || '', 600);
+  return objective ? goal + '\nTask objective: ' + objective : goal;
+}
+
 async function runReviewer({ env, reviewer, taskName, timeoutMs, context, primary }) {
   if (!reviewer) return null;
   const result = await runAiEnhancedTask({
@@ -144,6 +156,7 @@ async function runReviewer({ env, reviewer, taskName, timeoutMs, context, primar
       available: reviewer.available,
       invoke: () => reviewer.invoke(Object.freeze({
         taskName,
+        prompt: promptForTask(taskName, context) + '\nIndependently review the primary response and identify unsupported claims or missing evidence.',
         context: Object.freeze({
           ...context,
           collaboration: Object.freeze({
@@ -212,6 +225,7 @@ export function buildEkodiAiOrchestrator(env = {}, providers = []) {
           available: provider.available,
           invoke: () => provider.invoke(Object.freeze({
             taskName: normalizedTaskName,
+            prompt: promptForTask(normalizedTaskName, context),
             context: Object.freeze({
               ...context,
               collaboration: Object.freeze({ role: 'primary', mode: plan.mode }),
