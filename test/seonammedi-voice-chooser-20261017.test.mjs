@@ -18,7 +18,8 @@ test('citizen-voice menu is public on both SeonamMedi mounts, while write click 
     const res=await board.fetch(new Request(origin),{});
     assert.equal(res.status,200);
     const html=await res.text();
-    assert.match(html,//);
+    assert.match(html,/id="freshWrite"/);
+    assert.doesNotMatch(html,/<nav[^>]*>[\s\S]*?\?compose=1&choose_account=1[\s\S]*?<\/nav>/);
   }
 });
 
