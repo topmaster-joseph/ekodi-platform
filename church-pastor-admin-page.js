@@ -165,9 +165,50 @@ function pastorClient(POLICY){
       <div id="churchAiCommandStatus" role="status" aria-live="polite" class="trade-flash">주보·PPT·방송 자료를 실제로 조회한 뒤 준비 단계를 표시합니다.</div>
       <div id="churchAiCommandLinks" class="actions"></div>
     </section>`:'';
+    const originalSermonPanel=`<section class="service-row" id="church-sermon-source" style="display:block;padding:16px;border:1px solid #dce4dd;border-radius:12px;background:#fff;margin:0 0 20px">
+      <h2 style="margin:0 0 8px">말씀 원고 · Google Drive 원본 연동</h2>
+      <p class="empty">목회자 관리 화면에서만 원고를 불러옵니다. 페이지에 복사된 초안이 아닌 원본을 표시하며 원본 편집을 누르면 Google 문서가 열립니다.</p>
+      <div class="actions"><label for="churchSermonDate">주일 날짜 <select id="churchSermonDate"><option value="2026-10-18">2026년 10월 18일</option>${services.filter(x=>/^20\\d{2}-\\d{2}-\\d{2}$/.test(x.service_date)&&x.service_date!=='2026-10-18').map(x=>`<option value="${esc(x.service_date)}">${esc(x.service_date)}</option>`).join('')}</select></label>
+        <button type="button" id="churchSermonReload" class="button">원본 새로고침</button>
+        <a id="churchSermonEdit" class="button primary" target="_blank" rel="noopener noreferrer" hidden>Google 원본에서 편집</a></div>
+      <p id="churchSermonState" class="trade-flash" role="status" aria-live="polite">권한과 원본을 조회합니다.</p>
+      <iframe id="churchSermonFrame" title="관리자용 말씀 원고 원본" style="display:none;width:100%;min-height:740px;border:1px solid #dbe5de;border-radius:8px" loading="lazy" referrerpolicy="no-referrer"></iframe>
+      <p class="empty">교회 홈페이지 공개 주보·PPT에는 이 원고가 포함되지 않습니다. Google Drive 공유 설정은 원본 소유자가 별도로 제한해야 합니다. Google 편집 화면은 iframe 안에서 열 수 없으므로 편집은 원본 Google Docs 탭에서 수행합니다.</p>
+    </section>`;
     $('mainPanel').innerHTML=`<div class="service-row"><div><strong>에코디교회 · 주일모임 전용 관리</strong><p>에코디선교회 토요모임은 별도 소속·관리권한으로 운영합니다. 공통본문 확정 전에는 초안으로 저장하세요.</p></div><a href="/ekodimission/admin/saturday">선교회 토요모임 →</a></div>
-      ${aiWorshipPanel}<div class="table-wrap"><table><thead><tr><th>일자</th><th>공통본문</th><th>말씀 제목</th><th>상태</th><th>관리</th></tr></thead><tbody>${services.map((item,index)=>`<tr><td>${esc(item.service_date)}</td><td>${esc(item.scripture||'원본 미확인')}</td><td>${esc(item.title||'제목 미정')}</td><td>${item.is_published?'게시':'초안'}</td><td>${canWrite()?`<button type="button" class="button" data-worship-edit="${index}">편집</button>`:''}</td></tr>`).join('')}</tbody></table></div>${form}`;
+      ${originalSermonPanel}${aiWorshipPanel}<div class="table-wrap"><table><thead><tr><th>일자</th><th>공통본문</th><th>말씀 제목</th><th>상태</th><th>관리</th></tr></thead><tbody>${services.map((item,index)=>`<tr><td>${esc(item.service_date)}</td><td>${esc(item.scripture||'원본 미확인')}</td><td>${esc(item.title||'제목 미정')}</td><td>${item.is_published?'게시':'초안'}</td><td>${canWrite()?`<button type="button" class="button" data-worship-edit="${index}">편집</button>`:''}</td></tr>`).join('')}</tbody></table></div>${form}`;
 
+    const sermonDate=$('churchSermonDate'),sermonReload=$('churchSermonReload'),sermonFrame=$('churchSermonFrame'),sermonEdit=$('churchSermonEdit'),sermonState=$('churchSermonState');
+    let sermonSource=null;
+    const validGoogleDocumentUrl=value=>{
+      try{const u=new URL(value);return u.protocol==='https:'&&u.hostname==='docs.google.com'&&/^\\/document\\/d\\/[A-Za-z0-9_-]{24,100}\\/(?:edit|preview)$/.test(u.pathname)?u:null;}catch{return null;}
+    };
+    async function loadSermonOriginal(revalidate=true){
+      const date=sermonDate.value;
+      sermonEdit.hidden=true;sermonFrame.style.display='none';
+      if(!/^20\\d{2}-\\d{2}-\\d{2}$/.test(date)){sermonState.textContent='유효한 예배 날짜를 선택해 주세요.';return;}
+      sermonState.textContent='Google 원본 접근 권한 확인 중';
+      try{
+        const response=await fetch('/api/admin/church-worship-drive-source?date='+encodeURIComponent(date),{headers:{authorization:'Bearer '+(session?.accessToken||''),accept:'application/json'},cache:'no-store'});
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok||!data.ok)throw new Error(data.code||'원본 조회 불가');
+        const preview=validGoogleDocumentUrl(data.manuscript?.previewUrl),edit=validGoogleDocumentUrl(data.manuscript?.editUrl);
+        if(!preview||!edit)throw new Error('원본 주소 검증 실패');
+        sermonSource={preview,edit};
+        sermonEdit.href=edit.href;sermonEdit.hidden=false;
+        sermonFrame.src=preview.href+(revalidate?'?ekodi_refresh='+Date.now():'');
+        sermonFrame.style.display='block';
+        sermonState.textContent='Google 원본 연결됨 · 최대 약 1분 단위 새로고침 · '+date+' · '+String(data.manuscript.title||'');
+      }catch(error){sermonSource=null;sermonFrame.removeAttribute('src');sermonState.textContent='말씀 원고를 표시할 수 없습니다: '+error.message;}
+    }
+    sermonDate.addEventListener('change',()=>loadSermonOriginal());
+    sermonReload.addEventListener('click',()=>loadSermonOriginal());
+    window.setInterval(()=>{
+      if(!document.hidden&&sermonSource&&section==='worship'){
+        sermonFrame.src=sermonSource.preview.href+'?ekodi_refresh='+Date.now();
+      }
+    },60000);
+    loadSermonOriginal();
     const f=$('worshipForm');
     if(f){
       const dateField=f.elements.namedItem('service_date');
@@ -404,5 +445,5 @@ export function churchPastorAdminScript(){
 }
 
 export function churchPastorAdminPage(){
-  return new Response(`<!doctype html><html lang="ko" data-ekodi-authority-scope="tenant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow,noarchive"><title>에코디교회 목회자 관리자</title><link rel="stylesheet" href="/workspace-admin.css"><link rel="stylesheet" href="/church-reports-admin.css"></head><body><header class="topbar" data-ekodi-admin-topbar><a class="brand" href="/">EKODI</a><div class="context"><strong>에코디교회</strong><span>목회자 운영</span></div></header><div class="layout"><aside class="sidebar" data-ekodi-admin-sidebar><div class="scope"><span>교회 운영공간</span><strong>에코디교회</strong></div><nav id="adminNav" data-ekodi-admin-nav></nav><p class="boundary">플랫폼 전체 관리는 <a href="https://ekodi.kr/admin/">ekodi.kr/admin</a>에서 별도로 수행합니다.</p><div class="sidebar-footer" data-ekodi-admin-sidebar-footer><a class="public-link" href="/ekodichurch">교회 화면</a><button id="churchLogout" data-ekodi-logout type="button">로그아웃</button></div></aside><main data-ekodi-admin-main><section class="heading"><div><p class="eyebrow">EKODI CHURCH · PASTOR ADMIN</p><h1 id="pageTitle">오늘의 교회</h1><p id="pageCopy">오늘 일정·다음 예배·새가족·돌봄 후속처럼 지금 확인할 일을 한눈에 봅니다.</p></div><span class="state" id="pageState">확인 중</span></section><section class="cards" id="summaryCards"></section><section class="panel" id="mainPanel"><p class="loading">목회 운영공간을 확인하고 있습니다.</p></section></main></div><script src="/church-pastor-admin.js?v=20260928-banking1" defer></script><script src="/church-reports-admin.js?v=20260907-v1" defer></script></body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','x-frame-options':'DENY','referrer-policy':'no-referrer','content-security-policy':"default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",'x-ekodi-route':'church-pastor-admin','x-ekodi-authority-scope':'tenant'}});
+  return new Response(`<!doctype html><html lang="ko" data-ekodi-authority-scope="tenant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow,noarchive"><title>에코디교회 목회자 관리자</title><link rel="stylesheet" href="/workspace-admin.css"><link rel="stylesheet" href="/church-reports-admin.css"></head><body><header class="topbar" data-ekodi-admin-topbar><a class="brand" href="/">EKODI</a><div class="context"><strong>에코디교회</strong><span>목회자 운영</span></div></header><div class="layout"><aside class="sidebar" data-ekodi-admin-sidebar><div class="scope"><span>교회 운영공간</span><strong>에코디교회</strong></div><nav id="adminNav" data-ekodi-admin-nav></nav><p class="boundary">플랫폼 전체 관리는 <a href="https://ekodi.kr/admin/">ekodi.kr/admin</a>에서 별도로 수행합니다.</p><div class="sidebar-footer" data-ekodi-admin-sidebar-footer><a class="public-link" href="/ekodichurch">교회 화면</a><button id="churchLogout" data-ekodi-logout type="button">로그아웃</button></div></aside><main data-ekodi-admin-main><section class="heading"><div><p class="eyebrow">EKODI CHURCH · PASTOR ADMIN</p><h1 id="pageTitle">오늘의 교회</h1><p id="pageCopy">오늘 일정·다음 예배·새가족·돌봄 후속처럼 지금 확인할 일을 한눈에 봅니다.</p></div><span class="state" id="pageState">확인 중</span></section><section class="cards" id="summaryCards"></section><section class="panel" id="mainPanel"><p class="loading">목회 운영공간을 확인하고 있습니다.</p></section></main></div><script src="/church-pastor-admin.js?v=20260928-banking1" defer></script><script src="/church-reports-admin.js?v=20260907-v1" defer></script></body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','x-frame-options':'DENY','referrer-policy':'no-referrer','content-security-policy':"default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; frame-src https://docs.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",'x-ekodi-route':'church-pastor-admin','x-ekodi-authority-scope':'tenant'}});
 }
