@@ -8,6 +8,76 @@
   "notes": "총회 2026년 목회달력은 원본 무단 재배포·상업적 이용 금지. EKODI는 원문을 저장하거나 배포하지 않고, 교회력 날짜 메타데이터를 독립 등록·승인한다. 일부 2026 날짜는 공식 달력 PDF 대조 전 단계라 관리자 검토 필요.",
   "events": [
     {
+      "id": "pck-2026-epiphany",
+      "date": "2026-01-06",
+      "endDate": "2026-01-06",
+      "name": "주현절",
+      "category": "liturgical",
+      "approval": "provisional",
+      "bulletin": "교회력 참고: 예수 그리스도의 드러나심을 기억합니다.",
+      "sermonFocus": "빛으로 오신 그리스도"
+    },
+    {
+      "id": "pck-2026-baptism",
+      "date": "2026-01-11",
+      "endDate": "2026-01-11",
+      "name": "주님수세주일",
+      "category": "liturgical",
+      "approval": "provisional",
+      "bulletin": "교회력 참고: 주님의 세례와 부르심을 묵상합니다.",
+      "sermonFocus": "부르심과 새로운 삶"
+    },
+    {
+      "id": "pck-2026-transfiguration",
+      "date": "2026-02-15",
+      "endDate": "2026-02-15",
+      "name": "산상변모주일",
+      "category": "liturgical",
+      "approval": "provisional",
+      "bulletin": "교회력 참고: 그리스도의 영광과 제자의 길을 돌아봅니다.",
+      "sermonFocus": "변화산의 영광과 일상의 제자도"
+    },
+    {
+      "id": "pck-2026-ash",
+      "date": "2026-02-18",
+      "endDate": "2026-02-18",
+      "name": "재의 수요일",
+      "category": "liturgical",
+      "approval": "provisional",
+      "bulletin": "교회력 참고: 회개와 갱신의 사순절을 준비합니다.",
+      "sermonFocus": "회개와 하나님께 돌아옴"
+    },
+    {
+      "id": "pck-2026-lent1",
+      "date": "2026-02-22",
+      "endDate": "2026-02-22",
+      "name": "사순절 첫째 주일",
+      "category": "liturgical",
+      "approval": "provisional",
+      "bulletin": "교회력 참고: 사순절의 여정을 시작하며 주님의 길을 따릅니다.",
+      "sermonFocus": "십자가의 길과 자기부정"
+    },
+    {
+      "id": "pck-2026-palm",
+      "date": "2026-03-29",
+      "endDate": "2026-03-29",
+      "name": "종려주일·고난주일",
+      "category": "liturgical",
+      "approval": "provisional",
+      "bulletin": "교회력 참고: 예루살렘에 들어가신 주님의 겸손과 고난을 묵상합니다.",
+      "sermonFocus": "겸손한 왕과 십자가"
+    },
+    {
+      "id": "pck-2026-good-friday",
+      "date": "2026-04-03",
+      "endDate": "2026-04-03",
+      "name": "성금요일",
+      "category": "liturgical",
+      "approval": "provisional",
+      "bulletin": "교회력 참고: 예수님의 십자가를 기억하며 생명과 화해를 묵상합니다.",
+      "sermonFocus": "십자가의 사랑과 화해"
+    },
+    {
       "id": "pck-2026-easter",
       "date": "2026-04-05",
       "endDate": "2026-04-05",
@@ -18,6 +88,16 @@
       "sermonFocus": "죽음보다 강한 부활의 소망"
     },
     {
+      "id": "pck-2026-ascension",
+      "date": "2026-05-14",
+      "endDate": "2026-05-14",
+      "name": "주님승천일",
+      "category": "liturgical",
+      "approval": "provisional",
+      "bulletin": "교회력 참고: 승천하신 그리스도의 통치와 교회의 사명을 돌아봅니다.",
+      "sermonFocus": "주님의 통치와 세상으로의 파송"
+    },
+    {
       "id": "pck-2026-pentecost",
       "date": "2026-05-24",
       "endDate": "2026-05-24",
@@ -26,6 +106,26 @@
       "approval": "provisional",
       "bulletin": "성령강림주일: 성령의 임재와 교회의 증언을 묵상합니다.",
       "sermonFocus": "성령이 이루시는 연대와 파송"
+    },
+    {
+      "id": "pck-2026-trinity",
+      "date": "2026-05-31",
+      "endDate": "2026-05-31",
+      "name": "삼위일체주일",
+      "category": "liturgical",
+      "approval": "provisional",
+      "bulletin": "교회력 참고: 성부·성자·성령 하나님의 사랑과 교제를 고백합니다.",
+      "sermonFocus": "삼위일체 하나님의 사랑과 교회"
+    },
+    {
+      "id": "pck-2026-general-assembly",
+      "date": "2026-09-06",
+      "endDate": "2026-09-06",
+      "name": "총회주일",
+      "category": "denominational",
+      "approval": "provisional",
+      "bulletin": "교회력 참고: 교단과 이웃 교회의 선교와 일치를 위해 기도합니다.",
+      "sermonFocus": "연결된 교회와 공동체의 책임"
     },
     {
       "id": "pck-2026-workplace",
@@ -58,6 +158,26 @@
       "sermonFocus": "그리스도 안에서 하나 된 공동체"
     },
     {
+      "id": "pck-2026-reformation",
+      "date": "2026-10-25",
+      "endDate": "2026-10-25",
+      "name": "종교개혁주일",
+      "category": "denominational",
+      "approval": "provisional",
+      "bulletin": "교회력 참고: 복음과 말씀 앞에서 교회의 갱신을 돌아봅니다.",
+      "sermonFocus": "항상 말씀으로 갱신되는 교회"
+    },
+    {
+      "id": "pck-2026-harvest",
+      "date": "2026-11-15",
+      "endDate": "2026-11-15",
+      "name": "추수감사주일",
+      "category": "liturgical",
+      "approval": "provisional",
+      "bulletin": "교회력 참고: 삶을 지탱하는 은혜와 이웃과 나누는 감사를 기억합니다.",
+      "sermonFocus": "감사와 희년적 나눔"
+    },
+    {
       "id": "pck-2026-christking",
       "date": "2026-11-22",
       "endDate": "2026-11-22",
@@ -76,6 +196,16 @@
       "approval": "provisional",
       "bulletin": "대림절 첫째 주일: 오시는 주님을 소망하며 깨어 기다립니다.",
       "sermonFocus": "주님의 오심을 기다리는 희망과 깨어 있음"
+    },
+    {
+      "id": "pck-2026-bible",
+      "date": "2026-12-13",
+      "endDate": "2026-12-13",
+      "name": "성서주일",
+      "category": "denominational",
+      "approval": "provisional",
+      "bulletin": "교회력 참고: 말씀의 기쁨과 성서 보급을 위한 기도를 나눕니다.",
+      "sermonFocus": "말씀의 생명과 나눔"
     },
     {
       "id": "pck-2026-christmas",
