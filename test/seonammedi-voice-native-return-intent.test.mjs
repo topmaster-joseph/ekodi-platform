@@ -9,7 +9,7 @@ test('native Chromium guest audit confirms compose return and single identity fl
   for(const marker of [
     "root.origin+root.prefix+'/board/voices?compose=1'",
     "record.citizenVoiceLinkMatches",
-    "citizen_voice_chooser_destination_mismatch",
+    "citizen_voice_read_first_destination_mismatch",
     "record.composeReturnMatches",
     "record.singleLoginControl",
     "guest_compose_original_return_lost",
