@@ -75,16 +75,16 @@ test('Research mobile screen uses one canonical footer and disables unrelated ge
   read('shell/user-ai-entry.js'),read('ekodi-shell-injector.js')
  ]);
  assert.match(html,/<html lang="ko" data-ekodi-user-ai-entry="off">/);
- assert.match(shellAi,/dataset\\?\\.ekodiUserAiEntry/);
- assert.match(shellAi,/==='off'\\)return false/);
- assert.doesNotMatch(html,/<footer(?:\\s|>)/i,'do not create a second Research footer');
- assert.doesNotMatch(css,/(?:^|})\\s*footer\\s*\\{/m,'do not override the EKODI corporate footer with global Research CSS');
- assert.match(shellInjector,/renderEkodiUserFooter\\(\\)/,'shared EKODI company footer remains');
+ assert.match(shellAi,/dataset\?\.ekodiUserAiEntry/);
+ assert.match(shellAi,/==='off'\)return false/);
+ assert.doesNotMatch(html,/<footer(?:\s|>)/i,'do not create a second Research footer');
+ assert.doesNotMatch(css,/(?:^|})\s*footer\s*\{/m,'do not override the EKODI corporate footer with global Research CSS');
+ assert.match(shellInjector,/renderEkodiUserFooter\(\)/,'shared EKODI company footer remains');
  assert.match(html,/class="integrity-note"/,'Research integrity text stays within Research content');
- assert.match(css,/@media\\(max-width:730px\\)/);
- assert.match(css,/max-width:calc\\(100% - 100px\\)/);
- assert.match(css,/main\\{width:100%;max-width:100%;min-width:0;padding-inline:16px\\}/);
- assert.match(css,/\\.ethics\\{padding:22px 16px;margin:24px 0\\}/);
+ assert.match(css,/@media\(max-width:730px\)/);
+ assert.match(css,/max-width:calc\(100% - 100px\)/);
+ assert.match(css,/main\{width:100%;max-width:100%;min-width:0;padding-inline:16px\}/);
+ assert.match(css,/\.ethics\{padding:22px 16px;margin:24px 0\}/);
  assert.match(html,/id="diagnosisForm"/);
  assert.match(html,/id="projectForm"/);
 });
