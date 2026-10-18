@@ -831,6 +831,31 @@ async function adminMe(request,env,auth){
 }
 
 
+const ROSTER_CAPABILITY_LABELS=Object.freeze([
+  [NOTICE_CAP,'공지'],[TIMELINE_CAP,'활동이력·관련소식'],[CHANNEL_CAP,'소통채널'],[VOICE_CAP,'시민의견'],
+  [CONTENT_CAP,'웹검색 게시검토'],[PAGE_CAP,'현재상황·조직·회의록'],[FINANCE_CAP,'회계']
+]);
+const ROSTER_ROLE_LABELS=Object.freeze({manager:'사이트 전체 관리자',board_admin:'게시판 관리자',viewer:'열람자',staff:'운영자'});
+function rosterDisplayName(note){const value=clean(note,200);return value.startsWith('display-name:')?clean(value.slice('display-name:'.length),80):''}
+// Read-only roster for SeonamMedi administrators. Credential material, session
+// data and EKODI-wide operator accounts without site authority are never returned.
+async function listAdminRoster(env){
+  const platform=await env.DB.prepare("SELECT lower(trim(email)) AS email,created_at FROM admins WHERE role='super_admin' ORDER BY id").all();
+  const tenant=await env.DB.prepare('SELECT id FROM customer_tenants WHERE slug=? LIMIT 1').bind(TENANT_SLUG).first();
+  const grants=tenant?await env.DB.prepare(`SELECT lower(trim(email)) AS email,role,enabled,principal_type,capabilities_json,denied_capabilities_json,expires_at,note,created_at,updated_at
+    FROM customer_access_grants WHERE tenant_id=? ORDER BY created_at,email`).bind(tenant.id).all():{results:[]};
+  const items=[];
+  for(const row of platform.results||[])items.push({email:row.email,name:'',role:'super_admin',roleLabel:'EKODI 최고관리자',scope:'platform',permissions:ROSTER_CAPABILITY_LABELS.map(x=>x[1]),since:row.created_at||''});
+  for(const row of grants.results||[]){
+    if(!accessGrantIsActive(row))continue;
+    const caps=effectiveAccessCapabilities(row);
+    const permissions=ROSTER_CAPABILITY_LABELS.filter(([cap])=>caps.includes(cap)).map(x=>x[1]);
+    if(!permissions.length)continue;
+    items.push({email:row.email,name:rosterDisplayName(row.note),role:clean(row.role,80),roleLabel:ROSTER_ROLE_LABELS[clean(row.role,80)]||'사이트 관리자',scope:'site',permissions,since:row.created_at||''});
+  }
+  return json({ok:true,items});
+}
+
 const PAGE_KEYS=new Set(['status','organization']);
 const parseJsonObject=value=>{try{const parsed=JSON.parse(String(value||'{}'));return parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{}}catch{return{}}};
 function pageRow(row){return{key:row.section_key,data:parseJsonObject(row.body_json),visible:Boolean(row.visible),updatedBy:row.updated_by||'',updatedAt:row.updated_at||''}}
@@ -1285,6 +1310,7 @@ export async function handleSeonamMediAdminApi(request,env){
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{allow:'GET, POST, PUT, DELETE, OPTIONS','cache-control':'no-store'}});
   const auth=await authority(request,env);if(!auth.ok)return json({ok:false,error:auth.error},auth.status||403);
   if(url.pathname===PREFIX+'/admin/me'&&request.method==='GET')return adminMe(request,env,auth);
+  if(url.pathname===PREFIX+'/admin/admins'&&request.method==='GET')return listAdminRoster(env);
   if(url.pathname===PREFIX+'/admin/monitor/run'&&request.method==='POST'){
     if(!(can(auth,PAGE_CAP)||can(auth,CONTENT_CAP)))return json({ok:false,error:'health_forbidden'},403);
     const result=await runSeonamMediHourlyCheck(env,{scheduledAt:new Date().toISOString(),force:true});
