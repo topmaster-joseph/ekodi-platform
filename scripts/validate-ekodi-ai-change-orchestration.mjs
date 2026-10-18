@@ -67,6 +67,30 @@ if (policy.controlPlane !== 'EKODI AI') fail('EKODI AI must remain the control p
 if (policy.mutationBoundary?.breakGlassBypassEnabled !== false) fail('break-glass bypass must remain disabled.');
 if (policy.sourceControl?.directPushToMain !== false) fail('direct main pushes must remain forbidden.');
 if (policy.execution?.externalAiMayOwnProductionMutation !== false) fail('external AI cannot own production mutation.');
+const multiAi = policy.multiAiCommandAuthority || {};
+if (multiAi.policyId !== 'EKODI-MULTI-AI-SINGLE-ORCHESTRATOR-001' || multiAi.status !== 'enforced') fail('multi-AI single-orchestrator authority policy must remain enforced.');
+if (multiAi.mandatoryStatement !== '모든 AI는 EKODI의 협력 실행자이며, EKODI Orchestrator가 유일한 총괄 지휘자로서 설계·개발·검증·배포·운영을 통합 관리한다.') fail('EKODI mandatory multi-AI command rule was modified.');
+if (multiAi.soleTaskLifecycleOwner !== policy.orchestrator) fail('multi-AI authority must belong exclusively to EKODI Orchestrator.');
+for (const provider of ['chatgpt','claude','codex','gemini','local-ai','future-ai-providers']) {
+  if (!multiAi.appliesTo?.includes(provider)) fail('multi-AI command policy provider coverage missing: ' + provider);
+}
+for (const key of [
+  'providerRolesAreTaskScopedNotFixed',
+  'providerMayAnalyzeDesignImplementAndReviewInIsolatedScope',
+  'orchestratorIssuedTaskRequiredForProductionBoundWork',
+  'preserveOriginAndReturnChannel',
+  'workspaceIsolationAndIndependentVerificationRequired',
+  'ownerHumanGatesRemainAuthoritative',
+  'bidirectionalLiveProofMustBeAuthenticated',
+  'simulatedOrStaticTestsDoNotCountAsLiveProof',
+  'successClaimRequiresEvidenceFromBothClaudeAndGPT',
+]) if (multiAi[key] !== true) fail('multi-AI mandatory authority flag must remain true: ' + key);
+for (const key of ['providerMayIssueItsOwnOrchestratorAuthority','providerMayPromoteMergeOrDeployDirectly']) {
+  if (multiAi[key] !== false) fail('multi-AI workers must not self-authorize or self-promote: ' + key);
+}
+const requiredAiRoundtrip = ['authenticated_origin','orchestrator_accepted_task_id','scoped_worker_assignment','provider_response_received','orchestrator_verification_result','response_to_original_channel','audit_and_timestamp'];
+if (JSON.stringify(multiAi.requiredRoundtripEvidence || []) !== JSON.stringify(requiredAiRoundtrip)) fail('multi-AI live bidirectional proof must retain all evidence gates.');
+
 const expectedDefaultExecutionPath = ['ekodi-core-plan-finalized','github-work-branch','code-mutation','automated-tests','pull-request','deployment-gate','guarded-deployment','production-verification'];
 if (JSON.stringify(policy.execution?.defaultExecutionPath || []) !== JSON.stringify(expectedDefaultExecutionPath)) fail('EKODI Core to GitHub must remain the default execution path.');
 if (policy.execution?.aiConsultation !== 'advisory-not-serial-prerequisite') fail('AI consultation must remain advisory rather than a serial execution prerequisite.');
