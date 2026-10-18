@@ -57,21 +57,33 @@ test('Weekly view includes following weekdays and omits past events',async()=>{
 
 test('A pastor-verified JWT can create, publish, read, and archive with immutable audit entries',async()=>{
  const rows=new Map(),logs=[];
- const db={prepare(sql){return {bind(...args){return {
-   async all(){return {results:[...rows.values()]}},
-   async first(){return rows.has(args[0])?{version:1}:null},
-   async run(){
-    if(sql.includes('common_church_calendar_audit')){logs.push({id:args[0],op:args[1],actor:args[2]});return {};}
-    if(sql.includes('common_church_calendar_entries')){
-     if(sql.includes("approval='archived'")){
-       const old=rows.get(args[0]);if(old)rows.set(args[0],{...old,approval:'archived'});return {};
-     }
-     const [id,event_date,end_date,name,category,approval,bulletin,sermon_focus,source_url,source_note,updated_by]=args;
-     rows.set(id,{id,event_date,end_date,name,category,approval,bulletin,sermon_focus,source_url,source_note,updated_by});return {};
-    }
-    return {};
+ const db={
+   prepare(sql){
+     return {
+       bind(...args){
+         return {
+           async all(){return {results:[...rows.values()]};},
+           async first(){return rows.has(args[0])?{version:1}:null;},
+           async run(){
+             if(sql.includes('common_church_calendar_audit')){
+               logs.push({id:args[0],op:args[1],actor:args[2]});return {};
+             }
+             if(sql.includes('common_church_calendar_entries')){
+               if(sql.includes("approval='archived'")){
+                 const old=rows.get(args[0]);
+                 if(old)rows.set(args[0],{...old,approval:'archived'});
+                 return {};
+               }
+               const [id,event_date,end_date,name,category,approval,bulletin,sermon_focus,source_url,source_note,updated_by]=args;
+               rows.set(id,{id,event_date,end_date,name,category,approval,bulletin,sermon_focus,source_url,source_note,updated_by});
+             }
+             return {};
+           }
+         };
+       }
+     };
    }
- }};}}};
+ };
  const subject='11111111-2222-4333-8444-555555555555';
  const jwt='eyJhbGciOiJub25lIn0.'+Buffer.from(JSON.stringify({sub:subject})).toString('base64url')+'.test-signature';
  const auth='Bearer '+jwt,env={DB:db},deps={fetch:async()=>new Response(JSON.stringify({permissions:{worship:true}}),{status:200,headers:{'content-type':'application/json'}})};
