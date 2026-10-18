@@ -41,6 +41,9 @@ for (const [provider, channel, requestId] of [
     assert.match(workerPrompt, /only EKODI Orchestrator owns task assignment/);
     assert.match(workerPrompt, /no provider may grant itself an authoritative task receipt/);
     assert.match(workerPrompt, /preserved origin channel/);
+    assert.match(workerPrompt, /safe design, isolated development/);
+    assert.match(workerPrompt, /one authenticated owner confirmation/);
+    assert.match(workerPrompt, /Mandatory earlier high-risk/);
     assert.match(workerPrompt, new RegExp(`provider=${provider}`));
 
     const synthesis = buildOriginSynthesisPrompt(task, [{
