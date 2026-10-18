@@ -168,7 +168,7 @@ function pastorClient(POLICY){
     const originalSermonPanel=`<section class="service-row" id="church-sermon-source" style="display:block;padding:16px;border:1px solid #dce4dd;border-radius:12px;background:#fff;margin:0 0 20px">
       <h2 style="margin:0 0 8px">말씀 원고 · Google Drive 원본 연동</h2>
       <p class="empty">목회자 관리 화면에서만 원고를 불러옵니다. 페이지에 복사된 초안이 아닌 원본을 표시하며 원본 편집을 누르면 Google 문서가 열립니다.</p>
-      <div class="actions"><label for="churchSermonDate">주일 날짜 <select id="churchSermonDate"><option value="2026-10-18">2026년 10월 18일</option>${services.filter(x=>/^20\\d{2}-\\d{2}-\\d{2}$/.test(x.service_date)&&x.service_date!=='2026-10-18').map(x=>`<option value="${esc(x.service_date)}">${esc(x.service_date)}</option>`).join('')}</select></label>
+      <div class="actions"><label for="churchSermonDate">주일 날짜 <select id="churchSermonDate"><option value="2026-10-18">2026년 10월 18일</option>${services.filter(x=>/^20\d{2}-\d{2}-\d{2}$/.test(x.service_date)&&x.service_date!=='2026-10-18').map(x=>'<option value="'+esc(x.service_date)+'">'+esc(x.service_date)+'</option>').join('')}</select></label>
         <button type="button" id="churchSermonReload" class="button">원본 새로고침</button>
         <a id="churchSermonEdit" class="button primary" target="_blank" rel="noopener noreferrer" hidden>Google 원본에서 편집</a></div>
       <p id="churchSermonState" class="trade-flash" role="status" aria-live="polite">권한과 원본을 조회합니다.</p>
@@ -181,12 +181,12 @@ function pastorClient(POLICY){
     const sermonDate=$('churchSermonDate'),sermonReload=$('churchSermonReload'),sermonFrame=$('churchSermonFrame'),sermonEdit=$('churchSermonEdit'),sermonState=$('churchSermonState');
     let sermonSource=null;
     const validGoogleDocumentUrl=value=>{
-      try{const u=new URL(value);return u.protocol==='https:'&&u.hostname==='docs.google.com'&&/^\\/document\\/d\\/[A-Za-z0-9_-]{24,100}\\/(?:edit|preview)$/.test(u.pathname)?u:null;}catch{return null;}
+      try{const u=new URL(value);return u.protocol==='https:'&&u.hostname==='docs.google.com'&&/^\/document\/d\/[A-Za-z0-9_-]{24,100}\/(?:edit|preview)$/.test(u.pathname)?u:null;}catch{return null;}
     };
     async function loadSermonOriginal(revalidate=true){
       const date=sermonDate.value;
       sermonEdit.hidden=true;sermonFrame.style.display='none';
-      if(!/^20\\d{2}-\\d{2}-\\d{2}$/.test(date)){sermonState.textContent='유효한 예배 날짜를 선택해 주세요.';return;}
+      if(!/^20\d{2}-\d{2}-\d{2}$/.test(date)){sermonState.textContent='유효한 예배 날짜를 선택해 주세요.';return;}
       sermonState.textContent='Google 원본 접근 권한 확인 중';
       try{
         const response=await fetch('/api/admin/church-worship-drive-source?date='+encodeURIComponent(date),{headers:{authorization:'Bearer '+(session?.accessToken||''),accept:'application/json'},cache:'no-store'});
