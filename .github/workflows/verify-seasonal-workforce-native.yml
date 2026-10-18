@@ -18,9 +18,8 @@ on:
   schedule:
     - cron: '17 0 * * *'
   workflow_run:
-    workflows: [Deploy EKODI Shared Site Core]
+    workflows: [Deploy EKODI Shared Site Core, EKODI Orchestrated PR Convergent Merge]
     types: [completed]
-    branches: [main]
 
 permissions:
   contents: read
@@ -31,7 +30,15 @@ concurrency:
 
 jobs:
   native-public-readonly:
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (
+        github.event.workflow_run.conclusion == 'success' &&
+        (
+          (github.event.workflow_run.name == 'Deploy EKODI Shared Site Core' && github.event.workflow_run.head_branch == 'main') ||
+          (github.event.workflow_run.name == 'EKODI Orchestrated PR Convergent Merge' && contains(github.event.workflow_run.display_title, 'seasonal'))
+        )
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 22
     steps:
@@ -55,8 +62,11 @@ jobs:
       - name: Test branch-source PC and mobile routes without writes
         if: github.event_name == 'pull_request'
         run: node scripts/verify-seasonal-workforce-native.mjs --mode=source
-      - name: Test live public PC and mobile routes after protected release
+      - name: Test current production PC and mobile routes with exact event provenance
         if: github.event_name != 'pull_request'
+        env:
+          EKODI_NATIVE_TRIGGER: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.name || github.event_name }}
+          EKODI_NATIVE_UPSTREAM_SHA: ${{ github.event.workflow_run.head_sha || '' }}
         run: node scripts/verify-seasonal-workforce-native.mjs --mode=live
       - name: Save full-size screenshots and machine-readable evidence
         if: always()
