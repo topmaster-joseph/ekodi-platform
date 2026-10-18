@@ -28,8 +28,13 @@ try{
         const entry={site:target.name,device:device.name,route,url};
         report.results.push(entry);
         try{
-          const res=await page.goto(url,{waitUntil:'networkidle',timeout:30000});
+          // Public homepages can keep polling in the background; networkidle is not
+          // a reliable readiness signal and timed out on both domains' home routes.
+          // Wait for the real six-menu DOM instead; style and interaction assertions
+          // below still fail if the production page is incomplete or incorrect.
+          const res=await page.goto(url,{waitUntil:'domcontentloaded',timeout:30000});
           if(!res||res.status()>=400)throw Error('http_'+(res?.status()??0));
+          await page.locator('header.site-header nav.ekodi-six-nav').waitFor({state:'visible',timeout:10000});
           await page.mouse.move(0,0);
           entry.styles=await page.evaluate(()=>{
             const nav=document.querySelector('header.site-header nav.ekodi-six-nav');
