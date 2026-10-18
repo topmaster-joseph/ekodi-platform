@@ -12,6 +12,20 @@
   ],
   "surfaces": [
     {
+      "id": "cheonggyepass.public.qa-only",
+      "path": "/cheonggyepass",
+      "enabled": true,
+      "kind": "public",
+      "verificationNote": "temporary-draft-PR-guest-only-not-for-merge"
+    },
+    {
+      "id": "cheonggyepass.admin.guest.qa-only",
+      "path": "/cheonggyepass/admin",
+      "enabled": true,
+      "kind": "auth-redirect",
+      "verificationNote": "temporary-draft-PR-guest-only-not-for-merge"
+    },
+    {
       "id": "seonammedi.citizen_voice",
       "path": "/seonammedi/board/voices",
       "enabled": true,
