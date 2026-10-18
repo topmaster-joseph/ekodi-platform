@@ -21,8 +21,11 @@ const evidence={policy:'EKODI-SEASONAL-NATIVE-PUBLIC-001',origin:ORIGIN,
  browser:'EKODI-owned Playwright Chromium',mode:MODE,
  productionSiteVerified:false,sourceCodePreview:MODE==='source',
  workflowEvent:process.env.GITHUB_EVENT_NAME||'local',
+ upstreamWorkflow:process.env.EKODI_NATIVE_TRIGGER||null,
+ upstreamHeadSha:process.env.EKODI_NATIVE_UPSTREAM_SHA||null,
  checkedRepositoryCommit:process.env.GITHUB_SHA||null,
  evidenceWorkflowRunId:process.env.GITHUB_RUN_ID||null,
+ protectedReleaseWorkflowSucceeded:false,
  readOnly:true,realGoogleAuthentication:false,
  municipalDataMutation:false,legalGovernmentAuthorityVerified:false,
  at:new Date().toISOString(),profiles:[],success:false};
@@ -167,6 +170,7 @@ finally{
  await browser?.close().catch(()=>{});
  evidence.success=evidence.profiles.length===PROFILES.length&&evidence.profiles.every(x=>x.ok);
  evidence.productionSiteVerified=MODE==='live'&&evidence.success;
+ evidence.protectedReleaseWorkflowSucceeded=evidence.productionSiteVerified&&evidence.upstreamWorkflow==='Deploy EKODI Shared Site Core';
  await fs.writeFile(path.join(OUT,'evidence.json'),JSON.stringify(evidence,null,2)+'\n');
  console.log(JSON.stringify({policy:evidence.policy,mode:MODE,
   productionSiteVerified:evidence.productionSiteVerified,success:evidence.success,
