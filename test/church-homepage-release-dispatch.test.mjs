@@ -110,7 +110,7 @@ test('9-language Church native browser accepts only canonical same-origin member
   assert.match(w,/url\.searchParams\.get\('return_to'\)/);
   assert.match(w,/destination\.origin===location\.origin/);
   assert.match(w,/destination\.pathname==='\/ekodichurch\/my\/'/);
-  assert.match(w,/url\.pathname==='\\/ekodichurch\\/my\\/'&&url\.search===''/);
+  assert.ok(w.includes("if(url.pathname==='/ekodichurch/my/'&&url.search==='')return true;"));
   assert.match(w,/destination\.search===''&&destination\.hash===''/);
   assert.match(w,/assert\.equal\(initial\.member,true,'site-local member navigation retained'\)/);
   assert.match(w,/EKODI_CHURCH_MEMBER_NAV_EVIDENCE/);
