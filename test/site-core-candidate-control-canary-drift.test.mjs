@@ -36,11 +36,16 @@ test('unrelated Pay legacy stable rollback stays strictly protected; never disab
     assert.ok(route.headerExpect.includes('location: https://ekodi.kr/ekodipay/'));
     assert.notEqual(route.rollbackVerify,false);
   }
-  assert.deepEqual(bare.rollbackStatuses,[308]);
-  assert.ok(bare.rollbackHeaderExpect.includes('location: https://ekodi.kr/pay/'));
-  assert.deepEqual(slash.rollbackStatuses,[200]);
-  assert.ok(slash.rollbackExpect.includes("title:'EKODI Pay'"));
-  assert.ok(slash.rollbackHeaderExpect.includes('x-ekodi-canonical-path: /pay'));
+  for(const route of [bare,slash]){
+    assert.deepEqual(route.rollbackStatuses,[308]);
+    assert.deepEqual(route.rollbackExpect,[]);
+    for(const header of ['location: https://ekodi.kr/ekodipay/','cache-control: no-store','x-content-type-options: nosniff'])
+      assert.ok(route.rollbackHeaderExpect.includes(header),'stable rollback contract '+header);
+  }
+  // Last confirmed stable Worker version was released from git SHA 9a4ab36a97623aa5442c6be7aa48cb8b870dc973 (run 39057377028).
+  const router=await read('platform-router-entry-worker.js');
+  assert.match(router,/url\.pathname==='\/pay'\|\|url\.pathname==='\/pay\/'/);
+  assert.match(router,/location:'https:\/\/ekodi\.kr\/ekodipay\/'/);
 });
 
 test('Cheonggye Pass rollback and script canaries remain intact while Control manifest changes',async()=>{
