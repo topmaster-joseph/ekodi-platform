@@ -51,6 +51,12 @@ function projectLinks(id) {
   });
 }
 
+export function isGeminiFreeTierConfirmed(env = {}) {
+  // Administrative attestation ONLY. It cannot independently prove the live
+  // Google billing tier, and it must never be represented as provider telemetry.
+  return TRUTHY.has(trim(env.EKODI_GEMINI_FREE_TIER_ONLY_CONFIRMED).toLowerCase());
+}
+
 export function getGoogleCloudProjectInventory(env = {}) {
   const projects = configuredProjects(env).map(({ id, sources }) => Object.freeze({
     id,
@@ -75,6 +81,7 @@ export function getGoogleCloudProjectInventory(env = {}) {
     projectCount: projects.length,
     projects: Object.freeze(projects),
     geminiKeyPresent: Boolean(trim(env.GEMINI_API_KEY || env.GOOGLE_AI_API_KEY)),
+    geminiFreeTierAttested: isGeminiFreeTierConfirmed(env),
     paidAutoEscalation: false,
     warning: '프로젝트 ID 등록은 Google API 활성화·결제 등급·무료 한도 검증이 아닙니다. Google 콘솔에서 직접 확인해야 합니다.',
     docs: 'https://ai.google.dev/gemini-api/docs/billing',
