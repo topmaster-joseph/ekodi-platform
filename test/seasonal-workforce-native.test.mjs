@@ -70,6 +70,13 @@ test('independent PR workflow publishes evidence and does not trigger release',(
  assert.match(workflow,/name: Seasonal Workforce Native PC Mobile Verification/);
  assert.match(workflow,/pull_request:/);
  assert.match(workflow,/workflow_dispatch:/);
+ assert.match(workflow,/  push:\n    branches: \[main\]/);
+ assert.match(workflow,/  schedule:\n    - cron: '17 0 \* \* \*'/);
+ const pushPaths=workflow.split('  push:\n')[1]?.split('  schedule:\n')[0]||'';
+ assert.ok(pushPaths.includes("'.github/workflows/verify-seasonal-workforce-native.yml'"));
+ assert.ok(pushPaths.includes("'scripts/verify-seasonal-workforce-native.mjs'"));
+ assert.equal(pushPaths.includes("'seasonal-workforce/**'"),false,'do not race a protected shared-site production deployment');
+
  assert.match(workflow,/contents: read/);
  assert.match(workflow,/playwright@1\.55\.0/);
  assert.match(workflow,/npx playwright install --with-deps chromium/);
