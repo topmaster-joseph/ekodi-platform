@@ -321,3 +321,19 @@ test('provider admin summarizes readiness blockers and recent routing issue',()=
   assert.match(admin,/실호출 검증 필요/);
   assert.match(admin,/최근 우회\/차단/);
 });
+
+test('runtime sync accepts an unchanged wrangler [vars] binding but rejects changing it (Cloudflare 10053)',async()=>{
+  const { putProviderRuntimeSecret, describeProviderRuntimeSyncFailure }=await import('../ai-provider-control.js');
+  const env={CLOUDFLARE_SECRET_MANAGER_TOKEN:'manager-token',CLOUDFLARE_ACCOUNT_ID:'acct',AI_PROVIDER_RUNTIME_SCRIPTS:'ekodi-auth-api,ekodi-ai-control',AI_MULTI_PROVIDER_ENABLED:'true',EKODI_PROVIDER_ANTHROPIC_PRIORITY:'70'};
+  const original=globalThis.fetch,calls=[];
+  try{
+    globalThis.fetch=async url=>{calls.push(String(url));if(String(url).includes('ekodi-auth-api'))return new Response(JSON.stringify({success:false,errors:[{code:10053,message:"Binding name 'X' already in use."}]}),{status:400});return new Response(JSON.stringify({success:true}),{status:200})};
+    assert.deepEqual(await putProviderRuntimeSecret(env,'AI_MULTI_PROVIDER_ENABLED','true'),['ekodi-auth-api','ekodi-ai-control']);
+    assert.equal(calls.length,2,'10053 on an unchanged value must not be retried');
+    const error=await putProviderRuntimeSecret(env,'EKODI_PROVIDER_ANTHROPIC_PRIORITY','40').catch(e=>e);
+    const failure=describeProviderRuntimeSyncFailure(error);
+    assert.equal(failure.reason,'binding_managed_by_config');
+    assert.equal(failure.target,'ekodi-auth-api');
+    assert.equal(failure.cfCode,10053);
+  }finally{globalThis.fetch=original}
+});
