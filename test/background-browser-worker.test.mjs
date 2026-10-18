@@ -134,7 +134,7 @@ test('SeonamMedi real native browser board routes match direct Notice and citize
   assert.equal(routes.get('seonammedi.notice'),'/seonammedi/board/notices');
   assert.equal(routes.get('seonammedi.citizen_voice'),'/seonammedi/board/voices');
   assert.ok(home.includes('href="board/notices" >공지</a>'),'home Notice must navigate to actual board');
-  assert.ok(home.includes('href="board/voices?compose=1&choose_account=1"'),'citizen opinion link must target actual board with compose intent');
+  assert.ok(home.includes('href="board/voices"'),'citizen opinion menu must open a public list without compose intent');
   assert.ok(!menu.includes('"공지":'),'old dynamic category handler must not intercept Notice');
   assert.ok(!menu.includes('noticePreview'),'old central notice preview must not mask actual board');
 });
