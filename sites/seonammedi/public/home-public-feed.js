@@ -21,7 +21,7 @@ const items=(settled,key='items')=>settled.status==='fulfilled'?(Array.isArray(s
  const [boardNoticeResult,noticeResult,boardResult,timelineResult,staticResult]=await Promise.allSettled([
   fetchJson(home+'/board/api/notices'),
   fetchJson('/api/seonammedi/notices'),
-  fetchJson(home+'/board/api/posts'),
+  fetchJson(home+'/board/api/voices-fresh'),
   fetchJson('/api/seonammedi/timeline'),
   fetchJson('/seonammedi/data.json')
  ]);
