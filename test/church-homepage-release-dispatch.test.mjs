@@ -99,3 +99,14 @@ test('PR #114 worship-first approved layout requires source and live PC/mobile m
  assert.match(w,/CHURCH_SOURCE_SHA/);
  assert.match(w,/validate-ekodi-ai-change-orchestration\.mjs/);
 });
+
+test('9-language Church native browser accepts only canonical same-origin member paths and records truthful DOM on failure',async()=>{
+  const w=await read('.github/workflows/deploy-ekodi-church-homepage.yml');
+  assert.match(w,/document\.querySelectorAll\('#main-nav a\[href\]'\)/);
+  assert.match(w,/url\.origin===location\.origin&&url\.pathname==='\/ekodichurch\/my\/'/);
+  assert.match(w,/url\.search===''&&url\.hash===''/);
+  assert.match(w,/assert\.equal\(initial\.member,true,'site-local member navigation retained'\)/);
+  assert.match(w,/EKODI_CHURCH_MEMBER_NAV_EVIDENCE/);
+  assert.match(w,/document\.querySelector\('#main-nav'\)\?\.outerHTML/);
+  assert.match(w,/CHURCH_SOURCE_SHA/);
+});
