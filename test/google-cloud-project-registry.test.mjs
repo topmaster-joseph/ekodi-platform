@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { getGoogleCloudProjectInventory } from '../google-cloud-project-registry.js';
+import { getGoogleCloudProjectInventory, isGeminiFreeTierConfirmed } from '../google-cloud-project-registry.js';
 
 const source=path=>readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
 
@@ -61,4 +61,20 @@ test('authenticated provider admin exposes Google project registry, but does not
   assert.match(client,/미검증/);
   assert.match(client,/결제 확인/);
   assert.doesNotMatch(client,/localStorage/);
+});
+
+test('Gemini free-tier attestation fails closed unless explicitly enabled',()=>{
+  assert.equal(isGeminiFreeTierConfirmed({}),false);
+  assert.equal(isGeminiFreeTierConfirmed({EKODI_GEMINI_FREE_TIER_ONLY_CONFIRMED:'false'}),false);
+  assert.equal(isGeminiFreeTierConfirmed({EKODI_GEMINI_FREE_TIER_ONLY_CONFIRMED:'true'}),true);
+  assert.equal(isGeminiFreeTierConfirmed({EKODI_GEMINI_FREE_TIER_ONLY_CONFIRMED:'on'}),true);
+  assert.equal(getGoogleCloudProjectInventory({EKODI_GEMINI_FREE_TIER_ONLY_CONFIRMED:'true'}).geminiFreeTierAttested,true);
+});
+
+test('production gateway and scheduled checks block Gemini before any external API call when tier is unverified',()=>{
+  const server=source('ai-provider-control.js');
+  assert.match(server,/gemini-free-tier-unverified/);
+  assert.match(server,/gemini_free_tier_unverified/);
+  assert.match(server,/id==='gemini'&&clean\(env\.ENVIRONMENT,40\)\.toLowerCase\(\)==='production'&&!isGeminiFreeTierConfirmed\(env\)/);
+  assert.match(server,/freeGuardBinding:'EKODI_GEMINI_FREE_TIER_ONLY_CONFIRMED'/);
 });
