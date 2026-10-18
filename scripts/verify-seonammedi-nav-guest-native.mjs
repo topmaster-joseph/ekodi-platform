@@ -101,19 +101,19 @@ try {
           try{if(noticeLink?.href)resolvedNoticePath=new URL(noticeLink.href,target).pathname.replace(/[/]$/,'')}catch{}
           record.directNoticePath=resolvedNoticePath;
           if(publicSurface&&resolvedNoticePath!==expectedNoticePath)violations.push('notice_direct_path_mismatch');
-          // Citizen Voice is an intentional Google-auth navigation, not an in-page category.
-          // Check its exact destination here; the voice route audit below tests actual login.
+          // Citizen Voice opens the public read-first board. Google login (with account
+          // choice) is requested only from the board's own write button.
           const voiceLink=record.top.find(x=>x.label==='시민의견');
           let voiceLinkMatches=false;
           try{
             const u=new URL(voiceLink?.href||'',target);
             voiceLinkMatches=u.origin===root.origin &&
               u.pathname.replace(/[/]$/,'')===root.prefix+'/board/voices' &&
-              u.searchParams.get('compose')==='1' &&
-              u.searchParams.get('choose_account')==='1';
+              !u.searchParams.has('compose') &&
+              !u.searchParams.has('choose_account');
           }catch{}
           record.citizenVoiceLinkMatches=voiceLinkMatches;
-          if(publicSurface&&!voiceLinkMatches)violations.push('citizen_voice_chooser_destination_mismatch');
+          if(publicSurface&&!voiceLinkMatches)violations.push('citizen_voice_read_first_destination_mismatch');
           if(publicSurface&&record.centralCategory.noticeTrigger)violations.push('notice_category_click_interception');
           const socialGroup=record.groups.find(x=>x.parent==='소통채널');
           const centralValid=record.centralCategory.present&&record.centralCategory.initiallyHidden;
@@ -128,8 +128,8 @@ try {
               {label:'활동이력',selector:'a[data-view-link="committee"]'},
               {label:'관련소식',selector:'a[data-view-link="status"]'},
               {label:'소통채널',selector:'a[data-view-link="channels"]'},
-              // Do not click 시민의견 here: it deliberately navigates to Google auth.
-              // The board/voices guest case validates that redirect and return_to.
+              // 시민의견 leaves the central page for the read-first board; the
+              // board/voices guest case validates its write-button login and return_to.
               {label:'조직',selector:'a[data-view-link="organization"]'}
             ];
             const expectedPath=root.prefix+'/board/notices';

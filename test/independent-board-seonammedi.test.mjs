@@ -36,8 +36,8 @@ test('top-level citizen voices enters one-shot Google compose flow without login
     read('sites/seonammedi/public/index.html'),
     read('services/independent-board/worker.js')
   ]);
-  assert.match(site,/href="board\/voices\?compose=1&choose_account=1">시민의견/);
-  assert.match(worker,/link\(boardPath\(req,'voices'\)\+'\?compose=1&choose_account=1','시민의견','voices'\)/);
+  assert.match(site,/href="board\/voices">시민의견/);
+  assert.match(worker,/link\(boardPath\(req,'voices'\),'시민의견','voices'\)/);
   assert.doesNotMatch(worker,/VOICE_COMPOSE_AUTH_ONCE_KEY/);
   assert.doesNotMatch(worker,/function claimComposeAutoAuth\(\)/);
   assert.doesNotMatch(worker,/sessionStorage\.getItem\(key\)==="1"/);
@@ -92,7 +92,7 @@ test('finance and notice boards are first-class standalone board routes',async()
   assert.match(worker,/requirePermission\(req,'notices'\)/);
   assert.match(migration,/CREATE TABLE IF NOT EXISTS finance_posts/);
   assert.match(migration,/CREATE TABLE IF NOT EXISTS notice_posts/);
-  assert.match(site,/href="board\/voices\?compose=1&choose_account=1">시민의견/);
+  assert.match(site,/href="board\/voices">시민의견/);
   assert.doesNotMatch(site,/href="board\/finance">회계/);
   assert.match(site,/href="board\/notices">공지/);
 });
@@ -115,9 +115,9 @@ test('standalone board supports both customer-domain and internal seonammedi mou
   const external=await mod.default.fetch(new Request('https://seonammedi.kr/board/voices'),{});
   const internal=await mod.default.fetch(new Request('https://ekodi.kr/seonammedi/board/voices'),{});
   const externalHtml=await external.text(),internalHtml=await internal.text();
-  assert.match(externalHtml,/href="\/board\/voices\?compose=1&choose_account=1"/);
+  assert.match(externalHtml,/href="\/board\/voices"/);
   assert.match(externalHtml,/href="\/board\/notices"/);
-  assert.match(internalHtml,/href="\/seonammedi\/board\/voices\?compose=1&choose_account=1"/);
+  assert.match(internalHtml,/href="\/seonammedi\/board\/voices"/);
   assert.match(internalHtml,/href="\/seonammedi\/board\/notices"/);
   assert.match(internalHtml,/href="\/seonammedi\/#timeline"/);
   assert.doesNotMatch(internalHtml,/MY OPERATING SPACES|내 운영공간/);
@@ -222,7 +222,7 @@ test('SeonamMedi board admin login preserves the initiating external or internal
   assert.match(worker,/location\.pathname\.startsWith\(\"\/seonammedi\/board\"\)/);
   assert.match(worker,/ekodi_auth_return/);
   assert.match(worker,/auth\/v1\/verify/);
-  assert.match(site,/href="board\/voices\?compose=1&choose_account=1"/);
+  assert.match(site,/href="board\/voices"/);
   assert.match(site,/href="board\/notices"/);
   for(const route of ['voices','notices'])assert.match(adminSite,new RegExp('href="\\.\\./board/'+route+'"'));
   assert.doesNotMatch(site,/href="board\/finance"/);
@@ -378,7 +378,7 @@ test('independent board header uses one aligned desktop row and a stacked mobile
       assert.match(html,/\.site-header\.independent-board-header>nav\{flex:none;justify-content:flex-start;[^}]*width:100%/);
       assert.match(html,/\.site-header\.independent-board-header>nav a\[aria-current="page"\]\{color:#111;/);
       const menuRoute=route==='finance'?'notices':route;
-      if(route==='voices')assert.match(html,new RegExp('aria-current="page" href="'+mount.replace('https://seonammedi.kr','').replace('https://ekodi.kr','')+'/'+menuRoute+'\\?compose=1&choose_account=1">'));else assert.match(html,new RegExp('href="'+mount.replace('https://seonammedi.kr','').replace('https://ekodi.kr','')+'/'+menuRoute+'">'));
+      if(route==='voices')assert.match(html,new RegExp('aria-current="page" href="'+mount.replace('https://seonammedi.kr','').replace('https://ekodi.kr','')+'/'+menuRoute+'">'));else assert.match(html,new RegExp('href="'+mount.replace('https://seonammedi.kr','').replace('https://ekodi.kr','')+'/'+menuRoute+'">'));
       const nav=html.match(/<nav class="ekodi-six-nav" aria-label="주요 메뉴">([\s\S]*?)<\/nav>/)?.[1]||'';
       assert.doesNotMatch(nav,/>회계<\/a>/,'finance must not become a seventh top-level menu');
     }
