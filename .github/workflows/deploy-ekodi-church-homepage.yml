@@ -386,7 +386,10 @@ jobs:
                     layoutCss:[...document.styleSheets].some(x=>x.href?.includes('church-homepage-layout.css')),
                     sharedLive:!!document.querySelector('a[href="/live/church/"]'),
                     giving:!!document.querySelector('.giving-strip'),
-                    member:!!document.querySelector('a[href="/ekodichurch/my/"]')
+                    member:[...document.querySelectorAll('#main-nav a[href]')].some(a=>{
+                      const url=new URL(a.getAttribute('href'),location.href);
+                      return url.origin===location.origin&&url.pathname==='/ekodichurch/my/'&&url.search===''&&url.hash==='';
+                    })
                   };
                 });
                 assert.equal(initial.language,locale);
@@ -394,6 +397,16 @@ jobs:
                 assert.equal(initial.heroVisible,true,'hero should only show on home');
                 assert.equal(initial.weeklyHidden,true,'weekly panel hidden until selected');
                 assert.equal(initial.sharedLive,true,'shared EKODI Live link retained');
+                if(!initial.member){
+                  const navEvidence=await page.evaluate(()=>({
+                    url:location.href,
+                    nav:document.querySelector('#main-nav')?.outerHTML?.slice(0,1800)||null,
+                    localMyLinks:[...document.querySelectorAll('a[href]')]
+                      .filter(a=>a.href.includes('/ekodichurch/my'))
+                      .map(a=>({attribute:a.getAttribute('href'),resolved:a.href})).slice(0,12)
+                  }));
+                  console.error('EKODI_CHURCH_MEMBER_NAV_EVIDENCE='+JSON.stringify({locale,device:device.name,...navEvidence}));
+                }
                 assert.equal(initial.member,true,'site-local member navigation retained');
                 assert.ok(initial.header.left>=-2&&initial.header.right<=device.width+2,'header clipped '+locale+' '+device.name);
                 if(locale==='ko-KR'){
