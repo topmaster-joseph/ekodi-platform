@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { handleAiProviderControl, invokeAiProviderCapability, runAiProviderHealthSchedule, AI_PROVIDER_CONTROL_CONTRACT } from '../ai-provider-control.js';
+import { handleAiProviderControl, invokeAiProviderCapability, runAiProviderHealthSchedule, AI_PROVIDER_CONTROL_CONTRACT, describeProviderHttpError, describeProviderCheckDiagnostic } from '../ai-provider-control.js';
 import { createEkodiAiProviderRegistry } from '../ekodi-ai-provider-registry.js';
 
 const read=path=>readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
@@ -336,4 +336,20 @@ test('runtime sync accepts an unchanged wrangler [vars] binding but rejects chan
     assert.equal(failure.target,'ekodi-auth-api');
     assert.equal(failure.cfCode,10053);
   }finally{globalThis.fetch=original}
+});
+
+test('Claude 403 distinguishes Anthropic region block (with edge colo) from key permission errors',()=>{
+  const res=ray=>new Response('{}',{status:403,headers:{'cf-ray':ray}});
+  const region=describeProviderHttpError('anthropic',403,{type:'error',error:{type:'forbidden',message:'Request not allowed'}},res('8f00aa11bb22cc33-HKG'));
+  assert.equal(region.message,'anthropic_403_region_blocked_at_hkg');assert.equal(region.colo,'HKG');
+  assert.equal(describeProviderCheckDiagnostic(region).category,'region-blocked');
+  const permission=describeProviderHttpError('anthropic',403,{type:'error',error:{type:'permission_error',message:'Your API key does not have permission to use the specified resource.'},request_id:'req_test'},res('8f00aa11bb22cc33-ICN'));
+  assert.equal(permission.message,'anthropic_403_permission_error');assert.equal(permission.requestId,'req_test');
+  assert.equal(describeProviderCheckDiagnostic(permission).category,'authentication-error');
+  const noHeader=describeProviderHttpError('anthropic',403,{error:{type:'forbidden',message:'Request not allowed'}});
+  assert.equal(noHeader.message,'anthropic_403_region_blocked');
+  assert.equal(describeProviderHttpError('openai',403,{error:{type:'forbidden',message:'Request not allowed'}},res('x-HKG')).message,'openai_403_forbidden');
+  const admin=read('admin-provider-control.js');
+  assert.match(admin,/anthropic_403_region_blocked/);assert.match(admin,/Claude 지역 차단\(HTTP 403\)/);
+  assert.match(admin,/anthropic_403_permission_error/);assert.match(admin,/실행 위치/);
 });
