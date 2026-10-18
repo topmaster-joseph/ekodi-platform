@@ -286,7 +286,7 @@ function nav(active,req){
     link(home('#committee-activity'),'활동이력','committee')+
     link(home('#timeline'),'관련소식','timeline')+
     '<a href="'+home('#channels')+'" data-category-menu="소통채널" aria-controls="central-category-panel" aria-expanded="false">소통채널</a>'+
-    link(boardPath(req,'voices')+'?compose=1&choose_account=1','시민의견','voices')+
+    link(boardPath(req,'voices'),'시민의견','voices')+
     link(home('#organization'),'조직','organization')+'</nav></header><section id="central-category-panel" class="central-category-panel" hidden aria-live="polite"><h2 id="central-category-title"></h2><div id="central-category-buttons" class="central-category-buttons"></div></section><template id="central-category-link-contract">'+hiddenLinks.replace('<template id="legacy-category-links">','').replace('</template>','')+'</template>';
 }
 
