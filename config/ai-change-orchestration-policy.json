@@ -640,6 +640,44 @@
     "rollbackEvidenceMandatory": true,
     "liveProductionVerificationMandatory": true,
     "highRiskChangesRequireRelevantExpandedChecks": true,
-    "completionRequiresVerifiedLiveEvidence": true
+    "completionRequiresVerifiedLiveEvidence": true,
+    "oneFinalPromotionConfirmation": {
+      "policyId": "EKODI-ONE-FINAL-PROMOTION-CONFIRMATION-001",
+      "status": "enforced",
+      "appliesPlatformWide": true,
+      "ownerFacingApprovalMoments": "one-at-final-production-promotion",
+      "automaticStagesBeforeConfirmation": [
+        "plan",
+        "implement",
+        "test",
+        "repair",
+        "retest",
+        "review",
+        "pull-request",
+        "required-ci",
+        "staging",
+        "staging-proof",
+        "rollback-preflight"
+      ],
+      "automaticSafeFailureRecovery": true,
+      "retryResumesFailedStage": true,
+      "avoidRepeatedOwnerQuestions": true,
+      "deduplicateEquivalentChecks": true,
+      "failoverWithinRegisteredDelegationOnly": true,
+      "boundedRetryAttemptsPerFailure": 3,
+      "exponentialBackoff": true,
+      "uncertainWriteMustReconcileBeforeRetry": true,
+      "repeatedFailureEscalatesWithEvidence": true,
+      "finalConfirmationOnlyAfterAllRequiredGatesAndStaging": true,
+      "finalConfirmationScope": "task-and-exact-immutable-release-artifact",
+      "approvalMustBeAuthenticatedAndDurable": true,
+      "staleOrMismatchedApprovalMustFailClosed": true,
+      "confirmationDoesNotReplaceMandatoryEarlierHumanGates": true,
+      "finalPromotionByEkodiOrchestratorOnly": true,
+      "workerCanNeverApproveOrDeployItself": true,
+      "rollbackAndProductionVerificationMandatory": true,
+      "noNewDeploymentBoundary": true,
+      "noPaidProviderAutoUpgrade": true
+    }
   }
 }
