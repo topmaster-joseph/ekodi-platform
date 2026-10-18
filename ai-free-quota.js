@@ -12,7 +12,7 @@ export const AI_FREE_QUOTA_POLICY=Object.freeze({
   paidAutoEscalation:false,
   paidDecisionRequired:true,
   dailySafetyCaps:Object.freeze({
-    'cloudflare-workers-ai':4,
+    'cloudflare-workers-ai':300, // secondary call guard; primary budget is the shared Neuron ledger
     'openrouter-free':45,
     'groq-free':900,
     'cerebras-free':100,
