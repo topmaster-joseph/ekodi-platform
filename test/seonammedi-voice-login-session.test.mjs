@@ -95,3 +95,76 @@ test('fresh write form requires server verified Google session and checks confir
  assert.match(html,/beginLogin\(\)/);
 });
 
+
+
+test('canonical EKODI Google session carried by Supabase email magiclink remains valid',async()=>{
+ const oldFetch=globalThis.fetch;
+ const paths=[];
+ globalThis.fetch=async (url,options)=>{
+   const u=new URL(url);paths.push(u.pathname);
+   if(u.pathname==='/auth/v1/user'){
+     assert.equal(options.headers.authorization,'Bearer central-magiclink-token');
+     return Response.json({...authorizedUser(),app_metadata:{provider:'email',providers:['email']},identities:[{provider:'email'}]});
+   }
+   if(u.pathname==='/functions/v1/identity-api/identities'){
+     assert.equal(options.method,'GET');
+     assert.equal(options.cache,'no-store');
+     assert.equal(options.headers.origin,'https://ekodi.kr');
+     assert.equal(options.headers.authorization,'Bearer central-magiclink-token');
+     return Response.json({person:{ekodiId:'EKODI-TEST'},identities:[
+       {provider:'email',email:'writer@example.com',status:'active',is_current:true},
+       {provider:'google',email:'writer@example.com',status:'active',is_current:true}
+     ]});
+   }
+   throw Error('unexpected identity verification '+u.pathname);
+ };
+ try{
+   const response=await board.fetch(new Request(origin+'/board/api/auth/session',{
+      headers:{authorization:'Bearer central-magiclink-token'}
+   }),{});
+   assert.equal(response.status,200);
+   assert.deepEqual(await response.json(),{ok:true,authenticated:true,provider:'google',email:'writer@example.com'});
+   assert.deepEqual(paths,['/auth/v1/user','/functions/v1/identity-api/identities']);
+ }finally{globalThis.fetch=oldFetch}
+});
+
+test('email-only, unrelated, inactive or absent Google identity links remain rejected',async()=>{
+ const oldFetch=globalThis.fetch;
+ const variants=[
+   {identities:[{provider:'email',email:'writer@example.com',status:'active',is_current:true}]},
+   {identities:[{provider:'google',email:'writer@example.com',status:'active',is_current:false}]},
+   {identities:[{provider:'google',email:'writer@example.com',status:'inactive',is_current:true}]},
+   {identities:[{provider:'google',email:'different@example.com',status:'active',is_current:true}]},
+   {identities:[{provider:'google',email:'writer@example.com',status:'active',is_current:true}],status:403},
+   {identities:null}
+ ];
+ try{
+   for(const variant of variants){
+     globalThis.fetch=async url=>{
+       const p=new URL(url).pathname;
+       if(p==='/auth/v1/user')return Response.json({...authorizedUser(),app_metadata:{provider:'email',providers:['email']},identities:[{provider:'email'}]});
+       if(p==='/functions/v1/identity-api/identities')return Response.json({identities:variant.identities},{status:variant.status||200});
+       throw Error('unexpected '+p);
+     };
+     const response=await board.fetch(new Request(origin+'/board/api/auth/session',{
+       headers:{authorization:'Bearer central-email-token'}
+     }),{});
+     assert.equal(response.status,401,JSON.stringify(variant));
+     assert.equal((await response.json()).error,'google_login_required');
+   }
+ }finally{globalThis.fetch=oldFetch}
+});
+
+test('unavailable canonical identity API fails closed for email-session account',async()=>{
+ const oldFetch=globalThis.fetch;
+ globalThis.fetch=async url=>{
+   if(new URL(url).pathname==='/auth/v1/user')return Response.json({...authorizedUser(),app_metadata:{provider:'email',providers:['email']}});
+   throw Error('central identity unavailable');
+ };
+ try{
+   const response=await board.fetch(new Request(origin+'/board/api/auth/session',{
+     headers:{authorization:'Bearer inaccessible-email-token'}
+   }),{});
+   assert.equal(response.status,401);
+ }finally{globalThis.fetch=oldFetch}
+});
