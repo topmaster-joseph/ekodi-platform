@@ -9,10 +9,7 @@ on:
       - 'seasonal-workforce/**'
       - 'deploy/manifests/shared-site.worker.json'
   workflow_dispatch:
-  workflow_run:
-    workflows: [Deploy EKODI Shared Site Core]
-    types: [completed]
-    branches: [main]
+  workflow_call:
 
 permissions:
   contents: read
@@ -23,14 +20,13 @@ concurrency:
 
 jobs:
   native-public-readonly:
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 22
     steps:
       - name: Checkout EKODI native verifier
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_run' && 'main' || github.ref }}
+          ref: ${{ github.event_name == 'pull_request' && github.ref || github.sha }}
       - name: Configure Node
         uses: actions/setup-node@v4
         with:

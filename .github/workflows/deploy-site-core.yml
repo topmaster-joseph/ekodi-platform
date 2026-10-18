@@ -1255,3 +1255,8 @@ jobs:
     name: EKODI Authenticated Admin Surface Verification
     needs: deploy
     uses: ./.github/workflows/verify-admin-production-ui-e2e.yml
+
+  seasonal_workforce_native_postdeploy:
+    name: EKODI Seasonal Workforce Native · Live PC and Mobile
+    needs: deploy
+    uses: ./.github/workflows/verify-seasonal-workforce-native.yml
