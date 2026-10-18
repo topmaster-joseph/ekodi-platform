@@ -63,6 +63,7 @@ function safeAmount(v){const n=Math.round(Number(v)||0);return Math.max(0,Math.m
 function dateOnly(v){const value=text(v);return /^\d{4}-\d{2}-\d{2}$/.test(value)?value:new Date().toISOString().slice(0,10)}
 const SUPABASE_VERIFY_URL='https://renzehysxirjilvdxacv.supabase.co/auth/v1/verify';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
+const EKODI_IDENTITY_API='https://renzehysxirjilvdxacv.supabase.co/functions/v1/identity-api';
 const SUPABASE_SESSION_KEY='sb-renzehysxirjilvdxacv-auth-token';
 function authReturnHtml(session,path){
   const payload=JSON.stringify(session).replace(/</g,'\\u003c').replace(/>/g,'\\u003e').replace(/&/g,'\\u0026');
@@ -102,8 +103,23 @@ async function signedInGoogle(req){
     const response=await fetch(SUPABASE_VERIFY_URL.replace(/\/verify$/,'/user'),{headers:{apikey:SUPABASE_PUBLISHABLE_KEY,authorization:'Bearer '+token,'cache-control':'no-store'}});
     const user=await response.json().catch(()=>null);if(!response.ok||!user?.id||!user?.email_confirmed_at)return null;
     const providers=[user?.app_metadata?.provider,...(Array.isArray(user?.app_metadata?.providers)?user.app_metadata.providers:[]),...(Array.isArray(user?.identities)?user.identities.map(x=>x?.provider):[])].filter(Boolean).map(x=>String(x).toLowerCase());
-    return providers.includes('google')?{id:String(user.id),email:text(user.email).toLowerCase()}:null;
+    const verified={id:String(user.id),email:text(user.email).toLowerCase()};
+    if(providers.includes('google'))return verified;
+    // EKODI verifies the Google ID token itself (identity-api) and then issues a
+    // Supabase email one-time session, so Supabase records provider "email".
+    // The canonical proof of a Google login is an active google login identity
+    // bound to this exact auth user in EKODI's identity registry.
+    return await ekodiGoogleIdentity(token)?verified:null;
   }catch{return null}
+}
+async function ekodiGoogleIdentity(token){
+  try{
+    const response=await fetch(EKODI_IDENTITY_API+'/identities',{headers:{apikey:SUPABASE_PUBLISHABLE_KEY,authorization:'Bearer '+token,origin:'https://ekodi.kr','cache-control':'no-store'}});
+    if(!response.ok)return false;
+    const data=await response.json().catch(()=>null);
+    const identities=Array.isArray(data?.identities)?data.identities:[];
+    return identities.some(x=>String(x?.provider||'').toLowerCase()==='google'&&x?.status==='active'&&x?.is_current===true);
+  }catch{return false}
 }
 async function requireSignedInGoogle(req){
   const user=await signedInGoogle(req);
