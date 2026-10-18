@@ -84,7 +84,9 @@ export async function handleCommonChurchCalendar(request,env={},deps={}){
       const date=url.searchParams.get('date')||'',year=url.searchParams.get('year')||'';
       if(date&&!validDate(date))return json({ok:false,code:'INVALID_DATE'},400,isAdmin);
       if(year&&!/^20\d{2}$/.test(year))return json({ok:false,code:'INVALID_YEAR'},400,isAdmin);
-      const events=(date?eventsOnDate(date,all):year?all.filter(e=>e.date.slice(0,4)===year):all)
+      const week=url.searchParams.get('week')==='1';
+      const through=date&&week?new Date(Date.parse(date+'T00:00:00Z')+6*86400000).toISOString().slice(0,10):date;
+      const events=(date?all.filter(e=>e.date<=through&&e.endDate>=date):year?all.filter(e=>e.date.slice(0,4)===year):all)
         .filter(e=>isAdmin||e.approval!=='draft');
       return json({ok:true,registry:'ekodi-common-church-calendar',year:year||null,date:date||null,events,source:churchCalendarSource()},200,isAdmin);
     }
