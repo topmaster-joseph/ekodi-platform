@@ -382,10 +382,10 @@ test('shared-site release probes honor canonical slash parity',async()=>{
     if(root==='/pay'){
       assert.ok(canonical.headerExpect?.includes('location: https://ekodi.kr/ekodipay/'));
       assert.deepEqual(slashless.rollbackStatuses,[308]);
-      assert.ok(slashless.rollbackHeaderExpect?.includes('location: https://ekodi.kr/pay/'));
-      assert.deepEqual(canonical.rollbackStatuses,[200]);
-      assert.ok(canonical.rollbackExpect?.includes("title:'EKODI Pay'"));
-      assert.ok(canonical.rollbackHeaderExpect?.includes('x-ekodi-canonical-path: /pay'));
+      assert.ok(slashless.rollbackHeaderExpect?.includes('location: https://ekodi.kr/ekodipay/'));
+      assert.deepEqual(canonical.rollbackStatuses,[308]);
+      assert.ok(canonical.rollbackHeaderExpect?.includes('location: https://ekodi.kr/ekodipay/'));
+      assert.equal(canonical.rollbackExpect,undefined);
     }
   }
 });

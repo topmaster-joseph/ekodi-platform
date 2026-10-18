@@ -2168,7 +2168,7 @@
           308
         ],
         "rollbackHeaderExpect": [
-          "location: https://ekodi.kr/pay/"
+          "location: https://ekodi.kr/ekodipay/"
         ]
       },
       {
@@ -2182,18 +2182,10 @@
           "location: https://ekodi.kr/ekodipay/"
         ],
         "rollbackStatuses": [
-          200
-        ],
-        "rollbackExpect": [
-          "path === '/pay'",
-          "title:'EKODI Pay'",
-          "https://ekodi.kr/admin/#finance"
+          308
         ],
         "rollbackHeaderExpect": [
-          "x-ekodi-route: hub",
-          "x-ekodi-shell: v2",
-          "x-ekodi-canonical-surface: pay",
-          "x-ekodi-canonical-path: /pay"
+          "location: https://ekodi.kr/ekodipay/"
         ]
       },
       {
