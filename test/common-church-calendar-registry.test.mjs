@@ -60,6 +60,7 @@ test('A pastor-verified JWT can create, publish, read, and archive with immutabl
  const db={
    prepare(sql){
      return {
+       async all(){return {results:[...rows.values()]};},
        bind(...args){
          return {
            async all(){return {results:[...rows.values()]};},
