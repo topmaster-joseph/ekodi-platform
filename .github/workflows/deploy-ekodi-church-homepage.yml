@@ -387,8 +387,19 @@ jobs:
                     sharedLive:!!document.querySelector('a[href="/live/church/"]'),
                     giving:!!document.querySelector('.giving-strip'),
                     member:[...document.querySelectorAll('#main-nav a[href]')].some(a=>{
+                      // Public Church navigation can intentionally route guests via
+                      // Google account selection; retain the exact site-local target.
                       const url=new URL(a.getAttribute('href'),location.href);
-                      return url.origin===location.origin&&url.pathname==='/ekodichurch/my/'&&url.search===''&&url.hash==='';
+                      if(url.origin!==location.origin||url.hash)return false;
+                      if(url.pathname==='/ekodichurch/my/'&&url.search==='')return true;
+                      if(url.pathname!=='/auth/'||url.searchParams.get('site')!=='church')return false;
+                      if([...url.searchParams.keys()].sort().join(',')!=='return_to,site')return false;
+                      const back=url.searchParams.get('return_to');
+                      if(!back)return false;
+                      const destination=new URL(back,location.origin);
+                      return destination.origin===location.origin
+                        &&destination.pathname==='/ekodichurch/my/'
+                        &&destination.search===''&&destination.hash==='';
                     })
                   };
                 });
