@@ -71,6 +71,9 @@ async function putRuntimeSecret(env,name,value){
         if(response.ok&&data?.success!==false){failure=null;break}
         status=response.status;cfCode=Number(data?.errors?.[0]?.code)||0;cfMessage=clean(data?.errors?.[0]?.message,240);
       }catch{status=0}
+      // 10053: the name is a plain [vars] binding in wrangler config, so it cannot become a secret.
+      // An unchanged value is already in effect; a changed one has to go through the config file.
+      if(cfCode===10053&&String(value)===clean(env?.[name],8192)){failure=null;break}
       failure=runtimeSecretFailure(scriptName,status,cfCode,updated,cfMessage);
       if(status&&!runtimeSecretRetryable(status,cfCode))break;
       if(attempt<RUNTIME_SECRET_ATTEMPTS)await runtimeSecretDelay(attempt);
@@ -80,7 +83,7 @@ async function putRuntimeSecret(env,name,value){
   }
   return updated;
 }
-function runtimeSyncFailure(error){const status=Number(error?.status)||0,cfCode=Number(error?.cfCode)||0;const reason=error?.message==='provider_runtime_sync_unavailable'?'secret_manager_not_configured':cfCode===10215?'worker_latest_version_not_deployed':status===401||status===403?'secret_manager_permission_denied':status===404?'runtime_worker_not_found':status===429?'cloudflare_rate_limited':status===0?'cloudflare_unreachable':'cloudflare_secret_write_failed';return{reason,target:clean(error?.scriptName,120),status,cfCode,providerMessage:clean(error?.cfMessage,240),updatedTargets:Array.isArray(error?.updatedTargets)?error.updatedTargets.map(v=>clean(v,120)):[]}}
+function runtimeSyncFailure(error){const status=Number(error?.status)||0,cfCode=Number(error?.cfCode)||0;const reason=error?.message==='provider_runtime_sync_unavailable'?'secret_manager_not_configured':cfCode===10215?'worker_latest_version_not_deployed':cfCode===10053?'binding_managed_by_config':status===401||status===403?'secret_manager_permission_denied':status===404?'runtime_worker_not_found':status===429?'cloudflare_rate_limited':status===0?'cloudflare_unreachable':'cloudflare_secret_write_failed';return{reason,target:clean(error?.scriptName,120),status,cfCode,providerMessage:clean(error?.cfMessage,240),updatedTargets:Array.isArray(error?.updatedTargets)?error.updatedTargets.map(v=>clean(v,120)):[]}}
 async function runtimeSecretInventory(env={}){if(!runtimeSyncReady(env))return null;const inventory=new Map();for(const scriptName of runtimeScriptNames(env)){try{const response=await fetch(secretUrl(env,scriptName),{method:'GET',headers:{authorization:`Bearer ${runtimeManagerToken(env)}`,'content-type':'application/json'}});const data=await response.json().catch(()=>({}));if(!response.ok||data?.success===false){inventory.set(scriptName,null);continue}inventory.set(scriptName,new Set((Array.isArray(data?.result)?data.result:[]).map(item=>clean(item?.name,128)).filter(Boolean)))}catch{inventory.set(scriptName,null)}}return inventory}
 async function fingerprint(value){const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));return [...new Uint8Array(digest)].slice(0,8).map(v=>v.toString(16).padStart(2,'0')).join('')}
 function runtimeEnabled(env,id,fallback){const value=clean(env?.[RUNTIME_BINDINGS[id]?.enabled],30).toLowerCase();if(!value)return fallback;return ['1','true','yes','on','enabled'].includes(value)}
