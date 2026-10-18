@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 
 const script=readFileSync(new URL('../scripts/verify-seasonal-workforce-native.mjs',import.meta.url),'utf8');
 const workflow=readFileSync(new URL('../.github/workflows/verify-seasonal-workforce-native.yml',import.meta.url),'utf8');
+const release=readFileSync(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8');
 
 test('real PC/mobile test uses EKODI first-party isolated browser only',()=>{
  assert.match(script,/from 'playwright'/);
@@ -76,11 +77,16 @@ test('independent PR workflow publishes evidence and does not trigger release',(
  assert.match(workflow,/node scripts\/verify-seasonal-workforce-native\.mjs/);
  assert.match(workflow,/actions\/upload-artifact@v4/);
  assert.match(workflow,/artifacts\/seasonal-workforce-native/);
- assert.match(workflow,/workflow_run:/);
- assert.match(workflow,/github\.event\.workflow_run\.conclusion == 'success'/);
+ assert.match(workflow,/workflow_call:/);
+ assert.doesNotMatch(workflow,/workflow_run:/);
+ assert.match(workflow,/github\.sha/);
+ assert.match(release,/seasonal_workforce_native_postdeploy:[\s\S]*?needs: deploy\s*\n\s*uses: \.\/\.github\/workflows\/verify-seasonal-workforce-native\.yml/);
  assert.match(workflow,/--mode=source/);
  assert.match(workflow,/--mode=live/);
- assert.match(script,/productionSiteVerified:MODE==='live'/);
+ assert.match(script,/productionSiteVerified:false/);
+ assert.match(script,/evidence\.productionSiteVerified=MODE==='live'&&evidence\.success/);
+ assert.match(script,/releaseCommit:process\.env\.GITHUB_SHA/);
+ assert.match(script,/releaseRun:process\.env\.GITHUB_RUN_ID/);
  assert.match(script,/sourceCodePreview:MODE==='source'/);
  assert.doesNotMatch(workflow,/wrangler deploy|contents: write|pull-requests: write/);
 });
