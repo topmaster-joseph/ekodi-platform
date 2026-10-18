@@ -90,6 +90,23 @@ for (const key of ['providerMayIssueItsOwnOrchestratorAuthority','providerMayPro
 }
 const requiredAiRoundtrip = ['authenticated_origin','orchestrator_accepted_task_id','scoped_worker_assignment','provider_response_received','orchestrator_verification_result','response_to_original_channel','audit_and_timestamp'];
 if (JSON.stringify(multiAi.requiredRoundtripEvidence || []) !== JSON.stringify(requiredAiRoundtrip)) fail('multi-AI live bidirectional proof must retain all evidence gates.');
+const oneConfirmation = policy.deploymentMinimumFriction?.oneFinalPromotionConfirmation || {};
+if (oneConfirmation.policyId !== 'EKODI-ONE-FINAL-PROMOTION-CONFIRMATION-001' || oneConfirmation.status !== 'enforced' || oneConfirmation.appliesPlatformWide !== true) fail('final production confirmation policy must remain enforced.');
+if (oneConfirmation.ownerFacingApprovalMoments !== 'one-at-final-production-promotion' || oneConfirmation.finalConfirmationScope !== 'task-and-exact-immutable-release-artifact') fail('owner confirmation must be exactly scoped to final production promotion.');
+const requiredAutoStages = ['plan','implement','test','repair','retest','review','pull-request','required-ci','staging','staging-proof','rollback-preflight'];
+if (JSON.stringify(oneConfirmation.automaticStagesBeforeConfirmation || []) !== JSON.stringify(requiredAutoStages)) fail('preproduction automatic execution stages changed.');
+for (const key of [
+  'automaticSafeFailureRecovery','retryResumesFailedStage','avoidRepeatedOwnerQuestions',
+  'deduplicateEquivalentChecks','failoverWithinRegisteredDelegationOnly',
+  'exponentialBackoff','uncertainWriteMustReconcileBeforeRetry',
+  'repeatedFailureEscalatesWithEvidence','finalConfirmationOnlyAfterAllRequiredGatesAndStaging',
+  'approvalMustBeAuthenticatedAndDurable','staleOrMismatchedApprovalMustFailClosed',
+  'confirmationDoesNotReplaceMandatoryEarlierHumanGates','finalPromotionByEkodiOrchestratorOnly',
+  'workerCanNeverApproveOrDeployItself','rollbackAndProductionVerificationMandatory',
+  'noNewDeploymentBoundary','noPaidProviderAutoUpgrade'
+]) if (oneConfirmation[key] !== true) fail('final-promotion continuous execution safety rule must remain true: ' + key);
+if (oneConfirmation.boundedRetryAttemptsPerFailure !== 3) fail('continuous execution retry budget must remain bounded.');
+
 
 const expectedDefaultExecutionPath = ['ekodi-core-plan-finalized','github-work-branch','code-mutation','automated-tests','pull-request','deployment-gate','guarded-deployment','production-verification'];
 if (JSON.stringify(policy.execution?.defaultExecutionPath || []) !== JSON.stringify(expectedDefaultExecutionPath)) fail('EKODI Core to GitHub must remain the default execution path.');
