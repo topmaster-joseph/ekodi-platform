@@ -267,7 +267,7 @@ const mergeDisposition=merge.response.ok?'merged-immediately':`guarded-pending-h
 // Only a successfully merged, exactly owner-approved recovery PR may dispatch
 // the existing guarded production workflow. That workflow still enforces its
 // own orchestrator receipt, CI, auth boundary, and live production checks.
-if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched||sharedSiteTouched||controlApiTouched)){
+if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched||sharedSiteTouched)){
   if(merge.data?.merged!==true||!/^[a-f0-9]{40}$/i.test(text(merge.data?.sha,80))){
     fail('guarded merge did not return a verifiable commit SHA');
   }
@@ -299,17 +299,6 @@ if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched||sharedSiteT
     }
     out('shell_dispatch','accepted');
   }
-  if(controlApiTouched){
-    const apiDispatch=await github(`/repos/${repo}/actions/workflows/deploy-control-api.yml/dispatches`,{
-      method:'POST',
-      headers:{'content-type':'application/json'},
-      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branchRef,release_task_id:taskId}})
-    });
-    if(apiDispatch.response.status!==204){
-      fail('guarded Church Live Control API dispatch failed: HTTP '+apiDispatch.response.status);
-    }
-    out('control_api_dispatch','accepted');
-  }
   if(sharedSiteTouched){
     const siteDispatch=await github(`/repos/${repo}/actions/workflows/deploy-site-core.yml/dispatches`,{
       method:'POST',
@@ -321,6 +310,31 @@ if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched||sharedSiteT
     }
     out('shared_site_dispatch','accepted');
   }
+}
+
+// An approved Control API source-only merge must also dispatch the separately
+// guarded API workflow. Leave the original Site Core/Board/Shell contract
+// unchanged, including its established integration-order assertions.
+if(merge.response.ok&&controlApiTouched){
+  if(merge.data?.merged!==true||!/^[a-f0-9]{40}$/i.test(text(merge.data?.sha,80))){
+    fail('Church Live Control API dispatch needs verified protected merge SHA');
+  }
+  const main=await github(`/repos/${repo}/branches/main`);
+  if(!main.response.ok||text(main.data?.commit?.sha,80)!==text(merge.data.sha,80)){
+    fail('main changed before exact Church Live Control API dispatch; do not launch a stale release');
+  }
+  if(controlApiTouched){
+    const apiDispatch=await github(`/repos/${repo}/actions/workflows/deploy-control-api.yml/dispatches`,{
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branchRef,release_task_id:taskId}})
+    });
+    if(apiDispatch.response.status!==204){
+      fail('guarded Church Live Control API dispatch failed: HTTP '+apiDispatch.response.status);
+    }
+    out('control_api_dispatch','accepted');
+  }
+
 }
 
 // This branch is narrowly scoped: only a merged change to the CGMA edge
