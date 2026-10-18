@@ -99,6 +99,14 @@ async function adminSession(request,env){
   return session?.authenticated&&session?.email?session:null;
 }
 
+async function platformSuperAdminRow(env,email){
+  const target=normalize(email);
+  if(!env?.DB?.prepare||!target)return null;
+  const row=await env.DB.prepare("SELECT role FROM admins WHERE lower(trim(email)) = ? AND role = 'super_admin' LIMIT 1")
+    .bind(target).first().catch(()=>null);
+  return normalize(row?.role)==='super_admin'?row:null;
+}
+
 async function tenantRow(env,slug){
   if(!env?.DB||!slug)return null;
   return env.DB.prepare('SELECT id, slug, name, domain, status FROM customer_tenants WHERE slug = ?')
@@ -116,6 +124,16 @@ export async function resolveTenantAccessAuthority(request,env,{tenantSlug=''}={
 
   const principal=await principalFromSupabaseRequest(request);
   if(!principal?.email)return Object.freeze({ok:false,status:401,code:'ACCESS_AUTH_REQUIRED'});
+
+  // A verified Google principal registered as platform super_admin keeps platform authority
+  // on site-local admin pages that authenticate through the central Supabase session.
+  const platformAdmin=await platformSuperAdminRow(env,principal.email);
+  if(platformAdmin){
+    return Object.freeze({
+      ok:true,scope:'platform',email:normalize(principal.email),role:'super_admin',
+      tenantSlug:normalize(tenantSlug),tenantId:null,canManageAllTenants:true,
+    });
+  }
 
   const slug=normalize(tenantSlug);
   if(!slug)return Object.freeze({ok:false,status:403,code:'TENANT_CONTEXT_REQUIRED'});

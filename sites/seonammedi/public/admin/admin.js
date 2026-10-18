@@ -528,6 +528,18 @@ async function loadAdminRoster(){
     const count=document.createElement('p');count.className='muted';count.textContent='총 '+items.length+'명';box.append(count);
   }catch(error){box.textContent='관리자 목록을 불러오지 못했습니다: '+String(error?.message||error)}
 }
+let siteAdminRosterHandle=null;
+async function setupSiteAdminRoster(){
+  // Super administrators edit/register site administrators in place; site administrators keep the read-only list above.
+  const card=$('siteAdminRosterEditor'),container=$('siteAdminRoster');if(!card||!container)return;
+  card.hidden=!state.me?.platform;if(card.hidden)return;
+  try{
+    if(siteAdminRosterHandle){await siteAdminRosterHandle.reload().catch(()=>null);return}
+    const {mountSiteAdminRoster}=await import('/site-admin-roster.js?v=20261019-1');
+    const request=async(path,options={})=>{const data=await api(path,options);if(options.method&&options.method!=='GET')void loadAdminRoster();return data};
+    siteAdminRosterHandle=mountSiteAdminRoster({container,tenant:'seonammedi',request,heading:'관리자 수정·등록 (최고관리자)'});
+  }catch(error){container.textContent='관리자 편집기를 불러오지 못했습니다.';console.error(error)}
+}
 
 function setupBoardAccountRegistration(){
   const form=$('boardAccountForm'),panel=$('boardAccountRegistration'),status=$('boardAccountStatus');
@@ -554,7 +566,7 @@ function setupBoardAccountRegistration(){
 
 async function init(refresh=false){
   try{
-    state.me=await api('/api/seonammedi/admin/me');if(location.hash.includes('ekodi_token='))history.replaceState(null,'',location.pathname+location.search);updateDashboard();setupBoardAccountRegistration();void loadAdminRoster();
+    state.me=await api('/api/seonammedi/admin/me');if(location.hash.includes('ekodi_token='))history.replaceState(null,'',location.pathname+location.search);updateDashboard();setupBoardAccountRegistration();void loadAdminRoster();void setupSiteAdminRoster();
     await Promise.all([loadSiteHealth(),state.me.permissions?.pages?loadStatusPage():Promise.resolve(),state.me.permissions?.pages?loadOrganization():Promise.resolve(),state.me.permissions?.timeline?loadTimeline():Promise.resolve(),state.me.permissions?.finance?loadFinance():Promise.resolve(),state.me.permissions?.voices?loadVoices():Promise.resolve(),state.me.permissions?.content?loadContent():Promise.resolve(),state.me.permissions?.channels?loadChannels():Promise.resolve()]);
     restoreAdminRoute({replace:true});
     if(refresh)text($('scopeSummary'),adminRoleLabel(state.me)+' 권한으로 최신 상태를 확인했습니다.');

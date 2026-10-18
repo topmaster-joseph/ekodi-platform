@@ -909,7 +909,7 @@ test('seonammedi customer domain cache-busts public and admin static assets',asy
   assert.equal(jsVersion,cssVersion,'public script and stylesheet must share one cache-buster');
   assert.ok(adminHtml.includes('<a class="brand" href="./">'));
   assert.ok(adminHtml.includes('<a href="../" target="_blank" rel="noopener">공개페이지</a>'));
-  assert.ok(adminHtml.includes('/seonammedi/admin/admin.js?v=20261019-admin-roster-1'));
+  assert.ok(adminHtml.includes('/seonammedi/admin/admin.js?v=20261019-site-admin-roster-2'));
   assert.ok(adminHtml.includes('/seonammedi/admin/admin-minutes.js?v=20261006-domain-routing-2'));
 });
 

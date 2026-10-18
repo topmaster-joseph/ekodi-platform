@@ -1,7 +1,8 @@
 import authWorker, { isAllowedOrigin } from './auth-worker.js';
 import { handleAdminGoogleAuth } from './admin-google-auth.js';
-import { stringifyCapabilityList, validateAccessGrantInput, accessGrantExpired } from './access-governance.js';
+import { stringifyCapabilityList, validateAccessGrantInput, accessGrantExpired, accessGrantIsActive } from './access-governance.js';
 import { accessGrantManagementDecision, resolveTenantAccessAuthority, tenantGrantCapabilityDecision } from './tenant-access-authority.js';
+import { principalFromSupabaseRequest } from './ekodi-principal.js';
 
 const TENANTS = Object.freeze([
   { slug: 'ekodibiz', name: '에코디비즈', domain: 'ekodi.kr/ekodibiz', realm: 'ekodibiz-client' },
@@ -672,6 +673,57 @@ async function listAccessUsers(request, env, slug) {
   return json({ tenant: { slug: tenant.slug, name: tenant.name, domain: tenant.domain }, users: rows.results.map(publicAccessRow) }, 200, request, env);
 }
 
+// Site administrator roster: roles that operate a site/space (not ordinary members or viewers).
+export const SITE_ADMIN_ROSTER_ROLES = Object.freeze([
+  'owner','admin','manager','staff','marketer','accountant','store_owner','hq_manager','marketing_manager',
+  'accounting_manager','senior_pastor','pastor','care_staff','external_vendor','external_developer',
+  'tenant_admin','workspace_admin','client_admin','client_editor',
+]);
+const SITE_ADMIN_ROSTER_ROLE_SET = new Set(SITE_ADMIN_ROSTER_ROLES);
+
+async function siteAdminRosterAuthority(request, env, tenant) {
+  const authority = await resolveTenantAccessAuthority(request, env, { tenantSlug: tenant.slug });
+  if (authority.ok) return { ok: true, canManage: true, scope: authority.scope, email: authority.email, role: authority.role };
+  // Read-only: an active site administrator of this site may see who else administers it.
+  const principal = await principalFromSupabaseRequest(request);
+  const email = normalizeEmail(principal?.email);
+  if (!email) return { ok: false, status: 401, code: 'ACCESS_AUTH_REQUIRED' };
+  const grant = await env.DB.prepare(`SELECT role, enabled, principal_type, expires_at, last_verified_at
+    FROM customer_access_grants WHERE tenant_id = ? AND lower(trim(email)) = ?`).bind(tenant.id, email).first();
+  if (!grant || !accessGrantIsActive(grant) || !SITE_ADMIN_ROSTER_ROLE_SET.has(normalizeRole(grant.role))) {
+    return { ok: false, status: 403, code: 'SITE_ADMIN_ROSTER_FORBIDDEN' };
+  }
+  return { ok: true, canManage: false, scope: 'tenant-readonly', email, role: normalizeRole(grant.role) };
+}
+
+async function listSiteAdminRoster(request, env, slug) {
+  const tenant = await tenantBySlug(env.DB, slug);
+  if (!tenant) return json({ error: '등록된 사이트가 아닙니다.' }, 404, request, env);
+  const access = await siteAdminRosterAuthority(request, env, tenant);
+  if (!access.ok) return json({ error: '이 사이트의 관리자 목록을 볼 권한이 없습니다.', code: access.code }, access.status || 403, request, env);
+  const rows = await env.DB.prepare(`SELECT
+      a.email, a.role, a.enabled, a.created_at, a.last_verified_at, a.principal_type, a.github_username, a.expires_at, a.visibility,
+      COALESCE(u.display_name, '') AS display_name,
+      COALESCE(u.last_login_at, '') AS user_last_login_at
+    FROM customer_access_grants a
+    LEFT JOIN customer_users u ON lower(trim(u.email)) = a.email
+    WHERE a.tenant_id = ?
+    ORDER BY a.email`).bind(tenant.id).all();
+  const admins = (rows.results || [])
+    .filter(row => SITE_ADMIN_ROSTER_ROLE_SET.has(normalizeRole(row.role)))
+    .map(row => {
+      const item = publicAccessRow(row);
+      if (!access.canManage) { delete item.githubUsername; }
+      return item;
+    });
+  return json({
+    tenant: { slug: tenant.slug, name: tenant.name, domain: tenant.domain },
+    viewer: { email: access.email, role: access.role, scope: access.scope, canManage: access.canManage },
+    roles: SITE_ADMIN_ROSTER_ROLES.filter(role => ROLE_SET.has(role)).map(role => ({ role, label: ROLE_LABELS[role] || role })),
+    admins,
+  }, 200, request, env);
+}
+
 async function listDirectory(request, env) {
   const session = await adminSession(request, env);
   if (!session) return json({ error: 'EKODI 관리자 인증이 필요합니다.' }, 401, request, env);
@@ -791,6 +843,13 @@ export async function handleGoogleCustomerPreregistration(request, env) {
     const slug = normalizeTenant(updateMatch[1]);
     if (!slug) return json({ error: '등록된 고객사가 아닙니다.' }, 404, request, env);
     return updateAccess(request, env, slug);
+  }
+
+  const rosterMatch = path.match(/^\/api\/customers\/tenants\/([a-z0-9-]+)\/admin-roster$/);
+  if (request.method === 'GET' && rosterMatch) {
+    const slug = normalizeTenant(rosterMatch[1]);
+    if (!slug) return json({ error: '등록된 고객사가 아닙니다.' }, 404, request, env);
+    return listSiteAdminRoster(request, env, slug);
   }
 
   const usersMatch = path.match(/^\/api\/customers\/tenants\/([a-z0-9-]+)\/users$/);
