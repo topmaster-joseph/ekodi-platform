@@ -243,6 +243,13 @@ const upToDate=Number(currentBase.data?.behind_by)===0;
 if(!checksReady||!upToDate){
   const reason=!checksReady?'authentic_required_checks_not_green':'latest_main_not_in_source_ancestry';
   out('merge_condition',reason);
+  // GITHUB_TOKEN pushes/PRs do not start the push-triggered converger. Dispatch
+  // it on the orchestrator-issued branch so it approves the parked bot CI runs
+  // and performs the existing protected merge once required checks pass.
+  const converge=await github(`/repos/${repo}/actions/workflows/converge-orchestrated-pr-merge.yml/dispatches`,{
+    method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ref:branchRef})
+  });
+  out('converger_dispatch',converge.response.status===204?'accepted':`failed-http-${converge.response.status}`);
   await github(`/repos/${repo}/issues/${recoveryNumber}/comments`,{
     method:'POST',headers:{'content-type':'application/json'},
     body:JSON.stringify({body:`EKODI release-provenance recovery parked at protected convergence: ${reason}. No immediate merge, no deployment. Source exact SHA \`${headSha}\`; main \`${mainSha}\`. Existing protected CI/update-branch gate must complete before any release.`})
