@@ -87,7 +87,10 @@ test('independent PR workflow publishes evidence and does not trigger release',(
  assert.match(workflow,/github\.event\.workflow_run\.conclusion == 'success'/);
  assert.match(workflow,/--mode=source/);
  assert.match(workflow,/--mode=live/);
- assert.match(script,/productionSiteVerified:MODE==='live'/);
+ assert.match(script,/productionSiteVerified:false/);
+ assert.match(script,/evidence\.productionSiteVerified=MODE==='live'&&evidence\.success/);
+ assert.match(script,/workflowEvent:process\.env\.GITHUB_EVENT_NAME/);
+ assert.match(script,/checkedRepositoryCommit:process\.env\.GITHUB_SHA/);
  assert.match(script,/sourceCodePreview:MODE==='source'/);
  assert.doesNotMatch(workflow,/wrangler deploy|contents: write|pull-requests: write/);
 });
