@@ -104,5 +104,5 @@ function clientMain(){
 }
 
 export function localRegionAccessAdminScript(){
-  return new Response('('+clientMain.toString()+')();',{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+  return new Response('(()=>{const __name=(target,value)=>Object.defineProperty(target,"name",{value,configurable:true});\n('+clientMain.toString()+')();})();',{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 }
