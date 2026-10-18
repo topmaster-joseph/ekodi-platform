@@ -56,3 +56,20 @@ test('Worship Pages deploy verifies date-specific real content, not a 200 fallba
   assert.match(w,/grep -Fq '신명기 33:12–19'/);
   assert.match(w,/grep -Fq '\?view=stage'/);
 });
+
+test('Both Church drift workers checkout the trusted repo before calling the guarded receipt dispatcher',async()=>{
+  for(const path of [
+    '.github/workflows/reconcile-ekodi-church-homepage.yml',
+    '.github/workflows/watch-ekodi-church-source.yml'
+  ]){
+    const source=await read(path);
+    const checkout=source.indexOf('uses: actions/checkout@v7');
+    const dispatcher=source.indexOf('node scripts/dispatch-guarded-church-release.mjs');
+    assert.ok(checkout>0&&dispatcher>checkout,path+' must checkout before dispatch helper');
+    assert.match(source,/persist-credentials: false/);
+    assert.match(source,/EKODI_RELEASE_BRANCH_REF:/);
+    assert.match(source,/EKODI_RELEASE_TASK_ID:/);
+    assert.doesNotMatch(source,/curl [^\n]*api\.github\.com\/repos\/[^\n]*\/dispatches/);
+    assert.equal((source.match(/actions\/checkout@v7/g)||[]).length,1);
+  }
+});

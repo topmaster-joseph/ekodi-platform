@@ -75,3 +75,27 @@ test('Church QR director camera and resizable program require real deployment ca
  ])assert.ok(w.includes(marker),'missing QR on-air canary '+marker);
  assert.match(w,/Verified director QR camera and overlay sizing assets in production/);
 });
+
+test('PR #114 worship-first approved layout requires source and live PC/mobile multilingual Chromium proof',async()=>{
+ const w=await read('.github/workflows/deploy-ekodi-church-homepage.yml');
+ for(const contract of [
+  'church-homepage-layout.css',
+  'body:has(main :target) .hero{display:none!important}',
+  'href="#weekly-worship">예배자료</a>',
+  'online-triad--broadcast',
+  'href="/live/church/"',
+  "if grep -Eiq 'meet",
+  'Verify approved homepage on native Chromium across nine languages and PC/mobile',
+  "const locales=['ko-KR','en','zh-CN','ja','my','kac','vi','mn','id']",
+  "{name:'desktop',width:1440,height:900},{name:'mobile',width:390,height:844}",
+  "const release=process.env.CHURCH_SOURCE_SHA",
+  "initial.weeklyHidden,true",
+  "initial.member,true",
+  'worship.editorHidden,true',
+  'live.cards,2',
+  'Upload approved layout Chromium evidence'
+ ])assert.ok(w.includes(contract),'missing Church layout guarded proof: '+contract);
+ assert.match(w,/actions\/upload-artifact@v4/);
+ assert.match(w,/CHURCH_SOURCE_SHA/);
+ assert.match(w,/validate-ekodi-ai-change-orchestration\.mjs/);
+});

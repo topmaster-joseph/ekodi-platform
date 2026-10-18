@@ -104,6 +104,9 @@ const controlApiTouched=changedFiles.some(file=>
   'ekodi-orchestrator-task-adapter.js',
   'github-actions-oidc.js',
   'ai-command-control.js',
+  // EKODI Core AI Gateway imports this runtime: merged changes must dispatch
+  // the guarded Control API Worker, not only the shared Control UI assets.
+  'ai-orchestrator-runtime.js',
   // The same SeonamMedi monitor code runs in the public Site Core AND in
   // the Control API hourly scheduler. Both runtimes must be released together.
   'seonammedi-monitor.js',

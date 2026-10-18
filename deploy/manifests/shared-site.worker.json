@@ -167,10 +167,24 @@
       },
       {
         "url": "https://ekodi.kr/admin/control",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["EKODI Control", "무엇을 수행할까요?", "/control.css", "/control.js", "href=\"/admin/control\""],
-        "headerExpect": ["x-ekodi-canonical-surface: control", "x-ekodi-canonical-path: /admin/control", "x-ekodi-route: control-surface", "cache-control: no-store", "x-robots-tag: noindex, nofollow, noarchive"],
+        "expect": [
+          "EKODI Control",
+          "무엇을 수행할까요?",
+          "/control.css",
+          "/control.js",
+          "href=\"/admin/control\""
+        ],
+        "headerExpect": [
+          "x-ekodi-canonical-surface: control",
+          "x-ekodi-canonical-path: /admin/control",
+          "x-ekodi-route: control-surface",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive"
+        ],
         "rollbackVerify": false
       },
       {
@@ -2338,6 +2352,25 @@
         "rollbackVerify": false
       },
       {
+        "url": "https://ekodi.kr/cheonggye/local-region-admin-auth.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "const __name=(target,value)=>Object.defineProperty",
+          "ekodi-region-admin-session",
+          "regionAuthReady",
+          "return_to",
+          "/api/local-access/"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
         "url": "https://ekodi.kr/cheonggye/admin/pass",
         "statuses": [
           200
@@ -3626,7 +3659,8 @@
         "expect": [
           "data-pass-intake-form",
           "x-ekodi-intake-request",
-          "ekodi:region-access-ready"
+          "ekodi:region-access-ready",
+          "const __name=(target,value)=>Object.defineProperty"
         ],
         "headerExpect": [
           "cache-control: no-store",

@@ -33,6 +33,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Checkout canonical EKODI orchestrator source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Compare Church source with production release
         env:
           GH_TOKEN: ${{ github.token }}
