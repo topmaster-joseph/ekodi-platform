@@ -101,19 +101,18 @@ try {
           try{if(noticeLink?.href)resolvedNoticePath=new URL(noticeLink.href,target).pathname.replace(/[/]$/,'')}catch{}
           record.directNoticePath=resolvedNoticePath;
           if(publicSurface&&resolvedNoticePath!==expectedNoticePath)violations.push('notice_direct_path_mismatch');
-          // Citizen Voice is an intentional Google-auth navigation, not an in-page category.
-          // Check its exact destination here; the voice route audit below tests actual login.
+          // Citizen Voice menu is publicly readable. Only #freshWrite starts Google login.
+          // Verify there are no composer/account-choice parameters on the navigation link.
           const voiceLink=record.top.find(x=>x.label==='시민의견');
           let voiceLinkMatches=false;
           try{
             const u=new URL(voiceLink?.href||'',target);
             voiceLinkMatches=u.origin===root.origin &&
               u.pathname.replace(/[/]$/,'')===root.prefix+'/board/voices' &&
-              u.searchParams.get('compose')==='1' &&
-              u.searchParams.get('choose_account')==='1';
+              u.search==='' && u.hash==='';
           }catch{}
           record.citizenVoiceLinkMatches=voiceLinkMatches;
-          if(publicSurface&&!voiceLinkMatches)violations.push('citizen_voice_chooser_destination_mismatch');
+          if(publicSurface&&!voiceLinkMatches)violations.push('citizen_voice_public_destination_mismatch');
           if(publicSurface&&record.centralCategory.noticeTrigger)violations.push('notice_category_click_interception');
           const socialGroup=record.groups.find(x=>x.parent==='소통채널');
           const centralValid=record.centralCategory.present&&record.centralCategory.initiallyHidden;
@@ -121,6 +120,22 @@ try {
           if(publicSurface&&!socialEntries.some(x=>x.label==='유튜브'))violations.push('social_submenus_missing');
           if(publicSurface&&!socialEntries.some(x=>x.label==='인스타그램'))violations.push('instagram_link_missing');
           if(publicSurface&&!socialEntries.some(x=>x.label==='페이스북'||x.label==='페이스북 그룹'))violations.push('facebook_link_missing');
+          // Actual first-party browser click must open the public list, never the auth screen.
+          if(suffix==='/'&&voiceLinkMatches){
+            try{
+              await page.locator('header.site-header nav a[href*="board/voices"]').first().click({timeout:8000});
+              await page.waitForURL(u=>u.origin===root.origin&&u.pathname.replace(/[/]$/,'')===root.prefix+'/board/voices',{timeout:10000});
+              const opened=new URL(page.url());
+              record.voiceMenuPublicList=opened.search===''&&opened.hash===''&&
+                await page.locator('body.board-voices #freshWrite').isVisible().catch(()=>false);
+              if(!record.voiceMenuPublicList)violations.push('citizen_voice_menu_did_not_open_public_list');
+            }catch(error){
+              record.voiceMenuPublicList=false;
+              violations.push('citizen_voice_menu_forced_login_or_navigation_failed');
+            }
+            const restored=await page.goto(target,{waitUntil:'domcontentloaded',timeout:25000});
+            if(!restored?.ok())throw Error('citizen_voice_home_restore_http_'+String(restored?.status()||0));
+          }
           // Exercise real top-menu transitions before Notice, not only the isolated Notice link.
           // Every action stays read-only and uses the same first-party Chromium context.
           if(suffix==='/'&&centralValid){
@@ -128,8 +143,7 @@ try {
               {label:'활동이력',selector:'a[data-view-link="committee"]'},
               {label:'관련소식',selector:'a[data-view-link="status"]'},
               {label:'소통채널',selector:'a[data-view-link="channels"]'},
-              // Do not click 시민의견 here: it deliberately navigates to Google auth.
-              // The board/voices guest case validates that redirect and return_to.
+              // 시민의견 menu navigation is checked separately below without credentials.
               {label:'조직',selector:'a[data-view-link="organization"]'}
             ];
             const expectedPath=root.prefix+'/board/notices';
