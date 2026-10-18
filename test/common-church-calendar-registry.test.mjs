@@ -47,3 +47,9 @@ test('Release includes a durable audit migration and api worker routing',()=>{
  assert.match(migration,/common_church_calendar_audit/);
  assert.match(ingress,/handleCommonChurchCalendar\(request,env\)/);
 });
+
+test('Weekly view includes following weekdays and omits past events',async()=>{
+ const response=await handleCommonChurchCalendar(req('/api/public/church-calendar?date=2026-10-18&week=1'));
+ const payload=await response.json();
+ assert.deepEqual(payload.events.map(e=>e.name),['직장선교주일','기독교교육주간']);
+});\n
