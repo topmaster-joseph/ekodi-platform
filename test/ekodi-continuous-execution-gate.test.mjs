@@ -24,7 +24,8 @@ test('one owner confirmation remains a machine enforced policy proposal, not an 
   assert.equal(rule.status, 'enforced');
   assert.equal(rule.ownerFacingApprovalMoments, 'one-at-final-production-promotion');
   assert.equal(rule.confirmationDoesNotReplaceMandatoryEarlierHumanGates, true);
-  assert.equal(rule.workerCanNeverApproveOrDeployItself, true);
+  assert.equal(rule.finalPromotionByEkodiOrchestratorOnly, true);
+  assert.equal(policy.multiAiCommandAuthority.providerMayPromoteMergeOrDeployDirectly, false);
   assert.equal(rule.finalConfirmationOnlyAfterAllRequiredGatesAndStaging, true);
   assert.equal(EKODI_CONTINUOUS_EXECUTION_GATE.policyId, rule.policyId);
   assert.equal(EKODI_CONTINUOUS_EXECUTION_GATE.maxAutomaticRetries, 3);
