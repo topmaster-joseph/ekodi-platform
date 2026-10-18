@@ -38,11 +38,13 @@ test('immediate owner-approved recovery also dispatches both independent guarded
   for(const name of ['tenant-live.js','tenant-live.css','tenant-live-page.js','realtime-tenant-registry.js']){
     assert.ok(paths.includes("'"+name+"'"),'Site Core immediate source '+name);
   }
-  assert.match(r,/if\(merge\.response\.ok&&\(independentBoardTouched\|\|shellRuntimeTouched\|\|sharedSiteTouched\|\|controlApiTouched\)\)/);
+  // Preserve the existing independently reviewed Board/Shell/Site Core guard,
+  // and add a second receipt-bound API-only guard for host runtime edits.
+  assert.match(r,/if\(merge\.response\.ok&&\(independentBoardTouched\|\|shellRuntimeTouched\|\|sharedSiteTouched\)\)/);
   const dispatches=r.slice(r.indexOf('if(merge.response.ok&&(independentBoardTouched'),r.indexOf('// This branch is narrowly scoped'));
   assert.match(dispatches,/merge\.data\?\.merged!==true/);
   assert.match(dispatches,/main\.data\?\.commit\?\.sha/);
-  assert.match(dispatches,/if\(controlApiTouched\)\{/);
+  assert.match(dispatches,/if\(merge\.response\.ok&&controlApiTouched\)\{/);
   assert.match(dispatches,/deploy-control-api\.yml\/dispatches/);
   assert.match(dispatches,/if\(apiDispatch\.response\.status!==204\)/);
   assert.match(dispatches,/out\('control_api_dispatch','accepted'\)/);
