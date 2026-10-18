@@ -659,25 +659,21 @@
         "staging-proof",
         "rollback-preflight"
       ],
-      "automaticSafeFailureRecovery": true,
-      "retryResumesFailedStage": true,
-      "avoidRepeatedOwnerQuestions": true,
-      "deduplicateEquivalentChecks": true,
-      "failoverWithinRegisteredDelegationOnly": true,
       "boundedRetryAttemptsPerFailure": 3,
-      "exponentialBackoff": true,
-      "uncertainWriteMustReconcileBeforeRetry": true,
-      "repeatedFailureEscalatesWithEvidence": true,
+      "safeFailureAction": "diagnose-repair-retest-resume-failed-stage",
+      "uncertainWriteAction": "reconcile-before-retry",
+      "exhaustedRetryAction": "hold-with-evidence-not-infinite-retry",
       "finalConfirmationOnlyAfterAllRequiredGatesAndStaging": true,
       "finalConfirmationScope": "task-and-exact-immutable-release-artifact",
       "approvalMustBeAuthenticatedAndDurable": true,
-      "staleOrMismatchedApprovalMustFailClosed": true,
       "confirmationDoesNotReplaceMandatoryEarlierHumanGates": true,
       "finalPromotionByEkodiOrchestratorOnly": true,
-      "workerCanNeverApproveOrDeployItself": true,
-      "rollbackAndProductionVerificationMandatory": true,
-      "noNewDeploymentBoundary": true,
-      "noPaidProviderAutoUpgrade": true
+      "inheritedSafetyContracts": [
+        "AI-ORCHESTRATE-001",
+        "AI-COMPLETE-001",
+        "EKODI-DEPLOYMENT-FOUR-LAYER-001",
+        "EKODI-ORCHESTRATOR-COMPLETION-001"
+      ]
     }
   }
 }
