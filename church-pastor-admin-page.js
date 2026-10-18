@@ -217,7 +217,7 @@ function pastorClient(POLICY){
               const registry=await calendar.json();
               const entries=(registry.events||[]).filter(entry=>entry.approval==='approved'||entry.approval==='provisional');
               const notes=entries.map(entry=>(entry.approval==='provisional'?'[교단 원문 대조 전 참고] ':'')+String(entry.bulletin||'')).filter(Boolean);
-              churchCalendarNotes=notes.join('\\n');
+              churchCalendarNotes=notes.join('\n');
               const input=f.elements.namedItem('notice');
               if(input&&!String(input.value||'').trim())input.value=churchCalendarNotes;
               if(entries.length){
