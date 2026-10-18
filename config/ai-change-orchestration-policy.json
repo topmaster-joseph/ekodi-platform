@@ -5,6 +5,40 @@
   "controlPlane": "EKODI AI",
   "orchestrator": "ekodi-ai-orchestrator",
   "defaultRule": "all-ekodi-change-intents-enter-through-ekodi-ai",
+  "multiAiCommandAuthority": {
+    "policyId": "EKODI-MULTI-AI-SINGLE-ORCHESTRATOR-001",
+    "status": "enforced",
+    "mandatoryStatement": "모든 AI는 EKODI의 협력 실행자이며, EKODI Orchestrator가 유일한 총괄 지휘자로서 설계·개발·검증·배포·운영을 통합 관리한다.",
+    "appliesTo": [
+      "chatgpt",
+      "claude",
+      "codex",
+      "gemini",
+      "local-ai",
+      "future-ai-providers"
+    ],
+    "providerRolesAreTaskScopedNotFixed": true,
+    "soleTaskLifecycleOwner": "ekodi-ai-orchestrator",
+    "providerMayAnalyzeDesignImplementAndReviewInIsolatedScope": true,
+    "providerMayIssueItsOwnOrchestratorAuthority": false,
+    "providerMayPromoteMergeOrDeployDirectly": false,
+    "orchestratorIssuedTaskRequiredForProductionBoundWork": true,
+    "preserveOriginAndReturnChannel": true,
+    "workspaceIsolationAndIndependentVerificationRequired": true,
+    "ownerHumanGatesRemainAuthoritative": true,
+    "bidirectionalLiveProofMustBeAuthenticated": true,
+    "simulatedOrStaticTestsDoNotCountAsLiveProof": true,
+    "requiredRoundtripEvidence": [
+      "authenticated_origin",
+      "orchestrator_accepted_task_id",
+      "scoped_worker_assignment",
+      "provider_response_received",
+      "orchestrator_verification_result",
+      "response_to_original_channel",
+      "audit_and_timestamp"
+    ],
+    "successClaimRequiresEvidenceFromBothClaudeAndGPT": true
+  },
   "scope": [
     "ekodi-platform",
     "ekodi-services",
