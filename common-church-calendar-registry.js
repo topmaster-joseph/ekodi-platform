@@ -52,7 +52,13 @@ async function allowed(request,deps={}){
     const rsp=await (deps.fetch||fetch)(AUTH_URL,{headers:{authorization:auth,accept:'application/json'},redirect:'error'});
     if(!rsp.ok)return false;
     const result=await rsp.json();
-    return result?.permissions?.worship===true;
+    if(result?.permissions?.worship!==true)return false;
+    // Only after the tenant API verifies the bearer do we use the token's
+    // subject for the immutable mutation audit. Reject anonymous audit writes.
+    const jwt=auth.replace(/^Bearer\s+/i,'').split('.');
+    if(jwt.length!==3)return false;
+    const claims=JSON.parse(atob(jwt[1].replace(/-/g,'+').replace(/_/g,'/')));
+    return /^[a-zA-Z0-9-]{20,128}$/.test(String(claims?.sub||''))?claims.sub:false;
   }catch{return false;}
 }
 function validated(input){
@@ -75,7 +81,8 @@ export async function handleCommonChurchCalendar(request,env={},deps={}){
   if(path!==PUBLIC_PATH&&path!==ADMIN_PATH)return null;
   const isAdmin=path===ADMIN_PATH;
   const method=request.method.toUpperCase();
-  if(isAdmin&&!await allowed(request,deps))return json({ok:false,code:'AUTH_REQUIRED'},403,true);
+  const actorId=isAdmin?await allowed(request,deps):null;
+  if(isAdmin&&!actorId)return json({ok:false,code:'AUTH_REQUIRED'},403,true);
   if(!isAdmin&&method!=='GET')return json({ok:false,code:'READ_ONLY'},405);
   if(isAdmin&&!['GET','POST','PUT','DELETE'].includes(method))return json({ok:false,code:'METHOD_NOT_ALLOWED'},405,true);
   try{
@@ -97,7 +104,7 @@ export async function handleCommonChurchCalendar(request,env={},deps={}){
     const input=await request.json();
     const id=method==='POST'?'local-'+crypto.randomUUID():trim(input.id,100);
     if(!/^[a-z][a-z0-9-]{5,99}$/.test(id))return json({ok:false,code:'INVALID_ID'},400,true);
-    const actor='verified-church-worship-admin';
+    const actor=actorId;
     if(method==='DELETE'){
       await env.DB.prepare("INSERT INTO common_church_calendar_entries (id,event_date,end_date,name,category,approval,updated_by) VALUES (?,?,?,?,?,'archived',?) ON CONFLICT(id) DO UPDATE SET approval='archived',updated_at=CURRENT_TIMESTAMP,updated_by=excluded.updated_by,version=version+1")
         .bind(id,'2026-01-01','2026-01-01','보관됨','local',actor).run();
