@@ -230,6 +230,8 @@ export function rolePrompt(task, role, context = {}) {
     branch ? `Isolated branch: ${branch}` : 'No source branch has been allocated for this task.',
     'Work independently from the other parallel providers. Surface evidence, disagreements, risks, and the strongest solution for the origin synthesizer.',
     'Respect least privilege and the central review, merge, and deployment gate.',
+    'All AI providers are task-scoped EKODI collaborators; only EKODI Orchestrator owns task assignment, lifecycle, verification, governed release and completion. Claude, GPT and local AI may each design, implement or independently review within assigned isolated work, but no provider may grant itself an authoritative task receipt, change permissions, merge, deploy or mark production complete.',
+    'Return your review, candidate changes and structured evidence to EKODI Orchestrator for independent verification and a reply on the preserved origin channel. A simulated exchange or unverified model reply is not live bidirectional proof.',
     'Never mutate production directly. Production changes must promote the same verified immutable artifact through Governance Plane.',
     mission ? `Mission gate: ${mission.tier} (${mission.reason}); policy ${mission.policyVersion}.` : '',
     mission?.analysisOnly ? 'Mission governance permits analysis, review, and candidate preparation only. Do not perform the underlying high-impact action.' : '',
