@@ -208,6 +208,25 @@ function pastorClient(POLICY){
           status.textContent=request.date+' · 승인된 공통본문 확인 중';
           await refreshApprovedReading();
           if(!f.elements.namedItem('scripture').value)throw new Error('공통본문이 승인되지 않아 자동 준비를 중단했습니다.');
+          // Advisory calendar: optional and independent from the immutable approved Scripture.
+          // Only suggests content when the pastor has not entered a notice.
+          let churchCalendarNotes='';
+          try{
+            const calendar=await fetch('/api/public/church-calendar?date='+encodeURIComponent(request.date),{cache:'no-store'});
+            if(calendar.ok){
+              const registry=await calendar.json();
+              const entries=(registry.events||[]).filter(entry=>entry.approval==='approved'||entry.approval==='provisional');
+              const notes=entries.map(entry=>(entry.approval==='provisional'?'[교단 원문 대조 전 참고] ':'')+String(entry.bulletin||'')).filter(Boolean);
+              churchCalendarNotes=notes.join('\\n');
+              const input=f.elements.namedItem('notice');
+              if(input&&!String(input.value||'').trim())input.value=churchCalendarNotes;
+              if(entries.length){
+                const lens=entries.map(entry=>entry.name+(entry.sermonFocus?' · 설교 적용 참고: '+entry.sermonFocus:'')).join(' / ');
+                status.textContent=request.date+' · 교회력 참고: '+lens.slice(0,300);
+              }
+            }
+          }catch{/* Missing calendar metadata must not prevent a pastor from preparing worship. */}
+
           const path='/ekodichurch/worship/'+request.date+'/';
           const response=await fetch(path+'materials.json',{cache:'no-store'});
           let packet=null;
@@ -223,6 +242,7 @@ function pastorClient(POLICY){
             addLink('PPT 16:9',path+'?view=stage');
             addLink('방송 진행자',path+'?view=operator');
           }
+          addLink('EKODI 공통 교회력 관리','/ekodichurch/calendar/');
           if(request.youtube)addLink('교회 YouTube Studio','https://studio.youtube.com/');
           status.textContent=request.date+' · '+(packet?'기존 주보·발표자료 연결 완료':'자료 파일 생성/배포 대기')+' · '+(request.youtube?'YouTube 예약·채널 연결 미확인':'YouTube 준비 명령 없음')+' · 공개 전 반드시 검토 후 저장하세요.';
           f.scrollIntoView({behavior:'smooth',block:'nearest'});
