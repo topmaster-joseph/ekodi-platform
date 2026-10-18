@@ -53,3 +53,37 @@ test('Weekly view includes following weekdays and omits past events',async()=>{
  const payload=await response.json();
  assert.deepEqual(payload.events.map(e=>e.name),['직장선교주일','기독교교육주간']);
 });\n
+
+test('A pastor-verified JWT can create, publish, read, and archive with immutable audit entries',async()=>{
+ const rows=new Map(),logs=[];
+ const db={prepare(sql){return {bind(...args){return {
+   async all(){return {results:[...rows.values()]}},
+   async first(){return rows.has(args[0])?{version:1}:null},
+   async run(){
+    if(sql.includes('common_church_calendar_audit')){logs.push({id:args[0],op:args[1],actor:args[2]});return {};}
+    if(sql.includes('common_church_calendar_entries')){
+     if(sql.includes("approval='archived'")){
+       const old=rows.get(args[0]);if(old)rows.set(args[0],{...old,approval:'archived'});return {};
+     }
+     const [id,event_date,end_date,name,category,approval,bulletin,sermon_focus,source_url,source_note,updated_by]=args;
+     rows.set(id,{id,event_date,end_date,name,category,approval,bulletin,sermon_focus,source_url,source_note,updated_by});return {};
+    }
+    return {};
+   }
+ }};}}};
+ const subject='11111111-2222-4333-8444-555555555555';
+ const jwt='eyJhbGciOiJub25lIn0.'+Buffer.from(JSON.stringify({sub:subject})).toString('base64url')+'.test-signature';
+ const auth='Bearer '+jwt,env={DB:db},deps={fetch:async()=>new Response(JSON.stringify({permissions:{worship:true}}),{status:200,headers:{'content-type':'application/json'}})};
+ const make=(method,body)=>req('/api/admin/church-calendar',{method,headers:{authorization:auth,'content-type':'application/json'},body:JSON.stringify(body)});
+ const posted=await handleCommonChurchCalendar(make('POST',{...base,approval:'approved'}),env,deps);
+ assert.equal(posted.status,200);
+ const created=await posted.json();assert.equal(created.ok,true);
+ const list=await handleCommonChurchCalendar(req('/api/public/church-calendar?date=2026-10-18'),env);
+ assert.ok((await list.json()).events.some(e=>e.id===created.id));
+ const deleted=await handleCommonChurchCalendar(make('DELETE',{id:created.id}),env,deps);
+ assert.equal(deleted.status,200);
+ const after=await handleCommonChurchCalendar(req('/api/public/church-calendar?date=2026-10-18'),env);
+ assert.ok(!(await after.json()).events.some(e=>e.id===created.id));
+ assert.deepEqual(logs.map(x=>x.op),['create','archive']);
+ assert.ok(logs.every(x=>x.actor===subject));
+});
