@@ -54,3 +54,10 @@ test('first-party Chromium captures site-local Church navigation without modifyi
   assert.match(src,/name:'desktop',width:1440,height:900/);
   assert.match(src,/strictMember:!!document\.querySelector/);
 });
+
+test('worship-first section is opened before native Chromium selects hidden dated materials',()=>{
+  assert.match(src,/page\.goto\(PAGE\+'#weekly-worship'/);
+  assert.match(src,/location\.hash==='#weekly-worship'/);
+  assert.match(src,/getComputedStyle\(weekly\)\.display!=='none'/);
+  assert.ok(src.indexOf("PAGE+'#weekly-worship'")<src.indexOf("await picker.selectOption(entry.date)"));
+});
