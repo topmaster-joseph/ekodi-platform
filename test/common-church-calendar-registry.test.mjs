@@ -52,7 +52,8 @@ test('Weekly view includes following weekdays and omits past events',async()=>{
  const response=await handleCommonChurchCalendar(req('/api/public/church-calendar?date=2026-10-18&week=1'));
  const payload=await response.json();
  assert.deepEqual(payload.events.map(e=>e.name),['직장선교주일','기독교교육주간']);
-});\n
+});
+
 
 test('A pastor-verified JWT can create, publish, read, and archive with immutable audit entries',async()=>{
  const rows=new Map(),logs=[];
