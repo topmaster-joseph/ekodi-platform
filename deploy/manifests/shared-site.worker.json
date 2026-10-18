@@ -231,7 +231,7 @@
         ],
         "redirect": "manual",
         "expect": [
-          "/api/control/ai/v8/pulse",
+          "/api/control/ai/v8/sovereignty/preview",
           "/api/control/ai/assist",
           "control-surface"
         ],
