@@ -136,6 +136,14 @@ export async function capabilityEcosystemStoreSummary(db) {
 export async function persistSandboxRun(db, run = {}) {
   await assertCapabilityEcosystemSchema(db);
   const evaluation = run.evaluation || {};
+  // Contract runs carry their counts on `evaluation`; functional runs carry
+  // them on `evidence`. Read both so a functional run is not stored as zeroes.
+  const evidence = run.evidence || {};
+  const testCount = Number(evaluation.testCount ?? evidence.testCount ?? 0);
+  const passed = Number(evaluation.passed ?? evidence.passed ?? 0);
+  const successRate = Number(
+    evaluation.successRate ?? (testCount > 0 ? passed / testCount : 0),
+  );
   await db.prepare(`INSERT OR REPLACE INTO capability_sandbox_runs
     (id, candidate_id, status, test_count, passed, success_rate, promotion, evidence_json, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
@@ -143,9 +151,9 @@ export async function persistSandboxRun(db, run = {}) {
       run.id,
       run.candidateId,
       evaluation.state || 'sandboxed',
-      Number(evaluation.testCount || 0),
-      Number(evaluation.passed || 0),
-      Number(evaluation.successRate || 0),
+      testCount,
+      passed,
+      successRate,
       evaluation.promotion || 'blocked',
       JSON.stringify(run),
       run.completedAt || new Date().toISOString(),
