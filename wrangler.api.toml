@@ -7,6 +7,12 @@ workers_dev = false
 # Public API is canonical at https://ekodi.kr/api through the Shared Site CONTROL_API service binding.
 preview_urls = false
 
+# Anthropic rejects requests from unsupported regions (e.g. Cloudflare HKG) with
+# 403 "Request not allowed". Run fetch handlers in Seoul, a supported region.
+# Placement does not cover scheduled handlers or RPC entrypoints.
+[placement]
+region = "aws:ap-northeast-2"
+
 
 [triggers]
 crons = ["*/10 * * * *"]
