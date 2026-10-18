@@ -32,3 +32,11 @@ Functional source files:
 At the approved functional SHA, source CI verified `Full test suite: PASS` and `EKODI UI Surface policy OK` before the Draft merge-status guard stopped release. The official recovery PR needs fresh required CI after this docs change and after latest-main synchronization. Post-merge guarded release must dispatch both the shared Site Core and Shell Worker because this touches `sites/` and `shell/`; preserve previous Admin fallback until verified.
 
 Production acceptance requires authentic same-origin Google login, guest/viewer/manager/role-revoked verification, citizen opinions CRUD only with authorized test data, no duplicate menu or accidental data deletion, and native EKODI Chromium on PC and mobile including the fresh-visitor and logged-out paths. Keep #5148 open and never claim all 37 services completed from a single shared rollout.
+
+## Post-update-branch real CI revalidation
+
+The official EKODI convergent merge synchronized current main into recovered PR #5254, producing trusted bot merge `abb83e00ff81c28dcb2156042b4ef4dea79723d7`, with `behind_by=0` against `main`. The original functional source `3724deff44b6bec9f56d7767222abfa8089e8c5e` stays in ancestry.
+
+GitHub treated the synchronized bot-authored commit's check-runs (including `CI` and `EKODI AI Orchestration Gate`) as `action_required`, **not** a passing validation. This second documentation-only, owner-connected continuation commit starts genuine GitHub Actions on the actual synchronized functional tree, with unchanged runtime and unchanged owner approval. The original receipt-bound EKODI convergence workflow must re-check every required status and can merge only after actual GitHub Actions-success check-runs, current-main ancestry, source Human Gate and server-authoritative release receipt all pass.
+
+Do not falsely interpret the earlier successful CI on the pre-synchronization head as proof of latest-main compatibility. Run Shell staging, Site Core guarded release, production canary/rollback and EKODI-native authenticated PC/mobile checks after protected merge before calling this a completed rollout.
