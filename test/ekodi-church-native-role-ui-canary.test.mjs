@@ -45,3 +45,12 @@ test('first-party Chromium checks dated worship on PC and mobile without making 
   assert.match(src,/releaseSourceSha:release\.sourceSha/);
   assert.match(src,/if\(!\['GET','HEAD','OPTIONS'\]\.includes\(method\)\)/);
 });
+
+test('first-party Chromium captures site-local Church navigation without modifying auth or member data',()=>{
+  assert.match(src,/EKODI_NATIVE_CHURCH_MEMBER_NAV=/);
+  assert.match(src,/resolvedMember:links\.some\(link=>link\.matchesChurchMember\)/);
+  assert.match(src,/url\.origin===location\.origin&&url\.pathname==='\/ekodichurch\/my\/'/);
+  assert.match(src,/name:'mobile',width:390,height:844/);
+  assert.match(src,/name:'desktop',width:1440,height:900/);
+  assert.match(src,/strictMember:!!document\.querySelector/);
+});
