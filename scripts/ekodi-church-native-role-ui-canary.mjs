@@ -107,6 +107,13 @@ try{
   }
   await page.setViewportSize({width:390,height:844});
 
+  // The approved worship-first layout hides dated materials on Home.
+  // Open the public section exactly as a real menu click would before selecting.
+  await page.goto(PAGE+'#weekly-worship',{waitUntil:'domcontentloaded',timeout:25000});
+  await page.waitForFunction(()=>{
+    const weekly=document.querySelector('[data-church-weekly]');
+    return location.hash==='#weekly-worship'&&weekly&&getComputedStyle(weekly).display!=='none';
+  },null,{timeout:15000});
   // Read-only real production checks: dated packet switching and responsive UI.
   // No synthetic bearer is present until after these checks finish.
   const weekly=page.locator('[data-church-weekly]');
