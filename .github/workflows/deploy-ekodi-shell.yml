@@ -166,7 +166,7 @@ jobs:
           grep -Fq "'ekodibiz.kr':'biz'" shell/ecosystem-link-compat.js
           grep -Fq 'run_worker_first = true' wrangler.shell.toml
           grep -Fq 'run_worker_first = true' wrangler.shell.staging.toml
-          node --test test/ekodi-shell.test.mjs test/user-ui-header.test.mjs test/language-registry-v8.test.mjs test/user-global-nav.test.mjs test/admin-ui-shell.test.mjs test/public-surface-admin.test.mjs test/ekodian-identity-profile.test.mjs
+          node --test test/ekodi-shell.test.mjs test/user-ui-header.test.mjs test/language-registry-v8.test.mjs test/user-global-nav.test.mjs test/admin-ui-shell.test.mjs test/public-surface-admin.test.mjs test/public-surface-admin-revocation.test.mjs test/seonammedi-voice-admin-revocation.test.mjs test/ekodian-identity-profile.test.mjs
           node scripts/validate-user-ui-dna.mjs
           node scripts/validate-ekodi-shell-adoption.mjs
           node scripts/validate-seasonal-design-governance.mjs

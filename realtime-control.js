@@ -771,6 +771,19 @@ export async function handleRealtimeControl(request,env){
   const recordingStream=await recordingMedia(request,env,url);if(recordingStream)return recordingStream;
   const publicResponse=await publicRoutes(request,env,url);
   if(publicResponse)return publicResponse;
+  // Reuse the exact authorization check performed by room creation. This is
+  // read-only: it never creates a room or grants a presenter role.
+  if(url.pathname===`${PREFIX}/host-access`){
+    if(request.method!=='GET')return json(request,env,{ok:false,error:'method_not_allowed'},405);
+    const tenant=realtimeTenant(url.searchParams.get('tenant')||'');
+    if(!tenant)return json(request,env,{ok:false,error:'invalid_tenant'},400);
+    const access=await tenantAdminAccess(request,env,tenant.apiTenant);
+    if(!access.identity)return json(request,env,{ok:false,error:'authentication_required',authenticated:false,
+      loginUrl:`https://ekodi.kr/auth/?site=${encodeURIComponent(tenant.authSite)}&return_to=${encodeURIComponent('https://ekodi.kr'+tenant.path+'?mode=studio')}`},401);
+    if(!access.allowed)return json(request,env,{ok:false,error:'tenant_host_permission_required',
+      authenticated:true,authorized:false},403);
+    return json(request,env,{ok:true,authenticated:true,authorized:true,tenant:tenant.apiTenant},200);
+  }
   let input=null;
   if(['POST','PUT','PATCH'].includes(request.method)){
     input=await body(request);

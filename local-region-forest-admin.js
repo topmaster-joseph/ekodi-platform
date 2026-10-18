@@ -75,5 +75,5 @@ function clientMain(){
   document.addEventListener('ekodi:region-access-ready',ready,{once:true});if(root.__EKODI_REGION_ACCESS__)ready({detail:root.__EKODI_REGION_ACCESS__});
 }
 export function localRegionForestAdminScript(){
-  return new Response('('+clientMain.toString()+')();',{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+  return new Response('(()=>{const __name=(target,value)=>Object.defineProperty(target,"name",{value,configurable:true});\n('+clientMain.toString()+')();})();',{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 }

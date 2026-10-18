@@ -129,7 +129,7 @@ function clientMain(){
   else document.addEventListener('ekodi:region-access-ready',ready,{once:true});
 }
 export function cheonggyePassVendorIntakeScript(){
-  return new Response('('+clientMain.toString()+')();',{
+  return new Response('(()=>{const __name=(target,value)=>Object.defineProperty(target,"name",{value,configurable:true});\n('+clientMain.toString()+')();})();',{
     headers:{
       'content-type':'text/javascript; charset=utf-8',
       'cache-control':'no-store','x-content-type-options':'nosniff',

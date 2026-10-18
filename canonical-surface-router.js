@@ -319,6 +319,17 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
     for(const [key,value]of Object.entries(headers))routed.headers.set(key,value);
     return routed;
   }
+  // Privileged tenant-recovery page owns its canonical path before admin shell fallback.
+  if(path==='/admin/site-admins'||path==='/admin/site-admins/'||path==='/site-admin-bootstrap.js'){
+    if(!['GET','HEAD'].includes(request.method))return new Response(null,{status:405,headers:{allow:'GET, HEAD','cache-control':'no-store'}});
+    if(typeof legacyFetch!=='function')return serviceUnavailable('site-admin-bootstrap');
+    const response=await legacyFetch(request);
+    const routed=new Response(response.body,response);
+    routed.headers.set('cache-control','no-store');
+    routed.headers.set('x-content-type-options','nosniff');
+    routed.headers.set('x-robots-tag','noindex, nofollow, noarchive');
+    return routed;
+  }
   // This exact admin entry is a route alias, not a new admin screen.
   // Intercept before proxyAdminShell rewrites every nested /admin/* path to legacy '/'.
   if(/^\/admin\/desktop\/bootstrap(?:\/|\/index\.html)?$/.test(path)){

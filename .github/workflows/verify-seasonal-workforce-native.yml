@@ -1,0 +1,78 @@
+name: Seasonal Workforce Native PC Mobile Verification
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/verify-seasonal-workforce-native.mjs'
+      - 'test/seasonal-workforce-native.test.mjs'
+      - '.github/workflows/verify-seasonal-workforce-native.yml'
+      - 'seasonal-workforce/**'
+      - 'deploy/manifests/shared-site.worker.json'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-seasonal-workforce-native.yml'
+      - 'scripts/verify-seasonal-workforce-native.mjs'
+      - 'test/seasonal-workforce-native.test.mjs'
+  schedule:
+    - cron: '17 0 * * *'
+  workflow_run:
+    workflows: [Deploy EKODI Shared Site Core, EKODI Orchestrated PR Convergent Merge]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-seasonal-native-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  native-public-readonly:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (
+        github.event.workflow_run.conclusion == 'success' &&
+        (
+          (github.event.workflow_run.name == 'Deploy EKODI Shared Site Core' && github.event.workflow_run.head_branch == 'main') ||
+          (github.event.workflow_run.name == 'EKODI Orchestrated PR Convergent Merge' && contains(github.event.workflow_run.display_title, 'seasonal'))
+        )
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - name: Checkout EKODI native verifier
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && 'main' || github.ref }}
+      - name: Configure Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify source guardrails
+        run: |
+          node --check scripts/verify-seasonal-workforce-native.mjs
+          node --test test/seasonal-workforce-native.test.mjs
+          node --test test/seasonal-workforce-design.test.mjs
+      - name: Install isolated first-party Chromium
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Test branch-source PC and mobile routes without writes
+        if: github.event_name == 'pull_request'
+        run: node scripts/verify-seasonal-workforce-native.mjs --mode=source
+      - name: Test current production PC and mobile routes with exact event provenance
+        if: github.event_name != 'pull_request'
+        env:
+          EKODI_NATIVE_TRIGGER: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.name || github.event_name }}
+          EKODI_NATIVE_UPSTREAM_SHA: ${{ github.event.workflow_run.head_sha || '' }}
+        run: node scripts/verify-seasonal-workforce-native.mjs --mode=live
+      - name: Save full-size screenshots and machine-readable evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seasonal-workforce-native-${{ github.run_id }}
+          path: artifacts/seasonal-workforce-native
+          if-no-files-found: error
+          retention-days: 14
