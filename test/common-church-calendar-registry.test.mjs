@@ -20,7 +20,7 @@ test('Public date and year APIs expose provenance but no draft edit surface',asy
  const body=await today.json();assert.equal(body.events.length,1);
  assert.equal(body.events[0].id,'pck-2026-workplace');
  assert.ok(body.source.sourceUrl.includes('pck.or.kr'));
- assert.equal((await handleCommonChurchCalendar(req('/api/public/church-calendar?year=2026')).json()).events.length,CHURCH_CALENDAR_SEED.length);
+ assert.equal((await (await handleCommonChurchCalendar(req('/api/public/church-calendar?year=2026'))).json()).events.length,CHURCH_CALENDAR_SEED.length);
  assert.equal((await handleCommonChurchCalendar(req('/api/public/church-calendar?date=2026-02-30'))).status,400);
  assert.equal((await handleCommonChurchCalendar(req('/api/public/church-calendar',{method:'POST'}))).status,405);
  assert.equal(await handleCommonChurchCalendar(req('/api/public/not-calendar')),null);
