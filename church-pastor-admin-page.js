@@ -212,7 +212,7 @@ function pastorClient(POLICY){
           // Only suggests content when the pastor has not entered a notice.
           let churchCalendarNotes='';
           try{
-            const calendar=await fetch('/api/public/church-calendar?date='+encodeURIComponent(request.date),{cache:'no-store'});
+            const calendar=await fetch('/api/public/church-calendar?week=1&date='+encodeURIComponent(request.date),{cache:'no-store'});
             if(calendar.ok){
               const registry=await calendar.json();
               const entries=(registry.events||[]).filter(entry=>entry.approval==='approved'||entry.approval==='provisional');
