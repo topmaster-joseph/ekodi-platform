@@ -9,6 +9,14 @@ on:
       - 'seasonal-workforce/**'
       - 'deploy/manifests/shared-site.worker.json'
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-seasonal-workforce-native.yml'
+      - 'scripts/verify-seasonal-workforce-native.mjs'
+      - 'test/seasonal-workforce-native.test.mjs'
+  schedule:
+    - cron: '17 0 * * *'
   workflow_run:
     workflows: [Deploy EKODI Shared Site Core]
     types: [completed]
