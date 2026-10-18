@@ -7,9 +7,22 @@ const categoryLabels={question:'질문',proposal:'정책제안',experience:'의�
 const statusLabels={received:'접수됨',reviewing:'검토중',answered:'답변완료',published:'공개',archived:'보관'};
 let controller=null;
 let authorized=false;
+let authorizedToken='';
 let rows=new Map();
 let observer=null;
 let decorating=false;
+
+function clearVoiceAdmin(){
+  authorized=false;
+  authorizedToken='';
+  rows.clear();
+  observer?.disconnect();
+  observer=null;
+  controller?.reset?.();
+  controller=null;
+  const root=document.getElementById(ROOT_ID);
+  root?.querySelectorAll('['+ADMIN_MARK+'],[data-voice-admin-reply-delete]').forEach(node=>node.remove());
+}
 
 function token(){
   try{const platform=sessionStorage.getItem('ekodi-auth-token')||'';if(platform)return platform}catch{}
@@ -21,13 +34,16 @@ function token(){
   }catch{return''}
 }
 async function adminRequest(path,options={}){
-  const bearer=token();if(!bearer)throw new Error('authentication_required');
+  const bearer=token();if(!bearer){clearVoiceAdmin();throw new Error('authentication_required')}
   const headers=new Headers(options.headers||{});
   headers.set('authorization','Bearer '+bearer);
   if(options.body&&!headers.has('content-type'))headers.set('content-type','application/json');
   const response=await fetch(path,{...options,headers,cache:'no-store',credentials:'same-origin'});
   const data=await response.json().catch(()=>({}));
-  if(!response.ok||data?.ok===false)throw Object.assign(new Error(data.message||data.error||'request_failed'),{status:response.status,data});
+  if(!response.ok||data?.ok===false){
+    if(response.status===401||response.status===403)clearVoiceAdmin();
+    throw Object.assign(new Error(data.message||data.error||'request_failed'),{status:response.status,data});
+  }
   return data;
 }
 function field(tag,name,value=''){
@@ -57,7 +73,11 @@ async function reloadPublic(){
 }
 async function refreshAdminRows(){
   if(!authorized)return;
+  const activeToken=authorizedToken;
   const data=await adminRequest('/board/api/admin/posts');
+  // A late response from the previous account must not repopulate private rows.
+  if(!authorized||authorizedToken!==activeToken)return;
+  if(!activeToken||token()!==activeToken){clearVoiceAdmin();return}
   rows=new Map((data.items||[]).map(item=>[Number(item.id),item]));
 }
 function statusNode(message,error=false){
@@ -129,17 +149,27 @@ function decorate(){
   }finally{decorating=false}
 }
 async function authorize(){
-  const shared=window.EKODIPublicSurfaceAdmin;if(!shared?.create||!token())return false;
+  const shared=window.EKODIPublicSurfaceAdmin;
+  const bearer=token();
+  if(!shared?.create||!bearer){clearVoiceAdmin();return false}
+  clearVoiceAdmin();
   controller=shared.create({serviceId:'seonammedi-voices-inline',adminPath:'/seonammedi/admin/',authEndpoint:'/api/seonammedi/admin/me',tokenProvider:token});
   const me=await controller.authorize().catch(()=>null);
-  authorized=Boolean(me?.ok&&me?.permissions?.voices===true);
-  if(!authorized)return false;
-  await refreshAdminRows();decorate();return true;
+  if(token()!==bearer||!me?.ok||!(me?.permissions?.voices===true)){clearVoiceAdmin();return false}
+  authorized=true;
+  authorizedToken=bearer;
+  try{
+    await refreshAdminRows();
+    if(!authorized||authorizedToken!==bearer||token()!==bearer){clearVoiceAdmin();return false}
+    decorate();
+    return true;
+  }catch{clearVoiceAdmin();return false}
 }
 let starting=null;
 async function start(){
   const root=document.getElementById(ROOT_ID);if(!root)return false;
   if(starting)return starting;
+  const startedWithToken=token();
   starting=(async()=>{
     if(!await authorize())return false;
     if(!observer){
@@ -149,18 +179,32 @@ async function start(){
     decorate();
     return true;
   })();
-  try{return await starting}finally{starting=null}
+  try{return await starting}finally{
+    starting=null;
+    // A different account may sign in while the previous request is pending.
+    // Retry only for an actual token switch, never loop on an unchanged denial.
+    if(token()&&token()!==startedWithToken)queueMicrotask(()=>start().catch(()=>{}));
+  }
 }
 // The first page load can precede both auth handoff and the shared Shell runtime.
 // Always subscribe, even when the first authorization attempt is denied.
 function retryAuthorization(event){
   const serviceId=event?.detail?.serviceId;
   if(serviceId&&serviceId!=='seonammedi'&&serviceId!=='seonammedi-voices-inline')return;
+  const bearer=token();
+  if(!bearer||authorizedToken&&bearer!==authorizedToken){
+    clearVoiceAdmin();
+    if(bearer)start().catch(()=>{});
+    return;
+  }
   if(!authorized){start().catch(()=>{});return}
-  refreshAdminRows().then(decorate).catch(()=>{});
+  refreshAdminRows().then(decorate).catch(clearVoiceAdmin);
 }
 window.addEventListener('ekodi:public-admin-ready',retryAuthorization);
 window.addEventListener('ekodi:public-admin-runtime-ready',retryAuthorization);
 window.addEventListener('seonammedi:voice-inline-admin-authorized',retryAuthorization);
+window.addEventListener('focus',retryAuthorization);
+window.addEventListener('pageshow',retryAuthorization);
+window.addEventListener('storage',retryAuthorization);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{start().catch(()=>{})},{once:true});else start().catch(()=>{});
 })();

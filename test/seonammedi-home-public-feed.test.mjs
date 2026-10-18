@@ -9,7 +9,8 @@ test('SeonamMedi landing preview uses real timeline and board sources with four 
  const fixture={
   '/api/seonammedi/notices':{ok:true,items:[{id:8,title:'기존 공지',publishedAt:'2026-10-01',status:'published'}]},
   '/board/api/notices':{ok:true,items:[{id:4,title:'공식 공지',createdAt:'2026-10-13',status:'published'},{id:3,title:'이전 공지',createdAt:'2026-10-11',status:'published'}]},
-  '/board/api/posts':{ok:true,items:[{id:5,message:'시민의견 공개 글',createdAt:'2026-10-12',status:'published'},{id:7,message:'비공개 글',visibility:'private'}]},
+  '/board/api/posts':{ok:false,error:'legacy_citizen_board_retired'},
+  '/board/api/voices-fresh':{ok:true,items:[{id:5,message:'시민의견 공개 글',createdAt:'2026-10-12'},{id:7,message:'비공개 글',visibility:'private'}]},
   '/api/seonammedi/timeline':{items:[
    {title:'비대위 기자회견',date:'2026.10.11',recordScope:'committee',status:'published'},
    {title:'방송 관련소식',date:'2026.10.10',category:'방송',status:'published'},
@@ -44,7 +45,7 @@ test('EKODI path mount uses site-scoped independent board APIs and links',async(
  vm.runInNewContext(source,{document:{getElementById:id=>id==='homePublicFeed'?root:null},location:{hostname:'ekodi.kr'},fetch,Date,Promise,encodeURIComponent});
  await new Promise(resolve=>setImmediate(resolve));
  assert.ok(requested.includes('/seonammedi/board/api/notices'));
- assert.ok(requested.includes('/seonammedi/board/api/posts'));
+ assert.ok(requested.includes('/seonammedi/board/api/voices-fresh')&&!requested.includes('/seonammedi/board/api/posts'));
  assert.match(root.innerHTML,/실제 공지/);
  assert.match(root.innerHTML,/href="\/seonammedi\/board\/notices\?id=4"/);
 });
