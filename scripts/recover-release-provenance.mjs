@@ -266,6 +266,16 @@ if(!checksReady||!upToDate){
     method:'POST',headers:{'content-type':'application/json'},
     body:JSON.stringify({body:`EKODI release-provenance recovery parked at protected convergence: ${reason}. No immediate merge, no deployment. Source exact SHA \`${headSha}\`; main \`${mainSha}\`. Existing protected CI/update-branch gate must complete before any release.`})
   });
+  // The recovery branch was created with the Actions token, and GitHub does not
+  // start push-triggered workflows for GITHUB_TOKEN pushes, so the convergent
+  // merge on `ai/*/orch_*` would never run and the PR would park indefinitely.
+  // workflow_dispatch from GITHUB_TOKEN does start runs: hand off explicitly.
+  // Convergence still enforces receipt, required checks and the protected merge.
+  const convergence=await github(`/repos/${repo}/actions/workflows/converge-orchestrated-pr-merge.yml/dispatches`,{
+    method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ref:branchRef})
+  });
+  if(convergence.response.status!==204)fail(`parked recovery convergence dispatch failed: ${convergence.response.status}`);
+  out('convergence_dispatch','dispatched');
 }
 const merge=checksReady&&upToDate
   ?await github(`/repos/${repo}/pulls/${recoveryNumber}/merge`,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({merge_method:'squash'})})
