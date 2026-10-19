@@ -200,16 +200,53 @@ async function readCgmaSiteControl(env){
     return{...CGMA_SITE,publicStatus:'maintenance',maintenanceDisplayType:'default',maintenanceRedirectUrl:'',maintenanceTitle:CGMA_SITE.title,maintenanceMessage:CGMA_SITE.message,redirectMode:'button'};
   }
 }
-function cgmaCanonicalRedirect(request){
-  const source=new URL(request.url);
-  const target=new URL('https://ekodi.kr/cgma');
-  if(source.pathname&&source.pathname!=='/')target.pathname=`/cgma${source.pathname}`.replace(/\/+/g,'/');
+// Owner decision 2026-10-20 (and amendment 2026-09-03 v1.5.2): cgma.or.kr is the
+// representative public address. When its traffic reaches this worker, serve the
+// CGMA surface under cgma.or.kr instead of redirecting visitors to ekodi.kr/cgma.
+const CGMA_PUBLIC_ORIGIN='https://cgma.or.kr';
+const CGMA_PAGES_ORIGIN='https://cheonggye-market.pages.dev';
+export function cgmaPublicUpstreamUrl(requestUrl){
+  const source=new URL(requestUrl);
+  const target=new URL(source.pathname||'/',CGMA_PAGES_ORIGIN);
   target.search=source.search;
-  return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-public-site-mode':'public-redirect'}});
+  return target;
 }
-async function routeCgmaPublic(request,env){
+export function cgmaPublicLocation(location){
+  if(!location)return location;
+  try{
+    const target=new URL(location,CGMA_PAGES_ORIGIN);
+    if(target.origin!==CGMA_PAGES_ORIGIN)return location;
+    return new URL(target.pathname+target.search+target.hash,CGMA_PUBLIC_ORIGIN).toString();
+  }catch{return location;}
+}
+function cgmaApexRedirect(request){
+  const source=new URL(request.url);
+  const target=new URL(source.pathname||'/',CGMA_PUBLIC_ORIGIN);
+  target.search=source.search;
+  return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-public-site-mode':'public-apex-redirect'}});
+}
+async function cgmaPublicPassthrough(request,fetchImpl=fetch){
+  const method=request.method.toUpperCase();
+  const headers=new Headers(request.headers);
+  headers.delete('host');
+  headers.set('x-forwarded-host',new URL(request.url).host);
+  const upstream=await fetchImpl(new Request(cgmaPublicUpstreamUrl(request.url),{
+    method,headers,redirect:'manual',
+    body:['GET','HEAD'].includes(method)?undefined:request.body,
+    ...(!['GET','HEAD'].includes(method)&&request.body?{duplex:'half'}:{})
+  }));
+  const responseHeaders=new Headers(upstream.headers);
+  const location=responseHeaders.get('location');
+  if(location)responseHeaders.set('location',cgmaPublicLocation(location));
+  responseHeaders.set('x-ekodi-public-site-mode','public-passthrough');
+  responseHeaders.set('x-content-type-options','nosniff');
+  return new Response(method==='HEAD'?null:upstream.body,{status:upstream.status,statusText:upstream.statusText,headers:responseHeaders});
+}
+export async function routeCgmaPublic(request,env,fetchImpl=fetch){
+  if(new URL(request.url).hostname.toLowerCase()==='www.cgma.or.kr')return cgmaApexRedirect(request);
   const site=await readCgmaSiteControl(env);
-  if(site.publicStatus!=='maintenance')return cgmaCanonicalRedirect(request);
+  if(site.publicStatus!=='maintenance')return cgmaPublicPassthrough(request,fetchImpl);
+  if(!['GET','HEAD'].includes(request.method.toUpperCase()))return new Response(JSON.stringify({error:'site_maintenance'}),{status:503,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-public-site-mode':'maintenance'}});
   const redirectUrl=validPublicRedirectUrl(site.maintenanceRedirectUrl);
   if(site.maintenanceDisplayType==='url'&&redirectUrl&&site.redirectMode==='auto')return new Response(null,{status:302,headers:{location:redirectUrl,'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-public-site-mode':'maintenance-auto-redirect'}});
   return maintenanceResponse(site);
@@ -498,7 +535,7 @@ async function routePlatform(request,env,ctx){
       return out;
     }
 
-    if(CGMA_HOSTS.has(host)&&['GET','HEAD'].includes(request.method))return routeCgmaPublic(request,env);
+    if(CGMA_HOSTS.has(host))return routeCgmaPublic(request,env);
 
     if(host===PUBLIC_HOST){
       if(isSeasonalOperationsPath(url.pathname))return seasonalOperationsResponse(request,env);
