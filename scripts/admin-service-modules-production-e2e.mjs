@@ -113,6 +113,7 @@ async function verifyProfile(profile) {
     await page.goto(authEntryUrl, { waitUntil:'domcontentloaded', timeout:15_000 });
     await waitForAdminReady(page);
 
+    await page.waitForLoadState('networkidle', { timeout:10_000 }).catch(() => {});
     await page.goto(targetUrl, { waitUntil:'domcontentloaded', timeout:15_000 });
     await waitForAdminReady(page);
     await page.waitForFunction(() => {
@@ -132,6 +133,8 @@ async function verifyProfile(profile) {
       fullPage:true,
     });
 
+    // Let in-flight runtime requests settle so the reload does not cancel them mid-flight.
+    await page.waitForLoadState('networkidle', { timeout:10_000 }).catch(() => {});
     await page.reload({ waitUntil:'domcontentloaded', timeout:15_000 });
     await waitForAdminReady(page);
     await page.waitForFunction(() => window.EKODIAdminPanels?.current?.() === 'service-modules', null, { timeout:15_000 });
