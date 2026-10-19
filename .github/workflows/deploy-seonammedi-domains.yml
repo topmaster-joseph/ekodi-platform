@@ -3,6 +3,15 @@ name: Deploy SeonamMedi Domain Gateway (Manual Topology Change)
 
 on:
   workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Authorized EKODI orchestrator release branch (ai/<agent>/orch_<task-id>)'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Exact authorized EKODI task ID (orch_<task-id>)'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -16,6 +25,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
+      EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref }}
+      EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
@@ -71,4 +82,14 @@ jobs:
           }
           verify "seonammedi.kr" "/?source=ekodi" "/seonammedi/"
           verify "xn--3e0b8b58jw4co4mnpll3k.kr" "/?source=ekodi" "/seonammedi/"
+          for host in seonammedi.kr xn--3e0b8b58jw4co4mnpll3k.kr; do
+            ok=0
+            for attempt in $(seq 1 12); do
+              if curl -fsS --max-time 20 "https://$host/robots.txt" | grep -Fq 'Sitemap: https://seonammedi.kr/sitemap.xml' \
+                && curl -fsS --max-time 20 "https://$host/sitemap.xml" | grep -Fq '<loc>https://seonammedi.kr/</loc>'; then ok=1; break; fi
+              sleep 5
+            done
+            echo "$host search discovery ok=$ok"
+            [ "$ok" = 1 ] || failed=1
+          done
           exit "$failed"
