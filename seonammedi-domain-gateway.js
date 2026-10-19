@@ -62,6 +62,9 @@ function rewriteText(text, incoming, contentType) {
 // points crawlers to the canonical sitemap so both names resolve to one index.
 const CANONICAL_ORIGIN = 'https://seonammedi.kr';
 export const SEONAMMEDI_SITEMAP_PATHS = Object.freeze(['/', '/board/notices', '/board/voices']);
+// Daum Webmaster Tool ownership line (public value issued for https://seonammedi.kr,
+// owner-provided 2026-10-19). Daum has no IndexNow/API registration lane.
+export const SEONAMMEDI_DAUM_WEBMASTER_LINE = '#DaumWebMasterTool:a7f0b97c1ebcf8625674b86e301ffba14c26b9e3e4949468608dcf0bec5643d2:1T0ZRs6bn/unEVfM5aXupg==';
 export const SEONAMMEDI_ROBOTS_DISALLOW = Object.freeze(['/admin/', '/minutes/', '/api/', '/auth/', '/seonammedi/admin/']);
 
 function xmlEscape(value) {
@@ -70,6 +73,7 @@ function xmlEscape(value) {
 
 export function seonammediRobotsTxt() {
   return [
+    SEONAMMEDI_DAUM_WEBMASTER_LINE,
     'User-agent: *',
     'Allow: /',
     ...SEONAMMEDI_ROBOTS_DISALLOW.map(path => 'Disallow: ' + path),
