@@ -21,7 +21,7 @@ test('new admin controls appear only after server permission gate',async()=>{
  assert.match(html,/request\('\/admin',\{headers:\{authorization:'Bearer '\+token\}\}\)/);
  assert.match(html,/adminAllowed=Array\.isArray\(r\.items\)/);
  assert.match(html,/if\(adminAllowed\)/);
- assert.match(html,/adminEdit\(item\.id,next\)/);
+ assert.match(html,/adminEdit\(item\.id,next,nextTitle\)/);
  assert.match(html,/adminDelete\(item\.id\)/);
  assert.match(html,/url\.searchParams\.set\('select_account','1'\)/);
 });

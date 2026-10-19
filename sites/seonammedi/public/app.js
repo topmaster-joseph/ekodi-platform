@@ -226,10 +226,11 @@ function renderPublicTimeline(){
   const rows=relatedRows.filter(item=>relatedNewsFilterMatches(item,activeTimelineCategory)).slice().sort(timelineDescending);
   host.innerHTML=rows.length?rows.map((item,index)=>{
     const adminActions=publicTimelineAdminMode&&!item.autoCollected?'<div class="timeline-admin-actions"><span class="source-type '+(item.status==='published'?'':'is-private')+'">'+(item.status==='published'?'공개':'비공개')+'</span><button type="button" data-timeline-edit="'+Number(item.id)+'">수정</button><button type="button" data-timeline-status="'+Number(item.id)+'">'+(item.status==='published'?'비공개로':'공개로')+'</button><button type="button" data-timeline-delete="'+Number(item.id)+'">삭제</button></div>':publicContentInlineMode&&item.autoCollected&&Number(item.monitorSourceId)>0?'<div class="timeline-admin-actions"><span class="source-type">자동수집 기사</span><button type="button" data-monitor-hide="'+Number(item.monitorSourceId)+'">이 자료 삭제</button></div>':'';
-    return '<article class="timeline-item'+' is-collapsed'+'" data-event-date="'+escapeHtml(item.date)+'"><div class="timeline-date">'+escapeHtml(item.date)+'</div><div class="timeline-content"><h3><button type="button" class="timeline-toggle timeline-title-button" aria-expanded="false">'+escapeHtml(item.title)+'</button></h3><p class="timeline-summary">'+escapeHtml(item.summary)+'</p><div class="chips"><span class="chip">'+escapeHtml(relatedNewsCategory(item))+'</span><span class="chip">'+escapeHtml(item.evidence)+'</span></div><div class="timeline-detail">'+evidenceBlock(item)+'</div>'+adminActions+'</div></article>';
+    return '<article class="timeline-item'+' is-collapsed'+'" data-item-key="'+escapeHtml(itemShareKey(item))+'" data-event-date="'+escapeHtml(item.date)+'"><div class="timeline-date">'+escapeHtml(item.date)+'</div><div class="timeline-content"><h3><button type="button" class="timeline-toggle timeline-title-button" aria-expanded="false">'+escapeHtml(item.title)+'</button></h3><p class="timeline-summary">'+escapeHtml(item.summary)+'</p><div class="chips"><span class="chip">'+escapeHtml(relatedNewsCategory(item))+'</span><span class="chip">'+escapeHtml(item.evidence)+'</span></div><div class="timeline-detail">'+evidenceBlock(item)+'</div>'+itemShareButton(item,'timeline')+adminActions+'</div></article>';
   }).join(''):(activeTimelineCategory==='페이스북 그룹'?'<p class="muted">검증되어 공개된 그룹 게시물이 없습니다. 위의 페이스북 그룹 원문 링크를 확인해 주세요.</p>':'<p class="muted">이 분류에 공개된 관련소식이 없습니다.</p>');
   host.querySelectorAll('.timeline-toggle').forEach(button=>button.addEventListener('click',()=>{const card=button.closest('.timeline-item');const collapsed=card.classList.toggle('is-collapsed');button.setAttribute('aria-expanded',collapsed?'false':'true');}));
   attachMonitorMedia(window.__SEONAM_MONITOR_ITEMS||[]);
+  syncAdminLoginButtons();openSharedItem();
 }
 function renderCommitteeNews(){
   const host=el('committeeNewsList');if(!host)return;
@@ -238,13 +239,56 @@ function renderCommitteeNews(){
     const id=Number(item.id||0),auto=Boolean(item.autoCollected);
     const actions=publicTimelineAdminMode&&!auto&&id>0?'<div class="timeline-admin-actions"><span class="source-type">'+(item.status==='published'?'공개':'비공개')+'</span><button type="button" data-committee-news-edit="'+id+'">수정</button><button type="button" data-committee-news-status="'+id+'">'+(item.status==='published'?'비공개로':'공개로')+'</button><button type="button" data-committee-news-delete="'+id+'">삭제</button></div>'
       :publicTimelineAdminMode&&auto&&Number(item.monitorSourceId)>0?'<div class="timeline-admin-actions"><span class="source-type">자동수집</span><button type="button" data-committee-news-hide="'+Number(item.monitorSourceId)+'">공개 제외</button></div>':'';
-    return '<article class="timeline-item'+' is-collapsed'+'"><div class="timeline-date">'+escapeHtml(item.date||'')+'</div><div class="timeline-content"><h3><button type="button" class="timeline-toggle timeline-title-button" aria-expanded="false">'+escapeHtml(item.title||'')+'</button></h3><p class="timeline-summary">'+escapeHtml(item.summary||'')+'</p><div class="chips"><span class="chip">'+escapeHtml(relatedNewsCategory(item))+'</span><span class="chip">'+(auto?'출처 확인 · 자동수집':'등록 소식')+'</span></div><div class="timeline-detail">'+evidenceBlock(item)+'</div>'+actions+'</div></article>';
+    return '<article class="timeline-item'+' is-collapsed'+'" data-item-key="'+escapeHtml(itemShareKey(item))+'"><div class="timeline-date">'+escapeHtml(item.date||'')+'</div><div class="timeline-content"><h3><button type="button" class="timeline-toggle timeline-title-button" aria-expanded="false">'+escapeHtml(item.title||'')+'</button></h3><p class="timeline-summary">'+escapeHtml(item.summary||'')+'</p><div class="chips"><span class="chip">'+escapeHtml(relatedNewsCategory(item))+'</span><span class="chip">'+(auto?'출처 확인 · 자동수집':'등록 소식')+'</span></div><div class="timeline-detail">'+evidenceBlock(item)+'</div>'+itemShareButton(item,'committee')+actions+'</div></article>';
   }).join(''):'<p class="muted">현재 공개가 확인된 비상대책위 관련소식이 없습니다. 출처가 검증된 자료가 수집되면 자동으로 표시됩니다.</p>';
   host.querySelectorAll('.timeline-toggle').forEach(button=>button.addEventListener('click',()=>{
     const card=button.closest('.timeline-item'),collapsed=card.classList.toggle('is-collapsed');
     button.setAttribute('aria-expanded',collapsed?'false':'true');
   }));
+  openSharedItem();
 }
+// Owner request (2026-10-19): every 활동이력·관련소식 item can be shared as a
+// link that reopens that exact item, and administrators can sign in from the page.
+function itemShareKey(item){
+  const id=Number(item?.id||0);if(id>0)return 'i'+id;
+  const monitor=Number(item?.monitorSourceId||0);if(monitor>0)return 'm'+monitor;
+  const text=String(item?.date||'')+'|'+String(item?.title||'');let hash=0;
+  for(let i=0;i<text.length;i++)hash=(hash*31+text.charCodeAt(i))|0;
+  return 'h'+(hash>>>0).toString(36);
+}
+function itemShareButton(item,view){
+  return '<div class="item-share-row"><button type="button" class="secondary item-share" data-share-item="'+escapeHtml(itemShareKey(item))+'" data-share-view="'+(view==='committee'?'committee-activity':'timeline')+'" data-share-title="'+escapeHtml(item?.title||'')+'">공유</button></div>';
+}
+function siteMountBase(){return location.origin+(location.pathname.startsWith('/seonammedi')?'/seonammedi/':'/')}
+function itemShareUrl(key,view){const u=new URL(siteMountBase());u.searchParams.set('item',key);u.hash=view;return u.href}
+async function shareSiteItem(button){
+  const url=itemShareUrl(button.dataset.shareItem,button.dataset.shareView),title=button.dataset.shareTitle||document.title;
+  const done=text=>{const old='공유';button.textContent=text;setTimeout(()=>{button.textContent=old},1800)};
+  try{if(navigator.share){await navigator.share({title,url});return}}catch(error){if(error?.name==='AbortError')return}
+  try{if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(url);done('링크 복사됨');return}}catch{}
+  window.prompt('아래 링크를 복사해 공유하세요.',url);
+}
+document.addEventListener('click',event=>{const button=event.target.closest?.('[data-share-item]');if(!button)return;event.preventDefault();shareSiteItem(button)});
+var sharedItemOpened=false;
+function openSharedItem(){
+  if(sharedItemOpened)return;
+  const key=new URLSearchParams(location.search).get('item')||'';
+  if(!/^[imh][0-9a-z]{1,24}$/.test(key))return;
+  const card=[...document.querySelectorAll('[data-item-key]')].find(node=>node.dataset.itemKey===key&&!node.closest('[hidden]'));
+  if(!card)return;
+  sharedItemOpened=true;
+  card.classList.remove('is-collapsed');card.classList.add('is-shared');
+  card.querySelector('.timeline-toggle')?.setAttribute('aria-expanded','true');
+  setTimeout(()=>card.scrollIntoView({behavior:'smooth',block:'center'}),60);
+}
+var ADMIN_LOGIN_VIEWS=['committee-activity','timeline'];
+function adminLoginUrl(view){
+  const back=new URL(siteMountBase());back.searchParams.set('admin_view',ADMIN_LOGIN_VIEWS.includes(view)?view:'timeline');
+  const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','seonammedi');u.searchParams.set('direct','1');
+  u.searchParams.set('return_to',back.href);return u.href;
+}
+document.addEventListener('click',event=>{const button=event.target.closest?.('[data-admin-login]');if(!button)return;event.preventDefault();location.assign(adminLoginUrl(button.dataset.adminLogin))});
+function syncAdminLoginButtons(){document.querySelectorAll('[data-admin-login]').forEach(button=>{button.hidden=Boolean(publicTimelineAdminMode)})}
 function initializePublicTimeline(rows){
   basePublicTimelineEntries=Array.isArray(rows)?rows:[];
   publicTimelineEntries=basePublicTimelineEntries.slice();
@@ -621,8 +665,26 @@ async function consumeNoticeHandoff(){
     localStorage.setItem(NOTICE_SESSION_KEY,JSON.stringify({access_token:data.access_token,refresh_token:data.refresh_token||'',expires_at:Number(data.expires_at||0)||Math.floor(Date.now()/1000)+Number(data.expires_in||3600),user:data.user||null}));
     return true;
   }finally{
-    history.replaceState(null,'',location.pathname+location.search+'#notices');
+    const search=new URLSearchParams(location.search),adminView=search.get('admin_view')||'';
+    if(ADMIN_LOGIN_VIEWS.includes(adminView)){
+      search.delete('admin_view');const query=search.toString();
+      history.replaceState(null,'',location.pathname+(query?'?'+query:'')+'#'+adminView);
+      syncViewFromLocation();
+    }else history.replaceState(null,'',location.pathname+location.search+'#notices');
   }
+}
+// Sessions last one hour; renew a stored session with its refresh token through
+// the SeonamMedi auth bridge so in-place administration keeps working.
+async function refreshNoticeSession(){
+  try{
+    if(noticeToken())return true;
+    const session=noticeSession(),refresh=String(session?.refresh_token||'');if(!refresh)return false;
+    const response=await fetch('/api/seonammedi/admin/auth/refresh',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({refresh_token:refresh}),cache:'no-store'});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||!data.access_token){if(response.status===400||response.status===401)localStorage.removeItem(NOTICE_SESSION_KEY);return false}
+    localStorage.setItem(NOTICE_SESSION_KEY,JSON.stringify({access_token:data.access_token,refresh_token:data.refresh_token||refresh,expires_at:Number(data.expires_at||0)||Math.floor(Date.now()/1000)+Number(data.expires_in||3600),user:data.user||session?.user||null}));
+    return true;
+  }catch{return false}
 }
 function noticeLoginUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','seonammedi');u.searchParams.set('direct','1');u.searchParams.set('return_to',location.origin+'/?compose=notice#notices');return u.href}
 function noticePermalink(id){return location.origin+'/notices/'+encodeURIComponent(id)}
@@ -755,6 +817,7 @@ async function initNoticeFlow(){
   const compose=new URLSearchParams(location.search).get('compose')==='notice';
   let handoffError='';
   try{await consumeNoticeHandoff()}catch(error){handoffError=error?.message||'로그인 연결에 실패했습니다.'}
+  if(!handoffError)await refreshNoticeSession();
   if(compose)showView('notices');
   if(compose&&noticeToken()){noticeCompose.hidden=false;noticeWriteButton.hidden=true;noticeCompose.querySelector('input[name="title"]')?.focus()}
   else if(compose&&handoffError){const message=el('noticeComposeMessage');if(message)message.textContent='로그인 연결에 실패했습니다. 다시 로그인해 주세요.'}
@@ -1275,9 +1338,10 @@ function renderCommitteeActivity(){
   const rows=committeeItems();
   host.innerHTML=rows.length?rows.map((item,index)=>{
     const actions=publicTimelineAdminMode&&Number(item.id)>0?'<div class="timeline-admin-actions"><span class="source-type">'+(item.status==='published'?'공개':'비공개')+'</span><button type="button" data-committee-edit="'+Number(item.id)+'">수정</button><button type="button" data-committee-status="'+Number(item.id)+'">'+(item.status==='published'?'비공개로':'공개로')+'</button><button type="button" data-committee-delete="'+Number(item.id)+'">삭제</button></div>':'';
-    return '<article class="timeline-item'+' is-collapsed'+'"><div class="timeline-date">'+escapeHtml(item.date||'')+'</div><div class="timeline-content"><h3><button type="button" class="timeline-toggle timeline-title-button" aria-expanded="false">'+escapeHtml(item.title||'')+'</button></h3><p class="timeline-summary">'+escapeHtml(item.summary||'')+'</p><div class="chips"><span class="chip">'+escapeHtml(item.committeeKind||'기타 활동')+'</span><span class="chip">'+escapeHtml(item.evidence||'비상대책위 활동기록')+'</span></div><div class="timeline-detail">'+evidenceBlock(item)+'</div>'+actions+'</div></article>';
+    return '<article class="timeline-item'+' is-collapsed'+'" data-item-key="'+escapeHtml(itemShareKey(item))+'"><div class="timeline-date">'+escapeHtml(item.date||'')+'</div><div class="timeline-content"><h3><button type="button" class="timeline-toggle timeline-title-button" aria-expanded="false">'+escapeHtml(item.title||'')+'</button></h3><p class="timeline-summary">'+escapeHtml(item.summary||'')+'</p><div class="chips"><span class="chip">'+escapeHtml(item.committeeKind||'기타 활동')+'</span><span class="chip">'+escapeHtml(item.evidence||'비상대책위 활동기록')+'</span></div><div class="timeline-detail">'+evidenceBlock(item)+'</div>'+itemShareButton(item,'committee')+actions+'</div></article>';
   }).join(''):'<p class="muted">해당 조건으로 확인된 비상대책위 활동기록이 없습니다.</p>';
   host.querySelectorAll('.timeline-toggle').forEach(button=>button.addEventListener('click',()=>{const card=button.closest('.timeline-item'),closed=card.classList.toggle('is-collapsed');button.setAttribute('aria-expanded',closed?'false':'true')}));
+  syncAdminLoginButtons();openSharedItem();
 }
 function bindCommitteeActivityAdmin(){
   const form=el('committeeActivityForm'),toggle=el('committeeActivityManageToggle'),host=el('committeeActivityList'),cancel=el('committeeActivityCancel');
@@ -1401,7 +1465,7 @@ async function initPublicAdminControls(){
     try{
       const me=await admin.authorize();
       if(!me?.ok)return false;
-      publicAdminMe=me;renderPublicAdminControls();
+      publicAdminMe=me;renderPublicAdminControls();syncAdminLoginButtons();
       return true;
     }catch{return false}
   })();

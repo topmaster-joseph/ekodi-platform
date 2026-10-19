@@ -15,8 +15,8 @@ export async function consumeFreshVoiceQueue(env,payload){
   if(existing?.id)return Number(existing.id);
   try{
     const time=String(payload.createdAt||stamp());
-    const result=await env.BOARD_DB.prepare("INSERT INTO citizen_voices_fresh(google_subject,submission_key,body,status,created_at,updated_at) VALUES(?,?,?,'published',?,?)")
-      .bind(String(payload.googleSubject||''),key,String(payload.message||''),time,time).run();
+    const result=await env.BOARD_DB.prepare("INSERT INTO citizen_voices_fresh(google_subject,submission_key,title,body,status,created_at,updated_at) VALUES(?,?,?,?,'published',?,?)")
+      .bind(String(payload.googleSubject||''),key,String(payload.title||'').slice(0,160),String(payload.message||''),time,time).run();
     const id=Number(result?.meta?.last_row_id||0);
     if(id>0)return id;
   }catch(error){
@@ -42,10 +42,10 @@ export async function handleFreshVoiceApi(req,env,path,{google,admin,limit}){
       if(!gate.ok)return gate.response;
     }
     const q=String(url.searchParams.get('q')||'').trim().slice(0,100);
-    const sql="SELECT id,body,created_at,updated_at FROM citizen_voices_fresh WHERE status='published'"+(q?" AND body LIKE ?":"")+" ORDER BY id DESC LIMIT 100";
+    const sql="SELECT id,title,body,created_at,updated_at FROM citizen_voices_fresh WHERE status='published'"+(q?" AND (body LIKE ? OR title LIKE ?)":"")+" ORDER BY id DESC LIMIT 100";
     try{
-      const stmt=env.BOARD_DB.prepare(sql),result=await(q?stmt.bind('%'+q+'%').all():stmt.all());
-      return reply({ok:true,items:(result.results||[]).map(p=>({id:Number(p.id),message:p.body,createdAt:p.created_at,updatedAt:p.updated_at}))});
+      const stmt=env.BOARD_DB.prepare(sql),result=await(q?stmt.bind('%'+q+'%','%'+q+'%').all():stmt.all());
+      return reply({ok:true,items:(result.results||[]).map(p=>({id:Number(p.id),title:String(p.title||''),message:p.body,createdAt:p.created_at,updatedAt:p.updated_at}))});
     }catch{return invalid('storage_unavailable',503)}
   }
   if(req.method==='POST'&&tail===''){
@@ -57,11 +57,13 @@ export async function handleFreshVoiceApi(req,env,path,{google,admin,limit}){
     let data;try{data=await req.json()}catch{return invalid('invalid_json',400)}
     const message=String(data?.message||'').trim();
     if(!message||message.length>12000)return invalid('invalid_message',400);
+    const title=String(data?.title||'').replace(/\s+/g,' ').trim();
+    if(!title||title.length>160)return invalid('invalid_title',400);
     const producer=env?.BOARD_WRITE_QUEUE;
     if(!producer?.send)return invalid('durable_queue_unavailable',503);
     const submissionId=crypto.randomUUID();
     try{
-      await producer.send({kind:FRESH_QUEUE_KIND,payload:{submissionId,googleSubject:identity.id,message,createdAt:stamp()}},{contentType:'json'});
+      await producer.send({kind:FRESH_QUEUE_KIND,payload:{submissionId,googleSubject:identity.id,title,message,createdAt:stamp()}},{contentType:'json'});
       return reply({ok:true,queued:true,submissionId,statusUrl:'/board/api/voices-fresh/submissions/'+submissionId},202);
     }catch{return invalid('durable_queue_unavailable',503)}
   }
@@ -81,7 +83,9 @@ export async function handleFreshVoiceApi(req,env,path,{google,admin,limit}){
       let payload;try{payload=await req.json()}catch{return invalid('invalid_json',400)}
       const message=String(payload?.message||'').trim();
       if(!message||message.length>12000)return invalid('invalid_message',400);
-      await env.BOARD_DB.prepare("UPDATE citizen_voices_fresh SET body=?,updated_at=? WHERE id=?").bind(message,stamp(),id).run();
+      const title=String(payload?.title??'').replace(/\s+/g,' ').trim();
+      if(title.length>160)return invalid('invalid_title',400);
+      await env.BOARD_DB.prepare("UPDATE citizen_voices_fresh SET title=?,body=?,updated_at=? WHERE id=?").bind(title,message,stamp(),id).run();
       return reply({ok:true,id});
     }catch{return invalid('storage_unavailable',503)}
   }

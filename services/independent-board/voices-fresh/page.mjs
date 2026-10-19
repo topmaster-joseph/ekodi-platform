@@ -3,10 +3,10 @@
  * Fresh citizen page: intentionally independent of legacy boardPage and
  * queue/publish polling. Existing EKODI shell/header is reused, not the old UI.
  */
-const content = '<style>body.board-voices .notice-search{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}body.board-voices .notice-search label{font-weight:600;font-size:13px}body.board-voices .notice-search input{flex:1 1 220px;max-width:420px;min-height:36px;border:1px solid #cbd5e1;border-radius:6px;padding:7px 10px;box-sizing:border-box}body.board-voices #freshStatus{font-size:13px;margin:8px 0}body.board-voices #freshStatus:empty{display:none}body.board-voices #freshForm{margin:12px 0;padding:14px;border:1px solid #d7dfe8;border-radius:8px}body.board-voices #freshForm[hidden]{display:none}body.board-voices #freshMessage{display:block;box-sizing:border-box;width:100%;min-height:140px;margin:8px 0;padding:10px;border:1px solid #cbd5e1;border-radius:6px}</style>'+
-  '<div class="notice-search"><label for="freshSearch">의견 검색</label><input id="freshSearch" type="search" placeholder="내용 검색"></div>'+
+const content = '<style>body.board-voices .notice-search{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}body.board-voices .notice-search label{font-weight:600;font-size:13px}body.board-voices .notice-search input{flex:1 1 220px;max-width:420px;min-height:36px;border:1px solid #cbd5e1;border-radius:6px;padding:7px 10px;box-sizing:border-box}body.board-voices #freshStatus{font-size:13px;margin:8px 0}body.board-voices #freshStatus:empty{display:none}body.board-voices #freshForm{margin:12px 0;padding:14px;border:1px solid #d7dfe8;border-radius:8px}body.board-voices #freshForm[hidden]{display:none}body.board-voices #freshMessage{display:block;box-sizing:border-box;width:100%;min-height:140px;margin:8px 0;padding:10px;border:1px solid #cbd5e1;border-radius:6px}body.board-voices #freshTitle{display:block;box-sizing:border-box;width:100%;min-height:40px;margin:6px 0 10px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-weight:600}body.board-voices .voice-share{margin-top:8px}body.board-voices details.is-shared>summary{outline:2px solid #2b6cb0;outline-offset:2px;border-radius:6px}</style>'+
+  '<div class="notice-search"><label for="freshSearch">의견 검색</label><input id="freshSearch" type="search" placeholder="제목·내용 검색"></div>'+
   '<p id="freshStatus" role="status" aria-live="polite"></p>'+
-  '<form id="freshForm" hidden><label for="freshMessage">시민의견</label><textarea id="freshMessage" maxlength="12000" rows="6" required placeholder="의견을 작성해 주세요."></textarea><div class="admin-actions"><button type="submit">등록</button><button id="freshCancel" type="button" class="secondary">취소</button></div></form>'+
+  '<form id="freshForm" hidden><label for="freshTitle">제목</label><input id="freshTitle" type="text" maxlength="160" required placeholder="제목을 입력해 주세요."><label for="freshMessage">시민의견</label><textarea id="freshMessage" maxlength="12000" rows="6" required placeholder="의견을 작성해 주세요."></textarea><div class="admin-actions"><button type="submit">등록</button><button id="freshCancel" type="button" class="secondary">취소</button></div></form>'+
   '<section id="freshList" aria-label="등록된 시민의견"></section>';
 export const freshVoiceClient = String.raw`
 (async()=>{
@@ -91,7 +91,7 @@ export const freshVoiceClient = String.raw`
     location.assign(url.href);
   }
   function message(value){status.textContent=value}
-  function showEditor(){form.hidden=false;el('freshMessage').focus()}
+  function showEditor(){form.hidden=false;el('freshTitle').focus()}
   function closeEditor(){form.hidden=true;form.reset()}
   const btn=document.getElementById('freshWrite');
   btn.addEventListener('click',async()=>{
@@ -102,25 +102,42 @@ export const freshVoiceClient = String.raw`
   el('freshCancel').addEventListener('click',closeEditor);
   function render(){
     list.replaceChildren();
-    const q=search.value.trim().toLowerCase(),shown=posts.filter(p=>!q||p.message.toLowerCase().includes(q));
+    const q=search.value.trim().toLowerCase(),shown=posts.filter(p=>!q||p.message.toLowerCase().includes(q)||String(p.title||'').toLowerCase().includes(q));
     if(!shown.length){const p=document.createElement('p');p.textContent='등록된 시민의견이 없습니다.';list.append(p);return}
     for(const item of shown){
-      const details=document.createElement('details');details.className='board-row notice-record';
+      const details=document.createElement('details');details.className='board-row notice-record';details.id='voice-'+item.id;
       const summary=document.createElement('summary');summary.className='row-head';
-      const title=document.createElement('strong');title.textContent=item.message.slice(0,75)+(item.message.length>75?'…':'');
+      const heading=voiceTitle(item);
+      const title=document.createElement('strong');title.textContent=heading;
       const date=document.createElement('small');date.textContent=(item.createdAt||'').slice(0,16).replace('T',' ');
       summary.append(title,date);details.append(summary);
       const body=document.createElement('p');body.className='row-body';body.style.whiteSpace='pre-wrap';body.textContent=item.message;details.append(body);
+      const share=document.createElement('button');share.type='button';share.className='secondary voice-share';share.textContent='공유';
+      share.onclick=()=>shareVoice(item);details.append(share);
       if(adminAllowed){
         const actions=document.createElement('div');actions.className='admin-actions';
         const edit=document.createElement('button');edit.type='button';edit.textContent='수정';
-        edit.onclick=async()=>{const next=prompt('수정할 의견',item.message);if(next===null||!next.trim())return;try{await adminEdit(item.id,next);message('수정되었습니다.')}catch(e){message(e.message)}};
+        edit.onclick=async()=>{const nextTitle=prompt('수정할 제목',item.title||'');if(nextTitle===null)return;const next=prompt('수정할 의견',item.message);if(next===null||!next.trim())return;try{await adminEdit(item.id,next,nextTitle);message('수정되었습니다.')}catch(e){message(e.message)}};
         const remove=document.createElement('button');remove.type='button';remove.className='secondary';remove.textContent='삭제';
         remove.onclick=async()=>{if(!confirm('이 의견을 삭제하시겠습니까?'))return;try{await adminDelete(item.id);message('삭제되었습니다.')}catch(e){message(e.message)}};
         actions.append(edit,remove);details.append(actions);
       }
       list.append(details);
     }
+    openSharedVoice();
+  }
+  function voiceTitle(item){const t=String(item.title||'').trim();if(t)return t;const first=String(item.message||'').split('\n')[0].trim();return first.slice(0,75)+(first.length>75?'…':'')}
+  function voiceUrl(id){const u=new URL(location.href);u.hash='';u.search='';u.searchParams.set('id',String(id));return u.href}
+  async function shareVoice(item){
+    const url=voiceUrl(item.id),title=voiceTitle(item);
+    try{if(navigator.share){await navigator.share({title:title+' · 시민의견',text:title,url});return}}catch(e){if(e&&e.name==='AbortError')return}
+    try{await navigator.clipboard.writeText(url);message('공유 링크를 복사했습니다.')}catch{prompt('아래 링크를 복사해 공유해 주세요.',url)}
+  }
+  let sharedOpened=false;
+  function openSharedVoice(){
+    if(sharedOpened)return;const id=new URLSearchParams(location.search).get('id');if(!/^\d{1,12}$/.test(id||''))return;
+    const target=document.getElementById('voice-'+id);if(!target)return;
+    sharedOpened=true;target.open=true;target.classList.add('is-shared');target.scrollIntoView({block:'center'});
   }
   async function reload(){
     const d=await request(''+(search.value?'?q='+encodeURIComponent(search.value):''));
@@ -133,9 +150,9 @@ export const freshVoiceClient = String.raw`
       adminAllowed=Array.isArray(r.items);render();
     }catch{adminAllowed=false}
   }
-  async function adminEdit(id,value){
+  async function adminEdit(id,value,titleValue){
     const t=await session();if(!t)throw Error('login_required');
-    await request('/'+id,{method:'PUT',headers:{authorization:'Bearer '+t,'content-type':'application/json'},body:JSON.stringify({message:value.trim()})});
+    await request('/'+id,{method:'PUT',headers:{authorization:'Bearer '+t,'content-type':'application/json'},body:JSON.stringify({title:String(titleValue||'').trim(),message:value.trim()})});
     await reload();
   }
   async function adminDelete(id){
@@ -156,9 +173,10 @@ export const freshVoiceClient = String.raw`
     event.preventDefault();const submit=form.querySelector('button[type=submit]');submit.disabled=true;
     try{
       const t=await session();if(!t){message('Google 로그인 확인이 필요합니다.');return}
+      const titleValue=el('freshTitle').value.replace(/\s+/g,' ').trim();if(!titleValue)throw Error('제목을 입력해 주세요.');
       const body=el('freshMessage').value.trim();if(!body)throw Error('의견을 입력해 주세요.');
       message('저장 중입니다.');
-      const saved=await request('',{method:'POST',headers:{authorization:'Bearer '+t,'content-type':'application/json'},body:JSON.stringify({message:body})});
+      const saved=await request('',{method:'POST',headers:{authorization:'Bearer '+t,'content-type':'application/json'},body:JSON.stringify({title:titleValue,message:body})});
       const savedId=await waitUntilPublished(saved);
       await reload();
       if(!posts.some(p=>p.id===savedId))throw Error('저장됐지만 목록에서 확인되지 않았습니다. 다시 등록하지 말고 목록을 새로고침해 주세요.');

@@ -37,17 +37,17 @@ function fakeDb(){
       },
       async all(){
         let listed=entries.filter(x=>x.status==='published');
-        if(sql.includes('body LIKE ?'))listed=listed.filter(x=>x.body.includes(String(args[0]).replaceAll('%','')));
+        if(sql.includes('body LIKE ?'))listed=listed.filter(x=>(x.body+' '+(x.title||'')).includes(String(args[0]).replaceAll('%','')));
         return {results:listed.slice().sort((a,b)=>b.id-a.id).slice(0,100)};
       },
       async run(){
         if(sql.startsWith('INSERT INTO citizen_voices_fresh')){
-          const [google_subject,submission_key,body,created_at,updated_at]=args;
-          const id=nextId++;entries.push({id,google_subject,submission_key,body,created_at,updated_at,status:'published'});
+          const [google_subject,submission_key,title,body,created_at,updated_at]=args;
+          const id=nextId++;entries.push({id,google_subject,submission_key,title,body,created_at,updated_at,status:'published'});
           return {meta:{last_row_id:id}};
         }
-        if(sql.startsWith('UPDATE citizen_voices_fresh SET body=')){
-          const row=entries.find(x=>x.id===Number(args[2]));if(row)row.body=args[0];return {success:true};
+        if(sql.startsWith('UPDATE citizen_voices_fresh SET title=?,body=')){
+          const row=entries.find(x=>x.id===Number(args[3]));if(row){row.title=args[0];row.body=args[1]}return {success:true};
         }
         if(sql.startsWith("UPDATE citizen_voices_fresh SET status='deleted'")){
           const row=entries.find(x=>x.id===Number(args[1]));if(row)row.status='deleted';return {success:true};
@@ -81,7 +81,7 @@ async function boot({host,role='writer',env,invalidHandoff=false,staleLocal=fals
     access_token:'stale-session',expires_at:Math.floor(Date.now()/1000)+99999
   }));
   const ids={freshForm:node('form'),freshStatus:node('status'),freshList:node('list'),
-    freshSearch:node('search'),freshWrite:node('write'),freshMessage:node('message'),
+    freshSearch:node('search'),freshWrite:node('write'),freshTitle:node('title'),freshMessage:node('message'),
     freshCancel:node('cancel')};
   ids.freshForm.hidden=true;
   ids.freshForm.submitButton=node('submit');
@@ -137,14 +137,18 @@ test('Google handoff -> durable queue -> published list, with no admin controls 
     assert.match(app.ids.freshStatus.textContent,/Google 로그인 확인 완료/);
     assert.equal(JSON.parse(app.local.getItem(KEY)).access_token,'writer-access');
     assert.equal(JSON.parse(app.perTab.getItem(KEY)).access_token,'writer-access');
+    app.ids.freshTitle.value='테스트 제목';
     app.ids.freshMessage.value='테스트 시민의견 등록';
     await app.ids.freshForm.listeners.submit({preventDefault(){}});
     assert.equal(db.entries.length,1,'post must survive durable queue publish');
     assert.equal(db.entries[0].body,'테스트 시민의견 등록');
+    assert.equal(db.entries[0].title,'테스트 제목','the title travels through the durable queue');
     assert.equal(app.ids.freshForm.hidden,true);
     assert.match(app.ids.freshStatus.textContent,/저장됐습니다/);
     assert.equal(app.ids.freshList.children.length,1);
-    assert.equal(app.ids.freshList.children[0].children.length,2,'writer never receives administrator buttons');
+    assert.equal(app.ids.freshList.children[0].children.length,3,'writer sees summary, body and share only');
+    assert.equal(app.ids.freshList.children[0].children[2].textContent,'공유');
+    assert.ok(app.ids.freshList.children[0].children.every(c=>c.className!=='admin-actions'),'writer never receives administrator buttons');
     assert.ok(calls.includes('queue:published'));
   }
 });
@@ -156,14 +160,14 @@ test('verified site-authorized admin can edit and delete the same newly-publishe
       googleSubject:'synthetic-writer',message:'수정 전 본문',createdAt:new Date().toISOString()});
     const app=await boot({host,role:'admin',env});
     const item=app.ids.freshList.children[0];
-    assert.equal(item.children.length,3,'server verified permission reveals edit/delete');
-    const actions=item.children[2];
+    assert.equal(item.children.length,4,'server verified permission reveals edit/delete next to share');
+    const actions=item.children[3];
     assert.equal(actions.className,'admin-actions');
     app.context.prompt=()=> '관리자 수정 성공';
     await actions.children[0].onclick();
     assert.equal(db.entries[0].body,'관리자 수정 성공');
     assert.match(app.ids.freshStatus.textContent,/수정되었습니다/);
-    const newActions=app.ids.freshList.children[0].children[2];
+    const newActions=app.ids.freshList.children[0].children[3];
     await newActions.children[1].onclick();
     assert.equal(db.entries[0].status,'deleted');
     assert.equal(app.ids.freshList.children.length,1,'no results placeholder');
