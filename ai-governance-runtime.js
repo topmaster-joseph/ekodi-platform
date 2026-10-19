@@ -26,7 +26,7 @@ export const AI_MISSION_RUNTIME = Object.freeze({
       expiryBypassAllowed: false,
       shortLivedCredentialPersistenceAllowed: false,
       healthStates: Object.freeze(['connected', 'degraded', 'reauth_required', 'unavailable']),
-      operaBrowserConnector: 'prefer_when_connected',
+      operaBrowserConnector: 'manual_explicit_only',
     }),
   }),
   policyPriority: Object.freeze([
