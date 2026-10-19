@@ -82,7 +82,7 @@ test('hourly run resolves before verifying, backfills, and watches 비대위 cov
   const src=await readFile(new URL('../seonammedi-monitor.js',import.meta.url),'utf8');
   assert.match(src,/item=await verifySource\(item\)/);
   assert.doesNotMatch(src,/item=await enrichMedia\(item\)/,'raw search-engine links are never treated as the source');
-  assert.match(src,/reverified=await reverifyStoredCandidates\(env,startedAt\)/);
+  assert.match(src,/reverified=await reverifyStoredCandidates\(env,startedAt,\{limit:/);
   assert.match(src,/q:'서남권 의대 비대위'/);
   assert.match(src,/naverapihub\.apigw\.ntruss\.com\/search\/v1\//);
   assert.match(src,/AbortSignal\.timeout\(SOURCE_FETCH_TIMEOUT_MS\)/);

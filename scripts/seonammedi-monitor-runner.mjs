@@ -64,7 +64,9 @@ async function main(){
   const naver=process.env.NAVER_CLIENT_ID&&process.env.NAVER_CLIENT_SECRET?{NAVER_CLIENT_ID:process.env.NAVER_CLIENT_ID,NAVER_CLIENT_SECRET:process.env.NAVER_CLIENT_SECRET}:{};
   const env={DB:db,...naver};
   console.log(JSON.stringify({naverSearch:Boolean(naver.NAVER_CLIENT_ID)}));
-  const result=await runSeonamMediHourlyCheck(env,{scheduledAt:new Date().toISOString(),force:true});
+  // Runner egress has no Workers subrequest cap: verify more per run so Naver/Google
+  // candidates reach the publisher-verification gate within the same hour.
+  const result=await runSeonamMediHourlyCheck(env,{scheduledAt:new Date().toISOString(),force:true,verifyBudget:60,reverifyLimit:40});
   const summary={status:result.status,checked:result.checked,seen:result.seen,added:result.added,verified:result.verified,reverified:result.reverified,errors:(result.errors||[]).slice(0,8)};
   console.log(JSON.stringify(summary));
   if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'### SeonamMedi runner monitor\n```json\n'+JSON.stringify(summary,null,2)+'\n```\n');
