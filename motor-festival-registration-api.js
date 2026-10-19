@@ -26,6 +26,8 @@ const AUDIT='cgma_motor_festival_2026_access_audit';
 const MAX_BODY=8192;
 export const CLIENT_WINDOW_MS=10*60*1000,CLIENT_LIMIT=20; // shared shop Wi-Fi / mobile CGNAT tolerant
 export const PHONE_WINDOW_MS=24*60*60*1000,PHONE_LIMIT=3;
+// Global ceiling (≈30× the 74-member association): a flood fails closed instead of burying real rows.
+export const MAX_APPLICATIONS=2000;
 
 const CATEGORIES=['음식·분식','커피·음료·디저트','농특산물·가공식품','생활용품·잡화','공예·체험·서비스','기타'];
 const MEMBERSHIPS=['regular','join','info','none'];
@@ -106,17 +108,18 @@ export async function motorFestivalKeys(secret){
   keyCache.set(raw,keys);
   return keys;
 }
-export async function sealField(keys,value){
+const aadFor=(column,rowId)=>enc.encode(`${TABLE}|${column}|${rowId}|v1`);
+export async function sealField(keys,value,column='',rowId=''){
   if(!value)return '';
   const iv=crypto.getRandomValues(new Uint8Array(12));
-  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:enc.encode(TABLE)},keys.aes,enc.encode(value));
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:aadFor(column,rowId)},keys.aes,enc.encode(value));
   return 'v1.'+b64u(iv)+'.'+b64u(ct);
 }
-export async function openField(keys,sealed){
+export async function openField(keys,sealed,column='',rowId=''){
   if(!sealed)return '';
   const [version,iv,ct]=String(sealed).split('.');
   if(version!=='v1'||!iv||!ct)throw new Error('SEALED_FORMAT');
-  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64u(iv),additionalData:enc.encode(TABLE)},keys.aes,unb64u(ct));
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64u(iv),additionalData:aadFor(column,rowId)},keys.aes,unb64u(ct));
   return dec.decode(pt);
 }
 async function lookupHash(keys,value){return b64u(await crypto.subtle.sign('HMAC',keys.mac,enc.encode(value)));}
@@ -159,8 +162,9 @@ const clientAddress=request=>String(request.headers.get('cf-connecting-ip')||req
 
 // ---------- POST ----------
 async function submit(request,env,{now}){
-  if(now>=REGISTRATION_CLOSES_AT)return fail('REGISTRATION_CLOSED','신청이 마감되었습니다. (2026-10-25 08:00 마감)',410);
+  // Origin first: cross-origin writes are always 403, before and after the deadline.
   if(!sameOriginWrite(request))return fail('ORIGIN_FORBIDDEN','허용되지 않은 요청 출처입니다.',403);
+  if(now>=REGISTRATION_CLOSES_AT)return fail('REGISTRATION_CLOSED','신청이 마감되었습니다. (2026-10-25 08:00 마감)',410);
   if(!String(request.headers.get('content-type')||'').toLowerCase().startsWith('application/json'))return fail('CONTENT_TYPE_INVALID','JSON 요청만 허용됩니다.',415);
   const key=idempotencyKey(request);
   if(!key)return fail('IDEMPOTENCY_KEY_REQUIRED','신청 고유번호가 필요합니다. 페이지를 새로고침해 주세요.');
@@ -181,21 +185,24 @@ async function submit(request,env,{now}){
     return json({ok:true,reused:true,receipt_id:existing.receipt_code},200);
   }
 
-  // Edge layers (Shared Site PLATFORM_SENSITIVE_RATE_LIMITER, Control API SENSITIVE_RATE_LIMITER) already throttle
-  // per identity; these D1 windows add per-client and per-phone duplicate protection.
+  // The Shared Site edge limiter keys on IP+user-agent and is easy to rotate around, so these D1 windows
+  // (per network, per phone, global ceiling) are the authoritative limits for this path.
   const since=iso=>new Date(now-iso).toISOString();
   const counts=await env.DB.prepare(`SELECT
       (SELECT COUNT(*) FROM ${TABLE} WHERE client_hash=? AND created_at>=?) AS client_recent,
-      (SELECT COUNT(*) FROM ${TABLE} WHERE phone_hash=? AND created_at>=?) AS phone_recent`)
+      (SELECT COUNT(*) FROM ${TABLE} WHERE phone_hash=? AND created_at>=?) AS phone_recent,
+      (SELECT COUNT(*) FROM ${TABLE}) AS total`)
     .bind(clientHash,since(CLIENT_WINDOW_MS),phoneHash,since(PHONE_WINDOW_MS)).first();
+  if(Number(counts?.total||0)>=MAX_APPLICATIONS)return fail('CAPACITY_REACHED','접수 한도에 도달했습니다. 청계면상인회로 직접 문의해 주세요.',429,{'retry-after':'3600'});
   if(Number(counts?.client_recent||0)>=CLIENT_LIMIT)return fail('TOO_MANY_REQUESTS','같은 네트워크에서 신청이 너무 많습니다. 10분 후 다시 시도해 주세요.',429,{'retry-after':'600'});
   if(Number(counts?.phone_recent||0)>=PHONE_LIMIT)return fail('DUPLICATE_LIMIT','같은 연락처로 이미 여러 번 신청되었습니다. 수정이 필요하면 상인회로 연락해 주세요.',429,{'retry-after':'3600'});
 
-  const [contactEnc,phoneEnc,notesEnc]=await Promise.all([sealField(keys,v.contact),sealField(keys,v.phone),sealField(keys,v.notes)]);
   const createdAt=new Date(now).toISOString();
   let receipt='';
   for(let attempt=0;attempt<3&&!receipt;attempt++){
     const id=crypto.randomUUID(),code=receiptCode();
+    const [contactEnc,phoneEnc,notesEnc]=await Promise.all([
+      sealField(keys,v.contact,'contact_name',id),sealField(keys,v.phone,'phone',id),sealField(keys,v.notes,'notes',id)]);
     await env.DB.prepare(`INSERT OR IGNORE INTO ${TABLE}
         (id,receipt_code,submission_key,business_name,category,membership,intent,activity_json,items,hours,support_json,staff,
          contact_name_enc,phone_enc,notes_enc,phone_hash,client_hash,key_version,consent_version,created_at,expires_at)
@@ -243,23 +250,26 @@ async function list(request,env,{now,resolveAuthority}){
   const summaryOnly=new URL(request.url).searchParams.get('view')==='summary';
   const keys=summaryOnly?null:await motorFestivalKeys(env.MOTOR_FESTIVAL_PII_KEY);
   if(!summaryOnly&&!keys)return fail('ENCRYPTION_UNAVAILABLE','복호화 설정을 확인할 수 없습니다.',503);
-  const result=await env.DB.prepare(`SELECT * FROM ${TABLE} WHERE expires_at>? ORDER BY created_at DESC LIMIT 1000`).bind(new Date(now).toISOString()).all();
+  const result=await env.DB.prepare(`SELECT * FROM ${TABLE} WHERE expires_at>? ORDER BY created_at DESC LIMIT ${MAX_APPLICATIONS}`).bind(new Date(now).toISOString()).all();
   const rows=(result?.results||[]).map(row=>({
     ...row,activity:JSON.parse(row.activity_json||'[]'),support:JSON.parse(row.support_json||'[]'),
   }));
   const summary=summarize(rows);
   await audit(env,authority,summaryOnly?'summary':'list',rows.length,now);
   if(summaryOnly)return json({ok:true,summary,generated_at:new Date(now).toISOString()});
+  let unreadable=0;
+  const open=async(sealed,column,id)=>{try{return await openField(keys,sealed,column,id)}catch{unreadable++;return '[복호화 불가]'}};
   const applications=[];
   for(const row of rows){
     applications.push({
       receipt_id:row.receipt_code,created_at:row.created_at,business_name:row.business_name,
-      contact_name:await openField(keys,row.contact_name_enc),phone:await openField(keys,row.phone_enc),
+      contact_name:await open(row.contact_name_enc,'contact_name',row.id),phone:await open(row.phone_enc,'phone',row.id),
       category:row.category,membership:row.membership,intent:row.intent,activity:row.activity,items:row.items,
-      hours:row.hours,support:row.support,staff:row.staff,notes:await openField(keys,row.notes_enc),
+      hours:row.hours,support:row.support,staff:row.staff,notes:await open(row.notes_enc,'notes',row.id),
     });
   }
-  return json({ok:true,summary,applications,viewer:{email:authority.email,scope:authority.scope},expires_at:EXPIRES_AT});
+  if(unreadable)console.error('[cgma-motor-festival-2026] unreadable sealed fields',unreadable);
+  return json({ok:true,summary,applications,unreadable_fields:unreadable,viewer:{email:authority.email,scope:authority.scope},expires_at:EXPIRES_AT});
 }
 
 // ---------- entry ----------
@@ -271,7 +281,7 @@ export async function handleMotorFestivalApplications(request,env,options={}){
   const resolveAuthority=options.resolveAuthority||resolveTenantAccessAuthority;
   try{
     if(request.method==='POST')return await submit(request,env,{now});
-    if(request.method==='GET'||request.method==='HEAD')return await list(request,env,{now,resolveAuthority});
+    if(request.method==='GET')return await list(request,env,{now,resolveAuthority});
     return fail('METHOD_NOT_ALLOWED','허용되지 않은 요청입니다.',405,{allow:'GET, POST'});
   }catch(error){
     // Never log request bodies or applicant fields: error class only.
