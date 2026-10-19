@@ -70,6 +70,13 @@ test('independent PR workflow publishes evidence and does not trigger release',(
  assert.match(workflow,/name: Seasonal Workforce Native PC Mobile Verification/);
  assert.match(workflow,/pull_request:/);
  assert.match(workflow,/workflow_dispatch:/);
+ assert.match(workflow,/  push:\n    branches: \[main\]/);
+ assert.match(workflow,/  schedule:\n    - cron: '17 0 \* \* \*'/);
+ const pushPaths=workflow.split('  push:\n')[1]?.split('  schedule:\n')[0]||'';
+ assert.ok(pushPaths.includes("'.github/workflows/verify-seasonal-workforce-native.yml'"));
+ assert.ok(pushPaths.includes("'scripts/verify-seasonal-workforce-native.mjs'"));
+ assert.equal(pushPaths.includes("'seasonal-workforce/**'"),false,'do not race a protected shared-site production deployment');
+
  assert.match(workflow,/contents: read/);
  assert.match(workflow,/playwright@1\.55\.0/);
  assert.match(workflow,/npx playwright install --with-deps chromium/);
@@ -77,10 +84,19 @@ test('independent PR workflow publishes evidence and does not trigger release',(
  assert.match(workflow,/actions\/upload-artifact@v4/);
  assert.match(workflow,/artifacts\/seasonal-workforce-native/);
  assert.match(workflow,/workflow_run:/);
+ assert.match(workflow,/workflows: \[Deploy EKODI Shared Site Core, EKODI Orchestrated PR Convergent Merge\]/);
  assert.match(workflow,/github\.event\.workflow_run\.conclusion == 'success'/);
+ assert.match(workflow,/github\.event\.workflow_run\.head_branch == 'main'/);
+ assert.match(workflow,/contains\(github\.event\.workflow_run\.display_title, 'seasonal'\)/);
+ assert.match(workflow,/EKODI_NATIVE_TRIGGER:/);
+ assert.match(workflow,/EKODI_NATIVE_UPSTREAM_SHA:/);
  assert.match(workflow,/--mode=source/);
  assert.match(workflow,/--mode=live/);
- assert.match(script,/productionSiteVerified:MODE==='live'/);
+ assert.match(script,/productionSiteVerified:false/);
+ assert.match(script,/evidence\.productionSiteVerified=MODE==='live'&&evidence\.success/);
+ assert.match(script,/evidence\.protectedReleaseWorkflowSucceeded=evidence\.productionSiteVerified&&evidence\.upstreamWorkflow==='Deploy EKODI Shared Site Core'/);
+ assert.match(script,/workflowEvent:process\.env\.GITHUB_EVENT_NAME/);
+ assert.match(script,/checkedRepositoryCommit:process\.env\.GITHUB_SHA/);
  assert.match(script,/sourceCodePreview:MODE==='source'/);
  assert.doesNotMatch(workflow,/wrangler deploy|contents: write|pull-requests: write/);
 });

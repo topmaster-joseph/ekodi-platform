@@ -1,3 +1,4 @@
+import { PREVIEW_HTML } from './ekodipay-preview.js';
 // EKODI Pay public entry and non-financial experience demo.
 // This Worker NEVER makes PG requests, stores transactions, or confirms payment.
 export const CANONICAL_PAYMENT_ROOT = 'https://ekodi.kr/ekodipay';
@@ -96,7 +97,7 @@ function home(method) {
     '<p class="lead">에코디몰·에코디비즈·에코디교육·동행 서비스를 위한 공통 결제 창구입니다. ',
     '현재는 안전한 화면 시연을 제공하며, 실제 카드 청구나 입금은 발생하지 않습니다.</p>',
     '<div class="actions"><a class="primary" href="/ekodipay/demo">테스트 결제 체험</a>',
-    '<a class="secondary" href="#services">연결 서비스 보기</a></div></div>',
+    '<a class="secondary" href="#services">연결 서비스 보기</a><a class="secondary" href="/ekodipay/preview">통합 운영 시안</a></div></div>',
     '<aside class="state"><span class="status-mark">TEST EXPERIENCE · 실결제 미사용</span><h2>안전한 테스트 환경</h2>',
     '<p class="muted">서비스 선택부터 결제수단 선택·결과 화면까지 직접 확인할 수 있습니다.</p>',
     '<ul><li><span class="dot">✓</span>가상 금액만 표시하며 실제 청구하지 않습니다.</li>',
@@ -169,6 +170,23 @@ function demo(request,url) {
     '<aside class="card"><h3>정식 결제 서비스는 준비 중입니다</h3><p>PG 가맹점 계약, 인증키·웹훅 검증, 서버 측 원장과 금액 확정, 환불·정산 및 최종 운영 승인이 별도로 필요합니다.</p></aside></div>'+
     '<div class="notice">이 화면을 캡처하거나 공유하더라도 상품 구매·계약금 납부·교육 신청을 증명할 수 없습니다.</div></main>',request.method);
 }
+
+function preview(request,url) {
+  // Read-only design specimen: no account or live payment APIs, no stored values.
+  if (url.search) return new Response('Preview does not accept query parameters',{status:400,headers:{...headers('text/plain; charset=utf-8'),'x-robots-tag':'noindex, nofollow'}});
+  const nonce=crypto.randomUUID().replaceAll('-','');
+  const html=PREVIEW_HTML.replace('<style>', '<style nonce="'+nonce+'">')
+    .replace('<script>', '<script nonce="'+nonce+'">');
+  return new Response(request.method==='HEAD'?null:html,{
+    status:200,
+    headers:{
+      ...headers(),
+      'x-robots-tag':'noindex, nofollow',
+      'content-security-policy':"default-src 'none'; script-src 'nonce-"+nonce+"'; style-src 'nonce-"+nonce+"'; style-src-attr 'unsafe-inline'; img-src 'none'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    }
+  });
+}
+
 function checkout(request,url) {
   if ([...url.searchParams.keys()].some(key=>/amount|price|total|currency|paymentkey|billingkey/i.test(key))) {
     return shell('결제를 진행할 수 없습니다','<main class="wrap demo"><h1>결제를 진행할 수 없습니다</h1><p>결제 금액이나 결제키를 주소에 넣을 수 없습니다.</p></main>',request.method,400);
@@ -198,6 +216,7 @@ export default {
       realMoneyProcessing:'disabled-until-human-approved-pg-activation',
       demoMode:'read-only-no-transactions',paymentSecretsExposed:false
     }),{status:200,headers:headers('application/json; charset=utf-8')});
+    if(path===PREFIX+'/preview')return preview(request,url);
     if(path===PREFIX+'/demo')return demo(request,url);
     if(path===PREFIX+'/checkout')return checkout(request,url);
     return shell('페이지를 찾을 수 없습니다','<main class="wrap demo"><h1>페이지를 찾을 수 없습니다</h1><a href="/ekodipay/">EKODI Pay 홈</a></main>',request.method,404);

@@ -8,8 +8,8 @@ test('native Chromium checks Notice after in-page categories while independently
   for(const label of ['활동이력','관련소식','소통채널','조직'])assert.ok(source.includes("label:'"+label+"'"),label);
   for(const selector of ['a[data-view-link="committee"]','a[data-view-link="status"]','a[data-view-link="channels"]','a[data-view-link="organization"]'])assert.ok(source.includes(selector),selector);
   assert.ok(source.includes("record.noticeAfterCategory=[]"),'per-context evidence must be recorded');
-  assert.ok(source.includes("record.citizenVoiceLinkMatches"),'Google chooser path must be checked separately');
-  assert.ok(source.includes("u.searchParams.get('choose_account')==='1'"),'account picker intent is mandatory');
+  assert.ok(source.includes("record.citizenVoiceLinkMatches"),'citizen voice menu destination must be checked separately');
+  assert.ok(source.includes("!u.searchParams.has('compose')")&&source.includes("!u.searchParams.has('choose_account')"),'citizen voice menu must open the read-first board without forcing login');
   assert.ok(source.includes("root.prefix+'/board/notices'"),'route must use current mount prefix');
   assert.ok(source.includes("page.waitForURL"),'verify actual browser location after link click');
   assert.ok(source.includes('root.origin+root.prefix+suffix'),'both origins must be exercised');

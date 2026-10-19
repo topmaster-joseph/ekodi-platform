@@ -137,3 +137,19 @@ body.seonam-visual-ready > .seonam-visual-hero{display:none!important}
 :is(#committeeActivityList,#committeeNewsList,#timelineList) .timeline-title-button:focus-visible{outline:2px solid #2463a4;outline-offset:4px}
 :is(#committeeActivityList,#committeeNewsList,#timelineList) .timeline-item.is-collapsed{padding-block:12px;align-items:center}
 :is(#committeeActivityList,#committeeNewsList,#timelineList) .timeline-item.is-collapsed h3{margin:0}
+
+/* 2026-10-19 unified shell: one footer for every public SeonamMedi page
+   (home, boards, notices, finance, minutes). Class-scoped so page CSS that
+   targets a bare footer element cannot change it. */
+footer.site-footer{box-sizing:border-box;width:100%;max-width:1120px;margin:28px auto 0;padding:28px 20px 50px;display:flex;flex-direction:row;align-items:flex-start;justify-content:space-between;gap:18px;border:0;border-top:1px solid #dce3ea;background:transparent;color:#5f6e7b;font-size:13px;text-align:left}
+footer.site-footer .site-footer-copy{display:grid;gap:2px;min-width:0}
+footer.site-footer .site-footer-copy strong{color:#15202b;font-size:14px;line-height:1.45}
+footer.site-footer .site-footer-copy span{margin:0;font-size:12px;line-height:1.5;color:#687887}
+footer.site-footer>a{flex:0 0 auto;margin-left:auto;display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:6px 9px;border:1px solid #cbd5df;border-radius:9px;background:#fff;color:#225d8f;font-weight:600;line-height:1.3;text-decoration:none;white-space:nowrap}
+footer.site-footer>a[hidden]{display:none}
+@media(max-width:760px){footer.site-footer{padding:18px 18px max(28px,env(safe-area-inset-bottom));gap:14px}footer.site-footer .site-footer-copy{flex:1 1 auto;max-width:calc(100% - 72px)}}
+
+/* The highlighted top menu already names the current view. Keep the repeated
+   eyebrow + heading for screen readers only; notes and admin actions stay. */
+[data-view-section]>.section-head .eyebrow,[data-view-section]>.section-head h2,
+.board-head .eyebrow,.board-head h1{position:absolute!important;width:1px!important;height:1px!important;margin:-1px!important;padding:0!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}

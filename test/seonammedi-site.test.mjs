@@ -774,7 +774,7 @@ test('seonammedi citizen opinions hand off to the standalone board-owned UI',asy
     readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8'),
     readFile(new URL('../wrangler.independent-board.toml',import.meta.url),'utf8')
   ]);
-  assert.match(html,/href="board\/voices\?compose=1&choose_account=1"[^>]*>시민의견<\/a>/);
+  assert.match(html,/href="board\/voices"[^>]*>시민의견<\/a>/);
   assert.doesNotMatch(html,/id="voices"|id="publicVoiceList"|id="voiceComposeToggle"/);
   assert.match(worker,/function boardPage\(req\)/);
   assert.match(worker,/env\.BOARD_DB/);
@@ -797,7 +797,7 @@ test('seonammedi voices finance and notices use sibling standalone board routes'
     readFile(new URL('index.html',root),'utf8'),
     readFile(new URL('../services/independent-board/worker.js',import.meta.url),'utf8')
   ]);
-  assert.match(html,/href="board\/voices\?compose=1&choose_account=1"[^>]*>시민의견<\/a>/);
+  assert.match(html,/href="board\/voices"[^>]*>시민의견<\/a>/);
   assert.doesNotMatch(html,/href="board\/finance"[^>]*>회계<\/a>/);
   assert.match(html,/href="board\/notices"[^>]*>공지<\/a>/);
   assert.match(worker,/boardPath\(req,'voices'\)/);
@@ -909,7 +909,7 @@ test('seonammedi customer domain cache-busts public and admin static assets',asy
   assert.equal(jsVersion,cssVersion,'public script and stylesheet must share one cache-buster');
   assert.ok(adminHtml.includes('<a class="brand" href="./">'));
   assert.ok(adminHtml.includes('<a href="../" target="_blank" rel="noopener">공개페이지</a>'));
-  assert.ok(adminHtml.includes('/seonammedi/admin/admin.js?v=20261013-committee-news-1'));
+  assert.ok(adminHtml.includes('/seonammedi/admin/admin.js?v=20261019-admin-roster-1'));
   assert.ok(adminHtml.includes('/seonammedi/admin/admin-minutes.js?v=20261006-domain-routing-2'));
 });
 
@@ -951,7 +951,7 @@ test('seonammedi static surfaces declare route parity contract and preserve moun
   for(const source of [html,adminHtml]){
     assert.match(source,/name="ekodi-route-contract" content="CANONICAL-PATH-MOUNT-PARITY-001 CANONICAL-ROUTE-SLASH-PARITY-001"/);
   }
-  assert.match(html,/href="board\/voices\?compose=1&choose_account=1"/);
+  assert.match(html,/href="board\/voices"/);
   assert.match(html,/href="board\/notices"/);
   assert.doesNotMatch(html,/href="board\/finance"/);
   assert.match(html,/href="admin\/">관리<\/a>/);

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { handleAiProviderControl, invokeAiProviderCapability, runAiProviderHealthSchedule, AI_PROVIDER_CONTROL_CONTRACT } from '../ai-provider-control.js';
+import { handleAiProviderControl, invokeAiProviderCapability, runAiProviderHealthSchedule, AI_PROVIDER_CONTROL_CONTRACT, describeProviderHttpError, describeProviderCheckDiagnostic } from '../ai-provider-control.js';
 import { createEkodiAiProviderRegistry } from '../ekodi-ai-provider-registry.js';
 
 const read=path=>readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
@@ -320,4 +320,68 @@ test('provider admin summarizes readiness blockers and recent routing issue',()=
   assert.match(admin,/런타임 동기화 필요/);
   assert.match(admin,/실호출 검증 필요/);
   assert.match(admin,/최근 우회\/차단/);
+});
+
+test('runtime sync accepts an unchanged wrangler [vars] binding but rejects changing it (Cloudflare 10053)',async()=>{
+  const { putProviderRuntimeSecret, describeProviderRuntimeSyncFailure }=await import('../ai-provider-control.js');
+  const env={CLOUDFLARE_SECRET_MANAGER_TOKEN:'manager-token',CLOUDFLARE_ACCOUNT_ID:'acct',AI_PROVIDER_RUNTIME_SCRIPTS:'ekodi-auth-api,ekodi-ai-control',AI_MULTI_PROVIDER_ENABLED:'true',EKODI_PROVIDER_ANTHROPIC_PRIORITY:'70'};
+  const original=globalThis.fetch,calls=[];
+  try{
+    globalThis.fetch=async url=>{calls.push(String(url));if(String(url).includes('ekodi-auth-api'))return new Response(JSON.stringify({success:false,errors:[{code:10053,message:"Binding name 'X' already in use."}]}),{status:400});return new Response(JSON.stringify({success:true}),{status:200})};
+    assert.deepEqual(await putProviderRuntimeSecret(env,'AI_MULTI_PROVIDER_ENABLED','true'),['ekodi-auth-api','ekodi-ai-control']);
+    assert.equal(calls.length,2,'10053 on an unchanged value must not be retried');
+    const error=await putProviderRuntimeSecret(env,'EKODI_PROVIDER_ANTHROPIC_PRIORITY','40').catch(e=>e);
+    const failure=describeProviderRuntimeSyncFailure(error);
+    assert.equal(failure.reason,'binding_managed_by_config');
+    assert.equal(failure.target,'ekodi-auth-api');
+    assert.equal(failure.cfCode,10053);
+  }finally{globalThis.fetch=original}
+});
+
+test('Claude 403 distinguishes Anthropic region block (with edge colo) from key permission errors',()=>{
+  const res=ray=>new Response('{}',{status:403,headers:{'cf-ray':ray}});
+  const region=describeProviderHttpError('anthropic',403,{type:'error',error:{type:'forbidden',message:'Request not allowed'}},res('8f00aa11bb22cc33-HKG'));
+  assert.equal(region.message,'anthropic_403_region_blocked_at_hkg');assert.equal(region.colo,'HKG');
+  assert.equal(describeProviderCheckDiagnostic(region).category,'region-blocked');
+  const permission=describeProviderHttpError('anthropic',403,{type:'error',error:{type:'permission_error',message:'Your API key does not have permission to use the specified resource.'},request_id:'req_test'},res('8f00aa11bb22cc33-ICN'));
+  assert.equal(permission.message,'anthropic_403_permission_error');assert.equal(permission.requestId,'req_test');
+  assert.equal(describeProviderCheckDiagnostic(permission).category,'authentication-error');
+  const noHeader=describeProviderHttpError('anthropic',403,{error:{type:'forbidden',message:'Request not allowed'}});
+  assert.equal(noHeader.message,'anthropic_403_region_blocked');
+  assert.equal(describeProviderHttpError('openai',403,{error:{type:'forbidden',message:'Request not allowed'}},res('x-HKG')).message,'openai_403_forbidden');
+  const admin=read('admin-provider-control.js');
+  assert.match(admin,/anthropic_403_region_blocked/);assert.match(admin,/Claude 지역 차단\(HTTP 403\)/);
+  assert.match(admin,/anthropic_403_permission_error/);assert.match(admin,/실행 위치/);
+});
+
+test('a pasted provider key is verified before it replaces the stored key',async()=>{
+  const { preflightProviderSecret }=await import('../ai-provider-control.js');
+  const original=globalThis.fetch,seen=[];
+  const env={ANTHROPIC_API_KEY:'sk-ant-old-key-000000'};
+  try{
+    globalThis.fetch=async(url,init)=>{seen.push(init.headers['x-api-key']);return new Response(JSON.stringify({type:'error',error:{type:'authentication_error',message:'invalid x-api-key'}}),{status:401})};
+    const rejected=await preflightProviderSecret(env,'anthropic','ANTHROPIC_API_KEY','sk-ant-bad-key-1111111');
+    assert.equal(rejected.rejected,true);
+    assert.equal(rejected.diagnostic.category,'authentication-error');
+    assert.equal(seen[0],'sk-ant-bad-key-1111111','the candidate key, not the stored one, is tried');
+    assert.equal(env.ANTHROPIC_API_KEY,'sk-ant-old-key-000000','the stored key is left untouched');
+    assert.equal(JSON.stringify(rejected).includes('sk-ant-bad'),false);
+
+    globalThis.fetch=async()=>new Response(JSON.stringify({content:[{type:'text',text:'EKODI_PROVIDER_OK'}],usage:{input_tokens:5,output_tokens:3}}),{status:200});
+    const verified=await preflightProviderSecret(env,'anthropic','ANTHROPIC_API_KEY','sk-ant-good-key-222222');
+    assert.equal(verified.ok,true);
+    assert.equal(verified.rejected,false);
+
+    globalThis.fetch=async()=>new Response(JSON.stringify({type:'error',error:{type:'forbidden',message:'Request not allowed'}}),{status:403,headers:{'cf-ray':'abc-HKG'}});
+    const regional=await preflightProviderSecret(env,'anthropic','ANTHROPIC_API_KEY','sk-ant-good-key-222222');
+    assert.equal(regional.rejected,false,'a region block says nothing about the key');
+    assert.match(regional.code,/region_blocked/);
+  }finally{globalThis.fetch=original}
+  const source=read('ai-provider-control.js');
+  const connect=source.slice(source.indexOf('async function connectSecret('));
+  assert.ok(connect.indexOf('preflightProviderSecret(')<connect.indexOf('putRuntimeSecret(env,binding,value)'),'verification runs before the secret is written');
+  assert.match(connect,/provider_key_rejected/);
+  const admin=read('admin-provider-control.js');
+  assert.match(admin,/키 검증 완료 · 저장했고 정상 동작을 확인했습니다/);
+  assert.match(admin,/기존 키는 그대로 두었습니다/);
 });

@@ -123,7 +123,7 @@ function updateDashboard(){
   const statusLabel=me.publicStatus==='public'?'공개':me.publicStatus==='private'?'비공개':'점검중';text($('publicStatus'),statusLabel);
   const perms=[];if(me.permissions?.timeline)perms.push('활동이력');if(me.permissions?.voices)perms.push('시민의견');if(me.permissions?.content)perms.push('웹검색 게시검토');if(me.permissions?.notices)perms.push('공지');if(me.permissions?.channels)perms.push('소통채널');
   text($('scopeSummary'),me.platform?'최고관리자 권한으로 이 사이트를 관리하고 있습니다.':(perms.length?perms.join('·')+' 관리 권한만 부여된 사이트 범위 관리자입니다.':'조회 권한만 있습니다.'));
-  text($('adminIdentity'),me.email||'');text($('accessEmail'),me.email||'-');text($('accessRole'),me.platform?'최고관리자':'게시판 관리자');
+  text($('adminIdentity'),me.email||'');text($('accessEmail'),me.email||'-');text($('accessRole'),adminRoleLabel(me));
   text($('accessPages'),me.permissions?.pages?'현재상황·조직구성 수정 가능':'권한 없음');const runHealth=$('runSiteHealth');if(runHealth)runHealth.hidden=!me.permissions?.health;text($('accessTimeline'),me.permissions?.timeline?'등록·수정·게시여부 선택 가능':'권한 없음');text($('accessVoices'),me.permissions?.voices?'접수내용 조회·상태변경·삭제 가능':'권한 없음');text($('accessFinance'),me.permissions?.finance?'회계내역 등록·수정·삭제 가능':'권한 없음');text($('accessContent'),me.permissions?.content?'분류·게시여부 선택 가능':'권한 없음');text($('accessNotice'),me.permissions?.notices?'작성·수정·삭제 가능':'권한 없음');text($('accessChannel'),me.permissions?.channels?'추가·수정·숨김·삭제 가능':'권한 없음');
   const navVisibility={status:Boolean(me.permissions?.pages||me.permissions?.timeline||me.permissions?.content),organization:Boolean(me.permissions?.pages),voices:Boolean(me.permissions?.voices),notices:Boolean(me.permissions?.notices),channels:Boolean(me.permissions?.channels),finance:Boolean(me.permissions?.finance)};
   for(const [panel,visible] of Object.entries(navVisibility)){const node=qs('[data-panel-target="'+panel+'"]');if(node)node.hidden=!visible}
@@ -505,6 +505,30 @@ $('runSiteHealth')?.addEventListener('click',async()=>{
 });
 $('refreshAll').addEventListener('click',()=>init(true));$('changeAccount').addEventListener('click',()=>{sessionStorage.removeItem(PLATFORM_TOKEN_KEY);clearSession();try{localStorage.removeItem(CENTRAL_SESSION_KEY)}catch{}location.assign(authUrl())});
 
+const ADMIN_ROLE_LABELS={super_admin:'EKODI 최고관리자',manager:'사이트 전체 관리자',board_admin:'게시판 관리자',viewer:'열람자',staff:'운영자'};
+function adminRoleLabel(me){return me?.platform?'EKODI 최고관리자':(ADMIN_ROLE_LABELS[String(me?.role||'')]||'사이트 관리자')}
+async function loadAdminRoster(){
+  const box=$('adminRoster');if(!box)return;
+  box.textContent='관리자 목록을 불러오고 있습니다.';
+  try{
+    const data=await api('/api/seonammedi/admin/admins');
+    const items=Array.isArray(data?.items)?data.items:[];
+    box.replaceChildren();
+    if(!items.length){box.textContent='등록된 관리자가 없습니다.';return}
+    const table=document.createElement('table');table.className='admin-roster-table';
+    const head=document.createElement('tr');for(const label of ['구분','이름','Google 계정','관리 범위','등록일']){const th=document.createElement('th');th.scope='col';th.textContent=label;head.append(th)}
+    const thead=document.createElement('thead');thead.append(head);const tbody=document.createElement('tbody');
+    for(const item of items){
+      const tr=document.createElement('tr');
+      const cells=[item.roleLabel||'',item.name||'-',item.email||'',item.scope==='platform'?'전체':(item.permissions||[]).join(', '),String(item.since||'').slice(0,10)||'-'];
+      for(const value of cells){const td=document.createElement('td');td.textContent=value;tr.append(td)}
+      tbody.append(tr);
+    }
+    table.append(thead,tbody);box.append(table);
+    const count=document.createElement('p');count.className='muted';count.textContent='총 '+items.length+'명';box.append(count);
+  }catch(error){box.textContent='관리자 목록을 불러오지 못했습니다: '+String(error?.message||error)}
+}
+
 function setupBoardAccountRegistration(){
   const form=$('boardAccountForm'),panel=$('boardAccountRegistration'),status=$('boardAccountStatus');
   if(!form||!panel)return;
@@ -530,10 +554,10 @@ function setupBoardAccountRegistration(){
 
 async function init(refresh=false){
   try{
-    state.me=await api('/api/seonammedi/admin/me');if(location.hash.includes('ekodi_token='))history.replaceState(null,'',location.pathname+location.search);updateDashboard();setupBoardAccountRegistration();
+    state.me=await api('/api/seonammedi/admin/me');if(location.hash.includes('ekodi_token='))history.replaceState(null,'',location.pathname+location.search);updateDashboard();setupBoardAccountRegistration();void loadAdminRoster();
     await Promise.all([loadSiteHealth(),state.me.permissions?.pages?loadStatusPage():Promise.resolve(),state.me.permissions?.pages?loadOrganization():Promise.resolve(),state.me.permissions?.timeline?loadTimeline():Promise.resolve(),state.me.permissions?.finance?loadFinance():Promise.resolve(),state.me.permissions?.voices?loadVoices():Promise.resolve(),state.me.permissions?.content?loadContent():Promise.resolve(),state.me.permissions?.channels?loadChannels():Promise.resolve()]);
     restoreAdminRoute({replace:true});
-    if(refresh)text($('scopeSummary'),state.me.platform?'최고관리자 권한으로 최신 상태를 확인했습니다.':'게시판 관리자 권한으로 최신 상태를 확인했습니다.');
+    if(refresh)text($('scopeSummary'),adminRoleLabel(state.me)+' 권한으로 최신 상태를 확인했습니다.');
   }catch(error){
     if(error.status===403){const main=$('main');main.replaceChildren();const box=document.createElement('section');box.className='card placeholder';const h=document.createElement('strong');h.textContent='관리 권한이 없습니다';const p=document.createElement('p');p.textContent='이 Google 계정에는 서남권 국립의대 소통센터 관리 권한이 등록되어 있지 않습니다.';const a=document.createElement('a');a.href=authUrl();a.textContent='다른 Google 계정으로 로그인';box.append(h,p,a);main.append(box);return}
     text($('adminIdentity'),'연결 오류');

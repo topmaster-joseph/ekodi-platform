@@ -4,21 +4,24 @@ import {readFile} from 'node:fs/promises';
 
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 
-test('citizen-voice menu explicitly requests account choice on both SeonamMedi mounts',async()=>{
+test('citizen-voice menu opens the read-first board; account choice is requested only by the write button',async()=>{
   const [site,workerSource,layout]=await Promise.all([
     read('sites/seonammedi/public/index.html'),
     read('services/independent-board/worker.js'),
     read('sites/seonammedi/public/board-central-category.js')
   ]);
-  assert.match(site,/href="board\/voices\?compose=1&choose_account=1">시민의견/);
-  assert.match(workerSource,/link\(boardPath\(req,'voices'\)\+'\?compose=1&choose_account=1','시민의견','voices'\)/);
+  assert.match(site,/<a href="board\/voices">시민의견<\/a>/);
+  assert.match(workerSource,/link\(boardPath\(req,'voices'\),'시민의견','voices'\)/);
+  const page=await read('services/independent-board/voices-fresh/page.mjs');
+  assert.match(page,/url\.searchParams\.set\('select_account','1'\)/,'write button must still open the Google account chooser');
   assert.doesNotMatch(layout,/seonam-visual-side-nav/,'the duplicate left-side login entry is removed');
   const {default:board}=await import('../services/independent-board/worker.js');
   for(const origin of ['https://seonammedi.kr/board/voices','https://ekodi.kr/seonammedi/board/voices']){
     const res=await board.fetch(new Request(origin),{});
     assert.equal(res.status,200);
     const html=await res.text();
-    assert.match(html,/\?compose=1&choose_account=1/);
+    assert.doesNotMatch(html,/href="[^"]*board\/voices\?compose=1&choose_account=1"/,'menu must not force login for readers');
+    assert.match(html,/id="freshWrite"/);
   }
 });
 

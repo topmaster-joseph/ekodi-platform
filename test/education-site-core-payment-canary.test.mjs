@@ -16,11 +16,12 @@ test('canonical Pay 308 canaries retain explicit verified stable rollback requir
  }
  const oldBare=probes.find(x=>x.url==='https://ekodi.kr/pay');
  const oldSlash=probes.find(x=>x.url==='https://ekodi.kr/pay/');
- assert.deepEqual(oldBare.rollbackStatuses,[308]);
- assert.ok(oldBare.rollbackHeaderExpect.includes('location: https://ekodi.kr/pay/'));
- assert.deepEqual(oldSlash.rollbackStatuses,[200]);
- assert.ok(oldSlash.rollbackExpect.includes("title:'EKODI Pay'"));
- assert.ok(oldSlash.rollbackHeaderExpect.includes('x-ekodi-canonical-path: /pay'));
+ for(const oldRoute of [oldBare,oldSlash]){
+   assert.deepEqual(oldRoute.rollbackStatuses,[308]);
+   assert.deepEqual(oldRoute.rollbackExpect,[]);
+   for(const expected of ['location: https://ekodi.kr/ekodipay/','cache-control: no-store','x-content-type-options: nosniff'])
+     assert.ok(oldRoute.rollbackHeaderExpect.includes(expected),'stable rollback must preserve '+expected);
+ }
  assert.match(router,/url\.pathname==='\/pay'/);
  assert.match(router,/https:\/\/ekodi\.kr\/ekodipay\//);
  assert.match(router,/status:308/);
