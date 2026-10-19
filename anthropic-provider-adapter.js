@@ -1,7 +1,7 @@
 import { getSponsoredAiAllowance, recordProviderUsage } from './api-usage-meter.js';
 import { projectForExternalAi } from './secure-projection.js';
+import { fetchAnthropicMessages } from './anthropic-workspace.js';
 
-const ANTHROPIC_MESSAGES_URL = 'https://api.anthropic.com/v1/messages';
 const ANTHROPIC_VERSION = '2023-06-01';
 const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-5';
 
@@ -70,7 +70,7 @@ export function createAnthropicProvider(env = {}, options = {}) {
         purpose: 'ekodi-ai-orchestration',
         salt: crypto.randomUUID(),
       });
-      const response = await fetchImpl(ANTHROPIC_MESSAGES_URL, {
+      const response = await fetchAnthropicMessages(env, apiKey, {
         method: 'POST',
         headers: {
           'x-api-key': apiKey,
@@ -83,7 +83,7 @@ export function createAnthropicProvider(env = {}, options = {}) {
           system: SYSTEM,
           messages: [{ role: 'user', content: buildInput(taskName, projected) }],
         }),
-      });
+      }, fetchImpl);
       let data = null;
       try { data = await response.json(); } catch {}
       if (!response.ok) throw new Error(`ANTHROPIC_HTTP_${response.status}`);
