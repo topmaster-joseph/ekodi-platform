@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
   "policyId": "AI-ORCHESTRATE-001",
-  "orchestrationId": "ekoai-6e345ccb317e7b8a1d3d",
+  "orchestrationId": "ekoai-34f8792c013baf71d00e",
   "controlPlane": "EKODI AI",
   "orchestrator": "ekodi-ai-orchestrator",
-  "source": "protected-development-pr-merge",
-  "actor": "topmaster-joseph",
-  "branch": "ai/gpt-5-6-sol/orch_00000000-0000-4000-8000-000000000001",
-  "sha": "1111111111111111111111111111111111111111",
+  "source": "static-policy-validation",
+  "actor": "local",
+  "branch": "main",
+  "sha": "2a87c7e47d3d4b7414efc8f76b835ea21bcd8aa7",
   "taskClasses": [
     "platform-code"
   ],
@@ -38,19 +38,11 @@
   },
   "humanGateRecommended": false,
   "directMutationAllowed": false,
-  "constitutionalControls": [
-    "scripts/validate-constitution.mjs",
-    "scripts/validate-platform-boundaries.mjs",
-    "scripts/validate-ekodi-os-architecture.mjs",
-    "scripts/validate-security-baseline.mjs",
-    "scripts/validate-deployment-guardrails.mjs",
-    "scripts/validate-workflow-orchestration-gates.mjs",
-    "scripts/validate-ai-claim-integrity.mjs"
-  ],
+  "constitutionalControls": [],
   "releaseReceipt": {
     "required": false,
     "verified": false
   },
-  "releaseMode": true,
-  "timestamp": "2026-10-18T23:59:59.773Z"
+  "releaseMode": false,
+  "timestamp": "2026-10-19T05:01:42.935Z"
 }
