@@ -30,7 +30,8 @@ concurrency:
 env:
   WRANGLER_VERSION: '4.119.0'
   CGMA_SOURCE_REPO: topmaster-joseph/cheonggye-market
-  CGMA_SOURCE_REF: '8ae2b47d8f9f6f943f30fac1df0eb68b9657fe6b'
+  # 2026-10-20 owner decision: representative address cgma.or.kr (gateway canonical follows page path).
+  CGMA_SOURCE_REF: '8d867a750fdf08eef08cfa8a5d46f3373d69c7e0'
   EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
   EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
 
@@ -274,6 +275,7 @@ jobs:
             return 1
           }
           check_cgma '/cgma' '청계면상인회 | 오늘도 청계에서 만나요' 'cgma-root-gateway'
+          check_cgma '/cgma' '<link rel="canonical" href="https://cgma.or.kr/">' 'cgma-root-gateway'
           check_cgma '/cgma/admin' 'id="adminApp"' 'cgma-root-gateway'
           check_cgma '/cgma/api/resources' '"items"' 'cgma-root-gateway'
           check_cgma '/cgma/ai-education/' '우리 가게에 필요한 AI 교육을 찾아보세요' 'cgma-ai-education-survey'
