@@ -6,6 +6,7 @@ import { normalizeAiResourcePolicy, rankAiResourceCandidates, scoreAiResourceCan
 import { isZeroMarginalCostClass } from './ai-cost-policy.js';
 
 const RISK_LEVELS = new Set(['low', 'normal', 'high', 'critical']);
+const COMPLEXITY_LEVELS = new Set(['low', 'normal', 'medium', 'high', 'critical']);
 const COLLABORATION_MODES = new Set(['auto', 'primary', 'review']);
 
 function text(value, max = 160) {
@@ -65,9 +66,11 @@ function activeResourcePolicy(providers = []) {
   });
 }
 
-function chooseMode(collaboration, risk) {
-  if (collaboration !== 'auto') return collaboration;
-  return risk === 'high' || risk === 'critical' ? 'review' : 'primary';
+function chooseMode(collaboration, risk, complexity) {
+  // Cross-review is mandatory for high-risk OR high-complexity work, even when
+  // a caller requests primary-only execution. It never grants new authority.
+  if (risk === 'high' || risk === 'critical' || complexity === 'high' || complexity === 'critical') return 'review';
+  return collaboration === 'auto' ? 'primary' : collaboration;
 }
 
 function publicProvider(provider) {
@@ -86,6 +89,9 @@ function publicProvider(provider) {
 export function buildAiOrchestrationPlan(input = {}, providers = []) {
   const risk = RISK_LEVELS.has(String(input.risk || '').toLowerCase())
     ? String(input.risk).toLowerCase()
+    : 'normal';
+  const complexity = COMPLEXITY_LEVELS.has(String(input.complexity || '').toLowerCase())
+    ? String(input.complexity).toLowerCase()
     : 'normal';
   const collaboration = COLLABORATION_MODES.has(String(input.collaboration || '').toLowerCase())
     ? String(input.collaboration).toLowerCase()
@@ -111,7 +117,7 @@ export function buildAiOrchestrationPlan(input = {}, providers = []) {
       costClass: item.provider.costClass,
       blockedBy: item.result.blockedBy,
     }));
-  const mode = chooseMode(collaboration, risk);
+  const mode = chooseMode(collaboration, risk, complexity);
   const primary = eligible[0] || null;
   const reviewer = mode === 'review' ? eligible.find(provider => provider.id !== primary?.id) || null : null;
 
@@ -120,6 +126,7 @@ export function buildAiOrchestrationPlan(input = {}, providers = []) {
     orchestrator: 'ekodi-ai',
     taskName: text(input.taskName || 'ai_task', 120) || 'ai_task',
     risk,
+    complexity,
     lane,
     requestedMode: collaboration,
     mode,
@@ -128,6 +135,7 @@ export function buildAiOrchestrationPlan(input = {}, providers = []) {
     reviewerProvider: reviewer?.id || null,
     eligibleProviders: Object.freeze(eligible.map(provider => provider.id)),
     blockedProviders: Object.freeze(blockedProviders),
+    reviewRequired: mode === 'review',
     reviewAvailable: Boolean(reviewer),
     principle: 'ekodi-controls-models-models-do-not-control-ekodi',
   });
@@ -196,6 +204,7 @@ export function buildEkodiAiOrchestrator(env = {}, providers = []) {
       fallback,
       timeoutMs,
       risk = 'normal',
+      complexity = 'normal',
       collaboration = 'auto',
       requiredCapabilities = ['text'],
       lane = 'interactive',
@@ -208,11 +217,25 @@ export function buildEkodiAiOrchestrator(env = {}, providers = []) {
       const plan = buildAiOrchestrationPlan({
         taskName: normalizedTaskName,
         risk,
+        complexity,
         collaboration,
         requiredCapabilities,
         lane,
         governance,
       }, normalized);
+      // Never invoke an unreviewable high-risk/difficult task as though it were
+      // independently checked. Preserve Core/Free Assist instead.
+      if (plan.reviewRequired && !plan.reviewAvailable) {
+        const degraded = await runAiEnhancedTask({
+          env, taskName: normalizedTaskName, providers: [],
+          fallback: reason => fallback(Object.freeze({ ...reason, reason: 'independent_review_unavailable', context, plan })),
+        });
+        return Object.freeze({
+          ...degraded,
+          orchestration: Object.freeze({ plan, reviewer: null, reviewDegraded: true, reviewStatus: 'unavailable' }),
+        });
+      }
+
       const eligibleIds = new Set(plan.eligibleProviders);
       const eligible = normalized.filter(provider => eligibleIds.has(provider.id));
 
@@ -235,10 +258,10 @@ export function buildEkodiAiOrchestrator(env = {}, providers = []) {
         fallback: reason => fallback(Object.freeze({ ...reason, context, plan })),
       });
 
-      if (primary.mode !== 'ai' || plan.mode !== 'review') {
+      if (primary.mode !== 'ai' || !plan.reviewRequired) {
         return Object.freeze({
           ...primary,
-          orchestration: Object.freeze({ plan, reviewer: null, reviewDegraded: false }),
+          orchestration: Object.freeze({ plan, reviewer: null, reviewDegraded: false, reviewStatus: plan.reviewRequired ? 'not_executed' : 'not_required' }),
         });
       }
 
@@ -252,6 +275,17 @@ export function buildEkodiAiOrchestrator(env = {}, providers = []) {
         primary,
       });
 
+      if (!reviewResult) {
+        const degraded = await runAiEnhancedTask({
+          env, taskName: normalizedTaskName, providers: [],
+          fallback: reason => fallback(Object.freeze({ ...reason, reason: 'independent_review_failed', context, plan })),
+        });
+        return Object.freeze({
+          ...degraded,
+          orchestration: Object.freeze({ plan, reviewer: null, reviewDegraded: true, reviewStatus: 'failed' }),
+        });
+      }
+
       return Object.freeze({
         ...primary,
         orchestration: Object.freeze({
@@ -260,7 +294,8 @@ export function buildEkodiAiOrchestrator(env = {}, providers = []) {
             provider: reviewResult.provider,
             value: reviewResult.value,
           }) : null,
-          reviewDegraded: Boolean(plan.reviewerProvider && !reviewResult),
+          reviewDegraded: false,
+          reviewStatus: 'verified',
         }),
       });
     },
@@ -271,6 +306,8 @@ export const EKODI_AI_ORCHESTRATION = Object.freeze({
   version: '1.0.0',
   modes: Object.freeze([...COLLABORATION_MODES]),
   risks: Object.freeze([...RISK_LEVELS]),
+  complexities: Object.freeze([...COMPLEXITY_LEVELS]),
+  reviewPolicy: 'risk_or_high_complexity_fail_closed',
   highRiskDefault: 'independent_provider_review',
   authority: 'bounded_by_ekodi_mission_governance',
 });
