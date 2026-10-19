@@ -193,6 +193,8 @@ on:
       - 'finance-entry-worker.js'
       - 'index.html'
       - 'discovery-layer.js'
+      - 'site-discovery-head.js'
+      - 'test/site-discovery-head.test.mjs'
       - 'homepage-ambient.css'
       - 'homepage-ambient.js'
       - 'hub.html'

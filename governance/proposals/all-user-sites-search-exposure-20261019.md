@@ -1,6 +1,7 @@
 # ADR 제안: 에코디 플랫폼 전체 사용자 사이트 검색 노출 (SEARCH-EXPOSURE-ALL-001)
 
-- 상태: 협의 요청 (v1)
+- 상태: **결정 (v2)** — EKODI AI 협의 approve-with-changes, 지적사항 반영
+- 협의 기록: 이슈 #5353, run 39231255823 (planner approve-with-changes; operator·sentinel provider_disabled_or_missing → 부분 협의로 기록, AI-CONSULT-001 record-isolate-continue)
 - task_id: all-sites-search-exposure-20261019
 - 작성: 2026-10-19, Claude (교체 가능한 개발 작업자)
 - 선행: SEARCH-REGISTER-001 (이슈 #5336, seonammedi.kr 단일 도메인)
@@ -48,3 +49,13 @@
 2. canonical을 "자기 URL"로 둘지, 사이트 대표 URL로 모을지? (본 제안: 자기 URL, 쿼리 제거)
 3. `sc-domain:ekodi.kr` 단일 속성 등록이 테넌트 분리 원칙과 충돌하는가? 테넌트별 URL 접두어 속성이 필요한가?
 4. 누락된 위험(중복 콘텐츠, 개인 작업공간 노출 등)이 있는가?
+
+## 6. EKODI AI 협의 반영 (v2)
+
+| 구분 | 지적사항 | 반영 |
+|---|---|---|
+| 공개 동의 | public 상태만으로 검색 노출을 가정하지 말고 명시적 동의 확인 | 플랫폼 소유자가 2026-10-19 전체 공개 사이트 검색 노출을 명시 승인(본 요청). 테넌트별 거부는 `SEARCH_EXPOSURE_OPT_OUT_SITES`(코드 리뷰 변경)로 즉시 `noindex` 처리 — 사이트 접근은 유지 |
+| 인증 방식 | 경로형 테넌트는 루트 도메인으로 일괄 커버, 서브도메인·커스텀 도메인은 메타태그 또는 중앙 DNS API 위임, 파일 업로드 방식 배제 | `sc-domain:ekodi.kr` 도메인 속성(DNS TXT, 중앙 Cloudflare)으로 경로형·`*.ekodi.kr` 모두 포괄. 파일 업로드 인증 미사용 |
+| IndexNow 키 | 키 격리 요구 | IndexNow 프로토콜상 키는 `/<key>.txt`로 공개되는 값(비밀 아님). 테넌트별 키 미발급 유지. 변경 없음 |
+| 제출 빈도 | 배포마다 전체 제출 → 변경분(diff) 큐 권고 | 기존 동작 유지(현재 URL 수 < 1,000, 한도 10,000). diff 큐는 후속 과제로 등록(확인필요: 실제 rate limit 응답 여부) |
+| 단계 적용 | Canary 후 확대 | 머리말 보정은 "없을 때만 추가"라 기존 화면 변경 없음. 배포 후 표본 사이트 실측 → 문제 시 라우터 1줄 롤백 |
