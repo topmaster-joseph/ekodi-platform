@@ -9,6 +9,17 @@ import ecosystemServices from '../config/ecosystem-services.json' with { type: '
 import siteLifecycleRegistry from '../config/site-lifecycle-registry.json' with { type: 'json' };
 import capabilityRegistry from '../config/capability-registry.json' with { type: 'json' };
 
+for (const event of ['uncaughtException', 'unhandledRejection']) {
+  process.on(event, error => {
+    if (process.env.GITHUB_ACTIONS) {
+      const message = String(error?.stack || error?.message || error).replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A').slice(0, 900);
+      console.log(`::error title=Admin E2E aborted before menu verification::${message}`);
+    }
+    console.error(error);
+    process.exit(1);
+  });
+}
+
 const maxAttemptsPerMenu = 2;
 const menuTimeoutMs = 30_000;
 const taxSurfaceTimeoutMs = 35_000;
@@ -273,7 +284,21 @@ aggregate.error = fatal ? fatal.message : null;
 aggregate.diagnostics.consoleErrors = aggregate.diagnostics.consoleErrors.slice(-80);
 await fs.writeFile(path.join(artifactsDir, 'report.json'), JSON.stringify(aggregate, null, 2));
 
+// Surface failures as GitHub annotations so the cause is readable from the run API
+// even when raw job logs are unavailable to the reviewing agent.
+function annotate(level, title, message) {
+  if (!process.env.GITHUB_ACTIONS) return;
+  const clean = value => String(value ?? '').replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A').slice(0, 900);
+  console.log(`::${level} title=${clean(title).replace(/[,:]/g, ' ')}::${clean(message)}`);
+}
+
 if (!aggregate.passed) {
+  annotate('error', 'Admin E2E failed', aggregate.error || 'verification incomplete');
+  for (const failure of aggregate.diagnostics.attemptFailures.slice(-6)) {
+    annotate('error', `Admin E2E ${failure.menuId} attempt ${failure.attempt}`, `${failure.error || 'failed'} (exit=${failure.code ?? 'n/a'} signal=${failure.signal || 'none'})`);
+  }
+  for (const asset of aggregate.diagnostics.failedAdminAssets.slice(-5)) annotate('warning', 'Admin asset failure', asset);
+  for (const pageError of aggregate.diagnostics.pageErrors.slice(-5)) annotate('warning', 'Admin page error', typeof pageError === 'string' ? pageError : JSON.stringify(pageError));
   console.error(`[E2E] authenticated Admin verification failed: ${aggregate.error}`);
   process.exit(1);
 }
