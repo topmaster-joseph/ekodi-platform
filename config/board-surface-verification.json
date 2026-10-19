@@ -12,6 +12,20 @@
   ],
   "surfaces": [
     {
+      "id": "cheonggyepass.public.qa-20261019",
+      "path": "/cheonggyepass",
+      "kind": "public",
+      "enabled": true,
+      "verificationNote": "QA-only read-only first-party Chromium test, DO NOT MERGE"
+    },
+    {
+      "id": "cheonggyepass.admin.guest.qa-20261019",
+      "path": "/cheonggyepass/admin",
+      "kind": "auth-redirect",
+      "enabled": true,
+      "verificationNote": "QA-only guest first-party Chromium test, DO NOT MERGE"
+    },
+    {
       "id": "seonammedi.citizen_voice",
       "path": "/seonammedi/board/voices",
       "enabled": true,
