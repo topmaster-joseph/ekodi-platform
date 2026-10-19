@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import {createClient} from "jsr:@supabase/supabase-js@2.57.0";
 const url=Deno.env.get("SUPABASE_URL")||"",secret=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"",anon=Deno.env.get("SUPABASE_ANON_KEY")||"";
-const origins=new Set(["https://ekodi.kr","https://www.ekodi.kr"]);
+const origins=new Set(["https://ekodi.kr"]);
 const table="motor_festival_2026_applications";
 const json=(body:unknown,status=200,origin="")=>new Response(JSON.stringify(body),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff",...(origins.has(origin)?{"access-control-allow-origin":origin,"vary":"Origin"}:{})}});
 const str=(x:unknown,max:number)=>typeof x==="string"&&x.trim().length>0&&x.trim().length<=max;
