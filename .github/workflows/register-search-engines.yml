@@ -42,7 +42,7 @@ jobs:
       EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref }}
       EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id }}
       # Allow-list: changes only through code review. Unicode or punycode accepted.
-      SEARCH_REGISTER_ALLOWED_DOMAINS: 'seonammedi.kr,xn--3e0b8b58jw4co4mnpll3k.kr'
+      SEARCH_REGISTER_ALLOWED_DOMAINS: 'ekodi.kr,seonammedi.kr,xn--3e0b8b58jw4co4mnpll3k.kr'
       SEARCH_REGISTER_DOMAIN: ${{ inputs.domain }}
       SEARCH_REGISTER_SITEMAP_PATH: ${{ inputs.sitemap_path }}
       SEARCH_REGISTER_OWNER_EMAIL: topmaster.joseph@gmail.com

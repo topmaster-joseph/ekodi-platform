@@ -47,6 +47,7 @@ import { isStorePosAgentDownloadPath, storePosAgentDownload } from './store-pos-
 import { tenantAdminCommandHomeScript, tenantAdminCommandHomeCss } from './tenant-admin-command-home.js';
 import { isLearningPath, learningPage, learningScript, learningStyles } from './learning-page.js';
 import { decorateDiscoveryResponse } from './discovery-layer.js';
+import { ensureSiteDiscoveryHead } from './site-discovery-head.js';
 import { realtimeTenantAdminFromPath, realtimeTenantFromPath } from './realtime-tenant-registry.js';
 import { managementCameraPage, tenantLivePage } from './tenant-live-page.js';
 import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from './tenant-live-admin-page.js';
@@ -664,6 +665,7 @@ export default {
     let response;
     try{response=await routePlatform(request,env,ctx)}catch(error){record(500);throw error}
     if(adminPublicationSite)response=injectSitePublicationAdmin(response,adminPublicationSite);
+    else if(request.method==='GET'){try{const publicSite=await resolvePublicationSiteForRequest(request,env);if(publicSite)response=await ensureSiteDiscoveryHead(request,response,publicSite)}catch(error){console.error('site discovery head skipped',error)}}
     return finalize(response);
   },
   async queue(batch,env){
