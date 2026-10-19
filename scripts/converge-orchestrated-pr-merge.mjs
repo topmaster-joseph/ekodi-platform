@@ -98,6 +98,12 @@ const controlApiTouched=changedFiles.some(file=>
   'affiliate-marketplace.js',
   'coupang-partners-automation.js',
   'customer-entry-worker.js',
+  // Customer/site access APIs (directory, grants, site admin roster) execute inside
+  // customer-entry-worker; a token-mediated merge must still redeploy them.
+  'customer-google-prereg.js',
+  'customer-member-directory.js',
+  'tenant-access-authority.js',
+  'access-governance.js',
   'mission-control-entry-worker.js',
   // Church Live host authority and runtime tenant mapping execute in Control API.
   // A token-mediated merge skips main push; dispatch the guarded API on these edits.
