@@ -569,6 +569,44 @@ async function dispatchPostMergeDeploys(){
   }
 }
 
+// update-branch with the Actions token creates a head commit whose push does NOT
+// start new workflow runs (GitHub suppresses GITHUB_TOKEN push events), so the
+// PR would park with no checks. workflow_dispatch IS allowed from GITHUB_TOKEN:
+// explicitly re-run the required checks and this convergence on the new head.
+const RETRIGGER_WORKFLOWS=['ci.yml','ekodi-ai-orchestration-gate.yml','converge-orchestrated-pr-merge.yml'];
+async function waitForNewHead(previous){
+  for(let i=0;i<40;i++){
+    const p=(await api('/pulls/'+pr.number)).data;
+    const sha=String(p?.head?.sha||'');
+    if(/^[a-f0-9]{40}$/i.test(sha)&&sha!==previous)return sha;
+    await sleep(1500);
+  }
+  return '';
+}
+async function retriggerOnNewHead(previous){
+  const next=await waitForNewHead(previous);
+  if(!next)fail('update-branch accepted but the PR head did not advance; cannot retrigger checks');
+  for(const workflow of RETRIGGER_WORKFLOWS){
+    const d=await api('/actions/workflows/'+workflow+'/dispatches',{method:'POST',body:JSON.stringify({ref:branch})});
+    if(d.r.status!==204)fail('retrigger dispatch failed for '+workflow+' '+d.r.status+' '+JSON.stringify(d.data).slice(0,300));
+  }
+  return next;
+}
+// GITHUB_TOKEN can never be granted the `workflows` permission, so it cannot
+// write a base that changes .github/workflows. Say so once on the PR and fail
+// fast instead of spinning on 405 merges until the convergence timeout.
+const WORKFLOW_SYNC_MARKER='<!-- ekodi-orch-workflow-sync-required -->';
+function workflowPermissionRefusal(update){
+  const message=JSON.stringify(update?.data||{});
+  return [403,422].includes(update?.r?.status)&&/workflow/i.test(message)&&/permission|refus|not allowed|accessible/i.test(message);
+}
+async function requestAuthoredSync(base){
+  const comments=(await api('/issues/'+pr.number+'/comments?per_page=100')).data;
+  const already=Array.isArray(comments)&&comments.some(c=>String(c?.body||'').includes(WORKFLOW_SYNC_MARKER));
+  if(!already){
+    await api('/issues/'+pr.number+'/comments',{method:'POST',body:JSON.stringify({body:WORKFLOW_SYNC_MARKER+'\nEKODI convergence cannot update this branch: `main` contains `.github/workflows` changes and the Actions token cannot write workflow files. An authored sync (merge `main` into `'+branch+'` and push) is required; that push restarts checks and convergence automatically. Head `'+base.slice(0,12)+'`.'})});
+  }
+}
 for(let cycle=0;cycle<180;cycle++){
   const p=(await api('/pulls/'+pr.number)).data;
   if(p?.draft===true){console.log('[EKODI][ORCH-AUTO-MERGE] PR changed to draft; stop before merge');process.exit(0)}
@@ -585,10 +623,14 @@ for(let cycle=0;cycle<180;cycle++){
   // chasing GitHub's ephemeral test-merge SHA while main is actively changing.
   const update=await api('/pulls/'+pr.number+'/update-branch',{method:'PUT',body:JSON.stringify({expected_head_sha:headSha})});
   if(update.r.status===202){
-    console.log(JSON.stringify({ok:true,action:'branch-updated',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
-    // update-branch creates a new head commit; its push starts a fresh convergence
-    // run and fresh required checks. The old run must not act on a stale head.
+    // The old run must not act on a stale head; hand off to dispatched runs on the new head.
+    const nextHead=await retriggerOnNewHead(headSha);
+    console.log(JSON.stringify({ok:true,action:'branch-updated',retriggered:RETRIGGER_WORKFLOWS,nextHead,pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
     process.exit(0);
+  }
+  if(workflowPermissionRefusal(update)){
+    await requestAuthoredSync(headSha);
+    fail('update-branch refused: base contains workflow-file changes the Actions token cannot write; authored sync required');
   }
   if(![200,202,422].includes(update.r.status))fail('update-branch failed '+update.r.status+' '+JSON.stringify(update.data).slice(0,500));
 
