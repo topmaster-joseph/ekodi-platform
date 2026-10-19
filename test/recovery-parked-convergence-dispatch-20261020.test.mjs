@@ -30,3 +30,9 @@ test('recovery workflow may dispatch and convergence accepts workflow_dispatch',
   assert.match(recovery, /\n  actions: write\n/);
   assert.match(convergence, /\n  workflow_dispatch:\n/);
 });
+
+test('convergence concurrency is per branch so other PRs cannot cancel a pending run', async () => {
+  const wf = await read('.github/workflows/converge-orchestrated-pr-merge.yml');
+  assert.match(wf, /\nconcurrency:\n  group: ekodi-orchestrated-merge-\$\{\{ github\.ref \}\}\n  cancel-in-progress: false\n/);
+  assert.doesNotMatch(wf, /group: ekodi-orchestrated-merge\n/);
+});
