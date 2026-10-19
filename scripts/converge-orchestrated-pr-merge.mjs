@@ -1,3 +1,4 @@
+import {selectApprovableRuns} from './orchestrated-run-approval.mjs';
 const repo=String(process.env.GITHUB_REPOSITORY||'').trim();
 const token=String(process.env.GH_TOKEN||'').trim();
 const branch=String(process.env.GITHUB_REF_NAME||'').trim();
@@ -558,6 +559,20 @@ async function dispatchPostMergeDeploys(){
   }
 }
 
+async function approveParkedRecoveryRuns(){
+  const listed=await api('/actions/runs?head_sha='+headSha+'&status=action_required&per_page=100');
+  if(!listed.r.ok){console.log(JSON.stringify({ok:false,action:'ci-approval-list-failed',status:listed.r.status,taskId,branch}));return 0}
+  const ids=selectApprovableRuns({runs:listed.data?.workflow_runs,repo,branch,headSha});
+  let approved=0;
+  for(const id of ids){
+    const res=await api('/actions/runs/'+id+'/approve',{method:'POST'});
+    if(res.r.ok)approved++;
+    else console.log(JSON.stringify({ok:false,action:'ci-approval-failed',runId:id,status:res.r.status,taskId,branch}));
+  }
+  if(ids.length)console.log(JSON.stringify({ok:true,action:'ci-runs-approved',approved,candidates:ids.length,headSha,taskId,branch,authority:'ekodi-orchestrator'}));
+  return approved;
+}
+
 for(let cycle=0;cycle<180;cycle++){
   const p=(await api('/pulls/'+pr.number)).data;
   if(p?.draft===true){console.log('[EKODI][ORCH-AUTO-MERGE] PR changed to draft; stop before merge');process.exit(0)}
@@ -565,6 +580,9 @@ for(let cycle=0;cycle<180;cycle++){
   if(p?.head?.sha!==headSha)fail('PR head moved away from workflow SHA');
   const headStatuses=await statusMap(headSha);
   const pending=required.filter(k=>headStatuses.get(k)?.state!=='success');
+  // Bot-opened recovery PRs park their required CI as action_required.
+  // Approve only those exact-head bot runs so CI executes; never a release.
+  if(pending.length&&cycle%10===0)await approveParkedRecoveryRuns();
   if(pending.length){await sleep(3000);continue}
   // Commit statuses are compatibility signals. Before any protected merge
   // reconciliation, require the real GitHub Actions jobs on this exact head.
