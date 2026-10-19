@@ -12,6 +12,20 @@
   ],
   "surfaces": [
     {
+      "id": "cheonggyepass.public.mobile.qa-20261019",
+      "path": "/cheonggyepass",
+      "kind": "public",
+      "enabled": true,
+      "verificationNote": "Mobile first-party QA ONLY, never merge"
+    },
+    {
+      "id": "cheonggyepass.admin.mobile.qa-20261019",
+      "path": "/cheonggyepass/admin",
+      "kind": "auth-redirect",
+      "enabled": true,
+      "verificationNote": "Mobile first-party QA ONLY, never merge"
+    },
+    {
       "id": "seonammedi.citizen_voice",
       "path": "/seonammedi/board/voices",
       "enabled": true,
