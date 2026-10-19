@@ -327,6 +327,35 @@ export async function runSeonamMediHourlyCheck(env,{scheduledAt=null,force=false
     .bind(completedAt,status,checked,seen,added,clean(errors.join(' | '),1000),runId).run().catch(()=>{});
   return {ok:status!=='failed',status,checked,seen,added,verified,reverified,mediaCandidates,completedAt,errors};
 }
+// The same article reaches us through several search results: a " - 매체명"
+// suffix, a desktop and an AMP/mobile URL, or a syndicated copy. Show it once.
+export function canonicalArticleUrl(value){
+  try{
+    const url=new URL(String(value||''));url.hash='';
+    url.pathname=url.pathname.replace(/articleViewAmp\.html$/i,'articleView.html').replace(/\/amp(\/|$)/i,'/').replace(/\/mobile\/view\//i,'/view/');
+    if(/^m\./i.test(url.hostname))url.hostname=url.hostname.slice(2);
+    for(const key of [...url.searchParams.keys()])if(/^(utm_|fbclid|gclid|oc$|ref$)/i.test(key))url.searchParams.delete(key);
+    return (url.hostname.replace(/^www\./i,'')+url.pathname.replace(/\/+$/,'')+(url.search||'')).toLowerCase();
+  }catch{return''}
+}
+export function newsTitleKey(title,publisher=''){
+  let text=String(title||'').replace(/\s+/g,' ').trim();
+  const suffix=text.lastIndexOf(' - ');
+  if(suffix>0&&text.length-suffix<=40)text=text.slice(0,suffix);
+  if(publisher)text=text.split(String(publisher)).join(' ');
+  return text.replace(/[\s"'“”‘’`.,·…!?()\[\]<>《》「」『』:;~\-–—_|/]+/g,'').toLowerCase();
+}
+export function dedupeSeonamMediNews(items){
+  const seenUrls=new Set(),seenTitles=new Set(),out=[];
+  for(const item of Array.isArray(items)?items:[]){
+    const url=canonicalArticleUrl(item?.resolved_url||item?.url);
+    const title=newsTitleKey(item?.title,item?.publisher);
+    if((url&&seenUrls.has(url))||(title.length>=8&&seenTitles.has(title)))continue;
+    if(url)seenUrls.add(url);if(title.length>=8)seenTitles.add(title);
+    out.push(item);
+  }
+  return out;
+}
 // Public feed uses bounded batches so an old, unverified search hit cannot
 // starve newer approved records or limit the archive to the last seven days.
 const PUBLIC_NEWS_BATCH=160;
@@ -365,7 +394,7 @@ export async function handleSeonamMediMonitorApi(request,env){
     }
     // Relevance and source verification remain enforced on each page, including
     // entries collected before the current publication policy was introduced.
-    const publicItems=collected.map(item=>({...item,content_match:item.review_state==='verified'?'editor_verified':'source_confirmed'}));
+    const publicItems=dedupeSeonamMediNews(collected).map(item=>({...item,content_match:item.review_state==='verified'?'editor_verified':'source_confirmed'}));
     const recentCandidates=(initialOffset===0?(await env.DB.prepare("SELECT id,title,url,resolved_url,publisher,published_at,query_key,query_label,review_state,first_seen_at,last_seen_at,media_type,media_url,media_source,media_published_at,media_state,source_type,summary_text,source_verified FROM seonammedi_monitor_items WHERE datetime(last_seen_at)>=datetime('now','-7 days') ORDER BY COALESCE(published_at,first_seen_at) DESC LIMIT 160").all()).results||[]:[]);
     const mediaCandidateCount=publicItems.filter(item=>item.media_state==='candidate'&&['photo','video'].includes(item.media_type)).length;
     return json({ok:true,siteOwned:true,aiProvider:false,schedule:'hourly Asia/Seoul',scheduler:'existing-control-cron',channels:{news:true,naverBlog:naverBlogConfigured(env)},lastRun:lastRun||null,mediaCandidateCount,recentCandidateCount:recentCandidates.length,verifiedPublicCount:publicItems.length,items:publicItems,nextCursor:exhausted?null:String(offset),sort:'publication_desc',archive:true},200,'no-store');

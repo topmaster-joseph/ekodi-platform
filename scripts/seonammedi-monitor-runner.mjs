@@ -50,7 +50,9 @@ async function main(){
   const databaseId=ekodiAuthDatabaseId(fs.readFileSync(new URL('../wrangler.site.toml',import.meta.url),'utf8'));
   if(!databaseId)throw new Error('ekodi-auth D1 database id not found');
   if(dryRun){console.log(JSON.stringify({ok:true,dryRun:true,databaseId}));return}
-  const env={DB:createD1HttpBinding({accountId,databaseId,token})};
+  const naver=process.env.NAVER_CLIENT_ID&&process.env.NAVER_CLIENT_SECRET?{NAVER_CLIENT_ID:process.env.NAVER_CLIENT_ID,NAVER_CLIENT_SECRET:process.env.NAVER_CLIENT_SECRET}:{};
+  const env={DB:createD1HttpBinding({accountId,databaseId,token}),...naver};
+  console.log(JSON.stringify({naverSearch:Boolean(naver.NAVER_CLIENT_ID)}));
   const result=await runSeonamMediHourlyCheck(env,{scheduledAt:new Date().toISOString(),force:true});
   const summary={status:result.status,checked:result.checked,seen:result.seen,added:result.added,verified:result.verified,reverified:result.reverified,errors:(result.errors||[]).slice(0,8)};
   console.log(JSON.stringify(summary));
