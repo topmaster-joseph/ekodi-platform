@@ -44,6 +44,8 @@ const CONTROL_ASSETS = new Set(['/control.css','/control.js']);
 const WORKSPACE_ADMIN_ASSET_ALIASES = new Map([
   ['/cgma/admin/assets/cgma-member-admin.js','/cgma-member-admin.js'],
   ['/cgma/admin/assets/cgma-member-admin.css','/cgma-member-admin.css'],
+  ['/cgma/admin/assets/cgma-motor-festival-admin.js','/cgma-motor-festival-admin.js'],
+  ['/cgma/admin/assets/cgma-motor-festival-admin.css','/cgma-motor-festival-admin.css'],
 ]);
 
 const ADMIN_HOSTS = new Set([
