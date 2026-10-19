@@ -111,15 +111,17 @@ export async function registerDomain({ g, cf, domain, zoneId, sitemapPath, owner
   const resourceId = verified.data?.id;
   step('verify', { status: verified.status, owners: (verified.data?.owners || []).length });
 
+  // Google returns the id already percent-encoded (dns%3A%2F%2Fekodi.kr); normalize once.
+  const resourcePath = resourceId ? encodeURIComponent(decodeURIComponent(String(resourceId))) : '';
   if (ownerEmail && resourceId) {
     // Read the live owner list first: PUT replaces it, and dropping an owner that
     // is still verified elsewhere is rejected by Google ("cannot unverify").
-    const current = await g(`https://www.googleapis.com/siteVerification/v1/webResource/${encodeURIComponent(resourceId)}`);
+    const current = await g(`https://www.googleapis.com/siteVerification/v1/webResource/${resourcePath}`);
     const live = current.data?.owners || verified.data?.owners || [];
     if (!live.map(o => String(o).toLowerCase()).includes(ownerEmail.toLowerCase())) {
       const owners = [...new Set([...live, ownerEmail])];
       try {
-        const upd = await g(`https://www.googleapis.com/siteVerification/v1/webResource/${encodeURIComponent(resourceId)}`, 'PUT', { site, owners });
+        const upd = await g(`https://www.googleapis.com/siteVerification/v1/webResource/${resourcePath}`, 'PUT', { site, owners });
         step('addOwner', { status: upd.status, owners: owners.length });
       } catch (error) {
         // Non-fatal: the service account is a verified owner, so registration

@@ -102,3 +102,11 @@ test('owner add merges live owners and a rejected owner update does not block re
   assert.ok(ev.steps.some(s => s.name === 'sitemapSubmit'));
   assert.ok(calls.some(c => c.startsWith('GET www.googleapis.com/siteVerification/v1/webResource/')));
 });
+
+test('already-encoded webResource id is not double-encoded', async () => {
+  const { fetchImpl, calls } = fakeApis({ verifyFailures: 0 });
+  const { g, cf } = createClients({ fetchImpl, googleToken: 'g', cfToken: 'c' });
+  await registerDomain({ g, cf, domain: 'seonammedi.kr', zoneId: 'z'.repeat(32), sitemapPath: '/sitemap.xml', ownerEmail: 'owner@example.com', sleep: async () => {} });
+  const hit = calls.find(c => c.startsWith('GET www.googleapis.com/siteVerification/v1/webResource/'));
+  assert.ok(hit.endsWith('/dns%3A%2F%2Fseonammedi.kr'), hit);
+});
