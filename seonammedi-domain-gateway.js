@@ -1,4 +1,5 @@
 import { EKODI_INDEXNOW_KEY_PATH, ekodiIndexNowKeyResponse } from './platform-indexnow.js';
+import { injectVerificationMeta } from './search-engine-verification.js';
 
 const ORIGIN = 'https://ekodi.kr';
 const SITE_PREFIX = '/seonammedi';
@@ -52,6 +53,7 @@ function rewriteText(text, incoming, contentType) {
   if (contentType.includes('text/html')) {
     output = output.replaceAll('href="/seonammedi/', 'href="/');
     output = output.replaceAll('src="/seonammedi/', 'src="/');
+    output = injectVerificationMeta(output, incoming.hostname);
   }
   return output;
 }
