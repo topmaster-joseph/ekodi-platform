@@ -78,3 +78,20 @@ test('production gateway and scheduled checks block Gemini before any external A
   assert.match(server,/id==='gemini'&&clean\(env\.ENVIRONMENT,40\)\.toLowerCase\(\)==='production'&&!isGeminiFreeTierConfirmed\(env\)/);
   assert.match(server,/freeGuardBinding:'EKODI_GEMINI_FREE_TIER_ONLY_CONFIRMED'/);
 });
+
+test('separate Gemini orchestrator path refuses a production call without free-tier attestation',async()=>{
+  const {createGeminiOrchestratorProvider}=await import('../gemini-orchestrator-provider-adapter.js');
+  let networkCalls=0;
+  const provider=createGeminiOrchestratorProvider(
+    {ENVIRONMENT:'production',GEMINI_API_KEY:'stub-key'},
+    {fetchImpl:async()=>{networkCalls++;throw new Error('unapproved_network_call')}}
+  );
+  await assert.rejects(provider.invoke({taskName:'regression-check',context:{request:'hello'}}),/GEMINI_FREE_TIER_UNVERIFIED/);
+  assert.equal(networkCalls,0);
+});
+
+test('the admin project selector updates the per-project API links',()=>{
+  const client=source('admin-provider-control.js');
+  assert.match(client,/selection\.provider==='google-cloud'&&inventory/);
+  assert.match(client,/googleCloudInventory\(\)/);
+});
