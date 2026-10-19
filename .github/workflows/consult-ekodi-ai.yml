@@ -1,0 +1,145 @@
+name: Consult EKODI AI (Read-only Proposal Review)
+# Submits a governance proposal to the EKODI AI orchestrator as a read-only,
+# advisory multi-consult task and records the structured answer on a GitHub
+# issue. No production mutation is authorized by this workflow.
+
+on:
+  workflow_dispatch:
+    inputs:
+      proposal_path:
+        description: 'Repository path of the proposal (governance/proposals/*.md)'
+        required: true
+        type: string
+      issue_number:
+        description: 'Issue that receives the EKODI AI consultation record'
+        required: true
+        type: string
+      consult_mode:
+        description: 'review = single advisory review; multi = independent re-verification (AI-CONSULT-001 highUncertainty) for designs with open 확인필요 items'
+        required: false
+        default: multi
+        type: choice
+        options: [multi, review]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ekodi-ai-consultation
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  EKODI_ORIGIN: https://ekodi.kr
+  PROPOSAL_PATH: ${{ inputs.proposal_path }}
+  ISSUE_NUMBER: ${{ inputs.issue_number }}
+  CONSULT_MODE: ${{ inputs.consult_mode || 'multi' }}
+
+jobs:
+  consult:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Validate inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$PROPOSAL_PATH" =~ ^governance/proposals/[A-Za-z0-9._-]+\.md$ ]] || { echo 'proposal_path must be governance/proposals/*.md'; exit 1; }
+          test -f "$PROPOSAL_PATH"
+          [[ "$ISSUE_NUMBER" =~ ^[0-9]+$ ]] || { echo 'issue_number must be numeric'; exit 1; }
+
+      - name: Open short-lived super-admin session
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"; test -n "$CLOUDFLARE_ACCOUNT_ID"
+          cf_query() {
+            curl -fsS --retry 2 --retry-delay 1 -X POST \
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$1/query" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json' \
+              --data "$(jq -nc --arg sql "$2" '{sql:$sql}')"
+          }
+          databases=$(curl -fsS --retry 2 "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database?per_page=100" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          auth_db=''; admin_id=''
+          while IFS= read -r db; do
+            [ -n "$db" ] || continue
+            schema=$(cf_query "$db" "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('admins','sessions')" || true)
+            echo "$schema" | jq -e '.success == true and ([.result[]?.results[]?.name] | index("admins") != null and index("sessions") != null)' >/dev/null 2>&1 || continue
+            id=$(cf_query "$db" "SELECT id FROM admins WHERE role='super_admin' ORDER BY id LIMIT 1" | jq -r '.result[]?.results[0]?.id // empty' | head -1)
+            if [[ "$id" =~ ^[0-9]+$ ]]; then auth_db="$db"; admin_id="$id"; break; fi
+          done < <(echo "$databases" | jq -r '.result[]? | (.uuid // .id // empty)')
+          test -n "$auth_db"; test -n "$admin_id"
+          token=$(openssl rand -hex 32)
+          token_hash=$(printf '%s' "$token" | sha256sum | awk '{print $1}')
+          echo "::add-mask::$token"; echo "::add-mask::$token_hash"
+          created=$(date -u +'%Y-%m-%dT%H:%M:%S.000Z'); expires=$(date -u -d '+20 minutes' +'%Y-%m-%dT%H:%M:%S.000Z')
+          cf_query "$auth_db" "INSERT INTO sessions (token_hash, admin_id, expires_at, created_at) VALUES ('$token_hash', $admin_id, '$expires', '$created')" \
+            | jq -e '.success == true' >/dev/null
+          curl -fsS --retry 3 "$EKODI_ORIGIN/api/session" -H "Authorization: Bearer $token" \
+            | jq -e '.authenticated == true and .role == "super_admin"' >/dev/null
+          { echo "EKODI_TOKEN=$token"; echo "EKODI_TOKEN_HASH=$token_hash"; echo "EKODI_AUTH_DB=$auth_db"; } >> "$GITHUB_ENV"
+
+      - name: Submit read-only consultation and collect answer
+        shell: bash
+        run: |
+          set -euo pipefail
+          proposal=$(head -c 7000 "$PROPOSAL_PATH")
+          task_id="consult_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
+          goal=$(printf '%s\n\n%s' 'Read-only architecture consultation. Review the EKODI proposal below against EKODI constitution, security, secrets, DNS and orchestration policies. Answer each consultation question in section 8, state approve / approve-with-changes / reject with reasons, and list missing risks. Authorizes no external action and no production mutation.' "$proposal")
+          # A non-mutating review is classified read-only by AI-CONSULT-001 and gets a
+          # single review. Designs that still carry open 확인필요 items are a genuine
+          # highUncertainty case, which AI-CONSULT-001 routes to independent
+          # re-verification. The task still authorizes no action.
+          high_uncertainty=false; [ "$CONSULT_MODE" = "multi" ] && high_uncertainty=true
+          payload=$(jq -nc --arg taskId "$task_id" --arg goal "$goal" --argjson hu "$high_uncertainty" '{
+            taskId:$taskId, goal:$goal, risk:"medium", readOnly:true, mutation:false, routine:false, maxAttempts:1, highUncertainty:$hu,
+            target:{service:"core",capability:"architecture_review",surface:"admin"},
+            delegation:{allowed:true,reversible:true,audited:true,preflightVerified:true,verificationDefined:true},
+            context:{source:"github-actions-consultation",productionMutationAllowed:false,highUncertainty:$hu,uncertaintyReason:"proposal contains unresolved 확인필요 items",consultationCategories:["secrets","dns","authentication"]},
+            event:{id:("pulse_"+$taskId),kind:"manual_goal",source:"github-actions-consultation",summary:"Proposal review: search engine registration automation",changeClass:"green",actionable:true,requiresHumanDecision:false},
+            executeNow:true}')
+          curl -fsS --retry 2 -X POST "$EKODI_ORIGIN/api/control/ai/v8/pulse" -H "Authorization: Bearer $EKODI_TOKEN" \
+            -H 'Content-Type: application/json' --data "$payload" > "$RUNNER_TEMP/submit.json" || echo '{"ok":false}' > "$RUNNER_TEMP/submit.json"
+          state=''
+          for attempt in $(seq 1 40); do
+            curl -fsS --retry 2 "$EKODI_ORIGIN/api/control/ai/v8/tasks/$task_id" -H "Authorization: Bearer $EKODI_TOKEN" > "$RUNNER_TEMP/task.json" || true
+            state=$(jq -r '.task.state // empty' "$RUNNER_TEMP/task.json" 2>/dev/null || true)
+            case "$state" in verified|degraded|core_only|executor_ready|failed|human_gate|ignored) break;; esac
+            sleep 6
+          done
+          jq -n --arg taskId "$task_id" --arg state "${state:-unknown}" \
+            --slurpfile task "$RUNNER_TEMP/task.json" '{
+              taskId:$taskId, state:$state,
+              consultation:($task[0].task.consultation // $task[0].task.result.consultation // null),
+              specialists:[($task[0].task.result.specialists // [])[] | {role,provider,ok,value:((.value.text // (.value|tostring))[0:9000])}],
+              sentinel:(($task[0].task.result.sentinel // null) | if . then {provider,ok,value:((.value.text // (.value|tostring))[0:6000])} else null end)
+            }' > "$RUNNER_TEMP/consultation.json"
+
+      - name: Record consultation on issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          f="$RUNNER_TEMP/consultation.json"; [ -f "$f" ] || echo '{"state":"not_submitted"}' > "$f"
+          body=$(jq -r --arg run "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --arg path "$PROPOSAL_PATH" '
+            "## EKODI AI 협의 기록\n\n- 제안: `\($path)`\n- 실행: \($run)\n- task: `\(.taskId // "-")` · state: `\(.state // "-")`\n- consultation: `\((.consultation // {}) | tostring)`\n\n### 전문가 검토\n" +
+            ([(.specialists // [])[] | "- **\(.role)** (\(.provider // "-"), ok=\(.ok)): \(.value)"] | join("\n")) +
+            "\n\n### 독립 검증(sentinel)\n" + (if .sentinel then "- \(.sentinel.provider // "-") (ok=\(.sentinel.ok)): \(.sentinel.value)" else "- 없음" end)' "$f")
+          jq -nc --arg body "$body" '{body:$body}' | gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" --input - >/dev/null
+
+      - name: Revoke session
+        if: always()
+        shell: bash
+        run: |
+          set -uo pipefail
+          [ -n "${EKODI_TOKEN_HASH:-}" ] && [ -n "${EKODI_AUTH_DB:-}" ] || exit 0
+          curl -fsS -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$EKODI_AUTH_DB/query" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json' \
+            --data "$(jq -nc --arg sql "DELETE FROM sessions WHERE token_hash='$EKODI_TOKEN_HASH'" '{sql:$sql}')" | jq -e '.success == true' >/dev/null

@@ -2,6 +2,7 @@ import {isSeasonalOperationsPath,seasonalOperationsResponse} from './seasonal-wo
 import { isSeasonalPortalPath, seasonalPortalResponse } from './seasonal-workforce/route.mjs';
 import { routeCooperative, cooperativeLocatorGuard } from './cooperative-control.js';
 import { isCgmaAiEducationPath, routeCgmaAiEducation } from './cgma-ai-education-route.js';
+import { isCgmaMotorFestivalPath, routeCgmaMotorFestival } from './cgma-motor-festival-route.js';
 import legacyPlatformRouter from './platform-router-worker.js';
 import { canonicalTrackingQueryRedirect } from './canonical-query-policy.js';
 import financeEntryWorker from './finance-entry-worker.js';
@@ -46,6 +47,7 @@ import { isStorePosAgentDownloadPath, storePosAgentDownload } from './store-pos-
 import { tenantAdminCommandHomeScript, tenantAdminCommandHomeCss } from './tenant-admin-command-home.js';
 import { isLearningPath, learningPage, learningScript, learningStyles } from './learning-page.js';
 import { decorateDiscoveryResponse } from './discovery-layer.js';
+import { ensureSiteDiscoveryHead } from './site-discovery-head.js';
 import { realtimeTenantAdminFromPath, realtimeTenantFromPath } from './realtime-tenant-registry.js';
 import { managementCameraPage, tenantLivePage } from './tenant-live-page.js';
 import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from './tenant-live-admin-page.js';
@@ -432,6 +434,7 @@ async function routePlatform(request,env,ctx){
     if(host===PUBLIC_HOST&&isSinglesRoute(url.pathname))return routeSinglesSurface(request,env);
     const siteBoard=await handleSiteBoardRequest(request,env);if(siteBoard)return siteBoard;
     if(host===PUBLIC_HOST&&isCgmaAiEducationPath(url.pathname))return routeCgmaAiEducation(request,env);
+    if(host===PUBLIC_HOST&&isCgmaMotorFestivalPath(url.pathname))return routeCgmaMotorFestival(request,env);
     if(host===PUBLIC_HOST&&url.pathname.startsWith(MALL_API_APEX_PREFIX)){const mallApi=await routeMallApiApex(request,env);if(mallApi)return mallApi;}
     if((host===PUBLIC_HOST||SEONAMMEDI_HOSTS.has(host))&&url.pathname.startsWith('/api/seonammedi/')){const seonamApi=await routeSeonamMediApi(request,env,ctx);if(seonamApi)return seonamApi;}
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isDeletedSeonamPath(url.pathname))return deletedSeonamResponse();
@@ -662,6 +665,7 @@ export default {
     let response;
     try{response=await routePlatform(request,env,ctx)}catch(error){record(500);throw error}
     if(adminPublicationSite)response=injectSitePublicationAdmin(response,adminPublicationSite);
+    else if(request.method==='GET'){try{const publicSite=await resolvePublicationSiteForRequest(request,env);if(publicSite)response=await ensureSiteDiscoveryHead(request,response,publicSite)}catch(error){console.error('site discovery head skipped',error)}}
     return finalize(response);
   },
   async queue(batch,env){
