@@ -12,3 +12,8 @@ Validated original source: CI, Supabase Local CI, EKODI AI Orchestration Gate an
 Release procedure must preserve verified owner approval and provenance, original tenant guards, staging and rollback, and dispatch the existing `deploy-control-api.yml` and `deploy-site-core.yml` only **after** protected merge. The official Church Live Chromium E2E should then inspect actual authorized host, guest denial, independently received media, director QR camera, program overlays, PPT/chat and safe cleanup. No automatic public worship broadcast. External YouTube channel remains permission-scoped.
 
 Status at entry: PR #5301 generated but behind latest `main`; GitHub-token-created PR checks reported `action_required`, which is not a passing check. Only authentic CI on the current reconciled head can satisfy the gate. The live service, output tracks and effective deployment SHA have not been independently verified.
+
+## Post-sync authentic CI guard
+- EKODI Orchestrator refreshed the official branch to `f531f72a7d0a79aff87690bbffcddbc50692cdc8` with zero commits behind `main`. GitHub-token update-branch checks are `action_required`, not successes.
+- This owner-authorized append-only documentation change requests real GitHub Actions CI on the newly reconciled official branch, preserving the exact Human Gate-approved executable source and no alteration to server/renderer assets.
+- Continue only after authentic CI, orchestrator and conflict checks, latest-main validation, and protected merge. Existing guarded dispatch must ship Control API and Site Core; native Chromium broadcast media proof remains mandatory before final operational completion.
