@@ -662,6 +662,14 @@ export default {
     if(canonicalQueryRedirect)return finalize(canonicalQueryRedirect);
     const publicationAsset=sitePublicationAdminAsset(request);
     if(publicationAsset)return finalize(publicationAsset);
+    // The 2026 motor festival intake is a time-boxed event page with its own route policy. It must not be
+    // replaced by the CGMA Shared Site publication status page (cgma is 'maintenance' on the Shared Site
+    // because the tenant home is served by the CGMA gateway/Pages), or the gateway rejects it as 502.
+    if(resolvedHost(request,env)===PUBLIC_HOST&&isCgmaMotorFestivalPath(incomingUrl.pathname)){
+      let festival;
+      try{festival=await routeCgmaMotorFestival(request,env)}catch(error){record(500);throw error}
+      return finalize(festival);
+    }
     const cooperativeGuard=await cooperativeLocatorGuard(request,env);
     if(cooperativeGuard)return finalize(cooperativeGuard);
     const publicationGuard=await sitePublicationGuard(request,env);
