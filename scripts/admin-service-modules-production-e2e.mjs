@@ -49,7 +49,13 @@ async function readModuleState(page) {
       && !panel.classList.contains('hidden-panel')
       && getComputedStyle(panel).display !== 'none'
       && getComputedStyle(panel).visibility !== 'hidden';
-    const footers = cards.map(card => String(card.querySelector('.common-service-foot')?.textContent || '').replace(/\s+/g, ' ').trim());
+    // Since the 2026-09-28 list redesign (df7a4c5) each card renders activation and runtime as
+    // separate columns plus an accessible summary, instead of a single .common-service-foot.
+    const statusSummaries = cards.map(card => {
+      const hasColumns = Boolean(card.querySelector('.common-service-activation') && card.querySelector('.common-service-runtime'));
+      const summary = String(card.querySelector('.sr-only')?.textContent || '').replace(/\s+/g, ' ').trim();
+      return hasColumns ? summary : '';
+    });
     const panelText = String(panel?.innerText || '').replace(/\s+/g, ' ').trim();
     return {
       pathname: location.pathname,
@@ -62,7 +68,7 @@ async function readModuleState(page) {
       commonCount: commonCards.length,
       professionalCount: professionalCards.length,
       coreExcluded: !panelText.includes('핵심 엔진') && panelText.includes('Core 제외'),
-      activationRuntimeSeparated: footers.length > 0 && footers.every(text => text.includes('기능') && text.includes('런타임')),
+      activationRuntimeSeparated: statusSummaries.length > 0 && statusSummaries.every(text => text.includes('기능') && text.includes('런타임')),
       singleColumn,
       panelTextLength: panelText.length,
     };
@@ -169,5 +175,11 @@ try {
   }, null, 2));
 }
 
-if (fatal) throw fatal;
+if (fatal) {
+  if (process.env.GITHUB_ACTIONS) {
+    const message = String(fatal?.message || fatal).replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A').slice(0, 900);
+    console.log(`::error title=Admin service-modules direct route failed::${message}`);
+  }
+  throw fatal;
+}
 console.log('Authenticated service-modules direct-route E2E passed for desktop and mobile.');
