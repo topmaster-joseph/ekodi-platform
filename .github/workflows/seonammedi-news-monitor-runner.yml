@@ -4,13 +4,16 @@ name: SeonamMedi News Monitor (Runner Egress)
 # so the hourly SeonamMedi monitor also runs from a GitHub-hosted runner and
 # writes to the same ekodi-auth D1. Publication policy is unchanged.
 # GitHub throttles schedules on this repository (hourly crons fire every
-# 3-5h), so merges to main also trigger a run; the runner skips when a
-# successful monitor run happened within the last 40 minutes.
+# 3-5h) and merges pushed with GITHUB_TOKEN do not emit push events, so every
+# completed CI run also wakes the runner (workflow_run always executes the
+# default-branch workflow and code). The runner skips when a successful
+# monitor run happened within the last 40 minutes.
 on:
   schedule:
     - cron: '25 * * * *'
-  push:
-    branches: [main]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
