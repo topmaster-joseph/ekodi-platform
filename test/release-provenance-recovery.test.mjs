@@ -5,37 +5,39 @@ import {findExactHumanGateApproval} from '../scripts/release-human-gate-evidence
 
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 
-test('release provenance recovery requires exact-SHA policy-owner Human Gate evidence',async()=>{
+// Owner decision (topmaster-joseph, 2026-10-19): remove the per-PR human
+// approval comment/label. Exact-SHA required CI, guarded deploys and production
+// verification remain the release gate; legacy approvals are still recorded.
+test('release provenance recovery runs on owner standing delegation, gated by exact-SHA CI',async()=>{
   const source=await read('scripts/recover-release-provenance.mjs');
   for(const marker of [
     "APPROVAL_LABEL='orchestrator-human-gate-approved'",
     "APPROVAL_MARKER_PREFIX='EKODI-HUMAN-GATE-APPROVE:'",
-    "waiting-human-approval-label",
-    "waiting-exact-sha-human-approval",
-    "approvalMarker",
+    "owner-removed-per-pr-human-gate-20261019",
+    "owner_standing_delegation_ci_gated",
+    "exact_sha_human_gate_approved",
     "sourceSha:headSha",
     "humanApproval",
     "intent,target,'high'",
     "human_gate_required",
-    "exact_sha_human_gate_approved",
     "existing recovery branch does not match the exact approved source SHA",
   ]) assert.ok(source.includes(marker),marker);
-  assert.match(source,/issues\/\$\{prNumber\}\/comments\?per_page=100/);
-  assert.match(source,/findExactHumanGateApproval\(/);
-  assert.match(source,/issues\/\$\{prNumber\}\/events\?per_page=100/);
-  assert.match(source,/labelAppliedAt/);
-  assert.doesNotMatch(source,/body\.includes\(approvalMarker\)/);
+  assert.doesNotMatch(source,/waiting-human-approval-label/);
+  assert.doesNotMatch(source,/waiting-exact-sha-human-approval/);
+  assert.match(source,/findExactHumanGateApproval\(/,'legacy approval evidence is still recorded when present');
+  assert.match(source,/const requiredChecks=\['test','EKODI AI Orchestration Gate'\]/);
+  assert.match(source,/authentic_required_checks_not_green/,'no merge before exact-SHA CI is green');
   assert.match(source,/github-owner:\$\{approvalActor\}/);
   assert.doesNotMatch(source,/intent,target,'normal','delegated'/);
-  assert.doesNotMatch(source,/policyOwners\.has\(actor\)/);
 });
 
-test('trusted recovery workflow requires approval label and executes only default-branch runtime',async()=>{
+test('trusted recovery workflow runs without an approval label and executes only default-branch runtime',async()=>{
   const workflow=await read('.github/workflows/recover-release-provenance.yml');
   assert.match(workflow,/pull_request_target:/);
   assert.match(workflow,/types: \[opened, reopened, synchronize, ready_for_review, labeled\]/);
   assert.match(workflow,/head\.repo\.full_name == github\.repository/);
-  assert.match(workflow,/orchestrator-human-gate-approved/);
+  assert.match(workflow,/github\.event\.pull_request\.draft == false/,'draft PRs never release');
+  assert.doesNotMatch(workflow,/contains\(github\.event\.pull_request\.labels\.\*\.name, 'orchestrator-human-gate-approved'\)/);
   assert.match(workflow,/!contains\(github\.event\.pull_request\.head\.ref, '\/orch_'\)/);
   assert.match(workflow,/ref: \$\{\{ github\.event\.repository\.default_branch \}\}/);
   assert.match(workflow,/CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
