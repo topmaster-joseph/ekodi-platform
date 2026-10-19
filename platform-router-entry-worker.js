@@ -446,6 +446,10 @@ async function routeSeonamMediApi(request,env,ctx){
   });
 }
 
+// Workspace admin static modules (e.g. /cgma/admin/assets/*.js) are files, not admin pages: hand them to the
+// Shared Site asset aliases (site-worker WORKSPACE_ADMIN_ASSET_ALIASES) instead of the workspace admin shell HTML.
+const WORKSPACE_ADMIN_ASSET_PATH=/^\/[a-z0-9][a-z0-9-]*\/admin\/assets\/[a-z0-9][a-z0-9._-]*\.(?:js|css)$/i;
+export function isWorkspaceAdminAssetPath(pathname){return WORKSPACE_ADMIN_ASSET_PATH.test(String(pathname||''))}
 async function routePlatform(request,env,ctx){
     const url=new URL(request.url);
     const host=resolvedHost(request,env);
@@ -622,6 +626,7 @@ async function routePlatform(request,env,ctx){
           const response=injectEkodiShell(page,'space',surface,{contextKind:localRegionRoute.admin?'workspace':'public'});
           return request.method==='GET'?decorateDiscoveryResponse(response,url.pathname):response;
         }
+        if(isWorkspaceAdminAssetPath(url.pathname))return legacyPlatformRouter.fetch(request,env,ctx);
         if(isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');
       }
       if(['GET','HEAD'].includes(request.method)&&isEkodiIndexNowKeyPath(url.pathname))return ekodiIndexNowKeyResponse();

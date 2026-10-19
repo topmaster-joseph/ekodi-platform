@@ -979,10 +979,25 @@ function timelineRow(row,admin=false){
   if(admin){item.status=row.status;item.createdBy=row.created_by||'';item.createdAt=row.created_at;item.updatedAt=row.updated_at}
   return item;
 }
+// Owner request (2026-10-19): a news/schedule row that announced a committee
+// activity must not be listed again once that activity is recorded. A news row
+// is superseded when a published committee activity has the same date and
+// cites at least one identical source URL. Rows stay in the DB (reversible);
+// only the public listing drops them. Admin listings keep every row.
+const timelineLinkUrls=item=>new Set([...(item.links||[]),...(item.media||[])].map(link=>String(link?.url||'').trim().replace(/\/+$/,'')).filter(Boolean));
+export function suppressSupersededTimeline(items){
+  const activities=items.filter(item=>item.recordScope==='committee');
+  if(!activities.length)return items;
+  return items.filter(item=>{
+    if(item.recordScope==='committee')return true;
+    const urls=timelineLinkUrls(item);if(!urls.size)return true;
+    return !activities.some(activity=>activity.date===item.date&&[...timelineLinkUrls(activity)].some(url=>urls.has(url)));
+  });
+}
 async function listPublicTimeline(env){
   await ensureTimelineScope(env.DB);
   const rows=await env.DB.prepare("SELECT * FROM seonammedi_timeline WHERE status='published' ORDER BY sort_order ASC,id ASC LIMIT 300").all();
-  return json({ok:true,items:(rows.results||[]).map(row=>timelineRow(row,false))});
+  return json({ok:true,items:suppressSupersededTimeline((rows.results||[]).map(row=>timelineRow(row,false)))});
 }
 async function listAdminTimeline(env,auth){
   if(!can(auth,TIMELINE_CAP))return json({ok:false,error:'timeline_forbidden'},403);
