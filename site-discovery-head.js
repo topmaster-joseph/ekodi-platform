@@ -15,6 +15,12 @@ const MAX_HTML_BYTES = 2 * 1024 * 1024;
 // `x-robots-tag: noindex` while staying publicly reachable.
 export const SEARCH_EXPOSURE_OPT_OUT_SITES = Object.freeze(new Set([]));
 
+// Sites that own their discovery head end-to-end (own customer domain,
+// canonical, sitemap, IndexNow and a byte-exact release digest gate) are never
+// decorated: SeonamMedi's live release verifier rejects unknown HTML changes.
+export const SELF_MANAGED_DISCOVERY_SITES = Object.freeze(new Set(['seonammedi']));
+const RELEASE_DIGEST_MARKER = /<meta\s+name=(['"])ekodi-release\1/i;
+
 export function searchExposureOptedOut(site, optOut = SEARCH_EXPOSURE_OPT_OUT_SITES) {
   return Boolean(site && optOut.has(String(site.id || '').toLowerCase()));
 }
@@ -61,6 +67,7 @@ export function decorateSiteDiscoveryHtml(html, options = {}) {
   const text = String(html || '');
   const head = headSection(text);
   if (head === null) return text;
+  if (RELEASE_DIGEST_MARKER.test(head)) return text;
   if (/<meta\b(?=[^>]*\bname=(['"]?)robots\1)(?=[^>]*\bcontent=(['"]?)[^'">]*noindex)[^>]*>/i.test(head)) return text;
   const tags = siteDiscoveryTags(head, options);
   if (!tags.length) return text;
@@ -69,6 +76,7 @@ export function decorateSiteDiscoveryHtml(html, options = {}) {
 
 export function siteDiscoveryApplies(request, response, site) {
   if (!site || !response || request?.method !== 'GET') return false;
+  if (SELF_MANAGED_DISCOVERY_SITES.has(String(site.id || '').toLowerCase())) return false;
   if (response.status !== 200) return false;
   const type = String(response.headers?.get?.('content-type') || '').toLowerCase();
   if (!type.includes('text/html')) return false;

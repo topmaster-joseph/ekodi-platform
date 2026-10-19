@@ -62,3 +62,11 @@ test('tenant opt-out keeps the page reachable but marks it noindex', async () =>
   assert.equal(out.headers.get('x-robots-tag'), 'noindex, nofollow');
   assert.equal(await out.text(), html);
 });
+
+test('self-managed and release-digest pages are never modified (SeonamMedi parity)', async () => {
+  const seonam = { id: 'seonammedi', name: '서남권 국립의대 소통센터' };
+  const original = res();
+  assert.equal(await ensureSiteDiscoveryHead(req('https://ekodi.kr/seonammedi/'), original, seonam), original);
+  const digest = '<html><head><meta name="ekodi-release" content="r1"><title>t</title></head></html>';
+  assert.equal(decorateSiteDiscoveryHtml(digest, { canonical: 'https://ekodi.kr/a', siteName: 'n' }), digest);
+});
