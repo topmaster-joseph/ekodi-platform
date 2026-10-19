@@ -17,8 +17,13 @@ function normalizePath(value='/'){
   return path==='/'?'/':path.replace(/\/$/,'');
 }
 
+// Public surfaces whose page deliberately ships `noindex` (partner login portal).
+// Listing them in the sitemap sends crawlers a contradictory signal.
+export const PAGE_OWNED_NOINDEX_PATHS=Object.freeze(new Set(['/ekodibiz/trade']));
+
 export function isPublicDiscoveryPath(pathname='/'){
   const path=normalizePath(pathname).toLowerCase();
+  if(PAGE_OWNED_NOINDEX_PATHS.has(path))return false;
   if(BLOCKED_PREFIXES.some(prefix=>path===prefix||path.startsWith(prefix+'/')))return false;
   if(path.split('/').includes('admin'))return false;
   return true;

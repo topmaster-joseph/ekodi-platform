@@ -194,6 +194,8 @@ on:
       - 'index.html'
       - 'discovery-layer.js'
       - 'site-discovery-head.js'
+      - 'public-discovery-registry.js'
+      - 'test/search-exposure-registry-20261019.test.mjs'
       - 'test/site-discovery-head.test.mjs'
       - 'homepage-ambient.css'
       - 'homepage-ambient.js'

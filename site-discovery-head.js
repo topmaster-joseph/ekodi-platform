@@ -81,7 +81,6 @@ export function siteDiscoveryApplies(request, response, site) {
   const type = String(response.headers?.get?.('content-type') || '').toLowerCase();
   if (!type.includes('text/html')) return false;
   if (/noindex|none/i.test(String(response.headers.get('x-robots-tag') || ''))) return false;
-  if (response.headers.get('content-encoding')) return false;
   const length = Number(response.headers.get('content-length') || 0);
   if (length > MAX_HTML_BYTES) return false;
   return true;
@@ -102,6 +101,7 @@ export async function ensureSiteDiscoveryHead(request, response, site, { optOut 
   if (decorated === html) return response;
   const headers = new Headers(response.headers);
   headers.delete('content-length');
+  headers.delete('content-encoding');
   headers.delete('etag');
   headers.set('x-ekodi-search-exposure', 'site-head-v1');
   return new Response(decorated, { status: response.status, statusText: response.statusText, headers });

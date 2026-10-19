@@ -35,7 +35,17 @@ async function main() {
   const sites = (registry.resources || []).filter(resource => resource.type === 'site' || resource.source === 'discovery-layer');
   const results = [];
   for (const site of sites) {
-    try { results.push({ url: site.url, ...auditHtml(await get(site.url)) }); }
+    try {
+      let current = site.url, page = await get(current), hops = [];
+      while ([301, 302, 307, 308].includes(page.status) && hops.length < 3) {
+        const next = new URL(page.headers.get('location') || '', current).toString();
+        if (!next.startsWith(origin + '/')) break;
+        hops.push(`${page.status}->${next}`); current = next; page = await get(current);
+      }
+      const audit = auditHtml(page);
+      if (hops.length) audit.problems = [...audit.problems, 'sitemap_url_redirects'];
+      results.push({ url: site.url, final: current, hops, ...audit, ok: audit.problems.length === 0 });
+    }
     catch (error) { results.push({ url: site.url, ok: false, problems: ['fetch_' + (error.name || 'error')] }); }
   }
   const failed = results.filter(result => !result.ok);
@@ -47,7 +57,7 @@ async function main() {
   console.log(JSON.stringify(report, null, 2));
   // Annotations are readable through the checks API even when raw logs are not.
   console.log(`::notice title=SEARCH-EXPOSURE-ALL-001::robots=${robotsOk ? 'ok' : 'fail'} sitemap=${sitemap.status}/${report.sitemap.urls} passed=${report.passed}/${report.auditedSites}`);
-  for (const item of failed.slice(0, 40)) console.log(`::error title=search-exposure::${item.url} ${item.problems.join(',')}`);
+  if (failed.length) console.log(`::error title=search-exposure (${failed.length})::${failed.map(item => `${item.url} [${item.problems.join(',')}]${item.hops?.length ? ' ' + item.hops.join(' ') : ''}`).join(' | ')}`);
   if (process.env.GITHUB_STEP_SUMMARY) {
     const { appendFile } = await import('node:fs/promises');
     const rows = results.map(r => `| ${r.url} | ${r.ok ? '✅' : '❌ ' + r.problems.join(',')} | ${r.robots || ''} |`).join('\n');
