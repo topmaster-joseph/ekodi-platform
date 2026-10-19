@@ -232,6 +232,18 @@ function renderPublicTimeline(){
   attachMonitorMedia(window.__SEONAM_MONITOR_ITEMS||[]);
   syncAdminLoginButtons();openSharedItem();
 }
+// Mirror of the server rule (2026-10-19): a public news row with the same date
+// and a shared source URL as a recorded committee activity is the same event;
+// show it once. Admin rows (they carry status) are never dropped so they stay editable.
+const timelineUrlSet=item=>new Set([...(item?.links||[]),...(item?.media||[])].map(link=>String(link?.url||'').trim().replace(/\/+$/,'')).filter(Boolean));
+function dropSupersededTimeline(rows){
+  const activities=rows.filter(isCommitteeRecord);
+  return rows.filter(item=>{
+    if(item?.status||isCommitteeRecord(item))return true;
+    const urls=timelineUrlSet(item);if(!urls.size)return true;
+    return !activities.some(other=>other.date===item.date&&[...timelineUrlSet(other)].some(url=>urls.has(url)));
+  });
+}
 function renderCommitteeNews(){
   const host=el('committeeNewsList');if(!host)return;
   const rows=publicTimelineEntries.filter(isCommitteeRelatedNews).slice().sort(timelineDescending);
@@ -290,7 +302,7 @@ function adminLoginUrl(view){
 document.addEventListener('click',event=>{const button=event.target.closest?.('[data-admin-login]');if(!button)return;event.preventDefault();location.assign(adminLoginUrl(button.dataset.adminLogin))});
 function syncAdminLoginButtons(){document.querySelectorAll('[data-admin-login]').forEach(button=>{button.hidden=Boolean(publicTimelineAdminMode)})}
 function initializePublicTimeline(rows){
-  basePublicTimelineEntries=Array.isArray(rows)?rows:[];
+  basePublicTimelineEntries=dropSupersededTimeline(Array.isArray(rows)?rows:[]);
   publicTimelineEntries=basePublicTimelineEntries.slice();
   activeTimelineCategory=categoryFromMenuHash('timeline',TIMELINE_FILTERS);
   renderTimelineFilters();
