@@ -1,0 +1,15 @@
+.cgma-festival h2{margin:0 0 6px;font-size:1.25rem}
+.cgma-festival-note{margin:0 0 12px;color:var(--muted,#555);font-size:.9rem}
+.cgma-festival-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.cgma-festival-actions button,.cgma-festival-actions a{min-height:38px;padding:0 14px;border-radius:8px;border:1px solid currentColor;background:transparent;font:inherit;cursor:pointer;display:inline-flex;align-items:center;text-decoration:none;color:inherit}
+.cgma-festival-actions button.primary{background:#174837;color:#fff;border-color:#174837}
+.cgma-festival-actions button[disabled]{opacity:.45;cursor:not-allowed}
+.cgma-festival-status{padding:8px 10px;border-radius:8px;margin:6px 0}
+.cgma-festival-status.ok{background:#eaf6ec}
+.cgma-festival-status.warn{background:#fff6e0}
+.cgma-festival-status.err{background:#fdecec}
+.cgma-festival-table{overflow-x:auto}
+.cgma-festival-table table{border-collapse:collapse;width:100%;min-width:900px}
+.cgma-festival-table th,.cgma-festival-table td{border-bottom:1px solid #ddd;text-align:left;padding:8px;vertical-align:top;font-size:14px}
+.cgma-festival-table th{background:#f4f4f4;position:sticky;top:0}
+.cgma-festival-empty{padding:16px;color:var(--muted,#555)}

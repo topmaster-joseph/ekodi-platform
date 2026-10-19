@@ -19,8 +19,13 @@ test('page-owned noindex portal stays out of discovery', () => {
 
 import { TRAILING_SLASH_CANONICAL_PATHS } from '../public-discovery-registry.js';
 test('slash-canonical sites are known and remain discoverable', () => {
-  for (const path of ['/bible', '/ekodichurch/live', '/pyeonggongmok']) {
+  for (const path of ['/bible', '/ekodichurch', '/pyeonggongmok']) {
     assert.ok(TRAILING_SLASH_CANONICAL_PATHS.has(path));
     assert.equal(isPublicDiscoveryPath(path), true);
   }
+});
+
+test('legacy church live studio is not advertised', () => {
+  assert.equal(isPublicDiscoveryPath('/ekodichurch/live'), false);
+  assert.equal(isPublicDiscoveryPath('/live/church'), true);
 });

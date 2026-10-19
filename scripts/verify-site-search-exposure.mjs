@@ -48,15 +48,19 @@ async function main() {
     }
     catch (error) { results.push({ url: site.url, ok: false, problems: ['fetch_' + (error.name || 'error')] }); }
   }
-  const failed = results.filter(result => !result.ok);
+  // A page that itself ships noindex is an owner decision, not a platform
+  // regression: surface it as a warning so it stays visible without paging.
+  const ownerNoindex = results.filter(r => !r.ok && r.problems.every(p => ['x_robots_noindex', 'meta_noindex', 'canonical_missing'].includes(p)) && r.problems.some(p => p.endsWith('noindex')));
+  const failed = results.filter(result => !result.ok && !ownerNoindex.includes(result));
   const report = {
     policy: 'EKODI-SEARCH-EXPOSURE-ALL-001', checkedAt: new Date().toISOString(),
     robots: { status: robots.status, ok: robotsOk }, sitemap: { status: sitemap.status, urls: (sitemap.text.match(/<loc>/g) || []).length },
-    registryCount: registry.count, auditedSites: results.length, passed: results.length - failed.length, failed,
+    registryCount: registry.count, auditedSites: results.length, passed: results.length - failed.length - ownerNoindex.length, ownerNoindex: ownerNoindex.map(r => r.url), failed,
   };
   console.log(JSON.stringify(report, null, 2));
   // Annotations are readable through the checks API even when raw logs are not.
   console.log(`::notice title=SEARCH-EXPOSURE-ALL-001::robots=${robotsOk ? 'ok' : 'fail'} sitemap=${sitemap.status}/${report.sitemap.urls} passed=${report.passed}/${report.auditedSites}`);
+  if (ownerNoindex.length) console.log(`::warning title=owner-noindex (${ownerNoindex.length})::${ownerNoindex.map(r => r.url).join(' | ')} — 사이트 공개 상태는 public이나 페이지가 스스로 noindex. 소유자 확인 필요`);
   if (failed.length) console.log(`::error title=search-exposure (${failed.length})::${failed.map(item => `${item.url} [${item.problems.join(',')}]${item.hops?.length ? ' ' + item.hops.join(' ') : ''}`).join(' | ')}`);
   if (process.env.GITHUB_STEP_SUMMARY) {
     const { appendFile } = await import('node:fs/promises');
