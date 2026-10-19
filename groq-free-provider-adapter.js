@@ -7,6 +7,15 @@ const MAX_DAILY_LIMIT=1000;
 const clean=(value,max=40000)=>String(value??'').trim().slice(0,max);
 const number=(value,fallback)=>{const n=Number(value);return Number.isFinite(n)?n:fallback};
 const dailyLimit=env=>Math.max(1,Math.min(MAX_DAILY_LIMIT,Math.floor(number(env.EKODI_GROQ_FREE_DAILY_CALL_LIMIT,DEFAULT_DAILY_LIMIT))));
+const DEFAULT_OUTPUT_TOKENS=2048;
+const MAX_OUTPUT_TOKENS=8192;
+const outputTokens=value=>Math.max(64,Math.min(MAX_OUTPUT_TOKENS,Math.floor(number(value,DEFAULT_OUTPUT_TOKENS))));
+// FREE-AI-POOL-CAPACITY-20261019: gpt-oss models spend completion tokens on reasoning first. Long
+// translation prompts used to exhaust the budget before any visible answer (groq_free_empty_response).
+// Groq documents reasoning_effort (low|medium|high) and include_reasoning for gpt-oss only.
+export function groqReasoningControls(model=''){
+  return /^openai\/gpt-oss-/i.test(clean(model,180))?Object.freeze({reasoning_effort:'low',include_reasoning:false}):Object.freeze({});
+}
 const headerNumber=(headers,name)=>{const value=headers.get(name);if(value===null)return null;const n=Number(value);return Number.isFinite(n)?Math.max(0,Math.floor(n)):null};
 
 function errorFromResponse(response,data){
@@ -27,17 +36,28 @@ export function createGroqFreeProvider(env={},options={}){
   const available=Boolean(enabled&&key&&typeof fetchImpl==='function');
   return Object.freeze({
     id:'groq-free',model,available,priority:25,costClass:'free-preferred',
-    async invoke({prompt='' }={}){
+    async invoke({prompt='',maxOutputTokens}={}){
       if(!available)throw new Error('groq_free_not_configured');
       const reservation=await reserveFreeDailyRequest(env,'groq-free',dailyLimit(env));
       const projected=await projectForExternalAi({prompt:clean(prompt,24000)},{profile:'ai_minimum',purpose:'ekodi-free-provider',salt:crypto.randomUUID()});
       const safePrompt=clean(projected?.prompt||JSON.stringify(projected),24000);
-      const response=await fetchImpl('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{authorization:`Bearer ${key}`,'content-type':'application/json'},body:JSON.stringify({model,messages:[{role:'user',content:safePrompt}],temperature:0.2,max_completion_tokens:1024}),signal:AbortSignal.timeout(60000)});
+      const response=await fetchImpl('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{authorization:`Bearer ${key}`,'content-type':'application/json'},body:JSON.stringify({model,messages:[{role:'user',content:safePrompt}],temperature:0.2,max_completion_tokens:outputTokens(maxOutputTokens),...groqReasoningControls(model)}),signal:AbortSignal.timeout(60000)});
       const data=await response.json().catch(()=>({}));
       if(!response.ok)throw errorFromResponse(response,data);
-      const output=clean(data?.choices?.[0]?.message?.content,40000);if(!output)throw new Error('groq_free_empty_response');
+      const output=clean(data?.choices?.[0]?.message?.content,40000);
+      if(!output){const finish=clean(data?.choices?.[0]?.finish_reason,40).toLowerCase().replace(/[^a-z_]+/g,'');throw new Error(`groq_free_empty_response${finish?`_${finish}`:''}`)}
       return Object.freeze({text:output,model,quota:Object.freeze({remainingRequests:headerNumber(response.headers,'x-ratelimit-remaining-requests')??reservation.remaining,remainingTokens:headerNumber(response.headers,'x-ratelimit-remaining-tokens'),resetAt:reservation.resetAt})});
     }
   });
 }
-export const GROQ_FREE_DEFAULTS=Object.freeze({model:DEFAULT_MODEL,dailySafetyLimit:DEFAULT_DAILY_LIMIT,maxDailyLimit:MAX_DAILY_LIMIT});
+export const GROQ_FREE_DEFAULTS=Object.freeze({model:DEFAULT_MODEL,dailySafetyLimit:DEFAULT_DAILY_LIMIT,maxDailyLimit:MAX_DAILY_LIMIT,defaultOutputTokens:DEFAULT_OUTPUT_TOKENS,maxOutputTokens:MAX_OUTPUT_TOKENS});
+
+// Zero-quota credential probe: listing models does not spend a chat completion request.
+export async function probeGroqFreeCredential(env={},options={}){
+  const key=clean(env.GROQ_API_KEY,8192),fetchImpl=options.fetchImpl||globalThis.fetch;
+  if(!key)throw new Error('groq_free_not_configured');
+  const response=await fetchImpl('https://api.groq.com/openai/v1/models',{headers:{authorization:`Bearer ${key}`},signal:AbortSignal.timeout(15000)});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw errorFromResponse(response,data);
+  return Object.freeze({ok:true,quota:null});
+}

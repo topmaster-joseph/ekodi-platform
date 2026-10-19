@@ -55,6 +55,7 @@ test('Workers AI status exposes no credential material', () => {
     available:true,
     model:CLOUDFLARE_WORKERS_AI_DEFAULTS.model,
     dailyCallLimit:4,
+    dailyNeuronBudget:8000,
     costClass:'account-managed'
   });
 });
@@ -63,31 +64,34 @@ test('Workers AI defaults to the active fast Llama replacement', () => {
   assert.equal(CLOUDFLARE_WORKERS_AI_DEFAULTS.model,'@cf/meta/llama-3.1-8b-instruct-fast');
 });
 
-test('failed Workers AI calls refund the local daily reservation so recovery can retry', async () => {
-  let count=0;
-  const db={
+function ledgerDb(){
+  const rows=new Map();
+  const key=(id,day)=>`${id}|${day}`;
+  return {
+    rows,
     prepare(sql){
       return {
         bind(...args){
           return {
             async run(){
-              if(sql.startsWith('INSERT OR IGNORE'))return{meta:{changes:0}};
-              if(sql.includes('call_count=call_count+1')){
-                const limit=Number(args.at(-1));
-                if(count>=limit)return{meta:{changes:0}};
-                count+=1;return{meta:{changes:1}};
-              }
-              if(sql.includes('call_count=CASE WHEN call_count>0')){
-                count=Math.max(0,count-1);return{meta:{changes:1}};
-              }
+              if(sql.startsWith('INSERT OR IGNORE')){const k=key(args[0],args[1]);if(!rows.has(k))rows.set(k,0);return{meta:{changes:1}}}
+              if(sql.includes('call_count=call_count+1')){const [,id,day,limit]=args;const k=key(id,day);if((rows.get(k)||0)>=limit)return{meta:{changes:0}};rows.set(k,(rows.get(k)||0)+1);return{meta:{changes:1}}}
+              if(sql.includes('call_count=call_count+?')){const [amount,,id,day,,budget]=args;const k=key(id,day);if((rows.get(k)||0)+amount>budget)return{meta:{changes:0}};rows.set(k,(rows.get(k)||0)+amount);return{meta:{changes:1}}}
+              if(sql.includes('MAX(0,call_count+?)')){const [delta,,id,day]=args;const k=key(id,day);rows.set(k,Math.max(0,(rows.get(k)||0)+delta));return{meta:{changes:1}}}
+              if(sql.includes('call_count=CASE WHEN call_count>0')){const [,id,day]=args;const k=key(id,day);rows.set(k,Math.max(0,(rows.get(k)||0)-1));return{meta:{changes:1}}}
               return{meta:{changes:0}};
             },
-            async first(){return{call_count:count}}
+            async first(){const [id,day]=args;return{call_count:rows.get(key(id,day))||0}}
           };
         }
       };
     }
   };
+}
+const today=()=>new Date().toISOString().slice(0,10);
+
+test('failed Workers AI calls refund the local daily reservation so recovery can retry', async () => {
+  const db=ledgerDb();
   let attempts=0;
   const env={
     ENVIRONMENT:'production',
@@ -97,8 +101,9 @@ test('failed Workers AI calls refund the local daily reservation so recovery can
   };
   const provider=createCloudflareWorkersAiProvider(env);
   await assert.rejects(()=>provider.invoke({taskName:'first',context:{safe:true}}),/MODEL_TEMPORARY_FAILURE/);
-  assert.equal(count,0);
+  assert.equal(db.rows.get(`cloudflare-workers-ai|${today()}`),0);
+  assert.equal(db.rows.get(`${CLOUDFLARE_WORKERS_AI_DEFAULTS.neuronLedgerId}|${today()}`),0);
   const recovered=await provider.invoke({taskName:'second',context:{safe:true}});
   assert.equal(recovered.text,'RECOVERED');
-  assert.equal(count,1);
+  assert.equal(db.rows.get(`cloudflare-workers-ai|${today()}`),1);
 });

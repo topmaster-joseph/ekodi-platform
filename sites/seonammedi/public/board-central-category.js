@@ -1,37 +1,11 @@
-// Central category tabs on standalone SeonamMedi boards; no credential handling.
+// Central category menu on standalone SeonamMedi boards; no credential handling.
+// 소통채널 (and every other top menu) navigates to its home view, exactly like the
+// home page. The old in-board overlay stacked a second "소통채널" block on top of
+// the current board, so it stays hidden and is never opened here.
 (() => {
   const panel=document.getElementById('central-category-panel');
-  const template=document.getElementById('central-category-link-contract');
-  const buttons=document.getElementById('central-category-buttons');
-  const title=document.getElementById('central-category-title');
-  if(!panel||!template||!buttons||!title)return;
-  const entries=Array.from(template.content.querySelectorAll('a'));
-  const groups={
-    '소통채널':['페이스북','인스타그램','유튜브']
-  };
-  document.querySelectorAll('.site-header nav [data-category-menu]').forEach(trigger=>{
-    trigger.addEventListener('click',event=>{
-      const key=trigger.dataset.categoryMenu;
-      const labels=groups[key]||[];
-      if(!labels.length)return;
-      event.preventDefault();
-      const alreadyOpen=!panel.hidden&&title.textContent===key;
-      panel.hidden=alreadyOpen;
-      document.querySelectorAll('.site-header nav [data-category-menu]').forEach(a=>a.setAttribute('aria-expanded',String(a===trigger&&!alreadyOpen)));
-      if(alreadyOpen)return;
-      title.textContent=key;
-      buttons.replaceChildren();
-      for(const label of labels){
-        const source=entries.find(a=>a.textContent.trim()===label);
-        if(!source)continue;
-        const a=document.createElement('a');
-        a.href=source.href;
-        a.textContent=label;
-        buttons.appendChild(a);
-      }
-      panel.scrollIntoView({block:'nearest'});
-    });
-  });
+  if(panel)panel.hidden=true;
+  document.querySelectorAll('.site-header nav [data-category-menu]').forEach(a=>a.setAttribute('aria-expanded','false'));
 })();
 
 // Shared, image-free navigation layout for the public home and independent boards.

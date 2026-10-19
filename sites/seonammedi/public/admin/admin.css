@@ -25,3 +25,9 @@
 .link-import-form input,.link-import-form select{width:100%;max-width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:9px}
 .link-import-form button:disabled,.inline-manage-form button:disabled{opacity:.52;cursor:not-allowed}
 @media(max-width:760px){.link-import-preview{padding:12px}.activity-toolbar{flex-wrap:wrap}.activity-toolbar .ekodi-public-admin-inline{max-width:100%}}
+/* 2026-10-19 admin roster */
+.admin-roster{overflow-x:auto}
+.admin-roster-table{width:100%;border-collapse:collapse;font-size:14px}
+.admin-roster-table th,.admin-roster-table td{padding:9px 10px;border-bottom:1px solid #e3e8ee;text-align:left;vertical-align:top}
+.admin-roster-table th{font-weight:700;color:#3d4b58;background:#f6f8fa;white-space:nowrap}
+.admin-roster-table td:nth-child(3){word-break:break-all}
