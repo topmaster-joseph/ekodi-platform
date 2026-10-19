@@ -194,7 +194,7 @@ function isKnownTaxRendererProtocolRace(report) {
 const aggregate = {
   generatedAt: new Date().toISOString(),
   baseUrl: 'https://ekodi.kr/admin/',
-  canonicalCampusUrl: 'https://ekodi.kr/admin/home/campus',
+  canonicalCampusUrl: 'https://ekodi.kr/admin/sites/campus',
   compatibilityMenuBaseUrl: 'https://admin.ekodi.kr/',
   expectedMenuCount: menuIds.length,
   checkedMenuCount: 0,
