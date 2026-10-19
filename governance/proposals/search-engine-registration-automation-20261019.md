@@ -1,6 +1,7 @@
 # ADR 제안: 검색엔진 등록 자동화 모듈 (SEARCH-REGISTER-001)
 
-- 상태: 제안 (EKODI AI 협의 대기)
+- 상태: 제안 v2 (1차 EKODI AI 협의 approve-with-changes 반영, 다중협의 대기)
+- 1차 협의: 이슈 #5336, run 39223938198 (gemini, 단일 검토)
 - task_id: search-register-automation-20261019
 - 작성: 2026-10-19, Claude (교체 가능한 개발 작업자)
 - 최초 대상: seonammedi.kr, 서남권국립의대.kr (xn--3e0b8b58jw4co4mnpll3k.kr)
@@ -32,8 +33,10 @@
 | B. 소유자 OAuth 리프레시 토큰 | 소유자 구글 계정 동의 → 리프레시 토큰을 Worker secret(AES-GCM, ekodi-storage-control 패턴)으로 보관 | 소유자 본인 계정으로 바로 속성 생성 | 토큰 만료·철회 시 재동의, 범위 확대(권한 상승) 관리 부담 |
 | C. 메타 태그 슬롯 (수동 보조) | search-engine-verification.js 레지스트리에 코드 한 줄 추가 | 즉시 사용 가능, 모든 엔진 공통 | 엔진 화면에서 사람이 "확인" 클릭 필요 |
 
-결정 제안: 구글은 A, A 캐너리 실패 시 B로 폴백. 네이버는 공개 등록 API 존재 여부가
-확인필요이므로 C + 기존 IndexNow 자동제출 유지.
+결정 제안: 구글은 A, A 캐너리 실패 시 B로 폴백.
+네이버: 1차 협의 결과 서비스 계정형(M2M) 공개 등록 API 없음 → **자동화하지 않음**.
+세션 쿠키 주입·스크래핑은 NON-DISRUPTIVE-REMOTE-EXECUTION 위반이므로 금지.
+네이버는 C(메타 태그 슬롯, 사람 1회 클릭) + 기존 IndexNow 자동제출로 처리.
 
 ## 4. 설계 (A)
 
@@ -48,12 +51,18 @@
 7. Search Console `sites.add` (siteUrl `sc-domain:<domain>`, 형식 확인필요) → `sitemaps.submit`
 8. 결과 증거(JSON: 각 단계 HTTP 코드, TXT 레코드 ID, 확인 상태)를 실행 요약에 기록. 토큰·키 값은 출력 금지
 
-## 5. 보안·권한
+## 5. 보안·권한 (1차 협의 반영)
 
-- 필요한 비밀값: `GOOGLE_SEARCH_SA_KEY_JSON` (GitHub Actions secret), 기존 `CLOUDFLARE_API_TOKEN`
-- 서비스 계정 권한은 Site Verification API·Search Console API만. GCP 프로젝트 IAM 역할 부여 없음
-- DNS 쓰기는 TXT 추가만. 기존 레코드 수정·삭제 없음(정리 작업은 별도 승인)
-- 키 회전: 90일. 유출 시 GCP에서 키 폐기 → TXT는 남아도 무해(소유권은 서비스 계정·소유자 단위)
+- 비밀값은 저장소 단위가 아니라 GitHub **Environment `search-registration`** 단위로 격리
+  - `GOOGLE_SEARCH_SA_KEY_JSON`: 서비스 계정 키
+  - `CLOUDFLARE_DNS_TXT_TOKEN`: **전용 최소권한 토큰** (Zone:DNS:Edit, 허용 존만). 광범위한 기존 `CLOUDFLARE_API_TOKEN`은 사용하지 않음
+  - 전용 토큰이 아직 없으면 워크플로는 DNS 단계 전에 `HUMAN_GATE_SCOPED_DNS_TOKEN_REQUIRED`로 정지(광범위 토큰으로 폴백하지 않음)
+- 서비스 계정 권한은 Site Verification API·Search Console API만. GCP IAM 역할 부여 없음
+- DNS 쓰기: TXT **추가만**(동일 값 존재 시 건너뜀). 기존 레코드 덮어쓰기·수정·삭제 없음. TTL 300
+- TXT 정리(pruning): 구글은 확인 TXT가 남아 있어야 소유권이 유지되므로 삭제하지 않음. 폐기 시에만 별도 승인 작업
+- 소유권 바인딩: 서비스 계정이 자기 이름으로 확인 → `webResource.update`로 소유자 이메일을 owners에 추가 → 소유자 Search Console에 속성이 나타남
+- 키 회전 90일, 유출 시 GCP 키 폐기
+- 허용 도메인 정본: Cloudflare 활성 존 목록 ∩ 워크플로 허용 목록(코드 리뷰를 거치는 변경)
 
 ## 6. 검증·롤백
 
