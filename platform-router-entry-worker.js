@@ -2,6 +2,7 @@ import {isSeasonalOperationsPath,seasonalOperationsResponse} from './seasonal-wo
 import { isSeasonalPortalPath, seasonalPortalResponse } from './seasonal-workforce/route.mjs';
 import { routeCooperative, cooperativeLocatorGuard } from './cooperative-control.js';
 import { isCgmaAiEducationPath, routeCgmaAiEducation } from './cgma-ai-education-route.js';
+import { isCgmaMotorFestivalPath, routeCgmaMotorFestival } from './cgma-motor-festival-route.js';
 import legacyPlatformRouter from './platform-router-worker.js';
 import { canonicalTrackingQueryRedirect } from './canonical-query-policy.js';
 import financeEntryWorker from './finance-entry-worker.js';
@@ -432,6 +433,7 @@ async function routePlatform(request,env,ctx){
     if(host===PUBLIC_HOST&&isSinglesRoute(url.pathname))return routeSinglesSurface(request,env);
     const siteBoard=await handleSiteBoardRequest(request,env);if(siteBoard)return siteBoard;
     if(host===PUBLIC_HOST&&isCgmaAiEducationPath(url.pathname))return routeCgmaAiEducation(request,env);
+    if(host===PUBLIC_HOST&&isCgmaMotorFestivalPath(url.pathname))return routeCgmaMotorFestival(request,env);
     if(host===PUBLIC_HOST&&url.pathname.startsWith(MALL_API_APEX_PREFIX)){const mallApi=await routeMallApiApex(request,env);if(mallApi)return mallApi;}
     if((host===PUBLIC_HOST||SEONAMMEDI_HOSTS.has(host))&&url.pathname.startsWith('/api/seonammedi/')){const seonamApi=await routeSeonamMediApi(request,env,ctx);if(seonamApi)return seonamApi;}
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isDeletedSeonamPath(url.pathname))return deletedSeonamResponse();
