@@ -64,3 +64,10 @@ test('completed CI runs also wake the runner because schedules are throttled',as
   assert.doesNotMatch(workflow,/ref: \$\{\{ github\.event\.workflow_run/,'never checks out code from the triggering run');
   assert.match(workflow,/github\.event_name == 'workflow_dispatch' && '--force'/);
 });
+
+test('runner verifies more candidates per run than the Workers-safe default',async()=>{
+  const [runner,monitor]=await Promise.all([readFile(new URL('../scripts/seonammedi-monitor-runner.mjs',import.meta.url),'utf8'),readFile(new URL('../seonammedi-monitor.js',import.meta.url),'utf8')]);
+  assert.match(runner,/verifyBudget:60,reverifyLimit:40/);
+  assert.match(monitor,/verifyBudget=MEDIA_ENRICH_LIMIT,reverifyLimit=REVERIFY_LIMIT/);
+  assert.match(monitor,/Math\.min\(Number\(verifyBudget\)\|\|0,120\)/,'hard cap');
+});

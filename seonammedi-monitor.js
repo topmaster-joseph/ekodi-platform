@@ -8,7 +8,7 @@ const MEDIA_ENRICH_LIMIT=8;
 // collected before publisher-URL resolution existed) are re-checked a few at a
 // time each hour so the public archive catches up without a burst of requests.
 const REVERIFY_LIMIT=8;
-const REVERIFY_SCAN=60;
+const REVERIFY_SCAN=200;
 const REVERIFY_RETRY_HOURS=12;
 const SOURCE_FETCH_TIMEOUT_MS=7000;
 // Deliberately rate-limited; sources outside the budget stay unpublished until verified.
@@ -288,10 +288,12 @@ export async function reverifyStoredCandidates(env,checkedAt,{limit=REVERIFY_LIM
   }
   return verified;
 }
-export async function runSeonamMediHourlyCheck(env,{scheduledAt=null,force=false}={}){
+// verifyBudget/reverifyLimit default to Workers-safe values; the GitHub runner
+// (no Workers subrequest cap) passes larger budgets.
+export async function runSeonamMediHourlyCheck(env,{scheduledAt=null,force=false,verifyBudget=MEDIA_ENRICH_LIMIT,reverifyLimit=REVERIFY_LIMIT}={}){
   if(!env?.DB?.prepare)return {ok:false,error:'storage_unavailable'};
   try{await ensureSourceVerificationColumn(env.DB)}catch(error){return {ok:false,error:'source_verification_schema_unavailable',message:clean(error?.message||error,300)}}
-  const startedAt=new Date(scheduledAt||Date.now()).toISOString();let runId=null;let checked=0,seen=0,added=0,verified=0,reverified=0,mediaCandidates=0,mediaBudget=MEDIA_ENRICH_LIMIT;const errors=[];
+  const startedAt=new Date(scheduledAt||Date.now()).toISOString();let runId=null;let checked=0,seen=0,added=0,verified=0,reverified=0,mediaCandidates=0,mediaBudget=Math.max(0,Math.min(Number(verifyBudget)||0,120));const errors=[];
   if(!force){
     try{
       const existing=await env.DB.prepare("SELECT id,status,completed_at FROM seonammedi_monitor_runs WHERE strftime('%Y-%m-%d %H',datetime(started_at,'+9 hours'))=strftime('%Y-%m-%d %H',datetime(?,'+9 hours')) AND status IN ('running','ok','partial') ORDER BY id DESC LIMIT 1").bind(startedAt).first();
@@ -337,7 +339,7 @@ export async function runSeonamMediHourlyCheck(env,{scheduledAt=null,force=false
       }catch(error){errors.push(query.key+':blog:'+clean(error?.message||error,160))}
     }
   }
-  try{reverified=await reverifyStoredCandidates(env,startedAt)}catch(error){errors.push('reverify:'+clean(error?.message||error,160))}
+  try{reverified=await reverifyStoredCandidates(env,startedAt,{limit:Math.max(0,Math.min(Number(reverifyLimit)||0,80))})}catch(error){errors.push('reverify:'+clean(error?.message||error,160))}
   const completedAt=new Date().toISOString();const status=errors.length?(checked?'partial':'failed'):'ok';
   await env.DB.prepare('UPDATE seonammedi_monitor_runs SET completed_at=?,status=?,sources_checked=?,items_seen=?,new_items=?,error_summary=? WHERE id=?')
     .bind(completedAt,status,checked,seen,added,clean(errors.join(' | '),1000),runId).run().catch(()=>{});
