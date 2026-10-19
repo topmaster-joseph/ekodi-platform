@@ -58,8 +58,9 @@ test('runner skips when a successful monitor run happened in the last 40 minutes
   assert.equal(await recentSuccessfulRun(failing,Date.now()),null,'guard failure never blocks collection');
 });
 
-test('merges to main also trigger the runner because schedules are throttled',async()=>{
+test('completed CI runs also wake the runner because schedules are throttled',async()=>{
   const workflow=await readFile(new URL('../.github/workflows/seonammedi-news-monitor-runner.yml',import.meta.url),'utf8');
-  assert.match(workflow,/push:\n    branches: \[main\]/);
+  assert.match(workflow,/workflow_run:\n    workflows: \[CI\]\n    types: \[completed\]/);
+  assert.doesNotMatch(workflow,/ref: \$\{\{ github\.event\.workflow_run/,'never checks out code from the triggering run');
   assert.match(workflow,/github\.event_name == 'workflow_dispatch' && '--force'/);
 });
