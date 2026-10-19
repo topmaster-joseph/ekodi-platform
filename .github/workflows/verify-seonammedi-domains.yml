@@ -76,3 +76,12 @@ jobs:
           grep -Fq 'Sitemap: https://ekodi.kr/sitemap.xml' <<< "$robots"
           sitemap=$(curl -fsS --connect-timeout 10 --max-time 30 'https://ekodi.kr/sitemap.xml')
           grep -Fq '<loc>https://ekodi.kr/seonammedi</loc>' <<< "$sitemap"
+          for host in seonammedi.kr xn--3e0b8b58jw4co4mnpll3k.kr; do
+            host_robots=$(curl -fsS --connect-timeout 10 --max-time 30 "https://$host/robots.txt")
+            grep -Fq 'Sitemap: https://seonammedi.kr/sitemap.xml' <<< "$host_robots"
+            ! grep -Eq '^Disallow: /[[:space:]]*$' <<< "$host_robots"
+            host_sitemap=$(curl -fsS --connect-timeout 10 --max-time 30 "https://$host/sitemap.xml")
+            grep -Fq '<loc>https://seonammedi.kr/</loc>' <<< "$host_sitemap"
+            grep -Fq '<loc>https://seonammedi.kr/board/notices</loc>' <<< "$host_sitemap"
+            echo "$host robots+sitemap ok"
+          done

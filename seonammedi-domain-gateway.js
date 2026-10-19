@@ -1,3 +1,5 @@
+import { EKODI_INDEXNOW_KEY_PATH, ekodiIndexNowKeyResponse } from './platform-indexnow.js';
+
 const ORIGIN = 'https://ekodi.kr';
 const SITE_PREFIX = '/seonammedi';
 const API_PREFIX = '/api/seonammedi';
@@ -53,12 +55,65 @@ function rewriteText(text, incoming, contentType) {
   }
   return output;
 }
+// Search discovery for the customer domains. seonammedi.kr is the canonical
+// host (index.html declares it); the Korean IDN host serves the same pages and
+// points crawlers to the canonical sitemap so both names resolve to one index.
+const CANONICAL_ORIGIN = 'https://seonammedi.kr';
+export const SEONAMMEDI_SITEMAP_PATHS = Object.freeze(['/', '/board/notices', '/board/voices']);
+export const SEONAMMEDI_ROBOTS_DISALLOW = Object.freeze(['/admin/', '/minutes/', '/api/', '/auth/', '/seonammedi/admin/']);
+
+function xmlEscape(value) {
+  return String(value).replace(/[<>&'"]/g, ch => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' })[ch]);
+}
+
+export function seonammediRobotsTxt() {
+  return [
+    'User-agent: *',
+    'Allow: /',
+    ...SEONAMMEDI_ROBOTS_DISALLOW.map(path => 'Disallow: ' + path),
+    '',
+    'Sitemap: ' + CANONICAL_ORIGIN + '/sitemap.xml',
+    '',
+  ].join('\n');
+}
+
+export function seonammediSitemapXml() {
+  const urls = SEONAMMEDI_SITEMAP_PATHS.map(path => {
+    const priority = path === '/' ? '1.0' : '0.8';
+    return '  <url><loc>' + xmlEscape(CANONICAL_ORIGIN + path) + '</loc><changefreq>daily</changefreq><priority>' + priority + '</priority></url>';
+  }).join('\n');
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + urls + '\n</urlset>\n';
+}
+
+function discoveryResponse(body, contentType, route, method) {
+  return new Response(method === 'HEAD' ? null : body, {
+    status: 200,
+    headers: {
+      'content-type': contentType,
+      'cache-control': 'public, max-age=3600',
+      'x-content-type-options': 'nosniff',
+      'x-ekodi-domain-mode': 'customer-domain-preserved',
+      'x-ekodi-route': route,
+    },
+  });
+}
+
+export function seonammediDiscoveryResponse(request, incoming) {
+  if (!['GET', 'HEAD'].includes(request.method)) return null;
+  if (incoming.pathname === '/robots.txt') return discoveryResponse(seonammediRobotsTxt(), 'text/plain; charset=utf-8', 'seonammedi-robots', request.method);
+  if (incoming.pathname === '/sitemap.xml') return discoveryResponse(seonammediSitemapXml(), 'application/xml; charset=utf-8', 'seonammedi-sitemap', request.method);
+  if (incoming.pathname === EKODI_INDEXNOW_KEY_PATH) return ekodiIndexNowKeyResponse();
+  return null;
+}
+
 export default {
   async fetch(request) {
     const incoming = new URL(request.url);
     if (!DOMAIN_HOSTS.has(incoming.hostname.toLowerCase())) {
       return new Response('Not found', { status: 404 });
     }
+    const discovery = seonammediDiscoveryResponse(request, incoming);
+    if (discovery) return discovery;
 
     const upstream = await fetch(upstreamRequest(request, incoming));
     const headers = new Headers(upstream.headers);
