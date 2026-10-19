@@ -21,7 +21,9 @@ export async function routeCgmaAiEducation(request,env){
   if(!isDocument&&!isScript)return policyResponse(404,'Not Found');
   if(!env?.ASSETS?.fetch)return policyResponse(503,'Survey assets unavailable');
   let asset;
-  try{asset=await env.ASSETS.fetch(request)}catch{return policyResponse(503,'Survey assets unavailable')}
+  // Strip conditional headers: the static-asset binding answers If-None-Match with 304, which the
+  // status check below would otherwise turn into a 503 once the browser cache needs revalidation.
+  try{asset=await env.ASSETS.fetch(new Request(url.toString(),{method:request.method}))}catch{return policyResponse(503,'Survey assets unavailable')}
   if(asset.status!==200)return policyResponse(503,'Survey assets unavailable');
   const mime=String(asset.headers.get('content-type')||'').toLowerCase();
   if(isDocument?!mime.includes('text/html'):!mime.includes('javascript'))return policyResponse(503,'Survey asset type unavailable');
