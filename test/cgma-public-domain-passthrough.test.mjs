@@ -21,7 +21,7 @@ test('upstream and location mapping keep the cgma.or.kr address',()=>{
   assert.equal(cgmaPublicUpstreamUrl('https://cgma.or.kr/festival/2026/apply/?a=1').toString(),'https://cheonggye-market.pages.dev/festival/2026/apply/?a=1');
   assert.equal(cgmaPublicLocation('/member/'),'https://cgma.or.kr/member/');
   assert.equal(cgmaPublicLocation('https://cheonggye-market.pages.dev/x?y=1'),'https://cgma.or.kr/x?y=1');
-  assert.equal(cgmaPublicLocation('https://auth.ekodi.kr/?site=cgma'),'https://auth.ekodi.kr/?site=cgma');
+  assert.equal(cgmaPublicLocation('https://example.com/login?site=cgma'),'https://example.com/login?site=cgma');
 });
 
 test('public mode serves the CGMA surface under cgma.or.kr (no redirect to ekodi.kr/cgma)',async()=>{
