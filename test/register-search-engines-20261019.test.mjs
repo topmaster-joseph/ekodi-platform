@@ -42,7 +42,7 @@ test('backoff retries then succeeds, and gives up after attempts', async () => {
   await assert.rejects(backoff(async () => { throw new Error('never'); }, { attempts: 2, sleep: async () => {} }), /never/);
 });
 
-function fakeApis({ existingTxt = [], verifyFailures = 1, owners = ['sa@p.iam.gserviceaccount.com'] } = {}) {
+function fakeApis({ existingTxt = [], verifyFailures = 1, owners = ['sa@p.iam.gserviceaccount.com'], liveOwners = null, putError = null } = {}) {
   const calls = []; let verifyCalls = 0;
   const fetchImpl = async (url, init = {}) => {
     const u = new URL(url); const method = init.method || 'GET';
@@ -56,7 +56,8 @@ function fakeApis({ existingTxt = [], verifyFailures = 1, owners = ['sa@p.iam.gs
       if (verifyCalls <= verifyFailures) return json(400, { error: { message: 'token not found yet' } });
       return json(200, { id: 'dns%3A%2F%2Fseonammedi.kr', owners });
     }
-    if (u.pathname.startsWith('/siteVerification/v1/webResource/') && method === 'PUT') return json(200, { owners: JSON.parse(init.body).owners });
+    if (u.pathname.startsWith('/siteVerification/v1/webResource/') && method === 'GET') return json(200, { owners: liveOwners || owners });
+    if (u.pathname.startsWith('/siteVerification/v1/webResource/') && method === 'PUT') return putError ? json(400, { error: { message: putError } }) : json(200, { owners: JSON.parse(init.body).owners });
     if (u.pathname.startsWith('/webmasters/v3/sites/')) return method === 'GET' ? json(200, { isPending: true }) : new Response(null, { status: 204 });
     return json(404, { error: { message: 'unexpected ' + url } });
   };
@@ -90,4 +91,14 @@ test('owner already present is not re-added; API errors surface without secrets'
   assert.ok(!calls.some(c => c.startsWith('PUT www.googleapis.com/siteVerification')));
   const failing = createClients({ fetchImpl: async () => new Response('{"error":{"message":"denied"}}', { status: 403 }), googleToken: 'secret-google-token', cfToken: 'x' });
   await assert.rejects(failing.g('https://www.googleapis.com/siteVerification/v1/token', 'POST', {}), err => !/secret-google-token/.test(err.message) && /denied/.test(err.message));
+});
+
+test('owner add merges live owners and a rejected owner update does not block registration', async () => {
+  const { fetchImpl, calls } = fakeApis({ verifyFailures: 0, liveOwners: ['sa@p.iam.gserviceaccount.com', 'other@example.com'], putError: 'You cannot unverify this site owner' });
+  const { g, cf } = createClients({ fetchImpl, googleToken: 'g', cfToken: 'c' });
+  const ev = await registerDomain({ g, cf, domain: 'ekodi.kr', zoneId: 'z'.repeat(32), sitemapPath: '/sitemap.xml', ownerEmail: 'owner@example.com', sleep: async () => {} });
+  const owner = ev.steps.find(s => s.name === 'addOwner');
+  assert.equal(owner.action, 'deferred');
+  assert.ok(ev.steps.some(s => s.name === 'sitemapSubmit'));
+  assert.ok(calls.some(c => c.startsWith('GET www.googleapis.com/siteVerification/v1/webResource/')));
 });
