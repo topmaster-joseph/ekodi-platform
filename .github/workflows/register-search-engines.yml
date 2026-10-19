@@ -1,0 +1,98 @@
+name: Register Domain with Search Engines (SEARCH-REGISTER-001)
+# deployment-guardrail: topology-workflow-manual-only
+# Google: service account -> DNS_TXT token -> Cloudflare TXT (add-only) ->
+# verify -> owner binding -> Search Console domain property -> sitemap.
+# Naver has no public registration API (EKODI AI consultation #5336), so it is
+# handled by the verification meta slot + IndexNow, never by login automation.
+
+on:
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: 'Domain (Unicode or punycode). Must be in the allow-list below.'
+        required: true
+        type: string
+      sitemap_path:
+        description: 'Sitemap path on the domain'
+        required: false
+        default: '/sitemap.xml'
+        type: string
+      release_branch_ref:
+        description: 'Authorized EKODI orchestrator release branch (ai/<agent>/orch_<task-id>)'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Exact authorized EKODI task ID (orch_<task-id>)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-search-engine-registration
+  cancel-in-progress: false
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: search-registration
+    env:
+      EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref }}
+      EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id }}
+      # Allow-list: changes only through code review. Unicode or punycode accepted.
+      SEARCH_REGISTER_ALLOWED_DOMAINS: 'seonammedi.kr,xn--3e0b8b58jw4co4mnpll3k.kr'
+      SEARCH_REGISTER_DOMAIN: ${{ inputs.domain }}
+      SEARCH_REGISTER_SITEMAP_PATH: ${{ inputs.sitemap_path }}
+      SEARCH_REGISTER_OWNER_EMAIL: topmaster.joseph@gmail.com
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+
+      - name: Owner one-time prerequisites (human gate)
+        env:
+          SA_KEY: ${{ secrets.GOOGLE_SEARCH_SA_KEY_JSON }}
+          DNS_TOKEN: ${{ secrets.CLOUDFLARE_DNS_TXT_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=()
+          [ -n "$SA_KEY" ] || missing+=('GOOGLE_SEARCH_SA_KEY_JSON')
+          [ -n "$DNS_TOKEN" ] || missing+=('CLOUDFLARE_DNS_TXT_TOKEN')
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "HUMAN_GATE_REQUIRED: environment 'search-registration' secrets missing: ${missing[*]}" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo 'No fallback to the broad CLOUDFLARE_API_TOKEN (EKODI AI consultation #5336).' | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+      - name: Resolve zone with the scoped DNS token
+        env:
+          DNS_TOKEN: ${{ secrets.CLOUDFLARE_DNS_TXT_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          domain=$(node --input-type=module -e "import('./scripts/register-search-engines.mjs').then(m=>process.stdout.write(m.validateDomain(process.env.SEARCH_REGISTER_DOMAIN, process.env.SEARCH_REGISTER_ALLOWED_DOMAINS.split(','))))")
+          zone=$(curl -fsS "https://api.cloudflare.com/client/v4/zones?name=$domain&status=active" -H "Authorization: Bearer $DNS_TOKEN" | jq -r '.result[0].id // empty')
+          [[ "$zone" =~ ^[a-f0-9]{32}$ ]] || { echo "Scoped DNS token cannot see active zone for $domain"; exit 1; }
+          echo "SEARCH_REGISTER_ZONE_ID=$zone" >> "$GITHUB_ENV"
+          echo "SEARCH_REGISTER_DOMAIN=$domain" >> "$GITHUB_ENV"
+
+      - name: Register with Google Search Console
+        env:
+          GOOGLE_SEARCH_SA_KEY_JSON: ${{ secrets.GOOGLE_SEARCH_SA_KEY_JSON }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DNS_TXT_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/register-search-engines.mjs | tee "$RUNNER_TEMP/evidence.json"
+          {
+            echo '## SEARCH-REGISTER-001 evidence'
+            echo '```json'; cat "$RUNNER_TEMP/evidence.json"; echo '```'
+            echo 'Naver: verification meta slot (search-engine-verification.js) + IndexNow; console confirmation is a human step.'
+          } >> "$GITHUB_STEP_SUMMARY"

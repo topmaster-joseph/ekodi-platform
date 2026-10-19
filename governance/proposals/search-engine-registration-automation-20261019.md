@@ -1,7 +1,10 @@
 # ADR 제안: 검색엔진 등록 자동화 모듈 (SEARCH-REGISTER-001)
 
-- 상태: 제안 v2 (1차 EKODI AI 협의 approve-with-changes 반영, 다중협의 대기)
-- 1차 협의: 이슈 #5336, run 39223938198 (gemini, 단일 검토)
+- 상태: **결정 (v3)** — EKODI AI 협의 3회 모두 approve-with-changes, 지적사항 반영
+- 협의 기록: 이슈 #5336
+  - 1차 run 39223938198: 단일 검토(not_required), approve-with-changes
+  - 2차 run 39224751056: 단일 검토, approve-with-changes
+  - 3차 run 39225243586: highUncertainty 재검증 경로, planner·operator 모두 approve-with-changes. sentinel은 provider_disabled_or_missing → 협의 상태 partial로 기록 (AI-CONSULT-001: record-isolate-continue)
 - task_id: search-register-automation-20261019
 - 작성: 2026-10-19, Claude (교체 가능한 개발 작업자)
 - 최초 대상: seonammedi.kr, 서남권국립의대.kr (xn--3e0b8b58jw4co4mnpll3k.kr)
@@ -63,6 +66,13 @@
 - 소유권 바인딩: 서비스 계정이 자기 이름으로 확인 → `webResource.update`로 소유자 이메일을 owners에 추가 → 소유자 Search Console에 속성이 나타남
 - 키 회전 90일, 유출 시 GCP 키 폐기
 - 허용 도메인 정본: Cloudflare 활성 존 목록 ∩ 워크플로 허용 목록(코드 리뷰를 거치는 변경)
+
+## 5-1. 3차 협의 반영
+
+- 한글 도메인은 모든 API·DNS 호출 전에 ACE(punycode)로 정규화 (`normalizeDomain`)
+- TXT 수명주기: 생성 시 comment `Managed by EKODI SEARCH-REGISTER-001`. 속성이 유효한 동안 유지(구글 소유권 유지 조건), 도메인 폐기 시에만 별도 승인 작업으로 삭제
+- 비밀값: 저장소가 개인 계정 소유라 Organization secret 불가 → Environment `search-registration` 격리 (EKODI Core Vault 도입 시 이관)
+- 도메인 속성(`sc-domain:`)의 사이트맵은 전체 URL(`https://<domain>/sitemap.xml`)로 제출
 
 ## 6. 검증·롤백
 
