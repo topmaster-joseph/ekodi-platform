@@ -84,6 +84,8 @@ const controlApiTouched=changedFiles.some(file=>
   // Guarded Control API deploy applies canonical ekodi-auth D1 migrations.
   // GitHub-token PR merges do not emit push workflows; never strand new grants.
   (file.startsWith('migrations/')&&file.endsWith('.sql')&&!file.includes('messenger'))||[
+  // CGMA motor festival 2026 intake API (Control API, D1 ekodi-auth).
+  'motor-festival-registration-api.js',
 
   // LANG-UI-001: public language status is served by api-worker.js via
   // language-automation.js. A GITHUB_TOKEN merge does not fire main push CI,
@@ -189,6 +191,9 @@ const shellRuntimeTouched=changedFiles.some(file=>
    'scripts/converge-orchestrated-pr-merge.mjs'].includes(file)
 );
 const sharedSiteTouched=changedFiles.some(file=>
+  // CGMA workspace pages compiled into Site Core (/cgma/ai-education/, /cgma/motor-festival-2026/).
+  ['cgma-ai-education-route.js','cgma-motor-festival-route.js'].includes(file)||
+  (file.startsWith('prototypes/cgma-')&&/\.(html|js)$/.test(file))||
   // The EKODI public homepage is compiled into the shared Site Core. GITHUB_TOKEN
   // merges do not trigger main push workflows: dispatch its guarded release here.
   ['index.html','homepage-ambient.js','homepage-ambient.css'].includes(file)||
