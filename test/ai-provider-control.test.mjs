@@ -353,3 +353,35 @@ test('Claude 403 distinguishes Anthropic region block (with edge colo) from key 
   assert.match(admin,/anthropic_403_region_blocked/);assert.match(admin,/Claude 지역 차단\(HTTP 403\)/);
   assert.match(admin,/anthropic_403_permission_error/);assert.match(admin,/실행 위치/);
 });
+
+test('a pasted provider key is verified before it replaces the stored key',async()=>{
+  const { preflightProviderSecret }=await import('../ai-provider-control.js');
+  const original=globalThis.fetch,seen=[];
+  const env={ANTHROPIC_API_KEY:'sk-ant-old-key-000000'};
+  try{
+    globalThis.fetch=async(url,init)=>{seen.push(init.headers['x-api-key']);return new Response(JSON.stringify({type:'error',error:{type:'authentication_error',message:'invalid x-api-key'}}),{status:401})};
+    const rejected=await preflightProviderSecret(env,'anthropic','ANTHROPIC_API_KEY','sk-ant-bad-key-1111111');
+    assert.equal(rejected.rejected,true);
+    assert.equal(rejected.diagnostic.category,'authentication-error');
+    assert.equal(seen[0],'sk-ant-bad-key-1111111','the candidate key, not the stored one, is tried');
+    assert.equal(env.ANTHROPIC_API_KEY,'sk-ant-old-key-000000','the stored key is left untouched');
+    assert.equal(JSON.stringify(rejected).includes('sk-ant-bad'),false);
+
+    globalThis.fetch=async()=>new Response(JSON.stringify({content:[{type:'text',text:'EKODI_PROVIDER_OK'}],usage:{input_tokens:5,output_tokens:3}}),{status:200});
+    const verified=await preflightProviderSecret(env,'anthropic','ANTHROPIC_API_KEY','sk-ant-good-key-222222');
+    assert.equal(verified.ok,true);
+    assert.equal(verified.rejected,false);
+
+    globalThis.fetch=async()=>new Response(JSON.stringify({type:'error',error:{type:'forbidden',message:'Request not allowed'}}),{status:403,headers:{'cf-ray':'abc-HKG'}});
+    const regional=await preflightProviderSecret(env,'anthropic','ANTHROPIC_API_KEY','sk-ant-good-key-222222');
+    assert.equal(regional.rejected,false,'a region block says nothing about the key');
+    assert.match(regional.code,/region_blocked/);
+  }finally{globalThis.fetch=original}
+  const source=read('ai-provider-control.js');
+  const connect=source.slice(source.indexOf('async function connectSecret('));
+  assert.ok(connect.indexOf('preflightProviderSecret(')<connect.indexOf('putRuntimeSecret(env,binding,value)'),'verification runs before the secret is written');
+  assert.match(connect,/provider_key_rejected/);
+  const admin=read('admin-provider-control.js');
+  assert.match(admin,/키 검증 완료 · 저장했고 정상 동작을 확인했습니다/);
+  assert.match(admin,/기존 키는 그대로 두었습니다/);
+});
