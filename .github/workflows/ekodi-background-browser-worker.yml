@@ -229,6 +229,8 @@ jobs:
           EKODI_BROWSER_TASK_FILE: artifacts/browser-task.json
           EKODI_BROWSER_ARTIFACT_DIR: artifacts/background-browser-worker
         run: node scripts/ekodi-background-browser-worker.mjs
+      - name: Check real Cheonggye Pass UI with isolated fake identities on PC and mobile
+        run: node scripts/verify-cheonggyepass-native-ui.mjs
       - name: Validate evidence
         shell: bash
         run: |
@@ -254,5 +256,8 @@ jobs:
         if: always()
         with:
           name: ekodi-background-browser-${{ github.run_id }}-${{ github.run_attempt }}
-          path: artifacts/background-browser-worker
+          path: |
+            artifacts/background-browser-worker
+            artifacts/cheonggyepass-native-ui/report.json
+            artifacts/cheonggyepass-native-ui/*.png
           retention-days: 7
