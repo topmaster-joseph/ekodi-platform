@@ -6,6 +6,7 @@ on:
     paths:
       - 'delivery/**'
       - 'delivery-worker.js'
+      - 'site-discovery-head.js'
       - 'ekodi-service-manifest.js'
       - 'platform-boundaries.json'
       - 'test/delivery-hub-ai.test.mjs'
@@ -18,6 +19,7 @@ on:
     paths:
       - 'delivery/**'
       - 'delivery-worker.js'
+      - 'site-discovery-head.js'
       - 'ekodi-service-manifest.js'
       - 'platform-boundaries.json'
       - 'test/delivery-hub-ai.test.mjs'

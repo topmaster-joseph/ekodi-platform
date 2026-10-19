@@ -196,6 +196,7 @@ on:
       - 'site-discovery-head.js'
       - 'public-discovery-registry.js'
       - 'test/search-exposure-registry-20261019.test.mjs'
+      - 'test/search-exposure-direct-workers-20261019.test.mjs'
       - 'test/site-discovery-head.test.mjs'
       - 'homepage-ambient.css'
       - 'homepage-ambient.js'
