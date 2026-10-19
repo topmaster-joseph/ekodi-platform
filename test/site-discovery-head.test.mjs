@@ -70,3 +70,9 @@ test('self-managed and release-digest pages are never modified (SeonamMedi parit
   const digest = '<html><head><meta name="ekodi-release" content="r1"><title>t</title></head></html>';
   assert.equal(decorateSiteDiscoveryHtml(digest, { canonical: 'https://ekodi.kr/a', siteName: 'n' }), digest);
 });
+
+test('decorates proxied responses that still carry content-encoding', async () => {
+  const out = await ensureSiteDiscoveryHead(req(), res(html, { headers: { 'content-type': 'text/html', 'content-encoding': 'gzip' } }), site);
+  assert.equal(out.headers.get('content-encoding'), null);
+  assert.match(await out.text(), /rel="canonical"/);
+});
