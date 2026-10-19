@@ -36,8 +36,12 @@ test('Shared Site candidate smoke excludes the independently routed CGMA public 
 
 test('CGMA edge workflow pins board delegation source and verifies independent board', async () => {
   const cgmaWorkflow=await readFile(new URL('../.github/workflows/deploy-cgma-apex-edge.yml',import.meta.url),'utf8');
-  // Pin bumped 2026-10-20: cgma.or.kr representative-address gateway (cheonggye-market #180).
-  assert.match(cgmaWorkflow, /CGMA_SOURCE_REF: '8d867a750fdf08eef08cfa8a5d46f3373d69c7e0'/);
+  // Pin bumped 2026-10-20: motor festival delegation (cheonggye-market #181), on top of cgma.or.kr (#180).
+  assert.match(cgmaWorkflow, /CGMA_SOURCE_REF: 'ade95507490c15d8d9539aa0daaaf178ed96372a'/);
+  assert.match(cgmaWorkflow, /grep -Fq 'isMotorFestivalPath' cgma-root-gateway\.js/);
+  assert.match(cgmaWorkflow, /grep -Fq 'delegatedMotorFestivalResponse' cgma-root-gateway\.js/);
+  assert.match(cgmaWorkflow, /check_cgma '\/cgma\/motor-festival-2026\/' 'id="apply"' 'cgma-motor-festival-2026'/);
+  assert.match(cgmaWorkflow, /check_protected_asset '\/cgma\/admin\/assets\/cgma-motor-festival-admin\.js' 'mountCgmaMotorFestivalAdmin' 'admin-workspace-asset'/);
   assert.match(cgmaWorkflow, /check_cgma '\/cgma' '<link rel="canonical" href="https:\/\/cgma\.or\.kr\/">' 'cgma-root-gateway'/);
   assert.match(cgmaWorkflow, /grep -Fq 'isBoardPath' cgma-root-gateway\.js/);
   assert.match(cgmaWorkflow, /grep -Fq 'delegatedBoardResponse' cgma-root-gateway\.js/);
