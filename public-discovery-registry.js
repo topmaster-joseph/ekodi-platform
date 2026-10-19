@@ -19,12 +19,14 @@ function normalizePath(value='/'){
 
 // Public surfaces whose page deliberately ships `noindex` (partner login portal).
 // Listing them in the sitemap sends crawlers a contradictory signal.
-export const PAGE_OWNED_NOINDEX_PATHS=Object.freeze(new Set(['/ekodibiz/trade']));
+export const PAGE_OWNED_NOINDEX_PATHS=Object.freeze(new Set(['/ekodibiz/trade',
+  // Legacy Pages studio; the canonical church live entry is /live/church/.
+  '/ekodichurch/live']));
 
 // Sites whose live entry 308s from /<site> to /<site>/ (audit run 39241336747).
 // The sitemap lists the final URL so crawlers get no redirect hop.
 export const TRAILING_SLASH_CANONICAL_PATHS=Object.freeze(new Set([
-  '/bible','/books','/cafe','/community','/ekodichurch','/ekodichurch/live','/ekodilab','/ekodipay',
+  '/bible','/books','/cafe','/community','/ekodichurch','/ekodilab','/ekodipay',
   '/journal','/jubilee','/life','/live','/open','/publishing','/pyeonggongmok','/work',
 ]));
 
