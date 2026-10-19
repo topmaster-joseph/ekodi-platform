@@ -30,7 +30,10 @@ const SPACE_ADMIN_MANAGE_PATHS = Object.freeze({
   'cheonggye-local':'/cheonggye/admin',
   'cheonggye-pass':'/cheonggye/admin/pass',
   cgma:'/cgma/admin',
+  seonammedi:'/seonammedi/admin/?panel=access',
 });
+const SPACE_ADMIN_OVERVIEW_ROLE_SET = new Set([...SPACE_ADMIN_ROLE_SET,'tenant_admin','workspace_admin','client_admin','client_editor']);
+const SPACE_ADMIN_STATUS_LABELS = Object.freeze({ active:'활성', pre_registered:'로그인 대기', disabled:'중지', expired:'만료' });
 let locale = readLocale();
 let panelInstalled = false;
 let currentSession = null;
@@ -150,7 +153,7 @@ function installStyle() {
   const style = document.createElement('style');
   style.id = 'ekodi-admin-access-style';
   style.textContent = `
-.ekodi-admin-access{display:grid;gap:18px}.ekodi-space-admins{display:grid;gap:12px;padding-top:8px;border-top:1px solid rgba(148,163,184,.18)}.ekodi-space-admin-toolbar{display:grid;grid-template-columns:minmax(220px,1fr) minmax(220px,1fr) auto;gap:10px;align-items:end}.ekodi-space-admin-toolbar label,.ekodi-space-admin-form label{display:grid;gap:6px}.ekodi-space-admin-toolbar select,.ekodi-space-admin-form input,.ekodi-space-admin-form select,.ekodi-space-admin-row select{min-height:38px;border-radius:9px;border:1px solid rgba(148,163,184,.28);background:rgba(15,23,42,.55);color:inherit;padding:7px 10px}.ekodi-space-admin-form{display:grid;grid-template-columns:minmax(180px,1fr) minmax(220px,1.2fr) 180px 140px 140px auto;gap:8px;align-items:end}.ekodi-space-admin-list{display:grid;gap:8px}.ekodi-space-admin-row{display:grid;grid-template-columns:minmax(220px,1.3fr) 180px 130px 130px auto;gap:8px;align-items:center;padding:12px;border:1px solid rgba(148,163,184,.2);border-radius:12px}.ekodi-space-admin-manage{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:7px 12px;border:1px solid rgba(56,189,248,.28);border-radius:9px;background:rgba(14,165,233,.08);color:#bfe8ff;text-decoration:none;font-size:12px;font-weight:800;white-space:nowrap}.ekodi-space-admin-manage[hidden]{display:none}.ekodi-admin-add{display:grid;grid-template-columns:minmax(220px,1fr) 180px auto;gap:10px;align-items:end}.ekodi-admin-add label{display:grid;gap:6px}.ekodi-admin-add input,.ekodi-admin-add select,.ekodi-admin-row select{min-height:38px;border-radius:9px;border:1px solid rgba(148,163,184,.28);background:rgba(15,23,42,.55);color:inherit;padding:7px 10px}.ekodi-admin-add button,.ekodi-admin-row button{min-height:38px;border-radius:9px;padding:7px 12px}.ekodi-admin-list{display:grid;gap:9px}.ekodi-admin-row{display:grid;grid-template-columns:minmax(220px,1.4fr) 170px 150px auto;gap:10px;align-items:center;padding:13px;border:1px solid rgba(148,163,184,.2);border-radius:12px}.ekodi-admin-id{display:grid;gap:4px}.ekodi-admin-id small{opacity:.65}.ekodi-admin-msg.error{color:#fca5a5}
+.ekodi-admin-access{display:grid;gap:18px}.ekodi-space-admins{display:grid;gap:12px;padding-top:8px;border-top:1px solid rgba(148,163,184,.18)}.ekodi-space-admin-toolbar{display:grid;grid-template-columns:minmax(220px,1fr) minmax(220px,1fr) auto;gap:10px;align-items:end}.ekodi-space-admin-toolbar label,.ekodi-space-admin-form label{display:grid;gap:6px}.ekodi-space-admin-toolbar select,.ekodi-space-admin-form input,.ekodi-space-admin-form select,.ekodi-space-admin-row select{min-height:38px;border-radius:9px;border:1px solid rgba(148,163,184,.28);background:rgba(15,23,42,.55);color:inherit;padding:7px 10px}.ekodi-space-admin-form{display:grid;grid-template-columns:minmax(180px,1fr) minmax(220px,1.2fr) 180px 140px 140px auto;gap:8px;align-items:end}.ekodi-space-admin-list{display:grid;gap:8px}.ekodi-space-admin-row{display:grid;grid-template-columns:minmax(220px,1.3fr) 180px 130px 130px auto;gap:8px;align-items:center;padding:12px;border:1px solid rgba(148,163,184,.2);border-radius:12px}.ekodi-space-admin-manage{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:7px 12px;border:1px solid rgba(56,189,248,.28);border-radius:9px;background:rgba(14,165,233,.08);color:#bfe8ff;text-decoration:none;font-size:12px;font-weight:800;white-space:nowrap}.ekodi-space-admin-manage[hidden]{display:none}.ekodi-space-admin-overview{display:grid;gap:10px;padding-top:12px;border-top:1px solid rgba(148,163,184,.18)}.ekodi-space-admin-overview-head{display:flex;gap:12px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap}.ekodi-space-admin-overview-head h3,.ekodi-space-admin-overview-head p{margin:0}.ekodi-space-admin-overview-list{display:grid;gap:10px}.ekodi-space-admin-group{border:1px solid rgba(148,163,184,.2);border-radius:12px;padding:12px;display:grid;gap:8px}.ekodi-space-admin-group header{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}.ekodi-space-admin-group header div{display:grid;gap:2px}.ekodi-space-admin-group header small{opacity:.65}.ekodi-space-admin-group-actions{display:flex;gap:6px;flex-wrap:wrap}.ekodi-space-admin-group table{width:100%;border-collapse:collapse;font-size:13px}.ekodi-space-admin-group th,.ekodi-space-admin-group td{text-align:left;padding:6px 8px;border-top:1px solid rgba(148,163,184,.14);overflow-wrap:anywhere}.ekodi-space-admin-group th{font-weight:700;opacity:.7}.ekodi-space-admin-group .empty{opacity:.6;margin:0}.ekodi-admin-add{display:grid;grid-template-columns:minmax(220px,1fr) 180px auto;gap:10px;align-items:end}.ekodi-admin-add label{display:grid;gap:6px}.ekodi-admin-add input,.ekodi-admin-add select,.ekodi-admin-row select{min-height:38px;border-radius:9px;border:1px solid rgba(148,163,184,.28);background:rgba(15,23,42,.55);color:inherit;padding:7px 10px}.ekodi-admin-add button,.ekodi-admin-row button{min-height:38px;border-radius:9px;padding:7px 12px}.ekodi-admin-list{display:grid;gap:9px}.ekodi-admin-row{display:grid;grid-template-columns:minmax(220px,1.4fr) 170px 150px auto;gap:10px;align-items:center;padding:13px;border:1px solid rgba(148,163,184,.2);border-radius:12px}.ekodi-admin-id{display:grid;gap:4px}.ekodi-admin-id small{opacity:.65}.ekodi-admin-msg.error{color:#fca5a5}
 .ekodi-admin-context{position:sticky;top:0;z-index:38;display:flex;align-items:center;gap:9px;min-height:48px;padding:7px 16px;border-bottom:1px solid rgba(148,163,184,.18);background:rgba(7,21,34,.98)}.ekodi-admin-context label{display:flex;align-items:center;gap:8px;min-width:0}.ekodi-admin-context strong{font-size:11px;color:#aebed0;white-space:nowrap}.ekodi-admin-context select{min-width:230px;max-width:min(45vw,430px);min-height:34px;border:1px solid rgba(148,163,184,.26);border-radius:8px;background:#0b1d2e;color:#f4f8fc;padding:5px 30px 5px 9px;font:inherit;font-size:13px}.ekodi-admin-context-note{font-size:10px;color:#8498aa;white-space:nowrap}.ekodi-admin-context-badge{margin-left:auto;display:inline-flex;align-items:center;min-height:26px;padding:3px 8px;border:1px solid rgba(56,189,248,.22);border-radius:999px;color:#9edcff;font-size:10px;font-weight:800}
 .ekodi-privilege-overlay{position:fixed;inset:0;z-index:10050;display:grid;place-items:center;padding:18px;background:rgba(2,8,23,.72)}.ekodi-privilege-card{width:min(92vw,440px);display:grid;gap:13px;padding:22px;border:1px solid rgba(148,163,184,.28);border-radius:16px;background:#0b1d2e;color:#f4f8fc;box-shadow:0 24px 70px rgba(0,0,0,.35)}.ekodi-privilege-card h3{margin:0;font-size:19px}.ekodi-privilege-card p{margin:0;color:#aebed0;line-height:1.55}.ekodi-privilege-google{min-height:42px}.ekodi-privilege-actions{display:flex;justify-content:flex-end}.ekodi-privilege-actions button{min-height:36px;padding:7px 12px;border-radius:8px}.ekodi-privilege-state{min-height:18px;font-size:12px;color:#9edcff}
 .ekodi-workspace-connections{display:grid;gap:14px}.ekodi-workspace-connection-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.ekodi-workspace-connection-head h2{margin:2px 0 4px}.ekodi-workspace-connection-summary{display:grid;grid-template-columns:repeat(3,minmax(120px,1fr));gap:8px}.ekodi-workspace-connection-summary article{padding:10px 12px;border:1px solid rgba(148,163,184,.2);border-radius:10px;background:rgba(15,23,42,.32)}.ekodi-workspace-connection-summary small{display:block;opacity:.7}.ekodi-workspace-connection-summary strong{font-size:18px}.ekodi-workspace-connection-list{display:grid;gap:8px}.ekodi-workspace-connection-row{display:grid;grid-template-columns:minmax(220px,1.4fr) 145px minmax(170px,.8fr) auto;gap:9px;align-items:center;padding:12px;border:1px solid rgba(148,163,184,.2);border-radius:11px}.ekodi-workspace-connection-id{display:grid;gap:3px}.ekodi-workspace-connection-id small{opacity:.68}.ekodi-workspace-connection-row select,.ekodi-workspace-connection-row input,.ekodi-workspace-connection-form input,.ekodi-workspace-connection-form select{min-height:36px;border-radius:8px;border:1px solid rgba(148,163,184,.26);background:rgba(15,23,42,.55);color:inherit;padding:6px 9px}.ekodi-workspace-connection-actions{display:flex;gap:6px;flex-wrap:wrap}.ekodi-workspace-connection-form{display:grid;grid-template-columns:150px 150px minmax(200px,1fr) minmax(180px,1fr) 170px auto;gap:8px;align-items:end}.ekodi-workspace-connection-form label{display:grid;gap:5px}.ekodi-workspace-connection-note{font-size:11px;opacity:.72}.ekodi-workspace-connection-health{display:inline-block;margin-top:4px;padding:2px 6px;border-radius:999px;border:1px solid rgba(251,191,36,.3);font-size:10px}.ekodi-workspace-connection-health.ok{border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.08)}.ekodi-workspace-connection-msg.error{color:#fca5a5}
@@ -370,7 +373,7 @@ function ensureAdminPanel() {
   installStyle();
   const section = document.createElement('section');
   section.className = 'section ekodi-admin-access hidden-panel'; section.dataset.panel = 'admins'; section.hidden = true;
-  section.innerHTML = '<div><p class="kicker">PLATFORM ACCESS</p><h2 data-admin-title></h2><p data-admin-copy></p></div><h3>플랫폼 전역 관리자</h3><form class="ekodi-admin-add" data-admin-form><label><span data-admin-email-label></span><input name="email" type="email" required placeholder="name@ekodi.kr"></label><label><span data-admin-role-label></span><select name="role"></select></label><button type="submit" data-admin-add-label></button></form><p class="ekodi-admin-msg" data-admin-message role="status"></p><div class="ekodi-admin-list" data-admin-list></div><div class="ekodi-space-admins" data-space-admins><div><p class="kicker">SPACE ADMINISTRATION</p><h3>사이트·공간 관리자</h3><p>사이트/공간을 선택하면 해당 공간의 관리자만 표시됩니다.</p></div><div class="ekodi-space-admin-toolbar"><label>사이트·공간<select data-space-admin-tenant></select></label><label>목록보기<select data-space-admin-visibility-filter><option value="">전체</option><option value="private">비공개</option><option value="public">공개</option></select></label><a class="ekodi-space-admin-manage" data-space-admin-manage hidden>운영관리 열기</a></div><form class="ekodi-space-admin-form" data-space-admin-form><label>이름<input name="displayName" type="text" maxlength="120"></label><label>Google 이메일<input name="email" type="email" required></label><label>역할<select name="role"></select></label><label>공개<select name="visibility"><option value="private">비공개</option><option value="public">공개</option></select></label><label>만료일<input name="expiresAt" type="date"></label><button type="submit">등록</button></form><p class="ekodi-admin-msg" data-space-admin-message role="status"></p><div class="ekodi-space-admin-list" data-space-admin-list></div></div>';
+  section.innerHTML = '<div><p class="kicker">PLATFORM ACCESS</p><h2 data-admin-title></h2><p data-admin-copy></p></div><h3>플랫폼 전역 관리자</h3><form class="ekodi-admin-add" data-admin-form><label><span data-admin-email-label></span><input name="email" type="email" required placeholder="name@ekodi.kr"></label><label><span data-admin-role-label></span><select name="role"></select></label><button type="submit" data-admin-add-label></button></form><p class="ekodi-admin-msg" data-admin-message role="status"></p><div class="ekodi-admin-list" data-admin-list></div><div class="ekodi-space-admins" data-space-admins><div><p class="kicker">SPACE ADMINISTRATION</p><h3>사이트·공간 관리자</h3><p>사이트/공간을 선택하면 해당 공간의 관리자만 표시됩니다.</p></div><div class="ekodi-space-admin-toolbar"><label>사이트·공간<select data-space-admin-tenant></select></label><label>목록보기<select data-space-admin-visibility-filter><option value="">전체</option><option value="private">비공개</option><option value="public">공개</option></select></label><a class="ekodi-space-admin-manage" data-space-admin-manage hidden>운영관리 열기</a></div><form class="ekodi-space-admin-form" data-space-admin-form><label>이름<input name="displayName" type="text" maxlength="120"></label><label>Google 이메일<input name="email" type="email" required></label><label>역할<select name="role"></select></label><label>공개<select name="visibility"><option value="private">비공개</option><option value="public">공개</option></select></label><label>만료일<input name="expiresAt" type="date"></label><button type="submit">등록</button></form><p class="ekodi-admin-msg" data-space-admin-message role="status"></p><div class="ekodi-space-admin-list" data-space-admin-list></div><div class="ekodi-space-admin-overview" data-space-admin-overview><div class="ekodi-space-admin-overview-head"><div><p class="kicker">SITE ADMIN ROSTER</p><h3>사이트별 관리자 현황</h3><p>모든 사이트·공간에 등록된 관리자를 한눈에 확인하고, 편집을 누르면 위 편집기에서 바로 수정·등록할 수 있습니다.</p></div><button type="button" data-space-admin-overview-refresh>새로고침</button></div><p class="ekodi-admin-msg" data-space-admin-overview-message role="status"></p><div class="ekodi-space-admin-overview-list" data-space-admin-overview-list></div></div></div>';
   content.append(section);
   fillRoles(section.querySelector('select[name="role"]'));
   section.querySelector('[data-admin-form]').addEventListener('submit', addAccount);
@@ -378,6 +381,7 @@ function ensureAdminPanel() {
   section.querySelector('[data-space-admin-form]').addEventListener('submit', addSpaceAdmin);
   section.querySelector('[data-space-admin-tenant]').addEventListener('change',()=>{syncSpaceAdminManageLink();void loadSpaceAdmins();});
   section.querySelector('[data-space-admin-visibility-filter]').addEventListener('change', renderSpaceAdmins);
+  section.querySelector('[data-space-admin-overview-refresh]').addEventListener('click',()=>{spaceDirectory=null;void loadSpaceAdmins();});
   panelInstalled = true;
   translateAdminPanel();
   return section;
@@ -436,11 +440,16 @@ function syncSpaceAdminManageLink(){
 }
 async function ensureSpaceDirectory(){
   if(spaceDirectory)return spaceDirectory;
-  spaceDirectory=await api('/api/customers/directory');
   const select=document.querySelector('[data-space-admin-tenant]');
+  const previous=select?.value||'';
+  if(select&&!select.options.length){const loading=document.createElement('option');loading.value='';loading.textContent='사이트·공간 불러오는 중…';select.append(loading);}
+  spaceAdminMessage('사이트·공간 목록을 불러오는 중입니다.');
+  spaceDirectory=await api('/api/customers/directory');
   if(select){
     select.replaceChildren();
+    if(!(spaceDirectory.tenants||[]).length){const empty=document.createElement('option');empty.value='';empty.textContent='등록된 사이트·공간 없음';select.append(empty);}
     for(const tenant of spaceDirectory.tenants||[]){const option=document.createElement('option');option.value=tenant.slug;option.textContent=tenant.domain?tenant.name+' · '+tenant.domain:tenant.name;select.append(option);}
+    if(previous&&(spaceDirectory.tenants||[]).some(tenant=>tenant.slug===previous))select.value=previous;
     syncSpaceAdminManageLink();
   }
   return spaceDirectory;
@@ -464,9 +473,51 @@ function renderSpaceAdmins(){
     row.append(id,role,visibility,status,save);list.append(row);
   }
 }
+function spaceAdminOverviewMessage(text,error=false){
+  const node=document.querySelector('[data-space-admin-overview-message]');if(!node)return;node.textContent=text||'';node.classList.toggle('error',error);
+}
+function selectSpaceAdminTenant(slug){
+  const select=document.querySelector('[data-space-admin-tenant]');if(!select)return;
+  select.value=slug;syncSpaceAdminManageLink();void loadSpaceAdmins();
+  document.querySelector('[data-space-admin-form]')?.scrollIntoView({behavior:'smooth',block:'center'});
+}
+function renderSpaceAdminOverview(){
+  const list=document.querySelector('[data-space-admin-overview-list]');if(!list)return;
+  const tenants=spaceDirectory?.tenants||[];
+  const members=(spaceDirectory?.members||[]).filter(member=>SPACE_ADMIN_OVERVIEW_ROLE_SET.has(member.role));
+  const bySlug=new Map(tenants.map(tenant=>[tenant.slug,[]]));
+  for(const member of members){const slug=member.tenant?.slug||'';if(!bySlug.has(slug))bySlug.set(slug,[]);bySlug.get(slug).push(member);}
+  list.replaceChildren();
+  let total=0;
+  const ordered=[...bySlug.entries()].sort((a,b)=>b[1].length-a[1].length||String(a[0]).localeCompare(String(b[0])));
+  for(const [slug,admins] of ordered){
+    total+=admins.length;
+    const tenant=tenants.find(item=>item.slug===slug)||admins[0]?.tenant||{slug,name:slug};
+    const group=document.createElement('article');group.className='ekodi-space-admin-group';group.dataset.spaceAdminGroup=slug;
+    const header=document.createElement('header');
+    const title=document.createElement('div');const strong=document.createElement('strong');strong.textContent=(tenant.name||slug)+' · 관리자 '+admins.length+'명';const small=document.createElement('small');small.textContent=tenant.domain||slug;title.append(strong,small);
+    const actions=document.createElement('div');actions.className='ekodi-space-admin-group-actions';
+    const edit=document.createElement('button');edit.type='button';edit.textContent='편집·등록';edit.dataset.spaceAdminEdit=slug;edit.addEventListener('click',()=>selectSpaceAdminTenant(slug));actions.append(edit);
+    const managePath=SPACE_ADMIN_MANAGE_PATHS[slug];
+    if(managePath){const link=document.createElement('a');link.className='ekodi-space-admin-manage';link.href=managePath;link.textContent='사이트 관리자 페이지';actions.append(link);}
+    header.append(title,actions);group.append(header);
+    if(!admins.length){const p=document.createElement('p');p.className='empty';p.textContent='등록된 관리자가 없습니다.';group.append(p);list.append(group);continue;}
+    const table=document.createElement('table');const thead=document.createElement('thead');const hr=document.createElement('tr');
+    for(const label of ['이름','Google 이메일','역할','공개','상태']){const th=document.createElement('th');th.scope='col';th.textContent=label;hr.append(th);}
+    thead.append(hr);const tbody=document.createElement('tbody');
+    for(const admin of admins){
+      const tr=document.createElement('tr');
+      for(const value of [admin.displayName||'-',admin.email,admin.roleLabel||admin.role,admin.visibility==='public'?'공개':'비공개',SPACE_ADMIN_STATUS_LABELS[admin.status]||admin.status||'-']){const td=document.createElement('td');td.textContent=value;tr.append(td);}
+      tbody.append(tr);
+    }
+    table.append(thead,tbody);group.append(table);list.append(group);
+  }
+  spaceAdminOverviewMessage('사이트·공간 '+ordered.length+'곳 · 관리자 '+total+'명');
+}
 async function loadSpaceAdmins(){
   try{
     await ensureSpaceDirectory();
+    renderSpaceAdminOverview();
     syncSpaceAdminManageLink();
     const tenant=document.querySelector('[data-space-admin-tenant]')?.value||'';
     if(!tenant){selectedSpaceAdmins=[];renderSpaceAdmins();return;}
@@ -474,7 +525,7 @@ async function loadSpaceAdmins(){
     selectedSpaceAdmins=(data.users||[]).filter(item=>SPACE_ADMIN_ROLE_SET.has(item.role));
     renderSpaceAdmins();
     spaceAdminMessage('관리자 '+selectedSpaceAdmins.length+'명');
-  }catch(error){spaceAdminMessage(error.message,true);}
+  }catch(error){spaceAdminMessage(error.message,true);spaceAdminOverviewMessage(error.message,true);}
 }
 async function addSpaceAdmin(event){
   event.preventDefault();const form=event.currentTarget;if(!form.checkValidity())return form.reportValidity();

@@ -77,7 +77,7 @@ test('admin page renders the roster in the access panel with the refreshed bundl
   const html=await readFile(new URL('../sites/seonammedi/public/admin/index.html',import.meta.url),'utf8');
   const js=await readFile(new URL('../sites/seonammedi/public/admin/admin.js',import.meta.url),'utf8');
   assert.match(html,/data-panel="access"[\s\S]*id="adminRosterCard"[\s\S]*id="adminRoster"/);
-  assert.match(html,/admin\.js\?v=20261019-admin-menu-trim-1/);
+  assert.match(html,/admin\.js\?v=20261019-site-admin-roster-3/);
   assert.match(js,/api\('\/api\/seonammedi\/admin\/admins'\)/);
   assert.match(js,/textContent=value/,'roster cells are rendered as text, never HTML');
   assert.doesNotMatch(js,/innerHTML[^;]*item\.email/);
