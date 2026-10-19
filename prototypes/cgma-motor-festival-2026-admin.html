@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex, nofollow"><title>모터페스티벌 접수 관리자 · 청계면상인회</title>
+<style>body{font:16px system-ui,-apple-system,"Noto Sans KR",sans-serif;margin:24px auto;max-width:1000px;padding:0 12px;color:#151515}h1{font-size:1.5rem}table{border-collapse:collapse;width:100%;min-width:760px}td,th{border-bottom:1px solid #ddd;text-align:left;padding:8px;vertical-align:top;font-size:14px}th{background:#f4f4f4;position:sticky;top:0}button{padding:10px 14px;margin:4px 4px 4px 0;font:inherit;border-radius:8px;border:1px solid #111;background:#fff;cursor:pointer}button.primary{background:#111;color:#fff}button:disabled{opacity:.45}#data{overflow-x:auto}.msg{padding:10px;border-radius:8px}.err{background:#fdecec}.ok{background:#eaf6ec}.cards{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.card{border:1px solid #ddd;border-radius:10px;padding:10px 14px;min-width:110px}.card b{display:block;font-size:1.4rem}small{color:#555}</style></head>
+<body><h1>모터페스티벌 접수 현황</h1>
+<p><small>청계면상인회 관리자 전용 · 권한은 서버에서 EKODI 청계면상인회(cgma) 관리자 권한으로 검증합니다. 개인정보는 2026-11-24 00:00(KST) 자동 파기됩니다.</small></p>
+<button id="refresh" class="primary">접수 현황 새로고침</button><button id="share" disabled>개인정보 제외 통계 복사</button>
+<p id="status" class="msg" role="status" aria-live="polite"></p>
+<p id="login" hidden><a href="/cgma/admin">청계면상인회 관리자 로그인</a> 후 같은 창에서 이 페이지로 돌아오세요.</p>
+<div id="cards" class="cards"></div><div id="data"></div>
+<script type="module" src="/cgma/motor-festival-2026/admin/app.js"></script></body></html>
