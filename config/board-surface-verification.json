@@ -12,6 +12,20 @@
   ],
   "surfaces": [
     {
+      "id": "pass.public.synthetic.qa.20261019",
+      "path": "/cheonggyepass",
+      "enabled": true,
+      "kind": "public",
+      "verificationNote": "temporary synthetic QA do not merge"
+    },
+    {
+      "id": "pass.admin.synthetic.qa.20261019",
+      "path": "/cheonggyepass/admin",
+      "enabled": true,
+      "kind": "auth-redirect",
+      "verificationNote": "temporary synthetic QA do not merge"
+    },
+    {
       "id": "seonammedi.citizen_voice",
       "path": "/seonammedi/board/voices",
       "enabled": true,
