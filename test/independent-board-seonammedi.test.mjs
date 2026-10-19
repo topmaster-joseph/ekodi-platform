@@ -325,9 +325,11 @@ test('SeonamMedi board consumes Google return by POST so one-time token is not p
   }finally{globalThis.fetch=original}
 });
 
-test('SeonamMedi central auth uses form POST only for the customer-domain return',async()=>{
+test('SeonamMedi central auth uses form POST only for the customer-domain board return',async()=>{
   const client=await read('auth-site/client-auth.js');
-  assert.match(client,/if\(site==='seonammedi'&&target\.origin!=='https:\/\/ekodi\.kr'\)/);
+  // Static non-board pages answer POST with 405; only /board/* has a POST receiver.
+  assert.match(client,/if\(site==='seonammedi'&&target\.origin!=='https:\/\/ekodi\.kr'&&seonamBoardFormReturn\(target\)\)/);
+  assert.match(client,/function seonamBoardFormReturn\(target\)\{return target\.pathname==='\/board'\|\|target\.pathname\.startsWith\('\/board\/'\)\}/);
   assert.match(client,/form\.method='POST'/);
   assert.match(client,/ekodi_auth_return:'1'/);
   assert.match(client,/form\.submit\(\)/);

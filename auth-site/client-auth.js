@@ -231,10 +231,14 @@ function postLoginTarget(){
   if(isPlatformMy&&!['my','portal'].includes(site))return new URL(config.returnTo);
   return target;
 }
+function seonamBoardFormReturn(target){return target.pathname==='/board'||target.pathname.startsWith('/board/')}
 function routeTarget(proof){
   if(!proof?.tokenHash)throw new Error('identity_handoff_missing');
   const target=postLoginTarget();
-  if(site==='seonammedi'&&target.origin!=='https://ekodi.kr'){
+  // Only the independent board (/board/*) has a server-side form-POST receiver.
+  // Other SeonamMedi pages (/, /?admin_view=…, /?compose=notice) are static and
+  // answer POST with HTTP 405, so they receive the one-use token in the fragment.
+  if(site==='seonammedi'&&target.origin!=='https://ekodi.kr'&&seonamBoardFormReturn(target)){
     target.hash='';
     const form=document.createElement('form');
     form.method='POST';
