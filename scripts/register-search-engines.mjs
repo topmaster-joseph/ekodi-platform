@@ -96,7 +96,7 @@ export async function ensureTxtRecord(cf, { zoneId, name, content }) {
 
 export async function registerDomain({ g, cf, domain, zoneId, sitemapPath, ownerEmail, sleep }) {
   const evidence = { domain, steps: [] };
-  const step = (name, detail) => evidence.steps.push({ name, ...detail });
+  const step = (name, detail) => { evidence.steps.push({ name, ...detail }); if (process.env.GITHUB_ACTIONS) console.log(`::notice title=search-register ${name}::${JSON.stringify(detail).slice(0, 300)}`); };
   const site = { type: 'INET_DOMAIN', identifier: domain };
 
   const tok = await g('https://www.googleapis.com/siteVerification/v1/token', 'POST', { site, verificationMethod: 'DNS_TXT' });
@@ -145,10 +145,11 @@ async function main() {
   const tokenJson = await tokenRes.json().catch(() => ({}));
   if (!tokenRes.ok || !tokenJson.access_token) throw new Error(`service account token exchange failed: HTTP ${tokenRes.status}`);
   const { g, cf } = createClients({ googleToken: tokenJson.access_token, cfToken: process.env.CLOUDFLARE_API_TOKEN });
+  console.log('::notice title=search-register::service account token ok');
   const evidence = await registerDomain({ g, cf, domain, zoneId, sitemapPath, ownerEmail: process.env.SEARCH_REGISTER_OWNER_EMAIL || '' });
   console.log(JSON.stringify({ ok: true, ...evidence }, null, 2));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch(error => { console.error(JSON.stringify({ ok: false, error: String(error?.message || error) })); process.exit(1); });
+  main().catch(error => { const message = String(error?.message || error).replace(/[\r\n]+/g, ' ').slice(0, 600); console.error(JSON.stringify({ ok: false, error: message })); console.log(`::error title=search-register::${message}`); process.exit(1); });
 }
