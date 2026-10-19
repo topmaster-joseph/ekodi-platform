@@ -129,11 +129,11 @@
       <div class="heading"><div><p class="eyebrow">ACCESS SCOPE</p><h1>권한 안내</h1><p>사이트 범위를 넘어서는 권한은 제공하지 않습니다.</p></div></div>
       <section class="card"><dl class="access-list"><div><dt>로그인 계정</dt><dd id="accessEmail">-</dd></div><div><dt>역할</dt><dd id="accessRole">-</dd></div><div><dt>현재상황·조직 관리</dt><dd id="accessPages">-</dd></div><div><dt>활동이력 관리</dt><dd id="accessTimeline">-</dd></div><div><dt>시민의견 관리</dt><dd id="accessVoices">-</dd></div><div><dt>회계 관리</dt><dd id="accessFinance">-</dd></div><div><dt>웹검색 게시검토</dt><dd id="accessContent">-</dd></div><div><dt>공지 관리</dt><dd id="accessNotice">-</dd></div><div><dt>소통채널 관리</dt><dd id="accessChannel">-</dd></div></dl></section>
       <section class="card" id="adminRosterCard"><h2>관리자 목록</h2><p>이 사이트를 관리할 수 있는 계정입니다. 관리자에게만 표시됩니다.</p><div id="adminRoster" class="admin-roster"></div></section>
-      <section class="card" id="boardAccountRegistration" hidden><h2>게시판 관리자 계정 등록</h2><p>등록 즉시 권한이 저장되며, 해당 Google 계정으로 로그인하면 별도 배포 없이 공지·시민의견을 관리할 수 있습니다. 계정·권한 변경은 승인된 권한 관리자만 수행합니다.</p><form id="boardAccountForm"><label for="boardAccountEmail">Google 계정 이메일</label><input id="boardAccountEmail" type="email" autocomplete="off" required placeholder="example@gmail.com"><button type="submit">게시판 관리자 등록</button></form><p id="boardAccountStatus" role="status" aria-live="polite"></p></section>
+      <section class="card" id="siteAdminRosterEditor" hidden><div id="siteAdminRoster" aria-label="사이트 관리자 수정·등록"></div></section><section class="card" id="boardAccountRegistration" hidden><h2>게시판 관리자 계정 등록</h2><p>등록 즉시 권한이 저장되며, 해당 Google 계정으로 로그인하면 별도 배포 없이 공지·시민의견을 관리할 수 있습니다. 계정·권한 변경은 승인된 권한 관리자만 수행합니다.</p><form id="boardAccountForm"><label for="boardAccountEmail">Google 계정 이메일</label><input id="boardAccountEmail" type="email" autocomplete="off" required placeholder="example@gmail.com"><button type="submit">게시판 관리자 등록</button></form><p id="boardAccountStatus" role="status" aria-live="polite"></p></section>
     </section>
   </main>
 </div>
-<script type="module" src="/seonammedi/admin/admin.js?v=20261019-admin-menu-trim-1"></script>
+<script type="module" src="/seonammedi/admin/admin.js?v=20261019-site-admin-roster-3"></script>
 <script type="module" src="/seonammedi/admin/admin-minutes.js?v=20261006-domain-routing-2"></script>
 </body>
 </html>
