@@ -16,3 +16,10 @@ test('service-modules production E2E reads the current card status columns, not 
   assert.match(probe, /statusSummaries\.every\(text => text\.includes\('기능'\) && text\.includes\('런타임'\)\)/);
   assert.match(probe, /::error title=Admin service-modules direct route failed::/);
 });
+
+test('page-teardown fetch cancellations are not reported as AI runtime faults', async () => {
+  const [admin, probe] = await Promise.all([read('common-services-admin.js'), read('scripts/admin-service-modules-production-e2e.mjs')]);
+  assert.match(admin, /for\(const eventName of \['pagehide','beforeunload'\]\)window\.addEventListener\(eventName,\(\)=>\{pageUnloading=true\}\)/);
+  assert.match(admin, /catch\(error\)\{if\(isUnloadAbort\(error\)\)return;console\.error\('\[EKODI Common Services\] AI runtime'/);
+  assert.match(probe, /waitForLoadState\('networkidle', \{ timeout:10_000 \}\)\.catch\(\(\) => \{\}\);\n    await page\.reload/);
+});
