@@ -65,8 +65,8 @@ test('committee manager can search, filter, add, update, hide, delete, and recla
   assert.match(js,/if\(admin\.has\('timeline'\)\)bindCommitteeActivityAdmin\(\)/);
   assert.match(js,/recordScope:'committee'/);
   assert.match(js,/data-committee-edit/);assert.match(js,/data-committee-status/);assert.match(js,/data-committee-delete/);
-  assert.match(html,/name="recordScope"/);assert.match(adminHtml,/name="recordScope"/);
-  assert.match(adminJs,/recordScope:form\.elements\.recordScope\.value/);
+  assert.match(html,/name="recordScope"/);assert.doesNotMatch(adminHtml,/name="recordScope"/);
+  assert.doesNotMatch(adminJs,/recordScope:form\.elements\.recordScope\.value/,'managed on the public page (Owner 2026-10-19)');
   assert.match(api,/record_scope TEXT NOT NULL DEFAULT 'news'/);
   assert.match(api,/committee_kind TEXT NOT NULL DEFAULT ''/);
   assert.match(api,/recordScope:row\.record_scope==='committee'\|\|confirmedSeed\?'committee':'news'/);
@@ -84,7 +84,7 @@ test('related news cannot silently claim committee acts based on search headline
   assert.match(js,/const isCommitteeRecord=item=>item\?\.recordScope==='committee'/);
   assert.match(js,/if\(isCommitteeRecord\(row\)\)return false/);
   assert.match(api,/record_scope,committee_kind,status/);
-  assert.match(api,/'news','',\?,0/);
+  assert.match(api,/'news','',\?,\?,0/);
   assert.match(monitor,/isPublicSeonamMediSource/);
 });
 
@@ -117,8 +117,8 @@ test('committee news is a separate newest-first verified feed with administrator
   assert.match(js,/monitorPubliclyVisible\(item\)/);
   assert.match(monitor,/filter\(isPublicSeonamMediSource\)/);
   assert.match(html,/name="committeeRelated" type="checkbox"/);
-  assert.match(adminHtml,/type="checkbox" name="committeeRelated"/);
-  assert.match(adminJs,/committeeRelated:form\.elements\.committeeRelated\.checked/);
+  assert.doesNotMatch(adminHtml,/type="checkbox" name="committeeRelated"/);
+  assert.doesNotMatch(adminJs,/committeeRelated:form\.elements\.committeeRelated\.checked/);
   assert.match(api,/committee_related INTEGER NOT NULL DEFAULT 0/);
   assert.match(api,/await addColumnIfMissing\(db,'seonammedi_timeline','committee_related'/);
   assert.match(api,/committeeRelated:row\.record_scope!=='committee'/);

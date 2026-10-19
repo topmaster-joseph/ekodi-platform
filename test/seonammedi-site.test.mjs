@@ -114,10 +114,10 @@ test('seonammedi branding is canonical and legacy public paths are deleted',asyn
 
 test('seonammedi admin restores unique panel and organization tab URL state',async()=>{
   const adminJs=await readFile(new URL('admin/admin.js',root),'utf8');
-  assert.match(adminJs,/ADMIN_ROUTE_PANELS=new Set\(\['dashboard','status','channels','voices','finance','notices','organization','minutes','access'\]\)/);
+  assert.match(adminJs,/ADMIN_ROUTE_PANELS=new Set\(\['dashboard','voices','finance','notices','organization','minutes','access'\]\)/);
   assert.match(adminJs,/searchParams\.set\('panel',panel\)/);
   assert.match(adminJs,/searchParams\.set\('org',org\)/);
-  assert.match(adminJs,/searchParams\.set\('records','review'\)/);
+  assert.doesNotMatch(adminJs,/searchParams\.set\('records','review'\)/);
   assert.match(adminJs,/restoreAdminRoute\(\{replace:true\}\)/);
   assert.match(adminJs,/addEventListener\('popstate',\(\)=>restoreAdminRoute\(\)\)/);
   assert.match(adminJs,/showOrgAdminTab\(params\.get\('org'\)\|\|'bidae',\{route:false\}\)/);
@@ -202,9 +202,10 @@ test('timeline admin is seeded, permissioned and public materials use central ca
   assert.doesNotMatch(adminHtml,/data-panel-target="timeline"/);
   assert.doesNotMatch(adminHtml,/data-panel-target="content"/);
   assert.doesNotMatch(adminHtml,/data-panel-target="status"[^>]*>현재상황<\/button>/);
-  assert.match(adminHtml,/data-records-admin-tab="timeline"[^>]*>활동이력<\/button>/);
-  assert.match(adminHtml,/id="timelineForm"/);
-  assert.match(adminJs,/\/api\/seonammedi\/admin\/timeline/);
+  // Owner 2026-10-19: 활동이력·관련소식 are managed only on the public page.
+  assert.doesNotMatch(adminHtml,/data-records-admin-tab="timeline"/);
+  assert.doesNotMatch(adminHtml,/id="timelineForm"/);
+  assert.match(app,/\/api\/seonammedi\/admin\/timeline/);
   assert.match(control,/TIMELINE_CAP='seonammedi\.timeline\.manage'/);
   assert.match(control,/TIMELINE_SEED=/);
   assert.match(control,/async function ensureTimelineSeed\(db\)/);
@@ -252,10 +253,11 @@ test('seonammedi social channel hub groups channels by platform and supports Tik
   assert.match(app,/\['tiktok','TikTok'\]/);
   assert.match(app,/\['youtube','YouTube'\]/);
   assert.match(app,/data-channel-platform/);
-  assert.match(adminHtml,/<option value="tiktok">TikTok<\/option>/);
-  assert.match(adminHtml,/사이트 표시 ON/);
-  assert.match(adminJs,/toggleChannelVisibility/);
-  assert.match(adminJs,/tiktok:'TikTok'/);
+  // Owner 2026-10-19: channels are managed only on the public page.
+  assert.match(html,/<option value="tiktok">TikTok<\/option>/);
+  assert.doesNotMatch(adminHtml,/id="channelForm"/);
+  assert.doesNotMatch(adminJs,/toggleChannelVisibility/);
+  assert.match(app,/tiktok:'TikTok'/);
   assert.match(control,/PLATFORMS=new Set\(\['youtube','instagram','facebook','tiktok'/);
   assert.match(control,/player\/v1/);
   assert.match(control,/profileEmbedUrl/);
@@ -341,8 +343,7 @@ test('seonammedi public and admin menus keep the agreed content-first order',asy
   for(const label of ['현재상황','소통채널','시민의견','회계','공지','조직'])assert.doesNotMatch(adminHtml,new RegExp('data-panel-target="[^"]+"[^>]*>'+label+'<\\/button>'));
   assert.doesNotMatch(adminHtml,/data-panel-target="timeline"|data-panel-target="content"/);
   assert.doesNotMatch(adminHtml,/data-ekodi-site-publication-slot|사이트 공개여부/);
-  assert.match(adminHtml,/data-records-admin-tab="timeline"[^>]*>활동이력<\/button>/);
-  assert.match(adminHtml,/data-records-admin-tab="review"[^>]*>자료검토<\/button>/);
+  assert.doesNotMatch(adminHtml,/data-records-admin-tab=/,'관련소식·활동이력 review moved to the public page');
 });
 test('seonammedi full public-menu administration covers status organization materials voices and finance',async()=>{
   const [html,app,adminHtml,adminJs,control,migration]=await Promise.all([
@@ -353,8 +354,8 @@ test('seonammedi full public-menu administration covers status organization mate
     readFile(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8'),
     readFile(new URL('../migrations/0116_seonammedi_full_menu_admin.sql',import.meta.url),'utf8')
   ]);
-  for(const label of ['현재상황','조직','활동이력','관련보도','공식기록','공지','시민의견','회계'])assert.match(adminHtml,new RegExp(label));
-  assert.match(adminHtml,/id="statusForm"/);
+  for(const label of ['조직','공지','시민의견','회계'])assert.match(adminHtml,new RegExp(label));
+  assert.doesNotMatch(adminHtml,/id="statusForm"/);
   assert.match(adminHtml,/id="organizationForm"/);
   assert.match(adminHtml,/data-org-admin-tab="bidae"/);
   assert.match(adminHtml,/data-org-admin-tab="mokpo"/);
@@ -376,7 +377,7 @@ test('seonammedi full public-menu administration covers status organization mate
   assert.doesNotMatch(html,/id="financeManageForm"/);
   assert.match(app,/bindPublicFinanceAdmin/);
   assert.match(app,/\/api\/seonammedi\/admin\/finance/);
-  assert.match(adminJs,/\/api\/seonammedi\/admin\/pages\/status/);
+  assert.doesNotMatch(adminJs,/\/api\/seonammedi\/admin\/pages\/status/);
   assert.match(adminJs,/\/api\/seonammedi\/admin\/pages\/organization/);
   assert.match(control,/PAGE_CAP='seonammedi\.page\.manage'/);
   assert.match(control,/FINANCE_CAP='seonammedi\.finance\.manage'/);
@@ -457,12 +458,11 @@ test('seonammedi exposes seeded related channels on public and admin surfaces',a
   assert.match(app,/renderChannelPlatformTabs/);
   assert.match(app,/showChannelPreview\(publicChannels\.indexOf\(rows\[selectedRow\]\),\{updateRoute\}\)/);
   assert.doesNotMatch(adminHtml,/data-panel-target="channels"[^>]*>소통채널<\/button>/);
-  assert.match(adminHtml,/소통채널 관리/);
+  assert.doesNotMatch(adminHtml,/data-panel="channels"/);
   assert.match(migration,/instagram\.com\/wonokoh/);
   assert.match(migration,/youtube\.com\/@Mokpo-tv/);
   assert.match(migration,/WHERE NOT EXISTS/);
-  assert.match(adminHtml,/name="previewUrl"/);
-  assert.match(adminHtml,/화면 내 미리보기 URL/);
+  assert.match(html,/name="previewUrl"/);
 });
 
 
@@ -873,7 +873,8 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
   assert.ok(!app.includes("latest.textContent='마지막 갱신 '"));
   assert.match(css,/\.site-footer-copy\{display:grid;gap:2px/);
   assert.match(css,/footer>a\{flex:0 0 auto;margin-left:auto/);
-  for(const hash of ['committee-activity','timeline','channels','organization'])assert.match(adminHtml,new RegExp('href="\.\.\/#'+hash+'"'));
+  assert.match(adminHtml,/href="\.\.\/#organization"/);
+  for(const hash of ['committee-activity','timeline','channels'])assert.doesNotMatch(adminHtml,new RegExp('href="\\.\\.\\/#'+hash+'"'),'Owner 2026-10-19: removed from the admin page');
   assert.match(adminHtml,/href="\.\.\/board\/voices">시민의견 관리/);
   assert.match(adminHtml,/href="\?panel=finance"[^>]*>회계 관리/);
   assert.match(adminHtml,/href="\.\.\/board\/notices">공지 관리/);
@@ -909,7 +910,7 @@ test('seonammedi customer domain cache-busts public and admin static assets',asy
   assert.equal(jsVersion,cssVersion,'public script and stylesheet must share one cache-buster');
   assert.ok(adminHtml.includes('<a class="brand" href="./">'));
   assert.ok(adminHtml.includes('<a href="../" target="_blank" rel="noopener">공개페이지</a>'));
-  assert.ok(adminHtml.includes('/seonammedi/admin/admin.js?v=20261019-admin-roster-1'));
+  assert.ok(adminHtml.includes('/seonammedi/admin/admin.js?v=20261019-admin-menu-trim-1'));
   assert.ok(adminHtml.includes('/seonammedi/admin/admin-minutes.js?v=20261006-domain-routing-2'));
 });
 
