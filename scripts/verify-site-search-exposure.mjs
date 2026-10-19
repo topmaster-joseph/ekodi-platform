@@ -45,6 +45,9 @@ async function main() {
     registryCount: registry.count, auditedSites: results.length, passed: results.length - failed.length, failed,
   };
   console.log(JSON.stringify(report, null, 2));
+  // Annotations are readable through the checks API even when raw logs are not.
+  console.log(`::notice title=SEARCH-EXPOSURE-ALL-001::robots=${robotsOk ? 'ok' : 'fail'} sitemap=${sitemap.status}/${report.sitemap.urls} passed=${report.passed}/${report.auditedSites}`);
+  for (const item of failed.slice(0, 40)) console.log(`::error title=search-exposure::${item.url} ${item.problems.join(',')}`);
   if (process.env.GITHUB_STEP_SUMMARY) {
     const { appendFile } = await import('node:fs/promises');
     const rows = results.map(r => `| ${r.url} | ${r.ok ? '✅' : '❌ ' + r.problems.join(',')} | ${r.robots || ''} |`).join('\n');
