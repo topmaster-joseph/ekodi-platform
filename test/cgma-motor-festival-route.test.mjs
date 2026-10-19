@@ -71,3 +71,20 @@ test('Shared Site router and build publish the festival pages',()=>{
   const build=read('scripts/build.mjs');
   assert.match(build,/cgma\/motor-festival-2026\/admin\/index\.html/);
 });
+
+test('browser revalidation (If-None-Match) still serves 200, never 503 (both CGMA routes)',async()=>{
+  const {routeCgmaAiEducation}=await import('../cgma-ai-education-route.js');
+  const strictAssets={ASSETS:{async fetch(request){
+    if(request.headers.get('if-none-match')||request.headers.get('if-modified-since'))return new Response(null,{status:304});
+    const p=new URL(request.url).pathname;
+    const type=p.endsWith('.js')?'text/javascript':'text/html; charset=utf-8';
+    return new Response('ok',{headers:{'content-type':type,etag:'"v1"'}});
+  }}};
+  const conditional=url=>new Request(url,{headers:{'if-none-match':'"v1"','if-modified-since':'Mon, 19 Oct 2026 00:00:00 GMT'}});
+  for(const path of ['/','/app.js','/admin/','/admin/app.js']){
+    assert.equal((await routeCgmaMotorFestival(conditional(base+path),strictAssets)).status,200,path);
+  }
+  for(const path of ['/cgma/ai-education/','/cgma/ai-education/app.js']){
+    assert.equal((await routeCgmaAiEducation(conditional('https://ekodi.kr'+path),strictAssets)).status,200,path);
+  }
+});

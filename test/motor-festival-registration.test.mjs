@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import {
-  MOTOR_FESTIVAL_API_PATH, REGISTRATION_CLOSES_AT, EXPIRES_AT, CLIENT_LIMIT, PHONE_LIMIT,
+  MOTOR_FESTIVAL_API_PATH, REGISTRATION_CLOSES_AT, EXPIRES_AT, CLIENT_LIMIT, PHONE_LIMIT, MAX_APPLICATIONS,
   handleMotorFestivalApplications, purgeExpiredMotorFestivalApplications,
   validateApplication, motorFestivalKeys, sealField, openField, summarize,
 } from '../motor-festival-registration-api.js';
@@ -225,4 +225,49 @@ test('no Supabase service-role key or plaintext personal fields in the Worker mo
   const source=fs.readFileSync(new URL('../motor-festival-registration-api.js',import.meta.url),'utf8');
   assert.doesNotMatch(source,/SERVICE_ROLE/);
   assert.doesNotMatch(MIGRATION,/\b(contact_name|phone|notes)\s+TEXT/);
+});
+
+test('cross-origin writes stay 403 after the deadline (deploy probe stays valid)',async()=>{
+  const env=envWith();
+  const res=await handleMotorFestivalApplications(post(payload(),{headers:{origin:'https://evil.example'}}),env,at(REGISTRATION_CLOSES_AT+86400000));
+  assert.equal(res.status,403);
+  assert.equal((await res.json()).code,'ORIGIN_FORBIDDEN');
+  assert.equal((await handleMotorFestivalApplications(post(payload()),env,at(REGISTRATION_CLOSES_AT+1))).status,410);
+});
+
+test('global capacity ceiling fails closed without writing',async()=>{
+  const env=envWith();
+  const insert=env.DB.raw.prepare(`INSERT INTO cgma_motor_festival_2026_applications (id,receipt_code,submission_key,business_name,category,membership,intent,hours,staff,contact_name_enc,phone_enc,phone_hash,client_hash,consent_version,created_at,expires_at) VALUES (?,?,?,'x','기타','none','no','all','1','v1.a.b','v1.a.b',?,?,'v','2026-10-01T00:00:00.000Z',?)`);
+  for(let i=0;i<MAX_APPLICATIONS;i++)insert.run('id'+i,'R'+i,'k'+i,'p'+i,'c'+i,EXPIRES_AT);
+  const res=await handleMotorFestivalApplications(post(payload()),env,at(OPEN_NOW));
+  assert.equal(res.status,429);
+  assert.equal((await res.json()).code,'CAPACITY_REACHED');
+  assert.equal(env.DB.raw.prepare('SELECT count(*) n FROM cgma_motor_festival_2026_applications').get().n,MAX_APPLICATIONS);
+});
+
+test('HEAD does not run the administrator list or write audit rows',async()=>{
+  const env=envWith();
+  const res=await handleMotorFestivalApplications(new Request(ENDPOINT,{method:'HEAD'}),env,authority(CGMA_ADMIN));
+  assert.equal(res.status,405);
+  assert.equal(env.DB.raw.prepare('SELECT count(*) n FROM cgma_motor_festival_2026_access_audit').get().n,0);
+});
+
+test('ciphertext is bound to row and column; swapped or corrupt fields do not break the list',async()=>{
+  const env=envWith();
+  await handleMotorFestivalApplications(post(payload({phone:'010-4444-0001',contact_name:'가상 갑'})),env,at(OPEN_NOW));
+  await handleMotorFestivalApplications(post(payload({phone:'010-4444-0002',contact_name:'가상 을'})),env,at(OPEN_NOW+1));
+  const [a,b]=env.DB.raw.prepare('SELECT id,phone_enc,contact_name_enc FROM cgma_motor_festival_2026_applications ORDER BY created_at').all();
+  const keys=await motorFestivalKeys(KEY);
+  await assert.rejects(openField(keys,a.phone_enc,'phone',b.id),'row binding');
+  await assert.rejects(openField(keys,a.phone_enc,'contact_name',a.id),'column binding');
+  env.DB.raw.prepare('UPDATE cgma_motor_festival_2026_applications SET phone_enc=? WHERE id=?').run(a.phone_enc,b.id);
+  const logged=[];const original=console.error;console.error=(...x)=>logged.push(x.join(' '));
+  let data;
+  try{const res=await handleMotorFestivalApplications(get(),env,authority(CGMA_ADMIN));assert.equal(res.status,200);data=await res.json();}
+  finally{console.error=original}
+  assert.equal(data.unreadable_fields,1);
+  const byName=Object.fromEntries(data.applications.map(x=>[x.contact_name,x.phone]));
+  assert.equal(byName['가상 갑'],'010-4444-0001');
+  assert.equal(byName['가상 을'],'[복호화 불가]');
+  assert.doesNotMatch(logged.join('\n'),/010|가상/);
 });
