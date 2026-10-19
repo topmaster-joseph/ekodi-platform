@@ -17,7 +17,8 @@ test('social group source is managed in communication channels without duplicate
   assert.match(html,/id="publicChannelTabs"/);
   assert.match(html,/id="publicNewsCategories"[^>]*>[\s\S]*?<option value="페이스북 그룹">/);
   assert.match(html,/name="category"[^>]*>[\s\S]*?<option>페이스북 그룹<\/option>/);
-  assert.match(admin,/<option value="페이스북 그룹">/);
+  // Owner 2026-10-19: related news is managed on the public page, not the admin console.
+  assert.doesNotMatch(admin,/id="timelineForm"/);
   assert.match(css,/\.related-facebook-source\{/);
 });
 

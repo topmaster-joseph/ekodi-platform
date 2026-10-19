@@ -4,6 +4,13 @@ const API_PATH='/api/seonammedi/monitor';
 const MAX_ITEMS_PER_QUERY=20;
 const RECENT_DAYS=7;
 const MEDIA_ENRICH_LIMIT=8;
+// Unverified candidates already stored (for example Google News redirect links
+// collected before publisher-URL resolution existed) are re-checked a few at a
+// time each hour so the public archive catches up without a burst of requests.
+const REVERIFY_LIMIT=8;
+const REVERIFY_SCAN=60;
+const REVERIFY_RETRY_HOURS=12;
+const SOURCE_FETCH_TIMEOUT_MS=7000;
 // Deliberately rate-limited; sources outside the budget stay unpublished until verified.
 async function ensureSourceVerificationColumn(db){
   try{await db.prepare('SELECT source_verified FROM seonammedi_monitor_items LIMIT 0').all();return}catch(error){
@@ -16,8 +23,16 @@ const QUERIES=Object.freeze([
   {key:'seonam-national-medical',label:'서남권 국립의대',q:'"서남권" 국립의대'},
   {key:'mokpo-national-medical',label:'목포대 국립의대',q:'목포대 국립의대'},
   {key:'jeonnam-national-medical',label:'전남 국립의대',q:'전남 국립의대'},
-  {key:'seonam-committee',label:'서남권 의대 비상대책위원회',q:'"서남권 의대" 비상대책위원회'}
+  {key:'seonam-committee',label:'서남권 의대 비상대책위원회',q:'"서남권 의대" 비상대책위원회'},
+  {key:'seonam-committee-short',label:'서남권 의대 비대위',q:'서남권 의대 비대위'}
 ]);
+async function ensureVerifyCheckedColumn(db){
+  try{await db.prepare('SELECT verify_checked_at FROM seonammedi_monitor_items LIMIT 0').all();return}catch(error){
+    if(!/no such column/i.test(String(error?.message||error)))throw error;
+  }
+  try{await db.prepare('ALTER TABLE seonammedi_monitor_items ADD COLUMN verify_checked_at TEXT').run()}
+  catch(error){if(!/duplicate column name/i.test(String(error?.message||error)))throw error}
+}
 const clean=(value,max=1000)=>String(value??'').replace(/\s+/g,' ').trim().slice(0,max);
 const json=(body,status=200,cache='public, max-age=300')=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':cache,'x-content-type-options':'nosniff','referrer-policy':'no-referrer'}});
 const xmlText=value=>clean(String(value||'').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,'$1').replace(/<[^>]+>/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>'),1000);
@@ -120,9 +135,71 @@ function metaValue(html,key){
 function httpsUrl(value,base=''){
   try{const url=new URL(String(value||''),base||undefined);return url.protocol==='https:'?url.toString():''}catch{return''}
 }
+// Search engines hand back their own redirect links. Publication requires the
+// publisher's page, so resolve those links to the original article first.
+const GOOGLE_NEWS_ARTICLE=/^https:\/\/news\.google\.com\/(?:rss\/)?(?:articles|read)\/([A-Za-z0-9_-]{16,})/;
+function base64UrlBytes(value){
+  const normalized=String(value||'').replace(/-/g,'+').replace(/_/g,'/');
+  const padded=normalized+'='.repeat((4-normalized.length%4)%4);
+  const binary=atob(padded);const bytes=new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+  return bytes;
+}
+// Older Google News ids embed the article URL directly (field 4, length-prefixed).
+export function decodeLegacyGoogleNewsId(id){
+  try{
+    const bytes=base64UrlBytes(id);
+    if(bytes[0]!==0x08||bytes[1]!==0x13||bytes[2]!==0x22)return'';
+    let pos=3,length=0,shift=0;
+    for(;pos<bytes.length&&shift<35;pos++){const b=bytes[pos];length|=(b&0x7f)<<shift;shift+=7;if(!(b&0x80)){pos++;break}}
+    if(!length||pos+length>bytes.length)return'';
+    const text=new TextDecoder().decode(bytes.slice(pos,pos+length));
+    return /^https:\/\//.test(text)?httpsUrl(text):'';
+  }catch{return''}
+}
+function googleBatchRequest(id,timestamp,signature){
+  const inner=JSON.stringify(['garturlreq',[['X','X',['X','X'],null,null,1,1,'US:en',null,1,null,null,null,null,null,0,1],'X','X',1,[1,1,1],1,1,null,0,0,null,0],id,timestamp,signature]);
+  return 'f.req='+encodeURIComponent(JSON.stringify([[['Fbv4je',inner,null,'generic']]]));
+}
+export function parseGoogleBatchResponse(text){
+  const match=String(text||'').match(/\["wrb\.fr","Fbv4je","((?:\\.|[^"\\])*)"/);
+  if(!match)return'';
+  try{const payload=JSON.parse(JSON.parse('"'+match[1]+'"'));return payload?.[0]==='garturlres'?httpsUrl(payload[1]):''}catch{return''}
+}
+export async function resolveSeonamMediPublisherUrl(link,{fetchImpl=fetch}={}){
+  let url;try{url=new URL(String(link||''))}catch{return''}
+  const host=url.hostname.toLowerCase();
+  if(host==='www.bing.com'||host==='bing.com'){
+    const target=url.searchParams.get('url');
+    return target?httpsUrl(target):'';
+  }
+  const google=String(link).match(GOOGLE_NEWS_ARTICLE);
+  if(!google)return url.protocol==='https:'?url.href:'';
+  const id=google[1];
+  const legacy=decodeLegacyGoogleNewsId(id);
+  if(legacy)return legacy;
+  try{
+    const page=await fetchImpl('https://news.google.com/rss/articles/'+id,{headers:{'user-agent':'Mozilla/5.0 (compatible; EKODI-SeonamMedi-Monitor/1.3)','accept':'text/html'},signal:AbortSignal.timeout(SOURCE_FETCH_TIMEOUT_MS)});
+    if(!page.ok)return'';
+    const html=await page.text();
+    const signature=(html.match(/data-n-a-sg="([^"]+)"/)||[])[1];
+    const timestamp=Number((html.match(/data-n-a-ts="(\d+)"/)||[])[1]);
+    if(!signature||!Number.isFinite(timestamp))return'';
+    const response=await fetchImpl('https://news.google.com/_/DotsSplashUi/data/batchexecute',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded;charset=UTF-8','user-agent':'Mozilla/5.0 (compatible; EKODI-SeonamMedi-Monitor/1.3)'},body:googleBatchRequest(id,timestamp,signature),signal:AbortSignal.timeout(SOURCE_FETCH_TIMEOUT_MS)});
+    if(!response.ok)return'';
+    const resolved=parseGoogleBatchResponse(await response.text());
+    return resolved&&new URL(resolved).hostname!=='news.google.com'?resolved:'';
+  }catch{return''}
+}
+function isSearchEngineUrl(value){try{return /(?:^|\.)(?:news\.google\.com|google\.com|bing\.com)$/i.test(new URL(value).hostname)}catch{return true}}
+async function verifySource(item){
+  const resolvedUrl=item.resolvedUrl&&!isSearchEngineUrl(item.resolvedUrl)?item.resolvedUrl:await resolveSeonamMediPublisherUrl(item.url);
+  if(!resolvedUrl)return item;
+  return enrichMedia({...item,resolvedUrl});
+}
 async function enrichMedia(item){
   try{
-    const response=await fetch(item.url,{redirect:'follow',headers:{'user-agent':'EKODI-SeonamMedi-Evidence/1.0','accept':'text/html,application/xhtml+xml'}});
+    const response=await fetch(item.resolvedUrl||item.url,{redirect:'follow',headers:{'user-agent':'EKODI-SeonamMedi-Evidence/1.0','accept':'text/html,application/xhtml+xml'},signal:AbortSignal.timeout(SOURCE_FETCH_TIMEOUT_MS)});
     if(!response.ok)return item;
     const resolvedUrl=httpsUrl(response.url)||item.url;
     if(new URL(resolvedUrl).hostname==='news.google.com')return {...item,resolvedUrl};
@@ -160,10 +237,45 @@ async function insertItem(env,item,seenAt){
     .bind(fingerprint,item.title,item.url,item.publisher,item.publishedAt,item.queryKey,item.queryLabel,seenAt,seenAt,item.resolvedUrl,item.mediaType,item.mediaUrl,item.mediaSource,item.mediaPublishedAt,item.mediaState,item.sourceType||'web',item.summaryText||'',item.sourceVerified?1:0).run();
   return true;
 }
+// Naver News search returns the publisher's own link (originallink), so it is
+// the most reliable Korean source when NAVER_CLIENT_ID/SECRET are configured.
+async function fetchNaverNewsItems(env,query){
+  if(!naverBlogConfigured(env))return [];
+  const endpoint=new URL('https://openapi.naver.com/v1/search/news.json');endpoint.searchParams.set('query',query.q);endpoint.searchParams.set('display',String(MAX_ITEMS_PER_QUERY));endpoint.searchParams.set('sort','date');
+  const response=await fetch(endpoint,{headers:{'X-Naver-Client-Id':env.NAVER_CLIENT_ID,'X-Naver-Client-Secret':env.NAVER_CLIENT_SECRET,'user-agent':'EKODI-SeonamMedi-Monitor/1.3'}});
+  if(!response.ok)throw new Error('Naver news HTTP '+response.status);
+  const payload=await response.json();const floor=Date.now()-RECENT_DAYS*86400000;
+  return (Array.isArray(payload?.items)?payload.items:[]).map(row=>{
+    const url=httpsUrl(row.originallink)||httpsUrl(row.link);const publishedMs=Date.parse(row.pubDate);
+    let publisher='';try{publisher=new URL(url).hostname.replace(/^www\./,'')}catch{}
+    return {queryKey:query.key,queryLabel:query.label,title:stripMarkup(row.title),url,publisher:publisher||'네이버 뉴스',publishedAt:Number.isFinite(publishedMs)?new Date(publishedMs).toISOString():null,publishedMs,resolvedUrl:url,mediaType:'',mediaUrl:'',mediaSource:'',mediaPublishedAt:'',mediaState:'none',sourceType:'news',summaryText:'',sourceVerified:false};
+  }).filter(item=>item.title&&item.url&&(!Number.isFinite(item.publishedMs)||item.publishedMs>=floor));
+}
+export async function reverifyStoredCandidates(env,checkedAt,{limit=REVERIFY_LIMIT,verify=verifySource}={}){
+  await ensureVerifyCheckedColumn(env.DB);
+  const retryBefore=new Date(Date.parse(checkedAt)-REVERIFY_RETRY_HOURS*3600000).toISOString();
+  const rows=(await env.DB.prepare("SELECT id,title,url,resolved_url,publisher,published_at,query_key,query_label,source_type FROM seonammedi_monitor_items WHERE COALESCE(source_verified,0)=0 AND review_state NOT IN ('rejected','archived','verified') AND (verify_checked_at IS NULL OR verify_checked_at<?) ORDER BY COALESCE(published_at,first_seen_at) DESC LIMIT ?").bind(retryBefore,REVERIFY_SCAN).all())?.results||[];
+  let attempted=0,verified=0;
+  for(const row of rows){
+    const relevant=hasRegionalMedicalContext(row.title);
+    if(relevant&&attempted>=limit)continue;
+    if(relevant){
+      attempted+=1;
+      const item=await verify({queryKey:row.query_key||'',queryLabel:row.query_label||'',title:row.title,url:row.url,publisher:row.publisher||'',publishedAt:row.published_at||null,resolvedUrl:row.resolved_url||'',mediaType:'',mediaUrl:'',mediaSource:'',mediaPublishedAt:'',mediaState:'none',sourceType:row.source_type||'news',summaryText:'',sourceVerified:false});
+      // Evidence fields only: discovery timestamps keep their original meaning.
+      await env.DB.prepare("UPDATE seonammedi_monitor_items SET resolved_url=CASE WHEN ?<>'' THEN ? ELSE resolved_url END,summary_text=CASE WHEN ?<>'' THEN ? ELSE summary_text END,source_verified=CASE WHEN ?=1 THEN 1 ELSE source_verified END,media_type=CASE WHEN ?<>'' THEN ? ELSE media_type END,media_url=CASE WHEN ?<>'' THEN ? ELSE media_url END,media_source=CASE WHEN ?<>'' THEN ? ELSE media_source END,media_state=CASE WHEN ?='candidate' THEN 'candidate' ELSE media_state END,verify_checked_at=? WHERE id=?")
+        .bind(item.resolvedUrl||'',item.resolvedUrl||'',item.summaryText||'',item.summaryText||'',item.sourceVerified?1:0,item.mediaType||'',item.mediaType||'',item.mediaUrl||'',item.mediaUrl||'',item.mediaSource||'',item.mediaSource||'',item.mediaState||'none',checkedAt,row.id).run();
+      if(item.sourceVerified)verified+=1;
+      continue;
+    }
+    await env.DB.prepare('UPDATE seonammedi_monitor_items SET verify_checked_at=? WHERE id=?').bind(checkedAt,row.id).run();
+  }
+  return verified;
+}
 export async function runSeonamMediHourlyCheck(env,{scheduledAt=null,force=false}={}){
   if(!env?.DB?.prepare)return {ok:false,error:'storage_unavailable'};
   try{await ensureSourceVerificationColumn(env.DB)}catch(error){return {ok:false,error:'source_verification_schema_unavailable',message:clean(error?.message||error,300)}}
-  const startedAt=new Date(scheduledAt||Date.now()).toISOString();let runId=null;let checked=0,seen=0,added=0,mediaCandidates=0,mediaBudget=MEDIA_ENRICH_LIMIT;const errors=[];
+  const startedAt=new Date(scheduledAt||Date.now()).toISOString();let runId=null;let checked=0,seen=0,added=0,verified=0,reverified=0,mediaCandidates=0,mediaBudget=MEDIA_ENRICH_LIMIT;const errors=[];
   if(!force){
     try{
       const existing=await env.DB.prepare("SELECT id,status,completed_at FROM seonammedi_monitor_runs WHERE strftime('%Y-%m-%d %H',datetime(started_at,'+9 hours'))=strftime('%Y-%m-%d %H',datetime(?,'+9 hours')) AND status IN ('running','ok','partial') ORDER BY id DESC LIMIT 1").bind(startedAt).first();
@@ -193,22 +305,27 @@ export async function runSeonamMediHourlyCheck(env,{scheduledAt=null,force=false
     if(Array.isArray(newsItems)){
       checked+=1;seen+=newsItems.length;
       for(let item of newsItems){
-        if(mediaBudget>0&&hasRegionalMedicalContext(item.title)){item=await enrichMedia(item);mediaBudget-=1;if(item.mediaState==='candidate')mediaCandidates+=1}
+        if(mediaBudget>0&&hasRegionalMedicalContext(item.title)){item=await verifySource(item);mediaBudget-=1;if(item.mediaState==='candidate')mediaCandidates+=1;if(item.sourceVerified)verified+=1}
         if(await insertItem(env,item,startedAt))added+=1;
       }
       if(googleError)errors.push(query.key+':google_degraded:'+clean(googleError?.message||googleError,120));
     }
     if(naverBlogConfigured(env)){
       try{
+        const newsItems=await fetchNaverNewsItems(env,query);checked+=1;seen+=newsItems.length;
+        for(let item of newsItems){if(mediaBudget>0&&hasRegionalMedicalContext(item.title)){item=await verifySource(item);mediaBudget-=1;if(item.sourceVerified)verified+=1}if(await insertItem(env,item,startedAt))added+=1}
+      }catch(error){errors.push(query.key+':naver_news:'+clean(error?.message||error,160))}
+      try{
         const blogItems=await fetchNaverBlogItems(env,query);checked+=1;seen+=blogItems.length;
-        for(let item of blogItems){if(mediaBudget>0&&hasRegionalMedicalContext(item.title)){item=await enrichMedia(item);mediaBudget-=1;if(item.mediaState==='candidate')mediaCandidates+=1}if(await insertItem(env,item,startedAt))added+=1}
+        for(let item of blogItems){if(mediaBudget>0&&hasRegionalMedicalContext(item.title)){item=await verifySource(item);mediaBudget-=1;if(item.mediaState==='candidate')mediaCandidates+=1}if(await insertItem(env,item,startedAt))added+=1}
       }catch(error){errors.push(query.key+':blog:'+clean(error?.message||error,160))}
     }
   }
+  try{reverified=await reverifyStoredCandidates(env,startedAt)}catch(error){errors.push('reverify:'+clean(error?.message||error,160))}
   const completedAt=new Date().toISOString();const status=errors.length?(checked?'partial':'failed'):'ok';
   await env.DB.prepare('UPDATE seonammedi_monitor_runs SET completed_at=?,status=?,sources_checked=?,items_seen=?,new_items=?,error_summary=? WHERE id=?')
     .bind(completedAt,status,checked,seen,added,clean(errors.join(' | '),1000),runId).run().catch(()=>{});
-  return {ok:status!=='failed',status,checked,seen,added,mediaCandidates,completedAt,errors};
+  return {ok:status!=='failed',status,checked,seen,added,verified,reverified,mediaCandidates,completedAt,errors};
 }
 // Public feed uses bounded batches so an old, unverified search hit cannot
 // starve newer approved records or limit the archive to the last seven days.

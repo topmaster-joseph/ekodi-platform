@@ -1163,10 +1163,12 @@ async function loadPublicTimelineAdmin(){
   if(window.__SEONAM_MEDI_DATA)window.__SEONAM_MEDI_DATA.timeline=publicTimelineEntries.filter(item=>item.status==='published');
   renderTimelineFilters();renderPublicTimeline();renderCommitteeActivity();renderCommitteeNews();
 }
-function bindPublicTimelineLinkImport(){
-  const toggle=el('timelineLinkToggle'),form=el('timelineLinkForm'),cancel=el('timelineLinkCancel');
-  const previewButton=el('timelineLinkPreviewButton'),save=el('timelineLinkSaveButton'),preview=el('timelineLinkPreview'),message=el('timelineLinkMessage');
-  if(!toggle||!form||form.dataset.bound==='1')return;
+// One link-registration flow for both menus: the server reads the original
+// article and stores it in the same card format as automatically collected news.
+function bindInlineLinkImport(prefix,{committee=false}={}){
+  const toggle=el(prefix+'LinkToggle'),form=el(prefix+'LinkForm'),cancel=el(prefix+'LinkCancel');
+  const previewButton=el(prefix+'LinkPreviewButton'),save=el(prefix+'LinkSaveButton'),preview=el(prefix+'LinkPreview'),message=el(prefix+'LinkMessage');
+  if(!toggle||!form||!previewButton||!save||!preview||!message||form.dataset.bound==='1')return;
   form.dataset.bound='1';toggle.hidden=false;
   let previewedUrl='';
   const resetPreview=()=>{previewedUrl='';save.disabled=true;preview.hidden=true;preview.replaceChildren();message.textContent=''};
@@ -1175,8 +1177,8 @@ function bindPublicTimelineLinkImport(){
     toggle.textContent=visible?'링크 등록 닫기':'링크로 등록';
     if(visible)form.elements.url.focus();else{form.reset();resetPreview()}
   };
-  toggle.addEventListener('click',()=>{if(form.hidden)setPublicTimelineEditor(false);open(form.hidden)});
-  cancel.addEventListener('click',()=>open(false));
+  toggle.addEventListener('click',()=>{if(form.hidden&&!committee)setPublicTimelineEditor(false);open(form.hidden)});
+  cancel?.addEventListener('click',()=>open(false));
   form.elements.url.addEventListener('input',resetPreview);
   previewButton.addEventListener('click',async()=>{
     const url=String(form.elements.url.value||'').trim();resetPreview();if(!url||!form.elements.url.checkValidity()){message.textContent='유효한 HTTPS 기사 링크를 넣어주세요.';return}
@@ -1200,10 +1202,74 @@ function bindPublicTimelineLinkImport(){
     if(url!==previewedUrl){message.textContent='링크 미리보기를 먼저 확인해주세요.';return}
     save.disabled=true;message.textContent='원문 재검증 후 저장 중…';
     try{
-      const result=await publicAdminJson('/api/seonammedi/admin/timeline/link-import',{method:'POST',body:JSON.stringify({url,status:form.elements.status.value})});
+      const result=await publicAdminJson('/api/seonammedi/admin/timeline/link-import',{method:'POST',body:JSON.stringify({url,status:form.elements.status.value,committeeRelated:committee})});
       open(false);await loadPublicTimelineAdmin();
-      const notify=el('timelineManageMessage');if(notify)notify.textContent=result.duplicate?'이미 등록된 자료입니다.':'링크 내용으로 활동이력을 등록했습니다.';
+      const notify=el(committee?'committeeNewsMessage':'timelineManageMessage')||message;
+      notify.textContent=result.duplicate?'이미 등록된 자료입니다.':(committee?'링크 내용으로 비대위 관련소식을 등록했습니다.':'링크 내용으로 관련소식을 등록했습니다.');
     }catch(error){message.textContent='등록 실패: '+error.message;save.disabled=false}
+  });
+}
+function bindPublicTimelineLinkImport(){bindInlineLinkImport('timeline')}
+function bindCommitteeLinkImport(){bindInlineLinkImport('committee',{committee:true})}
+// Hourly web-search candidates that did not pass automatic source verification
+// are reviewed right on the public page by administrators (no admin console).
+const REVIEW_REGION=/서남권|전남|전라남도|목포|순천|무안|광주/;
+const REVIEW_MEDICAL=/의대|의과\s*대학/;
+const REVIEW_COMMITTEE=/비상대책위|비대위|대책위원회/;
+var monitorReviewItems=[];
+async function loadMonitorReview(){
+  const data=await publicAdminJson('/api/seonammedi/admin/content');
+  monitorReviewItems=(Array.isArray(data.items)?data.items:[]).filter(item=>item.reviewState==='candidate'&&REVIEW_REGION.test(item.title||'')&&REVIEW_MEDICAL.test(item.title||''));
+  renderMonitorReview();
+}
+function reviewRow(item){
+  const row=document.createElement('article');row.className='inline-review-item';
+  const copy=document.createElement('div');
+  const link=document.createElement(/^https?:\/\//i.test(String(item.url||''))?'a':'span');link.className='inline-review-title';link.textContent=item.title||'제목 없음';
+  if(link.tagName==='A'){link.href=item.url;link.target='_blank';link.rel='noopener noreferrer'}
+  const meta=document.createElement('small');meta.textContent=[item.publisher,item.publishedAt?String(item.publishedAt).slice(0,10):'',item.queryLabel].filter(Boolean).join(' · ');
+  copy.append(link,meta);
+  const actions=document.createElement('div');actions.className='inline-manage-actions';
+  const publish=document.createElement('button');publish.type='button';publish.textContent='공개';publish.dataset.reviewPublish=String(Number(item.id));
+  const reject=document.createElement('button');reject.type='button';reject.textContent='제외';reject.dataset.reviewReject=String(Number(item.id));
+  actions.append(publish,reject);row.append(copy,actions);return row;
+}
+function renderMonitorReview(){
+  for(const [panelId,listId,committee] of [['timelineReviewPanel','timelineReviewList',false],['committeeReviewPanel','committeeReviewList',true]]){
+    const panel=el(panelId),list=el(listId);if(!panel||!list)continue;
+    const rows=monitorReviewItems.filter(item=>REVIEW_COMMITTEE.test(item.title||'')===committee).slice(0,20);
+    panel.hidden=false;
+    if(!rows.length){const empty=document.createElement('p');empty.className='muted';empty.textContent='검토 대기 중인 자료가 없습니다.';list.replaceChildren(empty)}
+    else list.replaceChildren(...rows.map(reviewRow));
+    if(list.dataset.bound==='1')continue;
+    list.dataset.bound='1';
+    list.addEventListener('click',async event=>{
+      const control=event.target.closest('[data-review-publish],[data-review-reject]');if(!control)return;
+      const id=Number(control.dataset.reviewPublish||control.dataset.reviewReject);if(!id)return;
+      const publishing=Boolean(control.dataset.reviewPublish);
+      if(!publishing&&!confirm('이 자료를 공개 대상에서 제외할까요?'))return;
+      const message=el(committee?'committeeReviewMessage':'timelineReviewMessage');control.disabled=true;
+      try{
+        await publicAdminJson('/api/seonammedi/admin/content/'+id,{method:'PUT',body:JSON.stringify({state:publishing?'published':'rejected',category:'news'})});
+        if(message)message.textContent=publishing?'공개했습니다. 자동수집 자료와 같은 형식으로 표시됩니다.':'제외했습니다.';
+        await loadMonitorReview();await loadMonitor();
+      }catch(error){if(message)message.textContent='처리 실패: '+error.message;control.disabled=false}
+    });
+  }
+}
+function bindMonitorRunNow(){
+  document.querySelectorAll('[data-monitor-run]').forEach(button=>{
+    if(button.dataset.bound==='1')return;button.dataset.bound='1';button.hidden=false;
+    button.addEventListener('click',async()=>{
+      const message=el(button.dataset.monitorRun);button.disabled=true;
+      if(message)message.textContent='에코디가 웹검색과 원문검증을 진행 중입니다. 1~3분 걸릴 수 있습니다…';
+      try{
+        const data=await publicAdminJson('/api/seonammedi/admin/monitor/run',{method:'POST'});const r=data.result||{};
+        if(message)message.textContent='웹검색 완료 · 확인 '+Number(r.seen||0)+'건 · 신규 '+Number(r.added||0)+'건 · 원문검증 '+(Number(r.verified||0)+Number(r.reverified||0))+'건';
+        await loadMonitor();await loadMonitorReview().catch(()=>{});
+      }catch(error){if(message)message.textContent='웹검색 실패: '+error.message}
+      finally{button.disabled=false}
+    });
   });
 }
 function bindPublicMonitorContentAdmin(){
@@ -1449,6 +1515,9 @@ function renderPublicAdminControls(){
   if(admin.has('timeline'))bindCommitteeActivityAdmin();
   if(admin.has('timeline'))bindCommitteeNewsAdmin();
   if(admin.has('timeline'))bindPublicTimelineLinkImport();
+  if(admin.has('timeline'))bindCommitteeLinkImport();
+  if(admin.has('content'))loadMonitorReview().catch(()=>{});
+  if(admin.has('content')||admin.has('pages'))bindMonitorRunNow();
   if(admin.has('timeline')||admin.has('content'))bindPublicMonitorContentAdmin();
   if(admin.has('channels'))bindPublicChannelAdmin();
   if(admin.has('voices'))window.dispatchEvent(new CustomEvent('seonammedi:voice-inline-admin-authorized'));

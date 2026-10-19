@@ -77,8 +77,10 @@ test('registered administrator public page has all three operations and fail-clo
   assert.match(api,/if\(!\(can\(auth,TIMELINE_CAP\)\|\|can\(auth,CONTENT_CAP\)\)\)return json/);
   assert.match(api,/UPDATE seonammedi_monitor_items SET review_state='rejected'/);
   assert.match(publicJs,/data-timeline-delete/);
-  assert.match(adminHtml,/id="adminTimelineLinkForm"/);
-  assert.match(adminJs,/bindAdminTimelineLinkImport/);
+  // Owner 2026-10-19: link registration lives on the public page for both menus.
+  assert.doesNotMatch(adminHtml,/id="adminTimelineLinkForm"/);
+  assert.doesNotMatch(adminJs,/bindAdminTimelineLinkImport/);
+  assert.match(publicJs,/function bindInlineLinkImport\(prefix/);
   assert.match(api,/if\(!can\(auth,TIMELINE_CAP\)\)return json/);
   assert.match(api,/\/admin\/timeline\/link-preview/);
   assert.match(api,/\/admin\/timeline\/link-import/);
