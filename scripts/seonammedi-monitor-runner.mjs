@@ -45,13 +45,24 @@ export function createD1HttpBinding({accountId,databaseId,token,fetchImpl=fetch}
   }};
 }
 
+export const RECENT_RUN_WINDOW_MS=40*60*1000;
+export async function recentSuccessfulRun(db,nowMs,windowMs=RECENT_RUN_WINDOW_MS){
+  const since=new Date(nowMs-windowMs).toISOString();
+  const row=await db.prepare("SELECT id,started_at FROM seonammedi_monitor_runs WHERE status='ok' AND started_at>=? ORDER BY id DESC LIMIT 1").bind(since).first().catch(()=>null);
+  return row||null;
+}
 async function main(){
   if(!token||!accountId)throw new Error('CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are required');
   const databaseId=ekodiAuthDatabaseId(fs.readFileSync(new URL('../wrangler.site.toml',import.meta.url),'utf8'));
   if(!databaseId)throw new Error('ekodi-auth D1 database id not found');
   if(dryRun){console.log(JSON.stringify({ok:true,dryRun:true,databaseId}));return}
+  const db=createD1HttpBinding({accountId,databaseId,token});
+  if(!process.argv.includes('--force')){
+    const recent=await recentSuccessfulRun(db,Date.now());
+    if(recent){console.log(JSON.stringify({skipped:true,reason:'recent_successful_run',runId:recent.id,startedAt:recent.started_at}));return}
+  }
   const naver=process.env.NAVER_CLIENT_ID&&process.env.NAVER_CLIENT_SECRET?{NAVER_CLIENT_ID:process.env.NAVER_CLIENT_ID,NAVER_CLIENT_SECRET:process.env.NAVER_CLIENT_SECRET}:{};
-  const env={DB:createD1HttpBinding({accountId,databaseId,token}),...naver};
+  const env={DB:db,...naver};
   console.log(JSON.stringify({naverSearch:Boolean(naver.NAVER_CLIENT_ID)}));
   const result=await runSeonamMediHourlyCheck(env,{scheduledAt:new Date().toISOString(),force:true});
   const summary={status:result.status,checked:result.checked,seen:result.seen,added:result.added,verified:result.verified,reverified:result.reverified,errors:(result.errors||[]).slice(0,8)};

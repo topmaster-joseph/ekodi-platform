@@ -45,3 +45,21 @@ test('scheduled runner workflow is hourly, least-privilege and uses the shared m
   assert.match(script,/import \{runSeonamMediHourlyCheck\} from '\.\.\/seonammedi-monitor\.js'/);
   assert.match(script,/force:true/);
 });
+
+test('runner skips when a successful monitor run happened in the last 40 minutes',async()=>{
+  const {recentSuccessfulRun,RECENT_RUN_WINDOW_MS}=await import('../scripts/seonammedi-monitor-runner.mjs');
+  assert.equal(RECENT_RUN_WINDOW_MS,40*60*1000);
+  let seen=null;
+  const db={prepare(sql){return {bind(since){seen={sql,since};return this},async first(){return {id:405,started_at:'2026-10-19T05:48:03Z'}}}}};
+  assert.deepEqual(await recentSuccessfulRun(db,Date.parse('2026-10-19T06:00:00Z')),{id:405,started_at:'2026-10-19T05:48:03Z'});
+  assert.match(seen.sql,/status='ok' AND started_at>=\?/);
+  assert.equal(seen.since,'2026-10-19T05:20:00.000Z');
+  const failing={prepare(){return {bind(){return this},first:async()=>{throw new Error('down')}}}};
+  assert.equal(await recentSuccessfulRun(failing,Date.now()),null,'guard failure never blocks collection');
+});
+
+test('merges to main also trigger the runner because schedules are throttled',async()=>{
+  const workflow=await readFile(new URL('../.github/workflows/seonammedi-news-monitor-runner.yml',import.meta.url),'utf8');
+  assert.match(workflow,/push:\n    branches: \[main\]/);
+  assert.match(workflow,/github\.event_name == 'workflow_dispatch' && '--force'/);
+});
