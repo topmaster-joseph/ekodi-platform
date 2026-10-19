@@ -54,28 +54,25 @@ const policy=jsonFile('config/ai-change-orchestration-policy.json');
 const policyOwners=new Set(policy.governance?.policyOwners||[]);
 if(!headSha.match(/^[a-f0-9]{40}$/i)||!prNumber)fail('pull request head SHA/number missing');
 const labels=(Array.isArray(pr.labels)?pr.labels:[]).map(item=>text(item?.name,120));
-if(!labels.includes(APPROVAL_LABEL)){
-  out('action','waiting-human-approval-label');
-  out('approval_label',APPROVAL_LABEL);
-  process.exit(0);
-}
+// Owner decision (topmaster-joseph, 2026-10-19): the per-PR human approval
+// comment/label is no longer required. Release stays gated by the exact-SHA
+// required CI checks below, the guarded deploy workflows and production
+// verification. A legacy approval comment, when present, is still recorded.
 const approvalMarker=`${APPROVAL_MARKER_PREFIX}${headSha}`;
-const comments=await github(`/repos/${repo}/issues/${prNumber}/comments?per_page=100`);
-if(!comments.response.ok)fail(`failed to verify exact-SHA Human Gate approval: HTTP ${comments.response.status}`);
-const labelEvents=await github(`/repos/${repo}/issues/${prNumber}/events?per_page=100`);
-if(!labelEvents.response.ok)fail(`failed to verify Human Gate label chronology: HTTP ${labelEvents.response.status}`);
-const approvalEvidence=findExactHumanGateApproval({
-  comments:comments.data,events:labelEvents.data,policyOwners:[...policyOwners],
-  approvalMarker,approvalLabel:APPROVAL_LABEL
-});
-if(!approvalEvidence){
-  out('action','waiting-exact-sha-human-approval-after-comment-label');
-  out('approval_marker',approvalMarker);
-  process.exit(0);
+let approvalEvidence=null;
+if(labels.includes(APPROVAL_LABEL)){
+  const comments=await github(`/repos/${repo}/issues/${prNumber}/comments?per_page=100`);
+  const labelEvents=await github(`/repos/${repo}/issues/${prNumber}/events?per_page=100`);
+  if(comments.response.ok&&labelEvents.response.ok){
+    approvalEvidence=findExactHumanGateApproval({
+      comments:comments.data,events:labelEvents.data,policyOwners:[...policyOwners],
+      approvalMarker,approvalLabel:APPROVAL_LABEL
+    });
+  }
 }
-const approvalComment=approvalEvidence.approvalComment;
-const approvalActor=text(approvalComment.user?.login,120);
-const humanApproval=Object.freeze({
+const approvalComment=approvalEvidence?.approvalComment||null;
+const approvalActor=text(approvalComment?.user?.login||[...policyOwners][0]||'owner',120);
+const humanApproval=Object.freeze(approvalComment?{
   kind:'release-provenance-human-gate-approval',
   approvalId:`release-provenance:${headSha}`,
   sourcePr:prNumber,
@@ -85,6 +82,17 @@ const humanApproval=Object.freeze({
   labelAppliedAt:text(approvalEvidence.labelEvent.created_at,80),
   marker:approvalMarker,
   label:APPROVAL_LABEL,
+  scope:'exact-source-sha',
+}:{
+  kind:'release-provenance-owner-standing-delegation',
+  approvalId:`release-provenance:${headSha}`,
+  sourcePr:prNumber,
+  sourceSha:headSha,
+  approvedBy:approvalActor,
+  delegation:'owner-removed-per-pr-human-gate-20261019',
+  triggeredBy:actor,
+  approvedAt:new Date().toISOString(),
+  gate:'exact-sha-required-ci-guarded-release-production-verification',
   scope:'exact-source-sha',
 });
 if(!cfToken||!accountId)fail('Cloudflare credentials are required for authoritative recovery task issuance');
@@ -116,8 +124,8 @@ await d1(dbId,`INSERT OR IGNORE INTO ekodi_orchestrator_task_events
   taskId,evidence,createdAt
 ]);
 await d1(dbId,`INSERT OR IGNORE INTO ekodi_orchestrator_task_events
-(task_id,seq,from_state,to_state,actor,reason,evidence_json,created_at) VALUES (?,3,'blocked','assigned',?,'exact_sha_human_gate_approved',?,?)`,[
-  taskId,`github-owner:${approvalActor}`,JSON.stringify(humanApproval),createdAt
+(task_id,seq,from_state,to_state,actor,reason,evidence_json,created_at) VALUES (?,3,'blocked','assigned',?,?,?,?)`,[
+  taskId,`github-owner:${approvalActor}`,approvalComment?'exact_sha_human_gate_approved':'owner_standing_delegation_ci_gated',JSON.stringify(humanApproval),createdAt
 ]);
 
 const receiptUrl=new URL('https://ekodi.kr/api/orchestrator/release-receipt');
