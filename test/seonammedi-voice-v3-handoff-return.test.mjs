@@ -18,6 +18,7 @@ async function runClient({host,verifyOk=true,storageBlocked=false}){
   const status={textContent:''},list={replaceChildren(){},append(){}},search={value:'',addEventListener(){}};
   const fields={freshForm:form,freshStatus:status,freshList:list,freshSearch:search,
     freshWrite:{disabled:false,addEventListener:(name,cb)=>listeners.click=cb},
+    freshTitle:{value:'',focus(){}},
     freshMessage:{value:'',focus(){}},
     freshCancel:{addEventListener(){}}
   };

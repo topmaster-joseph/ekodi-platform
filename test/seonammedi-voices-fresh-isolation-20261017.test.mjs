@@ -21,14 +21,14 @@ function fakeDb(){
       },
       async run(){
         if(sql.startsWith('INSERT INTO citizen_voices_fresh')){
-          const [subject,submission_key,body,created_at,updated_at]=args;
-          const id=next++;state.posts.push({id,google_subject:subject,submission_key,body,status:'published',created_at,updated_at});
+          const [subject,submission_key,title,body,created_at,updated_at]=args;
+          const id=next++;state.posts.push({id,google_subject:subject,submission_key,title,body,status:'published',created_at,updated_at});
           return {meta:{last_row_id:id}};
         }
         if(sql.startsWith("UPDATE citizen_voices_fresh SET status='deleted'")){
           const p=state.posts.find(x=>x.id===Number(args[1]));if(p)p.status='deleted';
-        }else if(sql.startsWith('UPDATE citizen_voices_fresh SET body=')){
-          const p=state.posts.find(x=>x.id===Number(args[2]));if(p)p.body=args[0];
+        }else if(sql.startsWith('UPDATE citizen_voices_fresh SET title=?,body=')){
+          const p=state.posts.find(x=>x.id===Number(args[3]));if(p){p.title=args[0];p.body=args[1]}
         }else throw Error('unexpected_statement:'+sql);
         return {success:true};
       }
@@ -36,7 +36,7 @@ function fakeDb(){
   }}
 }
 const base='https://seonammedi.kr/board/api/voices-fresh';
-const jsonRequest=(path,method,message)=>new Request(base+path,{method,headers:{'content-type':'application/json'},body:JSON.stringify({message})});
+const jsonRequest=(path,method,message)=>new Request(base+path,{method,headers:{'content-type':'application/json'},body:JSON.stringify({title:'시민의견 제목',message})});
 const fakeAuth={
   google:async()=>({id:'synthetic-google-user'}),
   admin:async()=>({ok:true}),
@@ -80,7 +80,7 @@ test('new preview page has its own controls and compiles under both domains',asy
   const response=await worker.fetch(new Request(host),{});
   assert.equal(response.status,200);
   const html=await response.text();
-  for(const id of ['freshSearch','freshForm','freshMessage','freshList','freshWrite'])assert.ok(html.includes('id="'+id+'"'),id);
+  for(const id of ['freshSearch','freshForm','freshTitle','freshMessage','freshList','freshWrite'])assert.ok(html.includes('id="'+id+'"'),id);
   const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
   assert.equal(scripts.length,1);
   assert.doesNotThrow(()=>new Script(scripts[0][1]));
