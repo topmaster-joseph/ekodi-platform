@@ -35,6 +35,14 @@ export async function waitForVerifiedHeadStatus({
   }
 }
 
+// A closed PR (superseded by an orchestrator recovery PR, or already merged)
+// has no live merge commit to reconcile. Throwing here would trigger the CI
+// "revoke" step and overwrite the shared head commit's `test` status with
+// failure, poisoning the open PR that now owns that commit. Treat it as a no-op.
+export function closedPrNoop(pr) {
+  return pr?.state === 'closed';
+}
+
 export function verifiedHeadPr(pr, expectedHead) {
   if (pr?.state !== 'open' || pr?.draft === true || pr?.base?.ref !== 'main')
     throw new Error('PR is no longer eligible for merge status reconciliation');
@@ -68,10 +76,20 @@ async function main() {
     return response.status === 204 ? null : response.json();
   };
 
+  const initialPr = await api('/pulls/' + pr);
+  if (closedPrNoop(initialPr)) {
+    console.log('[EKODI][REQUIRED-STATUS-RECOVERY] PR #' + pr + ' is closed' +
+      (initialPr?.merged ? ' (merged)' : ' (superseded or abandoned)') + '; no merge commit to reconcile');
+    return;
+  }
   const by = await waitForVerifiedHeadStatus({
     getStatuses: sha => api('/commits/' + sha + '/status'), head,
   });
   const currentPr = await api('/pulls/' + pr);
+  if (closedPrNoop(currentPr)) {
+    console.log('[EKODI][REQUIRED-STATUS-RECOVERY] PR #' + pr + ' closed during reconciliation; no-op');
+    return;
+  }
   const mergeSha = verifiedHeadPr(currentPr, head);
   for (const context of REQUIRED) {
     const source = by.get(context);
