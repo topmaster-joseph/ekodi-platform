@@ -15,7 +15,7 @@ on:
         required: true
         type: string
       consult_mode:
-        description: 'review = single advisory review; multi = EKODI multi-consult with independent sentinel (secrets/dns/auth designs)'
+        description: 'review = single advisory review; multi = independent re-verification (AI-CONSULT-001 highUncertainty) for designs with open 확인필요 items'
         required: false
         default: multi
         type: choice
@@ -91,15 +91,16 @@ jobs:
           proposal=$(head -c 7000 "$PROPOSAL_PATH")
           task_id="consult_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
           goal=$(printf '%s\n\n%s' 'Read-only architecture consultation. Review the EKODI proposal below against EKODI constitution, security, secrets, DNS and orchestration policies. Answer each consultation question in section 8, state approve / approve-with-changes / reject with reasons, and list missing risks. Authorizes no external action and no production mutation.' "$proposal")
-          # multi: the reviewed design touches secrets/dns/auth, so EKODI AI-CONSULT-001
-          # must run multi_consult. readOnly:true would short-circuit to not_required.
-          # The task still authorizes no action (mutation:false, productionMutationAllowed:false).
-          read_only=true; [ "$CONSULT_MODE" = "multi" ] && read_only=false
-          payload=$(jq -nc --arg taskId "$task_id" --arg goal "$goal" --argjson readOnly "$read_only" '{
-            taskId:$taskId, goal:$goal, risk:"medium", readOnly:$readOnly, mutation:false, routine:false, maxAttempts:1,
+          # A non-mutating review is classified read-only by AI-CONSULT-001 and gets a
+          # single review. Designs that still carry open 확인필요 items are a genuine
+          # highUncertainty case, which AI-CONSULT-001 routes to independent
+          # re-verification. The task still authorizes no action.
+          high_uncertainty=false; [ "$CONSULT_MODE" = "multi" ] && high_uncertainty=true
+          payload=$(jq -nc --arg taskId "$task_id" --arg goal "$goal" --argjson hu "$high_uncertainty" '{
+            taskId:$taskId, goal:$goal, risk:"medium", readOnly:true, mutation:false, routine:false, maxAttempts:1, highUncertainty:$hu,
             target:{service:"core",capability:"architecture_review",surface:"admin"},
             delegation:{allowed:true,reversible:true,audited:true,preflightVerified:true,verificationDefined:true},
-            context:{source:"github-actions-consultation",productionMutationAllowed:false,consultationCategories:["secrets","dns","authentication"]},
+            context:{source:"github-actions-consultation",productionMutationAllowed:false,highUncertainty:$hu,uncertaintyReason:"proposal contains unresolved 확인필요 items",consultationCategories:["secrets","dns","authentication"]},
             event:{id:("pulse_"+$taskId),kind:"manual_goal",source:"github-actions-consultation",summary:"Proposal review: search engine registration automation",changeClass:"green",actionable:true,requiresHumanDecision:false},
             executeNow:true}')
           curl -fsS --retry 2 -X POST "$EKODI_ORIGIN/api/control/ai/v8/pulse" -H "Authorization: Bearer $EKODI_TOKEN" \
