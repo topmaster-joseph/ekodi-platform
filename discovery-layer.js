@@ -20,7 +20,7 @@ export const DISCOVERY_PRIVATE_PREFIXES = Object.freeze([
 ]);
 
 export const DISCOVERY_CRAWLER_POLICY = Object.freeze({
-  searchIndex: Object.freeze(['Googlebot', 'bingbot']),
+  searchIndex: Object.freeze(['Googlebot', 'bingbot', 'Yeti', 'Daum']),
   answerRetrieval: Object.freeze(['OAI-SearchBot', 'Claude-SearchBot', 'PerplexityBot', 'Applebot']),
   training: Object.freeze([
     'GPTBot', 'ClaudeBot', 'Google-Extended', 'Google-CloudVertexBot', 'Bytespider', 'CCBot',

@@ -1,0 +1,73 @@
+// SEARCH-EXPOSURE-ALL-001 live audit: every public site in the EKODI public
+// registry must be crawlable (HTTP 200, no noindex) and carry a canonical and
+// an index-allowing robots signal. Read-only; prints a JSON evidence report.
+const origin = 'https://ekodi.kr';
+const ua = 'EKODI-Search-Exposure-Audit/1.0';
+const timeoutMs = Number(process.env.AUDIT_TIMEOUT_MS || 20000);
+
+async function get(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { headers: { 'user-agent': ua, 'cache-control': 'no-cache' }, redirect: 'manual', signal: controller.signal });
+    return { status: response.status, headers: response.headers, text: await response.text() };
+  } finally { clearTimeout(timer); }
+}
+
+export function auditHtml({ status, headers, text }) {
+  const head = (String(text).match(/<head\b[^>]*>([\s\S]*?)<\/head>/i) || [])[1] || '';
+  const xRobots = String(headers.get('x-robots-tag') || '');
+  const robotsMeta = (head.match(/<meta\b(?=[^>]*\bname=(['"]?)robots\1)[^>]*content=(['"])([^'"]*)\2/i) || [])[3] || '';
+  const canonical = (head.match(/<link\b(?=[^>]*\brel=(['"]?)canonical\1)[^>]*href=(['"])([^'"]+)\2/i) || [])[3] || '';
+  const problems = [];
+  if (status !== 200) problems.push(`http_${status}`);
+  if (/noindex|none/i.test(xRobots)) problems.push('x_robots_noindex');
+  if (/noindex|none/i.test(robotsMeta)) problems.push('meta_noindex');
+  if (status === 200 && !canonical) problems.push('canonical_missing');
+  return { ok: problems.length === 0, problems, canonical, robots: robotsMeta || xRobots || '(default index)' };
+}
+
+async function main() {
+  const robots = await get(origin + '/robots.txt');
+  const robotsOk = robots.status === 200 && /User-agent: Yeti/.test(robots.text) && /Sitemap: https:\/\/ekodi\.kr\/sitemap\.xml/.test(robots.text);
+  const sitemap = await get(origin + '/sitemap.xml');
+  const registry = JSON.parse((await get(origin + '/public-registry.json')).text);
+  const sites = (registry.resources || []).filter(resource => resource.type === 'site' || resource.source === 'discovery-layer');
+  const results = [];
+  for (const site of sites) {
+    try {
+      let current = site.url, page = await get(current), hops = [];
+      while ([301, 302, 307, 308].includes(page.status) && hops.length < 3) {
+        const next = new URL(page.headers.get('location') || '', current).toString();
+        if (!next.startsWith(origin + '/')) break;
+        hops.push(`${page.status}->${next}`); current = next; page = await get(current);
+      }
+      const audit = auditHtml(page);
+      if (hops.length) audit.problems = [...audit.problems, 'sitemap_url_redirects'];
+      results.push({ url: site.url, final: current, hops, ...audit, ok: audit.problems.length === 0 });
+    }
+    catch (error) { results.push({ url: site.url, ok: false, problems: ['fetch_' + (error.name || 'error')] }); }
+  }
+  // A page that itself ships noindex is an owner decision, not a platform
+  // regression: surface it as a warning so it stays visible without paging.
+  const ownerNoindex = results.filter(r => !r.ok && r.problems.every(p => ['x_robots_noindex', 'meta_noindex', 'canonical_missing'].includes(p)) && r.problems.some(p => p.endsWith('noindex')));
+  const failed = results.filter(result => !result.ok && !ownerNoindex.includes(result));
+  const report = {
+    policy: 'EKODI-SEARCH-EXPOSURE-ALL-001', checkedAt: new Date().toISOString(),
+    robots: { status: robots.status, ok: robotsOk }, sitemap: { status: sitemap.status, urls: (sitemap.text.match(/<loc>/g) || []).length },
+    registryCount: registry.count, auditedSites: results.length, passed: results.length - failed.length - ownerNoindex.length, ownerNoindex: ownerNoindex.map(r => r.url), failed,
+  };
+  console.log(JSON.stringify(report, null, 2));
+  // Annotations are readable through the checks API even when raw logs are not.
+  console.log(`::notice title=SEARCH-EXPOSURE-ALL-001::robots=${robotsOk ? 'ok' : 'fail'} sitemap=${sitemap.status}/${report.sitemap.urls} passed=${report.passed}/${report.auditedSites}`);
+  if (ownerNoindex.length) console.log(`::warning title=owner-noindex (${ownerNoindex.length})::${ownerNoindex.map(r => r.url).join(' | ')} — 사이트 공개 상태는 public이나 페이지가 스스로 noindex. 소유자 확인 필요`);
+  if (failed.length) console.log(`::error title=search-exposure (${failed.length})::${failed.map(item => `${item.url} [${item.problems.join(',')}]${item.hops?.length ? ' ' + item.hops.join(' ') : ''}`).join(' | ')}`);
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    const { appendFile } = await import('node:fs/promises');
+    const rows = results.map(r => `| ${r.url} | ${r.ok ? '✅' : '❌ ' + r.problems.join(',')} | ${r.robots || ''} |`).join('\n');
+    await appendFile(process.env.GITHUB_STEP_SUMMARY, `## 사용자 사이트 검색 노출 점검\n\nrobots ${robotsOk ? '✅' : '❌'} · sitemap URL ${report.sitemap.urls} · 통과 ${report.passed}/${report.auditedSites}\n\n| URL | 결과 | robots |\n|---|---|---|\n${rows}\n`);
+  }
+  if (!robotsOk || sitemap.status !== 200 || failed.length) process.exit(1);
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) main().catch(error => { console.error(error.message); process.exit(1); });

@@ -42,6 +42,8 @@ const clean=(value,max=2048)=>String(value??'').trim().slice(0,max);
 const normalizedId=value=>clean(value,100).toLowerCase().replace(/[^a-z0-9-]/g,'');
 const trimPath=value=>{const raw=String(value||'/').split('?')[0].split('#')[0];const path=('/'+raw.replace(/^\/+|\/+$/g,'')).replace(/\/{2,}/g,'/');return path==='/'?'/':path.replace(/\/$/,'')};
 const pathForTenant=slug=>TENANT_PATH_ALIASES[clean(slug,100).toLowerCase()]||('/'+clean(slug,100).toLowerCase().replace(/[^a-z0-9-]/g,'-'));
+// customer_tenants.domain is the registered public address; an `ekodi.kr/<path>` value wins over the slug guess.
+export const registeredTenantPath=(slug,domain)=>{const raw=clean(domain,255).toLowerCase().replace(/^https?:\/\//,'');const m=raw.match(/^ekodi\.kr(\/[a-z0-9\-\/]+)$/);if(m){const path=trimPath(m[1]);if(path!=='/'&&!/(^|\/)(admin|api|auth)(\/|$)/.test(path))return path}return pathForTenant(slug)};
 const domainKey=site=>{try{const u=new URL(site.canonicalUrl);return u.hostname+(u.pathname==='/'?'/':u.pathname.replace(/\/$/,''))}catch{return site.canonicalPath||site.id}};
 const defaultMaintenanceTitle=site=>site.name?site.name+' 준비 중입니다':'현재 사이트 준비 중입니다';
 const defaultMaintenanceMessage='현재 관리자 점검 또는 준비 중입니다. 잠시 후 다시 확인해 주세요.';
@@ -139,7 +141,7 @@ async function activeCustomerTenantSites(env){
   let result;try{result=await env.DB.prepare("SELECT id,slug,name,domain,status FROM customer_tenants WHERE status='active' ORDER BY name,slug").all()}catch{return[]}
   return (result.results||[]).map(row=>{
     const slug=clean(row.slug,100).toLowerCase();if(!slug)return null;
-    const canonicalPath=pathForTenant(slug);
+    const canonicalPath=registeredTenantPath(slug,row.domain);
     return normalizeCatalogSite({
       id:slug,workspaceId:slug,name:row.name||slug,canonicalUrl:'https://ekodi.kr'+canonicalPath+'/',
       canonicalPath,adminUrl:'https://ekodi.kr'+canonicalPath+'/admin/',domain:row.domain||'',

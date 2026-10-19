@@ -17,8 +17,22 @@ function normalizePath(value='/'){
   return path==='/'?'/':path.replace(/\/$/,'');
 }
 
+// Public surfaces whose page deliberately ships `noindex` (partner login portal).
+// Listing them in the sitemap sends crawlers a contradictory signal.
+export const PAGE_OWNED_NOINDEX_PATHS=Object.freeze(new Set(['/ekodibiz/trade',
+  // Legacy Pages studio; the canonical church live entry is /live/church/.
+  '/ekodichurch/live']));
+
+// Sites whose live entry 308s from /<site> to /<site>/ (audit run 39241336747).
+// The sitemap lists the final URL so crawlers get no redirect hop.
+export const TRAILING_SLASH_CANONICAL_PATHS=Object.freeze(new Set([
+  '/bible','/books','/cafe','/community','/ekodichurch','/ekodilab','/ekodipay',
+  '/journal','/jubilee','/life','/live','/open','/publishing','/pyeonggongmok','/work',
+]));
+
 export function isPublicDiscoveryPath(pathname='/'){
   const path=normalizePath(pathname).toLowerCase();
+  if(PAGE_OWNED_NOINDEX_PATHS.has(path))return false;
   if(BLOCKED_PREFIXES.some(prefix=>path===prefix||path.startsWith(prefix+'/')))return false;
   if(path.split('/').includes('admin'))return false;
   return true;
@@ -31,6 +45,7 @@ function normalizeCanonical(value,pathFallback='/'){
     url.username='';url.password='';url.port='';url.search='';url.hash='';
     url.pathname=normalizePath(url.pathname);
     if(!isPublicDiscoveryPath(url.pathname))return null;
+    if(TRAILING_SLASH_CANONICAL_PATHS.has(url.pathname))return url.origin+url.pathname+'/';
     return url.toString().replace(/\/$/,'')+(url.pathname==='/'?'/':'');
   }catch{return null}
 }

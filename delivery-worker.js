@@ -1,3 +1,4 @@
+import { ensureSiteDiscoveryHead } from './site-discovery-head.js';
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { recommendDelivery, calculateSettlement, buildOperationsBrief } from './delivery/core.js';
 import { discoverStores, storeDiscoveryProviderStatus } from './delivery/store-resolver.js';
@@ -53,7 +54,7 @@ async function requireMember(request,env){
 function runtimeConfig(env={}){const providers=storeDiscoveryProviderStatus(env);return{dataMode:env.DATA_MODE||'isolated-staging',authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=delivery',centralIdentity:centralIdentityConfig(env),canonicalUrl:'https://ekodi.kr/delivery',accessPolicy:'public-guide-free-member-workspace',providerAdapterCount:providers.filter(item=>item.configured).length,providerAdapters:'official-or-approved-adapters-only',storeResolver:{version:'10g-preview',providers},executionEnabled:false,persistence:'browser-local-non-sensitive-mvp',aiMode:'provider-independent-decision-support',externalMutation:false,humanConfirmationRequired:true}}
 async function assetResponse(request,env,pathname){const assetUrl=new URL(request.url);assetUrl.pathname=pathname;const assetRequest=new Request(assetUrl,{method:'GET',headers:request.headers});return env.ASSETS.fetch(assetRequest)}
 
-export default{async fetch(request,env){
+const searchExposureEntry={async fetch(request,env){
   const url=new URL(request.url);
   const pathname=featurePath(url);
   const productionHost=url.hostname==='ekodi.kr';
@@ -71,3 +72,7 @@ export default{async fetch(request,env){
   const response=await assetResponse(request,env,pathname);
   return injectEkodiShell(withHeaders(response,env),'delivery');
 }};
+
+// SEARCH-EXPOSURE-ALL-001: this Worker owns its ekodi.kr route directly, so it
+// applies the shared add-only search head itself (router is bypassed).
+export default {...searchExposureEntry,async fetch(request,env,ctx){const response=await searchExposureEntry.fetch(request,env,ctx);try{return await ensureSiteDiscoveryHead(request,response,{id:'delivery',name:'EKODI 배달'})}catch{return response}}};
