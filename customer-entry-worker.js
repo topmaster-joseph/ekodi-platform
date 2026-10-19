@@ -6,6 +6,7 @@ import { handleGoogleCustomerPreregistration } from './customer-google-prereg.js
 import { handleRegionalAccessControl } from './regional-access-control.js';
 import { handleLocalRegionOperations } from './local-region-operations-control.js';
 import { handleCheonggyePassVendorIntake } from './cheonggyepass-vendor-intake.js';
+import { MOTOR_FESTIVAL_API_PATH, handleMotorFestivalApplications, purgeExpiredMotorFestivalApplications } from './motor-festival-registration-api.js';
 import { handleCustomerMemberDirectory } from './customer-member-directory.js';
 import { handleMembershipBilling, runMembershipBillingSchedule } from './membership-billing.js';
 import { handleAdminGoogleAuth } from './admin-google-auth.js';
@@ -274,6 +275,9 @@ export default {
         });
       }
     }
+    if (path === MOTOR_FESTIVAL_API_PATH || path === MOTOR_FESTIVAL_API_PATH + '/') {
+      return handleMotorFestivalApplications(request, env);
+    }
     if (path.startsWith('/api/cheonggyepass/vendor-intake')) {
       return handleCheonggyePassVendorIntake(request, env);
     }
@@ -332,6 +336,8 @@ export default {
   },
 
   async scheduled(controller, env, ctx) {
+    // Motor festival personal data retention: runs every cycle, before any early return.
+    ctx.waitUntil(purgeExpiredMotorFestivalApplications(env).catch(error => console.error('Motor festival retention purge failed', error?.name || 'Error')));
     const reporting = await syncScheduledCoupangPartnerReports(env, { reason: 'schedule' })
       .catch(error => {
         console.error('EKODI Mall Coupang report schedule failed', error);

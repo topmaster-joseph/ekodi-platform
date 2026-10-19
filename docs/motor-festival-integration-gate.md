@@ -1,23 +1,37 @@
-# 모터페스티벌 신청 API 통합 차단 조건
+# 모터페스티벌 2026 상가 참여 신청 — 운영 통합 기준
 
-2026-10-19 점검: PR #5307의 CI 및 AI Orchestration Gate 실패. 운영 배포 금지.
+- 사업: 2026년 제2회 전남폴리텍 모터페스티벌 (행사 2026-10-25, 신청 마감 2026-10-25 08:00 KST)
+- 운영 주체: 청계면상인회 (EKODI tenant `cgma`, scope `cheonggye-merchant-association`)
+- 작업: EKODI 공식 복구 브랜치 `ai/chatgpt/orch_recovery_e68a9e5bf49f140f31bc36217d5eadea` / PR #5315
 
-## 저장소 일치
-- `motor-festival-registration-api.js`는 D1의 `db.prepare().bind().run()` 인터페이스를 기대합니다.
-- 개발 환경에 생성된 `public.motor_festival_2026_applications`는 **Supabase PostgreSQL** 테이블입니다.
-- 두 저장소는 호환되지 않으므로 현재 코드를 Supabase 바인딩으로 연결하면 안 됩니다.
-- 권장: 기존 EKODI Supabase 서버 접근 패턴을 사용해 별도 서버 어댑터를 만들고, DB 서비스 권한은 서버에만 보관합니다.
+## 운영 주소 (서브도메인 없음)
+| 구분 | 주소 | 담당 런타임 |
+|---|---|---|
+| 신청 화면 | `https://ekodi.kr/cgma/motor-festival-2026/` | Shared Site (`cgma-motor-festival-route.js`, deploy-site-core) |
+| 관리자 화면 | `https://ekodi.kr/cgma/motor-festival-2026/admin/` | Shared Site |
+| 신청·조회 API | `https://ekodi.kr/api/merchant-events/motor-festival-2026/applications` | Control API (`motor-festival-registration-api.js`, deploy-control-api) |
 
-## 필수 통합 순서
-1. 인증된 서버측 데이터 저장 API 구현. 외부 사용자는 POST만, 관리자 GET은 EKODI가 발급한 서버 검증 세션과 사이트별 권한을 모두 확인합니다.
-2. POST는 Origin 검사만으로 방어하지 말고, 서버측 IP/디바이스 속도 제한과 스팸 방어를 추가합니다. 저장 실패 시 접수번호를 반환하지 않습니다.
-3. Supabase 테이블 RLS 및 anon/authenticated 접근 거부 유지. 서비스 키를 클라이언트에 노출하지 않습니다.
-4. 관리자 조회 응답은 최대 페이지 크기를 제한하고 접근 감사를 기록합니다.
-5. 운영 DB에 승인된 마이그레이션 적용, 실제 API와 화면을 동일 출처로 연결합니다.
-6. 실제 테스트: 비로그인 제출, 재조회 영속성, 중복/스팸 제한, 일반 사용자 GET 차단, 다른 사이트 관리자 GET 차단, 회원가입 희망 구분, PC/모바일, 삭제 일정.
-7. CI, Orchestration Gate, 필수 배포 검사 통과 후 Human Gate 승인·보호 병합·스테이징/운영 실증.
+`ekodi.kr/api/*` → Shared Site `routeCanonicalSurface` → `CONTROL_API` → `customer-entry-worker.js` → 본 핸들러.
+
+## 저장소 결정
+- 운영 저장소는 Control API D1 `ekodi-auth`의 `cgma_motor_festival_2026_applications` (migration `0199`).
+- EKODI Worker는 Supabase service-role 키를 보유하지 않는다(저장소 불변식·테스트로 강제). 운영 Supabase(`renzehysxirjilvdxacv`)에는 행사 테이블이 없다.
+- 개발 Supabase(`lxcxwbdwwojjkgybbqii`)의 Edge Function `motor-festival-2026`과 `supabase/dev/motor-festival-2026-retention.sql`은 **개발 원형(prototype)** 으로만 보존한다. 운영 경로가 아니며 실제 참가자 개인정보를 개발 환경으로 유도하지 않는다.
+
+## 보안·권한
+- POST: 비로그인 허용. 동일 출처(`Origin: https://ekodi.kr` 또는 없음, `x-ekodi-intake-request: 1`), JSON 8KB 상한, 허용 필드·값 목록 검증, 동의 필수, honeypot, `Idempotency-Key` 재전송 시 동일 접수번호.
+- 요청 제한: Edge 레이트리밋 + 같은 네트워크 10분 20건 + 같은 연락처 24시간 3건.
+- 접수번호(`MF26-XXXXXXXX`)는 D1 재조회로 저장이 확인된 뒤에만 반환. 저장 실패 시 503.
+- GET: `resolveTenantAccessAuthority(tenant=cgma)` — 플랫폼 `super_admin` 또는 cgma 활성 권한(owner/admin 등 접근관리 가능 역할)만 200. 비로그인 401, 일반 회원·기타 역할 403. 모든 조회는 `cgma_motor_festival_2026_access_audit`에 기록(관리자·건수만).
+- `?view=summary`: 개인정보 없는 집계만 반환. 관리자 화면의 "통계 복사"도 집계만 복사.
 
 ## 개인정보
-- 행사 종료 후 30일 내 삭제 정책을 DB 정리 작업 및 백업/로그에도 적용.
-- 관리자만 개인정보 조회. 통계 공유에는 연락처·담당자·업체별 개별 데이터 제외.
-- 본 문서 작성은 서비스 활성화 증거가 아닙니다.
+- 담당자 성명·연락처·건의사항은 AES-256-GCM(HKDF 파생, Worker secret `MOTOR_FESTIVAL_PII_KEY`) 암호문으로만 저장. 중복 판단은 HMAC 해시. 키는 배포 파이프라인이 생성하며 값은 출력·열람하지 않는다. 키가 없으면 신청·조회 모두 503(fail closed).
+- 보존기한: `expires_at = 2026-11-23T15:00:00Z` (2026-11-24 00:00 KST). Control API 10분 cron(`customer-entry-worker.scheduled`)이 만료 행을 삭제 → 행사 종료(10-25 17:00) 후 30일 이내 파기.
+- 로그: 요청 본문·신청 필드를 기록하지 않는다(오류 클래스명만).
+- D1 time-travel 백업은 Cloudflare 보존기간(확인필요: 요금제별 최대 30일) 경과 후 소멸.
+
+## 검증
+- `test/motor-festival-registration.test.mjs`, `test/cgma-motor-festival-route.test.mjs` (실제 migration을 node:sqlite로 실행).
+- 배포 후 자동 점검(deploy-control-api): 비로그인 GET 401, 교차 출처 POST 403, PII 키 존재(이름만) — 신청 데이터는 쓰지 않음.
+- 실서비스 신청·관리자 조회 실증은 가상 데이터로 수행 후 삭제.

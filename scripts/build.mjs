@@ -29,9 +29,15 @@ await mkdir(output, { recursive: true });
 await Promise.all(assets.map(asset => cp(`${root}${asset}`, `${output}${asset}`)));
 // CGMA survey remains a tenant-owned, anonymous static entrypoint (no write API).
 await mkdir(`${output}cgma/ai-education/`,{recursive:true});
+// CGMA motor festival 2026: public application + admin pages; data only via the Control API.
+await mkdir(`${output}cgma/motor-festival-2026/admin/`,{recursive:true});
 await Promise.all([
   cp(`${root}prototypes/cgma-ai-education-survey.html`,`${output}cgma/ai-education/index.html`),
   cp(`${root}prototypes/cgma-ai-education-survey.js`,`${output}cgma/ai-education/app.js`),
+  cp(`${root}prototypes/cgma-motor-festival-2026.html`,`${output}cgma/motor-festival-2026/index.html`),
+  cp(`${root}prototypes/cgma-motor-festival-2026.js`,`${output}cgma/motor-festival-2026/app.js`),
+  cp(`${root}prototypes/cgma-motor-festival-2026-admin.html`,`${output}cgma/motor-festival-2026/admin/index.html`),
+  cp(`${root}prototypes/cgma-motor-festival-2026-admin.js`,`${output}cgma/motor-festival-2026/admin/app.js`),
 ]);
 await Promise.all([
   cp(`${root}pizzamaru-mokpodae.html`, `${output}pizzamaru-mokpodae.html`),

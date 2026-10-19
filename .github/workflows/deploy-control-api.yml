@@ -39,6 +39,8 @@ on:
       - 'admin-google-auth.js'
       - 'customer-auth.js'
       - 'customer-entry-worker.js'
+      - 'motor-festival-registration-api.js'
+      - 'test/motor-festival-registration.test.mjs'
       - 'regional-access-control.js'
       - 'local-region-operations-control.js'
       - 'test/local-region-operations.test.mjs'
@@ -250,6 +252,8 @@ on:
       - 'admin-google-auth.js'
       - 'customer-auth.js'
       - 'customer-entry-worker.js'
+      - 'motor-festival-registration-api.js'
+      - 'test/motor-festival-registration.test.mjs'
       - 'regional-access-control.js'
       - 'local-region-operations-control.js'
       - 'test/local-region-operations.test.mjs'
@@ -594,6 +598,15 @@ jobs:
         run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.api.staging.runtime.toml
       - name: Deploy isolated Control staging
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.api.staging.runtime.toml
+      - name: Provision isolated staging motor festival PII key
+        shell: bash
+        run: |
+          set -euo pipefail
+          names=$(npx --yes wrangler@${WRANGLER_VERSION} secret list --config wrangler.api.staging.runtime.toml 2>/dev/null || true)
+          if ! printf '%s' "$names" | grep -Fq 'MOTOR_FESTIVAL_PII_KEY'; then
+            node -e "process.stdout.write(require('node:crypto').randomBytes(48).toString('base64url'))" | npx --yes wrangler@${WRANGLER_VERSION} secret put MOTOR_FESTIVAL_PII_KEY --config wrangler.api.staging.runtime.toml >/dev/null
+            echo 'Generated an isolated staging motor festival PII key (staging only).' >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Verify Personal Finance Control service binding in staging
         shell: bash
         run: |
@@ -754,6 +767,10 @@ jobs:
             node -e "process.stdout.write(require('node:crypto').randomBytes(48).toString('base64url'))" | npx --yes wrangler@${WRANGLER_VERSION} secret put MAIL_CREDENTIAL_KEY --config wrangler.api.toml >/dev/null
             echo 'Generated a persistent Mail credential-encryption key in Cloudflare Worker secrets.' >> "$GITHUB_STEP_SUMMARY"
           fi
+          if ! printf '%s' "$names" | grep -Fq 'MOTOR_FESTIVAL_PII_KEY'; then
+            node -e "process.stdout.write(require('node:crypto').randomBytes(48).toString('base64url'))" | npx --yes wrangler@${WRANGLER_VERSION} secret put MOTOR_FESTIVAL_PII_KEY --config wrangler.api.toml >/dev/null
+            echo 'Generated a persistent, isolated CGMA motor festival PII encryption key in Cloudflare Worker secrets.' >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Record configured AI providers without exposing secrets
         shell: bash
         run: |
@@ -879,6 +896,22 @@ jobs:
           grep -Fq '"code":"PF_ADMIN_AUTH_REQUIRED"' /tmp/personal-finance.json
           grep -Fq '"publishedLocales":["ko-KR"]' /tmp/i18n.json
           grep -Fq '"inheritedDefault":true' /tmp/catalog.json
+      - name: Verify CGMA motor festival API boundary without writing applicant data
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://ekodi.kr/api/merchant-events/motor-festival-2026/applications'
+          curl_retry=(--retry 3 --retry-delay 2 --retry-all-errors --connect-timeout 5 --max-time 12)
+          anon=$(curl -sS "${curl_retry[@]}" -o /tmp/mf-anon.json -w '%{http_code}' "$api")
+          test "$anon" = '401'
+          grep -Fq '"code":"ADMIN_LOGIN_REQUIRED"' /tmp/mf-anon.json
+          if grep -Eq '010-|contact_name|phone' /tmp/mf-anon.json; then echo 'Anonymous response leaked applicant fields' >&2; exit 1; fi
+          cross=$(curl -sS "${curl_retry[@]}" -o /tmp/mf-cross.json -w '%{http_code}' -X POST -H 'origin: https://evil.example' -H 'content-type: application/json' --data-binary '{}' "$api")
+          test "$cross" = '403'
+          grep -Fq '"code":"ORIGIN_FORBIDDEN"' /tmp/mf-cross.json
+          names=$(npx --yes wrangler@${WRANGLER_VERSION} secret list --config wrangler.api.toml 2>/dev/null || true)
+          printf '%s' "$names" | grep -Fq 'MOTOR_FESTIVAL_PII_KEY'
+          echo 'CGMA motor festival API: anonymous list 401, cross-origin write 403, isolated PII key present (value never read).' >> "$GITHUB_STEP_SUMMARY"
       - name: Verify canonical traffic telemetry version without writing visitor data
         shell: bash
         run: |
