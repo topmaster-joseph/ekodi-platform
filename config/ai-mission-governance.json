@@ -19,7 +19,7 @@
     "expiryBypassAllowed": false,
     "shortLivedCredentialPersistenceAllowed": false,
     "healthStates": ["connected", "degraded", "reauth_required", "unavailable"],
-    "operaBrowserConnector": "prefer_when_connected"
+    "operaBrowserConnector": "manual_explicit_only"
   },
   "policyPriority": [
     "mission_and_human_dignity",
