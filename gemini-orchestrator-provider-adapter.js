@@ -1,3 +1,4 @@
+import { isGeminiFreeTierConfirmed } from './google-cloud-project-registry.js';
 import { getSponsoredAiAllowance, recordProviderUsage } from './api-usage-meter.js';
 import { projectForExternalAi } from './secure-projection.js';
 
@@ -91,6 +92,7 @@ export function createGeminiOrchestratorProvider(env = {}, options = {}) {
     trustClass: 'external',
     async invoke({ taskName, context = {} } = {}) {
       if (!available) throw new Error('GEMINI_PROVIDER_NOT_CONFIGURED');
+      if (String(env.ENVIRONMENT || '').toLowerCase() === 'production' && !isGeminiFreeTierConfirmed(env)) throw new Error('GEMINI_FREE_TIER_UNVERIFIED');
       await budgetGuard(env);
       const projected = await projectForExternalAi(context, {
         profile: 'ai_minimum',
