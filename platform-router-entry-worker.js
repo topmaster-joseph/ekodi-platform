@@ -40,7 +40,7 @@ import { routeCanonicalSurface } from './canonical-surface-router.js';
 import { handlePreviewRequest } from './preview-page.js';
 import { storeGatewayPage } from './store-gateway-page.js';
 import { isEkodiIndexNowKeyPath, ekodiIndexNowKeyResponse } from './platform-indexnow.js';
-import { EKODI_PUBLIC_REGISTRY_PATH, EKODI_DYNAMIC_SITEMAP_PATH, EKODI_DYNAMIC_LLMS_PATH, ekodiPublicRegistryResponse, ekodiDynamicSitemapResponse, ekodiDynamicLlmsResponse } from './public-discovery-registry.js';
+import { EKODI_PUBLIC_REGISTRY_PATH, EKODI_DYNAMIC_SITEMAP_PATH, EKODI_DYNAMIC_LLMS_PATH, isPublicDiscoveryPath, ekodiPublicRegistryResponse, ekodiDynamicSitemapResponse, ekodiDynamicLlmsResponse } from './public-discovery-registry.js';
 import { publicDiscoveryContentResponse } from './public-discovery-content.js';
 import { storePortfolioAdminPage, storePortfolioAdminPanelPage, storePortfolioAdminPanelScript, storePortfolioAdminShellScript } from './store-portfolio-admin-page.js';
 import { isStorePosAgentDownloadPath, storePosAgentDownload } from './store-pos-agent-download.js';
@@ -665,7 +665,7 @@ export default {
     let response;
     try{response=await routePlatform(request,env,ctx)}catch(error){record(500);throw error}
     if(adminPublicationSite)response=injectSitePublicationAdmin(response,adminPublicationSite);
-    else if(request.method==='GET'){try{const publicSite=await resolvePublicationSiteForRequest(request,env);if(publicSite)response=await ensureSiteDiscoveryHead(request,response,publicSite)}catch(error){console.error('site discovery head skipped',error)}}
+    else if(request.method==='GET'){try{const reqUrl=new URL(request.url);const publicSite=await resolvePublicationSiteForRequest(request,env)||(reqUrl.hostname==='ekodi.kr'&&isPublicDiscoveryPath(reqUrl.pathname)?{id:'',name:''}:null);if(publicSite)response=await ensureSiteDiscoveryHead(request,response,publicSite)}catch(error){console.error('site discovery head skipped',error)}}
     return finalize(response);
   },
   async queue(batch,env){

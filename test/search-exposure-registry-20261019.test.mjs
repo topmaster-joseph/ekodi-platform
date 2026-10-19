@@ -16,3 +16,11 @@ test('page-owned noindex portal stays out of discovery', () => {
   assert.equal(isPublicDiscoveryPath('/ekodibiz/trade/products/a'), true);
   assert.equal(isPublicDiscoveryPath('/mnubiz'), true);
 });
+
+import { TRAILING_SLASH_CANONICAL_PATHS } from '../public-discovery-registry.js';
+test('slash-canonical sites are known and remain discoverable', () => {
+  for (const path of ['/bible', '/ekodichurch/live', '/pyeonggongmok']) {
+    assert.ok(TRAILING_SLASH_CANONICAL_PATHS.has(path));
+    assert.equal(isPublicDiscoveryPath(path), true);
+  }
+});

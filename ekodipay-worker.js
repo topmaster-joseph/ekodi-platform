@@ -1,3 +1,4 @@
+import { ensureSiteDiscoveryHead } from './site-discovery-head.js';
 import { PREVIEW_HTML } from './ekodipay-preview.js';
 // EKODI Pay public entry and non-financial experience demo.
 // This Worker NEVER makes PG requests, stores transactions, or confirms payment.
@@ -202,7 +203,7 @@ function checkout(request,url) {
     '<section class="card"><h2>주문번호: '+esc(orderId)+'</h2><p>이 화면은 결제 완료 증명이 아닙니다.</p>'+
     '<a href="'+back+'">에코디비즈 견적·결제 상태 확인</a></section></main>',request.method);
 }
-export default {
+const searchExposureEntry= {
   async fetch(request) {
     const url=new URL(request.url);
     const path=url.pathname;
@@ -222,3 +223,7 @@ export default {
     return shell('페이지를 찾을 수 없습니다','<main class="wrap demo"><h1>페이지를 찾을 수 없습니다</h1><a href="/ekodipay/">EKODI Pay 홈</a></main>',request.method,404);
   }
 };
+
+// SEARCH-EXPOSURE-ALL-001: this Worker owns its ekodi.kr route directly, so it
+// applies the shared add-only search head itself (router is bypassed).
+export default {...searchExposureEntry,async fetch(request,env,ctx){const response=await searchExposureEntry.fetch(request,env,ctx);try{return await ensureSiteDiscoveryHead(request,response,{id:'pay',name:'EKODI Pay'})}catch{return response}}};
