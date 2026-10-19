@@ -10,7 +10,7 @@ const res = (body = html, init = {}) => new Response(body, { status: 200, header
 test('canonical is self URL on ekodi.kr without query/hash', () => {
   assert.equal(canonicalSelfUrl('https://ekodi.kr/mnubiz/?a=1#b'), 'https://ekodi.kr/mnubiz/');
   assert.equal(canonicalSelfUrl('https://ekodi.kr//a//b'), 'https://ekodi.kr/a/b');
-  assert.equal(canonicalSelfUrl('https://cafe.ekodi.kr/'), '');
+  assert.equal(canonicalSelfUrl('https://seonammedi.kr/'), '');
   assert.equal(canonicalSelfUrl('http://ekodi.kr/'), '');
 });
 
