@@ -14,6 +14,12 @@ on:
         description: 'Issue that receives the EKODI AI consultation record'
         required: true
         type: string
+      consult_mode:
+        description: 'review = single advisory review; multi = independent re-verification (AI-CONSULT-001 highUncertainty) for designs with open 확인필요 items'
+        required: false
+        default: multi
+        type: choice
+        options: [multi, review]
 
 permissions:
   contents: read
@@ -29,6 +35,7 @@ env:
   EKODI_ORIGIN: https://ekodi.kr
   PROPOSAL_PATH: ${{ inputs.proposal_path }}
   ISSUE_NUMBER: ${{ inputs.issue_number }}
+  CONSULT_MODE: ${{ inputs.consult_mode || 'multi' }}
 
 jobs:
   consult:
@@ -84,11 +91,16 @@ jobs:
           proposal=$(head -c 7000 "$PROPOSAL_PATH")
           task_id="consult_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
           goal=$(printf '%s\n\n%s' 'Read-only architecture consultation. Review the EKODI proposal below against EKODI constitution, security, secrets, DNS and orchestration policies. Answer each consultation question in section 8, state approve / approve-with-changes / reject with reasons, and list missing risks. Authorizes no external action and no production mutation.' "$proposal")
-          payload=$(jq -nc --arg taskId "$task_id" --arg goal "$goal" '{
-            taskId:$taskId, goal:$goal, risk:"medium", readOnly:true, mutation:false, routine:false, maxAttempts:1,
+          # A non-mutating review is classified read-only by AI-CONSULT-001 and gets a
+          # single review. Designs that still carry open 확인필요 items are a genuine
+          # highUncertainty case, which AI-CONSULT-001 routes to independent
+          # re-verification. The task still authorizes no action.
+          high_uncertainty=false; [ "$CONSULT_MODE" = "multi" ] && high_uncertainty=true
+          payload=$(jq -nc --arg taskId "$task_id" --arg goal "$goal" --argjson hu "$high_uncertainty" '{
+            taskId:$taskId, goal:$goal, risk:"medium", readOnly:true, mutation:false, routine:false, maxAttempts:1, highUncertainty:$hu,
             target:{service:"core",capability:"architecture_review",surface:"admin"},
             delegation:{allowed:true,reversible:true,audited:true,preflightVerified:true,verificationDefined:true},
-            context:{source:"github-actions-consultation",productionMutationAllowed:false,consultationCategories:["secrets","dns","authentication"]},
+            context:{source:"github-actions-consultation",productionMutationAllowed:false,highUncertainty:$hu,uncertaintyReason:"proposal contains unresolved 확인필요 items",consultationCategories:["secrets","dns","authentication"]},
             event:{id:("pulse_"+$taskId),kind:"manual_goal",source:"github-actions-consultation",summary:"Proposal review: search engine registration automation",changeClass:"green",actionable:true,requiresHumanDecision:false},
             executeNow:true}')
           curl -fsS --retry 2 -X POST "$EKODI_ORIGIN/api/control/ai/v8/pulse" -H "Authorization: Bearer $EKODI_TOKEN" \
@@ -100,16 +112,12 @@ jobs:
             case "$state" in verified|degraded|core_only|executor_ready|failed|human_gate|ignored) break;; esac
             sleep 6
           done
-          assist_payload=$(jq -nc --arg m "$goal" '{message:$m,context:{source:"github-actions-consultation",readOnly:true},history:[]}')
-          curl -fsS --retry 2 -X POST "$EKODI_ORIGIN/api/control/ai/assist" -H "Authorization: Bearer $EKODI_TOKEN" \
-            -H 'Content-Type: application/json' --data "$assist_payload" > "$RUNNER_TEMP/assist.json" || echo '{}' > "$RUNNER_TEMP/assist.json"
           jq -n --arg taskId "$task_id" --arg state "${state:-unknown}" \
-            --slurpfile task "$RUNNER_TEMP/task.json" --slurpfile assist "$RUNNER_TEMP/assist.json" '{
+            --slurpfile task "$RUNNER_TEMP/task.json" '{
               taskId:$taskId, state:$state,
               consultation:($task[0].task.consultation // $task[0].task.result.consultation // null),
-              specialists:[($task[0].task.result.specialists // [])[] | {role,provider,ok,value:((.value|tostring)[0:2500])}],
-              sentinel:(($task[0].task.result.sentinel // null) | if . then {provider,ok,value:((.value|tostring)[0:2500])} else null end),
-              assist:{provider:($assist[0].provider // null), mode:($assist[0].mode // null), reply:(($assist[0].reply // "")[0:6000])}
+              specialists:[($task[0].task.result.specialists // [])[] | {role,provider,ok,value:((.value.text // (.value|tostring))[0:9000])}],
+              sentinel:(($task[0].task.result.sentinel // null) | if . then {provider,ok,value:((.value.text // (.value|tostring))[0:6000])} else null end)
             }' > "$RUNNER_TEMP/consultation.json"
 
       - name: Record consultation on issue
@@ -123,8 +131,7 @@ jobs:
           body=$(jq -r --arg run "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --arg path "$PROPOSAL_PATH" '
             "## EKODI AI 협의 기록\n\n- 제안: `\($path)`\n- 실행: \($run)\n- task: `\(.taskId // "-")` · state: `\(.state // "-")`\n- consultation: `\((.consultation // {}) | tostring)`\n\n### 전문가 검토\n" +
             ([(.specialists // [])[] | "- **\(.role)** (\(.provider // "-"), ok=\(.ok)): \(.value)"] | join("\n")) +
-            "\n\n### 독립 검증(sentinel)\n" + ((.sentinel // {}) | tostring) +
-            "\n\n### EKODI AI 답변 (\(.assist.provider // "-"))\n\n" + (.assist.reply // "")' "$f")
+            "\n\n### 독립 검증(sentinel)\n" + (if .sentinel then "- \(.sentinel.provider // "-") (ok=\(.sentinel.ok)): \(.sentinel.value)" else "- 없음" end)' "$f")
           jq -nc --arg body "$body" '{body:$body}' | gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" --input - >/dev/null
 
       - name: Revoke session
