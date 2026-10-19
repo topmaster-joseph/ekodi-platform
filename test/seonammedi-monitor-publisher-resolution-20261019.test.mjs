@@ -84,6 +84,6 @@ test('hourly run resolves before verifying, backfills, and watches 비대위 cov
   assert.doesNotMatch(src,/item=await enrichMedia\(item\)/,'raw search-engine links are never treated as the source');
   assert.match(src,/reverified=await reverifyStoredCandidates\(env,startedAt\)/);
   assert.match(src,/q:'서남권 의대 비대위'/);
-  assert.match(src,/openapi\.naver\.com\/v1\/search\/news\.json/);
+  assert.match(src,/naverapihub\.apigw\.ntruss\.com\/search\/v1\//);
   assert.match(src,/AbortSignal\.timeout\(SOURCE_FETCH_TIMEOUT_MS\)/);
 });

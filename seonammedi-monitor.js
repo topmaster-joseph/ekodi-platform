@@ -109,13 +109,31 @@ function parseRss(xml,key,label,{defaultPublisher='Google News'}={}){
   }).filter(item=>item.title&&/^https:\/\//i.test(item.url)&&(!Number.isFinite(item.publishedMs)||item.publishedMs>=floor));
 }
 function stripMarkup(value){return clean(String(value||'').replace(/<[^>]+>/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>'),1200)}
+// Naver Search moved to NAVER API HUB (NAVER Cloud): new keys are issued there
+// since 2026-07-31; legacy developers.naver.com keys keep working until
+// 2027-06-30. Try API HUB first, then the legacy endpoint for older keys.
+const NAVER_API_HUB='https://naverapihub.apigw.ntruss.com/search/v1/';
+const NAVER_LEGACY='https://openapi.naver.com/v1/search/';
+export async function naverSearchRequest(env,kind,q,{fetchImpl=fetch}={}){
+  const params=new URLSearchParams({query:q,display:String(MAX_ITEMS_PER_QUERY),sort:'date'});
+  const attempts=[
+    [NAVER_API_HUB+kind+'?'+params,{'X-NCP-APIGW-API-KEY-ID':env.NAVER_CLIENT_ID,'X-NCP-APIGW-API-KEY':env.NAVER_CLIENT_SECRET}],
+    [NAVER_LEGACY+kind+'.json?'+params,{'X-Naver-Client-Id':env.NAVER_CLIENT_ID,'X-Naver-Client-Secret':env.NAVER_CLIENT_SECRET}]
+  ];
+  let last=null;
+  for(const [url,auth] of attempts){
+    const response=await fetchImpl(url,{headers:{...auth,'user-agent':'EKODI-SeonamMedi-Monitor/1.4'},signal:AbortSignal.timeout(SOURCE_FETCH_TIMEOUT_MS)});
+    if(response.ok)return response;
+    last=response.status;
+    if(![401,403,404].includes(response.status))break;
+  }
+  throw new Error('Naver '+kind+' HTTP '+last);
+}
 function naverBlogConfigured(env){return Boolean(env?.NAVER_CLIENT_ID&&env?.NAVER_CLIENT_SECRET)}
 function naverBlogDate(value){const raw=String(value||'');if(!/^\d{8}$/.test(raw))return null;const iso=raw.slice(0,4)+'-'+raw.slice(4,6)+'-'+raw.slice(6,8)+'T00:00:00+09:00';const ms=Date.parse(iso);return Number.isFinite(ms)?new Date(ms).toISOString():null}
 async function fetchNaverBlogItems(env,query){
   if(!naverBlogConfigured(env))return [];
-  const endpoint=new URL('https://openapi.naver.com/v1/search/blog.json');endpoint.searchParams.set('query',query.q);endpoint.searchParams.set('display',String(MAX_ITEMS_PER_QUERY));endpoint.searchParams.set('sort','date');
-  const response=await fetch(endpoint,{headers:{'X-Naver-Client-Id':env.NAVER_CLIENT_ID,'X-Naver-Client-Secret':env.NAVER_CLIENT_SECRET,'user-agent':'EKODI-SeonamMedi-Monitor/1.2'}});
-  if(!response.ok)throw new Error('Naver HTTP '+response.status);
+  const response=await naverSearchRequest(env,'blog',query.q);
   const payload=await response.json();const floor=Date.now()-RECENT_DAYS*86400000;
   return (Array.isArray(payload?.items)?payload.items:[]).map(row=>{
     const title=stripMarkup(row.title);const url=httpsUrl(row.link);const publishedAt=naverBlogDate(row.postdate);const publishedMs=publishedAt?Date.parse(publishedAt):NaN;
@@ -241,9 +259,7 @@ async function insertItem(env,item,seenAt){
 // the most reliable Korean source when NAVER_CLIENT_ID/SECRET are configured.
 async function fetchNaverNewsItems(env,query){
   if(!naverBlogConfigured(env))return [];
-  const endpoint=new URL('https://openapi.naver.com/v1/search/news.json');endpoint.searchParams.set('query',query.q);endpoint.searchParams.set('display',String(MAX_ITEMS_PER_QUERY));endpoint.searchParams.set('sort','date');
-  const response=await fetch(endpoint,{headers:{'X-Naver-Client-Id':env.NAVER_CLIENT_ID,'X-Naver-Client-Secret':env.NAVER_CLIENT_SECRET,'user-agent':'EKODI-SeonamMedi-Monitor/1.3'}});
-  if(!response.ok)throw new Error('Naver news HTTP '+response.status);
+  const response=await naverSearchRequest(env,'news',query.q);
   const payload=await response.json();const floor=Date.now()-RECENT_DAYS*86400000;
   return (Array.isArray(payload?.items)?payload.items:[]).map(row=>{
     const url=httpsUrl(row.originallink)||httpsUrl(row.link);const publishedMs=Date.parse(row.pubDate);
