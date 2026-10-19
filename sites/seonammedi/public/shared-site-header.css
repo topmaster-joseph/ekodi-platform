@@ -137,6 +137,13 @@ body.seonam-visual-ready > .seonam-visual-hero{display:none!important}
 :is(#committeeActivityList,#committeeNewsList,#timelineList) .timeline-title-button:focus-visible{outline:2px solid #2463a4;outline-offset:4px}
 :is(#committeeActivityList,#committeeNewsList,#timelineList) .timeline-item.is-collapsed{padding-block:12px;align-items:center}
 :is(#committeeActivityList,#committeeNewsList,#timelineList) .timeline-item.is-collapsed h3{margin:0}
+/* 2026-10-19 layout: collapsed cards keep date, title, toggle and share on
+   one baseline instead of stacking the share button under the title. */
+:is(#committeeActivityList,#committeeNewsList,#timelineList) .timeline-item.is-collapsed .timeline-content{display:flex;align-items:center;gap:12px;min-width:0}
+:is(#committeeActivityList,#committeeNewsList,#timelineList) .timeline-item.is-collapsed .timeline-content>h3{flex:1 1 auto;min-width:0}
+:is(#committeeActivityList,#committeeNewsList,#timelineList) .timeline-item.is-collapsed .item-share-row{flex:0 0 auto;margin:0}
+:is(#committeeActivityList,#committeeNewsList,#timelineList) .timeline-item .timeline-date{align-self:center;line-height:1.4}
+:is(#committeeActivityList,#committeeNewsList,#timelineList) .timeline-item:not(.is-collapsed) .timeline-date{align-self:start}
 
 /* 2026-10-19 unified shell: one footer for every public SeonamMedi page
    (home, boards, notices, finance, minutes). Class-scoped so page CSS that
