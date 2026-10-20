@@ -19,7 +19,10 @@ test('mnubiz public surface follows CSP-safe user-site UI contract', async()=>{
     'data-ekodi-header-actions',
     'data-ekodi-site-subject="mnubiz"',
     'mnubiz-character-zone',
-    'site.css?v=20260925-1'
+    'site.css?v=20260925-1',
+    'id="research"',
+    '연구사업 · 자료실',
+    '후속 연구회의'
   ]) assert.ok(html.includes(token), 'missing token: '+token);
   assert.doesNotMatch(html,/<style[\s>]/i);
   assert.doesNotMatch(html,/<footer[\s>]/i);
