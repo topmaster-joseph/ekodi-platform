@@ -8,7 +8,7 @@ const json = (data,status=200)=>new Response(JSON.stringify(data),{
 });
 const health = {ok:true,service:'independent-board',storage:'independent-board-d1',
   db:true,files:true,queue:'ready',rateLimiter:true};
-const posts = {ok:true,storage:'independent-board-d1',items:[]};
+const posts = {ok:true,items:[]};
 const collection = {ok:true,storage:'independent-board-d1'};
 
 test('limited health monitor confirms real D1 read and omits post data',async()=>{
@@ -30,7 +30,8 @@ test('full monitor checks both URL surfaces and anonymous admin denial',async()=
   const fetchImpl = async url => {
     if(url.includes('/api/admin/finance'))return json({error:'forbidden'},403);
     if(url.endsWith('/health'))return json(health);
-    if(url.endsWith('/api/posts'))return json(posts);
+    if(url.endsWith('/api/finance'))return json({ok:false,error:'finance_detail_admin_only'},403);
+    if(url.endsWith('/api/voices-fresh'))return json(posts);
     return json(collection);
   };
   const result=await verifyLiveDataStores({fetchImpl,scope:'full'});
@@ -57,6 +58,8 @@ test('quota 429 opens circuit without retry storm',async()=>{
 test('payload validation refuses invented health and missing records',()=>{
   assert.equal(validatePublicProbeBody('health',{...health,files:false}),false);
   assert.equal(validatePublicProbeBody('posts',{ok:true,storage:'independent-board-d1'}),false);
+  assert.equal(validatePublicProbeBody('voices',{ok:true}),false);
+  assert.equal(validatePublicProbeBody('voices',{ok:true,items:[]}),true);
 });
 
 test('provider control-plane inventory recognizes both registered D1 names without IDs',async()=>{
@@ -107,4 +110,13 @@ test('scheduled database watch is separate, quota-gated and read-only',async()=>
   assert.match(source,/verify-provider-data-stores\.mjs/);
   assert.match(source,/verify-live-data-stores\.mjs --scope=lite/);
   assert.match(source,/--static-policy/);
+});
+
+test('live probe targets Citizen Voices V3, not the retired legacy posts route',async()=>{
+  const requested=[];
+  const fetchImpl=async url=>{requested.push(url);if(url.endsWith('/api/posts'))return json({ok:false,error:'legacy_citizen_board_retired'},410);return url.endsWith('/health')?json(health):json(posts)};
+  const result=await verifyLiveDataStores({fetchImpl});
+  assert.equal(result.ok,true);
+  assert.ok(requested.some(u=>u.endsWith('/board/api/voices-fresh')));
+  assert.ok(!requested.some(u=>u.endsWith('/board/api/posts')));
 });
