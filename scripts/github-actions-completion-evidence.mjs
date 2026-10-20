@@ -105,12 +105,24 @@ function productionJob(job){
   return !name.includes('staging')&&(name==='deploy'||name==='production'||name.endsWith(' / deploy')||name.endsWith(' / production')||name.includes('deploy-production')||name.includes('production deploy'));
 }
 
+// Production deploys are dispatched with the merge commit (a GITHUB_TOKEN merge
+// emits no push run), so a superseding run may be `push` or `workflow_dispatch`.
+// It must still be a successful run of the same workflow on main whose head
+// contains the merge commit; staging and production jobs are checked by the caller.
+const SUPERSEDING_EVENTS=Object.freeze(['push','workflow_dispatch']);
 async function laterSuccessfulRunContainingMerge({github,owner,repo,original,mergeSha}){
-  const response=await github.rest.actions.listWorkflowRuns({
-    owner,repo,workflow_id:original.workflow_id,branch:'main',event:'push',status:'success',per_page:20,
-  });
-  for(const candidate of response.data?.workflow_runs||[]){
+  const runs=[];
+  for(const event of SUPERSEDING_EVENTS){
+    const response=await github.rest.actions.listWorkflowRuns({
+      owner,repo,workflow_id:original.workflow_id,branch:'main',event,status:'success',per_page:20,
+    });
+    runs.push(...(response.data?.workflow_runs||[]).map(run=>({...run,event:run.event||event})));
+  }
+  runs.sort((a,b)=>String(a.created_at||'').localeCompare(String(b.created_at||'')));
+  for(const candidate of runs){
     if(Number(candidate.id)===Number(original.id)||!success(candidate))continue;
+    if(String(candidate.head_branch||'main')!=='main'||!SUPERSEDING_EVENTS.includes(String(candidate.event||'')))continue;
+    if(String(candidate.created_at||'')<String(original.created_at||''))continue;
     if(String(candidate.head_sha||'')===mergeSha)return candidate;
     const comparison=await github.rest.repos.compareCommits({owner,repo,base:mergeSha,head:String(candidate.head_sha||'')});
     if(['ahead','identical'].includes(String(comparison.data?.status||'').toLowerCase()))return candidate;
