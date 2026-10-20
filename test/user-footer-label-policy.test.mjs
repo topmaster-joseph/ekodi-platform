@@ -18,3 +18,10 @@ test('service-owned EKODIBIZ footer follows the same label-free rule in every lo
   assert.doesNotMatch(client,/운영주체 에코디비즈|Operator EKODIBIZ|运营主体 EKODIBIZ|運営主体 EKODIBIZ|सञ्चालक EKODIBIZ|Đơn vị vận hành EKODIBIZ/);
   assert.match(client,/footerCompany:'EKODIBIZ · Representative/);
 });
+test('shared footer shows the 통신판매업 신고번호 next to the business registration number', async () => {
+  const { renderEkodiUserFooter, EKODI_USER_FOOTER } = await import('../config/user-footer.js');
+  const html = renderEkodiUserFooter();
+  assert.equal(EKODI_USER_FOOTER.operator.commerceRegistrationNumber, '2023-전남무안-0153');
+  assert.ok(html.includes('<span>통신판매업신고번호 2023-전남무안-0153</span>'));
+  assert.ok(html.indexOf('사업자등록번호 213-13-01959') < html.indexOf('통신판매업신고번호'));
+});
