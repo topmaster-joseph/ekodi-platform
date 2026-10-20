@@ -9,15 +9,15 @@ const {default:board}=await import('../services/independent-board/worker.js');
 
 function fakeDb(rows){let sql='';return{get sql(){return sql},prepare(q){sql=q;const o={bind(){return o},async all(){return{results:rows}},async first(){return null},async run(){return{meta:{}}}};return o}}}
 
-test('public and admin notice lists are newest-first by creation time',async()=>{
+test('public and admin notice lists keep pinned first, then newest by creation time',async()=>{
   const db=fakeDb([]);
   await board.fetch(new Request('https://ekodi.kr/seonammedi/board/api/notices'),{ENVIRONMENT:'production',BOARD_DB:db},{});
-  assert.match(db.sql,/ORDER BY created_at DESC,id DESC/);
-  assert.doesNotMatch(worker,/ORDER BY pinned DESC,updated_at DESC/);
+  assert.match(db.sql,/ORDER BY pinned DESC,created_at DESC,id DESC/);
+  assert.doesNotMatch(worker,/updated_at DESC/);
 });
 
-test('client re-sorts newest first and shows KST creation date',()=>{
-  assert.match(worker,/sort\(\(a,b\)=>noticeTime\(b\)-noticeTime\(a\)/);
+test('client keeps pinned first, then newest, and shows KST creation date',()=>{
+  assert.match(worker,/sort\(\(a,b\)=>Number\(Boolean\(b\.pinned\)\)-Number\(Boolean\(a\.pinned\)\)\|\|noticeTime\(b\)-noticeTime\(a\)/);
   assert.match(worker,/timeZone:"Asia\/Seoul"/);
   assert.doesNotMatch(worker,/esc\(\(x\.updatedAt\|\|""\)\.slice\(0,10\)\)/);
 });
