@@ -20,7 +20,9 @@ test('EKODI runs 4 isolated desktop/mobile browser proof cases',()=>{
     'six_menu_order_mismatch',
     'homepage_header_menu_mismatch',
     'notice_link_mount_lost',
-    'auto_evidence_row_misplaced'
+    'auto_evidence_row_misplaced',
+    'notice_api_not_newest_first',
+    'notice_row_photo_not_loaded'
   ])assert.ok(script.includes(needle),needle);
 });
 test('read-only browser policy and no credential authority',()=>{

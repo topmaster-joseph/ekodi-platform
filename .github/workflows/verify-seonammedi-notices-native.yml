@@ -40,6 +40,15 @@ jobs:
       - name: EKODI internal-path real browser desktop and mobile
         if: always()
         run: node scripts/verify-seonammedi-notices-native.mjs --origin=https://ekodi.kr --out=artifacts/seonammedi-notices-ekodi
+      - name: Operating-space card contrast guard is live (SPACE-CARD-CONTRAST-001, read-only)
+        if: always()
+        run: |
+          set -euo pipefail
+          css=$(curl -fsS --max-time 30 'https://space.ekodi.kr/style.css?v=20261020-space-card-contrast-2')
+          grep -Fq '#internalShell :is(.panel,.space-card,.unmapped-list){color:#18211b}' <<<"$css"
+          page=$(curl -fsS --max-time 30 'https://space.ekodi.kr/')
+          grep -Fq 'style.css?v=20261020-space-card-contrast-2' <<<"$page"
+          echo 'space contrast guard live'
       - name: Preserve screenshots and machine-verifiable evidence
         if: always()
         uses: actions/upload-artifact@v4

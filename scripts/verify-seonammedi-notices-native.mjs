@@ -81,6 +81,27 @@ try{
       requireThat(JSON.stringify(initial.navigation)===JSON.stringify(expectedNav),'six_menu_order_mismatch');
       requireThat(initial.postCount>0,'no_public_notices_loaded');
       entry.noticeUiVersion=initial.detailCount===initial.postCount?'collapsed-list':'legacy-expanded';
+      // NOTICE-NEWEST-FIRST-001 + NOTICE-ROW-PHOTO-001 (2026-10-20): newest first by creation time,
+      // and a notice with photos shows a loaded thumbnail in its collapsed row.
+      const order=await page.evaluate(async base=>{
+        const r=await fetch(base+'/board/api/notices',{cache:'no-store'});const d=await r.json();
+        const api=(d.items||[]).map(x=>({id:String(x.id),t:Date.parse(x.createdAt||x.updatedAt||'')||0,photos:(x.imageUrls||[]).length}));
+        const dom=[...document.querySelectorAll('#list details.notice-record')].map(e=>e.id.replace(/^notice-/,''));
+        return {api,dom};
+      },origin+(paths[origin].home==='/'?'':'/seonammedi'));
+      entry.noticeOrder=order.dom.slice(0,6);
+      requireThat(order.api.every((x,i,a)=>i===0||a[i-1].t>=x.t),'notice_api_not_newest_first');
+      requireThat(JSON.stringify(order.dom)===JSON.stringify(order.api.map(x=>x.id)),'notice_dom_order_mismatch');
+      const withPhotos=order.api.filter(x=>x.photos>0).map(x=>x.id);
+      entry.noticesWithPhotos=withPhotos.length;
+      if(withPhotos.length){
+        await page.evaluate(()=>document.querySelectorAll('#list summary .row-photo img').forEach(i=>i.loading='eager'));
+        await page.waitForFunction(ids=>ids.every(id=>{const i=document.querySelector('#notice-'+id+' summary .row-photo img');return i&&i.complete}),withPhotos,{timeout:20000}).catch(()=>{});
+        const thumbs=await page.evaluate(ids=>ids.map(id=>{const i=document.querySelector('#notice-'+id+' summary .row-photo img');return{id,present:!!i,loaded:!!i&&i.naturalWidth>0}}),withPhotos);
+        entry.rowThumbnailsLoaded=thumbs.filter(x=>x.loaded).length;
+        requireThat(thumbs.every(x=>x.present),'notice_row_photo_missing');
+        requireThat(thumbs.every(x=>x.loaded),'notice_row_photo_not_loaded');
+      }
       requireThat(initial.detailCount===0||(initial.detailCount===initial.postCount&&initial.expandedCount===0),'notices_list_mixed_or_open_by_default');
       requireThat(initial.hasSearch,'notice_search_missing');
       requireThat(initial.shareCount===initial.postCount,'share_control_missing');
