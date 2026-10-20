@@ -49,7 +49,8 @@ test('shared item opener only accepts well-formed keys and expands the visible c
 test('administrators can sign in from 활동이력 and 관련소식 and return to the same view',async()=>{
   const [html,js]=await Promise.all([read('index.html'),read('app.js')]);
   assert.match(html,/id="committee-activity"[\s\S]*?data-admin-login="committee-activity"[\s\S]*?id="committeeActivityFilters"/);
-  assert.match(html,/id="timelineFilters"[\s\S]*?data-admin-login="timeline"/);
+  // 2026-10-20 owner request: 관리자 로그인 / ＋ 추가 sit at the right end of the section title.
+  assert.match(html,/id="timeline"[\s\S]*?id="timelineHeadActions"><button[^>]*data-admin-login="timeline"[\s\S]*?id="timelineFilters"/);
   const ctx={URL,location:{origin:'https://seonammedi.kr',pathname:'/'},ADMIN_LOGIN_VIEWS:['committee-activity','timeline']};
   runInNewContext(fn(js,'siteMountBase')+fn(js,'adminLoginUrl'),ctx);
   const url=new URL(ctx.adminLoginUrl('committee-activity'));

@@ -17,7 +17,7 @@ test('SeonamMedi public header uses flat six-item navigation without dropdown co
 test('central category panel and menu script are present', () => {
   assert.match(html, /id="central-category-panel"/);
   assert.match(html, /id="central-category-buttons"/);
-  assert.ok(html.includes('<script src="/seonammedi/central-category-runtime.js?v=20261015-notice-direct-all-1" defer></script>'));
+  assert.ok(html.includes('<script src="/seonammedi/central-category-runtime.js?v=20261020-section-title-1" defer></script>'));
 });
 
 test('no literal escaped newline text immediately follows the body tag', () => {

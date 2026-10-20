@@ -80,7 +80,8 @@ test('activity, news and social subcategories still open in the central panel',(
   for(const name of ['활동이력','관련소식','소통채널']){
     const {items,panel,title}=fixture();
     assert.equal(items.find(item=>item.textContent===name).click(),true);
-    assert.equal(title.textContent,name);
+    // 2026-10-20 owner request: full titles for the two committee/news panels.
+    assert.equal(title.textContent,({'활동이력':'서남권 국립의대 비상대책위원회 활동이력','관련소식':'서남권 국립의대 관련소식'})[name]||name);
     assert.equal(panel.hidden,false);
   }
 });
