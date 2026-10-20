@@ -139,16 +139,55 @@ test('failed check that is being re-run is still awaited and then merges', () =>
   assert.ok(calls.some(c => c.method === 'PUT' && c.path.endsWith('/pulls/7/merge')), 'merges after the re-run turns green');
 });
 
-test('both required checks hand off to convergence when they turn green on an orchestrator branch', () => {
+test('both required checks hand off to convergence when they turn green', () => {
   for (const [file, job] of [['ci.yml', 'test'], ['ekodi-ai-orchestration-gate.yml', 'orchestration']]) {
     const wf = readFileSync(new URL('../.github/workflows/' + file, import.meta.url), 'utf8');
     assert.match(wf, /\npermissions:\n(?:  .*\n)*  actions: write\n/, file + ' needs actions: write to dispatch');
     const start = wf.indexOf('- name: Start convergence when this required check is green on an orchestrator branch');
     assert.ok(start > wf.indexOf('\n  ' + job + ':\n'), file + ' hand-off must live in the required job');
-    const step = wf.slice(start);
-    assert.match(step, /if: success\(\) && /);
-    assert.match(step, /contains\(github\.event\.pull_request\.head\.ref \|\| github\.ref_name, '\/orch_'\)/);
-    assert.match(step, /actions\/workflows\/converge-orchestrated-pr-merge\.yml\/dispatches/);
-    assert.match(step, /::warning title=Convergence hand-off::/, 'a refused dispatch must not fail the required check');
+    assert.match(wf.slice(start), /if: success\(\) && /);
+    assert.match(wf.slice(start), /::warning title=Convergence hand-off::/, 'a refused dispatch must not fail the required check');
   }
+});
+
+// Execute the hand-off step with a fake curl: required statuses come from the
+// task-branch run, so it must resolve ai/<agent>/orch_recovery_<sha32>.
+function handOff(env, existingRefs) {
+  const dir = mkdtempSync(join(tmpdir(), 'handoff-'));
+  const log = join(dir, 'curl.log');
+  writeFileSync(join(dir, 'curl'), `#!/usr/bin/env bash
+url="\${@: -1}"; for a in "$@"; do [[ "$a" == https://* ]] && url="$a"; done
+echo "$*" >> ${JSON.stringify(log)}
+if [[ "$url" == */git/ref/heads/* ]]; then ref="\${url#*/git/ref/heads/}"; for e in ${existingRefs.map(r => JSON.stringify(r)).join(' ')}; do [[ "$ref" == "$e" ]] && { printf 200; exit 0; }; done; printf 404; exit 0; fi
+printf 204
+`, { mode: 0o755 });
+  const wf = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
+  const script = wf.slice(wf.indexOf('- name: Start convergence when this required check is green')).split('        run: |\n')[1].split('\n').map(l => l.replace(/^ {10}/, '')).join('\n');
+  const r = spawnSync('bash', ['-c', script], { encoding: 'utf8', env: { ...process.env, PATH: dir + ':' + process.env.PATH, GH_TOKEN: 'x', GITHUB_REPOSITORY: 'o/r', ...env } });
+  return { out: r.stdout + r.stderr, code: r.status, calls: existsSync(log) ? readFileSync(log, 'utf8') : '' };
+}
+const SHA = '0123456789abcdef0123456789abcdef01234567';
+
+test('task-branch green run dispatches convergence for its issued recovery branch', () => {
+  const orch = 'ai/claude/orch_recovery_' + SHA.slice(0, 32);
+  const r = handOff({ HEAD_REF: 'ai/claude/some-task', HEAD_SHA: SHA }, [orch]);
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, new RegExp('convergence dispatched for ' + orch));
+  assert.match(r.calls, /converge-orchestrated-pr-merge\.yml\/dispatches/);
+  assert.match(r.calls, new RegExp('"ref":"' + orch + '"'));
+});
+
+test('no recovery branch yet: skip quietly without dispatching', () => {
+  const r = handOff({ HEAD_REF: 'ai/claude/some-task', HEAD_SHA: SHA }, []);
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /not issued yet/);
+  assert.doesNotMatch(r.calls, /dispatches/);
+});
+
+test('orchestrator branch run dispatches convergence for itself', () => {
+  const orch = 'ai/codex/orch_abcdefghijklmnop';
+  const r = handOff({ HEAD_REF: orch, HEAD_SHA: SHA }, []);
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.calls, new RegExp('"ref":"' + orch + '"'));
+  assert.doesNotMatch(r.calls, /git\/ref\/heads/);
 });

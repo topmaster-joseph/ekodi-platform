@@ -201,21 +201,30 @@ jobs:
             published="$sha"
           done
       # Required checks can turn green after convergence has already stopped
-      # (a re-run on the same SHA pushes nothing). Hand off to convergence the
-      # moment this required check succeeds on an orchestrator PR. Convergence
-      # still verifies the receipt, both required checks and the exact head.
+      # (a re-run on the same SHA pushes nothing). Required statuses are
+      # produced by the task-branch PR run (bot-opened recovery PRs get no jobs),
+      # so on success hand off to the orchestrator branch for this exact SHA:
+      # the branch itself, or ai/<agent>/orch_recovery_<sha32> when it exists.
+      # Convergence still verifies the receipt, both checks and the exact head.
       - name: Start convergence when this required check is green on an orchestrator branch
-        if: success() && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && startsWith(github.event.pull_request.head.ref || github.ref_name, 'ai/') && contains(github.event.pull_request.head.ref || github.ref_name, '/orch_')
+        if: success() && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && startsWith(github.event.pull_request.head.ref || github.ref_name, 'ai/')
         env:
           GH_TOKEN: ${{ github.token }}
-          ORCH_REF: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         shell: bash
         run: |
           set -uo pipefail
-          code=$(curl -sS -o /dev/null -w '%{http_code}' -X POST \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H 'Accept: application/vnd.github+json' \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/converge-orchestrated-pr-merge.yml/dispatches" \
-            -d "$(jq -cn --arg ref "$ORCH_REF" '{ref:$ref}')") || code=000
+          api() { curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "$@" || echo 000; }
+          if [[ "$HEAD_REF" == */orch_* ]]; then
+            ORCH_REF="$HEAD_REF"
+          else
+            agent=$(cut -d/ -f2 <<<"$HEAD_REF")
+            [[ "$agent" =~ ^[a-z0-9][a-z0-9._-]{0,31}$ && "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "no orchestrator branch for $HEAD_REF"; exit 0; }
+            ORCH_REF="ai/${agent}/orch_recovery_${HEAD_SHA:0:32}"
+            if [[ "$(api "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/ref/heads/${ORCH_REF}")" != "200" ]]; then
+              echo "recovery branch $ORCH_REF not issued yet; release provenance recovery starts convergence itself"; exit 0
+            fi
+          fi
+          code=$(api -X POST "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/converge-orchestrated-pr-merge.yml/dispatches" -d "$(jq -cn --arg ref "$ORCH_REF" '{ref:$ref}')")
           if [[ "$code" == "204" ]]; then echo "convergence dispatched for $ORCH_REF"; else echo "::warning title=Convergence hand-off::dispatch returned HTTP $code for $ORCH_REF; continuity watchdog remains the fallback"; fi
