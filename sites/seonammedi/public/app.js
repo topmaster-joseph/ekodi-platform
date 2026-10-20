@@ -171,6 +171,9 @@ function mergeMonitorTimelineItems(baseRows,monitorItems){
     if(!title||!date)continue;
     if(seenAuto.some(prev=>(url&&prev.url===url)||(prev.date===date&&timelineTitleSimilarity(prev.title,title)>=0.72)))continue;
     seenAuto.push({url,date,title});
+    // 2026-10-19 rule: an article already cited as evidence by a committee
+    // activity on the same date is that activity, not a separate news item.
+    if(url&&rows.some(row=>isCommitteeRecord(row)&&row.date===date&&[...(row.links||[]),...(row.media||[])].some(link=>timelineNormalizeUrl(link.url)===url)))continue;
     const match=rows.find(row=>{
       const evidenceUrls=[...(row.links||[]).map(link=>timelineNormalizeUrl(link.url)),...(row.media||[]).map(media=>timelineNormalizeUrl(media.url))].filter(Boolean);
       if(isCommitteeRecord(row))return false;
