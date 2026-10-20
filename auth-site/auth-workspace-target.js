@@ -12,7 +12,7 @@ const serviceDefaults={cgma:'https://ekodi.kr/cgma/',mission:'https://ekodi.kr/e
 const serviceOrigins={
   cgma:['https://ekodi.kr','https://cgma.or.kr','https://cgma.ekodi.kr'],
   marketing:['https://marketing.ekodi.kr','https://jadam.ekodi.kr','https://pizzamaru.ekodi.kr','https://yogurt.ekodi.kr','https://yogurtpurple.ekodi.kr'],
-  biz:['https://biz.ekodi.kr'],
+  biz:['https://ekodi.kr'],
   trade:['https://ekodi.kr','https://trade.biz.ekodi.kr','https://trade.ekodi.kr'],
   mall:['https://ekodi.kr'],
   pay:['https://ekodi.kr'],

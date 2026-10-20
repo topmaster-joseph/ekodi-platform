@@ -12,7 +12,7 @@ const config = fs.readFileSync(new URL('../wrangler.ekodibiz.toml', import.meta.
 const staging = fs.readFileSync(new URL('../wrangler.ekodibiz-staging.toml', import.meta.url), 'utf8');
 
 test('EKODIBIZ stays separate from common Business OS', () => {
-  assert.match(config, /pattern = "biz\.ekodi\.kr"/);
+  assert.doesNotMatch(config, /pattern = "biz\.ekodi\.kr"/);
   assert.doesNotMatch(config, /pattern = "business\.ekodi\.kr"/);
   assert.match(config, /main = "ekodibiz-payment-architecture\.js"/);
   assert.match(adapter, /from '\.\/ekodibiz-worker\.js'/);

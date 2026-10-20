@@ -50,7 +50,7 @@ jobs:
           npm run validate:boundaries
           npm run validate:ui-dna
           npm run validate:mission
-          grep -Fq 'pattern = "biz.ekodi.kr"' wrangler.ekodibiz.toml
+          ! grep -Fq 'pattern = "biz.ekodi.kr"' wrangler.ekodibiz.toml
           ! grep -Fq 'pattern = "business.ekodi.kr"' wrangler.ekodibiz.toml
           grep -Fq 'HIGH_IMPACT_APPROVAL = "required"' wrangler.ekodibiz.toml
           grep -Fq '[exports.RevenueStore]' wrangler.ekodibiz.toml

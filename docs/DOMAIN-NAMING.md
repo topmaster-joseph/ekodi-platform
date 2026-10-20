@@ -2,15 +2,19 @@
 
 `ekodi.kr` is the canonical digital root of the EKODI ecosystem.
 
+## 0. EKODIBIZ-managed sites
+
+The EKODIBIZ base site is `ekodi.kr/ekodibiz`. Other EKODIBIZ-managed sites are paths on the root domain (`ekodi.kr/ekodimall`, `ekodi.kr/ekodibook`, …), not `*.biz.ekodi.kr` subdomains. `biz.ekodi.kr` is not used (2026-10-20, owner decision).
+
 ## 1. First-level service domains
 
 Use a first-level subdomain when the service is an ecosystem-wide brand, platform, or shared capability.
 
 | Purpose | Canonical address |
 |---|---|
-| Business | `biz.ekodi.kr` |
+| Business (EKODIBIZ) | `ekodi.kr/ekodibiz` — `biz.ekodi.kr` is retired and only 308-redirects here |
 | Trading | `trade.ekodi.kr` |
-| Mall | `mall.ekodi.kr` |
+| Mall | `ekodi.kr/ekodimall` |
 | Payments | `ekodi.kr/ekodipay` |
 | Books | `books.ekodi.kr` |
 | Lab | `lab.ekodi.kr` |
@@ -119,14 +123,13 @@ Examples:
 - `ekodilab.kr` → `lab.ekodi.kr`
 - `ekodimall.kr` → `mall.ekodi.kr`
 - `ekodibook.kr` → `books.ekodi.kr`
-- `ekodibiz.kr` → `biz.ekodi.kr` after the legacy domain is moved under the managed Cloudflare zone
+- `ekodibiz.kr` / `www.ekodibiz.kr` → `ekodi.kr/ekodibiz` (301, path and query preserved)
 
 ## 7. Current activation status
 
 Production service domains:
 
 - `books.ekodi.kr`
-- `biz.ekodi.kr`
 - `church.ekodi.kr`
 - `lab.ekodi.kr`
 - `mall.ekodi.kr`

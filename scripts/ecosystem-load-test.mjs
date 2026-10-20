@@ -5,7 +5,7 @@ const DEFAULT_TARGETS = [
   { label: 'root', url: 'https://ekodi.kr/' },
   { label: 'admin', url: 'https://admin.ekodi.kr/' },
   { label: 'api-health', url: 'https://ekodi.kr/api/health' },
-  { label: 'biz', url: 'https://biz.ekodi.kr/' },
+  { label: 'biz', url: 'https://ekodi.kr/ekodibiz' },
   { label: 'marketing', url: 'https://marketing.ekodi.kr/' },
   { label: 'church', url: 'https://ekodi.kr/ekodichurch/' },
   { label: 'lab', url: 'https://ekodi.kr/ekodilab/' },
