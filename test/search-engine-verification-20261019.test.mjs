@@ -57,3 +57,27 @@ test('gateway keeps proxying HTML and never duplicates verification meta', async
     assert.ok((html.match(/google-site-verification/g) || []).length <= (SEARCH_VERIFICATION_CODES['seonammedi.kr'].google.length));
   } finally { globalThis.fetch = original; }
 });
+
+test('ekodi.kr root carries the Naver ownership tag exactly once; other routes do not', async () => {
+  const { decorateDiscoveryHtml } = await import('../discovery-layer.js');
+  const html = '<!doctype html><html><head><title>EKODI</title><meta name="naver-site-verification" content="stale0000"></head><body></body></html>';
+  const root = decorateDiscoveryHtml(html, '/');
+  assert.equal((root.match(/naver-site-verification/g) || []).length, 1);
+  assert.match(root, /<meta name="naver-site-verification" content="89c7b7e30eb1de66e84a2b7c751e2e6d8cfe7e8f">/);
+  const history = decorateDiscoveryHtml(html.replace(/<meta name="naver[^>]*>/, ''), '/history');
+  assert.doesNotMatch(history, /site-verification/);
+});
+
+test('seonammedi.kr gateway pages carry the same Naver tag', () => {
+  assert.match(verificationMetaTags('seonammedi.kr'), /naver-site-verification" content="89c7b7e30eb1de66e84a2b7c751e2e6d8cfe7e8f"/);
+});
+
+test('ekodi.kr robots.txt starts with the Daum ownership line; malformed lines are dropped', async () => {
+  const { renderRobotsTxt } = await import('../discovery-layer.js');
+  const { daumWebmasterLine } = await import('../search-engine-verification.js');
+  const robots = renderRobotsTxt();
+  assert.equal(robots.split('\n')[0], '#DaumWebMasterTool:6a54258804aae42599a30f741a754100f26c942229a78e581195a158354f8ca1:sgQJn+c4WOkeYlgoF2KRow==');
+  assert.match(robots, /Sitemap: https:\/\/ekodi\.kr\/sitemap\.xml/);
+  assert.equal(daumWebmasterLine('ekodi.kr', { 'ekodi.kr': '#DaumWebMasterTool:bad\nDisallow: /' }), '');
+  assert.equal(daumWebmasterLine('unknown.kr'), '');
+});
