@@ -1230,7 +1230,9 @@ jobs:
 
   native_surface_verification_desktop:
     name: EKODI Native Surface Verification · Desktop
-    needs: deploy
+    # Avoid simultaneous Admin/Desktop/Mobile origin bursts; checks stay mandatory.
+    needs: [deploy, authenticated_admin_surface_verification]
+    if: ${{ always() && needs.deploy.result == 'success' }}
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
       verification_lane: site-core
@@ -1240,7 +1242,9 @@ jobs:
 
   native_surface_verification_mobile:
     name: EKODI Native Surface Verification · Mobile
-    needs: deploy
+    # Run after Desktop + Admin; 429/UI failures remain hard failures.
+    needs: [deploy, native_surface_verification_desktop, authenticated_admin_surface_verification]
+    if: ${{ always() && needs.deploy.result == 'success' }}
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
       verification_lane: site-core
