@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { canonicalUrl, DISCOVERY_CRAWLER_POLICY, DISCOVERY_PRIVATE_PREFIXES, DISCOVERY_PUBLIC_ROUTES, pageJsonLd, renderDiscoveryHead, renderLlmsTxt, renderRobotsTxt, renderSitemapXml } from '../discovery-layer.js';
+import { canonicalUrl, DISCOVERY_CRAWLER_POLICY, DISCOVERY_SERVICE_SITEMAPS, DISCOVERY_PRIVATE_PREFIXES, DISCOVERY_PUBLIC_ROUTES, pageJsonLd, renderDiscoveryHead, renderLlmsTxt, renderRobotsTxt, renderSitemapXml } from '../discovery-layer.js';
 
 test('sitemap contains only declared public canonical routes', () => {
   const sitemap = renderSitemapXml();
@@ -66,4 +66,15 @@ test('discovery head is page-specific and exposes canonical social metadata', ()
   assert.match(head, /property="og:url" content="https:\/\/ekodi\.kr\/privacy"/);
   assert.match(head, /application\/ld\+json/);
   assert.match(head, /name="robots" content="index, follow"/);
+});
+
+test('robots declares service-owned sitemaps (EKODI Mall) under the canonical host', () => {
+  const robots = renderRobotsTxt();
+  assert.match(robots, /Sitemap: https:\/\/ekodi\.kr\/ekodimall\/sitemap\.xml/);
+  assert.match(robots, /Sitemap: https:\/\/ekodi\.kr\/sitemap\.xml/);
+  for (const path of DISCOVERY_SERVICE_SITEMAPS) {
+    assert.match(path, /^\/[a-z0-9-]+\/sitemap\.xml$/);
+    assert.equal(DISCOVERY_PRIVATE_PREFIXES.some(prefix => path.startsWith(prefix)), false);
+  }
+  assert.ok(robots.endsWith('\n'));
 });
