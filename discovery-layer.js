@@ -1,3 +1,4 @@
+import { injectVerificationMeta, daumWebmasterLine } from './search-engine-verification.js';
 export const DISCOVERY_ORIGIN = 'https://ekodi.kr';
 
 export const DISCOVERY_PUBLIC_ROUTES = Object.freeze([
@@ -58,7 +59,8 @@ export function renderRobotsTxt(origin = DISCOVERY_ORIGIN) {
   ];
   const base = normalizeOrigin(origin);
   const sitemaps = [`${base}/sitemap.xml`, ...DISCOVERY_SERVICE_SITEMAPS.map(path => `${base}${path}`)];
-  return `${groups.join('\n\n')}\n\n${sitemaps.map(url => `Sitemap: ${url}`).join('\n')}\n`;
+  const daum = daumWebmasterLine(new URL(base).hostname);
+  return `${daum ? `${daum}\n` : ''}${groups.join('\n\n')}\n\n${sitemaps.map(url => `Sitemap: ${url}`).join('\n')}\n`;
 }
 
 export function renderSitemapXml(origin = DISCOVERY_ORIGIN, routes = DISCOVERY_PUBLIC_ROUTES) {
@@ -126,7 +128,11 @@ export function decorateDiscoveryHtml(html, pathname = '/', origin = DISCOVERY_O
     /<script\b(?=[^>]*\bdata-ekodi-discovery=(['"])v2\1)[^>]*>[\s\S]*?<\/script>\s*/gi,
   ];
   for (const pattern of managed) output = output.replace(pattern, '');
-  return insertDiscoveryHead(output, renderDiscoveryHead(route.path, origin));
+  output = output.replace(/<meta\b(?=[^>]*\bname=(['"])(?:google|naver)-site-verification\1)[^>]*>\s*/gi, '');
+  output = insertDiscoveryHead(output, renderDiscoveryHead(route.path, origin));
+  // Search-engine ownership tags live on the site root of the canonical host only.
+  if (route.path === '/') output = injectVerificationMeta(output, new URL(normalizeOrigin(origin)).hostname);
+  return output;
 }
 
 export async function decorateDiscoveryResponse(response, pathname = '/', origin = DISCOVERY_ORIGIN) {

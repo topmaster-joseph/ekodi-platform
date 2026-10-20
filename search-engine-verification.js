@@ -8,10 +8,19 @@
 // Add a code: put the `content` value Google / Naver shows for the
 // "HTML tag" method into the matching host entry below.
 
+// Naver code received from the owner 2026-10-21 without naming the site.
+// Placed on both owner sites so verification succeeds for whichever one was
+// registered; a tag on a site not registered with this code is inert.
+const NAVER_OWNER_CODE_20261021 = '89c7b7e30eb1de66e84a2b7c751e2e6d8cfe7e8f';
+
 export const SEARCH_VERIFICATION_CODES = Object.freeze({
+  'ekodi.kr': Object.freeze({
+    google: [],
+    naver: [NAVER_OWNER_CODE_20261021],
+  }),
   'seonammedi.kr': Object.freeze({
     google: [],
-    naver: [],
+    naver: [NAVER_OWNER_CODE_20261021],
   }),
 });
 
@@ -48,4 +57,16 @@ export function injectVerificationMeta(html, host, registry = SEARCH_VERIFICATIO
   if (!match) return text;
   const at = match.index + match[0].length;
   return text.slice(0, at) + tags + text.slice(at);
+}
+
+// Daum Webmaster Tool ownership: a single robots.txt comment line per host.
+export const DAUM_WEBMASTER_LINES = Object.freeze({
+  'ekodi.kr': '#DaumWebMasterTool:6a54258804aae42599a30f741a754100f26c942229a78e581195a158354f8ca1:sgQJn+c4WOkeYlgoF2KRow==',
+});
+
+const DAUM_LINE_PATTERN = /^#DaumWebMasterTool:[a-f0-9]{64}:[A-Za-z0-9+/]{22}==$/;
+
+export function daumWebmasterLine(host, registry = DAUM_WEBMASTER_LINES) {
+  const line = registry[String(host || '').toLowerCase()];
+  return line && DAUM_LINE_PATTERN.test(line) ? line : '';
 }
