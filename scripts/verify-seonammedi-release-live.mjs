@@ -79,7 +79,10 @@ for(let attempt=1;attempt<=attempts;attempt++){
           // Permit only this named file, never arbitrary customer-domain redirects.
           'board-central-category.js',
           // Board Worker serves the same audited script on both domain mounts.
-          'board/ui/central-category.js'];
+          'board/ui/central-category.js',
+          // 2026-10-20 SITE-MOUNT-RELATIVE-LINKS-001: these two site-owned shell assets moved from "./x" to
+          // "/seonammedi/x" so deep paths (/notices/<id>) load them; the customer host strips the mount prefix.
+          'central-category-menu.css','central-category-runtime.js'];
         const match=compareSeonamMediPublishedHtml(published,normalized.html,allowlisted);
         if(!match.matched){
           const around=(value,pos)=>typeof pos==='number'?JSON.stringify(String(value).slice(Math.max(0,pos-48),Math.min(String(value).length,pos+96))):'unavailable';
