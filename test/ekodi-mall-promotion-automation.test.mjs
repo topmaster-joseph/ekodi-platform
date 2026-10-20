@@ -95,3 +95,41 @@ test('official weekly board selects the product while the profit loop allocates 
   assert.match(worker,/affiliate_growth_policy_snapshots/);
   assert.match(worker,/WHERE run_date=\? AND product_row_id=\?/);
 });
+
+// --- apex-only promotion URLs (zero-subdomain) ---
+import { MALL_PUBLIC_URL as __MALL_PUBLIC_URL, promotionLinkUrl as __promotionLinkUrl, promotionImageUrl as __promotionImageUrl, handleMallPromotionRequest as __handleMallPromotionRequest } from '../mall-promotion-automation.js';
+import { readFileSync as __readFileSync } from 'node:fs';
+
+test('promotion link and image URLs use the canonical apex host only', () => {
+  const link = new URL(__promotionLinkUrl('mall-20261020-threads-12'));
+  assert.equal(link.origin, 'https://ekodi.kr');
+  assert.equal(link.pathname, '/marketing-connect-api/r/mall/mall-20261020-threads-12');
+  const image = new URL(__promotionImageUrl(12));
+  assert.equal(image.origin, 'https://ekodi.kr');
+  assert.equal(image.pathname, '/api/affiliate/public/image/12');
+  assert.equal(image.searchParams.get('storefront'), 'ekodi-mall');
+  assert.equal(__MALL_PUBLIC_URL, 'https://ekodi.kr/ekodimall');
+  const source = __readFileSync(new URL('../mall-promotion-automation.js', import.meta.url), 'utf8');
+  assert.equal(/https:\/\/(marketing-connect-api|api)\.ekodi\.kr/.test(source), false);
+  assert.equal(source.includes('ekodi.kr/ekodibiz/ekodimall'), false);
+});
+
+test('promotion redirect lands on the canonical mall path without an alias hop', async () => {
+  const row = { campaign_key:'mall-20261020-threads-12', provider:'threads', product_id:'P-1', status:'published' };
+  const db = {
+    prepare(sql) {
+      return {
+        bind() { return this; },
+        async first() { return /sqlite_master|pragma/i.test(sql) ? { name:'x' } : row; },
+        async all() { return { results: [] }; },
+        async run() { return { meta:{ changes:1 } }; },
+      };
+    },
+  };
+  const response = await __handleMallPromotionRequest(new Request('https://ekodi.kr/r/mall/mall-20261020-threads-12'), { DB: db });
+  assert.equal(response.status, 302);
+  const location = new URL(response.headers.get('location'));
+  assert.equal(location.origin + location.pathname, 'https://ekodi.kr/ekodimall');
+  assert.equal(location.searchParams.get('utm_medium'), 'organic_social');
+  assert.equal(location.searchParams.get('utm_campaign'), 'mall-20261020-threads-12');
+});
