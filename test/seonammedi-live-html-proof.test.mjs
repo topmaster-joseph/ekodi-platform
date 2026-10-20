@@ -88,3 +88,17 @@ test('production release verifier retains exact generated HTML byte provenance c
   assert.match(script,/html_digest_mismatch/);
   assert.match(script,/live_homepage_head_literal_escaped_whitespace/);
 });
+
+test('customer-domain search verification tags are the only extra head bytes tolerated',async()=>{
+  const { verificationMetaTags } = await import('../search-engine-verification.js');
+  const tags=verificationMetaTags('seonammedi.kr');
+  assert.ok(tags.includes('naver-site-verification'));
+  const expected=expectedSeonamMediHtmlAtOrigin(source,customer);
+  const live=expected.replace(/<head\b[^>]*>/i,m=>m+tags);
+  assert.equal(normalizeSeonamMediLiveHtml(live,{origin:customer,page:'index.html'}).html,expected);
+  const tampered=expected.replace(/<head\b[^>]*>/i,m=>m+'<meta name="naver-site-verification" content="attacker0000">');
+  assert.throws(()=>normalizeSeonamMediLiveHtml(tampered,{origin:customer,page:'index.html'}),/unexpected_search_verification_injection/);
+  const moved=expected.replace('</head>',tags+'</head>');
+  assert.throws(()=>normalizeSeonamMediLiveHtml(moved,{origin:customer,page:'index.html'}),/unexpected_search_verification_injection/);
+  assert.notEqual(normalizeSeonamMediLiveHtml(live,{origin:canonical,page:'index.html'}).html,expected,'canonical mount never receives verification tags');
+});

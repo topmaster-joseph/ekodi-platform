@@ -3,6 +3,8 @@
  * Never silently normalize unknown content: every removed fragment belongs to a
  * specific, already-audited first-party or Cloudflare edge transformation.
  */
+import { verificationMetaTags } from '../search-engine-verification.js';
+
 const origins=new Set(['https://ekodi.kr/seonammedi','https://seonammedi.kr']);
 const adminExtension='<link rel="stylesheet" href="/site-publication-admin.css" data-ekodi-site-publication-admin-style><script src="/site-publication-admin.js" defer data-ekodi-site-publication-admin data-site-id="seonammedi"></script>';
 const cfBeacon=/\n<script type="module" src="https:\/\/static\.cloudflareinsights\.com\/beacon\.min\.js\/[a-zA-Z0-9]+" integrity="sha512-[a-zA-Z0-9+/=]+" data-cf-beacon='([^']+)' crossorigin="anonymous"><\/script>(?=\n<\/body>)/g;
@@ -38,6 +40,20 @@ export function normalizeSeonamMediLiveHtml(rawHtml,{origin,page}){
   });
   if(beacons>1)throw new Error('multiple_cloudflare_beacon_injections');
   if(html.includes('static.cloudflareinsights.com'))throw new Error('unrecognized_cloudflare_beacon_injection');
+
+  // SEARCH-REGISTER-001: the customer-domain gateway inserts the exact registered
+  // search-engine ownership tags right after <head>. Remove only that exact
+  // string at that exact position on the customer origin; anything else fails.
+  if(origin==='https://seonammedi.kr'){
+    const tags=verificationMetaTags('seonammedi.kr');
+    if(tags){
+      const head=html.match(/<head\b[^>]*>/i);
+      if(!head)throw new Error('seonammedi_live_html_head_missing');
+      const at=head.index+head[0].length;
+      if(html.slice(at,at+tags.length)===tags)html=html.slice(0,at)+html.slice(at+tags.length);
+    }
+    if(/(?:google|naver)-site-verification/.test(html))throw new Error('unexpected_search_verification_injection');
+  }
 
   if(pageName==='admin/index.html'){
     const count=html.split(adminExtension).length-1;
