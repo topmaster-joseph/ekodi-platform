@@ -4,7 +4,8 @@ import {
   detectAutomationPatterns,
   getCapabilityEcosystemSummary,
 } from './ekodi-capability-ecosystem.js';
-import { runCapabilitySandbox, sandboxSummary } from './ekodi-capability-sandbox.js';
+import { runCapabilitySandbox, runFunctionalCapabilitySandbox, sandboxSummary } from './ekodi-capability-sandbox.js';
+import { buildSandboxAdapterRegistry, hasSandboxAdapter } from './ekodi-capability-sandbox-adapters.js';
 import { buildCapabilityAccumulationQueue, prepareFoundrySandboxBatch } from './ekodi-capability-accumulation.js';
 import {
   capabilityEcosystemStoreSummary,
@@ -19,7 +20,7 @@ import {
 export const EKODI_SELF_AUTOMATION_POLICY = Object.freeze({
   version: '1.1.0',
   targetGeneration: 10,
-  automaticScope: Object.freeze(['observe', 'detect_pattern', 'compose_candidate', 'contract_sandbox']),
+  automaticScope: Object.freeze(['observe', 'detect_pattern', 'compose_candidate', 'contract_sandbox', 'functional_sandbox']),
   directProductionMutation: false,
   directAuthorityExpansion: false,
   promotionPath: 'candidate -> contract sandbox -> functional sandbox -> verify -> PR -> CI -> staging -> guarded production',
@@ -37,6 +38,42 @@ async function runPendingContractSandboxes(db, candidates = [], options = {}) {
   return Object.freeze(runs);
 }
 
+function adapterBackedCapabilityId(candidate = {}) {
+  const steps = Array.isArray(candidate.steps) ? candidate.steps : [];
+  const supported = steps
+    .filter(step => step?.type === 'invoke_capability' && hasSandboxAdapter(step.capabilityId))
+    .map(step => String(step.capabilityId));
+  return supported.length === 1 ? supported[0] : null;
+}
+
+/**
+ * Promote contract-passing candidates into the functional sandbox, where the
+ * effect is actually performed, verified and rolled back in isolation.
+ *
+ * Without this stage a candidate stops at `functional_benchmark_required`
+ * forever: the contract sandbox can only inspect a candidate's shape, never its
+ * behaviour. Only capabilities with a registered sandbox-safe adapter run here.
+ */
+async function runPendingFunctionalSandboxes(db, contractRuns = [], candidates = [], options = {}) {
+  const byId = new Map(candidates.map(candidate => [candidate.id, candidate]));
+  const runs = [];
+  for (const contractRun of contractRuns) {
+    if (contractRun?.evaluation?.promotion !== 'functional_benchmark_required') continue;
+    const candidate = byId.get(contractRun.candidateId);
+    if (!candidate) continue;
+    const capabilityId = adapterBackedCapabilityId(candidate);
+    if (!capabilityId) continue;
+    const registry = buildSandboxAdapterRegistry({ capabilityIds: [capabilityId] });
+    const run = await runFunctionalCapabilitySandbox(candidate, {
+      adapter: registry[capabilityId],
+      trials: options.functionalSandboxTrials,
+    });
+    await persistSandboxRun(db, run);
+    runs.push(run);
+  }
+  return Object.freeze(runs);
+}
+
 export async function analyzeCapabilityEcosystem(db, options = {}) {
   const limit = Math.max(10, Math.min(1000, Math.trunc(Number(options.limit) || 500)));
   const experiences = await listCapabilityExperiences(db, { limit });
@@ -45,6 +82,7 @@ export async function analyzeCapabilityEcosystem(db, options = {}) {
   await upsertAutomationCandidates(db, candidates);
   const storedCandidates = await listAutomationCandidates(db, { limit: 100 });
   const newSandboxRuns = await runPendingContractSandboxes(db, storedCandidates, options);
+  const newFunctionalRuns = await runPendingFunctionalSandboxes(db, newSandboxRuns, storedCandidates, options);
   const [store, sandboxStore, sandboxRuns] = await Promise.all([
     capabilityEcosystemStoreSummary(db),
     sandboxStoreSummary(db),
@@ -65,6 +103,7 @@ export async function analyzeCapabilityEcosystem(db, options = {}) {
       store: sandboxStore,
       summary: sandboxSummary(sandboxRuns),
       newRuns: newSandboxRuns,
+      newFunctionalRuns,
       recentRuns: sandboxRuns,
     }),
     patterns,
