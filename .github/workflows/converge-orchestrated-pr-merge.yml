@@ -13,8 +13,15 @@ permissions:
   checks: read
   actions: write
 
+# Per-branch group (owner decision 2026-10-20). GitHub keeps one *pending* run
+# per concurrency group and a newer pending run cancels the older one, so a
+# repo-wide group silently dropped other PRs' convergence (12 of 28 runs
+# cancelled on 2026-10-19). Merges and update-branch are pinned to exact head
+# SHAs, every post-merge deploy has its own production concurrency group, and
+# runs of the same branch still never overlap. The continuity watchdog remains
+# the safety net for cancelled, timed-out or never-started runs.
 concurrency:
-  group: ekodi-orchestrated-merge
+  group: ekodi-orchestrated-merge-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
