@@ -1,0 +1,52 @@
+name: SeonamMedi Crawl Self-Watch
+
+# EKODI watches its own SeonamMedi news crawl and notifies the Owner through a
+# GitHub issue that mentions them (GitHub e-mail / mobile notification).
+# Triggers: the Control API Worker cron (workflow_dispatch on state changes),
+# a backup schedule independent of the Worker, and manual dispatch.
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: Who requested the check
+        required: false
+        default: manual
+      expected_state:
+        description: State observed by the requester (ok|alert)
+        required: false
+        default: ''
+      reason:
+        description: Reason observed by the requester
+        required: false
+        default: ''
+  schedule:
+    - cron: '45 */2 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seonammedi-crawl-self-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    permissions:
+      contents: read
+      issues: write
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Check crawl health and notify the Owner
+        run: node scripts/seonammedi-crawl-watch.mjs

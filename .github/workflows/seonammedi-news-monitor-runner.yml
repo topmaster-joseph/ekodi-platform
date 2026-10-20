@@ -28,6 +28,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
+    permissions:
+      contents: read
+      issues: write
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -43,3 +46,10 @@ jobs:
           node-version: '24'
       - name: Run SeonamMedi monitor from runner egress
         run: node scripts/seonammedi-monitor-runner.mjs ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }}
+      # EKODI self-watch: a failed collection run notifies the Owner (issue
+      # mention); a later healthy check closes the alert automatically.
+      - name: Notify the Owner when collection fails
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/seonammedi-crawl-watch.mjs --runner-failed
