@@ -588,7 +588,7 @@ test('seonammedi notices are an authenticated public board with image and sharin
   ]);
   assert.match(control,/createPublicNotice/);assert.match(control,/principalFromSupabaseRequest\(request\)/);
   assert.match(control,/image_too_large/);assert.match(control,/storeNoticeImageInDrive/);assert.match(control,/binding = "STORAGE"|STORAGE/);assert.match(control,/noticeImageMatch/);
-  assert.match(html,/id="noticeComposeForm"/);assert.match(html,/id="homeSpotlight"/);assert.match(html,/사진과 글을 게시/);
+  assert.match(html,/id="noticeComposeForm"/);assert.match(html,/id="homeSpotlight"/);assert.match(html,/<h2>행사·일정<\/h2>/);/* 2026-10-20 owner-approved: #notices is the calendar's 행사·일정 view; notices are written on the board */
   assert.match(app,/navigator\.share/);assert.match(app,/noticePermalink/);assert.match(app,/FormData\(noticeCompose\)/);assert.match(app,/NOTICE_SESSION_KEY/);
   assert.match(app,/recent=\[\.\.\.rows\]\.sort/);assert.match(css,/\.home-spotlight/);assert.match(css,/\.notice-detail/);
   assert.match(auth,/target\.pathname==='\/seonammedi'/);assert.match(migration,/image_key/);assert.match(apiConfig,/binding = "LIVE_RECORDINGS_BUCKET"/);
@@ -702,8 +702,9 @@ test('seonammedi notice list exposes edit and delete actions for the signed-in a
   assert.match(app,/data-notice-edit/);
   assert.match(app,/data-notice-delete/);
   assert.match(app,/async function deleteNotice\(item\)/);
-  assert.match(app,/querySelectorAll\('\[data-notice-edit\]'\)/);
-  assert.match(app,/querySelectorAll\('\[data-notice-delete\]'\)/);
+  // 2026-10-20 (owner decision): the #notices view is the 행사·일정 detail; its author edit/delete live on the detail.
+  assert.match(app,/<button type="button" class="notice-edit">수정<\/button><button type="button" class="notice-delete">삭제<\/button>/);
+  assert.match(app,/detail\.querySelector\('\.notice-delete'\)\?\.addEventListener\('click',\(\)=>deleteNotice\(item\)\)/);
   assert.match(css,/\.notice-row-actions/);
 });
 
@@ -883,7 +884,7 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
   assert.match(css,/min-height:100dvh;display:flex;flex-direction:column/);
   assert.match(css,/footer{margin-top:auto/);
   assert.doesNotMatch(html,/href="board\/finance">회계<\/a>/);
-  assert.match(app,/financeLink=event\.target\.closest\('a\[href="board\/finance"\]\'\)/);
+  assert.match(app,/financeLink=event\.target\.closest\('a\[href\$="board\/finance"\]\'\)/);
   assert.match(html,/COMMITTEE ACTIVITIES<\/p><h2>활동이력<\/h2>/);
   assert.match(html,/RELATED NEWS &amp; SOURCES<\/p><h2>관련소식<\/h2>/);
   assert.doesNotMatch(html,/세부 메뉴 준비중/);

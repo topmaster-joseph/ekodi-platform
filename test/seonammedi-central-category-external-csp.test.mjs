@@ -12,8 +12,8 @@ test('central category interactions run as same-origin external JS, preserving s
     read('_headers')
   ]);
   assert.doesNotMatch(home,/<script id="central-category-menu-script">/);
-  assert.ok(home.includes('<script src="./central-category-runtime.js?v=20261015-notice-direct-all-1" defer></script>'));
-  assert.match(home,/<link rel="stylesheet" href="\.\/central-category-menu\.css">/);
+  assert.ok(home.includes('<script src="/seonammedi/central-category-runtime.js?v=20261015-notice-direct-all-1" defer></script>'));
+  assert.match(home,/<link rel="stylesheet" href="\/seonammedi\/central-category-menu\.css">/);/* 2026-10-20: absolute so deep paths (/notices/<id>) load it */
   assert.match(home,/id="central-category-panel"[^>]*hidden/);
   assert.match(home,/id="central-category-buttons"/);
   assert.match(script,/const categories=\{/);

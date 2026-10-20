@@ -41,6 +41,6 @@ test('auto evidence row goes into the collapsible detail, never the collapsed ti
 test('cache-busting version bumped on every seonammedi page that loads app.js',async()=>{
   for(const page of ['index.html','notices/index.html','finance/index.html','minutes/index.html']){
     const html=await read(page);
-    if(/\/seonammedi\/app\.js\?v=/.test(html))assert.match(html,/app\.js\?v=20261013-monitor-dedup-1020/,page);
+    if(/\/seonammedi\/app\.js\?v=/.test(html))assert.match(html,/app\.js\?v=20261013-events-view-1020/,page);
   }
 });

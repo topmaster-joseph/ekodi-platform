@@ -282,3 +282,35 @@
 :is(#committeeActivityList,#committeeNewsList,#timelineList) .timeline-item.is-collapsed .auto-evidence-row{display:none!important}
 .timeline-item .auto-evidence-row{flex:1 1 100%;width:100%;min-width:0}
 .timeline-item .auto-evidence-row .media-link{min-width:0;overflow-wrap:anywhere;word-break:keep-all}
+
+/* SEONAMMEDI-EVENTS-VIEW-001 (2026-10-20): #notices holds the calendar's 행사·일정. One-line rows, no empty thumbnails,
+ * event time shown, the legacy write button retired (notices are written on the board). */
+#notices{--event-accent:#225d8f}
+#notices #noticeWriteButton[data-retired]{display:none!important}
+#notices .notice-board-link{display:inline-flex;align-items:center;text-decoration:none}
+#notices .module-shell{grid-template-columns:minmax(150px,200px) minmax(0,1fr)}
+#notices .notice-item.no-thumb .notice-open{grid-template-columns:minmax(0,1fr) auto}
+#notices .notice-open{align-items:center}
+#notices .notice-row-copy{min-width:0}
+#notices .notice-row-copy h3{margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#notices .notice-row-copy p{margin:2px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
+#notices .notice-row-date{margin:0;white-space:nowrap;text-align:right;color:var(--event-accent);font-weight:600}
+#notices .event-when{display:flex;gap:10px;align-items:baseline;margin:6px 0 12px;padding:10px 12px;border-radius:10px;background:#f1f6fb;color:#16324d;font-size:16px}
+#notices .event-when strong{flex:0 0 auto;color:var(--event-accent)}
+#notices .notice-detail-posted{color:#7a8794}
+@media(max-width:760px){#notices .module-shell{grid-template-columns:1fr}#notices .notice-row-date{font-size:12px}}
+/* SEONAMMEDI-EVENTS-VIEW-002: notice list (board data) under the event detail — same rules as the board. */
+#notices .board-notice-head{display:flex;justify-content:space-between;align-items:baseline;margin:22px 0 4px;padding-bottom:8px;border-bottom:2px solid #16324d}
+#notices .board-notice-head h3{margin:0;font-size:18px}
+#notices .board-notice-head a{font-size:13px;color:var(--event-accent);text-decoration:none}
+#notices .board-notice-row{display:flex;align-items:center;gap:10px;min-height:52px;padding:8px 2px;border-bottom:1px solid #e3e7eb;color:#192d41;text-decoration:none}
+#notices .board-notice-row .row-no{flex:0 0 2.6em;text-align:center;font-size:13px;font-weight:600;color:#64748b;font-variant-numeric:tabular-nums}
+#notices .board-notice-row .row-no.is-pinned{color:#b42318;font-weight:800}
+#notices .board-notice-row strong{flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:16px}
+#notices .board-notice-row .board-row-photo{flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#55606b;white-space:nowrap}
+#notices .board-notice-row .board-row-photo img{display:block!important;width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid #dde3ea}
+#notices .board-notice-row small{flex:0 0 auto;font-size:12px;color:#64748b;white-space:nowrap}
+@media(max-width:600px){#notices .board-notice-row strong{font-size:15px}#notices .board-notice-row .board-row-photo img{width:34px;height:34px}#notices .board-notice-row .row-no{flex-basis:2.2em}}
+/* The module grid's implicit column sized itself to the longest one-line title (overflow at 390px). Pin it to the viewport. */
+#notices .module-main{grid-template-columns:minmax(0,1fr)}
+#notices .notice-detail,#notices .notice-list,#notices .module-toolbar{min-width:0;max-width:100%}
