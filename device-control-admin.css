@@ -246,3 +246,4 @@ body.admin-compact #deviceControlPanel .device-enrollment-result code{
   body.admin-compact .app:has(#deviceControlPanel:not(.hidden-panel)) .content{width:100%!important;padding-inline:12px!important}
   body.admin-compact #deviceControlPanel .device-quick-connect{grid-template-columns:1fr!important}
 }
+.ekodi-pos-agent-summary{display:grid;gap:4px;padding:11px 12px;border:1px solid rgba(125,211,252,.2);border-radius:12px;background:rgba(2,6,23,.18)}.ekodi-pos-agent-summary strong{font-size:12px}.ekodi-pos-agent-summary span{font-size:11px;opacity:.78;overflow-wrap:anywhere}.ekodi-pos-agent-summary small{font-size:10px;opacity:.58}

@@ -7,6 +7,9 @@ test('CMPMYI POS Agent download gateway exposes only fixed lifecycle files',()=>
   assert.ok(CMPMYI_POS_AGENT_DOWNLOADS.includes('setup-pos-agent-compat.cmd'));
   assert.ok(CMPMYI_POS_AGENT_DOWNLOADS.includes('remove-pos-agent.cmd'));
   assert.ok(CMPMYI_POS_AGENT_DOWNLOADS.includes('diagnose-pos-targets.ps1'));
+  assert.ok(CMPMYI_POS_AGENT_DOWNLOADS.includes('enroll-pos-agent.cmd'));
+  assert.ok(CMPMYI_POS_AGENT_DOWNLOADS.includes('enroll-pos-agent.ps1'));
+  assert.equal(isStorePosAgentDownloadPath('/cmpmyi/admin/agent/download/enroll-pos-agent.cmd'),true);
   assert.equal(isStorePosAgentDownloadPath('/cmpmyi/admin/agent/download/setup-pos-agent.cmd'),true);
   assert.equal(isStorePosAgentDownloadPath('/cmpmyi/admin/agent/download/setup-pos-agent-compat.cmd'),true);
   assert.equal(isStorePosAgentDownloadPath('/cmpmyi/admin/agent/download/remove-pos-agent.cmd'),true);

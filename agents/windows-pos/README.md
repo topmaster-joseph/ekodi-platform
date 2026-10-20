@@ -102,9 +102,39 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\uninstall-pos-agent.ps1
 
 `allowedStores`는 이 PC에서 사용할 EKODI 매장 slug만 넣습니다. 기본 예시는 자담치킨(`jadam`)·피자마루(`pizzamaru`)·요거트퍼플(`yogurt`) 3개 1호점 운영공간을 허용하며, 전용 POS라면 실제 사용하는 매장만 남겨 범위를 줄일 수 있습니다.
 
+## 여러 POS PC 중앙 상태 확인 (선택 · 기본 꺼짐)
+
+여러 매장 POS PC의 Agent 상태를 중앙에서 보려면 PC마다 한 번 **중앙 상태 등록**을 합니다. 등록하지 않아도 매장 웹 화면과 바로 전환 기능은 그대로 동작합니다.
+
+1. 최고관리자가 EKODI 기기 관리에서 **기기 유형 POS**로 1회용 등록 코드(`EKD-...`)를 발급합니다. 코드는 10분 동안만 유효합니다.
+2. 해당 POS PC에서 `enroll-pos-agent.cmd`를 내려받아 실행하고 코드를 입력합니다. 관리자 권한을 요청합니다.
+3. Agent가 다시 시작되면 `https://ekodi.kr/api/device-agent/heartbeat`로 **바깥 방향(outbound) 상태 보고만** 보냅니다.
+
+보안 경계:
+
+- localhost Agent(`127.0.0.1:17831`)는 계속 외부에 열지 않습니다. 중앙은 PC에 접속하지 않고, PC가 상태만 보냅니다.
+- 보고 항목은 PC 이름, Agent 버전, 허용 매장, 대상 ID별 설정/실행 여부뿐입니다. **창 제목은 PC 밖으로 보내지 않습니다.**
+- 원격 명령을 조회하거나 실행하지 않습니다(`commands/next` 미사용). 중앙에서 Windows를 제어하는 원격관리 기능이 아닙니다.
+- 보고 주소는 `https://ekodi.kr`로 고정되며 다른 주소가 설정되면 보고하지 않습니다(`blocked_api_base`).
+- 기기 인증정보는 `%ProgramData%\EKODI\POSAgent\device-credential.json`에 SYSTEM·Administrators 전체권한, 현재 POS 사용자 읽기 전용으로 저장합니다. 화면에 토큰을 출력하지 않습니다.
+- 기기 관리에서 등록을 해제하면 다음 보고가 401로 거부되고 Agent는 보고를 스스로 멈춥니다(`revoked_or_unauthorized`).
+- 끄려면 관리자 PowerShell에서 `enroll-pos-agent.ps1 -Disable`을 실행합니다. 설정이 꺼지고 로컬 인증정보가 삭제됩니다.
+
+`GET /v1/health`의 `central` 항목에서 `disabled`, `not_enrolled`, `starting`, `online`, `retrying`, `revoked_or_unauthorized`, `blocked_api_base`, `invalid_credential` 상태를 확인할 수 있습니다.
+
+## 진단 후보 보기 (읽기 전용)
+
+`diagnose-pos-targets.ps1 -Suggest`는 실행 중인 창 목록과 함께 대상 ID별 **매핑 후보**를 보여 줍니다. 후보는 사람이 확인해야 하는 참고값이며 설정 파일을 바꾸지 않습니다. 이 진단은 프로그램을 실행·종료·전환하지 않습니다.
+
+## 0.2.0 변경 사항
+
+- `processNames` 또는 `windowTitleContains`가 비어 있는 대상이 있으면 PowerShell StrictMode에서 `/v1/health`가 `agent_error`로 실패하던 문제를 고쳤습니다(배달주문·포장주문·예약 기본값이 해당).
+- `/v1/health`에 `deviceName`, 대상별 `launchable`, `central` 상태를 추가했습니다.
+- 선택형 중앙 상태 보고와 `-Suggest` 진단 후보를 추가했습니다.
+
 ## 로컬 API
 
-- `GET /v1/health` — 등록 대상의 configured/running/windowTitle 상태
+- `GET /v1/health` — Agent 버전·PC 이름·중앙 보고 상태와 등록 대상의 configured/running/launchable/windowTitle 상태
 - `POST /v1/focus` — `{"target":"vpos"}`처럼 미리 등록된 대상만 사용자 동작으로 전환
 - `OPTIONS` — CORS / Private Network Access 사전 요청
 

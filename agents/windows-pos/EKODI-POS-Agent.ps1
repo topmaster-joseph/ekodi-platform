@@ -4,7 +4,8 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-$AgentVersion = '0.1.0'
+$AgentVersion = '0.2.0'
+$CentralApiBase = 'https://ekodi.kr'
 
 Add-Type @"
 using System;
@@ -25,6 +26,8 @@ function Property-Value($Object, [string]$Name, $Default = $null) {
   return $Default
 }
 
+# Callers must wrap this in @(...): PowerShell unrolls empty/single-item arrays on
+# return, and StrictMode rejects .Count on the resulting $null/scalar.
 function As-StringArray($Value) {
   if ($null -eq $Value) { return @() }
   return @($Value | ForEach-Object { [string]$_ } | Where-Object { $_.Trim() })
@@ -39,9 +42,51 @@ $prefix = [string](Property-Value $config 'listenerPrefix' 'http://127.0.0.1:178
 if ($prefix -notmatch '^http://(127\.0\.0\.1|localhost):\d+/$') {
   throw 'listenerPrefix must bind only to 127.0.0.1 or localhost.'
 }
-$allowedOrigins = As-StringArray (Property-Value $config 'allowedOrigins' @('https://ekodi.kr'))
-$allowedStores = As-StringArray (Property-Value $config 'allowedStores' @())
+$allowedOrigins = @(As-StringArray (Property-Value $config 'allowedOrigins' @('https://ekodi.kr')))
+$allowedStores = @(As-StringArray (Property-Value $config 'allowedStores' @()))
 $targets = @(Property-Value $config 'targets' @())
+$deviceName = [string]$env:COMPUTERNAME
+
+# Optional, outbound-only central status heartbeat (disabled by default).
+# It reuses the EKODI Device Agent enrollment/heartbeat contract, sends only a
+# data-minimized status summary, and NEVER polls or executes remote commands.
+$central = Property-Value $config 'centralHeartbeat' $null
+$credentialPath = Join-Path (Split-Path -Parent $ConfigPath) 'device-credential.json'
+$heartbeat = [ordered]@{
+  enabled = $false
+  state = 'disabled'
+  intervalSeconds = 60
+  nextAt = [DateTime]::UtcNow
+  failures = 0
+  lastSuccessAt = ''
+  lastError = ''
+  deviceId = ''
+  token = ''
+}
+if ($null -ne $central -and [bool](Property-Value $central 'enabled' $false)) {
+  $configuredBase = [string](Property-Value $central 'apiBase' $CentralApiBase)
+  $interval = [int](Property-Value $central 'intervalSeconds' 60)
+  $heartbeat.intervalSeconds = [Math]::Min([Math]::Max($interval, 30), 600)
+  if ($configuredBase.TrimEnd('/') -ne $CentralApiBase) {
+    $heartbeat.state = 'blocked_api_base'
+  } elseif (-not (Test-Path -LiteralPath $credentialPath)) {
+    $heartbeat.state = 'not_enrolled'
+  } else {
+    try {
+      $credential = Get-Content -LiteralPath $credentialPath -Raw -Encoding UTF8 | ConvertFrom-Json
+      $heartbeat.deviceId = [string](Property-Value $credential 'deviceId' '')
+      $heartbeat.token = [string](Property-Value $credential 'deviceToken' '')
+      if ($heartbeat.deviceId -match '^dev_[A-Za-z0-9-]{8,80}$' -and $heartbeat.token -match '^[a-f0-9]{32,128}$') {
+        $heartbeat.enabled = $true
+        $heartbeat.state = 'starting'
+      } else {
+        $heartbeat.state = 'invalid_credential'
+      }
+    } catch {
+      $heartbeat.state = 'invalid_credential'
+    }
+  }
+}
 
 function Test-Origin([string]$Origin) {
   if ([string]::IsNullOrWhiteSpace($Origin)) { return $false }
@@ -88,8 +133,8 @@ function Find-Target([string]$Id) {
 }
 
 function Find-TargetProcess($Target) {
-  $processNames = As-StringArray (Property-Value $Target 'processNames' @())
-  $titleNeedles = As-StringArray (Property-Value $Target 'windowTitleContains' @())
+  $processNames = @(As-StringArray (Property-Value $Target 'processNames' @()))
+  $titleNeedles = @(As-StringArray (Property-Value $Target 'windowTitleContains' @()))
   $candidates = @()
 
   foreach ($name in $processNames) {
@@ -123,10 +168,15 @@ function Find-TargetProcess($Target) {
 }
 
 function Target-IsConfigured($Target) {
-  $processNames = As-StringArray (Property-Value $Target 'processNames' @())
-  $titleNeedles = As-StringArray (Property-Value $Target 'windowTitleContains' @())
+  $processNames = @(As-StringArray (Property-Value $Target 'processNames' @()))
+  $titleNeedles = @(As-StringArray (Property-Value $Target 'windowTitleContains' @()))
   $launchPath = [string](Property-Value $Target 'launchPath' '')
   return ($processNames.Count -gt 0 -or $titleNeedles.Count -gt 0 -or -not [string]::IsNullOrWhiteSpace($launchPath))
+}
+
+function Target-IsLaunchable($Target) {
+  $launchPath = [string](Property-Value $Target 'launchPath' '')
+  return ([bool](Property-Value $Target 'allowLaunch' $false) -and -not [string]::IsNullOrWhiteSpace($launchPath) -and (Test-Path -LiteralPath $launchPath))
 }
 
 function Target-Status($Target) {
@@ -136,7 +186,71 @@ function Target-Status($Target) {
     label = [string](Property-Value $Target 'label' (Property-Value $Target 'id' ''))
     configured = [bool](Target-IsConfigured $Target)
     running = [bool]($null -ne $process)
+    launchable = [bool](Target-IsLaunchable $Target)
     windowTitle = if ($null -ne $process) { [string]$process.MainWindowTitle } else { '' }
+  }
+}
+
+function Central-Status {
+  return [ordered]@{
+    enabled = [bool]$heartbeat.enabled
+    state = [string]$heartbeat.state
+    lastSuccessAt = [string]$heartbeat.lastSuccessAt
+    lastError = [string]$heartbeat.lastError
+  }
+}
+
+function Send-CentralHeartbeatIfDue {
+  if (-not $heartbeat.enabled) { return }
+  if ([DateTime]::UtcNow -lt $heartbeat.nextAt) { return }
+  # Data minimization: window titles stay on this PC; only ids and booleans leave it.
+  $summary = @($targets | ForEach-Object {
+    $status = Target-Status $_
+    [ordered]@{ id = $status.id; configured = $status.configured; running = $status.running }
+  })
+  $os = ''
+  try { $os = [string][Environment]::OSVersion.VersionString } catch {}
+  $payload = [ordered]@{
+    hostname = $deviceName
+    osVersion = $os
+    agentVersion = "pos-$AgentVersion"
+    profileName = 'ekodi-pos-agent'
+    capabilities = [ordered]@{ posAgent = $true; remoteCommands = $false; focusMode = 'explicit_user_action_only' }
+    settings = [ordered]@{
+      posAgent = [ordered]@{
+        version = $AgentVersion
+        listener = 'loopback'
+        stores = @($allowedStores)
+        targets = $summary
+        configuredCount = @($summary | Where-Object { $_.configured }).Count
+        runningCount = @($summary | Where-Object { $_.running }).Count
+        reportedAt = [DateTime]::UtcNow.ToString('o')
+      }
+    }
+  }
+  try {
+    $headers = @{ Authorization = "Bearer $($heartbeat.token)"; 'X-EKODI-Device-Id' = $heartbeat.deviceId }
+    $body = $payload | ConvertTo-Json -Depth 8 -Compress
+    Invoke-RestMethod -Method Post -Uri "$CentralApiBase/api/device-agent/heartbeat" -Headers $headers -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($body)) -TimeoutSec 5 | Out-Null
+    $heartbeat.failures = 0
+    $heartbeat.state = 'online'
+    $heartbeat.lastError = ''
+    $heartbeat.lastSuccessAt = [DateTime]::UtcNow.ToString('o')
+    $heartbeat.nextAt = [DateTime]::UtcNow.AddSeconds($heartbeat.intervalSeconds)
+  } catch {
+    $heartbeat.failures = [Math]::Min($heartbeat.failures + 1, 6)
+    $code = 0
+    try { $code = [int]$_.Exception.Response.StatusCode } catch {}
+    if ($code -eq 401) {
+      # Revoked or invalid credential: stop sending instead of retrying forever.
+      $heartbeat.enabled = $false
+      $heartbeat.state = 'revoked_or_unauthorized'
+    } else {
+      $heartbeat.state = 'retrying'
+    }
+    $heartbeat.lastError = if ($code) { "http_$code" } else { 'network_error' }
+    $backoff = [Math]::Min($heartbeat.intervalSeconds * [Math]::Pow(2, $heartbeat.failures - 1), 600)
+    $heartbeat.nextAt = [DateTime]::UtcNow.AddSeconds($backoff)
   }
 }
 
@@ -181,11 +295,17 @@ try {
 Write-Host "EKODI POS Agent $AgentVersion" -ForegroundColor Green
 Write-Host "Listening only on $prefix"
 Write-Host 'Foreground switching occurs only after an explicit POST /v1/focus request from an allowed EKODI origin.'
+Write-Host "Central status heartbeat: $($heartbeat.state) (outbound only, no remote commands)"
 Write-Host 'Press Ctrl+C to stop.'
 
+$pendingContext = $null
 try {
   while ($listener.IsListening) {
-    $context = $listener.GetContext()
+    Send-CentralHeartbeatIfDue
+    if ($null -eq $pendingContext) { $pendingContext = $listener.BeginGetContext($null, $null) }
+    if (-not $pendingContext.AsyncWaitHandle.WaitOne(1000)) { continue }
+    $context = $listener.EndGetContext($pendingContext)
+    $pendingContext = $null
     $request = $context.Request
     $origin = [string]$request.Headers['Origin']
 
@@ -214,8 +334,10 @@ try {
         Write-Json $context 200 @{
           ok = $true
           version = $AgentVersion
+          deviceName = $deviceName
           listener = 'loopback'
           focusMode = 'explicit_user_action_only'
+          central = Central-Status
           targets = $targetStatus
         } $origin
         continue

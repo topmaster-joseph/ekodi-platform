@@ -9,6 +9,8 @@ const FILES=Object.freeze({
   'install-pos-agent.ps1':{type:'text/plain; charset=utf-8',source:'install-pos-agent.ps1'},
   'uninstall-pos-agent.ps1':{type:'text/plain; charset=utf-8',source:'uninstall-pos-agent.ps1'},
   'diagnose-pos-targets.ps1':{type:'text/plain; charset=utf-8',source:'diagnose-pos-targets.ps1'},
+  'enroll-pos-agent.cmd':{type:'application/octet-stream',source:'enroll-pos-agent.cmd'},
+  'enroll-pos-agent.ps1':{type:'text/plain; charset=utf-8',source:'enroll-pos-agent.ps1'},
   'EKODI-POS-Agent.ps1':{type:'text/plain; charset=utf-8',source:'EKODI-POS-Agent.ps1'},
   'pos-agent.config.example.json':{type:'application/json; charset=utf-8',source:'pos-agent.config.example.json'},
   'README.md':{type:'text/markdown; charset=utf-8',source:'README.md'},

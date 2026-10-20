@@ -28,6 +28,8 @@ test('Store Admin exposes the POS console without weakening store scope',async()
   assert.match(html,/start-pos-agent\.cmd/);
   assert.match(html,/stop-pos-agent\.cmd/);
   assert.match(html,/운영 데이터를 불러오고 있습니다.*설치 버튼/s);
+  assert.doesNotMatch(html,/raw\.githubusercontent\.com/);
+  assert.match(html,/\/cmpmyi\/admin\/agent\/download\/setup-pos-agent\.cmd/);
   const csp=response.headers.get('content-security-policy')||'';
   assert.match(csp,/http:\/\/127\.0\.0\.1:17831/);
   assert.match(csp,/http:\/\/localhost:17831/);
@@ -42,7 +44,20 @@ test('Store Admin exposes the POS console without weakening store scope',async()
   assert.match(script,/Agent 창을 별도로 열어 둘 필요는 없습니다/);
   assert.match(script,/웹 주문·배달 운영 화면을 기본으로 사용하고/);
   assert.doesNotMatch(script,/POS·배달·포장 프로그램 상태를 한눈에 보고 한 번 눌러 전환합니다/);
-  assert.match(script,/Windows 전환/);
+  assert.match(script,/바로 전환/);
+  assert.match(script,/Windows 프로그램 전환 실패/);
+  assert.match(script,/이 PC의 POS Agent가 연결되지 않았습니다\./);
+  for(const label of ['오늘 주문','오늘 매출','신규 주문','처리 필요','연결 이상'])assert.match(script,new RegExp(label));
+  assert.match(script,/Windows 앱 전환 방식/);
+  assert.match(script,/createStoreOrderModel|normalizeOrders/);
+  assert.match(script,/loadPosLiveData/);
+  assert.match(script,/Promise\.allSettled/);
+  assert.match(script,/화면은 자동으로 전환되지 않습니다/);
+  assert.match(script,/diagnose-pos-targets\.ps1/);
+  assert.match(script,/remove-pos-agent\.cmd/);
+  assert.match(script,/posErrorText/);
+  assert.match(script,/로컬 네트워크 액세스/);
+  assert.match(script,/foreground_switch_blocked:'/);
   assert.match(script,/Agent 실행 · 중지 안내/);
   assert.match(script,/\/cmpmyi\/admin\/agent\/download\//);
   assert.match(script,/20261006-task-scheduler-startup-fallback-v5/);
@@ -95,4 +110,29 @@ test('POS Agent example config exposes only the fixed Store Console target IDs',
   assert.deepEqual(ids,['vpos','mukkebi','ddangyo','naver_order','smartcon','delivery','takeout','reservation']);
   assert.ok(config.targets.every(row=>row.allowLaunch===false));
   assert.ok(config.targets.every(row=>typeof row.launchPath==='string'));
+});
+
+test('POS console never auto-focuses Windows programs from order refresh and degrades without Agent',async()=>{
+  const script=await storeAdminScript().text();
+  const liveStart=script.indexOf('async function loadPosLiveData');
+  const liveEnd=script.indexOf('function startPosLiveRefresh');
+  assert.ok(liveStart>0&&liveEnd>liveStart);
+  const live=script.slice(liveStart,liveEnd);
+  assert.doesNotMatch(live,/\/v1\/focus/);
+  assert.doesNotMatch(live,/posAgent\(/);
+  const focusCalls=script.match(/posAgent\('\/v1\/focus'/g)||[];
+  assert.equal(focusCalls.length,1);
+  const clickIndex=script.indexOf("querySelectorAll('[data-pos-target]')");
+  assert.ok(clickIndex>0&&script.indexOf("posAgent('/v1/focus'")>clickIndex);
+  assert.match(script,/visibilityState==='visible'/);
+  assert.match(script,/state\.localAgentProbed/);
+});
+
+test('client section capability map matches the server map so store roles can open POS',async()=>{
+  const {storeAdminSectionsForRole}=await import('../store-admin-engine.js');
+  const script=await storeAdminScript().text();
+  const clientMap=script.match(/const SECTION_CAPABILITY=\{([^}]*)\}/)?.[1]||'';
+  const clientKeys=clientMap.split(',').map(x=>x.split(':')[0].trim()).filter(Boolean).sort();
+  for(const key of ['pos','orders','delivery'])assert.ok(clientKeys.includes(key),key);
+  for(const role of ['owner','store_owner','manager','store_staff'])assert.ok(storeAdminSectionsForRole(role).includes('pos'),role);
 });
