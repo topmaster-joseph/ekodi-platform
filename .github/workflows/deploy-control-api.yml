@@ -752,6 +752,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       MAIL_GOOGLE_CLIENT_SECRET: ${{ secrets.MAIL_GOOGLE_CLIENT_SECRET }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      SEONAMMEDI_DISPATCH_TOKEN: ${{ secrets.SEONAMMEDI_DISPATCH_TOKEN }}
       EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
       EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
     steps:
@@ -796,6 +797,18 @@ jobs:
           if ! printf '%s' "$mf_names" | grep -Fq 'MOTOR_FESTIVAL_PII_KEY'; then
             node -e "process.stdout.write(require('node:crypto').randomBytes(48).toString('base64url'))" | npx --yes wrangler@${WRANGLER_VERSION} secret put MOTOR_FESTIVAL_PII_KEY --config wrangler.api.toml >/dev/null
             echo 'Generated a persistent, isolated CGMA motor festival PII encryption key in Cloudflare Worker secrets.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Provision SeonamMedi hourly crawl dispatch token
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Fine-grained GitHub token (this repository, Actions: read/write only).
+          # The hourly Worker cron uses it to wake the runner-egress news crawl.
+          if [ -n "${SEONAMMEDI_DISPATCH_TOKEN:-}" ]; then
+            printf '%s' "$SEONAMMEDI_DISPATCH_TOKEN" | npx --yes wrangler@${WRANGLER_VERSION} secret put SEONAMMEDI_DISPATCH_TOKEN --config wrangler.api.toml >/dev/null
+            echo 'SeonamMedi crawl dispatch token provisioned without printing its value.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'SEONAMMEDI_DISPATCH_TOKEN is not set; the hourly Worker cron will not wake the runner crawl.' >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Record configured AI providers without exposing secrets
         shell: bash
