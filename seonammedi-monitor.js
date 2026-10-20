@@ -213,7 +213,7 @@ function isSearchEngineUrl(value){try{return /(?:^|\.)(?:news\.google\.com|googl
 // Korean news CMSs rarely use <article>: also read JSON-LD articleBody and the
 // common body containers (ndsoft article-view-content-div, itemprop=articleBody,
 // *article_body*, *news_body*, *view_con*, ...).
-const BODY_CONTAINER=/<(?:div|section|td)\b[^>]*(?:id|class|itemprop)\s*=\s*["'][^"']*(?:article-view-content-div|articleBody|article[_-]?body|article[_-]?content|article[_-]?txt|news[_-]?body|news[_-]?content|newsct_article|view[_-]?con(?:tent|t)?|art[_-]?body|cont[_-]?view|news_view|read[_-]?body|text[_-]?area)[^"']*["'][^>]*>/i;
+const BODY_CONTAINER=/<(?:div|section|td)\b[^>]*(?:id|class|itemprop)\s*=\s*["'][^"']*(?:article-view-content-div|articleBody|article[_-]?body|article[_-]?content|article[_-]?txt|news[_-]?body|news[_-]?content|newsct_article|view[_-]?con(?:tent|t)?|art[_-]?body|cont[_-]?view|news_view|read[_-]?body|text[_-]?area|bo_v_con|news[_-]?txt|view[_-]?txt|articles?[_-]?detail|article[_-]?view|newsview|cont[_-]?area|detail[_-]?body|news[_-]?text)[^"']*["'][^>]*>/i;
 // The container element only (balanced open/close of the same tag), so side
 // columns with other headlines never count as article evidence.
 function balancedElement(source,start){
@@ -237,6 +237,12 @@ export function extractArticleBodies(html){
   }
   const container=source.search(BODY_CONTAINER);
   if(container>=0)out.push(clean(balancedElement(source,container)));
+  // Last resort: the page's own paragraphs (navigation and related-article
+  // lists are links/list items, not <p>), only when they look like a body.
+  const main=source.replace(/<(nav|header|footer|aside)\b[^>]*>[\s\S]*?<\/\1>/gi,' ');
+  const paragraphs=(main.match(/<p\b[^>]*>[\s\S]*?<\/p>/gi)||[]).map(p=>stripMarkup(p)).filter(text=>text.length>=20&&!/^(?:ⓒ|©|Copyright|무단|저작권)/i.test(text));
+  const joined=paragraphs.join(' ');
+  if(paragraphs.length>=3&&joined.length>=150)out.push(clean(joined));
   return out.filter(Boolean);
 }
 async function verifySource(item){
