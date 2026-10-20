@@ -314,3 +314,13 @@
 /* The module grid's implicit column sized itself to the longest one-line title (overflow at 390px). Pin it to the viewport. */
 #notices .module-main{grid-template-columns:minmax(0,1fr)}
 #notices .notice-detail,#notices .notice-list,#notices .module-toolbar{min-width:0;max-width:100%}
+/* CALENDAR-EVENT-OPENS-LEFT-001 + layout (owner request 2026-10-20): the event detail fills the left content area. */
+#notices .module-shell{grid-template-columns:minmax(0,1fr)!important;gap:0}
+#notices .module-intro,#notices .module-toolbar{display:none!important}
+#notices .notice-detail{padding:22px 24px;border:1px solid #dce3ea;border-radius:16px;background:#fff}
+#notices .event-detail-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+#notices .event-detail-eyebrow{font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--event-accent)}
+#notices .notice-back{min-height:34px;padding:6px 12px;font-size:13px;background:#fff;color:#16324d;border:1px solid #cbd5df}
+#notices .notice-detail h3{margin:2px 0 10px;font-size:22px;line-height:1.35;overflow-wrap:anywhere}
+#notices .notice-detail-body p{white-space:pre-wrap;line-height:1.75;color:#334155}
+@media(max-width:600px){#notices .notice-detail{padding:16px}#notices .notice-detail h3{font-size:19px}}

@@ -12,7 +12,7 @@ const [home,css,ui,worker]=await Promise.all([
 ]);
 
 test('six-menu home loads the same read-only visual shell as independent boards',()=>{
-  assert.ok(home.includes('src="/seonammedi/board/ui/central-category.js?v=20261016-home-photo-worker-1" defer'), 'home must load verified Worker asset');
+  assert.ok(home.includes('src="/seonammedi/board/ui/central-category.js?v=20261020-event-open-1" defer'), 'home must load verified Worker asset');
   assert.ok(!home.includes('src="/seonammedi/board-central-category.js'), 'home must not depend on legacy static asset');
   assert.ok(home.includes('/seonammedi/board/ui/central-category.js'), 'home must reuse proven board Worker route');
   assert.ok(worker.includes("boardPath(req,'ui/central-category.js')"));

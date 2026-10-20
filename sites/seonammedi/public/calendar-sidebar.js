@@ -45,6 +45,18 @@
     const url=shareUrl(item);
     return url?shareSummary(item)+'\n일정 확인: '+url:'';
   };
+  // CALENDAR-EVENT-OPENS-LEFT-001 (owner request 2026-10-20): an event title opens the 행사·일정 detail in the left
+  // content area. On the home app it opens in place (window.seonamOpenEvent); elsewhere it navigates there.
+  const siteMount=()=>location.pathname.startsWith('/seonammedi')?'/seonammedi':'';
+  const eventTitle=item=>{
+    const strong=document.createElement('strong');
+    const a=document.createElement('a');a.className='seonam-calendar-event-link';
+    a.href=siteMount()+'/notices/'+encodeURIComponent(item.id);a.textContent=item.title||'일정';
+    a.addEventListener('click',event=>{
+      if(typeof window.seonamOpenEvent==='function'&&window.seonamOpenEvent(item.id)){event.preventDefault()}
+    });
+    strong.append(a);return strong;
+  };
   const make=(tag,cls,content)=>{
     const element=document.createElement(tag);
     if(cls)element.className=cls;
@@ -214,7 +226,7 @@
       todayHeading.textContent='오늘의 일정 ('+Number(date.slice(5,7))+'월 '+Number(date.slice(8,10))+'일 · '+hits.length+'건)';
       for(const item of hits){
         const article=make('article','seonam-calendar-today-event');
-        article.append(make('strong','',item.title||'일정'));
+        article.append(eventTitle(item));
         const startTime=displayTime(item.eventStart);
         if(startTime){
           // EVENT-WHEN-001: an end equal to the start is not a range (avoid '09:00 ~ 09:00').
@@ -284,7 +296,7 @@
       }
       for(const item of hits){
         const article=make('article','seonam-calendar-event');
-        const title=make('strong','',item.title||'일정');
+        const title=eventTitle(item);
         const details=make('p','',item.body||'');
         const schedule=make('small','',dateOf(item.eventStart).replaceAll('-','.')+' '+displayTime(item.eventStart)+(item.eventEnd&&item.eventEnd!==item.eventStart?' ~ '+dateOf(item.eventEnd).replaceAll('-','.')+' '+displayTime(item.eventEnd):''));
         article.append(title,schedule);

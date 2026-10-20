@@ -58,16 +58,16 @@ test('photo home board Worker script keeps exact approved customer-domain mount 
    readFile(new URL('../sites/seonammedi/public/index.html',import.meta.url),'utf8'),
    readFile(new URL('../scripts/verify-seonammedi-release-live.mjs',import.meta.url),'utf8')
  ]);
- assert.ok(homepage.includes('src="/seonammedi/board/ui/central-category.js?v=20261016-home-photo-worker-1"'));
+ assert.ok(homepage.includes('src="/seonammedi/board/ui/central-category.js?v=20261020-event-open-1"'));
  assert.ok(verifier.includes("'board/ui/central-category.js'"),'strict live validator must name only this first-party Worker asset');
- const published='<script src="/seonammedi/board/ui/central-category.js?v=20261016-home-photo-worker-1" defer></script>';
- const customer='<script src="/board/ui/central-category.js?v=20261016-home-photo-worker-1" defer></script>';
+ const published='<script src="/seonammedi/board/ui/central-category.js?v=20261020-event-open-1" defer></script>';
+ const customer='<script src="/board/ui/central-category.js?v=20261020-event-open-1" defer></script>';
  const result=compareSeonamMediPublishedHtml(published,customer,['board/ui/central-category.js']);
  assert.equal(result.matched,true,JSON.stringify(result));
  assert.deepEqual(result.aliases,['board/ui/central-category.js']);
  for(const changed of [
    customer.replace('central-category.js','untrusted.js'),
-   customer.replace('home-photo-worker-1','unknown-release'),
+   customer.replace('event-open-1','unknown-release'),
    customer.replace(' defer',''),
  ])assert.equal(compareSeonamMediPublishedHtml(published,changed,['board/ui/central-category.js']).matched,false);
  assert.equal(compareSeonamMediPublishedHtml(published,customer,[]).matched,false);

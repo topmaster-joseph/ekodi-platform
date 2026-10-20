@@ -79,3 +79,7 @@
 .seonam-calendar-inline-details .seonam-calendar-form textarea{min-height:65px}
 .seonam-calendar-card .seonam-calendar-today-agenda{margin-top:8px;padding-top:8px}
 @media(max-width:940px){.seonam-calendar-card .seonam-calendar-day{min-height:39px;font-size:13px}}
+
+/* CALENDAR-EVENT-OPENS-LEFT-001 */
+.seonam-calendar-event-link{color:inherit;text-decoration:none}
+.seonam-calendar-event-link:hover,.seonam-calendar-event-link:focus-visible{color:#1e5b95;text-decoration:underline}

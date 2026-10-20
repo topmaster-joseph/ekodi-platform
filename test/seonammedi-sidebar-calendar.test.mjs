@@ -75,7 +75,7 @@ test('calendar shows selected day once inside a compact card and keeps managemen
   ]);
   assert.match(layout,/주요일정/);
   assert.doesNotMatch(layout,/일정 달력/);
-  assert.ok(layout.includes('20261017-compact-single-card-v1'),'published calendar JS and CSS must bypass old cached bundles');
+  assert.ok(layout.includes('20261020-event-open-1'),'published calendar JS and CSS must bypass old cached bundles');
   assert.ok(js.includes("heading.append(make('h2','','주요일정'))"));
   assert.ok(js.includes("appendButton(heading,'관리'"));
   assert.ok(js.includes("navigation.replaceChildren(current,previous,today,next)"));
@@ -207,8 +207,8 @@ test('every public event list has accessible native share and copy actions, with
   assert.doesNotMatch(shareBuilder,/searchParams\.set\('(?:manage|auth|access_token|ekodi_token)'/);
   assert.match(css,/\.seonam-calendar-event\.is-shared/);
   assert.match(css,/\.seonam-calendar-share-actions/);
-  assert.match(loader,/calendar-sidebar\.js\?v=20261017-compact-single-card-v1/);
-  assert.match(loader,/calendar-sidebar\.css\?v=20261017-compact-single-card-v1/);
+  assert.match(loader,/calendar-sidebar\.js\?v=20261020-event-open-1/);
+  assert.match(loader,/calendar-sidebar\.css\?v=20261020-event-open-1/);
   assert.match(js,/if\(!admin\)return;/);
 });
 
@@ -246,6 +246,6 @@ test('title-sharing assets stay byte-identical across the main Site Core and ind
   const site=await readFile(new URL('board-central-category.js',root),'utf8');
   const worker=await readFile(new URL('../../../services/independent-board/worker.js',root),'utf8');
   assert.ok(worker.includes('const BOARD_CATEGORY_CLIENT_JS='+JSON.stringify(site)+';'));
-  assert.ok(site.includes('/seonammedi/calendar-sidebar.js?v=20261017-compact-single-card-v1'));
-  assert.ok(site.includes('/seonammedi/calendar-sidebar.css?v=20261017-compact-single-card-v1'));
+  assert.ok(site.includes('/seonammedi/calendar-sidebar.js?v=20261020-event-open-1'));
+  assert.ok(site.includes('/seonammedi/calendar-sidebar.css?v=20261020-event-open-1'));
 });

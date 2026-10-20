@@ -67,7 +67,7 @@ test('home feed shows notice thumbnails and keeps board notice links', async () 
   assert.match(feed, /url:home\+'\/board\/notices\?id='\+encodeURIComponent\(x\.id\),thumb:firstPhoto\(x,home\)/);
   assert.match(feed, /class="public-feed-thumb"/);
   assert.match(css, /\.public-feed-thumb\{/);
-  assert.match(html, /home-public-feed\.js\?v=20261020-notice-thumb-1/);
+  assert.match(html, /home-public-feed\.js\?v=20261020-board-only-1/);
   // firstPhoto: board URLs get the mount, Site Core paths do not, non-paths are ignored.
   const firstPhoto = new Function('return ' + feed.match(/const firstPhoto=(\(x,mount\)=>\{[^\n]*\});/)[1])();
   assert.equal(firstPhoto({ imageUrls: ['/board/api/files/a.jpg'] }, '/seonammedi'), '/seonammedi/board/api/files/a.jpg');
