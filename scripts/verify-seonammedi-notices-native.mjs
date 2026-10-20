@@ -81,6 +81,43 @@ try{
       requireThat(JSON.stringify(initial.navigation)===JSON.stringify(expectedNav),'six_menu_order_mismatch');
       requireThat(initial.postCount>0,'no_public_notices_loaded');
       entry.noticeUiVersion=initial.detailCount===initial.postCount?'collapsed-list':'legacy-expanded';
+      // NOTICE-PINNED-THEN-NEWEST-001 (owner decision 2026-10-20): pinned notices first, then newest by
+      // creation time; the screen follows the API order exactly.
+      // NOTICE-ROW-NUMBER-001: pinned rows show 중요, others count down with the oldest = 1.
+      // NOTICE-ROW-PHOTO-VISIBLE-001: a notice with photos shows a thumbnail that is loaded AND rendered
+      // (HOME-IMAGERY-ONLY once hid loaded images with display:none).
+      // NOTICE-ROW-ONE-LINE-001: number, title, photo and date share one line.
+      const listing=await page.evaluate(async base=>{
+        const r=await fetch(base+'/board/api/notices',{cache:'no-store'});const d=await r.json();
+        const api=(d.items||[]).map(x=>({id:String(x.id),pinned:!!x.pinned,t:Date.parse(x.createdAt||x.updatedAt||'')||0,photos:(x.imageUrls||[]).length}));
+        const rows=[...document.querySelectorAll('#list details.notice-record')].map(e=>{
+          const s=e.querySelector('summary'),box=el=>el?.getBoundingClientRect(),mid=b=>b?(b.top+b.bottom)/2:null;
+          const t=box(s.querySelector('strong')),others=[s.querySelector('.row-no'),s.querySelector('.row-photo img'),s.querySelector('small')].filter(Boolean).map(box);
+          const img=s.querySelector('.row-photo img'),ib=box(img);
+          return{id:e.id.replace(/^notice-/,''),no:(s.querySelector('.row-no')?.textContent||'').trim(),
+            oneLine:!!t&&others.every(b=>Math.abs(mid(b)-mid(t))<16),
+            photo:img?{loaded:img.complete&&img.naturalWidth>0,rendered:ib.width>0&&ib.height>0&&getComputedStyle(img).display!=='none'&&getComputedStyle(img).visibility!=='hidden'}:null};
+        });
+        return {api,rows};
+      },origin+(paths[origin].home==='/'?'':'/seonammedi'));
+      const api=listing.api,rows=listing.rows;
+      entry.noticeOrder=rows.slice(0,6).map(x=>x.no+':'+x.id);
+      requireThat(api.every((x,i,a)=>i===0||Number(a[i-1].pinned)>Number(x.pinned)||(a[i-1].pinned===x.pinned&&a[i-1].t>=x.t)),'notice_api_not_pinned_then_newest');
+      requireThat(JSON.stringify(rows.map(x=>x.id))===JSON.stringify(api.map(x=>x.id)),'notice_dom_order_mismatch');
+      const regular=api.filter(x=>!x.pinned);
+      requireThat(rows.every(r=>{const a=api.find(x=>x.id===r.id);return a.pinned?r.no==='중요':r.no===String(regular.length-regular.indexOf(a))}),'notice_row_number_mismatch');
+      requireThat(rows.every(r=>r.oneLine),'notice_row_not_one_line');
+      const withPhotos=api.filter(x=>x.photos>0).map(x=>x.id);
+      entry.noticesWithPhotos=withPhotos.length;
+      if(withPhotos.length){
+        await page.evaluate(()=>document.querySelectorAll('#list summary .row-photo img').forEach(i=>i.loading='eager'));
+        await page.waitForFunction(ids=>ids.every(id=>{const i=document.querySelector('#notice-'+id+' summary .row-photo img');return i&&i.complete}),withPhotos,{timeout:20000}).catch(()=>{});
+        const thumbs=await page.evaluate(ids=>ids.map(id=>{const i=document.querySelector('#notice-'+id+' summary .row-photo img'),b=i?.getBoundingClientRect();return{present:!!i,loaded:!!i&&i.naturalWidth>0,rendered:!!b&&b.width>0&&getComputedStyle(i).display!=='none'}}),withPhotos);
+        entry.rowThumbnailsVisible=thumbs.filter(x=>x.loaded&&x.rendered).length;
+        requireThat(thumbs.every(x=>x.present),'notice_row_photo_missing');
+        requireThat(thumbs.every(x=>x.loaded),'notice_row_photo_not_loaded');
+        requireThat(thumbs.every(x=>x.rendered),'notice_row_photo_hidden_by_css');
+      }
       requireThat(initial.detailCount===0||(initial.detailCount===initial.postCount&&initial.expandedCount===0),'notices_list_mixed_or_open_by_default');
       requireThat(initial.hasSearch,'notice_search_missing');
       requireThat(initial.shareCount===initial.postCount,'share_control_missing');
@@ -115,6 +152,12 @@ try{
         entry.siteNavFontSize=homeHeader.fontSize;
         requireThat(JSON.stringify(homeHeader.names)===JSON.stringify(expectedNav),'homepage_header_menu_mismatch');
         requireThat(Math.abs(parseFloat(homeHeader.fontSize)-parseFloat(initial.headerNavFontSize))<=1,'site_board_nav_font_mismatch');
+        // SPACE-CARD-CONTRAST-001: operating-space cards own their text color (read-only static check).
+        if(origin==='https://ekodi.kr'&&p.name==='desktop'){
+          const css=await (await fetch('https://space.ekodi.kr/style.css',{cache:'no-store'})).text();
+          entry.spaceContrastGuard=css.includes('#internalShell :is(.panel,.space-card,.unmapped-list){color:#18211b}');
+          requireThat(entry.spaceContrastGuard,'space_card_contrast_guard_missing');
+        }
         // NOTICE-MOUNT-LINK-001 (2026-10-20): featured/public-feed notice links must keep the site mount,
         // otherwise ekodi.kr/seonammedi/ opened ekodi.kr/notices/:id (EKODI operating-space page).
         await home.waitForFunction(()=>document.querySelector('#homeSpotlight a.spotlight-card')||document.querySelector('#homeSpotlight[hidden]'),null,{timeout:20000}).catch(()=>{});
