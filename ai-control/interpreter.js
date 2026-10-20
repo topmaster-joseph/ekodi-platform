@@ -68,9 +68,9 @@ function speak(text,language,replace=false){
   speechSynthesis.speak(utterance);
 }
 async function processText(text){
-  const queued=String(text||'').trim();if(!queued)return;state.queue.push(queued);if(state.busy)return;state.busy=true;
+  const queued=String(text||'').trim();if(!queued)return;const pair=selected();state.queue.push({text:queued,...pair});if(state.busy)return;state.busy=true;
   while(state.queue.length){
-    const utterance=state.queue.shift();const {from,to}=selected();state.lastSource=utterance;$('sourceText').textContent=utterance;$('sourceText').classList.remove('muted');$('targetText').textContent='통역 중…';setNotice('');
+    const {text:utterance,from,to}=state.queue.shift();state.lastSource=utterance;$('sourceText').textContent=utterance;$('sourceText').classList.remove('muted');$('targetText').textContent='통역 중…';setNotice('');
     try{
       const translated=await translate(utterance,from,to);if(!translated)throw new Error('empty_translation');
       state.lastTarget=translated;$('targetText').textContent=translated;speak(translated,to,false);
@@ -84,7 +84,10 @@ async function processText(text){
   state.busy=false;
 }
 function updateMicUi(){
+  const locked=state.wantsListening||state.listening;
   $('micButton').classList.toggle('listening',state.listening);$('micLabel').textContent=state.listening?'마이크 중지':'마이크 시작';$('listeningState').textContent=state.listening?'듣는 중':'대기';
+  for(const id of ['sourceLanguage','targetLanguage','swapLanguages'])$(id).disabled=locked;
+  document.querySelectorAll('[data-preset]').forEach(button=>button.disabled=locked);
 }
 function configureRecognition(){
   if(!Recognition)return null;
@@ -102,16 +105,17 @@ function startListening(){
 }
 function toggleListening(){if(state.wantsListening||state.listening)stopListening();else startListening();}
 function swap(restart=true){
+  if(state.wantsListening||state.listening){setNotice('통역 중에는 언어가 고정됩니다. 마이크를 멈춘 뒤 변경해 주세요.');return;}
   const source=$('sourceLanguage'),target=$('targetLanguage');const before=source.value;source.value=target.value;target.value=before;
   $('interimText').textContent='';if(restart&&state.wantsListening){stopListening();setTimeout(startListening,220);}setNotice(`${LANGS[source.value].label}로 듣고 ${LANGS[target.value].label}로 통역합니다.`);
 }
-function preset(value){const [from,to]=String(value||'').split(':');if(!LANGS[from]||!LANGS[to])return;$('sourceLanguage').value=from;$('targetLanguage').value=to;if(state.wantsListening){stopListening();setTimeout(startListening,220);}setNotice(`${LANGS[from].label} → ${LANGS[to].label}`);}
+function preset(value){if(state.wantsListening||state.listening)return;const [from,to]=String(value||'').split(':');if(!LANGS[from]||!LANGS[to])return;$('sourceLanguage').value=from;$('targetLanguage').value=to;if(state.wantsListening){stopListening();setTimeout(startListening,220);}setNotice(`${LANGS[from].label} → ${LANGS[to].label}`);}
 function clearAll(){$('sourceText').textContent='마이크를 누르고 말해 주세요.';$('sourceText').classList.add('muted');$('targetText').textContent='통역 결과가 여기에 표시됩니다.';$('interimText').textContent='';state.lastSource='';state.lastTarget='';state.queue.length=0;if('speechSynthesis'in window)speechSynthesis.cancel();setNotice('');}
 fillLanguages();
 $('micButton').addEventListener('click',toggleListening);
 $('turnButton').addEventListener('click',()=>swap(true));
 $('swapLanguages').addEventListener('click',()=>swap(true));
-$('sourceLanguage').addEventListener('change',()=>{if(state.wantsListening){stopListening();setTimeout(startListening,220);}});
+$('sourceLanguage').addEventListener('change',()=>setNotice(`${LANGS[selected().from].label} → ${LANGS[selected().to].label}`));
 $('targetLanguage').addEventListener('change',()=>setNotice(`${LANGS[selected().from].label} → ${LANGS[selected().to].label}`));
 document.querySelectorAll('[data-preset]').forEach(button=>button.addEventListener('click',()=>preset(button.dataset.preset)));
 $('speakAgain').addEventListener('click',()=>speak(state.lastTarget,selected().to,true));

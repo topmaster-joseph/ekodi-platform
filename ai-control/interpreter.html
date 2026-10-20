@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="description" content="말하면 바로 번역하고 상대 언어로 읽어주는 EKODI 모두의 통역">
   <title>모두의 통역 | EKODI 모두의 AI</title>
-  <link rel="stylesheet" href="../api/interpreter/style?v=20260922-interpreter-1">
+  <link rel="stylesheet" href="../api/interpreter/style?v=20260922-interpreter-2">
 </head>
 <body>
   <main class="interpreter-shell">
@@ -48,7 +48,7 @@
 
       <div class="primary-actions">
         <button id="micButton" class="mic" type="button"><span class="mic-dot"></span><span id="micLabel">마이크 시작</span></button>
-        <button id="turnButton" class="secondary" type="button">상대방 차례</button>
+        <button id="turnButton" class="secondary" type="button">방향 바꾸기</button>
       </div>
       <div class="minor-actions">
         <button id="speakAgain" type="button">다시 듣기</button>
@@ -69,10 +69,10 @@
 
     <section class="guide">
       <strong>사용법</strong>
-      <p>① 언어 선택 → ② 마이크 시작 → ③ 말하기. 상대가 답할 때는 <b>상대방 차례</b>를 누르면 두 언어가 바뀝니다.</p>
+      <p>① 언어 선택 → ② 마이크 시작 → ③ 말하기. 통역 중에는 선택한 언어 방향이 고정됩니다. 방향을 바꾸려면 마이크를 멈춘 뒤 <b>방향 바꾸기</b>를 누르세요.</p>
       <p class="privacy">통역 기록은 기본적으로 저장하지 않습니다. 번역에는 필요한 텍스트만 전송하며, 음성 인식 처리 방식은 사용 중인 브라우저·기기의 정책이 적용될 수 있습니다.</p>
     </section>
   </main>
-  <script type="module" src="../api/interpreter/client?v=20260922-interpreter-1"></script>
+  <script type="module" src="../api/interpreter/client?v=20260922-interpreter-2"></script>
 </body>
 </html>
