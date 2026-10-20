@@ -16,7 +16,7 @@ test('the top-level Notice link always navigates directly to the standalone noti
  const nav=html.slice(navStart,navEnd);
  assert.ok(nav.includes('<a href="board/notices" >공지</a>'),'the Notice label links to the public notice board');
  assert.ok(!nav.includes('data-category-menu="공지"'),'Notice must not be a category menu');
- assert.ok(html.includes('central-category-runtime.js?v=20261015-notice-direct-all-1'),'browser must load new menu runtime');
+ assert.ok(html.includes('central-category-runtime.js?v=20261020-section-title-1'),'browser must load new menu runtime');
  assert.ok(!html.includes('id="central-category-preview"'),'obsolete central notice preview must not render');
  for(const legacy of ['"공지":','noticePreview','renderNoticePreview','minutes/','board/finance'])assert.ok(!runtime.includes(legacy),'obsolete Notice handler remains: '+legacy);
  assert.ok(runtime.includes('filter(t=>categories[t.textContent.trim()])'),'menu intercept must apply only to genuine category tabs');

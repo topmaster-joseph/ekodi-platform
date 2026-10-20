@@ -642,7 +642,7 @@ test('seonammedi public site uses shared authenticated inline admin without dupl
   assert.match(app,/authEndpoint:'\/api\/seonammedi\/admin\/me'/);
   assert.match(app,/await admin\.authorize\(\)/);
   assert.doesNotMatch(app,/admin\.attach/);
-  for(const label of ['조직 바로 수정','관련소식 관리','연결채널 바로 수정'])assert.match(html,new RegExp(label));
+  for(const label of ['조직 바로 수정','＋ 추가','연결채널 바로 수정'])assert.match(html,new RegExp(label));
   assert.match(app,/공지 작성/);
   assert.match(app,/bindPublicFinanceAdmin/);
   assert.match(app,/if\(admin\.has\('notices'\)\).*loadNotices\(\)/);
@@ -885,8 +885,8 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
   assert.match(css,/footer{margin-top:auto/);
   assert.doesNotMatch(html,/href="board\/finance">회계<\/a>/);
   assert.match(app,/financeLink=event\.target\.closest\('a\[href\$="board\/finance"\]\'\)/);
-  assert.match(html,/COMMITTEE ACTIVITIES<\/p><h2>활동이력<\/h2>/);
-  assert.match(html,/RELATED NEWS &amp; SOURCES<\/p><h2>관련소식<\/h2>/);
+  assert.match(html,/COMMITTEE ACTIVITIES<\/p><h2>서남권 국립의대 비상대책위원회 활동이력<\/h2><\/div>/);
+  assert.match(html,/RELATED NEWS &amp; SOURCES<\/p><h2>서남권 국립의대 관련소식<\/h2><\/div>/);
   assert.doesNotMatch(html,/세부 메뉴 준비중/);
   assert.doesNotMatch(html,/전체 회계내역|financeManageToggle|financeManageForm/);
   assert.match(adminHtml,/id="financeForm"/);

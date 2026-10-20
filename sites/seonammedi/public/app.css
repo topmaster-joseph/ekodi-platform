@@ -324,3 +324,10 @@
 #notices .notice-detail h3{margin:2px 0 10px;font-size:22px;line-height:1.35;overflow-wrap:anywhere}
 #notices .notice-detail-body p{white-space:pre-wrap;line-height:1.75;color:#334155}
 @media(max-width:600px){#notices .notice-detail{padding:16px}#notices .notice-detail h3{font-size:19px}}
+/* SECTION-TITLE-ADD-001 (owner request 2026-10-20): titles without notes; 관리자 로그인 / ＋ 추가 at the right end. */
+.section-view-title.section-title-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:nowrap}
+.section-view-title.section-title-actions>div:first-child{min-width:0}
+.section-view-title.section-title-actions h2{overflow-wrap:anywhere}
+.section-view-title.section-title-actions .section-head-actions{flex:0 0 auto;justify-content:flex-end}
+.section-add-button{font-weight:800}
+@media(max-width:600px){.section-view-title.section-title-actions{align-items:flex-start}.section-view-title.section-title-actions .section-head-actions .admin-login-entry,.section-view-title.section-title-actions .section-add-button{min-height:40px;padding:8px 12px;font-size:14px}}
