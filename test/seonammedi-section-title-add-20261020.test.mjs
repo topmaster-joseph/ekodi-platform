@@ -8,7 +8,7 @@ const pub=p=>readFile(new URL('../sites/seonammedi/public/'+p,import.meta.url),'
 const [html,app,css]=await Promise.all([pub('index.html'),pub('app.js'),pub('app.css')]);
 
 test('titles are renamed and the notes under them are gone',()=>{
-  assert.match(html,/<h2>서남권 국립의대 비상대책위원회 활동이력<\/h2><\/div><div class="section-head-actions">/);
+  assert.match(html,/<h2>비상대책위원회 활동이력<\/h2><\/div><div class="section-head-actions">/);
   assert.match(html,/<h2>서남권 국립의대 관련소식<\/h2><\/div><div class="section-head-actions" id="timelineHeadActions">/);
   assert.doesNotMatch(html,/직접 주관·참여한 활동을 먼저 보여줍니다/);
   assert.doesNotMatch(html,/발행일 최신순으로 보여주며, 검증된 과거 기록까지/);
@@ -24,7 +24,7 @@ test('login and ＋ 추가 sit at the title right end and open the add forms',()
 
 test('category panel shows the full titles while logic keeps the menu name',async()=>{
   const rt=await readFile(new URL('../sites/seonammedi/public/central-category-runtime.js',import.meta.url),'utf8');
-  assert.match(rt,/const TOPIC_TITLES=\{'활동이력':'서남권 국립의대 비상대책위원회 활동이력','관련소식':'서남권 국립의대 관련소식'\}/);
+  assert.match(rt,/const TOPIC_TITLES=\{'활동이력':'비상대책위원회 활동이력','관련소식':'서남권 국립의대 관련소식'\}/);
   assert.match(rt,/currentTopic=name;title\.textContent=TOPIC_TITLES\[name\]\|\|name;/);
   assert.doesNotMatch(rt,/title\.textContent===name|title\.textContent==='소통채널'/);
 });
