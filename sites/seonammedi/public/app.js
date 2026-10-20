@@ -785,11 +785,14 @@ function showNoticeDetail(item){
   detail.querySelector('.notice-delete')?.addEventListener('click',()=>deleteNotice(item));
 }
 function renderFeaturedNotice(rows){
-  const host=el('homeSpotlight');if(!host)return;const now=Date.now(),recent=[...rows].sort((a,b)=>String(b.publishedAt||b.updatedAt||'').localeCompare(String(a.publishedAt||a.updatedAt||'')));
-  const activeEvents=recent.filter(item=>item.kind==='event'&&(!item.eventEnd||new Date(item.eventEnd).getTime()>=now));
-  const priority=recent.filter(item=>item.featured&&item.kind!=='event'),latestNotices=recent.filter(item=>item.kind!=='event');
-  const selected=[];for(const item of [...activeEvents,...priority,...latestNotices])if(!selected.some(x=>x.id===item.id))selected.push(item);const items=selected.slice(0,4);
-  host.hidden=!items.length;host.innerHTML=items.map(item=>'<a class="spotlight-card" href="'+noticePermalink(item.id)+'">'+(item.imageUrl?'<img src="'+escapeHtml(item.imageUrl)+'" alt="" loading="eager">':'<span class="spotlight-placeholder">공지</span>')+'<span class="spotlight-copy"><small>'+(item.kind==='event'?'행사·일정':'최근 게시글')+'</small><strong>'+escapeHtml(item.title||'공지')+'</strong><em>게시글 보기</em></span></a>').join('');
+  const host=el('homeSpotlight');if(!host)return;
+  const items=(Array.isArray(rows)?rows:[])
+    .filter(item=>item&&item.kind!=='event'&&item.id!=null&&String(item.title||'').trim())
+    .sort((a,b)=>String(b.publishedAt||b.updatedAt||'').localeCompare(String(a.publishedAt||a.updatedAt||'')))
+    .slice(0,6);
+  host.hidden=!items.length;
+  host.setAttribute('aria-label','최근 공지사항');
+  host.innerHTML=items.length?'<div class="home-notice-preview"><div class="home-notice-preview-head"><h2>공지사항</h2><a href="/seonammedi/board/notices">더보기 →</a></div><ul>'+items.map(item=>'<li><a href="'+noticePermalink(item.id)+'"><span class="home-notice-preview-title">'+escapeHtml(item.title)+'</span><time>'+escapeHtml(noticeDate(item))+'</time></a></li>').join('')+'</ul></div>':'';
   document.querySelector('.hero')?.classList.toggle('has-spotlight',items.length>0);
 }
 // CALENDAR-EVENT-OPENS-LEFT-001: the calendar opens an event in the left content area without a page load.
