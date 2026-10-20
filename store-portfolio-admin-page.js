@@ -273,16 +273,19 @@ function agentManagementPanel(){
     </div>
     <div class="agent-grid">
       <article class="agent-card"><h2>설치 · 업그레이드</h2><p>처음 설치하거나 기존 Agent를 최신 버전으로 갱신할 때 사용합니다. 기존 로컬 설정은 업그레이드 시 보존됩니다.</p>
-        <div class="agent-actions"><a class="primary" href="${AGENT_DOWNLOAD_BASE}setup-pos-agent.cmd" download>원클릭 설치 다운로드</a><a href="${AGENT_DOWNLOAD_BASE}install-pos-agent.ps1" download>수동 설치 스크립트</a></div>
+        <div class="agent-actions"><a class="primary" href="${AGENT_DOWNLOAD_BASE}setup-pos-agent.cmd" download>원클릭 설치 다운로드</a><a href="${AGENT_DOWNLOAD_BASE}setup-pos-agent-compat.cmd" download>호환 설치 · XML 오류용</a><a href="${AGENT_DOWNLOAD_BASE}install-pos-agent.ps1" download>수동 설치 스크립트</a></div>
       </article>
       <article class="agent-card"><h2>실행 · 중지</h2><p>설치는 유지한 채 현재 Agent만 시작하거나 중지합니다. 중지해도 다음 Windows 로그인 자동 시작 설정은 유지됩니다.</p>
         <div class="agent-actions"><a href="${AGENT_DOWNLOAD_BASE}start-pos-agent.cmd" download>Agent 실행 파일</a><a href="${AGENT_DOWNLOAD_BASE}stop-pos-agent.cmd" download>Agent 중지 파일</a></div>
       </article>
-      <article class="agent-card"><h2>진단 · 고급 설정</h2><p>VPOS·먹깨비 등 실제 프로세스 이름과 창 제목을 확인합니다. 진단은 프로그램을 실행·종료·전환하지 않습니다.</p>
+      <article class="agent-card"><h2>진단 · 고급 설정</h2><p>VPOS·먹깨비 등 실제 프로세스 이름과 창 제목을 확인합니다. <code>-Suggest</code>를 붙이면 대상별 매핑 후보도 보여 줍니다. 진단은 프로그램을 실행·종료·전환하지 않고 설정도 바꾸지 않습니다.</p>
         <div class="agent-actions"><a href="${AGENT_DOWNLOAD_BASE}diagnose-pos-targets.ps1" download>진단 파일</a><a href="${AGENT_DOWNLOAD_BASE}pos-agent.config.example.json" download>설정 예시</a><a href="${AGENT_DOWNLOAD_BASE}README.md" download>전체 안내</a></div>
       </article>
       <article class="agent-card"><h2>삭제</h2><p>이 POS PC에서 EKODI POS Agent 예약 작업과 설치 파일을 완전히 제거합니다. 삭제 전 확인창이 표시됩니다.</p>
         <div class="agent-actions"><a class="danger" href="${AGENT_DOWNLOAD_BASE}remove-pos-agent.cmd" download>원클릭 삭제 다운로드</a><a href="${AGENT_DOWNLOAD_BASE}uninstall-pos-agent.ps1" download>수동 삭제 스크립트</a></div>
+      </article>
+      <article class="agent-card" data-pos-agent-central="v1"><h2>여러 POS PC 중앙 상태 (선택)</h2><p>최고관리자가 기기 관리에서 <strong>기기 유형 POS</strong>로 1회용 등록 코드를 발급한 뒤, 각 POS PC에서 등록 파일을 실행해 코드를 입력합니다. PC는 온라인 여부·Agent 버전·설정/실행 프로그램 수만 바깥 방향으로 보고하며, 중앙에서 원격 명령을 보내거나 Windows를 제어하지 않습니다. 창 제목은 PC 밖으로 보내지 않습니다.</p>
+        <div class="agent-actions"><a class="primary" href="${AGENT_DOWNLOAD_BASE}enroll-pos-agent.cmd" download>중앙 상태 등록 파일</a><a href="https://ekodi.kr/admin/status/devices" target="_top">기기 관리 · 등록 POS PC 보기</a></div>
       </article>
     </div>
     <div class="agent-card"><h2>매장 POS 바로가기</h2><p>설치가 끝난 각 POS PC에서 해당 매장 POS 통합화면을 열고 Agent 상태 확인 및 Windows 프로그램 전환을 사용합니다.</p><div class="agent-store-links">${stores}</div></div>
@@ -356,10 +359,12 @@ function portfolioPanelClient(){
         const running=targets.filter(row=>row.running).length;
         const allowed=results.map(row=>label[row.store]||row.store).join(' · ');
         if(host)host.dataset.state='online';
-        if(state)state.textContent='연결됨 · Agent '+(first.version||'')+' · 허용 매장 '+allowed+' · 설정 '+configured+'개 · 실행 '+running+'개';
+        const central={disabled:'중앙 상태 미등록(선택)',not_enrolled:'중앙 상태 미등록(선택)',starting:'중앙 상태 연결 중',online:'중앙 상태 보고 중',retrying:'중앙 상태 재시도 중',revoked_or_unauthorized:'중앙 등록 해제됨',blocked_api_base:'중앙 보고 차단(주소 오류)',invalid_credential:'중앙 등록정보 확인 필요'}[first.central?.state||'disabled']||'중앙 상태 확인 필요';
+        const latest='0.2.0';const parts=String(first.version||'0').split('.').map(Number);const outdated=parts[0]<0||(parts[0]===0&&(parts[1]||0)<2);
+        if(state)state.textContent='연결됨 · '+(first.deviceName?first.deviceName+' · ':'')+'Agent '+(first.version||'')+(outdated?' · 업데이트 필요(최신 '+latest+', 원클릭 설치로 업그레이드)':'')+' · 허용 매장 '+allowed+' · 설정 '+configured+'개 · 실행 '+running+'개 · '+central;
       }else{
         if(host)host.dataset.state='offline';
-        if(state)state.textContent='Agent 미연결 · 웹 관리기능은 계속 사용할 수 있습니다. 이 PC에 처음 설치하려면 아래 원클릭 설치를 사용하세요.';
+        if(state)state.textContent='이 PC의 POS Agent가 연결되지 않았습니다. 웹 관리기능은 계속 사용할 수 있습니다. 이 PC에 처음 설치하려면 아래 원클릭 설치를 사용하세요.';
       }
       if(button)button.disabled=false;
     }

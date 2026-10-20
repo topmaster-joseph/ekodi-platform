@@ -8,6 +8,11 @@
     "pizzamaru",
     "yogurt"
   ],
+  "centralHeartbeat": {
+    "enabled": false,
+    "apiBase": "https://ekodi.kr",
+    "intervalSeconds": 60
+  },
   "targets": [
     {
       "id": "vpos",

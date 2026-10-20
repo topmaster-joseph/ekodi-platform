@@ -125,3 +125,58 @@ test('POS Agent start and stop helpers only control the fixed scheduled task',()
 test('POS Agent README documents install, diagnostics, upgrade and explicit-user focus safety',()=>{
   for(const phrase of ['setup-pos-agent.cmd','remove-pos-agent.cmd','install-pos-agent.ps1','start-pos-agent.cmd','stop-pos-agent.cmd','diagnose-pos-targets.ps1','uninstall-pos-agent.ps1','cmpmyi/admin/agent','기존 설정은 유지','자동실행 금지','사용자가 직접','다음 Windows 로그인 시 자동 시작 설정은 유지']) assert.match(readme,new RegExp(phrase));
 });
+
+const enroll=read('agents/windows-pos/enroll-pos-agent.ps1');
+const enrollCmd=read('agents/windows-pos/enroll-pos-agent.cmd');
+const agentSource=read('agents/windows-pos/EKODI-POS-Agent.ps1');
+const exampleConfig=JSON.parse(read('agents/windows-pos/pos-agent.config.example.json'));
+
+test('POS Agent central heartbeat is opt-in, outbound-only, fixed to ekodi.kr and never runs remote commands',()=>{
+  assert.deepEqual(exampleConfig.centralHeartbeat,{enabled:false,apiBase:'https://ekodi.kr',intervalSeconds:60});
+  assert.match(agentSource,/\$CentralApiBase = 'https:\/\/ekodi\.kr'/);
+  assert.match(agentSource,/blocked_api_base/);
+  assert.match(agentSource,/\/api\/device-agent\/heartbeat/);
+  assert.doesNotMatch(agentSource,/commands\/next|\/result|device-agent\/enroll/);
+  assert.match(agentSource,/remoteCommands = \$false/);
+  assert.match(agentSource,/revoked_or_unauthorized/);
+  assert.match(agentSource,/if \(\$code -eq 401\)/);
+  const beat=agentSource.slice(agentSource.indexOf('function Send-CentralHeartbeatIfDue'),agentSource.indexOf('function Focus-TargetProcess'));
+  assert.ok(beat.length>200);
+  assert.doesNotMatch(beat,/windowTitle =/);
+  assert.doesNotMatch(beat,/Focus-TargetProcess|Start-Process/);
+  assert.match(agentSource,/BeginGetContext/);
+  assert.match(agentSource,/AsyncWaitHandle\.WaitOne\(1000\)/);
+});
+
+test('POS Agent string arrays are wrapped so StrictMode never breaks health on empty target lists',()=>{
+  const calls=agentSource.match(/= .*As-StringArray \(/g)||[];
+  assert.ok(calls.length>=6);
+  assert.ok(calls.every(line=>line.includes('@(As-StringArray')),calls.join('\n'));
+  assert.match(agentSource,/\$AgentVersion = '0\.2\.0'/);
+  assert.match(agentSource,/deviceName = \$deviceName/);
+  assert.match(agentSource,/launchable = \[bool\]\(Target-IsLaunchable \$Target\)/);
+});
+
+test('POS enrollment reuses the device registry, requires POS type and protects the credential',()=>{
+  assert.match(enroll,/\$ApiBase = 'https:\/\/ekodi\.kr'/);
+  assert.match(enroll,/\/api\/device-agent\/enroll/);
+  assert.match(enroll,/deviceType -ne 'pos'/);
+  assert.match(enroll,/Nothing was saved/);
+  assert.match(enroll,/icacls\.exe \$CredentialPath \/inheritance:r/);
+  assert.match(enroll,/\[switch\]\$Disable/);
+  assert.match(enroll,/never polls or executes remote commands/);
+  assert.doesNotMatch(enroll,/Write-Host[^\n]*\$token|Invoke-Expression|\biex\b|commands\/next/i);
+  assert.doesNotMatch(enroll,/https:\/\/(?!ekodi\.kr)/i);
+  assert.match(enrollCmd,/https:\/\/ekodi\.kr\/cmpmyi\/admin\/agent\/download\/enroll-pos-agent\.ps1/);
+  assert.match(enrollCmd,/never polls or executes remote commands/);
+  assert.match(enrollCmd,/ParseFile/);
+  assert.match(enrollCmd,/-Verb RunAs/);
+  assert.doesNotMatch(enrollCmd,/Invoke-Expression|\biex\b|raw\.githubusercontent/i);
+});
+
+test('POS diagnostics suggestions stay read-only candidates',()=>{
+  assert.match(diagnose,/\[switch\]\$Suggest/);
+  assert.match(diagnose,/confirmed = \$false/);
+  assert.match(diagnose,/nothing was written/);
+  assert.doesNotMatch(diagnose,/Set-Content|Out-File|Start-Process|Stop-Process|SetForegroundWindow|AppActivate/);
+});

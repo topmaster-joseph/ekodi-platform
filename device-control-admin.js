@@ -5,6 +5,34 @@
   const TOKEN_KEY = 'ekodi-auth-token';
   const WINDOWS_AGENT_URL = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/tools/ekodi-device-agent/windows/ekodi-device-agent.ps1';
   const BOOTSTRAP_URL = '/ekodi-device-bootstrap.cmd';
+  const LATEST_POS_AGENT_VERSION = '0.2.0';
+  const POS_TARGET_LABELS = Object.freeze({vpos:'POS',mukkebi:'먹깨비',ddangyo:'땡겨요',naver_order:'네이버 주문',smartcon:'스마트콘',delivery:'배달주문',takeout:'포장주문',reservation:'예약'});
+  const POS_STORE_LABELS = Object.freeze({jadam:'자담치킨',pizzamaru:'피자마루',yogurt:'요거트퍼플'});
+  // EKODI POS Agent devices report status only (outbound heartbeat) and never accept remote commands.
+  function posAgentStatus(device) {
+    if (device?.capabilities?.posAgent !== true) return null;
+    const pos = device.settings?.posAgent;
+    return pos && typeof pos === 'object' ? pos : {};
+  }
+  function versionBehind(current, latest) {
+    const a = String(current || '').split('.').map(Number), b = String(latest).split('.').map(Number);
+    for (let i = 0; i < 3; i += 1) { if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) < (b[i] || 0); }
+    return false;
+  }
+  function posAgentSummary(device, pos) {
+    const box = document.createElement('div'); box.className = 'ekodi-pos-agent-summary'; box.dataset.posAgentSummary = 'v1';
+    const targets = Array.isArray(pos.targets) ? pos.targets : [];
+    const configured = targets.filter(row => row && row.configured);
+    const stores = (Array.isArray(pos.stores) ? pos.stores : []).map(id => POS_STORE_LABELS[id] || id).join(' · ') || '매장 미지정';
+    const outdated = versionBehind(pos.version, LATEST_POS_AGENT_VERSION);
+    box.innerHTML = '<strong></strong><span class="pos-summary-meta"></span><span class="pos-summary-programs"></span><small>상태 보고 전용 기기입니다. 원격 명령은 보내지 않으며 Windows를 원격 제어하지 않습니다.</small>';
+    box.querySelector('strong').textContent = `POS Agent ${pos.version || '확인 전'}${outdated ? ' · 업데이트 필요' : pos.version ? ' · 최신' : ''}`;
+    box.querySelector('.pos-summary-meta').textContent = `${stores} · 설정 ${configured.length}개 · 실행 ${targets.filter(row => row && row.running).length}개${pos.reportedAt ? ' · 보고 ' + timeLabel(pos.reportedAt) : ''}`;
+    box.querySelector('.pos-summary-programs').textContent = configured.length
+      ? configured.map(row => `${POS_TARGET_LABELS[row.id] || row.id} ${row.running ? '실행중' : '미실행'}`).join(' · ')
+      : '설정된 프로그램이 아직 없습니다. 이 PC에서 진단 후 매핑하세요.';
+    return box;
+  }
   const POWER_COMMANDS = [
     ['power.always_on', '항상 켜짐', '절전 없음 · 화면 AC 30분 / 배터리 15분'],
     ['power.presentation', '프레젠테이션', '화면과 절전을 모두 끄지 않음'],
@@ -593,7 +621,11 @@
     revoke.addEventListener('click', async () => { if (!confirm(`${device.label || type.label}의 EKODI ${isInventory(device) ? '인벤토리 등록' : 'Device Agent 권한'}을 해제할까요?`)) return; try { await request(`/api/control/devices/${encodeURIComponent(device.id)}/revoke`, { method:'POST' }); await loadDevices(); } catch (error) { alert(error.message); } });
     foot.append(note, revoke);
 
-    card.append(head, meta, health.firstElementChild, recommendationPanel(device), mainActions, advanced, foot);
+    const posStatus = posAgentStatus(device);
+    if (posStatus) {
+      values[3].textContent = '상태 보고 전용';
+      card.append(head, meta, posAgentSummary(device, posStatus), foot);
+    } else card.append(head, meta, health.firstElementChild, recommendationPanel(device), mainActions, advanced, foot);
     const proofCommand = latestCommandByType(device, 'software.localai.verify');
     const proof = proofCommand?.result?.localAiProof || device.diagnostics?.localAiProof;
     if (proof) {

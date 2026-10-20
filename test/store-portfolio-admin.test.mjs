@@ -80,7 +80,7 @@ test('cmpmyi POS Agent manager provides local status, same-domain lifecycle down
   assert.match(runtime,/ekodiStorePortfolioPanel==='agent'/);
   assert.match(runtime,/127\.0\.0\.1:17831\/v1\/health/);
   assert.match(runtime,/X-EKODI-Store/);
-  assert.match(runtime,/Agent 미연결/);
+  assert.match(runtime,/POS Agent가 연결되지 않았습니다/);
   assert.doesNotMatch(runtime,/\/v1\/focus[\s\S]*ekodiStorePortfolioPanel==='agent'/);
 });
 
@@ -221,4 +221,20 @@ test('guarded release probes canonical store admins and redirect-only aggregate 
     const alias=byUrl.get(`https://ekodi.kr/cmpmyi/admin/${slug}`);assert.deepEqual(alias?.statuses,[308]);
     assert.ok(alias?.headerExpect.includes(`location: https://ekodi.kr/${slug}/admin`));
   }
+});
+
+test('CMPMYI POS Agent manager offers compat setup, optional central enrollment and honest offline wording',async()=>{
+  const html=await storePortfolioAdminPanelPage('agent').text();
+  assert.match(html,/setup-pos-agent-compat\.cmd/);
+  assert.match(html,/enroll-pos-agent\.cmd/);
+  assert.match(html,/data-pos-agent-central="v1"/);
+  assert.match(html,/원격 명령을 보내거나 Windows를 제어하지 않습니다/);
+  assert.match(html,/창 제목은 PC 밖으로 보내지 않습니다/);
+  assert.match(html,/https:\/\/ekodi\.kr\/admin\/status\/devices/);
+  assert.match(html,/-Suggest/);
+  const runtime=await storePortfolioAdminPanelScript().text();
+  assert.match(runtime,/이 PC의 POS Agent가 연결되지 않았습니다\./);
+  assert.match(runtime,/업데이트 필요/);
+  assert.match(runtime,/중앙 상태 보고 중/);
+  assert.match(runtime,/deviceName/);
 });
