@@ -21,3 +21,13 @@ test('SeonamMedi public page carries explicit search metadata', async () => {
   assert.match(html, /seonammedi\.kr/);
   assert.match(html, /서남권국립의대\.kr/);
 });
+
+test('SeonamMedi is findable by the compound query 서남권국립의대', async () => {
+  const html = await readFile(new URL('../sites/seonammedi/public/index.html', import.meta.url), 'utf8');
+  assert.match(html, /<title>서남권국립의대 소통센터[^<]*<\/title>/);
+  assert.match(html, /<meta name="description" content="서남권국립의대\(서남권 국립의대\)/);
+  assert.match(html, /"alternateName":\["서남권국립의대"/);
+  assert.match(html, /<meta name="keywords" content="서남권국립의대,/);
+  const notices = await readFile(new URL('../sites/seonammedi/public/notices/index.html', import.meta.url), 'utf8');
+  assert.match(notices, /<title>공지 · 서남권국립의대 소통센터<\/title>/);
+});
