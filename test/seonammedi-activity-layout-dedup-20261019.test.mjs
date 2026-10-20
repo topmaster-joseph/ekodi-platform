@@ -41,3 +41,10 @@ test('collapsed cards align date, title and share on one row',async()=>{
   assert.match(css,/\.timeline-item\.is-collapsed \.timeline-content\{display:flex;align-items:center/);
   assert.match(css,/\.timeline-item\.is-collapsed \.item-share-row\{flex:0 0 auto;margin:0\}/);
 });
+
+test('auto-collected articles already cited by a same-day committee activity are not re-listed',async()=>{
+  const app=await read('sites/seonammedi/public/app.js');
+  const merge=app.slice(app.indexOf('function mergeMonitorTimelineItems'),app.indexOf('function applyMonitorTimelineUpdates'));
+  assert.match(merge,/rows\.some\(row=>isCommitteeRecord\(row\)&&row\.date===date&&\[\.\.\.\(row\.links\|\|\[\]\),\.\.\.\(row\.media\|\|\[\]\)\]\.some\(link=>timelineNormalizeUrl\(link\.url\)===url\)\)\)continue;/);
+  assert.ok(merge.indexOf('isCommitteeRecord(row)&&row.date===date')<merge.indexOf('rows.push('),'skip must happen before an auto row is added');
+});
