@@ -26,3 +26,10 @@ test('collapsed notice row exposes attached photos with a mount-aware thumbnail'
   assert.match(worker,/class="row-photo"><img src="\\'\+esc\(noticeImageUrl\(x\.imageUrls\[0\]\)\)/);
   assert.match(worker,/body\.board-notices \.row-head \.row-photo img\{width:44px/);
 });
+
+test('notice rows carry a left-hand number: pinned show 중요, others count down with oldest = 1',()=>{
+  assert.match(worker,/const rowNo=new Map\(items\.filter\(x=>!x\.pinned\)\.slice\(\)\.reverse\(\)\.map\(\(x,i\)=>\[x\.id,i\+1\]\)\)/);
+  assert.match(worker,/<span class="row-no is-pinned" aria-label="중요 공지">중요<\/span>/);
+  assert.match(worker,/<span class="row-no" aria-label="글번호">\\'\+rowNo\.get\(x\.id\)/);
+  assert.match(worker,/body\.board-notices \.row-head>strong\{flex:1 1 auto\}/);
+});
