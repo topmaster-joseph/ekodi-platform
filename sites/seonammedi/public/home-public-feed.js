@@ -13,8 +13,12 @@ const timestamp=value=>{
 const time=x=>timestamp(x.publishedAt||x.createdAt||x.updatedAt||x.date);
 const sort=(a,b)=>time(b)-time(a);
 const displayDate=x=>{const t=time(x);return t?new Date(t).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):''};
-const row=x=>'<a class="public-feed-row" href="'+esc(x.url)+'"><span class="public-feed-title">'+esc(x.title)+'</span><time>'+esc(displayDate(x))+'</time><span aria-hidden="true">›</span></a>';
+const thumb=x=>x.thumb?'<img class="public-feed-thumb" src="'+esc(x.thumb)+'" alt="" loading="lazy" decoding="async">':'';
+const row=x=>'<a class="public-feed-row'+(x.thumb?' has-thumb':'')+'" href="'+esc(x.url)+'">'+thumb(x)+'<span class="public-feed-title">'+esc(x.title)+'</span><time>'+esc(displayDate(x))+'</time><span aria-hidden="true">›</span></a>';
 const section=(label,items,href,primary=false)=>'<section class="public-feed-section'+(primary?' public-feed-primary':'')+'"><div class="public-feed-heading"><h2>'+esc(label)+'</h2><a href="'+esc(href)+'">더보기 ›</a></div><div class="public-feed-rows">'+(items.length?items.slice(0,primary?5:3).map(row).join(''):'<p class="public-feed-empty">공개된 게시물이 없거나 일시적으로 불러올 수 없습니다.</p>')+'</div></section>';
+// First notice photo as a thumbnail. Board URLs are host-relative (/board/...)
+// and need the /seonammedi mount on ekodi.kr; Site Core URLs are already absolute paths.
+const firstPhoto=(x,mount)=>{const u=String((Array.isArray(x.imageUrls)&&x.imageUrls[0])||x.imageUrl||'');if(!u.startsWith('/'))return'';return (u.startsWith('/board/')?mount:'')+u};
 const fetchJson=async url=>{const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);return r.json()};
 const items=(settled,key='items')=>settled.status==='fulfilled'?(Array.isArray(settled.value)?settled.value:Array.isArray(settled.value?.[key])?settled.value[key]:[]):[];
 (async()=>{
@@ -26,8 +30,8 @@ const items=(settled,key='items')=>settled.status==='fulfilled'?(Array.isArray(s
   fetchJson('/seonammedi/data.json')
  ]);
  const notices=[
-  ...items(boardNoticeResult).map(x=>({...x,url:home+'/board/notices?id='+encodeURIComponent(x.id)})),
-  ...items(noticeResult).map(x=>({...x,url:home+'/notices/'+encodeURIComponent(x.id)}))
+  ...items(boardNoticeResult).map(x=>({...x,url:home+'/board/notices?id='+encodeURIComponent(x.id),thumb:firstPhoto(x,home)})),
+  ...items(noticeResult).map(x=>({...x,url:home+'/notices/'+encodeURIComponent(x.id),thumb:firstPhoto(x,'')}))
  ].filter(x=>publicItem(x)&&x.id!=null&&x.title).sort(sort);
  const opinions=items(boardResult).filter(x=>publicItem(x)&&x.id!=null&&(x.title||x.message)).map(x=>({...x,title:String(x.title||x.message).slice(0,90),url:home+'/board/voices'})).sort(sort);
  const liveTimeline=items(timelineResult);
