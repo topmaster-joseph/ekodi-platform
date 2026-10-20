@@ -28,7 +28,6 @@ export function buildOpsHealthDocument(env = process.env, now = new Date()) {
   const repository = clean(env.GITHUB_REPOSITORY, DEFAULT_REPOSITORY);
   const commitSha = clean(env.GITHUB_SHA, 'local');
   const runId = clean(env.GITHUB_RUN_ID);
-  const runAttempt = clean(env.GITHUB_RUN_ATTEMPT);
   const workflow = clean(env.GITHUB_WORKFLOW, 'local-build');
   const ref = clean(env.GITHUB_REF_NAME, clean(env.GITHUB_REF, 'local'));
   const generatedAt = resolveGeneratedAt(env, now);
@@ -47,7 +46,6 @@ export function buildOpsHealthDocument(env = process.env, now = new Date()) {
       ref,
       workflow,
       run_id: runId,
-      run_attempt: runAttempt,
       commit_url: commitSha === 'local' ? null : `${githubBase}/commit/${commitSha}`,
       workflow_url: runId ? `${githubBase}/actions/runs/${runId}` : null,
     }),
