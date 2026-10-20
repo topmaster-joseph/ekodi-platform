@@ -14,6 +14,10 @@ test('Control API production release can verify merged-PR provenance with least 
 
 
 test('Control API provenance gate receives the least-privilege workflow token on every release stage',()=>{
-  const gates=[...workflow.matchAll(/- name: EKODI AI Orchestration Gate\n\s+env:\n\s+GITHUB_TOKEN: \$\{\{ github\.token \}\}\n\s+EKODI_RELEASE_BRANCH_REF: \$\{\{ inputs\.release_branch_ref \|\| '' \}\}\n\s+EKODI_RELEASE_TASK_ID: \$\{\{ inputs\.release_task_id \|\| '' \}\}\n\s+run:/g)];
+  // An optional `if:` guard may sit between the step name and its env block —
+  // the validate stage runs the release gate only off pull requests. The
+  // assertion remains that all three release stages carry the same
+  // least-privilege token and no broader inputs.
+  const gates=[...workflow.matchAll(/- name: EKODI AI Orchestration Gate\n(?:\s+if: [^\n]+\n)?\s+env:\n\s+GITHUB_TOKEN: \$\{\{ github\.token \}\}\n\s+EKODI_RELEASE_BRANCH_REF: \$\{\{ inputs\.release_branch_ref \|\| '' \}\}\n\s+EKODI_RELEASE_TASK_ID: \$\{\{ inputs\.release_task_id \|\| '' \}\}\n\s+run:/g)];
   assert.equal(gates.length,3);
 });
