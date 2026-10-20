@@ -39,6 +39,9 @@ jobs:
       - name: Check trusted read-only verifier syntax before deploying UI
         run: node --check scripts/verify-seonammedi-nav-guest-native.mjs
   native-public-guest-audit:
+    permissions:
+      contents: read
+      issues: write
     # Owner-only post-merge read-only probe. Issue comments run from trusted default main,
     # never from a contributor-controlled PR head and never receive write credentials.
     if: >-
@@ -77,3 +80,10 @@ jobs:
           path: artifacts/seonammedi-nav-guest
           retention-days: 14
           if-no-files-found: warn
+      - name: Post token-free audit outcome to the owner-triggering PR
+        if: ${{ always() && github.event_name == 'issue_comment' && github.event.comment.body == 'EKODI-SEONAM-NATIVE-AUDIT:RUN' && github.event.comment.user.login == github.repository_owner && github.event.issue.state == 'closed' }}
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          AUDIT_ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: node scripts/report-seonammedi-native-audit.mjs
