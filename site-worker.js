@@ -16,6 +16,7 @@ import { decorateDiscoveryResponse } from './discovery-layer.js';
 import { realtimeTenantAdminFromPath, realtimeTenantFromPath } from './realtime-tenant-registry.js';
 import { tenantLivePage } from './tenant-live-page.js';
 import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from './tenant-live-admin-page.js';
+import { isMallPicksPath, mallPicksResponse } from './mall-weekly-picks-page.js';
 
 // Static Assets canonicalizes *.html URLs to extensionless paths.
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
@@ -781,6 +782,10 @@ export default {
         const response = new Response(null, { status: 308, headers: { Location: canonical.toString() } });
         applyBaseSecurityHeaders(response.headers);
         return response;
+      }
+      if (isMallPicksPath(url.pathname) && (request.method === 'GET' || request.method === 'HEAD')) {
+        const picks = withHostSecurity(await mallPicksResponse(env), MALL_CSP, 'public, max-age=300, s-maxage=1800', 'public-ekodi-mall-picks');
+        return decorateDiscoveryResponse(injectEkodiShell(picks, 'mall', 'public'), url.pathname);
       }
       if (isMallPath(url.pathname)) return proxyMallService(request);
       if (PUBLIC_ADMIN_ALIASES.has(url.pathname) || url.pathname.startsWith('/admin/')) {
