@@ -20,6 +20,13 @@ function safeJson(value,fallback={}) { try { return JSON.stringify(value ?? fall
 function safeParse(value,fallback={}) { try { return JSON.parse(value || ''); } catch { return fallback; } }
 function safeUrl(value) { const raw=clean(value,2048); if(!raw) return ''; try { const url=new URL(raw); return url.protocol==='https:'?url.href:''; } catch { return ''; } }
 function slug(value) { return clean(value,160).toLowerCase().replace(/[^a-z0-9가-힣_-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,120); }
+// Apex-only public URLs (EKODI zero-subdomain policy). The retired
+// marketing-connect-api.ekodi.kr / api.ekodi.kr hosts no longer resolve to an
+// origin, so SNS posts must link and embed through https://ekodi.kr paths.
+export const PROMOTION_PUBLIC_ORIGIN='https://ekodi.kr';
+export const MALL_PUBLIC_URL=`${PROMOTION_PUBLIC_ORIGIN}/ekodimall`;
+export function promotionLinkUrl(key) { return `${PROMOTION_PUBLIC_ORIGIN}/marketing-connect-api/r/mall/${encodeURIComponent(String(key||''))}`; }
+export function promotionImageUrl(productRowId) { return `${PROMOTION_PUBLIC_ORIGIN}/api/affiliate/public/image/${Number(productRowId)}?storefront=${STOREFRONT}`; }
 export function kstParts(date=new Date()) { const shifted=new Date(date.getTime()+9*60*60*1000); return {date:shifted.toISOString().slice(0,10),hour:shifted.getUTCHours()}; }
 export function campaignKey(runDate,provider,productRowId) { return `mall-${String(runDate).replaceAll('-','')}-${slug(provider)}-${Number(productRowId)}`; }
 function parseJsonObject(text) { const source=clean(text,12000); const start=source.indexOf('{'); const end=source.lastIndexOf('}'); if(start<0||end<=start) return null; try { return JSON.parse(source.slice(start,end+1)); } catch { return null; } }
@@ -251,8 +258,8 @@ export async function runMallPromotionAutomation(env,{reason='cron',force=false}
   }
   for(const {connection,learning} of selected){
     const keyValue=campaignKey(kst.date,connection.provider,product.id);
-    const linkUrl='https://marketing-connect-api.ekodi.kr/r/mall/'+encodeURIComponent(keyValue);
-    const imageUrl='https://api.ekodi.kr/api/affiliate/public/image/'+Number(product.id)+'?storefront='+STOREFRONT;
+    const linkUrl=promotionLinkUrl(keyValue);
+    const imageUrl=promotionImageUrl(product.id);
     const generated=await aiContent(env,product,connection.provider);
     const content={title:generated.title,caption:generated.caption,imageUrl,linkUrl,campaignKey:keyValue,productRowId:Number(product.id),productId:clean(product.product_id,100),weeklyTier:clean(product.tier||'A',10),weeklySlot:Number(product.slot||0),signalDirection:clean(product.signal_direction||'unknown',30),providerRank:Number(product.provider_rank||0),boardEvidence:product.boardEvidence||{},opportunityScore:Number(product.opportunity_score||0),recommendedAction:learning.action,baseRecommendedAction:clean(product.recommended_action,30),campaignAngle:clean(product.campaign_angle,160),policyScore:learning.policyScore,learningReason:learning.reason,expectedCommissionPerVisitKrw:learning.expectedCommissionPerVisit,confidenceScore:learning.confidenceScore};
     await upsertRun(env,{runDate:kst.date,productRowId:product.id,productId:product.product_id,provider:connection.provider,connectionId:connection.id,campaignKey:keyValue,status:'publishing',aiMode:generated.mode,aiModel:generated.model||'',content});
@@ -294,7 +301,7 @@ export async function handleMallPromotionRequest(request,env){
   if(!row||!['published','publishing','planned'].includes(row.status)) return new Response('Not found',{status:404});
   const today=kstParts().date;
   await env.DB.prepare(`INSERT INTO affiliate_promotion_visits(campaign_key,visit_date,visits,updated_at) VALUES(?,?,1,?) ON CONFLICT(campaign_key,visit_date) DO UPDATE SET visits=affiliate_promotion_visits.visits+1,updated_at=excluded.updated_at`).bind(key,today,nowIso()).run().catch(()=>{});
-  const target=new URL('https://ekodi.kr/ekodibiz/ekodimall');
+  const target=new URL(MALL_PUBLIC_URL);
   target.searchParams.set('utm_source',clean(row.provider,30));
   target.searchParams.set('utm_medium','organic_social');
   target.searchParams.set('utm_campaign',key);
