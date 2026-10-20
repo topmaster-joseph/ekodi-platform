@@ -16,6 +16,7 @@ permissions:
   contents: read
   pull-requests: read
   statuses: write
+  actions: write
 
 jobs:
   orchestration-gate:
@@ -214,3 +215,22 @@ jobs:
               "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${sha}" \
               -d "$payload" >/dev/null
           done
+      # Required checks can turn green after convergence has already stopped
+      # (a re-run on the same SHA pushes nothing). Hand off to convergence the
+      # moment this required check succeeds on an orchestrator PR. Convergence
+      # still verifies the receipt, both required checks and the exact head.
+      - name: Start convergence when this required check is green on an orchestrator branch
+        if: success() && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && startsWith(github.event.pull_request.head.ref || github.ref_name, 'ai/') && contains(github.event.pull_request.head.ref || github.ref_name, '/orch_')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ORCH_REF: ${{ github.event.pull_request.head.ref || github.ref_name }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          code=$(curl -sS -o /dev/null -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/converge-orchestrated-pr-merge.yml/dispatches" \
+            -d "$(jq -cn --arg ref "$ORCH_REF" '{ref:$ref}')") || code=000
+          if [[ "$code" == "204" ]]; then echo "convergence dispatched for $ORCH_REF"; else echo "::warning title=Convergence hand-off::dispatch returned HTTP $code for $ORCH_REF; continuity watchdog remains the fallback"; fi
