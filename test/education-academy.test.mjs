@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {AUDIENCES,CONSULTING,buildPlan,planMarkdown,consultationDraft} from '../education/study/academy/catalog.js';
+import {AUDIENCES,CONSULTING,suggestedCourseTitle,buildPlan,planMarkdown,consultationDraft} from '../education/study/academy/catalog.js';
 
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 
@@ -11,6 +11,19 @@ test('five audience tracks and four consultation methods are available',()=>{
  assert.deepEqual(AUDIENCES.map(a=>a.id),['merchant','staff','resident','employee','student']);
  assert.ok(AUDIENCES.every(a=>a.modules.length===4&&a.modules.every(module=>module.length===5)));
  assert.equal(CONSULTING.length,4);
+});
+
+test('canonical cross-service learning link is not rewritten by /edu HTML proxy',async()=>{
+ const html=await read('education/study/academy/index.html');
+ assert.match(html,/href="https:\/\/ekodi\.kr\/learn\/"/);
+ assert.doesNotMatch(html,/href="\/learn\/"/);
+});
+test('audience names use correct Korean object particles',()=>{
+ assert.equal(suggestedCourseTitle('merchant'),'소상공인을 위한 AI 실습교육');
+ assert.equal(suggestedCourseTitle('staff'),'교직원을 위한 AI 실습교육');
+ assert.equal(suggestedCourseTitle('resident'),'지역주민·무안군민을 위한 AI 실습교육');
+ assert.equal(suggestedCourseTitle('employee'),'재직자를 위한 AI 실습교육');
+ assert.equal(suggestedCourseTitle('student'),'학생을 위한 AI 실습교육');
 });
 
 test('MNU-style 4 sessions times 6 sets remains possible without altering existing classroom',async()=>{
