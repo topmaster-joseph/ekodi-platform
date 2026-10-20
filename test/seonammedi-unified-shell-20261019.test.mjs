@@ -9,7 +9,7 @@ import board from '../services/independent-board/worker.js';
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 const LABELS=['공지','활동이력','관련소식','소통채널','시민의견','조직'];
 const FOOTER_COPY='<div class="site-footer-copy"><strong>서남권 국립의대 소통센터</strong><span>자료의 성격과 출처를 구분해 보존합니다.</span></div>';
-const VERSION='shared-site-header.css?v=20261019-unified-shell-2';
+const VERSION='shared-site-header.css?v=20261019-unified-shell-3';
 
 function navLabels(html){
   const nav=html.match(/<nav class="ekodi-six-nav"[^>]*>([\s\S]*?)<\/nav>/)?.[1]||'';
