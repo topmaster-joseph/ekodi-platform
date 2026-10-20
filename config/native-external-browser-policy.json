@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-NATIVE-EXTERNAL-BROWSER-001",
+  "status": "pilot-contract",
+  "owner": "ekodi-orchestrator",
+  "scope": "user-authorized-provider-connector-separate-from-ekodi-background-browser-worker",
+  "source": "scripts/ekodi-owned-youtube-browser.mjs",
+  "priority": "ekodi-owned-execution-first",
+  "provider": "youtube-studio",
+  "channel": {
+    "name": "청계면상인회",
+    "handle": "@cgma4989",
+    "channelId": "UC001JT9opxVBt9z_h-tsx8A"
+  },
+  "trustBoundary": {
+    "backgroundWorkerPolicyUnchanged": true,
+    "publicChecksEphemeral": true,
+    "authenticatedTasksRequireManualSetup": true,
+    "separateDedicatedLocalBrowserProfile": true,
+    "activeUserChromeProfileForbidden": true,
+    "credentialCookieOrTokenExportForbidden": true,
+    "cloudProfileStorageForbidden": true,
+    "remoteDebuggingHostProfileForbidden": true,
+    "defaultMutation": false,
+    "taskArbitraryUrl": false,
+    "taskArbitraryScript": false,
+    "taskShellCommands": false,
+    "defaultExternalPaidBrowserProvider": false
+  },
+  "pilotAllowedOperations": [
+    "public-check",
+    "session-verify",
+    "login-setup"
+  ],
+  "authSetup": {
+    "explicitLocalInteractiveApproval": true,
+    "forbidInCI": true,
+    "requireExactChannelId": true,
+    "privateProfileStoredOnlyOnUserDevice": true
+  },
+  "mutation": {
+    "automaticGoLive": false,
+    "automaticVideoDeletion": false,
+    "automaticPosting": false,
+    "requiresSeparateApprovedMutationWorkflow": true
+  },
+  "rollout": {
+    "stage": "source-and-local-contract-tests",
+    "productionServiceWiring": "pending",
+    "liveAccountValidation": "pending-user-device-login"
+  }
+}
