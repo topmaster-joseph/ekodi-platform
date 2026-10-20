@@ -70,18 +70,21 @@ export function classifyMallSnsReadiness(payload){
 export function classifyWorkflow(name,data,nowMs=Date.now()){
   const all=Array.isArray(data?.workflow_runs)?data.workflow_runs:[];
   const recent=all.find(x=>x.event==='schedule'||x.event==='workflow_dispatch'||x.event==='workflow_run');
-  const cgmaHourly=name==='cgma-board-health-watch.yml';
-  if(!recent)return check(name,cgmaHourly?'alert':'warning','no_confirmed_execution');
+  // Both board and data-store watchers advertise hourly schedules. Detect stale
+  // successful runs rather than misreporting a multi-hour scheduler gap as healthy.
+  const hourlyWatch=name==='cgma-board-health-watch.yml'||
+    name==='data-store-readonly-watch.yml';
+  if(!recent)return check(name,hourlyWatch?'alert':'warning','no_confirmed_execution');
   const stamp=Date.parse(recent.created_at||'');
   const details={runId:Number(recent.id)||null,conclusion:compact(recent.conclusion||recent.status),
     event:compact(recent.event),url:compact(recent.html_url)};
   // Skipped workflow_run invocations can be intentionally filtered; only
   // the authoritative scheduled/workflow_dispatch jobs count as evidence.
   const authoritative=all.find(x=>['schedule','workflow_dispatch'].includes(x.event));
-  if(!authoritative)return check(name,cgmaHourly?'alert':'warning','no_scheduled_run_evidence',details);
+  if(!authoritative)return check(name,hourlyWatch?'alert':'warning','no_scheduled_run_evidence',details);
   const age=nowMs-Date.parse(authoritative.created_at||'');
-  const maximumAgeMs=cgmaHourly?4*3600000:36*3600000;
-  if(!Number.isFinite(age)||age>maximumAgeMs)return check(name,cgmaHourly?'alert':'warning','scheduled_run_stale',
+  const maximumAgeMs=hourlyWatch?4*3600000:36*3600000;
+  if(!Number.isFinite(age)||age>maximumAgeMs)return check(name,hourlyWatch?'alert':'warning','scheduled_run_stale',
     {runId:Number(authoritative.id)||null,ageHours:Number.isFinite(age)?Math.floor(age/3600000):null});
   if(authoritative.status==='completed'&&authoritative.conclusion==='failure')
     return check(name,'alert','scheduled_workflow_failed',{runId:Number(authoritative.id)||null});
