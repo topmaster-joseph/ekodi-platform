@@ -48,11 +48,28 @@ async function translateWithBrowser(text,from,to){
   const translator=await browserTranslator(from,to);if(!translator)return null;
   try{const result=await translator.translate(text);return String(result||'').trim()||null;}catch{return null;}
 }
-async function translateWithServer(text,from,to){
-  if(!state.session?.access_token){const error=new Error('login_required');error.code='login_required';throw error;}
+async function ensureAccessToken(){
+  if(!state.client){const error=new Error('login_required');error.code='login_required';throw error;}
+  let session=state.session;
+  const expiresSoon=!session?.expires_at||session.expires_at*1000-Date.now()<60000;
+  if(expiresSoon){
+    const {data,error}=await state.client.auth.refreshSession();
+    if(error||!data?.session){const authError=new Error('login_required');authError.code='login_required';throw authError;}
+    session=data.session;setSession(session);
+  }
+  if(!session?.access_token){const error=new Error('login_required');error.code='login_required';throw error;}
+  return session.access_token;
+}
+async function translateWithServer(text,from,to,retried=false){
+  const token=await ensureAccessToken();
   const system=`You are EKODI 모두의 통역. Translate the user's utterance from ${LANGS[from].name} to ${LANGS[to].name}. Return only the natural spoken translation. Preserve names, numbers, intent and tone. Do not explain, annotate, quote, romanize, or add facts.`;
-  const response=await fetch('/api/ai-modules/v1/providers/generate',{method:'POST',headers:{authorization:`Bearer ${state.session.access_token}`,'content-type':'application/json',accept:'application/json'},body:JSON.stringify({capability:'translation',system,input:text,maxOutputTokens:800}),cache:'no-store'});
-  const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||`http_${response.status}`);
+  const response=await fetch('/api/ai-modules/v1/providers/generate',{method:'POST',headers:{authorization:`Bearer ${token}`,'content-type':'application/json',accept:'application/json'},body:JSON.stringify({capability:'translation',system,input:text,maxOutputTokens:800}),cache:'no-store'});
+  const data=await response.json().catch(()=>({}));
+  if(response.status===401&&state.client&&!retried){
+    const {data:refreshed}=await state.client.auth.refreshSession();
+    if(refreshed?.session){setSession(refreshed.session);return translateWithServer(text,from,to,true);}
+  }
+  if(!response.ok){const error=new Error(data.error||data.message||`http_${response.status}`);error.status=response.status;throw error;}
   return String(data.text||'').trim();
 }
 async function translate(text,from,to){
@@ -68,9 +85,9 @@ function speak(text,language,replace=false){
   speechSynthesis.speak(utterance);
 }
 async function processText(text){
-  const queued=String(text||'').trim();if(!queued)return;state.queue.push(queued);if(state.busy)return;state.busy=true;
+  const queued=String(text||'').trim();if(!queued)return;const pair=selected();state.queue.push({text:queued,...pair});if(state.busy)return;state.busy=true;
   while(state.queue.length){
-    const utterance=state.queue.shift();const {from,to}=selected();state.lastSource=utterance;$('sourceText').textContent=utterance;$('sourceText').classList.remove('muted');$('targetText').textContent='통역 중…';setNotice('');
+    const {text:utterance,from,to}=state.queue.shift();state.lastSource=utterance;$('sourceText').textContent=utterance;$('sourceText').classList.remove('muted');$('targetText').textContent='통역 중…';setNotice('');
     try{
       const translated=await translate(utterance,from,to);if(!translated)throw new Error('empty_translation');
       state.lastTarget=translated;$('targetText').textContent=translated;speak(translated,to,false);
@@ -84,7 +101,10 @@ async function processText(text){
   state.busy=false;
 }
 function updateMicUi(){
+  const locked=state.wantsListening||state.listening;
   $('micButton').classList.toggle('listening',state.listening);$('micLabel').textContent=state.listening?'마이크 중지':'마이크 시작';$('listeningState').textContent=state.listening?'듣는 중':'대기';
+  for(const id of ['sourceLanguage','targetLanguage','swapLanguages'])$(id).disabled=locked;
+  document.querySelectorAll('[data-preset]').forEach(button=>button.disabled=locked);
 }
 function configureRecognition(){
   if(!Recognition)return null;
@@ -102,16 +122,17 @@ function startListening(){
 }
 function toggleListening(){if(state.wantsListening||state.listening)stopListening();else startListening();}
 function swap(restart=true){
+  if(state.wantsListening||state.listening){setNotice('통역 중에는 언어가 고정됩니다. 마이크를 멈춘 뒤 변경해 주세요.');return;}
   const source=$('sourceLanguage'),target=$('targetLanguage');const before=source.value;source.value=target.value;target.value=before;
   $('interimText').textContent='';if(restart&&state.wantsListening){stopListening();setTimeout(startListening,220);}setNotice(`${LANGS[source.value].label}로 듣고 ${LANGS[target.value].label}로 통역합니다.`);
 }
-function preset(value){const [from,to]=String(value||'').split(':');if(!LANGS[from]||!LANGS[to])return;$('sourceLanguage').value=from;$('targetLanguage').value=to;if(state.wantsListening){stopListening();setTimeout(startListening,220);}setNotice(`${LANGS[from].label} → ${LANGS[to].label}`);}
+function preset(value){if(state.wantsListening||state.listening)return;const [from,to]=String(value||'').split(':');if(!LANGS[from]||!LANGS[to])return;$('sourceLanguage').value=from;$('targetLanguage').value=to;if(state.wantsListening){stopListening();setTimeout(startListening,220);}setNotice(`${LANGS[from].label} → ${LANGS[to].label}`);}
 function clearAll(){$('sourceText').textContent='마이크를 누르고 말해 주세요.';$('sourceText').classList.add('muted');$('targetText').textContent='통역 결과가 여기에 표시됩니다.';$('interimText').textContent='';state.lastSource='';state.lastTarget='';state.queue.length=0;if('speechSynthesis'in window)speechSynthesis.cancel();setNotice('');}
 fillLanguages();
 $('micButton').addEventListener('click',toggleListening);
 $('turnButton').addEventListener('click',()=>swap(true));
 $('swapLanguages').addEventListener('click',()=>swap(true));
-$('sourceLanguage').addEventListener('change',()=>{if(state.wantsListening){stopListening();setTimeout(startListening,220);}});
+$('sourceLanguage').addEventListener('change',()=>setNotice(`${LANGS[selected().from].label} → ${LANGS[selected().to].label}`));
 $('targetLanguage').addEventListener('change',()=>setNotice(`${LANGS[selected().from].label} → ${LANGS[selected().to].label}`));
 document.querySelectorAll('[data-preset]').forEach(button=>button.addEventListener('click',()=>preset(button.dataset.preset)));
 $('speakAgain').addEventListener('click',()=>speak(state.lastTarget,selected().to,true));
