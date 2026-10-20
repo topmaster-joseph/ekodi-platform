@@ -31,3 +31,13 @@ test('runner job has room for the larger verification batch',async()=>{
   const workflow=await readFile(new URL('../.github/workflows/seonammedi-news-monitor-runner.yml',import.meta.url),'utf8');
   assert.match(workflow,/timeout-minutes: 30/);
 });
+
+test('gnuboard/MBC containers and a paragraph fallback are read',()=>{
+  assert.match(extractArticleBodies('<div id="bo_v_con"><p>갈등으로 번진 전남 국립의대 목포 재심사</p></div>')[0],/전남 국립의대/);
+  assert.match(extractArticleBodies('<div class="news_txt">2030년 개교 국립의대 발표 지연 서남권</div>')[0],/국립의대 발표/);
+  const page='<nav><p>서남권 국립의대 메뉴 링크 텍스트 스무 글자 이상</p></nav><p>전남 국립의대 후보 발표가 당초 예정보다 늦어지면서 서남권 지역의 반발과 우려가 계속 이어지고 있다고 지역 언론은 전했다.</p><p>교육부는 이달 안에 심사 일정을 정하겠다고 밝혔으며 지역에서는 공정성과 절차에 대한 우려가 여전히 크다는 목소리가 나온다.</p><p>목포대와 서남권 시군은 공정한 심사를 다시 요구하며 공동 대응에 나섰다.</p><p>ⓒ 무단전재 금지 저작권 표기 문장입니다 테스트</p>';
+  const bodies=extractArticleBodies(page);
+  assert.equal(bodies.length,1);
+  assert.doesNotMatch(bodies[0],/메뉴|무단전재/);
+  assert.equal(extractArticleBodies('<p>짧은 문장 하나뿐입니다 스무 글자 이상 문장</p>').length,0,'a lone paragraph is not a body');
+});
