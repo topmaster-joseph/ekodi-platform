@@ -46,7 +46,9 @@ jobs:
           set -euo pipefail
           css=$(curl -fsS --max-time 30 'https://space.ekodi.kr/style.css?v=20261020-space-card-contrast-2')
           grep -Fq '#internalShell :is(.panel,.space-card,.unmapped-list){color:#18211b}' <<<"$css"
-          page=$(curl -fsS --max-time 30 'https://space.ekodi.kr/')
+          echo 'guard CSS live on space.ekodi.kr'
+          # space.ekodi.kr/ intentionally 308-redirects to ekodi.kr/my/; the operating-space shell renders on the probe route.
+          page=$(curl -fsS --max-time 30 'https://space.ekodi.kr/deployment-probe')
           grep -Fq 'style.css?v=20261020-space-card-contrast-2' <<<"$page"
           echo 'space contrast guard live'
       - name: Preserve screenshots and machine-verifiable evidence
