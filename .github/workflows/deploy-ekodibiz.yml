@@ -63,6 +63,10 @@ jobs:
 
   deploy-staging:
     needs: validate
+    # Deployment lanes never run from a pull request. Until now this held only
+    # as a side effect of the release-grade orchestration gate failing on every
+    # PR; the exclusion is stated explicitly so it does not depend on that.
+    if: github.event_name != 'pull_request'
     environment: development
     runs-on: ubuntu-latest
     timeout-minutes: 14
