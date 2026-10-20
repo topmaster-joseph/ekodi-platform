@@ -138,3 +138,17 @@ test('failed check that is being re-run is still awaited and then merges', () =>
   assert.equal(code, 0, out);
   assert.ok(calls.some(c => c.method === 'PUT' && c.path.endsWith('/pulls/7/merge')), 'merges after the re-run turns green');
 });
+
+test('both required checks hand off to convergence when they turn green on an orchestrator branch', () => {
+  for (const [file, job] of [['ci.yml', 'test'], ['ekodi-ai-orchestration-gate.yml', 'orchestration']]) {
+    const wf = readFileSync(new URL('../.github/workflows/' + file, import.meta.url), 'utf8');
+    assert.match(wf, /\npermissions:\n(?:  .*\n)*  actions: write\n/, file + ' needs actions: write to dispatch');
+    const start = wf.indexOf('- name: Start convergence when this required check is green on an orchestrator branch');
+    assert.ok(start > wf.indexOf('\n  ' + job + ':\n'), file + ' hand-off must live in the required job');
+    const step = wf.slice(start);
+    assert.match(step, /if: success\(\) && /);
+    assert.match(step, /contains\(github\.event\.pull_request\.head\.ref \|\| github\.ref_name, '\/orch_'\)/);
+    assert.match(step, /actions\/workflows\/converge-orchestrated-pr-merge\.yml\/dispatches/);
+    assert.match(step, /::warning title=Convergence hand-off::/, 'a refused dispatch must not fail the required check');
+  }
+});
