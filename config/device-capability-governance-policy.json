@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-DEVICE-CAPABILITY-GOVERNANCE-001",
+  "status": "proposed",
+  "activationDefault": false,
+  "principles": {
+    "deviceOwnershipRequired": true,
+    "explicitEnrollmentRequired": true,
+    "leastPrivilege": true,
+    "perDeviceCapabilityGrant": true,
+    "denyByDefault": true,
+    "auditRequired": true,
+    "secretValuesInLogsForbidden": true,
+    "unencryptedSecretStorageForbidden": true,
+    "unattendedPrivilegeEscalationForbidden": true
+  },
+  "capabilities": {
+    "inventory": {
+      "operations": [
+        "device.status",
+        "filesystem.inventory",
+        "process.inventory"
+      ],
+      "approval": "device-enrollment",
+      "readOnly": true
+    },
+    "workspace": {
+      "operations": [
+        "filesystem.plan.organize",
+        "filesystem.stage.duplicates",
+        "filesystem.restore.staged"
+      ],
+      "approval": "operator",
+      "allowedRoots": [
+        "user-desktop/EKODI 통합관리",
+        "user-desktop/ekodi-*"
+      ],
+      "defaultMode": "dry-run",
+      "noFollowSymlinks": true,
+      "activeProjectProtection": true,
+      "gitDirtyProtection": true,
+      "activeProcessReferenceProtection": true,
+      "quarantineDays": 30,
+      "permanentDeleteDefault": false,
+      "hashAndManifestRequired": true
+    },
+    "virtualization": {
+      "operations": [
+        "computer.desktop.probe",
+        "computer.desktop.canary",
+        "computer.desktop.guest.canary",
+        "computer.desktop.ui.canary",
+        "computer.desktop.session.canary",
+        "computer.desktop.session.execute"
+      ],
+      "approval": "device-owner-and-admin",
+      "policyRef": "config/isolated-desktop-backend-policy.json",
+      "requiresVerifiedHeadlessBackend": true,
+      "ephemeralGuestRequired": true,
+      "hostProfileMountForbidden": true,
+      "hostClipboardForbidden": true,
+      "hostCredentialCollectionForbidden": true,
+      "boundedLeaseMinutes": 10
+    },
+    "credentials": {
+      "operations": [
+        "credential.metadata.list",
+        "credential.connection.test",
+        "credential.rotate.request",
+        "credential.revoke"
+      ],
+      "approval": "step-up",
+      "policyRef": "config/personal-credential-vault-policy.json",
+      "rawTokenToAiForbidden": true,
+      "rawTokenToCommandOutputForbidden": true,
+      "serviceOAuthVaultSeparate": true,
+      "accessTokenScopedByServiceAndDevice": true,
+      "credentialExportDefault": false
+    },
+    "remoteExecution": {
+      "operations": [
+        "task.allowlisted.execute",
+        "task.cancel",
+        "task.receipt.read"
+      ],
+      "approval": "per-task-policy",
+      "arbitraryShellDefault": false,
+      "networkEgressAllowlistRequired": true,
+      "timeoutSeconds": 120,
+      "outputRedactionRequired": true
+    }
+  },
+  "rolloutGates": [
+    "static-schema-validation",
+    "windows-powershell-5.1-compatibility",
+    "unit-tests-and-threat-model",
+    "device-enrollment-proof",
+    "per-device-approval-and-revocation-proof",
+    "dry-run-and-rollback-proof",
+    "synthetic-secret-leak-tests",
+    "vm-guest-canary",
+    "staging-validation",
+    "production-canary",
+    "live-device-observation"
+  ],
+  "killSwitch": {
+    "global": true,
+    "perDevice": true,
+    "perCapability": true
+  },
+  "operationalTruth": {
+    "configuredIsNotActivated": true,
+    "codeMergedIsNotDeployed": true,
+    "canaryIsNotGeneralExecution": true
+  }
+}
