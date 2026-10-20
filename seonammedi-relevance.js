@@ -9,6 +9,13 @@ export function hasRegionalMedicalContext(value){
   return text.length>=8&&REGION.test(text)&&MEDICAL_PROJECT.test(text);
 }
 
+// A headline may name the project without a place ("늦어지는 국립의대 발표 왜?");
+// the verified publisher body must then carry the regional context.
+export function isRelevantHeadline(value){
+  const text=String(value||'').replace(/\s+/g,' ').trim();
+  return text.length>=8&&MEDICAL_PROJECT.test(text);
+}
+
 export function isPublicSeonamMediSource(item){
   if(!item||['rejected','archived'].includes(item.review_state))return false;
   // An editor may approve a source after checking the actual publication.
@@ -17,7 +24,7 @@ export function isPublicSeonamMediSource(item){
   // A snippet is NOT evidence of visiting the source. Only a durable publisher-page
   // verification marker (or separate editor approval above) permits auto-publication.
   if(item.source_verified!==1&&item.source_verified!==true)return false;
-  if(item.source_type!=='news'||!hasRegionalMedicalContext(item.title)||!hasRegionalMedicalContext(item.summary_text))return false;
+  if(item.source_type!=='news'||!isRelevantHeadline(item.title)||!hasRegionalMedicalContext(item.summary_text))return false;
   try{
     const url=new URL(String(item.resolved_url||item.url||''));
     return url.protocol==='https:'&&url.hostname!=='news.google.com'&&url.hostname!=='www.google.com';
