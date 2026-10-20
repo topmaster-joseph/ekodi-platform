@@ -41,7 +41,24 @@ async function waitForReady() {
   stage('ready-token');
   await page.waitForFunction(() => sessionStorage.getItem('ekodi-auth-token'), null, { timeout: 15_000 });
   stage('ready-app');
-  await page.waitForSelector('#app:not([hidden])', { timeout: 15_000 });
+  try {
+    await page.waitForSelector('#app:not([hidden])', { timeout: 15_000 });
+  } catch (error) {
+    // Fail closed. Restrict evidence to DOM structure and static state, never session data or HTML.
+    const evidence = await page.evaluate(() => {
+      const app = document.querySelector('#app');
+      return {
+        documentReadyState: document.readyState,
+        appPresent: Boolean(app),
+        appHidden: Boolean(app?.hasAttribute('hidden')),
+        loginPresent: Boolean(document.querySelector('#loginScreen')),
+        coreLoaded: Boolean(window.EKODIAdminCore),
+        panelsLoaded: Boolean(window.EKODIAdminPanels),
+      };
+    }).catch(() => ({ unavailable:true }));
+    console.error(`[E2E:${menuId}] ready-app evidence=${JSON.stringify(evidence)} transport=${JSON.stringify(adminEntryTransport)} pageErrors=${pageErrors.length} failedAssets=${failedAdminAssets.length}`);
+    throw error;
+  }
   stage('ready-runtime');
   await page.waitForFunction(() => window.EKODIAdminPanels && window.EKODIAdminSidebar, null, { timeout: 15_000 });
   stage('ready-session');
@@ -607,6 +624,9 @@ try {
     status: entryResponse?.status() ?? null,
     contentType: String(entryHeaders['content-type'] || '').split(';')[0].slice(0, 80),
     cfCacheStatus: String(entryHeaders['cf-cache-status'] || '').slice(0, 40),
+    // Static allowlisted route classifications identify which Worker served a shell-less HTML document.
+    routeClass: ['admin-fallback','admin-shell','admin-fallback-asset'].includes(String(entryHeaders['x-ekodi-route'] || '').toLowerCase()) ? String(entryHeaders['x-ekodi-route']).toLowerCase() : (entryHeaders['x-ekodi-route'] ? 'other' : 'none'),
+    canonicalSurface: String(entryHeaders['x-ekodi-canonical-surface'] || '').toLowerCase() === 'admin' ? 'admin' : 'none',
   };
   if ([401, 403].includes(adminEntryTransport.status)) {
     throw new Error('Admin entry rejected by production authentication boundary');
