@@ -78,13 +78,16 @@ test('nested EKODI business services remain explicit apex-path boundaries', () =
   assert.match(siteWorker, /TRADE_LEGACY_HOSTS/);
 });
 
-test('biz.ekodi.kr proxy remains independent while legacy external domain redirect stays dedicated', () => {
+test('EKODIBIZ is canonical at ekodi.kr/ekodibiz; ekodibiz.kr and retired biz.ekodi.kr redirect there', () => {
   hasRoute(proxyToml, 'biz.ekodi.kr');
   hasRoute(proxyToml, 'mall.biz.ekodi.kr');
-  assert.match(proxy, /host === 'biz\.ekodi\.kr'/);
+  assert.match(proxy, /BIZ_CANONICAL = 'https:\/\/ekodi\.kr\/ekodibiz'/);
+  assert.match(proxy, /'biz\.ekodi\.kr': BIZ_CANONICAL/);
+  assert.doesNotMatch(proxy, /businessHub/);
   assert.match(proxy, /requestHost\(request, env, incoming\)/);
   assert.doesNotMatch(proxy, /'biz\.ekodi\.kr': 'https:\/\/ekodibiz\.kr'/);
-  assert.match(bizLegacy, /TARGET = 'https:\/\/biz\.ekodi\.kr'/);
+  assert.match(bizLegacy, /TARGET = 'https:\/\/ekodi\.kr\/ekodibiz'/);
+  assert.doesNotMatch(bizLegacy, /https:\/\/biz\.ekodi\.kr/);
   assert.match(bizLegacy, /Response\.redirect\(target\.toString\(\), 301\)/);
   for (const d of ['ekodibiz.kr','www.ekodibiz.kr']) hasRoute(bizLegacyToml,d);
 });

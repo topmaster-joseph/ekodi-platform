@@ -9,7 +9,8 @@ test('service proxy uses the shared Shell for user-facing proxied domains',async
   assert.match(source,/injectEkodiShell/);
   assert.match(source,/shellServiceForHost/);
   for(const host of ['church.ekodi.kr','lab.ekodi.kr'])assert.match(source,new RegExp(host.replaceAll('.','\\.')));
-  assert.match(source,/injectEkodiShell\(businessHub\(\), 'biz'\)/);
+  assert.match(source,/'biz\.ekodi\.kr': BIZ_CANONICAL/);
+  assert.doesNotMatch(source,/businessHub/);
   const [proxyConfig,boundaries]=await Promise.all([read('wrangler.service-proxy.toml'),read('platform-boundaries.json')]);
   assert.doesNotMatch(proxyConfig,/pattern = \"church\.ekodi\.kr\"/);
   assert.doesNotMatch(proxyConfig,/pattern = \"lab\.ekodi\.kr\"/);

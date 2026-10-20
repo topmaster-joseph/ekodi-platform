@@ -8,7 +8,7 @@ const IDENTITY=`${SUPABASE_URL}/functions/v1/identity-api`;
 const services={
   cgma:{name:'청계상권 · 정회원',tenant:'cheonggye',role:'member',returnTo:'https://ekodi.kr/cgma/member',origins:['https://ekodi.kr','https://cgma.or.kr','https://cgma.ekodi.kr'],requestable:true},
   marketing:{name:'마케팅AI',tenant:null,role:'store_owner',returnTo:'https://marketing.ekodi.kr',origins:['https://marketing.ekodi.kr','https://jadam.ekodi.kr','https://pizzamaru.ekodi.kr','https://yogurt.ekodi.kr','https://yogurtpurple.ekodi.kr'],requestable:true},
-  biz:{name:'에코디비즈',tenant:'ekodibiz',role:'member',returnTo:'https://biz.ekodi.kr',origins:['https://biz.ekodi.kr'],requestable:true},
+  biz:{name:'에코디비즈',tenant:'ekodibiz',role:'member',returnTo:'https://ekodi.kr/ekodibiz',origins:['https://ekodi.kr'],requestable:true},
   trade:{name:'EKODI Global Trading',tenant:'ekoditrade',role:'member',returnTo:'https://ekodi.kr/ekodibiz/trade',origins:['https://ekodi.kr','https://trade.biz.ekodi.kr','https://trade.ekodi.kr'],requestable:false},
   mall:{name:'에코디몰',tenant:null,role:'member',returnTo:'https://ekodi.kr/ekodimall',origins:['https://ekodi.kr'],requestable:true},
   pay:{name:'에코디결제',tenant:null,role:'member',returnTo:'https://ekodi.kr/ekodipay',origins:['https://ekodi.kr'],requestable:false},

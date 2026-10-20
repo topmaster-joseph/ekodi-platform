@@ -14,7 +14,7 @@ const realms={
   community:{name:'Community',returnTo:'https://ekodi.kr/community/',open:true,kind:'community'},
   singles:{name:'EKODI 동행',returnTo:'https://ekodi.kr/singles/',origins:['https://ekodi.kr'],open:true,kind:'singles'},
   church:{name:'EKODI Church',returnTo:'https://ekodi.kr/ekodichurch/',origins:['https://ekodi.kr'],open:true,kind:'church'},
-  biz:{name:'EKODI Biz',returnTo:'https://biz.ekodi.kr/',open:true,kind:'biz'},
+  biz:{name:'EKODI Biz',returnTo:'https://ekodi.kr/ekodibiz',origins:['https://ekodi.kr'],open:true,kind:'biz'},
   trade:{name:'EKODI Trading',returnTo:'https://trade.ekodi.kr/',open:true,kind:'trade'},
   mall:{name:'EKODI Mall',returnTo:'https://ekodi.kr/ekodimall',origins:['https://ekodi.kr'],open:true,kind:'mall'},
   pay:{name:'EKODI Pay',returnTo:'https://ekodi.kr/ekodipay/',open:true,kind:'pay'},

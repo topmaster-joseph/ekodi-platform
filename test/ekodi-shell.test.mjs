@@ -48,7 +48,7 @@ test('My, Community and shared service proxy all consume the same shell contract
   assert.match(my,/contextModel:'person-space-role'/);
   assert.match(community,/injectEkodiShell\(withHeaders\(await env\.ASSETS\.fetch\(request\)\),'community'\)/);
   assert.match(proxy,/shellServiceForHost/);
-  assert.match(proxy,/injectEkodiShell\(businessHub\(\), 'biz'\)/);
+  assert.match(proxy,/'biz\.ekodi\.kr': BIZ_CANONICAL/);
 });
 
 test('remaining Worker services use thin shared Shell adapters without moving domain logic',async()=>{
