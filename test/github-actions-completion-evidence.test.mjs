@@ -229,3 +229,51 @@ test('dispatched superseding run still needs staging and production jobs',async(
   assert.equal(evidence.verified,false);
   assert.equal(evidence.reason,'production_promotion_evidence_missing');
 });
+
+// 2026-10-20: a completed zero-job run carries no verdict; it must not mask an
+// executed run on the same head SHA, and it must never create a pass by itself.
+function ciRuns(ci){
+  return [
+    ...ci,
+    {id:2,name:'EKODI AI Orchestration Gate',status:'completed',conclusion:'success',created_at:'2026-10-20T02:00:00Z'},
+    {id:3,workflow_id:30,name:'Deploy Control API',status:'completed',conclusion:'success',head_sha:mergeSha},
+  ];
+}
+const zeroJob={11:[]};
+
+test('zero-job CI failure newer than an executed CI success does not block completion',async()=>{
+  const evidence=await collectAuthenticatedCompletionEvidence({github:mockGithub({
+    runs:ciRuns([
+      {id:11,name:'CI',status:'completed',conclusion:'failure',created_at:'2026-10-20T02:18:19Z'},
+      {id:10,name:'CI',status:'completed',conclusion:'success',created_at:'2026-10-20T02:17:43Z'},
+    ]),jobsByRun:zeroJob}),taskId,branchRef});
+  assert.equal(evidence.verified,true);
+  assert.equal(evidence.requiredWorkflows[0].runId,10);
+});
+
+test('executed CI failure newer than a success still fails closed',async()=>{
+  const evidence=await collectAuthenticatedCompletionEvidence({github:mockGithub({
+    runs:ciRuns([
+      {id:11,name:'CI',status:'completed',conclusion:'failure',created_at:'2026-10-20T02:18:19Z'},
+      {id:10,name:'CI',status:'completed',conclusion:'success',created_at:'2026-10-20T02:17:43Z'},
+    ]),jobsByRun:{11:[{name:'test',status:'completed',conclusion:'failure'}]}}),taskId,branchRef});
+  assert.equal(evidence.verified,false);
+  assert.equal(evidence.reason,'required_workflow_not_successful');
+});
+
+test('pending CI newer than a success defers completion',async()=>{
+  const evidence=await collectAuthenticatedCompletionEvidence({github:mockGithub({
+    runs:ciRuns([
+      {id:11,name:'CI',status:'in_progress',conclusion:null,created_at:'2026-10-20T02:18:19Z'},
+      {id:10,name:'CI',status:'completed',conclusion:'success',created_at:'2026-10-20T02:17:43Z'},
+    ])}),taskId,branchRef});
+  assert.equal(evidence.verified,false);
+  assert.equal(evidence.reason,'required_workflow_not_successful');
+});
+
+test('only zero-job CI runs never count as success',async()=>{
+  const evidence=await collectAuthenticatedCompletionEvidence({github:mockGithub({
+    runs:ciRuns([{id:11,name:'CI',status:'completed',conclusion:'failure',created_at:'2026-10-20T02:18:19Z'}]),jobsByRun:zeroJob}),taskId,branchRef});
+  assert.equal(evidence.verified,false);
+  assert.equal(evidence.reason,'required_workflow_not_successful');
+});
