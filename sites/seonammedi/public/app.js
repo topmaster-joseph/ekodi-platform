@@ -42,7 +42,7 @@ const attachMonitorMedia=items=>{
       const meta=document.createElement('small');meta.textContent=[item.media_source||item.publisher,kstDate(item.media_published_at||item.published_at),'원문 확인 필요'].filter(Boolean).join(' · ');
       a.append(type,title,meta);row.append(a);
     }
-    card.querySelector(':scope > div:last-child')?.append(row);
+    (card.querySelector('.timeline-detail')||card.querySelector(':scope > div:last-child'))?.append(row);
   }
 };
 let latestMonitorData=null;
@@ -613,7 +613,7 @@ function showView(view,{updateHash=false}={}){
 }
 function syncViewFromLocation(){
   const raw=location.hash.replace(/^#/,'');
-  if(raw==='notices'){location.replace('/notices/');return}
+  if(raw==='notices'){location.replace(siteMountBase()+'notices/');return}
   if(raw==='finance'){location.replace('https://ekodi.kr/seonammedi/admin/?panel=finance');return}
   if(raw.includes('ekodi_token=')){showView(new URLSearchParams(location.search).get('compose')==='notice'?'notices':'',{updateHash:false});return}
   if(raw==='timeline'||raw.startsWith('timeline/')){
@@ -699,7 +699,7 @@ async function refreshNoticeSession(){
   }catch{return false}
 }
 function noticeLoginUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','seonammedi');u.searchParams.set('direct','1');u.searchParams.set('return_to',location.origin+'/?compose=notice#notices');return u.href}
-function noticePermalink(id){return location.origin+'/notices/'+encodeURIComponent(id)}
+function noticePermalink(id){return siteMountBase()+'notices/'+encodeURIComponent(id)}
 function noticeDate(item){const raw=item.publishedAt||item.updatedAt||'';return raw?new Date(raw).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):''}
 function noticeCard(item){
   const image=item.imageUrl?'<img src="'+escapeHtml(item.imageUrl)+'" alt="" loading="lazy">':'<span class="notice-thumb-empty">공지</span>';

@@ -277,3 +277,8 @@
 /* Reliable text links for social channels when the published channel API is unavailable. */
 .channel-text-fallback-link{display:inline-flex;align-items:center;margin:6px 8px 8px 0;padding:9px 13px;border:1px solid #b9cadd;border-radius:8px;background:#fff;color:#174a72;font-size:14px;font-weight:700;text-decoration:none}
 .channel-text-fallback-link:hover,.channel-text-fallback-link:focus-visible{background:#f0f6fc;border-color:#2f669a}
+
+/* EVIDENCE-ROW-LAYOUT-001 (2026-10-20): auto-collected evidence never joins the collapsed title row */
+:is(#committeeActivityList,#committeeNewsList,#timelineList) .timeline-item.is-collapsed .auto-evidence-row{display:none!important}
+.timeline-item .auto-evidence-row{flex:1 1 100%;width:100%;min-width:0}
+.timeline-item .auto-evidence-row .media-link{min-width:0;overflow-wrap:anywhere;word-break:keep-all}
