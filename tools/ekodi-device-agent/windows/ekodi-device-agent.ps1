@@ -1559,6 +1559,105 @@ function Invoke-EkodiOwnedGithubPrObserve($Payload) {
   }
 }
 
+function Invoke-EkodiOwnedGithubPrObserve($Payload) {
+  # Run the reviewed native browser connector on a dedicated temporary profile.
+  # The centrally authenticated Device Control API accepts a numeric EKODI PR only.
+  $canary = Get-BackgroundBrowserCanaryState
+  if (-not $canary.verified) { throw 'background_browser_canary_required' }
+  if ([string]$Payload.executionMode -ne 'background-only' -or
+      $Payload.createUserBrowserTab -ne $false -or
+      $Payload.closeOwnedSurfaceOnComplete -ne $true -or
+      $Payload.closeOwnedSurfaceOnAuthRequired -ne $true -or
+      $Payload.preserveUserOwnedSurfaces -ne $true -or
+      [string]$Payload.mutationMode -ne 'read-only' -or
+      [string]$Payload.loginMode -ne 'never') {
+    throw 'github_browser_execution_policy_invalid'
+  }
+  $prText = [string]$Payload.pr
+  if ($prText -notmatch '^[1-9]\d{0,5}$') { throw 'github_browser_pr_invalid' }
+  $prNumber = [int]$prText
+  $nodeCommand = Get-Command node.exe -ErrorAction SilentlyContinue
+  if (-not $nodeCommand) { throw 'github_browser_node_unavailable' }
+  $nodeExe = [string]$nodeCommand.Source
+  $nodeVersionText = & $nodeExe --version
+  if ($LASTEXITCODE -ne 0 -or $nodeVersionText -notmatch '^v(\d+)\.' -or [int]$Matches[1] -lt 22) {
+    throw 'github_browser_node_22_required'
+  }
+
+  $workerRoot = Join-Path $Root 'browser-worker'
+  New-Item -ItemType Directory -Path $workerRoot -Force | Out-Null
+  $workerPath = Join-Path $workerRoot 'ekodi-owned-browser-connector.mjs'
+  # Fixed reviewed content commit, not a URL from a device command.
+  $sourceUrl = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/c89617811c25c5cb3755252850f55298df3aed2c/tools/ekodi-device-agent/windows/ekodi-owned-browser-connector.mjs'
+  $candidatePath = Join-Path $workerRoot ('candidate-' + [guid]::NewGuid().ToString('N') + '.mjs')
+  try {
+    Invoke-WebRequest -UseBasicParsing -Uri $sourceUrl -OutFile $candidatePath -TimeoutSec 20 -ErrorAction Stop
+    $candidateText = Get-Content -LiteralPath $candidatePath -Raw -Encoding UTF8
+    if ($candidateText.Length -lt 8000 -or
+        $candidateText -notmatch 'ekodi-owned-chromium-cdp' -or
+        $candidateText -notmatch 'BROWSER_DOCUMENT_ORIGIN_BLOCKED' -or
+        $candidateText -notmatch 'allowedSubresourceUrl') {
+      throw 'github_browser_source_invalid'
+    }
+    Move-Item -LiteralPath $candidatePath -Destination $workerPath -Force
+  } finally {
+    Remove-Item -LiteralPath $candidatePath -Force -ErrorAction SilentlyContinue
+  }
+
+  $process = [Diagnostics.Process]::new()
+  $process.StartInfo = [Diagnostics.ProcessStartInfo]@{
+    FileName = $nodeExe
+    Arguments = ('"' + $workerPath + '" --pr ' + $prNumber)
+    UseShellExecute = $false
+    CreateNoWindow = $true
+    RedirectStandardOutput = $true
+    RedirectStandardError = $true
+  }
+  try {
+    [void]$process.Start()
+    $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+    $stderrTask = $process.StandardError.ReadToEndAsync()
+    if (-not $process.WaitForExit(35000)) {
+      try { $process.Kill() } catch {}
+      throw 'github_browser_timeout'
+    }
+    $stdout = $stdoutTask.GetAwaiter().GetResult()
+    $null = $stderrTask.GetAwaiter().GetResult()
+    if ($process.ExitCode -ne 0) { throw 'github_browser_observation_failed' }
+    try { $proof = $stdout.Trim() | ConvertFrom-Json -ErrorAction Stop } catch {
+      throw 'github_browser_receipt_invalid'
+    }
+    $expectedUrl = 'https://github.com/topmaster-joseph/ekodi-platform/pull/' + $prNumber
+    if ($proof.ok -ne $true -or [string]$proof.mode -ne 'github-pr' -or
+        [string]$proof.url -ne $expectedUrl -or
+        $proof.authRequired -ne $false -or
+        $proof.isolatedProfile -ne $true -or
+        $proof.existingProfileReused -ne $false -or
+        $proof.foregroundInput -ne $false -or
+        $proof.mutationsAllowed -ne $false -or
+        $proof.domObserved -ne $true -or
+        [int]$proof.httpStatus -lt 200 -or [int]$proof.httpStatus -ge 400) {
+      throw 'github_browser_readonly_receipt_invalid'
+    }
+    return @{
+      ok = $true
+      mode = 'github-pr-readonly'
+      browser = [string]$proof.browser
+      pr = $prNumber
+      url = $expectedUrl
+      httpStatus = [int]$proof.httpStatus
+      isolatedProfile = $true
+      existingProfileReused = $false
+      foregroundInput = $false
+      mutationsAllowed = $false
+      message = 'EKODI 전용 격리 브라우저로 GitHub PR 읽기 검증을 완료했습니다.'
+    }
+  } finally {
+    if ($process -and -not $process.HasExited) { try { $process.Kill() } catch {} }
+    if ($process) { $process.Dispose() }
+  }
+}
+
 function Invoke-BackgroundBrowserWorker($Payload) {
   $canary = Get-BackgroundBrowserCanaryState
   if (-not $canary.verified) { throw 'background_browser_canary_required' }
