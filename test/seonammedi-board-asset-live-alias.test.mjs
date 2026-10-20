@@ -28,3 +28,17 @@ test('protected live-release verifier uses exact photo-shell path, not arbitrary
   assert.ok(!page.includes('src="/seonammedi/board-central-category.js'),'deprecated static script path must not reappear');
   assert.ok(!verifier.includes('allowAllPathAliases'),'no broad alias bypass');
 });
+
+// 2026-10-20: Shared Site Core run 39395436843 failed "Verify SeonamMedi live release convergence" because the
+// shell assets moved to /seonammedi/central-category-* were not approved customer-domain aliases.
+test('moved central-category shell assets are approved customer-domain aliases',async()=>{
+  const {readFile}=await import('node:fs/promises');
+  const {compareSeonamMediPublishedHtml}=await import('../scripts/seonammedi-release-html-alias.mjs');
+  const verifier=await readFile(new URL('../scripts/verify-seonammedi-release-live.mjs',import.meta.url),'utf8');
+  for(const name of ['central-category-menu.css','central-category-runtime.js'])
+    (await import('node:assert/strict')).default.ok(verifier.includes("'"+name+"'"),name+' must be allowlisted');
+  const published='<link rel="stylesheet" href="/seonammedi/central-category-menu.css"><script src="/seonammedi/central-category-runtime.js?v=1" defer></script>';
+  const live=published.replaceAll('="/seonammedi/','="/');
+  const r=compareSeonamMediPublishedHtml(published,live,['central-category-menu.css','central-category-runtime.js']);
+  (await import('node:assert/strict')).default.ok(r.matched,r.reason);
+});
