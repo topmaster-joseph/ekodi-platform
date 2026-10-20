@@ -48,11 +48,28 @@ async function translateWithBrowser(text,from,to){
   const translator=await browserTranslator(from,to);if(!translator)return null;
   try{const result=await translator.translate(text);return String(result||'').trim()||null;}catch{return null;}
 }
+async function ensureAccessToken(){
+  if(!state.client){const error=new Error('login_required');error.code='login_required';throw error;}
+  let session=state.session;
+  const expiresSoon=!session?.expires_at||session.expires_at*1000-Date.now()<60000;
+  if(expiresSoon){
+    const {data,error}=await state.client.auth.refreshSession();
+    if(error||!data?.session){const authError=new Error('login_required');authError.code='login_required';throw authError;}
+    session=data.session;setSession(session);
+  }
+  if(!session?.access_token){const error=new Error('login_required');error.code='login_required';throw error;}
+  return session.access_token;
+}
 async function translateWithServer(text,from,to){
-  if(!state.session?.access_token){const error=new Error('login_required');error.code='login_required';throw error;}
+  const token=await ensureAccessToken();
   const system=`You are EKODI 모두의 통역. Translate the user's utterance from ${LANGS[from].name} to ${LANGS[to].name}. Return only the natural spoken translation. Preserve names, numbers, intent and tone. Do not explain, annotate, quote, romanize, or add facts.`;
-  const response=await fetch('/api/ai-modules/v1/providers/generate',{method:'POST',headers:{authorization:`Bearer ${state.session.access_token}`,'content-type':'application/json',accept:'application/json'},body:JSON.stringify({capability:'translation',system,input:text,maxOutputTokens:800}),cache:'no-store'});
-  const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||`http_${response.status}`);
+  const response=await fetch('/api/ai-modules/v1/providers/generate',{method:'POST',headers:{authorization:`Bearer ${token}`,'content-type':'application/json',accept:'application/json'},body:JSON.stringify({capability:'translation',system,input:text,maxOutputTokens:800}),cache:'no-store'});
+  const data=await response.json().catch(()=>({}));
+  if(response.status===401&&state.client){
+    const {data:refreshed}=await state.client.auth.refreshSession();
+    if(refreshed?.session){setSession(refreshed.session);return translateWithServer(text,from,to);}
+  }
+  if(!response.ok){const error=new Error(data.error||data.message||`http_${response.status}`);error.status=response.status;throw error;}
   return String(data.text||'').trim();
 }
 async function translate(text,from,to){
@@ -91,8 +108,14 @@ function configureRecognition(){
   const recognition=new Recognition();recognition.continuous=true;recognition.interimResults=true;recognition.maxAlternatives=1;recognition.lang=LANGS[selected().from].speech;
   recognition.onstart=()=>{state.listening=true;updateMicUi();setNotice('말씀하세요. 문장이 끝나면 바로 통역합니다.');};
   recognition.onresult=event=>{let interim='',final='';for(let i=event.resultIndex;i<event.results.length;i++){const text=event.results[i][0]?.transcript||'';if(event.results[i].isFinal)final+=text;else interim+=text;}$('interimText').textContent=interim;if(final.trim())void processText(final.trim());};
-  recognition.onerror=event=>{if(event.error!=='no-speech')setNotice(`마이크 오류: ${event.error}`,true);};
-  recognition.onend=()=>{state.listening=false;updateMicUi();if(state.wantsListening){setTimeout(()=>{try{recognition.lang=LANGS[selected().from].speech;recognition.start();}catch{}},180);}};
+  recognition.onerror=event=>{
+    if(event.error==='no-speech')return;
+    if(event.error==='aborted')return;
+    if(event.error==='not-allowed'||event.error==='service-not-allowed'){state.wantsListening=false;setNotice('마이크 권한을 허용한 뒤 다시 눌러 주세요.',true);}
+    else if(event.error==='network')setNotice('음성 인식 연결이 불안정합니다. 자동으로 다시 연결합니다.',true);
+    else setNotice(`마이크 오류: ${event.error}`,true);
+  };
+  recognition.onend=()=>{state.listening=false;updateMicUi();if(state.wantsListening){setTimeout(()=>{try{recognition.lang=LANGS[selected().from].speech;recognition.start();}catch{}},350);}};
   return recognition;
 }
 function stopListening(){state.wantsListening=false;if(state.recognition){try{state.recognition.stop();}catch{}}state.listening=false;updateMicUi();}
