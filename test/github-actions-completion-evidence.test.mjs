@@ -38,7 +38,7 @@ function mockGithub(overrides={}){
           {name:'staging',status:'completed',conclusion:'success'},
           {name:'production',status:'completed',conclusion:'success'},
         ]}}),
-        listWorkflowRuns:async()=>({data:{workflow_runs:overrides.supersedingRuns||[]}}),
+        listWorkflowRuns:async({event,branch})=>({data:{workflow_runs:(overrides.supersedingRuns||[]).filter(run=>(!run.event||run.event===event)&&(!run.head_branch||run.head_branch===branch||overrides.ignoreBranchFilter))}}),
       },
       repos:{
         compareCommits:async()=>({data:{status:overrides.compareStatus||'ahead'}}),
@@ -192,4 +192,40 @@ test('production completion refuses PR-only workflow runs when no real deploymen
   ]}),taskId,branchRef});
   assert.equal(evidence.verified,false);
   assert.equal(evidence.reason,'production_deployment_run_missing');
+});
+
+// 2026-10-20: production deploys are workflow_dispatch runs on main; a later
+// dispatched run containing the merge must be able to supersede a cancelled or
+// failed one, without relaxing branch, recency, ancestry or job requirements.
+const cancelledOriginal=[
+  {id:1,name:'CI',status:'completed',conclusion:'success'},
+  {id:2,name:'EKODI AI Orchestration Gate',status:'completed',conclusion:'success'},
+  {id:3,workflow_id:30,name:'Deploy EKODI Shared Site Core',event:'workflow_dispatch',status:'completed',conclusion:'cancelled',head_sha:mergeSha,created_at:'2026-10-19T16:51:02Z'},
+];
+const dispatched=(extra={})=>({id:5,workflow_id:30,name:'Deploy EKODI Shared Site Core',event:'workflow_dispatch',head_branch:'main',status:'completed',conclusion:'success',head_sha:'89abcdef0123456789abcdef0123456789abcdef',created_at:'2026-10-19T16:56:28Z',html_url:'https://example/deploy5',...extra});
+
+test('a later successful workflow_dispatch deploy on main supersedes a cancelled dispatch',async()=>{
+  const evidence=await collectAuthenticatedCompletionEvidence({github:mockGithub({runs:cancelledOriginal,supersedingRuns:[dispatched()],compareStatus:'ahead'}),taskId,branchRef});
+  assert.equal(evidence.verified,true);
+  assert.equal(evidence.deployments[0].runId,5);
+  assert.equal(evidence.deployments[0].supersedesRunId,3);
+});
+
+test('dispatched superseding run must be on main, newer, and contain the merge commit',async()=>{
+  for(const [label,overrides] of [
+    ['non-main branch',{supersedingRuns:[dispatched({head_branch:'ai/claude/x'})],ignoreBranchFilter:true}],
+    ['older than original',{supersedingRuns:[dispatched({created_at:'2026-10-19T16:00:00Z'})]}],
+    ['does not contain merge',{supersedingRuns:[dispatched()],compareStatus:'behind'}],
+    ['other event type',{supersedingRuns:[dispatched({event:'schedule'})]}],
+  ]){
+    const evidence=await collectAuthenticatedCompletionEvidence({github:mockGithub({runs:cancelledOriginal,...overrides}),taskId,branchRef});
+    assert.equal(evidence.verified,false,label);
+    assert.equal(evidence.reason,'deployment_run_not_successful',label);
+  }
+});
+
+test('dispatched superseding run still needs staging and production jobs',async()=>{
+  const evidence=await collectAuthenticatedCompletionEvidence({github:mockGithub({runs:cancelledOriginal,supersedingRuns:[dispatched()],jobsByRun:{5:[{name:'staging',status:'completed',conclusion:'success'}]}}),taskId,branchRef});
+  assert.equal(evidence.verified,false);
+  assert.equal(evidence.reason,'production_promotion_evidence_missing');
 });
