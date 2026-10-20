@@ -73,7 +73,9 @@ test('continuity workflow is receipt-gated, bounded, and never bypasses guarded 
   assert.match(watchdog, /ref: main/);
   assert.match(watchdog, /actions: write/);
   assert.match(converger, /workflow_dispatch:/);
-  assert.match(converger, /group: ekodi-orchestrated-merge\s*\n  cancel-in-progress: false/);
+  // Per-branch convergence (owner decision 2026-10-20): other PRs must not cancel a pending run.
+  assert.match(converger, /group: ekodi-orchestrated-merge-\$\{\{ github\.ref \}\}\s*\n  cancel-in-progress: false/);
+  assert.doesNotMatch(converger, /group: ekodi-orchestrated-merge\s*\n/);
   assert.match(script, /hasAuthorizedReceipt\(planned\.taskId, planned\.branch\)/);
   assert.match(script, /result\.taskId === taskId/);
   assert.match(script, /result\.branchRef === branch/);

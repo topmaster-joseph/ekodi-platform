@@ -39,7 +39,7 @@ import { handleLocalCommerceControl } from './local-commerce-control.js';
 import { handleExternalAccountControl, runExternalAccountHealthAudit } from './external-account-control.js';
 import { handleRealtimeControl, runRealtimeRecordingRetention } from './realtime-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
-import { runSeonamMediHourlyCheck } from './seonammedi-monitor.js';
+import { runSeonamMediHourlyCheck, dispatchSeonamMediRunner } from './seonammedi-monitor.js';
 
 function errorResponse(message, code) {
   return applyApiSecurityHeaders(new Response(JSON.stringify({ error:message, code }), {
@@ -389,6 +389,10 @@ export default {
     const seonamMediHourly = scheduledAt.getUTCMinutes() === 0
       ? runSeonamMediHourlyCheck(env,{scheduledAt:scheduledAt.toISOString()}).catch(error => { console.error('Seonam Medi hourly monitor error', error); return { ok:false, error:'seonammedi_hourly_monitor_failed' }; })
       : null;
+    // Google/Bing reject Workers egress; wake the GitHub runner crawl every hour.
+    const seonamMediRunnerWake = scheduledAt.getUTCMinutes() === 0
+      ? dispatchSeonamMediRunner(env).catch(error => { console.error('Seonam Medi runner wake error', error); return { ok:false, error:'seonammedi_runner_wake_failed' }; })
+      : null;
     const externalAccountHealthDaily = scheduledAt.getUTCHours() === 23
       ? runExternalAccountHealthAudit(env,{scheduledAt:scheduledAt.toISOString()}).catch(error => { console.error('External account daily health error', error); return { ok:false, error:'external_account_daily_health_failed' }; })
       : null;
@@ -411,10 +415,12 @@ export default {
       ctx.waitUntil(recordingRetention);
       ctx.waitUntil(wakeOrchestration);
       if (seonamMediHourly) ctx.waitUntil(seonamMediHourly);
+      if (seonamMediRunnerWake) ctx.waitUntil(seonamMediRunnerWake);
       if (externalAccountHealthDaily) ctx.waitUntil(externalAccountHealthDaily);
     }
     const background = [authorBilling, messengerOutbox, commandPulse, aiProviderHealth, hybridWatchdog, recordingRetention, wakeOrchestration];
     if (seonamMediHourly) background.push(seonamMediHourly);
+    if (seonamMediRunnerWake) background.push(seonamMediRunnerWake);
     if (externalAccountHealthDaily) background.push(externalAccountHealthDaily);
     return customerSchedule || Promise.all(background);
   },
