@@ -9,7 +9,7 @@ import board from '../services/independent-board/worker.js';
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 const LABELS=['공지','활동이력','관련소식','소통채널','시민의견','조직'];
 // 2026-10-20 owner request: committee line + EKODIBIZ site credit.
-const FOOTER_COPY='<div class="site-footer-copy"><strong>서남권 국립의대 소통센터</strong><span>서남권 의대 설립 비상대책위원회 · 자료의 성격과 출처를 구분해 보존합니다.</span><span class="site-footer-credit">사이트 제작 에코디비즈 · 대표 정찬균 · <a href="mailto:ekodibiz@gmail.com">ekodibiz@gmail.com</a></span></div>';
+const FOOTER_COPY='<div class="site-footer-copy"><strong>서남권 국립의대 소통센터</strong><span>서남권 의대 설립 비상대책위원회 · 자료의 성격과 출처를 구분해 보존합니다.</span><span class="site-footer-credit">사이트 제작 에코디비즈 · 대표 정찬균 · <a href="tel:01035018542">010-3501-8542</a> · <a href="mailto:ekodibiz@gmail.com">ekodibiz@gmail.com</a></span></div>';
 const VERSION='shared-site-header.css?v=20261019-unified-shell-4';
 
 function navLabels(html){

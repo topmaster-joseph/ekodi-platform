@@ -5,7 +5,7 @@ import {readFile} from 'node:fs/promises';
 // 2026-10-20 owner request: shorter committee title; footer gains the committee line and the site-maker credit
 // (company · representative · contact) on every page that shares the footer.
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
-const CREDIT='<span class="site-footer-credit">사이트 제작 에코디비즈 · 대표 정찬균 · <a href="mailto:ekodibiz@gmail.com">ekodibiz@gmail.com</a></span>';
+const CREDIT='<span class="site-footer-credit">사이트 제작 에코디비즈 · 대표 정찬균 · <a href="tel:01035018542">010-3501-8542</a> · <a href="mailto:ekodibiz@gmail.com">ekodibiz@gmail.com</a></span>';
 
 test('every shared footer carries the committee line and the EKODIBIZ credit',async()=>{
   for(const p of ['sites/seonammedi/public/index.html','sites/seonammedi/public/finance/index.html','sites/seonammedi/public/notices/index.html','sites/seonammedi/public/minutes/index.html','services/independent-board/worker.js']){
