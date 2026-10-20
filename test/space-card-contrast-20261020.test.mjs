@@ -20,5 +20,5 @@ test('every light-background internal rule either sets color or is covered by th
 });
 
 test('space stylesheet cache-buster bumped',()=>{
-  assert.match(html,/style\.css\?v=20261020-space-card-contrast-1/);
+  assert.match(html,/style\.css\?v=20261020-space-card-contrast-2/);
 });
