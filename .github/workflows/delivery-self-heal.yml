@@ -1,0 +1,68 @@
+name: EKODI Delivery Self Heal
+
+on:
+  workflow_run:
+    workflows: ["EKODI AI Orchestration Gate", "EKODI Parallel Change Conflict Guard", "CI", "Deploy AI Control"]
+    types: [completed]
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ekodi-self-heal-${{ github.event.workflow_run.head_sha || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  recover-failed-run:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Classify and retry recoverable failure
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          set -euo pipefail
+          if [ "$ATTEMPT" -ge 3 ]; then
+            echo "[DELIVERY-SELF-HEAL-001] retry budget exhausted; preserve failure."
+            exit 0
+          fi
+          jobs="$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs")"
+          failed="$(jq -r '.jobs[] | select(.conclusion=="failure") | [.name, (.steps[]? | select(.conclusion=="failure") | .name)] | @tsv' <<<"$jobs")"
+          if grep -Eqi 'security|credential|destructive|constitutional|human approval' <<<"$failed"; then
+            echo "[DELIVERY-SELF-HEAL-001] safety-class failure; never bypass."
+            exit 0
+          fi
+          echo "[DELIVERY-SELF-HEAL-001] recoverable gate/conflict/test/staging failure; retry failed jobs."
+          gh api -X POST "repos/$REPO/actions/runs/$RUN_ID/rerun-failed-jobs"
+
+  refresh-stale-ai-prs:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refresh stale AI branches without force push
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api --paginate "repos/$REPO/pulls?state=open&base=main&per_page=100" --jq '.[] | select(.head.ref|startswith("ai/")) | [.number,.head.ref,.mergeable_state] | @tsv' |
+          while IFS=$'\t' read -r number branch mergeable_state; do
+            [ -n "$number" ] || continue
+            pr="$(gh api "repos/$REPO/pulls/$number")"
+            state="$(jq -r '.mergeable_state' <<<"$pr")"
+            if [ "$state" != "behind" ]; then
+              continue
+            fi
+            echo "[DELIVERY-SELF-HEAL-001] PR #$number ($branch) is stale; request safe GitHub update."
+            if ! gh api -X PUT "repos/$REPO/pulls/$number/update-branch" -f expected_head_sha="$(jq -r '.head.sha' <<<"$pr")"; then
+              echo "[DELIVERY-SELF-HEAL-001] PR #$number could not be auto-updated; preserve branch and protection."
+            fi
+          done
