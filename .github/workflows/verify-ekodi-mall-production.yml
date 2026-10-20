@@ -229,4 +229,6 @@ jobs:
           # SNS promotion redirect must be reachable on the apex host (unknown key => 404, never 5xx/530).
           code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 20 'https://ekodi.kr/marketing-connect-api/r/mall/mall-00000000-verify-0' || true)
           [[ "$code" == "404" ]] || { echo "Promotion redirect route returned $code (expected 404 for unknown key)"; exit 1; }
+          # 전자상거래법 사업자 표시: 공통 푸터·약관에 통신판매업신고번호가 노출돼야 한다.
+          c 'https://ekodi.kr/terms' | grep -Fq '2023-전남무안-0153' || { echo 'Terms missing 통신판매업신고번호'; exit 1; }
           echo 'revenue funnel guardrails=verified'
