@@ -33,3 +33,13 @@ test('notice rows carry a left-hand number: pinned show 중요, others count dow
   assert.match(worker,/<span class="row-no" aria-label="글번호">\\'\+rowNo\.get\(x\.id\)/);
   assert.match(worker,/body\.board-notices \.row-head>strong\{flex:1 1 auto\}/);
 });
+
+test('notice rows stay on one line: long titles end with an ellipsis, full title when opened',()=>{
+  // 2026-10-20 owner request: long titles pushed the photo/date onto extra lines on mobile.
+  for(const rule of [
+    'body.board-notices details.notice-record>summary.row-head{flex-wrap:nowrap;align-items:center;gap:10px}',
+    'body.board-notices details.notice-record>summary.row-head>strong{flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}',
+    'body.board-notices details.notice-record[open]>summary.row-head>strong{white-space:normal;overflow-wrap:anywhere}',
+    'body.board-notices details.notice-record>summary.row-head>:is(.row-no,.row-photo,small){flex:0 0 auto;white-space:nowrap}'
+  ])assert.ok(worker.includes(rule),rule);
+});
