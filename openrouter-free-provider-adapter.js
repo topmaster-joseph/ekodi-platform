@@ -10,6 +10,11 @@ const DEFAULT_OUTPUT_TOKENS=2048;
 const MAX_OUTPUT_TOKENS=8192;
 const clean=(value,max=40000)=>String(value??'').trim().slice(0,max);
 const number=(value,fallback)=>{const n=Number(value);return Number.isFinite(n)?n:fallback};
+// FREE-AI-POOL-RESILIENCE-20261021: openrouter/free picks a free model per request and some return an
+// empty message. One bounded retry lets the router choose again (each retry reserves its own daily slot).
+const DEFAULT_EMPTY_RETRY=1;
+const MAX_EMPTY_RETRY=2;
+const emptyRetries=env=>Math.max(0,Math.min(MAX_EMPTY_RETRY,Math.floor(number(env.EKODI_OPENROUTER_FREE_EMPTY_RETRY,DEFAULT_EMPTY_RETRY))));
 const outputTokens=value=>Math.max(64,Math.min(MAX_OUTPUT_TOKENS,Math.floor(number(value,DEFAULT_OUTPUT_TOKENS))));
 const dailyLimit=env=>Math.max(1,Math.min(MAX_DAILY_LIMIT,Math.floor(number(env.EKODI_OPENROUTER_FREE_DAILY_CALL_LIMIT,DEFAULT_DAILY_LIMIT))));
 
@@ -30,15 +35,23 @@ export function createOpenRouterFreeProvider(env={},options={}){
     id:'openrouter-free',model,available,priority:20,costClass:'free-preferred',
     async invoke({prompt='',maxOutputTokens}={}){
       if(!available)throw new Error('openrouter_free_not_configured');
-      const reservation=await reserveFreeDailyRequest(env,'openrouter-free',dailyLimit(env));
       const projected=await projectForExternalAi({prompt:clean(prompt,24000)},{profile:'ai_minimum',purpose:'ekodi-free-provider',salt:crypto.randomUUID()});
       const safePrompt=clean(projected?.prompt||JSON.stringify(projected),24000);
-      const response=await fetchImpl('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{authorization:`Bearer ${key}`,'content-type':'application/json','HTTP-Referer':'https://ekodi.kr','X-OpenRouter-Title':'EKODI AI Control'},body:JSON.stringify({model,messages:[{role:'user',content:safePrompt}],temperature:0.2,max_tokens:outputTokens(maxOutputTokens),reasoning:{effort:'low',exclude:true}}),signal:AbortSignal.timeout(60000)});
-      const data=await response.json().catch(()=>({}));
-      if(!response.ok)throw errorFromResponse(response,data);
-      const output=clean(data?.choices?.[0]?.message?.content,40000);
-      if(!output){const finish=clean(data?.choices?.[0]?.finish_reason,40).toLowerCase().replace(/[^a-z_]+/g,'');throw new Error(`openrouter_free_empty_response${finish?`_${finish}`:''}`)}
-      return Object.freeze({text:output,model,quota:Object.freeze({remainingRequests:reservation.remaining,remainingTokens:null,resetAt:reservation.resetAt})});
+      const attempts=1+emptyRetries(env);
+      let lastEmpty=null;
+      for(let attempt=1;attempt<=attempts;attempt++){
+        const reservation=await reserveFreeDailyRequest(env,'openrouter-free',dailyLimit(env));
+        const response=await fetchImpl('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{authorization:`Bearer ${key}`,'content-type':'application/json','HTTP-Referer':'https://ekodi.kr','X-OpenRouter-Title':'EKODI AI Control'},body:JSON.stringify({model,messages:[{role:'user',content:safePrompt}],temperature:0.2,max_tokens:outputTokens(maxOutputTokens),reasoning:{effort:'low',exclude:true}}),signal:AbortSignal.timeout(60000)});
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok)throw errorFromResponse(response,data);
+        const output=clean(data?.choices?.[0]?.message?.content,40000);
+        if(output)return Object.freeze({text:output,model:clean(data?.model,180)||model,attempts:attempt,quota:Object.freeze({remainingRequests:reservation.remaining,remainingTokens:null,resetAt:reservation.resetAt})});
+        const finish=clean(data?.choices?.[0]?.finish_reason,40).toLowerCase().replace(/[^a-z_]+/g,'');
+        lastEmpty=new Error(`openrouter_free_empty_response${finish?`_${finish}`:''}`);
+        // A length cut-off means the budget was too small for this prompt; another free model will not help.
+        if(finish==='length')break;
+      }
+      throw lastEmpty;
     }
   });
 }
