@@ -125,7 +125,6 @@ jobs:
       - name: Ensure private R2 backup bucket
         id: r2_bucket
         if: github.event_name != 'pull_request'
-        continue-on-error: true
         run: |
           set -euo pipefail
           if ! npx --yes wrangler@${WRANGLER_VERSION} r2 bucket info "$R2_BACKUP_BUCKET" >/dev/null 2>&1; then
@@ -135,7 +134,6 @@ jobs:
       - name: Persist verified backup to R2
         id: r2_persist
         if: github.event_name != 'pull_request' && steps.r2_bucket.outcome == 'success'
-        continue-on-error: true
         env:
           ARTIFACT: ${{ steps.verify.outputs.artifact }}
           EXPECTED_CHECKSUM: ${{ steps.verify.outputs.checksum }}
@@ -152,16 +150,16 @@ jobs:
           ACTUAL_CHECKSUM=$(sha256sum backup/r2-verify.sql | awk '{print $1}')
           test "$ACTUAL_CHECKSUM" = "$EXPECTED_CHECKSUM"
 
-      - name: Upload independent backup artifact
-        if: always() && steps.verify.outcome == 'success'
+      # Public repository artifacts are readable by repository readers.
+      # Never upload a production D1 SQL export (or any SQL dump) to GitHub Actions.
+      - name: Upload isolated PR restore report only
+        if: github.event_name == 'pull_request' && steps.verify.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.verify.outputs.artifact }}
-          path: |
-            backup/ekodi-auth.sql
-            backup/restore-report.txt
+          path: backup/restore-report.txt
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 7
 
       - name: Backup summary
         if: always() && steps.verify.outcome == 'success'
@@ -178,5 +176,11 @@ jobs:
           elif [ "${{ steps.r2_persist.outcome }}" = "success" ]; then
             echo "- R2: verified private copy in $R2_BACKUP_BUCKET" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo '- R2: unavailable; GitHub Artifact fallback retained' >> "$GITHUB_STEP_SUMMARY"
+            echo '- R2: unverified/unavailable; production backup fails closed (no GitHub SQL dump fallback)' >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Erase local backup export after verification and any report upload
+        if: always()
+        shell: bash
+        run: |
+          rm -f backup/ekodi-auth.sql backup/restored.sqlite backup/r2-verify.sql
