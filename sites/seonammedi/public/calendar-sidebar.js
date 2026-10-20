@@ -217,7 +217,8 @@
         article.append(make('strong','',item.title||'일정'));
         const startTime=displayTime(item.eventStart);
         if(startTime){
-          const endTime=item.eventEnd?displayTime(item.eventEnd):'';
+          // EVENT-WHEN-001: an end equal to the start is not a range (avoid '09:00 ~ 09:00').
+          const endTime=item.eventEnd&&item.eventEnd!==item.eventStart?displayTime(item.eventEnd):'';
           article.append(make('small','',startTime+(endTime?' ~ '+endTime:'')));
         }
         if(item.body)article.append(make('p','',item.body));
@@ -285,7 +286,7 @@
         const article=make('article','seonam-calendar-event');
         const title=make('strong','',item.title||'일정');
         const details=make('p','',item.body||'');
-        const schedule=make('small','',dateOf(item.eventStart).replaceAll('-','.')+' '+displayTime(item.eventStart)+(item.eventEnd?' ~ '+dateOf(item.eventEnd).replaceAll('-','.')+' '+displayTime(item.eventEnd):''));
+        const schedule=make('small','',dateOf(item.eventStart).replaceAll('-','.')+' '+displayTime(item.eventStart)+(item.eventEnd&&item.eventEnd!==item.eventStart?' ~ '+dateOf(item.eventEnd).replaceAll('-','.')+' '+displayTime(item.eventEnd):''));
         article.append(title,schedule);
         if(item.body)article.append(details);
         attachSharing(article,item);

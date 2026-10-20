@@ -275,6 +275,18 @@ function itemShareButton(item,view){
   return '<div class="item-share-row"><button type="button" class="secondary item-share" data-share-item="'+escapeHtml(itemShareKey(item))+'" data-share-view="'+(view==='committee'?'committee-activity':'timeline')+'" data-share-title="'+escapeHtml(item?.title||'')+'">공유</button></div>';
 }
 function siteMountBase(){return location.origin+(location.pathname.startsWith('/seonammedi')?'/seonammedi/':'/')}
+// SITE-MOUNT-RELATIVE-LINKS-001 (2026-10-20): this page is also served at deep paths such as
+// /seonammedi/notices/11, where relative links like "board/voices" resolved to /seonammedi/notices/board/voices (404).
+// Resolve every relative link against the site mount instead of the current path.
+function mountRelativeLinks(root=document){
+  const base=siteMountBase();
+  root.querySelectorAll('a[href]').forEach(a=>{
+    const raw=a.getAttribute('href');
+    if(!raw||/^(?:[a-z][a-z0-9+.-]*:|\/|#|\?)/i.test(raw))return;
+    const u=new URL(raw,base);a.setAttribute('href',u.pathname+u.search+u.hash);
+  });
+}
+mountRelativeLinks();
 function itemShareUrl(key,view){const u=new URL(siteMountBase());u.searchParams.set('item',key);u.hash=view;return u.href}
 async function shareSiteItem(button){
   const url=itemShareUrl(button.dataset.shareItem,button.dataset.shareView),title=button.dataset.shareTitle||document.title;
@@ -595,7 +607,7 @@ function showView(view,{updateHash=false}={}){
     const active=link.dataset.viewLink===key;
     if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
   });
-  const financeNav=document.querySelector('.site-header nav a[href="board/finance"]');
+  const financeNav=document.querySelector('.site-header nav a[href$="board/finance"]');
   if(financeNav){if(key==='finance')financeNav.setAttribute('aria-current','page');else financeNav.removeAttribute('aria-current')}
   const hero=document.querySelector('.hero');
   if(hero)hero.hidden=Boolean(key);
@@ -643,7 +655,7 @@ function syncViewFromLocation(){
   showView(raw,{updateHash:false});
 }
 document.querySelector('.site-header nav')?.addEventListener('click',event=>{
-  const financeLink=event.target.closest('a[href="board/finance"]');
+  const financeLink=event.target.closest('a[href$="board/finance"]');
   if(financeLink){event.preventDefault();showView('finance',{updateHash:true});return}
   const link=event.target.closest('[data-view-link]');
   if(!link)return;
@@ -704,11 +716,52 @@ async function refreshNoticeSession(){
 function noticeLoginUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','seonammedi');u.searchParams.set('direct','1');u.searchParams.set('return_to',location.origin+'/?compose=notice#notices');return u.href}
 function noticePermalink(id){return siteMountBase()+'notices/'+encodeURIComponent(id)}
 function noticeDate(item){const raw=item.publishedAt||item.updatedAt||'';return raw?new Date(raw).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):''}
+// SEONAMMEDI-EVENTS-VIEW-001 (2026-10-20, owner approved): this view holds the calendar's 행사·일정.
+// Notices live on the board (/board/notices). Event times are KST wall-clock strings (YYYY-MM-DDTHH:MM).
+const EVENT_WEEKDAYS=['일','월','화','수','목','금','토'];
+function eventParts(raw){const m=String(raw||'').match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);if(!m)return null;const [y,mo,d]=[+m[1],+m[2],+m[3]];return{y,mo,d,day:m[1]+'-'+m[2]+'-'+m[3],time:m[4]?m[4]+':'+m[5]:'',wd:EVENT_WEEKDAYS[new Date(Date.UTC(y,mo-1,d)).getUTCDay()]}}
+function eventDayLabel(p,withYear=true){return(withYear?p.y+'. ':'')+p.mo+'. '+p.d+'.('+p.wd+')'}
+function eventWhen(item,{short=false}={}){
+  const s=eventParts(item?.eventStart);if(!s)return'';
+  const e=item.eventEnd&&item.eventEnd!==item.eventStart?eventParts(item.eventEnd):null;
+  const head=eventDayLabel(s,!short)+(s.time?' '+s.time:'');
+  if(!e||short)return head;
+  return head+' ~ '+(e.day===s.day?e.time:eventDayLabel(e,e.y!==s.y)+(e.time?' '+e.time:''));
+}
+function eventSortKey(item,now=Date.now()){
+  const s=eventParts(item?.eventStart);if(!s)return[2,-Date.parse(item?.publishedAt||item?.updatedAt||'')||0];
+  const endRaw=item.eventEnd&&item.eventEnd>=item.eventStart?item.eventEnd:item.eventStart;
+  const end=Date.parse(String(endRaw).slice(0,16)+':00+09:00'),start=Date.parse(String(item.eventStart).slice(0,16)+':00+09:00');
+  return end>=now?[0,start]:[1,-start];
+}
+function sortEventsForView(rows){return [...rows].sort((a,b)=>{const x=eventSortKey(a),y=eventSortKey(b);return x[0]-y[0]||x[1]-y[1]||Number(b.id)-Number(a.id)})}
 function noticeCard(item){
-  const image=item.imageUrl?'<img src="'+escapeHtml(item.imageUrl)+'" alt="" loading="lazy">':'<span class="notice-thumb-empty">공지</span>';
+  const image=item.imageUrl?'<img src="'+escapeHtml(item.imageUrl)+'" alt="" loading="lazy">':'';
   const mine=noticeOwnedByCurrentUser(item);
   const actions=mine?'<div class="notice-row-actions"><button type="button" data-notice-edit="'+item.id+'">수정</button><button type="button" data-notice-delete="'+item.id+'">삭제</button></div>':'';
-  return '<article class="notice-item" data-notice-id="'+item.id+'"><a class="notice-open" href="'+noticePermalink(item.id)+'">'+image+'<div class="notice-row-copy"><h3>'+escapeHtml(item.title||'공지')+(item.pinned?'<span class="notice-pin">중요</span>':'')+'</h3><p>'+escapeHtml(item.body||'')+'</p></div><small class="notice-row-date">'+escapeHtml(noticeDate(item))+'</small></a>'+actions+'</article>'
+  const when=item.kind==='event'?eventWhen(item,{short:true}):'';
+  return '<article class="notice-item'+(image?'':' no-thumb')+'" data-notice-id="'+item.id+'"><a class="notice-open" href="'+noticePermalink(item.id)+'">'+image+'<div class="notice-row-copy"><h3>'+escapeHtml(item.title||'일정')+(item.pinned?'<span class="notice-pin">중요</span>':'')+'</h3><p>'+escapeHtml(item.body||'')+'</p></div><small class="notice-row-date">'+escapeHtml(when||noticeDate(item))+'</small></a>'+actions+'</article>'
+}
+// SEONAMMEDI-EVENTS-VIEW-002 (owner decision 2026-10-20): below an event, show the real notice list from the
+// board (/board/notices) with the board's rules: 중요 first, then newest; row numbers; one line; photo thumbnail.
+function boardMountPrefix(){return location.pathname.startsWith('/seonammedi')?'/seonammedi':''}
+function boardNoticeTime(x){return Date.parse(x.createdAt||x.updatedAt||'')||0}
+function boardNoticeRow(x,no){
+  const mount=boardMountPrefix(),photos=Array.isArray(x.imageUrls)?x.imageUrls:[];
+  const thumb=photos.length?'<span class="board-row-photo"><img src="'+escapeHtml(mount+String(photos[0]).replace(/^\/seonammedi(?=\/board\/)/,''))+'" alt="" loading="lazy">사진 '+photos.length+'장</span>':'';
+  const date=boardNoticeTime(x)?new Date(boardNoticeTime(x)).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):'';
+  return '<a class="board-notice-row" href="'+mount+'/board/notices/'+encodeURIComponent(x.id)+'">'+(x.pinned?'<span class="row-no is-pinned" aria-label="중요 공지">중요</span>':'<span class="row-no" aria-label="글번호">'+no+'</span>')+'<strong>'+escapeHtml(x.title||'공지')+'</strong>'+thumb+'<small>'+escapeHtml(date)+'</small></a>';
+}
+let boardNoticeCache=null;
+async function renderNoticeRows(){
+  const host=el('noticeList');if(!host)return;
+  const mount=boardMountPrefix();
+  try{
+    if(!boardNoticeCache){const r=await fetch(mount+'/board/api/notices',{cache:'no-store'});const d=await r.json().catch(()=>({}));if(!r.ok||d.ok===false)throw new Error('notice_list_failed');boardNoticeCache=Array.isArray(d.items)?d.items:[]}
+    const items=[...boardNoticeCache].sort((a,b)=>Number(Boolean(b.pinned))-Number(Boolean(a.pinned))||boardNoticeTime(b)-boardNoticeTime(a)||Number(b.id)-Number(a.id));
+    const regular=items.filter(x=>!x.pinned),no=new Map(regular.map((x,i)=>[x.id,regular.length-i]));
+    host.innerHTML='<div class="board-notice-head"><h3>공지</h3><a href="'+mount+'/board/notices">전체 보기 ›</a></div>'+(items.length?'<div class="board-notice-rows">'+items.slice(0,10).map(x=>boardNoticeRow(x,no.get(x.id))).join('')+'</div>':'<p class="muted">등록된 공지가 없습니다.</p>');
+  }catch{host.innerHTML='<div class="board-notice-head"><h3>공지</h3><a href="'+mount+'/board/notices">공지 게시판 열기 ›</a></div>'}
 }
 async function deleteNotice(item){
   if(!noticeOwnedByCurrentUser(item)||!confirm('이 게시물을 삭제하시겠습니까?'))return false;
@@ -723,10 +776,11 @@ async function deleteNotice(item){
 function showNoticeDetail(item){
   const detail=el('noticeDetail');if(!detail)return;const images=(item.imageUrls?.length?item.imageUrls:(item.imageUrl?[item.imageUrl]:[])).map(url=>'<img src="'+escapeHtml(url)+'" alt="" class="notice-detail-image" loading="lazy">').join('');
   const mine=noticeOwnedByCurrentUser(item);
-  detail.innerHTML='<button type="button" class="notice-back">목록</button><h3>'+escapeHtml(item.title||'공지')+'</h3><div class="notice-detail-body"><p>'+escapeHtml(item.body||'')+'</p>'+(images?'<div class="notice-detail-images">'+images+'</div>':'')+'</div><small>'+escapeHtml(noticeDate(item))+'</small><div class="notice-detail-actions"><button type="button" class="notice-share">공유</button>'+(mine?'<button type="button" class="notice-edit">수정</button><button type="button" class="notice-delete">삭제</button>':'')+'</div>';
-  detail.hidden=false;el('noticeList').hidden=true;
-  detail.querySelector('.notice-back')?.addEventListener('click',()=>{detail.hidden=true;el('noticeList').hidden=false;history.replaceState(null,'',location.pathname+'#notices')});
-  detail.querySelector('.notice-share')?.addEventListener('click',async()=>{const url=noticePermalink(item.id);try{if(navigator.share)await navigator.share({title:item.title||'공지',text:item.body||'',url});else{await navigator.clipboard.writeText(url);alert('게시물 링크를 복사했습니다.')}}catch{}});
+  const when=item.kind==='event'?eventWhen(item):'';
+  detail.innerHTML='<button type="button" class="notice-back">목록</button><h3>'+escapeHtml(item.title||'일정')+'</h3>'+(when?'<p class="event-when"><strong>일시</strong> <span>'+escapeHtml(when)+'</span></p>':'')+'<div class="notice-detail-body"><p>'+escapeHtml(item.body||'')+'</p>'+(images?'<div class="notice-detail-images">'+images+'</div>':'')+'</div><small class="notice-detail-posted">등록 '+escapeHtml(noticeDate(item))+'</small><div class="notice-detail-actions"><button type="button" class="notice-share">공유</button>'+(mine?'<button type="button" class="notice-edit">수정</button><button type="button" class="notice-delete">삭제</button>':'')+'</div>';
+  detail.hidden=false;el('noticeList').hidden=false;renderNoticeRows();
+  detail.querySelector('.notice-back')?.addEventListener('click',()=>{detail.hidden=true;renderNoticeRows();el('noticeList').hidden=false;history.replaceState(null,'',location.pathname+'#notices')});
+  detail.querySelector('.notice-share')?.addEventListener('click',async()=>{const url=noticePermalink(item.id);try{if(navigator.share)await navigator.share({title:item.title||'행사·일정',text:(when?when+'\n':'')+(item.body||''),url});else{await navigator.clipboard.writeText(url);alert('게시물 링크를 복사했습니다.')}}catch{}});
   detail.querySelector('.notice-edit')?.addEventListener('click',()=>beginNoticeEdit(item));
   detail.querySelector('.notice-delete')?.addEventListener('click',()=>deleteNotice(item));
 }
@@ -743,9 +797,7 @@ async function loadNotices(){
   try{
     const token=noticeToken();const response=await fetch('/api/seonammedi/notices',{cache:'no-store',headers:token?{authorization:'Bearer '+token}:{}});const data=await response.json().catch(()=>({}));
     if(!response.ok||!data.ok)throw new Error(data.message||'공지 목록을 불러오지 못했습니다.');
-    publicNotices=Array.isArray(data.items)?data.items:[];host.innerHTML=publicNotices.length?publicNotices.map(noticeCard).join(''):'<p class="muted">등록된 공지가 없습니다.</p>';renderFeaturedNotice(publicNotices);
-    host.querySelectorAll('[data-notice-edit]').forEach(button=>button.addEventListener('click',()=>{const item=publicNotices.find(row=>Number(row.id)===Number(button.dataset.noticeEdit));if(item)beginNoticeEdit(item)}));
-    host.querySelectorAll('[data-notice-delete]').forEach(button=>button.addEventListener('click',()=>{const item=publicNotices.find(row=>Number(row.id)===Number(button.dataset.noticeDelete));if(item)deleteNotice(item)}));
+    publicNotices=Array.isArray(data.items)?data.items:[];renderNoticeRows();renderFeaturedNotice(publicNotices);
     const pathMatch=location.pathname.match(/^(?:\/seonammedi)?\/notices\/(\d+)\/?$/);const wanted=Number(pathMatch?.[1]||new URLSearchParams(location.search).get('notice')||0);const selected=publicNotices.find(item=>Number(item.id)===wanted);if(selected){showView('notices');showNoticeDetail(selected)}
   }catch(error){host.innerHTML='<p class="muted">'+escapeHtml(error.message||'공지 목록을 불러오지 못했습니다.')+'</p>'}
 }

@@ -20,7 +20,7 @@
   <meta property="og:image:alt" content="전남 국립의대 추천의 공정성 검증과 원점 재심사 촉구">
   <meta name="twitter:image" content="https://seonammedi.kr/seonammedi/assets/campaign-reconsideration-20261013.png">
   <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://seonammedi.kr/#website","url":"https://seonammedi.kr/","name":"서남권 국립의대 소통센터","alternateName":["서남권국립의대","서남권국립의대 소통센터","서남권 국립의대","SEONAM MEDI","seonammedi.kr","서남권국립의대.kr"],"inLanguage":"ko"},{"@type":"WebPage","@id":"https://seonammedi.kr/#webpage","url":"https://seonammedi.kr/","name":"서남권 국립의대 소통센터 | SEONAM MEDI","description":"서남권국립의대(서남권 국립의대) 관련 공식자료, 활동이력, 관련보도, 시민 의견과 공개 정보를 확인하는 소통센터입니다.","inLanguage":"ko","isPartOf":{"@id":"https://seonammedi.kr/#website"}}]}</script>
-  <link rel="stylesheet" href="/seonammedi/app.css?v=20261013-monitor-dedup-1020">
+  <link rel="stylesheet" href="/seonammedi/app.css?v=20261013-events-view-1020">
 <style id="seonammedi-organization-mobile-fix">
 #organization{min-height:0!important;padding-bottom:24px!important;background:#fff!important}
 #organization .section-head{margin-bottom:12px!important;gap:8px;align-items:center}
@@ -47,7 +47,7 @@
 .campaign-hero-image{display:block;width:100%;height:auto;max-width:100%;object-fit:contain}
 @media(max-width:700px){.site-header{max-width:100%;box-sizing:border-box}.ekodi-six-nav{gap:14px}.ekodi-six-nav>a{font-size:14px}.central-category-panel{padding:14px 12px}}
 </style>
-<link rel="stylesheet" href="./central-category-menu.css">
+<link rel="stylesheet" href="/seonammedi/central-category-menu.css">
 <link rel="stylesheet" href="/seonammedi/shared-site-header.css?v=20261019-unified-shell-3">
 <script src="/seonammedi/board/ui/central-category.js?v=20261016-home-photo-worker-1" defer></script>
 <link rel="stylesheet" href="/seonammedi/home-public-feed.css?v=20261020-notice-thumb-1">
@@ -202,9 +202,9 @@
 
 <section id="notices" class="section module-section" data-view-section="notices" hidden>
   <div class="module-shell">
-    <aside class="module-intro"><p class="eyebrow">NOTICE BOARD</p><h2>공지</h2><p class="note">Google 계정으로 로그인한 등록 사용자는 사진과 글을 게시할 수 있습니다. 중요 소식과 공식 안내는 개별 링크로 열고 공유할 수 있습니다.</p></aside>
+    <aside class="module-intro"><p class="eyebrow">EVENTS</p><h2>행사·일정</h2><p class="note">주요일정 달력에 등록된 집회·회견·토론회 일정입니다. 공지사항은 상단 <a href="board/notices">공지</a> 메뉴에서 확인하세요.</p></aside>
     <div class="module-main">
-      <div class="module-toolbar"><span class="muted">최신 공지부터 표시합니다.</span><button id="noticeWriteButton" class="module-primary notice-write-button" type="button">게시글 작성</button></div>
+      <div class="module-toolbar"><span class="muted">다가오는 일정부터 표시합니다.</span><a class="module-primary notice-board-link" href="board/notices">공지 게시판</a><button id="noticeWriteButton" class="module-primary notice-write-button" type="button" hidden data-retired="events-view">게시글 작성</button></div>
   <form id="noticeComposeForm" class="notice-compose module-compose" hidden>
     <label>제목<input name="title" maxlength="180" required placeholder="제목을 입력하세요"></label>
     <label>파일첨부 (사진 최대 5장)<input id="noticeImages" name="images" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple><small>첨부 시 장당 5MB 이하로 자동 최적화합니다. JPG·PNG·WEBP·GIF · 최대 5장 · 선택 후 개별 삭제 가능</small></label>
@@ -213,7 +213,7 @@
     <div class="form-actions"><button type="submit">게시하기</button><button id="noticeComposeCancel" type="button" class="secondary">취소</button><span id="noticeComposeMessage" class="muted" role="status"></span></div>
   </form>
   <div id="noticeDetail" class="notice-detail" hidden></div>
-  <div id="noticeList" class="notice-list"><p class="muted">공지를 불러오는 중입니다.</p></div>
+  <div id="noticeList" class="notice-list"><p class="muted">일정을 불러오는 중입니다.</p></div>
     </div>
   </div>
 </section>
@@ -264,9 +264,9 @@
 
 </main>
 <footer class="site-footer"><div class="site-footer-copy"><strong>서남권 국립의대 소통센터</strong><span>자료의 성격과 출처를 구분해 보존합니다.</span></div><a href="admin/">관리</a></footer>
-<script src="/seonammedi/app.js?v=20261013-monitor-dedup-1020" defer></script>
+<script src="/seonammedi/app.js?v=20261013-events-view-1020" defer></script>
 <script src="/seonammedi/voice-public-admin.js?v=20261006-domain-routing-2" defer></script>
 
-<script src="./central-category-runtime.js?v=20261015-notice-direct-all-1" defer></script>
+<script src="/seonammedi/central-category-runtime.js?v=20261015-notice-direct-all-1" defer></script>
 <script src="/seonammedi/home-public-feed.js?v=20261020-notice-thumb-1" defer></script>
 </body></html>
