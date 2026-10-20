@@ -1,6 +1,15 @@
 name: Deploy EKODI Pay Canonical Entry
 on:
   workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: EKODI Orchestrator-issued source branch
+        required: true
+        type: string
+      release_task_id:
+        description: EKODI Orchestrator receipt task ID
+        required: true
+        type: string
   pull_request:
     paths:
       - 'ekodipay-worker.js'
@@ -24,11 +33,16 @@ on:
       - '.github/workflows/deploy-ekodipay.yml'
 permissions:
   contents: read
+  pull-requests: read
 concurrency:
   group: ekodipay-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   validate:
+    env:
+      GH_TOKEN: ${{ github.token }}
+      EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+      EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -38,6 +52,9 @@ jobs:
           node-version: '24'
       - name: EKODI orchestration and constitution release guard
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Verify merged Pay change belongs to signed official dispatch
+        if: github.event_name == 'workflow_dispatch'
+        run: node scripts/dispatch-ekodipay-postmerge.mjs --verify
       - name: Test payment paths and denied money movement
         run: |
           node --check ekodipay-worker.js
@@ -47,13 +64,16 @@ jobs:
       - name: Cloudflare bundle dry-run
         run: npx --yes wrangler@4.127.1 deploy --dry-run --config wrangler.ekodipay.toml --outdir /tmp/ekodipay-dry-run
   deploy-production:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 18
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+      EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -61,6 +81,9 @@ jobs:
           node-version: '24'
       - name: EKODI orchestration release guard
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Confirm official merged Pay PR before production mutation
+        if: github.event_name == 'workflow_dispatch'
+        run: node scripts/dispatch-ekodipay-postmerge.mjs --verify
       - name: Verify credentials
         run: test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
       - name: Deploy canonical-only Worker

@@ -39,3 +39,5 @@ jobs:
           node-version: "24"
       - name: Wait for verified head checks, recover merge status drift, and merge
         run: node scripts/converge-orchestrated-pr-merge.mjs
+      - name: Dispatch receipt-bound EKODI Pay release and public-host audit after protected merge
+        run: node scripts/dispatch-ekodipay-postmerge.mjs
