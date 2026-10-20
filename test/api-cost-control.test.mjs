@@ -56,3 +56,19 @@ test('both sponsored OpenAI adapters enforce the shared budget guard and meter u
     assert.match(source, /ekodi-sponsored/);
   }
 });
+
+
+test('Admin API cost UI renders measured Resource Governor state without fabricating telemetry', async () => {
+  const source = await readFile('api-cost-admin.js', 'utf8');
+  assert.match(source, /provider\.resourceGovernor/);
+  assert.match(source, /providerMetrics\(provider\)/);
+  assert.match(source, /metric\.usagePercent/);
+  assert.match(source, /metric\.stale/);
+  assert.match(source, /신규 자원 생성/);
+  assert.match(source, /차단 · 기존 서비스 유지/);
+  assert.match(source, /자동 유료 전환/);
+  assert.match(source, /measured: '실측'/);
+  assert.match(source, /partial: '부분 실측'/);
+  assert.match(source, /missing: '측정 없음'/);
+  assert.doesNotMatch(source, /현재 사용량', '0/);
+});
