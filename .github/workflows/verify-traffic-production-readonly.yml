@@ -1,0 +1,58 @@
+name: Verify Traffic Production Read-only
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/verify-traffic-production-readonly.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-traffic-production-readonly-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  traffic-production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Verify public Shell serves approved route attribution
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://ekodi.kr/shell/shell.js?traffic-readonly-probe=${GITHUB_SHA}"
+          status=$(curl -sS --connect-timeout 5 --max-time 18 \
+            -H 'Cache-Control: no-cache' -D /tmp/ekodi-shell-headers \
+            -o /tmp/ekodi-shell-body -w '%{http_code}' "$url" || true)
+          echo "Shell GET HTTP status: $status"
+          if [[ "$status" == '429' || "$status" == '1027' ]]; then
+            echo 'Cloudflare traffic quota guard: stop immediately' >&2
+            exit 1
+          fi
+          [[ "$status" == '200' ]] || { echo 'Production Shell unavailable' >&2; exit 1; }
+          grep -Fq 'site_path:first+child' /tmp/ekodi-shell-body ||
+            { echo 'Production Shell site attribution marker missing' >&2; exit 1; }
+          grep -Fq 'trafficKnownRoots' /tmp/ekodi-shell-body ||
+            { echo 'Production Shell canonical path privacy filter missing' >&2; exit 1; }
+          echo 'Production Shell site attribution and privacy markers: PASS' >> "$GITHUB_STEP_SUMMARY"
+      - name: Verify canonical Control API version without writing telemetry
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          status=$(curl -sS --connect-timeout 5 --max-time 18 \
+            -X OPTIONS -H 'Origin: https://ekodi.kr' \
+            -H 'Access-Control-Request-Method: POST' \
+            -D /tmp/ekodi-telemetry-headers -o /dev/null \
+            -w '%{http_code}' 'https://ekodi.kr/api/telemetry/visit' || true)
+          echo "Control API OPTIONS HTTP status: $status"
+          if [[ "$status" == '429' || "$status" == '1027' ]]; then
+            echo 'Cloudflare traffic quota guard: stop immediately' >&2
+            exit 1
+          fi
+          [[ "$status" == '204' ]] || { echo 'Control API telemetry preflight unavailable' >&2; exit 1; }
+          grep -Eiq '^x-ekodi-traffic-telemetry:[[:space:]]*site-scoped-v2' /tmp/ekodi-telemetry-headers ||
+            { echo 'Production Control API telemetry version marker missing' >&2; exit 1; }
+          echo 'Production Control API site-scoped-v2 no-write preflight: PASS' >> "$GITHUB_STEP_SUMMARY"
