@@ -62,7 +62,13 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     const printable = JSON.stringify(result, null, 2) + '\n';
     if (output) await writeFile(output,printable,'utf8');
     process.stdout.write(printable);
-    if (!result.ok) process.exitCode = 1;
+    if (!result.ok) {
+      if (process.env.GITHUB_ACTIONS) {
+        const missing = (result.registered || []).filter(x => !x.present).map(x => x.name).join(', ');
+        console.log(`::error title=Provider D1 inventory failed::${result.error || 'unknown'}${result.httpStatus ? ' HTTP ' + result.httpStatus : ''}${missing ? ' missing=' + missing : ''}`);
+      }
+      process.exitCode = 1;
+    }
   } catch {
     console.error(JSON.stringify({ ok:false, error:'provider-inventory-failed' }));
     process.exitCode = 1;

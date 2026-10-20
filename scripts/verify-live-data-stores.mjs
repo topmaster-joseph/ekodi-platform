@@ -13,12 +13,14 @@ const INTERNAL = 'https://ekodi.kr/seonammedi';
 function checks(scope) {
   const list = [
     { name: 'external-health', url: EXTERNAL + '/board/health', type: 'health', status: 200 },
-    { name: 'external-posts', url: EXTERNAL + '/board/api/posts', type: 'posts', status: 200 },
+    // Citizen Voices V3 (2026-10-17, d811e32) retired the legacy /board/api/posts route (HTTP 410).
+    { name: 'external-voices', url: EXTERNAL + '/board/api/voices-fresh', type: 'voices', status: 200 },
   ];
   if (scope === 'full') list.push(
     { name: 'internal-health', url: INTERNAL + '/board/health', type: 'health', status: 200 },
-    { name: 'internal-posts', url: INTERNAL + '/board/api/posts', type: 'posts', status: 200 },
-    { name: 'external-finance', url: EXTERNAL + '/board/api/finance', type: 'collection', status: 200 },
+    { name: 'internal-voices', url: INTERNAL + '/board/api/voices-fresh', type: 'voices', status: 200 },
+    // Finance detail is administrator-only; anonymous reads must be refused.
+    { name: 'anonymous-finance-detail-denied', url: EXTERNAL + '/board/api/finance', type: 'forbidden', status: 403 },
     { name: 'external-notices', url: EXTERNAL + '/board/api/notices', type: 'collection', status: 200 },
     { name: 'anonymous-admin-denied', url: EXTERNAL + '/board/api/admin/finance', type: 'forbidden', status: 403 },
   );
@@ -32,6 +34,8 @@ export function validatePublicProbeBody(type, body) {
     body.files === true && body.queue === 'ready' && body.rateLimiter === true;
   if (type === 'posts') return body.ok === true && body.storage === 'independent-board-d1' &&
     Array.isArray(body.items);
+  // V3 public list: D1 identity is asserted by the health probe; the list proves a live read.
+  if (type === 'voices') return body.ok === true && Array.isArray(body.items);
   if (type === 'collection') return body.ok === true && body.storage === 'independent-board-d1';
   return false;
 }
@@ -88,7 +92,13 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     if (output) await writeFile(output, formatted, 'utf8');
     // No source content or private values in the report.
     process.stdout.write(formatted);
-    if (!report.ok) process.exitCode = 1;
+    if (!report.ok) {
+      if (process.env.GITHUB_ACTIONS) {
+        const failed = report.probes.filter(x => !x.ok).map(x => `${x.name}: ${x.error} (HTTP ${x.status})`).join('; ');
+        console.log(`::error title=Live data store probe failed::${failed || 'circuit open'}`);
+      }
+      process.exitCode = 1;
+    }
   } catch (e) {
     console.error(JSON.stringify({ ok: false, error: 'probe-configuration-invalid', message: e.message }));
     process.exitCode = 1;
