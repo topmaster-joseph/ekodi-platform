@@ -231,4 +231,10 @@ jobs:
           [[ "$code" == "404" ]] || { echo "Promotion redirect route returned $code (expected 404 for unknown key)"; exit 1; }
           # 전자상거래법 사업자 표시: 공통 푸터·약관에 통신판매업신고번호가 노출돼야 한다.
           c 'https://ekodi.kr/terms' | grep -Fq '2023-전남무안-0153' || { echo 'Terms missing 통신판매업신고번호'; exit 1; }
+          # Server-rendered weekly picks: crawlable, disclosed, sponsored links through the apex click endpoint.
+          c 'https://ekodi.kr/ekodimall/picks' -o /tmp/mall-picks.html
+          grep -Fq '<link rel="canonical" href="https://ekodi.kr/ekodimall/picks">' /tmp/mall-picks.html || { echo 'Picks canonical missing'; exit 1; }
+          grep -Fq '쿠팡 파트너스 활동의 일환으로' /tmp/mall-picks.html || { echo 'Picks disclosure missing'; exit 1; }
+          if grep -Fq 'class="pick-cta"' /tmp/mall-picks.html; then grep -Fq 'rel="sponsored nofollow noopener"' /tmp/mall-picks.html || { echo 'Picks links not marked sponsored'; exit 1; }; fi
+          grep -Fq 'https://ekodi.kr/ekodimall/picks' /tmp/mall-sitemap.xml || { echo 'Picks missing from Mall sitemap'; exit 1; }
           echo 'revenue funnel guardrails=verified'
