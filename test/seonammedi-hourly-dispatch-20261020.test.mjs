@@ -34,9 +34,19 @@ test('hourly cron wakes the runner and deploy provisions the token secret',async
     readFile(new URL('../mission-control-entry-worker.js',import.meta.url),'utf8'),
     readFile(new URL('../.github/workflows/deploy-control-api.yml',import.meta.url),'utf8')
   ]);
-  assert.match(worker,/const seonamMediRunnerWake = scheduledAt\.getUTCMinutes\(\) === 0\s*\?\s*dispatchSeonamMediRunner\(env\)/);
+  assert.match(worker,/const seonamMediRunnerWake = scheduledAt\.getUTCMinutes\(\) === 0\s*\?\s*wakeSeonamMediRunner\(env\)/);
   assert.match(worker,/if \(seonamMediRunnerWake\) ctx\.waitUntil\(seonamMediRunnerWake\)/);
   assert.match(workflow,/SEONAMMEDI_DISPATCH_TOKEN: \$\{\{ secrets\.SEONAMMEDI_DISPATCH_TOKEN \}\}/);
   assert.match(workflow,/secret put SEONAMMEDI_DISPATCH_TOKEN --config wrangler\.api\.toml/);
   assert.doesNotMatch(workflow,/echo "\$SEONAMMEDI_DISPATCH_TOKEN"/,'never printed');
+});
+
+test('each wake outcome is recorded without secrets',async()=>{
+  const {recordSeonamMediRunnerWake}=await import('../seonammedi-monitor.js');
+  const sql=[];
+  const db={prepare(q){const st={args:[],bind(...a){st.args=a;return st},async run(){sql.push({q,args:st.args});return {}}};return st}};
+  assert.equal(await recordSeonamMediRunnerWake({DB:db},{ok:false,error:'github_http_401'},'2026-10-20T05:00:00Z'),true);
+  const insert=sql.find(x=>/INSERT INTO seonammedi_runner_wakes/.test(x.q));
+  assert.deepEqual(insert.args,['2026-10-20T05:00:00Z',0,'github_http_401']);
+  assert.equal(await recordSeonamMediRunnerWake({},{ok:true}),false);
 });

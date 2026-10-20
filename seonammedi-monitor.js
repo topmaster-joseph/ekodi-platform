@@ -329,6 +329,21 @@ export async function reverifyStoredCandidates(env,checkedAt,{limit=REVERIFY_LIM
 // through workflow_dispatch. Needs SEONAMMEDI_DISPATCH_TOKEN (fine-grained,
 // this repository, Actions read/write); absent token = no-op.
 export const SEONAMMEDI_RUNNER_WORKFLOW='seonammedi-news-monitor-runner.yml';
+// Records each hourly wake outcome (no secret values) so failures are visible.
+export async function recordSeonamMediRunnerWake(env,result,at=new Date().toISOString()){
+  if(!env?.DB?.prepare)return false;
+  try{
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS seonammedi_runner_wakes (id INTEGER PRIMARY KEY AUTOINCREMENT, woke_at TEXT NOT NULL, ok INTEGER NOT NULL, detail TEXT NOT NULL DEFAULT '')").run();
+    await env.DB.prepare('INSERT INTO seonammedi_runner_wakes(woke_at,ok,detail) VALUES (?,?,?)').bind(at,result?.ok?1:0,clean(result?.error||result?.skipped||(result?.dispatched?'dispatched':''),200)).run();
+    await env.DB.prepare('DELETE FROM seonammedi_runner_wakes WHERE id NOT IN (SELECT id FROM seonammedi_runner_wakes ORDER BY id DESC LIMIT 500)').run();
+    return true;
+  }catch{return false}
+}
+export async function wakeSeonamMediRunner(env,options={}){
+  const result=await dispatchSeonamMediRunner(env,options);
+  await recordSeonamMediRunnerWake(env,result);
+  return result;
+}
 export async function dispatchSeonamMediRunner(env,{fetchImpl=fetch}={}){
   const token=String(env?.SEONAMMEDI_DISPATCH_TOKEN||'').trim();
   if(!token)return {ok:false,skipped:'dispatch_token_not_configured'};
