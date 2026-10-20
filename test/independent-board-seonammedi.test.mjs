@@ -351,7 +351,7 @@ test('standalone board media and layout contract is shared by citizen voices and
   assert.match(worker,/navigator\.share/);
   assert.match(worker,/name="images" type="file"/);
   assert.match(worker,/width:min\(1180px,calc\(100% - 28px\)\)/);
-  assert.match(worker,/<footer class="site-footer"><div class="site-footer-copy"><strong>서남권 국립의대 소통센터<\/strong><span>자료의 성격과 출처를 구분해 보존합니다\.<\/span>/);
+  assert.match(worker,/<footer class="site-footer"><div class="site-footer-copy"><strong>서남권 국립의대 소통센터<\/strong><span>서남권 의대 설립 비상대책위원회 · 자료의 성격과 출처를 구분해 보존합니다\.<\/span><span class="site-footer-credit">사이트 제작 에코디비즈 · 대표 정찬균/);
   const financeStart=worker.indexOf('function financePage(req){');
   const financeEnd=worker.indexOf('function noticesPage(req){',financeStart);
   const financeBlock=worker.slice(financeStart,financeEnd);

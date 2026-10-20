@@ -171,3 +171,7 @@ body.board-notices main .notice-detail .notice-detail-photos{display:grid!import
 body.board-notices main .row-head .row-photo img,
 body.board-notices main .notice-record .notice-images img,
 body.board-notices main .notice-detail .notice-detail-photos img{display:block!important}
+
+/* SITE-FOOTER-CREDIT-001 (owner request 2026-10-20): committee line + site maker credit on every page. */
+footer.site-footer .site-footer-copy .site-footer-credit{font-size:11px;line-height:1.5;color:#7a8794}
+footer.site-footer .site-footer-copy .site-footer-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px;overflow-wrap:anywhere}

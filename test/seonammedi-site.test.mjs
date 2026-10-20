@@ -866,7 +866,7 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
   assert.match(html,/<link rel="canonical" href="https:\/\/seonammedi\.kr\/">/);
   assert.match(html,/<a class="brand" href="\.\/">/);
   assert.match(html,/<a href="admin\/">관리<\/a>/);
-  assert.match(html,/<div class="site-footer-copy">\s*<strong>서남권 국립의대 소통센터<\/strong>\s*<span>자료의 성격과 출처를 구분해 보존합니다.<\/span>\s*<\/div>/);
+  assert.match(html,/<div class="site-footer-copy">\s*<strong>서남권 국립의대 소통센터<\/strong>\s*<span>서남권 의대 설립 비상대책위원회 · 자료의 성격과 출처를 구분해 보존합니다.<\/span>\s*<span class="site-footer-credit">사이트 제작 에코디비즈 · 대표 정찬균 · <a href="mailto:ekodibiz@gmail.com">ekodibiz@gmail.com<\/a><\/span>\s*<\/div>/);
   assert.ok(!html.includes('id="lastUpdated"'));
   assert.match(html,/id="homeLatestUpdatedAt"/);
   assert.ok(app.includes("'마지막 갱신 '+new Date(runAt).toLocaleString"));
@@ -885,7 +885,7 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
   assert.match(css,/footer{margin-top:auto/);
   assert.doesNotMatch(html,/href="board\/finance">회계<\/a>/);
   assert.match(app,/financeLink=event\.target\.closest\('a\[href\$="board\/finance"\]\'\)/);
-  assert.match(html,/COMMITTEE ACTIVITIES<\/p><h2>서남권 국립의대 비상대책위원회 활동이력<\/h2><\/div>/);
+  assert.match(html,/COMMITTEE ACTIVITIES<\/p><h2>비상대책위원회 활동이력<\/h2><\/div>/);
   assert.match(html,/RELATED NEWS &amp; SOURCES<\/p><h2>서남권 국립의대 관련소식<\/h2><\/div>/);
   assert.doesNotMatch(html,/세부 메뉴 준비중/);
   assert.doesNotMatch(html,/전체 회계내역|financeManageToggle|financeManageForm/);

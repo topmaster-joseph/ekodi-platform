@@ -331,3 +331,7 @@
 .section-view-title.section-title-actions .section-head-actions{flex:0 0 auto;justify-content:flex-end}
 .section-add-button{font-weight:800}
 @media(max-width:600px){.section-view-title.section-title-actions{align-items:flex-start}.section-view-title.section-title-actions .section-head-actions .admin-login-entry,.section-view-title.section-title-actions .section-add-button{min-height:40px;padding:8px 12px;font-size:14px}}
+
+/* SITE-FOOTER-CREDIT-001 (owner request 2026-10-20): committee line + site maker credit on every page. */
+footer.site-footer .site-footer-copy .site-footer-credit{font-size:11px;line-height:1.5;color:#7a8794}
+footer.site-footer .site-footer-copy .site-footer-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px;overflow-wrap:anywhere}
