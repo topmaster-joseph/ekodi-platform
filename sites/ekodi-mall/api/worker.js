@@ -602,6 +602,19 @@ export async function recordConfirmedPayment(env, order, payment, provider = 'TO
   }
   await env.DB.batch(statements);
 }
+// P0: 결제 승인 전 서버 기준 주문 상태·만료·금액 검증 (Toss 승인 API 호출 이전에 차단)
+export function assessOrderForConfirmation(order, amount, now = new Date()) {
+  if (!order) return { ok:false, status:404, code:'ORDER_NOT_FOUND', error:'주문을 찾을 수 없습니다.' };
+  if (order.status !== 'payment_pending') return { ok:false, status:409, code:'ORDER_NOT_PAYABLE', error:'결제 대기 상태의 주문만 승인할 수 있습니다.' };
+  const grossAmount = Math.trunc(Number(order.gross_amount));
+  if (!Number.isFinite(grossAmount) || grossAmount <= 0) return { ok:false, status:409, code:'ORDER_AMOUNT_INVALID', error:'서버 주문금액이 올바르지 않습니다.' };
+  if (!Number.isFinite(amount) || amount !== grossAmount) return { ok:false, status:409, code:'AMOUNT_MISMATCH', error:'서버 주문금액과 결제금액이 일치하지 않습니다.' };
+  const expiresAt = order.expires_at ? Date.parse(order.expires_at) : NaN;
+  if (!Number.isFinite(expiresAt)) return { ok:false, status:409, code:'ORDER_EXPIRY_MISSING', error:'주문 만료시각이 없어 승인할 수 없습니다.' };
+  if (expiresAt <= now.getTime()) return { ok:false, status:410, code:'ORDER_EXPIRED', error:'주문 유효시간이 지났습니다. 다시 주문해 주세요.' };
+  return { ok:true };
+}
+
 async function confirmOrderPayment(env, body) {
   if (!flag(env.PAYMENTS_ENABLED)) return { error:'온라인 결제는 아직 비활성 상태입니다.', status:503 };
   const provider = selectedPaymentProvider(env);
@@ -612,9 +625,13 @@ async function confirmOrderPayment(env, body) {
   if (!id || !paymentKey || !Number.isFinite(amount)) return { error:'paymentKey, orderId, amount가 필요합니다.', status:400 };
   const order = await env.DB.prepare('SELECT * FROM orders WHERE id=?').bind(id).first();
   if (!order) return { error:'주문을 찾을 수 없습니다.', status:404 };
-  if (amount !== order.gross_amount) return { error:'서버 주문금액과 결제금액이 일치하지 않습니다.', status:409 };
   const existing = await env.DB.prepare("SELECT * FROM order_payments WHERE order_id=? AND status='DONE' LIMIT 1").bind(id).first();
-  if (existing) return { status:200, payment:{ paymentKey:existing.payment_key, orderId:id, status:existing.status, totalAmount:existing.total_amount }, idempotent:true };
+  if (existing) {
+    if (existing.payment_key !== paymentKey) return { error:'이미 다른 결제로 승인된 주문입니다.', status:409, code:'ORDER_ALREADY_PAID' };
+    return { status:200, payment:{ paymentKey:existing.payment_key, orderId:id, status:existing.status, totalAmount:existing.total_amount }, idempotent:true };
+  }
+  const guard = assessOrderForConfirmation(order, amount);
+  if (!guard.ok) return { error:guard.error, status:guard.status, code:guard.code };
   const payment = await confirmTossPayment(env, order, paymentKey, amount);
   await recordConfirmedPayment(env, order, payment, 'TOSS');
   return { status:200, payment:{ paymentKey:payment.paymentKey, orderId:payment.orderId, status:payment.status, totalAmount:payment.totalAmount, approvedAt:payment.approvedAt || null } };
