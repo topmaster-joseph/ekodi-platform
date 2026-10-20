@@ -207,3 +207,26 @@ jobs:
           node -e "const h=JSON.parse(require('fs').readFileSync('/tmp/marketing-publish-health.json','utf8'));if(!h.ok||h.service!=='ekodi-marketing-publishing'||!h.scheduler||!h.channelAutomationCore||h.mutations!==true)throw new Error('Marketing publishing engine is not production-ready');console.log('channel publishing runtime=verified');"
           curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/marketing-connect-api/health' -o /tmp/marketing-connect-health.json
           node -e "const h=JSON.parse(require('fs').readFileSync('/tmp/marketing-connect-health.json','utf8'));if(!h.ok||!h.oauthBroker||!h.encryptedVault||!h.platform?.youtubeConfigured||h.paidActivation!==false)throw new Error('YouTube channel broker is not production-ready');console.log('channel-first admin flow=verified');"
+      - name: Verify revenue funnel guardrails (discovery, disclosure, privacy, promo redirect)
+        shell: bash
+        run: |
+          set -euo pipefail
+          c() { curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 "$@"; }
+          # Search discovery: root robots.txt must declare the Mall service sitemap, and that sitemap must serve Mall URLs.
+          c 'https://ekodi.kr/robots.txt' -o /tmp/root-robots.txt
+          grep -Fxq 'Sitemap: https://ekodi.kr/sitemap.xml' /tmp/root-robots.txt || { echo 'Root sitemap line missing'; exit 1; }
+          grep -Fxq 'Sitemap: https://ekodi.kr/ekodimall/sitemap.xml' /tmp/root-robots.txt || { echo 'Mall sitemap is not declared in root robots.txt'; exit 1; }
+          c 'https://ekodi.kr/ekodimall/sitemap.xml' -o /tmp/mall-sitemap.xml
+          grep -Fq '<urlset' /tmp/mall-sitemap.xml || { echo 'Mall sitemap is not XML'; exit 1; }
+          grep -Fq '<loc>https://ekodi.kr/ekodimall/' /tmp/mall-sitemap.xml || { echo 'Mall sitemap has no canonical Mall URLs'; exit 1; }
+          # Affiliate disclosure must be visible without JavaScript on the storefront and the Coupang hub.
+          grep -Fq '쿠팡 파트너스 활동의 일환으로' /tmp/mall.html || { echo 'Storefront static Coupang disclosure missing'; exit 1; }
+          c 'https://ekodi.kr/ekodimall/coupang/' | grep -Fq '쿠팡 파트너스 활동의 일환으로' || { echo 'Coupang hub disclosure missing'; exit 1; }
+          # Privacy notice must describe what the code actually stores.
+          c 'https://ekodi.kr/ekodimall/pages/privacy/' -o /tmp/mall-privacy.html
+          grep -Fq '무작위 방문자 식별값' /tmp/mall-privacy.html || { echo 'Mall privacy notice does not match implemented processing'; exit 1; }
+          if grep -Fq '서버로 전송하지 않습니다' /tmp/mall-privacy.html; then echo 'Stale privacy claim is live'; exit 1; fi
+          # SNS promotion redirect must be reachable on the apex host (unknown key => 404, never 5xx/530).
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 20 'https://ekodi.kr/marketing-connect-api/r/mall/mall-00000000-verify-0' || true)
+          [[ "$code" == "404" ]] || { echo "Promotion redirect route returned $code (expected 404 for unknown key)"; exit 1; }
+          echo 'revenue funnel guardrails=verified'
