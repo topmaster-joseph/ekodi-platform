@@ -1,4 +1,4 @@
-import { hasRegionalMedicalContext, isPublicSeonamMediSource } from './seonammedi-relevance.js';
+import { hasRegionalMedicalContext, isPublicSeonamMediSource, isRelevantHeadline } from './seonammedi-relevance.js';
 
 const API_PATH='/api/seonammedi/monitor';
 const MAX_ITEMS_PER_QUERY=20;
@@ -210,6 +210,41 @@ export async function resolveSeonamMediPublisherUrl(link,{fetchImpl=fetch}={}){
   }catch{return''}
 }
 function isSearchEngineUrl(value){try{return /(?:^|\.)(?:news\.google\.com|google\.com|bing\.com)$/i.test(new URL(value).hostname)}catch{return true}}
+// Korean news CMSs rarely use <article>: also read JSON-LD articleBody and the
+// common body containers (ndsoft article-view-content-div, itemprop=articleBody,
+// *article_body*, *news_body*, *view_con*, ...).
+const BODY_CONTAINER=/<(?:div|section|td)\b[^>]*(?:id|class|itemprop)\s*=\s*["'][^"']*(?:article-view-content-div|articleBody|article[_-]?body|article[_-]?content|article[_-]?txt|news[_-]?body|news[_-]?content|newsct_article|view[_-]?con(?:tent|t)?|art[_-]?body|cont[_-]?view|news_view|read[_-]?body|text[_-]?area|bo_v_con|news[_-]?txt|view[_-]?txt|articles?[_-]?detail|article[_-]?view|newsview|cont[_-]?area|detail[_-]?body|news[_-]?text)[^"']*["'][^>]*>/i;
+// The container element only (balanced open/close of the same tag), so side
+// columns with other headlines never count as article evidence.
+function balancedElement(source,start){
+  const tag=(source.slice(start).match(/^<([a-z]+)/i)||[])[1]?.toLowerCase()||'div';
+  const pattern=new RegExp('<(/?)'+tag+'\\b[^>]*>','gi');pattern.lastIndex=start;
+  let depth=0,match;const limit=start+200000;
+  while((match=pattern.exec(source))&&match.index<limit){
+    depth+=match[1]?-1:1;
+    if(depth===0)return source.slice(start,pattern.lastIndex);
+  }
+  return source.slice(start,start+20000);
+}
+export function extractArticleBodies(html){
+  const source=String(html||'');const out=[];
+  const clean=fragment=>stripMarkup(String(fragment||'').replace(/<(?:script|style|nav|aside|footer|figure|figcaption)\b[^>]*>[\s\S]*?<\/(?:script|style|nav|aside|footer|figure|figcaption)>/gi,' '));
+  const article=(source.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i)||[])[1];
+  if(article)out.push(clean(article));
+  for(const block of source.match(/<script[^>]+application\/ld\+json[^>]*>[\s\S]*?<\/script>/gi)||[]){
+    const body=(block.match(/"articleBody"\s*:\s*"((?:\\.|[^"\\])*)"/)||[])[1];
+    if(body){try{out.push(stripMarkup(JSON.parse('"'+body+'"')))}catch{}}
+  }
+  const container=source.search(BODY_CONTAINER);
+  if(container>=0)out.push(clean(balancedElement(source,container)));
+  // Last resort: the page's own paragraphs (navigation and related-article
+  // lists are links/list items, not <p>), only when they look like a body.
+  const main=source.replace(/<(nav|header|footer|aside)\b[^>]*>[\s\S]*?<\/\1>/gi,' ');
+  const paragraphs=(main.match(/<p\b[^>]*>[\s\S]*?<\/p>/gi)||[]).map(p=>stripMarkup(p)).filter(text=>text.length>=20&&!/^(?:ⓒ|©|Copyright|무단|저작권)/i.test(text));
+  const joined=paragraphs.join(' ');
+  if(paragraphs.length>=3&&joined.length>=150)out.push(clean(joined));
+  return out.filter(Boolean);
+}
 async function verifySource(item){
   const resolvedUrl=item.resolvedUrl&&!isSearchEngineUrl(item.resolvedUrl)?item.resolvedUrl:await resolveSeonamMediPublisherUrl(item.url);
   if(!resolvedUrl)return item;
@@ -227,11 +262,12 @@ async function enrichMedia(item){
     // A Google search result alone is not proof: inspect the publisher's
     // actual page title and article text (or publisher-authored description).
     const originalTitle=stripMarkup(metaValue(html,'og:title')||metaValue(html,'twitter:title')||(html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)||[])[1]);
-    const articleHtml=(html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i)||[])[1]||'';
-    const articleText=articleHtml?stripMarkup(articleHtml.replace(/<(?:script|style|nav|aside|footer)\b[^>]*>[\s\S]*?<\/(?:script|style|nav|aside|footer)>/gi,' ')):'';
+    const bodies=extractArticleBodies(html);
     const articleDescription=stripMarkup(metaValue(html,'og:description')||metaValue(html,'description')||metaValue(html,'twitter:description'));
-    const authoritativeContent=hasRegionalMedicalContext(articleText)?articleText:articleText.length>=60?'':articleDescription;
-    const articleEvidence=hasRegionalMedicalContext(item.title)&&hasRegionalMedicalContext(originalTitle)&&hasRegionalMedicalContext(authoritativeContent)
+    // Body text wins; the publisher description is used only when no body was found.
+    const relevantBody=bodies.find(hasRegionalMedicalContext)||'';
+    const authoritativeContent=relevantBody||(bodies.some(text=>text.length>=60)?'':articleDescription);
+    const articleEvidence=isRelevantHeadline(item.title)&&isRelevantHeadline(originalTitle)&&hasRegionalMedicalContext(authoritativeContent)
       ?authoritativeContent:'';
     const verifiedSummary=articleEvidence?clean(articleEvidence,900):'';
     const video=metaValue(html,'og:video:secure_url')||metaValue(html,'og:video:url')||metaValue(html,'og:video')||metaValue(html,'twitter:player');
@@ -273,7 +309,7 @@ export async function reverifyStoredCandidates(env,checkedAt,{limit=REVERIFY_LIM
   const rows=(await env.DB.prepare("SELECT id,title,url,resolved_url,publisher,published_at,query_key,query_label,source_type FROM seonammedi_monitor_items WHERE COALESCE(source_verified,0)=0 AND review_state NOT IN ('rejected','archived','verified') AND (verify_checked_at IS NULL OR verify_checked_at<?) ORDER BY COALESCE(published_at,first_seen_at) DESC LIMIT ?").bind(retryBefore,REVERIFY_SCAN).all())?.results||[];
   let attempted=0,verified=0;
   for(const row of rows){
-    const relevant=hasRegionalMedicalContext(row.title);
+    const relevant=isRelevantHeadline(row.title);
     if(relevant&&attempted>=limit)continue;
     if(relevant){
       attempted+=1;
@@ -323,7 +359,7 @@ export async function runSeonamMediHourlyCheck(env,{scheduledAt=null,force=false
     if(Array.isArray(newsItems)){
       checked+=1;seen+=newsItems.length;
       for(let item of newsItems){
-        if(mediaBudget>0&&hasRegionalMedicalContext(item.title)){item=await verifySource(item);mediaBudget-=1;if(item.mediaState==='candidate')mediaCandidates+=1;if(item.sourceVerified)verified+=1}
+        if(mediaBudget>0&&isRelevantHeadline(item.title)){item=await verifySource(item);mediaBudget-=1;if(item.mediaState==='candidate')mediaCandidates+=1;if(item.sourceVerified)verified+=1}
         if(await insertItem(env,item,startedAt))added+=1;
       }
       if(googleError)errors.push(query.key+':google_degraded:'+clean(googleError?.message||googleError,120));
@@ -331,11 +367,11 @@ export async function runSeonamMediHourlyCheck(env,{scheduledAt=null,force=false
     if(naverBlogConfigured(env)){
       try{
         const newsItems=await fetchNaverNewsItems(env,query);checked+=1;seen+=newsItems.length;
-        for(let item of newsItems){if(mediaBudget>0&&hasRegionalMedicalContext(item.title)){item=await verifySource(item);mediaBudget-=1;if(item.sourceVerified)verified+=1}if(await insertItem(env,item,startedAt))added+=1}
+        for(let item of newsItems){if(mediaBudget>0&&isRelevantHeadline(item.title)){item=await verifySource(item);mediaBudget-=1;if(item.sourceVerified)verified+=1}if(await insertItem(env,item,startedAt))added+=1}
       }catch(error){errors.push(query.key+':naver_news:'+clean(error?.message||error,160))}
       try{
         const blogItems=await fetchNaverBlogItems(env,query);checked+=1;seen+=blogItems.length;
-        for(let item of blogItems){if(mediaBudget>0&&hasRegionalMedicalContext(item.title)){item=await verifySource(item);mediaBudget-=1;if(item.mediaState==='candidate')mediaCandidates+=1}if(await insertItem(env,item,startedAt))added+=1}
+        for(let item of blogItems){if(mediaBudget>0&&isRelevantHeadline(item.title)){item=await verifySource(item);mediaBudget-=1;if(item.mediaState==='candidate')mediaCandidates+=1}if(await insertItem(env,item,startedAt))added+=1}
       }catch(error){errors.push(query.key+':blog:'+clean(error?.message||error,160))}
     }
   }

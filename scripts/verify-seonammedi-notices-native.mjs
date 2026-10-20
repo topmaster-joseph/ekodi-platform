@@ -115,6 +115,17 @@ try{
         entry.siteNavFontSize=homeHeader.fontSize;
         requireThat(JSON.stringify(homeHeader.names)===JSON.stringify(expectedNav),'homepage_header_menu_mismatch');
         requireThat(Math.abs(parseFloat(homeHeader.fontSize)-parseFloat(initial.headerNavFontSize))<=1,'site_board_nav_font_mismatch');
+        // NOTICE-MOUNT-LINK-001 (2026-10-20): featured/public-feed notice links must keep the site mount,
+        // otherwise ekodi.kr/seonammedi/ opened ekodi.kr/notices/:id (EKODI operating-space page).
+        await home.waitForFunction(()=>document.querySelector('#homeSpotlight a.spotlight-card')||document.querySelector('#homeSpotlight[hidden]'),null,{timeout:20000}).catch(()=>{});
+        const mount=paths[origin].home.replace(/\/$/,'');
+        const noticeLinks=await home.evaluate(()=>[...document.querySelectorAll('a[href]')].map(a=>a.href).filter(h=>{try{return /\/notices\/\d+\/?$/.test(new URL(h).pathname)}catch{return false}}));
+        entry.noticeLinkCount=noticeLinks.length;
+        entry.badNoticeLinks=noticeLinks.filter(h=>{const u=new URL(h);return u.origin!==origin||!u.pathname.startsWith(mount+'/notices/')}).slice(0,5);
+        requireThat(entry.badNoticeLinks.length===0,'notice_link_mount_lost');
+        // EVIDENCE-ROW-LAYOUT-001: auto evidence rows belong to the collapsible detail, never the collapsed title row.
+        entry.misplacedEvidenceRows=await home.evaluate(()=>[...document.querySelectorAll('.auto-evidence-row')].filter(r=>!r.parentElement?.classList.contains('timeline-detail')).length);
+        requireThat(entry.misplacedEvidenceRows===0,'auto_evidence_row_misplaced');
       }finally{await home.close()}
 
       // User search interaction: a guaranteed nonmatching term must empty results.

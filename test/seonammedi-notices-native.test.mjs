@@ -18,7 +18,9 @@ test('EKODI runs 4 isolated desktop/mobile browser proof cases',()=>{
     'search_nonmatch_did_not_empty',
     'auth_compose_return_mismatch',
     'six_menu_order_mismatch',
-    'homepage_header_menu_mismatch'
+    'homepage_header_menu_mismatch',
+    'notice_link_mount_lost',
+    'auto_evidence_row_misplaced'
   ])assert.ok(script.includes(needle),needle);
 });
 test('read-only browser policy and no credential authority',()=>{

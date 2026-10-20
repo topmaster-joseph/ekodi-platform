@@ -100,6 +100,7 @@ on:
       - 'ekodi-capability-ecosystem.js'
       - 'ekodi-capability-ecosystem-store.js'
       - 'ekodi-capability-sandbox.js'
+      - 'ekodi-capability-sandbox-adapters.js'
       - 'ekodi-capability-accumulation.js'
       - 'ekodi-self-automation-engine.js'
       - 'ekodi-mcp-gateway.js'
@@ -312,6 +313,7 @@ on:
       - 'ekodi-capability-ecosystem.js'
       - 'ekodi-capability-ecosystem-store.js'
       - 'ekodi-capability-sandbox.js'
+      - 'ekodi-capability-sandbox-adapters.js'
       - 'ekodi-capability-accumulation.js'
       - 'ekodi-self-automation-engine.js'
       - 'ekodi-mcp-gateway.js'
@@ -455,7 +457,19 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      # A pull request is not production-bound: it cannot carry an
+      # orchestrator-issued branch or a release receipt, so the release-grade
+      # gate can never pass there. Pull requests are held to the CI-grade
+      # orchestration contract instead — the same one the standalone
+      # EKODI AI Orchestration Gate workflow applies.
+      - name: EKODI AI Orchestration Gate (pull request)
+        if: github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --ci
+      # Every non-pull-request event stays on the release-grade gate, unchanged.
       - name: EKODI AI Orchestration Gate
+        if: github.event_name != 'pull_request'
         env:
           GITHUB_TOKEN: ${{ github.token }}
           EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
@@ -466,7 +480,7 @@ jobs:
       - name: Validate control plane, Core AI Gateway and governance
         run: |
           set -euo pipefail
-          for file in api-worker.js platform-maturity-control.js preview-public-projection.js auth-worker.js auth-worker-core.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js tenant-access-authority.js church-reports-control.js mission-control-entry-worker.js seonammedi-civic-control.js common-board-adapter.js board-runtime-guard.js replaceable-board-provider.js board-engine-registry.js realtime-control.js realtime-tenant-registry.js storage-gateway.js canonical-drive-writer.js external-ai-module-gateway.js secure-projection.js traffic-intelligence.js traffic-intelligence-control.js devotional-control.js user-ai-control.js learning-control.js personal-ai-bridge.js ekodi-mcp-gateway.js mcp-client-policy.js ekodi-mcp-external-tools.js ekodi-orchestrator-task-adapter.js github-actions-oidc.js ai-access-orchestration.js personal-ai-provider-registry.js gemini-provider-adapter.js personal-openai-provider-adapter.js claude-provider-adapter.js user-openai-provider-adapter.js universal-membership.js membership-billing.js generated/user-services.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-command-control.js ekodi-command-ledger.js ekodi-pulse-runtime.js ekodi-command-plane.js ekodi-capability-executor.js ekodi-capability-ecosystem.js ekodi-capability-ecosystem-store.js ekodi-capability-sandbox.js ekodi-capability-accumulation.js ekodi-self-automation-engine.js ekodi-ai-provider-registry.js cloudflare-workers-ai-provider-adapter.js ai-orchestrator-runtime.js anthropic-provider-adapter.js gemini-orchestrator-provider-adapter.js ai-governance-runtime.js ai-resilience-runtime.js core-ai-gateway.js core-api.js openai-provider-adapter.js api-usage-meter.js api-cost-control.js free-tier-resource-governor.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js affiliate-marketplace.js affiliate-provider-feed.js product-identity.js coupang-partners-automation.js offer-registry.js offer-registry-control.js offer-registry-sources.js social-registry-api.js mail-credential-vault.js mail-google-adapter.js mail-control.js external-account-control.js cloudflare-account-pool.js local-commerce-control.js language-automation.js ai-provider-control.js ai-free-quota.js config/language-registry.js config/managed-language-sites.js; do
+          for file in api-worker.js platform-maturity-control.js preview-public-projection.js auth-worker.js auth-worker-core.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js tenant-access-authority.js church-reports-control.js mission-control-entry-worker.js seonammedi-civic-control.js common-board-adapter.js board-runtime-guard.js replaceable-board-provider.js board-engine-registry.js realtime-control.js realtime-tenant-registry.js storage-gateway.js canonical-drive-writer.js external-ai-module-gateway.js secure-projection.js traffic-intelligence.js traffic-intelligence-control.js devotional-control.js user-ai-control.js learning-control.js personal-ai-bridge.js ekodi-mcp-gateway.js mcp-client-policy.js ekodi-mcp-external-tools.js ekodi-orchestrator-task-adapter.js github-actions-oidc.js ai-access-orchestration.js personal-ai-provider-registry.js gemini-provider-adapter.js personal-openai-provider-adapter.js claude-provider-adapter.js user-openai-provider-adapter.js universal-membership.js membership-billing.js generated/user-services.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-command-control.js ekodi-command-ledger.js ekodi-pulse-runtime.js ekodi-command-plane.js ekodi-capability-executor.js ekodi-capability-ecosystem.js ekodi-capability-ecosystem-store.js ekodi-capability-sandbox.js ekodi-capability-sandbox-adapters.js ekodi-capability-accumulation.js ekodi-self-automation-engine.js ekodi-ai-provider-registry.js cloudflare-workers-ai-provider-adapter.js ai-orchestrator-runtime.js anthropic-provider-adapter.js gemini-orchestrator-provider-adapter.js ai-governance-runtime.js ai-resilience-runtime.js core-ai-gateway.js core-api.js openai-provider-adapter.js api-usage-meter.js api-cost-control.js free-tier-resource-governor.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js affiliate-marketplace.js affiliate-provider-feed.js product-identity.js coupang-partners-automation.js offer-registry.js offer-registry-control.js offer-registry-sources.js social-registry-api.js mail-credential-vault.js mail-google-adapter.js mail-control.js external-account-control.js cloudflare-account-pool.js local-commerce-control.js language-automation.js ai-provider-control.js ai-free-quota.js config/language-registry.js config/managed-language-sites.js; do
             node --check "$file"
           done
           node --check scripts/generate-user-service-registry.mjs
@@ -509,6 +523,10 @@ jobs:
   staging:
     environment: development
     needs: validate
+    # Deployment lanes never run from a pull request. Until now this held only
+    # as a side effect of the release-grade orchestration gate failing on every
+    # PR; the exclusion is stated explicitly so it does not depend on that.
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
