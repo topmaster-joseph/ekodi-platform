@@ -777,9 +777,9 @@ function showNoticeDetail(item){
   const detail=el('noticeDetail');if(!detail)return;const images=(item.imageUrls?.length?item.imageUrls:(item.imageUrl?[item.imageUrl]:[])).map(url=>'<img src="'+escapeHtml(url)+'" alt="" class="notice-detail-image" loading="lazy">').join('');
   const mine=noticeOwnedByCurrentUser(item);
   const when=item.kind==='event'?eventWhen(item):'';
-  detail.innerHTML='<button type="button" class="notice-back">목록</button><h3>'+escapeHtml(item.title||'일정')+'</h3>'+(when?'<p class="event-when"><strong>일시</strong> <span>'+escapeHtml(when)+'</span></p>':'')+'<div class="notice-detail-body"><p>'+escapeHtml(item.body||'')+'</p>'+(images?'<div class="notice-detail-images">'+images+'</div>':'')+'</div><small class="notice-detail-posted">등록 '+escapeHtml(noticeDate(item))+'</small><div class="notice-detail-actions"><button type="button" class="notice-share">공유</button>'+(mine?'<button type="button" class="notice-edit">수정</button><button type="button" class="notice-delete">삭제</button>':'')+'</div>';
+  detail.innerHTML='<div class="event-detail-top"><span class="event-detail-eyebrow">행사·일정</span><button type="button" class="notice-back" aria-label="일정 닫기">닫기 ✕</button></div><h3>'+escapeHtml(item.title||'일정')+'</h3>'+(when?'<p class="event-when"><strong>일시</strong> <span>'+escapeHtml(when)+'</span></p>':'')+'<div class="notice-detail-body"><p>'+escapeHtml(item.body||'')+'</p>'+(images?'<div class="notice-detail-images">'+images+'</div>':'')+'</div><small class="notice-detail-posted">등록 '+escapeHtml(noticeDate(item))+'</small><div class="notice-detail-actions"><button type="button" class="notice-share">공유</button>'+(mine?'<button type="button" class="notice-edit">수정</button><button type="button" class="notice-delete">삭제</button>':'')+'</div>';
   detail.hidden=false;el('noticeList').hidden=false;renderNoticeRows();
-  detail.querySelector('.notice-back')?.addEventListener('click',()=>{detail.hidden=true;renderNoticeRows();el('noticeList').hidden=false;history.replaceState(null,'',location.pathname+'#notices')});
+  detail.querySelector('.notice-back')?.addEventListener('click',()=>{detail.hidden=true;history.pushState(null,'',siteMountBase());showView('');window.scrollTo({top:0})});
   detail.querySelector('.notice-share')?.addEventListener('click',async()=>{const url=noticePermalink(item.id);try{if(navigator.share)await navigator.share({title:item.title||'행사·일정',text:(when?when+'\n':'')+(item.body||''),url});else{await navigator.clipboard.writeText(url);alert('게시물 링크를 복사했습니다.')}}catch{}});
   detail.querySelector('.notice-edit')?.addEventListener('click',()=>beginNoticeEdit(item));
   detail.querySelector('.notice-delete')?.addEventListener('click',()=>deleteNotice(item));
@@ -792,6 +792,16 @@ function renderFeaturedNotice(rows){
   host.hidden=!items.length;host.innerHTML=items.map(item=>'<a class="spotlight-card" href="'+noticePermalink(item.id)+'">'+(item.imageUrl?'<img src="'+escapeHtml(item.imageUrl)+'" alt="" loading="eager">':'<span class="spotlight-placeholder">공지</span>')+'<span class="spotlight-copy"><small>'+(item.kind==='event'?'행사·일정':'최근 게시글')+'</small><strong>'+escapeHtml(item.title||'공지')+'</strong><em>게시글 보기</em></span></a>').join('');
   document.querySelector('.hero')?.classList.toggle('has-spotlight',items.length>0);
 }
+// CALENDAR-EVENT-OPENS-LEFT-001: the calendar opens an event in the left content area without a page load.
+window.seonamOpenEvent=id=>{
+  const item=publicNotices.find(row=>Number(row.id)===Number(id));if(!item)return false;
+  history.pushState(null,'',noticePermalink(item.id));showView('notices');showNoticeDetail(item);
+  el('notices')?.scrollIntoView({block:'start'});return true;
+};
+window.addEventListener('popstate',()=>{
+  const m=location.pathname.match(/^(?:\/seonammedi)?\/notices\/(\d+)\/?$/);const item=m&&publicNotices.find(row=>Number(row.id)===Number(m[1]));
+  if(item){showView('notices');showNoticeDetail(item)}else if(!location.hash&&el('notices')&&!el('notices').hidden){showView('')}
+});
 async function loadNotices(){
   const host=el('noticeList');if(!host)return;
   try{

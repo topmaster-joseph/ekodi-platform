@@ -22,17 +22,18 @@ const firstPhoto=(x,mount)=>{const u=String((Array.isArray(x.imageUrls)&&x.image
 const fetchJson=async url=>{const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);return r.json()};
 const items=(settled,key='items')=>settled.status==='fulfilled'?(Array.isArray(settled.value)?settled.value:Array.isArray(settled.value?.[key])?settled.value[key]:[]):[];
 (async()=>{
- const [boardNoticeResult,noticeResult,boardResult,timelineResult,staticResult]=await Promise.allSettled([
+ const [boardNoticeResult,boardResult,timelineResult,staticResult]=await Promise.allSettled([
   fetchJson(home+'/board/api/notices'),
-  fetchJson('/api/seonammedi/notices'),
   fetchJson(home+'/board/api/voices-fresh'),
   fetchJson('/api/seonammedi/timeline'),
   fetchJson('/seonammedi/data.json')
  ]);
- const notices=[
-  ...items(boardNoticeResult).map(x=>({...x,url:home+'/board/notices?id='+encodeURIComponent(x.id),thumb:firstPhoto(x,home)})),
-  ...items(noticeResult).map(x=>({...x,url:home+'/notices/'+encodeURIComponent(x.id),thumb:firstPhoto(x,'')}))
- ].filter(x=>publicItem(x)&&x.id!=null&&x.title).sort(sort);
+ // HOME-NOTICES-BOARD-ONLY-001 (owner decision 2026-10-20): the home 공지사항 list is the board — every row opens
+ // the same screen as the top 공지 menu (board list with that notice expanded). Calendar events (Site Core
+ // /api/seonammedi/notices) stay in the 행사·일정 spotlight and the calendar, never in this list.
+ // Same order as the board: 중요 first, then newest.
+ const notices=items(boardNoticeResult).map(x=>({...x,url:home+'/board/notices?id='+encodeURIComponent(x.id),thumb:firstPhoto(x,home)}))
+  .filter(x=>publicItem(x)&&x.id!=null&&x.title).sort((a,b)=>Number(Boolean(b.pinned))-Number(Boolean(a.pinned))||sort(a,b));
  const opinions=items(boardResult).filter(x=>publicItem(x)&&x.id!=null&&(x.title||x.message)).map(x=>({...x,title:String(x.title||x.message).slice(0,90),url:home+'/board/voices'})).sort(sort);
  const liveTimeline=items(timelineResult);
  const curatedTimeline=items(staticResult,'timeline');
