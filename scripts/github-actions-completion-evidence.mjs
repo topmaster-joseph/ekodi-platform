@@ -130,6 +130,22 @@ async function laterSuccessfulRunContainingMerge({github,owner,repo,original,mer
   return null;
 }
 
+// 2026-10-20: a completed run that executed zero jobs (e.g. an approval-gated
+// run that never started) produced no verdict and must not mask the verdict of
+// a run that actually executed on the same head SHA. Newest-first; the first run
+// that is pending, or that executed and did not succeed, still fails closed.
+async function latestVerdictRun({github,owner,repo,runs}){
+  const ordered=runs.slice().sort((a,b)=>String(b?.created_at||'').localeCompare(String(a?.created_at||''))||Number(b?.id||0)-Number(a?.id||0));
+  for(const run of ordered){
+    if(success(run))return run;
+    if(run?.status!=='completed')return run;
+    const jobs=await github.rest.actions.listJobsForWorkflowRun({owner,repo,run_id:Number(run.id),filter:'all',per_page:1});
+    const executed=Number(jobs.data?.total_count??(jobs.data?.jobs||[]).length);
+    if(executed>0)return run;
+  }
+  return null;
+}
+
 export async function collectAuthenticatedCompletionEvidence({github,owner='topmaster-joseph',repo='ekodi-platform',taskId,branchRef}={}){
   const task=text(taskId,160),branch=text(branchRef,220);
   if(!/^orch_[a-z0-9][a-z0-9_-]{15,120}$/i.test(task)||!branch.endsWith(`/${task}`))return {verified:false,reason:'invalid_task_or_branch'};
@@ -150,7 +166,7 @@ export async function collectAuthenticatedCompletionEvidence({github,owner='topm
   const checkRuns=checkResponse.data?.workflow_runs||[];
   const requiredWorkflows=[];
   for(const name of REQUIRED_WORKFLOWS){
-    const run=checkRuns.find(item=>item?.name===name);
+    const run=await latestVerdictRun({github,owner,repo,runs:checkRuns.filter(item=>item?.name===name)});
     if(!success(run))return {verified:false,reason:'required_workflow_not_successful',workflow:name};
     requiredWorkflows.push({name,runId:Number(run.id),url:text(run.html_url,400),conclusion:'success'});
   }
