@@ -18,18 +18,29 @@ const H1 = 'a'.repeat(40), H2 = 'b'.repeat(40), M = 'c'.repeat(40);
 const MOCK = `
 import { appendFileSync } from 'node:fs';
 const log = process.env.MOCK_LOG, scenario = process.env.MOCK_SCENARIO;
-let head = '${H1}';
+let head = '${H1}', polls = 0;
 const json = (status, body) => new Response(status === 204 ? null : JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 globalThis.fetch = async (input, init = {}) => {
   const url = new URL(String(input)), method = (init.method || 'GET').toUpperCase();
   appendFileSync(log, JSON.stringify({ method, path: url.pathname + url.search, body: init.body || null }) + '\\n');
   if (url.hostname === 'ekodi.kr') return json(200, { authorized: true });
   const p = url.pathname.replace(/^\\/repos\\/[^/]+\\/[^/]+/, '');
-  if (method === 'GET' && p === '/pulls') return json(200, [{ number: 7, draft: false, head: { sha: head } }]);
+  if (method === 'GET' && p === '/pulls') {
+    if (scenario === 'merged') return json(200, [{ number: 7, state: 'closed', merged_at: '2026-10-20T00:00:00Z', draft: false, head: { sha: '${H1}' } }]);
+    if (scenario === 'newer-head') return json(200, [{ number: 7, state: 'open', draft: false, head: { sha: '${H2}' } }]);
+    return json(200, [{ number: 7, state: 'open', draft: false, head: { sha: head } }]);
+  }
   if (method === 'GET' && p === '/pulls/7/files') return json(200, [{ filename: 'README.md' }]);
   if (method === 'GET' && p === '/pulls/7') return json(200, { number: 7, merged: false, draft: false, head: { sha: head }, merge_commit_sha: '${M}', title: 't' });
-  if (method === 'GET' && /\\/commits\\/[a-f0-9]{40}\\/status$/.test(p)) return json(200, { statuses: ['test', 'EKODI AI Orchestration Gate'].map(context => ({ context, state: 'success', target_url: 'https://x' })) });
-  if (method === 'GET' && /\\/check-runs$/.test(p)) return json(200, { check_runs: ['test', 'EKODI AI Orchestration Gate'].map(name => ({ name, app: { slug: 'github-actions' }, status: 'completed', conclusion: 'success' })) });
+  if (method === 'GET' && /\\/commits\\/[a-f0-9]{40}\\/status$/.test(p)) {
+    polls++;
+    const testState = scenario === 'test-failed' || (scenario === 'test-rerun' && polls < 3) ? 'failure' : 'success';
+    return json(200, { statuses: [{ context: 'test', state: testState, target_url: 'https://x' }, { context: 'EKODI AI Orchestration Gate', state: 'success', target_url: 'https://x' }] });
+  }
+  if (method === 'GET' && /\\/check-runs$/.test(p)) {
+    const rerunning = scenario === 'test-rerun' && polls < 3;
+    return json(200, { check_runs: ['test', 'EKODI AI Orchestration Gate'].map(name => ({ name, app: { slug: 'github-actions' }, status: rerunning && name === 'test' ? 'in_progress' : 'completed', conclusion: rerunning && name === 'test' ? null : (scenario === 'test-failed' && name === 'test' ? 'failure' : 'success') })) });
+  }
   if (method === 'PUT' && p === '/pulls/7/update-branch') {
     if (scenario === 'behind') { head = '${H2}'; return json(202, { message: 'Updating pull request branch.' }); }
     if (scenario.startsWith('workflow')) return json(422, { message: 'refusing to allow a GitHub App to create or update workflow \`.github/workflows/x.yml\` without \`workflows\` permission' });
@@ -97,4 +108,33 @@ test('CI accepts workflow_dispatch so convergence can re-run the required test c
   assert.match(ci, /\n  workflow_dispatch:\n/);
   const gate = readFileSync(new URL('../.github/workflows/ekodi-ai-orchestration-gate.yml', import.meta.url), 'utf8');
   assert.match(gate, /\n  workflow_dispatch:\n/);
+});
+
+test('already merged PR: re-dispatched run is a logged no-op, not a failure', () => {
+  const { code, out, calls } = run('merged');
+  assert.equal(code, 0, out);
+  assert.match(out, /"action":"noop-stale-dispatch","reason":"pr-already-merged"/);
+  assert.ok(!calls.some(c => c.path.includes('ekodi.kr') || c.path.endsWith('/merge') || c.path.endsWith('/update-branch')));
+});
+
+test('PR moved to a newer head: stale run hands off without failing', () => {
+  const { code, out, calls } = run('newer-head');
+  assert.equal(code, 0, out);
+  assert.match(out, /"reason":"newer-pr-head"/);
+  assert.ok(!calls.some(c => c.path.endsWith('/merge')));
+});
+
+test('required check already failed and not re-running: stop immediately with the reason', () => {
+  const started = Date.now();
+  const { code, out, calls } = run('test-failed');
+  assert.notEqual(code, 0);
+  assert.match(out, /required check failed on head a{12}: test; fix and push to restart convergence/);
+  assert.ok(Date.now() - started < 20000, 'must not idle until the convergence timeout');
+  assert.ok(!calls.some(c => c.path.endsWith('/merge') || c.path.endsWith('/update-branch')));
+});
+
+test('failed check that is being re-run is still awaited and then merges', () => {
+  const { code, out, calls } = run('test-rerun');
+  assert.equal(code, 0, out);
+  assert.ok(calls.some(c => c.method === 'PUT' && c.path.endsWith('/pulls/7/merge')), 'merges after the re-run turns green');
 });
