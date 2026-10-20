@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 
 const policy=JSON.parse(fs.readFileSync('config/adaptive-infrastructure-policy.json','utf8'));
+const concurrentTraffic=JSON.parse(fs.readFileSync('config/concurrent-traffic-policy.json','utf8'));
 const freeTier=JSON.parse(fs.readFileSync('config/free-tier-optimization-policy.json','utf8'));
 const registry=JSON.parse(fs.readFileSync('config/evolution-resource-registry.json','utf8'));
 const accountPool=JSON.parse(fs.readFileSync('config/cloudflare-account-pool.json','utf8'));
@@ -20,6 +21,12 @@ expect(policy.scope?.inheritance==='all-current-and-future-sites-services-subsur
 expect(policy.scope?.localOverride==='forbidden','service-local adaptive override must remain forbidden');
 expect(policy.scope?.sourceOfTruth==='supabase-postgres','Supabase PostgreSQL must remain source of truth');
 expect(policy.scope?.criticalProductionFailoverToAuxiliary===false,'critical production failover to auxiliary must remain forbidden');
+expect(concurrentTraffic.policyId==='EKODI-CONCURRENT-TRAFFIC-10K-001','concurrent traffic policy must stay linked');
+expect(concurrentTraffic.status==='enforced','concurrent traffic policy must remain enforced');
+expect(concurrentTraffic.objective?.normalConcurrentUsers===100&&concurrentTraffic.objective?.busyConcurrentUsers===1000&&concurrentTraffic.objective?.surgeConcurrentUsers===10000,'traffic capacity tiers must remain 100/1000/10000');
+expect(concurrentTraffic.promotion?.doNotUseConcurrencyAlone===true,'concurrency-alone promotion must remain forbidden');
+expect(concurrentTraffic.sustainedDemand?.corroboratingPressureRequiredForProtection===true,'sustained capacity protection must require independent pressure');
+expect(concurrentTraffic.sustainedDemand?.automaticPaidUpgrade===false,'sustained demand must not trigger automatic paid upgrade');
 
 const usage=policy.signals?.usagePercent||{};
 expect(usage.normalMaxExclusive===60&&usage.saveMaxExclusive===75&&usage.protectMaxExclusive===90&&usage.surviveMin===90,'usage thresholds must remain 60/75/90');
@@ -54,6 +61,10 @@ expect(runtime.includes("cacheProfile:'aggressive-safe'"),'save mode must increa
 expect(runtime.includes("readPath:'cdn-r2-snapshot-first'"),'save mode must prefer CDN/R2 snapshots');
 expect(runtime.includes('metricBurnRate'),'runtime must calculate burn rate');
 expect(runtime.includes('trafficSpikeRatio'),'runtime must support traffic-spike pressure');
+expect(runtime.includes('trafficCapacityTierFromConcurrentSessions'),'runtime must classify 100/1000/10000 capacity tiers');
+expect(runtime.includes("policyId:'EKODI-CONCURRENT-TRAFFIC-10K-001'"),'runtime must identify the concurrent traffic policy');
+expect(runtime.includes('concurrencyAloneChangesProtectionMode:false'),'runtime must keep classification separate from protection');
+expect(runtime.includes('dedicatedCapacityCandidate'),'runtime must flag sustained high-demand isolation candidates');
 
 expect(governor.includes("import { buildAdaptiveInfrastructureDecision } from './adaptive-resource-orchestrator.js'"),'resource governor must use adaptive orchestrator');
 expect(governor.includes('adaptiveInfrastructure'),'resource governor must publish adaptive decision');

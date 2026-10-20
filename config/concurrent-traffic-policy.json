@@ -216,5 +216,20 @@
       "payments",
       "admin_control"
     ]
+  },
+  "sustainedDemand": {
+    "windows": [
+      "daily",
+      "weekly",
+      "monthly"
+    ],
+    "classificationSeparateFromProtection": true,
+    "concurrencyAloneChangesProtectionMode": false,
+    "corroboratingPressureRequiredForProtection": true,
+    "dedicatedCapacityCandidateAt": [
+      "L3",
+      "PROTECT"
+    ],
+    "automaticPaidUpgrade": false
   }
 }
