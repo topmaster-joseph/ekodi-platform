@@ -160,3 +160,14 @@ footer.site-footer>a[hidden]{display:none}
    eyebrow + heading for screen readers only; notes and admin actions stay. */
 [data-view-section]>.section-head .eyebrow,[data-view-section]>.section-head h2,
 .board-head .eyebrow,.board-head h1{position:absolute!important;width:1px!important;height:1px!important;margin:-1px!important;padding:0!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+
+/* SEONAMMEDI-NOTICE-PHOTOS-VISIBLE-001 (2026-10-20, owner decision):
+ * HOME-IMAGERY-ONLY still hides decorative media on inner views, but notice photos are content.
+ * The board notice list thumbnail, expanded notice photos and the notice detail page photos stay visible.
+ * Voices and finance boards keep the original policy. Must stay after the HOME-IMAGERY-ONLY block. */
+body.board-notices main .row-head .row-photo{display:inline-flex!important}
+body.board-notices main .notice-record .notice-images{display:flex!important}
+body.board-notices main .notice-detail .notice-detail-photos{display:grid!important}
+body.board-notices main .row-head .row-photo img,
+body.board-notices main .notice-record .notice-images img,
+body.board-notices main .notice-detail .notice-detail-photos img{display:block!important}

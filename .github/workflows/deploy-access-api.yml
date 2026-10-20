@@ -29,6 +29,12 @@ permissions:
   contents: read
   pull-requests: read
 
+# Convergent merges now run per branch, so two merged PRs may dispatch this
+# deploy close together. Serialize production releases; PR validation stays per PR.
+concurrency:
+  group: ekodi-access-api-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'production' }}
+  cancel-in-progress: false
+
 jobs:
   validate:
     runs-on: ubuntu-latest

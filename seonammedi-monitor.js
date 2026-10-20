@@ -324,6 +324,26 @@ export async function reverifyStoredCandidates(env,checkedAt,{limit=REVERIFY_LIM
   }
   return verified;
 }
+// Workers egress is blocked by Google/Bing, and GitHub throttles scheduled
+// workflows here, so the reliable hourly Worker cron wakes the runner crawl
+// through workflow_dispatch. Needs SEONAMMEDI_DISPATCH_TOKEN (fine-grained,
+// this repository, Actions read/write); absent token = no-op.
+export const SEONAMMEDI_RUNNER_WORKFLOW='seonammedi-news-monitor-runner.yml';
+export async function dispatchSeonamMediRunner(env,{fetchImpl=fetch}={}){
+  const token=String(env?.SEONAMMEDI_DISPATCH_TOKEN||'').trim();
+  if(!token)return {ok:false,skipped:'dispatch_token_not_configured'};
+  const repo=String(env?.GITHUB_REPOSITORY||'').trim()||'topmaster-joseph/ekodi-platform';
+  if(!/^[\w.-]+\/[\w.-]+$/.test(repo))return {ok:false,error:'invalid_repository'};
+  try{
+    const response=await fetchImpl(`https://api.github.com/repos/${repo}/actions/workflows/${SEONAMMEDI_RUNNER_WORKFLOW}/dispatches`,{
+      method:'POST',
+      headers:{authorization:`Bearer ${token}`,accept:'application/vnd.github+json','x-github-api-version':'2022-11-28','content-type':'application/json','user-agent':'EKODI-SeonamMedi-Cron/1.0'},
+      body:JSON.stringify({ref:'main'}),
+      signal:AbortSignal.timeout(SOURCE_FETCH_TIMEOUT_MS)
+    });
+    return response.status===204?{ok:true,dispatched:true}:{ok:false,error:'github_http_'+response.status};
+  }catch(error){return {ok:false,error:'github_dispatch_failed:'+clean(error?.name||error,60)}}
+}
 // verifyBudget/reverifyLimit default to Workers-safe values; the GitHub runner
 // (no Workers subrequest cap) passes larger budgets.
 export async function runSeonamMediHourlyCheck(env,{scheduledAt=null,force=false,verifyBudget=MEDIA_ENRICH_LIMIT,reverifyLimit=REVERIFY_LIMIT}={}){

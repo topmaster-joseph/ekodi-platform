@@ -60,7 +60,9 @@ test('public notices render a compact title/date list, with accessible expandabl
     assert.equal(response.status,200,url);
     const html=await response.text();
     assert.ok(html.includes('<details class="board-row notice-record"'),url);
-    assert.ok(html.includes('<summary class="row-head"><strong>'),url);
+    // 2026-10-20 owner request: a left-hand row number (or 중요 badge) precedes the title.
+    assert.ok(html.includes('<summary class="row-head">\\\'+(x.pinned?\\\'<span class="row-no is-pinned"')||html.includes('<summary class="row-head">\'+(x.pinned?\'<span class="row-no is-pinned"'),url);
+    assert.ok(html.includes('<span class="row-no" aria-label="글번호">'),url);
     assert.ok(html.includes('</small></summary><p class="row-body">'),url);
     assert.ok(html.includes('</div></details>'),url);
     assert.ok(html.includes('if(el){el.open=true;el.classList.add'),url);
