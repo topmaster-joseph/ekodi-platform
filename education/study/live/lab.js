@@ -39,7 +39,7 @@ function sourceFor(id){const ctx=missionContext(course,id,rec.track);return id==
 function tabs(){
   const items=[['agenda','오늘 순서']].concat(sessionMissions().map(id=>['m:'+id,course.missions[id].title.replace('개인 실습 ',''),rec.done[id]]));
   items.push(['activity',session().no===1?'퀴즈·오류 찾기':'오류 찾기·적용 계획'],['record','내 기록']);
-  $('#labTabs').innerHTML=items.map(([id,label,done])=>'<button type="button" class="tab'+(rec.tab===id?' is-on':'')+'" data-tab="'+esc(id)+'" aria-pressed="'+(rec.tab===id)+'">'+esc(label)+(done?'<span class="tick" aria-label="완료">✓</span>':'')+'</button>').join('');
+  $('#labTabs').innerHTML=items.map(([id,label,done])=>'<button type="button" class="tab'+(rec.tab===id?' is-on':'')+'" data-tab="'+esc(id)+'" aria-pressed="'+(rec.tab===id)+'">'+esc(label)+(done?'<span class="tick">완료</span>':'')+'</button>').join('');
 }
 function viewAgenda(){
   const rows=session().modules.map(m=>{
@@ -146,7 +146,7 @@ function viewRecord(){
     const crit=m.criteria[level.id];const done=crit.filter((_,i)=>rec.checked[m.id+':'+level.id+':'+i]).length;
     const errs=m.errors.filter((_,i)=>rec.checked[m.id+':err:'+i]).length;
     const chk=rec.checks[m.id]?.summary;
-    return '<tr><td>'+esc(m.title)+(rec.done[m.id]?' ✓':'')+'</td><td class="num">'+done+' / '+crit.length+'</td><td class="num">'+errs+' / '+m.errors.length+'</td><td class="num">'+(chk?'확인 '+chk.risk+' · 주의 '+chk.warn:'-')+'</td><td class="num">'+(rec.self[m.id]?.score?esc(rec.self[m.id].score)+'점':'-')+'</td></tr>';}).join('');
+    return '<tr><td>'+esc(m.title)+(rec.done[m.id]?' · 완료':'')+'</td><td class="num">'+done+' / '+crit.length+'</td><td class="num">'+errs+' / '+m.errors.length+'</td><td class="num">'+(chk?'확인 '+chk.risk+' · 주의 '+chk.warn:'-')+'</td><td class="num">'+(rec.self[m.id]?.score?esc(rec.self[m.id].score)+'점':'-')+'</td></tr>';}).join('');
   return '<div class="panel"><h2>내 기록</h2><p class="meta">익명·로컬 모드입니다. 출결·공식 평가·수료와 연결되지 않습니다.</p><div class="table-wrap"><table class="tbl"><thead><tr><th>실습</th><th>달성 조건</th><th>오류 검증</th><th>자동 점검</th><th>자기평가</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
     '<div class="btn-row"><button type="button" class="btn btn-primary" id="exportRec">내 기록 내려받기 (Markdown)</button></div><p class="meta">제출이 필요하면 기관이 안내한 공식 경로로 본인이 직접 제출합니다. EKODI 서버로 자동 제출하지 않습니다.</p></div>'+planPanel();
 }

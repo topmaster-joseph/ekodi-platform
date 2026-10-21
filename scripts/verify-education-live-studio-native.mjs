@@ -202,8 +202,14 @@ async function learnerFlow(browser,profile){
     await dl.delete().catch(()=>{});
     step('material download');
     // Guided practice: dock advances 준비 → FactChat 열기 → 프롬프트 ①
+    const dockState=()=>page.evaluate(()=>{const a=document.querySelector('#dockAction');const r=a?.getBoundingClientRect();
+      const hit=r?document.elementFromPoint(r.left+r.width/2,r.top+r.height/2):null;
+      return {label:document.querySelector('#dockLabel')?.innerText.replace(/\s+/g,' ').slice(0,80),mode:a?.dataset.mode,text:a?.textContent,
+        hit:hit?(hit.id||hit.tagName)+'.'+String(hit.className).slice(0,40):'none',tab:document.querySelector('.tab.is-on')?.textContent,vh:innerHeight,top:r&&Math.round(r.top)};});
+    const before=await dockState();
     await page.locator('#dockAction').click();
-    if(!(await page.locator('#dockLabel').innerText()).startsWith('2/6'))fail('dock did not advance to step 2');
+    await page.waitForFunction(()=>/^2\/6/.test(document.querySelector('#dockLabel')?.innerText||''),null,{timeout:5000})
+      .catch(async()=>fail('dock did not advance to step 2 before='+JSON.stringify(before)+' after='+JSON.stringify(await dockState())));
     await page.locator('#dockNext').click();
     if(!(await page.locator('#stepCard').innerText()).includes('프롬프트'))fail('prompt step not shown');
     await page.locator('#stepCard [data-copy="step-prompt"]').first().click();
@@ -226,7 +232,7 @@ async function learnerFlow(browser,profile){
     await page.locator('#dockNext').click();
     await page.locator('textarea[data-memo]').fill('가상 실습 메모');
     await page.locator('[data-finish="hwp"]').click();
-    if(!(await page.locator('[data-tab="m:hwp"]').innerText()).includes('✓'))fail('mission completion not marked');
+    if(!(await page.locator('[data-tab="m:hwp"]').innerText()).includes('완료'))fail('mission completion not marked');
     step('mission completion');
     await page.locator('[data-tab="activity"]').click();
     await page.locator('[data-quiz="0"][data-ans="0"]').click();
