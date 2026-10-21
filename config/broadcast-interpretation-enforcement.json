@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "policyId": "BROADCAST-INTERPRETATION-ENFORCEMENT-001",
+  "status": "enforced",
+  "effectiveDate": "2026-09-28",
+  "canonicalHost": "ekodi.kr",
+  "principle": "one shared broadcast and interpretation engine, site-specific presets, no duplicated site-local engine",
+  "scope": {
+    "platformLiveHub": true,
+    "allCurrentSites": true,
+    "allFutureSitesAutoInherit": true,
+    "siteSpecificCustomizationAllowed": true,
+    "siteLocalForkOfCoreEngineAllowed": false,
+    "perSiteOptOutAllowed": false
+  },
+  "canonicalAddressing": {
+    "publicHub": "https://ekodi.kr/live",
+    "broadcastPattern": "https://ekodi.kr/live/{broadcastId}",
+    "watchPattern": "https://ekodi.kr/live/{broadcastId}/watch",
+    "studioPattern": "https://ekodi.kr/live/{broadcastId}/studio",
+    "platformAdmin": "https://ekodi.kr/admin",
+    "siteAdminPattern": "https://ekodi.kr/{slug}/admin",
+    "featureSubdomainCreationForbidden": true
+  },
+  "sharedRuntime": {
+    "controlModule": "realtime-control.js",
+    "apiPrefix": "/api/realtime",
+    "providerNeutralContractRequired": true,
+    "browserSecretsForbidden": true,
+    "multitenantRequired": true
+  },
+  "mandatoryCapabilities": [
+    "camera-and-microphone",
+    "screen-and-document-sharing",
+    "presentation-layouts",
+    "host-speaker-interpreter-panelist-viewer-roles",
+    "realtime-stt",
+    "realtime-translation",
+    "translated-captions",
+    "language-audio-channel-selection",
+    "human-interpreter-channel",
+    "ai-interpretation-fallback",
+    "recording",
+    "multichannel-distribution",
+    "event-archive-linkage",
+    "ai-summary",
+    "chaptering",
+    "shortform-candidate-generation"
+  ],
+  "interpretationPipeline": {
+    "order": ["source-audio", "stt", "domain-context-correction", "translation", "caption", "tts-or-human-interpreter", "language-channel"],
+    "sourceAudioAlwaysAvailable": true,
+    "humanInterpreterMayOverrideAiVoice": true,
+    "aiAndHumanHybridAllowed": true,
+    "languageSelectionPerViewer": true
+  },
+  "recording": {
+    "separateTracksPreferred": ["program", "source-audio", "captions", "translations", "interpretation-audio"],
+    "serverStoresOnlyRequiredRuntimeData": true,
+    "durableArchiveMayUseLinkedExternalStorage": true,
+    "archiveLinksMustRemainAuditable": true
+  },
+  "distribution": {
+    "website": true,
+    "rtmp": true,
+    "youtube": true,
+    "additionalDestinationsThroughAdapters": true,
+    "singleDestinationFailureMustNotStopCoreBroadcast": true
+  },
+  "sitePresets": {
+    "ekodichurch": {
+      "mode": "worship",
+      "defaults": ["scripture-context", "sermon-layout", "multilingual-caption", "interpretation-audio", "archive-to-past-events"]
+    },
+    "ekodimission": {
+      "mode": "mission-event",
+      "defaults": ["speaker-layout", "multilingual-caption", "interpretation-audio", "event-archive"]
+    },
+    "ekodibiz": {
+      "mode": "seminar",
+      "defaults": ["presentation-first-layout", "panel-layout", "qa", "multilingual-caption", "meeting-summary"]
+    },
+    "ekoditrade": {
+      "mode": "trade-consultation",
+      "defaults": ["product-presentation", "supplier-buyer-roles", "multilingual-caption", "interpretation-audio", "consultation-record"]
+    },
+    "default": {
+      "mode": "general",
+      "defaults": ["presentation-first-layout", "multilingual-caption", "recording"]
+    }
+  },
+  "integration": {
+    "channelCenterRequired": true,
+    "eventArchiveRequired": true,
+    "youtubeConnectionReuseRequired": true,
+    "sharedBroadcastIdAcrossArchiveAndDistribution": true
+  },
+  "administration": {
+    "centralRegistry": "Broadcast, Channels & Autopost",
+    "siteAdminMustExposeBroadcastOperationsWhenEnabled": true,
+    "superAdminCanInspectSiteBroadcastConfiguration": true,
+    "roleAndCapabilityChecksRequired": true
+  },
+  "verification": {
+    "sourceValidationRequired": true,
+    "ciGuardRequired": true,
+    "canonicalProductionVerificationRequiredBeforeCompletionClaim": true,
+    "deviceMatrix": ["mobile-portrait", "mobile-landscape", "tablet", "desktop"],
+    "criticalFlows": ["create-broadcast", "join-studio", "share-screen", "select-caption-language", "select-audio-language", "record", "publish-archive"]
+  }
+}

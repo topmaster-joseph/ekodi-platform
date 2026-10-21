@@ -1,0 +1,24 @@
+{
+  "id": "EKODI-AMENDMENT-2026-09-28-BROADCAST-INTERPRETATION-ENFORCEMENT",
+  "date": "2026-09-28",
+  "class": "C2",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalSource": "explicit user instruction on 2026-09-28 to coordinate with EKODI, establish this as a forced execution rule, and build it",
+  "constitutionVersion": "1.26.0",
+  "summary": "Enforce one shared multitenant EKODI broadcast and multilingual simultaneous-interpretation engine with site-specific presets, canonical /live addressing, site-owned /admin operations, fail-closed CI validation, and production verification before completion claims.",
+  "affectedAreas": [
+    "broadcast",
+    "realtime",
+    "multilingual-interpretation",
+    "site-presets",
+    "admin-governance",
+    "channel-integration",
+    "event-archive",
+    "ci-enforcement"
+  ],
+  "migrationPolicy": "non-breaking; reuse the existing realtime-control.js runtime and /live platform route, add policy and validation without creating a new feature subdomain or independent deployment boundary",
+  "rollbackPlan": "revert the policy, validator, tests, workflow gate and this amendment record; existing realtime runtime and live route remain unchanged",
+  "approvalLabel": "constitution-approved",
+  "approvalRecordedAt": "2026-09-28"
+}
