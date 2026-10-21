@@ -70,17 +70,41 @@ async function guard(context,profile){
     return route.continue();
   });
 }
-async function open(page,route){
+async function open(page,route,{ready=true}={}){
   const response=await page.goto(ORIGIN+route,{waitUntil:'domcontentloaded',timeout:35000});
   if(!response||response.status()!==200)fail(route+' returned HTTP '+response?.status());
   if(new URL(page.url()).origin!==ORIGIN)fail('redirect escaped Education origin: '+page.url());
-  await page.locator('body[data-ready="true"]').waitFor({state:'attached',timeout:20000});
+  if(ready)await page.locator('body[data-ready="true"]').waitFor({state:'attached',timeout:20000});
   await page.waitForLoadState('networkidle',{timeout:8000}).catch(()=>{});
 }
 async function overflow(page,label){
   const o=await page.evaluate(()=>({width:document.documentElement.scrollWidth,client:document.documentElement.clientWidth}));
   if(o.width>o.client+2)fail(label+' horizontal overflow '+JSON.stringify(o));
   return o;
+}
+// Sticky top bar must stay compact, sit at the top while scrolling, never cover content, and the bottom dock
+// must never hide the end of the page. Also confirms the self-hosted Pretendard font is in use.
+async function chromeCheck(page,label,{mobile=false,dock=false}={}){
+  const r=await page.evaluate(async({dock})=>{
+    await document.fonts.ready;
+    const top=document.querySelector('.lv-top');const h=top?Math.round(top.getBoundingClientRect().height):0;
+    window.scrollTo(0,600);await new Promise(r=>setTimeout(r,250));
+    const t=top?top.getBoundingClientRect():{top:-1,bottom:0};
+    const probeY=Math.ceil(t.bottom)+4;const under=document.elementFromPoint(Math.floor(innerWidth/2),probeY);
+    const covered=!!(under&&top&&top.contains(under));
+    window.scrollTo(0,document.documentElement.scrollHeight);await new Promise(r=>setTimeout(r,250));
+    let hidden=false;
+    if(dock){const d=document.querySelector('.dock');const main=document.querySelector('main');const last=main?.lastElementChild;
+      if(d&&last)hidden=last.getBoundingClientRect().bottom>d.getBoundingClientRect().top+1;}
+    window.scrollTo(0,0);
+    return {h,stickyTop:Math.round(t.top),covered,hidden,font:document.fonts.check('16px "Pretendard Variable"'),family:getComputedStyle(document.body).fontFamily.slice(0,30)};
+  },{dock});
+  if(!r.font||!/Pretendard/.test(r.family))fail(label+' Pretendard font not active '+JSON.stringify(r));
+  if(r.h>(mobile?72:80))fail(label+' top bar too tall '+r.h+'px');
+  if(r.stickyTop!==0)fail(label+' top bar not pinned while scrolling '+JSON.stringify(r));
+  if(r.covered)fail(label+' content hidden under top bar');
+  if(r.hidden)fail(label+' page end hidden under bottom dock');
+  return r;
 }
 async function shot(page,name,full=true){
   await fs.mkdir(artifactRoot,{recursive:true});
@@ -173,21 +197,37 @@ async function learnerFlow(browser,profile){
     const fc=page.locator('a[data-open-tool="factchat"]').first();
     if(await fc.getAttribute('href')!==FACTCHAT||await fc.getAttribute('target')!=='_blank')fail('FactChat link incorrect');
     step('official FactChat link');
-    await page.locator('[data-copy="prompt-0"]').click();
-    await page.waitForFunction(()=>/복사|선택/.test(document.querySelector('#toast')?.textContent||''),null,{timeout:5000}).catch(()=>fail('copy feedback missing'));
-    step('prompt copy');
-    const [dl]=await Promise.all([page.waitForEvent('download',{timeout:10000}),page.locator('[data-download="0"]').click()]);
+    const [dl]=await Promise.all([page.waitForEvent('download',{timeout:10000}),page.locator('#stepCard [data-download="0"]').click()]);
     if(!dl.suggestedFilename().endsWith('.txt'))fail('material download missing');
     await dl.delete().catch(()=>{});
     step('material download');
-    await page.locator('[data-crit]').first().check();
-    await page.locator('textarea[data-memo]').fill('가상 실습 메모');
+    // Guided practice: dock advances 준비 → FactChat 열기 → 프롬프트 ①
+    await page.locator('#dockAction').click();
+    if(!(await page.locator('#dockLabel').innerText()).startsWith('2/6'))fail('dock did not advance to step 2');
+    await page.locator('#dockNext').click();
+    if(!(await page.locator('#stepCard').innerText()).includes('프롬프트'))fail('prompt step not shown');
+    await page.locator('#stepCard [data-copy="step-prompt"]').first().click();
+    await page.waitForFunction(()=>/복사|선택/.test(document.querySelector('#toast')?.textContent||''),null,{timeout:5000}).catch(()=>fail('copy feedback missing'));
+    step('guided steps + prompt copy');
+    await page.locator('[data-step="4"]').click();
+    await page.locator('[data-sample="hwp"]').click();
+    await page.waitForFunction(()=>document.querySelectorAll('#verifyOut .finding.risk').length>0,null,{timeout:5000}).catch(()=>fail('result checker found no risk in the known-bad sample'));
+    const findings=await page.locator('#verifyOut').innerText();
+    if(!/원문에 없는/.test(findings))fail('checker output missing invented-value finding');
+    await page.locator('#stepCard [data-crit]').first().check();
+    step('result checker flags invented values');
     await page.waitForTimeout(200);
     await page.reload({waitUntil:'domcontentloaded'});await page.locator('body[data-ready="true"]').waitFor({state:'attached'});
-    await page.locator('[data-tab="m:hwp"]').click();
-    if(!await page.locator('[data-crit]').first().isChecked())fail('checklist not restored after reload');
-    if(await page.locator('textarea[data-memo]').inputValue()!=='가상 실습 메모')fail('memo not restored');
+    if(!(await page.locator('#dockLabel').innerText()).startsWith('5/6'))fail('step position not restored after reload');
+    if(!await page.locator('#stepCard [data-crit]').first().isChecked())fail('checklist not restored after reload');
+    if(!(await page.locator('textarea[data-result="hwp"]').inputValue()).includes('가상 AI 출력'))fail('pasted result not restored');
+    if(await page.locator('#verifyOut .finding').count()<1)fail('checker findings not restored');
     step('reload / disconnect recovery');
+    await page.locator('#dockNext').click();
+    await page.locator('textarea[data-memo]').fill('가상 실습 메모');
+    await page.locator('[data-finish="hwp"]').click();
+    if(!(await page.locator('[data-tab="m:hwp"]').innerText()).includes('✓'))fail('mission completion not marked');
+    step('mission completion');
     await page.locator('[data-tab="activity"]').click();
     await page.locator('[data-quiz="0"][data-ans="0"]').click();
     if(!(await page.locator('.quiz-q .result').first().innerText()).includes('정답'))fail('OX quiz feedback missing');
@@ -198,7 +238,8 @@ async function learnerFlow(browser,profile){
     await rec.delete().catch(()=>{});
     step('personal record export');
     await page.locator('[data-tab="m:hwp"]').click();
-    await shot(page,profile.name+'-learner');
+    await page.locator('[data-step="0"]').click();
+    await shot(page,profile.name+'-learner',false);
     flow.overflow=await overflow(page,profile.name+' learner');
     const entry=await context.newPage();watch(entry,profile.name);
     const r=await entry.goto(ORIGIN+R.entry,{waitUntil:'domcontentloaded'});if(r?.status()!==200)fail('factchat entry HTTP '+r?.status());
@@ -213,9 +254,14 @@ async function layoutProbe(browser,profile){
   try{
     const page=await context.newPage();watch(page,profile.name);
     const result={name:profile.name,viewport:{width:profile.width,height:profile.height}};
-    for(const [k,route] of [['studio',R.studio],['presenter',R.presenter],['lab',R.lab+'&s=2&m=ppt']]){
-      await open(page,route);result[k]=await overflow(page,profile.name+' '+k);
+    for(const [k,route,dock] of [['studio',R.studio,false],['presenter',R.presenter,false],['lab',R.lab+'&s=2&m=ppt',true],['entry',R.entry,false]]){
+      await open(page,route,{ready:k!=='entry'});result[k]=await overflow(page,profile.name+' '+k);
+      if(k!=='presenter')result[k+'Chrome']=await chromeCheck(page,profile.name+' '+k,{mobile:profile.mobile,dock});
     }
+    await open(page,R.audience);
+    const aud=await page.evaluate(()=>({visibleHeaders:[...document.querySelectorAll('header')].filter(h=>h.getBoundingClientRect().height>0&&getComputedStyle(h).display!=='none').length,sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}));
+    if(aud.visibleHeaders!==0||aud.sw>aud.cw+2)fail(profile.name+' audience view shows a header or overflows '+JSON.stringify(aud));
+    result.audience=aud;
     const legacy=await page.goto(ORIGIN+R.bootcamp,{waitUntil:'domcontentloaded'});
     if(legacy?.status()!==200)fail('existing 4x6 bootcamp classroom regression HTTP '+legacy?.status());
     await page.locator('.course-cards .lesson-card').first().waitFor({timeout:15000});

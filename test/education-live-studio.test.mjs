@@ -168,3 +168,41 @@ test('Study hub links the new studio and the existing bootcamp; deploy pipeline 
   assert.match(deploy,/node scripts\/verify-education-live-studio-native\.mjs/);
   assert.match(ci,/test\/education-live-studio\.test\.mjs/);
 });
+
+test('result checker flags the course error types and stays quiet on faithful output',async()=>{
+  const {checkOutput,extractFacts}=await import('../education/study/live/engine/checker.js');
+  const T=COURSE.trackMaterials,M=COURSE.missions;
+  const hwp=checkOutput(T.hwp.academic.source,M.hwp.fallback.sampleOutput);
+  assert.ok(hwp.findings.some(f=>f.type==='invented-number'&&f.detail.includes('9월 7일')));
+  assert.ok(hwp.findings.some(f=>f.type==='invented-contact'&&f.detail.includes('061-000-1234')));
+  assert.ok(hwp.findings.some(f=>f.type==='marker'));
+  const minutes=checkOutput(T.minutes.facility.script,M.minutes.fallback.sampleOutput);
+  assert.ok(minutes.findings.some(f=>f.type==='decided'));
+  const ppt=checkOutput(T.ppt.student.facts,M.ppt.fallback.sampleOutput);
+  const invented=ppt.findings.find(f=>f.type==='invented-number');
+  assert.ok(invented&&/92%/.test(invented.detail)&&/4\.8점/.test(invented.detail)&&/15%/.test(invented.detail));
+  const good=checkOutput(T.ppt.student.facts,'신청 42명, 참여 36명, 수료 31명, 만족도 4.4점. 분반 운영은 개선안이며 [확인 필요].');
+  assert.equal(good.summary.risk,0);assert.equal(good.summary.warn,0);
+  assert.equal(checkOutput('x','').findings[0].type,'empty');
+  assert.deepEqual(extractFacts('9월 2일(월) 10:00, 3,000만 원').numbers,['3000만원']);
+});
+
+test('every live surface uses self-hosted Pretendard and one owned sticky header outside main',async()=>{
+  const pages=['education/study/live/index.html','education/study/live/present/index.html','education/study/live/lab/index.html','education/factchat/index.html'];
+  for(const p of pages){
+    const html=await read(p);
+    assert.match(html,/fonts\/pretendard\/pretendardvariable-dynamic-subset\.css/,p);
+    assert.match(html,/<header class="lv-top"[^>]*data-ekodi-fixed-header/,p);
+    const main=html.slice(html.indexOf('<main'),html.indexOf('</main>'));
+    assert.doesNotMatch(main,/<header[\s>]/,p+' must not put a <header> inside <main> (Shell would adopt it)');
+  }
+  const css=await read('education/fonts/pretendard/pretendardvariable-dynamic-subset.css');
+  assert.match(css,/font-family: 'Pretendard Variable'/);
+  assert.match(await read('education/fonts/pretendard/OFL-1.1.txt'),/SIL OPEN FONT LICENSE/i);
+  const live=await read('education/study/live/live.css');
+  assert.match(live,/--font:"Pretendard Variable"/);
+  assert.match(live,/top:var\(--lv-top-h\)/);
+  assert.match(live,/var\(--lv-dock-h\)/);
+  assert.match(live,/\.lv \[hidden\]\{display:none!important\}/);
+  assert.match(await read('education/study/live/present.js'),/ekodiUserHeader='immersive'/);
+});

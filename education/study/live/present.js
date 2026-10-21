@@ -3,7 +3,7 @@ import {courseEntry} from './courses/registry.js';
 import {validateCourse,sessionByNo,sessionSlides,learnerUrl,formatClock,liveBase} from './engine/model.js';
 import {createLiveStore,lectureElapsedMs,timerRemainingMs,timerPhase,CHANNEL_NAME} from './engine/live-state.js';
 import {qrSvg} from './engine/qr.js';
-import {esc,list,slideHtml,safeStorage,safeChannel} from './engine/render.js';
+import {esc,list,slideHtml,safeStorage,safeChannel,bindChrome} from './engine/render.js';
 
 const $=s=>document.querySelector(s);
 const params=new URLSearchParams(location.search);
@@ -136,6 +136,8 @@ async function init(){
   course=data.COURSE;validateCourse(course);notes=noteMod.NOTES||{};
   if(audience){
     document.body.classList.remove('pres-body');document.body.classList.add('audience-body');document.body.dataset.liveSurface='audience';
+    // Projector output: no shared header, spacer or footer on top of the slides.
+    document.body.dataset.ekodiUserHeader='immersive';
     $('#presTop').hidden=true;$('#presSide').remove();
     const main=$('#presMain');main.className='audience';main.querySelector('.stage').className='';
     document.title='청중 화면 · EKODI Education';
@@ -145,6 +147,7 @@ async function init(){
   const qs=Number(params.get('s'));
   if(!audience&&sessionByNo(course,qs)&&qs!==S().session)store.dispatch({type:'session/set',session:qs});
   bind();render();
+  if(!audience)bindChrome(document,{top:$('#presTop')});
   setInterval(tick,500);
   document.body.dataset.ready='true';
 }

@@ -33,14 +33,16 @@ export function featureCard(checks,id,{controls=false}={}){
 }
 export const allFeatureIds=()=>FACTCHAT_FEATURES.map(f=>f.id);
 
-export function promptBlocks(course,missionId,trackId,levelId){
-  return buildPrompts(course,missionId,trackId,levelId).map((p,i)=>
-    '<div class="prompt"><div class="prompt-head"><strong>'+esc(p.label)+'</strong><button type="button" class="btn btn-small" data-copy="prompt-'+i+'">복사</button></div>'+
-    '<pre class="prompt-text" id="prompt-'+i+'" tabindex="0">'+esc(p.text)+'</pre></div>').join('');
+export function promptBlock(p,id){
+  return '<div class="prompt"><div class="prompt-head"><strong>'+esc(p.label)+'</strong><button type="button" class="btn btn-small" data-copy="'+esc(id)+'">복사</button></div>'+
+    '<pre class="prompt-text" id="'+esc(id)+'" tabindex="0">'+esc(p.text)+'</pre></div>';
+}
+export function promptBlocks(course,missionId,trackId,levelId,idPrefix=''){
+  return buildPrompts(course,missionId,trackId,levelId).map((p,i)=>promptBlock(p,idPrefix+'prompt-'+i)).join('');
 }
 
 // The 10-part mission structure shared by the Learner Lab and the instructor preview.
-export function missionSections(course,missionId,{trackId,levelId,checks,tool,showFallback=false,checked={}}={}){
+export function missionSections(course,missionId,{trackId,levelId,checks,tool,showFallback=false,checked={},idPrefix=''}={}){
   const m=course.missions[missionId];if(!m)return '<p>미션을 찾을 수 없습니다.</p>';
   const ctx=missionContext(course,missionId,trackId);
   const level=levelById(course,levelId);
@@ -57,7 +59,7 @@ export function missionSections(course,missionId,{trackId,levelId,checks,tool,sh
     sec(4,'준비할 자료',list(m.prepare)+(source?'<div class="source"><p class="source-label">'+esc(ctx.label)+' · '+esc(ctx.doc||ctx.meeting||ctx.topic||'')+'</p><pre class="source-text">'+esc(source)+'</pre></div>':'')+ideas+
       (materials.length?'<div class="downloads">'+materials.map((f,i)=>'<button type="button" class="btn btn-ghost btn-small" data-download="'+i+'">⬇ '+esc(f.label)+'</button>').join('')+'</div>':'')),
     sec(5,'따라 하기',list(m.steps,true,'steps')),
-    sec(6,'복사 가능한 프롬프트 · '+esc(level.label),'<p class="meta">'+esc(level.hint)+'</p>'+promptBlocks(course,missionId,trackId,level.id)),
+    sec(6,'복사 가능한 프롬프트 · '+esc(level.label),'<p class="meta">'+esc(level.hint)+'</p>'+promptBlocks(course,missionId,trackId,level.id,idPrefix)),
     sec(7,'예상 결과 예시','<p>'+esc(m.expected)+'</p>'),
     sec(8,'검증해야 하는 오류','<div class="checks">'+errs+'</div>'),
     sec(9,'최종 결과물 · 달성 조건','<p><b>'+esc(m.deliverable)+'</b></p><div class="checks">'+crit+'</div>'),
@@ -109,3 +111,18 @@ export function safeStorage(win){
   try{const s=win.localStorage;const k='__ekodi_probe__';s.setItem(k,'1');s.removeItem(k);return s;}catch{return null;}
 }
 export function safeChannel(win,name){try{return typeof win.BroadcastChannel==='function'?new win.BroadcastChannel(name):null;}catch{return null;}}
+
+// Measures the sticky top bar and fixed dock so nothing overlaps; works whether or not the EKODI Shell
+// later adopts the top bar as its fixed header (it then inserts its own spacer of the same height).
+export function bindChrome(doc,{top=null,dock=null}={}){
+  const root=doc.body;
+  const apply=()=>{
+    if(top)root.style.setProperty('--lv-top-h',Math.ceil(top.getBoundingClientRect().height)+'px');
+    root.style.setProperty('--lv-dock-h',dock&&!dock.hidden?Math.ceil(dock.getBoundingClientRect().height)+'px':'0px');
+  };
+  apply();
+  const RO=doc.defaultView?.ResizeObserver;
+  if(typeof RO==='function'){const ro=new RO(apply);if(top)ro.observe(top);if(dock)ro.observe(dock);}
+  doc.defaultView?.addEventListener('resize',apply);
+  return apply;
+}
