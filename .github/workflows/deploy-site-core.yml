@@ -232,6 +232,7 @@ on:
       - 'admin-ai-control-plane.js'
       - 'admin-ai-governor.js'
       - 'admin-provider-control.js'
+      - 'ai-operations-center-admin.js'
       - 'admin-secret-generator.js'
       - 'admin-demand-loader.js'
       - 'personal-finance-admin.js'

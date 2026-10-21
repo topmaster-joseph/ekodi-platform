@@ -203,3 +203,9 @@ test('AI operations center renders the approval checkbox and sends the explicit 
   assert.match(center,/institution_account_approval_required/);
   assert.match(center,/\.aic-row\.provider \.aic-guard\{grid-column:1\/-1/);
 });
+
+test('AI operations center edits dispatch the Shared Site Core release that bundles it',()=>{
+  assert.match(read('scripts/converge-orchestrated-pr-merge.mjs'),/file==='ai-operations-center-admin\.js'\|\|/);
+  assert.match(read('.github/workflows/deploy-site-core.yml'),/- 'ai-operations-center-admin\.js'/);
+  assert.match(read('scripts/build.mjs'),/'ai-operations-center-admin\.js'/);
+});
