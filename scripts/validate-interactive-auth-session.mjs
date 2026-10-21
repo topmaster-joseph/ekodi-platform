@@ -75,6 +75,9 @@ for (const required of ['Request-EkodiInteractiveAuthLocalConsent', 'WScript.She
 must(/'computer\.auth_session\.start' \{ return Start-EkodiInteractiveAuthSession \$payload \}/.test(agent), 'agent dispatch start missing');
 must(/Reconcile-EkodiInteractiveAuthSession\)/.test(agent.slice(agent.indexOf('function Run-Agent'))), 'agent loop reconcile missing');
 
+must(/commands\/\$CommandId\/result" [^\n]*charset=utf-8'[^\n]*UTF8\.GetBytes\(\$body\)/.test(agent), 'agent command results must be sent as UTF-8 bytes');
+must(/device-agent\/heartbeat" [^\n]*charset=utf-8'[^\n]*UTF8\.GetBytes\(\$body\)/.test(agent), 'agent heartbeat must be sent as UTF-8 bytes');
+
 if (errors.length) {
   console.error(`EKODI-INTERACTIVE-AUTH-001 validation failed:\n- ${errors.join('\n- ')}`);
   process.exit(1);
