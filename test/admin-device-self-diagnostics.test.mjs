@@ -19,7 +19,7 @@ test('admin browser diagnostics is included in production dist assets', () => {
 });
 
 test('admin browser diagnostics stays local and browser-scoped', () => {
-  assert.match(source, /현재 관리자 브라우저 진단/);
+  assert.match(source, /이 컴퓨터의 브라우저 점검/);
   assert.match(source, /서버로 업로드하지 않습니다/);
   assert.match(source, /CACHE_ALLOWLIST/);
   assert.match(source, /registration\.update\(\)/);

@@ -159,7 +159,7 @@
   }
 
   async function safeOptimize(host) {
-    if (!window.confirm('admin.ekodi.kr의 EKODI 전용 캐시와 Service Worker 업데이트만 진행합니다. 로그인 정보, 다른 사이트 데이터, 개인 파일은 건드리지 않습니다. 계속할까요?')) return;
+    if (!window.confirm('현재 브라우저의 EKODI 전용 캐시를 정리하고 웹 구성요소 업데이트를 확인합니다. 로그인 정보, 다른 사이트 데이터, 개인 파일은 건드리지 않습니다. 계속할까요?')) return;
     const button = host.querySelector('[data-browser-safe-optimize]');
     button.disabled = true;
     const messages = [];
@@ -194,12 +194,12 @@
     section.className = 'admin-browser-diagnostic';
     section.innerHTML = `
       <div class="admin-browser-diagnostic-head">
-        <div><p class="kicker">CURRENT ADMIN BROWSER</p><h3>현재 관리자 브라우저 진단</h3><p>이 브라우저와 admin.ekodi.kr 웹 환경만 확인합니다. Windows 설정, 다른 사이트 데이터, 개인 파일에는 접근하지 않습니다.</p></div>
+        <div><p class="kicker">내 브라우저</p><h3>이 컴퓨터의 브라우저 점검</h3><p>현재 사용 중인 브라우저의 EKODI 접속 상태만 확인합니다. 다른 컴퓨터나 Windows 전체는 점검하지 않습니다.</p></div>
         <span data-browser-diagnostic-stamp>아직 진단하지 않음</span>
       </div>
       <div class="admin-browser-diagnostic-actions">
-        <button type="button" class="primary" data-browser-diagnose>현재 브라우저 진단</button>
-        <button type="button" class="secondary" data-browser-safe-optimize>안전 최적화</button>
+        <button type="button" class="primary" data-browser-diagnose>브라우저 점검</button>
+        <button type="button" class="secondary" data-browser-safe-optimize>브라우저 정리</button>
         <small data-browser-diagnostic-status>결과는 현재 브라우저에만 표시하며 서버로 업로드하지 않습니다.</small>
       </div>
       <div class="admin-browser-diagnostic-result" data-browser-diagnostic-result hidden></div>`;
