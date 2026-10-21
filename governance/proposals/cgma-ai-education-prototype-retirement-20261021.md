@@ -1,6 +1,10 @@
 # ADR 제안: 청계면상인회 AI 교육 수요조사 구버전 시제품 퇴역 (CGMA-AIEDU-RETIRE-001)
 
-- 상태: **제안 → EKODI AI 협의 요청**
+- 상태: **결정 (v2)** — EKODI AI 협의 2회, 2차 sentinel approve-with-changes 반영
+- 협의 기록: 이슈 #5524
+  - 1차 run 39535552797: partial. sentinel reject — 사유는 협의 도구 결함(본문 1,200자 절단, 요약 하드코딩). 도구 수정 #5527/#5528
+  - 2차 run 39535775334: partial(전문가 2, sentinel 1). sentinel **approve-with-changes**: 503 유지 지지(308은 루프·영구캐시 위험), 경로만 로깅 유지, 우회 이상징후 집계·알림 추가 요구
+- 릴리스: #5525 → orch_recovery #5526 병합(fdd3cf2). 2차 협의 결과 수신 전 자동 병합됨 — 요구사항은 후속 PR로 반영
 - task_id: cgma-ai-education-prototype-retire-20261021
 - 브랜치: `ai/claude/cgma-ai-education-prototype-retire-20261021`
 - 작성: 2026-10-21, Claude (교체 가능한 개발 작업자), 대표 지시 "에코디랑 협의해서 정리해 그리고 구축해"
@@ -46,3 +50,11 @@
 - 퇴역 방식(삭제 + fail-closed 가드)이 EKODI 정책에 맞는가
 - 503 대신 운영 원본으로 308 리다이렉트가 더 적절한가 (현재 판단: 게이트웨이 장애 시 루프 위험으로 503 유지)
 - 추가로 필요한 가드레일
+
+## 6. 협의 반영 (v2)
+
+| sentinel 요구 | 반영 |
+|---|---|
+| 503 유지, 308 금지 | 유지 |
+| 본문·쿼리 미기록, pathname만 | 유지 (`[ekodi-anomaly] cgma-gateway-bypass <pathname>`) |
+| 우회 이상징후 메트릭·알림 | 가드 응답에 `x-ekodi-anomaly: cgma-gateway-bypass` 헤더, 매시간 독립 감시 `cgma-ai-education-health-watch.yml` + `scripts/monitor-cgma-ai-education.mjs`가 운영 설문 소유자·관리자 전용 통계 경계를 확인하고 이상 시 장애 이슈 1건 생성(우회는 gateway_bypass로 명시), 회복 시 자동 종료 |

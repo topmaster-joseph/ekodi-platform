@@ -21,14 +21,15 @@ const NOTICE='<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta n
   +'<p><a href="/cgma/">청계면상인회 홈으로</a></p></body></html>';
 function headers(extra={}){
   return {'cache-control':'no-store','x-content-type-options':'nosniff','x-robots-tag':'noindex, nofollow',
-    'x-ekodi-route':CGMA_AI_EDUCATION_ROUTE,'x-ekodi-workspace':'cgma','x-ekodi-source-of-truth':CGMA_AI_EDUCATION_SOURCE,...extra};
+    'x-ekodi-route':CGMA_AI_EDUCATION_ROUTE,'x-ekodi-workspace':'cgma','x-ekodi-anomaly':'cgma-gateway-bypass','x-ekodi-source-of-truth':CGMA_AI_EDUCATION_SOURCE,...extra};
 }
 export async function routeCgmaAiEducation(request){
   const url=new URL(request.url);
   if(!isCgmaAiEducationPath(url.pathname))return null;
   if(!['GET','HEAD'].includes(request.method))return new Response(null,{status:405,headers:headers({allow:'GET, HEAD'})});
-  // Log the path only (never query or body) so a gateway bypass is visible in Worker logs.
-  console.error('[cgma-ai-education] request reached retired Shared Site guard; gateway bypass?',url.pathname.slice(0,80));
+  // Anomaly signal (CGMA-AIEDU-RETIRE-001): pathname only — never query, headers or body.
+  // scripts/monitor-cgma-ai-education.mjs (hourly) turns this route into an incident issue.
+  console.error('[ekodi-anomaly] cgma-gateway-bypass',url.pathname.slice(0,80));
   const isDocument=url.pathname===PREFIX||url.pathname===PREFIX+'/'||url.pathname===PREFIX+'/index.html';
   if(!isDocument)return new Response('Survey is served by the CGMA gateway',{status:503,headers:headers({'content-type':'text/plain; charset=utf-8','retry-after':'300'})});
   return new Response(request.method==='HEAD'?null:NOTICE,{status:503,headers:headers({

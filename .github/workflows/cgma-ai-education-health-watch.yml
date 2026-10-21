@@ -1,0 +1,66 @@
+name: CGMA AI Education Survey Health Watch
+# CGMA-AIEDU-RETIRE-001: hourly, read-only proof that ekodi.kr/cgma/ai-education is served by the
+# D1-backed operating survey (cheonggye-market via cgma-root-gateway) and never by the retired
+# Shared Site guard. Opens one incident on failure (gateway bypass is labelled explicitly) and
+# resolves it after recovery. Submits no survey answers and reads no private statistics.
+
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: cgma-ai-education-health-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Check the operating survey owner and admin-only statistics boundary
+        id: probe
+        continue-on-error: true
+        shell: bash
+        run: |
+          node scripts/monitor-cgma-ai-education.mjs > cgma-ai-education-probe.json
+      - name: Open one incident on failure, resolve it after recovery
+        if: always()
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+        with:
+          script: |
+            const fs=require('fs');
+            const marker='<!-- EKODI_CGMA_AI_EDUCATION_WATCH_V1 -->';
+            const issueTitle='[운영감시] CGMA AI 교육 수요조사 상태 이상';
+            let result;
+            try {
+              result=JSON.parse(fs.readFileSync('cgma-ai-education-probe.json','utf8'));
+            } catch {
+              result={ok:false,results:[{path:'CGMA_AI_EDUCATION_PROBE',ok:false,reason:'probe_process_failed'}]};
+            }
+            const {owner,repo}=context.repo;
+            const issues=await github.paginate(github.rest.issues.listForRepo,{owner,repo,state:'open',per_page:100});
+            const previous=issues.find(issue=>!issue.pull_request && issue.title===issueTitle && (issue.body||'').includes(marker));
+            if(result.ok===true){
+              if(previous){
+                await github.rest.issues.createComment({owner,repo,issue_number:previous.number,body:'CGMA AI education survey checks have recovered. Automated watch resolved this incident.'});
+                await github.rest.issues.update({owner,repo,issue_number:previous.number,state:'closed',state_reason:'completed'});
+              }
+            } else if(!previous) {
+              const problems=(result.results||[]).filter(r=>r.ok!==true).map(r=>'- '+String(r.path).slice(0,90)+': '+String(r.reason).slice(0,90)).join('\n');
+              const bypass=result.gatewayBypass===true?'\n\n**gateway_bypass**: 응답이 Shared Site 퇴역 가드(cgma-ai-education-retired-prototype)에서 나왔습니다. cgma-root-gateway 라우트(ekodi.kr/cgma*)를 즉시 확인하세요. 설문 응답이 접수되지 않는 상태입니다.':'';
+              await github.rest.issues.create({owner,repo,title:issueTitle,body:marker+'\nAutomated hourly read-only CGMA AI education survey check failed after bounded retries.\n'+problems+bypass+'\n\nWorkflow: '+context.serverUrl+'/'+owner+'/'+repo+'/actions/runs/'+context.runId+'\n\nNo survey answers were submitted and no private statistics were read.'});
+            }
+      - name: Fail workflow visibly if any check is still unhealthy
+        if: steps.probe.outcome != 'success'
+        run: exit 1
