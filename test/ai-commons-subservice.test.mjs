@@ -10,14 +10,15 @@ test('subservice source id is normalized without changing request identity',()=>
   assert.equal(idea.outcome,'홍보 글 만들어줘');
 });
 
-test('shared user shell bundles the common AI entry for user surfaces',()=>{
+test('shared user shell ships the retired, purge-only AI entry (bottom command box removed)',()=>{
   const worker=read('ekodi-shell-worker.js');
   const entry=read('shell/user-ai-entry.js');
   assert.match(worker,/user-ai-entry\.js/);
   assert.match(worker,/x-ekodi-user-ai-entry/);
-  assert.match(entry,/AI로 하기/);
-  assert.match(entry,/blocked=new Set\(\['admin','form','document','data'\]\)/);
-  assert.match(entry,/searchParams\.set\('source',service\)/);
+  assert.match(entry,/__EKODI_USER_AI_ENTRY_RETIRED__/);
+  assert.doesNotMatch(entry,/AI로 하기|무엇을 원하세요/);
+  assert.doesNotMatch(entry,/innerHTML|location\.assign/);
+  assert.match(worker,/'x-ekodi-user-ai-entry',userAiEntry\?'retired'/);
 });
 
 test('central AI handoff consumes subservice source and request',()=>{

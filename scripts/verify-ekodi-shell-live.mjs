@@ -124,7 +124,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
   }
   includesAll(shellResult.text,'shell',[
     'window.EKODIShell','내 공간 · My EKODI','EKODI 다음 행동','suggestedServices','모든 서비스 보기','ekodi:public-experience',
-    'window.EKODIUserUIHeader','window.EKODIUserUIFooter','__EKODI_USER_AI_ENTRY__','AI로 하기','window.EKODIMediaMeetingAdapter','https://ekodi.kr/social/api/media/youtube/status','window.__EKODI_USER_FOOTER_CONFIG__','user-footer.json','window.EKODICharacterRegistry','window.EKODICharacterIdentityRegistry','ekodi.ekodian-identity.v1','window.EKODIUserCharacter',
+    'window.EKODIUserUIHeader','window.EKODIUserUIFooter','__EKODI_USER_AI_ENTRY_RETIRED__','window.EKODIMediaMeetingAdapter','https://ekodi.kr/social/api/media/youtube/status','window.__EKODI_USER_FOOTER_CONFIG__','user-footer.json','window.EKODICharacterRegistry','window.EKODICharacterIdentityRegistry','ekodi.ekodian-identity.v1','window.EKODIUserCharacter',
     'window.EKODIAdminUIShell','ekodi-admin-ui-shell-style','.side-brand','ekodi:admin-shell-ready',
     'window.EKODIPublicSurfaceAdmin','cross_origin_admin_target_forbidden','ekodi:public-admin-ready','window.open',"presentation:mode",
     'ekodi-mobile-fixed-header-style','data-ekodi-mobile-header-spacer','ResizeObserver','position:fixed!important',
@@ -139,7 +139,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
   if(shellResult.headers?.get?.('x-ekodi-character-identity')!=='v2')failures.push(`shell:character-identity:${shellResult.headers?.get?.('x-ekodi-character-identity')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-user-character')!=='v6')failures.push(`shell:user-character:${shellResult.headers?.get?.('x-ekodi-user-character')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-user-ui-header')!=='v3')failures.push(`shell:user-ui-header:${shellResult.headers?.get?.('x-ekodi-user-ui-header')||'missing'}`);
-  if(shellResult.headers?.get?.('x-ekodi-user-ai-entry')!=='v1')failures.push(`shell:user-ai-entry:${shellResult.headers?.get?.('x-ekodi-user-ai-entry')||'missing'}`);
+  if(shellResult.headers?.get?.('x-ekodi-user-ai-entry')!=='retired')failures.push(`shell:user-ai-entry:${shellResult.headers?.get?.('x-ekodi-user-ai-entry')||'missing'}`);
   const expectedFooterHeader=footerConfig?.version?`v${Number(footerConfig.version)}`:'';
   if(expectedFooterHeader&&shellResult.headers?.get?.('x-ekodi-user-ui-footer')!==expectedFooterHeader)failures.push(`shell:user-ui-footer:${shellResult.headers?.get?.('x-ekodi-user-ui-footer')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-admin-ui-shell')!=='v2')failures.push(`shell:admin-ui-shell:${shellResult.headers?.get?.('x-ekodi-admin-ui-shell')||'missing'}`);
