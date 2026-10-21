@@ -29,6 +29,7 @@ import {
 } from './ekodi-orchestrator-task-adapter.js';
 import { collectPlatformRuntimeObservations } from './ekodi-platform-observer.js';
 import { runRuntimeAutonomicControlPlane } from './ekodi-autonomic-control-plane.js';
+import { buildFleetStatus, renderFleetStatusHtml } from './ekodi-fleet-status.js';
 
 const PREFIX = '/api/control/ai/v8';
 const COLLABORATION_PATH = `${PREFIX}/collaboration-settings`;
@@ -334,6 +335,36 @@ export async function handleEkodiV8CommandControl(request, env) {
       ledger,
       autonomic,
     });
+  }
+
+  // Read-only unified fleet status. Joins the existing D1 health read-model
+  // into one operator view (JSON) and a human-readable board (HTML). It never
+  // probes, mutates, or deploys; automatic rollback stays with guarded-release.
+  if (request.method === 'GET' && (url.pathname === `${PREFIX}/fleet` || url.pathname === `${PREFIX}/fleet/view`)) {
+    const emptyRows = { results: [] };
+    const [latestRes, envRes] = await Promise.all([
+      env.DB.prepare('SELECT service_id, status, http_status, response_ms, detail, checked_at FROM service_check_latest')
+        .all().catch(() => emptyRows),
+      env.DB.prepare('SELECT environment, service_id, service_name, host, status, http_status, response_ms, detail, checked_at FROM cloudflare_environment_checks')
+        .all().catch(() => emptyRows),
+    ]);
+    const model = buildFleetStatus({
+      now: new Date().toISOString(),
+      latestChecks: latestRes?.results || [],
+      environmentChecks: envRes?.results || [],
+    });
+    if (url.pathname === `${PREFIX}/fleet/view`) {
+      return new Response(renderFleetStatusHtml(model), {
+        status: 200,
+        headers: new Headers({
+          'content-type': 'text/html; charset=utf-8',
+          'cache-control': 'no-store',
+          'x-content-type-options': 'nosniff',
+          'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'",
+        }),
+      });
+    }
+    return json(request, env, { ok: true, fleet: model });
   }
 
   if (request.method === 'GET' && url.pathname === `${PREFIX}/tasks`) {
