@@ -244,7 +244,14 @@ async function main(){
     }
     if(report.notesLoadedByLearner)fail('Learner Lab requested instructor notes');
     report.ok=true;
-  }catch(error){report.error=trim(error?.message||error,1100);throw error}
+  }catch(error){
+    report.error=trim(error?.message||error,1100);
+    // Surface the reason as a GitHub annotation (readable without downloading logs/artifacts).
+    const esc=v=>String(v).replace(/%/g,'%25').replace(/\r/g,'%0D').replace(/\n/g,'%0A');
+    const extra=['consoleErrors','pageErrors','httpErrors','requestFailures'].map(k=>k+'='+JSON.stringify(report[k].slice(0,3))).join(' ');
+    console.log('::error title=EKODI Education Live probe::'+esc(report.error+' | '+extra).slice(0,3500));
+    throw error;
+  }
   finally{
     await browser?.close();report.finishedAt=new Date().toISOString();
     await fs.mkdir(artifactRoot,{recursive:true});
