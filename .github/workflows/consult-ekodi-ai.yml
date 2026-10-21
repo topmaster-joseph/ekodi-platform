@@ -88,20 +88,26 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          proposal=$(head -c 7000 "$PROPOSAL_PATH")
+          # The command plane clips `goal` to 1,200 chars, so the goal carries only the
+          # instruction and the proposal travels in `context.proposal` (passed verbatim to
+          # every specialist and the sentinel). The summary is derived from the proposal title.
+          proposal=$(head -c 24000 "$PROPOSAL_PATH")
+          title=$(grep -m1 '^# ' "$PROPOSAL_PATH" | sed 's/^# *//' | head -c 300)
+          [ -n "$title" ] || title=$(basename "$PROPOSAL_PATH")
           task_id="consult_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
-          goal=$(printf '%s\n\n%s' 'Read-only architecture consultation. Review the EKODI proposal below against EKODI constitution, security, secrets, DNS and orchestration policies. Answer each consultation question in section 8, state approve / approve-with-changes / reject with reasons, and list missing risks. Authorizes no external action and no production mutation.' "$proposal")
+          goal="Read-only architecture consultation of the EKODI proposal in context.proposal (title: ${title}). Review it against EKODI constitution, security, secrets, DNS and orchestration policies. Answer every question in the proposal's consultation-request section, state approve / approve-with-changes / reject with reasons, and list missing risks. Authorizes no external action and no production mutation."
+          goal=${goal:0:1150}
           # A non-mutating review is classified read-only by AI-CONSULT-001 and gets a
           # single review. Designs that still carry open 확인필요 items are a genuine
           # highUncertainty case, which AI-CONSULT-001 routes to independent
           # re-verification. The task still authorizes no action.
           high_uncertainty=false; [ "$CONSULT_MODE" = "multi" ] && high_uncertainty=true
-          payload=$(jq -nc --arg taskId "$task_id" --arg goal "$goal" --argjson hu "$high_uncertainty" '{
+          payload=$(jq -nc --arg taskId "$task_id" --arg goal "$goal" --arg proposal "$proposal" --arg path "$PROPOSAL_PATH" --arg title "$title" --argjson hu "$high_uncertainty" '{
             taskId:$taskId, goal:$goal, risk:"medium", readOnly:true, mutation:false, routine:false, maxAttempts:1, highUncertainty:$hu,
             target:{service:"core",capability:"architecture_review",surface:"admin"},
             delegation:{allowed:true,reversible:true,audited:true,preflightVerified:true,verificationDefined:true},
-            context:{source:"github-actions-consultation",productionMutationAllowed:false,highUncertainty:$hu,uncertaintyReason:"proposal contains unresolved 확인필요 items",consultationCategories:["secrets","dns","authentication"]},
-            event:{id:("pulse_"+$taskId),kind:"manual_goal",source:"github-actions-consultation",summary:"Proposal review: search engine registration automation",changeClass:"green",actionable:true,requiresHumanDecision:false},
+            context:{source:"github-actions-consultation",productionMutationAllowed:false,highUncertainty:$hu,uncertaintyReason:"proposal contains unresolved 확인필요 items",consultationCategories:["secrets","dns","authentication"],proposalPath:$path,proposalTitle:$title,proposal:$proposal},
+            event:{id:("pulse_"+$taskId),kind:"manual_goal",source:"github-actions-consultation",summary:("Proposal review: "+$title),changeClass:"green",actionable:true,requiresHumanDecision:false},
             executeNow:true}')
           curl -fsS --retry 2 -X POST "$EKODI_ORIGIN/api/control/ai/v8/pulse" -H "Authorization: Bearer $EKODI_TOKEN" \
             -H 'Content-Type: application/json' --data "$payload" > "$RUNNER_TEMP/submit.json" || echo '{"ok":false}' > "$RUNNER_TEMP/submit.json"
