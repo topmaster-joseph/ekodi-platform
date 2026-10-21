@@ -1,0 +1,137 @@
+name: Cloudflare Subdomain Zero Audit
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 18 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      APEX_DOMAIN: ekodi.kr
+    steps:
+      - uses: actions/checkout@v7
+      - name: EKODI AI orchestration gate
+        run: node scripts/validate-ekodi-ai-change-orchestration.mjs --ci
+      - name: Audit Cloudflare public web topology
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test -n "$CLOUDFLARE_API_TOKEN"
+          api='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          work=/tmp/ekodi-subdomain-zero
+          mkdir -p "$work"
+
+          request_required() {
+            local name="$1" url="$2"
+            curl -fsS "${auth[@]}" "$url" -o "$work/$name.json"
+            jq -e '.success == true' "$work/$name.json" >/dev/null
+          }
+          request_optional() {
+            local name="$1" url="$2"
+            if curl -fsS "${auth[@]}" "$url" -o "$work/$name.json" && jq -e '.success == true' "$work/$name.json" >/dev/null 2>&1; then
+              echo "$name=available" >> "$work/endpoints.txt"
+            else
+              rm -f "$work/$name.json"
+              echo "$name=unavailable" >> "$work/endpoints.txt"
+            fi
+          }
+
+          request_required zones "$api/zones?name=$APEX_DOMAIN&account.id=$CLOUDFLARE_ACCOUNT_ID"
+          zone_id=$(jq -r --arg d "$APEX_DOMAIN" '.result[] | select(.name == $d) | .id' "$work/zones.json" | head -n1)
+          test -n "$zone_id"
+
+          request_required dns "$api/zones/$zone_id/dns_records?per_page=5000"
+          request_required worker_domains "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains"
+          request_required worker_routes "$api/zones/$zone_id/workers/routes"
+          request_optional page_rules "$api/zones/$zone_id/pagerules?per_page=100"
+          request_optional rulesets "$api/zones/$zone_id/rulesets"
+          request_optional load_balancers "$api/zones/$zone_id/load_balancers?per_page=100"
+          request_optional pages_projects "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects"
+          request_optional redirect_lists "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/rules/lists?kind=redirect"
+
+          if [[ -f "$work/pages_projects.json" ]]; then
+            jq -r '.result[]?.name // empty' "$work/pages_projects.json" | while IFS= read -r project; do
+              [[ -n "$project" ]] || continue
+              safe=$(printf '%s' "$project" | tr -c 'A-Za-z0-9_.-' '_')
+              request_optional "pages_domains_$safe" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$project/domains"
+            done
+          fi
+
+          if [[ -f "$work/redirect_lists.json" ]]; then
+            jq -r '.result[]?.id // empty' "$work/redirect_lists.json" | while IFS= read -r list_id; do
+              [[ -n "$list_id" ]] || continue
+              request_optional "redirect_items_$list_id" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/rules/lists/$list_id/items?per_page=500"
+            done
+          fi
+
+          python - "$work" "$APEX_DOMAIN" <<'PY'
+          import json, pathlib, re, sys
+
+          work = pathlib.Path(sys.argv[1])
+          apex = sys.argv[2].lower()
+          host_re = re.compile(r'(?:(?:\*\.)|(?:[a-z0-9_-]+\.))+' + re.escape(apex), re.I)
+
+          def infrastructure(host):
+              host = host.lower().removeprefix('*.')
+              return (
+                  host == f'_dmarc.{apex}'
+                  or host == f'_acme-challenge.{apex}'
+                  or (host.startswith('_acme-challenge.') and host.endswith('.' + apex))
+                  or f'._domainkey.{apex}' in host
+              )
+
+          findings = set()
+          infra = set()
+          for file in sorted(work.glob('*.json')):
+              try:
+                  value = json.loads(file.read_text())
+              except Exception:
+                  continue
+              stack = [value]
+              while stack:
+                  item = stack.pop()
+                  if isinstance(item, dict):
+                      stack.extend(item.keys())
+                      stack.extend(item.values())
+                  elif isinstance(item, list):
+                      stack.extend(item)
+                  elif isinstance(item, str):
+                      for match in host_re.finditer(item):
+                          host = match.group(0).lower()
+                          if infrastructure(host):
+                              infra.add((file.name, host))
+                          else:
+                              findings.add((file.name, host))
+
+          summary = pathlib.Path('/tmp/subdomain-zero-summary.md')
+          lines = ['## Cloudflare subdomain-zero audit', '']
+          if findings:
+              lines.append(f'Forbidden public web hostname references: **{len(findings)}**')
+              lines.extend(f'- `{host}` in `{source}`' for source, host in sorted(findings))
+          else:
+              lines.append('Forbidden public web hostname references: **0**')
+          lines += ['', f'Allowed infrastructure DNS references: **{len(infra)}**']
+          lines.extend(f'- `{host}` in `{source}`' for source, host in sorted(infra))
+          summary.write_text('\n'.join(lines) + '\n')
+          print(summary.read_text())
+          if findings:
+              sys.exit(2)
+          PY
+
+          cat /tmp/subdomain-zero-summary.md >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo
+            echo '### Endpoint coverage'
+            if [[ -f "$work/endpoints.txt" ]]; then sed 's/^/- /' "$work/endpoints.txt"; fi
+          } >> "$GITHUB_STEP_SUMMARY"
