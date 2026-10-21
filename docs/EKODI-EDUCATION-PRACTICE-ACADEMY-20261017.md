@@ -3,7 +3,7 @@
 ## 1. 제품 결정
 - 정식 진입: `https://ekodi.kr/edu/`; 실행 소유자는 **기존 독립 Education Worker**, 자산 경로는 `education/`.
 - 새 진입: `/edu/study/academy/` (Worker 안에서는 `/study/academy/`). **새 앱, 새 도메인, 인증 경계, 운영 DB를 만들지 않는다.**
-- 기존 목포대 교직원 AI부트캠프 `/edu/study/ai-bootcamp/`, 자료 편집실, 강사 서류 편집실, `/learn/` 학습 기반, 청계면 소상공인 수요조사 `/cgma/ai-education/`는 보존한다.
+- 기존 목포대 교직원 AI부트캠프 `/edu/study/ai-bootcamp/`, 자료 편집실, 강사 서류 편집실, `/learn/` 학습 기반, 청계면 소상공인 수요조사 `/cgma/ai-education/`는 보존한다(운영 원본: cheonggye-market 저장소·D1, 2026-10-21 Shared Site 구버전 시제품 퇴역).
 - 무안군민 교육은 지역주민 트랙에 포함하되 지역 기관의 실제 위탁 계약·대상·일정은 별도 확정한다.
 - 모든 최상위 교육 설계 화면은 강사/사용자 페이지 우선. 관리자는 권한이 있는 사용자 화면 안에서 수정·관리하며 별도 관리자 메뉴를 증식하지 않는다.
 
