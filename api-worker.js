@@ -6,6 +6,7 @@ import { remotePowerSnapshot, requestRemoteWake } from './remote-power-control.j
 import { analyzeServiceFleet, evaluateTechnologyCandidate } from './evolution-intelligence-runtime.js';
 import { evolutionStoreSummary, listEvolutionRecommendations, persistEvolutionReport } from './evolution-intelligence-store.js';
 import { analyzeCapabilityEcosystem, capabilityEcosystemSnapshot } from './ekodi-self-automation-engine.js';
+import { pruneAdminAssistConversations } from './admin-assist-retention.js';
 import { buildPublicPreviewProjection } from './preview-public-projection.js';
 import { listSiteChromeSettings, putSiteChromeSettings } from './site-chrome-runtime.js';
 import { platformMaturityProjection } from './platform-maturity-control.js';
@@ -783,7 +784,13 @@ export default {
         runChecks(env),
         cloudflareAccountSnapshot(env)
       ]);
-      const [evolution] = await Promise.all([evolutionSnapshot(env), runLanguageAutomation(env), analyzeCapabilityEcosystem(env.DB)]);
+      const [evolution] = await Promise.all([
+        evolutionSnapshot(env),
+        runLanguageAutomation(env),
+        analyzeCapabilityEcosystem(env.DB),
+        // Admin AI conversation text expires on the existing cron; no new schedule.
+        pruneAdminAssistConversations(env.DB),
+      ]);
       await ownerReportSnapshot(env, { persist:true, evolution, limit:10 });
     })().catch(error => console.error('Scheduled service, account, or evolution check failed', error)));
   }
