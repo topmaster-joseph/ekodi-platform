@@ -11,7 +11,7 @@ const [api, admin, policyText, migration] = await Promise.all([
 const policy = JSON.parse(policyText);
 
 test('EKODI internal scheduler owns autonomous owner-report generation', () => {
-  assert.match(api, /ownerReportSnapshot\(env, \{ persist:true, evolution, limit:10 \}\)/);
+  assert.match(api, /ownerReportSnapshot\(env, \{ persist:true, evolution, accountSnapshot, limit:10 \}\)/);
   assert.match(api, /reportOwner: 'ekodi-orchestrator'/);
   assert.match(api, /chatgptTriggerRequired: false/);
   assert.equal(policy.reporting.reportOwner, 'ekodi-orchestrator');
@@ -45,4 +45,12 @@ test('AI Ops presents EKODI Orchestrator reports instead of a ChatGPT scheduler'
 
 test('AI Ops loads persisted EKODI owner report on the initial view', () => {
   assert.match(admin, /Promise\.all\(\[loadOverview\(false\), loadEvolution\(false\), loadOwnerReport\(false\)\]\)/);
+});
+
+
+test('scheduled owner reporting reuses the existing Cloudflare execution-boundary snapshot', () => {
+  assert.match(api, /const \[, accountSnapshot\] = await Promise\.all\(\[/);
+  assert.match(api, /cloudflareAccountSnapshot\(env\)/);
+  assert.match(api, /accountSnapshot = options\.accountSnapshot \|\| await cloudflareAccountSnapshot\(env\)/);
+  assert.match(api, /accountSnapshot,/);
 });

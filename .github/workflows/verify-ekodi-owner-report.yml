@@ -47,7 +47,7 @@ jobs:
           grep -Fq '/api/control/owner-report?limit=8' ai-ops-admin.js
           grep -Fq '/api/control/owner-report/check' ai-ops-admin.js
           grep -Fq 'chatgptTriggerRequired: false' api-worker.js
-          grep -Fq 'ownerReportSnapshot(env, { persist:true, evolution, limit:10 })' api-worker.js
+          grep -Fq 'ownerReportSnapshot(env, { persist:true, evolution, accountSnapshot, limit:10 })' api-worker.js
 
   production-proof:
     needs: validate
