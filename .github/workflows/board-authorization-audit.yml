@@ -1,0 +1,39 @@
+name: Board authorization matrix audit
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '37 4 * * *'
+  pull_request:
+    paths:
+      - 'site-board-control.js'
+      - 'services/independent-board/**'
+      - 'seonammedi-*control.js'
+      - 'supabase/functions/community-api/**'
+      - 'config/board-authorization-matrix.json'
+      - 'config/board-surface-verification.json'
+      - 'scripts/audit-board-authorization.mjs'
+      - 'test/board-authorization-matrix.test.mjs'
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test test/board-authorization-matrix.test.mjs
+      - run: node scripts/audit-board-authorization.mjs
+  anonymous-live:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node scripts/audit-board-authorization.mjs --live

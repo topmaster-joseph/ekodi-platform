@@ -69,9 +69,8 @@
     {
       "id": "community.board",
       "path": "/community/board",
-      "enabled": false,
-      "kind": "board",
-      "verificationNote": "covered-by-community-legacy-and-route-tests"
+      "enabled": true,
+      "kind": "board"
     },
     {
       "id": "seonammedi.board",
