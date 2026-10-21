@@ -4,14 +4,14 @@ const site = params.get('site') || 'portal';
 const returnTo = params.get('return_to') || params.get('returnTo') || '';
 const guardKey = `ekodi-auth-entry:${site}:${returnTo}`;
 const now = Date.now();
-const navigationType = performance.getEntriesByType?.('navigation')?.[0]?.type || '';
 let previous = 0;
 
 try {
   previous = Number(sessionStorage.getItem(guardKey) || 0);
 } catch {}
 
-const repeated = !interactive && navigationType !== 'reload' && previous > 0 && now - previous < 120000;
+// A reload must not bypass loop protection: redirect chains may reload the auth page.
+const repeated = !interactive && previous > 0 && now - previous < 120000;
 
 if (!interactive) {
   try {
