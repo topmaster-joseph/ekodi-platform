@@ -3,12 +3,10 @@ const APPROVED_BACKENDS=new Set(['https://ekodi-insurance-api-staging.ekodi-deve
 
 function json(data,status=200,sourceHeaders=null){
   const headers=new Headers({'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'});
-  for(const name of ['access-control-allow-origin','access-control-allow-headers','access-control-allow-methods','access-control-max-age','vary']){
-    const value=sourceHeaders?.get?.(name);if(value)headers.set(name,value);
-  }
+  for(const name of ['access-control-allow-origin','access-control-allow-headers','access-control-allow-methods','access-control-max-age','vary']){const value=sourceHeaders?.get?.(name);if(value)headers.set(name,value)}
   return new Response(JSON.stringify(data),{status,headers});
 }
-function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
+function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms))}
 async function centralSession(request,env,ctx,apiWorker){
   const url=new URL(request.url);url.pathname='/api/session';url.search='';
   const sessionRequest=new Request(url.toString(),{method:'GET',headers:request.headers});
@@ -30,6 +28,9 @@ function mapPath(pathname){
   const connector=pathname.match(/^\/api\/insurance\/admin\/network\/connectors\/(cnx_[a-z0-9-]+)$/i);if(connector)return`/api/internal/network/connectors/${connector[1]}`;
   if(pathname===`${PREFIX}/network/work-summary`)return'/api/internal/network/work-summary';
   const projection=pathname.match(/^\/api\/insurance\/admin\/network\/projections\/(con_[a-z0-9-]+)$/i);if(projection)return`/api/internal/network/projections/${projection[1]}`;
+  if(pathname===`${PREFIX}/network/advisor-customers`)return'/api/internal/network/advisor-customers';
+  if(pathname===`${PREFIX}/network/advisor-admin-users`)return'/api/internal/network/advisor-admin-users';
+  const customer=pathname.match(/^\/api\/insurance\/admin\/network\/advisor-customers\/(cus_[a-z0-9-]+)$/i);if(customer)return`/api/internal/network/advisor-customers/${customer[1]}`;
   if(pathname===`${PREFIX}/network/partners`)return'/api/internal/network/partners';
   const partner=pathname.match(/^\/api\/insurance\/admin\/network\/partners\/(par_[a-z0-9-]+)$/i);if(partner)return`/api/internal/network/partners/${partner[1]}`;
   if(pathname===`${PREFIX}/network/catalog`)return'/api/internal/network/catalog';
@@ -49,12 +50,7 @@ function normalizeResponse(data){
 async function fetchInternal(base,path,init){
   const attempts=base==='https://ekodi-insurance-api-staging.ekodi-development.workers.dev'?8:1;
   let response;
-  for(let attempt=1;attempt<=attempts;attempt+=1){
-    response=await fetch(`${base}${path}`,init);
-    if(response.status!==401||attempt===attempts)return response;
-    try{await response.body?.cancel?.();}catch{}
-    await sleep(750*attempt);
-  }
+  for(let attempt=1;attempt<=attempts;attempt+=1){response=await fetch(`${base}${path}`,init);if(response.status!==401||attempt===attempts)return response;try{await response.body?.cancel?.()}catch{}await sleep(750*attempt)}
   return response;
 }
 export async function handleInsuranceAdminProxy(request,env,ctx,apiWorker){
@@ -68,10 +64,7 @@ export async function handleInsuranceAdminProxy(request,env,ctx,apiWorker){
   if(!APPROVED_BACKENDS.has(base))return json({error:'unapproved_insurance_backend'},503,auth.response.headers);
   const headers=new Headers({'content-type':'application/json','x-ekodi-insurance-internal-token':internalToken,'x-ekodi-actor':String(auth.session.email).toLowerCase()});
   let body;
-  if(['PATCH','PUT'].includes(request.method)){
-    const input=await request.json().catch(()=>({}));
-    body=JSON.stringify(request.method==='PATCH'&&upstreamPath.endsWith('/status')?{...input,status:adminStatusToApi(input.status)}:input);
-  }
+  if(['PATCH','PUT'].includes(request.method)){const input=await request.json().catch(()=>({}));body=JSON.stringify(request.method==='PATCH'&&upstreamPath.endsWith('/status')?{...input,status:adminStatusToApi(input.status)}:input)}
   const upstream=await fetchInternal(base,`${upstreamPath}${incomingUrl.search}`,{method:request.method,headers,body,cache:'no-store'});
   const text=await upstream.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={error:'insurance_backend_invalid_response'}};
   return json(normalizeResponse(data),upstream.status,auth.response.headers);
