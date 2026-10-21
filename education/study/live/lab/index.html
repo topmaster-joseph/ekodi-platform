@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="description" content="EKODI Education Learner Lab — 강사가 지정한 실습 미션, 복사 가능한 프롬프트, 체크리스트와 개인 기록">
+  <meta name="ekodi-ui-type" content="USER">
+  <meta name="robots" content="noindex">
+  <title>수강생 실습실 · EKODI Education</title>
+  <link rel="stylesheet" href="../live.css">
+</head>
+<body class="lv" data-ekodi-ui="USER" data-live-surface="learner">
+<a class="skip" href="#labMain">본문으로 건너뛰기</a>
+<main class="lab" id="labMain" tabindex="-1">
+  <header class="lab-head">
+    <p class="eyebrow" id="labOrg">EKODI EDUCATION · LEARNER LAB</p>
+    <h1 id="labTitle">수강생 실습실</h1>
+    <p class="meta" id="labSub">실습 자료를 불러오는 중입니다.</p>
+  </header>
+  <div class="lab-bar" aria-label="실습 설정">
+    <label class="field">회차<select id="labSession"></select></label>
+    <label class="field">내 직무<select id="labTrack"></select></label>
+    <label class="field">난이도<select id="labLevel"></select></label>
+    <span class="grow"></span>
+    <div><p class="meta" id="labTimerLabel">실습 타이머</p><p class="lab-timer" id="labTimer" role="timer">--:--</p></div>
+    <button type="button" class="btn btn-small" id="labTimerBtn">타이머 시작</button>
+  </div>
+  <nav class="tabs" id="labTabs" aria-label="실습 메뉴"></nav>
+  <div id="labView" aria-live="polite"></div>
+  <section class="panel" aria-labelledby="privacyTitle">
+    <h2 id="privacyTitle" class="sr-only">개인정보와 저장 안내</h2>
+    <p class="meta" id="labSafety"></p>
+    <p class="meta">이 화면의 체크·메모는 <b>이 기기의 브라우저에만</b> 저장되며 서버로 전송되지 않습니다. 연결이 끊기거나 새로고침해도 이어서 할 수 있습니다. <button type="button" class="btn btn-small btn-danger" id="labClear">내 기록 삭제</button></p>
+  </section>
+</main>
+<div class="toast" id="toast" role="status" aria-live="assertive" hidden></div>
+<script type="module" src="../lab.js"></script>
+</body>
+</html>
