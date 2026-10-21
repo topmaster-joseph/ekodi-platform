@@ -1,0 +1,65 @@
+{
+  "policyId": "EKODI-INTERACTIVE-AUTH-001",
+  "issue": 5533,
+  "recordedAt": "2026-10-21T09:20:00Z",
+  "kind": "agent-runtime-e2e-simulated-provider",
+  "environment": {
+    "runner": "Linux sandbox, PowerShell 7.4.6",
+    "browser": "Chromium 141 (headless test build) via chrome.exe wrapper",
+    "provider": "local HTTPS mock of mokpo.factchat.bot (host-resolver mapping)",
+    "windowsSeamsDoubled": [
+      "Get-CimInstance",
+      "local consent popup",
+      "Get-AgentSettings"
+    ]
+  },
+  "codeUnderTest": "tools/ekodi-device-agent/windows/ekodi-device-agent.ps1 (real functions loaded via AST)",
+  "scenarios": [
+    "declined consent",
+    "consent->login->verify->close",
+    "TTL expiry",
+    "user closes window",
+    "profile path traversal"
+  ],
+  "assertionsPassed": 30,
+  "assertions": [
+    "declined state recorded",
+    "no profile directory created",
+    "no browser process launched",
+    "sanity",
+    "payload weakening credential relay is refused",
+    "state after launch = login_required",
+    "receipt invariants asserted",
+    "CDP port discovered from DevToolsActivePort",
+    "current host is the provider",
+    "password manager disabled in temp profile",
+    "before login: verify reports login form, not authenticated",
+    "reconcile detects login (state=authenticated)",
+    "after login: authenticated",
+    "visible: productivity,meeting-notes,hwp-editor,presentation,super-agent,deep-research,univ-in-data,usage-credit",
+    "absent menu reported as not found",
+    "session cookie never appears in receipt",
+    "email masked in usage lines",
+    "chat titles never leave the page",
+    "mutating verify refused",
+    "close reports profile removed",
+    "profile directory (cookies) deleted on disk",
+    "browser process terminated",
+    "last status shows closed for admin",
+    "reconcile reports change on expiry",
+    "state expired",
+    "expired profile deleted",
+    "expired browser terminated",
+    "closed after user closed window",
+    "profile deleted after user close",
+    "traversal refused"
+  ],
+  "result": "passed",
+  "claimBoundary": {
+    "realFactChatLoginVerified": false,
+    "windowsDesktopVerified": false,
+    "realFeatureExecutionVerified": false,
+    "note": "Proves agent logic with a real Chromium over CDP. Real FactChat login and Windows PC run remain pending until the person signs in on USER4 after the guarded release."
+  },
+  "defectFoundAndFixed": "URL-only classification marked /dashboard as authenticated while the SPA was still redirecting to login; status now requires a settled provider page without a visible password field."
+}

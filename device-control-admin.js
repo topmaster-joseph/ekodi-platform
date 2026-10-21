@@ -54,7 +54,21 @@
     tablet: new Set(['diagnostics.collect','network.diagnose','updates.scan']),
     sensor: new Set(), robot: new Set(), other: new Set(),
   });
+  // EKODI-INTERACTIVE-AUTH-001 (shared contract: interactive-auth-session.js)
+  const EXTERNAL_AUTH_SERVICE = Object.freeze({
+    id: 'factchat-mokpo',
+    label: 'FactChat · 국립목포대학교 기관계정',
+    host: 'mokpo.factchat.bot',
+    guide: 'https://docs.mindlogic.ai/docs/general/baze/getting-started/introduction',
+  });
+  const EXTERNAL_AUTH_STATE_LABELS = Object.freeze({
+    awaiting_local_consent:'PC 사용자 동의 대기', declined:'PC에서 거부·무응답', launching:'창 여는 중',
+    login_required:'로그인 대기 (PC에서 직접 입력)', authenticated:'로그인 확인됨', verifying:'점검 중',
+    verified:'읽기 전용 점검 완료', closing:'종료 중', closed:'종료·프로필 삭제', expired:'만료·프로필 삭제', failed:'실패',
+  });
   const CONFIRM_MESSAGES = {
+    'computer.auth_session.start': '선택한 PC에 FactChat 공식 로그인 창을 EKODI 전용 임시 브라우저로 엽니다.\n\n• PC 화면에 동의창이 먼저 뜨며, PC 앞의 본인이 [예]를 눌러야 열립니다.\n• 비밀번호·인증번호는 열린 창의 FactChat 공식 페이지에만 직접 입력하세요. EKODI·AI·채팅으로 보내지 마세요.\n• 기존 Opera/Chrome/Edge 프로필은 사용하지 않으며 30분 후 자동 종료·삭제됩니다.\n\n진행할까요?',
+    'computer.auth_session.verify': '로그인된 FactChat 화면에서 메뉴 표시와 크레딧·사용량 문구만 읽기 전용으로 점검합니다.\n파일 업로드·생성·크레딧 소모 작업은 실행하지 않습니다. 진행할까요?',
     'autologon.open': '자동로그인 암호는 클라우드에서 받지 않습니다. 이 PC에서 Microsoft Autologon 창을 열까요?',
     'maintenance.temp_cleanup': '7일 이상 지난 사용자/Windows 임시 파일만 정리합니다. 진행할까요?',
     'printing.image_preview.repair': '이미지 우클릭 인쇄가 바로 출력되지 않고 Windows 미리보기/레이아웃을 먼저 열도록 복구하고, 이후 변경도 자동 재복구할까요?',
@@ -147,6 +161,7 @@
       'updates.scan': '업데이트 확인', 'updates.install': '업데이트 설치', 'profile.workstation.apply': 'EKODI 업무환경',
       'profile.workstation.restore': '업무환경 복원', 'agent.self_update': 'Agent 업데이트', 'software.localai.install': 'Ollama·Claude 설치', 'software.localai.verify': '로컬 AI 실증', 'computer.browser.canary': 'BG Browser Canary',
       'computer.agent.status': 'Agent 상태', 'computer.system.read': '시스템 상태', 'computer.process.list': '프로세스 보기', 'computer.desktop.probe': '격리 데스크톱 점검', 'computer.desktop.canary': '격리 VM Canary', 'computer.desktop.guest.canary': 'Guest 실행 Canary', 'computer.desktop.ui.canary': 'Guest UI Canary', 'computer.desktop.session.canary': 'Session Canary', 'computer.desktop.session.execute': '격리 Session 실행',
+      'computer.auth_session.start': '외부 로그인 창 열기', 'computer.auth_session.verify': '외부 서비스 읽기 점검', 'computer.auth_session.close': '외부 인증 세션 종료',
     };
     return labels[type] || type;
   }
@@ -376,6 +391,99 @@
     return commands.find(command => command.type === type && command.status === 'succeeded')
       || commands.find(command => command.type === type)
       || null;
+  }
+
+  function remainingLabel(expiresAt) {
+    const ms = new Date(expiresAt || '').getTime() - Date.now();
+    if (!Number.isFinite(ms)) return '만료 시각 미확인';
+    if (ms <= 0) return '만료됨';
+    const minutes = Math.floor(ms / 60000);
+    return `${minutes}분 ${Math.floor((ms % 60000) / 1000)}초 남음`;
+  }
+
+  function externalAuthPanel(device) {
+    const box = document.createElement('details');
+    box.className = 'device-details device-external-auth';
+    box.dataset.externalAuthService = EXTERNAL_AUTH_SERVICE.id;
+    const session = device.settings?.interactiveAuthSession || null;
+    const live = session && ['awaiting_local_consent','launching','login_required','authenticated','verifying','verified'].includes(session.state);
+    const wanted = new URLSearchParams(location.search).get('externalAuth') === EXTERNAL_AUTH_SERVICE.id;
+    box.open = Boolean(live) || (wanted && device.status === 'online');
+    box.innerHTML = '<summary>외부 서비스 인증·검증 · FactChat</summary>';
+    const supported = capability(device, 'interactiveAuthSession');
+
+    const intro = document.createElement('p');
+    intro.className = 'device-remote-note';
+    intro.textContent = '이 PC에 EKODI 전용 임시 브라우저로 FactChat 공식 로그인 창을 엽니다. 로그인은 PC 앞의 본인이 공식 페이지에 직접 합니다. EKODI는 비밀번호·인증번호·쿠키를 받지 않고, 사용자 Opera/Chrome/Edge와 키보드·마우스·클립보드를 건드리지 않습니다.';
+
+    const status = document.createElement('div');
+    status.className = 'device-remote-summary-card';
+    const stateText = session ? (EXTERNAL_AUTH_STATE_LABELS[session.state] || '확인 필요') : '세션 없음';
+    status.innerHTML = '<small></small><strong></strong><span></span>';
+    status.querySelector('small').textContent = `${EXTERNAL_AUTH_SERVICE.label} · Agent ${supported ? '지원' : '업데이트 필요'} · 기기 ${statusLabel(device.status)}`;
+    status.querySelector('strong').textContent = stateText;
+    status.querySelector('span').textContent = session
+      ? [
+        live ? remainingLabel(session.expiresAt) : `종료 ${timeLabel(session.updatedAt)}`,
+        session.browser ? `브라우저 ${session.browser}(임시 프로필)` : '',
+        session.currentHost ? `현재 ${session.currentHost}` : '',
+        session.observedHosts?.length ? `경유 ${session.observedHosts.join(', ')}` : '',
+        session.profileRemoved ? '임시 프로필 삭제 확인' : '',
+        session.errorCode ? `오류 ${session.errorCode}` : '',
+      ].filter(Boolean).join(' · ')
+      : (supported ? '“로그인 창 열기”를 누르면 PC 화면에 동의창이 먼저 표시됩니다.' : '먼저 “Agent 업데이트”를 실행하세요.');
+
+    const actions = document.createElement('div');
+    actions.className = 'device-inline-actions device-remote-actions';
+    const sessionId = session?.sessionId || '';
+    actions.append(
+      makeActionButton(device, 'computer.auth_session.start', live ? '새 로그인 창으로 다시 시작' : '로그인 창 열기', 'primary',
+        { service: EXTERNAL_AUTH_SERVICE.id, userWillSignInPersonally: true, ttlMinutes: 30 }, !supported || device.status !== 'online'),
+      makeActionButton(device, 'computer.auth_session.verify', '로그인 후 읽기 전용 점검', 'secondary',
+        { sessionId, service: EXTERNAL_AUTH_SERVICE.id, readOnlyAcknowledged: true }, !supported || !live || !sessionId),
+      makeActionButton(device, 'computer.auth_session.close', '세션 즉시 종료·삭제', 'ghost',
+        { sessionId }, !live),
+    );
+
+    const result = document.createElement('div');
+    result.className = 'device-remote-result';
+    const verifyCommand = latestCommandByType(device, 'computer.auth_session.verify');
+    const verification = verifyCommand?.result?.interactiveAuth?.verification;
+    if (verification && verification.sessionId === sessionId) {
+      const wrap = document.createElement('div');
+      wrap.className = 'device-remote-processes';
+      wrap.innerHTML = '<div class="device-subhead"><h3>기능별 확인 결과</h3><span></span></div>';
+      wrap.querySelector('.device-subhead span').textContent = `${timeLabel(verification.checkedAt)} · ${verification.authenticated ? '로그인 상태' : '로그인 전'} · 메뉴 라벨 ${verification.menuLabelCount}개 확인`;
+      const list = document.createElement('div');
+      list.className = 'device-remote-process-list';
+      (verification.features || []).forEach(feature => {
+        const row = document.createElement('div');
+        const name = document.createElement('strong'); name.textContent = feature.label;
+        const menu = document.createElement('span'); menu.textContent = feature.menuVisible ? '메뉴 표시됨' : '메뉴 미발견(확인필요)';
+        const exec = document.createElement('span'); exec.textContent = '실행 검증: 미실시 · 크레딧 확인 후 별도 승인 필요';
+        row.append(name, menu, exec);
+        list.append(row);
+      });
+      wrap.append(list);
+      if (verification.usageLines?.length) {
+        const usage = document.createElement('p');
+        usage.className = 'device-remote-note';
+        usage.textContent = `크레딧·사용량 화면 문구: ${verification.usageLines.join(' / ')}`;
+        wrap.append(usage);
+      }
+      result.append(wrap);
+    }
+    const evidence = (device.recentCommands || []).filter(command => String(command.type || '').startsWith('computer.auth_session.')).slice(0, 4);
+    if (evidence.length) {
+      const log = document.createElement('div');
+      log.className = 'device-history';
+      log.innerHTML = '<h3>세션 작업 기록</h3>';
+      log.insertAdjacentHTML('beforeend', latestCommandMarkup(evidence));
+      result.append(log);
+    }
+    box.append(intro, status, actions, result);
+    if (wanted && box.open) window.setTimeout(() => box.scrollIntoView({ block: 'center' }), 50);
+    return box;
   }
 
   function remoteComputerPanel(device) {
@@ -625,7 +733,7 @@
     if (posStatus) {
       values[3].textContent = '상태 보고 전용';
       card.append(head, meta, posAgentSummary(device, posStatus), foot);
-    } else card.append(head, meta, health.firstElementChild, recommendationPanel(device), mainActions, advanced, foot);
+    } else card.append(head, meta, health.firstElementChild, recommendationPanel(device), mainActions, ...(device.management?.type === 'pc' && !isInventory(device) && device.status !== 'revoked' ? [externalAuthPanel(device)] : []), advanced, foot);
     const proofCommand = latestCommandByType(device, 'software.localai.verify');
     const proof = proofCommand?.result?.localAiProof || device.diagnostics?.localAiProof;
     if (proof) {

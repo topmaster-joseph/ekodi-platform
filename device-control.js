@@ -1,6 +1,15 @@
 import authWorker from './auth-worker.js';
 import { assessBackgroundBrowserReceipt } from './background-browser-proof.js';
 import { projectTapoDeviceForCloud, assertSafeTapoCloudProjection } from './tapo-provider-adapter.js';
+import {
+  INTERACTIVE_AUTH_CAPABILITY,
+  INTERACTIVE_AUTH_COMMANDS,
+  assessInteractiveAuthReceipt,
+  isInteractiveAuthCommand,
+  sanitizeInteractiveAuthPayload,
+  sanitizeInteractiveAuthSettings,
+  summarizeInteractiveAuthResult,
+} from './interactive-auth-session.js';
 
 const ADMIN_PREFIX = '/api/control/devices';
 const AGENT_PREFIX = '/api/device-agent';
@@ -105,6 +114,12 @@ const COMMAND_POLICIES = Object.freeze({
   'remote_desktop.recovery.disable': { risk: 'maintain', confirm: true },
   'remote_desktop.recovery.run': { risk: 'maintain', confirm: true },
   'camera.live.start': { risk: 'observe', payload: 'camera-stream' },
+  // EKODI-INTERACTIVE-AUTH-001: person signs in on the provider's own page in an
+  // EKODI-owned task-scoped window; super-admin only, local consent on the PC.
+  [INTERACTIVE_AUTH_COMMANDS.start]: { risk: 'privileged', confirm: true, payload: 'interactive-auth', superAdmin: true },
+  [INTERACTIVE_AUTH_COMMANDS.verify]: { risk: 'maintain', confirm: true, payload: 'interactive-auth', superAdmin: true },
+  // Ending a session must never be harder than starting one.
+  [INTERACTIVE_AUTH_COMMANDS.close]: { risk: 'maintain', payload: 'interactive-auth' },
 });
 
 const DIAGNOSTIC_SECTIONS = Object.freeze({
@@ -141,6 +156,9 @@ const COMMAND_CAPABILITIES = Object.freeze({
   'profile.workstation.apply': 'workstationProfile',
   'profile.workstation.restore': 'workstationProfile',
   'camera.live.start': 'cameraStreaming',
+  [INTERACTIVE_AUTH_COMMANDS.start]: INTERACTIVE_AUTH_CAPABILITY,
+  [INTERACTIVE_AUTH_COMMANDS.verify]: INTERACTIVE_AUTH_CAPABILITY,
+  [INTERACTIVE_AUTH_COMMANDS.close]: INTERACTIVE_AUTH_CAPABILITY,
 });
 
 function corsHeaders(request, env) {
@@ -414,6 +432,7 @@ function sanitizeCommandPayload(type, rawPayload) {
       loginMode:'never',
     };
   }
+  if (policy.payload === 'interactive-auth') return sanitizeInteractiveAuthPayload(type, rawPayload || {});
   if (policy.payload === 'camera-stream') {
     const externalId=safeText(rawPayload?.externalId,100).toLowerCase();
     const sessionId=safeText(rawPayload?.sessionId,80).toLowerCase();
@@ -537,6 +556,14 @@ function deviceHealth(settings = {}, diagnostics = {}) {
     score,
     label: score >= 90 ? '좋음' : score >= 75 ? '관찰' : score >= 55 ? '주의' : '점검 필요',
     recommendations: recommendations.slice(0, 6),
+  };
+}
+
+// Interactive auth receipts have their own strict allowlist projection.
+function projectCommandResult(result = {}, commandType = '') {
+  return {
+    ...summarizeInteractiveAuthResult(commandType, result),
+    ...(result?.message !== undefined ? { message: safeText(result.message, 300) } : {}),
   };
 }
 
@@ -1061,7 +1088,9 @@ async function listDevices(env) {
       issuedAt: command.issued_at,
       claimedAt: command.claimed_at,
       completedAt: command.completed_at,
-      result: summarizeCommandResult(parseJson(command.result_json), command.command_type),
+      result: isInteractiveAuthCommand(command.command_type)
+        ? projectCommandResult(parseJson(command.result_json), command.command_type)
+        : summarizeCommandResult(parseJson(command.result_json), command.command_type),
     });
   }
   const agentDevices = (devices.results || []).map(row => {
@@ -1264,6 +1293,8 @@ async function handleAdmin(request, env) {
     const policy = COMMAND_POLICIES[commandType];
     if (!policy) return json({ error: '자동 배정할 수 없는 작업입니다.', code: 'DEVICE_JOB_NOT_ALLOWED' }, 400, request, env);
     if (policy.confirm && body.confirmed !== true) return json({ error: '이 작업은 관리자 확인이 필요합니다.', code: 'DEVICE_JOB_CONFIRM_REQUIRED' }, 409, request, env);
+    // A person must be present at a specific PC; never auto-assign login windows.
+    if (isInteractiveAuthCommand(commandType)) return json({ error: '외부 서비스 인증 세션은 자동 배정할 수 없습니다.', code: 'INTERACTIVE_AUTH_JOB_FORBIDDEN' }, 400, request, env);
     let payload = {};
     try { payload = sanitizeCommandPayload(commandType, body.payload || {}); }
     catch { return json({ error: '작업 인자가 유효하지 않습니다.', code: 'DEVICE_JOB_PAYLOAD_INVALID' }, 400, request, env); }
@@ -1431,12 +1462,23 @@ async function handleAdmin(request, env) {
     if (policy.confirm && body.confirmed !== true) {
       return json({ error: '이 작업은 관리자 확인이 필요합니다.', code: 'DEVICE_COMMAND_CONFIRM_REQUIRED' }, 409, request, env);
     }
+    if (policy.superAdmin && auth.session?.role !== 'super_admin') {
+      return json({ error: '외부 서비스 인증 세션은 최고관리자만 시작할 수 있습니다.', code: 'INTERACTIVE_AUTH_SUPER_ADMIN_REQUIRED' }, 403, request, env);
+    }
     let payload = {};
     try { payload = sanitizeCommandPayload(commandType, body.payload || {}); }
     catch { return json({ error: '기기 명령 인자가 유효하지 않습니다.', code: 'DEVICE_COMMAND_PAYLOAD_INVALID' }, 400, request, env); }
 
-    const device = await env.DB.prepare('SELECT id, label, revoked_at FROM device_registry WHERE id = ?').bind(deviceId).first();
+    const device = await env.DB.prepare('SELECT id, label, revoked_at, capabilities_json, last_seen_at FROM device_registry WHERE id = ?').bind(deviceId).first();
     if (!device || device.revoked_at) return json({ error: '사용 가능한 Agent 기기를 찾을 수 없습니다.' }, 404, request, env);
+    if (isInteractiveAuthCommand(commandType) && commandType !== INTERACTIVE_AUTH_COMMANDS.close) {
+      if (parseJson(device.capabilities_json)?.[INTERACTIVE_AUTH_CAPABILITY] !== true) {
+        return json({ error: '이 기기의 EKODI Agent가 외부 서비스 인증 세션을 아직 지원하지 않습니다. Agent 업데이트 후 다시 시도하세요.', code: 'INTERACTIVE_AUTH_AGENT_UPGRADE_REQUIRED' }, 409, request, env);
+      }
+      if (statusFor(device.last_seen_at, null) !== 'online') {
+        return json({ error: '기기가 온라인이 아닙니다. 사용자가 PC 앞에 있을 때만 로그인 창을 열 수 있습니다.', code: 'INTERACTIVE_AUTH_DEVICE_OFFLINE' }, 409, request, env);
+      }
+    }
     const management = await managementProfile(env, deviceId);
     const deviceType = normalizeDeviceType(management?.device_type || 'pc');
     if (!commandAllowedForDeviceType(deviceType, commandType)) {
@@ -1449,8 +1491,9 @@ async function handleAdmin(request, env) {
       (id, device_id, command_type, payload_json, status, issued_at, issued_by)
       VALUES (?, ?, ?, ?, 'queued', ?, ?)`)
       .bind(commandId, deviceId, commandType, JSON.stringify(payload), issuedAt, actorId).run();
-    await audit(env, auth.session, 'device.command.issue', deviceId, `${device.label}: ${commandType} [${policy.risk}] type=${deviceType}`);
-    return json({ command: { id: commandId, deviceId, type: commandType, risk: policy.risk, deviceType, status: 'queued', issuedAt } }, 202, request, env);
+    await audit(env, auth.session, 'device.command.issue', deviceId, `${device.label}: ${commandType} [${policy.risk}] type=${deviceType}${payload.sessionId ? ` session=${payload.sessionId}` : ''}${payload.service ? ` service=${payload.service}` : ''}`);
+    return json({ command: { id: commandId, deviceId, type: commandType, risk: policy.risk, deviceType, status: 'queued', issuedAt,
+      ...(isInteractiveAuthCommand(commandType) ? { sessionId: payload.sessionId, expiresAt: payload.expiresAt || null } : {}) } }, 202, request, env);
   }
 
   const revokeMatch = path.match(/^\/api\/control\/devices\/([^/]+)\/revoke$/);
@@ -1538,7 +1581,7 @@ async function heartbeat(request, env, device) {
   if (deviceType === 'gateway') {
     const bridge=body.settings?.providerBridge||{};
     settings=JSON.stringify({providerBridge:{providerId:'tp-link.tapo',publicBase:sanitizeProviderPublicBase(bridge.publicBase,env),devices:sanitizeTapoProviderDevices(bridge.devices,device.id),lastSyncAt:now,generatedAt:now}});
-  } else if (body.settings && typeof body.settings === 'object') settings=safeJsonObject(body.settings,10000,device.settings_json);
+  } else if (body.settings && typeof body.settings === 'object') settings=safeJsonObject(sanitizeInteractiveAuthSettings(body.settings),10000,device.settings_json);
   const profileName = safeText(body.profileName || parseJson(settings).workstationProfile || device.profile_name, 80);
   await env.DB.prepare(`UPDATE device_registry
     SET hostname = ?, os_version = ?, agent_version = ?, capabilities_json = ?, settings_json = ?, profile_name = ?, last_seen_at = ?
@@ -1623,6 +1666,13 @@ async function commandResult(request, env, device, commandId) {
     (success || result.browserWorker?.authRequired === true)
     ? assessBackgroundBrowserReceipt({ result, requestId:commandId, deviceId:device.id })
     : null;
+  const interactiveAuthProof = isInteractiveAuthCommand(command.command_type)
+    ? assessInteractiveAuthReceipt(command.command_type, result)
+    : null;
+  if (interactiveAuthProof?.outcome === 'invalid') {
+    success = false;
+    result.message = 'INTERACTIVE_AUTH_RECEIPT_INVALID';
+  }
   const browserProofInvalid = browserProof?.outcome === 'invalid';
   const browserAuthRequired = browserProof?.outcome === 'auth_required';
   if (browserProofInvalid || browserAuthRequired) {
@@ -1647,7 +1697,7 @@ async function commandResult(request, env, device, commandId) {
     const diagnostics = mergeDiagnosticResult(device, command.command_type, result);
     const diagnosticsJson = safeJsonObject(diagnostics, 30000, device.diagnostics_json || '{}');
     const settingsJson = result.settings && typeof result.settings === 'object'
-      ? safeJsonObject(result.settings, 10000, device.settings_json || '{}')
+      ? safeJsonObject(sanitizeInteractiveAuthSettings(result.settings), 10000, device.settings_json || '{}')
       : device.settings_json;
     const profileName = safeText(result.profile || result.settings?.workstationProfile || device.profile_name, 80);
     await env.DB.prepare(`UPDATE device_registry
@@ -1660,7 +1710,7 @@ async function commandResult(request, env, device, commandId) {
     if (success) {
       await env.DB.prepare(`UPDATE device_jobs SET status = 'succeeded', completed_at = ?, last_error = '' WHERE id = ?`)
         .bind(completedAt, job.id).run();
-    } else if (!browserProofInvalid && !browserAuthRequired && Number(job.attempts || 0) < 3) {
+    } else if (!browserProofInvalid && !browserAuthRequired && interactiveAuthProof?.outcome !== 'invalid' && Number(job.attempts || 0) < 3) {
       await env.DB.prepare(`UPDATE device_jobs SET status = 'queued', assigned_device_id = NULL,
         assigned_command_id = NULL, assigned_at = NULL, last_error = ? WHERE id = ?`)
         .bind(safeText(result.message || '기기 작업 실패로 재배정', 300), job.id).run();
