@@ -3,6 +3,7 @@ import { assessBackgroundBrowserReceipt } from './background-browser-proof.js';
 import { CGMA_NATIVE_CANARY, inspectCgmaCanaryPayload } from './cgma-native-canary-policy.js';
 import { normalizeSlidesAudioPilot, validateSlidesAudioPilotReceipt, SLIDES_AUDIO_ITEMS, SLIDES_AUDIO_PRESENTATION_ID } from './google-workspace-slides-audio-policy.js';
 import { compareLocalExecutionCandidates, localExecutionPolicySnapshot, localExecutionScore, normalizeLocalResource } from './local-execution-policy.js';
+import { hybridWorkloadPolicySnapshot, resolveHybridWorkload } from './hybrid-execution-routing.js';
 
 const ADMIN_PREFIX = '/api/control/hybrid-execution';
 const AGENT_NEXT_PATH = '/api/device-agent/commands/next';
@@ -674,7 +675,8 @@ async function handleAdmin(request, env) {
 
   if (request.method === 'POST' && path === `${ADMIN_PREFIX}/jobs`) {
     const body = await readJson(request) || {};
-    const taskType = safeText(body.taskType, 80);
+    const workload = resolveHybridWorkload(body);
+    const taskType = safeText(body.taskType || workload?.taskType, 80);
     const policy = TASK_POLICIES[taskType];
     if (!policy) return json({ error:'허용되지 않은 하이브리드 작업입니다.', code:'HYBRID_TASK_NOT_ALLOWED' }, 400);
     if (policy.confirm && body.confirmed !== true) {
@@ -711,7 +713,7 @@ async function handleAdmin(request, env) {
     }
     const priority = clampInt(body.priority, 0, 100, 50);
     const deviceGroup = body.deviceGroup ? safeGroup(body.deviceGroup) : null;
-    const requiredCapabilities = sanitizeCapabilities(body.requiredCapabilities);
+    const requiredCapabilities = sanitizeCapabilities([...(body.requiredCapabilities || []), ...(workload?.requiredCapabilities || [])]);
     if (!requiredCapabilities.includes(policy.capability)) requiredCapabilities.push(policy.capability);
     const maxAttempts = taskType === 'computer.workspace.slides.audio.insert' ? 1 : clampInt(body.maxAttempts, 1, MAX_ATTEMPTS, MAX_ATTEMPTS);
     const notBeforeAt = body.notBeforeAt && Number.isFinite(Date.parse(body.notBeforeAt))
@@ -726,7 +728,7 @@ async function handleAdmin(request, env) {
       VALUES (?, ?, ?, 'pending', ?, ?, ?, 0, ?, ?, '{}', '', ?, ?, ?)`)
       .bind(jobId, taskType, safeJson(payload), priority, deviceGroup, JSON.stringify(requiredCapabilities),
         maxAttempts, notBeforeAt, actorId, now, now).run();
-    await event(env, jobId, null, 'created', { taskType, priority, deviceGroup, maxAttempts, risk:policy.risk });
+    await event(env, jobId, null, 'created', { taskType, priority, deviceGroup, maxAttempts, risk:policy.risk, workloadClass:workload?.workloadClass || null, serviceScope:workload?.serviceScope || 'platform' });
     await audit(env, auth.session, 'hybrid.job.create', jobId, `${taskType} [${policy.risk}]`);
     await assignPending(env);
     const created = await env.DB.prepare(`SELECT id, task_type, status, priority, assigned_device_id,
@@ -780,5 +782,6 @@ export const HYBRID_EXECUTION_POLICY = Object.freeze({
   authRequiredDisposition:'record-and-close',
   preserveUserOwnedSurfaces:true,
   scheduler:localExecutionPolicySnapshot(),
+  workloadRouting:hybridWorkloadPolicySnapshot(),
   taskTypes:Object.keys(TASK_POLICIES),
 });
