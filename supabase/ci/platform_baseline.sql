@@ -120,9 +120,9 @@ create table if not exists public.identity_challenges (
   created_at timestamptz not null default now()
 );
 
--- Production exposes these public helpers through private, security-definer
--- implementations. The ephemeral baseline reproduces the effective access rules
--- required by migration contracts without copying production internals.
+-- Access helpers are deliberately narrow SECURITY DEFINER predicates.
+-- They bypass recursive membership-table RLS only to answer auth.uid()-scoped booleans;
+-- direct anonymous execution is forbidden by the hardening migration.
 create or replace function public.has_tenant_access(p_tenant uuid)
 returns boolean
 language sql

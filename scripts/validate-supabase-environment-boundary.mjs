@@ -51,6 +51,7 @@ if (failures.length === 0) {
   expect(security.serviceRoleFrontendExposureForbidden === true, 'service role exposure to frontend must remain forbidden');
   expect(security.rlsRequiredForExposedTables === true, 'RLS must remain required for exposed tables');
   expect(security.securityDefinerRpcMustBeReviewed === true, 'SECURITY DEFINER RPC review must remain required');
+  expect(security.anonymousSecurityDefinerRpcRequiresExplicitReviewComment === true, 'anonymous SECURITY DEFINER RPCs must require explicit review comments');
   expect(security.productionSecretsInDevelopmentForbidden === true, 'production secrets must remain forbidden in development');
   expect(security.developmentSecretsInProductionForbidden === true, 'development secrets must remain forbidden in production');
 }

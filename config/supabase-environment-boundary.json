@@ -41,6 +41,7 @@
     "rlsRequiredForExposedTables": true,
     "securityDefinerRpcMustBeReviewed": true,
     "productionSecretsInDevelopmentForbidden": true,
-    "developmentSecretsInProductionForbidden": true
+    "developmentSecretsInProductionForbidden": true,
+    "anonymousSecurityDefinerRpcRequiresExplicitReviewComment": true
   }
 }
