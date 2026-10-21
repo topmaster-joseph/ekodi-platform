@@ -78,7 +78,7 @@ test('learner join link carries only non-personal pointers and round-trips',()=>
   const e=1800000000000;
   const url=learnerUrl('https://ekodi.kr','/edu/study/live/',{c:COURSE.id,s:2,m:'ppt',lv:'advanced',e});
   assert.equal(url,'https://ekodi.kr/edu/study/live/lab/?c=mnu-factchat-2026&s=2&m=ppt&lv=advanced&e=1800000000000');
-  assert.equal(learnerUrl('https://edu.ekodi.kr','/study/live/present/',{c:COURSE.id}),'https://edu.ekodi.kr/study/live/lab/?c=mnu-factchat-2026');
+  assert.equal(learnerUrl('http://127.0.0.1:8765','/study/live/present/',{c:COURSE.id}),'http://127.0.0.1:8765/study/live/lab/?c=mnu-factchat-2026');
   assert.equal(liveBase('/edu/factchat/'),'/edu');
   assert.deepEqual(parseLearnerParams(new URL(url).search,COURSE),{c:COURSE.id,s:2,m:'ppt',lv:'advanced',e});
   const bad=parseLearnerParams('?s=9&m=<script>&lv=root&e=-5',COURSE);
