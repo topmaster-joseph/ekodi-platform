@@ -7,20 +7,26 @@
   <meta name="ekodi-ui-type" content="USER">
   <meta name="robots" content="noindex">
   <title>강사 운영실 · EKODI Education Premium Studio</title>
+  <meta name="theme-color" content="#0a1930">
+  <link rel="stylesheet" href="../../fonts/pretendard/pretendardvariable-dynamic-subset.css">
   <link rel="stylesheet" href="./live.css">
 </head>
 <body class="lv" data-ekodi-ui="USER" data-live-surface="instructor">
 <a class="skip" href="#studioMain">본문으로 건너뛰기</a>
-<header class="lv-top" aria-label="강사 운영실 상단">
-  <a class="lv-brand" href="./" aria-label="Premium Studio 처음으로"><span class="lv-brand-mark" aria-hidden="true">E</span><span><strong>Premium Studio</strong><small>EKODI Education · 강사 운영실</small></span></a>
-  <label class="sr-only" for="sessionPicker">회차 선택</label>
-  <select id="sessionPicker" aria-label="회차 선택"></select>
-  <span class="pill" id="lectureState"><span class="dot" aria-hidden="true"></span><span>준비</span></span>
-  <span class="lv-clock" id="lectureClock" aria-label="강의 진행 시간">00:00</span>
+<header class="lv-top" id="studioTop" data-ekodi-fixed-header aria-label="강사 운영실 상단">
+  <a class="lv-brand" href="./" aria-label="Premium Studio 처음으로"><span class="lv-brand-mark" aria-hidden="true">E</span><span><strong>Premium Studio</strong><small id="topSub">EKODI Education · 강사 운영실</small></span></a>
+  <span class="pill lecture-pill"><span class="dot" id="lectureDot" aria-hidden="true"></span><span class="lv-clock" id="lectureClock" aria-label="강의 진행 시간">00:00</span></span>
+  <span class="timer-pill" id="topTimer" role="timer" hidden></span>
   <span class="grow"></span>
-  <button type="button" class="btn" id="lectureToggle">강의 시작</button>
-  <button type="button" class="btn" id="lectureEnd">종료</button>
-  <button type="button" class="btn btn-primary" id="openPresenter">발표 시작</button>
+  <div class="top-controls" id="topControls">
+    <label class="sr-only" for="sessionPicker">회차 선택</label>
+    <select id="sessionPicker" aria-label="회차 선택"></select>
+    <span class="pill hide-sm" id="lectureState"><span>준비</span></span>
+    <button type="button" class="btn" id="lectureToggle">강의 시작</button>
+    <button type="button" class="btn" id="lectureEnd">종료</button>
+  </div>
+  <button type="button" class="btn icon-btn show-md" id="topMenu" aria-expanded="false" aria-controls="topControls" aria-label="회차·강의 제어 열기">☰</button>
+  <button type="button" class="btn btn-primary" id="openPresenter" aria-label="발표 시작">발표<span class="hide-sm">&nbsp;시작</span></button>
 </header>
 <div class="studio">
   <nav class="studio-nav" aria-label="과정·강의 메뉴">
@@ -53,7 +59,7 @@
       <div class="btn-row">
         <button type="button" class="btn btn-small" data-timer-add="60000">+1분</button>
         <button type="button" class="btn btn-small" data-timer-add="300000">+5분</button>
-        <button type="button" class="btn btn-small" data-timer-add="-60000">−1분</button>
+        <button type="button" class="btn btn-small" data-timer-add="-60000">-1분</button>
       </div>
     </section>
     <section class="panel control" aria-labelledby="joinTitle">
@@ -82,12 +88,12 @@
     </section>
   </aside>
 </div>
-<div class="bottom-bar" role="toolbar" aria-label="주요 작업">
-  <span class="meta" id="saveInfo">자동 저장: 이 기기</span>
+<div class="bottom-bar" id="studioDock" role="toolbar" aria-label="주요 작업">
+  <span class="meta hide-sm" id="saveInfo">자동 저장: 이 기기</span>
   <span class="grow"></span>
   <button type="button" class="btn" id="previewModule">수강생 미리보기</button>
-  <button type="button" class="btn" id="exportPlan">강의안 Markdown</button>
-  <button type="button" class="btn" id="printPlan">인쇄·PDF</button>
+  <button type="button" class="btn hide-sm" id="exportPlan">강의안 Markdown</button>
+  <button type="button" class="btn hide-sm" id="printPlan">인쇄·PDF</button>
   <button type="button" class="btn btn-primary" id="bottomPractice">이 단계 실습 시작</button>
 </div>
 <div class="toast" id="toast" role="status" aria-live="assertive" hidden></div>

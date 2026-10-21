@@ -7,20 +7,21 @@
   <meta name="ekodi-ui-type" content="USER">
   <meta name="robots" content="noindex">
   <title>발표 화면 · EKODI Education Premium Studio</title>
+  <link rel="stylesheet" href="../../../fonts/pretendard/pretendardvariable-dynamic-subset.css">
   <link rel="stylesheet" href="../live.css">
 </head>
 <body class="lv pres-body" data-ekodi-ui="USER" data-live-surface="presenter">
-<header class="lv-top" id="presTop" aria-label="발표 제어">
+<header class="lv-top" id="presTop" data-ekodi-fixed-header aria-label="발표 제어">
   <a class="lv-brand" id="backStudio" href="../"><span class="lv-brand-mark" aria-hidden="true">E</span><span><strong>발표 화면</strong><small id="presSession">Premium Studio</small></span></a>
   <span class="pill"><span class="sr-only">강의 경과</span><span class="lv-clock" id="presLecture">00:00</span></span>
   <span class="pill" id="presTimerWrap"><span>실습</span><span class="lv-clock" id="presTimerTop">--:--</span></span>
   <span class="grow"></span>
-  <span class="kbd" id="presCounter">- / -</span>
+  <span class="kbd hide-sm" id="presCounter">- / -</span>
   <button type="button" class="btn" id="pPrev" aria-label="이전 슬라이드">←</button>
   <button type="button" class="btn" id="pNext" aria-label="다음 슬라이드">→</button>
   <button type="button" class="btn btn-primary" id="pPractice">실습 시작</button>
   <button type="button" class="btn" id="pBlack" aria-pressed="false">가리기</button>
-  <button type="button" class="btn" id="pFull">전체화면</button>
+  <button type="button" class="btn hide-sm" id="pFull">전체화면</button>
 </header>
 <main class="pres" id="presMain">
   <section class="stage" aria-label="현재 슬라이드">

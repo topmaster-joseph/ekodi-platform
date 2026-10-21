@@ -3,7 +3,8 @@ import {COURSES,courseEntry} from './courses/registry.js';
 import {validateCourse,sessionByNo,sessionSlides,practiceMinutes,practiceModules,totalMinutes,learnerUrl,formatClock,courseMarkdown,KIND_LABELS,missionMaterials,liveBase} from './engine/model.js';
 import {createLiveStore,lectureElapsedMs,timerRemainingMs,timerPhase,CHANNEL_NAME} from './engine/live-state.js';
 import {qrSvg} from './engine/qr.js';
-import {esc,list,missionSections,featureCard,readFeatureChecks,writeFeatureCheck,allFeatureIds,moduleLabel,downloadText,copyText,safeStorage,safeChannel,multiline} from './engine/render.js';
+import {esc,list,missionSections,featureCard,readFeatureChecks,writeFeatureCheck,allFeatureIds,moduleLabel,downloadText,copyText,safeStorage,safeChannel,multiline,bindChrome} from './engine/render.js';
+import {checkOutput} from './engine/checker.js';
 import {FACTCHAT_TOOL} from './tools/factchat.js';
 
 const $=s=>document.querySelector(s);
@@ -41,7 +42,10 @@ function joinLink(){
 function renderTop(){
   const st=S();
   const label={idle:'준비',running:'강의 중',paused:'일시정지',ended:'종료'}[st.lecture.status];
-  $('#lectureState').innerHTML='<span class="dot'+(st.lecture.status==='running'?' live':st.lecture.status==='paused'?' warn':'')+'" aria-hidden="true"></span><span>'+esc(label)+'</span>';
+  $('#lectureState').innerHTML='<span>'+esc(label)+'</span>';
+  $('#lectureDot').className='dot'+(st.lecture.status==='running'?' live':st.lecture.status==='paused'?' warn':'');
+  $('#lectureClock').setAttribute('aria-label','강의 진행 시간 · '+label);
+  $('#topSub').textContent=st.session+'회차 · '+label;
   $('#lectureToggle').textContent=st.lecture.status==='running'?'일시정지':st.lecture.status==='paused'?'강의 재개':st.lecture.status==='ended'?'다시 시작':'강의 시작';
   $('#sessionPicker').value=String(st.session);
   $('#lectureEnd').disabled=st.lecture.status==='idle'||st.lecture.status==='ended';
@@ -83,7 +87,7 @@ function viewModule(){
     const feats=m.features?.length?'<div class="panel"><h3>시연·설명 기능</h3><div class="features">'+m.features.map(id=>featureCard(readFeatureChecks(storage),id,{controls:true})).join('')+'</div></div>':'';
     const hunt=m.errorHunt?course.errorHunts.find(h=>h.id===m.errorHunt):null;
     body=(m.points?.length?'<div class="panel"><h3>강의 내용</h3>'+list(m.points,false,'points')+'</div>':'')+feats+
-      (hunt?'<div class="panel"><h3>AI 오류 찾기 · '+esc(hunt.title)+'</h3><pre class="source-text">'+esc(hunt.text)+'</pre><p class="meta">힌트: '+esc(hunt.hint)+'</p></div>':'')+
+      (hunt?'<div class="panel"><h3>AI 오류 찾기 · '+esc(hunt.title)+'</h3><pre class="source-text">'+esc(hunt.text)+'</pre><p class="meta">힌트: '+esc(hunt.hint)+'</p><div class="btn-row"><button type="button" class="btn btn-small" data-demo-check="'+esc(hunt.id)+'">결과 점검기로 시연</button></div><div class="verify-out" id="demoCheck"></div><p class="meta">수강생 실습실 「결과 점검」 단계와 같은 규칙 기반 점검기입니다(AI 아님).</p></div>':'')+
       (m.learner?.quiz?'<div class="panel"><h3>OX 퀴즈 (수강생 실습실에서 응답 · 개인 기기에만 저장)</h3><ol class="points">'+course.quiz.map(q=>'<li>'+esc(q.q)+' <b>'+(q.a?'O':'X')+'</b> — <span class="meta">'+esc(q.why)+'</span></li>').join('')+'</ol></div>':'')+learner;
   }
   return header+'<div class="panel">'+(notesBlock(m.id)||'<p class="meta">이 단계의 강사 노트가 없습니다.</p>')+'</div>'+body;
@@ -184,6 +188,8 @@ function tick(){
   $('#timerInfo').textContent={idle:'대기 중',running:'진행 중',paused:'일시정지',warn:'종료 5분 전',final:'종료 1분 전',done:'실습 시간 종료'}[phase]+(mission&&phase!=='idle'?' · '+mission.title:(st.timer.status!=='idle'&&!mission?' · 휴식':''));
   $('#timerPause').textContent=st.timer.status==='paused'?'재개':'일시정지';
   $('#timerPause').disabled=st.timer.status==='idle';
+  const pill=$('#topTimer');
+  if(st.timer.status==='idle'){pill.hidden=true;}else{pill.hidden=false;const left=formatClock(timerRemainingMs(st,now));pill.textContent=(mission?'실습 ':'휴식 ')+left;pill.className='timer-pill '+(['warn','final','done'].includes(phase)?phase:'');pill.setAttribute('aria-label','실습 타이머 '+left);}
   if(phase!==lastPhase){
     if(phase==='warn')toast('실습 종료 5분 전입니다. 결과 저장·검증을 안내하세요.');
     if(phase==='final')toast('실습 종료 1분 전입니다.');
@@ -195,6 +201,17 @@ function tick(){
 }
 function renderAll(){renderTop();renderTimerMissions();renderView();renderJoin();renderSlideInfo();tick();}
 
+function huntSource(hunt){
+  const [group,track]=String(hunt.source||'').split('.');
+  const key={MINUTES_TRACKS:'minutes',PPT_TRACKS:'ppt',HWP_TRACKS:'hwp'}[group];
+  const mat=course.trackMaterials?.[key]?.[track];
+  return mat?(mat.script||mat.facts||mat.source||''):'';
+}
+function demoCheck(id){
+  const hunt=course.errorHunts.find(h=>h.id===id);const box=$('#demoCheck');if(!hunt||!box)return;
+  const r=checkOutput(huntSource(hunt),hunt.text);
+  box.innerHTML='<p class="verify-sum"><span class="badge badge-live">확인 필요 '+r.summary.risk+'</span><span class="badge badge-warn">주의 '+r.summary.warn+'</span><span class="badge">참고 '+r.summary.info+'</span></p>'+r.findings.map(f=>'<div class="finding '+esc(f.level)+'"><b>'+esc(f.title)+'</b><p>'+esc(f.detail)+'</p></div>').join('');
+}
 function gotoModule(i,{present=false}={}){
   const s=session();const index=Math.max(0,Math.min(s.modules.length-1,Number(i)));
   view='module';
@@ -229,6 +246,7 @@ function bind(){
     if(d.gotoSession){if(Number(d.gotoSession)!==S().session)store.dispatch({type:'session/set',session:Number(d.gotoSession)});gotoModule(d.gotoModule);return;}
     if(d.presentModule!==undefined){const m=session().modules[Number(d.presentModule)];setSlide(firstSlideOf(m.id));toast('발표 화면을 「'+(m.kind==='practice'?course.missions[m.missionId].title:m.title)+'」로 전환했습니다.');return;}
     if(d.startPractice){startPractice(d.startPractice);return;}
+    if(d.demoCheck){demoCheck(d.demoCheck);return;}
     if(d.startBreak){store.dispatch({type:'timer/start',missionId:'',durationMs:Number(d.startBreak)});toast('휴식 타이머 시작');return;}
     if(d.timerAdd){store.dispatch({type:'timer/add',ms:Number(d.timerAdd)});return;}
     if(d.featureCheck){writeFeatureCheck(storage,d.featureCheck,d.status);renderView();toast('기능 상태를 이 기기에 기록했습니다.');return;}
@@ -294,6 +312,8 @@ async function init(){
   const qs=Number(params.get('s'));
   if(sessionByNo(course,qs)&&qs!==S().session)store.dispatch({type:'session/set',session:qs});
   bind();renderAll();
+  bindChrome(document,{top:$('#studioTop'),dock:$('#studioDock')});
+  $('#topMenu').addEventListener('click',()=>{const top=$('#studioTop');const open=!top.classList.contains('is-open');top.classList.toggle('is-open',open);$('#topMenu').setAttribute('aria-expanded',String(open));$('#topMenu').textContent=open?'✕':'☰';});
   setInterval(tick,500);
   document.body.dataset.ready='true';
 }

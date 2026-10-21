@@ -40,3 +40,10 @@ Total 240 min; individual practice 4 × 30 = 120 min (enforced by `validateCours
 
 ## Rollback
 Revert the PR (static assets + tests + workflow lines). No data migration.
+
+## v2 (2026-10-22) — on-site practice and premium chrome
+- **Header**: one owned sticky top bar (`.lv-top[data-ekodi-fixed-header]`) on every surface, never inside `<main>` (the EKODI Shell adopts it instead of a content block). Its measured height (`--lv-top-h`) offsets every other sticky element; the bottom dock height (`--lv-dock-h`) pads the page. Mobile/tablet (≤1023px) collapse instructor controls behind a menu button; the practice timer appears as a header pill. Audience window uses `data-ekodi-user-header="immersive"` and hides all chrome.
+- **Typography**: self-hosted Pretendard Variable (dynamic unicode-range subsets, OFL 1.1, `education/fonts/pretendard/`), tabular numerals for clocks.
+- **Guided practice** (Learner Lab): 준비 → FactChat 열기 (desktop: opens FactChat in the right half of the screen) → 프롬프트 ① → 프롬프트 ② → 결과 점검 → 완료·적용, with a fixed step dock, progress bar, completion ticks and full state recovery. The 10-part reference stays available under 「전체 안내 보기」.
+- **Result checker** (`engine/checker.js`, rule-based, local, not AI): pasted FactChat output vs source — invented dates/times/numbers, invented contacts/links, undecided→「확정」, missing [확인 필요], dropped source facts; plus personal-data warnings. 「예시 결과로 연습」 uses the fallback sample when FactChat is unavailable. Instructors can demo it in review modules.
+- **Probe**: production verifier additionally asserts header ≤72px (mobile)/≤80px, pinned while scrolling, no content under the header, page end not under the dock, Pretendard active, audience view header-free, and the guided flow including checker findings and reload recovery.
