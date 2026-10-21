@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="description" content="EKODI Education Premium Studio — 강의 기획·발표·실습 안내·진행 관리를 한 화면에서 운영하는 강사 운영실">
+  <meta name="ekodi-ui-type" content="USER">
+  <meta name="robots" content="noindex">
+  <title>강사 운영실 · EKODI Education Premium Studio</title>
+  <link rel="stylesheet" href="./live.css">
+</head>
+<body class="lv" data-ekodi-ui="USER" data-live-surface="instructor">
+<a class="skip" href="#studioMain">본문으로 건너뛰기</a>
+<header class="lv-top" aria-label="강사 운영실 상단">
+  <a class="lv-brand" href="./" aria-label="Premium Studio 처음으로"><span class="lv-brand-mark" aria-hidden="true">E</span><span><strong>Premium Studio</strong><small>EKODI Education · 강사 운영실</small></span></a>
+  <label class="sr-only" for="sessionPicker">회차 선택</label>
+  <select id="sessionPicker" aria-label="회차 선택"></select>
+  <span class="pill" id="lectureState"><span class="dot" aria-hidden="true"></span><span>준비</span></span>
+  <span class="lv-clock" id="lectureClock" aria-label="강의 진행 시간">00:00</span>
+  <span class="grow"></span>
+  <button type="button" class="btn" id="lectureToggle">강의 시작</button>
+  <button type="button" class="btn" id="lectureEnd">종료</button>
+  <button type="button" class="btn btn-primary" id="openPresenter">발표 시작</button>
+</header>
+<div class="studio">
+  <nav class="studio-nav" aria-label="과정·강의 메뉴">
+    <p class="nav-label">운영</p>
+    <button type="button" class="nav-item" data-view="dashboard"><span>교육 진행 대시보드</span></button>
+    <button type="button" class="nav-item" data-view="courses"><span>교육과정 관리</span></button>
+    <p class="nav-label" id="timelineLabel">회차 진행표</p>
+    <div id="moduleNav" role="group" aria-labelledby="timelineLabel"></div>
+    <p class="nav-label">도구</p>
+    <button type="button" class="nav-item" data-view="missions"><span>실습 시나리오</span></button>
+    <button type="button" class="nav-item" data-view="features"><span>FactChat 기능 점검</span></button>
+    <button type="button" class="nav-item" data-view="materials"><span>자료·내보내기</span></button>
+    <button type="button" class="nav-item" data-view="results"><span>실습 성과·피드백</span></button>
+    <button type="button" class="nav-item" data-view="editor"><span>강의안 편집</span></button>
+  </nav>
+  <main class="studio-main" id="studioMain" tabindex="-1">
+    <div id="view" aria-live="polite"><p>강의 데이터를 불러오는 중입니다.</p></div>
+  </main>
+  <aside class="studio-side" aria-label="강사 전용 진행 도구">
+    <section class="panel control" aria-labelledby="timerTitle">
+      <h3 id="timerTitle">실습 타이머</h3>
+      <div class="big-clock" id="timerClock" role="timer" aria-live="off">30:00</div>
+      <p class="meta" id="timerInfo">대기 중</p>
+      <label class="field" for="timerMission">실습 미션<select id="timerMission"></select></label>
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary" id="timerStart">실습 시작</button>
+        <button type="button" class="btn" id="timerPause">일시정지</button>
+        <button type="button" class="btn" id="timerReset">초기화</button>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-small" data-timer-add="60000">+1분</button>
+        <button type="button" class="btn btn-small" data-timer-add="300000">+5분</button>
+        <button type="button" class="btn btn-small" data-timer-add="-60000">−1분</button>
+      </div>
+    </section>
+    <section class="panel control" aria-labelledby="joinTitle">
+      <h3 id="joinTitle">수강생 접속 · 미션 공유</h3>
+      <div class="qr-box"><div id="joinQr" aria-hidden="false"></div><p class="qr-url" id="joinUrl"></p></div>
+      <label class="field" for="shareLevel">공유 난이도<select id="shareLevel"></select></label>
+      <div class="btn-row">
+        <button type="button" class="btn btn-small" id="copyJoin">링크 복사</button>
+        <a class="btn btn-small" id="openLearner" target="_blank" rel="noopener">수강생 화면 미리보기 ↗</a>
+      </div>
+      <p class="meta">QR에는 과정·회차·미션·난이도·실습 종료 시각만 담깁니다. 개인정보는 없습니다.</p>
+    </section>
+    <section class="panel control" aria-labelledby="presTitle">
+      <h3 id="presTitle">발표 제어</h3>
+      <p id="slideNow" class="meta">-</p>
+      <div class="btn-row">
+        <button type="button" class="btn" id="slidePrev" aria-label="이전 슬라이드">← 이전</button>
+        <button type="button" class="btn" id="slideNext" aria-label="다음 슬라이드">다음 →</button>
+        <button type="button" class="btn" id="blackout" aria-pressed="false">화면 가리기</button>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-small" id="openAudience">청중 화면 창 열기</button>
+        <button type="button" class="btn btn-small" id="resync">수동 동기화</button>
+      </div>
+      <p class="meta" id="syncInfo"></p>
+    </section>
+  </aside>
+</div>
+<div class="bottom-bar" role="toolbar" aria-label="주요 작업">
+  <span class="meta" id="saveInfo">자동 저장: 이 기기</span>
+  <span class="grow"></span>
+  <button type="button" class="btn" id="previewModule">수강생 미리보기</button>
+  <button type="button" class="btn" id="exportPlan">강의안 Markdown</button>
+  <button type="button" class="btn" id="printPlan">인쇄·PDF</button>
+  <button type="button" class="btn btn-primary" id="bottomPractice">이 단계 실습 시작</button>
+</div>
+<div class="toast" id="toast" role="status" aria-live="assertive" hidden></div>
+<script type="module" src="./instructor.js"></script>
+</body>
+</html>
