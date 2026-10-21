@@ -78,3 +78,20 @@ test('pasting an identity-linked Claude key verifies it through the Default Work
     assert.equal(result.rejected,false);
   }finally{globalThis.fetch=original}
 });
+
+// Production regression (2026-10-21): the identity-linked EKODI key cannot call
+// List Workspaces (403), so the automatic lookup never succeeds in production.
+// The paid Claude fallback only works when the workspace is pinned in config.
+test('production AI workers pin the Anthropic workspace so no admin lookup is needed',async()=>{
+  const {readFileSync}=await import('node:fs');
+  for(const file of ['wrangler.api.toml','wrangler.ai.toml','wrangler.ai.release.toml']){
+    const match=readFileSync(new URL(`../${file}`,import.meta.url),'utf8').match(/^ANTHROPIC_WORKSPACE_ID\s*=\s*"(wrkspc_[A-Za-z0-9]+)"/m);
+    assert.ok(match,`${file} must set ANTHROPIC_WORKSPACE_ID`);
+    resetAnthropicWorkspaceCache();
+    const {calls,fetchImpl}=fakeAnthropic({lookupStatus:403});
+    const response=await fetchAnthropicMessages({ANTHROPIC_WORKSPACE_ID:match[1]},'sk-ant-usr-test',{method:'POST',headers:{},body:'{}'},fetchImpl);
+    assert.equal(response.status,200,`${file}: pinned workspace must succeed even when lookup is forbidden`);
+    assert.equal(calls.some(call=>call.url.includes('/v1/organizations/workspaces')),false,'no workspace lookup when pinned');
+    assert.equal(calls.at(-1).headers['anthropic-workspace-id'],match[1]);
+  }
+});
