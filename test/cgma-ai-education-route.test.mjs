@@ -59,4 +59,8 @@ test('production edge verification still pins the D1-backed operating survey fro
   assert.ok(wf.includes("check_cgma '/cgma/ai-education/app.js' 'const questions = [' 'cgma-ai-education-survey'"));
   assert.ok(wf.includes("x-ekodi-route: cgma-ai-education-api"));
   assert.ok(wf.includes('CGMA_SOURCE_REPO: topmaster-joseph/cheonggye-market'));
+  // 접수현황 drawer regression guard (cheonggye-market #183).
+  assert.ok(wf.includes(`grep -Fq "frame-src 'self'" <<<"$survey_csp"`));
+  assert.ok(wf.includes(`grep -Fq "frame-ancestors 'none'" <<<"$survey_csp"`));
+  assert.ok(wf.includes('test "$survey_csp_ok" = true'));
 });

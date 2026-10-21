@@ -37,7 +37,7 @@ test('Shared Site candidate smoke excludes the independently routed CGMA public 
 test('CGMA edge workflow pins board delegation source and verifies independent board', async () => {
   const cgmaWorkflow=await readFile(new URL('../.github/workflows/deploy-cgma-apex-edge.yml',import.meta.url),'utf8');
   // Pin bumped 2026-10-20: motor festival delegation (cheonggye-market #181), on top of cgma.or.kr (#180).
-  assert.match(cgmaWorkflow, /CGMA_SOURCE_REF: 'ade95507490c15d8d9539aa0daaaf178ed96372a'/);
+  assert.match(cgmaWorkflow, /CGMA_SOURCE_REF: 'd4257ed563608e4f8a3ade4e78cba31ca71b3e9c'/);
   assert.match(cgmaWorkflow, /grep -Fq 'isMotorFestivalPath' cgma-root-gateway\.js/);
   assert.match(cgmaWorkflow, /grep -Fq 'delegatedMotorFestivalResponse' cgma-root-gateway\.js/);
   assert.match(cgmaWorkflow, /check_cgma '\/cgma\/motor-festival-2026\/' 'id="apply"' 'cgma-motor-festival-2026'/);

@@ -31,7 +31,7 @@ env:
   WRANGLER_VERSION: '4.119.0'
   CGMA_SOURCE_REPO: topmaster-joseph/cheonggye-market
   # 2026-10-20 owner decision: representative address cgma.or.kr (gateway canonical follows page path).
-  CGMA_SOURCE_REF: 'ade95507490c15d8d9539aa0daaaf178ed96372a'
+  CGMA_SOURCE_REF: 'd4257ed563608e4f8a3ade4e78cba31ca71b3e9c'
   EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
   EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
 
@@ -285,6 +285,15 @@ jobs:
           check_cgma '/cgma/ai-education/questions.mjs' 'export const SURVEY_QUESTIONS' 'cgma-ai-education-survey'
           check_cgma '/cgma/ai-education/report/' 'AI 교육 수요조사 통계' 'cgma-ai-education-survey'
           check_cgma '/cgma/ai-education/report/app.js' 'stats.sections' 'cgma-ai-education-survey'
+          # 접수현황 drawer: the survey CSP must allow the same-origin admin workbench frame and stylesheet.
+          survey_csp_ok=false
+          for attempt in $(seq 1 18); do
+            survey_csp=$(curl -sS --max-time 20 -D - -o /dev/null "https://ekodi.kr/cgma/ai-education/?edge_release=${GITHUB_SHA}" | tr -d '\r' | awk 'BEGIN{IGNORECASE=1} /^content-security-policy:/ {sub(/^[^:]+:[[:space:]]*/,""); print; exit}' || true)
+            if grep -Fq "frame-src 'self'" <<<"$survey_csp" && grep -Fq "style-src 'self'" <<<"$survey_csp" && grep -Fq "frame-ancestors 'none'" <<<"$survey_csp"; then survey_csp_ok=true; break; fi
+            sleep 4
+          done
+          test "$survey_csp_ok" = true
+          echo 'CGMA AI survey CSP allows the same-origin 접수현황 admin drawer.'
           # Read-only privacy and D1 proof; no artificial production survey responses.
           survey_stats_code=$(curl -sS --max-time 20 -D /tmp/cgma.ai.stats.headers -o /tmp/cgma.ai.stats.body -w '%{http_code}' "https://ekodi.kr/cgma/ai-education/api/stats?edge_release=${GITHUB_SHA}" || true)
           test "$survey_stats_code" = '401'
