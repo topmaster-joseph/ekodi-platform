@@ -156,7 +156,7 @@ function renderDock(){
   const prev=$('#dockPrev'),next=$('#dockNext'),act=$('#dockAction');
   if(id){
     const s=stepOf(id),m=course.missions[id];
-    $('#dockLabel').innerHTML='<b>'+(s+1)+'/'+STEP_LABELS.length+' · '+esc(STEP_LABELS[s])+'</b><span>'+esc(m.title.replace('개인 실습 ',''))+timerSuffix(id)+'</span>';
+    $('#dockLabel').innerHTML='<b>'+(s+1)+' / '+STEP_LABELS.length+' · '+esc(STEP_LABELS[s])+'</b><span>'+esc(m.title.replace('개인 실습 ',''))+timerSuffix(id)+'</span>';
     prev.hidden=false;next.hidden=false;prev.disabled=s===0;next.disabled=s===STEP_LABELS.length-1;
     act.textContent=s===STEP_LABELS.length-1&&rec.done[id]?'다음 실습':STEP_ACTIONS[s];
     act.dataset.mode='step';

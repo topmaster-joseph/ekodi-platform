@@ -127,15 +127,24 @@ export function sessionSlides(course,sessionNo){
 
 // Learner join links carry only non-personal pointers: course, session, mission, level and an optional
 // practice end time so every device shows the same countdown without any server.
+// The canonical /edu alias rewrites every quoted string that starts with a slash inside served JavaScript
+// (canonical-surface-router prefixRootLiterals). Paths and separators are therefore built from SLASH so the
+// same code is correct on ekodi.kr/edu/... and on the Education origin without a prefix.
+export const SLASH=String.fromCharCode(47);
+const segs=(...parts)=>SLASH+parts.join(SLASH)+SLASH;
+export const LIVE_PATH=segs('study','live');
+export const FACTCHAT_PATH=segs('factchat');
 export function liveBase(pathname){
-  const path=String(pathname||'/');
-  const idx=path.indexOf('/study/live/');
+  const path=String(pathname||SLASH);
+  const idx=path.indexOf(LIVE_PATH);
   if(idx>=0)return path.slice(0,idx);
-  const f=path.indexOf('/factchat/');
+  const f=path.indexOf(FACTCHAT_PATH);
   return f>=0?path.slice(0,f):'';
 }
+export const livePath=(pathname,sub='')=>liveBase(pathname)+LIVE_PATH+sub;
+export const sitePath=(pathname,sub='')=>liveBase(pathname)+SLASH+sub;
 export function learnerUrl(origin,pathname,params){
-  const url=new URL(liveBase(pathname)+'/study/live/lab/',origin);
+  const url=new URL(livePath(pathname,'lab'+SLASH),origin);
   const p=params||{};
   if(p.c)url.searchParams.set('c',p.c);
   if(p.s)url.searchParams.set('s',String(p.s));

@@ -1,6 +1,6 @@
 // EKODI Education Premium Studio — Instructor Studio (강사 운영실).
 import {COURSES,courseEntry} from './courses/registry.js';
-import {validateCourse,sessionByNo,sessionSlides,practiceMinutes,practiceModules,totalMinutes,learnerUrl,formatClock,courseMarkdown,KIND_LABELS,missionMaterials,liveBase} from './engine/model.js';
+import {validateCourse,sessionByNo,sessionSlides,practiceMinutes,practiceModules,totalMinutes,learnerUrl,formatClock,courseMarkdown,KIND_LABELS,missionMaterials,liveBase,livePath,sitePath,SLASH} from './engine/model.js';
 import {createLiveStore,lectureElapsedMs,timerRemainingMs,timerPhase,CHANNEL_NAME} from './engine/live-state.js';
 import {qrSvg} from './engine/qr.js';
 import {esc,list,missionSections,featureCard,readFeatureChecks,writeFeatureCheck,allFeatureIds,moduleLabel,downloadText,copyText,safeStorage,safeChannel,multiline,bindChrome} from './engine/render.js';
@@ -27,7 +27,7 @@ const S=()=>store.state;
 const session=()=>sessionByNo(course,S().session)||course.sessions[0];
 const mod=()=>session().modules[Math.min(S().moduleIndex,session().modules.length-1)];
 const firstSlideOf=moduleId=>Math.max(0,slides.findIndex(s=>s.moduleId===moduleId));
-const sessionHref=path=>{const base=liveBase(location.pathname);return base+'/study/live/'+path;};
+const sessionHref=path=>livePath(location.pathname,path);
 
 function currentJoinMission(){
   const shared=S().shared.missionId;
@@ -109,12 +109,12 @@ function viewDashboard(){
     '<dt>계획 대비</dt><dd>'+(drift===null?'강의 시작 전':drift===0?'계획대로':(drift>0?drift+'분 늦음':(-drift)+'분 빠름'))+'</dd>'+
     '<dt>실습 타이머</dt><dd>'+(st.timer.status==='idle'?'대기':formatClock(timerRemainingMs(st,now))+' 남음')+'</dd></dl></div>'+
     '<div class="panel"><h3>'+s.no+'회차 진행표 (총 '+s.minutes+'분)</h3><div class="table-wrap"><table class="tbl"><thead><tr><th>시간</th><th>구분</th><th>주제</th><th>분</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>'+
-    '<div class="panel"><h3>과정 구성 검증</h3><dl class="kv"><dt>총 교육 시간</dt><dd>'+totalMinutes(course)+'분 ('+course.sessions.length+'회 × 120분)</dd><dt>개인 집중 실습</dt><dd>'+practiceMinutes(course)+'분 = '+pm.map(x=>x.end-x.start).join(' + ')+'</dd><dt>직무별 사례</dt><dd>'+course.tracks.length+'개 · 난이도 '+course.levels.map(l=>l.label).join('/')+'</dd></dl></div>'+
+    '<div class="panel"><h3>과정 구성 검증</h3><dl class="kv"><dt>총 교육 시간</dt><dd>'+totalMinutes(course)+'분 ('+course.sessions.length+'회 × 120분)</dd><dt>개인 집중 실습</dt><dd>'+practiceMinutes(course)+'분 = '+pm.map(x=>x.end-x.start).join(' + ')+'</dd><dt>직무별 사례</dt><dd>'+course.tracks.length+'개 · 난이도 '+course.levels.map(l=>l.label).join(' · ')+'</dd></dl></div>'+
     '<div class="panel"><h3>참여·완료 현황</h3><p class="notice">참여자 수와 완료율은 서버에 연결되어 있지 않아 표시하지 않습니다(가상 수치 표시 금지). 수강생 체크는 각자의 기기에만 저장됩니다. 현장에서는 손들기·구두 확인을 사용하세요. 동의 기반 서버 집계는 기관 권한·보유기간·삭제 정책 확정 후 활성화합니다(P1 · 미구현).</p></div>';
 }
 function viewCourses(){
   const cards=COURSES.map(c=>'<article class="course-card'+(c.id===course.id?' is-current':'')+'"><p class="eyebrow">'+esc(c.org)+'</p><h3>'+esc(c.subtitle)+'</h3><p>'+esc(c.title)+'</p><p class="meta">'+esc(c.format)+' · '+esc(c.state)+'</p>'+
-    (c.engine==='live'?'<div class="btn-row"><a class="btn btn-small" href="'+esc(sessionHref('?c='+c.id))+'">운영실 열기</a></div>':'<div class="btn-row"><a class="btn btn-small" href="'+esc(liveBase(location.pathname)+'/'+c.href)+'">기존 강의실 열기 ↗</a></div><p class="meta">기존 과정 데이터는 그대로 보존되며 이 운영실에서 수정하지 않습니다.</p>')+'</article>').join('');
+    (c.engine==='live'?'<div class="btn-row"><a class="btn btn-small" href="'+esc(sessionHref('?c='+c.id))+'">운영실 열기</a></div>':'<div class="btn-row"><a class="btn btn-small" href="'+esc(sitePath(location.pathname,c.href))+'">기존 강의실 열기 ↗</a></div><p class="meta">기존 과정 데이터는 그대로 보존되며 이 운영실에서 수정하지 않습니다.</p>')+'</article>').join('');
   return '<div class="panel"><p class="eyebrow">COURSES</p><h2>교육과정 관리</h2><p class="meta">과정 데이터는 Course → Session → Module → Activity → Practice → Assessment → Artifact 구조로 분리되어 새 교육에도 코드 복제 없이 재사용합니다.</p></div><div class="grid-2">'+cards+'</div>'+
     '<div class="panel"><h3>현재 과정 정보</h3><dl class="kv"><dt>과정</dt><dd>'+esc(course.title)+'</dd><dt>기관</dt><dd>'+esc(course.org.name)+'</dd><dt>대상</dt><dd>'+esc(course.audience)+'</dd><dt>구성</dt><dd>'+esc(course.format)+'</dd><dt>상태</dt><dd>'+esc(course.status)+'</dd><dt>실습 도구</dt><dd>'+esc(FACTCHAT_TOOL.name)+' (공식 사이트 링크 · 연동 없음)</dd></dl></div>';
 }
@@ -148,7 +148,7 @@ function viewResults(){
 }
 function viewEditor(){
   return '<div class="panel"><p class="eyebrow">AUTHORING</p><h2>강의안 편집</h2><p>이 과정의 강의 내용·실습 프롬프트는 저장소의 과정 데이터 파일에서 관리되며, 변경은 검토·승인 배포를 거칩니다. 브라우저에서 파일(DOCX·PPTX·HWPX 등)의 텍스트를 추출해 초안을 만드는 기존 <b>교안 편집 스튜디오</b>를 계속 사용할 수 있습니다.</p>'+
-    '<div class="btn-row"><a class="btn" href="'+esc(liveBase(location.pathname)+'/study/ai-bootcamp/studio/')+'">교안 편집 스튜디오 열기 ↗</a><a class="btn" href="'+esc(liveBase(location.pathname)+'/study/academy/')+'">맞춤형 강의 구성(규칙 기반) ↗</a></div></div>'+
+    '<div class="btn-row"><a class="btn" href="'+esc(sitePath(location.pathname,['study','ai-bootcamp','studio',''].join(SLASH)))+'">교안 편집 스튜디오 열기 ↗</a><a class="btn" href="'+esc(sitePath(location.pathname,['study','academy',''].join(SLASH)))+'">맞춤형 강의 구성(규칙 기반) ↗</a></div></div>'+
     '<div class="panel"><h3>상태</h3>'+list(['AI 자동 생성: 승인된 AI 작성 기능이 연결되지 않아 제공하지 않음 (규칙 기반 템플릿만 사용)','서버 저장·버전 비교·복원·기관별 템플릿: 미구현 (P1/P2) — 강사 권한·감사로그·삭제 정책 설계 후 진행','이미지·표·서식: 파일 텍스트 추출 시 보존되지 않음(기존 스튜디오에서 명시)'])+'</div>';
 }
 const VIEWS={module:viewModule,dashboard:viewDashboard,courses:viewCourses,missions:viewMissions,features:viewFeatures,materials:viewMaterials,results:viewResults,editor:viewEditor};
