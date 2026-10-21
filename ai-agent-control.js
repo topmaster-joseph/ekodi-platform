@@ -5,6 +5,11 @@ import { getEkodiAiProviderRegistryStatus } from './ekodi-ai-provider-registry.j
 import { AI_MISSION_RUNTIME, evaluateMissionAction, getRuntimeAgentPolicy } from './ai-governance-runtime.js';
 import { evaluateAutonomousOperation, getSovereignAutonomySummary } from './sovereign-autonomy-runtime.js';
 import { buildEkodianOperationSnapshot, getEkodian8GSummary } from './ekodian-8g-runtime.js';
+import {
+  ADMIN_ASSIST_RETENTION,
+  ensureAdminAssistColumns,
+  summarizeConversationText as summarize,
+} from './admin-assist-retention.js';
 
 const PREFIX = '/api/control/ai';
 const MAX_LIST = 100;
@@ -14,6 +19,7 @@ const MAX_ASSIST_HISTORY_ITEMS = 8;
 const DEFAULT_ADMIN_ASSIST_TOTAL_TIMEOUT_MS = 15_000;
 const MAX_ADMIN_ASSIST_TOTAL_TIMEOUT_MS = 20_000;
 const SAFE_EXECUTORS = new Set(['service.health_check']);
+
 
 function json(data, status = 200, request = null, env = {}) {
   const headers = new Headers({
@@ -68,7 +74,9 @@ async function ensureSchema(db) {
     db.prepare('CREATE INDEX IF NOT EXISTS idx_ai_agent_actions_status ON ai_agent_actions(status, created_at DESC)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_ai_agent_actions_agent ON ai_agent_actions(agent_id, created_at DESC)'),
   ]);
+  await ensureAdminAssistColumns(db);
 }
+
 
 async function readJson(request) {
   try { return await request.json(); } catch { return null; }
@@ -155,8 +163,8 @@ async function insertAction(env, session, action, result) {
   const agent = getRuntimeAgentPolicy(action.agentId);
   const status = initialStatus(result, action);
   const row = await env.DB.prepare(`INSERT INTO ai_agent_actions
-    (agent_id, agent_name, action_type, area, target, rationale, payload_json, decision_tier, decision_reason, status, requested_by, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (agent_id, agent_name, action_type, area, target, rationale, rationale_summary, payload_json, decision_tier, decision_reason, status, requested_by, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     RETURNING id`)
     .bind(
       action.agentId,
@@ -165,6 +173,8 @@ async function insertAction(env, session, action, result) {
       action.area,
       action.target,
       action.rationale,
+      // Written now so the summary survives redaction of the verbatim text.
+      summarize(action.rationale),
       payloadJson(action).value,
       result.tier,
       result.reason,
@@ -215,10 +225,14 @@ async function finalizeAssistAction(env, id, result, value) {
     responseId: value?.responseId || null,
     notice: result.notice || '',
   };
+  // The reply is kept so the record is a conversation rather than half of one.
+  // It expires: pruneAdminAssistConversations redacts it after the retention
+  // window and keeps only the summary alongside the audit row.
+  const reply = String(value?.reply ?? value?.text ?? '').trim().slice(0, ADMIN_ASSIST_RETENTION.maxReplyChars);
   await env.DB.prepare(`UPDATE ai_agent_actions
-    SET status = ?, result_json = ?, verified_at = ?
+    SET status = ?, result_json = ?, verified_at = ?, reply_text = ?, reply_summary = ?
     WHERE id = ?`)
-    .bind(status, JSON.stringify(audit), now, id).run();
+    .bind(status, JSON.stringify(audit), now, reply, summarize(reply), id).run();
   return { status, verifiedAt: now };
 }
 
