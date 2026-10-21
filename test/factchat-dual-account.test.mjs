@@ -194,3 +194,12 @@ test('migration is additive, starts both accounts disabled and leaves every fall
   assert.doesNotMatch(migration,/^\s*UPDATE\s/im);
   assert.doesNotMatch(migration,/^\s*(DROP|DELETE)\s/im);
 });
+
+test('AI operations center renders the approval checkbox and sends the explicit confirmation',()=>{
+  const center=read('ai-operations-center-admin.js');
+  assert.match(center,/data-provider-guard/);
+  assert.match(center,/item\.freeGuardConfigured && item\.accountClass !== 'institution' \? 'checked' : ''/);
+  assert.match(center,/body: JSON\.stringify\(\{ enabled, priority, defaultModel, freeGuardConfirmed \}\)/);
+  assert.match(center,/institution_account_approval_required/);
+  assert.match(center,/\.aic-row\.provider \.aic-guard\{grid-column:1\/-1/);
+});
