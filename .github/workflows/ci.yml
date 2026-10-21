@@ -126,6 +126,11 @@ jobs:
           node --check education/study/ai-bootcamp/documents/portrait.js
           node --check education/study/ai-bootcamp/documents/documents.js
           node --test test/education-bootcamp-documents.test.mjs
+      - name: Test Education Premium Studio course engine
+        if: github.event_name != 'pull_request' || steps.scope.outputs.my_only != 'true'
+        run: |
+          for f in education/study/live/*.js education/study/live/*/*.js scripts/verify-education-live-studio-native.mjs; do node --check "$f"; done
+          node --test test/education-live-studio.test.mjs
       - name: Run static policy and code checks
         if: github.event_name != 'pull_request' || steps.scope.outputs.my_only != 'true'
         env:

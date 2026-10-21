@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="description" content="EKODI Education Premium Studio 발표 화면 — 발표자 노트, 다음 슬라이드, 실습 타이머, QR 접속 안내">
+  <meta name="ekodi-ui-type" content="USER">
+  <meta name="robots" content="noindex">
+  <title>발표 화면 · EKODI Education Premium Studio</title>
+  <link rel="stylesheet" href="../live.css">
+</head>
+<body class="lv pres-body" data-ekodi-ui="USER" data-live-surface="presenter">
+<header class="lv-top" id="presTop" aria-label="발표 제어">
+  <a class="lv-brand" id="backStudio" href="../"><span class="lv-brand-mark" aria-hidden="true">E</span><span><strong>발표 화면</strong><small id="presSession">Premium Studio</small></span></a>
+  <span class="pill"><span class="sr-only">강의 경과</span><span class="lv-clock" id="presLecture">00:00</span></span>
+  <span class="pill" id="presTimerWrap"><span>실습</span><span class="lv-clock" id="presTimerTop">--:--</span></span>
+  <span class="grow"></span>
+  <span class="kbd" id="presCounter">- / -</span>
+  <button type="button" class="btn" id="pPrev" aria-label="이전 슬라이드">←</button>
+  <button type="button" class="btn" id="pNext" aria-label="다음 슬라이드">→</button>
+  <button type="button" class="btn btn-primary" id="pPractice">실습 시작</button>
+  <button type="button" class="btn" id="pBlack" aria-pressed="false">가리기</button>
+  <button type="button" class="btn" id="pFull">전체화면</button>
+</header>
+<main class="pres" id="presMain">
+  <section class="stage" aria-label="현재 슬라이드">
+    <div class="stage-frame" id="stage" aria-live="polite"></div>
+  </section>
+  <aside class="pres-side" id="presSide" aria-label="발표자 전용 정보 (청중 화면에는 표시되지 않음)">
+    <section class="pres-card"><h3>실습 타이머</h3><div class="big-clock" id="presTimer" role="timer">--:--</div><p class="kbd" id="presTimerInfo">대기 중</p>
+      <div class="pres-controls"><button type="button" class="btn btn-small" id="pPause">일시정지</button><button type="button" class="btn btn-small" data-add="60000">+1분</button><button type="button" class="btn btn-small" id="pStop">실습 종료</button></div></section>
+    <section class="pres-card"><h3>발표자 노트 · 수강생 비공개</h3><div id="presNotes"></div></section>
+    <section class="pres-card"><h3>다음 슬라이드</h3><div class="next-frame" id="nextSlide"></div></section>
+    <section class="pres-card"><h3>두 번째 화면 · 출력</h3>
+      <div class="pres-controls">
+        <button type="button" class="btn btn-small" id="pAudience">청중 화면 창 열기</button>
+        <button type="button" class="btn btn-small" id="pNotes" aria-pressed="true">노트 숨기기</button>
+        <button type="button" class="btn btn-small" id="pPrint">인쇄·PDF</button>
+        <button type="button" class="btn btn-small" id="pSync">수동 동기화</button>
+      </div>
+      <p class="kbd">→/Space/PageDown 다음 · ←/PageUp 이전 · B 가리기 · F 전체화면 · N 노트 · Home/End</p>
+      <p class="kbd" id="presSync"></p>
+    </section>
+  </aside>
+</main>
+<div class="print-deck" id="printDeck" aria-hidden="true"></div>
+<div class="toast" id="toast" role="status" aria-live="assertive" hidden></div>
+<script type="module" src="../present.js"></script>
+</body>
+</html>
