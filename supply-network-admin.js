@@ -4,11 +4,14 @@
   const PANEL_ID = 'supplyNetworkAdminSection';
   const API = 'https://ekodi.kr/api/affiliate';
   const MALL_ADMIN = 'https://ekodi.kr/ekodimall/admin/sourcing';
+  const BIZ_ADMIN = 'https://ekodi.kr/ekodibiz/admin';
   const APPLICATION = { candidate:'후보', prepared:'가입 준비', account_exists:'계정보유', applied:'신청완료', review:'심사중', approved:'승인됨', active:'활성', blocked:'보류' };
   const INTEGRATION = { not_ready:'미연동', manual:'수동', deeplink:'딥링크', api:'API', feed:'Feed', live:'실연동' };
   const OUTREACH = { none:'미연락', planned:'연락 예정', sent:'문의 발송', replied:'회신 수신', action_required:'추가조치', closed:'연락 종료' };
   const token = () => { try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; } };
-  const mallAdminUrl = () => { const target=new URL(MALL_ADMIN); const value=token(); if(value) target.hash=new URLSearchParams({ekodi_admin_token:value}).toString(); return target.href; };
+  const adminUrl = (href) => { const target=new URL(href); const value=token(); if(value) target.hash=new URLSearchParams({ekodi_admin_token:value}).toString(); return target.href; };
+  const mallAdminUrl = () => adminUrl(MALL_ADMIN);
+  const bizAdminUrl = () => adminUrl(BIZ_ADMIN);
   const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   async function api(path, options = {}) {
     const headers = new Headers(options.headers || {});
@@ -32,7 +35,7 @@
     panel.innerHTML = `<div class="section-head"><div><p class="kicker">PROFESSIONAL SERVICE · COMMERCE</p>
       <h2>판매·공급망 엔진</h2><p>여러 운영공간이 재사용하는 공급자·제휴망 Adapter와 검증 상태를 중앙에서 관리합니다.</p></div>
       <div class="supply-network-actions"><button type="button" data-supply-refresh>↻ 상태 확인</button><a href="${mallAdminUrl()}">에코디몰 운영관리</a></div></div>
-      <div class="supply-network-boundary"><strong>경계 원칙</strong><span>Provider/Adapter/공통 안전 게이트와 제휴망 확보 상태는 전문서비스가 소유합니다.</span><span>판매처 선택·적용 ON/OFF·상품 추천 결정은 각 운영공간이 소유합니다.</span><span>Credential/Secret은 시스템서비스에만 보관합니다.</span></div>
+      <div class="supply-network-boundary"><strong>경계 원칙</strong><span>Provider/Adapter/공통 안전 게이트와 제휴망 확보 상태는 플랫폼 전문엔진이 소유합니다.</span><span>에코디비즈의 계약·영업·공급자·구매자 운영은 에코디비즈 관리자에서 관리합니다.</span><span>에코디몰의 상품 소싱·판매처 선택·추천 적용은 에코디몰 관리자에서 관리합니다.</span><span>Credential/Secret은 시스템서비스에만 보관합니다.</span></div>
       <div class="supply-network-summary" data-supply-summary><p>상태를 확인하는 중입니다.</p></div>
       <div class="supply-network-grid"><article><h3>Provider · Feed</h3><div data-supply-providers></div></article><article><h3>제휴망 · 프로그램</h3><div data-supply-programs></div></article></div>
       <p class="supply-network-note" data-supply-message role="status"></p>`;
