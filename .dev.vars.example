@@ -2,6 +2,13 @@ CF_API_TOKEN=replace-with-a-restricted-cloudflare-api-token
 OPENAI_API_KEY=replace-with-a-server-only-openai-project-key
 OPENAI_MODEL=gpt-5.6-terra
 
+# Kakao Personal Agent. Keep all real values in Worker secrets, never in browser assets.
+KAKAO_REST_API_KEY=replace-with-kakao-rest-api-key
+KAKAO_CLIENT_SECRET=replace-with-kakao-client-secret
+KAKAO_REDIRECT_URI=https://api.ekodi.kr/api/control/social/kakao/callback
+KAKAO_TOKEN_ENCRYPTION_KEY=replace-with-long-random-encryption-secret
+KAKAO_ADMIN_RETURN_URL=https://admin.ekodi.kr/#social
+
 # Remote PC power control. Keep real relay URL and shared secret in Worker secrets.
 REMOTE_POWER_RELAY_URL=https://remote-power-relay.example.invalid
 REMOTE_POWER_SHARED_SECRET=replace-with-long-random-secret
