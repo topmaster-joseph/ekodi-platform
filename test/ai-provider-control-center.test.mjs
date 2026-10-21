@@ -48,7 +48,7 @@ test('operator control uses accessible four-tab navigation and one shared gatewa
   assert.match(admin,/\['routing','라우팅'\]/);
   assert.match(admin,/\['logs','기록'\]/);
   assert.match(admin,/data-ai-open-provider/);
-  assert.match(runtime,/const result=await invokeAiProviderCapability\(env,\{capability,system,input,maxOutputTokens\}\)/);
+  assert.match(runtime,/const result=await invokeAiProviderCapability\(env,\{capability,system,input,maxOutputTokens,governance:\{channel:'public-gateway'\}\}\)/);
   assert.match(runtime,/stale-verification/);
   assert.match(runtime,/settingsChanged/);
 });
