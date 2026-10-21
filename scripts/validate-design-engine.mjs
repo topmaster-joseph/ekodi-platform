@@ -136,7 +136,8 @@ if (universalSitePrinciples?.communicationFirst?.assistant?.persistentFloating !
 if (universalSitePrinciples?.personalization?.mode !== 'progressive-consent-based' || universalSitePrinciples?.personalization?.anonymousBaseline !== 'fully-usable') errors.push('site personalization must be progressive, consent-based and fully usable anonymously.');
 if (universalSitePrinciples?.personalization?.sensitiveInferenceForbidden !== true || universalSitePrinciples?.personalization?.authorizationUnaffected !== true || universalSitePrinciples?.personalization?.explainableAndReversible !== true) errors.push('site personalization must not infer sensitive traits, alter authorization, or become irreversible.');
 if (userAiEntry.includes('.ekodi-user-ai-entry{position:fixed')) errors.push('shared User AI entry must not float over site content.');
-if (!userAiEntry.includes("insertBefore(root,footer)")) errors.push('shared User AI entry must be inserted into document flow before the footer when available.');
+if (!userAiEntry.includes('__EKODI_USER_AI_ENTRY_RETIRED__')) errors.push('shared User AI entry is retired and must stay a purge-only module.');
+if (/AI로 하기|무엇을 원하세요|innerHTML/.test(userAiEntry)) errors.push('retired User AI entry must not render the bottom AI command box.');
 
 const adminExperience = policy?.admin?.experienceStandard ?? {};
 if (adminExperience.inheritsConstructionStandard !== true) errors.push('admin surfaces must inherit the universal construction standard.');

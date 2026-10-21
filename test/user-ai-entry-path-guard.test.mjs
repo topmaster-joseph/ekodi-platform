@@ -5,62 +5,38 @@ import vm from 'node:vm';
 
 const source=fs.readFileSync(new URL('../shell/user-ai-entry.js',import.meta.url),'utf8');
 
-function mountState(pathname,surface='public',entry=''){
-  let createCount=0;
-  let mountCount=0;
-  const open={addEventListener(){},setAttribute(){}};
-  const form={addEventListener(){}};
-  const input={value:'',focus(){}};
-  const root={
-    dataset:{},
-    className:'',
-    innerHTML:'',
-    querySelector(selector){
-      if(selector==='.ekodi-user-ai-entry__open')return open;
-      if(selector==='form')return form;
-      if(selector==='input')return input;
-      return null;
-    },
-  };
+function run(pathname,surface='public',leftovers=0){
+  let created=0;let removed=0;let appended=0;
+  const nodes=Array.from({length:leftovers},()=>({remove(){removed+=1}}));
+  const html={dataset:{ekodiService:'ekodimall',ekodiUserSurface:surface}};
   const document={
-    documentElement:{dataset:{ekodiService:'ekodimall',ekodiUserSurface:surface,ekodiUserAiEntry:entry}},
-    currentScript:null,
-    readyState:'complete',
+    documentElement:html,currentScript:null,readyState:'complete',
     querySelector(){return null},
-    createElement(tag){
-      createCount+=1;
-      if(tag==='aside')return root;
-      return {dataset:{},textContent:''};
-    },
-    head:{append(){}},
-    body:{append(node){if(node===root)mountCount+=1}},
+    querySelectorAll(){return nodes},
+    createElement(){created+=1;return {dataset:{}}},
+    head:{append(){appended+=1}},body:{append(){appended+=1}},
   };
-  vm.runInNewContext(source,{window:{},document,location:{pathname,assign(){}},URL});
-  return {createCount,mountCount};
+  const window={};
+  vm.runInNewContext(source,{window,document,location:{pathname,assign(){}},URL});
+  return {created,removed,appended,window};
 }
 
-test('shared User AI entry never mounts on admin path segments',()=>{
-  for(const path of ['/admin','/admin/','/admin/settings','/ekodimall/admin','/ekodimall/admin/','/ekodimall/admin/products','/tenant/admin/orders/history','/ekodimall//admin//products/','/ekodimall/ADMIN/products','/ekodimall/%61dmin/products']){
-    assert.equal(mountState(path).mountCount,0,path);
+test('retired User AI entry never mounts on any EKODI surface',()=>{
+  for(const path of ['/','/ekodimall','/edu/study/live/lab/','/jadam/marketing','/admin','/ai/','/mnubiz/']){
+    for(const surface of ['public','workspace','admin']){
+      const r=run(path,surface);
+      assert.equal(r.created,0,`${surface}:${path}`);
+      assert.equal(r.appended,0,`${surface}:${path}`);
+    }
   }
 });
 
-test('shared User AI entry never mounts on the central AI surface',()=>{
-  for(const path of ['/ai','/ai/','/ai/history'])assert.equal(mountState(path).mountCount,0,path);
+test('retired User AI entry purges boxes left by a stale cached bundle',()=>{
+  const r=run('/edu/study/live/lab/','public',2);
+  assert.equal(r.removed,2);
+  assert.equal(r.window.__EKODI_USER_AI_ENTRY_RETIRED__,true);
 });
 
-
-test('admin guard does not over-block non-admin user paths',()=>{
-  for(const path of ['/','/ekodimall','/ekodimall/administrator','/tenant/myadmin','/tenant/administer/settings','/ai-tools']){
-    assert.equal(mountState(path).mountCount,1,path);
-  }
-});
-
-test('admin surface remains blocked independently of pathname',()=>{
-  assert.equal(mountState('/ekodimall','admin').mountCount,0);
-});
-
-test('user page can explicitly disable the shared AI entry',()=>{
-  assert.equal(mountState('/mnubiz/','public','off').mountCount,0);
-  assert.equal(mountState('/mnubiz/','public','OFF').mountCount,0);
+test('retired module carries no command box markup',()=>{
+  assert.doesNotMatch(source,/AI로 하기|무엇을 원하세요|해줘<\/button>|innerHTML/);
 });

@@ -108,7 +108,7 @@ async function bundledShell(request,env,ctx){
   headers.set('cache-control','public, max-age=60, stale-while-revalidate=300');
   headers.set('x-ekodi-user-ui-header',userHeader?'v3':'missing');
   headers.set('x-ekodi-user-ui-footer',userFooter?`v${EKODI_USER_FOOTER.version}`:'missing');
-  headers.set('x-ekodi-user-ai-entry',userAiEntry?'v1':'missing');
+  headers.set('x-ekodi-user-ai-entry',userAiEntry?'retired':'missing');
   headers.set('x-ekodi-user-experience-profiles','v1');
   headers.set('x-ekodi-user-language',userLanguage?'v1':'missing');
   headers.set('x-ekodi-media-meeting',mediaMeeting?'v2':'missing');

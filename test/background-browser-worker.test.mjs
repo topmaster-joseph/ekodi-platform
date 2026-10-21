@@ -72,7 +72,8 @@ test('shared-site guarded release invokes native browser verification after prod
   assert.match(workerWorkflow,/github\.event_name == 'pull_request' && 'config\/board-surface-verification\.json'/);
   assert.match(workerWorkflow,/horizontalOverflow/);
   assert.match(workerWorkflow,/userAiEntryCount/);
-  assert.match(workerWorkflow,/test\("\/admin\(\?:\/\|\$\)"/);
+  // Bottom AI command box is retired platform-wide: zero instances on every snapshot.
+  assert.match(workerWorkflow,/select\(\.type == "snapshot" and \(\(\.userAiEntryCount \/\/ 0\) > 0\)\)/);
   assert.match(workerWorkflow,/\.pageErrors \| length == 0/);
   assert.match(source,/url:clean\(page\.url\(\),500\)/);
   assert.match(workerWorkflow,/github\.event_name == 'pull_request'[\s\S]*'\/,\/my\/,\/admin\/'/);

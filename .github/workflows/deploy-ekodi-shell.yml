@@ -116,7 +116,9 @@ jobs:
           grep -Fq "x-ekodi-user-ui-header" ekodi-shell-worker.js
           grep -Fq "x-ekodi-user-ui-footer" ekodi-shell-worker.js
           grep -Fq "x-ekodi-user-ai-entry" ekodi-shell-worker.js
-          grep -Fq 'AI로 하기' shell/user-ai-entry.js
+          grep -Fq '__EKODI_USER_AI_ENTRY_RETIRED__' shell/user-ai-entry.js
+          ! grep -Fq 'AI로 하기' shell/user-ai-entry.js
+          ! grep -Fq '무엇을 원하세요' shell/user-ai-entry.js
           grep -Fq "x-ekodi-user-language" ekodi-shell-worker.js
           grep -Fq "x-ekodi-media-meeting" ekodi-shell-worker.js
           grep -Fq "x-ekodi-character-registry" ekodi-shell-worker.js
