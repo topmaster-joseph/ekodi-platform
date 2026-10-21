@@ -49,7 +49,8 @@
       "deliveryMode": "bridge",
       "targetUrl": "https://ekodi.kr/my/docs/",
       "sourceKind": "common",
-      "membershipSite": "ai"
+      "membershipSite": "ai",
+      "paidAvailable": true
     },
     {
       "id": "find-support",

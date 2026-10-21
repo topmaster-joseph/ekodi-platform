@@ -9,7 +9,7 @@
   <title>EKODI Docs AI | My EKODI</title>
   <link rel="stylesheet" href="./docs.css?v=20260908-docs-ui-4">
   <link rel="stylesheet" href="./docs-readability.css?v=20260910-readability-verified">
-  <link rel="stylesheet" href="./docs-focus.css?v=20260909-focus-1">
+  <link rel="stylesheet" href="./docs-focus.css?v=20261008-docs-mobile-auth-1">
 </head>
 <body data-ekodi-ui="USER" class="docs-focus library-collapsed ai-collapsed">
   <header class="docs-topbar">
@@ -18,7 +18,7 @@
       <button id="toggleLibrary" class="ghost panel-toggle" type="button" aria-pressed="true" aria-controls="docsLibrary" title="문서함 열기">문서함</button>
       <button id="toggleAi" class="ghost panel-toggle" type="button" aria-pressed="true" aria-controls="docsAiPanel" title="AI 패널 열기">AI</button>
       <span id="saveState" class="save-state" aria-live="polite">로컬 자동저장</span>
-      <button id="authButton" class="ghost" type="button">Google로 시작</button>
+      <button id="authButton" class="ghost" type="button">Google로 로그인</button>
     </div>
   </header>
 
@@ -114,6 +114,7 @@
         <textarea id="aiInstruction" maxlength="4000" placeholder="예: 지원사업 평가자가 한눈에 이해하도록 간결하게"></textarea>
       </label>
       <button id="runAi" class="primary" type="button">AI 편집 제안 만들기</button>
+      <a id="advancedAi" class="advanced-ai-link" href="https://ekodi.kr/auth/?site=ai&return_to=https%3A%2F%2Fekodi.kr%2Fmy%2Fdocs%2F&review=1&plan=plus">고급 AI · 구독</a>
       <p id="aiStatus" class="ai-status" aria-live="polite">선택 영역이 없으면 전체 문서를 대상으로 합니다. 긴 문서는 자동 분할해 한 번의 편집 작업으로 처리합니다.</p>
       <p id="aiQuota" class="ai-quota">AI 사용량은 실행 후 표시됩니다.</p>
 
@@ -139,7 +140,7 @@
 
   <button id="panelBackdrop" class="panel-backdrop" type="button" aria-label="열린 보조 패널 닫기" hidden></button>
   <script src="../config.js"></script>
-  <script src="./docs-focus.js?v=20260909-focus-1"></script>
-  <script type="module" src="./docs.js?v=20260909-docs-ai-6"></script>
+  <script src="./docs-focus.js?v=20261008-docs-mobile-auth-1"></script>
+  <script type="module" src="./docs.js?v=20261008-docs-auth-subscription-1"></script>
 </body>
 </html>

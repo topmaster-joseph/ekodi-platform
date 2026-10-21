@@ -5,6 +5,8 @@ const cfg=window.EKODI_MY_CONFIG||{};
 const enabled=Boolean(cfg.dataEnabled&&cfg.supabaseUrl&&cfg.supabasePublishableKey);
 const sb=enabled?createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{auth:{detectSessionInUrl:true,persistSession:true}}):null;
 const authUrl=cfg.authUrl||'https://ekodi.kr/auth/?site=my';
+const PUBLIC_DOCS_URL='https://ekodi.kr/ai/docs/';
+const PRIVATE_DOCS_URL='https://ekodi.kr/my/docs/';
 const AI_URL=enabled?`${cfg.supabaseUrl}/functions/v1/document-ai-api`:'';
 const LOCAL_KEY='ekodi.docs.v1';
 const PANEL_KEY='ekodi.docs.panels.v1';
@@ -124,7 +126,9 @@ async function handoff(){
   history.replaceState({},document.title,location.pathname+location.search);if(error)throw error;
 }
 function authUi(){
-  $('#authButton').textContent=session?'로그아웃':'Google로 시작';
+  $('#authButton').textContent=session?'로그아웃':'Google로 로그인';
+  document.body.dataset.authState=session?'member':'guest';
+  $('#toggleLibrary').hidden=!session;
   $('#libraryHint').textContent=session?'계정 저장은 내 EKODI 사용자 ID에 귀속됩니다. 로컬 자동저장도 함께 유지됩니다.':'로그인 전에는 이 브라우저에 안전하게 임시 저장합니다.';
   $('#saveCloud').disabled=!session;
   $('#historyToggle').disabled=!session;
@@ -132,7 +136,7 @@ function authUi(){
 }
 async function authAction(){
   if(!enabled)return;
-  if(!session){const target=new URL(authUrl);target.searchParams.set('return_to',location.href.split('#')[0]);location.assign(target.href);return}
+  if(!session){persistLocal();const target=new URL(authUrl);target.searchParams.set('site','my');target.searchParams.set('return_to',PRIVATE_DOCS_URL);location.assign(target.href);return}
   await sb.auth.signOut();session=null;cloudDocs=[];authUi();renderList();setState('로컬 자동저장');
 }
 async function loadCloud(){
