@@ -26,3 +26,8 @@ test('canonical auth path owns the Google bridge and the legacy auth host is ret
   assert.match(build,/google-origin-bridge\.html/);
   assert.match(admin,/new URL\('\/auth\/google-origin-bridge',GOOGLE_BRIDGE_ORIGIN\)/);
 });
+test('mobile preopened bridge survives parent navigation and does not dead-end at 15 seconds',()=>{
+  assert.match(admin,/window\.open\('','ekodi_google_origin_bridge'\)/);
+  assert.match(bridge,/120000/);
+  assert.doesNotMatch(bridge,/관리자 인증 연결 시간이 초과되었습니다/);
+});
