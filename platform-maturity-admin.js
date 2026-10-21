@@ -4,9 +4,15 @@ const TOKEN_KEY = 'ekodi-auth-token';
 const SESSION_URL = 'https://ekodi.kr/api/session';
 const MATURITY_API = 'https://ekodi.kr/api/control/platform-maturity';
 
-if (typeof document !== 'undefined' && !document.getElementById(MODULE_ID)) {
+function installMaturityAdmin() {
+  if (typeof document === 'undefined' || document.getElementById(MODULE_ID)) return;
   const content = document.querySelector('.content');
   const nav = document.querySelector('.sidebar nav');
+  // The registry can be imported before the asynchronously mounted Admin DOM.
+  if (!content || !nav) {
+    window.addEventListener('ekodi-admin-ready', installMaturityAdmin, { once:true });
+    return;
+  }
   const root = document.documentElement;
   root.dataset.ekodiMaturityAuthorized = 'pending';
 
@@ -48,6 +54,7 @@ html:not([data-ekodi-maturity-authorized="true"]) .sidebar [data-section="maturi
   let loaded = false;
   let loading = null;
   let authorizationInFlight = null;
+  let sessionRetryAttempted = false;
 
   const token = () => {
     try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; }
@@ -326,11 +333,14 @@ html:not([data-ekodi-maturity-authorized="true"]) .sidebar [data-section="maturi
     window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ section:SECTION } }));
   }
 
-  function deny() {
+  function deny({ transient = false } = {}) {
     authorized = false; root.dataset.ekodiMaturityAuthorized = 'false';
     nav?.querySelector('[data-section="maturity"]')?.remove();
     panel.hidden = true; panel.classList.add('hidden-panel');
-    if (location.hash.toLowerCase() === '#maturity') {
+    // Only a confirmed non-admin role must be redirected. A failed network
+    // session check is not proof of insufficient permissions; keep the
+    // requested route hidden while one bounded reauthentication is attempted.
+    if (!transient && location.hash.toLowerCase() === '#maturity') {
       history.replaceState(history.state, '', `${location.pathname}${location.search}#campus`);
       window.EKODIAdminPanels?.activate?.('campus');
     }
@@ -345,10 +355,19 @@ html:not([data-ekodi-maturity-authorized="true"]) .sidebar [data-section="maturi
         const session = await readSession();
         if (session?.role !== 'super_admin') return deny();
         authorized = true; root.dataset.ekodiMaturityAuthorized = 'true'; ensureNav();
-        if (location.hash.toLowerCase() === '#maturity' || window.EKODIAdminPanels?.current?.() === SECTION) await loadData();
+        if (location.hash.toLowerCase() === '#maturity' || window.EKODIAdminPanels?.current?.() === SECTION) {
+          // Explicitly re-activate the panel after a late successful session
+          // check; the menu may have been mounted while it was hidden.
+          window.EKODIAdminPanels?.activate?.(SECTION);
+          await loadData();
+        }
       } catch (error) {
         console.warn('[EKODI Maturity] authorization check failed', error);
-        deny();
+        deny({ transient:true });
+        if (!sessionRetryAttempted) {
+          sessionRetryAttempted = true;
+          window.setTimeout(() => { if (document.contains(panel)) void authorize(); }, 1500);
+        }
       }
     })().finally(() => { authorizationInFlight = null; });
     return authorizationInFlight;
@@ -382,4 +401,8 @@ html:not([data-ekodi-maturity-authorized="true"]) .sidebar [data-section="maturi
   if (nav && navObserver) navObserver.observe(nav, { childList:true, subtree:true });
 
   void authorize();
+}
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installMaturityAdmin, { once:true });
+  else installMaturityAdmin();
 }
