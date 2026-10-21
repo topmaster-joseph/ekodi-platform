@@ -1,0 +1,22 @@
+name: Autonomous Development Pilot Checks
+on:
+  pull_request:
+    paths:
+      - 'ekodi-autonomous-development-*.js'
+      - 'tests/autonomous-development-*.test.mjs'
+      - '.github/workflows/autonomous-development-pilot.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  policy-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check ekodi-autonomous-development-policy.js
+      - run: node --check ekodi-autonomous-development-runner.js
+      - run: node --test tests/autonomous-development-policy.test.mjs tests/autonomous-development-policy-regression.test.mjs
