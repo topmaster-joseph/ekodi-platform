@@ -19,6 +19,7 @@ on:
       - 'ai-control/**'
       - 'ai-control-*.js'
       - 'ai-provider-control.js'
+      - 'factchat-gateway-provider-adapter.js'
       - 'ekodi-site-improvement-scheduler.js'
       - 'ekodi-site-improvement-oidc-broker.js'
       - '.github/workflows/site-improvement-cloud.yml'
@@ -91,6 +92,7 @@ on:
       - 'migrations/0095_ai_free_quota_decisions.sql'
       - 'migrations/0096_activate_ai_provider_pool.sql'
       - 'migrations/0121_extended_free_ai_provider_chain.sql'
+      - 'migrations/0200_factchat_dual_account_providers.sql'
       - 'migrations/0122_ai_provider_routing_evidence.sql'
       - 'migrations/0120_common_ai_provider_chain.sql'
       - 'migrations/0109_low_traffic_site_improvement.sql'
@@ -108,6 +110,7 @@ on:
       - 'ai-control/**'
       - 'ai-control-*.js'
       - 'ai-provider-control.js'
+      - 'factchat-gateway-provider-adapter.js'
       - 'ekodi-site-improvement-scheduler.js'
       - 'ekodi-site-improvement-oidc-broker.js'
       - '.github/workflows/site-improvement-cloud.yml'
@@ -179,6 +182,7 @@ on:
       - 'migrations/0095_ai_free_quota_decisions.sql'
       - 'migrations/0096_activate_ai_provider_pool.sql'
       - 'migrations/0121_extended_free_ai_provider_chain.sql'
+      - 'migrations/0200_factchat_dual_account_providers.sql'
       - 'migrations/0122_ai_provider_routing_evidence.sql'
       - 'migrations/0120_common_ai_provider_chain.sql'
       - 'migrations/0109_low_traffic_site_improvement.sql'
@@ -236,6 +240,7 @@ jobs:
           node --check ai-free-quota.js
           node --check groq-free-provider-adapter.js
           node --check extended-free-provider-adapters.js
+          node --check factchat-gateway-provider-adapter.js
           node --check huggingface-provider-adapter.js
           node --check openrouter-free-provider-adapter.js
           node --check ai-control-worker.js
