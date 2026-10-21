@@ -1,0 +1,10 @@
+name = "ekodi-support-jubilee-shadow"
+main = "support-jubilee-shadow-worker.js"
+compatibility_date = "2026-08-01"
+account_id = "46aad4738793fbaca88574832a2ccc0f"
+workers_dev = true
+preview_urls = false
+
+[vars]
+ENVIRONMENT = "development"
+JUBILEE_MODE = "shadow"
