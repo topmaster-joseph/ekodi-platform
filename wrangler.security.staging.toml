@@ -1,0 +1,12 @@
+name = "ekodi-security-staging"
+main = "security-control-plane-worker.js"
+compatibility_date = "2026-08-22"
+workers_dev = true
+preview_urls = false
+
+[vars]
+SECURITY_CONTROL_PLANE_ENABLED = "false"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
