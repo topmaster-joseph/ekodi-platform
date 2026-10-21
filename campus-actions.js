@@ -234,6 +234,22 @@
     return actions;
   }
 
+  function makeAdminLauncher(site) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'campus-site-launcher';
+    button.dataset.campusAction = 'manage';
+    button.dataset.campusDomain = site.domain;
+    button.dataset.campusTarget = site.section;
+    button.dataset.campusFallback = site.fallback || '';
+    const label = document.createElement('span');
+    label.className = 'campus-site-launcher-name';
+    label.textContent = site.name;
+    button.append(label);
+    button.setAttribute('aria-label', `${site.name} 관리자 메뉴 열기`);
+    return button;
+  }
+
   function renderSiteItem(site) {
     const item = document.createElement('article');
     item.className = 'campus-site-item';
@@ -244,7 +260,7 @@
     if (site.lifecycle === 'planned') item.classList.add('is-planned');
     if (site.lifecycle === 'preparing') item.classList.add('is-preparing');
     if (site.lifecycle === 'beta') item.classList.add('is-beta');
-    item.append(makeIdentity(site), makeDomainControl(site), makeOperationalActions(site));
+    item.append(makeAdminLauncher(site));
     return item;
   }
 
@@ -334,12 +350,9 @@
     item.classList.toggle('is-preparing', site.lifecycle === 'preparing');
     item.classList.toggle('is-beta', site.lifecycle === 'beta');
 
-    const identity = item.querySelector('.campus-site-identity');
-    if (identity) identity.replaceWith(makeIdentity(site));
-    const domain = item.querySelector('.campus-site-domain');
-    if (domain) domain.replaceWith(makeDomainControl(site));
-    const actions = item.querySelector('.campus-row-actions');
-    if (actions) actions.replaceWith(makeOperationalActions(site));
+    const launcher = item.querySelector('.campus-site-launcher');
+    if (launcher) launcher.replaceWith(makeAdminLauncher(site));
+    else item.prepend(makeAdminLauncher(site));
   }
 
   function matchesSiteRelation(item) {
@@ -473,7 +486,7 @@
     }
 
     const copy = panel.querySelector('.campus-toolbar > div > p:not(.kicker)');
-    if (copy) copy.textContent = '에코디 생태계의 전체 사이트와 EKODI.KR 첫화면 공개 설정을 한 목록에서 관리합니다.';
+    if (copy) copy.textContent = '상단 분류를 선택한 뒤 사이트 버튼을 누르면 해당 관리자 메뉴로 바로 이동합니다.';
 
     const grid = document.createElement('div');
     grid.id = 'campusSiteGroups';
