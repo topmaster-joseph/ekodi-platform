@@ -895,6 +895,7 @@ function Get-AgentSettings {
     workstationProfile = Get-WorkstationProfileName
     health = Get-LightHealth
     backgroundBrowserCanary = Get-BackgroundBrowserCanaryState
+    interactiveAuthSession = Get-EkodiInteractiveAuthSettingsProjection
   }
 }
 
@@ -1687,6 +1688,452 @@ function Invoke-BackgroundBrowserWorker($Payload) {
     return @{ message = '인증이 필요한 자동작업을 사용자 화면에 열지 않고 AUTH_REQUIRED로 기록한 뒤 백그라운드 세션을 종료했습니다.'; browserWorker = $proof }
   }
   return @{ message = 'EKODI 자체 Background Browser Worker가 사용자 화면과 분리된 작업을 완료하고 임시 브라우저 세션을 종료했습니다.'; browserWorker = $proof }
+}
+
+# ---------------------------------------------------------------------------
+# EKODI-INTERACTIVE-AUTH-001 · Human-in-the-loop external service login
+# A visible, EKODI-owned, task-scoped Chromium window is opened ONLY after the
+# person at this PC accepts a local consent prompt. The person types their own
+# credentials into the provider's page. EKODI never reads password fields,
+# cookies, tokens or storage, never captures the screen, never injects input,
+# never touches the user's Opera/Chrome/Edge profiles, and deletes the profile
+# on close or expiry. Separate from EKODI-BROWSER-WORKER-001 (unchanged).
+# ---------------------------------------------------------------------------
+$InteractiveAuthPolicyId = 'EKODI-INTERACTIVE-AUTH-001'
+$InteractiveAuthRoot = Join-Path $Root 'InteractiveAuth'
+$InteractiveAuthStatePath = Join-Path $Root 'interactive-auth-session.json'
+$InteractiveAuthLastPath = Join-Path $Root 'interactive-auth-last.json'
+$InteractiveAuthSessionPattern = '^ias_[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'
+# Local registry: the agent never trusts a URL from the network payload.
+$InteractiveAuthServices = @{
+  'factchat-mokpo' = @{
+    entryUrl = 'https://mokpo.factchat.bot/dashboard/chat/40882'
+    origin = 'https://mokpo.factchat.bot'
+    host = 'mokpo.factchat.bot'
+    authPrefixes = @('/dashboard')
+    label = 'FactChat (국립목포대학교)'
+  }
+}
+$InteractiveAuthFeatureKeywords = [ordered]@{
+  'productivity' = @('생산성', 'productivity')
+  'meeting-notes' = @('회의록', '회의 녹음', 'meeting')
+  'hwp-editor' = @('hwp', 'hwpx', '한글 문서', '한글문서', '한글 편집')
+  'presentation' = @('프레젠테이션', 'ppt', '슬라이드', 'presentation')
+  'super-agent' = @('super agent', '슈퍼 에이전트', '슈퍼에이전트')
+  'deep-research' = @('deep research', '딥리서치', '딥 리서치')
+  'univ-in-data' = @('univ-in-data', 'univ in data')
+  'korea-in-data' = @('korea-in-data', 'korea in data')
+  'law-in-data' = @('law-in-data', 'law in data')
+  'usage-credit' = @('크레딧', 'credit', '사용량', '잔여', '한도')
+}
+
+# JSON round-trips may yield strings (PS 5.1) or DateTime (PS 7); normalize to UTC.
+function ConvertTo-EkodiUtc($Value) {
+  if ($Value -is [DateTime]) {
+    if ($Value.Kind -eq [DateTimeKind]::Unspecified) { return [DateTime]::SpecifyKind($Value, [DateTimeKind]::Utc) }
+    return $Value.ToUniversalTime()
+  }
+  return ([DateTimeOffset]::Parse([string]$Value, [Globalization.CultureInfo]::InvariantCulture)).UtcDateTime
+}
+
+function Format-EkodiUtc($Value) {
+  if (-not $Value) { return '' }
+  try { return (ConvertTo-EkodiUtc $Value).ToString('o') } catch { return '' }
+}
+
+function Get-EkodiInteractiveAuthInvariants {
+  return @{
+    credentialsReturned = $false
+    cookiesExported = $false
+    storageStateExported = $false
+    passwordFieldRead = $false
+    screenCaptured = $false
+    clipboardShared = $false
+    hostInputInjection = $false
+    activeUserProfileReused = $false
+  }
+}
+
+function Resolve-EkodiInteractiveBrowser {
+  # EKODI-owned Chromium first, then an installed Chromium-family browser used
+  # only with a brand-new temporary profile. Opera is never launched.
+  $owned = Join-Path $Root 'Chromium\chrome.exe'
+  if (Test-Path -LiteralPath $owned) { return @{ path = $owned; kind = 'ekodi-chromium' } }
+  $browser = Resolve-EkodiBrowser
+  if (-not $browser) { return $null }
+  $name = [IO.Path]::GetFileName($browser).ToLowerInvariant()
+  if ($name -eq 'chrome.exe') { return @{ path = $browser; kind = 'chrome' } }
+  if ($name -eq 'msedge.exe') { return @{ path = $browser; kind = 'msedge' } }
+  return $null
+}
+
+function Read-EkodiInteractiveAuthState {
+  if (-not (Test-Path -LiteralPath $InteractiveAuthStatePath)) { return $null }
+  try { return Get-Content -LiteralPath $InteractiveAuthStatePath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { return $null }
+}
+
+function Save-EkodiInteractiveAuthState($State) {
+  New-Item -ItemType Directory -Path $Root -Force | Out-Null
+  $State | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $InteractiveAuthStatePath -Encoding UTF8
+}
+
+function Assert-EkodiInteractiveAuthProfilePath([string]$ProfileDir) {
+  $rootPath = [IO.Path]::GetFullPath($InteractiveAuthRoot).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar + 'Session-'
+  $full = [IO.Path]::GetFullPath($ProfileDir)
+  if (-not $full.StartsWith($rootPath, [StringComparison]::OrdinalIgnoreCase) -or
+      $full.Substring($rootPath.Length) -notmatch '^[a-fA-F0-9]{32}$') {
+    throw 'interactive_auth_profile_path_invalid'
+  }
+  return $full
+}
+
+function Find-EkodiInteractiveAuthProcesses([string]$ProfileDir) {
+  $full = Assert-EkodiInteractiveAuthProfilePath $ProfileDir
+  $escaped = [regex]::Escape($full)
+  $pattern = '(?i)--user-data-dir=(?:"' + $escaped + '"|' + $escaped + ')(?=\s|"|$)'
+  return @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -in @('chrome.exe', 'msedge.exe') -and [regex]::IsMatch([string]$_.CommandLine, $pattern) })
+}
+
+function Get-EkodiInteractiveAuthProjection($State) {
+  if (-not $State) { return $null }
+  return @{
+    sessionId = [string]$State.sessionId
+    service = [string]$State.service
+    state = [string]$State.state
+    browser = [string]$State.browser
+    startedAt = Format-EkodiUtc $State.startedAt
+    expiresAt = Format-EkodiUtc $State.expiresAt
+    updatedAt = (Get-Date).ToUniversalTime().ToString('o')
+    currentHost = [string]$State.currentHost
+    pageClass = [string]$State.pageClass
+    observedHosts = @($State.observedHosts)
+    browserProcessAlive = [bool]$State.browserProcessAlive
+    profileRemoved = [bool]$State.profileRemoved
+    errorCode = [string]$State.errorCode
+  }
+}
+
+function Get-EkodiInteractiveAuthSettingsProjection {
+  $state = Read-EkodiInteractiveAuthState
+  if ($state) { return Get-EkodiInteractiveAuthProjection $state }
+  if (Test-Path -LiteralPath $InteractiveAuthLastPath) {
+    try { return Get-EkodiInteractiveAuthProjection (Get-Content -LiteralPath $InteractiveAuthLastPath -Raw -Encoding UTF8 | ConvertFrom-Json) } catch { }
+  }
+  return $null
+}
+
+function New-EkodiInteractiveAuthReceipt($State, [string]$Message, $Extra = @{}) {
+  $receipt = Get-EkodiInteractiveAuthInvariants
+  $receipt.policyId = $InteractiveAuthPolicyId
+  $receipt.agentVersion = $AgentVersion
+  $receipt.status = Get-EkodiInteractiveAuthProjection $State
+  foreach ($key in $Extra.Keys) { $receipt[$key] = $Extra[$key] }
+  return @{ message = $Message; interactiveAuth = $receipt; settings = Get-AgentSettings }
+}
+
+function Request-EkodiInteractiveAuthLocalConsent([string]$Label, [int]$TtlMinutes) {
+  $text = "EKODI 관리자 요청`n`n$Label 공식 로그인 화면을 EKODI 전용 임시 브라우저 창으로 엽니다.`n`n" +
+    "- 기존 Opera/Chrome/Edge 프로필·탭·비밀번호 저장소는 사용하지 않습니다.`n" +
+    "- 비밀번호·인증번호는 열린 창의 공식 페이지에만 직접 입력하세요. EKODI는 수집하지 않습니다.`n" +
+    "- 화면 녹화·키보드·마우스·클립보드 제어를 하지 않습니다.`n" +
+    "- 최대 $TtlMinutes 분 후 또는 종료 요청 시 창을 닫고 임시 프로필을 삭제합니다.`n`n허용하시겠습니까?"
+  try {
+    $shell = New-Object -ComObject WScript.Shell
+    # 4 = Yes/No, 32 = question icon, 4096 = system modal (on top). 120s timeout.
+    $answer = $shell.Popup($text, 120, 'EKODI 외부 서비스 로그인 동의', 4 + 32 + 4096)
+    return ($answer -eq 6)
+  } catch {
+    return $false
+  }
+}
+
+# Runs one fixed, read-only expression on an EKODI-owned page target.
+function Invoke-EkodiInteractiveAuthEvaluate($Page, [string]$Expression) {
+  $socket = [Net.WebSockets.ClientWebSocket]::new()
+  try {
+    $cts = [Threading.CancellationTokenSource]::new(10000)
+    try { $socket.ConnectAsync([Uri]$Page.webSocketDebuggerUrl, $cts.Token).GetAwaiter().GetResult() } finally { $cts.Dispose() }
+    $response = Invoke-EkodiCdpCommand $socket 1 'Runtime.evaluate' @{ expression = $Expression; returnByValue = $true; awaitPromise = $false }
+    return (([string]$response.result.result.value) | ConvertFrom-Json)
+  } finally {
+    try { $socket.Dispose() } catch { }
+  }
+}
+
+# Presence (never value) of a visible password field decides "still on login".
+$InteractiveAuthPageStateExpression = @'
+(() => JSON.stringify({
+  origin: location.origin,
+  path: location.pathname,
+  ready: document.readyState,
+  loginFormVisible: [...document.querySelectorAll('input[type=password]')].some(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; })
+}))()
+'@
+
+function Update-EkodiInteractiveAuthStatus($State) {
+  $service = $InteractiveAuthServices[[string]$State.service]
+  $processes = @(Find-EkodiInteractiveAuthProcesses ([string]$State.profileDir))
+  $State.browserProcessAlive = ($processes.Count -gt 0)
+  if (-not $State.browserProcessAlive) { return $State }
+  $hosts = New-Object System.Collections.Generic.List[string]
+  foreach ($h in @($State.observedHosts)) { if ($h) { $hosts.Add([string]$h) } }
+  try {
+    $targets = Invoke-RestMethod -Uri "http://127.0.0.1:$([int]$State.port)/json/list" -Method Get -TimeoutSec 5
+    $pages = @($targets | Where-Object { $_.type -eq 'page' })
+    $current = $null
+    $currentPage = $null
+    foreach ($page in $pages) {
+      try { $uri = [Uri]([string]$page.url) } catch { continue }
+      if ($uri.Scheme -ne 'https') { continue }
+      $hostName = $uri.Host.ToLowerInvariant()
+      if (-not $hosts.Contains($hostName) -and $hosts.Count -lt 12) { $hosts.Add($hostName) }
+      if (-not $current -or $hostName -eq $service.host) { $current = $uri; $currentPage = $page }
+    }
+    if ($current) {
+      $State.currentHost = $current.Host.ToLowerInvariant()
+      $authenticatedPath = $false
+      if ($State.currentHost -eq $service.host -and $currentPage.webSocketDebuggerUrl) {
+        # The URL alone is not proof: an SPA can sit on /dashboard while
+        # redirecting to its login form. Require the settled page itself.
+        $pageState = Invoke-EkodiInteractiveAuthEvaluate $currentPage $InteractiveAuthPageStateExpression
+        if ([string]$pageState.origin -eq $service.origin -and [string]$pageState.ready -eq 'complete' -and -not [bool]$pageState.loginFormVisible) {
+          foreach ($prefix in $service.authPrefixes) { if (([string]$pageState.path).StartsWith($prefix)) { $authenticatedPath = $true } }
+        }
+      }
+      if ($State.currentHost -eq $service.host -and $authenticatedPath) {
+        $State.pageClass = 'authenticated'
+        if ($State.state -in @('login_required', 'launching')) { $State.state = 'authenticated' }
+      } elseif ($State.currentHost -eq $service.host) {
+        $State.pageClass = 'login'
+        if ($State.state -eq 'authenticated') { $State.state = 'login_required' }
+      } else {
+        # Identity provider or other site: record the host name only.
+        $State.pageClass = 'other'
+      }
+    } else {
+      $State.pageClass = 'none'
+    }
+    $State.errorCode = ''
+  } catch {
+    $State.errorCode = 'cdp_status_unavailable'
+  }
+  $State.observedHosts = @($hosts)
+  return $State
+}
+
+function Close-EkodiInteractiveAuthSessionCore($State, [string]$FinalState) {
+  $profileDir = [string]$State.profileDir
+  $removed = $true
+  if ($profileDir) {
+    $full = Assert-EkodiInteractiveAuthProfilePath $profileDir
+    foreach ($process in @(Find-EkodiInteractiveAuthProcesses $full)) {
+      try { Stop-Process -Id ([int]$process.ProcessId) -Force -ErrorAction Stop } catch { }
+    }
+    $deadline = [DateTime]::UtcNow.AddSeconds(10)
+    while (@(Find-EkodiInteractiveAuthProcesses $full).Count -gt 0 -and [DateTime]::UtcNow -lt $deadline) { Start-Sleep -Milliseconds 250 }
+    for ($i = 0; $i -lt 8 -and (Test-Path -LiteralPath $full); $i++) {
+      Remove-Item -LiteralPath $full -Recurse -Force -ErrorAction SilentlyContinue
+      if (Test-Path -LiteralPath $full) { Start-Sleep -Milliseconds 400 }
+    }
+    $removed = -not (Test-Path -LiteralPath $full)
+  }
+  $State.state = $FinalState
+  $State.browserProcessAlive = $false
+  $State.profileRemoved = $removed
+  $State.pageClass = 'none'
+  $State.currentHost = ''
+  if (-not $removed) { $State.errorCode = 'profile_remove_failed' }
+  $State | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $InteractiveAuthLastPath -Encoding UTF8
+  if ($removed) { Remove-Item -LiteralPath $InteractiveAuthStatePath -Force -ErrorAction SilentlyContinue }
+  else { Save-EkodiInteractiveAuthState $State }
+  return $State
+}
+
+function Start-EkodiInteractiveAuthSession($Payload) {
+  if ([string]$Payload.policyId -ne $InteractiveAuthPolicyId) { throw 'interactive_auth_policy_mismatch' }
+  $sessionId = [string]$Payload.sessionId
+  if ($sessionId -notmatch $InteractiveAuthSessionPattern) { throw 'interactive_auth_session_id_invalid' }
+  $serviceId = [string]$Payload.service
+  if (-not $InteractiveAuthServices.ContainsKey($serviceId)) { throw 'interactive_auth_service_not_registered' }
+  if ($Payload.headed -ne $true -or $Payload.localConsentRequired -ne $true -or $Payload.credentialRelay -ne $false -or
+      $Payload.cookieExport -ne $false -or $Payload.activeUserProfileReuse -ne $false -or $Payload.hostInputInjection -ne $false -or
+      $Payload.screenCapture -ne $false -or $Payload.clipboardShared -ne $false) { throw 'interactive_auth_payload_contract_invalid' }
+  $service = $InteractiveAuthServices[$serviceId]
+  $now = (Get-Date).ToUniversalTime()
+  $expires = ConvertTo-EkodiUtc $Payload.expiresAt
+  if ($expires -le $now -or $expires -gt $now.AddMinutes(61)) { throw 'interactive_auth_expiry_invalid' }
+
+  # One live session per PC; a new start ends the previous one first.
+  $existing = Read-EkodiInteractiveAuthState
+  if ($existing) { [void](Close-EkodiInteractiveAuthSessionCore $existing 'closed') }
+
+  $state = [pscustomobject]@{
+    sessionId = $sessionId; service = $serviceId; state = 'awaiting_local_consent'; browser = ''
+    startedAt = $now.ToString('o'); expiresAt = $expires.ToString('o'); currentHost = ''; pageClass = 'none'
+    observedHosts = @(); browserProcessAlive = $false; profileRemoved = $false; errorCode = ''
+    profileDir = ''; port = 0
+  }
+  $ttl = [int][Math]::Ceiling(($expires - $now).TotalMinutes)
+  if (-not (Request-EkodiInteractiveAuthLocalConsent $service.label $ttl)) {
+    $state.state = 'declined'; $state.profileRemoved = $true
+    $state | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $InteractiveAuthLastPath -Encoding UTF8
+    return New-EkodiInteractiveAuthReceipt $state 'PC 사용자가 로그인 창 열기를 허용하지 않았거나 2분 안에 응답하지 않아 아무 창도 열지 않았습니다.' @{ profileRemoved = $true; localConsent = 'declined' }
+  }
+
+  $browser = Resolve-EkodiInteractiveBrowser
+  if (-not $browser) { throw 'interactive_auth_browser_not_found' }
+  New-Item -ItemType Directory -Path $InteractiveAuthRoot -Force | Out-Null
+  $profileDir = Join-Path $InteractiveAuthRoot ('Session-' + [guid]::NewGuid().ToString('N'))
+  $profileDir = Assert-EkodiInteractiveAuthProfilePath $profileDir
+  New-Item -ItemType Directory -Path (Join-Path $profileDir 'Default') -Force | Out-Null
+  # Password manager and autofill off: nothing is saved even inside the temp profile.
+  '{"credentials_enable_service":false,"profile":{"password_manager_enabled":false},"autofill":{"profile_enabled":false,"credit_card_enabled":false}}' |
+    Set-Content -LiteralPath (Join-Path $profileDir 'Default\Preferences') -Encoding UTF8
+  $arguments = @(
+    "--user-data-dir=`"$profileDir`"",
+    '--remote-debugging-port=0',
+    '--remote-debugging-address=127.0.0.1',
+    '--no-first-run',
+    '--no-default-browser-check',
+    '--disable-sync',
+    '--disable-extensions',
+    '--disable-features=PasswordManagerOnboarding,AutofillServerCommunication',
+    '--new-window',
+    $service.entryUrl
+  ) -join ' '
+  $state.browser = $browser.kind
+  $state.profileDir = $profileDir
+  $state.state = 'launching'
+  Save-EkodiInteractiveAuthState $state
+  try {
+    [void](Start-Process -FilePath $browser.path -ArgumentList $arguments -PassThru)
+    $portFile = Join-Path $profileDir 'DevToolsActivePort'
+    $deadline = [DateTime]::UtcNow.AddSeconds(25)
+    while (-not (Test-Path -LiteralPath $portFile) -and [DateTime]::UtcNow -lt $deadline) { Start-Sleep -Milliseconds 200 }
+    if (-not (Test-Path -LiteralPath $portFile)) { throw 'interactive_auth_cdp_port_missing' }
+    $port = [int](@(Get-Content -LiteralPath $portFile -Encoding UTF8)[0])
+    if ($port -le 0) { throw 'interactive_auth_cdp_port_invalid' }
+    $state.port = $port
+    $state.state = 'login_required'
+    $state = Update-EkodiInteractiveAuthStatus $state
+    Save-EkodiInteractiveAuthState $state
+  } catch {
+    $failure = $_.Exception.Message
+    $state.errorCode = 'launch_failed'
+    $state = Close-EkodiInteractiveAuthSessionCore $state 'failed'
+    throw "interactive_auth_launch_failed:$failure"
+  }
+  return New-EkodiInteractiveAuthReceipt $state "$($service.label) 공식 로그인 창을 EKODI 전용 임시 브라우저로 열었습니다. PC 앞의 사용자가 직접 로그인하세요." @{ profileRemoved = $false; localConsent = 'granted' }
+}
+
+function Invoke-EkodiInteractiveAuthVerify($Payload) {
+  if ([string]$Payload.policyId -ne $InteractiveAuthPolicyId) { throw 'interactive_auth_policy_mismatch' }
+  if ($Payload.mutation -ne $false -or $Payload.uploads -ne $false -or $Payload.creditConsumingActions -ne $false -or
+      $Payload.cookieRead -ne $false -or $Payload.storageRead -ne $false) { throw 'interactive_auth_verify_contract_invalid' }
+  $state = Read-EkodiInteractiveAuthState
+  if (-not $state -or [string]$state.sessionId -ne [string]$Payload.sessionId) { throw 'interactive_auth_session_not_active' }
+  $service = $InteractiveAuthServices[[string]$state.service]
+  if ((ConvertTo-EkodiUtc $state.expiresAt) -le (Get-Date).ToUniversalTime()) {
+    [void](Close-EkodiInteractiveAuthSessionCore $state 'expired'); throw 'interactive_auth_session_expired'
+  }
+  $state = Update-EkodiInteractiveAuthStatus $state
+  if (-not $state.browserProcessAlive) { [void](Close-EkodiInteractiveAuthSessionCore $state 'closed'); throw 'interactive_auth_browser_closed' }
+  $state.state = 'verifying'; Save-EkodiInteractiveAuthState $state
+
+  $targets = Invoke-RestMethod -Uri "http://127.0.0.1:$([int]$state.port)/json/list" -Method Get -TimeoutSec 5
+  $page = @($targets | Where-Object {
+    $_.type -eq 'page' -and $(try { ([Uri]([string]$_.url)).Host.ToLowerInvariant() -eq $service.host } catch { $false })
+  } | Select-Object -First 1)[0]
+  if (-not $page -or -not $page.webSocketDebuggerUrl) { $state.state = 'login_required'; Save-EkodiInteractiveAuthState $state; throw 'interactive_auth_service_page_not_open' }
+
+  # Fixed, read-only inventory. No password fields, cookies, storage or chat text
+  # leave the page: only visible menu labels (matched locally) and usage lines.
+  $expression = @'
+(() => {
+  const vis = e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+  const labels = [...document.querySelectorAll('a,button,[role=menuitem],[role=tab],nav li,aside li')]
+    .filter(vis)
+    .map(e => (e.innerText || e.getAttribute('aria-label') || e.getAttribute('title') || '').trim().replace(/\s+/g, ' ').slice(0, 60))
+    .filter(Boolean);
+  const usage = ((document.body && document.body.innerText) || '').split('\n')
+    .map(s => s.trim()).filter(s => s && s.length <= 140 && /(크레딧|credit|사용량|잔여|한도|토큰)/i.test(s)).slice(0, 8);
+  return JSON.stringify({
+    origin: location.origin,
+    path: location.pathname,
+    loginFormVisible: [...document.querySelectorAll('input[type=password]')].some(vis),
+    labels: [...new Set(labels)].slice(0, 300),
+    usage
+  });
+})()
+'@
+  $inventory = Invoke-EkodiInteractiveAuthEvaluate $page $expression
+  if ([string]$inventory.origin -ne $service.origin) { throw 'interactive_auth_origin_mismatch' }
+  $authenticated = (-not [bool]$inventory.loginFormVisible)
+  $joined = (@($inventory.labels) -join "`n").ToLowerInvariant()
+  $usageJoined = (@($inventory.usage) -join "`n").ToLowerInvariant()
+  $features = @()
+  foreach ($featureId in $InteractiveAuthFeatureKeywords.Keys) {
+    $visible = $false
+    foreach ($keyword in $InteractiveAuthFeatureKeywords[$featureId]) {
+      if ($joined.Contains($keyword) -or ($featureId -eq 'usage-credit' -and $usageJoined.Contains($keyword))) { $visible = $true }
+    }
+    $features += @{ id = $featureId; menuVisible = $visible }
+  }
+  $usageLines = @(@($inventory.usage) | ForEach-Object {
+    ([string]$_) -replace '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}', '[email]'
+  })
+  $state.state = $(if ($authenticated) { 'verified' } else { 'login_required' })
+  Save-EkodiInteractiveAuthState $state
+  $verification = @{
+    sessionId = [string]$state.sessionId
+    service = [string]$state.service
+    checkedAt = (Get-Date).ToUniversalTime().ToString('o')
+    pageOrigin = [string]$inventory.origin
+    authenticated = $authenticated
+    menuLabelCount = @($inventory.labels).Count
+    features = $features
+    usageLines = $usageLines
+  }
+  $message = $(if ($authenticated) { '로그인된 화면에서 메뉴·사용량 읽기 전용 점검을 마쳤습니다. 메뉴 표시만 확인했으며 기능 실행은 검증하지 않았습니다.' } else { '아직 로그인 화면입니다. PC에서 직접 로그인한 뒤 다시 점검하세요.' })
+  return New-EkodiInteractiveAuthReceipt $state $message @{ profileRemoved = $false; verification = $verification }
+}
+
+function Close-EkodiInteractiveAuthSession($Payload) {
+  $state = Read-EkodiInteractiveAuthState
+  if (-not $state) {
+    $last = $null
+    if (Test-Path -LiteralPath $InteractiveAuthLastPath) { try { $last = Get-Content -LiteralPath $InteractiveAuthLastPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { } }
+    return New-EkodiInteractiveAuthReceipt $last '열려 있는 외부 서비스 인증 세션이 없습니다.' @{ profileRemoved = $true }
+  }
+  $requested = [string]$Payload.sessionId
+  if ($requested -and $requested -ne 'any' -and $requested -ne [string]$state.sessionId) { throw 'interactive_auth_session_mismatch' }
+  $state = Close-EkodiInteractiveAuthSessionCore $state 'closed'
+  return New-EkodiInteractiveAuthReceipt $state '인증 세션 창을 닫고 임시 프로필(쿠키 포함)을 삭제했습니다.' @{ profileRemoved = [bool]$state.profileRemoved }
+}
+
+# Called every agent loop: enforces TTL, notices a user-closed window, and
+# reports login progress. Returns $true when the visible status changed.
+function Reconcile-EkodiInteractiveAuthSession {
+  $state = Read-EkodiInteractiveAuthState
+  if (-not $state) { return $false }
+  $before = "$($state.state)|$($state.pageClass)|$($state.currentHost)|$(@($state.observedHosts).Count)"
+  try {
+    if ((ConvertTo-EkodiUtc $state.expiresAt) -le (Get-Date).ToUniversalTime()) {
+      [void](Close-EkodiInteractiveAuthSessionCore $state 'expired'); return $true
+    }
+    if ([string]$state.state -in @('awaiting_local_consent', 'launching') -and -not $state.port) {
+      [void](Close-EkodiInteractiveAuthSessionCore $state 'failed'); return $true
+    }
+    $state = Update-EkodiInteractiveAuthStatus $state
+    if (-not $state.browserProcessAlive) { [void](Close-EkodiInteractiveAuthSessionCore $state 'closed'); return $true }
+    Save-EkodiInteractiveAuthState $state
+  } catch {
+    try { [void](Close-EkodiInteractiveAuthSessionCore $state 'failed') } catch { }
+    return $true
+  }
+  $after = "$($state.state)|$($state.pageClass)|$($state.currentHost)|$(@($state.observedHosts).Count)"
+  return ($before -ne $after)
 }
 
 function Get-WindowsOptionalFeatureStateSafe([string]$Name) {
@@ -3171,6 +3618,9 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     'computer.browser.execute' { return Invoke-BackgroundBrowserWorker $payload }
     'computer.browser.pr.observe' { return Invoke-EkodiOwnedGithubPrObserve $payload }
     'computer.workspace.slides.audio.insert' { return Invoke-WorkspaceSlidesAudioTask $payload }
+    'computer.auth_session.start' { return Start-EkodiInteractiveAuthSession $payload }
+    'computer.auth_session.verify' { return Invoke-EkodiInteractiveAuthVerify $payload }
+    'computer.auth_session.close' { return Close-EkodiInteractiveAuthSession $payload }
     'remote_desktop.recovery.enable' { return Set-DesktopCommanderRecovery $true }
     'remote_desktop.recovery.disable' { return Set-DesktopCommanderRecovery $false }
     'remote_desktop.recovery.run' { return Ensure-DesktopCommanderRunning $true }
@@ -3260,6 +3710,7 @@ function Send-Heartbeat($Config) {
       computerRead = $true; processRead = $true; agentStatus = $true
       isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktopProbe = $true; isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified; isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified; isolatedDesktopUiCanary = [bool](Get-IsolatedDesktopUiCanaryState).verified; isolatedDesktopSessionCanary = [bool](Get-IsolatedDesktopSessionCanaryState).verified; isolatedDesktop = [bool](Get-IsolatedDesktopSessionCanaryState).verified
       workspaceSlidesAudio = [bool](Get-WorkspaceSlidesAudioState).verified
+      interactiveAuthSession = [bool](Resolve-EkodiInteractiveBrowser)
       desktopCapture = $false; desktopInput = $false
       arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
     }
@@ -3449,8 +3900,10 @@ function Run-Agent {
       try {
         if (((Get-Date) - $lastHeartbeat).TotalSeconds -ge 60) { Send-Heartbeat $config; $lastHeartbeat = Get-Date }
         Reconcile-DesktopCommanderRecovery
+        try { if (Reconcile-EkodiInteractiveAuthSession) { Send-Heartbeat $config; $lastHeartbeat = Get-Date } } catch { }
         Reconcile-ImagePrintPreviewPolicy
         Poll-Command $config
+        if (Test-Path -LiteralPath $InteractiveAuthStatePath) { try { Send-Heartbeat $config; $lastHeartbeat = Get-Date } catch { } }
         if ($script:RestartAfterCommand) { break }
       } catch {
         # 네트워크 중단은 다음 주기에 자동 복구합니다. 임의 명령 실행으로 우회하지 않습니다.

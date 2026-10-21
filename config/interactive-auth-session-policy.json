@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-INTERACTIVE-AUTH-001",
+  "status": "enforced",
+  "owner": "ekodi-orchestrator",
+  "issue": "https://github.com/topmaster-joseph/ekodi-platform/issues/5533",
+  "purpose": "Human-in-the-loop sign-in to a registered external service on an EKODI-owned, task-scoped Chromium window, followed by bounded read-only verification and guaranteed destruction of the temporary profile.",
+  "constitutionalBasis": {
+    "policy": "AUTOMATIC-EXECUTION-LIFECYCLE-001",
+    "foregroundException": "oauth-or-provider-consent",
+    "automaticExecution": false,
+    "note": "This is never an automatic or background fallback. It runs only on an explicit super-administrator request plus a local consent prompt answered by the person at the PC. EKODI-BROWSER-WORKER-001 is unchanged and still records-and-closes AUTH_REQUIRED."
+  },
+  "backgroundBrowserWorkerPolicyUnchanged": "config/background-browser-worker-policy.json",
+  "authority": {
+    "startRequires": ["admin-session", "super_admin", "explicit-confirmation", "device-online", "agent-capability-interactiveAuthSession", "local-consent-on-device"],
+    "verifyRequires": ["admin-session", "super_admin", "explicit-confirmation", "read-only-acknowledgement", "active-session-id"],
+    "closeRequires": ["admin-session"],
+    "autoAssignedJobsForbidden": true,
+    "oneLiveSessionPerDevice": true
+  },
+  "session": {
+    "defaultTtlMinutes": 30,
+    "maxTtlMinutes": 60,
+    "localConsentTimeoutSeconds": 120,
+    "expiryEnforcedBy": "device-agent-loop",
+    "userClosingWindowEndsSession": true,
+    "profileDeletedOnCloseExpiryOrFailure": true,
+    "crashRecovery": "next agent loop closes orphaned sessions and deletes the profile"
+  },
+  "isolation": {
+    "headed": true,
+    "browserPriority": ["ekodi-chromium", "chrome", "msedge"],
+    "forbiddenBrowsers": ["opera"],
+    "dedicatedEphemeralProfile": true,
+    "activeUserProfileReuse": false,
+    "passwordManagerEnabled": false,
+    "cdpBindAddress": "127.0.0.1",
+    "clipboardShared": false,
+    "hostInputInjection": false,
+    "screenCapture": false,
+    "userOwnedWindowsAndTabsTouched": false
+  },
+  "credentials": {
+    "entryLocation": "provider-owned page only",
+    "ekodiRendersPasswordFields": false,
+    "passwordRelay": false,
+    "otpRelay": false,
+    "cookieExport": false,
+    "storageStateExport": false,
+    "sentToAiModel": false,
+    "loggedOrCaptured": false
+  },
+  "services": {
+    "factchat-mokpo": {
+      "entryUrl": "https://mokpo.factchat.bot/dashboard/chat/40882",
+      "automationOrigin": "https://mokpo.factchat.bot",
+      "authenticatedPathPrefixes": ["/dashboard"],
+      "identityProviderHostsObservedOnly": true,
+      "officialGuide": "https://docs.mindlogic.ai/docs/general/baze/getting-started/introduction"
+    }
+  },
+  "verification": {
+    "probe": "menu-and-usage-readonly",
+    "automationOriginOnly": true,
+    "mutation": false,
+    "uploads": false,
+    "creditConsumingActions": false,
+    "reportedFields": ["feature menu visibility booleans", "menu label count", "masked credit/usage lines", "page origin", "login form visible"],
+    "menuVisibleIsNotExecutionVerified": true,
+    "executionTestsRequireSeparateApproval": ["meeting-notes upload", "hwp edit/save", "presentation generation/export", "super-agent", "deep-research", "*-in-data queries"]
+  },
+  "evidence": {
+    "statusProjection": "interactive-auth-session.js#projectInteractiveAuthStatus",
+    "receiptInvariants": ["credentialsReturned=false", "cookiesExported=false", "storageStateExported=false", "passwordFieldRead=false", "screenCaptured=false", "clipboardShared=false", "hostInputInjection=false", "activeUserProfileReused=false"],
+    "closeRequiresProfileRemoved": true,
+    "audit": "audit_logs device.command.issue with session id and service"
+  },
+  "runtimeBindings": [
+    "interactive-auth-session.js",
+    "device-control.js",
+    "device-control-admin.js",
+    "tools/ekodi-device-agent/windows/ekodi-device-agent.ps1"
+  ],
+  "adminEntry": "https://ekodi.kr/admin/devices-agent/devices?externalAuth=factchat-mokpo"
+}
