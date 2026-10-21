@@ -7,6 +7,8 @@ on:
       - 'tax-invoice-worker.js'
       - 'tax-invoice-free-first-worker.js'
       - 'tax-service-worker.js'
+      - 'tax-notice-intake.js'
+      - 'tax-notice-intake-service.js'
       - 'tax-portal-worker.js'
       - 'tax-local-fallback.js'
       - 'tax-hometax-ledger.js'
@@ -28,6 +30,7 @@ on:
       - 'test/tax-professional-service.test.mjs'
       - 'test/tax-local-fallback.test.mjs'
       - 'test/tax-finance-service-binding.test.mjs'
+      - 'test/tax-invoice-notice-intake.test.mjs'
       - 'test/tax-hometax-ledger.test.mjs'
       - 'test/tax-business-registry.test.mjs'
       - '.github/workflows/deploy-tax-invoice-routing.yml'
@@ -51,8 +54,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in tax-invoice-worker.js tax-invoice-free-first-worker.js tax-service-worker.js tax-portal-worker.js tax-local-fallback.js tax-hometax-ledger.js tax-hometax-ledger-service.js tax-business-registry.js tax-business-registry-service.js platform-router-entry-worker.js finance-entry-worker.js finance-monitor.js admin-menu-registry.js admin-menu-runtime.js auth-site/admin-auth.js; do node --check "$f"; done
-          node --test test/tax-professional-service.test.mjs test/tax-local-fallback.test.mjs test/tax-finance-service-binding.test.mjs test/tax-hometax-ledger.test.mjs test/tax-business-registry.test.mjs
+          for f in tax-invoice-worker.js tax-invoice-free-first-worker.js tax-service-worker.js tax-notice-intake.js tax-notice-intake-service.js tax-portal-worker.js tax-local-fallback.js tax-hometax-ledger.js tax-hometax-ledger-service.js tax-business-registry.js tax-business-registry-service.js platform-router-entry-worker.js finance-entry-worker.js finance-monitor.js admin-menu-registry.js admin-menu-runtime.js auth-site/admin-auth.js; do node --check "$f"; done
+          node --test test/tax-professional-service.test.mjs test/tax-local-fallback.test.mjs test/tax-finance-service-binding.test.mjs test/tax-invoice-notice-intake.test.mjs test/tax-hometax-ledger.test.mjs test/tax-business-registry.test.mjs
           node scripts/validate-additive-migrations.mjs migrations
           grep -Fq 'TAX_INVOICE_AUTOMATION_ENABLED' tax-invoice-free-first-worker.js
           grep -Fq 'FREE_FIRST_AUTOMATION_DISABLED' tax-invoice-free-first-worker.js
