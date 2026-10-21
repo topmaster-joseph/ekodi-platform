@@ -9,6 +9,7 @@ const assets = [
   'remote-power-admin.js',
   'remote-power-admin.css',
   'device-wake-admin.js',
+  'hybrid-execution-admin.js',
 ];
 
 test('shared-site Orchestrator dispatch includes all device roster and remote power assets', async () => {
