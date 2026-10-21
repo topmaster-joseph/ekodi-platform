@@ -48,7 +48,7 @@
       .aic-tabs{display:flex;gap:6px;overflow:auto;padding:10px 14px;border-bottom:1px solid rgba(116,148,180,.16);background:rgba(5,19,32,.42);scrollbar-width:none}.aic-tabs::-webkit-scrollbar{display:none}.aic-tab{white-space:nowrap;border:0;border-radius:9px;padding:9px 12px;background:transparent;color:#9eb6c9;cursor:pointer;font:inherit}.aic-tab.is-active{background:rgba(101,157,197,.18);color:#f4fbff;font-weight:700}
       .aic-body{padding:16px 18px 20px}.aic-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.aic-card{border:1px solid rgba(119,151,181,.2);border-radius:14px;background:rgba(8,28,45,.7);padding:14px}.aic-card small{display:block;color:#7898b1;margin-bottom:5px}.aic-card strong{display:block;color:#f2f7fa;font-size:16px}.aic-card span{display:block;color:#9db2c2;font-size:12px;margin-top:5px;line-height:1.45}
       .aic-section{margin-top:14px}.aic-section:first-child{margin-top:0}.aic-section-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:9px}.aic-section-head h4{margin:0;font-size:15px}.aic-note{font-size:12px;color:#8ea7ba}.aic-list{display:grid;gap:8px}.aic-row{display:grid;grid-template-columns:minmax(150px,1.15fr) minmax(130px,.9fr) minmax(110px,.7fr) minmax(180px,1.3fr) auto;gap:9px;align-items:center;border:1px solid rgba(119,151,181,.18);border-radius:12px;padding:10px;background:rgba(5,20,33,.52)}
-      .aic-row.provider{grid-template-columns:minmax(150px,1.2fr) 90px 90px minmax(180px,1.5fr) minmax(120px,.8fr) auto}.aic-row.route{grid-template-columns:minmax(120px,.8fr) minmax(150px,1fr) minmax(180px,1.4fr) minmax(180px,1.3fr) auto}.aic-row.audit{grid-template-columns:105px minmax(140px,1fr) minmax(160px,1.2fr) minmax(130px,.9fr) auto}.aic-row input,.aic-row select{width:100%;box-sizing:border-box;border:1px solid rgba(129,158,186,.28);border-radius:8px;background:#0b263d;color:#edf6fb;padding:8px 9px;font:inherit}.aic-row input[type=checkbox]{width:auto}.aic-name strong{font-size:14px}.aic-name small{margin:3px 0 0}.aic-status{font-size:12px;padding:5px 8px;border-radius:999px;background:rgba(123,154,178,.15);display:inline-block;color:#bdd0de}.aic-status.healthy{background:rgba(75,163,128,.15);color:#a8e5c9}.aic-status.error,.aic-status.awaiting_human{background:rgba(194,102,102,.18);color:#ffd0d0}.aic-status.unconfigured{background:rgba(196,151,72,.16);color:#f4d9a5}.aic-inline{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.aic-secret{display:grid;grid-template-columns:minmax(160px,1fr) auto;gap:6px;margin-top:8px}.aic-secret input{min-width:0}.aic-message{margin:0 0 12px;padding:10px 12px;border-radius:10px;background:rgba(116,157,189,.12);color:#bcd0de;font-size:13px}.aic-message.error{background:rgba(185,85,85,.14);color:#ffd0d0}.aic-empty{padding:22px;text-align:center;color:#91a8ba;border:1px dashed rgba(120,151,181,.22);border-radius:12px}.aic-policy{display:flex;gap:7px;flex-wrap:wrap}.aic-pill{border:1px solid rgba(120,154,184,.24);background:rgba(14,44,66,.62);border-radius:999px;padding:6px 9px;font-size:12px;color:#bad0df}.aic-split{display:grid;grid-template-columns:1fr 1fr;gap:12px}.aic-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+      .aic-row.provider{grid-template-columns:minmax(150px,1.2fr) 90px 90px minmax(180px,1.5fr) minmax(120px,.8fr) auto}.aic-row.route{grid-template-columns:minmax(120px,.8fr) minmax(150px,1fr) minmax(180px,1.4fr) minmax(180px,1.3fr) auto}.aic-row.audit{grid-template-columns:105px minmax(140px,1fr) minmax(160px,1.2fr) minmax(130px,.9fr) auto}.aic-row input,.aic-row select{width:100%;box-sizing:border-box;border:1px solid rgba(129,158,186,.28);border-radius:8px;background:#0b263d;color:#edf6fb;padding:8px 9px;font:inherit}.aic-row input[type=checkbox]{width:auto}.aic-row.provider .aic-guard{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;border-top:1px dashed rgba(129,158,186,.28);padding-top:8px}.aic-row.provider .aic-guard small{overflow-wrap:break-word;word-break:keep-all}.aic-name strong{font-size:14px}.aic-name small{margin:3px 0 0}.aic-status{font-size:12px;padding:5px 8px;border-radius:999px;background:rgba(123,154,178,.15);display:inline-block;color:#bdd0de}.aic-status.healthy{background:rgba(75,163,128,.15);color:#a8e5c9}.aic-status.error,.aic-status.awaiting_human{background:rgba(194,102,102,.18);color:#ffd0d0}.aic-status.unconfigured{background:rgba(196,151,72,.16);color:#f4d9a5}.aic-inline{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.aic-secret{display:grid;grid-template-columns:minmax(160px,1fr) auto;gap:6px;margin-top:8px}.aic-secret input{min-width:0}.aic-message{margin:0 0 12px;padding:10px 12px;border-radius:10px;background:rgba(116,157,189,.12);color:#bcd0de;font-size:13px}.aic-message.error{background:rgba(185,85,85,.14);color:#ffd0d0}.aic-empty{padding:22px;text-align:center;color:#91a8ba;border:1px dashed rgba(120,151,181,.22);border-radius:12px}.aic-policy{display:flex;gap:7px;flex-wrap:wrap}.aic-pill{border:1px solid rgba(120,154,184,.24);background:rgba(14,44,66,.62);border-radius:999px;padding:6px 9px;font-size:12px;color:#bad0df}.aic-split{display:grid;grid-template-columns:1fr 1fr;gap:12px}.aic-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
       @media(max-width:1050px){.aic-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.aic-row,.aic-row.provider,.aic-row.route,.aic-row.audit{grid-template-columns:1fr 1fr}.aic-row>*:last-child{grid-column:1/-1}.aic-split{grid-template-columns:1fr}}
       @media(max-width:680px){.aic-head{display:block}.aic-head-actions{justify-content:flex-start;margin-top:12px}.aic-grid{grid-template-columns:1fr}.aic-row,.aic-row.provider,.aic-row.route,.aic-row.audit{grid-template-columns:1fr}.aic-body{padding:13px}.aic-row>*:last-child{grid-column:auto}}
     `;
@@ -126,7 +126,8 @@
     const runtime = item.runtime || {};
     return `<article class="aic-row provider" data-provider-id="${esc(item.id)}">
       <div class="aic-name"><strong>${esc(item.name || item.id)}</strong><small>${esc(item.id)} · ${esc(item.costClass || '')}</small><div class="aic-secret"><input type="password" autocomplete="new-password" data-provider-secret placeholder="새 API Key 연결"><button class="aic-btn" type="button" data-provider-secret-save>키 연결</button></div></div>
-      <label><small>활성</small><input type="checkbox" data-provider-enabled ${item.enabled ? 'checked' : ''}></label>
+      <label><small>활성</small><input type="checkbox" data-provider-enabled ${item.enabled ? 'checked' : ''}></label>${item.freeGuardRequired ? `
+      <label class="aic-guard"><small>${esc(item.freeGuardLabel || '보호조건 확인')}</small><input type="checkbox" data-provider-guard ${item.freeGuardConfigured && item.accountClass !== 'institution' ? 'checked' : ''}><small>${esc(item.freeGuardHint || '외부 콘솔에서 보호 설정을 확인한 경우에만 체크')}</small></label>` : ''}
       <label><small>우선순위</small><input type="number" min="1" max="999" data-provider-priority value="${Number(item.priority || 100)}"></label>
       <label><small>기본 모델</small><input type="text" maxlength="120" data-provider-model value="${esc(item.model || '')}"></label>
       <div><span class="aic-status ${healthClass(item.health)}">${esc(item.health || 'unknown')}</span><small>${item.configured ? '키 연결됨' : '키 미연결'} · ${item.inSync ? 'runtime sync' : 'sync 필요'}</small><small>${esc(runtime.model || '')}</small></div>
@@ -199,10 +200,23 @@
     const enabled = Boolean(row.querySelector('[data-provider-enabled]')?.checked);
     const priority = Number(row.querySelector('[data-provider-priority]')?.value || 100);
     const defaultModel = row.querySelector('[data-provider-model]')?.value.trim() || '';
+    // FACTCHAT-APPROVAL-UI-20261021: guarded providers (institution account included) send the explicit confirmation.
+    const freeGuardConfirmed = Boolean(row.querySelector('[data-provider-guard]')?.checked);
     if (!window.confirm(`${id} 공급자 설정을 서버 런타임에 적용하시겠습니까?`)) return;
-    await api(`/api/ai-modules/v1/providers/admin/${encodeURIComponent(id)}`, {
-      method: 'PUT', headers: authHeaders(true, { 'x-ekodi-confirm-impact': 'ai-provider-runtime-update' }), body: JSON.stringify({ enabled, priority, defaultModel }),
-    });
+    try {
+      await api(`/api/ai-modules/v1/providers/admin/${encodeURIComponent(id)}`, {
+        method: 'PUT', headers: authHeaders(true, { 'x-ekodi-confirm-impact': 'ai-provider-runtime-update' }), body: JSON.stringify({ enabled, priority, defaultModel, freeGuardConfirmed }),
+      });
+    } catch (error) {
+      const code = String(error?.message || '');
+      const messages = {
+        institution_account_approval_required: '기관계정 사용 승인이 확인되지 않아 기관계정 사용을 중지했습니다. 계속 쓰려면 승인 체크박스를 선택하고 다시 저장하세요.',
+        institution_account_super_admin_required: '기관계정 사용 선택·키 연결·라우팅 지정은 최고관리자만 할 수 있습니다.',
+        free_provider_guard_confirmation_required: '보호조건 확인 체크박스를 선택한 뒤 저장하세요.',
+      };
+      if (messages[code]) { await refresh(); state.error = messages[code]; renderBody(); return; }
+      throw error;
+    }
     await refresh();
   }
 
@@ -266,7 +280,8 @@
         else if (event.target.closest('[data-action-approve]')) await decideAction(action, 'approve');
         else if (event.target.closest('[data-action-reject]')) await decideAction(action, 'reject');
       } catch (error) {
-        state.error = error?.message || 'AI 운영센터 작업에 실패했습니다.';
+        const code = String(error?.message || '');
+        state.error = ({ institution_account_super_admin_required: '기관계정 사용 선택·키 연결·라우팅 지정은 최고관리자만 할 수 있습니다.', institution_daily_limit_reached: '기관계정 일일 호출 한도에 도달했습니다.' })[code] || code || 'AI 운영센터 작업에 실패했습니다.';
         renderBody();
       }
     });
