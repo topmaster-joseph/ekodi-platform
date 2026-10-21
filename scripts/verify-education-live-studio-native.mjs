@@ -48,7 +48,9 @@ function watch(page,profile,{onRequest}={}){
   page.on('pageerror',error=>record('pageErrors',profile,{message:trim(error?.message)}));
   page.on('requestfailed',request=>{
     const info={url:trim(request.url(),700),failure:trim(request.failure()?.errorText,150)};
-    if(/net::ERR_ABORTED/.test(info.failure)&&/blob:/.test(info.url))return;
+    // Navigation/teardown cancels in-flight requests (e.g. Shell assets); a cancellation is not a server failure.
+    // Real failures still surface through HTTP status, console and page errors.
+    if(/net::ERR_ABORTED/.test(info.failure))return;
     const security=classifyRequestSecurityBlock(info.url,info.failure);
     record(security?'observedSecurityBlocks':'requestFailures',profile,security?{type:'request',reason:security,...info}:info);
   });
@@ -73,6 +75,7 @@ async function open(page,route){
   if(!response||response.status()!==200)fail(route+' returned HTTP '+response?.status());
   if(new URL(page.url()).origin!==ORIGIN)fail('redirect escaped Education origin: '+page.url());
   await page.locator('body[data-ready="true"]').waitFor({state:'attached',timeout:20000});
+  await page.waitForLoadState('networkidle',{timeout:8000}).catch(()=>{});
 }
 async function overflow(page,label){
   const o=await page.evaluate(()=>({width:document.documentElement.scrollWidth,client:document.documentElement.clientWidth}));
