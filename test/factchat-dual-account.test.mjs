@@ -104,6 +104,35 @@ test('base URL override accepts only official FactChat hosts over https',()=>{
   assert.equal(factChatBaseUrl({FACTCHAT_MOKPO_BASE_URL:'https://evil.example.com/v1/gateway'},account),FACTCHAT_GATEWAY_DEFAULT_BASE_URL);
   assert.equal(factChatBaseUrl({FACTCHAT_MOKPO_BASE_URL:'http://factchat-cloud.mindlogic.ai/v1/gateway'},account),FACTCHAT_GATEWAY_DEFAULT_BASE_URL);
   assert.equal(factChatBaseUrl({FACTCHAT_MOKPO_BASE_URL:'https://factchat-cloud.mindlogic.ai/v1/gateway/'},account),'https://factchat-cloud.mindlogic.ai/v1/gateway');
+  assert.equal(factChatBaseUrl({FACTCHAT_MOKPO_BASE_URL:'https://mokpo.factchat.bot/v1/gateway'},account),'https://mokpo.factchat.bot/v1/gateway');
+  assert.equal(factChatBaseUrl({FACTCHAT_MOKPO_BASE_URL:'https://factchat-cloud.mindlogic.ai/v1/gateway?x=1'},account),FACTCHAT_GATEWAY_DEFAULT_BASE_URL);
+  assert.equal(factChatBaseUrl({FACTCHAT_MOKPO_BASE_URL:'https://user:pw@factchat-cloud.mindlogic.ai/v1/gateway'},account),FACTCHAT_GATEWAY_DEFAULT_BASE_URL);
+  // The EKODI key may never be pointed at an institution tenant host.
+  assert.equal(factChatBaseUrl({FACTCHAT_EKODI_BASE_URL:'https://mokpo.factchat.bot/v1/gateway'},FACTCHAT_ACCOUNTS.ekodi),FACTCHAT_GATEWAY_DEFAULT_BASE_URL);
+  assert.equal(factChatBaseUrl({FACTCHAT_EKODI_BASE_URL:'https://other.factchat.bot/v1/gateway'},FACTCHAT_ACCOUNTS.ekodi),FACTCHAT_GATEWAY_DEFAULT_BASE_URL);
+});
+
+test('end-user public gateway cannot spend institution credits unless explicitly opened',async()=>{
+  let fetches=0;
+  const route={primary_provider:'factchat-institution',fallback_json:'[]',model_override:''};
+  await withFetch(async()=>{fetches+=1;return chatOk('gpt-5.6-luna')},async()=>{
+    await assert.rejects(invokeAiProviderCapability({DB:gatewayDb({route,rows:{'factchat-institution':row('factchat-institution')}}),FACTCHAT_MOKPO_API_KEY:MOKPO_KEY,EKODI_FACTCHAT_INSTITUTION_USE_APPROVED:'true'},{input:'public',governance:{channel:'public-gateway'}}),error=>error.blocked?.includes('factchat-institution'));
+    assert.equal(fetches,0);
+    const opened=await invokeAiProviderCapability({DB:gatewayDb({route,rows:{'factchat-institution':row('factchat-institution')}}),FACTCHAT_MOKPO_API_KEY:MOKPO_KEY,EKODI_FACTCHAT_INSTITUTION_USE_APPROVED:'true',EKODI_FACTCHAT_INSTITUTION_PUBLIC_GATEWAY:'true'},{input:'public',governance:{channel:'public-gateway'}});
+    assert.equal(opened.provider,'factchat-institution');
+  });
+  assert.match(read('ai-provider-control.js'),/governance:\{channel:'public-gateway'\}/);
+});
+
+test('institution daily call cap blocks before any network call once exhausted',async()=>{
+  let fetches=0;
+  const DB=gatewayDb({route:{primary_provider:'factchat-institution',fallback_json:'[]',model_override:''},rows:{'factchat-institution':row('factchat-institution')}});
+  const prepare=DB.prepare.bind(DB);
+  DB.prepare=sql=>{const stmt=prepare(sql);if(sql.startsWith('UPDATE ai_provider_daily_budget')){stmt.run=async()=>({meta:{changes:0}})}return stmt};
+  await withFetch(async()=>{fetches+=1;throw new Error('must_not_call')},async()=>{
+    await assert.rejects(invokeAiProviderCapability({DB,FACTCHAT_MOKPO_API_KEY:MOKPO_KEY,EKODI_FACTCHAT_INSTITUTION_USE_APPROVED:'true'},{input:'over cap'}),error=>error.blocked?.includes('factchat-institution'));
+  });
+  assert.equal(fetches,0);
 });
 
 test('credential probe lists models without generating and surfaces auth failures',async()=>{
@@ -149,6 +178,12 @@ test('institution controls are super_admin only and approval is re-affirmed on e
   assert.match(ui,/https:\/\/mokpo\.factchat\.bot\/dashboard\/developers/);
   assert.match(ui,/기관계정 사용 선택·키 연결·라우팅 지정은 최고관리자만/);
   assert.match(ui,/p\.freeGuardHint/);
+  // Unchecking approval revokes at runtime and in the registry, and the box is never pre-checked.
+  assert.match(api,/await putRuntimeSecret\(env,freeGuardBinding,'false'\);await putRuntimeSecret\(env,bindings\.enabled,'false'\)/);
+  assert.match(api,/provider\.institution\.revoked/);
+  assert.match(ui,/p\.freeGuardConfigured&&p\.accountClass!=='institution'\?'checked'/);
+  // Manual check is gated the same way as every other institution control.
+  assert.match(api,/async function checkProvider\(request,env,session,id\)\{if\(!PROVIDERS\.has\(id\)\)return json\(request,env,\{error:'unknown_provider'\},404\);\{const denied=institutionGateDenied/);
 });
 
 test('migration is additive, starts both accounts disabled and leaves every fallback chain untouched',()=>{

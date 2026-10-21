@@ -22,6 +22,7 @@ export const FACTCHAT_ACCOUNTS=Object.freeze({
     modelBinding:'EKODI_FACTCHAT_EKODI_MODEL',
     enabledBinding:'EKODI_PROVIDER_FACTCHAT_EKODI_ENABLED',
     approvalBinding:'',
+    allowedHosts:Object.freeze(['factchat-cloud.mindlogic.ai']),
     funding:'ekodi-sponsored',
     costClass:'paid-opt-in',
     purpose:'ekodi-factchat-gateway',
@@ -33,6 +34,7 @@ export const FACTCHAT_ACCOUNTS=Object.freeze({
     modelBinding:'EKODI_FACTCHAT_INSTITUTION_MODEL',
     enabledBinding:'EKODI_PROVIDER_FACTCHAT_INSTITUTION_ENABLED',
     approvalBinding:'EKODI_FACTCHAT_INSTITUTION_USE_APPROVED',
+    allowedHosts:Object.freeze(['factchat-cloud.mindlogic.ai','mokpo.factchat.bot']),
     funding:'institution-sponsored',
     costClass:'account-managed',
     purpose:'mnu-factchat-institution',
@@ -44,12 +46,15 @@ export function factChatAccount(accountOrProviderId=''){
   return FACTCHAT_ACCOUNTS[value]||Object.values(FACTCHAT_ACCOUNTS).find(item=>item.providerId===value)||null;
 }
 
-// Only an https origin is accepted; anything else falls back to the official gateway so a
-// mistyped variable cannot redirect a key to an arbitrary host.
+// Each account is pinned to its own exact host set over https; anything else (other tenant
+// subdomains, query strings, credentials in the URL) falls back to the official gateway.
 export function factChatBaseUrl(env={},account){
-  const raw=clean(env?.[account?.baseUrlBinding],400).replace(/\/+$/,'');
+  const raw=clean(env?.[account?.baseUrlBinding],400);
   if(!raw)return FACTCHAT_GATEWAY_DEFAULT_BASE_URL;
-  try{const url=new URL(raw);if(url.protocol==='https:'&&/(^|\.)mindlogic\.ai$|(^|\.)factchat\.bot$/.test(url.hostname))return raw}catch{}
+  try{
+    const url=new URL(raw);
+    if(url.protocol==='https:'&&(account?.allowedHosts||[]).includes(url.hostname)&&!url.search&&!url.hash&&!url.username&&!url.password&&!url.port)return `${url.origin}${url.pathname}`.replace(/\/+$/,'');
+  }catch{}
   return FACTCHAT_GATEWAY_DEFAULT_BASE_URL;
 }
 
