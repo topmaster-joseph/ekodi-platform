@@ -142,7 +142,7 @@ async function instructorFlow(browser,profile){
     await studio.waitForFunction(()=>/진행 중/.test(document.querySelector('#timerInfo')?.textContent||''),null,{timeout:5000});
     const join=await studio.locator('#joinUrl').innerText();
     if(!join.includes('m=hwp')||!/[?&]e=\d{13}/.test(join))fail('join link lacks mission/timer: '+join);
-    if(await studio.locator('#joinQr svg path').count()!==1)fail('QR not rendered');
+    if(await studio.locator('#joinQr svg > path').count()!==1||await studio.locator('#joinQr svg rect path').count()!==0)fail('QR not rendered as a top-level SVG path');
     await presenter.waitForFunction(()=>/\d\d:\d\d/.test(document.querySelector('#presTimer')?.textContent||''),null,{timeout:5000});
     step('practice timer start + QR join link');
     if((await presenter.locator('#presNotes').innerText()).trim().length<10)fail('presenter notes empty');
@@ -208,12 +208,13 @@ async function learnerFlow(browser,profile){
         hit:hit?(hit.id||hit.tagName)+'.'+String(hit.className).slice(0,40):'none',tab:document.querySelector('.tab.is-on')?.textContent,vh:innerHeight,top:r&&Math.round(r.top)};});
     const before=await dockState();
     await page.locator('#dockAction').click();
-    await page.waitForFunction(()=>/^2\/6/.test(document.querySelector('#dockLabel')?.innerText||''),null,{timeout:5000})
+    await page.waitForFunction(()=>/^2 \/ 6/.test(document.querySelector('#dockLabel')?.innerText||''),null,{timeout:5000})
       .catch(async()=>fail('dock did not advance to step 2 before='+JSON.stringify(before)+' after='+JSON.stringify(await dockState())));
     await page.locator('#dockNext').click();
     if(!(await page.locator('#stepCard').innerText()).includes('프롬프트'))fail('prompt step not shown');
     await page.locator('#stepCard [data-copy="step-prompt"]').first().click();
     await page.waitForFunction(()=>/복사|선택/.test(document.querySelector('#toast')?.textContent||''),null,{timeout:5000}).catch(()=>fail('copy feedback missing'));
+    if(/edu/.test(await page.locator('#dockLabel').innerText()))fail('router rewrote dock text');
     step('guided steps + prompt copy');
     await page.locator('[data-step="4"]').click();
     await page.locator('[data-sample="hwp"]').click();
@@ -224,7 +225,7 @@ async function learnerFlow(browser,profile){
     step('result checker flags invented values');
     await page.waitForTimeout(200);
     await page.reload({waitUntil:'domcontentloaded'});await page.locator('body[data-ready="true"]').waitFor({state:'attached'});
-    if(!(await page.locator('#dockLabel').innerText()).startsWith('5/6'))fail('step position not restored after reload');
+    if(!/^5 \/ 6/.test(await page.locator('#dockLabel').innerText()))fail('step position not restored after reload');
     if(!await page.locator('#stepCard [data-crit]').first().isChecked())fail('checklist not restored after reload');
     if(!(await page.locator('textarea[data-result="hwp"]').inputValue()).includes('가상 AI 출력'))fail('pasted result not restored');
     if(await page.locator('#verifyOut .finding').count()<1)fail('checker findings not restored');

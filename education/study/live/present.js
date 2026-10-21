@@ -1,6 +1,6 @@
 // EKODI Education Premium Studio — Live Presentation (presenter + audience views).
 import {courseEntry} from './courses/registry.js';
-import {validateCourse,sessionByNo,sessionSlides,learnerUrl,formatClock,liveBase} from './engine/model.js';
+import {validateCourse,sessionByNo,sessionSlides,learnerUrl,formatClock,livePath} from './engine/model.js';
 import {createLiveStore,lectureElapsedMs,timerRemainingMs,timerPhase,CHANNEL_NAME} from './engine/live-state.js';
 import {qrSvg} from './engine/qr.js';
 import {esc,list,slideHtml,safeStorage,safeChannel,bindChrome} from './engine/render.js';
@@ -122,7 +122,7 @@ function bind(){
   $('#pNotes').addEventListener('click',toggleNotes);
   $('#pPrint').addEventListener('click',printDeck);
   $('#pSync').addEventListener('click',()=>{store.resync();lastKey='';render();toast('최신 상태로 동기화했습니다.');});
-  $('#backStudio').href=liveBase(location.pathname)+'/study/live/?c='+encodeURIComponent(course.id);
+  $('#backStudio').href=livePath(location.pathname,'?c='+encodeURIComponent(course.id));
 }
 function toggleNotes(){
   showNotes=!showNotes;

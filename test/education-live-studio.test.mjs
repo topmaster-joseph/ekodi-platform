@@ -206,3 +206,24 @@ test('every live surface uses self-hosted Pretendard and one owned sticky header
   assert.match(live,/\.lv \[hidden\]\{display:none!important\}/);
   assert.match(await read('education/study/live/present.js'),/ekodiUserHeader='immersive'/);
 });
+
+test('canonical /edu router leaves every live-studio script and page byte-identical (no root-slash literals)',async()=>{
+  const {routeCanonicalSurface}=await import('../canonical-surface-router.js');
+  const {readdir}=await import('node:fs/promises');
+  const files=(await readdir(new URL('../education/study/live/',import.meta.url),{recursive:true})).filter(f=>/\.(js|html)$/.test(f)).map(f=>'study/live/'+f);
+  files.push('factchat/index.html');
+  for(const file of files){
+    const body=await read('education/'+file);
+    const type=file.endsWith('.js')?'application/javascript; charset=utf-8':'text/html; charset=utf-8';
+    const service={fetch:async()=>new Response(body,{status:200,headers:{'content-type':type}})};
+    const response=await routeCanonicalSurface(new Request('https://ekodi.kr/edu/'+file),{EDUCATION:service});
+    assert.equal(response.status,200,file);
+    assert.equal(await response.text(),body,file+' was rewritten by the /edu router');
+  }
+  const {qrSvg}=await import('../education/study/live/engine/qr.js');
+  assert.doesNotMatch(qrSvg('x'),/\/>/,'QR SVG must not use self-closing tags that the router can rewrite');
+  const {livePath,learnerUrl:lu}=await import('../education/study/live/engine/model.js');
+  assert.equal(livePath('/edu/study/live/lab/','?c=x'),'/edu/study/live/?c=x');
+  assert.equal(livePath('/study/live/present/','lab/'),'/study/live/lab/');
+  assert.equal(lu('https://ekodi.kr','/edu/factchat/',{c:'a'}),'https://ekodi.kr/edu/study/live/lab/?c=a');
+});

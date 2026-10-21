@@ -165,5 +165,5 @@ export function qrSvg(text,{label='QR 코드',dark='#0b1b33',light='#ffffff',mar
   const dim=size+margin*2;let path='';
   modules.forEach((row,y)=>row.forEach((on,x)=>{if(on)path+='M'+(x+margin)+' '+(y+margin)+'h1v1h-1z';}));
   const safe=String(label).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+dim+' '+dim+'" role="img" aria-label="'+safe+'" shape-rendering="crispEdges"><rect width="'+dim+'" height="'+dim+'" fill="'+light+'"/><path d="'+path+'" fill="'+dark+'"/></svg>';
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+dim+' '+dim+'" role="img" aria-label="'+safe+'" shape-rendering="crispEdges"><rect width="'+dim+'" height="'+dim+'" fill="'+light+'"></rect><path d="'+path+'" fill="'+dark+'"></path></svg>';
 }
