@@ -48,6 +48,8 @@ test('worker uses Playwright isolated context without arbitrary JS task executio
   assert.match(source,/virtualizationProviderType:'native'/);
   assert.match(source,/acceptDownloads:false/);
   assert.match(source,/userAiEntryCount:document\.querySelectorAll/);
+  // Count rendered boxes only; <html data-ekodi-user-ai-entry="off"> is an opt-out marker, not a box.
+  assert.match(source,/querySelectorAll\('aside\[data-ekodi-user-ai-entry\],\.ekodi-user-ai-entry'\)/);
   assert.match(source,/pageErrors\.push\(\{/);
   assert.match(source,/stack:clean\(err\?\.stack/);
   assert.match(source,/block-non-idempotent-http|blockedMutations/);
