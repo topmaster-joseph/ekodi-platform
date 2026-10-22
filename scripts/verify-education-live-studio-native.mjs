@@ -150,6 +150,9 @@ async function instructorFlow(browser,profile){
     await presenter.bringToFront();await presenter.keyboard.press('ArrowRight');
     await studio.waitForFunction(b=>!document.querySelector('#slideNow').textContent.startsWith(b.split(' ')[0]+' /'),before,{timeout:5000});
     step('presenter keyboard → studio sync');
+    const stage=await presenter.evaluate(()=>{const r=document.querySelector('#stage').getBoundingClientRect();return {w:Math.round(r.width),h:Math.round(r.height),vw:innerWidth};});
+    if(stage.w<stage.vw*0.45||stage.h<200)fail('presenter slide stage collapsed '+JSON.stringify(stage));
+    step('presenter slide stage visible');
     await presenter.keyboard.press('b');
     await presenter.waitForFunction(()=>document.querySelector('#stage').classList.contains('is-black'),null,{timeout:3000});
     await presenter.keyboard.press('b');
@@ -158,6 +161,8 @@ async function instructorFlow(browser,profile){
     await open(audience,R.audience);
     if(await audience.locator('#presSide').count()!==0)fail('audience view must not contain presenter notes');
     if(await audience.locator('.notes').count()!==0)fail('audience shows notes');
+    const aStage=await audience.evaluate(()=>{const r=document.querySelector('#stage').getBoundingClientRect();return {w:Math.round(r.width),h:Math.round(r.height),fit:Math.round(Math.min(innerWidth,innerHeight*16/9))};});
+    if(aStage.w<aStage.fit*0.9)fail('audience slide not filling the screen '+JSON.stringify(aStage));
     step('audience view has no presenter notes');
     await shot(presenter,profile.name+'-presenter',false);
     await shot(audience,profile.name+'-audience',false);

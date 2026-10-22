@@ -249,6 +249,11 @@
 
 /* Presenter */
 .lv.pres-body{background:#08111f;color:#e8eef8}
+/* The EKODI Shell centres body>main at 1240px and auto-margins its sections. Auto margins on a grid item stop it
+   stretching, which collapsed the slide stage to 0px. Full-bleed app surfaces opt out (id selectors outrank it). */
+.lv #presMain,.lv #studioMain{width:auto;max-width:none;margin-inline:0}
+.lv #presMain>.stage,.lv #presMain>.pres-side{margin-inline:0;width:auto}
+.lv #presMain.audience{width:100vw}
 .lv .pres{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;padding:16px;min-height:calc(100vh - var(--lv-top-h))}
 .lv .pres.single{grid-template-columns:1fr}
 .lv .stage{background:#000;border-radius:var(--radius);display:grid;place-items:center;padding:12px;min-height:0;min-width:0}
