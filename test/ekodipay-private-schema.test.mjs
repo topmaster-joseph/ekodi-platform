@@ -1,0 +1,79 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {DatabaseSync} from 'node:sqlite';
+
+function database() {
+ const db=new DatabaseSync(':memory:');
+ db.exec(readFileSync(new URL('../services/ekodipay/migrations/0001-private-multi-merchant.sql',import.meta.url),'utf8'));
+ return db;
+}
+const merchant=(db,id)=>db.prepare("INSERT INTO ekodipay_merchants(merchant_id,legal_entity_ref,created_at) VALUES(?,?,?)").run(id,'entity_'+id,1790000000000);
+const bank=(db,id,fingerprint)=>db.prepare("INSERT INTO ekodipay_merchant_bank_verification(merchant_id,bank_code,account_last4,account_hmac_fingerprint,proof_ref,verified_by_ref,verified_at,review_state) VALUES (?,'088','1234',?,'BANK_PROOF_0001','owner_verified',1790000000000,'verified')").run(id,fingerprint);
+test('reference-only tenant DB schema parses with real SQLite and forbids two merchants sharing settlement account HMAC',()=>{
+ const db=database();
+ try{
+  merchant(db,'merchant_a');merchant(db,'merchant_b');
+  bank(db,'merchant_a','a'.repeat(64));
+  assert.throws(()=>bank(db,'merchant_b','a'.repeat(64)),/UNIQUE constraint failed/);
+  bank(db,'merchant_b','b'.repeat(64));
+ }finally{db.close()}
+});
+test('read-only merchant schema locks issuer, mode and MID to same immutable approved order',()=>{
+ const db=database();
+ try{
+  merchant(db,'merchant_a');
+  db.exec("INSERT INTO ekodipay_merchant_mid(merchant_id,pg_provider,pg_mode,mid,client_secret_binding_ref,server_secret_binding_ref) VALUES('merchant_a','tosspayments','test','TESTMID_001','PAY_MERCHANT_A_TEST_CLIENT','PAY_MERCHANT_A_TEST_SECRET')");
+  db.exec("INSERT INTO ekodipay_merchant_service_issuers(merchant_id,service_id,issuer_ref,is_enabled) VALUES('merchant_a','ekodibiz','issuer_a',1)");
+  db.exec("INSERT INTO ekodipay_merchant_service_issuers(merchant_id,service_id,issuer_ref,is_enabled) VALUES('merchant_a','ekodibiz','issuer_disabled',0)");
+  db.exec("INSERT INTO ekodipay_approved_orders(order_id,merchant_id,service_id,issuer_ref,pg_provider,pg_mode,mid,amount,expires_at,issuer_proof_ref,created_at) VALUES('ORD_001','merchant_a','ekodibiz','issuer_a','tosspayments','test','TESTMID_001',50000,1790005000000,'APPROVED_001',1790000000000)");
+  assert.throws(()=>db.exec("UPDATE ekodipay_approved_orders SET amount=1 WHERE order_id='ORD_001'"),/approved_order_immutable/);
+  assert.throws(()=>db.exec("INSERT INTO ekodipay_approved_orders(order_id,merchant_id,service_id,issuer_ref,pg_provider,pg_mode,mid,amount,expires_at,issuer_proof_ref,created_at) VALUES('ORD_002','merchant_a','ekodibiz','wrong_issuer','tosspayments','test','TESTMID_001',50000,1790005000000,'APPROVED_002',1790000000000)"),/approved_order_issuer_not_enabled/);
+  assert.throws(()=>db.exec("INSERT INTO ekodipay_approved_orders(order_id,merchant_id,service_id,issuer_ref,pg_provider,pg_mode,mid,amount,expires_at,issuer_proof_ref,created_at) VALUES('ORD_003','merchant_a','ekodibiz','issuer_disabled','tosspayments','test','TESTMID_001',50000,1790005000000,'APPROVED_003',1790000000000)"),/approved_order_issuer_not_enabled/);
+  assert.throws(()=>db.exec("INSERT INTO ekodipay_approved_orders(order_id,merchant_id,service_id,issuer_ref,pg_provider,pg_mode,mid,amount,expires_at,issuer_proof_ref,created_at) VALUES('ORD_004','merchant_a','ekodibiz','issuer_a','tosspayments','test','OTHER_MID',50000,1790005000000,'APPROVED_004',1790000000000)"),/FOREIGN KEY constraint failed/);
+  const insert=db.prepare("INSERT INTO ekodipay_settlement_snapshots(merchant_id,pg_mode,mid,transaction_key,payment_key,order_id,amount,paid_out_amount,paid_out_date,provider_evidence_digest,created_at) VALUES ('merchant_a',?,?,?,'PAY_001','ORD_001',50000,48400,'2026-10-15','SHA_001',1790000000000)");
+  assert.throws(()=>insert.run('live','TESTMID_001','TX_01'),/FOREIGN KEY constraint failed/);
+  assert.throws(()=>insert.run('test','OTHER_MID','TX_02'),/FOREIGN KEY constraint failed/);
+  insert.run('test','TESTMID_001','TX_03');
+ }finally{db.close()}
+});
+
+test('issuer signature nonce is durably claimed once for the immutable tenant order and cannot cross tenants',()=>{
+ const db=database();
+ try{
+  merchant(db,'merchant_a');merchant(db,'merchant_b');
+  for(const id of ['merchant_a','merchant_b']){
+   db.prepare("INSERT INTO ekodipay_merchant_mid(merchant_id,pg_provider,pg_mode,mid,client_secret_binding_ref,server_secret_binding_ref) VALUES (?,'tosspayments','test',?,?,?)").run(id,'MID_'+id,'PAY_'+id+'_CLIENT','PAY_'+id+'_SECRET');
+   db.prepare("INSERT INTO ekodipay_merchant_service_issuers(merchant_id,service_id,issuer_ref,is_enabled) VALUES (?,'ekodibiz','issuer_a',1)").run(id);
+   db.prepare("INSERT INTO ekodipay_approved_orders(order_id,merchant_id,service_id,issuer_ref,pg_provider,pg_mode,mid,amount,expires_at,issuer_proof_ref,created_at) VALUES (? ,?,'ekodibiz','issuer_a','tosspayments','test',?,50000,1790005000000,'ISSUERPROOF_001',1790000000000)").run('ORDER_'+id,id,'MID_'+id);
+  }
+  const claim=db.prepare("INSERT INTO ekodipay_issuer_nonce_claims(merchant_id,issuer_ref,pg_mode,nonce,order_id,payload_digest,claimed_at) VALUES (?,?,?,?,?,?,?)");
+  claim.run('merchant_a','issuer_a','test','RANDOMNONCE1234567','ORDER_merchant_a','a'.repeat(64),1790001000000);
+  assert.throws(()=>claim.run('merchant_a','issuer_a','test','RANDOMNONCE1234567','ORDER_merchant_a','a'.repeat(64),1790001000000),/UNIQUE constraint failed/);
+  assert.throws(()=>claim.run('merchant_a','issuer_a','test','RANDOMNONCE1234568','ORDER_merchant_a','a'.repeat(64),1790001000000),/UNIQUE constraint failed/);
+  assert.throws(()=>claim.run('merchant_b','issuer_a','test','RANDOMNONCE1234569','ORDER_merchant_a','b'.repeat(64),1790001000000),/issuer_nonce_order_mismatch/);
+  assert.throws(()=>claim.run('merchant_b','issuer_a','live','RANDOMNONCE1234570','ORDER_merchant_b','b'.repeat(64),1790001000000),/issuer_nonce_order_mismatch/);
+  assert.throws(()=>claim.run('merchant_b','issuer_a','test','RANDOMNONCE1234571','ORDER_merchant_b','b'.repeat(64),1790006000000),/issuer_nonce_order_mismatch/);
+  claim.run('merchant_b','issuer_a','test','RANDOMNONCE1234572','ORDER_merchant_b','b'.repeat(64),1790001000000);
+  assert.throws(()=>db.exec("UPDATE ekodipay_issuer_nonce_claims SET nonce='FAKENONCE12345678' WHERE merchant_id='merchant_a'"),/issuer_nonce_immutable/);
+ }finally{db.close()}
+});
+
+test('bank statement evidence cannot verify another merchant, unsettled PG batch or recycled deposit',()=>{
+ const db=database();
+ try{
+  merchant(db,'merchant_a');merchant(db,'merchant_b');
+  bank(db,'merchant_a','a'.repeat(64));bank(db,'merchant_b','b'.repeat(64));
+  const run=db.prepare("INSERT INTO ekodipay_reconciliation_runs(merchant_id,batch_ref,pg_mode,from_date,through_date,api_pagination_complete,pg_reconciled,created_at) VALUES (?,'BATCH_0001','live','2026-10-01','2026-10-02',1,?,1790000000000)");
+  run.run('merchant_a',0);run.run('merchant_b',1);
+  const insert=db.prepare("INSERT INTO ekodipay_bank_credit_proofs(merchant_id,batch_ref,pg_mode,statement_transaction_ref,account_hmac_fingerprint,currency,credit_direction,amount,verified_by_ref,evidence_ref,verified_at) VALUES (?,'BATCH_0001','live',?,?,'KRW','CREDIT',48350,'verifier_a','BANK_PROOF_0001',1790000100000)");
+  assert.throws(()=>insert.run('merchant_a','BANKTX_001','a'.repeat(64)),/bank_credit_evidence_not_authorized/);
+  db.exec("UPDATE ekodipay_reconciliation_runs SET pg_reconciled=1 WHERE merchant_id='merchant_a'");
+  assert.throws(()=>insert.run('merchant_a','BANKTX_001','b'.repeat(64)),/bank_credit_evidence_not_authorized/);
+  assert.throws(()=>insert.run('merchant_b','BANKTX_002','a'.repeat(64)),/bank_credit_evidence_not_authorized/);
+  insert.run('merchant_a','BANKTX_001','a'.repeat(64));
+  assert.throws(()=>insert.run('merchant_a','BANKTX_001','a'.repeat(64)),/UNIQUE constraint failed/);
+  insert.run('merchant_b','BANKTX_003','b'.repeat(64));
+  assert.throws(()=>db.exec("UPDATE ekodipay_bank_credit_proofs SET amount=1 WHERE merchant_id='merchant_a'"),/bank_credit_evidence_immutable/);
+ }finally{db.close()}
+});
