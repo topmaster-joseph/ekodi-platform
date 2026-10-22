@@ -297,3 +297,16 @@ test('AI control center layout: wrapping chain, labelled route cards, status chi
   assert.match(ui,/flex-wrap:wrap!important;overflow:visible!important/);
   assert.match(ui,/@media\(max-width:480px\)/);
 });
+
+test('command dock offers the FactChat institution target and routes it to the guarded server path',()=>{
+  const dock=read('admin-assist-dock.js');
+  assert.equal((dock.match(/<option value="factchat-institution">FactChat · 목포대<\/option>/g)||[]).length,2);
+  assert.match(dock,/if\(target==='factchat-institution'\)return submitFactChatInstitution\(prompt\);/);
+  assert.match(dock,/\/api\/ai-modules\/v1\/providers\/admin\/factchat-institution\/playground/);
+  assert.match(dock,/'x-ekodi-confirm-impact':'factchat-institution-playground'/);
+  assert.match(dock,/EXTERNAL_SECRET_RE\.test\(value\)\)\{showStatus\('비밀번호/);
+});
+
+test('command dock edits dispatch the Shared Site Core release',()=>{
+  assert.match(read('scripts/converge-orchestrated-pr-merge.mjs'),/\['admin-assist-dock\.js','admin-assist-dock\.css','admin-assist-bootstrap\.js','admin-assist-bootstrap\.css'\]\.includes\(file\)/);
+});
