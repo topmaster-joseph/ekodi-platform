@@ -96,11 +96,11 @@ function cookiePath(url){return url.hostname==='ekodi.kr'?'/edu/study/live':'/';
 function cookieHeader(url,value,maxAge){
   return GATE_COOKIE+'='+value+'; Path='+cookiePath(url)+'; Max-Age='+maxAge+'; HttpOnly; Secure; SameSite=Lax';
 }
-const ALLOWED_ORIGINS=new Set(['https://ekodi.kr','https://edu.ekodi.kr']);
+// The canonical apex, or the very origin the Worker was reached on (direct Worker host / local preview).
 function sameSiteOrigin(request,url){
   const origin=request.headers.get('origin');
   if(!origin||origin==='null')return !origin;
-  return ALLOWED_ORIGINS.has(origin)||origin===url.origin;
+  return origin==='https://ekodi.kr'||origin===url.origin;
 }
 // Relative redirect back to the requested document: resolves correctly under /edu, /education or the
 // Education origin without the Worker knowing which public prefix the visitor used.
