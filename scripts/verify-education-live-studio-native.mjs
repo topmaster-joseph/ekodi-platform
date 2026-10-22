@@ -35,14 +35,16 @@ const artifactRoot=path.resolve(process.env.EKODI_EDUCATION_LIVE_ARTIFACT_DIR||'
 const report={taskId:trim(process.env.EKODI_RELEASE_TASK_ID||'education-live-studio',150),owner:'ekodi-background-browser-worker',
   implementation:'ekodi-owned-ephemeral-chromium',sourceSha:trim(process.env.GITHUB_SHA||'unknown',80),origin:ORIGIN,
   evidenceScope:previewAllowed?'synthetic-local-preview':'real-production',readOnly:true,authenticated:false,ephemeral:true,
-  startedAt:new Date().toISOString(),profiles:[],flows:[],captures:[],consoleErrors:[],pageErrors:[],httpErrors:[],requestFailures:[],
+  startedAt:new Date().toISOString(),profiles:[],flows:[],captures:[],rateLimited:[],consoleErrors:[],pageErrors:[],httpErrors:[],requestFailures:[],
   blockedMutations:[],observedSecurityBlocks:[],notesLoadedByLearner:false,ok:false};
 const record=(kind,profile,detail)=>report[kind].push({profile,...detail});
 
 function watch(page,profile,{onRequest}={}){
   page.on('console',message=>{
     if(message.type()!=='error')return;
-    const value=trim(message.text(),850);const security=classifyConsoleSecurityBlock(value);
+    const value=trim(message.text(),850);
+    if(/status of 429\b/.test(value)){record('rateLimited',profile,{type:'console',message:value});return;}
+    const security=classifyConsoleSecurityBlock(value);
     record(security?'observedSecurityBlocks':'consoleErrors',profile,security?{type:'console',reason:security,message:value}:{message:value});
   });
   page.on('pageerror',error=>record('pageErrors',profile,{message:trim(error?.message)}));
@@ -55,7 +57,11 @@ function watch(page,profile,{onRequest}={}){
     record(security?'observedSecurityBlocks':'requestFailures',profile,security?{type:'request',reason:security,...info}:info);
   });
   page.on('request',request=>onRequest?.(request));
-  page.on('response',response=>{if(response.status()>=400)record('httpErrors',profile,{url:trim(response.url()),status:response.status()})});
+  page.on('response',response=>{
+    const status=response.status();
+    if(status===429){page.__ekodiRateLimited=Number(response.headers()['retry-after'])||60;record('rateLimited',profile,{url:trim(response.url()),status});return;}
+    if(status>=400)record('httpErrors',profile,{url:trim(response.url()),status});
+  });
 }
 async function guard(context,profile){
   await context.route('**/*',route=>{
@@ -71,10 +77,21 @@ async function guard(context,profile){
   });
 }
 async function open(page,route,{ready=true}={}){
-  const response=await page.goto(ORIGIN+route,{waitUntil:'domcontentloaded',timeout:35000});
-  if(!response||response.status()!==200)fail(route+' returned HTTP '+response?.status());
-  if(new URL(page.url()).origin!==ORIGIN)fail('redirect escaped Education origin: '+page.url());
-  if(ready)await page.locator('body[data-ready="true"]').waitFor({state:'attached',timeout:20000});
+  // Production traffic protection may answer a burst of headless requests with 429 + Retry-After.
+  // Respect it (never bypass), reload, and fail if the page still is not ready after two retries.
+  for(let attempt=0;;attempt++){
+    page.__ekodiRateLimited=0;
+    const response=await page.goto(ORIGIN+route,{waitUntil:'domcontentloaded',timeout:35000});
+    const status=response?.status();
+    let ok=status===200;
+    if(ok&&new URL(page.url()).origin!==ORIGIN)fail('redirect escaped Education origin: '+page.url());
+    if(ok&&ready)ok=await page.locator('body[data-ready="true"]').waitFor({state:'attached',timeout:20000}).then(()=>true,()=>false);
+    if(ok)break;
+    const wait=status===429?(Number(response.headers()['retry-after'])||60):page.__ekodiRateLimited;
+    if(!wait||attempt>=2)fail(route+(status!==200?' returned HTTP '+status:' did not become ready')+(page.__ekodiRateLimited?' after rate limiting':''));
+    report.rateLimitRetries=(report.rateLimitRetries||0)+1;
+    await page.waitForTimeout(Math.min(Math.max(wait,5),65)*1000);
+  }
   await page.waitForLoadState('networkidle',{timeout:8000}).catch(()=>{});
 }
 async function overflow(page,label){

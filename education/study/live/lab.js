@@ -2,8 +2,8 @@
 // Public, anonymous, local-only. Never loads instructor notes, never posts data, never stores personal identifiers.
 // Guided practice: 준비 → FactChat 열기 → 프롬프트 ① → 프롬프트 ② → 결과 점검(규칙 기반, AI 아님) → 완료·적용.
 import {courseEntry} from './courses/registry.js';
-import {validateCourse,sessionByNo,parseLearnerParams,formatClock,missionMaterials,missionContext,KIND_LABELS,buildPrompts,trackById,levelById} from './engine/model.js';
-import {esc,list,missionSections,readFeatureChecks,featureBadge,promptBlock,downloadText,copyText,safeStorage,multiline,bindChrome} from './engine/render.js';
+import {livePath,validateCourse,sessionByNo,parseLearnerParams,formatClock,missionMaterials,missionContext,KIND_LABELS,buildPrompts,trackById,levelById} from './engine/model.js';
+import {esc,list,missionSections,readFeatureChecks,featureBadge,promptBlock,downloadText,copyText,safeStorage,multiline,bindChrome,instructorCard} from './engine/render.js';
 import {checkOutput} from './engine/checker.js';
 import {detectContentWarnings} from '../ai-bootcamp/material-source.js';
 import {FACTCHAT_TOOL,featureById} from './tools/factchat.js';
@@ -16,7 +16,7 @@ const STEP_LABELS=['준비','FactChat 열기','프롬프트 ①','프롬프트 �
 const STEP_ACTIONS=['자료 확인 완료','FactChat 열기','프롬프트 ① 복사','프롬프트 ② 복사','결과 자동 점검','실습 완료'];
 let course,rec,key,toastTimer=0,lastPhase='',relayout=()=>{};
 
-const blank=()=>({v:1,session:1,track:'',level:'basic',tab:'agenda',checked:{},memo:{},self:{},quiz:{},hunts:{},plan:'',applied:'',timers:{},
+const blank=()=>({v:1,session:1,track:'',trackChosen:false,bigText:false,level:'basic',tab:'agenda',checked:{},memo:{},self:{},quiz:{},hunts:{},plan:'',applied:'',timers:{},
   step:{},done:{},results:{},ownSource:{},checks:{},updatedAt:0});
 function load(){
   try{const raw=JSON.parse(storage?.getItem(key)||'null');if(raw&&raw.v===1)return {...blank(),...raw};}catch{}
@@ -47,8 +47,17 @@ function viewAgenda(){
     const tasks=m.learner?.tasks?list(m.learner.tasks,true):m.kind==='practice'?'<div class="btn-row"><button type="button" class="btn btn-small btn-primary" data-tab="m:'+esc(m.missionId)+'">'+(rec.done[m.missionId]?'다시 보기':'실습 시작')+' →</button></div>':m.summary?'<p class="meta">'+esc(m.summary)+'</p>':'';
     return '<article class="panel"><p class="eyebrow">'+m.start+'–'+m.end+'분 · '+esc(KIND_LABELS[m.kind])+(m.kind==='practice'&&rec.done[m.missionId]?' · 완료':'')+'</p><h3>'+esc(m.learner?.headline||title)+'</h3>'+(m.learner?'<p class="meta">'+esc(title)+'</p>':'')+tasks+'</article>';
   }).join('');
-  return '<div class="panel"><p class="eyebrow">'+esc(course.subtitle)+' · '+session().no+'회차</p><h2>'+esc(session().title)+'</h2><p class="meta">'+esc(course.format)+'</p>'+
-    '<div class="btn-row">'+factchatButtons()+'</div><p class="meta">공식 FactChat 사이트에서 본인 기관 계정으로 직접 로그인합니다. EKODI는 계정·비밀번호를 받지 않습니다.</p></div>'+rows;
+  const s=session();
+  const pick=rec.trackChosen?'':'<section class="panel pick" aria-labelledby="pickTitle"><p class="eyebrow">시작 1단계 · 10초</p><h2 id="pickTitle">어떤 일을 하시나요?</h2><p class="meta">고르면 내 업무와 비슷한 실습 원문과 프롬프트로 바뀝니다. 나중에 위에서 바꿀 수 있어요.</p>'+
+    '<div class="pick-grid">'+course.tracks.map(t=>'<button type="button" class="pick-tile" data-pick-track="'+esc(t.id)+'"><b>'+esc(t.label)+'</b><span>'+esc(t.examples)+'</span></button>').join('')+'</div></section>';
+  const missions=sessionMissions();
+  const stamps='<div class="stamps" aria-label="오늘의 스탬프">'+missions.map(id=>'<span class="stamp'+(rec.done[id]?' is-on':'')+'" title="'+esc(course.missions[id].title)+'"><i aria-hidden="true">'+(rec.done[id]?'완료':course.missions[id].no)+'</i><b>'+esc(course.missions[id].title.replace('개인 실습 ',''))+'</b></span>').join('')+'</div>';
+  const outcomes='<section class="panel goal"><p class="eyebrow">'+s.no+'회차 · 오늘 손에 쥐고 나갈 것</p><h2>'+esc(s.title)+'</h2>'+(s.outcomes?.length?'<ol class="goal-list">'+s.outcomes.map(o=>'<li>'+esc(o)+'</li>').join('')+'</ol>':'')+
+    '<p class="meta">실습을 끝낼 때마다 스탬프가 찍힙니다 · '+missions.filter(id=>rec.done[id]).length+' / '+missions.length+'</p>'+stamps+
+    '<div class="btn-row">'+factchatButtons()+'</div><p class="meta">공식 FactChat 사이트에서 본인 기관 계정으로 직접 로그인합니다. EKODI는 계정·비밀번호를 받지 않습니다.</p></section>';
+  const hook=s.modules.find(m=>m.hook)?.hook;
+  const hookCard=hook?'<section class="panel hook-card"><p class="eyebrow">오늘의 질문</p><p class="hook-q">'+esc(hook.q)+'</p><p class="meta">'+esc(hook.sub)+'</p></section>':'';
+  return pick+instructorCard(course.instructor,livePath(location.pathname,''),{compact:s.no!==1})+hookCard+outcomes+rows;
 }
 function factchatButtons(){
   return (canSplit()?'<button type="button" class="btn btn-primary" data-split="1">FactChat 나란히 열기 ↗</button>':'')+
@@ -181,6 +190,7 @@ function render(){
   $('#topSub').textContent=session().no+'회차 · '+(id?course.missions[id].title.replace('개인 실습 ',''):'수강생 실습실');
   renderDock();tick();relayout();
 }
+function applyTextSize(){document.documentElement.classList.toggle('lv-big-text',!!rec.bigText);const b=$('#textSize');if(b){b.setAttribute('aria-pressed',String(!!rec.bigText));b.textContent=rec.bigText?'가 −':'가 +';}}
 function setStep(id,s){rec.step[id]=Math.max(0,Math.min(STEP_LABELS.length-1,s));save();render();const card=$('#stepCard');if(card){card.focus({preventScroll:true});card.scrollIntoView({block:'start',behavior:'smooth'});}}
 function tick(){
   const id=activeMission()||sessionMissions().find(m=>rec.timers[m]>Date.now())||'';
@@ -256,6 +266,8 @@ function exportMarkdown(){
 function bind(){
   document.addEventListener('click',async e=>{
     const t=e.target.closest('button,a');if(!t)return;const d=t.dataset;
+    if(d.pickTrack){rec.track=d.pickTrack;rec.trackChosen=true;save();render();toast(trackById(course,rec.track).label+' 사례로 준비했습니다. 첫 실습을 시작해 보세요.');return;}
+    if(t.id==='textSize'){rec.bigText=!rec.bigText;applyTextSize();save();relayout();return;}
     if(d.tab){rec.tab=d.tab;save();render();$('#labMain').focus({preventScroll:true});window.scrollTo({top:0});return;}
     if(d.step!==undefined){setStep(activeMission(),Number(d.step));return;}
     if(d.split){openFactchat(true);return;}
@@ -285,7 +297,7 @@ function bind(){
     else if(t.matches('[data-applied]')){rec.applied=clean(t.value);save();}
   });
   $('#labSession').addEventListener('change',e=>{rec.session=Number(e.target.value);rec.tab='agenda';save();render();});
-  $('#labTrack').addEventListener('change',e=>{rec.track=e.target.value;save();render();toast(trackById(course,rec.track).label+' 사례로 바꿨습니다.');});
+  $('#labTrack').addEventListener('change',e=>{rec.track=e.target.value;rec.trackChosen=true;save();render();toast(trackById(course,rec.track).label+' 사례로 바꿨습니다.');});
   $('#labLevel').addEventListener('change',e=>{rec.level=e.target.value;save();render();});
   $('#labTimerBtn').addEventListener('click',()=>{
     const id=activeMission();if(!id)return;
@@ -329,9 +341,10 @@ async function init(){
   $('#labLevel').innerHTML=course.levels.map(l=>'<option value="'+l.id+'">'+esc(l.label)+'</option>').join('');
   const needTrack=!rec.track;
   if(needTrack)rec.track=course.tracks[0].id;
+  applyTextSize();
   relayout=bindChrome(document,{top:$('#labTop'),dock:$('#labDock')});
   save();bind();render();
-  if(needTrack)toast('「내 직무」를 고르면 내 업무에 맞는 실습 원문과 프롬프트가 나옵니다.');
+  if(needTrack&&activeMission())toast('위의 「내 직무」를 고르면 내 업무에 맞는 실습 원문과 프롬프트가 나옵니다.');
   setInterval(tick,1000);
   document.body.dataset.ready='true';
 }

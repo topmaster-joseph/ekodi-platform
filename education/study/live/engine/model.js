@@ -109,6 +109,7 @@ export function moduleSlides(course,session,mod){
     out.push(slide({id:mod.id+'-a',moduleId:mod.id,k:range,t:mod.title,p:mod.summary,special:'break'}));
     return out;
   }
+  if(mod.hook)out.push(slide({id:mod.id+'-hook',moduleId:mod.id,k:'오늘의 질문',t:mod.hook.q,p:mod.hook.sub,special:'hook'}));
   out.push(slide({id:mod.id+'-a',moduleId:mod.id,k:range,t:mod.title,p:mod.summary}));
   if(mod.points?.length)out.push(slide({id:mod.id+'-b',moduleId:mod.id,k:range+' · 핵심',t:mod.title,bullets:mod.points}));
   if(mod.learner?.quiz)out.push(slide({id:mod.id+'-q',moduleId:mod.id,k:range+' · OX 퀴즈',t:'OX 퀴즈 — 실습실에서 풀어 보세요',bullets:course.quiz.map((q,i)=>(i+1)+'. '+q.q),special:'join'}));
@@ -122,7 +123,10 @@ export function sessionSlides(course,sessionNo){
   const session=sessionByNo(course,sessionNo);
   if(!session)return [];
   const opening=slide({id:'s'+session.no+'-open',moduleId:session.modules[0].id,k:course.subtitle+' · '+session.no+'회차',t:session.title,p:course.title+' — '+course.format,special:'join'});
-  return [opening,...session.modules.flatMap(m=>moduleSlides(course,session,m))];
+  const intro=[];
+  if(session.no===1&&course.instructor)intro.push(slide({id:'s1-instructor',moduleId:session.modules[0].id,k:'오늘의 강사',t:course.instructor.name,p:course.instructor.headline,special:'instructor'}));
+  if(session.outcomes?.length)intro.push(slide({id:'s'+session.no+'-outcomes',moduleId:session.modules[0].id,k:session.no+'회차 · 오늘 손에 쥐고 나갈 것',t:'끝날 때 여러분 손에 남는 것',bullets:session.outcomes,special:'outcomes'}));
+  return [opening,...intro,...session.modules.flatMap(m=>moduleSlides(course,session,m))];
 }
 
 // Learner join links carry only non-personal pointers: course, session, mission, level and an optional
