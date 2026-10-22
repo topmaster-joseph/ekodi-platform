@@ -285,3 +285,15 @@ test('institution model list is a zero-credit GET and returns model ids',async()
   assert.match(ui,/p\.accountClass==='institution'&&configured&&p\.enabled\?institutionPlayground\(p\)/);
   assert.match(ui,/'x-ekodi-confirm-impact':'factchat-institution-playground'/);
 });
+
+test('AI control center layout: wrapping chain, labelled route cards, status chips, scoped final layer',()=>{
+  const ui=read('admin-provider-control.js');
+  assert.match(ui,/AI-CENTER-LAYOUT-20261022/);
+  assert.match(ui,/<details class="ekodi-ai-chain-box">/);
+  assert.match(ui,/class="ekodi-ai-route-row"/);
+  assert.match(ui,/실패 시 \$\{shown\}/);
+  assert.match(ui,/class="ekodi-ai-chip /);
+  assert.match(ui,/installCenterLayoutStyle\(\)/);
+  assert.match(ui,/flex-wrap:wrap!important;overflow:visible!important/);
+  assert.match(ui,/@media\(max-width:480px\)/);
+});
