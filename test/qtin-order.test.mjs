@@ -469,7 +469,8 @@ function adminBrowser({ fragment = '', centralSession = null, fetchHandler = nul
     if (fetchHandler) return fetchHandler(url, options);
     throw new Error('synthetic_network_failure');
   };
-  const sessionStorage = { getItem: () => null, setItem() {}, removeItem() {} };
+  const saved = new Map();
+  const sessionStorage = { getItem: key => saved.get(key) || null, setItem(key, value) { saved.set(key, value); }, removeItem(key) { saved.delete(key); } };
   const localStorage = {
     getItem(key) { return key === 'sb-renzehysxirjilvdxacv-auth-token' && centralSession ? JSON.stringify(centralSession) : null; },
   };
@@ -477,7 +478,7 @@ function adminBrowser({ fragment = '', centralSession = null, fetchHandler = nul
     document, location, history, fetch, sessionStorage, localStorage,
     AbortController, URL, URLSearchParams, setTimeout, clearTimeout,
   }, { timeout: 1000 });
-  return { elements, location, history, requests };
+  return { elements, location, history, requests, sessionStorage };
 }
 
 test('QTIN admin erases handoff tokens before network and shows a recoverable failure instead of spinning', async () => {
@@ -508,6 +509,7 @@ test('QTIN admin reuses the same-origin central Supabase session and checks righ
   assert.equal(browser.location.href, '', 'valid central session should not trigger a login redirect');
   assert.equal(browser.requests.length, 2, 'fetch campaign list and selected campaign');
   assert.equal(browser.requests[0].options.headers.authorization, 'Bearer ' + bearer);
+  assert.equal(JSON.parse(browser.sessionStorage.getItem('ekodi-qtin-admin-session')).accessToken, bearer, 'operator-only test checkout must see the recovered session');
   assert.match(browser.elements.get('state').innerHTML, /operator@example.test/);
   assert.match(browser.elements.get('summary').innerHTML, /아직 결제 완료된 신청이 없습니다/);
 });
