@@ -123,3 +123,19 @@ test('church admin home prioritizes today, newcomers, care and worship follow-up
   assert.match(source, /돌봄 보기/);
   assert.match(source, /예배 준비/);
 });
+
+test('church admin links channels to the shared tenant channel center and lets the senior pastor write', async () => {
+  const script = await (await churchPastorAdminScript()).text();
+  // The link lives in the delegated (senior pastor) navigation and is gated by the marketing capability.
+  assert.match(script, /\{id:'communication',label:'소통 · 채널',items:\[\['publishing','채널·자동게시'\]\]\}/);
+  assert.match(script, /SECTION_CAPABILITY=\{publishing:POLICY\.capabilities\.marketing,/);
+  // The church page never renders channels itself; the path belongs to the shared workspace channel center.
+  assert.equal(isChurchPastorAdminPath('/ekodichurch/admin/publishing'), false);
+  const { isWorkspaceAdminPathShape } = await import('../workspace-route-policy.js');
+  assert.equal(isWorkspaceAdminPathShape('/ekodichurch/admin/publishing'), true);
+  const subject = fs.readFileSync(new URL('../channel-automation-subject.js', import.meta.url), 'utf8');
+  const writeRoles = subject.match(/const WRITE_ROLES = new Set\(\[([^\]]*)\]\)/)?.[1] || '';
+  assert.match(writeRoles, /'senior_pastor'/);
+  // Owner approval covered the senior pastor only.
+  assert.doesNotMatch(writeRoles, /'pastor'/);
+});
