@@ -11,6 +11,7 @@ import {
   extractItemIds, parseProductDetail, seriesSortOrder, buildOrderDraft, newOrderId, isValidTossOrderId,
   assessConfirmation, maskName, csvEscape, absoluteQtmUrl,
 } from './qtin-order-core.js';
+import * as ekodipay from './ekodipay-core.js';
 
 const BASE = '/qtin';
 const API = '/qtin/api';
@@ -18,7 +19,6 @@ const ADMIN_PATH = '/qtin/admin';
 const CENTRAL_SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const CENTRAL_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const CHURCH_PASTOR_API = 'https://renzehysxirjilvdxacv.supabase.co/functions/v1/church-pastor-api';
-const TOSS_API = 'https://api.tosspayments.com';
 const STAFF_ROLES = new Set(['senior_pastor', 'pastor', 'staff']);
 const USER_AGENT = 'EKODI-QTIN-GroupOrder/1.0 (+https://ekodi.kr/qtin; contact joseph@ekodibiz.kr)';
 const MAX_SYNC_FETCHES = 40;
@@ -33,28 +33,18 @@ const STAGING_PRODUCTS = Object.freeze([
 const flag = value => ['1', 'true', 'yes', 'on'].includes(String(value || '').toLowerCase());
 const isStaging = env => !env?.DB || String(env?.DATA_MODE || '') === 'isolated-staging';
 const publicBase = env => clean(env?.PUBLIC_BASE_URL, 200) || 'https://ekodi.kr/qtin';
-function paymentReadiness(env) {
-  const missing = [];
-  if (!flag(env?.PAYMENTS_ENABLED)) missing.push('payments-disabled');
-  if (!/^(test|live)_(g?ck)_/.test(String(env?.TOSS_CLIENT_KEY || ''))) missing.push('toss-client-key');
-  if (!/^(test|live)_(g?sk)_/.test(String(env?.TOSS_SECRET_KEY || ''))) missing.push('toss-secret-key');
-  if (isStaging(env)) missing.push('isolated-staging');
-  const mode = String(env?.TOSS_CLIENT_KEY || '').startsWith('live_') ? 'live' : (String(env?.TOSS_CLIENT_KEY || '').startsWith('test_') ? 'test' : 'none');
-  return { ready: missing.length === 0, missing, mode };
+function paymentReadiness(env, profileId) {
+  // EKODIPAY-CORE-001: shared readiness; profile defaults to EKODIPAY_PROFILE ('ekodi').
+  return ekodipay.readiness(env, { profileId: profileId || ekodipay.activeProfileId(env), staging: isStaging(env) });
 }
 // Test keys never take real money. While the client key is a test_ key, only signed-in
 // operators/staff may create (clearly labelled) test orders; the public page stays closed
 // and test orders are kept out of order totals, product counts and the CSV export.
 const TEST_ORDER_PREFIX = 'QTINTEST-';
 const NOT_TEST_ORDER = `o.id NOT LIKE '${TEST_ORDER_PREFIX}%'`;
-function publicPaymentReady(env) {
-  const r = paymentReadiness(env);
-  return r.ready && r.mode === 'live';
-}
-function testPaymentReady(env) {
-  const r = paymentReadiness(env);
-  return r.ready && r.mode === 'test';
-}
+const publicPaymentReady = env => paymentReadiness(env).publicReady;
+const testPaymentReady = env => paymentReadiness(env).testReady;
+const orderProfile = orderId => ekodipay.profileFromOrderId(orderId);
 function operatorEmails(env) {
   return new Set(String(env?.OPERATOR_EMAILS || '').split(',').map(v => v.trim().toLowerCase()).filter(Boolean));
 }
@@ -274,23 +264,10 @@ export async function runScheduled(env, now = new Date(), options = {}) {
 }
 
 // ---------- Toss Payments ----------
-function tossAuth(env) {
-  return `Basic ${btoa(`${env.TOSS_SECRET_KEY}:`)}`;
+async function tossRequest(env, path, options = {}, profileId) {
+  // EKODIPAY-CORE-001: every Toss call goes through the shared module with the order's merchant profile.
+  return ekodipay.tossRequest(env, profileId || ekodipay.activeProfileId(env), path, options);
 }
-async function tossRequest(env, path, { method = 'GET', body, idempotencyKey } = {}) {
-  const headers = { authorization: tossAuth(env), 'content-type': 'application/json' };
-  if (idempotencyKey) headers['idempotency-key'] = idempotencyKey;
-  const response = await fetch(TOSS_API + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(clean(data.message || data.code || `TOSS_${response.status}`, 300));
-    error.code = clean(data.code, 80);
-    error.status = response.status;
-    throw error;
-  }
-  return data;
-}
-
 async function markPaid(env, order, payment, actor) {
   const now = new Date().toISOString();
   const result = await env.DB.prepare(`UPDATE qtin_orders SET status='paid', payment_key=?, payment_method=?, approved_at=?, receipt_url=?, updated_at=?
@@ -301,7 +278,8 @@ async function markPaid(env, order, payment, actor) {
 }
 
 export async function confirmPayment(env, { paymentKey, orderId, amount }, now = new Date()) {
-  const readiness = paymentReadiness(env);
+  const profileId = orderProfile(orderId);
+  const readiness = paymentReadiness(env, profileId);
   if (!readiness.ready) return { ok: false, status: 503, code: 'PAYMENTS_NOT_READY', message: '온라인 결제가 아직 준비되지 않았습니다.' };
   if (!isValidTossOrderId(orderId) || !clean(paymentKey, 220)) return { ok: false, status: 400, code: 'BAD_REQUEST', message: '결제 정보가 올바르지 않습니다.' };
   const order = await env.DB.prepare('SELECT * FROM qtin_orders WHERE id=?').bind(orderId).first();
@@ -313,11 +291,11 @@ export async function confirmPayment(env, { paymentKey, orderId, amount }, now =
   if (!guard.ok) return { ...guard, ok: false };
   let payment;
   try {
-    payment = await tossRequest(env, '/v1/payments/confirm', { method: 'POST', body: { paymentKey, orderId, amount: Math.trunc(Number(amount)) }, idempotencyKey: `qtin-confirm-${orderId}` });
+    payment = await tossRequest(env, '/v1/payments/confirm', { method: 'POST', body: { paymentKey, orderId, amount: Math.trunc(Number(amount)) }, idempotencyKey: `qtin-confirm-${orderId}` }, profileId);
   } catch (error) {
     await audit(env, orderId, 'payment-provider:toss', 'payment.confirm_failed', { code: error.code, status: error.status });
     if (error.code === 'ALREADY_PROCESSED_PAYMENT') {
-      payment = await tossRequest(env, `/v1/payments/${encodeURIComponent(paymentKey)}`).catch(() => null);
+      payment = await tossRequest(env, `/v1/payments/${encodeURIComponent(paymentKey)}`, {}, profileId).catch(() => null);
     }
     if (!payment) return { ok: false, status: 402, code: error.code || 'CONFIRM_FAILED', message: error.message || '결제 승인에 실패했습니다.' };
   }
@@ -335,14 +313,18 @@ export async function confirmPayment(env, { paymentKey, orderId, amount }, now =
 
 /** Toss webhook (no signature for payment events): re-verify through the Payment Query API. */
 export async function handleWebhook(env, body) {
-  if (!paymentReadiness(env).ready) return { status: 503, result: 'not-ready' };
   const data = body?.data || {};
   const paymentKey = clean(data.paymentKey, 220);
   const orderId = clean(data.orderId, 80);
-  if (!paymentKey || !isValidTossOrderId(orderId)) return { status: 200, result: 'ignored' };
+  if (!paymentKey || !isValidTossOrderId(orderId)) {
+    if (!paymentReadiness(env).ready) return { status: 503, result: 'not-ready' };
+    return { status: 200, result: 'ignored' };
+  }
+  const profileId = orderProfile(orderId);
+  if (!paymentReadiness(env, profileId).ready) return { status: 503, result: 'not-ready' };
   const order = await env.DB.prepare('SELECT * FROM qtin_orders WHERE id=?').bind(orderId).first();
   if (!order) return { status: 200, result: 'unknown-order' };
-  const payment = await tossRequest(env, `/v1/payments/${encodeURIComponent(paymentKey)}`);
+  const payment = await tossRequest(env, `/v1/payments/${encodeURIComponent(paymentKey)}`, {}, profileId);
   if (payment.orderId !== orderId) return { status: 200, result: 'mismatch' };
   if (payment.status === 'DONE') {
     if (Math.trunc(Number(payment.totalAmount)) !== Math.trunc(Number(order.total_amount))) {
@@ -397,7 +379,8 @@ async function createOrder(env, body, now = new Date(), request = null) {
   const result = buildOrderDraft(body, products);
   if (!result.ok) return { status: 400, data: { error: result.errors[0], errors: result.errors } };
   const draft = result.draft;
-  const orderId = testActor ? newOrderId(campaign.id).replace(/^QTIN-/, TEST_ORDER_PREFIX) : newOrderId(campaign.id);
+  const baseOrderId = testActor ? newOrderId(campaign.id).replace(/^QTIN-/, TEST_ORDER_PREFIX) : newOrderId(campaign.id);
+  const orderId = ekodipay.tagOrderId(baseOrderId, readiness.profile);
   const lookupToken = randomToken();
   const createdAt = now.toISOString();
   const expiresAt = new Date(now.getTime() + PENDING_TTL_MS).toISOString();
@@ -415,7 +398,7 @@ async function createOrder(env, body, now = new Date(), request = null) {
     status: 201,
     data: {
       orderId, amount: draft.totalAmount, orderName: draft.orderName, customerName: draft.applicantName, customerEmail: draft.email || undefined,
-      customerMobilePhone: draft.phone.replace(/-/g, ''), clientKey: env.TOSS_CLIENT_KEY, customerKey: `qtin-${crypto.randomUUID()}`,
+      customerMobilePhone: draft.phone.replace(/-/g, ''), clientKey: ekodipay.merchantKeys(env, readiness.profile).clientKey, customerKey: `qtin-${crypto.randomUUID()}`,
       successUrl: `${base}/payment/success?t=${encodeURIComponent(lookupToken)}`,
       failUrl: `${base}/payment/fail?orderId=${encodeURIComponent(orderId)}`,
       expiresAt,
@@ -742,9 +725,9 @@ async function handleAdminApi(request, env, url) {
       const body = await readJson(request);
       const reason = clean(body?.reason, 200);
       if (reason.length < 2) return json({ error: '취소 사유를 입력해 주세요.' }, 400, env);
-      if (!paymentReadiness(env).ready) return json({ error: '결제 연결이 준비되지 않아 취소할 수 없습니다.' }, 503, env);
+      if (!paymentReadiness(env, orderProfile(id)).ready) return json({ error: '결제 연결이 준비되지 않아 취소할 수 없습니다.' }, 503, env);
       try {
-        await tossRequest(env, `/v1/payments/${encodeURIComponent(order.payment_key)}/cancel`, { method: 'POST', body: { cancelReason: reason }, idempotencyKey: `qtin-cancel-${id}` });
+        await tossRequest(env, `/v1/payments/${encodeURIComponent(order.payment_key)}/cancel`, { method: 'POST', body: { cancelReason: reason }, idempotencyKey: `qtin-cancel-${id}` }, orderProfile(id));
       } catch (error) {
         await audit(env, id, me.email, 'order.cancel_failed', { code: error.code });
         return json({ error: `토스 결제 취소 실패: ${error.message}` }, 502, env);
@@ -844,7 +827,7 @@ function adminClient() {
       if (!session) { location.href = authHref(); return; }
       const list = await api('/campaigns'); me = list.me;
       const pay = list.payment;
-      $('state').innerHTML = `<span class="dot"></span>${esc(me.email)} · ${me.canWrite ? '관리' : '조회'} 권한 · 결제 ${pay.ready ? (pay.mode === 'live' ? '운영 연결' : '테스트 연결 · <a href="/qtin/church">테스트 신청 열기</a>(실제 청구 없음, 집계 제외)') : '미연결(' + esc(pay.missing.join(', ')) + ')'}`;
+      $('state').innerHTML = `<span class="dot"></span>${esc(me.email)} · ${me.canWrite ? '관리' : '조회'} 권한 · 결제 ${pay.ready ? (pay.mode === 'live' ? '운영 연결' : '테스트 연결 · <a href="/qtin/church">테스트 신청 열기</a>(실제 청구 없음, 집계 제외)') + (pay.mid ? ' · 상점 ' + esc(pay.merchant || '') + ' ' + esc(pay.mid) : '') : '미연결(' + esc(pay.missing.join(', ')) + ')'}`;
       $('campaign').innerHTML = list.campaigns.map(c => `<option value="${c.id}">${c.target_year}년 ${c.target_month}월호 · ${({ open: '신청 중', scheduled: '예정', closed: '마감' })[c.state] || c.state}</option>`).join('');
       $('campaign').onchange = () => load().catch(e => setMsg(e.message));
       $('filter').oninput = renderOrders;
@@ -880,7 +863,7 @@ export async function handleRequest(request, env, now = new Date()) {
       ok: state !== 'open' || productsReady,
       service: 'ekodi-qtin-order',
       campaign: { id: campaign.id, state, productCount: products.length, lastSyncAt: campaign.last_sync_at || '', lastSyncStatus: campaign.last_sync_status || '' },
-      payment: { ready: readiness.ready, mode: readiness.mode, missing: readiness.missing },
+      payment: { ready: readiness.ready, mode: readiness.mode, missing: readiness.missing, profile: readiness.profile, mid: readiness.mid },
     }, state === 'open' && !productsReady ? 503 : 200, env, method);
   }
   if (path === `${API}/catalog` && (method === 'GET' || method === 'HEAD')) return json(await catalog(env, now), 200, env, method);
