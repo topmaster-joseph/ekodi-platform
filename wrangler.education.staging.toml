@@ -5,6 +5,8 @@ workers_dev = true
 preview_urls = false
 
 [vars]
+# Instructor gate verifier (PBKDF2, random ~79-bit password; see education-instructor-gate.js). Not a secret.
+EDU_INSTRUCTOR_GATE = "pbkdf2-sha256$100000$EIuDPHsCJbnpyAo0yx7INg$MXcuZEwBcx8KyAurTvhEYvRe6lOSN4WmwuzAwriyrQk"
 DATA_ENABLED = "false"
 DATA_MODE = "isolated-staging"
 AUTH_URL = "https://auth.ekodi.kr/?site=edu"

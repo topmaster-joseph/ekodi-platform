@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="description" content="EKODI Education Premium Studio 발표 화면 — 발표자 노트, 다음 슬라이드, 실습 타이머, QR 접속 안내">
+  <meta name="description" content="EKODI Education Premium Studio 발표 화면 — 강의·실습실 화면 전환, 발표자 노트, 다음 슬라이드, 실습 타이머, QR 접속 안내">
   <meta name="ekodi-ui-type" content="USER">
   <meta name="robots" content="noindex">
   <title>발표 화면 · EKODI Education Premium Studio</title>
@@ -24,7 +24,17 @@
   <button type="button" class="btn hide-sm" id="pFull">전체화면</button>
 </header>
 <main class="pres" id="presMain">
-  <section class="stage" aria-label="현재 슬라이드">
+  <section class="stage" aria-label="현재 화면">
+    <div class="stage-bar" id="stageBar" role="toolbar" aria-label="화면 전환 (청중 화면도 함께 바뀝니다)">
+      <div class="seg" role="group" aria-label="무대 화면">
+        <button type="button" class="seg-btn" data-stage-mode="slide" aria-pressed="true"><span class="kbd-hint">1</span>강의</button>
+        <button type="button" class="seg-btn" data-stage-mode="lab" aria-pressed="false"><span class="kbd-hint">2</span>실습실</button>
+        <button type="button" class="seg-btn" data-stage-mode="split" aria-pressed="false"><span class="kbd-hint">3</span>나란히</button>
+      </div>
+      <button type="button" class="btn btn-small" id="pFactchat" title="공식 FactChat 사이트를 별도 탭으로 열거나 앞으로 가져옵니다 (G)">FactChat 화면 ↗</button>
+      <span class="grow"></span>
+      <span class="kbd hide-sm" id="stageHint">강의 슬라이드</span>
+    </div>
     <div class="stage-frame" id="stage" aria-live="polite"></div>
   </section>
   <aside class="pres-side" id="presSide" aria-label="발표자 전용 정보 (청중 화면에는 표시되지 않음)">
@@ -39,7 +49,7 @@
         <button type="button" class="btn btn-small" id="pPrint">인쇄·PDF</button>
         <button type="button" class="btn btn-small" id="pSync">수동 동기화</button>
       </div>
-      <p class="kbd">→/Space/PageDown 다음 · ←/PageUp 이전 · B 가리기 · F 전체화면 · N 노트 · Home/End</p>
+      <p class="kbd">→/Space/PageDown 다음 · ←/PageUp 이전 · 1 강의 · 2 실습실 · 3 나란히 · G FactChat · B 가리기 · F 전체화면 · N 노트 · Home/End</p>
       <p class="kbd" id="presSync"></p>
     </section>
   </aside>

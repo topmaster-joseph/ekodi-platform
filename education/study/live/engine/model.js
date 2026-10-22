@@ -68,6 +68,12 @@ export function missionContext(course,missionId,trackId){
   return {...base,trackId:track.id,label:track.label,ideas:base.ideas||course.trackMaterials?.free?.[track.id]||[]};
 }
 
+// One-line task title of a field's practice material (HWP document, meeting, presentation topic, idea).
+export function trackTaskTitle(course,missionId,trackId){
+  const c=missionContext(course,missionId,trackId);
+  return c.doc||c.meeting||c.topic||c.ideas?.[0]||'';
+}
+
 export function buildPrompts(course,missionId,trackId,levelId){
   const mission=course.missions[missionId];
   if(!mission)return [];
@@ -100,6 +106,9 @@ export function moduleSlides(course,session,mod){
   if(mod.kind==='practice'){
     const m=course.missions[mod.missionId];
     out.push(slide({id:mod.id+'-a',moduleId:mod.id,k:range,t:m.title,p:m.problem,bullets:['왜: '+m.why,'결과물: '+m.deliverable,m.pcOnly?'PC 전용 실습 · 모바일은 대체 실습':'PC 권장 · 모바일 참여 가능']}));
+    // Shared basics are over: everyone practises now, at the same time, each with their own field's material.
+    out.push(slide({id:mod.id+'-t',moduleId:mod.id,k:range+' · 분야별 동시 실습',t:'같은 시간, 각자 내 업무로',p:'실습실에서 내 분야를 고르면 그 분야의 가상 원문과 프롬프트가 열립니다.',special:'tracks',
+      tracks:course.tracks.map(t=>({label:t.label,task:trackTaskTitle(course,m.id,t.id)}))}));
     out.push(slide({id:mod.id+'-b',moduleId:mod.id,k:range+' · 따라 하기',t:'따라 하기 '+m.steps.length+'단계',bullets:m.steps}));
     out.push(slide({id:mod.id+'-c',moduleId:mod.id,k:range+' · 실습실 입장',t:'QR로 실습실에 들어오세요',p:'직무를 고르면 내 업무에 맞는 원문과 프롬프트가 나옵니다.',special:'join',missionId:m.id}));
     out.push(slide({id:mod.id+'-d',moduleId:mod.id,k:range+' · 검증',t:'제출 전 반드시 확인',bullets:m.errors}));

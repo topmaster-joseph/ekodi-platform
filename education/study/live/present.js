@@ -3,7 +3,8 @@ import {courseEntry} from './courses/registry.js';
 import {validateCourse,sessionByNo,sessionSlides,learnerUrl,formatClock,livePath} from './engine/model.js';
 import {createLiveStore,lectureElapsedMs,timerRemainingMs,timerPhase,CHANNEL_NAME} from './engine/live-state.js';
 import {qrSvg} from './engine/qr.js';
-import {esc,list,slideHtml,safeStorage,safeChannel,bindChrome} from './engine/render.js';
+import {esc,list,slideHtml,safeStorage,safeChannel,bindChrome,showFactchatTab,embeddedLabUrl} from './engine/render.js';
+import {FACTCHAT_TOOL} from './tools/factchat.js';
 
 const $=s=>document.querySelector(s);
 const params=new URLSearchParams(location.search);
@@ -11,7 +12,8 @@ const audience=params.get('view')==='audience';
 const entry=courseEntry(params.get('c'));
 const storage=safeStorage(window);
 const channel=safeChannel(window,CHANNEL_NAME);
-let course,notes={},store,slides=[],showNotes=true,toastTimer=0,lastKey='';
+let course,notes={},store,slides=[],showNotes=true,toastTimer=0,lastKey='',lastLayout='';
+const MODE_LABELS={slide:'강의 슬라이드',lab:'수강생 실습실 (시연)',split:'강의 + 실습실 나란히'};
 
 const S=()=>store.state;
 const session=()=>sessionByNo(course,S().session)||course.sessions[0];
@@ -32,10 +34,11 @@ function slideMarkup(slide,{forPrint=false}={}){
 function render(){
   const st=S(),slide=currentSlide();
   const key=st.session+':'+st.slideIndex+':'+st.timer.status+':'+st.timer.endsAt+':'+st.shared.missionId+':'+st.shared.level;
-  const stage=$('#stage');
-  stage.classList.toggle('is-black',st.blackout);
-  if(key!==lastKey){stage.innerHTML=slideMarkup(slide);lastKey=key;}
+  renderStage(st,slide,key);
   if(audience)return;
+  const mode=st.stage?.mode||'slide';
+  document.querySelectorAll('[data-stage-mode]').forEach(b=>{const on=b.dataset.stageMode===mode;b.classList.toggle('is-on',on);b.setAttribute('aria-pressed',String(on));});
+  $('#stageHint').textContent='청중 화면: '+MODE_LABELS[mode];
   $('#presSession').textContent=course.subtitle+' · '+st.session+'회차';
   $('#presCounter').textContent=(st.slideIndex+1)+' / '+slides.length;
   $('#pPrev').disabled=st.slideIndex<=0;$('#pNext').disabled=st.slideIndex>=slides.length-1;
@@ -51,6 +54,37 @@ function render(){
   $('#pPractice').disabled=!practice;
   $('#presSync').textContent=channel?'강사 운영실·청중 창과 실시간 동기화 중':'창 간 실시간 동기화 미지원 — 수동 동기화 사용';
   tick();
+}
+// The stage shows the slide, the same-origin Learner Lab (demo) or both. The lab iframe is only rebuilt
+// when the mode or its address changes, so moving between slides never reloads the demo.
+function renderStage(st,slide,key){
+  const stage=$('#stage');
+  stage.classList.toggle('is-black',st.blackout);
+  const mode=st.stage?.mode||'slide';
+  stage.dataset.mode=mode;
+  if(mode==='slide'){
+    if(lastLayout!=='slide'){lastLayout='slide';lastKey='';}
+    if(key!==lastKey){stage.innerHTML=slideMarkup(slide);lastKey=key;}
+    return;
+  }
+  const src=embeddedLabUrl(joinLink(slide));
+  const layout=mode+'|'+src;
+  if(layout!==lastLayout){
+    const frame='<iframe class="stage-embed" src="'+esc(src)+'" title="수강생 실습실 화면 (시연)" referrerpolicy="same-origin"></iframe>';
+    stage.innerHTML=mode==='split'?'<div class="stage-split"><div class="split-slide"><div class="stage-frame" id="splitSlide"></div></div>'+frame+'</div>':'<div class="stage-split is-lab">'+frame+'</div>';
+    lastLayout=layout;lastKey='';
+  }
+  if(mode==='split'&&key!==lastKey){const host=$('#splitSlide');if(host)host.innerHTML=slideMarkup(slide);lastKey=key;}
+}
+function setStageMode(mode){
+  if(S().stage?.mode===mode)return;
+  store.dispatch({type:'stage/mode',mode});
+  toast(MODE_LABELS[mode]+' 화면으로 전환했습니다.');
+}
+function openFactchat(){
+  const r=showFactchatTab(window,FACTCHAT_TOOL.entryUrl);
+  if(!r.ok){toast('팝업이 차단되었습니다. 팝업을 허용한 뒤 다시 누르세요.');return;}
+  toast(r.fresh?'공식 FactChat을 새 탭으로 열었습니다. 시연 후 이 탭으로 돌아오세요.':'FactChat 탭을 앞으로 가져왔습니다.');
 }
 function tick(){
   const st=S(),now=Date.now();
@@ -107,6 +141,8 @@ function bind(){
     else if(k==='b'||k==='B'||k==='.'){e.preventDefault();store.dispatch({type:'blackout/toggle'});}
     else if(k==='f'||k==='F'){e.preventDefault();fullscreen();}
     else if((k==='n'||k==='N')&&!audience){e.preventDefault();toggleNotes();}
+    else if(k==='1'||k==='2'||k==='3'){e.preventDefault();setStageMode(['slide','lab','split'][Number(k)-1]);}
+    else if((k==='g'||k==='G')&&!audience){e.preventDefault();openFactchat();}
   });
   window.addEventListener('storage',e=>store.onStorage(e));
   if(audience)return;
@@ -120,6 +156,8 @@ function bind(){
   document.querySelector('[data-add]').addEventListener('click',e=>store.dispatch({type:'timer/add',ms:Number(e.currentTarget.dataset.add)}));
   $('#pAudience').addEventListener('click',()=>{const w=window.open(location.pathname+'?c='+encodeURIComponent(course.id)+'&view=audience','ekodi-edu-audience','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업을 허용한 뒤 다시 누르세요.');else toast('청중 화면 창을 프로젝터로 옮긴 뒤 F 키로 전체화면을 켜세요.');});
   $('#pNotes').addEventListener('click',toggleNotes);
+  document.querySelectorAll('[data-stage-mode]').forEach(b=>b.addEventListener('click',()=>setStageMode(b.dataset.stageMode)));
+  $('#pFactchat').addEventListener('click',openFactchat);
   $('#pPrint').addEventListener('click',printDeck);
   $('#pSync').addEventListener('click',()=>{store.resync();lastKey='';render();toast('최신 상태로 동기화했습니다.');});
   $('#backStudio').href=livePath(location.pathname,'?c='+encodeURIComponent(course.id));
@@ -138,7 +176,7 @@ async function init(){
     document.body.classList.remove('pres-body');document.body.classList.add('audience-body');document.body.dataset.liveSurface='audience';
     // Projector output: no shared header, spacer or footer on top of the slides.
     document.body.dataset.ekodiUserHeader='immersive';
-    $('#presTop').hidden=true;$('#presSide').remove();
+    $('#presTop').hidden=true;$('#presSide').remove();$('#stageBar').remove();
     const main=$('#presMain');main.className='audience';main.querySelector('.stage').className='';
     document.title='청중 화면 · EKODI Education';
   }
