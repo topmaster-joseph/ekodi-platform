@@ -91,13 +91,34 @@ async function authorize(context){
   const origin=new URL(ORIGIN);
   await context.addCookies([{name:GATE_COOKIE,value:await mintGateToken(key),domain:origin.hostname,path:(PREFIX||'')+'/study/live',httpOnly:true,secure:origin.protocol==='https:',sameSite:'Lax'}]);
 }
-// Without a session the instructor studio, presenter and notes must stay locked; the learner lab stays open.
+// The deployed access mode comes from the same Worker config that was released (EDU_INSTRUCTOR_GATE_MODE).
+async function deployedGateMode(){
+  const toml=await fs.readFile(new URL('../wrangler.education.toml',import.meta.url),'utf8');
+  return /EDU_INSTRUCTOR_GATE_MODE\s*=\s*"open"/i.test(toml)?'open':'locked';
+}
+// Locked: without a session the instructor studio, presenter and notes must be refused. Open: they load
+// without any password. Either way the learner lab stays public and frameable only by the same origin.
 async function gateProbe(browser){
+  const mode=await deployedGateMode();
   const context=await browser.newContext({locale:'ko-KR'});
   await guard(context,'gate');
   try{
     const page=await context.newPage();
     const result={};
+    result.mode=mode;
+    if(mode==='open'){
+      for(const [k,route] of [['studio',R.studio],['presenter',R.presenter]]){
+        const r=await page.goto(ORIGIN+route,{waitUntil:'domcontentloaded',timeout:35000});
+        result[k]=r?.status();
+        if(r?.status()!==200)fail('open mode: '+k+' must load without a password, got '+r?.status());
+        if(await page.locator('input[type="password"]').count()!==0)fail('open mode: '+k+' still shows a password form');
+      }
+      const lab=await context.request.get(ORIGIN+R.lab,{failOnStatusCode:false});
+      result.lab=lab.status();
+      if(lab.status()!==200)fail('learner lab must stay public, got '+lab.status());
+      report.gate={...result,passed:true};
+      return;
+    }
     for(const [k,route] of [['studio',R.studio],['presenter',R.presenter],['audience',R.audience]]){
       const r=await page.goto(ORIGIN+route,{waitUntil:'domcontentloaded',timeout:35000});
       result[k]=r?.status();

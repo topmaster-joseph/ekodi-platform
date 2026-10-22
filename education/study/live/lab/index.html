@@ -35,12 +35,12 @@
   </div>
   <div class="tabs-wrap"><nav class="tabs" id="labTabs" aria-label="실습 메뉴"></nav></div>
   <div id="labView" aria-live="polite"></div>
-  <section class="panel" aria-labelledby="privacyTitle">
-    <h2 id="privacyTitle" class="sr-only">개인정보와 저장 안내</h2>
+  <details class="panel lab-privacy" id="labPrivacy">
+    <summary><span>개인정보·비공개 자료는 입력하지 마세요 · 기록은 이 기기에만 저장</span></summary>
     <p class="meta" id="labSafety"></p>
-    <p class="meta">이 화면의 체크·메모·붙여 넣은 결과는 <b>이 기기의 브라우저에만</b> 저장되며 서버로 전송되지 않습니다. 연결이 끊기거나 새로고침해도 이어서 할 수 있습니다.</p>
+    <p class="meta">체크·메모·붙여 넣은 결과는 이 기기의 브라우저에만 저장되고 서버로 보내지 않습니다.</p>
     <div class="btn-row"><button type="button" class="btn btn-small btn-danger" id="labClear">내 기록 삭제</button></div>
-  </section>
+  </details>
 </main>
 <div class="dock" id="labDock" role="region" aria-label="실습 진행 도구">
   <div class="dock-in">

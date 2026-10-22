@@ -482,3 +482,10 @@ html.lv-big-text{font-size:115%}
 .lv .field-list b{font-size:.875rem;color:var(--teal-ink)}
 .lv .field-list span{font-size:.8125rem;color:var(--ink-2)}
 .lv .field-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0}
+
+/* Learner lab: privacy notice folded to one line */
+.lv .lab-privacy>summary{cursor:pointer;list-style:none;font-size:.8125rem;font-weight:650;color:var(--muted);display:flex;align-items:center;gap:6px;min-height:28px}
+.lv .lab-privacy>summary::-webkit-details-marker{display:none}
+.lv .lab-privacy>summary::after{content:'▾';font-size:.75rem}
+.lv .lab-privacy[open]>summary::after{content:'▴'}
+.lv .lab-privacy[open]{display:grid;gap:6px}

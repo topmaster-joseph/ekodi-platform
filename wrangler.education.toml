@@ -10,6 +10,8 @@ zone_name = "ekodi.kr"
 custom_domain = true
 
 [vars]
+# Instructor studio/presenter access: "open" (no password, instructor decision 2026-10-22) or "locked".
+EDU_INSTRUCTOR_GATE_MODE = "open"
 # Instructor gate verifier (PBKDF2, random ~79-bit password; see education-instructor-gate.js). Not a secret.
 EDU_INSTRUCTOR_GATE = "pbkdf2-sha256$100000$EIuDPHsCJbnpyAo0yx7INg$MXcuZEwBcx8KyAurTvhEYvRe6lOSN4WmwuzAwriyrQk"
 DATA_ENABLED = "true"

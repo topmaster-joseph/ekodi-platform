@@ -81,8 +81,7 @@ export function instructorCard(ins,assetBase='',{compact=false}={}){
     '<div class="ins-body"><p class="eyebrow">오늘의 강사</p><h2 class="ins-name">'+esc(ins.name)+' <span>'+esc(ins.nameEn)+'</span></h2><p class="ins-headline">'+esc(ins.headline)+'</p>'+
     '<p class="ins-hook">'+esc(ins.hook)+'</p>'+(compact
       // Learner lab: the same short card in every session; the full profile folds out on demand.
-      ?'<div class="site-chips" aria-label="운영 웹사이트">'+sites+'</div>'+
-        '<details class="ins-more"><summary>강사 소개 더 보기 · 경력·저서·활동</summary>'+detail+gallery+'</details>'
+      ?'<details class="ins-more"><summary>강사 소개 더 보기</summary>'+detail+'<div class="site-chips" aria-label="운영 웹사이트">'+sites+'</div>'+gallery+'</details>'
       :detail+'<div class="site-chips" aria-label="운영 웹사이트">'+sites+'</div>'+gallery)+'</div></section>';
 }
 export function slideHtml(slide,{joinSvg='',joinUrl='',timerText='',sessionLabel='',instructor=null,assetBase=''}={}){

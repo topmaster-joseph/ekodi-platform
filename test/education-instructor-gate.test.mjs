@@ -108,3 +108,13 @@ test('an instructor-chosen password (Worker secret) replaces the generated one; 
   assert.doesNotMatch(wf,/echo[^\n]*\$EDU_INSTRUCTOR_PASSWORD/,'never echo the password');
   for(const f of ['wrangler.education.toml','wrangler.education.staging.toml'])assert.doesNotMatch(await readFile(new URL('../'+f,import.meta.url),'utf8'),/EDU_INSTRUCTOR_GATE_SECRET|EDU_INSTRUCTOR_PASSWORD/);
 });
+
+test('open mode (instructor decision): studio, presenter and notes open without a password; unset mode stays locked',async()=>{
+  const open=env({EDU_INSTRUCTOR_GATE_MODE:'open'});
+  for(const p of ['/study/live/?c=mnu-factchat-2026','/study/live/present/?c=mnu-factchat-2026','/study/live/courses/mnu-factchat-2026.notes.js']){
+    const r=await get(p,{},open);assert.equal(r.status,200,p);assert.match(await r.text(),/ASSET/);
+  }
+  assert.equal((await get('/study/live/',{},env({EDU_INSTRUCTOR_GATE_MODE:'OPEN '}))).status,200);
+  for(const m of ['','locked','opened','false'])assert.equal((await get('/study/live/',{},env({EDU_INSTRUCTOR_GATE_MODE:m}))).status,401,'mode '+JSON.stringify(m));
+  for(const f of ['wrangler.education.toml','wrangler.education.staging.toml'])assert.match(await readFile(new URL('../'+f,import.meta.url),'utf8'),/EDU_INSTRUCTOR_GATE_MODE = "(open|locked)"/);
+});
