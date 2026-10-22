@@ -227,3 +227,20 @@ test('canonical /edu router leaves every live-studio script and page byte-identi
   assert.equal(livePath('/study/live/present/','lab/'),'/study/live/lab/');
   assert.equal(lu('https://ekodi.kr','/edu/factchat/',{c:'a'}),'https://ekodi.kr/edu/study/live/lab/?c=a');
 });
+
+test('instructor intro: public facts only, portrait asset present, intro and hooks open the sessions',async()=>{
+  const {INSTRUCTOR}=await import('../education/study/live/courses/instructor.js');
+  const {stat}=await import('node:fs/promises');
+  const src=await read('education/study/live/courses/instructor.js');
+  assert.doesNotMatch(src,/01[016789]-?\d{3,4}-?\d{4}|@[a-z0-9.-]+\.[a-z]{2,}|\d{3}-\d{2}-\d{5}/i,'no phone, e-mail or business ID in public instructor data');
+  assert.ok((await stat(new URL('../education/study/live/'+INSTRUCTOR.photo,import.meta.url))).size>10000);
+  assert.ok(INSTRUCTOR.sites.every(x=>/^https:\/\//.test(x.url)));
+  const s1=sessionSlides(COURSE,1),s2=sessionSlides(COURSE,2);
+  assert.deepEqual(s1.slice(0,4).map(x=>x.special),['join','instructor','outcomes','hook']);
+  assert.deepEqual(s2.slice(0,3).map(x=>x.special),['join','outcomes','hook']);
+  assert.ok(COURSE.sessions.every(x=>x.outcomes.length>=2));
+  const {instructorCard}=await import('../education/study/live/engine/render.js');
+  const html=instructorCard(INSTRUCTOR,'/edu/study/live/');
+  assert.match(html,/src="\/edu\/study\/live\/img\/instructor\.jpg"/);
+  assert.match(html,/에코디언을 찾아서/);
+});

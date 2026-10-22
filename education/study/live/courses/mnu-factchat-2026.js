@@ -3,6 +3,7 @@
 // 4회차 × 6세트 AI bootcamp proposal (education/study/ai-bootcamp/catalog.js), which is untouched.
 // All practice materials are fictional and labelled [가상 실습자료]. No real people, students or records.
 // Instructor-only facilitation notes live in ./mnu-factchat-2026.notes.js and are never loaded by the Learner Lab.
+import {INSTRUCTOR} from './instructor.js';
 
 const T=Object.freeze([
   {id:'planning',label:'기획·평가',examples:'사업계획·성과지표·평가보고'},
@@ -223,6 +224,7 @@ const ERROR_HUNTS=Object.freeze([
 
 const S1=[
   {id:'s1-intro',start:0,end:10,kind:'lecture',title:'내 업무에서 AI로 줄일 수 있는 일 찾기',
+    hook:{q:'지난주 쓴 안내문 초안, 몇 분 걸리셨나요?',sub:'오늘 120분 뒤, 원문 대조까지 끝낸 HWP 안내문과 회의 결정표를 손에 쥐고 나갑니다.'},
     summary:'반복·초안·정리 업무를 찾아 오늘 실습 대상으로 고릅니다.',
     points:['일주일 동안 반복하는 문서 작업 3개 적기','AI가 잘하는 일: 초안·요약·표 정리·문체 변환','사람이 해야 하는 일: 사실 확인·판단·승인·발송'],
     learner:{headline:'내 업무 시간 진단',tasks:['이번 주 반복 업무 3개를 실습 메모에 적습니다.','그중 「초안·요약·정리」에 해당하는 업무에 표시합니다.']}},
@@ -246,6 +248,7 @@ const S1=[
 ];
 const S2=[
   {id:'s2-research',start:0,end:15,kind:'lecture',title:'심층 조사·대학 데이터·출처 검증',
+    hook:{q:'AI가 지어낸 숫자, 5초 안에 찾을 수 있나요?',sub:'오늘은 출처를 확인하는 사람이 되는 날입니다. 5장 보고자료와 내 업무 결과물 1건을 완성합니다.'},
     summary:'Deep Research와 데이터 도구(Univ-in-Data 등)의 쓰임과 출처 확인 방법을 익힙니다.',
     features:['deep-research','univ-in-data','korea-in-data','law-in-data','super-agent'],
     points:['Deep Research: 조사 계획 확인 → 리서치 시작 → 출처 번호 대조','Univ-in-Data: 대학 공시 데이터 비교, 인용 원문 확인','Korea-in-Data · Law-in-Data · Super Agent: 강사 시연 위주','출처의 기준연도와 원문을 반드시 열어 본다'],
@@ -278,12 +281,15 @@ export const COURSE=Object.freeze({
   audience:'여러 부서 교직원 공동 참여 · 기초부터 심화',
   format:'2회 × 120분 · 개인 집중 실습 4개 × 30분 = 120분',
   tool:'factchat',
+  instructor:INSTRUCTOR,
   syntheticOnly:true,
   tracks:T,
   levels:LEVELS,
   sessions:[
-    {no:1,title:'AI 기초와 행정 문서 업무혁신',minutes:120,modules:S1},
-    {no:2,title:'AI 자료 조사와 발표자료 업무혁신',minutes:120,modules:S2}
+    {no:1,title:'AI 기초와 행정 문서 업무혁신',minutes:120,modules:S1,
+      outcomes:['HWP 안내문 1건 — 원문 대조 완료','회의 결정사항 표 + 공유 메시지']},
+    {no:2,title:'AI 자료 조사와 발표자료 업무혁신',minutes:120,modules:S2,
+      outcomes:['5장 업무 보고자료(PPTX)','내 업무 결과물 1건 + 재사용 프롬프트','30일 업무 적용 계획']}
   ],
   missions:MISSIONS,
   trackMaterials:{hwp:HWP_TRACKS,minutes:MINUTES_TRACKS,ppt:PPT_TRACKS,free:FREE_TRACKS},

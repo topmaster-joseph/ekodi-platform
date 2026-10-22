@@ -69,9 +69,33 @@ export function missionSections(course,missionId,{trackId,levelId,checks,tool,sh
 }
 function sec(no,title,body){return '<section class="msec"><h3><span class="msec-no">'+no+'</span>'+title+'</h3>'+body+'</section>';}
 
-export function slideHtml(slide,{joinSvg='',joinUrl='',timerText='',sessionLabel=''}={}){
+export function instructorCard(ins,assetBase='',{compact=false}={}){
+  if(!ins)return '';
+  const sites=ins.sites.map(x=>'<a class="site-chip" href="'+esc(x.url)+'" target="_blank" rel="noopener noreferrer"><b>'+esc(x.label)+'</b>'+(compact?'':'<span>'+esc(x.desc)+'</span>')+'</a>').join('');
+  const gallery=ins.gallery?.length?'<div class="ins-gallery">'+ins.gallery.map(g=>'<figure><img src="'+esc(assetBase+g.src)+'" alt="'+esc(g.alt)+'" loading="lazy"><figcaption>'+esc(g.caption)+'</figcaption></figure>').join('')+'</div>':'';
+  return '<section class="ins-card'+(compact?' is-compact':'')+'" aria-label="오늘의 강사 소개"><img class="ins-photo" src="'+esc(assetBase+ins.photo)+'" alt="'+esc(ins.photoAlt)+'" width="160" height="160" loading="lazy">'+
+    '<div class="ins-body"><p class="eyebrow">오늘의 강사</p><h2 class="ins-name">'+esc(ins.name)+' <span>'+esc(ins.nameEn)+'</span></h2><p class="ins-headline">'+esc(ins.headline)+'</p>'+
+    '<p class="ins-hook">'+esc(ins.hook)+'</p>'+(compact?'':'<p class="meta">'+esc(ins.promise)+'</p>'+list(ins.roles,false,'ins-roles')+
+    '<p class="meta">저서 · '+ins.books.map(b=>'『'+esc(b)+'』').join(' ')+'</p>')+
+    '<div class="site-chips" aria-label="운영 웹사이트">'+sites+'</div>'+gallery+'</div></section>';
+}
+export function slideHtml(slide,{joinSvg='',joinUrl='',timerText='',sessionLabel='',instructor=null,assetBase=''}={}){
   if(!slide)return '';
   const head='<p class="slide-kicker">'+esc(slide.k)+'</p><h2 class="slide-title">'+esc(slide.t)+'</h2>';
+  if(slide.special==='instructor'&&instructor){
+    const ins=instructor;
+    return '<div class="slide slide-ins"><img class="slide-ins-photo" src="'+esc(assetBase+ins.photo)+'" alt="'+esc(ins.photoAlt)+'"><div class="slide-ins-text">'+
+      '<p class="slide-kicker">'+esc(slide.k)+'</p><h2 class="slide-title">'+esc(ins.name)+' <span class="slide-ins-en">'+esc(ins.nameEn)+'</span></h2>'+
+      '<p class="slide-lead">'+esc(ins.headline)+'</p>'+list(ins.roles.slice(0,3),false,'slide-bullets slide-ins-roles')+
+      '<p class="slide-ins-sites">'+ins.sites.slice(0,4).map(x=>'<span>'+esc(x.label)+'</span>').join('')+'</p>'+
+      '<p class="slide-ins-hook">'+esc(ins.hook)+'</p></div></div>';
+  }
+  if(slide.special==='hook'){
+    return '<div class="slide slide-hook"><p class="slide-kicker">'+esc(slide.k)+'</p><h2 class="slide-hook-q">'+esc(slide.t)+'</h2><p class="slide-lead">'+esc(slide.p)+'</p></div>';
+  }
+  if(slide.special==='outcomes'){
+    return '<div class="slide slide-outcomes">'+head+'<ol class="slide-outcome-list">'+(slide.bullets||[]).map(b=>'<li>'+esc(b)+'</li>').join('')+'</ol></div>';
+  }
   if(slide.special==='join'){
     return '<div class="slide slide-join">'+'<div class="slide-join-text">'+head+(slide.p?'<p class="slide-lead">'+esc(slide.p)+'</p>':'')+(slide.bullets?.length?list(slide.bullets,false,'slide-bullets'):'')+
       '<p class="slide-url">'+esc(joinUrl)+'</p></div><div class="slide-qr">'+joinSvg+'</div></div>';

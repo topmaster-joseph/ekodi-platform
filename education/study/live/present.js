@@ -27,7 +27,7 @@ function slideMarkup(slide,{forPrint=false}={}){
   const st=S();
   const url=joinLink(slide);
   const timer=st.timer.status==='idle'?formatClock(((moduleOf(slide)?.end||10)-(moduleOf(slide)?.start||0))*60000):formatClock(timerRemainingMs(st,Date.now()));
-  return slideHtml(slide,{joinSvg:slide?.special==='join'?qrSvg(url,{label:'수강생 실습실 접속 QR'}):'',joinUrl:url,timerText:forPrint?'':timer,sessionLabel:course.subtitle+' · '+st.session+'회차'});
+  return slideHtml(slide,{joinSvg:slide?.special==='join'?qrSvg(url,{label:'수강생 실습실 접속 QR'}):'',joinUrl:url,timerText:forPrint?'':timer,sessionLabel:course.subtitle+' · '+st.session+'회차',instructor:course.instructor,assetBase:livePath(location.pathname,'')});
 }
 function render(){
   const st=S(),slide=currentSlide();
