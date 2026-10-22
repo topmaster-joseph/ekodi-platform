@@ -84,7 +84,8 @@ test('remaining canonical business, trade and lab surfaces inherit a readability
     read('canonical-surface-router.js'),
     read('scripts/verify-mobile-fixed-headers-live.mjs'),
   ]);
-  assert.match(router,/routeEkodiBizPublic[\s\S]*injectEkodiProgressiveHome\(injectEkodiTenantReadability\(rewritten\)\)/);
+  assert.match(router,/routeEkodiBizPublic[\s\S]+injectEkodiShell\(rewritten,'biz','public',\{existingHeader:true,existingFooter:true,contextKind:'public'\}\)/);
+  assert.match(router,/injectEkodiProgressiveHome\(injectEkodiTenantReadability\(adopted,\{operatingSpace:false\}\)\)/);
   assert.match(router,/LEGACY_OPERATING_SPACE_ROOTS=new Set\(\['ekodichurch','ekodimission'\]\)/);
   assert.match(router,/async function ensureLegacyOperatingSpaceMarker/);
   assert.match(router,/headers\.set\('x-ekodi-operating-space-label','v1'\)/);
@@ -139,7 +140,11 @@ test('guarded release keeps public site bodies brand-only while ownership stays 
     assert.ok(probe.forbid?.includes('운영공간'),url+' release must reject internal operating-space wording');
     assert.ok(probe.forbid?.includes('data-ekodi-operating-space-label'),url+' release must reject internal operating-space DOM markers');
     assert.ok((probe.expect||[]).length>0,url+' must verify public brand/service identity');
-    assert.ok(probe.headerExpect?.includes('x-ekodi-operating-space-label: v1'),url+' must prove shared ownership in response metadata');
+    if(url==='https://ekodi.kr/ekodibiz'){
+      assert.ok(probe.headerExpect?.includes('x-ekodi-shell: v2'));
+      assert.ok(probe.headerExpect?.includes('x-ekodi-user-footer: service'));
+      assert.ok(!probe.headerExpect?.includes('x-ekodi-operating-space-label: v1'));
+    }else assert.ok(probe.headerExpect?.includes('x-ekodi-operating-space-label: v1'),url+' must prove legacy shared ownership');
     assert.equal(probe.rollbackVerify,false);
   }
 });

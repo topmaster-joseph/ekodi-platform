@@ -140,7 +140,17 @@ function normalizeLocale(value){
   return SUPPORTED.includes(raw)?raw:null;
 }
 function cookieLocale(){const hit=document.cookie.split(';').map(v=>v.trim()).find(v=>v.startsWith('ekodi_locale='));return hit?decodeURIComponent(hit.slice('ekodi_locale='.length)):null}
-function initialLocale(){return normalizeLocale(cookieLocale()||localStorage.getItem('ekodi_locale')||localStorage.getItem('ekodibiz.locale')||navigator.language)||'ko-KR'}
+// The service-owned copy must not select an unpublished language from cookies,
+ // local storage, or navigator.language. The shared Shell is the sole publication
+ // authority, and its header pill exists only after readiness has been verified.
+function initialLocale(){return 'ko-KR'}
+function publishedShellLocale(value){
+  const next=normalizeLocale(value);
+  if(!next)return null;
+  if(next==='ko-KR')return next;
+  const select=document.querySelector('[data-ekodi-language-placement="header"] select');
+  return select&&[...select.options].some(option=>option.value===next)?next:null;
+}
 let locale=initialLocale();
 function text(){return TEXT[locale]||TEXT['ko-KR']}
 function gmailHref(subject){return `https://mail.google.com/mail/?view=cm&fs=1&to=ekodibiz%40gmail.com&su=${encodeURIComponent(subject)}`}
@@ -184,9 +194,22 @@ function applyLocale({persist=false,announce=false}={}){
   if(persist)persistLocale();
   if(announce)window.dispatchEvent(new CustomEvent('ekodi:locale-change',{detail:{locale,source:'ekodibiz'}}));
 }
+function syncPublishedShellLocale(){
+  const next=publishedShellLocale(window.EKODIUserLanguage?.getLocale?.());
+  if(!next||next===locale)return;
+  locale=next;applyLocale({persist:false,announce:false});
+}
 window.addEventListener('ekodi:locale-change',event=>{
-  const next=normalizeLocale(event.detail?.locale);if(!next||next===locale)return;
-  locale=next;applyLocale({persist:true,announce:false});
+  if(event.detail?.source==='ekodibiz')return;
+  const next=publishedShellLocale(event.detail?.locale);
+  if(!next||next===locale)return;
+  locale=next;applyLocale({persist:false,announce:false});
 });
 window.addEventListener('hashchange',()=>renderRoute(true));
 applyLocale();
+// A persisted non-Korean shared locale can become valid only after an
+// authoritative readiness response. Do not infer publication from browser data.
+queueMicrotask(syncPublishedShellLocale);
+new MutationObserver(()=>queueMicrotask(syncPublishedShellLocale)).observe(document.documentElement,{
+  attributes:true,attributeFilter:['data-ekodi-ready-locales']
+});
