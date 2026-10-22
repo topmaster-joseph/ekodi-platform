@@ -332,3 +332,23 @@ test('worker contract: routes, cron and secrets stay out of config', async () =>
   assert.equal(typeof worker.fetch, 'function');
   assert.equal(typeof worker.scheduled, 'function');
 });
+
+test('token-mediated merges dispatch the guarded QTIN deploy with the orchestrator release receipt', async () => {
+  const [script, prod, staging] = await Promise.all([
+    readFile(new URL('../scripts/converge-orchestrated-pr-merge.mjs', import.meta.url), 'utf8'),
+    readFile(new URL('../.github/workflows/deploy-qtin-order.yml', import.meta.url), 'utf8'),
+    readFile(new URL('../.github/workflows/deploy-qtin-order-staging.yml', import.meta.url), 'utf8'),
+  ]);
+  const start = script.indexOf('const qtinOrderTouched');
+  const block = script.slice(start, script.indexOf('].includes(file));', start));
+  for (const file of ['qtin-order-worker.js', 'qtin-order-core.js', 'migrations/0201_qtin_group_orders.sql', 'wrangler.qtin-order.toml', '.github/workflows/deploy-qtin-order.yml']) {
+    assert.ok(block.includes(`'${file}'`), `${file} must dispatch the QTIN deploy after convergent merge`);
+  }
+  assert.match(script, /deploy-qtin-order\.yml\/dispatches[\s\S]{0,200}release_branch_ref:branch,release_task_id:taskId/);
+  for (const wf of [prod, staging]) {
+    assert.match(wf, /release_branch_ref:/);
+    assert.match(wf, /EKODI_RELEASE_BRANCH_REF: \$\{\{ inputs\.release_branch_ref \|\| '' \}\}/);
+    assert.match(wf, /EKODI_RELEASE_TASK_ID: \$\{\{ inputs\.release_task_id \|\| '' \}\}/);
+  }
+  assert.match(prod, /release_branch_ref: \$\{\{ inputs\.release_branch_ref \|\| '' \}\}/);
+});

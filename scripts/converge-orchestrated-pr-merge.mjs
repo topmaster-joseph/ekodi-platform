@@ -179,6 +179,15 @@ const spaceTouched=changedFiles.some(file=>
   file==='wrangler.space.staging.toml'||
   file==='.github/workflows/deploy-space.yml'
 );
+const qtinOrderTouched=changedFiles.some(file=>[
+  'qtin-order-core.js',
+  'qtin-order-worker.js',
+  'migrations/0201_qtin_group_orders.sql',
+  'wrangler.qtin-order.toml',
+  'wrangler.qtin-order.staging.toml',
+  '.github/workflows/deploy-qtin-order.yml',
+  '.github/workflows/deploy-qtin-order-staging.yml',
+].includes(file));
 const mallSiteTouched=changedFiles.some(file=>file.startsWith('sites/ekodi-mall/')||file==='.github/workflows/deploy-ekodi-mall.yml');
 const labHomepageTouched=changedFiles.some(file=>
   file.startsWith('sites/ekodi-lab/')||
@@ -491,6 +500,14 @@ async function dispatchPostMergeDeploys(){
     console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-space.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
 
+  if(qtinOrderTouched){
+    const dispatch=await api('/actions/workflows/deploy-qtin-order.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('QTIN Group Order deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-qtin-order.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
   if(mallSiteTouched){
     const dispatch=await api('/actions/workflows/deploy-ekodi-mall.yml/dispatches',{
       method:'POST',
