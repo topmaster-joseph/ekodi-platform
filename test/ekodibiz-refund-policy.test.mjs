@@ -35,7 +35,7 @@ test('refund policy carries the statutory periods, refund deadline and operator 
   assert.match(html, /<footer class="footer" data-site-shell="footer"/);
   assert.match(html, /href="\/ekodibiz\/#business"/, 'service-local business navigation works from refund path');
   assert.match(html, /href="mailto:joseph@ekodibiz\.kr"/, 'support email link is actionable');
-  assert.equal((html.match(/aria-current="page"/g) || []).length, 2, 'active refund nav in header and footer');
+  assert.equal((html.match(/<a\b[^>]*aria-current="page"/g) || []).length, 2, 'active refund nav in header and footer');
 });
 
 test('refund policy response is cacheable HTML and HEAD has no body', async () => {
