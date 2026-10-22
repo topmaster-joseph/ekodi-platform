@@ -243,6 +243,7 @@ const qtinOrderTouched=changedFiles.some(file=>[
   'qtin-order-worker.js',
   'migrations/0201_qtin_group_orders.sql',
   'migrations/0202_qtin_buyer_accounts.sql',
+  'migrations/0203_qtin_product_intros.sql',
   'wrangler.qtin-order.toml',
   'wrangler.qtin-order.staging.toml',
   '.github/workflows/deploy-qtin-order.yml',
