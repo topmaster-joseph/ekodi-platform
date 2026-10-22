@@ -209,3 +209,23 @@ test('AI operations center edits dispatch the Shared Site Core release that bund
   assert.match(read('.github/workflows/deploy-site-core.yml'),/- 'ai-operations-center-admin\.js'/);
   assert.match(read('scripts/build.mjs'),/'ai-operations-center-admin\.js'/);
 });
+
+test('gateway requests carry a User-Agent and an edge 1010 block is not reported as a rejected key',async()=>{
+  const seen=[];
+  await withFetch(async(url,init)=>{seen.push(init?.headers||{});return new Response(JSON.stringify({data:[{id:'gpt-5.6-luna'}]}),{status:200})},async()=>{
+    await probeFactChatGatewayCredential({FACTCHAT_MOKPO_API_KEY:MOKPO_KEY},{account:'institution'});
+  });
+  assert.match(seen[0]['user-agent'],/^EKODI-/);
+  const chatHeaders=[];
+  await withFetch(async(url,init)=>{chatHeaders.push(init?.headers||{});return chatOk('gpt-5.6-luna')},async()=>{
+    await createFactChatGatewayProvider({FACTCHAT_MOKPO_API_KEY:MOKPO_KEY,EKODI_FACTCHAT_INSTITUTION_USE_APPROVED:'true'},{account:'institution'}).invoke({input:'hi'});
+  });
+  assert.match(chatHeaders[0]['user-agent'],/^EKODI-/);
+  await withFetch(async()=>new Response('error code: 1010',{status:403,headers:{'content-type':'text/plain'}}),async()=>{
+    const error=await probeFactChatGatewayCredential({FACTCHAT_MOKPO_API_KEY:MOKPO_KEY},{account:'institution'}).catch(e=>e);
+    assert.equal(error.edgeBlocked,true);
+    assert.match(error.message,/edge_blocked_1010$/);
+    const { describeProviderCheckDiagnostic }=await import('../ai-provider-control.js');
+    assert.notEqual(describeProviderCheckDiagnostic(error).category,'authentication-error');
+  });
+});

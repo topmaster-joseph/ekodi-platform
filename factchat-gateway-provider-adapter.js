@@ -75,7 +75,12 @@ export function factChatApprovalConfirmed(env={},account){
 function tokenField(model){return /^(gpt-|o\d)/i.test(model)?'max_completion_tokens':'max_tokens'}
 function outputTokens(value){const n=Math.floor(Number(value));return Math.max(64,Math.min(MAX_OUTPUT_TOKENS,Number.isFinite(n)?n:DEFAULT_OUTPUT_TOKENS))}
 
-function gatewayError(account,response,data){
+// FACTCHAT-USER-AGENT-20261022: Workers fetch sends no User-Agent, and the gateway's Cloudflare edge
+// rejects such requests with a non-JSON 403 "error code: 1010" before auth ever runs.
+const GATEWAY_HEADERS=Object.freeze({'user-agent':'EKODI-AI-Provider-Gateway/1.0',accept:'application/json'});
+async function readBody(response){const raw=await response.text().catch(()=>'');try{return{data:JSON.parse(raw),raw}}catch{return{data:{},raw}}}
+function gatewayError(account,response,data,raw=''){
+  if(response.status===403&&/error code:\s*1010/i.test(raw)){const edge=new Error(`${account.providerId.replace(/-/g,'_')}_403_edge_blocked_1010`);edge.status=403;edge.edgeBlocked=true;edge.providerMessage='gateway edge rejected the request (error code 1010) before key verification';return edge}
   const detail=clean(data?.detail?.message||data?.error?.message||data?.error?.code||(typeof data?.detail==='string'?data.detail:''),200).toLowerCase().replace(/[^a-z0-9._-]+/g,'_').replace(/^_+|_+$/g,'');
   const error=new Error(`${account.providerId.replace(/-/g,'_')}_${response.status}${detail?`_${detail}`:''}`);
   error.status=response.status;
@@ -108,9 +113,9 @@ export function createFactChatGatewayProvider(env={},options={}){
       const projected=await projectForExternalAi({prompt:userText},{profile:'ai_minimum',purpose:account.purpose,salt:crypto.randomUUID()});
       const safeInput=clean(projected?.prompt||JSON.stringify(projected),24000);
       const messages=[...(clean(system,12000)?[{role:'system',content:clean(system,12000)}]:[]),{role:'user',content:safeInput}];
-      const response=await fetchImpl(`${base}/chat/completions/`,{method:'POST',headers:{authorization:`Bearer ${key}`,'content-type':'application/json'},body:JSON.stringify({model,messages,[tokenField(model)]:outputTokens(maxOutputTokens),stream:false}),signal:AbortSignal.timeout(60000)});
-      const data=await response.json().catch(()=>({}));
-      if(!response.ok)throw gatewayError(account,response,data);
+      const response=await fetchImpl(`${base}/chat/completions/`,{method:'POST',headers:{...GATEWAY_HEADERS,authorization:`Bearer ${key}`,'content-type':'application/json'},body:JSON.stringify({model,messages,[tokenField(model)]:outputTokens(maxOutputTokens),stream:false}),signal:AbortSignal.timeout(60000)});
+      const {data,raw}=await readBody(response);
+      if(!response.ok)throw gatewayError(account,response,data,raw);
       const text=clean(data?.choices?.[0]?.message?.content,40000);
       if(!text)throw new Error(`${account.providerId.replace(/-/g,'_')}_empty_response`);
       return Object.freeze({text,model:clean(data?.model,180)||model,usage:Object.freeze({inputTokens:Number(data?.usage?.prompt_tokens||0),outputTokens:Number(data?.usage?.completion_tokens||0)})});
@@ -125,9 +130,9 @@ export async function probeFactChatGatewayCredential(env={},options={}){
   const key=factChatApiKey(env,account);
   if(!key)throw new Error(`${account.providerId.replace(/-/g,'_')}_not_configured`);
   const fetchImpl=options.fetchImpl||globalThis.fetch;
-  const response=await fetchImpl(`${factChatBaseUrl(env,account)}/models/?type=llm`,{headers:{authorization:`Bearer ${key}`},signal:AbortSignal.timeout(15000)});
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw gatewayError(account,response,data);
+  const response=await fetchImpl(`${factChatBaseUrl(env,account)}/models/?type=llm`,{headers:{...GATEWAY_HEADERS,authorization:`Bearer ${key}`},signal:AbortSignal.timeout(15000)});
+  const {data,raw}=await readBody(response);
+  if(!response.ok)throw gatewayError(account,response,data,raw);
   const models=Array.isArray(data?.data)?data.data.length:Array.isArray(data)?data.length:null;
   return{ok:true,quota:null,models};
 }
