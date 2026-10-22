@@ -1,3 +1,4 @@
+import { CONVERGE_MAX_RUNS_PER_HEAD, CONVERGE_RUN_BUDGET_MS, mayHandOff, stuckRequiredChecks, workflowsToRedispatch } from './lib/converge-stuck-check.mjs';
 const repo=String(process.env.GITHUB_REPOSITORY||'').trim();
 const token=String(process.env.GH_TOKEN||'').trim();
 const branch=String(process.env.GITHUB_REF_NAME||'').trim();
@@ -35,6 +36,49 @@ async function requiredChecksStillRunning(sha){
   if(!r.ok)return true;
   const runs=Array.isArray(data.check_runs)?data.check_runs:[];
   return runs.some(run=>required.includes(run.name)&&run.app?.slug==='github-actions'&&run.status!=='completed');
+}
+// CONVERGE-STUCK-CHECK-001: a required check whose job never closes (seen on
+// #5625) or a slow-but-healthy CI must not park a release behind the workflow
+// timeout. Re-run a stuck required workflow once, and hand convergence off to
+// a fresh dispatched run before this run's budget ends (bounded per head).
+const CONVERGE_STARTED=Date.now();
+let stuckHealDone=false;
+async function dispatchWorkflow(workflow){
+  const d=await api('/actions/workflows/'+workflow+'/dispatches',{method:'POST',body:JSON.stringify({ref:branch})});
+  if(d.r.status!==204)fail('dispatch failed for '+workflow+' '+d.r.status+' '+JSON.stringify(d.data).slice(0,300));
+}
+async function convergeRunsForHead(){
+  const {r,data}=await api('/actions/workflows/converge-orchestrated-pr-merge.yml/runs?branch='+encodeURIComponent(branch)+'&per_page=50');
+  if(!r.ok)return CONVERGE_MAX_RUNS_PER_HEAD;
+  return (Array.isArray(data.workflow_runs)?data.workflow_runs:[]).filter(run=>run?.head_sha===headSha).length;
+}
+async function handOffConvergence(reason){
+  const runs=await convergeRunsForHead();
+  if(!mayHandOff(runs))fail('convergence hand-off limit reached on head '+headSha.slice(0,12)+' ('+runs+' runs): '+reason);
+  await dispatchWorkflow('converge-orchestrated-pr-merge.yml');
+  console.log(JSON.stringify({ok:true,action:'convergence-handoff',reason,pr:pr?.number,branch,head:headSha,priorRuns:runs}));
+  process.exit(0);
+}
+async function healStuckRequiredChecks(sha){
+  if(stuckHealDone)return false;
+  const {r,data}=await api('/commits/'+sha+'/check-runs?per_page=100');
+  if(!r.ok)return false;
+  const runs=Array.isArray(data.check_runs)?data.check_runs:[];
+  const suites=new Map();
+  for(const run of runs){
+    if(!required.includes(run?.name)||run.status==='completed')continue;
+    const id=run.check_suite?.id;
+    if(!id||suites.has(id))continue;
+    const w=await api('/actions/runs?check_suite_id='+id+'&per_page=1');
+    suites.set(id,(Array.isArray(w.data?.workflow_runs)?w.data.workflow_runs:[])[0]||null);
+  }
+  const stuck=stuckRequiredChecks(required,runs,suites,Date.now());
+  if(!stuck.length)return false;
+  stuckHealDone=true;
+  const workflows=workflowsToRedispatch(stuck);
+  for(const workflow of workflows)await dispatchWorkflow(workflow);
+  console.log(JSON.stringify({ok:true,action:'stuck-required-check-redispatched',stuck,workflows,pr:pr?.number,branch,head:sha}));
+  return true;
 }
 if(!repo||!token||!branch||!headSha)fail('missing runtime input');
 const match=branch.match(/^ai\/([a-z0-9][a-z0-9._-]{0,31})\/(orch_[a-z0-9][a-z0-9_-]{15,120})$/i);
@@ -661,14 +705,15 @@ for(let cycle=0;cycle<180;cycle++){
   if(p?.draft===true){console.log('[EKODI][ORCH-AUTO-MERGE] PR changed to draft; stop before merge');process.exit(0)}
   if(p?.merged===true){await dispatchPostMergeDeploys();console.log('[EKODI][ORCH-AUTO-MERGE] already merged; post-merge deploys reconciled');process.exit(0)}
   if(p?.head?.sha!==headSha){console.log(JSON.stringify({ok:true,action:'noop-stale-dispatch',reason:'head-moved-during-run',pr:pr.number,branch,workflowSha:headSha,prHead:p?.head?.sha||''}));process.exit(0)}
+  if(Date.now()-CONVERGE_STARTED>CONVERGE_RUN_BUDGET_MS)await handOffConvergence('run-budget');
   const headStatuses=await statusMap(headSha);
   const failed=required.filter(k=>['failure','error'].includes(headStatuses.get(k)?.state));
   if(failed.length&&!await requiredChecksStillRunning(headSha))fail('required check failed on head '+headSha.slice(0,12)+': '+failed.join(', ')+'; fix and push to restart convergence');
   const pending=required.filter(k=>headStatuses.get(k)?.state!=='success');
-  if(pending.length){await sleep(3000);continue}
+  if(pending.length){if(await healStuckRequiredChecks(headSha))await handOffConvergence('stuck-required-check');await sleep(3000);continue}
   // Commit statuses are compatibility signals. Before any protected merge
   // reconciliation, require the real GitHub Actions jobs on this exact head.
-  if(!await verifiedCheckRuns(headSha)){await sleep(3000);continue}
+  if(!await verifiedCheckRuns(headSha)){if(await healStuckRequiredChecks(headSha))await handOffConvergence('stuck-required-check');await sleep(3000);continue}
 
   // First converge the real PR head with the current protected base. This avoids
   // chasing GitHub's ephemeral test-merge SHA while main is actively changing.
@@ -705,4 +750,4 @@ for(let cycle=0;cycle<180;cycle++){
   if([405,409,422].includes(merged.r.status)){await sleep(1000);continue}
   fail('merge failed '+merged.r.status+' '+JSON.stringify(merged.data).slice(0,500));
 }
-fail('merge convergence timeout');
+await handOffConvergence('cycle-limit');
