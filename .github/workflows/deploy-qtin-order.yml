@@ -2,6 +2,15 @@ name: Deploy QTIN Group Order
 
 on:
   workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: Orchestrator-issued ai/<agent>/orch_<task-id> branch
+        required: true
+        type: string
+      release_task_id:
+        description: Verified EKODI orchestrator task ID
+        required: true
+        type: string
   pull_request:
     paths: &qtin_paths
       - 'qtin-order-core.js'
@@ -10,6 +19,7 @@ on:
       - 'wrangler.qtin-order.toml'
       - 'wrangler.qtin-order.staging.toml'
       - 'test/qtin-order.test.mjs'
+      - 'scripts/converge-orchestrated-pr-merge.mjs'
       - '.github/workflows/deploy-qtin-order.yml'
       - '.github/workflows/deploy-qtin-order-staging.yml'
   push:
@@ -25,6 +35,8 @@ concurrency:
 
 env:
   WRANGLER_VERSION: '4.119.0'
+  EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+  EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
 
 jobs:
   validate:
@@ -58,6 +70,9 @@ jobs:
   staging_gate:
     needs: validate
     uses: ./.github/workflows/deploy-qtin-order-staging.yml
+    with:
+      release_branch_ref: ${{ inputs.release_branch_ref || '' }}
+      release_task_id: ${{ inputs.release_task_id || '' }}
     secrets: inherit
 
   release:
