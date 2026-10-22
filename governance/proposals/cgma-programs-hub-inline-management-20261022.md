@@ -1,6 +1,6 @@
 # ADR 제안: 청계면상인회 '행사·참여' 허브와 사용자 화면 직접관리 재배치 (CGMA-PROGRAMS-001)
 
-- 상태: 협의 요청 (v1)
+- 상태: **결정 (v2)** — EKODI AI 협의 이슈 #5616, run 39788932687: partial(전문가 2 approve-with-changes, sentinel provider_disabled)
 - task_id: cgma-programs-hub-20261022
 - 브랜치: `ai/claude/cgma-programs-hub-20261022` (cheonggye-market), 본 제안은 ekodi-platform
 - 작성: 2026-10-22, Claude (교체 가능한 개발 작업자)
@@ -56,3 +56,16 @@
 3. 홈 동적 띠의 fail-open(정적 링크 표시) 판단이 적절한가
 4. 관리자 화면 전용으로 남길 항목(민원·동의, 다국어 게시 검증) 판단
 5. 추가로 필요한 가드레일
+
+## 6. 협의 반영 (v2)
+
+| 요구 | 반영 |
+|---|---|
+| 메뉴 통합·레지스트리 | 승인 — 그대로 구현 (cheonggye-market PR #184) |
+| PIN 퇴역, JWT 단일 인증 | 관리 RPC가 상인회 관리자 JWT를 우선 인정. cgma.or.kr 이전 실확인 직후 PIN 분기 제거 마이그레이션 + Vercel 관리 화면 철거(이동 전용) |
+| 게이트웨이 사전 검증 | `cgma-root-gateway.js`를 모의 fetch로 실행해 `/cgma/programs/`, `/cgma/programs/ai-marketing-2026/`, `/cgma/cgma-programs.js`가 일반 프록시(200, `x-ekodi-route: cgma-root-gateway`)로 Pages에 도달함을 배포 전 확인 |
+| 감사 추적 | `cgma_admin_audit`(actor uid·종류·대상·변경 키, 메모 원문 미기록) — 행사 저장·신청현황 변경 모두 기록 |
+| search_path | 모든 security definer 함수 `set search_path = ''` + 완전 한정 이름(요구안 public,pg_temp보다 엄격) |
+| fail-open 한정 | 공개 목록 실패 시 정적 링크만, 관리 UI는 DB의 `cgma_is_site_admin()=true`일 때만 표시. 실패는 console.warn 기록 |
+| 관리자 전용 유지 | 민원·동의, 다국어 게시 검증 — 승인 |
+| Vercel 정리 | 정적 308 이동만 남기고 앱 파일 제거 |
