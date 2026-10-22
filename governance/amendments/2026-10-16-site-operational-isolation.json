@@ -1,0 +1,24 @@
+{
+  "id": "SITE-ISOLATION-001",
+  "date": "2026-10-16",
+  "status": "proposed-pending-protected-review",
+  "ownerInstruction": "검토해서 헌법 및 강제실행규칙으로 반영해",
+  "classification": "C2/C3 constitutional change",
+  "constitutionalSection": "CONSTITUTION.md#1E",
+  "machineReadablePolicy": "governance/constitution/constitution.json#/siteOperationalIsolationPolicy",
+  "requiredEvidence": [
+    "constitution validation",
+    "cross-site authorization and data-isolation tests",
+    "auth return URL and draft continuity tests",
+    "shared infrastructure blast radius analysis",
+    "protected PR and CI",
+    "staging and production verification"
+  ],
+  "nonWaivable": [
+    "security",
+    "privacy",
+    "human authority",
+    "protected merge",
+    "rollback"
+  ]
+}
