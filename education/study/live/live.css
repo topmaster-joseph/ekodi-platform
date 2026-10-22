@@ -551,3 +551,14 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 .lv .slide-mood-q{font-size:4.4cqw;line-height:1.22;font-weight:800;letter-spacing:-.035em;color:#fff;text-wrap:balance}
 .lv .slide-mood .slide-timer{color:#fff}
 .lv .slide-credit{position:absolute;z-index:1;right:2cqw;bottom:1.6cqw;font-size:1.05cqw;color:rgba(255,255,255,.72);margin:0}
+
+/* Presenter AI demo (FactChat institutional account) */
+.lv .ai-input{width:100%;min-height:96px;margin:8px 0;background:#0d1a30;color:#e8eef8;border:1px solid #2a4471;border-radius:10px;padding:9px 11px;font:inherit;font-size:.8125rem;line-height:1.45}
+.lv .ai-select{background:#182945;color:#fff;border:1px solid #2a4471;border-radius:8px;padding:5px 8px;font:inherit;font-size:.8125rem;min-height:32px}
+.lv .pres-card a.btn{background:#182945;border-color:#2a4471;color:#fff;text-decoration:none}
+.lv .slide-ai{gap:1.4cqw;justify-content:flex-start;padding:4cqw 5cqw}
+.lv .ai-prompt{font-size:1.5cqw;color:var(--muted);border-left:.4cqw solid var(--teal);padding-left:1.4cqw;margin:0;white-space:pre-wrap;max-height:9cqw;overflow:hidden}
+.lv .ai-body{flex:1;min-height:0;overflow:auto;border:.15cqw solid var(--line);border-radius:1.2cqw;background:#fbfcfe;padding:2cqw 2.4cqw}
+.lv .ai-answer{font-size:1.75cqw;line-height:1.55;white-space:pre-wrap;margin:0;font-family:var(--font)}
+.lv .ai-wait{font-size:2cqw;color:var(--muted);margin:0}
+.lv .ai-meta{font-size:1.2cqw;color:var(--muted);margin:0}

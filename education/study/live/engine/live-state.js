@@ -14,13 +14,16 @@ export function initialState(courseId,sessionNo=1){
     timer:{status:'idle',missionId:'',durationMs:0,endsAt:0,remainingMs:0},
     shared:{missionId:'',level:'basic'},
     stage:{mode:'slide'},
+    ai:{status:'idle',prompt:'',text:'',model:'',units:'',at:0},
     blackout:false,rev:0,updatedAt:0
   };
 }
 
 // What the presenter stage and the audience window show: the lecture slide, the embedded Learner Lab
 // (same-origin demo) or both side by side.
-export const STAGE_MODES=Object.freeze(['slide','lab','split']);
+export const STAGE_MODES=Object.freeze(['slide','lab','split','ai']);
+const AI_STATUS=new Set(['idle','running','done','failed']);
+const AI_MAX=12000;
 
 export function lectureElapsedMs(state,now){
   const l=state.lecture;
@@ -98,6 +101,11 @@ export function reduce(state,action,now){
       const mode=String(a.mode||'');
       if(!STAGE_MODES.includes(mode)||s.stage.mode===mode)return state;
       s.stage={mode};if(s.blackout)s.blackout=false;break;}
+    // Live FactChat (institutional account) demo result, shown on the stage in 'ai' mode. Text only.
+    case 'ai/set':{
+      const st=AI_STATUS.has(a.status)?a.status:'idle';
+      s.ai={status:st,prompt:String(a.prompt||'').slice(0,4000),text:String(a.text||'').slice(0,AI_MAX),model:String(a.model||'').slice(0,120),units:String(a.units||'').slice(0,80),at:now};
+      break;}
     case 'blackout/toggle':
       s.blackout=!s.blackout;break;
     case 'blackout/set':
@@ -122,6 +130,7 @@ export function sanitizeState(raw,courseId){
     timer:pick(raw.timer,['status','missionId','durationMs','endsAt','remainingMs'],base.timer),
     shared:pick(raw.shared,['missionId','level'],base.shared),
     stage:{mode:STAGE_MODES.includes(raw.stage?.mode)?raw.stage.mode:'slide'},
+    ai:raw.ai&&typeof raw.ai==='object'?{status:AI_STATUS.has(raw.ai.status)?raw.ai.status:'idle',prompt:String(raw.ai.prompt||'').slice(0,4000),text:String(raw.ai.text||'').slice(0,AI_MAX),model:String(raw.ai.model||'').slice(0,120),units:String(raw.ai.units||'').slice(0,80),at:Number.isFinite(raw.ai.at)?raw.ai.at:0}:base.ai,
     blackout:raw.blackout===true,
     rev:Number.isInteger(raw.rev)?raw.rev:0,
     updatedAt:Number.isFinite(raw.updatedAt)?raw.updatedAt:0
