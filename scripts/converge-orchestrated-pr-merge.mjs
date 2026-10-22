@@ -232,6 +232,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   // The EKODI public homepage is compiled into the shared Site Core. GITHUB_TOKEN
   // merges do not trigger main push workflows: dispatch its guarded release here.
   ['index.html','homepage-ambient.js','homepage-ambient.css'].includes(file)||
+  // The resident-council public page (/cgmurrc) is a Site Core static asset.
+  file==='cgmurrc.html'||
   // Control is a first-party Site Core surface, never a separate public Shell release.
   ['control.html','control.css','control.js'].includes(file)||
   // Shared administrator menu, canonical route registry and design contracts are production Site Core assets.
