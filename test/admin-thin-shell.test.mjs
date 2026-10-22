@@ -128,7 +128,8 @@ test('desktop root keeps command console while mobile root opens the operational
   assert.match(menu, /const explicitAdminSection=\(\)=>adminRoutes\(\)\?\.sectionFromLocation/);
   assert.match(routes, /window\.matchMedia\?\.\('\(max-width:760px\)'\)\.matches/);
   assert.match(routes, /return'platform-overview'/);
-  assert.match(routes, /version:'2\.0\.0'/);
+  assert.match(routes, /version:'2\.1\.0'/);
+  assert.match(routes, /V3_STAGE1_SECTION_GROUP\[section\]===group/);
   assert.match(routes, /V2_SECTION_GROUP\[section\]===group/);
   assert.match(menu, /else if\s*\(initialSection\)\s*\{[\s\S]*requestedSection\s*=\s*initialSection[\s\S]*queueMicrotask/);
   assert.match(menu, /if\(initialSection===COMMAND_HOME\)activateCommandHome\(\)/);
@@ -158,13 +159,13 @@ test('admin menu governance uses eight platform control areas with role-projecte
     assert.doesNotMatch(registry, new RegExp(`id: '${retired}', icon:`));
   }
   assert.match(registry, /id: 'campus', group: 'sites'/);
-  assert.match(registry, /id: 'work', group: 'sites'/);
+  assert.match(registry, /id: 'work', group: 'services'/);
   assert.match(registry, /id: 'clients', group: 'sites'/);
   assert.match(registry, /id: 'common-services', group: 'services'/);
   assert.match(registry, /id: 'community', group: 'sites'/);
-  assert.match(registry, /id: 'ai-membership', group: 'sites'/);
-  assert.match(registry, /id: 'books', group: 'sites'/);
-  assert.match(registry, /id: 'devotional', group: 'sites'/);
+  assert.match(registry, /id: 'ai-membership', group: 'ai'/);
+  assert.match(registry, /id: 'books', group: 'services'/);
+  assert.match(registry, /id: 'devotional', group: 'services'/);
   assert.match(registry, /id: 'life-ai', group: 'services'/);
   assert.match(registry, /id: 'security', group: 'accounts'/);
   assert.match(registry, /id: 'capabilities', group: 'services'/);

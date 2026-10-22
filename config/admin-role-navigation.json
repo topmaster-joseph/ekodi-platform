@@ -21,7 +21,7 @@
         {
           "id": "sites",
           "labelKo": "사이트 원장",
-          "purpose": "전체 사이트 목록과 사이트 관리자 이동, 이전 예정 사이트 운영 도구"
+          "purpose": "전체 사이트 목록과 각 사이트 관리자(/{site}/admin) 이동"
         },
         {
           "id": "ai",
@@ -60,7 +60,7 @@
       "mayAggregateChildStatus": true,
       "uniqueOwnership": true,
       "legacyDeepLinks": "Previously canonical routes remain accepted as aliases after navigation reclassification.",
-      "siteOperationsRule": "Site operation tools are transitional in the platform admin and move to each site admin (/{site}/admin) under ADMIN-AUDIENCE-001."
+      "siteOperationsRule": "Per-site operations (channels, events, members, messages) live only in each site admin (/{site}/admin); the platform admin lists sites and hands off. Platform-global engines (EKODI Books, devotional autopost, channel control center, EKODI Work) are platform services under ADMIN-AUDIENCE-001."
     },
     "delegated-manager": {
       "surfacePattern": "/{site-or-workspace}/admin",
