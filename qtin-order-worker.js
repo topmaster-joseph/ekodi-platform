@@ -743,7 +743,7 @@ async function handleAdminApi(request, env, url) {
 export function renderAdminPage(scriptNonce = '') {
   const body = `<header class="top"><div class="wrap"><div class="eyebrow">EKODI ADMIN · 큐티인 공동구매</div>
 <h1>큐티인 신청 관리</h1><p class="lead">월별 신청·결제 완료 현황, 도서별 발주 수량, 수령 상태를 관리합니다. 결제 완료(paid)만 발주 수량에 포함됩니다.</p>
-<div class="status" id="state"><span class="dot"></span>로그인 확인 중</div></div></header>
+<div class="status" id="state" aria-live="polite"><span class="dot"></span>로그인 확인 중</div></div></header>
 <main class="wrap">
 <section class="panel"><div class="fields">
 <label class="f">신청 월호<select id="campaign" style="padding:11px;border-radius:10px;border:1px solid var(--line);font:inherit"></select></label>
@@ -777,23 +777,51 @@ function adminClient() {
   const won = v => `${Math.trunc(Number(v) || 0).toLocaleString('ko-KR')}원`;
   const kst = iso => { const t = Date.parse(iso); if (!Number.isFinite(t)) return ''; const d = new Date(t + 9 * 3600000); return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`; };
   let session = null; let me = null; let data = null;
-  function stored() { try { const v = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); return v?.accessToken ? v : null; } catch { return null; } }
+  function stored() {
+    try { const v = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); if (v?.accessToken) return v; } catch {}
+    // Reuse the existing central EKODI Supabase session on the same origin; server RBAC is always rechecked.
+    try {
+      const raw = localStorage.getItem('sb-renzehysxirjilvdxacv-auth-token');
+      const parsed = raw ? JSON.parse(raw) : null;
+      const central = parsed?.currentSession || parsed?.session || parsed;
+      return central?.access_token ? normalize(central) : null;
+    } catch { return null; }
+  }
   function save(v) { sessionStorage.setItem(SESSION_KEY, JSON.stringify(v)); }
   function clear() { sessionStorage.removeItem(SESSION_KEY); }
   function normalize(d, c = {}) { return { accessToken: d.access_token || '', refreshToken: d.refresh_token || c.refreshToken || '', expiresAt: Number(d.expires_at || 0) || Math.floor(Date.now() / 1000) + Number(d.expires_in || 3600) }; }
-  async function authRequest(path, body) { const r = await fetch(SUPABASE_URL + path, { method: 'POST', headers: { apikey: SUPABASE_KEY, 'content-type': 'application/json' }, body: JSON.stringify(body) }); const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error_description || d.msg || d.error || '인증에 실패했습니다.'); return d; }
-  async function consumeHandoff() { const p = new URLSearchParams(location.hash.slice(1)); const t = p.get('ekodi_token'); if (!t) return stored(); const d = await authRequest('/auth/v1/verify', { token_hash: t, type: p.get('ekodi_type') || 'email' }); const n = normalize(d); save(n); history.replaceState(null, '', location.pathname + location.search); return n; }
+  async function fetchBounded(url, options = {}) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    try { return await fetch(url, { ...options, signal: controller.signal }); }
+    catch (error) { throw new Error(error?.name === 'AbortError' ? '서버 응답이 지연되고 있습니다. 다시 확인해 주세요.' : '서버 연결에 실패했습니다. 네트워크를 확인해 주세요.'); }
+    finally { clearTimeout(timeout); }
+  }
+  async function authRequest(path, body) { const r = await fetchBounded(SUPABASE_URL + path, { method: 'POST', headers: { apikey: SUPABASE_KEY, 'content-type': 'application/json' }, body: JSON.stringify(body) }); const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error_description || d.msg || d.error || '인증에 실패했습니다.'); return d; }
+  async function consumeHandoff() { const p = new URLSearchParams(location.hash.slice(1)); const t = p.get('ekodi_token'); if (!t) return stored(); history.replaceState(null, '', location.pathname + location.search); const d = await authRequest('/auth/v1/verify', { token_hash: t, type: p.get('ekodi_type') || 'email' }); const n = normalize(d); save(n); return n; }
   async function validSession() { let v = stored(); if (!v?.accessToken) return null; if (!v.expiresAt || v.expiresAt > Math.floor(Date.now() / 1000) + 60) return v; if (!v.refreshToken) { clear(); return null; } try { v = normalize(await authRequest('/auth/v1/token?grant_type=refresh_token', { refresh_token: v.refreshToken }), v); save(v); return v; } catch { clear(); return null; } }
   function authHref() { const u = new URL(AUTH_URL); u.searchParams.set('site', 'church'); u.searchParams.set('return_to', location.origin + location.pathname); return u.href; }
   async function api(path, options = {}) {
-    const r = await fetch(API + path, { ...options, headers: { authorization: 'Bearer ' + session.accessToken, 'content-type': 'application/json', ...(options.headers || {}) }, cache: 'no-store' });
-    if (r.status === 401) { clear(); location.href = authHref(); throw new Error('로그인이 필요합니다.'); }
+    const r = await fetchBounded(API + path, { ...options, headers: { authorization: 'Bearer ' + session.accessToken, 'content-type': 'application/json', ...(options.headers || {}) }, cache: 'no-store' });
+    if (r.status === 401) { clear(); const error = new Error('관리자 로그인 세션을 다시 확인해야 합니다.'); error.status = 401; throw error; }
     if ((r.headers.get('content-type') || '').includes('text/csv')) return r.blob();
     const d = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(d.error || '처리에 실패했습니다.');
+    if (!r.ok) { const error = new Error(d.error || '처리에 실패했습니다.'); error.status = r.status; throw error; }
     return d;
   }
   const setMsg = (t, ok = false) => { $('msg').style.color = ok ? 'var(--accent)' : 'var(--danger)'; $('msg').textContent = t || ''; };
+  function showFailure(error) {
+    const host = $('state');
+    const dot = document.createElement('span'); dot.className = 'dot';
+    const label = document.createElement('span');
+    label.textContent = error?.status === 403 ? '큐티인 관리자 권한 없음' : '관리자 확인 실패';
+    host.replaceChildren(dot, label);
+    if (error?.status !== 403) {
+      const retry = document.createElement('a'); retry.href = authHref(); retry.textContent = '로그인 다시 확인';
+      host.append(retry);
+    }
+    setMsg(error?.message || '로그인 및 관리자 연결을 확인하지 못했습니다.');
+  }
   function renderSummary() {
     const map = new Map();
     for (const r of data.byProduct) { const e = map.get(r.product_id) || { name: r.product_name, church: 0, mission: 0, amount: 0 }; e[r.org] = Number(r.qty); e.amount += Number(r.amount); map.set(r.product_id, e); }
@@ -837,7 +865,7 @@ function adminClient() {
       document.querySelectorAll('[data-state]').forEach(b => b.addEventListener('click', async () => { if (!confirm('신청 기간 상태를 변경할까요?')) return; try { await api('/campaigns/' + $('campaign').value + '/state', { method: 'POST', body: JSON.stringify({ manualState: b.dataset.state }) }); setMsg('신청 기간 상태를 변경했습니다.', true); await load(); } catch (e) { setMsg(e.message); } }));
       if (!me.canWrite) document.querySelectorAll('#sync,#add,[data-state]').forEach(b => { b.disabled = true; });
       await load();
-    } catch (e) { setMsg(e.message); }
+    } catch (e) { showFailure(e); }
   }
   boot();
 }
