@@ -35,14 +35,18 @@ const artifactRoot=path.resolve(process.env.EKODI_EDUCATION_LIVE_ARTIFACT_DIR||'
 const report={taskId:trim(process.env.EKODI_RELEASE_TASK_ID||'education-live-studio',150),owner:'ekodi-background-browser-worker',
   implementation:'ekodi-owned-ephemeral-chromium',sourceSha:trim(process.env.GITHUB_SHA||'unknown',80),origin:ORIGIN,
   evidenceScope:previewAllowed?'synthetic-local-preview':'real-production',readOnly:true,authenticated:false,ephemeral:true,
-  startedAt:new Date().toISOString(),profiles:[],flows:[],captures:[],rateLimited:[],consoleErrors:[],pageErrors:[],httpErrors:[],requestFailures:[],
+  startedAt:new Date().toISOString(),profiles:[],flows:[],captures:[],rateLimited:[],consoleErrors:[],pageErrors:[],httpErrors:[],requestFailures:[],externalMediaWarnings:[],
   blockedMutations:[],observedSecurityBlocks:[],notesLoadedByLearner:false,ok:false};
 const record=(kind,profile,detail)=>report[kind].push({profile,...detail});
+// Instructor gallery stills are served by YouTube's image CDN. Their availability is outside EKODI's control,
+// so a failure there is evidence (externalMediaWarnings), not a release blocker. Everything else stays strict.
+const EXTERNAL_MEDIA=/^https:\/\/i\.ytimg\.com\//;
 
 function watch(page,profile,{onRequest}={}){
   page.on('console',message=>{
     if(message.type()!=='error')return;
     const value=trim(message.text(),850);
+    if(EXTERNAL_MEDIA.test(message.location()?.url||'')){record('externalMediaWarnings',profile,{type:'console',url:trim(message.location().url),message:value});return;}
     if(/status of 429\b/.test(value)){record('rateLimited',profile,{type:'console',message:value});return;}
     const security=classifyConsoleSecurityBlock(value);
     record(security?'observedSecurityBlocks':'consoleErrors',profile,security?{type:'console',reason:security,message:value}:{message:value});
@@ -53,6 +57,7 @@ function watch(page,profile,{onRequest}={}){
     // Navigation/teardown cancels in-flight requests (e.g. Shell assets); a cancellation is not a server failure.
     // Real failures still surface through HTTP status, console and page errors.
     if(/net::ERR_ABORTED/.test(info.failure))return;
+    if(EXTERNAL_MEDIA.test(request.url())){record('externalMediaWarnings',profile,{type:'request',...info});return;}
     const security=classifyRequestSecurityBlock(info.url,info.failure);
     record(security?'observedSecurityBlocks':'requestFailures',profile,security?{type:'request',reason:security,...info}:info);
   });
@@ -60,6 +65,7 @@ function watch(page,profile,{onRequest}={}){
   page.on('response',response=>{
     const status=response.status();
     if(status===429){page.__ekodiRateLimited=Number(response.headers()['retry-after'])||60;record('rateLimited',profile,{url:trim(response.url()),status});return;}
+    if(status>=400&&EXTERNAL_MEDIA.test(response.url())){record('externalMediaWarnings',profile,{url:trim(response.url()),status});return;}
     if(status>=400)record('httpErrors',profile,{url:trim(response.url()),status});
   });
 }
@@ -273,6 +279,11 @@ async function learnerFlow(browser,profile){
     const entry=await context.newPage();watch(entry,profile.name);
     const r=await entry.goto(ORIGIN+R.entry,{waitUntil:'domcontentloaded'});if(r?.status()!==200)fail('factchat entry HTTP '+r?.status());
     await overflow(entry,profile.name+' entry');
+    await entry.waitForSelector('#instructorSlot .ins-card',{timeout:10000}).catch(()=>fail('instructor card not rendered on entry page'));
+    const intro=await entry.evaluate(()=>({text:document.querySelector('#instructorSlot')?.innerText||'',figures:document.querySelectorAll('#instructorSlot .ins-gallery figure a[href^="https://"]').length}));
+    if(!/목사/.test(intro.text)||!/박사/.test(intro.text))fail('instructor titles missing on entry page');
+    if(intro.figures!==3)fail('instructor gallery expected 3 linked stills, saw '+intro.figures);
+    flow.steps.push('entry instructor intro: titles + 3-item activity gallery');
     report.flows.push({...flow,passed:true});
   }finally{await context.close();}
 }
