@@ -13,7 +13,7 @@ test('authenticated Admin E2E verifies direct registry href menus through isolat
   assert.match(source, /async function verifyRegistryHref\(trigger, started\)/);
   assert.match(source, /const directDefinition = getAdminMenuItem\(menuId\)/);
   assert.match(source, /const trigger = await resolveMenuTrigger\(\)/);
-  assert.match(source, /button\.admin-detail-item\[data-admin-detail-section=/);
+  assert.match(source, /button:is\(\.admin-detail-item,\.admin-detail-tab\)\[data-admin-detail-section=/);
   assert.doesNotMatch(source, /admin-context-tab/);
   assert.match(source, /verifyRegistryHref\(trigger, started\)/);
   assert.match(source, /page\.waitForEvent\('popup'/);

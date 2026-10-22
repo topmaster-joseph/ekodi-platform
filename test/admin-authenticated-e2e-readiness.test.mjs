@@ -40,7 +40,8 @@ test('authenticated Admin E2E gives demand-loaded navigation a bounded productio
   assert.match(worker, /global\.waitFor\(\{ state: 'visible', timeout: interactionReadyTimeoutMs \}\)/);
   assert.match(worker, /group, \{ timeout: interactionReadyTimeoutMs \}\)/);
   assert.match(worker,/async function resolveMenuTrigger\(\)/);
-  assert.match(worker,/admin-detail-item\[data-admin-detail-section=/);
+  assert.match(worker,/:is\(\.admin-detail-item,\.admin-detail-tab\)\[data-admin-detail-section=/);
+  assert.match(worker,/data-admin-detail-menu=/);
   assert.match(worker,/data-admin-detail-more=/);
   assert.match(worker,/detail\.waitFor\(\{ state: 'visible', timeout: interactionReadyTimeoutMs \}\)/);
   assert.match(worker,/menuId === 'command-home'[\s\S]*EKODIAdminPanels\?\.current\?\.\(\) === 'command-home'[\s\S]*verifyCommandWorkbench\(started\)/);

@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright';
-import { adminMenuOrder, getAdminMenuGroupForSection, getAdminMenuItem } from '../admin-menu-registry.js';
+import { adminMenuOrder, getAdminMenuForSection, getAdminMenuGroupForSection, getAdminMenuItem } from '../admin-menu-registry.js';
 import { AI_ROUTER_SCORE_POLICY } from '../ai-router-score.js';
 
 const token = String(process.env.E2E_ADMIN_TOKEN || '').trim();
@@ -93,9 +93,19 @@ async function selectWorkArea() {
 }
 
 async function resolveMenuTrigger() {
-  const detailSelector = `button.admin-detail-item[data-admin-detail-section="${menuId}"]`;
+  // ADMIN-IA-V3: menu entries are .admin-detail-item; detail routes nested
+  // under the open menu are .admin-detail-tab.
+  const detailSelector = `button:is(.admin-detail-item,.admin-detail-tab)[data-admin-detail-section="${menuId}"]`;
   const detail = page.locator(detailSelector).first();
   if (await detail.count() && await detail.isVisible().catch(() => false)) return detail;
+
+  const owner = getAdminMenuForSection(menuId)?.id || '';
+  const menuButton = owner ? page.locator(`button.admin-detail-item[data-admin-detail-menu="${owner}"]`).first() : null;
+  if (menuButton && await menuButton.count() && await menuButton.isVisible().catch(() => false)) {
+    await clickFast(menuButton);
+    await detail.waitFor({ state: 'visible', timeout: interactionReadyTimeoutMs });
+    return detail;
+  }
 
   const more = page.locator(`button[data-admin-detail-more="${group}"]`).first();
   if (await more.count() && await more.isVisible().catch(() => false)) {
@@ -114,7 +124,7 @@ async function visiblePanelState() {
       const style = getComputedStyle(node);
       return ids.includes(section) && !node.hidden && !node.classList.contains('hidden-panel') && style.display !== 'none' && style.visibility !== 'hidden';
     });
-    const detail = document.querySelector(`button.admin-detail-item[data-admin-detail-section="${section}"]`);
+    const detail = document.querySelector(`button:is(.admin-detail-item,.admin-detail-tab)[data-admin-detail-section="${section}"]`);
     const text = String(panel?.innerText || '').replace(/\s+/g, ' ').trim();
     const busy = panel ? [panel, ...panel.querySelectorAll('[aria-busy="true"],.loading,.spinner')].filter(node => {
       if (!node.matches('[aria-busy="true"],.loading,.spinner')) return false;
