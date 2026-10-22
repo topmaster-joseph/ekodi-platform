@@ -66,10 +66,10 @@ function html(body, { status = 200, method = 'GET', scriptNonce = '', env } = {}
   const csp = [
     "default-src 'self'",
     "img-src 'self' data: https://www.qtm.or.kr https://qtm.or.kr https://*.tosspayments.com",
-    "style-src 'self' 'unsafe-inline'",
-    `script-src 'self' ${scriptNonce ? `'nonce-${scriptNonce}'` : ''} https://js.tosspayments.com`,
-    `connect-src 'self' https://*.tosspayments.com ${CENTRAL_SUPABASE_URL}`,
-    'frame-src https://*.tosspayments.com',
+    "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
+    `script-src 'self' ${scriptNonce ? `'nonce-${scriptNonce}'` : ''} https://js.tosspayments.com https://accounts.google.com/gsi/client`,
+    `connect-src 'self' https://*.tosspayments.com ${CENTRAL_SUPABASE_URL} https://accounts.google.com/gsi/`,
+    'frame-src https://*.tosspayments.com https://accounts.google.com/gsi/',
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self' https://*.tosspayments.com",
@@ -246,6 +246,8 @@ async function anonymizeOld(env, now = new Date()) {
   const cutoff = new Date(now.getTime() - PII_RETENTION_DAYS * 86400000).toISOString();
   const result = await env.DB.prepare(`UPDATE qtin_orders SET applicant_name='(보관기간 경과)', phone='', email='', department='', memo='', lookup_token_hash='', anonymized_at=?, updated_at=?
     WHERE anonymized_at='' AND created_at < ?`).bind(now.toISOString(), now.toISOString(), cutoff).run();
+  // Saved checkout details of buyers who have not ordered for the retention period are removed too.
+  await env.DB.prepare('DELETE FROM qtin_buyer_profiles WHERE updated_at < ?').bind(cutoff).run();
   return result?.meta?.changes || 0;
 }
 
@@ -365,6 +367,9 @@ async function createOrder(env, body, now = new Date(), request = null) {
   if (isStaging(env)) return { status: 403, data: { error: 'isolated-staging: 운영 신청은 스테이징에서 저장되지 않습니다.', dataMode: 'isolated-staging' } };
   const readiness = paymentReadiness(env);
   if (!readiness.ready) return { status: 503, data: { error: '온라인 결제 준비 중입니다. 결제가 열리면 신청할 수 있습니다.' } };
+  // EKODI-QTIN-GOOGLE-CHECKOUT-004: anyone may browse, but ordering needs a Google-verified EKODI account.
+  const buyer = request ? await buyerIdentity(request) : { error: 'login_required', status: 401 };
+  if (buyer.error) return { status: 401, data: { error: '구글 로그인 후 신청할 수 있습니다.', code: 'login_required' } };
   let testActor = '';
   if (readiness.mode !== 'live') {
     const session = request ? await adminSession(request, env) : { error: 'no-session' };
@@ -376,7 +381,7 @@ async function createOrder(env, body, now = new Date(), request = null) {
     return { status: 409, data: { error: '지금은 신청 기간이 아닙니다. 매월 20일~25일에 다음달호를 신청할 수 있습니다.' } };
   }
   const products = await listProducts(env, campaign.id);
-  const result = buildOrderDraft(body, products);
+  const result = buildOrderDraft({ ...body, email: clean(body?.email, 160) || buyer.data.email }, products);
   if (!result.ok) return { status: 400, data: { error: result.errors[0], errors: result.errors } };
   const draft = result.draft;
   const baseOrderId = testActor ? newOrderId(campaign.id).replace(/^QTIN-/, TEST_ORDER_PREFIX) : newOrderId(campaign.id);
@@ -390,6 +395,13 @@ async function createOrder(env, body, now = new Date(), request = null) {
       .bind(orderId, campaign.id, draft.org, draft.applicantName, draft.phone, draft.email, draft.department, draft.memo, draft.totalAmount, draft.totalQuantity, draft.orderName, await sha256(lookupToken), createdAt, expiresAt, createdAt, createdAt),
     ...draft.lines.map(line => env.DB.prepare(`INSERT INTO qtin_order_items (order_id, product_id, qtm_item_id, product_name, unit_price, quantity, line_amount) VALUES (?, ?, ?, ?, ?, ?, ?)`)
       .bind(orderId, line.productId, line.qtmItemId, line.productName, line.unitPrice, line.quantity, line.lineAmount)),
+    env.DB.prepare('INSERT INTO qtin_order_buyers (order_id, user_id, google_email, created_at) VALUES (?, ?, ?, ?)')
+      .bind(orderId, buyer.data.userId, buyer.data.email, createdAt),
+    env.DB.prepare(`INSERT INTO qtin_buyer_profiles (user_id, google_email, name, phone, email, department, org, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(user_id) DO UPDATE SET google_email=excluded.google_email, name=excluded.name, phone=excluded.phone, email=excluded.email,
+        department=excluded.department, org=excluded.org, updated_at=excluded.updated_at`)
+      .bind(buyer.data.userId, buyer.data.email, draft.applicantName, draft.phone, draft.email, draft.department, draft.org, createdAt, createdAt),
   ];
   await env.DB.batch(statements);
   if (testActor) await audit(env, orderId, testActor, 'order.test_created', { mode: readiness.mode });
@@ -440,7 +452,7 @@ label.f input,label.f textarea{border:1px solid var(--line);border-radius:10px;p
 .bar .wrap{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}.total{font-size:15px}.total b{font-size:22px;letter-spacing:-.02em}
 .pay{display:flex;gap:8px}.btn{border:0;border-radius:12px;padding:13px 18px;font:inherit;font-weight:800;cursor:pointer;background:var(--accent);color:var(--accent-ink)}
 .btn.alt{background:#fff;color:var(--accent);border:1.5px solid var(--accent)}.btn[disabled]{opacity:.45;cursor:not-allowed}
-.msg{margin:12px 0 0;color:var(--danger);font-weight:600;min-height:1em}.note{font-size:13px;color:var(--muted)}footer{padding:28px 0 90px;color:var(--muted);font-size:13px}
+.msg{margin:12px 0 0;color:var(--danger);font-weight:600;min-height:1em}.gbtn{min-height:44px;margin:6px 0}.acct{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0;font-weight:700}.acct .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block}button.link{background:none;border:0;color:var(--accent);text-decoration:underline;font:inherit;font-weight:600;cursor:pointer;padding:0}.mine{border-top:1px solid var(--line);padding:10px 0;font-size:14px}.mine b{font-size:15px}.note{font-size:13px;color:var(--muted)}footer{padding:28px 0 90px;color:var(--muted);font-size:13px}
 table.r{width:100%;border-collapse:collapse;margin:12px 0}table.r td,table.r th{border-bottom:1px solid var(--line);padding:9px 6px;text-align:left;font-size:14px}
 .empty{padding:40px 20px;text-align:center;background:var(--card);border:1px dashed var(--line);border-radius:16px;color:var(--muted)}
 .staging{background:#173e2e;color:#fff;padding:10px 14px;border-radius:12px;margin-top:12px;font-size:14px}`;
@@ -478,24 +490,34 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
 <main class="wrap">
   <div class="orgs" role="group" aria-label="신청 기관">${orgButtons}</div>
   ${products.length ? `<section class="grid" aria-label="${escapeHtml(issue)} 도서">${cards}</section>` : `<div class="empty">${open || state === 'scheduled' ? `${escapeHtml(issue)} 도서 정보를 QTM에서 확인하고 있습니다. 잠시 후 다시 열어 주세요.` : '이번 달 신청이 마감되었습니다. 다음달 20일에 새 큐티인 신청이 열립니다.'}</div>`}
-  <section class="panel" aria-labelledby="who"><h2 id="who">신청자 정보</h2>
+  <section class="panel" id="account" aria-labelledby="accountTitle"><h2 id="accountTitle">구글 계정으로 신청하기</h2>
+    <div id="signedOut">
+      <p class="note">책을 고르신 뒤 구글 계정으로 로그인하면 연락처를 입력하고 바로 결제하실 수 있습니다. 다음 달에는 입력하신 정보가 자동으로 채워집니다.</p>
+      <div id="googleButton" class="gbtn" aria-live="polite"></div>
+      <p class="note" id="accountStatus"></p>
+    </div>
+    <div id="signedIn" hidden><p class="acct"><span class="dot"></span><span id="accountEmail"></span> 로그인됨 <button type="button" class="link" id="logout">다른 계정으로 바꾸기</button></p></div>
+  </section>
+  <section class="panel" id="buyerForm" aria-labelledby="who" hidden><h2 id="who">연락처와 추가 정보</h2>
     <div class="fields">
       <label class="f">이름<input id="name" autocomplete="name" maxlength="40" required></label>
       <label class="f">휴대전화<input id="phone" autocomplete="tel" inputmode="tel" placeholder="010-0000-0000" maxlength="13" required></label>
-      <label class="f">이메일(선택 · 영수증 수신)<input id="email" type="email" autocomplete="email" maxlength="160"></label>
+      <label class="f">연락받을 이메일(영수증 수신)<input id="email" type="email" autocomplete="email" maxlength="160"></label>
       <label class="f">소속·부서(선택)<input id="department" maxlength="80" placeholder="예: 청년부, 3교구"></label>
     </div>
     <label class="f" style="margin-top:14px">요청사항(선택)<textarea id="memo" rows="2" maxlength="300"></textarea></label>
-    <label class="consent"><input type="checkbox" id="consent"><span>[필수] 신청·결제·수령 안내를 위해 이름, 휴대전화, 이메일, 소속을 수집·이용하는 데 동의합니다. 보관기간: 신청일로부터 약 1년(이후 자동 비식별 처리). 결제·구매대행: EKODIBIZ.</span></label>
+    <label class="consent"><input type="checkbox" id="consent"><span>[필수] 신청·결제·수령 안내를 위해 구글 계정 이메일, 이름, 휴대전화, 이메일, 소속을 수집·이용하는 데 동의합니다. 보관기간: 신청일로부터 약 1년(이후 자동 비식별 처리). 결제·구매대행: EKODIBIZ.</span></label>
     ${paymentNote}
-    <p class="msg" id="msg" role="alert"></p>
   </section>
+  <section class="panel" id="myOrders" hidden><h2>내 신청 내역</h2><div id="myOrderList"></div></section>
+  <p class="msg wrapmsg" id="msg" role="alert"></p>
 </main>
 <div class="bar"><div class="wrap"><div class="total">합계 <b id="total">0원</b> · <span id="count">0권</span></div>
-  <div class="pay"><button class="btn" id="payCard" type="button" disabled>카드로 결제</button><button class="btn alt" id="payTransfer" type="button" disabled>계좌이체</button></div></div></div>
+  <div class="pay"><button class="btn" id="loginCta" type="button" disabled>구글 로그인하고 신청</button><button class="btn" id="payCard" type="button" hidden disabled>카드로 결제</button><button class="btn alt" id="payTransfer" type="button" hidden disabled>계좌이체</button></div></div></div>
 <footer class="wrap">책은 교회에서 일괄 수령 후 나누어 드립니다(개별 배송 없음). 표지 이미지·가격 출처: <a href="${QTM_ORIGIN}/" rel="noopener" target="_blank">QTM 큐티선교회</a> 온라인 스토어. 결제·구매대행: EKODIBIZ(사업자 213-13-01959, 통신판매업 2023-전남무안-0153). 문의 010-3501-8542</footer>
 <script nonce="${scriptNonce}">window.__QTIN__=${JSON.stringify({ campaignId: campaign.id, open, paymentReady: Boolean(payment.ready), testMode: Boolean(payment.testMode), org }).replace(/</g, '\\u003c')};</script>
 <script src="https://js.tosspayments.com/v2/standard"></script>
+<script src="https://accounts.google.com/gsi/client" async></script>
 <script nonce="${scriptNonce}">${clientScript(orderClient)}</script>`;
   return shell(`${issue} 큐티인 신청 · EKODI`, body, scriptNonce);
 }
@@ -511,22 +533,153 @@ export function clientScript(fn) {
 /* Browser code (serialised into the page). */
 function orderClient() {
   const cfg = window.__QTIN__ || {};
+  const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
+  const IDENTITY = SUPABASE_URL + '/functions/v1/identity-api';
+  const BUYER_KEY = 'ekodi-qtin-buyer-session';
+  const CENTRAL_KEY = 'sb-renzehysxirjilvdxacv-auth-token';
+  const SIGNED_OUT_KEY = 'ekodi-qtin-signed-out';
+  const ORG = { church: '에코디교회', mission: '에코디선교회' };
+  const STATUS = { paid: '결제 완료', payment_pending: '결제 대기', cancelled: '취소' };
+  const FUL = { waiting: '발주 대기', ordered: 'QTM 발주 완료', received: '교회 도착', distributed: '전달 완료' };
   const $ = id => document.getElementById(id);
+  const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const won = v => `${Math.trunc(Number(v) || 0).toLocaleString('ko-KR')}원`;
   let org = cfg.org || '';
   let busy = false;
-  let testToken = '';
-  if (!cfg.paymentReady && cfg.testMode) {
-    try { const s = JSON.parse(sessionStorage.getItem('ekodi-qtin-admin-session') || 'null'); if (s?.accessToken && (!s.expiresAt || s.expiresAt > Date.now() / 1000 + 60)) testToken = s.accessToken; } catch { testToken = ''; }
-    if (testToken) { cfg.paymentReady = true; const n = $('testNote'); if (n) n.hidden = false; }
-  }
+  let session = null;
   const books = [...document.querySelectorAll('.book')];
-  const won = v => `${Math.trunc(v).toLocaleString('ko-KR')}원`;
+
+  // ---- session (Google-verified central EKODI account) ----
+  function read(store, key) { try { return JSON.parse(store.getItem(key) || 'null'); } catch { return null; } }
+  function normalize(d, c = {}) { return { accessToken: d.access_token || d.accessToken || '', refreshToken: d.refresh_token || d.refreshToken || c.refreshToken || '', expiresAt: Number(d.expires_at || d.expiresAt || 0) || Math.floor(Date.now() / 1000) + Number(d.expires_in || 3600) }; }
+  function save(v) { try { localStorage.setItem(BUYER_KEY, JSON.stringify(v)); sessionStorage.removeItem(SIGNED_OUT_KEY); } catch {} }
+  function forget() { try { localStorage.removeItem(BUYER_KEY); sessionStorage.setItem(SIGNED_OUT_KEY, '1'); } catch {} }
+  function stored() {
+    const own = read(localStorage, BUYER_KEY);
+    if (own?.accessToken) return own;
+    if (read(sessionStorage, SIGNED_OUT_KEY)) return null;
+    // Reuse an existing EKODI sign-in on this origin; the server re-verifies every request.
+    const admin = read(sessionStorage, 'ekodi-qtin-admin-session');
+    if (admin?.accessToken) return admin;
+    const central = read(localStorage, CENTRAL_KEY);
+    const s = central?.currentSession || central?.session || central;
+    return s?.access_token ? normalize(s) : null;
+  }
+  async function bounded(url, options = {}) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    try { return await fetch(url, { ...options, signal: controller.signal }); }
+    catch (e) { throw new Error(e?.name === 'AbortError' ? '서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' : '서버 연결에 실패했습니다. 네트워크를 확인해 주세요.'); }
+    finally { clearTimeout(timer); }
+  }
+  async function post(url, body) {
+    const r = await bounded(url, { method: 'POST', headers: { apikey: SUPABASE_KEY, 'content-type': 'application/json' }, body: JSON.stringify(body || {}) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { const e = new Error(d.error_description || d.msg || d.error || '인증에 실패했습니다.'); e.code = d.error || ''; throw e; }
+    return d;
+  }
+  async function validSession() {
+    let v = stored();
+    if (!v?.accessToken) return null;
+    if (!v.expiresAt || v.expiresAt > Math.floor(Date.now() / 1000) + 60) return v;
+    if (!v.refreshToken) { forget(); return null; }
+    try { v = normalize(await post(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, { refresh_token: v.refreshToken }), v); save(v); return v; }
+    catch { forget(); return null; }
+  }
+  async function api(path) {
+    const r = await bounded('/qtin/api' + path, { headers: { authorization: 'Bearer ' + session.accessToken }, cache: 'no-store' });
+    const d = await r.json().catch(() => ({}));
+    if (r.status === 401) { forget(); session = null; showSignedOut(); throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.'); }
+    if (!r.ok) throw new Error(d.error || '정보를 불러오지 못했습니다.');
+    return d;
+  }
+
+  // ---- Google sign-in, rendered in this page (same flow as ekodi.kr/auth) ----
+  function setStatus(text, error = false) { const n = $('accountStatus'); n.textContent = text || ''; n.style.color = error ? 'var(--danger)' : ''; }
+  function waitForGoogle() {
+    return new Promise((resolve, reject) => {
+      const started = Date.now();
+      (function poll() {
+        if (window.google?.accounts?.id) return resolve();
+        if (Date.now() - started > 10000) return reject(new Error('google_library_failed'));
+        setTimeout(poll, 100);
+      })();
+    });
+  }
+  async function prepareGoogle() {
+    setStatus('구글 로그인을 준비하고 있습니다.');
+    try {
+      const [challenge] = await Promise.all([post(IDENTITY + '/challenge'), waitForGoogle()]);
+      window.google.accounts.id.initialize({ client_id: challenge.clientId, nonce: challenge.nonce, auto_select: false, use_fedcm_for_prompt: true, callback: r => onCredential(r, challenge) });
+      const host = $('googleButton');
+      host.replaceChildren();
+      window.google.accounts.id.renderButton(host, { type: 'standard', theme: 'outline', size: 'large', text: 'continue_with', shape: 'rectangular', logo_alignment: 'left', width: Math.min(360, Math.max(240, host.clientWidth || 320)) });
+      setStatus('');
+    } catch (e) {
+      setStatus('구글 로그인을 준비하지 못했습니다. 새로고침 후 다시 시도해 주세요.', true);
+    }
+  }
+  async function onCredential(response, challenge) {
+    if (!response?.credential) { setStatus('구글 인증이 완료되지 않았습니다. 다시 시도해 주세요.', true); return; }
+    setStatus('구글 계정을 확인하고 있습니다.');
+    try {
+      const proof = await post(IDENTITY + '/google/exchange', { credential: response.credential, nonce: challenge.nonce });
+      const verified = await post(SUPABASE_URL + '/auth/v1/verify', { token_hash: proof.tokenHash, type: 'email' });
+      session = normalize(verified);
+      if (!session.accessToken) throw new Error('session_not_created');
+      save(session);
+      setStatus('');
+      await onSignedIn(true);
+    } catch (e) {
+      const text = e.code === 'challenge_expired_or_used' || e.message === 'challenge_expired_or_used' ? '인증 시간이 지났습니다. 다시 눌러 주세요.'
+        : e.code === 'identity_conflict' || e.message === 'identity_conflict' ? '이 구글 계정은 다른 EKODI 사용자에 연결되어 있습니다. 관리자에게 문의해 주세요.'
+        : '구글 로그인에 실패했습니다. 다시 시도해 주세요.';
+      setStatus(text, true);
+      prepareGoogle();
+    }
+  }
+  function showSignedOut() {
+    $('signedOut').hidden = false; $('signedIn').hidden = true; $('buyerForm').hidden = true; $('myOrders').hidden = true;
+    refresh();
+    prepareGoogle();
+  }
+  function fill(id, value) { const el = $(id); if (el && !el.value && value) el.value = value; }
+  function chooseOrg(next) {
+    if (!ORG[next]) return;
+    org = next;
+    document.querySelectorAll('.org').forEach(o => o.setAttribute('aria-pressed', String(o.dataset.org === next)));
+  }
+  async function onSignedIn(focusForm) {
+    $('signedOut').hidden = true; $('signedIn').hidden = false; $('buyerForm').hidden = false;
+    if (cfg.testMode && !cfg.paymentReady) { const n = $('testNote'); if (n) n.hidden = false; }
+    refresh();
+    try {
+      const me = await api('/me');
+      $('accountEmail').textContent = me.account?.email || '';
+      const p = me.profile || {};
+      fill('name', p.name); fill('phone', p.phone); fill('email', p.email || me.account?.email); fill('department', p.department);
+      if (!org && p.org) chooseOrg(p.org);
+      const orders = me.orders || [];
+      $('myOrders').hidden = orders.length === 0;
+      $('myOrderList').innerHTML = orders.map(o => `<div class="mine"><b>${esc(o.orderName)}</b> · ${o.totalQuantity}권 · ${won(o.totalAmount)}<br>${esc(ORG[o.org] || o.org)} · ${esc(o.campaignId)} · ${esc(STATUS[o.status] || o.status)}${o.status === 'paid' ? ' · ' + esc(FUL[o.fulfillmentStatus] || o.fulfillmentStatus) : ''}</div>`).join('');
+      if (focusForm) $('buyerForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (e) {
+      $('msg').textContent = e.message || '';
+    }
+  }
+
+  // ---- selection & payment ----
   function items() { return books.map(b => ({ productId: b.dataset.id, quantity: Math.max(0, Math.min(50, Math.trunc(Number(b.querySelector('input').value) || 0))), price: Number(b.dataset.price) })).filter(i => i.quantity > 0); }
+  function canPay() { return cfg.paymentReady || (cfg.testMode && Boolean(session)); }
   function refresh() {
     const list = items();
     $('total').textContent = won(list.reduce((s, i) => s + i.price * i.quantity, 0));
     $('count').textContent = `${list.reduce((s, i) => s + i.quantity, 0)}권`;
-    const ok = cfg.open && cfg.paymentReady && list.length > 0 && !busy;
+    const signedIn = Boolean(session);
+    $('loginCta').hidden = signedIn; $('payCard').hidden = !signedIn; $('payTransfer').hidden = !signedIn;
+    $('loginCta').disabled = !cfg.open || busy;
+    const ok = cfg.open && canPay() && list.length > 0 && !busy && signedIn;
     $('payCard').disabled = !ok; $('payTransfer').disabled = !ok;
   }
   books.forEach(b => {
@@ -534,21 +687,23 @@ function orderClient() {
     b.querySelectorAll('button[data-step]').forEach(btn => btn.addEventListener('click', () => { input.value = Math.max(0, Math.min(50, (Number(input.value) || 0) + Number(btn.dataset.step))); refresh(); }));
     input.addEventListener('input', refresh);
   });
-  document.querySelectorAll('.org').forEach(btn => btn.addEventListener('click', () => {
-    org = btn.dataset.org;
-    document.querySelectorAll('.org').forEach(o => o.setAttribute('aria-pressed', String(o === btn)));
-  }));
+  document.querySelectorAll('.org').forEach(btn => btn.addEventListener('click', () => chooseOrg(btn.dataset.org)));
+  $('loginCta').addEventListener('click', () => { $('account').scrollIntoView({ behavior: 'smooth', block: 'center' }); setStatus('아래 구글 버튼으로 로그인해 주세요.'); });
+  $('logout').addEventListener('click', () => { forget(); session = null; ['name', 'phone', 'email', 'department'].forEach(id => { $(id).value = ''; }); showSignedOut(); });
   async function pay(method) {
     $('msg').textContent = '';
+    if (!session) { $('account').scrollIntoView({ behavior: 'smooth', block: 'center' }); $('msg').textContent = '구글 로그인 후 결제하실 수 있습니다.'; return; }
     if (!org) { $('msg').textContent = '신청 기관(에코디교회/에코디선교회)을 선택해 주세요.'; return; }
     if (!$('consent').checked) { $('msg').textContent = '개인정보 수집·이용에 동의해 주세요.'; return; }
     busy = true; refresh();
     try {
-      const response = await fetch('/qtin/api/orders', { method: 'POST', headers: { 'content-type': 'application/json', ...(testToken ? { authorization: 'Bearer ' + testToken } : {}) }, body: JSON.stringify({
+      session = (await validSession()) || session;
+      const response = await bounded('/qtin/api/orders', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + session.accessToken }, body: JSON.stringify({
         campaignId: cfg.campaignId, org, name: $('name').value, phone: $('phone').value, email: $('email').value,
         department: $('department').value, memo: $('memo').value, privacyConsent: true,
         items: items().map(i => ({ productId: i.productId, quantity: i.quantity })) }) });
       const data = await response.json().catch(() => ({}));
+      if (response.status === 401) { forget(); session = null; showSignedOut(); throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.'); }
       if (!response.ok) throw new Error(data.error || '신청을 저장하지 못했습니다.');
       if (typeof window.TossPayments !== 'function') throw new Error('결제 모듈을 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.');
       const payment = window.TossPayments(data.clientKey).payment({ customerKey: data.customerKey });
@@ -563,6 +718,10 @@ function orderClient() {
   $('payCard').addEventListener('click', () => pay('CARD'));
   $('payTransfer').addEventListener('click', () => pay('TRANSFER'));
   refresh();
+  (async () => {
+    session = await validSession();
+    if (session) await onSignedIn(false); else showSignedOut();
+  })();
 }
 
 export function renderReceipt({ order, items }, { title, message, ok = true } = {}) {
@@ -592,6 +751,29 @@ function bearer(request) {
   const value = String(request.headers.get('authorization') || '');
   return value.toLowerCase().startsWith('bearer ') ? value.slice(7).trim() : '';
 }
+/** Any Google-verified central EKODI account (buyer). Rights are not implied. */
+async function buyerIdentity(request) {
+  const token = bearer(request);
+  if (!token || token.length > 8192) return { error: 'login_required', status: 401 };
+  const response = await fetch(`${CENTRAL_SUPABASE_URL}/auth/v1/user`, { headers: { apikey: CENTRAL_PUBLISHABLE_KEY, authorization: `Bearer ${token}` }, cache: 'no-store' });
+  const identity = response.ok ? await response.json().catch(() => null) : null;
+  if (!identity?.id || !identity?.email || !identity?.email_confirmed_at) return { error: 'login_required', status: 401 };
+  const meta = identity.user_metadata || {};
+  return { data: { userId: String(identity.id), email: String(identity.email).toLowerCase(), displayName: clean(meta.full_name || meta.name, 40) } };
+}
+
+async function buyerOverview(env, buyer) {
+  const profile = await env.DB.prepare('SELECT name, phone, email, department, org FROM qtin_buyer_profiles WHERE user_id=?').bind(buyer.userId).first();
+  const orders = await env.DB.prepare(`SELECT o.id, o.campaign_id, o.org, o.order_name, o.total_amount, o.total_quantity, o.status, o.fulfillment_status, o.approved_at, o.created_at
+    FROM qtin_order_buyers b JOIN qtin_orders o ON o.id=b.order_id
+    WHERE b.user_id=? AND o.status IN ('paid','cancelled','payment_pending') ORDER BY o.created_at DESC LIMIT 12`).bind(buyer.userId).all();
+  return {
+    account: { email: buyer.email, displayName: buyer.displayName },
+    profile: profile ? { name: profile.name, phone: profile.phone, email: profile.email, department: profile.department, org: profile.org } : { name: buyer.displayName, phone: '', email: buyer.email, department: '', org: '' },
+    orders: (orders.results || []).map(o => ({ id: o.id, campaignId: o.campaign_id, org: o.org, orderName: o.order_name, totalAmount: o.total_amount, totalQuantity: o.total_quantity, status: o.status, fulfillmentStatus: o.fulfillment_status, paidAt: o.approved_at, createdAt: o.created_at })),
+  };
+}
+
 async function adminSession(request, env) {
   const token = bearer(request);
   if (!token || token.length > 8192) return { error: '관리자 로그인이 필요합니다.', status: 401 };
@@ -903,6 +1085,12 @@ export async function handleRequest(request, env, now = new Date()) {
     }, state === 'open' && !productsReady ? 503 : 200, env, method);
   }
   if (path === `${API}/catalog` && (method === 'GET' || method === 'HEAD')) return json(await catalog(env, now), 200, env, method);
+  if (path === `${API}/me` && (method === 'GET' || method === 'HEAD')) {
+    if (isStaging(env)) return json({ error: 'staging_auth_required', dataMode: 'isolated-staging' }, 401, env, method);
+    const buyer = await buyerIdentity(request);
+    if (buyer.error) return json({ error: '구글 로그인이 필요합니다.', code: 'login_required' }, 401, env, method);
+    return json(await buyerOverview(env, buyer.data), 200, env, method);
+  }
   if (path === `${API}/orders` && method === 'POST') {
     const body = await readJson(request);
     if (!body) return json({ error: '요청 형식이 올바르지 않습니다.' }, 400, env);

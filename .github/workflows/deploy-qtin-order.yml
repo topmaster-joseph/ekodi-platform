@@ -18,6 +18,7 @@ on:
       - 'test/ekodipay-core.test.mjs'
       - 'qtin-order-worker.js'
       - 'migrations/0201_qtin_group_orders.sql'
+      - 'migrations/0202_qtin_buyer_accounts.sql'
       - 'wrangler.qtin-order.toml'
       - 'wrangler.qtin-order.staging.toml'
       - 'test/qtin-order.test.mjs'
@@ -114,6 +115,7 @@ jobs:
         run: |
           set -euo pipefail
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.qtin-order.toml --file migrations/0201_qtin_group_orders.sql
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.qtin-order.toml --file migrations/0202_qtin_buyer_accounts.sql
       - name: Deploy production worker
         shell: bash
         run: |
