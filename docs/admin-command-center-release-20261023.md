@@ -48,3 +48,15 @@ production asset verification on `https://ekodi.kr/admin/accounts/audit-records`
 and real authenticated PC/mobile browser regression for open, close, command,
 history, Admin context, and authorization boundaries. Report any missing evidence
 as unverified rather than completed.
+
+## Protected sync and genuine required CI regeneration — 2026-10-23
+
+- EKODI Orchestrated PR Convergent Merge synchronized the release branch to protected
+  `main` at head `67c173a56594c60f9a843134220428f2fbf5f35f`.
+- GitHub marked the bot-authored merge commit's PR checks `action_required`;
+  those checks are **not successful checks** and cannot authorize integration.
+- This append-only owner-delegated checkpoint regenerates real required CI
+  at the now-synchronized official release head. It does not change runtime
+  code, permissions, orchestrator task identity, receipt, or deployment lane.
+- Recheck required workflows and the exact current SHA before protected merge.
+  No unverified deployment or UI success claim is implied.
