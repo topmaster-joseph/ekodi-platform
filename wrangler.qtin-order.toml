@@ -19,10 +19,12 @@ ENVIRONMENT = "production"
 PUBLIC_BASE_URL = "https://ekodi.kr/qtin"
 OPERATOR_EMAILS = "topmaster.joseph@gmail.com,joseph@ekodibiz.kr"
 QTM_SEED_ITEM_IDS = "1719304225,1719305039,1719304141"
-# Fail-closed until the EKODIBIZ Toss Payments keys are registered.
-# TOSS_SECRET_KEY is a Worker secret only (never in this file, the repo or D1).
-PAYMENTS_ENABLED = "false"
-TOSS_CLIENT_KEY = ""
+# EKODI(MID q_ekodib62hb) Toss Payments — TEST key: only signed-in operators/staff can pay
+# (labelled test orders, excluded from totals). Public checkout opens only with a live_ key.
+# TOSS_SECRET_KEY is a Worker secret only (never in this file, the repo or D1);
+# readiness stays closed until that secret is registered.
+PAYMENTS_ENABLED = "true"
+TOSS_CLIENT_KEY = "test_ck_oEjb0gm23P450e7wmE6o3pGwBJn5"
 
 [[d1_databases]]
 binding = "DB"

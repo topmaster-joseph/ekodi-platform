@@ -42,6 +42,19 @@ function paymentReadiness(env) {
   const mode = String(env?.TOSS_CLIENT_KEY || '').startsWith('live_') ? 'live' : (String(env?.TOSS_CLIENT_KEY || '').startsWith('test_') ? 'test' : 'none');
   return { ready: missing.length === 0, missing, mode };
 }
+// Test keys never take real money. While the client key is a test_ key, only signed-in
+// operators/staff may create (clearly labelled) test orders; the public page stays closed
+// and test orders are kept out of order totals, product counts and the CSV export.
+const TEST_ORDER_PREFIX = 'QTINTEST-';
+const NOT_TEST_ORDER = `o.id NOT LIKE '${TEST_ORDER_PREFIX}%'`;
+function publicPaymentReady(env) {
+  const r = paymentReadiness(env);
+  return r.ready && r.mode === 'live';
+}
+function testPaymentReady(env) {
+  const r = paymentReadiness(env);
+  return r.ready && r.mode === 'test';
+}
 function operatorEmails(env) {
   return new Set(String(env?.OPERATOR_EMAILS || '').split(',').map(v => v.trim().toLowerCase()).filter(Boolean));
 }
@@ -362,14 +375,20 @@ async function catalog(env, now = new Date()) {
   return {
     campaign: { id: campaign.id, year: campaign.target_year, month: campaign.target_month, state: campaignState(campaign, now), opensAt: campaign.opens_at, closesAt: campaign.closes_at },
     products: products.map(publicProduct),
-    payment: { ready: paymentReadiness(env).ready, mode: paymentReadiness(env).mode },
+    payment: { ready: publicPaymentReady(env), mode: paymentReadiness(env).mode, testMode: testPaymentReady(env) },
   };
 }
 
-async function createOrder(env, body, now = new Date()) {
+async function createOrder(env, body, now = new Date(), request = null) {
   if (isStaging(env)) return { status: 403, data: { error: 'isolated-staging: 운영 신청은 스테이징에서 저장되지 않습니다.', dataMode: 'isolated-staging' } };
   const readiness = paymentReadiness(env);
   if (!readiness.ready) return { status: 503, data: { error: '온라인 결제 준비 중입니다. 결제가 열리면 신청할 수 있습니다.' } };
+  let testActor = '';
+  if (readiness.mode !== 'live') {
+    const session = request ? await adminSession(request, env) : { error: 'no-session' };
+    if (session.error || !session.data?.canWrite) return { status: 503, data: { error: '온라인 결제 준비 중입니다. 결제가 열리면 신청할 수 있습니다.' } };
+    testActor = session.data.email;
+  }
   const campaign = await currentCampaign(env, now);
   if (campaign.virtual || campaignState(campaign, now) !== 'open' || clean(body?.campaignId, 10) !== campaign.id) {
     return { status: 409, data: { error: '지금은 신청 기간이 아닙니다. 매월 20일~25일에 다음달호를 신청할 수 있습니다.' } };
@@ -378,7 +397,7 @@ async function createOrder(env, body, now = new Date()) {
   const result = buildOrderDraft(body, products);
   if (!result.ok) return { status: 400, data: { error: result.errors[0], errors: result.errors } };
   const draft = result.draft;
-  const orderId = newOrderId(campaign.id);
+  const orderId = testActor ? newOrderId(campaign.id).replace(/^QTIN-/, TEST_ORDER_PREFIX) : newOrderId(campaign.id);
   const lookupToken = randomToken();
   const createdAt = now.toISOString();
   const expiresAt = new Date(now.getTime() + PENDING_TTL_MS).toISOString();
@@ -390,6 +409,7 @@ async function createOrder(env, body, now = new Date()) {
       .bind(orderId, line.productId, line.qtmItemId, line.productName, line.unitPrice, line.quantity, line.lineAmount)),
   ];
   await env.DB.batch(statements);
+  if (testActor) await audit(env, orderId, testActor, 'order.test_created', { mode: readiness.mode });
   const base = publicBase(env);
   return {
     status: 201,
@@ -464,7 +484,7 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
       <button type="button" data-step="1" aria-label="${escapeHtml(p.name)} 수량 늘리기"${open ? '' : ' disabled'}>+</button></div>
     </div></article>`).join('');
   const orgButtons = Object.values(ORGS).map(o => `<button type="button" class="org" data-org="${o.id}" aria-pressed="${org === o.id}"><strong>${o.label}</strong><span>${o.id === 'church' ? '교회 성도·부서 신청' : '선교회 회원·사역자 신청'}</span></button>`).join('');
-  const paymentNote = payment.ready ? '' : '<p class="note">온라인 결제 연결을 준비하고 있습니다. 결제가 열리면 바로 신청하실 수 있습니다.</p>';
+  const paymentNote = payment.ready ? '' : `<p class="note">온라인 결제 연결을 준비하고 있습니다. 결제가 열리면 바로 신청하실 수 있습니다.</p>${payment.testMode ? '<p class="note" id="testNote" hidden><strong>테스트 결제 모드(관리자 전용)</strong> · 실제 금액이 청구되지 않으며, 이 신청은 집계·발주에 포함되지 않습니다.</p>' : ''}`;
   const body = `<header class="top"><div class="wrap">
   <div class="eyebrow">EKODI · 큐티인 함께 구입</div>
   <h1>${escapeHtml(issue)} 큐티인 신청</h1>
@@ -491,7 +511,7 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
 <div class="bar"><div class="wrap"><div class="total">합계 <b id="total">0원</b> · <span id="count">0권</span></div>
   <div class="pay"><button class="btn" id="payCard" type="button" disabled>카드로 결제</button><button class="btn alt" id="payTransfer" type="button" disabled>계좌이체</button></div></div></div>
 <footer class="wrap">책은 교회에서 일괄 수령 후 나누어 드립니다(개별 배송 없음). 표지 이미지·가격 출처: <a href="${QTM_ORIGIN}/" rel="noopener" target="_blank">QTM 큐티선교회</a> 온라인 스토어. 결제·구매대행: EKODIBIZ(사업자 213-13-01959, 통신판매업 2023-전남무안-0153). 문의 010-3501-8542</footer>
-<script nonce="${scriptNonce}">window.__QTIN__=${JSON.stringify({ campaignId: campaign.id, open, paymentReady: Boolean(payment.ready), org }).replace(/</g, '\\u003c')};</script>
+<script nonce="${scriptNonce}">window.__QTIN__=${JSON.stringify({ campaignId: campaign.id, open, paymentReady: Boolean(payment.ready), testMode: Boolean(payment.testMode), org }).replace(/</g, '\\u003c')};</script>
 <script src="https://js.tosspayments.com/v2/standard"></script>
 <script nonce="${scriptNonce}">(${orderClient.toString()})()</script>`;
   return shell(`${issue} 큐티인 신청 · EKODI`, body, scriptNonce);
@@ -503,6 +523,11 @@ function orderClient() {
   const $ = id => document.getElementById(id);
   let org = cfg.org || '';
   let busy = false;
+  let testToken = '';
+  if (!cfg.paymentReady && cfg.testMode) {
+    try { const s = JSON.parse(sessionStorage.getItem('ekodi-qtin-admin-session') || 'null'); if (s?.accessToken && (!s.expiresAt || s.expiresAt > Date.now() / 1000 + 60)) testToken = s.accessToken; } catch { testToken = ''; }
+    if (testToken) { cfg.paymentReady = true; const n = $('testNote'); if (n) n.hidden = false; }
+  }
   const books = [...document.querySelectorAll('.book')];
   const won = v => `${Math.trunc(v).toLocaleString('ko-KR')}원`;
   function items() { return books.map(b => ({ productId: b.dataset.id, quantity: Math.max(0, Math.min(50, Math.trunc(Number(b.querySelector('input').value) || 0))), price: Number(b.dataset.price) })).filter(i => i.quantity > 0); }
@@ -528,7 +553,7 @@ function orderClient() {
     if (!$('consent').checked) { $('msg').textContent = '개인정보 수집·이용에 동의해 주세요.'; return; }
     busy = true; refresh();
     try {
-      const response = await fetch('/qtin/api/orders', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
+      const response = await fetch('/qtin/api/orders', { method: 'POST', headers: { 'content-type': 'application/json', ...(testToken ? { authorization: 'Bearer ' + testToken } : {}) }, body: JSON.stringify({
         campaignId: cfg.campaignId, org, name: $('name').value, phone: $('phone').value, email: $('email').value,
         department: $('department').value, memo: $('memo').value, privacyConsent: true,
         items: items().map(i => ({ productId: i.productId, quantity: i.quantity })) }) });
@@ -601,8 +626,8 @@ async function campaignSummary(env, id) {
   if (!campaign) return null;
   const products = await listProducts(env, id, true);
   const byProduct = await env.DB.prepare(`SELECT i.product_id, i.product_name, o.org, SUM(i.quantity) AS qty, SUM(i.line_amount) AS amount
-    FROM qtin_order_items i JOIN qtin_orders o ON o.id=i.order_id WHERE o.campaign_id=? AND o.status='paid' GROUP BY i.product_id, o.org`).bind(id).all();
-  const totals = await env.DB.prepare(`SELECT org, status, COUNT(*) AS orders, SUM(total_amount) AS amount, SUM(total_quantity) AS qty FROM qtin_orders WHERE campaign_id=? GROUP BY org, status`).bind(id).all();
+    FROM qtin_order_items i JOIN qtin_orders o ON o.id=i.order_id WHERE o.campaign_id=? AND o.status='paid' AND ${NOT_TEST_ORDER} GROUP BY i.product_id, o.org`).bind(id).all();
+  const totals = await env.DB.prepare(`SELECT org, status, COUNT(*) AS orders, SUM(total_amount) AS amount, SUM(total_quantity) AS qty FROM qtin_orders o WHERE campaign_id=? AND ${NOT_TEST_ORDER} GROUP BY org, status`).bind(id).all();
   const orders = await env.DB.prepare(`SELECT id, org, applicant_name, phone, email, department, memo, total_amount, total_quantity, order_name, status, payment_method, approved_at, receipt_url, fulfillment_status, created_at
     FROM qtin_orders WHERE campaign_id=? AND status IN ('paid','cancelled','payment_pending') ORDER BY created_at DESC LIMIT 1000`).bind(id).all();
   return { campaign: { ...campaign, state: campaignState(campaign) }, products, byProduct: byProduct.results || [], totals: totals.results || [], orders: orders.results || [] };
@@ -610,7 +635,7 @@ async function campaignSummary(env, id) {
 
 async function exportCsv(env, id) {
   const rows = await env.DB.prepare(`SELECT o.id, o.org, o.applicant_name, o.phone, o.email, o.department, o.status, o.fulfillment_status, o.approved_at, o.payment_method, i.product_name, i.unit_price, i.quantity, i.line_amount, o.memo
-    FROM qtin_orders o JOIN qtin_order_items i ON i.order_id=o.id WHERE o.campaign_id=? AND o.status IN ('paid','cancelled') ORDER BY o.org, o.created_at`).bind(id).all();
+    FROM qtin_orders o JOIN qtin_order_items i ON i.order_id=o.id WHERE o.campaign_id=? AND o.status IN ('paid','cancelled') AND ${NOT_TEST_ORDER} ORDER BY o.org, o.created_at`).bind(id).all();
   const header = ['신청번호', '기관', '이름', '휴대전화', '이메일', '소속', '결제상태', '수령상태', '결제시각(KST)', '결제수단', '도서', '단가', '수량', '금액', '요청사항'];
   const lines = [header.map(csvEscape).join(',')];
   for (const r of rows.results || []) {
@@ -819,7 +844,7 @@ function adminClient() {
       if (!session) { location.href = authHref(); return; }
       const list = await api('/campaigns'); me = list.me;
       const pay = list.payment;
-      $('state').innerHTML = `<span class="dot"></span>${esc(me.email)} · ${me.canWrite ? '관리' : '조회'} 권한 · 결제 ${pay.ready ? (pay.mode === 'live' ? '운영 연결' : '테스트 연결') : '미연결(' + esc(pay.missing.join(', ')) + ')'}`;
+      $('state').innerHTML = `<span class="dot"></span>${esc(me.email)} · ${me.canWrite ? '관리' : '조회'} 권한 · 결제 ${pay.ready ? (pay.mode === 'live' ? '운영 연결' : '테스트 연결 · <a href="/qtin/church">테스트 신청 열기</a>(실제 청구 없음, 집계 제외)') : '미연결(' + esc(pay.missing.join(', ')) + ')'}`;
       $('campaign').innerHTML = list.campaigns.map(c => `<option value="${c.id}">${c.target_year}년 ${c.target_month}월호 · ${({ open: '신청 중', scheduled: '예정', closed: '마감' })[c.state] || c.state}</option>`).join('');
       $('campaign').onchange = () => load().catch(e => setMsg(e.message));
       $('filter').oninput = renderOrders;
@@ -862,7 +887,7 @@ export async function handleRequest(request, env, now = new Date()) {
   if (path === `${API}/orders` && method === 'POST') {
     const body = await readJson(request);
     if (!body) return json({ error: '요청 형식이 올바르지 않습니다.' }, 400, env);
-    const result = await createOrder(env, body, now);
+    const result = await createOrder(env, body, now, request);
     return json(result.data, result.status, env);
   }
   if (path === `${API}/toss/webhook` && method === 'POST') {

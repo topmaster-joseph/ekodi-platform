@@ -27,7 +27,7 @@ function d1() {
 async function freshEnv(extra = {}) {
   const DB = d1();
   DB.raw.exec(await readFile(new URL('../migrations/0201_qtin_group_orders.sql', import.meta.url), 'utf8'));
-  return { DB, PUBLIC_BASE_URL: 'https://ekodi.kr/qtin', OPERATOR_EMAILS: 'topmaster.joseph@gmail.com', PAYMENTS_ENABLED: 'true', TOSS_CLIENT_KEY: 'test_ck_abc', TOSS_SECRET_KEY: 'test_sk_abc', QTM_SEED_ITEM_IDS: '1719304225', ...extra };
+  return { DB, PUBLIC_BASE_URL: 'https://ekodi.kr/qtin', OPERATOR_EMAILS: 'topmaster.joseph@gmail.com', PAYMENTS_ENABLED: 'true', TOSS_CLIENT_KEY: 'live_ck_abc', TOSS_SECRET_KEY: 'test_sk_abc', QTM_SEED_ITEM_IDS: '1719304225', ...extra };
 }
 
 // ---------- QTM fixtures (youngcart markup) ----------
@@ -184,7 +184,7 @@ test('public page and catalog show next-month covers; order is created with serv
   const data = await res.json();
   assert.equal(res.status, 201, JSON.stringify(data));
   assert.equal(data.amount, 13500);
-  assert.equal(data.clientKey, 'test_ck_abc');
+  assert.equal(data.clientKey, 'live_ck_abc');
   assert.ok(data.successUrl.startsWith('https://ekodi.kr/qtin/payment/success?t='));
   assert.ok(!JSON.stringify(data).includes('test_sk_'));
   const row = await env.DB.prepare('SELECT * FROM qtin_orders WHERE id=?').bind(data.orderId).first();
@@ -324,7 +324,8 @@ test('worker contract: routes, cron and secrets stay out of config', async () =>
   assert.match(prod, /pattern = "ekodi\.kr\/qtin\*"/);
   assert.match(prod, /crons = \["0 15 \* \* \*", "0 3 \* \* \*"\]/);
   assert.match(prod, /database_name = "ekodi-auth"/);
-  assert.match(prod, /PAYMENTS_ENABLED = "false"/);
+  // Test-key phase: the committed client key must never be a live key without an explicit release.
+  assert.match(prod, /TOSS_CLIENT_KEY = "(test_ck_[A-Za-z0-9]+)?"/);
   assert.ok(!/TOSS_SECRET_KEY\s*=/.test(prod));
   const staging = await readFile(new URL('../wrangler.qtin-order.staging.toml', import.meta.url), 'utf8');
   assert.match(staging, /DATA_MODE = "isolated-staging"/);
@@ -351,4 +352,60 @@ test('token-mediated merges dispatch the guarded QTIN deploy with the orchestrat
     assert.match(wf, /EKODI_RELEASE_TASK_ID: \$\{\{ inputs\.release_task_id \|\| '' \}\}/);
   }
   assert.match(prod, /release_branch_ref: \$\{\{ inputs\.release_branch_ref \|\| '' \}\}/);
+});
+
+// ---------- test-key phase: operator-only test orders ----------
+async function testModeEnv() {
+  const env = await openEnvWithProducts();
+  env.TOSS_CLIENT_KEY = 'test_ck_abc';
+  return env;
+}
+function mockSupabase(email) {
+  const original = globalThis.fetch;
+  globalThis.fetch = async url => {
+    if (String(url).includes('/auth/v1/user')) {
+      return email ? new Response(JSON.stringify({ id: 'u1', email, email_confirmed_at: '2026-01-01' }), { status: 200 }) : new Response('{}', { status: 401 });
+    }
+    return new Response('[]', { status: 200 });
+  };
+  return { restore() { globalThis.fetch = original; } };
+}
+const testOrderBody = { campaignId: '2026-12', org: 'church', name: '테스트', phone: '010-1111-2222', privacyConsent: true, items: [{ productId: '2026-12:1719304225', quantity: 1 }] };
+
+test('with a test key the public checkout stays closed and anonymous orders are refused', async () => {
+  const env = await testModeEnv();
+  const cat = await (await handleRequest(new Request('https://ekodi.kr/qtin/api/catalog'), env, OPEN_NOW)).json();
+  assert.equal(cat.payment.ready, false);
+  assert.equal(cat.payment.testMode, true);
+  const sb = mockSupabase(null);
+  try {
+    const res = await handleRequest(post('/qtin/api/orders', testOrderBody), env, OPEN_NOW);
+    assert.equal(res.status, 503);
+  } finally { sb.restore(); }
+  assert.equal((await env.DB.prepare('SELECT COUNT(*) AS n FROM qtin_orders').first()).n, 0);
+});
+
+test('operators can place labelled test orders that never enter totals or the CSV', async () => {
+  const env = await testModeEnv();
+  const sb = mockSupabase('topmaster.joseph@gmail.com');
+  let order;
+  try {
+    const req = new Request('https://ekodi.kr/qtin/api/orders', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer tok' }, body: JSON.stringify(testOrderBody) });
+    const res = await handleRequest(req, env, OPEN_NOW);
+    assert.equal(res.status, 201);
+    order = await res.json();
+    assert.match(order.orderId, /^QTINTEST-/);
+    assert.equal(order.clientKey, 'test_ck_abc');
+  } finally { sb.restore(); }
+  await env.DB.prepare("UPDATE qtin_orders SET status='paid' WHERE id=?").bind(order.orderId).run();
+  const sb2 = mockSupabase('topmaster.joseph@gmail.com');
+  try {
+    const auth = { headers: { authorization: 'Bearer tok' } };
+    const summary = await (await handleRequest(new Request('https://ekodi.kr/qtin/api/admin/campaigns/2026-12', auth), env, OPEN_NOW)).json();
+    assert.ok(summary.orders.some(o => o.id === order.orderId), 'test order stays visible to admins');
+    assert.equal((summary.byProduct || []).length, 0);
+    assert.equal((summary.totals || []).length, 0);
+    const csv = await (await handleRequest(new Request('https://ekodi.kr/qtin/api/admin/campaigns/2026-12/export.csv', auth), env, OPEN_NOW)).text();
+    assert.ok(!csv.includes(order.orderId));
+  } finally { sb2.restore(); }
 });
