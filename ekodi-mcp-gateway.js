@@ -5,6 +5,7 @@ import { authorizeCapabilityInvocation, SOVEREIGN_CAPABILITY_FABRIC } from './so
 import { buildCoreAiGateway } from './core-ai-gateway.js';
 import { EKODI_MCP_EXTENSION_TOOLS, callAuthorizedEkodiMcpExtensionTool, callPublicEkodiMcpExtensionTool } from './ekodi-mcp-external-tools.js';
 import { publicEkodiMcpClientPolicy } from './mcp-client-policy.js';
+import { filterToolsForClient, isToolExposedToClient, resolveConnectClientClass } from './ekodi-connect.js';
 
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -215,6 +216,8 @@ export async function callEkodiMcpTool(name,args,request,env,dependencies={}){
   const resolved=await requireMcpIdentity(request,dependencies);
   if(resolved.error)return resolved.error;
   const {identity,auth}=resolved;
+  const clientClass=resolveConnectClientClass(auth?.claims?.client_id,env);
+  if(!isToolExposedToClient(name,clientClass))return textResult('이 EKODI 도구는 현재 연결된 AI에 공개되지 않습니다. 승인은 EKODI 관리자 화면에서 진행해 주세요.',{error:'TOOL_NOT_EXPOSED_FOR_CLIENT',clientClass,tool:name});
   const capabilityId=TOOL_CAPABILITIES[name];
   if(!capabilityId)return textResult('등록되지 않은 EKODI 도구입니다.',{error:'TOOL_NOT_FOUND'});
   const authorization=authorizeCapabilityInvocation({
@@ -301,7 +304,14 @@ async function handleRpc(message,request,env,dependencies={}){
     instructions:MCP_SERVER_INSTRUCTIONS,
   },{modern});
   if(method==='ping')return rpcResult(id,{}, {modern});
-  if(method==='tools/list')return rpcResult(id,{tools:EKODI_MCP_TOOLS,ttlMs:300000,cacheScope:'public'},{modern});
+  if(method==='tools/list'){
+    // Anonymous discovery keeps the full public catalog; an authenticated client sees only its class surface.
+    if(!bearerToken(request))return rpcResult(id,{tools:EKODI_MCP_TOOLS,ttlMs:300000,cacheScope:'public'},{modern});
+    const auth=await validateMcpBearer(request,dependencies);
+    if(!auth.ok)return rpcResult(id,{tools:EKODI_MCP_TOOLS,ttlMs:300000,cacheScope:'public'},{modern});
+    const clientClass=resolveConnectClientClass(auth.claims?.client_id,env);
+    return rpcResult(id,{tools:filterToolsForClient(EKODI_MCP_TOOLS,clientClass),ttlMs:300000,cacheScope:'private'},{modern});
+  }
   if(method==='tools/call'){
     const name=String(message?.params?.name||'');
     const result=await callEkodiMcpTool(name,message?.params?.arguments||{},request,env,dependencies);

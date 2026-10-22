@@ -1,5 +1,7 @@
+import { EKODI_CONNECT_CLIENT_CLASSES } from './ekodi-connect.js';
+
 export const EKODI_MCP_CLIENT_POLICY=Object.freeze({
-  version:'1.0.0',
+  version:'1.1.0',
   canonicalResource:'https://ekodi.kr/mcp',
   onboarding:Object.freeze({
     preRegisteredClientPreferred:true,
@@ -16,13 +18,7 @@ export const EKODI_MCP_CLIENT_POLICY=Object.freeze({
     tokenValidationRequired:true,
     orchestratorIsExecutionAuthority:true,
   }),
-  clientClasses:Object.freeze([
-    Object.freeze({id:'chatgpt',provider:'openai',kind:'interactive-assistant',status:'supported'}),
-    Object.freeze({id:'openai-responses-api',provider:'openai',kind:'api-runtime',status:'supported-with-registered-oauth-metadata'}),
-    Object.freeze({id:'openai-agents-api',provider:'openai',kind:'agent-runtime',status:'supported-with-registered-oauth-metadata'}),
-    Object.freeze({id:'openai-codex',provider:'openai',kind:'coding-agent',status:'supported-with-registered-oauth-metadata'}),
-    Object.freeze({id:'generic-mcp-oauth',provider:'provider-neutral',kind:'mcp-client',status:'supported-with-registered-oauth-metadata'}),
-  ]),
+  clientClasses:Object.freeze(EKODI_CONNECT_CLIENT_CLASSES.map(({id,provider,kind,status,toolProfile})=>Object.freeze({id,provider,kind,status,toolProfile}))),
 });
 
 export function publicEkodiMcpClientPolicy(){
