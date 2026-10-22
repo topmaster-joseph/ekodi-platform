@@ -33,7 +33,8 @@ test('production secret writes remain gated and values are not exposed by this c
 test('provider observer installs only missing targets and cannot self-render recursively', () => {
   assert.ok(source.includes('function renderMissingTargets()'));
   assert.ok(source.includes('if(!inventory)return'));
-  assert.ok(source.includes("aiOps&&!aiOps.querySelector('[data-ekodi-unified-provider]')"));
+  assert.ok(source.includes("aiOps&&aiView==='services'&&!aiOps.querySelector('[data-ekodi-unified-provider]')"));
+  assert.ok(source.includes("wrap.innerHTML=withAi?aiPanel():infraPanel()"));
   assert.doesNotMatch(source, /MutationObserver\(\(\)=>\{if\(inventory\)renderAll\(\)\}\)/);
 });
 
