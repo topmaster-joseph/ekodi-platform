@@ -29,6 +29,7 @@ async function freshEnv(extra = {}) {
   const DB = d1();
   DB.raw.exec(await readFile(new URL('../migrations/0201_qtin_group_orders.sql', import.meta.url), 'utf8'));
   DB.raw.exec(await readFile(new URL('../migrations/0202_qtin_buyer_accounts.sql', import.meta.url), 'utf8'));
+  DB.raw.exec(await readFile(new URL('../migrations/0203_qtin_product_intros.sql', import.meta.url), 'utf8'));
   return { DB, PUBLIC_BASE_URL: 'https://ekodi.kr/qtin', OPERATOR_EMAILS: 'topmaster.joseph@gmail.com', PAYMENTS_ENABLED: 'true', TOSS_CLIENT_KEY: 'live_ck_abc', TOSS_SECRET_KEY: 'live_sk_abc', QTM_SEED_ITEM_IDS: '1719304225', ...extra };
 }
 
@@ -41,7 +42,10 @@ function detailHtml(id, name, sale, list, prevId, nextId) {
   <input type="hidden" id="it_price" value="${sale}"></td></tr></table>
   ${prevId ? `<a href="https://www.qtm.or.kr/shop/${prevId}" id="siblings_prev">이전상품</a>` : ''}
   ${nextId ? `<a href="https://www.qtm.or.kr/shop/${nextId}" id="siblings_next">다음 상품</a>` : ''}
-  </div></body></html>`;
+  </div>
+  <h3>상품 상세설명</h3><div id="sit_inf_explan"><p><img src="https://www.qtm.or.kr/data/editor/2609/x.jpg"></p><p>목차</p><p>[${name} 목차]</p><p>2 목차 | 고린도전서 3:1-15:22<br>14 11월의 큐티</p><p>책 속으로</p><p>말씀으로 삶을 해석하고 나눕니다.&nbsp;(김정안)</p><script>evil()</script></div>
+  <h3>상품 정보 고시</h3><table id="sit_inf_open"><tr><th>도서명</th><td>${name}</td></tr></table>
+  </body></html>`;
 }
 const PAGES = {
   '1719304225': detailHtml('1719304225', '큐티인(QTIN)(큰글씨) 2026년 12월호', 4500, 5000, '1719305039', '1719304141'),
@@ -116,7 +120,7 @@ test('order draft uses server prices only and rejects invalid input', () => {
   assert.equal(ok.draft.orderName, '큐티인(QTIN)(작은글씨) 2026년 12월호 외 1종');
   assert.equal(ok.draft.phone, '010-1234-5678');
   for (const [patch, needle] of [
-    [{ org: 'other' }, '기관'], [{ name: 'a' }, '이름'], [{ phone: '02-123' }, '휴대전화'], [{ privacyConsent: false }, '동의'],
+    [{ org: 'unknown' }, '소속'], [{ org: 'other' }, '소속 교회·단체 이름'], [{ name: 'a' }, '이름'], [{ phone: '02-123' }, '휴대전화'], [{ privacyConsent: false }, '동의'],
     [{ items: [] }, '도서와 수량'], [{ items: [{ productId: '2026-12:3', quantity: 1 }] }, '신청할 수 없는'],
     [{ items: [{ productId: '2026-12:1', quantity: 51 }] }, '수량은'], [{ items: [{ productId: '2026-12:1', quantity: -1 }] }, '수량은'],
     [{ email: 'bad' }, '이메일'],
@@ -618,4 +622,73 @@ test('the order page script runs signed out: it prepares in-page Google sign-in 
   assert.equal(el('loginCta').hidden, false, 'signed-out visitors see the sign-in call to action');
   assert.equal(el('payCard').hidden, true, 'payment buttons stay hidden until sign-in');
   assert.equal(el('buyerForm').hidden, true);
+});
+
+// ---------- EKODI-QTIN-AFFILIATION-INTRO-005 ----------
+test('book introduction is parsed from the QTM detail page without images or scripts', async () => {
+  const { parseProductIntro } = await import('../qtin-order-core.js');
+  const intro = parseProductIntro(PAGES['1719304225']);
+  assert.equal(intro, '목차\n[큐티인(QTIN)(큰글씨) 2026년 12월호 목차]\n2 목차 | 고린도전서 3:1-15:22\n14 11월의 큐티\n책 속으로\n말씀으로 삶을 해석하고 나눕니다. (김정안)');
+  assert.ok(!intro.includes('evil') && !intro.includes('.jpg') && !intro.includes('도서명'));
+  // Heading fallback when the youngcart id is absent.
+  assert.equal(parseProductIntro('<h3>상품 상세설명</h3><div><p>소개 A</p><p>소개 B</p></div><h3>상품 정보 고시</h3>'), '소개 A\n소개 B');
+  assert.equal(parseProductIntro('<html>nothing</html>'), '');
+});
+
+test('cover click serves the stored book introduction; unknown items are refused', async () => {
+  const env = await openEnvWithProducts();
+  const stored = await env.DB.prepare('SELECT intro FROM qtin_product_intros WHERE qtm_item_id=?').bind('1719304225').first();
+  assert.ok(stored?.intro.startsWith('목차'), 'sync must keep the introduction');
+  const res = await handleRequest(new Request('https://ekodi.kr/qtin/api/products/1719304225/intro'), env, OPEN_NOW);
+  const data = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(data.name, '큐티인(QTIN)(큰글씨) 2026년 12월호');
+  assert.equal(data.productUrl, 'https://www.qtm.or.kr/shop/1719304225');
+  assert.match(data.intro, /책 속으로/);
+  assert.equal((await handleRequest(new Request('https://ekodi.kr/qtin/api/products/1800000000/intro'), env, OPEN_NOW)).status, 404, 'only listed books');
+  const page = await (await handleRequest(new Request('https://ekodi.kr/qtin'), env, OPEN_NOW)).text();
+  assert.ok(page.includes('data-intro="1719304225"') && page.includes('<dialog id="intro"'));
+});
+
+test('affiliation is chosen in the purchase form: 에코디교회, 에코디선교회 or 기타 (with a name)', async () => {
+  const env = await openEnvWithProducts();
+  const page = await (await handleRequest(new Request('https://ekodi.kr/qtin/mission'), env, OPEN_NOW)).text();
+  const form = page.slice(page.indexOf('id="buyerForm"'));
+  for (const value of ['church', 'mission', 'other']) assert.ok(form.includes(`name="org" value="${value}"`), value);
+  assert.ok(form.includes('value="mission" checked'), 'path preselects the affiliation');
+  assert.ok(!page.includes('class="org" data-org'), 'the old top-of-page organisation buttons are gone');
+  const base = { campaignId: '2026-12', org: 'other', name: '이웃', phone: '010-5555-6666', privacyConsent: true, items: [{ productId: '2026-12:1719304225', quantity: 1 }] };
+  const missing = await handleRequest(post('/qtin/api/orders', base), env, OPEN_NOW);
+  assert.equal(missing.status, 400);
+  assert.match((await missing.json()).error, /소속 교회·단체 이름/);
+  const ok = await handleRequest(post('/qtin/api/orders', { ...base, department: '무안제일교회' }), env, OPEN_NOW);
+  const order = await ok.json();
+  assert.equal(ok.status, 201, JSON.stringify(order));
+  const row = await env.DB.prepare('SELECT org, department FROM qtin_orders WHERE id=?').bind(order.orderId).first();
+  assert.deepEqual({ ...row }, { org: 'other', department: '무안제일교회' });
+  await env.DB.prepare("UPDATE qtin_orders SET status='paid' WHERE id=?").bind(order.orderId).run();
+  const sb = mockSupabase('topmaster.joseph@gmail.com');
+  try {
+    const summary = await (await handleRequest(new Request('https://ekodi.kr/qtin/api/admin/campaigns/2026-12', { headers: { authorization: 'Bearer tok' } }), env, OPEN_NOW)).json();
+    assert.ok(summary.byProduct.some(r => r.org === 'other' && Number(r.qty) === 1), 'admin order counts include 기타');
+    const csv = await (await handleRequest(new Request('https://ekodi.kr/qtin/api/admin/campaigns/2026-12/export.csv', { headers: { authorization: 'Bearer tok' } }), env, OPEN_NOW)).text();
+    assert.ok(csv.includes(',기타,이웃,'));
+  } finally { sb.restore(); }
+});
+
+test('real payment turns on by registering live keys as Worker secrets, overriding the test key in config', async () => {
+  const { readiness } = await import('../ekodipay-core.js');
+  const configured = { PAYMENTS_ENABLED: 'true', TOSS_CLIENT_KEY: 'test_ck_cfg' };
+  const testOnly = readiness({ ...configured, TOSS_SECRET_KEY: 'test_sk_x' });
+  assert.equal(testOnly.publicReady, false);
+  const live = readiness({ ...configured, TOSS_CLIENT_KEY__EKODI: 'live_ck_real', TOSS_SECRET_KEY__EKODI: 'live_sk_real' });
+  assert.equal(live.mode, 'live');
+  assert.equal(live.publicReady, true, 'any signed-in buyer can pay for real');
+  assert.equal(readiness({ ...configured, TOSS_SECRET_KEY__EKODI: 'live_sk_real' }).ready, false, 'a live secret with the test client key is a mode mismatch');
+  const env = await openEnvWithProducts({ TOSS_CLIENT_KEY: 'test_ck_cfg', TOSS_SECRET_KEY: '', TOSS_CLIENT_KEY__EKODI: 'live_ck_real', TOSS_SECRET_KEY__EKODI: 'live_sk_real' });
+  const res = await handleRequest(post('/qtin/api/orders', { campaignId: '2026-12', org: 'church', name: '홍길동', phone: '01012345678', privacyConsent: true, items: [{ productId: '2026-12:1719304225', quantity: 1 }] }), env, OPEN_NOW);
+  const order = await res.json();
+  assert.equal(res.status, 201, JSON.stringify(order));
+  assert.equal(order.clientKey, 'live_ck_real');
+  assert.match(order.orderId, /^QTIN-/, 'real orders are not test orders');
 });

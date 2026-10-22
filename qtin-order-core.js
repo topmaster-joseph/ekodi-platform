@@ -11,6 +11,7 @@ export const PENDING_TTL_MS = 30 * 60 * 1000;
 export const ORGS = Object.freeze({
   church: Object.freeze({ id: 'church', label: '에코디교회' }),
   mission: Object.freeze({ id: 'mission', label: '에코디선교회' }),
+  other: Object.freeze({ id: 'other', label: '기타' }),
 });
 export const FULFILLMENT = Object.freeze(['waiting', 'ordered', 'received', 'distributed']);
 export const QTM_ORIGIN = 'https://www.qtm.or.kr';
@@ -230,7 +231,7 @@ export function maskName(name) {
 export function buildOrderDraft(body, products) {
   const errors = [];
   const org = ORGS[clean(body?.org, 20)] ? clean(body.org, 20) : '';
-  if (!org) errors.push('신청 기관(에코디교회/에코디선교회)을 선택해 주세요.');
+  if (!org) errors.push('소속(에코디교회·에코디선교회·기타)을 선택해 주세요.');
   const applicantName = clean(body?.name, 40);
   if (applicantName.length < 2) errors.push('신청자 이름을 2자 이상 입력해 주세요.');
   const phone = normalizePhone(body?.phone);
@@ -239,6 +240,8 @@ export function buildOrderDraft(body, products) {
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) errors.push('이메일 형식이 올바르지 않습니다.');
   if (body?.privacyConsent !== true) errors.push('개인정보 수집·이용에 동의해 주세요.');
   const department = clean(body?.department, 80);
+  // 기타 소속은 어디에 속한 분인지 알아야 나눠 드릴 수 있으므로 소속 이름이 필수다.
+  if (org === 'other' && department.length < 2) errors.push('기타 소속을 선택하셨다면 소속 교회·단체 이름을 입력해 주세요.');
   const memo = clean(body?.memo, 300);
 
   const byId = new Map((products || []).filter(p => Number(p.active) === 1).map(p => [p.id, p]));
@@ -293,4 +296,40 @@ export function csvEscape(value) {
   const text = String(value ?? '');
   const safe = /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
   return /[",\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
+}
+
+/**
+ * Book introduction (목차·책 속으로·출판사 서평 …) from a QTM product detail page.
+ * Youngcart renders it in #sit_inf_explan; fall back to the text between the
+ * "상품 상세설명" and "상품 정보 고시" headings. Images and scripts are dropped.
+ */
+export function parseProductIntro(html) {
+  const text = String(html || '');
+  let block = '';
+  const start = text.search(/id=["']sit_inf_explan["']/i);
+  if (start !== -1) {
+    const open = text.indexOf('>', start) + 1;
+    const ends = [/id=["']sit_inf_open["']/i, /상품\s*정보\s*고시/, /id=["']sit_use["']/i].map(re => { const i = text.slice(open).search(re); return i === -1 ? Infinity : open + i; });
+    block = text.slice(open, Math.min(...ends, open + 200000));
+  } else {
+    const head = text.search(/상품\s*상세설명/);
+    if (head !== -1) {
+      const rest = text.slice(head);
+      const stop = rest.search(/상품\s*정보\s*고시/);
+      block = rest.slice(rest.indexOf('>') + 1, stop === -1 ? 200000 : stop);
+    }
+  }
+  if (!block) return '';
+  const lines = decodeEntities(block
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|h[1-6]|li|tr|table|blockquote)>/gi, '\n')
+    .replace(/<(td|th)[^>]*>/gi, ' ')
+    .replace(/<[^>]+>/g, ''))
+    .split('\n')
+    .map(line => line.replace(/[ \t ]+/g, ' ').trim())
+    .filter(line => line && !/^(상품\s*상세설명|상품\s*정보\s*고시)$/.test(line) && !/\.(jpe?g|png|gif|webp)$/i.test(line));
+  const out = [];
+  for (const line of lines) if (out[out.length - 1] !== line) out.push(line);
+  return out.join('\n').slice(0, 8000);
 }

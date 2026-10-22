@@ -8,7 +8,7 @@ import {
   ORGS, FULFILLMENT, QTM_ORIGIN, PENDING_TTL_MS,
   clean, escapeHtml, kstParts, campaignId, parseCampaignId, addMonth, defaultWindow, targetIssueFor,
   inPreparationWindow, campaignState, formatKst, formatWon, parseIssueTitle, titleMatchesIssue, isQtinFamily,
-  extractItemIds, parseProductDetail, seriesSortOrder, buildOrderDraft, newOrderId, isValidTossOrderId,
+  extractItemIds, parseProductDetail, parseProductIntro, seriesSortOrder, buildOrderDraft, newOrderId, isValidTossOrderId,
   assessConfirmation, maskName, csvEscape, absoluteQtmUrl,
 } from './qtin-order-core.js';
 import * as ekodipay from './ekodipay-core.js';
@@ -208,12 +208,15 @@ export async function syncCampaign(env, campaignRow, { fetchPage = fetchQtm, act
     const detail = parseProductDetail(page, id);
     if (!detail) continue;
     const family = isQtinFamily(detail.name);
-    if (family && titleMatchesIssue(detail.name, year, month)) found.set(id, detail);
+    if (family && titleMatchesIssue(detail.name, year, month)) found.set(id, { ...detail, intro: parseProductIntro(page) });
     // Follow prev/next links only from QTIN-family pages so the crawl stays on the periodical shelf.
     if (family) extractItemIds(page).sort((a, b) => Number(b) - Number(a)).forEach(next => enqueue(next));
   }
 
-  for (const detail of found.values()) await upsertProduct(env, campaignRow.id, detail);
+  for (const detail of found.values()) {
+    await upsertProduct(env, campaignRow.id, detail);
+    await saveIntro(env, detail.qtmItemId, detail.intro);
+  }
   // An auto-synced product whose QTM page no longer shows this issue (QTM reused the item for another month) is hidden.
   const autoRows = await env.DB.prepare("SELECT id, qtm_item_id FROM qtin_products WHERE campaign_id=? AND source='qtm-sync' AND active=1").bind(campaignRow.id).all();
   let hidden = 0;
@@ -345,8 +348,30 @@ export async function handleWebhook(env, body) {
 }
 
 // ---------- public API ----------
+async function saveIntro(env, qtmItemId, intro) {
+  if (!intro) return;
+  await env.DB.prepare(`INSERT INTO qtin_product_intros (qtm_item_id, intro, fetched_at) VALUES (?, ?, ?)
+    ON CONFLICT(qtm_item_id) DO UPDATE SET intro=excluded.intro, fetched_at=excluded.fetched_at`).bind(qtmItemId, intro, new Date().toISOString()).run();
+}
+const INTRO_MAX_AGE_MS = 30 * 86400000;
+/** Book introduction for a product we list; fetched from QTM once and kept (only for listed items). */
+async function productIntro(env, qtmItemId, { fetchPage = fetchQtm } = {}) {
+  const product = await env.DB.prepare('SELECT name, product_url FROM qtin_products WHERE qtm_item_id=? ORDER BY campaign_id DESC LIMIT 1').bind(qtmItemId).first();
+  if (!product) return null;
+  const row = await env.DB.prepare('SELECT intro, fetched_at FROM qtin_product_intros WHERE qtm_item_id=?').bind(qtmItemId).first();
+  let intro = row?.intro || '';
+  if (!intro || Date.now() - Date.parse(row.fetched_at) > INTRO_MAX_AGE_MS) {
+    try {
+      const fresh = parseProductIntro(await fetchPage(`${QTM_ORIGIN}/shop/${qtmItemId}`));
+      if (fresh) { intro = fresh; await saveIntro(env, qtmItemId, fresh); }
+    } catch (error) {
+      console.error('qtin intro fetch', error);
+    }
+  }
+  return { qtmItemId, name: product.name, productUrl: product.product_url, intro };
+}
 function publicProduct(p) {
-  return { id: p.id, name: p.name, series: p.series, salePrice: Number(p.sale_price), listPrice: Number(p.list_price || 0), imageUrl: p.image_url ? absoluteQtmUrl(p.image_url) : '', productUrl: p.product_url };
+  return { id: p.id, qtmItemId: p.qtm_item_id, name: p.name, series: p.series, salePrice: Number(p.sale_price), listPrice: Number(p.list_price || 0), imageUrl: p.image_url ? absoluteQtmUrl(p.image_url) : '', productUrl: p.product_url };
 }
 async function catalog(env, now = new Date()) {
   if (isStaging(env)) {
@@ -434,7 +459,7 @@ header.top{padding:40px 0 18px}.eyebrow{font-size:13px;letter-spacing:.14em;colo
 h1{font-size:clamp(28px,5vw,42px);letter-spacing:-.04em;margin:6px 0 10px;line-height:1.2}.lead{color:var(--muted);margin:0;max-width:640px}
 .status{display:inline-flex;gap:8px;align-items:center;margin-top:16px;padding:8px 14px;border-radius:999px;background:var(--soft);font-weight:700;font-size:14px}
 .status.closed{background:#f4ece4;color:#7a4a22}.dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}.status.closed .dot{background:var(--warm)}
-.orgs{display:flex;gap:10px;margin:22px 0 6px;flex-wrap:wrap}.org{flex:1 1 200px;border:1.5px solid var(--line);background:var(--card);border-radius:14px;padding:14px 16px;cursor:pointer;font:inherit;text-align:left}
+.orgs{display:flex;gap:10px;margin:22px 0 6px;flex-wrap:wrap}fieldset.orgs{border:0;padding:0;margin:0 0 16px}fieldset.orgs legend{font-weight:700;font-size:14px;margin-bottom:8px}.choice{flex:1 1 180px;display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--line);background:#fff;border-radius:14px;padding:12px 14px;cursor:pointer}.choice input{margin-top:4px;width:18px;height:18px;accent-color:var(--accent)}.choice span{display:flex;flex-direction:column}.choice small{color:var(--muted)}.choice:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 3px rgba(47,107,79,.12)}button.cover{border:0;padding:0;width:100%;cursor:zoom-in;position:relative;font:inherit}.peek{position:absolute;right:8px;bottom:8px;background:rgba(31,42,36,.78);color:#fff;font-size:12px;font-weight:700;padding:4px 9px;border-radius:999px}dialog#intro{border:0;border-radius:18px;padding:0;width:min(640px,calc(100% - 24px));max-height:86vh}dialog#intro::backdrop{background:rgba(20,28,24,.55)}.introbox{margin:0;padding:18px 20px 8px;display:flex;flex-direction:column;max-height:86vh}.introhead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.introhead h2{font-size:18px;margin:0;line-height:1.4}.x{border:0;background:var(--soft);border-radius:10px;width:36px;height:36px;font-size:22px;cursor:pointer;flex:none}.introbody{overflow:auto;margin-top:12px}.introbody img{float:right;width:120px;margin:0 0 10px 12px;border-radius:8px}.introtext{white-space:pre-line;font-size:14.5px;line-height:1.75}.org{flex:1 1 200px;border:1.5px solid var(--line);background:var(--card);border-radius:14px;padding:14px 16px;cursor:pointer;font:inherit;text-align:left}
 .org strong{display:block;font-size:17px}.org span{color:var(--muted);font-size:13px}.org[aria-pressed=true]{border-color:var(--accent);box-shadow:0 0 0 3px rgba(47,107,79,.12)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:18px;margin:22px 0}
 @media (max-width:560px){.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.info{padding:10px 10px 12px}.info h3{font-size:14px}.price{font-size:15px}.qty button{width:32px;height:34px}.qty input{width:100%;min-width:0;height:34px}.org{flex-basis:100%}.bar .wrap{gap:8px}.pay{width:100%}.pay .btn{flex:1}}
@@ -471,14 +496,14 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
     ? `신청 중 · ${escapeHtml(formatKst(campaign.closesAt))} 마감`
     : state === 'scheduled' ? `${escapeHtml(formatKst(campaign.opensAt))} 신청 시작` : `신청 마감 · 다음 신청은 매월 20일에 열립니다`;
   const cards = products.map(p => `<article class="book" data-id="${escapeHtml(p.id)}" data-price="${p.salePrice}">
-    <div class="cover">${p.imageUrl ? `<img src="${escapeHtml(p.imageUrl)}" alt="${escapeHtml(p.name)} 표지" loading="lazy" referrerpolicy="no-referrer">` : `<div class="ph">표지 준비 중</div>`}</div>
+    <button type="button" class="cover" data-intro="${escapeHtml(p.qtmItemId || '')}" data-name="${escapeHtml(p.name)}" data-img="${escapeHtml(p.imageUrl || '')}" aria-label="${escapeHtml(p.name)} 책 소개 보기">${p.imageUrl ? `<img src="${escapeHtml(p.imageUrl)}" alt="${escapeHtml(p.name)} 표지" loading="lazy" referrerpolicy="no-referrer">` : `<span class="ph">표지 준비 중</span>`}<span class="peek">책 소개</span></button>
     <div class="info"><h3>${escapeHtml(p.name)}</h3>
       <div class="price">${formatWon(p.salePrice)}${p.listPrice > p.salePrice ? `<s>${formatWon(p.listPrice)}</s>` : ''}</div>
       <div class="qty"><button type="button" data-step="-1" aria-label="${escapeHtml(p.name)} 수량 줄이기"${open ? '' : ' disabled'}>−</button>
       <input type="number" min="0" max="50" value="0" inputmode="numeric" aria-label="${escapeHtml(p.name)} 수량"${open ? '' : ' disabled'}>
       <button type="button" data-step="1" aria-label="${escapeHtml(p.name)} 수량 늘리기"${open ? '' : ' disabled'}>+</button></div>
     </div></article>`).join('');
-  const orgButtons = Object.values(ORGS).map(o => `<button type="button" class="org" data-org="${o.id}" aria-pressed="${org === o.id}"><strong>${o.label}</strong><span>${o.id === 'church' ? '교회 성도·부서 신청' : '선교회 회원·사역자 신청'}</span></button>`).join('');
+  const orgChoices = Object.values(ORGS).map(o => `<label class="choice"><input type="radio" name="org" value="${o.id}"${org === o.id ? ' checked' : ''}><span><strong>${o.label}</strong><small>${o.id === 'church' ? '교회 성도·부서' : o.id === 'mission' ? '선교회 회원·사역자' : '다른 교회·단체·개인'}</small></span></label>`).join('');
   const paymentNote = payment.ready ? '' : `<p class="note">온라인 결제 연결을 준비하고 있습니다. 결제가 열리면 바로 신청하실 수 있습니다.</p>${payment.testMode ? '<p class="note" id="testNote" hidden><strong>테스트 결제 모드(관리자 전용)</strong> · 실제 금액이 청구되지 않으며, 이 신청은 집계·발주에 포함되지 않습니다.</p>' : ''}`;
   const body = `<header class="top"><div class="wrap">
   <div class="eyebrow">EKODI · 큐티인 함께 구입</div>
@@ -488,7 +513,6 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
   ${data.dataMode === 'isolated-staging' ? '<div class="staging">ISOLATED STAGING · 샘플 데이터이며 신청·결제가 저장되지 않습니다.</div>' : ''}
 </div></header>
 <main class="wrap">
-  <div class="orgs" role="group" aria-label="신청 기관">${orgButtons}</div>
   ${products.length ? `<section class="grid" aria-label="${escapeHtml(issue)} 도서">${cards}</section>` : `<div class="empty">${open || state === 'scheduled' ? `${escapeHtml(issue)} 도서 정보를 QTM에서 확인하고 있습니다. 잠시 후 다시 열어 주세요.` : '이번 달 신청이 마감되었습니다. 다음달 20일에 새 큐티인 신청이 열립니다.'}</div>`}
   <section class="panel" id="account" aria-labelledby="accountTitle"><h2 id="accountTitle">구글 계정으로 신청하기</h2>
     <div id="signedOut">
@@ -499,11 +523,12 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
     <div id="signedIn" hidden><p class="acct"><span class="dot"></span><span id="accountEmail"></span> 로그인됨 <button type="button" class="link" id="logout">다른 계정으로 바꾸기</button></p></div>
   </section>
   <section class="panel" id="buyerForm" aria-labelledby="who" hidden><h2 id="who">연락처와 추가 정보</h2>
+    <fieldset class="orgs" aria-label="소속"><legend>소속</legend>${orgChoices}</fieldset>
     <div class="fields">
       <label class="f">이름<input id="name" autocomplete="name" maxlength="40" required></label>
       <label class="f">휴대전화<input id="phone" autocomplete="tel" inputmode="tel" placeholder="010-0000-0000" maxlength="13" required></label>
       <label class="f">연락받을 이메일(영수증 수신)<input id="email" type="email" autocomplete="email" maxlength="160"></label>
-      <label class="f">소속·부서(선택)<input id="department" maxlength="80" placeholder="예: 청년부, 3교구"></label>
+      <label class="f"><span id="departmentLabel">부서(선택)</span><input id="department" maxlength="80" placeholder="예: 청년부, 3교구"></label>
     </div>
     <label class="f" style="margin-top:14px">요청사항(선택)<textarea id="memo" rows="2" maxlength="300"></textarea></label>
     <label class="consent"><input type="checkbox" id="consent"><span>[필수] 신청·결제·수령 안내를 위해 구글 계정 이메일, 이름, 휴대전화, 이메일, 소속을 수집·이용하는 데 동의합니다. 보관기간: 신청일로부터 약 1년(이후 자동 비식별 처리). 결제·구매대행: EKODIBIZ.</span></label>
@@ -512,6 +537,11 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
   <section class="panel" id="myOrders" hidden><h2>내 신청 내역</h2><div id="myOrderList"></div></section>
   <p class="msg wrapmsg" id="msg" role="alert"></p>
 </main>
+<dialog id="intro" aria-labelledby="introTitle"><form method="dialog" class="introbox">
+  <div class="introhead"><h2 id="introTitle"></h2><button class="x" value="close" aria-label="닫기">×</button></div>
+  <div class="introbody"><img id="introImg" alt="" referrerpolicy="no-referrer" hidden><div id="introText" class="introtext">책 소개를 불러오고 있습니다.</div></div>
+  <p class="note"><a id="introLink" href="${QTM_ORIGIN}/" target="_blank" rel="noopener">QTM 스토어에서 자세히 보기</a></p>
+</form></dialog>
 <div class="bar"><div class="wrap"><div class="total">합계 <b id="total">0원</b> · <span id="count">0권</span></div>
   <div class="pay"><button class="btn" id="loginCta" type="button" disabled>구글 로그인하고 신청</button><button class="btn" id="payCard" type="button" hidden disabled>카드로 결제</button><button class="btn alt" id="payTransfer" type="button" hidden disabled>계좌이체</button></div></div></div>
 <footer class="wrap">책은 교회에서 일괄 수령 후 나누어 드립니다(개별 배송 없음). 표지 이미지·가격 출처: <a href="${QTM_ORIGIN}/" rel="noopener" target="_blank">QTM 큐티선교회</a> 온라인 스토어. 결제·구매대행: EKODIBIZ(사업자 213-13-01959, 통신판매업 2023-전남무안-0153). 문의 010-3501-8542</footer>
@@ -539,7 +569,7 @@ function orderClient() {
   const BUYER_KEY = 'ekodi-qtin-buyer-session';
   const CENTRAL_KEY = 'sb-renzehysxirjilvdxacv-auth-token';
   const SIGNED_OUT_KEY = 'ekodi-qtin-signed-out';
-  const ORG = { church: '에코디교회', mission: '에코디선교회' };
+  const ORG = { church: '에코디교회', mission: '에코디선교회', other: '기타' };
   const STATUS = { paid: '결제 완료', payment_pending: '결제 대기', cancelled: '취소' };
   const FUL = { waiting: '발주 대기', ordered: 'QTM 발주 완료', received: '교회 도착', distributed: '전달 완료' };
   const $ = id => document.getElementById(id);
@@ -648,7 +678,10 @@ function orderClient() {
   function chooseOrg(next) {
     if (!ORG[next]) return;
     org = next;
-    document.querySelectorAll('.org').forEach(o => o.setAttribute('aria-pressed', String(o.dataset.org === next)));
+    document.querySelectorAll('input[name="org"]').forEach(r => { r.checked = r.value === next; });
+    const other = next === 'other';
+    $('departmentLabel').textContent = other ? '소속 교회·단체 이름(필수)' : '부서(선택)';
+    $('department').placeholder = other ? '예: ○○교회 청년부, 개인' : '예: 청년부, 3교구';
   }
   async function onSignedIn(focusForm) {
     $('signedOut').hidden = true; $('signedIn').hidden = false; $('buyerForm').hidden = false;
@@ -687,13 +720,41 @@ function orderClient() {
     b.querySelectorAll('button[data-step]').forEach(btn => btn.addEventListener('click', () => { input.value = Math.max(0, Math.min(50, (Number(input.value) || 0) + Number(btn.dataset.step))); refresh(); }));
     input.addEventListener('input', refresh);
   });
-  document.querySelectorAll('.org').forEach(btn => btn.addEventListener('click', () => chooseOrg(btn.dataset.org)));
+  document.querySelectorAll('input[name="org"]').forEach(r => r.addEventListener('change', () => chooseOrg(r.value)));
+  if (org) chooseOrg(org);
+
+  // ---- book introduction (cover click) ----
+  const introCache = new Map();
+  document.querySelectorAll('button.cover').forEach(btn => btn.addEventListener('click', async () => {
+    const dialog = $('intro');
+    $('introTitle').textContent = btn.dataset.name || '';
+    const img = $('introImg');
+    img.hidden = !btn.dataset.img; if (btn.dataset.img) img.src = btn.dataset.img;
+    $('introText').textContent = '책 소개를 불러오고 있습니다.';
+    if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', '');
+    const id = btn.dataset.intro;
+    if (!id) { $('introText').textContent = '이 도서의 소개가 아직 준비되지 않았습니다.'; return; }
+    try {
+      if (!introCache.has(id)) {
+        const r = await bounded(`/qtin/api/products/${encodeURIComponent(id)}/intro`, { cache: 'no-store' });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error || '책 소개를 불러오지 못했습니다.');
+        introCache.set(id, d);
+      }
+      const d = introCache.get(id);
+      $('introText').textContent = d.intro || 'QTM 스토어에 등록된 책 소개가 아직 없습니다.';
+      if (d.productUrl) $('introLink').href = d.productUrl;
+    } catch (e) {
+      $('introText').textContent = e.message || '책 소개를 불러오지 못했습니다.';
+    }
+  }));
   $('loginCta').addEventListener('click', () => { $('account').scrollIntoView({ behavior: 'smooth', block: 'center' }); setStatus('아래 구글 버튼으로 로그인해 주세요.'); });
   $('logout').addEventListener('click', () => { forget(); session = null; ['name', 'phone', 'email', 'department'].forEach(id => { $(id).value = ''; }); showSignedOut(); });
   async function pay(method) {
     $('msg').textContent = '';
     if (!session) { $('account').scrollIntoView({ behavior: 'smooth', block: 'center' }); $('msg').textContent = '구글 로그인 후 결제하실 수 있습니다.'; return; }
-    if (!org) { $('msg').textContent = '신청 기관(에코디교회/에코디선교회)을 선택해 주세요.'; return; }
+    if (!org) { $('msg').textContent = '소속(에코디교회·에코디선교회·기타)을 선택해 주세요.'; $('buyerForm').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (org === 'other' && $('department').value.trim().length < 2) { $('msg').textContent = '기타 소속을 선택하셨다면 소속 교회·단체 이름을 입력해 주세요.'; $('department').focus(); return; }
     if (!$('consent').checked) { $('msg').textContent = '개인정보 수집·이용에 동의해 주세요.'; return; }
     busy = true; refresh();
     try {
@@ -874,9 +935,10 @@ async function handleAdminApi(request, env, url) {
       if (!itemId) return json({ error: 'QTM 상품 주소 또는 상품번호를 입력해 주세요.' }, 400, env);
       await ensureCampaign(env, parsed.year, parsed.month);
       let detail;
-      try { detail = parseProductDetail(await fetchQtm(`${QTM_ORIGIN}/shop/${itemId}`), itemId); } catch (error) { return json({ error: `QTM 페이지를 읽지 못했습니다: ${error.message}` }, 502, env); }
+      try { const page = await fetchQtm(`${QTM_ORIGIN}/shop/${itemId}`); detail = parseProductDetail(page, itemId); if (detail) detail.intro = parseProductIntro(page); } catch (error) { return json({ error: `QTM 페이지를 읽지 못했습니다: ${error.message}` }, 502, env); }
       if (!detail) return json({ error: '상품명·판매가격을 확인할 수 없는 페이지입니다.' }, 422, env);
       const productId = await upsertProduct(env, id, detail, 'manual');
+      await saveIntro(env, detail.qtmItemId, detail.intro);
       await env.DB.prepare("UPDATE qtin_products SET source='manual', active=1 WHERE id=?").bind(productId).run();
       await audit(env, productId, me.email, 'product.add_manual', detail.name);
       return json({ product: detail, issueMatches: titleMatchesIssue(detail.name, parsed.year, parsed.month) }, 201, env);
@@ -959,7 +1021,7 @@ function adminClient() {
   const SESSION_KEY = 'ekodi-qtin-admin-session';
   const AUTH_URL = 'https://ekodi.kr/auth/';
   const API = '/qtin/api/admin';
-  const ORG = { church: '에코디교회', mission: '에코디선교회' };
+  const ORG = { church: '에코디교회', mission: '에코디선교회', other: '기타' };
   const STATUS = { paid: '결제완료', payment_pending: '결제대기', cancelled: '취소' };
   const FUL = { waiting: '발주대기', ordered: 'QTM 발주', received: '교회 도착', distributed: '전달 완료' };
   const $ = id => document.getElementById(id);
@@ -1014,10 +1076,11 @@ function adminClient() {
   }
   function renderSummary() {
     const map = new Map();
-    for (const r of data.byProduct) { const e = map.get(r.product_id) || { name: r.product_name, church: 0, mission: 0, amount: 0 }; e[r.org] = Number(r.qty); e.amount += Number(r.amount); map.set(r.product_id, e); }
+    for (const r of data.byProduct) { const e = map.get(r.product_id) || { name: r.product_name, church: 0, mission: 0, other: 0, amount: 0 }; e[r.org] = (e[r.org] || 0) + Number(r.qty); e.amount += Number(r.amount); map.set(r.product_id, e); }
     const rows = [...map.values()];
     const sum = k => rows.reduce((s, r) => s + (r[k] || 0), 0);
-    $('summary').innerHTML = rows.length ? `<table class="r"><thead><tr><th>도서</th><th>교회</th><th>선교회</th><th>합계</th><th>금액</th></tr></thead><tbody>${rows.map(r => `<tr><td>${esc(r.name)}</td><td>${r.church}</td><td>${r.mission}</td><td><b>${r.church + r.mission}</b></td><td>${won(r.amount)}</td></tr>`).join('')}</tbody><tfoot><tr><th>합계</th><th>${sum('church')}</th><th>${sum('mission')}</th><th>${sum('church') + sum('mission')}</th><th>${won(sum('amount'))}</th></tr></tfoot></table>` : '<p class="note">아직 결제 완료된 신청이 없습니다.</p>';
+    const all = r => (r.church || 0) + (r.mission || 0) + (r.other || 0);
+    $('summary').innerHTML = rows.length ? `<table class="r"><thead><tr><th>도서</th><th>교회</th><th>선교회</th><th>기타</th><th>합계</th><th>금액</th></tr></thead><tbody>${rows.map(r => `<tr><td>${esc(r.name)}</td><td>${r.church}</td><td>${r.mission}</td><td>${r.other}</td><td><b>${all(r)}</b></td><td>${won(r.amount)}</td></tr>`).join('')}</tbody><tfoot><tr><th>합계</th><th>${sum('church')}</th><th>${sum('mission')}</th><th>${sum('other')}</th><th>${sum('church') + sum('mission') + sum('other')}</th><th>${won(sum('amount'))}</th></tr></tfoot></table>` : '<p class="note">아직 결제 완료된 신청이 없습니다.</p>';
   }
   function renderProducts() {
     $('products').innerHTML = data.products.length ? `<table class="r"><thead><tr><th>도서</th><th>판매가</th><th>출처</th><th>노출</th></tr></thead><tbody>${data.products.map(p => `<tr><td><a href="${esc(p.product_url)}" target="_blank" rel="noopener">${esc(p.name)}</a></td><td>${won(p.sale_price)}</td><td>${p.source === 'manual' ? '직접 추가' : 'QTM 자동'}</td><td><input type="checkbox" data-product="${esc(p.id)}" ${Number(p.active) ? 'checked' : ''} ${me.canWrite ? '' : 'disabled'}></td></tr>`).join('')}</tbody></table>` : '<p class="note">도서가 아직 없습니다. "QTM 도서 다시 불러오기"를 눌러 주세요.</p>';
@@ -1085,6 +1148,12 @@ export async function handleRequest(request, env, now = new Date()) {
     }, state === 'open' && !productsReady ? 503 : 200, env, method);
   }
   if (path === `${API}/catalog` && (method === 'GET' || method === 'HEAD')) return json(await catalog(env, now), 200, env, method);
+  const introMatch = /^\/qtin\/api\/products\/(\d{6,14})\/intro$/.exec(path);
+  if (introMatch && (method === 'GET' || method === 'HEAD')) {
+    if (isStaging(env)) return json({ qtmItemId: introMatch[1], name: '샘플 도서', productUrl: QTM_ORIGIN, intro: '스테이징 샘플 책 소개입니다.', dataMode: 'isolated-staging' }, 200, env, method);
+    const intro = await productIntro(env, introMatch[1]);
+    return intro ? json(intro, 200, env, method) : json({ error: '책 정보를 찾을 수 없습니다.' }, 404, env, method);
+  }
   if (path === `${API}/me` && (method === 'GET' || method === 'HEAD')) {
     if (isStaging(env)) return json({ error: 'staging_auth_required', dataMode: 'isolated-staging' }, 401, env, method);
     const buyer = await buyerIdentity(request);
