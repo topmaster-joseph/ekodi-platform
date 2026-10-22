@@ -359,7 +359,7 @@ test('presenter AI demo: institutional FactChat through the EKODI server route o
   const login=new URL(demo.adminLoginUrl(win()));
   assert.equal(login.origin+login.pathname,'https://ekodi.kr/auth/');assert.equal(login.searchParams.get('site'),'admin');
   assert.equal(login.searchParams.get('return_to'),'https://ekodi.kr/edu/study/live/present/?c=mnu-factchat-2026');
-  assert.equal(demo.adminLoginUrl(win('','edu.ekodi.kr')),'','only the canonical apex can receive the handoff');
+  assert.equal(demo.adminLoginUrl(win('','preview.example.org')),'','only the canonical apex host can receive the handoff');
   let seen;
   const ok=await demo.runInstitutionDemo(win(),'프롬프트',{fetchImpl:async(url,init)=>{seen={url,init};return {ok:true,status:200,json:async()=>({ok:true,text:'답',model:'gpt-x',usage:{inputUnits:3,outputUnits:5}})};}});
   assert.equal(ok.ok,true);assert.equal(ok.text,'답');
