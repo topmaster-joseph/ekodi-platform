@@ -83,10 +83,10 @@ test('slides cover every module, practice has QR join slides, notes exist for ev
 test('learner join link carries only non-personal pointers and round-trips',()=>{
   const e=1800000000000;
   const url=learnerUrl('https://ekodi.kr','/edu/study/live/',{c:COURSE.id,s:2,m:'ppt',lv:'advanced',e});
-  assert.equal(url,'https://ekodi.kr/edu/study/live/lab/?c=mnu-factchat-2026&s=2&m=ppt&lv=advanced&e=1800000000000');
+  assert.equal(url,'https://ekodi.kr/edu/study/live/lab/?c=mnu-factchat-2026&s=2&m=ppt&lv=advanced&e=1800000000000&open=1');
   assert.equal(learnerUrl('http://127.0.0.1:8765','/study/live/present/',{c:COURSE.id}),'http://127.0.0.1:8765/study/live/lab/?c=mnu-factchat-2026');
   assert.equal(liveBase('/edu/factchat/'),'/edu');
-  assert.deepEqual(parseLearnerParams(new URL(url).search,COURSE),{c:COURSE.id,s:2,m:'ppt',lv:'advanced',e});
+  assert.deepEqual(parseLearnerParams(new URL(url).search,COURSE),{open:true,c:COURSE.id,s:2,m:'ppt',lv:'advanced',e});
   const bad=parseLearnerParams('?s=9&m=<script>&lv=root&e=-5',COURSE);
   assert.deepEqual([bad.s,bad.m,bad.lv,bad.e],[1,'','',0]);
 });
@@ -322,4 +322,25 @@ test('learner lab v3: view-and-copy materials, copy→FactChat, sticky detailed 
   assert.match(html,/data-timer-add="-60000"/);assert.match(html,/data-timer-add="60000"/);
   assert.match(html,/<details class="lab-settings" id="labSettings">/);assert.match(html,/id="labRole"/);
   assert.doesNotMatch(html,/−/,'U+2212 is not in the Pretendard subset');
+});
+
+test('mood slides use real Unsplash photos with credit; session 2 opens after session 1 or via the instructor link',async()=>{
+  const {PHOTOS}=await import('../education/study/live/courses/photos.js');
+  for(const ph of Object.values(PHOTOS)){assert.match(ph.src,/^https:\/\/images\.unsplash\.com\/photo-[\w-]+\?/);assert.ok(ph.alt&&ph.credit&&/^https:\/\/unsplash\.com\/photos\//.test(ph.page));}
+  for(const n of [1,2]){
+    const slides=sessionSlides(COURSE,n);
+    const moods=slides.filter(x=>x.special==='mood');
+    assert.ok(moods.length>=2,'session '+n+' has mood breaks');
+    assert.ok(slides.filter(x=>x.special==='break').every(x=>x.photo),'break slides carry a photo');
+    assert.notEqual(slides[1].special,'mood','no mood slide in the opening sequence');
+  }
+  const {slideHtml}=await import('../education/study/live/engine/render.js');
+  const mood=sessionSlides(COURSE,1).find(x=>x.special==='mood');
+  const html=slideHtml(mood,{});
+  assert.match(html,/class="slide-photo" src="https:\/\/images\.unsplash\.com\//);assert.match(html,/Photo · [^<]+ \/ Unsplash/);
+  assert.match(learnerUrl('https://ekodi.kr','/edu/study/live/present/',{c:COURSE.id,s:2}),/[?&]open=1/);
+  assert.doesNotMatch(learnerUrl('https://ekodi.kr','/edu/study/live/present/',{c:COURSE.id,s:1}),/open=/);
+  assert.equal(parseLearnerParams('?s=2&open=1',COURSE).open,true);
+  const lab=await readFile(new URL('../education/study/live/lab.js',import.meta.url),'utf8');
+  assert.match(lab,/const sessionLocked=no=>no>1&&!rec\.unlocked&&!firstSessionDone\(\)/);
 });

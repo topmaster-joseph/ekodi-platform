@@ -118,3 +118,13 @@ test('open mode (instructor decision): studio, presenter and notes open without 
   for(const m of ['','locked','opened','false'])assert.equal((await get('/study/live/',{},env({EDU_INSTRUCTOR_GATE_MODE:m}))).status,401,'mode '+JSON.stringify(m));
   for(const f of ['wrangler.education.toml','wrangler.education.staging.toml'])assert.match(await readFile(new URL('../'+f,import.meta.url),'utf8'),/EDU_INSTRUCTOR_GATE_MODE = "(open|locked)"/);
 });
+
+test('a configured instructor PIN locks even when the mode var says open',async()=>{
+  const secret=await createVerifier('8542',{iterations:10000});
+  const e=env({EDU_INSTRUCTOR_GATE_MODE:'open',EDU_INSTRUCTOR_GATE_SECRET:secret});
+  assert.equal((await get('/study/live/',{},e)).status,401);
+  const ok=await get('/study/live/',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded',origin:'https://ekodi.kr'},body:new URLSearchParams({password:'8542'})},e);
+  assert.equal(ok.status,303);
+  const wrong=await get('/study/live/',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded',origin:'https://ekodi.kr'},body:new URLSearchParams({password:'1234'})},e);
+  assert.equal(wrong.status,401);
+});

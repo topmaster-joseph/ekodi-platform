@@ -4,6 +4,7 @@
 // All practice materials are fictional and labelled [가상 실습자료]. No real people, students or records.
 // Instructor-only facilitation notes live in ./mnu-factchat-2026.notes.js and are never loaded by the Learner Lab.
 import {INSTRUCTOR} from './instructor.js';
+import {PHOTOS} from './photos.js';
 
 const R=(...rows)=>Object.freeze(rows.map(([id,label])=>Object.freeze({id,label})));
 const T=Object.freeze([
@@ -289,6 +290,16 @@ export const COURSE=Object.freeze({
   syntheticOnly:true,
   tracks:T,
   levels:LEVELS,
+  // Mood / transition slides: a real photograph with one line to shift attention, placed before the module.
+  // Break modules use their photo as the slide background.
+  moods:Object.freeze({
+    's1-p1':{photo:PHOTOS.mist,k:'숨 고르기 · 30초',q:'오늘 가장 먼저 줄이고 싶은 업무 하나는?',sub:'떠오른 업무를 실습에서 바로 써 봅니다.'},
+    's1-break':{photo:PHOTOS.goldenSea},
+    's1-review':{photo:PHOTOS.river,k:'생각 전환',q:'처음 질문으로 — 그 안내문, 이제 몇 분이면 될까요?',sub:'빨라진 만큼, 확인하는 눈이 더 중요해집니다.'},
+    's2-p3':{photo:PHOTOS.forest,k:'숨 고르기 · 30초',q:'출처 없는 숫자는, 숫자가 아닙니다.',sub:'이제 내 업무 발표자료로 확인해 봅니다.'},
+    's2-break':{photo:PHOTOS.field},
+    's2-plan':{photo:PHOTOS.dawnSea,k:'30일 뒤',q:'한 달 뒤, 내 업무는 어떻게 달라져 있을까요?',sub:'오늘 만든 프롬프트 하나가 시작입니다.'}
+  }),
   sessions:[
     {no:1,title:'AI 기초와 행정 문서 업무혁신',minutes:120,modules:S1,
       outcomes:['HWP 안내문 1건 — 원문 대조 완료','회의 결정사항 표 + 공유 메시지']},
