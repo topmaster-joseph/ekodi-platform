@@ -73,13 +73,15 @@ function classifyProviderError(error) {
   return 'provider_error';
 }
 
-function normalizeProvider(provider, index, env) {
+function normalizeProvider(provider, index, env, allowLocalBrowser = false) {
   const kind = String(provider?.kind || '').trim();
   const state = ALLOWED_STATES.has(provider?.state) ? provider.state : 'unavailable';
   const id = String(provider?.id || `${kind || 'provider'}_${index + 1}`).trim();
   const quotaRemainingPercent = getQuotaRemainingPercent(provider);
   const quotaExhausted = provider?.quotaExhausted === true || quotaRemainingPercent !== null && quotaRemainingPercent <= 0;
-  const operaDisabled = kind === 'opera_browser' && !isOperaConnectorEnabled(env);
+  // A configured Opera connector is not consent to unattended local-browser
+  // execution. Each manual invocation must opt in explicitly.
+  const operaDisabled = kind === 'opera_browser' && (!isOperaConnectorEnabled(env) || !allowLocalBrowser);
   const explicitlyUnavailable = provider?.available === false;
   const available = !explicitlyUnavailable && !operaDisabled && !quotaExhausted;
   const unavailableReason = quotaExhausted
@@ -113,9 +115,9 @@ function freezeSkipped(skippedProviders) {
   return Object.freeze(skippedProviders.map(item => Object.freeze({ ...item })));
 }
 
-export function getCloudConnectionStatus(env = {}, providers = [], priority = DEFAULT_PRIORITY) {
+export function getCloudConnectionStatus(env = {}, providers = [], priority = DEFAULT_PRIORITY, options = {}) {
   const normalized = (Array.isArray(providers) ? providers : [])
-    .map((provider, index) => normalizeProvider(provider, index, env))
+    .map((provider, index) => normalizeProvider(provider, index, env, options.allowLocalBrowser === true))
     .sort((a, b) => rank(a.kind, priority) - rank(b.kind, priority));
   const usable = normalized.filter(provider => provider.available && ['connected', 'refreshable'].includes(provider.state));
   const authRequired = normalized.filter(provider => provider.available && provider.state === 'needs_user_auth');
@@ -131,7 +133,7 @@ export function getCloudConnectionStatus(env = {}, providers = [], priority = DE
     policyVersion: CLOUD_CONNECTION_POLICY.version,
     strategy: CLOUD_CONNECTION_POLICY.strategy,
     operaRequired: false,
-    operaEnabled: isOperaConnectorEnabled(env),
+    operaEnabled: isOperaConnectorEnabled(env) && options.allowLocalBrowser === true,
     usableProviders: usable.map(provider => provider.id),
     authRequiredProviders: authRequired.map(provider => provider.id),
     skippedProviders: freezeSkipped(skippedProviders),
@@ -160,10 +162,11 @@ export async function runCloudConnectedTask(options = {}) {
     providers = [],
     taskName = 'connected_operation',
     priority = DEFAULT_PRIORITY,
+    allowLocalBrowser = false,
   } = options;
 
   const normalized = (Array.isArray(providers) ? providers : [])
-    .map((provider, index) => normalizeProvider(provider, index, env))
+    .map((provider, index) => normalizeProvider(provider, index, env, allowLocalBrowser === true))
     .sort((a, b) => rank(a.kind, priority) - rank(b.kind, priority));
 
   const skippedProviders = normalized

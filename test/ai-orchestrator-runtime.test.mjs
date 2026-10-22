@@ -134,3 +134,68 @@ test('independent reviewer receives a meaningful request, review instruction and
   assert.match(seen[1].prompt, /Independently review/);
   assert.equal(seen[1].context.collaboration.primaryValue.text, 'primary-prompt-answer');
 });
+
+test('high complexity auto-selects cross-review even when task risk is normal', () => {
+  const plan = buildAiOrchestrationPlan({ taskName: 'complex-design', complexity: 'high' }, [
+    provider('designer', 1, 'design'), provider('reviewer', 2, 'review'),
+  ]);
+  assert.equal(plan.mode, 'review');
+  assert.equal(plan.complexity, 'high');
+  assert.equal(plan.reviewRequired, true);
+  assert.equal(plan.reviewerProvider, 'reviewer');
+});
+
+test('a primary-only request cannot bypass mandatory high-risk review', () => {
+  const plan = buildAiOrchestrationPlan({ risk: 'critical', collaboration: 'primary' }, [
+    provider('builder', 1, 'build'), provider('review', 2, 'review'),
+  ]);
+  assert.equal(plan.mode, 'review');
+  assert.equal(plan.reviewRequired, true);
+});
+
+test('missing independent reviewer never invokes a high-complexity provider', async () => {
+  let called = 0;
+  const orchestrator = buildEkodiAiOrchestrator({}, [{
+    ...provider('single', 1, 'unsafe'),
+    async invoke() { called++; return { text: 'not reviewed' }; },
+  }]);
+  const result = await orchestrator.run({
+    taskName: 'unreviewable', complexity: 'high',
+    fallback: ({ reason }) => ({ text: 'core-only', reason }),
+  });
+  assert.equal(called, 0);
+  assert.equal(result.mode, 'free_assist');
+  assert.equal(result.value.reason, 'independent_review_unavailable');
+  assert.equal(result.orchestration.reviewDegraded, true);
+  assert.equal(result.orchestration.reviewStatus, 'unavailable');
+});
+
+test('failed mandatory review does not return the unverified primary answer as success', async () => {
+  const orchestrator = buildEkodiAiOrchestrator({}, [
+    provider('builder', 1, 'unverified-primary'),
+    { ...provider('reviewer-fails', 2, 'unused'), async invoke() { throw new Error('REVIEWER_TEST_ERROR'); } },
+  ]);
+  const result = await orchestrator.run({
+    taskName: 'review-failure', complexity: 'critical',
+    fallback: ({ reason }) => ({ text: 'safe-assist-only', reason }),
+  });
+  assert.equal(result.mode, 'free_assist');
+  assert.equal(result.value.reason, 'independent_review_failed');
+  assert.equal(result.orchestration.reviewStatus, 'failed');
+  assert.equal(result.orchestration.reviewDegraded, true);
+});
+
+test('ordinary tasks remain single-provider without unnecessary review cost', async () => {
+  let reviewerCalls = 0;
+  const orchestrator = buildEkodiAiOrchestrator({}, [
+    provider('primary-simple', 1, 'normal'),
+    { ...provider('spare-reviewer', 2, 'spare'), async invoke() { reviewerCalls++; return { text: 'review' }; } },
+  ]);
+  const result = await orchestrator.run({
+    taskName: 'simple', complexity: 'low',
+    fallback: () => ({ text: 'fallback' }),
+  });
+  assert.equal(result.mode, 'ai');
+  assert.equal(result.orchestration.reviewStatus, 'not_required');
+  assert.equal(reviewerCalls, 0);
+});

@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-AUTO-DISPATCH-001",
+  "status": "enforced",
+  "owner": "EKODI Orchestrator",
+  "purpose": "Users state goals; EKODI selects the least-cost authorized execution route and reports only verified outcomes.",
+  "selection": {
+    "mode": "automatic",
+    "userProviderSelectionRequired": false,
+    "coreFirst": true,
+    "registeredCapabilitiesOnly": true,
+    "providerIndependenceRequired": true
+  },
+  "cost": {
+    "automaticPaidBudgetKrw": 0,
+    "paidApiAutoEscalation": false,
+    "explicitDelegatedBudgetRequired": true,
+    "coreFallbackRequired": true
+  },
+  "review": {
+    "mode": "high-risk-or-high-complexity",
+    "riskLevels": [
+      "high",
+      "critical"
+    ],
+    "complexityLevels": [
+      "high",
+      "critical"
+    ],
+    "independentProviderRequired": true,
+    "unavailableAction": "free_assist_without_unverified_ai_claim"
+  },
+  "browser": {
+    "strategy": "cloud_first_provider_independent",
+    "preferred": [
+      "official_api",
+      "connected_plugin",
+      "oauth_cloud",
+      "workload_identity",
+      "cloud_browser"
+    ],
+    "ekodiHeadlessOrCloudFirst": true,
+    "automaticLocalOpera": false,
+    "localBrowserRequiresExplicitUserAction": true,
+    "noConsumerWebAutomation": true
+  },
+  "safety": {
+    "preserveExistingApprovalSecurityDeploymentGates": true,
+    "privilegeEscalationRequiresHumanApproval": true,
+    "productionVerificationRequired": true,
+    "doNotClaimCompletionFromModelOutput": true
+  }
+}

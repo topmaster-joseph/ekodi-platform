@@ -80,6 +80,7 @@ test('login, consent, MFA or reauthentication is never bypassed', async () => {
 
 test('Opera can be an explicit last-resort provider without becoming a dependency', async () => {
   const result = await runCloudConnectedTask({
+    allowLocalBrowser: true,
     env: { OPERA_BROWSER_CONNECTOR_ENABLED: 'true' },
     providers: [
       { id: 'cloud', kind: 'cloud_browser', state: 'unavailable', invoke: async () => 'cloud' },
@@ -193,4 +194,20 @@ test('HTTP 429 is recorded as rate limited and does not become a user-auth reque
   assert.equal(result.ok, true);
   assert.equal(result.requiresUserAction, false);
   assert.equal(result.skippedProviders[0].reason, 'rate_limited');
+});
+
+test('Opera is never an unattended fallback even when its connector is enabled', async () => {
+  let invoked = 0;
+  const result = await runCloudConnectedTask({
+    env: { OPERA_BROWSER_CONNECTOR_ENABLED: 'true' },
+    providers: [{ id: 'opera', kind: 'opera_browser', state: 'connected',
+      invoke: async () => { invoked++; return 'should-not-run'; } }],
+  });
+  assert.equal(result.ok, false);
+  assert.equal(invoked, 0);
+  assert.equal(result.skippedProviders[0].reason, 'disabled');
+  const status = getCloudConnectionStatus({ OPERA_BROWSER_CONNECTOR_ENABLED: 'true' }, [
+    { id: 'opera', kind: 'opera_browser', state: 'connected', invoke: async () => 'x' },
+  ]);
+  assert.equal(status.operaEnabled, false);
 });
