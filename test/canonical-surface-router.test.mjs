@@ -264,17 +264,20 @@ test('Admin canonical route registry mirrors the eight management areas and migr
   assert.equal(routes.pathFor('communication'),'/admin/sites/communication');
   assert.equal(routes.pathFor('insurance'),'/admin/services/insurance');
   assert.equal(routes.pathFor('community'),'/admin/sites/community');
-  assert.equal(routes.pathFor('ai-membership'),'/admin/sites/ai-membership');
-  assert.equal(routes.pathFor('books'),'/admin/sites/books');
-  assert.equal(routes.pathFor('devotional'),'/admin/sites/devotional');
+  assert.equal(routes.pathFor('ai-membership'),'/admin/ai/ai-membership');
+  assert.equal(routes.pathFor('books'),'/admin/services/books');
+  assert.equal(routes.pathFor('devotional'),'/admin/services/devotional');
+  assert.equal(routes.pathFor('work'),'/work/admin');
+  // Stage-1 v3 addresses of the dissolved site-tools menu still resolve.
+  for (const [stage1, section] of [['/admin/sites/books','books'],['/admin/sites/devotional','devotional'],['/admin/sites/social','social'],['/admin/sites/ai-membership','ai-membership']]) assert.equal(routes.sectionFromPath(stage1), section, stage1);
   assert.equal(routes.pathFor('workspace'),'/admin/sites/workspace');
   assert.equal(routes.pathFor('clients'),'/admin/sites/clients');
   assert.equal(routes.pathFor('aiops'),'/admin/ai/aiops');
   // v2 (eleven-area) canonical addresses stay accepted and resolve to the v3 path.
   for (const [legacy, section, v3] of [
     ['/admin/releases/aiops','aiops','/admin/ai/aiops'],
-    ['/admin/content/books','books','/admin/sites/books'],
-    ['/admin/people/ai-membership','ai-membership','/admin/sites/ai-membership'],
+    ['/admin/content/books','books','/admin/services/books'],
+    ['/admin/people/ai-membership','ai-membership','/admin/ai/ai-membership'],
     ['/admin/devices-agent/devices','devices','/admin/ops/devices'],
     ['/admin/settings-records/storage','storage','/admin/settings/storage'],
     ['/admin/security-audit/security','security','/admin/accounts/security'],

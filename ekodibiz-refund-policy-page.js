@@ -12,7 +12,7 @@ const OPERATOR = Object.freeze({
   businessRegistrationNumber: '213-13-01959',
   commerceRegistrationNumber: '2023-전남무안-0153',
   address: '전남광주통합특별시 무안군 청계면 백련동1길 17-4, 건물 1층',
-  email: 'ekodibiz@gmail.com',
+  email: 'joseph@ekodibiz.kr',
   phone: '010-3501-8542',
 });
 
@@ -44,10 +44,34 @@ export function ekodiBizRefundPolicyHtml() {
     .operator{display:grid;grid-template-columns:150px 1fr;gap:7px 14px;margin-top:.8rem;font-size:.94rem}.operator dt{font-weight:700;color:var(--text)}.operator dd{margin:0;color:var(--muted)}
     .links{display:flex;flex-wrap:wrap;gap:12px;margin-top:2rem;padding-top:1.25rem;border-top:1px solid var(--line)}
     @media(max-width:640px){.operator{grid-template-columns:1fr;gap:2px}.operator dd{margin-bottom:8px}}
+    /* EKODIBIZ service-local chrome: mirrors the public home without loading browser scripts. */
+    body{min-height:100vh;display:flex;flex-direction:column}
+    .topbar{min-height:68px;width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px max(22px,calc((100vw - 1160px)/2));border-bottom:1px solid var(--line);background:var(--card)}
+    .topbar .brand{font-size:15px;font-weight:950;letter-spacing:.08em;white-space:nowrap}
+    .topbar nav{display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+    .topbar nav a{display:inline-flex;min-height:44px;align-items:center;padding:9px 11px;border-radius:9px;font-size:13px;color:var(--text);text-decoration:none}
+    .topbar nav a:hover,.topbar nav a:focus-visible,.topbar nav a[aria-current="page"]{background:var(--soft);color:var(--accent)}
+    main{flex:1;width:100%}.back-link{display:inline-flex;align-items:center;min-height:44px;font-size:13px;font-weight:750;text-decoration:none}
+    .footer{width:min(1120px,calc(100% - 40px));margin:0 auto 28px;padding:28px 0;border-top:1px solid var(--line);display:grid;gap:10px;justify-items:center;text-align:center;color:var(--muted)}
+    .footer strong{display:block;color:var(--text);font-size:13px;letter-spacing:.08em}.footer span{font-size:11px}
+    .footer p{font-size:12px;line-height:1.75;margin:0}.footer nav{display:flex;gap:8px 12px;flex-wrap:wrap;justify-content:center}
+    .footer nav a{display:inline-flex;align-items:center;min-height:44px;font-size:12px;text-decoration:none}
+    .footer nav a[aria-current="page"]{font-weight:800;text-decoration:underline}
+    :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+    @media(max-width:640px){.topbar{padding:8px 12px;align-items:flex-start;flex-wrap:wrap}.topbar nav{width:100%}.topbar nav a{padding:8px 10px}.footer{width:calc(100% - 28px)}main{padding-top:20px}}
   </style>
 </head>
-<body><main><article data-ekodibiz-refund-policy="${EKODIBIZ_REFUND_POLICY_VERSION}">
-  <a class="brand" href="/ekodibiz">EKODIBIZ</a>
+<body>
+<header class="topbar" data-site-shell="header" role="banner">
+  <a class="brand" href="/ekodibiz" aria-label="에코디비즈 홈">EKODIBIZ</a>
+  <nav aria-label="에코디비즈 주요 메뉴">
+    <a href="/ekodibiz/#business">사업분야</a>
+    <a href="/terms">이용약관</a>
+    <a href="/ekodibiz/refund" aria-current="page">환불정책</a>
+  </nav>
+</header>
+<main><article data-ekodibiz-refund-policy="${EKODIBIZ_REFUND_POLICY_VERSION}">
+  <a class="back-link" href="/ekodibiz">← 에코디비즈 홈</a>
   <h1>환불정책</h1>
   <p class="meta">시행일: 2026년 10월 22일 · 에코디비즈 환불정책 ${EKODIBIZ_REFUND_POLICY_VERSION}</p>
   <p class="lead">에코디비즈(이하 “회사”)는 「전자상거래 등에서의 소비자보호에 관한 법률」(이하 “전자상거래법”) 등 관계 법령에 따라 고객이 안심하고 거래할 수 있도록 청약철회와 환불의 기준·절차를 다음과 같이 정합니다.</p>
@@ -135,7 +159,18 @@ export function ekodiBizRefundPolicyHtml() {
   </dl>
 
   <div class="links"><a href="/ekodibiz">에코디비즈 홈</a><a href="/terms">이용약관</a><a href="/privacy">개인정보처리방침</a><a href="mailto:${o.email}">환불 문의</a></div>
-</article></main></body>
+</article></main>
+<footer class="footer" data-site-shell="footer" aria-label="에코디비즈 사업자 정보 및 정책">
+  <div><strong>EKODIBIZ</strong><span>Turn value into a business.</span></div>
+  <p>${o.name} · 대표 ${o.representative} · 사업자등록번호 ${o.businessRegistrationNumber}<br>${o.address} · <a href="mailto:${o.email}">${o.email}</a></p>
+  <nav aria-label="에코디비즈 푸터 메뉴">
+    <a href="/privacy">개인정보처리방침</a>
+    <a href="/terms">이용약관</a>
+    <a href="/ekodibiz/refund" aria-current="page">환불정책</a>
+    <a href="/">EKODI</a>
+  </nav>
+</footer>
+</body>
 </html>`;
 }
 

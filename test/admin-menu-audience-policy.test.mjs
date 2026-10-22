@@ -61,9 +61,11 @@ test('tenant exposure stays behind the human gate and site admins never inherit 
   assert.ok(fail.some(line => line.includes('never inherit platform authority')));
 });
 
-test('real AI operations center is classified platform-only and content menus mirror site admin', () => {
+test('platform-global engines stay platform-only while site-owned menus mirror site admin', () => {
   const entries = policy.classification.entries;
   assert.equal(entries.aiops.audience, 'platform-super-admin');
-  assert.equal(entries.books.siteMenu, 'content.posts');
+  for (const id of ['books', 'devotional', 'social', 'ai-membership']) assert.equal(entries[id].audience, 'platform-super-admin', id);
+  assert.equal(entries.community.siteMenu, 'content.events');
+  assert.equal(entries.communication.siteMenu, 'content.messages');
   assert.equal(entries['site-chrome'].siteMenu, 'settings.chrome');
 });

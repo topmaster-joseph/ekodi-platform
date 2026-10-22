@@ -98,8 +98,9 @@ test('global navigation remains synchronized to the active panel and opens an ax
 
 
 test('handoff-backed default groups stay open without immediate navigation', () => {
-  // v3: Jobs is a transitional site tool that hands off to its own service admin.
-  assert.match(registry, /id: 'site-tools'[^\n]*'work'\][^\n]*transitional: 'site-admin'/);
+  // v3 stage 2: Jobs is a platform content service that hands off to its own service admin.
+  assert.match(registry, /id: 'platform-content', group: 'services'[^\n]*'work'\]/);
+  assert.doesNotMatch(registry, /id: 'site-tools'/);
   assert.match(registry, /id: 'work'.*href: 'https:\/\/ekodi\.kr\/work\/admin'.*adminHandoff: true/s);
   const globalClick = sidebar.slice(sidebar.indexOf("const group = global.dataset.adminGlobalGroup || ''"), sidebar.indexOf("closeDrawer();", sidebar.indexOf("const group = global.dataset.adminGlobalGroup || ''")) + 14);
   assert.match(globalClick, /nav\.dataset\.adminFocusedGroup = group/);

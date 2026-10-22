@@ -20,6 +20,8 @@ crons = ["*/10 * * * *"]
 [vars]
 ENVIRONMENT = "production"
 CLOUDFLARE_ACCOUNT_ID = "6986fd633f4e33bf804c921697b2d797"
+# EKODI Connect: public OAuth client id -> client class (ekodi-connect.js). Unlisted clients get least privilege.
+EKODI_MCP_CLIENT_CLASS_MAP = "{\"aead6d37-3fd1-41d0-9ca2-f1b1b00b8911\":\"chatgpt\"}"
 INSURANCE_ADMIN_ENABLED = "false"
 INSURANCE_API_BASE = "https://insurance-api.ekodi.kr"
 ADMIN_EMAIL = "topmaster.joseph@gmail.com"

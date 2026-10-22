@@ -55,8 +55,8 @@ test('admin shell is separate from user shell and removes the left brand header'
   for (const label of ['홈', '사이트 원장', 'AI 운영', '서비스·엔진', '재무', '운영·안정성', '설정·연동', '계정·보안']) assert.equal(adminRegistry.includes(`ko: '${label}'`),true);
   assert.doesNotMatch(adminRegistry,/사이트구조|핵심서비스|공통서비스|전문서비스|고객사이트\(관리자\)/);
   assert.equal(adminRegistry.includes("{ id: 'community', group: 'sites'"),true);
-  assert.equal(adminRegistry.includes("{ id: 'books', group: 'sites'"),true);
-  assert.equal(adminRegistry.includes("{ id: 'devotional', group: 'sites'"),true);
+  assert.equal(adminRegistry.includes("{ id: 'books', group: 'services'"),true);
+  assert.equal(adminRegistry.includes("{ id: 'devotional', group: 'services'"),true);
   assert.equal(adminSidebar.includes("role-projected-sidebar-v4"),true);
   assert.match(adminSidebar,/nav\[data-ekodi-admin-nav-mode="primary"\] > \.nav\{display:none!important\}/);
   assert.match(adminSidebar,/const closeDrawer = \(\) =>/);
