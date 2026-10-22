@@ -52,11 +52,11 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.equal(adminRuntime.includes('function installLocaleControl()'),false);
   assert.equal(adminRuntime.includes('<option value="ko">한국어</option><option value="en">English</option>'),false);
 
-  for (const label of ['전체 대시보드', '사이트·브랜드', '회원·관리자·권한', '서비스·AI', '콘텐츠·행사·소통', '결제·회계·비용', '상태·성능·점검', '배포·장애', '기기·에이전트', '설정·연동·저장소', '보안·감사']) assert.equal(adminRegistry.includes(`ko: '${label}'`),true);
+  for (const label of ['홈', '사이트 원장', 'AI 운영', '서비스·엔진', '재무', '운영·안정성', '설정·연동', '계정·보안']) assert.equal(adminRegistry.includes(`ko: '${label}'`),true);
   assert.doesNotMatch(adminRegistry,/사이트구조|핵심서비스|공통서비스|전문서비스|고객사이트\(관리자\)/);
-  assert.equal(adminRegistry.includes("{ id: 'community', group: 'content'"),true);
-  assert.equal(adminRegistry.includes("{ id: 'books', group: 'content'"),true);
-  assert.equal(adminRegistry.includes("{ id: 'devotional', group: 'content'"),true);
+  assert.equal(adminRegistry.includes("{ id: 'community', group: 'sites'"),true);
+  assert.equal(adminRegistry.includes("{ id: 'books', group: 'sites'"),true);
+  assert.equal(adminRegistry.includes("{ id: 'devotional', group: 'sites'"),true);
   assert.equal(adminSidebar.includes("role-projected-sidebar-v4"),true);
   assert.match(adminSidebar,/nav\[data-ekodi-admin-nav-mode="primary"\] > \.nav\{display:none!important\}/);
   assert.match(adminSidebar,/const closeDrawer = \(\) =>/);
@@ -104,6 +104,6 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.match(principles,/Admin Shell UI/);
   assert.match(principles,/역할별 2단 구조/);
   assert.match(principles,/역할별 좌측 메뉴 고정·최고관리자 필요 시 독립스크롤/);
-  for (const label of ['전체 대시보드', '사이트·브랜드', '회원·관리자·권한', '서비스·AI', '콘텐츠·행사·소통', '결제·회계·비용', '상태·성능·점검', '배포·장애', '기기·에이전트', '설정·연동·저장소', '보안·감사']) assert.ok(principles.includes(label));
+  for (const label of ['홈', '사이트 원장', 'AI 운영', '서비스·엔진', '재무', '운영·안정성', '설정·연동', '계정·보안']) assert.ok(principles.includes(label));
   assert.match(principles,/가독성·직관성 공통 기준/);
 });

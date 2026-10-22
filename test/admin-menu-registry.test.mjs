@@ -4,7 +4,11 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import {
   ADMIN_MENU_GROUPS,
+  ADMIN_MENUS,
   ADMIN_MENU_REGISTRY,
+  adminMenusForGroup,
+  adminMenuTabs,
+  getAdminMenuForSection,
   adminMenuOrder,
   adminMenuCategoryOrder,
   getAdminMenuCategory,
@@ -15,16 +19,38 @@ import {
   normalizeAdminLocale,
 } from '../admin-menu-registry.js';
 
-const WORK_AREAS = ['summary', 'sites', 'people', 'services', 'content', 'finance', 'status', 'releases', 'devices-agent', 'settings-records', 'security-audit'];
+const WORK_AREAS = ['home', 'sites', 'ai', 'services', 'finance', 'ops', 'settings', 'accounts'];
 
-test('admin navigation has eleven nonoverlapping EKODI areas', () => {
+test('admin navigation has eight nonoverlapping platform-only EKODI areas', () => {
   assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.id), WORK_AREAS);
-  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.labels.en), ['Platform Dashboard', 'Sites & Brands', 'Members, Admins & Access', 'Services & AI', 'Content, Events & Communication', 'Payments, Accounting & Costs', 'Health, Performance & Checks', 'Releases & Incidents', 'Devices & Agents', 'Settings, Integrations & Storage', 'Security & Audit']);
+  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.labels.en), ['Home', 'Site Registry', 'AI Operations', 'Services & Engines', 'Finance', 'Operations & Reliability', 'Settings & Integrations', 'Accounts & Security']);
   for (const group of ADMIN_MENU_GROUPS) {
     assert.ok(group.defaultSection, `${group.id} missing defaultSection`);
     assert.equal(getAdminMenuGroupForSection(group.defaultSection), group.id);
     assert.equal(getAdminMenuGroupDefault(group.id), group.defaultSection);
+    assert.ok(adminMenusForGroup(group.id).length >= 1, `${group.id} has no menu`);
   }
+});
+
+test('every visible section is a detail route of exactly one v3 menu in its own group', () => {
+  const visible = ADMIN_MENU_REGISTRY.filter(item => !item.internal).map(item => item.id);
+  const seen = new Map();
+  for (const menu of ADMIN_MENUS) {
+    assert.ok(WORK_AREAS.includes(menu.group), `${menu.id} outside the eight areas`);
+    assert.ok(menu.labels?.ko && menu.labels?.en, `${menu.id} missing labels`);
+    for (const section of menu.sections) {
+      assert.equal(seen.has(section), false, `${section} belongs to two menus`);
+      seen.set(section, menu.id);
+      assert.equal(getAdminMenuGroupForSection(section), menu.group, `${section} group differs from its menu`);
+    }
+  }
+  for (const id of visible) assert.ok(seen.has(id), `${id} is visible but in no menu`);
+  for (const id of seen.keys()) assert.ok(visible.includes(id), `${id} is in a menu but hidden`);
+  assert.deepEqual(adminMenuOrder(), ADMIN_MENUS.flatMap(menu => menu.sections));
+  assert.equal(getAdminMenuForSection('aiops')?.id, 'control');
+  assert.deepEqual(adminMenuTabs('site-health'), ['health', 'site-health']);
+  assert.deepEqual(adminMenuTabs('pos-agent'), ['devices', 'pos-agent']);
+  assert.equal(getAdminMenuForSection('books')?.transitional, 'site-admin');
 });
 
 test('every public admin subservice belongs to one canonical area', () => {
@@ -46,17 +72,17 @@ test('every public admin subservice belongs to one canonical area', () => {
   assert.equal(getAdminMenuGroupForSection('marketing-ai'), 'services');
   assert.equal(getAdminMenuGroupForSection('finance'), 'finance');
   assert.equal(getAdminMenuGroupForSection('workspace'), 'sites');
-  assert.equal(getAdminMenuGroupForSection('community'), 'content');
-  assert.equal(getAdminMenuGroupForSection('ai-membership'), 'people');
-  assert.equal(getAdminMenuGroupForSection('books'), 'content');
-  assert.equal(getAdminMenuGroupForSection('devotional'), 'content');
-  assert.equal(getAdminMenuGroupForSection('storage'), 'settings-records');
+  assert.equal(getAdminMenuGroupForSection('community'), 'sites');
+  assert.equal(getAdminMenuGroupForSection('ai-membership'), 'sites');
+  assert.equal(getAdminMenuGroupForSection('books'), 'sites');
+  assert.equal(getAdminMenuGroupForSection('devotional'), 'sites');
+  assert.equal(getAdminMenuGroupForSection('storage'), 'settings');
   assert.equal(getAdminMenuLabel('devices', 'ko'), '실행 인프라');
   assert.equal(getAdminMenuLabel('devices', 'en'), 'Execution Infrastructure');
-  assert.equal(getAdminMenuGroupForSection('devices'), 'devices-agent');
+  assert.equal(getAdminMenuGroupForSection('devices'), 'ops');
   assert.equal(getAdminMenuLabel('pos-agent', 'ko'), 'POS Agent 설치·관리');
   assert.equal(getAdminMenuLabel('pos-agent', 'en'), 'POS Agent Install & Management');
-  assert.equal(getAdminMenuGroupForSection('pos-agent'), 'devices-agent');
+  assert.equal(getAdminMenuGroupForSection('pos-agent'), 'ops');
   assert.equal(getAdminMenuCategory('pos-agent'), 'devices');
   const posAgent = ADMIN_MENU_REGISTRY.find(item => item.id === 'pos-agent');
   assert.equal(posAgent?.href, undefined);

@@ -29,8 +29,8 @@ test('postbuild keeps system map in lazy admin bundle and publishes canonical re
   assert.match(postbuild, /ecosystem-services\.json/);
 });
 
-test('system structure is a visible routed Status contextual tab', () => {
-  assert.match(menuRegistry, /id: 'architecture'[\s\S]*?group: 'status'[\s\S]*?ko: '시스템 구조'/);
+test('system structure is a visible routed Operations detail route', () => {
+  assert.match(menuRegistry, /id: 'architecture'[\s\S]*?group: 'ops'[\s\S]*?ko: '시스템 구조'/);
   assert.doesNotMatch(menuRegistry, /id: 'architecture'[^\n]*internal: true/);
   assert.ok(routePair(menuLayout, '#architecture', 'architecture'));
   assert.ok(canonicalPair(menuLayout, 'architecture', '#architecture'));

@@ -128,7 +128,8 @@ test('desktop root keeps command console while mobile root opens the operational
   assert.match(menu, /const explicitAdminSection=\(\)=>adminRoutes\(\)\?\.sectionFromLocation/);
   assert.match(routes, /window\.matchMedia\?\.\('\(max-width:760px\)'\)\.matches/);
   assert.match(routes, /return'platform-overview'/);
-  assert.match(routes, /version:'1\.7\.0'/);
+  assert.match(routes, /version:'2\.0\.0'/);
+  assert.match(routes, /V2_SECTION_GROUP\[section\]===group/);
   assert.match(menu, /else if\s*\(initialSection\)\s*\{[\s\S]*requestedSection\s*=\s*initialSection[\s\S]*queueMicrotask/);
   assert.match(menu, /if\(initialSection===COMMAND_HOME\)activateCommandHome\(\)/);
   assert.match(menu, /else activateCommandHome\(\)/);
@@ -145,29 +146,30 @@ test('desktop root keeps command console while mobile root opens the operational
   assert.doesNotMatch(menu, /setInterval\(/);
 });
 
-test('admin menu governance uses eleven platform control areas with role-projected direct tasks', async () => {
+test('admin menu governance uses eight platform control areas with role-projected direct tasks', async () => {
   const registry = await read('admin-menu-registry.js');
   const sidebar = await read('admin-sidebar.js');
   assert.match(registry, /ADMIN_MENU_GROUPS/);
-  for (const group of ['summary', 'sites', 'people', 'services', 'content', 'finance', 'status', 'releases', 'devices-agent', 'settings-records', 'security-audit']) {
-    assert.match(registry, new RegExp(`id: '${group}'`));
+  for (const group of ['home', 'sites', 'ai', 'services', 'finance', 'ops', 'settings', 'accounts']) {
+    assert.match(registry, new RegExp(`id: '${group}', icon:`));
   }
-  for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'ai', 'business', 'data', 'site-management', 'access', 'settings']) {
+  // 'ai' and 'settings' return in v3 as platform-only areas; the older overlapping axes stay retired.
+  for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'business', 'data', 'site-management', 'access', 'summary', 'people', 'content', 'status', 'releases', 'devices-agent', 'settings-records', 'security-audit']) {
     assert.doesNotMatch(registry, new RegExp(`id: '${retired}', icon:`));
   }
   assert.match(registry, /id: 'campus', group: 'sites'/);
-  assert.match(registry, /id: 'work', group: 'content'/);
+  assert.match(registry, /id: 'work', group: 'sites'/);
   assert.match(registry, /id: 'clients', group: 'sites'/);
   assert.match(registry, /id: 'common-services', group: 'services'/);
-  assert.match(registry, /id: 'community', group: 'content'/);
-  assert.match(registry, /id: 'ai-membership', group: 'people'/);
-  assert.match(registry, /id: 'books', group: 'content'/);
-  assert.match(registry, /id: 'devotional', group: 'content'/);
+  assert.match(registry, /id: 'community', group: 'sites'/);
+  assert.match(registry, /id: 'ai-membership', group: 'sites'/);
+  assert.match(registry, /id: 'books', group: 'sites'/);
+  assert.match(registry, /id: 'devotional', group: 'sites'/);
   assert.match(registry, /id: 'life-ai', group: 'services'/);
-  assert.match(registry, /id: 'security', group: 'security-audit'/);
+  assert.match(registry, /id: 'security', group: 'accounts'/);
   assert.match(registry, /id: 'capabilities', group: 'services'/);
-  assert.match(registry, /id: 'devices', group: 'devices-agent'/);
-  assert.match(registry, /id: 'health', group: 'status'/);
+  assert.match(registry, /id: 'devices', group: 'ops'/);
+  assert.match(registry, /id: 'health', group: 'ops'/);
   assert.match(sidebar, /function pruneNonRegistryItems\(nav\)/);
   assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
   assert.match(sidebar, /GLOBAL_CLASS = 'admin-global-navs'/);

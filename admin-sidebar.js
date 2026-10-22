@@ -1,6 +1,8 @@
 import {
   ADMIN_MENU_GROUPS,
   adminMenuOrder,
+  adminMenusForGroup,
+  getAdminMenuMenuLabel,
   getAdminMenuGroupDefault,
   getAdminMenuGroupForSection,
   getAdminMenuGroupLabel,
@@ -32,25 +34,15 @@ const MORE_CLASS = 'admin-detail-more';
 const MOBILE_NAV_CLASS = 'admin-mobile-primary-nav';
 const DRAWER_SCRIM_CLASS = 'admin-mobile-drawer-scrim';
 const MOBILE_PRIMARY_GROUPS = Object.freeze([
-  { id:'summary', icon:'◉', ko:'홈', en:'Home' },
+  { id:'home', icon:'⌂', ko:'홈', en:'Home' },
   { id:'sites', icon:'▦', ko:'사이트', en:'Sites' },
-  { id:'services', icon:'◇', ko:'서비스', en:'Services' },
-  { id:'status', icon:'↑', ko:'운영', en:'Ops' },
+  { id:'ai', icon:'AI', ko:'AI 운영', en:'AI Ops' },
+  { id:'ops', icon:'◎', ko:'운영', en:'Ops' },
 ]);
-const FLAT_DETAIL_GROUPS = new Set(['services']);
-const PRIMARY_SECTIONS = Object.freeze({
-  summary: ['platform-overview'],
-  sites: ['sites-all', 'sites-business', 'sites-clients', 'sites-community', 'sites-core', 'sites-preparing'],
-  people: ['users-access', 'admins', 'ai-membership'],
-  services: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'],
-  content: ['work', 'communication', 'community', 'books', 'social'],
-  finance: ['finance', 'api-cost'],
-  status: ['health', 'site-health', 'architecture', 'maturity'],
-  releases: ['deployments', 'aiops'],
-  'devices-agent': ['devices', 'pos-agent'],
-  'settings-records': ['public-site-controls', 'language-status', 'ai-settings', 'storage', 'ai-module-spec'],
-  'security-audit': ['security', 'audit-records'],
-});
+// ADMIN-IA-V3: left navigation is group → menu → detail menu. The active
+// menu's detail entries are nested directly under it; there is no top tab strip.
+const FLAT_DETAIL_GROUPS = new Set();
+const TAB_CLASS = 'admin-detail-tab';
 
 export function adminSidebarSectionOf(item) {
   if (item?.dataset?.deviceControlNav === 'true') return 'devices';
@@ -110,6 +102,11 @@ body.admin-compact .admin-detail-item:hover{border-color:#dbe7ef;background:#f2f
 body.admin-compact .admin-detail-item.active{border-color:#bfd5ee;background:#edf4ff;color:#0b5cab}
 body.admin-compact .admin-detail-item b{display:inline-grid;place-items:center;min-width:19px;color:#6d8194;font-size:10px;font-weight:850}
 body.admin-compact .admin-detail-item.active b{color:#155eef}
+body.admin-compact .${TAB_CLASS}{display:flex;align-items:center;gap:6px;width:calc(100% - 14px);min-height:28px;margin:0 0 0 14px;padding:3px 6px;border:1px solid transparent;border-radius:8px;background:transparent;color:#506174;font:inherit;font-size:12.5px;font-weight:600;line-height:1.2;text-align:left;cursor:pointer}
+body.admin-compact .${TAB_CLASS}:hover{border-color:#dbe7ef;background:#f2f7fb;color:#173b57}
+body.admin-compact .${TAB_CLASS}.active{border-color:#bfd5ee;background:#edf4ff;color:#0b5cab;font-weight:760}
+body.admin-compact .${TAB_CLASS} b{display:inline-grid;place-items:center;min-width:12px;color:#8a9aab;font-size:10px}
+body.admin-compact .admin-detail-item.open{font-weight:800}
 body.admin-compact .${DETAILS_CLASS}[data-admin-flat-details="true"]{margin:0 0 6px!important;padding:0!important;border-left:0!important;gap:2px!important}
 body.admin-compact .${DETAILS_CLASS}[data-admin-flat-details="true"] .admin-detail-item{min-height:38px!important;padding:6px 10px!important;border-radius:9px!important;font-weight:720!important}
 body.admin-compact .${DETAILS_CLASS}[data-admin-flat-details="true"] .admin-detail-item b{min-width:22px!important}
@@ -312,6 +309,23 @@ function globalButtons(globals, locale) {
   for (const button of existing.values()) button.remove();
 }
 
+function detailButton(id, label, className, active) {
+  const definition = getAdminMenuItem(id);
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = className;
+  button.dataset.adminDetailSection = id;
+  const icon = document.createElement('b');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.textContent = className === TAB_CLASS ? '·' : (definition?.icon || '·');
+  const text = document.createElement('span');
+  text.textContent = label;
+  button.append(icon, text);
+  button.classList.toggle('active', active);
+  if (active) button.setAttribute('aria-current', 'page');
+  return button;
+}
+
 function renderSidebarDetails(nav, globals, group, section, locale) {
   let details = globals.querySelector(`:scope>.${DETAILS_CLASS}`);
   if (!details) {
@@ -320,45 +334,31 @@ function renderSidebarDetails(nav, globals, group, section, locale) {
     details.setAttribute('aria-label', locale === 'en' ? 'Admin submenu' : '관리자 하위 메뉴');
   }
   const ids = availableIds(nav, group);
-  const flatDetails = FLAT_DETAIL_GROUPS.has(group);
-  const primaryOrder = PRIMARY_SECTIONS[group] || [];
-  const primarySet = new Set(primaryOrder);
-  const primary = primaryOrder.filter(id => ids.includes(id));
-  const extras = ids.filter(id => !primarySet.has(id));
-  const expanded = nav.dataset.adminMoreGroup === group || extras.includes(section);
-  const shown = expanded ? ids : primary;
-  const nodes = shown.map(id => {
-    const definition = getAdminMenuItem(id);
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'admin-detail-item';
-    button.dataset.adminDetailSection = id;
-    const icon = document.createElement('b');
-    icon.setAttribute('aria-hidden', 'true');
-    icon.textContent = definition?.icon || '·';
-    const text = document.createElement('span');
-    text.textContent = getAdminMenuLabel(id, locale);
-    button.append(icon, text);
-    button.classList.toggle('active', id === section);
-    return button;
-  });
-  if (extras.length) {
-    const more = document.createElement('button');
-    more.type = 'button';
-    more.className = MORE_CLASS;
-    more.dataset.adminDetailMore = group;
-    const label = document.createElement('span');
-    label.textContent = expanded
-      ? (locale === 'en' ? 'Show less' : '간단히 보기')
-      : (locale === 'en' ? `More (${extras.length})` : `더보기 ${extras.length}`);
-    const mark = document.createElement('b');
-    mark.setAttribute('aria-hidden', 'true');
-    mark.textContent = expanded ? '⌃' : '⌄';
-    more.append(label, mark);
-    nodes.push(more);
+  const available = new Set(ids);
+  const covered = new Set();
+  const nodes = [];
+  for (const menu of adminMenusForGroup(group)) {
+    const tabs = menu.sections.filter(id => available.has(id));
+    if (!tabs.length) continue;
+    tabs.forEach(id => covered.add(id));
+    const inMenu = tabs.includes(section);
+    const target = inMenu ? section : tabs[0];
+    const menuButton = detailButton(target, getAdminMenuMenuLabel(menu.id, locale), 'admin-detail-item', inMenu && tabs.length === 1);
+    menuButton.dataset.adminDetailMenu = menu.id;
+    menuButton.classList.toggle('open', inMenu);
+    if (tabs.length > 1) menuButton.setAttribute('aria-expanded', inMenu ? 'true' : 'false');
+    nodes.push(menuButton);
+    if (inMenu && tabs.length > 1) {
+      for (const id of tabs) nodes.push(detailButton(id, getAdminMenuLabel(id, locale), TAB_CLASS, id === section));
+    }
+  }
+  for (const id of ids) {
+    if (covered.has(id)) continue;
+    nodes.push(detailButton(id, getAdminMenuLabel(id, locale), 'admin-detail-item', id === section));
   }
   details.dataset.adminDetailGroup = group;
-  details.dataset.adminFlatDetails = flatDetails ? 'true' : 'false';
+  details.dataset.adminFlatDetails = FLAT_DETAIL_GROUPS.has(group) ? 'true' : 'false';
+  details.dataset.adminMenuModel = 'group-menu-detail-v3';
   details.replaceChildren(...nodes);
   details.hidden = nodes.length === 0;
   const active = [...globals.querySelectorAll('[data-admin-global-group]')].find(button => button.dataset.adminGlobalGroup === group);
@@ -375,7 +375,7 @@ function activeSection(nav) {
   const activeId = adminSidebarSectionOf(active);
   if (activeId && getAdminMenuItem(activeId)) return activeId;
   if (panelSection && getAdminMenuItem(panelSection)) return panelSection;
-  return getAdminMenuGroupDefault('summary');
+  return getAdminMenuGroupDefault('home');
 }
 
 function availableIds(nav, group) {
