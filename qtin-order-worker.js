@@ -955,8 +955,8 @@ function adminClient() {
       if (!me.canWrite) document.querySelectorAll('#sync,#add,[data-state]').forEach(b => { b.disabled = true; });
       await load();
     } catch (e) {
-      showFailure(e);
       await prepareGoogle();
+      showFailure(e);
     }
   }
   boot();
