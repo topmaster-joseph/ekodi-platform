@@ -92,3 +92,4 @@ Revert the PR (static assets + tests + workflow lines). No data migration.
 - Calls go to `POST /api/ai-modules/v1/providers/admin/factchat-institution/playground` with the super-admin token from central auth (sessionStorage), the impact-confirm header, the server daily limit and audit log. No key reaches the browser; learners never get this path.
 - `auth-site/admin-auth.js` allowlists only the two exact presenter/studio paths for the admin token hand-off.
 - Production availability depends on `FACTCHAT_MOKPO_API_KEY` and `EKODI_FACTCHAT_INSTITUTION_USE_APPROVED` (확인필요).
+- Release note: the presenter AI demo landed on main via `orch_recovery_009b7565…` (159b98b) and the admin hand-off allowlist shipped with Shared Site Core run 39806048747. The Education lane is dispatched from this follow-up orchestrator release because `deploy-education` requires `release_sha == main HEAD` at dispatch time.
