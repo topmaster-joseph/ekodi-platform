@@ -56,7 +56,11 @@ jobs:
           node --test test/qtin-order.test.mjs
           node scripts/validate-additive-migrations.mjs
           grep -Fq 'ekodi.kr/qtin*' wrangler.qtin-order.toml
-          grep -Fq 'PAYMENTS_ENABLED = "false"' wrangler.qtin-order.toml
+          # Payments may be enabled only with a test_ client key (operator-only test orders);
+          # a live_ key must never be committed here without a separate, explicit release.
+          grep -Eq '^PAYMENTS_ENABLED = "(false|true)"$' wrangler.qtin-order.toml
+          grep -Eq '^TOSS_CLIENT_KEY = "(test_ck_[A-Za-z0-9]+)?"$' wrangler.qtin-order.toml
+          ! grep -Eq 'live_(g?ck|g?sk)_' wrangler.qtin-order.toml
           ! grep -Eq '^\s*TOSS_SECRET_KEY\s*=' wrangler.qtin-order.toml
           grep -Fq 'DATA_MODE = "isolated-staging"' wrangler.qtin-order.staging.toml
           ! grep -Fq '[[d1_databases]]' wrangler.qtin-order.staging.toml
