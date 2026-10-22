@@ -234,6 +234,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='admin-provider-control.js'||
   // The AI operations center is compiled into the same admin bundle (scripts/build.mjs).
   file==='ai-operations-center-admin.js'||
+  // The admin command dock and its bootstrap ship in the Site Core admin bundle.
+  ['admin-assist-dock.js','admin-assist-dock.css','admin-assist-bootstrap.js','admin-assist-bootstrap.css'].includes(file)||
   // AI membership is compiled into the shared ai-ops-admin.js bundle.
   file==='user-ai-tier-panel.js'||
   file==='common-services-admin.js'||
