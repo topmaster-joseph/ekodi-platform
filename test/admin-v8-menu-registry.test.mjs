@@ -74,5 +74,5 @@ test('backing implementation sections remain hidden while policies and deploymen
   assert.equal(byId.get('audit-records')?.delegateSection, 'aiops');
   assert.equal(byId.get('policies')?.internal, true);
   assert.equal(byId.get('community')?.group, 'sites');
-  assert.equal(byId.get('books')?.group, 'sites');
+  assert.equal(byId.get('books')?.group, 'services');
 });

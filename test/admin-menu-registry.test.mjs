@@ -50,7 +50,12 @@ test('every visible section is a detail route of exactly one v3 menu in its own 
   assert.equal(getAdminMenuForSection('aiops')?.id, 'control');
   assert.deepEqual(adminMenuTabs('site-health'), ['health', 'site-health']);
   assert.deepEqual(adminMenuTabs('pos-agent'), ['devices', 'pos-agent']);
-  assert.equal(getAdminMenuForSection('books')?.transitional, 'site-admin');
+  // Stage 2: the transitional site-tools menu is dissolved.
+  assert.equal(ADMIN_MENUS.some(menu => menu.id === 'site-tools' || menu.transitional), false);
+  assert.deepEqual(ADMIN_MENUS.filter(menu => menu.group === 'sites').map(menu => menu.id), ['registry']);
+  assert.equal(getAdminMenuForSection('books')?.id, 'platform-content');
+  assert.equal(getAdminMenuForSection('ai-membership')?.id, 'automation-policy');
+  assert.equal(getAdminMenuForSection('community'), null);
 });
 
 test('every public admin subservice belongs to one canonical area', () => {
@@ -73,9 +78,9 @@ test('every public admin subservice belongs to one canonical area', () => {
   assert.equal(getAdminMenuGroupForSection('finance'), 'finance');
   assert.equal(getAdminMenuGroupForSection('workspace'), 'sites');
   assert.equal(getAdminMenuGroupForSection('community'), 'sites');
-  assert.equal(getAdminMenuGroupForSection('ai-membership'), 'sites');
-  assert.equal(getAdminMenuGroupForSection('books'), 'sites');
-  assert.equal(getAdminMenuGroupForSection('devotional'), 'sites');
+  assert.equal(getAdminMenuGroupForSection('ai-membership'), 'ai');
+  assert.equal(getAdminMenuGroupForSection('books'), 'services');
+  assert.equal(getAdminMenuGroupForSection('devotional'), 'services');
   assert.equal(getAdminMenuGroupForSection('storage'), 'settings');
   assert.equal(getAdminMenuLabel('devices', 'ko'), '실행 인프라');
   assert.equal(getAdminMenuLabel('devices', 'en'), 'Execution Infrastructure');

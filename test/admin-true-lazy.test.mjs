@@ -92,13 +92,13 @@ test('shared admin navigation exposes eight distinct areas with direct task rout
   for (const area of ['home', 'sites', 'ai', 'services', 'finance', 'ops', 'settings', 'accounts']) assert.match(registry, new RegExp(`id: '${area}', icon:`));
   for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'business', 'data', 'site-management', 'access', 'summary', 'people', 'content', 'status', 'releases', 'devices-agent', 'settings-records', 'security-audit']) assert.doesNotMatch(registry, new RegExp(`id: '${retired}', icon:`));
   assert.match(registry, /id: 'campus', group: 'sites'/);
-  assert.match(registry, /id: 'work', group: 'sites'/);
+  assert.match(registry, /id: 'work', group: 'services'/);
   assert.match(registry, /id: 'clients', group: 'sites'/);
   assert.match(registry, /id: 'common-services', group: 'services'/);
   assert.match(registry, /id: 'community', group: 'sites'/);
-  assert.match(registry, /id: 'ai-membership', group: 'sites'/);
-  assert.match(registry, /id: 'books', group: 'sites'/);
-  assert.match(registry, /id: 'devotional', group: 'sites'/);
+  assert.match(registry, /id: 'ai-membership', group: 'ai'/);
+  assert.match(registry, /id: 'books', group: 'services'/);
+  assert.match(registry, /id: 'devotional', group: 'services'/);
   assert.match(registry, /id: 'capabilities', group: 'services'/);
   assert.match(registry, /id: 'devices', group: 'ops'/);
   assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
