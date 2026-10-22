@@ -132,6 +132,8 @@ function htmlResponse(html,status,extra={}){
   return new Response(html,{status,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store, private','x-robots-tag':'noindex, nofollow',...extra}});
 }
 
+// EDU_INSTRUCTOR_GATE_MODE: "open" (no password) or "locked" (default when unset or unrecognised: fail closed).
+export function gateMode(env){return String(env?.EDU_INSTRUCTOR_GATE_MODE||'').trim().toLowerCase()==='open'?'open':'locked';}
 // The instructor-chosen password (Worker secret) wins over the generated one (public var).
 export function activeVerifier(env){
   const custom=env?.EDU_INSTRUCTOR_GATE_SECRET;
@@ -143,6 +145,8 @@ export const MIN_CUSTOM_PASSWORD_LENGTH=10;
 // or null when the request is allowed to reach the protected asset.
 export async function instructorGate(request,env,{url=new URL(request.url)}={}){
   if(!isGatedPath(url.pathname))return null;
+  // Instructor decision (2026-10-22): operator surfaces open without a password. Set "locked" to re-enable.
+  if(gateMode(env)==='open')return null;
   const verifier=activeVerifier(env);
   const key=env?.EDU_GATE_SIGNING_KEY;
   const configured=!!parseVerifier(verifier)&&usableKey(key);

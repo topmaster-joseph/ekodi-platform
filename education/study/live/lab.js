@@ -45,17 +45,17 @@ function viewAgenda(){
   const rows=session().modules.map(m=>{
     const title=m.kind==='practice'?course.missions[m.missionId].title:m.title;
     const tasks=m.learner?.tasks?list(m.learner.tasks,true):m.kind==='practice'?'<div class="btn-row"><button type="button" class="btn btn-small btn-primary" data-tab="m:'+esc(m.missionId)+'">'+(rec.done[m.missionId]?'다시 보기':'실습 시작')+' →</button></div>':m.summary?'<p class="meta">'+esc(m.summary)+'</p>':'';
-    return '<article class="panel"><p class="eyebrow">'+m.start+'–'+m.end+'분 · '+esc(KIND_LABELS[m.kind])+(m.kind==='practice'&&rec.done[m.missionId]?' · 완료':'')+'</p><h3>'+esc(m.learner?.headline||title)+'</h3>'+(m.learner?'<p class="meta">'+esc(title)+'</p>':'')+tasks+'</article>';
+    return '<article class="panel"><p class="eyebrow">'+m.start+'–'+m.end+'분 · '+esc(KIND_LABELS[m.kind])+(m.kind==='practice'&&rec.done[m.missionId]?' · 완료':'')+'</p><h3>'+esc(m.learner?.headline||title)+'</h3>'+tasks+'</article>';
   }).join('');
   const s=session();
-  const pick=rec.trackChosen?'':trackPicker('실습 준비 · 10초','어떤 일을 하시나요?','기초 강의가 끝나면 모두 같은 시간에 각자 업무 분야로 실습합니다. 미리 고르면 실습 원문과 프롬프트가 내 업무로 바뀝니다. 나중에 위에서 바꿀 수 있어요.');
+  const pick=rec.trackChosen?'':trackPicker('실습 준비','어떤 일을 하시나요?','고르면 내 업무 원문으로 실습합니다.');
   const missions=sessionMissions();
   const stamps='<div class="stamps" aria-label="오늘의 스탬프">'+missions.map(id=>'<span class="stamp'+(rec.done[id]?' is-on':'')+'" title="'+esc(course.missions[id].title)+'"><i aria-hidden="true">'+(rec.done[id]?'완료':course.missions[id].no)+'</i><b>'+esc(course.missions[id].title.replace('개인 실습 ',''))+'</b></span>').join('')+'</div>';
   const outcomes='<section class="panel goal"><p class="eyebrow">'+s.no+'회차 · 오늘 손에 쥐고 나갈 것</p><h2>'+esc(s.title)+'</h2>'+(s.outcomes?.length?'<ol class="goal-list">'+s.outcomes.map(o=>'<li>'+esc(o)+'</li>').join('')+'</ol>':'')+
-    '<p class="meta">실습을 끝낼 때마다 스탬프가 찍힙니다 · '+missions.filter(id=>rec.done[id]).length+' / '+missions.length+'</p>'+stamps+
-    '<div class="btn-row">'+factchatButtons()+'</div><p class="meta">공식 FactChat 사이트에서 본인 기관 계정으로 직접 로그인합니다. EKODI는 계정·비밀번호를 받지 않습니다.</p></section>';
+    stamps+
+    '<div class="btn-row">'+factchatButtons()+'</div><p class="meta">본인 기관 계정으로 로그인합니다.</p></section>';
   const hook=s.modules.find(m=>m.hook)?.hook;
-  const hookCard=hook?'<section class="panel hook-card"><p class="eyebrow">오늘의 질문</p><p class="hook-q">'+esc(hook.q)+'</p><p class="meta">'+esc(hook.sub)+'</p></section>':'';
+  const hookCard=hook?'<section class="panel hook-card"><p class="eyebrow">오늘의 질문</p><p class="hook-q">'+esc(hook.q)+'</p></section>':'';
   return pick+instructorCard(course.instructor,livePath(location.pathname,''),{compact:true})+hookCard+outcomes+rows;
 }
 // Practice runs for everyone at the same time, each in their own field: the picker appears on the agenda
@@ -83,7 +83,7 @@ function stepCard(id){
     const files=missionMaterials(course,id,rec.track);
     const pc=m.pcOnly?'<p class="notice'+(narrow?' pc-only':'')+'">'+(narrow?'<b>PC 전용 실습입니다.</b> 이 기기에서는 HWP 편집을 할 수 없습니다(FactChat 공식 안내). 아래 「결과 점검」 단계의 예시 결과로 연습하거나 PC에서 이 화면을 여세요.':'이 실습은 PC 전용입니다(FactChat 공식 안내).')+'</p>':'';
     const ideas=id==='free'&&ctx.ideas.length?'<h3>'+esc(ctx.label)+' 추천 과제</h3>'+list(ctx.ideas):'';
-    return head('무엇을 만드나요?',m.problem)+pc+'<p class="meta"><b>결과물</b> '+esc(m.deliverable)+' · <b>이유</b> '+esc(m.why)+'</p>'+
+    return head('무엇을 만드나요?',m.problem)+pc+'<p class="meta"><b>결과물</b> '+esc(m.deliverable)+'</p>'+
       (source?'<div class="source"><p class="source-label">'+esc(ctx.label)+' · '+esc(ctx.doc||ctx.meeting||ctx.topic||'')+'</p><pre class="source-text">'+esc(source)+'</pre></div>':'')+ideas+
       (files.length?'<div class="downloads">'+files.map((f,i)=>'<button type="button" class="btn btn-small" data-download="'+i+'">⬇ '+esc(f.label)+'</button>').join('')+'</div>':'')+
       '<h3>준비물</h3>'+list(m.prepare);
@@ -132,7 +132,7 @@ function findingsHtml(result){
 }
 function viewMission(id){
   const m=course.missions[id];
-  if(!rec.trackChosen)return trackPicker('분야별 동시 실습 · 먼저 내 분야 선택','내 업무 분야를 고르세요','모두 같은 시간에 각자 분야의 실습 원문으로 '+m.title.replace('개인 실습 ','')+' 실습을 합니다. 고르면 바로 시작합니다.');
+  if(!rec.trackChosen)return trackPicker('분야별 실습','내 업무 분야를 고르세요','고르면 바로 시작합니다.');
   return '<div class="panel"><p class="eyebrow">'+m.minutes+'분 실습 · '+esc(trackById(course,rec.track).label)+' · '+esc(levelById(course,rec.level).label)+(rec.done[id]?' · 완료':'')+'</p><h2>'+esc(m.title)+'</h2>'+stepper(id)+'</div>'+
     '<section class="step-card" id="stepCard" tabindex="-1">'+stepCard(id)+'</section>'+
     '<details class="ref"><summary>전체 안내 보기 (10단계 구조 · 대체 실습 포함)</summary><div class="ref-body">'+
@@ -190,6 +190,7 @@ function renderDock(){
 function timerSuffix(id){const end=Number(rec.timers[id])||0;return end?' · 남은 시간 '+formatClock(Math.max(0,end-Date.now())):'';}
 function render(){
   tabs();
+  $('#labSub').textContent=session().no+'회차 · '+session().title;
   const id=activeMission();
   let html;
   if(id)html=viewMission(id);
@@ -348,7 +349,6 @@ async function init(){
   }
   $('#labOrg').textContent=course.org.name+' · LEARNER LAB';
   $('#labTitle').textContent=course.subtitle;
-  $('#labSub').textContent=course.title+' · '+course.format;
   $('#labSafety').textContent=course.safety;
   $('#topFactchat').href=FACTCHAT_TOOL.entryUrl;
   $('#labSession').innerHTML=course.sessions.map(s=>'<option value="'+s.no+'">'+s.no+'회차</option>').join('');
