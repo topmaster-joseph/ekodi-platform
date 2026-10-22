@@ -76,6 +76,11 @@ export function merchantKeys(env, profileId) {
   };
 }
 
+/** 결제위젯 연동 클라이언트 키(test_gck_/live_gck_)인지 여부. */
+export function isWidgetKey(clientKey) {
+  return /^(test|live)_gck_/.test(text(clientKey));
+}
+
 export function keyMode(clientKey) {
   const key = text(clientKey);
   if (key.startsWith('live_')) return 'live';
@@ -96,6 +101,8 @@ export function readiness(env, { profileId = activeProfileId(env), staging = fal
   if (!/^(test|live)_(g?ck)_/.test(clientKey)) missing.push('toss-client-key');
   if (!/^(test|live)_(g?sk)_/.test(secretKey)) missing.push('toss-secret-key');
   else if (keyMode(clientKey) !== 'none' && !secretKey.startsWith(`${keyMode(clientKey)}_`)) missing.push('key-mode-mismatch');
+  // 결제위젯 연동 키(gck/gsk)와 API 개별 연동 키(ck/sk)는 짝을 맞춰야 승인이 된다.
+  else if (isWidgetKey(clientKey) !== /^(test|live)_gsk_/.test(secretKey)) missing.push('key-type-mismatch');
   if (staging) missing.push('isolated-staging');
   const mode = keyMode(clientKey);
   const ready = missing.length === 0;
@@ -104,6 +111,7 @@ export function readiness(env, { profileId = activeProfileId(env), staging = fal
     missing,
     mode,
     publicReady: ready && mode === 'live',
+    widget: isWidgetKey(clientKey),
     testReady: ready && mode === 'test',
     profile: profile?.id || normalizeProfileId(profileId) || '',
     mid: profile?.mid || '',

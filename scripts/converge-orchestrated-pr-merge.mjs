@@ -240,6 +240,7 @@ const spaceTouched=changedFiles.some(file=>
 );
 const qtinOrderTouched=changedFiles.some(file=>[
   'qtin-order-core.js',
+  'ekodipay-core.js',
   'qtin-order-worker.js',
   'migrations/0201_qtin_group_orders.sql',
   'migrations/0202_qtin_buyer_accounts.sql',
