@@ -30,12 +30,12 @@ test('bootstrap never silently drops a command while Assist is lazy-loading',asy
 test('bootstrap explicitly awaits the dock listener runtime on demand and direct fallback paths',async()=>{
   const js=await read('admin-assist-bootstrap.js');
   assert.match(js,/window\.EKODIAdminDemand/);
-  assert.match(js,/d\?\.loadStyle&&d\?\.loadScript/);
-  assert.match(js,/d\.loadStyle\('ai-ops-admin\.css'\)/);
-  assert.match(js,/d\.loadStyle\('admin-assist-dock\.css'\)/);
-  assert.match(js,/d\.loadScript\('admin-lazy-features\.js'\)/);
-  assert.match(js,/d\.loadScript\('admin-assist-dock\.js'\)/);
-  assert.match(js,/d\.loadScript\('admin-ai-control-plane\.js'\)/);
+  assert.match(js,/let ls=d\?\.loadStyle\|\|d\?\.loadCss,lj=d\?\.loadScript\|\|d\?\.loadJs;if\(!L\)L=ls&&lj\?/);
+  assert.match(js,/ls\('ai-ops-admin\.css'\)/);
+  assert.match(js,/ls\('admin-assist-dock\.css'\)/);
+  assert.match(js,/lj\('admin-lazy-features\.js'\)/);
+  assert.match(js,/lj\('admin-assist-dock\.js'\)/);
+  assert.match(js,/lj\('admin-ai-control-plane\.js'\)/);
   assert.match(js,/import\('\.\/admin-lazy-features\.js'\)/);
   assert.match(js,/import\('\.\/admin-assist-dock\.js'\)/);
   assert.match(js,/import\('\.\/admin-ai-control-plane\.js'\)/);

@@ -32,8 +32,8 @@ test('admin root is a command-only workspace while Campus remains a child route'
   assert.doesNotMatch(bootstrap,/section==='campus'/);  assert.match(bootstrap,/ekodiAssistClose/);
   assert.match(bootstrap,/window\.EKODIAdminAssist/);
   assert.match(bootstrap,/bridge\.submit\(text\)/);
-  assert.match(bootstrap,/d\.loadStyle\('ai-ops-admin\.css'\)/);
-  assert.match(bootstrap,/d\.loadScript\('admin-lazy-features\.js'\)/);
+  assert.match(bootstrap,/ls\('ai-ops-admin\.css'\)/);
+  assert.match(bootstrap,/lj\('admin-lazy-features\.js'\)/);
   assert.match(bootstrap,/import\('\.\/admin-lazy-features\.js'\)/);
 
   assert.match(bootstrapCss,/html body\.admin-command-home \.ekodi-assist-bootstrap\{display:flex!important\}/);
