@@ -35,9 +35,15 @@ test('existing 4회차 × 6세트 bootcamp is preserved as a separate course and
   assert.equal(listed.href,'study/ai-bootcamp/');
 });
 
-test('mission engine: 10-part structure, 7 job tracks, 3 levels, no unresolved template text',()=>{
+test('mission engine: 10-part structure, 7 job tracks × 3 roles, 5 levels, no unresolved template text',()=>{
   assert.deepEqual(COURSE.tracks.map(t=>t.label),['기획·평가','학사·교무','학생지원·취업','연구·산학협력','총무·회계','홍보·국제교류','시설·도서관·기타 행정']);
-  assert.deepEqual(COURSE.levels.map(l=>l.id),['basic','intermediate','advanced']);
+  assert.deepEqual(COURSE.levels.map(l=>l.id),['starter','basic','intermediate','advanced','expert']);
+  assert.deepEqual(COURSE.levels.map(l=>l.label),['입문','초급','중급','고급','심화']);
+  assert.ok(COURSE.tracks.every(t=>t.roles.length===3&&t.roles.every(r=>r.id&&r.label)));
+  const rp=buildPrompts(COURSE,'hwp','academic','basic','curriculum')[0].text;
+  assert.match(rp,/^\[내 업무\] 학사·교무 · 수업·교과과정 담당/);
+  assert.match(buildPrompts(COURSE,'hwp','academic','expert')[0].text,/재사용 프롬프트 템플릿/);
+  assert.match(buildPrompts(COURSE,'hwp','academic','expert')[0].text,/일치 여부/,'심화 keeps the 고급 addendum');
   for(const [id,m] of Object.entries(COURSE.missions)){
     for(const k of ['problem','why','features','prepare','steps','prompts','expected','errors','deliverable','apply'])assert.ok(m[k]&&(m[k].length??1),id+' '+k);
     assert.ok(m.fallback.steps.length>=3,id+' fallback');
@@ -304,4 +310,16 @@ test('learner lab shows the same short instructor card in every session; full pr
   assert.match(html,/에코디교회 목사/);assert.equal((html.match(/<figure>/g)||[]).length,3);
   const css=await readFile(new URL('../education/study/live/live.css',import.meta.url),'utf8');
   assert.match(css,/\.lv \.ins-photo\{width:100%;height:auto;aspect-ratio:1;/,'portrait keeps its square aspect');
+});
+
+test('learner lab v3: view-and-copy materials, copy→FactChat, sticky detailed order, adjustable timer, no reference dump',async()=>{
+  const lab=await readFile(new URL('../education/study/live/lab.js',import.meta.url),'utf8');
+  const html=await readFile(new URL('../education/study/live/lab/index.html',import.meta.url),'utf8');
+  assert.doesNotMatch(lab,/전체 안내 보기|missionSections|data-download=/,'no long reference block, no forced download');
+  assert.match(lab,/data-view-material=/);assert.match(lab,/data-copy-open=/);assert.match(lab,/execCommand\('copy'\)/);
+  assert.match(html,/id="matSheet"[^>]*hidden/);assert.match(html,/data-sheet-copy-open/);
+  assert.match(html,/id="labSubnav"/);assert.match(lab,/IntersectionObserver/);
+  assert.match(html,/data-timer-add="-60000"/);assert.match(html,/data-timer-add="60000"/);
+  assert.match(html,/<details class="lab-settings" id="labSettings">/);assert.match(html,/id="labRole"/);
+  assert.doesNotMatch(html,/−/,'U+2212 is not in the Pretendard subset');
 });

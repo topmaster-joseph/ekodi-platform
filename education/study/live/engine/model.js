@@ -16,7 +16,6 @@ export function validateCourse(course){
   if(!Array.isArray(course.sessions)||!course.sessions.length)fail('no sessions');
   const missionIds=new Set(Object.keys(course.missions||{}));
   const trackIds=new Set((course.tracks||[]).map(t=>t.id));
-  const levelIds=new Set((course.levels||[]).map(l=>l.id));
   const moduleIds=new Set();
   for(const session of course.sessions){
     if(!Number.isInteger(session.no)||session.no<1)fail('invalid session number');
@@ -39,9 +38,10 @@ export function validateCourse(course){
   }
   for(const id of missionIds){
     const m=course.missions[id];
-    for(const level of levelIds){
-      if(!Array.isArray(m.criteria?.[level])||!m.criteria[level].length)fail('mission '+id+' lacks criteria for '+level);
-      if(typeof m.levelAddenda?.[level]!=='string')fail('mission '+id+' lacks level addendum '+level);
+    for(const level of course.levels){
+      const base=levelBase(level);
+      if(!Array.isArray(m.criteria?.[base])||!m.criteria[base].length)fail('mission '+id+' lacks criteria for '+level.id);
+      if(typeof m.levelAddenda?.[base]!=='string')fail('mission '+id+' lacks level addendum '+level.id);
     }
     const materials=course.trackMaterials?.[id];
     for(const track of trackIds)if(!materials?.[track])fail('mission '+id+' lacks material for track '+track);
@@ -55,7 +55,11 @@ export const practiceMinutes=course=>practiceModules(course).reduce((sum,m)=>sum
 export const sessionByNo=(course,no)=>course.sessions.find(s=>s.no===Number(no))||null;
 export const moduleIndexAtMinute=(session,minute)=>{const i=session.modules.findIndex(m=>minute>=m.start&&minute<m.end);return i<0?session.modules.length-1:i;};
 export const trackById=(course,id)=>course.tracks.find(t=>t.id===id)||course.tracks[0];
-export const levelById=(course,id)=>course.levels.find(l=>l.id===id)||course.levels[0];
+export const levelById=(course,id)=>course.levels.find(l=>l.id===id)||course.levels.find(l=>l.id==='basic')||course.levels[0];
+// Finer levels reuse a base level's criteria and mission addendum (level.base) and may add their own addendum.
+export const levelBase=level=>level?.base||level?.id;
+export const criteriaFor=(mission,level)=>mission.criteria[levelBase(level)]||[];
+export const roleById=(course,trackId,roleId)=>trackById(course,trackId).roles?.find(r=>r.id===roleId)||null;
 export function missionSessionModule(course,missionId){
   for(const s of course.sessions){const m=s.modules.find(x=>x.missionId===missionId);if(m)return {session:s.no,module:m};}
   return null;
@@ -74,14 +78,16 @@ export function trackTaskTitle(course,missionId,trackId){
   return c.doc||c.meeting||c.topic||c.ideas?.[0]||'';
 }
 
-export function buildPrompts(course,missionId,trackId,levelId){
+export function buildPrompts(course,missionId,trackId,levelId,roleId=''){
   const mission=course.missions[missionId];
   if(!mission)return [];
   const ctx=missionContext(course,missionId,trackId);
   const level=levelById(course,levelId);
-  const addendum=mission.levelAddenda?.[level.id]||'';
+  const addendum=[mission.levelAddenda?.[levelBase(level)]||'',level.addendum||''].filter(Boolean).join('\n');
+  const role=roleById(course,trackId,roleId);
   return mission.prompts.map((p,index)=>{
     let text=String(p.build(ctx)||'').trim();
+    if(role&&index===0)text='[내 업무] '+ctx.label+' · '+role.label+' 담당입니다. 이 업무 맥락에 맞는 표현과 항목으로 작성해 주세요.\n\n'+text;
     if(addendum&&index===0)text+='\n\n'+addendum;
     return {label:p.label,text};
   });
@@ -202,7 +208,7 @@ export function courseMarkdown(course,{notes=null,tool=null}={}){
         lines.push('','- 무엇을 해결: '+mission.problem,'- 왜 필요: '+mission.why,'- 결과물: '+mission.deliverable,'- 따라 하기:');
         mission.steps.forEach((st,i)=>lines.push('  '+(i+1)+'. '+st));
         lines.push('- 검증할 오류:');mission.errors.forEach(e=>lines.push('  - '+e));
-        lines.push('- 달성 조건(초급/중급/심화): '+course.levels.map(l=>l.label+' — '+mission.criteria[l.id].join(', ')).join(' / '));
+        lines.push('- 달성 조건(난이도별): '+course.levels.map(l=>l.label+' — '+criteriaFor(mission,l).join(', ')).join(' / '));
       }else{
         if(m.summary)lines.push('',m.summary);
         (m.points||[]).forEach(p=>lines.push('- '+p));

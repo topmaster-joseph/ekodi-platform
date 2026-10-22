@@ -1,6 +1,6 @@
 // Shared DOM-string rendering for Instructor Studio, Presenter and Learner Lab.
 // Every value is escaped; no inline styles or handlers (Education CSP: style-src/script-src 'self').
-import {buildPrompts,missionContext,missionMaterials,levelById,trackById,KIND_LABELS} from './model.js';
+import {buildPrompts,missionContext,missionMaterials,levelById,trackById,KIND_LABELS,criteriaFor} from './model.js';
 import {FACTCHAT_FEATURES,FEATURE_STATUS,featureById} from '../tools/factchat.js';
 
 export const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -50,7 +50,7 @@ export function missionSections(course,missionId,{trackId,levelId,checks,tool,sh
   const materials=missionMaterials(course,missionId,trackId);
   const features=m.features.map(id=>{const f=featureById(id);return f?'<li><b>'+esc(f.label)+'</b> — '+esc(f.where)+' '+featureBadge(checks,id)+'</li>':'';}).join('');
   const ideas=missionId==='free'&&ctx.ideas.length?'<h4>'+esc(ctx.label)+' 추천 과제</h4>'+list(ctx.ideas):'';
-  const crit=m.criteria[level.id].map((c,i)=>{const key=missionId+':'+level.id+':'+i;return '<label class="check"><input type="checkbox" data-crit="'+esc(key)+'"'+(checked[key]?' checked':'')+'> <span>'+esc(c)+'</span></label>';}).join('');
+  const crit=criteriaFor(m,level).map((c,i)=>{const key=missionId+':'+level.id+':'+i;return '<label class="check"><input type="checkbox" data-crit="'+esc(key)+'"'+(checked[key]?' checked':'')+'> <span>'+esc(c)+'</span></label>';}).join('');
   const errs=m.errors.map((c,i)=>{const key=missionId+':err:'+i;return '<label class="check"><input type="checkbox" data-crit="'+esc(key)+'"'+(checked[key]?' checked':'')+'> <span>'+esc(c)+'</span></label>';}).join('');
   return [
     sec(1,'무엇을 해결하나요?','<p>'+esc(m.problem)+'</p>'),
