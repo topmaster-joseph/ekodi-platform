@@ -47,3 +47,10 @@ Revert the PR (static assets + tests + workflow lines). No data migration.
 - **Guided practice** (Learner Lab): 준비 → FactChat 열기 (desktop: opens FactChat in the right half of the screen) → 프롬프트 ① → 프롬프트 ② → 결과 점검 → 완료·적용, with a fixed step dock, progress bar, completion ticks and full state recovery. The 10-part reference stays available under 「전체 안내 보기」.
 - **Result checker** (`engine/checker.js`, rule-based, local, not AI): pasted FactChat output vs source — invented dates/times/numbers, invented contacts/links, undecided→「확정」, missing [확인 필요], dropped source facts; plus personal-data warnings. 「예시 결과로 연습」 uses the fallback sample when FactChat is unavailable. Instructors can demo it in review modules.
 - **Probe**: production verifier additionally asserts header ≤72px (mobile)/≤80px, pinned while scrolling, no content under the header, page end not under the dock, Pretendard active, audience view header-free, and the guided flow including checker findings and reload recovery.
+
+## v3 (2026-10-22) — 강사 직함·학위 확정, 활동 갤러리
+- 강사 확인(2026-10-22): 「목사」 직함 추가, 학위 「국립목포대학교 경영대학원 경영정보시스템 전공 박사」.
+- 활동 갤러리 3건: 청계면상인회 사이트(cgma.or.kr)에 공식 등록된 영상(cgma_resources)의 대표 장면 — 2025 가을 골목축제, 2024 가을 골목축제, 2025.11.12 자율상권구역 지원사업 공청회. 썸네일은 YouTube 이미지 CDN(i.ytimg.com)에서 `referrerpolicy=no-referrer`로 지연 로드하며 원본 영상으로 연결.
+- 저장소의 EKODI 이미지 중 AI 생성 이미지(협동조합)·포스터는 강사 활동 사진으로 쓰지 않음.
+- 발견(확인필요): `books/assets/ekodian-cover.svg`, `space/open-table-meal-260925.jpg`의 커밋 내용에 `[... ELLIPSIZATION ...]` 문자열이 섞여 이미지가 손상된 상태. 원본 파일로 교체 필요.
+- 운영 프로브: 입장 페이지에서 목사·박사 표기와 링크된 갤러리 3건을 확인. YouTube 썸네일 장애는 `externalMediaWarnings`로 기록(배포 차단 아님).

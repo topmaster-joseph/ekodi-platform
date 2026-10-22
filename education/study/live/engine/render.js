@@ -69,10 +69,13 @@ export function missionSections(course,missionId,{trackId,levelId,checks,tool,sh
 }
 function sec(no,title,body){return '<section class="msec"><h3><span class="msec-no">'+no+'</span>'+title+'</h3>'+body+'</section>';}
 
+// Absolute https media (e.g. official video stills) is used as-is; package assets are resolved against assetBase.
+function mediaSrc(src,assetBase){return /^https:/.test(src)?src:assetBase+src}
 export function instructorCard(ins,assetBase='',{compact=false}={}){
   if(!ins)return '';
   const sites=ins.sites.map(x=>'<a class="site-chip" href="'+esc(x.url)+'" target="_blank" rel="noopener noreferrer"><b>'+esc(x.label)+'</b>'+(compact?'':'<span>'+esc(x.desc)+'</span>')+'</a>').join('');
-  const gallery=ins.gallery?.length?'<div class="ins-gallery">'+ins.gallery.map(g=>'<figure><img src="'+esc(assetBase+g.src)+'" alt="'+esc(g.alt)+'" loading="lazy"><figcaption>'+esc(g.caption)+'</figcaption></figure>').join('')+'</div>':'';
+  const gallery=ins.gallery?.length?'<div class="ins-gallery" aria-label="강사 활동">'+ins.gallery.map(g=>{const img='<img src="'+esc(mediaSrc(g.src,assetBase))+'" alt="'+esc(g.alt)+'" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="480" height="360">';
+    return '<figure>'+(g.href?'<a href="'+esc(g.href)+'" target="_blank" rel="noopener noreferrer" title="영상 보기 (새 창)">'+img+'<span class="ins-play" aria-hidden="true">▶</span></a>':img)+'<figcaption>'+esc(g.caption)+'</figcaption></figure>'}).join('')+'</div>':'';
   return '<section class="ins-card'+(compact?' is-compact':'')+'" aria-label="오늘의 강사 소개"><img class="ins-photo" src="'+esc(assetBase+ins.photo)+'" alt="'+esc(ins.photoAlt)+'" width="160" height="160" loading="lazy">'+
     '<div class="ins-body"><p class="eyebrow">오늘의 강사</p><h2 class="ins-name">'+esc(ins.name)+' <span>'+esc(ins.nameEn)+'</span></h2><p class="ins-headline">'+esc(ins.headline)+'</p>'+
     '<p class="ins-hook">'+esc(ins.hook)+'</p>'+(compact?'':'<p class="meta">'+esc(ins.promise)+'</p>'+list(ins.roles,false,'ins-roles')+
@@ -88,6 +91,7 @@ export function slideHtml(slide,{joinSvg='',joinUrl='',timerText='',sessionLabel
       '<p class="slide-kicker">'+esc(slide.k)+'</p><h2 class="slide-title">'+esc(ins.name)+' <span class="slide-ins-en">'+esc(ins.nameEn)+'</span></h2>'+
       '<p class="slide-lead">'+esc(ins.headline)+'</p>'+list(ins.roles.slice(0,3),false,'slide-bullets slide-ins-roles')+
       '<p class="slide-ins-sites">'+ins.sites.slice(0,4).map(x=>'<span>'+esc(x.label)+'</span>').join('')+'</p>'+
+      (ins.gallery?.length?'<p class="slide-ins-gallery">'+ins.gallery.slice(0,3).map(g=>'<img src="'+esc(mediaSrc(g.src,assetBase))+'" alt="'+esc(g.alt)+'" referrerpolicy="no-referrer" decoding="async">').join('')+'</p>':'')+
       '<p class="slide-ins-hook">'+esc(ins.hook)+'</p></div></div>';
   }
   if(slide.special==='hook'){

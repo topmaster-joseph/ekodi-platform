@@ -243,4 +243,12 @@ test('instructor intro: public facts only, portrait asset present, intro and hoo
   const html=instructorCard(INSTRUCTOR,'/edu/study/live/');
   assert.match(html,/src="\/edu\/study\/live\/img\/instructor\.jpg"/);
   assert.match(html,/에코디언을 찾아서/);
+  // Confirmed titles (2026-10-22) and a gallery of official activity-video stills that link to their source.
+  assert.ok(INSTRUCTOR.roles.some(x=>/목사/.test(x))&&INSTRUCTOR.roles.some(x=>/박사/.test(x)));
+  assert.equal(INSTRUCTOR.gallery.length,3);
+  assert.ok(INSTRUCTOR.gallery.every(g=>/^https:\/\/i\.ytimg\.com\/vi\/[\w-]{11}\/hqdefault\.jpg$/.test(g.src)&&/^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//.test(g.href)&&g.alt&&g.caption));
+  assert.equal((html.match(/<figure>/g)||[]).length,3);
+  assert.match(html,/src="https:\/\/i\.ytimg\.com\/vi\/CHWgslHyHYI\/hqdefault\.jpg"[^>]*referrerpolicy="no-referrer"/);
+  assert.doesNotMatch(html,/\/edu\/study\/live\/https:/,'absolute media is not prefixed');
+  assert.match(instructorCard(INSTRUCTOR,'/edu/study/live/',{compact:true}),/ins-card is-compact/);
 });
