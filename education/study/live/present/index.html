@@ -30,6 +30,7 @@
         <button type="button" class="seg-btn" data-stage-mode="slide" aria-pressed="true"><span class="kbd-hint">1</span>강의</button>
         <button type="button" class="seg-btn" data-stage-mode="lab" aria-pressed="false"><span class="kbd-hint">2</span>실습실</button>
         <button type="button" class="seg-btn" data-stage-mode="split" aria-pressed="false"><span class="kbd-hint">3</span>나란히</button>
+        <button type="button" class="seg-btn" data-stage-mode="ai" aria-pressed="false"><span class="kbd-hint">4</span>AI 결과</button>
       </div>
       <button type="button" class="btn btn-small" id="pFactchat" title="공식 FactChat 사이트를 별도 탭으로 열거나 앞으로 가져옵니다 (G)">FactChat 화면 ↗</button>
       <span class="grow"></span>
@@ -40,6 +41,13 @@
   <aside class="pres-side" id="presSide" aria-label="발표자 전용 정보 (청중 화면에는 표시되지 않음)">
     <section class="pres-card"><h3>실습 타이머</h3><div class="big-clock" id="presTimer" role="timer">--:--</div><p class="kbd" id="presTimerInfo">대기 중</p>
       <div class="pres-controls"><button type="button" class="btn btn-small" id="pPause">일시정지</button><button type="button" class="btn btn-small" data-add="60000">+1분</button><button type="button" class="btn btn-small" id="pStop">실습 종료</button></div></section>
+    <section class="pres-card ai-card" id="aiCard"><h3>AI 시연 · FactChat 기관계정</h3>
+      <p class="kbd" id="aiAuth">확인 중</p>
+      <div class="pres-controls"><label class="sr-only" for="aiTrack">시연 분야</label><select id="aiTrack" class="ai-select"></select><button type="button" class="btn btn-small" id="aiLoad">현재 단계 프롬프트</button></div>
+      <label class="sr-only" for="aiInput">실행할 프롬프트</label><textarea id="aiInput" class="ai-input" maxlength="8000" placeholder="프롬프트를 입력하거나 「현재 단계 프롬프트」를 누르세요."></textarea>
+      <div class="pres-controls"><button type="button" class="btn btn-small btn-primary" id="aiRun">실행</button><button type="button" class="btn btn-small" id="aiShow">무대에 띄우기</button><a class="btn btn-small" id="aiLogin" hidden>최고관리자 로그인</a></div>
+      <p class="kbd" id="aiStatus" role="status"></p>
+    </section>
     <section class="pres-card"><h3>발표자 노트 · 수강생 비공개</h3><div id="presNotes"></div></section>
     <section class="pres-card"><h3>다음 슬라이드</h3><div class="next-frame" id="nextSlide"></div></section>
     <section class="pres-card"><h3>두 번째 화면 · 출력</h3>
@@ -49,7 +57,7 @@
         <button type="button" class="btn btn-small" id="pPrint">인쇄·PDF</button>
         <button type="button" class="btn btn-small" id="pSync">수동 동기화</button>
       </div>
-      <p class="kbd">→/Space/PageDown 다음 · ←/PageUp 이전 · 1 강의 · 2 실습실 · 3 나란히 · G FactChat · B 가리기 · F 전체화면 · N 노트 · Home/End</p>
+      <p class="kbd">→/Space/PageDown 다음 · ←/PageUp 이전 · 1 강의 · 2 실습실 · 3 나란히 · 4 AI 결과 · G FactChat · B 가리기 · F 전체화면 · N 노트 · Home/End</p>
       <p class="kbd" id="presSync"></p>
     </section>
   </aside>

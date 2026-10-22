@@ -344,3 +344,34 @@ test('mood slides use real Unsplash photos with credit; session 2 opens after se
   const lab=await readFile(new URL('../education/study/live/lab.js',import.meta.url),'utf8');
   assert.match(lab,/const sessionLocked=no=>no>1&&!rec\.unlocked&&!firstSessionDone\(\)/);
 });
+
+test('presenter AI demo: institutional FactChat through the EKODI server route only, result mirrored as text',async()=>{
+  let st=initialState(COURSE.id);
+  st=reduce(st,{type:'stage/mode',mode:'ai'},1);assert.equal(st.stage.mode,'ai');
+  st=reduce(st,{type:'ai/set',status:'done',prompt:'p',text:'x'.repeat(20000),model:'m',units:'u'},2);
+  assert.equal(st.ai.text.length,12000);assert.equal(sanitizeState({...st,ai:{status:'evil'}},COURSE.id).ai.status,'idle');
+  const demo=await import('../education/study/live/engine/factchat-demo.js');
+  const store=new Map();
+  const win=(hash='',host='ekodi.kr')=>({location:{hash,hostname:host,href:'https://'+host+'/edu/study/live/present/?c=mnu-factchat-2026'+hash,pathname:'/edu/study/live/present/',search:'?c=mnu-factchat-2026'},
+    sessionStorage:{getItem:k=>store.get(k)??null,setItem:(k,v)=>store.set(k,v),removeItem:k=>store.delete(k)},history:{replaceState(){}},fetch:null});
+  assert.equal((await demo.runInstitutionDemo(win(),'hi',{fetchImpl:async()=>{throw new Error('must not call');}})).login,true,'no token → login, no request');
+  assert.equal(demo.acceptAdminHandoff(win('#ekodi_admin_token=tok123')),true);assert.equal(store.get('ekodi-auth-token'),'tok123');
+  const login=new URL(demo.adminLoginUrl(win()));
+  assert.equal(login.origin+login.pathname,'https://ekodi.kr/auth/');assert.equal(login.searchParams.get('site'),'admin');
+  assert.equal(login.searchParams.get('return_to'),'https://ekodi.kr/edu/study/live/present/?c=mnu-factchat-2026');
+  assert.equal(demo.adminLoginUrl(win('','preview.example.org')),'','only the canonical apex host can receive the handoff');
+  let seen;
+  const ok=await demo.runInstitutionDemo(win(),'프롬프트',{fetchImpl:async(url,init)=>{seen={url,init};return {ok:true,status:200,json:async()=>({ok:true,text:'답',model:'gpt-x',usage:{inputUnits:3,outputUnits:5}})};}});
+  assert.equal(ok.ok,true);assert.equal(ok.text,'답');
+  assert.equal(seen.url,'https://ekodi.kr/api/ai-modules/v1/providers/admin/factchat-institution/playground');
+  assert.equal(seen.init.headers.authorization,'Bearer tok123');assert.equal(seen.init.headers['x-ekodi-confirm-impact'],'factchat-institution-playground');
+  const denied=await demo.runInstitutionDemo(win(),'p',{fetchImpl:async()=>({ok:false,status:403,json:async()=>({error:'institution_account_approval_required'})})});
+  assert.match(denied.message,/승인/);
+  const expired=await demo.runInstitutionDemo(win(),'p',{fetchImpl:async()=>({ok:false,status:401,json:async()=>({})})});
+  assert.equal(expired.login,true);assert.equal(store.has('ekodi-auth-token'),false,'expired token cleared');
+  const src=await readFile(new URL('../education/study/live/engine/factchat-demo.js',import.meta.url),'utf8');
+  assert.doesNotMatch(src,/FACTCHAT_MOKPO_API_KEY|mokpo\.factchat\.bot\/api|sk-[A-Za-z0-9]/,'no key or direct provider call in the browser');
+  const auth=await readFile(new URL('../auth-site/admin-auth.js',import.meta.url),'utf8');
+  assert.match(auth,/u\.pathname==='\/edu\/study\/live\/'\|\|u\.pathname==='\/edu\/study\/live\/present\/'\)\)return u\.href;/,'exact presenter paths only');
+  assert.doesNotMatch(auth,/pathname\.startsWith\('\/edu/,'no /edu prefix wildcard');
+});
