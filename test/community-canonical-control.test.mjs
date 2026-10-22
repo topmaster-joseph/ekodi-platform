@@ -14,9 +14,10 @@ test('Control API contains Community and Social as active services without legac
   assert.match(api, /id: 'social'.*social\.ekodi\.kr\/health.*defaultState: 'active'.*defaultMonitor: true/);
 });
 
-test('Admin registry keeps Community functionality under the content operations area', async () => {
+test('Admin registry keeps Community functionality as a transitional site tool bound for site admin', async () => {
   const registry = await text('admin-menu-registry.js');
-  assert.match(registry, /id: 'community'[^\n]*group: 'content'[^\n]*en: 'Events, Applications & Reservations'/);
+  assert.match(registry, /id: 'community'[^\n]*group: 'sites'[^\n]*en: 'Events, Applications & Reservations'/);
+  assert.match(registry, /id: 'site-tools'[^\n]*'community'[^\n]*transitional: 'site-admin'/);
   assert.doesNotMatch(registry, /id: 'mission'/);
 });
 

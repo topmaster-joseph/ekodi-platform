@@ -255,21 +255,40 @@ test('legacy Admin entry host still converges while Auth has no legacy host cont
   assert.equal(response.status,308);const target=new URL(response.headers.get('location'));assert.equal(target.pathname,'/admin/');assert.equal(target.searchParams.get('route'),'books');
 });
 
-test('Admin canonical route registry mirrors the eleven management areas and migrates legacy groups',()=>{
+test('Admin canonical route registry mirrors the eight management areas and migrates legacy groups',()=>{
   const source=fs.readFileSync(new URL('../admin-canonical-routes.js',import.meta.url),'utf8');
   const location={href:'https://ekodi.kr/admin/',hostname:'ekodi.kr',pathname:'/admin/',search:'',hash:''};
   const window={location};vm.runInNewContext(source,{window,URL,URLSearchParams,Object,Set,String});
   const routes=window.EKODIAdminRoutes;
   assert.equal(routes.pathFor('campus'),'/admin/sites/campus');
-  assert.equal(routes.pathFor('communication'),'/admin/content/communication');
+  assert.equal(routes.pathFor('communication'),'/admin/sites/communication');
   assert.equal(routes.pathFor('insurance'),'/admin/services/insurance');
-  assert.equal(routes.pathFor('community'),'/admin/content/community');
-  assert.equal(routes.pathFor('ai-membership'),'/admin/people/ai-membership');
-  assert.equal(routes.pathFor('books'),'/admin/content/books');
-  assert.equal(routes.pathFor('devotional'),'/admin/content/devotional');
+  assert.equal(routes.pathFor('community'),'/admin/sites/community');
+  assert.equal(routes.pathFor('ai-membership'),'/admin/sites/ai-membership');
+  assert.equal(routes.pathFor('books'),'/admin/sites/books');
+  assert.equal(routes.pathFor('devotional'),'/admin/sites/devotional');
   assert.equal(routes.pathFor('workspace'),'/admin/sites/workspace');
   assert.equal(routes.pathFor('clients'),'/admin/sites/clients');
-  assert.equal(routes.pathFor('aiops'),'/admin/releases/aiops');
+  assert.equal(routes.pathFor('aiops'),'/admin/ai/aiops');
+  // v2 (eleven-area) canonical addresses stay accepted and resolve to the v3 path.
+  for (const [legacy, section, v3] of [
+    ['/admin/releases/aiops','aiops','/admin/ai/aiops'],
+    ['/admin/content/books','books','/admin/sites/books'],
+    ['/admin/people/ai-membership','ai-membership','/admin/sites/ai-membership'],
+    ['/admin/devices-agent/devices','devices','/admin/ops/devices'],
+    ['/admin/settings-records/storage','storage','/admin/settings/storage'],
+    ['/admin/security-audit/security','security','/admin/accounts/security'],
+    ['/admin/status/health','health','/admin/ops/health'],
+    ['/admin/summary/platform-overview','platform-overview','/admin/home/platform-overview'],
+  ]) {
+    assert.equal(routes.sectionFromPath(legacy), section, legacy);
+    assert.equal(routes.pathFor(section), v3, section);
+  }
+  assert.equal(routes.routeFromPath('/admin/releases').section,'deployments');
+  assert.equal(routes.routeFromPath('/admin/ops').section,'health');
+  assert.equal(routes.routeFromPath('/admin/ai').section,'aiops');
+  assert.equal(routes.routeFromPath('/admin/home').section,'command-home');
+  assert.equal(routes.routeFromPath('/admin/ops/books'),null);
   assert.equal(routes.sectionFromPath('/admin/system/security'),'security');
   assert.equal(routes.sectionFromPath('/admin/home/campus'),'campus');
   assert.equal(routes.sectionFromPath('/admin/system/campus'),'campus');

@@ -4,26 +4,26 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('Platform Admin uses eleven distinct control areas with active direct-task navigation', async () => {
+test('Platform Admin uses eight distinct control areas with group → menu → detail left navigation', async () => {
   const [registry, sidebar] = await Promise.all([
     read('admin-menu-registry.js'),
     read('admin-sidebar.js'),
   ]);
-  for (const marker of ["id: 'summary'","id: 'sites'","id: 'people'","id: 'services'","id: 'content'","id: 'finance'","id: 'status'","id: 'releases'","id: 'devices-agent'","id: 'settings-records'","id: 'security-audit'"])
+  for (const marker of ["id: 'home'","id: 'sites'","id: 'ai'","id: 'services'","id: 'finance'","id: 'ops'","id: 'settings'","id: 'accounts'"])
     assert.ok(registry.includes(marker), marker);
   for (const marker of [
-    "summary: ['platform-overview']",
-    "sites: ['sites-all', 'sites-business', 'sites-clients', 'sites-community', 'sites-core', 'sites-preparing']",
-    "people: ['users-access', 'admins', 'ai-membership']",
-    "services: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview']",
-    "content: ['work', 'communication', 'community', 'books', 'social']",
-    "finance: ['finance', 'api-cost']",
-    "status: ['health', 'site-health', 'architecture', 'maturity']",
-    "releases: ['deployments', 'aiops']",
-    "'devices-agent': ['devices', 'pos-agent']",
-    "'settings-records': ['public-site-controls', 'language-status', 'ai-settings', 'storage', 'ai-module-spec']",
-    "'security-audit': ['security', 'audit-records']",
-  ]) assert.ok(sidebar.includes(marker), marker);
+    "sections: ['platform-overview']",
+    "sections: ['sites-all', 'sites-preparing']",
+    "sections: ['aiops']",
+    "sections: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview']",
+    "sections: ['health', 'site-health']",
+    "sections: ['devices', 'pos-agent']",
+    "sections: ['public-site-controls', 'language-status']",
+    "sections: ['security', 'audit-records']",
+  ]) assert.ok(registry.includes(marker), marker);
+  assert.match(sidebar, /adminMenusForGroup\(group\)/);
+  assert.match(sidebar, /group-menu-detail-v3/);
+  assert.doesNotMatch(sidebar, /PRIMARY_SECTIONS/);
   assert.match(sidebar, /nav\.querySelector\(':scope>\.admin-command-entry'\)\?\.remove\(\)/);
   assert.match(sidebar, /main\?\.querySelector\(':scope>\.admin-context-tabs-shell'\)\?\.remove\(\)/);
   assert.doesNotMatch(sidebar, /dataset\.adminCommandHome/);

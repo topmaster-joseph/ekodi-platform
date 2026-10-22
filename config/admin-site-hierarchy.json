@@ -6,13 +6,14 @@
     "adminPath": "/admin",
     "role": "platform-super-admin",
     "ownRouteGroups": [
-      "summary",
+      "home",
       "sites",
-      "people",
+      "ai",
       "services",
-      "content",
-      "status",
-      "settings-records"
+      "finance",
+      "ops",
+      "settings",
+      "accounts"
     ],
     "mayAggregateStatus": true,
     "mayCreateChildAdminAlias": false,

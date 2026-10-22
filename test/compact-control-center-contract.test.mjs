@@ -9,17 +9,18 @@ const [registry, layout, css, build] = await Promise.all([
   readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
 ]);
 
-test('Admin navigation is grouped into eleven distinct EKODI areas', () => {
-  for (const id of ['summary','sites','people','services','content','finance','status','releases','devices-agent','settings-records','security-audit']) {
+test('Admin navigation is grouped into eight distinct EKODI areas', () => {
+  for (const id of ['home','sites','ai','services','finance','ops','settings','accounts']) {
     assert.match(registry, new RegExp(`id: '${id}'`));
   }
   assert.match(registry, /id: 'sites-all'[^\n]*en: 'All Sites'/);
-  assert.match(registry, /id: 'admins'[^\n]*group: 'people'[^\n]*en: 'Administrator Accounts & Access'/);
+  assert.match(registry, /id: 'admins'[^\n]*group: 'accounts'[^\n]*en: 'Administrator Accounts & Access'/);
 });
 
 test('internal technical sections stay hidden from the human menu and route through AI Ops', () => {
   assert.match(registry, /id: 'services'[\s\S]*internal: true/);
-  assert.match(registry, /id: 'deployments'[^\n]*group: 'releases'/);
+  assert.match(registry, /id: 'deployments'[^\n]*group: 'ops'/);
+  assert.match(registry, /id: 'aiops'[^\n]*group: 'ai'[^\n]*ko: 'AI 운영센터'/);
   assert.match(registry, /id: 'policies'[\s\S]*internal: true/);
   assert.ok(layout.includes("const INTERNAL=new Set(['services','policies']);"));
   assert.ok(layout.includes("function routeInternal(){dc=false;requestedSection='aiops'"));

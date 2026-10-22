@@ -14,7 +14,7 @@ test('System Health exposes code and architecture health without autonomous repa
     read('.github/workflows/system-health-code-audit.yml')
   ]);
 
-  assert.match(menu, /id: 'health'[^\n]*group: 'status'[^\n]*ko: '전체 운영상태'/);
+  assert.match(menu, /id: 'health'[^\n]*group: 'ops'[^\n]*ko: '전체 운영상태'/);
   assert.ok(admin.includes('<span>코드 · 구조 건강</span>'));
   assert.match(admin, /data-code-health-score/);
   assert.match(admin, /api\/control\/system-health\/code/);

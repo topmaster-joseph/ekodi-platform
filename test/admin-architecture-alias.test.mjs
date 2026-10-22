@@ -10,7 +10,7 @@ const [layout,health,registry]=await Promise.all([
 ]);
 
 test('architecture menu uses existing health demand loader, not an undefined feature',()=>{
- assert.match(registry,/id:\s*'architecture',\s*group:\s*'status'/);
+ assert.match(registry,/id:\s*'architecture',\s*group:\s*'ops'/);
  assert.match(layout,/\['architecture','health'\]/);
  assert.match(layout,/\['health','health'\]/);
  assert.match(layout,/const demandKey=DEMAND_KEYS.get\(section\)/);

@@ -13,8 +13,10 @@ test('AI operations center source parses as JavaScript', () => {
   assert.doesNotThrow(() => new Function(center));
 });
 
-test('AI operations center remains loaded while the visible status menu uses incident language', () => {
-  assert.match(menu, /id: 'aiops'[^\n]*group: 'releases'[^\n]*ko: '장애·오류·경고'[^\n]*en: 'Incidents, Errors & Warnings'/);
+test('AI operations center remains loaded and is named for what it shows under the AI area', () => {
+  assert.match(menu, /id: 'aiops'[^\n]*group: 'ai'[^\n]*ko: 'AI 운영센터'[^\n]*en: 'AI Operations Center'/);
+  assert.match(menu, /id: 'control', group: 'ai'[^\n]*sections: \['aiops'\]/);
+  assert.doesNotMatch(menu, /ko: '장애·오류·경고'/);
   assert.match(menu, /id: 'openai'[^\n]*group: 'services'[^\n]*en: 'OpenAI'[^\n]*internal: true/);
   assert.match(menu, /import\('\.\/ai-operations-center-admin\.js'\)/);
   assert.match(menu, /globalPolicyMutation: 'super_admin'/);
