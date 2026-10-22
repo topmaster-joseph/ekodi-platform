@@ -85,3 +85,10 @@ Revert the PR (static assets + tests + workflow lines). No data migration.
 - 분위기 전환 슬라이드: Unsplash 실사 6장(Unsplash License, 슬라이드에 촬영자 표기). 회차마다 실습 시작 전·검증/계획 전 「숨 고르기·생각 전환」 한 줄 + 휴식 슬라이드 배경. 이미지 CDN 장애는 프로브에서 경고로만 기록.
 - 2회차 입장 제한: 1회차 실습(HWP·회의록)을 이 기기에서 모두 완료해야 2회차 실습실이 열림. 강사 화면의 2회차 링크·QR에는 `open=1`이 붙어 바로 열림(수업 흐름 안내용 제한, 보안 통제 아님).
 - 강사 PIN: 4자리 이상 허용. 공개 저장소에 두면 즉시 풀리므로 GitHub secret `EDU_INSTRUCTOR_PASSWORD` → Worker secret 경로로만 적용. 설정되면 `EDU_INSTRUCTOR_GATE_MODE`와 무관하게 잠금. 프로브는 실제 응답(200/401)으로 모드 판별.
+
+## v5.2 — Presenter "AI 실행" demo (option A, 2026-10-23)
+
+- Presenter side panel gains an instructor-only AI card: load the current practice prompt (field selectable), run it once through the institutional FactChat playground route, and show the answer on the audience stage (stage mode `ai`, key 4).
+- Calls go to `POST /api/ai-modules/v1/providers/admin/factchat-institution/playground` with the super-admin token from central auth (sessionStorage), the impact-confirm header, the server daily limit and audit log. No key reaches the browser; learners never get this path.
+- `auth-site/admin-auth.js` allowlists only the two exact presenter/studio paths for the admin token hand-off.
+- Production availability depends on `FACTCHAT_MOKPO_API_KEY` and `EKODI_FACTCHAT_INSTITUTION_USE_APPROVED` (확인필요).

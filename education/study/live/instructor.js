@@ -289,7 +289,7 @@ function bind(){
   $('#slidePrev').addEventListener('click',()=>setSlide(S().slideIndex-1));
   $('#slideNext').addEventListener('click',()=>setSlide(S().slideIndex+1));
   $('#blackout').addEventListener('click',()=>store.dispatch({type:'blackout/toggle'}));
-  $$('[data-stage-mode]').forEach(b=>b.addEventListener('click',()=>{store.dispatch({type:'stage/mode',mode:b.dataset.stageMode});toast({slide:'청중 화면: 강의 슬라이드',lab:'청중 화면: 수강생 실습실(시연)',split:'청중 화면: 강의 + 실습실 나란히'}[b.dataset.stageMode]);}));
+  $$('[data-stage-mode]').forEach(b=>b.addEventListener('click',()=>{store.dispatch({type:'stage/mode',mode:b.dataset.stageMode});toast({slide:'청중 화면: 강의 슬라이드',lab:'청중 화면: 수강생 실습실(시연)',split:'청중 화면: 강의 + 실습실 나란히',ai:'청중 화면: AI 시연 결과'}[b.dataset.stageMode]);}));
   $('#openFactchatDemo').addEventListener('click',()=>{const r=showFactchatTab(window,FACTCHAT_TOOL.entryUrl);toast(!r.ok?'팝업이 차단되었습니다. 팝업을 허용한 뒤 다시 누르세요.':r.fresh?'공식 FactChat을 새 탭으로 열었습니다. 시연 후 이 탭으로 돌아오세요.':'FactChat 탭을 앞으로 가져왔습니다.');});
   $('#resync').addEventListener('click',()=>{store.resync();renderAll();toast('저장된 최신 상태로 동기화했습니다.');});
   $('#previewModule').addEventListener('click',()=>window.open(joinLink(),'_blank','noopener'));

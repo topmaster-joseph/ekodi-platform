@@ -1,6 +1,7 @@
 // EKODI Education Premium Studio — Live Presentation (presenter + audience views).
 import {courseEntry} from './courses/registry.js';
-import {validateCourse,sessionByNo,sessionSlides,learnerUrl,formatClock,livePath} from './engine/model.js';
+import {validateCourse,sessionByNo,sessionSlides,learnerUrl,formatClock,livePath,buildPrompts} from './engine/model.js';
+import {acceptAdminHandoff,adminLoginUrl,readToken,runInstitutionDemo} from './engine/factchat-demo.js';
 import {createLiveStore,lectureElapsedMs,timerRemainingMs,timerPhase,CHANNEL_NAME} from './engine/live-state.js';
 import {qrSvg} from './engine/qr.js';
 import {esc,list,slideHtml,safeStorage,safeChannel,bindChrome,showFactchatTab,embeddedLabUrl} from './engine/render.js';
@@ -13,7 +14,7 @@ const entry=courseEntry(params.get('c'));
 const storage=safeStorage(window);
 const channel=safeChannel(window,CHANNEL_NAME);
 let course,notes={},store,slides=[],showNotes=true,toastTimer=0,lastKey='',lastLayout='';
-const MODE_LABELS={slide:'강의 슬라이드',lab:'수강생 실습실 (시연)',split:'강의 + 실습실 나란히'};
+const MODE_LABELS={slide:'강의 슬라이드',lab:'수강생 실습실 (시연)',split:'강의 + 실습실 나란히',ai:'AI 시연 결과'};
 
 const S=()=>store.state;
 const session=()=>sessionByNo(course,S().session)||course.sessions[0];
@@ -67,6 +68,15 @@ function renderStage(st,slide,key){
     if(key!==lastKey){stage.innerHTML=slideMarkup(slide);lastKey=key;}
     return;
   }
+  if(mode==='ai'){
+    const ai=st.ai||{},k='ai|'+ai.status+'|'+ai.at;
+    if(lastLayout!==k){
+      const body=ai.status==='running'?'<p class="ai-wait">FactChat이 답을 만드는 중입니다…</p>':ai.status==='failed'?'<p class="ai-wait">'+esc(ai.text||'실행하지 못했습니다.')+'</p>':ai.text?'<pre class="ai-answer">'+esc(ai.text)+'</pre>':'<p class="ai-wait">발표자 화면에서 프롬프트를 실행하면 결과가 여기에 나타납니다.</p>';
+      stage.innerHTML='<div class="slide slide-ai"><p class="slide-kicker">FactChat · 목포대 기관계정 · 실시간 시연</p>'+(ai.prompt?'<p class="ai-prompt">'+esc(ai.prompt.slice(0,260))+(ai.prompt.length>260?'…':'')+'</p>':'')+'<div class="ai-body">'+body+'</div>'+(ai.model&&ai.status==='done'?'<p class="ai-meta">'+esc(ai.model)+' · '+esc(ai.units)+' · 기관 크레딧</p>':'')+'</div>';
+      lastLayout=k;lastKey='';
+    }
+    return;
+  }
   const src=embeddedLabUrl(joinLink(slide));
   const layout=mode+'|'+src;
   if(layout!==lastLayout){
@@ -85,6 +95,29 @@ function openFactchat(){
   const r=showFactchatTab(window,FACTCHAT_TOOL.entryUrl);
   if(!r.ok){toast('팝업이 차단되었습니다. 팝업을 허용한 뒤 다시 누르세요.');return;}
   toast(r.fresh?'공식 FactChat을 새 탭으로 열었습니다. 시연 후 이 탭으로 돌아오세요.':'FactChat 탭을 앞으로 가져왔습니다.');
+}
+// AI demo (presenter only): run the current prompt through the institutional account, mirror the result.
+function aiAuthRender(){
+  const has=!!readToken(window),login=adminLoginUrl(window);
+  $('#aiAuth').textContent=has?'최고관리자 로그인됨 · 실행 시 기관 크레딧 사용':(login?'최고관리자 로그인이 필요합니다.':'ekodi.kr 주소에서 열어야 로그인할 수 있습니다.');
+  const a=$('#aiLogin');a.hidden=has||!login;if(login)a.href=login;
+  $('#aiRun').disabled=!has;
+}
+function aiLoadPrompt(){
+  const m=moduleOf(currentSlide());
+  if(m.kind!=='practice'){toast('실습 단계에서 프롬프트를 불러올 수 있습니다. 직접 입력해도 됩니다.');return;}
+  const p=buildPrompts(course,m.missionId,$('#aiTrack').value)[0];
+  if(p){$('#aiInput').value=p.text;toast(course.missions[m.missionId].title.replace('개인 실습 ','')+' · 프롬프트 ①을 불러왔습니다.');}
+}
+async function aiRun(){
+  const input=$('#aiInput').value.trim();
+  if(!input){toast('실행할 프롬프트를 입력하세요.');return;}
+  $('#aiRun').disabled=true;$('#aiStatus').textContent='실행 중…';
+  store.dispatch({type:'ai/set',status:'running',prompt:input});
+  const r=await runInstitutionDemo(window,input);
+  if(r.ok){store.dispatch({type:'ai/set',status:'done',prompt:input,text:r.text,model:r.model,units:r.units});$('#aiStatus').textContent='완료 · '+r.model+' · '+r.units;if(S().stage?.mode!=='ai')toast('결과가 준비됐습니다. 「무대에 띄우기」(4)로 보여 주세요.');}
+  else{store.dispatch({type:'ai/set',status:'failed',prompt:input,text:r.message});$('#aiStatus').textContent=r.message;toast(r.message);}
+  aiAuthRender();
 }
 function tick(){
   const st=S(),now=Date.now();
@@ -141,7 +174,7 @@ function bind(){
     else if(k==='b'||k==='B'||k==='.'){e.preventDefault();store.dispatch({type:'blackout/toggle'});}
     else if(k==='f'||k==='F'){e.preventDefault();fullscreen();}
     else if((k==='n'||k==='N')&&!audience){e.preventDefault();toggleNotes();}
-    else if(k==='1'||k==='2'||k==='3'){e.preventDefault();setStageMode(['slide','lab','split'][Number(k)-1]);}
+    else if(k==='1'||k==='2'||k==='3'||k==='4'){e.preventDefault();setStageMode(['slide','lab','split','ai'][Number(k)-1]);}
     else if((k==='g'||k==='G')&&!audience){e.preventDefault();openFactchat();}
   });
   window.addEventListener('storage',e=>store.onStorage(e));
@@ -158,6 +191,11 @@ function bind(){
   $('#pNotes').addEventListener('click',toggleNotes);
   document.querySelectorAll('[data-stage-mode]').forEach(b=>b.addEventListener('click',()=>setStageMode(b.dataset.stageMode)));
   $('#pFactchat').addEventListener('click',openFactchat);
+  $('#aiTrack').innerHTML=course.tracks.map(t=>'<option value="'+esc(t.id)+'">'+esc(t.label)+'</option>').join('');
+  $('#aiLoad').addEventListener('click',aiLoadPrompt);
+  $('#aiRun').addEventListener('click',aiRun);
+  $('#aiShow').addEventListener('click',()=>setStageMode('ai'));
+  aiAuthRender();
   $('#pPrint').addEventListener('click',printDeck);
   $('#pSync').addEventListener('click',()=>{store.resync();lastKey='';render();toast('최신 상태로 동기화했습니다.');});
   $('#backStudio').href=livePath(location.pathname,'?c='+encodeURIComponent(course.id));
@@ -170,6 +208,7 @@ function toggleNotes(){
   if(!showNotes)toast('단일 화면 모드: N 키로 노트를 다시 엽니다.');
 }
 async function init(){
+  if(!audience)acceptAdminHandoff(window);
   const [data,noteMod]=await Promise.all([entry.load(),audience?Promise.resolve({NOTES:{}}):(entry.loadNotes?entry.loadNotes():Promise.resolve({NOTES:{}}))]);
   course=data.COURSE;validateCourse(course);notes=noteMod.NOTES||{};
   if(audience){
