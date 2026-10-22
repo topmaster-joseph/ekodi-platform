@@ -21,6 +21,7 @@ export const EKODI_USER_FOOTER=Object.freeze({
   legalLinks:Object.freeze([
     link('개인정보처리방침','https://ekodi.kr/privacy','privacy'),
     link('이용약관','https://ekodi.kr/terms','terms'),
+    link('환불정책','https://ekodi.kr/ekodibiz/refund','refund'),
     link('문의','mailto:ekodibiz@gmail.com','contact'),
   ]),
   copyright:'© 2026 EKODI · EKODIBIZ. All rights reserved.',
