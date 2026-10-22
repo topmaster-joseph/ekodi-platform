@@ -133,8 +133,9 @@ export async function probeFactChatGatewayCredential(env={},options={}){
   const response=await fetchImpl(`${factChatBaseUrl(env,account)}/models/?type=llm`,{headers:{...GATEWAY_HEADERS,authorization:`Bearer ${key}`},signal:AbortSignal.timeout(15000)});
   const {data,raw}=await readBody(response);
   if(!response.ok)throw gatewayError(account,response,data,raw);
-  const models=Array.isArray(data?.data)?data.data.length:Array.isArray(data)?data.length:null;
-  return{ok:true,quota:null,models};
+  const list=Array.isArray(data?.data)?data.data:Array.isArray(data)?data:null;
+  const modelIds=list?list.map(item=>clean(item?.id,180)).filter(Boolean).slice(0,200):[];
+  return{ok:true,quota:null,models:list?list.length:null,modelIds};
 }
 
 export const FACTCHAT_GATEWAY_DEFAULTS=Object.freeze({baseUrl:FACTCHAT_GATEWAY_DEFAULT_BASE_URL,model:DEFAULT_MODEL,defaultOutputTokens:DEFAULT_OUTPUT_TOKENS,maxOutputTokens:MAX_OUTPUT_TOKENS});

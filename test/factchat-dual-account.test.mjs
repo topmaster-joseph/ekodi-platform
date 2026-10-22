@@ -229,3 +229,59 @@ test('gateway requests carry a User-Agent and an edge 1010 block is not reported
     assert.notEqual(describeProviderCheckDiagnostic(error).category,'authentication-error');
   });
 });
+
+function adminDb({role='super_admin',row:registry=row('factchat-institution'),budgetChanges=1}={}){
+  const writes=[];
+  return{writes,batch:async()=>[],prepare(sql){const stmt={args:[],bind(...args){this.args=args;return this},
+    async first(){if(sql.includes('FROM sessions'))return{email:'owner@ekodi.kr',role,expires_at:'2999-01-01T00:00:00Z',elevated_until:null};if(sql.startsWith('SELECT * FROM ai_provider_registry WHERE'))return registry;if(sql.startsWith('SELECT COUNT(*) calls'))return{calls:0,cost:0,input_tokens:0,cached_input_tokens:0,output_tokens:0};return null},
+    async all(){return{results:[]}},
+    async run(){writes.push({sql,args:this.args});if(sql.startsWith('UPDATE ai_provider_daily_budget'))return{meta:{changes:budgetChanges}};return{meta:{changes:1}}}};return stmt}};
+}
+const adminEnv=(DB,extra={})=>({DB,ADMIN_EMAIL:'owner@ekodi.kr',FACTCHAT_MOKPO_API_KEY:MOKPO_KEY,EKODI_FACTCHAT_INSTITUTION_USE_APPROVED:'true',...extra});
+const adminRequest=(path,init={})=>new Request(`https://ekodi.kr/api/ai-modules/v1/providers/admin/factchat-institution/${path}`,{...init,headers:{authorization:'Bearer admin-session-token',...(init.headers||{})}});
+
+test('institution playground is super_admin only, approval-gated, capped and billed to the institution',async()=>{
+  const { handleAiProviderControl }=await import('../ai-provider-control.js');
+  const run=body=>adminRequest('playground',{method:'POST',headers:{'content-type':'application/json','x-ekodi-confirm-impact':'factchat-institution-playground'},body:JSON.stringify(body)});
+  let fetches=0;
+  await withFetch(async(url,init)=>{fetches+=1;assert.match(String(url),/\/chat\/completions\/$/);assert.equal(init.headers.authorization,`Bearer ${MOKPO_KEY}`);return chatOk('claude-haiku-5-5')},async()=>{
+    // non-super admin
+    let response=await handleAiProviderControl(run({input:'x'}),adminEnv(adminDb({role:'admin'})));
+    assert.equal(response.status,403);
+    // approval withdrawn
+    response=await handleAiProviderControl(run({input:'x'}),adminEnv(adminDb(),{EKODI_FACTCHAT_INSTITUTION_USE_APPROVED:'false'}));
+    assert.equal(response.status,409);
+    // disabled in registry
+    response=await handleAiProviderControl(run({input:'x'}),adminEnv(adminDb({row:row('factchat-institution',{enabled:0})})));
+    assert.equal((await response.json()).error,'institution_account_disabled');
+    // missing confirmation header
+    response=await handleAiProviderControl(adminRequest('playground',{method:'POST',body:'{"input":"x"}'}),adminEnv(adminDb()));
+    assert.equal(response.status,428);
+    // daily cap reached
+    response=await handleAiProviderControl(run({input:'x'}),adminEnv(adminDb({budgetChanges:0})));
+    assert.equal(response.status,429);
+    assert.equal(fetches,0,'no gate failure may reach the gateway');
+    // happy path
+    const DB=adminDb();
+    response=await handleAiProviderControl(run({input:'회의록 정리',model:'claude-haiku-5-5'}),adminEnv(DB));
+    const body=await response.json();
+    assert.equal(body.ok,true);assert.equal(body.text,'factchat-ok');assert.equal(body.model,'claude-haiku-5-5');
+    assert.ok(DB.writes.some(item=>item.sql.includes('api_usage_events')&&item.args.includes('institution-sponsored')));
+    assert.ok(DB.writes.some(item=>item.sql.includes('ai_provider_audit')&&item.args.includes('provider.institution.playground')));
+  });
+  assert.equal(fetches,1);
+});
+
+test('institution model list is a zero-credit GET and returns model ids',async()=>{
+  const { handleAiProviderControl }=await import('../ai-provider-control.js');
+  const calls=[];
+  await withFetch(async(url,init)=>{calls.push({url:String(url),method:init?.method||'GET'});return new Response(JSON.stringify({data:[{id:'gpt-5.6-luna'},{id:'claude-haiku-5-5'}]}),{status:200})},async()=>{
+    const response=await handleAiProviderControl(adminRequest('models'),adminEnv(adminDb()));
+    const body=await response.json();
+    assert.deepEqual(body.models,['gpt-5.6-luna','claude-haiku-5-5']);
+  });
+  assert.equal(calls.length,1);assert.equal(calls[0].method,'GET');assert.match(calls[0].url,/\/models\/\?type=llm$/);
+  const ui=read('admin-provider-control.js');
+  assert.match(ui,/p\.accountClass==='institution'&&configured&&p\.enabled\?institutionPlayground\(p\)/);
+  assert.match(ui,/'x-ekodi-confirm-impact':'factchat-institution-playground'/);
+});
