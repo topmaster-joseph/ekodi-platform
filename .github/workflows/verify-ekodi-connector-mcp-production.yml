@@ -22,6 +22,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
       - name: Verify canonical discovery, MCP and OAuth contract
         id: verify
         shell: bash
@@ -71,16 +75,24 @@ jobs:
           done
           test "$passed" = true
           echo 'EKODI Connector/MCP production contract verified.'
+      - name: Verify EKODI Connect client readiness (Claude hosted)
+        id: connect
+        shell: bash
+        run: |
+          set -euo pipefail
+          export EKODI_MCP_CLIENT_CLASS_MAP="$(node -e "const t=require('fs').readFileSync('wrangler.api.toml','utf8');const m=t.match(/^EKODI_MCP_CLIENT_CLASS_MAP = (\".*\")$/m);process.stdout.write(m?JSON.parse(m[1]):'{}')")"
+          node scripts/verify-ekodi-connect-readiness.mjs claude-hosted https://ekodi.kr/mcp
       - name: Publish verification evidence
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
           OUTCOME: ${{ steps.verify.outcome }}
+          CONNECT_OUTCOME: ${{ steps.connect.outcome }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         shell: bash
         run: |
           set -euo pipefail
-          if [ "$OUTCOME" = success ]; then
+          if [ "$OUTCOME" = success ] && [ "$CONNECT_OUTCOME" = success ]; then
             status='✅ EKODI Connector/MCP production verified'
           else
             status='❌ EKODI Connector/MCP production verification failed'
@@ -90,5 +102,5 @@ jobs:
           - discovery: https://ekodi.kr/.well-known/ekodi.json
           - MCP: https://ekodi.kr/mcp
           - OAuth metadata: https://ekodi.kr/.well-known/oauth-protected-resource
-          - checks: aliases + canonical identity + tools/list + bounded Human Gate approve_task + public identify + unauthenticated submit rejection
+          - checks: aliases + canonical identity + tools/list + bounded Human Gate approve_task + public identify + unauthenticated submit rejection + EKODI Connect readiness (claude-hosted)
           - workflow: $RUN_URL"
