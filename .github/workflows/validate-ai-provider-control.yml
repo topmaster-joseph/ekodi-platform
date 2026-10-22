@@ -9,6 +9,7 @@ on:
     paths:
       - 'ai-provider-control.js'
       - 'factchat-gateway-provider-adapter.js'
+      - 'test/baze-gateway-provider.test.mjs'
       - 'ai-control-provider-router.js'
       - 'openai-provider-adapter.js'
       - 'anthropic-provider-adapter.js'
@@ -53,7 +54,7 @@ jobs:
           node --check external-ai-module-gateway.js
           node --check admin-provider-control.js
           node scripts/validate-additive-migrations.mjs migrations
-          node --test test/ai-provider-control.test.mjs test/factchat-dual-account.test.mjs test/ai-control-provider-router.test.mjs test/ai-free-quota.test.mjs test/ai-provider-registry.test.mjs test/ai-provider-pool-activation.test.mjs test/my-docs-ai.test.mjs
+          node --test test/ai-provider-control.test.mjs test/factchat-dual-account.test.mjs test/baze-gateway-provider.test.mjs test/ai-control-provider-router.test.mjs test/ai-free-quota.test.mjs test/ai-provider-registry.test.mjs test/ai-provider-pool-activation.test.mjs test/my-docs-ai.test.mjs
           ! grep -Fq 'OPENAI_API_KEY =' wrangler.api.toml
           ! grep -Fq 'GEMINI_API_KEY =' wrangler.api.toml
           ! grep -Fq 'ANTHROPIC_API_KEY =' wrangler.api.toml
