@@ -14,6 +14,8 @@ on:
   pull_request:
     paths: &qtin_paths
       - 'qtin-order-core.js'
+      - 'ekodipay-core.js'
+      - 'test/ekodipay-core.test.mjs'
       - 'qtin-order-worker.js'
       - 'migrations/0201_qtin_group_orders.sql'
       - 'wrangler.qtin-order.toml'
@@ -53,7 +55,8 @@ jobs:
           set -euo pipefail
           node --check qtin-order-core.js
           node --check qtin-order-worker.js
-          node --test test/qtin-order.test.mjs
+          node --check ekodipay-core.js
+          node --test test/qtin-order.test.mjs test/ekodipay-core.test.mjs
           node scripts/validate-additive-migrations.mjs
           grep -Fq 'ekodi.kr/qtin*' wrangler.qtin-order.toml
           # Payments may be enabled only with a test_ client key (operator-only test orders);

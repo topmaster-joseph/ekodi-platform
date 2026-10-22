@@ -27,7 +27,7 @@ function d1() {
 async function freshEnv(extra = {}) {
   const DB = d1();
   DB.raw.exec(await readFile(new URL('../migrations/0201_qtin_group_orders.sql', import.meta.url), 'utf8'));
-  return { DB, PUBLIC_BASE_URL: 'https://ekodi.kr/qtin', OPERATOR_EMAILS: 'topmaster.joseph@gmail.com', PAYMENTS_ENABLED: 'true', TOSS_CLIENT_KEY: 'live_ck_abc', TOSS_SECRET_KEY: 'test_sk_abc', QTM_SEED_ITEM_IDS: '1719304225', ...extra };
+  return { DB, PUBLIC_BASE_URL: 'https://ekodi.kr/qtin', OPERATOR_EMAILS: 'topmaster.joseph@gmail.com', PAYMENTS_ENABLED: 'true', TOSS_CLIENT_KEY: 'live_ck_abc', TOSS_SECRET_KEY: 'live_sk_abc', QTM_SEED_ITEM_IDS: '1719304225', ...extra };
 }
 
 // ---------- QTM fixtures (youngcart markup) ----------
@@ -232,7 +232,7 @@ test('payment is completed only after server-side Toss confirmation; idempotent 
   const token = new URL(order.successUrl).searchParams.get('t');
   const toss = mockToss(async (url, init) => {
     assert.ok(url.startsWith('https://api.tosspayments.com/v1/payments/confirm'));
-    assert.equal(init.headers.authorization, `Basic ${btoa('test_sk_abc:')}`);
+    assert.equal(init.headers.authorization, `Basic ${btoa('live_sk_abc:')}`);
     const req = JSON.parse(init.body);
     return { body: { paymentKey: req.paymentKey, orderId: req.orderId, totalAmount: req.amount, status: 'DONE', method: '카드', approvedAt: '2026-11-22T10:01:00+09:00', receipt: { url: 'https://dashboard.tosspayments.com/receipt/x' } } };
   });
@@ -358,6 +358,7 @@ test('token-mediated merges dispatch the guarded QTIN deploy with the orchestrat
 async function testModeEnv() {
   const env = await openEnvWithProducts();
   env.TOSS_CLIENT_KEY = 'test_ck_abc';
+  env.TOSS_SECRET_KEY = 'test_sk_abc';
   return env;
 }
 function mockSupabase(email) {
@@ -408,4 +409,29 @@ test('operators can place labelled test orders that never enter totals or the CS
     const csv = await (await handleRequest(new Request('https://ekodi.kr/qtin/api/admin/campaigns/2026-12/export.csv', auth), env, OPEN_NOW)).text();
     assert.ok(!csv.includes(order.orderId));
   } finally { sb2.restore(); }
+});
+
+// ---------- EKODIPAY-CORE-001: merchant (MID) switch ----------
+test('after switching MID, new orders use the new merchant and old orders keep the original MID', async () => {
+  const env = await openEnvWithProducts();
+  const legacy = await pendingOrder(env);
+  assert.doesNotMatch(legacy.orderId, /-m[a-z0-9]+-/);
+  Object.assign(env, {
+    EKODIPAY_MERCHANTS: JSON.stringify({ church: { label: '에코디교회', mid: 'q_church01', owner: '에코디교회' } }),
+    EKODIPAY_PROFILE: 'church', TOSS_CLIENT_KEY__CHURCH: 'live_ck_ch', TOSS_SECRET_KEY__CHURCH: 'live_sk_ch',
+  });
+  const fresh = await pendingOrder(env);
+  assert.match(fresh.orderId, /^QTIN-mchurch-/);
+  assert.equal(fresh.clientKey, 'live_ck_ch');
+  const seen = [];
+  const toss = mockToss(async (url, init) => {
+    seen.push(init.headers.authorization);
+    const req = JSON.parse(init.body);
+    return { body: { paymentKey: req.paymentKey, orderId: req.orderId, totalAmount: req.amount, status: 'DONE', method: '카드' } };
+  });
+  try {
+    assert.equal((await confirmPayment(env, { paymentKey: 'pk_old', orderId: legacy.orderId, amount: legacy.amount }, OPEN_NOW)).ok, true);
+    assert.equal((await confirmPayment(env, { paymentKey: 'pk_new', orderId: fresh.orderId, amount: fresh.amount }, OPEN_NOW)).ok, true);
+  } finally { toss.restore(); }
+  assert.deepEqual(seen, [`Basic ${btoa('live_sk_abc:')}`, `Basic ${btoa('live_sk_ch:')}`]);
 });
