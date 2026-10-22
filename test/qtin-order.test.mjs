@@ -513,3 +513,25 @@ test('QTIN admin reuses the same-origin central Supabase session and checks righ
   assert.match(browser.elements.get('state').innerHTML, /operator@example.test/);
   assert.match(browser.elements.get('summary').innerHTML, /아직 결제 완료된 신청이 없습니다/);
 });
+
+test('serialised browser scripts survive wrangler esbuild keepNames (__name) without leaking a global', async () => {
+  const { Script, createContext } = await import('node:vm');
+  const { renderAdminPage, renderOrderPage: renderOrder, CLIENT_NAME_PRELUDE } = await import('../qtin-order-worker.js');
+  const pages = [
+    ['admin', renderAdminPage('n')],
+    ['order', renderOrder({ campaign: { id: '2026-12', year: 2026, month: 12, state: 'open', opensAt: '', closesAt: '' }, products: [], payment: { ready: false } }, { org: 'church', scriptNonce: 'n' })],
+  ];
+  for (const [label, html] of pages) {
+    const clientScripts = [...html.matchAll(/<script nonce="n">([\s\S]*?)<\/script>/g)].map(m => m[1]).filter(s => s.includes('function'));
+    assert.ok(clientScripts.length >= 1, `${label} must ship its client script`);
+    for (const js of clientScripts) {
+      assert.ok(js.startsWith(CLIENT_NAME_PRELUDE), `${label} client script lacks the private __name helper`);
+      assert.ok(js.endsWith('();})();'), `${label} client script must close its isolated IIFE`);
+      // Model the named-function annotation that esbuild keepNames inserts at build time.
+      const bundled = js.replace(CLIENT_NAME_PRELUDE, `${CLIENT_NAME_PRELUDE}__name(function compiledMember(){}, "compiledMember");\nreturn;\n`);
+      const context = createContext({});
+      assert.doesNotThrow(() => new Script(bundled).runInContext(context, { timeout: 3000 }), `${label} throws once bundled`);
+      assert.equal(context.__name, undefined, `${label} may not leak __name to global scope`);
+    }
+  }
+});
