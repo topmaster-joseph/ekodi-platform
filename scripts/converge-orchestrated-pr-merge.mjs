@@ -215,6 +215,21 @@ const marketingGrowthTouched=changedFiles.some(file=>[
   'wrangler.marketing-growth.toml',
   '.github/workflows/deploy-marketing-growth.yml',
 ].includes(file));
+// Token merges do not wake push workflows; Marketing Publishing (channel
+// automation, incl. tenant channel write roles) must be dispatched explicitly.
+const marketingPublishingTouched=changedFiles.some(file=>
+  file==='marketing-publishing-worker.js'||
+  file==='admin-service-catalog.js'||
+  /^channel-[^/]+\.js$/.test(file)||
+  file==='migrations/0055_channel_automation_core.sql'||
+  file==='migrations/0062_channel_service_bridge.sql'||
+  file==='migrations/0111_channel_site_bindings.sql'||
+  file==='migrations/0026_marketing_publication_queue.sql'||
+  file==='migrations/0027_marketing_publication_entitlements.sql'||
+  file==='wrangler.marketing-publishing.toml'||
+  file==='deploy/manifests/marketing-publishing.worker.json'||
+  file==='.github/workflows/deploy-marketing-publishing.yml'
+);
 const spaceTouched=changedFiles.some(file=>
   file.startsWith('space/')||
   file==='space-worker.js'||
@@ -587,6 +602,14 @@ async function dispatchPostMergeDeploys(){
     });
     if(!dispatch.r.ok)fail('Traffic Intelligence collector dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,350));
     console.log(JSON.stringify({ok:true,action:'traffic-collector-dispatched',workflow:'traffic-intelligence-analytics.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+  if(marketingPublishingTouched){
+    const dispatch=await api('/actions/workflows/deploy-marketing-publishing.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('Marketing Publishing deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-marketing-publishing.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
   if(marketingGrowthTouched){
     const dispatch=await api('/actions/workflows/deploy-marketing-growth.yml/dispatches',{
