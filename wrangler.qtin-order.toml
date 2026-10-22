@@ -1,0 +1,35 @@
+# EKODI-QTIN-GROUP-ORDER-001 — 큐티인 월간 공동구매(에코디교회·에코디선교회 공용)
+name = "ekodi-qtin-order"
+main = "qtin-order-worker.js"
+compatibility_date = "2026-10-14"
+workers_dev = false
+preview_urls = false
+
+[[routes]]
+pattern = "ekodi.kr/qtin*"
+zone_name = "ekodi.kr"
+
+# 00:00 KST(15:00 UTC) and 12:00 KST(03:00 UTC): prepare next issue on the 19th–25th,
+# sync QTM prices/covers, expire unpaid applications, anonymize old personal data.
+[triggers]
+crons = ["0 15 * * *", "0 3 * * *"]
+
+[vars]
+ENVIRONMENT = "production"
+PUBLIC_BASE_URL = "https://ekodi.kr/qtin"
+OPERATOR_EMAILS = "topmaster.joseph@gmail.com,joseph@ekodibiz.kr"
+QTM_SEED_ITEM_IDS = "1719304225,1719305039,1719304141"
+# Fail-closed until the EKODIBIZ Toss Payments keys are registered.
+# TOSS_SECRET_KEY is a Worker secret only (never in this file, the repo or D1).
+PAYMENTS_ENABLED = "false"
+TOSS_CLIENT_KEY = ""
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ekodi-auth"
+database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
+migrations_dir = "migrations"
+
+[observability.logs]
+enabled = true
+invocation_logs = true

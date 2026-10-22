@@ -1,0 +1,79 @@
+name: Deploy QTIN Group Order Staging
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qtin-group-order-staging-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  staging:
+    runs-on: ubuntu-latest
+    environment: development
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      STAGING_URL: https://ekodi-qtin-order-staging.ekodi-development.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Validate isolated staging contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check qtin-order-worker.js
+          grep -Fq 'DATA_MODE = "isolated-staging"' wrangler.qtin-order.staging.toml
+          ! grep -Fq '[[d1_databases]]' wrangler.qtin-order.staging.toml
+          test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
+          test -n "$CLOUDFLARE_API_TOKEN"
+          node --input-type=module <<'NODE'
+          import worker from './qtin-order-worker.js';
+          const env = { DATA_MODE: 'isolated-staging', PAYMENTS_ENABLED: 'false' };
+          const page = await worker.fetch(new Request('https://staging.invalid/qtin'), env);
+          const body = await page.text();
+          if (page.status !== 200 || page.headers.get('x-ekodi-data-mode') !== 'isolated-staging' || !body.includes('ISOLATED STAGING')) throw new Error('staging page contract mismatch');
+          const order = await worker.fetch(new Request('https://staging.invalid/qtin/api/orders', { method: 'POST', body: '{}' }), env);
+          if (order.status !== 403) throw new Error(`staging order must be refused, got ${order.status}`);
+          const admin = await worker.fetch(new Request('https://staging.invalid/qtin/api/admin/campaigns'), env);
+          if (admin.status !== 401) throw new Error(`staging admin API must fail closed, got ${admin.status}`);
+          NODE
+      - name: Deploy isolated Development staging Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.qtin-order.staging.toml 2>&1 | tee /tmp/qtin-development-deploy.log
+          grep -Fq "$STAGING_URL" /tmp/qtin-development-deploy.log
+      - name: Verify isolated Development staging boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          access_gate() {
+            local code="$1"; local headers="$2"
+            [[ "$code" =~ ^(302|303|307|308|403)$ ]] \
+              && { grep -Eiq '^www-authenticate: Cloudflare-Access' "$headers" || grep -Eiq '^location: https://[^/]+\.cloudflareaccess\.com/' "$headers"; }
+          }
+          for attempt in $(seq 1 12); do
+            page_code=$(curl -sS -D /tmp/q-page.h -o /tmp/q-page.b -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/qtin" || true)
+            api_code=$(curl -sS -D /tmp/q-api.h -o /tmp/q-api.b -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/qtin/api/admin/campaigns" || true)
+            page_ok=0; api_ok=0
+            if [[ "$page_code" == 200 ]] && grep -Eiq '^x-ekodi-data-mode: isolated-staging' /tmp/q-page.h && grep -Fq 'ISOLATED STAGING' /tmp/q-page.b; then page_ok=1; elif access_gate "$page_code" /tmp/q-page.h; then page_ok=1; fi
+            if [[ "$api_code" == 401 ]] && grep -Fq '"dataMode":"isolated-staging"' /tmp/q-api.b; then api_ok=1; elif access_gate "$api_code" /tmp/q-api.h; then api_ok=1; fi
+            if [[ "$page_ok" == 1 && "$api_ok" == 1 ]]; then echo "QTIN staging boundary verified: page=$page_code api=$api_code"; exit 0; fi
+            sleep 3
+          done
+          echo "Staging verification failed: page=$page_code api=$api_code"
+          head -c 600 /tmp/q-page.b || true
+          exit 1

@@ -1,0 +1,12 @@
+# Isolated Development staging: same worker code, no D1, no payments, sample catalog only.
+name = "ekodi-qtin-order-staging"
+main = "qtin-order-worker.js"
+compatibility_date = "2026-10-14"
+workers_dev = true
+preview_urls = true
+
+[vars]
+ENVIRONMENT = "staging"
+DATA_MODE = "isolated-staging"
+PUBLIC_BASE_URL = "https://ekodi-qtin-order-staging.ekodi-development.workers.dev/qtin"
+PAYMENTS_ENABLED = "false"
