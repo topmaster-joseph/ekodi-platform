@@ -28,6 +28,7 @@ function d1() {
 async function freshEnv(extra = {}) {
   const DB = d1();
   DB.raw.exec(await readFile(new URL('../migrations/0201_qtin_group_orders.sql', import.meta.url), 'utf8'));
+  DB.raw.exec(await readFile(new URL('../migrations/0202_qtin_buyer_accounts.sql', import.meta.url), 'utf8'));
   return { DB, PUBLIC_BASE_URL: 'https://ekodi.kr/qtin', OPERATOR_EMAILS: 'topmaster.joseph@gmail.com', PAYMENTS_ENABLED: 'true', TOSS_CLIENT_KEY: 'live_ck_abc', TOSS_SECRET_KEY: 'live_sk_abc', QTM_SEED_ITEM_IDS: '1719304225', ...extra };
 }
 
@@ -166,7 +167,18 @@ async function openEnvWithProducts(extra = {}) {
   await runScheduled(env, OPEN_NOW, { fetchPage: fakeFetchPage });
   return env;
 }
-const post = (path, body) => new Request(`https://ekodi.kr${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+// Ordering requires a Google-verified central EKODI account (EKODI-QTIN-GOOGLE-CHECKOUT-004).
+// The default network stub answers the central identity lookup for the synthetic buyer token.
+const BUYER = { id: 'buyer-1', email: 'buyer@gmail.com', email_confirmed_at: '2026-01-01', user_metadata: { full_name: '구매자' } };
+const baseFetch = async (url, init = {}) => {
+  if (String(url).includes('/auth/v1/user')) {
+    const auth = init?.headers?.authorization || '';
+    return auth === 'Bearer buyer-token' ? new Response(JSON.stringify(BUYER), { status: 200 }) : new Response('{}', { status: 401 });
+  }
+  throw new Error(`unexpected network call in test: ${url}`);
+};
+globalThis.fetch = baseFetch;
+const post = (path, body, token = 'buyer-token') => new Request(`https://ekodi.kr${path}`, { method: 'POST', headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body) });
 
 test('public page and catalog show next-month covers; order is created with server amount', async () => {
   const env = await openEnvWithProducts();
@@ -382,7 +394,7 @@ test('with a test key the public checkout stays closed and anonymous orders are 
   const sb = mockSupabase(null);
   try {
     const res = await handleRequest(post('/qtin/api/orders', testOrderBody), env, OPEN_NOW);
-    assert.equal(res.status, 503);
+    assert.equal(res.status, 401, 'an unverified visitor must sign in first');
   } finally { sb.restore(); }
   assert.equal((await env.DB.prepare('SELECT COUNT(*) AS n FROM qtin_orders').first()).n, 0);
 });
@@ -534,4 +546,76 @@ test('serialised browser scripts survive wrangler esbuild keepNames (__name) wit
       assert.equal(context.__name, undefined, `${label} may not leak __name to global scope`);
     }
   }
+});
+
+
+// ---------- EKODI-QTIN-GOOGLE-CHECKOUT-004: anyone browses, Google sign-in to order ----------
+test('anyone can browse, but an order without a Google-verified account is refused and nothing is stored', async () => {
+  const env = await openEnvWithProducts();
+  const page = await handleRequest(new Request('https://ekodi.kr/qtin/church'), env, OPEN_NOW);
+  const html = await page.text();
+  assert.equal(page.status, 200);
+  assert.ok(html.includes('id="googleButton"') && html.includes('구글 로그인하고 신청'));
+  assert.ok(html.includes('https://accounts.google.com/gsi/client'));
+  const csp = page.headers.get('content-security-policy');
+  assert.match(csp, /script-src[^;]*https:\/\/accounts\.google\.com\/gsi\/client/);
+  assert.match(csp, /frame-src[^;]*https:\/\/accounts\.google\.com\/gsi\//);
+  const body = { campaignId: '2026-12', org: 'church', name: '홍길동', phone: '01012345678', privacyConsent: true, items: [{ productId: '2026-12:1719304225', quantity: 1 }] };
+  for (const token of [null, 'forged-token']) {
+    const res = await handleRequest(post('/qtin/api/orders', body, token), env, OPEN_NOW);
+    assert.equal(res.status, 401);
+    assert.equal((await res.json()).code, 'login_required');
+  }
+  assert.equal((await env.DB.prepare('SELECT COUNT(*) AS n FROM qtin_orders').first()).n, 0);
+  assert.equal((await handleRequest(new Request('https://ekodi.kr/qtin/api/me'), env)).status, 401);
+});
+
+test('a signed-in buyer is linked to the order, contact email defaults to Google, and details are remembered', async () => {
+  const env = await openEnvWithProducts();
+  const res = await handleRequest(post('/qtin/api/orders', { campaignId: '2026-12', org: 'mission', name: '김선교', phone: '010-2222-3333', email: '', department: '청년부', privacyConsent: true, items: [{ productId: '2026-12:1719304225', quantity: 2 }] }), env, OPEN_NOW);
+  const order = await res.json();
+  assert.equal(res.status, 201, JSON.stringify(order));
+  assert.equal(order.customerEmail, 'buyer@gmail.com');
+  const link = await env.DB.prepare('SELECT * FROM qtin_order_buyers WHERE order_id=?').bind(order.orderId).first();
+  assert.equal(link.user_id, 'buyer-1');
+  assert.equal(link.google_email, 'buyer@gmail.com');
+  const me = await (await handleRequest(new Request('https://ekodi.kr/qtin/api/me', { headers: { authorization: 'Bearer buyer-token' } }), env)).json();
+  assert.equal(me.account.email, 'buyer@gmail.com');
+  assert.deepEqual(me.profile, { name: '김선교', phone: '010-2222-3333', email: 'buyer@gmail.com', department: '청년부', org: 'mission' });
+  assert.equal(me.orders.length, 1);
+  assert.equal(me.orders[0].id, order.orderId);
+  assert.equal(me.orders[0].totalAmount, 9000);
+  // A different contact email is kept as given and remembered for next month.
+  const second = await (await handleRequest(post('/qtin/api/orders', { campaignId: '2026-12', org: 'mission', name: '김선교', phone: '010-2222-3333', email: 'family@example.com', privacyConsent: true, items: [{ productId: '2026-12:1719304225', quantity: 1 }] }), env, OPEN_NOW)).json();
+  assert.equal(second.customerEmail, 'family@example.com');
+  const again = await (await handleRequest(new Request('https://ekodi.kr/qtin/api/me', { headers: { authorization: 'Bearer buyer-token' } }), env)).json();
+  assert.equal(again.profile.email, 'family@example.com');
+  assert.equal(again.orders.length, 2);
+});
+
+test('the order page script runs signed out: it prepares in-page Google sign-in and keeps payment behind login', async () => {
+  const { renderOrderPage: render, CLIENT_NAME_PRELUDE } = await import('../qtin-order-worker.js');
+  const html = render({ campaign: { id: '2026-12', year: 2026, month: 12, state: 'open', opensAt: '', closesAt: '' }, products: [], payment: { ready: true } }, { org: 'church', scriptNonce: 'n' });
+  const scripts = [...html.matchAll(/<script nonce="n">([\s\S]*?)<\/script>/g)].map(m => m[1]);
+  const elements = new Map();
+  const el = id => { if (!elements.has(id)) elements.set(id, { id, hidden: false, disabled: false, value: '', textContent: '', innerHTML: '', style: {}, children: [], addEventListener() {}, replaceChildren() {}, scrollIntoView() {}, setAttribute() {} }); return elements.get(id); };
+  const requests = [];
+  const store = () => { const m = new Map(); return { getItem: k => m.get(k) ?? null, setItem: (k, v) => m.set(k, v), removeItem: k => m.delete(k) }; };
+  const context = vm.createContext({
+    document: { getElementById: el, querySelectorAll: () => [] },
+    localStorage: store(), sessionStorage: store(), AbortController, setTimeout, clearTimeout,
+    fetch: async (url, options) => { requests.push(String(url)); return new Response(JSON.stringify({ clientId: 'cid', nonce: 'nonce' }), { status: 201 }); },
+  });
+  context.window = context;
+  context.window.google = { accounts: { id: { initialize(o) { context.initialized = o; }, renderButton() { context.rendered = true; } } } };
+  for (const js of scripts) new vm.Script(js).runInContext(context, { timeout: 1000 });
+  assert.ok(scripts.some(js => js.startsWith(CLIENT_NAME_PRELUDE)));
+  await new Promise(resolve => setTimeout(resolve, 50));
+  assert.ok(requests.some(u => u.endsWith('/functions/v1/identity-api/challenge')), 'must request a Google sign-in challenge');
+  assert.equal(context.initialized?.client_id, 'cid');
+  assert.equal(context.initialized?.nonce, 'nonce');
+  assert.equal(context.rendered, true);
+  assert.equal(el('loginCta').hidden, false, 'signed-out visitors see the sign-in call to action');
+  assert.equal(el('payCard').hidden, true, 'payment buttons stay hidden until sign-in');
+  assert.equal(el('buyerForm').hidden, true);
 });
