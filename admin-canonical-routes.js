@@ -9,14 +9,16 @@ const SECTION_GROUP=Object.freeze({
   'sites-all':'sites','sites-core':'sites','sites-business':'sites','sites-community':'sites','sites-clients':'sites','sites-knowledge':'sites','sites-communication':'sites','sites-worklife':'sites','sites-other':'sites','sites-preparing':'sites','sites-internal':'sites','sites-user':'sites','sites-customer-partner':'sites','sites-independent':'sites',
   campus:'sites',clients:'sites','site-chrome':'sites',organization:'sites',workspace:'sites','cheonggye-members':'sites',
   'common-services':'services','service-modules':'services',confirmations:'services','life-ai':'services','personal-finance':'services',invest:'services','marketing-ai':'services',affiliates:'services','supply-network':'services',insurance:'services',capabilities:'services',openai:'services',
-  'users-access':'accounts',security:'accounts',admins:'accounts','ai-membership':'sites',
-  work:'sites',communication:'sites',community:'sites',books:'sites',devotional:'sites',social:'sites',finance:'finance',tax:'finance',
+  'users-access':'accounts',security:'accounts',admins:'accounts','ai-membership':'ai',
+  work:'services',communication:'sites',community:'sites',books:'services',devotional:'services',social:'services',finance:'finance',tax:'finance',
   health:'ops','site-health':'ops',deployments:'ops',aiops:'ai',devices:'ops','pos-agent':'ops','api-cost':'finance',architecture:'ops',maturity:'ops',services:'ops',
   'public-site-controls':'settings','language-status':'settings','ai-module-spec':'settings',storage:'settings','ai-settings':'ai','audit-records':'accounts',policies:'accounts',
 });
 const GROUP_DEFAULT=Object.freeze({
   home:'platform-overview',sites:'sites-all',ai:'aiops',services:'engine-all',finance:'finance',ops:'health',settings:'public-site-controls',accounts:'users-access',
 });
+// Stage-1 v3 addresses of sections that moved in stage 2 stay resolvable.
+const V3_STAGE1_SECTION_GROUP=Object.freeze({work:'sites',books:'sites',devotional:'sites',social:'sites','ai-membership':'sites'});
 const V2_SECTION_GROUP=Object.freeze({
   'platform-overview':'summary',
   'engine-all':'services','engine-core':'services','engine-common':'services','engine-operations':'services','engine-professional':'services','engine-ai':'services','engine-integration':'services','engine-preview':'services',
@@ -96,6 +98,7 @@ function routeFromPath(pathname){
   if(!section)return null;
   const valid=SECTION_GROUP[section]===group
     ||V2_SECTION_GROUP[section]===group
+    ||V3_STAGE1_SECTION_GROUP[section]===group
     ||PREVIOUS_NAV_GROUP[section]===group
     ||LEGACY_SECTION_GROUP[section]===group
     ||(section==='campus'&&['home','system'].includes(group))
@@ -143,7 +146,7 @@ function navigationTarget(section,loc=window.location,detailSegments=null){
   return canonicalUrl(section,loc,detail||[]);
 }
 window.EKODIAdminRoutes=Object.freeze({
-  version:'2.0.0',
+  version:'2.1.0',
   groups:Object.freeze({...GROUP_DEFAULT}),
   normalizeSection,
   normalizeDetailSegments,
