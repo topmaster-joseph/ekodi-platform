@@ -496,8 +496,16 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
 <footer class="wrap">책은 교회에서 일괄 수령 후 나누어 드립니다(개별 배송 없음). 표지 이미지·가격 출처: <a href="${QTM_ORIGIN}/" rel="noopener" target="_blank">QTM 큐티선교회</a> 온라인 스토어. 결제·구매대행: EKODIBIZ(사업자 213-13-01959, 통신판매업 2023-전남무안-0153). 문의 010-3501-8542</footer>
 <script nonce="${scriptNonce}">window.__QTIN__=${JSON.stringify({ campaignId: campaign.id, open, paymentReady: Boolean(payment.ready), testMode: Boolean(payment.testMode), org }).replace(/</g, '\\u003c')};</script>
 <script src="https://js.tosspayments.com/v2/standard"></script>
-<script nonce="${scriptNonce}">(${orderClient.toString()})()</script>`;
+<script nonce="${scriptNonce}">${clientScript(orderClient)}</script>`;
   return shell(`${issue} 큐티인 신청 · EKODI`, body, scriptNonce);
+}
+
+// Wrangler bundles with esbuild keepNames, which inserts __name(fn, "name") calls into
+// nested functions. Those calls survive Function.prototype.toString(), so every
+// serialised browser function gets a private helper in its own IIFE (repo convention).
+export const CLIENT_NAME_PRELUDE = '(()=>{const __name=(target,value)=>Object.defineProperty(target,"name",{value,configurable:true});\n';
+export function clientScript(fn) {
+  return `${CLIENT_NAME_PRELUDE}(${fn.toString()})();})();`;
 }
 
 /* Browser code (serialised into the page). */
@@ -759,7 +767,7 @@ export function renderAdminPage(scriptNonce = '') {
 <div class="pay"><button class="btn alt" data-state="force_open" type="button">강제 열기</button><button class="btn alt" data-state="force_closed" type="button">강제 마감</button><button class="btn alt" data-state="" type="button">자동으로 되돌리기</button></div></section>
 </main>
 <footer class="wrap">공개 신청서: <a href="/qtin">ekodi.kr/qtin</a> · <a href="/qtin/church">/qtin/church</a> · <a href="/qtin/mission">/qtin/mission</a></footer>
-<script nonce="${scriptNonce}">(${adminClient.toString()})()</script>`;
+<script nonce="${scriptNonce}">${clientScript(adminClient)}</script>`;
   return shell('큐티인 신청 관리 · EKODI', body, scriptNonce);
 }
 
