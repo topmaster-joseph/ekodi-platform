@@ -1,5 +1,7 @@
 // FACTCHAT-DUAL-ACCOUNT-20261021: one OpenAI-compatible adapter, two strictly separated accounts.
 //  - ekodi:       EKODI's own FactChat/BAZE gateway key. Credits are an EKODI spend (paid opt-in).
+//                 BAZE-GATEWAY-20261022: the key is read from BAZE_API_KEY (the Mindlogic-documented
+//                 name); FACTCHAT_EKODI_API_KEY remains a read-only legacy alias so nothing breaks.
 //  - institution: the 국립목포대학교 institutional key from mokpo.factchat.bot/dashboard/developers.
 //                 Used only after a Super Administrator explicitly approves institutional use.
 // Each account has its own secret binding, base URL, approval flag and usage-funding label,
@@ -17,7 +19,8 @@ const on=value=>ENABLED.has(clean(value,20).toLowerCase());
 export const FACTCHAT_ACCOUNTS=Object.freeze({
   ekodi:Object.freeze({
     providerId:'factchat-ekodi',
-    keyBinding:'FACTCHAT_EKODI_API_KEY',
+    keyBinding:'BAZE_API_KEY',
+    legacyKeyBindings:Object.freeze(['FACTCHAT_EKODI_API_KEY']),
     baseUrlBinding:'FACTCHAT_EKODI_BASE_URL',
     modelBinding:'EKODI_FACTCHAT_EKODI_MODEL',
     enabledBinding:'EKODI_PROVIDER_FACTCHAT_EKODI_ENABLED',
@@ -30,6 +33,7 @@ export const FACTCHAT_ACCOUNTS=Object.freeze({
   institution:Object.freeze({
     providerId:'factchat-institution',
     keyBinding:'FACTCHAT_MOKPO_API_KEY',
+    legacyKeyBindings:Object.freeze([]),
     baseUrlBinding:'FACTCHAT_MOKPO_BASE_URL',
     modelBinding:'EKODI_FACTCHAT_INSTITUTION_MODEL',
     enabledBinding:'EKODI_PROVIDER_FACTCHAT_INSTITUTION_ENABLED',
@@ -45,6 +49,10 @@ export function factChatAccount(accountOrProviderId=''){
   const value=clean(accountOrProviderId,80).toLowerCase();
   return FACTCHAT_ACCOUNTS[value]||Object.values(FACTCHAT_ACCOUNTS).find(item=>item.providerId===value)||null;
 }
+
+// Every binding that may hold this account's key, preferred first. Accounts never share a binding.
+export function factChatKeyBindings(account){return account?[account.keyBinding,...(account.legacyKeyBindings||[])]:[]}
+export function factChatApiKey(env={},account){for(const binding of factChatKeyBindings(account)){const value=clean(env?.[binding],8192);if(value)return value}return''}
 
 // Each account is pinned to its own exact host set over https; anything else (other tenant
 // subdomains, query strings, credentials in the URL) falls back to the official gateway.
@@ -81,7 +89,7 @@ function gatewayError(account,response,data){
 export function createFactChatGatewayProvider(env={},options={}){
   const account=factChatAccount(options.account);
   if(!account)throw new Error('factchat_account_required');
-  const key=clean(env?.[account.keyBinding],8192);
+  const key=factChatApiKey(env,account);
   const model=clean(options.model||env?.[account.modelBinding],180)||DEFAULT_MODEL;
   const base=factChatBaseUrl(env,account);
   const fetchImpl=options.fetchImpl||globalThis.fetch;
@@ -114,7 +122,7 @@ export function createFactChatGatewayProvider(env={},options={}){
 export async function probeFactChatGatewayCredential(env={},options={}){
   const account=factChatAccount(options.account);
   if(!account)throw new Error('factchat_account_required');
-  const key=clean(env?.[account.keyBinding],8192);
+  const key=factChatApiKey(env,account);
   if(!key)throw new Error(`${account.providerId.replace(/-/g,'_')}_not_configured`);
   const fetchImpl=options.fetchImpl||globalThis.fetch;
   const response=await fetchImpl(`${factChatBaseUrl(env,account)}/models/?type=llm`,{headers:{authorization:`Bearer ${key}`},signal:AbortSignal.timeout(15000)});
