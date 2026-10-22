@@ -217,7 +217,7 @@
       for(const message of session.messages){
         const row=el('div',`ekodi-assist-turn ${message.role||'assistant'} ${message.kind||''}`);
         const bubble=el('div','ekodi-assist-bubble',message.text);
-        if(message.role==='assistant'){const who=el('div','ekodi-assist-who');who.append(el('span','ekodi-assist-avatar','E'),el('strong','',message.kind==='status'?'EKODI 작업':'에코디 AI'));row.append(who)}
+        if(message.role==='assistant'){const who=el('div','ekodi-assist-who');who.append(el('span','ekodi-assist-avatar',message.mode==='factchat-institution'?'F':'E'),el('strong','',message.kind==='status'?'EKODI 작업':message.mode==='factchat-institution'?FACTCHAT_INSTITUTION_LABEL:'에코디 AI'));row.append(who)}
         row.append(bubble);
         if(message.provider||message.status){const meta=el('small','ekodi-assist-turn-meta',[message.provider,message.status&&statusLabel(message.status)].filter(Boolean).join(' · '));row.append(meta)}
         thread.append(row);
@@ -356,12 +356,14 @@
   async function submitFactChatInstitution(prompt){
     const value=String(prompt||'').trim();if(!value)return false;
     if(EXTERNAL_SECRET_RE.test(value)){showStatus('비밀번호·API 키·토큰처럼 보이는 값은 외부 AI로 보내지 않습니다. 민감정보를 제거한 뒤 다시 실행해 주세요.',true);return false}
-    if(!window.confirm(`${FACTCHAT_INSTITUTION_LABEL} 크레딧으로 1회 호출합니다. 진행할까요?`))return false;
     setOpen(true);state.tab='ai';setTab('ai',false);
-    beginConversationTurn(value);showStatus(`${FACTCHAT_INSTITUTION_LABEL}로 요청 중입니다.`);
+    // FACTCHAT-DOCK-CHAT-20261022: selecting the target is the consent; earlier turns ride along so it converses like ChatGPT/Claude.
+    const history=beginConversationTurn(value)||[];showStatus(`${FACTCHAT_INSTITUTION_LABEL}로 답변을 만드는 중입니다.`);
+    const transcript=history.slice(-6).map(turn=>`${turn.role==='user'?'사용자':'AI'}: ${String(turn.text||'').slice(0,900)}`).join('\n');
+    const input=transcript?`[이전 대화]\n${transcript}\n\n[이번 질문]\n${value}`.slice(-7800):value;
     let reply='',status='active';
     try{
-      const result=await api('/api/ai-modules/v1/providers/admin/factchat-institution/playground',{method:'POST',headers:{'x-ekodi-confirm-impact':'factchat-institution-playground'},body:JSON.stringify({input:value})});
+      const result=await api('/api/ai-modules/v1/providers/admin/factchat-institution/playground',{method:'POST',headers:{'x-ekodi-confirm-impact':'factchat-institution-playground'},body:JSON.stringify({input,system:'당신은 EKODI 최고관리자를 돕는 한국어 AI 비서입니다. 이전 대화 맥락을 이어서 간결하고 정확하게 답하고, 모르는 것은 확인필요라고 말하세요.'})});
       if(result.ok){reply=String(result.text||'응답을 받지 못했습니다.');rememberAi('assistant',reply);lastAiReply={text:reply,mode:'factchat-institution',provider:FACTCHAT_INSTITUTION_LABEL,notice:''};reply=`${reply}\n\n— ${result.model} · 입력 ${result.usage?.inputUnits??0} / 출력 ${result.usage?.outputUnits??0} 토큰 · 기관 크레딧`}
       else{reply=`기관계정 호출 실패: ${result.code||'unknown'}`;status='failed'}
     }catch(error){reply=FACTCHAT_ERRORS[String(error?.message||'')]||String(error?.message||error);status='failed'}
@@ -473,7 +475,16 @@
     }
   }
 
-  function boot(){if(!document.querySelector('#app')||document.querySelector('#app')?.hidden)return;install()}
+  // DOCK-STYLE-SELF-LOAD-20261022: the bootstrap can load this script before the demand loader exists and then
+  // skips the stylesheets, leaving the panel unstyled below the viewport. The dock guarantees its own styles.
+  function ensureDockStyles(){
+    for(const name of ['ai-ops-admin.css','admin-assist-dock.css']){
+      const present=[...document.querySelectorAll('link[rel="stylesheet"]')].some(link=>String(link.getAttribute('href')||'').split('?')[0].endsWith(`/${name}`));
+      if(present)continue;
+      const link=document.createElement('link');link.rel='stylesheet';link.href=`/admin/${name}`;link.dataset.ekodiAssistStyle=name;document.head.appendChild(link);
+    }
+  }
+  function boot(){if(!document.querySelector('#app')||document.querySelector('#app')?.hidden)return;ensureDockStyles();install()}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
   window.addEventListener('ekodi-authenticated',boot);
 })();

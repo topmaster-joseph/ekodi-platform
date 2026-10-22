@@ -17,7 +17,7 @@ const STEP_ACTIONS=['자료 확인 완료','FactChat 열기','프롬프트 ① �
 const STEP_ACTIONS_MOBILE={2:'① 복사·FactChat',3:'② 복사·FactChat'};
 let course,rec,key,toastTimer=0,lastPhase='',relayout=()=>{},spy=null,spyLock=0,sheetText='',sheetName='';
 
-const blank=()=>({v:1,session:1,track:'',role:'',timerMin:{},trackChosen:false,bigText:false,level:'basic',tab:'agenda',checked:{},memo:{},self:{},quiz:{},hunts:{},plan:'',applied:'',timers:{},
+const blank=()=>({v:1,session:1,unlocked:false,track:'',role:'',timerMin:{},trackChosen:false,bigText:false,level:'basic',tab:'agenda',checked:{},memo:{},self:{},quiz:{},hunts:{},plan:'',applied:'',timers:{},
   step:{},done:{},results:{},ownSource:{},checks:{},updatedAt:0});
 function load(){
   try{const raw=JSON.parse(storage?.getItem(key)||'null');if(raw&&raw.v===1)return {...blank(),...raw};}catch{}
@@ -32,6 +32,11 @@ const session=()=>sessionByNo(course,rec.session)||course.sessions[0];
 const sessionMissions=()=>session().modules.filter(m=>m.kind==='practice').map(m=>m.missionId);
 const isNarrow=()=>window.matchMedia('(max-width: 899px)').matches||window.matchMedia('(pointer: coarse)').matches;
 const canSplit=()=>!isNarrow()&&(window.screen?.availWidth||0)>=1100;
+// Session 2+ stays closed until every session-1 practice is complete on this device, or the learner came in
+// through the instructor's link/QR for that session (open=1). Course flow guidance, not access control.
+const firstSessionMissions=()=>course.sessions[0].modules.filter(m=>m.kind==='practice').map(m=>m.missionId);
+const firstSessionDone=()=>firstSessionMissions().every(id=>rec.done[id]);
+const sessionLocked=no=>no>1&&!rec.unlocked&&!firstSessionDone();
 function activeMission(){const t=rec.tab;return t.startsWith('m:')&&course.missions[t.slice(2)]?t.slice(2):'';}
 const clean=(v,max=MAX_TEXT)=>String(v||'').replace(/\u0000/g,'').slice(0,max);
 const stepOf=id=>Math.max(0,Math.min(STEP_LABELS.length-1,Number(rec.step[id])||0));
@@ -179,6 +184,8 @@ function renderDock(){
   }
 }
 function render(){
+  if(sessionLocked(rec.session))return renderLocked();
+  $('#labTabsWrap').hidden=false;
   tabs();
   $('#labSub').textContent=session().no+'회차 · '+session().title;
   const id=activeMission();
@@ -188,10 +195,29 @@ function render(){
   else if(rec.tab==='record')html=viewRecord();
   else html=viewAgenda();
   $('#labView').innerHTML=html;
-  $('#labSession').value=String(rec.session);$('#labTrack').value=rec.track;$('#labLevel').value=rec.level;
+  sessionOptions();$('#labTrack').value=rec.track;$('#labLevel').value=rec.level;
   fillRoles();renderSummary();
   $('#topSub').textContent=session().no+'회차 · '+(id?course.missions[id].title.replace('개인 실습 ',''):'수강생 실습실');
   renderSubnav();renderDock();tick();relayout();measureTabs();setupSpy();
+}
+function renderLocked(){
+  const ids=firstSessionMissions();
+  $('#labTabsWrap').hidden=true;$('#labSubnav').hidden=true;
+  $('#labSub').textContent=rec.session+'회차 · 1회차 실습 후 열립니다';
+  $('#labView').innerHTML='<section class="panel lock-panel"><p class="eyebrow">'+rec.session+'회차 실습실</p><h2>1회차 실습을 마치면 열립니다</h2>'+
+    '<div class="stamps">'+ids.map(id=>'<span class="stamp'+(rec.done[id]?' is-on':'')+'"><i aria-hidden="true">'+(rec.done[id]?'완료':course.missions[id].no)+'</i><b>'+esc(course.missions[id].title.replace('개인 실습 ',''))+'</b></span>').join('')+'</div>'+
+    '<p class="meta">'+rec.session+'회차 수업에서는 강사 화면의 QR로 들어오면 바로 열립니다.</p>'+
+    '<div class="btn-row"><button type="button" class="btn btn-primary" data-goto-session="1">1회차 실습실로</button></div></section>';
+  sessionOptions();fillRoles();renderSummary();
+  $('#topSub').textContent=rec.session+'회차 · 잠김';
+  const prev=$('#dockPrev'),next=$('#dockNext'),act=$('#dockAction');
+  prev.hidden=true;next.hidden=true;act.disabled=false;act.textContent='1회차로';act.dataset.mode='goto1';
+  $('#dockLabel').innerHTML='<b>'+rec.session+'회차 잠김</b><span>1회차 실습 완료 후 열림</span>';
+  spy?.disconnect();tick();relayout();
+}
+function sessionOptions(){
+  $('#labSession').innerHTML=course.sessions.map(x=>'<option value="'+x.no+'">'+x.no+'회차'+(sessionLocked(x.no)?' (1회차 후)':'')+'</option>').join('');
+  $('#labSession').value=String(rec.session);
 }
 function fillRoles(){
   const roles=trackById(course,rec.track).roles||[];
@@ -326,6 +352,7 @@ function runCheck(id){
 }
 async function dockAction(){
   const act=$('#dockAction');
+  if(act.dataset.mode==='goto1'){rec.session=1;rec.tab='agenda';save();render();window.scrollTo({top:0});return;}
   if(act.dataset.mode==='open'){if(act.dataset.target){rec.tab='m:'+act.dataset.target;save();render();window.scrollTo({top:0});}else{rec.tab='agenda';save();render();}return;}
   const id=activeMission();const s=stepOf(id);
   if(s===0)return setStep(id,1);
@@ -369,6 +396,7 @@ function bind(){
     if(t.id==='textSize'){rec.bigText=!rec.bigText;applyTextSize();save();relayout();return;}
     if(d.tab){rec.tab=d.tab;save();render();$('#labMain').focus({preventScroll:true});window.scrollTo({top:0});return;}
     if(d.secGo){goSec(d.secGo);return;}
+    if(d.gotoSession){rec.session=Number(d.gotoSession);rec.tab='agenda';save();render();window.scrollTo({top:0});return;}
     if(d.viewMaterial!==undefined){const f=missionMaterials(course,activeMission(),rec.track)[Number(d.viewMaterial)];if(f)openSheet(f);return;}
     if(d.copyMaterial!==undefined){const f=missionMaterials(course,activeMission(),rec.track)[Number(d.copyMaterial)];if(f)toast(copyNow(f.text)?f.label+' 복사 완료 · FactChat에 붙여 넣으세요.':'「원문 보기·복사」에서 길게 눌러 복사하세요.');return;}
     if(d.copyOpen){copyAndOpen(document.getElementById(d.copyOpen)?.textContent||'');return;}
@@ -401,7 +429,7 @@ function bind(){
     else if(t.matches('[data-plan]')){rec.plan=clean(t.value);save();}
     else if(t.matches('[data-applied]')){rec.applied=clean(t.value);save();}
   });
-  $('#labSession').addEventListener('change',e=>{rec.session=Number(e.target.value);rec.tab='agenda';save();render();});
+  $('#labSession').addEventListener('change',e=>{rec.session=Number(e.target.value);rec.tab='agenda';save();render();if(sessionLocked(rec.session))toast('1회차 실습을 마치면 '+rec.session+'회차가 열립니다.');});
   $('#labTrack').addEventListener('change',e=>{rec.track=e.target.value;rec.role='';rec.trackChosen=true;save();render();toast(trackById(course,rec.track).label+' 사례로 바꿨습니다.');});
   $('#labRole').addEventListener('change',e=>{rec.role=e.target.value;save();render();});
   $('#labLevel').addEventListener('change',e=>{rec.level=e.target.value;save();render();});
@@ -432,6 +460,7 @@ async function init(){
   rec=load();
   if(!course.tracks.some(t=>t.id===rec.track))rec.track='';
   const p=parseLearnerParams(location.search,course);
+  if(p.open){rec.unlocked=true;}
   if(new URLSearchParams(location.search).has('s'))rec.session=p.s;
   if(!sessionByNo(course,rec.session))rec.session=1;
   // A practice tab from another session must not survive a session change (e.g. ?s=2 after a 1회차 mission).
@@ -448,7 +477,7 @@ async function init(){
   $('#labTitle').textContent=course.subtitle;
   $('#labSafety').textContent=course.safety;
   $('#topFactchat').href=FACTCHAT_TOOL.entryUrl;
-  $('#labSession').innerHTML=course.sessions.map(s=>'<option value="'+s.no+'">'+s.no+'회차</option>').join('');
+  sessionOptions();
   $('#labTrack').innerHTML='<option value="" disabled>분야 선택</option>'+course.tracks.map(t=>'<option value="'+t.id+'">'+esc(t.label)+'</option>').join('');
   $('#labLevel').innerHTML=course.levels.map(l=>'<option value="'+l.id+'">'+esc(l.label)+'</option>').join('');
   const needTrack=!rec.track;

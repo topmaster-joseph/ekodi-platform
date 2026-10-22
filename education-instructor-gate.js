@@ -139,14 +139,17 @@ export function activeVerifier(env){
   const custom=env?.EDU_INSTRUCTOR_GATE_SECRET;
   return parseVerifier(custom)?custom:env?.EDU_INSTRUCTOR_GATE;
 }
-export const MIN_CUSTOM_PASSWORD_LENGTH=10;
+// A short PIN is acceptable only because this verifier is a Worker secret (never public): offline guessing is
+// impossible and online guessing is bounded by the edge write rate limiter and PBKDF2 cost per attempt.
+export const MIN_CUSTOM_PASSWORD_LENGTH=4;
 
 // Returns a Response when the gate decides the request (lock page, login result, logout, denied asset),
 // or null when the request is allowed to reach the protected asset.
 export async function instructorGate(request,env,{url=new URL(request.url)}={}){
   if(!isGatedPath(url.pathname))return null;
   // Instructor decision (2026-10-22): operator surfaces open without a password. Set "locked" to re-enable.
-  if(gateMode(env)==='open')return null;
+  // A configured instructor-chosen password (Worker secret) always locks, whatever the mode var says.
+  if(gateMode(env)==='open'&&!parseVerifier(env?.EDU_INSTRUCTOR_GATE_SECRET))return null;
   const verifier=activeVerifier(env);
   const key=env?.EDU_GATE_SIGNING_KEY;
   const configured=!!parseVerifier(verifier)&&usableKey(key);

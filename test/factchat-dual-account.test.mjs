@@ -310,3 +310,22 @@ test('command dock offers the FactChat institution target and routes it to the g
 test('command dock edits dispatch the Shared Site Core release',()=>{
   assert.match(read('scripts/converge-orchestrated-pr-merge.mjs'),/\['admin-assist-dock\.js','admin-assist-dock\.css','admin-assist-bootstrap\.js','admin-assist-bootstrap\.css'\]\.includes\(file\)/);
 });
+
+test('command dock: FactChat runs without a confirm popup and carries prior turns like a chat',()=>{
+  const dock=read('admin-assist-dock.js');
+  const fn=dock.slice(dock.indexOf('async function submitFactChatInstitution'),dock.indexOf('async function handoffCommand'));
+  assert.doesNotMatch(fn,/window\.confirm/);
+  assert.match(fn,/\[이전 대화\]/);
+  assert.match(fn,/history\.slice\(-6\)/);
+  assert.match(dock,/message\.mode==='factchat-institution'\?FACTCHAT_INSTITUTION_LABEL:'에코디 AI'/);
+});
+
+test('dock guarantees its own stylesheets and the bootstrap accepts the demand loader API names',()=>{
+  const dock=read('admin-assist-dock.js'),boot=read('admin-assist-bootstrap.js'),loader=read('admin-demand-loader.js');
+  assert.match(dock,/function ensureDockStyles\(\)/);
+  assert.match(dock,/\['ai-ops-admin\.css','admin-assist-dock\.css'\]/);
+  assert.match(dock,/ensureDockStyles\(\);install\(\)/);
+  assert.match(boot,/let ls=d\?\.loadStyle\|\|d\?\.loadCss,lj=d\?\.loadScript\|\|d\?\.loadJs;/);
+  // Source exports loadScript/loadStyle; the admin postbuild ships them as loadJs/loadCss. Both must work.
+  assert.match(loader,/loadScript,\s*\n\s*loadStyle/);
+});

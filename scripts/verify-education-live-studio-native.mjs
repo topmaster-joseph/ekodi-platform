@@ -39,9 +39,9 @@ const report={taskId:trim(process.env.EKODI_RELEASE_TASK_ID||'education-live-stu
   startedAt:new Date().toISOString(),profiles:[],flows:[],captures:[],rateLimited:[],consoleErrors:[],pageErrors:[],httpErrors:[],requestFailures:[],externalMediaWarnings:[],
   blockedMutations:[],observedSecurityBlocks:[],notesLoadedByLearner:false,ok:false};
 const record=(kind,profile,detail)=>report[kind].push({profile,...detail});
-// Instructor gallery stills are served by YouTube's image CDN. Their availability is outside EKODI's control,
+// Instructor gallery stills (YouTube) and mood-slide photos (Unsplash) come from third-party image CDNs.
 // so a failure there is evidence (externalMediaWarnings), not a release blocker. Everything else stays strict.
-const EXTERNAL_MEDIA=/^https:\/\/i\.ytimg\.com\//;
+const EXTERNAL_MEDIA=/^https:\/\/(i\.ytimg\.com|images\.unsplash\.com)\//;
 
 function watch(page,profile,{onRequest}={}){
   page.on('console',message=>{
@@ -91,20 +91,24 @@ async function authorize(context){
   const origin=new URL(ORIGIN);
   await context.addCookies([{name:GATE_COOKIE,value:await mintGateToken(key),domain:origin.hostname,path:(PREFIX||'')+'/study/live',httpOnly:true,secure:origin.protocol==='https:',sameSite:'Lax'}]);
 }
-// The deployed access mode comes from the same Worker config that was released (EDU_INSTRUCTOR_GATE_MODE).
-async function deployedGateMode(){
-  const toml=await fs.readFile(new URL('../wrangler.education.toml',import.meta.url),'utf8');
-  return /EDU_INSTRUCTOR_GATE_MODE\s*=\s*"open"/i.test(toml)?'open':'locked';
+// The instructor surfaces are either open (EDU_INSTRUCTOR_GATE_MODE=open) or locked (default, or whenever an
+// instructor-chosen password is configured as a Worker secret). The probe observes which one is live and then
+// verifies that mode's contract.
+async function deployedGateMode(context){
+  const r=await context.request.get(ORIGIN+R.studio,{failOnStatusCode:false,maxRedirects:0});
+  if(r.status()===200)return 'open';
+  if(r.status()===401)return 'locked';
+  fail('instructor studio answered '+r.status()+' without a session (expected 200 open or 401 locked)');
 }
 // Locked: without a session the instructor studio, presenter and notes must be refused. Open: they load
 // without any password. Either way the learner lab stays public and frameable only by the same origin.
 async function gateProbe(browser){
-  const mode=await deployedGateMode();
   const context=await browser.newContext({locale:'ko-KR'});
   await guard(context,'gate');
   try{
     const page=await context.newPage();
     const result={};
+    const mode=await deployedGateMode(context);
     result.mode=mode;
     if(mode==='open'){
       for(const [k,route] of [['studio',R.studio],['presenter',R.presenter]]){
@@ -223,7 +227,9 @@ async function instructorFlow(browser,profile){
     await open(presenter,R.presenter);
     await studio.bringToFront();
     await studio.locator('[data-present-module="3"]').click();
-    await presenter.waitForFunction(()=>document.querySelector('#stage')?.innerText.includes('HWP 문서 업무'),null,{timeout:8000});
+    // A practice module may open with a photo mood slide before its title slide.
+    await presenter.waitForFunction(()=>{const st=document.querySelector('#stage');return !!st&&(st.innerText.includes('HWP 문서 업무')||!!st.querySelector('.slide-mood'));},null,{timeout:8000})
+      .catch(()=>fail('studio → presenter did not show the practice module'));
     step('studio → presenter slide sync');
     await studio.locator('[data-start-practice="hwp"]').click();
     await studio.waitForFunction(()=>/진행 중/.test(document.querySelector('#timerInfo')?.textContent||''),null,{timeout:5000});
@@ -299,6 +305,11 @@ async function learnerFlow(browser,profile){
   try{
     const page=await context.newPage();
     watch(page,profile.name,{onRequest:req=>{if(/\.notes\.js/.test(req.url()))report.notesLoadedByLearner=true;}});
+    // Session 2 stays closed until session 1's practices are done (or the instructor's QR opens it).
+    await open(page,R.lab+'&s=2');
+    if(await page.locator('#labView .lock-panel').count()!==1)fail('session 2 must be locked before session 1 practice is finished');
+    if(!(await page.locator('#labTabsWrap').isHidden()))fail('locked session must not expose its practice menu');
+    step('session 2 locked until session 1 is done');
     const end=Date.now()+20*60000;
     await open(page,R.lab+'&s=1&m=hwp&lv=basic&e='+end);
     if((await page.locator('.tab.is-on').innerText()).indexOf('HWP')<0)fail('QR deep link did not open HWP mission');
@@ -414,7 +425,7 @@ async function layoutProbe(browser,profile){
   try{
     const page=await context.newPage();watch(page,profile.name);
     const result={name:profile.name,viewport:{width:profile.width,height:profile.height}};
-    for(const [k,route,dock] of [['studio',R.studio,false],['presenter',R.presenter,false],['lab',R.lab+'&s=2&m=ppt',true],['entry',R.entry,false]]){
+    for(const [k,route,dock] of [['studio',R.studio,false],['presenter',R.presenter,false],['lab',R.lab+'&s=2&m=ppt&open=1',true],['entry',R.entry,false]]){
       await open(page,route,{ready:k!=='entry'});result[k]=await overflow(page,profile.name+' '+k);
       if(k!=='presenter')result[k+'Chrome']=await chromeCheck(page,profile.name+' '+k,{mobile:profile.mobile,dock});
     }
