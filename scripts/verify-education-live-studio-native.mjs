@@ -136,6 +136,12 @@ async function open(page,route,{ready=true}={}){
   }
   await page.waitForLoadState('networkidle',{timeout:8000}).catch(()=>{});
 }
+// A refresh is a new navigation: it gets the same 429/Retry-After handling as the first visit.
+async function reopen(page){
+  const url=page.url();
+  if(!url.startsWith(ORIGIN))fail('cannot refresh outside the Education origin: '+url);
+  await open(page,url.slice(ORIGIN.length));
+}
 async function overflow(page,label){
   const o=await page.evaluate(()=>({width:document.documentElement.scrollWidth,client:document.documentElement.clientWidth}));
   if(o.width>o.client+2)fail(label+' horizontal overflow '+JSON.stringify(o));
@@ -175,7 +181,7 @@ async function instructorFlow(browser,profile){
   await context.grantPermissions(['clipboard-read','clipboard-write'],{origin:ORIGIN}).catch(()=>{});
   await guard(context,profile.name);
   await authorize(context);
-  const flow={profile:profile.name,steps:[]};const step=s=>flow.steps.push(s);
+  const flow={profile:profile.name,steps:[]};const step=s=>{flow.steps.push(s);report.lastSteps=[profile.name,...flow.steps.slice(-3)];};
   try{
     const studio=await context.newPage();watch(studio,profile.name);
     await open(studio,R.studio);
@@ -250,7 +256,7 @@ async function instructorFlow(browser,profile){
     step('stage: back to lecture');
     await shot(presenter,profile.name+'-presenter',false);
     await shot(audience,profile.name+'-audience',false);
-    await studio.reload({waitUntil:'domcontentloaded'});await studio.locator('body[data-ready="true"]').waitFor({state:'attached'});
+    await reopen(studio);
     if(!/진행 중|종료 5분 전|종료 1분 전/.test(await studio.locator('#timerInfo').innerText()))fail('timer not restored after refresh');
     step('refresh restores running timer');
     const [md]=await Promise.all([studio.waitForEvent('download',{timeout:10000}),studio.locator('#exportPlan').click()]);
@@ -268,7 +274,7 @@ async function learnerFlow(browser,profile){
   const context=await browser.newContext({viewport:{width:profile.width,height:profile.height},isMobile:profile.mobile,hasTouch:profile.mobile,locale:'ko-KR',acceptDownloads:true});
   await context.grantPermissions(['clipboard-read','clipboard-write'],{origin:ORIGIN}).catch(()=>{});
   await guard(context,profile.name);
-  const flow={profile:profile.name,steps:[]};const step=s=>flow.steps.push(s);
+  const flow={profile:profile.name,steps:[]};const step=s=>{flow.steps.push(s);report.lastSteps=[profile.name,...flow.steps.slice(-3)];};
   try{
     const page=await context.newPage();
     watch(page,profile.name,{onRequest:req=>{if(/\.notes\.js/.test(req.url()))report.notesLoadedByLearner=true;}});
@@ -320,7 +326,7 @@ async function learnerFlow(browser,profile){
     await page.locator('#stepCard [data-crit]').first().check();
     step('result checker flags invented values');
     await page.waitForTimeout(200);
-    await page.reload({waitUntil:'domcontentloaded'});await page.locator('body[data-ready="true"]').waitFor({state:'attached'});
+    await reopen(page);
     if(!/^5 \/ 6/.test(await page.locator('#dockLabel').innerText()))fail('step position not restored after reload');
     if(!await page.locator('#stepCard [data-crit]').first().isChecked())fail('checklist not restored after reload');
     if(!(await page.locator('textarea[data-result="hwp"]').inputValue()).includes('가상 AI 출력'))fail('pasted result not restored');
@@ -404,7 +410,7 @@ async function main(){
     report.error=trim(error?.message||error,1100);
     // Surface the reason as a GitHub annotation (readable without downloading logs/artifacts).
     const esc=v=>String(v).replace(/%/g,'%25').replace(/\r/g,'%0D').replace(/\n/g,'%0A');
-    const extra=['consoleErrors','pageErrors','httpErrors','requestFailures'].map(k=>k+'='+JSON.stringify(report[k].slice(0,3))).join(' ');
+    const extra=['consoleErrors','pageErrors','httpErrors','requestFailures','rateLimited'].map(k=>k+'='+JSON.stringify(report[k].slice(-3))).join(' ')+' lastFlowSteps='+JSON.stringify(report.lastSteps||[]);
     console.log('::error title=EKODI Education Live probe::'+esc(report.error+' | '+extra).slice(0,3500));
     throw error;
   }
