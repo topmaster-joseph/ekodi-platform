@@ -14,9 +14,10 @@ test('Design Engine runtime owns the same distinct work areas as the Admin menu 
   assert.equal(new Set(engineGroups).size, engineGroups.length, 'work areas must never repeat');
   const ownerBySection = new Map(ADMIN_MENU_REGISTRY.filter(item => !item.internal).map(item => [item.id,item.group]));
   assert.equal(ownerBySection.get('finance'), 'finance');
-  assert.equal(ownerBySection.get('devices'), 'devices-agent');
-  assert.equal(ownerBySection.get('deployments'), 'releases');
-  assert.equal(ownerBySection.get('audit-records'), 'security-audit');
+  assert.equal(ownerBySection.get('devices'), 'ops');
+  assert.equal(ownerBySection.get('deployments'), 'ops');
+  assert.equal(ownerBySection.get('aiops'), 'ai');
+  assert.equal(ownerBySection.get('audit-records'), 'accounts');
 });
 
 test('Design Engine checks navigation in the actual sidebar rather than unrelated buttons', () => {

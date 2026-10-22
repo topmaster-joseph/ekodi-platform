@@ -33,7 +33,7 @@ test('heavy admin modules are explicit on-demand features', async () => {
   }
   assert.match(loader, /author-billing-admin\.js/);
   assert.match(loader, /system-health-admin\.js/);
-  assert.match(loader, /storage:\{[^\n]*paths:\['\/admin\/settings-records\/storage','\/admin\/system\/storage'\]/);
+  assert.match(loader, /storage:\{[^\n]*paths:\['\/admin\/settings\/storage','\/admin\/settings-records\/storage','\/admin\/system\/storage'\]/);
   assert.doesNotMatch(loader, /setInterval\([^)]*loadDevices/);
 });
 
@@ -84,23 +84,23 @@ test('device browser diagnostics are mirrored under canonical /admin and verifie
   assert.ok(diagnosticRequests.every(item => String(item.url).startsWith('https://ekodi.kr/admin/')));
 });
 
-test('shared admin navigation exposes eleven distinct areas with direct task routes', async () => {
+test('shared admin navigation exposes eight distinct areas with direct task routes', async () => {
   const registry = await read('admin-menu-registry.js');
   const sidebar = await read('admin-sidebar.js');
   const postbuild = await read('scripts/admin-performance-postbuild.mjs');
   assert.doesNotMatch(registry, /id: 'overview'/);
-  for (const area of ['summary', 'sites', 'people', 'services', 'content', 'finance', 'status', 'releases', 'devices-agent', 'settings-records', 'security-audit']) assert.match(registry, new RegExp(`id: '${area}'`));
-  for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'ai', 'business', 'data', 'site-management', 'settings', 'access']) assert.doesNotMatch(registry, new RegExp(`id: '${retired}', icon:`));
+  for (const area of ['home', 'sites', 'ai', 'services', 'finance', 'ops', 'settings', 'accounts']) assert.match(registry, new RegExp(`id: '${area}', icon:`));
+  for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'business', 'data', 'site-management', 'access', 'summary', 'people', 'content', 'status', 'releases', 'devices-agent', 'settings-records', 'security-audit']) assert.doesNotMatch(registry, new RegExp(`id: '${retired}', icon:`));
   assert.match(registry, /id: 'campus', group: 'sites'/);
-  assert.match(registry, /id: 'work', group: 'content'/);
+  assert.match(registry, /id: 'work', group: 'sites'/);
   assert.match(registry, /id: 'clients', group: 'sites'/);
   assert.match(registry, /id: 'common-services', group: 'services'/);
-  assert.match(registry, /id: 'community', group: 'content'/);
-  assert.match(registry, /id: 'ai-membership', group: 'people'/);
-  assert.match(registry, /id: 'books', group: 'content'/);
-  assert.match(registry, /id: 'devotional', group: 'content'/);
+  assert.match(registry, /id: 'community', group: 'sites'/);
+  assert.match(registry, /id: 'ai-membership', group: 'sites'/);
+  assert.match(registry, /id: 'books', group: 'sites'/);
+  assert.match(registry, /id: 'devotional', group: 'sites'/);
   assert.match(registry, /id: 'capabilities', group: 'services'/);
-  assert.match(registry, /id: 'devices', group: 'devices-agent'/);
+  assert.match(registry, /id: 'devices', group: 'ops'/);
   assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
   assert.match(sidebar, /admin-global-navs/);
   assert.doesNotMatch(sidebar, /data-admin-context-section/);

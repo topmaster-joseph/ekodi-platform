@@ -1,6 +1,23 @@
 (()=>{
 'use strict';
+// ADMIN-IA-V3 canonical groups. V2_SECTION_GROUP keeps every previously
+// canonical /admin/{group}/{section} address resolvable; the entry handoff then
+// rewrites it to the v3 canonical path.
 const SECTION_GROUP=Object.freeze({
+  'platform-overview':'home',
+  'engine-all':'services','engine-core':'services','engine-common':'services','engine-operations':'services','engine-professional':'services','engine-ai':'services','engine-integration':'services','engine-preview':'services',
+  'sites-all':'sites','sites-core':'sites','sites-business':'sites','sites-community':'sites','sites-clients':'sites','sites-knowledge':'sites','sites-communication':'sites','sites-worklife':'sites','sites-other':'sites','sites-preparing':'sites','sites-internal':'sites','sites-user':'sites','sites-customer-partner':'sites','sites-independent':'sites',
+  campus:'sites',clients:'sites','site-chrome':'sites',organization:'sites',workspace:'sites','cheonggye-members':'sites',
+  'common-services':'services','service-modules':'services',confirmations:'services','life-ai':'services','personal-finance':'services',invest:'services','marketing-ai':'services',affiliates:'services','supply-network':'services',insurance:'services',capabilities:'services',openai:'services',
+  'users-access':'accounts',security:'accounts',admins:'accounts','ai-membership':'sites',
+  work:'sites',communication:'sites',community:'sites',books:'sites',devotional:'sites',social:'sites',finance:'finance',tax:'finance',
+  health:'ops','site-health':'ops',deployments:'ops',aiops:'ai',devices:'ops','pos-agent':'ops','api-cost':'finance',architecture:'ops',maturity:'ops',services:'ops',
+  'public-site-controls':'settings','language-status':'settings','ai-module-spec':'settings',storage:'settings','ai-settings':'ai','audit-records':'accounts',policies:'accounts',
+});
+const GROUP_DEFAULT=Object.freeze({
+  home:'platform-overview',sites:'sites-all',ai:'aiops',services:'engine-all',finance:'finance',ops:'health',settings:'public-site-controls',accounts:'users-access',
+});
+const V2_SECTION_GROUP=Object.freeze({
   'platform-overview':'summary',
   'engine-all':'services','engine-core':'services','engine-common':'services','engine-operations':'services','engine-professional':'services','engine-ai':'services','engine-integration':'services','engine-preview':'services',
   'sites-all':'sites','sites-core':'sites','sites-business':'sites','sites-community':'sites','sites-clients':'sites','sites-knowledge':'sites','sites-communication':'sites','sites-worklife':'sites','sites-other':'sites','sites-preparing':'sites','sites-internal':'sites','sites-user':'sites','sites-customer-partner':'sites','sites-independent':'sites',
@@ -11,7 +28,7 @@ const SECTION_GROUP=Object.freeze({
   health:'status','site-health':'status',deployments:'releases',aiops:'releases',devices:'devices-agent','pos-agent':'devices-agent','api-cost':'finance',architecture:'status',maturity:'status',services:'status',
   'public-site-controls':'settings-records','language-status':'settings-records','ai-module-spec':'settings-records',storage:'settings-records','ai-settings':'settings-records','audit-records':'security-audit',policies:'settings-records',
 });
-const GROUP_DEFAULT=Object.freeze({
+const V2_GROUP_DEFAULT=Object.freeze({
   summary:'platform-overview',services:'engine-all',sites:'sites-all',people:'users-access',content:'work',finance:'finance',status:'health',releases:'deployments','devices-agent':'devices','settings-records':'public-site-controls','security-audit':'security',
 });
 const PREVIOUS_NAV_GROUP=Object.freeze({security:'people',finance:'content','api-cost':'status',deployments:'status',aiops:'status',devices:'status','pos-agent':'status','audit-records':'settings-records'});
@@ -72,12 +89,13 @@ function routeFromPath(pathname){
   if(parts.length===1)return Object.freeze({section:COMMAND_HOME,group:'home',detailSegments:Object.freeze([])});
   const group=String(parts[1]||'').toLowerCase();
   if(parts.length===2){
-    const section=group==='home'?COMMAND_HOME:(GROUP_DEFAULT[group]||LEGACY_GROUP_DEFAULT[group]||'');
+    const section=group==='home'?COMMAND_HOME:(GROUP_DEFAULT[group]||V2_GROUP_DEFAULT[group]||LEGACY_GROUP_DEFAULT[group]||'');
     return section?Object.freeze({section,group,detailSegments:Object.freeze([])}):null;
   }
   const section=normalizeSection(parts[2]);
   if(!section)return null;
   const valid=SECTION_GROUP[section]===group
+    ||V2_SECTION_GROUP[section]===group
     ||PREVIOUS_NAV_GROUP[section]===group
     ||LEGACY_SECTION_GROUP[section]===group
     ||(section==='campus'&&['home','system'].includes(group))
@@ -125,7 +143,7 @@ function navigationTarget(section,loc=window.location,detailSegments=null){
   return canonicalUrl(section,loc,detail||[]);
 }
 window.EKODIAdminRoutes=Object.freeze({
-  version:'1.7.0',
+  version:'2.0.0',
   groups:Object.freeze({...GROUP_DEFAULT}),
   normalizeSection,
   normalizeDetailSegments,

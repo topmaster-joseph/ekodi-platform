@@ -6,14 +6,15 @@ import {
   getAdminMenuGroupDefault,
 } from '../admin-menu-registry.js';
 
-test('v8 admin exposes eleven distinct EKODI management areas', () => {
-  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.id), ['summary', 'sites', 'people', 'services', 'content', 'finance', 'status', 'releases', 'devices-agent', 'settings-records', 'security-audit']);
-  assert.equal(ADMIN_MENU_GROUPS.length, 11);
-  assert.equal(getAdminMenuGroupDefault('summary'), 'platform-overview');
+test('v3 admin exposes eight distinct platform-only management areas', () => {
+  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.id), ['home', 'sites', 'ai', 'services', 'finance', 'ops', 'settings', 'accounts']);
+  assert.equal(ADMIN_MENU_GROUPS.length, 8);
+  assert.equal(getAdminMenuGroupDefault('home'), 'platform-overview');
   assert.equal(getAdminMenuGroupDefault('services'), 'engine-all');
   assert.equal(getAdminMenuGroupDefault('sites'), 'sites-all');
-  assert.equal(getAdminMenuGroupDefault('people'), 'users-access');
-  assert.equal(getAdminMenuGroupDefault('status'), 'health');
+  assert.equal(getAdminMenuGroupDefault('accounts'), 'users-access');
+  assert.equal(getAdminMenuGroupDefault('ops'), 'health');
+  assert.equal(getAdminMenuGroupDefault('ai'), 'aiops');
 });
 
 test('service and site aliases delegate to existing work surfaces without duplication', () => {
@@ -26,6 +27,12 @@ test('service and site aliases delegate to existing work surfaces without duplic
     assert.equal(byId.get(id)?.group, 'sites');
     assert.equal(byId.get(id)?.delegateSection, 'campus');
   }
+  // v3 merges the site category routes into the registry list; they stay routable but hidden.
+  for (const id of ['sites-core','sites-business','sites-community','sites-clients','sites-knowledge','sites-communication','sites-worklife','sites-other']) {
+    assert.equal(byId.get(id)?.internal, true, `${id} should be a hidden filter route`);
+  }
+  assert.notEqual(byId.get('sites-all')?.internal, true);
+  assert.notEqual(byId.get('sites-preparing')?.internal, true);
   for (const id of ['sites-internal','sites-user','sites-customer-partner','sites-independent']) {
     assert.equal(byId.get(id)?.internal, true);
     assert.equal(byId.get(id)?.delegateSection, 'campus');
@@ -34,14 +41,14 @@ test('service and site aliases delegate to existing work surfaces without duplic
 
 test('User access delegates to the unified site member directory', () => {
   const byId = new Map(ADMIN_MENU_REGISTRY.map(item => [item.id, item]));
-  assert.equal(byId.get('users-access')?.group, 'people');
+  assert.equal(byId.get('users-access')?.group, 'accounts');
   assert.equal(byId.get('users-access')?.delegateSection, 'clients');
   assert.equal(byId.get('clients')?.internal, true);
 });
 
 test('Operations, devices, finance and releases have one distinct primary owner', () => {
   const byId = new Map(ADMIN_MENU_REGISTRY.map(item => [item.id, item]));
-  const ownership = { health:'status','site-health':'status',deployments:'releases',aiops:'releases',devices:'devices-agent','pos-agent':'devices-agent','api-cost':'finance',finance:'finance',security:'security-audit','audit-records':'security-audit' };
+  const ownership = { health:'ops','site-health':'ops',deployments:'ops',aiops:'ai',devices:'ops','pos-agent':'ops','api-cost':'finance',finance:'finance',security:'accounts','audit-records':'accounts' };
   for (const [id,group] of Object.entries(ownership)) {
     assert.equal(byId.get(id)?.group, group, id);
     assert.notEqual(byId.get(id)?.internal, true, id);
@@ -66,6 +73,6 @@ test('backing implementation sections remain hidden while policies and deploymen
   assert.equal(byId.get('deployments')?.internal, undefined);
   assert.equal(byId.get('audit-records')?.delegateSection, 'aiops');
   assert.equal(byId.get('policies')?.internal, true);
-  assert.equal(byId.get('community')?.group, 'content');
-  assert.equal(byId.get('books')?.group, 'content');
+  assert.equal(byId.get('community')?.group, 'sites');
+  assert.equal(byId.get('books')?.group, 'sites');
 });

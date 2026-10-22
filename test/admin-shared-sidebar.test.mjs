@@ -19,11 +19,16 @@ test('Admin sidebar or production verifier changes trigger guarded shared-site r
   assert.ok(release.includes('release_branch_ref:branch,release_task_id:taskId'));
 });
 
-test('eleven unique areas replace the former overlapping admin taxonomy', () => {
-  for (const id of ['summary', 'sites', 'people', 'services', 'content', 'finance', 'status', 'releases', 'devices-agent', 'settings-records', 'security-audit']) {
+test('eight unique platform areas replace the former overlapping admin taxonomy', () => {
+  for (const id of ['home', 'sites', 'ai', 'services', 'finance', 'ops', 'settings', 'accounts']) {
     assert.match(registry, new RegExp(`id: '${id}'`));
   }
-  for (const retired of ['site-management', 'settings', 'access']) {
+  // Retired top-level area ids may not return as groups ('releases' survives only as an ops menu id).
+  const groupIds = registryModule.ADMIN_MENU_GROUPS.map(group => group.id);
+  for (const retired of ['site-management', 'access', 'summary', 'people', 'content', 'status', 'releases', 'devices-agent', 'settings-records', 'security-audit']) {
+    assert.equal(groupIds.includes(retired), false, retired);
+  }
+  for (const retired of ['site-management', 'access', 'summary', 'people', 'content', 'status', 'devices-agent', 'settings-records', 'security-audit']) {
     assert.doesNotMatch(registry, new RegExp(`id: '${retired}'`));
   }
   assert.match(sidebar, /admin-global-navs/);
@@ -93,7 +98,8 @@ test('global navigation remains synchronized to the active panel and opens an ax
 
 
 test('handoff-backed default groups stay open without immediate navigation', () => {
-  assert.match(registry, /id: 'content'.*defaultSection: 'work'/s);
+  // v3: Jobs is a transitional site tool that hands off to its own service admin.
+  assert.match(registry, /id: 'site-tools'[^\n]*'work'\][^\n]*transitional: 'site-admin'/);
   assert.match(registry, /id: 'work'.*href: 'https:\/\/ekodi\.kr\/work\/admin'.*adminHandoff: true/s);
   const globalClick = sidebar.slice(sidebar.indexOf("const group = global.dataset.adminGlobalGroup || ''"), sidebar.indexOf("closeDrawer();", sidebar.indexOf("const group = global.dataset.adminGlobalGroup || ''")) + 14);
   assert.match(globalClick, /nav\.dataset\.adminFocusedGroup = group/);
@@ -129,20 +135,24 @@ test('global menu labels use readable contrast on the dark primary sidebar', () 
 
 test('Operations, releases, devices and finance have distinct visible submenus', () => {
   for (const marker of [
-    "status: ['health', 'site-health', 'architecture', 'maturity']",
-    "releases: ['deployments', 'aiops']",
-    "'devices-agent': ['devices', 'pos-agent']",
-    "finance: ['finance', 'api-cost']",
-  ]) assert.ok(sidebar.includes(marker), marker);
+    "id: 'health', group: 'ops', labels: { ko: '운영상태', en: 'Operational Health' }, sections: ['health', 'site-health']",
+    "id: 'releases', group: 'ops', labels: { ko: '배포·장애', en: 'Releases & Incidents' }, sections: ['deployments']",
+    "id: 'system', group: 'ops', labels: { ko: '시스템 구조', en: 'System Structure' }, sections: ['architecture', 'maturity']",
+    "id: 'infra', group: 'ops', labels: { ko: '실행 인프라', en: 'Execution Infrastructure' }, sections: ['devices', 'pos-agent']",
+    "id: 'control', group: 'ai', labels: { ko: 'AI 운영센터', en: 'AI Operations Center' }, sections: ['aiops']",
+    "id: 'revenue', group: 'finance', labels: { ko: '결제·정산', en: 'Payments & Settlement' }, sections: ['finance']",
+    "id: 'usage', group: 'finance', labels: { ko: '사용량·비용', en: 'Usage & Cost' }, sections: ['api-cost']",
+  ]) assert.ok(registry.includes(marker), marker);
   for (const id of ['health','site-health','deployments','aiops','devices','pos-agent','api-cost','architecture','maturity']) {
     assert.match(registry, new RegExp(`id: '${id}'`));
   }
 });
 
-test('Services & AI uses flat direct engine links with no duplicate top navigation', () => {
-  assert.match(sidebar, /FLAT_DETAIL_GROUPS = new Set\(\['services'\]\)/);
-  assert.match(sidebar, /services: \['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'\]/);
-  assert.match(sidebar, /details\.dataset\.adminFlatDetails = flatDetails \? 'true' : 'false'/);
+test('Services & Engines nests engine detail links under one left menu with no duplicate top navigation', () => {
+  assert.match(sidebar, /FLAT_DETAIL_GROUPS = new Set\(\)/);
+  assert.match(registry, /id: 'engines', group: 'services'[^\n]*sections: \['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'\]/);
+  assert.match(sidebar, /details\.dataset\.adminFlatDetails = FLAT_DETAIL_GROUPS\.has\(group\) \? 'true' : 'false'/);
+  assert.match(sidebar, /if \(inMenu && tabs\.length > 1\)/);
   assert.match(sidebar, /data-admin-flat-details="true"/);
   assert.doesNotMatch(sidebar, /function renderContextTabs/);
   assert.doesNotMatch(sidebar, /data-admin-context-section/);

@@ -7,7 +7,7 @@ const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 
 test('POS Agent install management remains a native super-admin device panel',async()=>{
   const item=getAdminMenuItem('pos-agent');
-  assert.equal(item?.group,'devices-agent');
+  assert.equal(item?.group,'ops');
   assert.equal(item?.superAdminOnly,true);
   assert.equal(item?.href,undefined);
   assert.equal(item?.adminHandoff,undefined);
