@@ -459,7 +459,13 @@ function adminBrowser({ fragment = '', centralSession = null, fetchHandler = nul
     },
     createElement: () => element(),
     querySelectorAll: () => [],
+    head: { append(script) { if (typeof script.onload === 'function') script.onload(); } },
   };
+  const google = { init: null, host: null, options: null };
+  const window = { google: { accounts: { id: {
+    initialize(options) { google.init = options; },
+    renderButton(host, options) { google.host = host; google.options = options; },
+  } } } };
   document.getElementById('campaign').value = '2026-11';
   const location = { hash: fragment, pathname: '/qtin/admin', search: '', origin: 'https://ekodi.kr', href: '' };
   const history = { cleaned: false, replaceState() { this.cleaned = true; location.hash = ''; } };
@@ -475,10 +481,10 @@ function adminBrowser({ fragment = '', centralSession = null, fetchHandler = nul
     getItem(key) { return key === 'sb-renzehysxirjilvdxacv-auth-token' && centralSession ? JSON.stringify(centralSession) : null; },
   };
   vm.runInNewContext(code, {
-    document, location, history, fetch, sessionStorage, localStorage,
+    document, window, location, history, fetch, sessionStorage, localStorage,
     AbortController, URL, URLSearchParams, setTimeout, clearTimeout,
   }, { timeout: 1000 });
-  return { elements, location, history, requests, sessionStorage };
+  return { elements, location, history, requests, sessionStorage, google };
 }
 
 test('QTIN admin erases handoff tokens before network and shows a recoverable failure instead of spinning', async () => {
@@ -486,10 +492,10 @@ test('QTIN admin erases handoff tokens before network and shows a recoverable fa
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(browser.history.cleaned, true, 'one-time hash must be erased before the network response');
   assert.equal(browser.location.hash, '');
-  const host = browser.elements.get('state');
-  assert.match(host.children.map(item => item.textContent).join(' '), /관리자 확인 실패/);
-  const retry = host.children.find(item => item.textContent === '로그인 다시 확인');
-  assert.ok(retry?.href.startsWith('https://ekodi.kr/auth/'));
+  assert.match(browser.elements.get('state').textContent, /관리자 확인 실패/);
+  assert.equal(browser.elements.get('adminLogin').hidden, false, 'login remains on QTIN admin');
+  assert.equal(browser.elements.get('adminWorkspace').hidden, true, 'no protected data before RBAC');
+  assert.equal(browser.elements.get('centralLogin').href, 'https://ekodi.kr/auth/?site=church');
   assert.match(browser.elements.get('msg').textContent, /서버 연결에 실패/);
   assert.equal(browser.location.href, '', 'transient failure must not trigger a redirect loop');
 });
@@ -534,4 +540,63 @@ test('serialised browser scripts survive wrangler esbuild keepNames (__name) wit
       assert.equal(context.__name, undefined, `${label} may not leak __name to global scope`);
     }
   }
+});
+
+test('QTIN admin offers native Google selection, uses central identity exchange and protects data by server role', async () => {
+  const browser = adminBrowser({
+    fetchHandler: async (url, options) => {
+      const target = String(url);
+      const body = options?.body ? JSON.parse(options.body) : {};
+      const result = target.endsWith('/identity-api/challenge')
+        ? { clientId: 'synthetic.apps.googleusercontent.com', nonce: 'synthetic-nonce' }
+        : target.endsWith('/identity-api/google/exchange')
+          ? { tokenHash: 'synthetic-one-time-proof', type: 'email' }
+          : target.endsWith('/auth/v1/verify')
+            ? { access_token: 'synthetic-admin-token', refresh_token: 'synthetic-refresh-token', expires_in: 3600 }
+            : target.endsWith('/campaigns')
+              ? { me: { email: 'admin@example.test', canWrite: true, canRefund: false }, payment: { ready: false, missing: ['payments-disabled'] }, campaigns: [{ id: '2026-11', target_year: 2026, target_month: 11, state: 'open' }] }
+              : { campaign: { opens_at: '2026-10-19T15:00:00Z', closes_at: '2026-10-25T14:59:59Z', state: 'open' }, byProduct: [], products: [], orders: [] };
+      if (target.endsWith('/identity-api/google/exchange')) {
+        assert.equal(body.credential, 'synthetic-google-id-token');
+        assert.equal(body.nonce, 'synthetic-nonce');
+      }
+      if (target.endsWith('/auth/v1/verify')) assert.equal(body.token_hash, 'synthetic-one-time-proof');
+      return new Response(JSON.stringify(result), { status: 200, headers: { 'content-type': 'application/json' } });
+    },
+  });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(browser.location.href, '', 'login must remain on this URL');
+  assert.equal(browser.elements.get('adminLogin').hidden, false);
+  assert.equal(browser.elements.get('adminWorkspace').hidden, true);
+  assert.equal(browser.google.init.client_id, 'synthetic.apps.googleusercontent.com');
+  assert.equal(browser.google.init.nonce, 'synthetic-nonce');
+  assert.ok(browser.google.host, 'GIS button should be rendered within this screen');
+  await browser.google.init.callback({ credential: 'synthetic-google-id-token' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(browser.elements.get('adminLogin').hidden, true);
+  assert.equal(browser.elements.get('adminWorkspace').hidden, false);
+  assert.equal(JSON.parse(browser.sessionStorage.getItem('ekodi-qtin-admin-session')).accessToken, 'synthetic-admin-token');
+  assert.equal(browser.requests.find(r => r.url.endsWith('/campaigns')).options.headers.authorization, 'Bearer synthetic-admin-token');
+  assert.match(browser.elements.get('state').innerHTML, /admin@example.test/);
+});
+
+test('QTIN direct Google sign-in does not grant manager access when server denies permission', async () => {
+  const browser = adminBrowser({
+    fetchHandler: async (url) => {
+      const target = String(url);
+      const data = target.endsWith('/identity-api/challenge') ? { clientId: 'synthetic.apps.googleusercontent.com', nonce: 'synthetic-nonce' }
+        : target.endsWith('/identity-api/google/exchange') ? { tokenHash: 'test-once' }
+        : target.endsWith('/auth/v1/verify') ? { access_token: 'synthetic-member', expires_in: 3600 }
+        : { error: '큐티인 신청 관리 권한이 없습니다.' };
+      const status = target.endsWith('/campaigns') ? 403 : 200;
+      return new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } });
+    },
+  });
+  await new Promise(resolve => setImmediate(resolve));
+  await browser.google.init.callback({ credential: 'synthetic-google-id-token' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(browser.elements.get('adminWorkspace').hidden, true);
+  assert.equal(browser.elements.get('adminLogin').hidden, false);
+  assert.match(browser.elements.get('state').textContent, /관리자 권한 없음/);
+  assert.match(browser.elements.get('authMessage').textContent, /권한이 없습니다/);
 });
