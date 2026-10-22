@@ -15,6 +15,7 @@ on:
       - 'migrations/0021_device_control.sql'
       - 'migrations/0022_device_ai_ops.sql'
       - 'test/device-control-contract.test.mjs'
+      - 'test/device-codex-toolchain.test.mjs'
       - 'test/windows-device-enrollment-launcher.test.mjs'
       - 'test/non-disruptive-device-agent-contract.test.mjs'
       - 'test/background-browser-canary-contract.test.mjs'
@@ -34,6 +35,7 @@ on:
       - 'migrations/0021_device_control.sql'
       - 'migrations/0022_device_ai_ops.sql'
       - 'test/device-control-contract.test.mjs'
+      - 'test/device-codex-toolchain.test.mjs'
       - 'test/windows-device-enrollment-launcher.test.mjs'
       - 'test/non-disruptive-device-agent-contract.test.mjs'
       - 'test/background-browser-canary-contract.test.mjs'
@@ -57,7 +59,7 @@ jobs:
           node --check device-control-admin.js
           node --check remote-power-admin.js
           node --check admin-demand-loader.js
-          node --test test/device-control-contract.test.mjs test/windows-device-enrollment-launcher.test.mjs test/non-disruptive-device-agent-contract.test.mjs test/background-browser-canary-contract.test.mjs test/localai-device-installer-contract.test.mjs
+          node --test test/device-control-contract.test.mjs test/windows-device-enrollment-launcher.test.mjs test/non-disruptive-device-agent-contract.test.mjs test/background-browser-canary-contract.test.mjs test/localai-device-installer-contract.test.mjs test/device-codex-toolchain.test.mjs
       - name: Build authenticated true-lazy Admin with Device AI
         run: |
           set -euo pipefail
@@ -97,6 +99,7 @@ jobs:
         run: |
           foreach ($relative in @(
             'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1',
+            'tools/ekodi-device-agent/windows/ekodi-codex-toolchain-install.ps1',
             'tools/ekodi-device-agent/windows/ekodi-device-startup.ps1',
             'tools/ekodi-device-agent/windows/background-browser-canary.ps1',
             'tools/ekodi-device-agent/windows/ekodi-isolated-guest-agent.ps1',
@@ -136,7 +139,7 @@ jobs:
           $commands = @(
             'power.always_on','power.presentation','power.normal','power.restore','lock.resume_off','lock.resume_on','autologon.open',
             'diagnostics.collect','network.diagnose','printers.diagnose','startup.scan','startup.disable','startup.restore',
-            'maintenance.temp_cleanup','updates.scan','updates.install','profile.workstation.apply','profile.workstation.restore','agent.self_update','computer.browser.canary','computer.browser.execute','computer.desktop.probe','computer.desktop.canary','computer.desktop.guest.canary','computer.desktop.ui.canary','computer.desktop.session.canary','computer.desktop.session.execute',
+            'maintenance.temp_cleanup','updates.scan','updates.install','profile.workstation.apply','profile.workstation.restore','agent.self_update','software.codex.check','software.codex.install','computer.browser.canary','computer.browser.execute','computer.desktop.probe','computer.desktop.canary','computer.desktop.guest.canary','computer.desktop.ui.canary','computer.desktop.session.canary','computer.desktop.session.execute',
             'remote_desktop.recovery.enable','remote_desktop.recovery.disable','remote_desktop.recovery.run'
           )
           foreach ($command in $commands) {
