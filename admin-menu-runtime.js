@@ -545,7 +545,7 @@ function renderSpaceAdminOverview(){
     const tenant=tenants.find(item=>item.slug===slug)||admins[0]?.tenant||{};
     return [slug,tenant.name,tenant.domain,...admins.flatMap(admin=>[admin.displayName,admin.email,admin.roleLabel,admin.role])]
       .some(value=>String(value||'').toLocaleLowerCase().includes(search));
-  }).sort((a,b)=>b[1].length-a[1].length||String(a[0]).localeCompare(String(b[0]));
+  }).sort((a,b)=>b[1].length-a[1].length||String(a[0]).localeCompare(String(b[0])));
   for(const [slug,admins] of ordered){
     total+=admins.length;
     const tenant=tenants.find(item=>item.slug===slug)||admins[0]?.tenant||{slug,name:slug};
