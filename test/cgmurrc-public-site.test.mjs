@@ -19,3 +19,11 @@ test('cgmurrc public site is grounded, privacy-safe and build-owned',()=>{
   assert.doesNotMatch(page,/107명|010[-\s]?\d{3,4}[-\s]?\d{4}/);
   assert.match(build,/["']cgmurrc\.html["']/);
 });
+
+test('cgmurrc has canonical/OG metadata and a visible mobile menu',()=>{
+  assert.match(page,/<link rel="canonical" href="https:\/\/ekodi\.kr\/cgmurrc">/);
+  assert.match(page,/property="og:title"/);
+  assert.match(page,/property="og:url" content="https:\/\/ekodi\.kr\/cgmurrc"/);
+  assert.match(page,/<nav aria-label="주요 메뉴">/);
+  assert.doesNotMatch(page,/@media\(max-width:640px\)\{\.top nav\{display:none\}/);
+});
