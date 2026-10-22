@@ -24,10 +24,18 @@ test('refund policy carries the statutory periods, refund deadline and operator 
   assert.ok(html.includes(`<link rel="canonical" href="${EKODIBIZ_REFUND_POLICY_URL}">`));
   assert.equal(EKODIBIZ_REFUND_POLICY_URL, 'https://ekodi.kr/ekodibiz/refund');
   for (const needle of ['7일 이내', '3개월 이내', '30일 이내', '3영업일 이내', '지연배상금', '1372', 'ecmc.or.kr',
-    '213-13-01959', '2023-전남무안-0153', 'ekodibiz@gmail.com', '백련동1길 17-4']) {
+    '213-13-01959', '2023-전남무안-0153', 'joseph@ekodibiz.kr', '백련동1길 17-4']) {
     assert.ok(html.includes(needle), needle);
   }
   assert.doesNotMatch(html, /<script/i, 'legal page stays static and script-free');
+  assert.doesNotMatch(html, /ekodibiz@gmail\.com/, 'refund support contact uses business email only');
+  assert.equal((html.match(/<header\b/g) || []).length, 1, 'single EKODIBIZ header');
+  assert.equal((html.match(/<footer\b/g) || []).length, 1, 'single EKODIBIZ footer');
+  assert.match(html, /<header class="topbar" data-site-shell="header" role="banner">/);
+  assert.match(html, /<footer class="footer" data-site-shell="footer"/);
+  assert.match(html, /href="\/ekodibiz\/#business"/, 'service-local business navigation works from refund path');
+  assert.match(html, /href="mailto:joseph@ekodibiz\.kr"/, 'support email link is actionable');
+  assert.equal((html.match(/<a\b[^>]*aria-current="page"/g) || []).length, 2, 'active refund nav in header and footer');
 });
 
 test('refund policy response is cacheable HTML and HEAD has no body', async () => {
