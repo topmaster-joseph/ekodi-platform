@@ -2,6 +2,90 @@
 import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 
 const BASE_PATH = '/api/control/secrets';
+const ACTIONS_REPOSITORY = 'topmaster-joseph/ekodi-platform';
+const ACTIONS_WORKFLOWS = Object.freeze([
+  Object.freeze({ id:'cloudflare-production-usage-diagnose.yml', label:'Cloudflare 사용량 진단', effect:'read-only' }),
+  Object.freeze({ id:'traffic-intelligence-analytics.yml', label:'트래픽 집계 갱신', effect:'aggregate-write' }),
+]);
+const ACTIONS_CONFIRMATION = 'github-workflow-dispatch';
+function actionsCredential(env) {
+  // Never silently promote the inventory-only GitHub credential to Actions write.
+  return String(env.GITHUB_ACTIONS_DISPATCH_TOKEN || '').trim();
+}
+function actionsConnectionStatus(env) {
+  return {
+    configured:Boolean(actionsCredential(env)),
+    repository:ACTIONS_REPOSITORY,
+    ref:'main',
+    credentialRequired:'GitHub App installation token or fine-grained PAT, Actions: write (repository-scoped)',
+    workflows:ACTIONS_WORKFLOWS,
+    providerTokenConsole:'https://dash.cloudflare.com/profile/api-tokens',
+    actionsSecretSettings:'https://github.com/topmaster-joseph/ekodi-platform/settings/secrets/actions',
+    analyticsSecretName:'CLOUDFLARE_TRAFFIC_ANALYTICS_TOKEN',
+    credentialValuesReturned:false,
+    permissionChangesDelegated:false,
+  };
+}
+async function actionDispatch(request, env, auth) {
+  if (request.headers.get('x-ekodi-confirm-impact') !== ACTIONS_CONFIRMATION) {
+    return json({ error:'관리자 실행 확인이 필요합니다.', code:'ACTIONS_CONFIRMATION_REQUIRED' }, 428, auth.response.headers);
+  }
+  if (!actionsCredential(env)) {
+    return json({ error:'GitHub Actions 실행 전용 자격증명이 설정되지 않았습니다.', code:'ACTIONS_TOKEN_NOT_CONFIGURED' }, 503, auth.response.headers);
+  }
+  let input;
+  try { input = await request.json(); }
+  catch { return json({ error:'요청 형식이 올바르지 않습니다.', code:'INVALID_JSON' }, 400, auth.response.headers); }
+  const name = typeof input?.workflow === 'string' ? input.workflow : '';
+  const allowed = ACTIONS_WORKFLOWS.find(item => item.id === name);
+  if (!allowed || Object.keys(input || {}).some(key => key !== 'workflow')) {
+    return json({ error:'허용되지 않은 실행 대상 또는 매개변수입니다.', code:'ACTIONS_WORKFLOW_FORBIDDEN' }, 403, auth.response.headers);
+  }
+  const url = 'https://api.github.com/repos/' + ACTIONS_REPOSITORY +
+    '/actions/workflows/' + encodeURIComponent(name) + '/dispatches';
+  try {
+    // The official workflow and its own release/permission gates remain authoritative.
+    // A 204 response accepts the dispatch but does not prove a successful run.
+    const response = await fetch(url, {
+      method:'POST',
+      headers:{
+        authorization:'Bearer ' + actionsCredential(env),
+        accept:'application/vnd.github+json',
+        'content-type':'application/json',
+        'x-github-api-version':'2022-11-28',
+        'user-agent':'EKODI-Admin-Control-Plane',
+      },
+      body:JSON.stringify({ ref:'main' }),
+      redirect:'manual',
+    });
+    const accepted = response.status === 204;
+    await audit(env, {
+      adminEmail:auth.session.email, scriptName:'github-actions', name,
+      type:'workflow_dispatch', action:'dispatch', status:accepted ? 'accepted' : 'denied_http_' + response.status,
+    });
+    if (!accepted) {
+      return json({
+        error:'GitHub에서 실행 요청을 수락하지 않았습니다. Actions 권한과 저장소 설정을 점검하세요.',
+        code:'ACTIONS_DISPATCH_REJECTED', githubStatus:response.status,
+      }, 502, auth.response.headers);
+    }
+    return json({
+      accepted:true, status:'queued-unverified', repository:ACTIONS_REPOSITORY, workflow:name,
+      ref:'main', effect:allowed.effect,
+      runsUrl:'https://github.com/' + ACTIONS_REPOSITORY + '/actions/workflows/' + encodeURIComponent(name),
+      warning:'GitHub 204 수락은 작업 실행 또는 성공의 증거가 아닙니다. Actions 실행 기록과 결과를 별도로 확인하세요.',
+    }, 202, auth.response.headers);
+  } catch (error) {
+    await audit(env, {
+      adminEmail:auth.session.email, scriptName:'github-actions', name,
+      type:'workflow_dispatch', action:'dispatch', status:'network_error',
+    });
+    console.warn('GitHub workflow dispatch unavailable', String(error?.message || error));
+    // Never automatically retry an ambiguous dispatch: it might already have run.
+    return json({ error:'GitHub 응답이 확인되지 않았습니다. 재요청 전에 Actions 실행 기록을 확인하세요.', code:'ACTIONS_DISPATCH_AMBIGUOUS' }, 503, auth.response.headers);
+  }
+}
+
 const DEFAULT_BYTES = 48;
 const ALLOWED_BYTES = new Set([32, 48, 64]);
 const BINDING_NAME = /^[A-Za-z_$][A-Za-z0-9_$]{0,127}$/;
@@ -250,6 +334,21 @@ export async function handleCloudflareSecretControl(request, env) {
       existingSecretRequiresExplicitReplace:true,
       controllerCredentialsProtected:true,
     }, 200, auth.response.headers);
+  }
+
+  if (url.pathname === `${BASE_PATH}/actions` || url.pathname === `${BASE_PATH}/actions/dispatch`) {
+    // The existing secrets owner allowlist is required but not sufficient:
+    // direct Actions execution must also have an actual platform super-admin role.
+    if (String(auth.session.role || '').toLowerCase() !== 'super_admin') {
+      return json({ error:'플랫폼 최고관리자 권한이 필요합니다.', code:'ACTIONS_SUPER_ADMIN_REQUIRED' }, 403, auth.response.headers);
+    }
+    if (url.pathname === `${BASE_PATH}/actions` && request.method === 'GET') {
+      return json(actionsConnectionStatus(env), 200, auth.response.headers);
+    }
+    if (url.pathname === `${BASE_PATH}/actions/dispatch` && request.method === 'POST') {
+      return actionDispatch(request, env, auth);
+    }
+    return json({ error:'허용되지 않은 요청 방식입니다.', code:'ACTIONS_METHOD_NOT_ALLOWED' }, 405, auth.response.headers);
   }
 
   if (url.pathname === `${BASE_PATH}/providers` && request.method === 'GET') {
