@@ -38,15 +38,16 @@ test('unverified and missing registry rows cannot issue a real provider request'
   }finally{globalThis.fetch=originalFetch}
 });
 
-test('operator control uses accessible four-tab navigation and one shared gateway',()=>{
+test('operator control uses accessible five-tab navigation and one shared gateway',()=>{
   const admin=read('admin-provider-control.js');
   const runtime=read('ai-provider-control.js');
   assert.match(admin,/role="tablist"/);
   assert.match(admin,/aria-selected=/);
-  assert.match(admin,/\['operations','운영'\]/);
-  assert.match(admin,/\['connections','연결'\]/);
-  assert.match(admin,/\['routing','라우팅'\]/);
-  assert.match(admin,/\['logs','기록'\]/);
+  assert.match(admin,/\['operations','운영 현황'\]/);
+  assert.match(admin,/\['connections','공급자·계정'\]/);
+  assert.match(admin,/\['routing','자동 라우팅'\]/);
+  assert.match(admin,/\['logs','실행·감사 기록'\]/);
+  assert.match(admin,/\['services','외부 서비스'\]/);
   assert.match(admin,/data-ai-open-provider/);
   assert.match(runtime,/const result=await invokeAiProviderCapability\(env,\{capability,system,input,maxOutputTokens,governance:\{channel:'public-gateway'\}\}\)/);
   assert.match(runtime,/stale-verification/);
