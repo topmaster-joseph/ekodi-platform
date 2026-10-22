@@ -1,0 +1,45 @@
+name: Proposal Studio Foundation Tests
+
+on:
+  pull_request:
+    paths:
+      - 'proposal/**'
+      - 'test/proposal-studio.test.mjs'
+      - '.github/workflows/proposal-studio-tests.yml'
+      - 'site-worker.js'
+      - 'scripts/build.mjs'
+  workflow_dispatch:
+
+concurrency:
+  group: proposal-studio-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  foundation:
+    name: browser-draft-model-and-route-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout proposed code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Syntax checks
+        run: |
+          node --check proposal/core.js
+          node --check proposal/client.js
+          node --check proposal/analysis.js
+          node --check proposal/zip.js
+          node --check proposal/docx.js
+          node --check proposal/xlsx.js
+          node --check proposal/pptx.js
+          node --check site-worker.js
+      - name: Proposal unit and privacy tests
+        run: node --test test/proposal-studio*.test.mjs
