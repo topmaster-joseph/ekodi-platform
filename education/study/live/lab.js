@@ -48,8 +48,7 @@ function viewAgenda(){
     return '<article class="panel"><p class="eyebrow">'+m.start+'–'+m.end+'분 · '+esc(KIND_LABELS[m.kind])+(m.kind==='practice'&&rec.done[m.missionId]?' · 완료':'')+'</p><h3>'+esc(m.learner?.headline||title)+'</h3>'+(m.learner?'<p class="meta">'+esc(title)+'</p>':'')+tasks+'</article>';
   }).join('');
   const s=session();
-  const pick=rec.trackChosen?'':'<section class="panel pick" aria-labelledby="pickTitle"><p class="eyebrow">시작 1단계 · 10초</p><h2 id="pickTitle">어떤 일을 하시나요?</h2><p class="meta">고르면 내 업무와 비슷한 실습 원문과 프롬프트로 바뀝니다. 나중에 위에서 바꿀 수 있어요.</p>'+
-    '<div class="pick-grid">'+course.tracks.map(t=>'<button type="button" class="pick-tile" data-pick-track="'+esc(t.id)+'"><b>'+esc(t.label)+'</b><span>'+esc(t.examples)+'</span></button>').join('')+'</div></section>';
+  const pick=rec.trackChosen?'':trackPicker('실습 준비 · 10초','어떤 일을 하시나요?','기초 강의가 끝나면 모두 같은 시간에 각자 업무 분야로 실습합니다. 미리 고르면 실습 원문과 프롬프트가 내 업무로 바뀝니다. 나중에 위에서 바꿀 수 있어요.');
   const missions=sessionMissions();
   const stamps='<div class="stamps" aria-label="오늘의 스탬프">'+missions.map(id=>'<span class="stamp'+(rec.done[id]?' is-on':'')+'" title="'+esc(course.missions[id].title)+'"><i aria-hidden="true">'+(rec.done[id]?'완료':course.missions[id].no)+'</i><b>'+esc(course.missions[id].title.replace('개인 실습 ',''))+'</b></span>').join('')+'</div>';
   const outcomes='<section class="panel goal"><p class="eyebrow">'+s.no+'회차 · 오늘 손에 쥐고 나갈 것</p><h2>'+esc(s.title)+'</h2>'+(s.outcomes?.length?'<ol class="goal-list">'+s.outcomes.map(o=>'<li>'+esc(o)+'</li>').join('')+'</ol>':'')+
@@ -58,6 +57,12 @@ function viewAgenda(){
   const hook=s.modules.find(m=>m.hook)?.hook;
   const hookCard=hook?'<section class="panel hook-card"><p class="eyebrow">오늘의 질문</p><p class="hook-q">'+esc(hook.q)+'</p><p class="meta">'+esc(hook.sub)+'</p></section>':'';
   return pick+instructorCard(course.instructor,livePath(location.pathname,''),{compact:s.no!==1})+hookCard+outcomes+rows;
+}
+// Practice runs for everyone at the same time, each in their own field: the picker appears on the agenda
+// and again at the start of a practice if no field was chosen yet.
+function trackPicker(eyebrow,title,lead){
+  return '<section class="panel pick" aria-labelledby="pickTitle"><p class="eyebrow">'+esc(eyebrow)+'</p><h2 id="pickTitle">'+esc(title)+'</h2><p class="meta">'+esc(lead)+'</p>'+
+    '<div class="pick-grid">'+course.tracks.map(t=>'<button type="button" class="pick-tile" data-pick-track="'+esc(t.id)+'"><b>'+esc(t.label)+'</b><span>'+esc(t.examples)+'</span></button>').join('')+'</div></section>';
 }
 function factchatButtons(){
   return (canSplit()?'<button type="button" class="btn btn-primary" data-split="1">FactChat 나란히 열기 ↗</button>':'')+
@@ -127,6 +132,7 @@ function findingsHtml(result){
 }
 function viewMission(id){
   const m=course.missions[id];
+  if(!rec.trackChosen)return trackPicker('분야별 동시 실습 · 먼저 내 분야 선택','내 업무 분야를 고르세요','모두 같은 시간에 각자 분야의 실습 원문으로 '+m.title.replace('개인 실습 ','')+' 실습을 합니다. 고르면 바로 시작합니다.');
   return '<div class="panel"><p class="eyebrow">'+m.minutes+'분 실습 · '+esc(trackById(course,rec.track).label)+' · '+esc(levelById(course,rec.level).label)+(rec.done[id]?' · 완료':'')+'</p><h2>'+esc(m.title)+'</h2>'+stepper(id)+'</div>'+
     '<section class="step-card" id="stepCard" tabindex="-1">'+stepCard(id)+'</section>'+
     '<details class="ref"><summary>전체 안내 보기 (10단계 구조 · 대체 실습 포함)</summary><div class="ref-body">'+
@@ -163,7 +169,12 @@ function viewRecord(){
 function renderDock(){
   const id=activeMission();
   const prev=$('#dockPrev'),next=$('#dockNext'),act=$('#dockAction');
-  if(id){
+  act.disabled=false;
+  if(id&&!rec.trackChosen){
+    prev.hidden=true;next.hidden=true;
+    $('#dockLabel').innerHTML='<b>먼저 내 분야 선택</b><span>'+esc(course.missions[id].title.replace('개인 실습 ',''))+timerSuffix(id)+'</span>';
+    act.textContent='위에서 분야 고르기';act.dataset.mode='pick';act.disabled=true;
+  }else if(id){
     const s=stepOf(id),m=course.missions[id];
     $('#dockLabel').innerHTML='<b>'+(s+1)+' / '+STEP_LABELS.length+' · '+esc(STEP_LABELS[s])+'</b><span>'+esc(m.title.replace('개인 실습 ',''))+timerSuffix(id)+'</span>';
     prev.hidden=false;next.hidden=false;prev.disabled=s===0;next.disabled=s===STEP_LABELS.length-1;
@@ -264,9 +275,11 @@ function exportMarkdown(){
   downloadText(document,course.id+'_my-practice-record.md',lines.join('\n'),'text/markdown;charset=utf-8');
 }
 function bind(){
+  // Another window of this lab (e.g. the presenter's demo and the projector) changed the record: follow it.
+  window.addEventListener('storage',e=>{if(e.key===key&&e.newValue){rec=load();applyTextSize();render();}});
   document.addEventListener('click',async e=>{
     const t=e.target.closest('button,a');if(!t)return;const d=t.dataset;
-    if(d.pickTrack){rec.track=d.pickTrack;rec.trackChosen=true;save();render();toast(trackById(course,rec.track).label+' 사례로 준비했습니다. 첫 실습을 시작해 보세요.');return;}
+    if(d.pickTrack){rec.track=d.pickTrack;rec.trackChosen=true;save();render();toast(trackById(course,rec.track).label+(activeMission()?' 원문으로 실습을 시작합니다.':' 사례로 준비했습니다. 실습 시간에 바로 시작하세요.'));return;}
     if(t.id==='textSize'){rec.bigText=!rec.bigText;applyTextSize();save();relayout();return;}
     if(d.tab){rec.tab=d.tab;save();render();$('#labMain').focus({preventScroll:true});window.scrollTo({top:0});return;}
     if(d.step!==undefined){setStep(activeMission(),Number(d.step));return;}
@@ -315,6 +328,8 @@ function bind(){
   window.addEventListener('storage',e=>{if(e.key===key){rec=load();render();}});
 }
 async function init(){
+  // Shown inside the presenter stage for a live demo: no shared EKODI header over the embedded lab.
+  if(new URLSearchParams(location.search).get('embed')==='1'){document.body.dataset.ekodiUserHeader='immersive';document.documentElement.classList.add('lab-embed');}
   const data=await entry.load();
   course=data.COURSE;validateCourse(course);
   key='ekodi_edu_lab_v1:'+course.id;
@@ -344,7 +359,6 @@ async function init(){
   applyTextSize();
   relayout=bindChrome(document,{top:$('#labTop'),dock:$('#labDock')});
   save();bind();render();
-  if(needTrack&&activeMission())toast('위의 「내 직무」를 고르면 내 업무에 맞는 실습 원문과 프롬프트가 나옵니다.');
   setInterval(tick,1000);
   document.body.dataset.ready='true';
 }

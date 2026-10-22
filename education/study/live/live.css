@@ -362,6 +362,11 @@ html.lv-big-text{font-size:115%}
 .lv .slide-ins-roles{font-size:1.9cqw}
 .lv .slide-ins-sites{display:flex;flex-wrap:wrap;gap:.8cqw}
 .lv .slide-ins-sites span{font-size:1.45cqw;font-weight:700;padding:.5cqw 1.2cqw;border-radius:5cqw;background:var(--teal-soft);color:var(--teal-ink)}
+.lv .slide-tracks{gap:1.6cqw}
+.lv .slide-track-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1.2cqw}
+.lv .slide-track-grid li{background:var(--teal-soft);border:.15cqw solid var(--teal-line);border-radius:1.2cqw;padding:1.2cqw 1.4cqw;display:grid;gap:.5cqw;min-width:0}
+.lv .slide-track-grid b{font-size:1.75cqw;color:var(--teal-ink);font-weight:800}
+.lv .slide-track-grid span{font-size:1.35cqw;color:var(--ink-2);line-height:1.35}
 .lv .slide-ins-gallery{display:flex;gap:1cqw;margin:0}
 .lv .slide-ins-gallery img{width:13cqw;aspect-ratio:16/9;object-fit:cover;border-radius:1cqw;background:var(--teal-soft)}
 .lv .slide-ins-hook{font-size:2.1cqw;font-weight:750;color:var(--navy);border-left:.5cqw solid var(--teal);padding-left:1.5cqw}
@@ -373,6 +378,24 @@ html.lv-big-text{font-size:115%}
 .lv .slide-outcome-list li{counter-increment:oc;display:flex;align-items:center;gap:2cqw;font-size:2.8cqw;font-weight:700;color:var(--navy)}
 .lv .slide-outcome-list li::before{content:counter(oc);flex:none;width:5cqw;height:5cqw;border-radius:50%;background:var(--teal);color:#fff;display:grid;place-items:center;font-size:2.4cqw}
 
+/* Presenter stage: lecture ↔ learner-lab switching (state.stage.mode, mirrored on the audience window) */
+.lv .pres .stage{grid-template-rows:auto minmax(0,1fr);align-content:start;align-items:start;gap:10px}
+.lv .pres .stage>.stage-frame{width:min(100%,calc((100vh - var(--lv-top-h) - 112px)*16/9));justify-self:center}
+.lv .stage-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;min-width:0}
+.lv .stage-bar .seg{background:#101d35;border-color:#2a4471}
+.lv .stage-bar .seg-btn{color:#c7d4ea;border-right-color:#2a4471;display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:6px 13px}
+.lv .stage-bar .seg-btn.is-on{background:var(--teal);color:#fff}
+.lv .stage-bar .btn{background:#182945;border-color:#2a4471;color:#fff}
+.lv .stage-bar .kbd{color:#93a8cd}
+.lv .kbd-hint{display:inline-grid;place-items:center;min-width:18px;height:18px;border-radius:5px;border:1px solid currentColor;font-size:.6875rem;font-weight:800;opacity:.75}
+.lv .stage-split{position:absolute;inset:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);background:#0a1426;gap:2px}
+.lv .stage-split.is-lab{grid-template-columns:1fr}
+.lv .split-slide{display:grid;place-items:center;background:#0a1426;container-type:inline-size;min-width:0}
+.lv .split-slide>.stage-frame{width:100%;border-radius:0}
+.lv .stage-embed{width:100%;height:100%;border:0;display:block;background:var(--paper);min-width:0}
+.lv .stage-frame[data-mode="lab"],.lv .stage-frame[data-mode="split"]{background:#0a1426}
+.lv .audience .stage-frame[data-mode="lab"],.lv .audience .stage-frame[data-mode="split"]{width:100vw;height:100vh;aspect-ratio:auto}
+@media (max-width:760px){.lv .stage-split{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(0,1fr)}}
 /* Responsive */
 @media (max-width:1180px){
   .lv .studio{grid-template-columns:230px minmax(0,1fr)}
@@ -432,3 +455,21 @@ html.lv-big-text{font-size:115%}
   .lv .panel{box-shadow:none;border-color:#ccc}
   .lv .fallback{display:block}
 }
+
+/* Instructor gate (education-instructor-gate.js lock page) */
+.lv.gate-body{background:radial-gradient(1200px 600px at 20% -10%,#1c3a68 0%,var(--navy) 55%,#060f1f 100%);min-height:100vh}
+.lv .gate{min-height:calc(100vh - var(--lv-top-h,0px));display:grid;place-items:center;padding:24px 16px}
+.lv .gate-card{width:min(440px,100%);background:var(--white);border-radius:20px;padding:28px 24px;box-shadow:0 30px 80px -30px rgba(0,0,0,.6);display:grid;gap:12px}
+.lv .gate-card h1{font-size:1.625rem;letter-spacing:-.02em;color:var(--navy)}
+.lv .gate-form{display:grid;gap:8px}
+.lv .gate-form input{font:inherit;font-size:1rem;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--paper);min-height:48px}
+.lv .gate-form input:focus-visible{outline:3px solid var(--teal);outline-offset:1px;background:var(--white)}
+.lv .gate-form .btn{min-height:48px;font-size:1rem}
+.lv .gate-error{color:#b42318;font-weight:700;font-size:.9375rem}
+
+/* Studio: per-field overview and audience-stage switch */
+.lv .field-list{list-style:none;margin:6px 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.lv .field-list li{border:1px solid var(--line);border-radius:12px;padding:9px 11px;display:grid;gap:2px;background:var(--paper)}
+.lv .field-list b{font-size:.875rem;color:var(--teal-ink)}
+.lv .field-list span{font-size:.8125rem;color:var(--ink-2)}
+.lv .field-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0}

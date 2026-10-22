@@ -1,5 +1,6 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import researchWorker from './education/research/worker.js';
+import { instructorGate, isGatedPath } from './education-instructor-gate.js';
 
 const SECURITY_HEADERS={
   'x-content-type-options':'nosniff',
@@ -18,10 +19,17 @@ export default{
     if(url.pathname==='/health')return json({ok:true,service:'ekodi-education',surface:'education-platform',areas:['admission','study'],contextModel:'person-space-role',officialSourceRequired:true,submissionExecution:false,sensitiveDocumentStorage:false,dataMode:runtimeConfig(env).dataMode,ekodiShell:true});
     if(url.pathname==='/config.js')return new Response(`window.EKODI_EDU_CONFIG=${JSON.stringify(runtimeConfig(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}});
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/',307);
+    // Premium Studio operator surfaces (instructor studio, presenter, facilitation notes) are instructor-only.
+    const gate=await instructorGate(request,env,{url});
+    if(gate)return injectEkodiShell(withHeaders(gate),'edu');
     let response;
     if(url.pathname==='/admission'||url.pathname==='/admission/')response=await assetFor(request,env,'/admission/');
     else if(url.pathname==='/study'||url.pathname==='/study/')response=await assetFor(request,env,'/study/');
     else response=await env.ASSETS.fetch(request);
-    return injectEkodiShell(withHeaders(response),'edu');
+    response=withHeaders(response);
+    if(isGatedPath(url.pathname))response.headers.set('cache-control','private, no-store');
+    // The presenter shows the Learner Lab inside its own stage (same origin only).
+    if(/^\/study\/live\/lab(?:\/|$)/.test(url.pathname)){response.headers.set('content-security-policy',SECURITY_HEADERS['content-security-policy'].replace("frame-ancestors 'none'","frame-ancestors 'self'"));response.headers.set('x-frame-options','SAMEORIGIN');}
+    return injectEkodiShell(response,'edu');
   }
 };

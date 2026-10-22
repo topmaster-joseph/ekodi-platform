@@ -97,6 +97,9 @@ export function slideHtml(slide,{joinSvg='',joinUrl='',timerText='',sessionLabel
   if(slide.special==='hook'){
     return '<div class="slide slide-hook"><p class="slide-kicker">'+esc(slide.k)+'</p><h2 class="slide-hook-q">'+esc(slide.t)+'</h2><p class="slide-lead">'+esc(slide.p)+'</p></div>';
   }
+  if(slide.special==='tracks'){
+    return '<div class="slide slide-tracks">'+head+(slide.p?'<p class="slide-lead">'+esc(slide.p)+'</p>':'')+'<ol class="slide-track-grid">'+(slide.tracks||[]).map(t=>'<li><b>'+esc(t.label)+'</b><span>'+esc(t.task)+'</span></li>').join('')+'</ol></div>';
+  }
   if(slide.special==='outcomes'){
     return '<div class="slide slide-outcomes">'+head+'<ol class="slide-outcome-list">'+(slide.bullets||[]).map(b=>'<li>'+esc(b)+'</li>').join('')+'</ol></div>';
   }
@@ -153,4 +156,22 @@ export function bindChrome(doc,{top=null,dock=null}={}){
   if(typeof RO==='function'){const ro=new RO(apply);if(top)ro.observe(top);if(dock)ro.observe(dock);}
   doc.defaultView?.addEventListener('resize',apply);
   return apply;
+}
+
+// Opens — or brings back to the front — the official FactChat site in its own tab for a live demo.
+// Link-out only: FactChat is never framed (institutional login, third-party cookies, its own CSP).
+// A new tab starts at about:blank (same origin) so the opener link is cut before it navigates to FactChat.
+export function showFactchatTab(win,url,name='ekodi-factchat-demo'){
+  let w=null;
+  try{w=win.open('',name);}catch{w=null;}
+  if(!w)return {ok:false,fresh:false};
+  let fresh=false;
+  try{fresh=w.location.href==='about:blank';}catch{fresh=false;}
+  if(fresh){try{w.opener=null;}catch{}w.location.replace(url);}
+  try{w.focus();}catch{}
+  return {ok:true,fresh};
+}
+// The Learner Lab URL the presenter stage embeds for a demo: same origin, no timer pointer (stable src).
+export function embeddedLabUrl(joinUrl){
+  const u=new URL(joinUrl);u.searchParams.delete('e');u.searchParams.set('embed','1');return u.toString();
 }

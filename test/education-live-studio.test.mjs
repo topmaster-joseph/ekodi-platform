@@ -252,3 +252,44 @@ test('instructor intro: public facts only, portrait asset present, intro and hoo
   assert.doesNotMatch(html,/\/edu\/study\/live\/https:/,'absolute media is not prefixed');
   assert.match(instructorCard(INSTRUCTOR,'/edu/study/live/',{compact:true}),/ins-card is-compact/);
 });
+
+test('stage switching: lecture / learner lab / side-by-side is shared state the audience window follows',async()=>{
+  let st=initialState(COURSE.id);
+  assert.equal(st.stage.mode,'slide');
+  st=reduce(st,{type:'blackout/set',value:true},1);
+  const lab=reduce(st,{type:'stage/mode',mode:'lab'},2);
+  assert.equal(lab.stage.mode,'lab');assert.equal(lab.blackout,false,'switching the stage reveals it');
+  assert.equal(reduce(lab,{type:'stage/mode',mode:'lab'},3),lab,'no-op keeps revision');
+  assert.equal(reduce(lab,{type:'stage/mode',mode:'iframe-anything'},3),lab,'unknown modes are ignored');
+  assert.equal(sanitizeState({...lab,stage:{mode:'evil'}},COURSE.id).stage.mode,'slide');
+  assert.equal(sanitizeState({...lab},COURSE.id).stage.mode,'lab');
+  const {embeddedLabUrl,showFactchatTab}=await import('../education/study/live/engine/render.js');
+  const u=new URL(embeddedLabUrl('https://ekodi.kr/edu/study/live/lab/?c=mnu-factchat-2026&s=1&m=hwp&lv=basic&e=1999999999999'));
+  assert.equal(u.origin,'https://ekodi.kr');assert.equal(u.searchParams.get('embed'),'1');assert.equal(u.searchParams.has('e'),false);
+  // FactChat is opened as its own tab (never framed); the opener link is cut before navigating.
+  const calls=[];const fake={location:{href:'about:blank',replace:url=>calls.push(url)},opener:{},focus(){calls.push('focus');}};
+  const r=showFactchatTab({open:()=>fake},FACTCHAT_TOOL.entryUrl);
+  assert.deepEqual(r,{ok:true,fresh:true});assert.equal(fake.opener,null);assert.deepEqual(calls,[FACTCHAT_TOOL.entryUrl,'focus']);
+  assert.deepEqual(showFactchatTab({open:()=>null},FACTCHAT_TOOL.entryUrl),{ok:false,fresh:false});
+  const presenter=await readFile(new URL('../education/study/live/present/index.html',import.meta.url),'utf8');
+  for(const m of ['slide','lab','split'])assert.match(presenter,new RegExp('data-stage-mode="'+m+'"'));
+  const js=await readFile(new URL('../education/study/live/present.js',import.meta.url),'utf8');
+  assert.doesNotMatch(js,/factchat\.bot[^'"]*['"][^;]*iframe/i);
+  assert.match(js,/class="stage-embed" src="'\+esc\(src\)/,'only the same-origin lab is embedded');
+});
+
+test('after the shared basics, every practice runs per field at the same time',()=>{
+  for(const s of COURSE.sessions){
+    const slides=sessionSlides(COURSE,s.no);
+    const firstPractice=s.modules.findIndex(m=>m.kind==='practice');
+    assert.ok(firstPractice>0&&s.modules.slice(0,firstPractice).every(m=>m.kind!=='practice'),'basics come before practice');
+    for(const m of s.modules.filter(x=>x.kind==='practice')){
+      const t=slides.find(x=>x.moduleId===m.id&&x.special==='tracks');
+      assert.ok(t,m.id+' needs a per-field slide');
+      assert.equal(t.tracks.length,COURSE.tracks.length);
+      assert.ok(t.tracks.every(x=>x.label&&x.task),m.id);
+      const order=slides.filter(x=>x.moduleId===m.id).map(x=>x.special||'-');
+      assert.ok(order.indexOf('tracks')<order.indexOf('join'),'fields are introduced before the QR');
+    }
+  }
+});

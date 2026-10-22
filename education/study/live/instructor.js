@@ -1,9 +1,9 @@
 // EKODI Education Premium Studio — Instructor Studio (강사 운영실).
 import {COURSES,courseEntry} from './courses/registry.js';
-import {validateCourse,sessionByNo,sessionSlides,practiceMinutes,practiceModules,totalMinutes,learnerUrl,formatClock,courseMarkdown,KIND_LABELS,missionMaterials,liveBase,livePath,sitePath,SLASH} from './engine/model.js';
+import {validateCourse,sessionByNo,sessionSlides,practiceMinutes,practiceModules,totalMinutes,learnerUrl,formatClock,courseMarkdown,KIND_LABELS,missionMaterials,liveBase,livePath,sitePath,SLASH,trackTaskTitle} from './engine/model.js';
 import {createLiveStore,lectureElapsedMs,timerRemainingMs,timerPhase,CHANNEL_NAME} from './engine/live-state.js';
 import {qrSvg} from './engine/qr.js';
-import {esc,list,missionSections,featureCard,readFeatureChecks,writeFeatureCheck,allFeatureIds,moduleLabel,downloadText,copyText,safeStorage,safeChannel,multiline,bindChrome} from './engine/render.js';
+import {esc,list,missionSections,featureCard,readFeatureChecks,writeFeatureCheck,allFeatureIds,moduleLabel,downloadText,copyText,safeStorage,safeChannel,multiline,bindChrome,showFactchatTab} from './engine/render.js';
 import {checkOutput} from './engine/checker.js';
 import {FACTCHAT_TOOL} from './tools/factchat.js';
 
@@ -80,7 +80,10 @@ function viewModule(){
     (idx<s.modules.length-1?'<button type="button" class="btn btn-ghost" data-module="'+(idx+1)+'">다음 단계 →</button>':'')+'</div></div>';
   let body='';
   if(m.kind==='practice'){
-    body='<div class="panel"><div class="grid-2"><div>'+trackLevelControls()+'</div><div class="notice">수강생은 자기 직무를 직접 고릅니다. 여기서 고른 직무는 강사 미리보기용입니다. 같은 미션 엔진에서 원문·프롬프트·완료 기준만 바뀝니다.</div></div></div>'+
+    const fields='<div class="panel"><p class="eyebrow">분야별 동시 실습 · 7개 분야가 같은 시간에</p><h3>각자 내 업무 원문으로 실습합니다</h3><ol class="field-list">'+
+      course.tracks.map(t=>'<li><b>'+esc(t.label)+'</b><span>'+esc(trackTaskTitle(course,m.missionId,t.id))+'</span></li>').join('')+'</ol>'+
+      '<p class="meta">수강생은 QR로 들어와 내 분야를 고르면 바로 시작합니다. 발표 화면 「실습실」로 바꾸면 같은 화면을 시연할 수 있습니다.</p></div>';
+    body=fields+'<div class="panel"><div class="grid-2"><div>'+trackLevelControls()+'</div><div class="notice">수강생은 자기 직무를 직접 고릅니다. 여기서 고른 직무는 강사 미리보기용입니다. 같은 미션 엔진에서 원문·프롬프트·완료 기준만 바뀝니다.</div></div></div>'+
       '<div class="panel">'+missionSections(course,m.missionId,{trackId:prefs.track,levelId:prefs.level,checks:readFeatureChecks(storage),tool:FACTCHAT_TOOL,showFallback:prefs.showFallback})+'</div>';
   }else{
     const learner=m.learner?'<div class="panel"><h3>수강생 화면 안내 · '+esc(m.learner.headline)+'</h3>'+list(m.learner.tasks,true)+'</div>':'';
@@ -175,6 +178,8 @@ function renderSlideInfo(){
   $('#slideNow').textContent=slide?(st.slideIndex+1)+' / '+slides.length+' · '+slide.t:'-';
   $('#slidePrev').disabled=st.slideIndex<=0;$('#slideNext').disabled=st.slideIndex>=slides.length-1;
   $('#blackout').setAttribute('aria-pressed',String(st.blackout));$('#blackout').textContent=st.blackout?'화면 다시 표시':'화면 가리기';
+  const mode=st.stage?.mode||'slide';
+  $$('[data-stage-mode]').forEach(b=>{const on=b.dataset.stageMode===mode;b.classList.toggle('is-on',on);b.setAttribute('aria-pressed',String(on));});
   $('#syncInfo').textContent=(channel?'같은 컴퓨터의 발표 창과 실시간 동기화':'이 브라우저는 창 간 실시간 동기화를 지원하지 않습니다 — 「수동 동기화」 사용')+' · '+(store.persisted||storage?'새로고침 후 상태 복구됨':'저장소 차단: 새로고침 시 초기화');
 }
 function tick(){
@@ -284,6 +289,9 @@ function bind(){
   $('#slidePrev').addEventListener('click',()=>setSlide(S().slideIndex-1));
   $('#slideNext').addEventListener('click',()=>setSlide(S().slideIndex+1));
   $('#blackout').addEventListener('click',()=>store.dispatch({type:'blackout/toggle'}));
+  $$('[data-stage-mode]').forEach(b=>b.addEventListener('click',()=>{store.dispatch({type:'stage/mode',mode:b.dataset.stageMode});toast({slide:'청중 화면: 강의 슬라이드',lab:'청중 화면: 수강생 실습실(시연)',split:'청중 화면: 강의 + 실습실 나란히'}[b.dataset.stageMode]);}));
+  $('#openFactchatDemo').addEventListener('click',()=>{const r=showFactchatTab(window,FACTCHAT_TOOL.entryUrl);toast(!r.ok?'팝업이 차단되었습니다. 팝업을 허용한 뒤 다시 누르세요.':r.fresh?'공식 FactChat을 새 탭으로 열었습니다. 시연 후 이 탭으로 돌아오세요.':'FactChat 탭을 앞으로 가져왔습니다.');});
+  $('#gateLogout').href='./?c='+encodeURIComponent(course.id)+'&gate=logout';
   $('#resync').addEventListener('click',()=>{store.resync();renderAll();toast('저장된 최신 상태로 동기화했습니다.');});
   $('#previewModule').addEventListener('click',()=>window.open(joinLink(),'_blank','noopener'));
   $('#exportPlan').addEventListener('click',()=>downloadText(document,course.id+'_lesson-plan_instructor.md',courseMarkdown(course,{notes,tool:FACTCHAT_TOOL}),'text/markdown;charset=utf-8'));

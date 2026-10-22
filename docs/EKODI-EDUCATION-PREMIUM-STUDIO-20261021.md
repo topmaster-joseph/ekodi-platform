@@ -54,3 +54,12 @@ Revert the PR (static assets + tests + workflow lines). No data migration.
 - 저장소의 EKODI 이미지 중 AI 생성 이미지(협동조합)·포스터는 강사 활동 사진으로 쓰지 않음.
 - 발견(확인필요): `books/assets/ekodian-cover.svg`, `space/open-table-meal-260925.jpg`의 커밋 내용에 `[... ELLIPSIZATION ...]` 문자열이 섞여 이미지가 손상된 상태. 원본 파일로 교체 필요.
 - 운영 프로브: 입장 페이지에서 목사·박사 표기와 링크된 갤러리 3건을 확인. YouTube 썸네일 장애는 `externalMediaWarnings`로 기록(배포 차단 아님).
+
+## v4 (2026-10-22) — 강사 비밀번호 잠금, 강의↔실습실 화면 전환, 분야별 동시 실습
+- 강사 운영실·발표/청중 화면·강사 노트(`*.notes.js`)·`instructor.js`·`present.js`는 Education Worker에서 서버 측 비밀번호 확인 후에만 제공(`education-instructor-gate.js`). 수강생 실습실·입장 페이지·공용 엔진은 공개 유지.
+  - 비밀번호 검증값: PBKDF2-SHA256 100,000회(Workers 상한), 무작위 약 79비트 비밀번호 → 공개 저장소의 `EDU_INSTRUCTOR_GATE` 변수로 보관 가능. 사람이 정한 짧은 비밀번호는 이 방식에 쓰지 않음.
+  - 세션: `EDU_GATE_SIGNING_KEY`(Worker secret)로 서명한 HttpOnly·Secure·SameSite=Lax 쿠키, 12시간, 경로 `/edu/study/live`. 배포마다 키를 교체하고, 운영 프로브는 그 키로 자체 세션을 발급해 강사 화면을 검증(비밀번호 저장 없음). 배포 후 강사는 다시 로그인.
+  - 설정 누락 시 잠금 유지(fail closed). 잘못된 비밀번호 401, 교차 사이트 POST 403, 로그아웃 `?gate=logout`.
+- 발표 화면 무대 전환(청중 화면 동기화): 1 강의 · 2 실습실(같은 출처 Learner Lab iframe, `embed=1`) · 3 나란히. 실습실 문서만 `frame-ancestors 'self'`·`X-Frame-Options: SAMEORIGIN` 허용.
+- FactChat은 iframe으로 넣지 않음(기관 로그인·제3자 쿠키·링크아웃 원칙). 「FactChat 화면」(G)이 공식 사이트를 별도 탭으로 열거나 앞으로 가져옴(about:blank → opener 차단 → 이동).
+- 분야별 동시 실습: 실습마다 「같은 시간, 각자 내 업무로」 슬라이드(7개 분야 원문 제목) → QR → 실습실에서 분야 선택 후 시작. 강사 운영실 실습 화면에 7개 분야 원문 한눈에 보기.

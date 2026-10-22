@@ -129,8 +129,8 @@ jobs:
       - name: Test Education Premium Studio course engine
         if: github.event_name != 'pull_request' || steps.scope.outputs.my_only != 'true'
         run: |
-          for f in education/study/live/*.js education/study/live/*/*.js scripts/verify-education-live-studio-native.mjs; do node --check "$f"; done
-          node --test test/education-live-studio.test.mjs
+          for f in education/study/live/*.js education/study/live/*/*.js scripts/verify-education-live-studio-native.mjs education-instructor-gate.js; do node --check "$f"; done
+          node --test test/education-live-studio.test.mjs test/education-instructor-gate.test.mjs
       - name: Run static policy and code checks
         if: github.event_name != 'pull_request' || steps.scope.outputs.my_only != 'true'
         env:

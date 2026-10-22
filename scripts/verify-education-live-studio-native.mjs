@@ -1,11 +1,12 @@
 // EKODI-owned temporary Chromium probe for Education Premium Studio (Instructor Studio, Presenter, Learner Lab).
-// Read-only against the server: no account, no secrets, no external browser provider; all state stays in the
+// Read-only against the server: no account, no stored secrets, no external browser provider; all state stays in the
 // ephemeral browser context, which is destroyed afterwards. Non-GET requests are blocked and recorded.
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {classifyConsoleSecurityBlock,classifyRequestSecurityBlock,
   classifyMutationSecurityBlock,verifyKnownSecurityBlocks
 } from './education-native-security-observations.mjs';
+import {mintGateToken,GATE_COOKIE} from '../education-instructor-gate.js';
 
 const wantsPreview=process.env.EKODI_EDUCATION_PREVIEW_MODE==='true';
 const previewAllowed=wantsPreview&&process.env.GITHUB_EVENT_NAME==='pull_request'&&process.env.CI==='true';
@@ -82,6 +83,41 @@ async function guard(context,profile){
     return route.continue();
   });
 }
+// Instructor surfaces are password-gated. The release workflow rotates EDU_GATE_SIGNING_KEY and hands it to
+// this step only (masked), so the probe mints its own short-lived instructor session: no password is stored.
+async function authorize(context){
+  const key=process.env.EDU_GATE_SIGNING_KEY||'';
+  if(key.length<32)fail('EDU_GATE_SIGNING_KEY is not available to the probe; instructor surfaces cannot be verified');
+  const origin=new URL(ORIGIN);
+  await context.addCookies([{name:GATE_COOKIE,value:await mintGateToken(key),domain:origin.hostname,path:(PREFIX||'')+'/study/live',httpOnly:true,secure:origin.protocol==='https:',sameSite:'Lax'}]);
+}
+// Without a session the instructor studio, presenter and notes must stay locked; the learner lab stays open.
+async function gateProbe(browser){
+  const context=await browser.newContext({locale:'ko-KR'});
+  await guard(context,'gate');
+  try{
+    const page=await context.newPage();
+    const result={};
+    for(const [k,route] of [['studio',R.studio],['presenter',R.presenter],['audience',R.audience]]){
+      const r=await page.goto(ORIGIN+route,{waitUntil:'domcontentloaded',timeout:35000});
+      result[k]=r?.status();
+      if(r?.status()!==401)fail('unauthenticated '+k+' must be locked (401), got '+r?.status());
+      if(await page.locator('input[type="password"][name="password"]').count()!==1)fail(k+' lock page lacks the password field');
+      if(await page.locator('#presNotes,#view .notes').count()!==0)fail(k+' lock page leaked instructor content');
+    }
+    for(const asset of ['/study/live/courses/'+COURSE+'.notes.js','/study/live/instructor.js','/study/live/present.js']){
+      const r=await context.request.get(ORIGIN+PREFIX+asset,{failOnStatusCode:false,maxRedirects:0});
+      result[asset]=r.status();
+      if(r.status()!==401)fail('unauthenticated '+asset+' must be refused (401), got '+r.status());
+      if(/talk|answer/.test(await r.text()))fail(asset+' leaked content without a session');
+    }
+    const lab=await context.request.get(ORIGIN+R.lab,{failOnStatusCode:false});
+    result.lab=lab.status();
+    if(lab.status()!==200)fail('learner lab must stay public, got '+lab.status());
+    if(!/frame-ancestors 'self'/.test(lab.headers()['content-security-policy']||''))fail('learner lab must be frameable by the same-origin presenter only');
+    report.gate={...result,passed:true};
+  }finally{await context.close();}
+}
 async function open(page,route,{ready=true}={}){
   // Production traffic protection may answer a burst of headless requests with 429 + Retry-After.
   // Respect it (never bypass), reload, and fail if the page still is not ready after two retries.
@@ -138,6 +174,7 @@ async function instructorFlow(browser,profile){
   const context=await browser.newContext({viewport:{width:profile.width,height:profile.height},locale:'ko-KR',acceptDownloads:true});
   await context.grantPermissions(['clipboard-read','clipboard-write'],{origin:ORIGIN}).catch(()=>{});
   await guard(context,profile.name);
+  await authorize(context);
   const flow={profile:profile.name,steps:[]};const step=s=>flow.steps.push(s);
   try{
     const studio=await context.newPage();watch(studio,profile.name);
@@ -187,6 +224,30 @@ async function instructorFlow(browser,profile){
     const aStage=await audience.evaluate(()=>{const r=document.querySelector('#stage').getBoundingClientRect();return {w:Math.round(r.width),h:Math.round(r.height),fit:Math.round(Math.min(innerWidth,innerHeight*16/9))};});
     if(aStage.w<aStage.fit*0.9)fail('audience slide not filling the screen '+JSON.stringify(aStage));
     step('audience view has no presenter notes');
+    // Stage switching: 2 = learner lab demo, 3 = lecture + lab side by side, 1 = back to the lecture.
+    // The audience window follows through the shared live state.
+    if(await presenter.locator('#pFactchat').count()!==1)fail('presenter lacks the FactChat switch');
+    const frameReady=async(page,label)=>{
+      await page.locator('#stage iframe.stage-embed').waitFor({state:'attached',timeout:8000}).catch(()=>fail(label+': lab iframe missing'));
+      await page.frameLocator('#stage iframe.stage-embed').locator('body[data-ready="true"]').waitFor({state:'attached',timeout:25000}).catch(()=>fail(label+': embedded lab did not load (framing blocked?)'));
+      return page.evaluate(()=>{const f=document.querySelector('#stage iframe.stage-embed').getBoundingClientRect(),s=document.querySelector('#stage').getBoundingClientRect();return {fw:Math.round(f.width),fh:Math.round(f.height),sw:Math.round(s.width),sh:Math.round(s.height)};});
+    };
+    await presenter.bringToFront();await presenter.keyboard.press('2');
+    const pLab=await frameReady(presenter,'presenter lab');
+    if(pLab.fw<pLab.sw*0.9||pLab.fh<pLab.sh*0.9)fail('lab demo does not fill the stage '+JSON.stringify(pLab));
+    const aLab=await frameReady(audience,'audience lab');
+    if(aLab.fw<aLab.sw*0.9||aLab.fh<200)fail('audience lab demo too small '+JSON.stringify(aLab));
+    if(await presenter.frameLocator('#stage iframe.stage-embed').locator('header.ekodi-user-ui-header:visible').count()!==0)fail('embedded lab must not show the shared header');
+    step('stage: lecture → learner lab (presenter + audience)');
+    await presenter.keyboard.press('3');
+    await presenter.locator('#stage .stage-split .split-slide .slide').waitFor({timeout:5000}).catch(()=>fail('split view lacks the slide'));
+    await audience.locator('#stage .stage-split .split-slide .slide').waitFor({timeout:5000}).catch(()=>fail('audience split view lacks the slide'));
+    await frameReady(audience,'audience split');
+    await shot(presenter,profile.name+'-presenter-split',false);
+    step('stage: lecture + lab side by side');
+    await presenter.keyboard.press('1');
+    await audience.waitForFunction(()=>!document.querySelector('#stage iframe')&&document.querySelector('#stage .slide'),null,{timeout:5000}).catch(()=>fail('audience did not return to the lecture slide'));
+    step('stage: back to lecture');
     await shot(presenter,profile.name+'-presenter',false);
     await shot(audience,profile.name+'-audience',false);
     await studio.reload({waitUntil:'domcontentloaded'});await studio.locator('body[data-ready="true"]').waitFor({state:'attached'});
@@ -217,6 +278,13 @@ async function learnerFlow(browser,profile){
     const timer=await page.locator('#labTimer').innerText();
     if(!/^(19|20):\d\d$/.test(timer))fail('learner timer not synced to instructor end: '+timer);
     step('deep link + synced countdown');
+    // After the shared basics, everyone practises at the same time in their own field: a first-time learner
+    // arriving from the QR picks a field before the mission opens.
+    if(await page.locator('#labView .pick-tile').count()!==7)fail('practice must open with the 7-field picker for a first-time learner');
+    if(!(await page.locator('#dockAction').isDisabled()))fail('dock must wait for the field choice');
+    await page.locator('#labView [data-pick-track="academic"]').click();
+    if(!(await page.locator('#labView').innerText()).includes('수강'))fail('picked field did not load its source');
+    step('field picker at practice start');
     if(profile.mobile&&await page.locator('.pc-only').count()!==1)fail('mobile must show PC-only HWP notice');
     if(await page.locator('.msec').count()!==10)fail('learner mission must have 10 sections');
     await page.locator('#labTrack').selectOption('research');
@@ -291,6 +359,7 @@ async function learnerFlow(browser,profile){
 async function layoutProbe(browser,profile){
   const context=await browser.newContext({viewport:{width:profile.width,height:profile.height},isMobile:profile.mobile,hasTouch:profile.mobile,locale:'ko-KR'});
   await guard(context,profile.name);
+  await authorize(context);
   try{
     const page=await context.newPage();watch(page,profile.name);
     const result={name:profile.name,viewport:{width:profile.width,height:profile.height}};
@@ -323,6 +392,7 @@ async function main(){
   let browser;
   try{
     browser=await chromium.launch({headless:true});
+    await gateProbe(browser);
     for(const profile of VIEWPORTS){
       if(profile.width>=1366)await instructorFlow(browser,profile);
       if(profile.width===320||profile.width===390||profile.width===1366)await learnerFlow(browser,profile);

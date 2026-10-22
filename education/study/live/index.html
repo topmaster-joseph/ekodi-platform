@@ -80,11 +80,21 @@
         <button type="button" class="btn" id="slideNext" aria-label="다음 슬라이드">다음 →</button>
         <button type="button" class="btn" id="blackout" aria-pressed="false">화면 가리기</button>
       </div>
+      <div class="field-row" aria-label="청중 화면 전환">
+        <span class="meta">청중 화면</span>
+        <div class="seg" role="group" aria-label="청중 화면 전환">
+          <button type="button" class="seg-btn" data-stage-mode="slide" aria-pressed="true">강의</button>
+          <button type="button" class="seg-btn" data-stage-mode="lab" aria-pressed="false">실습실</button>
+          <button type="button" class="seg-btn" data-stage-mode="split" aria-pressed="false">나란히</button>
+        </div>
+      </div>
       <div class="btn-row">
+        <button type="button" class="btn btn-small" id="openFactchatDemo">FactChat 화면 ↗</button>
         <button type="button" class="btn btn-small" id="openAudience">청중 화면 창 열기</button>
         <button type="button" class="btn btn-small" id="resync">수동 동기화</button>
       </div>
       <p class="meta" id="syncInfo"></p>
+      <a class="btn btn-small btn-ghost" id="gateLogout" href="./?gate=logout">강사 로그아웃</a>
     </section>
   </aside>
 </div>

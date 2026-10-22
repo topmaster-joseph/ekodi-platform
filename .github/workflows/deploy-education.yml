@@ -19,6 +19,7 @@ on:
     paths:
       - 'education/**'
       - 'education-worker.js'
+      - 'education-instructor-gate.js'
       - 'research/migrations/**'
       - 'test/research-platform.test.mjs'
       - 'platform-route-registry.js'
@@ -40,6 +41,7 @@ on:
     paths:
       - 'education/**'
       - 'education-worker.js'
+      - 'education-instructor-gate.js'
       - 'research/migrations/**'
       - 'test/research-platform.test.mjs'
       - 'platform-route-registry.js'
@@ -81,6 +83,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check education-worker.js
+          node --check education-instructor-gate.js
           node --check education/research/worker.js
           node --check education/research/planner.js
           node --check education/research/app.js
@@ -88,7 +91,7 @@ jobs:
           node --check ekodi-service-manifest.js
           node --test test/education-platform.test.mjs test/my-life-journey.test.mjs test/research-platform.test.mjs
           for f in education/study/live/*.js education/study/live/*/*.js; do node --check "$f"; done
-          node --test test/education-live-studio.test.mjs
+          node --test test/education-live-studio.test.mjs test/education-instructor-gate.test.mjs
           node -e "JSON.parse(require('fs').readFileSync('platform-boundaries.json','utf8'))"
           node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/education.worker.json','utf8'))"
           grep -Fq 'EKODI Education' education/index.html
@@ -118,6 +121,14 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
       - name: Deploy isolated Education staging
         run: npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.education.staging.toml
+      - name: Rotate staging instructor gate signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          key=$(node -e "process.stdout.write(require('node:crypto').randomBytes(48).toString('base64url'))")
+          echo "::add-mask::$key"
+          printf '%s' "$key" | npx --yes wrangler@${WRANGLER_VERSION} secret put EDU_GATE_SIGNING_KEY --config wrangler.education.staging.toml >/dev/null
+          echo 'Rotated the staging instructor gate signing key (value never printed).' >> "$GITHUB_STEP_SUMMARY"
       - name: Verify staging surfaces and isolation
         shell: bash
         run: |
@@ -233,6 +244,19 @@ jobs:
             cat /tmp/edu-deployments.log
             exit 1
           fi
+      # The instructor gate (education-instructor-gate.js) signs its session cookie with this Worker secret.
+      # Rotating it on every release lets the read-only production probe mint its own instructor session
+      # without any stored credential; the value is masked and never printed. Instructors sign in again
+      # after a release.
+      - name: Rotate instructor gate signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          key=$(node -e "process.stdout.write(require('node:crypto').randomBytes(48).toString('base64url'))")
+          echo "::add-mask::$key"
+          printf '%s' "$key" | npx --yes wrangler@${WRANGLER_VERSION} secret put EDU_GATE_SIGNING_KEY --config wrangler.education.toml >/dev/null
+          echo "EDU_GATE_SIGNING_KEY=$key" >> "$GITHUB_ENV"
+          echo 'Rotated the instructor gate signing key (value never printed).' >> "$GITHUB_STEP_SUMMARY"
       - name: Verify real Education production hostname
         shell: bash
         run: |

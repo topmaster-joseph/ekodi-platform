@@ -13,9 +13,14 @@ export function initialState(courseId,sessionNo=1){
     lecture:{status:'idle',startedAt:0,accumulatedMs:0},
     timer:{status:'idle',missionId:'',durationMs:0,endsAt:0,remainingMs:0},
     shared:{missionId:'',level:'basic'},
+    stage:{mode:'slide'},
     blackout:false,rev:0,updatedAt:0
   };
 }
+
+// What the presenter stage and the audience window show: the lecture slide, the embedded Learner Lab
+// (same-origin demo) or both side by side.
+export const STAGE_MODES=Object.freeze(['slide','lab','split']);
 
 export function lectureElapsedMs(state,now){
   const l=state.lecture;
@@ -89,6 +94,10 @@ export function reduce(state,action,now){
       break;
     case 'share/level':
       s.shared={...s.shared,level:String(a.level||'basic')};break;
+    case 'stage/mode':{
+      const mode=String(a.mode||'');
+      if(!STAGE_MODES.includes(mode)||s.stage.mode===mode)return state;
+      s.stage={mode};if(s.blackout)s.blackout=false;break;}
     case 'blackout/toggle':
       s.blackout=!s.blackout;break;
     case 'blackout/set':
@@ -112,6 +121,7 @@ export function sanitizeState(raw,courseId){
     lecture:pick(raw.lecture,['status','startedAt','accumulatedMs'],base.lecture),
     timer:pick(raw.timer,['status','missionId','durationMs','endsAt','remainingMs'],base.timer),
     shared:pick(raw.shared,['missionId','level'],base.shared),
+    stage:{mode:STAGE_MODES.includes(raw.stage?.mode)?raw.stage.mode:'slide'},
     blackout:raw.blackout===true,
     rev:Number.isInteger(raw.rev)?raw.rev:0,
     updatedAt:Number.isFinite(raw.updatedAt)?raw.updatedAt:0
