@@ -384,7 +384,7 @@ async function catalog(env, now = new Date()) {
   return {
     campaign: { id: campaign.id, year: campaign.target_year, month: campaign.target_month, state: campaignState(campaign, now), opensAt: campaign.opens_at, closesAt: campaign.closes_at },
     products: products.map(publicProduct),
-    payment: { ready: publicPaymentReady(env), mode: paymentReadiness(env).mode, testMode: testPaymentReady(env) },
+    payment: { ready: publicPaymentReady(env), mode: paymentReadiness(env).mode, testMode: testPaymentReady(env), widget: Boolean(paymentReadiness(env).widget) },
   };
 }
 
@@ -459,7 +459,7 @@ header.top{padding:40px 0 18px}.eyebrow{font-size:13px;letter-spacing:.14em;colo
 h1{font-size:clamp(28px,5vw,42px);letter-spacing:-.04em;margin:6px 0 10px;line-height:1.2}.lead{color:var(--muted);margin:0;max-width:640px}
 .status{display:inline-flex;gap:8px;align-items:center;margin-top:16px;padding:8px 14px;border-radius:999px;background:var(--soft);font-weight:700;font-size:14px}
 .status.closed{background:#f4ece4;color:#7a4a22}.dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}.status.closed .dot{background:var(--warm)}
-.orgs{display:flex;gap:10px;margin:22px 0 6px;flex-wrap:wrap}fieldset.orgs{border:0;padding:0;margin:0 0 16px}fieldset.orgs legend{font-weight:700;font-size:14px;margin-bottom:8px}.choice{flex:1 1 180px;display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--line);background:#fff;border-radius:14px;padding:12px 14px;cursor:pointer}.choice input{margin-top:4px;width:18px;height:18px;accent-color:var(--accent)}.choice span{display:flex;flex-direction:column}.choice small{color:var(--muted)}.choice:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 3px rgba(47,107,79,.12)}button.cover{border:0;padding:0;width:100%;cursor:zoom-in;position:relative;font:inherit}.peek{position:absolute;right:8px;bottom:8px;background:rgba(31,42,36,.78);color:#fff;font-size:12px;font-weight:700;padding:4px 9px;border-radius:999px}dialog#intro{border:0;border-radius:18px;padding:0;width:min(640px,calc(100% - 24px));max-height:86vh}dialog#intro::backdrop{background:rgba(20,28,24,.55)}.introbox{margin:0;padding:18px 20px 8px;display:flex;flex-direction:column;max-height:86vh}.introhead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.introhead h2{font-size:18px;margin:0;line-height:1.4}.x{border:0;background:var(--soft);border-radius:10px;width:36px;height:36px;font-size:22px;cursor:pointer;flex:none}.introbody{overflow:auto;margin-top:12px}.introbody img{float:right;width:120px;margin:0 0 10px 12px;border-radius:8px}.introtext{white-space:pre-line;font-size:14.5px;line-height:1.75}.org{flex:1 1 200px;border:1.5px solid var(--line);background:var(--card);border-radius:14px;padding:14px 16px;cursor:pointer;font:inherit;text-align:left}
+.orgs{display:flex;gap:10px;margin:22px 0 6px;flex-wrap:wrap}fieldset.orgs{border:0;padding:0;margin:0 0 16px}fieldset.orgs legend{font-weight:700;font-size:14px;margin-bottom:8px}.choice{flex:1 1 180px;display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--line);background:#fff;border-radius:14px;padding:12px 14px;cursor:pointer}.choice input{margin-top:4px;width:18px;height:18px;accent-color:var(--accent)}.choice span{display:flex;flex-direction:column}.choice small{color:var(--muted)}.choice:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 3px rgba(47,107,79,.12)}button.cover{border:0;padding:0;width:100%;cursor:zoom-in;position:relative;font:inherit}.peek{position:absolute;right:8px;bottom:8px;background:rgba(31,42,36,.78);color:#fff;font-size:12px;font-weight:700;padding:4px 9px;border-radius:999px}dialog#payDialog{border:0;border-radius:18px;padding:0;width:min(640px,calc(100% - 16px));max-height:92vh}dialog#payDialog::backdrop{background:rgba(20,28,24,.55)}#widgetPay{margin:6px 0 16px}dialog#intro{border:0;border-radius:18px;padding:0;width:min(640px,calc(100% - 24px));max-height:86vh}dialog#intro::backdrop{background:rgba(20,28,24,.55)}.introbox{margin:0;padding:18px 20px 8px;display:flex;flex-direction:column;max-height:86vh}.introhead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.introhead h2{font-size:18px;margin:0;line-height:1.4}.x{border:0;background:var(--soft);border-radius:10px;width:36px;height:36px;font-size:22px;cursor:pointer;flex:none}.introbody{overflow:auto;margin-top:12px}.introbody img{float:right;width:120px;margin:0 0 10px 12px;border-radius:8px}.introtext{white-space:pre-line;font-size:14.5px;line-height:1.75}.org{flex:1 1 200px;border:1.5px solid var(--line);background:var(--card);border-radius:14px;padding:14px 16px;cursor:pointer;font:inherit;text-align:left}
 .org strong{display:block;font-size:17px}.org span{color:var(--muted);font-size:13px}.org[aria-pressed=true]{border-color:var(--accent);box-shadow:0 0 0 3px rgba(47,107,79,.12)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:18px;margin:22px 0}
 @media (max-width:560px){.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.info{padding:10px 10px 12px}.info h3{font-size:14px}.price{font-size:15px}.qty button{width:32px;height:34px}.qty input{width:100%;min-width:0;height:34px}.org{flex-basis:100%}.bar .wrap{gap:8px}.pay{width:100%}.pay .btn{flex:1}}
@@ -537,6 +537,12 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
   <section class="panel" id="myOrders" hidden><h2>내 신청 내역</h2><div id="myOrderList"></div></section>
   <p class="msg wrapmsg" id="msg" role="alert"></p>
 </main>
+<dialog id="payDialog" aria-labelledby="payTitle"><div class="introbox">
+  <div class="introhead"><h2 id="payTitle">결제 수단 선택</h2><button type="button" class="x" id="payClose" aria-label="닫기">×</button></div>
+  <div class="introbody"><p class="note" id="paySummary"></p><div id="paymentMethods"></div><div id="agreement"></div></div>
+  <p class="msg" id="payMsg" role="alert"></p>
+  <button class="btn" id="widgetPay" type="button" disabled>결제하기</button>
+</div></dialog>
 <dialog id="intro" aria-labelledby="introTitle"><form method="dialog" class="introbox">
   <div class="introhead"><h2 id="introTitle"></h2><button class="x" value="close" aria-label="닫기">×</button></div>
   <div class="introbody"><img id="introImg" alt="" referrerpolicy="no-referrer" hidden><div id="introText" class="introtext">책 소개를 불러오고 있습니다.</div></div>
@@ -545,7 +551,7 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
 <div class="bar"><div class="wrap"><div class="total">합계 <b id="total">0원</b> · <span id="count">0권</span></div>
   <div class="pay"><button class="btn" id="loginCta" type="button" disabled>구글 로그인하고 신청</button><button class="btn" id="payCard" type="button" hidden disabled>카드로 결제</button><button class="btn alt" id="payTransfer" type="button" hidden disabled>계좌이체</button></div></div></div>
 <footer class="wrap">책은 교회에서 일괄 수령 후 나누어 드립니다(개별 배송 없음). 표지 이미지·가격 출처: <a href="${QTM_ORIGIN}/" rel="noopener" target="_blank">QTM 큐티선교회</a> 온라인 스토어. 결제·구매대행: EKODIBIZ(사업자 213-13-01959, 통신판매업 2023-전남무안-0153). 문의 010-3501-8542</footer>
-<script nonce="${scriptNonce}">window.__QTIN__=${JSON.stringify({ campaignId: campaign.id, open, paymentReady: Boolean(payment.ready), testMode: Boolean(payment.testMode), org }).replace(/</g, '\\u003c')};</script>
+<script nonce="${scriptNonce}">window.__QTIN__=${JSON.stringify({ campaignId: campaign.id, open, paymentReady: Boolean(payment.ready), testMode: Boolean(payment.testMode), widget: Boolean(payment.widget), org }).replace(/</g, '\\u003c')};</script>
 <script src="https://js.tosspayments.com/v2/standard"></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script nonce="${scriptNonce}">${clientScript(orderClient)}</script>`;
@@ -710,10 +716,10 @@ function orderClient() {
     $('total').textContent = won(list.reduce((s, i) => s + i.price * i.quantity, 0));
     $('count').textContent = `${list.reduce((s, i) => s + i.quantity, 0)}권`;
     const signedIn = Boolean(session);
-    $('loginCta').hidden = signedIn; $('payCard').hidden = !signedIn; $('payTransfer').hidden = !signedIn;
+    $('loginCta').hidden = signedIn; $('payCard').hidden = !signedIn; if ($('payTransfer')) $('payTransfer').hidden = !signedIn;
     $('loginCta').disabled = !cfg.open || busy;
     const ok = cfg.open && canPay() && list.length > 0 && !busy && signedIn;
-    $('payCard').disabled = !ok; $('payTransfer').disabled = !ok;
+    $('payCard').disabled = !ok; if ($('payTransfer')) $('payTransfer').disabled = !ok;
   }
   books.forEach(b => {
     const input = b.querySelector('input');
@@ -750,6 +756,34 @@ function orderClient() {
   }));
   $('loginCta').addEventListener('click', () => { $('account').scrollIntoView({ behavior: 'smooth', block: 'center' }); setStatus('아래 구글 버튼으로 로그인해 주세요.'); });
   $('logout').addEventListener('click', () => { forget(); session = null; ['name', 'phone', 'email', 'department'].forEach(id => { $(id).value = ''; }); showSignedOut(); });
+  // ---- Toss 결제위젯 (결제위젯 연동 키 gck/gsk). 결제 UI는 상점관리자의 variantKey(DEFAULT)를 따른다. ----
+  let widgetRequest = null;
+  let widgetSdk = null;
+  async function openWidget(data, request) {
+    const dialog = $('payDialog');
+    $('payMsg').textContent = '';
+    $('widgetPay').disabled = true;
+    $('paySummary').textContent = `${data.orderName} · ${won(data.amount)}`;
+    $('paymentMethods').replaceChildren(); $('agreement').replaceChildren();
+    if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', '');
+    widgetSdk = window.TossPayments(data.clientKey).widgets({ customerKey: data.customerKey });
+    await widgetSdk.setAmount({ currency: 'KRW', value: data.amount });
+    await Promise.all([
+      widgetSdk.renderPaymentMethods({ selector: '#paymentMethods', variantKey: 'DEFAULT' }),
+      widgetSdk.renderAgreement({ selector: '#agreement', variantKey: 'AGREEMENT' }),
+    ]);
+    widgetRequest = request;
+    $('widgetPay').disabled = false;
+  }
+  $('widgetPay').addEventListener('click', async () => {
+    if (!widgetSdk || !widgetRequest) return;
+    $('widgetPay').disabled = true; $('payMsg').textContent = '';
+    try { await widgetSdk.requestPayment(widgetRequest); }
+    catch (error) { $('payMsg').textContent = error?.message || '결제를 진행하지 못했습니다.'; $('widgetPay').disabled = false; }
+  });
+  $('payClose').addEventListener('click', () => { const d = $('payDialog'); if (typeof d.close === 'function') d.close(); else d.removeAttribute('open'); });
+  if (cfg.widget) { $('payCard').textContent = '결제하기'; $('payTransfer').remove(); }
+
   async function pay(method) {
     $('msg').textContent = '';
     if (!session) { $('account').scrollIntoView({ behavior: 'smooth', block: 'center' }); $('msg').textContent = '구글 로그인 후 결제하실 수 있습니다.'; return; }
@@ -767,17 +801,21 @@ function orderClient() {
       if (response.status === 401) { forget(); session = null; showSignedOut(); throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.'); }
       if (!response.ok) throw new Error(data.error || '신청을 저장하지 못했습니다.');
       if (typeof window.TossPayments !== 'function') throw new Error('결제 모듈을 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.');
-      const payment = window.TossPayments(data.clientKey).payment({ customerKey: data.customerKey });
-      const request = { method, amount: { currency: 'KRW', value: data.amount }, orderId: data.orderId, orderName: data.orderName,
-        successUrl: data.successUrl, failUrl: data.failUrl, customerName: data.customerName, customerMobilePhone: data.customerMobilePhone };
+      const request = { orderId: data.orderId, orderName: data.orderName, successUrl: data.successUrl, failUrl: data.failUrl,
+        customerName: data.customerName, customerMobilePhone: data.customerMobilePhone };
       if (data.customerEmail) request.customerEmail = data.customerEmail;
-      await payment.requestPayment(request);
+      if (/^(test|live)_gck_/.test(String(data.clientKey || ''))) {
+        await openWidget(data, request);
+      } else {
+        const payment = window.TossPayments(data.clientKey).payment({ customerKey: data.customerKey });
+        await payment.requestPayment({ ...request, method, amount: { currency: 'KRW', value: data.amount } });
+      }
     } catch (error) {
       $('msg').textContent = error?.message || '결제를 시작하지 못했습니다.';
     } finally { busy = false; refresh(); }
   }
   $('payCard').addEventListener('click', () => pay('CARD'));
-  $('payTransfer').addEventListener('click', () => pay('TRANSFER'));
+  if ($('payTransfer')) $('payTransfer').addEventListener('click', () => pay('TRANSFER'));
   refresh();
   (async () => {
     session = await validSession();

@@ -692,3 +692,44 @@ test('real payment turns on by registering live keys as Worker secrets, overridi
   assert.equal(order.clientKey, 'live_ck_real');
   assert.match(order.orderId, /^QTIN-/, 'real orders are not test orders');
 });
+
+// ---------- EKODI-QTIN-TOSS-WIDGET-006: 결제위젯 연동 키(gck/gsk)로도 실결제 ----------
+test('widget keys (live_gck/live_gsk) open real checkout through the Toss payment widget; mixed key types stay closed', async () => {
+  const { readiness } = await import('../ekodipay-core.js');
+  const base = { PAYMENTS_ENABLED: 'true', TOSS_CLIENT_KEY: 'test_ck_cfg' };
+  const widget = readiness({ ...base, TOSS_CLIENT_KEY__EKODI: 'live_gck_real', TOSS_SECRET_KEY__EKODI: 'live_gsk_real' });
+  assert.equal(widget.publicReady, true);
+  assert.equal(widget.widget, true);
+  const api = readiness({ ...base, TOSS_CLIENT_KEY__EKODI: 'live_ck_real', TOSS_SECRET_KEY__EKODI: 'live_sk_real' });
+  assert.equal(api.publicReady, true);
+  assert.equal(api.widget, false);
+  for (const [ck, sk] of [['live_gck_a', 'live_sk_b'], ['live_ck_a', 'live_gsk_b']]) {
+    const mixed = readiness({ ...base, TOSS_CLIENT_KEY__EKODI: ck, TOSS_SECRET_KEY__EKODI: sk });
+    assert.equal(mixed.ready, false, `${ck}+${sk}`);
+    assert.ok(mixed.missing.includes('key-type-mismatch'));
+  }
+  const env = await openEnvWithProducts({ TOSS_CLIENT_KEY: 'test_ck_cfg', TOSS_SECRET_KEY: '', TOSS_CLIENT_KEY__EKODI: 'live_gck_real', TOSS_SECRET_KEY__EKODI: 'live_gsk_real' });
+  const cat = await (await handleRequest(new Request('https://ekodi.kr/qtin/api/catalog'), env, OPEN_NOW)).json();
+  assert.equal(cat.payment.ready, true);
+  assert.equal(cat.payment.widget, true);
+  const page = await (await handleRequest(new Request('https://ekodi.kr/qtin/church'), env, OPEN_NOW)).text();
+  assert.ok(page.includes('id="paymentMethods"') && page.includes('id="agreement"') && page.includes('"widget":true'));
+  assert.ok(page.includes("variantKey: 'DEFAULT'"));
+  const res = await handleRequest(post('/qtin/api/orders', { campaignId: '2026-12', org: 'church', name: '홍길동', phone: '01012345678', privacyConsent: true, items: [{ productId: '2026-12:1719304225', quantity: 1 }] }), env, OPEN_NOW);
+  const order = await res.json();
+  assert.equal(res.status, 201, JSON.stringify(order));
+  assert.equal(order.clientKey, 'live_gck_real');
+  assert.ok(!JSON.stringify(order).includes('gsk'), 'the widget secret key never reaches the browser');
+  // Confirmation uses the widget secret key server-side.
+  const token = new URL(order.successUrl).searchParams.get('t');
+  const toss = mockToss(async (url, init) => {
+    assert.equal(init.headers.authorization, `Basic ${btoa('live_gsk_real:')}`);
+    const req = JSON.parse(init.body);
+    return { body: { paymentKey: req.paymentKey, orderId: req.orderId, totalAmount: req.amount, status: 'DONE', method: '간편결제' } };
+  });
+  try {
+    const done = await handleRequest(new Request(`https://ekodi.kr/qtin/payment/success?t=${token}&paymentKey=pk_w1&orderId=${order.orderId}&amount=${order.amount}`), env, OPEN_NOW);
+    assert.equal(done.status, 200);
+  } finally { toss.restore(); }
+  assert.equal((await env.DB.prepare('SELECT status FROM qtin_orders WHERE id=?').bind(order.orderId).first()).status, 'paid');
+});
