@@ -109,6 +109,15 @@ export function slideHtml(slide,{joinSvg='',joinUrl='',timerText='',sessionLabel
     return '<div class="slide slide-join">'+'<div class="slide-join-text">'+head+(slide.p?'<p class="slide-lead">'+esc(slide.p)+'</p>':'')+(slide.bullets?.length?list(slide.bullets,false,'slide-bullets'):'')+
       '<p class="slide-url">'+esc(joinUrl)+'</p></div><div class="slide-qr">'+joinSvg+'</div></div>';
   }
+  if(slide.special==='mood'||(slide.special==='break'&&slide.photo)){
+    const ph=slide.photo;
+    const bg=ph?'<img class="slide-photo" src="'+esc(ph.src)+'" alt="'+esc(ph.alt)+'" decoding="async" referrerpolicy="no-referrer">':'';
+    const credit=ph?'<p class="slide-credit">Photo · '+esc(ph.credit)+' / Unsplash</p>':'';
+    const body=slide.special==='mood'
+      ?'<p class="slide-kicker">'+esc(slide.k)+'</p><h2 class="slide-mood-q">'+esc(slide.t)+'</h2>'+(slide.p?'<p class="slide-lead">'+esc(slide.p)+'</p>':'')
+      :head+'<p class="slide-lead">'+esc(slide.p)+'</p>'+(timerText?'<p class="slide-timer" data-slide-timer>'+esc(timerText)+'</p>':'');
+    return '<div class="slide slide-mood'+(slide.special==='break'?' slide-break':'')+'">'+bg+'<div class="slide-mood-text">'+body+'</div>'+credit+'</div>';
+  }
   if(slide.special==='break'){
     return '<div class="slide slide-break">'+head+'<p class="slide-lead">'+esc(slide.p)+'</p>'+(timerText?'<p class="slide-timer" data-slide-timer>'+esc(timerText)+'</p>':'')+'</div>';
   }

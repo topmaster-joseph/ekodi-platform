@@ -109,6 +109,8 @@ function slide(base){return Object.freeze({bullets:[],p:'',special:'',...base});
 export function moduleSlides(course,session,mod){
   const range=mod.start+'–'+mod.end+'분 · '+(KIND_LABELS[mod.kind]||'');
   const out=[];
+  const mood=course.moods?.[mod.id];
+  if(mood?.q)out.push(slide({id:mod.id+'-mood',moduleId:mod.id,k:mood.k||'잠깐',t:mood.q,p:mood.sub||'',special:'mood',photo:mood.photo}));
   if(mod.kind==='practice'){
     const m=course.missions[mod.missionId];
     out.push(slide({id:mod.id+'-a',moduleId:mod.id,k:range,t:m.title,p:m.problem,bullets:['왜: '+m.why,'결과물: '+m.deliverable,m.pcOnly?'PC 전용 실습 · 모바일은 대체 실습':'PC 권장 · 모바일 참여 가능']}));
@@ -121,7 +123,7 @@ export function moduleSlides(course,session,mod){
     return out;
   }
   if(mod.kind==='break'){
-    out.push(slide({id:mod.id+'-a',moduleId:mod.id,k:range,t:mod.title,p:mod.summary,special:'break'}));
+    out.push(slide({id:mod.id+'-a',moduleId:mod.id,k:range,t:mod.title,p:mod.summary,special:'break',photo:mood?.photo||null}));
     return out;
   }
   if(mod.hook)out.push(slide({id:mod.id+'-hook',moduleId:mod.id,k:'오늘의 질문',t:mod.hook.q,p:mod.hook.sub,special:'hook'}));
@@ -170,6 +172,8 @@ export function learnerUrl(origin,pathname,params){
   if(p.m)url.searchParams.set('m',p.m);
   if(p.lv)url.searchParams.set('lv',p.lv);
   if(Number.isFinite(p.e)&&p.e>0)url.searchParams.set('e',String(Math.round(p.e)));
+  // Later sessions open only after the learner finished session 1, or through the instructor's own link/QR.
+  if(Number(p.s)>1)url.searchParams.set('open','1');
   return url.href;
 }
 export function parseLearnerParams(search,course){
@@ -179,6 +183,7 @@ export function parseLearnerParams(search,course){
   const lv=q.get('lv');
   const e=Number(q.get('e'));
   return {
+    open:q.get('open')==='1',
     c:q.get('c')||course?.id||'',
     s:course&&sessionByNo(course,s)?s:1,
     m:course&&m&&course.missions[m]?m:'',
