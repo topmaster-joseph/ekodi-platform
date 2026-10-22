@@ -73,3 +73,15 @@ as unverified rather than completed.
   for fresh SHA checks, protected merge, deployment, and live UI verification.
 - Feature implementation remains the unmodified three-file change from
   source PR #5639. No new API credentials, permissions or finance scope.
+
+## Third protected-base synchronization / genuine checks
+
+The official merge controller synchronized the branch to `d19b23bb076f3738c0a447345faa290bbd5d0fa8`
+after unrelated concurrent merges advanced `main`. The official PR remains the
+only release candidate. The new bot-authored commit is not itself a passed CI
+result. This owner-delegated **docs-only** source change re-requests genuine
+required check jobs without changing feature behavior, underlying approval,
+deployment identities or release protection.
+
+Do not create a new feature branch, cherry-pick unverified runtime changes,
+force-merge, or mark deployed without evidence.
