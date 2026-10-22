@@ -1,0 +1,126 @@
+name: Deploy QTIN Group Order
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: &qtin_paths
+      - 'qtin-order-core.js'
+      - 'qtin-order-worker.js'
+      - 'migrations/0201_qtin_group_orders.sql'
+      - 'wrangler.qtin-order.toml'
+      - 'wrangler.qtin-order.staging.toml'
+      - 'test/qtin-order.test.mjs'
+      - '.github/workflows/deploy-qtin-order.yml'
+      - '.github/workflows/deploy-qtin-order-staging.yml'
+  push:
+    branches: [main]
+    paths: *qtin_paths
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qtin-group-order-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate QTIN group order contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check qtin-order-core.js
+          node --check qtin-order-worker.js
+          node --test test/qtin-order.test.mjs
+          node scripts/validate-additive-migrations.mjs
+          grep -Fq 'ekodi.kr/qtin*' wrangler.qtin-order.toml
+          grep -Fq 'PAYMENTS_ENABLED = "false"' wrangler.qtin-order.toml
+          ! grep -Eq '^\s*TOSS_SECRET_KEY\s*=' wrangler.qtin-order.toml
+          grep -Fq 'DATA_MODE = "isolated-staging"' wrangler.qtin-order.staging.toml
+          ! grep -Fq '[[d1_databases]]' wrangler.qtin-order.staging.toml
+      - name: Verify platform guardrails
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/validate-deployment-guardrails.mjs
+          if [[ -f scripts/validate-zero-subdomain.mjs ]]; then node scripts/validate-zero-subdomain.mjs; fi
+
+  staging_gate:
+    needs: validate
+    uses: ./.github/workflows/deploy-qtin-order-staging.yml
+    secrets: inherit
+
+  release:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: [validate, staging_gate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Verify Production Cloudflare credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test "$CLOUDFLARE_ACCOUNT_ID" != '46aad4738793fbaca88574832a2ccc0f'
+      - name: Record D1 restore point
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 time-travel info ekodi-auth --config wrangler.qtin-order.toml || echo 'time-travel info unavailable; migration is additive (CREATE ... IF NOT EXISTS only).'
+      - name: Apply additive QTIN schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.qtin-order.toml --file migrations/0201_qtin_group_orders.sql
+      - name: Deploy production worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.qtin-order.toml
+      - name: Verify production order page, health and admin boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            page_code=$(curl -L -sS -o /tmp/qtin.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/qtin' || true)
+            church_code=$(curl -L -sS -o /tmp/qtin-church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/qtin/church' || true)
+            health_code=$(curl -sS -o /tmp/qtin-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/qtin/api/health' || true)
+            admin_code=$(curl -sS -o /tmp/qtin-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/qtin/api/admin/campaigns' || true)
+            admin_page=$(curl -L -sS -o /tmp/qtin-admin.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/qtin/admin' || true)
+            if [[ "$page_code" == 200 && "$church_code" == 200 && "$admin_code" == 401 && "$admin_page" == 200 ]] \
+              && [[ "$health_code" == 200 || "$health_code" == 503 ]] \
+              && grep -Fq '큐티인 신청' /tmp/qtin.html \
+              && grep -Fq '"org":"church"' /tmp/qtin-church.html \
+              && grep -Fq '"service":"ekodi-qtin-order"' /tmp/qtin-health.json \
+              && grep -Fq '큐티인 신청 관리' /tmp/qtin-admin.html \
+              && ! grep -Fq 'test_sk_' /tmp/qtin.html \
+              && ! grep -Fq 'live_sk_' /tmp/qtin.html; then
+              echo "QTIN production verified: page=$page_code health=$health_code admin_api=$admin_code"
+              cat /tmp/qtin-health.json
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Production verification failed: page=$page_code church=$church_code health=$health_code admin_api=$admin_code admin_page=$admin_page"
+          head -c 600 /tmp/qtin-health.json || true
+          exit 1
