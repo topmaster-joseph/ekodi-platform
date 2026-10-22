@@ -1,3 +1,4 @@
+import vm from 'node:vm';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -6,7 +7,7 @@ import {
   defaultWindow, targetIssueFor, inPreparationWindow, campaignState, parseIssueTitle, titleMatchesIssue, isQtinFamily,
   extractItemIds, parseProductDetail, buildOrderDraft, assessConfirmation, csvEscape, normalizePhone, newOrderId, isValidTossOrderId, kstToUtc,
 } from '../qtin-order-core.js';
-import worker, { handleRequest, syncCampaign, runScheduled, confirmPayment, handleWebhook, renderOrderPage } from '../qtin-order-worker.js';
+import worker, { handleRequest, syncCampaign, runScheduled, confirmPayment, handleWebhook, renderOrderPage, renderAdminPage } from '../qtin-order-worker.js';
 
 // ---------- in-memory D1 shim ----------
 function d1() {
@@ -434,4 +435,81 @@ test('after switching MID, new orders use the new merchant and old orders keep t
     assert.equal((await confirmPayment(env, { paymentKey: 'pk_new', orderId: fresh.orderId, amount: fresh.amount }, OPEN_NOW)).ok, true);
   } finally { toss.restore(); }
   assert.deepEqual(seen, [`Basic ${btoa('live_sk_abc:')}`, `Basic ${btoa('live_sk_ch:')}`]);
+});
+
+
+// ---------- QTIN admin auth UX regressions ----------
+function adminBrowser({ fragment = '', centralSession = null, fetchHandler = null } = {}) {
+  const page = renderAdminPage('qtin-admin-test');
+  const marker = '<script nonce="qtin-admin-test">';
+  const start = page.lastIndexOf(marker);
+  assert.ok(start > 0, 'admin inline bootstrap must be rendered');
+  const code = page.slice(start + marker.length, page.indexOf('</script>', start));
+  const elements = new Map();
+  const element = () => ({
+    textContent: '', innerHTML: '', value: '', className: '', href: '', style: {},
+    children: [], append(...children) { this.children.push(...children); },
+    replaceChildren(...children) { this.children = [...children]; },
+    addEventListener() {},
+  });
+  const document = {
+    getElementById(id) {
+      if (!elements.has(id)) elements.set(id, element());
+      return elements.get(id);
+    },
+    createElement: () => element(),
+    querySelectorAll: () => [],
+  };
+  document.getElementById('campaign').value = '2026-11';
+  const location = { hash: fragment, pathname: '/qtin/admin', search: '', origin: 'https://ekodi.kr', href: '' };
+  const history = { cleaned: false, replaceState() { this.cleaned = true; location.hash = ''; } };
+  const requests = [];
+  const fetch = async (url, options) => {
+    requests.push({ url: String(url), options });
+    if (fetchHandler) return fetchHandler(url, options);
+    throw new Error('synthetic_network_failure');
+  };
+  const saved = new Map();
+  const sessionStorage = { getItem: key => saved.get(key) || null, setItem(key, value) { saved.set(key, value); }, removeItem(key) { saved.delete(key); } };
+  const localStorage = {
+    getItem(key) { return key === 'sb-renzehysxirjilvdxacv-auth-token' && centralSession ? JSON.stringify(centralSession) : null; },
+  };
+  vm.runInNewContext(code, {
+    document, location, history, fetch, sessionStorage, localStorage,
+    AbortController, URL, URLSearchParams, setTimeout, clearTimeout,
+  }, { timeout: 1000 });
+  return { elements, location, history, requests, sessionStorage };
+}
+
+test('QTIN admin erases handoff tokens before network and shows a recoverable failure instead of spinning', async () => {
+  const browser = adminBrowser({ fragment: '#ekodi_token=synthetic-one-time-code&ekodi_type=email' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(browser.history.cleaned, true, 'one-time hash must be erased before the network response');
+  assert.equal(browser.location.hash, '');
+  const host = browser.elements.get('state');
+  assert.match(host.children.map(item => item.textContent).join(' '), /관리자 확인 실패/);
+  const retry = host.children.find(item => item.textContent === '로그인 다시 확인');
+  assert.ok(retry?.href.startsWith('https://ekodi.kr/auth/'));
+  assert.match(browser.elements.get('msg').textContent, /서버 연결에 실패/);
+  assert.equal(browser.location.href, '', 'transient failure must not trigger a redirect loop');
+});
+
+test('QTIN admin reuses the same-origin central Supabase session and checks rights through the protected API', async () => {
+  const bearer = 'synthetic-central-access-token';
+  const browser = adminBrowser({
+    centralSession: { access_token: bearer, refresh_token: 'synthetic-refresh-token', expires_at: Math.floor(Date.now() / 1000) + 3600 },
+    fetchHandler: async url => {
+      const data = String(url).endsWith('/campaigns')
+        ? { me: { email: 'operator@example.test', canWrite: true, canRefund: false }, payment: { ready: false, missing: ['payments-disabled'] }, campaigns: [{ id: '2026-11', target_year: 2026, target_month: 11, state: 'closed' }] }
+        : { campaign: { opens_at: '2026-10-19T15:00:00Z', closes_at: '2026-10-25T14:59:59Z', state: 'closed' }, byProduct: [], products: [], orders: [] };
+      return new Response(JSON.stringify(data), { headers: { 'content-type': 'application/json' } });
+    },
+  });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(browser.location.href, '', 'valid central session should not trigger a login redirect');
+  assert.equal(browser.requests.length, 2, 'fetch campaign list and selected campaign');
+  assert.equal(browser.requests[0].options.headers.authorization, 'Bearer ' + bearer);
+  assert.equal(JSON.parse(browser.sessionStorage.getItem('ekodi-qtin-admin-session')).accessToken, bearer, 'operator-only test checkout must see the recovered session');
+  assert.match(browser.elements.get('state').innerHTML, /operator@example.test/);
+  assert.match(browser.elements.get('summary').innerHTML, /아직 결제 완료된 신청이 없습니다/);
 });

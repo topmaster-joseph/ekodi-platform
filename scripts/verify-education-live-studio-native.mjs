@@ -281,6 +281,19 @@ async function instructorFlow(browser,profile){
     await presenter.keyboard.press('1');
     await audience.waitForFunction(()=>!document.querySelector('#stage iframe')&&document.querySelector('#stage .slide'),null,{timeout:5000}).catch(()=>fail('audience did not return to the lecture slide'));
     step('stage: back to lecture');
+    // AI demo card: institutional FactChat runs only after Super Administrator sign-in (no credentials here).
+    if(await presenter.locator('#aiCard').count()!==1)fail('presenter lacks the AI demo card');
+    if(!(await presenter.locator('#aiRun').isDisabled()))fail('AI run must stay disabled without an admin session');
+    if(ORIGIN==='https://ekodi.kr'){
+      const href=await presenter.locator('#aiLogin').getAttribute('href')||'';
+      const u=href?new URL(href):null;
+      if(!u||u.origin+u.pathname!=='https://ekodi.kr/auth/'||u.searchParams.get('site')!=='admin'||!/^https:\/\/ekodi\.kr\/edu\/study\/live\/present\//.test(u.searchParams.get('return_to')||''))fail('AI demo login link incorrect: '+href);
+    }
+    await presenter.keyboard.press('4');
+    await audience.locator('#stage .slide-ai').waitFor({timeout:5000}).catch(()=>fail('audience did not switch to the AI result stage'));
+    await presenter.keyboard.press('1');
+    await audience.waitForFunction(()=>!document.querySelector('#stage .slide-ai'),null,{timeout:5000}).catch(()=>fail('audience did not leave the AI stage'));
+    step('AI demo card gated by admin sign-in; AI stage mirrors to audience');
     await shot(presenter,profile.name+'-presenter',false);
     await shot(audience,profile.name+'-audience',false);
     await reopen(studio);

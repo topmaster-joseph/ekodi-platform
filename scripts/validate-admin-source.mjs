@@ -105,7 +105,7 @@ for (const marker of ['.ekodi-assist-bootstrap{left:auto;right:12px;bottom:76px;
 for (const marker of ["Mobile admin shell authority v3",".ekodi-assist-bootstrap-plus::after{","content:'AI'","admin-command-active .ekodi-assist-bootstrap{display:none!important}"]) {
   if (!mobileWorkbench.includes(marker)) violations.push(`admin-conversation-workbench.css: missing ADMIN-MOBILE-SHELL-003 lazy Assist marker: ${marker}`);
 }
-for (const marker of ["window.matchMedia?.('(max-width:760px)').matches","return'platform-overview'","version:'2.0.0'","V2_SECTION_GROUP[section]===group"]) {
+for (const marker of ["window.matchMedia?.('(max-width:760px)').matches","return'platform-overview'","version:'2.1.0'","V2_SECTION_GROUP[section]===group","V3_STAGE1_SECTION_GROUP[section]===group"]) {
   if (!canonicalRoutes.includes(marker)) violations.push(`admin-canonical-routes.js: missing ADMIN-MOBILE-SHELL-003 routing marker: ${marker}`);
 }
 const adminDesignCss = readFileSync(join(root, 'admin-design-engine.css'), 'utf8');
