@@ -40,6 +40,9 @@ export const UNREGISTERED_CLIENT_CLASS='unregistered-mcp-oauth';
 const CLASS_BY_ID=new Map(EKODI_CONNECT_CLIENT_CLASSES.map(item=>[item.id,item]));
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+export function isClientClassBound(classId,env={}){
+  return Object.values(parseClientClassMap(env?.EKODI_MCP_CLIENT_CLASS_MAP)).includes(String(classId||''));
+}
 export function connectClientClass(id){return CLASS_BY_ID.get(String(id||''))||null}
 
 // OAuth client ids are public identifiers, not secrets. The binding of a registered client id
@@ -97,7 +100,7 @@ export function authorizationServerMetadataUrls(issuer){
 }
 
 // critical = blocks every MCP OAuth client; advisory = specific clients may fail.
-export function assessConnectorReadiness({expectedResource=EKODI_CONNECT_RESOURCE,unauthStatus,challengeHeader,resourceMetadata,authServerMetadata,clientClass='claude-hosted'}={}){
+export function assessConnectorReadiness({expectedResource=EKODI_CONNECT_RESOURCE,unauthStatus,challengeHeader,resourceMetadata,authServerMetadata,clientClass='claude-hosted',clientBound=false}={}){
   const checks=[];
   const add=(id,level,ok,detail)=>checks.push(Object.freeze({id,level,ok:!!ok,detail}));
   const challenge=parseChallenge(challengeHeader);
@@ -112,9 +115,12 @@ export function assessConnectorReadiness({expectedResource=EKODI_CONNECT_RESOURC
   const cls=connectClientClass(clientClass);
   const hasRegistration=!!authServerMetadata?.registration_endpoint;
   const cimd=authServerMetadata?.client_id_metadata_document_supported===true&&(authServerMetadata?.token_endpoint_auth_methods_supported||[]).includes('none');
-  add('client_identification','advisory',cls?.registration==='pre-registered'||hasRegistration||cimd,
-    cls?.registration==='pre-registered'?'pre-registered client id':hasRegistration?'dcr':cimd?'cimd':'none');
-  add('refresh_supported','advisory',(authServerMetadata?.grant_types_supported||['refresh_token']).includes('refresh_token'),String(authServerMetadata?.grant_types_supported||'default'));
+  const bound=cls?.registration==='pre-registered'&&clientBound===true;
+  add('client_identification','advisory',bound||hasRegistration||cimd,
+    bound?'pre-registered client id bound':hasRegistration?'dcr (registration_endpoint)':cimd?'cimd':'none');
+  // RFC 8414 §2: absent grant_types_supported means ["authorization_code","implicit"].
+  const grants=authServerMetadata?.grant_types_supported||['authorization_code','implicit'];
+  add('refresh_supported','advisory',grants.includes('refresh_token'),grants.join(','));
   const critical=checks.filter(c=>c.level==='critical');
   return Object.freeze({
     version:EKODI_CONNECT_VERSION,clientClass,
@@ -124,21 +130,26 @@ export function assessConnectorReadiness({expectedResource=EKODI_CONNECT_RESOURC
   });
 }
 
-export async function probeConnectorReadiness({resource=EKODI_CONNECT_RESOURCE,clientClass='claude-hosted',fetchImpl=fetch,timeoutMs=10000}={}){
+export async function probeConnectorReadiness({resource=EKODI_CONNECT_RESOURCE,clientClass='claude-hosted',clientBound=false,fetchImpl=fetch,timeoutMs=10000}={}){
+  // Headers and body share one deadline so a stalled body cannot hang the probe.
   const get=async(url,init={})=>{
     const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),timeoutMs);
-    try{return await fetchImpl(url,{...init,signal:ctl.signal})}catch{return null}finally{clearTimeout(t)}
+    try{
+      const res=await fetchImpl(url,{...init,signal:ctl.signal});
+      const body=res?.ok?await res.json().catch(()=>null):null;
+      return {status:res?.status??0,ok:!!res?.ok,headers:res?.headers,body};
+    }catch{return null}finally{clearTimeout(t)}
   };
   const unauth=await get(resource,{method:'POST',headers:{'content-type':'application/json'},
     body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'submit_task',arguments:{intent:'connector readiness probe'}}})});
   const challengeHeader=unauth?.headers?.get?.('www-authenticate')||'';
   const metaUrl=parseChallenge(challengeHeader)?.resource_metadata||`${new URL(resource).origin}/.well-known/oauth-protected-resource`;
   const metaRes=await get(metaUrl);
-  const resourceMetadata=metaRes?.ok?await metaRes.json().catch(()=>null):null;
+  const resourceMetadata=metaRes?.ok?metaRes.body:null;
   let authServerMetadata=null;
   for(const url of authorizationServerMetadataUrls(resourceMetadata?.authorization_servers?.[0])){
     const res=await get(url);
-    if(res?.ok){authServerMetadata=await res.json().catch(()=>null);if(authServerMetadata)break}
+    if(res?.ok&&res.body){authServerMetadata=res.body;break}
   }
-  return assessConnectorReadiness({expectedResource:resource,unauthStatus:unauth?.status??0,challengeHeader,resourceMetadata,authServerMetadata,clientClass});
+  return assessConnectorReadiness({expectedResource:resource,unauthStatus:unauth?.status??0,challengeHeader,resourceMetadata,authServerMetadata,clientClass,clientBound});
 }

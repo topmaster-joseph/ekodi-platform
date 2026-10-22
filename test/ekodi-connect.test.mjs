@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   EKODI_CONNECT_CLIENT_CLASSES, PRIVILEGED_MCP_TOOLS, assessConnectorReadiness, authorizationServerMetadataUrls,
-  connectClientClass, filterToolsForClient, isToolExposedToClient, parseClientClassMap, probeConnectorReadiness, resolveConnectClientClass,
+  connectClientClass, filterToolsForClient, isClientClassBound, isToolExposedToClient, parseClientClassMap, probeConnectorReadiness, resolveConnectClientClass,
 } from '../ekodi-connect.js';
 import { EKODI_MCP_CLIENT_POLICY } from '../mcp-client-policy.js';
 import { EKODI_MCP_RESOURCE, EKODI_MCP_TOOLS, callEkodiMcpTool, handleEkodiMcpGateway, mcpProtectedResourceMetadata } from '../ekodi-mcp-gateway.js';
@@ -85,7 +85,8 @@ test('readiness: live gateway contract passes critical checks with pre-registere
   const report=assessConnectorReadiness({
     unauthStatus:unauth.status,challengeHeader:unauth.headers.get('www-authenticate'),
     resourceMetadata:mcpProtectedResourceMetadata(),
-    authServerMetadata:{issuer:'x',authorization_endpoint:'a',token_endpoint:'t',code_challenge_methods_supported:['S256']},
+    authServerMetadata:{issuer:'x',authorization_endpoint:'a',token_endpoint:'t',code_challenge_methods_supported:['S256'],grant_types_supported:['authorization_code','refresh_token']},
+    clientBound:true,
   });
   assert.equal(report.ready,true,JSON.stringify(report.checks));
   assert.equal(report.fullyReady,true);
@@ -121,4 +122,31 @@ test('probe follows challenge → resource metadata → authorization server met
   const report=await probeConnectorReadiness({fetchImpl:fake});
   assert.equal(report.ready,true);
   assert.equal(seen.length,3);
+});
+
+test('tools/list with an invalid or expired token never returns privileged tools',async()=>{
+  const badFetch=async()=>new Response('{}',{status:401});
+  const expired=tokenFor({sub:'user-1',client_id:CHATGPT_ID,aud:EKODI_MCP_RESOURCE});
+  const res=await (await handleEkodiMcpGateway(rpc({jsonrpc:'2.0',id:7,method:'tools/list'},expired),ENV,{fetchImpl:badFetch})).json();
+  assert.ok(!res.result.tools.some(t=>t.name==='approve_task'));
+  assert.equal(res.result.cacheScope,'private');
+});
+
+test('batched tools/call cannot smuggle approve_task for Claude',async()=>{
+  const token=tokenFor({sub:'user-1',client_id:CLAUDE_ID,aud:EKODI_MCP_RESOURCE});
+  const call=(id,name)=>({jsonrpc:'2.0',id,method:'tools/call',params:{name,arguments:{taskId:'t1',expectedStateVersion:1}}});
+  const out=await (await handleEkodiMcpGateway(rpc([call(1,'get_task_status'),call(2,'approve_task'),call(3,'APPROVE_TASK')],token),ENV,{fetchImpl})).json();
+  const byId=new Map(out.map(item=>[item.id,item]));
+  assert.equal(byId.get(2).result.structuredContent.error,'TOOL_NOT_EXPOSED_FOR_CLIENT');
+  assert.notEqual(byId.get(3).result.structuredContent?.approved,true);
+});
+
+test('client identification is only claimed when the pre-registered class is actually bound',()=>{
+  const base={unauthStatus:401,challengeHeader:'Bearer resource_metadata="x"',resourceMetadata:{resource:'https://ekodi.kr/mcp',authorization_servers:['https://i']},authServerMetadata:{authorization_endpoint:'a',token_endpoint:'t'}};
+  assert.equal(assessConnectorReadiness(base).checks.find(c=>c.id==='client_identification').ok,false);
+  assert.equal(assessConnectorReadiness({...base,clientBound:true}).checks.find(c=>c.id==='client_identification').ok,true);
+  assert.equal(assessConnectorReadiness({...base,authServerMetadata:{...base.authServerMetadata,registration_endpoint:'r'}}).checks.find(c=>c.id==='client_identification').ok,true);
+  assert.equal(assessConnectorReadiness(base).checks.find(c=>c.id==='refresh_supported').ok,false);
+  assert.equal(isClientClassBound('chatgpt',ENV),true);
+  assert.equal(isClientClassBound('claude-code',ENV),false);
 });

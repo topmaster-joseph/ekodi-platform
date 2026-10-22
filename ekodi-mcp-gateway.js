@@ -5,7 +5,7 @@ import { authorizeCapabilityInvocation, SOVEREIGN_CAPABILITY_FABRIC } from './so
 import { buildCoreAiGateway } from './core-ai-gateway.js';
 import { EKODI_MCP_EXTENSION_TOOLS, callAuthorizedEkodiMcpExtensionTool, callPublicEkodiMcpExtensionTool } from './ekodi-mcp-external-tools.js';
 import { publicEkodiMcpClientPolicy } from './mcp-client-policy.js';
-import { filterToolsForClient, isToolExposedToClient, resolveConnectClientClass } from './ekodi-connect.js';
+import { UNREGISTERED_CLIENT_CLASS, filterToolsForClient, isToolExposedToClient, resolveConnectClientClass } from './ekodi-connect.js';
 
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -308,7 +308,8 @@ async function handleRpc(message,request,env,dependencies={}){
     // Anonymous discovery keeps the full public catalog; an authenticated client sees only its class surface.
     if(!bearerToken(request))return rpcResult(id,{tools:EKODI_MCP_TOOLS,ttlMs:300000,cacheScope:'public'},{modern});
     const auth=await validateMcpBearer(request,dependencies);
-    if(!auth.ok)return rpcResult(id,{tools:EKODI_MCP_TOOLS,ttlMs:300000,cacheScope:'public'},{modern});
+    // A presented but invalid/expired token is never treated as anonymous: least-privilege surface.
+    if(!auth.ok)return rpcResult(id,{tools:filterToolsForClient(EKODI_MCP_TOOLS,UNREGISTERED_CLIENT_CLASS),ttlMs:300000,cacheScope:'private'},{modern});
     const clientClass=resolveConnectClientClass(auth.claims?.client_id,env);
     return rpcResult(id,{tools:filterToolsForClient(EKODI_MCP_TOOLS,clientClass),ttlMs:300000,cacheScope:'private'},{modern});
   }

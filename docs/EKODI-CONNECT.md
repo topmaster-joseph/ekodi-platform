@@ -59,3 +59,4 @@ Critical checks (exit 1): unauthenticated 401, `resource_metadata` in the challe
 
 - Supabase dynamic client registration is **on** in production, although `mcp-client-policy.js` declares `dynamicRegistrationDefault:false`. Turning it off is an account setting reserved for the platform owner. Until then, the least-privilege default above is the safety net.
 - Five `MCP Inspector` test clients registered on 2026-10-01 to 2026-10-06 remain active and should be reviewed.
+- Least privilege is intentional: if ChatGPT reconnects and dynamic registration issues it a new client id, it loses `approve_task` until that id is bound. Approval remains available in the EKODI admin.
