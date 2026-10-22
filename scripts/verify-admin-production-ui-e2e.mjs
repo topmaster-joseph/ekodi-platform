@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright';
-import { adminMenuOrder, getAdminMenuGroupForSection, getAdminMenuItem } from '../admin-menu-registry.js';
+import { adminMenuOrder, getAdminMenuForSection, getAdminMenuGroupForSection, getAdminMenuItem } from '../admin-menu-registry.js';
 
 const ADMIN_URL = process.env.ADMIN_URL || 'https://ekodi.kr/admin/';
 const SYNTHETIC_TOKEN = 'ekodi-production-ui-e2e';
@@ -218,7 +218,11 @@ async function dispatchClick(locator, timeout = 10_000) {
 }
 
 async function resolveMenuTrigger(id, group) {
-  const detail = page.locator(`button.admin-detail-item[data-admin-detail-section="${id}"]`).first();
+  // ADMIN-IA-V3: a section is either a menu entry (.admin-detail-item) or a
+  // detail route nested under its open menu (.admin-detail-tab).
+  const detail = page.locator(`button:is(.admin-detail-item,.admin-detail-tab)[data-admin-detail-section="${id}"]`).first();
+  const menuId = getAdminMenuForSection(id)?.id || '';
+  const menuButton = menuId ? page.locator(`button.admin-detail-item[data-admin-detail-menu="${menuId}"]`).first() : null;
   const more = page.locator(`button[data-admin-detail-more="${group}"]`).first();
   const groupButton = page.locator(`button[data-admin-global-group="${group}"]`).first();
 
@@ -231,6 +235,16 @@ async function resolveMenuTrigger(id, group) {
     // bounded self-heal when lazy panel activation temporarily races the menu.
     await page.evaluate(() => window.EKODIAdminSidebar?.sync?.(document)).catch(() => false);
     if (await detail.isVisible().catch(() => false)) return detail;
+    if (menuButton && await menuButton.isVisible().catch(() => false)) {
+      // Open the owning menu so its nested detail routes render.
+      await dispatchClick(menuButton, 8_000);
+      try {
+        await detail.waitFor({ state: 'visible', timeout: 5_000 });
+        return detail;
+      } catch {
+        // Fall through to the group re-selection below.
+      }
+    }
     if (await more.isVisible().catch(() => false)) {
       const expanded = await page.locator('.sidebar nav').first()
         .getAttribute('data-admin-more-group').then(value => value === group).catch(() => false);

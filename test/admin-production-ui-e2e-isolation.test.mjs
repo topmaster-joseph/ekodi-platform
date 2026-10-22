@@ -81,7 +81,8 @@ test('synthetic production Admin UI verifier follows direct registry href menus 
 test('synthetic production Admin UI verifier requires visible left navigation and never falls back to hidden context tabs', async () => {
   const text = await source();
   assert.match(text, /async function resolveMenuTrigger\(id, group\)/);
-  assert.match(text, /admin-detail-item\[data-admin-detail-section=/);
+  assert.match(text, /:is\(\.admin-detail-item,\.admin-detail-tab\)\[data-admin-detail-section=/);
+  assert.match(text, /data-admin-detail-menu=/);
   assert.match(text, /data-admin-detail-more=/);
   assert.match(text, /no visible left-navigation trigger/);
   assert.match(text, /const alreadyActive = await page\.evaluate\(section => window\.EKODIAdminPanels\?\.current\?\.\(\) === section, id\)/);

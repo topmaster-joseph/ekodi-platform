@@ -18,7 +18,8 @@ test('authenticated Admin E2E activates only the target demand menu before left 
 
 test('authenticated Admin E2E uses only the visible left submenu after contextual tabs are retired', () => {
   assert.match(source, /async function resolveMenuTrigger\(\)/);
-  assert.match(source, /admin-detail-item\[data-admin-detail-section=/);
+  assert.match(source, /:is\(\.admin-detail-item,\.admin-detail-tab\)\[data-admin-detail-section=/);
+  assert.match(source, /data-admin-detail-menu=/);
   assert.match(source, /data-admin-detail-more=/);
   assert.match(source, /no visible left-navigation trigger/);
   assert.match(source, /stage\('sidebar-trigger'\)/);
