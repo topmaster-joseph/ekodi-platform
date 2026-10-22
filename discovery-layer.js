@@ -6,6 +6,7 @@ export const DISCOVERY_PUBLIC_ROUTES = Object.freeze([
   { path: '/history', asset: 'history.html', changefreq: 'monthly', priority: '0.5', label: 'EKODI History', title: 'EKODI History | 에코디 연혁', description: 'EKODI 생태계의 주요 흐름과 발전 과정을 확인합니다.' },
   { path: '/privacy', asset: 'privacy.html', changefreq: 'yearly', priority: '0.3', label: 'Privacy Policy', title: '개인정보처리방침 | EKODI', description: 'EKODI 서비스의 개인정보 처리 원칙과 정책을 안내합니다.' },
   { path: '/terms', asset: 'terms.html', changefreq: 'yearly', priority: '0.3', label: 'Terms of Service', title: '이용약관 | EKODI', description: 'EKODI 서비스 이용약관을 안내합니다.' },
+  { path: '/ekodibiz/refund', asset: null, changefreq: 'yearly', priority: '0.3', label: 'EKODIBIZ Refund Policy', title: '환불정책 | 에코디비즈 EKODIBIZ', description: '에코디비즈 상품·디지털콘텐츠·용역의 청약철회와 환불 기준을 안내합니다.' },
   { path: '/cmpmyi', asset: null, changefreq: 'weekly', priority: '0.8', label: 'Mokpo Store Gateway', title: '목포대점 통합 게이트 | EKODI', description: '자담치킨, 피자마루, 요거트퍼플 목포대점을 한 화면에서 선택합니다.' },
   { path: '/jadam', asset: null, changefreq: 'daily', priority: '0.9', label: '자담치킨 목포대점 · Jadam Chicken', title: '자담치킨 목포대점 | 목포대 후문 치킨 · 메뉴 · 배달주문', description: '국립목포대학교 후문·전남 무안군 청계면 자담치킨 목포대점의 메뉴·가격·전화·영업시간·지도·배달주문 안내.' },
   { path: '/pizzamaru', asset: null, changefreq: 'daily', priority: '0.9', label: '피자마루 목포대점 · PizzaMaru', title: '피자마루 목포대점 | 목포대 후문 피자 · 메뉴 · 배달주문', description: '국립목포대학교 후문·전남 무안군 청계면 피자마루 목포대점의 메뉴·가격·전화·영업시간·지도·배달주문 안내.' },
