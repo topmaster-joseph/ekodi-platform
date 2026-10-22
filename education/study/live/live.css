@@ -540,3 +540,14 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 .lv .timer-ctl{display:inline-flex;gap:6px;margin-left:auto;flex:none}
 .lv .lab-timer-row #labTimerLabel{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto}
 @media (max-width:420px){.lv .lab-timer-row{gap:6px}.lv .lab-timer-row #labTimerLabel{display:none}.lv .lab-timer-row .btn{padding-inline:10px}}
+
+/* Mood / transition slides: full-bleed real photograph, one line of text */
+.lv .slide-mood{position:absolute;inset:0;padding:0;display:block;color:#fff;overflow:hidden;background:#0a1426}
+.lv .slide-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.lv .slide-mood::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(6,14,28,.78) 0%,rgba(6,14,28,.45) 48%,rgba(6,14,28,.08) 100%)}
+.lv .slide-mood-text{position:absolute;z-index:1;left:7cqw;bottom:12cqw;max-width:62cqw;display:grid;gap:1.6cqw}
+.lv .slide-mood .slide-kicker{color:#9ee6dc}
+.lv .slide-mood .slide-title,.lv .slide-mood .slide-lead{color:#fff}
+.lv .slide-mood-q{font-size:4.4cqw;line-height:1.22;font-weight:800;letter-spacing:-.035em;color:#fff;text-wrap:balance}
+.lv .slide-mood .slide-timer{color:#fff}
+.lv .slide-credit{position:absolute;z-index:1;right:2cqw;bottom:1.6cqw;font-size:1.05cqw;color:rgba(255,255,255,.72);margin:0}
