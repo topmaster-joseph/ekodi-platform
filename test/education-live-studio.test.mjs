@@ -293,3 +293,15 @@ test('after the shared basics, every practice runs per field at the same time',(
     }
   }
 });
+
+test('learner lab shows the same short instructor card in every session; full profile folds out',async()=>{
+  const {INSTRUCTOR}=await import('../education/study/live/courses/instructor.js');
+  const {instructorCard}=await import('../education/study/live/engine/render.js');
+  const lab=await readFile(new URL('../education/study/live/lab.js',import.meta.url),'utf8');
+  assert.ok(lab.includes("''),{compact:true})")&&!/compact:s\.no/.test(lab),'same compact card in every session');
+  const html=instructorCard(INSTRUCTOR,'/edu/study/live/',{compact:true});
+  assert.match(html,/<details class="ins-more">/);
+  assert.match(html,/에코디교회 목사/);assert.equal((html.match(/<figure>/g)||[]).length,3);
+  const css=await readFile(new URL('../education/study/live/live.css',import.meta.url),'utf8');
+  assert.match(css,/\.lv \.ins-photo\{width:100%;height:auto;aspect-ratio:1;/,'portrait keeps its square aspect');
+});

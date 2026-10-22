@@ -56,7 +56,7 @@ function viewAgenda(){
     '<div class="btn-row">'+factchatButtons()+'</div><p class="meta">공식 FactChat 사이트에서 본인 기관 계정으로 직접 로그인합니다. EKODI는 계정·비밀번호를 받지 않습니다.</p></section>';
   const hook=s.modules.find(m=>m.hook)?.hook;
   const hookCard=hook?'<section class="panel hook-card"><p class="eyebrow">오늘의 질문</p><p class="hook-q">'+esc(hook.q)+'</p><p class="meta">'+esc(hook.sub)+'</p></section>':'';
-  return pick+instructorCard(course.instructor,livePath(location.pathname,''),{compact:s.no!==1})+hookCard+outcomes+rows;
+  return pick+instructorCard(course.instructor,livePath(location.pathname,''),{compact:true})+hookCard+outcomes+rows;
 }
 // Practice runs for everyone at the same time, each in their own field: the picker appears on the agenda
 // and again at the start of a practice if no field was chosen yet.

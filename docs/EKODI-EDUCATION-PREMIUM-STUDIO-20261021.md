@@ -63,3 +63,7 @@ Revert the PR (static assets + tests + workflow lines). No data migration.
 - 발표 화면 무대 전환(청중 화면 동기화): 1 강의 · 2 실습실(같은 출처 Learner Lab iframe, `embed=1`) · 3 나란히. 실습실 문서만 `frame-ancestors 'self'`·`X-Frame-Options: SAMEORIGIN` 허용.
 - FactChat은 iframe으로 넣지 않음(기관 로그인·제3자 쿠키·링크아웃 원칙). 「FactChat 화면」(G)이 공식 사이트를 별도 탭으로 열거나 앞으로 가져옴(about:blank → opener 차단 → 이동).
 - 분야별 동시 실습: 실습마다 「같은 시간, 각자 내 업무로」 슬라이드(7개 분야 원문 제목) → QR → 실습실에서 분야 선택 후 시작. 강사 운영실 실습 화면에 7개 분야 원문 한눈에 보기.
+
+## v4.1 (2026-10-22) — 강사가 정한 비밀번호, 회차별 강사 카드 통일
+- 강사가 정한 비밀번호: GitHub Actions secret `EDU_INSTRUCTOR_PASSWORD`(10~128자) → 배포 시 PBKDF2 검증값으로 변환해 Worker secret `EDU_INSTRUCTOR_GATE_SECRET`에 저장(저장소·로그에 비밀번호 없음). 설정되면 생성 비밀번호는 더 이상 쓰이지 않음. 변경은 secret 수정 후 배포.
+- 수강생 실습실 강사 카드: 1·2회차 모두 같은 간단 카드(사진 원형 72px, 이름·직함·한 줄 소개·사이트) + 「강사 소개 더 보기」에서 경력·저서·활동 영상. 사진이 세로로 늘어나던 문제(height 속성) 수정. 입장 페이지는 전체 카드 유지.
