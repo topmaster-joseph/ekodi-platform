@@ -313,17 +313,39 @@ async function learnerFlow(browser,profile){
     if(!(await page.locator('#labView').innerText()).includes('수강'))fail('picked field did not load its source');
     step('field picker at practice start');
     if(profile.mobile&&await page.locator('.pc-only').count()!==1)fail('mobile must show PC-only HWP notice');
-    if(await page.locator('.msec').count()!==10)fail('learner mission must have 10 sections');
+    if(await page.locator('#labView [data-step-sec]').count()!==6)fail('learner mission must show its 6 steps as sections');
+    if(await page.locator('text=전체 안내 보기').count()!==0)fail('the long reference block must be gone');
+    if(await page.locator('#labSubnav [data-sec-go]').count()!==6)fail('sticky detailed order must list the 6 steps');
+    // Compact settings: one summary line that opens to field, role and level.
+    await page.locator('#labSettings > summary').click();
     await page.locator('#labTrack').selectOption('research');
     if(!(await page.locator('#labView').innerText()).includes('신진연구자'))fail('track switch did not change source');
-    step('job track switch');
+    if(await page.locator('#labRole option').count()!==4)fail('role select must offer 전체 + 3 roles');
+    await page.locator('#labRole').selectOption({index:2});
+    if(!/연구·산학협력 · /.test(await page.locator('#setSummary').innerText()))fail('settings summary lacks the chosen role');
+    if(await page.locator('#labLevel option').count()!==5)fail('5 levels expected');
+    await page.locator('#labSettings > summary').click();
+    step('field / role / level settings');
     const fc=page.locator('a[data-open-tool="factchat"]').first();
     if(await fc.getAttribute('href')!==FACTCHAT||await fc.getAttribute('target')!=='_blank')fail('FactChat link incorrect');
     step('official FactChat link');
-    const [dl]=await Promise.all([page.waitForEvent('download',{timeout:10000}),page.locator('#stepCard [data-download="0"]').click()]);
-    if(!dl.suggestedFilename().endsWith('.txt'))fail('material download missing');
-    await dl.delete().catch(()=>{});
-    step('material download');
+    // Material opens on screen (no download) with copy and copy-and-open-FactChat.
+    await page.locator('#sec-step-0 [data-view-material="0"]').click();
+    await page.locator('#matSheet:not([hidden])').waitFor({timeout:5000}).catch(()=>fail('material sheet did not open'));
+    if(!(await page.locator('#matText').innerText()).includes('신진연구자'))fail('material sheet shows the wrong text');
+    if(await page.locator('#matSheet [data-sheet-copy-open]').count()!==1)fail('material sheet lacks copy-and-open FactChat');
+    await page.locator('#matSheet [data-sheet-copy]').click();
+    await page.waitForFunction(()=>/복사|선택/.test(document.querySelector('#toast')?.textContent||''),null,{timeout:5000}).catch(()=>fail('material copy feedback missing'));
+    await page.locator('#matSheet [data-sheet-close]').click();
+    if(!(await page.locator('#matSheet').isHidden()))fail('material sheet did not close');
+    step('material view + copy on screen');
+    // Adjustable timer: the instructor's end time can be moved by the learner.
+    const t0=await page.locator('#labTimer').innerText();
+    await page.locator('[data-timer-add="60000"]').click();
+    const t1=await page.locator('#labTimer').innerText();
+    const secs=t=>{const [m,s2]=t.split(':').map(Number);return m*60+s2;};
+    if(Math.abs(secs(t1)-secs(t0)-60)>3)fail('timer +1분 did not move the end time '+t0+' → '+t1);
+    step('adjustable timer');
     // Guided practice: dock advances 준비 → FactChat 열기 → 프롬프트 ①
     const dockState=()=>page.evaluate(()=>{const a=document.querySelector('#dockAction');const r=a?.getBoundingClientRect();
       const hit=r?document.elementFromPoint(r.left+r.width/2,r.top+r.height/2):null;
@@ -334,22 +356,24 @@ async function learnerFlow(browser,profile){
     await page.waitForFunction(()=>/^2 \/ 6/.test(document.querySelector('#dockLabel')?.innerText||''),null,{timeout:5000})
       .catch(async()=>fail('dock did not advance to step 2 before='+JSON.stringify(before)+' after='+JSON.stringify(await dockState())));
     await page.locator('#dockNext').click();
-    if(!(await page.locator('#stepCard').innerText()).includes('프롬프트'))fail('prompt step not shown');
-    await page.locator('#stepCard [data-copy="step-prompt"]').first().click();
+    await page.waitForFunction(()=>/^3 \/ 6/.test(document.querySelector('#dockLabel')?.innerText||''),null,{timeout:5000}).catch(()=>fail('dock next did not reach the prompt step'));
+    if(await page.locator('#labSubnav [aria-current="true"]').getAttribute('data-sec-go')!=='sec-step-2')fail('sticky order did not follow the step');
+    await page.locator('#sec-step-2 [data-copy="step-prompt-2"]').click();
     await page.waitForFunction(()=>/복사|선택/.test(document.querySelector('#toast')?.textContent||''),null,{timeout:5000}).catch(()=>fail('copy feedback missing'));
     if(/edu/.test(await page.locator('#dockLabel').innerText()))fail('router rewrote dock text');
     step('guided steps + prompt copy');
-    await page.locator('[data-step="4"]').click();
+    await page.locator('#labSubnav [data-sec-go="sec-step-4"]').click();
+    await page.waitForFunction(()=>/^5 \/ 6/.test(document.querySelector('#dockLabel')?.innerText||''),null,{timeout:5000}).catch(()=>fail('tapping a step title did not select it'));
     await page.locator('[data-sample="hwp"]').click();
     await page.waitForFunction(()=>document.querySelectorAll('#verifyOut .finding.risk').length>0,null,{timeout:5000}).catch(()=>fail('result checker found no risk in the known-bad sample'));
     const findings=await page.locator('#verifyOut').innerText();
     if(!/원문에 없는/.test(findings))fail('checker output missing invented-value finding');
-    await page.locator('#stepCard [data-crit]').first().check();
+    await page.locator('#sec-step-4 [data-crit]').first().check();
     step('result checker flags invented values');
     await page.waitForTimeout(200);
     await reopen(page);
     if(!/^5 \/ 6/.test(await page.locator('#dockLabel').innerText()))fail('step position not restored after reload');
-    if(!await page.locator('#stepCard [data-crit]').first().isChecked())fail('checklist not restored after reload');
+    if(!await page.locator('#sec-step-4 [data-crit]').first().isChecked())fail('checklist not restored after reload');
     if(!(await page.locator('textarea[data-result="hwp"]').inputValue()).includes('가상 AI 출력'))fail('pasted result not restored');
     if(await page.locator('#verifyOut .finding').count()<1)fail('checker findings not restored');
     step('reload / disconnect recovery');
@@ -368,7 +392,7 @@ async function learnerFlow(browser,profile){
     await rec.delete().catch(()=>{});
     step('personal record export');
     await page.locator('[data-tab="m:hwp"]').click();
-    await page.locator('[data-step="0"]').click();
+    await page.locator('#labSubnav [data-sec-go="sec-step-0"]').click();
     await shot(page,profile.name+'-learner',false);
     flow.overflow=await overflow(page,profile.name+' learner');
     const entry=await context.newPage();watch(entry,profile.name);

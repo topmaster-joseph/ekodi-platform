@@ -10,7 +10,7 @@
   --font:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,system-ui,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
   --mono:ui-monospace,"SFMono-Regular",Consolas,monospace;
   --lv-top-h:60px;--lv-dock-h:0px;
-  margin:0;background:var(--paper);color:var(--ink);font-family:var(--font);font-size:1rem;line-height:1.62;letter-spacing:-.006em;
+  margin:0;background:var(--paper);color:var(--ink);font-family:var(--font);font-size:1rem;line-height:1.5;letter-spacing:-.006em;
   font-feature-settings:"ss06","case";-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
   word-break:keep-all;overflow-wrap:break-word;-webkit-text-size-adjust:100%;text-rendering:optimizeLegibility;
 }
@@ -22,7 +22,7 @@
 .lv h1{font-weight:780}
 .lv p{margin:0}
 .lv .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.lv .meta{color:var(--muted);font-size:.875rem;line-height:1.55}
+.lv .meta{color:var(--muted);font-size:.875rem;line-height:1.45}
 .lv .num,.lv .lv-clock,.lv .big-clock,.lv .lab-timer,.lv .timer-pill{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
 .lv .skip{position:absolute;left:-999px;top:0;background:var(--white);padding:8px 12px;z-index:90}
 .lv .skip:focus{left:8px}
@@ -46,7 +46,7 @@
 .lv .panel>.btn-row,.lv .panel .btn-row:not(:first-child){margin-top:12px}
 .lv select,.lv textarea,.lv input[type=text]{font:inherit;color:var(--ink);background:var(--white);border:1px solid var(--line);border-radius:var(--radius-s);padding:8px 12px;min-height:42px;max-width:100%}
 .lv select{padding-right:32px}
-.lv textarea{width:100%;min-height:96px;resize:vertical;line-height:1.6}
+.lv textarea{width:100%;min-height:96px;resize:vertical;line-height:1.5}
 .lv textarea:focus,.lv select:focus,.lv input:focus{border-color:var(--teal);outline:none;box-shadow:0 0 0 3px var(--teal-soft)}
 .lv label.field{display:grid;gap:5px;font-size:.8125rem;font-weight:650;color:var(--muted)}
 .lv .seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--radius-s);overflow:hidden;background:var(--white);flex-wrap:wrap}
@@ -165,7 +165,7 @@
 .lv .feature-list li{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .lv .source{margin-top:10px;border:1px solid var(--line);border-radius:var(--radius-s);background:#fbfcfe}
 .lv .source-label{font-size:.8125rem;font-weight:700;color:var(--muted);padding:9px 13px;border-bottom:1px solid var(--line-2)}
-.lv pre{margin:0;font-family:var(--font);white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere;font-size:.9375rem;line-height:1.7}
+.lv pre{margin:0;font-family:var(--font);white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere;font-size:.9375rem;line-height:1.55}
 .lv .source-text{padding:11px 13px}
 .lv .downloads{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .lv .prompt{border:1px solid var(--teal-line);border-radius:var(--radius-s);background:var(--teal-soft);margin-top:10px;overflow:hidden}
@@ -489,3 +489,54 @@ html.lv-big-text{font-size:115%}
 .lv .lab-privacy>summary::after{content:'▾';font-size:.75rem}
 .lv .lab-privacy[open]>summary::after{content:'▴'}
 .lv .lab-privacy[open]{display:grid;gap:6px}
+
+/* Learner lab v3 — compact settings, adjustable timer, sticky detailed order, view-and-copy sheet.
+   Tighter line height, more breathing room around blocks. */
+.lv .lab .panel{padding:22px 24px}
+.lv .lab .panel+.panel,.lv #labView>*+*{margin-top:18px}
+.lv .lab-head{margin:4px 0 16px;gap:4px}
+.lv .lab-control{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden}
+.lv .lab-settings>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 16px;min-height:48px}
+.lv .lab-settings>summary::-webkit-details-marker{display:none}
+.lv .set-sum{flex:1 1 auto;min-width:0;font-weight:700;font-size:.9375rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lv .set-edit{flex:none;font-size:.8125rem;font-weight:700;color:var(--teal-ink);border:1px solid var(--teal-line);background:var(--teal-soft);border-radius:999px;padding:3px 11px}
+.lv .lab-settings[open] .set-edit::after{content:' ▴'}
+.lv .lab-settings .lab-bar{border:0;border-top:1px solid var(--line-2);border-radius:0;box-shadow:none;margin:0;padding:12px 16px 14px}
+.lv .lab-timer-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--line-2)}
+.lv .lab-timer-row .meta{margin-right:2px}
+.lv .lab-timer-row .btn{min-height:34px}
+.lv .subnav{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-top:8px;padding:4px;background:var(--white);border:1px solid var(--line);border-radius:12px}
+.lv .subnav::-webkit-scrollbar{display:none}
+.lv .subnav .sub{flex:none;border:0;background:transparent;border-radius:9px;padding:6px 11px;font:inherit;font-size:.8125rem;font-weight:650;color:var(--muted);cursor:pointer;white-space:nowrap;max-width:15em;overflow:hidden;text-overflow:ellipsis;min-height:32px}
+.lv .subnav .sub.is-done{color:var(--teal-ink)}
+.lv .subnav .sub.is-done::before{content:'✓ '}
+.lv .subnav .sub[aria-current="true"]{background:var(--navy);color:#fff}
+.lv [data-sec]{scroll-margin-top:calc(var(--lv-top-h) + var(--lv-tabs-h,96px) + 12px)}
+.lv .mission-head{padding:4px 2px 0}
+.lv .mission-head h2{font-size:1.375rem;margin-top:2px}
+.lv .step-card{padding:24px 26px}
+.lv .step-card .step-no{font-size:.75rem;font-weight:800;color:var(--teal-ink);letter-spacing:.06em}
+.lv .mats{display:grid;gap:10px;margin-top:14px}
+.lv .mat{border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:#fbfcfe;display:grid;gap:6px}
+.lv .mat-label{font-weight:750;font-size:.9375rem}
+.lv .mat-preview{color:var(--muted);font-size:.875rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.lv .sheet{position:fixed;inset:0;z-index:80;background:rgba(8,17,31,.55);display:grid;align-items:center;justify-items:center;padding:24px}
+.lv .sheet[hidden]{display:none}
+.lv .sheet-card{background:var(--white);border-radius:18px;width:min(720px,100%);max-height:calc(100vh - 48px);display:grid;grid-template-rows:auto minmax(0,1fr) auto;box-shadow:0 30px 80px -30px rgba(0,0,0,.6)}
+.lv .sheet-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line-2)}
+.lv .sheet-text{overflow:auto;padding:16px 18px;font-size:1rem;line-height:1.6;user-select:text;-webkit-user-select:text}
+.lv .sheet-actions{display:flex;flex-wrap:wrap;gap:8px;padding:12px 18px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line-2)}
+.lv .sheet-actions .btn{flex:1 1 auto;min-height:46px}
+html.sheet-open,html.sheet-open body{overflow:hidden}
+@media (max-width:760px){
+  .lv .lab .panel{padding:18px 18px}
+  .lv .step-card{padding:20px 18px}
+  .lv .sheet{padding:0;align-items:end}
+  .lv .sheet-card{border-radius:18px 18px 0 0;max-height:88vh;width:100%}
+  .lv .lab-timer-row{padding:10px 14px}
+  .lv .lab-settings>summary{padding:12px 14px}
+}
+.lv .step-card .prompt-text{border:1px solid var(--line);border-radius:12px;background:#fbfcfe;margin-top:12px;max-height:280px}
+.lv .timer-ctl{display:inline-flex;gap:6px;margin-left:auto;flex:none}
+.lv .lab-timer-row #labTimerLabel{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto}
+@media (max-width:420px){.lv .lab-timer-row{gap:6px}.lv .lab-timer-row #labTimerLabel{display:none}.lv .lab-timer-row .btn{padding-inline:10px}}

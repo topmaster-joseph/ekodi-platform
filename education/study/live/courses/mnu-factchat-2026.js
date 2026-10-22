@@ -5,20 +5,24 @@
 // Instructor-only facilitation notes live in ./mnu-factchat-2026.notes.js and are never loaded by the Learner Lab.
 import {INSTRUCTOR} from './instructor.js';
 
+const R=(...rows)=>Object.freeze(rows.map(([id,label])=>Object.freeze({id,label})));
 const T=Object.freeze([
-  {id:'planning',label:'기획·평가',examples:'사업계획·성과지표·평가보고'},
-  {id:'academic',label:'학사·교무',examples:'학사일정·수강 안내·교과과정'},
-  {id:'student',label:'학생지원·취업',examples:'비교과·상담 안내·취업 프로그램'},
-  {id:'research',label:'연구·산학협력',examples:'과제 공고·연구비 안내·산학 협약'},
-  {id:'admin',label:'총무·회계',examples:'물품·계약·예산 집행 안내'},
-  {id:'outreach',label:'홍보·국제교류',examples:'보도자료·교류 프로그램·외국인 안내'},
-  {id:'facility',label:'시설·도서관·기타 행정',examples:'시설 점검·도서관 서비스·민원 안내'}
+  {id:'planning',label:'기획·평가',examples:'사업계획·성과지표·평가보고',roles:R(['strategy','기획·전략'],['performance','성과·평가'],['budget','예산·정책'])},
+  {id:'academic',label:'학사·교무',examples:'학사일정·수강 안내·교과과정',roles:R(['ops','학사운영'],['curriculum','수업·교과과정'],['records','학적·졸업'])},
+  {id:'student',label:'학생지원·취업',examples:'비교과·상담 안내·취업 프로그램',roles:R(['extra','비교과·장학'],['care','상담·생활'],['career','취·창업 지원'])},
+  {id:'research',label:'연구·산학협력',examples:'과제 공고·연구비 안내·산학 협약',roles:R(['support','연구지원'],['industry','산학협력·기술이전'],['grants','과제관리·연구윤리'])},
+  {id:'admin',label:'총무·회계',examples:'물품·계약·예산 집행 안내',roles:R(['general','총무·인사'],['finance','회계·예산 집행'],['procure','구매·계약'])},
+  {id:'outreach',label:'홍보·국제교류',examples:'보도자료·교류 프로그램·외국인 안내',roles:R(['pr','홍보·대외협력'],['global','국제교류'],['admission','입학홍보'])},
+  {id:'facility',label:'시설·도서관·기타 행정',examples:'시설 점검·도서관 서비스·민원 안내',roles:R(['safety','시설·안전'],['library','도서관'],['service','정보화·민원'])}
 ]);
 
+// Five levels. 입문 and 심화 reuse the 초급/고급 criteria (base) and add their own instruction.
 const LEVELS=Object.freeze([
-  {id:'basic',label:'초급',hint:'기본 프롬프트를 그대로 실행하고 결과를 원문과 대조합니다.'},
-  {id:'intermediate',label:'중급',hint:'형식·표·문체 조건을 추가해 업무 문서 수준으로 다듬습니다.'},
-  {id:'advanced',label:'심화',hint:'AI가 스스로 원문 대조·검증표를 만들게 하고 내 업무 양식으로 재구성합니다.'}
+  {id:'starter',label:'입문',base:'basic',hint:'프롬프트를 그대로 붙여 넣고 결과만 원문과 비교합니다.',addendum:'추가 조건: 전문 용어 없이 쉬운 문장으로, 한 문단은 3줄 이내로 써 주세요.'},
+  {id:'basic',label:'초급',hint:'기본 프롬프트를 실행하고 결과를 원문과 대조합니다.'},
+  {id:'intermediate',label:'중급',hint:'형식·표·문체 조건을 더해 업무 문서 수준으로 다듬습니다.'},
+  {id:'advanced',label:'고급',hint:'AI가 원문 대조·검증표를 만들게 하고 내 업무 양식으로 재구성합니다.'},
+  {id:'expert',label:'심화',base:'advanced',hint:'검증표에 더해 내 부서에서 반복해 쓸 프롬프트 템플릿까지 만듭니다.',addendum:'추가 조건: 마지막에 이 작업을 내 부서에서 반복할 수 있는 재사용 프롬프트 템플릿을 만들어 주세요. 바뀌는 값은 {{문서명}}처럼 표시해 주세요.'}
 ]);
 
 const HWP_TRACKS={
@@ -66,7 +70,7 @@ const MISSIONS=Object.freeze({
     id:'hwp',no:1,title:'개인 실습 ① HWP 문서 업무',minutes:30,pcOnly:true,features:['hwp-editor','chat'],
     problem:'반복되는 안내문·보고서 초안을 한글(HWP) 문서로 빠르게 만들고 표·문체를 정리합니다.',
     why:'대학 행정 문서 대부분이 HWP 양식입니다. 초안 작성과 서식 정리에 드는 시간을 줄이고, 검토에 더 많은 시간을 씁니다.',
-    prepare:['PC (HWP 편집은 PC 전용입니다)','FactChat 기관 계정 로그인','아래 [가상 실습자료] 또는 내려받은 원문 텍스트'],
+    prepare:['PC (HWP 편집은 PC 전용입니다)','FactChat 기관 계정 로그인','아래 [가상 실습자료] — 「원문 보기·복사」'],
     steps:[
       'FactChat 왼쪽 메뉴에서 「HWP 편집」을 엽니다. 메뉴가 보이지 않으면 기관 정책상 미허용일 수 있으니 강사에게 알리고 대체 실습으로 갑니다.',
       '「새 문서 만들기」를 누르고 ① 초안 생성 프롬프트를 붙여 넣습니다.',
