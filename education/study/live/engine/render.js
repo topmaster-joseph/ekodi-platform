@@ -76,11 +76,14 @@ export function instructorCard(ins,assetBase='',{compact=false}={}){
   const sites=ins.sites.map(x=>'<a class="site-chip" href="'+esc(x.url)+'" target="_blank" rel="noopener noreferrer"><b>'+esc(x.label)+'</b>'+(compact?'':'<span>'+esc(x.desc)+'</span>')+'</a>').join('');
   const gallery=ins.gallery?.length?'<div class="ins-gallery" aria-label="강사 활동">'+ins.gallery.map(g=>{const img='<img src="'+esc(mediaSrc(g.src,assetBase))+'" alt="'+esc(g.alt)+'" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="480" height="360">';
     return '<figure>'+(g.href?'<a href="'+esc(g.href)+'" target="_blank" rel="noopener noreferrer" title="영상 보기 (새 창)">'+img+'<span class="ins-play" aria-hidden="true">▶</span></a>':img)+'<figcaption>'+esc(g.caption)+'</figcaption></figure>'}).join('')+'</div>':'';
+  const detail='<p class="meta">'+esc(ins.promise)+'</p>'+list(ins.roles,false,'ins-roles')+'<p class="meta">저서 · '+ins.books.map(b=>'『'+esc(b)+'』').join(' ')+'</p>';
   return '<section class="ins-card'+(compact?' is-compact':'')+'" aria-label="오늘의 강사 소개"><img class="ins-photo" src="'+esc(assetBase+ins.photo)+'" alt="'+esc(ins.photoAlt)+'" width="160" height="160" loading="lazy">'+
     '<div class="ins-body"><p class="eyebrow">오늘의 강사</p><h2 class="ins-name">'+esc(ins.name)+' <span>'+esc(ins.nameEn)+'</span></h2><p class="ins-headline">'+esc(ins.headline)+'</p>'+
-    '<p class="ins-hook">'+esc(ins.hook)+'</p>'+(compact?'':'<p class="meta">'+esc(ins.promise)+'</p>'+list(ins.roles,false,'ins-roles')+
-    '<p class="meta">저서 · '+ins.books.map(b=>'『'+esc(b)+'』').join(' ')+'</p>')+
-    '<div class="site-chips" aria-label="운영 웹사이트">'+sites+'</div>'+gallery+'</div></section>';
+    '<p class="ins-hook">'+esc(ins.hook)+'</p>'+(compact
+      // Learner lab: the same short card in every session; the full profile folds out on demand.
+      ?'<div class="site-chips" aria-label="운영 웹사이트">'+sites+'</div>'+
+        '<details class="ins-more"><summary>강사 소개 더 보기 · 경력·저서·활동</summary>'+detail+gallery+'</details>'
+      :detail+'<div class="site-chips" aria-label="운영 웹사이트">'+sites+'</div>'+gallery)+'</div></section>';
 }
 export function slideHtml(slide,{joinSvg='',joinUrl='',timerText='',sessionLabel='',instructor=null,assetBase=''}={}){
   if(!slide)return '';

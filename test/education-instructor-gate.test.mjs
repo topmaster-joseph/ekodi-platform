@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 // Node has no Cloudflare HTMLRewriter; a pass-through keeps the Shell injection step inert in this contract test.
 globalThis.HTMLRewriter??=class{on(){return this;}onDocument(){return this;}transform(response){return response;}};
 const {default:worker}=await import('../education-worker.js');
-import { createVerifier, verifyPassword, mintGateToken, verifyGateToken, isGatedPath, parseVerifier, GATE_COOKIE } from '../education-instructor-gate.js';
+import { createVerifier, verifyPassword, mintGateToken, verifyGateToken, isGatedPath, parseVerifier, GATE_COOKIE, activeVerifier } from '../education-instructor-gate.js';
 import { routeCanonicalSurface } from '../canonical-surface-router.js';
 
 const PASSWORD='test-only-pass-7k2m-9qxz';
@@ -91,4 +91,20 @@ test('lock page survives the canonical /edu router (asset links prefixed, form p
   assert.match(html,/href="\/edu\/study\/live\/live\.css"/);
   assert.match(html,/href="\/edu\/study\/live\/lab\/\?c=mnu-factchat-2026"/);
   assert.match(html,/<form method="post" action=""/);
+});
+
+test('an instructor-chosen password (Worker secret) replaces the generated one; the workflow never prints it',async()=>{
+  const chosen='우리-강의실-2026!';
+  const secret=await createVerifier(chosen,{iterations:10000});
+  const e=env({EDU_INSTRUCTOR_GATE_SECRET:secret});
+  assert.equal(activeVerifier(e),secret);
+  assert.equal(activeVerifier(env({EDU_INSTRUCTOR_GATE_SECRET:'garbage'})),VERIFIER,'malformed secret falls back to the generated verifier');
+  const post=password=>get('/study/live/',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded',origin:'https://ekodi.kr'},body:new URLSearchParams({password})},e);
+  assert.equal((await post(chosen)).status,303);
+  assert.equal((await post(PASSWORD)).status,401,'the generated password stops working once a chosen one is set');
+  const wf=await readFile(new URL('../.github/workflows/deploy-education.yml',import.meta.url),'utf8');
+  assert.equal((wf.match(/secret put EDU_INSTRUCTOR_GATE_SECRET/g)||[]).length,2,'production and staging');
+  assert.match(wf,/EDU_INSTRUCTOR_PASSWORD: \$\{\{ secrets\.EDU_INSTRUCTOR_PASSWORD \}\}/);
+  assert.doesNotMatch(wf,/echo[^\n]*\$EDU_INSTRUCTOR_PASSWORD/,'never echo the password');
+  for(const f of ['wrangler.education.toml','wrangler.education.staging.toml'])assert.doesNotMatch(await readFile(new URL('../'+f,import.meta.url),'utf8'),/EDU_INSTRUCTOR_GATE_SECRET|EDU_INSTRUCTOR_PASSWORD/);
 });

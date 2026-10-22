@@ -20,6 +20,7 @@ on:
       - 'education/**'
       - 'education-worker.js'
       - 'education-instructor-gate.js'
+      - 'scripts/edu-instructor-gate-verifier.mjs'
       - 'research/migrations/**'
       - 'test/research-platform.test.mjs'
       - 'platform-route-registry.js'
@@ -42,6 +43,7 @@ on:
       - 'education/**'
       - 'education-worker.js'
       - 'education-instructor-gate.js'
+      - 'scripts/edu-instructor-gate-verifier.mjs'
       - 'research/migrations/**'
       - 'test/research-platform.test.mjs'
       - 'platform-route-registry.js'
@@ -84,6 +86,7 @@ jobs:
           set -euo pipefail
           node --check education-worker.js
           node --check education-instructor-gate.js
+          node --check scripts/edu-instructor-gate-verifier.mjs
           node --check education/research/worker.js
           node --check education/research/planner.js
           node --check education/research/app.js
@@ -121,6 +124,19 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
       - name: Deploy isolated Education staging
         run: npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.education.staging.toml
+      - name: Apply instructor-chosen password to staging (if configured)
+        shell: bash
+        env:
+          EDU_INSTRUCTOR_PASSWORD: ${{ secrets.EDU_INSTRUCTOR_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${EDU_INSTRUCTOR_PASSWORD:-}" ]; then
+            echo 'No instructor-chosen password configured; the existing instructor password stays active.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          verifier=$(node scripts/edu-instructor-gate-verifier.mjs)
+          printf '%s' "$verifier" | npx --yes wrangler@${WRANGLER_VERSION} secret put EDU_INSTRUCTOR_GATE_SECRET --config wrangler.education.staging.toml >/dev/null
+          echo 'Instructor-chosen password applied as a Worker secret (value never printed).' >> "$GITHUB_STEP_SUMMARY"
       - name: Rotate staging instructor gate signing key
         shell: bash
         run: |
@@ -248,6 +264,19 @@ jobs:
       # Rotating it on every release lets the read-only production probe mint its own instructor session
       # without any stored credential; the value is masked and never printed. Instructors sign in again
       # after a release.
+      - name: Apply instructor-chosen password (if configured)
+        shell: bash
+        env:
+          EDU_INSTRUCTOR_PASSWORD: ${{ secrets.EDU_INSTRUCTOR_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${EDU_INSTRUCTOR_PASSWORD:-}" ]; then
+            echo 'No instructor-chosen password configured; the existing instructor password stays active.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          verifier=$(node scripts/edu-instructor-gate-verifier.mjs)
+          printf '%s' "$verifier" | npx --yes wrangler@${WRANGLER_VERSION} secret put EDU_INSTRUCTOR_GATE_SECRET --config wrangler.education.toml >/dev/null
+          echo 'Instructor-chosen password applied as a Worker secret (value never printed).' >> "$GITHUB_STEP_SUMMARY"
       - name: Rotate instructor gate signing key
         shell: bash
         run: |

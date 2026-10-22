@@ -12,6 +12,11 @@
 // value (16 characters from a 31-symbol alphabet): the verifier cannot be inverted in practice. Never store a short, human-chosen password this way.
 // Cloudflare Workers cap PBKDF2 at 100,000 iterations.
 //
+// Instructor-chosen password: the release workflow turns the GitHub Actions secret EDU_INSTRUCTOR_PASSWORD into
+// a verifier and stores it as the Worker *secret* EDU_INSTRUCTOR_GATE_SECRET (never in the repository, so a
+// human-memorable password is not exposed to offline guessing). When present it replaces the generated
+// password entirely; online guessing is bounded by the edge write rate limiter and PBKDF2 cost.
+//
 // Fail closed: without a verifier or a signing key, protected paths show the lock page and never the content.
 
 export const GATE_COOKIE='ekodi_edu_instructor';
@@ -127,11 +132,18 @@ function htmlResponse(html,status,extra={}){
   return new Response(html,{status,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store, private','x-robots-tag':'noindex, nofollow',...extra}});
 }
 
+// The instructor-chosen password (Worker secret) wins over the generated one (public var).
+export function activeVerifier(env){
+  const custom=env?.EDU_INSTRUCTOR_GATE_SECRET;
+  return parseVerifier(custom)?custom:env?.EDU_INSTRUCTOR_GATE;
+}
+export const MIN_CUSTOM_PASSWORD_LENGTH=10;
+
 // Returns a Response when the gate decides the request (lock page, login result, logout, denied asset),
 // or null when the request is allowed to reach the protected asset.
 export async function instructorGate(request,env,{url=new URL(request.url)}={}){
   if(!isGatedPath(url.pathname))return null;
-  const verifier=env?.EDU_INSTRUCTOR_GATE;
+  const verifier=activeVerifier(env);
   const key=env?.EDU_GATE_SIGNING_KEY;
   const configured=!!parseVerifier(verifier)&&usableKey(key);
   const course=(url.searchParams.get('c')||'').replace(/[^a-z0-9-]/gi,'').slice(0,64);
