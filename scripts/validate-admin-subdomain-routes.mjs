@@ -3,48 +3,40 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const ignored = /(staging|release|build|development|legacy)/i;
-const wranglers = fs.readdirSync(root)
-  .filter(name => /^wrangler\..+\.toml$/.test(name) && !ignored.test(name));
+const read = file => fs.readFileSync(path.join(root,file),'utf8');
+const failures=[];
+const check=(truth,message)=>{if(!truth)failures.push(message)};
+const site=read('wrangler.site.toml');
+check(site.includes('pattern = "ekodi.kr"'),'Apex Worker custom domain missing');
+check(site.includes('"/admin"') && site.includes('"/admin/*"'),'Apex admin path must execute Worker-first');
 
-function sourceHasAdmin(file, seen = new Set()) {
-  const full = path.resolve(root, file);
-  if (seen.has(full) || !fs.existsSync(full)) return false;
-  seen.add(full);
-  const source = fs.readFileSync(full, 'utf8');
-  if (source.includes("'/admin'") || source.includes('"/admin"')) return true;
-  const imports = [...source.matchAll(/from\s+['"](\.\.?\/[^'"]+)['"]/g)]
-    .map(match => match[1])
-    .map(spec => path.relative(root, path.resolve(path.dirname(full), spec)));
-  return imports.some(next => sourceHasAdmin(next, seen));
+for(const file of [
+ 'service-admin-entry-worker.js',
+ 'books-worker.js',
+ 'publishing-worker.js',
+ 'community-worker.js',
+ 'sites/ekodi-cafe/_redirects',
+ 'sites/ekodi-mall/_redirects'
+]){
+ const source=read(file);
+ check(!source.includes('https://admin.ekodi.kr'),file+' reintroduced legacy administrator hostname');
 }
-
-const failures = [];
-const audited = [];
-for (const wrangler of wranglers) {
-  const text = fs.readFileSync(path.join(root, wrangler), 'utf8');
-  const main = text.match(/^main\s*=\s*"([^"]+)"/m)?.[1];
-  const patterns = [...text.matchAll(/pattern\s*=\s*"([^"]+)"/g)].map(match => match[1]);
-  const hosts = patterns.map(value => value.split('/')[0].replace(/^\*\./, ''))
-    .filter(host => host.endsWith('.ekodi.kr') && host !== 'ekodi.kr');
-  if (!main || !hosts.length) continue;
-  const ok = sourceHasAdmin(main);
-  audited.push(...hosts.map(host => ({ host, wrangler, main, ok })));
-  if (!ok) failures.push(`${wrangler} -> ${main}: ${hosts.join(', ')}`);
+check(read('service-admin-entry-worker.js').includes("const CENTRAL_ADMIN = 'https://ekodi.kr/admin/';"),
+ 'Central admin handoff must use https://ekodi.kr/admin/');
+check(read('wrangler.my.toml').includes('AUTH_URL = "https://ekodi.kr/auth/?site=my"'),
+ 'My EKODI must use canonical /auth');
+const services=JSON.parse(read('service-registry.json')).services||[];
+for(const service of services){
+ const href=String(service.href||'');
+ check(href.startsWith('https://ekodi.kr/'),service.id+': noncanonical registry URL '+href);
 }
-
-for (const [label, file] of [
-  ['cafe.ekodi.kr', 'sites/ekodi-cafe/_redirects'],
-  ['mall.ekodi.kr', 'sites/ekodi-mall/_redirects'],
-]) {
-  const full = path.join(root, file);
-  const ok = fs.existsSync(full) && /\/admin\/?\s+https:\/\/admin\.ekodi\.kr\//.test(fs.readFileSync(full, 'utf8'));
-  audited.push({ host: label, wrangler: file, main: file, ok });
-  if (!ok) failures.push(`${label}: missing Pages /admin redirect in ${file}`);
+for(const [file,expected] of [
+ ['sites/ekodi-cafe/_redirects','https://ekodi.kr/admin/'],
+ ['sites/ekodi-mall/_redirects','https://ekodi.kr/ekodimall/admin']
+])check(read(file).includes(expected),file+': missing canonical admin target');
+if(failures.length){
+ console.error('Canonical admin/path entry gate FAILED ('+failures.length+')');
+ failures.forEach(message=>console.error('- '+message));
+ process.exit(1);
 }
-
-if (failures.length) {
-  console.error('EKODI admin subdomain route contract failed:\n' + failures.map(v => `- ${v}`).join('\n'));
-  process.exit(1);
-}
-console.log(`EKODI admin subdomain route contract OK: ${audited.length} routed host checks`);
+console.log('Canonical admin/path entry gate OK ('+services.length+' service registry entries)');
