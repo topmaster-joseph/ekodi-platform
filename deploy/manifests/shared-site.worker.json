@@ -1605,7 +1605,6 @@
         "redirect": "manual",
         "expect": [
           "EKODI Messenger",
-          "EKODI Investment",
           "https://ekodi.kr/shell/manifest.json",
           "/session/handoff",
           "session_timeout",
@@ -1727,63 +1726,66 @@
       {
         "url": "https://ekodi.kr/invest",
         "statuses": [
-          200
+          410
         ],
         "redirect": "manual",
         "expect": [
-          "EKODI Invest",
-          "data-ekodi-service=\"invest\"",
-          "근거를 먼저 보는 투자분석"
+          "Gone"
         ],
         "headerExpect": [
-          "x-ekodi-shell: v2",
-          "x-content-type-options: nosniff"
+          "x-ekodi-route: invest-retired",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive"
         ],
         "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/invest/invest-ui.js",
         "statuses": [
-          200
+          410
         ],
         "redirect": "manual",
         "expect": [
-          "https://ekodi.kr/workspace-api",
-          "/v1/invest/context",
-          "subject_type"
+          "Gone"
         ],
         "headerExpect": [
-          "x-content-type-options: nosniff"
+          "x-ekodi-route: invest-retired",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive"
         ],
         "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/invest/invest-subject-ui.js",
         "statuses": [
-          200
+          410
         ],
         "redirect": "manual",
         "expect": [
-          "https://ekodi.kr/workspace-api",
-          "subject_type",
-          "subject_key"
+          "Gone"
         ],
         "headerExpect": [
-          "x-content-type-options: nosniff"
+          "x-ekodi-route: invest-retired",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive"
         ],
         "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/invest/app.js",
         "statuses": [
-          200
+          410
         ],
         "redirect": "manual",
         "expect": [
-          "/v1/invest/",
-          "/handoff"
+          "Gone"
         ],
-        "rollbackVerify": false
+        "rollbackVerify": false,
+        "headerExpect": [
+          "x-ekodi-route: invest-retired",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive"
+        ]
       },
       {
         "url": "https://ekodi.kr/mail",
@@ -1931,37 +1933,32 @@
       {
         "url": "https://ekodi.kr/ekodibiz/invest",
         "statuses": [
-          200
+          410
         ],
         "redirect": "manual",
         "expect": [
-          "EKODIBIZ",
-          "EKODIBIZ · INVESTMENT BUSINESS",
-          "ekodi.kr/invest",
-          "data-ekodi-business-unit=\"invest\""
+          "Gone"
         ],
         "headerExpect": [
-          "x-ekodi-route: public-ekodibiz-invest",
-          "x-ekodi-shell: v2",
-          "x-content-type-options: nosniff"
+          "x-ekodi-route: invest-retired",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive"
         ],
         "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodibiz/invest/admin",
         "statuses": [
-          200
+          410
         ],
         "redirect": "manual",
         "expect": [
-          "EKODIBIZ INVEST",
-          "WORKSPACE-LOCAL ADMIN",
-          "data-ekodi-admin-surface=\"local\""
+          "Gone"
         ],
         "headerExpect": [
-          "x-ekodi-route: public-ekodibiz-invest-admin",
+          "x-ekodi-route: invest-retired",
           "cache-control: no-store",
-          "x-content-type-options: nosniff"
+          "x-robots-tag: noindex, nofollow, noarchive"
         ],
         "rollbackVerify": false
       },
