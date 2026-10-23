@@ -59,7 +59,7 @@ test('regional pages declare separate chrome subject and operating boundary',asy
 test('router claims local region before generic workspace and admin matchers',async()=>{
   const router=await fs.readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
   const local=router.indexOf('localRegionFromPath(url.pathname)');
-  const admin=router.indexOf('isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname)');
+  const admin=router.indexOf('isWorkspaceAdminPath(url.pathname)');
   const workspace=router.indexOf('isPublicWorkspacePath(url.pathname)&&!isEkodiBizOwnedPath(url.pathname)');
   assert.ok(local>0);
   assert.ok(admin>local,'regional admin must resolve before generic workspace admin');
