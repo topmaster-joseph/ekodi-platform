@@ -228,7 +228,7 @@ const registeredCommonPaths = new Set(constitution.registeredCommonServicePaths 
 const registeredCore = new Set(constitution.registeredCoreServiceBoundaries || []);
 const targets = constitution.legacyDomainTargets || {};
 const customerOwned = constitution.customerOwnedDomainMappings || {};
-if (!systemDomains.has('ekodi.kr') || !systemDomains.has('api.ekodi.kr') || !systemDomains.has('auth.ekodi.kr')) fail('canonical system domain set is incomplete');
+if (systemDomains.size !== 1 || !systemDomains.has('ekodi.kr')) fail('canonical production web host must be apex ekodi.kr only');
 if (constitution.domainPolicy?.newFeatureSubdomainsForbidden !== true) fail('new feature subdomains must be forbidden');
 if (constitution.domainPolicy?.newTenantSubdomainsForbidden !== true) fail('new tenant/workspace subdomains must be forbidden');
 if (constitution.domainPolicy?.sustainableBoundaryGateRequired !== true) fail('new system/common/core subdomains must pass the sustainable boundary gate');
@@ -239,16 +239,16 @@ if (!registeredCommon.has('try.ekodi.kr')) fail('registered Experience compatibi
 if (!registeredCommonPaths.has('/invest')) fail('registered common-service path missing: /invest');
 if (!registeredCommon.has('marketing.ekodi.kr')) fail('registered common-service boundary missing: marketing.ekodi.kr');
 if (!registeredCore.has('ai.ekodi.kr')) fail('registered core-service boundary missing: ai.ekodi.kr');
-if (!systemDomains.has('dev.ekodi.kr') || !systemDomains.has('exp.ekodi.kr')) fail('public Developer/Experience production boundaries are incomplete');
+if (constitution.domainPolicy?.newWebSubdomainsForbidden !== true || constitution.domainPolicy?.legacySubdomainRedirectsForbidden !== true) fail('production web subdomains and redirects must be forbidden');
 if ((constitution.systemBoundaries?.development || []).includes('dev.ekodi.kr')) fail('root dev.ekodi.kr must not remain a Development environment host');
 const portals=constitution.publicPortalPolicy||{};
-if (portals.developerPortal!=='https://dev.ekodi.kr' || portals.experiencePortal!=='https://exp.ekodi.kr') fail('public portal canonical domain policy mismatch');
+if (portals.developerPortal!=='https://ekodi.kr/developer' || portals.experiencePortal!=='https://ekodi.kr/experience') fail('Developer/Experience portals must use canonical paths');
 if (portals.sharedRuntimeAllowedAtS0!==true) fail('public portal S0 shared-runtime policy missing');
 if (portals.experienceDataPolicy!=='synthetic-only' || portals.developerDataPolicy!=='public-contract-only') fail('public portal data projection policy mismatch');
 const separation=constitution.userSurfaceEngineSeparation||{};
 if (separation.canonicalMarketingProduct !== 'https://ekodi.kr/ekodibiz/marketing-ai') fail('Marketing product canonical drift');
 if (separation.canonicalWorkspaceMarketingPattern !== 'https://ekodi.kr/{slug}/marketing') fail('workspace Marketing canonical pattern drift');
-if (separation.marketingCore !== 'https://marketing.ekodi.kr') fail('Marketing Core boundary drift');
+if (separation.marketingCore !== 'https://ekodi.kr/marketing' || separation.aiGateway !== 'https://ekodi.kr/ai') fail('Marketing and AI core canonical path drift');
 if (separation.aiGateway !== 'https://ai.ekodi.kr') fail('AI Gateway/Core boundary drift');
 if (separation.customerAiSubdomains !== 'legacy_execution_alias_only') fail('customer AI subdomains must remain legacy execution aliases');
 if (separation.providerTopologyVisibleToOrdinaryUsers !== false) fail('provider topology must stay hidden from ordinary users');
@@ -289,7 +289,7 @@ for (const [serviceId, service] of Object.entries(boundaries.platforms || {})) {
 for (const domain of legacy) {
   const target = targets[domain];
   if (!target) fail(`legacy domain target missing: ${domain}`);
-  else if (!/^https:\/\/(ekodi\.kr|my\.ekodi\.kr|api\.ekodi\.kr)(\/|$)/.test(target)) fail(`legacy target violates canonical grammar: ${domain} -> ${target}`);
+  else if (!/^https:\/\/ekodi\.kr(\/|$)/.test(target)) fail(`legacy target must be apex path only: ${domain} -> ${target}`);
 }
 
 if (!Array.isArray(coreData.protectedTables) || coreData.protectedTables.length < 4) fail('core data protection table set is incomplete');
