@@ -62,7 +62,7 @@ test('Mail aliases remain compatibility-only and converge on the constitutional 
   const [source,proxyConfig,siteConfig,boundaries]=await Promise.all([
     read('service-proxy.js'),read('wrangler.service-proxy.toml'),read('wrangler.site.toml'),read('platform-boundaries.json')
   ]);
-  assert.match(source,/const MAIL_CANONICAL = 'https:\/\/mail\.ekodi\.kr'/);
+  assert.match(source,/const MAIL_CANONICAL = 'https:\/\/ekodi\.kr\/mail'/);
   assert.doesNotMatch(source,/mail\.google\.com/);
   for(const alias of ['mail.biz.ekodi.kr','mail.church.ekodi.kr','mail.lab.ekodi.kr','mail.books.ekodi.kr','mail.trade.ekodi.kr']){
     assert.match(source,new RegExp(`'${alias.replaceAll('.','\\.')}': MAIL_CANONICAL`));
