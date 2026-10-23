@@ -21,7 +21,11 @@ const PROFILE_ID = /^[a-z0-9]{2,16}$/;
 const TOSS_TIMEOUT_MS = 15000;
 
 export const MERCHANT_PROFILES = Object.freeze({
+  // 큐티인 공동구매(기본 프로필 — 기존 키 이름 TOSS_CLIENT_KEY/TOSS_SECRET_KEY 호환)
   ekodi: Object.freeze({ id: 'ekodi', label: '에코디', mid: 'q_ekodib62hb', owner: 'EKODIBIZ', product: 'general' }),
+  // 에코디몰 — 키: TOSS_CLIENT_KEY__MALL, TOSS_SECRET_KEY__MALL (기존 이름은 쓰지 않음)
+  mall: Object.freeze({ id: 'mall', label: '에코디몰', mid: 'ekobizav68', owner: 'EKODIBIZ', product: 'general' }),
+  // 보류: q_ekodim56wc (용도 결정 후 등록)
   // 추가 예시(등록 시 주석 해제 + 키 등록):
   // church: { id: 'church', label: '에코디교회', mid: '<MID>', owner: '에코디교회', product: 'general' },
   // billing: { id: 'billing', label: '에코디 정기결제', mid: '<MID>', owner: 'EKODIBIZ', product: 'billing' },
@@ -125,6 +129,18 @@ export function keyDiagnostics(env, profileId = activeProfileId(env)) {
 /** 결제위젯 연동 클라이언트 키(test_gck_/live_gck_)인지 여부. */
 export function isWidgetKey(clientKey) {
   return /^(test|live)_gck_/.test(text(clientKey));
+}
+
+/**
+ * Copy of a Worker env whose TOSS_CLIENT_KEY/TOSS_SECRET_KEY are the given merchant's keys only.
+ * Lets existing site code that reads the plain names run on one MID without seeing another
+ * merchant's keys. Missing keys become '' (fail closed). Bindings are kept (own enumerable props).
+ */
+export function withMerchantKeys(env, profileId) {
+  const id = normalizeProfileId(profileId) || DEFAULT_PROFILE;
+  const { clientKey, secretKey } = merchantKeys(env, id);
+  const profile = merchantProfile(id, merchantProfiles(env));
+  return { ...env, TOSS_CLIENT_KEY: clientKey, TOSS_SECRET_KEY: secretKey, EKODIPAY_PROFILE: id, EKODIPAY_MID: profile?.mid || '' };
 }
 
 export function keyMode(clientKey) {

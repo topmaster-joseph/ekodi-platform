@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - "sites/ekodi-mall/**"
+      - "ekodipay-core.js"
       - ".github/workflows/deploy-ekodi-mall.yml"
   push:
     branches: [main]
     paths:
       - "sites/ekodi-mall/**"
+      - "ekodipay-core.js"
       - ".github/workflows/deploy-ekodi-mall.yml"
   workflow_dispatch:
     inputs:
@@ -445,7 +447,7 @@ jobs:
           changed=$(git -C "$GITHUB_WORKSPACE" diff --name-only "$before" "$GITHUB_SHA")
           api_changed=false
           site_changed=false
-          if printf '%s\n' "$changed" | grep -Eq '^sites/ekodi-mall/api/'; then api_changed=true; fi
+          if printf '%s\n' "$changed" | grep -Eq '^(sites/ekodi-mall/api/|ekodipay-core\.js$)'; then api_changed=true; fi
           if printf '%s\n' "$changed" | grep -E '^sites/ekodi-mall/' | grep -Ev '^sites/ekodi-mall/api/' | grep -q .; then site_changed=true; fi
           if printf '%s\n' "$changed" | grep -Fxq '.github/workflows/deploy-ekodi-mall.yml'; then site_changed=true; fi
           echo "api_changed=$api_changed" >> "$GITHUB_OUTPUT"
