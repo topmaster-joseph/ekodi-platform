@@ -3,71 +3,164 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="description" content="입시와 학습·유학을 하나의 교육 여정으로 이어주는 EKODI Education">
+  <meta name="description" content="누구나 배우고 성장하며 나누는 평생학습의 시작. EKODI Education에서 학습경로와 믿을 수 있는 교육 정보를 탐색하세요.">
   <meta name="ekodi-ui-type" content="USER">
-  <title>EKODI Education | 에코디교육</title>
+  <title>EKODI Education | 모두의 평생학습</title>
   <link rel="stylesheet" href="/styles.css?v=20260822-edu-1">
+  <link rel="stylesheet" href="/lifelong-home.css?v=20261023-edu-1">
 </head>
 <body data-area="home" data-ekodi-ui="USER">
 <header class="topbar">
-  <a class="brand" href="/"><span class="mark">E</span><span><strong>EKODI Education</strong><small>에코디교육</small></span></a>
-  <nav aria-label="주요 메뉴"><a href="/admission">Admission</a><a href="/study">Study</a><a href="#today">오늘</a><a href="https://ekodi.kr/my/journey/">My Journey</a></nav>
+  <a class="brand" href="/" aria-label="EKODI Education 홈"><span class="mark">E</span><span><strong>EKODI Education</strong><small>모두의 평생학습</small></span></a>
+  <nav class="home-nav" aria-label="주요 메뉴">
+    <a href="#discover">배움 분야</a><a href="#learningPath">배움 찾기</a><a href="#learningCommunity">배움 나눔</a><a href="/admission">입시</a><a href="/study">학습·유학</a><a href="https://ekodi.kr/my/journey/">My Journey</a>
+  </nav>
   <button id="authButton" class="ghost" type="button">Google로 시작</button>
 </header>
 <main>
-  <section class="hero">
+  <section class="hero" aria-labelledby="heroTitle">
     <div class="hero-copy">
-      <p class="eyebrow">USER UI · EDUCATION PLATFORM</p>
-      <h1>입시에서 끝나지 않고,<br><span>배움의 다음까지 이어집니다.</span></h1>
-      <p class="lead">EKODI Education은 Admission과 Study를 한 플랫폼 안에서 연결합니다. 학교·과정 탐색과 지원 준비, 합격 이후의 학습·학사·장학·생활 준비를 같은 교육 맥락에서 이어가되, 공식 근거 확인과 사용자의 최종 판단을 항상 우선합니다.</p>
-      <div class="hero-actions"><a class="primary" href="/admission">입시 준비 시작</a><a class="secondary" href="/study">학습·유학 보기</a><a class="secondary" href="https://ekodi.kr/my/journey/">My Journey로 돌아가기</a></div>
+      <p class="eyebrow">LIFELONG LEARNING · OPEN EDUCATION</p>
+      <h1 id="heroTitle">오늘의 배움이,<br><span>내일의 삶을 바꿉니다.</span></h1>
+      <p class="lead">나이와 학력, 지역에 관계없이 배우고 성장하며 함께 나누는 평생학습. 관심에서 출발해 학습과 진학, 일과 지역의 삶으로 연결합니다.</p>
+      <form id="learningSearch" class="home-search" role="search" action="#learningPath">
+        <label for="learningQuery">나에게 필요한 배움을 찾아보세요</label>
+        <div class="home-search-controls">
+          <input id="learningQuery" name="q" type="search" autocomplete="off" maxlength="80" placeholder="예: AI 활용, 창업, 학위, 인문학, 지역교육">
+          <button type="submit">배움 찾기 <span aria-hidden="true">↗</span></button>
+        </div>
+        <p class="search-help">에코디 교육경로 및 확인된 공공 학습정보 링크를 검색합니다. 실시간 모집 검색은 아닙니다.</p>
+      </form>
+      <div class="hero-actions">
+        <a class="primary" href="#discover">분야별 배움 탐색</a>
+        <a class="secondary" href="/study/academy/">AI 실습강의실</a>
+        <a class="secondary" href="https://ekodi.kr/my/journey/">나의 여정</a>
+      </div>
     </div>
-    <aside class="identity-card">
-      <small>EKODI USER AI</small>
+    <aside class="identity-card" aria-label="나의 배움">
+      <p class="eyebrow">MY EKODI · LEARNING COMPANION</p>
+      <span class="identity-avatar" aria-hidden="true">E</span>
+      <small>나의 배움 여정</small>
       <strong id="identityName">로그인 전</strong>
-      <p>Education은 진로를 대신 결정하지 않습니다. 필요한 공식 자료와 다음 행동을 정리하고, 제출·결제·계약 같은 중요한 행동은 사용자가 최종 확인합니다.</p>
-      <code>Education → Admission + Study</code>
+      <p>에코디는 배움을 대신 결정하지 않습니다. 믿을 수 있는 안내와 다음 단계를 정리하고 최종 선택은 사용자에게 남깁니다.</p>
+      <a href="https://ekodi.kr/my/journey/" class="identity-link">나의 여정 살펴보기 →</a>
+      <code>Learn · Grow · Share · Connect</code>
     </aside>
   </section>
 
-  <section class="summary" aria-label="Education 요약">
-    <article><span id="taskCount">0</span><small>진행 중 할 일</small></article>
-    <article><span id="shortlistCount">0</span><small>지원 후보</small></article>
-    <article><span id="studyCount">0</span><small>학습 준비 항목</small></article>
-  </section>
-
-  <section class="section">
-    <div class="section-head"><div><p class="eyebrow">TWO AREAS · ONE EDUCATION CONTEXT</p><h2>두 업무영역, 하나의 교육 플랫폼</h2></div><p>Admission과 Study는 사용자 여정상 구분되지만 학교·과정·학력·언어·일정·장학·상담 같은 공통 맥락이 많아 처음부터 플랫폼을 둘로 쪼개지 않습니다.</p></div>
-    <div class="journey-grid">
-      <a class="journey-card" href="/admission"><small>ADMISSION</small><h3>입시</h3><p>학교·과정 탐색, 지원 적합도 검토, 공식 모집요강 확인, 서류·면접·지원 일정 관리.</p><strong>입시 업무영역 열기 →</strong></a>
-      <a class="journey-card" href="/study"><small>STUDY</small><h3>학습·유학</h3><p>합격 이후 등록·수강·학사·장학·학습 계획과 국내외 유학 생활 준비를 연결.</p><strong>학습·유학 업무영역 열기 →</strong></a>
+  <section class="section discover-section" id="discover" aria-labelledby="discoverTitle">
+    <div class="section-head">
+      <div><p class="eyebrow">EXPLORE · OPEN TO EVERYONE</p><h2 id="discoverTitle">어떤 배움을 찾으시나요?</h2></div>
+      <p>관심 있는 분야를 선택하면 아래에서 관련 학습경로를 볼 수 있습니다. 교육 참여는 각 운영기관의 안내를 기준으로 합니다.</p>
+    </div>
+    <div class="interest-grid">
+      <a class="interest-card" href="#learningPath" data-category="digital"><span class="interest-no">01 / DIGITAL</span><strong>AI·디지털</strong><span>새로운 기술, 일상과 실무의 AI</span><span class="interest-arrow" aria-hidden="true">↗</span></a>
+      <a class="interest-card" href="#learningPath" data-category="work"><span class="interest-no">02 / CAREER</span><strong>일·창업·자격</strong><span>일터의 변화와 직업 역량</span><span class="interest-arrow" aria-hidden="true">↗</span></a>
+      <a class="interest-card" href="#learningPath" data-category="academic"><span class="interest-no">03 / ACADEMIC</span><strong>학교·학위·진학</strong><span>입시, 학위, 유학과 연구</span><span class="interest-arrow" aria-hidden="true">↗</span></a>
+      <a class="interest-card" href="#learningPath" data-category="culture"><span class="interest-no">04 / CULTURE</span><strong>문화·인문·예술</strong><span>삶을 풍성하게 하는 교양</span><span class="interest-arrow" aria-hidden="true">↗</span></a>
+      <a class="interest-card" href="#learningPath" data-category="community"><span class="interest-no">05 / COMMUNITY</span><strong>지역·공동체</strong><span>지역에서 배우고 함께 나누기</span><span class="interest-arrow" aria-hidden="true">↗</span></a>
+      <a class="interest-card" href="#learningPath" data-category="life"><span class="interest-no">06 / LIFE</span><strong>생애·생활교육</strong><span>전 세대를 위한 생활의 배움</span><span class="interest-arrow" aria-hidden="true">↗</span></a>
     </div>
   </section>
 
-  <section class="section" aria-labelledby="academyHomeTitle">
-    <div class="section-head"><div><p class="eyebrow">PRACTICE ACADEMY · FLEXIBLE COURSES</p><h2 id="academyHomeTitle">대상과 사업에 맞추는 실습교육</h2></div><p>소상공인·교직원·지역주민·재직자·학생을 위한 교육과정 설계, 실습 강의실, 온라인 컨설팅 안내를 통합합니다.</p></div>
-    <div class="journey-grid"><a class="journey-card" href="/study/academy/"><small>INSTRUCTOR SPACE</small><h3>맞춤형 AI 강의실</h3><p>지원사업·기관·대상·주제·기간에 따라 회차와 실습 비중을 조정하고 교육안을 내려받습니다.</p><strong>교육 설계 열기 →</strong></a><a class="journey-card" href="/study/academy/#consulting"><small>ONLINE CONSULTING</small><h3>교육·컨설팅 안내</h3><p>교육 도입·실무 컨설팅·기관별 사업형 교육기획과 후속 코칭을 살펴보고 문의 내용을 준비합니다.</p><strong>상담 안내 보기 →</strong></a></div>
+  <section class="section paths-section" id="learningPath" aria-labelledby="pathsTitle">
+    <div class="section-head">
+      <div><p class="eyebrow">LEARNING PATHWAYS · VERIFIED DESTINATIONS</p><h2 id="pathsTitle">여기서 배움을 시작하세요</h2></div>
+      <p>현재 연결 가능한 EKODI 교육·학습 기능과 공공 교육정보를 모았습니다. 외부 기관의 모집·수료·비용 정보는 반드시 공식 사이트에서 확인하세요.</p>
+    </div>
+    <div class="learning-toolbar">
+      <p id="learningResult" role="status" aria-live="polite">학습경로 전체 보기</p>
+      <button id="learningClear" type="button" class="chip" hidden>선택 해제 · 전체 보기</button>
+    </div>
+    <div class="path-grid" id="learningResults">
+      <article class="path-card" data-path-category="digital work" data-search="AI 디지털 맞춤형 실습강의실 소상공인 교직원 재직자 강사 교육설계">
+        <small>EKODI · 실습강의실</small><h3>맞춤형 AI 실습교육</h3><p>소상공인·교직원·지역주민·재직자·학생의 현장 중심 실습과 교육설계를 살펴봅니다.</p><a href="/study/academy/">실습강의실 열기 →</a>
+      </article>
+      <article class="path-card" data-path-category="digital" data-search="AI 디지털 교직원 부트캠프 목포대 인공지능 프롬프트 기초 실습">
+        <small>EKODI · 교육자료</small><h3>교직원 AI 부트캠프</h3><p>기존 교육용 수업 자료와 실습 활동으로 실제 업무에 적용하는 AI 활용을 익힙니다.</p><a href="/study/ai-bootcamp/">교육자료 살펴보기 →</a>
+      </article>
+      <article class="path-card" data-path-category="academic" data-search="학교 학위 진학 입시 모집요강 지원 서류 면접 대학 대학원">
+        <small>EKODI · ADMISSION</small><h3>입시·진학 준비</h3><p>학교와 과정 탐색, 공식 모집요강 확인, 서류·면접과 지원 일정 관리로 이어집니다.</p><a href="/admission">입시 준비 시작 →</a>
+      </article>
+      <article class="path-card" data-path-category="academic life" data-search="학습 유학 장학 국내 국외 학사 생활 준비">
+        <small>EKODI · STUDY</small><h3>학습·유학 준비</h3><p>학사·장학·수강·생활 준비를 같은 교육 여정에서 관리합니다.</p><a href="/study">학습·유학 보기 →</a>
+      </article>
+      <article class="path-card" data-path-category="academic" data-search="논문 학술 연구 박사 석사 학위 논문진단 연구실">
+        <small>EKODI · RESEARCH</small><h3>논문·학술 연구지원</h3><p>무료 연구 진단과 연구 일정 관리, 책임 있는 연구 준비를 지원하는 별도 서비스입니다.</p><a href="https://ekodi.kr/research/">연구지원 살펴보기 →</a>
+      </article>
+      <article class="path-card" data-path-category="digital work life" data-search="학습 진도 기술 스킬 역량 일 취업 재직 직무">
+        <small>EKODI · LEARNING FABRIC</small><h3>나의 학습·역량</h3><p>에코디의 공통 학습 진도와 역량 기반을 통해 배움을 다른 삶의 단계와 연결합니다.</p><a href="https://ekodi.kr/learn/">학습 공간 열기 →</a>
+      </article>
+      <article class="path-card" data-path-category="work community" data-search="강사 교육기관 소상공인 컨설팅 교육과정 기획 강의 지원사업">
+        <small>EKODI · 교육 컨설팅</small><h3>교육·강의 기획</h3><p>교육 도입, 실무 컨설팅, 기관별 교육사업 기획과 후속 코칭의 안내를 확인합니다.</p><a href="/study/academy/#consulting">교육 컨설팅 보기 →</a>
+      </article>
+      <article class="path-card" data-path-category="culture academic digital life" data-search="대학 온라인 공개 강좌 문화 인문 예술 기술 교양 K-MOOC">
+        <small>외부 공식 · K-MOOC</small><h3>대학 공개강좌 탐색</h3><p>대학과 전문기관의 온라인 공개강좌를 공식 교육 포털에서 찾아봅니다.</p><a href="https://www.kmooc.kr/" target="_blank" rel="noopener noreferrer">K-MOOC 열기 ↗</a>
+      </article>
+      <article class="path-card" data-path-category="culture community life work" data-search="국가 평생학습 강좌 시민 생활 인문 교양 예술 지역 직업 무료 교육">
+        <small>외부 공식 · 온국민평생배움터</small><h3>전국 평생학습 정보</h3><p>전국의 평생교육 정보와 학습 기회를 공공 포털에서 탐색합니다.</p><a href="https://www.all.go.kr/" target="_blank" rel="noopener noreferrer">온국민평생배움터 ↗</a>
+      </article>
+      <article class="path-card" data-path-category="community life work" data-search="전남 목포 무안 지역 주민 평생교육 장학 지원사업 인재">
+        <small>외부 공식 · 전남인재평생교육진흥원</small><h3>전남 지역의 배움</h3><p>지역 평생교육 및 교육지원 소식을 기관 공식 홈페이지에서 확인합니다.</p><a href="https://www.jntle.kr/" target="_blank" rel="noopener noreferrer">지역 교육정보 보기 ↗</a>
+      </article>
+    </div>
+    <p class="empty path-empty" id="learningEmpty" role="status" hidden>일치하는 학습경로가 없습니다. 다른 검색어를 입력하거나 전체 보기를 선택해 주세요.</p>
+    <p class="privacy-note">※ 경로 검색은 현재 이 페이지에 소개된 링크만 필터링합니다. 모집 중인 강좌의 실시간 조회, 자동 수강신청, 교육비 결제 기능은 아닙니다.</p>
   </section>
 
-  <section class="section" aria-labelledby="researchEducationTitle"><div class="section-head"><div><p class="eyebrow">RESEARCH · ACADEMIC CONSULTING</p><h2 id="researchEducationTitle">논문 연구지원</h2></div><p>연구자가 자신의 책임으로 논문을 준비하도록 무료 진단과 연구 일정 관리, 단계별 전문가 상담을 지원합니다.</p></div><div class="journey-grid"><a class="journey-card" href="https://ekodi.kr/research/"><small>EKODI RESEARCH</small><h3>AI 논문 컨설팅 플랫폼</h3><p>무료 연구진단과 나의 연구실. 원고 업로드·결제·AI 분석은 별도 보안 검증 후 활성화됩니다.</p><strong>연구실 열기 →</strong></a></div></section>
+  <section class="section community-section" id="learningCommunity" aria-labelledby="communityTitle">
+    <div class="section-head">
+      <div><p class="eyebrow">LEARN · GROW · SHARE · CONNECT</p><h2 id="communityTitle">배움이 사람과 공동체로 이어지도록</h2></div>
+      <p>좋은 배움은 혼자에게 머물지 않습니다. 강사와 학습자, 교육기관과 지역사회가 자신의 경험과 기회를 나누도록 연결합니다.</p>
+    </div>
+    <div class="community-grid">
+      <div class="community-card"><span>01</span><h3>배우기</h3><p>관심 있는 배움을 발견하고 자신에게 맞는 출발점을 찾습니다.</p></div>
+      <div class="community-card"><span>02</span><h3>성장하기</h3><p>현장 실습과 학습계획을 통해 삶에 필요한 역량을 키웁니다.</p></div>
+      <div class="community-card"><span>03</span><h3>나누기</h3><p>지식과 경험을 강의, 멘토링, 공동체 활동으로 나눕니다.</p></div>
+      <div class="community-card"><span>04</span><h3>연결하기</h3><p>배움을 진로·일·사업·지역의 참여로 이어갑니다.</p></div>
+    </div>
+    <div class="community-actions"><a class="primary" href="/study/academy/">강의·실습 공간</a><a class="secondary" href="https://ekodi.kr/my/journey/">나의 다음 여정</a></div>
+    <p class="privacy-note">교육기관 개설 접수, 멘토 매칭, 출결·수료 발급은 정식 운영 기능이 준비된 이후 별도로 안내합니다.</p>
+  </section>
 
-<section id="today" class="section">
-    <div class="section-head"><div><p class="eyebrow">TODAY · MAX 3</p><h2>지금 할 일</h2></div><p>해야 할 일을 길게 쌓지 않고, 기한이 가까운 미완료 항목 최대 3개만 우선 보여줍니다.</p></div>
+  <section class="section" aria-labelledby="areasTitle">
+    <div class="section-head">
+      <div><p class="eyebrow">TWO AREAS · ONE EDUCATION CONTEXT</p><h2 id="areasTitle">기존 입시와 학습·유학도 계속 연결됩니다</h2></div>
+      <p>Admission과 Study는 현재 하나의 교육 플랫폼 안에 있습니다. 기존 이용자의 학업 준비, 일정과 개인 기록은 그대로 보존합니다.</p>
+    </div>
+    <div class="journey-grid">
+      <a class="journey-card" href="/admission"><small>ADMISSION</small><h3>입시·진학</h3><p>학교·과정 탐색과 지원 적합도 검토, 공식 모집요강, 서류·면접 및 일정 관리.</p><strong>입시 업무영역 열기 →</strong></a>
+      <a class="journey-card" href="/study"><small>STUDY</small><h3>학습·유학</h3><p>합격 후 등록·수강·학사·장학·학습 계획과 국내외 유학 준비를 연결.</p><strong>학습·유학 업무영역 열기 →</strong></a>
+    </div>
+  </section>
+
+  <section class="section my-learning-section" aria-labelledby="myLearningTitle">
+    <div class="section-head"><div><p class="eyebrow">MY LEARNING · EXISTING PLANNER</p><h2 id="myLearningTitle">나의 학습 준비 현황</h2></div><p>기존 Admission·Study의 브라우저 학습 준비 기록을 이어서 확인합니다. 아래 수치는 전체 교육기관의 모집 실적이 아닙니다.</p></div>
+    <div class="summary" aria-label="Education 요약">
+      <article><span id="taskCount">0</span><small>진행 중 할 일</small></article>
+      <article><span id="shortlistCount">0</span><small>지원 후보</small></article>
+      <article><span id="studyCount">0</span><small>학습 준비 항목</small></article>
+    </div>
+  </section>
+
+  <section id="today" class="section">
+    <div class="section-head"><div><p class="eyebrow">TODAY · MAX 3</p><h2>지금 할 일</h2></div><p>기한이 가까운 미완료 항목 최대 3개를 우선 보여줍니다.</p></div>
     <div id="todayList" class="task-list"><div class="empty"><strong>지금 등록된 할 일이 없습니다.</strong></div></div>
   </section>
 
-  <section class="section">
-    <div class="section-head"><div><p class="eyebrow">OFFICIAL SOURCE FIRST</p><h2>AI보다 공식 근거가 먼저</h2></div><p>전형일정, 자격, 비자, 장학, 등록 같은 고위험 정보는 AI 기억이 아니라 공식 기관·대학의 최신 안내를 기준으로 확인합니다.</p></div>
+  <section class="section" id="resources">
+    <div class="section-head"><div><p class="eyebrow">OFFICIAL SOURCE FIRST</p><h2>교육정보는 공식 출처를 먼저 확인합니다</h2></div><p>모집 일정, 학위 인정, 장학, 자격, 체류·출입국은 기관의 최신 원문으로 확인해야 합니다.</p></div>
     <div class="source-grid">
-      <article class="source-card"><small>UNIVERSITY</small><h3>학교·대학원 공식 모집요강</h3><p>지원하려는 기관의 공식 입학 페이지와 해당 연도 모집요강을 최우선 근거로 사용합니다.</p></article>
-      <article class="source-card"><small>STUDY IN KOREA</small><h3>국가 유학정보</h3><p>한국 유학 관련 공공 정보를 확인할 때 활용합니다.</p><a href="https://www.studyinkorea.go.kr/" target="_blank" rel="noreferrer">공식 사이트 ↗</a></article>
-      <article class="source-card"><small>HIKOREA</small><h3>체류·출입국 정보</h3><p>외국인 사용자의 체류·출입국 정보는 필요한 경우 공식 출입국 안내로 별도 확인합니다.</p><a href="https://www.hikorea.go.kr/" target="_blank" rel="noreferrer">공식 사이트 ↗</a></article>
+      <article class="source-card"><small>UNIVERSITY</small><h3>학교·대학원 공식 모집요강</h3><p>지원하려는 교육기관의 공식 모집 페이지와 해당 연도 요강을 최우선으로 확인합니다.</p></article>
+      <article class="source-card"><small>STUDY IN KOREA</small><h3>국가 유학정보</h3><p>한국 유학 및 관련 공공 정보를 확인할 때 활용합니다.</p><a href="https://www.studyinkorea.go.kr/" target="_blank" rel="noopener noreferrer">공식 사이트 ↗</a></article>
+      <article class="source-card"><small>HIKOREA</small><h3>체류·출입국 정보</h3><p>체류와 출입국 관련 정보는 정부 공식 안내를 기준으로 확인합니다.</p><a href="https://www.hikorea.go.kr/" target="_blank" rel="noopener noreferrer">공식 사이트 ↗</a></article>
     </div>
     <p class="privacy-note">현재 첫 릴리스는 민감한 여권·성적표·재정증빙 파일을 저장하지 않습니다. 개인 계획 메모와 할 일은 이 브라우저에만 저장됩니다.</p>
   </section>
 </main>
-<footer><strong>EKODI Education</strong><span>Admission + Study · User agency first</span><a href="https://ekodi.kr/my/journey/">My Journey ↗</a><a href="/admin">Admin ↗</a></footer>
+<footer><strong>EKODI Education</strong><span>평생학습 · 배움과 성장, 나눔과 연결</span><a href="https://ekodi.kr/my/journey/">My Journey ↗</a><a href="/admin">Admin ↗</a></footer>
 <script src="/config.js"></script>
 <script type="module" src="/app.js?v=20260822-edu-1"></script>
+<script src="/lifelong-home.js?v=20261023-edu-1" defer></script>
 </body>
 </html>

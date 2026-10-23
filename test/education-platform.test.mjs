@@ -141,3 +141,46 @@ test('Education guarded Study release and rollback canaries match real stable pa
   assert.ok(probe.expect.includes('EKODI Education'));
   assert.ok(!probe.expect.includes('EKODI Work'));
 });
+
+
+test('Lifelong-learning home offers truthful local discovery without changing Admission or Study',async()=>{
+  const [home,styles,filter]=await Promise.all([
+    read('education/index.html'),
+    read('education/lifelong-home.css'),
+    read('education/lifelong-home.js')
+  ]);
+  assert.match(home,/오늘의 배움이/);
+  assert.match(home,/평생학습/);
+  assert.match(home,/id="learningSearch"/);
+  assert.match(home,/id="learningQuery"/);
+  assert.match(home,/id="learningResults"/);
+  assert.match(home,/id="learningResult"/);
+  assert.match(home,/id="learningEmpty"/);
+  assert.match(home,/id="learningClear"/);
+  assert.equal((home.match(/class="interest-card"/g)||[]).length,6);
+  assert.equal((home.match(/class="path-card"/g)||[]).length,10);
+  for(const path of ['/admission','/study','/study/academy/','/study/ai-bootcamp/','https://ekodi.kr/learn/','https://ekodi.kr/research/']){
+    assert.ok(home.includes('href="' + path + '"'),'preserve route ' + path);
+  }
+  for(const portal of ['https://www.kmooc.kr/','https://www.all.go.kr/','https://www.jntle.kr/']){
+    assert.ok(home.includes(portal),'official portal ' + portal);
+  }
+  assert.match(home,/실시간 모집 검색은 아닙니다/);
+  assert.match(home,/모집 중인 강좌/);
+  assert.match(home,/민감한 여권·성적표·재정증빙 파일을 저장하지 않습니다/);
+  assert.match(home,/id="authButton"/);
+  assert.match(home,/id="identityName"/);
+  assert.match(home,/id="taskCount"/);
+  assert.match(home,/id="shortlistCount"/);
+  assert.match(home,/id="studyCount"/);
+  assert.match(home,/id="todayList"/);
+  assert.match(styles,/body\[data-area="home"\]/);
+  assert.match(styles,/@media\(max-width:540px\)/);
+  assert.match(styles,/focus-visible/);
+  assert.match(filter,/addEventListener\('submit'/);
+  assert.match(filter,/aria-current/);
+  assert.match(filter,/entry\.hidden = !match/);
+  assert.doesNotMatch(filter,/\bfetch\s*\(|XMLHttpRequest|localStorage|sessionStorage|innerHTML/);
+  assert.doesNotMatch(home,/\sonclick=|<script(?![^>]*\bsrc=)/i);
+  execFileSync(process.execPath,['--check',fileURLToPath(new URL('../education/lifelong-home.js',import.meta.url))],{stdio:'pipe'});
+});
