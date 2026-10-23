@@ -15,8 +15,8 @@ const [api, agent, admin, build, entry, security, bootstrap, startup] = await Pr
 ]);
 
 const commands = [
-  'power.always_on','power.presentation','power.normal','power.restore','lock.resume_off','lock.resume_on','autologon.open',
-  'diagnostics.collect','network.diagnose','printers.diagnose','printing.image_preview.status','printing.image_preview.repair','printing.image_preview.restore','startup.scan','startup.disable','startup.restore',
+  'power.always_on','power.quiet_background','power.presentation','power.normal','power.restore','lock.resume_off','lock.resume_on','autologon.open',
+  'diagnostics.collect','console.tasks.diagnose','network.diagnose','printers.diagnose','printing.image_preview.status','printing.image_preview.repair','printing.image_preview.restore','startup.scan','startup.disable','startup.restore',
   'maintenance.temp_cleanup','updates.scan','updates.install','profile.workstation.apply','profile.workstation.restore','agent.self_update',
 ];
 
@@ -502,4 +502,35 @@ test('browser task journal crosses Device Control sanitization and is shown with
   assert.match(admin, /닫힘/);
   assert.match(admin, /item\.commandType/);
   assert.doesNotMatch(admin, /item\.commandLine|item\.profilePath/);
+});
+
+
+test('quiet background mode is explicit, reversible, and never rewrites battery policy', () => {
+  const profile = agent.match(/'power\.quiet_background'\s*\{([\s\S]*?)\n    \}\n    'power\.always_on'/)?.[1] || '';
+  assert.ok(profile, 'quiet profile must be implemented in Windows Agent');
+  assert.match(profile, /Save-PowerBackup/);
+  assert.match(profile, /isPortable/);
+  assert.match(profile, /'monitor-timeout-ac', '5'/);
+  assert.match(profile, /'standby-timeout-ac', '0'/);
+  assert.doesNotMatch(profile, /timeout-dc|hibernate-timeout/i);
+  assert.match(api, /'power\.quiet_background': \{ risk: 'maintain', confirm: true \}/);
+  assert.match(api, /'power\.quiet_background': 'quietBackgroundMode'/);
+  assert.match(admin, /'power\.quiet_background': '조용한 백그라운드'/);
+  assert.match(admin, /'power\.quiet_background': '전원 연결/);
+  assert.match(admin, /기존 전원 설정 복원/);
+});
+
+test('popup diagnosis sends bounded candidates and never changes scheduler tasks', () => {
+  const fn = agent.match(/function Get-ConsoleScheduledTaskDiagnostic \{([\s\S]*?)\n\}\n\nfunction Load-StartupBackup/)?.[1] || '';
+  assert.ok(fn, 'read-only scheduler diagnostic must exist');
+  assert.match(fn, /Get-ScheduledTask/);
+  assert.match(fn, /candidate-only/);
+  assert.match(fn, /Select-Object -First 30/);
+  assert.doesNotMatch(fn, /Disable-ScheduledTask|Unregister-ScheduledTask|Stop-ScheduledTask|\.Arguments|\.UserId/);
+  assert.match(api, /'console\.tasks\.diagnose': \{ risk: 'observe' \}/);
+  assert.match(api, /'console\.tasks\.diagnose': 'quietTasks'/);
+  assert.match(agent, /consoleTaskDiagnostics = \$true/);
+  assert.match(admin, /명령창 원인 후보 진단/);
+  assert.match(admin, /원인으로 확정한 것은 아닙니다/);
+  assert.match(admin, /device\.diagnostics\?\.quietTasks/);
 });

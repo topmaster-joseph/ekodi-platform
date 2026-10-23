@@ -73,6 +73,7 @@ const DEVICE_TYPE_POLICIES = Object.freeze({
 
 const COMMAND_POLICIES = Object.freeze({
   'power.always_on': { risk: 'maintain' },
+  'power.quiet_background': { risk: 'maintain', confirm: true },
   'power.presentation': { risk: 'maintain' },
   'power.normal': { risk: 'maintain' },
   'power.restore': { risk: 'maintain' },
@@ -97,6 +98,7 @@ const COMMAND_POLICIES = Object.freeze({
   'printing.image_preview.repair': { risk: 'maintain', confirm: true },
   'printing.image_preview.restore': { risk: 'maintain', confirm: true },
   'startup.scan': { risk: 'observe' },
+  'console.tasks.diagnose': { risk: 'observe' },
   'startup.disable': { risk: 'maintain', confirm: true, payload: 'startup-item' },
   'startup.restore': { risk: 'maintain', confirm: true, payload: 'startup-item' },
   'maintenance.temp_cleanup': { risk: 'maintain', confirm: true },
@@ -126,6 +128,7 @@ const DIAGNOSTIC_SECTIONS = Object.freeze({
   'network.diagnose': 'network',
   'printers.diagnose': 'printers',
   'startup.scan': 'startup',
+  'console.tasks.diagnose': 'quietTasks',
   'updates.scan': 'updates',
 });
 
@@ -150,6 +153,8 @@ const COMMAND_CAPABILITIES = Object.freeze({
   'printing.image_preview.repair': 'imagePrintPreview',
   'printing.image_preview.restore': 'imagePrintPreview',
   'startup.scan': 'startupManagement',
+  'console.tasks.diagnose': 'consoleTaskDiagnostics',
+  'power.quiet_background': 'quietBackgroundMode',
   'maintenance.temp_cleanup': 'storageMaintenance',
   'updates.scan': 'windowsUpdate',
   'updates.install': 'windowsUpdate',

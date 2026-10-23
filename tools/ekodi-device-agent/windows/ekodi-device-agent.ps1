@@ -19,7 +19,7 @@ try {
   throw '[EKODI:EKA-299][crypto] Windows DPAPI assembly is unavailable: ' + $_.Exception.Message
 }
 
-$AgentVersion = '2.5.7'
+$AgentVersion = '2.5.8'
 # Some remote/managed Windows sessions omit ProgramData from the process environment.
 # Resolve the canonical system data directory without changing machine-wide settings.
 if ([string]::IsNullOrWhiteSpace($env:ProgramData)) {
@@ -389,6 +389,41 @@ function Get-StartupDiagnostic {
     disabledCount = $disabled.Count
     items = @($items | Select-Object id, name, scope | ForEach-Object { @{ id = $_.id; name = $_.name; scope = $_.scope; enabled = $true } })
     disabledItems = @($disabled | ForEach-Object { @{ id = [string]$_.id; name = [string]$_.name; scope = [string]$_.scope; enabled = $false } })
+  }
+}
+
+# Read-only console-task candidates: never export arguments, paths, users or credentials.
+function Get-ConsoleScheduledTaskDiagnostic {
+  $items = @()
+  try {
+    foreach ($task in @(Get-ScheduledTask -ErrorAction Stop)) {
+      $executables = @($task.Actions | ForEach-Object {
+        [IO.Path]::GetFileName(([string]$_.Execute).Trim('"'))
+      } | Where-Object { $_ })
+      $shells = @($executables | Where-Object {
+        $_ -match '^(cmd|powershell|pwsh|node|npm|npx|python|pythonw|cscript)(\.exe|\.cmd|\.bat)?$'
+      })
+      if (-not $shells.Count) { continue }
+      $triggers = @($task.Triggers)
+      $repeated = @($triggers | Where-Object {
+        $_.Repetition -and $_.Repetition.Interval -and
+        [string]$_.Repetition.Interval -notin @('PT0S', '00:00:00')
+      }).Count -gt 0
+      $items += @{
+        name = ([string]$task.TaskName).Substring(0, [Math]::Min(100, ([string]$task.TaskName).Length))
+        executable = ([string]$shells[0]).Substring(0, [Math]::Min(40, ([string]$shells[0]).Length))
+        repeated = [bool]$repeated
+        agentTask = ([string]$task.TaskName -eq $TaskName)
+      }
+    }
+    return @{
+      checkedAt = (Get-Date).ToUniversalTime().ToString('o')
+      candidateCount = $items.Count
+      items = @($items | Sort-Object -Property repeated -Descending | Select-Object -First 30)
+      evidence = 'candidate-only'
+    }
+  } catch {
+    return @{ checkedAt = (Get-Date).ToUniversalTime().ToString('o'); candidateCount = 0; items = @(); evidence = 'unavailable'; error = 'scheduled_task_query_unavailable' }
   }
 }
 
@@ -3540,6 +3575,14 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
   $type = [string]$Command.type
   $payload = if ($Command.PSObject.Properties.Name -contains 'payload' -and $Command.payload) { $Command.payload } else { [pscustomobject]@{} }
   switch ($type) {
+    'power.quiet_background' {
+      $system = Get-SystemSnapshot
+      if ($system.error -or $system.isPortable -ne $false) { throw '조용한 백그라운드 모드는 데스크톱 PC에서만 적용할 수 있습니다.' }
+      Save-PowerBackup
+      Invoke-PowerCfg @('/change', 'monitor-timeout-ac', '5') | Out-Null
+      Invoke-PowerCfg @('/change', 'standby-timeout-ac', '0') | Out-Null
+      return @{ message = '모니터 5분 후 꺼짐 · PC와 Agent 계속 실행. 배터리 설정과 최대 절전은 유지합니다.'; settings = Get-AgentSettings }
+    }
     'power.always_on' {
       Save-PowerBackup
       Invoke-PowerCfg @('/change', 'standby-timeout-ac', '0') | Out-Null
@@ -3604,6 +3647,7 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     'printing.image_preview.repair' { return Repair-ImagePrintPreview }
     'printing.image_preview.restore' { return Restore-ImagePrintPreview }
     'startup.scan' { return @{ message = '시작 프로그램 목록을 확인했습니다.'; startup = Get-StartupDiagnostic } }
+    'console.tasks.diagnose' { return @{ message = '반복 명령창을 유발할 수 있는 예약 작업 후보를 읽기 전용으로 조회했습니다. 원인 확정은 아닙니다.'; quietTasks = Get-ConsoleScheduledTaskDiagnostic } }
     'startup.disable' { return Disable-StartupItem ([string]$payload.itemId) }
     'startup.restore' { return Restore-StartupItem ([string]$payload.itemId) }
     'maintenance.temp_cleanup' { return Clear-SafeTempFiles }
@@ -3705,6 +3749,7 @@ function Send-Heartbeat($Config) {
     profileName = $settings.workstationProfile
     capabilities = @{
       powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
+      quietBackgroundMode = $true; consoleTaskDiagnostics = $true
       diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
       networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true
       computerRead = $true; processRead = $true; agentStatus = $true
@@ -3824,6 +3869,7 @@ function Install-Agent {
       agentVersion = $AgentVersion
       capabilities = @{
         powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
+      quietBackgroundMode = $true; consoleTaskDiagnostics = $true
         diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
         networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true
         arbitraryShell = $false; screenCapture = $false; credentialCollection = $false

@@ -33,6 +33,8 @@ The first release supports Windows only. Android Enterprise and Apple MDM are de
 | Command | Behavior |
 |---|---|
 | `power.always_on` | Disables standby/hibernate; keeps display timeout at 30 min AC / 15 min battery |
+| `power.quiet_background` | Desktop-only, confirmed: set AC screen-off to 5 minutes and AC standby to never; battery/hibernate untouched; uses existing original-power backup and restore |
+| `console.tasks.diagnose` | Read-only candidate inventory of recurring shell-launching Windows Scheduled Tasks; bounded task name, executable basename and recurrence flag; no paths/arguments/users/credentials; **not proof** of popup origin |
 | `power.presentation` | Disables standby/hibernate/display timeout |
 | `power.normal` | Applies a conservative normal-use timeout profile |
 | `power.restore` | Imports the power plan exported before the first EKODI change and activates it |
@@ -120,3 +122,8 @@ Do not release directly to production. Before merge/deployment:
 - agent signed installer/MSIX and automatic agent updates
 - local health diagnostics beyond power/lock controls
 - remote uninstall with a separate explicit human gate
+
+
+## Screen-off and recurring console popups (2026-10-24)
+
+In the **platform super-admin → 운영·안정성 → 실행 인프라 → PC·에이전트 관리** view, expand an enrolled PC and use **화면 절전·명령창 관리**. The diagnosis is observe-only and never disables an arbitrary Windows job. The display power profile is an explicit per-PC change, does not modify laptop power settings, preserves the power plan for one-click restore, and must not be represented as having fixed every console popup. Updating the Windows Device Agent may be required for older enrolled PCs. Offline clients must reconnect before a queued action can execute. Do not confuse this Device Agent path with the separate Desktop Commander connector or claim a PC was repaired without live Windows evidence.

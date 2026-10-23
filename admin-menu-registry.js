@@ -85,7 +85,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'site-health', group: 'ops', icon: '✓', labels: { ko: '사이트 자동점검', en: 'Site Health Checks' }, superAdminOnly: true },
   { id: 'deployments', group: 'ops', icon: '↑', labels: { ko: '배포·변경 이력', en: 'Deployments & Change History' } },
   { id: 'aiops', group: 'ai', icon: 'AI', labels: { ko: 'AI 운영센터', en: 'AI Operations Center' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
-  { id: 'devices', group: 'ops', icon: 'D', labels: { ko: '실행 인프라', en: 'Execution Infrastructure' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
+  { id: 'devices', group: 'ops', icon: 'D', labels: { ko: 'PC·에이전트 관리', en: 'PC & Agent Management' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
   { id: 'pos-agent', group: 'ops', icon: 'POS', labels: { ko: 'POS Agent 설치·관리', en: 'POS Agent Install & Management' }, superAdminOnly: true, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
   { id: 'api-cost', group: 'finance', icon: '₩', labels: { ko: '사용량·비용', en: 'Usage & Cost' } },
   { id: 'architecture', group: 'ops', icon: '◇', labels: { ko: '시스템 구조', en: 'System Structure' } },
