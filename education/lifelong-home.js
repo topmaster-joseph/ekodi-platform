@@ -45,6 +45,8 @@
 
   form.addEventListener('submit', event => {
     event.preventDefault();
+    // A new text search explores all pathways, not the previously selected category.
+    selectedCategory = '';
     updateResults();
     target.scrollIntoView({ block: 'start' });
     history.replaceState(history.state, '', location.pathname + location.search + '#learningPath');
