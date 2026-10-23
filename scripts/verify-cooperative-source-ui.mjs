@@ -11,6 +11,7 @@ import { routeCooperative } from '../cooperative-control.js';
 import { fixture, authFetch } from '../test/helpers/cooperative-fixture.mjs';
 import { loadCooperativeProject } from '../cooperative-store.js';
 import { loadBundledCooperativeClient } from './cooperative-bundle-client.mjs';
+import { verifyCooperativeServiceWorkflows } from './cooperative-service-proof.mjs';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES
@@ -28,14 +29,15 @@ f.env.ASSETS = { async fetch(request) {
   const bytes = await fs.readFile(new URL('../sites/business-cooperative/public' + pathname.slice('/business-coop'.length), import.meta.url));
   return new Response(request.method === 'HEAD' ? null : bytes, { headers: { 'content-type': 'image/webp' } });
 } };
-const tokens = { 'admin-jub': 'chair-jub@example.test', 'member-jub': 'member-jub@example.test', 'admin-open': 'chair-open@example.test' };
+const tokens = { 'admin-jub': 'chair-jub@example.test', 'member-jub': 'member-jub@example.test', 'admin-open': 'chair-open@example.test', 'member-open': 'member-open@example.test', applicant: 'applicant@example.test' };
 f.grant(COOPERATIVES[0], tokens['admin-jub'], 'owner');
 f.grant(COOPERATIVES[0], tokens['member-jub'], 'member');
 f.grant(COOPERATIVES[1], tokens['admin-open'], 'owner');
+f.grant(COOPERATIVES[1], tokens['member-open'], 'member');
 for (const [index, token] of [[0, 'admin-jub'], [1, 'admin-open']]) {
   const row = await loadCooperativeProject(f.db, COOPERATIVES[index]);
   row.state.founders[0].accountEmail = tokens[token];
-  if (index === 0) row.state.founders[1].accountEmail = tokens['member-jub'];
+  row.state.founders[1].accountEmail = tokens[index === 0 ? 'member-jub' : 'member-open'];
   f.sqlite.prepare('UPDATE cooperative_projects SET snapshot_json=? WHERE workspace_id=?').run(JSON.stringify(row.state), COOPERATIVES[index].workspaceId);
 }
 const originalFetch = globalThis.fetch;
@@ -53,7 +55,10 @@ async function contextFor(width, token = '') {
   const context = await browser.newContext({ viewport: { width, height: width < 500 ? 844 : 950 }, isMobile: width < 500, hasTouch: width < 500, acceptDownloads: true });
   if (token) await context.addInitScript(value => {
     if (location.origin !== 'https://ekodi.kr' || window !== window.top) return;
-    sessionStorage.setItem('ekodi-cooperative-auth.v1', JSON.stringify({ accessToken: value, refreshToken: value + '-refresh', expiresAt: Math.floor(Date.now()/1000)+3600 }));
+    if (!sessionStorage.getItem('cooperative-source-qa-seeded')) {
+      sessionStorage.setItem('ekodi-cooperative-auth.v1', JSON.stringify({ accessToken: value, refreshToken: value + '-refresh', expiresAt: Math.floor(Date.now()/1000)+3600 }));
+      sessionStorage.setItem('cooperative-source-qa-seeded', '1');
+    }
   }, token);
   await context.route('**/*', async intercepted => {
     const incoming = intercepted.request();
@@ -202,6 +207,7 @@ try {
   assert.equal(await page.locator('#workspace').isVisible(), false);
   checks.push({ surface: 'member-self-edit-cross-coop-and-admin-denied', width: 390, passed: true });
   await context.close();
+  await verifyCooperativeServiceWorkflows({ contextFor, fixture: f, cooperatives: COOPERATIVES, checks, screenshot });
   assert.ok(refreshCount >= 4);
   assert.deepEqual(pageErrors, []);
   assert.deepEqual(responseErrors, []);

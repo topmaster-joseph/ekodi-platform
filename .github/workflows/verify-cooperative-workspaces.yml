@@ -15,6 +15,7 @@ on:
       - 'test/helpers/cooperative-fixture.mjs'
       - 'scripts/verify-cooperative-source-ui.mjs'
       - 'scripts/cooperative-bundle-client.mjs'
+      - 'scripts/cooperative-service-proof.mjs'
       - '.github/workflows/verify-cooperative-workspaces.yml'
   workflow_dispatch:
 
