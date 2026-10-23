@@ -53,6 +53,6 @@ export async function mokdaehumunApiResponse(request,env,{resolveSession=princip
    return reply({ok:true});
   }
   const rows=await env.DB.prepare('SELECT id,name,status,joined_at,created_at FROM mokdaehumun_members ORDER BY created_at DESC LIMIT 100').all();
-  return reply({ok:true,members:rows.results||[]});
+  return reply({ok:true,role:role.role,members:rows.results||[]});
  }catch{return reply({error:'storage_not_initialized'},503);}
 }
