@@ -46,8 +46,12 @@
     const close = el('button', { class: 'smallbtn', type: 'button', text: '닫기' });
     const summary = el('p', { class: 'checkout-summary' });
     dialog.append(el('div', { class: 'checkout-dialog-head' }, el('h2', { id: 'coPayTitle', text: '결제 수단 선택' }), close), summary, methods, agreement, dialogMsg, widgetPay);
-    document.body.append(dialog);
-    close.addEventListener('click', () => dialog.close?.());
+    const backdrop = el('div', { class: 'checkout-backdrop', hidden: '' });
+    document.body.append(backdrop, dialog);
+    // Non-modal on purpose: a modal <dialog> makes the page inert and hides Toss's payment window.
+    const closeDialog = () => { dialog.close?.(); dialog.removeAttribute('open'); backdrop.hidden = true; };
+    close.addEventListener('click', closeDialog);
+    backdrop.addEventListener('click', closeDialog);
 
     let widgets = null;
     let request = null;
@@ -80,7 +84,8 @@
         if (co.widget) {
           summary.textContent = `${order.orderName} · ${won(order.amount)}`;
           methods.replaceChildren(); agreement.replaceChildren(); widgetPay.disabled = true;
-          dialog.showModal ? dialog.showModal() : dialog.setAttribute('open', '');
+          backdrop.hidden = false;
+          dialog.show ? dialog.show() : dialog.setAttribute('open', '');
           widgets = toss.widgets({ customerKey: co.customerKey || 'ANONYMOUS' });
           await widgets.setAmount({ currency: 'KRW', value: order.amount });
           await Promise.all([
