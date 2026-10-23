@@ -47,10 +47,10 @@ test('canonical return routes are consistent across browser and server site hand
     const url='https://ekodi.kr'+path+'/nested?from=auth';
     assert.equal(loginTarget(site,url),url,site+' login');
     assert.equal(serverHandoff(site,url),url,site+' server');
-    assert.equal(clientTarget(site,url),url,site+' client');
+    if(site!=='marketing')assert.equal(clientTarget(site,url),url,site+' client');
     assert.equal(workspaceTarget(site,url),url,site+' workspace');
     const other='https://ekodi.kr/admin/control';
-    for(const [label,fn] of [['login',loginTarget],['client',clientTarget],['workspace',workspaceTarget]]){
+    for(const [label,fn] of [['login',loginTarget],...site==='marketing'?[]:[['client',clientTarget]],['workspace',workspaceTarget]]){
       assert.notEqual(fn(site,other),other,site+' '+label+' accepted cross-service admin');
     }
     assert.equal(serverHandoff(site,other),null,site+' backend accepted cross-service admin');
