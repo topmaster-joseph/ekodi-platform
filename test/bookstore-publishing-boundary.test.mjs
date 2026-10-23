@@ -70,5 +70,5 @@ test('publishing catalog fetch is private and degrades safely when Books binding
   assert.equal(unavailable.status,503);
   assert.equal((await unavailable.json()).error,'PUBLIC_BOOK_CATALOG_UNAVAILABLE');
   const config=fs.readFileSync(new URL('../wrangler.publishing.toml',import.meta.url),'utf8');
-  assert.match(config,/binding = "BOOKS"\\nservice = "ekodi-books"/);
+  assert.match(config,/binding = "BOOKS"\s*service = "ekodi-books"/);
 });
