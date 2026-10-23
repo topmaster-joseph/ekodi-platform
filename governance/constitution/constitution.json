@@ -354,9 +354,7 @@
     "trade.biz.ekodi.kr": "https://ekodi.kr/ekodibiz/trade",
     "ins.ekodi.kr": "https://ekodi.kr/insurance"
   },
-  "registeredCommonServicePaths": [
-    "/invest"
-  ],
+  "registeredCommonServicePaths": [],
   "registeredCommonServiceBoundaries": [
     "journal.ekodi.kr",
     "marketing.ekodi.kr",
@@ -1101,7 +1099,6 @@
       "delivery",
       "local-commerce",
       "trade",
-      "invest",
       "money",
       "pay",
       "edu",
