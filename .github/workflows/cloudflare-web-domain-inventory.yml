@@ -1,0 +1,76 @@
+name: Cloudflare First-Party Web Domain Inventory
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/cloudflare-web-domain-inventory.mjs'
+      - '.github/workflows/cloudflare-web-domain-inventory.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '37 17 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  source-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - run: |
+          node --check scripts/cloudflare-web-domain-inventory.mjs
+          node scripts/cloudflare-web-domain-inventory.mjs --self-test
+
+  production:
+    if: github.event_name != 'pull_request'
+    needs: source-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      EKODI_CF_SCOPE: production
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Inventory production Cloudflare assets (GET only)
+        run: node scripts/cloudflare-web-domain-inventory.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ekodi-web-domain-inventory-production
+          path: artifacts/cloudflare-web-domain-inventory-production.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  development:
+    if: github.event_name != 'pull_request'
+    needs: source-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment: development
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      EKODI_CF_SCOPE: development
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Inventory development Cloudflare assets (GET only)
+        run: node scripts/cloudflare-web-domain-inventory.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ekodi-web-domain-inventory-development
+          path: artifacts/cloudflare-web-domain-inventory-development.json
+          if-no-files-found: ignore
+          retention-days: 7
