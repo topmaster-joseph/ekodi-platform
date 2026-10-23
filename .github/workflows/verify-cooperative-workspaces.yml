@@ -15,6 +15,8 @@ on:
       - 'test/helpers/cooperative-fixture.mjs'
       - 'scripts/verify-cooperative-source-ui.mjs'
       - 'scripts/cooperative-bundle-client.mjs'
+      - 'scripts/cooperative-service-proof.mjs'
+      - 'scripts/verify-cooperative-production-ui.mjs'
       - '.github/workflows/verify-cooperative-workspaces.yml'
   workflow_dispatch:
 
@@ -44,11 +46,21 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Verify responsive source UI with all requests intercepted
         run: node scripts/verify-cooperative-source-ui.mjs
+      - name: Verify current production public and guest capability boundaries without writes
+        run: node scripts/verify-cooperative-production-ui.mjs
       - name: Preserve source-only screenshots and receipt
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: cooperative-source-ui-${{ github.run_id }}
           path: artifacts/cooperative-source-ui/
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Preserve separate public and guest production evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cooperative-production-ui-${{ github.run_id }}
+          path: artifacts/cooperative-production-ui/
           if-no-files-found: ignore
           retention-days: 7
