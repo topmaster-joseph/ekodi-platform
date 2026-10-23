@@ -6,7 +6,7 @@
   "status": "approved",
   "changeClass": "C3",
   "taskId": "zero-subdomain-canonical-20261023",
-  "summary": "Require all first-party EKODI production HTTP/HTTPS entrypoints on https://ekodi.kr paths; remove legacy *.ekodi.kr web bindings and HTTP DNS after readiness verification, not by permanent redirect.",
+  "summary": "Require all first-party EKODI production HTTP/HTTPS entrypoints on https://ekodi.kr paths; remove legacy legacy EKODI web subdomains web bindings and HTTP DNS after readiness verification, not by permanent redirect.",
   "approvalBasis": "The platform owner explicitly approved the proposed whole-ecosystem apex-only migration in the 2026-10-23 conversation and instructed EKODI to modify and update.",
   "implementationPhases": [
     "source-code-and-domain-policy",
