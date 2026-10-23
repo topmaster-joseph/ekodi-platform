@@ -105,7 +105,7 @@ test('confirm goes through EKODIPAY with idempotency key and clears the reservat
   const toss = fakeToss();
   try {
     const o = await createOrder(env, { shareCode: 'SHARE1', quantity: 1, buyer: BUYER });
-    const res = await core.fetch(new Request('https://mall-api.ekodi.kr/api/public/payments/confirm', { method: 'POST', body: JSON.stringify({ paymentKey: 'pk_1', orderId: o.order.id, amount: 15000 }) }), env);
+    const res = await core.fetch(new Request('https://ekodi.kr/api/public/payments/confirm', { method: 'POST', body: JSON.stringify({ paymentKey: 'pk_1', orderId: o.order.id, amount: 15000 }) }), env);
     assert.equal(res.status, 200, await res.clone().text());
     const confirm = toss.calls.find(c => c.url.endsWith('/confirm'));
     assert.equal(confirm.headers['idempotency-key'], `mall-confirm-${o.order.id}`);
@@ -123,7 +123,7 @@ test('record failure after Toss approval returns 202 and reconciliation records 
     const o = await createOrder(env, { shareCode: 'SHARE1', quantity: 1, buyer: BUYER });
     const realBatch = db.batch.bind(db);
     db.batch = async () => { throw new Error('D1 unavailable'); };
-    const res = await core.fetch(new Request('https://mall-api.ekodi.kr/api/public/payments/confirm', { method: 'POST', body: JSON.stringify({ paymentKey: 'pk_2', orderId: o.order.id, amount: 15000 }) }), env);
+    const res = await core.fetch(new Request('https://ekodi.kr/api/public/payments/confirm', { method: 'POST', body: JSON.stringify({ paymentKey: 'pk_2', orderId: o.order.id, amount: 15000 }) }), env);
     assert.equal(res.status, 202);
     assert.equal((await res.json()).recordPending, true);
     assert.equal(orderRow(db, o.order.id).status, 'payment_pending', 'money taken but not yet recorded');
@@ -203,7 +203,7 @@ test('refund done in Toss console is reflected: order refunded, settlement rever
   const toss = fakeToss();
   try {
     const o = await createOrder(env, { shareCode: 'SHARE1', quantity: 1, buyer: BUYER });
-    await core.fetch(new Request('https://mall-api.ekodi.kr/api/public/payments/confirm', { method: 'POST', body: JSON.stringify({ paymentKey: 'pk_r', orderId: o.order.id, amount: 15000 }) }), env);
+    await core.fetch(new Request('https://ekodi.kr/api/public/payments/confirm', { method: 'POST', body: JSON.stringify({ paymentKey: 'pk_r', orderId: o.order.id, amount: 15000 }) }), env);
     toss.payments.set(o.order.id, { ...toss.payments.get(o.order.id), status: 'CANCELED', cancels: [{ cancelAmount: 15000 }] });
     const r = await handleTossWebhook(env, { eventType: 'PAYMENT_STATUS_CHANGED', data: { orderId: o.order.id } });
     assert.equal(r.body.action, 'refunded');
@@ -219,7 +219,7 @@ test('webhook route is served without Origin and scheduled handler runs only whe
   const db = migrated({ stock: 1 });
   const toss = fakeToss();
   try {
-    const res = await entry.fetch(new Request('https://mall-api.ekodi.kr/api/public/payments/webhook', { method: 'POST', body: JSON.stringify({ data: { orderId: 'none' } }) }), { ...ENV, DB: db });
+    const res = await entry.fetch(new Request('https://ekodi.kr/api/public/payments/webhook', { method: 'POST', body: JSON.stringify({ data: { orderId: 'none' } }) }), { ...ENV, DB: db });
     assert.equal(res.status, 200);
     const o = await createOrder({ ...ENV, DB: db }, { shareCode: 'SHARE1', quantity: 1, buyer: BUYER });
     age(db, o.order.id, 60);

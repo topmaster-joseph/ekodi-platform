@@ -13,7 +13,7 @@
 
 ## 사람이 하는 것
 1. **환불(현재 수동):** 토스페이먼츠 상점관리자 → 결제내역 → 해당 주문번호(`mall_…`) → 취소. 반품 상품 재고는 판매자 화면에서 재고 수량을 다시 입력합니다(자동 재입고하지 않음).
-2. **웹훅 등록(1회):** 토스페이먼츠 개발자센터 → 웹훅 → `https://mall-api.ekodi.kr/api/public/payments/webhook` 등록, 이벤트 `PAYMENT_STATUS_CHANGED`·`DEPOSIT_CALLBACK`. 등록 전에도 10분 대사가 같은 일을 하므로 반영이 최대 10분 늦을 뿐 누락되지는 않습니다.
+2. **웹훅 등록(1회):** 토스페이먼츠 개발자센터 → 웹훅 → `https://ekodi.kr/ekodimall/api/public/payments/webhook` 등록, 이벤트 `PAYMENT_STATUS_CHANGED`·`DEPOSIT_CALLBACK`. 등록 전에도 10분 대사가 같은 일을 하므로 반영이 최대 10분 늦을 뿐 누락되지는 않습니다.
 3. **로그 `mismatch` 확인:** 금액이 다르거나 취소된 주문에 승인이 도착한 경우 자동 반영하지 않습니다(`DONE_NEEDS_REVIEW`). 토스 상점관리자에서 확인 후 취소 처리하세요.
 
 ## 재고
