@@ -41,7 +41,7 @@ body[data-area="home"] .section h2{font-size:clamp(1.72rem,3vw,2.35rem)}
 body[data-area="home"] .section-head>p{font-size:.92rem}
 body[data-area="home"] .interest-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 body[data-area="home"] .interest-card{position:relative;display:flex;flex-direction:column;gap:11px;min-height:157px;padding:23px 24px 23px;border:1px solid #2b435a;border-radius:17px;background:linear-gradient(145deg,#101e2b,#121f31);text-decoration:none;transition:border-color .15s,transform .15s}
-body[data-area="home"] .interest-card:hover,body[data-area="home"] .interest-card:focus-visible,body[data-area="home"] .interest-card[aria-pressed="true"]{border-color:#79a9f3;background:#162e48;transform:translateY(-1px)}
+body[data-area="home"] .interest-card:hover,body[data-area="home"] .interest-card:focus-visible,body[data-area="home"] .interest-card[aria-current="true"]{border-color:#79a9f3;background:#162e48;transform:translateY(-1px)}
 body[data-area="home"] .interest-no{font-size:.7rem;letter-spacing:.13em;color:#98b9dc;font-weight:700}
 body[data-area="home"] .interest-card strong{font-size:1.3rem;letter-spacing:-.035em}
 body[data-area="home"] .interest-card span:not(.interest-no):not(.interest-arrow){font-size:.85rem;color:#a9bdce}
