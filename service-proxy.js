@@ -2,7 +2,7 @@ import { injectEkodiShell, shellServiceForHost } from './ekodi-shell-injector.js
 
 const ORIGINS = Object.freeze({});
 
-const MAIL_CANONICAL = 'https://mail.ekodi.kr';
+const MAIL_CANONICAL = 'https://ekodi.kr/mail';
 const MALL_CANONICAL = 'https://ekodi.kr/ekodimall';
 const CANONICAL_REDIRECTS = Object.freeze({
   'mall.ekodi.kr': MALL_CANONICAL,
