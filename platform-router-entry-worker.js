@@ -12,11 +12,7 @@ import { injectTaxHometaxLedger } from './tax-hometax-ledger.js';
 import { injectTaxBusinessRegistry } from './tax-business-registry.js';
 import { injectEkodiProgressiveHome, injectEkodiShell, injectEkodiTenantReadability } from './ekodi-shell-injector.js';
 import { messengerUserPage, messengerUiScript } from './messenger-user-page.js';
-import { investUserPage, investUiScript } from './invest-user-page.js';
-import { investSubjectUiScript } from './invest-subject-ui.js';
-import { routeInvestSite } from './invest-site-system.js';
 import { isSinglesRoute, routeSinglesSurface } from './singles-surface.js';
-import { investIntroPage, investAnalysisPage, investAnalysisScript } from './invest-access-ui.js';
 import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
 import { handleMailContactApi, mailContactPage } from './mail-contact.js';
 import { mailAdminPage } from './mail-admin-page.js';
@@ -357,36 +353,12 @@ function internalHostRequest(request,host,pathname){
   const target=new URL(request.url);target.hostname=host;target.pathname=pathname;return new Request(target,{method:request.method,headers:request.headers,body:['GET','HEAD'].includes(request.method)?undefined:request.body,redirect:request.redirect});
 }
 async function routeMessengerApex(request,env,ctx){const url=new URL(request.url);if(request.method!=='GET'||!(url.pathname==='/messenger'||url.pathname.startsWith('/messenger/')))return null;const inner=url.pathname==='/messenger'?'/' : url.pathname.slice('/messenger'.length)||'/';if(inner==='/'||inner==='/index.html')return injectEkodiShell(await withReleaseMarker(messengerUserPage()),'messenger');if(inner==='/messenger-ui.js')return messengerUiScript();if(inner==='/app.js')return legacyPlatformRouter.fetch(internalHostRequest(request,MESSENGER_HOST,'/app.js'),env,ctx);return null;}
-async function routeInvestApex(request,env,ctx){
-  const url=new URL(request.url);
-  if(!['GET','HEAD'].includes(request.method)||!(url.pathname==='/invest'||url.pathname.startsWith('/invest/')))return null;
-  const inner=(url.pathname==='/invest'?'/' : url.pathname.slice('/invest'.length)||'/').replace(/\/+$/,'')||'/';
-  if(inner==='/'||inner==='/index.html')return injectEkodiShell(investIntroPage(),'invest');
-  if(inner==='/analysis')return injectEkodiShell(investAnalysisPage(),'invest');
-  if(inner==='/analysis.js')return investAnalysisScript();
-  if(inner==='/personal'){const target=new URL('/my/invest',request.url);return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store'}})}
-  if(inner==='/admin'||inner.startsWith('/assets/'))return null;
-  // Legacy scripts are served only as compatibility assets; not rendered as the public entry.
-  if(inner==='/invest-ui.js')return investUiScript();
-  if(inner==='/invest-subject-ui.js')return investSubjectUiScript();
-  if(inner==='/app.js')return legacyPlatformRouter.fetch(internalHostRequest(request,INVEST_HOST,'/app.js'),env,ctx);
-  // All other public Invest pages converge to the authenticated, non-personal analysis gate.
-  const target=new URL('/invest/analysis',request.url);
-  return new Response(null,{status:302,headers:{location:target.toString(),'cache-control':'private, no-store','x-ekodi-invest-gate':'member-analysis'}});
-}
 function routeMailApex(request){const url=new URL(request.url);if(request.method!=='GET')return null;if(url.pathname==='/mail'||url.pathname==='/mail/')return injectEkodiShell(mailUserPage(),'mail');if(url.pathname==='/mail/admin'||url.pathname==='/mail/admin/')return injectEkodiShell(mailAdminPage(),'mail','admin');if(url.pathname==='/mail/admin/overview'||url.pathname==='/mail/admin/overview/')return injectEkodiShell(mailAdminPage(),'mail','admin');return null;}
 
 async function withReleaseMarker(response){
   const text=await response.text();
   return new Response(text.replace('</body>','<!-- FUNCTIONAL BETA release compatibility marker; not user-visible --></body>'),{status:response.status,statusText:response.statusText,headers:response.headers});
 }
-async function withInvestSubjectScript(response){
-  const text=await response.text();
-  const marker='<script src="/invest/invest-ui.js" defer></script>';
-  const patched=text.replace(marker,'<script src="/invest/invest-subject-ui.js" defer></script>'+marker);
-  return new Response(patched,{status:response.status,statusText:response.statusText,headers:response.headers});
-}
-
 const LEGACY_OPERATING_SPACE_ROOTS=new Set(['ekodichurch','ekodimission']);
 function legacyOperatingSpacePath(pathname){const first=String(pathname||'').split('/').filter(Boolean)[0]?.toLowerCase()||'';return LEGACY_OPERATING_SPACE_ROOTS.has(first);}
 async function ensureLegacyOperatingSpaceMarker(response,includeBody=true){
@@ -454,6 +426,11 @@ export function isWorkspaceAdminAssetPath(pathname){return WORKSPACE_ADMIN_ASSET
 async function routePlatform(request,env,ctx){
     const url=new URL(request.url);
     const host=resolvedHost(request,env);
+    // Owner-approved retirement: every public Invest and Invest Biz route is Gone.
+    // This is intentionally scoped by segment, never matching /my/invest.
+    if(host===INVEST_HOST||(host===PUBLIC_HOST&&/^\/(?:invest|ekodibiz\/invest)(?:\/|$)/i.test(url.pathname))){
+      return new Response(request.method==='HEAD'?null:'Gone',{status:410,headers:{'cache-control':'no-store','x-robots-tag':'noindex, nofollow, noarchive','x-content-type-options':'nosniff','x-ekodi-route':'invest-retired'}});
+    }
     // Block legacy payment host family before legacy routing or shell fallback.
     if(host.startsWith('pay.')&&host.endsWith('.ekodi.kr'))return new Response('Gone',{status:410,headers:{'cache-control':'no-store','x-robots-tag':'noindex, nofollow, noarchive','x-content-type-options':'nosniff'}});
     if(host===PUBLIC_HOST&&(url.pathname==='/pay'||url.pathname==='/pay/')){
@@ -545,8 +522,6 @@ async function routePlatform(request,env,ctx){
       if(['GET','HEAD'].includes(request.method)&&isCgmaRoot(url.pathname)){const legacyResponse=await legacyPlatformRouter.fetch(request,env,ctx);return injectCgmaRegionalLinks(injectEkodiProgressiveHome(injectEkodiTenantReadability(legacyResponse)));}
       const mailApex=routeMailApex(request);if(mailApex)return mailApex;
       const messengerApex=await routeMessengerApex(request,env,ctx);if(messengerApex)return messengerApex;
-      const investApex=await routeInvestApex(request,env,ctx);if(investApex)return investApex;
-      const investSite=routeInvestSite(request);if(investSite)return injectEkodiShell(investSite,'invest');
       const taxPortal=await routeTaxPortalApex(request,env,ctx);if(taxPortal)return taxPortal;
       const contactResponse=await handleMailContactApi(request,env);if(contactResponse)return contactResponse;
       if(request.method==='GET'&&url.pathname==='/mail/contact')return injectEkodiShell(mailContactPage(),'mail');
@@ -667,12 +642,6 @@ async function routePlatform(request,env,ctx){
       if(url.pathname==='/messenger-ui.js')return messengerUiScript();
     }
 
-    if(host===INVEST_HOST&&['GET','HEAD'].includes(request.method)){
-      // The legacy subdomain must never bypass the canonical /invest authentication boundary.
-      // All authenticated market analysis is served on ekodi.kr, never on a parallel host.
-      const target=new URL(url.pathname==='/'||!url.pathname?'https://ekodi.kr/invest':'https://ekodi.kr/invest/analysis');
-      return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'private, no-store','x-ekodi-invest-route':'canonical-apex'}});
-    }
     const legacyResponse=await legacyPlatformRouter.fetch(request,env,ctx);
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&legacyOperatingSpacePath(url.pathname))return ensureLegacyOperatingSpaceMarker(injectEkodiTenantReadability(legacyResponse),request.method==='GET');
     return legacyResponse;
