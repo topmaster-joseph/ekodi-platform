@@ -21,6 +21,38 @@ function legacyRecorder(){
   return {calls,fetch};
 }
 
+test('canonical Cloud HTML keeps shared Shell after legacy host loses manifest lookup, while assets and existing chrome pass through',async t=>{
+  const previous=globalThis.HTMLRewriter;
+  let transforms=0;
+  globalThis.HTMLRewriter=class {on(){return this}transform(response){transforms++;return response}};
+  t.after(()=>{if(previous===undefined)delete globalThis.HTMLRewriter;else globalThis.HTMLRewriter=previous});
+  const calls=[];
+  let existingShell=false;
+  const legacyFetch=async request=>{
+    const url=new URL(request.url);calls.push(url);
+    const html=url.pathname==='/';
+    return new Response(html?'<html><head></head><body>EKODI Cloud</body></html>':'export const name="cloud";',{
+      headers:{'content-type':html?'text/html; charset=utf-8':'text/javascript; charset=utf-8','x-ekodi-route':'hub','cache-control':'private, no-store',...(existingShell?{'x-ekodi-shell':'v2'}:{})}
+    });
+  };
+  const response=await routeCanonicalSurface(new Request('https://ekodi.kr/cloud/?view=files'),{},{legacyFetch});
+  assert.equal(response.status,200);
+  assert.equal(response.headers.get('x-ekodi-shell'),'v2');
+  assert.equal(response.headers.get('x-ekodi-canonical-surface'),'cloud');
+  assert.equal(response.headers.get('x-ekodi-canonical-path'),'/cloud');
+  assert.equal(response.headers.get('cache-control'),'private, no-store');
+  assert.ok(transforms>0,'Existing Shell must actually decorate the HTML response');
+  assert.equal(calls[0].pathname,'/');assert.equal(calls[0].search,'?view=files');
+  const completed=transforms;
+  const asset=await routeCanonicalSurface(new Request('https://ekodi.kr/cloud/app.js'),{},{legacyFetch});
+  assert.equal(await asset.text(),'export const name="cloud";');
+  assert.equal(asset.headers.get('x-ekodi-shell'),null);assert.equal(transforms,completed);
+  existingShell=true;
+  const decorated=await routeCanonicalSurface(new Request('https://ekodi.kr/cloud/'),{},{legacyFetch});
+  assert.equal(decorated.headers.get('x-ekodi-shell'),'v2');
+  assert.equal(transforms,completed,'An already decorated upstream must not receive duplicate Shell chrome');
+});
+
 test('public execution surface roots canonicalize slashless URLs to the same trailing-slash route',async()=>{
   const publicRoots=PLATFORM_EXECUTION_SURFACES.filter(spec=>spec.id!=='ai'&&!spec.exact&&!spec.id.endsWith('-api')&&!spec.prefix.includes('/api/'));
   assert.ok(PLATFORM_EXECUTION_SURFACES.some(spec=>spec.id==='ai'));
