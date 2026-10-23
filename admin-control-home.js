@@ -28,12 +28,23 @@ function sync(){
     region.id='ekodiControlHome';
     region.setAttribute('aria-label','EKODI Control 통합 작업영역');
     region.hidden=true;
+    // Critical geometry must exist before the asynchronously fetched Admin CSS arrives.
+    // Without this, the embedded browser defaults to roughly 300x150 and a
+    // live E2E may observe a collapsed work area while the stylesheet loads.
+    region.style.width='100%';
+    region.style.height='100dvh';
+    region.style.minHeight='0';
+    region.style.overflow='hidden';
     const frame=document.createElement('iframe');
     frame.id='ekodiControlHomeFrame';
     frame.title='EKODI Control 명령·작업·Agents·Workers·결과';
     frame.src='/control?embedded=admin';
     frame.referrerPolicy='no-referrer';
     frame.loading='eager';
+    frame.style.display='block';
+    frame.style.width='100%';
+    frame.style.height='100%';
+    frame.style.border='0';
     region.appendChild(frame);
     main.appendChild(region);
   }

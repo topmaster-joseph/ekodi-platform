@@ -102,6 +102,21 @@ try {
   const frame=page.frameLocator('#ekodiControlHomeFrame');
   await frame.locator('#commandInput').waitFor({state:'visible',timeout:15_000});
   await frame.locator('#controlEmbeddedToolbar').waitFor({state:'visible',timeout:15_000});
+  // The iframe's own UI can be ready before the parent layout stylesheet has
+  // arrived. Keep the strict visual assertions, but sample only once layout
+  // has completed instead of measuring Chromium's 300x150 iframe fallback.
+  await page.waitForFunction(() => {
+    const frame = document.querySelector('#ekodiControlHomeFrame');
+    const sidebar = document.querySelector('.sidebar');
+    const cssReady = Array.from(document.styleSheets).some(sheet =>
+      String(sheet.href || '').includes('/admin/admin-control-home.css'));
+    if (!frame || !sidebar || !cssReady) return false;
+    const panel = frame.getBoundingClientRect();
+    const nav = sidebar.getBoundingClientRect();
+    return panel.width >= 300
+      && panel.height >= Math.max(300, window.innerHeight * 0.7)
+      && Math.abs(panel.left - nav.right) <= 2;
+  }, null, { timeout: 15_000 });
   report.visualState = await page.evaluate(() => {
     const sidebar=document.querySelector('.sidebar');
     const iframe=document.querySelector('#ekodiControlHomeFrame');
