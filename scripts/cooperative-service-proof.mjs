@@ -82,7 +82,7 @@ export async function verifyCooperativeServiceWorkflows({ contextFor, fixture: f
     assert.ok(charter.text.includes(coop.representatives[0]));
     // The provenance paragraph legitimately names the supplied source charter.
     // Verify this cooperative's actual title and naming clause instead.
-    assert.ok(charter.text.startsWith(coop.name + ' / 설립용 명칭(안): ' + coop.legalName));
+    assert.ok(charter.text.includes('\n' + coop.name + ' / 설립용 명칭(안): ' + coop.legalName + '\n'));
     assert.ok(charter.text.includes('제1조(설립과 명칭) 이 조합은 협동조합기본법에 의하여 설립하며, ' + coop.legalName + '이라 한다.'));
     proof(coop, 'document-status-memo-reload-and-charter-download');
 
@@ -205,6 +205,15 @@ export async function verifyCooperativeServiceWorkflows({ contextFor, fixture: f
     assert.equal(f.sqlite.prepare('SELECT count(*) AS count FROM customer_access_grants').get().count, grantsBefore);
     proof(coop, 'participation-application-stored-without-membership-grant', { width: 390 });
     await applicantContext.close();
+    const intakeContext = await contextFor(390, adminToken);
+    const intake = await intakeContext.newPage(); await intake.goto(root + '/admin');
+    await intake.waitForSelector('#workspace:not([hidden])'); await tab(intake, '계정·권한');
+    const intakeText = await intake.locator('[data-panel="accounts"]').innerText();
+    assert.ok(intakeText.includes('가상 실증 신청자'));
+    assert.ok(intakeText.includes('가상 신청 사업체'));
+    assert.ok(intakeText.includes('참여 의사만 접수합니다.'));
+    proof(coop, 'administrator-can-read-submitted-participation-request', { width: 390 });
+    await intakeContext.close();
 
     const publicContext = await contextFor(390);
     const publicPage = await publicContext.newPage(); await publicPage.goto(root + '/');
