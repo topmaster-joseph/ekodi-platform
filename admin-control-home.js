@@ -31,7 +31,7 @@ function sync(){
     const frame=document.createElement('iframe');
     frame.id='ekodiControlHomeFrame';
     frame.title='EKODI Control 명령·작업·Agents·Workers·결과';
-    frame.src='/control?embedded=admin';
+    frame.src='/admin/control?embedded=admin';
     frame.referrerPolicy='no-referrer';
     frame.loading='eager';
     region.appendChild(frame);
