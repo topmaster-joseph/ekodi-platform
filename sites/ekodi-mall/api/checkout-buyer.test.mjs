@@ -15,8 +15,8 @@ function migrated() {
   const now = new Date().toISOString();
   db.db.prepare(`INSERT INTO seller_profiles (user_id,email,display_name,seller_type,verification_status,direct_sale_status,created_at,updated_at) VALUES ('s1','s@x','EKODIBIZ','business','google_verified','verified',?,?)`).run(now, now);
   db.db.prepare(`INSERT INTO stores (id,seller_id,slug,name,contact,status,verification_status,created_at,updated_at) VALUES ('st1','s1','ekodibiz','EKODIBIZ','c','active','verified',?,?)`).run(now, now);
-  db.db.prepare(`INSERT INTO products (id,seller_id,store_id,share_code,public_url,seller_display_name,seller_type,sale_type,category,name,price,contact,status,checkout_ready,created_at,updated_at,published_at)
-    VALUES ('p1','s1','st1','SHARE1','https://ekodi.kr/ekodimall/p/SHARE1','EKODIBIZ','business','direct','general','에코디 텀블러',15000,'c','published',1,?,?,?)`).run(now, now, now);
+  db.db.prepare(`INSERT INTO products (id,seller_id,store_id,share_code,public_url,seller_display_name,seller_type,sale_type,category,name,price,stock_quantity,contact,status,checkout_ready,created_at,updated_at,published_at)
+    VALUES ('p1','s1','st1','SHARE1','https://ekodi.kr/ekodimall/p/SHARE1','EKODIBIZ','business','direct','general','에코디 텀블러',15000,10,'c','published',1,?,?,?)`).run(now, now, now);
   return db;
 }
 const BUYER = { name: '김구매', phone: '01012345678', email: 'buyer@example.com', postcode: '58556', address1: '전남 무안군 청계면 영산로 1', address2: '101호', memo: '문 앞', privacyConsent: true };

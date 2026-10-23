@@ -30,6 +30,7 @@
   const loginButton = document.querySelector('#sellerLogin');
   const logoutButton = document.querySelector('#sellerLogout');
   const affiliateField = document.querySelector('[data-affiliate-field]');
+  const stockField = document.querySelector('[data-stock-field]');
   const shareLinkStatus = document.querySelector('#shareLinkStatus');
   const shareLinkPreview = document.querySelector('#shareLinkPreview');
   let session = null;
@@ -193,6 +194,7 @@
         audience,
         oneLine,
         price: data.price ? Number(data.price) : null,
+        stockQuantity: data.stockQuantity === '' || data.stockQuantity === undefined ? null : Number(data.stockQuantity),
         benefits,
         specs,
         story,
@@ -311,6 +313,9 @@
     const isAffiliate = form.elements.saleType?.value === 'affiliate';
     if (affiliateField) affiliateField.hidden = !isAffiliate;
     if (form.elements.affiliateUrl) form.elements.affiliateUrl.required = isAffiliate;
+    const isDirect = (form.elements.saleType?.value || 'direct') === 'direct';
+    if (stockField) stockField.hidden = !isDirect;
+    if (form.elements.stockQuantity) form.elements.stockQuantity.required = isDirect;
     render();
   }
 

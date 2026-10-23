@@ -57,7 +57,7 @@
       store,
       product: {
         saleType: v.saleType || 'direct', category: v.category || 'general', region: selectedRegion(), name: productName, audience, oneLine: v.oneLine,
-        price: v.price ? Number(v.price) : null, benefits, specs: list(v.specs), story: v.story, fulfillment: v.fulfillment,
+        price: v.price ? Number(v.price) : null, stockQuantity: v.saleType === 'affiliate' || v.saleType === 'inquiry' ? null : (v.stockQuantity === '' || v.stockQuantity === undefined ? null : Number(v.stockQuantity)), benefits, specs: list(v.specs), story: v.story, fulfillment: v.fulfillment,
         contact: v.contact, affiliateUrl: v.affiliateUrl, action: { url: v.saleType === 'affiliate' ? v.affiliateUrl : '' }
       },
       content: {
@@ -94,7 +94,7 @@
     const store = product.store || {};
     const values = {
       productId: product.id, sellerType: s.type || 'individual', sellerDisplayName: s.displayName || '', contact: p.contact || store.contact || '',
-      saleType: p.saleType || 'direct', productName: p.name || '', category: p.category || 'general', primaryRegionId: p.region?.primaryRegionId || '', price: p.price ?? '', affiliateUrl: p.affiliateUrl || '',
+      saleType: p.saleType || 'direct', productName: p.name || '', category: p.category || 'general', primaryRegionId: p.region?.primaryRegionId || '', price: p.price ?? '', stockQuantity: p.stockQuantity ?? '', affiliateUrl: p.affiliateUrl || '',
       storeName: store.name || '', storeSlug: store.slug || '', audience: p.audience || '', oneLine: p.oneLine || '', benefits: (p.benefits || []).join('\n'),
       story: p.story || '', specs: (p.specs || []).join('\n'), fulfillment: p.fulfillment || ''
     };

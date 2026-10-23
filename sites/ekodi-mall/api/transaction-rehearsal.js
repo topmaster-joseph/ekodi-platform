@@ -45,8 +45,8 @@ async function seed(env, ids) {
       VALUES (?,?,?,?,?,'active','verified',?,?)`)
       .bind(ids.storeId, ids.sellerId, `reh-${ids.shareCode.toLowerCase()}`, 'EKODI Rehearsal Store', 'rehearsal@invalid.ekodi', now, now),
     env.DB.prepare(`INSERT INTO products
-      (id,seller_id,store_id,share_code,public_url,seller_display_name,seller_type,sale_type,category,name,price,contact,status,checkout_ready,created_at,updated_at,published_at)
-      VALUES (?,?,?,?,?,?,'business','direct','general',?,12340,?,'published',1,?,?,?)`)
+      (id,seller_id,store_id,share_code,public_url,seller_display_name,seller_type,sale_type,category,name,price,stock_quantity,contact,status,checkout_ready,created_at,updated_at,published_at)
+      VALUES (?,?,?,?,?,?,'business','direct','general',?,12340,10,?,'published',1,?,?,?)`)
       .bind(ids.productId, ids.sellerId, ids.storeId, ids.shareCode,
         `https://ekodi.kr/ekodimall/p/${ids.shareCode}`, 'EKODI Rehearsal Seller', 'EKODI Transaction Rehearsal',
         'rehearsal@invalid.ekodi', now, now, now),
