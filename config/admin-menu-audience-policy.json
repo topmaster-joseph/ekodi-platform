@@ -74,6 +74,7 @@
       "engine-integration": { "audience": "platform-super-admin" },
       "engine-preview": { "audience": "platform-super-admin" },
       "service-modules": { "audience": "platform-super-admin" },
+      "menu-templates": { "audience": "platform-super-admin" },
       "sites-all": { "audience": "platform-site-operations", "siteMenu": "registry" },
       "sites-core": { "audience": "platform-site-operations", "siteMenu": "registry" },
       "sites-business": { "audience": "platform-site-operations", "siteMenu": "registry" },

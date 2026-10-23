@@ -52,7 +52,7 @@ test('every visible section is a detail route of exactly one v3 menu in its own 
   assert.deepEqual(adminMenuTabs('pos-agent'), ['devices', 'pos-agent']);
   // Stage 2: the transitional site-tools menu is dissolved.
   assert.equal(ADMIN_MENUS.some(menu => menu.id === 'site-tools' || menu.transitional), false);
-  assert.deepEqual(ADMIN_MENUS.filter(menu => menu.group === 'sites').map(menu => menu.id), ['registry']);
+  assert.deepEqual(ADMIN_MENUS.filter(menu => menu.group === 'sites').map(menu => menu.id), ['registry', 'menu-templates']);
   assert.equal(getAdminMenuForSection('books')?.id, 'platform-content');
   assert.equal(getAdminMenuForSection('ai-membership')?.id, 'automation-policy');
   assert.equal(getAdminMenuForSection('community'), null);

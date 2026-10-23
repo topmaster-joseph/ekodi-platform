@@ -1,4 +1,5 @@
 import './platform-maturity-admin.js';
+import './admin-menu-templates.js';
 import './admin-service-handoffs.js';
 import './admin-context-shell-recovery.js';
 
@@ -18,6 +19,7 @@ export const ADMIN_MENU_GROUPS = Object.freeze([
 export const ADMIN_MENUS = Object.freeze([
   { id: 'dashboard', group: 'home', labels: { ko: '플랫폼 현황', en: 'Platform Overview' }, sections: ['platform-overview'] },
   { id: 'registry', group: 'sites', labels: { ko: '사이트 목록', en: 'Sites' }, sections: ['sites-all', 'sites-preparing'] },
+  { id: 'menu-templates', group: 'sites', labels: { ko: '관리자 메뉴 템플릿', en: 'Admin Menu Templates' }, sections: ['menu-templates'] },
   { id: 'control', group: 'ai', labels: { ko: 'AI 운영센터', en: 'AI Operations Center' }, sections: ['aiops'] },
   { id: 'automation-policy', group: 'ai', labels: { ko: 'AI 정책·사용 등급', en: 'AI Policies & Usage Tiers' }, sections: ['ai-settings', 'ai-membership'] },
   { id: 'engines', group: 'services', labels: { ko: '서비스 엔진', en: 'Service Engines' }, sections: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'] },
@@ -57,6 +59,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'sites-communication', group: 'sites', icon: '✉', delegateSection: 'campus', siteGroup: 'communication', labels: { ko: '소통·클라우드', en: 'Communication & Cloud' }, internal: true },
   { id: 'sites-worklife', group: 'sites', icon: 'W', delegateSection: 'campus', siteGroup: 'worklife', labels: { ko: '업무·생활', en: 'Work & Life' }, internal: true },
   { id: 'sites-other', group: 'sites', icon: '…', delegateSection: 'campus', siteGroup: 'other', labels: { ko: '기타', en: 'Other' }, internal: true },
+  { id: 'menu-templates', group: 'sites', icon: '☰', labels: { ko: '관리자 메뉴 템플릿', en: 'Admin Menu Templates' }, superAdminOnly: true },
   { id: 'sites-preparing', group: 'sites', icon: '◔', delegateSection: 'campus', siteRelation: 'preparing', labels: { ko: '준비·비공개', en: 'Preparing & Private' } },
 
   { id: 'sites-internal', group: 'sites', icon: 'I', delegateSection: 'campus', siteRelation: 'internal', labels: { ko: '내부 사이트', en: 'Internal Sites' }, internal: true },
@@ -143,7 +146,7 @@ const ADMIN_MENU_CATEGORY_ORDER = Object.freeze({
 const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
   'platform-overview':'overview','command-home':'overview',
   'engine-all':'catalog','engine-core':'catalog','engine-common':'catalog','engine-operations':'catalog','engine-professional':'catalog','engine-ai':'catalog','engine-integration':'catalog','engine-preview':'catalog','service-modules':'catalog',
-  'sites-all':'sites','sites-core':'sites','sites-business':'sites','sites-community':'sites','sites-clients':'sites','sites-knowledge':'sites','sites-communication':'sites','sites-worklife':'sites','sites-other':'sites','sites-preparing':'sites','sites-internal':'sites','sites-user':'sites','sites-customer-partner':'sites','sites-independent':'sites',campus:'sites',clients:'sites','site-chrome':'sites',cmpmyi:'sites',organization:'sites',workspace:'sites',
+  'sites-all':'sites','menu-templates':'sites','sites-core':'sites','sites-business':'sites','sites-community':'sites','sites-clients':'sites','sites-knowledge':'sites','sites-communication':'sites','sites-worklife':'sites','sites-other':'sites','sites-preparing':'sites','sites-internal':'sites','sites-user':'sites','sites-customer-partner':'sites','sites-independent':'sites',campus:'sites',clients:'sites','site-chrome':'sites',cmpmyi:'sites',organization:'sites',workspace:'sites',
   'users-access':'access',security:'security',admins:'access','ai-membership':'access',
   work:'content',communication:'content',community:'content',books:'content',devotional:'content',social:'content',finance:'finance',tax:'content',
   health:'status','site-health':'status',deployments:'releases',aiops:'releases',devices:'devices','pos-agent':'devices','api-cost':'finance',architecture:'status',maturity:'status',services:'status',

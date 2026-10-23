@@ -923,3 +923,31 @@ html body.admin-compact.ekodi-admin-design-engine .admin-command-entry,
 html body.admin-compact.ekodi-admin-design-engine .admin-context-tabs-shell{
   display:none!important;
 }
+
+/* ADMIN-IA-V3 readability (2026-10-23): the design-engine sidebar is light
+   (#f7f8fc), so inactive menu entries and nested detail routes need dark,
+   AA-contrast text instead of the dark-sidebar greys (#bcbcbc / #a9a9a9). */
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-detail-item,
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-detail-tab,
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-detail-more{
+  color:#3f4a59!important;
+  background:transparent!important;
+}
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-detail-item b,
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-detail-tab b,
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-detail-more b{color:#5d6878!important}
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-detail-item:hover,
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-detail-tab:hover,
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-detail-more:hover{
+  color:#111827!important;
+  background:#eceff6!important;
+  border-color:#e1e5ee!important;
+}
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-detail-item.active,
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-detail-tab.active{
+  color:#050505!important;
+  background:#e7ebf3!important;
+  border-color:#e7ebf3!important;
+}
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-detail-item.active b,
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-detail-tab.active b{color:#050505!important}
