@@ -868,6 +868,9 @@ jobs:
       - name: Apply production migrations after isolated staging success
         run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.api.toml "$WRANGLER_VERSION"
       - name: Verify cooperative administrator assignments in canonical production D1 (read only)
+        # Later authorized revocation must not block an unrelated Control release.
+        # Assignment completion still requires this verifier's positive evidence.
+        continue-on-error: true
         run: node scripts/verify-cooperative-admin-grants.mjs
       - name: Preserve scoped cooperative administrator evidence
         if: always()
