@@ -118,3 +118,39 @@ test('canonical /my/invest/access rejects anonymous requests at the real MY entr
  assert.equal(response.status,401);
  assert.equal((await response.json()).error,'authentication_required');
 });
+
+
+test('private owner investment dashboard keeps data local and labels assumptions',async()=>{
+ const page=await investMyRoute(get('/invest'),{});
+ const html=await page.text();
+ assert.match(html,/나만의 투자분석 설계/);
+ assert.match(html,/시나리오/);
+ assert.match(html,/가상 예시/);
+ assert.match(html,/실시간 시세가 연결되지 않습니다/);
+ assert.match(html,/id="owner" hidden>/);
+ assert.match(html,/holdingForm/);
+ assert.match(html,/download/);
+ const script=await investMyRoute(get('/invest/app.js'),{});
+ const js=await script.text();
+ assert.match(js,/verifyOtp/);
+ assert.match(js,/getSession/);
+ assert.match(js,/history\.replaceState/);
+ assert.match(js,/ekodi_token/);
+ assert.match(js,/\/my\/invest\/access/);
+ assert.match(js,/textContent/);
+ assert.doesNotMatch(js,/localStorage\.setItem|sessionStorage\.setItem|\/broker\/orders/);
+ const stylesheet=await investMyRoute(get('/invest/style.css'),{});
+ const css=await stylesheet.text();
+ assert.match(css,/\.hero/);
+ assert.match(css,/@media/);
+});
+
+test('private owner scenario entry does not expose analysis to unverified browsers',async()=>{
+ const page=await investMyRoute(get('/invest'),{});
+ const html=await page.text();
+ assert.doesNotMatch(html,/access_token|sb_secret_|service_role/);
+ assert.match(html,/<section id="owner" hidden>/);
+ const response=await investMyRoute(get('/invest/access'),{});
+ assert.equal(response.status,401);
+ assert.equal(response.headers.get('cache-control'),'private, no-store');
+});
