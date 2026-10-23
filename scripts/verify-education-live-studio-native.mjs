@@ -431,6 +431,46 @@ async function learnerFlow(browser,profile){
   }finally{await context.close();}
 }
 
+// Cross-surface regression is retained once, not on every layout profile.
+// Repeated navigation to the same bootcamp's catalog.js over five Premium Studio
+// viewports used to trip the existing HTTP 429 protection late in the release.
+// We never bypass that protection: observe Retry-After, back off, and fail closed
+// when the legitimate bootcamp cannot render its 4x6 class structure.
+async function bootcampRegressionProbe(browser){
+  const context=await browser.newContext({viewport:{width:390,height:844},locale:'ko-KR'});
+  await guard(context,'bootcamp-regression');
+  try{
+    const page=await context.newPage();watch(page,'bootcamp-regression');
+    for(let attempt=0;attempt<3;attempt++){
+      page.__ekodiRateLimited=0;
+      const response=await page.goto(ORIGIN+R.bootcamp,{waitUntil:'domcontentloaded',timeout:35000});
+      const status=response?.status();
+      if(status===200&&new URL(page.url()).origin!==ORIGIN)fail('existing bootcamp redirect escaped Education origin');
+      const ready=status===200&&await page.locator('.course-cards .lesson-card').first()
+        .waitFor({state:'visible',timeout:12000}).then(()=>true,()=>false);
+      if(ready){
+        const lessons=await page.locator('.course-cards .lesson-card').count();
+        const batches=await page.locator('#batchPicker option').count();
+        if(lessons!==4)fail('existing bootcamp lost its 4 lessons');
+        if(batches!==6)fail('existing bootcamp lost its 6 batches');
+        report.bootcampRegression={passed:true,lessons,batches,attempts:attempt+1,route:R.bootcamp};
+        return;
+      }
+      const observed=page.__ekodiRateLimited;
+      const retryAfter=status===429?Number(response.headers()['retry-after']):0;
+      const delay=retryAfter||observed;
+      if(!Number.isFinite(delay)||delay<=0||attempt>=2){
+        fail('existing 4x6 bootcamp regression did not render (HTTP '+status+
+          ', attempt '+(attempt+1)+(observed?', rate-limited':'')+')');
+      }
+      // A Retry-After above the bounded CI budget must not be shortened or bypassed.
+      if(delay>180)fail('existing bootcamp rate limit Retry-After exceeds bounded verification budget: '+delay+'s');
+      report.rateLimitRetries=(report.rateLimitRetries||0)+1;
+      await page.waitForTimeout(Math.max(delay,5)*1000);
+    }
+  }finally{await context.close();}
+}
+
 async function layoutProbe(browser,profile){
   const context=await browser.newContext({viewport:{width:profile.width,height:profile.height},isMobile:profile.mobile,hasTouch:profile.mobile,locale:'ko-KR'});
   await guard(context,profile.name);
@@ -446,12 +486,9 @@ async function layoutProbe(browser,profile){
     const aud=await page.evaluate(()=>({visibleHeaders:[...document.querySelectorAll('header')].filter(h=>h.getBoundingClientRect().height>0&&getComputedStyle(h).display!=='none').length,sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}));
     if(aud.visibleHeaders!==0||aud.sw>aud.cw+2)fail(profile.name+' audience view shows a header or overflows '+JSON.stringify(aud));
     result.audience=aud;
-    const legacy=await page.goto(ORIGIN+R.bootcamp,{waitUntil:'domcontentloaded'});
-    if(legacy?.status()!==200)fail('existing 4x6 bootcamp classroom regression HTTP '+legacy?.status());
-    await page.locator('.course-cards .lesson-card').first().waitFor({timeout:15000});
-    if(await page.locator('.course-cards .lesson-card').count()!==4)fail('existing bootcamp lost its 4 lessons');
-    if(await page.locator('#batchPicker option').count()!==6)fail('existing bootcamp lost its 6 batches');
-    result.bootcampRegression='4 lessons / 6 batches intact';
+    // The dedicated native bootcamp suite already checks all five viewports in the preceding release step.
+    // Do not repeat its four-lesson/six-batch asset fetch for every Premium Studio viewport.
+    result.bootcampRegression=report.bootcampRegression?.passed===true?'verified once + dedicated native suite':'unverified';
     const known=report.observedSecurityBlocks.filter(x=>x.profile===profile.name);
     const sec=verifyKnownSecurityBlocks({consoleBlocks:known.filter(x=>x.type==='console').map(x=>({message:x.message})),
       requestBlocks:known.filter(x=>x.type==='request').map(x=>({url:x.url,failure:x.failure})),mutations:report.blockedMutations.filter(x=>x.profile===profile.name)});
@@ -468,6 +505,7 @@ async function main(){
   try{
     browser=await chromium.launch({headless:true});
     await gateProbe(browser);
+    await bootcampRegressionProbe(browser);
     for(const profile of VIEWPORTS){
       if(profile.width>=1366)await instructorFlow(browser,profile);
       if(profile.width===320||profile.width===390||profile.width===1366)await learnerFlow(browser,profile);
