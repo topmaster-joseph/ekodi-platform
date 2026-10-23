@@ -77,3 +77,25 @@ test('actual native runners keep strict no-mutation isolation, error logs and en
   assert.match(deploy,/preflight-merged-release/);
   assert.match(workflow,/EKODI Orchestrated PR Convergent Merge/);
 });
+
+
+test('Premium Studio bootcamp cross-check is once per release and backs off rather than bypassing 429',()=>{
+  const live=read('scripts/verify-education-live-studio-native.mjs');
+  const deploy=read('.github/workflows/deploy-education.yml');
+  assert.match(live,/async function bootcampRegressionProbe\(browser\)/);
+  assert.match(live,/await bootcampRegressionProbe\(browser\)/);
+  assert.equal((live.match(/page\.goto\(ORIGIN\+R\.bootcamp/g)||[]).length,1,
+    'no duplicate bootcamp asset burst on every layout viewport');
+  assert.match(live,/report\.bootcampRegression=\{passed:true,lessons,batches,attempts:/);
+  assert.match(live,/if\(lessons!==4\)fail\('existing bootcamp lost its 4 lessons'\)/);
+  assert.match(live,/if\(batches!==6\)fail\('existing bootcamp lost its 6 batches'\)/);
+  assert.match(live,/Number\(response\.headers\(\)\['retry-after'\]\)/);
+  assert.match(live,/page\.__ekodiRateLimited/);
+  assert.match(live,/if\(delay>180\)fail/);
+  assert.match(live,/await page\.waitForTimeout\(Math\.max\(delay,5\)\*1000\)/);
+  assert.match(live,/for\(let attempt=0;attempt<3;attempt\+\+\)/);
+  assert.doesNotMatch(live,/bypassCSP|ignoreHTTPSErrors:\s*true|context\.route\([^)]*429|retry-after.*0|route\.fulfill/);
+  const single=deploy.indexOf('Verify actual Education classroom on desktop and mobile with EKODI-owned Chromium');
+  const premium=deploy.indexOf('Verify Premium Studio instructor, presenter and learner flows on desktop and mobile');
+  assert.ok(single>=0&&premium>single,'dedicated five-viewport bootcamp verification still runs first');
+});
