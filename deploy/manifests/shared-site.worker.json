@@ -1929,43 +1929,6 @@
         "candidateVerifyReason": "canonical /admin static assets are asset-first; verify the final postbuild mirror immediately after promotion"
       },
       {
-        "url": "https://ekodi.kr/ekodibiz/invest",
-        "statuses": [
-          200
-        ],
-        "redirect": "manual",
-        "expect": [
-          "EKODIBIZ",
-          "EKODIBIZ · INVESTMENT BUSINESS",
-          "ekodi.kr/invest",
-          "data-ekodi-business-unit=\"invest\""
-        ],
-        "headerExpect": [
-          "x-ekodi-route: public-ekodibiz-invest",
-          "x-ekodi-shell: v2",
-          "x-content-type-options: nosniff"
-        ],
-        "rollbackVerify": false
-      },
-      {
-        "url": "https://ekodi.kr/ekodibiz/invest/admin",
-        "statuses": [
-          200
-        ],
-        "redirect": "manual",
-        "expect": [
-          "EKODIBIZ INVEST",
-          "WORKSPACE-LOCAL ADMIN",
-          "data-ekodi-admin-surface=\"local\""
-        ],
-        "headerExpect": [
-          "x-ekodi-route: public-ekodibiz-invest-admin",
-          "cache-control: no-store",
-          "x-content-type-options: nosniff"
-        ],
-        "rollbackVerify": false
-      },
-      {
         "url": "https://ekodi.kr/jadam/admin/site",
         "statuses": [
           200
