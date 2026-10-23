@@ -1,0 +1,29 @@
+name: Verify cgmurrc Booth Production
+
+# Live check that each member's personal link changes only that member's booth schedule.
+# Uses two throwaway members created and deleted inside the run; no real member data is read or changed.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cgmurrc-booth-production-verification
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_VERSION: '4.127.1'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify personal-link isolation on ekodi.kr
+        run: node scripts/verify-cgmurrc-booth-live.mjs
