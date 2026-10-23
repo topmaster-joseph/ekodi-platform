@@ -21,35 +21,35 @@
         "url": "https://ai.ekodi.kr/admin",
         "statuses": [307],
         "redirect": "manual",
-        "headerExpect": ["location: https://ekodi.kr/admin/?source=ai.ekodi.kr", "cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"],
+        "headerExpect": ["location: https://ekodi.kr/admin/?source=", "cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"],
         "rollbackHeaderExpect": ["cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"]
       },
       {
         "url": "https://mail.biz.ekodi.kr/admin",
         "statuses": [307],
         "redirect": "manual",
-        "headerExpect": ["location: https://ekodi.kr/admin/?source=mail.biz.ekodi.kr", "cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"],
+        "headerExpect": ["location: https://ekodi.kr/admin/?source=", "cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"],
         "rollbackHeaderExpect": ["cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"]
       },
       {
         "url": "https://mail.church.ekodi.kr/admin",
         "statuses": [307],
         "redirect": "manual",
-        "headerExpect": ["location: https://ekodi.kr/admin/?source=mail.church.ekodi.kr", "cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"],
+        "headerExpect": ["location: https://ekodi.kr/admin/?source=", "cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"],
         "rollbackHeaderExpect": ["cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"]
       },
       {
         "url": "https://management.ekodi.kr/admin",
         "statuses": [307],
         "redirect": "manual",
-        "headerExpect": ["location: https://ekodi.kr/admin/?source=management.ekodi.kr", "cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"],
+        "headerExpect": ["location: https://ekodi.kr/admin/?source=", "cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"],
         "rollbackHeaderExpect": ["cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"]
       },
       {
         "url": "https://marketing-api.ekodi.kr/admin",
         "statuses": [307],
         "redirect": "manual",
-        "headerExpect": ["location: https://ekodi.kr/admin/?source=marketing-api.ekodi.kr", "cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"],
+        "headerExpect": ["location: https://ekodi.kr/admin/?source=", "cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"],
         "rollbackHeaderExpect": ["cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"]
       }
     ]

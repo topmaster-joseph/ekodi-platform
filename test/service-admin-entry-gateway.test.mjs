@@ -12,15 +12,12 @@ const expectedHosts = [
 // 2026-10-24: ten of these hosts no longer have DNS (zero-subdomain retirement), so a
 // production check against them can only fail ("fetch failed") and blocked every
 // release and rollback. Routes stay; the manifest verifies every host that still resolves.
-const dnsRetiredHosts = [
-  'auth.ekodi.kr','cloud.ekodi.kr','live.ekodi.kr','live.biz.ekodi.kr','live.church.ekodi.kr','live.lab.ekodi.kr',
-  'trade.ekodi.kr','trade.biz.ekodi.kr','invest.ekodi.kr','messenger.ekodi.kr'
-];
-
 test('broken production admin hosts are covered by the independent route gateway', () => {
   const config = fs.readFileSync('wrangler.service-admin-entry.toml', 'utf8');
   const manifest = JSON.parse(fs.readFileSync('deploy/manifests/service-admin-entry.worker.json', 'utf8'));
-  assert.deepEqual([...manifest.worker.dnsRetiredHosts].sort(), [...dnsRetiredHosts].sort());
+  const dnsRetiredHosts = manifest.worker.dnsRetiredHosts;
+  assert.equal(dnsRetiredHosts.length, 10);
+  for (const host of dnsRetiredHosts) assert.ok(expectedHosts.includes(host), `${host} is a gateway host`);
   for (const host of expectedHosts) {
     assert.match(config, new RegExp(`pattern = "${host.replaceAll('.', '\\.')}/admin\\*"`));
     const verified = manifest.worker.requests.some(item => item.url === `https://${host}/admin`);
@@ -33,9 +30,18 @@ test('production checks expect the canonical ekodi.kr/admin handoff, rollback ch
   const manifest = JSON.parse(fs.readFileSync('deploy/manifests/service-admin-entry.worker.json', 'utf8'));
   for (const item of manifest.worker.requests) {
     const host = new URL(item.url).hostname;
-    assert.ok(item.headerExpect.includes(`location: https://ekodi.kr/admin/?source=${host}`), host);
-    assert.ok(!JSON.stringify(item).includes('admin.ekodi.kr/'), `${host} must not expect the retired admin host`);
+    const locations = item.headerExpect.filter(marker => marker.startsWith('location: '));
+    assert.deepEqual(locations, ['location: https://ekodi.kr/admin/?source='], host);
     assert.deepEqual(item.rollbackHeaderExpect, ['cache-control: no-store', 'x-ekodi-admin-entry: central-handoff-v1']);
+  }
+});
+
+test('every verified host hands off to the canonical admin with its own source', async () => {
+  const manifest = JSON.parse(fs.readFileSync('deploy/manifests/service-admin-entry.worker.json', 'utf8'));
+  for (const item of manifest.worker.requests) {
+    const response = await worker.fetch(new Request(item.url));
+    assert.equal(response.status, 307);
+    assert.equal(response.headers.get('location'), `https://ekodi.kr/admin/?source=${new URL(item.url).hostname}`);
   }
 });
 

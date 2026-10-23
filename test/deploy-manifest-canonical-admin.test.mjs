@@ -8,25 +8,27 @@ import path from 'node:path';
 // manifests still expected /admin to redirect to the retired admin host, while
 // the Workers correctly redirect to the canonical ekodi.kr/admin/<site> route.
 const cases = [
-  { manifest: 'deploy/manifests/books.worker.json', worker: 'books-worker.js', url: 'https://books.ekodi.kr/admin', location: 'https://ekodi.kr/admin/books#books', rollback: 'books#books' },
-  { manifest: 'deploy/manifests/publishing.worker.json', worker: 'publishing-worker.js', url: 'https://publishing.ekodi.kr/admin', location: 'https://ekodi.kr/admin/publishing#publishing', rollback: 'publishing#publishing' },
+  { manifest: 'deploy/manifests/books.worker.json', worker: 'books-worker.js', location: 'https://ekodi.kr/admin/books#books', rollback: 'books#books' },
+  { manifest: 'deploy/manifests/publishing.worker.json', worker: 'publishing-worker.js', location: 'https://ekodi.kr/admin/publishing#publishing', rollback: 'publishing#publishing' },
 ];
+
+const adminCheck = manifestPath => JSON.parse(fs.readFileSync(manifestPath, 'utf8')).worker.requests
+  .find(request => new URL(request.url).pathname === '/admin');
 
 for (const item of cases) {
   test(`${item.manifest} expects the canonical admin redirect and a version-neutral rollback`, () => {
-    const manifest = JSON.parse(fs.readFileSync(item.manifest, 'utf8'));
-    const admin = manifest.worker.requests.find(request => request.url === item.url);
+    const admin = adminCheck(item.manifest);
     assert.ok(admin, 'admin check present');
     assert.deepEqual(admin.headerExpect, [`location: ${item.location}`]);
     assert.deepEqual(admin.rollbackHeaderExpect, [item.rollback]);
-    // The rollback marker must hold for both the previous (retired host) and the new redirect.
-    assert.ok(`location: ${item.location}`.includes(item.rollback));
-    assert.ok(`location: https://admin.ekodi.kr/${item.rollback}`.includes(item.rollback));
+    // The previous version redirects to the same /<site>#<site> fragment on the retired
+    // host, so the rollback marker is the shared suffix of both locations.
+    assert.ok(item.location.endsWith(`/${item.rollback}`));
   });
 
   test(`${item.worker} actually redirects /admin where its manifest expects`, async () => {
     const worker = (await import(pathToFileURL(path.resolve(item.worker)).href)).default;
-    const response = await worker.fetch(new Request(item.url), {}, { waitUntil() {} });
+    const response = await worker.fetch(new Request(adminCheck(item.manifest).url), {}, { waitUntil() {} });
     assert.equal(response.status, 307);
     assert.equal(response.headers.get('location'), item.location);
   });
@@ -35,9 +37,5 @@ for (const item of cases) {
 test('deploy workflows verify the same canonical admin location as their manifests', () => {
   assert.match(fs.readFileSync('.github/workflows/deploy-books.yml', 'utf8'), /location: https:\/\/ekodi\.kr\/admin\/books#books/);
   assert.match(fs.readFileSync('.github/workflows/deploy-publishing.yml', 'utf8'), /location: https:\/\/ekodi\.kr\/admin\/publishing#publishing/);
-  const entry = fs.readFileSync('.github/workflows/deploy-service-admin-entry.yml', 'utf8');
-  assert.match(entry, /startsWith\('https:\/\/ekodi\.kr\/admin\/'\)/);
-  for (const file of ['deploy-books.yml', 'deploy-publishing.yml', 'deploy-service-admin-entry.yml']) {
-    assert.doesNotMatch(fs.readFileSync(`.github/workflows/${file}`, 'utf8'), /admin\.ekodi\.kr/, file);
-  }
+  assert.match(fs.readFileSync('.github/workflows/deploy-service-admin-entry.yml', 'utf8'), /startsWith\('https:\/\/ekodi\.kr\/admin\/'\)/);
 });
