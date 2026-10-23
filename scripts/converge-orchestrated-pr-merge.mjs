@@ -1,4 +1,4 @@
-import { CONVERGE_MAX_RUNS_PER_HEAD, CONVERGE_RUN_BUDGET_MS, mayHandOff, stuckRequiredChecks, workflowsToRedispatch } from './lib/converge-stuck-check.mjs';
+import { CONVERGE_MAX_RUNS_PER_HEAD, CONVERGE_RUN_BUDGET_MS, mayHandOff, requiredChecksToHeal, workflowsToRedispatch } from './lib/converge-stuck-check.mjs';
 const repo=String(process.env.GITHUB_REPOSITORY||'').trim();
 const token=String(process.env.GH_TOKEN||'').trim();
 const branch=String(process.env.GITHUB_REF_NAME||'').trim();
@@ -72,12 +72,12 @@ async function healStuckRequiredChecks(sha){
     const w=await api('/actions/runs?check_suite_id='+id+'&per_page=1');
     suites.set(id,(Array.isArray(w.data?.workflow_runs)?w.data.workflow_runs:[])[0]||null);
   }
-  const stuck=stuckRequiredChecks(required,runs,suites,Date.now());
-  if(!stuck.length)return false;
+  const {stuck,missing,heal}=requiredChecksToHeal(required,runs,suites,Date.now(),Date.now()-CONVERGE_STARTED);
+  if(!heal.length)return false;
   stuckHealDone=true;
-  const workflows=workflowsToRedispatch(stuck);
+  const workflows=workflowsToRedispatch(heal);
   for(const workflow of workflows)await dispatchWorkflow(workflow);
-  console.log(JSON.stringify({ok:true,action:'stuck-required-check-redispatched',stuck,workflows,pr:pr?.number,branch,head:sha}));
+  console.log(JSON.stringify({ok:true,action:'stuck-required-check-redispatched',stuck,missing,workflows,pr:pr?.number,branch,head:sha}));
   return true;
 }
 if(!repo||!token||!branch||!headSha)fail('missing runtime input');
