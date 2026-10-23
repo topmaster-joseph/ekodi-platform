@@ -96,13 +96,43 @@ export function estimateOpenAiCostMicroUsd(usage, env = {}) {
   ));
 }
 
+// USD per 1M tokens [input, cached input, output], Anthropic first-party list prices
+// as of 2026-10. An unrecognised Claude model is priced at the most expensive tier so
+// the AI-COST-001 budget can over-count but never under-count.
+const ANTHROPIC_USD_PER_MILLION = Object.freeze([
+  ['claude-fable', [10, 0.25, 50]],
+  ['claude-mythos', [10, 0.25, 50]],
+  ['claude-opus-5-5', [4, 0.2, 20]],
+  ['claude-opus', [5, 0.5, 25]],
+  ['claude-sonnet-5', [2, 0.2, 10]],
+  ['claude-sonnet', [3, 0.3, 15]],
+  ['claude-haiku-5-5', [0.1, 0.01, 0.5]],
+  ['claude-haiku', [1, 0.1, 5]],
+]);
+const ANTHROPIC_FALLBACK_USD_PER_MILLION = Object.freeze([10, 0.25, 50]);
+
+export function estimateAnthropicCostMicroUsd(usage, model = '', env = {}) {
+  const normalized = normalizeOpenAiUsage(usage);
+  const id = safeText(model, 120).toLowerCase();
+  const listed = ANTHROPIC_USD_PER_MILLION.find(([prefix]) => id.startsWith(prefix))?.[1] || ANTHROPIC_FALLBACK_USD_PER_MILLION;
+  const input = envNumber(env, ['ANTHROPIC_INPUT_USD_PER_MILLION'], listed[0]);
+  const cached = envNumber(env, ['ANTHROPIC_CACHED_INPUT_USD_PER_MILLION'], listed[1]);
+  const output = envNumber(env, ['ANTHROPIC_OUTPUT_USD_PER_MILLION'], listed[2]);
+  const uncachedInput = Math.max(0, normalized.inputTokens - normalized.cachedInputTokens);
+  return Math.max(0, Math.round(uncachedInput * input + normalized.cachedInputTokens * cached + normalized.outputTokens * output));
+}
+
 export async function recordProviderUsage(env = {}, event = {}) {
   if (!env.DB?.prepare) return Object.freeze({ recorded: false, reason: 'meter_unavailable' });
   await ensureApiUsageSchema(env.DB);
   const provider = safeText(event.provider || 'unknown', 80).toLowerCase();
   const usage = normalizeOpenAiUsage(event.usage || {});
+  // 2026-10-23: Anthropic calls were metered at $0, so they never counted against
+  // the monthly USD budget (AI-COST-001) - only against the call caps.
   const estimatedCostMicroUsd = event.estimatedCostMicroUsd == null
-    ? (provider.includes('openai') ? estimateOpenAiCostMicroUsd(usage, env) : 0)
+    ? (provider.includes('openai') ? estimateOpenAiCostMicroUsd(usage, env)
+      : provider.includes('anthropic') || provider.includes('claude') ? estimateAnthropicCostMicroUsd(usage, event.model, env)
+        : 0)
     : integer(event.estimatedCostMicroUsd);
   const createdAt = event.createdAt ? new Date(event.createdAt).toISOString() : new Date().toISOString();
   const result = await env.DB.prepare(`INSERT OR IGNORE INTO api_usage_events

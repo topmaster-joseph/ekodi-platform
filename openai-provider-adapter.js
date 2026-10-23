@@ -128,10 +128,13 @@ export function createOpenAiProvider(env = {}, options = {}) {
     id: 'openai',
     model: defaultModel,
     available,
-    async invoke({ taskName, context = {} } = {}) {
+    async invoke({ taskName, prompt = '', context = {} } = {}) {
       if (!available) throw new Error('OPENAI_PROVIDER_NOT_CONFIGURED');
       await budgetGuard(env);
       const model = resolveOpenAiModelForContext(env, context);
+      // The EKODI orchestrator passes its task instruction as `prompt`; without this
+      // the request reached OpenAI as "요청 내용 없음". It is projected like the rest.
+      if (!context.message && !context.request) context = { ...context, message: String(prompt || '') };
       const projectedContext = await projectForExternalAi(context, {
         profile: 'ai_minimum',
         purpose: 'admin-ai-assist',

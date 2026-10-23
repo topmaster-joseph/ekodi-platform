@@ -230,6 +230,49 @@ test('dispatched superseding run still needs staging and production jobs',async(
   assert.equal(evidence.reason,'production_promotion_evidence_missing');
 });
 
+// 2026-10-23: QTIN, Church History and Marketing Pages promote from `release`/`sync`
+// jobs. Only those workflows, with their real deploy steps succeeded, may count.
+function equivalentRuns(name){
+  return [
+    {id:1,name:'CI',status:'completed',conclusion:'success'},
+    {id:2,name:'EKODI AI Orchestration Gate',status:'completed',conclusion:'success'},
+    {id:3,workflow_id:88,name,event:'workflow_dispatch',status:'completed',conclusion:'success',head_sha:mergeSha},
+  ];
+}
+const qtinStaging={name:'staging_gate / staging',status:'completed',conclusion:'success'};
+const qtinReleaseSteps=['Deploy production worker','Verify production order page, health and admin boundary'];
+const steps=(names,conclusion='success')=>names.map(name=>({name,status:'completed',conclusion}));
+
+test('QTIN release job with deploy and verify steps counts as production',async()=>{
+  const evidence=await collectAuthenticatedCompletionEvidence({github:mockGithub({runs:equivalentRuns('Deploy QTIN Group Order'),jobsByRun:{3:[
+    qtinStaging,{name:'release',status:'completed',conclusion:'success',steps:steps(qtinReleaseSteps)},
+  ]}}),taskId,branchRef});
+  assert.equal(evidence.verified,true);
+  assert.deepEqual(evidence.deployments[0].productionJobs,['release (production-equivalent)']);
+});
+
+test('production-equivalent job fails closed without its deploy steps or outside the allowlist',async()=>{
+  for(const [label,name,jobs] of [
+    ['skipped deploy step','Deploy QTIN Group Order',[qtinStaging,{name:'release',status:'completed',conclusion:'success',steps:[...steps([qtinReleaseSteps[0]],'skipped'),...steps([qtinReleaseSteps[1]])]}]],
+    ['missing verify step','Deploy QTIN Group Order',[qtinStaging,{name:'release',status:'completed',conclusion:'success',steps:steps([qtinReleaseSteps[0]])}]],
+    ['failed release job','Deploy QTIN Group Order',[qtinStaging,{name:'release',status:'completed',conclusion:'failure',steps:steps(qtinReleaseSteps)}]],
+    ['not allowlisted workflow','Deploy Something Else',[qtinStaging,{name:'release',status:'completed',conclusion:'success',steps:steps(qtinReleaseSteps)}]],
+    ['marketing sync without pages deploy','Deploy Marketing AI Pages',[qtinStaging,{name:'sync',status:'completed',conclusion:'success',steps:steps(['Plan idempotent Pages sync'])}]],
+  ]){
+    const evidence=await collectAuthenticatedCompletionEvidence({github:mockGithub({runs:equivalentRuns(name),jobsByRun:{3:jobs}}),taskId,branchRef});
+    assert.equal(evidence.verified,false,label);
+    assert.equal(evidence.reason,'production_promotion_evidence_missing',label);
+  }
+});
+
+test('Marketing Pages sync with the rollback-guarded deploy step counts as production',async()=>{
+  const evidence=await collectAuthenticatedCompletionEvidence({github:mockGithub({runs:equivalentRuns('Deploy Marketing AI Pages'),jobsByRun:{3:[
+    qtinStaging,{name:'sync',status:'completed',conclusion:'success',steps:steps(['Deploy all Pages projects with automatic rollback'])},
+  ]}}),taskId,branchRef});
+  assert.equal(evidence.verified,true);
+  assert.deepEqual(evidence.deployments[0].productionJobs,['sync (production-equivalent)']);
+});
+
 // 2026-10-20: a completed zero-job run carries no verdict; it must not mask an
 // executed run on the same head SHA, and it must never create a pass by itself.
 function ciRuns(ci){

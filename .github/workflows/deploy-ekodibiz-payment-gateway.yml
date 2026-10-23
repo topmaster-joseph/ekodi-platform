@@ -2,6 +2,15 @@ name: Deploy EKODIBIZ Payment Gateway
 
 on:
   workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Verified orchestrator source branch (post-merge dispatch)'
+        required: false
+        type: string
+      release_task_id:
+        description: 'Verified orchestrator task id (post-merge dispatch)'
+        required: false
+        type: string
   pull_request:
     paths:
       - 'ekodibiz-payment-architecture.js'
@@ -28,6 +37,11 @@ permissions:
 concurrency:
   group: ekodibiz-payment-gateway-${{ github.ref }}
   cancel-in-progress: true
+
+env:
+  # WORKER-LANE-GRAPH-001: post-merge dispatches carry the orchestrator receipt.
+  EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+  EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
 
 jobs:
   validate:
@@ -57,7 +71,7 @@ jobs:
           npx --yes wrangler@4.127.1 deploy --dry-run --config wrangler.ekodibiz-pay-gateway.toml --outdir /tmp/ekodibiz-pay-gateway-dry
 
   deploy-production:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.release_branch_ref != '' && inputs.release_task_id != ''))
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 15

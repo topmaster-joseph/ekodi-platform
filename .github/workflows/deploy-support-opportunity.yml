@@ -2,6 +2,15 @@ name: Deploy EKODI Support Opportunity
 
 on:
   workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Verified orchestrator source branch (post-merge dispatch)'
+        required: false
+        type: string
+      release_task_id:
+        description: 'Verified orchestrator task id (post-merge dispatch)'
+        required: false
+        type: string
   pull_request:
     paths:
       - 'support/**'
@@ -45,6 +54,9 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
+  # WORKER-LANE-GRAPH-001: post-merge dispatches carry the orchestrator receipt.
+  EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+  EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
   WRANGLER_VERSION: '4.129.0'
 
 jobs:

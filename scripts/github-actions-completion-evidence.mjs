@@ -9,6 +9,24 @@ const STAGING_EQUIVALENTS=Object.freeze({
     requiredSteps:Object.freeze(['Validate standalone board contract']),
   }),
 });
+// 2026-10-23: these workflows promote to production from a job that is not named
+// deploy/production, so their merged tasks stayed `assigned` forever. Each entry is
+// explicit and needs the real production deploy (and verify) steps to have succeeded;
+// a job that skipped its deploy step never counts.
+const PRODUCTION_EQUIVALENTS=Object.freeze({
+  'Deploy QTIN Group Order':Object.freeze({
+    job:'release',
+    requiredSteps:Object.freeze(['Deploy production worker','Verify production order page, health and admin boundary']),
+  }),
+  'Deploy Church History Archive':Object.freeze({
+    job:'release',
+    requiredSteps:Object.freeze(['Deploy production worker','Verify production public, admin and auth boundary']),
+  }),
+  'Deploy Marketing AI Pages':Object.freeze({
+    job:'sync',
+    requiredSteps:Object.freeze(['Deploy all Pages projects with automatic rollback']),
+  }),
+});
 
 // Explicit, non-generalizable release evidence for the approved EKODI native watch.
 // Normal Worker deployments retain their staging and production requirements.
@@ -91,15 +109,17 @@ async function collectNativeWatchEvidence({github,owner,repo,task,branch,pr,merg
 function text(value,max=500){return String(value??'').trim().slice(0,max)}
 function success(item){return item?.status==='completed'&&item?.conclusion==='success'}
 function stagingJob(job){return text(job?.name,160).toLowerCase().includes('staging')}
-function stagingEquivalentJobs(run,jobs){
-  const rule=STAGING_EQUIVALENTS[text(run?.name,160)];
+function equivalentJobs(rules,label,run,jobs){
+  const rule=rules[text(run?.name,160)];
   if(!rule)return [];
   const job=(jobs||[]).find(item=>text(item?.name,160)===rule.job&&success(item));
   if(!job)return [];
   const steps=Array.isArray(job.steps)?job.steps:[];
   const verified=rule.requiredSteps.every(required=>steps.some(step=>text(step?.name,160)===required&&success(step)));
-  return verified?[`${rule.job} (preproduction-equivalent)`]:[];
+  return verified?[`${rule.job} (${label})`]:[];
 }
+function stagingEquivalentJobs(run,jobs){return equivalentJobs(STAGING_EQUIVALENTS,'preproduction-equivalent',run,jobs)}
+function productionEquivalentJobs(run,jobs){return equivalentJobs(PRODUCTION_EQUIVALENTS,'production-equivalent',run,jobs)}
 function productionJob(job){
   const name=text(job?.name,160).toLowerCase();
   return !name.includes('staging')&&(name==='deploy'||name==='production'||name.endsWith(' / deploy')||name.endsWith(' / production')||name.includes('deploy-production')||name.includes('production deploy'));
@@ -202,6 +222,7 @@ export async function collectAuthenticatedCompletionEvidence({github,owner='topm
     const stagingJobs=jobs.filter(job=>stagingJob(job)&&success(job)).map(job=>text(job.name,160));
     if(!stagingJobs.length)stagingJobs.push(...stagingEquivalentJobs(run,jobs));
     const productionJobs=jobs.filter(job=>productionJob(job)&&success(job)).map(job=>text(job.name,160));
+    if(!productionJobs.length)productionJobs.push(...productionEquivalentJobs(run,jobs));
     if(stagingJobs.length)hasStaging=true;
     if(productionJobs.length)hasProduction=true;
     deployments.push({

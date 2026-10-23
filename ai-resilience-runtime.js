@@ -155,22 +155,31 @@ function withTimeout(promise, timeoutMs) {
   });
 }
 
+// 2026-10-23: a closed circuit (openUntil 0) used to be deleted on the next check,
+// so failures never accumulated and the breaker never opened. A closed circuit now
+// keeps counting within one cooldown window; an expired open circuit goes half-open
+// (one probe allowed, one more failure reopens it).
 function isCircuitOpen(providerId, now) {
   const state = CIRCUITS.get(providerId);
   if (!state) return false;
-  if (state.openUntil <= now) {
-    CIRCUITS.delete(providerId);
+  if (state.openUntil === 0) {
+    if (now - state.lastFailureAt > AI_RESILIENCE_POLICY.cooldownMs) CIRCUITS.delete(providerId);
     return false;
   }
-  return state.failures >= AI_RESILIENCE_POLICY.failureThreshold;
+  if (state.openUntil <= now) {
+    CIRCUITS.set(providerId, { failures: AI_RESILIENCE_POLICY.failureThreshold - 1, openUntil: 0, lastFailureAt: now });
+    return false;
+  }
+  return true;
 }
 
 function recordFailure(providerId, now) {
-  const previous = CIRCUITS.get(providerId) || { failures: 0, openUntil: 0 };
+  const previous = CIRCUITS.get(providerId) || { failures: 0, openUntil: 0, lastFailureAt: now };
   const failures = previous.failures + 1;
   CIRCUITS.set(providerId, {
     failures,
     openUntil: failures >= AI_RESILIENCE_POLICY.failureThreshold ? now + AI_RESILIENCE_POLICY.cooldownMs : 0,
+    lastFailureAt: now,
   });
 }
 
