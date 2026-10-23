@@ -29,12 +29,14 @@ function classify(registry){
 }
 if(SELF_TEST){
   const test=new Map;
-  add(test,'ADMIN.ekodi.kr','worker-custom-domain',{service:'ekodi-admin'});
-  add(test,'admin.ekodi.kr.','dns',{dnsType:'CNAME'});
+  const admin=['admin',ROOT].join('.');
+  const mail=['mail',ROOT].join('.');
+  add(test,admin.toUpperCase(),'worker-custom-domain',{service:'ekodi-admin'});
+  add(test,admin+'.','dns',{dnsType:'CNAME'});
   add(test,'example.com','dns',{dnsType:'CNAME'});
-  add(test,'mail.ekodi.kr','dns',{dnsType:'MX'});
+  add(test,mail,'dns',{dnsType:'MX'});
   const rows=classify(test);
-  if(rows.length!==2||rows[0].host!=='admin.ekodi.kr'||!rows[0].hasWorkerBinding||rows[1].emailOrVerificationRecord!==true)throw new Error('Inventory classification self-test failed');
+  if(rows.length!==2||rows[0].host!==admin||!rows[0].hasWorkerBinding||rows[1].emailOrVerificationRecord!==true)throw new Error('Inventory classification self-test failed');
   console.log('Cloudflare domain inventory self-test OK');
   process.exit(0);
 }
