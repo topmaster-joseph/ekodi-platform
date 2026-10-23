@@ -65,14 +65,60 @@ export function activeProfileId(env) {
   return normalizeProfileId(env?.EKODIPAY_PROFILE) || (text(env?.EKODIPAY_PROFILE) ? '' : DEFAULT_PROFILE);
 }
 
+/**
+ * Key values pasted into a dashboard often carry wrapping quotes, spaces or line breaks
+ * (e.g. copied from a wrangler snippet: "live_ck_…"). Those are never part of a Toss key,
+ * so they are removed. Case is kept: Toss keys are case-sensitive.
+ */
+export function cleanKey(value) {
+  let key = String(value ?? '').replace(/[\s\u200b\ufeff]+/g, '');
+  while (/^["'`]/.test(key) && /["'`]$/.test(key) && key.length > 1) key = key.slice(1, -1);
+  return key.replace(/^["'`]+|["'`]+$/g, '');
+}
+
 export function merchantKeys(env, profileId) {
   const id = normalizeProfileId(profileId);
   if (!id) return { clientKey: '', secretKey: '' };
   const suffix = id.toUpperCase();
   const legacy = id === DEFAULT_PROFILE;
   return {
-    clientKey: text(env?.[`TOSS_CLIENT_KEY__${suffix}`]) || (legacy ? text(env?.TOSS_CLIENT_KEY) : ''),
-    secretKey: text(env?.[`TOSS_SECRET_KEY__${suffix}`]) || (legacy ? text(env?.TOSS_SECRET_KEY) : ''),
+    clientKey: cleanKey(env?.[`TOSS_CLIENT_KEY__${suffix}`]) || (legacy ? cleanKey(env?.TOSS_CLIENT_KEY) : ''),
+    secretKey: cleanKey(env?.[`TOSS_SECRET_KEY__${suffix}`]) || (legacy ? cleanKey(env?.TOSS_SECRET_KEY) : ''),
+  };
+}
+
+/** Shape of a key without revealing it: where it came from and what is wrong with it. */
+function describeKey(raw, kind) {
+  if (raw == null || String(raw) === '') return { present: false };
+  const original = String(raw);
+  const key = cleanKey(original);
+  const issues = [];
+  if (original !== key) issues.push(/["'`]/.test(original) ? 'quotes-removed' : 'whitespace-removed');
+  const prefix = (/^[A-Za-z]+_[A-Za-z]+_/.exec(key) || [''])[0];
+  const expected = kind === 'client' ? /^(test|live)_g?ck_$/ : /^(test|live)_g?sk_$/;
+  if (!prefix) issues.push('no-prefix');
+  else if (prefix !== prefix.toLowerCase()) issues.push('uppercase-prefix');
+  else if (!expected.test(prefix)) issues.push(kind === 'client' && /_g?sk_$/.test(prefix) ? 'secret-key-in-client-slot' : kind === 'secret' && /_g?ck_$/.test(prefix) ? 'client-key-in-secret-slot' : 'unexpected-prefix');
+  return { present: true, prefix: prefix || '(none)', length: key.length, ok: expected.test(prefix), issues };
+}
+
+/** Admin-only diagnostics: which binding supplied each key and its shape (never the value). */
+export function keyDiagnostics(env, profileId = activeProfileId(env)) {
+  const id = normalizeProfileId(profileId);
+  const suffix = (id || DEFAULT_PROFILE).toUpperCase();
+  const legacy = (id || DEFAULT_PROFILE) === DEFAULT_PROFILE;
+  const pick = (base) => {
+    const named = `${base}__${suffix}`;
+    if (env?.[named] != null && String(env[named]) !== '') return { binding: named, raw: env[named] };
+    if (legacy && env?.[base] != null && String(env[base]) !== '') return { binding: base, raw: env[base] };
+    return { binding: named, raw: '' };
+  };
+  const client = pick('TOSS_CLIENT_KEY');
+  const secret = pick('TOSS_SECRET_KEY');
+  return {
+    profile: id || DEFAULT_PROFILE,
+    client: { binding: client.binding, ...describeKey(client.raw, 'client') },
+    secret: { binding: secret.binding, ...describeKey(secret.raw, 'secret') },
   };
 }
 

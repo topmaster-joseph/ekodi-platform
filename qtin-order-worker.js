@@ -929,7 +929,9 @@ async function handleAdminApi(request, env, url) {
     const target = targetIssueFor();
     await ensureCampaign(env, target.year, target.month);
     const rows = await env.DB.prepare('SELECT * FROM qtin_campaigns ORDER BY id DESC LIMIT 36').all();
-    return json({ campaigns: (rows.results || []).map(c => ({ ...c, state: campaignState(c) })), payment: paymentReadiness(env), me }, 200, env);
+    // Operators see which binding supplied each Toss key and its shape — never the key itself.
+    const keys = me.canWrite ? ekodipay.keyDiagnostics(env) : undefined;
+    return json({ campaigns: (rows.results || []).map(c => ({ ...c, state: campaignState(c) })), payment: paymentReadiness(env), keys, me }, 200, env);
   }
   let match = /^\/campaigns\/(\d{4}-\d{2})(\/.*)?$/.exec(path);
   if (match) {
@@ -1112,6 +1114,12 @@ function adminClient() {
     }
     setMsg(error?.message || '로그인 및 관리자 연결을 확인하지 못했습니다.');
   }
+  function keyNote(keys, pay) {
+    if (!keys || (pay.ready && pay.mode === 'live')) return '';
+    const label = { 'quotes-removed': '따옴표 자동 제거됨', 'whitespace-removed': '공백 자동 제거됨', 'no-prefix': '키 형식 아님', 'uppercase-prefix': '앞부분이 대문자', 'secret-key-in-client-slot': '시크릿 키가 들어 있음', 'client-key-in-secret-slot': '클라이언트 키가 들어 있음', 'unexpected-prefix': '예상과 다른 종류' };
+    const one = (name, k) => !k?.present ? `${name}: ${esc(k?.binding || '')} 없음` : `${name}: ${esc(k.binding)} = ${esc(k.prefix)}…(${k.length}자)${k.ok ? ' 형식 정상' : ''}${(k.issues || []).length ? ' · ' + k.issues.map(i => esc(label[i] || i)).join(', ') : ''}`;
+    return `<br><small>${one('클라이언트 키', keys.client)} / ${one('시크릿 키', keys.secret)}</small>`;
+  }
   function renderSummary() {
     const map = new Map();
     for (const r of data.byProduct) { const e = map.get(r.product_id) || { name: r.product_name, church: 0, mission: 0, other: 0, amount: 0 }; e[r.org] = (e[r.org] || 0) + Number(r.qty); e.amount += Number(r.amount); map.set(r.product_id, e); }
@@ -1146,7 +1154,7 @@ function adminClient() {
       if (!session) { location.href = authHref(); return; }
       const list = await api('/campaigns'); me = list.me;
       const pay = list.payment;
-      $('state').innerHTML = `<span class="dot"></span>${esc(me.email)} · ${me.canWrite ? '관리' : '조회'} 권한 · 결제 ${pay.ready ? (pay.mode === 'live' ? '운영 연결' : '테스트 연결 · <a href="/qtin/church">테스트 신청 열기</a>(실제 청구 없음, 집계 제외)') + (pay.mid ? ' · 상점 ' + esc(pay.merchant || '') + ' ' + esc(pay.mid) : '') : '미연결(' + esc(pay.missing.join(', ')) + ')'}`;
+      $('state').innerHTML = `<span class="dot"></span>${esc(me.email)} · ${me.canWrite ? '관리' : '조회'} 권한 · 결제 ${pay.ready ? (pay.mode === 'live' ? '운영 연결' : '테스트 연결 · <a href="/qtin/church">테스트 신청 열기</a>(실제 청구 없음, 집계 제외)') + (pay.mid ? ' · 상점 ' + esc(pay.merchant || '') + ' ' + esc(pay.mid) : '') : '미연결(' + esc(pay.missing.join(', ')) + ')'}${keyNote(list.keys, pay)}`;
       $('campaign').innerHTML = list.campaigns.map(c => `<option value="${c.id}">${c.target_year}년 ${c.target_month}월호 · ${({ open: '신청 중', scheduled: '예정', closed: '마감' })[c.state] || c.state}</option>`).join('');
       $('campaign').onchange = () => load().catch(e => setMsg(e.message));
       $('filter').oninput = renderOrders;
