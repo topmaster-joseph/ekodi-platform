@@ -85,10 +85,7 @@ if(scope==='production'){
   const zones=await pages('/zones?name='+encodeURIComponent(ROOT)+'&status=active');
   const zone=zones.find(z=>z.name===ROOT);
   if(!zone?.id)throw new Error('EKODI production DNS zone not found; incomplete inventory');
-  const dns=await pages('/zones/'+zone.id+'/dns_records?type=A'); // also fetch all types below
   const dnsAll=await pages('/zones/'+zone.id+'/dns_records');
-  // The A-only list is used solely to validate the zone read; all records are inventoried.
-  if(!Array.isArray(dns))throw new Error('A-record read failed');
   for(const record of dnsAll){sourceCounts.dnsRecords++;add(registry,record.name,'dns',{dnsType:String(record.type||'').toUpperCase()})}
   const routes=await pages('/zones/'+zone.id+'/workers/routes');
   for(const route of routes){
