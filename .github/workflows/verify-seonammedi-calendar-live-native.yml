@@ -1,0 +1,64 @@
+name: SeonamMedi Real Calendar Sharing Native Browser
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/verify-seonammedi-calendar-live-native.mjs'
+      - 'test/seonammedi-calendar-live-native.test.mjs'
+      - '.github/workflows/verify-seonammedi-calendar-live-native.yml'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/verify-seonammedi-calendar-live-native.mjs'
+      - 'test/seonammedi-calendar-live-native.test.mjs'
+      - '.github/workflows/verify-seonammedi-calendar-live-native.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: real-calendar-share-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  real-calendar-share-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - name: Checkout EKODI first-party proof
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate read-only browser source and protections
+        run: |
+          node --check scripts/verify-seonammedi-calendar-live-native.mjs
+          node --test test/seonammedi-calendar-live-native.test.mjs
+      - name: Install EKODI Chromium
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Verify real saved event in canonical and customer domains on PC/mobile
+        shell: bash
+        run: |
+          set +e
+          node scripts/verify-seonammedi-calendar-live-native.mjs --origin=https://seonammedi.kr --month=2026-10 --out=artifacts/live-calendar/customer
+          customer=$?
+          node scripts/verify-seonammedi-calendar-live-native.mjs --origin=https://ekodi.kr --month=2026-10 --out=artifacts/live-calendar/canonical
+          canonical=$?
+          if [ "$customer" -ne 0 ] || [ "$canonical" -ne 0 ]; then
+            echo 'Real public event verification is NOT complete on both domains and viewports' >&2
+            exit 1
+          fi
+          echo 'Real PUBLIC event read, deep-link, on-screen clipboard and Web Share API arguments verified for desktop/mobile on both origins.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No Google administrator sign-in or native mobile OS share-sheet was performed.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload redacted read-only screenshots and evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seonammedi-real-calendar-sharing-${{ github.run_id }}
+          path: artifacts/live-calendar/
+          if-no-files-found: warn
+          retention-days: 14
