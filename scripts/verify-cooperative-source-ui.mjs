@@ -220,7 +220,7 @@ try {
     await fs.writeFile(path.join(artifactRoot,'failure-'+index+'.html'),await pages[index].content()).catch(()=>{});
     await pages[index].screenshot({path:path.join(artifactRoot,'failure-'+index+'.png'),fullPage:true}).catch(()=>{});
   }
-  await fs.writeFile(path.join(artifactRoot,'failure.json'),JSON.stringify({ok:false,evidenceScope:'source-only',productionVerified:false,error:String(error),navigations,pageErrors,responseErrors},null,2));
+  await fs.writeFile(path.join(artifactRoot,'failure.json'),JSON.stringify({ok:false,evidenceScope:'source-only',productionVerified:false,error:String(error),completedChecks:checks,navigations,pageErrors,responseErrors},null,2));
   throw error;
 } finally {
   await browser.close(); globalThis.fetch = originalFetch; f.sqlite.close();

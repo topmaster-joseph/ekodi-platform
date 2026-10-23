@@ -200,7 +200,9 @@ export async function verifyCooperativeServiceWorkflows({ contextFor, fixture: f
     await applicant.locator('#applicationForm [name="consent"]').check();
     await applicant.locator('#applicationForm button[type="submit"]').click();
     await applicant.waitForFunction(() => document.querySelector('#applicationResult').textContent.includes('접수되었습니다'));
-    const application = f.sqlite.prepare('SELECT status,business FROM cooperative_applications WHERE workspace_id=? AND person_id=?').get(coop.workspaceId, 'applicant@example.test');
+    const application = f.sqlite.prepare('SELECT person_id,status,business FROM cooperative_applications WHERE workspace_id=? AND email=?').get(coop.workspaceId, 'applicant@example.test');
+    assert.ok(application, 'Submitted request must persist under the verified Core identity');
+    assert.equal(application.person_id, 'person:applicant@example.test');
     assert.equal(application.status, 'pending'); assert.equal(application.business, '가상 신청 사업체');
     assert.equal(f.sqlite.prepare('SELECT count(*) AS count FROM customer_access_grants').get().count, grantsBefore);
     proof(coop, 'participation-application-stored-without-membership-grant', { width: 390 });
