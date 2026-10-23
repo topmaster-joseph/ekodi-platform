@@ -14,32 +14,32 @@ const realms={
   community:{name:'Community',returnTo:'https://ekodi.kr/community/',open:true,kind:'community'},
   singles:{name:'EKODI 동행',returnTo:'https://ekodi.kr/singles/',origins:['https://ekodi.kr'],open:true,kind:'singles'},
   church:{name:'EKODI Church',returnTo:'https://ekodi.kr/ekodichurch/',origins:['https://ekodi.kr'],open:true,kind:'church'},
-  biz:{name:'EKODI Biz',returnTo:'https://biz.ekodi.kr/',open:true,kind:'biz'},
-  trade:{name:'EKODI Trading',returnTo:'https://trade.ekodi.kr/',open:true,kind:'trade'},
+  biz:{name:'EKODI Biz',returnTo:'https://ekodi.kr/ekodibiz/',open:true,kind:'biz'},
+  trade:{name:'EKODI Trading',returnTo:'https://ekodi.kr/ekodibiz/trade/',open:true,kind:'trade'},
   mall:{name:'EKODI Mall',returnTo:'https://ekodi.kr/ekodimall',origins:['https://ekodi.kr'],open:true,kind:'mall'},
   pay:{name:'EKODI Pay',returnTo:'https://ekodi.kr/ekodipay/',open:true,kind:'pay'},
-  books:{name:'EKODI Books',returnTo:'https://books.ekodi.kr/',open:true,kind:'books'},
-  lab:{name:'EKODI Lab',returnTo:'https://lab.ekodi.kr/',open:true,kind:'lab'},
+  books:{name:'EKODI Books',returnTo:'https://ekodi.kr/books/',open:true,kind:'books'},
+  lab:{name:'EKODI Lab',returnTo:'https://ekodi.kr/ekodilab/',open:true,kind:'lab'},
   mission:{name:'EKODI Mission',returnTo:'https://ekodi.kr/ekodimission/',adminReturnTo:'https://ekodi.kr/ekodimission/admin',origins:['https://ekodi.kr'],open:true,kind:'mission'},
-  edu:{name:'EKODI Education',returnTo:'https://edu.ekodi.kr/',open:true,kind:'edu'},
+  edu:{name:'EKODI Education',returnTo:'https://ekodi.kr/edu/',open:true,kind:'edu'},
   learn:{name:'EKODI Learning Fabric',returnTo:'https://ekodi.kr/learn',origins:['https://ekodi.kr'],open:true,kind:'learn',operatingModel:'public-service'},
-  media:{name:'EKODI Media',returnTo:'https://media.ekodi.kr/',open:true,kind:'media'},
-  social:{name:'EKODI Social',returnTo:'https://social.ekodi.kr/',open:true,kind:'social'},
-  energy:{name:'Energy AI',returnTo:'https://energy.ekodi.kr/',open:true,kind:'energy'},
+  media:{name:'EKODI Media',returnTo:'https://ekodi.kr/media/',open:true,kind:'media'},
+  social:{name:'EKODI Social',returnTo:'https://ekodi.kr/social/',open:true,kind:'social'},
+  energy:{name:'Energy AI',returnTo:'https://ekodi.kr/energy/',open:true,kind:'energy'},
   work:{name:'에코디워크 · 구인구직',returnTo:'https://ekodi.kr/work',origins:['https://ekodi.kr'],open:true,kind:'work'},
   messenger:{name:'EKODI Messenger',returnTo:'https://ekodi.kr/messenger',open:true,kind:'messenger'},
-  invest:{name:'EKODI Investment',returnTo:'https://invest.ekodi.kr/',open:true,kind:'invest'},
+  invest:{name:'EKODI Investment',returnTo:'https://ekodi.kr/invest/',open:true,kind:'invest'},
   support:{name:'EKODI Support AI',returnTo:'https://ekodi.kr/support/',open:true,kind:'support'},
-  publishing:{name:'Publishing',returnTo:'https://publishing.ekodi.kr/',open:true,kind:'publishing'},
+  publishing:{name:'Publishing',returnTo:'https://ekodi.kr/publishing/',open:true,kind:'publishing'},
   money:{name:'EKODI Money',returnTo:'https://ekodi.kr/money/',origins:['https://ekodi.kr'],open:true,kind:'money'},
   mail:{name:'EKODI Mail',returnTo:'https://ekodi.kr/mail',open:true,kind:'mail'},
   live:{name:'EKODI Live',returnTo:'https://ekodi.kr/live',open:true,kind:'live'},
-  cloud:{name:'EKODI Cloud',returnTo:'https://cloud.ekodi.kr/',open:true,kind:'cloud'},
-  cafe:{name:'EKODI Cafe',returnTo:'https://cafe.ekodi.kr/',open:true,kind:'cafe'},
+  cloud:{name:'EKODI Cloud',returnTo:'https://ekodi.kr/cloud/',open:true,kind:'cloud'},
+  cafe:{name:'EKODI Cafe',returnTo:'https://ekodi.kr/cafe/',open:true,kind:'cafe'},
   'cgma-client':{name:'청계상권 고객관리',returnTo:'https://ekodi.kr/cgma/client/',origins:['https://ekodi.kr','https://cgma.or.kr','https://cgma.ekodi.kr'],open:false,kind:'cgma-client'},
-  'jadam-client':{name:'자담치킨 목포대점 고객관리',returnTo:'https://jadam.ai.ekodi.kr/',origins:['https://jadam.ai.ekodi.kr','https://jadam.ekodi.kr'],open:false,kind:'jadam-client'},
-  'pizzamaru-client':{name:'피자마루 목포대점 고객관리',returnTo:'https://pizzamaru.ai.ekodi.kr/',origins:['https://pizzamaru.ai.ekodi.kr','https://pizzamaru.ekodi.kr'],open:false,kind:'pizzamaru-client'},
-  'yogurt-client':{name:'요거트퍼플 목포대점 고객관리',returnTo:'https://yogurt.ai.ekodi.kr/',origins:['https://yogurt.ai.ekodi.kr','https://yogurt.ekodi.kr'],open:false,kind:'yogurt-client'}
+  'jadam-client':{name:'자담치킨 목포대점 고객관리',returnTo:'https://ekodi.kr/jadam/marketing/',origins:['https://jadam.ai.ekodi.kr','https://jadam.ekodi.kr'],open:false,kind:'jadam-client'},
+  'pizzamaru-client':{name:'피자마루 목포대점 고객관리',returnTo:'https://ekodi.kr/pizzamaru/marketing/',origins:['https://pizzamaru.ai.ekodi.kr','https://pizzamaru.ekodi.kr'],open:false,kind:'pizzamaru-client'},
+  'yogurt-client':{name:'요거트퍼플 목포대점 고객관리',returnTo:'https://ekodi.kr/yogurt/marketing/',origins:['https://yogurt.ai.ekodi.kr','https://yogurt.ekodi.kr'],open:false,kind:'yogurt-client'}
 };
 const params=new URLSearchParams(location.search);
 const site=params.get('site')||'portal';
@@ -69,8 +69,8 @@ async function manifestRealm(id){
 function implicitEkodiRealm(id){
   const value=String(id||'').trim().toLowerCase();
   if(!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(value)||value==='portal')return null;
-  const origin=`https://${value}.ekodi.kr`;
-  return {name:value.replace(/-/g,' ').toUpperCase(),returnTo:`${origin}/`,origins:[origin],open:true,kind:value};
+  // Unknown realm IDs cannot mint new production web subdomains; use registered manifest or portal.
+  return null;
 }
 const manifestConfig=await manifestRealm(site);
 const baseConfig=realms[site]||manifestConfig||implicitEkodiRealm(site)||realms.portal;
@@ -87,10 +87,13 @@ function safeReturn(raw){
     const seonammediCanonical=config.kind==='seonammedi'&&target.origin==='https://ekodi.kr'&&(target.pathname==='/seonammedi'||target.pathname.startsWith('/seonammedi/'));
     // A site-specific login may return only to that site's registered host or canonical mount.
     // Never silently accept /my or another EKODI workspace as a SeonamMedi return target.
-    const internalEkodi=config.kind==='seonammedi'?seonammediCanonical:(config.kind==='cgma-client'?cgmaPlatform:(hostname==='ekodi.kr'||hostname.endsWith('.ekodi.kr')));
+    const prefix=fallback.pathname.replace(/\/$/,'');
+    const sameCanonicalPath=target.origin==='https://ekodi.kr'&&fallback.origin==='https://ekodi.kr'&&(prefix?(target.pathname===prefix||target.pathname.startsWith(prefix+'/')):(config.kind==='space'||(config.kind==='portal'&&target.pathname==='/')));
+    const internalEkodi=config.kind==='seonammedi'?seonammediCanonical:(config.kind==='cgma-client'?cgmaPlatform:sameCanonicalPath);
+    const trustedLegacy=target.origin!=='https://ekodi.kr'&&allowedOrigins.has(target.origin);
     const missionPath=config.kind!=='mission'||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')));
     const churchPath=config.kind!=='church'||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodichurch'||target.pathname.startsWith('/ekodichurch/')));
-    if(target.protocol!=='https:'||target.username||target.password||(!allowedOrigins.has(target.origin)&&!internalEkodi)||!missionPath||!churchPath)return fallback.href;
+    if(target.protocol!=='https:'||target.username||target.password||(!trustedLegacy&&!internalEkodi)||!missionPath||!churchPath)return fallback.href;
     target.hash='';
     return target.href;
   }catch{return fallback.href}

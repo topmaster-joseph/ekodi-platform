@@ -42,7 +42,9 @@ test('user-site special auth modules preserve only allowed same-service HTTPS re
     assert.match(source,/const RETURN_TO=safeReturn/);
   }
   assert.match(client,/const allowedOrigins=new Set\(config\.origins\|\|\[fallback\.origin\]\)/);
-  assert.match(client,/!allowedOrigins\.has\(target\.origin\)/);
+  assert.match(client,/const trustedLegacy=target\.origin!=='https:\/\/ekodi\.kr'&&allowedOrigins\.has\(target\.origin\)/);
+  assert.match(client,/!trustedLegacy&&!internalEkodi/);
+  assert.match(client,/sameCanonicalPath/);
   assert.match(business,/target\.origin!=='https:\/\/business\.ekodi\.kr'/);
   assert.match(author,/target\.origin!=='https:\/\/author\.ekodi\.kr'/);
 });
