@@ -247,3 +247,14 @@ body.admin-compact #deviceControlPanel .device-enrollment-result code{
   body.admin-compact #deviceControlPanel .device-quick-connect{grid-template-columns:1fr!important}
 }
 .ekodi-pos-agent-summary{display:grid;gap:4px;padding:11px 12px;border:1px solid rgba(125,211,252,.2);border-radius:12px;background:rgba(2,6,23,.18)}.ekodi-pos-agent-summary strong{font-size:12px}.ekodi-pos-agent-summary span{font-size:11px;opacity:.78;overflow-wrap:anywhere}.ekodi-pos-agent-summary small{font-size:10px;opacity:.58}
+
+/* Device Control: non-invasive screen-off and console task diagnosis. */
+#deviceControlPanel .device-quiet-panel{display:grid;gap:10px;padding:14px 16px;border:1px solid rgba(125,211,252,.22);border-radius:14px;background:rgba(14,116,144,.08);min-width:0}
+#deviceControlPanel .device-quiet-panel .device-subhead{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+#deviceControlPanel .device-quiet-panel .device-subhead h3{margin:0}
+#deviceControlPanel .device-quiet-panel .device-inline-actions{display:flex;flex-wrap:wrap;gap:8px}
+#deviceControlPanel .device-quiet-results{display:grid;gap:6px;max-height:290px;overflow-y:auto}
+#deviceControlPanel .device-quiet-task{display:flex;align-items:flex-start;flex-direction:column;gap:4px;padding:8px 10px;border-radius:8px;background:rgba(100,116,139,.09);min-width:0}
+#deviceControlPanel .device-quiet-task strong,#deviceControlPanel .device-quiet-task span{max-width:100%;overflow-wrap:break-word}
+#deviceControlPanel .device-quiet-task span{font-size:12px;opacity:.8}
+@media(max-width:390px){#deviceControlPanel .device-quiet-panel{padding:11px}#deviceControlPanel .device-quiet-panel .device-inline-actions>button{width:100%}}
