@@ -2,6 +2,8 @@ import { validateBuyer, checkoutConfig } from './checkout-buyer.js';
 import { commerceEventStatement } from './commerce-events.js';
 import { paymentExecutionBlockers, paymentProviderPublicView, selectedPaymentProvider } from './payment-capabilities.js';
 import { routeCommerceModel } from './commerce-os.js';
+import { confirmPayment as ekodipayConfirm } from '../../../ekodipay-core.js';
+import { handleTossWebhook } from './payment-reconciliation.js';
 
 const DEFAULT_ALLOWED_ORIGINS = [
   'https://ekodi.kr',
@@ -22,6 +24,13 @@ function cleanText(value, max = 500) {
 function cleanList(value, maxItems = 5, maxLength = 180) {
   const source = Array.isArray(value) ? value : String(value || '').split(/[\n,]/);
   return source.map((item) => cleanText(item, maxLength)).filter(Boolean).slice(0, maxItems);
+}
+
+// EKODI-MALL-PAY-RECON-001: 재고. 비우면 null(재고 관리 안 함), 0~100000 정수면 판매 가능 수량.
+export function cleanStock(value) {
+  if (value === '' || value === null || value === undefined) return null;
+  const number = Math.trunc(Number(value));
+  return Number.isFinite(number) && number >= 0 && number <= 100_000 ? number : null;
 }
 
 function cleanPrice(value) {
@@ -178,6 +187,8 @@ export function normalizeProductInput(body = {}) {
       audience: cleanText(product.audience, 500),
       oneLine: cleanText(product.oneLine, 300),
       price: cleanPrice(product.price),
+      stockProvided: Object.prototype.hasOwnProperty.call(product, 'stockQuantity'),
+      stockQuantity: cleanStock(product.stockQuantity),
       benefits: cleanList(product.benefits),
       specs: cleanList(product.specs),
       story: cleanText(product.story, 3000),
@@ -292,6 +303,7 @@ function rowToOwnerProduct(row) {
       audience: row.audience || '',
       oneLine: row.one_line || '',
       price: row.price,
+      stockQuantity: row.stock_quantity ?? null,
       benefits: JSON.parse(row.benefits_json || '[]'),
       specs: JSON.parse(row.specs_json || '[]'),
       story: row.story || '',
@@ -322,11 +334,12 @@ async function saveProduct(env, user, body, existingId = '') {
     const current = await getOwnerProduct(env, user.id, existingId);
     if (!current) return { notFound: true };
     await env.DB.prepare(`UPDATE products SET
-      store_id=?,seller_display_name=?,seller_type=?,sale_type=?,category=?,primary_region_id=?,region_ids_json=?,region_label=?,local_relationship=?,region_verified=0,name=?,audience=?,one_line=?,price=?,benefits_json=?,specs_json=?,story=?,fulfillment=?,contact=?,affiliate_url=?,content_json=?,version=version+1,updated_at=?
+      store_id=?,seller_display_name=?,seller_type=?,sale_type=?,category=?,primary_region_id=?,region_ids_json=?,region_label=?,local_relationship=?,region_verified=0,name=?,audience=?,one_line=?,price=?,stock_quantity=CASE WHEN ?=1 THEN ? ELSE stock_quantity END,benefits_json=?,specs_json=?,story=?,fulfillment=?,contact=?,affiliate_url=?,content_json=?,version=version+1,updated_at=?
       WHERE id=? AND seller_id=?`)
       .bind(linkedStoreId, seller.displayName, value.sellerType, value.product.saleType, value.product.category, value.product.region?.primaryRegionId || '', JSON.stringify(value.product.region?.regionIds || []),
         value.product.region?.label || '', value.product.region?.relationship || '', value.product.name,
-        value.product.audience, value.product.oneLine, value.product.price, JSON.stringify(value.product.benefits), JSON.stringify(value.product.specs),
+        value.product.audience, value.product.oneLine, value.product.price, value.product.stockProvided ? 1 : 0, value.product.stockQuantity,
+        JSON.stringify(value.product.benefits), JSON.stringify(value.product.specs),
         value.product.story, value.product.fulfillment, value.contact, value.product.affiliateUrl, JSON.stringify(value.content), now, existingId, user.id).run();
     return { product: rowToOwnerProduct(await getOwnerProduct(env, user.id, existingId)) };
   }
@@ -334,11 +347,11 @@ async function saveProduct(env, user, body, existingId = '') {
   const shareCode = randomCode(12);
   const publicUrl = makePublicUrl(env.MALL_BASE_URL, shareCode);
   await env.DB.prepare(`INSERT INTO products
-    (id,seller_id,store_id,share_code,public_url,seller_display_name,seller_type,sale_type,category,primary_region_id,region_ids_json,region_label,local_relationship,region_verified,name,audience,one_line,price,benefits_json,specs_json,story,fulfillment,contact,affiliate_url,content_json,status,checkout_ready,version,created_at,updated_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,?,?,?,?,'draft',0,1,?,?)`)
+    (id,seller_id,store_id,share_code,public_url,seller_display_name,seller_type,sale_type,category,primary_region_id,region_ids_json,region_label,local_relationship,region_verified,name,audience,one_line,price,stock_quantity,benefits_json,specs_json,story,fulfillment,contact,affiliate_url,content_json,status,checkout_ready,version,created_at,updated_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,'draft',0,1,?,?)`)
     .bind(id, user.id, linkedStoreId, shareCode, publicUrl, seller.displayName, value.sellerType, value.product.saleType, value.product.category,
       value.product.region?.primaryRegionId || '', JSON.stringify(value.product.region?.regionIds || []), value.product.region?.label || '', value.product.region?.relationship || '',
-      value.product.name, value.product.audience, value.product.oneLine, value.product.price, JSON.stringify(value.product.benefits),
+      value.product.name, value.product.audience, value.product.oneLine, value.product.price, value.product.stockQuantity, JSON.stringify(value.product.benefits),
       JSON.stringify(value.product.specs), value.product.story, value.product.fulfillment, value.contact, value.product.affiliateUrl,
       JSON.stringify(value.content), now, now).run();
   return { product: rowToOwnerProduct(await getOwnerProduct(env, user.id, id)) };
@@ -487,6 +500,8 @@ export async function buildOrderQuote(env, { shareCode, attributionToken = '', q
   if (row.direct_sale_status !== 'verified') blockers.push('seller-verification');
   if (row.seller_type === 'business' && !businessStoreVerified) blockers.push('business-store-verification');
   if (!row.checkout_ready) blockers.push('product-checkout-gate');
+  const stockManaged = row.stock_quantity !== null && row.stock_quantity !== undefined;
+  if (stockManaged && Number(row.stock_quantity) < qty) blockers.push('out-of-stock');
   for (const blocker of paymentExecutionBlockers(env)) blockers.push(blocker);
   return {
     status: 200,
@@ -505,6 +520,8 @@ export async function buildOrderQuote(env, { shareCode, attributionToken = '', q
       pgIncluded: true,
       vatIncluded: true,
       ...amounts,
+      stockManaged,
+      stockAvailable: stockManaged ? Number(row.stock_quantity) : null,
       checkoutReady: blockers.length === 0,
       blockers
     }
@@ -523,13 +540,21 @@ export async function createOrder(env, input) {
   const id = orderId();
   const now = isoNow();
   const expiresAt = addMinutesIso(30);
+  // EKODI-MALL-PAY-RECON-001: 재고 관리 상품은 주문 생성 시 조건부 차감(예약). 동시 주문이 와도 0 아래로 내려가지 않는다.
+  let reserved = 0;
+  if (quote.stockManaged) {
+    const hold = await env.DB.prepare(`UPDATE products SET stock_quantity=stock_quantity-?, updated_at=?
+      WHERE id=? AND stock_quantity IS NOT NULL AND stock_quantity>=?`).bind(quote.quantity, now, quote.productId, quote.quantity).run();
+    if (Number(hold?.meta?.changes ?? hold?.changes ?? 0) < 1) return { error: '재고가 부족합니다.', code: 'OUT_OF_STOCK', status: 409, quote };
+    reserved = quote.quantity;
+  }
   const orderInsert = env.DB.prepare(`INSERT INTO orders
     (id,product_id,seller_id,store_id,status,quantity,unit_amount,gross_amount,currency,attribution_type,attribution_token,
-     fee_rate_percent,platform_fee_amount,seller_settlement_amount,expires_at,created_at,updated_at)
-    VALUES (?,?,?,?,'payment_pending',?,?,?,?,?,?,?,?,?,?,?,?)`)
+     fee_rate_percent,platform_fee_amount,seller_settlement_amount,expires_at,stock_reserved,created_at,updated_at)
+    VALUES (?,?,?,?,'payment_pending',?,?,?,?,?,?,?,?,?,?,?,?,?)`)
     .bind(id, quote.productId, quote.sellerId, quote.storeId, quote.quantity, quote.unitAmount, quote.grossAmount, quote.currency,
       quote.attributionType, cleanText(input.attributionToken, 100) || null, quote.feeRatePercent, quote.platformFeeAmount,
-      quote.sellerSettlementAmount, expiresAt, now, now);
+      quote.sellerSettlementAmount, expiresAt, reserved, now, now);
   const orderEvent = commerceEventStatement(env, {
     eventType:'order.created', aggregateType:'order', aggregateId:id, actor:'mall-order-engine', action:'order.prepare',
     idempotencyKey:`order.created:${id}`, occurredAt:now,
@@ -539,7 +564,15 @@ export async function createOrder(env, input) {
   const buyerInsert = env.DB.prepare(`INSERT INTO order_buyers
     (order_id,name,phone,email,postcode,address1,address2,memo,privacy_consent_at,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)`)
     .bind(id, buyer.name, buyer.phone, buyer.email, buyer.postcode, buyer.address1, buyer.address2, buyer.memo, now, now);
-  await env.DB.batch([orderInsert, buyerInsert, orderEvent.statement]);
+  try {
+    await env.DB.batch([orderInsert, buyerInsert, orderEvent.statement]);
+  } catch (error) {
+    if (reserved) {
+      await env.DB.prepare('UPDATE products SET stock_quantity=stock_quantity+? WHERE id=? AND stock_quantity IS NOT NULL')
+        .bind(reserved, quote.productId).run().catch(restoreError => console.error('mall stock restore failed', restoreError));
+    }
+    throw error;
+  }
   return {
     status: 201,
     order: {
@@ -558,28 +591,10 @@ export async function createOrder(env, input) {
   };
 }
 
-function basicAuth(secret) {
-  return `Basic ${btoa(`${secret}:`)}`;
-}
-
 async function confirmTossPayment(env, order, paymentKey, amount) {
-  if (!env.TOSS_SECRET_KEY) throw new Error('TOSS_SECRET_KEY_NOT_CONFIGURED');
-  const response = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
-    method: 'POST',
-    headers: {
-      authorization: basicAuth(env.TOSS_SECRET_KEY),
-      'content-type': 'application/json',
-      // 같은 주문의 승인 재시도가 이중 승인되지 않도록 멱등키를 보낸다.
-      'idempotency-key': `mall-confirm-${order.id}`
-    },
-    body: JSON.stringify({ paymentKey, orderId: order.id, amount })
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(cleanText(body.code || body.message || `TOSS_${response.status}`, 200));
-    error.status = response.status;
-    throw error;
-  }
+  // EKODI-MALL-PAY-RECON-001: 토스 직접 호출 대신 공통 결제 모듈(EKODIPAY, 상점 프로필 mall) 경유.
+  // 같은 주문의 승인 재시도가 이중 승인되지 않도록 주문별 멱등키를 보낸다.
+  const body = await ekodipayConfirm(env, cleanText(env.EKODIPAY_PROFILE, 20) || 'mall', { paymentKey, orderId: order.id, amount }, `mall-confirm-${order.id}`);
   if (body.orderId !== order.id || Math.trunc(Number(body.totalAmount)) !== order.gross_amount) throw new Error('TOSS_PAYMENT_MISMATCH');
   return body;
 }
@@ -647,7 +662,14 @@ async function confirmOrderPayment(env, body) {
   const guard = assessOrderForConfirmation(order, amount);
   if (!guard.ok) return { error:guard.error, status:guard.status, code:guard.code };
   const payment = await confirmTossPayment(env, order, paymentKey, amount);
-  await recordConfirmedPayment(env, order, payment, 'TOSS');
+  try {
+    await recordConfirmedPayment(env, order, payment, 'TOSS');
+    if (payment.status === 'DONE') await env.DB.prepare('UPDATE orders SET stock_reserved=0 WHERE id=?').bind(order.id).run();
+  } catch (error) {
+    // 토스 승인은 끝났는데 기록이 실패 — 결제는 유효하다. 주기 대사(cron)·웹훅이 토스 재조회로 기록을 맞춘다.
+    console.error('mall payment record failed after toss approval; reconciliation will retry', { orderId: order.id, message: error?.message });
+    return { status: 202, payment: { paymentKey: payment.paymentKey, orderId: payment.orderId, status: payment.status, totalAmount: payment.totalAmount, approvedAt: payment.approvedAt || null }, recordPending: true };
+  }
   return { status:200, payment:{ paymentKey:payment.paymentKey, orderId:payment.orderId, status:payment.status, totalAmount:payment.totalAmount, approvedAt:payment.approvedAt || null } };
 }
 async function listSellerOrders(env, sellerId, limit) {
@@ -739,11 +761,16 @@ export default {
       const body = await readJson(request);
       try {
         const result = await confirmOrderPayment(env, body);
-        return json(result.payment ? { payment: result.payment, idempotent: Boolean(result.idempotent) } : { error: result.error }, result.status, origin, env);
+        return json(result.payment ? { payment: result.payment, idempotent: Boolean(result.idempotent), recordPending: Boolean(result.recordPending) } : { error: result.error }, result.status, origin, env);
       } catch (error) {
         console.error('mall toss confirm', error);
         return json({ error: '결제 승인 검증에 실패했습니다.' }, Number(error.status) || 502, origin, env);
       }
+    }
+    if (request.method === 'POST' && url.pathname === '/api/public/payments/webhook') {
+      const body = await readJson(request);
+      const result = await handleTossWebhook(env, body || {});
+      return json(result.body, result.status, origin, env);
     }
     if (request.method === 'GET' && url.pathname === '/api/public/fees') {
       return json({ individual: FEE_RATES, businessStore: 10, pgIncluded: true, vatIncluded: true, proAiSubscriptionSeparate: true }, 200, origin, env);
