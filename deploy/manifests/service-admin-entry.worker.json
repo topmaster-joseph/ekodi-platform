@@ -4,159 +4,53 @@
     "name": "ekodi-service-admin-entry",
     "config": "wrangler.service-admin-entry.toml",
     "allowFirstDeploy": true,
+    "dnsRetiredHosts": [
+      "auth.ekodi.kr",
+      "cloud.ekodi.kr",
+      "live.ekodi.kr",
+      "live.biz.ekodi.kr",
+      "live.church.ekodi.kr",
+      "live.lab.ekodi.kr",
+      "trade.ekodi.kr",
+      "trade.biz.ekodi.kr",
+      "invest.ekodi.kr",
+      "messenger.ekodi.kr"
+    ],
     "requests": [
       {
         "url": "https://ai.ekodi.kr/admin",
-        "statuses": [
-          307
-        ],
+        "statuses": [307],
         "redirect": "manual",
-        "headerExpect": [
-          "location: https://admin.ekodi.kr/",
-          "cache-control: no-store",
-          "x-ekodi-admin-entry: central-handoff-v1"
-        ]
-      },
-      {
-        "url": "https://auth.ekodi.kr/admin",
-        "statuses": [
-          307
-        ],
-        "redirect": "manual",
-        "headerExpect": [
-          "location: https://admin.ekodi.kr/",
-          "cache-control: no-store"
-        ]
-      },
-      {
-        "url": "https://cloud.ekodi.kr/admin",
-        "statuses": [
-          307
-        ],
-        "redirect": "manual",
-        "headerExpect": [
-          "location: https://admin.ekodi.kr/"
-        ]
-      },
-      {
-        "url": "https://live.ekodi.kr/admin",
-        "statuses": [
-          307
-        ],
-        "redirect": "manual",
-        "headerExpect": [
-          "location: https://admin.ekodi.kr/"
-        ]
-      },
-      {
-        "url": "https://live.biz.ekodi.kr/admin",
-        "statuses": [
-          307
-        ],
-        "redirect": "manual",
-        "headerExpect": [
-          "location: https://admin.ekodi.kr/"
-        ]
-      },
-      {
-        "url": "https://live.church.ekodi.kr/admin",
-        "statuses": [
-          307
-        ],
-        "redirect": "manual",
-        "headerExpect": [
-          "location: https://admin.ekodi.kr/"
-        ]
-      },
-      {
-        "url": "https://live.lab.ekodi.kr/admin",
-        "statuses": [
-          307
-        ],
-        "redirect": "manual",
-        "headerExpect": [
-          "location: https://admin.ekodi.kr/"
-        ]
+        "headerExpect": ["location: https://ekodi.kr/admin/?source=ai.ekodi.kr", "cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"],
+        "rollbackHeaderExpect": ["cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"]
       },
       {
         "url": "https://mail.biz.ekodi.kr/admin",
-        "statuses": [
-          307
-        ],
+        "statuses": [307],
         "redirect": "manual",
-        "headerExpect": [
-          "location: https://admin.ekodi.kr/"
-        ]
+        "headerExpect": ["location: https://ekodi.kr/admin/?source=mail.biz.ekodi.kr", "cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"],
+        "rollbackHeaderExpect": ["cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"]
       },
       {
         "url": "https://mail.church.ekodi.kr/admin",
-        "statuses": [
-          307
-        ],
+        "statuses": [307],
         "redirect": "manual",
-        "headerExpect": [
-          "location: https://admin.ekodi.kr/"
-        ]
-      },
-      {
-        "url": "https://trade.ekodi.kr/admin",
-        "statuses": [
-          307
-        ],
-        "redirect": "manual",
-        "headerExpect": [
-          "location: https://admin.ekodi.kr/"
-        ]
-      },
-      {
-        "url": "https://trade.biz.ekodi.kr/admin",
-        "statuses": [
-          307
-        ],
-        "redirect": "manual",
-        "headerExpect": [
-          "location: https://admin.ekodi.kr/"
-        ]
-      },
-      {
-        "url": "https://invest.ekodi.kr/admin",
-        "statuses": [
-          307
-        ],
-        "redirect": "manual",
-        "headerExpect": [
-          "location: https://admin.ekodi.kr/"
-        ]
-      },
-      {
-        "url": "https://messenger.ekodi.kr/admin",
-        "statuses": [
-          307
-        ],
-        "redirect": "manual",
-        "headerExpect": [
-          "location: https://admin.ekodi.kr/"
-        ]
+        "headerExpect": ["location: https://ekodi.kr/admin/?source=mail.church.ekodi.kr", "cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"],
+        "rollbackHeaderExpect": ["cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"]
       },
       {
         "url": "https://management.ekodi.kr/admin",
-        "statuses": [
-          307
-        ],
+        "statuses": [307],
         "redirect": "manual",
-        "headerExpect": [
-          "location: https://admin.ekodi.kr/"
-        ]
+        "headerExpect": ["location: https://ekodi.kr/admin/?source=management.ekodi.kr", "cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"],
+        "rollbackHeaderExpect": ["cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"]
       },
       {
         "url": "https://marketing-api.ekodi.kr/admin",
-        "statuses": [
-          307
-        ],
+        "statuses": [307],
         "redirect": "manual",
-        "headerExpect": [
-          "location: https://admin.ekodi.kr/"
-        ]
+        "headerExpect": ["location: https://ekodi.kr/admin/?source=marketing-api.ekodi.kr", "cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"],
+        "rollbackHeaderExpect": ["cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"]
       }
     ]
   }

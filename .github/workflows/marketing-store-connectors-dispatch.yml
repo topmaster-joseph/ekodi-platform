@@ -15,6 +15,7 @@ on:
 permissions:
   contents: read
   actions: write
+  pull-requests: read
 
 concurrency:
   group: marketing-store-connectors-control-dispatch
@@ -39,10 +40,8 @@ jobs:
           grep -Fq '/api/marketing/connectors/bridge/pair' marketing-order-connectors.js
           grep -Fq '/api/marketing/connectors/bridge/ingest' marketing-order-connectors.js
           grep -Fq 'externalWriteBack:false' marketing-order-connectors.js
+      # CONTROL-API-DISPATCH-RECEIPT-001: dispatch with the merged orchestrator receipt.
       - name: Dispatch guarded Control API workflow
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          gh workflow run deploy-control-api.yml --ref main
-          echo 'Guarded Control API deployment dispatched for store connector change.'
+        run: node scripts/dispatch-control-api-release.mjs
