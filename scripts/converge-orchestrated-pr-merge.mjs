@@ -219,6 +219,11 @@ const marketingGrowthTouched=changedFiles.some(file=>[
   'mall-promotion-automation.js',
   'marketing-growth-worker.js',
   'marketing-growth-entry.js',
+  // marketing-growth-worker.js imports these channel-*.js modules. They also match the
+  // Marketing Publishing regex, but the Growth worker bundles its own copy: ship both lanes.
+  'channel-publishing-catalog.js',
+  'channel-meta-reels-adapter.js',
+  'channel-publish-hardening.js',
   'wrangler.marketing-growth.toml',
   '.github/workflows/deploy-marketing-growth.yml',
 ].includes(file));

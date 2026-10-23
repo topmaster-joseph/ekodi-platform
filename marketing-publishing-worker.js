@@ -8,6 +8,8 @@ import { disconnectManagedConnection, handleYoutubeCallback, listManagedConnecti
 import { channelServiceBridgeReady, channelServiceBridgeSchemaReady, listServiceChannels, scheduleServiceYoutube } from './channel-service-bridge.js';
 import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
 import { channelAdminServices, canonicalServiceChannelAdminUrl } from './admin-service-catalog.js';
+import { FB_REELS_DAILY_LIMIT, absoluteFacebookUrl, instagramPermalink, instagramPublishingQuota, instagramQuotaDecision, metaAiLabelFields, publishFacebookReel, publishInstagramReel } from './channel-meta-reels-adapter.js';
+import { abandonIdempotentRequest, assertAiCaptionHonest, beginIdempotentRequest, canonicalPostUrl, completeIdempotentRequest, contentFormat, contentIsAiGenerated, markVariantPublished, recentPublishedReels, resolveYoutubePrivacy, tokenHealthDue } from './channel-publish-hardening.js';
 
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -438,6 +440,23 @@ async function queuePublish(request, env, identity, subject) {
   return json(request, env, {ok:true,contentId,scheduleKind,scheduledAt,recurrenceRule:recurrence,jobs,siteIds:requestedSiteIds,entitlement}, 201);
 }
 
+// Idempotency-Key: 같은 주체가 같은 키로 다시 요청하면 새 작업을 만들지 않고 처음 응답(작업 id)을 돌려준다.
+async function idempotentQueuePublish(request, env, identity, subject) {
+  const scope = `marketing-publishing:/v1/publish:${subject.type}:${subject.key}`;
+  const claim = await beginIdempotentRequest(env.DB,{scope,key:request.headers.get('idempotency-key')});
+  if (claim.state === 'invalid') return json(request,env,{error:'IDEMPOTENCY_KEY_INVALID'},400);
+  if (claim.state === 'in_progress') return json(request,env,{error:'IDEMPOTENCY_REQUEST_IN_PROGRESS'},409);
+  if (claim.state === 'replay') return json(request,env,{...claim.body,idempotent:true},claim.status);
+  let response;
+  try { response = await queuePublish(request,env,identity,subject); }
+  catch (error) { if (claim.state === 'new') await abandonIdempotentRequest(env.DB,claim.id).catch(()=>{}); throw error; }
+  if (claim.state !== 'new') return response;
+  if (response.status >= 400 && response.status < 500) { await abandonIdempotentRequest(env.DB,claim.id); return response; }
+  const body = await response.clone().json().catch(()=>({}));
+  await completeIdempotentRequest(env.DB,claim.id,{jobId:Array.isArray(body.jobs)&&body.jobs[0]?body.jobs[0].id:null,contentId:body.contentId??null,status:response.status,body});
+  return response;
+}
+
 async function listJobs(request, env, subject) {
   const result = await env.DB.prepare(`SELECT j.id,j.content_id,j.channel_id,j.schedule_kind,j.scheduled_at,j.recurrence_rule,j.status,j.requested_by,j.attempt_count,j.max_attempts,j.next_attempt_at,j.external_post_id,j.external_post_url,j.last_error,j.published_at,j.created_at,j.updated_at,
     c.title,c.content_type,c.caption,ch.provider,ch.channel_type,ch.display_name
@@ -513,6 +532,10 @@ async function publishFacebook(content, secret) {
   if (!version || !pageId || !accessToken) throw Object.assign(new Error('Meta Page 인증정보가 불완전합니다.'),{code:'INVALID_CREDENTIAL_CONFIG'});
   const base = `https://graph.facebook.com/${encodeURIComponent(version)}/${encodeURIComponent(pageId)}`;
   const payload = safeParse(content.content_json,{});
+  if (contentFormat(payload) === 'reel') {
+    const reel = await publishFacebookReel({graphVersion:version,pageId,accessToken,videoUrl:content.asset_url || (Array.isArray(payload.assets)?payload.assets[0]:''),description:content.caption,title:content.title});
+    return {id:reel.id,url:reel.url,response:reel.response,format:'reel',aiLabel:{isAiGenerated:contentIsAiGenerated(payload),sent:false,reason:'platform_flag_unavailable'}};
+  }
   const assets = Array.isArray(payload.assets) ? payload.assets.map(safeUrl).filter(Boolean).slice(0,10) : [];
   let data;
   if (assets.length > 1) {
@@ -529,22 +552,43 @@ async function publishFacebook(content, secret) {
   } else {
     data = await formPost(`${base}/feed`,{message:content.caption,link:content.link_url,access_token:accessToken});
   }
-  return {id:clean(data.id || data.post_id,240),url:'',response:data};
+  const postId = clean(data.post_id || data.id,240);
+  return {id:postId,url:canonicalPostUrl({provider:'facebook',id:postId,permalink:absoluteFacebookUrl(data.permalink_url)}),response:data};
 }
 
-async function publishInstagram(content, secret) {
+// Instagram 24시간 게시 한도: 공급자 content_publishing_limit를 먼저 확인하고, 모르면 EKODI 자체 게시 수(50)로 판단한다.
+async function instagramQuotaGate(env, row, {graphVersion,igUserId,accessToken}) {
+  const quota = await instagramPublishingQuota({graphVersion,igUserId,accessToken});
+  const since = new Date(Date.now()-24*60*60*1000).toISOString();
+  const local = await env.DB.prepare("SELECT count(*) AS n,MIN(published_at) AS first_at FROM marketing_publication_jobs WHERE channel_id=? AND status='published' AND published_at>=?").bind(Number(row.channel_id||0),since).first().catch(()=>null);
+  return instagramQuotaDecision(quota,{localPublished24h:Number(local?.n||0),oldestLocalPublishedAt:local?.first_at||''});
+}
+
+async function publishInstagram(content, secret, {env, row = {}} = {}) {
   const version = clean(secret.graphVersion,20);
   const accountId = clean(secret.instagramAccountId,160);
   const accessToken = String(secret.accessToken || '');
   if (!version || !accountId || !accessToken) throw Object.assign(new Error('Instagram Business 인증정보가 불완전합니다.'),{code:'INVALID_CREDENTIAL_CONFIG'});
   const base = `https://graph.facebook.com/${encodeURIComponent(version)}/${encodeURIComponent(accountId)}`;
   const payload = safeParse(content.content_json,{});
+  const format = contentFormat(payload);
+  const ai = metaAiLabelFields({isAiGenerated:contentIsAiGenerated(payload),version,enabled:String(env?.META_AI_LABEL_ENABLED||'')==='true'});
+  if (env?.DB) {
+    const gate = await instagramQuotaGate(env,row,{graphVersion:version,igUserId:accountId,accessToken});
+    if (!gate.allowed) return {deferred:true,code:gate.code,nextAt:gate.nextAt,message:gate.message};
+  }
+  if (format === 'reel') {
+    const pending = safeParse(row.provider_response_json,{});
+    const reel = await publishInstagramReel({graphVersion:version,igUserId:accountId,accessToken,videoUrl:content.asset_url || (Array.isArray(payload.assets)?payload.assets[0]:''),caption:content.caption,extraFields:ai.fields,resumeContainerId:pending.pendingContainerId||'',resumeCreatedAt:pending.pendingCreatedAt||''});
+    if (reel.pending) return {pending:true,containerId:reel.containerId,createdAt:reel.createdAt,format:'reel'};
+    return {id:reel.id,url:reel.url,response:reel.response,format:'reel',aiLabel:ai.label};
+  }
   let assets = Array.isArray(payload.assets) ? payload.assets.map(safeUrl).filter(Boolean).slice(0,10) : [];
   if (!assets.length && content.asset_url) assets = [content.asset_url];
   if (!assets.length) throw Object.assign(new Error('Instagram 게시에는 공개 HTTPS 이미지가 필요합니다.'),{code:'ASSET_REQUIRED'});
   let creationId;
   if (assets.length === 1) {
-    const created = await formPost(`${base}/media`,{image_url:assets[0],caption:content.caption,access_token:accessToken});
+    const created = await formPost(`${base}/media`,{image_url:assets[0],caption:content.caption,...ai.fields,access_token:accessToken});
     creationId = created.id;
   } else {
     const children = [];
@@ -552,18 +596,13 @@ async function publishInstagram(content, secret) {
       const child = await formPost(`${base}/media`,{image_url:url,is_carousel_item:'true',access_token:accessToken});
       if (child.id) children.push(child.id);
     }
-    const parent = await formPost(`${base}/media`,{media_type:'CAROUSEL',children:children.join(','),caption:content.caption,access_token:accessToken});
+    const parent = await formPost(`${base}/media`,{media_type:'CAROUSEL',children:children.join(','),caption:content.caption,...ai.fields,access_token:accessToken});
     creationId = parent.id;
   }
   if (!creationId) throw Object.assign(new Error('Instagram media container 생성에 실패했습니다.'),{code:'PROVIDER_ERROR'});
   const published = await formPost(`${base}/media_publish`,{creation_id:creationId,access_token:accessToken});
-  let permalink = '';
-  if (published.id) {
-    const response = await fetch(`https://graph.facebook.com/${encodeURIComponent(version)}/${encodeURIComponent(published.id)}?fields=permalink&access_token=${encodeURIComponent(accessToken)}`);
-    const detail = await response.json().catch(()=>({}));
-    if (response.ok) permalink = safeUrl(detail.permalink);
-  }
-  return {id:clean(published.id,240),url:permalink,response:published};
+  const permalink = published.id ? await instagramPermalink({graphVersion:version,mediaId:published.id,accessToken}) : '';
+  return {id:clean(published.id,240),url:permalink,response:published,format:assets.length>1?'carousel':(format||'photo'),aiLabel:ai.label};
 }
 
 async function publishOAuthVault(env, content, channel) {
@@ -571,9 +610,17 @@ async function publishOAuthVault(env, content, channel) {
   const connectionId = Number(config.oauthConnectionId || 0);
   if (!connectionId) throw Object.assign(new Error('OAuth Vault connection is missing.'),{code:'CREDENTIALS_REQUIRED'});
   if (!env.MARKETING_GROWTH || typeof env.MARKETING_GROWTH.publishFromVault !== 'function') throw Object.assign(new Error('Marketing Growth service binding is missing.'),{code:'SERVICE_BINDING_REQUIRED'});
+  const payload = safeParse(content.content_json,{});
+  const format = contentFormat(payload);
+  const pending = safeParse(content.provider_response_json,{});
+  const youtube = payload.youtube && typeof payload.youtube === 'object' ? payload.youtube : {};
+  // Phase 7: 포맷·AI 표시·YouTube 공개 범위·IG Reels 이어받기 정보를 함께 넘긴다. 이 필드가 없는 기존 자동 게시는 동작이 같다.
   return env.MARKETING_GROWTH.publishFromVault({
     subject:{type:channel.subject_type,key:channel.subject_key}, connectionId, provider:channel.provider,
-    content:{title:content.title,caption:content.caption,imageUrl:content.asset_url,linkUrl:content.link_url,campaignName:safeParse(content.content_json,{}).campaignName || ''},
+    content:{title:content.title,caption:content.caption,imageUrl:content.asset_url,linkUrl:content.link_url,campaignName:payload.campaignName || '',
+      format,assets:Array.isArray(payload.assets)?payload.assets.map(safeUrl).filter(Boolean).slice(0,10):[],isAiGenerated:payload.isAiGenerated===true,
+      privacyStatus:clean(youtube.privacyStatus||payload.privacyStatus,20),publishAt:clean(youtube.publishAt||payload.publishAt,40),
+      resumeContainerId:clean(pending.pendingContainerId,160),resumeCreatedAt:clean(pending.pendingCreatedAt,40),channelId:Number(content.channel_id||0)},
   });
 }
 
@@ -590,6 +637,10 @@ async function googleAccessToken(secret) {
 }
 
 async function publishYouTube(content, secret) {
+  const payload = safeParse(content.content_json,{});
+  const youtube = payload.youtube && typeof payload.youtube === 'object' ? payload.youtube : {};
+  const policy = resolveYoutubePrivacy({jobPrivacy:youtube.privacyStatus||payload.privacyStatus,channelPrivacy:secret.privacyStatus,publishAt:youtube.publishAt||payload.publishAt});
+  const aiGenerated = contentIsAiGenerated(payload);
   const assetUrl = safeUrl(content.asset_url);
   if (!assetUrl) throw Object.assign(new Error('YouTube upload requires a public HTTPS video URL.'),{code:'ASSET_REQUIRED'});
   const accessToken = await googleAccessToken(secret);
@@ -599,8 +650,10 @@ async function publishYouTube(content, secret) {
   const bytes = await asset.arrayBuffer();
   const title = clean(content.title || 'EKODI',100);
   const description = [clean(content.caption,4800),safeUrl(content.link_url)].filter(Boolean).join('\n\n');
-  const privacyStatus = ['private','unlisted','public'].includes(String(secret.privacyStatus || '')) ? String(secret.privacyStatus) : 'private';
+  const privacyStatus = policy.privacyStatus;
   const metadata = {snippet:{title,description,categoryId:String(secret.categoryId || '22')},status:{privacyStatus,selfDeclaredMadeForKids:false}};
+  if (policy.publishAt) metadata.status.publishAt = policy.publishAt;
+  if (aiGenerated) metadata.status.containsSyntheticMedia = true;
   const begin = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status',{method:'POST',headers:{authorization:`Bearer ${accessToken}`,'content-type':'application/json; charset=UTF-8','x-upload-content-type':contentType,'x-upload-content-length':String(bytes.byteLength)},body:JSON.stringify(metadata)});
   const beginData = await begin.clone().json().catch(()=>({}));
   const location = begin.headers.get('location');
@@ -608,25 +661,58 @@ async function publishYouTube(content, secret) {
   const uploaded = await fetch(location,{method:'PUT',headers:{authorization:`Bearer ${accessToken}`,'content-type':contentType,'content-length':String(bytes.byteLength)},body:bytes});
   const data = await uploaded.json().catch(()=>({}));
   if (!uploaded.ok || !data.id) throw Object.assign(new Error(data?.error?.message || `YouTube upload failed (${uploaded.status})`),{code:'PROVIDER_ERROR'});
-  return {id:clean(data.id,240),url:`https://www.youtube.com/watch?v=${encodeURIComponent(data.id)}`,response:{id:data.id,privacyStatus}};
+  const format = contentFormat(payload);
+  return {id:clean(data.id,240),url:canonicalPostUrl({provider:'youtube',id:data.id,format}),response:{id:data.id,privacyStatus,publishAt:policy.publishAt,privacySource:policy.source},format:format||'video',privacyStatus,aiLabel:{isAiGenerated:aiGenerated,sent:aiGenerated,param:aiGenerated?'containsSyntheticMedia':''}};
 }
 
 async function executeProvider(env, job, content, channel) {
   const config = safeParse(channel.config_json,{});
+  const payload = safeParse(content.content_json,{});
+  // AI 생성 콘텐츠가 "AI 미사용" 같은 사실과 다른 주장을 담으면 어떤 채널에도 게시하지 않는다.
+  assertAiCaptionHonest(`${content.title || ''}\n${content.caption || ''}`,contentIsAiGenerated(payload));
   if (config.credentialMode === 'oauth-vault' && ['facebook','instagram','threads','youtube'].includes(channel.provider)) return publishOAuthVault(env,content,channel);
   const secret = await secretConfig(env, channel.credential_ref);
   if (channel.provider === 'youtube' && channel.channel_type === 'youtube_short') {
     if (content.content_type !== 'short_video' || !content.asset_url) throw Object.assign(new Error('YouTube Shorts 게시에는 영상 자산이 필요합니다.'),{code:'ASSET_REQUIRED'});
-    return uploadYoutubeVideo({env,refreshToken:secret.refreshToken,assetUrl:content.asset_url,title:content.title||'EKODI Shorts',description:content.caption,privacyStatus:config.privacyStatus||'private',categoryId:config.categoryId||'22'});
+    const youtube = payload.youtube && typeof payload.youtube === 'object' ? payload.youtube : {};
+    const policy = resolveYoutubePrivacy({jobPrivacy:youtube.privacyStatus||payload.privacyStatus,channelPrivacy:config.privacyStatus,publishAt:youtube.publishAt||payload.publishAt});
+    const aiGenerated = contentIsAiGenerated(payload);
+    const result = await uploadYoutubeVideo({env,refreshToken:secret.refreshToken,assetUrl:content.asset_url,title:content.title||'EKODI Shorts',description:content.caption,publishAt:policy.publishAt,privacyStatus:policy.privacyStatus,categoryId:config.categoryId||'22',containsSyntheticMedia:aiGenerated});
+    return {...result,url:canonicalPostUrl({provider:'youtube',id:result.id,format:'short',channelType:'youtube_short'}),format:'short',privacyStatus:policy.privacyStatus,aiLabel:{isAiGenerated:aiGenerated,sent:aiGenerated,param:aiGenerated?'containsSyntheticMedia':''}};
   }
   if (channel.provider === 'webhook') return publishWebhook(job,content,channel,secret);
   if ((channel.provider === 'meta' || channel.provider === 'facebook') && channel.channel_type === 'facebook_page') return publishFacebook(content,secret);
-  if ((channel.provider === 'meta' || channel.provider === 'instagram') && channel.channel_type === 'instagram_business') return publishInstagram(content,secret);
+  if ((channel.provider === 'meta' || channel.provider === 'instagram') && channel.channel_type === 'instagram_business') return publishInstagram(content,secret,{env,row:job});
   if (channel.provider === 'youtube' && channel.channel_type === 'youtube_channel') return publishYouTube(content,secret);
   throw Object.assign(new Error(`${channel.provider}/${channel.channel_type} provider adapter is not ready.`),{code:'PROVIDER_NOT_READY'});
 }
-function safeProviderResult(result) {
-  return {id:clean(result?.id,240),url:safeUrl(result?.url),ok:true};
+// provider_response_json에는 토큰 없이 게시 결과 요약만 남긴다(포맷·AI 표시·YouTube 공개 범위 포함).
+function safeProviderResult(result, format = '') {
+  const out = {id:clean(result?.id,240),url:safeUrl(result?.url),ok:true};
+  const fmt = clean(result?.format || format,30);
+  if (fmt) out.format = fmt;
+  if (result?.aiLabel && typeof result.aiLabel === 'object') out.aiLabel = {isAiGenerated:result.aiLabel.isAiGenerated===true,sent:result.aiLabel.sent===true,param:clean(result.aiLabel.param,60),reason:clean(result.aiLabel.reason,80)};
+  if (result?.privacyStatus) out.privacyStatus = clean(result.privacyStatus,20);
+  if (result?.response?.publishAt) out.publishAt = clean(result.response.publishAt,40);
+  if (result?.response?.container_id) out.containerId = clean(result.response.container_id,160);
+  if (result?.response?.post_id) out.postId = clean(result.response.post_id,160);
+  return out;
+}
+const NON_RETRYABLE_CODES = new Set(['PROVIDER_NOT_READY','AI_CAPTION_MISLEADING','IG_CONTAINER_ALREADY_PUBLISHED','INVALID_SCHEDULE']);
+// 서비스 바인딩(RPC)을 건너온 오류는 code 속성을 잃을 수 있어 메시지 접두어("CODE: …")에서도 읽는다.
+function errorCode(error) {
+  if (error?.code) return String(error.code);
+  const match = /^([A-Z][A-Z0-9_]{2,60}):/.exec(String(error?.message || ''));
+  return match ? match[1] : 'PUBLISH_FAILED';
+}
+const IG_PENDING_MAX_MS = 2*60*60*1000;
+async function releaseClaim(env, subject, row, {nextAt, error, providerResponse = null, action, detail}) {
+  const sql = providerResponse
+    ? "UPDATE marketing_publication_jobs SET status='retrying',attempt_count=MAX(attempt_count-1,0),next_attempt_at=?,last_error=?,provider_response_json=?,updated_at=? WHERE id=? AND status='publishing'"
+    : "UPDATE marketing_publication_jobs SET status='retrying',attempt_count=MAX(attempt_count-1,0),next_attempt_at=?,last_error=?,updated_at=? WHERE id=? AND status='publishing'";
+  const args = providerResponse ? [nextAt,clean(error,1000),safeJson(providerResponse),nowIso(),row.id] : [nextAt,clean(error,1000),nowIso(),row.id];
+  await env.DB.prepare(sql).bind(...args).run();
+  await audit(env,subject,row.id,action,detail,'scheduler');
 }
 function backoffMinutes(attempt) { return [5,15,60,360,1440][Math.min(Math.max(attempt-1,0),4)]; }
 function nextRecurrence(value, rule) {
@@ -639,6 +725,7 @@ function nextRecurrence(value, rule) {
   return d.toISOString();
 }
 
+function safeIso(value){const ms=Date.parse(String(value||''));return Number.isFinite(ms)?new Date(ms).toISOString():''}
 async function deferJob(env,subject,row,code,message,nextAt){
   const when=nextAt||new Date(Date.now()+60*60*1000).toISOString();
   await env.DB.prepare("UPDATE marketing_publication_jobs SET status='retrying',next_attempt_at=?,last_error=?,updated_at=? WHERE id=? AND status IN ('scheduled','queued','retrying')").bind(when,clean(`${code}: ${message}`,1000),nowIso(),row.id).run();
@@ -663,12 +750,35 @@ async function processJob(env, row) {
     const nextAt=last?.at?Date.parse(last.at)+control.minHoursBetweenPosts*3600000:0;
     if(nextAt>Date.now())return deferJob(env,subject,row,'CHANNEL_COOLDOWN','채널 최소 게시 간격을 기다리는 중입니다.',new Date(nextAt).toISOString());
   }
+  const format=contentFormat(row.content_json);
+  const facebookReel=format==='reel'&&(row.provider==='facebook'||(row.provider==='meta'&&row.channel_type==='facebook_page'));
+  if(facebookReel){
+    // Facebook Page Reels 30개/24시간 소프트 가드(EKODI 게시 기록 기준).
+    const reels=await recentPublishedReels(env.DB,row.channel_id,cutoff);
+    if(reels.count>=FB_REELS_DAILY_LIMIT)return deferJob(env,subject,row,'FB_REELS_DAILY_LIMIT',`Facebook Page Reels 24시간 한도(${reels.count}/${FB_REELS_DAILY_LIMIT})에 도달했습니다.`,reels.firstAt?new Date(Date.parse(reels.firstAt)+86400000+60000).toISOString():'');
+  }
   const claimed=await env.DB.prepare(`UPDATE marketing_publication_jobs SET status='publishing',attempt_count=attempt_count+1,updated_at=? WHERE id=? AND status IN ('scheduled','queued','retrying')`).bind(nowIso(),row.id).run();
   if(!claimed.meta?.changes)return;
   const current=await env.DB.prepare('SELECT attempt_count,max_attempts FROM marketing_publication_jobs WHERE id=?').bind(row.id).first();
   try{
     const result=await executeProvider(env,row,row,row),publishedAt=nowIso();
-    await env.DB.prepare(`UPDATE marketing_publication_jobs SET status='published',external_post_id=?,external_post_url=?,provider_response_json=?,last_error='',published_at=?,updated_at=? WHERE id=?`).bind(clean(result.id,240),safeUrl(result.url),safeJson(safeProviderResult(result)),publishedAt,publishedAt,row.id).run();
+    if(result?.deferred){
+      // 공급자 한도(예: Instagram 24시간 게시 한도)는 실패가 아니다. 시도 횟수를 돌려주고 다음 창으로 미룬다.
+      const code=clean(result.code||'PROVIDER_LIMIT',60),nextAt=safeIso(result.nextAt)||new Date(Date.now()+60*60*1000).toISOString();
+      return releaseClaim(env,subject,row,{nextAt,error:`${code}: ${clean(result.message||'공급자 게시 한도로 연기',900)}`,action:'publication_deferred',detail:`${code}:${nextAt}`});
+    }
+    if(result?.pending){
+      // Instagram Reels 컨테이너가 아직 처리 중: 크론을 막지 않고 같은 컨테이너를 이어서 확인하도록 다시 예약한다.
+      const previous=safeParse(row.provider_response_json,{}),createdAt=safeIso(result.createdAt)||nowIso();
+      const firstSeen=safeIso(previous.pendingCreatedAt)&&previous.pendingContainerId===result.containerId?previous.pendingCreatedAt:createdAt;
+      if(Date.now()-Date.parse(firstSeen)>IG_PENDING_MAX_MS)throw Object.assign(new Error('Instagram Reels 컨테이너 처리 시간이 2시간을 넘었습니다.'),{code:'IG_CONTAINER_TIMEOUT'});
+      const nextAt=new Date(Date.now()+2*60*1000).toISOString();
+      return releaseClaim(env,subject,row,{nextAt,error:'IG_MEDIA_PROCESSING: Instagram Reels 영상 처리 대기 중',providerResponse:{pendingContainerId:clean(result.containerId,160),pendingCreatedAt:firstSeen,format:'reel'},action:'publication_media_processing',detail:`${clean(result.containerId,160)}:${nextAt}`});
+    }
+    const providerResult=safeProviderResult(result,format);
+    const postUrl=safeUrl(result.url)||canonicalPostUrl({provider:row.provider,id:result.id,format:providerResult.format||format,channelType:row.channel_type});
+    await env.DB.prepare(`UPDATE marketing_publication_jobs SET status='published',external_post_id=?,external_post_url=?,provider_response_json=?,last_error='',published_at=?,updated_at=? WHERE id=?`).bind(clean(result.id,240),postUrl,safeJson({...providerResult,url:postUrl}),publishedAt,publishedAt,row.id).run();
+    if(row.variant_id)await markVariantPublished(env.DB,row.variant_id,publishedAt);
     await audit(env,subject,row.id,'publication_published',`${row.provider}:${row.channel_type}:${result.id||'ok'}`,'scheduler');
     const nextAt=nextRecurrence(row.scheduled_at,row.recurrence_rule);
     if(nextAt){
@@ -676,10 +786,13 @@ async function processJob(env, row) {
       await env.DB.prepare(`INSERT INTO marketing_publication_jobs(subject_type,subject_key,workspace_id,content_id,channel_id,schedule_kind,scheduled_at,recurrence_rule,status,requested_by,governance_action_id,attempt_count,max_attempts,created_at,updated_at) VALUES(?,?,?,?,?,'repeating',?,?,'scheduled',?,?,0,?,?,?)`).bind(subject.type,subject.key,subject.workspaceId||'',row.content_id,row.channel_id,nextAt,row.recurrence_rule,row.requested_by,row.governance_action_id||null,row.max_attempts||control.maxAttempts||5,now,now).run();
     }
   }catch(error){
-    const code=String(error?.code||'PUBLISH_FAILED'),attempt=Number(current?.attempt_count||1),max=Number(current?.max_attempts||control.maxAttempts||5);
-    const credential=['CREDENTIALS_REQUIRED','INVALID_CREDENTIAL_CONFIG'].includes(code),retryable=!credential&&attempt<max&&!['PROVIDER_NOT_READY'].includes(code),status=credential?'credentials_required':retryable?'retrying':'failed';
+    const code=errorCode(error),attempt=Number(current?.attempt_count||1),max=Number(current?.max_attempts||control.maxAttempts||5);
+    const credential=['CREDENTIALS_REQUIRED','INVALID_CREDENTIAL_CONFIG'].includes(code),retryable=!credential&&attempt<max&&!NON_RETRYABLE_CODES.has(code)&&error?.retryable!==false,status=credential?'credentials_required':retryable?'retrying':'failed';
     const next=retryable?new Date(Date.now()+backoffMinutes(attempt)*60000).toISOString():null;
-    await env.DB.prepare('UPDATE marketing_publication_jobs SET status=?,next_attempt_at=?,last_error=?,updated_at=? WHERE id=?').bind(status,next,clean(`${code}: ${error?.message||'publish failed'}`,1000),nowIso(),row.id).run();
+    const message=clean(`${code}: ${String(error?.message||'publish failed').replace(new RegExp('^'+code+':\\s*'),'')}`,1000);
+    // 실패·만료된 IG 컨테이너는 다음 시도에서 새로 만든다(이어받기 정보 제거).
+    if(['IG_CONTAINER_FAILED','IG_CONTAINER_TIMEOUT'].includes(code))await env.DB.prepare("UPDATE marketing_publication_jobs SET status=?,next_attempt_at=?,last_error=?,provider_response_json='{}',updated_at=? WHERE id=?").bind(status,next,message,nowIso(),row.id).run();
+    else await env.DB.prepare('UPDATE marketing_publication_jobs SET status=?,next_attempt_at=?,last_error=?,updated_at=? WHERE id=?').bind(status,next,message,nowIso(),row.id).run();
     await audit(env,subject,row.id,'publication_failed',`${code}:${status}`,'scheduler');
   }
 }
@@ -785,7 +898,7 @@ export default {
     }
     if (url.pathname === '/v1/channels' && request.method === 'POST') return connectChannel(request,env,identity,subject);
     if (url.pathname === '/v1/jobs' && request.method === 'GET') return listJobs(request,env,subject);
-    if (url.pathname === '/v1/publish' && request.method === 'POST') return queuePublish(request,env,identity,subject);
+    if (url.pathname === '/v1/publish' && request.method === 'POST') return idempotentQueuePublish(request,env,identity,subject);
     const jobMatch = url.pathname.match(/^\/v1\/jobs\/(\d+)\/(cancel|retry)$/);
     if (jobMatch && request.method === 'POST') return mutateJob(request,env,identity,subject,Number(jobMatch[1]),jobMatch[2]);
     return json(request,env,{error:'NOT_FOUND'},404);
@@ -794,8 +907,11 @@ export default {
     const tasks = [runScheduler(env)];
     const scheduledAt = new Date(Number(event?.scheduledTime || Date.now()));
     if (scheduledAt.getUTCMinutes() % 20 === 5 && env.MARKETING_GROWTH?.runGrowthCycle) tasks.push(env.MARKETING_GROWTH.runGrowthCycle({reason:'shared-publishing-cron'}));
+    // 하루 한 번 OAuth 토큰 상태 점검(Threads 갱신·Meta 재인증 표시). 토큰 복호화 키를 가진 Growth 서비스가 실행한다.
+    if (tokenHealthDue(scheduledAt) && env.MARKETING_GROWTH?.runTokenHealth) tasks.push(env.MARKETING_GROWTH.runTokenHealth({reason:'daily-publishing-cron'}));
     ctx.waitUntil(Promise.allSettled(tasks));
   },
 };
 
-export { runScheduler, nextRecurrence, backoffMinutes, safeUrl };
+export { runScheduler, processJob, executeProvider, safeProviderResult, errorCode, nextRecurrence, backoffMinutes, safeUrl };
+export const queuePublishForTest = idempotentQueuePublish;
