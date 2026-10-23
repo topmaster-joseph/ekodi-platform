@@ -108,7 +108,6 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'confirmations', group: 'services', icon: '✓', managementArea: 'common-services', labels: { ko: '지급·수령 확인', en: 'Payment & Receipt Confirmation' }, internal: true },
   { id: 'life-ai', group: 'services', icon: 'Q', labels: { ko: '인생AI', en: 'Life AI' }, internal: true },
   { id: 'personal-finance', group: 'services', icon: '₩', managementArea: 'professional-services', labels: { ko: '개인재무', en: 'Personal Finance' }, internal: true },
-  { id: 'invest', group: 'services', icon: 'I', managementArea: 'professional-services', labels: { ko: '투자 AI', en: 'Invest AI' }, internal: true },
   { id: 'marketing-ai', group: 'services', icon: 'M', labels: { ko: '마케팅AI', en: 'Marketing AI' }, internal: true },
   { id: 'supply-network', group: 'services', icon: 'N', managementArea: 'professional-services', labels: { ko: '판매·공급망', en: 'Sales & Supply Network' }, internal: true },
   { id: 'insurance', group: 'services', icon: 'I', labels: { ko: '보험', en: 'Insurance' }, internal: true },
@@ -148,7 +147,7 @@ const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
   work:'content',communication:'content',community:'content',books:'content',devotional:'content',social:'content',finance:'finance',tax:'content',
   health:'status','site-health':'status',deployments:'releases',aiops:'releases',devices:'devices','pos-agent':'devices','api-cost':'finance',architecture:'status',maturity:'status',services:'status',
   'public-site-controls':'settings','language-status':'settings','ai-module-spec':'settings',storage:'settings','ai-settings':'settings','audit-records':'security',policies:'settings',
-  'common-services':'catalog',confirmations:'catalog','life-ai':'catalog','personal-finance':'catalog',invest:'catalog','marketing-ai':'catalog','supply-network':'catalog',insurance:'catalog',capabilities:'catalog',openai:'catalog',
+  'common-services':'catalog',confirmations:'catalog','life-ai':'catalog','personal-finance':'catalog','marketing-ai':'catalog','supply-network':'catalog',insurance:'catalog',capabilities:'catalog',openai:'catalog',
 });
 
 const BY_ID = new Map(ADMIN_MENU_REGISTRY.map(item => [item.id, item]));
