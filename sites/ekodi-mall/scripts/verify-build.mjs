@@ -4,6 +4,9 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
+// build-meta mirrors content/site.json; the payments marker follows the committed owner decision.
+const site = JSON.parse(await readFile(path.join(root, 'content', 'site.json'), 'utf8'));
+const paymentsMarker = `"paymentsEnabled": ${site?.commerce?.paymentsEnabled === true}`;
 const checks = [
   ['index.html', ['EKODI MALL', 'ALL MARKET', '7·8·9', '상품 하나부터', '무엇을 찾고 계세요?', '추천순위는 제휴수수료와 분리합니다', '/assets/marketplace-live.js', '/assets/context-curator.js', '/assets/local-commerce.js', '내 로컬']],
   ['assets/local-commerce.js', ['ekodiMallLocalRegionV1', 'explicit', 'geolocation', '좌표는 저장하지 않습니다', 'ekodi:local-region-change']],
@@ -48,7 +51,7 @@ const checks = [
   ['assets/supplier-connectors.js', ['/api/internal/connectors/domemae/readiness', '/api/internal/connectors/domemae/item-lookup', '/api/internal/connectors/domemae/order-dry-run', '실제 주문 API는 호출하지 않았습니다']],
   ['assets/shared-product.html', ['PUBLIC PRODUCT', '/assets/public-product.js']],
   ['_redirects', ['/p/* /assets/shared-product.html 200', '/store/* /assets/shared-store.html 200', '/free-ops /assets/free-ops.html 200', '/sourcing /assets/sourcing-lab.html 200', '/fulfillment', '/supplier-ops /assets/supplier-ops.html 200', '/verification-ops /assets/verification-ops.html 200', '/supplier-discovery /assets/supplier-discovery.html 200', '/supplier-connectors /assets/supplier-connectors.html 200']],
-  ['build-meta.json', ['"platformMode": "marketplace-v2"', '"paymentsEnabled": false', '"commerceOsVersion": 1', '"paymentProviderAuthority": "server-capability-registry"', '"highImpactExecution": "human-gated"', '"affiliateExternalRouting": true']]
+  ['build-meta.json', ['"platformMode": "marketplace-v2"', paymentsMarker, '"commerceOsVersion": 1', '"paymentProviderAuthority": "server-capability-registry"', '"highImpactExecution": "human-gated"', '"affiliateExternalRouting": true']]
 ];
 const errors = [];
 for (const [relative, needles] of checks) {
@@ -62,4 +65,4 @@ if (errors.length) {
   errors.forEach((error) => console.error(`- ${error}`));
   process.exit(1);
 }
-console.log('EKODI Mall V3.3 build verified: Free Ops reuses the existing supplier safety API and D1 with no new paid service, while payments, PII release, supplier forwarding and Auto Order remain disabled.');
+console.log(`EKODI Mall V3.3 build verified: Free Ops reuses the existing supplier safety API and D1 with no new paid service; payments ${site?.commerce?.paymentsEnabled === true ? 'enabled for human-gated direct sales' : 'disabled'}, while PII release, supplier forwarding and Auto Order remain disabled.`);

@@ -540,6 +540,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Production health must report the payments flag committed in api/wrangler.toml.
+          expected_payments=false
+          if grep -Eq '^PAYMENTS_ENABLED = "true"$' api/wrangler.toml; then expected_payments=true; fi
           for attempt in $(seq 1 18); do
             health_code=$(curl -sS -o /tmp/mall-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 https://mall-api.ekodi.kr/health || true)
             fees_code=$(curl -sS -o /tmp/mall-fees.json -w '%{http_code}' --connect-timeout 5 --max-time 15 https://mall-api.ekodi.kr/api/public/fees || true)
@@ -567,7 +570,7 @@ jobs:
               && [ "$cockpit_code" = "401" ] \
               && [ "$rehearsal_code" = "404" ] \
               && grep -Fq '"transactionRehearsalEnabled":false' /tmp/mall-api.json \
-              && grep -Fq '"paymentsEnabled":false' /tmp/mall-api.json \
+              && grep -Fq "\"paymentsEnabled\":${expected_payments}" /tmp/mall-api.json \
               && grep -Fq '"paymentProvider":{"id":"toss"' /tmp/mall-api.json \
               && grep -Fq '"adapterImplemented":true' /tmp/mall-api.json \
               && grep -Fq '"payoutExecutionEnabled":false' /tmp/mall-api.json \
