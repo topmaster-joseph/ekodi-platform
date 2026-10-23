@@ -285,7 +285,13 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
   }
   const executionSurface=executionSurfaceForPath(path);if(executionSurface){
     const rootRedirect=canonicalExecutionRootRedirect(request,executionSurface);if(rootRedirect)return rootRedirect;
-    const response=await proxyExecutionSurface(request,env,executionSurface,legacyFetch,externalFetch);return executionSurface.id==='lab'?injectEkodiTenantReadability(response):response;
+    const response=await proxyExecutionSurface(request,env,executionSurface,legacyFetch,externalFetch);
+    // Service metadata uses canonical apex URLs. The internal Cloud upstream
+    // can no longer identify its service from the legacy host, so attach the
+    // existing UI chrome at this canonical boundary without decorating assets
+    // or repeating chrome already provided upstream.
+    if(executionSurface.id==='cloud'&&typeof HTMLRewriter==='function'&&response.headers.get('x-ekodi-shell')!=='v2')return injectEkodiShell(response,'cloud');
+    return executionSurface.id==='lab'?injectEkodiTenantReadability(response):response;
   }
   // Reserved Research paths must never fall through to an authenticated workspace
   // or public-person fallback when this worker is built with a stale route registry.
