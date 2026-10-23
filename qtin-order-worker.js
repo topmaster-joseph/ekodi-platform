@@ -1073,6 +1073,15 @@ export function renderAdminPage(scriptNonce = '') {
 <h1>큐티인 신청 관리</h1><p class="lead">월별 신청·결제 완료 현황, 도서별 발주 수량, 수령 상태를 관리합니다. 결제 완료(paid)만 발주 수량에 포함됩니다.</p>
 <div class="status" id="state" aria-live="polite"><span class="dot"></span>로그인 확인 중</div></div></header>
 <main class="wrap">
+<section class="panel" id="adminLogin" aria-label="큐티인 관리자 로그인">
+<h2>Google 계정으로 관리자 로그인</h2>
+<p class="note">이 화면에서 EKODI Google 인증을 완료합니다. 신청 정보는 관리자 권한이 확인된 계정에만 표시합니다.</p>
+<div id="adminGoogleButton" style="min-height:44px"></div>
+<p id="adminAuthMessage" class="note" role="status" aria-live="polite">로그인 상태를 확인하고 있습니다.</p>
+<button id="adminGoogleRetry" type="button" class="btn alt">Google 로그인 다시 준비</button>
+<p class="note">버튼이 열리지 않으면 <a id="adminAuthFallback" href="https://ekodi.kr/auth/?site=portal">EKODI 통합인증센터</a>에서 로그인한 뒤 이 페이지를 다시 열어 주세요.</p>
+</section>
+<div id="adminWorkspace" hidden>
 <section class="panel"><div class="fields">
 <label class="f">신청 월호<select id="campaign" style="padding:11px;border-radius:10px;border:1px solid var(--line);font:inherit"></select></label>
 <div class="f" style="justify-content:flex-end;gap:8px;flex-direction:row;align-items:flex-end;flex-wrap:wrap">
@@ -1085,6 +1094,7 @@ export function renderAdminPage(scriptNonce = '') {
 <section class="panel"><h2>신청 내역</h2><div class="fields"><label class="f">검색<input id="filter" placeholder="이름·전화·신청번호"></label></div><div id="orders"></div></section>
 <section class="panel"><h2>신청 기간 수동 조정</h2><p class="note">자동: 매월 20일 00:00 ~ 25일 23:59(KST). 필요할 때만 강제 열기/닫기를 사용하세요.</p>
 <div class="pay"><button class="btn alt" data-state="force_open" type="button">강제 열기</button><button class="btn alt" data-state="force_closed" type="button">강제 마감</button><button class="btn alt" data-state="" type="button">자동으로 되돌리기</button></div></section>
+</div>
 </main>
 <footer class="wrap">공개 신청서: <a href="/qtin">ekodi.kr/qtin</a> · <a href="/qtin/church">/qtin/church</a> · <a href="/qtin/mission">/qtin/mission</a></footer>
 <script nonce="${scriptNonce}">${clientScript(adminClient)}</script>`;
@@ -1095,7 +1105,7 @@ function adminClient() {
   const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
   const SESSION_KEY = 'ekodi-qtin-admin-session';
-  const AUTH_URL = 'https://ekodi.kr/auth/';
+  const IDENTITY_API = SUPABASE_URL + '/functions/v1/identity-api';
   const API = '/qtin/api/admin';
   const ORG = { church: '에코디교회', mission: '에코디선교회', other: '기타' };
   const STATUS = { paid: '결제완료', payment_pending: '결제대기', cancelled: '취소' };
@@ -1128,7 +1138,7 @@ function adminClient() {
   async function authRequest(path, body) { const r = await fetchBounded(SUPABASE_URL + path, { method: 'POST', headers: { apikey: SUPABASE_KEY, 'content-type': 'application/json' }, body: JSON.stringify(body) }); const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error_description || d.msg || d.error || '인증에 실패했습니다.'); return d; }
   async function consumeHandoff() { const p = new URLSearchParams(location.hash.slice(1)); const t = p.get('ekodi_token'); if (!t) return stored(); history.replaceState(null, '', location.pathname + location.search); const d = await authRequest('/auth/v1/verify', { token_hash: t, type: p.get('ekodi_type') || 'email' }); const n = normalize(d); save(n); return n; }
   async function validSession() { let v = stored(); if (!v?.accessToken) return null; if (!v.expiresAt || v.expiresAt > Math.floor(Date.now() / 1000) + 60) { save(v); return v; } if (!v.refreshToken) { clear(); return null; } try { v = normalize(await authRequest('/auth/v1/token?grant_type=refresh_token', { refresh_token: v.refreshToken }), v); save(v); return v; } catch { clear(); return null; } }
-  function authHref() { const u = new URL(AUTH_URL); u.searchParams.set('site', 'church'); u.searchParams.set('return_to', location.origin + location.pathname); return u.href; }
+  function authHref() { return 'https://ekodi.kr/auth/?site=portal'; }
   async function api(path, options = {}) {
     const r = await fetchBounded(API + path, { ...options, headers: { authorization: 'Bearer ' + session.accessToken, 'content-type': 'application/json', ...(options.headers || {}) }, cache: 'no-store' });
     if (r.status === 401) { clear(); const error = new Error('관리자 로그인 세션을 다시 확인해야 합니다.'); error.status = 401; throw error; }
@@ -1138,17 +1148,81 @@ function adminClient() {
     return d;
   }
   const setMsg = (t, ok = false) => { $('msg').style.color = ok ? 'var(--accent)' : 'var(--danger)'; $('msg').textContent = t || ''; };
+  const authMessage = t => { $('adminAuthMessage').textContent = t || ''; };
+  let googleBusy = false;
+  function showLogin(message = 'Google 계정을 선택하여 관리자 권한을 확인해 주세요.') {
+    $('adminLogin').hidden = false;
+    $('adminWorkspace').hidden = true;
+    $('state').textContent = '관리자 로그인 필요';
+    authMessage(message);
+  }
   function showFailure(error) {
-    const host = $('state');
-    const dot = document.createElement('span'); dot.className = 'dot';
-    const label = document.createElement('span');
-    label.textContent = error?.status === 403 ? '큐티인 관리자 권한 없음' : '관리자 확인 실패';
-    host.replaceChildren(dot, label);
-    if (error?.status !== 403) {
-      const retry = document.createElement('a'); retry.href = authHref(); retry.textContent = '로그인 다시 확인';
-      host.append(retry);
+    const msg = error?.status === 403
+      ? '이 계정에는 큐티인 관리자 권한이 없습니다. 권한이 있는 Google 계정으로 로그인해 주세요.'
+      : (error?.message || '관리자 인증 및 연결 상태를 확인하지 못했습니다.');
+    showLogin(msg);
+    $('state').textContent = error?.status === 403 ? '큐티인 관리자 권한 없음' : '관리자 확인 실패';
+    setMsg(msg);
+  }
+  async function identity(path, payload) {
+    const response = await fetchBounded(IDENTITY_API + path, {
+      method:'POST', headers:{ apikey:SUPABASE_KEY, 'content-type':'application/json' },
+      body: JSON.stringify(payload || {}), cache:'no-store'
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'Google 본인 인증에 실패했습니다.');
+    return data;
+  }
+  async function waitForGoogle() {
+    if (window.google?.accounts?.id) return;
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      const timeout = setTimeout(() => reject(new Error('Google 로그인 모듈 응답이 지연됩니다. 다시 시도해 주세요.')), 8000);
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true; script.dataset.ekodiGoogleIdentity = 'true';
+      script.onload = () => { clearTimeout(timeout); resolve(); };
+      script.onerror = () => { clearTimeout(timeout); reject(new Error('Google 로그인 모듈을 불러오지 못했습니다.')); };
+      document.head.append(script);
+    });
+  }
+  async function onGoogleCredential(response, challenge) {
+    if (googleBusy) return;
+    if (!response?.credential) { authMessage('계정 선택을 완료하지 못했습니다. 다시 시도해 주세요.'); return; }
+    googleBusy = true;
+    authMessage('EKODI Google 인증 및 관리자 권한을 확인하고 있습니다.');
+    try {
+      const proof = await identity('/google/exchange', { credential:response.credential, nonce:challenge.nonce });
+      const verified = await authRequest('/auth/v1/verify', { token_hash:proof.tokenHash, type:proof.type || 'email' });
+      if (!verified?.access_token) throw new Error('인증 세션을 만들지 못했습니다.');
+      session = normalize(verified);
+      save(session);
+      await boot();
+    } catch (error) {
+      showFailure(error);
+      authMessage('Google 로그인 실패: ' + (error?.message === 'challenge_expired_or_used' ? '로그인 시간이 만료되었습니다.' : error?.message || '본인 확인 실패'));
+    } finally { googleBusy = false; }
+  }
+  async function prepareGoogle() {
+    $('adminGoogleRetry').onclick = () => prepareGoogle().catch(showFailure);
+    $('adminAuthFallback').href = authHref();
+    $('adminGoogleButton').replaceChildren();
+    authMessage('Google 로그인 버튼을 준비하고 있습니다.');
+    try {
+      const [challenge] = await Promise.all([identity('/challenge'), waitForGoogle()]);
+      if (!challenge?.clientId || !challenge?.nonce) throw new Error('Google 로그인 설정을 확인할 수 없습니다.');
+      window.google.accounts.id.initialize({
+        client_id:challenge.clientId, nonce:challenge.nonce, auto_select:false,
+        use_fedcm_for_prompt:true, callback:r => onGoogleCredential(r, challenge)
+      });
+      const host = $('adminGoogleButton');
+      window.google.accounts.id.renderButton(host, {
+        type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',
+        logo_alignment:'left',width:Math.min(360,Math.max(220,host.clientWidth||320))
+      });
+      authMessage('Google 계정을 선택해 주세요. 권한은 EKODI 서버에서 확인합니다.');
+    } catch (error) {
+      authMessage(error?.message || 'Google 로그인 준비에 실패했습니다. 다시 시도해 주세요.');
     }
-    setMsg(error?.message || '로그인 및 관리자 연결을 확인하지 못했습니다.');
   }
   function keyNote(keys, pay) {
     if (!keys || (pay.ready && pay.mode === 'live')) return '';
@@ -1187,8 +1261,10 @@ function adminClient() {
   async function boot() {
     try {
       session = await consumeHandoff(); session = await validSession();
-      if (!session) { location.href = authHref(); return; }
+      if (!session) { showLogin(); await prepareGoogle(); return; }
       const list = await api('/campaigns'); me = list.me;
+      $('adminLogin').hidden = true;
+      $('adminWorkspace').hidden = false;
       const pay = list.payment;
       $('state').innerHTML = `<span class="dot"></span>${esc(me.email)} · ${me.canWrite ? '관리' : '조회'} 권한 · 결제 ${pay.ready ? (pay.mode === 'live' ? '운영 연결' : '테스트 연결 · <a href="/qtin/church">테스트 신청 열기</a>(실제 청구 없음, 집계 제외)') + (pay.mid ? ' · 상점 ' + esc(pay.merchant || '') + ' ' + esc(pay.mid) : '') : '미연결(' + esc(pay.missing.join(', ')) + ')'}${keyNote(list.keys, pay)}`;
       $('campaign').innerHTML = list.campaigns.map(c => `<option value="${c.id}">${c.target_year}년 ${c.target_month}월호 · ${({ open: '신청 중', scheduled: '예정', closed: '마감' })[c.state] || c.state}</option>`).join('');
@@ -1200,7 +1276,10 @@ function adminClient() {
       document.querySelectorAll('[data-state]').forEach(b => b.addEventListener('click', async () => { if (!confirm('신청 기간 상태를 변경할까요?')) return; try { await api('/campaigns/' + $('campaign').value + '/state', { method: 'POST', body: JSON.stringify({ manualState: b.dataset.state }) }); setMsg('신청 기간 상태를 변경했습니다.', true); await load(); } catch (e) { setMsg(e.message); } }));
       if (!me.canWrite) document.querySelectorAll('#sync,#add,[data-state]').forEach(b => { b.disabled = true; });
       await load();
-    } catch (e) { showFailure(e); }
+    } catch (e) {
+      await prepareGoogle();
+      showFailure(e);
+    }
   }
   boot();
 }
