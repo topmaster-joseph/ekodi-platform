@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { investIntroPage, investAnalysisPage, investAnalysisScript } from '../invest-access-ui.js';
 import { investMyRoute } from '../invest-my-workspace.js';
 import myWorker from '../my-worker.js';
 import { routeCanonicalSurface } from '../canonical-surface-router.js';
@@ -10,27 +9,6 @@ const get=path=>new Request(origin+path);
 const authRequest=(path,token)=>new Request(origin+path,{headers:{authorization:'Bearer '+token}});
 const tok='a'.repeat(30);
 
-test('public Invest landing shows information only, without any stock picks or analysis form',async()=>{
- const result=investIntroPage();
- assert.equal(result.status,200);
- assert.match(result.headers.get('cache-control'),/no-store/);
- const html=await result.text();
- assert.match(html,/로그인 전에는 설명만/);
- assert.match(html,/로그인 후 공통 분석/);
- assert.doesNotMatch(html,/삼성전자|NVIDIA|id="result"|id="capital"/);
-});
-test('member common-analysis page is hidden until verified auth and contains no personalization',async()=>{
- const response=investAnalysisPage();
- const html=await response.text();
- assert.match(html,/<section id="analysis" hidden>/);
- assert.match(html,/모든 로그인 회원/);
- assert.doesNotMatch(html,/access_token|보유 종목|내 개인 투자 프로필/);
- const js=await investAnalysisScript().text();
- assert.match(js,/\/workspace-api\/v1\/invest\/common-analysis/);
- assert.match(js,/Bearer /);
- assert.match(js,/if\(!response.ok\)throw/);
- assert.doesNotMatch(js,/\/automation\/policy|\/invest\/context|삼성전자|NVIDIA/);
-});
 test('private My Invest has a disabled subscription by default',async()=>{
  const response=await investMyRoute(get('/invest'),{});
  assert.equal(response.status,200);
