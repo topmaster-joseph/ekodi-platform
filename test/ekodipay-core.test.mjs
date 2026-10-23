@@ -85,3 +85,26 @@ test('Toss client uses the profile secret, sends idempotency keys and maps error
     globalThis.fetch = original;
   }
 });
+
+test('merchant assignment: QTIN on q_ekodib62hb, EKODI Mall on ekobizav68, keys never cross', () => {
+  assert.equal(pay.merchantProfile('ekodi').mid, 'q_ekodib62hb');
+  assert.equal(pay.merchantProfile('mall').mid, 'ekobizav68');
+  const env = {
+    PAYMENTS_ENABLED: 'true', DB: { binding: true },
+    TOSS_CLIENT_KEY: 'test_ck_qtin', TOSS_SECRET_KEY: 'test_sk_qtin',
+    TOSS_CLIENT_KEY__MALL: 'test_ck_mall', TOSS_SECRET_KEY__MALL: 'test_sk_mall',
+  };
+  const mall = pay.withMerchantKeys(env, 'mall');
+  assert.equal(mall.TOSS_CLIENT_KEY, 'test_ck_mall');
+  assert.equal(mall.TOSS_SECRET_KEY, 'test_sk_mall');
+  assert.equal(mall.EKODIPAY_MID, 'ekobizav68');
+  assert.equal(mall.DB, env.DB, 'bindings are preserved');
+  assert.equal(env.TOSS_SECRET_KEY, 'test_sk_qtin', 'original env is not mutated');
+  // A mall Worker that only has the legacy names must NOT pick them up (fail closed).
+  const legacyOnly = pay.withMerchantKeys({ PAYMENTS_ENABLED: 'true', TOSS_CLIENT_KEY: 'live_ck_x', TOSS_SECRET_KEY: 'live_sk_x' }, 'mall');
+  assert.equal(legacyOnly.TOSS_CLIENT_KEY, '');
+  assert.equal(legacyOnly.TOSS_SECRET_KEY, '');
+  assert.equal(pay.readiness(env, { profileId: 'mall' }).mid, 'ekobizav68');
+  assert.equal(pay.readiness({ ...env, TOSS_CLIENT_KEY__MALL: '' }, { profileId: 'mall' }).ready, false);
+  assert.equal(pay.merchantProfile('q_ekodim56wc'), null, 'held MID is not registered');
+});
