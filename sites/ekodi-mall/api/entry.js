@@ -15,6 +15,7 @@ import { reconcileMallPayments, inventorySchemaReady } from './payment-reconcili
 import { handleCommerceOperationsRequest } from './commerce-operations.js';
 import { handleAmazonRequest, amazonRuntimeStatus, amazonCostSchemaReady, amazonConnectionSchemaReady } from './amazon.js';
 import { handleAmazonReadonlyRequest, amazonReadSyncSchemaReady } from './amazon-readonly-sync.js';
+import { handleMarketingOrdersRequest } from './marketing-orders.js';
 
 const FEE_RATES = Object.freeze({ direct: 7, marketplace: 8, ai: 9 });
 const ATTRIBUTION_WINDOW_DAYS = 7;
@@ -193,6 +194,10 @@ export default {
       if (!body) return reply({ error:'Invalid JSON' },400,origin,env);
       const result=await firstTouch(env,body); return reply(result.body,result.status,origin,env);
     }
+
+    // Phase 8: 마케팅 수익 리포트용 내부 주문 조회(읽기 전용, INTERNAL_ATTRIBUTION_TOKEN).
+    const marketingOrders = await handleMarketingOrdersRequest(request, env);
+    if (marketingOrders) return reply(marketingOrders.body, marketingOrders.status, origin, env);
 
     const rehearsal = await handleTransactionRehearsal(request, env);
     if (rehearsal) return reply(rehearsal.body, rehearsal.status, origin, env);

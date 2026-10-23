@@ -8,6 +8,9 @@
 // AI 생성 변형은 ai_generated=1로 저장하고, 게시 콘텐츠의 content_json.isAiGenerated로 함께 전달한다.
 // Phase 6: POST /studio/generate — 상품 정보로 SEO·AEO 구매 가이드와 채널별 초안을 만들어 모두 pending_review로 저장한다
 // (marketing-seo-engine.js, 기본 템플릿 모드·추가 비용 0원). 생성만 하고 게시·예약은 하지 않는다.
+// Phase 8: 네이버 블로그는 공식 글쓰기 API가 없다 → 수동 게시 흐름. GET /studio/naver 로 승인된 naver_blog 변형을
+// 복사용(제목·본문·해시태그)으로 내려주고, POST /studio/variants/:id/naver-published 로 관리자가 실제 게시 URL
+// (blog.naver.com / m.blog.naver.com)을 저장하면 변형(과 게시 작업이 있으면 작업)의 external_post_url·published 상태를 갱신한다.
 
 import { SEO_CHANNEL_TARGETS, SEO_GENERATION_CHANNELS, aiGenerationStatus, generateCampaignContent } from './marketing-seo-engine.js';
 
@@ -368,6 +371,60 @@ export async function generateProductCampaign(env, actor, input = {}, options = 
   };
 }
 
+
+// ---------------------------------------------------------------- Phase 8 · 네이버 블로그 수동 게시
+
+export const NAVER_BLOG_HOSTS = Object.freeze(['blog.naver.com','m.blog.naver.com']);
+export const NAVER_BLOG_WRITE_URL = 'https://blog.naver.com/';
+const NAVER_CAPTURE_FROM = Object.freeze(['approved','scheduled','published']);
+
+export function normalizeNaverPostUrl(value) {
+  let url;
+  try { url = new URL(String(value || '').trim()); } catch { return null; }
+  if (url.protocol !== 'https:' || url.username || url.password) return null;
+  if (!NAVER_BLOG_HOSTS.includes(url.hostname.toLowerCase())) return null;
+  if (!url.pathname || url.pathname === '/') return null;
+  url.hash = '';
+  return url.href.slice(0, 1000);
+}
+
+function naverCopy(row) {
+  const variant = publicVariant(row);
+  const hashtags = (Array.isArray(variant.hashtags) ? variant.hashtags : []).map(tag => `#${clean(tag, 60).replace(/^#+/, '').replace(/\s+/g, '')}`).filter(tag => tag.length > 1);
+  return {
+    ...variant, externalPostUrl:row.external_post_url || '', publishedAt:row.published_at || null, costKrw:Number(row.content_cost_krw || 0),
+    copy:{ title:variant.title, body:applyDisclosure(variant.body, variant.disclosureText), hashtags:hashtags.join(' ') },
+  };
+}
+
+export async function listNaverVariants(env) {
+  const rows = await env.DB.prepare(`SELECT v.*, j.id AS job_id, j.status AS job_status FROM marketing_content_variants v
+    LEFT JOIN marketing_publication_jobs j ON j.variant_id=v.id
+    WHERE v.channel='naver_blog' AND v.status IN ('approved','scheduled','published') ORDER BY v.updated_at DESC, v.id DESC LIMIT 100`).all();
+  return { variants:(rows.results || []).map(naverCopy), writeUrl:NAVER_BLOG_WRITE_URL, officialWriteApi:false };
+}
+
+export async function captureNaverPublication(env, actor, id, input = {}) {
+  const postUrl = normalizeNaverPostUrl(input.url ?? input.postUrl);
+  if (!postUrl) throw studioError('NAVER_POST_URL_INVALID');
+  const variant = await readVariant(env, id);
+  if (!variant) throw studioError('VARIANT_NOT_FOUND', 404);
+  if (variant.channel !== 'naver_blog') throw studioError('CHANNEL_MISMATCH', 409);
+  if (!NAVER_CAPTURE_FROM.includes(variant.status)) throw studioError('VARIANT_NOT_APPROVED', 409, { current:variant.status });
+  const now = nowIso();
+  const publishedAt = variant.published_at || now;
+  await env.DB.prepare(`UPDATE marketing_content_variants SET status='published',external_post_url=?,published_at=?,updated_at=? WHERE id=?`)
+    .bind(postUrl, publishedAt, now, id).run();
+  if (variant.job_id) {
+    await env.DB.prepare(`UPDATE marketing_publication_jobs SET status='published',external_post_url=?,published_at=COALESCE(published_at,?),last_error='',updated_at=? WHERE id=?`)
+      .bind(postUrl, publishedAt, now, variant.job_id).run();
+  }
+  await audit(env, variant, variant.job_id || null, 'studio_naver_post_captured', `variant:${id}:${postUrl}`, actor);
+  const row = await env.DB.prepare(`SELECT v.*, j.id AS job_id, j.status AS job_status FROM marketing_content_variants v
+    LEFT JOIN marketing_publication_jobs j ON j.variant_id=v.id WHERE v.id=?`).bind(id).first();
+  return naverCopy(row);
+}
+
 // ---------------------------------------------------------------- HTTP
 
 async function readJson(request) { try { return await request.json(); } catch { return null; } }
@@ -400,6 +457,13 @@ export async function handleContentStudio(request, env, { resolveAdmin, respond,
       const body = await readJson(request);
       if (!body) return reply({ error:'INVALID_JSON' }, 400);
       return reply({ ok:true, ...(await generateProductCampaign(env, actor, body, { partnerHosts:partnerHostsFrom(env), router:studioOptions.router })) }, 201);
+    }
+    if (path === `${STUDIO_PREFIX}/naver` && request.method === 'GET') return reply(await listNaverVariants(env));
+    const naverMatch = path.match(/^\/api\/marketing\/admin\/studio\/variants\/(\d+)\/naver-published$/);
+    if (naverMatch && mutating) {
+      const body = await readJson(request);
+      if (!body) return reply({ error:'INVALID_JSON' }, 400);
+      return reply({ ok:true, variant:await captureNaverPublication(env, actor, Number(naverMatch[1]), body) });
     }
     const match = path.match(/^\/api\/marketing\/admin\/studio\/variants\/(\d+)\/(approve|reject|schedule)$/);
     if (match && mutating) {

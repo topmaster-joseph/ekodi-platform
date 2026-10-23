@@ -1,6 +1,7 @@
 import authWorker, { isAllowedOrigin } from './auth-worker.js';
 import { readMarketingPublicationOverview } from './marketing-admin-publications.js';
 import { STUDIO_PREFIX, handleContentStudio } from './marketing-content-studio.js';
+import { PERFORMANCE_PATH, handlePerformanceReport } from './marketing-performance-report.js';
 
 const PAID_PLANS = new Set(['plus','pro','auto','enterprise']);
 const MARKETING_ACTION_RE = /(marketing|campaign|social|channel|crm|review|advert|promotion)/i;
@@ -425,6 +426,10 @@ export async function handleMarketingAdminControl(request, env) {
   // 콘텐츠 스튜디오(채널별 변형 검수·예약)는 같은 관리자 세션 확인(adminSession)을 재사용한다.
   if (path === STUDIO_PREFIX || path.startsWith(`${STUDIO_PREFIX}/`)) {
     return handleContentStudio(request, env, { resolveAdmin:adminSession, respond:(data, status = 200) => json(data, status, request, env) });
+  }
+  // Phase 8 성과·수익 리포트(읽기 전용). 메서드 검사·관리자 확인은 위임 모듈이 한다.
+  if (path === PERFORMANCE_PATH || path === `${PERFORMANCE_PATH}/`) {
+    return handlePerformanceReport(request, env, { resolveAdmin:adminSession, respond:(data, status = 200) => json(data, status, request, env) });
   }
   return null;
 }

@@ -204,6 +204,17 @@ const controlApiTouched=changedFiles.some(file=>
   'marketing-admin-publications.js',
   'marketing-content-studio.js',
   'marketing-seo-engine.js',
+  // Phase 8 (measurement · revenue attribution · Naver): performance report API, metrics collector and
+  // IndexNow daily submission run inside the Control API (/api/marketing/admin/performance + 10-minute cron).
+  'marketing-performance-report.js',
+  'marketing-metrics-collector.js',
+  'marketing-indexnow-scheduler.js',
+  'channel-credential-vault.js',
+  'platform-indexnow.js',
+  'public-discovery-registry.js',
+  'mall-weekly-picks-page.js',
+  'mall-product-jsonld.js',
+  'test/marketing-performance-phase8-20261024.test.mjs',
   // Telemetry reader and site classifier run inside the Control API.
   'traffic-intelligence-control.js',
   'traffic-intelligence.js',
@@ -340,6 +351,9 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='mall-social-setup.js'||
   // Mall public product Product/Offer JSON-LD is injected server-side by Site Core (site-worker.js).
   ['mall-product-jsonld.js','mall-weekly-picks-page.js'].includes(file)||
+  // Phase 8: edge attribution capture (utm_content → visit/affiliate_click/order) runs in the Site Core entry
+  // (platform-router-entry-worker.js); the 성과·수익 admin panel ships in marketing-ai-admin.js/css.
+  ['marketing-attribution-capture.js','test/marketing-performance-phase8-20261024.test.mjs'].includes(file)||
   file.startsWith('sites/')||
   // The Seasonal Workforce proposal portal is compiled into the same guarded Site Core.
   file.startsWith('seasonal-workforce/')||
