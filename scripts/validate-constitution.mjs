@@ -249,7 +249,7 @@ const separation=constitution.userSurfaceEngineSeparation||{};
 if (separation.canonicalMarketingProduct !== 'https://ekodi.kr/ekodibiz/marketing-ai') fail('Marketing product canonical drift');
 if (separation.canonicalWorkspaceMarketingPattern !== 'https://ekodi.kr/{slug}/marketing') fail('workspace Marketing canonical pattern drift');
 if (separation.marketingCore !== 'https://ekodi.kr/marketing' || separation.aiGateway !== 'https://ekodi.kr/ai') fail('Marketing and AI core canonical path drift');
-if (separation.aiGateway !== 'https://ai.ekodi.kr') fail('AI Gateway/Core boundary drift');
+if (separation.aiGateway !== 'https://ekodi.kr/ai') fail('AI Gateway/Core canonical path drift');
 if (separation.customerAiSubdomains !== 'legacy_execution_alias_only') fail('customer AI subdomains must remain legacy execution aliases');
 if (separation.providerTopologyVisibleToOrdinaryUsers !== false) fail('provider topology must stay hidden from ordinary users');
 if (targets['cgma.ekodi.kr'] !== 'https://ekodi.kr/cgma') fail('CGMA legacy domain must target the canonical platform path');
