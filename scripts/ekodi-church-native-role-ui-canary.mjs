@@ -88,6 +88,32 @@ try{
   assert.equal(landing?.status(),200,'live Church public homepage must respond 200');
   assert.equal(new URL(page.url()).origin,ORIGIN,'must remain at canonical EKODI origin');
   await page.waitForFunction(()=>document.readyState==='complete',null,{timeout:15000});
+  // EKODI first-party Chromium diagnosis: read only, no auth or content writes.
+  for(const device of [{name:'mobile',width:390,height:844},{name:'desktop',width:1440,height:900}]){
+    await page.setViewportSize({width:device.width,height:device.height});
+    const navEvidence=await page.evaluate(()=>{
+      const nav=document.querySelector('#main-nav');
+      const links=[...(nav?.querySelectorAll('a[href]')||[])].map(a=>{
+        const raw=a.getAttribute('href');
+        const url=new URL(raw,location.href);
+        return {raw,resolved:url.href,text:a.textContent?.trim(),
+          matchesChurchMember:url.origin===location.origin&&url.pathname==='/ekodichurch/my/'&&url.search===''&&url.hash===''};
+      });
+      return {url:location.href,releaseCandidate:location.search,navPresent:!!nav,links,
+        strictMember:!!document.querySelector('a[href="/ekodichurch/my/"]'),
+        resolvedMember:links.some(link=>link.matchesChurchMember)};
+    });
+    console.log('EKODI_NATIVE_CHURCH_MEMBER_NAV='+JSON.stringify({device:device.name,...navEvidence}));
+  }
+  await page.setViewportSize({width:390,height:844});
+
+  // The approved worship-first layout hides dated materials on Home.
+  // Open the public section exactly as a real menu click would before selecting.
+  await page.goto(PAGE+'#weekly-worship',{waitUntil:'domcontentloaded',timeout:25000});
+  await page.waitForFunction(()=>{
+    const weekly=document.querySelector('[data-church-weekly]');
+    return location.hash==='#weekly-worship'&&weekly&&getComputedStyle(weekly).display!=='none';
+  },null,{timeout:15000});
   // Read-only real production checks: dated packet switching and responsive UI.
   // No synthetic bearer is present until after these checks finish.
   const weekly=page.locator('[data-church-weekly]');
