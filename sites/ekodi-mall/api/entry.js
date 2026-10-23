@@ -1,4 +1,5 @@
 import core from './worker.js';
+import { withMerchantKeys } from '../../../ekodipay-core.js';
 import { handleTransactionRehearsal, transactionRehearsalEnabled } from './transaction-rehearsal.js';
 import { handleSourcingRequest, sourcingSchemaReady } from './sourcing.js';
 import { handleSourcingPlanRequest } from './sourcing-plan.js';
@@ -137,8 +138,12 @@ export class MallCatalog {
   }
 }
 
+// EKODIPAY-CORE-001: 에코디몰은 공통 결제 모듈의 'mall' 상점(MID ekobizav68) 키만 사용한다.
+export const MALL_MERCHANT_PROFILE = 'mall';
+
 export default {
-  async fetch(request, env) {
+  async fetch(request, rawEnv) {
+    const env = withMerchantKeys(rawEnv, rawEnv?.EKODIPAY_PROFILE || MALL_MERCHANT_PROFILE);
     const origin = request.headers.get('origin') || '';
     if (origin && !origins(env).has(origin)) return reply({ error:'허용되지 않은 요청입니다.' },403,origin,env);
     const url = new URL(request.url);
@@ -160,7 +165,7 @@ export default {
       const amazonReadSyncReady = Boolean(env.DB) && await amazonReadSyncSchemaReady(env);
       const ok = coreResponse.ok && firstTouchReady && sourcingReady && fulfillmentReady && verificationReady && supplierPilotReady && supplierDiscoveryReady && domemaeReady && commerceEventsReady;
       return reply({
-        ...coreBody, ok, version:3, environment:env.ENVIRONMENT || 'unknown', firstTouchSchemaReady:firstTouchReady,
+        ...coreBody, ok, version:3, environment:env.ENVIRONMENT || 'unknown', paymentMerchant:{ profile:env.EKODIPAY_PROFILE, mid:env.EKODIPAY_MID }, firstTouchSchemaReady:firstTouchReady,
         sourcingSchemaReady:sourcingReady, fulfillmentSchemaReady:fulfillmentReady, verificationSchemaReady:verificationReady,
         supplierPilotSchemaReady:supplierPilotReady, supplierDiscoverySchemaReady:supplierDiscoveryReady, domemaeConnectorReady:domemaeReady,
         commerceEventSchemaReady:commerceEventsReady, commerceOsVersion:1,

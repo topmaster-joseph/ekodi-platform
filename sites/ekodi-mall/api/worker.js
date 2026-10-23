@@ -568,7 +568,9 @@ async function confirmTossPayment(env, order, paymentKey, amount) {
     method: 'POST',
     headers: {
       authorization: basicAuth(env.TOSS_SECRET_KEY),
-      'content-type': 'application/json'
+      'content-type': 'application/json',
+      // 같은 주문의 승인 재시도가 이중 승인되지 않도록 멱등키를 보낸다.
+      'idempotency-key': `mall-confirm-${order.id}`
     },
     body: JSON.stringify({ paymentKey, orderId: order.id, amount })
   });
