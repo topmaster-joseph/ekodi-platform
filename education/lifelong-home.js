@@ -43,6 +43,23 @@
     // The native hash link remains functional even when JavaScript is disabled.
   }));
 
+  // Audience filters and shortcut prompts reuse the same local-only discovery.
+  for (const link of document.querySelectorAll('[data-audience]')) {
+    link.addEventListener('click', () => {
+      query.value = '';
+      selectedCategory = link.getAttribute('data-audience') || '';
+      updateResults();
+    });
+  }
+  for (const button of document.querySelectorAll('[data-quick-search]')) {
+    button.addEventListener('click', () => {
+      selectedCategory = '';
+      query.value = button.getAttribute('data-quick-search') || '';
+      updateResults();
+      target.scrollIntoView({ block: 'start' });
+    });
+  }
+
   form.addEventListener('submit', event => {
     event.preventDefault();
     // A new text search explores all pathways, not the previously selected category.
