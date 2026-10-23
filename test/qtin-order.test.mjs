@@ -714,11 +714,14 @@ test('widget keys (live_gck/live_gsk) open real checkout through the Toss paymen
   assert.equal(cat.payment.widget, true);
   const page = await (await handleRequest(new Request('https://ekodi.kr/qtin/church'), env, OPEN_NOW)).text();
   assert.ok(page.includes('id="paymentMethods"') && page.includes('id="agreement"') && page.includes('"widget":true'));
-  assert.ok(page.includes("variantKey: 'DEFAULT'"));
+  // The widget renders the 'qtin' payment UI (→ 큐티인 MID q_ekodib62hb), never the DEFAULT UI (→ ekobizav68).
+  assert.ok(page.includes("variantKey: data.widgetVariant || 'qtin'"));
+  assert.ok(!page.includes("variantKey: 'DEFAULT'"));
   const res = await handleRequest(post('/qtin/api/orders', { campaignId: '2026-12', org: 'church', name: '홍길동', phone: '01012345678', privacyConsent: true, items: [{ productId: '2026-12:1719304225', quantity: 1 }] }), env, OPEN_NOW);
   const order = await res.json();
   assert.equal(res.status, 201, JSON.stringify(order));
   assert.equal(order.clientKey, 'live_gck_real');
+  assert.equal(order.widgetVariant, 'qtin');
   assert.ok(!JSON.stringify(order).includes('gsk'), 'the widget secret key never reaches the browser');
   // Confirmation uses the widget secret key server-side.
   const token = new URL(order.successUrl).searchParams.get('t');
@@ -779,4 +782,14 @@ test('payment widget opens non-modal so the window Toss opens on requestPayment 
   for (const directive of ['frame-src', 'connect-src', 'form-action']) {
     assert.match(csp, new RegExp(`${directive}[^;]*https://\\*\\.toss\\.im`), directive);
   }
+});
+
+test('widget variantKey is configurable, defaults to qtin and rejects malformed values', async () => {
+  const { widgetVariantKey } = await import('../qtin-order-worker.js');
+  assert.equal(widgetVariantKey({}), 'qtin');
+  assert.equal(widgetVariantKey({ TOSS_WIDGET_VARIANT: ' qtin ' }), 'qtin');
+  assert.equal(widgetVariantKey({ TOSS_WIDGET_VARIANT: 'church-ui' }), 'church-ui');
+  assert.equal(widgetVariantKey({ TOSS_WIDGET_VARIANT: "x'+alert(1)+'" }), 'qtin');
+  const toml = await readFile(new URL('../wrangler.qtin-order.toml', import.meta.url), 'utf8');
+  assert.match(toml, /^TOSS_WIDGET_VARIANT = "qtin"$/m);
 });
