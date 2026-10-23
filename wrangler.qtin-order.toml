@@ -24,6 +24,8 @@ QTM_SEED_ITEM_IDS = "1719304225,1719305039,1719304141"
 # TOSS_SECRET_KEY is a Worker secret only (never in this file, the repo or D1);
 # readiness stays closed until that secret is registered.
 PAYMENTS_ENABLED = "true"
+# 결제위젯 결제 UI variantKey: "qtin" UI → 큐티인 MID q_ekodib62hb (DEFAULT UI는 ekobizav68)
+TOSS_WIDGET_VARIANT = "qtin"
 TOSS_CLIENT_KEY = "test_ck_oEjb0gm23P450e7wmE6o3pGwBJn5"
 
 [[d1_databases]]

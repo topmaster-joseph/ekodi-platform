@@ -436,6 +436,7 @@ async function createOrder(env, body, now = new Date(), request = null) {
     data: {
       orderId, amount: draft.totalAmount, orderName: draft.orderName, customerName: draft.applicantName, customerEmail: draft.email || undefined,
       customerMobilePhone: draft.phone.replace(/-/g, ''), clientKey: ekodipay.merchantKeys(env, readiness.profile).clientKey, customerKey: `qtin-${crypto.randomUUID()}`,
+      widgetVariant: widgetVariantKey(env),
       successUrl: `${base}/payment/success?t=${encodeURIComponent(lookupToken)}`,
       failUrl: `${base}/payment/fail?orderId=${encodeURIComponent(orderId)}`,
       expiresAt,
@@ -757,7 +758,7 @@ function orderClient() {
   }));
   $('loginCta').addEventListener('click', () => { $('account').scrollIntoView({ behavior: 'smooth', block: 'center' }); setStatus('아래 구글 버튼으로 로그인해 주세요.'); });
   $('logout').addEventListener('click', () => { forget(); session = null; ['name', 'phone', 'email', 'department'].forEach(id => { $(id).value = ''; }); showSignedOut(); });
-  // ---- Toss 결제위젯 (결제위젯 연동 키 gck/gsk). 결제 UI는 상점관리자의 variantKey(DEFAULT)를 따른다. ----
+  // ---- Toss 결제위젯 (결제위젯 연동 키 gck/gsk). 결제 UI(=정산 MID)는 서버가 주는 variantKey(기본 'qtin')를 따른다. ----
   let widgetRequest = null;
   let widgetSdk = null;
   async function openWidget(data, request) {
@@ -773,7 +774,7 @@ function orderClient() {
     widgetSdk = window.TossPayments(data.clientKey).widgets({ customerKey: data.customerKey });
     await widgetSdk.setAmount({ currency: 'KRW', value: data.amount });
     await Promise.all([
-      widgetSdk.renderPaymentMethods({ selector: '#paymentMethods', variantKey: 'DEFAULT' }),
+      widgetSdk.renderPaymentMethods({ selector: '#paymentMethods', variantKey: data.widgetVariant || 'qtin' }),
       widgetSdk.renderAgreement({ selector: '#agreement', variantKey: 'AGREEMENT' }),
     ]);
     widgetRequest = request;
@@ -1267,6 +1268,12 @@ export async function handleRequest(request, env, now = new Date()) {
     return html(renderOrderPage(await catalog(env, now), { org, scriptNonce }), { method, scriptNonce, env });
   }
   return json({ error: 'not_found' }, 404, env, method);
+}
+
+// 상점관리자 > 결제 UI 설정의 variantKey. 'qtin' UI는 큐티인 MID(q_ekodib62hb)로, 기본 UI(DEFAULT)는 다른 MID로 정산된다.
+export function widgetVariantKey(env) {
+  const v = String(env?.TOSS_WIDGET_VARIANT || '').trim();
+  return /^[A-Za-z0-9_-]{1,50}$/.test(v) ? v : 'qtin';
 }
 
 export default {
