@@ -9,6 +9,10 @@ pattern = "publishing.ekodi.kr"
 zone_name = "ekodi.kr"
 custom_domain = true
 
+[[services]]
+binding = "BOOKS"
+service = "ekodi-books"
+
 [assets]
 directory = "./publishing"
 binding = "ASSETS"

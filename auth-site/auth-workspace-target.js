@@ -8,7 +8,7 @@ const PERSON_SCOPED_SITES=new Set(['social','energy']);
 const params=new URLSearchParams(location.search);
 const site=String(params.get('site')||'').trim().toLowerCase();
 const requested=String(params.get('workspace')||'').trim();
-const serviceDefaults={cgma:'https://ekodi.kr/cgma/',mission:'https://ekodi.kr/ekodimission/',church:'https://ekodi.kr/ekodichurch/'};
+const serviceDefaults={cgma:'https://ekodi.kr/cgma/',mission:'https://ekodi.kr/ekodimission/',church:'https://ekodi.kr/ekodichurch/',marketing:'https://ekodi.kr/ekodibiz/marketing-ai',biz:'https://ekodi.kr/ekodibiz',trade:'https://ekodi.kr/ekodibiz/trade',mall:'https://ekodi.kr/ekodimall',pay:'https://ekodi.kr/ekodipay',books:'https://ekodi.kr/books',lab:'https://ekodi.kr/ekodilab',community:'https://ekodi.kr/community',edu:'https://ekodi.kr/edu',media:'https://ekodi.kr/media',social:'https://ekodi.kr/social',energy:'https://ekodi.kr/energy'};
 const serviceOrigins={
   cgma:['https://ekodi.kr','https://cgma.or.kr','https://cgma.ekodi.kr'],
   marketing:['https://marketing.ekodi.kr','https://jadam.ekodi.kr','https://pizzamaru.ekodi.kr','https://yogurt.ekodi.kr','https://yogurtpurple.ekodi.kr'],
@@ -31,7 +31,7 @@ const fallback=serviceDefaults[site]||`${origins[0]}/`;
 if(!origins.length||!requested||requested.length>180||!/^[a-z]+:[a-zA-Z0-9:_-]+$/.test(requested))throw new Error('target_workspace_not_applicable');
 
 function safeReturn(raw){
-  try{const target=new URL(raw||fallback);const platformPath=target.origin==='https://ekodi.kr'&&((site==='cgma'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/')))||(site==='mission'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')))||(site==='church'&&(target.pathname==='/ekodichurch'||target.pathname.startsWith('/ekodichurch/'))));return target.protocol==='https:'&&((origins.includes(target.origin)&&target.origin!=='https://ekodi.kr')||platformPath)?target.href:fallback;}
+  try{const target=new URL(raw||fallback);const base=new URL(fallback);const canonicalPath=base.origin==='https://ekodi.kr'&&base.pathname!=='/'&&(target.pathname===base.pathname||target.pathname===base.pathname.replace(/\/$/,'')||target.pathname.startsWith(base.pathname.replace(/\/$/,'')+'/'));const platformPath=target.origin==='https://ekodi.kr'&&((site==='cgma'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/')))||(site==='mission'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')))||(site==='church'&&(target.pathname==='/ekodichurch'||target.pathname.startsWith('/ekodichurch/'))));return target.protocol==='https:'&&((origins.includes(target.origin)&&target.origin!=='https://ekodi.kr')||platformPath||(target.origin==='https://ekodi.kr'&&canonicalPath))?target.href:fallback;}
   catch{return fallback;}
 }
 const returnTo=safeReturn(params.get('return_to'));

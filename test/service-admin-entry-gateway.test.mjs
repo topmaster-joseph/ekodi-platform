@@ -22,7 +22,7 @@ test('broken production admin hosts are covered by the independent route gateway
 test('admin root hands off to the central control plane without caching', async () => {
   const response = await worker.fetch(new Request('https://invest.ekodi.kr/admin'));
   assert.equal(response.status, 307);
-  assert.equal(response.headers.get('location'), 'https://admin.ekodi.kr/?source=invest.ekodi.kr');
+  assert.equal(response.headers.get('location'), 'https://ekodi.kr/admin/?source=invest.ekodi.kr');
   assert.equal(response.headers.get('cache-control'), 'no-store');
   assert.equal(response.headers.get('x-ekodi-admin-entry'), 'central-handoff-v1');
   assert.match(response.headers.get('x-robots-tag') || '', /noindex/);

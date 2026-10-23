@@ -1,5 +1,5 @@
 {
-  "version": 109,
+  "version": 110,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -3311,7 +3311,8 @@
         ],
         "redirect": "manual",
         "expect": [
-          ".site-header"
+          ".site-header",
+          ".table th,.table td{word-break:keep-all}"
         ],
         "headerExpect": [
           "content-type: text/css",
@@ -3626,6 +3627,36 @@
         "headerExpect": [
           "cache-control: no-store",
           "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/jubilee/assets/app.css",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          ".table th,.table td{word-break:keep-all}"
+        ],
+        "headerExpect": [
+          "content-type: text/css",
+          "cache-control: private, no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/open/assets/app.css",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          ".table th,.table td{word-break:keep-all}"
+        ],
+        "headerExpect": [
+          "content-type: text/css",
+          "cache-control: private, no-store"
         ],
         "rollbackVerify": false
       }
