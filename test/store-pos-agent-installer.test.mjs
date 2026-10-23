@@ -18,7 +18,8 @@ test('one-click POS Agent setup is fixed to the official package and elevates ex
   for(const name of ['install-pos-agent.ps1','EKODI-POS-Agent.ps1','pos-agent.config.example.json','diagnose-pos-targets.ps1','start-pos-agent.cmd','stop-pos-agent.cmd','uninstall-pos-agent.ps1']) assert.match(setup,new RegExp(name.replaceAll('.','\\.')));
   assert.match(setup,/Start-Process -FilePath '%ComSpec%'.*-Verb RunAs/);
   assert.match(setup,/listenerPrefix must remain loopback-only/);
-  assert.match(setup,/EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v5/);
+  assert.match(setup,/EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v\(\\d\+\)/);
+  assert.match(setup,/\$minCompat=\d+/);
   assert.match(setup,/Refreshing Task Scheduler compatibility package/);
   assert.match(setup,/\?v=/);
   assert.match(setup,/outdated Task Scheduler installer/);
@@ -179,4 +180,18 @@ test('POS diagnostics suggestions stay read-only candidates',()=>{
   assert.match(diagnose,/confirmed = \$false/);
   assert.match(diagnose,/nothing was written/);
   assert.doesNotMatch(diagnose,/Set-Content|Out-File|Start-Process|Stop-Process|SetForegroundWindow|AppActivate/);
+});
+
+// Guard: the one-click setup, the compatibility setup and the installer must agree
+// on the installer compat contract. A drift (installer v6, setup still pinned v5)
+// made every one-click install fail with "outdated Task Scheduler installer".
+test('one-click setup accepts the installer compat version that main actually ships',()=>{
+  const shipped=Number((install.match(/EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v(\d+)/)||[])[1]);
+  const minCompat=Number((setup.match(/\$minCompat=(\d+)/)||[])[1]);
+  const compatRequired=Number((compatSetup.match(/EKODI_POS_INSTALLER_COMPAT=task-scheduler-0x80041318-v(\d+)/)||[])[1]);
+  assert.ok(Number.isInteger(shipped)&&shipped>0,'installer must declare its compat version');
+  assert.ok(Number.isInteger(minCompat)&&minCompat>0,'setup must declare $minCompat');
+  assert.ok(shipped>=minCompat,`installer v${shipped} would be rejected by setup (requires v${minCompat}+)`);
+  assert.ok(shipped>=compatRequired,`installer v${shipped} would be rejected by compat setup (requires v${compatRequired})`);
+  assert.doesNotMatch(setup,/task-scheduler-0x80041318-v\d+'/,'setup must not pin an exact installer version');
 });
