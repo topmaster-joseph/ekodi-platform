@@ -62,5 +62,5 @@ test('Public publishing page has transparent pricing and consultation submission
   assert.match(publishingApp, /digital-start/);
   assert.match(publishingApp, /publish-pro/);
   assert.match(publishingApp, /\/api\/books\/inquiries/);
-  assert.match(booksWorker, /admin\.ekodi\.kr\/books#books/);
+  assert.match(booksWorker, /ekodi\.kr\/admin\/books#books/);
 });
