@@ -98,3 +98,9 @@ test('mall payments can only be enabled together with all four readiness policy 
     assert.match(wrangler, new RegExp(`^${ref} = "[^"]+"`, 'm'), `${ref} is required when PAYMENTS_ENABLED=true (sites/ekodi-mall/scripts/validate.mjs)`);
   }
 });
+
+test('mall build and production health checks follow the committed payments flag instead of pinning it off', async () => {
+  const verifyBuild = await readFile(new URL('../sites/ekodi-mall/scripts/verify-build.mjs', import.meta.url), 'utf8');
+  assert.ok(verifyBuild.includes('paymentsMarker') && !verifyBuild.includes(`'"paymentsEnabled": false'`));
+  assert.ok(deploy.includes('expected_payments=true') && deploy.includes('\\"paymentsEnabled\\":${expected_payments}'));
+});
