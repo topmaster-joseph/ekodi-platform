@@ -1,0 +1,40 @@
+{
+  "amendmentId": "EKODIBIZ-INVEST-MICROSITE-RETIREMENT-20261023",
+  "constitutionVersion": "1.27.1",
+  "approvedAt": "2026-10-23",
+  "changeClass": "C2",
+  "taskId": "retire-ekodibiz-invest-20261023",
+  "summary": "Decommission the redundant standalone EKODIBIZ Invest business path and site-local admin while preserving the shared EKODI Invest Core on /invest.",
+  "approvalBasis": "The EKODI Platform owner explicitly instructed on 2026-10-23 to cease independent operation of the EKODIBIZ Investment/IR website and remove its domain-path-specific source and server configuration.",
+  "implementation": [
+    "Remove EKODIBIZ investment public and admin page implementations, catalog exposure, local admin registration, monitoring, and deployment expectations.",
+    "Handle legacy GET/HEAD path requests with 308 redirects to /ekodibiz and reject non-read operations with 410; retain no standalone public or admin surface.",
+    "Preserve shared /invest common-service source code, authentication, user records, and investment research databases.",
+    "Retain historical approved governance records as audit evidence and continue the guarded CI, staging, production-verification release protocol."
+  ],
+  "mandatoryRules": [
+    "Never delete or disable EKODI Invest Core (/invest) as part of this retirement.",
+    "No production schema, shared data, identity, or unrelated workspace removal is authorized.",
+    "The retired EKODIBIZ investment site cannot be silently reintroduced as an independent surface without a new approved change.",
+    "No reduction in legal or regulated investment safeguards.",
+    "Require official EKODI AI Orchestrator-issued release provenance, green checks, staged verification, and real production confirmation."
+  ],
+  "validation": [
+    "EKODI Constitution Check",
+    "EKODI AI Orchestration Gate",
+    "CI",
+    "test/retired-business-invest.test.mjs",
+    "test/ekodibiz-revenue-os.test.mjs",
+    "production old-path redirect and shared /invest smoke verification"
+  ],
+  "rollback": "If retirement causes a regression, revert only this site-specific retirement through protected release after risk assessment; do not restore regulated functionality or remove shared Invest Core.",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalEvidence": {
+    "explicitOwnerInstruction": true,
+    "ownerInstructionDate": "2026-10-23",
+    "pullRequest": 5732,
+    "requiredPullRequestLabel": "constitution-approved",
+    "approvalLabel": "constitution-approved"
+  }
+}
