@@ -1,15 +1,16 @@
 {
   "schemaVersion": 1,
   "policyId": "AI-ORCHESTRATE-001",
-  "orchestrationId": "ekoai-72a3efb8e31718f63ca9",
+  "orchestrationId": "ekoai-04baacb4c41f4ddd82bd",
   "controlPlane": "EKODI AI",
   "orchestrator": "ekodi-ai-orchestrator",
   "source": "static-policy-validation",
   "actor": "local",
   "branch": "main",
-  "sha": "9499b01adf8e7a6ea1d984a173f6677f672cc976",
+  "sha": "fb53429731fc3fc9bed6080b1018498c8598db83",
   "taskClasses": [
-    "platform-code"
+    "release",
+    "experience"
   ],
   "roles": [
     "architect",
@@ -44,5 +45,5 @@
     "verified": false
   },
   "releaseMode": false,
-  "timestamp": "2026-10-22T12:22:51.667Z"
+  "timestamp": "2026-10-23T03:30:27.712Z"
 }
