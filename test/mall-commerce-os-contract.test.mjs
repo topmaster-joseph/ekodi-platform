@@ -18,12 +18,15 @@ const [providers, commerceOs, events, operations, worker, verification, entry, m
 ]);
 const site = JSON.parse(siteText);
 
-test('Commerce OS makes payment providers replaceable without enabling money movement', () => {
+test('Commerce OS makes payment providers replaceable; money moves only through human-gated direct sales', async () => {
   for (const provider of ['none', 'toss', 'portone', 'manual_bank']) assert.ok(providers.includes(`${provider}:`));
   assert.ok(providers.includes('adapterImplemented: false'));
   assert.ok(providers.includes('provider-adapter-not-implemented'));
   assert.match(wrangler, /PAYMENT_PROVIDER = "toss"/);
-  assert.match(wrangler, /PAYMENTS_ENABLED = "false"/);
+  // Production checkout is switched on (owner decision 2026-10-23, single MID q_ekodib62hb), but money still
+  // moves only for direct-sale products a human verified (seller verification + per-product checkout gate).
+  assert.match(wrangler, /PAYMENTS_ENABLED = "true"/);
+  for (const gate of ["blockers.push('seller-verification')", "blockers.push('product-checkout-gate')", "row.sale_type !== 'direct'"]) assert.ok(worker.includes(gate), gate);
   assert.equal(site.commerce.paymentProviderAuthority, 'server-capability-registry');
   assert.equal(site.commerce.highImpactExecution, 'human-gated');
 });
