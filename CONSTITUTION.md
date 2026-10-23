@@ -79,7 +79,7 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 
 ## 2. Domain Constitution (v1.27.2, 2026-10-23)
 - **Only `https://ekodi.kr/<path>` is canonical for first-party EKODI production HTTP/HTTPS.** Admin, authentication, personal, service and API entrypoints must not use `legacy EKODI web subdomains`.
-- Production routes include `/admin`, `/auth`, `/my`, `/api`, `/{workspace}`, `/{workspace}/admin` and registered service paths. Paths locate services; authorization derives from immutable `workspace_id` and Person + Workspace + Role + Capability.
+- Production routes include `/admin`, `/auth`, `/my`, `/api`, `/{workspace}`, `/{workspace}/admin` and registered service paths. Workspace kind is internal metadata and is never encoded into the public URL. Paths locate services; authorization derives from immutable `workspace_id` and Person + Workspace + Role + Capability.
 - Independent Workers retain separate source, secrets, deployment, data ownership, authorization and audit through an apex path gateway, Service Bindings and internal connections. **One browser origin does not merge security realms.**
 - Legacy `legacy EKODI web subdomains` HTTP Custom Domains must be retired after canonical login, admin, API, payments, webhooks and tenant tests, upstream callback updates, rollback evidence and guarded promotion. Do not keep permanent HTTP redirects or aliases.
 - Legacy hostname inventories are for removal only. New first-party production web subdomains are forbidden; final retirement requires zero remaining web route and DNS records.
