@@ -37,6 +37,14 @@ await Promise.all([
   cp(`${root}prototypes/cgma-motor-festival-2026-admin.html`,`${output}cgma/motor-festival-2026/admin/index.html`),
   cp(`${root}prototypes/cgma-motor-festival-2026-admin.js`,`${output}cgma/motor-festival-2026/admin/app.js`),
 ]);
+// cgmurrc booth shifts: member personal-link page + administrator page; data only via the Control API.
+await mkdir(`${output}cgmurrc/booth/admin/`,{recursive:true});
+await Promise.all([
+  cp(`${root}prototypes/cgmurrc-booth.html`,`${output}cgmurrc/booth/index.html`),
+  cp(`${root}prototypes/cgmurrc-booth.js`,`${output}cgmurrc/booth/app.js`),
+  cp(`${root}prototypes/cgmurrc-booth-admin.html`,`${output}cgmurrc/booth/admin/index.html`),
+  cp(`${root}prototypes/cgmurrc-booth-admin.js`,`${output}cgmurrc/booth/admin/app.js`),
+]);
 await Promise.all([
   cp(`${root}pizzamaru-mokpodae.html`, `${output}pizzamaru-mokpodae.html`),
   cp(`${root}pizzamaru-mokpodae.css`, `${output}pizzamaru-mokpodae.css`),

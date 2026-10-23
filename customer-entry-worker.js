@@ -7,6 +7,7 @@ import { handleRegionalAccessControl } from './regional-access-control.js';
 import { handleLocalRegionOperations } from './local-region-operations-control.js';
 import { handleCheonggyePassVendorIntake } from './cheonggyepass-vendor-intake.js';
 import { MOTOR_FESTIVAL_API_PATH, handleMotorFestivalApplications, purgeExpiredMotorFestivalApplications } from './motor-festival-registration-api.js';
+import { isBoothApiPath, handleCgmurrcBooth } from './cgmurrc-booth-api.js';
 import { handleCustomerMemberDirectory } from './customer-member-directory.js';
 import { handleMembershipBilling, runMembershipBillingSchedule } from './membership-billing.js';
 import { handleAdminGoogleAuth } from './admin-google-auth.js';
@@ -277,6 +278,9 @@ export default {
     }
     if (path === MOTOR_FESTIVAL_API_PATH || path === MOTOR_FESTIVAL_API_PATH + '/') {
       return handleMotorFestivalApplications(request, env);
+    }
+    if (isBoothApiPath(path)) {
+      return handleCgmurrcBooth(request, env);
     }
     if (path.startsWith('/api/cheonggyepass/vendor-intake')) {
       return handleCheonggyePassVendorIntake(request, env);

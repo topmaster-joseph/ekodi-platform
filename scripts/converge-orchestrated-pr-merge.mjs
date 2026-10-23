@@ -292,6 +292,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   // CGMA workspace pages compiled into Site Core (/cgma/ai-education/, /cgma/motor-festival-2026/).
   ['cgma-ai-education-route.js','cgma-motor-festival-route.js'].includes(file)||
   (file.startsWith('prototypes/cgma-')&&/\.(html|js)$/.test(file))||
+  // cgmurrc booth member/admin pages are compiled into Site Core by scripts/build.mjs.
+  (file.startsWith('prototypes/cgmurrc-')&&/\.(html|js)$/.test(file))||
   // The EKODI public homepage is compiled into the shared Site Core. GITHUB_TOKEN
   // merges do not trigger main push workflows: dispatch its guarded release here.
   ['index.html','homepage-ambient.js','homepage-ambient.css'].includes(file)||
