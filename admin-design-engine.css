@@ -529,7 +529,9 @@ body.admin-compact.ekodi-admin-design-engine .admin-detail-tab.active{
   background:#f2f2f2!important;
   border-color:#f2f2f2!important;
 }
-body.admin-compact.ekodi-admin-design-engine .admin-detail-item.open{color:#fff!important}
+/* An open multi-detail menu is emphasised by weight only; colour stays with .active so a
+   selected single-detail menu keeps its high-contrast active text (regression fix 2026-10-23). */
+body.admin-compact.ekodi-admin-design-engine .admin-detail-item.open:not(.active){font-weight:800!important}
 body.admin-compact.ekodi-admin-design-engine main,
 body.admin-compact.ekodi-admin-design-engine .content{
   background:#fafafa!important;
