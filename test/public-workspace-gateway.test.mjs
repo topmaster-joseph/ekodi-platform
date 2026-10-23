@@ -71,8 +71,8 @@ test('canonical public workspace paths use the isolated Space service binding',a
   assert.ok(stageWrangler.includes('binding = "EKODIBIZ"'));
   assert.ok(stageWrangler.includes('service = "ekodibiz-revenue-os-staging"'));
   assert.ok(stageWorkflow.includes("verify_public_path '/deployment-probe'"));
-  assert.ok(stageWorkflow.includes("verify_public_path '/ekodibiz/invest'"));
-  assert.ok(stageWorkflow.includes("verify_public_path '/ekodibiz/invest/admin'"));
+  assert.ok(stageWorkflow.includes("verify_retired_invest_path '/ekodibiz/invest'"));
+  assert.ok(stageWorkflow.includes("verify_retired_invest_path '/invest'"));
   for(const retiredKind of ['personal','o'+'rg','group','project']) assert.ok(!wrangler.includes(`\"/${retiredKind}/*\"`),retiredKind);
 });
 test('customer storefront and independent workspace responses receive readability only, not member chrome',async()=>{
