@@ -1,5 +1,6 @@
 import authWorker, { isAllowedOrigin } from './auth-worker.js';
 import { readMarketingPublicationOverview } from './marketing-admin-publications.js';
+import { STUDIO_PREFIX, handleContentStudio } from './marketing-content-studio.js';
 
 const PAID_PLANS = new Set(['plus','pro','auto','enterprise']);
 const MARKETING_ACTION_RE = /(marketing|campaign|social|channel|crm|review|advert|promotion)/i;
@@ -8,7 +9,7 @@ const MARKETING_TARGET_RE = /(marketing\.ekodi\.kr|\.ai\.ekodi\.kr|ekodibiz|jada
 function cors(origin, env = {}) {
   const headers = {
     'access-control-allow-headers': 'content-type, authorization',
-    'access-control-allow-methods': 'GET, OPTIONS',
+    'access-control-allow-methods': 'GET, POST, OPTIONS',
     'access-control-max-age': '86400',
     vary: 'Origin',
   };
@@ -421,5 +422,9 @@ export async function handleMarketingAdminControl(request, env) {
   if (request.method === 'OPTIONS') return new Response(null, { status:204, headers:cors(origin, env) });
   const path = new URL(request.url).pathname;
   if (request.method === 'GET' && path === '/api/marketing/admin/overview') return overview(request, env);
+  // 콘텐츠 스튜디오(채널별 변형 검수·예약)는 같은 관리자 세션 확인(adminSession)을 재사용한다.
+  if (path === STUDIO_PREFIX || path.startsWith(`${STUDIO_PREFIX}/`)) {
+    return handleContentStudio(request, env, { resolveAdmin:adminSession, respond:(data, status = 200) => json(data, status, request, env) });
+  }
   return null;
 }
