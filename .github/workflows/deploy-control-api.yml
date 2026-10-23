@@ -815,8 +815,18 @@ jobs:
           # Fine-grained GitHub token (this repository, Actions: read/write only).
           # The hourly Worker cron uses it to wake the runner-egress news crawl.
           if [ -n "${SEONAMMEDI_DISPATCH_TOKEN:-}" ]; then
-            printf '%s' "$SEONAMMEDI_DISPATCH_TOKEN" | npx --yes wrangler@${WRANGLER_VERSION} secret put SEONAMMEDI_DISPATCH_TOKEN --config wrangler.api.toml >/dev/null
-            echo 'SeonamMedi crawl dispatch token provisioned without printing its value.' >> "$GITHUB_STEP_SUMMARY"
+            # After a guarded release rolls back, the uploaded candidate stays the Worker's latest
+            # version while an older version serves traffic. Cloudflare then refuses in-place
+            # `secret put`. Stage the secret on a new version instead: the guarded release below
+            # uploads from the latest version, so the token ships with the next promotion.
+            if printf '%s' "$SEONAMMEDI_DISPATCH_TOKEN" | npx --yes wrangler@${WRANGLER_VERSION} secret put SEONAMMEDI_DISPATCH_TOKEN --config wrangler.api.toml >/dev/null 2>/tmp/seonammedi-secret.err; then
+              echo 'SeonamMedi crawl dispatch token provisioned without printing its value.' >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo 'In-place secret edit refused (latest Worker version not deployed); staging the token on a new version.' >&2
+              sed -E 's/[A-Za-z0-9_]{24,}/[redacted]/g' /tmp/seonammedi-secret.err >&2 || true
+              printf '%s' "$SEONAMMEDI_DISPATCH_TOKEN" | npx --yes wrangler@${WRANGLER_VERSION} versions secret put SEONAMMEDI_DISPATCH_TOKEN --config wrangler.api.toml --message 'EKODI: stage SeonamMedi crawl dispatch token' >/dev/null
+              echo 'SeonamMedi crawl dispatch token staged on a new Worker version; it is promoted by the guarded release.' >> "$GITHUB_STEP_SUMMARY"
+            fi
           else
             echo 'SEONAMMEDI_DISPATCH_TOKEN is not set; the hourly Worker cron will not wake the runner crawl.' >> "$GITHUB_STEP_SUMMARY"
           fi
