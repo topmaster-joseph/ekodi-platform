@@ -138,7 +138,7 @@ export class MallCatalog {
   }
 }
 
-// EKODIPAY-CORE-001: 에코디몰은 공통 결제 모듈의 'mall' 상점(MID ekobizav68) 키만 사용한다.
+// EKODIPAY-CORE-001: 에코디몰은 공통 결제 모듈의 'mall' 상점(MID q_ekodib62hb) 키만 사용한다.
 export const MALL_MERCHANT_PROFILE = 'mall';
 
 export default {

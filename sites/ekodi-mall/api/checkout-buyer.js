@@ -58,7 +58,7 @@ export function checkoutConfig(env, order) {
     provider: 'toss',
     clientKey,
     widget: isWidgetClientKey(clientKey),
-    variantKey: clean(env.TOSS_WIDGET_VARIANT_KEY, 60) || 'DEFAULT',
+    variantKey: clean(env.TOSS_WIDGET_VARIANT_KEY, 60) || 'qtin',
     agreementVariantKey: clean(env.TOSS_WIDGET_AGREEMENT_VARIANT_KEY, 60) || 'AGREEMENT',
     customerKey: 'ANONYMOUS',
     successUrl: `${page}?checkout=success`,

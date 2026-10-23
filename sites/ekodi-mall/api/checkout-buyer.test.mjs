@@ -44,7 +44,7 @@ test('Toss key pairs: widget (gck/gsk) or individual (ck/sk), never mixed or cro
   assert.equal(paymentProviderReadiness({ ...LIVE_WIDGET, TOSS_SECRET_KEY: 'live_sk_y' }).liveReady, false);
   assert.equal(isWidgetClientKey('live_gck_x'), true);
   const co = checkoutConfig(LIVE_WIDGET, { id: 'mall_1', shareCode: 'SHARE1' });
-  assert.deepEqual({ widget: co.widget, variantKey: co.variantKey, customerKey: co.customerKey }, { widget: true, variantKey: 'DEFAULT', customerKey: 'ANONYMOUS' });
+  assert.deepEqual({ widget: co.widget, variantKey: co.variantKey, customerKey: co.customerKey }, { widget: true, variantKey: 'qtin', customerKey: 'ANONYMOUS' });
   assert.equal(co.successUrl, 'https://ekodi.kr/ekodimall/p/SHARE1?checkout=success');
   assert.equal(co.failUrl, 'https://ekodi.kr/ekodimall/p/SHARE1?checkout=fail&orderId=mall_1');
   assert.ok(!JSON.stringify(co).includes('gsk'), 'secret key never reaches the browser');

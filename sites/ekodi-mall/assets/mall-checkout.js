@@ -89,7 +89,7 @@
           widgets = toss.widgets({ customerKey: co.customerKey || 'ANONYMOUS' });
           await widgets.setAmount({ currency: 'KRW', value: order.amount });
           await Promise.all([
-            widgets.renderPaymentMethods({ selector: '#coPaymentMethods', variantKey: co.variantKey || 'DEFAULT' }),
+            widgets.renderPaymentMethods({ selector: '#coPaymentMethods', variantKey: co.variantKey || 'qtin' }),
             widgets.renderAgreement({ selector: '#coAgreement', variantKey: co.agreementVariantKey || 'AGREEMENT' }),
           ]);
           widgetPay.disabled = false;

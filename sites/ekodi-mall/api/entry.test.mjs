@@ -62,12 +62,12 @@ test('legacy MallCatalog Durable Object remains non-destructive', async () => {
   assert.doesNotMatch(config,/deleted_classes\s*=.*MallCatalog/);
 });
 
-// EKODIPAY-CORE-001: EKODI Mall pays through MID ekobizav68 and never uses another merchant's keys.
-test('mall health reports MID ekobizav68 and only *__MALL keys count as configured', async () => {
+// EKODIPAY-CORE-001: EKODI Mall pays through MID q_ekodib62hb and never uses another merchant's keys.
+test('mall health reports MID q_ekodib62hb and only *__MALL keys count as configured', async () => {
   const { default: worker } = await import('./entry.js');
   const health = async env => (await worker.fetch(new Request('https://ekodi.kr/health'), env)).json();
   const legacyOnly = await health({ PAYMENTS_ENABLED: 'false', PAYMENT_PROVIDER: 'toss', TOSS_CLIENT_KEY: 'test_ck_q', TOSS_SECRET_KEY: 'test_sk_q' });
-  assert.deepEqual(legacyOnly.paymentMerchant, { profile: 'mall', mid: 'ekobizav68' });
+  assert.deepEqual(legacyOnly.paymentMerchant, { profile: 'mall', mid: 'q_ekodib62hb' });
   assert.equal(legacyOnly.tossSecretConfigured, false, 'QTIN/legacy keys must not activate mall payments');
   const mall = await health({ PAYMENTS_ENABLED: 'false', PAYMENT_PROVIDER: 'toss', TOSS_CLIENT_KEY__MALL: 'test_ck_m', TOSS_SECRET_KEY__MALL: 'test_sk_m' });
   assert.equal(mall.tossSecretConfigured, true);

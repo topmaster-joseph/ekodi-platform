@@ -714,7 +714,7 @@ test('widget keys (live_gck/live_gsk) open real checkout through the Toss paymen
   assert.equal(cat.payment.widget, true);
   const page = await (await handleRequest(new Request('https://ekodi.kr/qtin/church'), env, OPEN_NOW)).text();
   assert.ok(page.includes('id="paymentMethods"') && page.includes('id="agreement"') && page.includes('"widget":true'));
-  // The widget renders the 'qtin' payment UI (→ 큐티인 MID q_ekodib62hb), never the DEFAULT UI (→ ekobizav68).
+  // The widget renders the 'qtin' payment UI (→ 큐티인 MID q_ekodib62hb), not the DEFAULT UI.
   assert.ok(page.includes("variantKey: data.widgetVariant || 'qtin'"));
   assert.ok(!page.includes("variantKey: 'DEFAULT'"));
   const res = await handleRequest(post('/qtin/api/orders', { campaignId: '2026-12', org: 'church', name: '홍길동', phone: '01012345678', privacyConsent: true, items: [{ productId: '2026-12:1719304225', quantity: 1 }] }), env, OPEN_NOW);
