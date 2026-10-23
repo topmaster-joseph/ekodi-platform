@@ -5,6 +5,7 @@ import { isCgmaAiEducationPath, routeCgmaAiEducation } from './cgma-ai-education
 import { isCgmaMotorFestivalPath, routeCgmaMotorFestival } from './cgma-motor-festival-route.js';
 import legacyPlatformRouter from './platform-router-worker.js';
 import { canonicalTrackingQueryRedirect } from './canonical-query-policy.js';
+import { captureTrackedLanding, observeAttributedResponse } from './marketing-attribution-capture.js';
 import financeEntryWorker from './finance-entry-worker.js';
 import taxPortalWorker from './tax-portal-worker.js';
 import { injectTaxLocalFallback } from './tax-local-fallback.js';
@@ -701,7 +702,8 @@ export default {
       return finalize(releaseAttestationResponse(env));
     }
     const canonicalQueryRedirect=canonicalTrackingQueryRedirect(request);
-    if(canonicalQueryRedirect)return finalize(canonicalQueryRedirect);
+    // Phase 8: utm_content(콘텐츠 tracking_code)는 이 308 순간에만 보인다 — visit 귀속(waitUntil)+1st-party 쿠키. 실패해도 리다이렉트는 그대로.
+    if(canonicalQueryRedirect)return finalize(captureTrackedLanding(request,env,ctx,canonicalQueryRedirect));
     const publicationAsset=sitePublicationAdminAsset(request);
     if(publicationAsset)return finalize(publicationAsset);
     // The 2026 motor festival intake is a time-boxed event page with its own route policy. It must not be
@@ -719,6 +721,8 @@ export default {
     const adminPublicationSite=await resolvePublicationSiteForRequest(request,env,{admin:true});
     let response;
     try{response=await routePlatform(request,env,ctx)}catch(error){record(500);throw error}
+    // Phase 8: 쿠키가 있는 제휴 클릭·에코디몰 주문 생성만 비동기로 귀속한다(응답은 바꾸지 않음).
+    response=observeAttributedResponse(request,env,ctx,response);
     if(adminPublicationSite)response=injectSitePublicationAdmin(response,adminPublicationSite);
     else if(request.method==='GET'){try{const reqUrl=new URL(request.url);const publicSite=await resolvePublicationSiteForRequest(request,env)||(reqUrl.hostname==='ekodi.kr'&&isPublicDiscoveryPath(reqUrl.pathname)?{id:'',name:''}:null);if(publicSite)response=await ensureSiteDiscoveryHead(request,response,publicSite)}catch(error){console.error('site discovery head skipped',error)}}
     return finalize(response);
