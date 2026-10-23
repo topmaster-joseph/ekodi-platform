@@ -70,8 +70,6 @@ on:
       - 'test/tenant-admin-command-home.test.mjs'
       - 'test/tenant-live-admin.test.mjs'
       - 'test/realtime-live-collaboration.test.mjs'
-      - 'ekodibiz-invest-business.js'
-      - 'ekodibiz-invest-admin-page.js'
       - 'invest-user-page.js'
       - 'invest-subject-ui.js'
       - 'invest-site-system.js'
@@ -376,8 +374,6 @@ on:
       - 'scripts/ensure-church-route-ownership.mjs'
       - 'test/church-route-ownership.test.mjs'
       - 'test/shared-site-release-ownership.test.mjs'
-      - 'test/ekodibiz-invest-business.test.mjs'
-      - 'test/ekodibiz-invest-admin.test.mjs'
       - 'test/invest-site-system.test.mjs'
       - 'deploy/manifests/shared-site.worker.json'
       - 'wrangler.site.toml'
@@ -635,7 +631,7 @@ jobs:
           node --test test/admin-subdomain-redirect-runtime.test.mjs
           node --test test/tapo-admin-asset-boundary.test.mjs test/admin-true-lazy.test.mjs test/mall-production-verifier-contract.test.mjs
           node --test test/admin-assist-dock.test.mjs test/admin-deploy-report.test.mjs test/openai-workspace-release-contract.test.mjs test/shared-site-admin-probe.test.mjs
-          node --test test/admin-communication.test.mjs test/devotional-admin-readiness.test.mjs test/ekodibiz-invest-business.test.mjs test/ekodibiz-invest-admin.test.mjs test/invest-site-system.test.mjs test/public-workspace-gateway.test.mjs test/store-public-gateway.test.mjs test/store-portfolio-admin.test.mjs test/marketing-canonical-projection.test.mjs test/church-pastor-admin.test.mjs test/church-member-home.test.mjs test/church-route-ownership.test.mjs test/organization-subsite.test.mjs
+          node --test test/admin-communication.test.mjs test/devotional-admin-readiness.test.mjs test/retired-business-invest.test.mjs test/invest-site-system.test.mjs test/public-workspace-gateway.test.mjs test/store-public-gateway.test.mjs test/store-portfolio-admin.test.mjs test/marketing-canonical-projection.test.mjs test/church-pastor-admin.test.mjs test/church-member-home.test.mjs test/church-route-ownership.test.mjs test/organization-subsite.test.mjs
           node scripts/validate-admin-source.mjs
           node scripts/validate-user-ui-dna.mjs
           node scripts/validate-platform-security-policy.mjs

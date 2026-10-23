@@ -44,7 +44,8 @@ test('business inquiries use a browser-based Gmail composer instead of mailto', 
 });
 
 test('business areas and common shell are localized as one surface', () => {
-  for (const area of ['software','solar','mall','consulting','trade','publishing','ai-ops','marketing','invest']) assert.match(html, new RegExp(`data-business="${area}"`));
+  for (const area of ['software','solar','mall','consulting','trade','publishing','ai-ops','marketing']) assert.match(html, new RegExp(`data-business="${area}"`));
+  assert.doesNotMatch(html, /data-business="invest"/);
   assert.match(html, /data-site-shell="header"/);
   assert.match(html, /data-site-shell="footer"/);
   assert.doesNotMatch(html, /id="languageSelect"|class="language"/);

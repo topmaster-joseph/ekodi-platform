@@ -15,7 +15,7 @@ test('workspace admin asset paths are recognised narrowly', () => {
 test('asset dispatch precedes the workspace admin shell in the router', async () => {
   const source = await read('platform-router-entry-worker.js');
   const asset = source.indexOf('if(isWorkspaceAdminAssetPath(url.pathname))return legacyPlatformRouter.fetch(request,env,ctx);');
-  const shell = source.indexOf("if(isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');");
+  const shell = source.indexOf("if(isWorkspaceAdminPath(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');");
   assert.ok(asset > 0 && shell > 0 && asset < shell, 'asset passthrough must run before the admin shell catch-all');
 });
 

@@ -105,7 +105,7 @@ test('a future registered store is resolved from the canonical database route pr
 });
 test('router classifies store admin before generic workspace admin and keeps legacy asset aliases',()=>{
   const dynamic=router.indexOf('if(isStoreAdminPathShape(url.pathname))');
-  const generic=router.indexOf('if(isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname))');
+  const generic=router.indexOf('if(isWorkspaceAdminPath(url.pathname))');
   assert.ok(dynamic>=0);assert.ok(generic>dynamic);
   assert.match(router,/resolveStoreAdminRoute\(url\.pathname\)/);
   assert.match(router,/\/store-admin\.js/);assert.match(router,/\/jadam-admin\.js/);

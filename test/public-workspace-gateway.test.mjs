@@ -41,7 +41,7 @@ test('canonical public workspace paths use the isolated Space service binding',a
   assert.match(router,/safeWorkspaceReturnTo/);
   assert.ok(router.includes("const DEPLOYMENT_PROBE_PATH='/deployment-probe'"));
   assert.match(router,/routeDeploymentProbe[\s\S]*workspaceUpstreamRequest\(request,'\/'\)/);
-  assert.ok(router.includes('isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname)'));
+  assert.ok(router.includes('isWorkspaceAdminPath(url.pathname)'));
   assert.ok(router.includes("const EKODIBIZ_NAMESPACE_PREFIX='/ekodibiz/'"));
   assert.match(router,/function isEkodiBizOwnedPath\(pathname\)[\s\S]*path\.startsWith\(EKODIBIZ_NAMESPACE_PREFIX\)/);
   assert.ok(router.includes("isPublicWorkspacePath(url.pathname)&&!isEkodiBizOwnedPath(url.pathname)"));
@@ -71,8 +71,7 @@ test('canonical public workspace paths use the isolated Space service binding',a
   assert.ok(stageWrangler.includes('binding = "EKODIBIZ"'));
   assert.ok(stageWrangler.includes('service = "ekodibiz-revenue-os-staging"'));
   assert.ok(stageWorkflow.includes("verify_public_path '/deployment-probe'"));
-  assert.ok(stageWorkflow.includes("verify_public_path '/ekodibiz/invest'"));
-  assert.ok(stageWorkflow.includes("verify_public_path '/ekodibiz/invest/admin'"));
+  assert.ok(!stageWorkflow.includes("verify_public_path '/ekodibiz/invest'"));
   for(const retiredKind of ['personal','o'+'rg','group','project']) assert.ok(!wrangler.includes(`\"/${retiredKind}/*\"`),retiredKind);
 });
 test('customer storefront and independent workspace responses receive readability only, not member chrome',async()=>{

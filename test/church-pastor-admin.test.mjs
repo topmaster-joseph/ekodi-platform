@@ -94,7 +94,7 @@ test('production entry routes church admin before generic workspace admin', asyn
   assert.match(source, /url\.pathname===\'\/ekodi-church\'/);
   assert.match(source, /\/ekodichurch/);
   const church = source.indexOf('isChurchPastorAdminPath(url.pathname)');
-  const generic = source.indexOf('isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath');
+  const generic = source.indexOf('isWorkspaceAdminPath(url.pathname)');
   assert.ok(church >= 0 && generic > church);
   const wrangler = await fs.promises.readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8');
   assert.ok(wrangler.includes('"/ekodichurch*"'));
