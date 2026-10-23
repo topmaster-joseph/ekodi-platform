@@ -4,8 +4,6 @@ import { readFile } from 'node:fs/promises';
 import platformEntry from '../platform-router-entry-worker.js';
 import { mailUserPage } from '../mail-user-page.js';
 import { messengerUserPage, messengerUiScript } from '../messenger-user-page.js';
-import { investUserPage, investUiScript } from '../invest-user-page.js';
-import { investSubjectUiScript } from '../invest-subject-ui.js';
 
 const env={ENVIRONMENT:'test'};
 const fetchPath=path=>platformEntry.fetch(new Request(`https://ekodi.kr${path}`),env,{});
@@ -33,30 +31,25 @@ test('Messenger page and assets are path-native',async()=>{
   assert.equal(probes.some(item=>item.url.startsWith('https://messenger.ekodi.kr')),false);
 });
 
-test('Invest page and assets are path-native',async()=>{
-  const html=await investUserPage().text();assert.match(html,/\/invest\/app\.js/);assert.match(html,/\/invest\/invest-ui\.js/);assert.match(html,/https:\/\/ekodi\.kr\/auth\//);noPublicSubdomain(html);
-  const ui=await investUiScript().text();assert.match(ui,/https:\/\/ekodi\.kr\/workspace-api/);noPublicSubdomain(ui);
-  const subject=await investSubjectUiScript().text();assert.match(subject,/https:\/\/ekodi\.kr\/workspace-api/);noPublicSubdomain(subject);
-  const app=await fetchPath('/invest/app.js');assert.equal(app.status,200);noPublicSubdomain(await app.text());
-  const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
-  const urls=new Set(manifest.worker.requests.map(item=>item.url));
-  for(const url of ['https://ekodi.kr/invest','https://ekodi.kr/invest/invest-ui.js','https://ekodi.kr/invest/invest-subject-ui.js','https://ekodi.kr/invest/app.js'])assert.ok(urls.has(url),url);
-  assert.equal([...urls].some(url=>url.startsWith('https://invest.ekodi.kr')),false);
-  const rootInvest=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/invest');
-  assert.ok(rootInvest);
-  assert.ok(rootInvest.expect.includes('data-ekodi-service="invest"'));
-  assert.ok(rootInvest.expect.includes('근거를 먼저 보는 투자분석'));
-  assert.equal(rootInvest.expect.includes('/invest/invest-ui.js'),false);
-    const subjectProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/invest/invest-subject-ui.js');
-  assert.deepEqual(subjectProbe.expect,['https://ekodi.kr/workspace-api','subject_type','subject_key']);
-  assert.equal(subjectProbe.expect.includes('profile_key'),false);
+test('public Invest routes are retired and My Invest remains separate',async()=>{
+ for(const path of ['/invest','/invest/analysis','/invest/app.js','/ekodibiz/invest']){
+  const res=await fetchPath(path);
+  assert.equal(res.status,410,path);
+  assert.equal(res.headers.get('x-ekodi-route'),'invest-retired');
+ }
+ const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+ const probes=manifest.worker.requests.filter(item=>item.url.startsWith('https://ekodi.kr/invest')||item.url.startsWith('https://ekodi.kr/ekodibiz/invest'));
+ assert.equal(probes.length,6);
+ for(const item of probes){assert.deepEqual(item.statuses,[410]);assert.deepEqual(item.expect,['Gone']);}
 });
 
-test('production worker-first routing includes all three canonical roots',async()=>{
-  const wrangler=await readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8');
-  assert.match(wrangler,/"\/mail\*"/);assert.match(wrangler,/"\/messenger\*"/);assert.match(wrangler,/"\/invest\*"/);
-  const entry=await readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
-  assert.match(entry,/routeMessengerApex/);assert.match(entry,/routeInvestApex/);assert.match(entry,/\/invest\/invest-subject-ui\.js/);
+test('production worker-first routing keeps mail/messenger and retires public invest',async()=>{
+ const wrangler=await readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8');
+ assert.match(wrangler,/"\/mail\*"/);assert.match(wrangler,/"\/messenger\*"/);assert.match(wrangler,/"\/invest\*"/);
+ const entry=await readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
+ assert.match(entry,/routeMessengerApex/);
+ assert.match(entry,/invest-retired/);
+ assert.doesNotMatch(entry,/routeInvestApex/);
 });
 
 test('shared staging verifies canonical Shell and apex Messenger/Invest paths',async()=>{
@@ -64,6 +57,6 @@ test('shared staging verifies canonical Shell and apex Messenger/Invest paths',a
   assert.doesNotMatch(stage,/https:\/\/shell\.ekodi\.kr\/shell\.js/);
   assert.match(stage,/\$STAGING_URL\/shell\/shell\.js/);
   assert.match(stage,/verify_public_path '\/messenger'/);
-  assert.match(stage,/verify_public_path '\/invest'/);
+  assert.match(stage,/verify_retired_invest_path '\/invest'/);
   assert.match(stage,/pull-requests:\s*read/);
 });
