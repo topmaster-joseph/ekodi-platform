@@ -623,6 +623,10 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const host = url.hostname.toLowerCase();
+    // Public Invest and EKODIBIZ Invest are retired; private /my/invest lives elsewhere.
+    if(host==='invest.ekodi.kr'||(host==='ekodi.kr'&&/^\/(?:invest|ekodibiz\/invest)(?:\/|$)/i.test(url.pathname))){
+      return new Response(request.method==='HEAD'?null:'Gone',{status:410,headers:{'cache-control':'no-store','x-robots-tag':'noindex, nofollow, noarchive','x-content-type-options':'nosniff','x-ekodi-route':'invest-retired'}});
+    }
     // Retired payment subdomains are never public entry points.
     if (host === 'pay.ekodi.kr' || host === 'pay.biz.ekodi.kr') {
       return new Response('Gone', {status:410, headers:{'cache-control':'no-store','x-robots-tag':'noindex, nofollow, noarchive','x-content-type-options':'nosniff'}});
