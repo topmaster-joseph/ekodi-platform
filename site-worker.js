@@ -5,12 +5,10 @@ import { businessCenterCss, businessCenterScript } from './ekodibiz-business-cen
 import { legacyAdminAliasTarget } from './admin-address-policy.js';
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
 import { siteAdminBootstrapPage, siteAdminBootstrapScript } from './site-admin-bootstrap-page.js';
-import { ekodiBizInvestBusinessPage, isEkodiBizInvestPath } from './ekodibiz-invest-business.js';
 import { dorajiOfficeResponse, isDorajiOfficePath } from './ekodibiz-doraji-office.js';
 import { dorajiOperatorResponse, isDorajiOperatorPath } from './ekodibiz-doraji-operator-ui.js';
 import { dorajiLedgerApiResponse, isDorajiLedgerApiPath } from './ekodibiz-doraji-ledger-api.js';
 import { businessOsCommonResponse, isBusinessOsCommonPath } from './business-os-public-api.js';
-import { ekodiBizInvestAdminPage, isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
 import { tenantAdminCommandHomeScript, tenantAdminCommandHomeCss } from './tenant-admin-command-home.js';
 import { decorateDiscoveryResponse } from './discovery-layer.js';
 import { realtimeTenantAdminFromPath, realtimeTenantFromPath } from './realtime-tenant-registry.js';
@@ -747,11 +745,6 @@ export default {
         const response = await env.ASSETS.fetch(assetRequest(request, workspaceAdminAsset));
         return withHostSecurity(response, ADMIN_CSP, adminAssetCacheControl(url), 'admin-workspace-asset');
       }
-      if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestAdminPath(url.pathname)) {
-        const page=ekodiBizInvestAdminPage(request);
-        const secured=withHostSecurity(page, ADMIN_CSP, 'no-store', 'public-ekodibiz-invest-admin');
-        return injectEkodiShell(secured, 'biz', 'admin');
-      }
       const liveAdminTenant = realtimeTenantAdminFromPath(url.pathname);
       if (['GET','HEAD'].includes(request.method) && liveAdminTenant) return withHostSecurity(tenantLiveAdminPage(liveAdminTenant), LIVE_CSP, 'no-store', 'tenant-'+liveAdminTenant.apiTenant+'-live-admin');
       const liveTenant = realtimeTenantFromPath(url.pathname);
@@ -775,11 +768,6 @@ export default {
         return url.pathname.endsWith('.js')?secured:injectEkodiShell(secured,'biz','public');
       }
       if (isDorajiOfficePath(url.pathname)) return injectEkodiShell(withHostSecurity(dorajiOfficeResponse(request), PUBLIC_CSP, 'no-store', 'public-ekodibiz-doraji'), 'biz', 'public');
-      if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestPath(url.pathname)) {
-        const page=ekodiBizInvestBusinessPage(request);
-        const secured=withHostSecurity(page, PUBLIC_CSP, 'public, max-age=0, must-revalidate', 'public-ekodibiz-invest');
-        return injectEkodiShell(secured, 'biz', 'public');
-      }
       if (url.pathname === '/mall.html') {
         const canonical = new URL(request.url);
         canonical.pathname = MALL_PREFIX;
