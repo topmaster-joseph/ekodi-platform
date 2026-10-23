@@ -166,7 +166,7 @@ test('Lifelong-learning home offers truthful local discovery without changing Ad
     assert.ok(home.includes(portal),'official portal ' + portal);
   }
   assert.match(home,/실시간 모집 검색은 아닙니다/);
-  assert.match(home,/모집 여부/);
+  assert.match(home,/모집 중인 강좌/);
   assert.match(home,/민감한 여권·성적표·재정증빙 파일을 저장하지 않습니다/);
   assert.match(home,/id="authButton"/);
   assert.match(home,/id="identityName"/);
