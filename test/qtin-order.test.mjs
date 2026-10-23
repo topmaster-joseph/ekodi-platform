@@ -30,6 +30,7 @@ async function freshEnv(extra = {}) {
   DB.raw.exec(await readFile(new URL('../migrations/0201_qtin_group_orders.sql', import.meta.url), 'utf8'));
   DB.raw.exec(await readFile(new URL('../migrations/0202_qtin_buyer_accounts.sql', import.meta.url), 'utf8'));
   DB.raw.exec(await readFile(new URL('../migrations/0203_qtin_product_intros.sql', import.meta.url), 'utf8'));
+  DB.raw.exec(await readFile(new URL('../migrations/0204_qtin_order_delivery.sql', import.meta.url), 'utf8'));
   return { DB, PUBLIC_BASE_URL: 'https://ekodi.kr/qtin', OPERATOR_EMAILS: 'topmaster.joseph@gmail.com', PAYMENTS_ENABLED: 'true', TOSS_CLIENT_KEY: 'live_ck_abc', TOSS_SECRET_KEY: 'live_sk_abc', QTM_SEED_ITEM_IDS: '1719304225', ...extra };
 }
 
@@ -792,4 +793,36 @@ test('widget variantKey is configurable, defaults to qtin and rejects malformed 
   assert.equal(widgetVariantKey({ TOSS_WIDGET_VARIANT: "x'+alert(1)+'" }), 'qtin');
   const toml = await readFile(new URL('../wrangler.qtin-order.toml', import.meta.url), 'utf8');
   assert.match(toml, /^TOSS_WIDGET_VARIANT = "qtin"$/m);
+});
+
+test('delivery: church pickup stays free; parcel adds the fixed shipping fee and requires an address', async () => {
+  const pickup = buildOrderDraft(VALID, PRODUCTS);
+  assert.equal(pickup.draft.delivery.method, 'pickup');
+  assert.equal(pickup.draft.totalAmount, 3600 * 2 + 4500);
+  const parcelBody = { ...VALID, delivery: { method: 'parcel', postalCode: '58554', address1: '전남 무안군 청계면 테스트로 1', address2: '101호' } };
+  const parcel = buildOrderDraft(parcelBody, PRODUCTS);
+  assert.equal(parcel.ok, true, JSON.stringify(parcel.errors));
+  assert.equal(parcel.draft.delivery.shippingFee, 3000);
+  assert.equal(parcel.draft.booksAmount, 3600 * 2 + 4500);
+  assert.equal(parcel.draft.totalAmount, 3600 * 2 + 4500 + 3000);
+  assert.equal(parcel.draft.delivery.recipientName, '홍길동', 'recipient defaults to the applicant');
+  assert.equal(parcel.draft.delivery.recipientPhone, '010-1234-5678');
+  for (const [d, needle] of [[{ postalCode: '123' }, '우편번호'], [{ address1: '' }, '주소'], [{ recipientPhone: '02-1' }, '받는 분 휴대전화']]) {
+    const bad = buildOrderDraft({ ...parcelBody, delivery: { ...parcelBody.delivery, ...d } }, PRODUCTS);
+    assert.equal(bad.ok, false); assert.ok(bad.errors.some(e => e.includes(needle)), `${needle}: ${bad.errors}`);
+  }
+  // A client cannot dictate the fee: an unknown method falls back to free church pickup.
+  assert.equal(buildOrderDraft({ ...VALID, delivery: { method: 'express', shippingFee: 0 } }, PRODUCTS).draft.delivery.method, 'pickup');
+
+  const env = await openEnvWithProducts();
+  const res = await handleRequest(post('/qtin/api/orders', { campaignId: '2026-12', org: 'church', name: '홍길동', phone: '01012345678', privacyConsent: true,
+    delivery: { method: 'parcel', recipientName: '김받음', postalCode: '58554', address1: '전남 무안군 청계면 테스트로 1' },
+    items: [{ productId: '2026-12:1719304225', quantity: 1 }] }), env, OPEN_NOW);
+  const order = await res.json();
+  assert.equal(res.status, 201, JSON.stringify(order));
+  const row = env.DB.raw.prepare('SELECT o.total_amount, d.method, d.shipping_fee, d.recipient_name, d.postal_code FROM qtin_orders o JOIN qtin_order_delivery d ON d.order_id=o.id WHERE o.id=?').get(order.orderId);
+  assert.equal(row.method, 'parcel'); assert.equal(row.shipping_fee, 3000); assert.equal(row.recipient_name, '김받음'); assert.equal(row.postal_code, '58554');
+  assert.equal(order.amount, row.total_amount);
+  const page = await (await handleRequest(new Request('https://ekodi.kr/qtin/church'), env, OPEN_NOW)).text();
+  assert.ok(page.includes('id="delParcel"') && page.includes('"shippingFee":3000') && page.includes('id="postalCode"'));
 });
