@@ -434,3 +434,11 @@ test('mission remains the owner of its public UI while retaining shared admin sh
   const response=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/activities'),env);
   assert.equal(response.headers.get('x-ekodi-independent-site'),'true');
 });
+
+test('EKODI Mission links to the shared QTIN group-order page from its menu and home actions', async () => {
+  const { readFile: rf } = await import('node:fs/promises');
+  const shell = await rf(new URL('../space/ekodimission-shell.js', import.meta.url), 'utf8');
+  const home = await rf(new URL('../space/ekodimission.page', import.meta.url), 'utf8');
+  assert.ok(shell.includes("href:'/qtin/mission',label:'큐티인 신청'"));
+  assert.ok(home.includes('href="/qtin/mission"'));
+});

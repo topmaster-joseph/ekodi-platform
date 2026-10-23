@@ -20,7 +20,8 @@
       Object.freeze({href:'/ekodimission/live',label:'라이브'}),
       Object.freeze({href:'/ekodimission/participate',label:'함께하기'}),
       Object.freeze({href:'/ekodimission/partners',label:'협력'}),
-      Object.freeze({href:'/ekodimission/stories',label:'소식'})
+      Object.freeze({href:'/ekodimission/stories',label:'소식'}),
+      Object.freeze({href:'/qtin/mission',label:'큐티인 신청'})
     ]),
     language:Object.freeze({
       sourceLocale,
