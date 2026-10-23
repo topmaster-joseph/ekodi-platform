@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow,noarchive">
   <meta name="theme-color" content="#ffffff">
   <title>EKODI Control</title>
-  <link rel="stylesheet" href="/control.css?v=20261018-command-receipt-v1">
+  <link rel="stylesheet" href="/control.css?v=20261018-command-split-v1">
 </head>
 <body>
   <a class="skip-link" href="#commandInput">명령 입력으로 바로가기</a>
@@ -48,8 +48,12 @@
         </div>
       </header>
 
-      <section class="view active" id="viewChat" data-view-panel="chat">
-        <div class="conversation" id="conversation" aria-live="polite">
+      <section class="view active" id="viewChat" data-view-panel="chat" aria-label="명령 대화 작업공간">
+        <div class="chat-workspace-head">
+          <div class="chat-workspace-title"><strong>대화 · 작업 처리 현황</strong><span id="workspaceCounts" role="status" aria-live="polite">진행 작업을 확인합니다.</span></div>
+          <button type="button" class="chat-workspace-tasks secondary" id="openTaskList">작업 상태 확인</button>
+        </div>
+        <div class="conversation" id="conversation" aria-label="명령 대화 기록" tabindex="0" aria-live="polite">
           <div class="empty-state" id="emptyState">
             <div class="empty-eyebrow">EKODI OPERATIONS</div>
             <h1>무엇을 수행할까요?</h1>
@@ -65,7 +69,7 @@
 
         <footer class="composer-wrap">
           <form class="composer" id="commandForm">
-            <div class="composer-heading"><strong>새 명령</strong><span>Enter 실행 · Shift+Enter 줄바꿈</span></div>
+            <div class="composer-heading"><strong>명령 입력 · 실행</strong><span>Enter 실행 · Shift+Enter 줄바꿈</span></div>
             <textarea id="commandInput" rows="1" maxlength="4000" placeholder="에코디에게 명령하거나 질문하세요" aria-label="EKODI 명령 입력"></textarea>
             <div class="composer-row">
               <label class="target-label">
@@ -80,11 +84,12 @@
                   <option value="qwen">Qwen</option>
                 </select>
               </label>
-              <label class="toggle"><input type="checkbox" id="executeNow" checked><span>작업 접수·사전점검</span></label>
+              <label class="toggle"><input type="checkbox" id="executeNow" checked aria-describedby="executionModeDescription"><span>작업 접수·사전점검</span></label>
               <button type="button" class="secondary" id="aiRoutePreview">AI 경로 점검</button>
-              <label class="toggle"><input type="checkbox" id="orchestratorRelease"><span>보호된 배포 요청</span></label>
+              <label class="toggle"><input type="checkbox" id="orchestratorRelease" aria-describedby="executionModeDescription"><span>보호된 배포 요청</span></label>
               <button type="submit" class="send" id="sendButton">실행</button>
             </div>
+            <p class="execution-mode-description" id="executionModeDescription" role="status" aria-live="polite">일반 실행 · AI 경로 점검은 미리보기만 합니다.</p>
           </form>
           <small class="composer-note">보호된 배포 요청을 선택하면 공식 오케스트레이터에 접수하며 승인 및 실서비스 검증 전에는 배포 완료로 표시하지 않습니다.</small>
         </footer>
@@ -109,6 +114,6 @@
     </main>
   </div>
   <div class="toast" id="toast" hidden></div>
-  <script src="/control.js?v=20261018-command-receipt-v1" defer></script>
+  <script src="/control.js?v=20261018-command-split-v1" defer></script>
 </body>
 </html>

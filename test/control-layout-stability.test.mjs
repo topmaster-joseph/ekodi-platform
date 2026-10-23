@@ -46,8 +46,8 @@ test('Input focus cannot scroll the page, while command submission is preserved'
 });
 
 test('Control only uses release-matched CSS/JS and private route remains isolated',()=>{
-  assert.match(html,/\/control\.css\?v=20261018-command-receipt-v1/);
-  assert.match(html,/\/control\.js\?v=20261018-command-receipt-v1/);
+  assert.match(html,/\/control\.css\?v=20261018-command-split-v1/);
+  assert.match(html,/\/control\.js\?v=20261018-command-split-v1/);
   assert.match(worker,/url\.pathname === '\/control'/);
   assert.match(worker,/const CONTROL_ASSETS = new Set\(\['\/control\.css','\/control\.js'\]\)/);
   for(const file of ['control.html','control.css','control.js']){
