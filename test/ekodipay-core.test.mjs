@@ -86,9 +86,9 @@ test('Toss client uses the profile secret, sends idempotency keys and maps error
   }
 });
 
-test('merchant assignment: QTIN on q_ekodib62hb, EKODI Mall on ekobizav68, keys never cross', () => {
+test('merchant assignment: QTIN on q_ekodib62hb, EKODI Mall also on q_ekodib62hb (single MID), keys never cross', () => {
   assert.equal(pay.merchantProfile('ekodi').mid, 'q_ekodib62hb');
-  assert.equal(pay.merchantProfile('mall').mid, 'ekobizav68');
+  assert.equal(pay.merchantProfile('mall').mid, 'q_ekodib62hb');
   const env = {
     PAYMENTS_ENABLED: 'true', DB: { binding: true },
     TOSS_CLIENT_KEY: 'test_ck_qtin', TOSS_SECRET_KEY: 'test_sk_qtin',
@@ -97,14 +97,23 @@ test('merchant assignment: QTIN on q_ekodib62hb, EKODI Mall on ekobizav68, keys 
   const mall = pay.withMerchantKeys(env, 'mall');
   assert.equal(mall.TOSS_CLIENT_KEY, 'test_ck_mall');
   assert.equal(mall.TOSS_SECRET_KEY, 'test_sk_mall');
-  assert.equal(mall.EKODIPAY_MID, 'ekobizav68');
+  assert.equal(mall.EKODIPAY_MID, 'q_ekodib62hb');
   assert.equal(mall.DB, env.DB, 'bindings are preserved');
   assert.equal(env.TOSS_SECRET_KEY, 'test_sk_qtin', 'original env is not mutated');
   // A mall Worker that only has the legacy names must NOT pick them up (fail closed).
   const legacyOnly = pay.withMerchantKeys({ PAYMENTS_ENABLED: 'true', TOSS_CLIENT_KEY: 'live_ck_x', TOSS_SECRET_KEY: 'live_sk_x' }, 'mall');
   assert.equal(legacyOnly.TOSS_CLIENT_KEY, '');
   assert.equal(legacyOnly.TOSS_SECRET_KEY, '');
-  assert.equal(pay.readiness(env, { profileId: 'mall' }).mid, 'ekobizav68');
+  assert.equal(pay.readiness(env, { profileId: 'mall' }).mid, 'q_ekodib62hb');
   assert.equal(pay.readiness({ ...env, TOSS_CLIENT_KEY__MALL: '' }, { profileId: 'mall' }).ready, false);
   assert.equal(pay.merchantProfile('q_ekodim56wc'), null, 'held MID is not registered');
+});
+
+test('single merchant: every EKODIPAY profile settles to q_ekodib62hb; the cancelled MID is referenced nowhere', async () => {
+  for (const p of Object.values(pay.MERCHANT_PROFILES)) assert.equal(p.mid, 'q_ekodib62hb', p.id);
+  const { readFile } = await import('node:fs/promises');
+  const cancelled = ['ekobiz', 'av68'].join('');
+  for (const f of ['ekodipay-core.js', 'qtin-order-worker.js', 'wrangler.qtin-order.toml', 'sites/ekodi-mall/api/entry.js', 'sites/ekodi-mall/api/wrangler.toml', 'sites/ekodi-mall/api/checkout-buyer.js', 'sites/ekodi-mall/assets/mall-checkout.js']) {
+    assert.ok(!(await readFile(new URL(`../${f}`, import.meta.url), 'utf8')).includes(cancelled), f);
+  }
 });

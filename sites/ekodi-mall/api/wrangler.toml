@@ -17,7 +17,7 @@ SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
 MALL_OPERATIONS_EMAILS = "topmaster.joseph@gmail.com,joseph@ekodi.kr"
 PAYMENTS_ENABLED = "false"
 PAYMENT_PROVIDER = "toss"
-# EKODIPAY 공통 결제 모듈 상점: 에코디몰 MID ekobizav68.
+# EKODIPAY 공통 결제 모듈 상점: 에코디몰 MID q_ekodib62hb (큐티인과 같은 단일 상점).
 # 키: 변수 TOSS_CLIENT_KEY__MALL, Worker secret TOSS_SECRET_KEY__MALL (기존 TOSS_* 이름은 무시됨)
 EKODIPAY_PROFILE = "mall"
 MALL_LEGAL_READINESS_REF = ""
