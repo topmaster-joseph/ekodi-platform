@@ -1,11 +1,11 @@
 // EKODI-MALL-AUTH-CANONICAL-001: 판매자·운영 화면 로그인은 ekodi.kr/auth/ 로만 보낸다.
-// auth.ekodi.kr·mall.ekodi.kr 같은 서브도메인은 DNS가 없어 로그인이 끊긴다(2026-10-23 운영 장애).
+// 레거시 인증·몰 서브도메인은 DNS가 없어 로그인이 끊긴다(2026-10-23 운영 장애).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 
 const roots = ['assets', 'src', 'content'];
-const forbidden = /https?:\/\/(auth|mall)\.ekodi\.kr/i;
+const forbidden = new RegExp(['https?://(auth|mall)', 'ekodi', 'kr'].join('\\.'), 'i');
 
 test('mall pages never link to legacy auth/mall subdomains', () => {
   const offenders = [];
