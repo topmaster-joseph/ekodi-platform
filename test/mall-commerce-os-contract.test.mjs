@@ -23,9 +23,9 @@ test('Commerce OS makes payment providers replaceable; money moves only through 
   assert.ok(providers.includes('adapterImplemented: false'));
   assert.ok(providers.includes('provider-adapter-not-implemented'));
   assert.match(wrangler, /PAYMENT_PROVIDER = "toss"/);
-  // Production checkout is switched on (owner decision 2026-10-23, single MID q_ekodib62hb), but money still
-  // moves only for direct-sale products a human verified (seller verification + per-product checkout gate).
-  assert.match(wrangler, /PAYMENTS_ENABLED = "true"/);
+  // Production checkout stays off until the four MALL_*_READINESS_REF policy references exist
+  // (sites/ekodi-mall/scripts/validate.mjs). Even when on, money moves only for human-gated direct sales.
+  assert.match(wrangler, /PAYMENTS_ENABLED = "false"/);
   for (const gate of ["blockers.push('seller-verification')", "blockers.push('product-checkout-gate')", "row.sale_type !== 'direct'"]) assert.ok(worker.includes(gate), gate);
   assert.equal(site.commerce.paymentProviderAuthority, 'server-capability-registry');
   assert.equal(site.commerce.highImpactExecution, 'human-gated');
@@ -89,5 +89,12 @@ test('staging and production gates prove Commerce OS without opening high-impact
   assert.ok(productionVerifier.includes('adapterImplemented'));
   for (const flag of ['paymentsEnabled', 'payoutExecutionEnabled', 'buyerPiiReleaseEnabled', 'supplierForwardEnabled', 'refundExecutionEnabled']) {
     assert.ok(productionVerifier.includes(flag));
+  }
+});
+
+test('mall payments can only be enabled together with all four readiness policy references', () => {
+  if (!/^PAYMENTS_ENABLED = "true"/m.test(wrangler)) return;
+  for (const ref of ['MALL_LEGAL_READINESS_REF', 'MALL_PRIVACY_READINESS_REF', 'MALL_REFUND_READINESS_REF', 'MALL_PAYOUT_READINESS_REF']) {
+    assert.match(wrangler, new RegExp(`^${ref} = "[^"]+"`, 'm'), `${ref} is required when PAYMENTS_ENABLED=true (sites/ekodi-mall/scripts/validate.mjs)`);
   }
 });
