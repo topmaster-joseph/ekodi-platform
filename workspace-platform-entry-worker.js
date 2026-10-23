@@ -34,6 +34,8 @@ function profileEnv(env){
 export default {
   async fetch(request,env,ctx){
     const url=new URL(request.url);
+    // Legacy shared investment APIs are retired. /my/invest is a separate MY worker.
+    if(/^\/v1\/invest(?:\/|$)/i.test(url.pathname))return new Response(JSON.stringify({error:'service_retired'}),{status:410,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-robots-tag':'noindex, nofollow, noarchive','x-ekodi-route':'invest-api-retired'}});
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?route=workspace&source=workspace-api.ekodi.kr',307);
     if(url.pathname==='/v1/profiles'||url.pathname.startsWith('/v1/profiles/')){
       const response=await handleProfileEvidenceApi(request,profileEnv(env));
