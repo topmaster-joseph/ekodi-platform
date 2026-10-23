@@ -9,7 +9,7 @@ import {
   clean, escapeHtml, kstParts, campaignId, parseCampaignId, addMonth, defaultWindow, targetIssueFor,
   inPreparationWindow, campaignState, formatKst, formatWon, parseIssueTitle, titleMatchesIssue, isQtinFamily,
   extractItemIds, parseProductDetail, parseProductIntro, seriesSortOrder, buildOrderDraft, newOrderId, isValidTossOrderId,
-  assessConfirmation, maskName, csvEscape, absoluteQtmUrl,
+  assessConfirmation, maskName, csvEscape, absoluteQtmUrl, SHIPPING_FEE, DELIVERY_METHODS,
 } from './qtin-order-core.js';
 import * as ekodipay from './ekodipay-core.js';
 
@@ -420,6 +420,10 @@ async function createOrder(env, body, now = new Date(), request = null) {
       .bind(orderId, campaign.id, draft.org, draft.applicantName, draft.phone, draft.email, draft.department, draft.memo, draft.totalAmount, draft.totalQuantity, draft.orderName, await sha256(lookupToken), createdAt, expiresAt, createdAt, createdAt),
     ...draft.lines.map(line => env.DB.prepare(`INSERT INTO qtin_order_items (order_id, product_id, qtm_item_id, product_name, unit_price, quantity, line_amount) VALUES (?, ?, ?, ?, ?, ?, ?)`)
       .bind(orderId, line.productId, line.qtmItemId, line.productName, line.unitPrice, line.quantity, line.lineAmount)),
+    env.DB.prepare(`INSERT INTO qtin_order_delivery (order_id, method, shipping_fee, recipient_name, recipient_phone, postal_code, address1, address2, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .bind(orderId, draft.delivery.method, draft.delivery.shippingFee, draft.delivery.recipientName || null, draft.delivery.recipientPhone || null,
+        draft.delivery.postalCode || null, draft.delivery.address1 || null, draft.delivery.address2 || null, createdAt),
     env.DB.prepare('INSERT INTO qtin_order_buyers (order_id, user_id, google_email, created_at) VALUES (?, ?, ?, ?)')
       .bind(orderId, buyer.data.userId, buyer.data.email, createdAt),
     env.DB.prepare(`INSERT INTO qtin_buyer_profiles (user_id, google_email, name, phone, email, department, org, created_at, updated_at)
@@ -531,8 +535,19 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
       <label class="f">연락받을 이메일(영수증 수신)<input id="email" type="email" autocomplete="email" maxlength="160"></label>
       <label class="f"><span id="departmentLabel">부서(선택)</span><input id="department" maxlength="80" placeholder="예: 청년부, 3교구"></label>
     </div>
+    <fieldset class="orgs" aria-label="수령 방법" style="margin-top:14px"><legend>수령 방법</legend>
+      <label class="choice"><input type="radio" name="delivery" id="delPickup" value="pickup" checked><span><strong>${DELIVERY_METHODS.pickup}</strong><small>교회에서 일괄 수령 · 배송비 없음</small></span></label>
+      <label class="choice"><input type="radio" name="delivery" id="delParcel" value="parcel"><span><strong>${DELIVERY_METHODS.parcel}</strong><small>원하는 곳으로 배송 · 배송비 ${formatWon(SHIPPING_FEE)}</small></span></label>
+    </fieldset>
+    <div class="fields" id="shipFields" hidden>
+      <label class="f">받는 분(비우면 신청자)<input id="rcptName" autocomplete="shipping name" maxlength="40"></label>
+      <label class="f">받는 분 휴대전화(비우면 신청자)<input id="rcptPhone" autocomplete="shipping tel" inputmode="tel" placeholder="010-0000-0000" maxlength="13"></label>
+      <label class="f">우편번호<input id="postalCode" autocomplete="shipping postal-code" inputmode="numeric" maxlength="5" placeholder="5자리"></label>
+      <label class="f">주소<input id="address1" autocomplete="shipping address-line1" maxlength="160" placeholder="도로명 주소"></label>
+      <label class="f">상세 주소<input id="address2" autocomplete="shipping address-line2" maxlength="120" placeholder="동·호수 등"></label>
+    </div>
     <label class="f" style="margin-top:14px">요청사항(선택)<textarea id="memo" rows="2" maxlength="300"></textarea></label>
-    <label class="consent"><input type="checkbox" id="consent"><span>[필수] 신청·결제·수령 안내를 위해 구글 계정 이메일, 이름, 휴대전화, 이메일, 소속을 수집·이용하는 데 동의합니다. 보관기간: 신청일로부터 약 1년(이후 자동 비식별 처리). 결제·구매대행: EKODIBIZ.</span></label>
+    <label class="consent"><input type="checkbox" id="consent"><span>[필수] 신청·결제·수령 안내를 위해 구글 계정 이메일, 이름, 휴대전화, 이메일, 소속, 배송지(택배 선택 시)를 수집·이용하는 데 동의합니다. 보관기간: 신청일로부터 약 1년(이후 자동 비식별 처리). 결제·구매대행: EKODIBIZ.</span></label>
     ${paymentNote}
   </section>
   <section class="panel" id="myOrders" hidden><h2>내 신청 내역</h2><div id="myOrderList"></div></section>
@@ -552,8 +567,8 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
 </form></dialog>
 <div class="bar"><div class="wrap"><div class="total">합계 <b id="total">0원</b> · <span id="count">0권</span></div>
   <div class="pay"><button class="btn" id="loginCta" type="button" disabled>구글 로그인하고 신청</button><button class="btn" id="payCard" type="button" hidden disabled>카드로 결제</button><button class="btn alt" id="payTransfer" type="button" hidden disabled>계좌이체</button></div></div></div>
-<footer class="wrap">책은 교회에서 일괄 수령 후 나누어 드립니다(개별 배송 없음). 표지 이미지·가격 출처: <a href="${QTM_ORIGIN}/" rel="noopener" target="_blank">QTM 큐티선교회</a> 온라인 스토어. 결제·구매대행: EKODIBIZ(사업자 213-13-01959, 통신판매업 2023-전남무안-0153). 문의 010-3501-8542</footer>
-<script nonce="${scriptNonce}">window.__QTIN__=${JSON.stringify({ campaignId: campaign.id, open, paymentReady: Boolean(payment.ready), testMode: Boolean(payment.testMode), widget: Boolean(payment.widget), org }).replace(/</g, '\\u003c')};</script>
+<footer class="wrap">책은 교회에서 일괄 수령 후 나누어 드리며, 택배를 선택하시면 원하는 곳으로 보내 드립니다(배송비 ${formatWon(SHIPPING_FEE)}). 표지 이미지·가격 출처: <a href="${QTM_ORIGIN}/" rel="noopener" target="_blank">QTM 큐티선교회</a> 온라인 스토어. 결제·구매대행: EKODIBIZ(사업자 213-13-01959, 통신판매업 2023-전남무안-0153). 문의 010-3501-8542</footer>
+<script nonce="${scriptNonce}">window.__QTIN__=${JSON.stringify({ campaignId: campaign.id, open, paymentReady: Boolean(payment.ready), testMode: Boolean(payment.testMode), widget: Boolean(payment.widget), org, shippingFee: SHIPPING_FEE }).replace(/</g, '\\u003c')};</script>
 <script src="https://js.tosspayments.com/v2/standard"></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script nonce="${scriptNonce}">${clientScript(orderClient)}</script>`;
@@ -579,7 +594,7 @@ function orderClient() {
   const SIGNED_OUT_KEY = 'ekodi-qtin-signed-out';
   const ORG = { church: '에코디교회', mission: '에코디선교회', other: '기타' };
   const STATUS = { paid: '결제 완료', payment_pending: '결제 대기', cancelled: '취소' };
-  const FUL = { waiting: '발주 대기', ordered: 'QTM 발주 완료', received: '교회 도착', distributed: '전달 완료' };
+  const FUL = { waiting: '발주 대기', ordered: 'QTM 발주 완료', received: '교회 도착', distributed: '전달·배송 완료' };
   const $ = id => document.getElementById(id);
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const won = v => `${Math.trunc(Number(v) || 0).toLocaleString('ko-KR')}원`;
@@ -712,10 +727,15 @@ function orderClient() {
 
   // ---- selection & payment ----
   function items() { return books.map(b => ({ productId: b.dataset.id, quantity: Math.max(0, Math.min(50, Math.trunc(Number(b.querySelector('input').value) || 0))), price: Number(b.dataset.price) })).filter(i => i.quantity > 0); }
+  function deliveryMethod() { return $('delParcel')?.checked ? 'parcel' : 'pickup'; }
+  ['delPickup', 'delParcel'].forEach(id => $(id)?.addEventListener?.('change', () => refresh()));
   function canPay() { return cfg.paymentReady || (cfg.testMode && Boolean(session)); }
   function refresh() {
     const list = items();
-    $('total').textContent = won(list.reduce((s, i) => s + i.price * i.quantity, 0));
+    const parcel = deliveryMethod() === 'parcel';
+    if ($('shipFields')) $('shipFields').hidden = !parcel;
+    const booksAmt = list.reduce((s, i) => s + i.price * i.quantity, 0);
+    $('total').textContent = won(booksAmt + (parcel && list.length ? cfg.shippingFee : 0)) + (parcel && list.length ? ' (배송비 포함)' : '');
     $('count').textContent = `${list.reduce((s, i) => s + i.quantity, 0)}권`;
     const signedIn = Boolean(session);
     $('loginCta').hidden = signedIn; $('payCard').hidden = !signedIn; if ($('payTransfer')) $('payTransfer').hidden = !signedIn;
@@ -796,6 +816,7 @@ function orderClient() {
     if (!session) { $('account').scrollIntoView({ behavior: 'smooth', block: 'center' }); $('msg').textContent = '구글 로그인 후 결제하실 수 있습니다.'; return; }
     if (!org) { $('msg').textContent = '소속(에코디교회·에코디선교회·기타)을 선택해 주세요.'; $('buyerForm').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (org === 'other' && $('department').value.trim().length < 2) { $('msg').textContent = '기타 소속을 선택하셨다면 소속 교회·단체 이름을 입력해 주세요.'; $('department').focus(); return; }
+    if (deliveryMethod() === 'parcel' && (!/^[0-9]{5}$/.test($('postalCode').value.trim()) || $('address1').value.trim().length < 5)) { $('msg').textContent = '택배로 받으시려면 우편번호 5자리와 주소를 입력해 주세요.'; $('postalCode').focus(); return; }
     if (!$('consent').checked) { $('msg').textContent = '개인정보 수집·이용에 동의해 주세요.'; return; }
     busy = true; refresh();
     try {
@@ -803,6 +824,8 @@ function orderClient() {
       const response = await bounded('/qtin/api/orders', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + session.accessToken }, body: JSON.stringify({
         campaignId: cfg.campaignId, org, name: $('name').value, phone: $('phone').value, email: $('email').value,
         department: $('department').value, memo: $('memo').value, privacyConsent: true,
+        delivery: deliveryMethod() === 'parcel' ? { method: 'parcel', recipientName: $('rcptName').value, recipientPhone: $('rcptPhone').value,
+          postalCode: $('postalCode').value, address1: $('address1').value, address2: $('address2').value } : { method: 'pickup' },
         items: items().map(i => ({ productId: i.productId, quantity: i.quantity })) }) });
       const data = await response.json().catch(() => ({}));
       if (response.status === 401) { forget(); session = null; showSignedOut(); throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.'); }
@@ -833,14 +856,17 @@ function orderClient() {
 export function renderReceipt({ order, items }, { title, message, ok = true } = {}) {
   const org = ORGS[order.org]?.label || order.org;
   const statusLabel = { paid: '결제 완료 · 신청 완료', payment_pending: '결제 대기', expired: '결제 시간 만료', cancelled: '취소됨', payment_failed: '결제 실패' }[order.status] || order.status;
-  const fulfillLabel = { waiting: '발주 대기', ordered: 'QTM 발주 완료', received: '교회 도착', distributed: '전달 완료' }[order.fulfillment_status] || order.fulfillment_status;
+  const fulfillLabel = { waiting: '발주 대기', ordered: 'QTM 발주 완료', received: '교회 도착', distributed: '전달·배송 완료' }[order.fulfillment_status] || order.fulfillment_status;
   const rows = items.map(i => `<tr><td>${escapeHtml(i.product_name)}</td><td>${i.quantity}권</td><td>${formatWon(i.line_amount)}</td></tr>`).join('');
+  // 책값 합계와 결제 금액의 차이는 택배 배송비다(교회 수령은 0원).
+  const shipping = Math.max(0, Math.trunc(Number(order.total_amount)) - items.reduce((sum, i) => sum + Math.trunc(Number(i.line_amount)), 0));
+  const shippingRow = shipping ? `<tr><td>택배 배송비</td><td>-</td><td>${formatWon(shipping)}</td></tr>` : '';
   const body = `<header class="top"><div class="wrap"><div class="eyebrow">EKODI · 큐티인 함께 구입</div>
   <h1>${escapeHtml(title || statusLabel)}</h1><p class="lead">${escapeHtml(message || '')}</p>
   <div class="status${ok ? '' : ' closed'}"><span class="dot"></span>${escapeHtml(statusLabel)}${order.status === 'paid' ? ` · ${escapeHtml(fulfillLabel)}` : ''}</div></div></header>
   <main class="wrap"><section class="panel"><h2>신청 내역</h2>
   <p class="note">신청번호 ${escapeHtml(order.id)} · ${escapeHtml(org)} · ${escapeHtml(maskName(order.applicant_name))}</p>
-  <table class="r"><thead><tr><th>도서</th><th>수량</th><th>금액</th></tr></thead><tbody>${rows}</tbody>
+  <table class="r"><thead><tr><th>도서</th><th>수량</th><th>금액</th></tr></thead><tbody>${rows}${shippingRow}</tbody>
   <tfoot><tr><th>합계</th><th>${order.total_quantity}권</th><th>${formatWon(order.total_amount)}</th></tr></tfoot></table>
   ${order.receipt_url ? `<p><a href="${escapeHtml(order.receipt_url)}" target="_blank" rel="noopener">결제 영수증 보기</a></p>` : ''}
   <p class="note">이 화면의 주소를 저장해 두시면 진행 상황(발주·도착·전달)을 다시 확인하실 수 있습니다.</p>
@@ -907,18 +933,21 @@ async function campaignSummary(env, id) {
   const byProduct = await env.DB.prepare(`SELECT i.product_id, i.product_name, o.org, SUM(i.quantity) AS qty, SUM(i.line_amount) AS amount
     FROM qtin_order_items i JOIN qtin_orders o ON o.id=i.order_id WHERE o.campaign_id=? AND o.status='paid' AND ${NOT_TEST_ORDER} GROUP BY i.product_id, o.org`).bind(id).all();
   const totals = await env.DB.prepare(`SELECT org, status, COUNT(*) AS orders, SUM(total_amount) AS amount, SUM(total_quantity) AS qty FROM qtin_orders o WHERE campaign_id=? AND ${NOT_TEST_ORDER} GROUP BY org, status`).bind(id).all();
-  const orders = await env.DB.prepare(`SELECT id, org, applicant_name, phone, email, department, memo, total_amount, total_quantity, order_name, status, payment_method, approved_at, receipt_url, fulfillment_status, created_at
-    FROM qtin_orders WHERE campaign_id=? AND status IN ('paid','cancelled','payment_pending') ORDER BY created_at DESC LIMIT 1000`).bind(id).all();
+  const orders = await env.DB.prepare(`SELECT o.id, o.org, o.applicant_name, o.phone, o.email, o.department, o.memo, o.total_amount, o.total_quantity, o.order_name, o.status, o.payment_method, o.approved_at, o.receipt_url, o.fulfillment_status, o.created_at,
+      COALESCE(d.method, 'pickup') AS delivery_method, COALESCE(d.shipping_fee, 0) AS shipping_fee, d.recipient_name, d.recipient_phone, d.postal_code, d.address1, d.address2
+    FROM qtin_orders o LEFT JOIN qtin_order_delivery d ON d.order_id=o.id WHERE o.campaign_id=? AND o.status IN ('paid','cancelled','payment_pending') ORDER BY o.created_at DESC LIMIT 1000`).bind(id).all();
   return { campaign: { ...campaign, state: campaignState(campaign) }, products, byProduct: byProduct.results || [], totals: totals.results || [], orders: orders.results || [] };
 }
 
 async function exportCsv(env, id) {
-  const rows = await env.DB.prepare(`SELECT o.id, o.org, o.applicant_name, o.phone, o.email, o.department, o.status, o.fulfillment_status, o.approved_at, o.payment_method, i.product_name, i.unit_price, i.quantity, i.line_amount, o.memo
-    FROM qtin_orders o JOIN qtin_order_items i ON i.order_id=o.id WHERE o.campaign_id=? AND o.status IN ('paid','cancelled') AND ${NOT_TEST_ORDER} ORDER BY o.org, o.created_at`).bind(id).all();
-  const header = ['신청번호', '기관', '이름', '휴대전화', '이메일', '소속', '결제상태', '수령상태', '결제시각(KST)', '결제수단', '도서', '단가', '수량', '금액', '요청사항'];
+  const rows = await env.DB.prepare(`SELECT o.id, o.org, o.applicant_name, o.phone, o.email, o.department, o.status, o.fulfillment_status, o.approved_at, o.payment_method, i.product_name, i.unit_price, i.quantity, i.line_amount, o.memo,
+      COALESCE(d.method, 'pickup') AS delivery_method, COALESCE(d.shipping_fee, 0) AS shipping_fee, d.recipient_name, d.recipient_phone, d.postal_code, d.address1, d.address2
+    FROM qtin_orders o JOIN qtin_order_items i ON i.order_id=o.id LEFT JOIN qtin_order_delivery d ON d.order_id=o.id WHERE o.campaign_id=? AND o.status IN ('paid','cancelled') AND ${NOT_TEST_ORDER} ORDER BY o.org, o.created_at`).bind(id).all();
+  const header = ['신청번호', '기관', '이름', '휴대전화', '이메일', '소속', '결제상태', '수령상태', '결제시각(KST)', '결제수단', '도서', '단가', '수량', '금액', '요청사항', '수령방법', '배송비(신청당)', '받는분', '받는분 연락처', '우편번호', '주소'];
   const lines = [header.map(csvEscape).join(',')];
   for (const r of rows.results || []) {
-    lines.push([r.id, ORGS[r.org]?.label || r.org, r.applicant_name, r.phone, r.email, r.department, r.status, r.fulfillment_status, formatKst(r.approved_at), r.payment_method, r.product_name, r.unit_price, r.quantity, r.line_amount, r.memo].map(csvEscape).join(','));
+    lines.push([r.id, ORGS[r.org]?.label || r.org, r.applicant_name, r.phone, r.email, r.department, r.status, r.fulfillment_status, formatKst(r.approved_at), r.payment_method, r.product_name, r.unit_price, r.quantity, r.line_amount, r.memo,
+      DELIVERY_METHODS[r.delivery_method] || r.delivery_method, r.shipping_fee, r.recipient_name, r.recipient_phone, r.postal_code, [r.address1, r.address2].filter(Boolean).join(' ')].map(csvEscape).join(','));
   }
   return '\ufeff' + lines.join('\r\n');
 }
@@ -1070,7 +1099,7 @@ function adminClient() {
   const API = '/qtin/api/admin';
   const ORG = { church: '에코디교회', mission: '에코디선교회', other: '기타' };
   const STATUS = { paid: '결제완료', payment_pending: '결제대기', cancelled: '취소' };
-  const FUL = { waiting: '발주대기', ordered: 'QTM 발주', received: '교회 도착', distributed: '전달 완료' };
+  const FUL = { waiting: '발주대기', ordered: 'QTM 발주', received: '교회 도착', distributed: '전달·배송 완료' };
   const $ = id => document.getElementById(id);
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const won = v => `${Math.trunc(Number(v) || 0).toLocaleString('ko-KR')}원`;
@@ -1142,7 +1171,7 @@ function adminClient() {
   function renderOrders() {
     const q = ($('filter').value || '').trim();
     const list = data.orders.filter(o => !q || [o.id, o.applicant_name, o.phone, o.department].join(' ').includes(q));
-    $('orders').innerHTML = list.length ? `<table class="r"><thead><tr><th>신청</th><th>신청자</th><th>도서</th><th>금액</th><th>결제</th><th>수령</th></tr></thead><tbody>${list.map(o => `<tr><td>${esc(ORG[o.org] || o.org)}<br><small>${esc(kst(o.approved_at || o.created_at))}</small></td><td>${esc(o.applicant_name)}<br><small>${esc(o.phone)} ${esc(o.department)}</small></td><td>${esc(o.order_name)} · ${o.total_quantity}권${o.memo ? `<br><small>${esc(o.memo)}</small>` : ''}</td><td>${won(o.total_amount)}</td><td>${esc(STATUS[o.status] || o.status)}${o.status === 'paid' && me.canRefund ? `<br><button type="button" class="btn alt" style="padding:4px 8px;font-size:12px" data-cancel="${esc(o.id)}">결제취소</button>` : ''}</td><td>${o.status === 'paid' ? `<select data-ful="${esc(o.id)}" ${me.canWrite ? '' : 'disabled'}>${Object.entries(FUL).map(([k, v]) => `<option value="${k}" ${o.fulfillment_status === k ? 'selected' : ''}>${v}</option>`).join('')}</select>` : '-'}</td></tr>`).join('')}</tbody></table>` : '<p class="note">표시할 신청이 없습니다.</p>';
+    $('orders').innerHTML = list.length ? `<table class="r"><thead><tr><th>신청</th><th>신청자</th><th>도서</th><th>금액</th><th>결제</th><th>수령</th></tr></thead><tbody>${list.map(o => `<tr><td>${esc(ORG[o.org] || o.org)}<br><small>${esc(kst(o.approved_at || o.created_at))}</small></td><td>${esc(o.applicant_name)}<br><small>${esc(o.phone)} ${esc(o.department)}</small></td><td>${esc(o.order_name)} · ${o.total_quantity}권${o.delivery_method === 'parcel' ? `<br><small><b>택배</b> ${esc(o.recipient_name || '')} ${esc(o.recipient_phone || '')} · (${esc(o.postal_code || '')}) ${esc(o.address1 || '')} ${esc(o.address2 || '')}</small>` : ''}${o.memo ? `<br><small>${esc(o.memo)}</small>` : ''}</td><td>${won(o.total_amount)}</td><td>${esc(STATUS[o.status] || o.status)}${o.status === 'paid' && me.canRefund ? `<br><button type="button" class="btn alt" style="padding:4px 8px;font-size:12px" data-cancel="${esc(o.id)}">결제취소</button>` : ''}</td><td>${o.status === 'paid' ? `<select data-ful="${esc(o.id)}" ${me.canWrite ? '' : 'disabled'}>${Object.entries(FUL).map(([k, v]) => `<option value="${k}" ${o.fulfillment_status === k ? 'selected' : ''}>${v}</option>`).join('')}</select>` : '-'}</td></tr>`).join('')}</tbody></table>` : '<p class="note">표시할 신청이 없습니다.</p>';
     document.querySelectorAll('[data-ful]').forEach(el => el.addEventListener('change', async () => { try { await api('/orders/' + el.dataset.ful, { method: 'PATCH', body: JSON.stringify({ fulfillmentStatus: el.value }) }); setMsg('수령 상태를 저장했습니다.', true); } catch (e) { setMsg(e.message); } }));
     document.querySelectorAll('[data-cancel]').forEach(el => el.addEventListener('click', async () => { const reason = prompt('결제를 취소하고 환불합니다. 취소 사유를 입력해 주세요.'); if (!reason) return; try { await api('/orders/' + el.dataset.cancel + '/cancel', { method: 'POST', body: JSON.stringify({ reason }) }); setMsg('결제를 취소했습니다.', true); await load(); } catch (e) { setMsg(e.message); } }));
   }
@@ -1247,7 +1276,7 @@ export async function handleRequest(request, env, now = new Date()) {
     if (!receipt) return html(simplePage('결제 결과를 확인할 수 없습니다', result.ok ? '결제는 완료되었습니다. 관리자에게 신청번호를 알려 주세요.' : (result.message || '신청 정보를 찾을 수 없습니다.')), { status: result.ok ? 200 : 404, method, env });
     const viewUrl = `${BASE}/order/${encodeURIComponent(orderId)}?t=${encodeURIComponent(token)}`;
     const page = result.ok
-      ? renderReceipt(receipt, { title: '신청이 완료되었습니다', message: '결제가 확인되어 큐티인 신청이 완료되었습니다. 책이 교회에 도착하면 나누어 드리겠습니다. 감사합니다.' }).replace('</main>', `<p class="wrap note">진행 상황 확인 주소: <a href="${viewUrl}">${escapeHtml(publicBase(env))}/order/…</a></p></main>`)
+      ? renderReceipt(receipt, { title: '신청이 완료되었습니다', message: '결제가 확인되어 큐티인 신청이 완료되었습니다. 교회 수령은 책이 도착하면 나누어 드리고, 택배는 입력하신 곳으로 보내 드리겠습니다. 감사합니다.' }).replace('</main>', `<p class="wrap note">진행 상황 확인 주소: <a href="${viewUrl}">${escapeHtml(publicBase(env))}/order/…</a></p></main>`)
       : renderReceipt(receipt, { title: '결제가 완료되지 않았습니다', message: result.message || '결제 승인에 실패했습니다.', ok: false });
     return html(page, { status: result.ok ? 200 : (result.status === 202 ? 202 : 409), method, env });
   }
