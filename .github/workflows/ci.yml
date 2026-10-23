@@ -97,7 +97,6 @@ jobs:
             .github/workflows/backup-ekodi-core.yml \
             .github/workflows/verify-ekodi-core-completion.yml \
             .github/workflows/release-messenger-investment-functional.yml \
-            .github/workflows/release-invest-personalization.yml \
             .github/workflows/cloud-control-workers-builds.yml \
             .github/workflows/redeploy-control-on-central-core.yml \
             .github/workflows/github-governance-audit.yml \
