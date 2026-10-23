@@ -21,6 +21,8 @@ on:
       - 'education-worker.js'
       - 'education-instructor-gate.js'
       - 'scripts/edu-instructor-gate-verifier.mjs'
+      - 'scripts/verify-education-live-studio-native.mjs'
+      - 'test/education-native-security-observations.test.mjs'
       - 'research/migrations/**'
       - 'test/research-platform.test.mjs'
       - 'platform-route-registry.js'
@@ -44,6 +46,8 @@ on:
       - 'education-worker.js'
       - 'education-instructor-gate.js'
       - 'scripts/edu-instructor-gate-verifier.mjs'
+      - 'scripts/verify-education-live-studio-native.mjs'
+      - 'test/education-native-security-observations.test.mjs'
       - 'research/migrations/**'
       - 'test/research-platform.test.mjs'
       - 'platform-route-registry.js'
@@ -87,6 +91,7 @@ jobs:
           node --check education-worker.js
           node --check education-instructor-gate.js
           node --check scripts/edu-instructor-gate-verifier.mjs
+          node --check scripts/verify-education-live-studio-native.mjs
           node --check education/research/worker.js
           node --check education/research/planner.js
           node --check education/research/app.js
@@ -94,7 +99,7 @@ jobs:
           node --check ekodi-service-manifest.js
           node --test test/education-platform.test.mjs test/my-life-journey.test.mjs test/research-platform.test.mjs
           for f in education/study/live/*.js education/study/live/*/*.js; do node --check "$f"; done
-          node --test test/education-live-studio.test.mjs test/education-instructor-gate.test.mjs
+          node --test test/education-live-studio.test.mjs test/education-instructor-gate.test.mjs test/education-native-security-observations.test.mjs
           node -e "JSON.parse(require('fs').readFileSync('platform-boundaries.json','utf8'))"
           node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/education.worker.json','utf8'))"
           grep -Fq 'EKODI Education' education/index.html
