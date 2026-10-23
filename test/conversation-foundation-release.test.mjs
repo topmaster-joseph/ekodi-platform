@@ -29,21 +29,14 @@ test('Conversation release owns only Conversation APIs, never the shared-site Wo
   assert.doesNotMatch(workflow,/gh workflow run deploy-site-core\.yml/);
 });
 
-test('Workspace API has one deployment owner while Invest keeps an independent validation gate',async()=>{
+test('Workspace API retains one guarded deployment owner without a public Invest release',async()=>{
   const canonical=await read('.github/workflows/release-messenger-investment-functional.yml');
-  const invest=await read('.github/workflows/release-invest-personalization.yml');
-  const triggers=triggerBlock(canonical);
-  assert.match(triggers,/profile-official-data-adapter\.js/);
-  assert.match(triggers,/invest-personalization-runtime\.js/);
-  assert.match(triggers,/test\/invest-personalization-contract\.test\.mjs/);
-  assert.match(canonical,/node --test[^\n]*invest-personalization-contract\.test\.mjs/);
-  assert.match(canonical,/"investPersonalization":"v1"/);
-  assert.match(canonical,/"transactionExecution":false/);
-  assert.match(invest,/name: Validate EKODI Invest Personalization/);
-  assert.doesNotMatch(invest,/\n\s*workspace-staging:/);
-  assert.doesNotMatch(invest,/\n\s*production-workspace:/);
-  assert.doesNotMatch(invest,/wrangler@\$\{WRANGLER_VERSION\} deploy/);
-  assert.doesNotMatch(invest,/guarded-worker-release\.mjs/);
+  const ci=await read('.github/workflows/ci.yml');
+  assert.match(canonical,/name: Release EKODI Conversation Foundation APIs/);
+  assert.match(canonical,/group: ekodi-conversation-release/);
+  assert.doesNotMatch(ci,/\.github\/workflows\/release-invest-personalization\.yml/);
+  const entry=await read('workspace-platform-entry-worker.js');
+  assert.match(entry,/service_retired/);
 });
 
 test('canonical Shared Site workflow owns the shared-site manifest',async()=>{
