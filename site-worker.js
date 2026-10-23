@@ -15,6 +15,7 @@ import { realtimeTenantAdminFromPath, realtimeTenantFromPath } from './realtime-
 import { tenantLivePage } from './tenant-live-page.js';
 import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from './tenant-live-admin-page.js';
 import { isMallPicksPath, mallPicksResponse } from './mall-weekly-picks-page.js';
+import { decorateMallProductResponse, isMallProductPath } from './mall-product-jsonld.js';
 
 // Static Assets canonicalizes *.html URLs to extensionless paths.
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
@@ -779,6 +780,8 @@ export default {
         const picks = withHostSecurity(await mallPicksResponse(env), MALL_CSP, 'public, max-age=300, s-maxage=1800', 'public-ekodi-mall-picks');
         return decorateDiscoveryResponse(injectEkodiShell(picks, 'mall', 'public'), url.pathname);
       }
+      // Phase 6: 공개 상품 페이지는 서버에서 schema.org Product/Offer JSON-LD를 <head>에 넣는다(Mall API 바인딩, 실패 시 원본 유지).
+      if (request.method === 'GET' && isMallProductPath(url.pathname)) return decorateMallProductResponse(await proxyMallService(request), request, env);
       if (isMallPath(url.pathname)) return proxyMallService(request);
       if (PUBLIC_ADMIN_ALIASES.has(url.pathname) || url.pathname.startsWith('/admin/')) {
         const response = await env.ASSETS.fetch(assetRequest(request, '/admin-shell'));

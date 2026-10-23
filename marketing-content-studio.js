@@ -6,6 +6,10 @@
 // 추천·보증 표시(공정위 「추천·보증 등에 관한 표시·광고 심사지침」, 2024-12 개정): 제휴·협찬 링크가 있는 변형은
 // 경제적 이해관계 표시문을 본문 "첫 부분"에 둔다. applyDisclosure()가 이를 강제한다.
 // AI 생성 변형은 ai_generated=1로 저장하고, 게시 콘텐츠의 content_json.isAiGenerated로 함께 전달한다.
+// Phase 6: POST /studio/generate — 상품 정보로 SEO·AEO 구매 가이드와 채널별 초안을 만들어 모두 pending_review로 저장한다
+// (marketing-seo-engine.js, 기본 템플릿 모드·추가 비용 0원). 생성만 하고 게시·예약은 하지 않는다.
+
+import { SEO_CHANNEL_TARGETS, SEO_GENERATION_CHANNELS, aiGenerationStatus, generateCampaignContent } from './marketing-seo-engine.js';
 
 export const STUDIO_PREFIX = '/api/marketing/admin/studio';
 export const STUDIO_CHANNELS = Object.freeze(['facebook','instagram','threads','youtube','naver_blog','other']);
@@ -305,12 +309,71 @@ export async function scheduleVariant(env, actor, id, input = {}) {
   }
 }
 
+// ---------------------------------------------------------------- Phase 6 · 상품 → 콘텐츠 생성
+
+export const GENERATION_DEFAULT_SUBJECT = Object.freeze({ subjectType:'tenant', subjectKey:'ekodimall' });
+
+// 상품 정보로 구매 가이드 + 채널별 변형을 만들고 전부 pending_review로 저장한다(게시·예약 없음).
+export async function generateProductCampaign(env, actor, input = {}, options = {}) {
+  const product = input.product && typeof input.product === 'object' ? input.product : null;
+  if (!product) throw studioError('PRODUCT_REQUIRED');
+  const productUrl = clean(product.url, 2048);
+  if (!productUrl) throw studioError('PRODUCT_URL_REQUIRED');
+  const checked = classifyLink(productUrl, options);
+  if (!checked.ok) throw studioError('TRACKED_LINK_REJECTED', 400, { reason:checked.reason });
+  const subjectType = clean(input.subjectType || GENERATION_DEFAULT_SUBJECT.subjectType, 20);
+  const subjectKey = clean(input.subjectKey || GENERATION_DEFAULT_SUBJECT.subjectKey, 160);
+  if (!['person','tenant','store'].includes(subjectType) || !subjectKey) throw studioError('CONTENT_OR_SUBJECT_REQUIRED');
+
+  let generated;
+  try {
+    generated = await generateCampaignContent(product, { channels:input.channels, mode:input.mode, signals:input.signals, env, router:options.router, now:options.now });
+  } catch (error) {
+    if (error?.code) throw studioError(error.code, error.status || 400, error.reason ? { reason:error.reason } : {});
+    throw error;
+  }
+  const { buyingGuide, keywords } = generated;
+  const now = nowIso();
+  const contentJson = JSON.stringify({
+    seoEngine:{
+      version:1, mode:generated.mode, requestedMode:generated.requestedMode, fallbackReason:generated.fallbackReason, provider:generated.provider,
+      product:{ name:generated.product.name, category:generated.product.category, priceKrw:generated.product.priceKrw, features:generated.product.features,
+        audience:generated.product.audience, saleType:generated.product.saleType, partner:generated.product.partner, url:generated.product.url },
+      rejectedInputs:generated.product.rejectedInputs, keywords, buyingGuide,
+    },
+  });
+  const anyAi = generated.variants.some(variant => variant.aiGenerated);
+  const item = await env.DB.prepare(`INSERT INTO marketing_content_items(subject_type,subject_key,workspace_id,title,content_type,caption,asset_url,link_url,content_json,source,approval_state,created_by,created_at,updated_at)
+    VALUES(?,?,?,?,'article',?,?,?,?,?,'draft',?,?,?)`).bind(subjectType, subjectKey, clean(input.workspaceId, 160), clean(buyingGuide.title, 240),
+    clean(buyingGuide.body, MAX_BODY), generated.product.imageUrls[0] || '', checked.url.href, contentJson, anyAi ? 'ai' : 'human', clean(actor, 160), now, now).run();
+  const contentId = Number(item.meta?.last_row_id || 0);
+  if (!contentId) throw studioError('CONTENT_INSERT_FAILED', 500);
+  const subject = { subject_type:subjectType, subject_key:subjectKey, workspace_id:clean(input.workspaceId, 160) };
+  await audit(env, subject, null, 'studio_campaign_generated', `content:${contentId}:${generated.mode}:${generated.variants.length}${generated.fallbackReason ? `:fallback:${generated.fallbackReason}` : ''}`, actor);
+
+  const campaignKey = clean(input.campaignKey, 80) || `seo-${generated.product.name}`;
+  const variants = [];
+  for (const variant of generated.variants) {
+    const target = SEO_CHANNEL_TARGETS[variant.key];
+    variants.push(await createVariant(env, actor, {
+      contentId, channel:target.channel, format:target.format, title:variant.title, body:variant.body,
+      hashtags:variant.hashtags, media:variant.media, linkUrl:checked.url.href, campaignKey,
+      disclosureText:variant.disclosure, sponsored:true, aiGenerated:variant.aiGenerated === true,
+    }, options));
+  }
+  return {
+    contentId, variantIds:variants.map(variant => variant.id), variants,
+    channels:generated.variants.map(variant => variant.key), mode:generated.mode, requestedMode:generated.requestedMode,
+    fallbackReason:generated.fallbackReason, keywords, buyingGuide, rejectedInputs:generated.product.rejectedInputs,
+  };
+}
+
 // ---------------------------------------------------------------- HTTP
 
 async function readJson(request) { try { return await request.json(); } catch { return null; } }
 
 // resolveAdmin: marketing-admin-control.js의 adminSession(EKODI 관리자 세션 확인)을 그대로 주입받는다.
-export async function handleContentStudio(request, env, { resolveAdmin, respond } = {}) {
+export async function handleContentStudio(request, env, { resolveAdmin, respond, ...studioOptions } = {}) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, '');
   if (!path.startsWith(STUDIO_PREFIX)) return null;
@@ -329,6 +392,14 @@ export async function handleContentStudio(request, env, { resolveAdmin, respond 
       const body = await readJson(request);
       if (!body) return reply({ error:'INVALID_JSON' }, 400);
       return reply({ ok:true, variant:await createVariant(env, actor, body, { partnerHosts:partnerHostsFrom(env) }) }, 201);
+    }
+    if (path === `${STUDIO_PREFIX}/generate` && request.method === 'GET') {
+      return reply({ ...aiGenerationStatus(env, { router:studioOptions.router }), channels:SEO_GENERATION_CHANNELS, defaultMode:'template' });
+    }
+    if (path === `${STUDIO_PREFIX}/generate` && mutating) {
+      const body = await readJson(request);
+      if (!body) return reply({ error:'INVALID_JSON' }, 400);
+      return reply({ ok:true, ...(await generateProductCampaign(env, actor, body, { partnerHosts:partnerHostsFrom(env), router:studioOptions.router })) }, 201);
     }
     const match = path.match(/^\/api\/marketing\/admin\/studio\/variants\/(\d+)\/(approve|reject|schedule)$/);
     if (match && mutating) {

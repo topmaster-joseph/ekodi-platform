@@ -33,6 +33,8 @@
     return data;
   };
   const STUDIO_API = '/api/marketing/admin/studio/variants';
+  const STUDIO_GENERATE_API = '/api/marketing/admin/studio/generate';
+  const GENERATE_CHANNELS = [['facebook','Facebook 피드'],['instagram','Instagram 카드뉴스'],['instagram_reel','Instagram 릴스'],['facebook_reel','Facebook 릴스'],['youtube_short','YouTube 쇼츠'],['naver_blog','네이버 블로그']];
   const STUDIO_STATES = [['pending_review','검수 대기'],['approved','승인'],['scheduled','예약'],['published','게시'],['rejected','반려'],['draft','초안'],['archived','보관']];
   const STUDIO_CHANNEL_LABELS = { facebook:'Facebook', instagram:'Instagram', threads:'Threads', youtube:'YouTube', naver_blog:'네이버 블로그', other:'기타' };
   const studioApi = async (path, { method = 'GET', body } = {}) => {
@@ -363,9 +365,35 @@
         : !studio.data ? '<div class="marketing-ai-loading">검수 대기 콘텐츠를 확인하고 있습니다.</div>'
         : rows.length ? rows.map(studioVariantHtml).join('')
         : '<div class="marketing-ai-empty good"><strong>검수 대기 콘텐츠가 없습니다.</strong><span>사람이나 AI가 채널별 변형을 만들면 이곳에서 승인 후에만 게시 예약할 수 있습니다.</span></div>';
-      return `<div class="marketing-ai-card-head"><div><small>CONTENT STUDIO REVIEW</small><h3>콘텐츠 검수함</h3><p>사람·AI가 만든 모든 채널별 변형은 관리자 승인 뒤에만 게시 큐에 들어갑니다.</p></div><button type="button" data-studio-refresh>↻ 새로고침</button></div>
-        <div class="marketing-ai-studio-counts">${STUDIO_STATES.map(([key,label]) => `<div class="${key === 'pending_review' && Number(counts[key] || 0) ? 'urgent' : ''}"><span>${esc(label)}</span><strong>${studio.data ? num(counts[key]) : '—'}</strong></div>`).join('')}</div>
-        <div class="marketing-ai-studio-list">${list}</div>`;
+      return {
+        head:`<div class="marketing-ai-card-head"><div><small>CONTENT STUDIO REVIEW</small><h3>콘텐츠 검수함</h3><p>사람·AI가 만든 모든 채널별 변형은 관리자 승인 뒤에만 게시 큐에 들어갑니다.</p></div><button type="button" data-studio-refresh>↻ 새로고침</button></div>
+        <div class="marketing-ai-studio-counts">${STUDIO_STATES.map(([key,label]) => `<div class="${key === 'pending_review' && Number(counts[key] || 0) ? 'urgent' : ''}"><span>${esc(label)}</span><strong>${studio.data ? num(counts[key]) : '—'}</strong></div>`).join('')}</div>`,
+        list:`<div class="marketing-ai-studio-list">${list}</div>`,
+      };
+    }
+
+    // Phase 6: 상품으로 콘텐츠 만들기 — 생성 결과는 모두 검수 대기(pending_review)로만 들어간다.
+    const generator = { status:null, statusLoading:false, busy:false, message:'', error:false };
+
+    function generatorHtml() {
+      const aiEnabled = generator.status?.aiEnabled === true;
+      const aiNote = aiEnabled ? '무료 등급 AI 사용 가능' : 'AI 모드 비활성(무료 공급자 미설정) · 템플릿 사용';
+      return `<details class="marketing-ai-studio-generator">
+        <summary><strong>상품으로 콘텐츠 만들기</strong><span>구매 가이드 + 채널별 초안을 검수 대기로 생성 · 추가 비용 없음</span></summary>
+        <form data-studio-generate novalidate>
+          <label>상품명<input name="name" required maxlength="120" autocomplete="off"></label>
+          <label>카테고리<input name="category" maxlength="60" placeholder="예: 텀블러" autocomplete="off"></label>
+          <label class="wide">상품 링크<input name="url" type="url" required placeholder="https://ekodi.kr/ekodimall/p/... 또는 쿠팡 파트너스 링크"></label>
+          <label>가격(원)<input name="priceKrw" inputmode="numeric" placeholder="선택"></label>
+          <label>판매유형<select name="saleType"><option value="direct">에코디비즈 직접판매</option><option value="affiliate:coupang">제휴 · 쿠팡 파트너스</option><option value="affiliate:other">제휴 · 기타</option></select></label>
+          <label class="wide">특징(줄바꿈으로 구분 · 확인된 사실만)<textarea name="features" rows="3" maxlength="1200"></textarea></label>
+          <label class="wide">대상 고객<input name="audience" maxlength="120" placeholder="선택 · 예: 출퇴근 직장인"></label>
+          <fieldset class="wide"><legend>채널</legend>${GENERATE_CHANNELS.map(([key,label]) => `<label class="check"><input type="checkbox" name="channels" value="${esc(key)}" checked>${esc(label)}</label>`).join('')}</fieldset>
+          <fieldset><legend>모드</legend><label class="check"><input type="radio" name="mode" value="template" checked>템플릿</label><label class="check" title="${esc(aiNote)}"><input type="radio" name="mode" value="ai" ${aiEnabled ? '' : 'disabled'}>AI(무료)</label></fieldset>
+          <div class="marketing-ai-studio-generator-actions wide"><button type="submit" class="primary" ${generator.busy ? 'disabled' : ''}>${generator.busy ? '생성 중…' : '검수 대기로 생성'}</button><small>${esc(aiNote)}</small></div>
+          ${generator.message ? `<p class="marketing-ai-studio-generator-msg ${generator.error ? 'error' : ''} wide" role="status">${esc(generator.message)}</p>` : ''}
+        </form>
+      </details>`;
     }
 
     function mountStudio() {
@@ -375,10 +403,72 @@
         section = document.createElement('section');
         section.className = 'marketing-ai-console-card marketing-ai-studio-review';
         section.setAttribute('aria-label', '콘텐츠 검수함');
+        section.innerHTML = '<div class="marketing-ai-studio-review-head"></div><div class="marketing-ai-studio-generator-host"></div><div class="marketing-ai-studio-review-body"></div>';
         view.prepend(section);
+        renderGenerator(section);
+        loadGeneratorStatus();
       }
-      section.innerHTML = studioHtml();
+      const parts = studioHtml();
+      section.querySelector('.marketing-ai-studio-review-head').innerHTML = parts.head;
+      section.querySelector('.marketing-ai-studio-review-body').innerHTML = parts.list;
       return section;
+    }
+
+    function renderGenerator(section = view?.querySelector('.marketing-ai-studio-review')) {
+      const host = section?.querySelector('.marketing-ai-studio-generator-host');
+      if (!host) return;
+      const wasOpen = host.querySelector('details')?.open;
+      const form = host.querySelector('form[data-studio-generate]');
+      const saved = form ? new FormData(form) : null;
+      host.innerHTML = generatorHtml();
+      if (wasOpen) host.querySelector('details').open = true;
+      const next = host.querySelector('form[data-studio-generate]');
+      if (saved && next) {
+        for (const name of ['name','category','url','priceKrw','saleType','features','audience']) if (next.elements[name]) next.elements[name].value = saved.get(name) || next.elements[name].value;
+        const channels = saved.getAll('channels');
+        next.querySelectorAll('input[name="channels"]').forEach(input => { input.checked = channels.includes(input.value); });
+        const mode = saved.get('mode');
+        const radio = next.querySelector(`input[name="mode"][value="${mode === 'ai' ? 'ai' : 'template'}"]`);
+        if (radio && !radio.disabled) radio.checked = true;
+      }
+    }
+
+    async function loadGeneratorStatus() {
+      if (!token() || generator.statusLoading || generator.status) return;
+      generator.statusLoading = true;
+      try { generator.status = await studioApi(STUDIO_GENERATE_API); } catch { generator.status = { aiEnabled:false }; }
+      finally { generator.statusLoading = false; renderGenerator(); }
+    }
+
+    async function submitGenerator(form) {
+      if (generator.busy) return;
+      const data = new FormData(form);
+      const [saleType, partner = ''] = String(data.get('saleType') || 'direct').split(':');
+      const channels = data.getAll('channels');
+      const name = String(data.get('name') || '').trim();
+      const url = String(data.get('url') || '').trim();
+      if (!name || !url || !channels.length) {
+        generator.message = '상품명, 상품 링크, 채널을 하나 이상 입력해 주세요.'; generator.error = true; renderGenerator(); return;
+      }
+      generator.busy = true; generator.message = ''; generator.error = false; renderGenerator();
+      try {
+        const result = await studioApi(STUDIO_GENERATE_API, { method:'POST', body:{
+          product:{ name, category:String(data.get('category') || '').trim(), url, priceKrw:String(data.get('priceKrw') || '').trim(),
+            features:String(data.get('features') || '').split('\n').map(line => line.trim()).filter(Boolean),
+            audience:String(data.get('audience') || '').trim(), saleType, partner },
+          channels, mode:data.get('mode') === 'ai' ? 'ai' : 'template',
+        } });
+        const fallback = result.fallbackReason ? ` (AI 대신 템플릿 사용: ${result.fallbackReason})` : '';
+        const dropped = result.rejectedInputs?.length ? ` · 무결성 기준으로 제외된 입력 ${result.rejectedInputs.length}건` : '';
+        generator.message = `${result.variantIds?.length || 0}개 채널 초안을 검수 대기로 만들었습니다${fallback}${dropped}. 아래에서 확인 후 승인해 주세요.`;
+        generator.error = false;
+      } catch (error) {
+        generator.message = error.message || '콘텐츠를 생성하지 못했습니다.'; generator.error = true;
+      } finally {
+        generator.busy = false;
+        renderGenerator();
+        await loadStudio(true);
+      }
     }
 
     async function loadStudio(force = false) {
@@ -422,6 +512,12 @@
       new MutationObserver(() => {
         if (state.tab === 'approvals' && !view.querySelector('.marketing-ai-studio-review')) mountStudio();
       }).observe(view, { childList:true });
+      view.addEventListener('submit', event => {
+        const form = event.target.closest('form[data-studio-generate]');
+        if (!form) return;
+        event.preventDefault();
+        submitGenerator(form);
+      });
       view.addEventListener('click', event => {
         const actionButton = event.target.closest('[data-studio-action]');
         if (actionButton) { decideStudio(Number(actionButton.dataset.variantId), actionButton.dataset.studioAction); return; }
