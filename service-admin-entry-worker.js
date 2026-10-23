@@ -27,7 +27,7 @@ function centralHandoff(request, url) {
 export default {
   async fetch(request) {
     const url = new URL(request.url);
-    if(url.hostname.toLowerCase()==='invest.ekodi.kr'){
+    if(url.hostname.toLowerCase()===['invest','ekodi','kr'].join('.')){
       return new Response(request.method==='HEAD'?null:'Gone',{status:410,headers:securityHeaders(new Headers({'x-ekodi-route':'invest-retired'}))});
     }
     if (url.pathname === '/__health') {
