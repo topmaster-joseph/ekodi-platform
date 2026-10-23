@@ -5,6 +5,40 @@
   "controlPlane": "EKODI AI",
   "orchestrator": "ekodi-ai-orchestrator",
   "defaultRule": "all-ekodi-change-intents-enter-through-ekodi-ai",
+  "multiAiCommandAuthority": {
+    "policyId": "EKODI-MULTI-AI-SINGLE-ORCHESTRATOR-001",
+    "status": "enforced",
+    "mandatoryStatement": "모든 AI는 EKODI의 협력 실행자이며, EKODI Orchestrator가 유일한 총괄 지휘자로서 설계·개발·검증·배포·운영을 통합 관리한다.",
+    "appliesTo": [
+      "chatgpt",
+      "claude",
+      "codex",
+      "gemini",
+      "local-ai",
+      "future-ai-providers"
+    ],
+    "providerRolesAreTaskScopedNotFixed": true,
+    "soleTaskLifecycleOwner": "ekodi-ai-orchestrator",
+    "providerMayAnalyzeDesignImplementAndReviewInIsolatedScope": true,
+    "providerMayIssueItsOwnOrchestratorAuthority": false,
+    "providerMayPromoteMergeOrDeployDirectly": false,
+    "orchestratorIssuedTaskRequiredForProductionBoundWork": true,
+    "preserveOriginAndReturnChannel": true,
+    "workspaceIsolationAndIndependentVerificationRequired": true,
+    "ownerHumanGatesRemainAuthoritative": true,
+    "bidirectionalLiveProofMustBeAuthenticated": true,
+    "simulatedOrStaticTestsDoNotCountAsLiveProof": true,
+    "requiredRoundtripEvidence": [
+      "authenticated_origin",
+      "orchestrator_accepted_task_id",
+      "scoped_worker_assignment",
+      "provider_response_received",
+      "orchestrator_verification_result",
+      "response_to_original_channel",
+      "audit_and_timestamp"
+    ],
+    "successClaimRequiresEvidenceFromBothClaudeAndGPT": true
+  },
   "scope": [
     "ekodi-platform",
     "ekodi-services",
@@ -606,6 +640,40 @@
     "rollbackEvidenceMandatory": true,
     "liveProductionVerificationMandatory": true,
     "highRiskChangesRequireRelevantExpandedChecks": true,
-    "completionRequiresVerifiedLiveEvidence": true
+    "completionRequiresVerifiedLiveEvidence": true,
+    "oneFinalPromotionConfirmation": {
+      "policyId": "EKODI-ONE-FINAL-PROMOTION-CONFIRMATION-001",
+      "status": "enforced",
+      "appliesPlatformWide": true,
+      "ownerFacingApprovalMoments": "one-at-final-production-promotion",
+      "automaticStagesBeforeConfirmation": [
+        "plan",
+        "implement",
+        "test",
+        "repair",
+        "retest",
+        "review",
+        "pull-request",
+        "required-ci",
+        "staging",
+        "staging-proof",
+        "rollback-preflight"
+      ],
+      "boundedRetryAttemptsPerFailure": 3,
+      "safeFailureAction": "diagnose-repair-retest-resume-failed-stage",
+      "uncertainWriteAction": "reconcile-before-retry",
+      "exhaustedRetryAction": "hold-with-evidence-not-infinite-retry",
+      "finalConfirmationOnlyAfterAllRequiredGatesAndStaging": true,
+      "finalConfirmationScope": "task-and-exact-immutable-release-artifact",
+      "approvalMustBeAuthenticatedAndDurable": true,
+      "confirmationDoesNotReplaceMandatoryEarlierHumanGates": true,
+      "finalPromotionByEkodiOrchestratorOnly": true,
+      "inheritedSafetyContracts": [
+        "AI-ORCHESTRATE-001",
+        "AI-COMPLETE-001",
+        "EKODI-DEPLOYMENT-FOUR-LAYER-001",
+        "EKODI-ORCHESTRATOR-COMPLETION-001"
+      ]
+    }
   }
 }
