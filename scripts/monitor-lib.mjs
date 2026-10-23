@@ -42,7 +42,6 @@ const BUSINESS_CHAIN_SITES = [
   ['business-pay', 'EKODI Business Pay', 'ekodi.kr/ekodibiz/pay', 'https://ekodi.kr/ekodibiz/pay/'],
   ['business-mail', 'EKODI Business Mail', 'ekodi.kr/ekodibiz/mail', 'https://ekodi.kr/ekodibiz/mail/'],
   ['business-trade', 'EKODI Business Trade', 'ekodi.kr/ekoditrade', 'https://ekodi.kr/ekoditrade/'],
-  ['business-ekodibiz-invest', 'EKODIBIZ Invest Business', 'ekodi.kr', 'https://ekodi.kr/ekodibiz/invest']
 ];
 
 const SERVICE_SITES = EKODI_SERVICE_MANIFEST.services
