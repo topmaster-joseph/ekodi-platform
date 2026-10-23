@@ -10,7 +10,7 @@ test('post-deploy Admin visual E2E is automatic only for visual-contract changes
   assert.match(workflow, /workflows: \['Deploy EKODI Shared Site Core'\]/);
   assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
   assert.match(workflow, /Detect Admin visual-contract changes/);
-  assert.match(workflow, /admin-conversation-workbench\\\.css/);
+  assert.match(workflow, /admin-conversation-workbench\\.css/);
   assert.match(workflow, /admin_visual=true/);
   assert.match(workflow, /steps\.changes\.outputs\.admin_visual == 'true'/);
   assert.match(workflow, /node scripts\/admin-assist-canonical-e2e\.mjs/);
@@ -41,11 +41,11 @@ test('canonical Assist E2E verifies the native Control home frame before campus 
   assert.match(source,/contextTabsPresent/);
   assert.match(source,/commandEntryPresent/);
   assert.match(source,/frameWidth<300/);
-  assert.match(source,/document\\.styleSheets/);
-  assert.match(source,/window\\.innerHeight \\* 0\\.7/);
+  assert.match(source,/document\.styleSheets/);
+  assert.match(source,/window\.innerHeight \* 0\.7/);
   const home=await read('admin-control-home.js');
-  assert.match(home,/region\\.style\\.height='100dvh'/);
-  assert.match(home,/frame\\.style\\.height='100%'/);
+  assert.match(home,/region\.style\.height='100dvh'/);
+  assert.match(home,/frame\.style\.height='100%'/);
   assert.match(source,/visual\.frameLeft-visual\.sidebarRight/);
   assert.match(source,/admin-home-visual\.png/);
   assert.match(source,/report\.visualContractVerified = true/);
