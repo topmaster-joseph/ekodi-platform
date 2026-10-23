@@ -733,3 +733,34 @@ test('widget keys (live_gck/live_gsk) open real checkout through the Toss paymen
   } finally { toss.restore(); }
   assert.equal((await env.DB.prepare('SELECT status FROM qtin_orders WHERE id=?').bind(order.orderId).first()).status, 'paid');
 });
+
+// ---------- EKODI-QTIN-KEY-DIAGNOSTICS-008 ----------
+test('quoted or space-padded dashboard keys are cleaned; diagnostics show shape, never the value', async () => {
+  const { cleanKey, readiness, keyDiagnostics } = await import('../ekodipay-core.js');
+  assert.equal(cleanKey('"live_ck_ABC123"'), 'live_ck_ABC123');
+  assert.equal(cleanKey(" 'live_ck_ABC123'\n"), 'live_ck_ABC123');
+  assert.equal(cleanKey('LIVE_CK_ABC'), 'LIVE_CK_ABC', 'case is preserved');
+  const env = { PAYMENTS_ENABLED: 'true', TOSS_CLIENT_KEY: 'test_ck_cfg', TOSS_CLIENT_KEY__EKODI: '"live_ck_RealClient01"', TOSS_SECRET_KEY__EKODI: 'live_sk_RealSecret99 ' };
+  const ready = readiness(env);
+  assert.equal(ready.publicReady, true, 'quotes no longer block real checkout');
+  assert.equal(ready.mode, 'live');
+  const d = keyDiagnostics(env);
+  assert.deepEqual(d.client, { binding: 'TOSS_CLIENT_KEY__EKODI', present: true, prefix: 'live_ck_', length: 20, ok: true, issues: ['quotes-removed'] });
+  assert.equal(d.secret.ok, true);
+  assert.ok(!JSON.stringify(d).includes('RealClient01') && !JSON.stringify(d).includes('RealSecret99'), 'never reveal key material');
+  assert.deepEqual(keyDiagnostics({ TOSS_CLIENT_KEY__EKODI: 'LIVE_CK_x' }).client.issues, ['uppercase-prefix']);
+  assert.deepEqual(keyDiagnostics({ TOSS_CLIENT_KEY__EKODI: 'live_sk_x' }).client.issues, ['secret-key-in-client-slot']);
+  assert.deepEqual(keyDiagnostics({ TOSS_CLIENT_KEY: 'test_ck_cfg' }).client.binding, 'TOSS_CLIENT_KEY', 'reports the config fallback');
+  // Operators see diagnostics in the admin API; key material never appears.
+  const appEnv = await openEnvWithProducts({ TOSS_CLIENT_KEY: 'test_ck_cfg', TOSS_SECRET_KEY: '', TOSS_CLIENT_KEY__EKODI: 'live_ckBROKEN', TOSS_SECRET_KEY__EKODI: 'live_sk_RealSecret99' });
+  const sb = mockSupabase('topmaster.joseph@gmail.com');
+  try {
+    const res = await handleRequest(new Request('https://ekodi.kr/qtin/api/admin/campaigns', { headers: { authorization: 'Bearer tok' } }), appEnv, OPEN_NOW);
+    const body = await res.json();
+    assert.equal(res.status, 200);
+    assert.ok(body.payment.missing.includes('toss-client-key'));
+    assert.equal(body.keys.client.ok, false);
+    assert.ok(body.keys.client.issues.includes('no-prefix'));
+    assert.ok(!JSON.stringify(body).includes('RealSecret99') && !JSON.stringify(body).includes('BROKEN'));
+  } finally { sb.restore(); }
+});
