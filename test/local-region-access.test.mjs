@@ -113,7 +113,7 @@ test('router exposes auth assets and regional access page before generic workspa
   assert.match(router,/localRegionAccessAdminScript/);
   assert.match(router,/localRegionAccessAdminPage/);
   const regional=router.indexOf('localRegionFromPath(url.pathname)');
-  const generic=router.indexOf('isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname)');
+  const generic=router.indexOf('isWorkspaceAdminPath(url.pathname)');
   assert.ok(regional>0&&generic>regional);
   const wrangler=await fs.readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8');
   assert.match(wrangler,/\/cheonggye\*/);
