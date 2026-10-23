@@ -32,6 +32,19 @@
     if (!response.ok) throw new Error(data.error || `MarketingAI 관리자 API 요청 실패 (${response.status})`);
     return data;
   };
+  const STUDIO_API = '/api/marketing/admin/studio/variants';
+  const STUDIO_STATES = [['pending_review','검수 대기'],['approved','승인'],['scheduled','예약'],['published','게시'],['rejected','반려'],['draft','초안'],['archived','보관']];
+  const STUDIO_CHANNEL_LABELS = { facebook:'Facebook', instagram:'Instagram', threads:'Threads', youtube:'YouTube', naver_blog:'네이버 블로그', other:'기타' };
+  const studioApi = async (path, { method = 'GET', body } = {}) => {
+    const headers = new Headers();
+    if (token()) headers.set('authorization', `Bearer ${token()}`);
+    if (body) headers.set('content-type', 'application/json');
+    const response = await fetch(`${API}${path}`, { method, headers, cache:'no-store', ...(body ? { body:JSON.stringify(body) } : {}) });
+    let data = {};
+    try { data = await response.json(); } catch {}
+    if (!response.ok) throw new Error(data.error || `콘텐츠 검수 API 요청 실패 (${response.status})`);
+    return data;
+  };
   const won = value => `${Number(value || 0).toLocaleString('ko-KR')}원`;
   const num = value => Number(value || 0).toLocaleString('ko-KR');
   const esc = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
@@ -316,6 +329,106 @@
       </div>`;
     }
 
+    // 콘텐츠 스튜디오 검수함: 사람·AI가 만든 채널별 변형(pending_review)을 관리자가 승인·반려한다.
+    // Approvals 탭의 다른 렌더러(라이브 운영 원장)가 화면을 다시 그려도 검수함은 맨 위에 다시 붙는다.
+    const studio = { data:null, loadedAt:0, loading:false, busy:new Set(), error:'' };
+
+    function studioVariantHtml(row) {
+      const busy = studio.busy.has(row.id);
+      const body = String(row.body || '');
+      const preview = body.length > 220 ? `${body.slice(0, 220)}…` : body;
+      return `<article class="marketing-ai-studio-item" data-variant-id="${esc(row.id)}">
+        <div class="marketing-ai-studio-item-head">
+          <span class="marketing-ai-studio-channel ${esc(row.channel)}">${esc(STUDIO_CHANNEL_LABELS[row.channel] || row.channel)}</span>
+          <span class="marketing-ai-plan-chip">${esc(String(row.format || '').toUpperCase())}</span>
+          ${row.aiGenerated ? '<span class="marketing-ai-studio-ai" title="AI 생성 콘텐츠로 표시됩니다">AI 생성</span>' : '<span class="marketing-ai-studio-human">사람 작성</span>'}
+          <time>${esc(dateText(row.createdAt))}</time>
+        </div>
+        <strong>${esc(row.title || '(제목 없음)')}</strong>
+        ${row.disclosureText ? `<p class="marketing-ai-studio-disclosure"><b>추천·보증 표시</b>${esc(row.disclosureText)}</p>` : ''}
+        <p class="marketing-ai-studio-body">${esc(preview) || '—'}</p>
+        <div class="marketing-ai-studio-meta"><span>${esc(subjectLabel(state.data, { subject_type:row.subjectType, subject_key:row.subjectKey }))}</span><span>추적코드 ${esc(row.trackingCode)}</span>${row.linkUrl ? `<span title="${esc(row.linkUrl)}">링크 연결됨</span>` : ''}<span>작성 ${esc(row.createdBy || '—')}</span></div>
+        <div class="marketing-ai-studio-actions">
+          <button type="button" class="primary" data-studio-action="approve" data-variant-id="${esc(row.id)}" ${busy ? 'disabled' : ''}>승인</button>
+          <button type="button" class="secondary" data-studio-action="reject" data-variant-id="${esc(row.id)}" ${busy ? 'disabled' : ''}>반려</button>
+        </div>
+      </article>`;
+    }
+
+    function studioHtml() {
+      const counts = studio.data?.counts || {};
+      const rows = studio.data?.variants || [];
+      const list = studio.error
+        ? `<div class="marketing-ai-empty error"><strong>검수함을 불러오지 못했습니다.</strong><span>${esc(studio.error)}</span></div>`
+        : !studio.data ? '<div class="marketing-ai-loading">검수 대기 콘텐츠를 확인하고 있습니다.</div>'
+        : rows.length ? rows.map(studioVariantHtml).join('')
+        : '<div class="marketing-ai-empty good"><strong>검수 대기 콘텐츠가 없습니다.</strong><span>사람이나 AI가 채널별 변형을 만들면 이곳에서 승인 후에만 게시 예약할 수 있습니다.</span></div>';
+      return `<div class="marketing-ai-card-head"><div><small>CONTENT STUDIO REVIEW</small><h3>콘텐츠 검수함</h3><p>사람·AI가 만든 모든 채널별 변형은 관리자 승인 뒤에만 게시 큐에 들어갑니다.</p></div><button type="button" data-studio-refresh>↻ 새로고침</button></div>
+        <div class="marketing-ai-studio-counts">${STUDIO_STATES.map(([key,label]) => `<div class="${key === 'pending_review' && Number(counts[key] || 0) ? 'urgent' : ''}"><span>${esc(label)}</span><strong>${studio.data ? num(counts[key]) : '—'}</strong></div>`).join('')}</div>
+        <div class="marketing-ai-studio-list">${list}</div>`;
+    }
+
+    function mountStudio() {
+      if (!view || state.tab !== 'approvals') return null;
+      let section = view.querySelector('.marketing-ai-studio-review');
+      if (!section) {
+        section = document.createElement('section');
+        section.className = 'marketing-ai-console-card marketing-ai-studio-review';
+        section.setAttribute('aria-label', '콘텐츠 검수함');
+        view.prepend(section);
+      }
+      section.innerHTML = studioHtml();
+      return section;
+    }
+
+    async function loadStudio(force = false) {
+      if (!token() || studio.loading) return;
+      if (!force && studio.data && Date.now() - studio.loadedAt < 15000) { mountStudio(); return; }
+      studio.loading = true;
+      try {
+        studio.data = await studioApi(`${STUDIO_API}?status=pending_review`);
+        studio.loadedAt = Date.now();
+        studio.error = '';
+      } catch (error) {
+        studio.error = error.message || '알 수 없는 오류';
+      } finally {
+        studio.loading = false;
+        mountStudio();
+      }
+    }
+
+    async function decideStudio(id, action) {
+      if (!id || studio.busy.has(id)) return;
+      let note = '';
+      if (action === 'reject') {
+        const answer = window.prompt('반려 사유를 입력해 주세요. 작성자에게 검수 메모로 남습니다.', '');
+        if (answer === null) return;
+        note = answer.trim();
+      }
+      studio.busy.add(id);
+      mountStudio();
+      try {
+        await studioApi(`${STUDIO_API}/${encodeURIComponent(id)}/${action}`, { method:'POST', body:{ note } });
+        setMessage(action === 'approve' ? '콘텐츠를 승인했습니다. 게시 예약은 승인된 변형에서만 가능합니다.' : '콘텐츠를 반려했습니다.');
+      } catch (error) {
+        setMessage(error.message || '검수 결정을 저장하지 못했습니다.', true);
+      } finally {
+        studio.busy.delete(id);
+        await loadStudio(true);
+      }
+    }
+
+    if (view) {
+      new MutationObserver(() => {
+        if (state.tab === 'approvals' && !view.querySelector('.marketing-ai-studio-review')) mountStudio();
+      }).observe(view, { childList:true });
+      view.addEventListener('click', event => {
+        const actionButton = event.target.closest('[data-studio-action]');
+        if (actionButton) { decideStudio(Number(actionButton.dataset.variantId), actionButton.dataset.studioAction); return; }
+        if (event.target.closest('[data-studio-refresh]')) loadStudio(true);
+      });
+    }
+
     function render() {
       const data = state.data;
       if (!view) return;
@@ -329,6 +442,7 @@
       else if (state.tab === 'billing') renderBilling(data);
       else if (state.tab === 'reports') renderReports(data);
       else renderPlaceholder(data,state.tab);
+      if (state.tab === 'approvals') loadStudio();
       view.querySelectorAll('[data-open-tab]').forEach(link => link.addEventListener('click', () => selectTab(link.dataset.openTab)));
     }
 
