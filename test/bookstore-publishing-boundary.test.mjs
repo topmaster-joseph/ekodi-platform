@@ -50,3 +50,25 @@ test('publishing staging accepts only verified Cloudflare Access protection',()=
   assert.doesNotMatch(flow,/root=\$\(curl -L/);
   assert.match(flow,/verified behind Cloudflare Access/);
 });
+
+
+test('publishing catalog fetch is private and degrades safely when Books binding is missing', async()=>{
+  const {default: publishing}=await import('../publishing-worker.js');
+  const calls=[];
+  const request=new Request('https://ekodi.kr/publishing/books.json');
+  const response=await publishing.fetch(request,{
+    BOOKS:{fetch:async req=>{
+      calls.push(new URL(req.url).pathname);
+      return new Response('[{"id":"public"}]',{status:200,headers:{'content-type':'application/json'}});
+    }}
+  });
+  assert.equal(response.status,200);
+  assert.deepEqual(calls,['/books.json']);
+  assert.deepEqual(await response.json(),[{id:'public'}]);
+  assert.equal(response.headers.get('cache-control'),'no-store');
+  const unavailable=await publishing.fetch(request,{});
+  assert.equal(unavailable.status,503);
+  assert.equal((await unavailable.json()).error,'PUBLIC_BOOK_CATALOG_UNAVAILABLE');
+  const config=fs.readFileSync(new URL('../wrangler.publishing.toml',import.meta.url),'utf8');
+  assert.match(config,/binding = "BOOKS"\\nservice = "ekodi-books"/);
+});
