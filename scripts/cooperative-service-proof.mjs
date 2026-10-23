@@ -80,7 +80,10 @@ export async function verifyCooperativeServiceWorkflows({ contextFor, fixture: f
     assert.equal(charter.filename, coop.publicSlug + '-charter-draft.txt');
     assert.ok(charter.text.includes(coop.name)); assert.ok(charter.text.includes(purpose));
     assert.ok(charter.text.includes(coop.representatives[0]));
-    assert.equal(charter.text.includes(other.name), false);
+    // The provenance paragraph legitimately names the supplied source charter.
+    // Verify this cooperative's actual title and naming clause instead.
+    assert.ok(charter.text.startsWith(coop.name + ' / 설립용 명칭(안): ' + coop.legalName));
+    assert.ok(charter.text.includes('제1조(설립과 명칭) 이 조합은 협동조합기본법에 의하여 설립하며, ' + coop.legalName + '이라 한다.'));
     proof(coop, 'document-status-memo-reload-and-charter-download');
 
     await tab(page, '총회·신고 일정');
