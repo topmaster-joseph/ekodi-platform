@@ -11,6 +11,11 @@ export const RECONCILE_MIN_AGE_MS = 2 * 60 * 1000;
 // 주문 만료(30분) 이후에도 토스 승인 응답이 늦게 올 수 있어 여유를 둔다.
 export const EXPIRY_GRACE_MS = 15 * 60 * 1000;
 export const RECONCILE_BATCH = 30;
+// Check a bounded, fairly rotated slice of already-paid orders as well.
+// Otherwise a missed Toss refund webhook can leave the Mall ledger permanently stale.
+export const REFUND_RECONCILE_BATCH = 6;
+export const REFUND_RECONCILE_MIN_INTERVAL_MS = 30 * 60 * 1000;
+export const REFUND_RECONCILE_MAX_AGE_MS = 180 * 86400 * 1000;
 
 const PENDING_TOSS_STATUSES = new Set(['READY', 'IN_PROGRESS', 'WAITING_FOR_DEPOSIT']);
 const FAILED_TOSS_STATUSES = new Set(['ABORTED', 'EXPIRED']);
@@ -134,8 +139,8 @@ export async function handleTossWebhook(env, body) {
 }
 
 /** 주기 대사: 결제대기 주문을 토스와 맞추고, 만료 + 유예가 지난 미결제 주문은 취소·재고 해제. */
-export async function reconcileMallPayments(env, { now = new Date(), limit = RECONCILE_BATCH } = {}) {
-  const summary = { checked: 0, recorded: 0, cancelled: 0, refunded: 0, pending: 0, mismatch: 0, errors: 0 };
+export async function reconcileMallPayments(env, { now = new Date(), limit = RECONCILE_BATCH, refundLimit = REFUND_RECONCILE_BATCH } = {}) {
+  const summary = { checked: 0, recorded: 0, cancelled: 0, refunded: 0, pending: 0, mismatch: 0, errors: 0, paidChecked: 0, refundRecovered: 0 };
   if (!env?.DB) return { ...summary, skipped: 'no-db' };
   const cutoff = new Date(now.getTime() - RECONCILE_MIN_AGE_MS).toISOString();
   const rows = await env.DB.prepare(`SELECT * FROM orders WHERE status='payment_pending' AND created_at<=?
@@ -157,6 +162,43 @@ export async function reconcileMallPayments(env, { now = new Date(), limit = REC
       console.error('mall reconcile order failed', { orderId: order.id, code: error?.code, message: error?.message });
     }
     await env.DB.prepare('UPDATE orders SET reconcile_attempts=reconcile_attempts+1 WHERE id=?').bind(order.id).run().catch(() => {});
+  }
+
+  // Missed webhook recovery: periodically re-check paid/partially-refunded orders.
+  // The oldest last-checked orders go first; the time/age bounds prevent unbounded
+  // Toss queries and avoid querying other EKODI services sharing the same MID.
+  const paidBatchSize = Math.max(0, Math.min(20, Math.trunc(Number(refundLimit) || 0)));
+  if (paidBatchSize) {
+    const recent = new Date(now.getTime() - REFUND_RECONCILE_MAX_AGE_MS).toISOString();
+    const eligible = new Date(now.getTime() - REFUND_RECONCILE_MIN_INTERVAL_MS).toISOString();
+    const paidRows = await env.DB.prepare(`SELECT * FROM orders
+      WHERE status IN ('paid','partially_refunded') AND created_at >= ?
+        AND (reconciled_at IS NULL OR reconciled_at <= ?)
+      ORDER BY COALESCE(reconciled_at, '') ASC, created_at ASC LIMIT ?`)
+      .bind(recent, eligible, paidBatchSize).all();
+    for (const order of paidRows.results || []) {
+      summary.checked += 1;
+      summary.paidChecked += 1;
+      try {
+        const payment = await fetchTossPaymentByOrder(env, order.id);
+        // A missing Toss payment does not downgrade a recorded paid order.
+        if (payment) {
+          const result = await applyVerifiedPayment(env, order, payment, { now });
+          if (result.action === 'refunded') {
+            summary.refunded += 1;
+            summary.refundRecovered += 1;
+          } else if (result.action === 'mismatch') summary.mismatch += 1;
+        }
+      } catch (error) {
+        summary.errors += 1;
+        console.error('mall paid refund reconciliation failed', { orderId: order.id, code: error?.code, message: error?.message });
+      } finally {
+        // Rotate even failed lookups: one unavailable payment must not starve every
+        // other order on the next 10-minute cron. Re-eligible after the cooldown.
+        await env.DB.prepare(`UPDATE orders SET reconciled_at=?, reconcile_attempts=reconcile_attempts+1
+          WHERE id=? AND status IN ('paid','partially_refunded')`).bind(now.toISOString(), order.id).run().catch(() => {});
+      }
+    }
   }
   return summary;
 }

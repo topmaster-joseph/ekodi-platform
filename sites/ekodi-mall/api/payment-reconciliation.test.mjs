@@ -232,3 +232,76 @@ test('webhook route is served without Origin and scheduled handler runs only whe
     assert.equal(stockOf(db), 1);
   } finally { toss.restore(); }
 });
+
+
+test('cron recovers a full refund when the Toss webhook is missed, without restoring sold stock twice', async () => {
+  const db = migrated({ stock: 3 });
+  const env = { ...ENV, DB: db };
+  const toss = fakeToss();
+  try {
+    const created = await createOrder(env, { shareCode: 'SHARE1', quantity: 1, buyer: BUYER });
+    const id = created.order.id;
+    const confirmed = await core.fetch(new Request('https://ekodi.kr/api/public/payments/confirm', {
+      method: 'POST', body: JSON.stringify({ paymentKey: 'pk_missed_refund', orderId: id, amount: 15000 }),
+    }), env);
+    assert.equal(confirmed.status, 200);
+    assert.equal(stockOf(db), 2);
+    toss.payments.set(id, { ...toss.payments.get(id), status: 'CANCELED', cancels: [{ cancelAmount: 15000 }] });
+    // No webhook delivery. The 10-minute scheduled reconciling path must recover it.
+    const result = await reconcileMallPayments(env, { refundLimit: 1 });
+    assert.equal(result.paidChecked, 1);
+    assert.equal(result.refundRecovered, 1);
+    assert.equal(orderRow(db, id).status, 'refunded');
+    assert.equal(db.db.prepare("SELECT status FROM settlement_ledger WHERE order_id=? AND entry_type='sale'").get(id).status, 'reversed');
+    assert.equal(stockOf(db), 2, 'a sold item is never silently restocked on refund');
+    const second = await reconcileMallPayments(env, { refundLimit: 1 });
+    assert.equal(second.refundRecovered, 0);
+    assert.equal(db.db.prepare("SELECT COUNT(*) n FROM commerce_events WHERE event_type='payment.refunded' AND aggregate_id=?").get(id).n, 1);
+  } finally { toss.restore(); }
+});
+
+test('bounded paid order polling catches missed partial refund updates without duplicate events', async () => {
+  const db = migrated({ stock: 3 });
+  const env = { ...ENV, DB: db };
+  const toss = fakeToss();
+  try {
+    const created = await createOrder(env, { shareCode: 'SHARE1', quantity: 1, buyer: BUYER });
+    const id = created.order.id;
+    await core.fetch(new Request('https://ekodi.kr/api/public/payments/confirm', {
+      method: 'POST', body: JSON.stringify({ paymentKey: 'pk_partial_missed', orderId: id, amount: 15000 }),
+    }), env);
+    toss.payments.set(id, { ...toss.payments.get(id), status: 'PARTIAL_CANCELED', cancels: [{ cancelAmount: 3000 }] });
+    const first = await reconcileMallPayments(env, { refundLimit: 1 });
+    assert.equal(first.refundRecovered, 1);
+    assert.equal(orderRow(db, id).status, 'partially_refunded');
+    const second = await reconcileMallPayments(env, { refundLimit: 1 });
+    assert.equal(second.paidChecked, 0, 'cooldown avoids repeated Toss queries');
+    db.db.prepare('UPDATE orders SET reconciled_at=? WHERE id=?').run(new Date(Date.now() - 45 * 60000).toISOString(), id);
+    toss.payments.set(id, { ...toss.payments.get(id), cancels: [{ cancelAmount: 3000 }, { cancelAmount: 2000 }] });
+    const third = await reconcileMallPayments(env, { refundLimit: 1 });
+    assert.equal(third.refundRecovered, 1);
+    assert.equal(db.db.prepare("SELECT COUNT(*) n FROM commerce_events WHERE event_type='payment.refunded' AND aggregate_id=?").get(id).n, 2, 'incremental partial refunds produce one event per cumulative amount');
+  } finally { toss.restore(); }
+});
+
+test('paid-order reconciliation ignores missing provider result, rotates past transient outages and excludes old orders', async () => {
+  const db = migrated({ stock: 3 });
+  const env = { ...ENV, DB: db };
+  const toss = fakeToss();
+  try {
+    const created = await createOrder(env, { shareCode: 'SHARE1', quantity: 1, buyer: BUYER });
+    const id = created.order.id;
+    await core.fetch(new Request('https://ekodi.kr/api/public/payments/confirm', {
+      method: 'POST', body: JSON.stringify({ paymentKey: 'pk_paid_keep', orderId: id, amount: 15000 }),
+    }), env);
+    toss.payments.delete(id);
+    const result = await reconcileMallPayments(env, { refundLimit: 1 });
+    assert.equal(result.paidChecked, 1);
+    assert.equal(orderRow(db, id).status, 'paid', '404 from Toss must not erase a previously confirmed payment');
+    assert.ok(orderRow(db, id).reconciled_at);
+    assert.equal((await reconcileMallPayments(env, { refundLimit: 1 })).paidChecked, 0);
+    db.db.prepare("UPDATE orders SET created_at=?,reconciled_at=NULL WHERE id=?")
+      .run(new Date(Date.now() - 181 * 86400 * 1000).toISOString(), id);
+    assert.equal((await reconcileMallPayments(env, { refundLimit: 1 })).paidChecked, 0, 'older orders stay out of the bounded scan');
+  } finally { toss.restore(); }
+});
