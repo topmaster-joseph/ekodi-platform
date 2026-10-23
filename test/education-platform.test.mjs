@@ -184,3 +184,41 @@ test('Lifelong-learning home offers truthful local discovery without changing Ad
   assert.doesNotMatch(home,/\sonclick=|<script(?![^>]*\bsrc=)/i);
   execFileSync(process.execPath,['--check',fileURLToPath(new URL('../education/lifelong-home.js',import.meta.url))],{stdio:'pipe'});
 });
+
+
+test('Photo-led lifelong homepage stays accessible, factual and local-search only',async()=>{
+  const [home,css,search]=await Promise.all([
+    read('education/index.html'),
+    read('education/lifelong-visual.css'),
+    read('education/lifelong-home.js')
+  ]);
+  assert.match(home,/class="visual-layout"/);
+  assert.match(home,/class="visual-sidebar"/);
+  assert.match(home,/lifelong-visual\.css\?v=/);
+  assert.match(home,/id="educationCourses"/);
+  assert.match(home,/id="learningSearch"/);
+  assert.match(home,/id="learningResults"/);
+  assert.match(home,/id="audienceTitle"/);
+  assert.match(home,/id="aiGuideTitle"/);
+  assert.match(home,/id="identityName"/);
+  assert.equal((home.match(/class="audience-card"/g)||[]).length,6);
+  assert.equal((home.match(/class="interest-card"/g)||[]).length,6);
+  assert.equal((home.match(/class="path-card"/g)||[]).length,10);
+  for(const link of ['/admission','/study','/study/academy/','/study/ai-bootcamp/','https://ekodi.kr/learn/','https://ekodi.kr/my/journey/']){
+    assert.ok(home.includes('href="'+link+'"'), 'existing education route: '+link);
+  }
+  assert.match(home,/실시간 모집 검색은 아닙니다/);
+  assert.match(home,/AI와의 실시간 상담은 제공하지 않습니다/);
+  assert.match(home,/실제 개설·모집·가격은/);
+  assert.match(home,/민감한 여권·성적표·재정증빙 파일을 저장하지 않습니다/);
+  assert.doesNotMatch(home,/<script(?![^>]*src=)|\sonclick=/i);
+  assert.match(css,/body\[data-area="home"\]/);
+  assert.match(css,/@media\(max-width:940px\)/);
+  assert.match(css,/@media\(max-width:660px\)/);
+  assert.match(css,/focus-visible/);
+  assert.match(css,/images\.pexels\.com/);
+  assert.match(search,/data-quick-search/);
+  assert.match(search,/data-audience/);
+  assert.doesNotMatch(search,/\bfetch\s*\(|XMLHttpRequest|localStorage|sessionStorage|innerHTML/);
+  execFileSync(process.execPath,['--check',fileURLToPath(new URL('../education/lifelong-home.js',import.meta.url))],{stdio:'pipe'});
+});
