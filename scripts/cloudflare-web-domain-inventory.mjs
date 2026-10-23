@@ -35,8 +35,11 @@ if(SELF_TEST){
   add(test,admin+'.','dns',{dnsType:'CNAME'});
   add(test,'example.com','dns',{dnsType:'CNAME'});
   add(test,mail,'dns',{dnsType:'MX'});
+  const wildcard=['*',ROOT].join('.');
+  add(test,wildcard,'dns',{dnsType:'CNAME'});
   const rows=classify(test);
-  if(rows.length!==2||rows[0].host!==admin||!rows[0].hasWorkerBinding||rows[1].emailOrVerificationRecord!==true)throw new Error('Inventory classification self-test failed');
+  const worker=rows.find(x=>x.host===admin),smtp=rows.find(x=>x.host===mail),star=rows.find(x=>x.host===wildcard);
+  if(rows.length!==3||!worker?.hasWorkerBinding||smtp?.emailOrVerificationRecord!==true||!star?.dnsOnlyUnknownPurpose)throw new Error('Inventory classification self-test failed');
   console.log('Cloudflare domain inventory self-test OK');
   process.exit(0);
 }
