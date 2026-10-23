@@ -23,9 +23,9 @@ test('Commerce OS makes payment providers replaceable; money moves only through 
   assert.ok(providers.includes('adapterImplemented: false'));
   assert.ok(providers.includes('provider-adapter-not-implemented'));
   assert.match(wrangler, /PAYMENT_PROVIDER = "toss"/);
-  // Production checkout stays off until the four MALL_*_READINESS_REF policy references exist
-  // (sites/ekodi-mall/scripts/validate.mjs). Even when on, money moves only for human-gated direct sales.
-  assert.match(wrangler, /PAYMENTS_ENABLED = "false"/);
+  // Production checkout is on (owner approval 2026-10-23) with the four policy references below; money moves
+  // only for human-gated direct sales (seller verification + per-product checkout gate, sale_type=direct).
+  assert.match(wrangler, /PAYMENTS_ENABLED = "true"/);
   for (const gate of ["blockers.push('seller-verification')", "blockers.push('product-checkout-gate')", "row.sale_type !== 'direct'"]) assert.ok(worker.includes(gate), gate);
   assert.equal(site.commerce.paymentProviderAuthority, 'server-capability-registry');
   assert.equal(site.commerce.highImpactExecution, 'human-gated');
