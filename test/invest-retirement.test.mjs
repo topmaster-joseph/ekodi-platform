@@ -35,7 +35,7 @@ test('shared investment APIs are retired and reject non-GET methods',async()=>{
   assert.equal(response.status,410,path);
   assert.equal((await response.json()).error,'service_retired');
  }
- const post=await workspaceEntry.fetch(request('https://workspace-api.ekodi.kr/v1/invest/opportunities','POST'),{},null);
+ const post=await workspaceEntry.fetch(request('https://ekodi.kr/v1/invest/opportunities','POST'),{},null);
  assert.equal(post.status,410);
 });
 
