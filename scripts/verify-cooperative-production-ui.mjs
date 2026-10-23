@@ -12,7 +12,7 @@ const require=createRequire(import.meta.url);
 const {chromium}=require('playwright');
 const artifacts=path.resolve('artifacts/cooperative-production-ui');
 await fs.mkdir(artifacts,{recursive:true});
-const checks=[],pageErrors=[],consoleErrors=[],resourceFailures=[];
+const checks=[],pageErrors=[],consoleErrors=[],resourceFailures=[],criticalAssetFailures=[];
 let activePage=null,activeUrl='';
 const browser=await chromium.launch({headless:true});
 try{
@@ -24,7 +24,7 @@ try{
     activePage=page;
     page.on('pageerror',error=>pageErrors.push(error.message));
     page.on('console',message=>{if(message.type()==='error'&&consoleErrors.length<30)consoleErrors.push(message.text().slice(0,600));});
-    page.on('response',response=>{if(response.status()>=400&&resourceFailures.length<30){const url=new URL(response.url());resourceFailures.push({url:url.origin+url.pathname,status:response.status()});}});
+    page.on('response',response=>{if(response.status()>=400){const url=new URL(response.url());const failure={url:url.origin+url.pathname,status:response.status()};if(resourceFailures.length<30)resourceFailures.push(failure);if(url.origin==='https://ekodi.kr'&&/^\/(jubilee|open|business-coop)\/assets\/app\.(css|js)$/.test(url.pathname))criticalAssetFailures.push(failure);}});
     for(const coop of COOPERATIVES){
       const root='https://ekodi.kr/'+coop.publicSlug;
       const canonical=await context.request.get(root,{maxRedirects:0});
@@ -34,6 +34,17 @@ try{
       assert.equal(body.source,'server');assert.equal(body.workspaceId,coop.workspaceId);assert.equal(body.name,coop.name);
       const oldData=await context.request.get('https://ekodi.kr/'+coop.slug+'/api/public');
       assert.equal(oldData.status(),200);assert.equal((await oldData.json()).workspaceId,coop.workspaceId);
+      if(width===1440){
+        for(const endpoint of ['me','project','export','charter','application']){
+          const protectedUrl=root+'/api/'+endpoint;
+          const denied=await context.request.get(protectedUrl,{maxRedirects:0});
+          assert.equal(denied.status(),401,protectedUrl+' must deny a guest');
+          assert.ok(denied.headers()['cache-control'].includes('no-store'));
+          const deniedBody=await denied.json();assert.equal(deniedBody.code,'COOP_LOGIN_REQUIRED');
+          assert.equal('state' in deniedBody,false);assert.equal('founders' in deniedBody,false);
+          checks.push({url:protectedUrl,surface:'guest-private-capability-denied',width,passed:true});
+        }
+      }
       for(const suffix of ['/','/members','/admin'])for(const method of ['GET','HEAD']){
         const oldUrl='https://ekodi.kr/'+coop.slug+suffix+'?from=legacy';
         const redirect=await context.request.fetch(oldUrl,{method,maxRedirects:0});
@@ -94,11 +105,12 @@ try{
     await context.close();
   }
   assert.deepEqual(pageErrors,[]);
-  const result={ok:true,hostname:'ekodi.kr',engine:'EKODI Chromium browser task policy',evidenceScope:'production-public-and-guest',publicAndGuestVerified:true,authenticatedWritesVerified:false,mutationsPerformed:0,checkedAt:new Date().toISOString(),checks,pageErrors};
+  assert.deepEqual(criticalAssetFailures,[],'Core cooperative JS/CSS must not fail while the visible gate still passes');
+  const result={ok:true,hostname:'ekodi.kr',engine:'EKODI Chromium browser task policy',evidenceScope:'production-public-and-guest',publicAndGuestVerified:true,authenticatedWritesVerified:false,mutationsPerformed:0,checkedAt:new Date().toISOString(),checks,pageErrors,criticalAssetFailures};
   await fs.writeFile(path.join(artifacts,'result.json'),JSON.stringify(result,null,2));
   console.log(JSON.stringify({ok:true,evidenceScope:result.evidenceScope,checks:checks.length,authenticatedWritesVerified:false}));
 }catch(error){
-  const failure={ok:false,evidenceScope:'production-public-and-guest',activeUrl,mutationsPerformed:0,error:String(error.message||error),pageErrors,consoleErrors,resourceFailures,completedChecks:checks};
+  const failure={ok:false,evidenceScope:'production-public-and-guest',activeUrl,mutationsPerformed:0,error:String(error.message||error),pageErrors,consoleErrors,resourceFailures,criticalAssetFailures,completedChecks:checks};
   await fs.writeFile(path.join(artifacts,'failure.json'),JSON.stringify(failure,null,2));
   if(activePage&&!activePage.isClosed())await activePage.screenshot({path:path.join(artifacts,'failure.png'),fullPage:true}).catch(()=>{});
   console.error(JSON.stringify(failure));throw error;
