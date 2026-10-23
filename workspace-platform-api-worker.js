@@ -259,6 +259,7 @@ export default {async fetch(request,env){
   const {allowed,headers}=cors(request,env);if(request.method==='OPTIONS')return new Response(null,{status:allowed?204:403,headers});
   if(!allowed)return json(request,env,{error:'ORIGIN_FORBIDDEN'},403);
   const url=new URL(request.url);const path=url.pathname.replace(/\/+$/,'')||'/';
+  if(/^\/v1\/invest(?:\/|$)/i.test(path))return json(request,env,{error:'service_retired'},410);
   if(path==='/health')return json(request,env,{service:'ekodi-workspace-platform-api',environment:env.ENVIRONMENT||'unknown',schemaReady:await schemaReady(env),mutations:String(env.ALLOW_MUTATIONS)==='true',aiProviderConfigured:Boolean(env.MESSENGER_AI||safeUrl(env.MESSENGER_AI_URL||'')),transactionExecution:false});
   if(!env.DB)return json(request,env,{error:'DATABASE_UNAVAILABLE'},503);
   const write=!['GET','HEAD'].includes(request.method);const ctx=await authContext(request,env,{write});if(ctx.error)return json(request,env,{error:ctx.error},ctx.status);
