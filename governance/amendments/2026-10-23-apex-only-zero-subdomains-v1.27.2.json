@@ -1,0 +1,34 @@
+{
+  "amendmentId": "APEX-ONLY-ZERO-SUBDOMAINS-20261023",
+  "constitutionVersion": "1.27.2",
+  "approvedAt": "2026-10-23",
+  "approvedBy": "topmaster-joseph",
+  "status": "approved",
+  "changeClass": "C3",
+  "taskId": "zero-subdomain-canonical-20261023",
+  "summary": "Require all first-party EKODI production HTTP/HTTPS entrypoints on https://ekodi.kr paths; remove legacy legacy EKODI web subdomains web bindings and HTTP DNS after readiness verification, not by permanent redirect.",
+  "approvalBasis": "The platform owner explicitly approved the proposed whole-ecosystem apex-only migration in the 2026-10-23 conversation and instructed EKODI to modify and update.",
+  "implementationPhases": [
+    "source-code-and-domain-policy",
+    "auth-callbacks-oauth-payments-and-service-contracts",
+    "CI-and-staging-canonical-route-parity",
+    "guarded-production-release",
+    "cloudflare-worker-custom-domain-and-http-dns-removal",
+    "observability-and-live-end-to-end-verification"
+  ],
+  "securityFloors": [
+    "preserve-server-side-authentication-and-RBAC",
+    "preserve-CSRF-origin-and-session-protection",
+    "protect-secret-and-user-data-boundaries",
+    "preserve-external-customer-owned-DNS",
+    "never-remove-email-MX-SPF-DKIM-DMARC",
+    "no-webhook-redirect-as-substitute-for-callback-update",
+    "protect-workload-staging-and-last-known-good"
+  ],
+  "pendingProductionChange": "No Cloudflare production DNS deletion is approved for execution until per-host mapping, callback updates and production evidence pass C3 release gates; approval here authorizes the migration policy, not unsafe bulk deletion.",
+  "rollback": "Revert policy/code through approved PR pipeline and restore the last verified route release. Production DNS removals require per-host backups and verified reattachment capability before deletion.",
+  "supersedes": [
+    "2026-09-10-canonical-my-path-convergence-v1.10.0",
+    "legacy-subdomain-as-canonical-domain-naming-standard"
+  ]
+}
