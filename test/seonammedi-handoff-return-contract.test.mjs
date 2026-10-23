@@ -18,7 +18,7 @@ function clientTarget(site,returnTo){
 function serverTarget(site,returnTo){
   const first=accessSource.indexOf('function validHandoff('),last=accessSource.indexOf('function tenantSlugBase(',first);
   assert.ok(first>=0&&last>first,'real server allowlist implementation must be found');
-  const raw=accessSource.slice(first,last).replace('site:string,raw:string','site,raw').replace('const origins:Record<string,string[]>','const origins');
+  const raw=accessSource.slice(first,last).replace('site:string,raw:string','site,raw').replace('const origins:Record<string,string[]>','const origins').replace('const canonicalPrefixes:Record<string,string[]>','const canonicalPrefixes');
   const fn=runInNewContext(raw+'\nvalidHandoff',{URL,validMarketingOrigin:()=>false});
   return fn(site,returnTo);
 }

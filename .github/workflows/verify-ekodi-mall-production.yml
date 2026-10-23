@@ -23,6 +23,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Checkout committed Mall payment configuration
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            sites/ekodi-mall/api/wrangler.toml
+          sparse-checkout-cone-mode: false
+
       - name: Verify storefront, transaction safety and live catalog
         shell: bash
         run: |
@@ -138,7 +145,15 @@ jobs:
           if (health.operationsReviewConfigured !== true) throw new Error('operations review is not configured');
           if (health.operationsEmailAllowlistConfigured !== true) throw new Error('operations email allowlist is not configured');
           if (health.transactionRehearsalEnabled !== false) throw new Error('production transaction rehearsal must be disabled');
-          for (const key of ['paymentsEnabled', 'payoutExecutionEnabled', 'buyerPiiReleaseEnabled', 'supplierForwardEnabled', 'refundExecutionEnabled']) {
+          // Payments follow the committed, owner-approved PAYMENTS_ENABLED flag (same rule as the deploy and build checks).
+          const wrangler = fs.readFileSync('sites/ekodi-mall/api/wrangler.toml', 'utf8');
+          const expectedPayments = /^PAYMENTS_ENABLED = "true"$/m.test(wrangler);
+          if (health.paymentsEnabled !== expectedPayments) throw new Error(`paymentsEnabled=${health.paymentsEnabled} does not match committed PAYMENTS_ENABLED=${expectedPayments}`);
+          if (expectedPayments) {
+            if (health.inventorySchemaReady !== true) throw new Error('payments enabled but inventory schema is not ready');
+            if (health.paymentWebhookPath !== '/api/public/payments/webhook') throw new Error('payments enabled but Toss webhook path is not served');
+          }
+          for (const key of ['payoutExecutionEnabled', 'buyerPiiReleaseEnabled', 'supplierForwardEnabled', 'refundExecutionEnabled']) {
             if (health[key] !== false) throw new Error(`high-impact transaction gate unexpectedly enabled: ${key}`);
           }
           console.log(`mallApiVersion=${health.version}`);

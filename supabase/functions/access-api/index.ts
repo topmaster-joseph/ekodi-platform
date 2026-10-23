@@ -194,6 +194,16 @@ function validMarketingOrigin(origin:string){
   }catch{return false}
 }
 function validHandoff(site:string,raw:string){
+  // Existing legacy domains are temporary callback inputs, never canonical destinations.
+  // Apex callbacks must match the requesting site's service path, not merely ekodi.kr origin.
+  const canonicalPrefixes:Record<string,string[]>={
+    cgma:["/cgma"], marketing:["/ekodibiz/marketing-ai"], biz:["/ekodibiz"],
+    trade:["/ekodibiz/trade"], mall:["/ekodimall"], pay:["/ekodipay"],
+    books:["/books"], church:["/ekodichurch"], lab:["/ekodilab"],
+    mission:["/ekodimission"], community:["/community"], edu:["/edu"],
+    media:["/media"], social:["/social"], energy:["/energy"], admin:["/admin"],
+    seonammedi:["/seonammedi"]
+  };
   const origins:Record<string,string[]>={
     cgma:["https://ekodi.kr","https://cgma.or.kr","https://cgma.ekodi.kr"],
     marketing:["https://marketing.ekodi.kr","https://jadam.ekodi.kr","https://pizzamaru.ekodi.kr","https://yogurt.ekodi.kr","https://yogurtpurple.ekodi.kr"],
@@ -217,7 +227,8 @@ function validHandoff(site:string,raw:string){
     if(target.protocol!=="https:"||target.username||target.password)return null;
     if(site==="marketing"&&validMarketingOrigin(target.origin))return target.href;
     const platformPath=target.origin==="https://ekodi.kr"&&((site==="cgma"&&(target.pathname==="/cgma"||target.pathname.startsWith("/cgma/")))||(site==="mission"&&(target.pathname==="/ekodimission"||target.pathname.startsWith("/ekodimission/")))||(site==="church"&&(target.pathname==="/ekodichurch"||target.pathname.startsWith("/ekodichurch/")))||(site==="seonammedi"&&(target.pathname==="/seonammedi"||target.pathname.startsWith("/seonammedi/"))));
-    return (((origins[site]||[]).includes(target.origin)&&target.origin!=="https://ekodi.kr")||platformPath)?target.href:null;
+    const apexAllowed=target.origin==="https://ekodi.kr"&&(canonicalPrefixes[site]||[]).some(prefix=>target.pathname===prefix||target.pathname.startsWith(prefix+"/"));
+    return (((origins[site]||[]).includes(target.origin)&&target.origin!=="https://ekodi.kr")||platformPath||apexAllowed)?target.href:null;
   }catch{return null}
 }
 function tenantSlugBase(name:string,email:string){

@@ -40,7 +40,7 @@ function routeFns(){
     {URL,site:'church',origins:['https://ekodi.kr'],fallback:churchHome});
   let serverFn=extractBetween(api,'function validHandoff(site:string,raw:string){','function tenantSlugBase');
   serverFn=serverFn.replace('function validHandoff(site:string,raw:string){','function validHandoff(site,raw){')
-    .replace('const origins:Record<string,string[]>={','const origins={');
+    .replace('const origins:Record<string,string[]>={','const origins={').replace('const canonicalPrefixes:Record<string,string[]>={','const canonicalPrefixes={');
   const backend=runInNewContext(serverFn+'\nvalidHandoff',{URL,validMarketingOrigin:()=>false});
   return {client:clientFn,legacy:legacyFn,workspace:workspaceFn,backend:raw=>backend('church',raw)};
 }

@@ -104,3 +104,12 @@ test('mall build and production health checks follow the committed payments flag
   assert.ok(verifyBuild.includes('paymentsMarker') && !verifyBuild.includes(`'"paymentsEnabled": false'`));
   assert.ok(deploy.includes('expected_payments=true') && deploy.includes('\\"paymentsEnabled\\":${expected_payments}'));
 });
+
+test('Mall production verifier follows the committed payments flag and requires payment safety when on', async () => {
+  const verifier = await readFile(new URL('../.github/workflows/verify-ekodi-mall-production.yml', import.meta.url), 'utf8');
+  assert.ok(verifier.includes('sites/ekodi-mall/api/wrangler.toml'), 'verifier must read the committed Mall config');
+  assert.ok(verifier.includes('/^PAYMENTS_ENABLED = "true"$/m'), 'verifier must derive expected payments from PAYMENTS_ENABLED');
+  assert.ok(!/for \(const key of \['paymentsEnabled'/.test(verifier), 'paymentsEnabled must not be pinned off');
+  assert.ok(verifier.includes("health.inventorySchemaReady !== true") && verifier.includes("'/api/public/payments/webhook'"));
+  for (const key of ['payoutExecutionEnabled', 'buyerPiiReleaseEnabled', 'supplierForwardEnabled', 'refundExecutionEnabled']) assert.ok(verifier.includes(`'${key}'`));
+});
