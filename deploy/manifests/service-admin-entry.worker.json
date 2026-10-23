@@ -121,11 +121,16 @@
       {
         "url": "https://invest.ekodi.kr/admin",
         "statuses": [
-          307
+          410
         ],
         "redirect": "manual",
         "headerExpect": [
-          "location: https://admin.ekodi.kr/"
+          "x-ekodi-route: invest-retired",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive"
+        ],
+        "expect": [
+          "Gone"
         ]
       },
       {
