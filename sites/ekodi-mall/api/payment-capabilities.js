@@ -1,3 +1,4 @@
+import { tossKeyBlockers } from './checkout-buyer.js';
 const clean = (value, max = 500) => String(value ?? '').trim().slice(0, max);
 const flag = (value) => String(value || '').toLowerCase() === 'true';
 
@@ -33,7 +34,11 @@ export function selectedPaymentProvider(env = {}) {
 }
 
 function requiredConfig(providerId, env) {
-  if (providerId === 'toss') return env.TOSS_SECRET_KEY ? [] : ['toss-secret-missing'];
+  if (providerId === 'toss') {
+    // 브라우저 결제(결제위젯 gck 또는 결제창 ck)에는 클라이언트 키가, 승인에는 짝이 맞는 시크릿 키가 필요하다.
+    const blockers = env.TOSS_SECRET_KEY ? [] : ['toss-secret-missing'];
+    return [...blockers, ...tossKeyBlockers(env)];
+  }
   if (providerId === 'portone') {
     const blockers = [];
     if (!env.PORTONE_API_SECRET) blockers.push('portone-api-secret-missing');

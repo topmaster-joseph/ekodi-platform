@@ -131,13 +131,24 @@
     const quote = await loadQuote();
     const quoteNode = quoteBlock(quote);
     if (quoteNode) details.append(quoteNode);
+    // EKODI-MALL-TOSS-WIDGET-007: buy now only when the order server says every gate is open.
+    if (quote?.checkoutReady && window.EkodiMallCheckout) {
+      window.EkodiMallCheckout.mount(root, { api: API, shareCode: code, attributionToken: storedAttribution()?.token || '', quote });
+    }
     if (status) {
       const source = storedAttribution()?.sourceType;
       status.textContent = source === 'direct' ? '공개 상품 · 판매자 직접공유 최초유입 보존' : source === 'ai' ? '공개 상품 · AI 기여 최초유입 보존' : '공개 상품 · EKODI Mall 최초유입 보존';
     }
   }
+  function checkoutNotice(title, message, ok) {
+    let box = document.querySelector('#checkoutResult');
+    if (!box) { box = el('section', 'checkout-result'); box.id = 'checkoutResult'; box.setAttribute('role', 'status'); root.before(box); }
+    box.className = `checkout-result ${ok ? 'ok' : 'bad'}`;
+    box.replaceChildren(el('h2', '', title), el('p', '', message));
+  }
   async function load() {
     if (!code) return;
+    if (window.EkodiMallCheckout) window.EkodiMallCheckout.handleReturn(API, checkoutNotice);
     try {
       const response = await fetch(`${API}/api/public/products/${encodeURIComponent(code)}`);
       const body = await response.json();
