@@ -1,6 +1,7 @@
 const freezeFormats = formats => Object.freeze(formats.map(item => Object.freeze({...item})));
 
-export const CHANNEL_PUBLISHING_CATALOG_VERSION = 1;
+// v2(Phase 7): automatic 플래그를 실제 코드와 일치시킨다 — Reels는 전용 어댑터가 있고 Stories는 아직 없다.
+export const CHANNEL_PUBLISHING_CATALOG_VERSION = 2;
 
 export const CHANNEL_PUBLISHING_TARGETS = Object.freeze({
   youtube: Object.freeze({
@@ -17,8 +18,8 @@ export const CHANNEL_PUBLISHING_TARGETS = Object.freeze({
     accountHint:'Instagram 비즈니스/크리에이터 계정 식별자', connectionMode:'oauth', automaticPublishing:true, automationAdapter:true,
     formats:freezeFormats([
       {id:'feed',label:'피드',automatic:true},
-      {id:'reels',label:'Reels',automatic:true},
-      {id:'stories',label:'Stories',automatic:true},
+      {id:'reels',label:'Reels',automatic:true,adapter:'channel-meta-reels-adapter.js#publishInstagramReel'},
+      {id:'stories',label:'Stories',automatic:false,note:'Stories 자동게시 어댑터 미구현 — 수동 게시'},
     ]),
   }),
   facebook: Object.freeze({
@@ -26,7 +27,7 @@ export const CHANNEL_PUBLISHING_TARGETS = Object.freeze({
     accountHint:'Facebook Page 식별자', connectionMode:'oauth', automaticPublishing:true, automationAdapter:true,
     formats:freezeFormats([
       {id:'feed',label:'피드',automatic:true},
-      {id:'reels',label:'Reels',automatic:true},
+      {id:'reels',label:'Reels',automatic:true,adapter:'channel-meta-reels-adapter.js#publishFacebookReel'},
     ]),
   }),
   threads: Object.freeze({

@@ -64,14 +64,16 @@ export async function listYoutubeChannels(accessToken) {
 }
 function cleanText(value, max) { return String(value || '').trim().slice(0, max); }
 function safeHttps(value) { try { const u = new URL(String(value || '')); return u.protocol === 'https:' ? u.href : ''; } catch { return ''; } }
-function uploadMetadata({title,description,publishAt,privacyStatus,categoryId}) {
+function uploadMetadata({title,description,publishAt,privacyStatus,categoryId,containsSyntheticMedia=false}) {
   const scheduled = publishAt && Date.parse(publishAt) > Date.now();
   const allowedPrivacy = ['private','unlisted','public'].includes(privacyStatus) ? privacyStatus : 'private';
   const metadata = { snippet:{ title:cleanText(title,100) || 'EKODI Shorts', description:cleanText(description,5000), categoryId:String(categoryId || '22') }, status:{ privacyStatus:scheduled ? 'private' : allowedPrivacy, selfDeclaredMadeForKids:false } };
   if (scheduled) metadata.status.publishAt = new Date(publishAt).toISOString();
+  // AI 생성(합성) 콘텐츠 고지: YouTube Data API videos.status.containsSyntheticMedia.
+  if (containsSyntheticMedia === true) metadata.status.containsSyntheticMedia = true;
   return metadata;
 }
-async function uploadYoutubePayload({env,refreshToken,body,contentType='video/mp4',contentLength='',title,description,publishAt='',privacyStatus='private',categoryId='22',expectedChannelId=''}) {
+async function uploadYoutubePayload({env,refreshToken,body,contentType='video/mp4',contentLength='',title,description,publishAt='',privacyStatus='private',categoryId='22',expectedChannelId='',containsSyntheticMedia=false}) {
   const refreshed = await refreshYoutubeAccessToken(env, refreshToken);
   const accessToken = String(refreshed.access_token || '');
   if (!accessToken) throw Object.assign(new Error('YOUTUBE_ACCESS_TOKEN_MISSING'), { code:'YOUTUBE_ACCESS_TOKEN_MISSING' });
@@ -79,7 +81,7 @@ async function uploadYoutubePayload({env,refreshToken,body,contentType='video/mp
     const channels = await listYoutubeChannels(accessToken);
     if (channels.length !== 1 || channels[0].id !== String(expectedChannelId)) throw Object.assign(new Error('YOUTUBE_CHANNEL_BINDING_MISMATCH'), {code:'YOUTUBE_CHANNEL_BINDING_MISMATCH',status:409});
   }
-  const metadata = uploadMetadata({title,description,publishAt,privacyStatus,categoryId});
+  const metadata = uploadMetadata({title,description,publishAt,privacyStatus,categoryId,containsSyntheticMedia});
   const init = await fetch(`${UPLOAD}?uploadType=resumable&part=snippet,status`, {
     method:'POST',
     headers:{authorization:`Bearer ${accessToken}`,'content-type':'application/json; charset=UTF-8','x-upload-content-type':contentType,...(contentLength?{'x-upload-content-length':String(contentLength)}:{})},
@@ -99,12 +101,12 @@ export async function uploadYoutubeVideoBytes({env,refreshToken,bytes,contentTyp
   if (!body.byteLength) throw Object.assign(new Error('YOUTUBE_VIDEO_BYTES_REQUIRED'), {code:'YOUTUBE_VIDEO_BYTES_REQUIRED'});
   return uploadYoutubePayload({env,refreshToken,body,contentType,contentLength:body.byteLength,title,description,publishAt,privacyStatus,categoryId,expectedChannelId});
 }
-export async function uploadYoutubeVideo({ env, refreshToken, assetUrl, title, description, publishAt = '', privacyStatus = 'private', categoryId = '22' }) {
+export async function uploadYoutubeVideo({ env, refreshToken, assetUrl, title, description, publishAt = '', privacyStatus = 'private', categoryId = '22', containsSyntheticMedia = false }) {
   const sourceUrl = safeHttps(assetUrl);
   if (!sourceUrl) throw Object.assign(new Error('YOUTUBE_ASSET_HTTPS_REQUIRED'), { code:'YOUTUBE_ASSET_HTTPS_REQUIRED' });
   const source = await fetch(sourceUrl, { redirect:'follow' });
   if (!source.ok || !source.body) throw Object.assign(new Error(`YOUTUBE_ASSET_FETCH_${source.status}`), { code:'YOUTUBE_ASSET_FETCH_FAILED' });
   const contentType = source.headers.get('content-type') || 'video/mp4';
   const contentLength = source.headers.get('content-length') || '';
-  return uploadYoutubePayload({env,refreshToken,body:source.body,contentType,contentLength,title,description,publishAt,privacyStatus,categoryId});
+  return uploadYoutubePayload({env,refreshToken,body:source.body,contentType,contentLength,title,description,publishAt,privacyStatus,categoryId,containsSyntheticMedia});
 }
