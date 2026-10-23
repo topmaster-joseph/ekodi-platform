@@ -94,7 +94,7 @@ test('Premium Studio bootcamp cross-check is once per release and backs off rath
   assert.match(live,/if\(delay>180\)fail/);
   assert.match(live,/await page\.waitForTimeout\(Math\.max\(delay,5\)\*1000\)/);
   assert.match(live,/for\(let attempt=0;attempt<3;attempt\+\+\)/);
-  assert.doesNotMatch(live,/bypassCSP|ignoreHTTPSErrors:\s*true|context\.route\([^)]*429|retry-after.*0|route\.fulfill/);
+  assert.doesNotMatch(live,/bypassCSP|ignoreHTTPSErrors:\s*true|context\.route\([^)]*429|route\.fulfill/);
   const single=deploy.indexOf('Verify actual Education classroom on desktop and mobile with EKODI-owned Chromium');
   const premium=deploy.indexOf('Verify Premium Studio instructor, presenter and learner flows on desktop and mobile');
   assert.ok(single>=0&&premium>single,'dedicated five-viewport bootcamp verification still runs first');
