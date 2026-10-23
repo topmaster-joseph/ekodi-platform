@@ -442,6 +442,8 @@ async function bootcampRegressionProbe(browser){
   try{
     const page=await context.newPage();watch(page,'bootcamp-regression');
     for(let attempt=0;attempt<3;attempt++){
+      const errorOffsets=Object.fromEntries(['pageErrors','consoleErrors','httpErrors','requestFailures']
+        .map(kind=>[kind,report[kind].length]));
       page.__ekodiRateLimited=0;
       const response=await page.goto(ORIGIN+R.bootcamp,{waitUntil:'domcontentloaded',timeout:35000});
       const status=response?.status();
@@ -449,6 +451,10 @@ async function bootcampRegressionProbe(browser){
       const ready=status===200&&await page.locator('.course-cards .lesson-card').first()
         .waitFor({state:'visible',timeout:12000}).then(()=>true,()=>false);
       if(ready){
+        for(const kind of Object.keys(errorOffsets)){
+          const errors=report[kind].slice(errorOffsets[kind]).filter(item=>item.profile==='bootcamp-regression');
+          if(errors.length)fail('bootcamp regression '+kind+' after render: '+JSON.stringify(errors.slice(0,2)));
+        }
         const lessons=await page.locator('.course-cards .lesson-card').count();
         const batches=await page.locator('#batchPicker option').count();
         if(lessons!==4)fail('existing bootcamp lost its 4 lessons');
