@@ -1,4 +1,5 @@
 import authWorker, { isAllowedOrigin } from './auth-worker.js';
+import { resolveChargeOutcome, reconcileStaleCharges } from './billing-charge-reconciliation.js';
 
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -567,12 +568,19 @@ export async function runAuthorBillingSchedule(env) {
     .bind(now, now).run();
 
   if (!billingReady(env)) return { processed:0, billingReady:false };
+  const lookup = (id) => toss(`/payments/orders/${encodeURIComponent(id)}`, {}, env);
+  const reconciliation = await reconcileStaleCharges({
+    db:env.DB, lookup, addMonth,
+    chargeTable:'author_billing_charge_events', subscriptionTable:'author_billing_subscriptions',
+    chargeOwnerColumn:'user_id', subscriptionKeyColumn:'user_id',
+  });
   const due = await env.DB.prepare(`SELECT * FROM author_billing_subscriptions
     WHERE status='active' AND cancel_at_period_end=0 AND monthly_fee>0
       AND next_billing_at IS NOT NULL AND next_billing_at<=?
     ORDER BY next_billing_at LIMIT 20`).bind(now).all();
 
   let processed = 0;
+  let pendingReconcile = 0;
   for (const row of due.results || []) {
     const cycle = `renew:${row.user_id}:${String(row.next_billing_at).slice(0, 10)}`;
     const exists = await env.DB.prepare('SELECT status FROM author_billing_charge_events WHERE cycle_key=?').bind(cycle).first();
@@ -582,17 +590,40 @@ export async function runAuthorBillingSchedule(env) {
       (user_id,cycle_key,order_id,plan_id,amount,status,created_at)
       VALUES (?, ?, ?, ?, ?, 'processing', ?)`)
       .bind(row.user_id, cycle, orderId, row.plan_id, Number(row.monthly_fee), now).run();
+    let billingKey;
     try {
-      const billingKey = await decryptBillingKey(env, row.billing_key_cipher, row.billing_key_iv);
-      const payment = await charge(env, {
-        billingKey,
-        customerKey:row.provider_customer_key,
-        amount:Number(row.monthly_fee),
-        orderId,
-        orderName:`Creator AI ${String(row.plan_id).toUpperCase()} 월 구독`,
-        email:row.email,
-      });
-      if (payment?.status !== 'DONE') throw new Error(`payment_status_${payment?.status || 'unknown'}`);
+      billingKey = await decryptBillingKey(env, row.billing_key_cipher, row.billing_key_iv);
+    } catch {
+      // No charge request was sent, so this is a definite failure.
+      await env.DB.batch([
+        env.DB.prepare("UPDATE author_billing_charge_events SET status='failed',detail=?,completed_at=? WHERE cycle_key=?")
+          .bind('billing_key_unavailable', now, cycle),
+        env.DB.prepare("UPDATE author_billing_subscriptions SET status='past_due',updated_at=? WHERE user_id=?")
+          .bind(now, row.user_id),
+      ]);
+      continue;
+    }
+    let attempt = null;
+    let chargeError = null;
+    try {
+      const body = { customerKey:row.provider_customer_key, amount:Number(row.monthly_fee), orderId,
+        orderName:`Creator AI ${String(row.plan_id).toUpperCase()} 월 구독` };
+      if (row.email) body.customerEmail = row.email;
+      attempt = await toss(`/billing/${encodeURIComponent(billingKey)}`, { method:'POST', body }, env);
+    } catch (error) {
+      chargeError = error;
+    }
+    const result = await resolveChargeOutcome({ payment:attempt, error:chargeError, lookup, orderId });
+    if (result.outcome === 'unknown') {
+      // Money may have moved. Never demote here; reconciliation settles it with the provider.
+      await env.DB.prepare("UPDATE author_billing_charge_events SET detail=? WHERE cycle_key=? AND status='processing'")
+        .bind(String(result.detail).slice(0, 300), cycle).run();
+      pendingReconcile += 1;
+      continue;
+    }
+    try {
+      if (result.outcome !== 'done') throw new Error(result.detail || 'payment_failed');
+      const payment = result.payment;
       const next = addMonth(row.next_billing_at);
       await env.DB.batch([
         env.DB.prepare("UPDATE author_billing_charge_events SET status='done',provider_payment_key=?,completed_at=? WHERE cycle_key=?")
@@ -611,5 +642,5 @@ export async function runAuthorBillingSchedule(env) {
       ]);
     }
   }
-  return { processed, billingReady:true };
+  return { processed, pendingReconcile, reconciliation, billingReady:true };
 }

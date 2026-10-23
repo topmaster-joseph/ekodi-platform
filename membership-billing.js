@@ -1,4 +1,5 @@
 import authWorker, { isAllowedOrigin } from './auth-worker.js';
+import { resolveChargeOutcome, reconcileStaleCharges } from './billing-charge-reconciliation.js';
 
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -570,12 +571,19 @@ export async function runMembershipBillingSchedule(env) {
     .bind(now, now).run();
 
   if (!billingReady(env)) return { processed:0, billingReady:false };
+  const lookup = (id) => toss(`/payments/orders/${encodeURIComponent(id)}`, {}, env);
+  const reconciliation = await reconcileStaleCharges({
+    db:env.DB, lookup, addMonth,
+    chargeTable:'billing_charge_events', subscriptionTable:'service_subscriptions',
+    chargeOwnerColumn:'subscription_id', subscriptionKeyColumn:'id',
+  });
   const due = await env.DB.prepare(`SELECT * FROM service_subscriptions
     WHERE status='active' AND cancel_at_period_end=0 AND monthly_fee>0
       AND next_billing_at IS NOT NULL AND next_billing_at<=?
     ORDER BY next_billing_at LIMIT 20`).bind(now).all();
 
   let processed = 0;
+  let pendingReconcile = 0;
   for (const row of due.results || []) {
     const cycle = `renew:${row.id}:${String(row.next_billing_at).slice(0, 10)}`;
     const exists = await env.DB.prepare('SELECT status FROM billing_charge_events WHERE cycle_key=?').bind(cycle).first();
@@ -585,16 +593,41 @@ export async function runMembershipBillingSchedule(env) {
       (subscription_id,cycle_key,order_id,amount,status,created_at)
       VALUES (?, ?, ?, ?, 'processing', ?)`)
       .bind(row.id, cycle, orderId, row.monthly_fee, now).run();
+    let billingKey;
     try {
-      const billingKey = await decryptBillingKey(env, row.billing_key_cipher, row.billing_key_iv);
-      const payment = await charge(env, {
-        billingKey,
+      billingKey = await decryptBillingKey(env, row.billing_key_cipher, row.billing_key_iv);
+    } catch {
+      // No charge request was sent, so this is a definite failure.
+      await env.DB.batch([
+        env.DB.prepare("UPDATE billing_charge_events SET status='failed',detail=?,completed_at=? WHERE cycle_key=?")
+          .bind('billing_key_unavailable', now, cycle),
+        env.DB.prepare("UPDATE service_subscriptions SET status='past_due',updated_at=? WHERE id=?").bind(now, row.id),
+      ]);
+      continue;
+    }
+    let attempt = null;
+    let chargeError = null;
+    try {
+      attempt = await toss(`/billing/${encodeURIComponent(billingKey)}`, { method:'POST', body:{
         customerKey:row.provider_customer_key,
         amount:Number(row.monthly_fee),
         orderId,
         orderName:`EKODI ${String(row.plan_id).toUpperCase()} 월 구독`,
-      });
-      if (payment?.status !== 'DONE') throw new Error(`payment_status_${payment?.status || 'unknown'}`);
+      } }, env);
+    } catch (error) {
+      chargeError = error;
+    }
+    const result = await resolveChargeOutcome({ payment:attempt, error:chargeError, lookup, orderId });
+    if (result.outcome === 'unknown') {
+      // Money may have moved. Never demote here; reconciliation settles it with the provider.
+      await env.DB.prepare("UPDATE billing_charge_events SET detail=? WHERE cycle_key=? AND status='processing'")
+        .bind(String(result.detail).slice(0, 300), cycle).run();
+      pendingReconcile += 1;
+      continue;
+    }
+    try {
+      if (result.outcome !== 'done') throw new Error(result.detail || 'payment_failed');
+      const payment = result.payment;
       const next = addMonth(row.next_billing_at);
       await env.DB.batch([
         env.DB.prepare("UPDATE billing_charge_events SET status='done',provider_payment_key=?,completed_at=? WHERE cycle_key=?")
@@ -613,5 +646,5 @@ export async function runMembershipBillingSchedule(env) {
   }
 
   await env.DB.prepare("DELETE FROM membership_checkout_intents WHERE status='pending' AND expires_at<=?").bind(now).run();
-  return { processed, billingReady:true };
+  return { processed, pendingReconcile, reconciliation, billingReady:true };
 }
