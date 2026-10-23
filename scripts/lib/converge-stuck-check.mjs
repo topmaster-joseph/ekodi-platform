@@ -17,6 +17,10 @@ export const CONVERGE_REQUIRED_WORKFLOWS = Object.freeze({
 export const CONVERGE_STUCK_MS = 8 * 60 * 1000;
 export const CONVERGE_RUN_BUDGET_MS = 10 * 60 * 1000;
 export const CONVERGE_MAX_RUNS_PER_HEAD = 8;
+// A required check with no run at all on the head after this grace period was
+// never triggered (observed 2026-10-22 on #5672: token-created recovery PR,
+// no `test` or gate run ever started; the hand-off chain idled to its cap).
+export const CONVERGE_MISSING_GRACE_MS = 2 * 60 * 1000;
 
 const PASSING = new Set(['success', 'neutral', 'skipped']);
 
@@ -44,4 +48,15 @@ export function workflowsToRedispatch(stuckNames) {
 
 export function mayHandOff(convergeRunsForHead, max = CONVERGE_MAX_RUNS_PER_HEAD) {
   return Number(convergeRunsForHead) < max;
+}
+
+export function missingRequiredChecks(required, checkRuns) {
+  const runs = Array.isArray(checkRuns) ? checkRuns : [];
+  return required.filter(name => !runs.some(run => run?.name === name && run?.app?.slug === 'github-actions'));
+}
+
+export function requiredChecksToHeal(required, checkRuns, workflowRunBySuite, nowMs, waitedMs, { stuckMs = CONVERGE_STUCK_MS, missingGraceMs = CONVERGE_MISSING_GRACE_MS } = {}) {
+  const stuck = stuckRequiredChecks(required, checkRuns, workflowRunBySuite, nowMs, stuckMs);
+  const missing = waitedMs >= missingGraceMs ? missingRequiredChecks(required, checkRuns) : [];
+  return { stuck, missing, heal: [...new Set([...stuck, ...missing])] };
 }

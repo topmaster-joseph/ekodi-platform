@@ -5,7 +5,10 @@ import {
   CONVERGE_MAX_RUNS_PER_HEAD,
   CONVERGE_RUN_BUDGET_MS,
   CONVERGE_STUCK_MS,
+  CONVERGE_MISSING_GRACE_MS,
   isStuckCheckRun,
+  missingRequiredChecks,
+  requiredChecksToHeal,
   mayHandOff,
   stuckRequiredChecks,
   workflowsToRedispatch,
@@ -86,4 +89,33 @@ test('convergence uses the helpers, heals at most once per run and hands off bef
   assert.ok(CONVERGE_RUN_BUDGET_MS < timeoutMinutes * 60 * 1000 - 60_000, `budget ${CONVERGE_RUN_BUDGET_MS} vs timeout ${timeoutMinutes}m`);
   // Re-runs only ever target the required-check workflows and this convergence.
   assert.deepEqual(workflowsToRedispatch(['test', 'EKODI AI Orchestration Gate', 'unknown']), ['ci.yml', 'ekodi-ai-orchestration-gate.yml']);
+});
+
+test('#5672 replay: required checks that never ran are re-dispatched after the grace period, not before', () => {
+  // Token-created recovery PR: no `test` or gate run ever started on the head.
+  const runs = [{ name: 'converge', status: 'completed', conclusion: 'failure', app: gha, check_suite: { id: 5 } }];
+  assert.deepEqual(missingRequiredChecks(REQUIRED, runs), REQUIRED);
+  const early = requiredChecksToHeal(REQUIRED, runs, new Map(), NOW, CONVERGE_MISSING_GRACE_MS - 1);
+  assert.deepEqual(early.heal, [], 'a just-started run must not race a pull_request-triggered CI');
+  const late = requiredChecksToHeal(REQUIRED, runs, new Map(), NOW, CONVERGE_MISSING_GRACE_MS);
+  assert.deepEqual(late.missing, REQUIRED);
+  assert.deepEqual(workflowsToRedispatch(late.heal), ['ci.yml', 'ekodi-ai-orchestration-gate.yml']);
+});
+
+test('present required checks are never reported missing, and stuck plus missing heal once each', () => {
+  const runs = [
+    { name: 'test', status: 'in_progress', started_at: '2026-10-22T14:23:24Z', app: gha, check_suite: { id: 1 } },
+  ];
+  const result = requiredChecksToHeal(REQUIRED, runs, new Map([[1, { status: 'completed' }]]), NOW, CONVERGE_MISSING_GRACE_MS);
+  assert.deepEqual(result.stuck, ['test']);
+  assert.deepEqual(result.missing, ['EKODI AI Orchestration Gate']);
+  assert.deepEqual(result.heal, ['test', 'EKODI AI Orchestration Gate']);
+  const healthy = [{ name: 'test', status: 'completed', conclusion: 'success', app: gha }, { name: 'EKODI AI Orchestration Gate', status: 'queued', started_at: new Date(NOW).toISOString(), app: gha, check_suite: { id: 2 } }];
+  assert.deepEqual(requiredChecksToHeal(REQUIRED, healthy, new Map([[2, { status: 'queued' }]]), NOW, 60 * 60 * 1000).heal, []);
+});
+
+test('convergence heals missing required checks through the shared helper', async () => {
+  const script = await readFile(new URL('../scripts/converge-orchestrated-pr-merge.mjs', import.meta.url), 'utf8');
+  assert.match(script, /requiredChecksToHeal\(required,runs,suites,Date\.now\(\),Date\.now\(\)-CONVERGE_STARTED\)/);
+  assert.match(script, /action:'stuck-required-check-redispatched',stuck,missing,workflows/);
 });
