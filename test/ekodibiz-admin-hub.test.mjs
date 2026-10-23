@@ -6,7 +6,7 @@ import { workspaceTradeAdminScript } from '../workspace-trade-admin-page.js';
 import { readFile } from 'node:fs/promises';
 
 test('EKODIBIZ admin hub registers common and independent service management scopes',()=>{
-  assert.deepEqual(EKODIBIZ_ADMIN_SCOPES.map(item=>item.id),['common','mall','trade','invest','tax','books','lab']);
+  assert.deepEqual(EKODIBIZ_ADMIN_SCOPES.map(item=>item.id),['common','mall','trade','tax','books','lab']);
   assert.equal(ekodiBizAdminScopeForPath('/ekodibiz/admin'),'common');
   assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='mall')?.adminHref,'/ekodimall/admin');
   assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='mall')?.publicHref,'/ekodimall');
@@ -14,8 +14,7 @@ test('EKODIBIZ admin hub registers common and independent service management sco
   assert.equal(ekodiBizAdminScopeForPath('/admin/ekodimall/channel-settings'),'');
   assert.equal(ekodiBizAdminScopeForPath('/ekodibiz/mall/admin/channels'),'');
   assert.equal(ekodiBizAdminScopeForPath('/ekodibiz/trade/admin/access'),'trade');
-  assert.equal(ekodiBizAdminScopeForPath('/ekodibiz/invest/admin/ir'),'invest');
-  assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='invest')?.publicHref,'/ekodibiz/invest');
+  assert.equal(ekodiBizAdminScopeForPath('/ekodibiz/invest/admin/ir'),'');
   assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='tax')?.adminHref,'/tax');
   assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='books')?.label,'에코디북스');
   assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='books')?.adminHref,'/admin/?route=books&source=ekodibiz');
@@ -59,18 +58,16 @@ test('workspace and trade admins expose scope handoff only through full authorit
 });
 
 test('all EKODIBIZ admin surfaces share one site-switch contract',async()=>{
-  const [invest,tax,runtime]=await Promise.all([
-    readFile(new URL('../ekodibiz-invest-admin-page.js',import.meta.url),'utf8'),
+  const [tax,runtime]=await Promise.all([
     readFile(new URL('../tax-portal-worker.js',import.meta.url),'utf8'),
     readFile(new URL('../admin-menu-runtime.js',import.meta.url),'utf8'),
   ]);
-  for(const source of [invest,tax,runtime]){
+  for(const source of [tax,runtime]){
     assert.match(source,/admin-scope-switcher/);
     assert.match(source,/admin-scope-select/);
     assert.match(source,/admin-scope-label/);
     assert.match(source,/관리 사이트 전환/);
   }
-  assert.match(invest,/data-admin-scope-current="invest"/);
   assert.match(tax,/data-admin-scope-current="tax"/);
   assert.match(runtime,/dataset\.adminScopeCurrent='books'/);
 });
