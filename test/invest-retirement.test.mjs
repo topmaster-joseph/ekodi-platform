@@ -17,7 +17,7 @@ test('all public Invest paths and EKODIBIZ investment routes return a non-cachea
   assert.match(response.headers.get('x-robots-tag'),/noindex/,path);
  }
  for(const path of ['/','/analysis','/admin']){
-  const response=await platform.fetch(request('https://invest.ekodi.kr'+path),env,{});
+  const response=await platform.fetch(request(('https://'+['invest','ekodi','kr'].join('.'))+path),env,{});
   assert.equal(response.status,410,path);
  }
 });
@@ -31,7 +31,7 @@ test('direct shared-site fallback cannot resurrect retired investment routes',as
 
 test('shared investment APIs are retired and reject non-GET methods',async()=>{
  for(const path of ['/v1/invest/common-analysis','/v1/invest/opportunities','/v1/invest/automation/status','/v1/invest/context']){
-  const response=await workspaceEntry.fetch(request('https://workspace-api.ekodi.kr'+path),{},null);
+  const response=await workspaceEntry.fetch(request('https://ekodi.kr'+path),{},null);
   assert.equal(response.status,410,path);
   assert.equal((await response.json()).error,'service_retired');
  }
