@@ -228,21 +228,6 @@
       "status": "preparing"
     },
     {
-      "id": "invest",
-      "name": "에코디 투자",
-      "nameEn": "EKODI Investment",
-      "descriptionKo": "투자기회 발굴·Evidence·실사·연결·사후관리와 금융자산 분석을 지원",
-      "descriptionEn": "Evidence-first investment opportunities, diligence, connection, aftercare, and asset analysis",
-      "url": "https://ekodi.kr/invest",
-      "label": "ekodi.kr/invest",
-      "icon": "investment",
-      "category": "business-growth",
-      "order": 85,
-      "homepage": true,
-      "productionVerified": true,
-      "status": "beta"
-    },
-    {
       "id": "support",
       "name": "지원사업 AI",
       "nameEn": "Support Opportunity AI",
