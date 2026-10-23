@@ -30,6 +30,7 @@ test('projects every authoritative registry without changing source counts', () 
   const inputs = realInputs();
   const report = buildAssetInventory(inputs);
   assert.equal(report.mode, 'read-only');
+  assert.ok(inputs.ecosystem.services.every(s=>String(s.url||'').startsWith('https://ekodi.kr/')),'discovery web entrypoints must use apex routes');
   assert.equal(report.summary.byKind.service, inputs.ecosystem.services.length);
   assert.equal(report.summary.byKind.site, inputs.lifecycle.existingWorkspaceSites.length);
   assert.equal(report.summary.byKind.module, Object.keys(inputs.boundaries.platforms).length);
@@ -47,14 +48,14 @@ test('never reports health without evidence: every asset is UNKNOWN', () => {
   assert.deepEqual(Object.keys(report.summary.byStatus), [ASSET_STATUS_UNKNOWN]);
 });
 
-test('detects the six service-registry URL differences as non-mutating findings', () => {
+test('all shared service registry URLs converge to canonical apex paths without mutation', () => {
   const before = hashAll();
   const inputs = realInputs();
   const snapshot = JSON.stringify(inputs.serviceRegistry);
   const report = buildAssetInventory(inputs);
   const diffs = report.findings.filter((item) => item.subject.startsWith('service:') && item.code !== 'not_in_public_catalog');
-  assert.deepEqual(diffs.map((item) => item.subject).sort(), ['service:biz', 'service:books', 'service:church', 'service:lab', 'service:publishing', 'service:trade']);
-  assert.equal(report.summary.serviceRegistryUrlDifferences, 6);
+  assert.deepEqual(diffs, [], 'service catalog and public registry URLs must stay in sync');
+  assert.equal(report.summary.serviceRegistryUrlDifferences, 0);
   assert.ok(report.findings.every((item) => item.mutation === 'none'));
   assert.equal(JSON.stringify(inputs.serviceRegistry), snapshot, 'input object must not be mutated');
   assert.equal(hashAll(), before, 'source files must not change');
@@ -117,6 +118,6 @@ test('CLI is read-only and --check passes on current registries', () => {
   const parsed = JSON.parse(out);
   assert.equal(parsed.mode, 'read-only');
   assert.equal(parsed.assets, undefined);
-  assert.equal(parsed.summary.serviceRegistryUrlDifferences, 6);
+  assert.equal(parsed.summary.serviceRegistryUrlDifferences, 0);
   assert.equal(hashAll(), before);
 });
