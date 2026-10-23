@@ -1,6 +1,6 @@
 {
-  "version": "1.27.1",
-  "effectiveDate": "2026-10-02",
+  "version": "1.27.2",
+  "effectiveDate": "2026-10-23",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -69,23 +69,12 @@
   },
   "systemBoundaries": {
     "production": [
-      "ekodi.kr",
-      "my.ekodi.kr",
-      "admin.ekodi.kr",
-      "auth.ekodi.kr",
-      "api.ekodi.kr",
-      "status.ekodi.kr",
-      "ai.ekodi.kr",
-      "dev.ekodi.kr",
-      "exp.ekodi.kr"
+      "ekodi.kr"
     ],
     "development": [
-      "my.dev.ekodi.kr",
-      "admin.dev.ekodi.kr",
-      "auth.dev.ekodi.kr",
-      "api.dev.ekodi.kr"
+      "ekodi-development.workers.dev"
     ],
-    "rule": "User-operated spaces live under ekodi.kr paths. Subdomains are reserved for justified system, security, protocol, common-service or core-service boundaries and never define workspace identity."
+    "rule": "Only ekodi.kr is canonical first-party production web origin. Services are isolated through apex path gateway, Service Bindings, internal Workers, authorization, and independent data boundaries. Protected workers.dev endpoints are staging and rollback only."
   },
   "publicNamespaces": [
     "workspace-root-slug"
@@ -105,7 +94,7 @@
   "featurePatterns": [
     "https://ekodi.kr/{feature}",
     "https://ekodi.kr/my/{feature}",
-    "https://api.ekodi.kr/v1/{feature}"
+    "https://ekodi.kr/api/v1/{feature}"
   ],
   "workspaceRoutingPolicy": {
     "canonicalHost": "ekodi.kr",
@@ -127,14 +116,17 @@
   "domainPolicy": {
     "newFeatureSubdomainsForbidden": true,
     "newTenantSubdomainsForbidden": true,
-    "commonOrCoreServiceSubdomainsRequireGovernanceRegistration": true,
+    "commonOrCoreServiceSubdomainsRequireGovernanceRegistration": false,
     "sustainableBoundaryGateRequired": true,
     "customDomainsMapToTenantPublicSpace": true,
-    "legacyAliasesMayRedirect": true,
+    "legacyAliasesMayRedirect": false,
     "legacyAliasesMustBeRegistered": true,
     "userFacingEngineAddressesForbidden": true,
     "canonicalHumanAndManagementHost": "ekodi.kr",
-    "subdomainUserEntryForbidden": true
+    "subdomainUserEntryForbidden": true,
+    "newWebSubdomainsForbidden": true,
+    "legacySubdomainRedirectsForbidden": true,
+    "legacyAliasRole": "retirement-inventory-only"
   },
   "legacyPathAliases": {
     "https://space.ekodi.kr/{slug}": "https://ekodi.kr/{slug}",
@@ -1314,5 +1306,6 @@
       "production-verification"
     ],
     "exceptionPolicy": "constitutional-amendment-required"
-  }
+  },
+  "legacyDomainAllowlistRole": "retirement-inventory-only"
 }
