@@ -415,17 +415,6 @@
       "error": null
     },
     {
-      "id": "invest",
-      "name": "EKODI Investment",
-      "domain": "invest.ekodi.kr",
-      "url": "https://invest.ekodi.kr/",
-      "status": "offline",
-      "httpStatus": 429,
-      "responseTime": 119,
-      "checkedAt": "2026-08-27T16:05:13.499Z",
-      "error": null
-    },
-    {
       "id": "money",
       "name": "EKODI Money",
       "domain": "ekodi.kr/money",
