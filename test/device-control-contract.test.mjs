@@ -516,7 +516,7 @@ test('quiet background mode is explicit, reversible, and never rewrites battery 
   assert.match(api, /'power\.quiet_background': \{ risk: 'maintain', confirm: true \}/);
   assert.match(api, /'power\.quiet_background': 'quietBackgroundMode'/);
   assert.match(admin, /'power\.quiet_background': '조용한 백그라운드'/);
-  assert.match(admin, /'power\.quiet_background': '전원 연결/);
+  assert.match(admin, /'power\.quiet_background': '선택한 데스크톱 PC/);
   assert.match(admin, /기존 전원 설정 복원/);
 });
 
