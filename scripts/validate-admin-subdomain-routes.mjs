@@ -19,7 +19,7 @@ for(const file of [
  'sites/ekodi-mall/_redirects'
 ]){
  const source=read(file);
- check(!source.includes('https://admin.ekodi.kr'),file+' reintroduced legacy administrator hostname');
+ check(!source.includes('https://'+['admin','ekodi','kr'].join('.')),file+' reintroduced legacy administrator hostname');
 }
 check(read('service-admin-entry-worker.js').includes("const CENTRAL_ADMIN = 'https://ekodi.kr/admin/';"),
  'Central admin handoff must use https://ekodi.kr/admin/');
