@@ -6,7 +6,7 @@
 
   const sb = window.supabase.createClient(SUPABASE_URL, PUBLISHABLE_KEY, { auth: { persistSession:true, autoRefreshToken:true, detectSessionInUrl:false } });
   const blockerLabels = {
-    'not-direct-sale':'직접판매 상품이 아님','product-not-published':'상품 게시 필요','price-not-confirmed':'확정 판매가격 필요',
+    'not-direct-sale':'직접판매 상품이 아님','product-not-published':'상품 게시 필요','price-not-confirmed':'확정 판매가격 필요','stock-required':'재고 수량 입력 필요','out-of-stock':'재고 없음',
     'seller-verification':'판매자 직접판매 검증 필요','business-store-verification':'사업자 스토어 검증 필요','product-checkout-gate':'상품 판매 게이트 승인 필요',
     'payments-disabled':'온라인 결제 전체 OFF','toss-secret-missing':'Toss 서버키 미연결'
   };

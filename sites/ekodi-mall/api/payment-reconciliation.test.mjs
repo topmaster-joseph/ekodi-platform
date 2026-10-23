@@ -84,12 +84,13 @@ test('stock: order reserves stock, oversell is refused, quote reports availabili
   assert.equal(db.db.prepare('SELECT COUNT(*) n FROM orders').get().n, 1);
 });
 
-test('stock: NULL stock means unmanaged (backward compatible)', async () => {
+test('stock: direct-sale product without stock cannot be checked out (stock-required)', async () => {
   const db = migrated({ stock: null });
-  const r = await createOrder({ ...ENV, DB: db }, { shareCode: 'SHARE1', quantity: 5, buyer: BUYER });
-  assert.equal(r.status, 201);
-  assert.equal(stockOf(db), null);
-  assert.equal(orderRow(db, r.order.id).stock_reserved, 0);
+  const q = await buildOrderQuote({ ...ENV, DB: db }, { shareCode: 'SHARE1', quantity: 1 });
+  assert.ok(q.quote.blockers.includes('stock-required'));
+  const r = await createOrder({ ...ENV, DB: db }, { shareCode: 'SHARE1', quantity: 1, buyer: BUYER });
+  assert.equal(r.status, 409);
+  assert.equal(db.db.prepare('SELECT COUNT(*) n FROM orders').get().n, 0);
 });
 
 test('product input: stockQuantity parsed, invalid values become unmanaged, omission is detectable', () => {
@@ -180,7 +181,7 @@ test('virtual account waiting for deposit is kept even past expiry; deposit via 
 });
 
 test('webhook: forged amount is rejected, foreign orders ignored, Toss outage asks for retry', async () => {
-  const db = migrated({ stock: null });
+  const db = migrated({ stock: 5 });
   const env = { ...ENV, DB: db };
   const toss = fakeToss();
   try {

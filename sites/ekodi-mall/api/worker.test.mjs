@@ -31,8 +31,13 @@ test('canonical product URL stays marketplace while attributed URLs carry opaque
 });
 
 test('product input keeps Store optional and validates affiliate link', () => {
-  const personal = normalizeProductInput({ seller: { type: 'individual', displayName: '홍길동' }, store: null, product: { name: '테스트 상품', saleType: 'direct', category: 'general', contact: 'seller@example.com' } });
+  const personal = normalizeProductInput({ seller: { type: 'individual', displayName: '홍길동' }, store: null, product: { name: '테스트 상품', saleType: 'direct', category: 'general', contact: 'seller@example.com', stockQuantity: 5 } });
   assert.deepEqual(personal.errors, []);
+  // EKODI-MALL-STOCK-REQUIRED-001: 직접판매는 재고 수량 필수, 제휴·문의형은 불필요
+  const noStock = normalizeProductInput({ seller: { type: 'individual', displayName: '홍길동' }, product: { name: '테스트 상품', saleType: 'direct', contact: 'seller@example.com' } });
+  assert.ok(noStock.errors.some((value) => value.includes('재고 수량')));
+  const inquiry = normalizeProductInput({ seller: { type: 'individual', displayName: '홍길동' }, product: { name: '상담 상품', saleType: 'inquiry', contact: 'seller@example.com' } });
+  assert.deepEqual(inquiry.errors, []);
   assert.equal(personal.value.store, null);
   const affiliate = normalizeProductInput({ seller: { type: 'individual', displayName: '홍길동' }, product: { name: '제휴 상품', saleType: 'affiliate', contact: 'seller@example.com', action: { url: 'http://unsafe.example.com' } } });
   assert.ok(affiliate.errors.some((value) => value.includes('HTTPS')));
@@ -43,7 +48,7 @@ test('local geography is separate from category and seller verification cannot b
   const normalized = normalizeProductInput({
     seller: { type: 'individual', displayName: '홍길동' },
     product: {
-      name: '청계 상품', saleType: 'direct', category: 'local', contact: 'seller@example.com',
+      name: '청계 상품', saleType: 'direct', category: 'local', contact: 'seller@example.com', stockQuantity: 3,
       region: { primaryRegionId: 'kr-46-muan-cheonggye', regionIds: ['kr-46','kr-46-muan','kr-46-muan-cheonggye'], label: '전라남도 무안군 청계면', relationship: 'seller-declared', verified: true }
     }
   });

@@ -208,6 +208,8 @@ export function normalizeProductInput(body = {}) {
   if (!normalized.contact) errors.push('연락·문의 채널을 입력해 주세요.');
   if (normalized.product.region && !normalized.product.region.label) errors.push('지역 연결에는 표시할 행정지역명이 필요합니다.');
   if (saleType === 'affiliate' && !affiliateUrl) errors.push('제휴판매는 유효한 HTTPS 제휴링크가 필요합니다.');
+  // EKODI-MALL-STOCK-REQUIRED-001: 직접판매(실결제) 상품은 재고 수량이 필수 — 초과판매 방지.
+  if (saleType === 'direct' && normalized.product.stockQuantity === null) errors.push('직접판매 상품은 재고 수량(0 이상 정수)을 입력해 주세요.');
   if (normalized.store?.name && !normalized.store.slug) errors.push('스토어를 연결하려면 영문 소문자·숫자·하이픈 slug가 필요합니다.');
   return { value: normalized, errors };
 }
@@ -370,6 +372,7 @@ function publicationErrors(row) {
   if (!row.one_line) errors.push('한 줄 소개');
   if (!row.fulfillment) errors.push('배송·제공 방식');
   if (row.sale_type === 'affiliate' && !row.affiliate_url) errors.push('제휴링크');
+  if (row.sale_type === 'direct' && (row.stock_quantity === null || row.stock_quantity === undefined)) errors.push('재고 수량');
   return errors;
 }
 
@@ -501,6 +504,7 @@ export async function buildOrderQuote(env, { shareCode, attributionToken = '', q
   if (row.seller_type === 'business' && !businessStoreVerified) blockers.push('business-store-verification');
   if (!row.checkout_ready) blockers.push('product-checkout-gate');
   const stockManaged = row.stock_quantity !== null && row.stock_quantity !== undefined;
+  if (!stockManaged) blockers.push('stock-required');
   if (stockManaged && Number(row.stock_quantity) < qty) blockers.push('out-of-stock');
   for (const blocker of paymentExecutionBlockers(env)) blockers.push(blocker);
   return {
