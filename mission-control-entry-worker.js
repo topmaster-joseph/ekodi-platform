@@ -16,6 +16,8 @@ import { disableIneligibleWakeProfiles, enforceDesktopWakeRequest } from './devi
 import { claimHybridFallback, handleHybridAgentResult, handleHybridExecution } from './hybrid-execution.js';
 import { handleHybridExecutionMonitor, runHybridExecutionMonitor } from './hybrid-execution-monitor.js';
 import { handleMarketingAdminControl } from './marketing-admin-control.js';
+import { runScheduledMetricsCollection } from './marketing-metrics-collector.js';
+import { runScheduledIndexNow } from './marketing-indexnow-scheduler.js';
 import { handleMarketingLedgerControl } from './marketing-ledger-control.js';
 import { handleMarketingOrderConnectors } from './marketing-order-connectors.js';
 import { handleAuthorBillingControl, runAuthorBillingSchedule } from './author-billing-control.js';
@@ -407,6 +409,10 @@ export default {
     const aiProviderHealth = runAiProviderHealthSchedule(env, { scheduledTime:controller?.scheduledTime }).catch(error => { console.error('AI provider health schedule error', error); return { ok:false, checked:0, error:'ai_provider_health_failed' }; });
     const hybridWatchdog = runHybridExecutionMonitor(env).catch(error => { console.error('Hybrid execution watchdog schedule error', error); return { status:'unavailable', error:'hybrid_execution_watchdog_failed' }; });
     const recordingRetention = runRealtimeRecordingRetention(env,{limit:10}).catch(error => { console.error('Realtime recording retention error', error); return { expired:0, stale:0, error:'realtime_recording_retention_failed' }; });
+    // Phase 8 (AI Social Growth): 게시물 성과 수집(상태 기반 6시간)과 IndexNow 일일 제출(KST 04시 이후 하루 1회).
+    // 둘 다 내부에서 모든 오류를 삼키고, 아직 due가 아니면 DB 조회 1회만 하고 끝난다.
+    const marketingMetrics = runScheduledMetricsCollection(env, { now:scheduledAt.getTime() }).catch(error => { console.error('Marketing metrics collection error', error); return { ran:false, error:'marketing_metrics_failed' }; });
+    const marketingIndexNow = runScheduledIndexNow(env, { now:scheduledAt.getTime() }).catch(error => { console.error('Marketing IndexNow schedule error', error); return { ran:false, error:'marketing_indexnow_failed' }; });
     const wakeOrchestration = (async () => {
       await disableIneligibleWakeProfiles(env);
       return runWakeOrchestration(env);
@@ -419,12 +425,14 @@ export default {
       ctx.waitUntil(hybridWatchdog);
       ctx.waitUntil(recordingRetention);
       ctx.waitUntil(wakeOrchestration);
+      ctx.waitUntil(marketingMetrics);
+      ctx.waitUntil(marketingIndexNow);
       if (seonamMediHourly) ctx.waitUntil(seonamMediHourly);
       if (seonamMediRunnerWake) ctx.waitUntil(seonamMediRunnerWake);
       if (seonamMediCrawlWatch) ctx.waitUntil(seonamMediCrawlWatch);
       if (externalAccountHealthDaily) ctx.waitUntil(externalAccountHealthDaily);
     }
-    const background = [authorBilling, messengerOutbox, commandPulse, aiProviderHealth, hybridWatchdog, recordingRetention, wakeOrchestration];
+    const background = [authorBilling, messengerOutbox, commandPulse, aiProviderHealth, hybridWatchdog, recordingRetention, wakeOrchestration, marketingMetrics, marketingIndexNow];
     if (seonamMediHourly) background.push(seonamMediHourly);
     if (seonamMediRunnerWake) background.push(seonamMediRunnerWake);
     if (seonamMediCrawlWatch) background.push(seonamMediCrawlWatch);

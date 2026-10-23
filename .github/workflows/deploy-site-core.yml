@@ -33,6 +33,8 @@ on:
       - 'control.html'
       - 'control.css'
       - 'control.js'
+      - 'admin-control-home.js'
+      - 'admin-control-home.css'
       - 'cooperative-*.js'
       - 'sites/business-cooperative/**'
       - 'migrations/0133_cooperative_distribution_workspaces.sql'

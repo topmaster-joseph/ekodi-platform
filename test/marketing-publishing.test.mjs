@@ -98,7 +98,11 @@ test('central publisher reuses OAuth vault over private service binding and supp
   assert.match(publisher, /\['facebook','instagram','threads','youtube'\]/);
   assert.match(publisher, /oauth2\.googleapis\.com\/token/);
   assert.match(publisher, /upload\/youtube\/v3\/videos\?uploadType=resumable/);
-  assert.match(publisher, /privacyStatus.*private/);
+  // Phase 7: YouTube 공개 범위는 공용 정책(기본 private, publishAt 시 private 강제)으로 결정한다.
+  assert.match(publisher, /resolveYoutubePrivacy\(/);
+  const hardening = await read('channel-publish-hardening.js');
+  assert.match(hardening, /source === 'channel' \? channel : 'private'/);
+  assert.match(hardening, /privacyStatus:'private', publishAt:/);
   assert.match(growth, /export class MarketingGrowthPublisher extends WorkerEntrypoint/);
   assert.match(growth, /publishFromVault/);
   assert.match(wrangler, /binding = "MARKETING_GROWTH"/);

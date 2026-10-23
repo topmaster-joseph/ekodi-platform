@@ -34,6 +34,9 @@
   };
   const STUDIO_API = '/api/marketing/admin/studio/variants';
   const STUDIO_GENERATE_API = '/api/marketing/admin/studio/generate';
+  const PERFORMANCE_API = '/api/marketing/admin/performance';
+  const NAVER_API = '/api/marketing/admin/studio/naver';
+  const NAVER_WRITE_URL = 'https://blog.naver.com/';
   const GENERATE_CHANNELS = [['facebook','Facebook 피드'],['instagram','Instagram 카드뉴스'],['instagram_reel','Instagram 릴스'],['facebook_reel','Facebook 릴스'],['youtube_short','YouTube 쇼츠'],['naver_blog','네이버 블로그']];
   const STUDIO_STATES = [['pending_review','검수 대기'],['approved','승인'],['scheduled','예약'],['published','게시'],['rejected','반려'],['draft','초안'],['archived','보관']];
   const STUDIO_CHANNEL_LABELS = { facebook:'Facebook', instagram:'Instagram', threads:'Threads', youtube:'YouTube', naver_blog:'네이버 블로그', other:'기타' };
@@ -508,17 +511,173 @@
       }
     }
 
+
+    // Phase 8 성과·수익 패널(Reports 탭). 추정·확정·미귀속 금액은 절대 합치지 않고 따로 보여준다.
+    // 라이브 운영 렌더러가 탭을 다시 그려도 MutationObserver가 패널을 다시 붙인다.
+    const kstToday = () => new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+    const kstDaysAgo = days => new Date(Date.now() + 9 * 3600000 - days * 86400000).toISOString().slice(0, 10);
+    const perf = { data:null, naver:null, loading:false, error:'', naverError:'', from:kstDaysAgo(29), to:kstToday(), busy:new Set(), copy:new Map(), message:'' };
+    const pct = value => `${(Number(value || 0) * 100).toFixed(1)}%`;
+
+    function perfTotalsHtml(report) {
+      const t = report?.totals || {};
+      const u = t.unattributed || {};
+      const direct = report?.directSale || {};
+      return `<div class="marketing-ai-perf-kpis">
+          <div><span>조회수</span><strong>${num(t.views)}</strong></div><div><span>참여</span><strong>${num(t.engagement)}</strong></div>
+          <div><span>방문</span><strong>${num(t.visits)}</strong></div><div><span>제휴 클릭</span><strong>${num(t.affiliateClicks)}</strong></div>
+          <div><span>주문</span><strong>${num(t.orders)}</strong></div><div><span>콘텐츠 비용</span><strong>${esc(won(t.costKrw))}</strong></div>
+        </div>
+        <div class="marketing-ai-perf-revenue">
+          <article class="confirmed"><small>확정 매출 · 게시물 귀속</small><strong>${esc(won(t.attributed?.confirmedKrw))}</strong><p>직접판매 결제(환불 차감)와 확정 귀속 이벤트만 포함합니다.</p></article>
+          <article class="estimated"><small>추정 수수료 · 게시물 귀속</small><strong>${esc(won(t.attributed?.estimatedKrw))}</strong><p>제휴 클릭 × 기간 쿠팡 EPC(${esc(won(report?.estimatedMethod?.epcKrw))}/클릭) 기준 추정치입니다. 확정 금액과 합치지 않습니다.</p></article>
+          <article class="unattributed"><small>미귀속 확정 · 채널/합계 수준</small><strong>${esc(won(u.confirmedKrw))}</strong><p>쿠팡 보고 수수료 ${esc(won(u.coupangReportedKrw))} · 직접판매 미귀속 ${esc(won(u.directSaleKrw))}. 특정 게시물로 귀속할 수 없는 금액입니다.</p></article>
+        </div>
+        <p class="marketing-ai-perf-flag ${direct.connected ? '' : 'warn'}">${direct.connected ? `에코디몰 직접판매 연결됨 · 기간 결제 주문 ${num(direct.orders)}건` : `에코디몰 직접판매 미연결(${esc(direct.reason || 'NOT_CONNECTED')}) — 직접판매 매출은 0원으로 표시하며 추측하지 않습니다.`}</p>`;
+    }
+
+    function perfItemsHtml(report) {
+      const rows = report?.items || [];
+      if (!rows.length) return '<div class="marketing-ai-empty"><strong>기간 안 성과 데이터가 없습니다.</strong><span>게시가 완료되고 성과 수집(6시간 주기)·유입 귀속이 쌓이면 표시됩니다.</span></div>';
+      return `<div class="marketing-ai-perf-table" role="region" aria-label="콘텐츠별 성과" tabindex="0"><table>
+        <thead><tr><th>콘텐츠</th><th>채널</th><th>조회</th><th>도달</th><th>참여율</th><th>방문</th><th>제휴 클릭</th><th>주문</th><th>확정</th><th>추정</th><th>비용</th><th>ROI</th></tr></thead>
+        <tbody>${rows.map(row => `<tr>
+          <td data-label="콘텐츠"><strong>${esc(row.title || row.trackingCode || row.key)}</strong>${row.postUrl ? `<a href="${esc(row.postUrl)}" target="_blank" rel="noopener noreferrer">게시물 ↗</a>` : ''}<small>${esc(row.trackingCode || '')}</small></td>
+          <td data-label="채널"><span class="marketing-ai-studio-channel ${esc(row.channel)}">${esc(STUDIO_CHANNEL_LABELS[row.channel] || row.channel)}</span></td>
+          <td data-label="조회">${num(row.views)}</td><td data-label="도달">${num(row.reach)}</td><td data-label="참여율">${esc(pct(row.engagementRate))}</td>
+          <td data-label="방문">${num(row.visits)}</td><td data-label="제휴 클릭">${num(row.affiliateClicks)}</td><td data-label="주문">${num(row.orders)}</td>
+          <td data-label="확정">${esc(won(row.confirmedKrw))}</td><td data-label="추정">${esc(won(row.estimatedKrw))}</td><td data-label="비용">${esc(won(row.costKrw))}</td>
+          <td data-label="ROI">${row.roi == null ? '—' : esc(pct(row.roi))}</td></tr>`).join('')}</tbody></table></div>`;
+    }
+
+    function perfRecommendationHtml(report) {
+      const top = report?.recommendation?.top || [];
+      return `<div class="marketing-ai-perf-reco"><small>AI 추천 힌트</small><p>${esc(report?.recommendation?.basis || '')}</p>
+        ${top.length ? `<ol>${top.map(item => `<li><b>${esc(item.title || item.key)}</b> · ${esc(STUDIO_CHANNEL_LABELS[item.channel] || item.channel)} — ${esc(item.reason)}</li>`).join('')}</ol>` : '<p>아직 매출·참여 신호가 충분하지 않습니다.</p>'}</div>`;
+    }
+
+    function naverHtml() {
+      if (perf.naverError) return `<div class="marketing-ai-empty error"><strong>네이버 블로그 목록을 불러오지 못했습니다.</strong><span>${esc(perf.naverError)}</span></div>`;
+      if (!perf.naver) return '<div class="marketing-ai-loading">승인된 네이버 블로그 초안을 확인하고 있습니다.</div>';
+      const rows = perf.naver.variants || [];
+      perf.copy.clear();
+      const list = rows.length ? rows.map(row => {
+        perf.copy.set(`${row.id}:title`, row.copy?.title || '');
+        perf.copy.set(`${row.id}:body`, row.copy?.body || '');
+        perf.copy.set(`${row.id}:hashtags`, row.copy?.hashtags || '');
+        const busy = perf.busy.has(row.id);
+        return `<article class="marketing-ai-naver-item" data-variant-id="${esc(row.id)}">
+          <div class="marketing-ai-studio-item-head"><span class="marketing-ai-studio-channel naver_blog">네이버 블로그</span><span class="marketing-ai-naver-state ${esc(row.status)}">${esc(row.status === 'published' ? '게시 완료' : '승인 · 게시 대기')}</span></div>
+          <strong>${esc(row.title || '(제목 없음)')}</strong>
+          <div class="marketing-ai-naver-copy">
+            <button type="button" data-naver-copy="title" data-variant-id="${esc(row.id)}">제목 복사</button>
+            <button type="button" data-naver-copy="body" data-variant-id="${esc(row.id)}">본문 복사</button>
+            <button type="button" data-naver-copy="hashtags" data-variant-id="${esc(row.id)}">해시태그 복사</button>
+            <a href="${esc(perf.naver.writeUrl || NAVER_WRITE_URL)}" target="_blank" rel="noopener noreferrer">네이버 블로그 열기 ↗</a>
+          </div>
+          <form class="marketing-ai-naver-capture" data-naver-capture="${esc(row.id)}" novalidate>
+            <label>게시한 네이버 글 주소<input name="url" type="url" inputmode="url" placeholder="https://blog.naver.com/아이디/글번호" value="${esc(row.externalPostUrl || '')}" required></label>
+            <button type="submit" ${busy ? 'disabled' : ''}>${busy ? '저장 중…' : row.externalPostUrl ? 'URL 수정' : '게시 URL 저장'}</button>
+          </form>
+        </article>`;
+      }).join('') : '<div class="marketing-ai-empty"><strong>승인된 네이버 블로그 초안이 없습니다.</strong><span>Approvals 탭에서 naver_blog 변형을 승인하면 여기에 복사용으로 나타납니다.</span></div>';
+      return `<div class="marketing-ai-card-head"><div><small>NAVER BLOG · MANUAL</small><h3>네이버 블로그</h3><p>네이버 블로그는 공식 글쓰기 API가 없어 복사 → 직접 게시 → 게시 URL 저장 순서로 운영합니다.</p></div></div><div class="marketing-ai-naver-list">${list}</div>`;
+    }
+
+    function perfHtml() {
+      const report = perf.data;
+      const body = perf.error
+        ? `<div class="marketing-ai-empty error"><strong>성과·수익 리포트를 불러오지 못했습니다.</strong><span>${esc(perf.error)}</span></div>`
+        : !report ? '<div class="marketing-ai-loading">성과·수익 데이터를 집계하고 있습니다.</div>'
+        : `${perfTotalsHtml(report)}${perfRecommendationHtml(report)}${perfItemsHtml(report)}`;
+      return `<div class="marketing-ai-card-head"><div><small>PERFORMANCE · REVENUE</small><h3>성과·수익</h3><p>조회·참여는 공급자 누적값, 수익은 확정·추정·미귀속을 분리해 보여줍니다.</p></div>
+          <form class="marketing-ai-perf-range" data-perf-range novalidate>
+            <label>시작<input type="date" name="from" value="${esc(perf.from)}" max="${esc(kstToday())}"></label>
+            <label>종료<input type="date" name="to" value="${esc(perf.to)}" max="${esc(kstToday())}"></label>
+            <button type="submit" ${perf.loading ? 'disabled' : ''}>${perf.loading ? '조회 중…' : '조회'}</button>
+          </form></div>
+        ${perf.message ? `<p class="marketing-ai-studio-generator-msg" role="status">${esc(perf.message)}</p>` : ''}
+        <div class="marketing-ai-perf-body">${body}</div>
+        <section class="marketing-ai-naver" aria-label="네이버 블로그 수동 게시">${naverHtml()}</section>`;
+    }
+
+    function mountPerformance() {
+      if (!view || state.tab !== 'reports') return null;
+      let section = view.querySelector('.marketing-ai-performance');
+      if (!section) {
+        section = document.createElement('section');
+        section.className = 'marketing-ai-console-card marketing-ai-performance';
+        section.setAttribute('aria-label', '성과·수익');
+        view.prepend(section);
+      }
+      section.innerHTML = perfHtml();
+      return section;
+    }
+
+    async function loadPerformance(force = false) {
+      if (!token() || perf.loading) { mountPerformance(); return; }
+      if (!force && perf.data && perf.naver) { mountPerformance(); return; }
+      perf.loading = true;
+      mountPerformance();
+      const query = `?from=${encodeURIComponent(perf.from)}&to=${encodeURIComponent(perf.to)}`;
+      const [report, naver] = await Promise.allSettled([studioApi(`${PERFORMANCE_API}${query}`), studioApi(NAVER_API)]);
+      if (report.status === 'fulfilled') { perf.data = report.value; perf.error = ''; } else perf.error = report.reason?.message || '알 수 없는 오류';
+      if (naver.status === 'fulfilled') { perf.naver = naver.value; perf.naverError = ''; } else perf.naverError = naver.reason?.message || '알 수 없는 오류';
+      perf.loading = false;
+      mountPerformance();
+    }
+
+    async function copyNaver(id, field) {
+      const text = perf.copy.get(`${id}:${field}`) || '';
+      try { await navigator.clipboard.writeText(text); perf.message = `${field === 'title' ? '제목' : field === 'body' ? '본문' : '해시태그'}을 복사했습니다.`; }
+      catch { perf.message = '클립보드 복사가 차단되었습니다. 브라우저 권한을 확인해 주세요.'; }
+      mountPerformance();
+    }
+
+    async function captureNaver(form) {
+      const id = Number(form.dataset.naverCapture);
+      const url = String(new FormData(form).get('url') || '').trim();
+      if (!id || perf.busy.has(id)) return;
+      if (!/^https:\/\/(m\.)?blog\.naver\.com\/.+/i.test(url)) { perf.message = '네이버 블로그 글 주소(https://blog.naver.com/…)를 입력해 주세요.'; mountPerformance(); return; }
+      perf.busy.add(id);
+      mountPerformance();
+      try {
+        await studioApi(`${STUDIO_API}/${encodeURIComponent(id)}/naver-published`, { method:'POST', body:{ url } });
+        perf.message = '네이버 게시 URL을 저장했습니다. 이 콘텐츠는 게시 완료로 표시됩니다.';
+      } catch (error) {
+        perf.message = error.message || '네이버 게시 URL을 저장하지 못했습니다.';
+      } finally {
+        perf.busy.delete(id);
+        await loadPerformance(true);
+      }
+    }
+
     if (view) {
       new MutationObserver(() => {
         if (state.tab === 'approvals' && !view.querySelector('.marketing-ai-studio-review')) mountStudio();
+        if (state.tab === 'reports' && !view.querySelector('.marketing-ai-performance')) mountPerformance();
       }).observe(view, { childList:true });
       view.addEventListener('submit', event => {
+        const range = event.target.closest('form[data-perf-range]');
+        if (range) {
+          event.preventDefault();
+          const data = new FormData(range);
+          perf.from = String(data.get('from') || perf.from);
+          perf.to = String(data.get('to') || perf.to);
+          perf.message = '';
+          loadPerformance(true);
+          return;
+        }
+        const capture = event.target.closest('form[data-naver-capture]');
+        if (capture) { event.preventDefault(); captureNaver(capture); return; }
         const form = event.target.closest('form[data-studio-generate]');
         if (!form) return;
         event.preventDefault();
         submitGenerator(form);
       });
       view.addEventListener('click', event => {
+        const copyButton = event.target.closest('[data-naver-copy]');
+        if (copyButton) { copyNaver(Number(copyButton.dataset.variantId), copyButton.dataset.naverCopy); return; }
         const actionButton = event.target.closest('[data-studio-action]');
         if (actionButton) { decideStudio(Number(actionButton.dataset.variantId), actionButton.dataset.studioAction); return; }
         if (event.target.closest('[data-studio-refresh]')) loadStudio(true);
@@ -539,6 +698,7 @@
       else if (state.tab === 'reports') renderReports(data);
       else renderPlaceholder(data,state.tab);
       if (state.tab === 'approvals') loadStudio();
+      if (state.tab === 'reports') loadPerformance();
       view.querySelectorAll('[data-open-tab]').forEach(link => link.addEventListener('click', () => selectTab(link.dataset.openTab)));
     }
 

@@ -16,6 +16,9 @@ on:
     paths:
       - 'marketing-growth-worker.js'
       - 'marketing-growth-entry.js'
+      - 'channel-publishing-catalog.js'
+      - 'channel-meta-reels-adapter.js'
+      - 'channel-publish-hardening.js'
       - 'mall-growth-dashboard.js'
       - 'mall-autonomous-profit-loop.js'
       - 'owned-tenant-autopost-loop.js'
