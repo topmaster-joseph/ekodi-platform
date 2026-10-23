@@ -285,7 +285,7 @@ jobs:
               && verify_public_path '/learn' 'EKODI LEARNING FABRIC' 'x-ekodi-shell: v2' \
               && verify_public_path '/insurance/advisor' 'PERSONAL INSURANCE CARE' 'x-ekodi-route: public-insurance' \
               && verify_retired_invest_path '/ekodibiz/invest' \
-              && verify_public_path '/ekodibiz/invest/admin' 'WORKSPACE-LOCAL ADMIN' 'x-ekodi-route: public-ekodibiz-invest-admin' \
+              && verify_retired_invest_path '/ekodibiz/invest/admin' \
               && verify_discovery_path '/robots.txt' 'OAI-SearchBot' \
               && verify_discovery_path '/sitemap.xml' '<urlset' \
               && verify_discovery_path '/llms.txt' 'Canonical site: https://ekodi.kr/'; then
