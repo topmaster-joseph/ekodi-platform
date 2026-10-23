@@ -210,6 +210,10 @@ test('Photo-led lifelong homepage stays accessible, factual and local-search onl
   assert.match(home,/실시간 모집 검색은 아닙니다/);
   assert.match(home,/AI와의 실시간 상담은 제공하지 않습니다/);
   assert.match(home,/실제 개설·모집·가격은/);
+  // The mockup contains illustrative notices/prices; production must not assert them as live facts.
+  assert.doesNotMatch(home,/50,000원|2026년 평생교육이용권 신청 안내|정원 마감 임박/);
+  assert.match(css,/background-color|background:#|background:linear-gradient/);
+
   assert.match(home,/민감한 여권·성적표·재정증빙 파일을 저장하지 않습니다/);
   assert.doesNotMatch(home,/<script(?![^>]*src=)|\sonclick=/i);
   assert.match(css,/body\[data-area="home"\]/);
