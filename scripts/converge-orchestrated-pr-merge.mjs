@@ -197,6 +197,13 @@ const controlApiTouched=changedFiles.some(file=>
   'device-control.js',
   // AI Provider API runtime ownership; release-automation changes also repair missed deployments.
   'ai-provider-control.js',
+  // MarketingAI admin API (/api/marketing/admin/*, incl. content studio and the
+  // Phase 6 SEO generator) is bundled into the Control API via mission-control-entry-worker.js.
+  // Token merges skip push workflows: dispatch the guarded Control API for these modules.
+  'marketing-admin-control.js',
+  'marketing-admin-publications.js',
+  'marketing-content-studio.js',
+  'marketing-seo-engine.js',
   // Telemetry reader and site classifier run inside the Control API.
   'traffic-intelligence-control.js',
   'traffic-intelligence.js',
@@ -326,6 +333,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='admin-central-handoff.js'||
   file==='ai-provider-control.js'||
   file==='mall-social-setup.js'||
+  // Mall public product Product/Offer JSON-LD is injected server-side by Site Core (site-worker.js).
+  ['mall-product-jsonld.js','mall-weekly-picks-page.js'].includes(file)||
   file.startsWith('sites/')||
   // The Seasonal Workforce proposal portal is compiled into the same guarded Site Core.
   file.startsWith('seasonal-workforce/')||
