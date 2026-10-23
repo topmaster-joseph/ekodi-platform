@@ -131,6 +131,10 @@
     const quote = await loadQuote();
     const quoteNode = quoteBlock(quote);
     if (quoteNode) details.append(quoteNode);
+    // EKODI-MALL-TOSS-WIDGET-007: buy now only when the order server says every gate is open.
+    if (quote?.checkoutReady && window.EkodiMallCheckout) {
+      window.EkodiMallCheckout.mount(root, { shareCode: code, attributionToken: storedAttribution()?.token || '', quote });
+    }
     if (status) {
       const source = storedAttribution()?.sourceType;
       status.textContent = source === 'direct' ? '공개 상품 · 판매자 직접공유 최초유입 보존' : source === 'ai' ? '공개 상품 · AI 기여 최초유입 보존' : '공개 상품 · EKODI Mall 최초유입 보존';

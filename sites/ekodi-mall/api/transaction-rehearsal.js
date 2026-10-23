@@ -21,6 +21,7 @@ async function cleanup(env, ids, orderId = '') {
     statements.push(env.DB.prepare("DELETE FROM commerce_events WHERE aggregate_type='order' AND aggregate_id=?").bind(orderId));
     statements.push(env.DB.prepare('DELETE FROM settlement_ledger WHERE order_id=?').bind(orderId));
     statements.push(env.DB.prepare('DELETE FROM order_payments WHERE order_id=?').bind(orderId));
+    statements.push(env.DB.prepare('DELETE FROM order_buyers WHERE order_id=?').bind(orderId));
     statements.push(env.DB.prepare('DELETE FROM orders WHERE id=?').bind(orderId));
   }
   statements.push(env.DB.prepare('DELETE FROM products WHERE id=?').bind(ids.productId));
@@ -80,8 +81,8 @@ export async function handleTransactionRehearsal(request, env) {
     requireProof(safety.quote.checkoutReady === false, 'staging-safety-gate-open');
     requireProof(safety.quote.blockers.includes('payments-disabled'), 'payments-disabled-blocker-missing');
 
-    const isolatedEnv = { ...env, PAYMENTS_ENABLED:'true', PAYMENT_PROVIDER:'toss', TOSS_SECRET_KEY:'rehearsal-no-network' };
-    const created = await createOrder(isolatedEnv, { shareCode: ids.shareCode, quantity: 1 });
+    const isolatedEnv = { ...env, PAYMENTS_ENABLED:'true', PAYMENT_PROVIDER:'toss', TOSS_SECRET_KEY:'rehearsal-no-network', TOSS_CLIENT_KEY:'rehearsal-no-network' };
+    const created = await createOrder(isolatedEnv, { shareCode: ids.shareCode, quantity: 1, buyer: { name:'리허설 구매자', phone:'010-0000-0000', postcode:'00000', address1:'staging rehearsal synthetic address', privacyConsent:true } });
     requireProof(created.status === 201 && Boolean(created.order?.id), 'order-not-created');
     orderId = created.order.id;
     const order = await env.DB.prepare('SELECT * FROM orders WHERE id=?').bind(orderId).first();

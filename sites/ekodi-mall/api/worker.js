@@ -1,3 +1,4 @@
+import { validateBuyer, checkoutConfig } from './checkout-buyer.js';
 import { commerceEventStatement } from './commerce-events.js';
 import { paymentExecutionBlockers, paymentProviderPublicView, selectedPaymentProvider } from './payment-capabilities.js';
 import { routeCommerceModel } from './commerce-os.js';
@@ -514,6 +515,10 @@ export async function createOrder(env, input) {
   const result = await buildOrderQuote(env, input);
   if (!result.quote) return result;
   if (!result.quote.checkoutReady) return { error: '직접결제 활성화 조건이 아직 완료되지 않았습니다.', status: 409, quote: result.quote };
+  // EKODI-MALL-TOSS-WIDGET-007: a direct-sale order needs the recipient before payment starts.
+  const buyerResult = validateBuyer(input.buyer);
+  if (!buyerResult.ok) return { error: buyerResult.errors[0], errors: buyerResult.errors, status: 400 };
+  const buyer = buyerResult.buyer;
   const quote = result.quote;
   const id = orderId();
   const now = isoNow();
@@ -531,7 +536,10 @@ export async function createOrder(env, input) {
     payload:{ productId:quote.productId, sellerId:quote.sellerId, amount:quote.grossAmount, currency:quote.currency, attributionType:quote.attributionType, paymentProvider:quote.commerceRoute?.paymentProvider || null },
   });
   if (!orderEvent) throw new Error('COMMERCE_EVENT_STATEMENT_REQUIRED');
-  await env.DB.batch([orderInsert, orderEvent.statement]);
+  const buyerInsert = env.DB.prepare(`INSERT INTO order_buyers
+    (order_id,name,phone,email,postcode,address1,address2,memo,privacy_consent_at,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)`)
+    .bind(id, buyer.name, buyer.phone, buyer.email, buyer.postcode, buyer.address1, buyer.address2, buyer.memo, now, now);
+  await env.DB.batch([orderInsert, buyerInsert, orderEvent.statement]);
   return {
     status: 201,
     order: {
@@ -541,6 +549,10 @@ export async function createOrder(env, input) {
       amount: quote.grossAmount,
       currency: quote.currency,
       expiresAt,
+      customerName: buyer.name,
+      customerMobilePhone: buyer.phone.replace(/-/g, ''),
+      customerEmail: buyer.email || undefined,
+      checkout: checkoutConfig(env, { id }),
       quote
     }
   };
@@ -719,7 +731,7 @@ export default {
       const body = await readJson(request);
       if (!body?.shareCode) return json({ error: 'shareCode가 필요합니다.' }, 400, origin, env);
       const result = await createOrder(env, body);
-      return json(result.order ? { order: result.order } : { error: result.error, quote: result.quote || null }, result.status, origin, env);
+      return json(result.order ? { order: result.order } : { error: result.error, errors: result.errors || undefined, quote: result.quote || null }, result.status, origin, env);
     }
     if (request.method === 'POST' && url.pathname === '/api/public/payments/confirm') {
       const body = await readJson(request);

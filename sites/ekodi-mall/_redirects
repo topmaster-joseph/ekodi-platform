@@ -1,3 +1,7 @@
+/checkout/success /assets/checkout-success.html 200
+/checkout/success/ /assets/checkout-success.html 200
+/checkout/fail /assets/checkout-fail.html 200
+/checkout/fail/ /assets/checkout-fail.html 200
 /agoda /travel/stay/ 301
 /agoda/ /travel/stay/ 301
 /travel/stay /travel/stay/ 301
