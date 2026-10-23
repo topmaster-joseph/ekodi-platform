@@ -204,44 +204,6 @@
       "database": "none; synthetic and curated public projection only",
       "note": "Shared S0 public runtime with two logical surfaces: exp.ekodi.kr is the canonical synthetic-only Experience portal; dev.ekodi.kr is the public Developer/Conformance portal exposing sanitized contracts only. try.ekodi.kr is a legacy 308 alias to exp. Neither portal carries workspace identity or production customer data."
     },
-    "invest": {
-      "kind": "common-service-platform",
-      "publicName": "EKODI Invest",
-      "source": [
-        "invest-user-page.js",
-        "invest-site-system.js",
-        "invest-personal-control.js",
-        "invest-market-core.js",
-        "invest-automation-runtime.js",
-        "invest-subject-ui.js",
-        "invest-personalization-runtime.js",
-        "invest-admin.js",
-        "invest-admin.css",
-        "profile-official-data-adapter.js",
-        "workspace-platform-entry-worker.js",
-        "workspace-platform-api-worker.js",
-        "migrations/0028_messenger_investment_workspaces.sql",
-        "migrations/0086_invest_autonomous_loop.sql",
-        "test/invest-personalization-contract.test.mjs",
-        "test/invest-market-core.test.mjs",
-        "test/invest-site-system.test.mjs",
-        "test/ekodibiz-invest-business.test.mjs",
-        "test/ekodibiz-invest-admin.test.mjs"
-      ],
-      "canonicalPath": "https://ekodi.kr/invest",
-      "domains": [
-        "ekodi.kr"
-      ],
-      "deployWorkflow": ".github/workflows/release-invest-personalization.yml",
-      "sharedDependencies": [
-        "workspace-api.ekodi.kr",
-        "central auth hub",
-        "ekodi-shell",
-        "official data adapters through reviewed credentials and licensed partners"
-      ],
-      "database": "ekodi-auth D1 investment_* and profile evidence namespaces",
-      "note": "Registered common-service boundary for reusable Evidence-First investment research, diligence, IR, simulation-first multi-broker portfolio analysis and connection support. EKODIBIZ-specific investment businesses remain under ekodi.kr/ekodibiz/invest and other workspaces may consume the common core without transferring workspace identity or business ownership."
-    },
     "community": {
       "kind": "independent-platform",
       "source": [
