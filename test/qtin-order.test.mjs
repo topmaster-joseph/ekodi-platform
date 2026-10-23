@@ -764,3 +764,19 @@ test('quoted or space-padded dashboard keys are cleaned; diagnostics show shape,
     assert.ok(!JSON.stringify(body).includes('RealSecret99') && !JSON.stringify(body).includes('BROKEN'));
   } finally { sb.restore(); }
 });
+
+// ---------- EKODI-QTIN-WIDGET-MODAL-009 ----------
+test('payment widget opens non-modal so the window Toss opens on requestPayment stays usable; Toss domains allowed', async () => {
+  const env = await openEnvWithProducts({ TOSS_CLIENT_KEY: 'test_ck_cfg', TOSS_SECRET_KEY: '', TOSS_CLIENT_KEY__EKODI: 'live_gck_real', TOSS_SECRET_KEY__EKODI: 'live_gsk_real' });
+  const page = await handleRequest(new Request('https://ekodi.kr/qtin/church'), env, OPEN_NOW);
+  const html = await page.text();
+  const widgetCode = html.slice(html.indexOf('async function openWidget'), html.indexOf('async function pay('));
+  assert.ok(widgetCode.length > 0);
+  assert.ok(!widgetCode.includes('showModal'), 'a modal dialog makes the Toss payment window inert');
+  assert.ok(widgetCode.includes('dialog.show()'));
+  assert.ok(html.includes('id="payBackdrop"'));
+  const csp = page.headers.get('content-security-policy');
+  for (const directive of ['frame-src', 'connect-src', 'form-action']) {
+    assert.match(csp, new RegExp(`${directive}[^;]*https://\\*\\.toss\\.im`), directive);
+  }
+});
