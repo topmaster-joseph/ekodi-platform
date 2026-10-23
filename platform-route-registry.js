@@ -1,7 +1,7 @@
 export const PLATFORM_ROUTE_REGISTRY=Object.freeze({
   canonical:Object.freeze(['admin','my','auth','api','mcp','webhooks','health','connect']),
   platformServices:Object.freeze([
-    'ai','author','bible','books','business','cafe','cloud','community','cmpmyi','delivery','dev','developer','edu','education','energy','ekodilab','ekodimall','ekodimission','ekodipay','event','experience','finance-api','give','history','insurance','invest','journal','lab','life','live','local-commerce','login','logout','mail','mall','management','marketing','marketing-api','marketing-connect-api','marketing-publish-api','media','messenger','mission','money','pay','personal-finance-api','preview','privacy','publish','publishing','research','shell','singles','social','status','storage','stores','support','tax','terms','trade','try','work','workspace-api','www'
+    'ai','author','bible','books','business','cafe','cloud','community','cmpmyi','delivery','dev','developer','edu','education','energy','ekodilab','ekodimall','ekodimission','ekodipay','event','experience','finance-api','give','history','insurance','journal','lab','life','live','local-commerce','login','logout','mail','mall','management','marketing','marketing-api','marketing-connect-api','marketing-publish-api','media','messenger','mission','money','pay','personal-finance-api','preview','privacy','publish','publishing','research','shell','singles','social','status','storage','stores','support','tax','terms','trade','try','work','workspace-api','www'
   ]),
   retiredIdentityPrefixes:Object.freeze(['group','org','personal','project','space','user']),
 });
@@ -66,7 +66,7 @@ export const PLATFORM_LEGACY_HOST_PATHS=Object.freeze({
   [platformHost('trade.biz')]:'/ekodibiz/trade',[platformHost('biz')]:'/ekodibiz',[platformHost('church')]:'/ekodichurch',[platformHost('lab')]:'/ekodilab',
   [platformHost('mall')]:'/ekodibiz/mall',[platformHost('mall.biz')]:'/ekodibiz/mall',[platformHost('mail')]:'/mail',[platformHost('mail.biz')]:'/mail',
   [platformHost('mail.church')]:'/mail',[platformHost('mail.lab')]:'/mail',[platformHost('mail.books')]:'/mail',[platformHost('mail.trade')]:'/mail',
-  [platformHost('messenger')]:'/messenger',[platformHost('invest')]:'/invest',[platformHost('tax')]:'/tax',[platformHost('cafe')]:'/cafe',
+  [platformHost('messenger')]:'/messenger',[platformHost('tax')]:'/tax',[platformHost('cafe')]:'/cafe',
   [platformHost('marketing')]:'/ekodibiz/marketing-ai',[platformHost('cgma')]:'/cgma',[platformHost('jadam')]:'/jadam',[platformHost('pizzamaru')]:'/pizzamaru',[platformHost('yogurt')]:'/yogurt',
   [platformHost('jadam.ai')]:'/jadam/marketing',[platformHost('pizzamaru.ai')]:'/pizzamaru/marketing',[platformHost('yogurt.ai')]:'/yogurt/marketing',[platformHost('cgma.ai')]:'/cgma/marketing'
 });
