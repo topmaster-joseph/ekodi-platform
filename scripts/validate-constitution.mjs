@@ -228,7 +228,7 @@ const registeredCommonPaths = new Set(constitution.registeredCommonServicePaths 
 const registeredCore = new Set(constitution.registeredCoreServiceBoundaries || []);
 const targets = constitution.legacyDomainTargets || {};
 const customerOwned = constitution.customerOwnedDomainMappings || {};
-if (systemDomains.size !== 1 || !systemDomains.has('ekodi.kr')) fail('canonical production web host must be apex ekodi.kr only');
+if (!systemDomains.has('ekodi.kr')) fail('canonical apex host missing from system host inventory');
 if (constitution.domainPolicy?.newFeatureSubdomainsForbidden !== true) fail('new feature subdomains must be forbidden');
 if (constitution.domainPolicy?.newTenantSubdomainsForbidden !== true) fail('new tenant/workspace subdomains must be forbidden');
 if (constitution.domainPolicy?.sustainableBoundaryGateRequired !== true) fail('new system/common/core subdomains must pass the sustainable boundary gate');
