@@ -51,6 +51,8 @@ export function tossKeyBlockers(env = {}) {
 /** What the browser needs to start Toss checkout. The secret key never leaves the server. */
 export function checkoutConfig(env, order) {
   const base = clean(env.MALL_BASE_URL, 200).replace(/\/+$/, '') || 'https://ekodi.kr/ekodimall';
+  // Toss returns the buyer to the same product page, which confirms the payment server-side.
+  const page = `${base}/p/${encodeURIComponent(clean(order.shareCode, 80))}`;
   const clientKey = clean(env.TOSS_CLIENT_KEY, 200);
   return {
     provider: 'toss',
@@ -59,7 +61,7 @@ export function checkoutConfig(env, order) {
     variantKey: clean(env.TOSS_WIDGET_VARIANT_KEY, 60) || 'DEFAULT',
     agreementVariantKey: clean(env.TOSS_WIDGET_AGREEMENT_VARIANT_KEY, 60) || 'AGREEMENT',
     customerKey: 'ANONYMOUS',
-    successUrl: `${base}/checkout/success/`,
-    failUrl: `${base}/checkout/fail/?orderId=${encodeURIComponent(order.id)}`,
+    successUrl: `${page}?checkout=success`,
+    failUrl: `${page}?checkout=fail&orderId=${encodeURIComponent(order.id)}`,
   };
 }

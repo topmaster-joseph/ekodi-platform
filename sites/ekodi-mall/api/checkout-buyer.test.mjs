@@ -43,10 +43,10 @@ test('Toss key pairs: widget (gck/gsk) or individual (ck/sk), never mixed or cro
   assert.equal(paymentProviderReadiness(LIVE_WIDGET).liveReady, true);
   assert.equal(paymentProviderReadiness({ ...LIVE_WIDGET, TOSS_SECRET_KEY: 'live_sk_y' }).liveReady, false);
   assert.equal(isWidgetClientKey('live_gck_x'), true);
-  const co = checkoutConfig(LIVE_WIDGET, { id: 'mall_1' });
+  const co = checkoutConfig(LIVE_WIDGET, { id: 'mall_1', shareCode: 'SHARE1' });
   assert.deepEqual({ widget: co.widget, variantKey: co.variantKey, customerKey: co.customerKey }, { widget: true, variantKey: 'DEFAULT', customerKey: 'ANONYMOUS' });
-  assert.equal(co.successUrl, 'https://ekodi.kr/ekodimall/checkout/success/');
-  assert.equal(co.failUrl, 'https://ekodi.kr/ekodimall/checkout/fail/?orderId=mall_1');
+  assert.equal(co.successUrl, 'https://ekodi.kr/ekodimall/p/SHARE1?checkout=success');
+  assert.equal(co.failUrl, 'https://ekodi.kr/ekodimall/p/SHARE1?checkout=fail&orderId=mall_1');
   assert.ok(!JSON.stringify(co).includes('gsk'), 'secret key never reaches the browser');
 });
 
@@ -62,6 +62,7 @@ test('direct-sale order stores the recipient and returns widget checkout config;
   assert.equal(order.amount, 30000);
   assert.equal(order.checkout.clientKey, 'live_gck_x');
   assert.equal(order.checkout.widget, true);
+  assert.equal(order.checkout.successUrl, 'https://ekodi.kr/ekodimall/p/SHARE1?checkout=success');
   assert.equal(order.customerMobilePhone, '01012345678');
   assert.ok(!JSON.stringify(order).includes('live_gsk_y'));
   const row = db.db.prepare('SELECT name, phone, postcode, address1, address2 FROM order_buyers WHERE order_id=?').get(order.id);

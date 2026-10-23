@@ -1,7 +1,6 @@
 // EKODI-MALL-TOSS-WIDGET-007 — direct-sale checkout on the public product page.
 // Server decides everything (price, gates, keys); this only collects the recipient and starts Toss.
 (() => {
-  const API = 'https://mall-api.ekodi.kr';
   const won = v => `${new Intl.NumberFormat('ko-KR').format(Math.max(0, Number(v) || 0))}원`;
   function el(tag, attrs = {}, ...children) {
     const node = document.createElement(tag);
@@ -15,7 +14,7 @@
     return el('label', { class: 'checkout-field' }, el('span', { text: label }), el('input', { id, ...attrs }));
   }
 
-  /** Mount the checkout panel. `ctx` = { shareCode, attributionToken, quote }. */
+  /** Mount the checkout panel. `ctx` = { api, shareCode, attributionToken, quote }. The API base comes from the page. */
   function mount(host, ctx) {
     if (!host || !ctx?.quote?.checkoutReady) return null;
     const msg = el('p', { class: 'checkout-msg', role: 'alert' });
@@ -66,7 +65,7 @@
       payBtn.disabled = true;
       try {
         const v = id => document.getElementById(id).value;
-        const response = await fetch(`${API}/api/public/orders`, {
+        const response = await fetch(`${ctx.api}/api/public/orders`, {
           method: 'POST', headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ shareCode: ctx.shareCode, attributionToken: ctx.attributionToken || '', quantity: Math.max(1, Math.min(20, Math.trunc(Number(qty.value) || 1))),
             buyer: { name: v('coName'), phone: v('coPhone'), email: v('coEmail'), postcode: v('coPostcode'), address1: v('coAddr1'), address2: v('coAddr2'), memo: v('coMemo'), privacyConsent: true } }),
@@ -99,5 +98,32 @@
     payBtn.addEventListener('click', start);
     return panel;
   }
-  window.EkodiMallCheckout = { mount };
+  /**
+   * Toss sends the buyer back to this product page (?checkout=success&paymentKey&orderId&amount
+   * or ?checkout=fail&message). The order is "paid" only after the server confirms with Toss.
+   */
+  async function handleReturn(api, notify) {
+    const params = new URLSearchParams(location.search);
+    const kind = params.get('checkout');
+    if (kind !== 'success' && kind !== 'fail') return null;
+    const clean = new URL(location.href);
+    for (const key of ['checkout', 'paymentKey', 'orderId', 'amount', 'paymentType', 'code', 'message']) clean.searchParams.delete(key);
+    history.replaceState(null, '', clean.pathname + clean.search);
+    if (kind === 'fail') { notify('결제가 완료되지 않았습니다', `${params.get('message') || '결제가 취소되었거나 실패했습니다.'} 주문은 완료되지 않았고 비용도 청구되지 않았습니다.`, false); return 'fail'; }
+    const paymentKey = params.get('paymentKey') || '';
+    const orderId = params.get('orderId') || '';
+    const amount = Math.trunc(Number(params.get('amount')));
+    if (!paymentKey || !orderId || !Number.isFinite(amount)) { notify('결제 정보를 확인할 수 없습니다', '다시 시도해 주세요.', false); return 'invalid'; }
+    notify('결제를 확인하고 있습니다', '잠시만 기다려 주세요. 이 창을 닫지 마세요.', true);
+    try {
+      const r = await fetch(`${api}/api/public/payments/confirm`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ paymentKey, orderId, amount }) });
+      const data = await r.json().catch(() => ({}));
+      if (r.ok && data.payment?.status === 'DONE') { notify('주문이 완료되었습니다', `주문번호 ${orderId} · ${won(data.payment.totalAmount)} 결제가 확인되었습니다. 판매자가 배송을 준비합니다. 감사합니다.`, true); return 'paid'; }
+      if (r.ok) { notify('결제 확인 중입니다', '결제가 아직 완료되지 않았습니다. 입금이 확인되면 주문이 완료됩니다.', true); return 'pending'; }
+      notify('결제를 확인하지 못했습니다', `${data.error || '결제 승인 검증에 실패했습니다.'} 문제가 계속되면 주문번호 ${orderId}로 문의해 주세요.`, false); return 'error';
+    } catch {
+      notify('결제를 확인하지 못했습니다', `네트워크 문제로 확인하지 못했습니다. 주문번호 ${orderId}로 문의해 주세요.`, false); return 'error';
+    }
+  }
+  window.EkodiMallCheckout = { mount, handleReturn };
 })();

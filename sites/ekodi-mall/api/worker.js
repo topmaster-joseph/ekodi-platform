@@ -552,7 +552,7 @@ export async function createOrder(env, input) {
       customerName: buyer.name,
       customerMobilePhone: buyer.phone.replace(/-/g, ''),
       customerEmail: buyer.email || undefined,
-      checkout: checkoutConfig(env, { id }),
+      checkout: checkoutConfig(env, { id, shareCode: quote.shareCode }),
       quote
     }
   };
