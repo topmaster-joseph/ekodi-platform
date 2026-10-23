@@ -16,6 +16,20 @@ test('OpenAI provider stays unavailable without a server-side key', () => {
   });
 });
 
+test('OpenAI provider sends the orchestrator prompt when the context has no message', async () => {
+  let body = null;
+  const provider = createOpenAiProvider({ OPENAI_API_KEY: 'sk-proj-server-only-example-1234567890' }, {
+    fetchImpl: async (url, init) => {
+      body = JSON.parse(init.body);
+      return new Response(JSON.stringify({ output: [{ content: [{ type: 'output_text', text: 'ok' }] }] }), { status: 200 });
+    },
+  });
+  await provider.invoke({ taskName: 'command', prompt: '배포 상태를 검증해줘 token=abc-secret-1234567890', context: { commandGoal: 'x' } });
+  assert.match(body.input, /배포 상태를 검증해줘/);
+  assert.doesNotMatch(body.input, /요청 내용 없음/);
+  assert.doesNotMatch(body.input, /abc-secret-1234567890/);
+});
+
 test('OpenAI provider uses Responses API without storage and redacts credentials from admin context', async () => {
   let observed = null;
   const provider = createOpenAiProvider({

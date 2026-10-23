@@ -52,6 +52,20 @@ test('scheduled free provider health performs a bounded real provider probe cont
   try{const result=await runAiProviderHealthSchedule({DB,GEMINI_API_KEY:'test-key-1234567890'},{now:Date.parse('2026-09-08T00:00:00Z')});assert.equal(result.ok,true);assert.equal(result.checked,1);assert.equal(result.results[0].status,'healthy');assert.ok(writes.some(item=>item.sql.includes('UPDATE ai_provider_registry SET health_status')));assert.ok(writes.some(item=>item.sql.includes('INSERT INTO ai_provider_calls')))}finally{globalThis.fetch=originalFetch}
 });
 
+// 2026-10-23: providers with no secret were logged as a failed call every health
+// cycle (cerebras/qwen/factchat-ekodi: 291 rows/week), skewing failure-rate metrics.
+test('scheduled health records a missing secret once, not every cycle',async()=>{
+  for(const [label,previous,expectCall] of [['first detection',{health_status:'unknown',last_error:''},true],['already unconfigured',{health_status:'unconfigured',last_error:'secret_not_configured'},false]]){
+    const writes=[];
+    const row={provider_id:'gemini',enabled:1,priority:10,default_model:'gemini-3.7-flash',secret_binding:'GEMINI_API_KEY',last_checked_at:null,...previous};
+    const DB={prepare(sql){const stmt={args:[],bind(...args){this.args=args;return this},async all(){if(sql.startsWith('SELECT * FROM ai_provider_registry'))return{results:[row]};return{results:[]}},async first(){return null},async run(){writes.push({sql,args:this.args});return{meta:{changes:1}}}};return stmt}};
+    const result=await runAiProviderHealthSchedule({DB},{now:Date.parse('2026-09-08T00:00:00Z')});
+    assert.equal(result.results[0].status,'unconfigured',label);
+    assert.ok(writes.some(item=>item.sql.includes("health_status='unconfigured'")),label);
+    assert.equal(writes.some(item=>item.sql.includes('INSERT INTO ai_provider_calls')),expectCall,label);
+  }
+});
+
 test('mission control schedules provider health without delaying core work',()=>{const source=read('mission-control-entry-worker.js');assert.match(source,/runAiProviderHealthSchedule/);assert.match(source,/ctx\.waitUntil\(aiProviderHealth\)/);});
 
 test('scheduled paid provider health is blocked before network access',async()=>{

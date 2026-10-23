@@ -1,7 +1,18 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { apiCostPolicy, estimateOpenAiCostMicroUsd, normalizeOpenAiUsage } from '../api-usage-meter.js';
+import { apiCostPolicy, estimateAnthropicCostMicroUsd, estimateOpenAiCostMicroUsd, normalizeOpenAiUsage } from '../api-usage-meter.js';
+
+test('Anthropic usage is priced per model so it counts against the USD budget', () => {
+  const usage = { inputTokens: 1_000_000, cachedInputTokens: 0, outputTokens: 100_000 };
+  assert.equal(estimateAnthropicCostMicroUsd(usage, 'claude-sonnet-5'), 3_000_000);
+  assert.equal(estimateAnthropicCostMicroUsd(usage, 'claude-sonnet-5-5'), 3_000_000);
+  assert.equal(estimateAnthropicCostMicroUsd(usage, 'claude-haiku-4-5-20251001'), 1_500_000);
+  assert.equal(estimateAnthropicCostMicroUsd(usage, 'claude-opus-5-5'), 6_000_000);
+  // Unknown model ids are priced at the top tier: over-count, never under-count.
+  assert.equal(estimateAnthropicCostMicroUsd(usage, 'claude-unreleased-9'), 15_000_000);
+  assert.equal(estimateAnthropicCostMicroUsd(usage, 'claude-sonnet-5', { ANTHROPIC_INPUT_USD_PER_MILLION: '1', ANTHROPIC_OUTPUT_USD_PER_MILLION: '1' }), 1_100_000);
+});
 
 test('OpenAI usage normalization and Terra cost estimate use actual token classes', () => {
   const usage = normalizeOpenAiUsage({

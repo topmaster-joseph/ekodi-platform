@@ -2,6 +2,15 @@ name: Deploy Church History Archive
 
 on:
   workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Verified orchestrator source branch (post-merge dispatch)'
+        required: false
+        type: string
+      release_task_id:
+        description: 'Verified orchestrator task id (post-merge dispatch)'
+        required: false
+        type: string
   pull_request:
     paths: &history_paths
       - 'church-history-worker.js'
@@ -24,6 +33,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  # WORKER-LANE-GRAPH-001: post-merge dispatches carry the orchestrator receipt.
+  EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+  EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
   WRANGLER_VERSION: '4.119.0'
 
 jobs:

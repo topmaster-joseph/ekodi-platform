@@ -1,4 +1,6 @@
 import { CONVERGE_MAX_RUNS_PER_HEAD, CONVERGE_RUN_BUDGET_MS, mayHandOff, requiredChecksToHeal, workflowsToRedispatch } from './lib/converge-stuck-check.mjs';
+import { lanesForChangedFiles } from './lib/worker-bundle-graph.mjs';
+import { fileURLToPath } from 'node:url';
 const repo=String(process.env.GITHUB_REPOSITORY||'').trim();
 const token=String(process.env.GH_TOKEN||'').trim();
 const branch=String(process.env.GITHUB_REF_NAME||'').trim();
@@ -450,6 +452,35 @@ const adminContinuityVerificationTouched=changedFiles.some(file=>
   file==='.github/workflows/admin-authenticated-e2e.yml'||
   file==='scripts/converge-orchestrated-pr-merge.mjs'
 );
+// WORKER-LANE-GRAPH-001 (2026-10-24): the file lists above missed shared modules
+// (config/user-footer.js left 17 service Workers on the old legal footer). Every
+// production Worker whose static import graph contains a changed file is also
+// redeployed through its registered lane (config/worker-deploy-lanes.json).
+// Computed before merging so a broken lane registry stops convergence early.
+let bundleLanes;
+try{bundleLanes=lanesForChangedFiles(fileURLToPath(new URL('..',import.meta.url)),changedFiles)}catch(error){fail('worker bundle lane resolution failed: '+String(error?.message||error).slice(0,300))}
+const handDispatchedLanes=new Set([
+  [cgmaApexTouched,'deploy-cgma-apex-edge.yml'],[spaceTouched,'deploy-space.yml'],[qtinOrderTouched,'deploy-qtin-order.yml'],
+  [mallSiteTouched,'deploy-ekodi-mall.yml'],[labHomepageTouched,'deploy-ekodi-lab-homepage.yml'],[controlApiTouched,'deploy-control-api.yml'],
+  [marketingPublishingTouched,'deploy-marketing-publishing.yml'],[marketingGrowthTouched,'deploy-marketing-growth.yml'],[myTouched,'deploy-my.yml'],
+  [accessApiTouched,'deploy-access-api.yml'],[independentBoardTouched,'deploy-independent-board.yml'],[aiControlTouched,'deploy-ai-control.yml'],
+  [shellRuntimeTouched,'deploy-ekodi-shell.yml'],[churchApiTouched,'deploy-church-pastor-api.yml'],[churchPagesTouched,'deploy-ekodi-church-homepage.yml'],
+  [sharedSiteTouched,'deploy-site-core.yml'],
+].filter(([touched])=>touched).map(([,workflow])=>workflow));
+async function dispatchBundleGraphLanes(){
+  for(const lane of bundleLanes.dispatches){
+    if(handDispatchedLanes.has(lane.workflow))continue;
+    const dispatch=await api('/actions/workflows/'+lane.workflow+'/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{...lane.inputs,release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('bundle-graph deploy dispatch failed for '+lane.workflow+' '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    const workers=bundleLanes.affected.filter(item=>item.workflow===lane.workflow).map(item=>item.name);
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',source:'bundle-graph',workflow:lane.workflow,workers,pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+  const notDispatched=bundleLanes.affected.filter(item=>!item.workflow);
+  if(notDispatched.length)console.log(JSON.stringify({ok:true,action:'bundle-graph-not-dispatched',workers:notDispatched.map(({name,config,excluded,touched})=>({name,config,excluded:excluded||'no lane registered',touched})),pr:pr.number,taskId}));
+}
 async function dispatchPostMergeDeploys(){
   if(orchestratorLiveVerificationTouched){
     const response=await api('/actions/workflows/verify-ekodi-orchestrator-live-e2e.yml/dispatches',{
@@ -720,6 +751,7 @@ async function dispatchPostMergeDeploys(){
     if(!dispatch.r.ok)fail('shared site deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
     console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-site-core.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
+  await dispatchBundleGraphLanes();
 }
 
 // update-branch with the Actions token creates a head commit whose push does NOT
