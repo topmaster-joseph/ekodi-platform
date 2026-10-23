@@ -28,14 +28,14 @@ export default {
       privateCrossServiceDataAccess:false,
       externalSubmissionExecution:false
     });
-    if(url.pathname==='/admin'||url.pathname==='/admin/'||url.pathname==='/admin.html')return Response.redirect('https://admin.ekodi.kr/publishing#publishing',307);
+    if(url.pathname==='/admin'||url.pathname==='/admin/'||url.pathname==='/admin.html')return Response.redirect('https://ekodi.kr/admin/publishing#publishing',307);
     if(url.pathname==='/books.json'){
-      const upstream=await fetch('https://books.ekodi.kr/books.json',{headers:{accept:'application/json'}});
+      const upstream=await fetch('https://ekodi.kr/books/books.json',{headers:{accept:'application/json'}});
       return new Response(upstream.body,{status:upstream.status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}});
     }
-    if(url.pathname==='/publishing/'||url.pathname==='/publishing')return Response.redirect('https://publishing.ekodi.kr/',308);
-    if(url.pathname.startsWith('/publishing/studio'))return Response.redirect('https://publishing.ekodi.kr/studio/',308);
-    if(url.pathname.startsWith('/publishing/upaper'))return Response.redirect('https://publishing.ekodi.kr/upaper/',308);
+    if(url.pathname==='/publishing/'||url.pathname==='/publishing')return Response.redirect('https://ekodi.kr/publishing/',308);
+    if(url.pathname.startsWith('/publishing/studio'))return Response.redirect('https://ekodi.kr/publishing/studio/',308);
+    if(url.pathname.startsWith('/publishing/upaper'))return Response.redirect('https://ekodi.kr/publishing/upaper/',308);
     return injectEkodiShell(withHeaders(await env.ASSETS.fetch(request)),'publishing');
   }
 };
