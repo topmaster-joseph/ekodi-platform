@@ -182,7 +182,7 @@ h1{margin:0 0 4px;font-size:24px;letter-spacing:-.04em;line-height:1.18}p{margin
 .help{margin-top:9px;padding:10px 11px;background:#fff;border:1px solid var(--line);border-radius:10px;color:#768279;font-size:11px;line-height:1.5}
 .delivery-overview{margin-bottom:14px;padding:14px 15px;border:1px solid #d7e3d8;border-radius:13px;background:#f8fbf8}.delivery-overview strong{display:block;font-size:13px;margin-bottom:5px}.delivery-overview p{font-size:11px}.delivery-platforms{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.delivery-platform{display:inline-flex;align-items:center;padding:6px 8px;border:1px solid #dfe7df;border-radius:999px;background:#fff;color:#4b5b50;font-size:9.5px;font-weight:800}.delivery-card-note{margin:-3px 0 10px;padding:8px 9px;border-radius:8px;background:#f5f8f5;color:#758078;font-size:9.5px;line-height:1.5}.delivery-card .actions{grid-template-columns:repeat(2,minmax(0,1fr))}.delivery-card .actions a:first-child{grid-column:1/-1}.delivery-card .actions a:nth-child(2){background:#eef6f0;color:#17492b;border-color:#cddfd1}.delivery-safety{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}.delivery-safety div{padding:10px;border:1px solid #e1e7df;border-radius:9px;background:#fff}.delivery-safety b{display:block;font-size:10px;margin-bottom:3px}.delivery-safety span{display:block;color:#7a867e;font-size:11px;line-height:1.45}.delivery-live-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding-top:11px;border-top:1px solid #e1e8e1}.delivery-live-toolbar span{font-size:10px;color:#607068;font-weight:750}.delivery-live-toolbar-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.delivery-live-toolbar button,.delivery-live-toolbar a{border:1px solid #cbd9cd;border-radius:8px;background:#fff;color:#285239;padding:7px 9px;font-size:10px;font-weight:800;text-decoration:none;cursor:pointer}.delivery-live-toolbar button[aria-pressed="true"]{background:#174e2d;color:#fff;border-color:#174e2d}.delivery-summary-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin-top:10px}.delivery-summary-grid[hidden]{display:none}.delivery-summary-grid div{padding:9px 10px;border:1px solid #e0e7df;border-radius:9px;background:#fff}.delivery-summary-grid small{display:block;color:#7d8880;font-size:8.5px}.delivery-summary-grid b{display:block;margin-top:3px;color:#20382a;font-size:13px}.delivery-live{margin:0 0 11px;padding:10px;border:1px solid #e0e7df;border-radius:9px;background:#fbfcfb}.delivery-live-state{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}.delivery-live-state b{font-size:10px}.delivery-live-state span{font-size:8.5px;color:#768178}.delivery-live-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.delivery-live-metrics a{display:block;padding:7px;border-radius:7px;background:#f4f7f4;color:inherit;text-decoration:none;border:1px solid transparent}.delivery-live-metrics a:hover,.delivery-live-metrics a:focus-visible{background:#edf5ef;border-color:#c9ddce;outline:none}.delivery-live-metrics a.is-issue{background:#fff7f4;border-color:#efd2c8}.delivery-live-metrics small{display:block;color:#7d8880;font-size:8px}.delivery-live-metrics strong{display:block;margin-top:2px;font-size:11px;color:#243a2b}.delivery-card[data-issues-only="hidden"]{display:none}.delivery-live-error{color:#9a3f34;font-size:9.5px;line-height:1.5}.delivery-live-muted{color:#7a867e;font-size:9.5px;line-height:1.5}.delivery-live-login{display:inline-flex;margin-top:7px;padding:7px 9px;border:1px solid #cbd9cd;border-radius:8px;background:#fff;color:#285239;text-decoration:none;font-size:9.5px;font-weight:800}
 .direct-workspace{background:#fff;border:1px solid var(--line);border-radius:11px;overflow:hidden}.direct-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:8px 9px;border-bottom:1px solid var(--line);background:#fbfcfb}.direct-toolbar-group{display:flex;align-items:center;gap:5px;flex-wrap:wrap}.direct-toolbar-group>span{font-size:9px;font-weight:900;color:#768279;margin-right:2px}.direct-toolbar button{border:1px solid #dce4dc;border-radius:7px;background:#fff;color:#425248;padding:6px 8px;font-size:10px;font-weight:800;cursor:pointer}.direct-toolbar button.is-active,.direct-toolbar button[aria-pressed="true"]{background:#1f5b36;color:#fff;border-color:#1f5b36}.direct-frame{display:block;width:100%;height:calc(100vh - 132px);min-height:600px;border:0;background:#fff}
-.agent-manager{display:grid;gap:10px}.agent-status{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 13px;border:1px solid #cfe0d2;border-radius:11px;background:#f8fbf8}.agent-status-copy{min-width:0}.agent-status-copy b{display:block;font-size:13px}.agent-status-copy span{display:block;margin-top:3px;color:#66746b;font-size:11px;line-height:1.5}.agent-status button{flex:0 0 auto;border:1px solid #c6d9ca;border-radius:8px;background:#fff;color:#285239;padding:8px 10px;font-size:11px;font-weight:850;cursor:pointer}.agent-status[data-state="online"]{background:#edf7ef;border-color:#bcd8c2}.agent-status[data-state="offline"]{background:#fff8f4;border-color:#ecd7cb}.agent-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.agent-card{padding:12px;border:1px solid var(--line);border-radius:11px;background:#fff}.agent-card h2{margin:0 0 4px;font-size:14px}.agent-card p{font-size:11px}.agent-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.agent-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:8px 10px;border:1px solid #cfddd1;border-radius:8px;background:#fff;color:#274c34;text-decoration:none;font-size:11px;font-weight:850}.agent-actions a.primary{background:#1f5b36;border-color:#1f5b36;color:#fff}.agent-actions a.danger{background:#fff6f2;border-color:#e7cabc;color:#8d3b2f}.agent-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.agent-step{padding:10px;border:1px solid #e0e7df;border-radius:9px;background:#fff}.agent-step b{display:block;font-size:11px;margin-bottom:3px}.agent-step span{display:block;color:#748078;font-size:10px;line-height:1.45}.agent-store-links{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.agent-store-links a{padding:7px 9px;border:1px solid #dce4dc;border-radius:8px;background:#fff;color:#365342;text-decoration:none;font-size:10px;font-weight:800}.agent-note{padding:10px 11px;border:1px solid #e1e6df;border-radius:9px;background:#fbfcfb;color:#6e7a72;font-size:10.5px;line-height:1.55}
+.agent-manager{display:grid;gap:10px}.agent-manager[data-agent-state=online] [data-agent-onboarding]{display:none}.agent-live{display:grid;gap:8px;padding:12px 13px;border:1px solid #cfe0d2;border-radius:11px;background:#fff}.agent-chips{display:flex;flex-wrap:wrap;gap:6px}.agent-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border:1px solid #dfe7df;border-radius:999px;background:#f8fbf8;color:#405047;font-size:11px;font-weight:760}.agent-chip[data-tone=ok]{border-color:#bfdcc7;background:#eef7f0;color:#17492b}.agent-chip[data-tone=warn]{border-color:#efd6a8;background:#fff8ea;color:#7a5410}.agent-programs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}.agent-program{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid #e6ece6;border-radius:9px;font-size:11px}.agent-program b{font-weight:780;color:#26352b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.agent-program span{flex:none;color:#7b877e}.agent-program[data-run=on] span{color:#1f5b36;font-weight:780}.agent-program[data-run=unset] span{color:#a06a12}.agent-live-actions{display:flex;flex-wrap:wrap;gap:6px}.agent-live-actions a{padding:8px 11px;border-radius:8px;background:#1f5b36;color:#fff;text-decoration:none;font-size:12px;font-weight:780}.agent-maint{border:1px solid #e0e6df;border-radius:11px;background:#fbfcfb}.agent-maint>summary{cursor:pointer;padding:11px 13px;font-size:13px;font-weight:800;color:#26352b}.agent-maint>summary small{margin-left:6px;color:#7b877e;font-size:11px;font-weight:600}.agent-maint>.agent-grid{padding:0 10px 10px}.agent-status{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 13px;border:1px solid #cfe0d2;border-radius:11px;background:#f8fbf8}.agent-status-copy{min-width:0}.agent-status-copy b{display:block;font-size:13px}.agent-status-copy span{display:block;margin-top:3px;color:#66746b;font-size:11px;line-height:1.5}.agent-status button{flex:0 0 auto;border:1px solid #c6d9ca;border-radius:8px;background:#fff;color:#285239;padding:8px 10px;font-size:11px;font-weight:850;cursor:pointer}.agent-status[data-state="online"]{background:#edf7ef;border-color:#bcd8c2}.agent-status[data-state="offline"]{background:#fff8f4;border-color:#ecd7cb}.agent-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.agent-card{padding:12px;border:1px solid var(--line);border-radius:11px;background:#fff}.agent-card h2{margin:0 0 4px;font-size:14px}.agent-card p{font-size:11px}.agent-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.agent-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:8px 10px;border:1px solid #cfddd1;border-radius:8px;background:#fff;color:#274c34;text-decoration:none;font-size:11px;font-weight:850}.agent-actions a.primary{background:#1f5b36;border-color:#1f5b36;color:#fff}.agent-actions a.danger{background:#fff6f2;border-color:#e7cabc;color:#8d3b2f}.agent-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.agent-step{padding:10px;border:1px solid #e0e7df;border-radius:9px;background:#fff}.agent-step b{display:block;font-size:11px;margin-bottom:3px}.agent-step span{display:block;color:#748078;font-size:10px;line-height:1.45}.agent-store-links{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.agent-store-links a{padding:7px 9px;border:1px solid #dce4dc;border-radius:8px;background:#fff;color:#365342;text-decoration:none;font-size:10px;font-weight:800}.agent-note{padding:10px 11px;border:1px solid #e1e6df;border-radius:9px;background:#fbfcfb;color:#6e7a72;font-size:10.5px;line-height:1.55}
 @media(max-width:900px){.agent-grid{grid-template-columns:1fr}.agent-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.grid{grid-template-columns:1fr}.head{display:block}.badge{display:inline-block;margin-top:10px}.delivery-safety{grid-template-columns:1fr}.delivery-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.direct-toolbar{align-items:flex-start;flex-direction:column}.direct-frame{height:72vh;min-height:520px}}
 @media(max-width:390px){body{padding:10px}h1{font-size:22px}.direct-frame{min-height:500px}}`;
 
@@ -260,35 +260,45 @@ function directWorkspace(view,key){
 const AGENT_DOWNLOAD_BASE='/cmpmyi/admin/agent/download/';
 function agentManagementPanel(){
   const stores=STORES.map(store=>`<a href="/${store.slug}/admin/pos" target="_top">${store.short} POS 화면</a>`).join('');
-  return `<section class="agent-manager" data-cmpmyi-pos-agent-manager="v1">
+  return `<section class="agent-manager" data-cmpmyi-pos-agent-manager="v1" data-agent-layout="adaptive-v2" data-agent-state="checking">
     <div class="agent-status" id="posAgentLocalStatus" data-state="checking">
       <div class="agent-status-copy"><b>이 POS PC의 Agent 상태</b><span id="posAgentLocalState">연결상태를 확인하고 있습니다.</span></div>
       <button id="posAgentCheck" type="button">상태 다시 확인</button>
     </div>
-    <div class="agent-steps" aria-label="POS Agent 설치 순서">
+    <div class="agent-live" id="posAgentLive" hidden>
+      <div class="agent-chips" id="posAgentChips"></div>
+      <div class="agent-programs" id="posAgentPrograms" aria-label="이 PC의 POS 프로그램 상태"></div>
+      <div class="agent-live-actions" id="posAgentOpen"></div>
+    </div>
+    <div class="agent-steps" data-agent-onboarding aria-label="POS Agent 설치 순서">
       <div class="agent-step"><b>1 · POS PC에서 열기</b><span>설치하려는 각 Windows POS에서 이 관리페이지를 엽니다.</span></div>
       <div class="agent-step"><b>2 · 원클릭 설치</b><span>설치 파일을 내려받아 실행하고 Windows 관리자 권한을 허용합니다.</span></div>
       <div class="agent-step"><b>3 · 연결 확인</b><span>상태 확인에서 Agent 버전과 실행 중 프로그램 수를 확인합니다.</span></div>
       <div class="agent-step"><b>4 · 필요 시 진단</b><span>프로그램명이 맞지 않으면 진단 파일로 실제 창 이름을 확인해 매핑합니다.</span></div>
     </div>
     <div class="agent-grid">
-      <article class="agent-card"><h2>설치 · 업그레이드</h2><p>처음 설치하거나 기존 Agent를 최신 버전으로 갱신할 때 사용합니다. 기존 로컬 설정은 업그레이드 시 보존됩니다.</p>
-        <div class="agent-actions"><a class="primary" href="${AGENT_DOWNLOAD_BASE}setup-pos-agent.cmd" download>원클릭 설치 다운로드</a><a href="${AGENT_DOWNLOAD_BASE}setup-pos-agent-compat.cmd" download>호환 설치 · XML 오류용</a><a href="${AGENT_DOWNLOAD_BASE}install-pos-agent.ps1" download>수동 설치 스크립트</a></div>
-      </article>
       <article class="agent-card"><h2>실행 · 중지</h2><p>설치는 유지한 채 현재 Agent만 시작하거나 중지합니다. 중지해도 다음 Windows 로그인 자동 시작 설정은 유지됩니다.</p>
         <div class="agent-actions"><a href="${AGENT_DOWNLOAD_BASE}start-pos-agent.cmd" download>Agent 실행 파일</a><a href="${AGENT_DOWNLOAD_BASE}stop-pos-agent.cmd" download>Agent 중지 파일</a></div>
       </article>
       <article class="agent-card"><h2>진단 · 고급 설정</h2><p>VPOS·먹깨비 등 실제 프로세스 이름과 창 제목을 확인합니다. <code>-Suggest</code>를 붙이면 대상별 매핑 후보도 보여 줍니다. 진단은 프로그램을 실행·종료·전환하지 않고 설정도 바꾸지 않습니다.</p>
         <div class="agent-actions"><a href="${AGENT_DOWNLOAD_BASE}diagnose-pos-targets.ps1" download>진단 파일</a><a href="${AGENT_DOWNLOAD_BASE}pos-agent.config.example.json" download>설정 예시</a><a href="${AGENT_DOWNLOAD_BASE}README.md" download>전체 안내</a></div>
       </article>
-      <article class="agent-card"><h2>삭제</h2><p>이 POS PC에서 EKODI POS Agent 예약 작업과 설치 파일을 완전히 제거합니다. 삭제 전 확인창이 표시됩니다.</p>
+    </div>
+    <div class="agent-card"><h2>매장 POS 바로가기</h2><p>설치가 끝난 각 POS PC에서 해당 매장 POS 통합화면을 열고 Agent 상태 확인 및 Windows 프로그램 전환을 사용합니다.</p><div class="agent-store-links">${stores}</div></div>
+    <details class="agent-maint" id="posAgentMaint" open>
+      <summary>설치 · 업그레이드 · 삭제 · 중앙 상태 <small id="posAgentMaintHint">처음 설치하거나 업그레이드·삭제할 때 엽니다.</small></summary>
+      <div class="agent-grid">
+      <article class="agent-card" data-agent-card="install"><h2>설치 · 업그레이드</h2><p>처음 설치하거나 기존 Agent를 최신 버전으로 갱신할 때 사용합니다. 기존 로컬 설정은 업그레이드 시 보존됩니다.</p>
+        <div class="agent-actions"><a class="primary" href="${AGENT_DOWNLOAD_BASE}setup-pos-agent.cmd" download>원클릭 설치 다운로드</a><a href="${AGENT_DOWNLOAD_BASE}setup-pos-agent-compat.cmd" download>호환 설치 · XML 오류용</a><a href="${AGENT_DOWNLOAD_BASE}install-pos-agent.ps1" download>수동 설치 스크립트</a></div>
+      </article>
+      <article class="agent-card" data-agent-card="remove"><h2>삭제</h2><p>이 POS PC에서 EKODI POS Agent 예약 작업과 설치 파일을 완전히 제거합니다. 삭제 전 확인창이 표시됩니다.</p>
         <div class="agent-actions"><a class="danger" href="${AGENT_DOWNLOAD_BASE}remove-pos-agent.cmd" download>원클릭 삭제 다운로드</a><a href="${AGENT_DOWNLOAD_BASE}uninstall-pos-agent.ps1" download>수동 삭제 스크립트</a></div>
       </article>
       <article class="agent-card" data-pos-agent-central="v1"><h2>여러 POS PC 중앙 상태 (선택)</h2><p>최고관리자가 기기 관리에서 <strong>기기 유형 POS</strong>로 1회용 등록 코드를 발급한 뒤, 각 POS PC에서 등록 파일을 실행해 코드를 입력합니다. PC는 온라인 여부·Agent 버전·설정/실행 프로그램 수만 바깥 방향으로 보고하며, 중앙에서 원격 명령을 보내거나 Windows를 제어하지 않습니다. 창 제목은 PC 밖으로 보내지 않습니다.</p>
         <div class="agent-actions"><a class="primary" href="${AGENT_DOWNLOAD_BASE}enroll-pos-agent.cmd" download>중앙 상태 등록 파일</a><a href="https://ekodi.kr/admin/status/devices" target="_top">기기 관리 · 등록 POS PC 보기</a></div>
       </article>
-    </div>
-    <div class="agent-card"><h2>매장 POS 바로가기</h2><p>설치가 끝난 각 POS PC에서 해당 매장 POS 통합화면을 열고 Agent 상태 확인 및 Windows 프로그램 전환을 사용합니다.</p><div class="agent-store-links">${stores}</div></div>
+      </div>
+    </details>
     <div class="agent-note">브라우저 보안상 웹페이지가 Windows 설치·삭제 파일을 자동 실행할 수는 없습니다. 다운로드한 <strong>.cmd</strong> 파일을 해당 POS PC에서 직접 실행해야 하며, Windows가 관리자 권한을 요청하면 내용을 확인한 뒤 허용합니다. Agent는 계속 <strong>127.0.0.1</strong>에만 연결됩니다.</div>
   </section>`;
 }
@@ -337,6 +347,37 @@ function portfolioPanelClient(){
     const button=document.getElementById('posAgentCheck');
     const stores=['jadam','pizzamaru','yogurt'];
     const label={jadam:'자담치킨',pizzamaru:'피자마루',yogurt:'요거트퍼플'};
+    const manager=document.querySelector('[data-cmpmyi-pos-agent-manager]');
+    const live=document.getElementById('posAgentLive');
+    const chips=document.getElementById('posAgentChips');
+    const programs=document.getElementById('posAgentPrograms');
+    const openLinks=document.getElementById('posAgentOpen');
+    const maint=document.getElementById('posAgentMaint');
+    const maintHint=document.getElementById('posAgentMaintHint');
+    const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    function layout(mode,outdated){
+      if(manager)manager.dataset.agentState=mode;
+      if(live)live.hidden=mode!=='online';
+      // Installed and current: maintenance tools step back; otherwise installation leads.
+      if(maint)maint.open=mode!=='online'||Boolean(outdated);
+      if(maintHint)maintHint.textContent=mode==='online'?(outdated?'업데이트가 필요합니다. 원클릭 설치로 업그레이드하세요.':'설치 완료 · 업그레이드나 삭제가 필요할 때만 엽니다.'):'처음 설치하거나 업그레이드·삭제할 때 엽니다.';
+    }
+    function renderLive(results,first,outdated,latest,central){
+      const targets=Array.isArray(first.targets)?first.targets:[];
+      const configured=targets.filter(row=>row.configured).length;
+      const running=targets.filter(row=>row.running).length;
+      const centralOk=first.central?.state==='online';
+      if(chips)chips.innerHTML=[
+        ['Agent '+esc(first.version||'?')+(outdated?' · 업데이트 필요':' · 최신'),outdated?'warn':'ok'],
+        first.deviceName?['PC '+esc(first.deviceName),'']:null,
+        ['허용 매장 '+esc(results.map(row=>label[row.store]||row.store).join(' · ')),'ok'],
+        ['프로그램 실행 '+running+' / 설정 '+configured,running?'ok':(configured?'warn':'')],
+        [esc(central),centralOk?'ok':'']
+      ].filter(Boolean).map(([text,tone])=>'<span class="agent-chip"'+(tone?' data-tone="'+tone+'"':'')+'>'+text+'</span>').join('');
+      // Window titles stay out of the page: only label, configured and running are shown.
+      if(programs)programs.innerHTML=targets.length?targets.map(row=>{const run=row.running?'on':(row.configured?'off':'unset');return '<div class="agent-program" data-run="'+run+'"><b>'+esc(row.label||row.id||'프로그램')+'</b><span>'+(run==='on'?'● 실행 중':run==='off'?'○ 꺼짐':'설정 필요')+'</span></div>'}).join(''):'<div class="agent-program" data-run="unset"><b>등록된 프로그램 없음</b><span>진단 파일로 매핑</span></div>';
+      if(openLinks)openLinks.innerHTML=results.map(row=>'<a href="/'+esc(row.store)+'/admin/pos" target="_top">'+esc(label[row.store]||row.store)+' POS 통합화면 열기</a>').join('');
+    }
     async function probe(store){
       const controller=new AbortController();
       const timer=setTimeout(()=>controller.abort(),1800);
@@ -362,8 +403,11 @@ function portfolioPanelClient(){
         const central={disabled:'중앙 상태 미등록(선택)',not_enrolled:'중앙 상태 미등록(선택)',starting:'중앙 상태 연결 중',online:'중앙 상태 보고 중',retrying:'중앙 상태 재시도 중',revoked_or_unauthorized:'중앙 등록 해제됨',blocked_api_base:'중앙 보고 차단(주소 오류)',invalid_credential:'중앙 등록정보 확인 필요'}[first.central?.state||'disabled']||'중앙 상태 확인 필요';
         const latest='0.2.0';const parts=String(first.version||'0').split('.').map(Number);const outdated=parts[0]<0||(parts[0]===0&&(parts[1]||0)<2);
         if(state)state.textContent='연결됨 · '+(first.deviceName?first.deviceName+' · ':'')+'Agent '+(first.version||'')+(outdated?' · 업데이트 필요(최신 '+latest+', 원클릭 설치로 업그레이드)':'')+' · 허용 매장 '+allowed+' · 설정 '+configured+'개 · 실행 '+running+'개 · '+central;
+        renderLive(results,first,outdated,latest,central);
+        layout('online',outdated);
       }else{
         if(host)host.dataset.state='offline';
+        layout('offline',false);
         if(state)state.textContent='이 PC의 POS Agent가 연결되지 않았습니다. 웹 관리기능은 계속 사용할 수 있습니다. 이 PC에 처음 설치하려면 아래 원클릭 설치를 사용하세요.';
       }
       if(button)button.disabled=false;

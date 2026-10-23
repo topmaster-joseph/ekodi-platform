@@ -238,3 +238,22 @@ test('CMPMYI POS Agent manager offers compat setup, optional central enrollment 
   assert.match(runtime,/중앙 상태 보고 중/);
   assert.match(runtime,/deviceName/);
 });
+
+test('POS Agent manager adapts its layout: installed PCs see status first, install tools fold away',async()=>{
+  const html=await storePortfolioAdminPanelPage('agent').text();
+  assert.match(html,/data-agent-layout="adaptive-v2"/);
+  assert.match(html,/id="posAgentLive" hidden/);
+  assert.match(html,/<details class="agent-maint" id="posAgentMaint" open>/);
+  assert.match(html,/data-agent-onboarding/);
+  assert.match(html,/\[data-agent-state=online\] \[data-agent-onboarding\]\{display:none\}/);
+  // Install/delete live inside the maintenance fold; run/stop and diagnostics stay outside it.
+  const fold=html.slice(html.indexOf('id="posAgentMaint"'),html.indexOf('</details>'));
+  for(const file of ['setup-pos-agent.cmd','setup-pos-agent-compat.cmd','remove-pos-agent.cmd','enroll-pos-agent.cmd'])assert.match(fold,new RegExp(file.replaceAll('.','\\.')));
+  assert.doesNotMatch(fold,/start-pos-agent\.cmd|diagnose-pos-targets\.ps1/);
+  const script=await storePortfolioAdminPanelScript().text();
+  const runtime=script.slice(script.indexOf("ekodiStorePortfolioPanel==='agent'"));
+  assert.match(runtime,/layout\('online',outdated\)/);
+  assert.match(runtime,/layout\('offline',false\)/);
+  assert.match(runtime,/maint\.open=mode!=='online'\|\|Boolean\(outdated\)/);
+  assert.doesNotMatch(runtime.slice(0,runtime.indexOf("ekodiStorePortfolioPanel!=='delivery'")),/windowTitle/);
+});
