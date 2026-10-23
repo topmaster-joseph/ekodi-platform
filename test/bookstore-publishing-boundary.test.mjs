@@ -55,7 +55,8 @@ test('publishing staging accepts only verified Cloudflare Access protection',()=
 test('publishing catalog fetch is private and degrades safely when Books binding is missing', async()=>{
   const {default: publishing}=await import('../publishing-worker.js');
   const calls=[];
-  const request=new Request('https://ekodi.kr/publishing/books.json');
+  // Canonical path gateway strips /publishing before invoking the publishing Worker.
+  const request=new Request('https://ekodi.kr/books.json');
   const response=await publishing.fetch(request,{
     BOOKS:{fetch:async req=>{
       calls.push(new URL(req.url).pathname);
