@@ -174,6 +174,16 @@ export async function verifyCooperativeServiceWorkflows({ contextFor, fixture: f
     await member.locator('#myBusinessForm button[type="submit"]').click();
     await member.waitForFunction(() => document.querySelector('#status').textContent.includes('나의 사업정보가 저장'));
     await reload(member); assert.equal(await member.locator('#myBusinessForm [name="business"]').inputValue(), memberBusiness);
+    for (const width of [320, 390]) {
+      await member.setViewportSize({ width, height: 844 });
+      const lines = await member.getByRole('cell', { name: '공동유통', exact: true }).evaluate(cell => {
+        const range = document.createRange(); range.selectNodeContents(cell);
+        return new Set([...range.getClientRects()].map(rect => Math.round(rect.top))).size;
+      });
+      assert.equal(lines, 1, 'A Korean industry word must stay intact in the shared member table');
+      assert.equal(await member.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+    }
+    proof(coop, 'mobile-table-preserves-natural-korean-words', { widths: [320, 390] });
     assert.equal((await read(coop)).state.founders[0].business, business);
     assert.ok((await download(member, '#charter')).text.includes(coop.name));
     await screenshot(member, coop.slug + '-service-member-390');
