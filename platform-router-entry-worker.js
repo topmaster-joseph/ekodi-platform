@@ -24,7 +24,6 @@ import { isStoreAdminPathShape, resolveStoreAdminRoute, storeAdminPage, storeAdm
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
 import { siteAdminBootstrapPage, siteAdminBootstrapScript } from './site-admin-bootstrap-page.js';
 import { churchMemberHomePage, isChurchMemberHomePath } from './church-member-home-page.js';
-import { isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
 import { workspaceTradeAdminScript } from './workspace-trade-admin-page.js';
 import { isTradePartnerPath, tradePartnerPage, tradePartnerCss, tradePartnerScript } from './workspace-trade-portal.js';
 import { tradeProductPublicRoute, tradeProductPublicPage } from './trade-product-public-page.js';
@@ -604,7 +603,7 @@ async function routePlatform(request,env,ctx){
           return request.method==='GET'?decorateDiscoveryResponse(response,url.pathname):response;
         }
         if(isWorkspaceAdminAssetPath(url.pathname))return legacyPlatformRouter.fetch(request,env,ctx);
-        if(isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');
+        if(isWorkspaceAdminPath(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');
       }
       if(['GET','HEAD'].includes(request.method)&&isEkodiIndexNowKeyPath(url.pathname))return ekodiIndexNowKeyResponse();
       if(['GET','HEAD'].includes(request.method)&&url.pathname===EKODI_PUBLIC_REGISTRY_PATH)return ekodiPublicRegistryResponse(env,{head:request.method==='HEAD'});
