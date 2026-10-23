@@ -20,9 +20,9 @@ test('broken production admin hosts are covered by the independent route gateway
 });
 
 test('admin root hands off to the central control plane without caching', async () => {
-  const response = await worker.fetch(new Request('https://invest.ekodi.kr/admin'));
+  const response = await worker.fetch(new Request('https://management.ekodi.kr/admin'));
   assert.equal(response.status, 307);
-  assert.equal(response.headers.get('location'), 'https://admin.ekodi.kr/?source=invest.ekodi.kr');
+  assert.equal(response.headers.get('location'), 'https://admin.ekodi.kr/?source=management.ekodi.kr');
   assert.equal(response.headers.get('cache-control'), 'no-store');
   assert.equal(response.headers.get('x-ekodi-admin-entry'), 'central-handoff-v1');
   assert.match(response.headers.get('x-robots-tag') || '', /noindex/);
@@ -51,3 +51,6 @@ test('retired payment admin routes must not remain in the independent gateway', 
     assert.equal(config.includes(`pattern = "${host}/admin*"`), false);
   }
 });
+
+
+test('retired Invest domain admin route returns 410 instead of central admin redirect',async()=>{const response=await worker.fetch(new Request('https://invest.ekodi.kr/admin'));assert.equal(response.status,410);assert.equal(response.headers.get('x-ekodi-route'),'invest-retired');assert.equal(response.headers.get('location'),null);});
