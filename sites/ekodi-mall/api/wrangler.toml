@@ -45,6 +45,10 @@ storage = "sqlite"
 enabled = true
 invocation_logs = true
 
+# EKODI-MALL-PAY-RECON-001: 결제 대사·만료 주문 정리(entry.js scheduled)
+[triggers]
+crons = ["*/10 * * * *"]
+
 [[d1_databases]]
 binding = "DB"
 database_name = "ekodi-mall"

@@ -11,6 +11,7 @@ import { handleDomemaeRequest, domemaeConnectorReady } from './domemae.js';
 import { handleAnalyticsRequest } from './analytics.js';
 import { handleStorefrontRequest } from './storefront.js';
 import { commerceEventSchemaReady } from './commerce-events.js';
+import { reconcileMallPayments, inventorySchemaReady } from './payment-reconciliation.js';
 import { handleCommerceOperationsRequest } from './commerce-operations.js';
 import { handleAmazonRequest, amazonRuntimeStatus, amazonCostSchemaReady, amazonConnectionSchemaReady } from './amazon.js';
 import { handleAmazonReadonlyRequest, amazonReadSyncSchemaReady } from './amazon-readonly-sync.js';
@@ -159,6 +160,7 @@ export default {
       const supplierDiscoveryReady = Boolean(env.DB) && await supplierDiscoverySchemaReady(env);
       const domemaeReady = Boolean(env.DB) && await domemaeConnectorReady(env);
       const commerceEventsReady = Boolean(env.DB) && await commerceEventSchemaReady(env);
+      const inventoryReady = Boolean(env.DB) && await inventorySchemaReady(env);
       const amazon = await amazonRuntimeStatus(env);
       const amazonCostReady = Boolean(env.DB) && await amazonCostSchemaReady(env);
       const amazonConnectionReady = Boolean(env.DB) && await amazonConnectionSchemaReady(env);
@@ -169,6 +171,7 @@ export default {
         sourcingSchemaReady:sourcingReady, fulfillmentSchemaReady:fulfillmentReady, verificationSchemaReady:verificationReady,
         supplierPilotSchemaReady:supplierPilotReady, supplierDiscoverySchemaReady:supplierDiscoveryReady, domemaeConnectorReady:domemaeReady,
         commerceEventSchemaReady:commerceEventsReady, commerceOsVersion:1,
+        inventorySchemaReady:inventoryReady, paymentWebhookPath:'/api/public/payments/webhook', paymentReconciliation:'cron-10m',
         amazonConnector:amazon, amazonCostSchemaReady:amazonCostReady, amazonConnectionSchemaReady:amazonConnectionReady, amazonReadSyncSchemaReady:amazonReadSyncReady,
         domemaeLookupEnabled:String(env.DOMEMAE_LOOKUP_ENABLED || '').toLowerCase() === 'true', domemaeOrderEnabled:false,
         attributionWindowDays:ATTRIBUTION_WINDOW_DAYS,
@@ -234,5 +237,15 @@ export default {
       if (result) return reply(result.body, result.status, origin, env);
     }
     return core.fetch(request, env);
+  },
+
+  // EKODI-MALL-PAY-RECON-001: 10분마다 결제대기 주문을 토스 재조회로 대사하고 만료 주문의 재고를 되돌린다.
+  async scheduled(controller, rawEnv, ctx) {
+    const env = withMerchantKeys(rawEnv, rawEnv?.EKODIPAY_PROFILE || MALL_MERCHANT_PROFILE);
+    if (!['1','true','yes','on'].includes(String(env.PAYMENTS_ENABLED || '').toLowerCase())) return;
+    const run = reconcileMallPayments(env).then(summary => {
+      if (summary.checked || summary.errors) console.log('mall payment reconciliation', JSON.stringify(summary));
+    }).catch(error => console.error('mall payment reconciliation failed', error));
+    if (ctx?.waitUntil) ctx.waitUntil(run); else await run;
   }
 };
