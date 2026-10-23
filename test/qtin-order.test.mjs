@@ -476,7 +476,13 @@ function adminBrowser({ fragment = '', centralSession = null, fetchHandler = nul
     },
     createElement: () => element(),
     querySelectorAll: () => [],
+    head: { append(script) { if (typeof script.onload === 'function') script.onload(); } },
   };
+  const google = { init: null, host: null };
+  const window = { google: { accounts: { id: {
+    initialize(options) { google.init = options; },
+    renderButton(host) { google.host = host; },
+  } } } };
   document.getElementById('campaign').value = '2026-11';
   const location = { hash: fragment, pathname: '/qtin/admin', search: '', origin: 'https://ekodi.kr', href: '' };
   const history = { cleaned: false, replaceState() { this.cleaned = true; location.hash = ''; } };
@@ -492,10 +498,10 @@ function adminBrowser({ fragment = '', centralSession = null, fetchHandler = nul
     getItem(key) { return key === 'sb-renzehysxirjilvdxacv-auth-token' && centralSession ? JSON.stringify(centralSession) : null; },
   };
   vm.runInNewContext(code, {
-    document, location, history, fetch, sessionStorage, localStorage,
+    document, window, location, history, fetch, sessionStorage, localStorage,
     AbortController, URL, URLSearchParams, setTimeout, clearTimeout,
   }, { timeout: 1000 });
-  return { elements, location, history, requests, sessionStorage };
+  return { elements, location, history, requests, sessionStorage, google };
 }
 
 test('QTIN admin erases handoff tokens before network and shows a recoverable failure instead of spinning', async () => {
@@ -503,10 +509,10 @@ test('QTIN admin erases handoff tokens before network and shows a recoverable fa
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(browser.history.cleaned, true, 'one-time hash must be erased before the network response');
   assert.equal(browser.location.hash, '');
-  const host = browser.elements.get('state');
-  assert.match(host.children.map(item => item.textContent).join(' '), /관리자 확인 실패/);
-  const retry = host.children.find(item => item.textContent === '로그인 다시 확인');
-  assert.ok(retry?.href.startsWith('https://ekodi.kr/auth/'));
+  assert.match(browser.elements.get('state').textContent, /관리자 확인 실패/);
+  assert.equal(browser.elements.get('adminLogin').hidden, false, 'login stays on the same page');
+  assert.equal(browser.elements.get('adminWorkspace').hidden, true);
+  assert.equal(browser.elements.get('adminAuthFallback').href, 'https://ekodi.kr/auth/?site=portal');
   assert.match(browser.elements.get('msg').textContent, /서버 연결에 실패/);
   assert.equal(browser.location.href, '', 'transient failure must not trigger a redirect loop');
 });
@@ -529,6 +535,8 @@ test('QTIN admin reuses the same-origin central Supabase session and checks righ
   assert.equal(JSON.parse(browser.sessionStorage.getItem('ekodi-qtin-admin-session')).accessToken, bearer, 'operator-only test checkout must see the recovered session');
   assert.match(browser.elements.get('state').innerHTML, /operator@example.test/);
   assert.match(browser.elements.get('summary').innerHTML, /아직 결제 완료된 신청이 없습니다/);
+  assert.equal(browser.elements.get('adminLogin').hidden, true);
+  assert.equal(browser.elements.get('adminWorkspace').hidden, false);
 });
 
 test('serialised browser scripts survive wrangler esbuild keepNames (__name) without leaking a global', async () => {
@@ -825,4 +833,60 @@ test('delivery: church pickup stays free; parcel adds the fixed shipping fee and
   assert.equal(order.amount, row.total_amount);
   const page = await (await handleRequest(new Request('https://ekodi.kr/qtin/church'), env, OPEN_NOW)).text();
   assert.ok(page.includes('id="delParcel"') && page.includes('"shippingFee":3000') && page.includes('id="postalCode"'));
+});
+
+
+test('QTIN admin completes Google sign-in on its own page using central identity API and server role', async () => {
+  const browser = adminBrowser({
+    fetchHandler: async (url, options) => {
+      const path = String(url);
+      const payload = options?.body ? JSON.parse(options.body) : {};
+      if (path.endsWith('/identity-api/google/exchange')) {
+        assert.equal(payload.credential, 'synthetic-google-proof');
+        assert.equal(payload.nonce, 'nonce-synthetic');
+      }
+      if (path.endsWith('/auth/v1/verify')) assert.equal(payload.token_hash, 'synthetic-one-use');
+      const data = path.endsWith('/identity-api/challenge') ? { clientId: 'synthetic.apps.googleusercontent.com', nonce: 'nonce-synthetic' }
+        : path.endsWith('/identity-api/google/exchange') ? { tokenHash: 'synthetic-one-use', type: 'email' }
+        : path.endsWith('/auth/v1/verify') ? { access_token: 'synthetic-admin-token', refresh_token: 'synthetic-refresh', expires_in: 3600 }
+        : path.endsWith('/campaigns') ? { me: { email: 'operator@example.test', canWrite: true, canRefund: false }, payment: { ready: false, missing: ['payments-disabled'] }, campaigns: [{ id: '2026-11', target_year: 2026, target_month: 11, state: 'open' }] }
+        : { campaign: { opens_at: '2026-10-19T15:00:00Z', closes_at: '2026-10-25T14:59:59Z', state: 'open' }, byProduct: [], products: [], orders: [] };
+      return new Response(JSON.stringify(data), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+  });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(browser.location.href, '');
+  assert.equal(browser.elements.get('adminLogin').hidden, false);
+  assert.equal(browser.elements.get('adminWorkspace').hidden, true);
+  assert.equal(browser.google.init.client_id, 'synthetic.apps.googleusercontent.com');
+  assert.ok(browser.google.host, 'the Google button is rendered within QTIN admin');
+  await browser.google.init.callback({ credential: 'synthetic-google-proof' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(browser.location.href, '', 'do not navigate away to a church site');
+  assert.equal(browser.elements.get('adminLogin').hidden, true);
+  assert.equal(browser.elements.get('adminWorkspace').hidden, false);
+  assert.equal(JSON.parse(browser.sessionStorage.getItem('ekodi-qtin-admin-session')).accessToken, 'synthetic-admin-token');
+  assert.equal(browser.requests.find(r => r.url.endsWith('/campaigns')).options.headers.authorization, 'Bearer synthetic-admin-token');
+  assert.match(browser.elements.get('state').innerHTML, /operator@example.test/);
+});
+
+test('QTIN in-page Google login never exposes orders after an admin 403 response', async () => {
+  const browser = adminBrowser({
+    fetchHandler: async url => {
+      const path = String(url);
+      const data = path.endsWith('/identity-api/challenge') ? { clientId: 'synthetic.apps.googleusercontent.com', nonce: 'nonce-synthetic' }
+        : path.endsWith('/identity-api/google/exchange') ? { tokenHash: 'synthetic-one-use', type: 'email' }
+        : path.endsWith('/auth/v1/verify') ? { access_token: 'synthetic-member-token', expires_in: 3600 }
+        : { error: '큐티인 신청 관리 권한이 없습니다.' };
+      const status = path.endsWith('/campaigns') ? 403 : 200;
+      return new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } });
+    }
+  });
+  await new Promise(resolve => setImmediate(resolve));
+  await browser.google.init.callback({ credential: 'synthetic-google-proof' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(browser.elements.get('adminLogin').hidden, false);
+  assert.equal(browser.elements.get('adminWorkspace').hidden, true);
+  assert.match(browser.elements.get('state').textContent, /권한 없음/);
+  assert.match(browser.elements.get('adminAuthMessage').textContent, /관리자 권한이 없습니다/);
 });
