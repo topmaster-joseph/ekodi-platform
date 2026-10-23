@@ -243,6 +243,8 @@ test('POS Agent manager adapts its layout: installed PCs see status first, insta
   const html=await storePortfolioAdminPanelPage('agent').text();
   assert.match(html,/data-agent-layout="adaptive-v2"/);
   assert.match(html,/id="posAgentLive" hidden/);
+  // class display rules must not override the hidden attribute (empty box regression)
+  assert.match(html,/\.agent-live\[hidden\]\{display:none\}/);
   assert.match(html,/<details class="agent-maint" id="posAgentMaint" open>/);
   assert.match(html,/data-agent-onboarding/);
   assert.match(html,/\[data-agent-state=online\] \[data-agent-onboarding\]\{display:none\}/);
