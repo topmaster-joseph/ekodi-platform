@@ -54,3 +54,18 @@ test('QR E2E reuses the existing secret-masked, expiring and revoked official Ch
   assert.match(script,/viewerTracks/);
   assert.match(script,/return/);
 });
+
+test('Church Live E2E can be triggered by a bounded owner-only issue command',()=>{
+ assert.match(workflow,/issue_comment:/);
+ assert.match(workflow,/types: \[created\]/);
+ assert.match(workflow,/github\.repository == 'topmaster-joseph\/ekodi-platform'/);
+ assert.match(workflow,/github\.event\.issue\.number == 5140/);
+ assert.match(workflow,/github\.event\.comment\.user\.login == 'topmaster-joseph'/);
+ assert.match(workflow,/github\.event\.comment\.body == '\/ekodi-church-live-e2e 2026-10-25'/);
+ assert.match(workflow,/github\.event_name == 'workflow_dispatch'/);
+ assert.match(workflow,/github\.event_name == 'workflow_run'/);
+ assert.match(script,/protected_sunday_worship_window/);
+ assert.match(script,/Asia\/Seoul/);
+ assert.match(script,/passed:false,skipped:true,reason:'active_church_broadcast'/);
+ assert.doesNotMatch(workflow,/pull_request_target:/);
+});

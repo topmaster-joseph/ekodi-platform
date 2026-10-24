@@ -60,9 +60,22 @@ async function text(page,selector){
 }
 
 await fs.mkdir(artifactDir,{recursive:true});
+// Avoid a synthetic public test broadcast near the Sunday 11:00 KST worship service.
+function scheduledWorshipWindow(now=new Date()){
+  const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Seoul',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(now);
+  const fields=Object.fromEntries(parts.map(item=>[item.type,item.value]));
+  const minuteOfDay=Number(fields.hour)*60+Number(fields.minute);
+  return fields.weekday==='Sun'&&minuteOfDay>=9*60+30&&minuteOfDay<13*60;
+}
+if(scheduledWorshipWindow()){
+  Object.assign(report,{passed:false,skipped:true,reason:'protected_sunday_worship_window'});
+  await fs.writeFile(`${artifactDir}/report.json`,JSON.stringify(report,null,2));
+  console.log('Church Live E2E safely skipped: protected Sunday worship window.');
+  process.exit(0);
+}
 const initial=await publicLive();
 if(initial.live){
-  Object.assign(report,{passed:true,skipped:true,reason:'active_church_broadcast'});
+  Object.assign(report,{passed:false,skipped:true,reason:'active_church_broadcast'});
   await fs.writeFile(`${artifactDir}/report.json`,JSON.stringify(report,null,2));
   console.log('Church Live production E2E skipped: a real live broadcast is active.');
   process.exit(0);
