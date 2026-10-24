@@ -50,7 +50,7 @@ const checks = [
   ['assets/supplier-connectors.html', ['OFFICIAL SUPPLIER CONNECTORS', '도매매 · 도매꾹 공식 API', 'ORDER DRY-RUN', '/assets/supplier-connectors.js', '코드 없음']],
   ['assets/supplier-connectors.js', ['/api/internal/connectors/domemae/readiness', '/api/internal/connectors/domemae/item-lookup', '/api/internal/connectors/domemae/order-dry-run', '실제 주문 API는 호출하지 않았습니다']],
   ['assets/shared-product.html', ['PUBLIC PRODUCT', '/assets/public-product.js']],
-  ['_redirects', ['/p/* /assets/shared-product.html 200', '/store/* /assets/shared-store.html 200', '/free-ops /assets/free-ops.html 200', '/sourcing /assets/sourcing-lab.html 200', '/fulfillment', '/supplier-ops /assets/supplier-ops.html 200', '/verification-ops /assets/verification-ops.html 200', '/supplier-discovery /assets/supplier-discovery.html 200', '/supplier-connectors /assets/supplier-connectors.html 200']],
+  ['_redirects', ['/p/* /assets/shared-product 200', '/store/* /assets/shared-store 200', '/free-ops /assets/free-ops 200', '/sourcing /assets/sourcing-lab 200', '/fulfillment', '/supplier-ops /assets/supplier-ops 200', '/verification-ops /assets/verification-ops 200', '/supplier-discovery /assets/supplier-discovery 200', '/supplier-connectors /assets/supplier-connectors 200']],
   ['build-meta.json', ['"platformMode": "marketplace-v2"', paymentsMarker, '"commerceOsVersion": 1', '"paymentProviderAuthority": "server-capability-registry"', '"highImpactExecution": "human-gated"', '"affiliateExternalRouting": true']]
 ];
 const errors = [];
