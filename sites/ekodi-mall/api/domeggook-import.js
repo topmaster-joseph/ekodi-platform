@@ -7,6 +7,7 @@
 // 응답 경로 근거: 도매꾹 Open API 문서 getItemView 4.6 (basis/price/qty/deli/thumb/desc).
 import { MEDIA_PREFIX, MAX_IMAGES, MAX_IMAGE_BYTES } from './product-media.js';
 import { raiseAlert } from './ops-alerts.js';
+import { maskSupplierText } from './supplier-mask.js';
 
 export const PROVIDER = 'domeggook';
 const ENDPOINT = 'https://domeggook.com/ssl/api/';
@@ -179,7 +180,9 @@ async function copyImages(env, productId, urls, fetchImpl) {
   return images;
 }
 
-export function productBodyFromItem(item, salePrice) {
+export function productBodyFromItem(rawItem, salePrice) {
+  // 공개 문구에는 공급처 주소·상품번호를 남기지 않는다(에코디몰 고유 상품으로 노출).
+  const item = { ...rawItem, title: maskSupplierText(rawItem.title) || '에코디몰 엄선 상품' };
   const stock = item.inventory === null ? 10 : Math.min(MAX_STOCK, Math.max(0, Math.trunc(item.inventory)));
   const jeju = item.jejuExtra ? ` 제주·도서산간은 추가 배송비가 있을 수 있습니다.` : '';
   return {

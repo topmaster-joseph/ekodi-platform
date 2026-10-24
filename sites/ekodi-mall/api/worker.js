@@ -1,4 +1,5 @@
 import { importDomeggookProduct, notifySupplyOrder } from './domeggook-import.js';
+import { maskPublicProductFields } from './supplier-mask.js';
 import { runCuration } from './domeggook-curation.js';
 import { publicImages, uploadProductImage, deleteProductImage, reorderProductImages, servePublicMedia } from './product-media.js';
 import { validateBuyer, checkoutConfig } from './checkout-buyer.js';
@@ -166,8 +167,17 @@ export function calculateOrderAmounts(grossAmount, feeRatePercent) {
 // EKODI-MALL-SOURCING-BOUNDARY-001: 제휴(쿠팡 파트너스 등) 상품은 직접판매 상품으로 소싱할 수 없다.
 // 직접판매는 판매자 수동 등록 또는 도매꾹·도매매 등 공급처 연동으로만 들어온다.
 const AFFILIATE_SOURCE_PATTERN = /(link\.coupang\.com|coupa\.ng|ads-partners\.coupang\.com|partners\.coupang\.com|[?&]lptag=AF|s\.click\.aliexpress\.com|amzn\.to\/|link\.11st\.co\.kr|affiliate)/i;
+// 필드 이름(affiliateUrl 등)이 아니라 사람이 입력한 값만 검사한다. 키까지 문자열화하면
+// 'affiliate' 패턴이 빈 affiliateUrl 키에 걸려 도매꾹 자동 등록 같은 정상 직접판매가 막힌다.
+function stringValues(value, out = [], depth = 0) {
+  if (depth > 8 || value === null || value === undefined) return out;
+  if (typeof value === 'string') out.push(value);
+  else if (Array.isArray(value)) value.forEach((item) => stringValues(item, out, depth + 1));
+  else if (typeof value === 'object') Object.values(value).forEach((item) => stringValues(item, out, depth + 1));
+  return out;
+}
 export function containsAffiliateSource(value) {
-  try { return AFFILIATE_SOURCE_PATTERN.test(JSON.stringify(value ?? '')); } catch { return true; }
+  try { return stringValues(value).some((text) => AFFILIATE_SOURCE_PATTERN.test(text)); } catch { return true; }
 }
 
 export function normalizeProductInput(body = {}) {
@@ -468,12 +478,12 @@ async function getPublicProduct(env, shareCode) {
     publicUrl: row.public_url,
     seller: { type: row.seller_type, displayName: row.seller_display_name, verified: sellerVerified, official: sellerOfficial },
     store: row.store_id ? { name: row.store_name || '', slug: row.store_slug || '' } : null,
-    product: {
+    product: maskPublicProductFields({
       saleType: row.sale_type, category: normalizeCategory(row.category), region: row.primary_region_id ? { primaryRegionId: row.primary_region_id, regionIds: JSON.parse(row.region_ids_json || '[]'), label: row.region_label || '', relationship: row.local_relationship || 'seller-declared', verified: Boolean(row.region_verified) } : null, name: row.name, audience: row.audience || '', oneLine: row.one_line || '', price: row.price,
       benefits: JSON.parse(row.benefits_json || '[]'), specs: JSON.parse(row.specs_json || '[]'), story: row.story || '', fulfillment: row.fulfillment || '',
       contact: row.contact || '', affiliateUrl: row.sale_type === 'affiliate' ? row.affiliate_url || '' : '',
       images: publicImages(row.images_json, env.MALL_BASE_URL)
-    },
+    }),
     feePolicy: feePreview,
     checkoutReady: Boolean(row.checkout_ready),
     publishedAt: row.published_at

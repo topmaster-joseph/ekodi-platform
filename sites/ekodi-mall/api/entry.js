@@ -1,4 +1,5 @@
 import core from './worker.js';
+import { maskPublicProductFields } from './supplier-mask.js';
 import { runSupplyCuration } from './worker.js';
 import { withMerchantKeys, keyDiagnostics } from '../../../ekodipay-core.js';
 import { handleTransactionRehearsal, transactionRehearsalEnabled } from './transaction-rehearsal.js';
@@ -76,11 +77,11 @@ function publicProduct(row) {
     publicUrl: row.public_url,
     seller: { type: row.seller_type, displayName: row.seller_display_name },
     store: row.store_id ? { name: row.store_name || '', slug: row.store_slug || '', verificationStatus: row.store_verification_status || 'unverified' } : null,
-    product: {
+    product: maskPublicProductFields({
       saleType: row.sale_type, category: publicCategory(row.category), region: row.primary_region_id ? { primaryRegionId: row.primary_region_id, regionIds: parseJson(row.region_ids_json), label: row.region_label || '', relationship: row.local_relationship || 'seller-declared', verified: Boolean(row.region_verified) } : null, name: row.name, audience: row.audience || '', oneLine: row.one_line || '', price: row.price,
       benefits: parseJson(row.benefits_json), specs: parseJson(row.specs_json), story: row.story || '', fulfillment: row.fulfillment || '',
       contact: row.contact || '', affiliateUrl: row.sale_type === 'affiliate' ? row.affiliate_url || '' : ''
-    },
+    }),
     businessStoreVerified: verifiedBusinessStore,
     checkoutReady: Boolean(row.checkout_ready) && (row.seller_type !== 'business' || verifiedBusinessStore),
     paymentsEnabled: false,

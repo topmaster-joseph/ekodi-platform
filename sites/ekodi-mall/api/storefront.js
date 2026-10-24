@@ -1,3 +1,4 @@
+import { maskSupplierText } from './supplier-mask.js';
 const clean = (value, max = 500) => String(value ?? '').trim().slice(0, max);
 const STORE_SLUG = /^[a-z0-9-]{2,80}$/;
 
@@ -47,8 +48,8 @@ async function publicStore(env, slug) {
     products: products.map((product) => ({
       shareCode: product.shareCode,
       publicUrl: product.publicUrl,
-      name: product.name,
-      oneLine: product.oneLine || '',
+      name: maskSupplierText(product.name),
+      oneLine: maskSupplierText(product.oneLine || ''),
       category: product.category,
       saleType: product.saleType,
       price: product.price === null || product.price === undefined ? null : Number(product.price),
