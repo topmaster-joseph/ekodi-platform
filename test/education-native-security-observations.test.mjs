@@ -99,3 +99,23 @@ test('Premium Studio bootcamp cross-check is once per release and backs off rath
   const premium=deploy.indexOf('Verify Premium Studio instructor, presenter and learner flows on desktop and mobile');
   assert.ok(single>=0&&premium>single,'dedicated five-viewport bootcamp verification still runs first');
 });
+
+test('Cloudflare JS detections blocked by the Education CSP: accepted only for the audited snippet hash',async()=>{
+  const m=await import('../scripts/education-native-security-observations.mjs');
+  const {createHash}=await import('node:crypto');
+  const body="window.__CF$cv$params={r:'b1c2d3e4f5a6b7c8',t:'MTc5MjgzOTA5Nw==',u:'01a16d899f687206b341f5c0bdc3fa89'};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";
+  const hash=createHash('sha256').update(body).digest('base64');
+  const msg=h=>"Executing inline script violates the following Content Security Policy directive 'script-src 'self' https://cdn.jsdelivr.net https://ekodi.kr'. Either the 'unsafe-inline' keyword, a hash ('sha256-"+h+"'), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.";
+  assert.equal(m.classifyConsoleSecurityBlock(msg(hash)),'cloudflare-js-detection-blocked-by-CSP');
+  assert.equal(m.classifyConsoleSecurityBlock(msg(hash).replace('https://ekodi.kr','https://evil.example')),null,'other policies stay errors');
+  assert.equal(m.verifyKnownSecurityBlocks({consoleBlocks:[{message:msg(hash)}]}).ok,false,'unaudited hash is never accepted');
+  // Lookalikes are not trusted: external loader, other path, malformed ray id.
+  for(const bad of [body.replace("a.src='/cdn-cgi","a.src='https://evil.example/cdn-cgi"),body.replace('/cdn-cgi/challenge-platform/scripts/jsd/main.js','/evil.js'),body.replace("r:'b1c2d3e4f5a6b7c8'","r:'zz'")])
+    assert.deepEqual(m.cloudflareJsDetectionHashes('<body><script>'+bad+'</script></body>'),[]);
+  m.trustCloudflareJsDetections('<html><body><main>x</main><script>'+body+'</script></body></html>');
+  assert.deepEqual(m.verifyKnownSecurityBlocks({consoleBlocks:[{message:msg(hash)}]}),{ok:true,reason:'known-security-blocks-observed-and-enforced'});
+  const other=createHash('sha256').update('alert(1)').digest('base64');
+  assert.equal(m.verifyKnownSecurityBlocks({consoleBlocks:[{message:msg(hash)},{message:msg(other)}]}).reason,'blocked-inline-script-not-an-audited-cloudflare-js-detection');
+  for(const f of ['bootcamp','material-studio','documents','live-studio'])
+    assert.match(readFileSync(new URL('../scripts/verify-education-'+f+'-native.mjs',import.meta.url),'utf8'),/observeCloudflareJsDetections\((?:context|ctx)\);/,f);
+});

@@ -6,7 +6,7 @@ import path from 'node:path';
 import {DEFAULT_PORTRAIT} from '../education/study/ai-bootcamp/documents/portrait.js';
 import {EKODI_SERVICE_MANIFEST} from '../ekodi-service-manifest.js';
 import {classifyConsoleSecurityBlock,classifyRequestSecurityBlock,
-  classifyMutationSecurityBlock,verifyKnownSecurityBlocks} from './education-native-security-observations.mjs';
+  classifyMutationSecurityBlock,verifyKnownSecurityBlocks,observeCloudflareJsDetections} from './education-native-security-observations.mjs';
 
 const preview=process.env.EKODI_EDUCATION_PREVIEW_MODE==='true';
 if(preview&&(process.env.GITHUB_EVENT_NAME!=='pull_request'||process.env.CI!=='true'))
@@ -30,6 +30,7 @@ const validPhoto=Buffer.from(DEFAULT_PORTRAIT.split(',')[1],'base64');
 async function testProfile(browser,profile){
   const ctx=await browser.newContext({viewport:{width:profile.width,height:profile.height},isMobile:profile.isMobile,
     hasTouch:profile.isMobile,locale:'ko-KR',acceptDownloads:true});
+  observeCloudflareJsDetections(ctx);
   const p=await ctx.newPage();
   const x={name:profile.name,checks:[],requestsBlocked:[],errors:[],captures:[],
     consoleErrors:[],requestFailures:[],observedSecurityBlocks:[],passed:false};
