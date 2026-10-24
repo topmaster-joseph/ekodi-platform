@@ -27,7 +27,8 @@ const list = [
   { no: '1003', title: '트렁크 정리함 대형', price: 12000, unitQty: 1 },
   { no: '1004', title: '차량 시트 틈새 수납', price: 800, unitQty: 1 },
   { no: '1005', title: '차량 컵홀더 수납', price: 5500, unitQty: 1 },
-  { no: '1006', title: '차량 정리 바구니', price: 6500, unitQty: 1 }
+  { no: '1006', title: '차량 정리 바구니', price: 6500, unitQty: 1 },
+  { no: '1007', title: '수납 포켓 차량용 RD-10817', price: 4200, unitQty: 1 }
 ];
 const detail = (no, usable = true) => ({ domeggook: { basis: { no, title: `상품 ${no}`, status: '판매중' }, price: { supply: 5000 }, qty: { inventory: 80 },
   deli: { supply: { type: '고정', fee: 3000 } }, thumb: { original: 'https://cdn1.domeggook.com/a.jpg' }, desc: { license: { usable }, contents: { item: '' } } } });
@@ -62,6 +63,16 @@ test('curation discovers, imports with licensed photos only, publishes up to tar
   assert.equal(r3.done, true);
   assert.equal(db.prepare("SELECT COUNT(*) n FROM supply_candidates WHERE item_no IN ('1002','1004')").get().n, 2);
   assert.equal(db.prepare("SELECT COUNT(*) n FROM supply_candidates WHERE item_no IN ('1002','1004') AND status='rejected'").get().n, 2);
+});
+
+test('model-code twins are imported once and capped keywords do not stall discovery', async () => {
+  const { db, env } = setup({ DOMEGGOOK_CURATION_TARGET: '10', DOMEGGOOK_CURATION_PER_KEYWORD: '4' });
+  const calls = [];
+  for (let i = 0; i < 4; i += 1) await runSupplyCuration(env, { fetchImpl: fakeFetch(calls), perRun: 2 });
+  const twin = db.prepare("SELECT status,reason FROM supply_candidates WHERE item_no IN ('1001','1007') ORDER BY item_no").all();
+  assert.equal(twin.filter((t) => t.status === 'imported').length, 1);
+  assert.ok(twin.some((t) => t.reason === 'duplicate-title'), JSON.stringify(twin));
+  assert.ok(db.prepare("SELECT COUNT(*) n FROM supply_curation_keywords WHERE scanned_at IS NOT NULL").get().n >= 2, 'moves on to the next keyword once the first is capped');
 });
 
 test('curation is off unless enabled and needs a verified EKODIan seller', async () => {
