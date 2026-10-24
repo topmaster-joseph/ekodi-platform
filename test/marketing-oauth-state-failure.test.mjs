@@ -61,3 +61,15 @@ test('Meta publish login requests business_management and re-shows the page pick
   assert.match(src, /owned_pages\.limit\(100\)/);
   assert.match(src, /기존 설정 편집/);
 });
+
+test('platform marketing console connects channels to the ekodimall autopost subject', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const [ui, engine] = await Promise.all([
+    readFile(new URL('../marketing-ai-channel-manager.js', import.meta.url), 'utf8'),
+    readFile(new URL('../mall-promotion-automation.js', import.meta.url), 'utf8'),
+  ]);
+  assert.match(ui, /searchParams\.set\('subject_type','tenant'\)/);
+  assert.match(ui, /searchParams\.set\('subject_key','ekodimall'\)/);
+  assert.doesNotMatch(ui, /searchParams\.set\('subject_type','person'\)/);
+  assert.match(engine, /const SUBJECT_KEY = 'ekodimall';/);
+});
