@@ -329,3 +329,12 @@ test('dock guarantees its own stylesheets and the bootstrap accepts the demand l
   // Source exports loadScript/loadStyle; the admin postbuild ships them as loadJs/loadCss. Both must work.
   assert.match(loader,/loadScript,\s*\n\s*loadStyle/);
 });
+
+test('institution practice area ships 7 MNU training templates and runs without a confirm popup',()=>{
+  const ui=read('admin-provider-control.js');
+  assert.match(ui,/FACTCHAT-EDU-TEMPLATES-20261024/);
+  for(const label of ['회의록 정리','공문 초안','보고서 요약','행사 안내문','이메일 회신','발표 자료 개요','부서 협업 정리'])assert.ok(ui.includes(`['${label}',`),label);
+  assert.match(ui,/data-ai-pg-template=/);
+  assert.match(ui,/area\.setSelectionRange\(mark/);
+  assert.doesNotMatch(ui,/기관계정 크레딧으로 1회 호출합니다/);
+});
