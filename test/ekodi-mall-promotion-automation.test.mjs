@@ -24,13 +24,13 @@ test('promotion master gate is fail-closed and shared by every scheduler path', 
 
 test('campaign attribution is deterministic by KST date provider and product', () => {
   assert.equal(campaignKey('2026-09-01','instagram',42),'mall-20260901-instagram-42');
-  assert.deepEqual(kstParts(new Date('2026-08-31T23:15:00Z')), {date:'2026-09-01',hour:8});
+  assert.deepEqual(kstParts(new Date('2026-08-31T23:15:00Z')), {date:'2026-09-01',hour:8,minute:495});
 });
 
 test('fallback content is useful, opportunity-aware and discloses first', () => {
   const content = fallbackContent({product_name:'테스트 상품',category:'생활',campaign_angle:'생활 검색수요 상승 대응형 구매가이드'},'facebook');
   assert.equal(content.mode,'rules');
-  assert.match(content.caption,/^쿠팡 파트너스/);
+  assert.match(content.caption,/^이 포스팅은 쿠팡 파트너스 활동의 일환으로/);
   assert.match(content.caption,/테스트 상품/);
   assert.match(content.caption,/검색수요 상승/);
   assert.doesNotMatch(content.caption,/최저가|무조건|100%/);

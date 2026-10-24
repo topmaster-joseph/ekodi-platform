@@ -6,7 +6,7 @@ const SUBJECT_TYPE = 'tenant';
 const SUBJECT_KEY = 'ekodimall';
 const ACCOUNT_ID = 'coupang-ekodibiz';
 const STOREFRONT = 'ekodi-mall';
-const AFFILIATE_DISCLOSURE = '쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.';
+const AFFILIATE_DISCLOSURE = '이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.';
 const PROVIDERS = Object.freeze(['facebook','instagram','threads']);
 export function mallPromotionAutomationEnabled(env) { return ['1','true','yes','on'].includes(String(env?.MALL_PROMOTION_AUTOMATION_ENABLED || '').trim().toLowerCase()); }
 const RUN_AFTER_KST_HOUR = 8;
@@ -27,7 +27,13 @@ export const PROMOTION_PUBLIC_ORIGIN='https://ekodi.kr';
 export const MALL_PUBLIC_URL=`${PROMOTION_PUBLIC_ORIGIN}/ekodimall`;
 export function promotionLinkUrl(key) { return `${PROMOTION_PUBLIC_ORIGIN}/marketing-connect-api/r/mall/${encodeURIComponent(String(key||''))}`; }
 export function promotionImageUrl(productRowId) { return `${PROMOTION_PUBLIC_ORIGIN}/api/affiliate/public/image/${Number(productRowId)}?storefront=${STOREFRONT}`; }
-export function kstParts(date=new Date()) { const shifted=new Date(date.getTime()+9*60*60*1000); return {date:shifted.toISOString().slice(0,10),hour:shifted.getUTCHours()}; }
+export function kstParts(date=new Date()) { const shifted=new Date(date.getTime()+9*60*60*1000); return {date:shifted.toISOString().slice(0,10),hour:shifted.getUTCHours(),minute:shifted.getUTCHours()*60+shifted.getUTCMinutes()}; }
+// 비규칙 게시: 날짜·채널마다 다른 시각(KST 09:00~21:30)을 결정적으로 고른다. 재시작해도 같은 날엔 같은 시각, 날마다·채널마다 달라진다.
+const IRREGULAR_WINDOW_START = 9*60, IRREGULAR_WINDOW_END = 21*60+30;
+export function irregularSlotMinute(runDate, provider) {
+  let h = 2166136261; for (const ch of `${runDate}|${provider}|ekodimall`) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  return IRREGULAR_WINDOW_START + (h % (IRREGULAR_WINDOW_END - IRREGULAR_WINDOW_START));
+}
 export function campaignKey(runDate,provider,productRowId) { return `mall-${String(runDate).replaceAll('-','')}-${slug(provider)}-${Number(productRowId)}`; }
 function parseJsonObject(text) { const source=clean(text,12000); const start=source.indexOf('{'); const end=source.lastIndexOf('}'); if(start<0||end<=start) return null; try { return JSON.parse(source.slice(start,end+1)); } catch { return null; } }
 
@@ -256,7 +262,10 @@ export async function runMallPromotionAutomation(env,{reason='cron',force=false}
     const status=pending.length?'no_action':'already_done';
     return {ok:true,status,runDate:kst.date,reason,strategy:STRATEGY,board:{weekKey:board.weekKey,daySlot:board.daySlot,boardStatus:board.boardStatus},todayProduct:{productRowId:Number(product.id),productId:product.product_id,productName:product.product_name,tier:product.tier,slot:Number(product.slot||0)},results};
   }
+  const deferred=[];
   for(const {connection,learning} of selected){
+    const slotMinute=irregularSlotMinute(kst.date,connection.provider);
+    if(!force&&kst.minute<slotMinute){ deferred.push({provider:connection.provider,slotKst:`${String(Math.floor(slotMinute/60)).padStart(2,'0')}:${String(slotMinute%60).padStart(2,'0')}`}); continue; }
     const keyValue=campaignKey(kst.date,connection.provider,product.id);
     const linkUrl=promotionLinkUrl(keyValue);
     const imageUrl=promotionImageUrl(product.id);
@@ -277,7 +286,7 @@ export async function runMallPromotionAutomation(env,{reason='cron',force=false}
   }
   const published=results.some(row=>row.status==='published');
   const failed=results.some(row=>row.status==='failed');
-  return {ok:!failed||published,status:published?'ran':failed?'failed':'no_action',runDate:kst.date,reason,strategy:STRATEGY,board:{weekKey:board.weekKey,daySlot:board.daySlot,boardStatus:board.boardStatus},todayProduct:{productRowId:Number(product.id),productId:product.product_id,productName:product.product_name,tier:product.tier,slot:Number(product.slot||0)},results};
+  return {ok:!failed||published,status:published?'ran':failed?'failed':deferred.length?'scheduled':'no_action',runDate:kst.date,reason,strategy:STRATEGY,deferred,board:{weekKey:board.weekKey,daySlot:board.daySlot,boardStatus:board.boardStatus},todayProduct:{productRowId:Number(product.id),productId:product.product_id,productName:product.product_name,tier:product.tier,slot:Number(product.slot||0)},results};
 }
 
 export async function handleMallPromotionRequest(request,env){
