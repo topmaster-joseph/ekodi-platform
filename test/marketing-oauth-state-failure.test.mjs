@@ -51,3 +51,13 @@ test('reason is length-bounded and host is fixed (no open redirect)', async () =
   const p = notice(await call(`/oauth/meta/callback?error_code=999&error_message=${long}&return_url=https://evil.example`));
   assert.ok(p.get('reason').length <= 300);
 });
+
+test('Meta publish login requests business_management and re-shows the page picker', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const src = await readFile(new URL('../marketing-growth-worker.js', import.meta.url), 'utf8');
+  assert.match(src, /'instagram_content_publish','business_management'\];/);
+  assert.match(src, /searchParams\.set\('auth_type','rerequest'\)/);
+  assert.match(src, /metaPagesWithBusinessFallback\(env,userToken,pagesData\.data/);
+  assert.match(src, /owned_pages\.limit\(100\)/);
+  assert.match(src, /기존 설정 편집/);
+});

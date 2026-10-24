@@ -285,11 +285,13 @@ async function startMeta(request, env, identity, subject) {
   const mode = body.mode === 'paid' ? 'paid' : 'publish';
   const registry=await oauthRegistryRow(env,subject,META_PROVIDER,body.registryConnectionId);
   const state = await createOAuthState(env,META_PROVIDER,mode,identity,subject,body.returnUrl,registry?.id||'');
-  const scopes = ['pages_show_list','pages_read_engagement','pages_manage_posts','instagram_basic','instagram_content_publish'];
+  // business_management: 비즈니스 포트폴리오 소속 페이지는 이 권한 없이는 /me/accounts에 나타나지 않는다.
+  const scopes = ['pages_show_list','pages_read_engagement','pages_manage_posts','instagram_basic','instagram_content_publish','business_management'];
   if (mode === 'paid') scopes.push('ads_read','ads_management','business_management');
   const version = clean(env.META_GRAPH_VERSION || 'v25.0',16);
   const url = new URL(`https://www.facebook.com/${version}/dialog/oauth`);
   url.searchParams.set('client_id',String(env.META_APP_ID));
+  url.searchParams.set('auth_type','rerequest');
   url.searchParams.set('redirect_uri',callbackUrl(env,META_PROVIDER));
   url.searchParams.set('state',state);
   url.searchParams.set('response_type','code');
@@ -364,6 +366,30 @@ async function upsertPublishChannel(env, subject, {provider,channelType,displayN
     .bind(subject.type,subject.key,provider,channelType,displayName,externalId,status,safeJson(config),now,now,now).run();
 }
 
+// /me/accounts가 비면 사용자가 속한 비즈니스 포트폴리오의 소유·클라이언트 페이지에서 토큰을 찾는다.
+async function metaPagesWithBusinessFallback(env, userToken, pages) {
+  if (pages.some(page => page?.id && page?.access_token)) return pages;
+  const pageFields = 'id,name,access_token,instagram_business_account{id,username,name}';
+  const url = new URL(`${graphBase(env)}/me/businesses`);
+  url.searchParams.set('fields',`id,owned_pages.limit(100){${pageFields}},client_pages.limit(100){${pageFields}}`);
+  url.searchParams.set('limit','50');
+  url.searchParams.set('access_token',userToken);
+  const data = await fetchJson(url.href).catch(() => ({data:[]}));
+  const seen = new Set(); const found = [];
+  for (const business of (data.data || [])) {
+    for (const page of [...(business?.owned_pages?.data || []), ...(business?.client_pages?.data || [])]) {
+      if (!page?.id || seen.has(String(page.id))) continue;
+      seen.add(String(page.id)); found.push(page);
+    }
+  }
+  return found;
+}
+function metaFailureReason(message) {
+  const code = String(message || '');
+  if (code === 'META_PUBLISH_RESOURCE_NOT_FOUND') return '승인은 되었지만 게시할 Facebook 페이지를 찾지 못했습니다. Meta로 계속을 다시 눌러 "기존 설정 편집"에서 게시할 페이지와 Instagram 계정을 모두 선택하세요. 페이지 관리자(전체 권한) 계정으로 로그인해야 합니다.';
+  if (/client secret/i.test(code)) return '에코디 서버의 Meta 앱 시크릿 코드가 앱과 일치하지 않습니다. GitHub 금고의 META_APP_SECRET을 갱신한 뒤 배포하세요.';
+  return code;
+}
 async function metaCallback(request, env) {
   const url = new URL(request.url);
   const state = await consumeOAuthState(env,url.searchParams.get('state') || '',META_PROVIDER);
@@ -394,9 +420,10 @@ async function metaCallback(request, env) {
     pageUrl.searchParams.set('limit','100');
     pageUrl.searchParams.set('access_token',userToken);
     const pagesData = await fetchJson(pageUrl.href);
+    const pages = await metaPagesWithBusinessFallback(env,userToken,pagesData.data || []);
     let count = 0;
     const connectionIds=[];
-    for (const page of (pagesData.data || [])) {
+    for (const page of pages) {
       if (!page?.id || !page?.access_token) continue;
       const fb = await upsertConnection(env,subject,{provider:'facebook',resourceType:'page',externalId:String(page.id),displayName:clean(page.name || 'Facebook Page',120),token:String(page.access_token),expiresAt,scopes:['pages_manage_posts','pages_read_engagement'],metadata:{source:'meta_oauth',registryConnectionId:state.registry_connection_id||''}});
       if (fb?.id) {
@@ -432,7 +459,7 @@ async function metaCallback(request, env) {
     return redirectResult(state.return_url,{ekodi_connect:'success',provider:'meta',connections:count});
   } catch (error) {
     await markRegistryFailure(env,state,error);
-    return redirectResult(state.return_url,{ekodi_connect:'error',provider:'meta',reason:clean(error.message,160)});
+    return redirectResult(state.return_url,{ekodi_connect:'error',provider:'meta',reason:clean(metaFailureReason(error.message),300)});
   }
 }
 async function threadsCallback(request, env) {
