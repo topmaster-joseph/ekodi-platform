@@ -286,6 +286,8 @@ export async function startMarketingYouTubeOAuth(env,{state,accountHint}={}) {
   const hint=String(accountHint||'').trim(); if(hint) params.set('login_hint',hint);
   return {authorizationUrl:`${AUTH_URL}?${params}`,callbackUrl:redirectUri};
 }
+// Released through the orchestrator-dispatched Storage lane (deploy-storage.yml workflow_dispatch),
+// because GITHUB_TOKEN merges do not emit main push events.
 export async function finishMarketingYouTubeOAuth(env,{state,code,error}={}) {
   if(!ready(env)) throw Object.assign(new Error('GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'),{code:'GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'});
   await ensureSchema(env.DB);
