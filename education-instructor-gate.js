@@ -1,7 +1,9 @@
 // EKODI Education — instructor gate for the Premium Studio operator surfaces.
 //
-// What it protects: the Instructor Studio, the presenter/audience windows and the instructor-only
-// facilitation notes. The Learner Lab, the entry page and the shared engine stay public.
+// What it protects (instructor decision 2026-10-25): only the instructor-only facilitation notes (talk track and
+// answer keys). The Instructor Studio, presenter/audience windows, Learner Lab and shared engine open without a
+// password; the studio and presenter unlock the notes through /study/live/unlock/ and fall back to a locked
+// notes panel when the notes module is refused.
 //
 // How: one shared instructor password, verified server-side in the Education Worker (no new DB, no new
 // auth system, nothing secret in the browser). A correct password yields a short-lived HttpOnly cookie
@@ -31,12 +33,11 @@ const b64u={
 };
 
 // Paths are Education-origin paths (the /edu or /education prefix is already stripped by the router).
+export const UNLOCK_PATH='/study/live/unlock/';
+const isUnlockPath=p=>p==='/study/live/unlock'||p==='/study/live/unlock/'||p==='/study/live/unlock/index.html';
 export function isGatedPath(pathname){
   const p=String(pathname||'').toLowerCase();
-  if(p==='/study/live'||p==='/study/live/')return true;
-  if(p.startsWith('/study/live/index'))return true;
-  if(p==='/study/live/instructor.js'||p==='/study/live/present.js')return true;
-  if(p==='/study/live/present'||p.startsWith('/study/live/present/'))return true;
+  if(isUnlockPath(p))return true;
   return /^\/study\/live\/courses\/[^/]+\.notes\.js$/.test(p);
 }
 const isDocumentPath=p=>!/\.(?:js|mjs|css|json|svg|png|jpe?g|webp|woff2?)$/i.test(String(p||''));
@@ -110,22 +111,30 @@ function sameSiteOrigin(request,url){
 // Relative redirect back to the requested document: resolves correctly under /edu, /education or the
 // Education origin without the Worker knowing which public prefix the visitor used.
 function backTo(url){const seg=url.pathname.endsWith('/')?'./':'./'+url.pathname.split('/').pop();return seg+url.search;}
+// The unlock page returns to the studio or the presenter (fixed, relative targets: no open redirect).
+function courseOf(url){return (url.searchParams.get('c')||'').replace(/[^a-z0-9-]/gi,'').slice(0,64);}
+export function unlockReturn(url){
+  const up=url.pathname.endsWith('/')?'../':'./';
+  const c=courseOf(url),q=c?'?c='+encodeURIComponent(c):'';
+  return up+(url.searchParams.get('back')==='present'?'present/':'')+q;
+}
 
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function lockPage({message='',configured=true,course=''}){
+function lockPage({message='',configured=true,course='',backHref=''}){
   const lab='/study/live/lab/'+(course?'?c='+encodeURIComponent(course):'');
   return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'+
-    '<meta name="robots" content="noindex"><meta name="ekodi-ui-type" content="USER"><title>강사 전용 · EKODI Education Premium Studio</title>'+
+    '<meta name="robots" content="noindex"><meta name="ekodi-ui-type" content="USER"><title>강사 노트 열기 · EKODI Education Premium Studio</title>'+
     '<link rel="stylesheet" href="/fonts/pretendard/pretendardvariable-dynamic-subset.css"><link rel="stylesheet" href="/study/live/live.css"></head>'+
     '<body class="lv gate-body" data-ekodi-ui="USER" data-live-surface="gate"><main class="gate" id="gateMain">'+
-    '<section class="gate-card" aria-labelledby="gateTitle"><p class="eyebrow">PREMIUM STUDIO · 강사 전용</p><h1 id="gateTitle">강사 운영실</h1>'+
-    '<p class="meta">강의 진행·발표자 노트·정답 해설이 있는 강사 공간입니다. 강사 비밀번호를 입력하세요.</p>'+
+    '<section class="gate-card" aria-labelledby="gateTitle"><p class="eyebrow">PREMIUM STUDIO · 강사 전용</p><h1 id="gateTitle">강사 노트 열기</h1>'+
+    '<p class="meta">진행 멘트와 정답 해설은 강사 비밀번호로 열립니다. 강의 화면과 발표 화면은 비밀번호 없이 쓸 수 있습니다.</p>'+
     (configured?'<form method="post" action="" class="gate-form" autocomplete="on"><label class="field" for="gatePassword">강사 비밀번호</label>'+
-      '<input id="gatePassword" name="password" type="password" autocomplete="current-password" required minlength="8" maxlength="256" autofocus>'+
-      '<button type="submit" class="btn btn-primary">입장</button></form>'
+      '<input id="gatePassword" name="password" type="password" inputmode="text" autocomplete="current-password" required minlength="4" maxlength="256" autofocus>'+
+      '<button type="submit" class="btn btn-primary">노트 열기</button></form>'
       :'<p class="notice" role="alert">강사 운영실 잠금 설정이 아직 완료되지 않아 열 수 없습니다. 관리자에게 문의하세요.</p>')+
     (message?'<p class="gate-error" role="alert">'+esc(message)+'</p>':'')+
-    '<p class="meta">입장 후 이 브라우저에서 12시간 동안 유지됩니다. 공용 PC에서는 수업 후 브라우저를 닫아 주세요.</p>'+
+    '<p class="meta">한 번 열면 이 브라우저에서 12시간 동안 유지됩니다. 공용 PC에서는 수업 후 「노트 잠그기」를 누르세요.</p>'+
+    (backHref?'<a class="btn" href="'+esc(backHref)+'">← 노트 없이 강의 화면으로</a> ':'')+
     '<a class="btn btn-ghost" href="'+esc(lab)+'">수강생이신가요? 실습실로 가기 →</a></section></main></body></html>';
 }
 function htmlResponse(html,status,extra={}){
@@ -147,34 +156,36 @@ export const MIN_CUSTOM_PASSWORD_LENGTH=4;
 // or null when the request is allowed to reach the protected asset.
 export async function instructorGate(request,env,{url=new URL(request.url)}={}){
   if(!isGatedPath(url.pathname))return null;
-  // Instructor decision (2026-10-22): operator surfaces open without a password. Set "locked" to re-enable.
-  // A configured instructor-chosen password (Worker secret) always locks, whatever the mode var says.
-  if(gateMode(env)==='open'&&!parseVerifier(env?.EDU_INSTRUCTOR_GATE_SECRET))return null;
+  const unlock=isUnlockPath(url.pathname.toLowerCase());
+  const back=()=>new Response(null,{status:303,headers:{location:unlockReturn(url),'cache-control':'no-store'}});
+  // "open" mode (no password) applies only while no instructor-chosen password is configured; a configured
+  // Worker secret always locks the notes, whatever the mode var says.
+  if(gateMode(env)==='open'&&!parseVerifier(env?.EDU_INSTRUCTOR_GATE_SECRET))return unlock?back():null;
   const verifier=activeVerifier(env);
   const key=env?.EDU_GATE_SIGNING_KEY;
   const configured=!!parseVerifier(verifier)&&usableKey(key);
-  const course=(url.searchParams.get('c')||'').replace(/[^a-z0-9-]/gi,'').slice(0,64);
+  const course=courseOf(url);
   const doc=isDocumentPath(url.pathname);
   const method=request.method.toUpperCase();
 
   if(doc&&method==='GET'&&url.searchParams.get('gate')==='logout'){
     const clean=new URL(url);clean.searchParams.delete('gate');
-    return new Response(null,{status:303,headers:{location:backTo(clean),'set-cookie':cookieHeader(url,'',0),'cache-control':'no-store'}});
+    return new Response(null,{status:303,headers:{location:unlock?unlockReturn(clean):backTo(clean),'set-cookie':cookieHeader(url,'',0),'cache-control':'no-store'}});
   }
-  if(!configured)return doc?htmlResponse(lockPage({configured:false,course}),503):new Response('locked',{status:503,headers:{'cache-control':'no-store','content-type':'text/plain; charset=utf-8'}});
+  if(!configured)return doc?htmlResponse(lockPage({configured:false,course,backHref:unlock?unlockReturn(url):''}),503):new Response('locked',{status:503,headers:{'cache-control':'no-store','content-type':'text/plain; charset=utf-8'}});
 
   if(doc&&method==='POST'){
-    if(!sameSiteOrigin(request,url))return htmlResponse(lockPage({message:'허용되지 않은 요청입니다.',course}),403);
+    if(!sameSiteOrigin(request,url))return htmlResponse(lockPage({message:'허용되지 않은 요청입니다.',course,backHref:unlock?unlockReturn(url):''}),403);
     const type=String(request.headers.get('content-type')||'').toLowerCase();
-    if(!type.startsWith('application/x-www-form-urlencoded'))return htmlResponse(lockPage({message:'입력 형식이 올바르지 않습니다.',course}),400);
+    if(!type.startsWith('application/x-www-form-urlencoded'))return htmlResponse(lockPage({message:'입력 형식이 올바르지 않습니다.',course,backHref:unlock?unlockReturn(url):''}),400);
     const raw=await request.text();
-    if(raw.length>1024)return htmlResponse(lockPage({message:'입력이 너무 깁니다.',course}),413);
+    if(raw.length>1024)return htmlResponse(lockPage({message:'입력이 너무 깁니다.',course,backHref:unlock?unlockReturn(url):''}),413);
     const password=new URLSearchParams(raw).get('password')||'';
-    if(!(await verifyPassword(password,verifier)))return htmlResponse(lockPage({message:'비밀번호가 맞지 않습니다. 다시 입력해 주세요.',course}),401);
+    if(!(await verifyPassword(password,verifier)))return htmlResponse(lockPage({message:'비밀번호가 맞지 않습니다. 다시 입력해 주세요.',course,backHref:unlock?unlockReturn(url):''}),401);
     const token=await mintGateToken(key);
-    return new Response(null,{status:303,headers:{location:backTo(url),'set-cookie':cookieHeader(url,token,GATE_TTL_SECONDS),'cache-control':'no-store'}});
+    return new Response(null,{status:303,headers:{location:unlock?unlockReturn(url):backTo(url),'set-cookie':cookieHeader(url,token,GATE_TTL_SECONDS),'cache-control':'no-store'}});
   }
-  if(await verifyGateToken(readCookie(request,GATE_COOKIE),key))return null;
-  if(doc&&(method==='GET'||method==='HEAD'))return htmlResponse(lockPage({course}),401);
+  if(await verifyGateToken(readCookie(request,GATE_COOKIE),key))return unlock?back():null;
+  if(doc&&(method==='GET'||method==='HEAD'))return htmlResponse(lockPage({course,backHref:unlock?unlockReturn(url):''}),401);
   return new Response('instructor sign-in required',{status:401,headers:{'cache-control':'no-store','content-type':'text/plain; charset=utf-8'}});
 }

@@ -15,6 +15,7 @@ export function initialState(courseId,sessionNo=1){
     shared:{missionId:'',level:'basic'},
     stage:{mode:'slide'},
     ai:{status:'idle',prompt:'',text:'',model:'',units:'',at:0},
+    answer:{id:'',text:'',show:false},
     blackout:false,rev:0,updatedAt:0
   };
 }
@@ -24,6 +25,7 @@ export function initialState(courseId,sessionNo=1){
 export const STAGE_MODES=Object.freeze(['slide','lab','split','ai']);
 const AI_STATUS=new Set(['idle','running','done','failed']);
 const AI_MAX=12000;
+const ANSWER_MAX=2000;
 
 export function lectureElapsedMs(state,now){
   const l=state.lecture;
@@ -106,6 +108,14 @@ export function reduce(state,action,now){
       const st=AI_STATUS.has(a.status)?a.status:'idle';
       s.ai={status:st,prompt:String(a.prompt||'').slice(0,4000),text:String(a.text||'').slice(0,AI_MAX),model:String(a.model||'').slice(0,120),units:String(a.units||'').slice(0,80),at:now};
       break;}
+    // 「정답 공개」: the instructor reveals one module's answer on the audience stage (from the unlocked notes).
+    case 'answer/show':{
+      const id=String(a.id||'').slice(0,80),text=String(a.text||'').slice(0,ANSWER_MAX);
+      if(!id||!text)return state;
+      s.answer={id,text,show:true};s.stage={mode:'slide'};s.blackout=false;break;}
+    case 'answer/hide':
+      if(!s.answer.show)return state;
+      s.answer={...s.answer,show:false};break;
     case 'blackout/toggle':
       s.blackout=!s.blackout;break;
     case 'blackout/set':
@@ -131,6 +141,7 @@ export function sanitizeState(raw,courseId){
     shared:pick(raw.shared,['missionId','level'],base.shared),
     stage:{mode:STAGE_MODES.includes(raw.stage?.mode)?raw.stage.mode:'slide'},
     ai:raw.ai&&typeof raw.ai==='object'?{status:AI_STATUS.has(raw.ai.status)?raw.ai.status:'idle',prompt:String(raw.ai.prompt||'').slice(0,4000),text:String(raw.ai.text||'').slice(0,AI_MAX),model:String(raw.ai.model||'').slice(0,120),units:String(raw.ai.units||'').slice(0,80),at:Number.isFinite(raw.ai.at)?raw.ai.at:0}:base.ai,
+    answer:raw.answer&&typeof raw.answer==='object'?{id:String(raw.answer.id||'').slice(0,80),text:String(raw.answer.text||'').slice(0,ANSWER_MAX),show:raw.answer.show===true&&!!raw.answer.text}:base.answer,
     blackout:raw.blackout===true,
     rev:Number.isInteger(raw.rev)?raw.rev:0,
     updatedAt:Number.isFinite(raw.updatedAt)?raw.updatedAt:0

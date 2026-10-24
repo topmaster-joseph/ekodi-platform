@@ -375,3 +375,42 @@ test('presenter AI demo: institutional FactChat through the EKODI server route o
   assert.match(auth,/u\.pathname==='\/edu\/study\/live\/'\|\|u\.pathname==='\/edu\/study\/live\/present\/'\)\)return u\.href;/,'exact presenter paths only');
   assert.doesNotMatch(auth,/pathname\.startsWith\('\/edu/,'no /edu prefix wildcard');
 });
+
+test('「정답 공개」: reveal one module answer on the audience stage, hide it, survive a reload',()=>{
+  const id='s1-review',text=NOTES[id].answer;
+  let s=initialState(COURSE.id);
+  s=reduce(s,{type:'stage/mode',mode:'lab'},1);
+  assert.equal(reduce(s,{type:'answer/show',id,text:''},2),s,'no empty answer');
+  s=reduce(s,{type:'answer/show',id,text},3);
+  assert.deepEqual(s.answer,{id,text,show:true});assert.equal(s.stage.mode,'slide','reveal brings the slide back');
+  const restored=sanitizeState(JSON.parse(JSON.stringify(s)),COURSE.id);
+  assert.deepEqual(restored.answer,s.answer);
+  s=reduce(s,{type:'answer/hide'},4);assert.equal(s.answer.show,false);
+  assert.equal(reduce(s,{type:'answer/hide'},5),s);
+  assert.equal(sanitizeState({...s,answer:{id:1,text:5,show:'yes'}},COURSE.id).answer.show,false);
+});
+
+test('notes-only lock: studio and presenter load notes softly, offer unlock/lock links and the answer button',async()=>{
+  const render=await read('education/study/live/engine/render.js');
+  assert.match(render,/export async function loadNotesSafe/);
+  assert.match(render,/'unlock'\+SLASH/);
+  for(const f of ['education/study/live/instructor.js','education/study/live/present.js']){
+    const src=await read(f);
+    assert.match(src,/loadNotesSafe\(entry\)/,f);assert.doesNotMatch(src,/entry\.loadNotes\(\)/,f);
+    assert.match(src,/lockedNotesHtml\(unlockHref\)/,f);assert.match(src,/type:'answer\/show'/,f);assert.match(src,/data-answer-toggle/,f);
+  }
+  const present=await read('education/study/live/present.js');
+  assert.match(present,/answerRevealHtml\(st\.answer\)/);assert.match(present,/k==='a'\|\|k==='A'/);
+  const lab=await read('education/study/live/lab.js');
+  assert.doesNotMatch(lab,/answer\/show|loadNotesSafe/);
+});
+
+test('plain words for meeting outcomes: 「정해진 일」·「할 일」 (FactChat labels only in parentheses)',async()=>{
+  const files=['education/study/live/courses/mnu-factchat-2026.js','education/study/live/courses/mnu-factchat-2026.notes.js','education/study/live/tools/factchat.js','education/study/ai-bootcamp/catalog.js','education/study/academy/catalog.js'];
+  for(const f of files){
+    const src=(await read(f)).replace(/\((?:화면 표기: )?[^()]*(?:결정 사항|액션 아이템)[^()]*\)/g,'');
+    assert.doesNotMatch(src,/결정\s?사항|액션\s?아이템|결정표/,f);
+  }
+  const course=await read('education/study/live/courses/mnu-factchat-2026.js');
+  assert.match(course,/정해진 일/);assert.match(course,/할 일/);
+});

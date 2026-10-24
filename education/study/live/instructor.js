@@ -3,7 +3,7 @@ import {COURSES,courseEntry} from './courses/registry.js';
 import {validateCourse,sessionByNo,sessionSlides,practiceMinutes,practiceModules,totalMinutes,learnerUrl,formatClock,courseMarkdown,KIND_LABELS,missionMaterials,liveBase,livePath,sitePath,SLASH,trackTaskTitle} from './engine/model.js';
 import {createLiveStore,lectureElapsedMs,timerRemainingMs,timerPhase,CHANNEL_NAME} from './engine/live-state.js';
 import {qrSvg} from './engine/qr.js';
-import {esc,list,missionSections,featureCard,readFeatureChecks,writeFeatureCheck,allFeatureIds,moduleLabel,downloadText,copyText,safeStorage,safeChannel,multiline,bindChrome,showFactchatTab} from './engine/render.js';
+import {esc,list,missionSections,featureCard,readFeatureChecks,writeFeatureCheck,allFeatureIds,moduleLabel,downloadText,copyText,safeStorage,safeChannel,multiline,bindChrome,showFactchatTab,loadNotesSafe,notesUnlockUrl,lockedNotesHtml} from './engine/render.js';
 import {checkOutput} from './engine/checker.js';
 import {FACTCHAT_TOOL} from './tools/factchat.js';
 
@@ -14,7 +14,7 @@ const entry=courseEntry(params.get('c'));
 const storage=safeStorage(window);
 const channel=safeChannel(window,CHANNEL_NAME);
 const PREF_KEY='ekodi_edu_studio_prefs_v1';
-let course,notes={},store,slides=[];
+let course,notes={},notesLocked=false,unlockHref='',lockHref='',store,slides=[];
 let view='module';
 let prefs={track:'planning',level:'basic',showFallback:false};
 let lastPhase='';
@@ -60,14 +60,29 @@ function trackLevelControls(){
     '<label class="field">난이도<select id="levelPicker">'+course.levels.map(l=>'<option value="'+l.id+'"'+(l.id===prefs.level?' selected':'')+'>'+esc(l.label)+'</option>').join('')+'</select></label>'+
     '<label class="field">대체 실습<select id="fallbackPicker"><option value="0"'+(prefs.showFallback?'':' selected')+'>숨김</option><option value="1"'+(prefs.showFallback?' selected':'')+'>표시</option></select></label></div>';
 }
+function answerShown(id){const a=S().answer;return !!(a?.show&&a.id===id);}
+function answerButton(id){
+  if(!notes[id]?.answer)return '';
+  const on=answerShown(id);
+  return '<button type="button" class="btn btn-small'+(on?'':' btn-primary')+'" data-answer-toggle="'+esc(id)+'" aria-pressed="'+on+'">'+(on?'청중 화면 정답 숨기기':'정답 공개 (청중 화면)')+'</button>';
+}
+function toggleAnswer(id){
+  const n=notes[id];if(!n?.answer)return;
+  if(answerShown(id)){store.dispatch({type:'answer/hide'});toast('정답을 숨겼습니다.');return;}
+  const presented=slides[Math.min(S().slideIndex,slides.length-1)]?.moduleId;
+  if(presented!==id){const i=slides.findIndex(x=>x.moduleId===id&&x.special!=='mood');setSlide(i>=0?i:firstSlideOf(id));}
+  store.dispatch({type:'answer/show',id,text:n.answer});
+  toast('발표·청중 화면에 정답을 띄웠습니다.');
+}
 function notesBlock(id){
+  if(notesLocked)return lockedNotesHtml(unlockHref);
   const n=notes[id];if(!n)return '';
   const parts=[];
   if(n.talk?.length)parts.push('<h4>진행 멘트</h4>'+list(n.talk));
   if(n.demo?.length)parts.push('<h4>시연 순서</h4>'+list(n.demo,true));
   if(n.cues?.length)parts.push('<h4>시간 신호</h4>'+list(n.cues));
-  if(n.answer)parts.push('<h4>정답·해설</h4><p>'+esc(n.answer)+'</p>');
-  return '<aside class="notes" aria-label="강사 전용 노트">'+parts.join('')+'<p class="meta">강사 화면·발표자 화면에만 표시됩니다(수강생 실습실에는 불러오지 않음).</p></aside>';
+  if(n.answer)parts.push('<h4>정답·해설</h4><p>'+esc(n.answer)+'</p><div class="btn-row">'+answerButton(id)+'</div>');
+  return '<aside class="notes" aria-label="강사 전용 노트">'+parts.join('')+'<p class="meta">강사 화면·발표자 화면에만 표시됩니다(수강생 실습실에는 불러오지 않음). <a href="'+esc(lockHref)+'">노트 잠그기</a></p></aside>';
 }
 function viewModule(){
   const s=session(),m=mod(),st=S();
@@ -90,7 +105,7 @@ function viewModule(){
     const feats=m.features?.length?'<div class="panel"><h3>시연·설명 기능</h3><div class="features">'+m.features.map(id=>featureCard(readFeatureChecks(storage),id,{controls:true})).join('')+'</div></div>':'';
     const hunt=m.errorHunt?course.errorHunts.find(h=>h.id===m.errorHunt):null;
     body=(m.points?.length?'<div class="panel"><h3>강의 내용</h3>'+list(m.points,false,'points')+'</div>':'')+feats+
-      (hunt?'<div class="panel"><h3>AI 오류 찾기 · '+esc(hunt.title)+'</h3><pre class="source-text">'+esc(hunt.text)+'</pre><p class="meta">힌트: '+esc(hunt.hint)+'</p><div class="btn-row"><button type="button" class="btn btn-small" data-demo-check="'+esc(hunt.id)+'">결과 점검기로 시연</button></div><div class="verify-out" id="demoCheck"></div><p class="meta">수강생 실습실 「결과 점검」 단계와 같은 규칙 기반 점검기입니다(AI 아님).</p></div>':'')+
+      (hunt?'<div class="panel"><h3>AI 오류 찾기 · '+esc(hunt.title)+'</h3><pre class="source-text">'+esc(hunt.text)+'</pre><p class="meta">힌트: '+esc(hunt.hint)+'</p><div class="btn-row"><button type="button" class="btn btn-small" data-demo-check="'+esc(hunt.id)+'">결과 점검기로 시연</button>'+answerButton(m.id)+'</div><div class="verify-out" id="demoCheck"></div><p class="meta">수강생 실습실 「결과 점검」 단계와 같은 규칙 기반 점검기입니다(AI 아님).</p></div>':'')+
       (m.learner?.quiz?'<div class="panel"><h3>OX 퀴즈 (수강생 실습실에서 응답 · 개인 기기에만 저장)</h3><ol class="points">'+course.quiz.map(q=>'<li>'+esc(q.q)+' <b>'+(q.a?'O':'X')+'</b> — <span class="meta">'+esc(q.why)+'</span></li>').join('')+'</ol></div>':'')+learner;
   }
   return header+'<div class="panel">'+(notesBlock(m.id)||'<p class="meta">이 단계의 강사 노트가 없습니다.</p>')+'</div>'+body;
@@ -252,6 +267,7 @@ function bind(){
     if(d.presentModule!==undefined){const m=session().modules[Number(d.presentModule)];setSlide(firstSlideOf(m.id));toast('발표 화면을 「'+(m.kind==='practice'?course.missions[m.missionId].title:m.title)+'」로 전환했습니다.');return;}
     if(d.startPractice){startPractice(d.startPractice);return;}
     if(d.demoCheck){demoCheck(d.demoCheck);return;}
+    if(d.answerToggle){toggleAnswer(d.answerToggle);return;}
     if(d.startBreak){store.dispatch({type:'timer/start',missionId:'',durationMs:Number(d.startBreak)});toast('휴식 타이머 시작');return;}
     if(d.timerAdd){store.dispatch({type:'timer/add',ms:Number(d.timerAdd)});return;}
     if(d.featureCheck){writeFeatureCheck(storage,d.featureCheck,d.status);renderView();toast('기능 상태를 이 기기에 기록했습니다.');return;}
@@ -306,8 +322,9 @@ function bind(){
 
 async function init(){
   loadPrefs();
-  const [data,noteMod]=await Promise.all([entry.load(),entry.loadNotes?entry.loadNotes():Promise.resolve({NOTES:{}})]);
-  course=data.COURSE;validateCourse(course);notes=noteMod.NOTES||{};
+  const [data,noteState]=await Promise.all([entry.load(),loadNotesSafe(entry)]);
+  course=data.COURSE;validateCourse(course);notes=noteState.notes;notesLocked=noteState.locked;
+  unlockHref=notesUnlockUrl(location.pathname,course.id);lockHref=notesUnlockUrl(location.pathname,course.id,{lock:true});
   if(!course.tracks.some(t=>t.id===prefs.track))prefs.track=course.tracks[0].id;
   $('#sessionPicker').innerHTML=course.sessions.map(s=>'<option value="'+s.no+'">'+s.no+'회차 · '+esc(s.title)+'</option>').join('');
   $('#shareLevel').innerHTML=course.levels.map(l=>'<option value="'+l.id+'">'+esc(l.label)+'</option>').join('');
