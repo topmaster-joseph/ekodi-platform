@@ -27,7 +27,9 @@ function stripCloudflareJsDetections(html){
   });
   if(count>1)throw new Error('multiple_cloudflare_js_detection_injections');
   if(out.includes('__CF$cv$params')||out.includes('/cdn-cgi/challenge-platform/')){
-    throw new Error('unrecognized_cloudflare_js_detection_injection');
+    // Diagnostic fragment (public Cloudflare markup only) so the shape can be audited.
+    const at=Math.max(0,Math.min(...['<script>window.__CF$cv$params','__CF$cv$params','/cdn-cgi/challenge-platform/'].map(m=>out.indexOf(m)).filter(i=>i>=0))-80);
+    throw new Error('unrecognized_cloudflare_js_detection_injection fragment='+JSON.stringify(out.slice(at,at+900)));
   }
   return {html:out,count};
 }
