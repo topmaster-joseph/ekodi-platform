@@ -87,7 +87,10 @@ test('EKODIBIZ legacy domain points to the canonical apex service path while rev
   assert.match(bizLegacy, /TARGET = 'https:\/\/ekodi\.kr\/ekodibiz'/);
   assert.doesNotMatch(bizLegacy, /TARGET = 'https:\/\/biz\.ekodi\.kr'/);
   assert.match(bizLegacy, /Response\.redirect\(target\.toString\(\), 301\)/);
-  for (const d of ['ekodibiz.kr','www.ekodibiz.kr']) hasRoute(bizLegacyToml,d);
+  for (const d of ['ekodibiz.kr','www.ekodibiz.kr']) {
+    assert.ok(bizLegacyToml.includes(`pattern = "${d}/*"`));
+  }
+  assert.doesNotMatch(bizLegacyToml, /custom_domain\s*=\s*true/);
 });
 
 test('finance and root custom-domain contracts remain intact', () => {
