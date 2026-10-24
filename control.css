@@ -502,3 +502,8 @@ html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-co
     height:calc(100svh - 106px)!important;
   }
 }
+/* CONTROL-HUMAN-GATE-001: in-place approval for a blocked orchestrator task. */
+.execution-card .gate-approve{display:block;margin-top:10px;border:0;border-radius:10px;padding:8px 14px;background:#111827;color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.execution-card .gate-approve:hover{background:#000}
+.execution-card .gate-approve:disabled{opacity:.6;cursor:progress}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .execution-card .gate-approve{background:#111827!important;color:#fff!important}
