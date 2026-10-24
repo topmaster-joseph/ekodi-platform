@@ -1,0 +1,71 @@
+# ADR 제안: 청계면상인회 '행사·참여' 허브와 사용자 화면 직접관리 재배치 (CGMA-PROGRAMS-001)
+
+- 상태: **결정 (v2)** — EKODI AI 협의 이슈 #5616, run 39788932687: partial(전문가 2 approve-with-changes, sentinel provider_disabled)
+- task_id: cgma-programs-hub-20261022
+- 브랜치: `ai/claude/cgma-programs-hub-20261022` (cheonggye-market), 본 제안은 ekodi-platform
+- 작성: 2026-10-22, Claude (교체 가능한 개발 작업자)
+- 대표 지시(원문 요지): "에코디랑 협의해서 등록해줘. 상인회 사용자 홈페이지에 앞으로도 다양한 활동이나 행사 안내가 있고 곧바로 관리 등록할 예정이야. 사이트 배치 구조를 적절히 변경배치. 에코디 원칙대로 가급적 사용자페이지에서 모든 관리업무도 바로 가능하게 하고 불가피한 경우에만 관리자페이지에서 관리"
+
+## 1. 현황 (실측, 2026-10-22 KST)
+
+| 항목 | 사실 |
+|---|---|
+| 사이트 원본 | cheonggye-market 저장소 → Cloudflare Pages `cheonggye-market`, 대표 주소 cgma.or.kr, `ekodi.kr/cgma*`는 `cgma-root-gateway`가 프록시 |
+| 상단 메뉴 | 상인회 소개·일정·가게찾기·공지·자료·상권소식·**AI 교육 수요조사**·**축제 참여부스 신청**·**5천원 쿠폰 사용 상가 신청**·커뮤니티 — 행사마다 상단 메뉴 1개씩 추가되는 구조(메뉴 비대화, 지난 행사 잔존) |
+| 홈 행사 안내 | `cgma-festival-alert` 정적 HTML(축제 1건 하드코딩) |
+| 신규 사업 | 상인 AI 마케팅 교육(2026.11.6~12.18, 8회, 정원 15) 참가 신청 — 현재 별도 주소 `cgma-ai-edu.vercel.app`(Supabase prod `cgma_ai_edu_2026_*` 테이블, RLS 직접접근 차단, security definer RPC, 관리자 PIN). 상인회 사이트와 미연결 |
+| 사용자 화면 직접관리 | `cgma-inline-management.js`가 서버 검증(`/api/admin-session` → membership-api tenant admin) 후 페이지별 관리 버튼 노출: 홈(첫 화면·점포·자료·상권현황·번역), 수요조사, 축제, 쿠폰. 공지·일정은 게시판/일정표에서 직접 작성 |
+| 관리자 화면 전용 | 정회원 신청 승인(memberReview), 민원·동의 접수(petitionManager) |
+
+## 2. 결정 제안
+
+### 2.1 메뉴·배치
+1. 상단 메뉴의 개별 행사 3개를 **'행사·참여' 1개**(→ `/programs/`)로 통합. 이후 행사가 늘어도 메뉴는 고정.
+2. 홈의 정적 축제 안내를 **'지금 참여할 수 있는 활동'** 동적 띠(모집 중·예정 최대 3건 + 전체 보기)로 교체. 레지스트리 조회 실패 시 기존 정적 링크를 그대로 보여주는 fail-open 표시(정보 노출만, 쓰기 없음).
+3. `/programs/` 허브: 모집 중 / 예정 / 지난 활동 3구획 카드 목록.
+4. AI 마케팅 교육 신청은 `/programs/ai-marketing-2026/`(cgma.or.kr 안)으로 이전. 데이터는 기존 Supabase 테이블 그대로(단일 원본). Vercel 주소는 같은 신청 화면으로 308 이동만 남김.
+   - `/ai-education/` 아래가 아닌 이유: 게이트웨이가 `/cgma/ai-education/*`를 수요조사 자산 허용목록으로만 위임(그 외 404) → 수요조사 원본 경계를 건드리지 않음.
+
+### 2.2 사용자 화면 직접관리 (EKODI 원칙)
+1. **행사·활동 레지스트리** `public.cgma_programs`(제목·분류·기간·상태·신청 링크·관리 링크·이미지·요약·공개여부·정렬). 공개 RPC는 공개 항목만, 관리 RPC는 `auth.uid()` 기준 `is_platform_admin()` 또는 `has_tenant_admin_access(청계 tenant)`일 때만 쓰기. 직접 테이블 접근 차단(RLS, 권한 회수).
+2. `/programs/`와 홈 띠에서 관리자에게만 **'+ 새 행사·활동 등록'·'수정'·'숨기기'**를 같은 화면에 노출(버튼 노출은 편의, 권한은 DB가 매 호출 검증).
+3. AI 교육 신청 페이지에서 관리자에게 **'신청현황 관리'** 패널(상태·출석·메모·정원·마감·CSV)을 같은 화면에 노출. 관리 RPC가 상인회 관리자 로그인(JWT)을 인정하도록 확장, 기존 PIN은 상인회 로그인 없이 쓰는 비상 경로로 유지(1시간 5회 실패 잠금).
+4. 정회원 신청 승인: `/member` 화면에도 관리 버튼 노출(기존 관리 도구를 같은 iframe 드로어로 재사용, 서버 검증 동일).
+5. 관리자 화면(`/admin/`)에는 '행사·활동' 바로가기 카드만 추가(기능 중복 구현 없음). 관리자 화면 전용으로 남기는 것: 민원·동의 접수(대량 개인정보 일괄 처리), 다국어 게시 검증(사이트 전체 영향) — 불가피 사유.
+
+## 3. EKODI 규칙 정합성
+
+| 규칙 | 적용 |
+|---|---|
+| 단일 원본 | 행사 목록 = `cgma_programs`, AI 교육 신청 = `cgma_ai_edu_2026_applications` 한 곳. 화면은 투영 |
+| 최소 권한 | 브라우저는 publishable key + 사용자 JWT만. service role 미사용. 모든 쓰기는 security definer RPC 내부 권한검사 |
+| 개인정보 | 신청자 개인정보는 관리 RPC로만 반환, 공개 RPC는 집계·본인확인(성명+번호 일치)만 |
+| fail-closed | 관리 권한 불명확 시 관리 UI 미노출·쓰기 거부. 공개 목록 실패 시 정적 링크(읽기)만 |
+| 릴리스 경로 | cheonggye-market 태스크 브랜치 PR → CI → 병합 → Pages 배포 → cgma.or.kr·ekodi.kr/cgma 실확인. DB는 마이그레이션(가산적) |
+| 롤백 | 페이지: PR 되돌리기. DB: 신규 테이블·함수 drop(기존 데이터 무변경) |
+
+## 4. 확인필요
+
+- 게이트웨이(ekodi.kr/cgma)가 `/programs/*`를 일반 프록시로 통과시키는지 — 배포 후 실측
+- 대표가 '즉시 관리 등록'할 다음 행사의 분류 체계(교육/행사·축제/모집·신청/설문) 충분성
+
+## 5. 협의 요청 사항
+
+1. 개별 행사 메뉴 → '행사·참여' 단일 메뉴 + 레지스트리 방식이 EKODI 정책(사용자 화면 우선, 단일 원본)에 맞는가
+2. 관리 RPC의 이중 인증(상인회 관리자 JWT 우선 + PIN 비상 경로) 유지가 적절한가, PIN을 퇴역해야 하는가
+3. 홈 동적 띠의 fail-open(정적 링크 표시) 판단이 적절한가
+4. 관리자 화면 전용으로 남길 항목(민원·동의, 다국어 게시 검증) 판단
+5. 추가로 필요한 가드레일
+
+## 6. 협의 반영 (v2)
+
+| 요구 | 반영 |
+|---|---|
+| 메뉴 통합·레지스트리 | 승인 — 그대로 구현 (cheonggye-market PR #184) |
+| PIN 퇴역, JWT 단일 인증 | 관리 RPC가 상인회 관리자 JWT를 우선 인정. cgma.or.kr 이전 실확인 직후 PIN 분기 제거 마이그레이션 + Vercel 관리 화면 철거(이동 전용) |
+| 게이트웨이 사전 검증 | `cgma-root-gateway.js`를 모의 fetch로 실행해 `/cgma/programs/`, `/cgma/programs/ai-marketing-2026/`, `/cgma/cgma-programs.js`가 일반 프록시(200, `x-ekodi-route: cgma-root-gateway`)로 Pages에 도달함을 배포 전 확인 |
+| 감사 추적 | `cgma_admin_audit`(actor uid·종류·대상·변경 키, 메모 원문 미기록) — 행사 저장·신청현황 변경 모두 기록 |
+| search_path | 모든 security definer 함수 `set search_path = ''` + 완전 한정 이름(요구안 public,pg_temp보다 엄격) |
+| fail-open 한정 | 공개 목록 실패 시 정적 링크만, 관리 UI는 DB의 `cgma_is_site_admin()=true`일 때만 표시. 실패는 console.warn 기록 |
+| 관리자 전용 유지 | 민원·동의, 다국어 게시 검증 — 승인 |
+| Vercel 정리 | 정적 308 이동만 남기고 앱 파일 제거 |
