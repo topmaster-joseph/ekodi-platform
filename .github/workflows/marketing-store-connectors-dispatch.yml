@@ -34,7 +34,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check marketing-order-connectors.js
-          node --test test/marketing-order-connectors-contract.test.mjs
+          node --test test/marketing-order-connectors-contract.test.mjs test/marketing-connector-tenant-admin.test.mjs
           grep -Fq '/api/marketing/connectors/status' marketing-order-connectors.js
           grep -Fq '/api/marketing/connectors/supabase-orders/sync' marketing-order-connectors.js
           grep -Fq '/api/marketing/connectors/bridge/pair' marketing-order-connectors.js

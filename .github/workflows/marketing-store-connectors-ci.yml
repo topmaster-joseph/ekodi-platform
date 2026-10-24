@@ -40,7 +40,7 @@ jobs:
           node --check mission-control-entry-worker.js
           node --check security-edge.js
       - name: Verify store connector privacy and isolation contracts
-        run: node --test test/marketing-order-connectors-contract.test.mjs
+        run: node --test test/marketing-order-connectors-contract.test.mjs test/marketing-connector-tenant-admin.test.mjs
       - name: Verify additive migration structure
         run: node scripts/validate-additive-migrations.mjs migrations
       - name: Verify critical connector invariants
