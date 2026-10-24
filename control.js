@@ -60,14 +60,44 @@
   function renderRecent(){const root=$('#recentTasks');const items=state.sessions.slice(0,14);root.innerHTML=items.length?items.map(s=>'<button type="button" class="recent-item" data-session="'+esc(s.id)+'">'+esc(s.title||'새 작업')+'</button>').join(''):'<div class="section-title">아직 작업이 없습니다.</div>';root.querySelectorAll('[data-session]').forEach(b=>b.onclick=()=>{state.activeId=b.dataset.session;setView('chat');renderMessages({scrollToEnd:true})})}
   function renderMessages({scrollToEnd=false}={}){const s=state.sessions.find(x=>x.id===state.activeId);const messages=s?.messages||[];$('#emptyState').hidden=messages.length>0;$('#messages').innerHTML=messages.map(m=>{
     const meta=[m.provider,m.target,m.status&&statusLabel(m.status)].filter(Boolean).join(' · ');
-    const task=m.taskId?'<div class="execution-card"><strong>EKODI Task '+esc(m.taskId)+'</strong><span>'+esc(statusLabel(m.status))+'</span></div>':m.actionId?'<div class="execution-card"><strong>EKODI Action #'+esc(m.actionId)+'</strong><span>'+esc(statusLabel(m.status))+'</span></div>':'';
+    // A Human Gate is approved in place; the server re-checks super-admin authority and the state version.
+    const gate=m.taskId&&m.status==='blocked'&&m.humanGate!==false?'<button type="button" class="gate-approve" data-approve-task="'+esc(m.taskId)+'">승인 후 계속</button>':'';
+    const task=m.taskId?'<div class="execution-card"><strong>EKODI Task '+esc(m.taskId)+'</strong><span>'+esc(statusLabel(m.status))+'</span>'+gate+'</div>':m.actionId?'<div class="execution-card"><strong>EKODI Action #'+esc(m.actionId)+'</strong><span>'+esc(statusLabel(m.status))+'</span></div>':'';
     return '<article class="turn '+esc(m.role)+'"><div class="meta">'+esc(m.role==='user'?'사용자':'EKODI')+(meta?' · '+esc(meta):'')+'</div><div class="bubble">'+esc(m.text)+'</div>'+task+'</article>';
   }).join('');
+    $('#messages').querySelectorAll('[data-approve-task]').forEach(button=>button.onclick=()=>approveHumanGate(button.dataset.approveTask,button));
     // Do not animate the window on initial load or during a background update.
     // Message history has its own bounded scroll surface, separate from the fixed composer.
     if(scrollToEnd && messages.length && state.view==='chat'){
       requestAnimationFrame(()=>{const panel=$('#conversation');if(panel && state.view==='chat')panel.scrollTop=panel.scrollHeight});
     }
+  }
+  function setTaskStatus(taskId,status){
+    for(const session of state.sessions)for(const message of session.messages||[])if(message.taskId===taskId)message.status=status;
+    state.tasks.forEach(task=>{if(task.id===taskId)task.status=status});saveState();saveHistory();
+  }
+  async function approveHumanGate(taskId,button){
+    if(!taskId||state.busy)return;
+    state.busy=true;button.disabled=true;button.textContent='승인 처리 중';
+    try{
+      // Always read the live gate so a stale stateVersion is never replayed.
+      const gates=await api('/api/control/ai/v8/orchestrator/human-gates?limit=50');
+      const gate=(Array.isArray(gates?.tasks)?gates.tasks:[]).find(task=>task.taskId===taskId);
+      const expectedStateVersion=gate?.humanGate?.expectedStateVersion;
+      if(!expectedStateVersion){
+        setTaskStatus(taskId,'human_gate');
+        pushMessage('assistant','이 작업은 지금 승인 대기 목록에 없습니다. 이미 처리되었거나 다른 사유로 차단된 상태이니 작업 상세를 확인해 주세요.',{provider:'EKODI Orchestrator',status:'human_gate',taskId,humanGate:false});
+        return;
+      }
+      const result=await api('/api/control/ai/v8/orchestrator/tasks/'+encodeURIComponent(taskId)+'/approve',{method:'POST',body:JSON.stringify({expectedStateVersion,note:'Approved from EKODI Control console'})});
+      if(result?.task?.approved!==true)throw new Error(result?.task?.reason||'승인을 적용하지 못했습니다.');
+      const next=String(result.task.state||'queued');
+      setTaskStatus(taskId,next);
+      pushMessage('assistant','최고관리자 승인을 기록했습니다. 같은 작업을 다시 진행하며, CI·스테이징·운영 검증이 끝나야 완료로 표시됩니다.',{provider:'EKODI Orchestrator',status:next,taskId,humanGate:false});
+    }catch(error){
+      toast(error.auth?'최고관리자 로그인이 필요합니다.':String(error.message||'승인 처리에 실패했습니다.'));
+      renderMessages();
+    }finally{state.busy=false;$('#sendButton').disabled=false}
   }
   function historyForAssist(){const s=state.sessions.find(x=>x.id===state.activeId);return (s?.messages||[]).filter(m=>m.role==='user'||m.role==='assistant').slice(-8).map(m=>({role:m.role,text:m.text}))}
   async function previewAiRoute(){
@@ -93,11 +123,11 @@
       const checked=(Array.isArray(result.connections)?result.connections:[])
         .filter(item=>item.connected===true).map(item=>item.id);
       const vault=result.credentialVault?.configured===true?'개인별 암호화 금고 설정됨':'개인별 암호화 금고 설정 미확인';
-      const reply='AI 실행 경로 사전 점검 (실행되지 않음)\\n'+route+
-        '\\n관련 자체서비스: '+(matches.join(', ')||'검색 결과 없음')+
-        '\\n건강검사 확인된 AI: '+(checked.join(', ')||'없음')+
-        '\\n'+vault+
-        '\\n실제 실행은 EKODI 권한·검증·비용 정책에 따라 별도로 진행됩니다.';
+      const reply='AI 실행 경로 사전 점검 (실행되지 않음)\n'+route+
+        '\n관련 자체서비스: '+(matches.join(', ')||'검색 결과 없음')+
+        '\n건강검사 확인된 AI: '+(checked.join(', ')||'없음')+
+        '\n'+vault+
+        '\n실제 실행은 EKODI 권한·검증·비용 정책에 따라 별도로 진행됩니다.';
       pushMessage('assistant',reply,{provider:'EKODI 사전 점검',status:'assist_only'});
     }catch(error){pushMessage('assistant',String(error.message||'미리보기 실패'),{status:'failed'});}
     finally{state.busy=false;$('#sendButton').disabled=false}
@@ -124,7 +154,7 @@
         // This opt-in applies to one submitted command only.
         if($('#orchestratorRelease'))$('#orchestratorRelease').checked=false;
         const humanGateNotice=taskStatus==='blocked' && submitted.humanGate?.required===true
-          ?'\n현재 차단 사유: Human Gate 승인 대기. 최고관리자 권한으로 해당 작업의 승인 상태를 확인해야 합니다. 승인 없이 배포하지 않습니다.'
+          ?'\n현재 차단 사유: Human Gate 승인 대기. 아래 [승인 후 계속]을 누르면 최고관리자 권한으로 승인하고 같은 작업을 다시 진행합니다. 승인 없이 배포하지 않습니다.'
           :taskStatus==='blocked'?'\n현재 차단 사유는 작업 상세에서 확인해야 합니다. 임의 승인이나 자동 재시도는 하지 않습니다.':'';
         const reply='EKODI 공식 오케스트레이터 작업 접수: '+taskId+
           '\n작업 브랜치: '+String(submitted.branchRef||'없음')+
@@ -134,7 +164,7 @@
         state.tasks=state.tasks.slice(0,40);
         state.results.unshift({title:title(message),summary:reply,provider:'EKODI Orchestrator',taskId,status:taskStatus,at:now()});
         state.results=state.results.slice(0,40);saveState();
-        pushMessage('assistant',reply,{provider:'EKODI Orchestrator',target:'ekodi',status:taskStatus,taskId});
+        pushMessage('assistant',reply,{provider:'EKODI Orchestrator',target:'ekodi',status:taskStatus,taskId,humanGate:submitted.humanGate?.required===true});
         renderPanels();
         return;
       }

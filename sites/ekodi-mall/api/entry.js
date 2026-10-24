@@ -1,4 +1,6 @@
+import { publicImages } from './product-media.js';
 import core from './worker.js';
+import { maskPublicProductFields } from './supplier-mask.js';
 import { runSupplyCuration } from './worker.js';
 import { withMerchantKeys, keyDiagnostics } from '../../../ekodipay-core.js';
 import { handleTransactionRehearsal, transactionRehearsalEnabled } from './transaction-rehearsal.js';
@@ -77,16 +79,28 @@ function publicProduct(row) {
     publicUrl: row.public_url,
     seller: { type: row.seller_type, displayName: row.seller_display_name },
     store: row.store_id ? { name: row.store_name || '', slug: row.store_slug || '', verificationStatus: row.store_verification_status || 'unverified' } : null,
-    product: {
+    product: maskPublicProductFields({
       saleType: row.sale_type, category: publicCategory(row.category), region: row.primary_region_id ? { primaryRegionId: row.primary_region_id, regionIds: parseJson(row.region_ids_json), label: row.region_label || '', relationship: row.local_relationship || 'seller-declared', verified: Boolean(row.region_verified) } : null, name: row.name, audience: row.audience || '', oneLine: row.one_line || '', price: row.price,
       benefits: parseJson(row.benefits_json), specs: parseJson(row.specs_json), story: row.story || '', fulfillment: row.fulfillment || '',
       contact: row.contact || '', affiliateUrl: row.sale_type === 'affiliate' ? row.affiliate_url || '' : ''
-    },
+    }),
     businessStoreVerified: verifiedBusinessStore,
     checkoutReady: Boolean(row.checkout_ready) && (row.seller_type !== 'business' || verifiedBusinessStore),
     paymentsEnabled: false,
     publishedAt: row.published_at
   };
+}
+
+// EKODI-MALL-PROMOTABLE-001: 자동 홍보 대상 직접판매 상품 — 공개·재고 있음·사진 있음·제휴링크 없음.
+export async function listPromotableDirectProducts(env, limitValue) {
+  const limit = Math.max(1, Math.min(48, Math.trunc(Number(limitValue) || 48)));
+  const result = await env.DB.prepare(`SELECT share_code,public_url,name,one_line,category,price,images_json,stock_quantity FROM products
+    WHERE status='published' AND sale_type='direct' AND COALESCE(affiliate_url,'')='' AND stock_quantity>0 AND images_json<>'[]'
+    ORDER BY published_at DESC LIMIT ?`).bind(limit).all();
+  return (result.results || []).map(row => {
+    const image = publicImages(row.images_json, env.MALL_BASE_URL)[0];
+    return image ? { shareCode: row.share_code, publicUrl: row.public_url, name: row.name, oneLine: row.one_line || '', category: publicCategory(row.category), price: Number(row.price || 0), imageUrl: image.url } : null;
+  }).filter(Boolean);
 }
 
 async function listPublicProducts(env, limitValue) {
@@ -198,6 +212,10 @@ export default {
       }, ok ? 200 : 503, origin, env);
     }
 
+    if (request.method === 'GET' && url.pathname === '/api/public/promotable') {
+      if (!env.DB) return reply({ error:'Mall 전용 데이터베이스 연결이 없습니다.' },503,origin,env);
+      return reply({ products:await listPromotableDirectProducts(env,url.searchParams.get('limit')) },200,origin,env);
+    }
     if (request.method === 'GET' && url.pathname === '/api/public/products') {
       if (!env.DB) return reply({ error:'Mall 전용 데이터베이스 연결이 없습니다.' },503,origin,env);
       return reply({ products:await listPublicProducts(env,url.searchParams.get('limit')) },200,origin,env);

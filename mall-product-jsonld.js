@@ -89,6 +89,29 @@ export function injectProductJsonLd(html, ld) {
   return source.includes('</head>') ? source.replace('</head>', `${script}\n</head>`) : source;
 }
 
+// EKODI-MALL-PRODUCT-SEO-001: 상품별 제목·설명·OG·트위터 카드와 JS 없이 읽히는 본문 요약(구글·네이버·AI 답변 엔진·SNS 미리보기).
+const escAttr = value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+export function productSeo(data, ld) {
+  const product = data?.product || {};
+  const name = text(product.name, 120);
+  if (!name) return null;
+  const description = text(product.oneLine || product.story || product.audience || `${name} — 에코디몰에서 만나보세요.`, 160);
+  const image = Array.isArray(ld?.image) ? ld.image[0] : (typeof ld?.image === 'string' ? ld.image : '');
+  const price = Number(product.price || 0) > 0 ? `${Number(product.price).toLocaleString('ko-KR')}원` : '';
+  return { title: `${name} | 에코디몰`, description, image, price, name, url: ld?.url || '' };
+}
+export function productMetaTags(seo) {
+  if (!seo) return '';
+  const tags = [['property','og:type','product'],['property','og:site_name','에코디몰 EKODI MALL'],['property','og:title',seo.title],['property','og:description',seo.description],
+    ['property','og:url',seo.url],['property','og:locale','ko_KR'],['name','twitter:card',seo.image ? 'summary_large_image' : 'summary'],['name','twitter:title',seo.title],['name','twitter:description',seo.description]];
+  if (seo.image) tags.push(['property','og:image',seo.image],['name','twitter:image',seo.image]);
+  return tags.filter(([, , v]) => v).map(([k, n, v]) => `<meta ${k}="${n}" content="${escAttr(v)}" data-ekodi-product-meta>`).join('');
+}
+export function productSummaryHtml(seo) {
+  if (!seo) return '';
+  return `<section class="product-hero"><div><p class="eyebrow">EKODI MALL</p><h1>${escAttr(seo.name)}</h1><p class="detail-desc">${escAttr(seo.description)}</p>${seo.price ? `<p class="detail-price">${escAttr(seo.price)}</p>` : ''}</div></section>`;
+}
+
 async function readPublicProduct(env, shareCode, timeoutMs) {
   if (!env?.MALL_API?.fetch) return null;
   const request = new Request(`${PUBLIC_ORIGIN}/api/public/products/${encodeURIComponent(shareCode)}`, { headers:{ accept:'application/json' } });
@@ -113,10 +136,20 @@ export async function decorateMallProductResponse(response, request, env, { time
     const ld = data && text(data.shareCode, 80) === shareCode ? buildMallProductJsonLd(data, { canonicalUrl:mallProductCanonicalUrl(shareCode) }) : null;
     if (!ld) return response;
     const script = productJsonLdScript(ld);
+    const seo = productSeo(data, ld);
+    const meta = productMetaTags(seo);
     if (typeof HTMLRewriter === 'function') {
-      return new HTMLRewriter().on('head', { element(element) { element.append(script, { html:true }); } }).transform(response);
+      let rewriter = new HTMLRewriter().on('head', { element(element) { element.append(script + meta, { html:true }); } });
+      if (seo) rewriter = rewriter
+        .on('title', { element(element) { element.setInnerContent(seo.title); } })
+        .on('meta[name="description"]', { element(element) { element.setAttribute('content', seo.description); } })
+        .on('#publicProduct', { element(element) { element.setInnerContent(productSummaryHtml(seo), { html:true }); } });
+      return rewriter.transform(response);
     }
-    const html = injectProductJsonLd(await response.text(), ld);
+    let html = injectProductJsonLd(await response.text(), ld);
+    if (seo) html = html.replace(/<title>[^<]*<\/title>/i, `<title>${escAttr(seo.title)}</title>`)
+      .replace(/(<meta name="description" content=")[^"]*(")/i, `$1${escAttr(seo.description)}$2`)
+      .replace('</head>', `${meta}\n</head>`);
     const headers = new Headers(response.headers);
     headers.delete('content-length');
     return new Response(html, { status:response.status, statusText:response.statusText, headers });
