@@ -8,6 +8,7 @@ import { handleVerificationRequest, verificationSchemaReady } from './verificati
 import { handleSupplierPilotRequest, supplierPilotSchemaReady } from './supplier-pilot.js';
 import { handleSupplierDiscoveryRequest, supplierDiscoverySchemaReady } from './supplier-discovery.js';
 import { handleDomemaeRequest, domemaeConnectorReady } from './domemae.js';
+import { probeDomeggookKey, syncSupplyProducts } from './domeggook-import.js';
 import { handleAnalyticsRequest } from './analytics.js';
 import { handleStorefrontRequest } from './storefront.js';
 import { commerceEventSchemaReady } from './commerce-events.js';
@@ -186,7 +187,7 @@ export default {
         commerceEventSchemaReady:commerceEventsReady, commerceOsVersion:1,
         inventorySchemaReady:inventoryReady, paymentWebhookPath:'/api/public/payments/webhook', paymentReconciliation:'cron-10m',
         amazonConnector:amazon, amazonCostSchemaReady:amazonCostReady, amazonConnectionSchemaReady:amazonConnectionReady, amazonReadSyncSchemaReady:amazonReadSyncReady,
-        domemaeLookupEnabled:String(env.DOMEMAE_LOOKUP_ENABLED || '').toLowerCase() === 'true', domemaeOrderEnabled:false,
+        domemaeLookupEnabled:String(env.DOMEMAE_LOOKUP_ENABLED || '').toLowerCase() === 'true', domemaeOrderEnabled:false, domeggookKeyConfigured:Boolean(env.DOMEMAE_API_KEY),
         attributionWindowDays:ATTRIBUTION_WINDOW_DAYS,
         operationsReviewConfigured:Boolean(env.MALL_OPERATIONS_TOKEN || env.MALL_OPERATIONS_EMAILS), operationsEmailAllowlistConfigured:Boolean(env.MALL_OPERATIONS_EMAILS),
         transactionRehearsalEnabled:transactionRehearsalEnabled(env),
@@ -264,6 +265,11 @@ export default {
       if (summary.soldOut) console.log('mall expiry sold-out sweep', JSON.stringify(summary));
     }).catch(error => console.error('mall expiry sweep failed', error)) : Promise.resolve();
     if (ctx?.waitUntil) ctx.waitUntil(expirySweep); else await expirySweep;
+    // EKODI-MALL-DOMEGGOOK-IMPORT-001: 키 동작 확인(6시간 1회) + 위탁상품 가격·재고 동기화.
+    const supplySync = env?.DB ? probeDomeggookKey(env).then(() => syncSupplyProducts(env)).then(summary => {
+      if (summary.synced) console.log('mall supply sync', JSON.stringify(summary));
+    }).catch(error => console.error('mall supply sync failed', error)) : Promise.resolve();
+    if (ctx?.waitUntil) ctx.waitUntil(supplySync); else await supplySync;
     if (!['1','true','yes','on'].includes(String(env.PAYMENTS_ENABLED || '').toLowerCase())) return;
     const run = reconcileMallPayments(env).then(summary => {
       if (summary.checked || summary.errors) console.log('mall payment reconciliation', JSON.stringify(summary));

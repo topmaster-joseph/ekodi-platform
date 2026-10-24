@@ -258,6 +258,7 @@
     }
   }
 
+  window.ekodiSellerServer = { api, fillForm, loadDashboard, setStatus };
   ensureUi();
   sb.auth.onAuthStateChange((_event, session) => { if (session) loadDashboard(); });
   window.setTimeout(loadDashboard, 600);

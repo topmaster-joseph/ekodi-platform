@@ -1,3 +1,4 @@
+import { importDomeggookProduct, notifySupplyOrder } from './domeggook-import.js';
 import { publicImages, uploadProductImage, deleteProductImage, reorderProductImages, servePublicMedia } from './product-media.js';
 import { validateBuyer, checkoutConfig } from './checkout-buyer.js';
 import { commerceEventStatement } from './commerce-events.js';
@@ -695,6 +696,7 @@ export async function recordConfirmedPayment(env, order, payment, provider = 'TO
     statements.push(settlementEvent.statement);
   }
   await env.DB.batch(statements);
+  if (paid) await notifySupplyOrder(env, order).catch((error) => console.error('mall supply order notice', error));
 }
 // P0: 결제 승인 전 서버 기준 주문 상태·만료·금액 검증 (Toss 승인 API 호출 이전에 차단)
 export function assessOrderForConfirmation(order, amount, now = new Date()) {
@@ -860,7 +862,7 @@ export default {
     if (request.method === 'GET' && url.pathname === '/api/me') {
       const profile = await env.DB.prepare(`SELECT user_id AS userId,email,display_name AS displayName,seller_type AS sellerType,verification_status AS verificationStatus,direct_sale_status AS directSaleStatus FROM seller_profiles WHERE user_id=?`).bind(user.id).first();
       const membership = await env.DB.prepare('SELECT plan_id AS planId,status,valid_from AS validFrom,valid_to AS validTo FROM memberships WHERE seller_id=?').bind(user.id).first();
-      return json({ user: { id: user.id, email: user.email, displayName: displayNameFromUser(user) }, profile, membership }, 200, origin, env);
+      return json({ user: { id: user.id, email: user.email, displayName: displayNameFromUser(user), official: isEkodian(user, env) }, profile, membership }, 200, origin, env);
     }
     if (request.method === 'GET' && url.pathname === '/api/products') return json({ products: await listOwnerProducts(env, user.id) }, 200, origin, env);
     if (request.method === 'GET' && url.pathname === '/api/orders') {
@@ -881,6 +883,24 @@ export default {
         if (error.message === 'STORE_SLUG_TAKEN') return json({ error: '이미 사용 중인 스토어 slug입니다.' }, 409, origin, env);
         console.error('mall product create', error);
         return json({ error: '상품 서버 저장에 실패했습니다.' }, 500, origin, env);
+      }
+    }
+
+    // EKODI-MALL-DOMEGGOOK-IMPORT-001: 에코디언 전용 위탁상품 가져오기(초안 생성, 선발주 없음).
+    if (request.method === 'POST' && url.pathname === '/api/products/import/domeggook') {
+      if (!isEkodian(user, env)) return json({ error: '도매꾹 상품 가져오기는 에코디언 계정에서만 사용할 수 있습니다.' }, 403, origin, env);
+      const body = await readJson(request);
+      if (!body) return json({ error: 'Invalid JSON' }, 400, origin, env);
+      try {
+        const result = await importDomeggookProduct(env, user, body, {
+          saveProduct,
+          getProduct: async (e, sellerId, id) => rowToOwnerProduct(await getOwnerProduct(e, sellerId, id))
+        });
+        if (result.status < 300) await opsAudit(env, 'mall-auto:ekodian', 'product.supply.imported', user.id, result.body.product?.id, { provider: 'domeggook', itemNo: result.body.supply?.itemNo, salePrice: result.body.pricing?.salePrice });
+        return json(result.body, result.status, origin, env);
+      } catch (error) {
+        console.error('mall domeggook import', error);
+        return json({ error: '도매꾹 상품 가져오기에 실패했습니다.' }, 500, origin, env);
       }
     }
 
