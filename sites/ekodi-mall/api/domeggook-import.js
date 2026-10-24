@@ -203,13 +203,14 @@ export function productBodyFromItem(item, salePrice) {
  * 상품 초안 생성(또는 같은 공급 상품이면 갱신). saveProduct 는 worker.js 에서 주입한다.
  * 반환: { status, body }
  */
-export async function importDomeggookProduct(env, user, input, { saveProduct, getProduct, fetchImpl = fetch } = {}) {
+export async function importDomeggookProduct(env, user, input, { saveProduct, getProduct, fetchImpl = fetch, requireLicense = false, maxImages = MAX_IMAGES } = {}) {
   const itemNo = parseItemNo(input?.itemNo ?? input?.url ?? input);
   if (!itemNo) return { status: 400, body: { error: '도매꾹·도매매 상품번호 또는 상품 주소를 넣어 주세요.' } };
   const fetched = await fetchDomeggookItem(env, itemNo, fetchImpl);
   if (fetched.error) return { status: fetched.code === 'DOMEGGOOK_KEY_MISSING' ? 503 : 502, body: { error: fetched.error, code: fetched.code } };
   const item = { ...fetched.item, itemNo: fetched.item.itemNo || itemNo };
   const blockers = importBlockers(item);
+  if (requireLicense && !item.licenseUsable) blockers.push('공급사가 사진 재사용을 허용하지 않습니다');
   if (blockers.length) return { status: 422, body: { error: `가져올 수 없는 상품입니다: ${blockers.join(', ')}`, blockers } };
   const salePrice = quoteSalePrice(item, env.DOMEGGOOK_MARGIN_PCT);
   const existing = await env.DB.prepare('SELECT id FROM products WHERE seller_id=? AND supply_provider=? AND supply_item_no=?')
@@ -231,7 +232,7 @@ export async function importDomeggookProduct(env, user, input, { saveProduct, ge
   let imageNote = '';
   if (!existing) {
     if (item.licenseUsable) {
-      const images = await copyImages(env, productId, [item.thumbUrl, ...item.detailImages].filter(Boolean), fetchImpl);
+      const images = await copyImages(env, productId, [item.thumbUrl, ...item.detailImages].filter(Boolean).slice(0, maxImages), fetchImpl);
       if (images.length) await env.DB.prepare('UPDATE products SET images_json=? WHERE id=? AND seller_id=?').bind(JSON.stringify(images), productId, user.id).run();
       imageNote = images.length ? `공급사 허용 사진 ${images.length}장을 넣었습니다.` : '사진을 가져오지 못했습니다. 직접 올려 주세요.';
     } else {
@@ -282,7 +283,7 @@ export async function probeDomeggookKey(env, fetchImpl = fetch) {
 }
 
 /** 위탁 상품 가격·재고·판매상태 동기화. 문제 시 품절 처리 + 관리자 알림. */
-export async function syncSupplyProducts(env, fetchImpl = fetch, limit = 10) {
+export async function syncSupplyProducts(env, fetchImpl = fetch, limit = 20) {
   if (!env?.DB || !env.DOMEMAE_API_KEY) return { synced: 0 };
   const cutoff = new Date(Date.now() - SYNC_INTERVAL_MS).toISOString();
   const rows = await env.DB.prepare(`SELECT id,seller_id,name,price,stock_quantity,supply_item_no,supply_cost,supply_shipping FROM products
