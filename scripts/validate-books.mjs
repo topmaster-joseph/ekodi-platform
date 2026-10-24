@@ -30,3 +30,9 @@ for(const marker of ['/api/books/public/config','/api/books/inquiries','digital-
   if(!publishingApp.includes(marker)) throw new Error(`Publishing app missing contract: ${marker}`);
 }
 console.log(`Validated ${data.books.length} EKODI Books catalog entr${data.books.length===1?'y':'ies'}, Book Core routes, and publishing workspace.`);
+
+// SEO guardrail: legacy EKODI hosts are blocked repo-wide by scripts/zero-subdomain-guard.mjs.
+// Here we additionally pin catalog admin links to the canonical admin path.
+for(const book of data.books){
+  if(!book.adminUrl.startsWith('https://ekodi.kr/admin/')) throw new Error(`Book ${book.id} adminUrl must live under https://ekodi.kr/admin/`);
+}

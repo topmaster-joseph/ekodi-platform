@@ -4,18 +4,18 @@
   "principle": "one-book-one-record",
   "storefront": {
     "name": "에코디서점",
-    "url": "https://books.ekodi.kr/",
+    "url": "https://ekodi.kr/books/",
     "audience": ["guest", "reader", "member"],
     "modules": ["catalog", "book-detail", "preview", "external-purchase", "library-link"]
   },
   "publishing": {
     "name": "출판",
-    "url": "https://books.ekodi.kr/publishing/",
+    "url": "https://ekodi.kr/books/publishing/",
     "audience": ["author", "editor", "publisher"],
     "modules": ["workspace", "manuscript", "metadata", "epub-validation", "distribution", "archive"]
   },
   "admin": {
-    "url": "https://admin.ekodi.kr/books",
+    "url": "https://ekodi.kr/admin/books",
     "modules": ["overview", "catalog", "publishing", "distribution", "storefront", "versions", "sales"],
     "roles": {
       "books_admin": "전체 도서·출판 관리",
