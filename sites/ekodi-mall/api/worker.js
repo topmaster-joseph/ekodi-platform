@@ -1,4 +1,5 @@
 import { importDomeggookProduct, notifySupplyOrder } from './domeggook-import.js';
+import { runCuration } from './domeggook-curation.js';
 import { publicImages, uploadProductImage, deleteProductImage, reorderProductImages, servePublicMedia } from './product-media.js';
 import { validateBuyer, checkoutConfig } from './checkout-buyer.js';
 import { commerceEventStatement } from './commerce-events.js';
@@ -545,6 +546,14 @@ async function resolveAttributionType(env, productIdValue, token) {
   const row = await env.DB.prepare(`SELECT source_type FROM attribution_tokens
     WHERE token=? AND product_id=? AND expires_at>?`).bind(cleanText(token, 100), productIdValue, isoNow()).first();
   return row && VALID_ATTRIBUTION_TYPES.has(row.source_type) ? row.source_type : 'marketplace';
+}
+
+// EKODI-MALL-DOMEGGOOK-CURATION-001: cron 이 호출하는 자동 선별 진입점(판매자 저장·게시 로직 재사용).
+export function runSupplyCuration(env, options = {}) {
+  return runCuration(env, {
+    saveProduct, setPublished,
+    getProduct: async (e, sellerId, id) => rowToOwnerProduct(await getOwnerProduct(e, sellerId, id))
+  }, options);
 }
 
 export async function buildOrderQuote(env, { shareCode, attributionToken = '', quantity = 1 } = {}) {

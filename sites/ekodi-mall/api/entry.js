@@ -1,4 +1,5 @@
 import core from './worker.js';
+import { runSupplyCuration } from './worker.js';
 import { withMerchantKeys, keyDiagnostics } from '../../../ekodipay-core.js';
 import { handleTransactionRehearsal, transactionRehearsalEnabled } from './transaction-rehearsal.js';
 import { handleSourcingRequest, sourcingSchemaReady } from './sourcing.js';
@@ -268,6 +269,9 @@ export default {
     // EKODI-MALL-DOMEGGOOK-IMPORT-001: 키 동작 확인(6시간 1회) + 위탁상품 가격·재고 동기화.
     const supplySync = env?.DB ? probeDomeggookKey(env).then(() => syncSupplyProducts(env)).then(summary => {
       if (summary.synced) console.log('mall supply sync', JSON.stringify(summary));
+      return runSupplyCuration(env);
+    }).then(summary => {
+      if (summary?.imported || summary?.discovery) console.log('mall supply curation', JSON.stringify(summary));
     }).catch(error => console.error('mall supply sync failed', error)) : Promise.resolve();
     if (ctx?.waitUntil) ctx.waitUntil(supplySync); else await supplySync;
     if (!['1','true','yes','on'].includes(String(env.PAYMENTS_ENABLED || '').toLowerCase())) return;
