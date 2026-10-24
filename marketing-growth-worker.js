@@ -192,7 +192,9 @@ function redirectResult(returnUrl, params) {
 }
 async function schemaReady(env) { return d1SchemaReady(env?.DB,['marketing_oauth_states','marketing_oauth_state_registry','marketing_oauth_connections','marketing_growth_campaigns','marketing_channel_settings','external_account_connections','external_account_audit']); }
 function metaConfigured(env) { return Boolean(env.META_APP_ID && env.META_APP_SECRET); }
-function threadsConfigured(env) { return Boolean((env.THREADS_APP_ID || env.META_APP_ID) && (env.THREADS_APP_SECRET || env.META_APP_SECRET)); }
+// Threads uses its own app ID/secret (Meta dashboard > Use cases > Threads API > Settings).
+// Never fall back to the Facebook META_APP_ID: Threads rejects it (error 4476002, "app ID not sent").
+function threadsConfigured(env) { return Boolean(String(env.THREADS_APP_ID || '').trim() && String(env.THREADS_APP_SECRET || '').trim()); }
 function youtubeConfigured(env) { return Boolean(env.GOOGLE_CLIENT_ID && providerSecret(env,YOUTUBE_PROVIDER) && env.GOOGLE_OAUTH_BROKER); }
 function naverConfigured(env) { return Boolean(env.NAVER_CLIENT_ID && env.NAVER_CLIENT_SECRET); }
 function tiktokConfigured(env) { return Boolean(env.TIKTOK_CLIENT_KEY && env.TIKTOK_CLIENT_SECRET); }
@@ -277,7 +279,7 @@ async function startThreads(request, env, identity, subject) {
   const body = await readJson(request) || {};
   const registry=await oauthRegistryRow(env,subject,THREADS_PROVIDER,body.registryConnectionId);
   const state = await createOAuthState(env,THREADS_PROVIDER,'publish',identity,subject,body.returnUrl,registry?.id||'');
-  const appId = env.THREADS_APP_ID || env.META_APP_ID;
+  const appId = String(env.THREADS_APP_ID).trim();
   const url = new URL('https://threads.net/oauth/authorize');
   url.searchParams.set('client_id',String(appId));
   url.searchParams.set('redirect_uri',callbackUrl(env,THREADS_PROVIDER));
@@ -419,8 +421,8 @@ async function threadsCallback(request, env) {
   try {
     const code = clean(url.searchParams.get('code'),4096);
     if (!code) throw new Error('AUTHORIZATION_CODE_MISSING');
-    const appId = env.THREADS_APP_ID || env.META_APP_ID;
-    const appSecret = env.THREADS_APP_SECRET || env.META_APP_SECRET;
+    const appId = String(env.THREADS_APP_ID || '').trim();
+    const appSecret = String(env.THREADS_APP_SECRET || '').trim();
     const form = new URLSearchParams({client_id:String(appId),client_secret:String(appSecret),grant_type:'authorization_code',redirect_uri:callbackUrl(env,THREADS_PROVIDER),code});
     const short = await fetchJson('https://graph.threads.net/oauth/access_token',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:form});
     const longUrl = new URL('https://graph.threads.net/access_token');
