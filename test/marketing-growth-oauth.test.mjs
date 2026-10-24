@@ -61,3 +61,14 @@ test('YouTube API project disablement is normalized into an allowlisted registry
   assert.match(code,/state\?\.provider==='youtube'\?youtubeFailureCode\(error\)/);
   assert.match(code,/reason:youtubeFailureCode\(error\)/);
 });
+
+test('Threads OAuth uses only the dedicated Threads app ID, never the Facebook META_APP_ID', async () => {
+  const growth = await read('marketing-growth-worker.js');
+  const start = growth.slice(growth.indexOf('async function startThreads'), growth.indexOf('async function startYouTube'));
+  const callback = growth.slice(growth.indexOf('async function threadsCallback'), growth.indexOf('async function threadsCallback') + 1200);
+  const configured = growth.match(/function threadsConfigured\(env\)[^\n]*/)[0];
+  for (const block of [start, callback, configured]) assert.doesNotMatch(block, /META_APP_(ID|SECRET)/);
+  assert.match(configured, /THREADS_APP_ID/);
+  assert.match(configured, /THREADS_APP_SECRET/);
+  assert.match(start, /THREADS_APP_NOT_CONFIGURED/);
+});
