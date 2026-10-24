@@ -67,6 +67,8 @@ on:
       - 'test/ekodimission-admin-production-e2e-contract.test.mjs'
       - 'deploy/manifests/shared-site.worker.json'
       - 'tenant-live.js'
+      - 'live-interpretation.js'
+      - 'live-interpretation.css'
       - 'tenant-live.css'
       - 'tenant-live-admin-page.js'
       - 'tenant-admin-command-home.js'

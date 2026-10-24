@@ -10,7 +10,7 @@ export function tenantLivePage(tenant){
     ?`<header class="mission-site-header"><a class="mission-brand" href="${home}"><span class="mission-brand-mark">E</span><span><strong>${name}</strong><small>EKODI MISSION</small></span></a><nav aria-label="주요 메뉴" data-mission-nav></nav></header><div class="mission-live-state"><span id="liveState">확인 중</span></div>`
     :`<header class="live-header"><a class="brand" href="${home}"><span class="mark">E</span><span><strong>${name}</strong><small>LIVE</small></span></a><div class="header-actions"><span id="liveState">확인 중</span><a href="${home}">홈</a></div></header>`;
   const shellScript=missionShell?'<script src="/ekodimission/assets/shell.js" defer></script>':'';
-  const body=`<!doctype html><html lang="ko-KR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="${robots}"><title>${title}</title><meta name="description" content="${name} 실시간 방송"><link rel="stylesheet" href="/tenant-live.css">${shellHead}</head>
+  const body=`<!doctype html><html lang="ko-KR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="${robots}"><title>${title}</title><meta name="description" content="${name} 실시간 방송"><link rel="stylesheet" href="/tenant-live.css"><link rel="stylesheet" href="/live-interpretation.css">${shellHead}</head>
 <body data-tenant="${esc(tenant.apiTenant)}" data-room-mode="${esc(tenant.mode)}" data-live-path="${path}" data-auth-site="${esc(tenant.authSite)}" data-name="${name}" data-default-title="${title}">
 ${header}
 <main class="live-shell">
@@ -43,9 +43,9 @@ ${header}
 
     <details class="live-chat-box compact-section"><summary>채팅</summary><div class="source-head"><strong>실시간 채팅</strong><span id="studioChatState">대기</span></div><div id="studioChatMessages" class="chat-messages"></div><form id="studioChatForm" class="chat-form"><input id="studioChatInput" maxlength="500" autocomplete="off" placeholder="메시지"><button type="submit">전송</button></form></details>
 
-    <section class="interpretation-box compact-interpretation"><strong>동시통역</strong><div class="language-chips"><span>EN</span><span>中</span><span>日</span><span>VI</span><span>MN</span></div></section>
+    <details class="compact-section live-interpretation-section" open><summary>동시통역 자막</summary><div data-live-interpretation-console><small>통역 자막 도구를 불러오는 중</small></div></details>
 
-    <details class="delivery-settings compact-section"><summary>송출·저장</summary><div class="delivery-fixed"><span class="delivery-check" aria-hidden="true">✓</span><div><strong>EKODI · 자동 저장</strong></div><span class="delivery-default">기본</span></div><div class="external-head"><strong>외부 동시방송</strong><button id="refreshDestinationsButton" type="button">확인</button></div><div id="externalDestinations" class="destination-options"><small>로그인 후 확인</small></div></details>
+    <details class="delivery-settings compact-section"><summary>송출·저장</summary><div class="delivery-fixed"><span class="delivery-check" aria-hidden="true">✓</span><div><strong>EKODI · 자동 저장</strong></div><span class="delivery-default">기본</span></div><div class="external-head"><strong>외부 동시방송</strong><button id="refreshDestinationsButton" type="button">확인</button></div><div id="externalDestinations" class="destination-options"><small>로그인 후 확인</small></div><div class="live-simulcast" data-live-simulcast></div></details>
 
     <div class="broadcast-actions"><button class="primary" id="goLiveButton">방송 시작</button><button class="danger hidden" id="endLiveButton" disabled>방송 종료</button></div>
     <div id="hostAccessStatus" class="studio-host-status hidden" role="status" aria-live="polite"></div>
@@ -66,7 +66,7 @@ ${header}
 </main>
 
 <dialog id="managementCameraDialog" class="camera-pair-dialog"><form method="dialog"><button class="dialog-close" aria-label="닫기">×</button></form><p class="eyebrow">QR CAMERA</p><h2>관리카메라 추가</h2><canvas id="managementCameraQr" width="196" height="196" aria-label="관리카메라 연결 QR"></canvas><p class="pair-copy">QR을 찍고 승인합니다.</p><input id="managementCameraUrl" readonly aria-label="관리카메라 연결 주소"><div class="pair-actions"><button id="copyManagementCameraUrlButton" type="button">링크 복사</button><button id="newManagementCameraPairButton" type="button">새 QR</button></div><div id="managementCameraPairs" class="pair-list"></div></dialog>
-${shellScript}<script src="/tenant-live.js" defer></script></body></html>`;
+${shellScript}<script src="/tenant-live.js" defer></script><script src="/live-interpretation.js" defer></script></body></html>`;
   const headers={'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'};
   if(tenant.robots)headers['x-robots-tag']=String(tenant.robots);
   if(tenant.route)headers['x-ekodi-route']=String(tenant.route);

@@ -345,7 +345,7 @@ async function routeEkodiMission(request,env){
   if(MISSION_EVENT_LEGACY_PATHS.has(pathname)){const target=new URL(MISSION_EVENT_PATH+url.search,'https://ekodi.kr');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-route':'ekodimission-event-canonical','x-ekodi-publication-status':'published'}});}
   if(pathname==='/ekodimission/live'){
     const tenant=realtimeTenant('ekodimission');if(!tenant)return withHeaders(env,new Response('Not Found',{status:404}),'ekodimission-not-found');
-    return brandSiteResponse(withHeaders(env,tenantLivePage(tenant),EKODIMISSION_PUBLIC_ROUTE));
+    return brandSiteResponse(liveStudioHeaders(withHeaders(env,tenantLivePage(tenant),EKODIMISSION_PUBLIC_ROUTE)));
   }
   const assetPath=EKODIMISSION_PAGES.get(pathname)||EKODIMISSION_ASSETS.get(pathname);
   if(!assetPath)return brandSiteResponse(withHeaders(env,new Response('Not Found',{status:404,headers:{'content-type':'text/plain; charset=utf-8'}}),'ekodimission-not-found'));
@@ -398,6 +398,16 @@ function securityHeaders(env={}){
     'permissions-policy':'camera=(), microphone=(), geolocation=(), usb=()',
     'x-ekodi-service':'space',
   };
+}
+// The live page is a broadcast studio: it needs this origin's camera,
+// microphone and screen share, speech recognition for interpretation captions,
+// and the Cloudflare Stream player for RTMPS-ingested programs. Every other
+// mission page keeps the locked-down policy from securityHeaders().
+function liveStudioHeaders(response){
+  const csp=String(response.headers.get('content-security-policy')||'');
+  if(csp&&!/frame-src/.test(csp))response.headers.set('content-security-policy',csp.replace("object-src 'none';","object-src 'none'; frame-src 'self' https://*.cloudflarestream.com; media-src 'self' blob: https:;"));
+  response.headers.set('permissions-policy','camera=(self), microphone=(self), display-capture=(self), geolocation=(), usb=()');
+  return response;
 }
 function withHeaders(env,response,route='asset'){
   const headers=new Headers(response.headers);

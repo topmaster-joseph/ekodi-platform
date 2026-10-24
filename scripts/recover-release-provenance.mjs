@@ -191,7 +191,7 @@ const independentBoardTouched=sourceFiles.some(file=>
 // the canonical Control API (host-access route) and Site Core (studio UI).
 // Each deployed workflow retains receipt, staging and rollback checks.
 const controlApiTouched=sourceFiles.some(file=>[
-  'realtime-control.js','realtime-tenant-registry.js',
+  'realtime-control.js','realtime-tenant-registry.js','live-interpretation-control.js',
   'scripts/converge-orchestrated-pr-merge.mjs',
   'scripts/recover-release-provenance.mjs'
 ].includes(file));
@@ -205,6 +205,7 @@ const sharedSiteTouched=sourceFiles.some(file=>
   ['site-worker.js','site-shell-worker.js','ekodi-shell-injector.js','seonammedi-admin-control.js',
    'control.html','control.css','control.js',
    'tenant-live.js','tenant-live.css','tenant-live-page.js','tenant-live-admin-page.js',
+   'live-interpretation.js','live-interpretation.css',
    'realtime-tenant-registry.js',
    'scripts/converge-orchestrated-pr-merge.mjs',
    'platform-router-entry-worker.js','.github/workflows/deploy-site-core.yml'].includes(file)
