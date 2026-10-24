@@ -42,7 +42,23 @@
   .wz-on #studio .studio-intro{display:none}
   html:not(.wz-on) .wz-head,html:not(.wz-on) .wz-nav,html:not(.wz-on) .wz-err{display:none}
   `;
+  style.textContent += `
+  #draftStatus.wz-status{margin:12px 0 0;padding:10px 12px;border-radius:10px;background:#eef5f1;color:#1f4d3c;font-size:14px;font-weight:600}
+  #draftStatus.wz-status[data-state="error"]{background:#fbecec;color:#8a2430}
+  `;
   document.head.appendChild(style);
+
+  // Save/publish results are written to #draftStatus, which lives in the
+  // studio intro that the wizard hides. Move it right under the action
+  // buttons so every success or error message is visible where the click happened.
+  const draftStatus = document.querySelector('#draftStatus');
+  const buttonsRow = form.querySelector('.studio-buttons');
+  if (draftStatus && buttonsRow) {
+    draftStatus.classList.add('wz-status');
+    draftStatus.setAttribute('role', 'status');
+    draftStatus.setAttribute('aria-live', 'polite');
+    buttonsRow.after(draftStatus);
+  }
 
   const bar = document.createElement('nav');
   bar.className = 'wz-bar';
@@ -80,6 +96,7 @@
     const wanted = new Set((step.fields || []).map(byLegend).filter(Boolean));
     fieldsets.forEach((f) => f.classList.toggle('wz-hide', !wanted.has(f)));
     form.querySelector('.studio-buttons')?.classList.toggle('wz-hide', !step.buttons);
+    draftStatus?.classList.toggle('wz-hide', !step.buttons);
     const last = [...keep].pop();
     (last || main).after(nav);
     head.querySelector('[data-wz-title]').textContent = `${current + 1}단계 · ${step.title}`;
