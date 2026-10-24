@@ -119,8 +119,24 @@ async function seonamNoticeItems(env){
   }catch{return []}
 }
 
+// EKODI-MALL-PRODUCT-SEO-002: 공개 에코디몰 상품(/ekodimall/p/{shareCode})을 sitemap·llms.txt·공개 레지스트리에 포함한다.
+export async function mallProductItems(env){
+  if(!env?.MALL_API?.fetch)return [];
+  try{
+    const response=await env.MALL_API.fetch(new Request('https://mall-api.internal/api/public/products?limit=48',{headers:{accept:'application/json'}}));
+    if(!response.ok)return [];
+    const body=await response.json().catch(()=>({}));
+    return (Array.isArray(body?.products)?body.products:[]).map(item=>{
+      const code=String(item?.shareCode||'');if(!/^[A-Za-z0-9_-]{3,80}$/.test(code))return null;
+      const p=item.product||{};const path='/ekodimall/p/'+encodeURIComponent(code);const url=validPublicUrl('https://ekodi.kr'+path);if(!url)return null;
+      return {id:'mall-product:'+code,type:'product',siteId:'ekodimall',name:String(p.name||'에코디몰 상품').slice(0,160),url,path,
+        description:String(p.oneLine||'').slice(0,300),imageUrl:'',source:'ekodi-mall',publishedAt:item.publishedAt||'',updatedAt:item.updatedAt||item.publishedAt||'',changefreq:'daily',priority:'0.7'};
+    }).filter(Boolean);
+  }catch{return []}
+}
+
 export async function collectPublicDiscoveryItems(env){
-  const groups=await Promise.all([ledgerItems(env),seonamNoticeItems(env)]);
+  const groups=await Promise.all([ledgerItems(env),seonamNoticeItems(env),mallProductItems(env)]);
   const map=new Map();
   for(const item of groups.flat())if(item?.url)map.set(item.url,item);
   return [...map.values()];

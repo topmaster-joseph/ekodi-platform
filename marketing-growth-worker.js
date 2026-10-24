@@ -1,3 +1,4 @@
+import { mallPromotionBoard } from './mall-promotion-board.js';
 import { WorkerEntrypoint } from 'cloudflare:workers';
 import { runMallAutonomousProfitLoop } from './mall-autonomous-profit-loop.js';
 import { ownedTenantAutopostSubject, runOwnedTenantAutopostCycle } from './owned-tenant-autopost-loop.js';
@@ -1006,6 +1007,10 @@ export default {
     if (auth.error) return json(request,env,{error:auth.error},auth.status);
     const {identity,subject} = auth;
 
+    if (url.pathname === '/v1/mall/promotion-board' && request.method === 'GET') {
+      if (subject.type !== 'tenant' || subject.key !== 'ekodimall') return json(request,env,{error:'SUBJECT_FORBIDDEN'},403);
+      return json(request,env,await mallPromotionBoard(env));
+    }
     if (url.pathname === '/v1/mall/dashboard' && request.method === 'GET') {
       if (subject.type !== 'tenant' || subject.key !== 'ekodimall') return json(request,env,{error:'SUBJECT_FORBIDDEN'},403);
       return json(request,env,await mallGrowthDashboardSnapshot(env));
