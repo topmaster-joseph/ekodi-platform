@@ -195,6 +195,7 @@
         oneLine,
         price: data.price ? Number(data.price) : null,
         stockQuantity: data.stockQuantity === '' || data.stockQuantity === undefined ? null : Number(data.stockQuantity),
+        expiryDate: data.expiryDate || '',
         benefits,
         specs,
         story,
@@ -316,6 +317,8 @@
     const isDirect = (form.elements.saleType?.value || 'direct') === 'direct';
     if (stockField) stockField.hidden = !isDirect;
     if (form.elements.stockQuantity) form.elements.stockQuantity.required = isDirect;
+    const expiryField = form.querySelector('[data-expiry-field]');
+    if (expiryField) expiryField.hidden = !isDirect;
     render();
   }
 

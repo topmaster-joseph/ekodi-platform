@@ -12,6 +12,7 @@ import { handleAnalyticsRequest } from './analytics.js';
 import { handleStorefrontRequest } from './storefront.js';
 import { commerceEventSchemaReady } from './commerce-events.js';
 import { reconcileMallPayments, inventorySchemaReady } from './payment-reconciliation.js';
+import { sweepExpiryWindow } from './shelf-life.js';
 import { handleCommerceOperationsRequest } from './commerce-operations.js';
 import { handleAmazonRequest, amazonRuntimeStatus, amazonCostSchemaReady, amazonConnectionSchemaReady } from './amazon.js';
 import { handleAmazonReadonlyRequest, amazonReadSyncSchemaReady } from './amazon-readonly-sync.js';
@@ -258,6 +259,11 @@ export default {
   // EKODI-MALL-PAY-RECON-001: 10분마다 결제대기 주문을 토스 재조회로 대사하고 만료 주문의 재고를 되돌린다.
   async scheduled(controller, rawEnv, ctx) {
     const env = withMerchantKeys(rawEnv, rawEnv?.EKODIPAY_PROFILE || MALL_MERCHANT_PROFILE);
+    // EKODI-MALL-SHELF-LIFE-001: 소비기한 3개월 미만 직접판매 상품 자동 품절(결제 활성화 여부와 무관하게 실행).
+    const expirySweep = env?.DB ? sweepExpiryWindow(env).then(summary => {
+      if (summary.soldOut) console.log('mall expiry sold-out sweep', JSON.stringify(summary));
+    }).catch(error => console.error('mall expiry sweep failed', error)) : Promise.resolve();
+    if (ctx?.waitUntil) ctx.waitUntil(expirySweep); else await expirySweep;
     if (!['1','true','yes','on'].includes(String(env.PAYMENTS_ENABLED || '').toLowerCase())) return;
     const run = reconcileMallPayments(env).then(summary => {
       if (summary.checked || summary.errors) console.log('mall payment reconciliation', JSON.stringify(summary));
