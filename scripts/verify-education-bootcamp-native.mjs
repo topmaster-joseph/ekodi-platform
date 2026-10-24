@@ -8,7 +8,10 @@ import {classifyConsoleSecurityBlock,classifyRequestSecurityBlock,
 } from './education-native-security-observations.mjs';
 
 // Reuse the existing registered Education boundary; never mint a new hostname.
-export const ORIGIN=new URL(EKODI_SERVICE_MANIFEST.services.find(row=>row.id==='edu').url).origin;
+const SERVICE_URL=new URL(EKODI_SERVICE_MANIFEST.services.find(row=>row.id==='edu').url);
+export const ORIGIN=SERVICE_URL.origin;
+// Registered service base (origin + path): https://ekodi.kr/edu after the 2026-10-23 apex-only migration.
+export const SERVICE_BASE=ORIGIN+SERVICE_URL.pathname.replace(/\/+$/,'');
 export const ROUTE='/study/ai-bootcamp/';
 const wantsPreview=process.env.EKODI_EDUCATION_PREVIEW_MODE==='true';
 const previewAllowed=wantsPreview&&process.env.GITHUB_EVENT_NAME==='pull_request'&&process.env.CI==='true';
@@ -78,8 +81,8 @@ async function checkProfile(browser,profile){
   });
   try{
     if(!previewAllowed){
-      const legacy=await page.request.get(ORIGIN+ROUTE,{timeout:15000});
-      if(legacy.status()!==200)fail('legacy Education classroom compatibility failed HTTP '+legacy.status());
+      const registered=await page.request.get(SERVICE_BASE+ROUTE,{timeout:15000});
+      if(registered.status()!==200)fail('registered Education classroom address failed HTTP '+registered.status());
     }
     const response=await page.goto(TARGET_ORIGIN+TARGET_ROUTE,{waitUntil:'domcontentloaded',timeout:35000});
     if(!response||response.status()!==200)fail(profile.name+' classroom returned HTTP '+response?.status());

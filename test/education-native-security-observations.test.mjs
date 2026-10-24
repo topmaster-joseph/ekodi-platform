@@ -61,7 +61,7 @@ test('actual native runners keep strict no-mutation isolation, error logs and en
     assert.doesNotMatch(source,/launchPersistentContext|connectOverCDP|ignoreHTTPSErrors:\s*true|bypassCSP:\s*true/);
   }
   assert.match(classroom,/TARGET_ROUTE=previewAllowed\?ROUTE:'\/edu'\+ROUTE/);
-  assert.match(classroom,/const legacy=await page\.request\.get\(ORIGIN\+ROUTE/);
+  assert.match(classroom,/const registered=await page\.request\.get\(SERVICE_BASE\+ROUTE/,'checks the registered service address (apex path after the apex-only migration)');
   assert.match(classroom,/TARGET_ORIGIN\+TARGET_ROUTE/);
   assert.match(classroom,/sessionRows:24/);
   assert.match(classroom,/slideCounts/);
