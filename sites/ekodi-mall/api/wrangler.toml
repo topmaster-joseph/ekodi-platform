@@ -37,8 +37,10 @@ DOMEGGOOK_CURATION_TARGET = "1000"
 DOMEGGOOK_CURATION_PER_KEYWORD = "15"
 DOMEGGOOK_MARGIN_PCT = "25"
 MALL_CURATION_SELLER_EMAIL = "joseph@ekodi.kr"
+# EKODI-MALL-DOMEGGOOK-AUTOORDER-001: 결제완료 위탁주문 자동발주. DOMEMAE_USER_ID·DOMEMAE_PASSWORD secret 이 있어야 실제 동작.
+DOMEGGOOK_AUTO_ORDER_ENABLED = "true"
 
-# DOMEMAE_API_KEY, DOMEMAE_USER_ID, DOMEMAE_SESSION_ID are Worker secrets only.
+# DOMEMAE_API_KEY, DOMEMAE_USER_ID, DOMEMAE_PASSWORD (auto-order login) are Worker secrets only.
 # Do not put provider credentials in this file, browser assets or D1.
 
 # Non-destructive compatibility declaration for the short-lived SQLite Durable

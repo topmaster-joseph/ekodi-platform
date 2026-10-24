@@ -325,6 +325,8 @@ export async function notifySupplyOrder(env, order) {
   if (!env?.DB || !order?.product_id) return false;
   const row = await env.DB.prepare('SELECT name,supply_provider,supply_item_no,supply_cost,supply_shipping FROM products WHERE id=?').bind(order.product_id).first();
   if (!row || row.supply_provider !== PROVIDER) return false;
+  // 자동발주가 켜져 있으면 cron 이 발주하고, 실패할 때만 알림을 남긴다.
+  if (String(env.DOMEGGOOK_AUTO_ORDER_ENABLED || '').toLowerCase() === 'true' && env.DOMEMAE_USER_ID && env.DOMEMAE_PASSWORD) return true;
   await raiseAlert(env, {
     severity: 'warn', kind: 'supply.order_needed', orderId: order.id, productId: order.product_id,
     message: `발주 필요 · 도매꾹 ${row.supply_item_no} · ${row.name} × ${order.quantity || 1} (예상 공급비 ${((row.supply_cost || 0) * (order.quantity || 1) + (row.supply_shipping || 0)).toLocaleString('ko-KR')}원)`
