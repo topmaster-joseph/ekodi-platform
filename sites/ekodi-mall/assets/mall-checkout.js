@@ -38,7 +38,7 @@
     if (!zip || !addr1) return;
     const button = el('button', { class: 'btn ghost checkout-address-search', type: 'button', text: '주소 검색' });
     const box = el('div', { class: 'checkout-address-box', hidden: '' });
-    const note = el('p', { class: 'checkout-address-note', text: '주소 검색으로 우편번호와 도로명 주소를 정확히 입력하세요.' });
+    const note = el('p', { class: 'checkout-address-note', text: '[주소 검색]을 누르면 우편번호와 주소가 자동으로 입력됩니다.' });
     zip.closest('label').after(button);
     panel.querySelector('.checkout-grid')?.after(box);
     box.before(note);
@@ -64,12 +64,23 @@
         }).embed(box, { autoClose: true });
         box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       } catch {
+        zip.readOnly = false; addr1.readOnly = false;
+        zip.placeholder = '5자리'; addr1.placeholder = '';
         note.textContent = '주소 검색을 불러오지 못했습니다. 우편번호와 주소를 직접 입력해 주세요.';
       } finally { button.disabled = false; }
     };
+    // Postcode and street address are filled only by the search, never typed:
+    // tapping either field opens the search. If the search cannot load, the
+    // fields unlock so the buyer can still complete the order.
+    for (const input of [zip, addr1]) {
+      input.readOnly = true;
+      input.placeholder = '주소 검색으로 자동 입력';
+      input.addEventListener('click', () => { if (input.readOnly && box.hidden) open(); });
+      input.addEventListener('keydown', (event) => { if (input.readOnly && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); open(); } });
+    }
+    const zipLabel = zip.closest('label');
+    if (zipLabel) zipLabel.classList.add('checkout-zip-auto');
     button.addEventListener('click', open);
-    // Opening the search when the empty 주소 field is focused guides the buyer to exact input.
-    addr1.addEventListener('focus', () => { if (!addr1.value.trim() && box.hidden) open(); }, { once: true });
   }
 
   /** Mount the checkout panel. `ctx` = { api, shareCode, attributionToken, quote }. The API base comes from the page. */
