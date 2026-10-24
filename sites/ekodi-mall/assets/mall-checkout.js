@@ -14,6 +14,64 @@
     return el('label', { class: 'checkout-field' }, el('span', { text: label }), el('input', { id, ...attrs }));
   }
 
+  // EKODI-MALL-ADDRESS-SEARCH-001: free Kakao(Daum) postcode search, embedded
+  // in the page (no popup). Selecting a result fills 우편번호/주소 exactly and
+  // moves focus to 상세주소. Manual entry still works if the script cannot load.
+  const POSTCODE_SRC = 'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
+  let postcodeLoading = null;
+  function loadPostcode() {
+    const ready = () => (window.kakao && window.kakao.Postcode) || (window.daum && window.daum.Postcode);
+    if (ready()) return Promise.resolve(ready());
+    if (!postcodeLoading) postcodeLoading = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = POSTCODE_SRC; script.async = true;
+      script.onload = () => { const wait = (n) => ready() ? resolve(ready()) : n > 50 ? reject(new Error('postcode_unavailable')) : setTimeout(() => wait(n + 1), 100); wait(0); };
+      script.onerror = () => { postcodeLoading = null; reject(new Error('postcode_unavailable')); };
+      document.head.append(script);
+    });
+    return postcodeLoading;
+  }
+  function mountAddressSearch(panel) {
+    const zip = panel.querySelector('#coPostcode');
+    const addr1 = panel.querySelector('#coAddr1');
+    const addr2 = panel.querySelector('#coAddr2');
+    if (!zip || !addr1) return;
+    const button = el('button', { class: 'btn ghost checkout-address-search', type: 'button', text: '주소 검색' });
+    const box = el('div', { class: 'checkout-address-box', hidden: '' });
+    const note = el('p', { class: 'checkout-address-note', text: '주소 검색으로 우편번호와 도로명 주소를 정확히 입력하세요.' });
+    zip.closest('label').after(button);
+    panel.querySelector('.checkout-grid')?.after(box);
+    box.before(note);
+    const style = document.createElement('style');
+    style.textContent = '.checkout-address-search{align-self:end;min-height:42px}.checkout-address-box{position:relative;border:1px solid #d9d2c4;border-radius:12px;height:460px;margin:10px 0;overflow:hidden}.checkout-address-note{font-size:13px;color:#4d5a55;margin:6px 0 0}';
+    document.head.append(style);
+    const open = async () => {
+      button.disabled = true;
+      try {
+        const Postcode = await loadPostcode();
+        box.hidden = false; box.replaceChildren();
+        new Postcode({
+          oncomplete(data) {
+            const base = data.userSelectedType === 'J' ? (data.jibunAddress || data.roadAddress) : (data.roadAddress || data.jibunAddress);
+            const extra = data.buildingName && data.apartment === 'Y' ? ` (${data.buildingName})` : '';
+            zip.value = data.zonecode || '';
+            addr1.value = `${base || ''}${extra}`.trim();
+            box.hidden = true; box.replaceChildren();
+            note.textContent = '주소가 입력되었습니다. 상세주소(동·호수 등)를 입력하세요.';
+            addr2?.focus();
+          },
+          width: '100%', height: '100%'
+        }).embed(box, { autoClose: true });
+        box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      } catch {
+        note.textContent = '주소 검색을 불러오지 못했습니다. 우편번호와 주소를 직접 입력해 주세요.';
+      } finally { button.disabled = false; }
+    };
+    button.addEventListener('click', open);
+    // Opening the search when the empty 주소 field is focused guides the buyer to exact input.
+    addr1.addEventListener('focus', () => { if (!addr1.value.trim() && box.hidden) open(); }, { once: true });
+  }
+
   /** Mount the checkout panel. `ctx` = { api, shareCode, attributionToken, quote }. The API base comes from the page. */
   function mount(host, ctx) {
     if (!host || !ctx?.quote?.checkoutReady) return null;
@@ -37,6 +95,7 @@
       el('label', { class: 'checkout-consent' }, consent, el('span', { text: '[필수] 주문·배송 안내를 위해 이름, 휴대전화, 이메일, 주소를 수집·이용하는 데 동의합니다. 판매자에게는 배송에 필요한 범위에서만 전달됩니다.' })),
       msg, payBtn);
     host.append(panel);
+    mountAddressSearch(panel);
 
     const dialog = el('dialog', { class: 'checkout-dialog', 'aria-labelledby': 'coPayTitle' });
     const methods = el('div', { id: 'coPaymentMethods' });
