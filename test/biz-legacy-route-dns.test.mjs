@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { reconcileLegacyRoutes } from '../scripts/reconcile-ekodibiz-legacy-route.mjs';
+import { reconcileLegacyRoutes, verifyRedirects } from '../scripts/reconcile-ekodibiz-legacy-route.mjs';
 import { readFile } from 'node:fs/promises';
 
 const ok = result => new Response(JSON.stringify({ success: true, result }), {
@@ -86,4 +86,40 @@ test('unproxyable web record fails closed before any DNS write', async () => {
     token: 'not-a-real-token', fetchImpl, probe: async () => {}
   }), /not safely proxyable/);
   assert.deepEqual(db.patches, []);
+});
+
+test('transient HTTPS/DNS error recovers during bounded retry period', async () => {
+  let calls = 0;
+  const fetchImpl = async () => {
+    calls++;
+    if (calls === 1) throw Object.assign(new Error('Network temporarily unavailable'), { code: 'EAI_AGAIN' });
+    return new Response(null, { status: 301,
+      headers: { location: 'https://ekodi.kr/ekodibiz/domain-check?source=biz-legacy' } });
+  };
+  await verifyRedirects(['ekodibiz.kr'], fetchImpl, { attempts: 3, intervalMs: 0 });
+  assert.equal(calls, 2);
+});
+
+test('persistent non-301 response reports the final status and Location', async () => {
+  const fetchImpl = async () => new Response(null, { status: 503 });
+  await assert.rejects(
+    verifyRedirects(['ekodibiz.kr'], fetchImpl, { attempts: 2, intervalMs: 0 }),
+    /after 2 attempts\. Last observation: HTTP 503, location=\(missing\)/,
+  );
+});
+
+test('persistent DNS error reports the error class without leaking internals', async () => {
+  const fetchImpl = async () => { throw Object.assign(new Error('secret diagnostic text'), { code: 'ENOTFOUND' }); };
+  await assert.rejects(
+    verifyRedirects(['ekodibiz.kr'], fetchImpl, { attempts: 2, intervalMs: 0 }),
+    error => error.message.includes('fetch error class=ENOTFOUND') && !error.message.includes('secret diagnostic text'),
+  );
+});
+
+test('deployment timeout covers a full public DNS cache TTL', async () => {
+  const workflow = await readFile(new URL('../.github/workflows/deploy-biz-legacy.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /timeout-minutes: 20/);
+  const script = await readFile(new URL('../scripts/reconcile-ekodibiz-legacy-route.mjs', import.meta.url), 'utf8');
+  assert.match(script, /attempts = options\.attempts \?\? 105/);
+  assert.match(script, /intervalMs = options\.intervalMs \?\? 4000/);
 });
