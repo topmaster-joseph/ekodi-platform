@@ -84,11 +84,23 @@
   const CATEGORY_LABEL = { general: '일반', food: '식품', local: '로컬', craft: '공예', book: '도서', beauty: '뷰티', living: '리빙', fashion: '패션', digital: '디지털', service: '서비스' };
   function mediaBlock(data) {
     const figure = el('figure', 'pp-media');
-    const image = (data.product.images || []).find((item) => /^https:\/\//.test(String(item?.url || item || '')));
-    if (image) {
+    const photos = (data.product.images || []).map((item) => String(item?.url || item || '')).filter((url) => /^https:\/\//.test(url));
+    if (photos.length) {
       const img = document.createElement('img');
-      img.src = String(image.url || image); img.alt = data.product.name; img.loading = 'eager'; img.decoding = 'async';
+      img.src = photos[0]; img.alt = data.product.name; img.loading = 'eager'; img.decoding = 'async';
       figure.append(img);
+      if (photos.length > 1) {
+        const thumbs = el('div', 'pp-thumbs');
+        photos.forEach((url, index) => {
+          const button = el('button', index === 0 ? 'is-active' : ''); button.type = 'button';
+          button.setAttribute('aria-label', `사진 ${index + 1}`);
+          const t = document.createElement('img'); t.src = url; t.alt = ''; t.loading = 'lazy';
+          button.append(t);
+          button.addEventListener('click', () => { img.src = url; thumbs.querySelectorAll('button').forEach((b) => b.classList.toggle('is-active', b === button)); });
+          thumbs.append(button);
+        });
+        figure.append(thumbs);
+      }
     } else {
       const visual = el('div', 'pp-visual');
       visual.setAttribute('role', 'img');
