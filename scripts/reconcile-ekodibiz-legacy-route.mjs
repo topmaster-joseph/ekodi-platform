@@ -30,9 +30,11 @@ export async function verifyRedirects(hosts = HOSTS, fetchImpl = fetch, options 
   const attempts = options.attempts ?? 105;
   const intervalMs = options.intervalMs ?? 4000;
   const requestTimeoutMs = options.requestTimeoutMs ?? 8000;
+  const maxElapsedMs = options.maxElapsedMs ?? 420000;
   for (const host of hosts) {
     let passed = false;
     let lastObservation = 'no response';
+    const startedAt = Date.now();
     for (let attempt = 1; attempt <= attempts; attempt++) {
       try {
         const response = await fetchImpl('https://' + host + '/domain-check?source=biz-legacy', {
@@ -56,6 +58,9 @@ export async function verifyRedirects(hosts = HOSTS, fetchImpl = fetch, options 
         console.info('EKODIBIZ DNS/TLS propagation check for ' + host +
           ' (' + attempt + '/' + attempts + '): ' + lastObservation);
       }
+      // A hard wall-clock deadline ensures both hosts and DNS rollback fit
+      // inside the guarded 20-minute deployment job, even with slow TLS errors.
+      if (Date.now() - startedAt >= maxElapsedMs) break;
       if (attempt < attempts) await delay(intervalMs);
     }
     if (!passed) throw new Error('EKODIBIZ live redirect check failed for ' + host +
