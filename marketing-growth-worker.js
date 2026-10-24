@@ -621,6 +621,14 @@ async function ensureChannelId(env, subject, connection) {
     .bind(subject.type,subject.key,connection.provider,channelType,connection.external_id).first();
   return Number(row?.id || 0);
 }
+async function immediatePublishPlanActive(env, subject) {
+  const row = await env.DB.prepare(`SELECT 1 AS ok FROM service_subscriptions s
+    WHERE s.site='marketing' AND s.status='active' AND s.plan_id IN ('flex','plus','pro','auto','enterprise')
+      AND ((?1 IN ('person','tenant') AND s.subject_type=?1 AND s.subject_key=?2)
+        OR (?1='store' AND s.subject_type='tenant' AND s.subject_key=(SELECT tenant_slug FROM marketing_store_workspaces WHERE store_id=?2 LIMIT 1)))
+    LIMIT 1`).bind(subject.type,subject.key).first();
+  return Boolean(row?.ok);
+}
 async function insertContent(env, subject, identity, content) {
   const now = nowIso();
   const result = await env.DB.prepare(`INSERT INTO marketing_content_items(subject_type,subject_key,title,content_type,caption,asset_url,link_url,content_json,source,approval_state,created_by,created_at,updated_at)
@@ -791,6 +799,9 @@ async function executePublish(request, env, identity, subject, body) {
   if (!ids.length || (!clean(content.caption,12000) && !clean(content.title,240))) return json(request,env,{error:'CONTENT_AND_CONNECTIONS_REQUIRED'},400);
   try { assertAiCaptionHonest(`${content.title || ''}\n${content.caption || ''}`,content.isAiGenerated === true); }
   catch (error) { return json(request,env,{error:error.code,detail:clean(error.message,300)},400); }
+  // The DB trigger aborts immediate jobs without an active plan. Check first so nothing is posted
+  // to a provider before we know the result can be recorded (and the admin sees why, not a 500).
+  if (!(await immediatePublishPlanActive(env,subject))) return json(request,env,{error:'MARKETING_PLAN_IMMEDIATE_REQUIRED',detail:'즉시 게시에는 활성 Marketing 플랜이 필요합니다.'},402);
   const contentId = await insertContent(env,subject,identity,{...content,campaignName:body.campaignName || content.campaignName || ''});
   if (!contentId) return json(request,env,{error:'CONTENT_INSERT_FAILED'},500);
   const results = [];
