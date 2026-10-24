@@ -127,4 +127,10 @@ for(let attempt=1;attempt<=attempts;attempt++){
     if(attempt<attempts)await sleep(delayMs);
   }
 }
+// Surface the failing check as a GitHub annotation so it is readable via the
+// check-runs API even when raw job logs are unavailable.
+if(process.env.GITHUB_ACTIONS==='true'){
+  const safe=String(lastError).replace(/%/g,'%25').replace(/\r/g,'%0D').replace(/\n/g,'%0A').slice(0,1500);
+  console.log('::error title=SeonamMedi live release convergence::'+safe);
+}
 throw new Error('SeonamMedi live release did not converge: '+lastError);
