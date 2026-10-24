@@ -78,15 +78,19 @@ test('nested EKODI business services remain explicit apex-path boundaries', () =
   assert.match(siteWorker, /TRADE_LEGACY_HOSTS/);
 });
 
-test('biz.ekodi.kr proxy remains independent while legacy external domain redirect stays dedicated', () => {
+test('EKODIBIZ legacy domain points to the canonical apex service path while revenue Worker stays independent', () => {
   hasRoute(proxyToml, 'biz.ekodi.kr');
   hasRoute(proxyToml, 'mall.biz.ekodi.kr');
   assert.match(proxy, /host === 'biz\.ekodi\.kr'/);
   assert.match(proxy, /requestHost\(request, env, incoming\)/);
   assert.doesNotMatch(proxy, /'biz\.ekodi\.kr': 'https:\/\/ekodibiz\.kr'/);
-  assert.match(bizLegacy, /TARGET = 'https:\/\/biz\.ekodi\.kr'/);
+  assert.match(bizLegacy, /TARGET = 'https:\/\/ekodi\.kr\/ekodibiz'/);
+  assert.doesNotMatch(bizLegacy, /TARGET = 'https:\/\/biz\.ekodi\.kr'/);
   assert.match(bizLegacy, /Response\.redirect\(target\.toString\(\), 301\)/);
-  for (const d of ['ekodibiz.kr','www.ekodibiz.kr']) hasRoute(bizLegacyToml,d);
+  for (const d of ['ekodibiz.kr','www.ekodibiz.kr']) {
+    assert.ok(bizLegacyToml.includes(`pattern = "${d}/*"`));
+  }
+  assert.doesNotMatch(bizLegacyToml, /custom_domain\s*=\s*true/);
 });
 
 test('finance and root custom-domain contracts remain intact', () => {

@@ -41,6 +41,7 @@ import { routeCanonicalSurface } from './canonical-surface-router.js';
 import { handlePreviewRequest } from './preview-page.js';
 import { storeGatewayPage } from './store-gateway-page.js';
 import { isEkodiIndexNowKeyPath, ekodiIndexNowKeyResponse } from './platform-indexnow.js';
+import { searchVerificationFileResponse } from './search-engine-verification.js';
 import { EKODI_PUBLIC_REGISTRY_PATH, EKODI_DYNAMIC_SITEMAP_PATH, EKODI_DYNAMIC_LLMS_PATH, isPublicDiscoveryPath, ekodiPublicRegistryResponse, ekodiDynamicSitemapResponse, ekodiDynamicLlmsResponse } from './public-discovery-registry.js';
 import { publicDiscoveryContentResponse } from './public-discovery-content.js';
 import { storePortfolioAdminPage, storePortfolioAdminPanelPage, storePortfolioAdminPanelScript, storePortfolioAdminShellScript } from './store-portfolio-admin-page.js';
@@ -690,6 +691,7 @@ export default {
     const traffic=await assessTrafficTier(request,env);
     const trafficGuard=trafficRequestGuard(request,traffic);
     if(trafficGuard)return applyPlatformSecurityHeaders(trafficGuard,request);
+    if(['GET','HEAD'].includes(request.method)){const verificationFile=searchVerificationFileResponse(new URL(request.url).pathname,{head:request.method==='HEAD'});if(verificationFile)return applyPlatformSecurityHeaders(verificationFile,request);}
     let trafficRecorded=false;
     const record=status=>{if(trafficRecorded)return;trafficRecorded=true;recordTrafficOutcome({durationMs:Date.now()-trafficStartedAt,status})};
     const finalize=response=>{
