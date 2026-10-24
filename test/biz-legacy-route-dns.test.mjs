@@ -72,3 +72,18 @@ test('legacy Wrangler uses ordinary routes rather than conflicting custom domain
   assert.match(workflow, /reconcile-ekodibiz-legacy-route\.mjs/);
   assert.doesNotMatch(workflow, /curl\s+[^\n]*-X DELETE/);
 });
+
+test('unproxyable web record fails closed before any DNS write', async () => {
+  const db = fakeCloudflare();
+  const fetchImpl = async (url, options = {}) => {
+    if (url.includes('/dns_records?name=ekodibiz.kr')) {
+      return ok([{ id: 'apex-locked', name: 'ekodibiz.kr', type: 'A',
+        proxied: false, proxiable: false }]);
+    }
+    return db.fetchImpl(url, options);
+  };
+  await assert.rejects(reconcileLegacyRoutes({
+    token: 'not-a-real-token', fetchImpl, probe: async () => {}
+  }), /not safely proxyable/);
+  assert.deepEqual(db.patches, []);
+});
