@@ -52,6 +52,12 @@ function fakeToss() {
       const p = payments.get(decodeURIComponent(byOrder[1]));
       return p ? Response.json(p) : Response.json({ code: 'NOT_FOUND_PAYMENT', message: 'not found' }, { status: 404 });
     }
+    const byKey = /\/v1\/payments\/([^/?]+)$/.exec(u);
+    if (byKey && byKey[1] !== 'confirm' && (init.method || 'GET') === 'GET') {
+      const key = decodeURIComponent(byKey[1]);
+      const p = [...payments.values()].find((item) => item.paymentKey === key);
+      return p ? Response.json(p) : Response.json({ code: 'NOT_FOUND_PAYMENT', message: 'not found' }, { status: 404 });
+    }
     if (u.endsWith('/v1/payments/confirm')) {
       const body = JSON.parse(init.body);
       const p = { paymentKey: body.paymentKey, orderId: body.orderId, totalAmount: body.amount, status: 'DONE', method: '카드', approvedAt: new Date().toISOString() };
@@ -342,4 +348,29 @@ test('reconciliation raises de-duplicated operator alerts and records recovered 
   rows = alerts();
   assert.equal(rows.find((r) => r.kind === 'payment.reconcile_failed').status, 'resolved');
   assert.equal(rows.find((r) => r.kind === 'payment.refund_recorded').severity, 'info');
+});
+
+// Live finding 2026-10-25: the orderId lookup answered NOT_FOUND for a cancelled
+// live payment. The paymentKey lookup must still recover the refund.
+test('paid-order refund recovery uses the recorded paymentKey when orderId lookup is not found', async () => {
+  const db = migrated({ stock: 3 });
+  const env = { ...ENV, DB: db };
+  const toss = fakeToss();
+  const original = globalThis.fetch;
+  try {
+    const created = await createOrder(env, { shareCode: 'SHARE1', quantity: 1, buyer: BUYER });
+    const id = created.order.id;
+    await core.fetch(new Request('https://ekodi.kr/api/public/payments/confirm', {
+      method: 'POST', body: JSON.stringify({ paymentKey: 'pk_by_key', orderId: id, amount: 15000 }),
+    }), env);
+    toss.payments.set(id, { ...toss.payments.get(id), status: 'CANCELED', cancels: [{ cancelAmount: 15000 }] });
+    const mocked = globalThis.fetch;
+    globalThis.fetch = async (url, init) => /\/v1\/payments\/orders\//.test(String(url))
+      ? Response.json({ code: 'NOT_FOUND_PAYMENT', message: 'not found' }, { status: 404 })
+      : mocked(url, init);
+    const result = await reconcileMallPayments(env, { refundLimit: 1 });
+    assert.equal(result.refundRecovered, 1);
+    assert.equal(orderRow(db, id).status, 'refunded');
+    assert.equal(db.db.prepare("SELECT COUNT(*) n FROM mall_ops_alerts WHERE kind='payment.reconcile_not_found'").get().n, 0);
+  } finally { globalThis.fetch = original; toss.restore(); }
 });

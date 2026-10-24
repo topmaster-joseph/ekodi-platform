@@ -27,6 +27,30 @@ const clean = (value, max = 200) => String(value ?? '').trim().slice(0, max);
 const profileOf = env => clean(env?.EKODIPAY_PROFILE, 20) || MALL_PAYMENT_PROFILE;
 
 /** 주문번호로 토스 결제를 조회한다. 토스에 결제가 없으면 null. */
+/**
+ * Paid orders: look the payment up by the recorded paymentKey first. In live
+ * operation (2026-10-25) Toss answered NOT_FOUND to the orderId lookup for a
+ * cancelled live payment while the payment itself existed; the paymentKey
+ * lookup is the canonical one. Falls back to orderId when no key is recorded.
+ */
+export async function fetchTossPaymentForOrder(env, orderId, paymentKey = '') {
+  const key = clean(paymentKey, 220);
+  if (key) {
+    try {
+      const payment = await tossRequest(env, profileOf(env), `/v1/payments/${encodeURIComponent(key)}`);
+      if (payment && payment.orderId === orderId) return payment;
+    } catch (error) {
+      if (!(error instanceof TossError && (error.status === 404 || error.code === 'NOT_FOUND_PAYMENT'))) throw error;
+    }
+  }
+  return fetchTossPaymentByOrder(env, orderId);
+}
+
+async function recordedPaymentKey(env, orderId) {
+  const row = await env.DB.prepare("SELECT payment_key FROM order_payments WHERE order_id=? ORDER BY created_at DESC LIMIT 1").bind(orderId).first().catch(() => null);
+  return row?.payment_key || '';
+}
+
 export async function fetchTossPaymentByOrder(env, orderId) {
   try {
     return await tossRequest(env, profileOf(env), `/v1/payments/orders/${encodeURIComponent(orderId)}`);
@@ -130,7 +154,7 @@ export async function handleTossWebhook(env, body) {
   if (!order) return { status: 200, body: { ok: true, ignored: 'not-a-mall-order' } };
   let payment;
   try {
-    payment = await fetchTossPaymentByOrder(env, orderId);
+    payment = await fetchTossPaymentForOrder(env, orderId, clean(body?.data?.paymentKey || body?.paymentKey, 220) || await recordedPaymentKey(env, orderId));
   } catch (error) {
     console.error('mall webhook toss lookup failed', { orderId, code: error?.code });
     return { status: 502, body: { ok: false, retry: true } }; // 토스가 재전송한다.
@@ -182,7 +206,7 @@ export async function reconcileMallPayments(env, { now = new Date(), limit = REC
       summary.checked += 1;
       summary.paidChecked += 1;
       try {
-        const payment = await fetchTossPaymentByOrder(env, order.id);
+        const payment = await fetchTossPaymentForOrder(env, order.id, await recordedPaymentKey(env, order.id));
         // A missing Toss payment does not downgrade a recorded paid order.
         if (payment) {
           const result = await applyVerifiedPayment(env, order, payment, { now });
