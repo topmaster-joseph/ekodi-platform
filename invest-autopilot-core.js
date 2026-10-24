@@ -460,6 +460,33 @@ export function stressTestStrategy(strategy,opts={}){
  });
 }
 
+// ---- Scheduling ----
+// Reports are due Monday 08:00 KST (weekly, previous Mon-Sun) and the 1st 08:00 KST (monthly, previous month).
+const KST=9*3600e3,DAY=86400e3;
+export const kstDay=ms=>new Date(ms+KST).toISOString().slice(0,10);
+export function autopilotReportPeriods(now){
+ const kst=now+KST;
+ const midnight=kst-((kst%DAY)+DAY)%DAY-KST;
+ let monday=midnight-((new Date(kst).getUTCDay()+6)%7)*DAY;
+ if(now<monday+8*3600e3)monday-=7*DAY;
+ const d=new Date(kst);let y=d.getUTCFullYear(),m=d.getUTCMonth();
+ if(now<Date.UTC(y,m,1)-KST+8*3600e3)m-=1;
+ const monthEnd=Date.UTC(y,m,1)-KST,monthStart=Date.UTC(y,m-1,1)-KST;
+ return [
+  {kind:'weekly',start:monday-7*DAY,end:monday,key:'W:'+kstDay(monday-7*DAY)},
+  {kind:'monthly',start:monthStart,end:monthEnd,key:'M:'+kstDay(monthStart).slice(0,7)}
+ ];
+}
+
+// series: [{day,equity}] ascending. base: equity at the close before the period (falls back to the first point).
+export function periodPerformance(series=[],base){
+ if(!series.length)return {periodReturn:undefined,maxDrawdown:undefined,points:0};
+ const start=Number(base)>0?Number(base):Number(series[0].equity);
+ let peak=start,mdd=0;
+ for(const p of series){peak=Math.max(peak,p.equity);mdd=Math.max(mdd,(peak-p.equity)/peak)}
+ return {periodReturn:series[series.length-1].equity/start-1,maxDrawdown:mdd,points:series.length};
+}
+
 // ---- Reporting ----
 const won=n=>Number.isFinite(Number(n))?Math.round(Number(n)).toLocaleString('ko-KR')+'원':'확인 필요';
 const pct=n=>Number.isFinite(Number(n))?(Number(n)*100).toFixed(2)+'%':'확인 필요';
@@ -467,15 +494,16 @@ export function buildAutopilotReport(kind,snapshot={}){
  const s=snapshot;
  const budget=Number(s.policy?.totalBudget||0);
  const lines=kind==='monthly'?[
-  ['월간 순수익률',pct(s.monthReturn)],['누적 수익률',pct(s.cumulativeReturn)],['최대낙폭',pct(s.maxDrawdown)],
+  ['월간 순수익률',pct(s.monthReturn??s.periodReturn)],['누적 수익률',pct(s.cumulativeReturn)],['최대낙폭',pct(s.maxDrawdown)],
   ['수수료·세금·환율 영향',won(s.costs)],['자산배분 상태',s.allocationSummary||'확인 필요'],['장기 목표 대비',s.goalProgress||'확인 필요']
  ]:[
-  ['총 투자자산',won(s.equity)],['평가손익',won(s.unrealizedPnl)],['실현손익',won(s.realizedPnl)],
+  ['총 투자자산',won(s.equity)],['주간 수익률',pct(s.periodReturn)],['평가손익',won(s.unrealizedPnl)],['실현손익',won(s.realizedPnl)],
   ['투자한도 사용률',budget?pct(Number(s.committed||0)/budget):'한도 미설정'],['벤치마크 대비',pct(s.excessReturn)],
   ['이번 주 거래',`${Number(s.tradeCount||0)}건`],['위험 상태',s.riskState||'정상'],['다음 주 점검',s.nextChecks?.join(', ')||'없음']
  ];
  return {
   schema:'ekodi.invest.autopilot-report.v1',kind,generatedAt:new Date(Number(s.now??Date.now())).toISOString(),
+  period:s.period?{start:new Date(s.period.start).toISOString(),end:new Date(s.period.end).toISOString(),key:s.period.key}:null,
   dataBasis:s.dataBasis||'paper',
   state:s.state||AUTOPILOT_DEFAULT_STATE,
   lines:lines.map(([label,value])=>({label,value})),

@@ -10,6 +10,7 @@ import { PERSONAL_AI_PROVIDER_REGISTRY } from './personal-ai-provider-registry.j
 import { handleMessengerOperatorControl } from './messenger-operator-control.js';
 import { handleMessengerOperatorPage } from './messenger-operator-page.js';
 import { drainMessengerOutbox } from './messenger-outbox.js';
+import { runInvestAutopilotSchedule } from './invest-autopilot-runtime.js';
 import { handleDeviceControl } from './device-control.js';
 import { handleDeviceWakeControl, runWakeOrchestration } from './device-wake-control.js';
 import { disableIneligibleWakeProfiles, enforceDesktopWakeRequest } from './device-wake-policy.js';
@@ -405,6 +406,8 @@ export default {
       : null;
     const authorBilling = runAuthorBillingSchedule(env).catch(error => { console.error('Author billing schedule error', error); return { processed:0, error:'author_billing_schedule_failed' }; });
     const messengerOutbox = drainMessengerOutbox(env, { limit:20 }).catch(error => { console.error('Messenger outbox schedule error', error); return { processed:0, failed:1, error:'messenger_outbox_schedule_failed' }; });
+    // My Invest autopilot: Sentinel on every pass; weekly/monthly reports are idempotent per period.
+    const investAutopilot = runInvestAutopilotSchedule(env, { now:scheduledAt.getTime() }).catch(error => { console.error('Invest autopilot schedule error', error); return { ran:false, error:'invest_autopilot_schedule_failed' }; });
     const commandPulse = runEkodiPulseSchedule(env, { limit:1 }).catch(error => { console.error('EKODI v8 Pulse schedule error', error); return { ok:false, error:'ekodi_v8_pulse_failed' }; });
     const aiProviderHealth = runAiProviderHealthSchedule(env, { scheduledTime:controller?.scheduledTime }).catch(error => { console.error('AI provider health schedule error', error); return { ok:false, checked:0, error:'ai_provider_health_failed' }; });
     const hybridWatchdog = runHybridExecutionMonitor(env).catch(error => { console.error('Hybrid execution watchdog schedule error', error); return { status:'unavailable', error:'hybrid_execution_watchdog_failed' }; });
@@ -420,6 +423,7 @@ export default {
     if (ctx?.waitUntil) {
       ctx.waitUntil(authorBilling);
       ctx.waitUntil(messengerOutbox);
+      ctx.waitUntil(investAutopilot);
       ctx.waitUntil(commandPulse);
       ctx.waitUntil(aiProviderHealth);
       ctx.waitUntil(hybridWatchdog);
@@ -432,7 +436,7 @@ export default {
       if (seonamMediCrawlWatch) ctx.waitUntil(seonamMediCrawlWatch);
       if (externalAccountHealthDaily) ctx.waitUntil(externalAccountHealthDaily);
     }
-    const background = [authorBilling, messengerOutbox, commandPulse, aiProviderHealth, hybridWatchdog, recordingRetention, wakeOrchestration, marketingMetrics, marketingIndexNow];
+    const background = [authorBilling, messengerOutbox, investAutopilot, commandPulse, aiProviderHealth, hybridWatchdog, recordingRetention, wakeOrchestration, marketingMetrics, marketingIndexNow];
     if (seonamMediHourly) background.push(seonamMediHourly);
     if (seonamMediRunnerWake) background.push(seonamMediRunnerWake);
     if (seonamMediCrawlWatch) background.push(seonamMediCrawlWatch);

@@ -54,6 +54,7 @@ on:
       - 'test/invest-lifecycle-runtime.test.mjs'
       - 'test/invest-autopilot-core.test.mjs'
       - 'test/invest-autopilot-runtime.test.mjs'
+      - 'test/invest-autopilot-schedule.test.mjs'
       - '.github/workflows/release-messenger-investment-functional.yml'
   push:
     branches: [main]
@@ -99,7 +100,7 @@ jobs:
         run: |
           set -euo pipefail
           for file in ekodi-principal.js profile-evidence-runtime.js profile-official-data-adapter.js invest-personalization-runtime.js invest-market-core.js invest-automation-runtime.js invest-lifecycle-runtime.js invest-autopilot-core.js invest-autopilot-runtime.js design-profile-runtime.js site-chrome-runtime.js config/site-chrome-defaults.js api-worker.js messenger-triage.js messenger-outbox.js messenger-channel-adapters.js messenger-operator-control.js workspace-messenger-v2.js store-sms-order-runtime.js workspace-platform-entry-worker.js workspace-platform-api-worker.js mission-control-entry-worker.js; do node --check "$file"; done
-          node --test test/workspace-platform.test.mjs test/store-sms-order-runtime.test.mjs test/store-terminal-payment.test.mjs test/conversation-release-registry.test.mjs test/conversation-production-health-retry.test.mjs test/profile-evidence-contract.test.mjs test/design-profile-contract.test.mjs test/site-chrome-runtime.test.mjs test/invest-personalization-contract.test.mjs test/invest-market-core.test.mjs test/invest-site-system.test.mjs test/invest-lifecycle-runtime.test.mjs test/invest-autopilot-core.test.mjs test/invest-autopilot-runtime.test.mjs
+          node --test test/workspace-platform.test.mjs test/store-sms-order-runtime.test.mjs test/store-terminal-payment.test.mjs test/conversation-release-registry.test.mjs test/conversation-production-health-retry.test.mjs test/profile-evidence-contract.test.mjs test/design-profile-contract.test.mjs test/site-chrome-runtime.test.mjs test/invest-personalization-contract.test.mjs test/invest-market-core.test.mjs test/invest-site-system.test.mjs test/invest-lifecycle-runtime.test.mjs test/invest-autopilot-core.test.mjs test/invest-autopilot-runtime.test.mjs test/invest-autopilot-schedule.test.mjs
           node scripts/validate-additive-migrations.mjs migrations
           bash -n scripts/apply-d1-migrations-with-retry.sh
           grep -Fq 'messenger_outbox' migrations/0030_messenger_event_outbox.sql

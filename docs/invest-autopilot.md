@@ -84,9 +84,18 @@ Task: `invest-autonomous-wealth-p0p3` · Branch: `ai/claude/invest-autonomous-we
 4. 문자(SMS) 위험 알림의 비용 승인.
 5. 실거래 활성화: 모의투자 60일 이상 + 전략 합격 + 위 1~4 완료 후 별도 화면에서 명시적 승인. 이 문서나 기존 구축 승인은 실거래 승인이 아닙니다.
 
-## 다음 단계 (P1·P2·P4)
+## P4 자동 운영 (정기 감시·보고)
 
-- P1: 토스 조회 전용 어댑터(`/api/v1/holdings`, `/accounts`), 서버 측 토큰 캐시(24h, 단일 토큰), `X-RateLimit-*` 준수. 고정 IP 중계 승인 후.
+- 실행 위치: 기존 Control API 10분 크론(`mission-control-entry-worker.js` `scheduled`)에 `runInvestAutopilotSchedule`을 추가했습니다. workspace-platform 워커는 크론 슬롯을 새로 쓰지 않는다는 기존 계약을 유지합니다. 같은 D1(`ekodi-auth`)을 사용합니다.
+- 매 실행: 모의투자 중인 계정마다 Sentinel 검사(손실 한도 도달 시 자동 `PAUSED`, 보유자산 유지) → 한국시간 일별 평가자산 기록(`investment_autopilot_equity_daily`).
+- 긴급 알림: critical 경보는 `investment_autopilot_notices`에 코드·날짜별 1건만 생성됩니다(10분마다 반복 발송 없음).
+- 정기 보고서: 주간(월요일 08:00 KST, 직전 월~일), 월간(1일 08:00 KST, 직전 달). `(kind, period_key)` 고유키로 중복 실행에도 1회만 생성됩니다. 기간 수익률·최대낙폭은 일별 평가자산으로 계산하고, 측정할 수 없는 값은 "확인 필요"로 둡니다.
+- 전달: 항상 `/my/invest` 상단 "이번 주 핵심 요약"·"중요 위험 알림"에 표시합니다. 정책에서 이메일을 선택했고 기존 메신저 이메일 채널(`CHANNEL_EMAIL` 바인딩 또는 `CHANNEL_EMAIL_URL`)과 `INVEST_OWNER_MESSENGER_THREAD_ID`가 설정된 경우에만 이메일로도 보냅니다. 현재 운영 설정 여부는 확인하지 못했습니다(확인 필요). 새 유료 채널은 추가하지 않았습니다.
+- 사용하지 않은 경로: 플랫폼 운영 보고서(`ekodi_owner_reports`)는 투자정보 분리 원칙 때문에, GitHub 이슈 알림은 저장소가 공개 저장소라서 사용하지 않습니다.
+- 한계: 시세가 직접 입력값이라 Sentinel은 마지막 입력 시세 기준으로만 판단합니다. 실시간 시세 연결 전에는 장중 급락을 감지하지 못합니다.
+
+## 다음 단계
+
+- P1: 토스 조회 전용 어댑터(`/api/v1/holdings`, `/accounts`), 서버 측 토큰 캐시(24h, 단일 토큰), `X-RateLimit-*` 준수. 고정 IP 중계 승인 후(보류 중).
 - P2: 검증된 과거 시세로 워크포워드·스트레스 실행, 결과를 전략 합격 기록으로 저장(`paperValidation`의 마지막 차단 사유 해제).
-- P4: Sentinel 정기 실행(workspace-platform `scheduled`), 주간·월간 보고서 자동 발송(기존 `ekodi_owner_reports`·알림 인프라 재사용).
 - 거버넌스: 모의 자율운용 기능 추가가 `invest` 공통서비스 헌장 개정(C2/C3) 대상인지 오케스트레이터 판정 필요.

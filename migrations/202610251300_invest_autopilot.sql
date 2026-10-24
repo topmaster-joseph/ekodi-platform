@@ -58,3 +58,33 @@ CREATE TABLE IF NOT EXISTS investment_autopilot_events (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_investment_autopilot_events_subject ON investment_autopilot_events(subject_type, subject_key, id);
+
+-- Owner notices: scheduled weekly/monthly reports and critical risk alerts.
+-- UNIQUE(period_key) makes every scheduler run idempotent; delivery never leaves EKODI unless the owner chose a configured channel.
+CREATE TABLE IF NOT EXISTS investment_autopilot_notices (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  subject_type TEXT NOT NULL,
+  subject_key TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('weekly','monthly','alert')),
+  period_key TEXT NOT NULL,
+  severity TEXT NOT NULL DEFAULT 'info' CHECK (severity IN ('info','warning','critical')),
+  title TEXT NOT NULL,
+  body_json TEXT NOT NULL DEFAULT '{}',
+  delivery_status TEXT NOT NULL DEFAULT 'pending',
+  delivery_detail TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE (subject_type, subject_key, kind, period_key)
+);
+CREATE INDEX IF NOT EXISTS idx_investment_autopilot_notices_subject ON investment_autopilot_notices(subject_type, subject_key, id);
+
+-- One paper equity point per KST trading day for period returns and drawdown.
+CREATE TABLE IF NOT EXISTS investment_autopilot_equity_daily (
+  subject_type TEXT NOT NULL,
+  subject_key TEXT NOT NULL,
+  trade_day TEXT NOT NULL,
+  equity REAL NOT NULL,
+  start_equity REAL NOT NULL DEFAULT 0,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (subject_type, subject_key, trade_day)
+);
