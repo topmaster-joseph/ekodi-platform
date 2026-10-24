@@ -24,7 +24,9 @@
           "\"officialDataProvider\":\"embedded-v1\"",
           "\"investPersonalization\":\"v1\"",
           "\"storeSmsOrders\":\"v1\"",
-          "\"storeSmsOrderSchemaReady\":true"
+          "\"storeSmsOrderSchemaReady\":true",
+          "\"storeTerminalPayments\":\"v1\"",
+          "\"storeTerminalPaymentSchemaReady\":true"
         ]
       }
     ]
