@@ -29,7 +29,7 @@ function harness(email=OWNER){
   const original=globalThis.fetch;
   globalThis.fetch=async()=>new Response(JSON.stringify({id:'owner-uuid',email,email_confirmed_at:'2026-10-01T00:00:00Z'}),{status:200});
   try{
-   const response=await handleInvestAutopilotApi(new Request('https://workspace-api.ekodi.kr'+path,{method,headers:{authorization:'Bearer '+'t'.repeat(40),'content-type':'application/json',origin:'https://ekodi.kr'},body:payload?JSON.stringify(payload):undefined}),env);
+   const response=await handleInvestAutopilotApi(new Request('https://ekodi.kr'+path,{method,headers:{authorization:'Bearer '+'t'.repeat(40),'content-type':'application/json',origin:'https://ekodi.kr'},body:payload?JSON.stringify(payload):undefined}),env);
    return {status:response.status,body:await response.json()};
   }finally{globalThis.fetch=original}
  };
@@ -49,7 +49,7 @@ function withClock(fn){
 test('autopilot API is owner-only and rejects anonymous callers',async()=>{
  const {call}=harness('someone@example.com');
  assert.equal((await call('GET','/v1/invest/autopilot/status')).body.error,'OWNER_ONLY');
- const anon=await handleInvestAutopilotApi(new Request('https://workspace-api.ekodi.kr/v1/invest/autopilot/status'),{DB:d1()});
+ const anon=await handleInvestAutopilotApi(new Request('https://ekodi.kr/v1/invest/autopilot/status'),{DB:d1()});
  assert.equal(anon.status,401);
 });
 
@@ -57,7 +57,7 @@ test('entry worker routes /v1/invest/autopilot to the autopilot runtime',async()
  const {env}=harness();
  const original=globalThis.fetch;globalThis.fetch=async()=>new Response('{}',{status:401});
  try{
-  const response=await entryWorker.fetch(new Request('https://workspace-api.ekodi.kr/v1/invest/autopilot/status',{headers:{authorization:'Bearer '+'t'.repeat(40)}}),env,{});
+  const response=await entryWorker.fetch(new Request('https://ekodi.kr/v1/invest/autopilot/status',{headers:{authorization:'Bearer '+'t'.repeat(40)}}),env,{});
   assert.equal(response.status,401);
  }finally{globalThis.fetch=original}
 });
