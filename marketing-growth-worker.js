@@ -185,6 +185,28 @@ function safeReturnUrl(value) {
     return url.href;
   } catch { return fallback; }
 }
+const MARKETING_ADMIN_RETURN = 'https://ekodi.kr/admin/services/marketing-ai';
+function oauthAppIdOf(env, provider) {
+  if (provider === THREADS_PROVIDER) return String(env.THREADS_APP_ID || env.META_APP_ID || '');
+  if (provider === META_PROVIDER) return String(env.META_APP_ID || '');
+  return '';
+}
+// 확인값(state)이 없거나 만료된 콜백: 원문 오류 대신 관리자 화면으로 돌려보내며 한국어 사유를 전달한다.
+function oauthStateFailure(request, env, provider) {
+  const url = new URL(request.url);
+  const code = clean(url.searchParams.get('error_code'),20);
+  const error = clean(url.searchParams.get('error'),60);
+  const message = clean(url.searchParams.get('error_message') || url.searchParams.get('error_description'),200);
+  const appId = clean(oauthAppIdOf(env,provider),40);
+  const appLabel = appId ? `앱 ID ${appId}` : '사용 중인 앱';
+  let reason;
+  if (code === '1349048') reason = `Meta ${appLabel}의 기본 설정에 앱 도메인 ekodi.kr과 웹사이트 플랫폼(https://ekodi.kr/)이 없습니다. 추가·저장 후 연결 버튼을 다시 누르세요.`;
+  else if (code === '1349187' || /redirect/i.test(message)) reason = `${appLabel}의 유효한 OAuth 리디렉션 URI에 ${callbackUrl(env,provider)} 를 등록하세요.`;
+  else if (error === 'access_denied' || code === '200') reason = '로그인 또는 권한 승인을 취소했습니다. 연결 버튼을 다시 눌러 모든 페이지·계정을 선택하세요.';
+  else if (code || error || message) reason = `연결이 차단되었습니다(${code || error}). ${message}`.trim();
+  else reason = '연결 확인 시간(10분)이 지났거나 이미 사용된 요청입니다. 이전 창을 새로고침하지 말고 연결 버튼을 다시 누르세요.';
+  return redirectResult(MARKETING_ADMIN_RETURN,{ekodi_connect:'error',provider,reason:clean(reason,300)});
+}
 function redirectResult(returnUrl, params) {
   const url = new URL(safeReturnUrl(returnUrl));
   Object.entries(params).forEach(([key,value]) => url.searchParams.set(key,String(value)));
@@ -345,7 +367,7 @@ async function upsertPublishChannel(env, subject, {provider,channelType,displayN
 async function metaCallback(request, env) {
   const url = new URL(request.url);
   const state = await consumeOAuthState(env,url.searchParams.get('state') || '',META_PROVIDER);
-  if (!state) return new Response('Invalid or expired OAuth state',{status:400});
+  if (!state) return oauthStateFailure(request,env,META_PROVIDER);
   if (url.searchParams.get('error')) { const error=new Error(clean(url.searchParams.get('error_description') || url.searchParams.get('error'),160)); await markRegistryFailure(env,state,error); return redirectResult(state.return_url,{ekodi_connect:'error',provider:'meta',reason:error.message}); }
   try {
     const code = clean(url.searchParams.get('code'),4096);
@@ -416,7 +438,7 @@ async function metaCallback(request, env) {
 async function threadsCallback(request, env) {
   const url = new URL(request.url);
   const state = await consumeOAuthState(env,url.searchParams.get('state') || '',THREADS_PROVIDER);
-  if (!state) return new Response('Invalid or expired OAuth state',{status:400});
+  if (!state) return oauthStateFailure(request,env,THREADS_PROVIDER);
   if (url.searchParams.get('error')) { const error=new Error(clean(url.searchParams.get('error_description') || url.searchParams.get('error'),160)); await markRegistryFailure(env,state,error); return redirectResult(state.return_url,{ekodi_connect:'error',provider:'threads',reason:error.message}); }
   try {
     const code = clean(url.searchParams.get('code'),4096);
@@ -469,11 +491,11 @@ async function youtubeCallback(request, env) {
       brokerTicket = clean(brokerResult?.ticket,512);
       brokerError = clean(brokerResult?.error,160);
     } catch (error) {
-      return new Response('Invalid or expired Google OAuth state',{status:400});
+      return oauthStateFailure(request,env,YOUTUBE_PROVIDER);
     }
   }
   const state = await consumeOAuthState(env,marketingState,YOUTUBE_PROVIDER);
-  if (!state) return new Response('Invalid or expired OAuth state',{status:400});
+  if (!state) return oauthStateFailure(request,env,YOUTUBE_PROVIDER);
   if (brokerError) {
     const error=new Error(brokerError);
     await markRegistryFailure(env,state,error);
