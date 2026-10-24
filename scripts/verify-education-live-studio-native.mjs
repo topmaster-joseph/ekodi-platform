@@ -4,7 +4,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {classifyConsoleSecurityBlock,classifyRequestSecurityBlock,
-  classifyMutationSecurityBlock,verifyKnownSecurityBlocks
+  classifyMutationSecurityBlock,verifyKnownSecurityBlocks,observeCloudflareJsDetections
 } from './education-native-security-observations.mjs';
 import {mintGateToken,GATE_COOKIE} from '../education-instructor-gate.js';
 
@@ -103,6 +103,7 @@ async function deployedGateMode(context){
 }
 async function gateProbe(browser){
   const context=await browser.newContext({locale:'ko-KR'});
+  observeCloudflareJsDetections(context);
   await guard(context,'gate');
   try{
     const page=await context.newPage();
@@ -196,6 +197,7 @@ async function shot(page,name,full=true){
 
 async function instructorFlow(browser,profile){
   const context=await browser.newContext({viewport:{width:profile.width,height:profile.height},locale:'ko-KR',acceptDownloads:true});
+  observeCloudflareJsDetections(context);
   await context.grantPermissions(['clipboard-read','clipboard-write'],{origin:ORIGIN}).catch(()=>{});
   await guard(context,profile.name);
   await authorize(context);
@@ -317,6 +319,7 @@ async function instructorFlow(browser,profile){
 
 async function learnerFlow(browser,profile){
   const context=await browser.newContext({viewport:{width:profile.width,height:profile.height},isMobile:profile.mobile,hasTouch:profile.mobile,locale:'ko-KR',acceptDownloads:true});
+  observeCloudflareJsDetections(context);
   await context.grantPermissions(['clipboard-read','clipboard-write'],{origin:ORIGIN}).catch(()=>{});
   await guard(context,profile.name);
   const flow={profile:profile.name,steps:[]};const step=s=>{flow.steps.push(s);report.lastSteps=[profile.name,...flow.steps.slice(-3)];};
@@ -443,6 +446,7 @@ async function learnerFlow(browser,profile){
 // when the legitimate bootcamp cannot render its 4x6 class structure.
 async function bootcampRegressionProbe(browser){
   const context=await browser.newContext({viewport:{width:390,height:844},locale:'ko-KR'});
+  observeCloudflareJsDetections(context);
   await guard(context,'bootcamp-regression');
   try{
     const page=await context.newPage();watch(page,'bootcamp-regression');
@@ -484,6 +488,7 @@ async function bootcampRegressionProbe(browser){
 
 async function layoutProbe(browser,profile){
   const context=await browser.newContext({viewport:{width:profile.width,height:profile.height},isMobile:profile.mobile,hasTouch:profile.mobile,locale:'ko-KR'});
+  observeCloudflareJsDetections(context);
   await guard(context,profile.name);
   await authorize(context);
   try{

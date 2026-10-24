@@ -5,7 +5,7 @@ import {mkdir,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {EKODI_SERVICE_MANIFEST} from '../ekodi-service-manifest.js';
 import {classifyConsoleSecurityBlock,classifyRequestSecurityBlock,
-  classifyMutationSecurityBlock,verifyKnownSecurityBlocks
+  classifyMutationSecurityBlock,verifyKnownSecurityBlocks,observeCloudflareJsDetections
 } from './education-native-security-observations.mjs';
 
 const registered=new URL(EKODI_SERVICE_MANIFEST.services.find(s=>s.id==='edu').url).origin;
@@ -28,6 +28,7 @@ const report={source:process.env.GITHUB_SHA||null,scope:isPreview?'local-preview
 function fail(message){throw new Error('[EKODI MATERIAL STUDIO] '+message)}
 async function check(browser,profile){
   const ctx=await browser.newContext({...profile,acceptDownloads:true,locale:'ko-KR'});
+  observeCloudflareJsDetections(ctx);
   const p=await ctx.newPage();
   const entry={name:profile.name,passed:false,screenshots:[],checks:[],consoleErrors:[],requestsBlocked:[],requestFailures:[],observedSecurityBlocks:[]};
   report.profiles.push(entry);

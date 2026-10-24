@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {EKODI_SERVICE_MANIFEST} from '../ekodi-service-manifest.js';
 import {classifyConsoleSecurityBlock,classifyRequestSecurityBlock,
-  classifyMutationSecurityBlock,verifyKnownSecurityBlocks
+  classifyMutationSecurityBlock,verifyKnownSecurityBlocks,observeCloudflareJsDetections
 } from './education-native-security-observations.mjs';
 
 // Reuse the existing registered Education boundary; never mint a new hostname.
@@ -53,6 +53,7 @@ async function checkProfile(browser,profile){
     isMobile:profile.mobile,hasTouch:profile.mobile,acceptDownloads:true,
     locale:'ko-KR',colorScheme:'dark'
   });
+  observeCloudflareJsDetections(context);
   const page=await context.newPage();
   page.on('console',message=>{
     if(message.type()!=='error')return;
