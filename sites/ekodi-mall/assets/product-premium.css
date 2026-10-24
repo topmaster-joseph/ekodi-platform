@@ -1,0 +1,69 @@
+/* EKODI-MALL-PREMIUM-PDP-001 — compact, gallery-first product page + checkout. */
+.pp-page{--pp-ink:#1b1f1d;--pp-muted:#6b706c;--pp-line:#e7e2d8;--pp-bg:#faf8f4;--pp-card:#ffffff;--pp-accent:#1f3d33;--pp-gold:#a8875a;background:var(--pp-bg);color:var(--pp-ink)}
+.pp-page .notice{background:transparent;color:var(--pp-muted);font-size:12px;letter-spacing:.02em;border:0;padding:8px 16px;text-align:center}
+.pp-page .seller-main{max-width:1120px;margin:0 auto;padding:12px 20px 96px}
+.pp-wrap{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);gap:44px;align-items:start;margin-top:8px}
+.pp-media{margin:0;position:sticky;top:84px;border-radius:20px;overflow:hidden;background:#efe9df;aspect-ratio:4/5;box-shadow:0 30px 60px -38px rgba(31,61,51,.45)}
+.pp-media img{width:100%;height:100%;object-fit:cover;display:block}
+.pp-visual{position:relative;width:100%;height:100%;display:grid;place-items:center;
+  background:radial-gradient(120% 90% at 30% 20%,#fbf7ef 0%,#efe6d6 46%,#d9cdb7 100%)}
+.pp-visual::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.07) 0 2px,transparent 2px 6px);mix-blend-mode:soft-light;pointer-events:none}
+.pp-visual-mark{font-family:"Noto Serif KR","Nanum Myeongjo","Apple SD Gothic Neo",serif;font-size:clamp(96px,14vw,168px);font-weight:600;color:rgba(31,61,51,.82);line-height:1;text-shadow:0 18px 40px rgba(31,61,51,.18)}
+.pp-visual-cap{position:absolute;bottom:22px;left:0;right:0;text-align:center;font-size:11px;letter-spacing:.32em;color:rgba(31,61,51,.55)}
+.pp-info{display:flex;flex-direction:column;gap:14px;padding-top:6px}
+.pp-crumbs{margin:0;font-size:12px;letter-spacing:.08em;color:var(--pp-gold);text-transform:uppercase}
+.pp-title{margin:0;font-family:"Noto Serif KR","Nanum Myeongjo",serif;font-weight:600;font-size:clamp(24px,2.6vw,32px);line-height:1.25;letter-spacing:-.01em}
+.pp-lead{margin:0;color:var(--pp-muted);font-size:15px;line-height:1.6}
+.pp-price{margin:4px 0 0;font-size:26px;font-weight:700;letter-spacing:-.01em}
+.pp-facts{list-style:none;margin:0;padding:12px 0;border-top:1px solid var(--pp-line);border-bottom:1px solid var(--pp-line);display:grid;gap:6px}
+.pp-facts li{font-size:13px;color:#3b413e;padding-left:16px;position:relative}
+.pp-facts li::before{content:"";position:absolute;left:0;top:.55em;width:6px;height:6px;border-radius:50%;background:var(--pp-gold)}
+.pp-share{display:flex;gap:16px;flex-wrap:wrap}
+.pp-link{background:none;border:0;padding:0;color:var(--pp-muted);font-size:13px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.pp-soon{margin:0;padding:12px 14px;border-radius:12px;background:#f1ede5;color:var(--pp-muted);font-size:14px}
+.pp-cta{display:block;text-align:center}
+.pp-details{max-width:760px;margin:56px auto 0;border-top:1px solid var(--pp-line)}
+.pp-section{border-bottom:1px solid var(--pp-line)}
+.pp-section summary{list-style:none;cursor:pointer;padding:18px 2px;font-size:15px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.pp-section summary::-webkit-details-marker{display:none}
+.pp-section summary::after{content:"+";font-weight:400;font-size:20px;color:var(--pp-muted)}
+.pp-section[open] summary::after{content:"–"}
+.pp-section p{margin:0 2px 18px;color:#3b413e;font-size:14px;line-height:1.75;white-space:pre-line}
+.pp-section-muted summary{font-weight:500;color:var(--pp-muted);font-size:13px}
+.pp-quote{font-size:12px!important;color:var(--pp-muted)!important}
+.pp-list{margin:0 0 18px;padding-left:18px;color:#3b413e;font-size:14px;line-height:1.8}
+
+/* Compact checkout inside the buy box */
+.pp-buy .checkout-panel{margin:0;padding:18px;border:1px solid var(--pp-line);border-radius:16px;background:var(--pp-card);box-shadow:none}
+.pp-buy .checkout-panel h2{font-size:15px;margin:0 0 12px;font-weight:600}
+.pp-buy .checkout-qty{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.pp-buy .checkout-qty input{width:64px}
+.pp-buy .checkout-total{margin-left:auto;font-size:13px;color:var(--pp-muted)}
+.pp-buy .checkout-total b{font-size:18px;color:var(--pp-ink)}
+.pp-buy .checkout-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pp-buy .checkout-field{display:grid;gap:4px;font-size:12px;color:var(--pp-muted)}
+.pp-buy .checkout-field input{height:40px;border:1px solid var(--pp-line);border-radius:10px;padding:0 12px;font-size:14px;background:#fff;color:var(--pp-ink)}
+.pp-buy .checkout-field input:focus{outline:2px solid rgba(31,61,51,.25);border-color:var(--pp-accent)}
+.pp-buy .checkout-field:has(#coAddr1),.pp-buy .checkout-field:has(#coAddr2),.pp-buy .checkout-field:has(#coMemo){grid-column:1/-1}
+.pp-buy .checkout-address-search{height:40px;border-radius:10px;font-size:13px}
+.pp-buy .checkout-consent{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--pp-muted);margin:12px 0 4px;line-height:1.5}
+.pp-buy .checkout-msg{min-height:0;margin:6px 0;color:#9a2f37;font-size:13px}
+.pp-buy .checkout-panel>.btn.primary{width:100%;height:50px;border-radius:12px;font-size:16px;background:var(--pp-accent);border-color:var(--pp-accent)}
+.pp-mobile-bar{display:none}
+
+@media (max-width:860px){
+  .pp-page .seller-main{padding:0 0 96px}
+  .pp-wrap{grid-template-columns:1fr;gap:20px}
+  .pp-media{position:relative;top:0;border-radius:0;aspect-ratio:1/1;box-shadow:none}
+  .pp-info{padding:0 18px}
+  .pp-details{margin:36px 18px 0}
+  .pp-buy .checkout-grid{grid-template-columns:1fr}
+  .pp-mobile-bar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:30;gap:12px;align-items:center;justify-content:space-between;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:rgba(250,248,244,.96);backdrop-filter:blur(8px);border-top:1px solid var(--pp-line)}
+  .pp-mobile-bar strong{font-size:18px}
+  .pp-mobile-bar .btn{height:46px;padding:0 28px;border-radius:12px;background:var(--pp-accent);border-color:var(--pp-accent)}
+}
+.pp-page .seller-main,.pp-page main{background:transparent}
+.pp-buy .checkout-grid>*{min-width:0}
+.pp-buy .checkout-field input{width:100%;box-sizing:border-box;min-width:0}
+.pp-buy .checkout-address-search{width:100%;align-self:end;background:#f4f0e8;border:1px solid var(--pp-line);color:var(--pp-accent);font-weight:600}
+.pp-buy .checkout-address-note{grid-column:1/-1;font-size:12px!important;margin:6px 0 0!important}

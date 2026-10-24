@@ -80,64 +80,112 @@
     article.append(el('small', '', label), el('h3', '', title), el('p', '', body));
     return article;
   }
-  function quoteBlock(quote) {
-    if (!quote) return null;
-    const sourceLabel = quote.attributionType === 'direct' ? '판매자 직접공유' : quote.attributionType === 'ai' ? 'AI 기여' : 'EKODI Mall';
-    const body = `${sourceLabel} 경로 · 수수료 ${quote.feeRatePercent}% · 플랫폼 수수료 ${money(quote.platformFeeAmount)} · 판매자 정산예정 ${money(quote.sellerSettlementAmount)}. PG와 플랫폼 수수료 VAT를 포함한 정책 기준이며 실제 주문 시 서버가 다시 확정합니다.`;
-    return infoBlock('SERVER QUOTE', `${sourceLabel} · ${quote.feeRatePercent}%`, body);
+  // EKODI-MALL-PREMIUM-PDP-001: compact, gallery-first product page.
+  const CATEGORY_LABEL = { general: '일반', food: '식품', local: '로컬', craft: '공예', book: '도서', beauty: '뷰티', living: '리빙', fashion: '패션', digital: '디지털', service: '서비스' };
+  function mediaBlock(data) {
+    const figure = el('figure', 'pp-media');
+    const image = (data.product.images || []).find((item) => /^https:\/\//.test(String(item?.url || item || '')));
+    if (image) {
+      const img = document.createElement('img');
+      img.src = String(image.url || image); img.alt = data.product.name; img.loading = 'eager'; img.decoding = 'async';
+      figure.append(img);
+    } else {
+      const visual = el('div', 'pp-visual');
+      visual.setAttribute('role', 'img');
+      visual.setAttribute('aria-label', `${data.product.name} 대표 이미지 준비 중`);
+      visual.append(el('span', 'pp-visual-mark', (data.product.name || 'E').trim().charAt(0)), el('span', 'pp-visual-cap', 'EKODI MALL'));
+      figure.append(visual);
+    }
+    return figure;
+  }
+  function section(title, body, open = false) {
+    const details = document.createElement('details');
+    details.className = 'pp-section';
+    if (open) details.open = true;
+    const summary = el('summary', '', title);
+    details.append(summary);
+    if (body instanceof Node) details.append(body); else details.append(el('p', '', body));
+    return details;
+  }
+  function list(items) {
+    const ul = el('ul', 'pp-list');
+    for (const item of items) ul.append(el('li', '', item));
+    return ul;
   }
   async function render(data) {
     product = data;
     document.title = `${data.product.name} | EKODI MALL`;
+    document.body.classList.add('pp-page');
     root.replaceChildren();
-    const hero = el('section', 'product-hero');
-    const main = el('div', 'product-main');
-    main.append(el('p', 'eyebrow', data.store ? 'STORE PRODUCT' : 'PERSONAL PRODUCT'), el('h1', '', data.product.name), el('p', 'detail-desc', data.product.oneLine || data.product.audience || '상품 소개'));
-    const meta = el('div', 'product-meta');
-    meta.append(el('span', 'status', data.seller.displayName), el('span', 'status', priceLabel(data.product.price)));
-    main.append(meta);
-    const actions = el('div', 'cta');
-    const copy = el('button', 'btn primary', '링크 복사'); copy.type = 'button'; copy.addEventListener('click', copyLink);
-    const share = el('button', 'btn ghost', '공유'); share.type = 'button'; share.addEventListener('click', nativeShare);
-    const sms = el('button', 'smallbtn', '문자'); sms.type = 'button'; sms.addEventListener('click', smsShare);
-    actions.append(copy, share, sms);
-    if (refCode) { const canonical = el('a', 'smallbtn', '일반 상품링크'); canonical.href = canonicalShareUrl(); actions.append(canonical); }
+    const wrap = el('section', 'pp-wrap');
+    const info = el('div', 'pp-info');
+    const crumbs = el('p', 'pp-crumbs', `${data.store?.name || data.seller.displayName} · ${CATEGORY_LABEL[data.product.category] || '상품'}`);
+    const title = el('h1', 'pp-title', data.product.name);
+    const lead = el('p', 'pp-lead', data.product.oneLine || data.product.audience || '');
+    const price = el('p', 'pp-price', priceLabel(data.product.price));
+    const facts = el('ul', 'pp-facts');
+    if (data.product.fulfillment) facts.append(el('li', '', data.product.fulfillment));
+    if (data.product.region?.label) facts.append(el('li', '', `${data.product.region.label}${data.product.region.verified ? '' : ' · 판매자 등록 지역'}`));
+    facts.append(el('li', '', '토스페이먼츠 안전결제'));
+    info.append(crumbs, title);
+    if (lead.textContent) info.append(lead);
+    info.append(price, facts);
+    const buy = el('div', 'pp-buy');
+    buy.id = 'ppBuy';
+    info.append(buy);
     if (data.product.saleType === 'affiliate' && data.product.affiliateUrl) {
-      const affiliate = el('a', 'btn primary', '외부 제휴 판매처에서 보기');
-      affiliate.href = data.product.affiliateUrl; affiliate.target = '_blank'; affiliate.rel = 'noopener sponsored'; actions.prepend(affiliate);
+      const affiliate = el('a', 'btn primary pp-cta', '판매처에서 보기');
+      affiliate.href = data.product.affiliateUrl; affiliate.target = '_blank'; affiliate.rel = 'noopener sponsored';
+      buy.append(affiliate);
     }
-    main.append(actions);
-    const side = el('aside', 'product-summary');
-    side.append(
-      infoBlock('SELLER', data.seller.displayName, data.store?.name || '개인 등록상품'),
-      infoBlock('STATUS', data.checkoutReady ? '결제 검증 준비' : '상품 공개 · 결제 준비 중', data.checkoutReady ? '결제 활성화 여부는 주문 서버가 최종 결정합니다.' : '현재는 상품 공유와 소개가 가능하며 직접판매 결제는 아직 활성화하지 않았습니다.')
-    );
-    hero.append(main, side); root.append(hero);
-    const details = el('section', 'product-info-grid');
-    details.append(
-      ...(data.product.region?.label ? [infoBlock('LOCAL', data.product.region.label, data.product.region.verified ? '확인된 지역 연결 정보입니다.' : '판매자가 등록한 지역 연결 정보이며 아직 검증 전입니다.')] : []),
-      infoBlock('WHO', '누구를 위한 상품인가', data.product.audience || '상품 대상 설명 준비 중'),
-      infoBlock('STORY', '상품 이야기', data.product.story || '상품 이야기를 준비 중입니다.'),
-      infoBlock('FULFILLMENT', '받는 방법', data.product.fulfillment || '배송·제공 방식 확인 필요')
-    );
-    if (data.product.benefits?.length) details.append(infoBlock('BENEFITS', '핵심 장점', data.product.benefits.join(' · ')));
-    if (data.product.specs?.length) details.append(infoBlock('SPECS', '규격·구성', data.product.specs.join(' · ')));
+    const share = el('div', 'pp-share');
+    const copy = el('button', 'pp-link', '링크 복사'); copy.type = 'button'; copy.addEventListener('click', copyLink);
+    const native = el('button', 'pp-link', '공유'); native.type = 'button'; native.addEventListener('click', nativeShare);
+    const sms = el('button', 'pp-link', '문자'); sms.type = 'button'; sms.addEventListener('click', smsShare);
+    share.append(copy, native, sms);
+    if (refCode) { const canonical = el('a', 'pp-link', '일반 상품링크'); canonical.href = canonicalShareUrl(); share.append(canonical); }
+    info.append(share);
+    wrap.append(mediaBlock(data), info);
+    root.append(wrap);
+
+    const details = el('section', 'pp-details');
+    const story = [data.product.story, data.product.audience ? `추천 대상 · ${data.product.audience}` : ''].filter(Boolean).join('\n\n');
+    details.append(section('상품 설명', story || data.product.oneLine || '판매자가 상품 설명을 준비 중입니다.', true));
+    if (data.product.benefits?.length) details.append(section('핵심 장점', list(data.product.benefits)));
+    if (data.product.specs?.length) details.append(section('구성 · 규격', list(data.product.specs)));
+    details.append(section('배송 · 교환 · 환불', `${data.product.fulfillment || '판매자가 배송·제공 방식을 안내합니다.'}\n\n결제 취소와 환불은 에코디몰 환불정책과 판매자 안내에 따릅니다.`));
+    details.append(section('판매자 정보', `${data.seller.displayName}${data.store?.name ? ` · ${data.store.name}` : ' · 개인 판매자'}${data.product.contact ? `\n문의 · ${data.product.contact}` : ''}`));
     const feeText = data.seller.type === 'individual'
       ? '개인상품은 판매자 서버발급 공유링크 7%, 일반 EKODI Mall 유입 8%, AI 내부발급 링크 9%입니다. 최초 유입은 7일간 서버에 보존되며 PG·플랫폼 수수료 VAT 포함 기준입니다.'
       : '사업자 인증 스토어 직접판매 기본수수료는 10%이며 실제 결제 활성화에는 사업자 검증이 필요합니다.';
-    details.append(infoBlock('FEE POLICY', '판매수수료 안내', feeText));
+    const feeBody = el('div', 'pp-fee');
+    feeBody.append(el('p', '', feeText));
+    const fee = section('판매 수수료 안내', feeBody);
+    fee.classList.add('pp-section-muted');
+    details.append(fee);
     root.append(details);
+
     await issueAttribution();
     const quote = await loadQuote();
-    const quoteNode = quoteBlock(quote);
-    if (quoteNode) details.append(quoteNode);
+    if (quote) {
+      const sourceLabel = quote.attributionType === 'direct' ? '판매자 직접공유' : quote.attributionType === 'ai' ? 'AI 기여' : 'EKODI Mall';
+      feeBody.append(el('p', 'pp-quote', `SERVER QUOTE · ${sourceLabel} 경로 ${quote.feeRatePercent}% · 플랫폼 수수료 ${money(quote.platformFeeAmount)} · 판매자 정산예정 ${money(quote.sellerSettlementAmount)}`));
+    }
     // EKODI-MALL-TOSS-WIDGET-007: buy now only when the order server says every gate is open.
     if (quote?.checkoutReady && window.EkodiMallCheckout) {
-      window.EkodiMallCheckout.mount(root, { api: API, shareCode: code, attributionToken: storedAttribution()?.token || '', quote });
+      window.EkodiMallCheckout.mount(buy, { api: API, shareCode: code, attributionToken: storedAttribution()?.token || '', quote });
+      const bar = el('div', 'pp-mobile-bar');
+      bar.append(el('strong', '', priceLabel(data.product.price)));
+      const go = el('button', 'btn primary', '구매하기'); go.type = 'button';
+      go.addEventListener('click', () => buy.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+      bar.append(go);
+      document.body.append(bar);
+    } else if (data.product.saleType === 'direct') {
+      buy.append(el('p', 'pp-soon', quote?.blockers?.includes('out-of-stock') ? '품절되었습니다.' : '구매 준비 중인 상품입니다.'));
     }
     if (status) {
       const source = storedAttribution()?.sourceType;
-      status.textContent = source === 'direct' ? '공개 상품 · 판매자 직접공유 최초유입 보존' : source === 'ai' ? '공개 상품 · AI 기여 최초유입 보존' : '공개 상품 · EKODI Mall 최초유입 보존';
+      status.textContent = source === 'direct' ? '판매자 추천 링크로 방문하셨습니다' : '에코디몰 · 안전결제';
     }
   }
   function checkoutNotice(title, message, ok) {
