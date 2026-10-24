@@ -176,6 +176,10 @@ try{
     return videos.some(v=>v.videoWidth>0&&v.srcObject?.getVideoTracks?.().some(track=>track.readyState==='live'));
   },{timeout:30000});
   report.camera.hostVideoReceived=true;
+  // The owner QR modal correctly blocks background controls. Close it as a
+  // real director would before placing the approved camera on air.
+  await host.locator('#managementCameraDialog .management-camera-close button').click();
+  await host.locator('#managementCameraDialog').waitFor({state:'hidden',timeout:10000});
   await managementCard.getByRole('button',{name:'방송화면에 추가'}).click();
   const overlay=host.locator('#programOverlayLayer .program-drag-handle[data-program-overlay^="management_camera:"]').first();
   await overlay.waitFor({state:'visible',timeout:10000});
