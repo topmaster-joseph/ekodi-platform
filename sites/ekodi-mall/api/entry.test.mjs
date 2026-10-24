@@ -67,9 +67,14 @@ test('mall health reports MID q_ekodib62hb and only *__MALL keys count as config
   const { default: worker } = await import('./entry.js');
   const health = async env => (await worker.fetch(new Request('https://ekodi.kr/health'), env)).json();
   const legacyOnly = await health({ PAYMENTS_ENABLED: 'false', PAYMENT_PROVIDER: 'toss', TOSS_CLIENT_KEY: 'test_ck_q', TOSS_SECRET_KEY: 'test_sk_q' });
-  assert.deepEqual(legacyOnly.paymentMerchant, { profile: 'mall', mid: 'q_ekodib62hb' });
+  assert.deepEqual(legacyOnly.paymentMerchant, { profile: 'mall', mid: 'q_ekodib62hb', keyMode: { client: 'missing', secret: 'missing', widgetPair: false } });
   assert.equal(legacyOnly.tossSecretConfigured, false, 'QTIN/legacy keys must not activate mall payments');
   const mall = await health({ PAYMENTS_ENABLED: 'false', PAYMENT_PROVIDER: 'toss', TOSS_CLIENT_KEY__MALL: 'test_ck_m', TOSS_SECRET_KEY__MALL: 'test_sk_m' });
   assert.equal(mall.tossSecretConfigured, true);
   assert.equal(mall.paymentsEnabled, false);
+  assert.deepEqual(mall.paymentMerchant.keyMode, { client: 'test', secret: 'test', widgetPair: false });
+  // EKODI-MALL-KEY-MODE-001: live widget keys are reported as live without exposing values.
+  const live = await health({ PAYMENTS_ENABLED: 'true', PAYMENT_PROVIDER: 'toss', TOSS_CLIENT_KEY__MALL: 'live_gck_abcdef', TOSS_SECRET_KEY__MALL: 'live_gsk_secretvalue' });
+  assert.deepEqual(live.paymentMerchant.keyMode, { client: 'live', secret: 'live', widgetPair: true });
+  assert.doesNotMatch(JSON.stringify(live), /abcdef|secretvalue/);
 });
