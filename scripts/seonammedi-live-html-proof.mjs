@@ -9,6 +9,12 @@ const origins=new Set(['https://ekodi.kr/seonammedi','https://seonammedi.kr']);
 const adminExtension='<link rel="stylesheet" href="/site-publication-admin.css" data-ekodi-site-publication-admin-style><script src="/site-publication-admin.js" defer data-ekodi-site-publication-admin data-site-id="seonammedi"></script>';
 const cfBeacon=/\n<script type="module" src="https:\/\/static\.cloudflareinsights\.com\/beacon\.min\.js\/[a-zA-Z0-9]+" integrity="sha512-[a-zA-Z0-9+/=]+" data-cf-beacon='([^']+)' crossorigin="anonymous"><\/script>(?=\n<\/body>)/g;
 
+// Cloudflare's per-request Precursor loader is injected at the end of HTML by the
+// edge on the ekodi.kr mount. Only the audited vendor-shaped loader with bounded
+// token fields, a literal trusted /cdn-cgi/ path and a body-close anchor is ignored.
+// All other HTML bytes (including unknown scripts) still require exact SHA-256 parity.
+const cfPrecursor=/<script>window\.__CF\$cv\$params=\{r:'[a-f0-9]{16}',t:'[A-Za-z0-9+/=]{12,64}',u:'[a-f0-9]{32}',ut:'[A-Za-z0-9._~+\/=-]{20,1024}'(?:,i:\d{1,3})?\};\(function\(\)\{if\(!document\.body\)return;var s=document\.createElement\('script'\);s\.src='\/cdn-cgi\/challenge-platform\/scripts\/precursor\/main\.js';document\.head\.appendChild\(s\);\}\)\(\);<\/script>(?=\s*<\/body>)/g;
+
 function assertOrigin(origin){
   if(!origins.has(origin))throw new Error('unexpected_seonammedi_html_verification_origin');
 }
@@ -26,6 +32,13 @@ export function normalizeSeonamMediLiveHtml(rawHtml,{origin,page}){
   const pageName=String(page||'');
   if(!['index.html','admin/index.html','finance/index.html','notices/index.html'].includes(pageName)){
     throw new Error('unexpected_seonammedi_html_verification_page');
+  }
+  let precursors=0;
+  // Preserve the preceding newline so the published HTML digest still matches.
+  if(html.includes('window.__CF$cv$params')){
+    html=html.replace(cfPrecursor,()=>{precursors++;return '';});
+    if(precursors!==1||html.includes('window.__CF$cv$params'))
+      throw new Error('unrecognized_cloudflare_precursor_injection');
   }
   let beacons=0;
   let html=String(rawHtml).replace(cfBeacon,(_markup,meta)=>{
@@ -62,5 +75,5 @@ export function normalizeSeonamMediLiveHtml(rawHtml,{origin,page}){
   }else if(html.includes('data-ekodi-site-publication-admin-style')){
     throw new Error('unexpected_site_publication_injection_outside_admin');
   }
-  return Object.freeze({html,beacons,adminExtensionRemoved:pageName==='admin/index.html'});
+  return Object.freeze({html,beacons,precursors,adminExtensionRemoved:pageName==='admin/index.html'});
 }
