@@ -740,21 +740,44 @@
       const title = document.querySelector('#pageTitle');
       if (title) title.textContent = 'MarketingAI';
       document.querySelector('.sidebar')?.classList.remove('open');
-      if (location.hash !== '#marketing-ai') history.replaceState(null,'','#marketing-ai');
+      const target = window.EKODIAdminRoutes?.navigationTarget?.('marketing-ai', location) || '#marketing-ai';
+      if (target.startsWith('/')) { if (`${location.pathname}${location.search}${location.hash}` !== target) history.replaceState(null,'',target); }
+      else if (location.hash !== target) history.replaceState(null,'',target);
       refreshData();
     }
+
+    // 관리자 셸은 표준 경로(/admin/services/marketing-ai)로 패널을 활성화하고
+    // 'ekodi-admin-section-changed' 이벤트만 보낸다(해시·사이드바 버튼 클릭이 없음). 그 활성화에 맞춰 데이터를 불러온다.
+    const routeActive = () => window.EKODIAdminRoutes?.sectionFromLocation?.(location) === 'marketing-ai' || location.hash === '#marketing-ai';
+    const panelVisible = () => panel.isConnected && !panel.hidden && !panel.classList.contains('hidden-panel');
+    function activateFromShell() {
+      if (!token()) return;
+      if (state.loading) return;
+      refreshData();
+    }
+    window.addEventListener('ekodi-admin-section-changed', event => {
+      if (String(event.detail?.section || '') === 'marketing-ai') activateFromShell();
+    });
 
     button.addEventListener('click',show);
     panel.querySelectorAll('[data-marketing-refresh]').forEach(refreshButton => refreshButton.addEventListener('click',refreshData));
     tabs.forEach(tab => tab.addEventListener('click',() => selectTab(tab.dataset.marketingTab)));
+    // 확장 스크립트가 추가한 탭(예: 포스팅 현황 'publications')을 누르면 현재 탭 상태를 옮겨
+    // Approvals·Reports 재부착 감시가 다른 탭 화면 위에 검수함/성과 패널을 끼워 넣지 않게 한다.
+    panel.addEventListener('click', event => {
+      const extra = event.target.closest?.('[data-marketing-tab]');
+      if (extra && !TABS.some(([key]) => key === extra.dataset.marketingTab)) state.tab = extra.dataset.marketingTab;
+    });
 
     if (location.hash === '#marketing-ai' && token()) setTimeout(show,0);
+    else if (token() && (routeActive() || panelVisible())) setTimeout(() => { if (!state.data && (routeActive() || panelVisible())) activateFromShell(); }, 0);
     const app = document.querySelector('#app');
     if (app?.hidden) {
       const observer = new MutationObserver(() => {
         if (!app.hidden && token()) {
           observer.disconnect();
           if (location.hash === '#marketing-ai') show();
+          else if (routeActive() && !state.data) activateFromShell();
         }
       });
       observer.observe(app,{attributes:true,attributeFilter:['hidden']});
