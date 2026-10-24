@@ -44,8 +44,10 @@ export function promotionLane(runDate, provider) {
 const DIRECT_REPEAT_DAYS = 14;
 export async function fetchDirectCandidates(env) {
   try {
-    const url = 'https://mall-api.ekodi.kr/api/public/promotable?limit=48';
-    const response = env?.MALL_API?.fetch ? await env.MALL_API.fetch(new Request(url)) : await fetch(url);
+    // 내부 실행은 비공개 서비스 바인딩(MALL_API), 예비 경로는 apex 경로형 주소만 사용한다(Zero-Subdomain 정책).
+    const response = env?.MALL_API?.fetch
+      ? await env.MALL_API.fetch(new Request('https://mall-api.internal/api/public/promotable?limit=48'))
+      : await fetch('https://ekodi.kr/ekodimall/api/public/promotable?limit=48');
     if (!response.ok) return [];
     const data = await response.json().catch(() => ({}));
     return (Array.isArray(data?.products) ? data.products : []).filter(p => p?.shareCode && p?.imageUrl && p?.publicUrl && !/coupang/i.test(`${p.publicUrl}${p.imageUrl}`));
