@@ -42,7 +42,7 @@
     "wrangler.site.toml": { "workflow": "deploy-site-core.yml", "inputs": { "sync_domains": "false" } },
     "wrangler.social.toml": { "workflow": "deploy-social.yml" },
     "wrangler.space.toml": { "workflow": "deploy-space.yml" },
-    "wrangler.storage.toml": { "excluded": "deploy-storage.yml has no workflow_dispatch and provisions credentials (secret put) during release; adding a dispatch path needs owner review. Follow-up under WORKER-LANE-GRAPH-001." },
+    "wrangler.storage.toml": { "workflow": "deploy-storage.yml" },
     "wrangler.support.toml": { "workflow": "deploy-support-opportunity.yml" },
     "wrangler.work.toml": { "workflow": "deploy-work.yml" },
     "wrangler.workspace-platform.toml": { "workflow": "release-messenger-investment-functional.yml" }
