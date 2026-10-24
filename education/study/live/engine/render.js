@@ -1,6 +1,6 @@
 // Shared DOM-string rendering for Instructor Studio, Presenter and Learner Lab.
 // Every value is escaped; no inline styles or handlers (Education CSP: style-src/script-src 'self').
-import {buildPrompts,missionContext,missionMaterials,levelById,trackById,KIND_LABELS,criteriaFor} from './model.js';
+import {buildPrompts,missionContext,missionMaterials,levelById,trackById,KIND_LABELS,criteriaFor,livePath,SLASH} from './model.js';
 import {FACTCHAT_FEATURES,FEATURE_STATUS,featureById} from '../tools/factchat.js';
 
 export const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -185,4 +185,22 @@ export function showFactchatTab(win,url,name='ekodi-factchat-demo'){
 // The Learner Lab URL the presenter stage embeds for a demo: same origin, no timer pointer (stable src).
 export function embeddedLabUrl(joinUrl){
   const u=new URL(joinUrl);u.searchParams.delete('e');u.searchParams.set('embed','1');return u.toString();
+}
+
+// Instructor notes (talk track + answer keys) are the only password-protected asset. When the Worker refuses
+// the notes module (401: not unlocked yet), the studio and presenter keep working with a locked notes panel.
+export async function loadNotesSafe(entry){
+  if(!entry?.loadNotes)return {notes:{},locked:false};
+  try{const mod=await entry.loadNotes();return {notes:mod?.NOTES||{},locked:false};}
+  catch{return {notes:{},locked:true};}
+}
+export function notesUnlockUrl(pathname,courseId,{back='',lock=false}={}){
+  const q=new URLSearchParams();if(courseId)q.set('c',courseId);if(back)q.set('back',back);if(lock)q.set('gate','logout');
+  return livePath(pathname,'unlock'+SLASH)+'?'+q.toString();
+}
+export function lockedNotesHtml(href){
+  return '<div class="notes notes-locked" data-notes-locked="true"><p><b>강사 노트·정답 잠김</b> 진행 멘트와 정답은 강사 비밀번호로 엽니다.</p><a class="btn btn-small btn-primary" href="'+esc(href)+'">노트 열기</a></div>';
+}
+export function answerRevealHtml(answer){
+  return '<div class="answer-reveal" role="status" data-answer-reveal="true"><p class="answer-kicker">정답 공개</p><p class="answer-text">'+esc(String(answer.text).replace(/^(?:대체 실습 )?정답\s*[:：]\s*/,''))+'</p></div>';
 }

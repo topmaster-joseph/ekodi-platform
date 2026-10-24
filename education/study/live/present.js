@@ -4,7 +4,7 @@ import {validateCourse,sessionByNo,sessionSlides,learnerUrl,formatClock,livePath
 import {acceptAdminHandoff,adminLoginUrl,readToken,runInstitutionDemo} from './engine/factchat-demo.js';
 import {createLiveStore,lectureElapsedMs,timerRemainingMs,timerPhase,CHANNEL_NAME} from './engine/live-state.js';
 import {qrSvg} from './engine/qr.js';
-import {esc,list,slideHtml,safeStorage,safeChannel,bindChrome,showFactchatTab,embeddedLabUrl} from './engine/render.js';
+import {esc,list,slideHtml,safeStorage,safeChannel,bindChrome,showFactchatTab,embeddedLabUrl,loadNotesSafe,notesUnlockUrl,lockedNotesHtml,answerRevealHtml} from './engine/render.js';
 import {FACTCHAT_TOOL} from './tools/factchat.js';
 
 const $=s=>document.querySelector(s);
@@ -13,7 +13,7 @@ const audience=params.get('view')==='audience';
 const entry=courseEntry(params.get('c'));
 const storage=safeStorage(window);
 const channel=safeChannel(window,CHANNEL_NAME);
-let course,notes={},store,slides=[],showNotes=true,toastTimer=0,lastKey='',lastLayout='';
+let course,notes={},notesLocked=false,unlockHref='',lockHref='',store,slides=[],showNotes=true,toastTimer=0,lastKey='',lastLayout='';
 const MODE_LABELS={slide:'강의 슬라이드',lab:'수강생 실습실 (시연)',split:'강의 + 실습실 나란히',ai:'AI 시연 결과'};
 
 const S=()=>store.state;
@@ -34,7 +34,7 @@ function slideMarkup(slide,{forPrint=false}={}){
 }
 function render(){
   const st=S(),slide=currentSlide();
-  const key=st.session+':'+st.slideIndex+':'+st.timer.status+':'+st.timer.endsAt+':'+st.shared.missionId+':'+st.shared.level;
+  const key=st.session+':'+st.slideIndex+':'+st.timer.status+':'+st.timer.endsAt+':'+st.shared.missionId+':'+st.shared.level+':'+answerKey(st,slide);
   renderStage(st,slide,key);
   if(audience)return;
   const mode=st.stage?.mode||'slide';
@@ -46,7 +46,11 @@ function render(){
   $('#pBlack').setAttribute('aria-pressed',String(st.blackout));$('#pBlack').textContent=st.blackout?'다시 표시':'가리기';
   const m=moduleOf(slide);
   const n=notes[m.id];
-  $('#presNotes').innerHTML=n?'<div class="notes">'+(n.talk?.length?'<h4>진행 멘트</h4>'+list(n.talk):'')+(n.demo?.length?'<h4>시연 순서</h4>'+list(n.demo,true):'')+(n.cues?.length?'<h4>시간 신호</h4>'+list(n.cues):'')+(n.answer?'<h4>정답</h4><p>'+esc(n.answer)+'</p>':'')+'</div>':'<p class="kbd">노트 없음</p>';
+  const shown=answerShown(st,slide);
+  $('#presNotes').innerHTML=notesLocked?lockedNotesHtml(unlockHref):
+    (n?'<div class="notes">'+(n.talk?.length?'<h4>진행 멘트</h4>'+list(n.talk):'')+(n.demo?.length?'<h4>시연 순서</h4>'+list(n.demo,true):'')+(n.cues?.length?'<h4>시간 신호</h4>'+list(n.cues):'')+
+      (n.answer?'<h4>정답</h4><p>'+esc(n.answer)+'</p><div class="btn-row"><button type="button" class="btn btn-small'+(shown?'':' btn-primary')+'" id="pAnswer" data-answer-toggle="'+esc(m.id)+'" aria-pressed="'+shown+'">'+(shown?'정답 숨기기':'정답 공개')+'</button><span class="kbd">A 키</span></div>':'')+'</div>':'<p class="kbd">노트 없음</p>')+
+    (notesLocked?'':'<p class="notes-lock-link"><a href="'+esc(lockHref)+'">노트 잠그기</a></p>');
   const next=slides[st.slideIndex+1];
   $('#nextSlide').innerHTML=next?'<div class="stage-frame">'+slideMarkup(next)+'</div>':'<p class="kbd">마지막 슬라이드</p>';
   const practice=m.kind==='practice'?course.missions[m.missionId]:null;
@@ -58,6 +62,15 @@ function render(){
 }
 // The stage shows the slide, the same-origin Learner Lab (demo) or both. The lab iframe is only rebuilt
 // when the mode or its address changes, so moving between slides never reloads the demo.
+// 「정답 공개」 shows only on the module whose answer the instructor revealed.
+function answerShown(st,slide){const a=st.answer;return !!(a?.show&&a.text&&a.id===moduleOf(slide)?.id);}
+function answerKey(st,slide){return answerShown(st,slide)?'A'+st.answer.id:'';}
+function toggleAnswer(id){
+  const n=notes[id];if(!n?.answer){toast(notesLocked?'노트를 먼저 열어 주세요.':'이 단계에는 공개할 정답이 없습니다.');return;}
+  const a=S().answer;
+  if(a?.show&&a.id===id){store.dispatch({type:'answer/hide'});toast('정답을 숨겼습니다.');}
+  else{store.dispatch({type:'answer/show',id,text:n.answer});toast('청중 화면에 정답을 띄웠습니다. A 키로 숨깁니다.');}
+}
 function renderStage(st,slide,key){
   const stage=$('#stage');
   stage.classList.toggle('is-black',st.blackout);
@@ -65,7 +78,7 @@ function renderStage(st,slide,key){
   stage.dataset.mode=mode;
   if(mode==='slide'){
     if(lastLayout!=='slide'){lastLayout='slide';lastKey='';}
-    if(key!==lastKey){stage.innerHTML=slideMarkup(slide);lastKey=key;}
+    if(key!==lastKey){stage.innerHTML=slideMarkup(slide)+(answerShown(st,slide)?answerRevealHtml(st.answer):'');lastKey=key;}
     return;
   }
   if(mode==='ai'){
@@ -176,9 +189,11 @@ function bind(){
     else if((k==='n'||k==='N')&&!audience){e.preventDefault();toggleNotes();}
     else if(k==='1'||k==='2'||k==='3'||k==='4'){e.preventDefault();setStageMode(['slide','lab','split','ai'][Number(k)-1]);}
     else if((k==='g'||k==='G')&&!audience){e.preventDefault();openFactchat();}
+    else if((k==='a'||k==='A')&&!audience){e.preventDefault();toggleAnswer(moduleOf(currentSlide()).id);}
   });
   window.addEventListener('storage',e=>store.onStorage(e));
   if(audience)return;
+  $('#presNotes').addEventListener('click',e=>{const b=e.target.closest('[data-answer-toggle]');if(b)toggleAnswer(b.dataset.answerToggle);});
   $('#pPrev').addEventListener('click',()=>setSlide(S().slideIndex-1));
   $('#pNext').addEventListener('click',()=>setSlide(S().slideIndex+1));
   $('#pBlack').addEventListener('click',()=>store.dispatch({type:'blackout/toggle'}));
@@ -209,8 +224,9 @@ function toggleNotes(){
 }
 async function init(){
   if(!audience)acceptAdminHandoff(window);
-  const [data,noteMod]=await Promise.all([entry.load(),audience?Promise.resolve({NOTES:{}}):(entry.loadNotes?entry.loadNotes():Promise.resolve({NOTES:{}}))]);
-  course=data.COURSE;validateCourse(course);notes=noteMod.NOTES||{};
+  const [data,noteState]=await Promise.all([entry.load(),audience?Promise.resolve({notes:{},locked:false}):loadNotesSafe(entry)]);
+  course=data.COURSE;validateCourse(course);notes=noteState.notes;notesLocked=noteState.locked;
+  unlockHref=notesUnlockUrl(location.pathname,course.id,{back:'present'});lockHref=notesUnlockUrl(location.pathname,course.id,{back:'present',lock:true});
   if(audience){
     document.body.classList.remove('pres-body');document.body.classList.add('audience-body');document.body.dataset.liveSurface='audience';
     // Projector output: no shared header, spacer or footer on top of the slides.
