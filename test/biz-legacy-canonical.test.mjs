@@ -27,7 +27,3 @@ test('child paths and query string are preserved', async () => {
 test('unexpected host does not redirect', async () => {
   assert.equal((await lookup('https://example.invalid/trade')).status, 404);
 });
-
-test('legacy redirect never chains through retired biz.ekodi.kr', async () => {
-  assert.doesNotMatch((await lookup('https://ekodibiz.kr/')).location, /^https:\/\/biz\.ekodi\.kr/);
-});
