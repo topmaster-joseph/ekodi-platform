@@ -17,7 +17,7 @@
 
   const steps = [
     { title: '로그인', hint: 'Google 계정으로 시작합니다.', show: () => [auth] },
-    { title: '판매자 정보', hint: '판매자 유형·표시명·문의 연락처를 입력하세요.', fields: [1, 3], required: ['sellerDisplayName', 'contact'] },
+    { title: '판매자 정보', hint: '판매자 유형·표시명·문의 연락처를 입력하세요.', fields: [1], optionalStore: true, required: ['sellerDisplayName', 'contact'] },
     { title: '상품·가격·재고', hint: '판매 방식, 상품명, 가격, 재고를 입력하세요.', fields: [2], required: ['productName', 'price'] },
     { title: '상품 소개', hint: '한 줄 소개는 게시에 꼭 필요합니다.', fields: [4], required: ['oneLine'] },
     { title: '배송 · 저장 · 게시', hint: '배송·제공 방식을 적고 [서버에 저장] → [게시 · 링크 활성화]를 누르세요.', fields: [5], buttons: true, required: ['fulfillment'] },
@@ -40,6 +40,7 @@
   .wz-err{color:#a33b44;max-width:960px;margin:8px auto 0;padding:0 16px;min-height:1em}
   .wz-full{background:none;border:0;color:#2f5f86;text-decoration:underline;cursor:pointer;font-size:13px}
   .wz-on #studio .studio-intro{display:none}
+  .wz-on [data-studio-save],.wz-on [data-studio-export]{display:none!important}
   html:not(.wz-on) .wz-head,html:not(.wz-on) .wz-nav,html:not(.wz-on) .wz-err{display:none}
   `;
   style.textContent += `
@@ -94,6 +95,9 @@
       el.classList.toggle('wz-hide', !keep.has(el));
     });
     const wanted = new Set((step.fields || []).map(byLegend).filter(Boolean));
+    // The optional store block only appears in the wizard when a store name is
+    // already filled in, so a half-filled store can never silently block saving.
+    if (step.optionalStore && String(form.elements.storeName?.value || '').trim()) wanted.add(byLegend(3));
     fieldsets.forEach((f) => f.classList.toggle('wz-hide', !wanted.has(f)));
     form.querySelector('.studio-buttons')?.classList.toggle('wz-hide', !step.buttons);
     draftStatus?.classList.toggle('wz-hide', !step.buttons);
@@ -160,6 +164,21 @@
   });
 
   // Sections such as #commerceReadiness are inserted later by other scripts.
+  // Store slug: derive one automatically when a store name is typed and the
+  // slug is still empty (Korean-only names get a short random latin slug).
+  const storeName = form.elements.storeName;
+  const storeSlug = form.elements.storeSlug;
+  const autoSlug = () => {
+    if (!storeName || !storeSlug || String(storeSlug.value || '').trim()) return;
+    const name = String(storeName.value || '').trim();
+    if (!name) return;
+    const latin = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+    storeSlug.value = latin.length >= 3 ? latin : `store-${Math.random().toString(36).slice(2, 8)}`;
+    storeSlug.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+  storeName?.addEventListener('change', autoSlug);
+  form.addEventListener('click', (e) => { if (e.target.closest('[data-server-save],[data-server-publish]')) autoSlug(); }, true);
+
   const own = new Set([bar, head, err, nav]);
   new MutationObserver((records) => {
     if (!document.documentElement.classList.contains('wz-on')) return;
