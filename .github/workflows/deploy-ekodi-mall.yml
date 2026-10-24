@@ -516,6 +516,12 @@ jobs:
             openssl rand -hex 32 | npx --yes wrangler@${WRANGLER_VERSION} secret put AMAZON_CREDENTIAL_KEY --name ekodi-mall-api >/dev/null
             echo 'Generated the persistent Amazon production credential encryption key directly in Cloudflare without exposing its value.' >> "$GITHUB_STEP_SUMMARY"
           fi
+          # EKODI-MALL-DOMEGGOOK-IMPORT-001: report (never print) whether the Domeggook key secret exists.
+          if grep -Fq 'DOMEMAE_API_KEY' /tmp/mall-prod-secret-list.txt; then
+            echo '::notice title=Domeggook key::DOMEMAE_API_KEY secret is configured on ekodi-mall-api'
+          else
+            echo '::warning title=Domeggook key::DOMEMAE_API_KEY secret is missing on ekodi-mall-api'
+          fi
           rm -f /tmp/mall-prod-secret-list.txt
 
       - name: Verify production Amazon vault readiness
