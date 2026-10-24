@@ -52,6 +52,20 @@ jobs:
             echo 'Publication admin projection must not expose credential references.'
             exit 1
           fi
+
+  dispatch-control-api:
+    needs: validate-and-dispatch
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    # CONTROL-API-DISPATCH-DEDUPE-001: one Control API dispatch per SHA across all callers.
+    concurrency:
+      group: control-api-release-dispatch-${{ github.sha }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
       # CONTROL-API-DISPATCH-RECEIPT-001: dispatch with the merged orchestrator receipt.
       - name: Dispatch guarded Control API workflow
         env:
