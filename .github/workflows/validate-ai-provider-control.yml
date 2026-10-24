@@ -64,12 +64,16 @@ jobs:
     if: github.event_name == 'push'
     needs: validate
     runs-on: ubuntu-latest
+    # CONTROL-API-DISPATCH-DEDUPE-001: one Control API dispatch per SHA across all callers.
+    concurrency:
+      group: control-api-release-dispatch-${{ github.sha }}
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 2
-      # CONTROL-API-DISPATCH-RECEIPT-001: skip when a Control API run already exists
-      # for this exact SHA, otherwise dispatch with the merged orchestrator receipt.
+      # CONTROL-API-DISPATCH-RECEIPT-001: skip when a Control API run already releases
+      # this SHA, otherwise dispatch with the merged orchestrator receipt.
       - name: Dispatch canonical Control API release with its orchestrator receipt
         env:
           GH_TOKEN: ${{ github.token }}
