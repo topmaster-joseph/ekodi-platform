@@ -132,3 +132,19 @@ test('wrong redirect destination does not count as successful', async () => {
     /Last observation: HTTP 301, location=https:\/\/example\.invalid\/unexpected/,
   );
 });
+
+test('both public aliases must independently pass canonical redirect verification', async () => {
+  const visited = [];
+  const fetchImpl = async url => {
+    const host = new URL(url).hostname;
+    visited.push(host);
+    if (host.startsWith('www.')) return new Response(null, { status: 503 });
+    return new Response(null, { status: 301,
+      headers: { location: 'https://ekodi.kr/ekodibiz/domain-check?source=biz-legacy' } });
+  };
+  await assert.rejects(
+    verifyRedirects(['ekodibiz.kr', 'www.ekodibiz.kr'], fetchImpl, { attempts: 1, intervalMs: 0 }),
+    /live redirect check failed for www\.ekodibiz\.kr/,
+  );
+  assert.deepEqual(visited, ['ekodibiz.kr', 'www.ekodibiz.kr']);
+});
