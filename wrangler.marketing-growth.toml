@@ -25,6 +25,10 @@ entrypoint = "GoogleOAuthBroker"
 binding = "CONTROL_API"
 service = "ekodi-auth-api"
 
+[[services]]
+binding = "MALL_API"
+service = "ekodi-mall-api"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "ekodi-auth"

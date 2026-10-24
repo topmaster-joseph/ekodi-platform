@@ -29,10 +29,54 @@ export function promotionLinkUrl(key) { return `${PROMOTION_PUBLIC_ORIGIN}/marke
 export function promotionImageUrl(productRowId) { return `${PROMOTION_PUBLIC_ORIGIN}/api/affiliate/public/image/${Number(productRowId)}?storefront=${STOREFRONT}`; }
 export function kstParts(date=new Date()) { const shifted=new Date(date.getTime()+9*60*60*1000); return {date:shifted.toISOString().slice(0,10),hour:shifted.getUTCHours(),minute:shifted.getUTCHours()*60+shifted.getUTCMinutes()}; }
 // 비규칙 게시: 날짜·채널마다 다른 시각(KST 09:00~21:30)을 결정적으로 고른다. 재시작해도 같은 날엔 같은 시각, 날마다·채널마다 달라진다.
+function mixHash(text) {
+  let h = 2166136261; for (const ch of String(text)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b) >>> 0; h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35) >>> 0; h ^= h >>> 16; return h >>> 0;
+}
 const IRREGULAR_WINDOW_START = 9*60, IRREGULAR_WINDOW_END = 21*60+30;
 export function irregularSlotMinute(runDate, provider) {
-  let h = 2166136261; for (const ch of `${runDate}|${provider}|ekodimall`) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
-  return IRREGULAR_WINDOW_START + (h % (IRREGULAR_WINDOW_END - IRREGULAR_WINDOW_START));
+  return IRREGULAR_WINDOW_START + (mixHash(`${runDate}|${provider}|ekodimall`) % (IRREGULAR_WINDOW_END - IRREGULAR_WINDOW_START));
+}
+// 홍보 레인: 날짜·채널마다 제휴(쿠팡 파트너스) 또는 직접판매 상품을 비규칙적으로 고른다(약 1:1).
+export function promotionLane(runDate, provider) {
+  return (mixHash(`${runDate}|${provider}|lane`) >>> 7) % 2 === 0 ? 'affiliate' : 'direct';
+}
+const DIRECT_REPEAT_DAYS = 14;
+export async function fetchDirectCandidates(env) {
+  try {
+    // 내부 실행은 비공개 서비스 바인딩(MALL_API), 예비 경로는 apex 경로형 주소만 사용한다(Zero-Subdomain 정책).
+    const response = env?.MALL_API?.fetch
+      ? await env.MALL_API.fetch(new Request('https://mall-api.internal/api/public/promotable?limit=48'))
+      : await fetch('https://ekodi.kr/ekodimall/api/public/promotable?limit=48');
+    if (!response.ok) return [];
+    const data = await response.json().catch(() => ({}));
+    return (Array.isArray(data?.products) ? data.products : []).filter(p => p?.shareCode && p?.imageUrl && p?.publicUrl && !/coupang/i.test(`${p.publicUrl}${p.imageUrl}`));
+  } catch { return []; }
+}
+export function directContent(product, provider, runDate) {
+  const name = clean(product?.name, 90);
+  const line = clean(product?.oneLine, 160);
+  const price = Number(product?.price || 0) > 0 ? `${Number(product.price).toLocaleString('ko-KR')}원` : '';
+  const hooks = { facebook: `에코디몰 직접판매 · ${name}`, instagram: `오늘의 에코디몰 상품 · ${name}`, threads: `에코디몰에서 직접 보내드려요 · ${name}` };
+  const body = [line || `${name}을(를) 에코디몰에서 바로 만나보세요.`, price ? `판매가 ${price}` : '', '에코디몰이 직접 판매·배송합니다. 결제와 문의도 에코디몰에서 안전하게.'].filter(Boolean).join('\n');
+  const link = new URL(product.publicUrl);
+  link.searchParams.set('utm_source', provider); link.searchParams.set('utm_medium', 'social'); link.searchParams.set('utm_campaign', `direct-${String(runDate).replaceAll('-', '')}`);
+  return { title: hooks[provider] || hooks.facebook, caption: `${body}\n\n#에코디몰 #EKODI`, imageUrl: product.imageUrl, linkUrl: link.href, mode: 'rules' };
+}
+async function pickDirectProduct(env, candidates, runDate, provider) {
+  if (!candidates.length) return null;
+  const since = new Date(Date.parse(`${runDate}T00:00:00Z`) - DIRECT_REPEAT_DAYS * 864e5).toISOString().slice(0, 10);
+  const recent = await env.DB.prepare('SELECT DISTINCT share_code FROM mall_direct_promotion_runs WHERE run_date>=? AND status IN (\'published\',\'publishing\')').bind(since).all().catch(() => ({ results: [] }));
+  const used = new Set((recent.results || []).map(r => String(r.share_code)));
+  const pool = candidates.filter(c => !used.has(String(c.shareCode)));
+  const list = pool.length ? pool : candidates;
+  return list[irregularSlotMinute(runDate, `${provider}|pick`) % list.length];
+}
+async function recordDirectRun(env, v) {
+  const now = nowIso();
+  await env.DB.prepare(`INSERT INTO mall_direct_promotion_runs(run_date,share_code,product_name,provider,connection_id,campaign_key,status,content_json,external_post_id,external_post_url,last_error,published_at,created_at,updated_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(run_date,provider,connection_id) DO UPDATE SET status=excluded.status,external_post_id=excluded.external_post_id,external_post_url=excluded.external_post_url,last_error=excluded.last_error,published_at=excluded.published_at,updated_at=excluded.updated_at`)
+    .bind(v.runDate, clean(v.shareCode,80), clean(v.productName,160), v.provider, Number(v.connectionId), clean(v.campaignKey,160), v.status, safeJson(v.content||{}), clean(v.externalPostId,240), clean(v.externalPostUrl,500), clean(v.lastError,1000), v.publishedAt||null, now, now).run();
 }
 export function campaignKey(runDate,provider,productRowId) { return `mall-${String(runDate).replaceAll('-','')}-${slug(provider)}-${Number(productRowId)}`; }
 function parseJsonObject(text) { const source=clean(text,12000); const start=source.indexOf('{'); const end=source.lastIndexOf('}'); if(start<0||end<=start) return null; try { return JSON.parse(source.slice(start,end+1)); } catch { return null; } }
@@ -252,6 +296,9 @@ export async function runMallPromotionAutomation(env,{reason='cron',force=false}
   if(gate.maxDailyPosts<=0) return {ok:true,status:'no_action',runDate:kst.date,strategy:STRATEGY,reason:'daily_post_limit_zero',board};
   const existing=await env.DB.prepare('SELECT provider,connection_id,status FROM affiliate_promotion_runs WHERE run_date=? AND product_row_id=?').bind(kst.date,Number(product.id)).all();
   const completed=new Set((existing.results||[]).filter(row=>['published','publishing','planned'].includes(row.status)).map(row=>String(row.provider)+':'+String(row.connection_id)));
+  const directReady=await d1SchemaReady(env.DB,['mall_direct_promotion_runs']).catch(()=>false);
+  if(directReady){ const directToday=await env.DB.prepare("SELECT provider,connection_id FROM mall_direct_promotion_runs WHERE run_date=? AND status IN ('published','publishing')").bind(kst.date).all().catch(()=>({results:[]})); for(const row of directToday.results||[]) completed.add(String(row.provider)+':'+String(row.connection_id)); }
+  let directCandidates=null;
   const pending=policies.filter(({connection})=>!completed.has(String(connection.provider)+':'+String(connection.id)));
   const scale=pending.filter(row=>row.learning.action==='scale');
   const tests=pending.filter(row=>row.learning.action==='test');
@@ -266,6 +313,25 @@ export async function runMallPromotionAutomation(env,{reason='cron',force=false}
   for(const {connection,learning} of selected){
     const slotMinute=irregularSlotMinute(kst.date,connection.provider);
     if(!force&&kst.minute<slotMinute){ deferred.push({provider:connection.provider,slotKst:`${String(Math.floor(slotMinute/60)).padStart(2,'0')}:${String(slotMinute%60).padStart(2,'0')}`}); continue; }
+    if(directReady&&promotionLane(kst.date,connection.provider)==='direct'){
+      if(directCandidates===null) directCandidates=await fetchDirectCandidates(env);
+      const direct=await pickDirectProduct(env,directCandidates,kst.date,connection.provider);
+      if(direct){
+        const dKey=`mall-direct-${String(kst.date).replaceAll('-','')}-${slug(connection.provider)}-${slug(direct.shareCode)}`;
+        const dContent={...directContent(direct,connection.provider,kst.date),campaignKey:dKey};
+        await recordDirectRun(env,{runDate:kst.date,shareCode:direct.shareCode,productName:direct.name,provider:connection.provider,connectionId:connection.id,campaignKey:dKey,status:'publishing',content:dContent});
+        try {
+          const published=await executeProvider(env,connection,dContent);
+          await recordDirectRun(env,{runDate:kst.date,shareCode:direct.shareCode,productName:direct.name,provider:connection.provider,connectionId:connection.id,campaignKey:dKey,status:'published',content:dContent,externalPostId:published.id,externalPostUrl:published.url,publishedAt:nowIso()});
+          results.push({provider:connection.provider,status:'published',lane:'direct',campaignKey:dKey,shareCode:direct.shareCode});
+        } catch(error){
+          const message=clean(error?.message||error,1000);
+          await recordDirectRun(env,{runDate:kst.date,shareCode:direct.shareCode,productName:direct.name,provider:connection.provider,connectionId:connection.id,campaignKey:dKey,status:'failed',content:dContent,lastError:message});
+          results.push({provider:connection.provider,status:'failed',lane:'direct',campaignKey:dKey,error:message});
+        }
+        continue;
+      }
+    }
     const keyValue=campaignKey(kst.date,connection.provider,product.id);
     const linkUrl=promotionLinkUrl(keyValue);
     const imageUrl=promotionImageUrl(product.id);
