@@ -23,23 +23,43 @@ async function cloudflare(fetchImpl, token, url, options = {}) {
   return body;
 }
 
-export async function verifyRedirects(hosts = HOSTS, fetchImpl = fetch) {
+export async function verifyRedirects(hosts = HOSTS, fetchImpl = fetch, options = {}) {
+  // Existing public DNS answers can remain cached for 300 seconds after orange-cloud
+  // activation. Bound retries past the DNS TTL without leaving proxy changes active
+  // indefinitely on a failed deployment.
+  const attempts = options.attempts ?? 105;
+  const intervalMs = options.intervalMs ?? 4000;
+  const requestTimeoutMs = options.requestTimeoutMs ?? 8000;
   for (const host of hosts) {
     let passed = false;
-    for (let attempt = 0; attempt < 15; attempt++) {
+    let lastObservation = 'no response';
+    for (let attempt = 1; attempt <= attempts; attempt++) {
       try {
         const response = await fetchImpl('https://' + host + '/domain-check?source=biz-legacy', {
           redirect: 'manual',
-          signal: AbortSignal.timeout(12000),
+          signal: AbortSignal.timeout(requestTimeoutMs),
         });
-        if (response.status === 301 && response.headers.get('location') === EXPECTED) {
+        const location = response.headers.get('location') || '(missing)';
+        lastObservation = 'HTTP ' + response.status + ', location=' + location;
+        if (response.status === 301 && location === EXPECTED) {
           passed = true;
+          console.info('EKODIBIZ redirect live-verified for ' + host +
+            ' (attempt ' + attempt + '/' + attempts + ')');
           break;
         }
-      } catch { /* Allow bounded DNS and edge propagation. */ }
-      if (attempt < 14) await delay(3500);
+      } catch (error) {
+        // Display only a bounded, non-secret error class for diagnostic evidence.
+        const code = String(error?.cause?.code || error?.code || error?.name || 'fetch_error');
+        lastObservation = 'fetch error class=' + code.slice(0, 60);
+      }
+      if (attempt === 1 || attempt % 15 === 0) {
+        console.info('EKODIBIZ DNS/TLS propagation check for ' + host +
+          ' (' + attempt + '/' + attempts + '): ' + lastObservation);
+      }
+      if (attempt < attempts) await delay(intervalMs);
     }
-    if (!passed) throw new Error('EKODIBIZ live redirect check failed for ' + host);
+    if (!passed) throw new Error('EKODIBIZ live redirect check failed for ' + host +
+      ' after ' + attempts + ' attempts. Last observation: ' + lastObservation);
   }
 }
 
@@ -87,6 +107,8 @@ export async function reconcileLegacyRoutes({
         throw new Error('Cloudflare did not confirm proxy activation for ' + record.hostname);
       }
     }
+    console.info('Web DNS proxy reconciliation: ' + changed.length + ' flag(s) activated; ' +
+      'MX/TXT records untouched. Checking public HTTPS 301 after DNS propagation.');
     await probe(HOSTS);
     return { hostsVerified: HOSTS.length, proxyFlagsChanged: changed.length };
   } catch (error) {
@@ -95,6 +117,8 @@ export async function reconcileLegacyRoutes({
       try { await setProxy(record, false); }
       catch { failures.push(record.hostname); }
     }
+    console.error('Redirect verification did not pass. Rollback attempted for ' +
+      changed.length + ' changed web proxy flag(s).');
     if (failures.length) {
       throw new Error('Redirect activation failed and DNS proxy rollback requires review: ' +
         [...new Set(failures)].join(', ') + '; original error: ' + error.message);
