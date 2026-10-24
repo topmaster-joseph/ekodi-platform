@@ -91,7 +91,20 @@ jobs:
 
   staging:
     environment: development
-    if: github.event_name == 'pull_request'
+    # Dormant by decision, not by accident.
+    #
+    # This lane was written to deploy an isolated Community staging target for
+    # each pull request. It never has: it runs the release-grade orchestration
+    # gate, which a pull request branch cannot pass (no orchestrator-issued ref,
+    # no release receipt), so every run has failed at that step since the lane
+    # was added. The red mark was the only thing it produced.
+    #
+    # Rather than quietly waking a dormant deployment lane by correcting its
+    # gate — which would start deploying to the development account on every
+    # pull request — the platform owner's decision is recorded here: the lane
+    # stays off, and turning it on is its own change, with its own review of
+    # cost and of environment approval.
+    if: false && github.event_name == 'pull_request'
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 15
