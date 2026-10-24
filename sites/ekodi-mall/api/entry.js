@@ -1,5 +1,5 @@
 import core from './worker.js';
-import { withMerchantKeys } from '../../../ekodipay-core.js';
+import { withMerchantKeys, keyDiagnostics } from '../../../ekodipay-core.js';
 import { handleTransactionRehearsal, transactionRehearsalEnabled } from './transaction-rehearsal.js';
 import { handleSourcingRequest, sourcingSchemaReady } from './sourcing.js';
 import { handleSourcingPlanRequest } from './sourcing-plan.js';
@@ -143,6 +143,17 @@ export class MallCatalog {
 // EKODIPAY-CORE-001: 에코디몰은 공통 결제 모듈의 'mall' 상점(MID q_ekodib62hb) 키만 사용한다.
 export const MALL_MERCHANT_PROFILE = 'mall';
 
+// EKODI-MALL-KEY-MODE-001: expose only whether the installed Toss keys are
+// test or live (and whether they pair correctly) — never the key values.
+function paymentKeyMode(rawEnv, profileId) {
+  try {
+    const d = keyDiagnostics(rawEnv, profileId);
+    const mode = (prefix) => String(prefix || '').startsWith('live_') ? 'live' : String(prefix || '').startsWith('test_') ? 'test' : 'none';
+    return { client: d.client?.present ? mode(d.client.prefix) : 'missing', secret: d.secret?.present ? mode(d.secret.prefix) : 'missing',
+      widgetPair: /_gck_$/.test(d.client?.prefix || '') && /_gsk_$/.test(d.secret?.prefix || '') };
+  } catch { return { client: 'unknown', secret: 'unknown', widgetPair: false }; }
+}
+
 export default {
   async fetch(request, rawEnv) {
     const env = withMerchantKeys(rawEnv, rawEnv?.EKODIPAY_PROFILE || MALL_MERCHANT_PROFILE);
@@ -168,7 +179,7 @@ export default {
       const amazonReadSyncReady = Boolean(env.DB) && await amazonReadSyncSchemaReady(env);
       const ok = coreResponse.ok && firstTouchReady && sourcingReady && fulfillmentReady && verificationReady && supplierPilotReady && supplierDiscoveryReady && domemaeReady && commerceEventsReady;
       return reply({
-        ...coreBody, ok, version:3, environment:env.ENVIRONMENT || 'unknown', paymentMerchant:{ profile:env.EKODIPAY_PROFILE, mid:env.EKODIPAY_MID }, firstTouchSchemaReady:firstTouchReady,
+        ...coreBody, ok, version:3, environment:env.ENVIRONMENT || 'unknown', paymentMerchant:{ profile:env.EKODIPAY_PROFILE, mid:env.EKODIPAY_MID, keyMode:paymentKeyMode(rawEnv, env.EKODIPAY_PROFILE) }, firstTouchSchemaReady:firstTouchReady,
         sourcingSchemaReady:sourcingReady, fulfillmentSchemaReady:fulfillmentReady, verificationSchemaReady:verificationReady,
         supplierPilotSchemaReady:supplierPilotReady, supplierDiscoverySchemaReady:supplierDiscoveryReady, domemaeConnectorReady:domemaeReady,
         commerceEventSchemaReady:commerceEventsReady, commerceOsVersion:1,
