@@ -15,13 +15,22 @@ const cfBeacon=/\n<script type="module" src="https:\/\/static\.cloudflareinsight
 // no external URL, no nested markup. Anything else stays a mismatch.
 const cfJsd=/<script>window\.__CF\$cv\$params=\{r:'([0-9a-f]{16})',t:'([A-Za-z0-9+\/=]+)'((?:,[a-z]{1,8}:(?:'[A-Za-z0-9+\/=_.\-]*'|\d{1,6}))*)\};([^<]*)<\/script>(?=(?:\n?<script type="module" src="https:\/\/static\.cloudflareinsights\.com\/|<\/body>))/g;
 // Cloudflare serves either the classic jsd loader or the newer precursor loader.
-const CF_JSD_PATHS=['/cdn-cgi/challenge-platform/scripts/jsd/main.js','/cdn-cgi/challenge-platform/scripts/precursor/main.js'];
+// The loader body is fixed edge code; only __CF$cv$params varies per request.
+// Accept exactly these audited bodies (optionally with Cloudflare's CSP nonce).
+// A body that merely *mentions* a jsd path is not trusted: arbitrary same-origin
+// or protocol-relative script would otherwise be stripped as "Cloudflare".
+// New Cloudflare templates fail closed with a diagnostic fragment for audit.
+const CF_NONCE="(?:[a-z]\\.nonce='[A-Za-z0-9+\\/=]{0,128}';)?";
+const CF_LOADER_BODIES=[
+  new RegExp("^var a=document\\.createElement\\('script'\\);"+CF_NONCE.replace('[a-z]','a')+"a\\.src='\\/cdn-cgi\\/challenge-platform\\/scripts\\/jsd\\/main\\.js';document\\.getElementsByTagName\\('head'\\)\\[0\\]\\.appendChild\\(a\\);$"),
+  new RegExp("^\\(function\\(\\)\\{if\\(!document\\.body\\)return;var s=document\\.createElement\\('script'\\);"+CF_NONCE.replace('[a-z]','s')+"s\\.src='\\/cdn-cgi\\/challenge-platform\\/scripts\\/precursor\\/main\\.js';document\\.head\\.appendChild\\(s\\);\\}\\)\\(\\);$"),
+];
 
 function stripCloudflareJsDetections(html){
   let count=0;
   const out=String(html).replace(cfJsd,(_m,_ray,_token,_extra,body)=>{
     count++;
-    if(CF_JSD_PATHS.filter(path=>body.includes("'"+path+"'")).length!==1||/:\/\//.test(body)||body.length>2000){
+    if(!CF_LOADER_BODIES.some(re=>re.test(body))){
       throw new Error('untrusted_cloudflare_js_detection_injection');
     }
     // Cloudflare inserts the tag verbatim immediately before </body>; remove only the tag.
