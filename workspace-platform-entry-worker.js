@@ -1,6 +1,7 @@
 import legacyWorkspaceWorker from './workspace-platform-api-worker.js';
 import { handleWorkspaceMessengerV2 } from './workspace-messenger-v2.js';
 import { handleStoreSmsOrderApi } from './store-sms-order-runtime.js';
+import { handleStoreTerminalPaymentApi } from './store-terminal-payment-runtime.js';
 import { drainMessengerOutbox } from './messenger-outbox.js';
 import { handleProfileEvidenceApi, profileSchemaReady } from './profile-evidence-runtime.js';
 import { createOfficialProfileDataBinding, officialDataConnections } from './profile-official-data-adapter.js';
@@ -17,6 +18,7 @@ async function siteChromeSchemaReady(env){ return d1SchemaReady(env?.DB,['site_c
 
 async function conversationSchemaReady(env){ return d1SchemaReady(env?.DB,['messenger_outbox','messenger_identity_audit']); }
 async function storeSmsOrderSchemaReady(env){ return d1SchemaReady(env?.DB,['store_sms_orders','store_sms_ingress_events']); }
+async function storeTerminalPaymentSchemaReady(env){ return d1SchemaReady(env?.DB,['store_terminal_payments']); }
 async function investAutomationSchemaReady(env){ return d1SchemaReady(env?.DB,['investment_policies','investment_strategies','investment_broker_connections','investment_cycles']); }
 async function investLifecycleSchemaReady(env){ return d1SchemaReady(env?.DB,['investment_project_profiles','investment_interest_records','investment_connections','investment_aftercare_updates']); }
 
@@ -63,6 +65,10 @@ export default {
       const response=await handleDesignProfileApi(request,env);
       if(response)return response;
     }
+    if(url.pathname.startsWith('/v1/store-terminal/')){
+      const response=await handleStoreTerminalPaymentApi(request,env);
+      if(response)return response;
+    }
     if(url.pathname.startsWith('/v1/store-sms/')){
       scheduleOutboxRecovery(env,ctx,8);
       const response=await handleStoreSmsOrderApi(request,env,ctx);
@@ -77,9 +83,9 @@ export default {
       const response=await legacyWorkspaceWorker.fetch(request,env,ctx);
       try{
         const data=await response.clone().json();
-        const [foundationReady,smsOrderReady,profileReady,designReady,investAutomationReady,investLifecycleReady,chromeReady]=await Promise.all([conversationSchemaReady(env),storeSmsOrderSchemaReady(env),profileSchemaReady(env),designProfileSchemaReady(env),investAutomationSchemaReady(env),investLifecycleSchemaReady(env),siteChromeSchemaReady(env)]);
+        const [terminalPaymentReady,foundationReady,smsOrderReady,profileReady,designReady,investAutomationReady,investLifecycleReady,chromeReady]=await Promise.all([storeTerminalPaymentSchemaReady(env),conversationSchemaReady(env),storeSmsOrderSchemaReady(env),profileSchemaReady(env),designProfileSchemaReady(env),investAutomationSchemaReady(env),investLifecycleSchemaReady(env),siteChromeSchemaReady(env)]);
         const connections=officialDataConnections(env).map(({id,status})=>({id,status}));
-        return new Response(JSON.stringify({...data,conversationFoundation:'v2',eventOutbox:true,conversationSchemaReady:foundationReady,storeSmsOrders:'v1',storeSmsOrderSchemaReady:smsOrderReady,smsIngressConfigured:Boolean(env.STORE_SMS_INGRESS_TOKEN),smsOutboundConfigured:Boolean((env.CHANNEL_SMS&&typeof env.CHANNEL_SMS.fetch==='function')||env.CHANNEL_SMS_URL),profileEvidenceFoundation:'v1',profileSchemaReady:profileReady,officialDataFirst:true,officialDataProvider:'embedded-v1',investPersonalization:'v1',investAutomation:'v1',investAutomationSchemaReady:investAutomationReady,investLifecycle:'v1',investLifecycleSchemaReady:investLifecycleReady,investDataConnections:connections,adaptiveDesign:'v1',designProfileSchemaReady:designReady,siteChrome:'v1',siteChromeSchemaReady:chromeReady}),{status:response.status,headers:response.headers});
+        return new Response(JSON.stringify({...data,conversationFoundation:'v2',eventOutbox:true,conversationSchemaReady:foundationReady,storeSmsOrders:'v1',storeTerminalPayments:'v1',storeTerminalPaymentSchemaReady:terminalPaymentReady,storeSmsOrderSchemaReady:smsOrderReady,smsIngressConfigured:Boolean(env.STORE_SMS_INGRESS_TOKEN),smsOutboundConfigured:Boolean((env.CHANNEL_SMS&&typeof env.CHANNEL_SMS.fetch==='function')||env.CHANNEL_SMS_URL),profileEvidenceFoundation:'v1',profileSchemaReady:profileReady,officialDataFirst:true,officialDataProvider:'embedded-v1',investPersonalization:'v1',investAutomation:'v1',investAutomationSchemaReady:investAutomationReady,investLifecycle:'v1',investLifecycleSchemaReady:investLifecycleReady,investDataConnections:connections,adaptiveDesign:'v1',designProfileSchemaReady:designReady,siteChrome:'v1',siteChromeSchemaReady:chromeReady}),{status:response.status,headers:response.headers});
       }catch{return response}
     }
     return legacyWorkspaceWorker.fetch(request,env,ctx);
