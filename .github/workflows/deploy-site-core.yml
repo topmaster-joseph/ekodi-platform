@@ -921,17 +921,24 @@ jobs:
         run: node scripts/ensure-church-route-ownership.mjs
 
       - name: Candidate at 0%, verify routes, promote and auto-rollback on failure
+        id: promote
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
 
       - name: Verify SeonamMedi live release convergence
-        if: steps.quota.outputs.skip_nonessential != 'true'
-        run: |
-          node scripts/verify-seonammedi-release-live.mjs --expected=dist/seonammedi/.well-known/ekodi-release.json --origin=https://seonammedi.kr --attempts=18 --delayMs=5000
-          node scripts/verify-seonammedi-release-live.mjs --expected=dist/seonammedi/.well-known/ekodi-release.json --origin=https://ekodi.kr/seonammedi --attempts=18 --delayMs=5000
+        id: v_seonammedi_release
+        if: ${{ !cancelled() && steps.promote.outcome == 'success' && steps.quota.outputs.skip_nonessential != 'true' }}
+        run: node scripts/verify-seonammedi-release-live.mjs --expected=dist/seonammedi/.well-known/ekodi-release.json --origin=https://seonammedi.kr --attempts=18 --delayMs=5000
+
+      - name: Verify SeonamMedi live release convergence on EKODI subpath
+        id: v_seonammedi_release_subpath
+        if: ${{ !cancelled() && steps.promote.outcome == 'success' && steps.quota.outputs.skip_nonessential != 'true' }}
+        run: node scripts/verify-seonammedi-release-live.mjs --expected=dist/seonammedi/.well-known/ekodi-release.json --origin=https://ekodi.kr/seonammedi --attempts=18 --delayMs=5000
 
       - name: Verify no public SeonamMedi finance totals or ledger entries
+        id: v_seonammedi_finance
+        if: ${{ !cancelled() && steps.promote.outcome == 'success' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -950,6 +957,8 @@ jobs:
           exit 1
 
       - name: Verify stray SeonamMedi board URLs canonicalize
+        id: v_seonammedi_board_urls
+        if: ${{ !cancelled() && steps.promote.outcome == 'success' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -972,6 +981,8 @@ jobs:
           done
 
       - name: Finalize durable write queue consumer trigger
+        id: v_write_queue_consumer
+        if: ${{ !cancelled() && steps.promote.outcome == 'success' }}
         # Queue consumption is part of the durable public-write contract, not a
         # nonessential probe. POST acceptance without an attached consumer can
         # strand accepted writes until a later release.
@@ -1006,7 +1017,8 @@ jobs:
           echo 'durableWriteQueueConsumer=attached'
 
       - name: Verify public edge cache absorbs repeated SeonamMedi reads
-        if: steps.quota.outputs.skip_nonessential != 'true'
+        id: v_seonammedi_edge_cache
+        if: ${{ !cancelled() && steps.promote.outcome == 'success' && steps.quota.outputs.skip_nonessential != 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -1026,7 +1038,8 @@ jobs:
           echo 'seonamMediPublicEdgeCache=HIT' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Report adaptive Turnstile readiness without exposing secrets
-        if: steps.quota.outputs.skip_nonessential != 'true'
+        id: v_turnstile
+        if: ${{ !cancelled() && steps.promote.outcome == 'success' && steps.quota.outputs.skip_nonessential != 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -1038,13 +1051,15 @@ jobs:
           fi
           rm -f /tmp/shared-site-secrets.json
       - name: Verify EKODI Mission LIVE production shell contract
-        if: steps.quota.outputs.skip_nonessential != 'true'
+        id: v_mission
+        if: ${{ !cancelled() && steps.promote.outcome == 'success' && steps.quota.outputs.skip_nonessential != 'true' }}
         env:
           EKODI_MISSION_VERIFY_SCOPE: shared
         run: node scripts/verify-ekodimission-production.mjs
 
       - name: Verify EKODI Mall canonical address
-        if: steps.quota.outputs.skip_nonessential != 'true'
+        id: v_mall
+        if: ${{ !cancelled() && steps.promote.outcome == 'success' && steps.quota.outputs.skip_nonessential != 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -1065,7 +1080,8 @@ jobs:
           echo 'ekodiMallCanonicalAddress=verified'
 
       - name: Verify canonical Admin route ownership
-        if: steps.quota.outputs.skip_nonessential != 'true'
+        id: v_admin_route
+        if: ${{ !cancelled() && steps.promote.outcome == 'success' && steps.quota.outputs.skip_nonessential != 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -1077,19 +1093,23 @@ jobs:
           echo 'canonicalAdminRouteOwnership=verified'
 
       - name: Verify Device Admin production release artifact parity
-        if: steps.quota.outputs.skip_nonessential != 'true'
+        id: v_device_admin
+        if: ${{ !cancelled() && steps.promote.outcome == 'success' && steps.quota.outputs.skip_nonessential != 'true' }}
         run: node scripts/verify-device-admin-live.mjs --origin=https://ekodi.kr --expectedDir=dist --attempts=12 --delayMs=5000
 
       - name: Verify canonical AI Provider Control production surface
-        if: steps.quota.outputs.skip_nonessential != 'true'
+        id: v_ai_provider
+        if: ${{ !cancelled() && steps.promote.outcome == 'success' && steps.quota.outputs.skip_nonessential != 'true' }}
         run: node scripts/verify-admin-provider-control-production.mjs
 
       - name: Verify independent board subpages and Singles gated access live
-        if: steps.quota.outputs.skip_nonessential != 'true'
+        id: v_independent_board
+        if: ${{ !cancelled() && steps.promote.outcome == 'success' && steps.quota.outputs.skip_nonessential != 'true' }}
         run: node scripts/verify-independent-board-live.mjs
 
       - name: Verify admin assets and every registered production service
-        if: steps.quota.outputs.skip_nonessential != 'true'
+        id: v_service_links
+        if: ${{ !cancelled() && steps.promote.outcome == 'success' && steps.quota.outputs.skip_nonessential != 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -1239,6 +1259,25 @@ jobs:
 
           exit "$failed"
 
+      - name: Record per-site post-promotion verification ledger
+        id: verification_ledger
+        # Every post-promotion check runs independently (gated only on promotion).
+        # This step records each site's outcome separately and keeps the release
+        # blocking contract: any failed check fails the deploy job, so dependent
+        # verification jobs and the run conclusion stay red.
+        if: ${{ always() && steps.promote.outcome == 'success' }}
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ github.sha }}
+        run: node scripts/record-post-promotion-verification.mjs --out=artifacts/post-promotion-verification.json -- 'seonammedi-kr|release-convergence|v_seonammedi_release|${{ steps.v_seonammedi_release.outcome }}' 'seonammedi-ekodi-subpath|release-convergence|v_seonammedi_release_subpath|${{ steps.v_seonammedi_release_subpath.outcome }}' 'seonammedi|public-finance-boundary|v_seonammedi_finance|${{ steps.v_seonammedi_finance.outcome }}' 'seonammedi|board-url-canonical|v_seonammedi_board_urls|${{ steps.v_seonammedi_board_urls.outcome }}' 'shared-site|durable-write-queue|v_write_queue_consumer|${{ steps.v_write_queue_consumer.outcome }}' 'seonammedi|edge-cache|v_seonammedi_edge_cache|${{ steps.v_seonammedi_edge_cache.outcome }}' 'shared-site|turnstile-readiness|v_turnstile|${{ steps.v_turnstile.outcome }}' 'ekodimission|live-shell|v_mission|${{ steps.v_mission.outcome }}' 'ekodimall|canonical-address|v_mall|${{ steps.v_mall.outcome }}' 'admin|route-ownership|v_admin_route|${{ steps.v_admin_route.outcome }}' 'device-admin|artifact-parity|v_device_admin|${{ steps.v_device_admin.outcome }}' 'ai-provider-control|production-surface|v_ai_provider|${{ steps.v_ai_provider.outcome }}' 'independent-board|subpages-gated|v_independent_board|${{ steps.v_independent_board.outcome }}' 'all-services|link-audit|v_service_links|${{ steps.v_service_links.outcome }}'
+
+      - name: Persist per-site post-promotion verification evidence
+        if: ${{ always() && steps.verification_ledger.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-site-post-promotion-verification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/post-promotion-verification.json
+          if-no-files-found: error
 
   native_surface_verification_desktop:
     name: EKODI Native Surface Verification · Desktop
