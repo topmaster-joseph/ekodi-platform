@@ -245,7 +245,8 @@ export async function mountCgmaEdocAdmin({root,summaryRoot,getToken,state=()=>{}
       if(doc.content_kind==='file')draft.append(el('label',{className:'cgma-edoc-field'},[el('span',{text:'원본 파일 올리기/바꾸기'}),file]),
         button('원본 올리기',async()=>{const f=file.files?.[0];if(!f)return setMessage('파일을 선택해 주세요.',true);
           try{await request(`/${doc.id}/file`,{method:'PUT',body:f,headers:{'content-type':f.type||'application/octet-stream','x-ekodi-file-name':encodeURIComponent(f.name)}});await showDetail(doc.id,'원본을 올렸습니다.');}catch(error){fail(error);}}));
-      draft.append(button('서명 요청 시작',async()=>{try{await request(`/${doc.id}/start`,{method:'POST',body:'{}'});await showDetail(doc.id,'서명 요청을 시작했습니다.');}catch(error){fail(error);}},'cgma-edoc-btn primary'));
+      const start=button('서명 요청 시작',async()=>{start.disabled=true;try{await request(`/${doc.id}/start`,{method:'POST',body:'{}'});await showDetail(doc.id,'서명 요청을 시작했습니다.');}catch(error){start.disabled=false;fail(error);}},'cgma-edoc-btn primary');
+      draft.append(start);
       nodes.push(draft);
     }
     if(doc.content_kind==='text')nodes.push(el('details',{className:'cgma-edoc-text'},[el('summary',{text:'문서 본문 보기'}),el('pre',{text:doc.body_text})]));

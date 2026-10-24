@@ -88,7 +88,8 @@ function documentSection(){
         holder.replaceChildren(d.file_mime==='application/pdf'?el('iframe',{className:'preview',attrs:{src:url,title:'문서 미리보기'}}):el('img',{className:'preview',attrs:{src:url,alt:d.title}}));
         const tab=el('button',{className:'no-print',text:'새 창에서 크게 보기',attrs:{type:'button'}});
         tab.addEventListener('click',()=>window.open(url,'_blank','noopener'));
-        holder.append(el('div',{className:'row',attrs:{style:'margin-top:8px'}},[tab]));
+        const save=el('a',{className:'no-print',text:'파일 내려받기 (미리보기가 안 보이면)',attrs:{href:url,download:d.file_name||'document'}});
+        holder.append(el('div',{className:'row',attrs:{style:'margin-top:8px'}},[tab,save]));
       }catch(error){holder.replaceChildren(notice(error.message,'error'))}
       finally{open.disabled=false}
     });
@@ -97,18 +98,21 @@ function documentSection(){
   return section;
 }
 
+let onFull=()=>{};
 function signaturePad(){
   const canvas=el('canvas',{attrs:{width:'1000',height:'400','aria-label':'서명 입력란'}});
   const ctx=canvas.getContext('2d');
   ctx.lineWidth=9;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#111';
   let strokes=[],current=null;
   const point=event=>{const r=canvas.getBoundingClientRect();return [Math.round(Math.min(1000,Math.max(0,(event.clientX-r.left)*1000/r.width))),Math.round(Math.min(400,Math.max(0,(event.clientY-r.top)*400/r.height)))];};
-  canvas.addEventListener('pointerdown',event=>{event.preventDefault();canvas.setPointerCapture(event.pointerId);current=[point(event)];strokes.push(current);ctx.beginPath();ctx.moveTo(...current[0]);ctx.lineTo(current[0][0]+.1,current[0][1]);ctx.stroke();});
-  canvas.addEventListener('pointermove',event=>{if(!current)return;const p=point(event),last=current[current.length-1];if(Math.abs(p[0]-last[0])+Math.abs(p[1]-last[1])<3)return;if(current.length>=1500)return;current.push(p);ctx.beginPath();ctx.moveTo(...last);ctx.lineTo(...p);ctx.stroke();});
+  const MAX_TOTAL=5800,MAX_STROKES=80;
+  const total=()=>strokes.reduce((n,s)=>n+s.length,0);
+  canvas.addEventListener('pointerdown',event=>{event.preventDefault();if(strokes.length>=MAX_STROKES||total()>=MAX_TOTAL){onFull();return;}canvas.setPointerCapture(event.pointerId);current=[point(event)];strokes.push(current);ctx.beginPath();ctx.moveTo(...current[0]);ctx.lineTo(current[0][0]+.1,current[0][1]);ctx.stroke();});
+  canvas.addEventListener('pointermove',event=>{if(!current)return;const p=point(event),last=current[current.length-1];if(Math.abs(p[0]-last[0])+Math.abs(p[1]-last[1])<3)return;if(total()>=MAX_TOTAL){current=null;onFull();return;}current.push(p);ctx.beginPath();ctx.moveTo(...last);ctx.lineTo(...p);ctx.stroke();});
   const end=()=>{current=null;};
   canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);canvas.addEventListener('pointerleave',end);
   const clear=()=>{strokes=[];ctx.clearRect(0,0,1000,400);};
-  return {canvas,clear,strokes:()=>strokes.filter(s=>s.length).slice(0,80),points:()=>strokes.reduce((n,s)=>n+s.length,0)};
+  return {canvas,clear,strokes:()=>strokes.filter(s=>s.length),points:total};
 }
 
 function signForm(){
@@ -120,6 +124,7 @@ function signForm(){
   clear.addEventListener('click',pad.clear);
   const submit=el('button',{className:'primary',text:'서명하기',attrs:{type:'button'}});
   const message=el('div');
+  onFull=()=>message.replaceChildren(notice('서명이 너무 깁니다. ‘서명 지우기’ 후 간단히 다시 서명해 주세요.','error'));
   submit.addEventListener('click',async()=>{
     message.replaceChildren();
     if(!agree.checked)return message.append(notice('문서 내용을 확인했다는 항목에 체크해 주세요.','error'));

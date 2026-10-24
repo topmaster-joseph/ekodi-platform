@@ -187,6 +187,9 @@ test('three signers sign strictly left to right; dates are server time; completi
   assert.equal((await ctx.call(`/${doc.id}/cancel`, { method: 'POST', body: { reason: '테스트' } })).status, 409, 'completed cannot be cancelled');
 
   // Tampering with any event breaks the hash chain.
+  // The database itself refuses edits; simulate an out-of-band edit by removing the guard first.
+  assert.throws(() => ctx.env.DB.sqlite.prepare("UPDATE cgma_edoc_events SET actor='x'").run(), /append-only/);
+  ctx.env.DB.sqlite.exec('DROP TRIGGER trg_cgma_edoc_events_no_update');
   ctx.env.DB.sqlite.prepare("UPDATE cgma_edoc_events SET detail_json='{\"seq\":2}' WHERE action='signed' AND detail_json LIKE '%이국장%'").run();
   assert.equal((await (await ctx.call(`/${doc.id}`)).json()).chain_valid, false);
 });
@@ -290,4 +293,75 @@ test('migration is additive and the API never logs request content', () => {
   const entry = fs.readFileSync(new URL('../customer-entry-worker.js', import.meta.url), 'utf8');
   assert.match(entry, /if \(isEdocApiPath\(path\)\) \{\n\s+return handleCgmaEdocs\(request, env\);/);
   assert.match(fs.readFileSync(new URL('../wrangler.api.toml', import.meta.url), 'utf8'), /binding = "CGMA_EDOC_FILES"\nbucket_name = "ekodi-storage"/);
+});
+
+// ---------- review findings: races and database-level permanence ----------
+async function draftWithFile(ctx) {
+  const created = await (await ctx.call('', { method: 'POST', body: draft() })).json();
+  await ctx.call(`/${created.id}/file`, { method: 'PUT', body: PDF, headers: { 'content-type': 'application/pdf' } });
+  return created.id;
+}
+
+test('double start is a no-op: first links stay valid, one started event, chain intact', async () => {
+  const ctx = setup();
+  const id = await draftWithFile(ctx);
+  const [a, b] = await Promise.all([1, 2].map(() => ctx.call(`/${id}/start`, { method: 'POST', body: '{}' })));
+  assert.deepEqual([a.status, b.status].sort(), [200, 409]);
+  const winner = await (a.status === 200 ? a : b).json();
+  const view = await (await ctx.call('/sign', { admin: false, token: tokenOf(winner.links[0].link) })).json();
+  assert.equal(view.can_sign, true, 'links from the successful start keep working');
+  const detail = await (await ctx.call(`/${id}`)).json();
+  assert.equal(detail.events.filter(e => e.action === 'started').length, 1);
+  assert.equal(detail.chain_valid, true);
+});
+
+test('refused operations leave no audit record (cancel after completion, reissue after signing)', async () => {
+  const ctx = setup();
+  const created = await (await ctx.call('', { method: 'POST', body: { title: '단독 결의서', category: '결의서', content_kind: 'text', body_text: '결의 내용',
+    signers: [{ role_title: '상인회장', signer_name: '정찬균' }] } })).json();
+  const started = await (await ctx.call(`/${created.id}/start`, { method: 'POST', body: '{}' })).json();
+  const token = tokenOf(started.links[0].link);
+  const sha = await sha256Hex('결의 내용');
+  const [signed, cancelled, reissued] = await Promise.all([
+    ctx.call('/sign', { method: 'POST', admin: false, token, body: signBody(sha, '정찬균') }),
+    ctx.call(`/${created.id}/cancel`, { method: 'POST', body: { reason: '경합' } }),
+    ctx.call(`/${created.id}/signers/1/reissue`, { method: 'POST', body: '{}' }),
+  ]);
+  const detail = await (await ctx.call(`/${created.id}`)).json();
+  const actions = detail.events.map(e => e.action);
+  // Whatever order D1 serialized them in, the log matches the final state exactly.
+  if (detail.document.status === 'completed') { assert.equal(signed.status, 200); assert.ok(!actions.includes('cancelled')); }
+  else { assert.equal(detail.document.status, 'cancelled'); assert.equal(cancelled.status, 200); assert.ok(!actions.includes('signed')); }
+  assert.equal(actions.filter(a => a === 'link_reissued').length, reissued.status === 200 ? 1 : 0);
+  assert.equal(detail.chain_valid, true);
+});
+
+test('concurrent writers on one document never fork the hash chain', async () => {
+  const ctx = setup();
+  const doc = await startedFileDoc(ctx);
+  const t1 = tokenOf(doc.links[0].link);
+  const results = await Promise.all([
+    ctx.call('/sign', { method: 'POST', admin: false, token: t1, body: signBody(doc.sha, '김총무') }),
+    ctx.call(`/${doc.id}/signers/3/reissue`, { method: 'POST', body: '{}' }),
+    ctx.call(`/${doc.id}/signers/2/reissue`, { method: 'POST', body: '{}' }),
+  ]);
+  assert.deepEqual(results.map(r => r.status), [200, 200, 200]);
+  const detail = await (await ctx.call(`/${doc.id}`)).json();
+  assert.equal(detail.events.length, 6);
+  assert.equal(detail.chain_valid, true);
+  const parents = detail.events.map(e => e.prev_hash);
+  assert.equal(new Set(parents).size, parents.length, 'every event has a distinct parent');
+});
+
+test('database refuses deletion and edits of signed signatures or locked content', async () => {
+  const ctx = setup();
+  const doc = await startedFileDoc(ctx);
+  await ctx.call('/sign', { method: 'POST', admin: false, token: tokenOf(doc.links[0].link), body: signBody(doc.sha, '김총무') });
+  const db = ctx.env.DB.sqlite;
+  assert.throws(() => db.prepare('DELETE FROM cgma_edoc_documents').run(), /never physically deleted/);
+  assert.throws(() => db.prepare('DELETE FROM cgma_edoc_signers').run(), /never physically deleted/);
+  assert.throws(() => db.prepare('DELETE FROM cgma_edoc_events').run(), /append-only/);
+  assert.throws(() => db.prepare("UPDATE cgma_edoc_signers SET signed_at='2020-01-01' WHERE seq=1").run(), /immutable/);
+  assert.throws(() => db.prepare("UPDATE cgma_edoc_signers SET status='active' WHERE seq=1").run(), /immutable/);
+  assert.throws(() => db.prepare("UPDATE cgma_edoc_documents SET content_sha256='x'").run(), /locked/);
 });

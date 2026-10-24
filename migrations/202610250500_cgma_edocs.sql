@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS cgma_edoc_documents (
   completed_at TEXT NOT NULL DEFAULT '',
   cancelled_at TEXT NOT NULL DEFAULT '',
   cancel_reason TEXT NOT NULL DEFAULT '',
+  op_nonce TEXT NOT NULL DEFAULT '',
   updated_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_cgma_edoc_documents_status ON cgma_edoc_documents(workspace_id,status,created_at DESC);
@@ -64,3 +65,40 @@ CREATE TABLE IF NOT EXISTS cgma_edoc_events (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_cgma_edoc_events_doc ON cgma_edoc_events(doc_id,created_at,id);
+-- One child per parent: concurrent writers cannot fork the hash chain (the loser retries).
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cgma_edoc_events_chain ON cgma_edoc_events(doc_id,prev_hash);
+
+-- Records are permanent at the database level, not only in application code.
+CREATE TRIGGER IF NOT EXISTS trg_cgma_edoc_events_no_update
+BEFORE UPDATE ON cgma_edoc_events
+BEGIN
+  SELECT RAISE(ABORT,'cgma_edoc_events is append-only');
+END;
+CREATE TRIGGER IF NOT EXISTS trg_cgma_edoc_events_no_delete
+BEFORE DELETE ON cgma_edoc_events
+BEGIN
+  SELECT RAISE(ABORT,'cgma_edoc_events is append-only');
+END;
+CREATE TRIGGER IF NOT EXISTS trg_cgma_edoc_documents_no_delete
+BEFORE DELETE ON cgma_edoc_documents
+BEGIN
+  SELECT RAISE(ABORT,'cgma_edoc_documents are never physically deleted');
+END;
+CREATE TRIGGER IF NOT EXISTS trg_cgma_edoc_signers_no_delete
+BEFORE DELETE ON cgma_edoc_signers
+BEGIN
+  SELECT RAISE(ABORT,'cgma_edoc_signers are never physically deleted');
+END;
+CREATE TRIGGER IF NOT EXISTS trg_cgma_edoc_signers_signed_immutable
+BEFORE UPDATE ON cgma_edoc_signers
+WHEN OLD.status='signed' AND (NEW.status<>'signed' OR NEW.signed_at<>OLD.signed_at OR NEW.signed_name<>OLD.signed_name
+  OR NEW.signature_strokes<>OLD.signature_strokes OR NEW.signed_content_sha256<>OLD.signed_content_sha256 OR NEW.signature_id<>OLD.signature_id)
+BEGIN
+  SELECT RAISE(ABORT,'a completed signature is immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS trg_cgma_edoc_documents_content_locked
+BEFORE UPDATE ON cgma_edoc_documents
+WHEN OLD.status<>'draft' AND (NEW.content_sha256<>OLD.content_sha256 OR NEW.file_key<>OLD.file_key OR NEW.body_text<>OLD.body_text)
+BEGIN
+  SELECT RAISE(ABORT,'document content is locked after signing starts');
+END;

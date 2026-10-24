@@ -157,17 +157,32 @@ async function lastEventHash(env,docId){
 export async function eventHash({prevHash,docId,action,actor,detailJson,createdAt}){
   return sha256Hex([prevHash,docId,action,actor,detailJson,createdAt].join('\n'));
 }
+// Guards make an event (and dependent statements) conditional on the state change in the same batch
+// having actually happened, so a refused operation never leaves a false audit record.
+const signatureGuard=(docId,seq,signatureId)=>({sql:'EXISTS (SELECT 1 FROM cgma_edoc_signers WHERE doc_id=? AND seq=? AND signature_id=?)',binds:[docId,seq,signatureId]});
+const nonceGuard=(docId,nonce)=>({sql:'EXISTS (SELECT 1 FROM cgma_edoc_documents WHERE id=? AND op_nonce=?)',binds:[docId,nonce]});
+const tokenGuard=(docId,seq,tokenHash)=>({sql:'EXISTS (SELECT 1 FROM cgma_edoc_signers WHERE doc_id=? AND seq=? AND token_hash=?)',binds:[docId,seq,tokenHash]});
 async function eventStatement(env,{docId,action,actor,detail={},createdAt,prevHash,guard=null}){
   const detailJson=JSON.stringify(detail);
   const hash=await eventHash({prevHash,docId,action,actor,detailJson,createdAt});
   const id=crypto.randomUUID();
   const statement=guard
     ?env.DB.prepare(`INSERT INTO cgma_edoc_events (id,doc_id,action,actor,detail_json,prev_hash,event_hash,created_at)
-        SELECT ?,?,?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM cgma_edoc_signers WHERE doc_id=? AND seq=? AND signature_id=?)`)
-      .bind(id,docId,action,actor,detailJson,prevHash,hash,createdAt,docId,guard.seq,guard.signatureId)
+        SELECT ?,?,?,?,?,?,?,? WHERE ${guard.sql}`)
+      .bind(id,docId,action,actor,detailJson,prevHash,hash,createdAt,...guard.binds)
     :env.DB.prepare('INSERT INTO cgma_edoc_events (id,doc_id,action,actor,detail_json,prev_hash,event_hash,created_at) VALUES (?,?,?,?,?,?,?,?)')
       .bind(id,docId,action,actor,detailJson,prevHash,hash,createdAt);
   return {statement,hash};
+}
+// The (doc_id, prev_hash) unique index lets only one writer extend the chain from a given event. A batch
+// that loses the race is rolled back atomically by D1; rebuild it on the new chain head and retry.
+const isChainConflict=error=>/UNIQUE/i.test(String(error?.message||''))&&/prev_hash|idx_cgma_edoc_events_chain/i.test(String(error?.message||''));
+export async function chainedBatch(env,docId,build,attempts=5){
+  for(let attempt=1;;attempt++){
+    const statements=await build(await lastEventHash(env,docId));
+    try{return await env.DB.batch(statements);}
+    catch(error){if(!isChainConflict(error)||attempt>=attempts)throw error;}
+  }
 }
 async function loadDocument(env,id){
   return env.DB.prepare('SELECT * FROM cgma_edoc_documents WHERE id=? AND workspace_id=? LIMIT 1').bind(id,EDOC_TENANT).first();
@@ -272,15 +287,22 @@ async function uploadFile(request,env,{doc,actor,now}){
   const sha=await sha256Hex(body.bytes);
   const key=`cgma/edocs/${doc.id}/original-${sha.slice(0,16)}.${type.ext}`;
   await store.put(key,body.bytes,{httpMetadata:{contentType:type.mime},customMetadata:{sha256:sha,doc_id:doc.id,workspace:EDOC_TENANT}});
-  const stamp=new Date(now).toISOString();
-  const {statement:event}=await eventStatement(env,{docId:doc.id,action:'file_uploaded',actor,createdAt:stamp,prevHash:await lastEventHash(env,doc.id),
-    detail:{file_name:name,size:body.bytes.length,mime:type.mime,sha256:sha}});
-  const results=await env.DB.batch([
-    env.DB.prepare(`UPDATE cgma_edoc_documents SET file_key=?,file_name=?,file_mime=?,file_size=?,content_sha256=?,updated_at=? WHERE id=? AND status='draft'`)
-      .bind(key,name,type.mime,body.bytes.length,sha,stamp,doc.id),
-    event,
-  ]);
-  if(Number(results?.[0]?.meta?.changes||0)!==1)return fail('DOCUMENT_LOCKED','서명 요청이 시작된 문서의 원본은 바꿀 수 없습니다.',409);
+  const stamp=new Date(now).toISOString(),nonce=crypto.randomUUID();
+  const results=await chainedBatch(env,doc.id,async prevHash=>{
+    const {statement:event}=await eventStatement(env,{docId:doc.id,action:'file_uploaded',actor,createdAt:stamp,prevHash,guard:nonceGuard(doc.id,nonce),
+      detail:{file_name:name,size:body.bytes.length,mime:type.mime,sha256:sha}});
+    return [
+      env.DB.prepare(`UPDATE cgma_edoc_documents SET file_key=?,file_name=?,file_mime=?,file_size=?,content_sha256=?,op_nonce=?,updated_at=? WHERE id=? AND status='draft'`)
+        .bind(key,name,type.mime,body.bytes.length,sha,nonce,stamp,doc.id),
+      event,
+    ];
+  });
+  if(Number(results?.[0]?.meta?.changes||0)!==1){
+    // Lost a race with start: remove the object unless it is (by identical content) the document's file.
+    const current=await loadDocument(env,doc.id).catch(()=>null);
+    if(current?.file_key!==key)await store.delete?.(key)?.catch?.(()=>{});
+    return fail('DOCUMENT_LOCKED','서명 요청이 시작된 문서의 원본은 바꿀 수 없습니다.',409);
+  }
   return json({ok:true,content_sha256:sha,file_name:name,file_size:body.bytes.length});
 }
 
@@ -289,20 +311,24 @@ async function startDocument(env,{doc,actor,now}){
   if(!doc.content_sha256)return fail('CONTENT_REQUIRED','원본 파일 또는 본문을 먼저 등록해 주세요.',409);
   const signers=await loadSigners(env,doc.id);
   if(!signers.length)return fail('SIGNERS_INVALID','서명자가 없습니다.',409);
-  const stamp=new Date(now).toISOString(),expires=new Date(now+LINK_TTL_MS).toISOString();
+  const stamp=new Date(now).toISOString(),expires=new Date(now+LINK_TTL_MS).toISOString(),nonce=crypto.randomUUID();
+  const guard=nonceGuard(doc.id,nonce);
   const tokens=[];
-  const statements=[];
+  const signerStatements=[];
   for(const s of signers){
     const token=newSignToken();tokens.push(token);
-    statements.push(env.DB.prepare(`UPDATE cgma_edoc_signers SET status=?,link_token=?,token_hash=?,token_expires_at=?,updated_at=? WHERE doc_id=? AND seq=?`)
-      .bind(Number(s.seq)===1?'active':'waiting',token,await sha256Hex(token),expires,stamp,doc.id,s.seq));
+    // Conditional on this batch's own draft→in_progress transition: a second (double-click) start is a no-op.
+    signerStatements.push(env.DB.prepare(`UPDATE cgma_edoc_signers SET status=?,link_token=?,token_hash=?,token_expires_at=?,updated_at=? WHERE doc_id=? AND seq=? AND ${guard.sql}`)
+      .bind(Number(s.seq)===1?'active':'waiting',token,await sha256Hex(token),expires,stamp,doc.id,s.seq,...guard.binds));
   }
-  const {statement:event}=await eventStatement(env,{docId:doc.id,action:'started',actor,createdAt:stamp,prevHash:await lastEventHash(env,doc.id),
-    detail:{content_sha256:doc.content_sha256,order:signers.map(s=>`${s.seq}. ${s.role_title} ${s.signer_name}`),links_expire_at:expires}});
-  const results=await env.DB.batch([
-    env.DB.prepare(`UPDATE cgma_edoc_documents SET status='in_progress',current_seq=1,started_at=?,updated_at=? WHERE id=? AND status='draft'`).bind(stamp,stamp,doc.id),
-    ...statements,event,
-  ]);
+  const results=await chainedBatch(env,doc.id,async prevHash=>{
+    const {statement:event}=await eventStatement(env,{docId:doc.id,action:'started',actor,createdAt:stamp,prevHash,guard,
+      detail:{content_sha256:doc.content_sha256,order:signers.map(s=>`${s.seq}. ${s.role_title} ${s.signer_name}`),links_expire_at:expires}});
+    return [
+      env.DB.prepare(`UPDATE cgma_edoc_documents SET status='in_progress',current_seq=1,started_at=?,op_nonce=?,updated_at=? WHERE id=? AND status='draft' AND content_sha256<>''`).bind(stamp,nonce,stamp,doc.id),
+      ...signerStatements,event,
+    ];
+  });
   if(Number(results?.[0]?.meta?.changes||0)!==1)return fail('ALREADY_STARTED','이미 서명 요청이 시작된 문서입니다.',409);
   return json({ok:true,status:'in_progress',links:signers.map((s,i)=>({seq:Number(s.seq),role_title:s.role_title,signer_name:s.signer_name,link:signLink(tokens[i])}))});
 }
@@ -313,13 +339,15 @@ async function cancelDocument(request,env,{doc,actor,now}){
   if(parsed.invalidType)return fail('CONTENT_TYPE_INVALID','JSON 요청만 허용됩니다.',415);
   const reason=clean(parsed.value?.reason);
   if(!within(reason,300))return fail('REASON_REQUIRED','취소 사유를 입력해 주세요.');
-  const stamp=new Date(now).toISOString();
-  const {statement:event}=await eventStatement(env,{docId:doc.id,action:'cancelled',actor,createdAt:stamp,prevHash:await lastEventHash(env,doc.id),detail:{reason}});
-  const results=await env.DB.batch([
-    env.DB.prepare(`UPDATE cgma_edoc_documents SET status='cancelled',cancelled_at=?,cancel_reason=?,updated_at=? WHERE id=? AND status IN ('draft','in_progress')`).bind(stamp,reason,stamp,doc.id),
-    env.DB.prepare(`UPDATE cgma_edoc_signers SET link_token='',token_hash='',updated_at=? WHERE doc_id=? AND status<>'signed'`).bind(stamp,doc.id),
-    event,
-  ]);
+  const stamp=new Date(now).toISOString(),nonce=crypto.randomUUID(),guard=nonceGuard(doc.id,nonce);
+  const results=await chainedBatch(env,doc.id,async prevHash=>{
+    const {statement:event}=await eventStatement(env,{docId:doc.id,action:'cancelled',actor,createdAt:stamp,prevHash,guard,detail:{reason}});
+    return [
+      env.DB.prepare(`UPDATE cgma_edoc_documents SET status='cancelled',cancelled_at=?,cancel_reason=?,op_nonce=?,updated_at=? WHERE id=? AND status IN ('draft','in_progress')`).bind(stamp,reason,nonce,stamp,doc.id),
+      env.DB.prepare(`UPDATE cgma_edoc_signers SET link_token='',token_hash='',updated_at=? WHERE doc_id=? AND status<>'signed' AND ${guard.sql}`).bind(stamp,doc.id,...guard.binds),
+      event,
+    ];
+  });
   if(Number(results?.[0]?.meta?.changes||0)!==1)return fail('NOT_CANCELLABLE','완료되었거나 이미 취소된 문서는 취소할 수 없습니다.',409);
   return json({ok:true,status:'cancelled'});
 }
@@ -330,13 +358,17 @@ async function reissueLink(env,{doc,seq,actor,now}){
   if(!signer)return fail('SIGNER_NOT_FOUND','서명자를 찾을 수 없습니다.',404);
   if(signer.status==='signed')return fail('ALREADY_SIGNED','이미 서명한 서명자입니다.',409);
   const token=newSignToken(),stamp=new Date(now).toISOString(),expires=new Date(now+LINK_TTL_MS).toISOString();
-  const {statement:event}=await eventStatement(env,{docId:doc.id,action:'link_reissued',actor,createdAt:stamp,prevHash:await lastEventHash(env,doc.id),
-    detail:{seq,role_title:signer.role_title,links_expire_at:expires}});
-  const results=await env.DB.batch([
-    env.DB.prepare(`UPDATE cgma_edoc_signers SET link_token=?,token_hash=?,token_expires_at=?,updated_at=? WHERE doc_id=? AND seq=? AND status<>'signed'`)
-      .bind(token,await sha256Hex(token),expires,stamp,doc.id,seq),
-    event,
-  ]);
+  const tokenHash=await sha256Hex(token);
+  const results=await chainedBatch(env,doc.id,async prevHash=>{
+    const {statement:event}=await eventStatement(env,{docId:doc.id,action:'link_reissued',actor,createdAt:stamp,prevHash,guard:tokenGuard(doc.id,seq,tokenHash),
+      detail:{seq,role_title:signer.role_title,links_expire_at:expires}});
+    return [
+      env.DB.prepare(`UPDATE cgma_edoc_signers SET link_token=?,token_hash=?,token_expires_at=?,updated_at=? WHERE doc_id=? AND seq=? AND status<>'signed'
+          AND EXISTS (SELECT 1 FROM cgma_edoc_documents WHERE id=? AND status='in_progress')`)
+        .bind(token,tokenHash,expires,stamp,doc.id,seq,doc.id),
+      event,
+    ];
+  });
   if(Number(results?.[0]?.meta?.changes||0)!==1)return fail('ALREADY_SIGNED','이미 서명한 서명자입니다.',409);
   return json({ok:true,seq,link:signLink(token),link_expires_at:expires});
 }
@@ -409,8 +441,9 @@ async function submitSignature(request,env,{signer,doc,tokenHash,expired,now}){
   const stamp=new Date(now).toISOString(),signatureId=crypto.randomUUID();
   const clientHash=await sha256Hex(`cgma-edoc|${doc.id}|${clientAddress(request)}`);
   const ua=clean(request.headers.get('user-agent')||'').slice(0,200);
-  const guard={seq,signatureId};
-  const signedEvent=await eventStatement(env,{docId:doc.id,action:'signed',actor:`signer:${seq}`,createdAt:stamp,prevHash:await lastEventHash(env,doc.id),guard,
+  const guard=signatureGuard(doc.id,seq,signatureId);
+  const results=await chainedBatch(env,doc.id,async prevHash=>{
+  const signedEvent=await eventStatement(env,{docId:doc.id,action:'signed',actor:`signer:${seq}`,createdAt:stamp,prevHash,guard,
     detail:{seq,role_title:signer.role_title,signer_name:signer.signer_name,signed_name:signedName,content_sha256:doc.content_sha256,signature_id:signatureId,client_hash:clientHash}});
   const statements=[
     env.DB.prepare(`UPDATE cgma_edoc_signers SET status='signed',signed_at=?,signed_name=?,signature_strokes=?,signed_content_sha256=?,signature_id=?,client_hash=?,user_agent=?,link_token='',updated_at=?
@@ -430,7 +463,8 @@ async function submitSignature(request,env,{signer,doc,tokenHash,expired,now}){
       detail:{content_sha256:doc.content_sha256,signer_count:count}});
     statements.push(completed.statement);
   }
-  const results=await env.DB.batch(statements);
+  return statements;
+  });
   if(Number(results?.[0]?.meta?.changes||0)!==1)return fail('SIGN_CONFLICT','서명 상태가 바뀌었습니다. 새로고침 후 확인해 주세요.',409);
   return json({ok:true,signed_at:stamp,completed:isLast,next:isLast?null:{seq:seq+1}});
 }

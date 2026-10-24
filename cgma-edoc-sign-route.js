@@ -3,7 +3,7 @@
 // is presented to the Control API (/api/cgma/edocs/sign) in a header, which enforces order and authority.
 const PREFIX='/cgma/sign';
 const ROUTE='cgma-edoc-sign';
-const CSP="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data: blob:; frame-src blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'";
+const CSP="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data: blob:; frame-src blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src blob:";
 const DOCUMENT=PREFIX+'/';
 const SCRIPT=PREFIX+'/app.js';
 export function isCgmaEdocSignPath(pathname){
