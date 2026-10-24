@@ -1,5 +1,5 @@
 ﻿(() => {
-  const API = 'https://mall-api.ekodi.kr';
+  const API = '/ekodimall/api';
   const grid = document.querySelector('#grid');
   if (!grid) return;
 
