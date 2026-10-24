@@ -218,7 +218,7 @@
       bar.append(go);
       document.body.append(bar);
     } else if (data.product.saleType === 'direct') {
-      const soldOut = quote?.blockers?.includes('out-of-stock');
+      const soldOut = quote?.blockers?.includes('out-of-stock') || quote?.blockers?.includes('expiry-window');
       const soon = el('button', 'pp-soon', soldOut ? '품절' : '구매 준비 중'); soon.type = 'button'; soon.disabled = true;
       buy.append(soon);
       if (soldOut) buy.append(el('p', 'pp-soon-note', '재입고되면 이 페이지에서 바로 구매할 수 있습니다.'));
