@@ -15,15 +15,40 @@
     set(v) { try { localStorage.setItem(STORE_KEY, String(v)); } catch { /* storage unavailable */ } }
   };
 
+  // EKODI-MALL-SIMPLE-LISTING-001: three short steps. Seller name/contact come
+  // from the signed-in account (server default); intro and shipping text are
+  // pre-written from a free template and stay editable before publishing.
   const steps = [
     { title: '로그인', hint: 'Google 계정으로 시작합니다.', show: () => [auth] },
-    { title: '판매자 정보', hint: '판매자 유형·표시명·문의 연락처를 입력하세요.', fields: [1], optionalStore: true, required: ['sellerDisplayName', 'contact'] },
-    { title: '상품·가격·재고', hint: '판매 방식, 상품명, 가격, 재고를 입력하세요.', fields: [2], required: ['productName', 'price'] },
-    { title: '상품 소개', hint: '한 줄 소개는 게시에 꼭 필요합니다.', fields: [4], required: ['oneLine'] },
-    { title: '배송 · 저장 · 게시', hint: '배송·제공 방식을 적고 [서버에 저장] → [게시 · 링크 활성화]를 누르세요.', fields: [5], buttons: true, required: ['fulfillment'] },
-    { title: '상품 사진', hint: '대표 사진부터 올리세요. 첫 번째 사진이 상품 페이지 대표 이미지가 됩니다.', show: () => [document.querySelector('#sellerPhotos')].filter(Boolean) },
-    { title: '판매 인증', hint: '판매자 인증을 신청하면 운영자 승인 후 결제가 열립니다.', show: () => [document.querySelector('#commerceReadiness')].filter(Boolean) }
+    { title: '상품 정보', hint: '상품명 · 가격 · 재고만 입력하세요. 나머지는 자동으로 채워집니다.', fields: [2], simpleProduct: true, required: ['productName', 'price'] },
+    { title: '사진', hint: '대표 사진을 올려 주세요. 첫 사진이 상품 페이지 대표 이미지가 됩니다.', show: () => [document.querySelector('#sellerPhotos')].filter(Boolean), onEnter: () => ensureSaved() },
+    { title: '확인 · 게시', hint: '자동으로 작성된 소개와 배송 안내를 확인하고 [게시하기]를 누르세요.', fields: [4, 5], buttons: true, simpleIntro: true, required: ['oneLine', 'fulfillment'], onEnter: () => autofill() },
+    { title: '판매 인증', hint: '일반 판매자는 판매자 인증 승인 후 결제가 열립니다. 에코디언 계정은 자동으로 열립니다.', show: () => [document.querySelector('#commerceReadiness')].filter(Boolean) }
   ];
+
+  const CATEGORY_TEXT = { general: '', food: '식품', local: '로컬', craft: '공예', book: '도서', beauty: '뷰티', living: '리빙', fashion: '패션', digital: '디지털', service: '서비스' };
+  function setIfEmpty(name, value) {
+    const field = form.elements[name];
+    if (!field || String(field.value || '').trim()) return;
+    field.value = value;
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  function autofill() {
+    const name = String(form.elements.productName?.value || '').trim() || '이 상품';
+    const category = CATEGORY_TEXT[form.elements.category?.value] || '';
+    setIfEmpty('oneLine', `${category ? `${category} · ` : ''}${name} — 에코디몰 직접판매`);
+    setIfEmpty('story', `${name}을(를) 에코디몰에서 직접 판매합니다.\n상품 구성과 배송·교환 안내를 확인하신 뒤 토스페이먼츠 안전결제로 구매하실 수 있습니다.`);
+    setIfEmpty('fulfillment', '택배 배송 · 결제 확인 후 영업일 기준 2~3일 내 발송\n교환·환불은 에코디몰 환불정책에 따릅니다.');
+  }
+  async function ensureSaved() {
+    autofill();
+    const id = () => String(form.elements.productId?.value || '').trim();
+    if (/^prd_[a-f0-9]{32}$/i.test(id())) return;
+    const save = form.querySelector('[data-server-save]');
+    if (!save) return;
+    save.click();
+    for (let i = 0; i < 40 && !/^prd_[a-f0-9]{32}$/i.test(id()); i++) await new Promise((r) => setTimeout(r, 200));
+  }
 
   const style = document.createElement('style');
   style.textContent = `
@@ -41,7 +66,9 @@
   .wz-err{color:#a33b44;max-width:960px;margin:8px auto 0;padding:0 16px;min-height:1em}
   .wz-full{background:none;border:0;color:#2f5f86;text-decoration:underline;cursor:pointer;font-size:13px}
   .wz-on #studio .studio-intro{display:none}
-  .wz-on [data-studio-save],.wz-on [data-studio-export]{display:none!important}
+  .wz-on [data-studio-save],.wz-on [data-studio-export],.wz-on [data-server-save],.wz-on [data-studio-clear]{display:none!important}
+  .wz-on .wz-adv{display:none!important}
+  .wz-on [data-server-publish]{min-width:180px;height:48px;font-size:16px;background:#1f3d33!important;color:#fff!important;border-color:#1f3d33!important}
   html:not(.wz-on) .wz-head,html:not(.wz-on) .wz-nav,html:not(.wz-on) .wz-err{display:none}
   `;
   style.textContent += `
@@ -115,6 +142,7 @@
     nav.querySelector('[data-wz-next]').textContent = current === steps.length - 1 ? '완료' : '다음';
     err.textContent = '';
     store.set(current);
+    Promise.resolve(step.onEnter?.()).catch(() => {});
   }
 
   function missing(step) {
@@ -131,7 +159,7 @@
     if (target > 0 && !signedIn()) { current = 0; apply(); err.textContent = '먼저 Google로 로그인해 주세요.'; return; }
     if (validate && target > current) {
       const miss = missing(steps[current]);
-      if (form.elements.saleType?.value === 'direct' && current === 2 && !String(form.elements.stockQuantity?.value || '').trim()) miss.push('stockQuantity');
+      if (form.elements.saleType?.value === 'direct' && steps[current].simpleProduct && !String(form.elements.stockQuantity?.value || '').trim()) miss.push('stockQuantity');
       if (miss.length) {
         const label = (n) => form.elements[n]?.closest('label')?.childNodes[0]?.textContent?.trim() || n;
         err.textContent = `필수 입력: ${miss.map(label).join(', ')}`;
@@ -186,6 +214,15 @@
     const foreign = records.some((r) => [...r.addedNodes].some((n) => n.nodeType === 1 && !own.has(n)));
     if (foreign) apply();
   }).observe(main, { childList: true });
+
+  // Advanced inputs stay available in '전체 화면 보기' but are hidden in the simple flow.
+  for (const name of ['saleType', 'primaryRegionId', 'affiliateUrl', 'audience', 'specs']) {
+    const label = form.elements[name]?.closest('label');
+    if (label) label.classList.add('wz-adv');
+  }
+  form.querySelectorAll('.studio-local-note').forEach((note) => note.classList.add('wz-adv'));
+  const publishBtn = () => form.querySelector('[data-server-publish]');
+  new MutationObserver(() => { const b = publishBtn(); if (b && b.textContent !== '게시하기') b.textContent = '게시하기'; }).observe(form, { childList: true, subtree: true });
 
   const start = () => { current = signedIn() ? Math.max(1, store.get()) : 0; apply(); };
   start();

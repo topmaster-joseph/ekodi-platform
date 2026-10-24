@@ -151,8 +151,14 @@
     const facts = el('ul', 'pp-facts');
     if (data.product.fulfillment) facts.append(el('li', '', data.product.fulfillment));
     if (data.product.region?.label) facts.append(el('li', '', `${data.product.region.label}${data.product.region.verified ? '' : ' · 판매자 등록 지역'}`));
-    facts.append(el('li', '', '토스페이먼츠 안전결제'));
-    info.append(crumbs, title);
+    facts.append(el('li', '', '토스페이먼츠 안전결제 · 결제 정보는 판매자에게 공유되지 않습니다'));
+    // EKODI-MALL-TRUST-001: trust signals come from server facts only.
+    const badges = el('div', 'pp-badges');
+    if (data.seller.official) badges.append(el('span', 'pp-badge pp-badge-official', '에코디몰 공식'));
+    else if (data.seller.verified) badges.append(el('span', 'pp-badge', '인증 판매자'));
+    const returns = el('a', 'pp-badge pp-badge-link', '교환·환불 안내'); returns.href = '/ekodimall/pages/returns/';
+    badges.append(returns);
+    info.append(crumbs, title, badges);
     if (lead.textContent) info.append(lead);
     info.append(price, facts);
     const buy = el('div', 'pp-buy');
@@ -179,7 +185,13 @@
     if (data.product.benefits?.length) details.append(section('핵심 장점', list(data.product.benefits)));
     if (data.product.specs?.length) details.append(section('구성 · 규격', list(data.product.specs)));
     details.append(section('배송 · 교환 · 환불', `${data.product.fulfillment || '판매자가 배송·제공 방식을 안내합니다.'}\n\n결제 취소와 환불은 에코디몰 환불정책과 판매자 안내에 따릅니다.`));
-    details.append(section('판매자 정보', `${data.seller.displayName}${data.store?.name ? ` · ${data.store.name}` : ' · 개인 판매자'}${data.product.contact ? `\n문의 · ${data.product.contact}` : ''}`));
+    const sellerLines = [
+      `${data.seller.displayName}${data.store?.name ? ` · ${data.store.name}` : data.seller.official ? ' · 에코디몰 공식 판매' : ' · 개인 판매자'}`,
+      data.seller.official ? '판매 · 에코디비즈(EKODIBIZ) · 사업자등록번호 213-13-01959 · 통신판매업 2023-전남무안-0153' : '',
+      data.seller.verified ? '에코디몰 판매자 인증 완료' : '',
+      data.product.contact ? `문의 · ${data.product.contact}` : ''
+    ].filter(Boolean).join('\n');
+    details.append(section('판매자 정보', sellerLines));
     const feeText = data.seller.type === 'individual'
       ? '개인상품은 판매자 서버발급 공유링크 7%, 일반 EKODI Mall 유입 8%, AI 내부발급 링크 9%입니다. 최초 유입은 7일간 서버에 보존되며 PG·플랫폼 수수료 VAT 포함 기준입니다.'
       : '사업자 인증 스토어 직접판매 기본수수료는 10%이며 실제 결제 활성화에는 사업자 검증이 필요합니다.';
