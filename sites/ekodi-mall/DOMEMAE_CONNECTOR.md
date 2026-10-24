@@ -63,3 +63,13 @@
 `Official API access ≠ resale right ≠ PII permission ≠ order execution permission ≠ Auto Order permission`
 
 각 권한은 독립적으로 검증한다.
+
+## V2 자동발주 (EKODI-MALL-DOMEGGOOK-AUTOORDER-001, 2026-10-25)
+
+운영자 결정(2026-10-25): Private API(구매용) 승인을 전제로, **에코디몰에서 고객 결제가 완료된 위탁상품만** 자동 발주한다. 선발주는 없다.
+
+- 코드: `api/domeggook-order.js` (cron 10분). 비밀값: `DOMEMAE_API_KEY`, `DOMEMAE_USER_ID`, `DOMEMAE_PASSWORD`(로그인 전용, 세션은 저장하지 않음).
+- 게이트: `DOMEGGOOK_AUTO_ORDER_ENABLED="true"` + 위 secret 3개가 모두 있을 때만 동작.
+- 안전장치: `supplier_orders.order_id` UNIQUE 멱등 / 공급처 판매상태·재고 재확인 / 역마진 차단 / 이머니 잔액 확인(부족 시 알림 후 충전되면 재시도) / 응답 불명은 재시도 금지(이중 발주 방지) / 발주 직후 getOrderView 로 품목·수량 대조, 불일치 시 즉시 setOrdDeny / 고객 환불 시 배송 전이면 자동 구매취소, 배송 후면 반품 알림.
+- 배송지 정보는 발주에 필요한 최소 항목(이름·연락처·이메일·주소·배송메모)만 공급처로 전달된다. 개인정보처리방침의 제3자 제공 고지 반영은 확인필요.
+- 확인필요: setOrder `item[]` 칸 의미(연동 가이드 docx). 기본 템플릿 `{market}||P||01|{qty}||{sellerMemo}||{deliMemo}` 은 문서 예시를 따른 것이며 `DOMEGGOOK_ORDER_ITEM_TEMPLATE` 로 교체 가능.

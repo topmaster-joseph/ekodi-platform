@@ -39,6 +39,11 @@ const DEFAULT_PER_KEYWORD = 15;
 const RESCAN_MS = 7 * 24 * 60 * 60 * 1000;
 const isoNow = () => new Date().toISOString();
 
+export function titleKey(title) {
+  return String(title || '').toLowerCase().replace(/[a-z]{1,4}-?\d{3,}/g, '').replace(/\[[^\]]*\]|\([^)]*\)/g, '')
+    .replace(/[^0-9a-z가-힣]/g, '').split('').sort().join('').slice(0, 120);
+}
+
 export function scoreListItem(item, rankPos, total, weight = 1) {
   const price = Number(String(item.price ?? '').replace(/,/g, '').split('|')[0].replace(/^\d+\+/, '')) || 0;
   const title = String(item.title || '');
@@ -115,13 +120,24 @@ export async function runCuration(env, deps, { fetchImpl = fetch, perRun = 3 } =
   const active = await activeCuratedCount(env, seller.id);
   if (active >= target) return { active, target, done: true };
   const summary = { active, target, imported: 0, rejected: 0 };
-  const queued = await env.DB.prepare("SELECT COUNT(*) n FROM supply_candidates WHERE status='new'").first();
+  // 키워드 상한에 걸리지 않은 대기 후보만 센다(상한에 막힌 후보가 쌓여 탐색이 멈추지 않도록).
+  const queued = await env.DB.prepare(`SELECT COUNT(*) n FROM supply_candidates c WHERE c.status='new'
+    AND (SELECT COUNT(*) FROM supply_candidates x WHERE x.keyword=c.keyword AND x.status='imported') < ?`).bind(perKeyword).first();
   if (Number(queued?.n || 0) < 5) summary.discovery = await discover(env, fetchImpl);
-  const picks = await env.DB.prepare(`SELECT c.item_no,c.keyword FROM supply_candidates c
+  const picks = await env.DB.prepare(`SELECT c.item_no,c.keyword,c.title FROM supply_candidates c
     WHERE c.status='new' AND (SELECT COUNT(*) FROM supply_candidates x WHERE x.keyword=c.keyword AND x.status='imported') < ?
     ORDER BY c.score DESC LIMIT ?`).bind(perKeyword, Math.min(perRun, target - active)).all();
+  const legacy = await env.DB.prepare("SELECT item_no,title FROM supply_candidates WHERE status='imported' AND title_key='' LIMIT 50").all();
+  for (const row of legacy.results || []) await env.DB.prepare('UPDATE supply_candidates SET title_key=? WHERE item_no=?').bind(titleKey(row.title), row.item_no).run();
   for (const pick of picks.results || []) {
     const now = isoNow();
+    // 모델코드만 다른 같은 상품(예: DD-10817 / RD-10817)은 하나만 올린다.
+    const key = titleKey(pick.title);
+    if (key && await env.DB.prepare("SELECT 1 FROM supply_candidates WHERE status='imported' AND title_key=?").bind(key).first()) {
+      await env.DB.prepare("UPDATE supply_candidates SET status='rejected',reason='duplicate-title',updated_at=? WHERE item_no=?").bind(now, pick.item_no).run();
+      summary.rejected += 1;
+      continue;
+    }
     const result = await importDomeggookProduct(env, seller, { itemNo: pick.item_no }, { ...deps, fetchImpl, requireLicense: true, maxImages: 4 });
     if (result.status >= 300) {
       await env.DB.prepare("UPDATE supply_candidates SET status='rejected',reason=?,updated_at=? WHERE item_no=?").bind(String(result.body?.error || result.status).slice(0, 200), now, pick.item_no).run();
@@ -135,7 +151,7 @@ export async function runCuration(env, deps, { fetchImpl = fetch, perRun = 3 } =
       summary.rejected += 1;
       continue;
     }
-    await env.DB.prepare("UPDATE supply_candidates SET status='imported',product_id=?,updated_at=? WHERE item_no=?").bind(productId, now, pick.item_no).run();
+    await env.DB.prepare("UPDATE supply_candidates SET status='imported',product_id=?,title_key=?,updated_at=? WHERE item_no=?").bind(productId, key, now, pick.item_no).run();
     summary.imported += 1;
   }
   if (!summary.imported && !(picks.results || []).length && summary.discovery && !summary.discovery.scanned) {
