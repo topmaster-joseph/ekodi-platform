@@ -63,7 +63,9 @@
 
   function endpoint(path) {
     const url = new URL(`${API}${path}`, location.origin);
-    url.searchParams.set('subject_type','person');
+    // 플랫폼 관제센터의 채널은 에코디몰 자율 홍보 엔진(tenant: ekodimall)이 쓰는 주체로 저장한다.
+    url.searchParams.set('subject_type','tenant');
+    url.searchParams.set('subject_key','ekodimall');
     return url.href;
   }
   async function request(path,{method='GET',body}={}) {
