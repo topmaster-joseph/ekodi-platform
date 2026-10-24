@@ -37,6 +37,8 @@ const EXCLUDE = /(식품|간식|음료|커피|차\s?티백|건강|영양|비타�
 const MIN_PRICE = 1500, MAX_PRICE = 40000;
 const DEFAULT_PER_KEYWORD = 15;
 const RESCAN_MS = 7 * 24 * 60 * 60 * 1000;
+// 운영자 결정(2026-10-25): 1시간마다 새 키워드 1개를 소싱(탐색)한다. 등록은 10분마다 소량씩 계속한다.
+const DEFAULT_DISCOVERY_INTERVAL_MIN = 60;
 const isoNow = () => new Date().toISOString();
 
 export function titleKey(title) {
@@ -123,7 +125,10 @@ export async function runCuration(env, deps, { fetchImpl = fetch, perRun = 3 } =
   // 키워드 상한에 걸리지 않은 대기 후보만 센다(상한에 막힌 후보가 쌓여 탐색이 멈추지 않도록).
   const queued = await env.DB.prepare(`SELECT COUNT(*) n FROM supply_candidates c WHERE c.status='new'
     AND (SELECT COUNT(*) FROM supply_candidates x WHERE x.keyword=c.keyword AND x.status='imported') < ?`).bind(perKeyword).first();
-  if (Number(queued?.n || 0) < 5) summary.discovery = await discover(env, fetchImpl);
+  const intervalMin = Math.max(10, Number(env.DOMEGGOOK_DISCOVERY_INTERVAL_MIN) || DEFAULT_DISCOVERY_INTERVAL_MIN);
+  const lastScan = await env.DB.prepare('SELECT MAX(scanned_at) t FROM supply_curation_keywords').first();
+  const hourlyDue = !lastScan?.t || Date.now() - Date.parse(lastScan.t) >= intervalMin * 60 * 1000;
+  if (hourlyDue || Number(queued?.n || 0) < 5) summary.discovery = await discover(env, fetchImpl);
   const picks = await env.DB.prepare(`SELECT c.item_no,c.keyword,c.title FROM supply_candidates c
     WHERE c.status='new' AND (SELECT COUNT(*) FROM supply_candidates x WHERE x.keyword=c.keyword AND x.status='imported') < ?
     ORDER BY c.score DESC LIMIT ?`).bind(perKeyword, Math.min(perRun, target - active)).all();

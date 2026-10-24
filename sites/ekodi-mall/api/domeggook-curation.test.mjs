@@ -75,6 +75,17 @@ test('model-code twins are imported once and capped keywords do not stall discov
   assert.ok(db.prepare("SELECT COUNT(*) n FROM supply_curation_keywords WHERE scanned_at IS NOT NULL").get().n >= 2, 'moves on to the next keyword once the first is capped');
 });
 
+test('a new keyword is sourced every hour even when the queue is full', async () => {
+  const { db, env } = setup({ DOMEGGOOK_CURATION_TARGET: '50' });
+  await runSupplyCuration(env, { fetchImpl: fakeFetch([]), perRun: 1 });
+  for (let i = 0; i < 10; i += 1) db.prepare("INSERT INTO supply_candidates (item_no,keyword,title,score,status,created_at,updated_at) VALUES (?,?,?,0,'new','t','t')").run(`q${i}`, '대기', `대기 ${i}`);
+  const r2 = await runSupplyCuration(env, { fetchImpl: fakeFetch([]), perRun: 1 });
+  assert.equal(r2.discovery, undefined, 'not again within the hour while candidates remain');
+  db.prepare("UPDATE supply_curation_keywords SET scanned_at='2026-01-01T00:00:00Z' WHERE scanned_at IS NOT NULL").run();
+  const r3 = await runSupplyCuration(env, { fetchImpl: fakeFetch([]), perRun: 1 });
+  assert.ok(r3.discovery?.scanned, 'hourly discovery runs');
+});
+
 test('curation is off unless enabled and needs a verified EKODIan seller', async () => {
   assert.equal((await runSupplyCuration(setup({ DOMEGGOOK_CURATION_ENABLED: 'false' }).env)).skipped, 'disabled');
   assert.equal((await runSupplyCuration(setup({ MALL_CURATION_SELLER_EMAIL: 'none@x.kr' }).env)).skipped, 'no-seller');
