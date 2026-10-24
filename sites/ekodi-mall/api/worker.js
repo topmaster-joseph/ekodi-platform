@@ -5,6 +5,7 @@ import { paymentExecutionBlockers, paymentProviderPublicView, selectedPaymentPro
 import { routeCommerceModel } from './commerce-os.js';
 import { confirmPayment as ekodipayConfirm } from '../../../ekodipay-core.js';
 import { handleTossWebhook } from './payment-reconciliation.js';
+import { cleanExpiryDate, isInExpiryWindow, expiryWindowMessage, EXPIRY_BLOCKER } from './shelf-life.js';
 
 const DEFAULT_ALLOWED_ORIGINS = [
   'https://ekodi.kr',
@@ -190,6 +191,8 @@ export function normalizeProductInput(body = {}) {
       price: cleanPrice(product.price),
       stockProvided: Object.prototype.hasOwnProperty.call(product, 'stockQuantity'),
       stockQuantity: cleanStock(product.stockQuantity),
+      expiryProvided: Object.prototype.hasOwnProperty.call(product, 'expiryDate'),
+      expiryDate: saleType === 'direct' ? cleanExpiryDate(product.expiryDate) : null,
       benefits: cleanList(product.benefits),
       specs: cleanList(product.specs),
       story: cleanText(product.story, 3000),
@@ -211,6 +214,8 @@ export function normalizeProductInput(body = {}) {
   if (saleType === 'affiliate' && !affiliateUrl) errors.push('제휴판매는 유효한 HTTPS 제휴링크가 필요합니다.');
   // EKODI-MALL-STOCK-REQUIRED-001: 직접판매(실결제) 상품은 재고 수량이 필수 — 초과판매 방지.
   if (saleType === 'direct' && normalized.product.stockQuantity === null) errors.push('직접판매 상품은 재고 수량(0 이상 정수)을 입력해 주세요.');
+  // EKODI-MALL-SHELF-LIFE-001: 소비기한은 선택 입력이지만, 입력했다면 실제 날짜(YYYY-MM-DD)여야 한다.
+  if (saleType === 'direct' && normalized.product.expiryProvided && String(product.expiryDate ?? '').trim() && !normalized.product.expiryDate) errors.push('소비기한은 YYYY-MM-DD 형식의 날짜로 입력해 주세요.');
   if (normalized.store?.name && !normalized.store.slug) errors.push('스토어를 연결하려면 영문 소문자·숫자·하이픈 slug가 필요합니다.');
   return { value: normalized, errors };
 }
@@ -308,6 +313,8 @@ function rowToOwnerProduct(row) {
       oneLine: row.one_line || '',
       price: row.price,
       stockQuantity: row.stock_quantity ?? null,
+      expiryDate: row.expiry_date || null,
+      expirySoldOutAt: row.expiry_sold_out_at || null,
       benefits: JSON.parse(row.benefits_json || '[]'),
       specs: JSON.parse(row.specs_json || '[]'),
       story: row.story || '',
@@ -337,25 +344,32 @@ async function saveProduct(env, user, body, existingId = '') {
   if (existingId) {
     const current = await getOwnerProduct(env, user.id, existingId);
     if (!current) return { notFound: true };
+    // EKODI-MALL-SHELF-LIFE-001: 새로 입력·변경한 소비기한만 3개월 기준으로 거부한다(기존 값 그대로면 cron이 품절 처리).
+    const expiryChanged = value.product.expiryProvided && (value.product.expiryDate || null) !== (current.expiry_date || null);
+    if (expiryChanged && value.product.saleType === 'direct' && isInExpiryWindow(value.product.expiryDate)) return { errors: [expiryWindowMessage()] };
     await env.DB.prepare(`UPDATE products SET
-      store_id=?,seller_display_name=?,seller_type=?,sale_type=?,category=?,primary_region_id=?,region_ids_json=?,region_label=?,local_relationship=?,region_verified=0,name=?,audience=?,one_line=?,price=?,stock_quantity=CASE WHEN ?=1 THEN ? ELSE stock_quantity END,benefits_json=?,specs_json=?,story=?,fulfillment=?,contact=?,affiliate_url=?,content_json=?,version=version+1,updated_at=?
+      store_id=?,seller_display_name=?,seller_type=?,sale_type=?,category=?,primary_region_id=?,region_ids_json=?,region_label=?,local_relationship=?,region_verified=0,name=?,audience=?,one_line=?,price=?,stock_quantity=CASE WHEN ?=1 THEN ? ELSE stock_quantity END,
+      expiry_date=CASE WHEN ?=1 THEN ? ELSE expiry_date END,expiry_sold_out_at=CASE WHEN ?=1 THEN NULL ELSE expiry_sold_out_at END,expiry_held_stock=CASE WHEN ?=1 THEN NULL ELSE expiry_held_stock END,
+      benefits_json=?,specs_json=?,story=?,fulfillment=?,contact=?,affiliate_url=?,content_json=?,version=version+1,updated_at=?
       WHERE id=? AND seller_id=?`)
       .bind(linkedStoreId, seller.displayName, value.sellerType, value.product.saleType, value.product.category, value.product.region?.primaryRegionId || '', JSON.stringify(value.product.region?.regionIds || []),
         value.product.region?.label || '', value.product.region?.relationship || '', value.product.name,
         value.product.audience, value.product.oneLine, value.product.price, value.product.stockProvided ? 1 : 0, value.product.stockQuantity,
+        expiryChanged ? 1 : 0, value.product.expiryDate, expiryChanged ? 1 : 0, expiryChanged ? 1 : 0,
         JSON.stringify(value.product.benefits), JSON.stringify(value.product.specs),
         value.product.story, value.product.fulfillment, value.contact, value.product.affiliateUrl, JSON.stringify(value.content), now, existingId, user.id).run();
     return { product: rowToOwnerProduct(await getOwnerProduct(env, user.id, existingId)) };
   }
+  if (value.product.saleType === 'direct' && isInExpiryWindow(value.product.expiryDate)) return { errors: [expiryWindowMessage()] };
   const id = productId();
   const shareCode = randomCode(12);
   const publicUrl = makePublicUrl(env.MALL_BASE_URL, shareCode);
   await env.DB.prepare(`INSERT INTO products
-    (id,seller_id,store_id,share_code,public_url,seller_display_name,seller_type,sale_type,category,primary_region_id,region_ids_json,region_label,local_relationship,region_verified,name,audience,one_line,price,stock_quantity,benefits_json,specs_json,story,fulfillment,contact,affiliate_url,content_json,status,checkout_ready,version,created_at,updated_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,'draft',0,1,?,?)`)
+    (id,seller_id,store_id,share_code,public_url,seller_display_name,seller_type,sale_type,category,primary_region_id,region_ids_json,region_label,local_relationship,region_verified,name,audience,one_line,price,stock_quantity,expiry_date,benefits_json,specs_json,story,fulfillment,contact,affiliate_url,content_json,status,checkout_ready,version,created_at,updated_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,'draft',0,1,?,?)`)
     .bind(id, user.id, linkedStoreId, shareCode, publicUrl, seller.displayName, value.sellerType, value.product.saleType, value.product.category,
       value.product.region?.primaryRegionId || '', JSON.stringify(value.product.region?.regionIds || []), value.product.region?.label || '', value.product.region?.relationship || '',
-      value.product.name, value.product.audience, value.product.oneLine, value.product.price, value.product.stockQuantity, JSON.stringify(value.product.benefits),
+      value.product.name, value.product.audience, value.product.oneLine, value.product.price, value.product.stockQuantity, value.product.expiryDate, JSON.stringify(value.product.benefits),
       JSON.stringify(value.product.specs), value.product.story, value.product.fulfillment, value.contact, value.product.affiliateUrl,
       JSON.stringify(value.content), now, now).run();
   return { product: rowToOwnerProduct(await getOwnerProduct(env, user.id, id)) };
@@ -509,6 +523,8 @@ export async function buildOrderQuote(env, { shareCode, attributionToken = '', q
   const stockManaged = row.stock_quantity !== null && row.stock_quantity !== undefined;
   if (!stockManaged) blockers.push('stock-required');
   if (stockManaged && Number(row.stock_quantity) < qty) blockers.push('out-of-stock');
+  // EKODI-MALL-SHELF-LIFE-001: 소비기한 3개월 미만 구간은 cron 실행 여부와 무관하게 주문 시점에 품절로 막는다.
+  if (row.expiry_date && isInExpiryWindow(row.expiry_date)) blockers.push(EXPIRY_BLOCKER);
   for (const blocker of paymentExecutionBlockers(env)) blockers.push(blocker);
   return {
     status: 200,
