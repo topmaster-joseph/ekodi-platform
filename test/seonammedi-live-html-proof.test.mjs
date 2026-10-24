@@ -102,3 +102,21 @@ test('customer-domain search verification tags are the only extra head bytes tol
   assert.throws(()=>normalizeSeonamMediLiveHtml(moved,{origin:customer,page:'index.html'}),/unexpected_search_verification_injection/);
   assert.notEqual(normalizeSeonamMediLiveHtml(live,{origin:canonical,page:'index.html'}).html,expected,'canonical mount never receives verification tags');
 });
+
+test('Cloudflare Precursor injection is removed only at the audited HTML footer',()=>{
+  const precursor="<script>window.__CF$cv$params={r:'a4f86b2ef962ed19',t:'MTc5MjgzOTAwNg==',u:'01a16d883a58728880f67d0866ebebd6',ut:'vh8fTgPVAbcd0123456789_-.abcdefghi',i:60};(function(){if(!document.body)return;var s=document.createElement('script');s.src='/cdn-cgi/challenge-platform/scripts/precursor/main.js';document.head.appendChild(s);})();</script>";
+  for(const origin of [canonical,customer]){
+    const html=expectedSeonamMediHtmlAtOrigin(source,origin);
+    const injected=html.replace('\n</body>', '\n'+precursor+'</body>');
+    const normalized=normalizeSeonamMediLiveHtml(injected,{origin,page:'index.html'});
+    assert.equal(normalized.html,html);
+    assert.equal(normalized.precursors,1);
+    assert.equal(normalizeSeonamMediLiveHtml(html,{origin,page:'index.html'}).precursors,0);
+    assert.throws(()=>normalizeSeonamMediLiveHtml(injected.replace('precursor/main.js','malicious/main.js'),{origin,page:'index.html'}),/unrecognized_cloudflare_precursor_injection/);
+    assert.throws(()=>normalizeSeonamMediLiveHtml(injected.replace('i:60','i:60,extra:1'),{origin,page:'index.html'}),/unrecognized_cloudflare_precursor_injection/);
+    assert.notEqual(normalizeSeonamMediLiveHtml(injected.replace('hero.png','attacker.png'),{origin,page:'index.html'}).html,html,'unknown source alteration cannot be normalized away');
+    const misplaced=html.replace('</head>',precursor+'</head>');
+    assert.throws(()=>normalizeSeonamMediLiveHtml(misplaced,{origin,page:'index.html'}),/unrecognized_cloudflare_precursor_injection/);
+    assert.throws(()=>normalizeSeonamMediLiveHtml(injected.replace('</body>',precursor+'</body>'),{origin,page:'index.html'}),/unrecognized_cloudflare_precursor_injection/);
+  }
+});
