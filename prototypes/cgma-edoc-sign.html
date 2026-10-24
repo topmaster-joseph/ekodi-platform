@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>청계면상인회 전자서명</title>
+<style>
+:root{--ink:#14302f;--muted:#5b6b69;--line:#d6e0de;--teal:#0f5f5c;--teal-soft:#e6f1ef;--gold:#b38a2e;--bg:#f6f8f7;--danger:#a3312a;--ok:#1f7a4a;color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif}
+header{background:var(--teal);color:#fff;padding:18px 16px}
+header p{margin:0;font-size:13px;opacity:.85;letter-spacing:.04em}
+header h1{margin:2px 0 0;font-size:20px}
+main{width:min(820px,100%);margin:0 auto;padding:16px}
+section{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;margin:0 0 14px}
+h2{font-size:17px;margin:0 0 10px}
+.meta{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px;margin:0}
+.meta dt{color:var(--muted)}.meta dd{margin:0;word-break:break-all}
+.hash{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+.chain{display:flex;gap:8px;margin:0;padding:0;list-style:none;overflow-x:auto}
+.chain li{flex:1 1 0;min-width:120px;border:1px solid var(--line);border-radius:12px;padding:10px;font-size:14px;background:#fff}
+.chain li[data-status="signed"]{border-color:var(--ok);background:#eef7f1}
+.chain li[data-status="active"]{border-color:var(--gold);box-shadow:0 0 0 2px #f1e3bd}
+.chain li[data-me="true"]{outline:2px solid var(--teal);outline-offset:2px}
+.chain .step{display:block;font-size:12px;color:var(--muted)}
+.chain strong{display:block}
+.chain small{display:block;color:var(--muted);font-size:12px}
+.chain svg{display:block;width:100%;height:auto;max-height:56px;margin-top:4px}
+.notice{padding:12px 14px;border-radius:12px;background:var(--teal-soft);margin:0 0 14px;font-size:15px}
+.notice[data-kind="error"]{background:#fbecea;color:var(--danger)}
+.notice[data-kind="ok"]{background:#eef7f1;color:var(--ok)}
+.body-text{white-space:pre-wrap;word-break:break-word;border:1px solid var(--line);border-radius:10px;padding:12px;max-height:60vh;overflow:auto;font-size:15px}
+iframe.preview{width:100%;height:70vh;border:1px solid var(--line);border-radius:10px}
+img.preview{max-width:100%;border:1px solid var(--line);border-radius:10px}
+button{font:inherit;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:10px 16px;min-height:44px;cursor:pointer}
+button.primary{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:700}
+button:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+label{display:block;font-size:14px;margin:12px 0 4px;color:var(--muted)}
+input[type="text"]{font:inherit;width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;min-height:44px}
+.agree{display:flex;gap:10px;align-items:flex-start;font-size:15px;color:var(--ink);margin:12px 0}
+.agree input{width:22px;height:22px;margin-top:2px}
+.pad-wrap{border:2px dashed var(--line);border-radius:12px;background:#fff;position:relative}
+canvas{display:block;width:100%;height:auto;aspect-ratio:5/2;touch-action:none}
+.pad-hint{position:absolute;left:12px;top:8px;font-size:12px;color:var(--muted);pointer-events:none}
+.cert-sign{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.cert-sign div{border:1px solid var(--line);border-radius:10px;padding:8px;font-size:13px}
+.cert-sign svg{display:block;width:100%;height:auto}
+footer{color:var(--muted);font-size:12px;text-align:center;padding:8px 16px 28px}
+@media print{header,footer,.no-print{display:none!important}body{background:#fff}section{border:none;padding:0}}
+</style>
+</head>
+<body>
+<header><p>청계면상인회 · 전자문서</p><h1>전자서명</h1></header>
+<main id="app" aria-live="polite">
+  <p class="notice" id="status">서명 정보를 불러오는 중입니다…</p>
+</main>
+<footer>서명 일시는 서버 시각(한국 시간)으로 자동 기록됩니다. 서명 순서는 왼쪽부터 오른쪽입니다.</footer>
+<script src="/cgma/sign/app.js" type="module"></script>
+</body>
+</html>
