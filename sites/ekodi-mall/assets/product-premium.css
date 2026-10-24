@@ -73,3 +73,28 @@
 .pp-thumbs img{width:100%;height:100%;object-fit:cover}
 .pp-buy .checkout-field input[readonly]{background:#f6f3ec;cursor:pointer}
 .pp-buy .checkout-zip-auto input{color:#6b706c}
+
+/* EKODI-MALL-PREMIUM-PDP-002 — larger type scale, still-life placeholder, refined states */
+.pp-page .seller-main{max-width:1200px;padding-top:20px}
+.pp-wrap{gap:clamp(28px,4.5vw,64px)}
+.pp-visual{background:linear-gradient(180deg,#f6f1e8 0%,#eee5d6 62%,#e4d8c4 100%)}
+.pp-visual::before{content:"";position:absolute;inset:0;background:radial-gradient(70% 45% at 30% 18%,rgba(255,255,255,.7),transparent 70%);pointer-events:none}
+.pp-still{width:72%;max-width:340px;height:auto;position:relative;z-index:1}
+.pp-visual-mark{display:none}
+.pp-visual-cap{letter-spacing:.12em;font-size:12px;color:rgba(31,61,51,.6)}
+.pp-crumbs{font-size:12.5px;letter-spacing:.06em}
+.pp-title{font-size:clamp(28px,3vw,40px);line-height:1.2}
+.pp-lead{font-size:16px}
+.pp-price{font-size:30px}
+.pp-facts li{font-size:14px}
+.pp-soon{width:100%;height:54px;border:0;border-radius:12px;background:#d9d4ca;color:#5d625f;font-size:16px;font-weight:700;cursor:not-allowed;padding:0}
+.pp-soon-note{margin:8px 0 0;font-size:13px;color:var(--pp-muted)}
+.pp-page .checkout-result{max-width:1152px;margin:16px auto 0;padding:16px 20px 16px 56px;position:relative;border:1px solid #d6e6dc;background:#fff;border-radius:14px;box-shadow:0 12px 30px -22px rgba(31,61,51,.5)}
+.pp-page .checkout-result::before{content:"✓";position:absolute;left:18px;top:16px;width:24px;height:24px;border-radius:50%;background:#1f3d33;color:#fff;display:grid;place-items:center;font-size:14px;font-weight:700}
+.pp-page .checkout-result.bad::before{content:"!";background:#9a2f37}
+.pp-page .checkout-result h2{margin:0 0 4px;font-size:16px}
+.pp-page .checkout-result p{margin:0;font-size:14px;color:#4a514d}
+.pp-details{max-width:820px}
+.pp-section summary{font-size:16px;padding:20px 2px}
+.pp-section p,.pp-list{font-size:15px}
+@media (max-width:860px){.pp-page .checkout-result{margin:12px 16px 0}}
