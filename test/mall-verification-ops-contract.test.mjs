@@ -36,7 +36,7 @@ test('verification operations keep review, checkout gate and high-impact payment
 });
 
 test('verification operations are built and routed as a Mall operations surface', () => {
-  assert.ok(redirects.includes('/verification-ops /assets/verification-ops.html 200'));
+  assert.ok(redirects.includes('/verification-ops /assets/verification-ops 200'));
   assert.ok(headers.includes('/verification-ops*'));
   assert.ok(headers.includes('Cache-Control: no-store'));
   assert.ok(deploy.includes('dist/assets/verification-ops.html'));
