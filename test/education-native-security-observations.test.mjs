@@ -118,6 +118,8 @@ test('Cloudflare JS detections blocked by the Education CSP: accepted only for t
   assert.equal(m.verifyKnownSecurityBlocks({consoleBlocks:[{message:msg(hash)},{message:msg(other)}]}).reason,'blocked-inline-script-not-an-audited-cloudflare-js-detection');
   for(const f of ['bootcamp','material-studio','documents','live-studio'])
     assert.match(readFileSync(new URL('../scripts/verify-education-'+f+'-native.mjs',import.meta.url),'utf8'),/observeCloudflareJsDetections\((?:context|ctx)\);/,f);
+});
+
 test('a failing native probe surfaces its reason as bounded, sanitized workflow annotations',async()=>{
   const {annotationsFrom}=await import('../scripts/education-probe-annotate.mjs');
   const lines=annotationsFrom({error:'boom\nnext',httpErrors:Array.from({length:6},(_,i)=>({profile:'mobile',status:404,url:'https://ekodi.kr/x'+i}))},'education-native');
