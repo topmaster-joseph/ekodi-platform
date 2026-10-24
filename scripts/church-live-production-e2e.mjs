@@ -183,19 +183,27 @@ try{
   await managementCard.getByRole('button',{name:'방송화면에 추가'}).click();
   const overlay=host.locator('#programOverlayLayer .program-drag-handle[data-program-overlay^="management_camera:"]').first();
   await overlay.waitFor({state:'visible',timeout:10000});
+  // Playwright does not auto-scroll when issuing raw mouse moves. Source cards
+  // live below the program preview; return the viewport to the actual on-air
+  // screen before dragging a grip. A mouse aimed offscreen exercises no pointer handler.
+  await host.locator('#programScreen').scrollIntoViewIfNeeded();
   const beforeVideo=await overlay.boundingBox();
   assert.ok(beforeVideo?.width>20,'management_video_overlay_missing');
   const videoGrip=overlay.locator('.overlay-resize-grip');
   const videoGripBox=await videoGrip.boundingBox();
+  const viewport=host.viewportSize();
+  assert.ok(videoGripBox&&videoGripBox.y>=0&&videoGripBox.y+videoGripBox.height<=viewport.height,'video_resize_grip_outside_viewport');
   await host.mouse.move(videoGripBox.x+videoGripBox.width/2,videoGripBox.y+videoGripBox.height/2);
   await host.mouse.down();
   await host.mouse.move(videoGripBox.x+videoGripBox.width/2+24,videoGripBox.y+videoGripBox.height/2+16,{steps:5});
   await host.mouse.up();
   const afterVideo=await overlay.boundingBox();
+  report.camera.videoResizePixels={before:Math.round(beforeVideo.width),after:Math.round(afterVideo.width)};
   assert.ok(afterVideo.width>beforeVideo.width+8,'director_video_resize_not_applied');
   report.camera.videoResized=true;
 
   await host.locator('#chatOverlaySource').click();
+  await host.locator('#programScreen').scrollIntoViewIfNeeded();
   const chatOverlay=host.locator('[data-program-overlay="chat"]');
   await chatOverlay.waitFor({state:'visible',timeout:10000});
   const beforeChat=await chatOverlay.boundingBox();
@@ -206,6 +214,7 @@ try{
   await host.mouse.move(gripBox.x+gripBox.width/2+24,gripBox.y+gripBox.height/2+15,{steps:5});
   await host.mouse.up();
   const afterChat=await chatOverlay.boundingBox();
+  report.camera.chatResizePixels={before:Math.round(beforeChat.width),after:Math.round(afterChat.width)};
   assert.ok(afterChat.width>beforeChat.width+8,'director_chat_resize_not_applied');
   report.camera.chatResized=true;
 

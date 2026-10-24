@@ -78,3 +78,16 @@ test('Host closes the owner QR modal before clicking the on-air camera source',(
  assert.match(script,/management_camera:/);
  assert.match(script,/report\.camera\.hostVideoReceived=true/);
 });
+
+test('Director drag E2E scrolls on-air preview into view after acting on below-fold source cards',()=>{
+ const vi=script.indexOf('await host.locator(\'#programScreen\').scrollIntoViewIfNeeded();');
+ const vb=script.indexOf('const videoGripBox=await videoGrip.boundingBox();');
+ const ci=script.indexOf("await host.locator('#chatOverlaySource').click()");
+ const cs=script.indexOf("await host.locator('#programScreen').scrollIntoViewIfNeeded()",ci);
+ const cb=script.indexOf('const gripBox=await grip.boundingBox();');
+ assert.ok(vi>=0&&vb>vi,'video preview must be scrolled before raw mouse events');
+ assert.ok(cs>ci&&cb>cs,'chat preview must be scrolled before raw mouse events');
+ assert.match(script,/video_resize_grip_outside_viewport/);
+ assert.match(script,/videoResizePixels/);
+ assert.match(script,/chatResizePixels/);
+});
