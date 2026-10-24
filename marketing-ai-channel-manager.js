@@ -117,7 +117,9 @@
   }
   function accountEmail(row) {
     const meta = row.metadata || {};
-    return String(meta.authorizedEmail || meta.email || meta.targetAccount || '').trim();
+    const email = String(meta.authorizedEmail || meta.email || meta.targetAccount || '').trim();
+    // Google returns an internal pages.plusgoogle.com identity for YouTube brand accounts.
+    return /@pages\.plusgoogle\.com$/i.test(email) ? 'Google 브랜드 계정' : email;
   }
   function providerAccountSummary(connections, providers) {
     const rows = connections.filter(row => providers.includes(row.provider) && row.status === 'active');

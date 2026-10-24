@@ -732,7 +732,8 @@ async function publishYouTube(env, connection, content) {
   const asset = await fetch(assetUrl);
   if (!asset.ok) throw new Error(`YOUTUBE_ASSET_FETCH_${asset.status}`);
   const bytes = await asset.arrayBuffer();
-  const contentType = asset.headers.get('content-type') || 'video/mp4';
+  const sourceType = String(asset.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+  const contentType = /^video\//.test(sourceType) ? sourceType : 'video/mp4';
   const link = trackedUrl(content.linkUrl,'youtube',content.campaignName);
   const title = clean(content.title || content.campaignName || 'EKODI',100);
   const description = [clean(content.caption,4800),link].filter(Boolean).join('\n\n');
