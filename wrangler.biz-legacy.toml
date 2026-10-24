@@ -10,7 +10,7 @@ preview_urls = false
 # Public DNS-only answers were observed with TTL=300 seconds on 2026-10-24.
 # Guarded deploy-biz-legacy workflow retries the live HTTPS 301 through that
 # cache expiration window and rolls back only newly enabled proxy flags on failure.
-# Do not replace these with custom_domain=true; that conflicts with existing
+# Do not attach these as Worker Custom Domains; that conflicts with existing
 # DNS (Cloudflare API 100117). Never remove MX/TXT or web records as a shortcut.
 [[routes]]
 pattern = "ekodibiz.kr/*"
