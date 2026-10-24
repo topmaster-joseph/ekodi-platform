@@ -22,7 +22,7 @@ function withWorkspaces(workspaces,fn){
   };
   return fn().finally(()=>{globalThis.fetch=original});
 }
-const status=()=>handleMarketingOrderConnectors(new Request(`https://api.ekodi.kr/api/marketing/connectors/status?store=${JADAM}`,{headers:{authorization:'Bearer t'}}),env());
+const status=()=>handleMarketingOrderConnectors(new Request(`https://ekodi.kr/api/marketing/connectors/status?store=${JADAM}`,{headers:{authorization:'Bearer t'}}),env());
 const tenantRow=(over={})=>({workspace_key:'tenant:25d0a2d7-7e52-47bc-abc7-b2fcc46b3070',workspace_kind:'business',tenant:'ekodibiz',role:'tenant_admin',status:'active',store_id:null,...over});
 
 test('tenant_admin of the store tenant can read store connectors without a direct store row',async()=>{
