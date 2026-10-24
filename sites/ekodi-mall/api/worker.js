@@ -163,6 +163,13 @@ export function calculateOrderAmounts(grossAmount, feeRatePercent) {
   };
 }
 
+// EKODI-MALL-SOURCING-BOUNDARY-001: 제휴(쿠팡 파트너스 등) 상품은 직접판매 상품으로 소싱할 수 없다.
+// 직접판매는 판매자 수동 등록 또는 도매꾹·도매매 등 공급처 연동으로만 들어온다.
+const AFFILIATE_SOURCE_PATTERN = /(link\.coupang\.com|coupa\.ng|ads-partners\.coupang\.com|partners\.coupang\.com|[?&]lptag=AF|s\.click\.aliexpress\.com|amzn\.to\/|link\.11st\.co\.kr|affiliate)/i;
+export function containsAffiliateSource(value) {
+  try { return AFFILIATE_SOURCE_PATTERN.test(JSON.stringify(value ?? '')); } catch { return true; }
+}
+
 export function normalizeProductInput(body = {}) {
   const seller = body.seller || {};
   const product = body.product || {};
@@ -214,6 +221,7 @@ export function normalizeProductInput(body = {}) {
   if (!normalized.contact) errors.push('연락·문의 채널을 입력해 주세요.');
   if (normalized.product.region && !normalized.product.region.label) errors.push('지역 연결에는 표시할 행정지역명이 필요합니다.');
   if (saleType === 'affiliate' && !affiliateUrl) errors.push('제휴판매는 유효한 HTTPS 제휴링크가 필요합니다.');
+  if (saleType === 'direct' && (affiliateUrl || containsAffiliateSource(product))) errors.push('제휴(쿠팡 파트너스 등) 상품은 직접판매로 등록할 수 없습니다. 직접판매는 수동 등록 또는 도매꾹·도매매 공급처 연동으로만 가능합니다.');
   // EKODI-MALL-STOCK-REQUIRED-001: 직접판매(실결제) 상품은 재고 수량이 필수 — 초과판매 방지.
   if (saleType === 'direct' && normalized.product.stockQuantity === null) errors.push('직접판매 상품은 재고 수량(0 이상 정수)을 입력해 주세요.');
   // EKODI-MALL-SHELF-LIFE-001: 소비기한은 선택 입력이지만, 입력했다면 실제 날짜(YYYY-MM-DD)여야 한다.
