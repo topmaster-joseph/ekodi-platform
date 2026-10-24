@@ -306,10 +306,13 @@ export async function finishMarketingYouTubeOAuth(env,{state,code,error}={}) {
     const profile=await profileResponse.json().catch(()=>({}));
     const authorizedEmail=profileResponse.ok?String(profile.email||'').trim().toLowerCase():'';
     if(targetAccount&&authorizedEmail!==targetAccount) throw Object.assign(new Error('YOUTUBE_TARGET_ACCOUNT_MISMATCH'),{code:'YOUTUBE_TARGET_ACCOUNT_MISMATCH',targetAccount,authorizedEmail});
-    const ticket=await createMarketingYouTubeTicket(env,{token,targetAccount,authorizedEmail});
+    let ticket;
+    try { ticket=await createMarketingYouTubeTicket(env,{token,targetAccount,authorizedEmail}); }
+    catch (storeError) { console.warn('Marketing YouTube ticket store failed:',String(storeError?.code||storeError?.name||'error')); throw Object.assign(new Error('GOOGLE_OAUTH_TICKET_STORE_FAILED'),{code:'GOOGLE_OAUTH_TICKET_STORE_FAILED'}); }
     return {marketingState,ticket,targetAccount,authorizedEmail};
   } catch (error) {
     // OAuth state validation above remains fail-closed; never forward raw Google provider details.
+    console.warn('Marketing YouTube OAuth finish failed:',marketingYouTubeOAuthErrorCode(error));
     return {marketingState,error:marketingYouTubeOAuthErrorCode(error)};
   }
 }
