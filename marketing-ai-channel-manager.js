@@ -30,7 +30,7 @@
   }
 
   function endpoint(path) {
-    const url = new URL(`${API}${path}`);
+    const url = new URL(`${API}${path}`, location.origin);
     url.searchParams.set('subject_type','person');
     return url.href;
   }
@@ -97,10 +97,10 @@
     const tab = panel?.querySelector(`[data-marketing-tab="${TAB_KEY}"]`);
     const view = panel?.querySelector('#marketingAiConsoleView');
     if (!panel || !tab || !view || !tab.classList.contains('active') || loading) return;
-    tab.textContent = '게시 · 홍보';
+    if (tab.textContent !== '게시 · 홍보') tab.textContent = '게시 · 홍보';
     ensureStyles();
     loading = true;
-    view.innerHTML = '<div class="growth-empty">게시·홍보 연결상태를 확인하는 중입니다.</div>';
+    view.innerHTML = '<div class="growth-empty" data-growth-manager>게시·홍보 연결상태를 확인하는 중입니다.</div>';
     try {
       if (!token()) throw new Error('관리자 로그인이 필요합니다.');
       const [connectionData,campaignData] = await Promise.all([request('/v1/connections'),request('/v1/promotions')]);
@@ -113,7 +113,7 @@
       const platform = connectionData.platform || {};
       const platformAlert = (!platform.metaConfigured || !platform.threadsConfigured || !platform.youtubeConfigured) ? `<div class="growth-platform-alert"><b>최초 1회 플랫폼 설정 필요</b><br>사용자별 인증키 입력은 없앴습니다. 다만 에코디 전체가 사용할 공식 앱 식별정보가 아직 등록되지 않은 서비스는 연결 버튼이 잠깁니다. Meta·Google 앱 설정은 시스템 전체에서 한 번만 완료하면 이후 모든 사용자는 공식 계정 로그인과 권한 승인만 합니다.</div>` : '';
 
-      view.innerHTML = `<div class="growth-hub" data-growth-hub>
+      view.innerHTML = `<div class="growth-hub" data-growth-hub data-growth-manager>
         <section class="growth-hero"><span class="growth-chip">중앙 OAuth · 암호화 Vault · 무료 직접 게시</span><h3>게시 · 홍보 연결센터</h3><p>인증키, Access Token, Page ID를 복사하지 않습니다. 공식 계정으로 로그인하면 에코디가 권한·계정발견·토큰보관·게시·유입추적을 한 흐름으로 처리합니다. Metricool은 필수가 아닙니다.</p></section>
         ${callbackNotice()}${platformAlert}
         <div class="growth-summary"><article><small>게시 연결</small><strong>${activePublish}</strong></article><article><small>광고계정</small><strong>${adAccounts}</strong></article><article><small>무료 홍보</small><strong>${organic}</strong></article><article><small>유료 초안</small><strong>${paid}</strong></article></div>
@@ -176,7 +176,7 @@
         catch (error) { alert(error.message); button.disabled = false; }
       }));
     } catch (error) {
-      view.innerHTML = `<div class="growth-platform-alert">게시·홍보 연결센터를 불러오지 못했습니다. ${esc(error.message)}</div>`;
+      view.innerHTML = `<div class="growth-platform-alert" data-growth-manager>게시·홍보 연결센터를 불러오지 못했습니다. ${esc(error.message)}</div>`;
     } finally { loading = false; }
   }
 
@@ -187,7 +187,9 @@
       const panel = document.querySelector('#marketingAiAdminPanel');
       if (!panel) return;
       const tab = panel.querySelector(`[data-marketing-tab="${TAB_KEY}"]`);
-      if (tab && tab.classList.contains('active')) queueMicrotask(renderManager);
+      // 자기 렌더(로딩·허브·오류 모두 data-growth-manager 표식)를 다시 감지해 무한 재렌더하지 않는다.
+      const view = panel.querySelector('#marketingAiConsoleView');
+      if (tab && tab.classList.contains('active') && !loading && view && !view.querySelector('[data-growth-manager]')) setTimeout(renderManager,0);
     });
     observer.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
     document.addEventListener('click',event => {
