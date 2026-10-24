@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readdirSync, readFileSync } from 'node:fs';
-import { placeSupplierOrders, trackSupplierOrders, buildDeliInfo, buildItemValue } from './domeggook-order.js';
+import { placeSupplierOrders, trackSupplierOrders, buildDeliInfo, buildItemValue, probeDomeggookLogin } from './domeggook-order.js';
 
 function d1(db) {
   const wrap = (sql) => { const stmt = db.prepare(sql); let args = []; const api = {
@@ -99,4 +99,15 @@ test('customer refund before shipping cancels the supplier order; disabled witho
   assert.ok(log.some((c) => c.mode === 'setOrdDeny'));
   assert.equal(db.prepare('SELECT status FROM supplier_orders').get().status, 'cancel_requested');
   assert.equal((await placeSupplierOrders(setup({ DOMEMAE_PASSWORD: '' }).env, supplier())).skipped, 'disabled');
+});
+
+test('login probe records readiness and low e-money without secrets', async () => {
+  const { db, env } = setup();
+  const r = await probeDomeggookLogin(env, supplier({ emoney: 5000 }));
+  assert.equal(r.ok, true);
+  const row = db.prepare("SELECT result_status,metadata_json FROM supplier_connector_checks WHERE external_ref='probe:login'").get();
+  assert.equal(row.result_status, 'ok');
+  assert.ok(!row.metadata_json.includes('PW!') && !row.metadata_json.includes('SID1'));
+  assert.ok(db.prepare("SELECT 1 FROM mall_ops_alerts WHERE kind='supply.emoney_low'").get());
+  assert.equal((await probeDomeggookLogin(env, supplier())).skipped, 'recent');
 });

@@ -208,3 +208,26 @@ export async function trackSupplierOrders(env, fetchImpl = fetch, limit = 10) {
   }
   return summary;
 }
+
+/** 로그인·이머니 잔액 확인(6시간 1회, 비밀값·세션은 기록하지 않음). 자동발주 준비상태를 운영자가 볼 수 있게 남긴다. */
+export async function probeDomeggookLogin(env, fetchImpl = fetch) {
+  if (!autoOrderEnabled(env) || !env.DB) return { skipped: 'disabled' };
+  const last = await env.DB.prepare("SELECT checked_at FROM supplier_connector_checks WHERE external_ref='probe:login' ORDER BY checked_at DESC LIMIT 1").first().catch(() => null);
+  if (last && Date.now() - Date.parse(last.checked_at) < 6 * 60 * 60 * 1000) return { skipped: 'recent' };
+  let ok = false; let meta = {};
+  try {
+    const session = await login(env, fetchImpl);
+    const balance = await emoneyBalance(env, session, fetchImpl);
+    ok = true; meta = { login: 'ok', emoney: balance };
+    await env.DB.prepare("UPDATE mall_ops_alerts SET status='resolved',resolved_at=?,updated_at=? WHERE status='open' AND kind='supply.login_failed'").bind(isoNow(), isoNow()).run().catch(() => {});
+    if (balance !== null && balance < Number(env.DOMEGGOOK_EMONEY_MIN || 30000)) {
+      await raiseAlert(env, { severity: 'warn', kind: 'supply.emoney_low', message: `도매꾹 이머니 잔액 ${balance.toLocaleString('ko-KR')}원 — 자동발주를 위해 충전을 권장합니다.` });
+    }
+  } catch (error) {
+    meta = { login: 'failed', error: redact(error.message, env) };
+    await raiseAlert(env, { severity: 'error', kind: 'supply.login_failed', message: meta.error });
+  }
+  await env.DB.prepare('INSERT INTO supplier_connector_checks (id,provider_id,check_type,external_ref,result_status,metadata_json,checked_at) VALUES (?,?,?,?,?,?,?)')
+    .bind(`chk_${crypto.randomUUID().replaceAll('-', '')}`, 'domemae-official', 'order_readiness', 'probe:login', ok ? 'ok' : 'failed', JSON.stringify(meta), isoNow()).run().catch(() => {});
+  return { ok, ...meta };
+}
