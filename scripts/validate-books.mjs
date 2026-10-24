@@ -31,15 +31,8 @@ for(const marker of ['/api/books/public/config','/api/books/inquiries','digital-
 }
 console.log(`Validated ${data.books.length} EKODI Books catalog entr${data.books.length===1?'y':'ies'}, Book Core routes, and publishing workspace.`);
 
-// SEO guardrail: books.ekodi.kr and admin.ekodi.kr are legacy hosts that 308-redirect.
-// Canonical, og:url, sitemap and structured data must point at https://ekodi.kr/books/.
-for(const file of ['books/index.html','books/ekodian/index.html','books/series/index.html','books/research/index.html','books/notes/index.html','books/publishing/index.html','books/sitemap.xml','books/robots.txt','books/app.js','books/books.json','books/book-core.json']){
-  if(!fs.existsSync(file)) continue;
-  const text=fs.readFileSync(file,'utf8');
-  for(const legacy of ['books.ekodi.kr','admin.ekodi.kr']){
-    if(text.includes(legacy)) throw new Error(`${file} still references legacy host ${legacy}; use https://ekodi.kr/books/ or https://ekodi.kr/admin/`);
-  }
-}
+// SEO guardrail: legacy EKODI hosts are blocked repo-wide by scripts/zero-subdomain-guard.mjs.
+// Here we additionally pin catalog admin links to the canonical admin path.
 for(const book of data.books){
   if(!book.adminUrl.startsWith('https://ekodi.kr/admin/')) throw new Error(`Book ${book.id} adminUrl must live under https://ekodi.kr/admin/`);
 }
