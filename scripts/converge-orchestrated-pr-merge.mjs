@@ -388,6 +388,7 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='scripts/build.mjs'||
   file==='scripts/finalize-seonammedi-release.mjs'||
   file==='scripts/verify-seonammedi-release-live.mjs'||
+  file==='scripts/seonammedi-live-html-proof.mjs'||
   file==='scripts/seonammedi-cache-contract.mjs'||
   file==='test/seonammedi-cache-contract.test.mjs'||
   file==='.github/workflows/deploy-site-core.yml'||

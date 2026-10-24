@@ -1,0 +1,36 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {normalizeSeonamMediLiveHtml} from '../scripts/seonammedi-live-html-proof.mjs';
+
+const origin='https://ekodi.kr/seonammedi';
+const source='<!doctype html><html><head><meta property="og:image" content="x"></head><body><main>hi</main><script src="/seonammedi/app.js" defer></script>\n</body></html>';
+const jsd="<script>window.__CF$cv$params={r:'a4f86d6a3ac8a1e8',t:'MTc5MjgzOTA5Nw==',u:'01a16d899f687206b341f5c0bdc3fa89',ut:'FY7hhuH'};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);</script>";
+const beacon='<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon=\'{"version":"2024.11.0","token":"3a717d2e21e7479bac38f567ef8831ad","r":1,"spa":2}\' crossorigin="anonymous"></script>';
+const norm=html=>normalizeSeonamMediLiveHtml(html,{origin,page:'index.html'});
+
+test('Cloudflare JS detections injection is removed byte-exactly in every placement',()=>{
+  for(const live of [
+    source.replace('\n</body>','\n'+jsd+'</body>'),
+    source.replace('\n</body>','\n'+jsd+'\n</body>'),
+    source.replace('\n</body>','\n'+jsd+'\n'+beacon+'\n</body>'),
+    source.replace('\n</body>','\n'+beacon+'\n'+jsd+'</body>'),
+  ]){
+    const out=norm(live);
+    assert.equal(out.html,source);
+    assert.equal(out.jsDetections,1);
+  }
+  assert.equal(norm(source).jsDetections,0);
+});
+
+test('lookalike or tampered challenge injections are never silently stripped',()=>{
+  const external=jsd.replace("a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js'","a.src='https://evil.example/cdn-cgi/challenge-platform/scripts/jsd/main.js'");
+  assert.throws(()=>norm(source.replace('\n</body>','\n'+external+'</body>')),/untrusted_cloudflare_js_detection_injection/);
+  const otherPath=jsd.replace('/cdn-cgi/challenge-platform/scripts/jsd/main.js','/evil.js');
+  assert.throws(()=>norm(source.replace('\n</body>','\n'+otherPath+'</body>')),/untrusted_cloudflare_js_detection_injection|unrecognized_cloudflare_js_detection_injection/);
+  const badRay=jsd.replace("r:'a4f86d6a3ac8a1e8'","r:'zz'");
+  assert.throws(()=>norm(source.replace('\n</body>','\n'+badRay+'</body>')),/unrecognized_cloudflare_js_detection_injection/);
+  const midPage=source.replace('<main>',jsd+'<main>');
+  assert.throws(()=>norm(midPage),/unrecognized_cloudflare_js_detection_injection/);
+  const twice=source.replace('\n</body>','\n'+jsd+'\n'+jsd+'</body>');
+  assert.throws(()=>norm(twice),/multiple_cloudflare_js_detection_injections|unrecognized_cloudflare_js_detection_injection/);
+});
