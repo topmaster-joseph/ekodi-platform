@@ -33,6 +33,7 @@ export function normalizeSeonamMediLiveHtml(rawHtml,{origin,page}){
   if(!['index.html','admin/index.html','finance/index.html','notices/index.html'].includes(pageName)){
     throw new Error('unexpected_seonammedi_html_verification_page');
   }
+  let html=String(rawHtml);
   let precursors=0;
   // Preserve the preceding newline so the published HTML digest still matches.
   if(html.includes('window.__CF$cv$params')){
@@ -41,7 +42,7 @@ export function normalizeSeonamMediLiveHtml(rawHtml,{origin,page}){
       throw new Error('unrecognized_cloudflare_precursor_injection');
   }
   let beacons=0;
-  let html=String(rawHtml).replace(cfBeacon,(_markup,meta)=>{
+  html=html.replace(cfBeacon,(_markup,meta)=>{
     beacons++;
     let decoded={};
     try{decoded=JSON.parse(meta)}catch{throw new Error('untrusted_cloudflare_beacon_metadata')}
