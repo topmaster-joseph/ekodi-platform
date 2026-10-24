@@ -1,3 +1,4 @@
+import { publicImages, uploadProductImage, deleteProductImage, reorderProductImages, servePublicMedia } from './product-media.js';
 import { validateBuyer, checkoutConfig } from './checkout-buyer.js';
 import { commerceEventStatement } from './commerce-events.js';
 import { paymentExecutionBlockers, paymentProviderPublicView, selectedPaymentProvider } from './payment-capabilities.js';
@@ -288,6 +289,7 @@ function rowToOwnerProduct(row) {
     shareCode: row.share_code,
     publicUrl: row.public_url,
     publicShareLinkActive: row.status === 'published',
+    images: publicImages(row.images_json, null),
     checkoutReady: Boolean(row.checkout_ready),
     seller: { type: row.seller_type, displayName: row.seller_display_name },
     store: row.store_id ? { id: row.store_id, name: row.store_name || '', slug: row.store_slug || '', contact: row.store_contact || '' } : null,
@@ -403,7 +405,8 @@ async function getPublicProduct(env, shareCode) {
     product: {
       saleType: row.sale_type, category: normalizeCategory(row.category), region: row.primary_region_id ? { primaryRegionId: row.primary_region_id, regionIds: JSON.parse(row.region_ids_json || '[]'), label: row.region_label || '', relationship: row.local_relationship || 'seller-declared', verified: Boolean(row.region_verified) } : null, name: row.name, audience: row.audience || '', oneLine: row.one_line || '', price: row.price,
       benefits: JSON.parse(row.benefits_json || '[]'), specs: JSON.parse(row.specs_json || '[]'), story: row.story || '', fulfillment: row.fulfillment || '',
-      contact: row.contact || '', affiliateUrl: row.sale_type === 'affiliate' ? row.affiliate_url || '' : ''
+      contact: row.contact || '', affiliateUrl: row.sale_type === 'affiliate' ? row.affiliate_url || '' : '',
+      images: publicImages(row.images_json, env.MALL_BASE_URL)
     },
     feePolicy: feePreview,
     checkoutReady: Boolean(row.checkout_ready),
@@ -738,6 +741,8 @@ export default {
     }
     if (!env.DB) return json({ error: 'Mall 전용 데이터베이스 연결이 없습니다.' }, 503, origin, env);
 
+    const publicMediaMatch = url.pathname.match(/^\/api\/public\/media\/(.+)$/);
+    if ((request.method === 'GET' || request.method === 'HEAD') && publicMediaMatch) return servePublicMedia(env, decodeURIComponent(publicMediaMatch[1]), request);
     const publicProductMatch = url.pathname.match(/^\/api\/public\/products\/([^/]+)$/);
     if (request.method === 'GET' && publicProductMatch) {
       const product = await getPublicProduct(env, decodeURIComponent(publicProductMatch[1]));
@@ -859,6 +864,21 @@ export default {
       } catch (error) {
         console.error('mall direct share link', error);
         return json({ error: '직접 공유링크 생성에 실패했습니다.' }, 500, origin, env);
+      }
+    }
+
+    const imagesMatch = url.pathname.match(/^\/api\/products\/([^/]+)\/images(?:\/([a-f0-9]{16}))?$/);
+    if (imagesMatch) {
+      const productIdValue = decodeURIComponent(imagesMatch[1]);
+      try {
+        let result = null;
+        if (request.method === 'POST' && !imagesMatch[2]) result = await uploadProductImage(env, user.id, productIdValue, request);
+        else if (request.method === 'DELETE' && imagesMatch[2]) result = await deleteProductImage(env, user.id, productIdValue, imagesMatch[2]);
+        else if (request.method === 'PUT' && !imagesMatch[2]) result = await reorderProductImages(env, user.id, productIdValue, (await readJson(request))?.order);
+        if (result) return json(result.body, result.status, origin, env);
+      } catch (error) {
+        console.error('mall product image', error);
+        return json({ error: '사진 처리에 실패했습니다.' }, 500, origin, env);
       }
     }
 
