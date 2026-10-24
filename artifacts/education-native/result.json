@@ -1,0 +1,405 @@
+{
+  "taskId": "education-classroom-production",
+  "owner": "ekodi-background-browser-worker",
+  "implementation": "ekodi-owned-ephemeral-chromium",
+  "sourceSha": "unknown",
+  "origin": "http://127.0.0.1:8793",
+  "evidenceScope": "real-production",
+  "readOnly": true,
+  "authenticated": false,
+  "ephemeral": true,
+  "startedAt": "2026-10-24T21:44:35.751Z",
+  "profiles": [
+    {
+      "name": "compact-mobile",
+      "viewport": {
+        "width": 320,
+        "height": 640
+      },
+      "categories": 6,
+      "lessons": 4,
+      "batches": 6,
+      "sessionRows": 24,
+      "slideCounts": [
+        9,
+        9,
+        9,
+        9
+      ],
+      "assets": [
+        {
+          "file": "catalog.js",
+          "status": 200,
+          "type": "text/javascript; charset=utf-8"
+        },
+        {
+          "file": "classroom.js",
+          "status": 200,
+          "type": "text/javascript; charset=utf-8"
+        },
+        {
+          "file": "classroom.css",
+          "status": 200,
+          "type": "text/css; charset=utf-8"
+        },
+        {
+          "file": "data/sample.csv",
+          "status": 200,
+          "type": "text/csv; charset=utf-8"
+        }
+      ],
+      "overflow": {
+        "width": 320,
+        "client": 320
+      },
+      "securityBlocks": 5,
+      "passed": true
+    },
+    {
+      "name": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "categories": 6,
+      "lessons": 4,
+      "batches": 6,
+      "sessionRows": 24,
+      "slideCounts": [
+        9,
+        9,
+        9,
+        9
+      ],
+      "assets": [
+        {
+          "file": "catalog.js",
+          "status": 200,
+          "type": "text/javascript; charset=utf-8"
+        },
+        {
+          "file": "classroom.js",
+          "status": 200,
+          "type": "text/javascript; charset=utf-8"
+        },
+        {
+          "file": "classroom.css",
+          "status": 200,
+          "type": "text/css; charset=utf-8"
+        },
+        {
+          "file": "data/sample.csv",
+          "status": 200,
+          "type": "text/csv; charset=utf-8"
+        }
+      ],
+      "overflow": {
+        "width": 390,
+        "client": 390
+      },
+      "securityBlocks": 5,
+      "passed": true
+    },
+    {
+      "name": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "categories": 6,
+      "lessons": 4,
+      "batches": 6,
+      "sessionRows": 24,
+      "slideCounts": [
+        9,
+        9,
+        9,
+        9
+      ],
+      "assets": [
+        {
+          "file": "catalog.js",
+          "status": 200,
+          "type": "text/javascript; charset=utf-8"
+        },
+        {
+          "file": "classroom.js",
+          "status": 200,
+          "type": "text/javascript; charset=utf-8"
+        },
+        {
+          "file": "classroom.css",
+          "status": 200,
+          "type": "text/css; charset=utf-8"
+        },
+        {
+          "file": "data/sample.csv",
+          "status": 200,
+          "type": "text/csv; charset=utf-8"
+        }
+      ],
+      "overflow": {
+        "width": 768,
+        "client": 768
+      },
+      "securityBlocks": 5,
+      "passed": true
+    },
+    {
+      "name": "desktop",
+      "viewport": {
+        "width": 1366,
+        "height": 900
+      },
+      "categories": 6,
+      "lessons": 4,
+      "batches": 6,
+      "sessionRows": 24,
+      "slideCounts": [
+        9,
+        9,
+        9,
+        9
+      ],
+      "assets": [
+        {
+          "file": "catalog.js",
+          "status": 200,
+          "type": "text/javascript; charset=utf-8"
+        },
+        {
+          "file": "classroom.js",
+          "status": 200,
+          "type": "text/javascript; charset=utf-8"
+        },
+        {
+          "file": "classroom.css",
+          "status": 200,
+          "type": "text/css; charset=utf-8"
+        },
+        {
+          "file": "data/sample.csv",
+          "status": 200,
+          "type": "text/csv; charset=utf-8"
+        }
+      ],
+      "overflow": {
+        "width": 1366,
+        "client": 1366
+      },
+      "securityBlocks": 5,
+      "passed": true
+    },
+    {
+      "name": "large-desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "categories": 6,
+      "lessons": 4,
+      "batches": 6,
+      "sessionRows": 24,
+      "slideCounts": [
+        9,
+        9,
+        9,
+        9
+      ],
+      "assets": [
+        {
+          "file": "catalog.js",
+          "status": 200,
+          "type": "text/javascript; charset=utf-8"
+        },
+        {
+          "file": "classroom.js",
+          "status": 200,
+          "type": "text/javascript; charset=utf-8"
+        },
+        {
+          "file": "classroom.css",
+          "status": 200,
+          "type": "text/css; charset=utf-8"
+        },
+        {
+          "file": "data/sample.csv",
+          "status": 200,
+          "type": "text/csv; charset=utf-8"
+        }
+      ],
+      "overflow": {
+        "width": 1440,
+        "client": 1440
+      },
+      "securityBlocks": 5,
+      "passed": true
+    }
+  ],
+  "captures": [
+    "compact-mobile.png",
+    "mobile.png",
+    "tablet.png",
+    "desktop.png",
+    "large-desktop.png"
+  ],
+  "consoleErrors": [],
+  "pageErrors": [],
+  "httpErrors": [],
+  "requestFailures": [],
+  "blockedMutations": [],
+  "observedSecurityBlocks": [
+    {
+      "profile": "compact-mobile",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-LiXvRlPcXXsokE41eFS7y5B+hJa0pauWdVT/Djrp4nQ='), or a nonce ('nonce-...') is required to enable inline execution."
+    },
+    {
+      "profile": "compact-mobile",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-wo6UxAABjRaoc7daJHFwNEhchuZLrGAZznw5zT+FPg4='), or a nonce ('nonce-...') is required to enable inline execution."
+    },
+    {
+      "profile": "compact-mobile",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-gwi27txQ+LxililAlC1ahp8iA2T5AzuUSwr+DuATeXs='), or a nonce ('nonce-...') is required to enable inline execution."
+    },
+    {
+      "profile": "compact-mobile",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-56iRHn0ej9JYBkqhTqTQCrBVCLBuVesvScQBMp5bJOI='), or a nonce ('nonce-...') is required to enable inline execution."
+    },
+    {
+      "profile": "compact-mobile",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-mE13/Tkp6GHOZBGLsbNs4lm9lEsDZF0aqAyMUFoW4yw='), or a nonce ('nonce-...') is required to enable inline execution."
+    },
+    {
+      "profile": "mobile",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-LiXvRlPcXXsokE41eFS7y5B+hJa0pauWdVT/Djrp4nQ='), or a nonce ('nonce-...') is required to enable inline execution."
+    },
+    {
+      "profile": "mobile",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-wo6UxAABjRaoc7daJHFwNEhchuZLrGAZznw5zT+FPg4='), or a nonce ('nonce-...') is required to enable inline execution."
+    },
+    {
+      "profile": "mobile",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-gwi27txQ+LxililAlC1ahp8iA2T5AzuUSwr+DuATeXs='), or a nonce ('nonce-...') is required to enable inline execution."
+    },
+    {
+      "profile": "mobile",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-56iRHn0ej9JYBkqhTqTQCrBVCLBuVesvScQBMp5bJOI='), or a nonce ('nonce-...') is required to enable inline execution."
+    },
+    {
+      "profile": "mobile",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-mE13/Tkp6GHOZBGLsbNs4lm9lEsDZF0aqAyMUFoW4yw='), or a nonce ('nonce-...') is required to enable inline execution."
+    },
+    {
+      "profile": "tablet",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-LiXvRlPcXXsokE41eFS7y5B+hJa0pauWdVT/Djrp4nQ='), or a nonce ('nonce-...') is required to enable inline execution."
+    },
+    {
+      "profile": "tablet",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-gwi27txQ+LxililAlC1ahp8iA2T5AzuUSwr+DuATeXs='), or a nonce ('nonce-...') is required to enable inline execution."
+    },
+    {
+      "profile": "tablet",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-wo6UxAABjRaoc7daJHFwNEhchuZLrGAZznw5zT+FPg4='), or a nonce ('nonce-...') is required to enable inline execution."
+    },
+    {
+      "profile": "tablet",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-56iRHn0ej9JYBkqhTqTQCrBVCLBuVesvScQBMp5bJOI='), or a nonce ('nonce-...') is required to enable inline execution."
+    },
+    {
+      "profile": "tablet",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-mE13/Tkp6GHOZBGLsbNs4lm9lEsDZF0aqAyMUFoW4yw='), or a nonce ('nonce-...') is required to enable inline execution."
+    },
+    {
+      "profile": "desktop",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-LiXvRlPcXXsokE41eFS7y5B+hJa0pauWdVT/Djrp4nQ='), or a nonce ('nonce-...') is required to enable inline execution."
+    },
+    {
+      "profile": "desktop",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-wo6UxAABjRaoc7daJHFwNEhchuZLrGAZznw5zT+FPg4='), or a nonce ('nonce-...') is required to enable inline execution."
+    },
+    {
+      "profile": "desktop",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-gwi27txQ+LxililAlC1ahp8iA2T5AzuUSwr+DuATeXs='), or a nonce ('nonce-...') is required to enable inline execution."
+    },
+    {
+      "profile": "desktop",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-56iRHn0ej9JYBkqhTqTQCrBVCLBuVesvScQBMp5bJOI='), or a nonce ('nonce-...') is required to enable inline execution."
+    },
+    {
+      "profile": "desktop",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-mE13/Tkp6GHOZBGLsbNs4lm9lEsDZF0aqAyMUFoW4yw='), or a nonce ('nonce-...') is required to enable inline execution."
+    },
+    {
+      "profile": "large-desktop",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-LiXvRlPcXXsokE41eFS7y5B+hJa0pauWdVT/Djrp4nQ='), or a nonce ('nonce-...') is required to enable inline execution."
+    },
+    {
+      "profile": "large-desktop",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-wo6UxAABjRaoc7daJHFwNEhchuZLrGAZznw5zT+FPg4='), or a nonce ('nonce-...') is required to enable inline execution."
+    },
+    {
+      "profile": "large-desktop",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-gwi27txQ+LxililAlC1ahp8iA2T5AzuUSwr+DuATeXs='), or a nonce ('nonce-...') is required to enable inline execution."
+    },
+    {
+      "profile": "large-desktop",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-56iRHn0ej9JYBkqhTqTQCrBVCLBuVesvScQBMp5bJOI='), or a nonce ('nonce-...') is required to enable inline execution."
+    },
+    {
+      "profile": "large-desktop",
+      "type": "console",
+      "reason": "inline-style-rejected-by-strict-CSP",
+      "message": "Refused to apply inline style because it violates the following Content Security Policy directive: \"style-src 'self' https://ekodi.kr https://ekodi.kr/shell\". Either the 'unsafe-inline' keyword, a hash ('sha256-mE13/Tkp6GHOZBGLsbNs4lm9lEsDZF0aqAyMUFoW4yw='), or a nonce ('nonce-...') is required to enable inline execution."
+    }
+  ],
+  "ok": true,
+  "finishedAt": "2026-10-24T21:44:51.748Z"
+}

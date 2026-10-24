@@ -93,3 +93,9 @@ Revert the PR (static assets + tests + workflow lines). No data migration.
 - `auth-site/admin-auth.js` allowlists only the two exact presenter/studio paths for the admin token hand-off.
 - Production availability depends on `FACTCHAT_MOKPO_API_KEY` and `EKODI_FACTCHAT_INSTITUTION_USE_APPROVED` (확인필요).
 - Release note: the presenter AI demo landed on main via `orch_recovery_009b7565…` (159b98b) and the admin hand-off allowlist shipped with Shared Site Core run 39806048747. The Education lane is dispatched from this follow-up orchestrator release because `deploy-education` requires `release_sha == main HEAD` at dispatch time.
+
+## v6 — Notes-only lock, 「정답 공개」, plain meeting terms (2026-10-25)
+
+- Instructor decision: only the instructor notes (talk track + answer keys) are password-protected. Studio and presenter open without a password and show a locked-notes panel; `/study/live/unlock/` takes the instructor password and returns to the studio or presenter (`back=present`); 「노트 잠그기」 signs out.
+- 「정답 공개」: from the studio (review / error-hunt step) or the presenter notes (button or A key), the module answer is shown full-screen on the presenter and audience stage; pressing again (or A) hides it. The answer travels through the local live state only; the learner lab never loads notes.
+- Plain language: 결정사항 → 「정해진 일」, 액션아이템 → 「할 일(누가·언제까지)」. Where learners must find FactChat's own menu, its label stays in parentheses (화면 표기: 결정 사항 / 액션 아이템).

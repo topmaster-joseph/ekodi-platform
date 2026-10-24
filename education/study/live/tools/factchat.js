@@ -30,7 +30,7 @@ export const FACTCHAT_FEATURES=Object.freeze([
     pcOnly:true,credit:'요청마다 사용량 기반 차감, 응답 아래에 사용량 표시'},
   {id:'meeting-notes',label:'회의록',group:'콘텐츠 만들기',docUrl:'https://docs.mindlogic.ai/docs/general/baze/product/meeting-notes',docAsOf:'2026-09-23',
     where:'왼쪽 메뉴 「회의록」 → 「+ 새 회의」',
-    summary:'「녹음 시작」 또는 오디오 업로드(MP3·WAV·M4A·MP4, 회의당 최대 2시간·파일당 최대 200MB) → 개요·주요 논의·결정 사항·액션 아이템 요약과 화자별 대화록 → TXT/Markdown 다운로드.',
+    summary:'「녹음 시작」 또는 오디오 업로드(MP3·WAV·M4A·MP4, 회의당 최대 2시간·파일당 최대 200MB) → 개요·주요 논의·정해진 일(결정 사항)·할 일(액션 아이템) 요약과 화자별 대화록 → TXT/Markdown 다운로드.',
     pcOnly:false,credit:'녹음·업로드 1분당 약 6크레딧(공식 문서 기준)'},
   {id:'presentation',label:'프레젠테이션',group:'콘텐츠 만들기',docUrl:'https://docs.mindlogic.ai/docs/general/baze/product/presentation',docAsOf:'2026-10-12',
     where:'「콘텐츠 만들기」 → 「프레젠테이션」',

@@ -91,17 +91,16 @@ async function authorize(context){
   const origin=new URL(ORIGIN);
   await context.addCookies([{name:GATE_COOKIE,value:await mintGateToken(key),domain:origin.hostname,path:(PREFIX||'')+'/study/live',httpOnly:true,secure:origin.protocol==='https:',sameSite:'Lax'}]);
 }
-// The instructor surfaces are either open (EDU_INSTRUCTOR_GATE_MODE=open) or locked (default, or whenever an
-// instructor-chosen password is configured as a Worker secret). The probe observes which one is live and then
-// verifies that mode's contract.
+// Instructor decision 2026-10-25: only the instructor notes (talk track + answer keys) are password-protected.
+// The studio and presenter open without a password and show a locked notes panel until the instructor unlocks
+// the notes at /study/live/unlock/. Open mode (no instructor-chosen password) serves the notes as well.
+const NOTES_ASSET='/study/live/courses/'+COURSE+'.notes.js';
 async function deployedGateMode(context){
-  const r=await context.request.get(ORIGIN+R.studio,{failOnStatusCode:false,maxRedirects:0});
+  const r=await context.request.get(ORIGIN+PREFIX+NOTES_ASSET,{failOnStatusCode:false,maxRedirects:0});
   if(r.status()===200)return 'open';
   if(r.status()===401)return 'locked';
-  fail('instructor studio answered '+r.status()+' without a session (expected 200 open or 401 locked)');
+  fail('instructor notes answered '+r.status()+' without a session (expected 200 open or 401 locked)');
 }
-// Locked: without a session the instructor studio, presenter and notes must be refused. Open: they load
-// without any password. Either way the learner lab stays public and frameable only by the same origin.
 async function gateProbe(browser){
   const context=await browser.newContext({locale:'ko-KR'});
   await guard(context,'gate');
@@ -110,31 +109,25 @@ async function gateProbe(browser){
     const result={};
     const mode=await deployedGateMode(context);
     result.mode=mode;
-    if(mode==='open'){
-      for(const [k,route] of [['studio',R.studio],['presenter',R.presenter]]){
-        const r=await page.goto(ORIGIN+route,{waitUntil:'domcontentloaded',timeout:35000});
-        result[k]=r?.status();
-        if(r?.status()!==200)fail('open mode: '+k+' must load without a password, got '+r?.status());
-        if(await page.locator('input[type="password"]').count()!==0)fail('open mode: '+k+' still shows a password form');
-      }
-      const lab=await context.request.get(ORIGIN+R.lab,{failOnStatusCode:false});
-      result.lab=lab.status();
-      if(lab.status()!==200)fail('learner lab must stay public, got '+lab.status());
-      report.gate={...result,passed:true};
-      return;
-    }
-    for(const [k,route] of [['studio',R.studio],['presenter',R.presenter],['audience',R.audience]]){
+    for(const [k,route,sel] of [['studio',R.studio,'#view [data-notes-locked]'],['presenter',R.presenter,'#presNotes [data-notes-locked]']]){
       const r=await page.goto(ORIGIN+route,{waitUntil:'domcontentloaded',timeout:35000});
       result[k]=r?.status();
-      if(r?.status()!==401)fail('unauthenticated '+k+' must be locked (401), got '+r?.status());
-      if(await page.locator('input[type="password"][name="password"]').count()!==1)fail(k+' lock page lacks the password field');
-      if(await page.locator('#presNotes,#view .notes').count()!==0)fail(k+' lock page leaked instructor content');
+      if(r?.status()!==200)fail(k+' must open without a password, got '+r?.status());
+      await page.locator('body[data-ready="true"]').waitFor({state:'attached',timeout:30000}).catch(()=>fail(k+' did not finish loading without a password'));
+      if(await page.locator('input[type="password"]').count()!==0)fail(k+' still shows a password form');
+      const lockedPanel=await page.locator(sel).count();
+      result[k+'NotesLocked']=lockedPanel>0;
+      if(mode==='locked'&&!lockedPanel)fail(k+' must show the locked-notes panel without a session');
+      if(mode==='open'&&lockedPanel)fail(k+' shows locked notes although notes are open');
     }
-    for(const asset of ['/study/live/courses/'+COURSE+'.notes.js','/study/live/instructor.js','/study/live/present.js']){
-      const r=await context.request.get(ORIGIN+PREFIX+asset,{failOnStatusCode:false,maxRedirects:0});
-      result[asset]=r.status();
-      if(r.status()!==401)fail('unauthenticated '+asset+' must be refused (401), got '+r.status());
-      if(/talk|answer/.test(await r.text()))fail(asset+' leaked content without a session');
+    if(mode==='locked'){
+      const notes=await context.request.get(ORIGIN+PREFIX+NOTES_ASSET,{failOnStatusCode:false,maxRedirects:0});
+      if(/talk|answer/.test(await notes.text()))fail('notes leaked content without a session');
+      const r=await page.goto(ORIGIN+PREFIX+'/study/live/unlock/?c='+encodeURIComponent(COURSE)+'&back=present',{waitUntil:'domcontentloaded',timeout:35000});
+      result.unlock=r?.status();
+      if(r?.status()!==401)fail('unlock page must ask for the password (401), got '+r?.status());
+      if(await page.locator('input[type="password"][name="password"]').count()!==1)fail('unlock page lacks the password field');
+      if(!(await page.locator('#gateTitle').innerText()).includes('강사 노트 열기'))fail('unlock page title is not 「강사 노트 열기」');
     }
     const lab=await context.request.get(ORIGIN+R.lab,{failOnStatusCode:false});
     result.lab=lab.status();
@@ -294,6 +287,18 @@ async function instructorFlow(browser,profile){
     await presenter.keyboard.press('1');
     await audience.waitForFunction(()=>!document.querySelector('#stage .slide-ai'),null,{timeout:5000}).catch(()=>fail('audience did not leave the AI stage'));
     step('AI demo card gated by admin sign-in; AI stage mirrors to audience');
+    // 「정답 공개」: the studio reveals the review answer on the presenter + audience stage; A hides it.
+    await studio.bringToFront();
+    await studio.locator('#moduleNav [data-module="6"]').click();
+    await studio.locator('#view [data-answer-toggle="s1-review"]').first().click().catch(()=>fail('studio lacks the 「정답 공개」 button on the review step'));
+    await audience.locator('#stage .answer-reveal').waitFor({timeout:6000}).catch(()=>fail('audience did not show the revealed answer'));
+    if(!(await audience.locator('#stage .answer-reveal').innerText()).includes('보류'))fail('revealed answer text mismatch');
+    await presenter.locator('#pAnswer[aria-pressed="true"]').waitFor({timeout:5000}).catch(()=>fail('presenter answer button did not reflect the reveal'));
+    await audience.waitForTimeout(500);
+    await shot(audience,profile.name+'-audience-answer',false);
+    await presenter.bringToFront();await presenter.keyboard.press('a');
+    await audience.waitForFunction(()=>!document.querySelector('#stage .answer-reveal'),null,{timeout:5000}).catch(()=>fail('A key did not hide the answer'));
+    step('answer reveal: studio → audience, A hides');
     await shot(presenter,profile.name+'-presenter',false);
     await shot(audience,profile.name+'-audience',false);
     await reopen(studio);

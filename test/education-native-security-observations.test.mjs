@@ -61,7 +61,7 @@ test('actual native runners keep strict no-mutation isolation, error logs and en
     assert.doesNotMatch(source,/launchPersistentContext|connectOverCDP|ignoreHTTPSErrors:\s*true|bypassCSP:\s*true/);
   }
   assert.match(classroom,/TARGET_ROUTE=previewAllowed\?ROUTE:'\/edu'\+ROUTE/);
-  assert.match(classroom,/const legacy=await page\.request\.get\(ORIGIN\+ROUTE/);
+  assert.match(classroom,/const registered=await page\.request\.get\(SERVICE_BASE\+ROUTE/,'checks the registered service address (apex path after the apex-only migration)');
   assert.match(classroom,/TARGET_ORIGIN\+TARGET_ROUTE/);
   assert.match(classroom,/sessionRows:24/);
   assert.match(classroom,/slideCounts/);
@@ -98,4 +98,16 @@ test('Premium Studio bootcamp cross-check is once per release and backs off rath
   const single=deploy.indexOf('Verify actual Education classroom on desktop and mobile with EKODI-owned Chromium');
   const premium=deploy.indexOf('Verify Premium Studio instructor, presenter and learner flows on desktop and mobile');
   assert.ok(single>=0&&premium>single,'dedicated five-viewport bootcamp verification still runs first');
+});
+
+test('a failing native probe surfaces its reason as bounded, sanitized workflow annotations',async()=>{
+  const {annotationsFrom}=await import('../scripts/education-probe-annotate.mjs');
+  const lines=annotationsFrom({error:'boom\nnext',httpErrors:Array.from({length:6},(_,i)=>({profile:'mobile',status:404,url:'https://ekodi.kr/x'+i}))},'education-native');
+  assert.equal(lines[0],'::error title=education-native failed::boom%0Anext');
+  assert.equal(lines.filter(l=>l.includes('httpErrors')).length,5,'four rows plus a "more" line');
+  assert.match(annotationsFrom(null,'x')[0],/result\.json missing/);
+  assert.match(annotationsFrom({},'x')[0],/without a recorded reason/);
+  const wf=readFileSync(new URL('../.github/workflows/deploy-education.yml',import.meta.url),'utf8');
+  for(const [script,dir] of [['bootcamp','education-native'],['material-studio','education-studio-native'],['documents','education-documents-native'],['live-studio','education-live-native']])
+    assert.match(wf,new RegExp('node scripts/verify-education-'+script+'-native\\.mjs \\|\\| \\{ node scripts/education-probe-annotate\\.mjs artifacts/'+dir+'; exit 1; \\}'),script);
 });

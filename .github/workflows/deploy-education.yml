@@ -22,6 +22,7 @@ on:
       - 'education-instructor-gate.js'
       - 'scripts/edu-instructor-gate-verifier.mjs'
       - 'scripts/verify-education-live-studio-native.mjs'
+      - 'scripts/education-probe-annotate.mjs'
       - 'test/education-native-security-observations.test.mjs'
       - 'research/migrations/**'
       - 'test/research-platform.test.mjs'
@@ -47,6 +48,7 @@ on:
       - 'education-instructor-gate.js'
       - 'scripts/edu-instructor-gate-verifier.mjs'
       - 'scripts/verify-education-live-studio-native.mjs'
+      - 'scripts/education-probe-annotate.mjs'
       - 'test/education-native-security-observations.test.mjs'
       - 'research/migrations/**'
       - 'test/research-platform.test.mjs'
@@ -92,6 +94,7 @@ jobs:
           node --check education-instructor-gate.js
           node --check scripts/edu-instructor-gate-verifier.mjs
           node --check scripts/verify-education-live-studio-native.mjs
+          node --check scripts/education-probe-annotate.mjs
           node --check education/research/worker.js
           node --check education/research/planner.js
           node --check education/research/app.js
@@ -314,8 +317,9 @@ jobs:
               && grep -Fq '"dataEnabled":true' /tmp/edu-config.js \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/edu-headers \
               && grep -Eiq '^location: https://ekodi\.kr/admin/?' /tmp/edu-admin-headers; then
-              # Resolve only the already-registered Education origin; never create a new domain.
-              edu_origin=$(node --input-type=module -e "import {EKODI_SERVICE_MANIFEST} from './ekodi-service-manifest.js'; process.stdout.write(new URL(EKODI_SERVICE_MANIFEST.services.find(row=>row.id==='edu').url).origin)")
+              # Resolve only the already-registered Education service base (origin + path, e.g. https://ekodi.kr/edu
+              # after the apex-only migration); never create a new domain.
+              edu_origin=$(node --input-type=module -e "import {EKODI_SERVICE_MANIFEST} from './ekodi-service-manifest.js'; const u=new URL(EKODI_SERVICE_MANIFEST.services.find(row=>row.id==='edu').url); process.stdout.write(u.origin+u.pathname.replace(/\/+$/,''))")
               test -n "$edu_origin"
               classroom=$(curl -L -sS -o /tmp/edu-bootcamp.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$edu_origin/study/ai-bootcamp/" || true)
               catalog=$(curl -L -sS -o /tmp/edu-catalog.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$edu_origin/study/ai-bootcamp/catalog.js" || true)
@@ -349,13 +353,13 @@ jobs:
           npm install --no-save --package-lock=false playwright@1.64.1
           npx playwright install --with-deps chromium
       - name: Verify actual Education classroom on desktop and mobile with EKODI-owned Chromium
-        run: node scripts/verify-education-bootcamp-native.mjs
+        run: node scripts/verify-education-bootcamp-native.mjs || { node scripts/education-probe-annotate.mjs artifacts/education-native; exit 1; }
       - name: Verify actual canonical /edu material studio desktop and mobile
-        run: node scripts/verify-education-material-studio-native.mjs
+        run: node scripts/verify-education-material-studio-native.mjs || { node scripts/education-probe-annotate.mjs artifacts/education-studio-native; exit 1; }
       - name: Verify actual bootcamp instructor documents on desktop and mobile
-        run: node scripts/verify-education-documents-native.mjs
+        run: node scripts/verify-education-documents-native.mjs || { node scripts/education-probe-annotate.mjs artifacts/education-documents-native; exit 1; }
       - name: Verify Premium Studio instructor, presenter and learner flows on desktop and mobile
-        run: node scripts/verify-education-live-studio-native.mjs
+        run: node scripts/verify-education-live-studio-native.mjs || { node scripts/education-probe-annotate.mjs artifacts/education-live-native; exit 1; }
       - uses: actions/upload-artifact@v4
         if: always()
         with:

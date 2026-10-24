@@ -1,6 +1,6 @@
 name: Deploy EKODI Church Homepage
 # Release reconciliation marker: church-operating-space-20260924
-# Reconcile Church public Pages to source commit 2e71e09789dda60aaf48fe259b8c32c43776250f (2026-10-09).
+# Reconcile Church public Pages to source commit 6eda5d40ba6fad6ed0c1facca53ab7ad54ca33e6 (2026-10-25: 큐티인 신청 런타임 메뉴, ekodi-church#120).
 
 on:
   workflow_dispatch:
@@ -386,7 +386,9 @@ jobs:
                     layoutCss:[...document.styleSheets].some(x=>x.href?.includes('church-homepage-layout.css')),
                     sharedLive:!!document.querySelector('a[href="/live/church/"]'),
                     giving:!!document.querySelector('.giving-strip'),
-                    member:!!document.querySelector('a[href="/ekodichurch/my/"]')
+                    // The shared shell wraps My Page in the central login (/auth/?…return_to=…/ekodichurch/my/).
+                    member:[...document.querySelectorAll('.site-header a')].some(a=>{const h=a.getAttribute('href')||'';try{const u=new URL(h,location.origin);return u.pathname==='/ekodichurch/my/'||(u.pathname.startsWith('/auth')&&new URL(u.searchParams.get('return_to')||'/',location.origin).pathname==='/ekodichurch/my/')}catch{return false}}),
+                    qtin:!!document.querySelector('.site-header a[href="/qtin/church"]')
                   };
                 });
                 assert.equal(initial.language,locale);
@@ -395,6 +397,7 @@ jobs:
                 assert.equal(initial.weeklyHidden,true,'weekly panel hidden until selected');
                 assert.equal(initial.sharedLive,true,'shared EKODI Live link retained');
                 assert.equal(initial.member,true,'site-local member navigation retained');
+                assert.equal(initial.qtin,true,'QTIN group-order link in the church header '+locale+' '+device.name);
                 assert.ok(initial.header.left>=-2&&initial.header.right<=device.width+2,'header clipped '+locale+' '+device.name);
                 if(locale==='ko-KR'){
                   await page.screenshot({path:'/tmp/church-approved-layout-proof/'+device.name+'-home.png',fullPage:false});
