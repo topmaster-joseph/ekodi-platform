@@ -2,6 +2,7 @@ import { authorizeVerificationOperations } from './verification.js';
 import { paymentProviderReadiness } from './payment-capabilities.js';
 import { commerceAutonomyPolicy, commandPlaneCapabilityContract } from './commerce-os.js';
 import { listCommerceEvents } from './commerce-events.js';
+import { openAlerts } from './ops-alerts.js';
 
 const PATH = '/api/internal/operations/cockpit';
 const flag = (value) => String(value || '').toLowerCase() === 'true';
@@ -39,9 +40,16 @@ async function cockpit(env) {
   if (flag(env.BUYER_PII_RELEASE_ENABLED)) exceptions.push({ code:'buyer-pii-release-enabled', riskClass:'red', humanGate:true });
   if (flag(env.SUPPLIER_FORWARD_ENABLED)) exceptions.push({ code:'supplier-forward-enabled', riskClass:'red', humanGate:true });
 
+  const soldOut = await scalar(env, "SELECT COUNT(*) AS count FROM products WHERE status='published' AND checkout_ready=1 AND stock_quantity=0");
+  if (soldOut > 0) exceptions.push({ code:'product-sold-out', riskClass:'amber', humanGate:false, count:soldOut });
+  const alerts = await openAlerts(env, 20);
+  for (const alert of alerts) {
+    exceptions.push({ code:alert.kind, riskClass:alert.severity === 'error' ? 'red' : alert.severity === 'warn' ? 'amber' : 'green', humanGate:alert.severity !== 'info',
+      count:alert.occurrences, blockers:[[alert.orderId, alert.message].filter(Boolean).join(' · ')] });
+  }
   const latestEvents = await listCommerceEvents(env, { limit:25 });
   return {
-    status:exceptions.some((item) => item.riskClass === 'red') ? 'attention' : exceptions.length ? 'review' : 'clear',
+    status:exceptions.some((item) => item.riskClass === 'red') ? 'attention' : exceptions.some((item) => item.riskClass !== 'green') ? 'review' : 'clear',
     generatedAt:now,
     payment,
     counters:{ openVerification, checkoutGateEnabled, paymentPending, expiredPaymentPending, pendingSettlement, pendingSettlementAmount },
@@ -53,6 +61,7 @@ async function cockpit(env) {
       refundExecutionEnabled:false,
     },
     exceptions,
+    alerts,
     latestEvents,
     autonomy:commerceAutonomyPolicy(),
     commandPlane:commandPlaneCapabilityContract(),

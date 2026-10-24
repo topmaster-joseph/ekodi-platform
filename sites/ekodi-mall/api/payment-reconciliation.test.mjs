@@ -305,3 +305,41 @@ test('paid-order reconciliation ignores missing provider result, rotates past tr
     assert.equal((await reconcileMallPayments(env, { refundLimit: 1 })).paidChecked, 0, 'older orders stay out of the bounded scan');
   } finally { toss.restore(); }
 });
+
+// EKODI-MALL-OPS-ALERTS-001: the operator sees why a paid order could not be reconciled.
+test('reconciliation raises de-duplicated operator alerts and records recovered refunds', async () => {
+  const db = migrated({ stock: 3 });
+  const env = { ...ENV, DB: db };
+  const toss = fakeToss();
+  let id;
+  try {
+    const created = await createOrder(env, { shareCode: 'SHARE1', quantity: 1, buyer: BUYER });
+    id = created.order.id;
+    await core.fetch(new Request('https://ekodi.kr/api/public/payments/confirm', {
+      method: 'POST', body: JSON.stringify({ paymentKey: 'pk_alert', orderId: id, amount: 15000 }),
+    }), env);
+  } finally { toss.restore(); }
+  const alerts = () => db.db.prepare('SELECT severity,kind,status,occurrences,message FROM mall_ops_alerts WHERE order_id=? ORDER BY id').all(id);
+  const original = globalThis.fetch;
+  globalThis.fetch = async () => Response.json({ code: 'UNAUTHORIZED_KEY', message: '인증되지 않은 시크릿 키 live_gsk_ABCDEF123' }, { status: 401 });
+  try {
+    await reconcileMallPayments(env, { refundLimit: 1, now: new Date(Date.now() + 1) });
+    db.db.prepare('UPDATE orders SET reconciled_at=NULL WHERE id=?').run(id);
+    await reconcileMallPayments(env, { refundLimit: 1, now: new Date(Date.now() + 2) });
+  } finally { globalThis.fetch = original; }
+  let rows = alerts();
+  assert.equal(rows.length, 1, 'same failure for the same order is one open alert');
+  assert.equal(rows[0].kind, 'payment.reconcile_failed');
+  assert.equal(rows[0].occurrences, 2);
+  assert.doesNotMatch(rows[0].message, /ABCDEF123/, 'key material is never stored in alerts');
+  const toss2 = fakeToss();
+  try {
+    toss2.payments.set(id, { paymentKey: 'pk_alert', orderId: id, totalAmount: 15000, status: 'CANCELED', cancels: [{ cancelAmount: 15000 }] });
+    db.db.prepare('UPDATE orders SET reconciled_at=NULL WHERE id=?').run(id);
+    const result = await reconcileMallPayments(env, { refundLimit: 1 });
+    assert.equal(result.refundRecovered, 1);
+  } finally { toss2.restore(); }
+  rows = alerts();
+  assert.equal(rows.find((r) => r.kind === 'payment.reconcile_failed').status, 'resolved');
+  assert.equal(rows.find((r) => r.kind === 'payment.refund_recorded').severity, 'info');
+});

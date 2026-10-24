@@ -1,6 +1,7 @@
 // EKODI-MALL-PAY-RECON-001 (2026-10-23)
 // 에코디몰 결제의 사후 정합성: 토스 웹훅 수신, 주기 대사(cron), 결제대기 만료 정리, 재고 예약 해제.
 // 원칙: 웹훅 본문은 신뢰하지 않는다 — 항상 공통 결제 모듈(ekodipay-core)로 토스에 재조회한 결과만 반영한다.
+import { raiseAlert, resolveAlerts } from './ops-alerts.js';
 import { tossRequest, TossError } from '../../../ekodipay-core.js';
 import { commerceEventStatement } from './commerce-events.js';
 import { recordConfirmedPayment } from './worker.js';
@@ -160,6 +161,7 @@ export async function reconcileMallPayments(env, { now = new Date(), limit = REC
     } catch (error) {
       summary.errors += 1;
       console.error('mall reconcile order failed', { orderId: order.id, code: error?.code, message: error?.message });
+      await raiseAlert(env, { severity: 'warn', kind: 'payment.reconcile_failed', orderId: order.id, message: `${error?.code || error?.status || 'error'} ${error?.message || ''}` });
     }
     await env.DB.prepare('UPDATE orders SET reconcile_attempts=reconcile_attempts+1 WHERE id=?').bind(order.id).run().catch(() => {});
   }
@@ -187,11 +189,19 @@ export async function reconcileMallPayments(env, { now = new Date(), limit = REC
           if (result.action === 'refunded') {
             summary.refunded += 1;
             summary.refundRecovered += 1;
-          } else if (result.action === 'mismatch') summary.mismatch += 1;
+            await raiseAlert(env, { severity: 'info', kind: 'payment.refund_recorded', orderId: order.id, message: `토스 취소 확인 · ${result.status} · ${result.refundedAmount}원` });
+          } else if (result.action === 'mismatch') {
+            summary.mismatch += 1;
+            await raiseAlert(env, { severity: 'error', kind: 'payment.mismatch', orderId: order.id, message: result.reason || 'amount-or-order-mismatch' });
+          }
+          await resolveAlerts(env, { kind: 'payment.reconcile_failed', orderId: order.id });
+        } else {
+          await raiseAlert(env, { severity: 'warn', kind: 'payment.reconcile_not_found', orderId: order.id, message: '토스에서 결제를 찾지 못함 (키 모드·상점 불일치 가능)' });
         }
       } catch (error) {
         summary.errors += 1;
         console.error('mall paid refund reconciliation failed', { orderId: order.id, code: error?.code, message: error?.message });
+        await raiseAlert(env, { severity: 'warn', kind: 'payment.reconcile_failed', orderId: order.id, message: `${error?.code || error?.status || 'error'} ${error?.message || ''}` });
       } finally {
         // Rotate even failed lookups: one unavailable payment must not starve every
         // other order on the next 10-minute cron. Re-eligible after the cooldown.
