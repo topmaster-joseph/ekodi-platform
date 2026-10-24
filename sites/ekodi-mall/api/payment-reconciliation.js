@@ -219,6 +219,7 @@ export async function reconcileMallPayments(env, { now = new Date(), limit = REC
             await raiseAlert(env, { severity: 'error', kind: 'payment.mismatch', orderId: order.id, message: result.reason || 'amount-or-order-mismatch' });
           }
           await resolveAlerts(env, { kind: 'payment.reconcile_failed', orderId: order.id });
+          await resolveAlerts(env, { kind: 'payment.reconcile_not_found', orderId: order.id });
         } else {
           await raiseAlert(env, { severity: 'warn', kind: 'payment.reconcile_not_found', orderId: order.id, message: '토스에서 결제를 찾지 못함 (키 모드·상점 불일치 가능)' });
         }
