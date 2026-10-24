@@ -8,6 +8,7 @@ import { handleLocalRegionOperations } from './local-region-operations-control.j
 import { handleCheonggyePassVendorIntake } from './cheonggyepass-vendor-intake.js';
 import { MOTOR_FESTIVAL_API_PATH, handleMotorFestivalApplications, purgeExpiredMotorFestivalApplications } from './motor-festival-registration-api.js';
 import { isBoothApiPath, handleCgmurrcBooth } from './cgmurrc-booth-api.js';
+import { isEdocApiPath, handleCgmaEdocs } from './cgma-edoc-api.js';
 import { handleCustomerMemberDirectory } from './customer-member-directory.js';
 import { handleMembershipBilling, runMembershipBillingSchedule } from './membership-billing.js';
 import { handleAdminGoogleAuth } from './admin-google-auth.js';
@@ -281,6 +282,9 @@ export default {
     }
     if (isBoothApiPath(path)) {
       return handleCgmurrcBooth(request, env);
+    }
+    if (isEdocApiPath(path)) {
+      return handleCgmaEdocs(request, env);
     }
     if (path.startsWith('/api/cheonggyepass/vendor-intake')) {
       return handleCheonggyePassVendorIntake(request, env);

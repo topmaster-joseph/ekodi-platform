@@ -3,6 +3,7 @@ import { isSeasonalPortalPath, seasonalPortalResponse } from './seasonal-workfor
 import { routeCooperative, cooperativeLocatorGuard } from './cooperative-control.js';
 import { isCgmaAiEducationPath, routeCgmaAiEducation } from './cgma-ai-education-route.js';
 import { isCgmaMotorFestivalPath, routeCgmaMotorFestival } from './cgma-motor-festival-route.js';
+import { isCgmaEdocSignPath, routeCgmaEdocSign } from './cgma-edoc-sign-route.js';
 import legacyPlatformRouter from './platform-router-worker.js';
 import { canonicalTrackingQueryRedirect } from './canonical-query-policy.js';
 import { captureTrackedLanding, observeAttributedResponse } from './marketing-attribution-capture.js';
@@ -478,6 +479,7 @@ async function routePlatform(request,env,ctx){
     const siteBoard=await handleSiteBoardRequest(request,env);if(siteBoard)return siteBoard;
     if(host===PUBLIC_HOST&&isCgmaAiEducationPath(url.pathname))return routeCgmaAiEducation(request,env);
     if(host===PUBLIC_HOST&&isCgmaMotorFestivalPath(url.pathname))return routeCgmaMotorFestival(request,env);
+    if(host===PUBLIC_HOST&&isCgmaEdocSignPath(url.pathname))return routeCgmaEdocSign(request,env);
     if(host===PUBLIC_HOST&&url.pathname.startsWith(MALL_API_APEX_PREFIX)){const mallApi=await routeMallApiApex(request,env);if(mallApi)return mallApi;}
     if((host===PUBLIC_HOST||SEONAMMEDI_HOSTS.has(host))&&url.pathname.startsWith('/api/seonammedi/')){const seonamApi=await routeSeonamMediApi(request,env,ctx);if(seonamApi)return seonamApi;}
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isDeletedSeonamPath(url.pathname))return deletedSeonamResponse();
@@ -715,6 +717,12 @@ export default {
       let festival;
       try{festival=await routeCgmaMotorFestival(request,env)}catch(error){record(500);throw error}
       return finalize(festival);
+    }
+    // The CGMA e-document signing page follows the same rule: its own route policy, never the publication page.
+    if(resolvedHost(request,env)===PUBLIC_HOST&&isCgmaEdocSignPath(incomingUrl.pathname)){
+      let signPage;
+      try{signPage=await routeCgmaEdocSign(request,env)}catch(error){record(500);throw error}
+      return finalize(signPage);
     }
     const cooperativeGuard=await cooperativeLocatorGuard(request,env);
     if(cooperativeGuard)return finalize(cooperativeGuard);

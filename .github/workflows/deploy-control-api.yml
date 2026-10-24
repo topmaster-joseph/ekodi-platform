@@ -45,6 +45,8 @@ on:
       - 'customer-entry-worker.js'
       - 'motor-festival-registration-api.js'
       - 'test/motor-festival-registration.test.mjs'
+      - 'cgma-edoc-api.js'
+      - 'test/cgma-edoc-api.test.mjs'
       - 'regional-access-control.js'
       - 'local-region-operations-control.js'
       - 'test/local-region-operations.test.mjs'
@@ -268,6 +270,8 @@ on:
       - 'customer-entry-worker.js'
       - 'motor-festival-registration-api.js'
       - 'test/motor-festival-registration.test.mjs'
+      - 'cgma-edoc-api.js'
+      - 'test/cgma-edoc-api.test.mjs'
       - 'regional-access-control.js'
       - 'local-region-operations-control.js'
       - 'test/local-region-operations.test.mjs'
@@ -979,6 +983,22 @@ jobs:
           grep -Fq '"code":"PF_ADMIN_AUTH_REQUIRED"' /tmp/personal-finance.json
           grep -Fq '"publishedLocales":["ko-KR"]' /tmp/i18n.json
           grep -Fq '"inheritedDefault":true' /tmp/catalog.json
+      - name: Verify CGMA e-document signing API boundary without writing records
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://ekodi.kr/api/cgma/edocs'
+          curl_retry=(--retry 3 --retry-delay 2 --retry-all-errors --connect-timeout 5 --max-time 12)
+          anon=$(curl -sS "${curl_retry[@]}" -o /tmp/edoc-anon.json -w '%{http_code}' "$api")
+          test "$anon" = '401'
+          grep -Fq '"code":"ADMIN_LOGIN_REQUIRED"' /tmp/edoc-anon.json
+          sign=$(curl -sS "${curl_retry[@]}" -o /tmp/edoc-sign.json -w '%{http_code}' -H 'x-ekodi-sign-token: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' "$api/sign")
+          test "$sign" = '401'
+          grep -Fq '"code":"SIGN_LINK_INVALID"' /tmp/edoc-sign.json
+          cross=$(curl -sS "${curl_retry[@]}" -o /tmp/edoc-cross.json -w '%{http_code}' -X POST -H 'origin: https://evil.example' -H 'content-type: application/json' --data-binary '{}' "$api/sign")
+          test "$cross" = '403'
+          grep -Fq '"code":"ORIGIN_FORBIDDEN"' /tmp/edoc-cross.json
+          echo 'CGMA e-documents API: anonymous admin 401, unknown signing link 401, cross-origin write 403 (no records written).' >> "$GITHUB_STEP_SUMMARY"
       - name: Verify CGMA motor festival API boundary without writing applicant data
         shell: bash
         run: |

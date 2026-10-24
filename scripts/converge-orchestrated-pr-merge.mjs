@@ -158,6 +158,8 @@ const controlApiTouched=changedFiles.some(file=>
   (file.startsWith('migrations/')&&file.endsWith('.sql')&&!file.includes('messenger'))||[
   // CGMA motor festival 2026 intake API (Control API, D1 ekodi-auth).
   'motor-festival-registration-api.js',
+  // CGMA e-documents · sequential signing API (Control API, D1 ekodi-auth + private R2).
+  'cgma-edoc-api.js','test/cgma-edoc-api.test.mjs',
 
   // LANG-UI-001: public language status is served by api-worker.js via
   // language-automation.js. A GITHUB_TOKEN merge does not fire main push CI,
@@ -319,7 +321,7 @@ const sharedSiteTouched=changedFiles.some(file=>
   // Token merges skip push workflows, so these must dispatch Site Core explicitly (2026-10-23).
   ['marketing-ai-admin.js','marketing-ai-admin.css','marketing-ai-admin-live-ops.js','marketing-ai-admin-live-ops.css','marketing-ai-admin-posting-status.js','marketing-ai-channel-manager.js','test/marketing-admin-site-core-dispatch-20261023.test.mjs'].includes(file)||
   // CGMA workspace pages compiled into Site Core (/cgma/ai-education/, /cgma/motor-festival-2026/).
-  ['cgma-ai-education-route.js','cgma-motor-festival-route.js'].includes(file)||
+  ['cgma-ai-education-route.js','cgma-motor-festival-route.js','cgma-edoc-sign-route.js','cgma-edoc-admin.js','cgma-edoc-admin.css'].includes(file)||
   (file.startsWith('prototypes/cgma-')&&/\.(html|js)$/.test(file))||
   // cgmurrc booth member/admin pages are compiled into Site Core by scripts/build.mjs.
   (file.startsWith('prototypes/cgmurrc-')&&/\.(html|js)$/.test(file))||
