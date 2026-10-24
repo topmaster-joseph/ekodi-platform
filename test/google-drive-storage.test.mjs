@@ -269,3 +269,12 @@ test('shared legacy Google callback forwards missing-code and denied marketing r
   assert.doesNotMatch(callback,/console\.error\('Marketing YouTube OAuth broker callback failed',error\)/);
   assert.equal(marketingYouTubeOAuthErrorCode({code:'GOOGLE_OAUTH_ACCESS_DENIED'}),'GOOGLE_OAUTH_ACCESS_DENIED');
 });
+
+test('Marketing YouTube OAuth maps Google token error enums to specific safe codes', async () => {
+  const { marketingYouTubeOAuthErrorCode } = await import('../marketing-youtube-oauth-error.js');
+  assert.equal(marketingYouTubeOAuthErrorCode({code:'GOOGLE_TOKEN_EXCHANGE_FAILED',providerCode:'invalid_client',message:'Unauthorized'}),'GOOGLE_OAUTH_INVALID_CLIENT');
+  assert.equal(marketingYouTubeOAuthErrorCode({googleError:'redirect_uri_mismatch'}),'GOOGLE_OAUTH_REDIRECT_MISMATCH');
+  assert.equal(marketingYouTubeOAuthErrorCode({code:'GOOGLE_REAUTH_REQUIRED',providerCode:'invalid_grant'}),'GOOGLE_OAUTH_CODE_INVALID');
+  assert.equal(marketingYouTubeOAuthErrorCode({providerCode:'something_new'}),'GOOGLE_OAUTH_EXCHANGE_FAILED');
+  assert.equal(marketingYouTubeOAuthErrorCode({code:'GOOGLE_OAUTH_TICKET_STORE_FAILED'}),'GOOGLE_OAUTH_TICKET_STORE_FAILED');
+});

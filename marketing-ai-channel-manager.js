@@ -22,9 +22,41 @@
     const style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = `
-      .growth-hub{display:grid;gap:11px}.growth-hero,.growth-card,.growth-summary article{border:1px solid #d9e3ec;border-radius:11px;background:#ffffff}.growth-hero{padding:13px;display:grid;gap:6px}.growth-hero h3{margin:0;color:#172033;font-size:10px}.growth-hero p{margin:0;color:#4d6072;font-size:6.3px;line-height:1.6}.growth-chip{display:inline-flex;width:max-content;padding:3px 6px;border:1px solid #9fd3bf;border-radius:999px;background:#eaf7f1;color:#1d6b52;font-size:5.8px;font-weight:900}.growth-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.growth-summary article{padding:10px}.growth-summary small{display:block;color:#5b6f82;font-size:5.8px}.growth-summary strong{display:block;margin-top:3px;color:#172033;font-size:13px}.growth-connectors{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.growth-card{padding:11px}.growth-card h4{margin:0 0 5px;color:#172033;font-size:8px}.growth-card p{margin:0 0 8px;color:#4d6072;font-size:5.9px;line-height:1.5}.growth-card button,.growth-form button,.growth-action{min-height:29px;padding:0 10px;border:1px solid #9db7cc;border-radius:7px;background:#eef4f9;color:#173a57;font-size:6px;font-weight:900;cursor:pointer}.growth-card button:disabled,.growth-form button:disabled{opacity:.45;cursor:not-allowed}.growth-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.growth-card header{display:flex;align-items:center;justify-content:space-between;gap:7px}.growth-state{display:inline-flex;padding:3px 6px;border:1px solid #c3d1dd;border-radius:999px;color:#4d6072;font-size:5.4px;font-weight:900}.growth-state.active,.growth-state.ready,.growth-state.approved{border-color:#9fd3bf;background:#eaf7f1;color:#1d6b52}.growth-state.failed,.growth-state.error{border-color:#e6b3b7;background:#fdf0f1;color:#a33b44}.growth-state.draft,.growth-state.paused{border-color:#e7cf9f;background:#fff7e8;color:#8a5a12}.growth-list{display:grid;gap:5px;margin-top:7px}.growth-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;padding:7px;border:1px solid #e1e9f0;border-radius:8px;background:#f7fafc}.growth-row strong{display:block;color:#172033;font-size:6.8px}.growth-row span,.growth-row small,.growth-row a{color:#5b6f82;font-size:5.6px}.growth-meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:3px}.growth-empty{padding:10px;border:1px dashed #c3d1dd;border-radius:8px;color:#5b6f82;font-size:6px;line-height:1.55}.growth-form{display:grid;gap:7px;margin-top:7px}.growth-form label{display:grid;gap:3px;color:#4d6072;font-size:5.8px}.growth-form input,.growth-form textarea,.growth-form select{width:100%;padding:6px 7px;border:1px solid #c3d1dd;border-radius:7px;background:#ffffff;color:#172033;font-size:6.4px}.growth-form textarea{min-height:74px;resize:vertical}.growth-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.growth-full{grid-column:1/-1}.growth-checks{display:grid;gap:5px}.growth-check{display:flex!important;grid-template-columns:none!important;flex-direction:row;align-items:center;gap:6px!important;padding:6px;border:1px solid #e1e9f0;border-radius:7px;background:#f7fafc}.growth-check input{width:auto}.growth-note{padding:8px;border:1px solid #b9dccd;border-radius:8px;background:#eef8f4;color:#1f5a49;font-size:5.8px;line-height:1.55}.growth-result{min-height:18px;color:#2f5f86;font-size:6px}.growth-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}.growth-platform-alert{padding:9px;border:1px solid #e7cf9f;border-radius:9px;background:#fff7e8;color:#7a4b12;font-size:5.9px;line-height:1.55}
-      @media(max-width:1080px){.growth-connectors{grid-template-columns:1fr 1fr}.growth-grid{grid-template-columns:1fr}.growth-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
-      @media(max-width:680px){.growth-connectors,.growth-summary,.growth-form-grid{grid-template-columns:1fr}.growth-full{grid-column:auto}}
+      .growth-hub{display:grid;gap:14px;font-size:14px;line-height:1.6;color:#172033}
+      .growth-hero,.growth-card,.growth-summary article{border:1px solid #d9e3ec;border-radius:12px;background:#ffffff}
+      .growth-hero{padding:18px 20px;display:grid;gap:8px}.growth-hero h3{margin:0;color:#172033;font-size:20px;line-height:1.35}.growth-hero p{margin:0;color:#41556a;font-size:14px;line-height:1.7}
+      .growth-chip{display:inline-flex;width:max-content;padding:4px 10px;border:1px solid #9fd3bf;border-radius:999px;background:#eaf7f1;color:#1d6b52;font-size:12.5px;font-weight:800}
+      .growth-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.growth-summary article{padding:14px 16px}.growth-summary small{display:block;color:#53687c;font-size:13px}.growth-summary strong{display:block;margin-top:4px;color:#172033;font-size:24px;line-height:1.2}
+      .growth-tabs{display:flex;flex-wrap:wrap;gap:6px;padding:6px;border:1px solid #d9e3ec;border-radius:12px;background:#f4f8fb}
+      .growth-tab{min-height:40px;padding:0 16px;border:1px solid transparent;border-radius:9px;background:transparent;color:#41556a;font-size:15px;font-weight:700;cursor:pointer}
+      .growth-tab:hover{background:#e8f0f7}.growth-tab[aria-selected="true"]{border-color:#9db7cc;background:#ffffff;color:#173a57;box-shadow:0 1px 3px rgba(23,58,87,.12)}
+      .growth-tab .growth-count{margin-left:6px;padding:1px 8px;border-radius:999px;background:#e3ecf4;color:#173a57;font-size:12.5px}
+      .growth-pane{display:grid;gap:12px}.growth-pane[hidden]{display:none}
+      .growth-connectors{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+      .growth-card{padding:18px 20px}.growth-card h4{margin:0 0 8px;color:#172033;font-size:17px;line-height:1.4}.growth-card p{margin:0 0 12px;color:#41556a;font-size:14px;line-height:1.7}
+      .growth-card button,.growth-form button,.growth-action{min-height:42px;padding:0 18px;border:1px solid #9db7cc;border-radius:9px;background:#eef4f9;color:#173a57;font-size:15px;font-weight:800;cursor:pointer}
+      .growth-card button.primary,.growth-form button[type="submit"]{border-color:#1f5f9a;background:#1f5f9a;color:#ffffff}
+      .growth-card button:disabled,.growth-form button:disabled{opacity:.45;cursor:not-allowed}
+      .growth-grid{display:grid;grid-template-columns:1fr;gap:12px}.growth-card header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px}
+      .growth-state{display:inline-flex;padding:3px 10px;border:1px solid #c3d1dd;border-radius:999px;color:#41556a;font-size:12.5px;font-weight:800;white-space:nowrap}
+      .growth-state.active,.growth-state.ready,.growth-state.approved{border-color:#9fd3bf;background:#eaf7f1;color:#1d6b52}.growth-state.failed,.growth-state.error{border-color:#e6b3b7;background:#fdf0f1;color:#a33b44}.growth-state.draft,.growth-state.paused{border-color:#e7cf9f;background:#fff7e8;color:#8a5a12}
+      .growth-account{display:grid;gap:4px;margin:0 0 12px;padding:12px 14px;border:1px solid #b9dccd;border-radius:10px;background:#eef8f4;font-size:14px}.growth-account.none{border-color:#d9e3ec;background:#f7fafc;color:#53687c}
+      .growth-account b{color:#172033}.growth-account span{color:#1f5a49}
+      .growth-list{display:grid;gap:8px;margin-top:8px}.growth-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start;padding:12px 14px;border:1px solid #e1e9f0;border-radius:10px;background:#f7fafc}
+      .growth-row strong{display:block;color:#172033;font-size:15.5px}.growth-row span,.growth-row small,.growth-row a{color:#53687c;font-size:13.5px}
+      .growth-row .growth-email{color:#173a57;font-weight:700}.growth-meta{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:4px}
+      .growth-empty{padding:16px;border:1px dashed #c3d1dd;border-radius:10px;color:#53687c;font-size:14px;line-height:1.7}
+      .growth-form{display:grid;gap:12px;margin-top:8px}.growth-form label{display:grid;gap:6px;color:#2f4357;font-size:14px;font-weight:700}
+      .growth-form input,.growth-form textarea,.growth-form select{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #c3d1dd;border-radius:9px;background:#ffffff;color:#172033;font-size:15px;font-weight:400}
+      .growth-form textarea{min-height:120px;resize:vertical}.growth-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.growth-full{grid-column:1/-1}
+      .growth-checks{display:grid;gap:8px}.growth-check{display:flex!important;flex-direction:row;align-items:center;gap:10px!important;padding:10px 12px;border:1px solid #e1e9f0;border-radius:9px;background:#f7fafc;font-size:14.5px!important}.growth-check input{width:18px;height:18px}
+      .growth-note{padding:12px 14px;border:1px solid #b9dccd;border-radius:10px;background:#eef8f4;color:#1f5a49;font-size:14px;line-height:1.7}
+      .growth-result{min-height:22px;color:#2f5f86;font-size:14px}.growth-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+      .growth-platform-alert{padding:14px 16px;border:1px solid #e7cf9f;border-radius:10px;background:#fff7e8;color:#6d4210;font-size:14.5px;line-height:1.7}.growth-platform-alert b{display:block;margin-bottom:2px;font-size:15.5px}
+      .growth-platform-alert.error{border-color:#e6b3b7;background:#fdf0f1;color:#8a2f37}
+      .growth-platform-alert code{font-size:12.5px;color:#7a5a5e}
+      @media(max-width:1080px){.growth-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      @media(max-width:680px){.growth-connectors,.growth-summary,.growth-form-grid{grid-template-columns:1fr}.growth-full{grid-column:auto}.growth-tab{flex:1 1 calc(50% - 6px)}}
     `;
     document.head.append(style);
   }
@@ -52,17 +84,55 @@
     ['ekodi_connect','provider','connections','reason'].forEach(key => url.searchParams.delete(key));
     return url.href;
   }
+  const REASON_TEXT = {
+    GOOGLE_OAUTH_EXCHANGE_FAILED:['Google 인증 마무리 단계에서 실패했습니다.','Google 로그인은 통과했지만 에코디가 연결 토큰을 받지 못해 계정이 저장되지 않았습니다. 다시 한 번 연결을 눌러 주세요. 반복되면 Google Cloud OAuth 클라이언트 설정 확인이 필요합니다.'],
+    GOOGLE_OAUTH_INVALID_CLIENT:['Google OAuth 클라이언트 정보가 맞지 않습니다.','Google Cloud의 클라이언트 ID와 에코디에 저장된 클라이언트 보안 비밀번호가 서로 다릅니다. 클라이언트를 새로 만들었거나 보안 비밀번호를 바꿨다면 에코디 쪽 값도 같이 갱신해야 합니다.'],
+    GOOGLE_OAUTH_UNAUTHORIZED_CLIENT:['이 Google 클라이언트는 이 방식의 인증을 허용하지 않습니다.','Google Cloud에서 클라이언트 유형이 “웹 애플리케이션”인지 확인해 주세요.'],
+    GOOGLE_OAUTH_REDIRECT_MISMATCH:['Google에 등록된 리디렉션 주소가 다릅니다.','Google Cloud 클라이언트의 “승인된 리디렉션 URI”에 에코디 콜백 주소가 있어야 합니다.'],
+    GOOGLE_OAUTH_CODE_INVALID:['인증 코드가 만료되었거나 이미 사용되었습니다.','새로고침하지 말고 연결 버튼을 다시 눌러 처음부터 진행해 주세요.'],
+    GOOGLE_OAUTH_CLIENT_DELETED:['Google OAuth 클라이언트가 삭제된 상태입니다.','Google Cloud 콘솔의 “삭제된 사용자 인증 정보”에서 복원해 주세요.'],
+    GOOGLE_OAUTH_TICKET_STORE_FAILED:['토큰은 받았지만 에코디 보관 단계에서 실패했습니다.','에코디 내부 저장소 문제입니다. 잠시 후 다시 시도하고, 반복되면 운영 점검이 필요합니다.'],
+    GOOGLE_OAUTH_ACCESS_DENIED:['Google 권한 승인이 취소되었습니다.','동의 화면에서 “허용”을 눌러야 연결됩니다. Google OAuth 앱이 테스트 모드라면 로그인한 계정을 테스트 사용자로 추가해야 합니다.'],
+    YOUTUBE_REFRESH_TOKEN_MISSING:['Google이 장기 연결 토큰을 주지 않았습니다.','https://myaccount.google.com/permissions 에서 이 앱 권한을 삭제한 뒤 다시 연결해 주세요.'],
+    YOUTUBE_TARGET_ACCOUNT_MISMATCH:['지정한 계정과 다른 Google 계정으로 로그인했습니다.','계정 선택 화면에서 연결하려는 계정을 골라 주세요.'],
+    AUTHORIZATION_CODE_MISSING:['Google에서 인증 코드를 받지 못했습니다.','연결 버튼을 다시 눌러 처음부터 진행해 주세요.'],
+  };
+  function reasonText(reason) {
+    const raw = String(reason || '').trim();
+    if (raw.startsWith('YOUTUBE_DATA_API_DISABLED')) return ['YouTube Data API가 꺼져 있습니다.','Google Cloud 프로젝트에서 YouTube Data API v3를 사용 설정해 주세요.'];
+    return REASON_TEXT[raw] || ['계정 인증을 완료하지 못했습니다.', raw ? '' : '권한 또는 앱 설정을 확인하세요.'];
+  }
   function callbackNotice() {
     const url = new URL(location.href);
     const status = url.searchParams.get('ekodi_connect');
     if (!status) return '';
     const provider = url.searchParams.get('provider') || '계정';
-    if (status === 'success') return `<div class="growth-note">${esc(providerLabel(provider))} 인증이 완료되었습니다. 연결된 계정 정보를 자동으로 불러왔습니다.</div>`;
-    return `<div class="growth-platform-alert">계정 인증을 완료하지 못했습니다. ${esc(url.searchParams.get('reason') || '권한 또는 앱 설정을 확인하세요.')}</div>`;
+    if (status === 'success') {
+      const count = Number(url.searchParams.get('connections') || 0);
+      return `<div class="growth-note"><b>${esc(providerLabel(provider))} 연결 완료</b> · ${count ? `${count}개 채널을 연결했습니다.` : '인증이 완료되었습니다.'} 아래 “연결된 계정” 탭에서 어떤 계정으로 연결됐는지 확인할 수 있습니다.</div>`;
+    }
+    const reason = url.searchParams.get('reason') || '';
+    const [title, detail] = reasonText(reason);
+    return `<div class="growth-platform-alert error"><b>${esc(providerLabel(provider))} 연결 실패 — ${esc(title)}</b>${detail ? esc(detail) : ''}${reason ? `<br><code>오류 코드: ${esc(reason)}</code>` : ''}</div>`;
+  }
+  function accountEmail(row) {
+    const meta = row.metadata || {};
+    return String(meta.authorizedEmail || meta.email || meta.targetAccount || '').trim();
+  }
+  function providerAccountSummary(connections, providers) {
+    const rows = connections.filter(row => providers.includes(row.provider) && row.status === 'active');
+    if (!rows.length) return '<div class="growth-account none">아직 연결된 계정이 없습니다.</div>';
+    return `<div class="growth-account">${rows.map(row => {
+      const email = accountEmail(row);
+      return `<div><b>${esc(row.display_name || providerLabel(row.provider))}</b>${email ? ` <span>· 로그인 계정 ${esc(email)}</span>` : ''}</div>`;
+    }).join('')}</div>`;
   }
   function connectionRows(connections) {
-    if (!connections.length) return '<div class="growth-empty">아직 연결된 계정이 없습니다. 인증키나 Page ID를 입력하지 말고 위의 연결 버튼에서 공식 로그인만 진행하면 됩니다.</div>';
-    return `<div class="growth-list">${connections.map(row => `<article class="growth-row"><div><strong>${esc(row.display_name || providerLabel(row.provider))}</strong><div class="growth-meta"><span>${esc(providerLabel(row.provider))} · ${esc(row.resource_type)}</span><small>${esc(row.external_id)}</small><small>확인 ${esc(dateText(row.last_check_at || row.updated_at))}</small></div>${row.last_error ? `<small>${esc(row.last_error)}</small>` : ''}</div><span class="growth-state ${esc(row.status)}">${esc(stateLabel(row.status))}</span></article>`).join('')}</div>`;
+    if (!connections.length) return '<div class="growth-empty">아직 연결된 계정이 없습니다. 인증키나 Page ID를 입력하지 말고 “연결하기” 탭의 버튼으로 공식 로그인만 진행하면 됩니다.</div>';
+    return `<div class="growth-list">${connections.map(row => {
+      const email = accountEmail(row);
+      return `<article class="growth-row"><div><strong>${esc(row.display_name || providerLabel(row.provider))}</strong><div class="growth-meta"><span>${esc(providerLabel(row.provider))} ${row.provider === 'youtube' ? '채널' : esc(row.resource_type || '')}</span>${email ? `<span class="growth-email">로그인 계정: ${esc(email)}</span>` : ''}<small>ID ${esc(row.external_id)}</small><small>확인 ${esc(dateText(row.last_check_at || row.updated_at))}</small></div>${row.last_error ? `<small>${esc(row.last_error)}</small>` : ''}</div><span class="growth-state ${esc(row.status)}">${esc(stateLabel(row.status))}</span></article>`;
+    }).join('')}</div>`;
   }
   function channelChecks(connections) {
     const rows = connections.filter(row => ['facebook','instagram','threads','youtube'].includes(row.provider) && row.status === 'active');
@@ -85,6 +155,9 @@
     if (!data.authorizationUrl) throw new Error('인증 주소를 받지 못했습니다.');
     location.assign(data.authorizationUrl);
   }
+  const TAB_STORE = 'ekodi-growth-tab';
+  function readTab() { try { return sessionStorage.getItem(TAB_STORE) || ''; } catch { return ''; } }
+  function writeTab(key) { try { sessionStorage.setItem(TAB_STORE,key); } catch {} }
   function selectedIds(form) { return [...form.querySelectorAll('input[name="connectionIds"]:checked')].map(input => Number(input.value)).filter(Number.isInteger); }
   function formValue(form,name) { return String(new FormData(form).get(name) || '').trim(); }
   function setResult(form,message,error=false) {
@@ -113,24 +186,38 @@
       const platform = connectionData.platform || {};
       const platformAlert = (!platform.metaConfigured || !platform.threadsConfigured || !platform.youtubeConfigured) ? `<div class="growth-platform-alert"><b>최초 1회 플랫폼 설정 필요</b><br>사용자별 인증키 입력은 없앴습니다. 다만 에코디 전체가 사용할 공식 앱 식별정보가 아직 등록되지 않은 서비스는 연결 버튼이 잠깁니다. Meta·Google 앱 설정은 시스템 전체에서 한 번만 완료하면 이후 모든 사용자는 공식 계정 로그인과 권한 승인만 합니다.</div>` : '';
 
+      const notice = callbackNotice();
+      const callbackStatus = new URL(location.href).searchParams.get('ekodi_connect');
+      const tabs = [['connect','연결하기',0],['accounts','연결된 계정',connections.length],['organic','무료 게시',organic],['paid','유료 홍보',paid],['history','활동 내역',campaigns.length]];
+      let activeTab = callbackStatus === 'success' ? 'accounts' : callbackStatus ? 'connect' : (readTab() || 'connect');
+      if (!tabs.some(([key]) => key === activeTab)) activeTab = 'connect';
+      const tabButton = ([key,label,count]) => `<button type="button" class="growth-tab" role="tab" id="growthTab-${key}" aria-controls="growthPane-${key}" aria-selected="${key === activeTab}" data-growth-tab="${key}">${label}${count ? `<span class="growth-count">${count}</span>` : ''}</button>`;
+      const pane = (key,body) => `<div class="growth-pane" role="tabpanel" id="growthPane-${key}" aria-labelledby="growthTab-${key}" data-growth-pane="${key}" ${key === activeTab ? '' : 'hidden'}>${body}</div>`;
+      const card = (title,configured,bodyText,accounts,button) => `<section class="growth-card"><header><h4>${title}</h4><span class="growth-state ${configured ? 'active' : 'draft'}">${configured ? '준비됨' : '앱 설정 필요'}</span></header><p>${bodyText}</p>${accounts}${button}</section>`;
+
       view.innerHTML = `<div class="growth-hub" data-growth-hub data-growth-manager>
         <section class="growth-hero"><span class="growth-chip">중앙 OAuth · 암호화 Vault · 무료 직접 게시</span><h3>게시 · 홍보 연결센터</h3><p>인증키, Access Token, Page ID를 복사하지 않습니다. 공식 계정으로 로그인하면 에코디가 권한·계정발견·토큰보관·게시·유입추적을 한 흐름으로 처리합니다. Metricool은 필수가 아닙니다.</p></section>
-        ${callbackNotice()}${platformAlert}
+        ${notice}${platformAlert}
         <div class="growth-summary"><article><small>게시 연결</small><strong>${activePublish}</strong></article><article><small>광고계정</small><strong>${adAccounts}</strong></article><article><small>무료 홍보</small><strong>${organic}</strong></article><article><small>유료 초안</small><strong>${paid}</strong></article></div>
-        <div class="growth-connectors">
-          <section class="growth-card"><header><h4>Meta 통합 연결</h4><span class="growth-state ${platform.metaConfigured ? 'active' : 'draft'}">${platform.metaConfigured ? '준비됨' : '앱 설정 필요'}</span></header><p>Facebook 페이지와 연결된 Instagram 비즈니스 계정을 한 번의 Meta 승인으로 자동 검색·연결합니다.</p><button type="button" data-connect="meta" ${platform.metaConfigured ? '' : 'disabled'}>Meta로 계속</button></section>
-          <section class="growth-card"><header><h4>Threads 연결</h4><span class="growth-state ${platform.threadsConfigured ? 'active' : 'draft'}">${platform.threadsConfigured ? '준비됨' : '앱 설정 필요'}</span></header><p>Threads 공식 로그인으로 프로필을 연결합니다. 토큰은 암호화 Vault에만 보관됩니다.</p><button type="button" data-connect="threads" ${platform.threadsConfigured ? '' : 'disabled'}>Threads로 계속</button></section>
-          <section class="growth-card"><header><h4>YouTube 연결</h4><span class="growth-state ${platform.youtubeConfigured ? 'active' : 'draft'}">${platform.youtubeConfigured ? '준비됨' : '앱 설정 필요'}</span></header><p>Google 계정으로 로그인해 YouTube 채널을 연결합니다. API 키나 비밀번호는 입력하지 않습니다.</p><button type="button" data-connect="youtube" ${platform.youtubeConfigured ? '' : 'disabled'}>Google로 YouTube 연결</button></section>
-          <section class="growth-card"><header><h4>유료 홍보 권한</h4><span class="growth-state ${adAccounts ? 'active' : 'draft'}">${adAccounts ? `${adAccounts} 계정` : '선택 연결'}</span></header><p>Meta 광고계정 권한을 연결합니다. 광고 캠페인은 승인 후에도 PAUSED로만 생성해 예기치 않은 과금을 막습니다.</p><button type="button" data-connect-paid ${platform.metaConfigured ? '' : 'disabled'}>Meta 광고계정 연결</button></section>
-        </div>
-        <section class="growth-card"><h4>연결된 계정</h4>${connectionRows(connections)}</section>
-        <div class="growth-grid">
-          <section class="growth-card"><h4>무료 게시 · 홍보 실행</h4><p>연결 채널을 고르면 UTM을 자동 부착해 실제 게시하고, 성공·실패 URL을 에코디에 기록합니다.</p><form class="growth-form" data-organic-form>${channelChecks(connections)}<div class="growth-form-grid"><label class="growth-full">캠페인 이름<input name="name" required maxlength="120" placeholder="예: 에코디몰 오늘의 발견"></label><label class="growth-full">게시문<textarea name="caption" required maxlength="12000" placeholder="홍보 문구"></textarea></label><label>유입 링크<input name="targetUrl" type="url" placeholder="https://ekodi.kr/ekodibiz/ekodimall"></label><label>미디어 URL<input name="imageUrl" type="url" placeholder="Instagram은 이미지 · YouTube는 MP4 영상"></label></div><div class="growth-note">무료 홍보는 광고비 0원입니다. Facebook·Instagram·Threads·YouTube마다 UTM source를 자동 구분해 유입을 추적합니다.</div><button type="submit" ${activePublish ? '' : 'disabled'}>게시 · 무료 홍보 실행</button><div class="growth-result"></div></form></section>
-          <section class="growth-card"><h4>유료 홍보 초안</h4><p>예산·목표만 먼저 기록합니다. 초안 생성만으로는 1원도 집행되지 않습니다.</p><form class="growth-form" data-paid-form><div class="growth-form-grid"><label class="growth-full">광고계정<select name="adAccountConnectionId" required>${adOptions(connections)}</select></label><label class="growth-full">캠페인 이름<input name="name" required maxlength="120" placeholder="예: 에코디몰 유입 캠페인"></label><label class="growth-full">목표 URL<input name="targetUrl" required type="url" placeholder="https://ekodi.kr/ekodibiz/ekodimall"></label><label>일 예산<input name="dailyBudgetKrw" required type="number" min="1000" step="1000" value="5000"></label><label>총 예산<input name="totalBudgetKrw" required type="number" min="1000" step="1000" value="30000"></label><label class="growth-full">광고 문안<textarea name="caption" maxlength="12000" placeholder="광고 소재 문안"></textarea></label></div><div class="growth-note">안전장치: 초안 → 명시적 광고비 승인 → Meta에 PAUSED 캠페인 생성. 현재 자동 활성화는 의도적으로 막아두었습니다.</div><button type="submit" ${adAccounts ? '' : 'disabled'}>유료 홍보 초안 만들기</button><div class="growth-result"></div></form></section>
-        </div>
-        <section class="growth-card"><h4>홍보 활동 내역</h4>${campaignRows(campaigns)}</section>
+        <div class="growth-tabs" role="tablist" aria-label="게시·홍보 메뉴">${tabs.map(tabButton).join('')}</div>
+        ${pane('connect',`<div class="growth-connectors">
+          ${card('Meta 통합 연결',platform.metaConfigured,'Facebook 페이지와 연결된 Instagram 비즈니스 계정을 한 번의 Meta 승인으로 자동 검색·연결합니다.',providerAccountSummary(connections,['facebook','instagram']),`<button type="button" class="primary" data-connect="meta" ${platform.metaConfigured ? '' : 'disabled'}>Meta로 계속</button>`)}
+          ${card('Threads 연결',platform.threadsConfigured,'Threads 공식 로그인으로 프로필을 연결합니다. 토큰은 암호화 Vault에만 보관됩니다.',providerAccountSummary(connections,['threads']),`<button type="button" class="primary" data-connect="threads" ${platform.threadsConfigured ? '' : 'disabled'}>Threads로 계속</button>`)}
+          ${card('YouTube 연결',platform.youtubeConfigured,'Google 계정으로 로그인해 YouTube 채널을 연결합니다. 브랜드 계정 채널은 Google 계정 선택 다음의 “채널 선택” 화면에서 고르면 됩니다.',providerAccountSummary(connections,['youtube']),`<button type="button" class="primary" data-connect="youtube" ${platform.youtubeConfigured ? '' : 'disabled'}>Google로 YouTube 연결</button>`)}
+          <section class="growth-card"><header><h4>유료 홍보 권한</h4><span class="growth-state ${adAccounts ? 'active' : 'draft'}">${adAccounts ? `${adAccounts} 계정` : '선택 연결'}</span></header><p>Meta 광고계정 권한을 연결합니다. 광고 캠페인은 승인 후에도 PAUSED로만 생성해 예기치 않은 과금을 막습니다.</p>${providerAccountSummary(connections,['facebook_ads'])}<button type="button" data-connect-paid ${platform.metaConfigured ? '' : 'disabled'}>Meta 광고계정 연결</button></section>
+        </div>`)}
+        ${pane('accounts',`<section class="growth-card"><h4>연결된 계정</h4><p>각 채널이 어떤 로그인 계정으로 연결됐는지 보여 줍니다.</p>${connectionRows(connections)}</section>`)}
+        ${pane('organic',`<section class="growth-card"><h4>무료 게시 · 홍보 실행</h4><p>연결 채널을 고르면 UTM을 자동 부착해 실제 게시하고, 성공·실패 URL을 에코디에 기록합니다.</p><form class="growth-form" data-organic-form>${channelChecks(connections)}<div class="growth-form-grid"><label class="growth-full">캠페인 이름<input name="name" required maxlength="120" placeholder="예: 에코디몰 오늘의 발견"></label><label class="growth-full">게시문<textarea name="caption" required maxlength="12000" placeholder="홍보 문구"></textarea></label><label>유입 링크<input name="targetUrl" type="url" placeholder="https://ekodi.kr/ekodibiz/ekodimall"></label><label>미디어 URL<input name="imageUrl" type="url" placeholder="Instagram은 이미지 · YouTube는 MP4 영상"></label></div><div class="growth-note">무료 홍보는 광고비 0원입니다. Facebook·Instagram·Threads·YouTube마다 UTM source를 자동 구분해 유입을 추적합니다.</div><button type="submit" ${activePublish ? '' : 'disabled'}>게시 · 무료 홍보 실행</button><div class="growth-result"></div></form></section>`)}
+        ${pane('paid',`<section class="growth-card"><h4>유료 홍보 초안</h4><p>예산·목표만 먼저 기록합니다. 초안 생성만으로는 1원도 집행되지 않습니다.</p><form class="growth-form" data-paid-form><div class="growth-form-grid"><label class="growth-full">광고계정<select name="adAccountConnectionId" required>${adOptions(connections)}</select></label><label class="growth-full">캠페인 이름<input name="name" required maxlength="120" placeholder="예: 에코디몰 유입 캠페인"></label><label class="growth-full">목표 URL<input name="targetUrl" required type="url" placeholder="https://ekodi.kr/ekodibiz/ekodimall"></label><label>일 예산<input name="dailyBudgetKrw" required type="number" min="1000" step="1000" value="5000"></label><label>총 예산<input name="totalBudgetKrw" required type="number" min="1000" step="1000" value="30000"></label><label class="growth-full">광고 문안<textarea name="caption" maxlength="12000" placeholder="광고 소재 문안"></textarea></label></div><div class="growth-note">안전장치: 초안 → 명시적 광고비 승인 → Meta에 PAUSED 캠페인 생성. 현재 자동 활성화는 의도적으로 막아두었습니다.</div><button type="submit" ${adAccounts ? '' : 'disabled'}>유료 홍보 초안 만들기</button><div class="growth-result"></div></form></section>`)}
+        ${pane('history',`<section class="growth-card"><h4>홍보 활동 내역</h4>${campaignRows(campaigns)}</section>`)}
       </div>`;
 
+      view.querySelectorAll('[data-growth-tab]').forEach(button => button.addEventListener('click',() => {
+        const key = button.dataset.growthTab;
+        writeTab(key);
+        view.querySelectorAll('[data-growth-tab]').forEach(node => node.setAttribute('aria-selected',String(node === button)));
+        view.querySelectorAll('[data-growth-pane]').forEach(node => { node.hidden = node.dataset.growthPane !== key; });
+      }));
       view.querySelector('[data-connect="meta"]')?.addEventListener('click',() => connect('meta').catch(error => alert(error.message)));
       view.querySelector('[data-connect="threads"]')?.addEventListener('click',() => connect('threads').catch(error => alert(error.message)));
       view.querySelector('[data-connect="youtube"]')?.addEventListener('click',() => connect('youtube').catch(error => alert(error.message)));
