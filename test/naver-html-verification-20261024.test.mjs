@@ -13,6 +13,11 @@ test('Naver HTML ownership file is served verbatim at the root path', async () =
   assert.equal(await searchVerificationFileResponse(FILE, { head: true }).text(), '');
 });
 
+test('second Naver file for ekodi.kr is served too', async () => {
+  const res = searchVerificationFileResponse('/naver55dffd2edf849422807852a996ee52e6.html');
+  assert.equal(await res.text(), 'naver-site-verification: naver55dffd2edf849422807852a996ee52e6.html');
+});
+
 test('unknown, nested or malformed verification paths are not answered', () => {
   for (const path of ['/naver00000000000000000000000000000000.html', '/ekodimall' + FILE, FILE + '?x', '/naverf72bebc155107dcad735d8178146679f.txt', '/../naver.html'])
     assert.equal(searchVerificationFileResponse(path), null, path);
