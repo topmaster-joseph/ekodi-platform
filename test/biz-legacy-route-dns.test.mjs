@@ -123,3 +123,12 @@ test('deployment timeout covers a full public DNS cache TTL', async () => {
   assert.match(script, /attempts = options\.attempts \?\? 105/);
   assert.match(script, /intervalMs = options\.intervalMs \?\? 4000/);
 });
+
+test('wrong redirect destination does not count as successful', async () => {
+  const fetchImpl = async () => new Response(null, { status: 301,
+    headers: { location: 'https://example.invalid/unexpected' } });
+  await assert.rejects(
+    verifyRedirects(['ekodibiz.kr'], fetchImpl, { attempts: 2, intervalMs: 0 }),
+    /Last observation: HTTP 301, location=https:\/\/example\.invalid\/unexpected/,
+  );
+});
