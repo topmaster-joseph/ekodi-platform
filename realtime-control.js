@@ -2,6 +2,7 @@ import { canonicalAiSubject, personalAiSubjectCandidates, resolveCanonicalEkodiI
 import { entitlementSnapshot, evaluateRealtimeRequest, resolveRealtimeTier } from './src/realtime/entitlement.mjs';
 import { planAdaptiveMedia } from './src/realtime/adaptive-media.mjs';
 import { realtimeTenant, realtimeTenantAliases, realtimeTenantList } from './realtime-tenant-registry.js';
+import { handleLiveInterpretation } from './live-interpretation-control.js';
 
 const PREFIX='/api/realtime';
 const PROVIDER_BASE='https://rtc.live.cloudflare.com/v1';
@@ -789,6 +790,9 @@ export async function handleRealtimeControl(request,env){
     input=await body(request);
     if(!input)return json(request,env,{ok:false,error:'invalid_json'},400);
   }
+  // Interpretation captions + external simulcast (shared by every tenant).
+  const liveAddon=await handleLiveInterpretation(request,env,url,input,{json,tenantAdminAccess,subjectOf:canonicalAiSubject,realtimeTenant,evaluate:evaluateRealtimeRequest});
+  if(liveAddon)return liveAddon;
   if(url.pathname===`${PREFIX}/rooms`&&request.method==='POST'){
     const config=realtimeTenant(input?.tenant||'ekodichurch');
     if(!config)return json(request,env,{ok:false,error:'invalid_tenant'},400);

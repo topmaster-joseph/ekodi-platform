@@ -183,6 +183,7 @@ const controlApiTouched=changedFiles.some(file=>
   // A token-mediated merge skips main push; dispatch the guarded API on these edits.
   'realtime-control.js',
   'realtime-tenant-registry.js',
+  'live-interpretation-control.js',
   // Control API directly imports the Orchestrator completion/OIDC boundary.
   // A trusted GitHub Actions merge does not automatically trigger main push.
   'ekodi-orchestrator-task-adapter.js',
@@ -346,7 +347,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   // Church Live studio and tenant registry are owned by the shared Site Core.
   // Never strand the studio UI when a token-mediated merge skips push workflows.
   ['tenant-live.js','tenant-live.css','tenant-live-page.js',
-   'tenant-live-admin-page.js','realtime-tenant-registry.js'].includes(file)||
+   'tenant-live-admin-page.js','realtime-tenant-registry.js',
+   'live-interpretation.js','live-interpretation.css'].includes(file)||
   // Admin Google handoff is bundled in Site Core; never skip its post-merge release.
   file==='admin-central-handoff.js'||
   file==='ai-provider-control.js'||
