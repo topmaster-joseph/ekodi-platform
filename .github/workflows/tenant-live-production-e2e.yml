@@ -12,6 +12,8 @@ on:
       - 'realtime-tenant-registry.js'
       - 'tenant-live-page.js'
       - 'tenant-live.js'
+      - 'live-interpretation.js'
+      - 'live-interpretation-control.js'
       - 'tenant-live.css'
 
 permissions:

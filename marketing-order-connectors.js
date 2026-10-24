@@ -1,6 +1,9 @@
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const STORE_MANAGER_ROLES = new Set(['store_owner','tenant_admin','platform_admin','hq_manager','client_admin','accounting_manager']);
+// Tenant-level administrators manage every store of their own tenant, matching the
+// store admin surface (tenant_admin is FULL there). Never widened to store staff.
+const TENANT_MANAGER_ROLES = new Set(['tenant_admin','platform_admin','client_admin']);
 const BRIDGE_PROVIDERS = new Set(['pos_bridge','baemin','coupang_eats','yogiyo']);
 const encoder = new TextEncoder();
 
@@ -89,11 +92,18 @@ async function storeContext(request, env, storeId, requireManager=true) {
   if (!store) return { error:'유효한 점포가 필요합니다.', status:400 };
   const who = await identity(request);
   if (!who) return { error:'EKODI 로그인과 Marketing workspace 권한이 필요합니다.', status:401 };
-  const access = who.workspaces.find(row => String(row?.store_id || '').toLowerCase() === store && String(row?.workspace_key || '') === `store:${store}`);
-  if (!access) return { error:'이 점포의 Marketing workspace에 접근할 수 없습니다.', status:403 };
-  if (requireManager && !STORE_MANAGER_ROLES.has(String(access.role || ''))) return { error:'이 점포의 데이터 연결을 관리할 권한이 없습니다.', status:403 };
   const template = await env.DB.prepare(`SELECT workspace_type,workspace_key,tenant_slug,store_id,template_key,identity_salt
     FROM marketing_workspace_templates WHERE workspace_type='store' AND workspace_key=? LIMIT 1`).bind(store).first();
+  const storeAccess = who.workspaces.find(row => String(row?.store_id || '').toLowerCase() === store && String(row?.workspace_key || '') === `store:${store}`);
+  const tenantSlug = String(template?.tenant_slug || '').toLowerCase();
+  const tenantAccess = storeAccess || !tenantSlug ? null : who.workspaces.find(row =>
+    String(row?.workspace_key || '').startsWith('tenant:')
+    && String(row?.tenant || '').toLowerCase() === tenantSlug
+    && String(row?.status || 'active') === 'active'
+    && TENANT_MANAGER_ROLES.has(String(row?.role || '')));
+  const access = storeAccess || tenantAccess;
+  if (!access) return { error:'이 점포의 Marketing workspace에 접근할 수 없습니다.', status:403 };
+  if (requireManager && !STORE_MANAGER_ROLES.has(String(access.role || ''))) return { error:'이 점포의 데이터 연결을 관리할 권한이 없습니다.', status:403 };
   if (!template) return { error:'이 점포의 CRM 템플릿이 아직 활성화되지 않았습니다.', status:404 };
   return { store, who, access, template };
 }
