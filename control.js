@@ -99,6 +99,25 @@
       renderMessages();
     }finally{state.busy=false;$('#sendButton').disabled=false}
   }
+  // CONTROL-FACTCHAT-INSTITUTION-001: same super-admin playground path as the admin assist dock.
+  // The server enforces super_admin, the owner approval, the enabled flag and the daily cap.
+  const FACTCHAT_INSTITUTION_LABEL='FactChat · 목포대 기관계정';
+  const EXTERNAL_SECRET_RE=/(sk-[a-z0-9_-]{12,}|gh[pousr]_[a-z0-9]{20,}|akia[0-9a-z]{16}|-----begin [a-z ]+private key-----|\beyj[a-z0-9_-]{10,}\.[a-z0-9_-]{10,}\.[a-z0-9_-]{10,}\b|(?:password|passwd|비밀번호)\s*[:=]\s*\S+)/i;
+  const FACTCHAT_ERRORS=Object.freeze({institution_account_super_admin_required:'기관계정은 최고관리자만 사용할 수 있습니다.',institution_account_approval_required:'기관계정 사용 승인이 꺼져 있습니다. AI 운영센터 › 연결에서 승인 후 저장하세요.',institution_account_disabled:'기관계정이 꺼져 있습니다. AI 운영센터 › 연결에서 사용을 켜고 저장하세요.',secret_not_configured:'기관계정 API Key가 연결되지 않았습니다.',institution_daily_limit_reached:'기관계정 오늘 호출 한도에 도달했습니다.'});
+  async function askFactChatInstitution(message,prior){
+    if(EXTERNAL_SECRET_RE.test(message)){pushMessage('assistant','비밀번호·API 키·토큰처럼 보이는 값은 외부 AI로 보내지 않습니다. 민감정보를 제거한 뒤 다시 실행해 주세요.',{provider:FACTCHAT_INSTITUTION_LABEL,status:'failed'});return}
+    const transcript=(prior||[]).slice(-6).map(turn=>(turn.role==='user'?'사용자':'AI')+': '+String(turn.text||'').slice(0,900)).join('\n');
+    const input=(transcript?'[이전 대화]\n'+transcript+'\n\n[이번 질문]\n'+message:message).slice(-7800);
+    try{
+      const result=await api('/api/ai-modules/v1/providers/admin/factchat-institution/playground',{method:'POST',headers:{'x-ekodi-confirm-impact':'factchat-institution-playground'},body:JSON.stringify({input,system:'당신은 EKODI 최고관리자를 돕는 한국어 AI 비서입니다. 이전 대화 맥락을 이어서 간결하고 정확하게 답하고, 모르는 것은 확인필요라고 말하세요.'})});
+      if(result?.ok!==true){pushMessage('assistant','기관계정 호출 실패: '+String(result?.code||'unknown'),{provider:FACTCHAT_INSTITUTION_LABEL,status:'failed'});return}
+      const usage='— '+String(result.model||'')+' · 입력 '+String(result.usage?.inputUnits??0)+' / 출력 '+String(result.usage?.outputUnits??0)+' 토큰 · 기관 크레딧';
+      pushMessage('assistant',String(result.text||'응답을 받지 못했습니다.')+'\n\n'+usage,{provider:FACTCHAT_INSTITUTION_LABEL,target:'factchat-institution',status:'assist_only'});
+    }catch(error){
+      const code=String(error?.message||'');
+      pushMessage('assistant',FACTCHAT_ERRORS[code]||code||'기관계정 호출에 실패했습니다.',{provider:FACTCHAT_INSTITUTION_LABEL,status:'failed'});
+    }
+  }
   function historyForAssist(){const s=state.sessions.find(x=>x.id===state.activeId);return (s?.messages||[]).filter(m=>m.role==='user'||m.role==='assistant').slice(-8).map(m=>({role:m.role,text:m.text}))}
   async function previewAiRoute(){
     const goal=String($('#commandInput')?.value||'').trim();
@@ -138,6 +157,8 @@
     const prior=historyForAssist();pushMessage('user',message,{target});$('#commandInput').value='';resizeInput();
     let queued=null;
     try{
+      // Selecting the institution account is the consent; a protected release request still wins.
+      if(!releaseMode&&target==='factchat-institution'){await askFactChatInstitution(message,prior);return;}
       if(releaseMode){
         // Stable per conversation/message to prevent duplicate task creation on retries.
         const bytes=new TextEncoder().encode(String(state.activeId||'session')+'\\0'+message);
