@@ -49,6 +49,12 @@ invocation_logs = true
 [triggers]
 crons = ["*/10 * * * *"]
 
+# EKODI-MALL-PRODUCT-PHOTOS-001: seller product photos (prefix ekodimall/products/).
+# Keep this block above [[d1_databases]]: the deploy workflow appends database_id to the end of this file.
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "ekodi-storage"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "ekodi-mall"

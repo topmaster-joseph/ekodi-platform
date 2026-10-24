@@ -21,6 +21,7 @@
     { title: '상품·가격·재고', hint: '판매 방식, 상품명, 가격, 재고를 입력하세요.', fields: [2], required: ['productName', 'price'] },
     { title: '상품 소개', hint: '한 줄 소개는 게시에 꼭 필요합니다.', fields: [4], required: ['oneLine'] },
     { title: '배송 · 저장 · 게시', hint: '배송·제공 방식을 적고 [서버에 저장] → [게시 · 링크 활성화]를 누르세요.', fields: [5], buttons: true, required: ['fulfillment'] },
+    { title: '상품 사진', hint: '대표 사진부터 올리세요. 첫 번째 사진이 상품 페이지 대표 이미지가 됩니다.', show: () => [document.querySelector('#sellerPhotos')].filter(Boolean) },
     { title: '판매 인증', hint: '판매자 인증을 신청하면 운영자 승인 후 결제가 열립니다.', show: () => [document.querySelector('#commerceReadiness')].filter(Boolean) }
   ];
 
