@@ -246,6 +246,24 @@ async function authenticate(request, env) {
   return user?.id ? user : null;
 }
 
+// EKODI-MALL-EKODIAN-001: EKODI operator ("에코디언") accounts run the autonomous
+// direct-sale lane: seller verification and the product checkout gate open
+// automatically (always audited). Only Google-verified emails on the allowlist count.
+export function ekodianEmails(env) {
+  return new Set(cleanText(env?.MALL_EKODIAN_EMAILS || '', 1000).split(',').map((item) => item.trim().toLowerCase()).filter(Boolean));
+}
+export function isEkodian(user, env) {
+  const email = cleanText(user?.email, 240).toLowerCase();
+  const verified = Boolean(user?.email_confirmed_at || user?.confirmed_at);
+  return Boolean(email) && verified && ekodianEmails(env).has(email);
+}
+async function opsAudit(env, actor, action, sellerId, productId, metadata) {
+  try {
+    await env.DB.prepare('INSERT INTO mall_ops_audit (actor,action,seller_id,store_id,product_id,request_id,metadata_json,created_at) VALUES (?,?,?,?,?,?,?,?)')
+      .bind(actor, action, sellerId, null, productId || null, null, JSON.stringify(metadata || {}).slice(0, 4000), isoNow()).run();
+  } catch (error) { console.error('mall ops audit', error); }
+}
+
 function displayNameFromUser(user) {
   const metadata = user?.user_metadata || {};
   return cleanText(metadata.full_name || metadata.name || String(user?.email || '').split('@')[0], 100);
@@ -336,9 +354,25 @@ async function getOwnerProduct(env, sellerId, id) {
 }
 
 async function saveProduct(env, user, body, existingId = '') {
-  const { value, errors } = normalizeProductInput(body);
+  // Simple listing: seller name and contact default to the signed-in account
+  // so sellers only type product name, price and stock.
+  const input = body && typeof body === 'object' ? body : {};
+  input.seller = { ...(input.seller || {}) };
+  input.product = { ...(input.product || {}) };
+  const official = isEkodian(user, env);
+  const typedName = cleanText(input.seller.displayName, 100);
+  if (!typedName || typedName === '판매자') input.seller.displayName = official ? '에코디몰' : (displayNameFromUser(user) || '판매자');
+  if (!cleanText(input.product.contact || input.store?.contact, 240)) input.product.contact = cleanText(user?.email, 240);
+  const { value, errors } = normalizeProductInput(input);
   if (errors.length) return { errors };
   const seller = await ensureSeller(env, user, value);
+  if (official) {
+    const profile = await env.DB.prepare('SELECT direct_sale_status FROM seller_profiles WHERE user_id=?').bind(user.id).first();
+    if (profile && profile.direct_sale_status !== 'verified') {
+      await env.DB.prepare("UPDATE seller_profiles SET direct_sale_status='verified',updated_at=? WHERE user_id=?").bind(isoNow(), user.id).run();
+      await opsAudit(env, 'mall-auto:ekodian', 'seller.direct_sale.auto_verified', user.id, null, { email: cleanText(user.email, 240) });
+    }
+  }
   const linkedStoreId = await ensureStore(env, user.id, value.store);
   const now = isoNow();
   if (existingId) {
@@ -392,7 +426,7 @@ function publicationErrors(row) {
   return errors;
 }
 
-async function setPublished(env, sellerId, id, published) {
+async function setPublished(env, sellerId, id, published, official = false) {
   const row = await getOwnerProduct(env, sellerId, id);
   if (!row) return { notFound: true };
   if (published) {
@@ -402,19 +436,27 @@ async function setPublished(env, sellerId, id, published) {
   const now = isoNow();
   await env.DB.prepare('UPDATE products SET status=?,published_at=?,updated_at=? WHERE id=? AND seller_id=?')
     .bind(published ? 'published' : 'draft', published ? now : null, now, id, sellerId).run();
+  if (published && official && row.sale_type === 'direct' && Number.isInteger(row.price) && row.price > 0
+      && row.stock_quantity !== null && row.stock_quantity !== undefined && !row.checkout_ready) {
+    await env.DB.prepare('UPDATE products SET checkout_ready=1,updated_at=? WHERE id=? AND seller_id=?').bind(now, id, sellerId).run();
+    await opsAudit(env, 'mall-auto:ekodian', 'product.checkout_gate.auto_enabled', sellerId, id, { price: row.price, stock: row.stock_quantity });
+  }
   return { product: rowToOwnerProduct(await getOwnerProduct(env, sellerId, id)) };
 }
 
 async function getPublicProduct(env, shareCode) {
   const row = await env.DB.prepare(`${OWNER_SELECT} WHERE p.share_code=? AND p.status='published'`).bind(shareCode).first();
   if (!row) return null;
+  const sellerProfile = await env.DB.prepare('SELECT email,direct_sale_status FROM seller_profiles WHERE user_id=?').bind(row.seller_id).first().catch(() => null);
+  const sellerVerified = sellerProfile?.direct_sale_status === 'verified';
+  const sellerOfficial = Boolean(sellerProfile?.email) && ekodianEmails(env).has(String(sellerProfile.email).toLowerCase());
   const feePreview = row.seller_type === 'individual'
     ? { direct: 7, marketplace: 8, ai: 9, pgIncluded: true, vatIncluded: true }
     : { businessStore: 10, pgIncluded: true, vatIncluded: true, verificationRequiredForCheckout: true };
   return {
     shareCode: row.share_code,
     publicUrl: row.public_url,
-    seller: { type: row.seller_type, displayName: row.seller_display_name },
+    seller: { type: row.seller_type, displayName: row.seller_display_name, verified: sellerVerified, official: sellerOfficial },
     store: row.store_id ? { name: row.store_name || '', slug: row.store_slug || '' } : null,
     product: {
       saleType: row.sale_type, category: normalizeCategory(row.category), region: row.primary_region_id ? { primaryRegionId: row.primary_region_id, regionIds: JSON.parse(row.region_ids_json || '[]'), label: row.region_label || '', relationship: row.local_relationship || 'seller-declared', verified: Boolean(row.region_verified) } : null, name: row.name, audience: row.audience || '', oneLine: row.one_line || '', price: row.price,
@@ -864,7 +906,7 @@ export default {
 
     const publishMatch = url.pathname.match(/^\/api\/products\/([^/]+)\/(publish|unpublish)$/);
     if (request.method === 'POST' && publishMatch) {
-      const result = await setPublished(env, user.id, decodeURIComponent(publishMatch[1]), publishMatch[2] === 'publish');
+      const result = await setPublished(env, user.id, decodeURIComponent(publishMatch[1]), publishMatch[2] === 'publish', isEkodian(user, env));
       if (result.notFound) return json({ error: '상품을 찾을 수 없습니다.' }, 404, origin, env);
       if (result.errors) return json({ error: result.errors.join(' '), fields: result.errors }, 400, origin, env);
       return json(result, 200, origin, env);
