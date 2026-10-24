@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://books.ekodi.kr/sitemap.xml
+Sitemap: https://ekodi.kr/books/sitemap.xml
