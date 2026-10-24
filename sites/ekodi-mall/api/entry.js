@@ -12,7 +12,7 @@ import { handleSupplierPilotRequest, supplierPilotSchemaReady } from './supplier
 import { handleSupplierDiscoveryRequest, supplierDiscoverySchemaReady } from './supplier-discovery.js';
 import { handleDomemaeRequest, domemaeConnectorReady } from './domemae.js';
 import { probeDomeggookKey, syncSupplyProducts } from './domeggook-import.js';
-import { placeSupplierOrders, trackSupplierOrders, autoOrderEnabled } from './domeggook-order.js';
+import { placeSupplierOrders, trackSupplierOrders, autoOrderEnabled, probeDomeggookLogin } from './domeggook-order.js';
 import { handleAnalyticsRequest } from './analytics.js';
 import { handleStorefrontRequest } from './storefront.js';
 import { commerceEventSchemaReady } from './commerce-events.js';
@@ -286,7 +286,7 @@ export default {
     }).catch(error => console.error('mall expiry sweep failed', error)) : Promise.resolve();
     if (ctx?.waitUntil) ctx.waitUntil(expirySweep); else await expirySweep;
     // EKODI-MALL-DOMEGGOOK-IMPORT-001: 키 동작 확인(6시간 1회) + 위탁상품 가격·재고 동기화.
-    const supplySync = env?.DB ? placeSupplierOrders(env).then(summary => {
+    const supplySync = env?.DB ? probeDomeggookLogin(env).then(() => placeSupplierOrders(env)).then(summary => {
       if (summary.placed || summary.failed || summary.unknown) console.log('mall supplier auto-order', JSON.stringify(summary));
       return trackSupplierOrders(env);
     }).then(() => probeDomeggookKey(env)).then(() => syncSupplyProducts(env)).then(summary => {
