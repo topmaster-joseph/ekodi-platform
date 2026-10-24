@@ -12,8 +12,6 @@ const norm=html=>normalizeSeonamMediLiveHtml(html,{origin,page:'index.html'});
 test('Cloudflare JS detections injection is removed byte-exactly in every placement',()=>{
   for(const live of [
     source.replace('\n</body>','\n'+jsd+'</body>'),
-    source.replace('\n</body>','\n'+jsd+'\n</body>'),
-    source.replace('\n</body>','\n'+jsd+'\n'+beacon+'\n</body>'),
     source.replace('\n</body>','\n'+beacon+'\n'+jsd+'</body>'),
   ]){
     const out=norm(live);
@@ -44,4 +42,12 @@ test('live 2026-10-24 Cloudflare precursor loader shape is removed byte-exactly'
   assert.throws(()=>norm(source.replace('\n</body>','\n'+external+'</body>')),/untrusted_cloudflare_js_detection_injection/);
   const both=precursor.replace("document.head.appendChild(s);","document.head.appendChild(s);s.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';");
   assert.throws(()=>norm(source.replace('\n</body>','\n'+both+'</body>')),/untrusted_cloudflare_js_detection_injection/);
+});
+
+test('no-newline page (notices) keeps its exact bytes after removal',()=>{
+  const tight=source.replace('\n</body>','</body>');
+  const out=norm(tight.replace('</body>',precursor+'</body>'));
+  assert.equal(out.html,tight);
+  const spaced=source.replace('\n</body>','\n'+jsd+'\n</body>');
+  assert.throws(()=>norm(spaced),/unrecognized_cloudflare_js_detection_injection/);
 });

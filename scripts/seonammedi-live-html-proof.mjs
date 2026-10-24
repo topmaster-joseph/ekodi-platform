@@ -13,7 +13,7 @@ const cfBeacon=/\n<script type="module" src="https:\/\/static\.cloudflareinsight
 // inline script before </body> that loads a same-origin /cdn-cgi challenge script.
 // Recognize only that exact shape: hex ray id, base64 token, same-origin jsd path,
 // no external URL, no nested markup. Anything else stays a mismatch.
-const cfJsd=/\n?<script>window\.__CF\$cv\$params=\{r:'([0-9a-f]{16})',t:'([A-Za-z0-9+\/=]+)'((?:,[a-z]{1,8}:(?:'[A-Za-z0-9+\/=_.\-]*'|\d{1,6}))*)\};([^<]*)<\/script>\n?(?=\s*(?:<script type="module" src="https:\/\/static\.cloudflareinsights\.com\/|<\/body>))/g;
+const cfJsd=/<script>window\.__CF\$cv\$params=\{r:'([0-9a-f]{16})',t:'([A-Za-z0-9+\/=]+)'((?:,[a-z]{1,8}:(?:'[A-Za-z0-9+\/=_.\-]*'|\d{1,6}))*)\};([^<]*)<\/script>(?=(?:\n?<script type="module" src="https:\/\/static\.cloudflareinsights\.com\/|<\/body>))/g;
 // Cloudflare serves either the classic jsd loader or the newer precursor loader.
 const CF_JSD_PATHS=['/cdn-cgi/challenge-platform/scripts/jsd/main.js','/cdn-cgi/challenge-platform/scripts/precursor/main.js'];
 
@@ -24,7 +24,8 @@ function stripCloudflareJsDetections(html){
     if(CF_JSD_PATHS.filter(path=>body.includes("'"+path+"'")).length!==1||/:\/\//.test(body)||body.length>2000){
       throw new Error('untrusted_cloudflare_js_detection_injection');
     }
-    return '\n';
+    // Cloudflare inserts the tag verbatim immediately before </body>; remove only the tag.
+    return '';
   });
   if(count>1)throw new Error('multiple_cloudflare_js_detection_injections');
   if(out.includes('__CF$cv$params')||out.includes('/cdn-cgi/challenge-platform/')){
