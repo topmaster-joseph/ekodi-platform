@@ -12,6 +12,7 @@ on:
 permissions:
   contents: read
   actions: write
+  pull-requests: read
 
 concurrency:
   group: marketing-ledger-control-dispatch
@@ -36,10 +37,8 @@ jobs:
           grep -Fq '/api/marketing/ledger/campaigns' marketing-ledger-control.js
           grep -Fq "'human_gate'" marketing-ledger-control.js
           grep -Fq 'externalExecution:false' marketing-ledger-control.js
+      # CONTROL-API-DISPATCH-RECEIPT-001: dispatch with the merged orchestrator receipt.
       - name: Dispatch guarded Control API workflow
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          gh workflow run deploy-control-api.yml --ref main
-          echo 'Guarded Control API deployment dispatched for Marketing ledger change.'
+        run: node scripts/dispatch-control-api-release.mjs

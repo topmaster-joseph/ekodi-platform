@@ -82,7 +82,7 @@ jobs:
               && grep -Fq 'id="consultationForm"' /tmp/publishing.html \
               && grep -Fq 'UPAPER QUICK PUBLISH' /tmp/upaper.html \
               && grep -Fiq 'x-ekodi-shell: v2' /tmp/upaper-headers \
-              && grep -Fiq 'location: https://admin.ekodi.kr/books#books' /tmp/books-admin-headers; then
+              && grep -Fiq 'location: https://ekodi.kr/admin/books#books' /tmp/books-admin-headers; then
               echo 'EKODI Books production and adaptive UPaper helper verified.'
               exit 0
             fi

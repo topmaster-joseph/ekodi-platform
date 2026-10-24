@@ -29,6 +29,7 @@ on:
 permissions:
   contents: read
   actions: write
+  pull-requests: read
 
 jobs:
   validate:
@@ -67,17 +68,9 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 2
-      - name: Dispatch only when canonical Control API path filters would not already fire
+      # CONTROL-API-DISPATCH-RECEIPT-001: skip when a Control API run already exists
+      # for this exact SHA, otherwise dispatch with the merged orchestrator receipt.
+      - name: Dispatch canonical Control API release with its orchestrator receipt
         env:
           GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          changed=$(git diff --name-only HEAD^ HEAD)
-          printf '%s\n' "$changed"
-          if printf '%s\n' "$changed" | grep -Eq '^(migrations/|wrangler\.api\.toml$|mission-control-entry-worker\.js$)'; then
-            echo 'Canonical Deploy Control API is already triggered by this push.'
-            exit 0
-          fi
-          gh workflow run deploy-control-api.yml --ref main
-          echo 'Dispatched canonical Control API owner workflow.'
+        run: node scripts/dispatch-control-api-release.mjs

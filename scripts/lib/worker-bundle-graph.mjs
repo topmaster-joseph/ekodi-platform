@@ -79,6 +79,40 @@ export function workflowDispatchInputs(root,workflow){
   return [...inputs[1].matchAll(/^ {6}([A-Za-z0-9_-]+):/gm)].map(match=>match[1]);
 }
 
+// Required (no default) inputs declared under `on.workflow_dispatch.inputs`.
+export function requiredDispatchInputs(root,workflow){
+  let source='';
+  try{source=fs.readFileSync(path.join(root,'.github/workflows',workflow),'utf8')}catch{return null}
+  const block=source.match(/^ {2}workflow_dispatch:[^\n]*\n((?: {4,}.*\n|\s*\n)*)/m);
+  const inputs=block&&block[1].match(/^ {4}inputs:\s*\n((?: {6,}.*\n|\s*\n)*)/m);
+  if(!inputs)return [];
+  const required=[];
+  for(const entry of inputs[1].split(/\n(?= {6}[A-Za-z0-9_-]+:)/)){
+    const name=(entry.match(/^ {6}([A-Za-z0-9_-]+):/m)||[])[1];
+    if(name&&/^ {8}required:\s*true\b/m.test(entry)&&!/^ {8}default:/m.test(entry))required.push(name);
+  }
+  return required;
+}
+
+// 2026-10-24: validate-ai-provider-control.yml ran `gh workflow run deploy-control-api.yml`
+// without the inputs that lane requires, and failed with HTTP 422 on the first push that
+// reached it. Every `gh workflow run <file>` must pass each required input of its target.
+export function workflowDispatchCallProblems(root){
+  const dir=path.join(root,'.github/workflows');
+  const problems=[];
+  for(const file of fs.readdirSync(dir).filter(name=>/\.ya?ml$/.test(name))){
+    const source=fs.readFileSync(path.join(dir,file),'utf8').replace(/\\\r?\n\s*/g,' ');
+    for(const match of source.matchAll(/gh\s+workflow\s+run\s+["']?([A-Za-z0-9_.-]+\.ya?ml)["']?([^\n]*)/g)){
+      const required=requiredDispatchInputs(root,match[1]);
+      if(required===null)continue;
+      const passed=new Set([...match[2].matchAll(/(?:-f|-F|--field|--raw-field)\s+["']?([A-Za-z0-9_-]+)=/g)].map(item=>item[1]));
+      const missing=required.filter(name=>!passed.has(name));
+      if(missing.length)problems.push(`${file} runs ${match[1]} without required input(s) ${missing.join(', ')}`);
+    }
+  }
+  return problems;
+}
+
 // Workers whose bundle contains a changed file, with the lane that redeploys them.
 // `dispatches` is one entry per workflow with its extra (non-receipt) inputs.
 export function lanesForChangedFiles(root,changedFiles,{workers=listProductionWorkers(root),lanes=readWorkerLanes(root)}={}){

@@ -5,12 +5,14 @@
 // Usage: node scripts/validate-worker-deploy-lanes.mjs [--changed file1,file2]
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { lanesForChangedFiles, validateWorkerLanes } from './lib/worker-bundle-graph.mjs';
+import { lanesForChangedFiles, validateWorkerLanes, workflowDispatchCallProblems } from './lib/worker-bundle-graph.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const result=validateWorkerLanes(root);
-if(!result.ok){
+const dispatchProblems=workflowDispatchCallProblems(root);
+if(!result.ok||dispatchProblems.length){
   for(const error of result.errors)console.error(`[WORKER-LANE-GRAPH-001] ${error}`);
+  for(const problem of dispatchProblems)console.error(`[CONTROL-API-DISPATCH-RECEIPT-001] ${problem}`);
   process.exit(1);
 }
 const changedArg=process.argv.indexOf('--changed');

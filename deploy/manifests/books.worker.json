@@ -22,7 +22,8 @@
         "url": "https://books.ekodi.kr/admin",
         "statuses": [301, 302, 307, 308],
         "redirect": "manual",
-        "headerExpect": ["location: https://admin.ekodi.kr/books#books"]
+        "headerExpect": ["location: https://ekodi.kr/admin/books#books"],
+        "rollbackHeaderExpect": ["books#books"]
       }
     ]
   }
