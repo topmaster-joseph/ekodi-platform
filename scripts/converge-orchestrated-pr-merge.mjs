@@ -367,6 +367,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='seonammedi-relevance.js'||
   file==='wrangler.site.toml'||
   file==='platform-router-entry-worker.js'||
+  // Search-engine ownership meta tags and verification files are served by the Site Core router.
+  file==='search-engine-verification.js'||
   file==='canonical-surface-router.js'||
   file==='admin-sidebar.js'||
   file==='scripts/verify-admin-production-ui-e2e.mjs'||

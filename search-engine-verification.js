@@ -70,3 +70,21 @@ export function daumWebmasterLine(host, registry = DAUM_WEBMASTER_LINES) {
   const line = registry[String(host || '').toLowerCase()];
   return line && DAUM_LINE_PATTERN.test(line) ? line : '';
 }
+
+// Naver Search Advisor "HTML 파일 업로드" ownership file, received from the owner 2026-10-24.
+// Public value by design. Served on every host the platform router answers, at the exact root path.
+const VERIFICATION_FILE_PATTERN = /^\/naver[0-9a-f]{32}\.html$/;
+export const SEARCH_VERIFICATION_FILES = Object.freeze({
+  '/naverf72bebc155107dcad735d8178146679f.html': 'naver-site-verification: naverf72bebc155107dcad735d8178146679f.html',
+});
+
+export function searchVerificationFileResponse(pathname, { head = false } = {}, registry = SEARCH_VERIFICATION_FILES) {
+  const path = String(pathname || '');
+  if (!VERIFICATION_FILE_PATTERN.test(path)) return null;
+  const body = registry[path];
+  if (!body || body !== `naver-site-verification: ${path.slice(1)}`) return null;
+  return new Response(head ? null : body, {
+    status: 200,
+    headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=300', 'x-content-type-options': 'nosniff' },
+  });
+}
