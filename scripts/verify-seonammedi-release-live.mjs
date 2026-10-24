@@ -70,7 +70,13 @@ for(let attempt=1;attempt<=attempts;attempt++){
       if(actualHash!==expectedHash){
         const customerHost=new URL(origin).hostname.toLowerCase();
         const isCustomer=['seonammedi.kr','www.seonammedi.kr','xn--3e0b8b58jw4co4mnpll3k.kr','www.xn--3e0b8b58jw4co4mnpll3k.kr'].includes(customerHost);
-        if(!isCustomer)throw new Error(name+'_html_digest_mismatch expected='+expectedHash+' actual='+actualHash);
+        if(!isCustomer){
+          // Diagnostic only: locate the first divergence so the failure is actionable.
+          const diff=compareSeonamMediPublishedHtml(published,normalized.html,[]);
+          const at=(value,pos)=>typeof pos==='number'?JSON.stringify(String(value).slice(Math.max(0,pos-48),Math.min(String(value).length,pos+120))):'unavailable';
+          throw new Error(name+'_html_digest_mismatch expected='+expectedHash+' actual='+actualHash+' reason='+String(diff?.reason||'unknown')
+            +' expectedFragment='+at(published,diff?.expectedOffset)+' actualFragment='+at(normalized.html,diff?.actualOffset));
+        }
         const allowlisted=[...Object.values(expected.assets||{}).map(asset=>asset.path).filter(Boolean),
           'assets/campaign-reconsideration-20261013.png',
           // Published shell asset paths; only the customer-domain mount prefix may change.
