@@ -69,3 +69,12 @@ test('Church Live E2E can be triggered by a bounded owner-only issue command',()
  assert.match(script,/passed:false,skipped:true,reason:'active_church_broadcast'/);
  assert.doesNotMatch(workflow,/pull_request_target:/);
 });
+
+test('Host closes the owner QR modal before clicking the on-air camera source',()=>{
+ const modalClose=script.indexOf("host.locator('#managementCameraDialog .management-camera-close button').click()");
+ const modalHidden=script.indexOf("host.locator('#managementCameraDialog').waitFor({state:'hidden'");
+ const liveButton=script.indexOf("managementCard.getByRole('button',{name:'방송화면에 추가'}).click()");
+ assert.ok(modalClose>0&&modalHidden>modalClose&&liveButton>modalHidden);
+ assert.match(script,/management_camera:/);
+ assert.match(script,/report\.camera\.hostVideoReceived=true/);
+});
