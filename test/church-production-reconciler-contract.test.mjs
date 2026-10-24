@@ -51,9 +51,10 @@ test('Only real EKODI receipts can dispatch Church Pages; no missing-data fallba
 });
 test('Worship Pages deploy verifies date-specific real content, not a 200 fallback',async()=>{
   const w=await read('.github/workflows/deploy-ekodi-church-homepage.yml');
-  assert.match(w,/Verify October 18 worship page/);
-  assert.match(w,/church\/worship\/2026-10-18\/materials\.json/);
-  assert.match(w,/grep -Fq '신명기 33:12–19'/);
+  assert.match(w,/Verify current-week worship page/);
+  assert.match(w,/church\/worship\/\$\{week\}\/materials\.json/);
+  assert.match(w,/grep -Fq "\$scripture" \/tmp\/church-week-worship\.html/);
+  assert.doesNotMatch(w,/Verify October 18 worship page/,'week must not be hard-coded');
   assert.match(w,/grep -Fq '\?view=stage'/);
 });
 

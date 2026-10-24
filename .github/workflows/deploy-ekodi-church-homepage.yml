@@ -444,49 +444,55 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-      - name: Verify October 18 worship page, live stage routes and homepage entry
+      - name: Verify current-week worship page, live stage routes and homepage entry
         shell: bash
         run: |
           set -euo pipefail
-          test -s church/worship/2026-10-18/index.html
-          test -s church/worship/2026-10-18/materials.json
+          # The current week is whatever weekly.json marks as the newest prepared
+          # Sunday, so a new week never requires editing this workflow.
+          week=$(jq -r '[.services[]|select(.status=="prepared")]|sort_by(.date)|last|.date // empty' church/worship/weekly.json)
+          test -n "$week"
+          test -s "church/worship/$week/index.html"
+          test -s "church/worship/$week/materials.json"
           test -s church/live/worship-materials.js
-          grep -Fq '10.18–10.24' church/worship/2026-10-18/index.html
           grep -Fq "fetch('/ekodichurch/worship/weekly.json'" church/live/worship-materials.js
           grep -Fq 'resolveServiceDate()' church/live/worship-materials.js
-          node --input-type=module <<'NODE'
+          scripture=$(WEEK="$week" node --input-type=module <<'NODE'
           import fs from 'node:fs';
           import assert from 'node:assert/strict';
-          const packet=JSON.parse(fs.readFileSync('church/worship/2026-10-18/materials.json','utf8'));
-          assert.equal(packet.date,'2026-10-18');
-          assert.equal(packet.scripture,'신명기 33:12–19');
+          const week=process.env.WEEK;
+          const packet=JSON.parse(fs.readFileSync(`church/worship/${week}/materials.json`,'utf8'));
+          assert.equal(packet.date,week);
+          assert.ok(packet.scripture&&packet.title);
           assert.equal(packet.slides.length,16);
           assert.equal(packet.youtube.status,'metadata-prepared-not-scheduled');
+          assert.doesNotMatch(JSON.stringify(packet),/streamKey|stream_key/i);
+          process.stdout.write(packet.scripture);
           NODE
+          )
           release="$CHURCH_SOURCE_SHA"
           verified=false
           for attempt in $(seq 1 18); do
-            root=$(curl -L -sS --connect-timeout 5 --max-time 20 -o /tmp/church-oct18-home.html -w '%{http_code}' "https://ekodi.kr/ekodichurch/?release=$release" || true)
-            worship=$(curl -L -sS --connect-timeout 5 --max-time 20 -o /tmp/church-oct18-worship.html -w '%{http_code}' "https://ekodi.kr/ekodichurch/worship/2026-10-18/?release=$release" || true)
-            live_materials=$(curl -L -sS --connect-timeout 5 --max-time 20 -o /tmp/church-oct18-live-materials.js -w '%{http_code}' "https://ekodi.kr/ekodichurch/live/worship-materials.js?release=$release" || true)
+            root=$(curl -L -sS --connect-timeout 5 --max-time 20 -o /tmp/church-week-home.html -w '%{http_code}' "https://ekodi.kr/ekodichurch/?release=$release" || true)
+            worship=$(curl -L -sS --connect-timeout 5 --max-time 20 -o /tmp/church-week-worship.html -w '%{http_code}' "https://ekodi.kr/ekodichurch/worship/$week/?release=$release" || true)
+            live_materials=$(curl -L -sS --connect-timeout 5 --max-time 20 -o /tmp/church-week-live-materials.js -w '%{http_code}' "https://ekodi.kr/ekodichurch/live/worship-materials.js?release=$release" || true)
             if [[ "$root" == 200 && "$worship" == 200 && "$live_materials" == 200 ]] &&
-              grep -Fq '/ekodichurch/worship/2026-10-18/' /tmp/church-oct18-home.html &&
-              grep -Fq '신명기 33:12–19' /tmp/church-oct18-worship.html &&
-              grep -Fq '10.18–10.24' /tmp/church-oct18-worship.html &&
-              grep -Fq '?view=stage' /tmp/church-oct18-worship.html &&
-              grep -Fq '?view=operator' /tmp/church-oct18-worship.html &&
-              grep -Fq "fetch('/ekodichurch/worship/weekly.json'" /tmp/church-oct18-live-materials.js &&
-              ! grep -Fq "query.get('date')||'2026-10-11'" /tmp/church-oct18-live-materials.js; then
+              grep -Fq "/ekodichurch/worship/$week/" /tmp/church-week-home.html &&
+              grep -Fq "$scripture" /tmp/church-week-worship.html &&
+              grep -Fq '?view=stage' /tmp/church-week-worship.html &&
+              grep -Fq '?view=operator' /tmp/church-week-worship.html &&
+              grep -Fq "fetch('/ekodichurch/worship/weekly.json'" /tmp/church-week-live-materials.js &&
+              ! grep -Fq "query.get('date')||'2026-10-11'" /tmp/church-week-live-materials.js; then
               verified=true
               break
             fi
             sleep 5
           done
           if [[ "$verified" != true ]]; then
-            echo "::error::October 18 worship release not reflected on real canonical host."
+            echo "::error::Current-week ($week) worship release not reflected on real canonical host."
             exit 1
           fi
-          echo "Verified October 18 worship on real production: $release"
+          echo "Verified $week worship ($scripture) on real production: $release"
 
       - name: Verify director QR cameras and resizable live program on real Church Pages
         shell: bash
