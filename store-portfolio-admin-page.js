@@ -617,7 +617,11 @@ export function storePortfolioAdminPage(initialView='pos'){
   }});
 }
 
-export function storePortfolioAdminShellScript(){return new Response(`(${portfolioShellClient.toString()})();`,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}})}
+// Wrangler bundles with esbuild keepNames, which inserts __name(fn,"name") calls into
+// nested functions. They survive Function.prototype.toString(), so each serialised
+// browser script carries a private helper in its own IIFE (repo convention).
+export const CMPMYI_NAME_PRELUDE='(()=>{const __name=(target,value)=>Object.defineProperty(target,"name",{value,configurable:true});\n';
+export function storePortfolioAdminShellScript(){return new Response(`${CMPMYI_NAME_PRELUDE}(${portfolioShellClient.toString()})();})();`,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}})}
 
 export function storePortfolioAdminPanelPage(viewName='overview'){
   const key=String(viewName||'overview').toLowerCase();
@@ -646,6 +650,6 @@ export function storePortfolioAdminPanelPage(viewName='overview'){
   }});
 }
 
-export function storePortfolioAdminPanelScript(){return new Response(`(${portfolioPanelClient.toString()})();`,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}})}
+export function storePortfolioAdminPanelScript(){return new Response(`${CMPMYI_NAME_PRELUDE}(${portfolioPanelClient.toString()})();})();`,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}})}
 
 export { STORES as CMPMYI_STORES, SECTIONS as CMPMYI_ADMIN_SECTIONS, STORE_MENU as CMPMYI_STORE_MENU, COMMON_MENU as CMPMYI_COMMON_MENU };
