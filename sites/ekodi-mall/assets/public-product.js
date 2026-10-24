@@ -104,8 +104,21 @@
     } else {
       const visual = el('div', 'pp-visual');
       visual.setAttribute('role', 'img');
-      visual.setAttribute('aria-label', `${data.product.name} 대표 이미지 준비 중`);
-      visual.append(el('span', 'pp-visual-mark', (data.product.name || 'E').trim().charAt(0)), el('span', 'pp-visual-cap', 'EKODI MALL'));
+      visual.setAttribute('aria-label', `${data.product.name} 대표 사진 준비 중`);
+      // Neutral still-life illustration (gift box on linen) until the seller uploads a real photo.
+      visual.innerHTML = `<svg class="pp-still" viewBox="0 0 400 500" aria-hidden="true">
+        <defs>
+          <linearGradient id="ppBox" x1="0" x2="1"><stop offset="0" stop-color="#efe6d6"/><stop offset="1" stop-color="#ddd0ba"/></linearGradient>
+          <linearGradient id="ppLid" x1="0" x2="1"><stop offset="0" stop-color="#f7f1e6"/><stop offset="1" stop-color="#e6dac5"/></linearGradient>
+          <radialGradient id="ppShadow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="rgba(60,48,30,.28)"/><stop offset="1" stop-color="rgba(60,48,30,0)"/></radialGradient>
+        </defs>
+        <ellipse cx="200" cy="372" rx="150" ry="22" fill="url(#ppShadow)"/>
+        <rect x="88" y="210" width="224" height="158" rx="6" fill="url(#ppBox)"/>
+        <rect x="78" y="186" width="244" height="34" rx="6" fill="url(#ppLid)"/>
+        <rect x="190" y="186" width="20" height="182" fill="#1f3d33" opacity=".9"/>
+        <path d="M200 186c-30-40-70-38-66-14 3 18 40 18 66 14zm0 0c30-40 70-38 66-14-3 18-40 18-66 14z" fill="none" stroke="#1f3d33" stroke-width="9" stroke-linecap="round" opacity=".9"/>
+      </svg>`;
+      visual.append(el('span', 'pp-visual-cap', '대표 사진 준비 중'));
       figure.append(visual);
     }
     return figure;
@@ -193,7 +206,10 @@
       bar.append(go);
       document.body.append(bar);
     } else if (data.product.saleType === 'direct') {
-      buy.append(el('p', 'pp-soon', quote?.blockers?.includes('out-of-stock') ? '품절되었습니다.' : '구매 준비 중인 상품입니다.'));
+      const soldOut = quote?.blockers?.includes('out-of-stock');
+      const soon = el('button', 'pp-soon', soldOut ? '품절' : '구매 준비 중'); soon.type = 'button'; soon.disabled = true;
+      buy.append(soon);
+      if (soldOut) buy.append(el('p', 'pp-soon-note', '재입고되면 이 페이지에서 바로 구매할 수 있습니다.'));
     }
     if (status) {
       const source = storedAttribution()?.sourceType;
