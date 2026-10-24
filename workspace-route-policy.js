@@ -1,3 +1,4 @@
+export { INDEPENDENT_BOARD_POLICY, boardActionOwner, boardRouteKey, validateBoardCategories, validateBoardRegistration } from './independent-board-policy.js';
 import { isReservedPlatformRoot, platformRouteRegistrySnapshot } from './platform-route-registry.js';
 import { isForbiddenAdminAggregationPath } from './admin-address-policy.js';
 
