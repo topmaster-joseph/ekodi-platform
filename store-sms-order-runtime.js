@@ -163,6 +163,7 @@ async function handleInbound(request,env,executionCtx){
   return json(request,env,{ok:true,orderId:order?.id||null,threadId,status:order?.status||null,replyQueued:queued.status},201);
 }
 
+export async function storeOrderAdminContext(request,env,options){return adminContext(request,env,options)}
 async function adminContext(request,env,{write=false}={}){
   if(write&&String(env.ALLOW_MUTATIONS)!=='true')return {ctx:null,response:json(request,env,{error:'MUTATIONS_DISABLED'},503)};
   const base=await principalFromSupabaseRequest(request);
