@@ -76,6 +76,8 @@ export function daumWebmasterLine(host, registry = DAUM_WEBMASTER_LINES) {
 const VERIFICATION_FILE_PATTERN = /^\/naver[0-9a-f]{32}\.html$/;
 export const SEARCH_VERIFICATION_FILES = Object.freeze({
   '/naverf72bebc155107dcad735d8178146679f.html': 'naver-site-verification: naverf72bebc155107dcad735d8178146679f.html',
+  // 2026-10-24: file Naver issues for https://ekodi.kr (the f72… file belongs to another registered site).
+  '/naver55dffd2edf849422807852a996ee52e6.html': 'naver-site-verification: naver55dffd2edf849422807852a996ee52e6.html',
 });
 
 export function searchVerificationFileResponse(pathname, { head = false } = {}, registry = SEARCH_VERIFICATION_FILES) {
