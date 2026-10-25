@@ -17,6 +17,24 @@ export const STORE_DISCOVERY_PROFILES=Object.freeze({
 
 function clean(value){return String(value??'').trim();}
 function uniq(values){return [...new Set((values||[]).map(clean).filter(Boolean))];}
+// "11:00–22:00" → schema.org openingHours "Mo-Su 11:00-22:00" + OpeningHoursSpecification.
+// Only a plain daily range is converted; anything else stays as the displayed text.
+export function storeOpeningHours(hours){
+  const m=/^\s*([01]?\d|2[0-3]):([0-5]\d)\s*[-–~]\s*([01]?\d|2[0-4]):([0-5]\d)\s*$/.exec(clean(hours));
+  if(!m)return null;
+  const opens=`${m[1].padStart(2,'0')}:${m[2]}`,closes=`${m[3].padStart(2,'0')}:${m[4]}`;
+  return {
+    openingHours:`Mo-Su ${opens}-${closes}`,
+    openingHoursSpecification:[{'@type':'OpeningHoursSpecification',dayOfWeek:['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],opens,closes}],
+  };
+}
+// "전남 무안군 청계면 승달산길 37-1" → region/locality split so local search can match the town.
+export function storePostalAddress(address){
+  const text=clean(address);
+  if(!text)return null;
+  const locality=(/([가-힣]+[시군])\s*([가-힣]+[읍면동])?/.exec(text)||[]);
+  return {'@type':'PostalAddress',streetAddress:text,addressRegion:'전라남도',...(locality[1]?{addressLocality:[locality[1],locality[2]].filter(Boolean).join(' ')}:{}),addressCountry:'KR'};
+}
 
 export function storeDiscoveryFaq({name,address,phone,hours,category='메뉴',orderProviders=[]}={}){
   const storeName=clean(name)||'매장';
@@ -38,6 +56,14 @@ export function storeDiscoveryFaq({name,address,phone,hours,category='메뉴',or
       question:`${storeName} ${category}와 가격은 어디서 확인하나요?`,
       answer:`이 페이지에서 대표 ${category}, 확인된 가격과 주문 경로를 한 번에 확인할 수 있습니다. 실시간 판매 여부, 옵션, 쿠폰, 배달비는 각 주문 채널의 최종 화면이 기준입니다.`
     },
+    {
+      question:`목포대 후문 ${category}, 어디서 주문할 수 있나요?`,
+      answer:`국립목포대학교 후문 인근의 ${storeName}에서 주문할 수 있습니다.${address?` 주소는 ${address}입니다.`:''}${phone?` 전화 주문·문의는 ${phone}입니다.`:''}`,
+    },
+    {
+      question:`${storeName} 전화번호는 무엇인가요?`,
+      answer:phone?`${storeName} 전화번호는 ${phone}입니다. 영업시간과 주문 가능 여부를 전화로 확인할 수 있습니다.`:`${storeName} 연락처는 이 페이지의 매장안내에서 확인할 수 있습니다.`,
+    },
   ];
 }
 
@@ -48,7 +74,7 @@ export function renderStoreFaqSection(options={}){
 
 export function buildStoreDiscoveryGraph({
   slug,name,canonical,description,brand,brandUrl,category,address,phone,hours,map,image,
-  menuItems=[],orderUrl='',orderProviders=[]
+  menuItems=[],orderUrl='',orderProviders=[],sameAs=[]
 }={}){
   const profile=STORE_DISCOVERY_PROFILES[slug]||{aliases:[],localTerms:[]};
   const storeName=clean(name);
@@ -75,8 +101,9 @@ export function buildStoreDiscoveryGraph({
     menu:{'@id':menuId},
     mainEntityOfPage:{'@id':`${pageUrl}#webpage`},
     ...(phone?{telephone:phone}:{}),
-    ...(address?{address:{'@type':'PostalAddress',streetAddress:address,addressRegion:'전라남도',addressCountry:'KR'}}:{}),
-    ...(hours?{openingHours:hours}:{}),
+    ...(address?{address:storePostalAddress(address)}:{}),
+    ...(hours?(storeOpeningHours(hours)||{openingHours:hours}):{}),
+    ...(uniq(sameAs).length?{sameAs:uniq(sameAs).filter(url=>/^https:\/\//.test(url))}:{}),
     ...(map?{hasMap:map}:{}),
     ...(image?{image}:{}),
     ...(orderUrl?{potentialAction:{'@type':'OrderAction',target:orderUrl}}:{}),
