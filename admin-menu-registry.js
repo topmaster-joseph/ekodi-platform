@@ -1,4 +1,5 @@
 import './platform-maturity-admin.js';
+import './domain-control-admin.js';
 import './admin-menu-templates.js';
 import './admin-service-handoffs.js';
 import './admin-context-shell-recovery.js';
@@ -42,6 +43,7 @@ export const ADMIN_MENUS = Object.freeze([
   { id: 'revenue', group: 'finance', labels: { ko: '결제·정산', en: 'Payments & Settlement' }, sections: ['finance'] },
   { id: 'usage', group: 'finance', labels: { ko: '사용량·비용', en: 'Usage & Cost' }, sections: ['api-cost'] },
   { id: 'health', group: 'ops', labels: { ko: '운영상태', en: 'Operational Health' }, sections: ['site-health'] },
+  { id: 'domains', group: 'ops', labels: { ko: '도메인', en: 'Domains' }, sections: ['domain-control'] },
   { id: 'releases', group: 'ops', labels: { ko: '배포·장애', en: 'Releases & Incidents' }, sections: ['deployments'] },
   { id: 'system', group: 'ops', labels: { ko: '시스템 구조', en: 'System Structure' }, sections: ['architecture', 'maturity'] },
   { id: 'infra', group: 'ops', labels: { ko: '실행 인프라', en: 'Execution Infrastructure' }, sections: ['devices', 'pos-agent'] },
@@ -106,6 +108,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'api-cost', group: 'finance', icon: '₩', labels: { ko: '사용량·비용', en: 'Usage & Cost' } },
   { id: 'architecture', group: 'ops', icon: '◇', labels: { ko: '시스템 구조', en: 'System Structure' } },
   { id: 'maturity', group: 'ops', icon: 'M5', labels: { ko: '플랫폼 성숙도', en: 'Platform Maturity' }, superAdminOnly: true },
+  { id: 'domain-control', group: 'ops', icon: '◎', labels: { ko: '도메인 관제', en: 'Domain Monitoring' }, superAdminOnly: true },
   { id: 'services', group: 'ops', icon: '▦', labels: { ko: '서비스·지표', en: 'Services & Metrics' }, internal: true },
   { id: 'policies', group: 'accounts', icon: '§', labels: { ko: '정책 내부경로', en: 'Policy Internal Route' }, internal: true },
 
@@ -165,7 +168,7 @@ const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
   'sites-all':'sites','menu-templates':'sites','sites-core':'sites','sites-business':'sites','sites-community':'sites','sites-clients':'sites','sites-knowledge':'sites','sites-communication':'sites','sites-worklife':'sites','sites-other':'sites','sites-preparing':'sites','sites-internal':'sites','sites-user':'sites','sites-customer-partner':'sites','sites-independent':'sites',campus:'sites',clients:'sites','site-chrome':'sites',cmpmyi:'sites',organization:'sites',workspace:'sites',
   'users-access':'access',security:'security',admins:'access','ai-membership':'access',
   work:'content',communication:'content',community:'content',books:'content',devotional:'content',social:'content',finance:'finance',tax:'content',
-  health:'status','site-health':'status',deployments:'releases',aiops:'releases',devices:'devices','pos-agent':'devices','api-cost':'finance',architecture:'status',maturity:'status',services:'status',
+  health:'status','site-health':'status',deployments:'releases',aiops:'releases',devices:'devices','pos-agent':'devices','api-cost':'finance',architecture:'status',maturity:'status','domain-control':'status',services:'status',
   'public-site-controls':'settings','language-status':'settings','ai-module-spec':'settings',storage:'settings','ai-settings':'settings','audit-records':'security',policies:'settings',
   'common-services':'catalog',confirmations:'catalog','life-ai':'catalog','personal-finance':'catalog',invest:'catalog','marketing-ai':'catalog','supply-network':'catalog',insurance:'catalog',capabilities:'catalog',openai:'catalog',
 });
