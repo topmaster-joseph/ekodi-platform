@@ -38,3 +38,11 @@ test('deploy lane keeps JWT verification, provenance, preflight order and rollba
   let last=-1;for(const step of order){const i=prod.indexOf(step);assert.ok(i>last,step+' out of order');last=i;}
   assert.match(wf,/if: failure\(\) && steps\.verify\.conclusion == 'failure'/);
 });
+
+test('orchestrator convergence dispatches the singles-api lane (token merges emit no push)',async()=>{
+  const src=await readFile(new URL('../scripts/converge-orchestrated-pr-merge.mjs',import.meta.url),'utf8');
+  assert.match(src,/const singlesApiTouched=changedFiles\.some\(file=>\n  file\.startsWith\('supabase\/functions\/singles-api\/'\)/);
+  assert.match(src,/\[singlesApiTouched,'deploy-singles-api\.yml'\]/);
+  assert.match(src,/if\(singlesApiTouched\)\{[\s\S]*?actions\/workflows\/deploy-singles-api\.yml\/dispatches[\s\S]*?inputs:\{release_branch_ref:branch,release_task_id:taskId\}/);
+  assert.match(src,/workflow:'deploy-singles-api\.yml',pr:pr\.number,taskId,branch,authority:'ekodi-orchestrator'/);
+});
