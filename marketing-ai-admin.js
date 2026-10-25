@@ -22,7 +22,7 @@
   };
 
   let state = { tab:'overview', data:null, loading:false };
-  const growth = { subject:'ekodimall', cache:new Map(), loading:false, error:'' };
+  const growth = { subject:'ekodimall', cache:new Map(), loading:false, error:'', discoveryCache:new Map(), discoveryLoading:false, discoveryError:'' };
 
   const api = async path => {
     const headers = new Headers();
@@ -351,6 +351,53 @@
         if (state.tab === 'growth-os') renderGrowthOs(state.data);
       }
     }
+    const DISCOVERY_FINDING_LABELS = {
+      public_page_http_status:'공개 페이지 응답 확인 필요',
+      robots_unavailable:'robots.txt 확인 필요', sitemap_unavailable:'sitemap.xml 확인 필요',
+      search_or_answer_bot_policy:'검색·AI 답변용 크롤러 허용 정책 확인',
+      training_bot_policy_check:'AI 학습용 크롤러 차단 정책 확인',
+      canonical_missing_or_mismatch:'대표 주소(canonical) 누락·불일치',
+      description_missing:'페이지 설명(meta description) 보완',
+      open_graph_title_missing:'소셜 공유 제목(OG) 보완',
+      jsonld_missing:'구조화 데이터(JSON-LD) 보완',
+      index_blocked:'검색 색인 차단(noindex) 확인',
+      not_listed_in_root_sitemap:'대표 사이트맵에 페이지 등록 확인',
+      public_read_unavailable:'운영 사이트 응답을 확인할 수 없음',
+    };
+    async function verifyGrowthOsDiscovery() {
+      if (growth.discoveryLoading || !token()) return;
+      const subject = growth.subject;
+      growth.discoveryLoading = true; growth.discoveryError = '';
+      if (state.tab === 'growth-os') renderGrowthOs(state.data);
+      try {
+        const report = await api(`/marketing-connect-api/v1/growth-os/discovery/verify?subject_type=tenant&subject_key=${encodeURIComponent(subject)}`);
+        growth.discoveryCache.set(subject,report);
+      } catch (error) {
+        growth.discoveryError = error?.message || '공개 검색 진단을 완료하지 못했습니다.';
+      } finally {
+        growth.discoveryLoading = false;
+        if (state.tab === 'growth-os') renderGrowthOs(state.data);
+      }
+    }
+    function growthDiscoveryHtml() {
+      const report = growth.discoveryCache.get(growth.subject);
+      const label = report?.status === 'checks_passed' ? '기술 요건 확인됨' : report?.status === 'issues_found' ? '개선 항목 있음'
+        : report?.status === 'public_route_not_registered' ? '공개 경로 미등록' : report?.status === 'verification_unavailable' ? '실측 불가' : '검증 전';
+      const findings = report?.findings || [];
+      const checks = report?.checks || null;
+      return `<section class="marketing-ai-console-card">
+        <div class="marketing-ai-card-head"><div><small>DISCOVERY READINESS · SEO / AEO / GEO</small><h3>공개 검색 기술 진단</h3>
+          <p>등록된 공개 페이지의 robots·사이트맵·대표 URL·메타·JSON-LD를 읽기 전용으로 점검합니다. 실제 검색 노출수·AI 인용수와는 구별합니다.</p></div>
+          <button type="button" class="secondary" data-growth-discovery-verify ${growth.discoveryLoading ? 'disabled' : ''}>${growth.discoveryLoading ? '확인 중…' : '공개 페이지 실증'}</button></div>
+        <p><strong>${esc(label)}</strong>${report?.target?.url ? ` · <a href="${esc(report.target.url)}" target="_blank" rel="noopener noreferrer">${esc(report.target.url)}</a>` : ''}</p>
+        ${growth.discoveryError ? `<p role="alert">${esc(growth.discoveryError)}</p>` : ''}
+        ${report?.verifiedAt ? `<small>검증시각 ${esc(dateText(report.verifiedAt))}</small>` : ''}
+        ${checks ? `<p>공개 응답 ${checks.http200 ? '정상' : '점검 필요'} · 대표 URL ${checks.canonicalMatches ? '일치' : '점검 필요'} · 사이트맵 ${checks.listedInSitemap ? '포함' : '점검 필요'}</p>` : ''}
+        ${findings.length ? `<ul>${findings.map(item => `<li>${esc(DISCOVERY_FINDING_LABELS[item.id] || item.id)} · ${esc(item.severity)}</li>`).join('')}</ul>` :
+          report?.status === 'checks_passed' ? '<p>점검된 기술 항목에 발견된 오류는 없습니다.</p>' : ''}
+        <small>검색 순위·AI 추천·AI 인용·전환을 보장하거나 추정하지 않습니다. 계정별 검색 데이터 연결은 별도 검증 사항입니다.</small>
+      </section>`;
+    }
     function renderGrowthOs(data) {
       const current = growth.cache.get(growth.subject);
       const counts = current?.campaigns || null;
@@ -380,6 +427,7 @@
         <div class="marketing-ai-billing-list">${(current.nextActions || []).map(a => `<div><strong>${esc(a.id)}</strong><span>${esc(a.action)}</span><small>${esc(a.mode)}</small></div>`).join('')}</div>
         <p>조회 전용 · 신규 광고비 집행·게시·고객 발송 없음 · 전 사이트 검색 및 CRM 성과는 아직 연결되지 않음</p>` : ''}
       </section>`;
+      if (current) view.insertAdjacentHTML('beforeend', growthDiscoveryHtml());
       if (!current && !growth.error && !growth.loading && token()) refreshGrowthOs();
     }
 
@@ -744,6 +792,7 @@
       });
       view.addEventListener('click', event => {
         if (event.target.closest('[data-growth-os-refresh]')) { refreshGrowthOs(true); return; }
+        if (event.target.closest('[data-growth-discovery-verify]')) { verifyGrowthOsDiscovery(); return; }
         const copyButton = event.target.closest('[data-naver-copy]');
         if (copyButton) { copyNaver(Number(copyButton.dataset.variantId), copyButton.dataset.naverCopy); return; }
         const actionButton = event.target.closest('[data-studio-action]');
