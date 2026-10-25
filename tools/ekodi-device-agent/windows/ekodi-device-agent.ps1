@@ -19,7 +19,7 @@ try {
   throw '[EKODI:EKA-299][crypto] Windows DPAPI assembly is unavailable: ' + $_.Exception.Message
 }
 
-$AgentVersion = '2.6.0'
+$AgentVersion = '2.6.1'
 # Some remote/managed Windows sessions omit ProgramData from the process environment.
 # Resolve the canonical system data directory without changing machine-wide settings.
 if ([string]::IsNullOrWhiteSpace($env:ProgramData)) {
@@ -744,7 +744,7 @@ function Restore-AgentUpgradeSnapshot($Snapshot) {
   } elseif (-not $Snapshot.configExists) {
     Remove-Item -LiteralPath $ConfigPath -Force -ErrorAction SilentlyContinue
   }
-  Restore-AgentTaskSnapshot $Snapshot.task
+  if (-not ($script:AgentRunActive -and $Snapshot.task -and $Snapshot.task.exists)) { Restore-AgentTaskSnapshot $Snapshot.task }
   Restore-ProtocolSnapshot $Snapshot.protocol
   if ($Snapshot.configExists) {
     try {
@@ -794,7 +794,9 @@ function Invoke-AgentUpgradeTransaction([string]$CandidatePath, [switch]$DeferRe
     Invoke-TestFailure 'protocol_registered'
 
     $stage = 'register_task'
-    if ($snapshot.configExists) { Ensure-AgentTask }
+    # Re-registering a task while this updater may be its running instance is
+    # avoided; the existing task already launches the promoted AgentPath.
+    if ($snapshot.configExists -and -not ($script:AgentRunActive -and $snapshot.task -and $snapshot.task.exists)) { Ensure-AgentTask }
     Invoke-TestFailure 'task_registered'
 
     if ($snapshot.configExists -and -not $DeferRestart) {
@@ -3952,7 +3954,12 @@ function Poll-Command($Config) {
 }
 
 function Stop-ExistingAgentProcesses {
-  try { Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue } catch { }
+  # EKA-121: an in-process self-update runs inside the Agent; after a logon or
+  # reboot that Agent is the Scheduled Task's own instance, so stopping the
+  # task would terminate the updater itself before the receipt is posted.
+  if (-not $script:AgentRunActive) {
+    try { Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue } catch { }
+  }
   try {
     foreach ($process in @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue)) {
       if ([int]$process.ProcessId -eq $PID) { continue }
@@ -4098,6 +4105,7 @@ function Handle-ProtocolUrl([string]$Url) {
 function Run-Agent {
   $mutex = [Threading.Mutex]::new($false, 'Global\EKODI_Device_Agent_V2')
   if (-not $mutex.WaitOne(0, $false)) { return }
+  $script:AgentRunActive = $true
   try {
     $config = Load-Config
     $lastHeartbeat = [datetime]::MinValue

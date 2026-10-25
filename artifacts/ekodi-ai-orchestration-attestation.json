@@ -52,5 +52,6 @@
     "verified": false
   },
   "releaseMode": true,
-  "timestamp": "2026-10-23T03:40:38.964Z"
+  "releaseModeRequested": true,
+  "timestamp": "2026-10-25T01:10:57.069Z"
 }

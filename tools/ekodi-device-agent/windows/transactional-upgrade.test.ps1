@@ -2,6 +2,7 @@ $ErrorActionPreference = 'Stop'
 
 $agentSource = Join-Path $PSScriptRoot 'ekodi-device-agent.ps1'
 . $agentSource
+$script:RealStopExistingAgentProcesses = ${function:Stop-ExistingAgentProcesses}
 
 $testRoot = Join-Path $env:RUNNER_TEMP ('ekodi-agent-transaction-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
@@ -120,6 +121,24 @@ try {
     $cancelMapped = $_.Exception.Message -match '^\[EKODI:EKA-092\]\[elevation\]'
   }
   if (-not $cancelMapped) { throw 'UAC cancellation was not mapped to EKA-092.' }
+
+  # EKA-121: an in-process self-update must never stop its own Scheduled Task
+  # instance (that would kill the updater before the receipt is posted).
+  $script:stopTaskCalls = 0
+  function Stop-ScheduledTask { $script:stopTaskCalls++ }
+  function Get-CimInstance { return @() }
+  function Start-Sleep { }
+  $script:AgentRunActive = $true
+  & $script:RealStopExistingAgentProcesses
+  if ($script:stopTaskCalls -ne 0) { throw 'In-process self-update stopped its own Scheduled Task instance.' }
+  $taskCallsBefore = $script:taskCalls
+  $inProcess = Invoke-AgentUpgradeTransaction -CandidatePath $agentSource -DeferRestart
+  if (-not $inProcess.upgraded) { throw 'In-process (task instance) self-update did not complete.' }
+  if ($script:taskCalls -ne $taskCallsBefore) { throw 'In-process self-update re-registered the running Scheduled Task.' }
+  $script:AgentRunActive = $false
+  & $script:RealStopExistingAgentProcesses
+  if ($script:stopTaskCalls -ne 1) { throw 'Out-of-process installer no longer stops the Scheduled Task before replacing the Agent.' }
+  Write-Host 'Task-instance self-update regression PASS: no self-termination, no running-task re-registration.'
 
   Write-Host 'Elevation regression PASS: admin bypass -> child detail propagation -> plain failure mapping -> UAC cancellation.'
   Write-Host 'Transactional upgrade regression PASS: validate -> upgrade -> injected failure -> rollback -> re-upgrade.'
