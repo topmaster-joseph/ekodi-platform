@@ -30,8 +30,9 @@ test('contract query refuses anything but plain function signatures',()=>{
 test('deploy lane keeps JWT verification, provenance, preflight order and rollback',()=>{
   assert.doesNotMatch(wf,/--no-verify-jwt/);
   assert.match(wf,/test "\$jwt" = 'true'/);
-  assert.match(wf,/if: github\.event_name == 'workflow_dispatch' && github\.ref == 'refs\/heads\/main'/);
-  assert.doesNotMatch(wf,/^\s+push:/m,'phase 1: no automatic push deploys yet');
+  assert.match(wf,/if: github\.event_name == 'push' \|\| \(github\.event_name == 'workflow_dispatch' && github\.ref == 'refs\/heads\/main'\)/);
+  assert.match(wf,/push:\n    branches: \[main\]\n    paths:\n      - "supabase\/functions\/singles-api\/\*\*"/);
+  assert.match(wf,/commits\/\$GITHUB_SHA\/pulls/,'push deploys recover the merged orchestrator branch');
   const order=['validate-ekodi-ai-change-orchestration.mjs --release','validate-deployment-guardrails.mjs','singles-api-db-preflight.mjs','functions deploy singles-api','id: verify','git checkout HEAD^ -- supabase/functions/singles-api'];
   const prod=wf.slice(wf.indexOf('  production:'));
   let last=-1;for(const step of order){const i=prod.indexOf(step);assert.ok(i>last,step+' out of order');last=i;}
