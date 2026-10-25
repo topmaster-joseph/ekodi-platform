@@ -25,6 +25,23 @@ const ENROLLMENT_TTL_MS = 10 * 60 * 1000;
 const DEVICE_ONLINE_MS = 90 * 1000;
 const DEVICE_STALE_MS = 10 * 60 * 1000;
 const COMMAND_CLAIM_TIMEOUT_MS = 60 * 60 * 1000;
+// EKA-121: a self-update finishes in seconds. If the Agent keeps heartbeating
+// well after claiming one without a receipt, the updater was terminated
+// (Agents <= 2.6.0 running as their own Scheduled Task instance). Requeueing
+// would only repeat the self-termination, so the claim is closed as failed
+// with the one local remedy instead.
+export const SELF_UPDATE_STALE_CLAIM_MS = 3 * 60 * 1000;
+export const SELF_UPDATE_STALE_CLAIM_RESULT = Object.freeze({
+  code: 'EKA-121',
+  message: '업데이트 명령이 응답 없이 멈췄습니다(EKA-121). 이 PC가 재부팅 후 이전 Agent로 실행 중이면 원격 업데이트가 되지 않습니다. 이 PC에서 관리자 › 실행 인프라 › "이 PC 연결"을 한 번 실행하세요.',
+});
+
+export async function closeStaleSelfUpdateClaims(env, deviceId, nowMs = Date.now()) {
+  const staleBefore = new Date(nowMs - SELF_UPDATE_STALE_CLAIM_MS).toISOString();
+  await env.DB.prepare(`UPDATE device_commands SET status = 'failed', completed_at = ?, result_json = ?
+    WHERE device_id = ? AND command_type = 'agent.self_update' AND status = 'claimed' AND claimed_at < ?`)
+    .bind(new Date(nowMs).toISOString(), JSON.stringify(SELF_UPDATE_STALE_CLAIM_RESULT), deviceId, staleBefore).run();
+}
 const JOB_ASSIGNMENT_TIMEOUT_MS = 65 * 60 * 1000;
 const STREAM_SESSION_TTL_MS = 3 * 60 * 1000;
 
@@ -1615,11 +1632,13 @@ async function heartbeat(request, env, device) {
       now,
       device.id,
     ).run();
+  if (deviceType !== 'gateway') await closeStaleSelfUpdateClaims(env, device.id);
   return json({ ok: true, serverTime: now }, 200, request, env);
 }
 
 async function nextCommand(request, env, device) {
   await reconcileJobs(env);
+  await closeStaleSelfUpdateClaims(env, device.id);
   const staleClaim = new Date(Date.now() - COMMAND_CLAIM_TIMEOUT_MS).toISOString();
   await env.DB.prepare(`UPDATE device_commands SET status = 'queued', claimed_at = NULL
     WHERE device_id = ? AND status = 'claimed' AND claimed_at < ?`).bind(device.id, staleClaim).run();
