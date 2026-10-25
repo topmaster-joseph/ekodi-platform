@@ -1,6 +1,7 @@
 import { importDomeggookProduct, notifySupplyOrder } from './domeggook-import.js';
 import { maskPublicProductFields } from './supplier-mask.js';
 import { runCuration } from './domeggook-curation.js';
+import { applySupplyGate, hourlyRatchet, supplyApproved } from './domeggook-release.js';
 import { publicImages, uploadProductImage, deleteProductImage, reorderProductImages, servePublicMedia } from './product-media.js';
 import { validateBuyer, checkoutConfig } from './checkout-buyer.js';
 import { commerceEventStatement } from './commerce-events.js';
@@ -453,6 +454,10 @@ async function setPublished(env, sellerId, id, published, official = false) {
     const missing = publicationErrors(row);
     if (missing.length) return { errors: [`게시 필수항목: ${missing.join(', ')}`] };
   }
+  if (published && row.supply_provider === 'domeggook' && !(await supplyApproved(env))) {
+    await env.DB.prepare("UPDATE products SET supply_release='staged',updated_at=? WHERE id=? AND seller_id=?").bind(isoNow(), id, sellerId).run();
+    return { errors: ['도매꾹 구매 API 승인 전이라 대기 등록했습니다. 승인되면 자동으로 판매·검색노출·홍보를 시작합니다.'] };
+  }
   const now = isoNow();
   await env.DB.prepare('UPDATE products SET status=?,published_at=?,updated_at=? WHERE id=? AND seller_id=?')
     .bind(published ? 'published' : 'draft', published ? now : null, now, id, sellerId).run();
@@ -567,6 +572,13 @@ async function resolveAttributionType(env, productIdValue, token) {
 }
 
 // EKODI-MALL-DOMEGGOOK-CURATION-001: cron 이 호출하는 자동 선별 진입점(판매자 저장·게시 로직 재사용).
+// EKODI-MALL-SUPPLY-RELEASE-001: 시간별 선정기준 상향 + 승인 게이트(판매·노출·홍보 시작/대기).
+export async function runSupplyGate(env) {
+  const ratchet = await hourlyRatchet(env);
+  const gate = await applySupplyGate(env, { setPublished });
+  return { ratchet, gate };
+}
+
 export function runSupplyCuration(env, options = {}) {
   return runCuration(env, {
     saveProduct, setPublished,

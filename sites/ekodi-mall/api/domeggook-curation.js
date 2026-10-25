@@ -10,6 +10,7 @@
 // 제외: 식품·건강·화장품·유아동·전기전자(KC)·의약외품·화학제품 등 인증/신고가 필요한 품목.
 import { importDomeggookProduct, PROVIDER } from './domeggook-import.js';
 import { raiseAlert } from './ops-alerts.js';
+import { supplyApproved, getState } from './domeggook-release.js';
 
 const ENDPOINT = 'https://domeggook.com/ssl/api/';
 export const CURATION_KEYWORDS = [
@@ -103,7 +104,8 @@ export async function discover(env, fetchImpl = fetch) {
 }
 
 export async function activeCuratedCount(env, sellerId) {
-  const row = await env.DB.prepare("SELECT COUNT(*) n FROM products WHERE seller_id=? AND supply_provider=? AND status='published' AND COALESCE(stock_quantity,0)>0").bind(sellerId, PROVIDER).first();
+  // 게시 중 + 승인 대기(staged) 상품을 모두 목표 개수에 포함한다.
+  const row = await env.DB.prepare("SELECT COUNT(*) n FROM products WHERE seller_id=? AND supply_provider=? AND (status='published' OR supply_release='staged') AND COALESCE(stock_quantity,0)>0").bind(sellerId, PROVIDER).first();
   return Number(row?.n || 0);
 }
 
@@ -129,9 +131,16 @@ export async function runCuration(env, deps, { fetchImpl = fetch, perRun = 3 } =
   const lastScan = await env.DB.prepare('SELECT MAX(scanned_at) t FROM supply_curation_keywords').first();
   const hourlyDue = !lastScan?.t || Date.now() - Date.parse(lastScan.t) >= intervalMin * 60 * 1000;
   if (hourlyDue || Number(queued?.n || 0) < 5) summary.discovery = await discover(env, fetchImpl);
+  // 시간별로 올라가는 최소점수와 키워드 성과 가중치를 반영해 선정한다.
+  const minScore = Number(await getState(env, 'min_score', '0')) || 0;
   const picks = await env.DB.prepare(`SELECT c.item_no,c.keyword,c.title FROM supply_candidates c
-    WHERE c.status='new' AND (SELECT COUNT(*) FROM supply_candidates x WHERE x.keyword=c.keyword AND x.status='imported') < ?
-    ORDER BY c.score DESC LIMIT ?`).bind(perKeyword, Math.min(perRun, target - active)).all();
+    LEFT JOIN supply_curation_keywords k ON k.keyword=c.keyword
+    WHERE c.status='new' AND c.score * COALESCE(k.weight_adj,1) >= ?
+      AND (SELECT COUNT(*) FROM supply_candidates x WHERE x.keyword=c.keyword AND x.status='imported') < ?
+    ORDER BY c.score * COALESCE(k.weight_adj,1) DESC LIMIT ?`).bind(minScore, perKeyword, Math.min(perRun, target - active)).all();
+  const approved = await supplyApproved(env);
+  summary.approved = approved;
+  summary.minScore = minScore;
   const legacy = await env.DB.prepare("SELECT item_no,title FROM supply_candidates WHERE status='imported' AND title_key='' LIMIT 50").all();
   for (const row of legacy.results || []) await env.DB.prepare('UPDATE supply_candidates SET title_key=? WHERE item_no=?').bind(titleKey(row.title), row.item_no).run();
   for (const pick of picks.results || []) {
@@ -150,12 +159,20 @@ export async function runCuration(env, deps, { fetchImpl = fetch, perRun = 3 } =
       continue;
     }
     const productId = result.body.product?.id;
+    if (!approved) {
+      // 도매꾹 구매 API 승인 전: 비공개 대기. 승인되면 applySupplyGate 가 게시한다.
+      await env.DB.prepare("UPDATE products SET supply_release='staged' WHERE id=?").bind(productId).run();
+      await env.DB.prepare("UPDATE supply_candidates SET status='imported',product_id=?,title_key=?,updated_at=? WHERE item_no=?").bind(productId, key, now, pick.item_no).run();
+      summary.imported += 1;
+      continue;
+    }
     const published = await deps.setPublished(env, seller.id, productId, true, true);
     if (published.errors) {
       await env.DB.prepare("UPDATE supply_candidates SET status='rejected',reason=?,product_id=?,updated_at=? WHERE item_no=?").bind(published.errors.join(' ').slice(0, 200), productId, now, pick.item_no).run();
       summary.rejected += 1;
       continue;
     }
+    await env.DB.prepare("UPDATE products SET supply_release='released' WHERE id=?").bind(productId).run();
     await env.DB.prepare("UPDATE supply_candidates SET status='imported',product_id=?,title_key=?,updated_at=? WHERE item_no=?").bind(productId, key, now, pick.item_no).run();
     summary.imported += 1;
   }
