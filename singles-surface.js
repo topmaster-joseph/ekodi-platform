@@ -53,6 +53,8 @@ function allowApi(path,method){
  if(path==='/api/events'&&method==='GET')return ['/events',true];
  if(path==='/api/admin/events'&&method==='GET')return ['/admin/events',true];
  if(/^\/api\/admin\/events\/[0-9a-f-]{36}\/fee$/i.test(path)&&method==='PUT')return [path.slice(4),true];
+ if(/^\/api\/admin\/reports\/(?:open|under_review|resolved|dismissed)$/.test(path)&&method==='GET')return [path.slice(4),true];
+ if(/^\/api\/admin\/reports\/[0-9a-f-]{36}\/review$/i.test(path)&&method==='POST')return [path.slice(4),true];
  if(path==='/api/requests'&&method==='GET')return ['/requests',true];
  const patterns=[
   [/^\/api\/events\/([0-9a-f-]{36})$/i,['GET'],'/events/'],

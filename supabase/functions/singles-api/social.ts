@@ -61,6 +61,40 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   if(saveError)throw saveError;
   return reply(req,{saved:true,fee_krw:v.fee_krw,paid_registration_ready:v.fee_krw===0});
  }
+ const reportQueue=match(p,/^\/admin\/reports\/(open|under_review|resolved|dismissed)$/);
+ const reportReview=match(p,/^\/admin\/reports\/([0-9a-f-]{36})\/review$/i);
+ if((reportQueue&&method==='GET')||(reportReview&&method==='POST')){
+  const role=await one(admin.from('singles_report_operators').select('enabled,can_review').eq('user_id',userId));
+  if(!role?.enabled||!role?.can_review)return reply(req,{error:'report_review_capability_required'},403);
+  if(reportQueue){
+   const rows=await many(admin.from('singles_reports')
+    .select('id,reporter_id,target_id,category,details,status,created_at,reviewed_at,resolution_note')
+    .eq('status',reportQueue).order('created_at',{ascending:reportQueue==='open'||reportQueue==='under_review'}).limit(50));
+   const ids=[...new Set(rows.flatMap((r:any)=>[r.reporter_id,r.target_id]))];
+   const names=ids.length?await many(admin.from('singles_profiles').select('user_id,display_name').in('user_id',ids)):[];
+   const byId=new Map(names.map((n:any)=>[n.user_id,n.display_name]));
+   // Reviewers see display names and short references, never raw account identifiers.
+   const who=(id:string)=>({name:byId.get(id)||'이름 없는 회원',ref:String(id).slice(0,8),self:id===userId});
+   return reply(req,{reports:rows.map((r:any)=>({id:r.id,category:r.category,details:r.details,status:r.status,
+    created_at:r.created_at,reviewed_at:r.reviewed_at,resolution_note:r.resolution_note,reporter:who(r.reporter_id),target:who(r.target_id)}))});
+  }
+  const v=await body(req);
+  if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>!['status','note'].includes(k))
+   ||!['under_review','resolved','dismissed'].includes(v.status)||(v.note!==undefined&&(typeof v.note!=='string'||v.note.length>500)))
+   return reply(req,{error:'invalid_review'},400);
+  const {data,error}=await admin.rpc('singles_report_review',{p_report:reportReview,p_operator:userId,p_status:v.status,p_note:v.note??null});
+  if(error){
+   const msg=String(error.message||'');
+   if(msg.includes('operator_conflict_of_interest'))return reply(req,{error:'operator_conflict_of_interest'},403);
+   if(msg.includes('operator_not_authorized'))return reply(req,{error:'report_review_capability_required'},403);
+   if(msg.includes('resolution_note_required'))return reply(req,{error:'resolution_note_required'},400);
+   if(msg.includes('invalid_review'))return reply(req,{error:'invalid_review'},400);
+   if(msg.includes('report_not_found'))return reply(req,{error:'report_not_found'},404);
+   if(msg.includes('report_not_reviewable'))return reply(req,{error:'report_not_reviewable'},409);
+   throw error;
+  }
+  return reply(req,{ok:true,id:reportReview,status:data});
+ }
  if(p==='/profile'&&method==='GET'){
   const record=await one(admin.from('singles_profiles').select('display_name,broad_region,intro,public_link').eq('user_id',userId));
   return reply(req,{profile:record?{...record,discoverable:m?.discoverable===true}:null});
