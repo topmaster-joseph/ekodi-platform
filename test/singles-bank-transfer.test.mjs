@@ -179,3 +179,30 @@ test('SQL receipt hardening checks independent operator role and active verified
  assert.match(sql,/grant execute on function public\.singles_bank_confirm_order[\s\S]*to service_role/);
  assert.match(sql,/singles_bank_settings_audit/);
 });
+
+test('operator cannot verify or reject their own order (DB guard surfaces as 403)',async()=>{
+ flags.SINGLES_BANK_TRANSFER_ENABLED='true';
+ flags.SINGLES_BANK_VERIFICATION_ENABLED='true';
+ const path='/bank/admin/orders/'+reference+'/review';
+ for(const decision of ['verified','rejected']){
+  const x=db({operator:true,configured:true});
+  x.rpc=async(name,params)=>{x.calls.push({name,params});return{data:null,error:{code:'42501',message:'operator_self_confirmation_forbidden'}}};
+  const r=await handleSinglesBank(request(path,'POST',{decision,bank_trace:'TX-123456'}),path,x,uid,reply);
+  assert.equal(r.status,403);
+  assert.equal((await r.json()).error,'operator_self_confirmation_forbidden');
+ }
+ const x=db({operator:true,configured:true});
+ x.rpc=async()=>({data:null,error:{code:'23514',message:'order_not_awaiting_verification'}});
+ const r=await handleSinglesBank(request(path,'POST',{decision:'verified',bank_trace:'TX-123456'}),path,x,uid,reply);
+ assert.equal(r.status,409);
+});
+
+test('confirm migration forbids self-confirmation before any status change',async()=>{
+ const sql=await readFile(new URL('../supabase/migrations/20261025050000_singles_bank_forbid_self_confirmation.sql',import.meta.url),'utf8');
+ const guard=sql.indexOf("if r.user_id=p_operator then raise exception 'operator_self_confirmation_forbidden'");
+ assert.ok(guard>0);
+ assert.ok(guard<sql.indexOf('update public.singles_bank_orders'),'guard must run before any write');
+ assert.ok(guard>sql.indexOf('for update'),'guard must use the locked row');
+ assert.match(sql,/revoke all on function public\.singles_bank_confirm_order\(text,uuid,text,text,text\) from public,anon,authenticated;/);
+ assert.match(sql,/grant execute on function public\.singles_bank_confirm_order\(text,uuid,text,text,text\) to service_role;/);
+});
