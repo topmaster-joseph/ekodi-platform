@@ -57,7 +57,8 @@ test('Security, Health and Marketing AI follow the canonical accounts, operation
   assert.match(loader, /scripts:\s*\['admin-secret-generator\.js'\]/);
   assert.match(loader, /hashes:\s*\['#security'\]/);
   assert.match(menu, /#security:security/);
-  assert.match(menuRegistry, /\{ id: 'ops'[^\n]*defaultSection: 'health'/);
+  // 전체 운영상태 is merged into 홈 › 플랫폼 현황; 운영·안정성 opens 배포·장애 first.
+  assert.match(menuRegistry, /\{ id: 'ops'[^\n]*defaultSection: 'deployments'/);
   assert.match(menuRegistry, /\{ id: 'health', group: 'ops'/);
   assert.match(menuRegistry, /\{ id: 'security', group: 'accounts'/);
   assert.match(menuRegistry, /\{ id: 'marketing-ai', group: 'services'[^\n]*internal: true/);

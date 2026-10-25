@@ -8,7 +8,10 @@ import {
   getAdminMenuGroupLabel,
   getAdminMenuItem,
   getAdminMenuLabel,
+  getAdminMenuForSection,
+  isAdminRiskSection,
   normalizeAdminLocale,
+  ADMIN_LAYOUT_MODEL,
 } from './admin-menu-registry.js';
 
 const LOCALE_KEY = 'ekodi-admin-locale';
@@ -39,10 +42,16 @@ const MOBILE_PRIMARY_GROUPS = Object.freeze([
   { id:'ai', icon:'AI', ko:'AI 운영', en:'AI Ops' },
   { id:'ops', icon:'◎', ko:'운영', en:'Ops' },
 ]);
-// ADMIN-IA-V3: left navigation is group → menu → detail menu. The active
-// menu's detail entries are nested directly under it; there is no top tab strip.
+// ADMIN-LAYOUT-3L-001 (owner decision 2026-10-25): the left navigation shows the
+// 1차 group and its 2차 menus only. The active menu's 3차 detail routes render as a
+// button strip at the top of the workspace (.admin-work-strip) and the selected
+// detail's settings render below it. The retired .admin-context-tabs-shell stays
+// retired; the strip is a different, registry-driven surface that never repeats a
+// left-side entry (ADMIN-DIRECT-NAV-006).
 const FLAT_DETAIL_GROUPS = new Set();
 const TAB_CLASS = 'admin-detail-tab';
+const STRIP_CLASS = 'admin-work-strip';
+const STRIP_ITEM_CLASS = 'admin-work-strip-item';
 
 export function adminSidebarSectionOf(item) {
   if (item?.dataset?.deviceControlNav === 'true') return 'devices';
@@ -150,6 +159,28 @@ body.admin-compact #campusPanel .campus-homepage-notice{margin-bottom:9px!import
 body.admin-compact #campusPanel .campus-homepage-notice>span{width:30px!important;height:30px!important;flex-basis:30px!important;font-size:14px!important}
 body.admin-compact #campusPanel .campus-homepage-notice strong{font-size:13px!important}body.admin-compact #campusPanel .campus-homepage-notice small{font-size:12px!important;line-height:1.45!important}
 @media(max-width:1480px){body.admin-compact #campusSiteGroups .campus-groups-grid{grid-template-columns:minmax(0,1fr)!important}}
+body .${STRIP_CLASS}{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0;padding:10px 16px;border-bottom:1px solid #d9e2ec;background:#fff}
+.${STRIP_CLASS}[hidden]{display:none!important}
+.${STRIP_CLASS} .admin-work-strip-label{flex:0 0 auto;margin-right:4px;color:#66768a;font-size:13px;font-weight:700;white-space:nowrap;word-break:keep-all}
+body .${STRIP_CLASS} .${STRIP_ITEM_CLASS}{display:inline-flex!important;flex:0 0 auto;align-items:center;gap:6px;width:auto!important;min-height:36px;margin:0!important;padding:6px 12px;border:1px solid #c9d6e3;border-radius:9px;background:#fff;color:#22374d;font:inherit;font-size:14px!important;font-weight:700!important;line-height:1.2;text-align:center;cursor:pointer;word-break:keep-all;white-space:nowrap}
+.${STRIP_CLASS} .${STRIP_ITEM_CLASS}:hover{border-color:#8fb0d1;background:#f2f7fb}
+body .${STRIP_CLASS} .${STRIP_ITEM_CLASS}.active{border:2px solid #155eef;padding:5px 11px;background:#edf4ff;color:#0b4fb3}
+.${STRIP_CLASS} .${STRIP_ITEM_CLASS} small{color:#66768a;font-size:12px;font-weight:700}
+.${STRIP_CLASS} .admin-work-strip-state{display:inline-block;width:8px;height:8px;border-radius:50%;background:#1f9d55}
+.${STRIP_CLASS} .admin-work-strip-state[data-state="warn"]{background:#c98a00}.${STRIP_CLASS} .admin-work-strip-state[data-state="error"]{background:#d14343}.${STRIP_CLASS} .admin-work-strip-state[data-state="off"]{background:#9aa7b4}
+.${STRIP_CLASS} .${STRIP_ITEM_CLASS} .risk{color:#a14a00;font-size:11px;font-weight:800}
+.admin-risk-dialog{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:16px;background:rgba(15,28,45,.45)}
+.admin-risk-dialog>div{width:min(460px,100%);padding:20px;border-radius:14px;background:#fff;color:#172033;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.admin-risk-dialog h2{margin:0 0 8px;font-size:18px}.admin-risk-dialog p{margin:0 0 6px;color:#44566b;font-size:14px;line-height:1.55;word-break:keep-all}
+.admin-risk-dialog .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.admin-risk-dialog button{min-height:40px;padding:8px 14px;border:1px solid #c9d6e3;border-radius:9px;background:#fff;font:inherit;font-weight:700;cursor:pointer}
+.admin-risk-dialog button[data-risk-confirm]{border-color:#b42318;background:#b42318;color:#fff}
+.admin-risk-toast{position:fixed;right:16px;bottom:96px;z-index:2147482000;display:flex;align-items:center;gap:10px;max-width:min(520px,calc(100vw - 32px));padding:10px 12px;border-radius:12px;background:#172033;color:#fff;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.admin-risk-toast button{min-height:34px;padding:4px 10px;border:1px solid #8fb5d6;border-radius:8px;background:transparent;color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.admin-risk-history{display:grid;gap:6px;margin:0 0 12px;padding:10px 12px;border:1px solid #d9e2ec;border-radius:10px;background:#f8fafc;font-size:13px;color:#33475b}
+.admin-risk-history[hidden]{display:none!important}
+.admin-risk-history ol{margin:0;padding-left:18px}.admin-risk-history li{margin:2px 0;word-break:keep-all}
+@media(max-width:760px){body .${STRIP_CLASS}{flex-wrap:nowrap;overflow-x:auto;padding:6px 8px;scrollbar-width:thin}body .${STRIP_CLASS} .${STRIP_ITEM_CLASS}{min-height:44px}body .${STRIP_CLASS} .admin-work-strip-label{display:none}}
 @media(max-width:760px){body.admin-compact .admin-global-navs{gap:2px;margin:3px 0 5px}body.admin-compact .admin-global-nav{min-height:38px;padding:6px 8px;font-size:13px}body.admin-compact .content{padding:8px 8px 20px!important}body.admin-compact #campusPanel .campus-toolbar{padding:13px!important}body.admin-compact #campusSiteGroups .campus-site-item{padding:11px!important}body.admin-compact #campusSiteGroups .campus-row-action{min-height:44px!important;font-size:14px!important}}
 `;
   document.head.append(style);
@@ -337,20 +368,20 @@ function renderSidebarDetails(nav, globals, group, section, locale) {
   const available = new Set(ids);
   const covered = new Set();
   const nodes = [];
+  let activeMenu = null;
   for (const menu of adminMenusForGroup(group)) {
     const tabs = menu.sections.filter(id => available.has(id));
     if (!tabs.length) continue;
     tabs.forEach(id => covered.add(id));
     const inMenu = tabs.includes(section);
     const target = inMenu ? section : tabs[0];
-    const menuButton = detailButton(target, getAdminMenuMenuLabel(menu.id, locale), 'admin-detail-item', inMenu && tabs.length === 1);
+    // 2차 menu only. Its 3차 details live in the workspace strip, never nested here.
+    const menuButton = detailButton(target, getAdminMenuMenuLabel(menu.id, locale), 'admin-detail-item', inMenu);
     menuButton.dataset.adminDetailMenu = menu.id;
     menuButton.classList.toggle('open', inMenu);
-    if (tabs.length > 1) menuButton.setAttribute('aria-expanded', inMenu ? 'true' : 'false');
+    if (tabs.length > 1) menuButton.dataset.adminDetailCount = String(tabs.length);
     nodes.push(menuButton);
-    if (inMenu && tabs.length > 1) {
-      for (const id of tabs) nodes.push(detailButton(id, getAdminMenuLabel(id, locale), TAB_CLASS, id === section));
-    }
+    if (inMenu) activeMenu = { menu, tabs };
   }
   for (const id of ids) {
     if (covered.has(id)) continue;
@@ -359,11 +390,290 @@ function renderSidebarDetails(nav, globals, group, section, locale) {
   details.dataset.adminDetailGroup = group;
   details.dataset.adminFlatDetails = FLAT_DETAIL_GROUPS.has(group) ? 'true' : 'false';
   details.dataset.adminMenuModel = 'group-menu-detail-v3';
+  details.dataset.adminLayoutModel = ADMIN_LAYOUT_MODEL;
   details.replaceChildren(...nodes);
   details.hidden = nodes.length === 0;
   const active = [...globals.querySelectorAll('[data-admin-global-group]')].find(button => button.dataset.adminGlobalGroup === group);
   if (active) active.insertAdjacentElement('afterend', details);
   else globals.append(details);
+  renderDetailStrip(nav, activeMenu, section, locale);
+}
+
+// ── 3차 workspace strip ───────────────────────────────────────────────────
+// One renderer for every admin area. Platform menus pass their registry
+// detail routes; 사이트관리 passes the sites of the selected classification.
+function workStripElement(doc = document) {
+  const main = doc.querySelector('#app main') || doc.querySelector('main');
+  if (!main) return null;
+  let strip = main.querySelector(`:scope>.${STRIP_CLASS}`);
+  if (!strip) {
+    strip = doc.createElement('div');
+    strip.className = STRIP_CLASS;
+    strip.setAttribute('role', 'tablist');
+    strip.hidden = true;
+    const content = main.querySelector(':scope>.content');
+    if (content) content.insertAdjacentElement('beforebegin', strip);
+    else main.append(strip);
+  }
+  return strip;
+}
+
+export function renderAdminWorkStrip(items = [], { owner = 'menu', key = '', active = '', label = '', ariaLabel = '', onSelect = null, doc = document } = {}) {
+  const strip = workStripElement(doc);
+  if (!strip) return null;
+  const list = Array.isArray(items) ? items.filter(item => item && item.id) : [];
+  strip.dataset.adminStripOwner = owner;
+  strip.dataset.adminStripKey = key;
+  strip.setAttribute('aria-label', ariaLabel || label || '세부 메뉴');
+  if (!list.length) {
+    strip.replaceChildren();
+    strip.hidden = true;
+    return strip;
+  }
+  const nodes = [];
+  if (label) {
+    const caption = doc.createElement('span');
+    caption.className = 'admin-work-strip-label';
+    caption.textContent = label;
+    nodes.push(caption);
+  }
+  for (const item of list) {
+    const button = doc.createElement('button');
+    button.type = 'button';
+    button.className = `${STRIP_ITEM_CLASS}${item.className ? ` ${item.className}` : ''}`;
+    button.setAttribute('role', 'tab');
+    for (const [name, value] of Object.entries(item.dataset || {})) button.dataset[name] = value;
+    button.dataset.adminStripItem = item.id;
+    if (item.state) {
+      const dot = doc.createElement('span');
+      dot.className = 'admin-work-strip-state';
+      dot.dataset.state = item.state;
+      dot.setAttribute('aria-hidden', 'true');
+      button.append(dot);
+    }
+    const text = doc.createElement('span');
+    text.textContent = item.label || item.id;
+    button.append(text);
+    if (item.note) {
+      const note = doc.createElement('small');
+      note.textContent = item.note;
+      button.append(note);
+    }
+    if (item.risk) {
+      const risk = doc.createElement('span');
+      risk.className = 'risk';
+      risk.textContent = '주의';
+      risk.title = '저장 전에 확인창이 열리고 변경 이력과 되돌리기가 남습니다.';
+      button.append(risk);
+    }
+    const selected = item.id === active;
+    button.classList.toggle('active', selected);
+    button.setAttribute('aria-selected', selected ? 'true' : 'false');
+    if (selected) button.setAttribute('aria-current', 'page');
+    if (item.stateLabel) button.setAttribute('aria-label', `${item.label || item.id} · ${item.stateLabel}`);
+    nodes.push(button);
+  }
+  strip.replaceChildren(...nodes);
+  strip.hidden = false;
+  strip.onclick = event => {
+    const button = event.target.closest?.(`.${STRIP_ITEM_CLASS}`);
+    if (!button || !strip.contains(button)) return;
+    event.preventDefault();
+    onSelect?.(button.dataset.adminStripItem, button);
+  };
+  return strip;
+}
+
+function renderDetailStrip(nav, activeMenu, section, locale) {
+  const doc = nav.ownerDocument || document;
+  const strip = workStripElement(doc);
+  if (!strip) return;
+  // 사이트관리 classifications hand the strip to the site manager, which lists the
+  // sites of that class. Keep its content while the same classification is active.
+  if (activeMenu?.menu?.siteClass) {
+    if (strip.dataset.adminStripOwner === 'sites' && strip.dataset.adminStripKey === section) return;
+    strip.dataset.adminStripOwner = 'sites';
+    strip.dataset.adminStripKey = section;
+    window.dispatchEvent(new CustomEvent('ekodi-admin-site-class-selected', { detail: { section, menu: activeMenu.menu.id } }));
+    return;
+  }
+  const tabs = activeMenu?.tabs || [];
+  if (tabs.length < 2) {
+    renderAdminWorkStrip([], { owner: 'menu', key: section, doc });
+    return;
+  }
+  renderAdminWorkStrip(tabs.map(id => ({
+    id,
+    label: getAdminMenuLabel(id, locale),
+    className: TAB_CLASS,
+    risk: isAdminRiskSection(id),
+    dataset: { adminDetailSection: id },
+  })), {
+    owner: 'menu',
+    key: activeMenu.menu.id,
+    active: section,
+    label: getAdminMenuMenuLabel(activeMenu.menu.id, locale),
+    ariaLabel: locale === 'en' ? 'Detail menu' : '세부 메뉴',
+    doc,
+    onSelect: id => {
+      delete nav.dataset.adminFocusedGroup;
+      activateSection(nav, id);
+      queueMicrotask(() => syncAdminSidebar(doc));
+    },
+  });
+}
+
+// ── ADMIN-RISK-GUARD-001 ──────────────────────────────────────────────────
+// High-risk settings (registry risk:'high') are saved only after an explicit
+// confirmation. Each save is recorded in this browser's change history and gets a
+// one-step undo when the previous state was read from the same address with a
+// compatible shape. Server-side authority, approvals and audit stay unchanged.
+const RISK_HISTORY_KEY = 'ekodi-admin-risk-history';
+const RISK_READ_ONLY_PATH = /\/(?:check|test|verify|preview|search|query|status|health|refresh|session|login|logout|token)(?:[/?#]|$)/i;
+const riskSnapshots = new Map();
+let riskGuardInstalled = false;
+
+function riskSection() {
+  const current = window.EKODIAdminPanels?.current?.();
+  if (current && getAdminMenuItem(current)) return current;
+  return window.EKODIAdminRoutes?.sectionFromLocation?.(window.location) || '';
+}
+function riskRequestUrl(input) {
+  try { return new URL(typeof input === 'string' || input instanceof URL ? String(input) : input.url, window.location.href); }
+  catch { return null; }
+}
+function readRiskHistory() {
+  try { const value = JSON.parse(localStorage.getItem(RISK_HISTORY_KEY) || '[]'); return Array.isArray(value) ? value : []; }
+  catch { return []; }
+}
+function writeRiskHistory(entry) {
+  const list = [entry, ...readRiskHistory()].slice(0, 50);
+  try { localStorage.setItem(RISK_HISTORY_KEY, JSON.stringify(list)); } catch {}
+  renderRiskHistory(entry.section);
+  return list;
+}
+function parseJson(text) { try { return JSON.parse(text); } catch { return undefined; } }
+export function undoBodyFor(snapshotText, bodyText) {
+  const before = parseJson(snapshotText);
+  const after = parseJson(bodyText);
+  if (!before || !after || typeof before !== 'object' || typeof after !== 'object' || Array.isArray(after)) return null;
+  const keys = Object.keys(after);
+  if (!keys.length || !keys.every(key => Object.prototype.hasOwnProperty.call(before, key))) return null;
+  return JSON.stringify(Object.fromEntries(keys.map(key => [key, before[key]])));
+}
+export function confirmAdminRiskChange({ title, lines = [], confirmLabel = '변경 저장', doc = document } = {}) {
+  return new Promise(resolve => {
+    const overlay = doc.createElement('div');
+    overlay.className = 'admin-risk-dialog';
+    overlay.setAttribute('role', 'alertdialog');
+    overlay.setAttribute('aria-modal', 'true');
+    const box = doc.createElement('div');
+    const heading = doc.createElement('h2');
+    heading.textContent = title || '중요 설정을 변경할까요?';
+    box.append(heading);
+    for (const line of lines) { const p = doc.createElement('p'); p.textContent = line; box.append(p); }
+    const actions = doc.createElement('div');
+    actions.className = 'actions';
+    const cancel = doc.createElement('button'); cancel.type = 'button'; cancel.textContent = '취소'; cancel.dataset.riskCancel = 'true';
+    const ok = doc.createElement('button'); ok.type = 'button'; ok.textContent = confirmLabel; ok.dataset.riskConfirm = 'true';
+    actions.append(cancel, ok); box.append(actions); overlay.append(box);
+    const done = value => { overlay.remove(); doc.removeEventListener('keydown', onKey, true); resolve(value); };
+    const onKey = event => { if (event.key === 'Escape') { event.preventDefault(); done(false); } };
+    cancel.addEventListener('click', () => done(false));
+    ok.addEventListener('click', () => done(true));
+    overlay.addEventListener('click', event => { if (event.target === overlay) done(false); });
+    doc.addEventListener('keydown', onKey, true);
+    doc.body.append(overlay);
+    cancel.focus();
+  });
+}
+function showRiskToast(message, undo, doc = document) {
+  doc.querySelector('.admin-risk-toast')?.remove();
+  const toast = doc.createElement('div');
+  toast.className = 'admin-risk-toast';
+  toast.setAttribute('role', 'status');
+  const text = doc.createElement('span'); text.textContent = message; toast.append(text);
+  if (undo) {
+    const button = doc.createElement('button'); button.type = 'button'; button.textContent = '되돌리기';
+    button.addEventListener('click', () => { toast.remove(); undo(); });
+    toast.append(button);
+  }
+  doc.body.append(toast);
+  window.setTimeout(() => toast.remove(), undo ? 20000 : 6000);
+}
+function renderRiskHistory(section = riskSection(), doc = document) {
+  if (!section || !isAdminRiskSection(section)) return;
+  const panel = [...doc.querySelectorAll('.content [data-panel]')].find(node => !node.hidden && !node.classList.contains('hidden-panel') && String(node.dataset.panel || '').split(/\s+/).includes(section));
+  if (!panel) return;
+  const entries = readRiskHistory().filter(entry => entry.section === section).slice(0, 5);
+  let box = panel.querySelector(':scope>.admin-risk-history');
+  if (!entries.length) { if (box) box.hidden = true; return; }
+  if (!box) { box = doc.createElement('details'); box.className = 'admin-risk-history'; panel.prepend(box); }
+  box.hidden = false;
+  const summary = doc.createElement('summary');
+  summary.textContent = `이 메뉴의 변경 이력 ${entries.length}건 (이 브라우저 기록)`;
+  const list = doc.createElement('ol');
+  for (const entry of entries) {
+    const li = doc.createElement('li');
+    const when = new Date(entry.at).toLocaleString('ko-KR', { hour12: false });
+    li.textContent = `${when} · ${entry.kind === 'undo' ? '되돌리기' : '변경'} · ${entry.method} ${entry.path} · ${entry.ok ? '완료' : `실패(${entry.status})`}`;
+    list.append(li);
+  }
+  box.replaceChildren(summary, list);
+}
+export function installAdminRiskGuard(win = window) {
+  if (riskGuardInstalled || typeof win.fetch !== 'function') return false;
+  riskGuardInstalled = true;
+  const original = win.fetch.bind(win);
+  const guarded = async (input, init = {}) => {
+    const url = riskRequestUrl(input);
+    const method = String(init?.method || (typeof input === 'object' && input?.method) || 'GET').toUpperCase();
+    const sameOriginApi = url && url.origin === win.location.origin && url.pathname.startsWith('/api/');
+    const section = sameOriginApi ? riskSection() : '';
+    if (!sameOriginApi || !isAdminRiskSection(section)) return original(input, init);
+    const key = `${url.pathname}${url.search}`;
+    if (method === 'GET') {
+      const response = await original(input, init);
+      if (response.ok && /json/i.test(response.headers.get('content-type') || '')) {
+        response.clone().text().then(text => { if (text.length <= 200000) riskSnapshots.set(key, text); }).catch(() => {});
+      }
+      return response;
+    }
+    if (init?.ekodiRiskBypass === true || RISK_READ_ONLY_PATH.test(url.pathname)) return original(input, init);
+    const label = getAdminMenuLabel(section, 'ko');
+    const accepted = await confirmAdminRiskChange({
+      title: `${label} 변경을 저장할까요?`,
+      lines: [
+        '결제·권한·보안·AI 정책·배포처럼 운영에 바로 영향을 주는 설정입니다.',
+        `요청: ${method} ${url.pathname}`,
+        '저장 후 변경 이력에 남고, 이전 상태를 알 수 있으면 되돌리기를 제공합니다.',
+      ],
+    });
+    if (!accepted) throw new DOMException('관리자가 중요 설정 변경을 취소했습니다.', 'AbortError');
+    const bodyText = typeof init?.body === 'string' ? init.body : '';
+    const snapshot = riskSnapshots.get(key);
+    const undoBody = ['PUT', 'PATCH'].includes(method) && snapshot && bodyText ? undoBodyFor(snapshot, bodyText) : null;
+    const response = await original(input, init);
+    const entry = { at: new Date().toISOString(), section, label, method, path: url.pathname, ok: response.ok, status: response.status, kind: 'change', undoAvailable: Boolean(undoBody && response.ok) };
+    writeRiskHistory(entry);
+    if (response.ok) {
+      const undo = undoBody ? async () => {
+        const sure = await confirmAdminRiskChange({ title: `${label} 변경을 되돌릴까요?`, lines: ['직전에 저장하기 전의 값으로 다시 저장합니다.'], confirmLabel: '되돌리기' });
+        if (!sure) return;
+        const headers = new Headers(init?.headers || {});
+        headers.set('content-type', 'application/json');
+        const result = await original(input, { ...init, headers, body: undoBody, ekodiRiskBypass: true }).catch(error => ({ ok: false, status: 0, error }));
+        writeRiskHistory({ at: new Date().toISOString(), section, label, method, path: url.pathname, ok: Boolean(result.ok), status: result.status || 0, kind: 'undo', undoAvailable: false });
+        showRiskToast(result.ok ? '이전 값으로 되돌렸습니다. 화면을 새로고침해 확인하세요.' : '되돌리기에 실패했습니다. 변경 이력을 확인하세요.');
+      } : null;
+      showRiskToast(undo ? `${label} 변경을 저장했습니다.` : `${label} 변경을 저장했습니다. 이 변경은 자동 되돌리기를 지원하지 않습니다.`, undo);
+    }
+    return response;
+  };
+  win.fetch = guarded;
+  win.addEventListener('ekodi-admin-section-changed', () => queueMicrotask(() => renderRiskHistory()));
+  win.EKODIAdminRiskGuard = Object.freeze({ version: '1.0.0', history: readRiskHistory, confirm: confirmAdminRiskChange });
+  return true;
 }
 
 function activeSection(nav) {
@@ -543,6 +853,7 @@ export function mountAdminSidebar(root = document, options = {}) {
     return existing;
   }
 
+  if (isPlatformSuperAdminSurface()) installAdminRiskGuard();
   const sidebar = nav.closest('.sidebar');
   const menuButton = root.querySelector?.('#menuButton') || document.querySelector('#menuButton');
   const mobilePrimary = ensureMobilePrimaryNav(root);
@@ -692,5 +1003,7 @@ if (typeof window !== 'undefined') {
     createItem: createAdminSidebarItem,
     sectionOf: adminSidebarSectionOf,
     readLocale: readAdminSidebarLocale,
+    renderWorkStrip: renderAdminWorkStrip,
   };
+  window.EKODIAdminWorkStrip = Object.freeze({ render: renderAdminWorkStrip });
 }

@@ -22,6 +22,8 @@ test('every platform admin menu has a unique canonical address',()=>{
   const seen=new Map();
   for(const item of ADMIN_MENU_REGISTRY.filter(item=>!item.href)){
     const path=routes.pathFor(item.id);
+    // A merged duplicate resolves to its surviving section's address (redirect, not a second screen).
+    if(item.mergedInto){assert.equal(path,routes.pathFor(item.mergedInto),`${item.id} must redirect to ${item.mergedInto}`);continue;}
     assert.match(path,/^\/admin(?:\/|$)/,`${item.id} must have an /admin canonical path`);
     assert.equal(seen.has(path),false,`duplicate canonical route ${path}: ${seen.get(path)} and ${item.id}`);
     seen.set(path,item.id);
@@ -70,4 +72,18 @@ test('church and organization admins preserve recognized menu identity on deep r
   assert.equal(isChurchPastorAdminPath('/ekodichurch/admin/not-a-section/member-123'),false);
   assert.equal(isOrganizationAdminPath('/hammu/admin/notices/notice-123/edit'),true);
   assert.equal(isOrganizationAdminPath('/hammu/admin/unknown/item-123'),false);
+});
+
+test('ADMIN-LAYOUT-3L-001 merged and reclassified addresses keep resolving',()=>{
+  const routes=routesFor();
+  for(const legacy of ['/admin/ops/health','/admin/status/health','/admin/system/health']) assert.equal(routes.routeFromPath(legacy)?.section,'platform-overview',legacy);
+  assert.equal(routes.pathFor('health'),'/admin/home/platform-overview');
+  assert.equal(routes.routeFromPath('/admin/ops')?.section,'deployments');
+  for(const id of ['sites-core','sites-community','sites-business','sites-clients','sites-knowledge','sites-communication','sites-worklife','sites-other','sites-preparing']){
+    const path=routes.pathFor(id);
+    assert.equal(path,`/admin/sites/${id}`);
+    assert.equal(routes.routeFromPath(path)?.section,id);
+  }
+  // No child-admin alias is created under /admin for a selected site.
+  assert.equal(routes.routeFromPath('/admin/sites/ekodichurch'),null);
 });

@@ -313,14 +313,15 @@ test('Admin canonical route registry mirrors the eight management areas and migr
     ['/admin/devices-agent/devices','devices','/admin/ops/devices'],
     ['/admin/settings-records/storage','storage','/admin/settings/storage'],
     ['/admin/security-audit/security','security','/admin/accounts/security'],
-    ['/admin/status/health','health','/admin/ops/health'],
+    // ADMIN-LAYOUT-3L-001: 전체 운영상태 merged into 홈 › 플랫폼 현황.
+    ['/admin/status/health','platform-overview','/admin/home/platform-overview'],
     ['/admin/summary/platform-overview','platform-overview','/admin/home/platform-overview'],
   ]) {
     assert.equal(routes.sectionFromPath(legacy), section, legacy);
     assert.equal(routes.pathFor(section), v3, section);
   }
   assert.equal(routes.routeFromPath('/admin/releases').section,'deployments');
-  assert.equal(routes.routeFromPath('/admin/ops').section,'health');
+  assert.equal(routes.routeFromPath('/admin/ops').section,'deployments');
   assert.equal(routes.routeFromPath('/admin/ai').section,'aiops');
   assert.equal(routes.routeFromPath('/admin/home').section,'command-home');
   assert.equal(routes.routeFromPath('/admin/ops/books'),null);
@@ -337,6 +338,10 @@ test('Admin canonical route registry mirrors the eight management areas and migr
   for (const item of ADMIN_MENU_REGISTRY.filter(item => !item.href)) {
     if (item.id === 'command-home') {
       assert.equal(routes.pathFor(item.id), '/admin/');
+      continue;
+    }
+    if (item.mergedInto) {
+      assert.equal(routes.pathFor(item.id), routes.pathFor(item.mergedInto), `${item.id} redirects to ${item.mergedInto}`);
       continue;
     }
     assert.equal(routes.pathFor(item.id).split('/')[2], item.group, `${item.id} route group must match its canonical Admin path area`);

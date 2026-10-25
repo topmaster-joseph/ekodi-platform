@@ -1,4 +1,4 @@
-// ADMIN-AUDIENCE-001 · 사이트 원장 › 관리자 메뉴 템플릿 (read-only view).
+// ADMIN-AUDIENCE-001 · 사이트관리 › 관리자 메뉴 템플릿 (read-only view).
 // The classification ledger config/admin-menu-audience-policy.json is the source
 // of truth; this browser copy is held equal to it by
 // test/admin-menu-templates-view.test.mjs. Changes go through an EKODI-orchestrated
@@ -247,6 +247,9 @@ export function renderMenuTemplateTable(template = SITE_ADMIN_MENU_TEMPLATE) {
   }).join('');
   return `<table class="ekodi-mt-table"><colgroup><col class="ekodi-mt-menu">${types.map(() => '<col>').join('')}</colgroup><thead><tr><th scope="col">사이트 관리자 메뉴</th>${head}</tr></thead><tbody>${body}</tbody></table>`;
 }
+
+// 사이트관리 reads the same ledger copy to list a selected site's own admin menus.
+if (typeof window !== 'undefined') window.EKODISiteAdminMenuTemplate = SITE_ADMIN_MENU_TEMPLATE;
 
 if (typeof document !== 'undefined' && !document.getElementById(MODULE_ID)) {
   const content = document.querySelector('.content');

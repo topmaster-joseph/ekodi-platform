@@ -11,7 +11,7 @@
   "profiles": {
     "platform-super-admin": {
       "surface": "/admin",
-      "navigationMode": "eight-platform-control-areas-with-menu-and-detail-routes",
+      "navigationMode": "eight-platform-control-areas-left-menu-top-detail-strip",
       "groups": [
         {
           "id": "home",
@@ -20,8 +20,8 @@
         },
         {
           "id": "sites",
-          "labelKo": "사이트 원장",
-          "purpose": "전체 사이트 목록과 각 사이트 관리자(/{site}/admin) 이동"
+          "labelKo": "사이트관리",
+          "purpose": "사이트 분류(왼쪽) → 분류의 사이트 버튼(위) → 선택한 사이트의 관리자 메뉴(아래, 각 /{site}/admin 으로 연결)"
         },
         {
           "id": "ai",
@@ -41,7 +41,7 @@
         {
           "id": "ops",
           "labelKo": "운영·안정성",
-          "purpose": "운영상태, 자동점검, 배포·장애, 시스템 구조, 실행 인프라"
+          "purpose": "자동점검, 배포·장애, 시스템 구조, 실행 인프라 (전체 운영상태는 홈 › 플랫폼 현황으로 통합)"
         },
         {
           "id": "settings",
@@ -54,13 +54,15 @@
           "purpose": "EKODI 계정, 최고관리자, 보안·인증, 감사기록"
         }
       ],
-      "leftDetailRule": "Show the active group's menus under the selected control area; the active menu nests its detail routes directly beneath it (group → menu → detail).",
-      "serviceGroupRule": "Services & Engines renders the engine catalog as detail routes of one menu; no duplicate top context tab strip.",
+      "leftDetailRule": "ADMIN-LAYOUT-3L-001: the left sidebar shows the eight control areas (1차) and the active area's menus (2차) only. The active menu's detail routes (3차) render as a button strip at the top of the workspace and the selected detail's settings render below it. A menu with one detail route shows no strip.",
+      "serviceGroupRule": "Services & Engines renders the engine catalog as 3차 detail buttons of one menu in the workspace strip; the retired context tab shell stays retired.",
       "maySeeControlPlane": true,
       "mayAggregateChildStatus": true,
       "uniqueOwnership": true,
       "legacyDeepLinks": "Previously canonical routes remain accepted as aliases after navigation reclassification.",
-      "siteOperationsRule": "Per-site operations (channels, events, members, messages) live only in each site admin (/{site}/admin); the platform admin lists sites and hands off. Platform-global engines (EKODI Books, devotional autopost, channel control center, EKODI Work) are platform services under ADMIN-AUDIENCE-001."
+      "siteOperationsRule": "Per-site operations (channels, events, members, messages) live only in each site admin (/{site}/admin); the platform admin lists sites and hands off. Platform-global engines (EKODI Books, devotional autopost, channel control center, EKODI Work) are platform services under ADMIN-AUDIENCE-001.",
+      "siteManagementRule": "사이트관리 2차 menus are site classifications; the strip lists that classification's sites; the selected site's own admin menus render below as hand-off links to its canonical /{site}/admin/{menu}. No child-admin alias is created under /admin.",
+      "riskGuardRule": "ADMIN-RISK-GUARD-001: high-risk settings (registry risk:high) require an explicit confirmation before save, are recorded in change history, and offer one-step undo when the previous state is known."
     },
     "delegated-manager": {
       "surfacePattern": "/{site-or-workspace}/admin",

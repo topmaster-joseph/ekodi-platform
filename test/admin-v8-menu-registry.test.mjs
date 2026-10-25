@@ -13,7 +13,7 @@ test('v3 admin exposes eight distinct platform-only management areas', () => {
   assert.equal(getAdminMenuGroupDefault('services'), 'engine-all');
   assert.equal(getAdminMenuGroupDefault('sites'), 'sites-all');
   assert.equal(getAdminMenuGroupDefault('accounts'), 'users-access');
-  assert.equal(getAdminMenuGroupDefault('ops'), 'health');
+  assert.equal(getAdminMenuGroupDefault('ops'), 'deployments');
   assert.equal(getAdminMenuGroupDefault('ai'), 'aiops');
 });
 
@@ -27,9 +27,9 @@ test('service and site aliases delegate to existing work surfaces without duplic
     assert.equal(byId.get(id)?.group, 'sites');
     assert.equal(byId.get(id)?.delegateSection, 'campus');
   }
-  // v3 merges the site category routes into the registry list; they stay routable but hidden.
+  // ADMIN-LAYOUT-3L-001: site classifications are the visible 2차 menus of 사이트관리.
   for (const id of ['sites-core','sites-business','sites-community','sites-clients','sites-knowledge','sites-communication','sites-worklife','sites-other']) {
-    assert.equal(byId.get(id)?.internal, true, `${id} should be a hidden filter route`);
+    assert.notEqual(byId.get(id)?.internal, true, `${id} should be a visible classification route`);
   }
   assert.notEqual(byId.get('sites-all')?.internal, true);
   assert.notEqual(byId.get('sites-preparing')?.internal, true);
@@ -48,7 +48,11 @@ test('User access delegates to the unified site member directory', () => {
 
 test('Operations, devices, finance and releases have one distinct primary owner', () => {
   const byId = new Map(ADMIN_MENU_REGISTRY.map(item => [item.id, item]));
-  const ownership = { health:'ops','site-health':'ops',deployments:'ops',aiops:'ai',devices:'ops','pos-agent':'ops','api-cost':'finance',finance:'finance',security:'accounts','audit-records':'accounts' };
+  // health is merged into 홈 › 플랫폼 현황 (same panel); its old addresses redirect there.
+  assert.equal(byId.get('health')?.internal, true);
+  assert.equal(byId.get('health')?.mergedInto, 'platform-overview');
+  assert.equal(byId.get('platform-overview')?.delegateSection, 'health');
+  const ownership = { 'site-health':'ops',deployments:'ops',aiops:'ai',devices:'ops','pos-agent':'ops','api-cost':'finance',finance:'finance',security:'accounts','audit-records':'accounts' };
   for (const [id,group] of Object.entries(ownership)) {
     assert.equal(byId.get(id)?.group, group, id);
     assert.notEqual(byId.get(id)?.internal, true, id);

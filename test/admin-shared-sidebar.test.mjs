@@ -136,7 +136,7 @@ test('global menu labels use readable contrast on the dark primary sidebar', () 
 
 test('Operations, releases, devices and finance have distinct visible submenus', () => {
   for (const marker of [
-    "id: 'health', group: 'ops', labels: { ko: '운영상태', en: 'Operational Health' }, sections: ['health', 'site-health']",
+    "id: 'health', group: 'ops', labels: { ko: '운영상태', en: 'Operational Health' }, sections: ['site-health']",
     "id: 'releases', group: 'ops', labels: { ko: '배포·장애', en: 'Releases & Incidents' }, sections: ['deployments']",
     "id: 'system', group: 'ops', labels: { ko: '시스템 구조', en: 'System Structure' }, sections: ['architecture', 'maturity']",
     "id: 'infra', group: 'ops', labels: { ko: '실행 인프라', en: 'Execution Infrastructure' }, sections: ['devices', 'pos-agent']",
@@ -149,11 +149,16 @@ test('Operations, releases, devices and finance have distinct visible submenus',
   }
 });
 
-test('Services & Engines nests engine detail links under one left menu with no duplicate top navigation', () => {
+test('Services & Engines shows its engine details as one 3차 workspace strip, never nested on the left', () => {
   assert.match(sidebar, /FLAT_DETAIL_GROUPS = new Set\(\)/);
   assert.match(registry, /id: 'engines', group: 'services'[^\n]*sections: \['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'\]/);
   assert.match(sidebar, /details\.dataset\.adminFlatDetails = FLAT_DETAIL_GROUPS\.has\(group\) \? 'true' : 'false'/);
-  assert.match(sidebar, /if \(inMenu && tabs\.length > 1\)/);
+  // ADMIN-LAYOUT-3L-001: left = 1차 group + 2차 menu; 3차 details go to the top strip.
+  assert.doesNotMatch(sidebar, /if \(inMenu && tabs\.length > 1\)/);
+  assert.match(sidebar, /renderDetailStrip\(nav, activeMenu, section, locale\)/);
+  assert.match(sidebar, /if \(tabs\.length < 2\) \{\n    renderAdminWorkStrip\(\[\]/);
+  assert.match(sidebar, /className: TAB_CLASS,/);
+  assert.match(sidebar, /dataset: \{ adminDetailSection: id \}/);
   assert.match(sidebar, /data-admin-flat-details="true"/);
   assert.doesNotMatch(sidebar, /function renderContextTabs/);
   assert.doesNotMatch(sidebar, /data-admin-context-section/);

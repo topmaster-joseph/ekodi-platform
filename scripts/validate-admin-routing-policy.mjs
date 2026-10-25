@@ -27,12 +27,14 @@ const seen=new Set();
 for(const item of ADMIN_MENU_REGISTRY.filter(item=>!item.href)){
   const path=routes.pathFor(item.id);
   if(!path.startsWith('/admin/'))fail.push(`${item.id} missing canonical /admin path`);
+  // ADMIN-LAYOUT-3L-001: a merged duplicate is not a second screen; it must redirect to its survivor.
+  if(item.mergedInto){if(path!==routes.pathFor(item.mergedInto))fail.push(`${item.id} must redirect to ${item.mergedInto}`);continue;}
   if(seen.has(path))fail.push(`duplicate canonical admin path: ${path}`);
   seen.add(path);
 }
 const deep=routes.pathFor('finance',['transactions','txn-123','edit']);
 if(deep!=='/admin/finance/finance/transactions/txn-123/edit')fail.push('platform deep admin route generation drifted');
-for (const [legacy,section] of [['/admin/content/finance','finance'],['/admin/status/devices','devices'],['/admin/status/aiops','aiops'],['/admin/people/security','security'],['/admin/settings-records/audit-records','audit-records']]) {
+for (const [legacy,section] of [['/admin/ops/health','platform-overview'],['/admin/status/health','platform-overview'],['/admin/content/finance','finance'],['/admin/status/devices','devices'],['/admin/status/aiops','aiops'],['/admin/people/security','security'],['/admin/settings-records/audit-records','audit-records']]) {
   if (routes.routeFromPath(legacy)?.section!==section) fail.push('prior admin deep link stopped resolving: '+legacy);
 }
 const parsed=routes.routeFromPath(deep);

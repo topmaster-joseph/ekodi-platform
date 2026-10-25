@@ -506,6 +506,7 @@
     const requestedGroup = new URLSearchParams(location.search).get('site_group');
     if (requestedGroup) applyGroupFilter(requestedGroup, { syncUrl:false });
     else applySiteSection(window.EKODIAdminPanels?.current?.() || 'sites-all');
+    queueMicrotask(() => syncSiteManager());
     refreshCampusCounts();
     loadHomepageAdmin();
     return true;
@@ -550,9 +551,210 @@
     }
   }
 
+  // ── 사이트관리 3단 구조 (ADMIN-LAYOUT-3L-001) ────────────────────────────
+  // 왼쪽 2차 = 사이트 분류, 위쪽 버튼 = 그 분류의 사이트, 아래 = 선택한 사이트의
+  // 관리자 메뉴. 관리자 메뉴는 복제하지 않고 config/admin-site-hierarchy.json에 등록된
+  // 각 사이트의 고유 관리자 주소(/{사이트}/admin/{메뉴})로 연결만 한다
+  // (상위 관리자 아래에 하위 관리자 별칭 주소를 만들지 않는다).
+  const SITE_ADMIN_ROOTS = Object.freeze([
+    { id: 'ekodichurch', publicPath: '/ekodichurch', adminPath: '/ekodichurch/admin', siteType: 'church' },
+    { id: 'ekodibiz', publicPath: '/ekodibiz', adminPath: '/ekodibiz/admin', siteType: 'org' },
+    { id: 'ekodibiz-trade', publicPath: '/ekodibiz/trade', adminPath: '/ekodibiz/trade/admin', siteType: 'org' },
+    { id: 'ekodimall', publicPath: '/ekodimall', adminPath: '/ekodimall/admin', siteType: 'store' },
+    { id: 'ekodibooks', publicPath: '/books', adminPath: '/books/admin', siteType: 'brand' },
+    { id: 'cheonggye-local', publicPath: '/cheonggye', adminPath: '/cheonggye/admin', siteType: 'org' },
+    { id: 'cgma', publicPath: '/cgma', adminPath: '/cgma/admin', siteType: 'org' },
+    { id: 'cmpmyi', publicPath: '/cmpmyi', adminPath: '/cmpmyi/admin', siteType: 'store' },
+    { id: 'jadam', publicPath: '/jadam', adminPath: '/jadam/admin', siteType: 'store' },
+    { id: 'pizzamaru', publicPath: '/pizzamaru', adminPath: '/pizzamaru/admin', siteType: 'store' },
+    { id: 'yogurt', publicPath: '/yogurt', adminPath: '/yogurt/admin', siteType: 'store' },
+  ]);
+  const LIFECYCLE_STATE = Object.freeze({ live: ['ok', '운영 중'], beta: ['warn', '베타'], preparing: ['warn', '준비 중'], planned: ['off', '오픈 전'], private: ['off', '비공개'], hidden: ['off', '숨김'] });
+  let activeSiteKey = '';
+
+  function siteAdminRoot(site) {
+    const info = surfaceInfo(site);
+    let path = '';
+    try { path = new URL(info.url || `https://${site.domain}`).pathname.replace(/\/+$/, ''); } catch {}
+    if (!path) return null;
+    return SITE_ADMIN_ROOTS.find(root => root.publicPath === path) || null;
+  }
+
+  function siteRecordFromItem(item) {
+    const domain = item.dataset.siteDomain || '';
+    const card = item.closest('[data-campus-group]');
+    const site = {
+      id: item.dataset.siteId || '',
+      name: item.querySelector('.campus-site-identity strong')?.textContent?.trim() || domain,
+      type: item.querySelector('.campus-site-type')?.textContent?.trim() || '',
+      domain,
+      lifecycle: item.dataset.siteLifecycle || 'live',
+      relation: item.dataset.siteRelation || 'internal',
+      group: card?.dataset.campusGroup || 'other',
+    };
+    const root = siteAdminRoot(site);
+    site.adminRoot = root;
+    site.key = root?.id || normalizeDomain(domain);
+    return site;
+  }
+
+  function sitesForSection(section) {
+    const grid = document.querySelector('#campusSiteGroups');
+    if (!grid) return [];
+    const filter = SITE_SECTION_FILTER[String(section || '')] || SITE_SECTION_FILTER['sites-all'];
+    const previous = [activeSiteGroup, activeSiteRelation];
+    [activeSiteGroup, activeSiteRelation] = [filter.group, filter.relation];
+    const sites = [];
+    for (const card of grid.querySelectorAll('.campus-group-card')) {
+      if (filter.group !== 'all' && card.dataset.campusGroup !== filter.group) continue;
+      for (const item of card.querySelectorAll('.campus-site-item')) if (matchesSiteRelation(item)) sites.push(siteRecordFromItem(item));
+    }
+    [activeSiteGroup, activeSiteRelation] = previous;
+    return sites;
+  }
+
+  function currentSiteSection() {
+    const section = window.EKODIAdminPanels?.current?.() || window.EKODIAdminRoutes?.sectionFromLocation?.(location) || '';
+    return SITE_SECTION_FILTER[section] ? section : '';
+  }
+
+  function siteAdminContainer() {
+    const wrapper = document.querySelector('#campusPanel .campus-table-wrap');
+    if (!wrapper) return null;
+    let box = document.querySelector('#campusSiteAdmin');
+    if (!box) {
+      box = document.createElement('section');
+      box.id = 'campusSiteAdmin';
+      box.className = 'campus-site-admin';
+      box.setAttribute('aria-live', 'polite');
+      box.addEventListener('click', event => {
+        const button = event.target.closest('[data-campus-action]');
+        if (!button) return;
+        event.stopPropagation();
+        openSection(button.dataset.campusTarget || 'services', button.dataset.campusDomain || '', button.dataset.campusFallback || 'services');
+      });
+      wrapper.insertAdjacentElement('beforebegin', box);
+    }
+    return box;
+  }
+
+  function element(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = text;
+    return node;
+  }
+
+  function renderSiteAdmin(site) {
+    const box = siteAdminContainer();
+    const grid = document.querySelector('#campusSiteGroups');
+    if (!box) return;
+    if (!site) {
+      box.dataset.state = 'empty';
+      box.replaceChildren(element('p', 'campus-site-admin-hint', '위쪽 버튼에서 사이트를 선택하면 그 사이트의 관리자 메뉴가 여기에 표시됩니다.'));
+      if (grid) { grid.hidden = false; grid.style.removeProperty('display'); }
+      return;
+    }
+    box.dataset.state = 'selected';
+    box.dataset.siteKey = site.key;
+    if (grid) { grid.hidden = true; grid.style.setProperty('display', 'none', 'important'); }
+    const head = element('header', 'campus-site-admin-head');
+    const title = element('div');
+    title.append(element('p', 'kicker', `${site.type || '사이트'} · ${LIFECYCLE_STATE[site.lifecycle]?.[1] || '운영 중'}`), element('h3', '', site.name), element('p', 'campus-site-admin-address', surfaceInfo(site).label));
+    const actions = element('div', 'campus-site-admin-actions');
+    if (site.adminRoot) {
+      const open = element('a', 'primary campus-row-action', '관리자 홈 열기 ↗');
+      open.href = site.adminRoot.adminPath; open.target = '_blank'; open.rel = 'noopener';
+      actions.append(open);
+    }
+    actions.append(makeButton('Status', 'secondary', 'status', site), makeOpenControl(site));
+    const back = element('button', 'secondary campus-row-action', '목록 보기');
+    back.type = 'button';
+    back.addEventListener('click', () => selectSite(''));
+    actions.append(back);
+    head.append(title, actions);
+    const body = element('div', 'campus-site-admin-menus');
+    const template = window.EKODISiteAdminMenuTemplate;
+    if (!site.adminRoot) {
+      body.append(element('p', 'campus-site-admin-note', '이 사이트는 아직 독립 관리자 주소(/{사이트}/admin)가 등록되지 않았습니다. 등록 전까지는 위의 Status·Open으로 확인합니다. (확인필요)'));
+    } else if (!template?.groups?.length) {
+      body.append(element('p', 'campus-site-admin-note', '관리자 메뉴 정의를 불러오는 중입니다. 잠시 후 다시 선택해 주세요.'));
+    } else {
+      const type = site.adminRoot.siteType;
+      for (const group of template.groups) {
+        const menus = (group.menus || []).filter(menu => !menu.siteTypes || menu.siteTypes.includes(type));
+        if (!menus.length) continue;
+        const card = element('section', 'campus-site-admin-group');
+        const h = element('h4', '', group.ko);
+        if (group.readOnly) h.append(element('em', '', '열람 전용'));
+        const list = element('div', 'campus-site-admin-links');
+        for (const menu of menus) {
+          const link = element('a', 'campus-site-admin-link', menu.ko);
+          link.href = `${site.adminRoot.adminPath}/${encodeURIComponent(menu.id)}`;
+          link.target = '_blank'; link.rel = 'noopener';
+          link.dataset.siteAdminMenu = menu.id;
+          list.append(link);
+        }
+        card.append(h, list);
+        body.append(card);
+      }
+      body.append(element('p', 'campus-site-admin-note', '메뉴는 해당 사이트의 고유 관리자 화면에서 열립니다. 권한은 사이트별 역할에 따라 다시 확인됩니다.'));
+    }
+    box.replaceChildren(head, body);
+  }
+
+  function selectSite(key, { syncUrl = true } = {}) {
+    activeSiteKey = String(key || '');
+    const section = currentSiteSection() || 'sites-all';
+    const sites = sitesForSection(section);
+    const site = sites.find(item => item.key === activeSiteKey) || null;
+    if (!site) activeSiteKey = '';
+    renderSiteStrip(section, sites);
+    renderSiteAdmin(site);
+    if (syncUrl) {
+      const url = new URL(location.href);
+      if (activeSiteKey) url.searchParams.set('site', activeSiteKey); else url.searchParams.delete('site');
+      history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+    }
+  }
+
+  function renderSiteStrip(section, sites = sitesForSection(section)) {
+    const strip = window.EKODIAdminWorkStrip;
+    if (!strip?.render || !section) return false;
+    strip.render(sites.map(site => {
+      const [state, stateLabel] = LIFECYCLE_STATE[site.lifecycle] || LIFECYCLE_STATE.live;
+      return { id: site.key, label: site.name, state, stateLabel, note: site.adminRoot ? '' : '주소 미등록', dataset: { siteKey: site.key } };
+    }), {
+      owner: 'sites',
+      key: section,
+      active: activeSiteKey,
+      label: `사이트 ${sites.length}`,
+      ariaLabel: '분류에 속한 사이트',
+      onSelect: key => selectSite(key === activeSiteKey ? '' : key),
+    });
+    return true;
+  }
+
+  function syncSiteManager(section = currentSiteSection()) {
+    if (!section || !document.querySelector('#campusSiteGroups')) return;
+    const requested = new URLSearchParams(location.search).get('site') || '';
+    const sites = sitesForSection(section);
+    activeSiteKey = sites.some(site => site.key === requested) ? requested : (sites.some(site => site.key === activeSiteKey) ? activeSiteKey : '');
+    renderSiteStrip(section, sites);
+    renderSiteAdmin(sites.find(site => site.key === activeSiteKey) || null);
+  }
+
+  window.addEventListener('ekodi-admin-site-class-selected', event => {
+    const section = String(event.detail?.section || '');
+    if (!SITE_SECTION_FILTER[section]) return;
+    applySiteSection(section);
+    syncSiteManager(section);
+  });
+  window.addEventListener('ekodi-campus-registry-reconciled', () => syncSiteManager());
+
   window.addEventListener('ekodi-admin-section-changed', event => {
     const section = String(event.detail?.section || '');
-    if (SITE_SECTION_FILTER[section]) applySiteSection(section);
+    if (SITE_SECTION_FILTER[section]) { applySiteSection(section); syncSiteManager(section); }
   });
 
   window.EKODICampus = Object.freeze({
@@ -561,6 +763,9 @@
     applySiteRelation,
     applySiteSection,
     loadHomepageAdmin,
+    selectSite,
+    sitesForSection,
+    siteAdminRoots: SITE_ADMIN_ROOTS,
   });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
