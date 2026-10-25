@@ -4,6 +4,7 @@ import { runMallAutonomousProfitLoop } from './mall-autonomous-profit-loop.js';
 import { ownedTenantAutopostSubject, runOwnedTenantAutopostCycle } from './owned-tenant-autopost-loop.js';
 import { d1SchemaReady } from './d1-schema-readiness.js';
 import { mallGrowthDashboardSnapshot } from './mall-growth-dashboard.js';
+import { growthOsSnapshot } from './ekodi-growth-os.js';
 import { channelCatalogSnapshot } from './channel-publishing-catalog.js';
 import { selectAuthorizedYouTubeChannels } from './youtube-brand-channel-verification.js';
 import { youtubeDataApiDisabledProject } from './youtube-data-api-readiness.js';
@@ -1007,6 +1008,15 @@ export default {
     if (auth.error) return json(request,env,{error:auth.error},auth.status);
     const {identity,subject} = auth;
 
+    if (url.pathname === '/v1/growth-os/overview' && request.method === 'GET') {
+      try {
+        const overview = await growthOsSnapshot(env, subject, { platform: platformReadiness(env) });
+        return json(request, env, overview, overview.ok ? 200 : (overview.status || 503));
+      } catch (error) {
+        console.error('EKODI Growth OS snapshot failed', error?.message || 'unknown');
+        return json(request, env, { error: 'GROWTH_OS_READ_FAILED' }, 503);
+      }
+    }
     if (url.pathname === '/v1/mall/promotion-board' && request.method === 'GET') {
       if (subject.type !== 'tenant' || subject.key !== 'ekodimall') return json(request,env,{error:'SUBJECT_FORBIDDEN'},403);
       return json(request,env,await mallPromotionBoard(env));
