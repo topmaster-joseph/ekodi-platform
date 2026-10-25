@@ -77,7 +77,7 @@ jobs:
           set -euo pipefail
           for attempt in $(seq 1 18); do
             root_code=$(curl -L -sS -o /tmp/books.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://books.ekodi.kr/' || true)
-            detail_code=$(curl -L -sS -o /tmp/ekodian.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://books.ekodi.kr/ekodian/' || true)
+            detail_code=$(curl -L -sS -o /tmp/ekodian.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/books/ekodian/' || true)
             publishing_code=$(curl -L -sS -o /tmp/publishing.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://books.ekodi.kr/publishing/' || true)
             upaper_code=$(curl -L -sS -D /tmp/upaper-headers -o /tmp/upaper.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://books.ekodi.kr/publishing/upaper/' || true)
             admin_code=$(curl -sS --max-redirs 0 -D /tmp/books-admin-headers -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://books.ekodi.kr/admin' || true)
