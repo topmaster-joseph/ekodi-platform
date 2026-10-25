@@ -163,7 +163,7 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   const name=typeof v.bank_name==='string'?v.bank_name.trim():'';
   const account=typeof v.account_number==='string'?v.account_number.trim():'';
   const holder=typeof v.account_holder==='string'?v.account_holder.trim():'';
-  const validAmount=a=>a===null||(Number.isInteger(a)&&a>=100&&a<=10000000);
+  const validAmount=(a:any)=>a===null||(Number.isInteger(a)&&a>=100&&a<=10000000);
   if(name.length<2||name.length>70||! /^[0-9 -]{6,40}$/.test(account)||holder.length<2||holder.length>70
      ||!validAmount(v.community_amount_krw)||!validAmount(v.consulting_amount_krw))
     return reply(req,{error:'invalid_bank_configuration_values'},400);
