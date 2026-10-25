@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { evaluateEkodiContinuousExecution, EKODI_CONTINUOUS_EXECUTION_GATE } from '../ekodi-continuous-execution-gate.js';
+import { evaluateEkodiContinuousExecution, evaluateEkodiContinuousExecutionFromLedger, EKODI_CONTINUOUS_EXECUTION_GATE } from '../ekodi-continuous-execution-gate.js';
 
 const policy = JSON.parse(readFileSync(new URL('../config/ai-change-orchestration-policy.json', import.meta.url), 'utf8'));
 const rule = policy.deploymentMinimumFriction.oneFinalPromotionConfirmation;
@@ -108,13 +108,71 @@ test('client-supplied approval fields, mismatched SHA and stale state all fail c
   }
 });
 
-test('attested approval advances only to guarded production promotion, never directly deploys', () => {
-  const decision = evaluateEkodiContinuousExecution({
-    ...ready, trustedOrchestratorConfirmation: receipt,
+const durableReceipt = {
+  ...receipt,
+  approved:true, approvedBy:'owner-1',
+  approvalId:`final_promotion_${taskId}_v3`,
+};
+const taskRow = {
+  task_id:taskId, branch_ref:branchRef, state:'staging',
+  state_version:3, permission_class:'delegated', deployment_requested:1,
+};
+const eventRow = {
+  actor:'super-admin:owner-1', reason:'final_promotion_approval_recorded',
+  evidence_json:JSON.stringify(durableReceipt),
+};
+function ledger(task=taskRow,event=eventRow) {
+  return { prepare(sql){
+    if(sql.includes('FROM ekodi_orchestrator_tasks')){
+      return {bind(id){return {first:async()=>id===taskId?task:null}}};
+    }
+    if(sql.includes('FROM ekodi_orchestrator_task_events')){
+      return {bind(id){return {first:async()=>id===taskId?event:null}}};
+    }
+    throw Error('Unexpected SQL');
+  }};
+}
+
+test('model supplied truthy approval flag cannot authorize final promotion',async()=>{
+  const fake=evaluateEkodiContinuousExecution({
+    ...ready, trustedOrchestratorConfirmation:receipt,
   });
-  assert.equal(decision.decision, 'ready_for_guarded_promotion');
-  assert.equal(decision.requiresSeparateOfficialReleaseGate, true);
-  assert.equal(decision.productionDeployed, false);
+  assert.equal(fake.decision,'await_final_owner_confirmation');
+  assert.equal(fake.productionDeployed,false);
+  const withoutDb=await evaluateEkodiContinuousExecutionFromLedger(null,{
+    ...ready, trustedOrchestratorConfirmation:receipt,
+  });
+  assert.equal(withoutDb.decision,'await_final_owner_confirmation');
+});
+
+test('only real scoped EKODI ledger evidence can pass advisory final preflight',async()=>{
+  const decision=await evaluateEkodiContinuousExecutionFromLedger(ledger(),ready);
+  assert.equal(decision.decision,'ready_for_guarded_promotion');
+  assert.equal(decision.reason,'durable_task_approval_verified');
+  assert.equal(decision.requiresSeparateOfficialReleaseGate,true);
+  assert.equal(decision.productionDeployed,false);
+});
+
+test('stale, mismatched, corrupt or unprivileged DB approvals fail closed',async()=>{
+  for (const [task,event] of [
+    [null,eventRow],
+    [{...taskRow,state:'blocked'},eventRow],
+    [{...taskRow,branch_ref:'ai/gpt6/'+taskId},eventRow],
+    [{...taskRow,state_version:4},eventRow],
+    [{...taskRow,permission_class:'unapproved'},eventRow],
+    [{...taskRow,deployment_requested:0},eventRow],
+    [taskRow,null],
+    [taskRow,{...eventRow,actor:'ai:claude'}],
+    [taskRow,{...eventRow,evidence_json:'{not-json'}],
+    [taskRow,{...eventRow,evidence_json:JSON.stringify({...durableReceipt,releaseSha:'c'.repeat(40)})}],
+    [taskRow,{...eventRow,evidence_json:JSON.stringify({...durableReceipt,approvedBy:'other'})}],
+    [taskRow,{...eventRow,evidence_json:JSON.stringify({...durableReceipt,stateVersion:4})}],
+  ]){
+    const result=await evaluateEkodiContinuousExecutionFromLedger(ledger(task,event),ready);
+    assert.equal(result.decision,'await_final_owner_confirmation');
+  }
+  const db={prepare(){throw Error('DB unavailable')}};
+  assert.equal((await evaluateEkodiContinuousExecutionFromLedger(db,ready)).decision,'await_final_owner_confirmation');
 });
 
 test('unknown stages are not treated as production-ready', () => {
