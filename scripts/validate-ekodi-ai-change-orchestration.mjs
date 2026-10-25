@@ -15,6 +15,23 @@ if (staticPolicyMode && (releaseMode || ciFlag)) {
   process.exit(1);
 }
 const ciMode = ciFlag || releaseMode;
+// A pull request is never production-bound. It cannot carry an
+// orchestrator-issued `ai/<agent>/orch_<task-id>` ref or a release receipt, so
+// release-grade verification can never pass on one: every lane that ran
+// `--release` on `pull_request` failed at this gate before any of its own
+// checks ran. Release grade belongs to the events that actually deploy, so on
+// a pull request the gate degrades to the CI-grade contract instead — the same
+// one the standalone EKODI AI Orchestration Gate workflow applies.
+//
+// This is the single place that truth belongs. Encoding it per job, as an `if:`
+// on every lane, also means editing `.github/workflows/**`, and the
+// release-provenance recovery cannot create a branch for such a change: its
+// workflow token holds contents/pull-requests/issues/actions but not
+// `workflows`, so GitHub refuses the ref and no release can be issued.
+//
+// An orchestrator-issued branch is still receipt-verified here, in CI mode,
+// through `releaseReceiptRequired` below. Nothing is relaxed for the lanes that
+// deploy.
 
 function fail(message) {
   console.error(`[EKODI][AI-ORCHESTRATE-001] ${message}`);
@@ -299,6 +316,10 @@ async function verifiedBranchPrMerge(targetBranch) {
   return null;
 }
 
+// Release grade applies to every event except a pull request (see above).
+const pullRequestEvent = eventName === 'pull_request' || eventName === 'pull_request_target';
+const effectiveReleaseMode = releaseMode && !pullRequestEvent;
+
 let source = 'static-policy-validation';
 let intentBranch = text(process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME);
 
@@ -332,13 +353,13 @@ if (staticPolicyMode) {
   source = `${eventName}-routed-through-ekodi-ai`;
 } else if (ciMode && eventName) {
   source = `${eventName}-routed-through-ekodi-ai`;
-} else if (releaseMode) {
+} else if (effectiveReleaseMode) {
   fail('direct local production mutation is forbidden; use an EKODI AI orchestrated GitHub change/release lane.');
 }
 
 const orchestratorBranch = parseOrchestratorReleaseBranch(intentBranch);
 const canonicalRepository = repository === 'topmaster-joseph/ekodi-platform';
-const releaseReceiptRequired = !staticPolicyMode && canonicalRepository && (releaseMode || (ciMode && Boolean(orchestratorBranch)));
+const releaseReceiptRequired = !staticPolicyMode && canonicalRepository && (effectiveReleaseMode || (ciMode && Boolean(orchestratorBranch)));
 let releaseReceipt = null;
 if (releaseReceiptRequired) {
   try {
@@ -418,7 +439,10 @@ const attestation = {
     authority: releaseReceipt.authority,
     state: releaseReceipt.state,
   }) : Object.freeze({ required: releaseReceiptRequired, verified: false }),
-  releaseMode,
+  // What the gate actually enforced, not what the flag asked for: a pull
+  // request is recorded as CI grade even when invoked with --release.
+  releaseMode: effectiveReleaseMode,
+  releaseModeRequested: releaseMode,
   timestamp: new Date().toISOString(),
 };
 
