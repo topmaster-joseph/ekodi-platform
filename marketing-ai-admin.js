@@ -4,7 +4,7 @@
   const REVIEW = 'https://auth.ekodi.kr/?site=marketing&review=1&return_to=https%3A%2F%2Fmarketing.ekodi.kr%2F';
   const token = () => sessionStorage.getItem('ekodi-auth-token') || '';
   const TABS = [
-    ['overview','Overview'],['customers','Customers'],['workspaces','Workspaces'],['campaigns','Campaigns'],['crm','CRM'],
+    ['overview','Overview'],['growth-os','Growth OS'],['customers','Customers'],['workspaces','Workspaces'],['campaigns','Campaigns'],['crm','CRM'],
     ['channels','Channels'],['automation','Automation'],['approvals','Approvals'],['billing','Billing'],['reports','Reports'],
   ];
   const WORKSPACE_LABELS = {
@@ -22,6 +22,7 @@
   };
 
   let state = { tab:'overview', data:null, loading:false };
+  const growth = { subject:'ekodimall', cache:new Map(), loading:false, error:'' };
 
   const api = async path => {
     const headers = new Headers();
@@ -318,6 +319,68 @@
           <div class="marketing-ai-subscription-grid">${subscriptions.length ? subscriptions.slice(0,16).map(row => `<article><div><strong>${esc(subjectLabel(data,row))}</strong><span class="marketing-ai-plan-chip">${esc(planLabel(row))}</span></div><small>${Number(row.monthly_fee || 0) ? `월 ${esc(won(row.monthly_fee))}` : '무료/종량제'} · ${esc(dateText(row.updated_at))}</small></article>`).join('') : '<div class="marketing-ai-empty">구독 레코드가 없습니다.</div>'}</div>
         </section>
       </div>`;
+    }
+
+    const GROWTH_PILLARS = [
+      ['discovery','발견 · SEO/AEO/GEO'], ['content','콘텐츠 · 캠페인'], ['commerce','상거래 · 전환'],
+      ['relationship','고객관계 · CRM'], ['intelligence','성과 · 학습'], ['governance','승인 · 안전'],
+    ];
+    function growthSubjects(data) {
+      const available = new Set(['ekodimall']);
+      (data?.workspaces || []).forEach(row => {
+        const slug = String(row?.tenantSlug || '').trim();
+        if (slug && /^[a-z0-9-]{1,80}$/.test(slug)) available.add(slug);
+      });
+      return [...available];
+    }
+    async function refreshGrowthOs(force = false) {
+      if (growth.loading || !token()) return;
+      const key = growth.subject;
+      if (!force && growth.cache.has(key)) return;
+      growth.loading = true;
+      growth.error = '';
+      if (state.tab === 'growth-os') renderGrowthOs(state.data);
+      try {
+        const result = await api(`/marketing-connect-api/v1/growth-os/overview?subject_type=tenant&subject_key=${encodeURIComponent(key)}`);
+        if (result?.ok) growth.cache.set(key,result);
+        else growth.error = result?.error || 'Growth OS 데이터를 확인할 수 없습니다.';
+      } catch (error) {
+        growth.error = error?.message || 'Growth OS API를 불러오지 못했습니다.';
+      } finally {
+        growth.loading = false;
+        if (state.tab === 'growth-os') renderGrowthOs(state.data);
+      }
+    }
+    function renderGrowthOs(data) {
+      const current = growth.cache.get(growth.subject);
+      const counts = current?.campaigns || null;
+      const options = growthSubjects(data).map(key =>
+        `<option value="${esc(key)}" ${key === growth.subject ? 'selected' : ''}>${esc(key)}</option>`).join('');
+      const status = growth.loading ? '확인 중' : growth.error ? '연결 확인 필요' : current ? '조회 완료' : '대기';
+      const pillarCards = current ? GROWTH_PILLARS.map(([key,label]) => {
+        const info = current.pillars?.[key] || {};
+        return `<article class="marketing-ai-workspace-card"><small>${esc(label)}</small><h3>${esc(info.status || 'not_connected')}</h3>
+          <p>${esc(info.evidence || (info.performance ? '검증된 집계 데이터가 연결되었습니다.' : '해당 영역의 데이터 계약 및 연결 상태를 표시합니다.'))}</p></article>`;
+      }).join('') : '';
+      view.innerHTML = `<section class="marketing-ai-console-card">
+        <div class="marketing-ai-card-head"><div><small>EKODI GROWTH OS · v0.1</small><h3>통합 성장 운영 관제</h3>
+          <p>검색·AI 발견부터 캠페인·상거래·CRM·분석·승인까지 연결 상태를 조직별로 확인합니다. 미연동 데이터는 0으로 표시하지 않습니다.</p></div>
+          <span>${esc(status)}</span></div>
+        <div class="marketing-ai-admin-actions"><label>조직 <select data-growth-os-subject>${options}</select></label>
+          <button type="button" class="secondary" data-growth-os-refresh>상태 다시 확인</button></div>
+        ${growth.error ? `<div class="marketing-ai-empty error"><strong>조회 실패</strong><span>${esc(growth.error)}</span></div>` : ''}
+        ${!current && !growth.error ? '<div class="marketing-ai-loading">조직별 성장 현황을 불러오는 중입니다.</div>' : ''}
+        ${current ? `<div class="marketing-ai-admin-status">
+          <article><small>캠페인</small><strong>${num(counts?.total)}</strong><span>해당 조직 집계</span></article>
+          <article><small>연결된 채널 계정</small><strong>${num(current.channels?.activeConnections)}</strong><span>활성 OAuth</span></article>
+          <article><small>승인 대기 캠페인</small><strong>${num(counts?.awaitingApproval)}</strong><span>사람 검토 필요</span></article>
+          <article><small>실패한 캠페인</small><strong>${num(counts?.failed)}</strong><span>원인 확인</span></article>
+        </div><div class="marketing-ai-workspace-grid">${pillarCards}</div>
+        <div class="marketing-ai-card-head"><div><small>NEXT ACTIONS</small><h3>검증 기반 개선 과제</h3></div></div>
+        <div class="marketing-ai-billing-list">${(current.nextActions || []).map(a => `<div><strong>${esc(a.id)}</strong><span>${esc(a.action)}</span><small>${esc(a.mode)}</small></div>`).join('')}</div>
+        <p>조회 전용 · 신규 광고비 집행·게시·고객 발송 없음 · 전 사이트 검색 및 CRM 성과는 아직 연결되지 않음</p>` : ''}
+      </section>`;
+      if (!current && !growth.error && !growth.loading && token()) refreshGrowthOs();
     }
 
     function renderReports(data) {
@@ -675,7 +738,12 @@
         event.preventDefault();
         submitGenerator(form);
       });
+      view.addEventListener('change', event => {
+        const chooser = event.target.closest('[data-growth-os-subject]');
+        if (chooser) { growth.subject = chooser.value; growth.error = ''; renderGrowthOs(state.data); }
+      });
       view.addEventListener('click', event => {
+        if (event.target.closest('[data-growth-os-refresh]')) { refreshGrowthOs(true); return; }
         const copyButton = event.target.closest('[data-naver-copy]');
         if (copyButton) { copyNaver(Number(copyButton.dataset.variantId), copyButton.dataset.naverCopy); return; }
         const actionButton = event.target.closest('[data-studio-action]');
@@ -692,6 +760,7 @@
         return;
       }
       if (state.tab === 'overview') renderOverview(data);
+      else if (state.tab === 'growth-os') renderGrowthOs(data);
       else if (state.tab === 'customers') renderCustomers(data);
       else if (state.tab === 'workspaces') renderWorkspaces(data);
       else if (state.tab === 'billing') renderBilling(data);
