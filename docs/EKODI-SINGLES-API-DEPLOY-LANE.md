@@ -1,6 +1,8 @@
 # 동행 서버 함수(singles-api) 자동 배포 경로 설계안 (승인 전)
 
-기준일: 2026-10-26 · 상태: 설계. 워크플로는 아직 만들지 않음
+기준일: 2026-10-26 · 상태: **1단계 구현** — `.github/workflows/deploy-singles-api.yml`(PR 검증 + 승인된 오케스트레이터 수동 실행 배포). `main` push 자동 배포는 수동 1회 검증 후 켬
+
+구현 결정: DB 선행조건은 Management API 읽기 전용 쿼리(`scripts/singles-api-db-preflight.mjs`, 계약 `config/singles-api-db-contract.json`)로 확인하고, SQL 함수 `singles_api_contract()`는 만들지 않음. 배포 후 확인 실패 시 직전 `main` 소스로 자동 롤백.
 
 ## 1. 왜 필요한가
 - `singles-api` Edge 함수를 배포하는 GitHub 워크플로가 없다. 그래서 v5~v7은 작업 세션에서 직접 배포했다.

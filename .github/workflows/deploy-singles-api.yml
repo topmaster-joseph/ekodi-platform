@@ -1,0 +1,148 @@
+name: Deploy Singles API
+
+# EKODI 동행 singles-api Edge Function lane (docs/EKODI-SINGLES-API-DEPLOY-LANE.md).
+# Phase 1: pull requests validate; production deploys only by an approved
+# orchestrator dispatch. Push-to-main deploys are enabled after one verified run.
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/singles-api/**"
+      - "config/singles-api-db-contract.json"
+      - "scripts/singles-api-db-preflight.mjs"
+      - "test/singles-*.test.mjs"
+      - ".github/workflows/deploy-singles-api.yml"
+  workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Approved orchestrator source branch'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Approved orchestrator release task'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ekodi-singles-api-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'production' }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check singles-api
+        run: deno check --node-modules-dir=auto supabase/functions/singles-api/index.ts
+      - name: Singles regression tests
+        run: node --test test/singles-*.test.mjs
+
+  production:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: production
+    env:
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+      PROJECT_REF: renzehysxirjilvdxacv
+      PUBLISHABLE_KEY: sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Recover exact orchestrator release provenance
+        shell: bash
+        env:
+          REQUESTED_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref }}
+          REQUESTED_RELEASE_TASK_ID: ${{ inputs.release_task_id }}
+        run: |
+          set -euo pipefail
+          branch="${REQUESTED_RELEASE_BRANCH_REF:-}"
+          task="${REQUESTED_RELEASE_TASK_ID:-}"
+          if [[ "$branch" =~ ^ai/[^/]+/(orch_[A-Za-z0-9_-]+)$ ]]; then
+            derived_task="${BASH_REMATCH[1]}"
+            if [ -n "$task" ] && [ "$task" != "$derived_task" ]; then
+              echo "Release task does not match authorized orchestrator branch" >&2
+              exit 1
+            fi
+            echo "EKODI_RELEASE_BRANCH_REF=$branch" >> "$GITHUB_ENV"
+            echo "EKODI_RELEASE_TASK_ID=${task:-$derived_task}" >> "$GITHUB_ENV"
+          else
+            echo "Missing authoritative orchestrator release provenance" >&2
+            exit 1
+          fi
+      - name: EKODI AI Orchestration Gate
+        run: node scripts/validate-ekodi-ai-change-orchestration.mjs --release
+      - name: Validate deployment guardrails
+        run: node scripts/validate-deployment-guardrails.mjs
+      - name: Select Supabase deployment credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="${TOKEN_A:-}"
+          [ -n "$token" ] || token="${TOKEN_B:-}"
+          [ -n "$token" ] || token="${TOKEN_C:-}"
+          [ -n "$token" ] || token="${TOKEN_D:-}"
+          if [ -z "$token" ]; then
+            echo 'No Supabase deployment credential is configured.'
+            exit 2
+          fi
+          echo "::add-mask::$token"
+          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+      - name: Require database contract before code (read-only)
+        run: node scripts/singles-api-db-preflight.mjs
+      - name: Record live version
+        shell: bash
+        run: |
+          set -euo pipefail
+          before=$(curl -sS -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PROJECT_REF/functions/singles-api" | jq -r '.version')
+          [[ "$before" =~ ^[0-9]+$ ]] || { echo "Could not read live singles-api version" >&2; exit 1; }
+          echo "BEFORE_VERSION=$before" >> "$GITHUB_ENV"
+          echo "live singles-api version: $before"
+      - name: Deploy singles-api (JWT verification stays on)
+        run: npx --yes supabase@2.116.0 functions deploy singles-api --project-ref "$PROJECT_REF"
+      - name: Verify deployment
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          meta=$(curl -sS -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PROJECT_REF/functions/singles-api")
+          version=$(jq -r '.version' <<<"$meta"); jwt=$(jq -r '.verify_jwt' <<<"$meta"); status=$(jq -r '.status' <<<"$meta")
+          echo "deployed version=$version verify_jwt=$jwt status=$status"
+          test "$status" = 'ACTIVE'
+          test "$jwt" = 'true'
+          test "$version" -gt "$BEFORE_VERSION"
+          code=$(curl -sS -o /tmp/singles-api.json -w '%{http_code}' \
+            "https://$PROJECT_REF.supabase.co/functions/v1/singles-api/me" -H "apikey: $PUBLISHABLE_KEY")
+          echo "unauthenticated /me -> $code $(head -c 120 /tmp/singles-api.json)"
+          # 401 from the JWT gateway, or the function's own pre-launch 503. Anything else fails.
+          if [ "$code" = '401' ]; then exit 0; fi
+          test "$code" = '503'
+          grep -Fq 'singles_enrollment_not_launched' /tmp/singles-api.json
+      - name: Roll back to previous main on failed verification
+        if: failure() && steps.verify.conclusion == 'failure'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout HEAD^ -- supabase/functions/singles-api
+          npx --yes supabase@2.116.0 functions deploy singles-api --project-ref "$PROJECT_REF"
+          echo "::error::singles-api verification failed; redeployed previous main source"
