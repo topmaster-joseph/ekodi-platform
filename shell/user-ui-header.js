@@ -102,7 +102,7 @@ function installStyle(){
       padding-left:0!important;
       padding-right:0!important;
     }
-    .${FALLBACK_CLASS} .ekodi-user-ui-header-fallback__inner{width:min(var(--ekodi-user-content-inline-size,var(--ekodi-user-canvas-max,1240px)),calc(100% - 32px));min-height:64px;margin:0 auto;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:16px}
+    .${FALLBACK_CLASS} .ekodi-user-ui-header-fallback__inner{width:min(var(--ekodi-user-content-inline-size,var(--ekodi-user-canvas-max,1240px)),calc(100% - 32px));min-height:64px;margin-left:var(--ekodi-user-content-left,auto);margin-right:var(--ekodi-user-content-right,auto);display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:16px}
     .${FALLBACK_CLASS} a{color:inherit;text-decoration:none}.${FALLBACK_CLASS} a:focus-visible{outline:2px solid currentColor;outline-offset:4px;border-radius:4px}
     .${FALLBACK_CLASS} .ekodi-user-ui-header-fallback__brand{font-weight:850;letter-spacing:.12em}.ekodi-user-ui-header-fallback__context{text-align:center;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ekodi-user-ui-header-fallback__my{color:var(--ekodi-shell-focus,#315d48)!important;font-weight:650}
     .${OPERATING_SCOPE_CLASS}{display:inline-flex!important;align-items:center!important;justify-content:center!important;margin-left:8px!important;padding:2px 7px!important;border:1px solid color-mix(in srgb,currentColor 26%,transparent)!important;border-radius:999px!important;background:color-mix(in srgb,var(--ekodi-shell-surface,#fafaf7) 82%,transparent)!important;color:inherit!important;font:750 10px/1.2 system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif!important;letter-spacing:.02em!important;white-space:nowrap!important;vertical-align:middle!important;opacity:.74!important}
@@ -130,8 +130,28 @@ function installStyle(){
 }
 
 function findContentCanvas(){
-  const selectors=['[data-ekodi-user-canvas="centered-v1"]','body > main','body > [role="main"]','main','[role="main"]'];
-  for(const selector of selectors){for(const node of document.querySelectorAll(selector)){if(visible(node)&&!node.closest('[data-ekodi-shell-root]'))return node;}}
+  // A full-bleed <main> is a page background, not the content alignment edge.
+  // Explicit service-owned markers always take precedence over heuristics.
+  for(const node of document.querySelectorAll('[data-ekodi-user-canvas="centered-v1"]')){
+    if(visible(node))return node;
+  }
+  const viewport=document.documentElement.clientWidth||window.innerWidth||0;
+  if(!(viewport>0))return null;
+  const mains=[...document.querySelectorAll('body > main,body > [role="main"],main,[role="main"]')];
+  for(const main of mains){
+    if(!visible(main))continue;
+    const rect=main.getBoundingClientRect();
+    if(rect.width<=viewport-24)return main;
+    // Only scan structural content wrappers; never infer canvas width from
+    // an arbitrary card, sidebar, navigation, modal or text column.
+    const candidates=[...main.querySelectorAll('[data-ekodi-main-inner],.page-container,.main-container,.site-container,.content-container,.main-inner,.page-inner,.container,.c')]
+      .filter(node=>visible(node)&&!node.closest('aside,nav,[role="dialog"],.sidebar,.card,[data-ekodi-shell-root]'))
+      .map(node=>({node,rect:node.getBoundingClientRect()}))
+      .filter(({rect:r})=>r.width>=Math.min(180,viewport*.55)&&r.width<=viewport-12&&r.left>=-1&&r.right<=viewport+1)
+      .sort((a,b)=>b.rect.width-a.rect.width||a.rect.top-b.rect.top);
+    if(candidates.length)return candidates[0].node;
+  }
+  // An unmarked full-bleed page uses the canonical 1240px shell fallback.
   return null;
 }
 function clearContentFrame(){
@@ -144,9 +164,10 @@ function updateContentFrame(){
   if(!shouldEnable()){clearContentFrame();return;}
   const canvas=findContentCanvas();
   if(canvas!==activeCanvas){if(canvasResizeObserver)canvasResizeObserver.disconnect();activeCanvas=canvas;canvasResizeObserver=null;if(canvas&&typeof ResizeObserver==='function'){canvasResizeObserver=new ResizeObserver(updateContentFrame);canvasResizeObserver.observe(canvas);}}
-  if(!canvas)return;
-  const rect=canvas.getBoundingClientRect(),viewport=Math.max(document.documentElement.clientWidth||0,window.innerWidth||0);
-  if(!(rect.width>0)||!(viewport>0))return;
+  if(!canvas){clearContentFrame();return;}
+  // Use CSS layout viewport rather than window.innerWidth (scrollbar width).
+  const rect=canvas.getBoundingClientRect(),viewport=document.documentElement.clientWidth||window.innerWidth||0;
+  if(!(rect.width>0)||!(viewport>0)){clearContentFrame();return;}
   const inline=Math.min(viewport,Math.round(rect.width*100)/100),left=Math.max(0,Math.round(rect.left*100)/100),right=Math.max(0,Math.round((viewport-rect.right)*100)/100);
   const signature=[inline,left,right].join(':');if(signature===contentFrameSignature)return;contentFrameSignature=signature;
   document.documentElement.style.setProperty('--ekodi-user-content-inline-size',inline+'px');document.documentElement.style.setProperty('--ekodi-user-content-left',left+'px');document.documentElement.style.setProperty('--ekodi-user-content-right',right+'px');document.documentElement.dataset.ekodiContentFrame='main-aligned-v1';
