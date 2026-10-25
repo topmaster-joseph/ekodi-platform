@@ -25,6 +25,9 @@ async function sessionToken(){
  if(!data?.session?.access_token)throw Error('login_required');
  return data.session.access_token;
 }
+// Self-hosted, version-pinned EKODI identity client (npm @supabase/supabase-js@2.117.3,
+// dist/umd/supabase.js). The integrity hash must change together with the file.
+const SUPABASE_JS=Object.freeze({src:'/singles/vendor/supabase-js-2.117.3.umd.js',integrity:'sha384-BWcjm9OdFth9TbhCxZPdm+gAOUMAzQy9nmTs12ioXdCcbVnJaPMn+fMUoQCLt60R'});
 async function api(path,options={}){
  const access=await sessionToken();
  const method=options.method||'GET';
@@ -553,7 +556,7 @@ async function main(){
  if(!identityUrl||!identityKey)return;
  if(typeof window.supabase?.createClient!=='function'){
   const ready=await new Promise(resolve=>{
-   const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+   const script=document.createElement('script');script.src=SUPABASE_JS.src;script.integrity=SUPABASE_JS.integrity;script.crossOrigin='anonymous';
    script.async=true;script.addEventListener('load',()=>resolve(typeof window.supabase?.createClient==='function'),{once:true});
    script.addEventListener('error',()=>resolve(false),{once:true});document.head.append(script);
   });

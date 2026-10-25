@@ -7,7 +7,7 @@ function headers(type='text/html; charset=utf-8',isPrivate=false){
  const h=new Headers({'content-type':type,'cache-control':isPrivate?'private, no-store':'public, max-age=60',
  'referrer-policy':'no-referrer','x-content-type-options':'nosniff','x-frame-options':'DENY',
  'permissions-policy':'camera=(), microphone=(), geolocation=()',
- 'content-security-policy':"default-src 'none'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data:; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'; upgrade-insecure-requests",
+ 'content-security-policy':"default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'; upgrade-insecure-requests",
  'x-ekodi-singles-stage':'social-gated'});
  if(isPrivate)h.set('x-robots-tag','noindex, nofollow, noarchive');return h;
 }
@@ -135,7 +135,7 @@ export async function routeSinglesSurface(request,env){
     (sub==='/api/public'||!sub.startsWith('/api/'))){
   return json({error:'singles_unpublished'},404);
  }
- if(sub==='/styles.css'||sub==='/app.js'||sub==='/donghaeng-couple.webp'){if(!SAFE_METHODS.has(request.method))return json({error:'method_not_allowed'},405);return env.ASSETS.fetch(request)}
+ if(sub==='/styles.css'||sub==='/app.js'||sub==='/donghaeng-couple.webp'||sub==='/vendor/supabase-js-2.117.3.umd.js'){if(!SAFE_METHODS.has(request.method))return json({error:'method_not_allowed'},405);return env.ASSETS.fetch(request)}
  const fromApi=await api(request,env,sub);if(fromApi)return fromApi;
  if(sub==='/privacy'&&SAFE_METHODS.has(request.method))return html(singlesPrivacyReviewPage(),{privateContent:true,head:request.method==='HEAD'});
  if(!SAFE_METHODS.has(request.method))return json({error:'method_not_allowed'},405);
