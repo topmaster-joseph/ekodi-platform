@@ -281,6 +281,17 @@ const qtinOrderTouched=changedFiles.some(file=>[
   '.github/workflows/deploy-qtin-order-staging.yml',
 ].includes(file));
 const mallSiteTouched=changedFiles.some(file=>file.startsWith('sites/ekodi-mall/')||file==='.github/workflows/deploy-ekodi-mall.yml');
+// Books static catalogue/detail assets are served by the dedicated Books Worker but
+// are not JavaScript imports, so the bundle graph cannot discover them. GITHUB_TOKEN
+// merges suppress ordinary main push workflows: explicitly own this post-merge lane.
+const booksTouched=changedFiles.some(file=>
+  file.startsWith('books/')||
+  file==='books-worker.js'||
+  file==='wrangler.books.toml'||
+  file==='deploy/manifests/books.worker.json'||
+  file==='scripts/validate-books.mjs'||
+  file==='.github/workflows/deploy-books.yml'
+);
 const labHomepageTouched=changedFiles.some(file=>
   file.startsWith('sites/ekodi-lab/')||
   file==='deploy/manifests/ekodilab.pages.json'||
@@ -469,7 +480,7 @@ let bundleLanes;
 try{bundleLanes=lanesForChangedFiles(fileURLToPath(new URL('..',import.meta.url)),changedFiles)}catch(error){fail('worker bundle lane resolution failed: '+String(error?.message||error).slice(0,300))}
 const handDispatchedLanes=new Set([
   [cgmaApexTouched,'deploy-cgma-apex-edge.yml'],[spaceTouched,'deploy-space.yml'],[qtinOrderTouched,'deploy-qtin-order.yml'],
-  [mallSiteTouched,'deploy-ekodi-mall.yml'],[labHomepageTouched,'deploy-ekodi-lab-homepage.yml'],[controlApiTouched,'deploy-control-api.yml'],
+  [mallSiteTouched,'deploy-ekodi-mall.yml'],[booksTouched,'deploy-books.yml'],[labHomepageTouched,'deploy-ekodi-lab-homepage.yml'],[controlApiTouched,'deploy-control-api.yml'],
   [marketingPublishingTouched,'deploy-marketing-publishing.yml'],[marketingGrowthTouched,'deploy-marketing-growth.yml'],[myTouched,'deploy-my.yml'],
   [accessApiTouched,'deploy-access-api.yml'],[independentBoardTouched,'deploy-independent-board.yml'],[aiControlTouched,'deploy-ai-control.yml'],
   [shellRuntimeTouched,'deploy-ekodi-shell.yml'],[churchApiTouched,'deploy-church-pastor-api.yml'],[churchPagesTouched,'deploy-ekodi-church-homepage.yml'],
@@ -734,6 +745,14 @@ async function dispatchPostMergeDeploys(){
     });
     if(!dispatch.r.ok)fail('Shell deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
     console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-ekodi-shell.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+  if(booksTouched){
+    const dispatch=await api('/actions/workflows/deploy-books.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('Books deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-books.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
   if(churchApiTouched){
     const dispatch=await api('/actions/workflows/deploy-church-pastor-api.yml/dispatches',{
