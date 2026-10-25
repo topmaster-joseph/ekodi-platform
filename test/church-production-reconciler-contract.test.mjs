@@ -55,6 +55,8 @@ test('Worship Pages deploy verifies date-specific real content, not a 200 fallba
   assert.match(w,/church\/worship\/\$\{week\}\/materials\.json/);
   assert.match(w,/grep -Fq "\$scripture" \/tmp\/church-week-worship\.html/);
   assert.doesNotMatch(w,/Verify October 18 worship page/,'week must not be hard-coded');
+  assert.match(w,/church\/worship\/\$week\/sermon\/index\.html/);
+  assert.match(w,/! grep -Fq '예배 전 확인'/,'internal checklist never ships');
   assert.match(w,/grep -Fq '\?view=stage'/);
 });
 

@@ -457,6 +457,12 @@ jobs:
           test -s church/live/worship-materials.js
           grep -Fq "fetch('/ekodichurch/worship/weekly.json'" church/live/worship-materials.js
           grep -Fq 'resolveServiceDate()' church/live/worship-materials.js
+          # Weeks published from the pastor's sermon manuscript carry /sermon/.
+          sermon_page=false
+          if [[ -s "church/worship/$week/sermon/index.html" ]]; then
+            sermon_page=true
+            ! grep -Fq '예배 전 확인' "church/worship/$week/sermon/index.html"
+          fi
           scripture=$(WEEK="$week" node --input-type=module <<'NODE'
           import fs from 'node:fs';
           import assert from 'node:assert/strict';
@@ -482,7 +488,8 @@ jobs:
               grep -Fq '?view=stage' /tmp/church-week-worship.html &&
               grep -Fq '?view=operator' /tmp/church-week-worship.html &&
               grep -Fq "fetch('/ekodichurch/worship/weekly.json'" /tmp/church-week-live-materials.js &&
-              ! grep -Fq "query.get('date')||'2026-10-11'" /tmp/church-week-live-materials.js; then
+              ! grep -Fq "query.get('date')||'2026-10-11'" /tmp/church-week-live-materials.js &&
+              { [[ "$sermon_page" != true ]] || [[ "$(curl -L -sS --connect-timeout 5 --max-time 20 -o /tmp/church-week-sermon.html -w '%{http_code}' "https://ekodi.kr/ekodichurch/worship/$week/sermon/?release=$release" || true)" == 200 ]]; }; then
               verified=true
               break
             fi
