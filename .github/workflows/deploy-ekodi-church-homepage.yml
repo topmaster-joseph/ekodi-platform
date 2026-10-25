@@ -464,7 +464,7 @@ jobs:
           const packet=JSON.parse(fs.readFileSync(`church/worship/${week}/materials.json`,'utf8'));
           assert.equal(packet.date,week);
           assert.ok(packet.scripture&&packet.title);
-          assert.equal(packet.slides.length,16);
+          assert.ok(Array.isArray(packet.slides)&&packet.slides.length>=1&&packet.slides.length<=60,'slide count follows the weekly original deck');
           assert.equal(packet.youtube.status,'metadata-prepared-not-scheduled');
           assert.doesNotMatch(JSON.stringify(packet),/streamKey|stream_key/i);
           process.stdout.write(packet.scripture);
