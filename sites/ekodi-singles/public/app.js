@@ -392,6 +392,54 @@ async function showBankAdmin(h){
   }
  }catch(e){notice(p,e?.status===403?'운영 권한이 없습니다.':errorText(e))}
 }
+const REPORT_STATUS={open:'접수',under_review:'검토 중',resolved:'조치 완료',dismissed:'기각'};
+const REPORT_CATEGORY={harassment:'괴롭힘',fake_profile:'허위 프로필',spam:'스팸',safety:'안전 위협',other:'기타'};
+async function showReportModeration(h){
+ const panel=text('section','','member-card');panel.append(text('h3','신고 처리'));
+ paragraph(panel,'본인이 신고했거나 신고 대상인 건은 처리할 수 없습니다. 조치 완료·기각에는 처리 사유가 필요하며 모든 처리는 감사 기록에 남습니다.');
+ const tabs=text('div','','actions'),list=text('div','');
+ panel.append(tabs,list);
+ let loaded=false;
+ async function load(status){
+  list.replaceChildren(text('p','불러오는 중…','status-text'));
+  try{
+   const data=await api('/admin/reports/'+status);loaded=true;
+   list.replaceChildren();
+   if(!(data.reports||[]).length){paragraph(list,REPORT_STATUS[status]+' 상태의 신고가 없습니다.');return}
+   for(const r of data.reports){
+    const card=text('article','','mini-card');
+    card.append(text('h4',(REPORT_CATEGORY[r.category]||r.category)+' · '+REPORT_STATUS[r.status]));
+    card.append(text('p','신고자: '+r.reporter.name+' ('+r.reporter.ref+') → 대상: '+r.target.name+' ('+r.target.ref+')','muted'));
+    card.append(text('p','접수: '+new Date(r.created_at).toLocaleString('ko-KR'),'muted'));
+    if(r.details)card.append(text('p',r.details));
+    if(r.resolution_note)card.append(text('p','처리 사유: '+r.resolution_note,'muted'));
+    const feedback=text('p','','status-text');
+    if(r.reporter.self||r.target.self){card.append(text('p','본인 관련 신고라 처리할 수 없습니다.','status-text'));list.append(card);continue}
+    if(r.status==='open'||r.status==='under_review'){
+     const label=text('label','처리 사유(조치 완료·기각 시 필수, 500자 이내)','field'),note=document.createElement('textarea');
+     note.maxLength=500;note.rows=2;label.append(note);card.append(label);
+     const act=async(next)=>{
+      if(next!=='under_review'&&note.value.trim().length<2){feedback.textContent='처리 사유를 입력하세요.';return}
+      if(!confirm('이 신고를 「'+REPORT_STATUS[next]+'」로 처리합니까?'))return;
+      try{await api('/admin/reports/'+r.id+'/review',{method:'POST',body:{status:next,...(note.value.trim()?{note:note.value.trim()}:{})}});
+       feedback.textContent='처리했습니다.';await load(status)}
+      catch(e){feedback.textContent=e?.status===409?'이미 다른 운영자가 처리한 신고입니다.':errorText(e)}
+     };
+     const row=text('div','','actions');
+     if(r.status==='open')row.append(button('검토 시작',()=>act('under_review'),'outline'));
+     row.append(button('조치 완료',()=>act('resolved'),'primary'),button('기각',()=>act('dismissed'),'outline'));
+     card.append(row);
+    }
+    card.append(feedback);list.append(card);
+   }
+  }catch(e){
+   if((e?.status===403||e?.status===503)&&!loaded){panel.remove();return}
+   list.replaceChildren(text('p',errorText(e),'status-text'));
+  }
+ }
+ for(const status of Object.keys(REPORT_STATUS))tabs.append(button(REPORT_STATUS[status],()=>load(status),'outline'));
+ h.append(panel);await load('open');
+}
 async function showEventPricing(h){
  try{
   const result=await api('/admin/events');
@@ -481,7 +529,7 @@ async function signedIn(status){
  else if(page==='/discover')await showDiscover(h);
  else if(page==='/messages')await showMessages(h);
  else if(page==='/subscribe')await showSubscription(h);
- else if(page==='/admin'){await showBankAdmin(h);await showEventPricing(h);await showAllPricing(h);await showBrokerageReadiness(h);}
+ else if(page==='/admin'){await showBankAdmin(h);await showEventPricing(h);await showReportModeration(h);await showAllPricing(h);await showBrokerageReadiness(h);}
  else if(page==='/groups')paragraph(h,'지역 공동체·소그룹 기능을 준비하고 있습니다. 행사 목록을 먼저 확인해 주세요.');
  else {paragraph(h,'반갑습니다. 나의 프로필, 공개 행사, 동행 찾기를 살펴보세요.');const row=text('div','','actions');for(const [name,href] of [['프로필 등록','/singles/my'],['공개 행사','/singles/events'],['동행 찾기','/singles/discover']]){const a=text('a',name,'outline');a.href=href;row.append(a)}h.append(row)}
 }

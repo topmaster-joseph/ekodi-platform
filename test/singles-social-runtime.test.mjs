@@ -6,11 +6,12 @@ const id='33333333-3333-4333-8333-333333333333';
 const reply=(_req,body,status=200)=>new Response(JSON.stringify(body),{status});
 const settings={SINGLES_SOCIAL_ENABLED:'true',SINGLES_BANK_TRANSFER_ENABLED:'false'};
 globalThis.Deno={env:{get:key=>settings[key]||undefined}};
-function db({verified=true,accepted=false,grant=false,retry=0,rpcError=null,interest=null}={}){
+function db({verified=true,accepted=false,grant=false,retry=0,rpcError=null,interest=null,extra={},lists={},rpcResult=undefined}={}){
  const writes=[],calls=[];
  const rows={singles_memberships:{status:'active',base_consent:true,age_19_confirmed:true,adult_verified_at:verified?'2026-10-09T00:00:00Z':null,religion_consent:true,discoverable:verified},
   singles_interests:accepted?{from_user_id:other,to_user_id:uid,status:'accepted'}:null,
   singles_events:{id,starts_at:'2027-05-01T09:00:00Z'},
+  ...extra,
   singles_bank_grants:grant?{expires_at:grant==='expired'?'2020-01-01T00:00:00Z':'2030-01-01T00:00:00Z'}:null};
  const make=(name)=>{
   const query={
@@ -29,11 +30,11 @@ function db({verified=true,accepted=false,grant=false,retry=0,rpcError=null,inte
     if(name==='singles_interests'&&interest)record=interest;
     return {data:record,error:null};
    },
-   then(ok,fail){return Promise.resolve({data:[],error:null}).then(ok,fail)}
+   then(ok,fail){return Promise.resolve({data:lists[name]||[],error:null}).then(ok,fail)}
   };
   return query;
  };
- return {from:make,writes,calls,rpc:async(name,params)=>{calls.push({name,params});return rpcError?{data:null,error:rpcError}:{data:retry,error:null}}};
+ return {from:make,writes,calls,rpc:async(name,params)=>{calls.push({name,params});return rpcError?{data:null,error:rpcError}:{data:name==='singles_report_review'?(rpcResult??params.p_status):retry,error:null}}};
 }
 test('logged-in event summaries are readable without subscription',async()=>{
  const admin=db({verified:false});
@@ -181,4 +182,47 @@ test('re-sending interest to a withdrawn pair does not revive the old connection
  const res=await handleSinglesSocial(new Request('https://ekodi.kr/interests/'+other,{method:'POST'}),'/interests/'+other,admin,uid,reply);
  assert.equal(res.status,200);assert.equal((await res.json()).status,'withdrawn');
  assert.equal(admin.writes.filter(w=>w.name==='singles_interests').length,0);
+});
+
+const rid='44444444-4444-4444-8444-444444444444';
+const reviewer={singles_report_operators:{enabled:true,can_review:true}};
+const reviewReq=(b)=>new Request('https://ekodi.kr/admin/reports/'+rid+'/review',{method:'POST',body:JSON.stringify(b)});
+test('report moderation requires an enabled reviewer capability',async()=>{
+ for(const extra of [{},{singles_report_operators:{enabled:true,can_review:false}},{singles_report_operators:{enabled:false,can_review:true}}]){
+  const admin=db({verified:false,extra});
+  let res=await handleSinglesSocial(new Request('https://ekodi.kr/admin/reports/open'),'/admin/reports/open',admin,uid,reply);
+  assert.equal(res.status,403);
+  res=await handleSinglesSocial(reviewReq({status:'resolved',note:'조치함'}),'/admin/reports/'+rid+'/review',admin,uid,reply);
+  assert.equal(res.status,403);assert.equal(admin.calls.length,0);
+ }
+});
+test('reviewer queue shows names and short refs, never raw account ids',async()=>{
+ const admin=db({verified:false,extra:reviewer,lists:{
+  singles_reports:[{id:rid,reporter_id:other,target_id:id,category:'spam',details:'광고',status:'open',created_at:'2026-10-25T00:00:00Z',reviewed_at:null,resolution_note:null}],
+  singles_profiles:[{user_id:other,display_name:'신고자'}]}});
+ const res=await handleSinglesSocial(new Request('https://ekodi.kr/admin/reports/open'),'/admin/reports/open',admin,uid,reply);
+ assert.equal(res.status,200);
+ const body=await res.json();
+ assert.equal(body.reports[0].reporter.name,'신고자');assert.equal(body.reports[0].target.name,'이름 없는 회원');
+ assert.equal(body.reports[0].target.ref,id.slice(0,8));
+ assert.ok(!JSON.stringify(body).includes(other)&&!JSON.stringify(body).includes(id+'"'),'no full ids');
+});
+test('review goes through the atomic DB function with validated input',async()=>{
+ let admin=db({verified:false,extra:reviewer});
+ let res=await handleSinglesSocial(reviewReq({status:'resolved',note:'경고 조치'}),'/admin/reports/'+rid+'/review',admin,uid,reply);
+ assert.equal(res.status,200);assert.equal((await res.json()).status,'resolved');
+ assert.deepEqual(admin.calls[0],{name:'singles_report_review',params:{p_report:rid,p_operator:uid,p_status:'resolved',p_note:'경고 조치'}});
+ assert.equal(admin.writes.length,0,'no direct table writes');
+ for(const bad of [{status:'open'},{status:'resolved',note:5},{status:'resolved',extra:1},{status:'dismissed',note:'x'.repeat(501)}]){
+  admin=db({verified:false,extra:reviewer});
+  res=await handleSinglesSocial(reviewReq(bad),'/admin/reports/'+rid+'/review',admin,uid,reply);
+  assert.equal(res.status,400,JSON.stringify(bad));assert.equal(admin.calls.length,0);
+ }
+});
+test('review DB errors map to clear statuses',async()=>{
+ for(const [message,status] of [['operator_conflict_of_interest',403],['resolution_note_required',400],['report_not_found',404],['report_not_reviewable',409]]){
+  const admin=db({verified:false,extra:reviewer,rpcError:{message}});
+  const res=await handleSinglesSocial(reviewReq({status:'resolved',note:'메모'}),'/admin/reports/'+rid+'/review',admin,uid,reply);
+  assert.equal(res.status,status,message);
+ }
 });
