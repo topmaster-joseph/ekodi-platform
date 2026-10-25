@@ -116,6 +116,7 @@
       "api-cost": { "audience": "platform-super-admin" },
       "architecture": { "audience": "platform-super-admin" },
       "maturity": { "audience": "platform-super-admin" },
+      "domain-control": { "audience": "platform-super-admin" },
       "services": { "audience": "platform-super-admin" },
       "policies": { "audience": "platform-super-admin" },
       "public-site-controls": { "audience": "platform-super-admin" },
