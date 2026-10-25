@@ -119,7 +119,7 @@ export async function evaluateEkodiContinuousExecutionFromLedger(db, input = {})
     return preview;
   }
   if(!event || event.reason!=='final_promotion_approval_recorded' ||
-     !/^super-admin:[^\\s]+$/.test(String(event.actor||'')))return preview;
+     !/^super-admin:[^\s]+$/.test(String(event.actor||'')))return preview;
 
   let receipt;
   try{receipt=JSON.parse(event.evidence_json||'{}')}catch{return preview}
