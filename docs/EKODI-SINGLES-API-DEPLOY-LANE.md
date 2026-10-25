@@ -1,6 +1,6 @@
 # 동행 서버 함수(singles-api) 자동 배포 경로 설계안 (승인 전)
 
-기준일: 2026-10-26 · 상태: **1단계 구현** — `.github/workflows/deploy-singles-api.yml`(PR 검증 + 승인된 오케스트레이터 수동 실행 배포). `main` push 자동 배포는 수동 1회 검증 후 켬
+기준일: 2026-10-26 · 상태: **2단계 운영** — 2026-10-26 첫 수동 실행(run 40244545699)으로 v8 배포·검증 후 `main` 병합 자동 배포 활성화. 이전 표기: 1단계 구현 — `.github/workflows/deploy-singles-api.yml`(PR 검증 + 승인된 오케스트레이터 수동 실행 배포). `main` push 자동 배포는 수동 1회 검증 후 켬
 
 구현 결정: DB 선행조건은 Management API 읽기 전용 쿼리(`scripts/singles-api-db-preflight.mjs`, 계약 `config/singles-api-db-contract.json`)로 확인하고, SQL 함수 `singles_api_contract()`는 만들지 않음. 배포 후 확인 실패 시 직전 `main` 소스로 자동 롤백.
 

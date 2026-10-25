@@ -1,8 +1,8 @@
 name: Deploy Singles API
 
 # EKODI 동행 singles-api Edge Function lane (docs/EKODI-SINGLES-API-DEPLOY-LANE.md).
-# Phase 1: pull requests validate; production deploys only by an approved
-# orchestrator dispatch. Push-to-main deploys are enabled after one verified run.
+# Phase 2 (after the verified first dispatch, run 40244545699 -> v8): orchestrator
+# releases merged to main deploy automatically; dispatch remains for re-runs.
 on:
   pull_request:
     paths:
@@ -10,6 +10,13 @@ on:
       - "config/singles-api-db-contract.json"
       - "scripts/singles-api-db-preflight.mjs"
       - "test/singles-*.test.mjs"
+      - ".github/workflows/deploy-singles-api.yml"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/functions/singles-api/**"
+      - "config/singles-api-db-contract.json"
+      - "scripts/singles-api-db-preflight.mjs"
       - ".github/workflows/deploy-singles-api.yml"
   workflow_dispatch:
     inputs:
@@ -48,7 +55,7 @@ jobs:
         run: node --test test/singles-*.test.mjs
 
   production:
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 12
@@ -70,12 +77,17 @@ jobs:
       - name: Recover exact orchestrator release provenance
         shell: bash
         env:
+          GH_TOKEN: ${{ github.token }}
           REQUESTED_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref }}
           REQUESTED_RELEASE_TASK_ID: ${{ inputs.release_task_id }}
         run: |
           set -euo pipefail
           branch="${REQUESTED_RELEASE_BRANCH_REF:-}"
           task="${REQUESTED_RELEASE_TASK_ID:-}"
+          if [[ "$GITHUB_EVENT_NAME" == 'push' ]]; then
+            branch="$(gh api "/repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '[.[] | select(.merged_at != null and .base.ref == "main" and (.head.ref | startswith("ai/")))] | sort_by(.merged_at) | last | .head.ref // empty')"
+            task=''
+          fi
           if [[ "$branch" =~ ^ai/[^/]+/(orch_[A-Za-z0-9_-]+)$ ]]; then
             derived_task="${BASH_REMATCH[1]}"
             if [ -n "$task" ] && [ "$task" != "$derived_task" ]; then
