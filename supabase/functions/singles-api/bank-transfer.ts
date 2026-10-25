@@ -227,6 +227,8 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   const {data,error}=await admin.rpc('singles_bank_confirm_order',{
     p_reference:adminRef,p_operator:userId,p_action:v.decision,
     p_trace:trace||null,p_reason:reason||null});
+  if(error&&String(error.message||'').includes('operator_self_confirmation_forbidden'))
+   return reply(req,{error:'operator_self_confirmation_forbidden'},403);
   if(error)return reply(req,{error:'bank_verification_failed_or_duplicate'},409);
   return reply(req,{reference:adminRef,status:data});
  }
