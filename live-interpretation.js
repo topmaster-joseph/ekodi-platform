@@ -22,7 +22,7 @@ async function api(path,{method='GET',payload}={}){
   return data;
 }
 const q=`tenant=${encodeURIComponent(tenant)}`;
-const ERR={authentication_required:'진행자 로그인이 필요합니다.',tenant_host_permission_required:'이 사이트의 방송 관리자 권한이 필요합니다.',stream_not_configured:'동시송출 엔진(Cloudflare Stream)이 아직 켜지지 않았습니다.',invalid_stream_key:'스트림 키를 다시 확인해 주세요.',ingest_host_not_allowed_for_platform:'선택한 플랫폼의 송출 주소가 아닙니다.',ingest_url_must_be_rtmp:'송출 주소는 rtmp:// 또는 rtmps:// 로 시작해야 합니다.',target_language_required:'통역할 언어를 하나 이상 고르세요.',caption_session_ended:'통역 자막이 종료되었습니다.',stream_input_not_created:'먼저 송출 주소를 만드세요.',simulcast_destination_limit:'동시송출 채널은 최대 10개입니다.'};
+const ERR={authentication_required:'진행자 로그인이 필요합니다.',tenant_host_permission_required:'이 사이트의 방송 관리자 권한이 필요합니다.',stream_not_configured:'동시송출 엔진(Cloudflare Stream)이 아직 켜지지 않았습니다.',invalid_stream_key:'스트림 키를 다시 확인해 주세요.',ingest_host_not_allowed_for_platform:'선택한 플랫폼의 송출 주소가 아닙니다.',ingest_url_must_be_rtmp:'송출 주소는 rtmp:// 또는 rtmps:// 로 시작해야 합니다.',ingest_url_must_be_rtmps:'이 채널은 rtmps:// 주소만 사용할 수 있습니다.',target_language_required:'통역할 언어를 하나 이상 고르세요.',caption_session_ended:'통역 자막이 종료되었습니다.',stream_input_not_created:'먼저 송출 주소를 만드세요.',simulcast_destination_limit:'동시송출 채널은 최대 10개입니다.'};
 const say=error=>ERR[error?.message]||ERR[error?.data?.error]||'처리하지 못했습니다. 잠시 뒤 다시 시도하세요.';
 
 /* ---------------- viewer captions ---------------- */
@@ -176,11 +176,12 @@ function setupSimulcast(){
     const platform=el('select',{},data.platforms.map(p=>el('option',{value:p.id,text:p.label})));
     const url=el('input',{placeholder:'rtmps://…',value:data.platforms[0]?.defaultUrl||''});
     const key=el('input',{type:'password',placeholder:'스트림 키',autocomplete:'off'});
+    const label=el('input',{placeholder:'채널 이름 (예: 에코디교회 YouTube)',maxlength:'60'});
     const help=el('a',{target:'_blank',rel:'noopener',text:'키 받는 곳'});
     const syncHelp=()=>{const p=data.platforms.find(x=>x.id===platform.value);url.value=p?.defaultUrl||'';help.href=p?.keyHelpUrl||'#';help.hidden=!p?.keyHelpUrl};
     platform.addEventListener('change',syncHelp);syncHelp();
-    const add=el('form',{class:'live-simulcast-add'},[platform,url,key,help,el('button',{type:'submit',class:'primary',text:'채널 추가'})]);
-    add.addEventListener('submit',async e=>{e.preventDefault();try{await api('/simulcast/outputs',{method:'POST',payload:{tenant,platform:platform.value,url:url.value,streamKey:key.value}});key.value='';await load()}catch(error){status.textContent=say(error)}});
+    const add=el('form',{class:'live-simulcast-add'},[platform,label,url,key,help,el('button',{type:'submit',class:'primary',text:'채널 추가'})]);
+    add.addEventListener('submit',async e=>{e.preventDefault();try{await api('/simulcast/outputs',{method:'POST',payload:{tenant,platform:platform.value,url:url.value,streamKey:key.value,label:label.value}});key.value='';label.value='';await load()}catch(error){status.textContent=say(error)}});
     nodes.push(list,add);
     content.replaceChildren(...nodes);
   }

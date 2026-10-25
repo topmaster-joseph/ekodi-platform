@@ -159,7 +159,7 @@ test('simulcast stays inert and explains setup when Cloudflare Stream is not con
   const h=harness();
   const status=await h.call('GET','/api/realtime/simulcast?tenant=ekodichurch');
   assert.equal(status.status,200);assert.equal(status.data.configured,false);assert.equal(status.data.setup.reason,'stream_not_configured');
-  assert.deepEqual(status.data.platforms.map(p=>p.id),['youtube','facebook','custom']);
+  assert.deepEqual(status.data.platforms.map(p=>p.id),['youtube','facebook','instagram','custom']);
   assert.equal((await h.call('POST','/api/realtime/simulcast/input',{tenant:'ekodichurch'})).status,503);
   const pub=await h.call('GET','/api/realtime/simulcast/public?tenant=ekodichurch');
   assert.deepEqual([pub.data.live,pub.data.player],[false,null]);
@@ -274,4 +274,17 @@ test('every tenant live page mounts the interpretation console, simulcast panel 
   const space=fs.readFileSync(new URL('../space-worker.js',import.meta.url),'utf8');
   assert.match(space,/liveStudioHeaders\(withHeaders\(env,tenantLivePage\(tenant\)/);
   assert.match(space,/camera=\(self\), microphone=\(self\)/);
+});
+
+test('multichannel presets: Instagram Live is RTMPS-only on Meta hosts and stored with its label',async()=>{
+  const ig=validateSimulcastDestination({platform:'instagram',url:'rtmps://edgetee-upload-icn1-1.xx.fbcdn.net:443/rtmp/',streamKey:'IG-abcdef123456',label:'에코디교회 Instagram'});
+  assert.equal(ig.ok,true);assert.equal(ig.platform,'custom');assert.equal(ig.preset,'instagram');assert.equal(ig.label,'에코디교회 Instagram');
+  assert.equal(validateSimulcastDestination({platform:'instagram',url:'rtmp://live-upload.instagram.com:80/rtmp/',streamKey:'k1234'}).error,'ingest_url_must_be_rtmps');
+  assert.equal(validateSimulcastDestination({platform:'instagram',url:'rtmps://evil.example.com/rtmp/',streamKey:'k1234'}).error,'ingest_host_not_allowed_for_platform');
+  const stream=fakeStream();const h=harness({stream:{fetch:stream.fetch}});
+  await h.call('POST','/api/realtime/simulcast/input',{tenant:'ekodimission'});
+  const out=await h.call('POST','/api/realtime/simulcast/outputs',{tenant:'ekodimission',platform:'instagram',url:'rtmps://live-upload.instagram.com:443/rtmp/',streamKey:'IG-key-9876',label:'선교회 Instagram'});
+  assert.equal(out.status,201);assert.equal(out.data.output.label,'선교회 Instagram');assert.equal(out.data.output.platform,'custom');
+  const status=await h.call('GET','/api/realtime/simulcast?tenant=ekodimission');
+  assert.ok(status.data.platforms.some(p=>p.id==='instagram'));
 });
