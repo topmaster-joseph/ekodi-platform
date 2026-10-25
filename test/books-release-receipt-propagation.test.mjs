@@ -24,7 +24,7 @@ test('Books production workflow passes the receipt into staging', () => {
 });
 
 test('Books production verification proves the live first-title sale surface', () => {
-  assert.match(deploy,/https:\/\/books\.ekodi\.kr\/ekodian\//);
+  assert.match(deploy,/https:\/\/ekodi\.kr\/books\/ekodian\//);
   assert.match(deploy,/https:\/\/ekodi\.upaper\.kr\/content\/1223429/);
   assert.match(deploy,/9,900원 · 전자책 구매하기/);
   assert.match(deploy,/guarded-worker-release\.mjs --manifest deploy\/manifests\/books\.worker\.json/);
