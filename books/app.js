@@ -38,16 +38,25 @@ function distributionRow(label,detail,state){const row=document.createElement('d
 
 function injectStructuredData(data,books){const graph=[{'@type':'Organization','@id':'https://ekodi.kr/books/#publisher',name:data.publisher||'에코디서점',url:'https://ekodi.kr/books/'},{'@type':'WebSite','@id':'https://ekodi.kr/books/#website',name:'에코디서점',url:'https://ekodi.kr/books/',publisher:{'@id':'https://ekodi.kr/books/#publisher'},inLanguage:'ko-KR'}];books.forEach(book=>{const saleUrl=book.links?.upaper||book.links?.korea;graph.push({'@type':'Book',name:book.title,alternateName:book.editions?.amazonEnglish?.title||undefined,description:book.abstract||book.subtitle||undefined,author:{'@type':'Person',name:book.author},publisher:{'@id':'https://ekodi.kr/books/#publisher'},bookFormat:'https://schema.org/EBook',inLanguage:Array.isArray(book.language)?book.language:[book.language||'ko'],identifier:book.identifiers?.googleBooks||book.identifiers?.isbnEbook||undefined,image:book.coverImage?absoluteUrl(book.coverImage):undefined,isPartOf:book.series?{'@type':'BookSeries',name:book.series,position:book.seriesNumber||undefined}:undefined,url:absoluteUrl(book.detailUrl||'/#catalog'),offers:saleUrl?{'@type':'Offer',price:String(book.listPrice?.amount||9900),priceCurrency:book.listPrice?.currency||'KRW',availability:'https://schema.org/InStock',url:saleUrl}:undefined});});const script=document.createElement('script');script.type='application/ld+json';script.textContent=JSON.stringify({'@context':'https://schema.org','@graph':graph});document.head.append(script);}
 
+// BOOKS-CATALOG-SOURCE-001: books/books.json (CI-validated, versioned) is the
+// source of truth for the storefront. The D1 API only contributes titles that the
+// static catalog does not already carry (matched by id or legacyId), so a stale
+// D1 row can never hide a live sale link or newer edition.
+function catalogBase(){return location.pathname==='/books'||location.pathname.startsWith('/books/')?'/books':'';}
+function mergeCatalog(staticData,apiData){
+  const base=staticData&&Array.isArray(staticData.books)?staticData:{books:[]};
+  const known=new Set();base.books.forEach(book=>{if(book.id)known.add(book.id);if(book.legacyId)known.add(book.legacyId);});
+  const extra=(apiData&&Array.isArray(apiData.books)?apiData.books:[]).filter(book=>book&&book.id&&!known.has(book.id)&&book.isPublic!==false);
+  return {...base,books:[...base.books,...extra]};
+}
+async function fetchJson(url){const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status} ${url}`);return response.json();}
 async function fetchCatalog(){
-  try{
-    const response=await fetch(`${API}/api/books/public/publications`,{cache:'no-store'});
-    if(!response.ok)throw new Error(`API ${response.status}`);
-    const data=await response.json();
-    if(Array.isArray(data.books)&&data.books.length)return data;
-  }catch(error){console.warn('에코디서점 API catalog fallback',error);}
-  const response=await fetch('/books.json',{cache:'no-store'});
-  if(!response.ok)throw new Error(`HTTP ${response.status}`);
-  return response.json();
+  const [staticResult,apiResult]=await Promise.allSettled([fetchJson(`${catalogBase()}/books.json`),fetchJson(`${API}/api/books/public/publications`)]);
+  if(staticResult.status==='rejected')console.warn('에코디서점 static catalog unavailable',staticResult.reason);
+  if(apiResult.status==='rejected')console.warn('에코디서점 API catalog unavailable',apiResult.reason);
+  const merged=mergeCatalog(staticResult.value,apiResult.value);
+  if(!merged.books.length)throw new Error('에코디서점 catalog unavailable');
+  return merged;
 }
 
 function renderBook(book){
