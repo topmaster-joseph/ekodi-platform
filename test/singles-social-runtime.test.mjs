@@ -6,8 +6,8 @@ const id='33333333-3333-4333-8333-333333333333';
 const reply=(_req,body,status=200)=>new Response(JSON.stringify(body),{status});
 const settings={SINGLES_SOCIAL_ENABLED:'true',SINGLES_BANK_TRANSFER_ENABLED:'false'};
 globalThis.Deno={env:{get:key=>settings[key]||undefined}};
-function db({verified=true,accepted=false,grant=false}={}){
- const writes=[];
+function db({verified=true,accepted=false,grant=false,retry=0,rpcError=null}={}){
+ const writes=[],calls=[];
  const rows={singles_memberships:{status:'active',base_consent:true,age_19_confirmed:true,adult_verified_at:verified?'2026-10-09T00:00:00Z':null,religion_consent:true,discoverable:verified},
   singles_interests:accepted?{from_user_id:other,to_user_id:uid,status:'accepted'}:null,
   singles_events:{id,starts_at:'2027-05-01T09:00:00Z'},
@@ -32,7 +32,7 @@ function db({verified=true,accepted=false,grant=false}={}){
   };
   return query;
  };
- return {from:make,writes};
+ return {from:make,writes,calls,rpc:async(name,params)=>{calls.push({name,params});return rpcError?{data:null,error:rpcError}:{data:retry,error:null}}};
 }
 test('logged-in event summaries are readable without subscription',async()=>{
  const admin=db({verified:false});
@@ -105,4 +105,59 @@ test('no active subscription is inferred from identity or mutable client input',
  const admin=db({verified:true});
  const res=await handleSinglesSocial(new Request('https://ekodi.kr/subscription'),'/subscription',admin,uid,reply);
  assert.deepEqual(await res.json(),{active:false,community_active:false,consulting_active:false,payment_method:'bank_transfer'});
+});
+
+test('each social write takes a per-user rate slot before writing',async()=>{
+ settings.SINGLES_BANK_TRANSFER_ENABLED='true';
+ const cases=[
+  ['/blocks/'+other,'POST',{verified:false},null,'block'],
+  ['/reports/'+other,'POST',{verified:false},{category:'spam',details:'x'},'report'],
+  ['/interests/'+other,'POST',{},null,'interest'],
+  ['/messages/'+id,'POST',{accepted:true,grant:true},{text:'안녕하세요'},'message'],
+ ];
+ for(const [path,method,opts,payload,action] of cases){
+  const admin=db(opts);
+  const res=await handleSinglesSocial(new Request('https://ekodi.kr'+path,{method,body:payload?JSON.stringify(payload):undefined}),path,admin,uid,reply);
+  assert.ok(res.status<300,path+' '+res.status);
+  const call=admin.calls.find(c=>c.name==='singles_rate_take');
+  assert.ok(call,'rate slot taken for '+action);
+  assert.equal(call.params.p_user,uid);assert.equal(call.params.p_action,action);
+ }
+});
+test('over-limit social writes return 429 with retry time and write nothing',async()=>{
+ settings.SINGLES_BANK_TRANSFER_ENABLED='true';
+ const cases=[
+  ['/blocks/'+other,{verified:false},null,'block'],
+  ['/reports/'+other,{verified:false},{category:'spam',details:'x'},'report'],
+  ['/interests/'+other,{},null,'interest'],
+  ['/messages/'+id,{accepted:true,grant:true},{text:'안녕하세요'},'message'],
+ ];
+ for(const [path,opts,payload,action] of cases){
+  const admin=db({...opts,retry:42});
+  const res=await handleSinglesSocial(new Request('https://ekodi.kr'+path,{method:'POST',body:payload?JSON.stringify(payload):undefined}),path,admin,uid,reply);
+  assert.equal(res.status,429,path);
+  assert.deepEqual(await res.json(),{error:'rate_limited',action,retry_after_seconds:42});
+  assert.equal(admin.writes.filter(w=>w.name!=='singles_rate_events').length,0,path+' must not write');
+ }
+});
+test('rate limiter failure fails closed instead of allowing the write',async()=>{
+ const admin=db({verified:false,rpcError:{message:'db down'}});
+ await assert.rejects(()=>handleSinglesSocial(new Request('https://ekodi.kr/blocks/'+other,{method:'POST'}),'/blocks/'+other,admin,uid,reply));
+ assert.equal(admin.writes.length,0);
+});
+test('invalid requests are rejected before consuming a rate slot',async()=>{
+ const admin=db({verified:false});
+ const res=await handleSinglesSocial(new Request('https://ekodi.kr/reports/'+other,{method:'POST',body:JSON.stringify({category:'bogus',details:'x'})}),'/reports/'+other,admin,uid,reply);
+ assert.equal(res.status,400);assert.equal(admin.calls.length,0);
+});
+test('rate limit migration is atomic, bounded and server-only',async()=>{
+ const {readFile}=await import('node:fs/promises');
+ const sql=await readFile(new URL('../supabase/migrations/20261025070000_singles_rate_limits.sql',import.meta.url),'utf8');
+ assert.match(sql,/pg_advisory_xact_lock/);
+ assert.ok(sql.indexOf('pg_advisory_xact_lock')<sql.indexOf('select count(*)'),'lock before counting');
+ assert.match(sql,/alter table public\.singles_rate_events enable row level security;/);
+ assert.match(sql,/revoke all on table public\.singles_rate_events from public,anon,authenticated;/);
+ assert.match(sql,/revoke all on function public\.singles_rate_take\(uuid,text,int,int\) from public,anon,authenticated;/);
+ assert.match(sql,/grant execute on function public\.singles_rate_take\(uuid,text,int,int\) to service_role;/);
+ assert.doesNotMatch(sql,/body|details|text\s+text/i);
 });

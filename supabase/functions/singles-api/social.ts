@@ -18,6 +18,21 @@ async function blocked(admin:Admin,a:string,b:string){
 }
 async function body(req:Request){if(Number(req.headers.get('content-length')||0)>4096)throw new Error('payload_too_large');return await req.json()}
 const match=(p:string,re:RegExp)=>p.match(re)?.[1]||'';
+// Per-user write limits (EKODI-SINGLES-MVP abuse controls). Enforced atomically in
+// the database; an RPC failure throws so the request fails closed (503).
+export const SINGLES_RATE_LIMITS={
+ interest:{limit:20,windowSeconds:86400},
+ report:{limit:10,windowSeconds:86400},
+ block:{limit:30,windowSeconds:86400},
+ message:{limit:60,windowSeconds:600},
+} as const;
+async function rateLimited(admin:Admin,userId:string,action:keyof typeof SINGLES_RATE_LIMITS){
+ const rule=SINGLES_RATE_LIMITS[action];
+ const {data,error}=await admin.rpc('singles_rate_take',{p_user:userId,p_action:action,p_limit:rule.limit,p_window_seconds:rule.windowSeconds});
+ if(error)throw error;
+ return Number(data)>0?Number(data):0;
+}
+const tooMany=(req:Request,reply:Reply,action:string,retry:number)=>reply(req,{error:'rate_limited',action,retry_after_seconds:retry},429);
 export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userId:string,reply:Reply):Promise<Response>{
  if(!socialEnabled())return reply(req,{error:'singles_social_not_launched'},503);
  const m=await membership(admin,userId);
@@ -98,6 +113,7 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
  if(earlyBlock&&method==='POST'){
   if(!active(m))return reply(req,{error:'membership_required'},403);
   if(earlyBlock===userId)return reply(req,{error:'cannot_block_self'},400);
+  {const retry=await rateLimited(admin,userId,'block');if(retry)return tooMany(req,reply,'block',retry);}
   const {error}=await admin.from('singles_blocks').upsert({blocker_id:userId,blocked_id:earlyBlock},{onConflict:'blocker_id,blocked_id'});
   if(error)throw error;
   return reply(req,{ok:true,blocked:true});
@@ -109,6 +125,7 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   const v=await body(req);
   if(!['harassment','fake_profile','spam','safety','other'].includes(v?.category)||typeof v?.details!=='string'||v.details.length>500)
    return reply(req,{error:'invalid_report'},400);
+  {const retry=await rateLimited(admin,userId,'report');if(retry)return tooMany(req,reply,'report',retry);}
   const {error}=await admin.from('singles_reports').insert({reporter_id:userId,target_id:reportTarget,category:v.category,details:v.details});
   if(error)throw error;
   return reply(req,{ok:true,status:'open'});
@@ -134,6 +151,7 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   if(!verified(recipient)||recipient.discoverable!==true)return reply(req,{error:'connection_unavailable'},404);
   const existing=await one(admin.from('singles_interests').select('id,status').eq('from_user_id',userId).eq('to_user_id',interestUser));
   if(existing)return reply(req,{ok:true,status:existing.status,interest_id:existing.id});
+  {const retry=await rateLimited(admin,userId,'interest');if(retry)return tooMany(req,reply,'interest',retry);}
   const {data,error}=await admin.from('singles_interests').insert({from_user_id:userId,to_user_id:interestUser,status:'pending'}).select('id').single();
   if(error)throw error;return reply(req,{ok:true,status:'pending',interest_id:data.id});
  }
@@ -181,6 +199,7 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   if(!await subscribed(admin,userId))return reply(req,{error:'community_subscription_required'},402);
   const v=await body(req);
   if(typeof v?.text!=='string'||!v.text.trim()||v.text.length>1000)return reply(req,{error:'invalid_message'},400);
+  {const retry=await rateLimited(admin,userId,'message');if(retry)return tooMany(req,reply,'message',retry);}
   const {error}=await admin.from('singles_messages').insert({interest_id:interestId,sender_id:userId,body:v.text.trim()});
   if(error)throw error;return reply(req,{ok:true});
  }
