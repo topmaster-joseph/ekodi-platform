@@ -58,7 +58,8 @@
       product: {
         saleType: v.saleType || 'direct', category: v.category || 'general', region: selectedRegion(), name: productName, audience, oneLine: v.oneLine,
         price: v.price ? Number(v.price) : null, stockQuantity: v.saleType === 'affiliate' || v.saleType === 'inquiry' ? null : (v.stockQuantity === '' || v.stockQuantity === undefined ? null : Number(v.stockQuantity)), expiryDate: v.saleType === 'affiliate' || v.saleType === 'inquiry' ? '' : (v.expiryDate || ''), benefits, specs: list(v.specs), story: v.story, fulfillment: v.fulfillment,
-        contact: v.contact, affiliateUrl: v.affiliateUrl, action: { url: v.saleType === 'affiliate' ? v.affiliateUrl : '' }
+        contact: v.contact, affiliateUrl: v.affiliateUrl, action: { url: v.saleType === 'affiliate' ? v.affiliateUrl : '' },
+        source: v.sourceKind !== undefined ? { kind: v.sourceKind, name: v.sourceName, contact: v.sourceContact, public: form.elements.sourcePublic?.checked ? 1 : 0 } : undefined
       },
       content: {
         headline: v.oneLine,
@@ -96,7 +97,8 @@
       productId: product.id, sellerType: s.type || 'individual', sellerDisplayName: s.displayName || '', contact: p.contact || store.contact || '',
       saleType: p.saleType || 'direct', productName: p.name || '', category: p.category || 'general', primaryRegionId: p.region?.primaryRegionId || '', price: p.price ?? '', stockQuantity: p.stockQuantity ?? '', expiryDate: p.expiryDate || '', affiliateUrl: p.affiliateUrl || '',
       storeName: store.name || '', storeSlug: store.slug || '', audience: p.audience || '', oneLine: p.oneLine || '', benefits: (p.benefits || []).join('\n'),
-      story: p.story || '', specs: (p.specs || []).join('\n'), fulfillment: p.fulfillment || ''
+      story: p.story || '', specs: (p.specs || []).join('\n'), fulfillment: p.fulfillment || '',
+      sourceKind: product.source?.kind || '', sourceName: product.source?.name || '', sourceContact: product.source?.contact || ''
     };
     for (const [name, value] of Object.entries(values)) {
       const field = form.elements[name];
@@ -104,6 +106,7 @@
       field.value = value;
       field.dispatchEvent(new Event('input', { bubbles: true }));
     }
+    if (form.elements.sourcePublic) { form.elements.sourcePublic.checked = Boolean(product.source?.public); form.elements.sourcePublic.dispatchEvent(new Event('change', { bubbles: true })); }
     renderLink(product);
     setStatus(`서버 상품을 불러왔습니다 · ${product.status === 'published' ? '게시 중' : '초안'}`);
   }
@@ -212,7 +215,10 @@
     article.innerHTML = '<span></span><h3></h3><p></p><div class="studio-buttons"><button class="smallbtn" type="button">불러오기</button></div>';
     article.querySelector('span').textContent = product.status === 'published' ? 'PUBLISHED' : 'DRAFT';
     article.querySelector('h3').textContent = product.product?.name || '상품';
-    article.querySelector('p').textContent = `${product.seller?.displayName || '판매자'} · ${product.store?.name || '개인상품'} · ${product.shareCode}`;
+    const origin = product.supply?.provider ? `출처 ${({ domeggook: '도매꾹', ownerclan: '오너클랜' })[product.supply.provider] || product.supply.provider} #${product.supply.itemNo}`
+      : product.source?.kind === 'consigned_merchant' ? `출처 상인 ${product.source.name}${product.source.contact ? ` (${product.source.contact})` : ''}`
+      : product.source?.kind === 'ekodibiz_own' ? '출처 에코디비즈 자체상품' : '';
+    article.querySelector('p').textContent = [`${product.seller?.displayName || '판매자'} · ${product.store?.name || '개인상품'} · ${product.shareCode}`, origin].filter(Boolean).join(' · ');
     article.querySelector('button').addEventListener('click', () => fillForm(product));
     if (product.publicShareLinkActive) {
       const link = document.createElement('a');

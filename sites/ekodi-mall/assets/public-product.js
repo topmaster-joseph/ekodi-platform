@@ -188,6 +188,7 @@
     const sellerLines = [
       `${data.seller.displayName}${data.store?.name ? ` · ${data.store.name}` : data.seller.official ? ' · 에코디몰 공식 판매' : ' · 개인 판매자'}`,
       data.seller.official ? '판매 · 에코디비즈(EKODIBIZ) · 사업자등록번호 213-13-01959 · 통신판매업 2023-전남무안-0153' : '',
+      data.source?.name ? `${data.source.label || '상품 제공'} · ${data.source.name}${data.source.contact ? ` · ${data.source.contact}` : ''}` : '',
       data.seller.verified ? '에코디몰 판매자 인증 완료' : '',
       data.product.contact ? `문의 · ${data.product.contact}` : ''
     ].filter(Boolean).join('\n');

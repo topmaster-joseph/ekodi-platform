@@ -76,3 +76,32 @@ test('regular sellers keep the human approval gate', async () => {
     assert.equal(pub.product.seller.official, false);
   });
 });
+
+test('EKODIan merchant-consigned product records the provider and shows it publicly only with consent', async () => {
+  const { db, env } = setup();
+  const user = { id: 'u-ekodian', email: 'joseph@ekodi.kr', email_confirmed_at: '2026-01-01' };
+  await withUser(user, async () => {
+    const body = { ...simple, product: { ...simple.product, source: { kind: 'consigned_merchant', name: '청계상회 홍길동', contact: '010-1234-5678', public: 1 } } };
+    const product = (await (await call(env, 'POST', '/api/products', body)).json()).product;
+    assert.deepEqual(product.source, { kind: 'consigned_merchant', name: '청계상회 홍길동', contact: '010-1234-5678', public: true });
+    await call(env, 'POST', `/api/products/${product.id}/publish`);
+    const pub = await (await worker.fetch(new Request(`https://x/api/public/products/${product.shareCode}`), env)).json();
+    assert.deepEqual(pub.product.source, { label: '상품 제공', name: '청계상회 홍길동', contact: '010-1234-5678' });
+    // 동의 해제 → 비공개, 내부 기록은 유지
+    const off = { ...body, product: { ...body.product, source: { ...body.product.source, public: 0 } } };
+    await call(env, 'PUT', `/api/products/${product.id}`, off);
+    const pub2 = await (await worker.fetch(new Request(`https://x/api/public/products/${product.shareCode}`), env)).json();
+    assert.equal(pub2.product.source, null);
+    assert.equal(db.prepare('SELECT source_name FROM products WHERE id=?').get(product.id).source_name, '청계상회 홍길동');
+  });
+});
+
+test('regular sellers cannot set a product source', async () => {
+  const { db, env } = setup();
+  const user = { id: 'u-free', email: 'someone@gmail.com', email_confirmed_at: '2026-01-01' };
+  await withUser(user, async () => {
+    const body = { ...simple, product: { ...simple.product, source: { kind: 'consigned_merchant', name: '사칭 상회', contact: '010', public: 1 } } };
+    const product = (await (await call(env, 'POST', '/api/products', body)).json()).product;
+    assert.equal(db.prepare('SELECT source_kind FROM products WHERE id=?').get(product.id).source_kind, '');
+  });
+});

@@ -12,6 +12,7 @@ import { handleSupplierPilotRequest, supplierPilotSchemaReady } from './supplier
 import { handleSupplierDiscoveryRequest, supplierDiscoverySchemaReady } from './supplier-discovery.js';
 import { handleDomemaeRequest, domemaeConnectorReady } from './domemae.js';
 import { probeDomeggookKey, syncSupplyProducts } from './domeggook-import.js';
+import { probeOwnerclan } from './ownerclan.js';
 import { placeSupplierOrders, trackSupplierOrders, autoOrderEnabled, probeDomeggookLogin } from './domeggook-order.js';
 import { handleAnalyticsRequest } from './analytics.js';
 import { handleStorefrontRequest } from './storefront.js';
@@ -289,7 +290,7 @@ export default {
     const supplySync = env?.DB ? probeDomeggookLogin(env).then(() => placeSupplierOrders(env)).then(summary => {
       if (summary.placed || summary.failed || summary.unknown) console.log('mall supplier auto-order', JSON.stringify(summary));
       return trackSupplierOrders(env);
-    }).then(() => probeDomeggookKey(env)).then(() => syncSupplyProducts(env)).then(summary => {
+    }).then(() => probeOwnerclan(env)).then(() => probeDomeggookKey(env)).then(() => syncSupplyProducts(env)).then(summary => {
       if (summary.synced) console.log('mall supply sync', JSON.stringify(summary));
       return runSupplyCuration(env);
     }).then(summary => {

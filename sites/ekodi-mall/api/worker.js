@@ -361,6 +361,9 @@ function rowToOwnerProduct(row) {
       contact: row.contact || '',
       affiliateUrl: row.affiliate_url || ''
     },
+    // 내부 전용 출처: API 공급사(supply)와 등록 출처(source)
+    supply: row.supply_provider ? { provider: row.supply_provider, itemNo: row.supply_item_no || '', market: row.supply_market || '' } : null,
+    source: { kind: row.source_kind || '', name: row.source_name || '', contact: row.source_contact || '', public: Boolean(row.source_public) },
     content: JSON.parse(row.content_json || '{}'),
     updatedAt: row.updated_at,
     publishedAt: row.published_at || null
@@ -372,6 +375,18 @@ const OWNER_SELECT = `SELECT p.*,s.name AS store_name,s.slug AS store_slug,s.con
 
 async function getOwnerProduct(env, sellerId, id) {
   return env.DB.prepare(`${OWNER_SELECT} WHERE p.id=? AND p.seller_id=?`).bind(id, sellerId).first();
+}
+
+// EKODI-MALL-PRODUCT-SOURCE-001: 에코디언만 상품 출처(상인 위탁·자체상품)를 기록한다.
+const SOURCE_KINDS = new Set(['', 'ekodibiz_own', 'consigned_merchant']);
+async function applyProductSource(env, sellerId, productId, official, source) {
+  if (!official || !source || typeof source !== 'object') return;
+  const kind = SOURCE_KINDS.has(cleanText(source.kind, 40)) ? cleanText(source.kind, 40) : '';
+  const name = kind === 'consigned_merchant' ? cleanText(source.name, 80) : '';
+  const contact = kind === 'consigned_merchant' ? cleanText(source.contact, 120) : '';
+  const isPublic = kind === 'consigned_merchant' && name && (source.public === true || source.public === 1 || source.public === '1' || source.public === 'on') ? 1 : 0;
+  await env.DB.prepare('UPDATE products SET source_kind=?,source_name=?,source_contact=?,source_public=? WHERE id=? AND seller_id=?')
+    .bind(kind, name, contact, isPublic, productId, sellerId).run();
 }
 
 async function saveProduct(env, user, body, existingId = '') {
@@ -413,6 +428,7 @@ async function saveProduct(env, user, body, existingId = '') {
         expiryChanged ? 1 : 0, value.product.expiryDate, expiryChanged ? 1 : 0, expiryChanged ? 1 : 0,
         JSON.stringify(value.product.benefits), JSON.stringify(value.product.specs),
         value.product.story, value.product.fulfillment, value.contact, value.product.affiliateUrl, JSON.stringify(value.content), now, existingId, user.id).run();
+    await applyProductSource(env, user.id, existingId, official, body?.product?.source);
     return { product: rowToOwnerProduct(await getOwnerProduct(env, user.id, existingId)) };
   }
   if (value.product.saleType === 'direct' && isInExpiryWindow(value.product.expiryDate)) return { errors: [expiryWindowMessage()] };
@@ -427,6 +443,7 @@ async function saveProduct(env, user, body, existingId = '') {
       value.product.name, value.product.audience, value.product.oneLine, value.product.price, value.product.stockQuantity, value.product.expiryDate, JSON.stringify(value.product.benefits),
       JSON.stringify(value.product.specs), value.product.story, value.product.fulfillment, value.contact, value.product.affiliateUrl,
       JSON.stringify(value.content), now, now).run();
+  await applyProductSource(env, user.id, id, official, body?.product?.source);
   return { product: rowToOwnerProduct(await getOwnerProduct(env, user.id, id)) };
 }
 
@@ -482,6 +499,8 @@ async function getPublicProduct(env, shareCode) {
     shareCode: row.share_code,
     publicUrl: row.public_url,
     seller: { type: row.seller_type, displayName: row.seller_display_name, verified: sellerVerified, official: sellerOfficial },
+    // 상인 위탁 상품은 제공자 동의 시에만 공개 표시. API 공급사는 공개하지 않는다.
+    source: row.source_kind === 'consigned_merchant' && row.source_public && row.source_name ? { label: '상품 제공', name: row.source_name, contact: row.source_contact || '' } : null,
     store: row.store_id ? { name: row.store_name || '', slug: row.store_slug || '' } : null,
     product: maskPublicProductFields({
       saleType: row.sale_type, category: normalizeCategory(row.category), region: row.primary_region_id ? { primaryRegionId: row.primary_region_id, regionIds: JSON.parse(row.region_ids_json || '[]'), label: row.region_label || '', relationship: row.local_relationship || 'seller-declared', verified: Boolean(row.region_verified) } : null, name: row.name, audience: row.audience || '', oneLine: row.one_line || '', price: row.price,
