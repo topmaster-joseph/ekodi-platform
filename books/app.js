@@ -6,7 +6,10 @@ const nav=document.querySelector('#site-nav');
 
 document.querySelector('#year').textContent=new Date().getFullYear();
 menuButton?.addEventListener('click',()=>{const open=nav.classList.toggle('open');menuButton.setAttribute('aria-expanded',String(open));});
-nav?.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{nav.classList.remove('open');menuButton?.setAttribute('aria-expanded','false');}));
+function closeMenu(){if(!nav?.classList.contains('open'))return;nav.classList.remove('open');menuButton?.setAttribute('aria-expanded','false');}
+nav?.addEventListener('click',event=>{if(event.target.closest('a'))closeMenu();});
+document.addEventListener('keydown',event=>{if(event.key==='Escape'){closeMenu();menuButton?.focus();}});
+document.addEventListener('click',event=>{if(!event.target.closest('.masthead'))closeMenu();});
 
 function installPublishingEntry(){
   if(nav&&!nav.querySelector('a[href="/publishing/"]')){
@@ -75,7 +78,7 @@ function renderBook(book){
   const editions=book.editions||{};const upaper=editions.upaperKoreanBilingual||{};const dist=node.querySelector('.distribution-list');
   dist.append(distributionRow('Google Play Books',identifier||editions.googleKoreanBilingual?.price||'',book.distribution?.google),distributionRow('Amazon KDP',['English Edition',editions.amazonEnglish?.price].filter(Boolean).join(' · '),book.distribution?.amazon),distributionRow('국내 판매',upaper.provider?[upaper.provider,upaper.price].filter(Boolean).join(' · '):(upaper.price||''),book.distribution?.upaper||book.distribution?.korea));
   const links=node.querySelector('.book-links');links.append(linkFor('Google Play',book.links?.google,book.distribution?.google),linkFor('Amazon',book.links?.amazon,book.distribution?.amazon),linkFor('유페이퍼 구매',book.links?.upaper||book.links?.korea,book.distribution?.upaper||book.distribution?.korea));
-  if(book.coverImage){const img=document.createElement('img');img.src=book.coverImage;img.alt=`${book.title} 표지`;img.loading='lazy';img.decoding='async';cover.classList.add('has-cover');cover.replaceChildren(img);}
+  if(book.coverImage){const img=document.createElement('img');img.src=/^\/(?!\/)/.test(book.coverImage)?`${catalogBase()}${book.coverImage}`:book.coverImage;img.alt=`${book.title} 표지`;img.loading='lazy';img.decoding='async';cover.classList.add('has-cover');cover.replaceChildren(img);}
   grid.append(node);
 }
 
