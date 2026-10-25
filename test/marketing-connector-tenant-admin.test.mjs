@@ -74,3 +74,15 @@ test('CMPMYI-embedded store admin keeps ?embed=cmpmyi on every in-frame navigati
   assert.equal(on('/jadam/site'),'/jadam/site');
   assert.equal(off('/jadam/admin/overview'),'/jadam/admin/overview');
 });
+
+test('CMPMYI-embedded login runs at top level and hands the session back to CMPMYI',async()=>{
+  const js=await storeAdminScript().text();
+  // Login link breaks out of the frame (Google/EKODI auth refuse framing).
+  assert.match(js,/href="\$\{esc\(authUrl\(\)\)\}"\$\{IS_CMPMYI_EMBED\?' target="_top"':''\}/);
+  assert.match(js,/back\.searchParams\.set\('cmpmyi_return','1'\)/);
+  // On return: share with the three CMPMYI store frames only, then go back to CMPMYI.
+  const boot=js.slice(js.indexOf("get('cmpmyi_return')==='1'"),js.indexOf("location.replace('/cmpmyi/admin')")+40);
+  assert.match(boot,/FIRST_STORE_SLUGS\.has\(SLUG\)/);
+  assert.match(boot,/localStorage\.setItem\(CENTRAL_CMPMYI_SESSION_KEY/);
+  assert.match(boot,/location\.replace\('\/cmpmyi\/admin'\)/);
+});

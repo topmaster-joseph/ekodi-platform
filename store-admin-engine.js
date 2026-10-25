@@ -206,7 +206,12 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL){
 
   function card(label,value,small=''){return `<article class="card"><small>${esc(label)}</small><strong>${esc(value)}</strong><span>${esc(small)}</span></article>`}
   function setState(text,kind=''){const el=$('pageState');el.textContent=text;el.className=`state ${kind}`.trim()}
-  function authUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','space');u.searchParams.set('return_to',location.origin+location.pathname+location.search);return u.href}
+  function authUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','space');
+    // Inside the CMPMYI frame, Google/EKODI login cannot render (they forbid framing). Sign in at the
+    // top level on this store's own admin page, then hand the session back to CMPMYI (see boot()).
+    if(IS_CMPMYI_EMBED){const back=new URL(location.pathname,location.origin);back.searchParams.set('cmpmyi_return','1');u.searchParams.set('return_to',back.href)}
+    else u.searchParams.set('return_to',location.origin+location.pathname+location.search);
+    return u.href}
   function roleCapabilities(role=state.role){return POLICY.roleCapabilities[String(role||'').trim().toLowerCase()]||[]}
   function canSection(key,role=state.role){const capability=SECTION_CAPABILITY[key];const allowed=roleCapabilities(role);return Boolean(capability&&(allowed.includes('*')||allowed.includes(capability)))}
   function activeGroup(){const groups=groupsForRole();return groups.find(group=>group.items.some(([key])=>key===section))||groups[0]}
@@ -240,7 +245,7 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL){
   function loginPanel(message=STORE_NAME+' 운영 권한으로 로그인해야 합니다.'){
     state.role='';setAuthChrome(false);renderNav();publishTenantContext('');
     $('summaryCards').innerHTML=[card('운영공간',STORE_NAME,'store-scoped'),card('현재 상태','로그인 전','운영 데이터 비공개'),card('관리 영역',FIRST_STORE_SLUGS.has(SLUG)?'브랜드 전용':'7개',FIRST_STORE_SLUGS.has(SLUG)?'판매 · 고객 · 마케팅 · 운영 · 정산 · 권한':'홈 · 사이트 · 판매 · 고객 · 마케팅 · 운영 · 경영'),card('데이터 경계','점포 전용','다른 매장과 분리')].join('');
-    $('mainPanel').innerHTML=`<div class="empty"><strong>운영공간 로그인</strong>${esc(message)}<div class="actions"><a class="button primary" href="${esc(authUrl())}">Google 계정으로 계속</a></div></div>`;setState('로그인 필요','warn');
+    $('mainPanel').innerHTML=`<div class="empty"><strong>운영공간 로그인</strong>${esc(message)}<div class="actions"><a class="button primary" href="${esc(authUrl())}"${IS_CMPMYI_EMBED?' target="_top"':''}>Google 계정으로 계속</a></div></div>`;setState('로그인 필요','warn');
   }
   function connectorStatus(provider){
     const row=(state.connector?.connectors||[]).find(x=>x.provider===provider);return row||{provider,status:'setup_required',displayName:provider};
@@ -789,6 +794,12 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL){
   }
   async function boot(){
     setup();state.session=storedSession();try{await exchangeCentralToken()}catch(e){clearSession();return loginPanel('통합인증 연결에 실패했습니다. 다시 로그인해 주세요.')}
+    if(new URLSearchParams(location.search).get('cmpmyi_return')==='1'){
+      // Returned from top-level login started inside CMPMYI: share the session with the three
+      // CMPMYI store frames (each frame still checks its own store authority) and go back.
+      const s=storedSession();if(s?.accessToken&&FIRST_STORE_SLUGS.has(SLUG)){try{localStorage.setItem(CENTRAL_CMPMYI_SESSION_KEY,JSON.stringify(s))}catch{}}
+      location.replace('/cmpmyi/admin');return;
+    }
     if(!(await accessToken()))return loginPanel();
     try{await loadData()}catch(e){if(e.status===401)return loginPanel();if(e.status===403){applyRole(state.role);return permissionPanel()}$('summaryCards').innerHTML=[card('\uC6B4\uC601\uACF5\uAC04',STORE_NAME,'\uB370\uC774\uD130 \uD655\uC778 \uD544\uC694')].join('');$('mainPanel').innerHTML=`<div class="empty"><strong>\uC2E4\uB370\uC774\uD130 \uC5F0\uACB0 \uD655\uC778 \uD544\uC694</strong>${esc(e.message)}</div>`;setState('\uD655\uC778 \uD544\uC694','warn')}
   }
