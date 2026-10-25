@@ -43,7 +43,7 @@ export const ADMIN_MENUS = Object.freeze([
   { id: 'revenue', group: 'finance', labels: { ko: '결제·정산', en: 'Payments & Settlement' }, sections: ['finance'] },
   { id: 'usage', group: 'finance', labels: { ko: '사용량·비용', en: 'Usage & Cost' }, sections: ['api-cost'] },
   { id: 'health', group: 'ops', labels: { ko: '운영상태', en: 'Operational Health' }, sections: ['site-health'] },
-  { id: 'domains', group: 'ops', labels: { ko: '도메인', en: 'Domains' }, sections: ['domain-control'] },
+  { id: 'domain-watch', group: 'ops', labels: { ko: '도메인', en: 'Domains' }, sections: ['domain-control'] },
   { id: 'releases', group: 'ops', labels: { ko: '배포·장애', en: 'Releases & Incidents' }, sections: ['deployments'] },
   { id: 'system', group: 'ops', labels: { ko: '시스템 구조', en: 'System Structure' }, sections: ['architecture', 'maturity'] },
   { id: 'infra', group: 'ops', labels: { ko: '실행 인프라', en: 'Execution Infrastructure' }, sections: ['devices', 'pos-agent'] },
