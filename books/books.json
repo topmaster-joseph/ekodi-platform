@@ -1,6 +1,6 @@
 {
   "publisher": "에코디서점",
-  "updated": "2026-10-25",
+  "updated": "2026-10-26",
   "books": [
     {
       "id": "BOOK-EKODI-000001",
@@ -22,9 +22,16 @@
       "discipline": "Ecclesiology · Public Theology · Community Studies",
       "language": "ko-en",
       "languageLabel": "한국어 · 영어 병기 / Amazon 영어 단독판 별도",
-      "format": ["EPUB 3", "Reflowable Digital Edition"],
+      "format": [
+        "EPUB 3",
+        "Reflowable Digital Edition"
+      ],
       "edition": "Digital First Edition · v1.7",
-      "listPrice": {"currency":"KRW","amount":9900,"label":"9,900원"},
+      "listPrice": {
+        "currency": "KRW",
+        "amount": 9900,
+        "label": "9,900원"
+      },
       "abstract": "교회를 건물과 제도의 언어에 가두지 않고, 성경의 큰 이야기 안에서 부름받은 백성의 삶으로 다시 읽는다. 에클레시아, 코이노니아, 디아스포라, 희년이라는 네 개의 오래된 언어를 오늘의 공동체와 일상으로 연결하며, 주일의 고백이 월요일의 선택으로 이어지는 신앙의 구조를 탐구한다.",
       "citation": "정찬균. 『에코디언을 찾아서: 성경 속 숨겨진 하나님 백성의 진짜 모습』. 에코디서점, 2026.",
       "identifiers": {
@@ -74,6 +81,62 @@
         "google": "",
         "upaper": "https://ekodi.upaper.kr/content/1223429",
         "korea": "https://ekodi.upaper.kr/content/1223429"
+      }
+    },
+    {
+      "id": "BOOK-EKODI-000002",
+      "catalogNo": "EB-MONO-002",
+      "series": "EKODI ORIGINAL",
+      "seriesNumber": 2,
+      "publicationType": "MONOGRAPH",
+      "status": "서지정보 정리 중 · 2026",
+      "coverTitle": "AI 시대의\n진보와 빈곤",
+      "detailUrl": "/#catalog",
+      "storeUrl": "/#catalog",
+      "publishingUrl": "/publishing/workspace/?book=BOOK-EKODI-000002",
+      "adminUrl": "https://ekodi.kr/admin/books#BOOK-EKODI-000002",
+      "title": "AI 시대의 진보와 빈곤",
+      "subtitle": "",
+      "author": "정찬균",
+      "discipline": "",
+      "language": "ko",
+      "languageLabel": "한국어",
+      "format": [
+        "Digital Edition"
+      ],
+      "edition": "",
+      "listPrice": {
+        "currency": "KRW",
+        "amount": 0,
+        "label": "가격 확인 중"
+      },
+      "abstract": "정찬균의 두 번째 EKODI ORIGINAL 단행본입니다. 부제·소개·판매처는 확인되는 대로 이 서점에 갱신됩니다.",
+      "citation": "정찬균. 『AI 시대의 진보와 빈곤』. 에코디서점.",
+      "identifiers": {
+        "googleBooks": "",
+        "isbnEbook": "",
+        "amazonAsin": ""
+      },
+      "workflow": {
+        "manuscript": "needs_verification",
+        "editing": "needs_verification",
+        "epub": "needs_verification",
+        "cover": "needs_verification",
+        "metadata": "needs_verification",
+        "distribution": "needs_verification",
+        "storefront": "catalog_listed"
+      },
+      "editions": {},
+      "distribution": {
+        "google": "확인 중",
+        "upaper": "확인 중",
+        "amazon": "확인 중"
+      },
+      "links": {
+        "amazon": "",
+        "google": "",
+        "upaper": "",
+        "korea": ""
       }
     }
   ]
