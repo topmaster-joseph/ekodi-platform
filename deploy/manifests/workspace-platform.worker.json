@@ -26,7 +26,8 @@
           "\"storeSmsOrders\":\"v1\"",
           "\"storeSmsOrderSchemaReady\":true",
           "\"storeTerminalPayments\":\"v1\"",
-          "\"storeTerminalPaymentSchemaReady\":true"
+          "\"storeTerminalPaymentSchemaReady\":true",
+          "\"storePromo\":\"v1\""
         ]
       }
     ]

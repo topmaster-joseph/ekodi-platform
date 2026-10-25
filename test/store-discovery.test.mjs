@@ -34,7 +34,7 @@ for(const [slug,name,category] of fixtures){
     const menu=graph['@graph'].find((item)=>item['@type']==='Menu');
     assert.equal(menu.hasMenuItem.length,2);
     const faq=graph['@graph'].find((item)=>item['@type']==='FAQPage');
-    assert.equal(faq.mainEntity.length,4);
+    assert.equal(faq.mainEntity.length,6);
     assert.match(renderStoreFaqSection({name,address:'전남 무안군',phone:'061',hours:'11:00–22:00',category}),/자주 묻는 질문/);
     assert.ok(STORE_DISCOVERY_PROFILES[slug].localTerms.includes('국립목포대학교 후문'));
   });
@@ -50,3 +50,21 @@ for(const [slug,name,category] of fixtures){
     assert.match(llms,/메뉴·가격·전화·영업시간·지도·배달주문/);
   });
 }
+
+test('local search structure: machine-readable daily hours, town-level address, intent FAQ mirrored in HTML',async()=>{
+  const { buildStoreDiscoveryGraph, storeOpeningHours, storePostalAddress, renderStoreFaqSection } = await import('../store-discovery.js');
+  assert.deepEqual(storeOpeningHours('11:00–22:00').openingHours,'Mo-Su 11:00-22:00');
+  assert.equal(storeOpeningHours('휴무·마감시간은 전화 확인'),null);
+  assert.equal(storePostalAddress('전남 무안군 청계면 승달산길 37-1').addressLocality,'무안군 청계면');
+  const graph=buildStoreDiscoveryGraph({slug:'jadam',name:'자담치킨 목포대점',canonical:'https://ekodi.kr/jadam',brand:'자담치킨',category:'치킨',address:'전남 무안군 청계면 승달산길 37-1',phone:'061-453-8295',hours:'11:00–22:00',sameAs:['https://www.instagram.com/example','javascript:alert(1)']});
+  const r=graph['@graph'].find(x=>x['@type']==='Restaurant');
+  assert.equal(r.openingHoursSpecification[0].opens,'11:00');
+  assert.deepEqual(r.sameAs,['https://www.instagram.com/example']);
+  const faq=graph['@graph'].find(x=>x['@type']==='FAQPage');
+  assert.ok(faq.mainEntity.some(q=>q.name.startsWith('목포대 후문 치킨')));
+  const html=renderStoreFaqSection({name:'자담치킨 목포대점',address:'전남 무안군 청계면 승달산길 37-1',phone:'061-453-8295',hours:'11:00–22:00',category:'치킨'});
+  for(const q of faq.mainEntity)assert.ok(html.includes(q.name.replace(/&/g,'&amp;')),`visible FAQ must mirror JSON-LD: ${q.name}`);
+  // Unparseable hours keep the displayed text instead of inventing a schedule.
+  const loose=buildStoreDiscoveryGraph({slug:'jadam',name:'x',canonical:'https://ekodi.kr/jadam',hours:'전화 확인'})['@graph'].find(x=>x['@type']==='Restaurant');
+  assert.equal(loose.openingHours,'전화 확인');assert.equal(loose.openingHoursSpecification,undefined);
+});
