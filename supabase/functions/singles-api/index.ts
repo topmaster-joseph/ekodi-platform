@@ -75,14 +75,11 @@ Deno.serve(async req => {
     if (socialRoute && p.startsWith("/bank/")) return await handleSinglesBank(req, p, admin, userId, reply);
     if (socialRoute) return await handleSinglesSocial(req, p, admin, userId, reply);
     if (p === "/withdraw") {
-      const { error: updateError } = await admin.from("singles_memberships").update({
-        status: "withdrawn", discoverable: false, marriage_opt_in: false,
-        religion_consent: false, base_consent: false, withdrawn_at: new Date().toISOString(),
-      }).eq("user_id", userId);
-      if (updateError) throw updateError;
-      const { error: receiptError } = await admin.from("singles_consent_receipts")
-        .insert({ user_id: userId, action: "withdrawn", consent_version: VERSION });
-      if (receiptError) throw receiptError;
+      // Atomic: membership off, open connections closed (no revival on re-join),
+      // pending/approved RSVPs cancelled, consent receipt written.
+      const { error: withdrawError } = await admin.rpc("singles_withdraw_member", { p_user: userId, p_version: VERSION });
+      if (withdrawError?.code === "P0002") return reply(req, { error: "member_not_found" }, 404);
+      if (withdrawError) throw withdrawError;
       return reply(req, { ok: true, status: "withdrawn" });
     }
     const fields = "status,age_19_confirmed,adult_verified_at,base_consent,religion_consent,marriage_opt_in,consent_version,consented_at,withdrawn_at";
