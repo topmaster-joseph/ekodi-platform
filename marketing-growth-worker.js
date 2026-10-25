@@ -5,6 +5,7 @@ import { ownedTenantAutopostSubject, runOwnedTenantAutopostCycle } from './owned
 import { d1SchemaReady } from './d1-schema-readiness.js';
 import { mallGrowthDashboardSnapshot } from './mall-growth-dashboard.js';
 import { growthOsSnapshot } from './ekodi-growth-os.js';
+import { verifyGrowthDiscovery } from './ekodi-growth-discovery-audit.js';
 import { channelCatalogSnapshot } from './channel-publishing-catalog.js';
 import { selectAuthorizedYouTubeChannels } from './youtube-brand-channel-verification.js';
 import { youtubeDataApiDisabledProject } from './youtube-data-api-readiness.js';
@@ -1008,6 +1009,10 @@ export default {
     if (auth.error) return json(request,env,{error:auth.error},auth.status);
     const {identity,subject} = auth;
 
+    if (url.pathname === '/v1/growth-os/discovery/verify' && request.method === 'GET') {
+      const report = await verifyGrowthDiscovery(subject);
+      return json(request, env, report, report.ok ? 200 : 503);
+    }
     if (url.pathname === '/v1/growth-os/overview' && request.method === 'GET') {
       try {
         const overview = await growthOsSnapshot(env, subject, { platform: platformReadiness(env) });
