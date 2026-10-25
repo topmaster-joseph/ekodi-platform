@@ -89,7 +89,7 @@
       "series": "EKODI ORIGINAL",
       "seriesNumber": 2,
       "publicationType": "MONOGRAPH",
-      "status": "서지정보 정리 중 · 2026",
+      "status": "판매처 등록 준비 중 · 2026",
       "coverTitle": "AI 시대의\n진보와 빈곤",
       "detailUrl": "/#catalog",
       "storeUrl": "/#catalog",
@@ -107,10 +107,10 @@
       "edition": "",
       "listPrice": {
         "currency": "KRW",
-        "amount": 0,
-        "label": "가격 확인 중"
+        "amount": 9900,
+        "label": "9,900원"
       },
-      "abstract": "정찬균의 두 번째 EKODI ORIGINAL 단행본입니다. 부제·소개·판매처는 확인되는 대로 이 서점에 갱신됩니다.",
+      "abstract": "정찬균의 두 번째 EKODI ORIGINAL 단행본입니다. 유페이퍼 등 판매처 등록이 완료되면 이 서점에서 바로 구매하실 수 있습니다.",
       "citation": "정찬균. 『AI 시대의 진보와 빈곤』. 에코디서점.",
       "identifiers": {
         "googleBooks": "",
@@ -126,11 +126,17 @@
         "distribution": "needs_verification",
         "storefront": "catalog_listed"
       },
-      "editions": {},
+      "editions": {
+        "upaperKoreanBilingual": {
+          "provider": "Upaper",
+          "price": "KRW 9,900",
+          "status": "등록 준비 중"
+        }
+      },
       "distribution": {
-        "google": "확인 중",
-        "upaper": "확인 중",
-        "amazon": "확인 중"
+        "google": "준비 중",
+        "upaper": "등록 준비 중",
+        "amazon": "준비 중"
       },
       "links": {
         "amazon": "",

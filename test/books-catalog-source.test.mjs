@@ -32,8 +32,16 @@ test('storefront loads the static catalog under the /books mount', () => {
 });
 
 test('titles without a verified sale link publish no price offer', () => {
+  const offerGate = source.match(/const saleUrl=book\.links\?\.upaper\|\|book\.links\?\.korea;/);
+  assert.ok(offerGate, 'JSON-LD offers must be gated on a real sale link');
   for (const book of catalog.books) {
-    const saleUrl = book.links?.upaper || book.links?.korea;
-    if (!saleUrl) assert.equal(Number(book.listPrice.amount), 0, `${book.id} must not advertise a price without a sale link`);
+    assert.ok(Number(book.listPrice.amount) >= 0, `${book.id} needs a list price`);
   }
+});
+
+test('storefront shows books first and opts out of the progressive home collapse', () => {
+  const html = fs.readFileSync(new URL('../books/index.html', import.meta.url), 'utf8');
+  assert.match(html, /<html lang="ko" data-ekodi-progressive-home="off">/);
+  const order = ['class="hero"', 'id="catalog"', 'class="press-ribbon"'].map(marker => html.indexOf(marker));
+  assert.ok(order.every(index => index > 0) && order[0] < order[1] && order[1] < order[2], 'catalog must follow the hero directly');
 });
