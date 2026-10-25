@@ -25,3 +25,10 @@ test('cmpmyi is reserved and guarded while stores remains a compatibility route'
   for(const path of ['/cmpmyi','/jadam','/pizzamaru','/yogurt'])assert.ok(discovery.includes(`path: '${path}'`),path);
   assert.ok(!discovery.includes("path: '/stores'"));
 });
+
+test('CMPMYI gate exposes an integrated-admin login entry to /cmpmyi/admin',async()=>{
+  const { storeGatewayPage } = await import('../store-gateway-page.js');
+  const html=await storeGatewayPage().text();
+  assert.match(html,/<a class="gate-admin" href="\/cmpmyi\/admin" data-cmpmyi-admin-login>통합관리자 로그인<\/a>/);
+  assert.match(html,/<a href="\/cmpmyi\/admin">통합관리자<\/a>/);
+});
