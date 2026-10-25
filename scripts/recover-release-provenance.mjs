@@ -191,7 +191,7 @@ const independentBoardTouched=sourceFiles.some(file=>
 // the canonical Control API (host-access route) and Site Core (studio UI).
 // Each deployed workflow retains receipt, staging and rollback checks.
 const controlApiTouched=sourceFiles.some(file=>[
-  'realtime-control.js','realtime-tenant-registry.js','live-interpretation-control.js',
+  'realtime-control.js','realtime-tenant-registry.js','live-interpretation-control.js','simulcast-relay-policy.js',
   'scripts/converge-orchestrated-pr-merge.mjs',
   'scripts/recover-release-provenance.mjs'
 ].includes(file));

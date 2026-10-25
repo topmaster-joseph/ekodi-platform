@@ -10,6 +10,8 @@
 // Stream keys never reach viewers. Destination keys are forwarded to Cloudflare
 // Stream once and never stored by EKODI; only a masked hint is kept.
 
+import { SIMULCAST_RELAY_CAPABILITY, SIMULCAST_RELAY_COMMANDS, SIMULCAST_RELAY_FFMPEG, SIMULCAST_RELAY_INGEST, SIMULCAST_RELAY_MAX_DESTINATIONS, SIMULCAST_RELAY_POLICY_ID, sanitizeSimulcastRelayPayload, summarizeSimulcastRelayResult } from './simulcast-relay-policy.js';
+
 export const LIVE_TRANSLATION_MODEL = '@cf/meta/m2m100-1.2b';
 export const LIVE_CAPTION_MAX_CHARS = 400;
 export const LIVE_CAPTION_PAGE = 60;
@@ -164,7 +166,7 @@ function catalog(){
 export async function handleLiveInterpretation(request,env,url,input,deps){
   const {json,tenantAdminAccess,subjectOf,realtimeTenant,evaluate}=deps;
   const path=url.pathname;
-  if(!/^\/api\/realtime\/(captions|interpretation|simulcast)(\/|$)/.test(path))return null;
+  if(!/^\/api\/realtime\/(captions|interpretation|simulcast|relay)(\/|$)/.test(path))return null;
   if(!env.DB)return json(request,env,{ok:false,error:'database_not_configured'},503);
 
   const tenantOf=value=>realtimeTenant(clean(value,80)||'');
@@ -352,5 +354,106 @@ export async function handleLiveInterpretation(request,env,url,input,deps){
       return json(request,env,{ok:true,output:safeOutput(await env.DB.prepare('SELECT * FROM live_stream_outputs WHERE id=?').bind(output.id).first())});
     }catch(error){return json(request,env,{ok:false,error:error.code||'stream_provider_error',message:error.message},error.status||502)}
   }
+  // ---------- EKODI-SIMULCAST-RELAY-001 (EKODI-owned simulcast, no paid service) ----------
+  if(path.startsWith('/api/realtime/relay'))return relayRoute({request,env,url,input,json,requireHost,tenantOf});
   return json(request,env,{ok:false,error:'live_addon_endpoint_not_found'},404);
+}
+
+const RELAY_ONLINE_MS=3*60*1000;
+async function enqueueRelayCommand(env,deviceId,type,payload,actor){
+  const id=`cmd_${crypto.randomUUID()}`,stamp=nowIso();
+  await env.DB.prepare(`INSERT INTO device_commands (id, device_id, command_type, payload_json, status, issued_at, issued_by) VALUES (?, ?, ?, ?, 'queued', ?, NULL)`)
+    .bind(id,deviceId,type,JSON.stringify(payload||{}),stamp).run();
+  return id;
+}
+function relayDeviceView(row){
+  if(!row)return null;
+  let caps={};try{caps=JSON.parse(row.capabilities_json||'{}')}catch{}
+  const seen=Date.parse(String(row.last_seen_at||''));
+  return {id:row.id,label:row.label,hostname:row.hostname,agentVersion:row.agent_version,online:Number.isFinite(seen)&&Date.now()-seen<RELAY_ONLINE_MS,lastSeenAt:row.last_seen_at||null,relayCapable:caps?.[SIMULCAST_RELAY_CAPABILITY]===true,revoked:Boolean(row.revoked_at)};
+}
+async function relayRoute({request,env,url,input,json,requireHost,tenantOf}){
+  const path=url.pathname,method=request.method;
+  const tenantValue=method==='GET'?url.searchParams.get('tenant'):input?.tenant;
+  if(path==='/api/realtime/relay/devices'&&method==='GET'){
+    const host=await requireHost(tenantValue);if(host.response)return host.response;
+    if(host.access.identity?.platformAdminRole!=='super_admin')return json(request,env,{ok:false,error:'relay_binding_super_admin_required'},403);
+    const rows=await env.DB.prepare(`SELECT id,label,hostname,agent_version,capabilities_json,last_seen_at,revoked_at FROM device_registry WHERE revoked_at IS NULL ORDER BY last_seen_at DESC LIMIT 50`).all().catch(()=>({results:[]}));
+    return json(request,env,{ok:true,devices:(rows.results||[]).map(relayDeviceView)});
+  }
+  const host=await requireHost(tenantValue);if(host.response)return host.response;
+  const tenant=host.config.apiTenant,actor=host.actor;
+  const binding=await env.DB.prepare('SELECT * FROM live_relay_bindings WHERE tenant_id=?').bind(tenant).first();
+  const device=binding?await env.DB.prepare('SELECT id,label,hostname,agent_version,capabilities_json,last_seen_at,revoked_at FROM device_registry WHERE id=?').bind(binding.device_id).first():null;
+  const audit=(action,outcome,detail)=>env.DB.prepare(`INSERT INTO realtime_audit_log(id,tenant_id,room_id,actor_user_id,action,outcome,detail_json,created_at) VALUES(?,?,?,?,?,?,?,?)`).bind(newId('audit'),tenant,null,actor||null,action,outcome,JSON.stringify(detail||{}).slice(0,2000),nowIso()).run().catch(()=>{});
+  if(path==='/api/realtime/relay'&&method==='GET'){
+    const dests=await env.DB.prepare('SELECT id,label,preset,ingest_host,key_hint,enabled,created_at FROM live_relay_destinations WHERE tenant_id=? ORDER BY created_at').bind(tenant).all();
+    let last=null,pending=0;
+    if(binding){
+      const row=await env.DB.prepare(`SELECT command_type,status,completed_at,result_json FROM device_commands WHERE device_id=? AND command_type LIKE 'simulcast.relay.%' AND status IN ('completed','failed') ORDER BY completed_at DESC LIMIT 1`).bind(binding.device_id).first().catch(()=>null);
+      if(row){let r={};try{r=JSON.parse(row.result_json||'{}')}catch{}last={command:row.command_type,status:row.status,at:row.completed_at,relay:summarizeSimulcastRelayResult(r?.simulcastRelay||r?.result?.simulcastRelay||r),message:clean(r?.message||r?.result?.message||'',300)}}
+      const q=await env.DB.prepare(`SELECT COUNT(*) AS n FROM device_commands WHERE device_id=? AND command_type LIKE 'simulcast.relay.%' AND status IN ('queued','claimed')`).bind(binding.device_id).first().catch(()=>null);pending=Number(q?.n||0);
+    }
+    return json(request,env,{ok:true,policy:SIMULCAST_RELAY_POLICY_ID,engine:'ekodi-device-relay',tenant,
+      binding:binding?{deviceId:binding.device_id,armed:Boolean(binding.armed),boundAt:binding.bound_at,device:relayDeviceView(device)}:null,
+      canBind:host.access.identity?.platformAdminRole==='super_admin',
+      ingest:{server:SIMULCAST_RELAY_INGEST.url,streamKey:SIMULCAST_RELAY_INGEST.streamKey,full:SIMULCAST_RELAY_INGEST.full,note:'방송 PC의 OBS 설정 → 방송 → 서비스: 사용자 지정, 서버와 스트림 키를 입력합니다.'},
+      ffmpeg:{version:SIMULCAST_RELAY_FFMPEG.version},
+      destinations:(dests.results||[]).map(d=>({id:d.id,label:d.label,preset:d.preset,ingestHost:d.ingest_host,keyHint:d.key_hint,enabled:Boolean(d.enabled),createdAt:d.created_at})),
+      platforms:Object.entries(PLATFORM_RULES).map(([id,rule])=>({id,label:rule.label,defaultUrl:rule.defaultUrl,keyHelpUrl:rule.keyHelp})),
+      lastResult:last,pendingCommands:pending});
+  }
+  if(path==='/api/realtime/relay/bind'&&method==='POST'){
+    if(host.access.identity?.platformAdminRole!=='super_admin')return json(request,env,{ok:false,error:'relay_binding_super_admin_required'},403);
+    const deviceId=clean(input?.deviceId,80);
+    const row=await env.DB.prepare('SELECT id,revoked_at FROM device_registry WHERE id=?').bind(deviceId).first().catch(()=>null);
+    if(!row||row.revoked_at)return json(request,env,{ok:false,error:'relay_device_not_found'},404);
+    const stamp=nowIso();
+    await env.DB.prepare(`INSERT INTO live_relay_bindings(tenant_id,device_id,bound_by,bound_at,armed,updated_at) VALUES(?,?,?,?,0,?) ON CONFLICT(tenant_id) DO UPDATE SET device_id=excluded.device_id,bound_by=excluded.bound_by,bound_at=excluded.bound_at,armed=0,updated_at=excluded.updated_at`).bind(tenant,deviceId,actor,stamp,stamp).run();
+    await audit('relay.bind','allowed',{deviceId});
+    return json(request,env,{ok:true,binding:{deviceId}});
+  }
+  if(!binding)return json(request,env,{ok:false,error:'relay_device_not_bound'},409);
+  const enqueue=async(type,payload,detail)=>{const id=await enqueueRelayCommand(env,binding.device_id,type,payload,actor);await audit(type,'allowed',{commandId:id,...(detail||{})});return id};
+  if(path==='/api/realtime/relay/install'&&method==='POST'){
+    return json(request,env,{ok:true,commandId:await enqueue(SIMULCAST_RELAY_COMMANDS.install,{})},202);
+  }
+  if(path==='/api/realtime/relay/status'&&method==='POST'){
+    return json(request,env,{ok:true,commandId:await enqueue(SIMULCAST_RELAY_COMMANDS.status,{})},202);
+  }
+  if((path==='/api/realtime/relay/arm'||path==='/api/realtime/relay/disarm')&&method==='POST'){
+    const arm=path.endsWith('/arm');
+    const commandId=await enqueue(SIMULCAST_RELAY_COMMANDS.configure,sanitizeSimulcastRelayPayload({op:arm?'arm':'disarm'}));
+    await env.DB.prepare('UPDATE live_relay_bindings SET armed=?,updated_at=? WHERE tenant_id=?').bind(arm?1:0,nowIso(),tenant).run();
+    return json(request,env,{ok:true,armed:arm,commandId},202);
+  }
+  if(path==='/api/realtime/relay/destinations'&&method==='POST'){
+    const check=validateSimulcastDestination(input||{});
+    if(!check.ok)return json(request,env,{ok:false,error:check.error},400);
+    const count=await env.DB.prepare('SELECT COUNT(*) AS n FROM live_relay_destinations WHERE tenant_id=?').bind(tenant).first();
+    if(Number(count?.n||0)>=SIMULCAST_RELAY_MAX_DESTINATIONS)return json(request,env,{ok:false,error:'simulcast_destination_limit'},409);
+    const id=`relay_${crypto.randomUUID().replaceAll('-','').slice(0,24)}`;
+    // The tee muxer needs one URL per destination: base ingest URL + '/' + key.
+    let payload;
+    try{payload=sanitizeSimulcastRelayPayload({op:'add',destination:{id,label:check.label,url:check.url,key:check.streamKey}})}catch(error){return json(request,env,{ok:false,error:'invalid_stream_key'},400)}
+    const commandId=await enqueue(SIMULCAST_RELAY_COMMANDS.configure,payload,{destinationId:id,host:check.host,keyHint:check.keyHint});
+    const stamp=nowIso();
+    await env.DB.prepare(`INSERT INTO live_relay_destinations(id,tenant_id,device_id,label,preset,ingest_host,key_hint,enabled,command_id,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,1,?,?,?,?)`).bind(id,tenant,binding.device_id,check.label,check.preset||check.platform,check.host,check.keyHint,commandId,actor,stamp,stamp).run();
+    return json(request,env,{ok:true,destination:{id,label:check.label,preset:check.preset||check.platform,ingestHost:check.host,keyHint:check.keyHint,enabled:true},commandId},201);
+  }
+  const dm=path.match(/^\/api\/realtime\/relay\/destinations\/(relay_[a-f0-9]{16,40})$/);
+  if(dm&&['POST','DELETE'].includes(method)){
+    const row=await env.DB.prepare('SELECT * FROM live_relay_destinations WHERE id=? AND tenant_id=?').bind(dm[1],tenant).first();
+    if(!row)return json(request,env,{ok:false,error:'simulcast_destination_not_found'},404);
+    if(method==='DELETE'){
+      const commandId=await enqueue(SIMULCAST_RELAY_COMMANDS.configure,sanitizeSimulcastRelayPayload({op:'remove',destinationId:row.id}));
+      await env.DB.prepare('DELETE FROM live_relay_destinations WHERE id=?').bind(row.id).run();
+      return json(request,env,{ok:true,deleted:row.id,commandId});
+    }
+    const enabled=input?.enabled!==false;
+    const commandId=await enqueue(SIMULCAST_RELAY_COMMANDS.configure,sanitizeSimulcastRelayPayload({op:enabled?'enable':'disable',destinationId:row.id}));
+    await env.DB.prepare('UPDATE live_relay_destinations SET enabled=?,updated_at=? WHERE id=?').bind(enabled?1:0,nowIso(),row.id).run();
+    return json(request,env,{ok:true,enabled,commandId});
+  }
+  return json(request,env,{ok:false,error:'relay_endpoint_not_found'},404);
 }
