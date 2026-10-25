@@ -80,23 +80,61 @@ export function evaluateEkodiContinuousExecution(input = {}) {
     return result('continue_preproduction_verification', 'mandatory_preproduction_evidence_missing');
   }
 
-  // Only an approval already validated by the trusted EKODI authority is
-  // eligible. Client-submitted fields, simulated reviews and model text are not.
-  const approval = input.trustedOrchestratorConfirmation;
-  if (!approval || approval.verifiedByTrustedServer !== true ||
-      approval.authority !== 'ekodi-orchestrator' ||
-      approval.approvedByRole !== 'super_admin' ||
-      approval.scope !== 'production_promotion' ||
-      approval.taskId !== taskId || approval.branchRef !== branch ||
-      approval.releaseSha !== commit || approval.artifactDigest !== artifact ||
-      !Number.isInteger(approval.stateVersion) || approval.stateVersion < 1 ||
-      !text(approval.approvedAt, 80)) {
-    return result('await_final_owner_confirmation', 'exact_artifact_owner_approval_required', {
-      taskId, branchRef: branch, releaseSha: commit, artifactDigest: artifact,
-    });
-  }
-  return result('ready_for_guarded_promotion', 'attested_final_confirmation_present', {
+  // A caller-provided object/boolean cannot prove an approval. Only the
+  // trusted server-side D1 task/event ledger check below may produce the
+  // attested promotion-readiness decision.
+  return result('await_final_owner_confirmation', 'exact_artifact_owner_approval_required', {
     taskId, branchRef: branch, releaseSha: commit, artifactDigest: artifact,
-    requiresSeparateOfficialReleaseGate: true,
+  });
+}
+
+/**
+ * Authenticated final-promotion preflight for the first-party server only.
+ * The privileged writer and the production release scripts remain separate
+ * and MUST verify their own authorization, CI, rollback and immutable release.
+ * Never expose this function as a client-invokable command.
+ */
+export async function evaluateEkodiContinuousExecutionFromLedger(db, input = {}) {
+  const preview=evaluateEkodiContinuousExecution(input);
+  if(preview.decision!=='await_final_owner_confirmation')return preview;
+  if(!db?.prepare)return preview;
+
+  const taskId=preview.taskId, branchRef=preview.branchRef;
+  const releaseSha=preview.releaseSha, artifactDigest=preview.artifactDigest;
+  let task, event;
+  try{
+    task=await db.prepare(
+      'SELECT task_id,branch_ref,state,state_version,permission_class,deployment_requested FROM ekodi_orchestrator_tasks WHERE task_id=?'
+    ).bind(taskId).first();
+    if(!task || task.branch_ref!==branchRef ||
+       Number(task.deployment_requested)!==1 || task.permission_class!=='delegated' ||
+       ['completed','blocked','failed','cancelled'].includes(task.state) ||
+       !Number.isInteger(Number(task.state_version)) || Number(task.state_version)<1){
+      return preview;
+    }
+    event=await db.prepare(
+      "SELECT actor,reason,evidence_json FROM ekodi_orchestrator_task_events WHERE task_id=? AND reason='final_promotion_approval_recorded' ORDER BY seq DESC LIMIT 1"
+    ).bind(taskId).first();
+  }catch{
+    return preview;
+  }
+  if(!event || event.reason!=='final_promotion_approval_recorded' ||
+     !/^super-admin:[^\\s]+$/.test(String(event.actor||'')))return preview;
+
+  let receipt;
+  try{receipt=JSON.parse(event.evidence_json||'{}')}catch{return preview}
+  if(receipt?.approved!==true || receipt.authority!=='ekodi-orchestrator' ||
+     receipt.approvedByRole!=='super_admin' || receipt.scope!=='production_promotion' ||
+     receipt.taskId!==taskId || receipt.branchRef!==branchRef ||
+     receipt.releaseSha!==releaseSha || receipt.artifactDigest!==artifactDigest ||
+     !Number.isInteger(receipt.stateVersion) ||
+     receipt.stateVersion!==Number(task.state_version) ||
+     !text(receipt.approvedAt,80) || !text(receipt.approvalId,240) ||
+     receipt.approvalId!==`final_promotion_${taskId}_v${receipt.stateVersion}` ||
+     String(event.actor).slice('super-admin:'.length)!==String(receipt.approvedBy||''))return preview;
+  return result('ready_for_guarded_promotion','durable_task_approval_verified',{
+    taskId,branchRef,releaseSha,artifactDigest,
+    approvalId:receipt.approvalId,
+    requiresSeparateOfficialReleaseGate:true,
   });
 }
