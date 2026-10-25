@@ -1,7 +1,7 @@
 import { publicImages } from './product-media.js';
 import core from './worker.js';
 import { maskPublicProductFields } from './supplier-mask.js';
-import { runSupplyCuration } from './worker.js';
+import { runSupplyCuration, runSupplyGate } from './worker.js';
 import { withMerchantKeys, keyDiagnostics } from '../../../ekodipay-core.js';
 import { handleTransactionRehearsal, transactionRehearsalEnabled } from './transaction-rehearsal.js';
 import { handleSourcingRequest, sourcingSchemaReady } from './sourcing.js';
@@ -294,6 +294,9 @@ export default {
       return runSupplyCuration(env);
     }).then(summary => {
       if (summary?.imported || summary?.discovery) console.log('mall supply curation', JSON.stringify(summary));
+      return runSupplyGate(env);
+    }).then(result => {
+      if (result?.gate?.held || result?.gate?.released || result?.ratchet?.minScore) console.log('mall supply gate', JSON.stringify(result));
     }).catch(error => console.error('mall supply sync failed', error)) : Promise.resolve();
     if (ctx?.waitUntil) ctx.waitUntil(supplySync); else await supplySync;
     if (!['1','true','yes','on'].includes(String(env.PAYMENTS_ENABLED || '').toLowerCase())) return;
