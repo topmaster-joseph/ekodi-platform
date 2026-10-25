@@ -41,6 +41,11 @@ const PLATFORM_RULES = Object.freeze({
   facebook:{label:'Facebook',hosts:host=>/(^|\.)facebook\.com$/.test(host),
     keyHelp:'https://www.facebook.com/live/producer',
     defaultUrl:'rtmps://live-api-s.facebook.com:443/rtmp/'},
+  // Instagram Live Producer (Professional account, desktop) issues a per-session
+  // RTMPS server URL and key on Meta ingest hosts. Stored as 'custom' to keep the
+  // existing table constraint; the label carries the channel name.
+  instagram:{label:'Instagram Live',storeAs:'custom',hosts:host=>/(^|\.)(facebook\.com|fbcdn\.net|instagram\.com)$/.test(host),
+    keyHelp:'https://www.instagram.com/',defaultUrl:'',requireRtmps:true},
   custom:{label:'기타 RTMP',hosts:host=>Boolean(host)&&!/^\d{1,3}(\.\d{1,3}){3}$/.test(host)&&!host.includes(':')&&host!=='localhost'&&host.includes('.'),
     keyHelp:'',defaultUrl:''},
 });
@@ -71,13 +76,14 @@ export function validateSimulcastDestination(input={}){
   const rawUrl=clean(input.url||rule.defaultUrl,500);
   let parsed;try{parsed=new URL(rawUrl)}catch{return {ok:false,error:'invalid_ingest_url'}}
   if(!['rtmp:','rtmps:'].includes(parsed.protocol))return {ok:false,error:'ingest_url_must_be_rtmp'};
+  if(rule.requireRtmps&&parsed.protocol!=='rtmps:')return {ok:false,error:'ingest_url_must_be_rtmps'};
   if(parsed.username||parsed.password)return {ok:false,error:'ingest_url_credentials_forbidden'};
   const host=parsed.hostname.toLowerCase();
   if(!rule.hosts(host))return {ok:false,error:'ingest_host_not_allowed_for_platform'};
   const streamKey=String(input.streamKey??'').trim();
   if(streamKey.length<4||streamKey.length>256||/\s/.test(streamKey))return {ok:false,error:'invalid_stream_key'};
   const label=clean(input.label,60)||rule.label;
-  return {ok:true,platform,url:parsed.toString(),host,streamKey,label,keyHint:maskKey(streamKey)};
+  return {ok:true,platform:rule.storeAs||platform,preset:platform,url:parsed.toString(),host,streamKey,label,keyHint:maskKey(streamKey)};
 }
 
 export function streamIframeUrl(env,liveInputUid){
