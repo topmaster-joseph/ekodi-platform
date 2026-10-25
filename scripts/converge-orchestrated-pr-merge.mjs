@@ -186,6 +186,7 @@ const controlApiTouched=changedFiles.some(file=>
   'realtime-control.js',
   'realtime-tenant-registry.js',
   'live-interpretation-control.js',
+  'simulcast-relay-policy.js',
   // Control API directly imports the Orchestrator completion/OIDC boundary.
   // A trusted GitHub Actions merge does not automatically trigger main push.
   'ekodi-orchestrator-task-adapter.js',

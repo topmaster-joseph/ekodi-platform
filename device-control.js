@@ -10,6 +10,14 @@ import {
   sanitizeInteractiveAuthSettings,
   summarizeInteractiveAuthResult,
 } from './interactive-auth-session.js';
+import {
+  SIMULCAST_RELAY_CAPABILITY,
+  SIMULCAST_RELAY_COMMANDS,
+  isSimulcastRelayCommand,
+  redactSimulcastRelayPayload,
+  sanitizeSimulcastRelayPayload,
+  summarizeSimulcastRelayResult,
+} from './simulcast-relay-policy.js';
 
 const ADMIN_PREFIX = '/api/control/devices';
 const AGENT_PREFIX = '/api/device-agent';
@@ -120,6 +128,11 @@ const COMMAND_POLICIES = Object.freeze({
   [INTERACTIVE_AUTH_COMMANDS.verify]: { risk: 'maintain', confirm: true, payload: 'interactive-auth', superAdmin: true },
   // Ending a session must never be harder than starting one.
   [INTERACTIVE_AUTH_COMMANDS.close]: { risk: 'maintain', payload: 'interactive-auth' },
+  // EKODI-SIMULCAST-RELAY-001: issued only through /api/realtime/relay (tenant
+  // host + bound PC); destination keys are redacted from D1 once claimed.
+  [SIMULCAST_RELAY_COMMANDS.install]: { risk: 'maintain' },
+  [SIMULCAST_RELAY_COMMANDS.configure]: { risk: 'privileged', payload: 'simulcast-relay' },
+  [SIMULCAST_RELAY_COMMANDS.status]: { risk: 'observe' },
 });
 
 const DIAGNOSTIC_SECTIONS = Object.freeze({
@@ -159,6 +172,9 @@ const COMMAND_CAPABILITIES = Object.freeze({
   [INTERACTIVE_AUTH_COMMANDS.start]: INTERACTIVE_AUTH_CAPABILITY,
   [INTERACTIVE_AUTH_COMMANDS.verify]: INTERACTIVE_AUTH_CAPABILITY,
   [INTERACTIVE_AUTH_COMMANDS.close]: INTERACTIVE_AUTH_CAPABILITY,
+  [SIMULCAST_RELAY_COMMANDS.install]: SIMULCAST_RELAY_CAPABILITY,
+  [SIMULCAST_RELAY_COMMANDS.configure]: SIMULCAST_RELAY_CAPABILITY,
+  [SIMULCAST_RELAY_COMMANDS.status]: SIMULCAST_RELAY_CAPABILITY,
 });
 
 function corsHeaders(request, env) {
@@ -387,6 +403,7 @@ function commandAllowedForDeviceType(deviceType, commandType) {
 function sanitizeCommandPayload(type, rawPayload) {
   const policy = COMMAND_POLICIES[type];
   if (!policy?.payload) return {};
+  if (policy.payload === 'simulcast-relay') return sanitizeSimulcastRelayPayload(rawPayload || {});
   if (policy.payload === 'startup-item') {
     const itemId = safeText(rawPayload?.itemId, 80).toLowerCase();
     if (!/^[a-f0-9]{64}$/.test(itemId)) throw new Error('STARTUP_ITEM_INVALID');
@@ -572,6 +589,7 @@ function summarizeCommandResult(result = {}, commandType = '') {
   // Expose only a bounded version for approved native Agent self-update receipts.
   if (commandType === 'agent.self_update' && result?.version !== undefined)
     summary.version = safeText(result.version, 32);
+  if (String(commandType).startsWith('simulcast.relay.')) summary.simulcastRelay = summarizeSimulcastRelayResult(result?.simulcastRelay || result || {});
   const finiteNumber = value => value === null || value === undefined || value === ''
     ? null
     : (Number.isFinite(Number(value)) ? Number(value) : null);
@@ -1459,6 +1477,7 @@ async function handleAdmin(request, env) {
     const policy = COMMAND_POLICIES[commandType];
     if (!policy) return json({ error: '허용되지 않은 기기 명령입니다.', code: 'DEVICE_COMMAND_NOT_ALLOWED' }, 400, request, env);
     if (commandType === 'camera.live.start') return json({ error: '카메라 스트림은 전용 임시 세션 경로로만 시작할 수 있습니다.', code: 'DEVICE_STREAM_ROUTE_REQUIRED' }, 409, request, env);
+    if (isSimulcastRelayCommand(commandType)) return json({ error: '동시송출은 라이브 방송실의 에코디 송출 경로로만 제어합니다.', code: 'DEVICE_RELAY_ROUTE_REQUIRED' }, 409, request, env);
     if (policy.confirm && body.confirmed !== true) {
       return json({ error: '이 작업은 관리자 확인이 필요합니다.', code: 'DEVICE_COMMAND_CONFIRM_REQUIRED' }, 409, request, env);
     }
@@ -1619,6 +1638,11 @@ async function nextCommand(request, env, device) {
   const claim = await env.DB.prepare(`UPDATE device_commands SET status = 'claimed', claimed_at = ?
     WHERE id = ? AND status = 'queued'`).bind(claimedAt, command.id).run();
   if (!claim.meta?.changes) return json({ command: null }, 200, request, env);
+  if (command.command_type === SIMULCAST_RELAY_COMMANDS.configure) {
+    // The stream key is delivered to the PC exactly once; D1 keeps a masked hint.
+    await env.DB.prepare(`UPDATE device_commands SET payload_json=? WHERE id=?`)
+      .bind(JSON.stringify(redactSimulcastRelayPayload(parseJson(command.payload_json))), command.id).run();
+  }
   return json({ command: {
     id: command.id,
     type: command.command_type,
