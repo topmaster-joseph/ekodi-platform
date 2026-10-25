@@ -22,7 +22,7 @@ async function api(path,{method='GET',payload}={}){
   return data;
 }
 const q=`tenant=${encodeURIComponent(tenant)}`;
-const ERR={authentication_required:'진행자 로그인이 필요합니다.',tenant_host_permission_required:'이 사이트의 방송 관리자 권한이 필요합니다.',stream_not_configured:'동시송출 엔진(Cloudflare Stream)이 아직 켜지지 않았습니다.',invalid_stream_key:'스트림 키를 다시 확인해 주세요.',ingest_host_not_allowed_for_platform:'선택한 플랫폼의 송출 주소가 아닙니다.',ingest_url_must_be_rtmp:'송출 주소는 rtmp:// 또는 rtmps:// 로 시작해야 합니다.',ingest_url_must_be_rtmps:'이 채널은 rtmps:// 주소만 사용할 수 있습니다.',target_language_required:'통역할 언어를 하나 이상 고르세요.',caption_session_ended:'통역 자막이 종료되었습니다.',stream_input_not_created:'먼저 송출 주소를 만드세요.',simulcast_destination_limit:'동시송출 채널은 최대 10개입니다.'};
+const ERR={authentication_required:'진행자 로그인이 필요합니다.',tenant_host_permission_required:'이 사이트의 방송 관리자 권한이 필요합니다.',stream_not_configured:'동시송출 엔진(Cloudflare Stream)이 아직 켜지지 않았습니다.',invalid_stream_key:'스트림 키를 다시 확인해 주세요.',ingest_host_not_allowed_for_platform:'선택한 플랫폼의 송출 주소가 아닙니다.',ingest_url_must_be_rtmp:'송출 주소는 rtmp:// 또는 rtmps:// 로 시작해야 합니다.',ingest_url_must_be_rtmps:'이 채널은 rtmps:// 주소만 사용할 수 있습니다.',target_language_required:'통역할 언어를 하나 이상 고르세요.',caption_session_ended:'통역 자막이 종료되었습니다.',stream_input_not_created:'먼저 송출 주소를 만드세요.',simulcast_destination_limit:'동시송출 채널은 최대 10개입니다.',relay_device_not_bound:'먼저 송출 PC를 지정하세요.',relay_binding_super_admin_required:'송출 PC 지정은 에코디 최고관리자만 할 수 있습니다.',relay_device_not_found:'송출 PC를 찾을 수 없습니다.'};
 const say=error=>ERR[error?.message]||ERR[error?.data?.error]||'처리하지 못했습니다. 잠시 뒤 다시 시도하세요.';
 
 /* ---------------- viewer captions ---------------- */
@@ -153,11 +153,55 @@ function setupSimulcast(){
   const refresh=el('button',{type:'button',text:'확인',onclick:()=>load()});
   host.replaceChildren(el('div',{class:'external-head'},[el('strong',{text:'유튜브·페이스북 동시송출'}),refresh]),status,content);
   const copyBtn=value=>el('button',{type:'button',text:'복사',onclick:async e=>{try{await navigator.clipboard.writeText(value);e.target.textContent='복사됨'}catch{}}});
+
+  // EKODI-owned relay (EKODI-SIMULCAST-RELAY-001): OBS on the broadcast PC →
+  // EKODI Device Agent → YouTube / Facebook / Instagram / other RTMP at once.
+  async function renderRelay(){
+    let r;
+    try{r=await api(`/relay?${q}`)}catch(error){status.textContent=say(error);content.replaceChildren();return}
+    const nodes=[el('p',{class:'live-addon-note',text:'에코디 송출 PC가 방송 하나를 받아 여러 채널로 동시에 내보냅니다. 추가 비용이 없습니다.'})];
+    if(!r.binding){
+      status.textContent='송출 PC 지정 필요';
+      if(!r.canBind){nodes.push(el('p',{class:'live-addon-note',text:'에코디 최고관리자가 방송 PC를 이 사이트에 지정하면 사용할 수 있습니다.'}));content.replaceChildren(...nodes);return}
+      let list;try{list=await api(`/relay/devices?${q}`)}catch(error){status.textContent=say(error);return}
+      const box=el('div',{class:'destination-options'});
+      for(const d of list.devices){
+        box.append(el('div',{class:'live-simulcast-row'},[el('label',{},[el('b',{text:d.label||d.hostname||d.id}),el('small',{text:`${d.hostname||''} · ${d.online?'온라인':'오프라인'} · Agent ${d.agentVersion||'?'}${d.relayCapable?'':' · 업데이트 필요'}`})]),el('button',{type:'button',text:'이 PC로 지정',onclick:async()=>{try{await api('/relay/bind',{method:'POST',payload:{tenant,deviceId:d.id}});await load()}catch(error){status.textContent=say(error)}}})]));
+      }
+      if(!list.devices.length)box.append(el('small',{text:'등록된 PC가 없습니다. 에코디 관리자 → 기기에서 방송 PC를 등록하세요.'}));
+      nodes.push(box);content.replaceChildren(...nodes);return;
+    }
+    const dev=r.binding.device||{},last=r.lastResult?.relay;
+    const running=last?.running,armed=r.binding.armed;
+    status.textContent=!dev.online?'송출 PC 오프라인':armed?(running?'동시송출 대기 중 — OBS에서 방송을 시작하세요':'동시송출 준비 중'):'동시송출 꺼짐';
+    nodes.push(el('small',{class:'live-addon-note',text:`송출 PC: ${dev.label||dev.hostname||r.binding.deviceId} · ${dev.online?'온라인':'오프라인'} · Agent ${dev.agentVersion||'?'}${dev.relayCapable?'':' (Agent 업데이트 필요)'}${r.pendingCommands?` · 처리 대기 ${r.pendingCommands}건`:''}`}));
+    if(last?.lastError)nodes.push(el('small',{class:'live-addon-note',text:'최근 오류: '+last.lastError}));
+    nodes.push(el('div',{class:'live-simulcast-secret'},[el('label',{},[el('span',{text:'OBS 서버'}),el('input',{readonly:true,value:r.ingest.server}),copyBtn(r.ingest.server)]),el('label',{},[el('span',{text:'스트림 키'}),el('input',{readonly:true,value:r.ingest.streamKey}),copyBtn(r.ingest.streamKey)]),el('small',{class:'live-addon-note',text:r.ingest.note})]));
+    const act=(label,path,cls)=>el('button',{type:'button',class:cls||'',text:label,onclick:async e=>{e.target.disabled=true;try{await api(path,{method:'POST',payload:{tenant}});status.textContent='송출 PC에 전달했습니다. 10초 안에 반영됩니다.';setTimeout(load,12000)}catch(error){status.textContent=say(error)}finally{e.target.disabled=false}}});
+    nodes.push(el('div',{class:'live-console-actions'},[armed?act('동시송출 끄기','/relay/disarm'):act('동시송출 켜기','/relay/arm','primary'),act('상태 확인','/relay/status')]));
+    const list=el('div',{class:'destination-options'});
+    for(const d of r.destinations){
+      const toggle=el('input',{type:'checkbox',checked:d.enabled,onchange:async e=>{try{await api(`/relay/destinations/${encodeURIComponent(d.id)}`,{method:'POST',payload:{tenant,enabled:e.target.checked}})}catch(error){e.target.checked=!e.target.checked;status.textContent=say(error)}}});
+      list.append(el('div',{class:'live-simulcast-row'},[el('label',{},[toggle,el('b',{text:d.label}),el('small',{text:`${d.ingestHost} · ${d.keyHint}`})]),el('button',{type:'button',text:'삭제',onclick:async()=>{if(!confirm(`${d.label} 채널을 삭제할까요?`))return;try{await api(`/relay/destinations/${encodeURIComponent(d.id)}`,{method:'DELETE',payload:{tenant}});await load()}catch(error){status.textContent=say(error)}}})]));
+    }
+    if(!r.destinations.length)list.append(el('small',{text:'연결된 채널이 없습니다. 아래에서 유튜브·페이스북·인스타그램을 추가하세요.'}));
+    const platform=el('select',{},r.platforms.map(p=>el('option',{value:p.id,text:p.label})));
+    const label=el('input',{placeholder:'채널 이름 (예: 에코디교회 YouTube)',maxlength:'60'});
+    const url=el('input',{placeholder:'rtmps://…'});
+    const key=el('input',{type:'password',placeholder:'스트림 키',autocomplete:'off'});
+    const help=el('a',{target:'_blank',rel:'noopener',text:'키 받는 곳'});
+    const sync=()=>{const p=r.platforms.find(x=>x.id===platform.value);url.value=p?.defaultUrl||'';help.href=p?.keyHelpUrl||'#';help.hidden=!p?.keyHelpUrl};
+    platform.addEventListener('change',sync);sync();
+    const add=el('form',{class:'live-simulcast-add'},[platform,label,url,key,help,el('button',{type:'submit',class:'primary',text:'채널 추가'})]);
+    add.addEventListener('submit',async e=>{e.preventDefault();try{await api('/relay/destinations',{method:'POST',payload:{tenant,platform:platform.value,url:url.value,streamKey:key.value,label:label.value}});key.value='';label.value='';await load()}catch(error){status.textContent=say(error)}});
+    nodes.push(list,add);
+    content.replaceChildren(...nodes);
+  }
   async function load(){
     status.textContent='확인 중';
     let data;
     try{data=await api(`/simulcast?${q}`)}catch(error){status.textContent=say(error);content.replaceChildren();return}
-    if(!data.configured){status.textContent='동시송출 엔진 준비 필요';content.replaceChildren(el('p',{class:'live-addon-note',text:'관리자가 Cloudflare Stream을 켜고 STREAM_API_TOKEN을 등록하면 이 자리에서 바로 연결됩니다.'}),el('a',{href:data.setup?.dashboardUrl||'https://dash.cloudflare.com/',target:'_blank',rel:'noopener',text:'Cloudflare Stream 열기'}));return}
+    if(!data.configured){await renderRelay();return}
     const nodes=[];
     if(!data.input){
       status.textContent='송출 주소 없음';
