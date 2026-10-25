@@ -40,7 +40,7 @@ test('device control: relay commands registered, only via the live route, redact
 });
 
 test('Windows agent: pinned ffmpeg, DPAPI store, fixed arguments, supervised relay', () => {
-  assert.match(agent, /\$AgentVersion = '2\.6\.0'/);
+  assert.match(agent, /\$AgentVersion = '2\.6\.1'/);
   assert.ok(agent.includes(`$SimulcastFfmpegSource = '${SIMULCAST_RELAY_FFMPEG.source}'`));
   assert.ok(agent.includes(`$SimulcastTarballSha256 = '${SIMULCAST_RELAY_FFMPEG.tarballSha256.toUpperCase()}'`));
   assert.ok(agent.includes(`$SimulcastFfmpegSha256 = '${SIMULCAST_RELAY_FFMPEG.exeSha256.toUpperCase()}'`));
@@ -70,7 +70,7 @@ function d1() {
   db.exec(`CREATE TABLE device_registry (id TEXT PRIMARY KEY,label TEXT NOT NULL,platform TEXT NOT NULL,hostname TEXT NOT NULL DEFAULT '',os_version TEXT NOT NULL DEFAULT '',agent_version TEXT NOT NULL DEFAULT '',token_hash TEXT NOT NULL UNIQUE,capabilities_json TEXT NOT NULL DEFAULT '{}',settings_json TEXT NOT NULL DEFAULT '{}',last_seen_at TEXT,enrolled_at TEXT NOT NULL,revoked_at TEXT);
     CREATE TABLE device_commands (id TEXT PRIMARY KEY,device_id TEXT NOT NULL,command_type TEXT NOT NULL,payload_json TEXT NOT NULL DEFAULT '{}',status TEXT NOT NULL DEFAULT 'queued',issued_at TEXT NOT NULL,issued_by INTEGER,claimed_at TEXT,completed_at TEXT,result_json TEXT NOT NULL DEFAULT '{}');`);
   const now = new Date().toISOString();
-  db.prepare(`INSERT INTO device_registry VALUES ('dev_church','방송PC','windows','CHURCH-PC','Windows 11','2.6.0','h1','{"simulcastRelay":true}','{}',?,?,NULL)`).run(now, now);
+  db.prepare(`INSERT INTO device_registry VALUES ('dev_church','방송PC','windows','CHURCH-PC','Windows 11','2.6.1','h1','{"simulcastRelay":true}','{}',?,?,NULL)`).run(now, now);
   const st = (sql, args = []) => ({ bind: (...v) => st(sql, v), first: async () => db.prepare(sql).get(...args) ?? null, all: async () => ({ results: db.prepare(sql).all(...args) }), run: async () => ({ meta: { changes: Number(db.prepare(sql).run(...args).changes) } }) });
   return { raw: db, prepare: sql => st(sql), batch: async l => l };
 }
