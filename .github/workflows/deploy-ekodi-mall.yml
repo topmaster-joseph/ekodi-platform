@@ -527,6 +527,11 @@ jobs:
           else
             echo '::warning title=Domeggook auto-order::DOMEMAE_USER_ID or DOMEMAE_PASSWORD secret missing; auto-order stays off'
           fi
+          if grep -Fq 'OWNERCLAN_USER_ID' /tmp/mall-prod-secret-list.txt && grep -Fq 'OWNERCLAN_PASSWORD' /tmp/mall-prod-secret-list.txt; then
+            echo '::notice title=OwnerClan::OWNERCLAN_USER_ID and OWNERCLAN_PASSWORD secrets are configured'
+          else
+            echo '::notice title=OwnerClan::OwnerClan secrets not configured yet'
+          fi
           rm -f /tmp/mall-prod-secret-list.txt
 
       - name: Verify production Amazon vault readiness
