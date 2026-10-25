@@ -138,6 +138,13 @@ const accessApiTouched=changedFiles.some(file=>
   file.startsWith('supabase/functions/_shared/')||
   file==='.github/workflows/deploy-access-api.yml'
 );
+// EKODI 동행 singles-api Edge Function: same reason as the Access API above.
+const singlesApiTouched=changedFiles.some(file=>
+  file.startsWith('supabase/functions/singles-api/')||
+  file==='config/singles-api-db-contract.json'||
+  file==='scripts/singles-api-db-preflight.mjs'||
+  file==='.github/workflows/deploy-singles-api.yml'
+);
 const independentBoardTouched=changedFiles.some(file=>
   file.startsWith('services/independent-board/')||
   file==='wrangler.independent-board.toml'||
@@ -482,7 +489,7 @@ const handDispatchedLanes=new Set([
   [cgmaApexTouched,'deploy-cgma-apex-edge.yml'],[spaceTouched,'deploy-space.yml'],[qtinOrderTouched,'deploy-qtin-order.yml'],
   [mallSiteTouched,'deploy-ekodi-mall.yml'],[booksTouched,'deploy-books.yml'],[labHomepageTouched,'deploy-ekodi-lab-homepage.yml'],[controlApiTouched,'deploy-control-api.yml'],
   [marketingPublishingTouched,'deploy-marketing-publishing.yml'],[marketingGrowthTouched,'deploy-marketing-growth.yml'],[myTouched,'deploy-my.yml'],
-  [accessApiTouched,'deploy-access-api.yml'],[independentBoardTouched,'deploy-independent-board.yml'],[aiControlTouched,'deploy-ai-control.yml'],
+  [accessApiTouched,'deploy-access-api.yml'],[singlesApiTouched,'deploy-singles-api.yml'],[independentBoardTouched,'deploy-independent-board.yml'],[aiControlTouched,'deploy-ai-control.yml'],
   [shellRuntimeTouched,'deploy-ekodi-shell.yml'],[churchApiTouched,'deploy-church-pastor-api.yml'],[churchPagesTouched,'deploy-ekodi-church-homepage.yml'],
   [sharedSiteTouched,'deploy-site-core.yml'],
 ].filter(([touched])=>touched).map(([,workflow])=>workflow));
@@ -721,6 +728,14 @@ async function dispatchPostMergeDeploys(){
     });
     if(!dispatch.r.ok)fail('Access API deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
     console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-access-api.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+  if(singlesApiTouched){
+    const dispatch=await api('/actions/workflows/deploy-singles-api.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('Singles API deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-singles-api.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
   if(independentBoardTouched){
     const dispatch=await api('/actions/workflows/deploy-independent-board.yml/dispatches',{
