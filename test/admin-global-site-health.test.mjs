@@ -14,7 +14,9 @@ test('platform super admin owns global site health with static and dynamic tabs'
     read('sites/seonammedi/public/admin/index.html')
   ]);
   assert.match(registry,/id: 'site-health'[^\n]*group: 'ops'[^\n]*superAdminOnly: true/);
-  assert.match(registry,/id: 'health', group: 'ops'[^\n]*sections: \['health', 'site-health'\]/);
+  // ADMIN-LAYOUT-3L-001: 전체 운영상태 merged into 홈 › 플랫폼 현황; 운영상태 keeps site checks.
+  assert.match(registry,/id: 'health', group: 'ops'[^\n]*sections: \['site-health'\]/);
+  assert.match(registry,/id: 'health', group: 'ops'[^\n]*internal: true, mergedInto: 'platform-overview'/);
   assert.match(sidebar,/adminMenusForGroup\(group\)/);
   assert.match(shell,/deferredPostAuthScripts[\s\S]*site-health-admin\.js/);
   assert.match(js,/section\.dataset\.panel=SECTION/);

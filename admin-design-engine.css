@@ -529,6 +529,26 @@ body.admin-compact.ekodi-admin-design-engine .admin-detail-tab.active{
   background:#f2f2f2!important;
   border-color:#f2f2f2!important;
 }
+/* ADMIN-LAYOUT-3L-001: the workspace 3차 strip is a light surface above the settings.
+   Its buttons also carry .admin-detail-tab for E2E/menu contracts, so the dark-sidebar
+   tab palette above must not leak into it. Contrast stays WCAG AA on white. */
+body.admin-compact.ekodi-admin-design-engine .admin-work-strip{background:#fff!important;border-bottom:1px solid #e3e7ee!important}
+body.admin-compact.ekodi-admin-design-engine .admin-work-strip .admin-work-strip-item{
+  color:#26303d!important;
+  background:#fff!important;
+  border:1px solid #c9d1dc!important;
+  font-weight:700!important;
+}
+body.admin-compact.ekodi-admin-design-engine .admin-work-strip .admin-work-strip-item:hover{
+  color:#050505!important;
+  background:#f2f4f7!important;
+  border-color:#9aa6b5!important;
+}
+body.admin-compact.ekodi-admin-design-engine .admin-work-strip .admin-work-strip-item.active{
+  color:#050505!important;
+  background:#e9eef6!important;
+  border:2px solid #1f3a5f!important;
+}
 /* An open multi-detail menu is emphasised by weight only; colour stays with .active so a
    selected single-detail menu keeps its high-contrast active text (regression fix 2026-10-23). */
 body.admin-compact.ekodi-admin-design-engine .admin-detail-item.open:not(.active){font-weight:800!important}

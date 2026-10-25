@@ -147,3 +147,22 @@ body.admin-compact .campus-empty-state[hidden]{display:none!important}
   body.admin-compact .campus-homepage-notice{align-items:flex-start!important}
   body.admin-compact .campus-homepage-preview{overflow-wrap:anywhere!important}
 }
+
+/* ADMIN-LAYOUT-3L-001 · 사이트관리: 선택한 사이트의 관리자 메뉴 */
+.campus-site-admin{display:grid;gap:12px;margin:0 0 12px}
+.campus-site-admin[data-state="empty"]{margin-bottom:8px}
+.campus-site-admin-hint{margin:0;padding:10px 12px;border:1px dashed #c9d6e3;border-radius:10px;background:#f8fafc;color:#44566b;font-size:14px;word-break:keep-all}
+.campus-site-admin-head{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:10px;padding:14px 16px;border:1px solid #d9e2ec;border-radius:12px;background:#fff}
+.campus-site-admin-head h3{margin:2px 0;font-size:20px;color:#172033}
+.campus-site-admin-head .kicker{margin:0;color:#66768a;font-size:13px;font-weight:700}
+.campus-site-admin-address{margin:0;color:#44566b;font-size:13px}
+.campus-site-admin-actions{display:flex;flex-wrap:wrap;gap:6px}
+.campus-site-admin-menus{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.campus-site-admin-group{padding:12px 14px;border:1px solid #d9e2ec;border-radius:12px;background:#fff}
+.campus-site-admin-group h4{margin:0 0 8px;font-size:15px;color:#172033;word-break:keep-all}
+.campus-site-admin-group h4 em{margin-left:6px;padding:1px 7px;border-radius:99px;background:#fdf1df;color:#8a4b00;font-size:11px;font-style:normal}
+.campus-site-admin-links{display:flex;flex-wrap:wrap;gap:6px}
+.campus-site-admin-link{display:inline-flex;align-items:center;min-height:36px;padding:6px 11px;border:1px solid #c9d6e3;border-radius:9px;background:#fff;color:#0b4fb3;font-size:14px;font-weight:700;text-decoration:none;word-break:keep-all}
+.campus-site-admin-link:hover{border-color:#8fb0d1;background:#f2f7fb}
+.campus-site-admin-note{grid-column:1/-1;margin:0;color:#66768a;font-size:13px;word-break:keep-all}
+@media(max-width:760px){.campus-site-admin-link{min-height:44px}}

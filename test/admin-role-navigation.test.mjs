@@ -14,7 +14,7 @@ test('platform super admin owns explicit platform control navigation', () => {
   assert.equal(profile.surface, '/admin');
   assert.equal(profile.maySeeControlPlane, true);
   assert.deepEqual(profile.groups.map(group => group.id), ['home', 'sites', 'ai', 'services', 'finance', 'ops', 'settings', 'accounts']);
-  assert.deepEqual(profile.groups.map(group => group.labelKo), ['홈', '사이트 원장', 'AI 운영', '서비스·엔진', '재무', '운영·안정성', '설정·연동', '계정·보안']);
+  assert.deepEqual(profile.groups.map(group => group.labelKo), ['홈', '사이트관리', 'AI 운영', '서비스·엔진', '재무', '운영·안정성', '설정·연동', '계정·보안']);
   assert.match(profile.siteOperationsRule, /ADMIN-AUDIENCE-001/);
   for (const label of profile.groups.map(group => group.labelKo)) assert.match(registry, new RegExp(label));
   assert.match(sidebar, /isPlatformSuperAdminSurface/);

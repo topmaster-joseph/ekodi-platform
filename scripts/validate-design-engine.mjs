@@ -28,7 +28,7 @@ const [responsiveCss, responsiveStandard] = await Promise.all([
 const errors = [];
 // ADMIN-IA-V3: eight platform-only super admin areas (group → menu → detail).
 const expectedAxes = ['home', 'sites', 'ai', 'services', 'finance', 'ops', 'settings', 'accounts'];
-const expectedLabels = ['홈', '사이트 원장', 'AI 운영', '서비스·엔진', '재무', '운영·안정성', '설정·연동', '계정·보안'];
+const expectedLabels = ['홈', '사이트관리', 'AI 운영', '서비스·엔진', '재무', '운영·안정성', '설정·연동', '계정·보안'];
 const actualAxes = ADMIN_MENU_GROUPS.map(group => group.id);
 const actualLabels = ADMIN_MENU_GROUPS.map(group => group.labels?.ko);
 

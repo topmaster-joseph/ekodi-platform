@@ -15,7 +15,7 @@ const SECTION_GROUP=Object.freeze({
   'public-site-controls':'settings','language-status':'settings','ai-module-spec':'settings',storage:'settings','ai-settings':'ai','audit-records':'accounts',policies:'accounts',
 });
 const GROUP_DEFAULT=Object.freeze({
-  home:'platform-overview',sites:'sites-all',ai:'aiops',services:'engine-all',finance:'finance',ops:'health',settings:'public-site-controls',accounts:'users-access',
+  home:'platform-overview',sites:'sites-all',ai:'aiops',services:'engine-all',finance:'finance',ops:'deployments',settings:'public-site-controls',accounts:'users-access',
 });
 // Stage-1 v3 addresses of sections that moved in stage 2 stay resolvable.
 const V3_STAGE1_SECTION_GROUP=Object.freeze({work:'sites',books:'sites',devotional:'sites',social:'sites','ai-membership':'sites'});
@@ -50,6 +50,10 @@ const LEGACY_SECTION_GROUP=Object.freeze({
 const ALIASES=Object.freeze({
   'ai-ops':'aiops',storige:'storage',release:'deployments','mall-ai-sales':'affiliates',
 });
+// ADMIN-LAYOUT-3L-001 duplicate merge: a merged section keeps every previous
+// address resolvable and is rewritten to the single remaining canonical section.
+const MERGED_SECTIONS=Object.freeze({health:'platform-overview'});
+const canonicalSection=section=>MERGED_SECTIONS[section]||section;
 const COMMAND_HOME='command-home';
 const SECTION_SET=new Set([COMMAND_HOME,...Object.keys(SECTION_GROUP)]);
 function normalizeSection(value){
@@ -70,7 +74,7 @@ function normalizeDetailSegments(value){
   return result;
 }
 function pathFor(section,detailSegments=[]){
-  const normalized=normalizeSection(section);
+  const normalized=canonicalSection(normalizeSection(section));
   if(!normalized||normalized===COMMAND_HOME)return'/admin/';
   if(normalized==='work'){
     const detail=normalizeDetailSegments(detailSegments);
@@ -106,7 +110,7 @@ function routeFromPath(pathname){
     ||((group==='space'||group==='spaces')&&LEGACY_SECTION_GROUP[section]==='workspaces');
   if(!valid)return null;
   const detailSegments=normalizeDetailSegments(parts.slice(3));
-  return Object.freeze({section,group,detailSegments:Object.freeze(detailSegments)});
+  return Object.freeze({section:canonicalSection(section),group,detailSegments:Object.freeze(detailSegments)});
 }
 function sectionFromPath(pathname){
   return routeFromPath(pathname)?.section||'';
@@ -115,10 +119,10 @@ function sectionFromLocation(loc=window.location){
   const pathSection=sectionFromPath(loc.pathname);
   if(pathSection&&pathSection!==COMMAND_HOME)return pathSection;
   const params=new URLSearchParams(loc.search);
-  const query=normalizeSection(params.get('route'));
+  const query=canonicalSection(normalizeSection(params.get('route')));
   if(query)return query;
   if(pathSection===COMMAND_HOME&&String(params.get('service')||'').trim())return'engine-all';
-  const hash=normalizeSection(loc.hash);
+  const hash=canonicalSection(normalizeSection(loc.hash));
   if(hash)return hash;
   if(pathSection===COMMAND_HOME&&/^\/admin\/?$/.test(String(loc.pathname||''))&&loc===window.location&&window.matchMedia?.('(max-width:760px)').matches)return'platform-overview';
   return pathSection;
@@ -140,13 +144,14 @@ function canonicalUrl(section,loc=window.location,detailSegments=[]){
 function isCanonicalHost(loc=window.location){return String(loc.hostname||'').toLowerCase()==='ekodi.kr'}
 function navigationTarget(section,loc=window.location,detailSegments=null){
   if(!isCanonicalHost(loc))return legacyHashFor(section);
-  const normalized=normalizeSection(section);
+  const normalized=canonicalSection(normalizeSection(section));
   const current=detailSegments==null?routeFromPath(loc.pathname):null;
   const detail=detailSegments==null&&current?.section===normalized?current.detailSegments:detailSegments;
   return canonicalUrl(section,loc,detail||[]);
 }
 window.EKODIAdminRoutes=Object.freeze({
   version:'2.1.0',
+  mergedSections:MERGED_SECTIONS,
   groups:Object.freeze({...GROUP_DEFAULT}),
   normalizeSection,
   normalizeDetailSegments,

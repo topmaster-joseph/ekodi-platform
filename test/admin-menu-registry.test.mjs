@@ -23,7 +23,7 @@ const WORK_AREAS = ['home', 'sites', 'ai', 'services', 'finance', 'ops', 'settin
 
 test('admin navigation has eight nonoverlapping platform-only EKODI areas', () => {
   assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.id), WORK_AREAS);
-  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.labels.en), ['Home', 'Site Registry', 'AI Operations', 'Services & Engines', 'Finance', 'Operations & Reliability', 'Settings & Integrations', 'Accounts & Security']);
+  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.labels.en), ['Home', 'Site Management', 'AI Operations', 'Services & Engines', 'Finance', 'Operations & Reliability', 'Settings & Integrations', 'Accounts & Security']);
   for (const group of ADMIN_MENU_GROUPS) {
     assert.ok(group.defaultSection, `${group.id} missing defaultSection`);
     assert.equal(getAdminMenuGroupForSection(group.defaultSection), group.id);
@@ -48,11 +48,15 @@ test('every visible section is a detail route of exactly one v3 menu in its own 
   for (const id of seen.keys()) assert.ok(visible.includes(id), `${id} is in a menu but hidden`);
   assert.deepEqual(adminMenuOrder(), ADMIN_MENUS.flatMap(menu => menu.sections));
   assert.equal(getAdminMenuForSection('aiops')?.id, 'control');
-  assert.deepEqual(adminMenuTabs('site-health'), ['health', 'site-health']);
+  // ADMIN-LAYOUT-3L-001: 전체 운영상태 is merged into 홈 › 플랫폼 현황 (same panel).
+  assert.deepEqual(adminMenuTabs('site-health'), ['site-health']);
+  assert.equal(getAdminMenuForSection('health'), null);
   assert.deepEqual(adminMenuTabs('pos-agent'), ['devices', 'pos-agent']);
   // Stage 2: the transitional site-tools menu is dissolved.
   assert.equal(ADMIN_MENUS.some(menu => menu.id === 'site-tools' || menu.transitional), false);
-  assert.deepEqual(ADMIN_MENUS.filter(menu => menu.group === 'sites').map(menu => menu.id), ['registry', 'menu-templates']);
+  // 사이트관리 2차 = site classifications (one detail each) + the menu-template ledger.
+  assert.deepEqual(ADMIN_MENUS.filter(menu => menu.group === 'sites').map(menu => menu.id), ['site-class-all', 'site-class-core', 'site-class-community', 'site-class-business', 'site-class-clients', 'site-class-knowledge', 'site-class-communication', 'site-class-worklife', 'site-class-other', 'site-class-preparing', 'menu-templates']);
+  for (const menu of ADMIN_MENUS.filter(menu => menu.siteClass)) assert.equal(menu.sections.length, 1, `${menu.id} must map to one site filter`);
   assert.equal(getAdminMenuForSection('books')?.id, 'platform-content');
   assert.equal(getAdminMenuForSection('ai-membership')?.id, 'automation-policy');
   assert.equal(getAdminMenuForSection('community'), null);

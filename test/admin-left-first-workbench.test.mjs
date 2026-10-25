@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('Platform Admin uses eight distinct control areas with group → menu → detail left navigation', async () => {
+test('Platform Admin uses eight control areas: group and menu on the left, details in the workspace strip', async () => {
   const [registry, sidebar] = await Promise.all([
     read('admin-menu-registry.js'),
     read('admin-sidebar.js'),
@@ -13,10 +13,11 @@ test('Platform Admin uses eight distinct control areas with group → menu → d
     assert.ok(registry.includes(marker), marker);
   for (const marker of [
     "sections: ['platform-overview']",
-    "sections: ['sites-all', 'sites-preparing']",
+    "sections: ['sites-all']",
+    "sections: ['sites-preparing']",
     "sections: ['aiops']",
     "sections: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview']",
-    "sections: ['health', 'site-health']",
+    "sections: ['site-health']",
     "sections: ['devices', 'pos-agent']",
     "sections: ['public-site-controls', 'language-status']",
     "sections: ['security', 'audit-records']",
@@ -31,6 +32,8 @@ test('Platform Admin uses eight distinct control areas with group → menu → d
   assert.doesNotMatch(sidebar, /shell = document\.createElement/);
     assert.match(sidebar, /role-projected-sidebar-v4/);
   assert.match(sidebar, /renderSidebarDetails\(nav, globals, group, displayedSection \|\| section, locale\)/);
+  assert.match(registry, /ADMIN_LAYOUT_MODEL = 'left-group-menu-top-detail-v1'/);
+  assert.match(sidebar, /const STRIP_CLASS = 'admin-work-strip'/);
 });
 test('Functional Admin pages keep only the bottom EKODI composer until conversation is opened', async () => {
   const [bootstrapCss, dockCss, principles] = await Promise.all([

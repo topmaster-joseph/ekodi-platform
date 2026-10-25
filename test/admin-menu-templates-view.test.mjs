@@ -35,12 +35,13 @@ test('rendered table is escaped, labels every site type and marks partial groups
   assert.match(hostile, /&lt;img src=x onerror=1&gt;/);
 });
 
-test('menu templates is a super-admin-only platform screen under 사이트 원장', async () => {
+test('menu templates is a super-admin-only platform screen under 사이트관리', async () => {
   const item = getAdminMenuItem('menu-templates');
   assert.equal(item.group, 'sites');
   assert.equal(item.superAdminOnly, true);
   assert.equal(getAdminMenuForSection('menu-templates')?.id, 'menu-templates');
-  assert.deepEqual(ADMIN_MENUS.filter(menu => menu.group === 'sites').map(menu => menu.id), ['registry', 'menu-templates']);
+  assert.deepEqual(ADMIN_MENUS.filter(menu => menu.group === 'sites').map(menu => menu.id).at(-1), 'menu-templates');
+  assert.ok(ADMIN_MENUS.filter(menu => menu.group === 'sites' && menu.id !== 'menu-templates').every(menu => menu.siteClass));
   assert.ok(adminMenuOrder().includes('menu-templates'));
   assert.equal(policy.classification.entries['menu-templates'].audience, 'platform-super-admin');
   const [routes, postbuild, build, module] = await Promise.all([read('admin-canonical-routes.js'), read('scripts/admin-performance-postbuild.mjs'), read('scripts/build.mjs'), read('admin-menu-templates.js')]);
