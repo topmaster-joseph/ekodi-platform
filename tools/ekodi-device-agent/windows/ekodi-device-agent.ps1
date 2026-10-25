@@ -19,7 +19,7 @@ try {
   throw '[EKODI:EKA-299][crypto] Windows DPAPI assembly is unavailable: ' + $_.Exception.Message
 }
 
-$AgentVersion = '2.5.7'
+$AgentVersion = '2.6.0'
 # Some remote/managed Windows sessions omit ProgramData from the process environment.
 # Resolve the canonical system data directory without changing machine-wide settings.
 if ([string]::IsNullOrWhiteSpace($env:ProgramData)) {
@@ -832,6 +832,206 @@ function Invoke-AgentUpgradeTransaction([string]$CandidatePath, [switch]$DeferRe
     $code = if ($codes.ContainsKey($stage)) { $codes[$stage] } else { 'EKA-199' }
     Throw-AgentStageError $code $stage 'Agent 설치·업그레이드를 중단하고 이전 상태로 롤백했습니다.' $failure
   }
+}
+
+# ---------------------------------------------------------------------------
+# EKODI-SIMULCAST-RELAY-001 — EKODI-owned multichannel simulcast (no paid service).
+# OBS on this PC streams to rtmp://127.0.0.1:1935/live/ekodi. A pinned ffmpeg
+# copies the program (no re-encode) to every enabled destination via the tee
+# muxer; onfail=ignore keeps the other channels alive when one fails.
+# Destination keys are stored here only, protected with Windows DPAPI.
+# Never execute a binary or argument supplied by a cloud payload.
+# ---------------------------------------------------------------------------
+$SimulcastRoot = Join-Path $Root 'simulcast'
+$SimulcastFfmpegPath = Join-Path $SimulcastRoot 'ffmpeg.exe'
+$SimulcastStorePath = Join-Path $SimulcastRoot 'store.dat'
+$SimulcastPidPath = Join-Path $SimulcastRoot 'relay.json'
+$SimulcastLogPath = Join-Path $SimulcastRoot 'relay.log'
+$SimulcastFfmpegSource = 'https://registry.npmjs.org/@ffmpeg-installer/win32-x64/-/win32-x64-4.1.0.tgz'
+$SimulcastTarballSha256 = '2AA313BE3585994D710197BC4196F5FCBB6A1469BE1013B24D200E45D773592F'
+$SimulcastFfmpegSha256 = 'C8ABC49E7BE62DDE8E12972AF373959E0076A7B8DC8040EB45978E0608F8781E'
+$SimulcastIngest = 'rtmp://127.0.0.1:1935/live/ekodi'
+
+function Test-EkodiSimulcastFfmpeg {
+  if (-not (Test-Path -LiteralPath $SimulcastFfmpegPath)) { return $false }
+  return ((Get-FileHash -LiteralPath $SimulcastFfmpegPath -Algorithm SHA256).Hash -eq $SimulcastFfmpegSha256)
+}
+
+function Install-EkodiSimulcastRelay {
+  if (Test-EkodiSimulcastFfmpeg) { return Get-EkodiSimulcastStatus }
+  New-Item -ItemType Directory -Force -Path $SimulcastRoot | Out-Null
+  $work = Join-Path $env:TEMP ('ekodi-simulcast-' + [guid]::NewGuid().ToString('N'))
+  New-Item -ItemType Directory -Force -Path $work | Out-Null
+  try {
+    $tgz = Join-Path $work 'ffmpeg.tgz'
+    Invoke-WebRequest -UseBasicParsing -Uri $SimulcastFfmpegSource -OutFile $tgz -TimeoutSec 600
+    if ((Get-FileHash -LiteralPath $tgz -Algorithm SHA256).Hash -ne $SimulcastTarballSha256) { throw 'SIMULCAST_FFMPEG_ARCHIVE_HASH_MISMATCH' }
+    $tar = Join-Path $env:SystemRoot 'System32\tar.exe'
+    if (-not (Test-Path -LiteralPath $tar)) { throw 'SIMULCAST_TAR_UNAVAILABLE' }
+    $p = Start-Process -FilePath $tar -ArgumentList @('-xzf', ('"' + $tgz + '"'), '-C', ('"' + $work + '"')) -WindowStyle Hidden -PassThru -Wait
+    if ($p.ExitCode -ne 0) { throw 'SIMULCAST_FFMPEG_EXTRACT_FAILED' }
+    $exe = Join-Path $work 'package\ffmpeg.exe'
+    if (-not (Test-Path -LiteralPath $exe)) { throw 'SIMULCAST_FFMPEG_MISSING' }
+    if ((Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash -ne $SimulcastFfmpegSha256) { throw 'SIMULCAST_FFMPEG_HASH_MISMATCH' }
+    Copy-Item -LiteralPath $exe -Destination $SimulcastFfmpegPath -Force
+    if (-not (Test-EkodiSimulcastFfmpeg)) { throw 'SIMULCAST_FFMPEG_INSTALL_VERIFY_FAILED' }
+  } finally {
+    Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
+  }
+  return Get-EkodiSimulcastStatus
+}
+
+function Get-EkodiSimulcastStore {
+  $empty = [pscustomobject]@{ armed = $false; destinations = @() }
+  if (-not (Test-Path -LiteralPath $SimulcastStorePath)) { return $empty }
+  try {
+    $json = Unprotect-LocalSecret ((Get-Content -LiteralPath $SimulcastStorePath -Raw -Encoding UTF8).Trim())
+    $store = $json | ConvertFrom-Json
+    if ($null -eq $store.destinations) { $store | Add-Member -NotePropertyName destinations -NotePropertyValue @() -Force }
+    return $store
+  } catch { return $empty }
+}
+
+function Save-EkodiSimulcastStore($Store) {
+  New-Item -ItemType Directory -Force -Path $SimulcastRoot | Out-Null
+  $json = @{ armed = [bool]$Store.armed; destinations = @($Store.destinations) } | ConvertTo-Json -Depth 6 -Compress
+  Set-Content -LiteralPath $SimulcastStorePath -Value (Protect-LocalSecret $json) -Encoding UTF8
+}
+
+function Get-EkodiSimulcastKeyHint([string]$Key) {
+  if ($Key.Length -le 4) { return '****' }
+  return '****' + $Key.Substring($Key.Length - 4)
+}
+
+function Test-EkodiSimulcastDestination($Destination) {
+  $id = [string]$Destination.id
+  if ($id -notmatch '^relay_[a-f0-9]{16,40}$') { throw 'SIMULCAST_RELAY_DESTINATION_ID_INVALID' }
+  $url = [string]$Destination.url
+  $uri = $null
+  if (-not [Uri]::TryCreate($url, [UriKind]::Absolute, [ref]$uri)) { throw 'SIMULCAST_RELAY_URL_INVALID' }
+  if (@('rtmp','rtmps') -notcontains $uri.Scheme) { throw 'SIMULCAST_RELAY_URL_INVALID' }
+  if ($uri.UserInfo -or $uri.IsLoopback -or $uri.HostNameType -ne [UriHostNameType]::Dns) { throw 'SIMULCAST_RELAY_URL_INVALID' }
+  if ($url -match '[|\[\]"''\s]') { throw 'SIMULCAST_RELAY_URL_INVALID' }
+  if ([string]$Destination.key -notmatch '^[A-Za-z0-9_\-\.=\?&~:%\+]{4,256}$') { throw 'SIMULCAST_RELAY_KEY_INVALID' }
+}
+
+function Get-EkodiSimulcastProcess {
+  if (-not (Test-Path -LiteralPath $SimulcastPidPath)) { return $null }
+  try {
+    $state = Get-Content -LiteralPath $SimulcastPidPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $process = Get-Process -Id ([int]$state.pid) -ErrorAction Stop
+    if ($process.Path -and ([IO.Path]::GetFullPath($process.Path) -ne [IO.Path]::GetFullPath($SimulcastFfmpegPath))) { return $null }
+    return [pscustomobject]@{ process = $process; fingerprint = [string]$state.fingerprint }
+  } catch { return $null }
+}
+
+function Stop-EkodiSimulcastProcess {
+  $current = Get-EkodiSimulcastProcess
+  if ($current) { try { $current.process.Kill(); [void]$current.process.WaitForExit(5000) } catch { } }
+  Remove-Item -LiteralPath $SimulcastPidPath -Force -ErrorAction SilentlyContinue
+}
+
+function Get-EkodiSimulcastTargets($Store) {
+  $targets = @()
+  foreach ($d in @($Store.destinations)) {
+    if ($d.enabled -eq $false) { continue }
+    Test-EkodiSimulcastDestination $d
+    $base = [string]$d.url
+    if (-not $base.EndsWith('/')) { $base += '/' }
+    $targets += ('[f=flv:onfail=ignore]' + $base + [string]$d.key)
+  }
+  return $targets
+}
+
+function Start-EkodiSimulcastProcess($Store) {
+  $targets = @(Get-EkodiSimulcastTargets $Store)
+  if ($targets.Count -eq 0) { return $false }
+  $tee = $targets -join '|'
+  $arguments = '-hide_banner -nostdin -loglevel warning -listen 1 -i ' + $SimulcastIngest + ' -map 0 -c copy -f tee "' + $tee + '"'
+  $process = Start-Process -FilePath $SimulcastFfmpegPath -ArgumentList $arguments -WindowStyle Hidden -RedirectStandardError $SimulcastLogPath -PassThru
+  $fingerprint = Get-Sha256String ($tee)
+  @{ pid = $process.Id; fingerprint = $fingerprint; startedAt = (Get-Date).ToString('o') } | ConvertTo-Json -Compress | Set-Content -LiteralPath $SimulcastPidPath -Encoding UTF8
+  return $true
+}
+
+function Reconcile-EkodiSimulcastRelay {
+  if (-not (Test-Path -LiteralPath $SimulcastStorePath)) { return }
+  $store = Get-EkodiSimulcastStore
+  $current = Get-EkodiSimulcastProcess
+  if (-not $store.armed) { if ($current) { Stop-EkodiSimulcastProcess }; return }
+  if (-not (Test-EkodiSimulcastFfmpeg)) { return }
+  $targets = @(Get-EkodiSimulcastTargets $store)
+  if ($targets.Count -eq 0) { if ($current) { Stop-EkodiSimulcastProcess }; return }
+  $fingerprint = Get-Sha256String ($targets -join '|')
+  if ($current -and $current.fingerprint -ne $fingerprint) { Stop-EkodiSimulcastProcess; $current = $null }
+  # ffmpeg exits when OBS stops; listen again so the next broadcast is relayed.
+  if (-not $current) { [void](Start-EkodiSimulcastProcess $store) }
+}
+
+function Get-EkodiSimulcastLastError($Store) {
+  if (-not (Test-Path -LiteralPath $SimulcastLogPath)) { return '' }
+  try {
+    $line = (Get-Content -LiteralPath $SimulcastLogPath -Tail 3 -Encoding UTF8 | Where-Object { $_ -and $_.Trim() } | Select-Object -Last 1)
+    if (-not $line) { return '' }
+    $text = [string]$line
+    foreach ($d in @($Store.destinations)) { if ($d.key) { $text = $text.Replace([string]$d.key, '****') } }
+    if ($text.Length -gt 300) { $text = $text.Substring(0, 300) }
+    return $text
+  } catch { return '' }
+}
+
+function Get-EkodiSimulcastStatus {
+  $store = Get-EkodiSimulcastStore
+  $current = Get-EkodiSimulcastProcess
+  $destinations = @()
+  foreach ($d in @($store.destinations)) {
+    $hostName = ''
+    try { $hostName = ([Uri][string]$d.url).Host } catch { }
+    $destinations += @{ id = [string]$d.id; label = [string]$d.label; host = $hostName; keyHint = (Get-EkodiSimulcastKeyHint ([string]$d.key)); enabled = ($d.enabled -ne $false) }
+  }
+  $message = '대기'
+  if ($store.armed -and $current) { $message = '송출 대기 중: OBS에서 방송을 시작하면 연결된 채널로 동시송출됩니다.' }
+  elseif ($store.armed) { $message = '동시송출 준비 중' }
+  return @{
+    message = $message
+    simulcastRelay = @{
+      installed = (Test-EkodiSimulcastFfmpeg)
+      armed = [bool]$store.armed
+      running = [bool]$current
+      ingest = $SimulcastIngest
+      destinations = $destinations
+      lastError = (Get-EkodiSimulcastLastError $store)
+      ffmpegVersion = '4.1.0'
+    }
+  }
+}
+
+function Invoke-EkodiSimulcastConfigure($Payload) {
+  $op = [string]$Payload.op
+  $store = Get-EkodiSimulcastStore
+  $list = New-Object System.Collections.ArrayList
+  foreach ($d in @($store.destinations)) { [void]$list.Add($d) }
+  switch ($op) {
+    'add' {
+      $d = $Payload.destination
+      Test-EkodiSimulcastDestination $d
+      if ($list.Count -ge 10) { throw 'SIMULCAST_DESTINATION_LIMIT' }
+      $existing = @($list | Where-Object { $_.id -eq $d.id })
+      foreach ($e in $existing) { [void]$list.Remove($e) }
+      [void]$list.Add([pscustomobject]@{ id = [string]$d.id; label = [string]$d.label; url = [string]$d.url; key = [string]$d.key; enabled = $true })
+    }
+    'remove' { foreach ($e in @($list | Where-Object { $_.id -eq [string]$Payload.destinationId })) { [void]$list.Remove($e) } }
+    'enable' { foreach ($e in $list) { if ($e.id -eq [string]$Payload.destinationId) { $e.enabled = $true } } }
+    'disable' { foreach ($e in $list) { if ($e.id -eq [string]$Payload.destinationId) { $e.enabled = $false } } }
+    'arm' { $store.armed = $true }
+    'disarm' { $store.armed = $false }
+    default { throw 'SIMULCAST_RELAY_OP_INVALID' }
+  }
+  $store.destinations = @($list)
+  Save-EkodiSimulcastStore $store
+  if ($op -eq 'arm' -and -not (Test-EkodiSimulcastFfmpeg)) { [void](Install-EkodiSimulcastRelay) }
+  Reconcile-EkodiSimulcastRelay
+  return Get-EkodiSimulcastStatus
 }
 
 function Install-EkodiLocalAI {
@@ -3612,6 +3812,9 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     'profile.workstation.apply' { return Apply-WorkstationProfile }
     'profile.workstation.restore' { return Restore-WorkstationProfile }
     'agent.self_update' { return Update-AgentFromOfficialSource }
+    'simulcast.relay.install' { return Install-EkodiSimulcastRelay }
+    'simulcast.relay.configure' { return Invoke-EkodiSimulcastConfigure $payload }
+    'simulcast.relay.status' { return Get-EkodiSimulcastStatus }
     'software.localai.install' { return Install-EkodiLocalAI }
     'software.localai.verify' { return Get-EkodiLocalAiVerification }
     'computer.browser.canary' { return Invoke-BackgroundBrowserCanary }
@@ -3706,7 +3909,7 @@ function Send-Heartbeat($Config) {
     capabilities = @{
       powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
       diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
-      networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true
+      networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true; simulcastRelay = $true
       computerRead = $true; processRead = $true; agentStatus = $true
       isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktopProbe = $true; isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified; isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified; isolatedDesktopUiCanary = [bool](Get-IsolatedDesktopUiCanaryState).verified; isolatedDesktopSessionCanary = [bool](Get-IsolatedDesktopSessionCanaryState).verified; isolatedDesktop = [bool](Get-IsolatedDesktopSessionCanaryState).verified
       workspaceSlidesAudio = [bool](Get-WorkspaceSlidesAudioState).verified
@@ -3825,7 +4028,7 @@ function Install-Agent {
       capabilities = @{
         powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
         diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
-        networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true
+        networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true; simulcastRelay = $true
         arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
       }
     } | ConvertTo-Json -Depth 8
@@ -3903,6 +4106,7 @@ function Run-Agent {
         if (((Get-Date) - $lastHeartbeat).TotalSeconds -ge 60) { Send-Heartbeat $config; $lastHeartbeat = Get-Date }
         Reconcile-DesktopCommanderRecovery
         try { if (Reconcile-EkodiInteractiveAuthSession) { Send-Heartbeat $config; $lastHeartbeat = Get-Date } } catch { }
+        try { Reconcile-EkodiSimulcastRelay } catch { }
         Reconcile-ImagePrintPreviewPolicy
         Poll-Command $config
         if (Test-Path -LiteralPath $InteractiveAuthStatePath) { try { Send-Heartbeat $config; $lastHeartbeat = Get-Date } catch { } }

@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - 'device-control.js'
+      - 'simulcast-relay-policy.js'
+      - 'test/simulcast-relay.test.mjs'
       - 'device-control-admin.js'
       - 'device-control-admin.css'
       - 'remote-power-admin.js'
@@ -57,7 +59,7 @@ jobs:
           node --check device-control-admin.js
           node --check remote-power-admin.js
           node --check admin-demand-loader.js
-          node --test test/device-control-contract.test.mjs test/windows-device-enrollment-launcher.test.mjs test/non-disruptive-device-agent-contract.test.mjs test/background-browser-canary-contract.test.mjs test/localai-device-installer-contract.test.mjs
+          node --test test/device-control-contract.test.mjs test/windows-device-enrollment-launcher.test.mjs test/non-disruptive-device-agent-contract.test.mjs test/background-browser-canary-contract.test.mjs test/localai-device-installer-contract.test.mjs test/simulcast-relay.test.mjs
       - name: Build authenticated true-lazy Admin with Device AI
         run: |
           set -euo pipefail
@@ -89,7 +91,7 @@ jobs:
 
   windows-agent:
     runs-on: windows-latest
-    timeout-minutes: 9
+    timeout-minutes: 16
     steps:
       - uses: actions/checkout@v7
       - name: Parse Windows Agent and Boot/WOL scripts without executing them
@@ -476,3 +478,8 @@ jobs:
           if ($bootstrap -match "'-Install','-RunNow'") { throw 'Bootstrap still auto-installs the Boot/WOL task.' }
           if ($bootstrap -notmatch 'EKB-130') { throw 'Bootstrap does not expose structured install error codes.' }
           Write-Host 'Bootstrap elevation and Agent/Boot separation OK.'
+      - name: EKODI simulcast relay — pinned ffmpeg, DPAPI keys, real RTMP ingest, disarm
+        shell: powershell
+        timeout-minutes: 6
+        run: |
+          & (Join-Path $PWD 'tools/ekodi-device-agent/windows/simulcast-relay.test.ps1')
