@@ -1011,7 +1011,8 @@ export default {
 
     if (url.pathname === '/v1/growth-os/discovery/verify' && request.method === 'GET') {
       const report = await verifyGrowthDiscovery(subject);
-      return json(request, env, report, report.ok ? 200 : 503);
+      // Diagnostic failures are structured evidence, not a transport failure.
+      return json(request, env, report);
     }
     if (url.pathname === '/v1/growth-os/overview' && request.method === 'GET') {
       try {
