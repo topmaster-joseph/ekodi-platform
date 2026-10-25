@@ -164,7 +164,7 @@ async function handleInbound(request,env,executionCtx){
 }
 
 export async function storeOrderAdminContext(request,env,options){return adminContext(request,env,options)}
-async function adminContext(request,env,{write=false}={}){
+async function adminContext(request,env,{write=false,capability=TENANT_ADMIN_CAPABILITIES.orders,errorCode='STORE_ORDER_CAPABILITY_REQUIRED'}={}){
   if(write&&String(env.ALLOW_MUTATIONS)!=='true')return {ctx:null,response:json(request,env,{error:'MUTATIONS_DISABLED'},503)};
   const base=await principalFromSupabaseRequest(request);
   if(!base)return {ctx:null,response:json(request,env,{error:'AUTH_REQUIRED'},401)};
@@ -186,14 +186,14 @@ async function adminContext(request,env,{write=false}={}){
   if(!verify.ok)return {ctx:null,response:json(request,env,{error:'STORE_AUTHORITY_CHECK_FAILED'},502)};
   const snapshot=await verify.json().catch(()=>null);
   const role=clean(snapshot?.role,80).toLowerCase();
-  if(!role||!tenantAdminCan(role,TENANT_ADMIN_CAPABILITIES.orders)){
-    return {ctx:null,response:json(request,env,{error:'STORE_ORDER_CAPABILITY_REQUIRED'},403)};
+  if(!role||!tenantAdminCan(role,capability)){
+    return {ctx:null,response:json(request,env,{error:errorCode},403)};
   }
   const principal=buildPrincipal({
     id:base.id,email:base.email,kind:'user',provider:base.provider,role,
     subjectType:'tenant',subjectKey:storeSlug,capabilities:['conversation:read','conversation:write'],
   });
-  const ctx={principal,subject:principal.subject,identity:{id:base.subject.key,email:base.email},store:snapshot?.store||null,role};
+  const ctx={principal,subject:principal.subject,identity:{id:base.subject.key,email:base.email},store:snapshot?.store||null,menu:Array.isArray(snapshot?.menu)?snapshot.menu:[],role};
   return {ctx,response:null};
 }
 

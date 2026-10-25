@@ -55,7 +55,7 @@ test('PizzaMaru customer page renders full menu navigation and official social l
     assert.match(html,/"@type":"Restaurant"/);
     assert.match(html,/"telephone":"061-453-8295"/);
     assert.match(html,/"streetAddress":"전남 무안군 청계면 승달산길 37-1"/);
-    assert.match(html,/"openingHours":"11:00–22:00"/);
+    assert.match(html,/"openingHours":"Mo-Su 11:00-22:00"/);
     assert.match(html,/국립목포대학교 후문 · 전남 무안군 청계면/);
     assert.doesNotMatch(html,/Powered by EKODI|EKODI 검증 원칙/);
   }finally{globalThis.fetch=originalFetch}
