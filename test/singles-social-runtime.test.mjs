@@ -6,7 +6,7 @@ const id='33333333-3333-4333-8333-333333333333';
 const reply=(_req,body,status=200)=>new Response(JSON.stringify(body),{status});
 const settings={SINGLES_SOCIAL_ENABLED:'true',SINGLES_BANK_TRANSFER_ENABLED:'false'};
 globalThis.Deno={env:{get:key=>settings[key]||undefined}};
-function db({verified=true,accepted=false,grant=false,retry=0,rpcError=null}={}){
+function db({verified=true,accepted=false,grant=false,retry=0,rpcError=null,interest=null}={}){
  const writes=[],calls=[];
  const rows={singles_memberships:{status:'active',base_consent:true,age_19_confirmed:true,adult_verified_at:verified?'2026-10-09T00:00:00Z':null,religion_consent:true,discoverable:verified},
   singles_interests:accepted?{from_user_id:other,to_user_id:uid,status:'accepted'}:null,
@@ -26,6 +26,7 @@ function db({verified=true,accepted=false,grant=false,retry=0,rpcError=null}={})
     if(query.kind)return {data:{id},error:null};
     let record=rows[name]??null;
     if(name==='singles_interests'&&!accepted)record=null;
+    if(name==='singles_interests'&&interest)record=interest;
     return {data:record,error:null};
    },
    then(ok,fail){return Promise.resolve({data:[],error:null}).then(ok,fail)}
@@ -160,4 +161,24 @@ test('rate limit migration is atomic, bounded and server-only',async()=>{
  assert.match(sql,/revoke all on function public\.singles_rate_take\(uuid,text,int,int\) from public,anon,authenticated;/);
  assert.match(sql,/grant execute on function public\.singles_rate_take\(uuid,text,int,int\) to service_role;/);
  assert.doesNotMatch(sql,/body|details|text\s+text/i);
+});
+
+test('a withdrawn connection never reopens its conversation or accepts new replies',async()=>{
+ settings.SINGLES_BANK_TRANSFER_ENABLED='true';
+ const closed={id,from_user_id:other,to_user_id:uid,status:'withdrawn'};
+ for(const method of ['GET','POST']){
+  const admin=db({grant:true,interest:closed});
+  const res=await handleSinglesSocial(new Request('https://ekodi.kr/messages/'+id,{method,body:method==='POST'?JSON.stringify({text:'다시 안녕'}):undefined}),'/messages/'+id,admin,uid,reply);
+  assert.equal(res.status,403,method);assert.equal((await res.json()).error,'mutual_consent_required');
+  assert.equal(admin.writes.length,0);
+ }
+ const admin=db({interest:closed});
+ const res=await handleSinglesSocial(new Request('https://ekodi.kr/requests/'+id+'/respond',{method:'POST',body:JSON.stringify({decision:'accepted'})}),'/requests/'+id+'/respond',admin,uid,reply);
+ assert.equal(res.status,409);assert.equal(admin.writes.length,0);
+});
+test('re-sending interest to a withdrawn pair does not revive the old connection',async()=>{
+ const admin=db({interest:{id,from_user_id:uid,to_user_id:other,status:'withdrawn'}});
+ const res=await handleSinglesSocial(new Request('https://ekodi.kr/interests/'+other,{method:'POST'}),'/interests/'+other,admin,uid,reply);
+ assert.equal(res.status,200);assert.equal((await res.json()).status,'withdrawn');
+ assert.equal(admin.writes.filter(w=>w.name==='singles_interests').length,0);
 });
