@@ -1,6 +1,7 @@
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { renderMallHeader } from '../../../mall-shared-header.js';
 import { loadBookstoreProducts, mergeBookstoreProducts } from './bookstore-products.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -148,6 +149,7 @@ const businessInfo = legalFieldsComplete
 const localTitle = site.local.title.split('|').map(esc).join('<br>');
 const sellerStudioHref = site.platform?.sellerStudioHref || '/seller/';
 const indexHtml = fill(indexTemplate, {
+  MALL_HEADER: renderMallHeader({ home: true, sellerHref: sellerStudioHref }),
   SEO_TITLE: esc(site.seo.title),
   SEO_DESCRIPTION: esc(site.seo.description),
   BASE_URL: esc(baseUrl),
@@ -295,6 +297,7 @@ for (const hub of affiliateHubs) {
   const hubPath = hub.path || hub.id;
   const pageUrl = `${baseUrl}/${hubPath}/`;
   const html = fill(affiliateHubTemplate, {
+    MALL_HEADER: renderMallHeader({ home: false, sellerHref: sellerStudioHref }),
     NAME: esc(hub.name),
     EYEBROW: esc(hub.eyebrow),
     TITLE: esc(hub.title),
