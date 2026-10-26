@@ -8,7 +8,7 @@ import './admin-context-shell-recovery.js';
 // 1차 group and 2차 menu are on the left; the active menu's 3차 detail routes are a
 // button strip at the top of the workspace; settings render below it. Every detail
 // route is an existing section id, so content wiring and deep links stay intact.
-export const ADMIN_LAYOUT_MODEL = 'left-group-menu-top-detail-v1';
+export const ADMIN_LAYOUT_MODEL = 'left-menu-first-site-strip-v2';
 export const ADMIN_MENU_GROUPS = Object.freeze([
   { id: 'home', icon: '⌂', defaultSection: 'platform-overview', labels: { ko: '홈', en: 'Home' } },
   { id: 'sites', icon: '▦', defaultSection: 'sites-all', labels: { ko: '사이트관리', en: 'Site Management' } },

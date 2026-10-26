@@ -166,3 +166,11 @@ body.admin-compact .campus-empty-state[hidden]{display:none!important}
 .campus-site-admin-link:hover{border-color:#8fb0d1;background:#f2f7fb}
 .campus-site-admin-note{grid-column:1/-1;margin:0;color:#66768a;font-size:13px;word-break:keep-all}
 @media(max-width:760px){.campus-site-admin-link{min-height:44px}}
+
+/* ADMIN-SITE-EMBED-001: the selected site's own admin page shows right below the site strip. */
+.campus-site-admin-frame{margin-top:12px;border:1px solid #dfe4ec;border-radius:12px;overflow:hidden;background:#fff}
+.campus-site-admin-frame iframe{display:block;width:100%;height:calc(100vh - 230px);min-height:560px;border:0;background:#fff}
+.campus-site-admin-frame[data-state="refused"]{padding:14px 16px;overflow:visible}
+.admin-work-strip .admin-work-strip-item.no-site-admin{opacity:.72}
+/* With a site selected, its admin page takes the space right below the site strip. */
+#campusPanel:has(#campusSiteAdmin[data-state="selected"]) .campus-toolbar{display:none!important}
