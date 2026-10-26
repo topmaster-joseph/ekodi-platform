@@ -39,10 +39,10 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-o
 .req{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;border:1px solid var(--gold);border-radius:10px;background:var(--gold-soft)}
 .req b{min-width:90px}.req span{flex:1 1 160px}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-input[type=text]{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;min-width:0;flex:1 1 160px}
+input[type=text],input[type=email]{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;min-width:0;flex:1 1 160px}
 a.button{display:inline-block;text-decoration:none;font-weight:700;padding:10px 16px;border-radius:8px;border:1px solid var(--teal);background:var(--teal);color:var(--bg)}
 #authBar{margin-top:10px}
-a.button[hidden]{display:none}
+a.button[hidden],.row[hidden]{display:none}
 textarea{width:100%;min-height:200px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:13px/1.5 inherit;padding:10px}
 </style></head>
 <body><main>
@@ -55,6 +55,12 @@ textarea{width:100%;min-height:200px;border:1px solid var(--line);border-radius:
     <button id="logout" type="button" hidden>다른 계정으로 로그인</button>
     <button id="retry" type="button">다시 불러오기</button>
   </div>
+  <form id="switchForm" class="row" hidden>
+    <label for="switchEmail" class="muted">로그인할 Google 계정</label>
+    <input id="switchEmail" type="email" autocomplete="email" placeholder="example@gmail.com" required>
+    <button type="submit">이 계정으로 로그인</button>
+    <button id="switchCancel" type="button">취소</button>
+  </form>
 </header>
 <p id="status" class="msg" role="status" aria-live="polite">불러오는 중입니다. 오래 걸리면 「관리자 로그인」을 눌러 주세요.</p>
 <p id="login" class="msg" hidden>관리자 로그인이 필요합니다. 위 「관리자 로그인 (Google)」을 누르면 로그인 후 이 화면으로 돌아옵니다.</p>
