@@ -489,6 +489,10 @@ window.EKODIShell={
   close:closePanel,
   myUrl
 };
+// AUTH-RETURN-CONTINUITY-001 v1.27.3: every login link returns to the exact pre-login page.
+// A central /auth link without return_to is stamped with the current page before navigation.
+function stampLoginReturn(event){try{const a=event.target?.closest?.('a[href]');if(!a)return;const u=new URL(a.getAttribute('href'),location.href);if(u.origin!==new URL(AUTH).origin||!(u.pathname==='/auth'||u.pathname==='/auth/'))return;if(u.searchParams.get('return_to')||u.searchParams.get('returnTo'))return;u.searchParams.set('return_to',currentReturn());a.href=u.href;}catch{}}
+document.addEventListener('click',stampLoginReturn,true);
 window.addEventListener('ekodi:context-change',event=>mergeContext(event.detail||{}));
 window.addEventListener('ekodi:surface-change',event=>setSurface(event.detail?.surface||event.detail||'workspace'));
 void boot();

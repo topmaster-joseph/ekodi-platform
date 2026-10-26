@@ -31,6 +31,7 @@ const MALL_PROXY_HEADER = 'x-ekodi-canonical-proxy';
 const PUBLIC_ASSETS = new Set([
   '/homepage-ambient.css',
   '/homepage-ambient.js',
+  '/homepage-auth-state.js',
   '/ekodi-message-ui.js',
   '/tenant-live.css',
   '/tenant-live.js',

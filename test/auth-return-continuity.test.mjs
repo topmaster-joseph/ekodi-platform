@@ -79,3 +79,35 @@ test('auth and store releases are cache-busted for return continuity',()=>{
   assert.match(store,/store-admin\.css\?v=20261026-compact-head-v1/);
   assert.match(store,/20261026-compact-head-v1/);
 });
+
+test('v1.27.3: login always returns to the exact pre-login page and never falls back to a My page',()=>{
+  const policy=registry.authenticationReturnContinuityPolicy;
+  assert.equal(registry.version,'1.27.3');
+  assert.match(constitution,/로그인 직전 페이지/);
+  assert.match(constitution,/My pages are never a post-login fallback/);
+  for(const key of ['preLoginPageReturnMandatory','everyLoginEntryMustCarryCurrentPageReturnTo','shellStampsMissingReturnTo','myPagesAsPostLoginFallbackForbidden','serviceLocalMyFallbackForbidden','myLandingOnlyWhenLoginStartedOnMyPageOrExplicitMyLink']) assert.equal(policy[key],true,key);
+  assert.deepEqual(policy.fallbackOrder,['trusted-exact-return-to','canonical-initiating-service-entry']);
+  assert.deepEqual(workspacePolicy.authenticationReturnPolicy.fallbackOrder,['trusted_return_to','initiating_site_canonical_entry']);
+  assert.equal(workspacePolicy.authenticationReturnPolicy.siteLocalMyFallback,false);
+});
+
+test('v1.27.3: known login entries carry the pre-login page instead of a My page',()=>{
+  const home=read('index.html');
+  assert.match(home,/auth\/\?site=portal&amp;return_to=https%3A%2F%2Fekodi\.kr%2F"[^>]*data-ekodi-home-login/);
+  assert.doesNotMatch(home,/auth\/\?site=my&amp;return_to=https%3A%2F%2Fekodi\.kr%2Fmy%2F/);
+  assert.doesNotMatch(home,/<script\b/i,'source homepage stays zero-JavaScript; the build injects the auth-state script');
+  assert.ok(read('scripts/build.mjs').includes('<script src="/homepage-auth-state.js" defer></script>'));
+  const homeState=read('homepage-auth-state.js');
+  assert.match(homeState,/history\.replaceState/);
+  assert.doesNotMatch(homeState,/location\.(assign|replace)\(/,'homepage must not navigate away after login');
+  const singles=read('sites/ekodi-singles/public/app.js');
+  assert.doesNotMatch(singles,/page\|\|'\/my'/);
+  assert.match(singles,/'https:\/\/ekodi\.kr\/singles'\+page\+location\.search/);
+  assert.doesNotMatch(read('singles-surface.js'),/return_to=https%3A%2F%2Fekodi\.kr%2Fsingles%2Fmy/);
+  assert.doesNotMatch(read('qtin-order-worker.js'),/auth\/\?site=portal'/);
+  const shell=read('shell/shell.js');
+  assert.match(shell,/function stampLoginReturn\(event\)/);
+  assert.match(shell,/document\.addEventListener\('click',stampLoginReturn,true\)/);
+  assert.ok(read('site-worker.js').includes("'/homepage-auth-state.js'"));
+  assert.ok(read('scripts/build.mjs').includes("'homepage-auth-state.js'"));
+});

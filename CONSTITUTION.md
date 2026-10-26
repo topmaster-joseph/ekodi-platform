@@ -1,6 +1,6 @@
-# EKODI Platform Constitution v1.27.2
+# EKODI Platform Constitution v1.27.3
 
-Effective: 2026-10-23
+Effective: 2026-10-26
 
 This constitution is the highest architecture and operations rule for EKODI Platform. Existing validators remain authoritative implementation guards; this document unifies their intent and governs future changes.
 
@@ -123,15 +123,16 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - These conditions apply to current and future user services and are merge-blocking through `validate:membership` and `validate:constitution`.
 - Machine-readable authority: `governance/constitution/constitution.json` -> `universalFreeIdentityPolicy` and `config/universal-membership.json` -> `enforcedLoginInheritance`.
 
-## 3A. Authentication Return Continuity Constitution
-- Authentication is a temporary identity boundary, never a navigation destination. After successful sign-in, the user returns to the exact trusted page that initiated login whenever a valid `return_to` exists.
+## 3A. Authentication Return Continuity Constitution (v1.27.3, 2026-10-26 — mandatory pre-login return)
+- Authentication is a temporary identity boundary, never a navigation destination. After successful sign-in, the user always returns to the exact trusted page that initiated login — the page the user was on immediately before login (로그인 직전 페이지), including its path and functional query context.
+- Every login entry point on every current and future EKODI site, Workspace, service, operator page and administrator page must carry the current page as `return_to` (`location.origin + pathname + search`). A login link without the current page is a defect; the shared shell stamps the current page onto any central `/auth` link that lacks `return_to` as a self-healing guard.
 - Every EKODI site, Workspace, service, My page, operator page and administrator page preserves its own navigation context across authentication. A login initiated from one site must not silently land in another site's home, My page or the platform My EKODI hub.
-- If an exact pre-login URL is unavailable, the initiating service may use its explicitly registered authenticated home or service-local My page; otherwise it falls back to that service's canonical entry. Cross-service fallback is forbidden.
-- `https://ekodi.kr/my` is the canonical platform personal home and may be a login destination only for an authentication flow explicitly initiated for My EKODI or the apex EKODI portal. It is forbidden as a generic post-login fallback for other services, Workspaces or administrator surfaces.
+- My pages are never a post-login fallback. The platform My EKODI (`https://ekodi.kr/my`) is forbidden as a generic post-login fallback, and neither it nor a service-local My page (for example `/{slug}/my`) may be used as a login landing unless the user started login from that My page itself or explicitly chose a My EKODI link.
+- If and only if a trusted exact pre-login URL is genuinely unavailable or rejected by return-target validation, the fallback is the initiating service's canonical public entry. Cross-service fallback is forbidden.
 - Workspace/service administrator login must return to the original canonical admin path, including its child section such as `/{slug}/admin/menu`, `/{slug}/admin/delivery` or `/{slug}/admin/connections`.
-- One-time handoff tokens must be delivered directly to the intended destination when possible. If a token is accidentally delivered to My EKODI with a trusted non-My `return_to`, My EKODI must redirect it to that target before consuming the token.
-- Return targets are allowlisted trusted HTTPS EKODI/customer-owned destinations with credential-bearing URLs rejected. Authentication must preserve query context but never propagate reusable secrets in query parameters.
-- This rule applies to all current and future login adapters and is enforced by shared authentication routing tests and production system verification.
+- One-time handoff tokens must be delivered directly to the intended destination when possible. If a token is accidentally delivered to My EKODI with a trusted non-My `return_to`, My EKODI must redirect it to that target before consuming the token. Pages that cannot consume a handoff fragment must erase it without navigating away.
+- Return targets are allowlisted trusted HTTPS EKODI/customer-owned destinations with credential-bearing URLs rejected. Authentication must preserve query context but never propagate reusable secrets in query parameters. Pre-login capture never weakens the platform `Referrer-Policy: no-referrer`; the explicit `return_to` is the only capture channel.
+- This rule applies to all current and future login adapters and is enforced by shared authentication routing tests, `validate:constitution` and production system verification.
 - Machine-readable authority: `governance/constitution/constitution.json` -> `authenticationReturnContinuityPolicy` and `config/service-workspace-policy.json` -> `authenticationReturnPolicy`.
 
 ## 3B. Canonical Human URL Query Hygiene Constitution

@@ -1,0 +1,33 @@
+{
+  "amendmentId": "AUTH-PRELOGIN-RETURN-MANDATORY-20261026",
+  "constitutionVersion": "1.27.3",
+  "approvedAt": "2026-10-26",
+  "approvedBy": "topmaster-joseph",
+  "status": "approved",
+  "changeClass": "C2",
+  "taskId": "auth-return-prelogin-20261026",
+  "summary": "Make return to the exact pre-login page mandatory for every EKODI login; remove My pages (platform and service-local) from the post-login fallback order; require every login entry to carry the current page as return_to with a shared-shell self-healing stamp.",
+  "approvalBasis": "The platform owner instructed on 2026-10-26 (KST) to audit the whole EKODI ecosystem's login constitution and enforced rules, which were sending users to My pages after login, and to change them so login returns to the page immediately before login.",
+  "adds": [
+    "pre-login page return is mandatory, not merely preferred",
+    "every login entry carries the current page as return_to",
+    "shared shell stamps missing return_to on central /auth links",
+    "platform and service-local My pages are forbidden as post-login fallback",
+    "fallback is only the initiating service canonical entry when the exact page is unavailable",
+    "unconsumed handoff fragments are erased without navigation"
+  ],
+  "preserves": [
+    "v1.27.2 apex-only web topology",
+    "trusted HTTPS return-target validation and credential-bearing URL rejection",
+    "Referrer-Policy no-referrer",
+    "one-time handoff token model and My misroute recovery",
+    "exact admin child path return",
+    "central EKODI identity authority and Universal FREE identity"
+  ],
+  "rollback": "Revert only the v1.27.3 authentication return amendment (CONSTITUTION 3A text, authenticationReturnContinuityPolicy keys, service-workspace authenticationReturnPolicy keys, and the matching homepage/singles/qtin/shell login link changes) while preserving v1.27.2 and all identities, sessions and workspace data.",
+  "approvalEvidence": {
+    "ownerInstructionRecorded": true,
+    "ownerInstructionDate": "2026-10-26",
+    "requiredPullRequestLabel": "constitution-approved"
+  }
+}
