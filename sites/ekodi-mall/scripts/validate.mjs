@@ -1,10 +1,11 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadBookstoreProducts, mergeBookstoreProducts } from './bookstore-products.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const load = async (name) => JSON.parse(await readFile(path.join(root, 'content', name), 'utf8'));
-const [site, products, pages, stores, regionsConfig, affiliateHubs] = await Promise.all([
+const [site, ownProducts, pages, stores, regionsConfig, affiliateHubs] = await Promise.all([
   load('site.json'),
   load('products.json'),
   load('pages.json'),
@@ -12,6 +13,9 @@ const [site, products, pages, stores, regionsConfig, affiliateHubs] = await Prom
   load('regions.json'),
   load('affiliate-hubs.json')
 ]);
+
+const products = mergeBookstoreProducts(ownProducts, await loadBookstoreProducts(root));
+if (!products.some((product) => product.saleType === 'publisher')) throw new Error('MALL-BOOKSTORE-BRIDGE-001: bookstore titles must appear in the 책·배움 corner');
 
 const wrangler = await readFile(path.join(root, 'api', 'wrangler.toml'), 'utf8');
 const wranglerVar = (name) => wrangler.match(new RegExp('^' + name + '\\s*=\\s*\"([^\"]*)\"', 'm'))?.[1] || '';
