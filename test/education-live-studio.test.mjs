@@ -414,3 +414,16 @@ test('plain words for meeting outcomes: 「정해진 일」·「할 일」 (Fact
   const course=await read('education/study/live/courses/mnu-factchat-2026.js');
   assert.match(course,/정해진 일/);assert.match(course,/할 일/);
 });
+
+test('presenter: practice timer and its controls live in the top bar; the side column fits the stage height',async()=>{
+  const html=await read('education/study/live/present/index.html');
+  const top=html.slice(html.indexOf('<header'),html.indexOf('</header>'));
+  for(const id of ['presTimer','presTimerInfo','pPause','pStop'])assert.match(top,new RegExp('id="'+id+'"'),id);
+  assert.match(top,/data-add="60000"/);
+  const side=html.slice(html.indexOf('id="presSide"'),html.indexOf('</aside>'));
+  assert.doesNotMatch(side,/실습 타이머|id="presTimer"/,'no timer card in the side column');
+  const js=await read('education/study/live/present.js');
+  assert.match(js,/function fitSideToStage\(\)/);assert.match(js,/new ResizeObserver\(apply\)\.observe\(stage\)/);
+  assert.doesNotMatch(js,/presTimerTop/);
+  assert.match(await read('education/study/live/live.css'),/\.lv \.pres-side\{position:sticky;top:calc\(var\(--lv-top-h\) \+ 16px\);overflow-y:auto/);
+});
