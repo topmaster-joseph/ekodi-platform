@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { renderMallHeader } from '../mall-shared-header.js';
 import { isMallPicksPath, loadMallPicks, renderMallPicksHtml, mallPicksResponse, pickReason, clickUrl, MALL_PICKS_CANONICAL } from '../mall-weekly-picks-page.js';
 
 const row = (id, extra = {}) => ({ id, product_name:`상품 ${id}`, price_krw:10000 + id, category:'생활', provider_rank:1, is_rocket:1, is_free_shipping:0, ...extra });
@@ -91,4 +92,15 @@ test('site-worker routes /ekodimall/picks before the Pages proxy', () => {
   const picks = source.indexOf('isMallPicksPath(url.pathname)');
   const proxy = source.indexOf('if (isMallPath(url.pathname)) return proxyMallService(request);');
   assert.ok(picks > 0 && proxy > picks);
+});
+
+test('weekly-picks shares Mall buyer header and uses canonical shell footer', () => {
+  const html = renderMallPicksHtml({ items: [] });
+  const header = renderMallHeader({ publicPrefix: '/ekodimall', home: false });
+  assert.ok(html.includes(header));
+  assert.match(html, /class="header buyer-header mall-header"/);
+  assert.match(html, /href="\/ekodimall\/travel\/stay\/"/);
+  assert.match(html, /href="\/ekodimall\/picks"/);
+  assert.match(html, /assets\/home-refresh\.css/);
+  assert.doesNotMatch(html, /<footer\b/); // shell adds the single shared footer
 });

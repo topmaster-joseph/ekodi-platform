@@ -6,6 +6,7 @@
 // crawlable HTML with a static affiliate disclosure, sponsored links and
 // schema.org ItemList data. Read-only: it never writes to D1.
 import { isoWeekInfo } from './mall-official-promotion-board.js';
+import { renderMallHeader } from './mall-shared-header.js';
 
 export const MALL_PICKS_PATH = '/ekodimall/picks';
 export const MALL_PICKS_CANONICAL = 'https://ekodi.kr/ekodimall/picks';
@@ -92,6 +93,9 @@ export function renderMallPicksHtml({ items = [], week = isoWeekInfo(), generate
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
 <link rel="canonical" href="${MALL_PICKS_CANONICAL}">
+<link rel="stylesheet" href="/ekodimall/assets/styles.css">
+<link rel="stylesheet" href="/ekodimall/assets/platform.css">
+<link rel="stylesheet" href="/ekodimall/assets/home-refresh.css">
 <meta property="og:type" content="website">
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(description)}">
@@ -119,6 +123,7 @@ h1{font-size:clamp(1.5rem,3.6vw,2.2rem);margin:.3rem 0 .4rem}
 </style>
 </head>
 <body>
+${renderMallHeader({ publicPrefix: '/ekodimall', home: false })}
 <main>
   <p class="eyebrow">EKODI MALL · WEEKLY PICKS</p>
   <h1>이번 주 에코디 추천</h1>
@@ -128,6 +133,7 @@ h1{font-size:clamp(1.5rem,3.6vw,2.2rem);margin:.3rem 0 .4rem}
   <p class="note">가격·재고·배송 조건은 ${esc(kst)} (KST) 기준이며 판매처에서 달라질 수 있습니다. 주문·결제·배송·반품은 판매처에서 진행됩니다. · <a href="/ekodimall/">에코디몰 홈</a> · <a href="/ekodimall/coupang/">조건으로 상품 찾기</a></p>
   <span hidden data-generated-at="${esc(stamp)}"></span>
 </main>
+<script defer src="/ekodimall/assets/mall-header-nav.js"></script>
 </body>
 </html>`;
 }
