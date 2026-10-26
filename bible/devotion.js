@@ -184,7 +184,7 @@ function boot(root) {
     const detail = el('span', 'dv-audio-hint');
     const url = String(song?.mrUrl || '');
     audioRow.append(title, detail);
-    if (!/^\\/bible\\/media\\/[a-z0-9/_-]+\\.(mp3|ogg|m4a|webm)$/i.test(url)) {
+    if (!/^\/bible\/media\/[a-z0-9/_-]+\.(mp3|ogg|m4a|webm)$/i.test(url)) {
       detail.textContent = '사용 권한이 확인된 반주 음원이 아직 등록되지 않았습니다.';
       return;
     }
