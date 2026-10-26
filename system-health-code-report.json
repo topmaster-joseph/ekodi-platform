@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-19T04:28:22.752Z",
-  "startedAt": "2026-10-19T04:27:56.822Z",
+  "generatedAt": "2026-10-26T04:33:14.662Z",
+  "startedAt": "2026-10-26T04:32:22.395Z",
   "repository": "topmaster-joseph/ekodi-platform",
   "branch": "main",
-  "head": "2a87c7e47d3d4b7414efc8f76b835ea21bcd8aa7",
-  "overallScore": 85.4,
+  "head": "dc772017502cd01cb48725307c26baa52d16a54b",
+  "overallScore": 84.8,
   "status": "watch",
   "thresholds": {
     "healthy": 90,
@@ -18,7 +18,7 @@
       "weight": 25,
       "score": 25,
       "status": "ok",
-      "detail": "1001개 테스트 파일 · 전체 테스트 통과"
+      "detail": "1130개 테스트 파일 · 전체 테스트 통과"
     },
     "duplication": {
       "weight": 15,
@@ -28,9 +28,9 @@
     },
     "complexity": {
       "weight": 15,
-      "score": 13.9,
+      "score": 13.3,
       "status": "ok",
-      "detail": "대형 파일 2개 · 매우 큰 파일 0개 · TODO/FIXME 24건"
+      "detail": "대형 파일 3개 · 매우 큰 파일 0개 · TODO/FIXME 27건"
     },
     "security": {
       "weight": 15,
@@ -48,7 +48,7 @@
       "weight": 10,
       "score": 10,
       "status": "ok",
-      "detail": "263개 Workflow · 배포 가드 검증 통과"
+      "detail": "275개 Workflow · 배포 가드 검증 통과"
     },
     "documentation": {
       "weight": 5,
@@ -58,13 +58,13 @@
     }
   },
   "metrics": {
-    "runtimeFiles": 1052,
-    "runtimeLines": 179127,
-    "testFiles": 1001,
-    "workflows": 263,
-    "largeFiles": 2,
+    "runtimeFiles": 1184,
+    "runtimeLines": 206069,
+    "testFiles": 1130,
+    "workflows": 275,
+    "largeFiles": 3,
     "veryLargeFiles": 0,
-    "todoMarkers": 24,
+    "todoMarkers": 27,
     "duplicateGroups": 30,
     "duplicateWindows": 155
   },
@@ -103,9 +103,9 @@
       "detail": "3개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "customer-federated-auth.js:47",
-        "customer-google-prereg.js:94",
-        "customer-member-directory.js:34"
+        "customer-google-prereg.js:92",
+        "marketing-admin-control.js:11",
+        "membership-billing.js:48"
       ]
     },
     {
@@ -142,7 +142,7 @@
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
         "affiliate-control.js:94",
-        "device-control.js:307"
+        "device-control.js:358"
       ]
     },
     {
@@ -153,7 +153,7 @@
       "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "ai-agent-control.js:28",
+        "ai-agent-control.js:34",
         "homepage-presentation-control.js:28"
       ]
     },
@@ -165,8 +165,8 @@
       "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "books-control.js:42",
-        "books-finance-control.js:34"
+        "author-billing-control.js:15",
+        "customer-google-prereg.js:96"
       ]
     },
     {
@@ -174,17 +174,17 @@
       "severity": "low",
       "category": "complexity",
       "title": "임시 작업 표식 누적",
-      "detail": "TODO/FIXME/HACK/TEMP 표식이 24건입니다.",
+      "detail": "TODO/FIXME/HACK/TEMP 표식이 27건입니다.",
       "recommendation": "오래된 항목부터 제거 조건과 책임 영역을 정리하세요.",
       "evidence": [
-        "admin-sidebar.js:652",
-        "device-control-admin.js:164",
-        "device-control-admin.js:871",
+        "admin-sidebar.js:963",
+        "device-control-admin.js:207",
+        "device-control-admin.js:1011",
+        "education/study/live/lab.js:100",
+        "education/study/live/lab.js:105",
         "ekodibiz-business-center.js:139",
         "ekodibiz-business-center.js:141",
-        "scripts/data-store-topology.mjs:33",
-        "scripts/inventory-declared-data-stores.mjs:25",
-        "scripts/system-health-code-audit.mjs:116"
+        "scripts/data-store-topology.mjs:33"
       ]
     }
   ],
@@ -193,7 +193,7 @@
       "ok": true,
       "status": 0,
       "timedOut": false,
-      "summary": "✔ fresh citizen opinions keep independent queue-first storage and never direct-write from public handler (3.607824ms)\n✔ explicit Brand Account OAuth requires an authenticated single YouTube channel and registry identity (1.136714ms)\n✔ Brand Account opt-in is scoped and never disables signed OAuth, code exchange or email-based standard mode (5.002482ms)\n✔ account linked banner uses registry ID or explicit connection IDs, never coincident email (2.642061ms)\nℹ tests 4956\nℹ suites 0\nℹ pass 4955\nℹ fail 0\nℹ cancelled 0\nℹ skipped 1\nℹ todo 0\nℹ duration_ms 24857.324164"
+      "summary": "✔ fresh citizen opinions keep independent queue-first storage and never direct-write from public handler (8.780324ms)\n✔ explicit Brand Account OAuth requires an authenticated single YouTube channel and registry identity (1.413884ms)\n✔ Brand Account opt-in is scoped and never disables signed OAuth, code exchange or email-based standard mode (8.188932ms)\n✔ account linked banner uses registry ID or explicit connection IDs, never coincident email (4.521838ms)\nℹ tests 5823\nℹ suites 0\nℹ pass 5822\nℹ fail 0\nℹ cancelled 0\nℹ skipped 1\nℹ todo 0\nℹ duration_ms 50478.535596"
     },
     "security": {
       "ok": true,
