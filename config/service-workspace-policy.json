@@ -307,5 +307,48 @@
     },
     "adminChildPathReturnRequired": true,
     "misroutedMyHandoffMustRecoverBeforeTokenConsumption": true
+  },
+  "boardPolicy": {
+    "policyId": "BOARD-INDEPENDENT-001",
+    "scope": "all-existing-and-future-service-and-independent-site-boards",
+    "inherited": true,
+    "boardEngineOwns": [
+      "posts",
+      "replies",
+      "attachments",
+      "categories",
+      "search",
+      "edit",
+      "delete",
+      "audit"
+    ],
+    "platformOwns": [
+      "authentication",
+      "authorization-handoff",
+      "site-routing"
+    ],
+    "singleCanonicalWriteStore": true,
+    "legacyWriteForbidden": true,
+    "legacyReadCompatibilityAllowed": true,
+    "perBoardCategoryContract": true,
+    "globalCategoryListForced": false,
+    "preserveExistingRecords": true,
+    "canonicalTrailingSlashEquivalent": true,
+    "directNavigationAndRefreshRequired": true,
+    "returnToOriginalBoardAfterLogin": true,
+    "serverSideAuthorizationRequired": true,
+    "regressionChecks": [
+      "create-read-update-delete",
+      "replies",
+      "attachments",
+      "category-api-db-ui-consistency",
+      "search-and-filter",
+      "permissions",
+      "legacy-compatibility",
+      "route-refresh",
+      "authentication-return",
+      "production-deployment-evidence"
+    ],
+    "noCompletionWithoutEvidence": true
   }
 }
