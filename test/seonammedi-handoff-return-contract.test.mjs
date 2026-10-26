@@ -47,7 +47,8 @@ test('SeonamMedi legacy host, www, and canonical EKODI board mount preserve inte
 test('unrelated portal logins remain portal instead of being hijacked by board handoff',()=>{
   const result=clientTarget('portal','https://ekodi.kr');
   assert.equal(result.site,'portal');
-  assert.equal(result.returnTo,'https://ekodi.kr');
+  // Owner decision 2026-10-26: an EKODI portal login lands on My Page, not the bare homepage.
+  assert.equal(result.returnTo,'https://ekodi.kr/my/');
 });
 
 test('server never issues cross-site handoff on untrusted domain or unsafe EKODI path',()=>{
