@@ -10,6 +10,7 @@ test('server shell preserves native site footers and renders site-specific fallb
   assert.match(injector,/const shared=classes\.includes\('ekodi-user-ui-footer'\)/);
   assert.match(injector,/if\(shared&&!serviceOwnsFooter\(this\.serviceId\)\)\{element\.remove\(\);return;\}/);
   assert.match(injector,/if\(sharedFooterReplacesLocalFooter\(this\.serviceId\)\)\{element\.remove\(\);return;\}/);
+  assert.match(injector,/SHARED_FOOTER_REPLACES_LOCAL_FOOTER_SERVICES=new Set\(\)/);
   assert.match(injector,/hasNativeFooter=true/);
   assert.match(injector,/element\.onEndTag\(tag=>/);
   assert.match(injector,/this\.footerState\?\.hasNativeFooter/);
