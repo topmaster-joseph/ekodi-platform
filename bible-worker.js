@@ -1,6 +1,7 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { bibleCorePolicy, bibleProviderCatalog, readBiblePassage, readBibleReference, searchBible } from './bible-core.js';
-import { resolveDevotion, devotionShareText, isDevotionDate } from './devotional-activities.js';
+import { resolveDevotion, devotionShareText, isDevotionDate, seoulToday } from './devotional-activities.js';
+import { devotionAdminSession, devotionOverride, saveDevotionOverride } from './devotional-admin-api.js';
 
 const MAX_MESSAGE = 4000;
 const MAX_HISTORY = 8;
@@ -213,6 +214,9 @@ async function handleAssist(request, env) {
 }
 
 async function handleBibleApi(request, env, url) {
+  if (url.pathname === '/api/bible/devotion' && request.method === 'PUT') {
+    return saveDevotionOverride(request, env, await devotionAdminSession(request, env), resolveDevotion);
+  }
   if (request.method !== 'GET') return json({ ok:false, error:'method_not_allowed' }, 405);
   if (url.pathname === '/api/bible/providers') {
     return json({ ok:true, policy:bibleCorePolicy(), providers:bibleProviderCatalog() });
@@ -233,14 +237,29 @@ async function handleBibleApi(request, env, url) {
   }
   if (url.pathname === '/api/bible/devotion') {
     const date = clean(url.searchParams.get('date'), 10);
-    const devotion = resolveDevotion(date);
-    if (devotion.error === 'invalid_date') return json({ ok:false, ...devotion }, 400);
+    const selectedDate = date || seoulToday();
+    if (!isDevotionDate(selectedDate)) return json({ok:false,error:'invalid_date'},400);
+    const administrator = await devotionAdminSession(request, env);
+    // Security gate: client date controls never confer future-day access.
+    if (selectedDate > seoulToday() && !administrator)
+      return json({ok:false,error:'future_unavailable',today:seoulToday()},403);
+    const devotion = resolveDevotion(selectedDate);
+    if (devotion.error === 'invalid_date') return json({ok:false,...devotion},400);
     if (devotion.found) {
+      const override = await devotionOverride(env,selectedDate);
+      if (override && (override.status === 'published' || administrator)) {
+        devotion.activities = override.activities;
+        devotion.activitySource = 'editorial-override';
+      }
+      if (administrator) devotion.admin = {
+        canEdit:true, revision:Number(override?.revision||0),
+        status:override?.status||'source', email:administrator.email
+      };
       devotion.scripture = await Promise.all(devotion.passageParts.map(part =>
         readBibleReference(request, env, part, 'KRV1961').catch(() => ({ ok:false, error:'scripture_unavailable', reference:part }))));
     }
-    const response = json({ ok:true, ...devotion }, devotion.found ? 200 : 404);
-    response.headers.set('cache-control', 'public, max-age=300, s-maxage=900');
+    const response = json({ ok:true, ...devotion, today:seoulToday() }, devotion.found ? 200 : 404);
+    response.headers.set('cache-control',administrator?'private, no-store':'public, max-age=300, s-maxage=300');
     return response;
   }
   if (url.pathname === '/api/bible/search') {
@@ -273,7 +292,10 @@ export function devotionMetaTags(devotion) {
 }
 
 async function devotionPage(request, env, dateValue) {
-  const devotion = resolveDevotion(dateValue);
+  // HTML/Open Graph preview must not reveal future-day scripture or application.
+  const devotion = isDevotionDate(dateValue) && dateValue > seoulToday()
+    ? {found:false,date:dateValue,shareUrl:'https://ekodi.kr/bible/devotion'}
+    : resolveDevotion(dateValue);
   // Workers Static Assets may canonicalise "/devotion.html" to "/devotion"; accept either form.
   let asset = await assetFor(request, env, '/devotion');
   if (!asset.ok) asset = await assetFor(request, env, '/devotion.html');

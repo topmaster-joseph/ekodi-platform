@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 400" role="img" aria-label="시온산을 향해 걷는 이웃들의 묵상 그림">
+<title>구원과 회복의 산</title><desc>단순한 선그림 인물들이 서로의 손을 잡고 산 위의 새날을 향해 함께 걷는다.</desc>
+<defs><linearGradient id="sky" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#fff8e9"/><stop offset="1" stop-color="#d8ece4"/></linearGradient>
+<linearGradient id="hill" x1="0" x2="1"><stop stop-color="#9bb5a6"/><stop offset="1" stop-color="#c1cf9c"/></linearGradient></defs>
+<rect width="920" height="400" rx="24" fill="url(#sky)"/><circle cx="684" cy="98" r="60" fill="#f4d27e" opacity=".88"/>
+<g stroke="#e5c374" stroke-width="3" opacity=".55"><path d="M684 15v-10M684 183v14M601 98h-17M765 98h20M622 34l-15-15M750 158l15 15M751 35l15-15M620 159l-16 16"/></g>
+<path d="M0 270L141 190L255 259L447 128L642 264L805 197L920 249V400H0Z" fill="#d0dbd1"/><path d="M0 327L155 291L305 343L451 243L603 313L750 280L920 319V400H0Z" fill="url(#hill)"/>
+<path d="M0 366Q150 330 280 352T570 321T920 355V400H0Z" fill="#739b85" opacity=".65"/>
+<path d="M130 400Q260 339 377 323T618 221" fill="none" stroke="#f7eed6" stroke-width="40" stroke-linecap="round"/><path d="M130 400Q260 339 377 323T618 221" fill="none" stroke="#c8a77b" stroke-width="1.5" stroke-dasharray="5 12"/>
+<g fill="#d4bd8b" stroke="#8e957e" stroke-width="2"><path d="M585 217v-35h85v35z"/><path d="M603 181v-29h17v29z"/><path d="M635 181v-41h19v41z"/></g>
+<g fill="none" stroke="#253b35" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+<circle cx="200" cy="303" r="20" fill="#f8e7c3"/><path d="M200 324v43m0-27l-30-13m30 13 28-14m-28 51-15 20m15-20 17 20"/>
+<circle cx="280" cy="281" r="20" fill="#f8e7c3"/><path d="M280 302v43m0-26-28 16m28-16 30-22m-30 48-20 21m20-21 18 20"/>
+<circle cx="364" cy="265" r="20" fill="#f8e7c3"/><path d="M364 286v42m0-24-30-10m30 10 31-26m-31 50-20 18m20-18 15 21"/>
+<circle cx="459" cy="226" r="23" fill="#f8e7c3"/><path d="M459 249v48m0-32-31-15m31 15 38-31m-38 63-18 22m18-22 24 17"/>
+</g>
+<g fill="#253b35"><circle cx="194" cy="302" r="2.5"/><circle cx="206" cy="302" r="2.5"/><circle cx="274" cy="280" r="2.5"/><circle cx="286" cy="280" r="2.5"/><circle cx="357" cy="263" r="2.5"/><circle cx="370" cy="263" r="2.5"/><circle cx="451" cy="223" r="2.5"/><circle cx="467" cy="223" r="2.5"/></g>
+<g stroke="#253b35" stroke-width="2" fill="none" stroke-linecap="round"><path d="M193 311q7 7 14 0M273 289q7 7 14 0M356 274q8 7 15 0M449 235q9 9 19 0"/></g>
+<g fill="#376f57"><path d="M115 359l-6-30 17 12 6-30 8 48z"/><path d="M748 336l-10-39 19 13 9-43 9 68z"/></g>
+</svg>
