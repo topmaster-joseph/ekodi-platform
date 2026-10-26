@@ -24,7 +24,8 @@ const check=(name,passed,detail={})=>{
  if(!passed) throw new Error('sandbox_check_failed:'+name+' '+JSON.stringify(detail));
 };
 await fs.mkdir(OUT,{recursive:true});
-const browser=await chromium.launch({headless:true});
+const executablePath=process.env.EKODI_NATIVE_CHROME||undefined;
+const browser=await chromium.launch({headless:true,...(executablePath?{executablePath}:{})});
 try{
  for(const device of [{name:'desktop',width:1440,height:900,mobile:false},{name:'mobile',width:390,height:844,mobile:true}]){
    const native=await runTask({

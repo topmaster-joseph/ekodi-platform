@@ -32,10 +32,17 @@ jobs:
         run: |
           node --check scripts/verify-devotion-native-sandbox.mjs
           node --test test/bible-devotion.test.mjs test/devotional-admin-api.test.mjs
-      - name: Install EKODI-owned isolated Chromium harness
+      - name: Prepare EKODI-owned Chromium from isolated runner
+        shell: bash
         run: |
           npm install --no-save --package-lock=false playwright@1.55.0
-          npx playwright install --with-deps chromium
+          browser_path="$(command -v chromium || command -v google-chrome || true)"
+          if [ -n "$browser_path" ]; then
+            echo "EKODI_NATIVE_CHROME=$browser_path" >> "$GITHUB_ENV"
+            echo "First-party system Chromium: $browser_path"
+          else
+            npx playwright install --with-deps chromium
+          fi
       - name: EKODI native desktop/mobile devotional sandbox
         run: node scripts/verify-devotion-native-sandbox.mjs
       - name: Summarize native sandbox evidence
