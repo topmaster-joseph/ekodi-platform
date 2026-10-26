@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { canonicalSiteSubject, handleSiteChromeApi, listSiteChromeSettings } from '../site-chrome-runtime.js';
+import { siteChromeDefaults } from '../config/site-chrome-defaults.js';
 
 function publicDb(){
   return {
@@ -39,7 +40,11 @@ test('public site chrome omits administrator identity and legacy domain metadata
   assert.equal(body.updatedBy,undefined);
   assert.equal(body.publicDomain,undefined);
   assert.equal(body.source,'default');
-  assert.equal(body.footer.operator.name,'에코디비즈');
+  assert.equal(body.footer.brand,'청계면상인회');
+  assert.equal(body.footer.operator.name,'청계면상인회');
+  assert.equal(body.footer.operator.businessRegistrationNumber,'');
+  assert.equal(body.footer.contact.address,'');
+  assert.match(body.footer.copyright,/EKODI \(에코디\)/);
 });
 
 test('private site chrome endpoint requires authentication',async()=>{
@@ -75,4 +80,23 @@ test('central Admin ships site chrome as an on-demand asset',async()=>{
   assert.match(postbuild,/admin-site-chrome\.js/);
   assert.match(siteChromeAdmin,/ekodi-admin-section-changed/);
   assert.match(siteChromeAdmin,/detail:\{section:SECTION\}/);
+});
+
+
+test('site identity defaults do not impersonate another operating entity',()=>{
+  const church=siteChromeDefaults('에코디교회','https://ekodi.kr/ekodichurch');
+  assert.equal(church.footer.brand,'에코디교회');
+  assert.equal(church.footer.operator.name,'에코디교회');
+  assert.equal(church.footer.operator.businessRegistrationNumber,'');
+  assert.equal(church.footer.contact.email,'');
+  assert.match(church.footer.copyright,/EKODI \(에코디\)/);
+  const biz=siteChromeDefaults('에코디비즈','https://ekodi.kr/ekodibiz');
+  assert.equal(biz.footer.operator.name,'에코디비즈');
+  assert.equal(biz.footer.operator.businessRegistrationNumber,'213-13-01959');
+});
+
+test('central editor cannot override the EKODI copyright credit',async()=>{
+  const admin=await readFile(new URL('../admin-site-chrome.js',import.meta.url),'utf8');
+  assert.doesNotMatch(admin,/name="copyright"/);
+  assert.match(admin,/저작권 표시 \(플랫폼 공통, 수정 불가\)/);
 });
