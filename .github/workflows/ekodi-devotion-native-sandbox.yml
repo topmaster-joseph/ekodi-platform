@@ -1,0 +1,54 @@
+name: EKODI Devotion Native Sandbox
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/verify-devotion-native-sandbox.mjs'
+      - 'test/devotional-admin-api.test.mjs'
+      - '.github/workflows/ekodi-devotion-native-sandbox.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/verify-devotion-native-sandbox.mjs'
+      - 'test/devotional-admin-api.test.mjs'
+      - '.github/workflows/ekodi-devotion-native-sandbox.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-devotion-native-sandbox-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  devotion-sandbox:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: '24' }
+      - name: Verify sandbox script and canonical Bible / editor unit contracts
+        run: |
+          node --check scripts/verify-devotion-native-sandbox.mjs
+          node --test test/bible-devotion.test.mjs test/devotional-admin-api.test.mjs
+      - name: Install EKODI-owned isolated Chromium harness
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: EKODI native desktop/mobile devotional sandbox
+        run: node scripts/verify-devotion-native-sandbox.mjs
+      - name: Summarize native sandbox evidence
+        if: always()
+        shell: bash
+        run: |
+          if [ -f artifacts/devotion-native-sandbox/report.json ]; then
+            echo '### EKODI native devotional sandbox' >> "$GITHUB_STEP_SUMMARY"
+            jq -r '"- Passed: \(.passed)\n- Checks passed: \(.totals.passed)\n- Checks failed: \(.totals.failed)\n- Checks blocked: \(.totals.blocked)\n- Failure: \(.failure // "none")"' artifacts/devotion-native-sandbox/report.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ekodi-devotion-native-sandbox-${{ github.run_id }}
+          path: artifacts/devotion-native-sandbox
+          retention-days: 14
