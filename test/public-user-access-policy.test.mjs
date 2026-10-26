@@ -9,7 +9,7 @@ test('platform public access contract is inherited and non-overridable',()=>{
   const constitution=json('governance/constitution/constitution.json');
   const workspace=json('config/service-workspace-policy.json');
   const policy=constitution.publicUserSurfacePolicy;
-  assert.equal(constitution.version,'1.27.2');
+  assert.equal(constitution.version,'1.27.3');
   assert.equal(policy.defaultAccess,'guest-open');
   assert.equal(policy.inheritanceScope,'all-current-and-future-user-facing-services-workspaces-and-independent-sites');
   assert.equal(policy.serviceLocalOverrideAllowed,false);
