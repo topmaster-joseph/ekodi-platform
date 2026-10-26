@@ -100,3 +100,33 @@ test('central editor cannot override the EKODI copyright credit',async()=>{
   assert.doesNotMatch(admin,/name="copyright"/);
   assert.match(admin,/저작권 표시 \(플랫폼 공통, 수정 불가\)/);
 });
+
+test('EKODI Mall legal footer identifies the verified direct seller, while other tenants stay isolated',async()=>{
+  const {renderEkodiUserFooter}=await import('../config/user-footer.js');
+  for(const url of ['https://ekodi.kr/ekodimall','https://ekodi.kr/ekodimall/']){
+    const mall=siteChromeDefaults('Mall',url).footer;
+    assert.equal(mall.brand,'Mall');
+    assert.equal(mall.operator.name,'에코디비즈');
+    assert.equal(mall.operator.businessRegistrationNumber,'213-13-01959');
+    assert.equal(mall.operator.commerceRegistrationNumber,'2023-전남무안-0153');
+    assert.equal(mall.contact.email,'ekodibiz@gmail.com');
+    assert.match(mall.copyright,/EKODI/);
+    const html=renderEkodiUserFooter(mall);
+    assert.match(html,/통신판매업신고번호 2023-전남무안-0153/);
+    assert.match(html,/사업자등록번호 213-13-01959/);
+  }
+  for(const url of ['https://ekodi.kr/ekodichurch','https://ekodi.kr/cgma','https://other.example/ekodimall','https://ekodi.kr/ekodimall/seller']){
+    const independent=siteChromeDefaults('Independent',url).footer;
+    assert.equal(independent.operator.businessRegistrationNumber,'');
+    assert.equal(independent.operator.commerceRegistrationNumber,'');
+    assert.equal(independent.contact.email,'');
+  }
+});
+
+test('shared-site guarded workflow redeploys site footer dependencies on main',async()=>{
+  const workflow=await readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8');
+  const pushTrigger=workflow.split('  push:\n')[1]?.split('\npermissions:')[0]||'';
+  assert.ok(pushTrigger.includes("'config/site-chrome-defaults.js'"));
+  assert.ok(pushTrigger.includes("'config/user-footer.js'"));
+  assert.ok(pushTrigger.includes("'ekodi-shell-injector.js'"));
+});

@@ -21,15 +21,21 @@ export const EKODI_SITE_CHROME_DEFAULTS=freeze({
 export function siteChromeDefaults(siteName='',homeUrl=''){
   const name=String(siteName||'').trim()||EKODI_SITE_CHROME_DEFAULTS.header.siteName;
   const url=String(homeUrl||'').trim();
-  // Only the EKODIBIZ operating site may inherit EKODIBIZ's business identity.
-  // Every other tenant receives its own display identity; unknown legal details
-  // are left empty rather than attributing a different entity's registration.
-  const businessHome=(()=>{try{return new URL(url).pathname.replace(/\/+$/,'')==='/ekodibiz'}catch{return false}})();
+  // Only verified first-party sites directly operated by EKODIBIZ can display
+  // its business registration. Independent tenants never inherit that identity.
+  // The Mall is EKODIBIZ's direct-selling service (see /terms and /ekodibiz/refund).
+  const ekodibizOperated=(()=>{
+    try{
+      const parsed=new URL(url);
+      const path=parsed.pathname.replace(/\/+$/,'')||'/';
+      return parsed.origin==='https://ekodi.kr'&&new Set(['/ekodibiz','/ekodimall']).has(path);
+    }catch{return false;}
+  })();
   const base=EKODI_SITE_CHROME_DEFAULTS.footer;
-  const operator=businessHome?{...base.operator}:{
+  const operator=ekodibizOperated?{...base.operator}:{
     ...base.operator,name,representative:'',businessRegistrationNumber:'',commerceRegistrationNumber:''
   };
-  const contact=businessHome?{...base.contact}:{address:'',email:'',emailHref:''};
+  const contact=ekodibizOperated?{...base.contact}:{address:'',email:'',emailHref:''};
   return {
     version:EKODI_SITE_CHROME_DEFAULTS.version,
     header:{...EKODI_SITE_CHROME_DEFAULTS.header,siteName:name,homeUrl:url},
