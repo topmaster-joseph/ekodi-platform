@@ -59,6 +59,7 @@
     },
     'site-health':{label:'Site Health',icon:'✓',styles:['site-health-admin.css'],scripts:['site-health-admin.js'],real:'[data-section="site-health"]',ready:'#ekodiGlobalSiteHealth',hashes:['#site-health'],insert:'after-health'},
     'api-cost':{label:'API Cost',icon:'₩',styles:['api-cost-admin.css'],scripts:['api-cost-admin.js'],real:'[data-section="api-cost"]',hashes:['#api-cost'],insert:'after-health'},
+    'infra-costs':{label:'비용·인프라 관리',icon:'▤',styles:['infra-cost-admin.css'],scripts:['infra-cost-admin.js'],real:'[data-section="infra-costs"]',hashes:['#infra-costs'],paths:['/admin/finance/infra-costs'],insert:'after-health'},
     storage:{label:'Storage',icon:'▣',styles:['storage-admin.css'],scripts:['storage-admin.js'],real:'[data-section="storage"]',hashes:['#storage'],paths:['/admin/settings/storage','/admin/settings-records/storage','/admin/system/storage'],insert:'after-health'},
     security:{label:'Security',icon:'◆',styles:['admin-secret-generator.css'],scripts:['admin-secret-generator.js'],real:'[data-section="security"]',hashes:['#security'],insert:'after-health'},
     deployments:{label:'Deployments',icon:'↑',styles:['release-control-admin.css'],scripts:['release-control-admin.js'],real:'[data-section="deployments"]',ready:'#releaseControl',hashes:['#deployments','#release'],insert:'after-security'},

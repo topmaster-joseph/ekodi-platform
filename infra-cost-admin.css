@@ -1,0 +1,48 @@
+
+/* EKODI Infra Cost Center — inherits the shared admin shell. */
+.infra-costs{min-width:0;max-width:100%;overflow-wrap:normal;word-break:keep-all}
+.infra-costs .section-head{align-items:center;gap:1rem;flex-wrap:wrap}
+.infra-costs .section-head p{max-width:75ch;line-height:1.6}
+.infra-note,.infra-foot{padding:12px 16px;border:1px solid #cbd5e1;border-radius:12px;background:#f8fafc;color:#334155;line-height:1.6}
+.infra-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0 24px}
+.infra-summary article{min-width:0;padding:18px;border:1px solid #d9e2eb;border-radius:14px;background:#fff;display:grid;gap:8px}
+.infra-summary small{color:#64748b;font-size:.82rem}
+.infra-summary strong{font-size:clamp(1.08rem,2vw,1.45rem);overflow-wrap:anywhere}
+.infra-summary span{font-size:.78rem;color:#64748b}
+.infra-section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:25px 0 12px}
+.infra-section-head h3{font-size:1.15rem;margin:0}
+.infra-section-head small{color:#64748b}
+.infra-providers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.infra-providers article{padding:15px;border:1px solid #d9e2eb;border-radius:12px;background:#fff;min-width:0}
+.infra-provider-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.infra-provider-head strong{font-size:1rem}
+.infra-chip{background:#eef2ff;border-radius:20px;padding:4px 8px;color:#334155;font-size:.75rem}
+.infra-providers p{margin:12px 0;color:#334155;font-size:.84rem;line-height:1.5}
+.infra-providers small{display:block;color:#475569;font-size:.75rem;overflow-wrap:anywhere}
+.infra-providers a{display:inline-block;margin-top:12px;font-size:.8rem;color:#1d4ed8}
+.infra-table-wrap{width:100%;overflow-x:auto;border:1px solid #d9e2eb;border-radius:12px;background:#fff}
+.infra-table-wrap table{border-collapse:collapse;width:100%;min-width:660px}
+.infra-table-wrap th,.infra-table-wrap td{padding:12px 11px;border-bottom:1px solid #e2e8f0;text-align:left;vertical-align:middle;font-size:.85rem}
+.infra-table-wrap th{font-weight:700;background:#f1f5f9;white-space:nowrap}
+.infra-table-wrap tr:last-child td{border-bottom:0}
+.infra-hint{display:block;color:#64748b;font-size:.7rem;margin-top:3px}
+.infra-danger{color:#b91c1c;font-weight:700}
+.infra-status{color:#475569}
+.infra-row-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.infra-row-actions select{min-width:105px;width:auto;font-size:.8rem;max-width:145px}
+.infra-row-actions button{white-space:nowrap}
+.infra-editor{margin:13px 0 24px;border:1px solid #cbd5e1;border-radius:12px;background:#fff;padding:11px 14px}
+.infra-editor summary{cursor:pointer;font-weight:700;color:#1e40af;list-style:revert}
+.infra-editor form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:15px 0 5px}
+.infra-editor label{display:flex;flex-direction:column;gap:6px;font-size:.82rem;min-width:0}
+.infra-editor label.wide{grid-column:span 2}
+.infra-editor input,.infra-editor select{font:inherit;min-width:0;width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;box-sizing:border-box;color:#0f172a;background:#fff}
+.infra-editor .infra-check{flex-direction:row;align-items:center;gap:8px}
+.infra-editor .infra-check input{width:auto}
+.infra-editor button{align-self:end}
+.infra-message{min-height:22px;color:#475569;font-size:.85rem}
+.infra-message[data-error="true"]{color:#b91c1c}
+.infra-alert{display:block;padding:10px 14px;border-radius:9px;background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;margin-bottom:8px}
+.infra-foot{margin-top:20px;font-size:.8rem}
+@media(max-width:1050px){.infra-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.infra-providers{grid-template-columns:repeat(2,minmax(0,1fr))}.infra-editor form{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.infra-summary,.infra-providers,.infra-editor form{grid-template-columns:minmax(0,1fr)}.infra-editor label.wide{grid-column:auto}.infra-summary article{padding:14px}.infra-costs .section-head{align-items:flex-start}.infra-editor{padding:10px}}
