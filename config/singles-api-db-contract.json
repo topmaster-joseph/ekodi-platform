@@ -11,5 +11,6 @@
   "required_columns": [
     "public.singles_consent_receipts.marriage_opt_in",
     "public.singles_consent_receipts.religion_consent"
-  ]
+  ],
+  "release_path": "Orchestrator convergence (scripts/converge-orchestrated-pr-merge.mjs) dispatches deploy-singles-api.yml right after merging an ai/<agent>/orch_* release that touches this lane. Bot-token merges emit no push event, so the push trigger only covers human-authored merges. See docs/EKODI-SINGLES-API-DEPLOY-LANE.md."
 }
