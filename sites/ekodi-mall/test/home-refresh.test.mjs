@@ -42,6 +42,8 @@ test('responsive storefront does not change payments or disclose false sales cla
 test('real portrait has a separate slot and suppresses only the Mall landing mascot', () => {
   assert.match(template, /data-ekodi-character="off"/);
   assert.match(template, /class="mall-hero-person"/);
+  assert.match(template, /pexels-photo-6347572\.jpeg/);
+  assert.doesNotMatch(template, /pexels-photo-35760987\.jpeg/);
   assert.match(css, /mall-hero-person\{position:absolute;top:-90px/);
   assert.match(css, /mall-photo-hero\{margin-top:96px/);
   assert.match(css, /@media\(max-width:390px\)/);
