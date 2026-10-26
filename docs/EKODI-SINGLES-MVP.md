@@ -111,7 +111,7 @@ Core 재사용: people, login_identities, 기존 auth.users 연결, 공통 이�
 6) 주최자 A는 타 모임 B 참가자 개인정보 접근 불가.
 7) 일반 관리자도 DM 원문을 일괄 조회할 수 없음.
 8) 민감정보 동의 철회 시 자동 추천·노출·처리 정지.
-9) 구글 로그인 복귀는 /singles/my, 일회성 credential URL 노출 없음.
+9) 구글 로그인 복귀는 로그인 직전 페이지(헌법 v1.27.3, /singles 첫 화면에서 로그인하면 /singles로 복귀), 일회성 credential URL 노출 없음.
 10) /singles와 /singles/ 동일. 320/390/768/1366/1440px UI 접근성.
 11) 장애 시 외부 모델 호출 없이 추천, provider failover가 정보 경계 위반하지 않음.
 12) 기존 /connect /community /ekodichurch /my 동작 회귀 테스트.

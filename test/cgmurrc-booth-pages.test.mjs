@@ -43,7 +43,10 @@ test('the admin page offers a real login button and never hangs on loading',()=>
   assert.match(js,/\/auth\/v1\/verify/);
   assert.ok((js.match(/AbortSignal\.timeout\(TIMEOUT_MS\)/g)||[]).length>=2,'every request is bounded');
   assert.match(js,/credentials:bearer\?'omit':'same-origin'/,'a signed-in request does not also send the cookie');
-  assert.match(html,/a\.button\[hidden\]\{display:none\}/,'the login button really hides after sign-in');
+  assert.match(html,/a\.button\[hidden\],\.row\[hidden\]\{display:none\}/,'the login button really hides after sign-in');
+  // Switching accounts must force the central sign-in to drop a session for a different account.
+  assert.match(js,/searchParams\.set\('expected_account',email\);u\.searchParams\.set\('force_account','1'\)/);
+  assert.match(html,/id="switchForm"[^>]*hidden/);
 });
 
 test('build ships the booth pages and convergent merges dispatch Site Core',()=>{

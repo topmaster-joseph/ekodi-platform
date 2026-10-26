@@ -153,6 +153,19 @@ $('copyAll').addEventListener('click',async()=>{
   try{await navigator.clipboard.writeText(t);say('카톡 문구를 복사했습니다.','ok')}catch{$('kakao').select();say('자동 복사가 막혀 문구를 선택해 두었습니다. 직접 복사하세요.')}
 });
 $('retry').addEventListener('click',()=>{if(!busy)load()});
-$('logout').addEventListener('click',()=>{clearSession();location.assign($('loginBtn').href)});
+// Switching accounts: the central sign-in reuses an existing Google session automatically, so a plain
+// re-login would come back as the same person. expected_account+force_account makes it drop a session
+// for any other account and open Google with that account pre-selected.
+$('logout').addEventListener('click',()=>{$('switchForm').hidden=false;$('switchEmail').focus()});
+$('switchCancel').addEventListener('click',()=>{$('switchForm').hidden=true});
+$('switchForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const email=$('switchEmail').value.trim().toLowerCase();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){say('이메일 주소를 확인해 주세요.','err');return}
+  clearSession();
+  const u=new URL($('loginBtn').href,location.origin);
+  u.searchParams.set('expected_account',email);u.searchParams.set('force_account','1');
+  location.assign(u.href);
+});
 window.addEventListener('error',e=>say('화면 오류가 났습니다. 「다시 불러오기」를 눌러 주세요. ('+String(e.message||'').slice(0,80)+')','err'));
 load();

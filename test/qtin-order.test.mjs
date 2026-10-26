@@ -512,7 +512,7 @@ test('QTIN admin erases handoff tokens before network and shows a recoverable fa
   assert.match(browser.elements.get('state').textContent, /관리자 확인 실패/);
   assert.equal(browser.elements.get('adminLogin').hidden, false, 'login stays on the same page');
   assert.equal(browser.elements.get('adminWorkspace').hidden, true);
-  assert.equal(browser.elements.get('adminAuthFallback').href, 'https://ekodi.kr/auth/?site=portal');
+  assert.equal(browser.elements.get('adminAuthFallback').href, 'https://ekodi.kr/auth/?site=space&return_to=https%3A%2F%2Fekodi.kr%2Fqtin%2Fadmin', 'login must return to the exact pre-login page');
   assert.match(browser.elements.get('msg').textContent, /서버 연결에 실패/);
   assert.equal(browser.location.href, '', 'transient failure must not trigger a redirect loop');
 });

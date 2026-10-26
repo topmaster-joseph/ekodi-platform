@@ -293,7 +293,6 @@
     "siteLocalContextRequired": true,
     "fallbackOrder": [
       "trusted_return_to",
-      "registered_site_my_or_authenticated_home",
       "initiating_site_canonical_entry"
     ],
     "crossSiteFallback": false,
@@ -306,6 +305,9 @@
       ]
     },
     "adminChildPathReturnRequired": true,
-    "misroutedMyHandoffMustRecoverBeforeTokenConsumption": true
+    "misroutedMyHandoffMustRecoverBeforeTokenConsumption": true,
+    "preLoginPageReturnMandatory": true,
+    "everyLoginLinkCarriesCurrentPage": true,
+    "siteLocalMyFallback": false
   }
 }
