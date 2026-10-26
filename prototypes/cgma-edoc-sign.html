@@ -13,14 +13,14 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 -apple-system,
 header{background:var(--teal);color:#fff;padding:18px 16px}
 header p{margin:0;font-size:13px;opacity:.85;letter-spacing:.04em}
 header h1{margin:2px 0 0;font-size:20px}
-main{width:min(820px,100%);margin:0 auto;padding:16px}
+main{width:min(820px,100%);margin:0 auto;padding:16px;overflow-wrap:anywhere}
 section{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;margin:0 0 14px}
 h2{font-size:17px;margin:0 0 10px}
 .meta{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px;margin:0}
 .meta dt{color:var(--muted)}.meta dd{margin:0;word-break:break-all}
-.hash{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
-.chain{display:flex;gap:8px;margin:0;padding:0;list-style:none;overflow-x:auto}
-.chain li{flex:1 1 0;min-width:120px;border:1px solid var(--line);border-radius:12px;padding:10px;font-size:14px;background:#fff}
+.hash{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;overflow-wrap:anywhere;word-break:break-all}
+.chain{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;margin:0;padding:0;list-style:none}
+.chain li{min-width:0;border:1px solid var(--line);border-radius:12px;padding:10px;font-size:14px;background:#fff;overflow-wrap:anywhere}
 .chain li[data-status="signed"]{border-color:var(--ok);background:#eef7f1}
 .chain li[data-status="active"]{border-color:var(--gold);box-shadow:0 0 0 2px #f1e3bd}
 .chain li[data-me="true"]{outline:2px solid var(--teal);outline-offset:2px}

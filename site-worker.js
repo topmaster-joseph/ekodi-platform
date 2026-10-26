@@ -319,7 +319,12 @@ function isMallVerificationOpsPath(pathname, prefix = MALL_PREFIX) {
   return pathname === `${prefix}/verification-ops`
     || pathname === `${prefix}/verification-ops/`
     || pathname === `${prefix}/assets/verification-ops`
-    || pathname === `${prefix}/assets/verification-ops.html`;
+    || pathname === `${prefix}/assets/verification-ops.html`
+    // EKODI-MALL-ORDER-OPS-001: 운영자 주문·발주 관리 화면도 같은 비공개(no-store·noindex) 운영면으로 처리.
+    || pathname === `${prefix}/order-ops`
+    || pathname === `${prefix}/order-ops/`
+    || pathname === `${prefix}/assets/order-ops`
+    || pathname === `${prefix}/assets/order-ops.html`;
 }
 
 function isLegacyMallPath(pathname) {

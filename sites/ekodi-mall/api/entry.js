@@ -20,6 +20,7 @@ import { commerceEventSchemaReady } from './commerce-events.js';
 import { reconcileMallPayments, inventorySchemaReady } from './payment-reconciliation.js';
 import { sweepExpiryWindow } from './shelf-life.js';
 import { handleCommerceOperationsRequest } from './commerce-operations.js';
+import { handleOrderOpsRequest } from './order-ops.js';
 import { handleAmazonRequest, amazonRuntimeStatus, amazonCostSchemaReady, amazonConnectionSchemaReady } from './amazon.js';
 import { handleAmazonReadonlyRequest, amazonReadSyncSchemaReady } from './amazon-readonly-sync.js';
 import { handleMarketingOrdersRequest } from './marketing-orders.js';
@@ -245,6 +246,8 @@ export default {
     const verification = await handleVerificationRequest(request, env);
     if (verification) return reply(verification.body, verification.status, origin, env);
 
+    const orderOps = await handleOrderOpsRequest(request, env);
+    if (orderOps) return reply(orderOps.body, orderOps.status, origin, env);
     const commerceOperations = await handleCommerceOperationsRequest(request, env);
     if (commerceOperations) return reply(commerceOperations.body, commerceOperations.status, origin, env);
 
