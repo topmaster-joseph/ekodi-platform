@@ -118,9 +118,11 @@ html[data-ekodi-user-ui][data-ekodi-user-layout="centered-v1"] [data-ekodi-user-
 }
 
 .ekodi-user-ui-fallback-header__inner {
+  max-width: 100%;
   width: min(var(--ekodi-user-content-inline-size, var(--ekodi-user-canvas-max)), calc(100% - 32px));
   min-height: var(--ekodi-user-header-fallback-height);
-  margin: 0 auto;
+  margin-left: var(--ekodi-user-content-left, auto);
+  margin-right: var(--ekodi-user-content-right, auto);
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
@@ -225,9 +227,11 @@ body:has([data-ekodi-user-header-root]:not(.ekodi-user-ui-fallback-header):not(.
 }
 
 .ekodi-user-ui-header-fallback .ekodi-user-ui-header-fallback__inner {
+  max-width: 100%;
   width: min(var(--ekodi-user-content-inline-size, var(--ekodi-user-canvas-max)), calc(100% - 32px));
   min-height: var(--ekodi-user-header-fallback-height);
-  margin: 0 auto;
+  margin-left: var(--ekodi-user-content-left, auto);
+  margin-right: var(--ekodi-user-content-right, auto);
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
@@ -346,8 +350,10 @@ html[data-ekodi-service="community"] .language-menu {
 }
 
 .ekodi-user-ui-footer__inner {
+  max-width: 100%;
   width: min(var(--ekodi-user-content-inline-size, var(--ekodi-user-canvas-max)), calc(100% - 32px));
-  margin: 0 auto;
+  margin-left: var(--ekodi-user-content-left, auto);
+  margin-right: var(--ekodi-user-content-right, auto);
   padding: 24px 0;
   display: flex;
   flex-direction: column;
