@@ -20,8 +20,8 @@
     { type: '구인구직', name: '에코디워크 · 구인구직', domain: 'ekodi.kr/work', url: 'https://ekodi.kr/work', label: 'ekodi.kr/work', section: 'work', fallback: 'services', group: 'worklife' },
     { type: '에너지', name: '에너지 AI', domain: 'energy.ekodi.kr', section: 'services', group: 'worklife' },
     { type: '보험', name: '에코디보험', domain: 'ekodi.kr/insurance', url: 'https://ekodi.kr/insurance', label: 'ekodi.kr/insurance', section: 'services', group: 'worklife', lifecycle: 'beta' },
-    { type: '메일', name: '에코디 메일', domain: 'mail.ekodi.kr', section: 'communication', fallback: 'services', group: 'communication', lifecycle: 'planned' },
-    { type: '라이브', name: '에코디 라이브', domain: 'live.ekodi.kr', section: 'communication', fallback: 'services', group: 'communication', lifecycle: 'planned' },
+    { type: '메일', name: '에코디 메일', domain: 'ekodi.kr/mail', section: 'communication', fallback: 'services', group: 'communication', lifecycle: 'planned' },
+    { type: '라이브', name: '에코디 라이브', domain: 'ekodi.kr/live', section: 'communication', fallback: 'services', group: 'communication', lifecycle: 'planned' },
     { type: '클라우드', name: '에코디 클라우드', domain: 'cloud.ekodi.kr', section: 'workspace', fallback: 'services', group: 'communication', lifecycle: 'planned' },
     { type: '미디어', name: '에코디미디어', domain: 'media.ekodi.kr', section: 'communication', fallback: 'services', group: 'communication', lifecycle: 'planned' },
     { type: '고객', name: '청계면상인회', domain: 'cgma.ekodi.kr', url: 'https://ekodi.kr/cgma/', label: 'ekodi.kr/cgma · cgma.or.kr', section: 'clients', fallback: 'services', group: 'clients' },
@@ -429,7 +429,7 @@
       const domain = normalizeDomain(service?.label || service?.domain || service?.url);
       if (!domain) continue;
       // A registry entry may name the same site by a legacy subdomain or by its
-      // canonical apex path (my.ekodi.kr vs ekodi.kr/my); match on either, then on name.
+      // canonical apex path (legacy host vs ekodi.kr/my); match on either, then on name.
       const key = surfaceKey(service);
       const name = String(service?.name || '').trim();
       const rows = [...grid.querySelectorAll('.campus-site-item')];

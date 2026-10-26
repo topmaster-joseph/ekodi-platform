@@ -15,14 +15,18 @@ test('registry reconciliation matches a site by domain, canonical apex path, the
   assert.match(block, /rows\.find\(row => normalizeDomain\(row\.dataset\.siteDomain\) === domain\)\n\s+\|\| rows\.find\(row => key && surfaceKey\(\{ domain: row\.dataset\.siteDomain \}\) === key\)\n\s+\|\| \(name \? rows\.find/);
 });
 
-test('legacy subdomains resolve to the same canonical apex path as registry entries', async () => {
-  const source = await read('admin-surface-labels.js');
+test('a legacy host row and its canonical apex registry entry share one surface key', async () => {
+  const [source, campus] = await Promise.all([read('admin-surface-labels.js'), read('campus-actions.js')]);
   const window = {};
   vm.runInNewContext(source, { window, URL });
   const key = value => new URL(window.EKODIAdminSurfaceLabels.info(value).url).pathname.replace(/\/+$/, '');
-  assert.equal(key('my.ekodi.kr'), key('ekodi.kr/my'));
-  assert.equal(key('mail.ekodi.kr'), '/mail');
-  assert.equal(key('live.ekodi.kr'), '/live');
+  const legacyMy = campus.match(/name: '마이 에코디', domain: '([^']+)'/)[1];
+  assert.equal(key(legacyMy), key('ekodi.kr/my'));
+  // Mail and Live are listed by their apex paths, so their admin roots resolve directly.
+  assert.match(campus, /name: '에코디 메일', domain: 'ekodi\.kr\/mail'/);
+  assert.match(campus, /name: '에코디 라이브', domain: 'ekodi\.kr\/live'/);
+  assert.equal(key('ekodi.kr/mail'), '/mail');
+  assert.equal(key('ekodi.kr/live'), '/live');
 });
 
 test('work, mail and live open their own admin roots below the strip', async () => {
