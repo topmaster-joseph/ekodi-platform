@@ -236,7 +236,8 @@ jobs:
           grep -Fq '<loc>https://ekodi.kr/ekodimall/' /tmp/mall-sitemap.xml || { echo 'Mall sitemap has no canonical Mall URLs'; exit 1; }
           # Affiliate disclosure must be visible without JavaScript on the storefront and the Coupang hub.
           grep -Fq '쿠팡 파트너스 활동의 일환으로' /tmp/mall.html || { echo 'Storefront static Coupang disclosure missing'; exit 1; }
-          c 'https://ekodi.kr/ekodimall/coupang/' | grep -Fq '쿠팡 파트너스 활동의 일환으로' || { echo 'Coupang hub disclosure missing'; exit 1; }
+          c 'https://ekodi.kr/ekodimall/coupang/' -o /tmp/mall-coupang.html
+          grep -Fq '쿠팡 파트너스 활동의 일환으로' /tmp/mall-coupang.html || { echo 'Coupang hub disclosure missing'; exit 1; }
           # Privacy notice must describe what the code actually stores.
           c 'https://ekodi.kr/ekodimall/pages/privacy/' -o /tmp/mall-privacy.html
           grep -Fq '무작위 방문자 식별값' /tmp/mall-privacy.html || { echo 'Mall privacy notice does not match implemented processing'; exit 1; }
