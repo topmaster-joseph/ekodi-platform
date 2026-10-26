@@ -1,0 +1,38 @@
+.dv-hero{text-align:center;padding:26px 16px 14px;background:linear-gradient(180deg,#eef5f0,#f7f8f5);border-bottom:1px solid #e1e7e1}
+.dv-hero h1{font-size:clamp(1.55rem,4vw,2.2rem);margin:2px 0}
+.dv-datebar{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:12px}
+.dv-datebar a{text-decoration:none;font-size:.9rem;padding:7px 12px}
+.dv-datebar strong{min-width:150px}
+.dv-main{max-width:760px;margin:auto;padding:22px 16px 70px}
+.dv-card{background:#fff;border:1px solid #dde4de;border-radius:20px;padding:22px;margin:0 0 16px;box-shadow:0 8px 30px rgba(24,49,37,.04);scroll-margin-top:80px}
+.dv-card[hidden],.dv-jump[hidden]{display:none}
+.dv-card h2{margin:6px 0 4px;font-size:1.5rem;color:#203f31}
+.dv-card h3{margin:6px 0 10px;font-size:1.2rem}
+.dv-card-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.dv-theme{margin:2px 0;font-weight:700;color:#52665c}
+.dv-keyline{margin:12px 0;padding:14px 16px;border-left:4px solid #315e48;background:#f1f5f1;border-radius:0 12px 12px 0;font-size:1.05rem}
+.dv-scripture summary{cursor:pointer;font-weight:700;color:#315e48;padding:6px 0}
+.dv-scripture .bible-verses p{margin:4px 0}
+.dv-scripture sup{color:#7a8a80;margin-right:2px}
+.dv-chapter{font-weight:700;color:#52665c;margin-top:10px!important}
+.dv-share-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.dv-share-row a{text-decoration:none}
+.dv-jump{position:sticky;top:0;z-index:5;display:flex;gap:6px;overflow-x:auto;padding:10px 0;margin-bottom:8px;background:#f7f8f5}
+.dv-jump a{flex:none;text-decoration:none;color:#304a3c;border:1px solid #cfd9d1;background:#fff;border-radius:999px;padding:6px 12px;font-size:.88rem}
+.dv-mini{border:1px solid #cfd9d1;background:#fff;color:#304a3c;border-radius:999px;padding:4px 12px;font-size:.82rem;font-weight:700}
+.dv-poem p,.dv-song p{margin:2px 0;line-height:1.85}
+.dv-poem{font-family:"Nanum Myeongjo","Noto Serif KR",serif;font-size:1.05rem}
+.dv-refrain{margin-top:12px;padding:12px 14px;border-radius:12px;background:#f6f3e8}
+.dv-refrain small{display:block;margin-bottom:4px}
+.dv-questions{padding-left:20px;margin:6px 0}
+.dv-questions li{margin:10px 0}
+.dv-tag{display:inline-block;font-size:.75rem;font-weight:700;color:#fff;background:#315e48;border-radius:999px;padding:1px 9px;margin-right:4px}
+.dv-check{display:flex;gap:10px;align-items:flex-start;font-size:1.02rem}
+.dv-check input{width:20px;height:20px;margin-top:4px;flex:none}
+.dv-prayer{font-style:italic;font-size:1.05rem}
+#dvMine{width:100%;border:1px solid #cfd9d1;border-radius:12px;padding:10px;resize:vertical}
+.dv-notice{font-size:.85rem;color:#647269;text-align:center;margin-top:20px}
+.dv-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);max-width:calc(100% - 32px);background:#203f31;color:#fff;padding:10px 16px;border-radius:12px;opacity:0;pointer-events:none;transition:opacity .2s;word-break:break-all;z-index:50}
+.dv-toast.show{opacity:1}
+.dv-offscreen{position:fixed;left:-9999px;top:0}
+@media (max-width:520px){.dv-card{padding:18px;border-radius:16px}.dv-datebar strong{min-width:0;font-size:.95rem}}

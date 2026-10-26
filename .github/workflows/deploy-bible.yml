@@ -16,6 +16,11 @@ on:
       - 'bible/**'
       - 'bible-core.js'
       - 'bible-worker.js'
+      - 'devotional-activities.js'
+      - 'common-scripture-registry.js'
+      - 'config/common-scripture/**'
+      - 'config/devotional-activities/**'
+      - 'test/bible-devotion.test.mjs'
       - 'scripts/validate-bible-core.mjs'
       - 'scripts/vendor-krv-data.mjs'
       - 'test/bible-core.test.mjs'
@@ -35,6 +40,11 @@ on:
       - 'bible/**'
       - 'bible-core.js'
       - 'bible-worker.js'
+      - 'devotional-activities.js'
+      - 'common-scripture-registry.js'
+      - 'config/common-scripture/**'
+      - 'config/devotional-activities/**'
+      - 'test/bible-devotion.test.mjs'
       - 'scripts/validate-bible-core.mjs'
       - 'scripts/vendor-krv-data.mjs'
       - 'test/bible-core.test.mjs'
@@ -79,16 +89,20 @@ jobs:
           node --check bible/books.js
           node --check bible/reader.js
           node --check bible/app.js
+          node --check bible/devotion.js
+          node --check devotional-activities.js
           node --check scripts/validate-bible-core.mjs
           node --check scripts/vendor-krv-data.mjs
           node scripts/validate-bible-core.mjs
-          node --test test/bible-core.test.mjs
+          node --test test/bible-core.test.mjs test/bible-devotion.test.mjs
           node --check ekodi-service-manifest.js
           node -e "JSON.parse(require('fs').readFileSync('platform-boundaries.json','utf8'))"
           node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/bible.worker.json','utf8'))"
           grep -Fq '에코디 말씀대화' bible/index.html
           grep -Fq '정답보다 질문에서 시작합니다.' bible/index.html
           grep -Fq '돌아보기' bible/index.html
+          grep -Fq 'href="/bible/devotion"' bible/index.html
+          grep -Fq '<!--EKODI_DEVOTION_META-->' bible/devotion.html
           grep -Fq '공동체 피드' bible/index.html
           grep -Fq 'bible_shared_feed' supabase/bible-conversation.sql
           grep -Fq 'bible_content_plans for select to authenticated' supabase/bible-conversation.sql
@@ -155,11 +169,16 @@ jobs:
             conversation=$(curl -L -sS -o /tmp/bible-stage-conversation.html -w '%{http_code}' --max-time 15 "$verify_base/conversation" || true)
             journey=$(curl -L -sS -o /tmp/bible-stage-journey.html -w '%{http_code}' --max-time 15 "$verify_base/journey" || true)
             together=$(curl -L -sS -o /tmp/bible-stage-together.html -w '%{http_code}' --max-time 15 "$verify_base/together" || true)
+            devotion=$(curl -L -sS -o /tmp/bible-stage-devotion.html -w '%{http_code}' --max-time 15 "$verify_base/devotion/2026-10-26" || true)
+            devotion_api=$(curl -sS -o /tmp/bible-stage-devotion.json -w '%{http_code}' --max-time 15 "$verify_base/api/bible/devotion?date=2026-10-26" || true)
             health=$(curl -sS -o /tmp/bible-stage-health.json -w '%{http_code}' --max-time 15 "$verify_base/health" || true)
             config=$(curl -sS -o /tmp/bible-stage-config.js -w '%{http_code}' --max-time 15 "$verify_base/config.js" || true)
             assist=$(curl -sS -o /tmp/bible-stage-assist.json -w '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{"message":"앞으로가 불안해요","topic":"믿음"}' "$verify_base/api/assist" || true)
-            if [[ "$root" == '200' && "$today" == '200' && "$reader" == '200' && "$providers" == '200' && "$passage" == '200' && "$protected" == '200' && "$conversation" == '200' && "$journey" == '200' && "$together" == '200' && "$health" == '200' && "$config" == '200' && "$assist" == '401' ]] \
+            if [[ "$root" == '200' && "$today" == '200' && "$reader" == '200' && "$providers" == '200' && "$passage" == '200' && "$protected" == '200' && "$conversation" == '200' && "$journey" == '200' && "$together" == '200' && "$devotion" == '200' && "$devotion_api" == '200' && "$health" == '200' && "$config" == '200' && "$assist" == '401' ]] \
               && grep -Fq '에코디 말씀대화' /tmp/bible-stage.html \
+              && grep -Fq 'og:title" content="에코디 매일묵상 · 오바댜 1:17-21"' /tmp/bible-stage-devotion.html \
+              && grep -Fq '"activitySource":"curated"' /tmp/bible-stage-devotion.json \
+              && grep -Fq '"integrity":"verbatim"' /tmp/bible-stage-devotion.json \
               && grep -Fq 'EKODI Bible Core' /tmp/bible-stage-reader.html \
               && grep -Fq '"defaultProvider":"KRV1961"' /tmp/bible-stage-providers.json \
               && grep -Fq '태초에 하나님이 천지를 창조하시니라' /tmp/bible-stage-passage.json \
@@ -239,14 +258,19 @@ jobs:
             conversation=$(curl -L -sS -o /tmp/bible-conversation.html -w '%{http_code}' --max-time 15 'https://ekodi.kr/bible/conversation' || true)
             journey=$(curl -L -sS -o /tmp/bible-journey.html -w '%{http_code}' --max-time 15 'https://ekodi.kr/bible/journey' || true)
             together=$(curl -L -sS -o /tmp/bible-together.html -w '%{http_code}' --max-time 15 'https://ekodi.kr/bible/together' || true)
+            devotion=$(curl -L -sS -o /tmp/bible-devotion.html -w '%{http_code}' --max-time 15 'https://ekodi.kr/bible/devotion/2026-10-26' || true)
+            devotion_api=$(curl -sS -o /tmp/bible-devotion.json -w '%{http_code}' --max-time 15 'https://ekodi.kr/bible/api/bible/devotion?date=2026-10-26' || true)
             health=$(curl -sS -o /tmp/bible-health.json -w '%{http_code}' --max-time 15 'https://ekodi.kr/bible/health' || true)
             config=$(curl -sS -o /tmp/bible-config.js -w '%{http_code}' --max-time 15 'https://ekodi.kr/bible/config.js' || true)
             assist=$(curl -sS -o /tmp/bible-assist.json -w '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{"message":"앞으로가 불안해요","topic":"믿음"}' 'https://ekodi.kr/bible/api/assist' || true)
             admin=$(curl -sS -o /dev/null -D /tmp/bible-admin-h -w '%{http_code}' --max-time 15 'https://ekodi.kr/bible/admin' || true)
             legacy=$(curl -sS -o /dev/null -D /tmp/bible-legacy-h -w '%{http_code}' --max-time 15 'https://bible.ekodi.kr/reader?provider=KRV1961' || true)
             case "$admin" in 301|302|303|307|308) admin_redirect=true;; *) admin_redirect=false;; esac
-            if [[ "$root" == '200' && "$today" == '200' && "$reader" == '200' && "$providers" == '200' && "$passage" == '200' && "$protected" == '200' && "$conversation" == '200' && "$journey" == '200' && "$together" == '200' && "$health" == '200' && "$config" == '200' && "$assist" == '401' && "$admin_redirect" == 'true' && "$legacy" == '308' ]] \
+            if [[ "$root" == '200' && "$today" == '200' && "$reader" == '200' && "$providers" == '200' && "$passage" == '200' && "$protected" == '200' && "$conversation" == '200' && "$journey" == '200' && "$together" == '200' && "$devotion" == '200' && "$devotion_api" == '200' && "$health" == '200' && "$config" == '200' && "$assist" == '401' && "$admin_redirect" == 'true' && "$legacy" == '308' ]] \
               && grep -Fq '에코디 말씀대화' /tmp/bible.html \
+              && grep -Fq 'og:title" content="에코디 매일묵상 · 오바댜 1:17-21"' /tmp/bible-devotion.html \
+              && grep -Fq '"activitySource":"curated"' /tmp/bible-devotion.json \
+              && grep -Fq '"integrity":"verbatim"' /tmp/bible-devotion.json \
               && grep -Fq '오늘의 말씀대화' /tmp/bible-today.html \
               && grep -Fq 'EKODI Bible Core' /tmp/bible-reader.html \
               && grep -Fq '"defaultProvider":"KRV1961"' /tmp/bible-providers.json \
