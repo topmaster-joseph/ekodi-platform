@@ -152,7 +152,7 @@ export function applyPlatformSecurityHeaders(response,request){
     && ['GET','HEAD'].includes(request.method.toUpperCase())
     && url.searchParams.get('embed')==='church-online'
     && url.searchParams.get('mode')==='viewer'
-    && /^\/ekodichurch\/live\/(?:index\.html)?$/i.test(url.pathname)
+    && /^(?:\/ekodichurch\/live\/(?:index\.html)?|\/live\/church\/)$/i.test(url.pathname)
     && /^text\/html(?:;|$)/i.test(String(headers.get('Content-Type')||''))
     && /(?:^|;)\s*frame-ancestors\s+'self'\s*(?:;|$)/i.test(responseCsp);
   if(firstPartyChurchLiveViewer)headers.set('X-Frame-Options','SAMEORIGIN');
