@@ -80,7 +80,7 @@ test('devotion API returns verbatim KRV verses for a cross-chapter day', async (
 
 test('devotion API rejects invalid dates and 404s unregistered months', async () => {
   assert.equal((await worker.fetch(new Request('https://ekodi.kr/bible/api/bible/devotion?date=2026-99-99'), assetEnv())).status, 400);
-  assert.equal((await worker.fetch(new Request('https://ekodi.kr/bible/api/bible/devotion?date=2026-11-03'), assetEnv())).status, 404);
+  assert.equal((await worker.fetch(new Request('https://ekodi.kr/bible/api/bible/devotion?date=2099-11-03'), assetEnv())).status, 403);
 });
 
 test('dated share link renders KakaoTalk-ready Open Graph tags without HTML injection', async () => {
@@ -112,11 +112,16 @@ test('devotion assets ship without inline script or style (CSP self-only)', () =
   assert.match(fs.readFileSync(new URL('index.html', bibleDir), 'utf8'), /href="\/bible\/devotion"/);
 });
 
-test('shared renderer exposes one-panel-at-a-time tabs for every activity', () => {
+test('shared renderer keeps canonical Scripture visible and merges response sections', () => {
   const js = fs.readFileSync(new URL('devotion.js', bibleDir), 'utf8');
-  for (const id of ['passage', 'poem', 'song', 'questions', 'family', 'action', 'prayer', 'mine']) assert.ok(js.includes(`id: '${id}'`), id);
-  assert.match(js, /panels\.get\(tabId\)\.hidden = !on/);
+  for (const id of ['poem','song','image','questions','family','prayer']) assert.ok(js.includes(`id: '${id}'`), id);
+  for (const former of ['passage','action','mine']) assert.equal(js.includes(`id: '${former}'`), false, former);
+  assert.match(js, /renderPassage\\(scriptureBlock, data\\)/);
+  assert.match(js, /panels\\.get\\(tabId\\)\\.hidden = !on/);
   assert.match(js, /data-date-mode|dateMode === 'query'/);
+  assert.match(js, /renderScore\\(score,a\\.song\\.abc\\)/);
+  assert.match(js, /setupMrPlayer\\(a\\.song\\)/);
+  assert.match(js, /renderAdminEditor\\(data\\)/);
 });
 
 test('church and mission devotion pages mount the shared renderer with their own chrome', () => {
@@ -128,4 +133,22 @@ test('church and mission devotion pages mount the shared renderer with their own
   assert.doesNotMatch(mission, /style="/);
   assert.match(fs.readFileSync(new URL('../space-worker.js', import.meta.url), 'utf8'), /\['\/ekodimission\/devotion','\/ekodimission-devotion\.page'\]/);
   assert.match(fs.readFileSync(new URL('../space/ekodimission-shell.js', import.meta.url), 'utf8'), /href:'\/ekodimission\/devotion',label:'매일묵상'/);
+});
+
+test('future content is not exposed to unauthenticated clients or link crawlers',async()=>{
+  const api=await worker.fetch(new Request('https://ekodi.kr/bible/api/bible/devotion?date=2099-01-01'),assetEnv());
+  assert.equal(api.status,403);
+  assert.equal((await api.json()).error,'future_unavailable');
+  const preview=await worker.fetch(new Request('https://ekodi.kr/bible/devotion/2099-01-01'),assetEnv());
+  assert.equal(preview.status,200);
+  const html=await preview.text();
+  assert.doesNotMatch(html,/2099-01-01.*오바댜/);
+  assert.match(html,/오늘의 매일묵상/);
+});
+test('attribution and October original score are present',()=>{
+  assert.equal(activities.notice,'묵상 적용(시·노래·질문·기도)은 에코디언 정찬균목사가 공통본문을 바탕으로 AI 도움을 받아 만든 창작 묵상 자료입니다. 성경 본문은 개역한글(대한성서공회, 1961) 원문을 그대로 표시합니다.');
+  const song=activities.days.find(d=>d.day===26)?.song;
+  assert.match(song?.abc||'',/^X:1/);
+  assert.match(song.abc,/K:G/);
+  assert.ok(fs.existsSync(new URL('devotion-illustration.svg',bibleDir)));
 });
