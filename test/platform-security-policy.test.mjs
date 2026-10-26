@@ -179,14 +179,15 @@ test('Church iframe opt-in is exact-path, same-origin, document-only and CSP-gat
   assert.match(viewer.headers.get('content-security-policy')||'',/frame-ancestors 'self'/);
   for(const path of [
     '/ekodichurch/live/?mode=studio',
+    '/ekodichurch/live/?mode=studio&embed=church-online',
     '/ekodichurch/live/?mode=studio&embed=church-online-extra',
     '/ekodichurch/?embed=church-online',
     '/ekodichurch/admin?embed=church-online',
     '/live/church/?embed=church-online',
     '/ekodichurch/live/live.js?embed=church-online'
   ])assert.equal(policy(path).headers.get('x-frame-options'),'DENY',path);
-  assert.equal(policy('/ekodichurch/live/?embed=church-online',"frame-ancestors 'none'").headers.get('x-frame-options'),'DENY');
-  assert.equal(policy('/ekodichurch/live/?embed=church-online',csp,{'content-type':'application/javascript'}).headers.get('x-frame-options'),'DENY');
+  assert.equal(policy('/ekodichurch/live/?mode=viewer&embed=church-online',"frame-ancestors 'none'").headers.get('x-frame-options'),'DENY');
+  assert.equal(policy('/ekodichurch/live/?mode=viewer&embed=church-online',csp,{'content-type':'application/javascript'}).headers.get('x-frame-options'),'DENY');
   const crossDomain=applyPlatformSecurityHeaders(new Response('<html></html>',{headers:{
     'content-type':'text/html','content-security-policy':csp
   }}),new Request('https://malicious.example/ekodichurch/live/?embed=church-online'));
