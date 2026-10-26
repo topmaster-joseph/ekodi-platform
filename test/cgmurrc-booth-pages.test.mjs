@@ -27,7 +27,23 @@ test('the member page identifies itself only by the personal key, never by a mem
 test('the admin page never persists issued links and renders without innerHTML',()=>{
   const js=read('prototypes/cgmurrc-booth-admin.js');
   assert.doesNotMatch(js,/localStorage|innerHTML/);
-  assert.doesNotMatch(js,/sessionStorage\.setItem/);
+  // The only thing written to storage is the tab-scoped admin session, never an issued member link.
+  const writes=js.match(/sessionStorage\.setItem\([^)]*\)/g)||[];
+  assert.deepEqual(writes,['sessionStorage.setItem(SESSION_KEY,JSON.stringify(v)']);
+});
+
+test('the admin page offers a real login button and never hangs on loading',()=>{
+  const html=read('prototypes/cgmurrc-booth-admin.html');
+  // A plain link, so login works even before (or without) the script.
+  assert.match(html,/<a id="loginBtn" class="button" href="\/auth\/\?site=space&amp;direct=1&amp;return_to=https%3A%2F%2Fekodi\.kr%2Fcgmurrc%2Fbooth%2Fadmin%2F">/);
+  assert.match(html,/id="retry"/);
+  const js=read('prototypes/cgmurrc-booth-admin.js');
+  assert.match(js,/ekodi_token/);
+  assert.match(js,/history\.replaceState\(null,'',location\.pathname\+location\.search\)/,'one-use token removed from the address bar');
+  assert.match(js,/\/auth\/v1\/verify/);
+  assert.ok((js.match(/AbortSignal\.timeout\(TIMEOUT_MS\)/g)||[]).length>=2,'every request is bounded');
+  assert.match(js,/credentials:bearer\?'omit':'same-origin'/,'a signed-in request does not also send the cookie');
+  assert.match(html,/a\.button\[hidden\]\{display:none\}/,'the login button really hides after sign-in');
 });
 
 test('build ships the booth pages and convergent merges dispatch Site Core',()=>{

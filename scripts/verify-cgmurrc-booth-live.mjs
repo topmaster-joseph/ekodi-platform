@@ -57,6 +57,15 @@ async function main(){
   check('회원 화면 스크립트 제공',p.status===200&&p.has,`HTTP ${p.status}`);
   p=await page('/cgmurrc/booth/admin/','/cgmurrc/booth/admin/app.js');
   check('관리자 화면 /cgmurrc/booth/admin/ 제공',p.status===200&&p.has,`HTTP ${p.status}`);
+  p=await page('/cgmurrc/booth/admin/','id="loginBtn"');
+  check('관리자 화면에 로그인 버튼',p.status===200&&p.has,`HTTP ${p.status}`);
+  const adminJs=await fetch(BASE+'/cgmurrc/booth/admin/app.js',{redirect:'manual'});
+  const adminJsText=await adminJs.text();
+  check('관리자 화면 스크립트 제공(자바스크립트 형식)',adminJs.status===200&&/javascript/i.test(adminJs.headers.get('content-type')||'')&&adminJsText.includes('ekodi_token'),
+    `HTTP ${adminJs.status} ${adminJs.headers.get('content-type')||''}`);
+  const started=Date.now();
+  const anon=await call('/admin');
+  check('로그인 없는 관리자 API는 바로 401',anon.status===401&&Date.now()-started<10000,`HTTP ${anon.status} ${Date.now()-started}ms`);
 
   // Authentication of personal links
   let r=await call('/me');
