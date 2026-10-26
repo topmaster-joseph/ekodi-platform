@@ -116,12 +116,12 @@ test('shared renderer keeps canonical Scripture visible and merges response sect
   const js = fs.readFileSync(new URL('devotion.js', bibleDir), 'utf8');
   for (const id of ['poem','song','image','questions','family','prayer']) assert.ok(js.includes(`id: '${id}'`), id);
   for (const former of ['passage','action','mine']) assert.equal(js.includes(`id: '${former}'`), false, former);
-  assert.match(js, /renderPassage\\(scriptureBlock, data\\)/);
-  assert.match(js, /panels\\.get\\(tabId\\)\\.hidden = !on/);
+  assert.match(js, /renderPassage\(scriptureBlock, data\)/);
+  assert.match(js, /panels\.get\(tabId\)\.hidden = !on/);
   assert.match(js, /data-date-mode|dateMode === 'query'/);
-  assert.match(js, /renderScore\\(score,a\\.song\\.abc\\)/);
-  assert.match(js, /setupMrPlayer\\(a\\.song\\)/);
-  assert.match(js, /renderAdminEditor\\(data\\)/);
+  assert.match(js, /renderScore\(score,a\.song\.abc\)/);
+  assert.match(js, /setupMrPlayer\(a\.song\)/);
+  assert.match(js, /renderAdminEditor\(data\)/);
 });
 
 test('church and mission devotion pages mount the shared renderer with their own chrome', () => {
