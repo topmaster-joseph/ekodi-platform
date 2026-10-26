@@ -119,7 +119,7 @@ for (const category of categories) {
 }
 
 if (userShell?.principles?.persistentChromeHeaderFooterOnly !== true) errors.push('user shell must keep persistent chrome to shared header and footer only.');
-if (userShell?.header?.owner !== 'shared-shell' || userShell?.footer?.owner !== 'shared-shell') errors.push('user shared header/footer ownership drifted.');
+if (userShell?.header?.owner !== 'service' || userShell?.footer?.owner !== 'service' || userShell?.principles?.siteOwnedHeaderFooter !== true || userShell?.principles?.ekodiCopyrightAlways !== true) errors.push('Site chrome must remain operator-owned with mandatory EKODI attribution.');
 if (userShell?.adminExcluded !== true) errors.push('user shell must remain excluded from admin surfaces.');
 if (!Array.isArray(userDna?.shared?.mustVary) || userDna.shared.mustVary.length < 7) errors.push('user UI DNA must preserve service-specific visual variation.');
 if (!theme?.services || Object.keys(theme.services).length < 10) errors.push('shell theme must keep service-specific identities instead of one universal skin.');

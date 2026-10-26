@@ -313,7 +313,7 @@ function findHomeAnchor(header){
   for(const selector of selectors){const node=header?.querySelector(selector);if(node instanceof HTMLAnchorElement)return node;}
   return null;
 }
-function applySiteChromeHeader(header,chrome){const cfg=chrome?.header;if(!header||!cfg)return;const home=findHomeAnchor(header);if(home&&cfg.homeUrl)home.setAttribute('href',isIndividualSite()?serviceHomeUrl().toString():String(cfg.homeUrl));pruneIndividualSiteGlobalLinks(header);const fallback=header.hasAttribute(FALLBACK_ATTR);const siteNode=fallback?header.querySelector('.ekodi-user-ui-header-fallback__brand'):header.querySelector('[data-ekodi-header-site-name],[data-ekodi-site-name],.brand-title,.site-title');if(siteNode&&cfg.siteName)siteNode.textContent=String(cfg.siteName);const taglineNode=fallback?header.querySelector('.ekodi-user-ui-header-fallback__context'):header.querySelector('[data-ekodi-header-tagline]');if(taglineNode){const base=String(cfg.tagline||cfg.siteName||serviceLabel());taglineNode.textContent=base;}ensureOperatingSpaceLabel(header,siteNode||operatingSpaceTarget(header));header.dataset.ekodiSiteChrome='v1';window.dispatchEvent(new CustomEvent('ekodi:site-chrome',{detail:{subjectKey:chrome.subjectKey||siteSubject(),header:cfg}}))}
+function applySiteChromeHeader(header,chrome){const cfg=chrome?.header;if(!header||!cfg||header.dataset.ekodiSiteChrome==='v1')return;const home=findHomeAnchor(header);if(home&&cfg.homeUrl)home.setAttribute('href',isIndividualSite()?serviceHomeUrl().toString():String(cfg.homeUrl));pruneIndividualSiteGlobalLinks(header);const fallback=header.hasAttribute(FALLBACK_ATTR);const siteNode=fallback?header.querySelector('.ekodi-user-ui-header-fallback__brand'):header.querySelector('[data-ekodi-header-site-name],[data-ekodi-site-name],.brand-title,.site-title');if(siteNode&&cfg.siteName)siteNode.textContent=String(cfg.siteName);const taglineNode=fallback?header.querySelector('.ekodi-user-ui-header-fallback__context'):header.querySelector('[data-ekodi-header-tagline]');if(taglineNode){const base=String(cfg.tagline||cfg.siteName||serviceLabel());taglineNode.textContent=base;}ensureOperatingSpaceLabel(header,siteNode||operatingSpaceTarget(header));header.dataset.ekodiSiteChrome='v1';window.dispatchEvent(new CustomEvent('ekodi:site-chrome',{detail:{subjectKey:chrome.subjectKey||siteSubject(),header:cfg}}))}
 function bindHomeAnchor(header){
   const anchor=findHomeAnchor(header);if(!anchor)return;
   const localAnchor=serviceHomeAnchor();
@@ -367,6 +367,18 @@ function detach(){
 }
 function attach(header){
   if(!header||!shouldEnable())return;
+  // Existing site chrome is site-owned: preserve its position, typography,
+  // navigation layout and responsive behavior. Shell manages only the fallback.
+  if(isIndividualSite()&&!header.hasAttribute(FALLBACK_ATTR)){
+    if(activeHeader!==header)detach();
+    activeHeader=header;
+    header.dataset.ekodiHeaderScope='service-local';
+    pruneIndividualSiteGlobalLinks(header);
+    bindHomeAnchor(header);
+    void siteChrome().then(chrome=>applySiteChromeHeader(header,chrome));
+    window.dispatchEvent(new CustomEvent('ekodi:user-header-ready',{detail:{version:VERSION,surface:surface(),native:true,fallback:false}}));
+    return;
+  }
   pruneIndividualSiteGlobalLinks(header);
   bindHomeAnchor(header);
   ensureOperatingSpaceLabel(header);
@@ -420,7 +432,7 @@ function schedule(){
 window.EKODIUserUIHeader=Object.freeze({
   version:VERSION,
   refresh:schedule,
-  getState:()=>({enabled:shouldEnable(),surface:surface(),mode:mode(),attached:Boolean(activeHeader),centered:Boolean(activeCenter),fallback:Boolean(activeHeader?.hasAttribute(FALLBACK_ATTR)),contentFrame:document.documentElement.dataset.ekodiContentFrame||''})
+  getState:()=>({enabled:shouldEnable(),surface:surface(),mode:mode(),attached:Boolean(activeHeader),native:Boolean(activeHeader&&isIndividualSite()&&!activeHeader.hasAttribute(FALLBACK_ATTR)),centered:Boolean(activeCenter),fallback:Boolean(activeHeader?.hasAttribute(FALLBACK_ATTR)),contentFrame:document.documentElement.dataset.ekodiContentFrame||''})
 });
 window.addEventListener('ekodi:shell-theme',schedule);
 window.addEventListener('ekodi:surface-change',schedule);

@@ -1,8 +1,8 @@
 {
-  "version": 16,
+  "version": 17,
   "name": "EKODI User UI Shell",
   "parentPolicy": "config/user-ui-dna.json",
-  "purpose": "Keep one EKODI user experience while allowing each service to preserve its own visual family, with persistent common chrome limited to one shared header and one shared footer.",
+  "purpose": "Each operating entity owns its own header/footer, navigation, design and correct operator information. EKODI shares technical contracts, fallback only where missing, and mandatory EKODI copyright.",
   "scope": [
     "public",
     "workspace"
@@ -39,12 +39,14 @@
     "transientCharacterFlashForbidden": true,
     "publicSiteOperationalRoleLabelsForbidden": true,
     "singlePublishedLocaleHidesLanguageControl": true,
-    "languageControlHiddenUntilReadinessResolved": true
+    "languageControlHiddenUntilReadinessResolved": true,
+    "siteOwnedHeaderFooter": true,
+    "ekodiCopyrightAlways": true
   },
   "header": {
-    "owner": "shared-shell",
-    "strategy": "adopt-existing-first",
-    "fallback": "shared-shell-header-when-missing",
+    "owner": "service",
+    "strategy": "adopt-site-native-first",
+    "fallback": "site-identity-fallback-when-missing",
     "requiredMeaning": [
       "current site identity",
       "current service context",
@@ -84,20 +86,22 @@
     "surfaceMeaning": {
       "public": "brand and service identity only; do not expose internal operating-space or administrator terminology",
       "workspace": "operating context may be shown when it helps distinguish an authenticated workspace"
-    }
+    },
+    "nativeStyleAuthority": "site-owned; shell may not override adopted native positioning, typography or layout"
   },
   "footer": {
-    "owner": "shared-shell",
-    "strategy": "shell-supplied",
-    "contentSource": "config/user-footer.js",
-    "layout": "centered single-column operator copy and legal links; wrap naturally on narrow screens",
+    "owner": "service",
+    "strategy": "native-site-footer-first",
+    "contentSource": "site chrome per operator with config/user-footer.js reserved for EKODI-only fallback",
+    "layout": "site-designed when present; centered site-specific fallback only when absent",
     "alignment": "center",
-    "themePolicy": "inherit each service typography, palette and visual mood; optional --ekodi-user-footer-* tokens may refine it",
-    "serviceExtension": "append-only",
+    "themePolicy": "inherit each service typography, palette and visual mood for fallback only; never override site native footers",
+    "serviceExtension": "site-owned",
     "separatePolicyPrecedence": true,
-    "dedupe": "exactly-one-shared-footer",
+    "dedupe": "exactly-one-footer-per-site",
     "languageChoice": "forbidden",
-    "contentWidth": "match-adopted-main-canvas"
+    "contentWidth": "match-adopted-main-canvas",
+    "copyright": "EKODI (에코디) attribution cannot be overridden by site administrator"
   },
   "language": {
     "owner": "shared-shell",

@@ -172,14 +172,14 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(sharedCss,/color:\s*var\(--ekodi-user-footer-text,\s*inherit\)/);
   assert.match(sharedCss,/font-family:\s*inherit/);
   assert.match(sharedCss,/\.ekodi-user-ui-footer__scope/);
-  assert.match(sharedCss,/\[data-ekodi-legal-footer\]:not\(\.ekodi-user-ui-footer\)/);
+  assert.match(sharedCss,/\[data-ekodi-legal-footer\]:not\(\.ekodi-user-ui-footer\):not\(\[data-ekodi-service-footer\]\)/);
   assert.doesNotMatch(sharedCss,/\.ekodi-user-ui-footer\s*\{[^}]*rgba\(250,\s*250,\s*247/is);
   assert.doesNotMatch(sharedCss,/\.ekodi-user-ui-footer\s*\{[^}]*rgba\(16,\s*21,\s*18/is);
 
   assert.match(injector,/SHELL_USER_UI_STYLE=`\$\{SHELL_ORIGIN\}\/user-ui-shell\.css\?v=\$\{EKODI_SERVICE_MANIFEST\.shellVersion\}`/);
   assert.match(injector,/renderEkodiUserFooter/);
   assert.match(injector,/options\?\.existingHeader!==true/);
-  assert.match(injector,/new UserChromeInjector\(serviceId,addFallbackHeader\)/);
+  assert.match(injector,/new UserChromeInjector\(serviceId,addFallbackHeader,footerState\)/);
   assert.match(injector,/data-ekodi-user-ui-style/);
   assert.match(injector,/platformRoot\?'platform':'service-local'/);
   assert.match(injector,/platformRoot\?'[^']*사용자 계정':'사이트 도구'/);
@@ -189,9 +189,9 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.doesNotMatch(injector,/data-ekodi-user-ui-shell-style/);
 
   const parsedPolicy=JSON.parse(shellPolicy);
-  assert.equal(parsedPolicy.footer.contentSource,'config/user-footer.js');
+  assert.match(parsedPolicy.footer.contentSource,/site chrome per operator/);
   assert.equal(parsedPolicy.footer.alignment,'center');
-  assert.equal(parsedPolicy.footer.dedupe,'exactly-one-shared-footer');
+  assert.equal(parsedPolicy.footer.dedupe,'exactly-one-footer-per-site');
   assert.equal(parsedPolicy.footer.languageChoice,'forbidden');
   assert.equal(parsedPolicy.language.placement,'header-only');
   assert.equal(parsedPolicy.language.controlGeometry,'pill');
@@ -232,4 +232,15 @@ test('user UI header/footer/language are shared user-surface-only modules',async
 
   assert.match(principles,/관리자 화면\(`admin`\)/);
   assert.match(principles,/각 사이트의 브랜드, 목적, 사용자 흐름/);
+});
+
+
+test('site-owned chrome takes precedence over shell-generated layout',async()=>{
+  const [header,footer]=await Promise.all([read('shell/user-ui-header.js'),read('shell/user-ui-footer.js')]);
+  assert.match(header,/isIndividualSite\(\)&&!header\.hasAttribute\(FALLBACK_ATTR\)/);
+  assert.match(header,/native:true,fallback:false/);
+  assert.match(footer,/function nativeFooter\(\)/);
+  assert.match(footer,/function creditNativeFooter\(\)/);
+  assert.match(footer,/EKODI \(에코디\)\. All rights reserved/);
+  assert.match(footer,/if\(config\.operator\?\.businessRegistrationNumber\)/);
 });

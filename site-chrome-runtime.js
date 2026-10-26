@@ -77,7 +77,8 @@ function normalizeFooter(value,tenant){
       emailHref:safeHref(contact.emailHref,{mail:true})||`mailto:${email}`,
     },
     legalLinks:legalLinks.length?legalLinks:defaults.legalLinks.map(item=>({...item})),
-    copyright:clean(input.copyright,200)||defaults.copyright,
+    // Copyright attribution is platform-owned and not editable per tenant.
+    copyright:defaults.copyright,
     precedenceNotice:clean(input.precedenceNotice,300)||defaults.precedenceNotice,
     ariaLabel:clean(input.ariaLabel,100)||defaults.ariaLabel,
   };
