@@ -367,6 +367,18 @@ function detach(){
 }
 function attach(header){
   if(!header||!shouldEnable())return;
+  // Existing site chrome is site-owned: preserve its position, typography,
+  // navigation layout and responsive behavior. Shell manages only the fallback.
+  if(isIndividualSite()&&!header.hasAttribute(FALLBACK_ATTR)){
+    if(activeHeader!==header)detach();
+    activeHeader=header;
+    header.dataset.ekodiHeaderScope='service-local';
+    pruneIndividualSiteGlobalLinks(header);
+    bindHomeAnchor(header);
+    void siteChrome().then(chrome=>applySiteChromeHeader(header,chrome));
+    window.dispatchEvent(new CustomEvent('ekodi:user-header-ready',{detail:{version:VERSION,surface:surface(),native:true,fallback:false}}));
+    return;
+  }
   pruneIndividualSiteGlobalLinks(header);
   bindHomeAnchor(header);
   ensureOperatingSpaceLabel(header);
@@ -420,7 +432,7 @@ function schedule(){
 window.EKODIUserUIHeader=Object.freeze({
   version:VERSION,
   refresh:schedule,
-  getState:()=>({enabled:shouldEnable(),surface:surface(),mode:mode(),attached:Boolean(activeHeader),centered:Boolean(activeCenter),fallback:Boolean(activeHeader?.hasAttribute(FALLBACK_ATTR)),contentFrame:document.documentElement.dataset.ekodiContentFrame||''})
+  getState:()=>({enabled:shouldEnable(),surface:surface(),mode:mode(),attached:Boolean(activeHeader),native:Boolean(activeHeader&&isIndividualSite()&&!activeHeader.hasAttribute(FALLBACK_ATTR)),centered:Boolean(activeCenter),fallback:Boolean(activeHeader?.hasAttribute(FALLBACK_ATTR)),contentFrame:document.documentElement.dataset.ekodiContentFrame||''})
 });
 window.addEventListener('ekodi:shell-theme',schedule);
 window.addEventListener('ekodi:surface-change',schedule);
