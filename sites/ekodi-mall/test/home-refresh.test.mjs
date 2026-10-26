@@ -79,3 +79,14 @@ test('all Mall pages center their header to the same width as the EKODI user foo
   const character = readFileSync(new URL('../../../shell/user-character.js', import.meta.url), 'utf8');
   assert.match(character, /serviceId\(\)!=='mall'/);
 });
+
+test('legacy product, store, seller, checkout and policy headers match canonical EKODI footer width', () => {
+  const shared = readFileSync(new URL('../assets/styles.css', import.meta.url), 'utf8');
+  for (const name of ['product','store','seller','checkout','page']) {
+    const html = readFileSync(new URL('../src/' + name + '.template.html', import.meta.url), 'utf8');
+    assert.match(html, /class="header"/);
+  }
+  assert.match(shared, /\.header:not\(\.mall-header\)/);
+  assert.match(shared, /--ekodi-user-content-inline-size,var\(--ekodi-user-canvas-max,1240px\)/);
+  assert.match(shared, /@media\(max-width:720px\)/);
+});
