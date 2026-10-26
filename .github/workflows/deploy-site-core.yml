@@ -221,6 +221,7 @@ on:
       - 'test/site-discovery-head.test.mjs'
       - 'homepage-ambient.css'
       - 'homepage-ambient.js'
+      - 'homepage-auth-state.js'
       - 'hub.html'
       - 'test/hub-apex-routing.test.mjs'
       - 'trade.html'

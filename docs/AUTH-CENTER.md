@@ -64,6 +64,8 @@ EKODI 인증은 `사람(Person)`, `로그인 수단(Identity)`, `기본 무료�
 `https://ekodi.kr/auth/?site=<service-key>&return_to=<encoded-target>`
 
 - `return_to`는 해당 서비스의 허용된 HTTPS origin만 허용한다.
+- (헌법 v1.27.3 강제규칙) `return_to`는 항상 **로그인 직전 페이지**(`location.origin + pathname + search`)다. 모든 로그인 버튼·링크는 현재 페이지를 담아야 하며, 빠진 링크는 공통 Shell이 클릭 시 현재 페이지를 자동으로 채운다.
+- 로그인 후 My EKODI(`/my`)나 서비스 내 My 페이지(`/{slug}/my`)로 보내는 기본값·대체경로는 금지한다. My 페이지는 사용자가 My 페이지에서 로그인했거나 My 링크를 직접 눌렀을 때만 도착지다. 직전 페이지를 쓸 수 없을 때만 해당 서비스의 공개 첫 화면으로 돌아간다.
 - 일반 서비스는 중앙 세션이 있으면 즉시 `identity-api /session/handoff`를 통해 일회용 handoff를 받는다.
 - 처음 로그인한 사용자는 Google 검증 후 같은 handoff 흐름으로 들어간다.
 - 서비스는 handoff로 받은 사용자 신원을 검증한 뒤 자체 세션을 만든다.

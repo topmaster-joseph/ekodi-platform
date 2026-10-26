@@ -1,3 +1,11 @@
+// Login returns that land on the homepage (https://ekodi.kr/#ekodi_token=…) continue to My Page,
+// which verifies the one-time token and shows the member's own space. The token stays in the fragment.
+(() => {
+  const hash = location.hash || '';
+  if ((location.pathname === '/' || location.pathname === '/index.html') && /(?:^#|&)ekodi_token=/.test(hash)) {
+    location.replace('/my/' + hash);
+  }
+})();
 (() => {
   const palettes = [
     ['#f3c69d66','#a9d6b966','#c6b6e552','18%','18%','82%','30%','55%','82%'],

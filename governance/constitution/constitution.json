@@ -1,5 +1,5 @@
 {
-  "version": "1.27.2",
+  "version": "1.27.3",
   "effectiveDate": "2026-10-23",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -912,7 +912,6 @@
     "crossServicePostLoginFallbackForbidden": true,
     "fallbackOrder": [
       "trusted-exact-return-to",
-      "registered-service-authenticated-home",
       "canonical-initiating-service-entry"
     ],
     "myEkodi": {
@@ -946,7 +945,16 @@
       "service-auth",
       "my-misroute-recovery",
       "system-verification"
-    ]
+    ],
+    "version": "1.27.3",
+    "preLoginPageReturnMandatory": true,
+    "everyLoginEntryMustCarryCurrentPageReturnTo": true,
+    "shellStampsMissingReturnTo": true,
+    "myPagesAsPostLoginFallbackForbidden": true,
+    "serviceLocalMyFallbackForbidden": true,
+    "myLandingOnlyWhenLoginStartedOnMyPageOrExplicitMyLink": true,
+    "unconsumedHandoffFragmentMustBeErasedWithoutNavigation": true,
+    "referrerPolicyMayNotBeWeakenedForCapture": true
   },
   "canonicalUrlQueryPolicy": {
     "id": "CANONICAL-URL-QUERY-001",
