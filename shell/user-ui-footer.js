@@ -11,6 +11,32 @@ const SITE_CHROME_URL='https://workspace-api.ekodi.kr/v1/site-chrome/public';
 const NON_TENANT_SITE_CHROME_SUBJECTS=new Set(['edu','education']);
 const USER_SURFACES=new Set(['public','workspace']);
 const SERVICE_OWNED_FOOTER_SERVICES=new Set();
+const SITE_COPYRIGHT_ATTR='data-ekodi-copyright-credit';
+const ekodiCopyright=()=>`© ${new Date().getFullYear()} EKODI (에코디). All rights reserved.`;
+function nativeFooter(){
+  // A native site footer wins. Never treat modal or article footers as site chrome.
+  return [...document.querySelectorAll('footer:not([data-ekodi-user-footer])')].find(node=>
+    !node.closest('dialog,[role="dialog"],article,[data-ekodi-shell-root]') &&
+    (node.matches('body > footer,[data-ekodi-service-footer],.site-footer,.app-footer,.main-footer,[role="contentinfo"]') ||
+      node.parentElement===document.body ||
+      node.parentElement?.id==='app' ||
+      node.parentElement?.tagName==='MAIN'&&node.classList.contains('site-footer'))
+  )||null;
+}
+function creditNativeFooter(){
+  const footer=nativeFooter();if(!footer)return false;
+  footer.dataset.ekodiServiceFooter='true';
+  footer.removeAttribute('data-ekodi-legacy-common-footer-hidden');
+  footer.removeAttribute('aria-hidden');
+  // Other operators may retain their own copy; EKODI attribution remains explicit.
+  const text=String(footer.textContent||'');
+  if(!/(?:©|ⓒ|copyright|저작권)[^\n]{0,100}(?:EKODI|에코디)/i.test(text)){
+    let node=footer.querySelector(`[${SITE_COPYRIGHT_ATTR}]`);
+    if(!node){node=document.createElement('small');node.setAttribute(SITE_COPYRIGHT_ATTR,'v1');footer.append(node);}
+    node.textContent=ekodiCopyright();
+  }
+  return true;
+}
 const FOOTER_ATTR='data-ekodi-user-footer';
 const LEGACY_HIDDEN_ATTR='data-ekodi-legacy-common-footer-hidden';
 let configPromise=null;
@@ -22,7 +48,7 @@ function surface(){return String(document.documentElement.dataset.ekodiShellSurf
 function serviceId(){return String(document.documentElement.dataset.ekodiService||'').trim().toLowerCase();}
 function siteSubject(){const explicit=String(document.documentElement.dataset.ekodiSiteSubject||document.body?.dataset?.ekodiSiteSubject||'').trim().toLowerCase();if(explicit)return explicit;const service=serviceId();const owned={church:'ekodi-church',biz:'ekodi-biz',lab:'ekodi-lab',trade:'ekodi-trade',cafe:'ekodi-cafe'};if(owned[service])return owned[service];const first=location.pathname.split('/').filter(Boolean)[0]||'';const aliases={ekodibiz:'ekodi-biz',biz:'ekodi-biz',ekodichurch:'ekodi-church',church:'ekodi-church',ekodilab:'ekodi-lab',lab:'ekodi-lab',cheonggye:'cgma','cheonggye-merchants':'cgma','cheonggye-merchant-association':'cgma'};return aliases[first]||first}
 function footerMode(){return String(document.body?.dataset.ekodiFooterMode||document.documentElement.dataset.ekodiFooterMode||'').trim().toLowerCase();}
-function serviceOwnsFooter(){return SERVICE_OWNED_FOOTER_SERVICES.has(serviceId())||['service','custom','off'].includes(footerMode())||Boolean(document.querySelector('[data-ekodi-service-footer]'));}
+function serviceOwnsFooter(){return SERVICE_OWNED_FOOTER_SERVICES.has(serviceId())||['service','custom','off'].includes(footerMode())||Boolean(nativeFooter());}
 function enabled(){return USER_SURFACES.has(surface())&&!serviceOwnsFooter();}
 function removeSharedFooter(){document.querySelectorAll(`[${FOOTER_ATTR}]`).forEach(node=>node.remove());}
 function dedupeSharedFooters(){
@@ -70,7 +96,7 @@ function installStyle(){
     .ekodi-user-ui-footer__business,.ekodi-user-ui-footer__address{width:100%!important;display:flex!important;align-items:baseline!important;justify-content:center!important;gap:5px 16px!important;flex-wrap:wrap!important;color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important}.ekodi-user-ui-footer__address{word-break:keep-all!important}.ekodi-user-ui-footer__separator{color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important;opacity:.9!important}
     .ekodi-user-ui-footer__links{display:flex!important;justify-content:center!important;align-items:center!important;gap:7px 18px!important;flex-wrap:wrap!important;white-space:normal!important}.ekodi-user-ui-footer a{color:var(--ekodi-user-footer-safe-link,#fff)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-link,#fff)!important;font-weight:700!important;text-decoration:none!important;text-underline-offset:3px!important}.ekodi-user-ui-footer a:hover,.ekodi-user-ui-footer a:focus-visible{text-decoration:underline!important}.ekodi-user-ui-footer a:focus-visible{outline:2px solid currentColor!important;outline-offset:3px!important}
     .ekodi-user-ui-footer__copyright,.ekodi-user-ui-footer__scope{color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important;opacity:1!important}.ekodi-user-ui-footer__scope{max-width:800px!important;font-size:13px!important;line-height:1.7!important}
-    [data-ekodi-legal-footer]:not(.ekodi-user-ui-footer),[data-ekodi-legacy-common-footer-hidden]{display:none!important}
+    [data-ekodi-legacy-common-footer-hidden]:not([data-ekodi-service-footer]){display:none!important}
     @media(max-width:720px){.ekodi-user-ui-footer{font-size:13px!important}.ekodi-user-ui-footer__inner{width:min(var(--ekodi-user-content-inline-size,var(--ekodi-user-canvas-max,1240px)),calc(100% - 28px))!important;padding:24px 0 26px!important;gap:12px!important}.ekodi-user-ui-footer__business,.ekodi-user-ui-footer__address{gap:4px 11px!important}.ekodi-user-ui-footer__scope{font-size:12.5px!important}}
   `;
   (document.head||document.documentElement).append(style);
@@ -131,7 +157,13 @@ async function loadSiteConfig(){
   return siteConfigPromise;
 }
 async function loadBaseConfig(){const embedded=window.__EKODI_USER_FOOTER_CONFIG__;if(validConfig(embedded))return embedded;if(!configPromise)configPromise=fetch(CONFIG_URL,{credentials:'omit',cache:'force-cache'}).then(async response=>{if(!response.ok)throw new Error('footer-config-http-'+response.status);const config=await response.json();if(!validConfig(config))throw new Error('footer-config-invalid');window.__EKODI_USER_FOOTER_CONFIG__=config;return config}).catch(()=>null);return configPromise}
-async function loadConfig(){const base=await loadBaseConfig();if(!base)return null;const site=await loadSiteConfig();if(!site)return base;return {...base,...site,operator:{...base.operator,...(site.operator||{})},contact:{...base.contact,...(site.contact||{})},legalLinks:Array.isArray(site.legalLinks)&&site.legalLinks.length?site.legalLinks:base.legalLinks}}
+async function loadConfig(){const base=await loadBaseConfig();if(!base)return null;const site=await loadSiteConfig();if(!site){
+    const id=serviceId();
+    if(!id||['ekodi','biz','business'].includes(id))return base;
+    const label=serviceLabel()||id.toUpperCase();
+    return {...base,brand:label,operator:{...base.operator,name:label,representative:'',businessRegistrationNumber:'',commerceRegistrationNumber:''},contact:{address:'',email:'',emailHref:''},copyright:ekodiCopyright()};
+  }
+  return {...base,...site,operator:{...base.operator,...(site.operator||{})},contact:{...base.contact,...(site.contact||{})},legalLinks:Array.isArray(site.legalLinks)&&site.legalLinks.length?site.legalLinks:base.legalLinks}}
 function appendText(parent,tag,text,className=''){
   const node=document.createElement(tag);
   if(className)node.className=className;
@@ -149,14 +181,13 @@ function createFooter(config){
   const copy=appendText(inner,'div','','ekodi-user-ui-footer__copy');
   appendText(copy,'strong',config.brand,'ekodi-user-ui-footer__brand');
   const business=appendText(copy,'div','','ekodi-user-ui-footer__business');
-  appendText(business,'span',config.operator.name);
-  appendText(business,'span',`${config.operator.representativeLabel} ${config.operator.representative}`);
-  appendText(business,'span',`${config.operator.registrationLabel} ${config.operator.businessRegistrationNumber}`);
+  if(config.operator?.name)appendText(business,'span',config.operator.name);
+  if(config.operator?.representative)appendText(business,'span',`${config.operator.representativeLabel} ${config.operator.representative}`);
+  if(config.operator?.businessRegistrationNumber)appendText(business,'span',`${config.operator.registrationLabel} ${config.operator.businessRegistrationNumber}`);
   const address=appendText(copy,'div','','ekodi-user-ui-footer__address');
-  appendText(address,'span',config.contact.address);
-  appendText(address,'span','·','ekodi-user-ui-footer__separator').setAttribute('aria-hidden','true');
-  const email=appendText(address,'a',config.contact.email);
-  email.href=String(config.contact.emailHref||`mailto:${config.contact.email}`);
+  if(config.contact?.address)appendText(address,'span',config.contact.address);
+  if(config.contact?.address&&config.contact?.email)appendText(address,'span','·','ekodi-user-ui-footer__separator').setAttribute('aria-hidden','true');
+  if(config.contact?.email){const email=appendText(address,'a',config.contact.email);email.href=String(config.contact.emailHref||`mailto:${config.contact.email}`);}
   appendText(copy,'div',config.copyright,'ekodi-user-ui-footer__copyright');
   appendText(copy,'div',config.precedenceNotice,'ekodi-user-ui-footer__scope');
   const nav=appendText(inner,'nav','','ekodi-user-ui-footer__links');
@@ -172,6 +203,7 @@ function createFooter(config){
 async function reconcile(){
   if(serviceOwnsFooter()){
     removeSharedFooter();
+    creditNativeFooter();
     return;
   }
   if(!enabled()||!document.body)return;
@@ -182,6 +214,7 @@ async function reconcile(){
   const config=await loadConfig();
   if(serviceOwnsFooter()){
     removeSharedFooter();
+    creditNativeFooter();
     return;
   }
   if(!config||document.querySelector(`[${FOOTER_ATTR}]`)||!document.body)return;
