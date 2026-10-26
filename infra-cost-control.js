@@ -35,6 +35,7 @@ const required=(input,max=120)=>{
   return s;
 };
 const money=(input)=>{
+  if(input===null||input===undefined||String(input).trim()==='')throw new Error('금액을 입력해야 합니다.');
   if(!Number.isFinite(Number(input))||Number(input)<0||Number(input)>100000000)throw new Error('금액이 올바르지 않습니다.');
   return Math.round(Number(input)*100);
 };
