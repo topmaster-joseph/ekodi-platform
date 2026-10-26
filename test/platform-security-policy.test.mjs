@@ -176,9 +176,15 @@ test('Church iframe opt-in is exact-path, same-origin, document-only and CSP-gat
   );
   const viewer=policy('/ekodichurch/live/?mode=viewer&embed=church-online');
   assert.equal(viewer.headers.get('x-frame-options'),'SAMEORIGIN');
+  const canonical=policy('/live/church/?mode=viewer&embed=church-online');
+  assert.equal(canonical.headers.get('x-frame-options'),'SAMEORIGIN');
+
   assert.match(viewer.headers.get('content-security-policy')||'',/frame-ancestors 'self'/);
   for(const path of [
     '/ekodichurch/live/?mode=studio',
+    '/live/church/?mode=studio&embed=church-online',
+    '/live/church/?mode=viewer',
+    '/live/church/admin/?mode=viewer&embed=church-online',
     '/ekodichurch/live/?mode=studio&embed=church-online',
     '/ekodichurch/live/?mode=studio&embed=church-online-extra',
     '/ekodichurch/?embed=church-online',
