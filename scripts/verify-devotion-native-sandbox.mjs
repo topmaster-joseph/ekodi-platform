@@ -24,7 +24,8 @@ const check=(name,passed,detail={})=>{
  if(!passed) throw new Error('sandbox_check_failed:'+name+' '+JSON.stringify(detail));
 };
 await fs.mkdir(OUT,{recursive:true});
-const browser=await chromium.launch({headless:true});
+const executablePath=process.env.EKODI_NATIVE_CHROME||undefined;
+const browser=await chromium.launch({headless:true,...(executablePath?{executablePath}:{})});
 try{
  for(const device of [{name:'desktop',width:1440,height:900,mobile:false},{name:'mobile',width:390,height:844,mobile:true}]){
    const native=await runTask({
@@ -96,7 +97,16 @@ try{
          check(device.name+'-'+surface.name+'-scripture-persistent',
              await root.locator('.dv-scripture-section .dv-verses').isVisible());
          await root.locator('[data-tab="image"]').click();
-         const img=await root.locator('.dv-illustration').evaluate(el=>({loaded:el.complete&&el.naturalWidth>0,src:el.src,alt:el.alt}));
+         const imageElement=root.locator('.dv-illustration');
+         await imageElement.scrollIntoViewIfNeeded();
+         const imageSrc=await imageElement.getAttribute('src');
+         const imageResponse=await page.request.get(ORIGIN+imageSrc,{timeout:20000});
+         check(device.name+'-'+surface.name+'-illustration-http',imageResponse.status()===200,{status:imageResponse.status(),imageSrc});
+         await page.waitForFunction(()=>{
+           const el=document.querySelector('[data-ekodi-devotion] .dv-illustration');
+           return el?.complete===true && el.naturalWidth>0;
+         },null,{timeout:16000});
+         const img=await imageElement.evaluate(el=>({loaded:el.complete&&el.naturalWidth>0,src:el.src,alt:el.alt}));
          check(device.name+'-'+surface.name+'-illustration',img.loaded&&img.alt.length>5,{image:img});
          await root.locator('[data-tab="questions"]').click();
          check(device.name+'-'+surface.name+'-questions-action',
