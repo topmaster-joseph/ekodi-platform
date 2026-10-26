@@ -10,16 +10,26 @@
     search.value = incomingQuery;
     if (query) query.value = incomingQuery;
     search.dispatchEvent(new Event('input', { bubbles:true }));
+    // The entire catalog, including affiliate offers, is searched by the curator.
+    window.EkodiContextCurator?.recommend(incomingQuery, true);
   }
   if (params.has('wishlist')) window.addEventListener('load', () => document.getElementById('wishBtn')?.click(), {once:true});
 
   form?.addEventListener('submit', (event) => {
-    event.preventDefault();
+    // Allow native GET form submission if this is not the Mall storefront.
     if (!search || !shop) return;
-    search.value = (query?.value || '').trim();
+    event.preventDefault();
+    const term = (query?.value || '').trim().slice(0, 120);
+    search.value = term;
     search.dispatchEvent(new Event('input', { bubbles: true }));
-    shop.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-    if (search.value) search.focus({ preventScroll: true });
+    if (term && window.EkodiContextCurator?.recommend) {
+      const contextInput = document.getElementById('contextInput');
+      if (contextInput) contextInput.value = term;
+      window.EkodiContextCurator.recommend(term, true);
+    } else {
+      shop.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+      search.focus({ preventScroll: true });
+    }
   });
 
   document.querySelectorAll('a[data-filter-target]').forEach((link) => {

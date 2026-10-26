@@ -130,3 +130,21 @@ body{background:var(--mall-surface)}
 @media(max-width:980px){.mall-premium-hero .mall-photo-hero{margin-top:82px;min-height:310px}.mall-premium-hero .mall-hero-person{top:-76px;width:106px;height:68px}}
 @media(max-width:760px){.mall-premium-hero .mall-photo-hero{margin-top:80px;min-height:260px}.mall-premium-hero .mall-hero-person{top:-73px;right:2px;width:104px;height:66px}.mall-premium-hero .mall-hero-photo{border-radius:16px}}
 @media(max-width:390px){.mall-premium-hero .mall-photo-hero{margin-top:73px;min-height:240px}.mall-premium-hero .mall-hero-person{top:-67px;width:94px;height:60px}}
+
+/* The same centered width token and gutters as the EKODI canonical footer. */
+.mall-header{height:auto!important;padding:0!important;width:100%;max-width:100%;box-sizing:border-box}
+.mall-header .mall-header-inner{
+  width:min(var(--ekodi-user-content-inline-size,var(--ekodi-user-canvas-max,1240px)),calc(100% - 40px));
+  max-width:100%;margin-inline:auto;min-width:0;
+}
+.mall-header .mall-header-top,.mall-header .mall-primary-nav{width:100%;min-width:0}
+.mall-header .mall-global-search{min-width:0}
+.mall-header .mall-global-search button{flex-shrink:0}
+.mall-premium-hero .ekodi-main-ekodian,
+.mall-premium-hero [data-ekodi-user-character]{display:none!important}
+/* Keep footer and header content aligned even when the shell adjusts its canvas. */
+@media(max-width:720px){
+ .mall-header .mall-header-inner{
+  width:min(var(--ekodi-user-content-inline-size,var(--ekodi-user-canvas-max,1240px)),calc(100% - 28px));
+ }
+}

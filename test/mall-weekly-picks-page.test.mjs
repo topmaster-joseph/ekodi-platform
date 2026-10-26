@@ -104,3 +104,11 @@ test('weekly-picks shares Mall buyer header and uses canonical shell footer', ()
   assert.match(html, /assets\/home-refresh\.css/);
   assert.doesNotMatch(html, /<footer\b/); // shell adds the single shared footer
 });
+
+test('weekly picks header shares responsive centered buyer chrome and functional search return route', () => {
+  const html = renderMallPicksHtml({ items: [] });
+  assert.match(html, /class="mall-header-inner"/);
+  assert.match(html, /action="\/ekodimall\/" method="get"/);
+  assert.match(html, /name="q" type="search"/);
+  assert.match(html, /assets\/home-refresh\.css/);
+});
