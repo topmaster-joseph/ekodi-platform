@@ -675,6 +675,52 @@
     head.append(title, actions);
     const body = element('div', 'campus-site-admin-menus');
     const template = window.EKODISiteAdminMenuTemplate;
+    if (site.adminRoot) {
+      // ADMIN-SITE-EMBED-001: the site's own admin page opens right here, same origin
+      // only (?embedded=admin). If the page refuses framing, the menu links remain.
+      box.replaceChildren(head, siteAdminFrame(site, target => renderSiteAdminLinks(site, target, template)));
+      return;
+    }
+    renderSiteAdminLinks(site, body, template);
+    box.replaceChildren(head, body);
+  }
+
+  function siteAdminFrame(site, fallback) {
+    const wrap = element('div', 'campus-site-admin-frame');
+    const frame = document.createElement('iframe');
+    frame.title = `${site.name} 관리자`;
+    frame.dataset.siteAdminFrame = site.key;
+    frame.loading = 'eager';
+    frame.referrerPolicy = 'same-origin';
+    const src = new URL(site.adminRoot.adminPath, location.origin);
+    src.searchParams.set('embedded', 'admin');
+    frame.src = `${src.pathname}${src.search}`;
+    let settled = false;
+    const refuse = () => {
+      if (settled) return;
+      settled = true;
+      wrap.dataset.state = 'refused';
+      const note = element('p', 'campus-site-admin-note', '이 사이트 관리자 화면은 아직 여기에 함께 표시할 수 없어 메뉴 바로가기로 보여드립니다. 위의 "관리자 홈 열기"로 새 창에서 열 수 있습니다.');
+      const links = element('div', 'campus-site-admin-menus');
+      fallback(links);
+      wrap.replaceChildren(note, ...links.childNodes);
+    };
+    frame.addEventListener('load', () => {
+      if (settled) return;
+      // A refused frame becomes an opaque error document we cannot read.
+      let readable = false;
+      try { readable = Boolean(frame.contentDocument && frame.contentWindow.location.href !== 'about:blank'); } catch { readable = false; }
+      if (!readable) return refuse();
+      settled = true;
+      wrap.dataset.state = 'loaded';
+    });
+    setTimeout(() => { if (!settled && wrap.isConnected) refuse(); }, 15000);
+    wrap.dataset.state = 'loading';
+    wrap.append(frame);
+    return wrap;
+  }
+
+  function renderSiteAdminLinks(site, body, template) {
     if (!site.adminRoot) {
       body.append(element('p', 'campus-site-admin-note', '이 사이트는 아직 독립 관리자 주소(/{사이트}/admin)가 등록되지 않았습니다. 등록 전까지는 위의 Status·Open으로 확인합니다. (확인필요)'));
     } else if (!template?.groups?.length) {
@@ -700,7 +746,7 @@
       }
       body.append(element('p', 'campus-site-admin-note', '메뉴는 해당 사이트의 고유 관리자 화면에서 열립니다. 권한은 사이트별 역할에 따라 다시 확인됩니다.'));
     }
-    box.replaceChildren(head, body);
+    return body;
   }
 
   function selectSite(key, { syncUrl = true } = {}) {
@@ -723,7 +769,7 @@
     if (!strip?.render || !section) return false;
     strip.render(sites.map(site => {
       const [state, stateLabel] = LIFECYCLE_STATE[site.lifecycle] || LIFECYCLE_STATE.live;
-      return { id: site.key, label: site.name, state, stateLabel, note: site.adminRoot ? '' : '주소 미등록', dataset: { siteKey: site.key } };
+      return { id: site.key, label: site.name, state, stateLabel: site.adminRoot ? stateLabel : `${stateLabel} · 관리자 주소 미등록`, className: site.adminRoot ? 'has-site-admin' : 'no-site-admin', dataset: { siteKey: site.key } };
     }), {
       owner: 'sites',
       key: section,

@@ -951,3 +951,27 @@ html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-detail-tab.act
 }
 html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-detail-item.active b,
 html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-detail-tab.active b{color:#050505!important}
+
+/* ADMIN-LEFT-MENU-FIRST-001 (2026-10-26): every area's menus are visible at once.
+   The area name is a compact caption; menus are the first visible level and the
+   active menu's detail routes nest directly under it. 사이트관리 classes and long
+   detail lists use two columns so the whole tree fits one screen. */
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-global-navs{gap:0!important;margin:0 0 4px!important}
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-global-nav{min-height:18px!important;margin:5px 0 0!important;padding:1px 8px!important;border:0!important;background:transparent!important;color:#7a8596!important;font-size:11px!important;font-weight:800!important;letter-spacing:.02em}
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-global-nav:first-child{margin-top:0!important}
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-global-nav b{min-width:14px!important;color:#9aa4b2!important;font-size:10px!important}
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-global-nav:hover,
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-global-nav.active{background:transparent!important;color:#111827!important}
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-global-details{display:grid!important;gap:0!important;margin:0!important;padding:0!important;border-left:0!important}
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-global-details[hidden]{display:none!important}
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-global-details .admin-detail-item{min-height:24px!important;padding:2px 10px!important;font-size:13.5px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-global-details[data-admin-site-classes="true"]{grid-template-columns:1fr 1fr!important;column-gap:2px!important}
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-global-details[data-admin-site-classes="true"] .admin-detail-item{min-height:24px!important;padding:2px 8px!important;font-size:12.5px!important}
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-global-details[data-admin-site-classes="true"] .admin-detail-item:not([data-admin-site-class]){grid-column:1 / -1!important}
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-global-details[data-admin-site-classes="true"] .admin-detail-item b,
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-detail-nested .admin-detail-tab b{display:none!important}
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-detail-nested{display:grid!important;gap:0!important;margin:0 0 2px 16px!important;padding-left:4px!important;border-left:2px solid #dfe4ec!important}
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-detail-nested[data-admin-detail-columns="2"]{grid-template-columns:1fr 1fr!important;column-gap:2px!important}
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-detail-nested .admin-detail-tab{width:100%!important;min-width:0!important;min-height:24px!important;margin:0!important;padding:2px 6px!important;font-size:12.5px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-detail-nested .admin-detail-tab span{overflow:hidden!important;text-overflow:ellipsis!important}
+html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-detail-nested .admin-detail-tab[data-admin-risk="high"]::after{content:'주의';flex:0 0 auto;margin-left:auto;padding:0 4px;border-radius:4px;background:#fff4e5;color:#9a5b00;font-size:10px;font-weight:800}

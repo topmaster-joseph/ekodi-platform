@@ -149,20 +149,23 @@ test('Operations, releases, devices and finance have distinct visible submenus',
   }
 });
 
-test('Services & Engines shows its engine details as one 3차 workspace strip, never nested on the left', () => {
+test('Services & Engines nests its engine details under the active menu on the left (ADMIN-LEFT-MENU-FIRST-001)', () => {
   assert.match(sidebar, /FLAT_DETAIL_GROUPS = new Set\(\)/);
   assert.match(registry, /id: 'engines', group: 'services'[^\n]*sections: \['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'\]/);
   assert.match(sidebar, /details\.dataset\.adminFlatDetails = FLAT_DETAIL_GROUPS\.has\(group\) \? 'true' : 'false'/);
-  // ADMIN-LAYOUT-3L-001: left = 1차 group + 2차 menu; 3차 details go to the top strip.
-  assert.doesNotMatch(sidebar, /if \(inMenu && tabs\.length > 1\)/);
+  // Owner decision 2026-10-26: details move up one level, from the top strip to the left.
+  assert.match(sidebar, /if \(inMenu && !menu\.siteClass && tabs\.length > 1\) \{/);
+  assert.match(sidebar, /nested\.className = 'admin-detail-nested'/);
+  assert.match(sidebar, /if \(tabs\.length > 4\) nested\.dataset\.adminDetailColumns = '2'/);
+  assert.match(sidebar, /detailButton\(id, getAdminMenuLabel\(id, locale\), TAB_CLASS, id === section\)/);
+  // Only 사이트관리 keeps the workspace strip (its sites); every other menu clears it.
   assert.match(sidebar, /renderDetailStrip\(nav, activeMenu, section, locale\)/);
-  assert.match(sidebar, /if \(tabs\.length < 2\) \{\n    renderAdminWorkStrip\(\[\]/);
-  assert.match(sidebar, /className: TAB_CLASS,/);
-  assert.match(sidebar, /dataset: \{ adminDetailSection: id \}/);
+  assert.match(sidebar, /\/\/ Outside 사이트관리 the detail routes live on the left; the strip stays empty\.\n  renderAdminWorkStrip\(\[\], \{ owner: 'menu', key: section, doc \}\);\n\}/);
   assert.match(sidebar, /data-admin-flat-details="true"/);
   assert.doesNotMatch(sidebar, /function renderContextTabs/);
   assert.doesNotMatch(sidebar, /data-admin-context-section/);
 });
+
 
 
 test('retired top navigation leaves the workspace readable without duplicate chrome', () => {
@@ -222,11 +225,13 @@ test('shared menu ES modules are published and cache-busted with the admin relea
 
 
 
-test('platform-super-admin sidebar expands only the active area with direct task links', () => {
+test('platform-super-admin sidebar shows every area menu directly, each area in its own list', () => {
   assert.ok(sidebar.includes("DETAILS_CLASS = 'admin-global-details'"));
   assert.ok(sidebar.includes("function isPlatformSuperAdminSurface()"));
   assert.ok(sidebar.includes("renderSidebarDetails(nav, globals, group, displayedSection || section, locale)"));
-  assert.ok(sidebar.includes("else globals.querySelector(\`:scope>.\${DETAILS_CLASS}\`)?.remove()"));
+  assert.ok(sidebar.includes("else globals.querySelectorAll(\`:scope>.\${DETAILS_CLASS}\`).forEach(node => node.remove())"));
+  assert.ok(sidebar.includes("for (const area of ADMIN_MENU_GROUPS) {"));
+  assert.ok(sidebar.includes("renderGroupDetails(nav, globals, area.id, area.id === group ? section : '', locale)"));
   assert.ok(!sidebar.includes('TABS_SHELL_CLASS'));
   assert.ok(!sidebar.includes('data-admin-context-section'));
   assert.ok(sidebar.includes("main?.querySelector(':scope>.admin-context-tabs-shell')?.remove()"));
