@@ -87,3 +87,19 @@
 }
 /* 2026-10-27: on the mission devotion page the header (brand + menu) spans the same centre column as the content. */
 body:has([data-mission-devotion]) .mission-site-header{max-width:840px;padding-inline:16px}
+/* 2026-10-27: 관리자 메뉴(로그인한 최고·교회·선교회 관리자) · 나의 묵상기록 */
+.ekodi-devotion .dv-adminbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:4px 0 6px;padding:10px 14px;border:1px solid #c9b47a;border-radius:14px;background:#fbf6e6}
+.ekodi-devotion .dv-adminbar[hidden]{display:none!important}
+.ekodi-devotion .dv-adminbar-title{font-size:.82rem;color:#6b5418;margin-right:4px;letter-spacing:.02em}
+.ekodi-devotion .dv-adminbar-link{display:inline-block;padding:6px 12px;border-radius:999px;border:1px solid #c9b47a;background:#fff;color:#4d3d10;font-size:.86rem;font-weight:700;text-decoration:none}
+.ekodi-devotion .dv-adminbar-link:hover,.ekodi-devotion .dv-adminbar-link:focus-visible{background:#f1e5bd}
+.ekodi-devotion .dv-record-form .dv-section-label{display:flex;flex-direction:column;gap:6px}
+.ekodi-devotion .dv-record-form textarea{font-weight:400}
+.ekodi-devotion .dv-records{margin-top:18px;border-top:1px solid var(--dv-line);padding-top:6px}
+.ekodi-devotion .dv-record{padding:12px 0;border-bottom:1px dashed #dde4de}
+.ekodi-devotion .dv-record:last-child{border-bottom:0}
+.ekodi-devotion .dv-record p{margin:6px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.ekodi-devotion .dv-record .dv-share-row{margin-top:6px}
+.ekodi-devotion .dv-tabs,.ekodi-devotion .dv-panel,.ekodi-devotion .dv-admin{scroll-margin-top:96px}
+.ekodi-devotion .dv-panel{position:relative;isolation:isolate}
+.ekodi-devotion .dv-poem p{position:relative;overflow-wrap:anywhere}

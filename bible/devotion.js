@@ -12,9 +12,62 @@ const TABS = Object.freeze([
   { id: 'questions', label: '질문 / 실천' },
   { id: 'family', label: '가정·어린이' },
   { id: 'prayer', label: '한줄기도' },
+  { id: 'records', label: '나의 묵상기록' },
 ]);
 const ATTRIBUTION = '묵상 적용(시·노래·질문·기도)은 에코디언 정찬균목사가 공통본문을 바탕으로 AI 도움을 받아 만든 창작 묵상 자료입니다. 성경 본문은 개역한글(대한성서공회, 1961) 원문을 그대로 표시합니다.';
 const ADMIN_TOKEN_KEY = 'ekodi-auth-token';
+const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
+const RECORD_TOPIC = '매일묵상';
+
+// EKODI member session written by the shared login (supabase-js format in localStorage).
+function memberSessionEntry() {
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i) || '';
+      if (!/^sb-.*-auth-token$/.test(key)) continue;
+      const parsed = JSON.parse(localStorage.getItem(key) || 'null');
+      const session = parsed?.currentSession || parsed?.session || parsed;
+      if (session?.access_token && session?.user) return { key, parsed, session };
+    }
+  } catch {}
+  return null;
+}
+let refreshing = null;
+async function memberSession() {
+  const entry = memberSessionEntry();
+  if (!entry) return null;
+  const { session } = entry;
+  if (Number(session.expires_at || 0) > Math.floor(Date.now() / 1000) + 30) return session;
+  if (!session.refresh_token) return null;
+  refreshing ||= (async () => {
+    try {
+      const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST', headers: { apikey: SUPABASE_KEY, 'content-type': 'application/json' },
+        body: JSON.stringify({ refresh_token: session.refresh_token }),
+      });
+      if (!response.ok) return null;
+      const next = await response.json();
+      if (!next?.access_token) return null;
+      const merged = { ...session, ...next, expires_at: next.expires_at || Math.floor(Date.now() / 1000) + Number(next.expires_in || 3600) };
+      const stored = entry.parsed?.currentSession ? { ...entry.parsed, currentSession: merged } : entry.parsed?.session ? { ...entry.parsed, session: merged } : merged;
+      try { localStorage.setItem(entry.key, JSON.stringify(stored)); } catch {}
+      return merged;
+    } catch { return null; } finally { setTimeout(() => { refreshing = null; }, 0); }
+  })();
+  return refreshing;
+}
+function adminConsoleToken() { try { return sessionStorage.getItem(ADMIN_TOKEN_KEY) || ''; } catch { return ''; } }
+// Admin-console token first (existing super-admin editor), otherwise the member's own token.
+async function requestToken() { return adminConsoleToken() || (await memberSession())?.access_token || ''; }
+async function memberRest(path, init = {}) {
+  const session = await memberSession();
+  if (!session) throw Error('login_required');
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { ...init, cache: 'no-store', headers: {
+    apikey: SUPABASE_KEY, authorization: `Bearer ${session.access_token}`, 'content-type': 'application/json', ...(init.headers || {}) } });
+  if (!response.ok) throw Error(`HTTP ${response.status}`);
+  return response.status === 204 ? null : response.json().catch(() => null);
+}
 const TAB_IDS = new Set(TABS.map(tab => tab.id));
 
 const mount = document.querySelector('[data-ekodi-devotion]');
@@ -39,6 +92,8 @@ function boot(root) {
   const base = rawBase.replace(/\/+$/, '');
   const dateMode = root.dataset.dateMode === 'query' ? 'query' : 'path';
   const siteLabel = root.dataset.siteLabel || '에코디';
+  const siteKey = root.dataset.siteKey || (base.startsWith('/ekodichurch') ? 'church' : base.startsWith('/ekodimission') ? 'mission' : 'bible');
+  const loginUrl = () => `${ORIGIN}/auth/?site=${siteKey}&return_to=${encodeURIComponent(location.href.split('#')[0] + '#records')}&direct=1`;
   const pageUrl = date => dateMode === 'query' ? `${rawBase}?date=${date}` : `${base}/${date}`;
   const shareUrl = (date, hash) => `${ORIGIN}${pageUrl(date)}${hash ? `#${hash}` : ''}`;
   let current = null;
@@ -72,6 +127,7 @@ function boot(root) {
   scriptureBlock.setAttribute('aria-label','개역한글 성경 본문');
   const audioRow = el('section','dv-audio-row');
   const adminPanel = el('section','dv-admin');
+  adminPanel.id = 'devotion-editor';
   adminPanel.hidden = true;
 
   const tabbar = el('div', 'dv-tabs');
@@ -104,7 +160,10 @@ function boot(root) {
   // Page order (2026-10-27): Scripture → activity tabs and the selected panel → attribution → share.
   // The passage summary card and the standalone CCM MR row are not shown; a licensed MR, when
   // registered, plays inside the 묵상 노래 panel instead (see setupMrPlayer).
-  root.append(datebar, status, scriptureBlock, tabbar, panelWrap, notice, shareRow, adminPanel, toastEl);
+  const adminBar = el('nav', 'dv-adminbar');
+  adminBar.setAttribute('aria-label', '관리자 메뉴');
+  adminBar.hidden = true;
+  root.append(adminBar, datebar, status, scriptureBlock, tabbar, panelWrap, notice, shareRow, adminPanel, toastEl);
 
   function toast(message) {
     toastEl.textContent = message;
@@ -136,6 +195,23 @@ function boot(root) {
       panels.get(tabId).hidden = !on;
     }
     if (updateHash) history.replaceState(null, '', `${location.pathname}${location.search}${id === 'poem' ? '' : `#${id}`}`);
+  }
+  // After a tab switch from further down the page, bring the tab row back just below the site's
+  // sticky/fixed header so the newly shown panel never starts hidden behind it.
+  function siteHeaderBottom() {
+    let bottom = 0;
+    for (const header of document.querySelectorAll('[data-ekodi-fixed-header], .site-header, .mission-site-header, body > header')) {
+      const position = getComputedStyle(header).position;
+      if (position !== 'fixed' && position !== 'sticky') continue;
+      const rect = header.getBoundingClientRect();
+      if (rect.top <= 1 && rect.height > 0) bottom = Math.max(bottom, rect.bottom);
+    }
+    return bottom;
+  }
+  function revealTabs() {
+    const top = tabbar.getBoundingClientRect().top;
+    const clearance = siteHeaderBottom() + 8;
+    if (top < clearance) window.scrollBy({ top: top - clearance, behavior: 'auto' });
   }
 
   function renderPassage(panel, data) {
@@ -241,7 +317,7 @@ function boot(root) {
     const feedback = el('p','dv-status');
     form.append(controls,feedback);
     const persist = async statusValue => {
-      const token = (()=>{try{return sessionStorage.getItem(ADMIN_TOKEN_KEY)||''}catch{return ''}})();
+      const token = await requestToken();
       if (!token) {feedback.textContent='관리자 로그인이 필요합니다.';return}
       const out = JSON.parse(JSON.stringify(source));
       for (const [path,field] of bindings) {
@@ -275,6 +351,155 @@ function boot(root) {
     saveDraft.addEventListener('click',()=>persist('draft'));
     publish.addEventListener('click',()=>persist('published'));
     adminPanel.append(heading,info,form);
+  }
+
+  // ── 관리자 메뉴: shown only to roles the server confirms; each linked surface enforces its own auth.
+  async function loadViewer() {
+    let viewer = null;
+    try {
+      const token = await requestToken();
+      if (!token) return;
+      const response = await fetch(`${API}/me`, { cache: 'no-store', headers: { authorization: `Bearer ${token}` } });
+      if (response.ok) viewer = await response.json();
+    } catch {}
+    renderAdminBar(viewer);
+  }
+  function renderAdminBar(viewer) {
+    adminBar.replaceChildren();
+    const links = [];
+    if (viewer?.superAdmin) {
+      links.push(['이 날짜 묵상 편집', '#devotion-editor', 'edit']);
+      links.push(['매일묵상 관리', '/admin#devotional']);
+    }
+    if (viewer?.superAdmin || viewer?.churchAdmin) links.push(['교회 관리자 · 예배·말씀', '/ekodichurch/admin/worship']);
+    if (viewer?.superAdmin || viewer?.missionAdmin) links.push(['선교회 관리자', '/ekodimission/admin/activities']);
+    if (!links.length) { adminBar.hidden = true; return; }
+    adminBar.append(el('strong', 'dv-adminbar-title', '관리자 메뉴'));
+    for (const [label, href, action] of links) {
+      const link = el('a', 'dv-adminbar-link', label);
+      link.href = href;
+      if (action === 'edit') link.addEventListener('click', event => {
+        event.preventDefault();
+        if (adminPanel.hidden) { toast('편집기를 불러오는 중입니다. 잠시 후 다시 눌러 주세요.'); void reloadAsAdmin(); return; }
+        adminPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        adminPanel.querySelector('input,textarea')?.focus({ preventScroll: true });
+      });
+      adminBar.append(link);
+    }
+    adminBar.hidden = false;
+    if (viewer?.superAdmin && current?.found && !current.admin?.canEdit) void reloadAsAdmin();
+  }
+  async function reloadAsAdmin() {
+    try {
+      const token = await requestToken();
+      const response = await fetch(`${API}?date=${current?.date || ''}`, { cache: 'no-store', headers: { authorization: `Bearer ${token}` } });
+      if (response.ok) { const data = await response.json(); if (data.admin?.canEdit) render(data); }
+    } catch {}
+  }
+
+  // ── 나의 묵상기록: the member's own records (Supabase bible_journeys, row-level security = owner only).
+  const recordTitle = date => `${date} 매일묵상`;
+  async function renderRecords(panel, data) {
+    panel.replaceChildren();
+    panelHead(panel, '나의 묵상기록');
+    const session = await memberSession();
+    const localKey = `ekodi-devotion-mine-${data.date}`;
+    const form = el('form', 'dv-record-form');
+    const reflection = el('textarea', 'dv-mine');
+    reflection.name = 'reflection'; reflection.rows = 4; reflection.maxLength = 2000;
+    reflection.placeholder = '오늘 말씀에서 받은 은혜와 깨달음을 적어 보세요.';
+    const prayer = el('textarea', 'dv-mine');
+    prayer.name = 'prayer'; prayer.rows = 2; prayer.maxLength = 500;
+    prayer.placeholder = '오늘 말씀 앞에서 나의 한줄기도를 적어 보세요.';
+    const reflectionLabel = el('label', 'dv-section-label', '오늘의 묵상');
+    const prayerLabel = el('label', 'dv-section-label', '나의 한줄기도');
+    reflectionLabel.append(reflection); prayerLabel.append(prayer);
+    const actions = el('div', 'dv-share-row');
+    const save = el('button', 'dv-btn dv-btn-primary', session ? '기록 저장' : '이 기기에 임시 저장');
+    save.type = 'submit';
+    const sharePrayer = el('button', 'dv-mini', '나의 기도 공유');
+    sharePrayer.type = 'button'; sharePrayer.dataset.share = 'mine';
+    actions.append(save, sharePrayer);
+    const note = el('p', 'dv-meta');
+    form.append(reflectionLabel, prayerLabel, actions, note);
+    panel.append(form);
+    const list = el('div', 'dv-records');
+    panel.append(list);
+
+    if (!session) {
+      try { const local = JSON.parse(storageGet(localKey) || 'null'); if (local && typeof local === 'object') { reflection.value = local.reflection || ''; prayer.value = local.prayer || ''; } else prayer.value = storageGet(localKey); } catch { prayer.value = storageGet(localKey); }
+      note.textContent = '로그인하지 않으면 이 기기에만 저장됩니다. 로그인하면 어느 기기에서나 나의 묵상기록을 보고 고칠 수 있습니다.';
+      const login = el('a', 'dv-btn', '로그인하고 기록 관리하기');
+      login.href = loginUrl();
+      actions.prepend(login);
+      form.addEventListener('submit', event => { event.preventDefault(); storageSet(localKey, JSON.stringify({ reflection: reflection.value, prayer: prayer.value })); toast('이 기기에 저장했습니다.'); });
+      return;
+    }
+    note.textContent = `${session.user?.email || '내 계정'} 계정에 저장됩니다. 나만 볼 수 있고, 공유는 직접 누를 때만 이루어집니다.`;
+    let records = [];
+    let existing = null;
+    const paint = () => {
+      list.replaceChildren(el('h4', 'dv-section-label', `나의 묵상기록 ${records.length ? `(${records.length})` : ''}`));
+      if (!records.length) { list.append(el('p', 'dv-meta', '아직 저장한 묵상기록이 없습니다.')); return; }
+      for (const record of records) {
+        const item = el('article', 'dv-record');
+        const date = String(record.title || '').slice(0, 10);
+        item.append(el('strong', '', `${/^\d{4}-\d{2}-\d{2}$/.test(date) ? koreanDate(date) : record.title} · ${record.scripture_ref || ''}`));
+        if (record.reflection) item.append(el('p', '', record.reflection));
+        if (record.prayer) item.append(el('p', 'dv-prayer', record.prayer));
+        const row = el('div', 'dv-share-row');
+        if (/^\d{4}-\d{2}-\d{2}$/.test(date) && date !== data.date) {
+          const open = el('a', 'dv-mini', '이 날 묵상 열기');
+          open.href = `${pageUrl(date)}#records`;
+          row.append(open);
+        }
+        const remove = el('button', 'dv-mini', '삭제');
+        remove.type = 'button';
+        remove.addEventListener('click', async () => {
+          if (!confirm('이 묵상기록을 삭제할까요? 삭제하면 되돌릴 수 없습니다.')) return;
+          try {
+            await memberRest(`bible_journeys?id=eq.${encodeURIComponent(record.id)}`, { method: 'DELETE' });
+            records = records.filter(item => item.id !== record.id);
+            if (existing?.id === record.id) { existing = null; reflection.value = ''; prayer.value = ''; }
+            paint(); toast('삭제했습니다.');
+          } catch { toast('삭제하지 못했습니다. 다시 로그인한 뒤 시도해 주세요.'); }
+        });
+        row.append(remove);
+        item.append(row);
+        list.append(item);
+      }
+    };
+    try {
+      records = await memberRest(`bible_journeys?topic=eq.${encodeURIComponent(RECORD_TOPIC)}&select=id,title,scripture_ref,reflection,prayer,updated_at&order=title.desc&limit=60`) || [];
+      existing = records.find(item => item.title === recordTitle(data.date)) || null;
+      reflection.value = existing?.reflection || '';
+      const local = storageGet(localKey);
+      prayer.value = existing?.prayer || (local && !local.startsWith('{') ? local : '');
+      if (existing) save.textContent = '기록 수정';
+      paint();
+    } catch { list.replaceChildren(el('p', 'dv-meta', '나의 묵상기록을 불러오지 못했습니다. 다시 로그인해 주세요.')); }
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (!reflection.value.trim() && !prayer.value.trim()) { toast('묵상이나 기도를 한 줄 이상 적어 주세요.'); return; }
+      save.disabled = true;
+      const body = { reflection: reflection.value.trim(), prayer: prayer.value.trim(), scripture_ref: data.passage, updated_at: new Date().toISOString() };
+      try {
+        if (existing) {
+          const rows = await memberRest(`bible_journeys?id=eq.${encodeURIComponent(existing.id)}`, { method: 'PATCH', headers: { prefer: 'return=representation' }, body: JSON.stringify(body) });
+          existing = rows?.[0] || { ...existing, ...body };
+        } else {
+          const user = (await memberSession())?.user;
+          const rows = await memberRest('bible_journeys', { method: 'POST', headers: { prefer: 'return=representation' },
+            body: JSON.stringify({ ...body, user_id: user.id, topic: RECORD_TOPIC, title: recordTitle(data.date) }) });
+          existing = rows?.[0] || null;
+        }
+        records = [existing, ...records.filter(item => item.id !== existing?.id)].filter(Boolean).sort((a, b) => String(b.title).localeCompare(String(a.title)));
+        storageSet(localKey, '');
+        save.textContent = '기록 수정';
+        paint(); toast('나의 묵상기록에 저장했습니다.');
+      } catch { toast('저장하지 못했습니다. 다시 로그인한 뒤 시도해 주세요.'); }
+      finally { save.disabled = false; }
+    });
   }
 
   function render(data) {
@@ -364,23 +589,15 @@ function boot(root) {
       const panel=panels.get('prayer');
       panelHead(panel,'한줄기도','prayer');
       panel.append(el('p','dv-prayer',a.prayer));
-      const label=el('label','dv-section-label','나의 한줄기도');
-      const area=el('textarea','dv-mine');
-      area.rows=2;area.maxLength=500;
-      area.placeholder='오늘 말씀 앞에서 나의 한줄기도를 적어 보세요.';
-      const mineKey=`ekodi-devotion-mine-${data.date}`;
-      area.value=storageGet(mineKey);
-      area.addEventListener('input',()=>storageSet(mineKey,area.value));
-      const row=el('div','dv-share-row');
-      const share=el('button','dv-mini','나의 기도 공유');
-      share.type='button';share.dataset.share='mine';
-      row.append(share);
-      panel.append(label,area,el('p','dv-meta','내 기도는 이 기기에만 저장되고 직접 공유할 때만 외부로 전달됩니다.'),row);
+      const go=el('button','dv-mini','나의 묵상기록에 적기');
+      go.type='button';go.dataset.tab='records';
+      panel.append(el('div','dv-share-row'));panel.lastChild.append(go);
+      renderRecords(panels.get('records'), data);
     }
     notice.textContent = ATTRIBUTION + (data.activitySource === 'fallback' ? ' 이 날짜는 기본 묵상 적용 자료를 제공합니다.' : '');
     setupMrPlayer(a.song);
     if(data.admin?.canEdit) renderAdminEditor(data);
-    const legacyTab = {passage:'poem',action:'questions',mine:'prayer'}[location.hash.slice(1)];
+    const legacyTab = {passage:'poem',action:'questions',mine:'records'}[location.hash.slice(1)];
     selectTab(legacyTab || location.hash.slice(1) || 'poem', { updateHash: false });
   }
 
@@ -398,9 +615,9 @@ function boot(root) {
       case 'action': return { title: '오늘의 실천', text: `${head}\n\n✔ 오늘의 실천: ${a.action}`, hash: 'action' };
       case 'prayer': return { title: '한 줄 기도', text: `${head}\n\n🙏 ${a.prayer}`, hash: 'prayer' };
       case 'mine': {
-        const mine = panels.get('prayer').querySelector('textarea')?.value.trim();
+        const mine = panels.get('records').querySelector('textarea[name="prayer"]')?.value.trim();
         if (!mine) return null;
-        return { title: '나의 한줄기도', text: `${head}\n\n${mine}`, hash: 'prayer' };
+        return { title: '나의 한줄기도', text: `${head}\n\n${mine}`, hash: 'records' };
       }
       default: return { title: `${siteLabel} 오늘의 매일묵상 · ${d.passage}`, text: `${head}\n${a.keyLine}`, hash: '' };
     }
@@ -422,7 +639,7 @@ function boot(root) {
   async function share(kind, copyOnly = false) {
     if (!current?.found) return;
     const body = shareBody(kind);
-    if (!body) { toast('먼저 나의 한줄기도를 적어 주세요.'); panels.get('prayer').querySelector('textarea')?.focus(); return; }
+    if (!body) { toast('먼저 나의 한줄기도를 적어 주세요.'); selectTab('records'); panels.get('records').querySelector('textarea[name="prayer"]')?.focus(); return; }
     const url = shareUrl(current.date, body.hash);
     if (copyOnly) { toast(await copy(url) ? '링크를 복사했습니다. 카카오톡 대화방에 붙여 넣어 주세요.' : url); return; }
     if (navigator.share) {
@@ -434,7 +651,7 @@ function boot(root) {
 
   root.addEventListener('click', event => {
     const tab = event.target.closest('[data-tab]');
-    if (tab) { selectTab(tab.dataset.tab); return; }
+    if (tab) { selectTab(tab.dataset.tab); revealTabs(); return; }
     const shareButton = event.target.closest('[data-share]');
     if (shareButton) { share(shareButton.dataset.share); return; }
     const copyButton = event.target.closest('[data-copy]');
@@ -449,7 +666,7 @@ function boot(root) {
     tabButtons.get(nextId).focus();
   });
   window.addEventListener('hashchange', () => {
-    const hash = location.hash.slice(1), legacy = {passage:'poem',action:'questions',mine:'prayer'}[hash];
+    const hash = location.hash.slice(1), legacy = {passage:'poem',action:'questions',mine:'records'}[hash];
     if (current?.found) selectTab(legacy || hash || 'poem', { updateHash: false });
   });
 
@@ -463,7 +680,8 @@ function boot(root) {
   (async () => {
     const date = requestedDate();
     try {
-      const token = (()=>{try{return sessionStorage.getItem(ADMIN_TOKEN_KEY)||''}catch{return ''}})();
+      const token = await requestToken();
+      void loadViewer();
       const response = await fetch(`${API}${date ? `?date=${date}` : ''}`,
         {cache:'no-store',headers:token?{authorization:`Bearer ${token}`}:{}});
       const data = await response.json();
