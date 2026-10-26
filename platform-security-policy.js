@@ -129,7 +129,7 @@ export async function enforcePlatformRequestSecurity(request,env={}){
   return null;
 }
 
-export const SITE_ADMIN_FRAME_ROOT=/^\/(?:ekodichurch|ekodibiz(?:\/trade)?|ekodimall|books|cheonggye|cgma|cmpmyi|jadam|pizzamaru|yogurt)\/admin(?:\/[a-z0-9._~%-]+)*\/?$/i;
+export const SITE_ADMIN_FRAME_ROOT=/^\/(?:ekodichurch|ekodibiz(?:\/trade)?|ekodimall|books|cheonggye|cgma|cmpmyi|jadam|pizzamaru|yogurt|work|mail|live)\/admin(?:\/[a-z0-9._~%-]+)*\/?$/i;
 export function isFirstPartySiteAdminFrame(url,request,headers){
   return url.hostname.toLowerCase()==='ekodi.kr'
     && ['GET','HEAD'].includes(String(request.method||'GET').toUpperCase())

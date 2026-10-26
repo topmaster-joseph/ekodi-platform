@@ -416,6 +416,11 @@
     applySiteVisibility();
   }
 
+  function surfaceKey(site) {
+    const info = surfaceInfo({ domain: site?.label || site?.domain || site?.url, url: site?.url || '' });
+    return normalizeDomain(info?.url || '');
+  }
+
   function reconcileRegistryServices(services = []) {
     const grid = document.querySelector('#campusSiteGroups');
     if (!grid || !Array.isArray(services)) return false;
@@ -423,7 +428,14 @@
     for (const service of services) {
       const domain = normalizeDomain(service?.label || service?.domain || service?.url);
       if (!domain) continue;
-      let item = [...grid.querySelectorAll('.campus-site-item')].find(row => normalizeDomain(row.dataset.siteDomain) === domain);
+      // A registry entry may name the same site by a legacy subdomain or by its
+      // canonical apex path (my.ekodi.kr vs ekodi.kr/my); match on either, then on name.
+      const key = surfaceKey(service);
+      const name = String(service?.name || '').trim();
+      const rows = [...grid.querySelectorAll('.campus-site-item')];
+      let item = rows.find(row => normalizeDomain(row.dataset.siteDomain) === domain)
+        || rows.find(row => key && surfaceKey({ domain: row.dataset.siteDomain }) === key)
+        || (name ? rows.find(row => row.querySelector('.campus-site-identity strong')?.textContent?.trim() === name) : null);
       const site = registrySite(service, item);
       if (!site.domain) continue;
 
@@ -568,6 +580,9 @@
     { id: 'jadam', publicPath: '/jadam', adminPath: '/jadam/admin', siteType: 'store' },
     { id: 'pizzamaru', publicPath: '/pizzamaru', adminPath: '/pizzamaru/admin', siteType: 'store' },
     { id: 'yogurt', publicPath: '/yogurt', adminPath: '/yogurt/admin', siteType: 'store' },
+    { id: 'work', publicPath: '/work', adminPath: '/work/admin', siteType: 'org' },
+    { id: 'mail', publicPath: '/mail', adminPath: '/mail/admin', siteType: 'org' },
+    { id: 'live', publicPath: '/live', adminPath: '/live/admin', siteType: 'org' },
   ]);
   const LIFECYCLE_STATE = Object.freeze({ live: ['ok', '운영 중'], beta: ['warn', '베타'], preparing: ['warn', '준비 중'], planned: ['off', '오픈 전'], private: ['off', '비공개'], hidden: ['off', '숨김'] });
   let activeSiteKey = '';
@@ -651,7 +666,7 @@
     if (!box) return;
     if (!site) {
       box.dataset.state = 'empty';
-      box.replaceChildren(element('p', 'campus-site-admin-hint', '위쪽 버튼에서 사이트를 선택하면 그 사이트의 관리자 메뉴가 여기에 표시됩니다.'));
+      box.replaceChildren(element('p', 'campus-site-admin-hint', '위쪽 버튼에서 사이트를 선택하면 그 사이트의 관리자 화면이 여기에 열립니다.'));
       if (grid) { grid.hidden = false; grid.style.removeProperty('display'); }
       return;
     }
