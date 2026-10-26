@@ -1,7 +1,7 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { bibleCorePolicy, bibleProviderCatalog, readBiblePassage, readBibleReference, searchBible } from './bible-core.js';
 import { resolveDevotion, devotionShareText, isDevotionDate, seoulToday } from './devotional-activities.js';
-import { devotionAdminSession, devotionOverride, saveDevotionOverride } from './devotional-admin-api.js';
+import { devotionAdminSession, devotionOverride, devotionViewer, saveDevotionOverride } from './devotional-admin-api.js';
 
 const MAX_MESSAGE = 4000;
 const MAX_HISTORY = 8;
@@ -218,6 +218,11 @@ async function handleBibleApi(request, env, url) {
     return saveDevotionOverride(request, env, await devotionAdminSession(request, env), resolveDevotion);
   }
   if (request.method !== 'GET') return json({ ok:false, error:'method_not_allowed' }, 405);
+  if (url.pathname === '/api/bible/devotion/me') {
+    // Role discovery for the devotion page admin menu; private and never cached.
+    const viewer = await devotionViewer(request, env);
+    return json({ ok:true, ...viewer, canEditDevotion:viewer.superAdmin });
+  }
   if (url.pathname === '/api/bible/providers') {
     return json({ ok:true, policy:bibleCorePolicy(), providers:bibleProviderCatalog() });
   }

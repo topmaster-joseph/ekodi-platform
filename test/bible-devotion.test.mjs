@@ -156,7 +156,7 @@ test('attribution and October original score are present',()=>{
 test('page order: Scripture, tabs and panel, attribution, share — no summary card or standalone MR row', () => {
   const js = fs.readFileSync(new URL('devotion.js', bibleDir), 'utf8');
   const line = js.match(/root\.append\(([^)]*)\);/)[1].split(',').map(s => s.trim());
-  assert.deepEqual(line, ['datebar', 'status', 'scriptureBlock', 'tabbar', 'panelWrap', 'notice', 'shareRow', 'adminPanel', 'toastEl']);
+  assert.deepEqual(line, ['adminBar', 'datebar', 'status', 'scriptureBlock', 'tabbar', 'panelWrap', 'notice', 'shareRow', 'adminPanel', 'toastEl']);
   assert.doesNotMatch(js, /사용 권한이 확인된 반주 음원이 아직 등록되지 않았습니다/);
   assert.match(js, /panels\.get\('song'\) \|\| root\)\.append\(audioRow\)/);
 });
@@ -165,4 +165,21 @@ test('mission devotion header spans the same 840px centre column as the content'
   const css = fs.readFileSync(new URL('devotion.css', bibleDir), 'utf8');
   assert.match(css, /\.ekodi-devotion\{[^}]*max-width:840px/);
   assert.match(css, /body:has\(\[data-mission-devotion\]\) \.mission-site-header\{max-width:840px;padding-inline:16px\}/);
+});
+
+test('admin menu and 나의 묵상기록 tab are wired', () => {
+  const js = fs.readFileSync(new URL('devotion.js', bibleDir), 'utf8');
+  assert.match(js, /\{ id: 'records', label: '나의 묵상기록' \}/);
+  assert.match(js, /fetch\(`\$\{API\}\/me`/);
+  for (const href of ['/admin#devotional', '/ekodichurch/admin/worship', '/ekodimission/admin/activities']) assert.ok(js.includes(`'${href}'`), href);
+  assert.match(js, /bible_journeys\?topic=eq\./);
+  assert.match(js, /method: 'DELETE'/);
+});
+
+test('/me endpoint: anonymous viewers get no roles and the response is never cached', async () => {
+  const response = await worker.fetch(new Request('https://ekodi.kr/bible/api/bible/devotion/me'), assetEnv());
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.deepEqual({ a: body.authenticated, s: body.superAdmin, c: body.churchAdmin, m: body.missionAdmin }, { a: false, s: false, c: false, m: false });
+  assert.match(response.headers.get('cache-control'), /no-store/);
 });

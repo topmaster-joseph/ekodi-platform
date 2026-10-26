@@ -5,10 +5,67 @@ import { isDevotionDate } from './devotional-activities.js';
 const string=(value,max=2000)=>typeof value==='string'?value.trim().slice(0,max):'';
 const safeMedia=value=>{const v=string(value,400);return /^\/bible\/media\/[a-z0-9/_-]+\.(?:mp3|ogg|m4a|webm|png|jpg|jpeg|webp|svg)$/i.test(v)?v:'';};
 
+const CHURCH_ADMIN_ROLES=new Set(['senior_pastor','pastor','worship_admin','staff','care_staff']);
+const MISSION_ADMIN_ROLES=new Set(['tenant_admin','store_owner']);
+const JWT_RE=/^[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}$/;
+
+function bearer(request){
+  const match=/^Bearer\s+(\S{20,4096})$/i.exec(request.headers.get('authorization')||'');
+  return match?match[1]:'';
+}
+// Verified EKODI member (Supabase Auth). The token is checked by Supabase, never decoded locally.
+export async function devotionMember(request,env){
+  const token=bearer(request);
+  if(!JWT_RE.test(token)||!env.SUPABASE_URL||!env.SUPABASE_PUBLISHABLE_KEY)return null;
+  try{
+    const response=await fetch(`${env.SUPABASE_URL}/auth/v1/user`,{headers:{authorization:`Bearer ${token}`,apikey:env.SUPABASE_PUBLISHABLE_KEY}});
+    if(!response.ok)return null;
+    const user=await response.json();
+    if(!user?.id)return null;
+    return {id:user.id,email:String(user.email||'').toLowerCase(),emailConfirmed:Boolean(user.email_confirmed_at||user.confirmed_at),token};
+  }catch{return null}
+}
+async function superAdminByEmail(env,member){
+  if(!env.DB||!member?.email||!member.emailConfirmed)return null;
+  const row=await env.DB.prepare('SELECT email,role FROM admins WHERE lower(email)=? LIMIT 1').bind(member.email).first().catch(()=>null);
+  return row?.role==='super_admin'?{email:row.email,role:row.role,via:'member'}:null;
+}
+async function memberRest(env,member,path,init={}){
+  const response=await fetch(`${env.SUPABASE_URL}${path}`,{...init,headers:{apikey:env.SUPABASE_PUBLISHABLE_KEY,authorization:`Bearer ${member.token}`,'content-type':'application/json',...(init.headers||{})}});
+  if(!response.ok)return null;
+  return response.json().catch(()=>null);
+}
+// Who is viewing: drives the devotion page admin menu. Read-only role discovery; every admin
+// surface linked from the menu still enforces its own authorization.
+export async function devotionViewer(request,env){
+  const d1Admin=await devotionD1Session(request,env);
+  const member=d1Admin?null:await devotionMember(request,env);
+  const viewer={authenticated:Boolean(d1Admin||member),email:d1Admin?.email||member?.email||'',superAdmin:Boolean(d1Admin),churchAdmin:false,missionAdmin:false};
+  if(!member)return viewer;
+  const [superAdmin,staff,contexts]=await Promise.all([
+    superAdminByEmail(env,member),
+    memberRest(env,member,`/rest/v1/church_staff?church_slug=eq.ekodi-church&user_id=eq.${encodeURIComponent(member.id)}&active=eq.true&select=role&limit=1`).catch(()=>null),
+    memberRest(env,member,'/rest/v1/rpc/current_site_activity_contexts',{method:'POST',body:'{}'}).catch(()=>null),
+  ]);
+  const list=Array.isArray(contexts)?contexts:[];
+  viewer.superAdmin=Boolean(superAdmin);
+  viewer.churchAdmin=(Array.isArray(staff)&&CHURCH_ADMIN_ROLES.has(String(staff[0]?.role||'')))
+    ||list.some(item=>String(item?.site||'')==='church'&&String(item?.authorization_role||'')==='tenant_admin');
+  viewer.missionAdmin=list.some(item=>String(item?.tenant||'').toLowerCase()==='ekodimission'&&MISSION_ADMIN_ROLES.has(String(item?.authorization_role||'').toLowerCase()));
+  return viewer;
+}
+
+// Super administrator: an EKODI admin-console session (D1) or a verified member whose email is a
+// D1 super_admin. Client-provided roles are never trusted.
 export async function devotionAdminSession(request,env){
+  const d1=await devotionD1Session(request,env);
+  if(d1)return d1;
+  return superAdminByEmail(env,await devotionMember(request,env));
+}
+async function devotionD1Session(request,env){
   const raw=request.headers.get('authorization')||'';
   const match=/^Bearer ([a-zA-Z0-9_.-]{20,256})$/.exec(raw);
-  if(!match||!env.DB)return null;
+  if(!match||JWT_RE.test(match[1])||!env.DB)return null;
   const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(match[1])))).map(b=>b.toString(16).padStart(2,'0')).join('');
   const row=await env.DB.prepare(`SELECT a.email,a.role FROM sessions s JOIN admins a ON a.id=s.admin_id
     WHERE s.token_hash=? AND s.expires_at>? LIMIT 1`).bind(hash,new Date().toISOString()).first().catch(()=>null);

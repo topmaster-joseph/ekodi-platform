@@ -21,6 +21,8 @@ on:
       - 'config/common-scripture/**'
       - 'config/devotional-activities/**'
       - 'test/bible-devotion.test.mjs'
+      - 'test/devotional-viewer-roles.test.mjs'
+      - 'devotional-admin-api.js'
       - 'scripts/validate-bible-core.mjs'
       - 'scripts/vendor-krv-data.mjs'
       - 'test/bible-core.test.mjs'
@@ -45,6 +47,8 @@ on:
       - 'config/common-scripture/**'
       - 'config/devotional-activities/**'
       - 'test/bible-devotion.test.mjs'
+      - 'test/devotional-viewer-roles.test.mjs'
+      - 'devotional-admin-api.js'
       - 'scripts/validate-bible-core.mjs'
       - 'scripts/vendor-krv-data.mjs'
       - 'test/bible-core.test.mjs'
@@ -94,7 +98,7 @@ jobs:
           node --check scripts/validate-bible-core.mjs
           node --check scripts/vendor-krv-data.mjs
           node scripts/validate-bible-core.mjs
-          node --test test/bible-core.test.mjs test/bible-devotion.test.mjs
+          node --test test/bible-core.test.mjs test/bible-devotion.test.mjs test/devotional-viewer-roles.test.mjs
           node --check ekodi-service-manifest.js
           node -e "JSON.parse(require('fs').readFileSync('platform-boundaries.json','utf8'))"
           node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/bible.worker.json','utf8'))"
