@@ -157,6 +157,135 @@ function boot(root) {
     panel.append(verses, el('p', 'dv-meta', blocks[0].attribution || ''));
   }
 
+
+  function renderScore(container, abc) {
+    const notation = String(abc || '').replace(/\\n/g, '\n');
+    if (!notation.trim()) return;
+    container.textContent = '악보를 불러오는 중입니다.';
+    if (!scoreScriptReady) scoreScriptReady = new Promise((resolve, reject) => {
+      if (window.ABCJS?.renderAbc) { resolve(); return; }
+      const script = el('script');
+      script.src = SCORE_LIB;
+      script.async = true;
+      script.onload = () => window.ABCJS?.renderAbc ? resolve() : reject(new Error('score renderer unavailable'));
+      script.onerror = reject;
+      document.head.append(script);
+    });
+    scoreScriptReady.then(() => {
+      if (!container.isConnected) return;
+      container.textContent = '';
+      window.ABCJS.renderAbc(container, notation, {responsive:'resize',staffwidth:620});
+    }).catch(() => { container.textContent = '악보 표시를 불러오지 못했습니다. 가사는 아래에서 확인하세요.'; });
+  }
+
+  function setupMrPlayer(song) {
+    audioRow.replaceChildren();
+    const title = el('strong', '', '오늘의 CCM MR');
+    const detail = el('span', 'dv-audio-hint');
+    const url = String(song?.mrUrl || '');
+    audioRow.append(title, detail);
+    if (!/^\\/bible\\/media\\/[a-z0-9/_-]+\\.(mp3|ogg|m4a|webm)$/i.test(url)) {
+      detail.textContent = '사용 권한이 확인된 반주 음원이 아직 등록되지 않았습니다.';
+      return;
+    }
+    const audio = el('audio');
+    audio.src = url; audio.loop = true; audio.preload = 'metadata';
+    const toggle = el('button','dv-mini','MR 재생');
+    toggle.type = 'button'; toggle.setAttribute('aria-pressed','false');
+    const update = playing => {
+      toggle.textContent = playing ? 'MR 일시정지' : 'MR 재생';
+      toggle.setAttribute('aria-pressed', String(playing));
+    };
+    toggle.addEventListener('click', async () => {
+      if (!audio.paused) { audio.pause(); update(false); return; }
+      try { await audio.play(); update(true); detail.textContent = song.mrTitle || '반주 재생 중'; }
+      catch { detail.textContent = '브라우저 설정에서 음성 재생을 허용해 주세요.'; update(false); }
+    });
+    audio.addEventListener('ended',()=>update(false));
+    audio.addEventListener('error',()=>{update(false);detail.textContent='음원 파일을 확인할 수 없습니다.';});
+    audioRow.append(toggle,audio);
+    detail.textContent = song.mrTitle || '사용 허가된 반주';
+    // Browsers may block unmuted autoplay; never circumvent the user's audio preference.
+    audio.play().then(()=>update(true)).catch(()=>{update(false);detail.textContent='자동재생이 제한되었습니다. MR 재생 버튼을 누르세요.';});
+  }
+
+  function renderAdminEditor(data) {
+    adminPanel.hidden = false;
+    const heading = el('h3','','관리자 · 묵상 적용 편집');
+    const info = el('p','dv-meta',`승인된 공통본문 ${data.passage}은 수정하지 않습니다. 세부 적용 자료만 편집합니다. 상태: ${data.admin.status}`);
+    const form = el('form','dv-editor-form');
+    const source = data.activities;
+    const sections = [
+      ['theme','주제','text'],['keyLine','핵심 문장','textarea'],
+      ['poem.title','묵상 시 제목','text'],['poem.lines','시 · 줄마다 한 행','textarea'],
+      ['song.title','묵상 노래 제목','text'],['song.mood','노래 분위기','text'],
+      ['song.verse','노래 1절 · 줄마다 한 행','textarea'],['song.refrain','노래 후렴 · 줄마다 한 행','textarea'],
+      ['song.abc','악보 · ABC 표기법','textarea'],['song.mrUrl','CCM MR · 사용권 확인된 /bible/media/ 파일','text'],
+      ['song.mrTitle','MR 제목','text'],['illustration.src','그림 · /bible/media/ 파일 또는 공통 일러스트','text'],
+      ['illustration.alt','그림 설명','text'],['questions','적용 질문 · 각 행에 분류|질문','textarea'],
+      ['action','오늘의 실천','textarea'],['family','가정·어린이','textarea'],
+      ['prayer','한줄기도 · 기도 예문','textarea'],
+    ];
+    const bindings = new Map();
+    const getValue = path => {
+      if (path === 'questions') return (source.questions||[]).map(q=>`${q.kind}|${q.text}`).join('\n');
+      const value = path.split('.').reduce((obj,key)=>obj?.[key],source);
+      return Array.isArray(value)?value.join('\n'):String(value||'');
+    };
+    for (const [path,labelText,kind] of sections) {
+      const label = el('label','dv-editor-field');
+      const textLabel = el('span','',labelText);
+      const field = el(kind === 'textarea'?'textarea':'input','dv-editor-input');
+      if(kind==='textarea') field.rows = path==='song.abc'?6:3;
+      field.value = getValue(path);
+      field.dataset.editor = path;
+      field.setAttribute('aria-label',labelText);
+      label.append(textLabel,field);form.append(label);bindings.set(path,field);
+    }
+    const controls = el('div','dv-share-row');
+    const saveDraft = el('button','dv-btn','임시저장');
+    const publish = el('button','dv-btn dv-btn-primary','공개 반영');
+    saveDraft.type=publish.type='button';
+    controls.append(saveDraft,publish);
+    const feedback = el('p','dv-status');
+    form.append(controls,feedback);
+    const persist = async statusValue => {
+      const token = (()=>{try{return sessionStorage.getItem(ADMIN_TOKEN_KEY)||''}catch{return ''}})();
+      if (!token) {feedback.textContent='관리자 로그인이 필요합니다.';return}
+      const out = JSON.parse(JSON.stringify(source));
+      for (const [path,field] of bindings) {
+        const raw = field.value.trim();
+        let value = raw;
+        if(path==='questions') value=raw.split('\n').filter(Boolean).map(line=>{
+          const i=line.indexOf('|');return {kind:i<0?'적용':line.slice(0,i).trim(),text:line.slice(i+1).trim()};
+        });
+        else if(['poem.lines','song.verse','song.refrain'].includes(path)) value=raw.split('\n').map(v=>v.trim()).filter(Boolean);
+        if(path.includes('.')) {
+          const [head,tail]=path.split('.');
+          out[head] ||= {};
+          out[head][tail]=value;
+        }else out[path]=value;
+      }
+      saveDraft.disabled=publish.disabled=true;feedback.textContent='저장 중입니다.';
+      try {
+        const response=await fetch(API,{method:'PUT',cache:'no-store',headers:{
+          'content-type':'application/json',authorization:`Bearer ${token}`
+        },body:JSON.stringify({date:data.date,activities:out,status:statusValue,expectedRevision:data.admin.revision})});
+        const answer=await response.json();
+        if(!response.ok)throw Error(answer.error||'save_failed');
+        data.admin.revision=answer.revision;
+        data.admin.status=answer.status;
+        feedback.textContent=statusValue==='published'?'변경 사항이 공개 반영되었습니다.':'검수용 초안을 저장했습니다.';
+        current.activities=out;
+        render(current);
+      } catch(error){feedback.textContent=`저장 실패: ${error.message}. 다시 조회한 뒤 재시도해 주세요.`;}
+      finally{saveDraft.disabled=publish.disabled=false;}
+    };
+    saveDraft.addEventListener('click',()=>persist('draft'));
+    publish.addEventListener('click',()=>persist('published'));
+    adminPanel.append(heading,info,form);
+  }
+
   function render(data) {
     current = data;
     dateLabel.textContent = koreanDate(data.date);
@@ -202,18 +331,38 @@ function boot(root) {
       const refrain = el('div', 'dv-refrain');
       refrain.append(el('small', '', '후렴'));
       for (const line of a.song.refrain) refrain.append(el('p', '', line));
-      panel.append(verse, refrain, el('p', 'dv-meta', '자유롭게 곡을 붙여 불러 보세요. 가족·소그룹이 함께 만든 곡조도 좋은 고백이 됩니다.'));
+      const score = el('div','dv-score');
+      panel.append(score,verse,refrain);
+      if(a.song.abc)renderScore(score,a.song.abc);
+      else score.append(el('p','dv-meta','선율이 확정되지 않아 악보가 아직 없습니다. 관리자가 악보를 등록하면 오선보로 표시합니다.'));
+      panel.append(el('p','dv-meta','묵상 노래의 선율 악보는 작성·검수된 원곡 자료만 표시합니다.'));
+    }
+    {
+      const panel = panels.get('image');
+      panelHead(panel,'말씀을 그리다','image');
+      const img=el('img','dv-illustration');
+      img.src=a.illustration?.src || '/bible/devotion-illustration.svg';
+      img.alt=a.illustration?.alt || '말씀의 길을 함께 걷는 사람들의 선그림';
+      img.loading='lazy';img.decoding='async';
+      panel.append(img,el('p','dv-meta',`묵상 그림 · ${a.theme}`));
     }
     {
       const panel = panels.get('questions');
-      panelHead(panel, '삶에 비추어 묻기', 'questions');
+      panelHead(panel, '질문 / 실천', 'questions');
       const list = el('ol', 'dv-questions');
-      for (const q of a.questions) {
+      for (const q of a.questions || []) {
         const li = el('li');
         li.append(el('span', 'dv-tag', q.kind), ' ', q.text);
         list.append(li);
       }
-      panel.append(list);
+      const label=el('label','dv-check');
+      const box=el('input');box.type='checkbox';
+      const doneKey=`ekodi-devotion-done-${data.date}`;
+      box.checked=storageGet(doneKey)==='1';
+      box.addEventListener('change',()=>storageSet(doneKey,box.checked?'1':''));
+      label.append(box,el('span','',a.action || '오늘의 말씀을 실천하기'));
+      panel.append(list,el('h4','dv-section-label','오늘의 실천'),label,
+        el('p','dv-meta','실천 체크는 이 기기에만 저장됩니다.'));
     }
     {
       const panel = panels.get('family');
@@ -221,39 +370,21 @@ function boot(root) {
       panel.append(el('p', 'dv-body', a.family));
     }
     {
-      const panel = panels.get('action');
-      panelHead(panel, '오늘의 실천', 'action');
-      const label = el('label', 'dv-check');
-      const box = el('input');
-      box.type = 'checkbox';
-      const doneKey = `ekodi-devotion-done-${data.date}`;
-      box.checked = storageGet(doneKey) === '1';
-      box.addEventListener('change', () => storageSet(doneKey, box.checked ? '1' : ''));
-      label.append(box, el('span', '', a.action));
-      panel.append(label, el('p', 'dv-meta', '체크 표시는 이 기기에만 저장됩니다.'));
-    }
-    {
-      const panel = panels.get('prayer');
-      panelHead(panel, '한 줄 기도', 'prayer');
-      panel.append(el('p', 'dv-prayer', a.prayer));
-    }
-    {
-      const panel = panels.get('mine');
-      panelHead(panel, '나의 묵상 한 줄');
-      panel.append(el('p', 'dv-meta', '이 기기에만 저장됩니다. 공유는 직접 누를 때만 이루어집니다.'));
-      const area = el('textarea', 'dv-mine');
-      area.rows = 3;
-      area.maxLength = 500;
-      area.placeholder = '오늘 말씀 앞에서 붙든 한 문장을 적어 보세요';
-      const mineKey = `ekodi-devotion-mine-${data.date}`;
-      area.value = storageGet(mineKey);
-      area.addEventListener('input', () => storageSet(mineKey, area.value));
-      const row = el('div', 'dv-share-row');
-      const share = el('button', 'dv-btn dv-btn-primary', '나의 한 줄 공유');
-      share.type = 'button';
-      share.dataset.share = 'mine';
+      const panel=panels.get('prayer');
+      panelHead(panel,'한줄기도','prayer');
+      panel.append(el('p','dv-prayer',a.prayer));
+      const label=el('label','dv-section-label','나의 한줄기도');
+      const area=el('textarea','dv-mine');
+      area.rows=2;area.maxLength=500;
+      area.placeholder='오늘 말씀 앞에서 나의 한줄기도를 적어 보세요.';
+      const mineKey=`ekodi-devotion-mine-${data.date}`;
+      area.value=storageGet(mineKey);
+      area.addEventListener('input',()=>storageSet(mineKey,area.value));
+      const row=el('div','dv-share-row');
+      const share=el('button','dv-mini','나의 기도 공유');
+      share.type='button';share.dataset.share='mine';
       row.append(share);
-      panel.append(area, row);
+      panel.append(label,area,el('p','dv-meta','내 기도는 이 기기에만 저장되고 직접 공유할 때만 외부로 전달됩니다.'),row);
     }
     notice.textContent = ATTRIBUTION + (data.activitySource === 'fallback' ? ' 이 날짜는 기본 묵상 적용 자료를 제공합니다.' : '');
     setupMrPlayer(a.song);
@@ -270,14 +401,14 @@ function boot(root) {
     switch (kind) {
       case 'poem': return { title: a.poem.title, text: `${head}\n\n〈${a.poem.title}〉\n${a.poem.lines.join('\n')}`, hash: 'poem' };
       case 'song': return { title: a.song.title, text: `${head}\n\n♪ ${a.song.title}\n${a.song.verse.join('\n')}\n(후렴) ${a.song.refrain.join(' / ')}`, hash: 'song' };
-      case 'questions': return { title: '적용 질문', text: `${head}\n\n${a.questions.map((q, i) => `${i + 1}. [${q.kind}] ${q.text}`).join('\n')}`, hash: 'questions' };
+      case 'questions': return { title: '질문 / 실천', text: `${head}\n\n${a.questions.map((q, i) => `${i + 1}. [${q.kind}] ${q.text}`).join('\n')}\n오늘의 실천: ${a.action}`, hash: 'questions' };
       case 'family': return { title: '가정·어린이 질문', text: `${head}\n\n👨‍👩‍👧 ${a.family}`, hash: 'family' };
       case 'action': return { title: '오늘의 실천', text: `${head}\n\n✔ 오늘의 실천: ${a.action}`, hash: 'action' };
       case 'prayer': return { title: '한 줄 기도', text: `${head}\n\n🙏 ${a.prayer}`, hash: 'prayer' };
       case 'mine': {
-        const mine = panels.get('mine').querySelector('textarea')?.value.trim();
+        const mine = panels.get('prayer').querySelector('textarea')?.value.trim();
         if (!mine) return null;
-        return { title: '나의 묵상 한 줄', text: `${head}\n\n✍ ${mine}`, hash: '' };
+        return { title: '나의 한줄기도', text: `${head}\n\n${mine}`, hash: 'prayer' };
       }
       default: return { title: `${siteLabel} 오늘의 매일묵상 · ${d.passage}`, text: `${head}\n${a.keyLine}`, hash: '' };
     }
@@ -299,7 +430,7 @@ function boot(root) {
   async function share(kind, copyOnly = false) {
     if (!current?.found) return;
     const body = shareBody(kind);
-    if (!body) { toast('먼저 나의 한 줄을 적어 주세요.'); panels.get('mine').querySelector('textarea')?.focus(); return; }
+    if (!body) { toast('먼저 나의 한줄기도를 적어 주세요.'); panels.get('prayer').querySelector('textarea')?.focus(); return; }
     const url = shareUrl(current.date, body.hash);
     if (copyOnly) { toast(await copy(url) ? '링크를 복사했습니다. 카카오톡 대화방에 붙여 넣어 주세요.' : url); return; }
     if (navigator.share) {
