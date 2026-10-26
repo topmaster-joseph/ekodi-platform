@@ -16,7 +16,7 @@ const PROGRESSIVE_HOME_STYLE=`${SHELL_ORIGIN}/progressive-home.css?v=${EKODI_SER
 const INTERNAL_SURFACES=new Set(['workspace','admin','form','document','data']);
 const USER_SURFACES=new Set(['public','workspace']);
 const SERVICE_OWNED_FOOTER_SERVICES=new Set(['mission']);
-const SHARED_FOOTER_REPLACES_LOCAL_FOOTER_SERVICES=new Set(['mall']);
+const SHARED_FOOTER_REPLACES_LOCAL_FOOTER_SERVICES=new Set(); // Native mall footers are operator-owned.
 const MY_SERVICE_ID='my';
 const USER_UI_VERSION='v1';
 const USER_LAYOUT_VERSION='centered-v1';
