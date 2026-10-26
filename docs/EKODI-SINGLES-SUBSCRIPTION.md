@@ -29,8 +29,12 @@
 
 ## 구독 권한 진실과 가격
 - Plan ID: `plus`. **금액/결제주기/환불 문구 미확정** — 관리자 계약 심사 전 임의의 가격·할인·구독 시도를 만들지 않는다.
-- EKODI Core 결제 검증 -> 인증된 중앙 billing 이벤트 -> `singles_entitlements`에 사용자별 `source='verified_central_billing'`, `receipt_id`, `expires_at` 기록. 구매 UI에서 자체적으로 활성화하거나 user_metadata를 믿지 않는다.
-- Worker `SINGLES_M1_ENABLED`, `SINGLES_SOCIAL_ENABLED`, `SINGLES_PAID_ACTIONS_ENABLED` 및 Edge `SINGLES_ONBOARDING_ENABLED`, `SINGLES_SOCIAL_ENABLED`, `SINGLES_PAYMENTS_ENABLED`는 모두 기본 OFF. 결제·회원수집·추천은 각각 심사 통과 후 제어한다.
+- **현행(2026-10-26 기준) 구독 원장은 `singles_bank_grants`다.** 회원이 계좌이체 주문(`singles_bank_orders`) → 입금 신고 → 운영자가 `singles_bank_confirm_order()`로 승인하면 `singles_bank_grants`에 `expires_at`이 기록·연장된다. 승인자는 본인 주문을 처리할 수 없다. 구매 UI·user_metadata는 근거가 되지 않는다.
+- `singles_entitlements`(`source='verified_central_billing'`)는 향후 EKODI Core 중앙 결제 연동용으로 만들어 둔 표이며 **현재 코드에서 쓰지 않는다**(0건).
+- 기능 스위치의 정본 목록은 `config/singles-feature-flags.json`이다. 회원 대상 스위치는 모두 기본 OFF이며 각각 심사 통과 후 제어한다.
+  - Worker: `SINGLES_M1_ENABLED`, `SINGLES_SOCIAL_ENABLED`, `SINGLES_PAID_ACTIONS_ENABLED`, `SINGLES_BANK_TRANSFER_ENABLED`, `SINGLES_BANK_VERIFICATION_ENABLED`
+  - Edge: `SINGLES_ONBOARDING_ENABLED`, `SINGLES_SOCIAL_ENABLED`, `SINGLES_BANK_TRANSFER_ENABLED`, `SINGLES_BANK_VERIFICATION_ENABLED`
+  - 이전 문서의 Edge `SINGLES_PAYMENTS_ENABLED`는 코드에 존재한 적 없는 이름이라 폐기했다. Edge의 유료 행동은 스위치가 아니라 구독 원장(`singles_bank_grants`)으로 강제된다(미구독 402).
 - Premium write는 결제 비활성 시 HTTP 503, 구독 미확인·만료 시 402, 본인 및 상호동의 또는 성인확인 위반 시 403.
 - 구독 만료 후에도 기존 메시지 열람(상호동의 유지 시), 거절·차단·신고 기능은 무료로 유지한다.
 

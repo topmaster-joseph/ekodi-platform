@@ -1,0 +1,14 @@
+{
+  "service": "ekodi-singles",
+  "purpose": "Single registry of every SINGLES_*_ENABLED switch, where it is read and what it gates. Tests fail if code, wrangler or docs drift from this file.",
+  "flags": [
+    {"name": "SINGLES_PUBLIC_PREVIEW_ENABLED", "layer": "worker", "default": "true-if-unset", "gates": "공개 소개 화면(/singles). 'false'일 때만 소개 화면도 닫힘"},
+    {"name": "SINGLES_M1_ENABLED", "layer": "worker", "default": "false", "gates": "회원 API 프록시 전체(가입·동의·프로필)"},
+    {"name": "SINGLES_SOCIAL_ENABLED", "layer": "worker+edge", "default": "false", "gates": "탐색·호감·메시지·행사·신고·차단·운영자 신고 처리"},
+    {"name": "SINGLES_PAID_ACTIONS_ENABLED", "layer": "worker", "default": "false", "gates": "메시지 발송·행사 신청 쓰기(유료 행동). Edge는 구독 원장(singles_bank_grants)으로 별도 강제"},
+    {"name": "SINGLES_BANK_TRANSFER_ENABLED", "layer": "worker+edge", "default": "false", "gates": "계좌이체 주문 접수"},
+    {"name": "SINGLES_BANK_VERIFICATION_ENABLED", "layer": "worker+edge", "default": "false", "gates": "운영자 입금 확인(승인)"},
+    {"name": "SINGLES_ONBOARDING_ENABLED", "layer": "edge", "default": "false", "gates": "Edge 회원 가입·동의 처리(/me, /withdraw)"}
+  ],
+  "retired_names": ["SINGLES_PAYMENTS_ENABLED"]
+}

@@ -76,7 +76,7 @@ Core 재사용: people, login_identities, 기존 auth.users 연결, 공통 이�
 
 ## 5. 서버 API 초안
 - GET /singles/api/public : 공개 통계가 아닌 소개·모임 정보, PII 없음.
-- GET/PUT /singles/api/me : 본인 프로필·동의·공개 설정. POST /singles/api/withdraw.
+- GET/PUT /singles/api/me : 본인 프로필·동의·공개 설정. DELETE /singles/api/withdraw(탈퇴: 연결 종료·RSVP 취소·영수증 기록을 한 트랜잭션으로 처리, `docs/EKODI-SINGLES-WITHDRAWAL-DATA.md`).
 - GET /singles/api/discover : 서버 동의·성인·차단 확인 후 최소 공개 카드와 추천 근거 반환.
 - POST /singles/api/interests/:member_id, DELETE /singles/api/interests/:member_id : 상호 동의/철회 원자적 처리.
 - GET /singles/api/matches : 당사자만.
