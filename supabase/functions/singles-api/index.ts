@@ -119,7 +119,8 @@ Deno.serve(async req => {
       .upsert(row, { onConflict: "user_id" }).select(fields).single();
     if (writeError) throw writeError;
     const { error: receiptError } = await admin.from("singles_consent_receipts")
-      .insert({ user_id: userId, action: "enrolled", consent_version: VERSION });
+      .insert({ user_id: userId, action: "enrolled", consent_version: VERSION,
+        religion_consent: b.religion_consent, marriage_opt_in: b.marriage_opt_in });
     if (receiptError) throw receiptError;
     return reply(req, { member: safe(member) });
   } catch (err) {
