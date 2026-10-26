@@ -138,8 +138,9 @@ function tick(){
     $('#presLecture').textContent=formatClock(lectureElapsedMs(st,now));
     const phase=timerPhase(st,now);
     const text=st.timer.status==='idle'?'--:--':formatClock(timerRemainingMs(st,now));
-    $('#presTimer').textContent=text;$('#presTimerTop').textContent=text;
-    $('#presTimer').className='big-clock '+(['warn','final','done'].includes(phase)?phase:'');
+    $('#presTimer').textContent=text;
+    $('#presTimer').className='lv-clock '+(['warn','final','done'].includes(phase)?phase:'');
+    $('#presTimerWrap').dataset.phase=phase;
     $('#presTimerInfo').textContent={idle:'대기 중',running:'진행 중',paused:'일시정지',warn:'종료 5분 전',final:'종료 1분 전',done:'종료'}[phase];
     $('#pPause').textContent=st.timer.status==='paused'?'재개':'일시정지';$('#pPause').disabled=st.timer.status==='idle';
   }
@@ -193,6 +194,7 @@ function bind(){
   });
   window.addEventListener('storage',e=>store.onStorage(e));
   if(audience)return;
+  fitSideToStage();
   $('#presNotes').addEventListener('click',e=>{const b=e.target.closest('[data-answer-toggle]');if(b)toggleAnswer(b.dataset.answerToggle);});
   $('#pPrev').addEventListener('click',()=>setSlide(S().slideIndex-1));
   $('#pNext').addEventListener('click',()=>setSlide(S().slideIndex+1));
@@ -214,6 +216,19 @@ function bind(){
   $('#pPrint').addEventListener('click',printDeck);
   $('#pSync').addEventListener('click',()=>{store.resync();lastKey='';render();toast('최신 상태로 동기화했습니다.');});
   $('#backStudio').href=livePath(location.pathname,'?c='+encodeURIComponent(course.id));
+}
+// The presenter side column never runs past the stage: its height follows the stage (bar + slide) and the
+// cards scroll inside it. Single-column (narrow) layouts keep the natural flow.
+function fitSideToStage(){
+  const stage=document.querySelector('#presMain>.stage'),side=$('#presSide');
+  if(!stage||!side)return;
+  const apply=()=>{
+    const wide=matchMedia('(min-width:1181px)').matches;
+    side.style.maxHeight=wide?Math.max(320,Math.round(stage.getBoundingClientRect().height))+'px':'';
+  };
+  apply();
+  if(typeof ResizeObserver==='function')new ResizeObserver(apply).observe(stage);
+  addEventListener('resize',apply);
 }
 function toggleNotes(){
   showNotes=!showNotes;
