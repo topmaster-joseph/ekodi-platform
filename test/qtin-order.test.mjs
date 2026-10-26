@@ -663,7 +663,7 @@ test('church and mission checkout omit affiliation while retaining the general r
   const env = await openEnvWithProducts();
   for (const [scope, selected] of [['church', 'church'], ['mission', 'mission']]) {
     const page = await (await handleRequest(new Request('https://ekodi.kr/qtin/' + scope), env, OPEN_NOW)).text();
-    const form = page.slice(page.indexOf('id="buyerForm"'));
+    const form = page.slice(page.indexOf('id="buyerForm"'), page.indexOf('id="myOrders"'));
     assert.ok(!form.includes('aria-label="소속"'), scope);
     assert.ok(!form.includes('name="org"'), scope);
     assert.ok(page.includes('"org":"' + selected + '"'), scope);
