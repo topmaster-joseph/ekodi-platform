@@ -1,19 +1,21 @@
 // EKODI 오늘의 매일묵상 — shared renderer for /bible, /ekodichurch and /ekodimission.
 // Each host page provides its own header/footer and a mount:
 //   <div data-ekodi-devotion data-base="/ekodichurch/devotion/" data-date-mode="query" data-site-label="에코디교회"></div>
-// Tabs show one activity at a time; the URL hash (#poem, #song …) selects the tab so shared links open it directly.
+// Canonical Scripture is always visible above the activity tabs. Deep links select a creative response.
 const API = '/bible/api/bible/devotion';
 const ORIGIN = 'https://ekodi.kr';
 const TABS = Object.freeze([
-  { id: 'passage', label: '본문' },
   { id: 'poem', label: '묵상 시' },
-  { id: 'song', label: '묵상 노래' },
-  { id: 'questions', label: '적용 질문' },
+  { id: 'song', label: '묵상 노래·악보' },
+  { id: 'image', label: '묵상 그림' },
+  { id: 'questions', label: '질문 / 실천' },
   { id: 'family', label: '가정·어린이' },
-  { id: 'action', label: '오늘의 실천' },
-  { id: 'prayer', label: '기도' },
-  { id: 'mine', label: '나의 한 줄' },
+  { id: 'prayer', label: '한줄기도' },
 ]);
+const ATTRIBUTION = '묵상 적용(시·노래·질문·기도)은 에코디언 정찬균목사가 공통본문을 바탕으로 AI 도움을 받아 만든 창작 묵상 자료입니다. 성경 본문은 개역한글(대한성서공회, 1961) 원문을 그대로 표시합니다.';
+const ADMIN_TOKEN_KEY = 'ekodi-auth-token';
+const SCORE_LIB = 'https://cdn.jsdelivr.net/npm/abcjs@6.5.2/dist/abcjs-basic-min.js';
+let scoreScriptReady;
 const TAB_IDS = new Set(TABS.map(tab => tab.id));
 
 const mount = document.querySelector('[data-ekodi-devotion]');
@@ -41,7 +43,7 @@ function boot(root) {
   const pageUrl = date => dateMode === 'query' ? `${rawBase}?date=${date}` : `${base}/${date}`;
   const shareUrl = (date, hash) => `${ORIGIN}${pageUrl(date)}${hash ? `#${hash}` : ''}`;
   let current = null;
-  let activeTab = 'passage';
+  let activeTab = 'poem';
 
   root.classList.add('ekodi-devotion');
   root.innerHTML = '';
@@ -66,7 +68,12 @@ function boot(root) {
   copyAll.type = 'button';
   copyAll.dataset.copy = 'page';
   shareRow.append(shareAll, copyAll);
-  summary.append(el('small', 'dv-kicker', '오늘의 공통본문'), passageTitle, theme, keyLine, shareRow);
+  summary.append(el('small', 'dv-kicker', '오늘의 공통본문'), passageTitle, theme, keyLine);
+  const scriptureBlock = el('section', 'dv-panel dv-scripture-section');
+  scriptureBlock.setAttribute('aria-label','개역한글 성경 본문');
+  const audioRow = el('section','dv-audio-row');
+  const adminPanel = el('section','dv-admin');
+  adminPanel.hidden = true;
 
   const tabbar = el('div', 'dv-tabs');
   tabbar.setAttribute('role', 'tablist');
@@ -91,11 +98,11 @@ function boot(root) {
     panels.set(tab.id, panel);
     panelWrap.append(panel);
   }
-  const notice = el('p', 'dv-notice');
+  const notice = el('p', 'dv-notice',ATTRIBUTION);
   const toastEl = el('p', 'dv-toast');
   toastEl.setAttribute('role', 'status');
   toastEl.setAttribute('aria-live', 'polite');
-  root.append(datebar, status, summary, tabbar, panelWrap, notice, toastEl);
+  root.append(datebar, status, summary, scriptureBlock, notice, shareRow, audioRow, tabbar, panelWrap, adminPanel, toastEl);
 
   function toast(message) {
     toastEl.textContent = message;
@@ -117,7 +124,7 @@ function boot(root) {
   }
 
   function selectTab(id, { updateHash = true } = {}) {
-    if (!TAB_IDS.has(id) || tabButtons.get(id)?.hidden) id = 'passage';
+    if (!TAB_IDS.has(id) || tabButtons.get(id)?.hidden) id = TABS.find(tab => !tabButtons.get(tab.id).hidden)?.id || 'questions';
     activeTab = id;
     for (const [tabId, button] of tabButtons) {
       const on = tabId === id;
@@ -126,7 +133,7 @@ function boot(root) {
       button.tabIndex = on ? 0 : -1;
       panels.get(tabId).hidden = !on;
     }
-    if (updateHash) history.replaceState(null, '', `${location.pathname}${location.search}${id === 'passage' ? '' : `#${id}`}`);
+    if (updateHash) history.replaceState(null, '', `${location.pathname}${location.search}${id === 'poem' ? '' : `#${id}`}`);
   }
 
   function renderPassage(panel, data) {
@@ -155,22 +162,27 @@ function boot(root) {
     dateLabel.textContent = koreanDate(data.date);
     prev.href = pageUrl(data.prevDate);
     next.href = pageUrl(data.nextDate);
+    next.hidden = !data.admin?.canEdit && data.nextDate > (data.today || data.date);
     for (const panel of panels.values()) panel.replaceChildren();
+    scriptureBlock.replaceChildren();
+    audioRow.replaceChildren();
+    adminPanel.replaceChildren();
+    adminPanel.hidden = true;
     if (!data.found) {
       status.textContent = data.error === 'scripture_not_registered'
         ? '이 날짜의 공통본문이 아직 등록되지 않았습니다. 다른 날짜를 선택해 주세요.'
         : '날짜 형식을 확인해 주세요.';
-      summary.hidden = tabbar.hidden = panelWrap.hidden = true;
+      summary.hidden = scriptureBlock.hidden = shareRow.hidden = notice.hidden = audioRow.hidden = tabbar.hidden = panelWrap.hidden = true;
       return;
     }
     status.textContent = '';
-    summary.hidden = tabbar.hidden = panelWrap.hidden = false;
+    summary.hidden = scriptureBlock.hidden = shareRow.hidden = notice.hidden = tabbar.hidden = panelWrap.hidden = false;
     const a = data.activities;
     passageTitle.textContent = data.passage;
     theme.textContent = a.theme;
     keyLine.textContent = a.keyLine;
 
-    renderPassage(panels.get('passage'), data);
+    renderPassage(scriptureBlock, data);
 
     tabButtons.get('poem').hidden = !a.poem;
     if (a.poem) {
@@ -243,8 +255,11 @@ function boot(root) {
       row.append(share);
       panel.append(area, row);
     }
-    notice.textContent = `${data.notice}${data.activitySource === 'fallback' ? ' 이 날짜는 기본 묵상 활동을 제공합니다.' : ''}`;
-    selectTab(location.hash.slice(1) || 'passage', { updateHash: false });
+    notice.textContent = ATTRIBUTION + (data.activitySource === 'fallback' ? ' 이 날짜는 기본 묵상 적용 자료를 제공합니다.' : '');
+    setupMrPlayer(a.song);
+    if(data.admin?.canEdit) renderAdminEditor(data);
+    const legacyTab = {passage:'poem',action:'questions',mine:'prayer'}[location.hash.slice(1)];
+    selectTab(legacyTab || location.hash.slice(1) || 'poem', { updateHash: false });
   }
 
   function shareBody(kind) {
@@ -310,7 +325,10 @@ function boot(root) {
     selectTab(nextId);
     tabButtons.get(nextId).focus();
   });
-  window.addEventListener('hashchange', () => { if (current?.found) selectTab(location.hash.slice(1) || 'passage', { updateHash: false }); });
+  window.addEventListener('hashchange', () => {
+    const hash = location.hash.slice(1), legacy = {passage:'poem',action:'questions',mine:'prayer'}[hash];
+    if (current?.found) selectTab(legacy || hash || 'poem', { updateHash: false });
+  });
 
   function requestedDate() {
     const match = location.pathname.match(/\/devotion\/(\d{4}-\d{2}-\d{2})\/?$/);
@@ -322,8 +340,17 @@ function boot(root) {
   (async () => {
     const date = requestedDate();
     try {
-      const response = await fetch(`${API}${date ? `?date=${date}` : ''}`, { cache: 'no-store' });
+      const token = (()=>{try{return sessionStorage.getItem(ADMIN_TOKEN_KEY)||''}catch{return ''}})();
+      const response = await fetch(`${API}${date ? `?date=${date}` : ''}`,
+        {cache:'no-store',headers:token?{authorization:`Bearer ${token}`}:{}});
       const data = await response.json();
+      if (!response.ok) {
+        status.textContent = data.error === 'future_unavailable'
+          ? '아직 공개되지 않은 날짜입니다. 오늘 날짜까지만 열람할 수 있습니다.'
+          : data.error === 'invalid_date' ? '날짜를 확인해 주세요.' : '묵상 자료를 불러올 수 없습니다.';
+        summary.hidden = scriptureBlock.hidden = notice.hidden = shareRow.hidden = tabbar.hidden = panelWrap.hidden = audioRow.hidden = true;
+        return;
+      }
       if (!date && data.date && dateMode === 'path') history.replaceState(null, '', `${pageUrl(data.date)}${location.hash}`);
       render(data);
     } catch (error) {
