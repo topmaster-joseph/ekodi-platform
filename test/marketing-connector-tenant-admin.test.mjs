@@ -31,6 +31,15 @@ test('tenant_admin of the store tenant can read store connectors without a direc
   });
 });
 
+test('production slug shape: D1 template "ekodi-biz" matches Supabase tenant "ekodibiz"; unrelated slugs stay blocked',async()=>{
+  const saved=TEMPLATES[JADAM].tenant_slug;TEMPLATES[JADAM].tenant_slug='ekodi-biz';
+  try{
+    await withWorkspaces([tenantRow()],async()=>{assert.equal((await status()).status,200)});
+    await withWorkspaces([tenantRow({tenant:'ekodi-church'})],async()=>{assert.equal((await status()).status,403)});
+    await withWorkspaces([tenantRow({tenant:'ekodi-bizz'})],async()=>{assert.equal((await status()).status,403)});
+  }finally{TEMPLATES[JADAM].tenant_slug=saved}
+});
+
 test('direct store managers keep working exactly as before',async()=>{
   await withWorkspaces([{workspace_key:`store:${JADAM}`,store_id:JADAM,role:'store_owner',status:'active'}],async()=>{
     assert.equal((await status()).status,200);
