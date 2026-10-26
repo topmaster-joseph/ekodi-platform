@@ -1,5 +1,6 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { bibleCorePolicy, bibleProviderCatalog, readBiblePassage, readBibleReference, searchBible } from './bible-core.js';
+import { resolveDevotion, devotionShareText, isDevotionDate } from './devotional-activities.js';
 
 const MAX_MESSAGE = 4000;
 const MAX_HISTORY = 8;
@@ -230,11 +231,62 @@ async function handleBibleApi(request, env, url) {
         });
     return json(result, result.ok ? 200 : 400);
   }
+  if (url.pathname === '/api/bible/devotion') {
+    const date = clean(url.searchParams.get('date'), 10);
+    const devotion = resolveDevotion(date);
+    if (devotion.error === 'invalid_date') return json({ ok:false, ...devotion }, 400);
+    if (devotion.found) {
+      devotion.scripture = await Promise.all(devotion.passageParts.map(part =>
+        readBibleReference(request, env, part, 'KRV1961').catch(() => ({ ok:false, error:'scripture_unavailable', reference:part }))));
+    }
+    const response = json({ ok:true, ...devotion }, devotion.found ? 200 : 404);
+    response.headers.set('cache-control', 'public, max-age=300, s-maxage=900');
+    return response;
+  }
   if (url.pathname === '/api/bible/search') {
     const result = await searchBible(request, env, url.searchParams.get('q'), url.searchParams.get('limit'));
     return json(result, result.ok ? 200 : 400);
   }
   return json({ ok:false, error:'not_found' }, 404);
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+}
+
+export function devotionMetaTags(devotion) {
+  const title = devotion.found ? `에코디 매일묵상 · ${devotion.passage}` : '에코디 매일묵상';
+  const description = devotion.found ? devotionShareText(devotion).split('\n').slice(1).join(' ') + ' · 시·노래·적용질문·기도' : '에코디 공통본문으로 시·노래·적용질문·기도까지 함께하는 매일묵상';
+  const url = devotion.shareUrl || 'https://ekodi.kr/bible/devotion';
+  return [
+    `<link rel="canonical" href="${escapeHtml(url)}">`,
+    '<meta property="og:type" content="article">',
+    '<meta property="og:site_name" content="EKODI 에코디">',
+    `<meta property="og:title" content="${escapeHtml(title)}">`,
+    `<meta property="og:description" content="${escapeHtml(description)}">`,
+    `<meta property="og:url" content="${escapeHtml(url)}">`,
+    '<meta property="og:locale" content="ko_KR">',
+    '<meta name="twitter:card" content="summary">',
+    `<meta name="twitter:title" content="${escapeHtml(title)}">`,
+    `<meta name="twitter:description" content="${escapeHtml(description)}">`,
+  ].join('\n  ');
+}
+
+async function devotionPage(request, env, dateValue) {
+  const devotion = resolveDevotion(dateValue);
+  // Workers Static Assets may canonicalise "/devotion.html" to "/devotion"; accept either form.
+  let asset = await assetFor(request, env, '/devotion');
+  if (!asset.ok) asset = await assetFor(request, env, '/devotion.html');
+  if (!asset.ok) return asset;
+  const title = devotion.found ? `에코디 매일묵상 · ${devotion.passage}` : '에코디 매일묵상';
+  const html = (await asset.text())
+    .replace('<title>에코디 매일묵상</title>', `<title>${escapeHtml(title)}</title>`)
+    .replace('<!--EKODI_DEVOTION_META-->', devotionMetaTags(devotion));
+  const headers = new Headers(asset.headers);
+  headers.set('content-type', 'text/html; charset=utf-8');
+  headers.delete('content-length');
+  headers.delete('etag');
+  return new Response(html, { status: devotion.error === 'invalid_date' ? 404 : 200, headers });
 }
 
 function withHeaders(response) {
@@ -264,7 +316,7 @@ export default {
         ok: true,
         service: 'ekodi-bible-conversation',
         surface: 'scripture-conversation',
-        areas: ['today', 'reader', 'search', 'conversation', 'journey', 'together'],
+        areas: ['today', 'devotion', 'reader', 'search', 'conversation', 'journey', 'together'],
         privacyDefault: 'private',
         explicitSharing: true,
         providerIndependent: true,
@@ -288,7 +340,10 @@ export default {
 
     let response;
     const route = internalUrl.pathname.replace(/\/$/, '');
-    if (['/today', '/reader', '/search', '/conversation', '/journey', '/together'].includes(route)) response = await assetFor(request, env, '/');
+    const devotionMatch = route.match(/^\/devotion(?:\/([^/]+))?$/);
+    if (devotionMatch) response = await devotionPage(request, env, devotionMatch[1] && isDevotionDate(devotionMatch[1]) ? devotionMatch[1] : (devotionMatch[1] ? 'invalid' : ''));
+    else if (route === '/devotion.html') response = Response.redirect('https://ekodi.kr/bible/devotion', 308);
+    else if (['/today', '/reader', '/search', '/conversation', '/journey', '/together'].includes(route)) response = await assetFor(request, env, '/');
     else response = await env.ASSETS.fetch(requestAtPath(request, internalUrl.pathname));
     return injectEkodiShell(withHeaders(response), 'bible');
   },
