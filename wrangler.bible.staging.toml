@@ -19,3 +19,9 @@ run_worker_first = true
 [observability.logs]
 enabled = true
 invocation_logs = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ekodi-auth-development"
+database_id = "790a8551-cdb2-4dbf-bfcc-a46d61b62766"
+migrations_dir = "migrations"
