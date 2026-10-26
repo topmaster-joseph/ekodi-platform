@@ -27,3 +27,27 @@ export function unapprovedReleaseRunIds(runs, { branch, headSha }) {
     .map(run => run.id)
     .filter(id => Number.isSafeInteger(id) && id > 0);
 }
+
+// Backlog: releases before this rule left their parked runs behind (438 on
+// 2026-10-27). Each convergence also removes a bounded batch of parked runs from
+// OTHER release branches that are at least an hour old, so a release that is
+// still converging always cleans up its own head first.
+export const BACKLOG_BATCH = 100;
+export const BACKLOG_MIN_AGE_MS = 60 * 60 * 1000;
+export function staleParkedReleaseRunIds(runs, { branch, nowMs, minAgeMs = BACKLOG_MIN_AGE_MS, limit = BACKLOG_BATCH }) {
+  if (!Number.isFinite(nowMs)) return [];
+  return (Array.isArray(runs) ? runs : [])
+    .filter(run => run
+      && run.status === 'completed'
+      && run.conclusion === 'action_required'
+      && run.event === 'pull_request'
+      && ORCH_RELEASE_BRANCH.test(String(run.head_branch || ''))
+      && run.head_branch !== branch
+      && run.actor?.login === RELEASE_PR_BOT
+      && run.triggering_actor?.login === RELEASE_PR_BOT
+      && Number.isFinite(Date.parse(run.created_at))
+      && nowMs - Date.parse(run.created_at) >= minAgeMs)
+    .map(run => run.id)
+    .filter(id => Number.isSafeInteger(id) && id > 0)
+    .slice(0, Math.max(0, limit));
+}

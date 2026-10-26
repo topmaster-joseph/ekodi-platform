@@ -1,6 +1,6 @@
 import { CONVERGE_MAX_RUNS_PER_HEAD, CONVERGE_RUN_BUDGET_MS, mayHandOff, requiredChecksToHeal, workflowsToRedispatch } from './lib/converge-stuck-check.mjs';
 import { lanesForChangedFiles } from './lib/worker-bundle-graph.mjs';
-import { unapprovedReleaseRunIds } from './lib/converge-unapproved-runs.mjs';
+import { unapprovedReleaseRunIds, staleParkedReleaseRunIds } from './lib/converge-unapproved-runs.mjs';
 import { fileURLToPath } from 'node:url';
 const repo=String(process.env.GITHUB_REPOSITORY||'').trim();
 const token=String(process.env.GH_TOKEN||'').trim();
@@ -60,6 +60,14 @@ async function retireUnapprovedReleaseRuns(){
     let removed=0;
     for(const id of ids){const d=await api('/actions/runs/'+id,{method:'DELETE'});if(d.r.status===204)removed+=1}
     console.log(JSON.stringify({ok:true,action:'unapproved-release-runs-removed',found:ids.length,removed,branch,head:headSha}));
+    // Backlog from releases before this rule: bounded batch, other release branches, >=1h old.
+    const old=await api('/actions/runs?status=action_required&event=pull_request&per_page=100');
+    if(old.r.ok){
+      const stale=staleParkedReleaseRunIds(old.data.workflow_runs,{branch,nowMs:Date.now()});
+      let swept=0;
+      for(const id of stale){const d=await api('/actions/runs/'+id,{method:'DELETE'});if(d.r.status===204)swept+=1}
+      console.log(JSON.stringify({ok:true,action:'parked-release-backlog-swept',candidates:stale.length,removed:swept,remaining:Math.max(0,Number(old.data.total_count||0)-swept)}));
+    }
   }catch(error){console.log(JSON.stringify({ok:false,action:'unapproved-runs-remove-error',reason:String(error?.message||error).slice(0,200)}))}
 }
 async function dispatchWorkflow(workflow){
