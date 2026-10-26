@@ -172,7 +172,7 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(sharedCss,/color:\s*var\(--ekodi-user-footer-text,\s*inherit\)/);
   assert.match(sharedCss,/font-family:\s*inherit/);
   assert.match(sharedCss,/\.ekodi-user-ui-footer__scope/);
-  assert.match(sharedCss,/\[data-ekodi-legal-footer\]:not\(\.ekodi-user-ui-footer\)/);
+  assert.match(sharedCss,/\[data-ekodi-legal-footer\]:not\(\.ekodi-user-ui-footer\):not\(\[data-ekodi-service-footer\]\)/);
   assert.doesNotMatch(sharedCss,/\.ekodi-user-ui-footer\s*\{[^}]*rgba\(250,\s*250,\s*247/is);
   assert.doesNotMatch(sharedCss,/\.ekodi-user-ui-footer\s*\{[^}]*rgba\(16,\s*21,\s*18/is);
 
@@ -189,9 +189,9 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.doesNotMatch(injector,/data-ekodi-user-ui-shell-style/);
 
   const parsedPolicy=JSON.parse(shellPolicy);
-  assert.equal(parsedPolicy.footer.contentSource,'config/user-footer.js');
+  assert.match(parsedPolicy.footer.contentSource,/site chrome per operator/);
   assert.equal(parsedPolicy.footer.alignment,'center');
-  assert.equal(parsedPolicy.footer.dedupe,'exactly-one-shared-footer');
+  assert.equal(parsedPolicy.footer.dedupe,'exactly-one-footer-per-site');
   assert.equal(parsedPolicy.footer.languageChoice,'forbidden');
   assert.equal(parsedPolicy.language.placement,'header-only');
   assert.equal(parsedPolicy.language.controlGeometry,'pill');
