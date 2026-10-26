@@ -97,6 +97,27 @@
       "adminPath": "/yogurt/admin",
       "parentId": "cmpmyi",
       "navigationProfile": "role-projected-site-admin"
+    },
+    {
+      "id": "work",
+      "publicPath": "/work",
+      "adminPath": "/work/admin",
+      "parentId": "platform",
+      "navigationProfile": "role-projected-site-admin"
+    },
+    {
+      "id": "mail",
+      "publicPath": "/mail",
+      "adminPath": "/mail/admin",
+      "parentId": "platform",
+      "navigationProfile": "role-projected-site-admin"
+    },
+    {
+      "id": "live",
+      "publicPath": "/live",
+      "adminPath": "/live/admin",
+      "parentId": "platform",
+      "navigationProfile": "role-projected-site-admin"
     }
   ],
   "forbiddenAggregationAliases": [
