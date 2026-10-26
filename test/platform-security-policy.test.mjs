@@ -162,3 +162,34 @@ test('public write rate-limit can be escalated only by verified Turnstile withou
   assert.equal(blocked.headers.get('x-ekodi-turnstile-required'),'1');
   assert.equal(blocked.headers.get('x-ekodi-turnstile-sitekey'),'public-site-key');
 });
+
+test('Church iframe opt-in is exact-path, same-origin, document-only and CSP-gated',()=>{
+  const csp="default-src 'self'; frame-ancestors 'self'; object-src 'none'";
+  const policy=(pathname,cspValue=csp,headers={})=>applyPlatformSecurityHeaders(
+    new Response('<html></html>',{headers:{
+      'content-type':'text/html; charset=utf-8',
+      'content-security-policy':cspValue,
+      'x-frame-options':'DENY',
+      ...headers,
+    }}),
+    new Request('https://ekodi.kr'+pathname)
+  );
+  const viewer=policy('/ekodichurch/live/?mode=viewer&embed=church-online');
+  assert.equal(viewer.headers.get('x-frame-options'),'SAMEORIGIN');
+  assert.match(viewer.headers.get('content-security-policy')||'',/frame-ancestors 'self'/);
+  for(const path of [
+    '/ekodichurch/live/?mode=studio',
+    '/ekodichurch/live/?mode=studio&embed=church-online',
+    '/ekodichurch/live/?mode=studio&embed=church-online-extra',
+    '/ekodichurch/?embed=church-online',
+    '/ekodichurch/admin?embed=church-online',
+    '/live/church/?embed=church-online',
+    '/ekodichurch/live/live.js?embed=church-online'
+  ])assert.equal(policy(path).headers.get('x-frame-options'),'DENY',path);
+  assert.equal(policy('/ekodichurch/live/?mode=viewer&embed=church-online',"frame-ancestors 'none'").headers.get('x-frame-options'),'DENY');
+  assert.equal(policy('/ekodichurch/live/?mode=viewer&embed=church-online',csp,{'content-type':'application/javascript'}).headers.get('x-frame-options'),'DENY');
+  const crossDomain=applyPlatformSecurityHeaders(new Response('<html></html>',{headers:{
+    'content-type':'text/html','content-security-policy':csp
+  }}),new Request('https://malicious.example/ekodichurch/live/?embed=church-online'));
+  assert.equal(crossDomain.headers.get('x-frame-options'),'DENY');
+});

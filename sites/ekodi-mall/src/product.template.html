@@ -20,7 +20,7 @@
   <main class="detail-main detail-main-v2">
     <a class="back" href="/#shop">← 전체 상품</a>
     <section class="product-detail product-detail-v2">
-      <div class="detail-art {{PRODUCT_CATEGORY}}"><span>{{PRODUCT_BADGE}}</span></div>
+      <div class="detail-art {{PRODUCT_CATEGORY}}{{DETAIL_ART_CLASS}}">{{DETAIL_ART_IMAGE}}<span>{{PRODUCT_BADGE}}</span></div>
       <div class="detail-copy">
         <p class="eyebrow">{{PRODUCT_BADGE}}</p>
         <p class="product-store"><span>STORE</span><a href="{{STORE_URL}}">{{STORE_NAME}} →</a></p>
@@ -35,7 +35,7 @@
           <div><dt>가격</dt><dd>{{PRICE_LABEL}}</dd></div>
         </dl>
         <p class="detail-note">{{TRANSACTION_NOTE}}</p>
-        <div class="detail-actions">{{BASKET_ACTION}}<a class="btn {{ACTION_CLASS}}" href="{{ACTION_URL}}" target="_blank" rel="noopener sponsored">{{ACTION_LABEL}}</a><a class="smallbtn" href="{{STORE_URL}}">스토어 보기</a></div>
+        <div class="detail-actions">{{BASKET_ACTION}}<a class="btn {{ACTION_CLASS}}" href="{{ACTION_URL}}" target="_blank" rel="{{ACTION_REL}}">{{ACTION_LABEL}}</a><a class="smallbtn" href="{{STORE_URL}}">스토어 보기</a></div>
       </div>
     </section>
 

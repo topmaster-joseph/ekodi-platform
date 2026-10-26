@@ -2,6 +2,7 @@ import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { renderMallHeader } from '../../../mall-shared-header.js';
+import { loadBookstoreProducts, mergeBookstoreProducts } from './bookstore-products.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
@@ -28,6 +29,7 @@ const saleTypeLabels = {
   direct: '에코디몰 직접판매',
   affiliate: '외부 제휴판매',
   inquiry: '상담·문의형',
+  publisher: '에코디서점 발행 도서',
   local: '지역상생 기획',
   content: '콘텐츠 상품',
   curation: '큐레이션 준비'
@@ -52,7 +54,8 @@ const [site, productsRaw, pages, storesRaw, regionsConfig, affiliateHubsRaw, ind
 const stores = storesRaw.filter((store) => store.published);
 const storeMap = new Map(stores.map((store) => [store.id, store]));
 const publishedStoreIds = new Set(stores.map((store) => store.id));
-const products = productsRaw.filter((product) => product.published && publishedStoreIds.has(product.storeId));
+const bookstoreMirror = await loadBookstoreProducts(root);
+const products = mergeBookstoreProducts(productsRaw, bookstoreMirror).filter((product) => product.published && publishedStoreIds.has(product.storeId));
 const affiliateHubs = affiliateHubsRaw.filter((hub) => hub.published);
 const baseUrl = site.seo.baseUrl.replace(/\/$/, '');
 const basketHref = site.platform?.basketHref || '/checkout/';
@@ -79,7 +82,9 @@ function productCard(product, options = {}) {
 
 function productDetailSections(product, store) {
   const saleLabel = saleTypeLabels[product.saleType] || product.saleType || '준비 중';
-  const transactionText = product.saleType === 'affiliate'
+  const transactionText = product.saleType === 'publisher'
+    ? (product.action?.type === 'external' ? '에코디서점이 직접 발행한 도서입니다. 구매 버튼을 누르면 공식 전자책 판매처로 이동해 구매합니다.' : '에코디서점이 직접 발행한 도서입니다. 판매처 등록이 끝나면 이곳에서 바로 구매하실 수 있습니다.')
+    : product.saleType === 'affiliate'
     ? '구매 버튼을 누르면 외부 제휴 판매처로 이동하며 주문·결제·배송·반품은 해당 판매처에서 처리합니다.'
     : product.saleType === 'direct'
       ? '직접판매 상품은 판매자 확인과 주문·결제·정산 연결이 완료된 뒤 에코디몰에서 거래됩니다.'
@@ -190,16 +195,19 @@ for (const product of products) {
   const productUrl = `${baseUrl}/products/${product.slug}/`;
   const store = storeMap.get(product.storeId);
   const isAffiliate = product.saleType === 'affiliate';
+  const isPublisherSale = product.saleType === 'publisher' && product.action?.type === 'external';
   const related = products
     .filter((item) => item.id !== product.id)
     .sort((a, b) => Number(b.category === product.category) - Number(a.category === product.category))
     .slice(0, 3)
     .map((item) => productCard(item, { withData: false, withHeart: false }))
     .join('');
-  const basketAction = site.commerce?.inquiryBasketEnabled && !isAffiliate
+  const basketAction = site.commerce?.inquiryBasketEnabled && !isAffiliate && product.saleType !== 'publisher'
     ? `<button class="btn primary" type="button" data-add-basket data-product-id="${esc(product.id)}" data-product-name="${esc(product.name)}" data-store-name="${esc(store.name)}" data-product-status="${esc(product.status)}" data-product-href="/products/${esc(product.slug)}/">${site.commerce.paymentsEnabled && Number.isFinite(product.price) ? '구매목록에 담기' : '상담목록에 담기'}</button>`
     : '';
-  const transactionNote = isAffiliate
+  const transactionNote = product.saleType === 'publisher'
+    ? (isPublisherSale ? '에코디서점이 발행한 도서입니다. 구매 버튼을 누르면 공식 전자책 판매처(유페이퍼 등)로 이동하며, 결제·다운로드는 해당 판매처에서 처리합니다. 에코디서점에서 도서 정보와 판본을 확인할 수 있습니다.' : '에코디서점이 발행한 도서입니다. 판매처 등록이 끝나면 구매 버튼이 열립니다. 지금은 에코디서점에서 도서 정보를 확인할 수 있습니다.')
+    : isAffiliate
     ? '이 상품은 외부 제휴 판매처에서 구매합니다. 구매 버튼을 누르면 제휴 링크로 이동하며, 에코디는 제휴 활동을 통해 일정 수수료를 제공받을 수 있습니다. 주문·결제·배송·반품은 해당 판매처에서 처리합니다.'
     : product.saleType === 'direct'
       ? '직접판매 상품은 판매자 확인과 결제·주문·정산 시스템 검증 후 에코디몰 결제를 활성화합니다. 현재 판매 준비 상태를 확인해 주세요.'
@@ -215,7 +223,10 @@ for (const product of products) {
     PRICE_LABEL: esc(formatPrice(product.price)),
     ACTION_LABEL: esc(product.action?.label || (isAffiliate ? '외부 판매처에서 구매' : '문의하기')),
     ACTION_URL: esc(product.action?.url || site.links.inquiry),
-    ACTION_CLASS: isAffiliate ? 'primary' : 'ghost',
+    ACTION_CLASS: isAffiliate || isPublisherSale ? 'primary' : 'ghost',
+    DETAIL_ART_CLASS: product.image ? ' has-image' : '',
+    DETAIL_ART_IMAGE: product.image ? `<img src="${esc(product.image)}" alt="${esc(product.name)} 표지" loading="eager" decoding="async">` : '',
+    ACTION_REL: product.saleType === 'publisher' ? 'noopener' : 'noopener sponsored',
     TRANSACTION_NOTE: esc(transactionNote),
     STORE_NAME: esc(store.name),
     STORE_OPERATOR: esc(store.operator),

@@ -145,7 +145,18 @@ export function applyPlatformSecurityHeaders(response,request){
     && url.searchParams.get('embed')==='admin'
     && /^\/ekodimall\/(?:assets\/)?free-ops(?:\.html)?\/?$/i.test(url.pathname)
     && /(?:^|;)\s*frame-ancestors\s+https:\/\/ekodi\.kr(?:\s*;|$)/i.test(responseCsp);
-  if(firstPartyAdminEmbed)headers.delete('X-Frame-Options');
+  // Only the same-origin EKODI Church Online viewer can frame the Church Live
+  // *document*. The upstream Church Page must opt in with frame-ancestors 'self'.
+  // Never loosen unrelated pages or the studio/admin view.
+  const firstPartyChurchLiveViewer=url.hostname.toLowerCase()==='ekodi.kr'
+    && ['GET','HEAD'].includes(request.method.toUpperCase())
+    && url.searchParams.get('embed')==='church-online'
+    && url.searchParams.get('mode')==='viewer'
+    && /^\/ekodichurch\/live\/(?:index\.html)?$/i.test(url.pathname)
+    && /^text\/html(?:;|$)/i.test(String(headers.get('Content-Type')||''))
+    && /(?:^|;)\s*frame-ancestors\s+'self'\s*(?:;|$)/i.test(responseCsp);
+  if(firstPartyChurchLiveViewer)headers.set('X-Frame-Options','SAMEORIGIN');
+  else if(firstPartyAdminEmbed)headers.delete('X-Frame-Options');
   else if(!headers.has('X-Frame-Options'))headers.set('X-Frame-Options','DENY');
   if(!headers.has('Permissions-Policy')){
     headers.set('Permissions-Policy',info.live
