@@ -15,7 +15,7 @@ const SURFACES=[
  {name:'bible',path:'/bible/devotion/'+DAY}
 ];
 const report={schema:'ekodi.devotion-native-sandbox.v1',executedAt:new Date().toISOString(),owner:'EKODI Background Browser Worker',origin:ORIGIN,
-  mode:'read-only-ephemeral-first-party-native-chromium',authenticated:false,productionMutations:false,checks:[],screenshots:[],browserErrors:[],
+  mode:'read-only-ephemeral-first-party-native-chromium',verificationTarget:'actual-live-production-no-asset-override',authenticated:false,productionMutations:false,checks:[],screenshots:[],browserErrors:[],
   caveats:['실제 관리자의 비공개 로그인 세션은 사용하지 않음','사용권 승인된 CCM MR 실음원 미등록 상태에서는 재생을 검증할 수 없음']};
 const check=(name,passed,detail={})=>{
  const item={name,passed:passed===true,...detail};
@@ -61,6 +61,10 @@ try{
              scriptureBeforeTabs:find('dv-scripture-section')<find('dv-tabs'),
              scriptureBeforeNotice:find('dv-scripture-section')<find('dv-notice'),
              shareAfterNotice:find('dv-share-row')>find('dv-notice'),
+           noticeShareNonoverlap:(()=>{
+             const n=notice?.getBoundingClientRect(),sh=share?.getBoundingClientRect();
+             return Boolean(n&&sh&&sh.top>=n.bottom-1);
+           })(),
              nextHidden:el.querySelector('.dv-datebar a:last-child')?.hidden,
              adminHidden:el.querySelector('.dv-admin')?.hidden,
              overflow:document.documentElement.scrollWidth>document.documentElement.clientWidth+2,
@@ -72,7 +76,7 @@ try{
          });
          check(device.name+'-'+surface.name+'-scripture',state.scriptureDisplayed&&state.scriptureText.includes('오바댜 1:17-21')&&state.scriptureText.length>120,{excerpt:state.scriptureText.slice(0,100)});
          check(device.name+'-'+surface.name+'-attribution',state.notice.includes(NOTICE));
-         check(device.name+'-'+surface.name+'-order',state.scriptureBeforeTabs&&state.scriptureBeforeNotice&&state.shareAfterNotice);
+         check(device.name+'-'+surface.name+'-order',state.scriptureBeforeTabs&&state.scriptureBeforeNotice&&state.shareAfterNotice&&state.noticeShareNonoverlap);
          check(device.name+'-'+surface.name+'-future-link',state.nextHidden===true,{nextHidden:state.nextHidden});
          check(device.name+'-'+surface.name+'-guest-admin-closed',state.adminHidden===true);
          check(device.name+'-'+surface.name+'-tabs',[
@@ -81,9 +85,13 @@ try{
          check(device.name+'-'+surface.name+'-no-overflow',!state.overflow);
          check(device.name+'-'+surface.name+'-no-pageerrors',errors.length===0,{errors});
          await root.locator('[data-tab="song"]').click();
-         await root.locator('.dv-score svg').first().waitFor({state:'visible',timeout:17000});
+         await root.locator('.dv-score svg').first().waitFor({state:'visible',timeout:17000})
+           .catch(async error=>{
+             const scoreText=await root.locator('.dv-score').innerText().catch(()=>null);
+             throw new Error('score_svg_not_rendered:'+JSON.stringify({scoreText,error:String(error.message||error)}));
+           });
          check(device.name+'-'+surface.name+'-music-notation',
-            await root.locator('.dv-score svg').count()>0,
+            await root.locator('.dv-score svg ellipse').count()>=5 && await root.locator('.dv-score svg line').count()>=5,
             {abcRenderer:true});
          check(device.name+'-'+surface.name+'-scripture-persistent',
              await root.locator('.dv-scripture-section .dv-verses').isVisible());
