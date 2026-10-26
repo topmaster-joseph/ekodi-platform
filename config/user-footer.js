@@ -1,4 +1,4 @@
-// Shared user footer. Mall local-footer deduplication is handled by ekodi-shell-injector.js.
+// Shared fallback footer for the central EKODI operator; native mall and site footers remain site-owned.
 const link=(label,href,i18n='')=>Object.freeze({label,href,i18n});
 
 export const EKODI_USER_FOOTER=Object.freeze({
