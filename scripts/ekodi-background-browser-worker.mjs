@@ -91,9 +91,11 @@ export async function runTask(rawTask, options={}){
   const runtimeBrowser=clean(process.env.EKODI_NATIVE_CHROME||'',180);
   if(runtimeBrowser&&!['/usr/bin/chromium','/usr/bin/google-chrome'].includes(runtimeBrowser))
     fail('BROWSER_EXECUTABLE_FORBIDDEN','Native browser path must be the installed runner Chromium');
-  const browser=await chromium.launch({
-    headless:true,...(runtimeBrowser?{executablePath:runtimeBrowser}:{})
-  });
+  // Preserve canonical locked-down default browser startup exactly; the
+  // allowlisted system Chromium is an opt-in, never a silent security fallback.
+  const browser=runtimeBrowser
+    ? await chromium.launch({headless:true,executablePath:runtimeBrowser})
+    : await chromium.launch({headless:true});
   const device=PROFILE[task.deviceProfile];
   const context=await browser.newContext({
     viewport:{width:device.width,height:device.height},
