@@ -4,7 +4,7 @@ export function renderMallHeader({publicPrefix='',home=false,sellerHref}={}) {
  const root=prefix+'/';
  const href=hash=>home?hash:root+hash;
  const link=(hash,label,filter)=>'<a href="'+href(hash)+'"'+(home&&filter?' data-filter-target="'+filter+'"':'')+'>'+label+'</a>';
- return '<header class="header buyer-header mall-header">'+
+ return '<header class="header buyer-header mall-header"><div class="mall-header-inner">'+
  '<div class="mall-header-top">'+
  '<a class="brand" href="'+href('#top')+'" aria-label="에코디몰 홈"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a>'+
  '<form id="mallGlobalSearch" class="mall-global-search" role="search" action="'+root+'" method="get"><label for="mallGlobalQuery" class="sr-only">에코디몰 상품 검색</label><input id="mallGlobalQuery" name="q" type="search" maxlength="120" placeholder="무엇을 찾고 계세요?" autocomplete="off"><button type="submit" aria-label="상품 검색하기">⌕</button></form>'+
@@ -16,5 +16,5 @@ export function renderMallHeader({publicPrefix='',home=false,sellerHref}={}) {
  link('#shop','로컬·특산물','local')+link('#shop','식품·건강','general')+
  link('#shop','생활·가전','living')+link('#shop','책·배움','book')+
  link('#shop','선물·기념품','gift')+link('#recommend','AI 추천')+
- '<a href="'+prefix+'/picks">이번 주 추천</a></nav></header>';
+ '<a href="'+prefix+'/picks">이번 주 추천</a></nav></div></header>';
 }

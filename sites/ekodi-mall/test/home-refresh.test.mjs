@@ -58,3 +58,24 @@ test('home and affiliate travel page use the same generated buyer header', () =>
   for (const label of ['전체상품','여행·레저','AI 추천','이번 주 추천']) assert.ok(mallHeader.includes(label));
   assert.match(affiliate, /assets\/home-refresh\.css/);
 });
+
+test('global search searches marketplace and live affiliate curator instead of a dead local-only filter', () => {
+  assert.match(js, /EkodiContextCurator\.recommend\(term, true\)/);
+  assert.match(js, /EkodiContextCurator\?\.recommend\(incomingQuery, true\)/);
+  assert.match(js, /if \(!search \|\| !shop\) return;\s*event\.preventDefault\(\)/);
+  assert.match(mallHeader, /role="search"/);
+  assert.match(mallHeader, /method="get"/);
+  const travelHeader = renderMallHeader({ publicPrefix: '/ekodimall', home: false });
+  assert.match(travelHeader, /action="\/ekodimall\/"/);
+  assert.match(travelHeader, /name="q"/);
+});
+
+test('all Mall pages center their header to the same width as the EKODI user footer', () => {
+  assert.match(mallHeader, /class="mall-header-inner"/);
+  assert.match(css, /--ekodi-user-content-inline-size,var\(--ekodi-user-canvas-max,1240px\)/);
+  assert.match(css, /\.mall-header \.mall-header-inner/);
+  assert.match(css, /@media\(max-width:720px\)/);
+  assert.match(css, /\.mall-premium-hero \[data-ekodi-user-character\]/);
+  const character = readFileSync(new URL('../../../shell/user-character.js', import.meta.url), 'utf8');
+  assert.match(character, /serviceId\(\)!=='mall'/);
+});
