@@ -193,3 +193,21 @@ test('converge resolves bundle lanes before merging and dispatches them with the
   const post = source.slice(source.indexOf('async function dispatchPostMergeDeploys(){'));
   assert.match(post, /await dispatchBundleGraphLanes\(\);\n\}/);
 });
+
+// WORKER-LANE-ASSETS-001: #6073 changed only bible/devotion.* (static assets) and the
+// Bible Worker was never redeployed. Asset-directory and lane-workflow changes must dispatch.
+test('changes inside a Worker [assets] directory dispatch that Worker lane', () => {
+  const result = lanesForChangedFiles(root, ['bible/devotion.js', 'bible/devotion.css']);
+  assert.deepEqual(result.dispatches.map(d => d.workflow), ['deploy-bible.yml']);
+  const bible = result.affected.find(item => item.config === 'wrangler.bible.toml');
+  assert.deepEqual(bible.touched, ['bible/devotion.css', 'bible/devotion.js']);
+});
+
+test('a change to a lane workflow file dispatches its own lane', () => {
+  const result = lanesForChangedFiles(root, ['.github/workflows/deploy-bible.yml']);
+  assert.deepEqual(result.dispatches.map(d => d.workflow), ['deploy-bible.yml']);
+});
+
+test('asset prefix matching is directory-bounded and ignores unrelated files', () => {
+  assert.equal(lanesForChangedFiles(root, ['bible-notes.md', 'README.md', 'biblesomething/x.js']).dispatches.length, 0);
+});
