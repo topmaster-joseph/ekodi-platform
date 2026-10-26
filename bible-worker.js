@@ -258,7 +258,7 @@ async function handleBibleApi(request, env, url) {
       devotion.scripture = await Promise.all(devotion.passageParts.map(part =>
         readBibleReference(request, env, part, 'KRV1961').catch(() => ({ ok:false, error:'scripture_unavailable', reference:part }))));
     }
-    const response = json({ ok:true, ...devotion }, devotion.found ? 200 : 404);
+    const response = json({ ok:true, ...devotion, today:seoulToday() }, devotion.found ? 200 : 404);
     response.headers.set('cache-control',administrator?'private, no-store':'public, max-age=300, s-maxage=300');
     return response;
   }
@@ -293,7 +293,7 @@ export function devotionMetaTags(devotion) {
 
 async function devotionPage(request, env, dateValue) {
   // HTML/Open Graph preview must not reveal future-day scripture or application.
-  const devotion = dateValue && dateValue > seoulToday()
+  const devotion = isDevotionDate(dateValue) && dateValue > seoulToday()
     ? {found:false,date:dateValue,shareUrl:'https://ekodi.kr/bible/devotion'}
     : resolveDevotion(dateValue);
   // Workers Static Assets may canonicalise "/devotion.html" to "/devotion"; accept either form.
