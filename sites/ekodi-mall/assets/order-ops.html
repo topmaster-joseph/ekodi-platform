@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#173f35"><meta name="robots" content="noindex,nofollow">
+  <meta name="description" content="EKODI Mall 주문·발주 관리">
+  <link rel="stylesheet" href="/assets/styles.css"><link rel="stylesheet" href="/assets/platform.css"><link rel="stylesheet" href="/assets/order-ops.css">
+  <title>주문·발주 관리 | EKODI MALL</title>
+</head>
+<body>
+  <div class="notice" id="opsStatus">운영자 Google 로그인 후 주문·발주를 확인합니다.</div>
+  <header class="header"><a class="brand" href="/"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a><nav><a href="/seller/">SELLER</a><a href="/verification-ops">VERIFY</a><a href="/order-ops" aria-current="page">ORDERS</a></nav></header>
+  <main class="oo-main">
+    <section class="oo-head">
+      <div><p class="eyebrow">ORDER OPS</p><h1>주문 · 발주 관리</h1><p class="oo-sub">결제 → 도매꾹 자동발주 → 송장까지 한 화면에서 확인합니다.</p></div>
+      <div class="oo-actions"><button class="btn primary" id="opsLogin" type="button">운영자 Google 로그인</button><button class="btn" id="opsLogout" type="button" hidden>로그아웃</button><button class="btn" id="opsReload" type="button" disabled>새로고침</button></div>
+    </section>
+    <section class="oo-summary" id="opsSummary"></section>
+    <p class="oo-supplier" id="opsSupplier"></p>
+    <section class="oo-filter"><label>보기 <select id="opsFilter" disabled><option value="">전체 주문</option><option value="paid">결제완료</option><option value="supply_issue">발주 문제</option><option value="refunded">환불</option></select></label>
+      <span class="oo-links"><a href="https://app.tosspayments.com/" target="_blank" rel="noopener">토스 결제내역 ↗</a> · <a href="https://domeggook.com/" target="_blank" rel="noopener">도매꾹 구매내역 ↗</a></span></section>
+    <section class="oo-list" id="opsList"><p class="empty">운영자 로그인 후 주문 목록이 표시됩니다.</p></section>
+  </main>
+  <footer class="footer compact"><div class="bottom"><span>© 2026 EKODI MALL · Order Ops</span><span>구매자 정보 열람은 감사기록에 남습니다</span></div></footer>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script><script src="/assets/order-ops.js" defer></script>
+</body>
+</html>
