@@ -1,6 +1,24 @@
-# 동행 서버 함수(singles-api) 자동 배포 경로 설계안 (승인 전)
+# 동행 서버 함수(singles-api) 자동 배포 경로 (운영 중)
 
-기준일: 2026-10-26 · 상태: **2단계 운영** — 2026-10-26 첫 수동 실행(run 40244545699)으로 v8 배포·검증 후 `main` 병합 자동 배포 활성화. 이전 표기: 1단계 구현 — `.github/workflows/deploy-singles-api.yml`(PR 검증 + 승인된 오케스트레이터 수동 실행 배포). `main` push 자동 배포는 수동 1회 검증 후 켬
+기준일: 2026-10-26 · 상태: **2단계 운영 · 실제 경로 확인됨** — 2026-10-26 첫 수동 실행(run 40244545699)으로 v8 배포·검증. 이후 동행 서버 함수 변경은 **에코디 릴리스 병합 직후 봇이 배포를 시작**하는 경로로 자동 배포된다(아래 0절). 이전 표기 "`main` push 자동 배포"는 실제로 한 번도 실행되지 않았으므로 바로잡는다.
+
+## 0. 실제 자동 배포 경로 (2026-10-26 실증)
+
+| 단계 | 누가 | 실증 (P2-1 API, `54a09e2`) |
+|---|---|---|
+| 1. 작업 브랜치 PR 검사 | `deploy-singles-api.yml`의 `validate`(타입·회귀) | run 40247475593 성공 |
+| 2. 에코디 릴리스 PR(`ai/<agent>/orch_recovery_*`) 생성·병합 | 에코디 봇(`github-actions[bot]`) — `converge-orchestrated-pr-merge.mjs` | 00:04:55 UTC 병합 |
+| 3. **배포 시작** | 같은 수렴 스크립트가 병합 직후 `deploy-singles-api.yml`을 `workflow_dispatch`로 시작(`singlesApiTouched`) | 00:04:58 UTC, run 40247610405 |
+| 4. 출처 확인 → DB 칸·함수 확인 → 배포 → 배포 후 확인(실패 시 자동 롤백) | `production` 작업 | 모두 성공, 운영 `singles-api` v8 → v9 |
+
+- 봇 토큰으로 병합하면 GitHub가 `push` 이벤트를 만들지 않는다. 그래서 워크플로의 `push` 트리거는 봇 릴리스에서는 동작하지 않고, 사람이 직접 병합한 경우에만 쓰인다. 자동 배포의 실제 주체는 3단계 디스패치다.
+- 이 경로는 `test/singles-api-deploy-lane.test.mjs`(수렴 스크립트가 이 레인을 디스패치하는지)로 보호된다.
+- 배포 레인을 깨우는 파일: `supabase/functions/singles-api/**`, `config/singles-api-db-contract.json`, `scripts/singles-api-db-preflight.mjs`, `.github/workflows/deploy-singles-api.yml`.
+
+### 릴리스 PR의 빨간 "실패" 표시 (CONVERGE-UNAPPROVED-RUNS-001)
+- 원인: 에코디 봇이 연 릴리스 PR에 붙는 `pull_request` 워크플로는 GitHub가 모두 "승인 필요(`action_required`)"로 세워 두고 실행하지 않는다. 병합 뒤 브랜치가 지워지면 이 대기 실행이 작업 0개짜리 "실패"로 바뀌어 릴리스마다 약 14개의 거짓 실패가 보였다.
+- 영향: 없음. 릴리스 근거는 작업 브랜치 PR 검사와 오케스트레이터 상태값이며, 대기 실행은 한 번도 돌지 않는다.
+- 조치: 수렴 스크립트가 병합 직전에 같은 릴리스 head의 봇 대기 실행만 취소한다(`scripts/lib/converge-unapproved-runs.mjs`). 실패해도 릴리스를 막지 않는다.
 
 구현 결정: DB 선행조건은 Management API 읽기 전용 쿼리(`scripts/singles-api-db-preflight.mjs`, 계약 `config/singles-api-db-contract.json`)로 확인하고, SQL 함수 `singles_api_contract()`는 만들지 않음. 배포 후 확인 실패 시 직전 `main` 소스로 자동 롤백.
 
@@ -15,7 +33,7 @@
 
 | 단계 | 내용 | 근거 |
 |---|---|---|
-| 트리거 | PR: `supabase/functions/singles-api/**`, `test/singles-*.test.mjs`, 워크플로 자신 → 검증만 / `main` push(같은 경로) → 배포 / `workflow_dispatch`(release_branch_ref, release_task_id) | access-api와 동일 |
+| 트리거 | PR: `supabase/functions/singles-api/**`, `test/singles-*.test.mjs`, 워크플로 자신 → 검증만 / **에코디 릴리스 병합 후 수렴 스크립트의 `workflow_dispatch`(release_branch_ref, release_task_id) → 배포** / `main` push(같은 경로)는 사람이 직접 병합한 경우만 | access-api와 동일 |
 | validate | `deno check supabase/functions/singles-api/index.ts`, `node --test test/singles-*.test.mjs` | 타입·회귀 |
 | 출처 확인 | `scripts/validate-ekodi-ai-change-orchestration.mjs --release`, `scripts/validate-deployment-guardrails.mjs` | 오케스트레이터 영수증 없는 배포 차단 |
 | DB 선행조건 | 배포 전에 필요한 DB 함수가 운영에 있는지 확인(아래 3절). 없으면 배포 중단 | 서버 함수가 DB보다 먼저 나가면 쓰기 전체가 503 |
@@ -39,7 +57,7 @@
 ## 4. 도입 순서
 1. `singles_api_contract()` 마이그레이션 + 테스트(운영 적용은 승인 후)
 2. `deploy-singles-api.yml` 추가. 처음에는 `workflow_dispatch`만 열어 수동 1회 실행으로 검증한다.
-3. 검증되면 `main` push 자동 배포를 켠다.
+3. 검증되면 자동 배포를 켠다 → 완료: 릴리스 병합 직후 수렴 스크립트가 디스패치(0절).
 4. 이후 동행 서버 함수 변경은 이 경로로만 배포한다. 작업 세션의 직접 배포는 중단한다.
 
 ## 5. 결정·확인 필요

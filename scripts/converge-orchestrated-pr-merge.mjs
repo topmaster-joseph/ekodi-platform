@@ -1,5 +1,6 @@
 import { CONVERGE_MAX_RUNS_PER_HEAD, CONVERGE_RUN_BUDGET_MS, mayHandOff, requiredChecksToHeal, workflowsToRedispatch } from './lib/converge-stuck-check.mjs';
 import { lanesForChangedFiles } from './lib/worker-bundle-graph.mjs';
+import { unapprovedReleaseRunIds } from './lib/converge-unapproved-runs.mjs';
 import { fileURLToPath } from 'node:url';
 const repo=String(process.env.GITHUB_REPOSITORY||'').trim();
 const token=String(process.env.GH_TOKEN||'').trim();
@@ -45,6 +46,20 @@ async function requiredChecksStillRunning(sha){
 // a fresh dispatched run before this run's budget ends (bounded per head).
 const CONVERGE_STARTED=Date.now();
 let stuckHealDone=false;
+// CONVERGE-UNAPPROVED-RUNS-001: cancel the bot-triggered pull_request runs that
+// GitHub parks for approval on this release head. They never execute and are not
+// release evidence; cancelling them stops the red zero-job "failure" that appears
+// once the merged branch is deleted. Best effort: never blocks the release.
+async function retireUnapprovedReleaseRuns(){
+  try{
+    const {r,data}=await api('/actions/runs?head_sha='+headSha+'&status=action_required&event=pull_request&per_page=100');
+    if(!r.ok){console.log(JSON.stringify({ok:false,action:'unapproved-runs-lookup-failed',status:r.status}));return}
+    const ids=unapprovedReleaseRunIds(data.workflow_runs,{branch,headSha});
+    let cancelled=0;
+    for(const id of ids){const c=await api('/actions/runs/'+id+'/cancel',{method:'POST'});if(c.r.status===202)cancelled+=1}
+    console.log(JSON.stringify({ok:true,action:'unapproved-release-runs-cancelled',found:ids.length,cancelled,branch,head:headSha}));
+  }catch(error){console.log(JSON.stringify({ok:false,action:'unapproved-runs-cancel-error',reason:String(error?.message||error).slice(0,200)}))}
+}
 async function dispatchWorkflow(workflow){
   const d=await api('/actions/workflows/'+workflow+'/dispatches',{method:'POST',body:JSON.stringify({ref:branch})});
   if(d.r.status!==204)fail('dispatch failed for '+workflow+' '+d.r.status+' '+JSON.stringify(d.data).slice(0,300));
@@ -875,6 +890,7 @@ for(let cycle=0;cycle<180;cycle++){
     if(!set.r.ok)fail(`failed to publish ${context} to merge SHA: ${set.r.status}`);
   }
 
+  await retireUnapprovedReleaseRuns();
   const merged=await api('/pulls/'+pr.number+'/merge',{method:'PUT',body:JSON.stringify({sha:headSha,merge_method:'squash',commit_title:fresh.title})});
   if(merged.r.ok&&merged.data?.merged===true){
     await dispatchPostMergeDeploys();
