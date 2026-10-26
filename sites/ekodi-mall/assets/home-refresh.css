@@ -123,14 +123,6 @@ body{background:var(--mall-surface)}
 @media(max-width:370px){.mall-header .brand span:last-child{display:none}.mall-global-search input{font-size:11px}.mall-editorial-card strong{font-size:14px}}
 @media(prefers-reduced-motion:reduce){.mall-photo-hero:hover .mall-hero-photo,.mall-category-shortcuts a:hover,.mall-editorial-card:hover{transform:none}.mall-hero-photo,.mall-category-shortcuts a,.mall-editorial-card{transition:none}}
 
-/* Isolated editorial portrait above—not on top of—the lifestyle photograph. */
-.mall-premium-hero .mall-photo-hero{margin-top:96px;min-height:342px;overflow:visible;background:transparent}
-.mall-premium-hero .mall-hero-photo{border-radius:18px;overflow:hidden;background-color:#ecd6ae}
-.mall-premium-hero .mall-hero-person{position:absolute;top:-90px;right:6px;width:124px;height:82px;object-fit:cover;object-position:center 38%;border:4px solid #fff;border-radius:18px;box-shadow:0 8px 24px rgba(20,40,60,.14);background:#f5e9df;z-index:2;pointer-events:none}
-@media(max-width:980px){.mall-premium-hero .mall-photo-hero{margin-top:82px;min-height:310px}.mall-premium-hero .mall-hero-person{top:-76px;width:106px;height:68px}}
-@media(max-width:760px){.mall-premium-hero .mall-photo-hero{margin-top:80px;min-height:260px}.mall-premium-hero .mall-hero-person{top:-73px;right:2px;width:104px;height:66px}.mall-premium-hero .mall-hero-photo{border-radius:16px}}
-@media(max-width:390px){.mall-premium-hero .mall-photo-hero{margin-top:73px;min-height:240px}.mall-premium-hero .mall-hero-person{top:-67px;width:94px;height:60px}}
-
 /* The same centered width token and gutters as the EKODI canonical footer. */
 .mall-header{height:auto!important;padding:0!important;width:100%;max-width:100%;box-sizing:border-box}
 .mall-header .mall-header-inner{

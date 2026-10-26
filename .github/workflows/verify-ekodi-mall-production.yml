@@ -265,10 +265,14 @@ jobs:
               grep -Fq "$marker" "$page" || { echo "Mall shared buyer chrome missing [$marker] in $page"; exit 1; }
             done
           done
-          grep -Fq 'pexels-photo-6347572.jpeg' /tmp/mall.html || { echo 'Sourced editorial portrait missing on Mall home'; exit 1; }
+          if grep -Fq 'mall-hero-person' /tmp/mall.html || grep -Fq 'pexels-photo-6347572.jpeg' /tmp/mall.html; then
+            echo 'Removed upper-right Mall person thumbnail is still present'
+            exit 1
+          fi
+          grep -Fq 'class="mall-hero-photo"' /tmp/mall.html || { echo 'Main lifestyle Mall photo missing'; exit 1; }
           grep -Fq 'data-ekodi-character="off"' /tmp/mall.html || { echo 'Cartoon suppression absent from Mall landing'; exit 1; }
           grep -Fq '이 페이지에는 숙박 제휴링크가 포함될 수 있으며' /tmp/mall-travel.html || { echo 'Travel affiliate disclosure missing'; exit 1; }
-          echo 'Mall buyer header, footer and portrait=verified'
+          echo 'Mall buyer header, footer, no extra portrait and main lifestyle photo=verified'
           grep -Fq '<link rel="canonical" href="https://ekodi.kr/ekodimall/picks">' /tmp/mall-picks.html || { echo 'Picks canonical missing'; exit 1; }
           grep -Fq '쿠팡 파트너스 활동의 일환으로' /tmp/mall-picks.html || { echo 'Picks disclosure missing'; exit 1; }
           if grep -Fq 'class="pick-cta"' /tmp/mall-picks.html; then grep -Fq 'rel="sponsored nofollow noopener"' /tmp/mall-picks.html || { echo 'Picks links not marked sponsored'; exit 1; }; fi

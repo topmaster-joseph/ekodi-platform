@@ -39,14 +39,15 @@ test('responsive storefront does not change payments or disclose false sales cla
   assert.doesNotMatch(js, /checkout|payment|localStorage|fetch\(/);
 });
 
-test('real portrait has a separate slot and suppresses only the Mall landing mascot', () => {
+test('Mall has only the main lifestyle photo; no mascot or secondary person thumbnail', () => {
   assert.match(template, /data-ekodi-character="off"/);
-  assert.match(template, /class="mall-hero-person"/);
-  assert.match(template, /pexels-photo-6347572\.jpeg/);
-  assert.doesNotMatch(template, /pexels-photo-35760987\.jpeg/);
-  assert.match(css, /mall-hero-person\{position:absolute;top:-90px/);
-  assert.match(css, /mall-photo-hero\{margin-top:96px/);
-  assert.match(css, /@media\(max-width:390px\)/);
+  assert.match(template, /class="mall-hero-photo"/);
+  assert.match(css, /pexels-photo-39997379\.jpeg/);
+  assert.doesNotMatch(template, /mall-hero-person|pexels-photo-6347572\.jpeg/);
+  assert.doesNotMatch(css, /mall-hero-person|margin-top:96px|margin-top:82px/);
+  assert.match(css, /\.mall-premium-hero \.ekodi-main-ekodian/);
+  const character = readFileSync(new URL('../../../shell/user-character.js', import.meta.url), 'utf8');
+  assert.match(character, /serviceId\(\)!=='mall'/);
 });
 
 test('home and affiliate travel page use the same generated buyer header', () => {
