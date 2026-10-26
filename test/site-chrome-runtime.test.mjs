@@ -122,3 +122,11 @@ test('EKODI Mall legal footer identifies the verified direct seller, while other
     assert.equal(independent.contact.email,'');
   }
 });
+
+test('shared-site guarded workflow redeploys site footer dependencies on main',async()=>{
+  const workflow=await readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8');
+  const pushTrigger=workflow.split('  push:\n')[1]?.split('\npermissions:')[0]||'';
+  assert.ok(pushTrigger.includes("'config/site-chrome-defaults.js'"));
+  assert.ok(pushTrigger.includes("'config/user-footer.js'"));
+  assert.ok(pushTrigger.includes("'ekodi-shell-injector.js'"));
+});
