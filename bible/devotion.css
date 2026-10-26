@@ -85,3 +85,5 @@
 .ekodi-devotion .dv-audio-hint{min-width:100%}
 .ekodi-devotion .dv-illustration{max-height:260px;aspect-ratio:1.65/1}
 }
+/* 2026-10-27: on the mission devotion page the header (brand + menu) spans the same centre column as the content. */
+body:has([data-mission-devotion]) .mission-site-header{max-width:840px;padding-inline:16px}
