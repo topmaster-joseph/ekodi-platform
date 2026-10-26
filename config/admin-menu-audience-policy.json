@@ -15,21 +15,40 @@
   ],
   "audiences": {
     "platform-super-admin": {
-      "label": { "ko": "최고관리자 · 플랫폼 전용", "en": "Super Admin · Platform only" },
+      "label": {
+        "ko": "최고관리자 · 플랫폼 전용",
+        "en": "Super Admin · Platform only"
+      },
       "pathGrammar": "/admin/{group}/{menu}/{tab}",
-      "visibleTo": ["platform_super_admin"]
+      "visibleTo": [
+        "platform_super_admin"
+      ]
     },
     "platform-site-operations": {
-      "label": { "ko": "최고관리자 · 사이트 운영 (사이트 관리자 메뉴 기준)", "en": "Super Admin · Site operations (mirrors site admin)" },
+      "label": {
+        "ko": "최고관리자 · 사이트 운영 (사이트 관리자 메뉴 기준)",
+        "en": "Super Admin · Site operations (mirrors site admin)"
+      },
       "pathGrammar": "/admin/sites/{menu}/{tab}",
-      "visibleTo": ["platform_super_admin"],
+      "visibleTo": [
+        "platform_super_admin"
+      ],
       "mirrorsSiteAdmin": true,
       "siteMutation": "enter-site-admin-context"
     },
     "site-admin": {
-      "label": { "ko": "사이트 관리자", "en": "Site admin" },
+      "label": {
+        "ko": "사이트 관리자",
+        "en": "Site admin"
+      },
       "pathGrammar": "/{site}/admin/{group}/{menu}",
-      "visibleTo": ["tenant_admin", "store_owner", "workspace_admin", "client_admin", "senior_pastor"],
+      "visibleTo": [
+        "tenant_admin",
+        "store_owner",
+        "workspace_admin",
+        "client_admin",
+        "senior_pastor"
+      ],
       "inheritsPlatformAuthority": false
     }
   },
@@ -38,103 +57,477 @@
     "toward-platform-only": "orchestrator-autonomous"
   },
   "siteTypes": {
-    "church": { "ko": "교회·공동체" },
-    "store": { "ko": "매장·상거래" },
-    "org": { "ko": "단체·기관" },
-    "brand": { "ko": "개인·브랜드" }
+    "church": {
+      "ko": "교회·공동체"
+    },
+    "store": {
+      "ko": "매장·상거래"
+    },
+    "org": {
+      "ko": "단체·기관"
+    },
+    "brand": {
+      "ko": "개인·브랜드"
+    }
   },
   "platformSiteOperationsMenus": {
-    "menu-management": { "ko": "메뉴 관리", "tabs": ["templates", "assign", "history"] },
-    "registry": { "ko": "사이트 목록", "tabs": ["all", "core", "business", "community", "clients", "knowledge", "private"] }
+    "menu-management": {
+      "ko": "메뉴 관리",
+      "tabs": [
+        "templates",
+        "assign",
+        "history"
+      ]
+    },
+    "registry": {
+      "ko": "사이트 목록",
+      "tabs": [
+        "all",
+        "core",
+        "business",
+        "community",
+        "clients",
+        "knowledge",
+        "private"
+      ]
+    }
   },
   "siteAdminMenuContract": [
-    { "id": "home", "ko": "홈", "menus": [ { "id": "overview", "ko": "운영 현황" }, { "id": "command", "ko": "에코디와 대화" } ] },
-    { "id": "settings", "ko": "사이트 설정", "menus": [ { "id": "profile", "ko": "기본정보" }, { "id": "chrome", "ko": "헤더·푸터·테마" }, { "id": "domain", "ko": "도메인" }, { "id": "language", "ko": "언어" } ] },
-    { "id": "members", "ko": "회원·운영진", "menus": [ { "id": "members", "ko": "회원" }, { "id": "staff", "ko": "운영진" }, { "id": "approvals", "ko": "가입 승인" } ] },
-    { "id": "content", "ko": "콘텐츠·소통", "menus": [ { "id": "posts", "ko": "게시물·미디어" }, { "id": "devotional", "ko": "묵상·다국어", "siteTypes": ["church"] }, { "id": "channels", "ko": "방송·자동게시" }, { "id": "events", "ko": "행사·예약" }, { "id": "messages", "ko": "일정·알림" } ] },
-    { "id": "store", "ko": "매장·주문", "menus": [ { "id": "orders", "ko": "주문", "siteTypes": ["store"] }, { "id": "catalog", "ko": "메뉴·상품", "siteTypes": ["store"] }, { "id": "pos", "ko": "POS 연결", "siteTypes": ["store"] } ] },
-    { "id": "marketing", "ko": "마케팅", "menus": [ { "id": "channels", "ko": "채널", "siteTypes": ["store", "org", "brand"] }, { "id": "publishing", "ko": "게시", "siteTypes": ["store", "org", "brand"] }, { "id": "results", "ko": "성과", "siteTypes": ["store", "org", "brand"] } ] },
-    { "id": "billing", "ko": "결제·정산 보고", "readOnly": true, "note": "EKODIBIZ is the merchant of record; site admins read payments and settlement reports only.", "menus": [ { "id": "payments", "ko": "결제 내역" }, { "id": "reports", "ko": "정산 보고서" } ] },
-    { "id": "ai", "ko": "AI 도우미", "menus": [ { "id": "usage", "ko": "사용량" }, { "id": "delegation", "ko": "위임 권한" } ] },
-    { "id": "records", "ko": "기록", "menus": [ { "id": "changes", "ko": "변경 기록" }, { "id": "audit", "ko": "감사" } ] }
+    {
+      "id": "home",
+      "ko": "홈",
+      "menus": [
+        {
+          "id": "overview",
+          "ko": "운영 현황"
+        },
+        {
+          "id": "command",
+          "ko": "에코디와 대화"
+        }
+      ]
+    },
+    {
+      "id": "settings",
+      "ko": "사이트 설정",
+      "menus": [
+        {
+          "id": "profile",
+          "ko": "기본정보"
+        },
+        {
+          "id": "chrome",
+          "ko": "헤더·푸터·테마"
+        },
+        {
+          "id": "domain",
+          "ko": "도메인"
+        },
+        {
+          "id": "language",
+          "ko": "언어"
+        }
+      ]
+    },
+    {
+      "id": "members",
+      "ko": "회원·운영진",
+      "menus": [
+        {
+          "id": "members",
+          "ko": "회원"
+        },
+        {
+          "id": "staff",
+          "ko": "운영진"
+        },
+        {
+          "id": "approvals",
+          "ko": "가입 승인"
+        }
+      ]
+    },
+    {
+      "id": "content",
+      "ko": "콘텐츠·소통",
+      "menus": [
+        {
+          "id": "posts",
+          "ko": "게시물·미디어"
+        },
+        {
+          "id": "devotional",
+          "ko": "묵상·다국어",
+          "siteTypes": [
+            "church"
+          ]
+        },
+        {
+          "id": "channels",
+          "ko": "방송·자동게시"
+        },
+        {
+          "id": "events",
+          "ko": "행사·예약"
+        },
+        {
+          "id": "messages",
+          "ko": "일정·알림"
+        }
+      ]
+    },
+    {
+      "id": "store",
+      "ko": "매장·주문",
+      "menus": [
+        {
+          "id": "orders",
+          "ko": "주문",
+          "siteTypes": [
+            "store"
+          ]
+        },
+        {
+          "id": "catalog",
+          "ko": "메뉴·상품",
+          "siteTypes": [
+            "store"
+          ]
+        },
+        {
+          "id": "pos",
+          "ko": "POS 연결",
+          "siteTypes": [
+            "store"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "marketing",
+      "ko": "마케팅",
+      "menus": [
+        {
+          "id": "channels",
+          "ko": "채널",
+          "siteTypes": [
+            "store",
+            "org",
+            "brand"
+          ]
+        },
+        {
+          "id": "publishing",
+          "ko": "게시",
+          "siteTypes": [
+            "store",
+            "org",
+            "brand"
+          ]
+        },
+        {
+          "id": "results",
+          "ko": "성과",
+          "siteTypes": [
+            "store",
+            "org",
+            "brand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "billing",
+      "ko": "결제·정산 보고",
+      "readOnly": true,
+      "note": "EKODIBIZ is the merchant of record; site admins read payments and settlement reports only.",
+      "menus": [
+        {
+          "id": "payments",
+          "ko": "결제 내역"
+        },
+        {
+          "id": "reports",
+          "ko": "정산 보고서"
+        }
+      ]
+    },
+    {
+      "id": "ai",
+      "ko": "AI 도우미",
+      "menus": [
+        {
+          "id": "usage",
+          "ko": "사용량"
+        },
+        {
+          "id": "delegation",
+          "ko": "위임 권한"
+        }
+      ]
+    },
+    {
+      "id": "records",
+      "ko": "기록",
+      "menus": [
+        {
+          "id": "changes",
+          "ko": "변경 기록"
+        },
+        {
+          "id": "audit",
+          "ko": "감사"
+        }
+      ]
+    }
   ],
   "classification": {
     "decidedBy": "ekodi-ai-orchestrator",
-    "decidedAt": "2026-10-22",
-    "source": "owner-approved admin IA v3 stage 2 (2026-10-22): platform-global content engines stay platform; per-site events and messages live in site admins",
+    "decidedAt": "2026-10-26",
+    "source": "owner-approved admin IA v3 stage 2 (2026-10-22): platform-global content engines stay platform; per-site events and messages live in site admins; 2026-10-26 owner-directed platform-only infra cost menu (orchestrator recovery PR #6058)",
     "entries": {
-      "platform-overview": { "audience": "platform-super-admin" },
-      "command-home": { "audience": "platform-super-admin" },
-      "engine-all": { "audience": "platform-super-admin" },
-      "engine-core": { "audience": "platform-super-admin" },
-      "engine-common": { "audience": "platform-super-admin" },
-      "engine-operations": { "audience": "platform-super-admin" },
-      "engine-professional": { "audience": "platform-super-admin" },
-      "engine-ai": { "audience": "platform-super-admin" },
-      "engine-integration": { "audience": "platform-super-admin" },
-      "engine-preview": { "audience": "platform-super-admin" },
-      "service-modules": { "audience": "platform-super-admin" },
-      "menu-templates": { "audience": "platform-super-admin" },
-      "sites-all": { "audience": "platform-site-operations", "siteMenu": "registry" },
-      "sites-core": { "audience": "platform-site-operations", "siteMenu": "registry" },
-      "sites-business": { "audience": "platform-site-operations", "siteMenu": "registry" },
-      "sites-community": { "audience": "platform-site-operations", "siteMenu": "registry" },
-      "sites-clients": { "audience": "platform-site-operations", "siteMenu": "registry" },
-      "sites-knowledge": { "audience": "platform-site-operations", "siteMenu": "registry" },
-      "sites-communication": { "audience": "platform-site-operations", "siteMenu": "registry" },
-      "sites-worklife": { "audience": "platform-site-operations", "siteMenu": "registry" },
-      "sites-other": { "audience": "platform-site-operations", "siteMenu": "registry" },
-      "sites-preparing": { "audience": "platform-site-operations", "siteMenu": "registry" },
-      "sites-internal": { "audience": "platform-site-operations", "siteMenu": "registry" },
-      "sites-user": { "audience": "platform-site-operations", "siteMenu": "registry" },
-      "sites-customer-partner": { "audience": "platform-site-operations", "siteMenu": "registry" },
-      "sites-independent": { "audience": "platform-site-operations", "siteMenu": "registry" },
-      "campus": { "audience": "platform-site-operations", "siteMenu": "registry" },
-      "organization": { "audience": "platform-site-operations", "siteMenu": "registry" },
-      "workspace": { "audience": "platform-site-operations", "siteMenu": "registry" },
-      "users-access": { "audience": "platform-site-operations", "siteMenu": "members.members" },
-      "clients": { "audience": "platform-site-operations", "siteMenu": "members.staff" },
-      "ai-membership": { "audience": "platform-super-admin" },
-      "site-chrome": { "audience": "platform-site-operations", "siteMenu": "settings.chrome" },
-      "books": { "audience": "platform-super-admin" },
-      "devotional": { "audience": "platform-super-admin" },
-      "social": { "audience": "platform-super-admin" },
-      "community": { "audience": "platform-site-operations", "siteMenu": "content.events" },
-      "communication": { "audience": "platform-site-operations", "siteMenu": "content.messages" },
-      "cmpmyi": { "audience": "platform-site-operations", "siteMenu": "store.orders" },
-      "security": { "audience": "platform-super-admin" },
-      "admins": { "audience": "platform-super-admin" },
-      "work": { "audience": "platform-super-admin" },
-      "finance": { "audience": "platform-super-admin" },
-      "tax": { "audience": "platform-super-admin" },
-      "health": { "audience": "platform-super-admin" },
-      "site-health": { "audience": "platform-super-admin" },
-      "deployments": { "audience": "platform-super-admin" },
-      "aiops": { "audience": "platform-super-admin" },
-      "devices": { "audience": "platform-super-admin" },
-      "pos-agent": { "audience": "platform-super-admin" },
-      "api-cost": { "audience": "platform-super-admin" },
-      "architecture": { "audience": "platform-super-admin" },
-      "maturity": { "audience": "platform-super-admin" },
-      "domain-control": { "audience": "platform-super-admin" },
-      "services": { "audience": "platform-super-admin" },
-      "policies": { "audience": "platform-super-admin" },
-      "public-site-controls": { "audience": "platform-super-admin" },
-      "language-status": { "audience": "platform-super-admin" },
-      "ai-module-spec": { "audience": "platform-super-admin" },
-      "storage": { "audience": "platform-super-admin" },
-      "ai-settings": { "audience": "platform-super-admin" },
-      "audit-records": { "audience": "platform-super-admin" },
-      "common-services": { "audience": "platform-super-admin" },
-      "confirmations": { "audience": "platform-super-admin" },
-      "life-ai": { "audience": "platform-super-admin" },
-      "personal-finance": { "audience": "platform-super-admin" },
-      "invest": { "audience": "platform-super-admin" },
-      "marketing-ai": { "audience": "platform-super-admin" },
-      "supply-network": { "audience": "platform-super-admin" },
-      "insurance": { "audience": "platform-super-admin" },
-      "capabilities": { "audience": "platform-super-admin" },
-      "openai": { "audience": "platform-super-admin" }
+      "platform-overview": {
+        "audience": "platform-super-admin"
+      },
+      "command-home": {
+        "audience": "platform-super-admin"
+      },
+      "engine-all": {
+        "audience": "platform-super-admin"
+      },
+      "engine-core": {
+        "audience": "platform-super-admin"
+      },
+      "engine-common": {
+        "audience": "platform-super-admin"
+      },
+      "engine-operations": {
+        "audience": "platform-super-admin"
+      },
+      "engine-professional": {
+        "audience": "platform-super-admin"
+      },
+      "engine-ai": {
+        "audience": "platform-super-admin"
+      },
+      "engine-integration": {
+        "audience": "platform-super-admin"
+      },
+      "engine-preview": {
+        "audience": "platform-super-admin"
+      },
+      "service-modules": {
+        "audience": "platform-super-admin"
+      },
+      "menu-templates": {
+        "audience": "platform-super-admin"
+      },
+      "sites-all": {
+        "audience": "platform-site-operations",
+        "siteMenu": "registry"
+      },
+      "sites-core": {
+        "audience": "platform-site-operations",
+        "siteMenu": "registry"
+      },
+      "sites-business": {
+        "audience": "platform-site-operations",
+        "siteMenu": "registry"
+      },
+      "sites-community": {
+        "audience": "platform-site-operations",
+        "siteMenu": "registry"
+      },
+      "sites-clients": {
+        "audience": "platform-site-operations",
+        "siteMenu": "registry"
+      },
+      "sites-knowledge": {
+        "audience": "platform-site-operations",
+        "siteMenu": "registry"
+      },
+      "sites-communication": {
+        "audience": "platform-site-operations",
+        "siteMenu": "registry"
+      },
+      "sites-worklife": {
+        "audience": "platform-site-operations",
+        "siteMenu": "registry"
+      },
+      "sites-other": {
+        "audience": "platform-site-operations",
+        "siteMenu": "registry"
+      },
+      "sites-preparing": {
+        "audience": "platform-site-operations",
+        "siteMenu": "registry"
+      },
+      "sites-internal": {
+        "audience": "platform-site-operations",
+        "siteMenu": "registry"
+      },
+      "sites-user": {
+        "audience": "platform-site-operations",
+        "siteMenu": "registry"
+      },
+      "sites-customer-partner": {
+        "audience": "platform-site-operations",
+        "siteMenu": "registry"
+      },
+      "sites-independent": {
+        "audience": "platform-site-operations",
+        "siteMenu": "registry"
+      },
+      "campus": {
+        "audience": "platform-site-operations",
+        "siteMenu": "registry"
+      },
+      "organization": {
+        "audience": "platform-site-operations",
+        "siteMenu": "registry"
+      },
+      "workspace": {
+        "audience": "platform-site-operations",
+        "siteMenu": "registry"
+      },
+      "users-access": {
+        "audience": "platform-site-operations",
+        "siteMenu": "members.members"
+      },
+      "clients": {
+        "audience": "platform-site-operations",
+        "siteMenu": "members.staff"
+      },
+      "ai-membership": {
+        "audience": "platform-super-admin"
+      },
+      "site-chrome": {
+        "audience": "platform-site-operations",
+        "siteMenu": "settings.chrome"
+      },
+      "books": {
+        "audience": "platform-super-admin"
+      },
+      "devotional": {
+        "audience": "platform-super-admin"
+      },
+      "social": {
+        "audience": "platform-super-admin"
+      },
+      "community": {
+        "audience": "platform-site-operations",
+        "siteMenu": "content.events"
+      },
+      "communication": {
+        "audience": "platform-site-operations",
+        "siteMenu": "content.messages"
+      },
+      "cmpmyi": {
+        "audience": "platform-site-operations",
+        "siteMenu": "store.orders"
+      },
+      "security": {
+        "audience": "platform-super-admin"
+      },
+      "admins": {
+        "audience": "platform-super-admin"
+      },
+      "work": {
+        "audience": "platform-super-admin"
+      },
+      "finance": {
+        "audience": "platform-super-admin"
+      },
+      "tax": {
+        "audience": "platform-super-admin"
+      },
+      "health": {
+        "audience": "platform-super-admin"
+      },
+      "site-health": {
+        "audience": "platform-super-admin"
+      },
+      "deployments": {
+        "audience": "platform-super-admin"
+      },
+      "aiops": {
+        "audience": "platform-super-admin"
+      },
+      "devices": {
+        "audience": "platform-super-admin"
+      },
+      "pos-agent": {
+        "audience": "platform-super-admin"
+      },
+      "api-cost": {
+        "audience": "platform-super-admin"
+      },
+      "architecture": {
+        "audience": "platform-super-admin"
+      },
+      "maturity": {
+        "audience": "platform-super-admin"
+      },
+      "domain-control": {
+        "audience": "platform-super-admin"
+      },
+      "services": {
+        "audience": "platform-super-admin"
+      },
+      "policies": {
+        "audience": "platform-super-admin"
+      },
+      "public-site-controls": {
+        "audience": "platform-super-admin"
+      },
+      "language-status": {
+        "audience": "platform-super-admin"
+      },
+      "ai-module-spec": {
+        "audience": "platform-super-admin"
+      },
+      "storage": {
+        "audience": "platform-super-admin"
+      },
+      "ai-settings": {
+        "audience": "platform-super-admin"
+      },
+      "audit-records": {
+        "audience": "platform-super-admin"
+      },
+      "common-services": {
+        "audience": "platform-super-admin"
+      },
+      "confirmations": {
+        "audience": "platform-super-admin"
+      },
+      "life-ai": {
+        "audience": "platform-super-admin"
+      },
+      "personal-finance": {
+        "audience": "platform-super-admin"
+      },
+      "invest": {
+        "audience": "platform-super-admin"
+      },
+      "marketing-ai": {
+        "audience": "platform-super-admin"
+      },
+      "supply-network": {
+        "audience": "platform-super-admin"
+      },
+      "insurance": {
+        "audience": "platform-super-admin"
+      },
+      "capabilities": {
+        "audience": "platform-super-admin"
+      },
+      "openai": {
+        "audience": "platform-super-admin"
+      },
+      "infra-costs": {
+        "audience": "platform-super-admin"
+      }
     }
   }
 }
