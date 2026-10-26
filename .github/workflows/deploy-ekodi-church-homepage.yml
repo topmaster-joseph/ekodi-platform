@@ -1,6 +1,6 @@
 name: Deploy EKODI Church Homepage
 # Release reconciliation marker: church-operating-space-20260924
-# Reconcile Church public Pages to source commit 6eda5d40ba6fad6ed0c1facca53ab7ad54ca33e6 (2026-10-25: 큐티인 신청 런타임 메뉴, ekodi-church#120).
+# Reconcile Church public Pages to source commit 4b2f26999e4388d7c3147bcccc9b71eea2cfd29f (2026-10-26: 오늘의 매일묵상 페이지·메뉴, ekodi-church#124).
 
 on:
   workflow_dispatch:
@@ -136,6 +136,12 @@ jobs:
           grep -Fq 'current_streak' church/my/attendance/app.js
           grep -Fq '<progress class="month-meter"' church/my/attendance/app.js
           if grep -Fq '운영자 기능은 별도 관리자 화면에서 처리합니다.' church/my/index.html; then echo 'Member home must not expose internal operator guidance.'; exit 1; fi
+          test -s church/devotion/index.html
+          grep -Fq '<h1>오늘의 매일묵상</h1>' church/devotion/index.html
+          grep -Fq 'data-ekodi-devotion data-base="/ekodichurch/devotion/"' church/devotion/index.html
+          grep -Fq '<script type="module" src="/bible/devotion.js"></script>' church/devotion/index.html
+          grep -Fq 'href="/ekodichurch/devotion/">매일묵상</a>' church/index.html
+          grep -Fq "{ href: '/ekodichurch/devotion/', label: '매일묵상', className: 'nav-devotion' }" church/script.js
           grep -Fq 'https://ekodi.kr/privacy' church/index.html
           grep -Fq 'https://ekodi.kr/terms' church/index.html
           grep -Fq 'data-ekodi-character-identity="founder-pastor"' church/index.html
@@ -190,6 +196,30 @@ jobs:
           set -euo pipefail
           cd /tmp/ekodi-church-pages
           npx --yes wrangler@${WRANGLER_VERSION} pages deploy . --project-name ekodi-church --branch main --commit-dirty=true
+
+      - name: Verify production church devotion page and shared renderer
+        shell: bash
+        run: |
+          set -euo pipefail
+          release="$CHURCH_SOURCE_SHA"
+          # The shared renderer ships in the Bible lane of the same release; allow it up to 10 minutes.
+          for attempt in $(seq 1 60); do
+            page=$(curl -L -sS -o /tmp/church-devotion.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/devotion/?release=${release}" || true)
+            renderer=$(curl -L -sS -o /tmp/devotion-renderer.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/bible/devotion.js' || true)
+            api=$(curl -sS -o /tmp/devotion-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/bible/api/bible/devotion?date=2026-10-26' || true)
+            if [[ "$page" == 200 && "$renderer" == 200 && "$api" == 200 ]] \
+              && grep -Fq '<h1>오늘의 매일묵상</h1>' /tmp/church-devotion.html \
+              && grep -Fq 'class="site-header church-devotion-header"' /tmp/church-devotion.html \
+              && grep -Fq 'data-ekodi-devotion' /tmp/church-devotion.html \
+              && grep -Fq 'data-tab' /tmp/devotion-renderer.js \
+              && grep -Fq '"activitySource":"curated"' /tmp/devotion-api.json; then
+              echo 'Church devotion page verified.'
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Church devotion verification failed: page=$page renderer=$renderer api=$api"
+          exit 1
 
       - name: Verify production life hub assets and exact release
         shell: bash
