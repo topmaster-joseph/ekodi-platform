@@ -102,7 +102,7 @@ function boot(root) {
   const toastEl = el('p', 'dv-toast');
   toastEl.setAttribute('role', 'status');
   toastEl.setAttribute('aria-live', 'polite');
-  root.append(datebar, status, summary, scriptureBlock, notice, shareRow, audioRow, tabbar, panelWrap, adminPanel, toastEl);
+  root.append(datebar, status, scriptureBlock, summary, notice, shareRow, audioRow, tabbar, panelWrap, adminPanel, toastEl);
 
   function toast(message) {
     toastEl.textContent = message;
@@ -402,6 +402,7 @@ function boot(root) {
       case 'poem': return { title: a.poem.title, text: `${head}\n\n〈${a.poem.title}〉\n${a.poem.lines.join('\n')}`, hash: 'poem' };
       case 'song': return { title: a.song.title, text: `${head}\n\n♪ ${a.song.title}\n${a.song.verse.join('\n')}\n(후렴) ${a.song.refrain.join(' / ')}`, hash: 'song' };
       case 'questions': return { title: '질문 / 실천', text: `${head}\n\n${a.questions.map((q, i) => `${i + 1}. [${q.kind}] ${q.text}`).join('\n')}\n오늘의 실천: ${a.action}`, hash: 'questions' };
+      case 'image': return { title: '묵상 그림', text: `${head}\n\n묵상 그림 · ${a.theme}`, hash: 'image' };
       case 'family': return { title: '가정·어린이 질문', text: `${head}\n\n👨‍👩‍👧 ${a.family}`, hash: 'family' };
       case 'action': return { title: '오늘의 실천', text: `${head}\n\n✔ 오늘의 실천: ${a.action}`, hash: 'action' };
       case 'prayer': return { title: '한 줄 기도', text: `${head}\n\n🙏 ${a.prayer}`, hash: 'prayer' };
