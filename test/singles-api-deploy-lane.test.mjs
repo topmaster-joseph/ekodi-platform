@@ -16,7 +16,7 @@ test('preflight passes only when every contract function exists',async()=>{
   const mk=(present)=>async(url,opts)=>{
     assert.match(url,/\/v1\/projects\/ref123\/database\/query\/read-only$/);
     assert.equal(opts.headers.authorization,'Bearer tok');
-    return new Response(JSON.stringify(contract.required_functions.map((sig,i)=>({sig,present:present(i)}))),{status:201});
+    return new Response(JSON.stringify([...contract.required_functions,...(contract.required_columns||[])].map((sig,i)=>({sig,present:present(i)}))),{status:201});
   };
   assert.deepEqual(await preflight({ref:'ref123',token:'tok',fetchImpl:mk(()=>true)}),{ok:true,missing:[]});
   const r=await preflight({ref:'ref123',token:'tok',fetchImpl:mk(i=>i!==2)});
@@ -45,4 +45,20 @@ test('orchestrator convergence dispatches the singles-api lane (token merges emi
   assert.match(src,/\[singlesApiTouched,'deploy-singles-api\.yml'\]/);
   assert.match(src,/if\(singlesApiTouched\)\{[\s\S]*?actions\/workflows\/deploy-singles-api\.yml\/dispatches[\s\S]*?inputs:\{release_branch_ref:branch,release_task_id:taskId\}/);
   assert.match(src,/workflow:'deploy-singles-api\.yml',pr:pr\.number,taskId,branch,authority:'ekodi-orchestrator'/);
+});
+
+test('preflight also requires the DB columns the code writes',async()=>{
+  assert.ok(contract.required_columns.includes('public.singles_consent_receipts.religion_consent'));
+  const q=contractQuery(['public.a(uuid)'],['public.t.c']);
+  assert.match(q,/union all/);assert.match(q,/pg_catalog\.pg_attribute/);assert.match(q,/not a\.attisdropped/);
+  assert.throws(()=>contractQuery([],["public.t.c';drop table x--"]),/invalid_column/);
+  const api=await readFile(new URL('../supabase/functions/singles-api/index.ts',import.meta.url),'utf8');
+  for(const col of contract.required_columns){
+    const [, table, name]=col.split('.');
+    assert.ok(api.includes(table)&&api.includes(name+':'),col+' is written by the API');
+  }
+});
+test('enrollment receipt records the exact optional consents chosen',async()=>{
+  const api=await readFile(new URL('../supabase/functions/singles-api/index.ts',import.meta.url),'utf8');
+  assert.match(api,/action: "enrolled", consent_version: VERSION,\n\s+religion_consent: b\.religion_consent, marriage_opt_in: b\.marriage_opt_in \}\)/);
 });
