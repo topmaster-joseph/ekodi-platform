@@ -5,7 +5,10 @@
 // evidence comes from the task-branch PR checks and the orchestrator statuses,
 // not from these parked runs. Left alone they flip to a red zero-job
 // "failure" when the merged branch is deleted, so each release showed ~14
-// false failures. Convergence cancels exactly those parked runs before merging.
+// false failures.
+// GitHub reports a parked run as status=completed, conclusion=action_required,
+// so it cannot be cancelled (verified on release #6084). Convergence therefore
+// deletes exactly those never-executed, log-less run records before merging.
 export const ORCH_RELEASE_BRANCH = /^ai\/[a-z0-9-]+\/orch_[A-Za-z0-9_-]+$/;
 export const RELEASE_PR_BOT = 'github-actions[bot]';
 
@@ -14,7 +17,8 @@ export function unapprovedReleaseRunIds(runs, { branch, headSha }) {
   if (!/^[a-f0-9]{40}$/i.test(String(headSha || ''))) return [];
   return (Array.isArray(runs) ? runs : [])
     .filter(run => run
-      && run.status === 'action_required'
+      && run.status === 'completed'
+      && run.conclusion === 'action_required'
       && run.event === 'pull_request'
       && run.head_branch === branch
       && run.head_sha === headSha

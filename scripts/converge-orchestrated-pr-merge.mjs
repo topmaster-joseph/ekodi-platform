@@ -46,19 +46,21 @@ async function requiredChecksStillRunning(sha){
 // a fresh dispatched run before this run's budget ends (bounded per head).
 const CONVERGE_STARTED=Date.now();
 let stuckHealDone=false;
-// CONVERGE-UNAPPROVED-RUNS-001: cancel the bot-triggered pull_request runs that
-// GitHub parks for approval on this release head. They never execute and are not
-// release evidence; cancelling them stops the red zero-job "failure" that appears
-// once the merged branch is deleted. Best effort: never blocks the release.
+// CONVERGE-UNAPPROVED-RUNS-001: remove the bot-triggered pull_request runs that
+// GitHub parks for approval on this release head (status completed, conclusion
+// action_required). They never execute, have no jobs or logs and are not release
+// evidence; removing them stops the red zero-job "failure" that appears once the
+// merged branch is deleted. Cancel is impossible for an already-completed run.
+// Best effort: never blocks the release.
 async function retireUnapprovedReleaseRuns(){
   try{
     const {r,data}=await api('/actions/runs?head_sha='+headSha+'&status=action_required&event=pull_request&per_page=100');
     if(!r.ok){console.log(JSON.stringify({ok:false,action:'unapproved-runs-lookup-failed',status:r.status}));return}
     const ids=unapprovedReleaseRunIds(data.workflow_runs,{branch,headSha});
-    let cancelled=0;
-    for(const id of ids){const c=await api('/actions/runs/'+id+'/cancel',{method:'POST'});if(c.r.status===202)cancelled+=1}
-    console.log(JSON.stringify({ok:true,action:'unapproved-release-runs-cancelled',found:ids.length,cancelled,branch,head:headSha}));
-  }catch(error){console.log(JSON.stringify({ok:false,action:'unapproved-runs-cancel-error',reason:String(error?.message||error).slice(0,200)}))}
+    let removed=0;
+    for(const id of ids){const d=await api('/actions/runs/'+id,{method:'DELETE'});if(d.r.status===204)removed+=1}
+    console.log(JSON.stringify({ok:true,action:'unapproved-release-runs-removed',found:ids.length,removed,branch,head:headSha}));
+  }catch(error){console.log(JSON.stringify({ok:false,action:'unapproved-runs-remove-error',reason:String(error?.message||error).slice(0,200)}))}
 }
 async function dispatchWorkflow(workflow){
   const d=await api('/actions/workflows/'+workflow+'/dispatches',{method:'POST',body:JSON.stringify({ref:branch})});

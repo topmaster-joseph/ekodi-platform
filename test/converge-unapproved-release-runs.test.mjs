@@ -6,12 +6,14 @@ import { unapprovedReleaseRunIds } from '../scripts/lib/converge-unapproved-runs
 const branch = 'ai/claude/orch_recovery_6d82c41bd148c2c7be0daac915b3690d';
 const headSha = '6d82c41bd148c2c7be0daac915b3690d00000000';
 const bot = { login: 'github-actions[bot]' };
-const run = (id, extra = {}) => ({ id, status: 'action_required', event: 'pull_request', head_branch: branch, head_sha: headSha, actor: bot, triggering_actor: bot, ...extra });
+const run = (id, extra = {}) => ({ id, status: 'completed', conclusion: 'action_required', event: 'pull_request', head_branch: branch, head_sha: headSha, actor: bot, triggering_actor: bot, ...extra });
 
-test('only bot-parked pull_request runs on this exact orchestrator release head are selected', () => {
+test('only bot-parked (completed + action_required) pull_request runs on this exact release head are selected', () => {
   const runs = [
     run(1),
-    run(2, { status: 'completed' }),
+    run(2, { conclusion: 'failure' }),
+    run(9, { status: 'queued', conclusion: null }),
+    run(10, { conclusion: 'success' }),
     run(3, { event: 'workflow_dispatch' }),
     run(4, { head_sha: 'f'.repeat(40) }),
     run(5, { head_branch: 'ai/claude/orch_recovery_other' }),
@@ -35,7 +37,9 @@ test('convergence retires parked runs right before merging and never blocks the 
   const src = await readFile(new URL('../scripts/converge-orchestrated-pr-merge.mjs', import.meta.url), 'utf8');
   assert.match(src, /import \{ unapprovedReleaseRunIds \} from '\.\/lib\/converge-unapproved-runs\.mjs';/);
   assert.match(src, /status=action_required&event=pull_request/);
-  assert.match(src, /'\/actions\/runs\/'\+id\+'\/cancel',\{method:'POST'\}/);
+  // Parked runs are already completed (conclusion action_required), so cancel is impossible.
+  assert.match(src, /api\('\/actions\/runs\/'\+id,\{method:'DELETE'\}\)/);
+  assert.doesNotMatch(src, /\/actions\/runs\/'\+id\+'\/cancel'/);
   const fn = src.slice(src.indexOf('async function retireUnapprovedReleaseRuns'), src.indexOf('async function dispatchWorkflow'));
   assert.match(fn, /\}catch\(error\)\{/, 'lookup or cancel errors are logged, not thrown');
   assert.doesNotMatch(fn, /fail\(/);
