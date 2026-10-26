@@ -1,3 +1,4 @@
+import { renderDevotionScore } from './devotion-score.js';
 // EKODI 오늘의 매일묵상 — shared renderer for /bible, /ekodichurch and /ekodimission.
 // Each host page provides its own header/footer and a mount:
 //   <div data-ekodi-devotion data-base="/ekodichurch/devotion/" data-date-mode="query" data-site-label="에코디교회"></div>
@@ -14,8 +15,6 @@ const TABS = Object.freeze([
 ]);
 const ATTRIBUTION = '묵상 적용(시·노래·질문·기도)은 에코디언 정찬균목사가 공통본문을 바탕으로 AI 도움을 받아 만든 창작 묵상 자료입니다. 성경 본문은 개역한글(대한성서공회, 1961) 원문을 그대로 표시합니다.';
 const ADMIN_TOKEN_KEY = 'ekodi-auth-token';
-const SCORE_LIB = 'https://cdn.jsdelivr.net/npm/abcjs@6.5.2/dist/abcjs-basic-min.js';
-let scoreScriptReady;
 const TAB_IDS = new Set(TABS.map(tab => tab.id));
 
 const mount = document.querySelector('[data-ekodi-devotion]');
@@ -159,23 +158,9 @@ function boot(root) {
 
 
   function renderScore(container, abc) {
-    const notation = String(abc || '').replace(/\\n/g, '\n');
-    if (!notation.trim()) return;
-    container.textContent = '악보를 불러오는 중입니다.';
-    if (!scoreScriptReady) scoreScriptReady = new Promise((resolve, reject) => {
-      if (window.ABCJS?.renderAbc) { resolve(); return; }
-      const script = el('script');
-      script.src = SCORE_LIB;
-      script.async = true;
-      script.onload = () => window.ABCJS?.renderAbc ? resolve() : reject(new Error('score renderer unavailable'));
-      script.onerror = reject;
-      document.head.append(script);
-    });
-    scoreScriptReady.then(() => {
-      if (!container.isConnected) return;
-      container.textContent = '';
-      window.ABCJS.renderAbc(container, notation, {responsive:'resize',staffwidth:620});
-    }).catch(() => { container.textContent = '악보 표시를 불러오지 못했습니다. 가사는 아래에서 확인하세요.'; });
+    const rendered=renderDevotionScore(container,abc);
+    if(!rendered)container.dataset.scoreStatus='unsupported-score';
+    else container.dataset.scoreStatus='first-party-svg-ready';
   }
 
   function setupMrPlayer(song) {
