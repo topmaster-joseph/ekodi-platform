@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { DatabaseSync } from 'node:sqlite';
 import {
   defaultWindow, targetIssueFor, inPreparationWindow, campaignState, parseIssueTitle, titleMatchesIssue, isQtinFamily,
-  extractItemIds, parseProductDetail, buildOrderDraft, assessConfirmation, csvEscape, normalizePhone, newOrderId, isValidTossOrderId, kstToUtc,
+  extractItemIds, parseProductDetail, buildOrderDraft, assessConfirmation, csvEscape, normalizePhone, newOrderId, isValidTossOrderId, kstToUtc, CHURCH_PICKUP_ADDRESS,
 } from '../qtin-order-core.js';
 import worker, { handleRequest, syncCampaign, runScheduled, confirmPayment, handleWebhook, renderOrderPage, renderAdminPage } from '../qtin-order-worker.js';
 
@@ -659,13 +659,24 @@ test('cover click serves the stored book introduction; unknown items are refused
   assert.ok(page.includes('data-intro="1719304225"') && page.includes('<dialog id="intro"'));
 });
 
-test('affiliation is chosen in the purchase form: 에코디교회, 에코디선교회 or 기타 (with a name)', async () => {
+test('church and mission checkout omit affiliation while retaining the general route for other applicants', async () => {
   const env = await openEnvWithProducts();
-  const page = await (await handleRequest(new Request('https://ekodi.kr/qtin/mission'), env, OPEN_NOW)).text();
-  const form = page.slice(page.indexOf('id="buyerForm"'));
-  for (const value of ['church', 'mission', 'other']) assert.ok(form.includes(`name="org" value="${value}"`), value);
-  assert.ok(form.includes('value="mission" checked'), 'path preselects the affiliation');
-  assert.ok(!page.includes('class="org" data-org'), 'the old top-of-page organisation buttons are gone');
+  for (const [scope, selected] of [['church', 'church'], ['mission', 'mission']]) {
+    const page = await (await handleRequest(new Request('https://ekodi.kr/qtin/' + scope), env, OPEN_NOW)).text();
+    const form = page.slice(page.indexOf('id="buyerForm"'), page.indexOf('id="myOrders"'));
+    assert.ok(!form.includes('aria-label="소속"'), scope);
+    assert.ok(!form.includes('name="org"'), scope);
+    assert.ok(page.includes('"org":"' + selected + '"'), scope);
+    assert.ok(form.indexOf('id="delPickup"') < form.indexOf('id="name"'));
+    assert.ok(form.indexOf('id="name"') < form.indexOf('id="pickupAddress"'));
+    assert.ok(form.indexOf('id="pickupAddress"') < form.indexOf('id="phone"'));
+    assert.ok(form.includes('value="' + CHURCH_PICKUP_ADDRESS + '" readonly aria-readonly="true"'));
+    assert.ok(form.includes('id="shipFields" hidden'));
+    assert.ok(form.includes('id="departmentRow" hidden'));
+  }
+  const general = await (await handleRequest(new Request('https://ekodi.kr/qtin'), env, OPEN_NOW)).text();
+  assert.ok(general.includes('name="org" value="other"'), 'the generic order page still accepts other organizations');
+  assert.ok(!general.includes('class="org" data-org'), 'old top-of-page organization buttons remain removed');
   const base = { campaignId: '2026-12', org: 'other', name: '이웃', phone: '010-5555-6666', privacyConsent: true, items: [{ productId: '2026-12:1719304225', quantity: 1 }] };
   const missing = await handleRequest(post('/qtin/api/orders', base), env, OPEN_NOW);
   assert.equal(missing.status, 400);
@@ -806,6 +817,10 @@ test('widget variantKey is configurable, defaults to qtin and rejects malformed 
 test('delivery: church pickup stays free; parcel adds the fixed shipping fee and requires an address', async () => {
   const pickup = buildOrderDraft(VALID, PRODUCTS);
   assert.equal(pickup.draft.delivery.method, 'pickup');
+  assert.equal(pickup.draft.delivery.address1, CHURCH_PICKUP_ADDRESS);
+  assert.equal(pickup.draft.delivery.recipientName, VALID.name);
+  assert.equal(pickup.draft.delivery.recipientPhone, VALID.phone);
+  assert.equal(buildOrderDraft({ ...VALID, delivery: { method: 'pickup', address1: '조작된 주소', shippingFee: 9999 } }, PRODUCTS).draft.delivery.address1, CHURCH_PICKUP_ADDRESS);
   assert.equal(pickup.draft.totalAmount, 3600 * 2 + 4500);
   const parcelBody = { ...VALID, delivery: { method: 'parcel', postalCode: '58554', address1: '전남 무안군 청계면 테스트로 1', address2: '101호' } };
   const parcel = buildOrderDraft(parcelBody, PRODUCTS);
@@ -831,10 +846,31 @@ test('delivery: church pickup stays free; parcel adds the fixed shipping fee and
   const row = env.DB.raw.prepare('SELECT o.total_amount, d.method, d.shipping_fee, d.recipient_name, d.postal_code FROM qtin_orders o JOIN qtin_order_delivery d ON d.order_id=o.id WHERE o.id=?').get(order.orderId);
   assert.equal(row.method, 'parcel'); assert.equal(row.shipping_fee, 3000); assert.equal(row.recipient_name, '김받음'); assert.equal(row.postal_code, '58554');
   assert.equal(order.amount, row.total_amount);
+  const pickupSaved = await handleRequest(post('/qtin/api/orders', { campaignId: '2026-12', org: 'mission', name: '배부신청', phone: '01012345678', privacyConsent: true,
+    delivery: { method: 'pickup', address1: '가짜 교회 주소' },
+    items: [{ productId: '2026-12:1719304225', quantity: 1 }] }), env, OPEN_NOW);
+  const pickupOrder = await pickupSaved.json();
+  assert.equal(pickupSaved.status, 201, JSON.stringify(pickupOrder));
+  const savedPickup = env.DB.raw.prepare('SELECT method, shipping_fee, address1 FROM qtin_order_delivery WHERE order_id=?').get(pickupOrder.orderId);
+  assert.deepEqual({ ...savedPickup }, { method: 'pickup', shipping_fee: 0, address1: CHURCH_PICKUP_ADDRESS });
   const page = await (await handleRequest(new Request('https://ekodi.kr/qtin/church'), env, OPEN_NOW)).text();
   assert.ok(page.includes('id="delParcel"') && page.includes('"shippingFee":3000') && page.includes('id="postalCode"'));
 });
 
+
+test('QTIN logout blocks shared-session re-entry and returns to the originating church or mission home', async () => {
+  const { renderOrderPage: render } = await import('../qtin-order-worker.js');
+  const campaign = { id: '2026-12', year: 2026, month: 12, state: 'open', opensAt: '', closesAt: '' };
+  for (const [org, target] of [['church', '/ekodichurch/'], ['mission', '/ekodimission/']]) {
+    const html = render({ campaign, products: [], payment: { ready: true } }, { org, scriptNonce: 'test-nonce' });
+    assert.match(html, /localStorage\.setItem\(SIGNED_OUT_KEY, '1'\)/);
+    assert.match(html, /if \(read\(localStorage, SIGNED_OUT_KEY\) \|\| read\(sessionStorage, SIGNED_OUT_KEY\)\) return null/);
+    assert.match(html, /disableAutoSelect/);
+    assert.match(html, /location\.replace\(org === 'mission' \? '\/ekodimission\/' : '\/ekodichurch\/'\)/);
+    assert.ok(html.includes('id="logout">로그아웃'));
+    assert.equal(org === 'mission' ? target : target, target);
+  }
+});
 
 test('QTIN admin completes Google sign-in on its own page using central identity API and server role', async () => {
   const browser = adminBrowser({

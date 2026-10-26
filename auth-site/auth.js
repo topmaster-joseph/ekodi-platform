@@ -378,7 +378,16 @@ async function renderAccess(s){
 $('googleRetry').addEventListener('click',prepareGoogle);
 $('cancelSignedOut').addEventListener('click',cancelToService);
 $('cancelSignedIn').addEventListener('click',cancelToService);
-$('logout').addEventListener('click',async()=>{await sb.auth.signOut();cleanUrl();show('signedIn',false);show('signedOut',true);show('reviewConsole',false);show('identityPanel',false);$('serviceBadge').textContent='인증 필요';await prepareGoogle()});
+$('logout').addEventListener('click',async()=>{
+  try{await sb.auth.signOut()}catch(error){console.warn('central sign out',error)}
+  // For Church and Mission, return to the public homepage, not another auth/mypage handoff.
+  if(site==='church'||site==='mission'){
+    window.google?.accounts?.id?.disableAutoSelect?.();
+    location.replace(config.returnTo);
+    return;
+  }
+  cleanUrl();show('signedIn',false);show('signedOut',true);show('reviewConsole',false);show('identityPanel',false);$('serviceBadge').textContent='인증 필요';await prepareGoogle();
+});
 $('continueFree').addEventListener('click',()=>location.assign(marketing?marketingFreeTarget():returnTo));
 $('refreshReviews').addEventListener('click',loadReviewConsole);
 $('addGoogleAccount').addEventListener('click',prepareLinkGoogle);
