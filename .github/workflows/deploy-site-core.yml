@@ -30,6 +30,8 @@ on:
       - 'mall-product-jsonld.js'
       - 'site-shell-worker.js'
       - 'ekodi-shell-injector.js'
+      - 'config/site-chrome-defaults.js'
+      - 'config/user-footer.js'
       - 'control.html'
       - 'control.css'
       - 'control.js'
