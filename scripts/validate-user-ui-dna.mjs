@@ -82,7 +82,7 @@ if (shell?.principles?.singleSource !== true || shell?.principles?.noDuplicatedH
 if (shell?.principles?.centeredChrome !== true || shell?.principles?.selectiveRoundedInteraction !== true || shell?.principles?.serviceGeometryPreserved !== true || shell?.principles?.mainAlignedChrome !== true) {
   errors.push('User UI Shell must center shared chrome, align it to the adopted main canvas and use selective service-aware geometry.');
 }
-if (shell?.header?.alignment !== 'centered-canvas' || shell?.footer?.dedupe !== 'exactly-one-shared-footer' || shell?.header?.contentWidth !== 'match-adopted-main-canvas' || shell?.footer?.contentWidth !== 'match-adopted-main-canvas') {
+if (shell?.header?.alignment !== 'centered-canvas' || shell?.footer?.dedupe !== 'exactly-one-footer-per-site' || shell?.header?.contentWidth !== 'match-adopted-main-canvas' || shell?.footer?.contentWidth !== 'match-adopted-main-canvas') {
   errors.push('Shared header/footer alignment, main-width matching and footer cardinality contract is incomplete.');
 }
 if (shell?.contentFrame?.strategy !== 'measure-adopted-main-with-canonical-fallback' || shell?.contentFrame?.alignment !== 'header-main-footer-content-edges-match' || Number(shell?.contentFrame?.canonicalMaxPx) !== 1240) {
@@ -111,11 +111,11 @@ if(!commerceProfile?.geometry?.controlRadius || serviceProfiles.mall!=='consumer
 for (const principle of ['subserviceInheritance','fallbackHeaderWhenMissing','legacyCommonFooterSuppressed','rootInternalPathsExcluded','languageChoiceEverywhere','languageChoiceInHeaderOnly','footerLanguageChoiceForbidden','globalUtilitiesInHeader','unavailableLanguageReturnsToKorean','unreadyLanguageHidden','automaticTranslationLifecycle','progressiveHomeDisclosure','individualSiteHeaderStaysLocal']) {
   if (shell?.principles?.[principle] !== true) errors.push(`User UI Shell principle must remain enabled: ${principle}.`);
 }
-if (shell?.header?.strategy !== 'adopt-existing-first' || shell?.header?.owner !== 'shared-shell') {
-  errors.push('User header must be shared-shell owned and adopt existing service headers first.');
+if (shell?.header?.strategy !== 'adopt-site-native-first' || shell?.header?.owner !== 'service' || shell?.principles?.siteOwnedHeaderFooter !== true) {
+  errors.push('Each user header must be site owned and preserve its native design.');
 }
-if (shell?.header?.fallback !== 'shared-shell-header-when-missing') {
-  errors.push('User header must provide the shared fallback header when a page has no service header.');
+if (shell?.header?.fallback !== 'site-identity-fallback-when-missing') {
+  errors.push('User header must provide a site-specific fallback only when missing.');
 }
 for (const meaning of ['current site identity', 'current service context', 'language choice']) {
   if (!shell?.header?.requiredMeaning?.includes(meaning)) errors.push(`User header is missing required meaning: ${meaning}`);
@@ -123,11 +123,11 @@ for (const meaning of ['current site identity', 'current service context', 'lang
 for (const selector of ['header','.site-header','.topbar','.app-header','.main-header','[data-ekodi-fixed-header]']) {
   if (!shell?.header?.recognizedExistingHeaders?.includes(selector)) errors.push(`User header adoption selector is missing: ${selector}`);
 }
-if (shell?.footer?.strategy !== 'shell-supplied' || shell?.footer?.owner !== 'shared-shell') {
-  errors.push('User footer must be supplied by the shared Shell.');
+if (shell?.footer?.strategy !== 'native-site-footer-first' || shell?.footer?.owner !== 'service') {
+  errors.push('Native site footer must take priority over shell-supplied fallbacks.');
 }
-if (shell?.footer?.contentSource !== 'config/user-footer.js') {
-  errors.push('User footer text and links must have one central source: config/user-footer.js.');
+if (!String(shell?.footer?.contentSource||'').includes('site chrome per operator') || shell?.principles?.ekodiCopyrightAlways !== true) {
+  errors.push('Site footer must use per-operator information and mandatory EKODI attribution.');
 }
 if (shell?.footer?.alignment !== 'center' || !String(shell?.footer?.layout||'').includes('centered')) {
   errors.push('User footer must remain center-aligned across desktop and mobile.');
@@ -154,8 +154,8 @@ for(const marker of ['data-ekodi-i18n="privacy"','data-ekodi-i18n="terms"','data
 if (!renderedFooter.includes(EKODI_USER_FOOTER.precedenceNotice)) {
   errors.push('Central user footer must show the separate-policy precedence notice.');
 }
-if (shell?.footer?.serviceExtension !== 'append-only' || shell?.footer?.separatePolicyPrecedence !== true) {
-  errors.push('Service-specific footer information must extend, not replace, the shared platform footer.');
+if (shell?.footer?.serviceExtension !== 'site-owned' || shell?.footer?.separatePolicyPrecedence !== true) {
+  errors.push('Site-specific footer is sovereign with distinct operator and policy information.');
 }
 if (!shell?.inheritance?.rootPolicyPages?.includes('/privacy') || !shell?.inheritance?.rootPolicyPages?.includes('/terms')) {
   errors.push('Privacy and terms pages must remain inside the common User UI Shell contract.');

@@ -423,7 +423,7 @@ html[data-ekodi-service="community"] .language-menu {
   font-size: .92em;
 }
 
-[data-ekodi-legal-footer]:not(.ekodi-user-ui-footer) {
+[data-ekodi-legal-footer]:not(.ekodi-user-ui-footer):not([data-ekodi-service-footer]) {
   display: none !important;
 }
 body > [data-ekodi-user-footer] ~ [data-ekodi-user-footer] {
