@@ -9,7 +9,7 @@ import {
   clean, escapeHtml, kstParts, campaignId, parseCampaignId, addMonth, defaultWindow, targetIssueFor,
   inPreparationWindow, campaignState, formatKst, formatWon, parseIssueTitle, titleMatchesIssue, isQtinFamily,
   extractItemIds, parseProductDetail, parseProductIntro, seriesSortOrder, buildOrderDraft, newOrderId, isValidTossOrderId,
-  assessConfirmation, maskName, csvEscape, absoluteQtmUrl, SHIPPING_FEE, DELIVERY_METHODS,
+  assessConfirmation, maskName, csvEscape, absoluteQtmUrl, SHIPPING_FEE, DELIVERY_METHODS, CHURCH_PICKUP_ADDRESS,
 } from './qtin-order-core.js';
 import * as ekodipay from './ekodipay-core.js';
 
@@ -528,26 +528,29 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
     <div id="signedIn" hidden><p class="acct"><span class="dot"></span><span id="accountEmail"></span> 로그인됨 <button type="button" class="link" id="logout">다른 계정으로 바꾸기</button></p></div>
   </section>
   <section class="panel" id="buyerForm" aria-labelledby="who" hidden><h2 id="who">연락처와 추가 정보</h2>
-    <fieldset class="orgs" aria-label="소속"><legend>소속</legend>${orgChoices}</fieldset>
+    ${org ? '' : `<fieldset class="orgs" aria-label="신청 구분"><legend>신청 구분</legend>${orgChoices}</fieldset>`}
+    <fieldset class="orgs" aria-label="수령 방법"><legend>수령 방법</legend>
+      <label class="choice"><input type="radio" name="delivery" id="delPickup" value="pickup" checked><span><strong>${DELIVERY_METHODS.pickup}</strong><small>에코디교회에서 수령 · 무료</small></span></label>
+      <label class="choice"><input type="radio" name="delivery" id="delParcel" value="parcel"><span><strong>${DELIVERY_METHODS.parcel}</strong><small>지정한 주소로 배송 · 배송비 ${formatWon(SHIPPING_FEE)}</small></span></label>
+    </fieldset>
     <div class="fields">
       <label class="f">이름<input id="name" autocomplete="name" maxlength="40" required></label>
-      <label class="f">휴대전화<input id="phone" autocomplete="tel" inputmode="tel" placeholder="010-0000-0000" maxlength="13" required></label>
-      <label class="f">연락받을 이메일(영수증 수신)<input id="email" type="email" autocomplete="email" maxlength="160"></label>
-      <label class="f"><span id="departmentLabel">부서(선택)</span><input id="department" maxlength="80" placeholder="예: 청년부, 3교구"></label>
     </div>
-    <fieldset class="orgs" aria-label="수령 방법" style="margin-top:14px"><legend>수령 방법</legend>
-      <label class="choice"><input type="radio" name="delivery" id="delPickup" value="pickup" checked><span><strong>${DELIVERY_METHODS.pickup}</strong><small>교회에서 일괄 수령 · 배송비 없음</small></span></label>
-      <label class="choice"><input type="radio" name="delivery" id="delParcel" value="parcel"><span><strong>${DELIVERY_METHODS.parcel}</strong><small>원하는 곳으로 배송 · 배송비 ${formatWon(SHIPPING_FEE)}</small></span></label>
-    </fieldset>
+    <div class="fields" id="pickupFields">
+      <label class="f">수령 주소(수정 불가)<input id="pickupAddress" value="${escapeHtml(CHURCH_PICKUP_ADDRESS)}" readonly aria-readonly="true"></label>
+    </div>
     <div class="fields" id="shipFields" hidden>
-      <label class="f">받는 분(비우면 신청자)<input id="rcptName" autocomplete="shipping name" maxlength="40"></label>
-      <label class="f">받는 분 휴대전화(비우면 신청자)<input id="rcptPhone" autocomplete="shipping tel" inputmode="tel" placeholder="010-0000-0000" maxlength="13"></label>
       <label class="f">우편번호<input id="postalCode" autocomplete="shipping postal-code" inputmode="numeric" maxlength="5" placeholder="5자리"></label>
-      <label class="f">주소<input id="address1" autocomplete="shipping address-line1" maxlength="160" placeholder="도로명 주소"></label>
+      <label class="f">배송 주소<input id="address1" autocomplete="shipping address-line1" maxlength="160" placeholder="도로명 주소"></label>
       <label class="f">상세 주소<input id="address2" autocomplete="shipping address-line2" maxlength="120" placeholder="동·호수 등"></label>
     </div>
+    <div class="fields">
+      <label class="f">휴대전화<input id="phone" autocomplete="tel" inputmode="tel" placeholder="010-0000-0000" maxlength="13" required></label>
+      <label class="f">연락받을 이메일(영수증 수신, 선택)<input id="email" type="email" autocomplete="email" maxlength="160"></label>
+      <label class="f" id="departmentRow" hidden><span id="departmentLabel">소속 교회·단체 이름(필수)</span><input id="department" maxlength="80" placeholder="예: ○○교회 청년부, 개인"></label>
+    </div>
     <label class="f" style="margin-top:14px">요청사항(선택)<textarea id="memo" rows="2" maxlength="300"></textarea></label>
-    <label class="consent"><input type="checkbox" id="consent"><span>[필수] 신청·결제·수령 안내를 위해 구글 계정 이메일, 이름, 휴대전화, 이메일, 소속, 배송지(택배 선택 시)를 수집·이용하는 데 동의합니다. 보관기간: 신청일로부터 약 1년(이후 자동 비식별 처리). 결제·구매대행: EKODIBIZ.</span></label>
+    <label class="consent"><input type="checkbox" id="consent"><span>[필수] 신청·결제·수령 안내를 위해 구글 계정 이메일, 이름, 휴대전화, 이메일, 신청 구분, 배송지(택배 선택 시)를 수집·이용하는 데 동의합니다. 보관기간: 신청일로부터 약 1년(이후 자동 비식별 처리). 결제·구매대행: EKODIBIZ.</span></label>
     ${paymentNote}
   </section>
   <section class="panel" id="myOrders" hidden><h2>내 신청 내역</h2><div id="myOrderList"></div></section>
@@ -606,12 +609,13 @@ function orderClient() {
   // ---- session (Google-verified central EKODI account) ----
   function read(store, key) { try { return JSON.parse(store.getItem(key) || 'null'); } catch { return null; } }
   function normalize(d, c = {}) { return { accessToken: d.access_token || d.accessToken || '', refreshToken: d.refresh_token || d.refreshToken || c.refreshToken || '', expiresAt: Number(d.expires_at || d.expiresAt || 0) || Math.floor(Date.now() / 1000) + Number(d.expires_in || 3600) }; }
-  function save(v) { try { localStorage.setItem(BUYER_KEY, JSON.stringify(v)); sessionStorage.removeItem(SIGNED_OUT_KEY); } catch {} }
-  function forget() { try { localStorage.removeItem(BUYER_KEY); sessionStorage.setItem(SIGNED_OUT_KEY, '1'); } catch {} }
+  function save(v) { try { localStorage.setItem(BUYER_KEY, JSON.stringify(v)); localStorage.removeItem(SIGNED_OUT_KEY); sessionStorage.removeItem(SIGNED_OUT_KEY); } catch {} }
+  function forget() { try { localStorage.removeItem(BUYER_KEY); localStorage.setItem(SIGNED_OUT_KEY, '1'); sessionStorage.setItem(SIGNED_OUT_KEY, '1'); } catch {} }
   function stored() {
+    // Respect an explicit QTIN logout even when the shared EKODI session still exists.
+    if (read(localStorage, SIGNED_OUT_KEY) || read(sessionStorage, SIGNED_OUT_KEY)) return null;
     const own = read(localStorage, BUYER_KEY);
     if (own?.accessToken) return own;
-    if (read(sessionStorage, SIGNED_OUT_KEY)) return null;
     // Reuse an existing EKODI sign-in on this origin; the server re-verifies every request.
     const admin = read(sessionStorage, 'ekodi-qtin-admin-session');
     if (admin?.accessToken) return admin;
@@ -703,8 +707,8 @@ function orderClient() {
     org = next;
     document.querySelectorAll('input[name="org"]').forEach(r => { r.checked = r.value === next; });
     const other = next === 'other';
-    $('departmentLabel').textContent = other ? '소속 교회·단체 이름(필수)' : '부서(선택)';
-    $('department').placeholder = other ? '예: ○○교회 청년부, 개인' : '예: 청년부, 3교구';
+    $('departmentRow').hidden = !other;
+    $('departmentLabel').textContent = '소속 교회·단체 이름(필수)';
   }
   async function onSignedIn(focusForm) {
     $('signedOut').hidden = true; $('signedIn').hidden = false; $('buyerForm').hidden = false;
@@ -714,7 +718,8 @@ function orderClient() {
       const me = await api('/me');
       $('accountEmail').textContent = me.account?.email || '';
       const p = me.profile || {};
-      fill('name', p.name); fill('phone', p.phone); fill('email', p.email || me.account?.email); fill('department', p.department);
+      fill('name', p.name); fill('phone', p.phone); fill('email', p.email || me.account?.email);
+      if (org === 'other') fill('department', p.department);
       if (!org && p.org) chooseOrg(p.org);
       const orders = me.orders || [];
       $('myOrders').hidden = orders.length === 0;
@@ -734,6 +739,7 @@ function orderClient() {
     const list = items();
     const parcel = deliveryMethod() === 'parcel';
     if ($('shipFields')) $('shipFields').hidden = !parcel;
+    if ($('pickupFields')) $('pickupFields').hidden = parcel;
     const booksAmt = list.reduce((s, i) => s + i.price * i.quantity, 0);
     $('total').textContent = won(booksAmt + (parcel && list.length ? cfg.shippingFee : 0)) + (parcel && list.length ? ' (배송비 포함)' : '');
     $('count').textContent = `${list.reduce((s, i) => s + i.quantity, 0)}권`;
@@ -777,7 +783,11 @@ function orderClient() {
     }
   }));
   $('loginCta').addEventListener('click', () => { $('account').scrollIntoView({ behavior: 'smooth', block: 'center' }); setStatus('아래 구글 버튼으로 로그인해 주세요.'); });
-  $('logout').addEventListener('click', () => { forget(); session = null; ['name', 'phone', 'email', 'department'].forEach(id => { $(id).value = ''; }); showSignedOut(); });
+  $('logout').addEventListener('click', () => {
+    forget(); session = null;
+    window.google?.accounts?.id?.disableAutoSelect?.();
+    location.replace(org === 'mission' ? '/ekodimission/' : '/ekodichurch/');
+  });
   // ---- Toss 결제위젯 (결제위젯 연동 키 gck/gsk). 결제 UI(=정산 MID)는 서버가 주는 variantKey(기본 'qtin')를 따른다. ----
   let widgetRequest = null;
   let widgetSdk = null;
@@ -823,8 +833,8 @@ function orderClient() {
       session = (await validSession()) || session;
       const response = await bounded('/qtin/api/orders', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + session.accessToken }, body: JSON.stringify({
         campaignId: cfg.campaignId, org, name: $('name').value, phone: $('phone').value, email: $('email').value,
-        department: $('department').value, memo: $('memo').value, privacyConsent: true,
-        delivery: deliveryMethod() === 'parcel' ? { method: 'parcel', recipientName: $('rcptName').value, recipientPhone: $('rcptPhone').value,
+        department: org === 'other' ? $('department').value : '', memo: $('memo').value, privacyConsent: true,
+        delivery: deliveryMethod() === 'parcel' ? { method: 'parcel',
           postalCode: $('postalCode').value, address1: $('address1').value, address2: $('address2').value } : { method: 'pickup' },
         items: items().map(i => ({ productId: i.productId, quantity: i.quantity })) }) });
       const data = await response.json().catch(() => ({}));
