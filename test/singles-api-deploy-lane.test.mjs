@@ -62,3 +62,16 @@ test('enrollment receipt records the exact optional consents chosen',async()=>{
   const api=await readFile(new URL('../supabase/functions/singles-api/index.ts',import.meta.url),'utf8');
   assert.match(api,/action: "enrolled", consent_version: VERSION,\n\s+religion_consent: b\.religion_consent, marriage_opt_in: b\.marriage_opt_in \}\)/);
 });
+
+test('an identical-bundle deploy is a verified no-op, not a failure (SINGLES-LANE-NOOP-001)',()=>{
+  assert.match(wf,/echo "BEFORE_BUNDLE=\$before_bundle" >> "\$GITHUB_ENV"/);
+  assert.match(wf,/if \[ "\$version" -le "\$BEFORE_VERSION" \]; then[\s\S]*?test -n "\$BEFORE_BUNDLE"\n\s+test "\$version" = "\$BEFORE_VERSION"\n\s+test "\$bundle" = "\$BEFORE_BUNDLE"/);
+  assert.doesNotMatch(wf,/test "\$version" -gt "\$BEFORE_VERSION"/,'a strict version bump fails every no-op release');
+  assert.match(wf,/if ! git diff --quiet HEAD~1 HEAD -- supabase\/functions\/singles-api; then/,'a real code change must still advance the version');
+  assert.match(wf,/fetch-depth: 2/);
+  // reachability is still checked after a no-op
+  const verify=wf.slice(wf.indexOf('- name: Verify deployment'),wf.indexOf('- name: Roll back'));
+  assert.ok(verify.indexOf('identical bundle')<verify.indexOf('singles-api/me'));
+  assert.match(verify,/test "\$status" = 'ACTIVE'/);
+  assert.match(verify,/test "\$jwt" = 'true'/);
+});

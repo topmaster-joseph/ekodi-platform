@@ -18,7 +18,12 @@
 ### 릴리스 PR의 빨간 "실패" 표시 (CONVERGE-UNAPPROVED-RUNS-001)
 - 원인: 에코디 봇이 연 릴리스 PR에 붙는 `pull_request` 워크플로는 GitHub가 모두 "승인 필요(`action_required`)"로 세워 두고 실행하지 않는다. 병합 뒤 브랜치가 지워지면 이 대기 실행이 작업 0개짜리 "실패"로 바뀌어 릴리스마다 약 14개의 거짓 실패가 보였다.
 - 영향: 없음. 릴리스 근거는 작업 브랜치 PR 검사와 오케스트레이터 상태값이며, 대기 실행은 한 번도 돌지 않는다.
-- 조치: 수렴 스크립트가 병합 직전에 같은 릴리스 head의 봇 대기 실행만 취소한다(`scripts/lib/converge-unapproved-runs.mjs`). 실패해도 릴리스를 막지 않는다.
+- 조치: 수렴 스크립트가 병합 직전에 같은 릴리스 head·같은 릴리스 브랜치의 봇 대기 실행 기록만 삭제한다(`scripts/lib/converge-unapproved-runs.mjs`). 실패해도 릴리스를 막지 않는다.
+- 정정(릴리스 #6084 실증): 대기 실행은 GitHub에 `status=completed`, `conclusion=action_required`로 기록되어 **취소가 불가능**하다. 첫 구현(취소)은 대상이 0건이라 효과가 없었고, 실행된 적 없고 작업·로그가 없는 이 기록만 삭제하는 방식으로 바꿨다.
+
+### 같은 코드 재배포는 정상 무변경 (SINGLES-LANE-NOOP-001)
+- 릴리스 #6084(계약 파일 설명만 변경)에서 레인이 다시 실행되어 자동 경로는 확인됐지만(run 40311190988), Supabase는 바이트가 같은 번들을 올리면 버전을 올리지 않는다. 기존 확인 단계는 "버전 증가"만 성공으로 봐서 실패 처리했고, 자동 롤백도 같은 코드라 운영(v9)은 그대로였다.
+- 조치: 버전이 그대로면 ① 함수 소스가 직전 `main`과 같고 ② 운영 번들 해시(`ezbr_sha256`)가 배포 전과 같을 때만 무변경 배포로 인정한다. 소스가 바뀌었는데 버전이 안 오르면 계속 실패다. 무변경이어도 상태·JWT·도달성 확인은 그대로 한다.
 
 구현 결정: DB 선행조건은 Management API 읽기 전용 쿼리(`scripts/singles-api-db-preflight.mjs`, 계약 `config/singles-api-db-contract.json`)로 확인하고, SQL 함수 `singles_api_contract()`는 만들지 않음. 배포 후 확인 실패 시 직전 `main` 소스로 자동 롤백.
 

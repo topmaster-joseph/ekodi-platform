@@ -124,10 +124,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          before=$(curl -sS -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            "https://api.supabase.com/v1/projects/$PROJECT_REF/functions/singles-api" | jq -r '.version')
+          meta=$(curl -sS -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PROJECT_REF/functions/singles-api")
+          before=$(jq -r '.version' <<<"$meta"); before_bundle=$(jq -r '.ezbr_sha256 // ""' <<<"$meta")
           [[ "$before" =~ ^[0-9]+$ ]] || { echo "Could not read live singles-api version" >&2; exit 1; }
           echo "BEFORE_VERSION=$before" >> "$GITHUB_ENV"
+          echo "BEFORE_BUNDLE=$before_bundle" >> "$GITHUB_ENV"
           echo "live singles-api version: $before"
       - name: Deploy singles-api (JWT verification stays on)
         run: npx --yes supabase@2.116.0 functions deploy singles-api --project-ref "$PROJECT_REF"
@@ -139,10 +141,23 @@ jobs:
           meta=$(curl -sS -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
             "https://api.supabase.com/v1/projects/$PROJECT_REF/functions/singles-api")
           version=$(jq -r '.version' <<<"$meta"); jwt=$(jq -r '.verify_jwt' <<<"$meta"); status=$(jq -r '.status' <<<"$meta")
+          bundle=$(jq -r '.ezbr_sha256 // ""' <<<"$meta")
           echo "deployed version=$version verify_jwt=$jwt status=$status"
           test "$status" = 'ACTIVE'
           test "$jwt" = 'true'
-          test "$version" -gt "$BEFORE_VERSION"
+          # SINGLES-LANE-NOOP-001: Supabase keeps the version when the uploaded bundle is
+          # byte-identical (release #6084 touched only the DB contract note). An unchanged
+          # version is accepted only when the live bundle hash is also unchanged.
+          if [ "$version" -le "$BEFORE_VERSION" ]; then
+            # Function source changed since the previous main -> a new version is mandatory.
+            if ! git diff --quiet HEAD~1 HEAD -- supabase/functions/singles-api; then
+              echo "singles-api source changed but live version did not advance" >&2; exit 1
+            fi
+            test -n "$BEFORE_BUNDLE"
+            test "$version" = "$BEFORE_VERSION"
+            test "$bundle" = "$BEFORE_BUNDLE"
+            echo "identical bundle: version $version kept (no-op deploy)"
+          fi
           code=$(curl -sS -o /tmp/singles-api.json -w '%{http_code}' \
             "https://$PROJECT_REF.supabase.co/functions/v1/singles-api/me" -H "apikey: $PUBLISHABLE_KEY")
           echo "unauthenticated /me -> $code $(head -c 120 /tmp/singles-api.json)"
