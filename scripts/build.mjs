@@ -62,6 +62,9 @@ await cp(`${root}sites/business-cooperative/public`, `${output}business-coop`, {
 await cp(`${root}sites/seonammedi/public`, `${output}seonammedi`, { recursive: true });
 await finalizeSeonamMediRelease(output);
 await cp(`${root}sites/pyeonggongmok/public`, `${output}pyeonggongmok`, { recursive: true });
+// Mokpo Presbytery mission pilot: isolated public static site.
+await mkdir(`${output}mokpo-presbytery/mission/`, { recursive: true });
+await cp(`${root}sites/mokpo-presbytery/mission/index.html`, `${output}mokpo-presbytery/mission/index.html`);
 await cp(`${root}config/capability-registry.json`, `${output}capability-registry.json`);
 await cp(`${root}config/capability-foundry.json`, `${output}capability-foundry.json`);
 
