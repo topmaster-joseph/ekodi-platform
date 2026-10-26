@@ -152,3 +152,17 @@ test('attribution and October original score are present',()=>{
   assert.match(song.abc,/K:G/);
   assert.ok(fs.existsSync(new URL('devotion-illustration.svg',bibleDir)));
 });
+
+test('page order: Scripture, tabs and panel, attribution, share — no summary card or standalone MR row', () => {
+  const js = fs.readFileSync(new URL('devotion.js', bibleDir), 'utf8');
+  const line = js.match(/root\.append\(([^)]*)\);/)[1].split(',').map(s => s.trim());
+  assert.deepEqual(line, ['datebar', 'status', 'scriptureBlock', 'tabbar', 'panelWrap', 'notice', 'shareRow', 'adminPanel', 'toastEl']);
+  assert.doesNotMatch(js, /사용 권한이 확인된 반주 음원이 아직 등록되지 않았습니다/);
+  assert.match(js, /panels\.get\('song'\) \|\| root\)\.append\(audioRow\)/);
+});
+
+test('mission devotion header spans the same 840px centre column as the content', () => {
+  const css = fs.readFileSync(new URL('devotion.css', bibleDir), 'utf8');
+  assert.match(css, /\.ekodi-devotion\{[^}]*max-width:840px/);
+  assert.match(css, /body:has\(\[data-mission-devotion\]\) \.mission-site-header\{max-width:840px;padding-inline:16px\}/);
+});

@@ -101,7 +101,10 @@ function boot(root) {
   const toastEl = el('p', 'dv-toast');
   toastEl.setAttribute('role', 'status');
   toastEl.setAttribute('aria-live', 'polite');
-  root.append(datebar, status, scriptureBlock, summary, notice, shareRow, audioRow, tabbar, panelWrap, adminPanel, toastEl);
+  // Page order (2026-10-27): Scripture → activity tabs and the selected panel → attribution → share.
+  // The passage summary card and the standalone CCM MR row are not shown; a licensed MR, when
+  // registered, plays inside the 묵상 노래 panel instead (see setupMrPlayer).
+  root.append(datebar, status, scriptureBlock, tabbar, panelWrap, notice, shareRow, adminPanel, toastEl);
 
   function toast(message) {
     toastEl.textContent = message;
@@ -170,9 +173,12 @@ function boot(root) {
     const url = String(song?.mrUrl || '');
     audioRow.append(title, detail);
     if (!/^\/bible\/media\/[a-z0-9/_-]+\.(mp3|ogg|m4a|webm)$/i.test(url)) {
-      detail.textContent = '사용 권한이 확인된 반주 음원이 아직 등록되지 않았습니다.';
+      audioRow.replaceChildren();
+      audioRow.hidden = true;
       return;
     }
+    audioRow.hidden = false;
+    (panels.get('song') || root).append(audioRow);
     const audio = el('audio');
     audio.src = url; audio.loop = true; audio.preload = 'metadata';
     const toggle = el('button','dv-mini','MR 재생');
