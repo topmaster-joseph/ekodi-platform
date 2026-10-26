@@ -9,6 +9,8 @@ const ORIGIN='https://ekodi.kr';
 const OUT='artifacts/devotion-native-sandbox';
 const DAY='2026-10-26';
 const NOTICE='묵상 적용(시·노래·질문·기도)은 에코디언 정찬균목사가 공통본문을 바탕으로 AI 도움을 받아 만든 창작 묵상 자료입니다. 성경 본문은 개역한글(대한성서공회, 1961) 원문을 그대로 표시합니다.';
+const candidateOverlay=process.env.GITHUB_EVENT_NAME==='pull_request';
+
 const SURFACES=[
  {name:'church',path:'/ekodichurch/devotion/?date='+DAY},
  {name:'mission',path:'/ekodimission/devotion?date='+DAY},
@@ -23,6 +25,7 @@ const check=(name,passed,detail={})=>{
  console.log('[EKODI-DEVOTION-SANDBOX] '+JSON.stringify(item));
  if(!passed) throw new Error('sandbox_check_failed:'+name+' '+JSON.stringify(detail));
 };
+report.candidateOverlay=candidateOverlay;
 await fs.mkdir(OUT,{recursive:true});
 const browser=await chromium.launch({headless:true});
 try{
@@ -40,6 +43,17 @@ try{
       {snapshots:native.results.filter(x=>x.type==='snapshot').map(x=>({url:x.url,overflow:x.horizontalOverflow,textLength:x.bodyText?.length})),nativeScreenshots:native.screenshots.length});
    const context=await browser.newContext({viewport:{width:device.width,height:device.height},isMobile:device.mobile,hasTouch:device.mobile});
    await context.route('**/*',route=>['GET','HEAD','OPTIONS'].includes(route.request().method())?route.continue():route.abort('blockedbyclient'));
+   if(candidateOverlay){
+     // PR-only preview: serve repository candidate JS/CSS from an ephemeral browser
+     // without mutating production assets, auth, cookies or canonical Scripture.
+     for(const asset of ['devotion.js','devotion-score.js','devotion.css']){
+       const contents=await fs.readFile('bible/'+asset,'utf8');
+       await context.route(ORIGIN+'/bible/'+asset,route=>route.fulfill({
+         status:200,contentType:asset.endsWith('.css')?'text/css; charset=utf-8':'application/javascript; charset=utf-8',
+         headers:{'cache-control':'no-store'},body:contents
+       }));
+     }
+   }
    try{
      for(const surface of SURFACES){
        const page=await context.newPage(),errors=[];
