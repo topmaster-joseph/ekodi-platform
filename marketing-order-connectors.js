@@ -4,6 +4,10 @@ const STORE_MANAGER_ROLES = new Set(['store_owner','tenant_admin','platform_admi
 // Tenant-level administrators manage every store of their own tenant, matching the
 // store admin surface (tenant_admin is FULL there). Never widened to store staff.
 const TENANT_MANAGER_ROLES = new Set(['tenant_admin','platform_admin','client_admin']);
+// D1 marketing templates keep legacy hyphenated tenant keys (e.g. 'ekodi-biz') while Supabase
+// workspaces report the canonical slug ('ekodibiz'). Only these explicit pairs are equivalent.
+const TENANT_SLUG_ALIASES = Object.freeze({ 'ekodi-biz':'ekodibiz', 'ekodi-church':'ekodichurch', 'ekodi-lab':'ekodilab', 'ekodi-trade':'ekoditrade' });
+const canonicalTenant = value => { const key = String(value || '').trim().toLowerCase(); return TENANT_SLUG_ALIASES[key] || key; };
 const BRIDGE_PROVIDERS = new Set(['pos_bridge','baemin','coupang_eats','yogiyo']);
 const encoder = new TextEncoder();
 
@@ -95,10 +99,10 @@ async function storeContext(request, env, storeId, requireManager=true) {
   const template = await env.DB.prepare(`SELECT workspace_type,workspace_key,tenant_slug,store_id,template_key,identity_salt
     FROM marketing_workspace_templates WHERE workspace_type='store' AND workspace_key=? LIMIT 1`).bind(store).first();
   const storeAccess = who.workspaces.find(row => String(row?.store_id || '').toLowerCase() === store && String(row?.workspace_key || '') === `store:${store}`);
-  const tenantSlug = String(template?.tenant_slug || '').toLowerCase();
+  const tenantSlug = canonicalTenant(template?.tenant_slug);
   const tenantAccess = storeAccess || !tenantSlug ? null : who.workspaces.find(row =>
     String(row?.workspace_key || '').startsWith('tenant:')
-    && String(row?.tenant || '').toLowerCase() === tenantSlug
+    && canonicalTenant(row?.tenant) === tenantSlug
     && String(row?.status || 'active') === 'active'
     && TENANT_MANAGER_ROLES.has(String(row?.role || '')));
   const access = storeAccess || tenantAccess;
