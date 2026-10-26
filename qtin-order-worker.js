@@ -475,7 +475,7 @@ h1{font-size:clamp(28px,5vw,42px);letter-spacing:-.04em;margin:6px 0 10px;line-h
 .qty{display:flex;align-items:center;gap:6px;margin-top:auto}.qty button{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:18px;cursor:pointer}
 .qty input{width:52px;height:36px;text-align:center;border:1px solid var(--line);border-radius:10px;font:inherit;font-weight:700}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;margin:26px 0}.panel h2{margin:0 0 14px;font-size:20px}
-.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}label.f{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.fields[hidden],label.f[hidden]{display:none!important}.fields+ .fields{margin-top:12px}label.f input[readonly]{background:var(--soft);color:var(--ink);cursor:default}label.f{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600}
 label.f input,label.f textarea{border:1px solid var(--line);border-radius:10px;padding:11px 12px;font:inherit;font-weight:400;background:#fff}
 .consent{display:flex;gap:10px;align-items:flex-start;margin-top:16px;font-size:14px;color:var(--muted)}.consent input{margin-top:4px;width:18px;height:18px}
 .bar{position:sticky;bottom:0;background:rgba(251,250,246,.96);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:12px 0;z-index:5}
@@ -525,7 +525,7 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
       <div id="googleButton" class="gbtn" aria-live="polite"></div>
       <p class="note" id="accountStatus"></p>
     </div>
-    <div id="signedIn" hidden><p class="acct"><span class="dot"></span><span id="accountEmail"></span> 로그인됨 <button type="button" class="link" id="logout">다른 계정으로 바꾸기</button></p></div>
+    <div id="signedIn" hidden><p class="acct"><span class="dot"></span><span id="accountEmail"></span> 로그인됨 <button type="button" class="link" id="logout">로그아웃</button></p></div>
   </section>
   <section class="panel" id="buyerForm" aria-labelledby="who" hidden><h2 id="who">연락처와 추가 정보</h2>
     ${org ? '' : `<fieldset class="orgs" aria-label="신청 구분"><legend>신청 구분</legend>${orgChoices}</fieldset>`}
