@@ -380,7 +380,16 @@ async function prepare(){
 $('googleRetry')?.addEventListener('click',prepare);
 $('cancelSignedOut')?.addEventListener('click',()=>location.assign(cancelledLoginTarget()));
 $('cancelSignedIn')?.addEventListener('click',()=>location.assign(RETURN_TO));
-$('logout')?.addEventListener('click',async()=>{try{await timeout(sb.auth.signOut(),8000,'logout_timeout')}catch(error){console.warn(error)}await prepare()});
+$('logout')?.addEventListener('click',async()=>{
+  try{await timeout(sb.auth.signOut(),8000,'logout_timeout')}catch(error){console.warn(error)}
+  // A church/mission logout must never re-run automatic central-session handoff.
+  if(site==='church'||site==='mission'){
+    window.google?.accounts?.id?.disableAutoSelect?.();
+    location.replace(config.returnTo);
+    return;
+  }
+  await prepare();
+});
 
 await prepare();
 sb.auth.onAuthStateChange((event,s)=>{

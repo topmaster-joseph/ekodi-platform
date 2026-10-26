@@ -17,6 +17,7 @@ export const FULFILLMENT = Object.freeze(['waiting', 'ordered', 'received', 'dis
 // 수령 방법: 교회 일괄 수령(무료) 또는 택배(신청 1건당 고정 배송비).
 export const SHIPPING_FEE = 3000;
 export const DELIVERY_METHODS = Object.freeze({ pickup: '교회에서 받기', parcel: '택배로 받기' });
+export const CHURCH_PICKUP_ADDRESS = '전남 무안군 청계면 백련동1길 17-4, 1층';
 export const QTM_ORIGIN = 'https://www.qtm.or.kr';
 
 export function clean(value, max = 500) {
@@ -243,11 +244,12 @@ export function buildOrderDraft(body, products) {
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) errors.push('이메일 형식이 올바르지 않습니다.');
   if (body?.privacyConsent !== true) errors.push('개인정보 수집·이용에 동의해 주세요.');
   const department = clean(body?.department, 80);
-  // 기타 소속은 어디에 속한 분인지 알아야 나눠 드릴 수 있으므로 소속 이름이 필수다.
+  // 일반 신청 화면의 '기타'는 기존 구매·배부 계약을 유지한다.
   if (org === 'other' && department.length < 2) errors.push('기타 소속을 선택하셨다면 소속 교회·단체 이름을 입력해 주세요.');
   const memo = clean(body?.memo, 300);
   const method = clean(body?.delivery?.method, 10) === 'parcel' ? 'parcel' : 'pickup';
-  let delivery = { method, shippingFee: 0, recipientName: '', recipientPhone: '', postalCode: '', address1: '', address2: '' };
+  // The pickup address is owned by the server: a browser cannot override it.
+  let delivery = { method, shippingFee: 0, recipientName: applicantName, recipientPhone: phone, postalCode: '', address1: CHURCH_PICKUP_ADDRESS, address2: '' };
   if (method === 'parcel') {
     const d = body.delivery;
     delivery = {
