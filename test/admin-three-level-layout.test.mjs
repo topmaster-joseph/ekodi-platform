@@ -16,21 +16,21 @@ const [sidebar, campus, templates, hierarchyRaw, principles, designCss] = await 
 ]);
 const hierarchy = JSON.parse(hierarchyRaw);
 
-test('ADMIN-LAYOUT-3L-001: left = 1차 group + 2차 menu, 3차 detail = workspace strip, settings below', () => {
-  assert.equal(ADMIN_LAYOUT_MODEL, 'left-group-menu-top-detail-v1');
+test('ADMIN-LEFT-MENU-FIRST-001: every area menu on the left, details nested under the active menu, strip only for 사이트관리 sites', () => {
+  assert.equal(ADMIN_LAYOUT_MODEL, 'left-menu-first-site-strip-v2');
   assert.match(sidebar, /const STRIP_CLASS = 'admin-work-strip'/);
   assert.match(sidebar, /content\.insertAdjacentElement\('beforebegin', strip\)/, 'strip sits above the settings content');
   assert.match(sidebar, /export function renderAdminWorkStrip/);
   assert.match(sidebar, /window\.EKODIAdminWorkStrip = Object\.freeze\(\{ render: renderAdminWorkStrip \}\)/);
-  // details are never nested on the left any more
-  assert.doesNotMatch(sidebar, /nodes\.push\(detailButton\(id, getAdminMenuLabel\(id, locale\), TAB_CLASS/);
-  // a one-detail menu shows no strip; the retired context tab shell stays retired
-  assert.match(sidebar, /if \(tabs\.length < 2\)/);
+  // details moved up one level: nested on the left under the active menu
+  assert.match(sidebar, /detailButton\(id, getAdminMenuLabel\(id, locale\), TAB_CLASS, id === section\)/);
+  assert.match(sidebar, /\/\/ Outside 사이트관리 the detail routes live on the left; the strip stays empty\./);
   assert.match(sidebar, /main\?\.querySelector\(':scope>\.admin-context-tabs-shell'\)\?\.remove\(\)/);
   // the dark-sidebar tab palette must not leak into the light strip
   assert.match(designCss, /\.admin-work-strip \.admin-work-strip-item\{\n  color:#26303d!important;/);
-  assert.match(principles, /ADMIN-LAYOUT-3L-001/);
+  assert.match(principles, /ADMIN-LEFT-MENU-FIRST-001/);
 });
+
 
 test('사이트관리 2차 menus are the site classifications the campus filter understands', () => {
   const classes = adminMenusForGroup('sites').filter(menu => menu.siteClass);

@@ -129,6 +129,23 @@ export async function enforcePlatformRequestSecurity(request,env={}){
   return null;
 }
 
+export const SITE_ADMIN_FRAME_ROOT=/^\/(?:ekodichurch|ekodibiz(?:\/trade)?|ekodimall|books|cheonggye|cgma|cmpmyi|jadam|pizzamaru|yogurt)\/admin(?:\/[a-z0-9._~%-]+)*\/?$/i;
+export function isFirstPartySiteAdminFrame(url,request,headers){
+  return url.hostname.toLowerCase()==='ekodi.kr'
+    && ['GET','HEAD'].includes(String(request.method||'GET').toUpperCase())
+    && SITE_ADMIN_FRAME_ROOT.test(url.pathname)
+    && String(request.headers.get('sec-fetch-dest')||'').toLowerCase()==='iframe'
+    && String(request.headers.get('sec-fetch-site')||'').toLowerCase()==='same-origin'
+    && /^text\/html(?:;|$)/i.test(String(headers.get('Content-Type')||''));
+}
+export function sameOriginFrameCsp(csp=''){
+  const value=String(csp||'').trim();
+  if(!value)return "frame-ancestors 'self'";
+  return /(?:^|;)\s*frame-ancestors\b/i.test(value)
+    ? value.replace(/(^|;)(\s*)frame-ancestors\b[^;]*/i,"$1$2frame-ancestors 'self'")
+    : `${value.replace(/;\s*$/,'')}; frame-ancestors 'self'`;
+}
+
 export function applyPlatformSecurityHeaders(response,request){
   const secured=new Response(response.body,response);
   const url=new URL(request.url);
@@ -155,7 +172,17 @@ export function applyPlatformSecurityHeaders(response,request){
     && /^(?:\/ekodichurch\/live\/(?:index\.html)?|\/live\/church\/)$/i.test(url.pathname)
     && /^text\/html(?:;|$)/i.test(String(headers.get('Content-Type')||''))
     && /(?:^|;)\s*frame-ancestors\s+'self'\s*(?:;|$)/i.test(responseCsp);
-  if(firstPartyChurchLiveViewer)headers.set('X-Frame-Options','SAMEORIGIN');
+  // ADMIN-SITE-EMBED-001: the platform admin (ekodi.kr/admin › 사이트관리) shows a
+  // registered site's own admin page in a same-origin frame. Only those admin roots,
+  // only GET/HEAD HTML documents, and only when the browser itself reports a
+  // same-origin iframe navigation. frame-ancestors becomes 'self', never wider.
+  const firstPartySiteAdminFrame=isFirstPartySiteAdminFrame(url,request,headers);
+  if(firstPartySiteAdminFrame){
+    headers.set('X-Frame-Options','SAMEORIGIN');
+    headers.set('Content-Security-Policy',sameOriginFrameCsp(responseCsp));
+    headers.append('Vary','Sec-Fetch-Dest');
+  }
+  else if(firstPartyChurchLiveViewer)headers.set('X-Frame-Options','SAMEORIGIN');
   else if(firstPartyAdminEmbed)headers.delete('X-Frame-Options');
   else if(!headers.has('X-Frame-Options'))headers.set('X-Frame-Options','DENY');
   if(!headers.has('Permissions-Policy')){

@@ -351,18 +351,24 @@ function detailButton(id, label, className, active) {
   icon.textContent = className === TAB_CLASS ? '·' : (definition?.icon || '·');
   const text = document.createElement('span');
   text.textContent = label;
+  button.title = label;
   button.append(icon, text);
   button.classList.toggle('active', active);
   if (active) button.setAttribute('aria-current', 'page');
   return button;
 }
 
-function renderSidebarDetails(nav, globals, group, section, locale) {
-  let details = globals.querySelector(`:scope>.${DETAILS_CLASS}`);
+// ADMIN-LEFT-MENU-FIRST-001 (owner decision 2026-10-26): every area's menus are
+// shown directly, without opening the area first. Outside 사이트관리 the active
+// menu's detail routes sit right under it on the left (one level up from the
+// former top strip); 사이트관리 keeps the top strip for the sites of a class.
+function renderGroupDetails(nav, globals, group, section, locale) {
+  let details = globals.querySelector(`:scope>.${DETAILS_CLASS}[data-admin-detail-group="${group}"]`);
   if (!details) {
     details = document.createElement('div');
     details.className = DETAILS_CLASS;
-    details.setAttribute('aria-label', locale === 'en' ? 'Admin submenu' : '관리자 하위 메뉴');
+    details.dataset.adminDetailGroup = group;
+    details.setAttribute('aria-label', getAdminMenuGroupLabel(group, locale));
   }
   const ids = availableIds(nav, group);
   const available = new Set(ids);
@@ -375,27 +381,48 @@ function renderSidebarDetails(nav, globals, group, section, locale) {
     tabs.forEach(id => covered.add(id));
     const inMenu = tabs.includes(section);
     const target = inMenu ? section : tabs[0];
-    // 2차 menu only. Its 3차 details live in the workspace strip, never nested here.
-    const menuButton = detailButton(target, getAdminMenuMenuLabel(menu.id, locale), 'admin-detail-item', inMenu);
+    const menuButton = detailButton(target, getAdminMenuMenuLabel(menu.id, locale), 'admin-detail-item', inMenu && (tabs.length < 2 || Boolean(menu.siteClass)));
     menuButton.dataset.adminDetailMenu = menu.id;
     menuButton.classList.toggle('open', inMenu);
+    if (menu.siteClass) menuButton.dataset.adminSiteClass = 'true';
     if (tabs.length > 1) menuButton.dataset.adminDetailCount = String(tabs.length);
     nodes.push(menuButton);
     if (inMenu) activeMenu = { menu, tabs };
+    if (inMenu && !menu.siteClass && tabs.length > 1) {
+      const nested = document.createElement('div');
+      nested.className = 'admin-detail-nested';
+      nested.dataset.adminDetailNested = menu.id;
+      if (tabs.length > 4) nested.dataset.adminDetailColumns = '2';
+      nested.append(...tabs.map(id => {
+        const tab = detailButton(id, getAdminMenuLabel(id, locale), TAB_CLASS, id === section);
+        if (isAdminRiskSection(id)) tab.dataset.adminRisk = 'high';
+        return tab;
+      }));
+      nodes.push(nested);
+    }
   }
   for (const id of ids) {
     if (covered.has(id)) continue;
     nodes.push(detailButton(id, getAdminMenuLabel(id, locale), 'admin-detail-item', id === section));
   }
-  details.dataset.adminDetailGroup = group;
   details.dataset.adminFlatDetails = FLAT_DETAIL_GROUPS.has(group) ? 'true' : 'false';
-  details.dataset.adminMenuModel = 'group-menu-detail-v3';
+  details.dataset.adminSiteClasses = group === 'sites' ? 'true' : 'false';
+  details.dataset.adminMenuModel = 'group-menu-detail-v4';
   details.dataset.adminLayoutModel = ADMIN_LAYOUT_MODEL;
   details.replaceChildren(...nodes);
   details.hidden = nodes.length === 0;
-  const active = [...globals.querySelectorAll('[data-admin-global-group]')].find(button => button.dataset.adminGlobalGroup === group);
-  if (active) active.insertAdjacentElement('afterend', details);
+  const owner = [...globals.querySelectorAll('[data-admin-global-group]')].find(button => button.dataset.adminGlobalGroup === group);
+  if (owner) owner.insertAdjacentElement('afterend', details);
   else globals.append(details);
+  return activeMenu;
+}
+
+function renderSidebarDetails(nav, globals, group, section, locale) {
+  let activeMenu = null;
+  for (const area of ADMIN_MENU_GROUPS) {
+    const menu = renderGroupDetails(nav, globals, area.id, area.id === group ? section : '', locale);
+    if (area.id === group) activeMenu = menu;
+  }
   renderDetailStrip(nav, activeMenu, section, locale);
 }
 
@@ -497,30 +524,8 @@ function renderDetailStrip(nav, activeMenu, section, locale) {
     window.dispatchEvent(new CustomEvent('ekodi-admin-site-class-selected', { detail: { section, menu: activeMenu.menu.id } }));
     return;
   }
-  const tabs = activeMenu?.tabs || [];
-  if (tabs.length < 2) {
-    renderAdminWorkStrip([], { owner: 'menu', key: section, doc });
-    return;
-  }
-  renderAdminWorkStrip(tabs.map(id => ({
-    id,
-    label: getAdminMenuLabel(id, locale),
-    className: TAB_CLASS,
-    risk: isAdminRiskSection(id),
-    dataset: { adminDetailSection: id },
-  })), {
-    owner: 'menu',
-    key: activeMenu.menu.id,
-    active: section,
-    label: getAdminMenuMenuLabel(activeMenu.menu.id, locale),
-    ariaLabel: locale === 'en' ? 'Detail menu' : '세부 메뉴',
-    doc,
-    onSelect: id => {
-      delete nav.dataset.adminFocusedGroup;
-      activateSection(nav, id);
-      queueMicrotask(() => syncAdminSidebar(doc));
-    },
-  });
+  // Outside 사이트관리 the detail routes live on the left; the strip stays empty.
+  renderAdminWorkStrip([], { owner: 'menu', key: section, doc });
 }
 
 // ── ADMIN-RISK-GUARD-001 ──────────────────────────────────────────────────
@@ -714,7 +719,7 @@ function syncWorkbenchState(nav, locale, preferredSection = '') {
     button.setAttribute('aria-expanded', selected ? 'true' : 'false');
   }
   if (isPlatformSuperAdminSurface()) renderSidebarDetails(nav, globals, group, displayedSection || section, locale);
-  else globals.querySelector(`:scope>.${DETAILS_CLASS}`)?.remove();
+  else globals.querySelectorAll(`:scope>.${DETAILS_CLASS}`).forEach(node => node.remove());
   nav.dataset.adminGlobalGroup = group;
   nav.dataset.adminRoleNavigation = isPlatformSuperAdminSurface() ? 'platform-super-admin' : 'delegated-manager';
   syncMobilePrimaryNav(nav, locale, group, Boolean(nav.closest('.sidebar')?.classList.contains('open')));
