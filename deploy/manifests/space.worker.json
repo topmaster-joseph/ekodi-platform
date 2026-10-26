@@ -641,6 +641,30 @@
         "rollbackVerify": false
       },
       {
+        "url": "https://ekodi.kr/ekodimission/devotion",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "오늘의 매일묵상",
+          "class=\"mission-site-header\"",
+          "data-mission-nav",
+          "data-ekodi-devotion",
+          "/ekodimission/assets/shell.css",
+          "/ekodimission/assets/shell.js",
+          "/bible/devotion.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: ekodimission-public",
+          "x-ekodi-independent-site: true",
+          "x-ekodi-publication-status: published",
+          "x-robots-tag: index, follow",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
         "url": "https://ekodi.kr/ekodimission/contact",
         "statuses": [
           200

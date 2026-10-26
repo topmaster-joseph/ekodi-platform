@@ -4,95 +4,21 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>에코디 매일묵상</title>
-  <meta name="description" content="에코디 공통본문으로 시·노래·적용질문·기도까지, 말씀을 삶으로 이어 가는 매일묵상 활동">
+  <meta name="description" content="에코디 공통본문으로 시·노래·적용질문·기도까지, 말씀을 삶으로 이어 가는 오늘의 매일묵상">
   <!--EKODI_DEVOTION_META-->
   <link rel="stylesheet" href="/bible/styles.css">
   <link rel="stylesheet" href="/bible/devotion.css">
 </head>
 <body class="devotion-page">
-  <header class="dv-hero">
-    <p class="eyebrow">EKODI DAILY DEVOTION</p>
-    <h1>에코디 매일묵상</h1>
-    <p class="tagline">말씀을 읽고, 노래하고, 묻고, 살아봅니다.</p>
-    <nav class="dv-datebar" aria-label="날짜 이동">
-      <a id="dvPrev" class="ghost" href="#">‹ 이전</a>
-      <strong id="dvDate">불러오는 중</strong>
-      <a id="dvNext" class="ghost" href="#">다음 ›</a>
-    </nav>
+  <header class="dv-page-title">
+    <small>EKODI DAILY DEVOTION</small>
+    <h1>오늘의 매일묵상</h1>
+    <p>말씀을 읽고, 노래하고, 묻고, 살아봅니다.</p>
   </header>
-
-  <main class="dv-main">
-    <p id="dvStatus" class="notice" role="status"></p>
-
-    <article class="dv-card dv-passage" id="passage">
-      <small>오늘의 공통본문</small>
-      <h2 id="dvPassage"></h2>
-      <p id="dvTheme" class="dv-theme"></p>
-      <p id="dvKeyLine" class="dv-keyline"></p>
-      <details id="dvScripture" class="dv-scripture">
-        <summary>본문 읽기 (개역한글)</summary>
-        <div id="dvVerses" class="bible-verses"></div>
-        <p id="dvAttribution" class="meta"></p>
-      </details>
-      <div class="dv-share-row">
-        <button type="button" class="primary" data-share="page">카카오톡 등으로 공유</button>
-        <button type="button" class="ghost" data-copy="page">링크 복사</button>
-      </div>
-    </article>
-
-    <nav class="dv-jump" aria-label="묵상 활동 바로가기">
-      <a href="#poem">묵상 시</a><a href="#song">묵상 노래</a><a href="#questions">적용 질문</a><a href="#family">가정·어린이</a><a href="#action">오늘의 실천</a><a href="#prayer">기도</a><a href="#mine">나의 한 줄</a>
-    </nav>
-
-    <section class="dv-card" id="poem" data-activity="poem">
-      <div class="dv-card-head"><small>묵상 시</small><button type="button" class="dv-mini" data-share="poem">공유</button></div>
-      <h3 id="dvPoemTitle"></h3>
-      <div id="dvPoem" class="dv-poem"></div>
-    </section>
-
-    <section class="dv-card" id="song" data-activity="song">
-      <div class="dv-card-head"><small>묵상 노래</small><button type="button" class="dv-mini" data-share="song">공유</button></div>
-      <h3 id="dvSongTitle"></h3>
-      <p id="dvSongMood" class="meta"></p>
-      <div id="dvSong" class="dv-song"></div>
-      <p class="meta">자유롭게 곡을 붙여 불러 보세요. 가족·소그룹이 함께 만든 곡조도 좋은 고백이 됩니다.</p>
-    </section>
-
-    <section class="dv-card" id="questions" data-activity="questions">
-      <div class="dv-card-head"><small>적용 질문</small><button type="button" class="dv-mini" data-share="questions">공유</button></div>
-      <ol id="dvQuestions" class="dv-questions"></ol>
-    </section>
-
-    <section class="dv-card" id="family" data-activity="family">
-      <div class="dv-card-head"><small>가정·어린이와 함께</small><button type="button" class="dv-mini" data-share="family">공유</button></div>
-      <p id="dvFamily"></p>
-    </section>
-
-    <section class="dv-card" id="action" data-activity="action">
-      <div class="dv-card-head"><small>오늘의 실천</small><button type="button" class="dv-mini" data-share="action">공유</button></div>
-      <label class="dv-check"><input type="checkbox" id="dvActionDone"><span id="dvAction"></span></label>
-    </section>
-
-    <section class="dv-card" id="prayer" data-activity="prayer">
-      <div class="dv-card-head"><small>한 줄 기도</small><button type="button" class="dv-mini" data-share="prayer">공유</button></div>
-      <p id="dvPrayer" class="dv-prayer"></p>
-    </section>
-
-    <section class="dv-card" id="mine">
-      <div class="dv-card-head"><small>나의 묵상 한 줄</small></div>
-      <p class="meta">이 기기에만 저장됩니다. 공유는 직접 누를 때만 이루어집니다.</p>
-      <textarea id="dvMine" rows="3" maxlength="500" placeholder="오늘 말씀 앞에서 붙든 한 문장을 적어 보세요"></textarea>
-      <div class="dv-share-row">
-        <button type="button" class="primary" data-share="mine">나의 한 줄 공유</button>
-        <a class="ghost" href="/bible/journey">Journey에 기록하기</a>
-      </div>
-    </section>
-
-    <p id="dvNotice" class="dv-notice"></p>
-    <p id="dvToast" class="dv-toast" role="status" aria-live="polite"></p>
+  <main>
+    <div data-ekodi-devotion data-base="/bible/devotion" data-date-mode="path" data-site-label="에코디"></div>
   </main>
-
-  <footer><a href="/bible/">말씀대화</a><span>·</span><a href="https://ekodi.kr/ekodichurch">에코디교회</a><span>·</span><a href="https://ekodi.kr/">EKODI</a></footer>
+  <footer><a href="/bible/">말씀대화</a><span>·</span><a href="/ekodichurch/devotion/">에코디교회</a><span>·</span><a href="/ekodimission/devotion">에코디선교회</a><span>·</span><a href="https://ekodi.kr/">EKODI</a></footer>
   <script type="module" src="/bible/devotion.js"></script>
 </body>
 </html>

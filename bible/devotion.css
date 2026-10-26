@@ -1,38 +1,51 @@
-.dv-hero{text-align:center;padding:26px 16px 14px;background:linear-gradient(180deg,#eef5f0,#f7f8f5);border-bottom:1px solid #e1e7e1}
-.dv-hero h1{font-size:clamp(1.55rem,4vw,2.2rem);margin:2px 0}
-.dv-datebar{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:12px}
-.dv-datebar a{text-decoration:none;font-size:.9rem;padding:7px 12px}
-.dv-datebar strong{min-width:150px}
-.dv-main{max-width:760px;margin:auto;padding:22px 16px 70px}
-.dv-card{background:#fff;border:1px solid #dde4de;border-radius:20px;padding:22px;margin:0 0 16px;box-shadow:0 8px 30px rgba(24,49,37,.04);scroll-margin-top:80px}
-.dv-card[hidden],.dv-jump[hidden]{display:none}
-.dv-card h2{margin:6px 0 4px;font-size:1.5rem;color:#203f31}
-.dv-card h3{margin:6px 0 10px;font-size:1.2rem}
-.dv-card-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.dv-theme{margin:2px 0;font-weight:700;color:#52665c}
-.dv-keyline{margin:12px 0;padding:14px 16px;border-left:4px solid #315e48;background:#f1f5f1;border-radius:0 12px 12px 0;font-size:1.05rem}
-.dv-scripture summary{cursor:pointer;font-weight:700;color:#315e48;padding:6px 0}
-.dv-scripture .bible-verses p{margin:4px 0}
-.dv-scripture sup{color:#7a8a80;margin-right:2px}
-.dv-chapter{font-weight:700;color:#52665c;margin-top:10px!important}
-.dv-share-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
-.dv-share-row a{text-decoration:none}
-.dv-jump{position:sticky;top:0;z-index:5;display:flex;gap:6px;overflow-x:auto;padding:10px 0;margin-bottom:8px;background:#f7f8f5}
-.dv-jump a{flex:none;text-decoration:none;color:#304a3c;border:1px solid #cfd9d1;background:#fff;border-radius:999px;padding:6px 12px;font-size:.88rem}
-.dv-mini{border:1px solid #cfd9d1;background:#fff;color:#304a3c;border-radius:999px;padding:4px 12px;font-size:.82rem;font-weight:700}
-.dv-poem p,.dv-song p{margin:2px 0;line-height:1.85}
-.dv-poem{font-family:"Nanum Myeongjo","Noto Serif KR",serif;font-size:1.05rem}
-.dv-refrain{margin-top:12px;padding:12px 14px;border-radius:12px;background:#f6f3e8}
-.dv-refrain small{display:block;margin-bottom:4px}
-.dv-questions{padding-left:20px;margin:6px 0}
-.dv-questions li{margin:10px 0}
-.dv-tag{display:inline-block;font-size:.75rem;font-weight:700;color:#fff;background:#315e48;border-radius:999px;padding:1px 9px;margin-right:4px}
-.dv-check{display:flex;gap:10px;align-items:flex-start;font-size:1.02rem}
-.dv-check input{width:20px;height:20px;margin-top:4px;flex:none}
-.dv-prayer{font-style:italic;font-size:1.05rem}
-#dvMine{width:100%;border:1px solid #cfd9d1;border-radius:12px;padding:10px;resize:vertical}
-.dv-notice{font-size:.85rem;color:#647269;text-align:center;margin-top:20px}
-.dv-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);max-width:calc(100% - 32px);background:#203f31;color:#fff;padding:10px 16px;border-radius:12px;opacity:0;pointer-events:none;transition:opacity .2s;word-break:break-all;z-index:50}
-.dv-toast.show{opacity:1}
+/* EKODI 오늘의 매일묵상 — shared styles. Scoped to .ekodi-devotion so it sits inside any site's header/footer. */
+.ekodi-devotion{--dv-ink:#1d2a25;--dv-muted:#647269;--dv-accent:#315e48;--dv-accent-dark:#203f31;--dv-line:#dde4de;--dv-soft:#f1f5f1;--dv-warm:#f6f3e8;max-width:760px;margin:0 auto;padding:0 16px 56px;color:var(--dv-ink);line-height:1.7;font-family:Pretendard,"Noto Sans KR",system-ui,-apple-system,sans-serif;box-sizing:border-box}
+.ekodi-devotion *{box-sizing:border-box}
+.dv-page-title{max-width:760px;margin:0 auto;padding:28px 16px 6px;text-align:center}
+.dv-page-title small{display:block;letter-spacing:.12em;font-weight:700;color:#52665c;font-size:.78rem}
+.dv-page-title h1{margin:4px 0 2px;font-size:clamp(1.6rem,4.4vw,2.3rem);color:#203f31;line-height:1.25}
+.dv-page-title p{margin:0;color:#647269}
+.ekodi-devotion .dv-datebar{display:flex;justify-content:center;align-items:center;gap:12px;margin:10px 0 14px}
+.ekodi-devotion .dv-date-link{text-decoration:none;color:var(--dv-accent);border:1px solid #cfd9d1;background:#fff;border-radius:999px;padding:6px 12px;font-size:.88rem;font-weight:700}
+.ekodi-devotion .dv-date{min-width:150px;text-align:center}
+.ekodi-devotion .dv-status:empty{display:none}
+.ekodi-devotion .dv-status{text-align:center;color:var(--dv-muted)}
+.ekodi-devotion .dv-summary{background:#fff;border:1px solid var(--dv-line);border-radius:20px;padding:22px;box-shadow:0 8px 30px rgba(24,49,37,.05)}
+.ekodi-devotion .dv-kicker{letter-spacing:.08em;font-weight:700;color:#52665c;font-size:.8rem}
+.ekodi-devotion .dv-passage{margin:4px 0 2px;font-size:1.5rem;color:var(--dv-accent-dark)}
+.ekodi-devotion .dv-theme{margin:0;font-weight:700;color:#52665c}
+.ekodi-devotion .dv-keyline{margin:12px 0 0;padding:12px 16px;border-left:4px solid var(--dv-accent);background:var(--dv-soft);border-radius:0 12px 12px 0;font-size:1.04rem}
+.ekodi-devotion .dv-share-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.ekodi-devotion .dv-btn{display:inline-block;border:1px solid #cfd9d1;background:#fff;color:#304a3c;border-radius:12px;padding:9px 15px;font:inherit;font-weight:700;text-decoration:none;cursor:pointer}
+.ekodi-devotion .dv-btn-primary{background:#234b38;border-color:#234b38;color:#fff}
+.ekodi-devotion .dv-tabs{position:sticky;top:0;z-index:5;display:flex;gap:6px;overflow-x:auto;padding:12px 2px;margin:14px 0 4px;background:rgba(255,255,255,.95);border-radius:14px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.ekodi-devotion .dv-tabs::-webkit-scrollbar{display:none}
+.ekodi-devotion .dv-tab{flex:none;border:1px solid #cfd9d1;background:#fff;color:#304a3c;border-radius:999px;padding:7px 14px;font:inherit;font-size:.9rem;font-weight:700;cursor:pointer}
+.ekodi-devotion .dv-tab.active{background:var(--dv-accent-dark);border-color:var(--dv-accent-dark);color:#fff}
+.ekodi-devotion .dv-tab[hidden],.ekodi-devotion [hidden]{display:none!important}
+.ekodi-devotion .dv-panel{background:#fff;border:1px solid var(--dv-line);border-radius:20px;padding:22px;box-shadow:0 8px 30px rgba(24,49,37,.04)}
+.ekodi-devotion .dv-panel-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+.ekodi-devotion .dv-panel-head h3{margin:0;font-size:1.2rem}
+.ekodi-devotion .dv-mini{flex:none;border:1px solid #cfd9d1;background:#fff;color:#304a3c;border-radius:999px;padding:5px 12px;font:inherit;font-size:.82rem;font-weight:700;cursor:pointer}
+.ekodi-devotion .dv-verses p{margin:4px 0;line-height:1.85}
+.ekodi-devotion .dv-verses sup{color:#7a8a80;margin-right:2px}
+.ekodi-devotion .dv-chapter{font-weight:700;color:#52665c;margin-top:10px}
+.ekodi-devotion .dv-poem,.ekodi-devotion .dv-song{margin-top:6px}
+.ekodi-devotion .dv-poem p,.ekodi-devotion .dv-song p,.ekodi-devotion .dv-refrain p{margin:2px 0;line-height:1.9}
+.ekodi-devotion .dv-poem{font-family:"Gowun Batang","Nanum Myeongjo","Noto Serif KR",serif;font-size:1.08rem}
+.ekodi-devotion .dv-refrain{margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--dv-warm)}
+.ekodi-devotion .dv-refrain small{display:block;font-weight:700;color:#7a6a3c;margin-bottom:2px}
+.ekodi-devotion .dv-questions{padding-left:20px;margin:6px 0}
+.ekodi-devotion .dv-questions li{margin:12px 0}
+.ekodi-devotion .dv-tag{display:inline-block;font-size:.75rem;font-weight:700;color:#fff;background:var(--dv-accent);border-radius:999px;padding:1px 9px;margin-right:4px}
+.ekodi-devotion .dv-body{font-size:1.04rem;margin:6px 0}
+.ekodi-devotion .dv-check{display:flex;gap:10px;align-items:flex-start;font-size:1.04rem}
+.ekodi-devotion .dv-check input{width:20px;height:20px;margin-top:4px;flex:none}
+.ekodi-devotion .dv-prayer{font-style:italic;font-size:1.08rem;margin:6px 0}
+.ekodi-devotion .dv-mine{width:100%;border:1px solid #cfd9d1;border-radius:12px;padding:10px;font:inherit;resize:vertical}
+.ekodi-devotion .dv-meta{font-size:.84rem;color:#748078;margin:8px 0 0}
+.ekodi-devotion .dv-notice{font-size:.84rem;color:var(--dv-muted);text-align:center;margin-top:20px}
+.ekodi-devotion .dv-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);max-width:calc(100% - 32px);background:#203f31;color:#fff;padding:10px 16px;border-radius:12px;opacity:0;pointer-events:none;transition:opacity .2s;word-break:break-all;z-index:60;margin:0}
+.ekodi-devotion .dv-toast.show{opacity:1}
 .dv-offscreen{position:fixed;left:-9999px;top:0}
-@media (max-width:520px){.dv-card{padding:18px;border-radius:16px}.dv-datebar strong{min-width:0;font-size:.95rem}}
+@media (max-width:520px){.ekodi-devotion .dv-summary,.ekodi-devotion .dv-panel{padding:18px;border-radius:16px}.ekodi-devotion .dv-date{min-width:0;font-size:.95rem}}

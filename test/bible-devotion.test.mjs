@@ -92,7 +92,8 @@ test('dated share link renders KakaoTalk-ready Open Graph tags without HTML inje
   assert.match(html, /property="og:url" content="https:\/\/ekodi\.kr\/bible\/devotion\/2026-10-25"/);
   assert.match(html, /property="og:description" content="[^"]*멀찍이/);
   assert.doesNotMatch(html, /EKODI_DEVOTION_META/);
-  assert.match(html, /data-share="poem"/);
+  assert.match(html, /data-ekodi-devotion data-base="\/bible\/devotion"/);
+  assert.match(html, /<h1>오늘의 매일묵상<\/h1>/);
 });
 
 test('bare devotion route serves today and invalid date paths are 404', async () => {
@@ -109,4 +110,22 @@ test('devotion assets ship without inline script or style (CSP self-only)', () =
   assert.doesNotMatch(html, /<script(?![^>]*src=)[^>]*>/);
   assert.doesNotMatch(html, /<style|style="/);
   assert.match(fs.readFileSync(new URL('index.html', bibleDir), 'utf8'), /href="\/bible\/devotion"/);
+});
+
+test('shared renderer exposes one-panel-at-a-time tabs for every activity', () => {
+  const js = fs.readFileSync(new URL('devotion.js', bibleDir), 'utf8');
+  for (const id of ['passage', 'poem', 'song', 'questions', 'family', 'action', 'prayer', 'mine']) assert.ok(js.includes(`id: '${id}'`), id);
+  assert.match(js, /panels\.get\(tabId\)\.hidden = !on/);
+  assert.match(js, /data-date-mode|dateMode === 'query'/);
+});
+
+test('church and mission devotion pages mount the shared renderer with their own chrome', () => {
+  const mission = fs.readFileSync(new URL('../space/ekodimission-devotion.page', import.meta.url), 'utf8');
+  assert.match(mission, /<h1>오늘의 매일묵상<\/h1>/);
+  assert.match(mission, /class="mission-site-header"/);
+  assert.match(mission, /data-ekodi-devotion data-base="\/ekodimission\/devotion" data-date-mode="query"/);
+  assert.match(mission, /<script type="module" src="\/bible\/devotion\.js"><\/script>/);
+  assert.doesNotMatch(mission, /style="/);
+  assert.match(fs.readFileSync(new URL('../space-worker.js', import.meta.url), 'utf8'), /\['\/ekodimission\/devotion','\/ekodimission-devotion\.page'\]/);
+  assert.match(fs.readFileSync(new URL('../space/ekodimission-shell.js', import.meta.url), 'utf8'), /href:'\/ekodimission\/devotion',label:'매일묵상'/);
 });
