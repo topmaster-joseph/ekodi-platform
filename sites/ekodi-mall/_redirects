@@ -14,6 +14,8 @@
 /supplier-ops /assets/supplier-ops 200
 /supplier-ops/ /assets/supplier-ops 200
 /verification-ops /assets/verification-ops 200
+/order-ops /assets/order-ops 200
+/order-ops/ /assets/order-ops 200
 /verification-ops/ /assets/verification-ops 200
 /supplier-discovery /assets/supplier-discovery 200
 /supplier-discovery/ /assets/supplier-discovery 200
