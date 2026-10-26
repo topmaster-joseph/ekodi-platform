@@ -7,7 +7,7 @@ import { SITE_ADMIN_FRAME_ROOT } from '../platform-security-policy.js';
 const read = path => readFile(new URL('../' + path, import.meta.url), 'utf8');
 
 // Observed 2026-10-27 on /admin/sites/sites-worklife: '마이 에코디' appeared twice in the
-// site strip (static my.ekodi.kr row + registry ekodi.kr/my), and 에코디 워크 had no
+// site strip (static legacy-host row + registry ekodi.kr/my), and 에코디 워크 had no
 // admin root although /work/admin exists.
 test('registry reconciliation matches a site by domain, canonical apex path, then name', async () => {
   const campus = await read('campus-actions.js');
