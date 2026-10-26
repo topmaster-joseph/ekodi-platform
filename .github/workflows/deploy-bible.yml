@@ -130,6 +130,8 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+      - name: Migrate isolated devotional editor storage
+        run: npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth-development --remote --file=migrations/10001_devotion_activity_overrides.sql --config wrangler.bible.staging.toml
       - name: Deploy isolated staging
         run: npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.bible.staging.toml
       - name: Confirm staging deployment exists
@@ -232,6 +234,9 @@ jobs:
         run: |
           code=$(curl -sS -o /tmp/user-ai-status.json -w '%{http_code}' --max-time 15 'https://ekodi.kr/api/user-ai/status?site=bible' || true)
           test "$code" = '401' || test "$code" = '200'
+      - name: Prepare protected devotional editor storage
+        # Idempotent schema. Do not apply unrelated pending global migrations.
+        run: npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --file=migrations/10001_devotion_activity_overrides.sql --config wrangler.bible.toml
       - name: Bootstrap or guarded release
         shell: bash
         run: |
