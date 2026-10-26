@@ -50,8 +50,8 @@ test('channel workspace follows status quick-action list detail ordering on ever
   for(const store of CMPMYI_STORES){
     const page=await storeAdminPage({...store,id:store.slug,brand:store.short,pathname:'/'+store.slug+'/admin/publishing'}).text();
     assert.match(page,/채널 · 자동게시/);
-    assert.match(page,/store-admin\.css\?v=20261026-tenant-alias-v1/);
-    assert.match(page,/store-admin\.js\?v=20261026-tenant-alias-v1/);
+    assert.match(page,/store-admin\.css\?v=20261026-compact-head-v1/);
+    assert.match(page,/store-admin\.js\?v=20261026-compact-head-v1/);
   }
 });
 
@@ -71,7 +71,9 @@ test('cmpmyi channel publishing opens the real management workspace without a se
   assert.doesNotMatch(panel,/data-direct-section="connections"/);
   assert.doesNotMatch(panel,/data-direct-section="marketing"/);
   assert.doesNotMatch(panel,/aria-label="채널 · 자동게시 통합관리 브랜드 선택"/);
-  assert.match(panel,/중간 선택 카드를 없앴습니다/);
+  // Compact header: one toolbar line carries title + brands; no stacked eyebrow/description/help rows.
+  assert.match(panel,/<h1 class="direct-title"[^>]*>채널 · 자동게시<\/h1>/);
+  assert.doesNotMatch(panel,/COMMON MANAGEMENT|class="help"|class="head"/);
   assert.match(panel,/\/cmpmyi\/admin\/panel\.js/);
 });
 
