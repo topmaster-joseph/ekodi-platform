@@ -233,3 +233,14 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(principles,/관리자 화면\(`admin`\)/);
   assert.match(principles,/각 사이트의 브랜드, 목적, 사용자 흐름/);
 });
+
+
+test('site-owned chrome takes precedence over shell-generated layout',async()=>{
+  const [header,footer]=await Promise.all([read('shell/user-ui-header.js'),read('shell/user-ui-footer.js')]);
+  assert.match(header,/isIndividualSite\(\)&&!header\.hasAttribute\(FALLBACK_ATTR\)/);
+  assert.match(header,/native:true,fallback:false/);
+  assert.match(footer,/function nativeFooter\(\)/);
+  assert.match(footer,/function creditNativeFooter\(\)/);
+  assert.match(footer,/EKODI \(에코디\)\. All rights reserved/);
+  assert.match(footer,/if\(config\.operator\?\.businessRegistrationNumber\)/);
+});
