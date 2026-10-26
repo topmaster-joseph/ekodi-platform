@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko">
+<html lang="ko" data-ekodi-character="off">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -20,33 +20,8 @@
 <body>
   <a class="skip" href="#main">본문 바로가기</a>
   <div class="notice">{{NOTICE}}</div>
-  <header class="header buyer-header mall-header">
-    <div class="mall-header-top">
-      <a class="brand" href="#top" aria-label="에코디몰 홈"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a>
-      <form id="mallGlobalSearch" class="mall-global-search" role="search">
-        <label for="mallGlobalQuery" class="sr-only">에코디몰 상품 검색</label>
-        <input id="mallGlobalQuery" type="search" maxlength="120" placeholder="무엇을 찾고 계세요?" autocomplete="off">
-        <button type="submit" aria-label="상품 검색하기">⌕</button>
-      </form>
-      <div class="actions">
-        <button class="icon mall-search-mobile" id="searchBtn" aria-label="상품 검색">⌕</button>
-        <button class="icon" id="wishBtn" aria-label="관심상품 보기">♡ <span id="wishCount">0</span></button>
-        <a class="seller-mini" href="{{SELLER_STUDIO_HREF}}">판매하기</a>
-      </div>
-    </div>
-    <nav class="mall-primary-nav" aria-label="쇼핑 카테고리">
-      <a href="#shop" data-filter-target="all">전체상품</a>
-      <a href="/travel/stay/">여행·레저</a>
-      <a href="#shop" data-filter-target="local">로컬·특산물</a>
-      <a href="#shop" data-filter-target="general">식품·건강</a>
-      <a href="#shop" data-filter-target="living">생활·가전</a>
-      <a href="#shop" data-filter-target="book">책·배움</a>
-      <a href="#shop" data-filter-target="gift">선물·기념품</a>
-      <a href="#recommend">AI 추천</a>
-      <a href="/picks">이번 주 추천</a>
-    </nav>
-  </header>
-  <main id="main">
+  {{MALL_HEADER}}
+ <main id="main">
     <section class="context-hero mall-premium-hero" id="top">
       <div class="context-hero-copy">
         <p class="eyebrow">EKODI MALL · WHY FIRST</p>
@@ -58,6 +33,7 @@
         <p class="context-trust">추천 기준: 적합성 · 가격 · 배송 · 신뢰도 · 최신성. 제휴수수료는 추천순위에서 분리합니다.</p>
       </div>
       <aside class="context-hero-visual mall-photo-hero" aria-label="햇살이 드는 편안한 집 안 풍경">
+        <img class="mall-hero-person" src="https://images.pexels.com/photos/35760987/pexels-photo-35760987.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=480" width="124" height="82" loading="lazy" decoding="async" alt="">
         <div class="mall-hero-photo" aria-hidden="true"></div>
         <div class="mall-hero-highlight"><small>EKODI CURATION</small><strong>오늘의 필요를<br>더 나은 선택으로</strong><span>상품을 고르는 기준부터 함께합니다.</span><a href="#recommend">추천 둘러보기 <span aria-hidden="true">→</span></a></div>
       </aside>

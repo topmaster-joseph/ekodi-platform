@@ -14,7 +14,8 @@
 <header class="lv-top" id="presTop" data-ekodi-fixed-header aria-label="발표 제어">
   <a class="lv-brand" id="backStudio" href="../"><span class="lv-brand-mark" aria-hidden="true">E</span><span><strong>발표 화면</strong><small id="presSession">Premium Studio</small></span></a>
   <span class="pill"><span class="sr-only">강의 경과</span><span class="lv-clock" id="presLecture">00:00</span></span>
-  <span class="pill" id="presTimerWrap"><span>실습</span><span class="lv-clock" id="presTimerTop">--:--</span></span>
+  <span class="pill pres-timer" id="presTimerWrap"><span>실습</span><span class="lv-clock" id="presTimer" role="timer">--:--</span><small class="pres-timer-info" id="presTimerInfo">대기 중</small></span>
+  <span class="pres-timer-ctl" role="group" aria-label="실습 타이머 조작"><button type="button" class="btn btn-small" id="pPause">일시정지</button><button type="button" class="btn btn-small" data-add="60000">+1분</button><button type="button" class="btn btn-small" id="pStop">실습 종료</button></span>
   <span class="grow"></span>
   <span class="kbd hide-sm" id="presCounter">- / -</span>
   <button type="button" class="btn" id="pPrev" aria-label="이전 슬라이드">←</button>
@@ -39,8 +40,6 @@
     <div class="stage-frame" id="stage" aria-live="polite"></div>
   </section>
   <aside class="pres-side" id="presSide" aria-label="발표자 전용 정보 (청중 화면에는 표시되지 않음)">
-    <section class="pres-card"><h3>실습 타이머</h3><div class="big-clock" id="presTimer" role="timer">--:--</div><p class="kbd" id="presTimerInfo">대기 중</p>
-      <div class="pres-controls"><button type="button" class="btn btn-small" id="pPause">일시정지</button><button type="button" class="btn btn-small" data-add="60000">+1분</button><button type="button" class="btn btn-small" id="pStop">실습 종료</button></div></section>
     <section class="pres-card ai-card" id="aiCard"><h3>AI 시연 · FactChat 기관계정</h3>
       <p class="kbd" id="aiAuth">확인 중</p>
       <div class="pres-controls"><label class="sr-only" for="aiTrack">시연 분야</label><select id="aiTrack" class="ai-select"></select><button type="button" class="btn btn-small" id="aiLoad">현재 단계 프롬프트</button></div>

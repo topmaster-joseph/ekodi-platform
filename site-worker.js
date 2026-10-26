@@ -108,6 +108,8 @@ const ADMIN_ASSETS = new Set([
   '/ekodi-message-ui.js',
   '/admin-shell.css',
   '/admin-finance.css',
+  '/infra-cost-admin.js',
+  '/infra-cost-admin.css',
   '/admin-canonical-routes.js',
   '/admin-surface-labels.js',
   '/admin-central-handoff.js',

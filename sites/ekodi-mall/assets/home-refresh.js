@@ -4,6 +4,14 @@
   const query = document.getElementById('mallGlobalQuery');
   const search = document.getElementById('search');
   const shop = document.getElementById('shop');
+  const params = new URLSearchParams(window.location.search);
+  const incomingQuery = (params.get('q') || '').trim().slice(0,120);
+  if (search && incomingQuery) {
+    search.value = incomingQuery;
+    if (query) query.value = incomingQuery;
+    search.dispatchEvent(new Event('input', { bubbles:true }));
+  }
+  if (params.has('wishlist')) window.addEventListener('load', () => document.getElementById('wishBtn')?.click(), {once:true});
 
   form?.addEventListener('submit', (event) => {
     event.preventDefault();

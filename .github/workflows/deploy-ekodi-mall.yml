@@ -4,12 +4,14 @@ on:
   pull_request:
     paths:
       - "sites/ekodi-mall/**"
+      - "books/books.json"
       - "ekodipay-core.js"
       - ".github/workflows/deploy-ekodi-mall.yml"
   push:
     branches: [main]
     paths:
       - "sites/ekodi-mall/**"
+      - "books/books.json"
       - "ekodipay-core.js"
       - ".github/workflows/deploy-ekodi-mall.yml"
   workflow_dispatch:

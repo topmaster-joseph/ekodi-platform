@@ -574,3 +574,18 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 .lv .answer-text{margin:0;font-size:3.4cqw;line-height:1.45;font-weight:700;white-space:pre-line;max-width:72cqw;word-break:keep-all}
 @keyframes lvAnswerIn{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){.lv .answer-reveal{animation:none}}
+
+/* Presenter: practice timer lives in the top bar; the side column stays within the stage height */
+.lv .pres-timer{gap:8px}
+.lv .pres-timer .lv-clock.warn{color:#f0b44c}.lv .pres-timer .lv-clock.final,.lv .pres-timer .lv-clock.done{color:#ff8a7a}
+.lv .pres-timer[data-phase="final"],.lv .pres-timer[data-phase="done"]{box-shadow:inset 0 0 0 1px #ff8a7a}
+.lv .pres-timer-info{font-size:.75rem;color:#9fb0c8;font-weight:600}
+.lv .pres-timer-ctl{display:inline-flex;gap:6px}
+.lv .pres-timer-ctl .btn{min-height:34px;padding:0 10px;background:#13233f;border-color:#2a4269;color:#e8eef8}
+.lv .pres-timer-ctl .btn:disabled{opacity:.45}
+@media (min-width:1181px){
+  .lv .pres{align-items:start}
+  .lv .pres-side{position:sticky;top:calc(var(--lv-top-h) + 16px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#2a4269 transparent;padding-right:2px}
+}
+@media (max-width:1180px){.lv .pres-timer-info{display:none}}
+@media (max-width:760px){.lv .pres-timer-ctl{display:none}}
