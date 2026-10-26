@@ -25,6 +25,7 @@ import { handleAuthorBillingControl, runAuthorBillingSchedule } from './author-b
 import { handleSystemHealthControl } from './system-health-control.js';
 import { handleTrafficIntelligence } from './traffic-intelligence-control.js';
 import { handleApiCostControl } from './api-cost-control.js';
+import { handleInfraCostControl } from './infra-cost-control.js';
 import { handleCloudflareSecretControl } from './cloudflare-secret-control.js';
 import { handleBooksNetworkRequest } from './books-network-control.js';
 import { handleUniversalMembership } from './universal-membership.js';
@@ -299,6 +300,11 @@ export default {
     if (path.startsWith('/api/control/system-health')) {
       try { const response = await handleSystemHealthControl(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('System Health control error', error); return errorResponse('System Health 처리 중 오류가 발생했습니다.', 'SYSTEM_HEALTH_CONTROL_ERROR'); }
+    }
+
+    if (path.startsWith('/api/control/infra-costs')) {
+      try { const response = await handleInfraCostControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Infra cost control error', error); return errorResponse('비용·인프라 원장 처리 중 오류가 발생했습니다.', 'INFRA_COST_CONTROL_ERROR'); }
     }
 
     if (path === '/api/control/api-cost') {
