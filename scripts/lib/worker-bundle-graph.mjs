@@ -26,10 +26,20 @@ export function listProductionWorkers(root){
       const source=fs.readFileSync(path.join(root,file),'utf8');
       const name=(source.match(/^name\s*=\s*"([^"]+)"/m)||[])[1]||'';
       const main=(source.match(/^main\s*=\s*"([^"]+)"/m)||[])[1]||'';
-      return {config:file,name,main};
+      return {config:file,name,main,assets:assetsDirectory(source)};
     })
     .filter(worker=>worker.name&&worker.main&&fs.existsSync(path.join(root,worker.main)))
     .sort((a,b)=>a.config.localeCompare(b.config));
+}
+
+// WORKER-LANE-ASSETS-001 (2026-10-26): a Worker also ships the static files in its
+// [assets] directory (bible/devotion.js, space/*.page …). Changing only those files
+// left the Bible lane undeployed after #6073, so they count as part of the Worker.
+export function assetsDirectory(source){
+  const section=String(source||'').match(/^\[assets\]\s*$([\s\S]*?)(?=^\[|(?![\s\S]))/m);
+  const dir=(section?.[1].match(/^directory\s*=\s*"([^"]+)"/m)||[])[1]||'';
+  const clean=dir.replace(/\\/g,'/').replace(/^\.\//,'').replace(/\/+$/,'');
+  return clean&&clean!=='.'&&!clean.startsWith('..')?clean:'';
 }
 
 function resolveImport(from,spec){
@@ -123,9 +133,12 @@ export function lanesForChangedFiles(root,changedFiles,{workers=listProductionWo
     const closure=bundleClosure(root,worker.main,cache);
     const touched=[...closure].filter(file=>changed.has(file));
     if(changed.has(worker.config))touched.push(worker.config);
+    if(worker.assets)for(const file of changed)if(file.startsWith(worker.assets+'/'))touched.push(file);
+    const laneWorkflow=lanes[worker.config]?.workflow;
+    if(laneWorkflow&&changed.has('.github/workflows/'+laneWorkflow))touched.push('.github/workflows/'+laneWorkflow);
     if(!touched.length)continue;
     const lane=lanes[worker.config]||null;
-    affected.push({...worker,touched:touched.sort(),workflow:lane?.workflow||null,excluded:lane?.workflow?null:(lane?.excluded||null)});
+    affected.push({...worker,touched:[...new Set(touched)].sort(),workflow:lane?.workflow||null,excluded:lane?.workflow?null:(lane?.excluded||null)});
   }
   const dispatches=new Map();
   for(const item of affected){
