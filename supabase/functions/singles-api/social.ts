@@ -91,6 +91,29 @@ function cleanVisibility(raw:unknown){
  for(const [k,v] of Object.entries(raw as Record<string,unknown>)){if(!VISIBILITY_KEYS.includes(k)||typeof v!=='boolean')return null;out[k]=v}
  return out;
 }
+
+// 본인확인기관(포트원 V2) 연동. 비밀키는 Edge 비밀값 PORTONE_API_SECRET에만 둔다.
+const identityOn=()=>Deno.env.get('SINGLES_IDENTITY_PROVIDER_ENABLED')==='true'&&Boolean(Deno.env.get('PORTONE_API_SECRET'));
+async function fetchIdentity(id:string){
+ try{
+  const r=await fetch('https://api.portone.io/identity-verifications/'+encodeURIComponent(id),{headers:{authorization:'PortOne '+Deno.env.get('PORTONE_API_SECRET')},signal:AbortSignal.timeout(10000)});
+  if(!r.ok)return {ok:false,data:null};
+  return {ok:true,data:await r.json()};
+ }catch{return {ok:false,data:null}}
+}
+// 만 19세 이상(한국 시간 기준 생일 경과). birthDate는 yyyy-MM-dd.
+export function isAdult(birthDate:unknown,now=new Date()){
+ if(typeof birthDate!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(birthDate))return false;
+ const [y,mo,d]=birthDate.split('-').map(Number);
+ const kst=new Date(now.getTime()+9*3600000);
+ const ty=kst.getUTCFullYear(),tm=kst.getUTCMonth()+1,td=kst.getUTCDate();
+ let age=ty-y;if(tm<mo||(tm===mo&&td<d))age--;
+ return age>=19;
+}
+async function sha256hex(text:string){
+ const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));
+ return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
 const match=(p:string,re:RegExp)=>p.match(re)?.[1]||'';
 // Per-user write limits (EKODI-SINGLES-MVP abuse controls). Enforced atomically in
 // the database; an RPC failure throws so the request fails closed (503).
@@ -269,6 +292,38 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   const {error}=await admin.from('singles_reports').insert({reporter_id:userId,target_id:reportTarget,category:v.category,details:v.details});
   if(error)throw error;
   return reply(req,{ok:true,status:'open'});
+ }
+ // ── 본인확인기관 연동(포트원 V2 본인인증, 2026-10-28) ──
+ // 이름·생년월일·전화번호는 저장하지 않고, 만 19세 이상 여부와 중복 가입 방지용 CI 해시만 남긴다.
+ if(p==='/identity/start'&&method==='POST'){
+  if(!identityOn())return reply(req,{error:'identity_provider_not_configured'},503);
+  if(!active(m))return reply(req,{error:'membership_required'},403);
+  if(m.adult_verified_at)return reply(req,{ok:true,already_verified:true});
+  const id='ekodi-sgl-'+crypto.randomUUID().replaceAll('-','');
+  const {error}=await admin.rpc('singles_identity_start',{p_user:userId,p_id:id});
+  if(error){if(rpcMsg(error).includes('identity_rate_limited'))return reply(req,{error:'identity_rate_limited'},429);throw error}
+  return reply(req,{ok:true,identity_verification_id:id});
+ }
+ if(p==='/identity/complete'&&method==='POST'){
+  if(!identityOn())return reply(req,{error:'identity_provider_not_configured'},503);
+  const v=await body(req);const id=typeof v?.identity_verification_id==='string'?v.identity_verification_id:'';
+  if(!/^ekodi-sgl-[0-9a-f]{32}$/.test(id))return reply(req,{error:'invalid_identity_verification'},400);
+  const pending=await one(admin.from('singles_identity_verifications').select('status').eq('id',id).eq('user_id',userId));
+  if(!pending)return reply(req,{error:'identity_not_found'},404);
+  if(pending.status!=='pending')return reply(req,{error:'identity_already_completed',status:pending.status},409);
+  const result=await fetchIdentity(id);
+  if(!result.ok)return reply(req,{error:'identity_provider_unavailable'},502);
+  const iv=result.data;
+  if(iv?.status!=='VERIFIED'||iv?.id!==id)return reply(req,{error:'identity_not_verified'},409);
+  const adult=isAdult(iv?.verifiedCustomer?.birthDate);
+  const ci=typeof iv?.verifiedCustomer?.ci==='string'&&iv.verifiedCustomer.ci?iv.verifiedCustomer.ci:'';
+  const ciHash=ci?await sha256hex('ekodi-singles:'+ci):null;
+  const {data,error}=await admin.rpc('singles_identity_complete',{p_user:userId,p_id:id,p_adult:adult,p_ci_hash:ciHash});
+  if(error){if(rpcMsg(error).includes('identity_already_completed'))return reply(req,{error:'identity_already_completed'},409);throw error}
+  if(data==='rejected_minor')return reply(req,{error:'adult_required'},403);
+  if(data==='duplicate')return reply(req,{error:'identity_already_used'},409);
+  if(data==='failed')return reply(req,{error:'identity_key_missing'},409);
+  return reply(req,{ok:true,adult_verified:true});
  }
  if(!verified(m))return reply(req,{error:'adult_verification_required'},403);
  if(p==='/discover'&&method==='GET'){

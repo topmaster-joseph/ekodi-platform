@@ -442,7 +442,7 @@ function showGuide(h){
  const passes=state.pricing?.passes||[];
  if(passes.length)paragraph(box,'기간제 메시지 이용권: '+passes.map(x=>x.display_name+' '+money(x.price_krw)).join(' · '));
  const steps=document.createElement('ol');steps.className='join-steps';
- for(const t of ['로그인 후 참여 동의','성인 본인확인(운영자 확인)','가입비 500,000원 계좌이체 주문·입금','운영자 입금 확인 → 유료회원 전환·적립금 500,000원'])steps.append(text('li',t));
+ for(const t of ['로그인 후 참여 동의','성인 본인인증(휴대폰 본인인증 또는 운영자 확인)','가입비 500,000원 계좌이체 주문·입금','운영자 입금 확인 → 유료회원 전환·적립금 500,000원'])steps.append(text('li',t));
  box.append(text('h4','유료회원 가입 순서'),steps);
  h.append(box);
 }
@@ -451,7 +451,10 @@ async function showJoin(h){
  paragraph(box,'결제수단은 계좌이체입니다. 주문번호를 발급받아 입금하고 "입금 완료 신고"를 누르면 운영자가 은행 내역과 대조해 확인합니다. 확인되면 유료회원이 되고 같은 금액의 적립금이 생깁니다.');
  let member=null;try{member=(await api('/me')).member}catch{}
  if(!member){paragraph(box,'먼저 "내 정보"에서 참여 동의를 저장해 주세요.');box.append(button('참여 동의하러 가기',()=>location.assign('/singles/my'),'primary'));h.append(box);return}
- if(!member.adult_verified){notice(box,'가입비 결제 전에 성인 본인확인이 필요합니다. 운영자(joseph@ekodi.kr)에게 신분증 확인을 요청해 주세요.');}
+ if(!member.adult_verified){
+  if(state.status?.identity_verification){notice(box,'가입비 결제 전에 성인 본인인증이 필요합니다. 휴대폰 본인인증으로 1분 안에 끝납니다.');box.append(button('휴대폰 본인인증 하기',()=>location.assign('/singles/verify'),'primary'));}
+  else notice(box,'가입비 결제 전에 성인 본인확인이 필요합니다. 운영자(joseph@ekodi.kr)에게 신분증 확인을 요청해 주세요.');
+ }
  box.append(button('가입비 주문번호 발급',async()=>{
   try{const r=await api('/bank/orders',{method:'POST',body:{plan_code:'credit_initial'}});notice(box,'주문번호 '+r.order.reference+'가 발급되었습니다. 아래 계좌로 입금해 주세요.');await reloadBankOrders(h)}
   catch(e){notice(box,errorText(e))}

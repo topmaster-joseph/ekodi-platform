@@ -3,16 +3,16 @@ const PREFIX='/singles';
 const PUBLIC_PAGES=new Set(['','/','/groups','/events','/discover','/messages','/my','/subscribe','/admin','/privacy']);
 const PRIVATE_PATHS=new Set(['/discover','/messages','/my','/events','/groups','/subscribe','/admin']);
 const SAFE_METHODS=new Set(['GET','HEAD']);
-function headers(type='text/html; charset=utf-8',isPrivate=false){
+function headers(type='text/html; charset=utf-8',isPrivate=false,csp=null){
  const h=new Headers({'content-type':type,'cache-control':isPrivate?'private, no-store':'public, max-age=60',
  'referrer-policy':'no-referrer','x-content-type-options':'nosniff','x-frame-options':'DENY',
  'permissions-policy':'camera=(), microphone=(), geolocation=()',
- 'content-security-policy':"default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'; upgrade-insecure-requests",
+ 'content-security-policy':csp||"default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'; upgrade-insecure-requests",
  'x-ekodi-singles-stage':'social-gated'});
  if(isPrivate)h.set('x-robots-tag','noindex, nofollow, noarchive');return h;
 }
 function json(data,status=200,isPrivate=true){return new Response(JSON.stringify(data),{status,headers:headers('application/json; charset=utf-8',isPrivate)})}
-function html(body,{privateContent=false,status=200,head=false}={}){return new Response(head?null:body,{status,headers:headers('text/html; charset=utf-8',privateContent)})}
+function html(body,{privateContent=false,status=200,head=false,csp=null}={}){return new Response(head?null:body,{status,headers:headers('text/html; charset=utf-8',privateContent,csp)})}
 function pathAfterSingles(pathname){if(pathname===PREFIX)return '';if(!pathname.startsWith(PREFIX+'/'))return null;return pathname.slice(PREFIX.length).replace(/\/+$/,'')||'/'}
 export function isSinglesRoute(pathname){return pathAfterSingles(String(pathname||''))!==null}
 function enabled(env){return env?.SINGLES_M1_ENABLED==='true'&&Boolean(env?.SINGLES_API_URL)&&Boolean(env?.SUPABASE_URL)&&Boolean(env?.SUPABASE_PUBLISHABLE_KEY)}
@@ -20,6 +20,16 @@ function socialEnabled(env){return enabled(env)&&env?.SINGLES_SOCIAL_ENABLED==='
 function paymentEnabled(env){return socialEnabled(env)&&env?.SINGLES_PAID_ACTIONS_ENABLED==='true'}
 function bankEnabled(env){return socialEnabled(env)&&env?.SINGLES_BANK_TRANSFER_ENABLED==='true'}
 function bankVerifyEnabled(env){return bankEnabled(env)&&env?.SINGLES_BANK_VERIFICATION_ENABLED==='true'}
+// 본인확인기관(포트원 V2) 공개 식별자. 비밀키는 Edge에만 있다.
+function identityConfig(env){
+ const store=String(env?.SINGLES_PORTONE_STORE_ID||''),channel=String(env?.SINGLES_PORTONE_IDENTITY_CHANNEL_KEY||'');
+ return /^store-[A-Za-z0-9-]{8,64}$/.test(store)&&/^channel-key-[A-Za-z0-9-]{8,64}$/.test(channel)?{provider:'portone',store_id:store,channel_key:channel}:null;
+}
+// 본인인증 창(포트원·인증사)을 띄우는 페이지에만 넓힌 보안 정책.
+const VERIFY_CSP="default-src 'none'; script-src 'self' https://cdn.portone.io; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co https://*.portone.io; frame-src https://*.portone.io https://*.inicis.com https://*.danal.co.kr; frame-ancestors 'none'; base-uri 'none'; form-action 'self' https://*.portone.io https://*.inicis.com https://*.danal.co.kr; object-src 'none'; upgrade-insecure-requests";
+function verifyPage(){
+ return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>본인인증 · EKODI 동행</title><link rel="stylesheet" href="/singles/styles.css"><script src="/singles/vendor/supabase-js-2.117.3.umd.js" integrity="sha384-BWcjm9OdFth9TbhCxZPdm+gAOUMAzQy9nmTs12ioXdCcbVnJaPMn+fMUoQCLt60R" crossorigin="anonymous" defer></script><script src="/singles/verify.js" defer></script></head><body class="romantic-inner"><header class="mast"><div class="mast-inner"><a class="logo" href="/singles"><strong>EKODI</strong><span>동행</span></a><nav aria-label="주요 메뉴"><a href="/singles/subscribe">동행 안내·가입</a></nav></div></header><main id="main" class="singles-privacy"><p class="eyebrow">EKODI · VERIFY</p><h1>성인 본인인증</h1><p>휴대폰 본인인증으로 만 19세 이상인지 확인합니다. 에코디는 이름·생년월일·전화번호를 저장하지 않고, 성인 확인 결과와 한 사람이 여러 계정을 만들지 못하게 하는 식별값(암호화)만 보관합니다.</p><p id="verifyStatus" class="notice" role="status">준비 중입니다…</p><p><button id="verifyStart" class="primary" type="button" hidden>휴대폰 본인인증 시작</button></p><p><a class="outline" href="/singles/subscribe">동행 안내·가입으로 돌아가기</a></p></main></body></html>';
+}
 function configuredOrigin(raw){try{const u=new URL(String(raw||''));return u.protocol==='https:'?u:null}catch{return null}}
 function status(env){const active=enabled(env);
  // The Supabase publishable key is public; admin preparation still needs login and a separately provisioned operator capability.
@@ -30,6 +40,7 @@ function status(env){const active=enabled(env);
  matching_enabled:false,messaging_enabled:socialEnabled(env),messages_require_subscription:true,paid_brokerage_enabled:false,
  bank_transfer_enabled:bankEnabled(env),bank_verification_enabled:bankVerifyEnabled(env),consulting_optional:true,
  events:[],identity_provider:'ekodi',
+ identity_verification:identityConfig(env),
  ...(active||prepReady?{auth:{supabase_url:env.SUPABASE_URL,publishable_key:env.SUPABASE_PUBLISHABLE_KEY}}:{})
 }}
 function allowApi(path,method){
@@ -40,6 +51,7 @@ function allowApi(path,method){
  if(path==='/api/subscription'&&method==='GET')return ['/subscription',true];
  // 유료회원 모델(2026-10-28): 요금표·내 요금, 기간권 구매, 운영자 회원 목록·수동 성인 확인.
  if(path==='/api/pricing'&&method==='GET')return ['/pricing',true];
+ if((path==='/api/identity/start'||path==='/api/identity/complete')&&method==='POST')return [path.slice(4),true];
  if(/^\/api\/passes\/pass_(?:1|10|20|30)d$/.test(path)&&method==='POST')return [path.slice(4),true];
  if(path==='/api/bank/admin/members'&&method==='GET')return ['/bank/admin/members',true];
  if(/^\/api\/bank\/admin\/members\/[0-9a-f-]{36}\/adult-verify$/i.test(path)&&method==='POST')return [path.slice(4),true];
@@ -165,8 +177,9 @@ export async function routeSinglesSurface(request,env){
     (sub==='/api/public'||!sub.startsWith('/api/'))){
   return json({error:'singles_unpublished'},404);
  }
- if(sub==='/styles.css'||sub==='/app.js'||sub==='/donghaeng-couple.webp'||sub==='/vendor/supabase-js-2.117.3.umd.js'){if(!SAFE_METHODS.has(request.method))return json({error:'method_not_allowed'},405);return env.ASSETS.fetch(request)}
+ if(sub==='/styles.css'||sub==='/app.js'||sub==='/verify.js'||sub==='/donghaeng-couple.webp'||sub==='/vendor/supabase-js-2.117.3.umd.js'){if(!SAFE_METHODS.has(request.method))return json({error:'method_not_allowed'},405);return env.ASSETS.fetch(request)}
  const fromApi=await api(request,env,sub);if(fromApi)return fromApi;
+ if(sub==='/verify'&&SAFE_METHODS.has(request.method))return html(verifyPage(),{privateContent:true,head:request.method==='HEAD',csp:VERIFY_CSP});
  if(sub==='/privacy'&&SAFE_METHODS.has(request.method))return html(singlesPrivacyReviewPage(),{privateContent:true,head:request.method==='HEAD'});
  if(sub==='/inquiry/muan-2026'&&SAFE_METHODS.has(request.method))return html(singlesMuanInquiryPage(),{privateContent:true,head:request.method==='HEAD'});
  if(!SAFE_METHODS.has(request.method))return json({error:'method_not_allowed'},405);
