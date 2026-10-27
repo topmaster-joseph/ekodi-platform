@@ -28,8 +28,6 @@
       <article><small>30일 내 갱신</small><strong data-infra-renew>—</strong><span>도메인·계약·유료 서비스</span></article>
     </div>
     <div data-infra-error class="infra-message" role="status" aria-live="polite"></div>
-    <div class="infra-section-head" id="infra-services"><h3>공급자별 서비스 현황</h3><small data-infra-updated>조회 전</small></div>
-    <div class="infra-providers" data-infra-providers></div>
     <div class="infra-section-head" id="infra-billing"><h3>청구·납부 원장</h3><small>상태 변경은 최고관리자 감사기록에 남습니다.</small></div>
     <div class="infra-invoice-toolbar" role="search" aria-label="청구서 목록 검색 및 필터">
       <label class="infra-search-field"><span>청구서 검색</span><input type="search" data-infra-invoice-search placeholder="공급자 · 청구번호 · 계정 검색" autocomplete="off"></label>
@@ -53,6 +51,8 @@
         <button type="submit" class="primary">청구서 등록</button>
       </form>
     </details>
+    <div class="infra-section-head" id="infra-services"><h3>공급자별 서비스 현황</h3><small data-infra-updated>조회 전</small></div>
+    <div class="infra-providers" data-infra-providers></div>
     <div class="infra-section-head" id="infra-budget"><h3>공급자별 월간 예산</h3><small>예산의 80% 도달 시 화면에서 경고합니다.</small></div>
     <div data-infra-budget-alerts></div>
     <div class="infra-table-wrap"><table><thead><tr><th>공급자</th><th>설정 예산</th><th>당월 등록 청구액</th></tr></thead><tbody data-infra-budgets></tbody></table></div>
