@@ -29,14 +29,14 @@ test('Canonical and friendly routes both resolve to the visibility section',()=>
 test('Search visibility is source-available and deployable through the guarded site worker',()=>{
   assert.match(read('scripts/build.mjs'),/'search-visibility-admin.js'/);
   assert.match(read('site-worker.js'),/'\/search-visibility-admin.js'/);
-  assert.match(read('admin-menu-layout.js'),/import\('\.\/search-visibility-admin.js'\)/);
+  assert.match(read('admin-menu-registry.js'),/import\('\.\/search-visibility-admin.js'\)/);
 });
 test('Compact runtime source hash matches readable menu and code parses',()=>{
   const source=read('admin-menu-layout.js').replace(/\r\n/g,'\n');
   const digest=createHash('sha256').update(source).digest('hex');
   const compact=read('admin-menu-layout.compact.js');
   assert.ok(compact.startsWith('// source-sha256:'+digest));
-  assert.match(compact,/import\("\.\/search-visibility-admin.js"\)/);
+  assert.match(read('admin-menu-registry.js'),/ekodi-nav-changed/);
   const parsed=spawnSync(process.execPath,['--check',new URL('../search-visibility-admin.js',import.meta.url).pathname],{encoding:'utf8'});
   assert.equal(parsed.status,0,parsed.stderr);
 });
