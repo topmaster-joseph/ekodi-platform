@@ -8,12 +8,14 @@ import {
 } from '../cgma-edoc-api.js';
 
 const MIGRATION = fs.readFileSync(new URL('../migrations/202610250500_cgma_edocs.sql', import.meta.url), 'utf8');
+const MIGRATION_ARCHIVE = fs.readFileSync(new URL('../migrations/202610280400_cgma_edocs_archive.sql', import.meta.url), 'utf8');
 const ORIGIN = 'https://ekodi.kr';
 const T0 = Date.parse('2026-10-25T05:00:00Z');
 
 function d1() {
   const sqlite = new DatabaseSync(':memory:');
   sqlite.exec(MIGRATION);
+  sqlite.exec(MIGRATION_ARCHIVE);
   const statement = (sql, params = []) => ({
     bind(...values) { return statement(sql, values); },
     async first() { return sqlite.prepare(sql).get(...params) || null; },
@@ -89,7 +91,8 @@ test('draft validation enforces title, category, signer chain bounds', () => {
   assert.equal(validateDraft(draft({ category: '아무거나' })).code, 'CATEGORY_INVALID');
   assert.equal(validateDraft(draft({ signers: [] })).code, 'SIGNERS_INVALID');
   assert.equal(validateDraft(draft({ signers: Array.from({ length: 11 }, () => ({ role_title: 'a', signer_name: 'b' })) })).code, 'SIGNERS_INVALID');
-  assert.equal(validateDraft(draft({ signers: [{ role_title: '총무', signer_name: '' }] })).code, 'SIGNER_INVALID');
+  assert.equal(validateDraft(draft({ signers: [{ role_title: '총무', signer_name: '' }] })).ok, true, 'name may be filled in later');
+  assert.equal(validateDraft(draft({ signers: [{ role_title: '', signer_name: '김총무' }] })).code, 'SIGNERS_INVALID');
   assert.equal(validateDraft(draft({ content_kind: 'text', body_text: '' })).code, 'BODY_TEXT_INVALID');
   assert.deepEqual(DEFAULT_SIGNER_ROLES, ['총무', '사무국장', '상인회장']);
 });
@@ -289,7 +292,9 @@ test('migration is additive and the API never logs request content', () => {
   assert.doesNotMatch(MIGRATION.replace(/--[^\n]*/g, ''), /\bDROP\b|\bRENAME\b|\bDELETE\s+FROM\b/i);
   const source = fs.readFileSync(new URL('../cgma-edoc-api.js', import.meta.url), 'utf8');
   assert.doesNotMatch(source, /console\.(log|error)\([^)]*(body|signed_name|signature|strokes)/);
-  assert.doesNotMatch(source, /DELETE FROM cgma_edoc/);
+  assert.doesNotMatch(source, /DELETE FROM cgma_edoc_(documents|events)/);
+  // The only signer delete is the guarded draft re-plan; the DB trigger refuses it for any started document.
+  assert.deepEqual(source.match(/DELETE FROM cgma_edoc_signers[^`]*/g), ['DELETE FROM cgma_edoc_signers WHERE doc_id=? AND ${guard.sql}']);
   const entry = fs.readFileSync(new URL('../customer-entry-worker.js', import.meta.url), 'utf8');
   assert.match(entry, /if \(isEdocApiPath\(path\)\) \{\n\s+return handleCgmaEdocs\(request, env\);/);
   assert.match(fs.readFileSync(new URL('../wrangler.api.toml', import.meta.url), 'utf8'), /binding = "CGMA_EDOC_FILES"\nbucket_name = "ekodi-storage"/);
@@ -364,4 +369,69 @@ test('database refuses deletion and edits of signed signatures or locked content
   assert.throws(() => db.prepare("UPDATE cgma_edoc_signers SET signed_at='2020-01-01' WHERE seq=1").run(), /immutable/);
   assert.throws(() => db.prepare("UPDATE cgma_edoc_signers SET status='active' WHERE seq=1").run(), /immutable/);
   assert.throws(() => db.prepare("UPDATE cgma_edoc_documents SET content_sha256='x'").run(), /locked/);
+});
+
+// ---------- 보관(records-only) documents, draft signer plans, 연번 ----------
+const HWP = new Uint8Array([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1, ...new Array(64).fill(0)]);
+const DOCX = new Uint8Array([0x50, 0x4b, 0x03, 0x04, ...new Array(64).fill(1)]);
+
+test('archive documents accept office/HWP originals, finalize without signatures and stay locked', async () => {
+  const ctx = setup();
+  const created = await (await ctx.call('', { method: 'POST', body: { title: '2026년 상반기 결산', category: '회계·정산', mode: 'archive', doc_date: '2026-06-24', source_note: 'Google Drive' } })).json();
+  assert.equal(created.ok, true);
+  // HWP is accepted for records (by extension + OLE signature), with a generic browser content type.
+  let r = await ctx.call(`/${created.id}/file`, { method: 'PUT', body: HWP, headers: { 'content-type': 'application/octet-stream', 'x-ekodi-file-name': encodeURIComponent('결산.hwp') } });
+  assert.equal(r.status, 200);
+  assert.equal((await ctx.call(`/${created.id}/start`, { method: 'POST', body: '{}' })).status, 409, 'archive docs are never sent for signing');
+  r = await ctx.call(`/${created.id}/archive`, { method: 'POST', body: '{}' });
+  assert.equal(r.status, 200);
+  assert.equal((await ctx.call(`/${created.id}/archive`, { method: 'POST', body: '{}' })).status, 409);
+  assert.equal((await ctx.call(`/${created.id}/file`, { method: 'PUT', body: HWP, headers: { 'x-ekodi-file-name': 'x.hwp' } })).status, 409, 'locked after archiving');
+  assert.equal((await ctx.call(`/${created.id}/cancel`, { method: 'POST', body: { reason: 'x' } })).status, 409);
+  const detail = await (await ctx.call(`/${created.id}`)).json();
+  assert.equal(detail.document.status, 'completed'); assert.equal(detail.document.archived, true);
+  assert.equal(detail.document.doc_date, '2026-06-24'); assert.equal(detail.document.file_mime, 'application/x-hwp');
+  assert.deepEqual(detail.events.map(e => e.action), ['created', 'file_uploaded', 'archived']);
+  assert.equal(detail.chain_valid, true);
+  assert.throws(() => ctx.env.DB.sqlite.prepare("UPDATE cgma_edoc_documents SET content_sha256='x'").run(), /locked/);
+});
+
+test('signing documents still accept only browser-viewable files; office files are records-only', async () => {
+  const ctx = setup();
+  const created = await (await ctx.call('', { method: 'POST', body: draft() })).json();
+  assert.equal((await ctx.call(`/${created.id}/file`, { method: 'PUT', body: DOCX, headers: { 'x-ekodi-file-name': 'a.docx' } })).status, 415);
+  assert.equal((await ctx.call(`/${created.id}/file`, { method: 'PUT', body: PDF, headers: { 'content-type': 'application/octet-stream', 'x-ekodi-file-name': 'a.pdf' } })).status, 200, 'PDF recognised by extension + signature');
+  assert.equal((await ctx.call(`/${created.id}/archive`, { method: 'POST', body: '{}' })).status, 409);
+});
+
+test('a draft can be registered before names are known; start requires every name', async () => {
+  const ctx = setup();
+  const created = await (await ctx.call('', { method: 'POST', body: draft({ signers: DEFAULT_SIGNER_ROLES.map(role_title => ({ role_title, signer_name: '' })) }) })).json();
+  await ctx.call(`/${created.id}/file`, { method: 'PUT', body: PDF, headers: { 'content-type': 'application/pdf' } });
+  let r = await ctx.call(`/${created.id}/start`, { method: 'POST', body: '{}' });
+  assert.equal(r.status, 409); assert.equal((await r.json()).code, 'SIGNER_NAMES_REQUIRED');
+  r = await ctx.call(`/${created.id}/signers`, { method: 'PUT', body: { signers: [{ role_title: '총무', signer_name: '김총무' }, { role_title: '사무국장', signer_name: '이국장' }, { role_title: '상인회장', signer_name: '정찬균' }, { role_title: '감사', signer_name: '박감사' }] } });
+  assert.equal(r.status, 200);
+  const started = await (await ctx.call(`/${created.id}/start`, { method: 'POST', body: '{}' })).json();
+  assert.deepEqual(started.links.map(l => `${l.role_title} ${l.signer_name}`), ['총무 김총무', '사무국장 이국장', '상인회장 정찬균', '감사 박감사']);
+  assert.equal((await ctx.call(`/${created.id}/signers`, { method: 'PUT', body: { signers: [{ role_title: '총무', signer_name: 'x' }] } })).status, 409, 'plan locked after start');
+  assert.throws(() => ctx.env.DB.sqlite.prepare('DELETE FROM cgma_edoc_signers').run(), /never physically deleted/);
+  assert.equal((await (await ctx.call(`/${created.id}`)).json()).chain_valid, true);
+});
+
+test('연번 is a stable registration-order serial, unaffected by filters; summary separates 보관', async () => {
+  const ctx = setup();
+  const ids = [];
+  for (const [i, title] of ['첫 문서', '둘째 회의록', '셋째 결산'].entries()) {
+    ctx.setNow(T0 + i * 1000);
+    ids.push((await (await ctx.call('', { method: 'POST', body: i === 2 ? { title, category: '회계·정산', mode: 'archive', content_kind: 'text', body_text: '결산 본문' } : draft({ title }) })).json()).id);
+  }
+  await ctx.call(`/${ids[2]}/archive`, { method: 'POST', body: '{}' });
+  const all = await (await ctx.call('')).json();
+  assert.deepEqual(all.documents.map(d => [d.serial_no, d.title]), [[3, '셋째 결산'], [2, '둘째 회의록'], [1, '첫 문서']]);
+  const filtered = await (await ctx.call('?q=' + encodeURIComponent('회의록'))).json();
+  assert.deepEqual(filtered.documents.map(d => d.serial_no), [2]);
+  const archived = await (await ctx.call('?status=archived')).json();
+  assert.deepEqual(archived.documents.map(d => d.serial_no), [3]);
+  assert.equal(all.summary.archived, 1); assert.equal(all.summary.completed, 0); assert.equal(all.summary.draft, 2);
 });

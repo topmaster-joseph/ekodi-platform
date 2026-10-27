@@ -29,6 +29,7 @@ await fs.mkdir(outDir, { recursive: true });
 // ---------- production modules over a real database ----------
 const sqlite = new DatabaseSync(':memory:');
 sqlite.exec(await fs.readFile(new URL('migrations/202610250500_cgma_edocs.sql', ROOT), 'utf8'));
+sqlite.exec(await fs.readFile(new URL('migrations/202610280400_cgma_edocs_archive.sql', ROOT), 'utf8'));
 const stmt = (sql, params = []) => ({
   bind: (...v) => stmt(sql, v),
   first: async () => sqlite.prepare(sql).get(...params) || null,
@@ -196,6 +197,25 @@ try {
   check('처리 이력: 등록→원본→시작→서명×3→완료', audit.actions.join(',') === 'created,file_uploaded,started,signed,signed,signed,completed' && audit.chain_valid, audit);
   const pdfSha = (await import('node:crypto')).createHash('sha256').update(await fs.readFile(pdfPath)).digest('hex');
   check('문서 지문 = 원본 PDF의 SHA-256', audit.sha === pdfSha, { sha256: pdfSha });
+  // 5. 보관 문서: register a records-only document (no signatures) and confirm 연번 in the list.
+  await admin.getByRole('button', { name: '목록으로' }).first().click();
+  await admin.getByRole('button', { name: '+ 새 전자문서' }).click();
+  await admin.locator('input[name="cgmaEdocMode"][value="archive"]').check();
+  check('보관 모드: 서명자 입력란 숨김', await admin.locator('.cgma-edoc-signer-section').isHidden());
+  await admin.locator('.cgma-edoc-form input[type="text"]').first().fill('2026년 청계면 상인회 상반기 결산 (실증)');
+  await admin.locator('select').first().selectOption('회계·정산');
+  await admin.locator('input[type="date"]').fill('2026-06-24');
+  await admin.locator('input[type="file"]').setInputFiles(pdfPath);
+  await admin.getByRole('button', { name: '보관 등록' }).click();
+  await admin.locator('.cgma-edoc-head').waitFor();
+  const archivedBadge = await admin.locator('.cgma-edoc-head .cgma-edoc-badge').textContent();
+  check('보관 등록 → 상태 ‘보관’', archivedBadge === '보관', { badge: archivedBadge });
+  await admin.getByRole('button', { name: '목록으로' }).first().click();
+  await admin.locator('.cgma-edoc-row').first().waitFor();
+  const serials = await admin.locator('.cgma-edoc-serial').allTextContents();
+  const head = await admin.locator('.cgma-edoc-table thead th').first().textContent();
+  check('문서 목록 첫 열 ‘연번’, 최신순 2·1', head === '연번' && JSON.stringify(serials) === JSON.stringify(['2', '1']), { head, serials });
+  await shot(admin, '09-admin-list-serial-archive');
   check('브라우저 콘솔 · CSP 위반 없음', report.consoleProblems.length === 0, { problems: report.consoleProblems });
 } finally {
   await browser.close();
