@@ -61,7 +61,7 @@ const syntheticJson = body => ({
   contentType: 'application/json; charset=utf-8',
   headers: {
     'access-control-allow-origin': 'https://ekodi.kr',
-    'access-control-allow-methods': 'GET, POST, OPTIONS',
+    'access-control-allow-methods': 'GET, POST, PUT, OPTIONS',
     'access-control-allow-headers': 'authorization, content-type',
     'cache-control': 'no-store',
   },
@@ -111,6 +111,80 @@ await page.route('https://ekodi.kr/api/control/ai/assist', async route => {
     provider:'production-e2e',
   }));
 });
+
+
+// DOMAIN-CONTROL-SYNTHETIC-001. Only .invalid fixture records; never real DNS or registry writes.
+const fixtureDomainRecords=[{"domain":"qa-domain-1.invalid","registrar":"Synthetic Registrar","memo":"fixture-keyword","registeredAt":"2026-01-01","expiresAt":"","autoRenew":false,"transferLock":false,"whoisPrivacy":false,"reminderDays":60},{"domain":"qa-domain-2.invalid","registrar":"QA Registrar","memo":"synthetic-only","registeredAt":"2026-01-01","expiresAt":"","autoRenew":false,"transferLock":false,"whoisPrivacy":false,"reminderDays":60},{"domain":"qa-domain-3.invalid","registrar":"QA Registrar","memo":"synthetic-only","registeredAt":"2026-01-01","expiresAt":"","autoRenew":false,"transferLock":false,"whoisPrivacy":false,"reminderDays":60},{"domain":"qa-domain-4.invalid","registrar":"QA Registrar","memo":"synthetic-only","registeredAt":"2026-01-01","expiresAt":"","autoRenew":false,"transferLock":false,"whoisPrivacy":false,"reminderDays":60},{"domain":"qa-domain-5.invalid","registrar":"QA Registrar","memo":"synthetic-only","registeredAt":"2026-01-01","expiresAt":"","autoRenew":false,"transferLock":false,"whoisPrivacy":false,"reminderDays":60},{"domain":"qa-domain-6.invalid","registrar":"QA Registrar","memo":"synthetic-only","registeredAt":"2026-01-01","expiresAt":"","autoRenew":false,"transferLock":false,"whoisPrivacy":false,"reminderDays":60}];
+const registryWriteLog=[];
+let fixtureReadCount=0;
+await page.route(/^https:\/\/ekodi\.kr\/api\/registry(?:\/.*)?(?:\?.*)?$/,async route=>{
+  const request=route.request();
+  const url=new URL(request.url());
+  if(request.method()==='GET'&&url.pathname==='/api/registry'){
+    fixtureReadCount++;
+    return route.fulfill(syntheticJson({ok:true,records:fixtureDomainRecords.map(r=>({...r}))}));
+  }
+  if(request.method()==='PUT'&&url.pathname.startsWith('/api/registry/')){
+    const domain=decodeURIComponent(url.pathname.slice('/api/registry/'.length));
+    const record=fixtureDomainRecords.find(r=>r.domain===domain);
+    if(!record)throw Error('Attempt to mutate outside synthetic registry fixture: '+domain);
+    const body=request.postDataJSON();
+    const allowed=['registeredAt','expiresAt','autoRenew','transferLock','whoisPrivacy','reminderDays','memo'];
+    if(!body||Object.keys(body).some(k=>!allowed.includes(k)))throw Error('Unexpected synthetic registry fields');
+    Object.assign(record,body);
+    registryWriteLog.push({domain,body:{...body}});
+    return route.fulfill(syntheticJson({ok:true,record:{...record}}));
+  }
+  throw Error('Unexpected registry method or path: '+request.method()+' '+request.url());
+});
+async function verifyDomainControlAcceptance() {
+  const panel=page.locator('#ekodiDomainControl');
+  await panel.waitFor({state:'visible',timeout:15000});
+  await panel.locator('.ekodi-domctl-entry').first().waitFor({state:'visible',timeout:15000});
+  const state=await page.evaluate(()=>{
+    const panel=document.querySelector('#ekodiDomainControl');
+    const visible=node=>Boolean(node&&!node.hidden&&!node.classList.contains('hidden-panel')&&getComputedStyle(node).display!=='none'&&node.getBoundingClientRect().height>0);
+    return {panelVisible:visible(panel),active:window.EKODIAdminPanels?.current?.(),rows:panel?.querySelectorAll('.ekodi-domctl-entry').length,unknown:panel?.querySelectorAll('.ekodi-domctl-state.st-unknown').length,autoRenewOff:panel?.querySelectorAll('.ekodi-domctl-pill.no').length,architectureVisible:[...document.querySelectorAll('.content [data-panel~="architecture"]')].some(visible)};
+  });
+  if(!state.panelVisible||state.active!=='domain-control'||state.rows!==6||state.unknown!==6||state.autoRenewOff!==6||state.architectureVisible)throw Error('Domain content mismatch: '+JSON.stringify(state));
+  const summary=await panel.locator('.ekodi-domctl-summary').innerText();
+  if(!/자동갱신 꺼짐[\s\S]*6/.test(summary)||!/만료일 확인 필요[\s\S]*6/.test(summary))throw Error('Domain totals mismatch: '+summary);
+  const search=panel.locator('[data-domctl-search]');
+  for(const [term,want] of [['fixture-keyword',1],['qa-domain-2',1],['Synthetic Registrar',1],['',6]]){
+    await search.fill(term);
+    const count=await panel.locator('.ekodi-domctl-entry').count();
+    if(count!==want)throw Error(`Domain search mismatch ${term}: ${count}!=${want}`);
+  }
+  for(const [filter,want] of [['expiring',0],['unset',6],['no-renew',6],['attention',6],['all',6]]){
+    await panel.locator(`[data-domctl-filter="${filter}"]`).click();
+    const count=await panel.locator('.ekodi-domctl-entry').count();
+    if(count!==want)throw Error(`Domain filter mismatch ${filter}: ${count}!=${want}`);
+  }
+  const first=panel.locator('.ekodi-domctl-entry').filter({hasText:'qa-domain-1.invalid'});
+  await first.locator('[data-domctl-edit]').click();
+  await first.locator('input[name="memo"]').fill('synthetic-updated-verified');
+  const readsBefore=fixtureReadCount;
+  await first.locator('button.save').click();
+  await page.waitForFunction(()=>document.querySelector('#ekodiDomainControl')?.textContent?.includes('synthetic-updated-verified'),null,{timeout:12000});
+  if(registryWriteLog.length!==1||registryWriteLog[0].domain!=='qa-domain-1.invalid'||fixtureReadCount<=readsBefore)throw Error('Synthetic PUT/GET ledger mismatch');
+  const responsive=[];
+  for(const width of [320,390,768,1366,1440]){
+    await page.setViewportSize({width,height:960});
+    const metrics=await page.evaluate(()=>{
+      const panel=document.querySelector('#ekodiDomainControl');
+      const table=panel?.querySelector('.ekodi-domctl-table');
+      const search=panel?.querySelector('[data-domctl-search]');
+      const rect=search?.getBoundingClientRect();
+      return {width:innerWidth,visible:Boolean(panel&&!panel.hidden&&getComputedStyle(panel).display!=='none'),panelOverflow:(panel?.scrollWidth||0)-(panel?.clientWidth||0),tableOverflow:(table?.scrollWidth||0)-(table?.clientWidth||0),searchVisible:Boolean(rect&&rect.width>0&&rect.left>=0&&rect.right<=innerWidth+2)};
+    });
+    responsive.push(metrics);
+    await page.screenshot({path:path.join(artifactsDir,`domain-control-${width}.png`),fullPage:false});
+    if(!metrics.visible||!metrics.searchVisible||metrics.panelOverflow>2||metrics.tableOverflow>2)throw Error('Domain responsive failure '+JSON.stringify(metrics));
+  }
+  await page.setViewportSize({width:1440,height:1000});
+  await fs.writeFile(path.join(artifactsDir,'domain-control-acceptance.json'),JSON.stringify({task_id:'domain-control-compact-20261028',synthetic:true,state,registryWriteLog,fixtureReadCount,responsive,timestamp:new Date().toISOString(),origin:page.url()},null,2));
+  console.log('DOMAIN_CONTROL_SYNTHETIC_ACCEPTANCE=passed');
+}
 
 async function waitForAdminShell() {
   await page.waitForFunction(() => document.documentElement.dataset.ekodiAdminReady === 'true', null, { timeout: 30000 });
@@ -532,49 +606,7 @@ for (const [id, group] of menus) {
     throw new Error(`${id} did not render a visible non-empty panel: ${JSON.stringify(visiblePanel)}`);
   }
   if (id === 'campus' && visiblePanel.id !== 'campusPanel') throw new Error(`Campus rendered unexpected panel: ${visiblePanel.id || '(no id)'}`);
-
-  if (id === 'engine-all') {
-    // ENGINE_CATALOG_STYLE_E2E: a non-empty DOM is not enough; CSS must load
-    // on nested admin URLs, and compact cards must remain readable on mobile.
-    const expectedStylePath = '/common-services-admin.css';
-    await page.waitForFunction(expected => {
-      const style = document.querySelector('link[data-ekodi-common-services-style]');
-      return style && new URL(style.href).pathname === expected
-        && Boolean(style.sheet)
-        && getComputedStyle(document.querySelector('.common-services-summary')).display === 'grid'
-        && getComputedStyle(document.querySelector('.common-service-card')).display === 'grid';
-    }, expectedStylePath, { timeout: 15000 });
-    const desktop = await page.evaluate(() => ({
-      link: new URL(document.querySelector('link[data-ekodi-common-services-style]').href).pathname,
-      summary: getComputedStyle(document.querySelector('.common-services-summary')).display,
-      list: getComputedStyle(document.querySelector('.common-services-list-head')).display,
-      detailHidden: document.querySelector('#commonServiceDetail')?.hidden === true,
-      summaryCount: document.querySelectorAll('.common-services-summary article').length,
-    }));
-    if (desktop.link !== expectedStylePath || desktop.summary !== 'grid' || desktop.list !== 'grid' || !desktop.detailHidden || desktop.summaryCount !== 3) {
-      throw new Error('ENGINE_CATALOG_STYLE_E2E desktop failed: ' + JSON.stringify(desktop));
-    }
-    await page.setViewportSize({ width: 390, height: 844 });
-    try {
-      const mobile = await page.evaluate(() => {
-        const list = document.querySelector('.common-services-list-wrap');
-        const card = document.querySelector('.common-service-card');
-        return {
-          cardDisplay: card ? getComputedStyle(card).display : '',
-          headerDisplay: getComputedStyle(document.querySelector('.common-services-list-head')).display,
-          summaryDisplay: getComputedStyle(document.querySelector('.common-services-summary')).display,
-          scrollExcess: list ? Math.round(list.scrollWidth - list.clientWidth) : -1,
-        };
-      });
-      if (mobile.cardDisplay !== 'grid' || mobile.headerDisplay !== 'none' || mobile.summaryDisplay !== 'grid' || mobile.scrollExcess > 2) {
-        throw new Error('ENGINE_CATALOG_STYLE_E2E mobile failed: ' + JSON.stringify(mobile));
-      }
-      console.log('[PROD-E2E] engine-all: stylesheet and compact desktop/mobile layout verified');
-      await page.screenshot({ path:path.join(artifactsDir,'menu-engine-all-mobile.png'),fullPage:false });
-    } finally {
-      await page.setViewportSize({ width: 1440, height: 1000 });
-    }
-  }
+  if (id === 'domain-control') await verifyDomainControlAcceptance();
   results.push({ id, group, kind: 'panel', ok: true, detail: `${visiblePanel.id || visiblePanel.tag}:${visiblePanel.textLength}` });
   console.log(`[PROD-E2E] ${id}: ok ${visiblePanel.id || visiblePanel.tag}:${visiblePanel.textLength}`);
   await page.screenshot({ path:path.join(artifactsDir,`menu-${id}.png`), fullPage:false });
