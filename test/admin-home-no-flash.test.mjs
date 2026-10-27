@@ -14,7 +14,7 @@ test('the assist command view is held on the home until Control decides, with a 
 
 test('Control home releases the hold for non-super-admin sessions and other sections', async () => {
   const home = await read('admin-control-home.js');
-  assert.match(home, /document\.body\.classList\.toggle\('admin-control-home-released',!atHome&&!pendingVerification\(\)\);/);
+  assert.match(home, /document\.body\.classList\.toggle\('admin-control-home-released',!isSuperAdmin\(\)&&!pendingVerification\(\)\);/);
   assert.match(home, /verifying=Boolean\(token&&app&&!app\.hidden\);/);
   assert.match(home, /if\(requestId===verificationId\)verifying=false;/);
   assert.ok(home.indexOf('let verifying=false;') < home.indexOf('function sync()'), 'flag is declared before first use');
@@ -22,3 +22,4 @@ test('Control home releases the hold for non-super-admin sessions and other sect
   const shell = await read('admin-authenticated-shell.js');
   assert.doesNotMatch(shell, /admin-control-home-pending/);
 });
+

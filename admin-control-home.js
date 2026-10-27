@@ -52,8 +52,10 @@ function sync(){
   document.body.classList.toggle('admin-control-home',Boolean(atHome));
   if(region)region.hidden=!atHome;
   // ADMIN-HOME-NO-FLASH-001: the assist command view stays held (CSS) until Control owns
-  // the home or the session is known not to be a super admin.
-  document.body.classList.toggle('admin-control-home-released',!atHome&&!pendingVerification());
+  // the home, and is released only once the session is known not to be a super admin.
+  // A super admin whose panel router has not reported command-home yet stays held, so
+  // the assist welcome never paints before Control (observed 2026-10-28).
+  document.body.classList.toggle('admin-control-home-released',!isSuperAdmin()&&!pendingVerification());
 }
 function pendingVerification(){return verifying&&Boolean(readToken())}
 async function verify(){

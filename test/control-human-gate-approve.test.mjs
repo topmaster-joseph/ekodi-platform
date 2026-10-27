@@ -31,6 +31,6 @@ test('a blocked orchestrator task is approved in place against the live gate ver
 test('the approve route stays platform-admin only and the console asset cache is bumped', async () => {
   const [api, html, css] = await Promise.all([read('ai-command-control.js'), read('control.html'), read('control.css')]);
   assert.match(api, /approveOrchestratorTaskForPlatformAdmin\(/);
-  assert.match(html, /control\.js\?v=20261025-factchat-institution-v1/);
+  assert.match(html, /control\.js\?v=20261028-external-ai-v1/);
   assert.match(css, /CONTROL-HUMAN-GATE-001/);
 });
