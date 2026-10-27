@@ -5,6 +5,7 @@ const menuButton=document.querySelector('.menu-button');
 const nav=document.querySelector('#site-nav');
 
 document.querySelector('#year').textContent=new Date().getFullYear();
+if(menuButton)menuButton.dataset.menuBound='1';
 menuButton?.addEventListener('click',()=>{const open=nav.classList.toggle('open');menuButton.setAttribute('aria-expanded',String(open));});
 function closeMenu(){if(!nav?.classList.contains('open'))return;nav.classList.remove('open');menuButton?.setAttribute('aria-expanded','false');}
 nav?.addEventListener('click',event=>{if(event.target.closest('a'))closeMenu();});
