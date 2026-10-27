@@ -264,7 +264,7 @@ jobs:
             exit 0
           fi
           marker="EKODI-CITIZEN-FRESH-CANARY-${GITHUB_RUN_ID}"
-          payload="$(jq -nc --arg message "$marker" '{message:$message}')"
+          payload="$(jq -nc --arg message "$marker" --arg title "EKODI 검증" '{message:$message,title:$title}')"
           created="$(curl -fsS -X POST https://seonammedi.kr/board/api/voices-fresh -H 'content-type: application/json' -H "authorization: Bearer $BOARD_CANARY_GOOGLE_TOKEN" --data "$payload")"
           submission_id="$(jq -r 'select(.ok==true and .queued==true) | .submissionId // ""' <<<"$created")"
           [[ "$submission_id" =~ ^[0-9a-fA-F-]{36}$ ]] || { echo "durable queue did not accept citizen post" >&2; exit 1; }
