@@ -39,7 +39,10 @@ function xmlEscape(value) {
 function normalizeOrigin(origin = DISCOVERY_ORIGIN) { return String(origin).replace(/\/+$/, ''); }
 export function canonicalUrl(path = '/', origin = DISCOVERY_ORIGIN) { const base = normalizeOrigin(origin); return `${base}${path === '/' ? '/' : path}`; }
 export function publicDiscoveryRoute(path = '/') { return DISCOVERY_PUBLIC_ROUTES.find(route => route.path === path) || null; }
-function publicRobotGroup(userAgent) { return [`User-agent: ${userAgent}`, 'Allow: /', ...DISCOVERY_PRIVATE_PREFIXES.map(prefix => `Disallow: ${prefix}`)].join('\n'); }
+// EKODI-MALL-SEO-IMAGE-002: 상품 사진(og:image·구조화 데이터)은 /ekodimall/api 아래 공개 미디어 경로에 있으므로
+// 더 긴 Allow 규칙으로 이미지 수집만 연다(나머지 API 는 계속 차단).
+export const DISCOVERY_PUBLIC_ALLOW_PREFIXES = Object.freeze(['/ekodimall/api/public/media/']);
+function publicRobotGroup(userAgent) { return [`User-agent: ${userAgent}`, 'Allow: /', ...DISCOVERY_PUBLIC_ALLOW_PREFIXES.map(prefix => `Allow: ${prefix}`), ...DISCOVERY_PRIVATE_PREFIXES.map(prefix => `Disallow: ${prefix}`)].join('\n'); }
 function deniedRobotGroup(userAgent) { return `User-agent: ${userAgent}\nDisallow: /`; }
 
 // Service-owned sitemaps served under the canonical host. Crawlers only read
