@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="540" viewBox="0 0 360 540" role="img" aria-label="AI 시대의 진보와 빈곤 표지">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3eee2"/><stop offset="1" stop-color="#e3d9c4"/></linearGradient></defs>
+  <rect width="360" height="540" fill="url(#g)"/>
+  <rect x="18" y="18" width="324" height="504" fill="none" stroke="#7a2a2a" stroke-width="1.2"/>
+  <text x="180" y="66" text-anchor="middle" font-family="Georgia, serif" font-size="11" letter-spacing="3" fill="#7a2a2a">EKODI ORIGINAL · 2</text>
+  <line x1="120" y1="86" x2="240" y2="86" stroke="#7a2a2a" stroke-width="0.8"/>
+  <g stroke="#10264f" stroke-width="0.8" fill="none" opacity="0.35"><circle cx="180" cy="150" r="22"/><circle cx="180" cy="150" r="36"/><path d="M144 150h72M180 114v72"/></g>
+  <text x="180" y="236" text-anchor="middle" font-family="'Noto Serif KR', 'Nanum Myeongjo', Georgia, serif" font-size="34" font-weight="600" fill="#10264f">AI 시대의</text>
+  <text x="180" y="284" text-anchor="middle" font-family="'Noto Serif KR', 'Nanum Myeongjo', Georgia, serif" font-size="34" font-weight="600" fill="#10264f">진보와 빈곤</text>
+  <text x="180" y="334" text-anchor="middle" font-family="'Noto Serif KR', 'Nanum Myeongjo', Georgia, serif" font-size="14" fill="#7a2a2a">인공지능의 풍요를</text>
+  <text x="180" y="356" text-anchor="middle" font-family="'Noto Serif KR', 'Nanum Myeongjo', Georgia, serif" font-size="14" fill="#7a2a2a">모두의 몫으로</text>
+  <circle cx="180" cy="404" r="3" fill="#7a2a2a"/>
+  <text x="180" y="458" text-anchor="middle" font-family="'Noto Serif KR', 'Nanum Myeongjo', Georgia, serif" font-size="17" fill="#10264f">정찬균</text>
+  <text x="180" y="494" text-anchor="middle" font-family="Georgia, serif" font-size="10" letter-spacing="2.5" fill="#7a2a2a">에코디서점 · EKODI BOOKS</text>
+</svg>

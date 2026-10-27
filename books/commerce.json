@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "principle": "server-priced",
+  "currency": "KRW",
+  "tiers": [
+    { "id": "member", "label": "에코디 회원", "discountRate": 0, "description": "구글 계정으로 로그인한 모든 회원 · 정가" },
+    { "id": "ekodian", "label": "에코디언", "discountRate": 0.2, "description": "에코디 공동체 회원 · 전 도서 20% 할인" },
+    { "id": "subscriber", "label": "에코디서점 구독 회원", "discountRate": 0.3, "description": "구독 회원 · 전 도서 30% 할인 · 신간 우선 공개" }
+  ],
+  "subscription": {
+    "id": "books-reader",
+    "label": "에코디서점 구독",
+    "monthlyFee": 4900,
+    "status": "preparing",
+    "statusNote": "정기결제(빌링) 계약 완료 후 열립니다. 그 전에는 관리자가 등급을 부여합니다."
+  },
+  "policy": {
+    "delivery": "결제 즉시 내 서재(ekodi.kr/books/library/)에서 EPUB 파일로 받으실 수 있습니다.",
+    "refund": "전자책 특성상 다운로드 전에는 7일 이내 전액 환불, 다운로드 후에는 파일 결함이 있을 때만 환불됩니다.",
+    "seller": "에코디비즈 · 대표 정찬균 · 사업자등록번호 213-13-01959 · 통신판매업 2023-전남무안-0153"
+  }
+}

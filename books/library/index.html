@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko" data-ekodi-progressive-home="off">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>내 서재 | 에코디서점</title>
+  <meta name="description" content="에코디서점에서 구매한 전자책" />
+  <meta name="robots" content="noindex,follow" />
+  <meta name="theme-color" content="#f6f2e8" />
+  <meta property="og:title" content="에코디서점" />
+  <meta property="og:description" content="현장을 기록하고, 다시 인용될 수 있는 지식으로." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://ekodi.kr/books/library/" />
+  <meta property="og:site_name" content="에코디서점" />
+  <meta property="og:locale" content="ko_KR" />
+  <meta name="twitter:card" content="summary" />
+  <link rel="canonical" href="https://ekodi.kr/books/library/" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/responsive.css" />
+  <link rel="stylesheet" href="/buy/buy.css" />
+</head>
+<body>
+  <a class="skip" href="#main">본문으로 바로가기</a>
+  <header class="site-header">
+    <div class="shell masthead">
+      <a class="brand" href="/" aria-label="에코디서점 홈">
+        <span class="brand-mark" aria-hidden="true">ES</span>
+        <span class="brand-copy"><b>에코디서점</b><small>Faith · Scholarship · Community</small></span>
+      </a>
+      <button class="menu-button" type="button" aria-expanded="false" aria-controls="site-nav">MENU</button>
+      <nav id="site-nav" class="nav" aria-label="주요 메뉴">
+        <a href="/">Home</a>
+        <a href="/#catalog">Books</a>
+        <a href="/series/">Series</a>
+        <a href="/research/">Research</a>
+        <a href="/notes/">Notes</a>
+        <a href="/#about">About</a>
+        <a href="/library/">내 서재</a>
+        <a href="https://ekodi.kr/">EKODI ↗</a>
+      </nav>
+    </div>
+  </header>
+  <main id="main" class="buy-page"><section class="buy-hero"><div class="shell">
+    <p class="buy-kicker">MY LIBRARY</p>
+    <h1 class="buy-title">내 서재</h1>
+    <p class="buy-author" id="libStatus">불러오는 중입니다.</p>
+    <div class="account-box" id="libLogin" hidden><p>구매한 책을 보려면 EKODI 계정(구글)으로 로그인해 주세요.</p><div id="googleButton"></div><p id="accountStatus" class="buy-msg" role="status"></p></div>
+    <div class="library-list" id="libraryList"></div>
+  </div></section></main>
+  <footer class="site-footer">
+    <div class="shell footer-grid">
+      <div><b>에코디서점</b><p>Faith · Scholarship · Community</p></div>
+      <div><p>© <span id="year"></span> 에코디서점</p><a href="https://ekodi.kr/">ekodi.kr</a></div>
+    </div>
+  </footer>
+  <script src="https://accounts.google.com/gsi/client" async></script>
+  <script src="/buy/commerce-client.js" defer></script>
+  <script src="/buy/library.js" defer></script>
+</body>
+</html>
