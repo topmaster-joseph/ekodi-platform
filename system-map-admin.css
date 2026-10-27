@@ -91,7 +91,7 @@ body.admin-compact .architecture[data-panel~="architecture"] .structure-section-
 body.admin-compact .architecture[data-panel~="architecture"] :is(#structureFlow,#structureLayers,#structureServiceRegistry,#ekodiArchitectureMap){scroll-margin-top:80px}
 body.admin-compact .architecture[data-panel~="architecture"] .structure-flow{
   display:grid;
-  grid-template-columns:repeat(7,minmax(0,1fr));
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);
   align-items:stretch;
   gap:8px;
   padding:14px;
@@ -104,6 +104,7 @@ body.admin-compact .architecture[data-panel~="architecture"] .structure-flow>div
 body.admin-compact .architecture[data-panel~="architecture"] .structure-flow>b{
   display:grid;
   place-items:center;
+  width:20px;
   font-size:22px;
 }
 body.admin-compact .architecture[data-panel~="architecture"] .structure-flow small,
@@ -225,15 +226,25 @@ body.admin-compact .architecture[data-panel~="architecture"] [data-architecture-
   font-size:14px;
   line-height:1.5;
 }
+
+/* ADMIN-ARCH-GRID-001: the global single-list contract applies to every
+ * -grid class with !important. IDs identify ONLY these read-only system-map
+ * grids, so this override cannot weaken other admin menus or tenant panels. */
+body.admin-compact .architecture[data-panel~="architecture"] #structureLayers,
+body.admin-compact .architecture[data-panel~="architecture"] #structureServiceRegistry .structure-service-grid,
+body.admin-compact .architecture[data-panel~="architecture"] #ekodiArchitectureMap .system-map-platform-grid{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+}
 @media(max-width:1220px){
   body.admin-compact .architecture[data-panel~="architecture"] .structure-flow{
     grid-template-columns:repeat(2,minmax(0,1fr));
   }
   body.admin-compact .architecture[data-panel~="architecture"] .structure-flow>div{grid-column:auto}
   body.admin-compact .architecture[data-panel~="architecture"] .structure-flow>b{display:none}
-  body.admin-compact .architecture[data-panel~="architecture"] .structure-layer-grid,
-  body.admin-compact .architecture[data-panel~="architecture"] .structure-service-grid,
-  body.admin-compact .architecture[data-panel~="architecture"] .system-map-platform-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  body.admin-compact .architecture[data-panel~="architecture"] #structureLayers,
+  body.admin-compact .architecture[data-panel~="architecture"] #structureServiceRegistry .structure-service-grid,
+  body.admin-compact .architecture[data-panel~="architecture"] #ekodiArchitectureMap .system-map-platform-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 }
 @media(max-width:760px){
   body.admin-compact .content > .architecture[data-panel~="architecture"]{padding:14px!important}
@@ -245,11 +256,11 @@ body.admin-compact .architecture[data-panel~="architecture"] [data-architecture-
   }
   body.admin-compact .architecture[data-panel~="architecture"] .structure-section-nav button{padding:9px 10px}
   body.admin-compact .architecture[data-panel~="architecture"] .structure-flow,
-  body.admin-compact .architecture[data-panel~="architecture"] .structure-layer-grid,
   body.admin-compact .architecture[data-panel~="architecture"] .structure-columns,
-  body.admin-compact .architecture[data-panel~="architecture"] .structure-principles,
-  body.admin-compact .architecture[data-panel~="architecture"] .structure-service-grid,
-  body.admin-compact .architecture[data-panel~="architecture"] .system-map-platform-grid{grid-template-columns:minmax(0,1fr)}
+  body.admin-compact .architecture[data-panel~="architecture"] .structure-principles{grid-template-columns:minmax(0,1fr)}
+  body.admin-compact .architecture[data-panel~="architecture"] #structureLayers,
+  body.admin-compact .architecture[data-panel~="architecture"] #structureServiceRegistry .structure-service-grid,
+  body.admin-compact .architecture[data-panel~="architecture"] #ekodiArchitectureMap .system-map-platform-grid{grid-template-columns:minmax(0,1fr)!important}
   body.admin-compact .architecture[data-panel~="architecture"] .structure-card,
   body.admin-compact .architecture[data-panel~="architecture"] .structure-vision,
   body.admin-compact .architecture[data-panel~="architecture"] .structure-service-registry{padding:16px}
