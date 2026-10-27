@@ -9,13 +9,14 @@ const [layout, mapJs, mapCss, postbuild, principles] = await Promise.all([
   read('ADMIN_UI_PRINCIPLES.md'),
 ]);
 
-test('architecture direct route loads the CSS bundle before the JS bundle', () => {
-  assert.match(layout, /function ensureArchitectureAssets\(/);
-  assert.match(layout, /const path='\/system-health-admin\.css'/);
-  assert.match(layout, /architectureAssetPromise=styles\.then\(\(\)=>import\('\.\/system-health-admin\.js'\)\)/);
-  assert.match(layout, /if\(section==='architecture'\)void ensureArchitectureAssets\(\)/);
-  assert.match(layout, /dataset\.architectureLoadError='true'/);
+test('architecture lazy map owns its CSS loading without expanding the menu runtime', () => {
+  assert.match(mapJs, /\(async \(\) => \{/);
+  assert.match(mapJs, /const cssPath='\/system-health-admin\.css'/);
+  assert.match(mapJs, /await new Promise\(\(resolve,reject\)=>\{/);
+  assert.match(mapJs, /link\.addEventListener\('load',resolve/);
+  assert.match(mapJs, /dataset\.architectureLoadError='true'/);
   assert.match(postbuild, /\$\{healthCss\}\\n\$\{mapCss\}/);
+  assert.match(layout, /if\(section === 'architecture'&&!window\.EKODISystemMap\)import\('\.\/system-health-admin\.js'\)/);
 });
 
 test('system structure exposes keyboard-accessible, canonical-URL-preserving shortcuts', () => {
