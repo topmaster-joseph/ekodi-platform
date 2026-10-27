@@ -46,6 +46,12 @@
       "layer": "edge",
       "default": "false",
       "gates": "Edge 회원 가입·동의 처리(/me, /withdraw)"
+    },
+    {
+      "name": "SINGLES_REQUEST_BILLING_ENABLED",
+      "layer": "edge",
+      "default": "false",
+      "gates": "요청 과금: 요청 시 요청자 크레딧 1단위 잡아두기, 수락 시 요청자·응답자 각 1단위(1만원) 확정, 월 이용권 필요"
     }
   ],
   "retired_names": [

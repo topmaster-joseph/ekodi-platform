@@ -5,6 +5,9 @@ import { bankPlanSnapshot, hasBankPlan } from './bank-transfer.ts';
 type Reply=(req:Request,body:unknown,status?:number)=>Response;
 type Admin=any;
 const socialEnabled=()=>Deno.env.get('SINGLES_SOCIAL_ENABLED')==='true';
+// 요청 과금(2026-10-27): 요청 시 크레딧 잡아두기, 수락 시 요청자·응답자 각 1단위(1만원) 확정.
+const requestBilling=()=>Deno.env.get('SINGLES_REQUEST_BILLING_ENABLED')==='true';
+const rpcMsg=(e:any)=>String(e?.message||'');
 async function one(query:any){const {data,error}=await query.maybeSingle();if(error)throw error;return data}
 async function many(query:any){const {data,error}=await query;if(error)throw error;return data||[]}
 async function membership(admin:Admin,id:string){return one(admin.from('singles_memberships').select('status,base_consent,religion_consent,age_19_confirmed,adult_verified_at,discoverable').eq('user_id',id))}
@@ -185,7 +188,17 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   if(!verified(recipient)||recipient.discoverable!==true)return reply(req,{error:'connection_unavailable'},404);
   const existing=await one(admin.from('singles_interests').select('id,status').eq('from_user_id',userId).eq('to_user_id',interestUser));
   if(existing)return reply(req,{ok:true,status:existing.status,interest_id:existing.id});
+  if(requestBilling()&&!await subscribed(admin,userId))return reply(req,{error:'monthly_pass_required'},402);
   {const retry=await rateLimited(admin,userId,'interest');if(retry)return tooMany(req,reply,'interest',retry);}
+  if(requestBilling()){
+   const {data:iid,error}=await admin.rpc('singles_request_create',{p_requester:userId,p_responder:interestUser});
+   if(error){
+    if(rpcMsg(error).includes('insufficient_request_credit'))return reply(req,{error:'request_credit_required',unit_krw:10000},402);
+    if(rpcMsg(error).includes('request_exists'))return reply(req,{error:'request_exists'},409);
+    throw error;
+   }
+   return reply(req,{ok:true,status:'pending',interest_id:iid,billing:{reserved_units:1,charged_on:'acceptance'}});
+  }
   const {data,error}=await admin.from('singles_interests').insert({from_user_id:userId,to_user_id:interestUser,status:'pending'}).select('id').single();
   if(error)throw error;return reply(req,{ok:true,status:'pending',interest_id:data.id});
  }
@@ -209,6 +222,15 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
    .eq('id',decisionId).eq('to_user_id',userId));
   if(!interest||interest.status!=='pending')return reply(req,{error:'connection_not_pending'},409);
   if(await blocked(admin,userId,interest.from_user_id))return reply(req,{error:'blocked'},403);
+  if(requestBilling()){
+   const {data:result,error:billError}=await admin.rpc('singles_request_decide',{p_responder:userId,p_interest:decisionId,p_decision:decision});
+   if(!billError)return reply(req,{ok:true,status:result,billing:decision==='accepted'?{charged_units:1}:{charged_units:0}});
+   const m=rpcMsg(billError);
+   if(m.includes('responder_insufficient_credit'))return reply(req,{error:'response_credit_required',unit_krw:10000},402);
+   if(m.includes('request_not_pending')||m.includes('request_state_changed'))return reply(req,{error:'request_state_changed'},409);
+   if(!m.includes('request_not_found'))throw billError;
+   // 과금 도입 전에 만들어진 요청은 기존(무과금) 방식으로 처리
+  }
   const {data,error}=await admin.from('singles_interests').update({status:decision,updated_at:new Date().toISOString()})
    .eq('id',decisionId).eq('status','pending').eq('to_user_id',userId).select('id').maybeSingle();
   if(error)throw error;if(!data)return reply(req,{error:'request_state_changed'},409);

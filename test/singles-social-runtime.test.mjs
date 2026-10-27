@@ -226,3 +226,47 @@ test('review DB errors map to clear statuses',async()=>{
   assert.equal(res.status,status,message);
  }
 });
+
+// --- 요청 과금(2026-10-27): 수락 시 요청자·응답자 각 1단위 확정 ---
+const withBilling=async(fn)=>{settings.SINGLES_REQUEST_BILLING_ENABLED='true';settings.SINGLES_BANK_TRANSFER_ENABLED='true';try{await fn()}finally{delete settings.SINGLES_REQUEST_BILLING_ENABLED}};
+const rpcBy=(admin,map)=>{admin.rpc=async(name,params)=>{admin.calls.push({name,params});const r=map[name];return typeof r==='function'?r(params):(r||{data:0,error:null})};return admin};
+const interestReq=()=>new Request('https://ekodi.kr/interests/'+other,{method:'POST'});
+const respondReq=(decision)=>new Request('https://ekodi.kr/requests/'+id+'/respond',{method:'POST',body:JSON.stringify({decision})});
+
+test('billing: a request needs an active monthly pass',()=>withBilling(async()=>{
+ const admin=db({grant:false});
+ const res=await handleSinglesSocial(interestReq(),'/interests/'+other,admin,uid,reply);
+ assert.equal(res.status,402);assert.equal((await res.json()).error,'monthly_pass_required');
+ assert.equal(admin.writes.length,0);
+}));
+test('billing: request reserves through the atomic DB function, never a direct insert',()=>withBilling(async()=>{
+ const admin=rpcBy(db({grant:true}),{singles_request_create:{data:id,error:null}});
+ const res=await handleSinglesSocial(interestReq(),'/interests/'+other,admin,uid,reply);
+ assert.equal(res.status,200);
+ const body=await res.json();assert.equal(body.billing.charged_on,'acceptance');
+ assert.deepEqual(admin.calls.find(c=>c.name==='singles_request_create').params,{p_requester:uid,p_responder:other});
+ assert.equal(admin.writes.filter(w=>w.name==='singles_interests').length,0);
+}));
+test('billing: no credit means 402 and nothing is created',()=>withBilling(async()=>{
+ const admin=rpcBy(db({grant:true}),{singles_request_create:{data:null,error:{message:'insufficient_request_credit'}}});
+ const res=await handleSinglesSocial(interestReq(),'/interests/'+other,admin,uid,reply);
+ assert.equal(res.status,402);assert.equal((await res.json()).error,'request_credit_required');
+}));
+test('billing: accepting charges through the DB function; responder without credit gets 402',()=>withBilling(async()=>{
+ const pending={id,from_user_id:other,to_user_id:uid,status:'pending'};
+ let admin=rpcBy(db({interest:pending}),{singles_request_decide:p=>({data:p.p_decision,error:null})});
+ let res=await handleSinglesSocial(respondReq('accepted'),'/requests/'+id+'/respond',admin,uid,reply);
+ assert.equal(res.status,200);assert.equal((await res.json()).billing.charged_units,1);
+ assert.deepEqual(admin.calls.find(c=>c.name==='singles_request_decide').params,{p_responder:uid,p_interest:id,p_decision:'accepted'});
+ assert.equal(admin.writes.length,0,'no direct status write when billing handles it');
+ admin=rpcBy(db({interest:pending}),{singles_request_decide:{data:null,error:{message:'responder_insufficient_credit'}}});
+ res=await handleSinglesSocial(respondReq('accepted'),'/requests/'+id+'/respond',admin,uid,reply);
+ assert.equal(res.status,402);assert.equal((await res.json()).error,'response_credit_required');
+ assert.equal(admin.writes.length,0);
+}));
+test('billing: requests created before billing fall back to the free path',()=>withBilling(async()=>{
+ const admin=rpcBy(db({interest:{id,from_user_id:other,to_user_id:uid,status:'pending'}}),{singles_request_decide:{data:null,error:{message:'request_not_found'}}});
+ const res=await handleSinglesSocial(respondReq('declined'),'/requests/'+id+'/respond',admin,uid,reply);
+ assert.equal(res.status,200);
+ assert.equal(admin.writes.filter(w=>w.name==='singles_interests'&&w.kind==='update').length,1);
+}));
