@@ -85,10 +85,12 @@
       onStatus('');
     } catch { onStatus('구글 로그인을 준비하지 못했습니다. 새로고침 후 다시 시도해 주세요.', true); }
   }
+  // 게이트웨이가 HTML·JSON 속 경로에 이미 /books를 붙여 줄 때가 있으므로, 아직 없을 때만 붙인다.
+  const under = p => { const v = String(p || ''); if (!BASE || !/^\/(?!\/)/.test(v) || v === BASE || v.startsWith(`${BASE}/`) || v.startsWith(`${BASE}#`)) return v; return `${BASE}${v}`; };
   const won = n => Number.isFinite(Number(n)) ? new Intl.NumberFormat('ko-KR').format(Number(n)) + '원' : '-';
   function cover(book, alt) {
-    if (book?.coverImage) { const img = document.createElement('img'); img.src = /^\/(?!\/)/.test(book.coverImage) ? BASE + book.coverImage : book.coverImage; img.alt = alt || `${book.title} 표지`; img.decoding = 'async'; return img; }
+    if (book?.coverImage) { const img = document.createElement('img'); img.src = under(book.coverImage); img.alt = alt || `${book.title} 표지`; img.decoding = 'async'; return img; }
     const div = document.createElement('div'); div.className = 'cover-fallback'; div.textContent = book?.title || ''; return div;
   }
-  window.EkodiBooksCommerce = { BASE, api, session, forget, mountGoogle, won, cover };
+  window.EkodiBooksCommerce = { BASE, under, api, session, forget, mountGoogle, won, cover };
 })();
