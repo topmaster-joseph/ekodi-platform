@@ -30,19 +30,28 @@
       "name": "SINGLES_PAID_ACTIONS_ENABLED",
       "layer": "worker",
       "default": "false",
-      "gates": "메시지 발송·행사 신청 쓰기(유료 행동). Edge는 구독 원장(singles_bank_grants)으로 별도 강제"
+      "gates": "메시지 발송·행사 신청 쓰기(유료 행동). Edge는 구독 원장(singles_bank_grants)으로 별도 강제",
+      "production": "true",
+      "launchedAt": "2026-10-28",
+      "launchDecision": "owner (topmaster-joseph) 2026-10-28: 유료회원 모델 실증 시작(시범 명단만 — Edge 시범 게이트가 SINGLES_PUBLIC_LAUNCH_ENABLED 전까지 명단·운영자 외 차단)"
     },
     {
       "name": "SINGLES_BANK_TRANSFER_ENABLED",
       "layer": "worker+edge",
       "default": "false",
-      "gates": "계좌이체 주문 접수"
+      "gates": "계좌이체 주문 접수",
+      "production": "true",
+      "launchedAt": "2026-10-28",
+      "launchDecision": "owner (topmaster-joseph) 2026-10-28: 유료회원 모델 실증 시작(시범 명단만 — Edge 시범 게이트가 SINGLES_PUBLIC_LAUNCH_ENABLED 전까지 명단·운영자 외 차단)"
     },
     {
       "name": "SINGLES_BANK_VERIFICATION_ENABLED",
       "layer": "worker+edge",
       "default": "false",
-      "gates": "운영자 입금 확인(승인)"
+      "gates": "운영자 입금 확인(승인)",
+      "production": "true",
+      "launchedAt": "2026-10-28",
+      "launchDecision": "owner (topmaster-joseph) 2026-10-28: 유료회원 모델 실증 시작(시범 명단만 — Edge 시범 게이트가 SINGLES_PUBLIC_LAUNCH_ENABLED 전까지 명단·운영자 외 차단)"
     },
     {
       "name": "SINGLES_ONBOARDING_ENABLED",

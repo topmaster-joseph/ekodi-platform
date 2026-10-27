@@ -62,7 +62,7 @@ create table if not exists public.singles_pass_plans(
  active boolean not null default true,
  updated_at timestamptz not null default now()
 );
--- 기간권 금액은 운영 확정 전 임시값(관리자 화면에서 변경).
+-- 기간권 금액: 2026-10-28 소유자 확정(1일 1만·10일 5만·20일 8만·30일 10만원).
 insert into public.singles_pass_plans(code,display_name,days,price_krw) values
  ('pass_1d','1일 메시지 이용권',1,10000),('pass_10d','10일 메시지 이용권',10,50000),
  ('pass_20d','20일 메시지 이용권',20,80000),('pass_30d','1달(30일) 메시지 이용권',30,100000)

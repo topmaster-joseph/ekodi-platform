@@ -51,7 +51,7 @@
 | 스위치 | 위치 | 현재 값 |
 |---|---|---|
 | `SINGLES_M1_ENABLED` (2026-10-27), `SINGLES_SOCIAL_ENABLED` (2026-10-28) | Worker(`wrangler.site.toml`) | `"true"` — 소유자 개통 결정 |
-| `SINGLES_PAID_ACTIONS_ENABLED`, `SINGLES_BANK_TRANSFER_ENABLED`, `SINGLES_BANK_VERIFICATION_ENABLED` | Worker(`wrangler.site.toml`) | `"false"` |
+| `SINGLES_PAID_ACTIONS_ENABLED`, `SINGLES_BANK_TRANSFER_ENABLED`, `SINGLES_BANK_VERIFICATION_ENABLED` | Worker(`wrangler.site.toml`) | `"true"` (2026-10-28 실증, Edge 시범 명단 게이트로 범위 제한) |
 | `SINGLES_ONBOARDING_ENABLED`, `SINGLES_SOCIAL_ENABLED`, `SINGLES_BANK_*` | Edge(Supabase 비밀값) | 확인필요 — 저장소에서 볼 수 없음. Worker가 앞단에서 막고 있어 회원 노출은 없음 |
 
 ## F. 요청 과금(A안) 판매 개시 관문
@@ -70,7 +70,7 @@
 
 ## G. 유료회원 모델(2026-10-28 결정) — 구축 → 실증 → 개통
 
-결정: 무료회원은 안내만, 유료회원 가입비 500,000원 = 적립금 500,000원. 요청 요금은 "기본 요금 + 입력·공개 할인"(메시지 교환 10,000원, 연락처 교환 100,000원·최대 50% 할인, 범위 1만~10만원). 요청자는 보류 후 수락 시 확정, 수락자는 수락 시 자기 요금 차감. 기간제 메시지 이용권(1·10·20·30일, 임시 금액). 연락처 교환 수락 전 메시지 속 연락처 자동 가림. 가입 시도(시간·Google 계정) 기록. 운영자 joseph@ekodi.kr. **모두 구축 후 실증하고 개통.**
+결정: 무료회원은 안내만, 유료회원 가입비 500,000원 = 적립금 500,000원. 요청 요금은 "기본 요금 + 입력·공개 할인"(메시지 교환 10,000원, 연락처 교환 100,000원·최대 50% 할인, 범위 1만~10만원). 요청자는 보류 후 수락 시 확정, 수락자는 수락 시 자기 요금 차감. 기간제 메시지 이용권(1일 1만·10일 5만·20일 8만·30일 10만원, 2026-10-28 확정). 연락처 교환 수락 전 메시지 속 연락처 자동 가림. 가입 시도(시간·Google 계정) 기록. 운영자 joseph@ekodi.kr. **모두 구축 후 실증하고 개통.**
 
 | # | 항목 | 상태 |
 |---|---|---|
@@ -78,7 +78,7 @@
 | G2 | 서버: 무료/유료 구분, 요청·수락 차감, 연락처 가림, 가입 시도 기록, 시범 명단 제한(`SINGLES_PUBLIC_LAUNCH_ENABLED`가 true가 아니면 명단·운영자만) | ✅ 배포(스위치 OFF) |
 | G3 | 화면: 무료회원 안내·유료 전용 메뉴 숨김, 가입비 결제, 요청 종류·요금, 적립금·기간권, 운영자 회원·성인 확인 화면 | ✅ 배포 |
 | G4 | 운영자 지정: joseph@ekodi.kr(입금 확인·성인 확인·설정) | ✅ |
-| G5 | 실증: 시범 명단 계정으로 가입 → 성인 확인 → 가입비 입금·확인 → 요청·수락·거절·연락처 가림·기간권·탈퇴 반환 확인 | ⛔ 실증 대기 |
+| G5 | 실증: 시범 명단(joseph@ekodi.kr 운영자, topmaster.joseph@gmail.com, ekodibiz@gmail.com)으로 가입 → 성인 확인 → 가입비 입금·확인 → 요청·수락·거절·연락처 가림·기간권·탈퇴 반환 확인 | 🟡 실증 진행(스위치·계좌 활성화 2026-10-28) |
 | G6 | 14일 미응답 자동 반환 실행 주기 연결(`singles_paid_request_release(null,'expired')`) | ⛔ |
 | G7 | 적립금 환불 처리 화면 | ⛔ |
 | G8 | 법률 검토(선불금·결혼중개업·입력·공개 할인·수락자 과금), 무안군 회신 | ⛔ |
