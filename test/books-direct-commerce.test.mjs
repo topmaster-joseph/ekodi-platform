@@ -108,3 +108,42 @@ test('only operators can grant member tiers, and the tier changes the price', as
   const created = await createOrder(env, signedIn(), { bookId: 'BOOK-EKODI-000001', consent: true });
   assert.equal(created.data.amount, 6900);
 });
+
+test('with the gateway bound, books uses its readiness, client key and confirm (no local keys)', async () => {
+  const { payments } = await import('../books-commerce.js');
+  const db = d1();
+  const calls = [];
+  const EKODIPAY = {
+    readiness: async () => ({ ok: true, data: { ready: true, mode: 'live', profile: 'ekodi', merchant: '에코디', mid: 'q_ekodib62hb' } }),
+    clientKey: async () => ({ ok: true, data: 'live_ck_gateway' }),
+    confirm: async input => { calls.push(input); return { ok: true, data: { orderId: input.orderId, totalAmount: input.amount, status: 'DONE', method: '카드' } }; },
+    getPayment: async () => ({ ok: false, error: { message: 'x', code: 'NOT_FOUND', status: 404 } }),
+  };
+  const env = { DB: db, ASSETS: assets, PAYMENTS_ENABLED: 'true', EKODIPAY, PUBLIC_BASE_URL: 'https://ekodi.kr/books' };
+  const p = await payments(env);
+  assert.equal(p.ready, true); assert.equal(p.via, 'gateway'); assert.equal(p.clientKey, 'live_ck_gateway');
+  assert.equal((await payments({ ...env, PAYMENTS_ENABLED: 'false' })).ready, false, 'local switch still closes checkout');
+  const created = await createOrder(env, signedIn(), { bookId: 'BOOK-EKODI-000001', consent: true });
+  assert.equal(created.status, 201); assert.equal(created.data.clientKey, 'live_ck_gateway');
+  const ok = await confirm(env, { paymentKey: 'pk_live_1', orderId: created.data.orderId, amount: 9900 });
+  assert.equal(ok.status, 200);
+  assert.equal(calls[0].callerId, 'books'); assert.equal(calls[0].amount, 9900);
+});
+
+test('an unreachable gateway fails closed instead of throwing', async () => {
+  const { payments } = await import('../books-commerce.js');
+  const broken = { readiness: async () => { throw new Error('no entrypoint'); }, clientKey: async () => { throw new Error('x'); } };
+  const p = await payments({ PAYMENTS_ENABLED: 'true', EKODIPAY: broken });
+  assert.equal(p.ready, false);
+});
+
+test('EPUB validation accepts real EPUB containers and rejects others', async () => {
+  const { validateEpub } = await import('../books-commerce.js');
+  const enc = new TextEncoder();
+  const header = new Uint8Array(30); header.set([0x50, 0x4b, 0x03, 0x04]);
+  const good = new Uint8Array([...header, ...enc.encode('mimetypeapplication/epub+zip'), ...new Uint8Array(40)]);
+  assert.equal(validateEpub(good).ok, true);
+  assert.equal(validateEpub(enc.encode('%PDF-1.7 not an epub file at all, padded to be long enough........')).ok, false);
+  const zipNotEpub = new Uint8Array([...header, ...enc.encode('word/document.xml'), ...new Uint8Array(40)]);
+  assert.equal(validateEpub(zipNotEpub).ok, false);
+});
