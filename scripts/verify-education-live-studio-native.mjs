@@ -167,7 +167,28 @@ async function docsProbe(browser){
     }
     const gone=await context.request.get(base+item.path,{failOnStatusCode:false});
     if(gone.status()!==404)fail('deleted share link must answer 404, got '+gone.status());
-    report.docs={configured:true,passed:true};
+    // The real screen path: a large phone-like photo picked on the docs page and uploaded by the browser.
+    const marker='EKODI 자동 점검 (화면 업로드 · 즉시 삭제)';
+    const page=await context.newPage();
+    await page.goto(base+'?c='+encodeURIComponent(COURSE),{waitUntil:'domcontentloaded',timeout:35000});
+    await page.locator('body[data-ready="true"]').waitFor({state:'attached',timeout:20000}).catch(()=>fail('docs manager page did not load with an instructor session'));
+    const big=await page.evaluate(async()=>{const c=document.createElement('canvas');c.width=4000;c.height=3000;const x=c.getContext('2d');const img=x.createImageData(4000,3000);
+      for(let i=0;i<img.data.length;i+=4){const v=(i*2654435761)>>>24;img.data[i]=v;img.data[i+1]=(v*7)&255;img.data[i+2]=(v*13)&255;img.data[i+3]=255;}
+      x.putImageData(img,0,0);const b=await new Promise(r=>c.toBlob(r,'image/jpeg',0.97));const buf=new Uint8Array(await b.arrayBuffer());let s='';for(let i=0;i<buf.length;i+=32768)s+=String.fromCharCode(...buf.subarray(i,i+32768));return {b64:btoa(s),size:buf.length};});
+    const form=page.locator('form[data-kind="id"]');
+    await form.locator('input[type="file"]').setInputFiles({name:'phone-photo.jpg',mimeType:'image/jpeg',buffer:Buffer.from(big.b64,'base64')});
+    await form.locator('input[name="purpose"]').fill(marker);
+    const before=await page.locator('.docs-item').count();
+    await form.locator('button[type="submit"]').click();
+    const outcome=await Promise.race([
+      page.waitForFunction(n=>document.querySelectorAll('.docs-item').length>n,before,{timeout:45000}).then(()=>'ok'),
+      page.waitForFunction(()=>{const t=document.querySelector('#toast');return t&&!t.hidden&&!/링크를 만들었습니다/.test(t.textContent)?t.textContent:'';},null,{timeout:45000}).then(h=>h.jsonValue())
+    ]).catch(e=>'timeout: '+e.message);
+    // Remove every probe document, whatever the outcome.
+    const left=await (await context.request.get(base+'api/list',{failOnStatusCode:false})).json().catch(()=>({items:[]}));
+    for(const it of left.items||[])if(it.purpose===marker)await context.request.post(base+'api/delete',{failOnStatusCode:false,headers:{origin:new URL(ORIGIN).origin},data:{token:it.token}});
+    if(outcome!=='ok')fail('docs screen upload of a '+(big.size/1048576).toFixed(1)+'MB photo failed: '+outcome);
+    report.docs={configured:true,passed:true,screenUploadBytes:big.size};
   }finally{await context.close();}
 }
 async function open(page,route,{ready=true}={}){
