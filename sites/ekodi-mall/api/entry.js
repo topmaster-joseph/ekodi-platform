@@ -11,8 +11,9 @@ import { handleVerificationRequest, verificationSchemaReady } from './verificati
 import { handleSupplierPilotRequest, supplierPilotSchemaReady } from './supplier-pilot.js';
 import { handleSupplierDiscoveryRequest, supplierDiscoverySchemaReady } from './supplier-discovery.js';
 import { handleDomemaeRequest, domemaeConnectorReady } from './domemae.js';
-import { probeDomeggookKey, syncSupplyProducts } from './domeggook-import.js';
+import { probeDomeggookKey, syncSupplyProducts, backfillSupplyImages } from './domeggook-import.js';
 import { probeOwnerclan } from './ownerclan.js';
+import { submitProductIndexNow } from './seo-indexnow.js';
 import { placeSupplierOrders, trackSupplierOrders, autoOrderEnabled, probeDomeggookLogin } from './domeggook-order.js';
 import { handleAnalyticsRequest } from './analytics.js';
 import { handleStorefrontRequest } from './storefront.js';
@@ -103,6 +104,13 @@ export async function listPromotableDirectProducts(env, limitValue) {
     const image = publicImages(row.images_json, env.MALL_BASE_URL)[0];
     return image ? { shareCode: row.share_code, publicUrl: row.public_url, name: row.name, oneLine: row.one_line || '', category: publicCategory(row.category), price: Number(row.price || 0), imageUrl: image.url } : null;
   }).filter(Boolean);
+}
+
+export async function listProductIndex(env, limitValue) {
+  const limit = Math.max(1, Math.min(5000, Math.trunc(Number(limitValue) || 5000)));
+  const rows = await env.DB.prepare(`SELECT share_code,name,one_line,published_at,updated_at FROM products WHERE status='published'
+    ORDER BY published_at DESC LIMIT ?`).bind(limit).all();
+  return (rows.results || []).map((r) => ({ shareCode: r.share_code, product: maskPublicProductFields({ name: r.name, oneLine: r.one_line || '' }), publishedAt: r.published_at, updatedAt: r.updated_at }));
 }
 
 async function listPublicProducts(env, limitValue) {
@@ -218,6 +226,11 @@ export default {
       if (!env.DB) return reply({ error:'Mall 전용 데이터베이스 연결이 없습니다.' },503,origin,env);
       return reply({ products:await listPromotableDirectProducts(env,url.searchParams.get('limit')) },200,origin,env);
     }
+    // EKODI-MALL-SEO-INDEX-001: 사이트맵·IndexNow 용 전체 공개 상품 목록(가벼운 필드만).
+    if (request.method === 'GET' && url.pathname === '/api/public/products/index') {
+      if (!env.DB) return reply({ error:'Mall 전용 데이터베이스 연결이 없습니다.' },503,origin,env);
+      return reply({ products:await listProductIndex(env,url.searchParams.get('limit')) },200,origin,env);
+    }
     if (request.method === 'GET' && url.pathname === '/api/public/products') {
       if (!env.DB) return reply({ error:'Mall 전용 데이터베이스 연결이 없습니다.' },503,origin,env);
       return reply({ products:await listPublicProducts(env,url.searchParams.get('limit')) },200,origin,env);
@@ -295,6 +308,8 @@ export default {
       return trackSupplierOrders(env);
     }).then(() => probeOwnerclan(env)).then(() => probeDomeggookKey(env)).then(() => syncSupplyProducts(env)).then(summary => {
       if (summary.synced) console.log('mall supply sync', JSON.stringify(summary));
+      return backfillSupplyImages(env).then(r => { if (r.tried) console.log('mall supply images', JSON.stringify(r)); }).catch(e => console.error('mall supply images failed', e));
+    }).then(() => {
       return runSupplyCuration(env);
     }).then(summary => {
       if (summary?.imported || summary?.discovery) console.log('mall supply curation', JSON.stringify(summary));
@@ -303,6 +318,9 @@ export default {
       if (result?.gate?.held || result?.gate?.released || result?.ratchet?.minScore) console.log('mall supply gate', JSON.stringify(result));
     }).catch(error => console.error('mall supply sync failed', error)) : Promise.resolve();
     if (ctx?.waitUntil) ctx.waitUntil(supplySync); else await supplySync;
+    // EKODI-MALL-SEO-INDEX-001: 공개 상품 변경분을 1시간마다 IndexNow 로 알림.
+    const indexNow = env?.DB ? submitProductIndexNow(env).then(r => { if (r.submitted || r.status) console.log('mall indexnow', JSON.stringify(r)); }).catch(e => console.error('mall indexnow failed', e)) : Promise.resolve();
+    if (ctx?.waitUntil) ctx.waitUntil(indexNow); else await indexNow;
     if (!['1','true','yes','on'].includes(String(env.PAYMENTS_ENABLED || '').toLowerCase())) return;
     const run = reconcileMallPayments(env).then(summary => {
       if (summary.checked || summary.errors) console.log('mall payment reconciliation', JSON.stringify(summary));

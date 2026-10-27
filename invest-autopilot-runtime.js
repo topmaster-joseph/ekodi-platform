@@ -9,6 +9,7 @@ import {
  autopilotReportPeriods,periodPerformance,kstDay
 } from './invest-autopilot-core.js';
 import { buildChannelEnvelope, dispatchChannelEnvelope } from './messenger-channel-adapters.js';
+import { stepUpStatus, verifyStepUp, revokeStepUp, stepUpSession } from './invest-step-up.js';
 
 const clean=(value,max=240)=>String(value??'').trim().slice(0,max);
 const nowIso=()=>new Date().toISOString();
@@ -347,6 +348,18 @@ export async function handleInvestAutopilotApi(request,env){
  if(!env?.DB)return json(request,env,{error:'DATABASE_UNAVAILABLE'},503);
  const write=!['GET','HEAD'].includes(request.method);
  const ctx=await ownerContext(request,env,write);if(ctx.error)return json(request,env,{error:ctx.error},ctx.status);
+ // Second factor ("본인인증"): Google login alone never unlocks the workspace.
+ if(path==='/v1/invest/autopilot/step-up'){
+  const audit=(type,severity,payload)=>recordEvent(env,ctx,type,severity,payload).catch(()=>{});
+  let result;
+  if(request.method==='GET')result=await stepUpStatus(request,env,ctx);
+  else if(request.method==='POST'){const input=await body(request);result=await verifyStepUp(request,env,ctx,input?.answer,audit)}
+  else if(request.method==='DELETE')result=await revokeStepUp(request,env,ctx);
+  else return json(request,env,{error:'METHOD_NOT_ALLOWED'},405);
+  return json(request,env,result.body,result.status);
+ }
+ const stepUp=await stepUpSession(request,env,ctx);
+ if(!stepUp.verified)return json(request,env,{error:'STEP_UP_REQUIRED'},403);
  if(path==='/v1/invest/autopilot/status'&&request.method==='GET')return status(request,env,ctx);
  if(path==='/v1/invest/autopilot/policy'&&request.method==='PUT')return updatePolicy(request,env,ctx);
  if(path==='/v1/invest/autopilot/state'&&request.method==='POST')return changeState(request,env,ctx);

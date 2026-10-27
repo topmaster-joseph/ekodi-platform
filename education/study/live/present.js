@@ -2,6 +2,7 @@
 import {courseEntry} from './courses/registry.js';
 import {validateCourse,sessionByNo,sessionSlides,learnerUrl,formatClock,livePath,buildPrompts} from './engine/model.js';
 import {acceptAdminHandoff,adminLoginUrl,readToken,runInstitutionDemo} from './engine/factchat-demo.js';
+import {adminInstructorSession,reloadOnce} from './engine/admin-instructor.js';
 import {createLiveStore,lectureElapsedMs,timerRemainingMs,timerPhase,CHANNEL_NAME} from './engine/live-state.js';
 import {qrSvg} from './engine/qr.js';
 import {esc,list,slideHtml,safeStorage,safeChannel,bindChrome,showFactchatTab,embeddedLabUrl,loadNotesSafe,notesUnlockUrl,lockedNotesHtml,answerRevealHtml} from './engine/render.js';
@@ -239,7 +240,10 @@ function toggleNotes(){
 }
 async function init(){
   if(!audience)acceptAdminHandoff(window);
-  const [data,noteState]=await Promise.all([entry.load(),audience?Promise.resolve({notes:{},locked:false}):loadNotesSafe(entry)]);
+  const noteState0=audience?{notes:{},locked:false}:await loadNotesSafe(entry);
+  // EKODI super admin signed in for the AI demo: the same sign-in opens the instructor notes.
+  if(noteState0.locked&&readToken(window)&&(await adminInstructorSession(window)).ok&&reloadOnce(window))return;
+  const [data,noteState]=await Promise.all([entry.load(),Promise.resolve(noteState0)]);
   course=data.COURSE;validateCourse(course);notes=noteState.notes;notesLocked=noteState.locked;
   unlockHref=notesUnlockUrl(location.pathname,course.id,{back:'present'});lockHref=notesUnlockUrl(location.pathname,course.id,{back:'present',lock:true});
   if(audience){

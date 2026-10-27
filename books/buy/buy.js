@@ -87,7 +87,7 @@
   $('payBtn').addEventListener('click', pay);
   $('signOut').addEventListener('click', () => { C.forget(); load(); });
   C.mountGoogle($('googleButton'), (t, err) => { $('accountStatus').textContent = t || ''; $('accountStatus').style.color = err ? 'var(--danger)' : ''; }, load);
-  document.querySelectorAll('[data-books-base]').forEach(a => { a.href = C.BASE + a.getAttribute('data-books-base'); });
+  document.querySelectorAll('[data-books-base]').forEach(a => { a.href = C.under(a.getAttribute('data-books-base')); });
   if (!bookId) { $('buyRoot').hidden = true; $('buyError').hidden = false; $('buyErrorText').textContent = '도서를 선택해 주세요.'; }
   else load();
 })();

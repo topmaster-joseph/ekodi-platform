@@ -10,7 +10,55 @@ const accountId=String(process.env.CLOUDFLARE_ACCOUNT_ID||'').trim();
 const APPROVAL_LABEL='orchestrator-human-gate-approved';
 const APPROVAL_MARKER_PREFIX='EKODI-HUMAN-GATE-APPROVE:';
 
-function fail(message){console.error('[EKODI][RELEASE-PROVENANCE-RECOVERY] '+message);process.exit(1)}
+// Where a refusal gets written down.
+//
+// Until now `await fail()` wrote only to the workflow log. A log is readable by a
+// person with repository access and by nothing else: an agent recovering from
+// the failure cannot see why it was refused, so it re-runs, re-pushes and
+// guesses. One refusal cost six full CI cycles and five wrong hypotheses
+// before the cause (a missing `workflows` token permission) was found by
+// reading production D1 by hand.
+//
+// `ekodi_orchestrator_tasks.dead_letter_reason` already exists for exactly
+// this and was never written. Recording the reason there, next to the task it
+// refused, is what lets the next attempt start from the answer instead of from
+// the beginning.
+//
+// Deliberately NOT changed: the task's `state`. A refused recovery is still
+// retryable, and moving it to a non-releasable state would deny the receipt on
+// the next attempt — turning a legible failure into a permanent one.
+let deadLetter=null;
+function armDeadLetter(databaseId,task){deadLetter={databaseId,task}}
+
+/** Best-effort, and never through d1(): that helper fails, which would recurse. */
+async function recordDeadLetter(message){
+  if(!deadLetter?.databaseId||!deadLetter?.task||!cfToken||!accountId)return false;
+  const reason=text(message,480);
+  const now=new Date().toISOString();
+  try{
+    await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${deadLetter.databaseId}/query`,{
+      method:'POST',headers:{authorization:`Bearer ${cfToken}`,'content-type':'application/json'},
+      body:JSON.stringify({sql:`UPDATE ekodi_orchestrator_tasks SET dead_letter_reason=?,updated_at=? WHERE task_id=?`,params:[reason,now,deadLetter.task]})
+    });
+    await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${deadLetter.databaseId}/query`,{
+      method:'POST',headers:{authorization:`Bearer ${cfToken}`,'content-type':'application/json'},
+      body:JSON.stringify({sql:`INSERT INTO ekodi_orchestrator_task_events
+        (task_id,seq,from_state,to_state,actor,reason,evidence_json,created_at)
+        SELECT ?,IFNULL(MAX(seq),0)+1,NULL,'blocked','ekodi-release-provenance-recovery',?,?,?
+        FROM ekodi_orchestrator_task_events WHERE task_id = ?`,
+        params:[deadLetter.task,reason,JSON.stringify({recoveryRefused:true,reason}),now,deadLetter.task]})
+    });
+    return true;
+  }catch{return false}
+}
+
+async function fail(message){
+  console.error('[EKODI][RELEASE-PROVENANCE-RECOVERY] '+message);
+  const recorded=await recordDeadLetter(message);
+  out('dead_letter_reason',text(message,480));
+  out('dead_letter_recorded',recorded?'true':'false');
+  process.exit(1);
+}
 function out(name,value){if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,`${name}=${String(value)}\n`)}
 function jsonFile(path){return JSON.parse(fs.readFileSync(path,'utf8'))}
 function text(value,max=500){return String(value??'').trim().slice(0,max)}
@@ -33,13 +81,13 @@ async function d1(databaseId,sql,params){
     method:'POST',headers:{authorization:`Bearer ${cfToken}`,'content-type':'application/json'},
     body:JSON.stringify({sql,params})
   });
-  if(!response.ok||data?.success!==true)fail(`D1 recovery write failed: HTTP ${response.status} ${JSON.stringify(data).slice(0,600)}`);
+  if(!response.ok||data?.success!==true)await fail(`D1 recovery write failed: HTTP ${response.status} ${JSON.stringify(data).slice(0,600)}`);
   return data;
 }
 
 if(!['pull_request','pull_request_target'].includes(eventName)){out('action','noop');process.exit(0)}
-if(!eventPath||!fs.existsSync(eventPath))fail('GitHub pull_request event payload is required');
-if(!ghToken)fail('GH_TOKEN is required');
+if(!eventPath||!fs.existsSync(eventPath))await fail('GitHub pull_request event payload is required');
+if(!ghToken)await fail('GH_TOKEN is required');
 const event=jsonFile(eventPath);
 const pr=event.pull_request||{};
 const sourceBranch=text(pr.head?.ref,220);
@@ -49,10 +97,10 @@ const actor=text(event.sender?.login||process.env.GITHUB_ACTOR,120);
 const prNumber=Number(pr.number||event.number||0);
 if(!sourceBranch.startsWith('ai/')){out('action','noop-non-ai-branch');process.exit(0)}
 if(isOrchestratorBranch(sourceBranch)){out('action','noop-already-orchestrated');out('branch_ref',sourceBranch);process.exit(0)}
-if(sourceRepo!==repo)fail('automatic provenance recovery is forbidden for fork pull requests');
+if(sourceRepo!==repo)await fail('automatic provenance recovery is forbidden for fork pull requests');
 const policy=jsonFile('config/ai-change-orchestration-policy.json');
 const policyOwners=new Set(policy.governance?.policyOwners||[]);
-if(!headSha.match(/^[a-f0-9]{40}$/i)||!prNumber)fail('pull request head SHA/number missing');
+if(!headSha.match(/^[a-f0-9]{40}$/i)||!prNumber)await fail('pull request head SHA/number missing');
 const labels=(Array.isArray(pr.labels)?pr.labels:[]).map(item=>text(item?.name,120));
 // Owner decision (topmaster-joseph, 2026-10-19): the per-PR human approval
 // comment/label is no longer required. Release stays gated by the exact-SHA
@@ -95,13 +143,17 @@ const humanApproval=Object.freeze(approvalComment?{
   gate:'exact-sha-required-ci-guarded-release-production-verification',
   scope:'exact-source-sha',
 });
-if(!cfToken||!accountId)fail('Cloudflare credentials are required for authoritative recovery task issuance');
+if(!cfToken||!accountId)await fail('Cloudflare credentials are required for authoritative recovery task issuance');
 
 const wrangler=fs.readFileSync('wrangler.site.toml','utf8');
 const dbId=wrangler.match(/database_name\s*=\s*"ekodi-auth"[\s\S]{0,240}?database_id\s*=\s*"([^"]+)"/)?.[1];
-if(!dbId)fail('ekodi-auth D1 database id not found');
+if(!dbId)await fail('ekodi-auth D1 database id not found');
 
 const taskId=`orch_recovery_${headSha.slice(0,32).toLowerCase()}`;
+// From here on a refusal has somewhere to be written. Everything above this
+// line fails on missing environment or a malformed event, which the log is
+// enough for; everything below can refuse for a reason the next attempt needs.
+armDeadLetter(dbId,taskId);
 const agent=branchAgent(sourceBranch);
 const branchRef=`ai/${agent}/${taskId}`;
 const createdAt=new Date().toISOString();
@@ -131,7 +183,7 @@ await d1(dbId,`INSERT OR IGNORE INTO ekodi_orchestrator_task_events
 const receiptUrl=new URL('https://ekodi.kr/api/orchestrator/release-receipt');
 receiptUrl.searchParams.set('taskId',taskId);receiptUrl.searchParams.set('branchRef',branchRef);
 const receipt=await request(receiptUrl,{headers:{accept:'application/json','user-agent':'ekodi-release-provenance-recovery'}});
-if(!receipt.response.ok||receipt.data?.authorized!==true)fail(`recovery receipt not authorized: HTTP ${receipt.response.status} ${JSON.stringify(receipt.data)}`);
+if(!receipt.response.ok||receipt.data?.authorized!==true)await fail(`recovery receipt not authorized: HTTP ${receipt.response.status} ${JSON.stringify(receipt.data)}`);
 
 // Check an existing exactly approved orchestrator branch before attempting any GitHub write.
 // This also supports delegated owner creation when GITHUB_TOKEN cannot create protected refs.
@@ -139,21 +191,21 @@ const existingRefPath=`/repos/${repo}/git/ref/heads/${branchRef.split('/').map(e
 const existing=await github(existingRefPath);
 if(existing.response.ok){
   if(text(existing.data?.object?.sha,80)!==headSha){
-    fail('existing recovery branch does not match the exact approved source SHA');
+    await fail('existing recovery branch does not match the exact approved source SHA');
   }
 }else if(existing.response.status===404){
   const refPath=`/repos/${repo}/git/refs`;
   const ref=await github(refPath,{method:'POST','headers':{'content-type':'application/json'},body:JSON.stringify({ref:`refs/heads/${branchRef}`,sha:headSha})});
   if(!ref.response.ok){
     // Accept only a verified exact-SHA concurrent creation, not a generic 403 bypass.
-    if(ref.response.status!==422)fail(`failed to create recovery branch: HTTP ${ref.response.status} ${JSON.stringify(ref.data)}`);
+    if(ref.response.status!==422)await fail(`failed to create recovery branch: HTTP ${ref.response.status} ${JSON.stringify(ref.data)}`);
     const raced=await github(existingRefPath);
     if(!raced.response.ok||text(raced.data?.object?.sha,80)!==headSha){
-      fail('existing recovery branch does not match the exact approved source SHA');
+      await fail('existing recovery branch does not match the exact approved source SHA');
     }
   }
 }else{
-  fail(`failed to inspect existing recovery branch: HTTP ${existing.response.status}`);
+  await fail(`failed to inspect existing recovery branch: HTTP ${existing.response.status}`);
 }
 
 const pulls=await github(`/repos/${repo}/pulls?state=open&head=${encodeURIComponent(repo.split('/')[0]+':'+branchRef)}&base=main`);
@@ -164,19 +216,19 @@ if(!recoveryPr){
     head:branchRef,base:'main',
     body:`Automatic EKODI release provenance recovery for #${prNumber}.\n\nTask: \`${taskId}\`\nSource: \`${sourceBranch}@${headSha}\`\n\nNo gate is bypassed: CI, orchestration receipt, guarded release, and production verification remain required.`
   })});
-  if(!created.response.ok)fail(`failed to create recovery PR: HTTP ${created.response.status} ${JSON.stringify(created.data)}`);
+  if(!created.response.ok)await fail(`failed to create recovery PR: HTTP ${created.response.status} ${JSON.stringify(created.data)}`);
   recoveryPr=created.data;
 }
 const recoveryNumber=Number(recoveryPr?.number||0);
-if(!recoveryNumber)fail('recovery PR number missing');
+if(!recoveryNumber)await fail('recovery PR number missing');
 
 const sourceFiles=[];
 for(let page=1;page<=20;page++){
   const response=await github(`/repos/${repo}/pulls/${prNumber}/files?per_page=100&page=${page}`);
-  if(!response.response.ok||!Array.isArray(response.data))fail('source file inspection failed before guarded merge');
+  if(!response.response.ok||!Array.isArray(response.data))await fail('source file inspection failed before guarded merge');
   sourceFiles.push(...response.data.map(item=>text(item?.filename,300)));
   if(response.data.length<100)break;
-  if(page===20)fail('source file list exceeds bounded dispatch inspection');
+  if(page===20)await fail('source file list exceeds bounded dispatch inspection');
 }
 // CGMA's independently owned apex edge needs a receipt-bound release even when
 // an exact-SHA owner-approved recovery PR merges immediately with GITHUB_TOKEN.
@@ -242,10 +294,10 @@ await github(`/repos/${repo}/pulls/${prNumber}`,{method:'PATCH',headers:{'conten
 // a source revision that contains the current main. If these are not ready,
 // leave the official recovery PR open for existing convergent CI/merge handling.
 const sourceStatus=await github(`/repos/${repo}/commits/${headSha}/status`);
-if(!sourceStatus.response.ok)fail('cannot inspect exact approved source commit statuses');
+if(!sourceStatus.response.ok)await fail('cannot inspect exact approved source commit statuses');
 const statuses=new Map((sourceStatus.data?.statuses||[]).map(entry=>[entry.context,entry.state]));
 const sourceChecks=await github(`/repos/${repo}/commits/${headSha}/check-runs?per_page=100`);
-if(!sourceChecks.response.ok)fail('cannot inspect authentic source CI checks');
+if(!sourceChecks.response.ok)await fail('cannot inspect authentic source CI checks');
 const authenticChecks=Array.isArray(sourceChecks.data?.check_runs)?sourceChecks.data.check_runs:[];
 const requiredChecks=['test','EKODI AI Orchestration Gate'];
 const checksReady=requiredChecks.every(context=>
@@ -255,10 +307,10 @@ const checksReady=requiredChecks.every(context=>
   )
 );
 const mainRef=await github(`/repos/${repo}/git/ref/heads/main`);
-if(!mainRef.response.ok)fail('cannot verify latest main before approved recovery merge');
+if(!mainRef.response.ok)await fail('cannot verify latest main before approved recovery merge');
 const mainSha=text(mainRef.data?.object?.sha,80);
 const currentBase=await github(`/repos/${repo}/compare/${mainSha}...${headSha}`);
-if(!currentBase.response.ok)fail('cannot inspect source relationship to protected main');
+if(!currentBase.response.ok)await fail('cannot inspect source relationship to protected main');
 const upToDate=Number(currentBase.data?.behind_by)===0;
 if(!checksReady||!upToDate){
   const reason=!checksReady?'authentic_required_checks_not_green':'latest_main_not_in_source_ancestry';
@@ -275,7 +327,7 @@ if(!checksReady||!upToDate){
   const convergence=await github(`/repos/${repo}/actions/workflows/converge-orchestrated-pr-merge.yml/dispatches`,{
     method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ref:branchRef})
   });
-  if(convergence.response.status!==204)fail(`parked recovery convergence dispatch failed: ${convergence.response.status}`);
+  if(convergence.response.status!==204)await fail(`parked recovery convergence dispatch failed: ${convergence.response.status}`);
   out('convergence_dispatch','dispatched');
 }
 const merge=checksReady&&upToDate
@@ -288,11 +340,11 @@ const mergeDisposition=merge.response.ok?'merged-immediately':`guarded-pending-h
 // own orchestrator receipt, CI, auth boundary, and live production checks.
 if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched||sharedSiteTouched)){
   if(merge.data?.merged!==true||!/^[a-f0-9]{40}$/i.test(text(merge.data?.sha,80))){
-    fail('guarded merge did not return a verifiable commit SHA');
+    await fail('guarded merge did not return a verifiable commit SHA');
   }
   const main=await github(`/repos/${repo}/branches/main`);
   if(!main.response.ok||text(main.data?.commit?.sha,80)!==text(merge.data.sha,80)){
-    fail('main changed before exact service dispatch; do not launch a stale release');
+    await fail('main changed before exact service dispatch; do not launch a stale release');
   }
   if(independentBoardTouched){
     const dispatch=await github(`/repos/${repo}/actions/workflows/deploy-independent-board.yml/dispatches`,{
@@ -301,7 +353,7 @@ if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched||sharedSiteT
       body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branchRef,release_task_id:taskId}})
     });
     if(dispatch.response.status!==204){
-      fail('guarded independent board dispatch failed: HTTP '+dispatch.response.status);
+      await fail('guarded independent board dispatch failed: HTTP '+dispatch.response.status);
     }
     out('independent_board_dispatch','accepted');
   }
@@ -314,7 +366,7 @@ if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched||sharedSiteT
       body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branchRef,release_task_id:taskId}})
     });
     if(shellDispatch.response.status!==204){
-      fail('guarded Shell Worker dispatch failed: HTTP '+shellDispatch.response.status);
+      await fail('guarded Shell Worker dispatch failed: HTTP '+shellDispatch.response.status);
     }
     out('shell_dispatch','accepted');
   }
@@ -325,7 +377,7 @@ if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched||sharedSiteT
       body:JSON.stringify({ref:'main',inputs:{sync_domains:'false',release_branch_ref:branchRef,release_task_id:taskId}})
     });
     if(siteDispatch.response.status!==204){
-      fail('guarded shared Site Core dispatch failed: HTTP '+siteDispatch.response.status);
+      await fail('guarded shared Site Core dispatch failed: HTTP '+siteDispatch.response.status);
     }
     out('shared_site_dispatch','accepted');
   }
@@ -336,11 +388,11 @@ if(merge.response.ok&&(independentBoardTouched||shellRuntimeTouched||sharedSiteT
 // unchanged, including its established integration-order assertions.
 if(merge.response.ok&&controlApiTouched){
   if(merge.data?.merged!==true||!/^[a-f0-9]{40}$/i.test(text(merge.data?.sha,80))){
-    fail('Church Live Control API dispatch needs verified protected merge SHA');
+    await fail('Church Live Control API dispatch needs verified protected merge SHA');
   }
   const main=await github(`/repos/${repo}/branches/main`);
   if(!main.response.ok||text(main.data?.commit?.sha,80)!==text(merge.data.sha,80)){
-    fail('main changed before exact Church Live Control API dispatch; do not launch a stale release');
+    await fail('main changed before exact Church Live Control API dispatch; do not launch a stale release');
   }
   if(controlApiTouched){
     const apiDispatch=await github(`/repos/${repo}/actions/workflows/deploy-control-api.yml/dispatches`,{
@@ -349,7 +401,7 @@ if(merge.response.ok&&controlApiTouched){
       body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branchRef,release_task_id:taskId}})
     });
     if(apiDispatch.response.status!==204){
-      fail('guarded Church Live Control API dispatch failed: HTTP '+apiDispatch.response.status);
+      await fail('guarded Church Live Control API dispatch failed: HTTP '+apiDispatch.response.status);
     }
     out('control_api_dispatch','accepted');
   }
@@ -361,11 +413,11 @@ if(merge.response.ok&&controlApiTouched){
 // immediate merges emit no main-push event, unlike the convergent merger.
 if(merge.response.ok&&cgmaApexTouched){
   if(merge.data?.merged!==true||!/^[a-f0-9]{40}$/i.test(text(merge.data?.sha,80))){
-    fail('CGMA apex dispatch needs verified protected merge SHA');
+    await fail('CGMA apex dispatch needs verified protected merge SHA');
   }
   const main=await github(`/repos/${repo}/branches/main`);
   if(!main.response.ok||text(main.data?.commit?.sha,80)!==text(merge.data.sha,80)){
-    fail('main changed before exact CGMA apex dispatch; do not launch a stale release');
+    await fail('main changed before exact CGMA apex dispatch; do not launch a stale release');
   }
   const cgmaDispatch=await github(`/repos/${repo}/actions/workflows/deploy-cgma-apex-edge.yml/dispatches`,{
     method:'POST',
@@ -373,7 +425,7 @@ if(merge.response.ok&&cgmaApexTouched){
     body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branchRef,release_task_id:taskId}})
   });
   if(cgmaDispatch.response.status!==204){
-    fail('guarded CGMA apex dispatch failed: HTTP '+cgmaDispatch.response.status);
+    await fail('guarded CGMA apex dispatch failed: HTTP '+cgmaDispatch.response.status);
   }
   out('cgma_apex_dispatch','accepted');
 }
@@ -382,10 +434,10 @@ if(merge.response.ok&&cgmaApexTouched){
 // the trusted converger. Only the exact approved, verified merged HEAD qualifies.
 if(merge.response.ok&&adminContinuityTouched){
   if(merge.data?.merged!==true||!/^[a-f0-9]{40}$/i.test(text(merge.data?.sha,80))){
-    fail('authenticated Admin E2E needs verified protected merge SHA');
+    await fail('authenticated Admin E2E needs verified protected merge SHA');
   }
   const main=await github(`/repos/${repo}/branches/main`);
-  if(!main.response.ok)fail('cannot verify protected main before authenticated Admin E2E');
+  if(!main.response.ok)await fail('cannot verify protected main before authenticated Admin E2E');
   const mergedSha=text(merge.data.sha,80);
   const mainSha=text(main.data?.commit?.sha,80);
   if(mainSha!==mergedSha){
@@ -394,14 +446,14 @@ if(merge.response.ok&&adminContinuityTouched){
     const ancestry=await github(`/repos/${repo}/compare/${mergedSha}...${mainSha}`);
     if(!ancestry.response.ok||Number(ancestry.data?.behind_by)!==0||
       !['ahead','identical'].includes(ancestry.data?.status)){
-      fail('approved Admin recovery merge is not in current main ancestry');
+      await fail('approved Admin recovery merge is not in current main ancestry');
     }
   }
   const result=await github(`/repos/${repo}/actions/workflows/verify-admin-authenticated-production-e2e.yml/dispatches`,{
     method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ref:'main'})
   });
   if(result.response.status!==204){
-    fail('authenticated Admin E2E dispatch failed: HTTP '+result.response.status);
+    await fail('authenticated Admin E2E dispatch failed: HTTP '+result.response.status);
   }
   out('admin_e2e_dispatch','accepted');
 }

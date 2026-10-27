@@ -39,6 +39,8 @@ function safe(row: any) {
     religion_consent: row.religion_consent === true,
     marriage_opt_in: row.marriage_opt_in === true,
     discoverable: false,
+    paid_member: Boolean(row.paid_member_since) && row.status === "active",
+    paid_member_since: row.paid_member_since || null,
     consent_version: row.consent_version,
     consented_at: row.consented_at,
     withdrawn_at: row.withdrawn_at,
@@ -71,10 +73,26 @@ Deno.serve(async req => {
     const { data, error } = await db().auth.getUser(bearer);
     if (error || !data.user || data.user.is_anonymous) return reply(req, { error: "unauthorized" }, 401);
     const userId = data.user.id;
+    const email = typeof data.user.email === "string" ? data.user.email.slice(0, 320) : null;
     const admin = db(true);
-    if (socialRoute && p.startsWith("/bank/")) return await handleSinglesBank(req, p, admin, userId, reply);
+    // 시범 운영(2026-10-28): 공개 개통(SINGLES_PUBLIC_LAUNCH_ENABLED=true) 전에는 시범 명단과 운영자만 회원 기능을 쓴다.
+    if (Deno.env.get("SINGLES_PUBLIC_LAUNCH_ENABLED") !== "true") {
+      const { data: pilot, error: pilotError } = await admin.from("singles_pilot_users").select("user_id").eq("user_id", userId).maybeSingle();
+      if (pilotError) throw pilotError;
+      const { data: op, error: opError } = await admin.from("singles_bank_operators").select("enabled").eq("user_id", userId).maybeSingle();
+      if (opError) throw opError;
+      if (!pilot && op?.enabled !== true) return reply(req, { error: "pilot_only" }, 403);
+    }
+    // 가입 시도 기록(시간·Google 계정). 기록하지 못하면 가입을 진행하지 않는다.
+    const logAttempt = async (action: string, detail: string | null = null) => {
+      const { error: logError } = await admin.from("singles_signup_attempts")
+        .insert({ user_id: userId, email, action, detail: detail ? detail.slice(0, 120) : null });
+      if (logError) throw logError;
+    };
+    if (socialRoute && p.startsWith("/bank/")) return await handleSinglesBank(req, p, admin, userId, reply, email);
     if (socialRoute) return await handleSinglesSocial(req, p, admin, userId, reply);
     if (p === "/withdraw") {
+      await logAttempt("withdraw");
       // Atomic: membership off, open connections closed (no revival on re-join),
       // pending/approved RSVPs cancelled, consent receipt written.
       const { error: withdrawError } = await admin.rpc("singles_withdraw_member", { p_user: userId, p_version: VERSION });
@@ -82,7 +100,7 @@ Deno.serve(async req => {
       if (withdrawError) throw withdrawError;
       return reply(req, { ok: true, status: "withdrawn" });
     }
-    const fields = "status,age_19_confirmed,adult_verified_at,base_consent,religion_consent,marriage_opt_in,consent_version,consented_at,withdrawn_at";
+    const fields = "status,age_19_confirmed,adult_verified_at,base_consent,religion_consent,marriage_opt_in,consent_version,consented_at,withdrawn_at,paid_member_since";
     if (req.method === "GET") {
       const { data: member, error: readError } = await admin.from("singles_memberships")
         .select(fields).eq("user_id", userId).maybeSingle();
@@ -91,27 +109,29 @@ Deno.serve(async req => {
     }
     if (Number(req.headers.get("content-length") || 0) > 1024)
       return reply(req, { error: "payload_too_large" }, 413);
+    const fail = async (code: string, status = 400) => { await logAttempt("enroll_failed", code); return reply(req, { error: code }, status); };
     let input: unknown;
-    try { input = await req.json(); } catch { return reply(req, { error: "invalid_json" }, 400); }
+    try { input = await req.json(); } catch { return await fail("invalid_json"); }
     if (!input || typeof input !== "object" || Array.isArray(input))
-      return reply(req, { error: "invalid_payload" }, 400);
+      return await fail("invalid_payload");
     const b = input as Record<string, unknown>;
     const allowed = new Set(["age_19_confirmed", "base_consent", "religion_consent", "marriage_opt_in"]);
-    if (Object.keys(b).some(k => !allowed.has(k))) return reply(req, { error: "unknown_field" }, 400);
+    if (Object.keys(b).some(k => !allowed.has(k))) return await fail("unknown_field");
     if (b.age_19_confirmed !== true || b.base_consent !== true)
-      return reply(req, { error: "adult_declaration_and_base_consent_required" }, 400);
+      return await fail("adult_declaration_and_base_consent_required");
     if (typeof b.religion_consent !== "boolean" || typeof b.marriage_opt_in !== "boolean")
-      return reply(req, { error: "explicit_optional_choices_required" }, 400);
+      return await fail("explicit_optional_choices_required");
     // Dating/community operating mode: marriage-purpose connection is not offered
     // (결혼중개업 미신고 운영). Kept in the schema for a future registered brokerage.
     if (b.marriage_opt_in === true)
-      return reply(req, { error: "marriage_connection_not_offered" }, 400);
+      return await fail("marriage_connection_not_offered");
     if (b.marriage_opt_in && !b.religion_consent)
-      return reply(req, { error: "religion_consent_required_for_marriage" }, 400);
+      return await fail("religion_consent_required_for_marriage");
     const { data: link, error: linkError } = await admin.from("login_identities")
       .select("person_id").eq("auth_user_id", userId).eq("status", "active").maybeSingle();
     if (linkError) throw linkError;
-    if (!link?.person_id) return reply(req, { error: "core_identity_link_required" }, 409);
+    if (!link?.person_id) return await fail("core_identity_link_required", 409);
+    await logAttempt("enroll");
     const row = {
       user_id: userId, person_id: link.person_id, status: "active",
       age_19_confirmed: true, base_consent: true,

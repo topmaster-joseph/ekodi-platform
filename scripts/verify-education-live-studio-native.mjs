@@ -134,7 +134,68 @@ async function gateProbe(browser){
     result.lab=lab.status();
     if(lab.status()!==200)fail('learner lab must stay public, got '+lab.status());
     if(!/frame-ancestors 'self'/.test(lab.headers()['content-security-policy']||''))fail('learner lab must be frameable by the same-origin presenter only');
+    // Materials page without a session: slides only; summary and practice downloads stay instructor-only.
+    await page.goto(ORIGIN+PREFIX+'/study/live/handout/?c='+encodeURIComponent(COURSE)+'&mode=practice',{waitUntil:'domcontentloaded',timeout:35000});
+    await page.locator('body[data-ready="true"]').waitFor({state:'attached',timeout:30000}).catch(()=>fail('materials page did not load for learners'));
+    if(await page.locator('#handout .ho-slide').count()<10)fail('learners must get the lecture slides');
+    if(await page.locator('[data-mode="summary"]:visible,[data-mode="practice"]:visible').count()!==0)fail('summary/practice downloads must be instructor-only');
+    if(await page.locator('#handout .ho-pre').count()!==0)fail('practice materials rendered for a learner');
+    result.handoutLearner='slides-only';
     report.gate={...result,passed:true};
+  }finally{await context.close();}
+}
+// Instructor document share: the management API refuses anonymous callers; with a (probe-minted) instructor
+// session one synthetic 1×1 PNG is uploaded with a 1-day expiry, viewed through its public link, then deleted
+// at once so no test document stays in storage.
+async function docsProbe(browser){
+  const context=await browser.newContext({locale:'ko-KR'});
+  try{
+    const base=ORIGIN+PREFIX+'/study/live/docs/';
+    const anon=await context.request.get(base+'api/list',{failOnStatusCode:false});
+    if(anon.status()!==401)fail('docs API must refuse anonymous callers (401), got '+anon.status());
+    await authorize(context);
+    const list=await context.request.get(base+'api/list',{failOnStatusCode:false});
+    if(list.status()===503){report.docs={configured:false};return;}
+    if(list.status()!==200)fail('docs API list with instructor session returned '+list.status());
+    const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==','base64');
+    const up=await context.request.post(base+'api/upload',{failOnStatusCode:false,headers:{origin:new URL(ORIGIN).origin},
+      multipart:{kind:'id',days:'1',purpose:'EKODI 자동 점검 (즉시 삭제)',file:{name:'probe.png',mimeType:'image/png',buffer:png}}});
+    if(up.status()!==201)fail('docs upload returned '+up.status());
+    const {item}=await up.json();
+    try{
+      const viewer=await context.request.get(base+item.path,{failOnStatusCode:false,headers:{cookie:''}});
+      if(viewer.status()!==200||!(await viewer.text()).includes('EKODI 자동 점검'))fail('docs share view failed '+viewer.status());
+      if(!/noindex/.test(viewer.headers()['x-robots-tag']||''))fail('docs share view must be noindex');
+      const file=await context.request.get(base+item.path.replace(/^s\//,'f/'),{failOnStatusCode:false});
+      if(file.status()!==200||file.headers()['content-type']!=='image/png')fail('docs share file failed '+file.status());
+    }finally{
+      const del=await context.request.post(base+'api/delete',{failOnStatusCode:false,headers:{origin:new URL(ORIGIN).origin},data:{token:item.path.slice(2)}});
+      if(del.status()!==200)fail('docs probe could not delete its synthetic document: '+del.status());
+    }
+    const gone=await context.request.get(base+item.path,{failOnStatusCode:false});
+    if(gone.status()!==404)fail('deleted share link must answer 404, got '+gone.status());
+    // The real screen path: a large phone-like photo picked on the docs page and uploaded by the browser.
+    const marker='EKODI 자동 점검 (화면 업로드 · 즉시 삭제)';
+    const page=await context.newPage();
+    await page.goto(base+'?c='+encodeURIComponent(COURSE),{waitUntil:'domcontentloaded',timeout:35000});
+    await page.locator('body[data-ready="true"]').waitFor({state:'attached',timeout:20000}).catch(()=>fail('docs manager page did not load with an instructor session'));
+    const big=await page.evaluate(async()=>{const c=document.createElement('canvas');c.width=4000;c.height=3000;const x=c.getContext('2d');const img=x.createImageData(4000,3000);
+      for(let i=0;i<img.data.length;i+=4){const v=(i*2654435761)>>>24;img.data[i]=v;img.data[i+1]=(v*7)&255;img.data[i+2]=(v*13)&255;img.data[i+3]=255;}
+      x.putImageData(img,0,0);const b=await new Promise(r=>c.toBlob(r,'image/jpeg',0.97));const buf=new Uint8Array(await b.arrayBuffer());let s='';for(let i=0;i<buf.length;i+=32768)s+=String.fromCharCode(...buf.subarray(i,i+32768));return {b64:btoa(s),size:buf.length};});
+    const form=page.locator('form[data-kind="id"]');
+    await form.locator('input[type="file"]').setInputFiles({name:'phone-photo.jpg',mimeType:'image/jpeg',buffer:Buffer.from(big.b64,'base64')});
+    await form.locator('input[name="purpose"]').fill(marker);
+    const before=await page.locator('.docs-item').count();
+    await form.locator('button[type="submit"]').click();
+    const outcome=await Promise.race([
+      page.waitForFunction(n=>document.querySelectorAll('.docs-item').length>n,before,{timeout:45000}).then(()=>'ok'),
+      page.waitForFunction(()=>{const t=document.querySelector('#toast');return t&&!t.hidden&&!/링크를 만들었습니다/.test(t.textContent)?t.textContent:'';},null,{timeout:45000}).then(h=>h.jsonValue())
+    ]).catch(e=>'timeout: '+e.message);
+    // Remove every probe document, whatever the outcome.
+    const left=await (await context.request.get(base+'api/list',{failOnStatusCode:false})).json().catch(()=>({items:[]}));
+    for(const it of left.items||[])if(it.purpose===marker)await context.request.post(base+'api/delete',{failOnStatusCode:false,headers:{origin:new URL(ORIGIN).origin},data:{token:it.token}});
+    if(outcome!=='ok')fail('docs screen upload of a '+(big.size/1048576).toFixed(1)+'MB photo failed: '+outcome);
+    report.docs={configured:true,passed:true,screenUploadBytes:big.size};
   }finally{await context.close();}
 }
 async function open(page,route,{ready=true}={}){
@@ -542,6 +603,7 @@ async function main(){
   try{
     browser=await chromium.launch({headless:true});
     await gateProbe(browser);
+    await docsProbe(browser);
     await bootcampRegressionProbe(browser);
     for(const profile of VIEWPORTS){
       if(profile.width>=1366)await instructorFlow(browser,profile);

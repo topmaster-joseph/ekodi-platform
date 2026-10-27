@@ -122,3 +122,23 @@
 .inquiry-doc a{color:#1d4f91}
 @media(max-width:610px){.inquiry-doc{margin:0;box-shadow:none;font-size:15px}.inquiry-table th{white-space:normal;width:4.8em}}
 @media print{@page{size:A4;margin:18mm}.inquiry-body{background:#fff}.inquiry-doc{margin:0;padding:0;box-shadow:none;max-width:none}.inquiry-doc a{color:inherit;text-decoration:none}}
+/* 프로필 항목별 입력·공개 선택(2026-10-28) */
+.price-notice{border-left:4px solid #e7a08f;padding:12px 16px}
+.price-notice strong{display:block;margin-bottom:4px}
+.price-notice p{margin:0;line-height:1.7}
+.profile-meter{font-weight:650;color:#8b5048;margin:12px 0}
+.profile-row{display:flex;gap:12px;align-items:flex-end}
+.profile-row>.field{flex:1 1 auto;min-width:0}
+.profile-row select{width:100%}
+.show-toggle{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:10px 12px;border:1px solid #f2e3df;border-radius:14px;margin-bottom:12px;white-space:nowrap;cursor:pointer}
+.profile-facts{display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;margin:8px 0}
+.profile-facts dt{color:#8b5048;font-weight:650}.profile-facts dd{margin:0}
+@media(max-width:610px){.profile-row{flex-direction:column;align-items:stretch;gap:0}.show-toggle{align-self:flex-start}}
+/* 유료회원 모델(2026-10-28) */
+.guide ul,.guide ol{line-height:1.8;padding-left:1.2em}
+.price-table{width:100%;border-collapse:collapse;margin:12px 0}
+.price-table th,.price-table td{border:1px solid #f2e3df;padding:8px 10px;text-align:left}
+.price-table th{background:#fff1e9}
+.wallet-balance{font-size:1.2em;font-weight:700;color:#8b5048}
+.ledger{list-style:none;padding:0;font-size:.92em;color:#765f57;line-height:1.7}
+.join-steps{line-height:1.9}

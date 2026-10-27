@@ -27,7 +27,7 @@ test('Donghaeng main hero uses the consented self-hosted photograph, concise cop
   assert.match(html,/href="\/singles\/groups"/);
   assert.match(html,/href="\/singles\/discover"/);
   assert.doesNotMatch(html,/FAITH · COMMUNITY · RELATIONSHIP/);
-  assert.match(html,/href="\/auth\/\?site=singles&amp;return_to=/);
+  assert.match(html,/href="\/auth\/\?site=singles&amp;select_account=1&amp;return_to=/);
   assert.match(result.headers.get('content-security-policy'),/img-src 'self'/);
 });
 

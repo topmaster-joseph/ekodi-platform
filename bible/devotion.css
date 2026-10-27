@@ -123,3 +123,10 @@ body:has([data-mission-devotion]) .mission-site-header{max-width:840px;padding-i
 .ekodi-devotion .dv-admin-card dt{color:#5b6b62;font-size:.85rem}
 .ekodi-devotion .dv-admin-card dd{margin:0;font-weight:700}
 @media (max-width:520px){.ekodi-devotion .dv-admin-list li{grid-template-columns:5em minmax(0,1fr)}.ekodi-devotion .dv-admin-title{grid-column:2}}
+/* 2026-10-28: 모바일에서 본문 좌우 여백 최소화 (본문 글자 기준 약 50px → 약 19px). */
+@media (max-width:520px){
+.devotion-page main{padding-left:0;padding-right:0}
+.ekodi-devotion{padding-left:max(6px,env(safe-area-inset-left,0px));padding-right:max(6px,env(safe-area-inset-right,0px))}
+.ekodi-devotion .dv-scripture-section{padding:16px 12px;border-radius:14px}
+.ekodi-devotion .dv-panel{padding-left:12px;padding-right:12px}
+}

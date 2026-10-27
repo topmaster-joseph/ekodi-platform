@@ -8,6 +8,8 @@
 //   GET  /api/cgma/edocs/{id}/file                원본 파일
 //   POST /api/cgma/edocs/{id}/start               서명 요청 시작(서명 링크 발급)
 //   POST /api/cgma/edocs/{id}/cancel              취소(사유 기록, 물리 삭제 없음)
+//   POST /api/cgma/edocs/{id}/import              링크(구글 문서·드라이브·웹 파일)에서 원본 사본 가져오기 — 초안에서만
+//                                                 (보관 문서는 {link_only:true}로 링크 자체를 기록할 수 있음)
 //   POST /api/cgma/edocs/{id}/signers/{seq}/reissue  해당 서명자 링크 재발급
 // Signer endpoints (possession of the signing link; header x-ekodi-sign-token):
 //   GET  /api/cgma/edocs/sign                     내 서명 화면 정보
@@ -105,15 +107,28 @@ export function validateDraft(body){
   if(!EDOC_CATEGORIES.includes(category))return {ok:false,code:'CATEGORY_INVALID'};
   if([...summary].length>500)return {ok:false,code:'SUMMARY_TOO_LONG'};
   if(contentKind==='text'&&!within(bodyText,20000))return {ok:false,code:'BODY_TEXT_INVALID'};
-  const list=Array.isArray(body.signers)?body.signers:[];
-  if(list.length<1||list.length>MAX_SIGNERS)return {ok:false,code:'SIGNERS_INVALID'};
+  const mode=body.mode==='archive'?'archive':'sign';
+  const docDate=clean(body.doc_date);
+  if(docDate&&!/^\d{4}-\d{2}-\d{2}$/.test(docDate))return {ok:false,code:'DOC_DATE_INVALID'};
+  const sourceNote=clean(body.source_note);
+  if([...sourceNote].length>200)return {ok:false,code:'SOURCE_NOTE_TOO_LONG'};
+  let sourceUrl='';
+  if(clean(body.source_url)){sourceUrl=normalizeSourceUrl(body.source_url);if(!sourceUrl)return {ok:false,code:'SOURCE_URL_INVALID'};}
+  if(sourceUrl&&contentKind!=='file')return {ok:false,code:'SOURCE_URL_INVALID'};
+  const signers=mode==='archive'?[]:validateSigners(body.signers);
+  if(!signers)return {ok:false,code:'SIGNERS_INVALID'};
+  return {ok:true,value:{title,category,summary,contentKind,bodyText,signers,mode,docDate,sourceNote,sourceUrl}};
+}
+// A signer plan: 1..10 rows, role required; the name may be filled in later (before the request starts).
+export function validateSigners(list){
+  if(!Array.isArray(list)||list.length<1||list.length>MAX_SIGNERS)return null;
   const signers=[];
   for(const item of list){
     const roleTitle=clean(item?.role_title),signerName=clean(item?.signer_name);
-    if(!within(roleTitle,30)||!within(signerName,30))return {ok:false,code:'SIGNER_INVALID'};
+    if(!within(roleTitle,30)||[...signerName].length>30)return null;
     signers.push({roleTitle,signerName});
   }
-  return {ok:true,value:{title,category,summary,contentKind,bodyText,signers}};
+  return signers;
 }
 export function validateStrokes(value){
   if(!Array.isArray(value)||value.length<1||value.length>MAX_STROKES)return null;
@@ -133,12 +148,111 @@ export function validateStrokes(value){
   }
   return points>=MIN_POINTS?out:null;
 }
-export function sniffFileType(bytes,declared){
-  const type=FILE_TYPES[String(declared||'').toLowerCase().split(';')[0].trim()];
-  if(!type)return null;
-  if(bytes.length<type.magic.length||!type.magic.every((b,i)=>bytes[i]===b))return null;
-  return {mime:String(declared).toLowerCase().split(';')[0].trim(),ext:type.ext};
+// Records-only (보관) documents may also be office/HWP originals; they are downloaded, never rendered.
+const ZIP=[0x50,0x4b,0x03,0x04],OLE=[0xd0,0xcf,0x11,0xe0];
+const ARCHIVE_TYPES=Object.freeze({
+  hwp:{mime:'application/x-hwp',magic:OLE},
+  hwpx:{mime:'application/hwp+zip',magic:ZIP},
+  docx:{mime:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',magic:ZIP},
+  xlsx:{mime:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',magic:ZIP},
+  pptx:{mime:'application/vnd.openxmlformats-officedocument.presentationml.presentation',magic:ZIP},
+});
+const EXT_MIME=Object.freeze({pdf:'application/pdf',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg'});
+const hasMagic=(bytes,magic)=>bytes.length>=magic.length&&magic.every((b,i)=>bytes[i]===b);
+export function sniffFileType(bytes,declared,{fileName='',archive=false}={}){
+  const mime=String(declared||'').toLowerCase().split(';')[0].trim();
+  const ext=(String(fileName).toLowerCase().match(/\.([a-z0-9]{2,5})$/)||[])[1]||'';
+  const viewable=FILE_TYPES[mime]?mime:EXT_MIME[ext];
+  if(viewable&&hasMagic(bytes,FILE_TYPES[viewable].magic))return {mime:viewable,ext:FILE_TYPES[viewable].ext};
+  const office=archive&&ARCHIVE_TYPES[ext];
+  if(office&&hasMagic(bytes,office.magic))return {mime:office.mime,ext};
+  return null;
 }
+
+// ---------- links (구글 문서·드라이브·웹 파일) ----------
+// Only public https addresses on a hostname are accepted: no credentials, no custom ports, no IP literals,
+// no local/internal names and none of EKODI's own hosts (the fetch must never reach a private surface).
+const OWN_HOSTS=/(^|\.)(ekodi\.kr|cgma\.or\.kr|workers\.dev|pages\.dev)$/;
+export function normalizeSourceUrl(value){
+  const raw=clean(value);
+  if(!raw||raw.length>2000)return '';
+  let url;try{url=new URL(raw)}catch{return ''}
+  if(url.protocol!=='https:'||url.username||url.password||(url.port&&url.port!=='443'))return '';
+  const host=url.hostname.toLowerCase().replace(/\.$/,'');
+  if(!host.includes('.')||/^[\d.]+$/.test(host)||host.includes(':')||host.startsWith('[')||/(^|\.)(localhost|local|internal|intranet|lan|home|corp|arpa)$/.test(host)||OWN_HOSTS.test(host))return '';
+  url.hash='';
+  return url.toString();
+}
+// Google 문서·스프레드시트·프레젠테이션 → PDF 내보내기, 드라이브 파일 → 원본 내려받기 주소.
+export function snapshotSource(sourceUrl){
+  const url=new URL(sourceUrl),host=url.hostname.toLowerCase();
+  const id=(url.pathname.match(/\/d\/([A-Za-z0-9_-]{10,})/)||[])[1]||(/^[A-Za-z0-9_-]{10,}$/.test(url.searchParams.get('id')||'')?url.searchParams.get('id'):'');
+  if(host==='docs.google.com'&&id){
+    if(url.pathname.startsWith('/document/'))return {fetchUrl:`https://docs.google.com/document/d/${id}/export?format=pdf`,provider:'google-docs',fallbackExt:'pdf'};
+    if(url.pathname.startsWith('/spreadsheets/'))return {fetchUrl:`https://docs.google.com/spreadsheets/d/${id}/export?format=pdf`,provider:'google-sheets',fallbackExt:'pdf'};
+    if(url.pathname.startsWith('/presentation/'))return {fetchUrl:`https://docs.google.com/presentation/d/${id}/export/pdf`,provider:'google-slides',fallbackExt:'pdf'};
+  }
+  if((host==='drive.google.com'||host==='docs.google.com')&&id)
+    return {fetchUrl:`https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t`,provider:'google-drive',fallbackExt:''};
+  return {fetchUrl:sourceUrl,provider:'web',fallbackExt:''};
+}
+function dispositionName(header){
+  const value=String(header||'');
+  const star=value.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+  if(star){try{return decodeURIComponent(star[1].trim().replace(/^"|"$/g,''))}catch{}}
+  const plain=value.match(/filename\s*=\s*"([^"]+)"|filename\s*=\s*([^;]+)/i);
+  return plain?(plain[1]||plain[2]||'').trim():'';
+}
+async function readResponse(response,limit){
+  const declared=Number(response.headers.get('content-length')||0);
+  if(declared>limit){try{await response.body?.cancel()}catch{}return {tooLarge:true};}
+  const reader=response.body?.getReader();
+  if(!reader)return {bytes:new Uint8Array(0)};
+  const chunks=[];let size=0;
+  for(;;){
+    const {done,value}=await reader.read();
+    if(done)break;
+    size+=value.byteLength;
+    if(size>limit){await reader.cancel().catch(()=>{});return {tooLarge:true};}
+    chunks.push(value);
+  }
+  const bytes=new Uint8Array(size);let offset=0;for(const c of chunks){bytes.set(c,offset);offset+=c.byteLength;}
+  return {bytes};
+}
+// Fetches a public copy of the linked document. Redirects are followed by hand (max 5) so every hop is
+// re-validated; an HTML answer means "not a downloadable file" (a web page, or a private Google file).
+export async function fetchLinkSnapshot(sourceUrl,{fetchImpl=fetch,archive=false,timeoutMs=25000}={}){
+  const source=snapshotSource(sourceUrl);
+  let target=source.fetchUrl,response=null;
+  const signal=typeof AbortSignal?.timeout==='function'?AbortSignal.timeout(timeoutMs):undefined;
+  try{
+    for(let hop=0;hop<=5;hop++){
+      if(!normalizeSourceUrl(target))return {code:'LINK_URL_INVALID'};
+      response=await fetchImpl(target,{method:'GET',redirect:'manual',signal,headers:{accept:'application/pdf,image/*,application/octet-stream;q=0.9,*/*;q=0.5','user-agent':'EKODI-cgma-edocs/1.0'}});
+      if(response.status>=300&&response.status<400&&response.headers.get('location')){
+        target=new URL(response.headers.get('location'),target).toString();
+        try{await response.body?.cancel()}catch{}
+        if(hop===5)return {code:'LINK_TOO_MANY_REDIRECTS'};
+        continue;
+      }
+      break;
+    }
+  }catch{return {code:'LINK_FETCH_FAILED'};}
+  if(!response?.ok){try{await response?.body?.cancel()}catch{}return {code:[401,403].includes(response?.status)?'LINK_NOT_PUBLIC':'LINK_FETCH_FAILED',status:response?.status||0};}
+  const contentType=String(response.headers.get('content-type')||'').toLowerCase();
+  if(contentType.startsWith('text/html')){try{await response.body?.cancel()}catch{}return {code:source.provider.startsWith('google')?'LINK_NOT_PUBLIC':'LINK_NOT_A_FILE'};}
+  const body=await readResponse(response,MAX_FILE_BYTES);
+  if(body.tooLarge)return {code:'FILE_TOO_LARGE'};
+  let name=dispositionName(response.headers.get('content-disposition'));
+  if(!name){try{name=decodeURIComponent(new URL(target).pathname.split('/').pop()||'')}catch{name=''}}
+  name=clean(name).replace(/[\\/]/g,'_').slice(0,120);
+  if(source.fallbackExt&&!/\.[a-z0-9]{2,5}$/i.test(name))name=(name||'document')+'.'+source.fallbackExt;
+  const type=sniffFileType(body.bytes,contentType,{fileName:name,archive});
+  if(!type)return {code:'FILE_TYPE_INVALID'};
+  if(!/\.[a-z0-9]{2,5}$/i.test(name))name=(name||'document')+'.'+type.ext;
+  return {ok:true,bytes:body.bytes,name,type,provider:source.provider};
+}
+
 export function nextSignerState(signers,seq){
   // Pure model of one signing step: returns the new signer statuses and document status.
   const count=signers.length,isLast=seq===count;
@@ -196,7 +310,9 @@ function publicDocument(doc){
   return {id:doc.id,doc_no:doc.doc_no,title:doc.title,category:doc.category,summary:doc.summary,content_kind:doc.content_kind,
     body_text:doc.content_kind==='text'?doc.body_text:'',file_name:doc.file_name,file_mime:doc.file_mime,file_size:Number(doc.file_size||0),
     content_sha256:doc.content_sha256,status:doc.status,current_seq:Number(doc.current_seq||0),signer_count:Number(doc.signer_count||0),
-    created_at:doc.created_at,started_at:doc.started_at,completed_at:doc.completed_at,cancelled_at:doc.cancelled_at,cancel_reason:doc.cancel_reason};
+    created_at:doc.created_at,started_at:doc.started_at,completed_at:doc.completed_at,cancelled_at:doc.cancelled_at,cancel_reason:doc.cancel_reason,
+    mode:doc.mode||'sign',doc_date:doc.doc_date||'',source_note:doc.source_note||'',source_url:doc.source_url||'',serial_no:doc.serial_no==null?null:Number(doc.serial_no),
+    archived:(doc.mode||'sign')==='archive'&&doc.status==='completed'};
 }
 function publicSigner(s,{withLink=false,doc=null,now=Date.now()}={}){
   const out={seq:Number(s.seq),role_title:s.role_title,signer_name:s.signer_name,status:s.status,signed_at:s.signed_at,
@@ -231,15 +347,19 @@ async function listDocuments(request,env){
   const status=url.searchParams.get('status')||'';
   const q=clean(url.searchParams.get('q')||'').slice(0,60);
   const year=/^\d{4}$/.test(url.searchParams.get('year')||'')?url.searchParams.get('year'):'';
-  const where=['workspace_id=?'],binds=[EDOC_TENANT];
-  if(['draft','in_progress','completed','cancelled'].includes(status)){where.push('status=?');binds.push(status);}
+  const where=['1=1'],binds=[EDOC_TENANT];
+  if(status==='archived'){where.push("status='completed' AND mode='archive'");}
+  else if(status==='completed'){where.push("status='completed' AND mode<>'archive'");}
+  else if(['draft','in_progress','cancelled'].includes(status)){where.push('status=?');binds.push(status);}
   if(year){where.push('doc_no LIKE ?');binds.push(`CGMA-${year}-%`);}
-  if(q){where.push('(title LIKE ? OR doc_no LIKE ? OR category LIKE ? OR summary LIKE ?)');const like=`%${q.replace(/[%_]/g,'')}%`;binds.push(like,like,like,like);}
-  const result=await env.DB.prepare(`SELECT * FROM cgma_edoc_documents WHERE ${where.join(' AND ')} ORDER BY created_at DESC LIMIT 300`).bind(...binds).all();
+  if(q){where.push('(title LIKE ? OR doc_no LIKE ? OR category LIKE ? OR summary LIKE ? OR source_url LIKE ?)');const like=`%${q.replace(/[%_]/g,'')}%`;binds.push(like,like,like,like,like);}
+  // 연번: a stable serial number in registration order across the whole register (filters do not renumber).
+  const result=await env.DB.prepare(`SELECT * FROM (SELECT d.*,ROW_NUMBER() OVER (ORDER BY d.created_at,d.id) AS serial_no
+      FROM cgma_edoc_documents d WHERE d.workspace_id=?) WHERE ${where.join(' AND ')} ORDER BY serial_no DESC LIMIT 300`).bind(...binds).all();
   const docs=(result?.results||[]).map(publicDocument);
-  const counts=await env.DB.prepare('SELECT status,COUNT(*) AS n FROM cgma_edoc_documents WHERE workspace_id=? GROUP BY status').bind(EDOC_TENANT).all();
-  const summary={draft:0,in_progress:0,completed:0,cancelled:0};
-  for(const row of counts?.results||[])summary[row.status]=Number(row.n||0);
+  const counts=await env.DB.prepare("SELECT CASE WHEN status='completed' AND mode='archive' THEN 'archived' ELSE status END AS bucket,COUNT(*) AS n FROM cgma_edoc_documents WHERE workspace_id=? GROUP BY bucket").bind(EDOC_TENANT).all();
+  const summary={draft:0,in_progress:0,completed:0,archived:0,cancelled:0};
+  for(const row of counts?.results||[])summary[row.bucket]=Number(row.n||0);
   return json({ok:true,documents:docs,summary,categories:EDOC_CATEGORIES,default_roles:DEFAULT_SIGNER_ROLES});
 }
 
@@ -255,12 +375,12 @@ async function createDocument(request,env,{actor,now}){
     const {year,n}=await nextDocNo(env,now);
     const docNo=`CGMA-${year}-${String(n+attempt).padStart(4,'0')}`;
     const {statement:event}=await eventStatement(env,{docId:id,action:'created',actor,createdAt:stamp,prevHash:'',
-      detail:{doc_no:docNo,title:d.title,category:d.category,content_kind:d.contentKind,signers:d.signers.map(s=>`${s.roleTitle} ${s.signerName}`)}});
+      detail:{doc_no:docNo,title:d.title,category:d.category,content_kind:d.contentKind,mode:d.mode,doc_date:d.docDate,source_url:d.sourceUrl||undefined,signers:d.signers.map(s=>`${s.roleTitle} ${s.signerName}`.trim())}});
     try{
       await env.DB.batch([
-        env.DB.prepare(`INSERT INTO cgma_edoc_documents (id,workspace_id,doc_no,title,category,summary,content_kind,body_text,content_sha256,status,current_seq,signer_count,created_by,created_at,updated_at)
-          VALUES (?,?,?,?,?,?,?,?,?,'draft',0,?,?,?,?)`)
-          .bind(id,EDOC_TENANT,docNo,d.title,d.category,d.summary,d.contentKind,d.bodyText,contentSha,d.signers.length,actor,stamp,stamp),
+        env.DB.prepare(`INSERT INTO cgma_edoc_documents (id,workspace_id,doc_no,title,category,summary,content_kind,body_text,content_sha256,status,current_seq,signer_count,created_by,created_at,updated_at,mode,doc_date,source_note,source_url)
+          VALUES (?,?,?,?,?,?,?,?,?,'draft',0,?,?,?,?,?,?,?,?)`)
+          .bind(id,EDOC_TENANT,docNo,d.title,d.category,d.summary,d.contentKind,d.bodyText,contentSha,d.signers.length,actor,stamp,stamp,d.mode,d.docDate,d.sourceNote,d.sourceUrl),
         ...d.signers.map((s,i)=>env.DB.prepare(`INSERT INTO cgma_edoc_signers (doc_id,seq,role_title,signer_name,status,created_at,updated_at) VALUES (?,?,?,?,'waiting',?,?)`)
           .bind(id,i+1,s.roleTitle,s.signerName,stamp,stamp)),
         event,
@@ -280,17 +400,22 @@ async function uploadFile(request,env,{doc,actor,now}){
   if(!store?.put)return fail('FILE_STORAGE_UNAVAILABLE','파일 저장소를 사용할 수 없습니다.',503);
   const body=await readBody(request,MAX_FILE_BYTES);
   if(body.tooLarge)return fail('FILE_TOO_LARGE','파일은 20MB 이하만 올릴 수 있습니다.',413);
-  const type=sniffFileType(body.bytes,request.headers.get('content-type'));
-  if(!type)return fail('FILE_TYPE_INVALID','PDF, PNG, JPEG 파일만 올릴 수 있습니다.',415);
   let name='';try{name=clean(decodeURIComponent(request.headers.get('x-ekodi-file-name')||''))}catch{}
+  const archive=(doc.mode||'sign')==='archive';
+  const type=sniffFileType(body.bytes,request.headers.get('content-type'),{fileName:name,archive});
+  if(!type)return fail('FILE_TYPE_INVALID',archive?'PDF, 이미지(PNG·JPEG), 한글(HWP·HWPX), 워드·엑셀·파워포인트 파일만 올릴 수 있습니다.':'서명용 문서는 PDF, PNG, JPEG 파일만 올릴 수 있습니다.',415);
   name=(name.replace(/[\\/]/g,'_').slice(0,120))||`document.${type.ext}`;
+  return storeOriginal(env,store,{doc,actor,now,bytes:body.bytes,name,type,action:'file_uploaded',extra:{}});
+}
+async function storeOriginal(env,store,{doc,actor,now,bytes,name,type,action,extra}){
+  const body={bytes};
   const sha=await sha256Hex(body.bytes);
   const key=`cgma/edocs/${doc.id}/original-${sha.slice(0,16)}.${type.ext}`;
   await store.put(key,body.bytes,{httpMetadata:{contentType:type.mime},customMetadata:{sha256:sha,doc_id:doc.id,workspace:EDOC_TENANT}});
   const stamp=new Date(now).toISOString(),nonce=crypto.randomUUID();
   const results=await chainedBatch(env,doc.id,async prevHash=>{
-    const {statement:event}=await eventStatement(env,{docId:doc.id,action:'file_uploaded',actor,createdAt:stamp,prevHash,guard:nonceGuard(doc.id,nonce),
-      detail:{file_name:name,size:body.bytes.length,mime:type.mime,sha256:sha}});
+    const {statement:event}=await eventStatement(env,{docId:doc.id,action,actor,createdAt:stamp,prevHash,guard:nonceGuard(doc.id,nonce),
+      detail:{file_name:name,size:body.bytes.length,mime:type.mime,sha256:sha,...extra}});
     return [
       env.DB.prepare(`UPDATE cgma_edoc_documents SET file_key=?,file_name=?,file_mime=?,file_size=?,content_sha256=?,op_nonce=?,updated_at=? WHERE id=? AND status='draft'`)
         .bind(key,name,type.mime,body.bytes.length,sha,nonce,stamp,doc.id),
@@ -306,11 +431,62 @@ async function uploadFile(request,env,{doc,actor,now}){
   return json({ok:true,content_sha256:sha,file_name:name,file_size:body.bytes.length});
 }
 
+// 링크에서 가져오기: the server downloads a public copy (Google 문서는 PDF로) and stores it as the original.
+// A 보관 document whose link cannot be downloaded may keep the link itself as its record (link_only).
+const LINK_MESSAGES=Object.freeze({
+  LINK_NOT_PUBLIC:'링크의 문서를 가져올 수 없습니다. 구글 문서·드라이브라면 공유를 ‘링크가 있는 모든 사용자’로 바꾼 뒤 다시 시도해 주세요.',
+  LINK_NOT_A_FILE:'이 링크는 내려받을 수 있는 파일이 아니라 웹페이지입니다.',
+  LINK_FETCH_FAILED:'링크의 문서를 가져오지 못했습니다. 주소를 확인하거나 잠시 후 다시 시도해 주세요.',
+  LINK_TOO_MANY_REDIRECTS:'링크가 너무 여러 번 다른 주소로 넘어갑니다.',
+  LINK_URL_INVALID:'허용되지 않는 링크 주소입니다. https 공개 주소만 등록할 수 있습니다.',
+  FILE_TOO_LARGE:'링크의 파일이 20MB를 넘습니다.',
+  FILE_TYPE_INVALID:'링크의 파일 형식은 등록할 수 없습니다. (PDF·이미지·한글·워드·엑셀·파워포인트)',
+});
+async function importFromLink(request,env,{doc,actor,now,fetchImpl}){
+  if(doc.status!=='draft')return fail('DOCUMENT_LOCKED','등록이 확정된 문서의 원본은 바꿀 수 없습니다.',409);
+  if(doc.content_kind!=='file')return fail('CONTENT_KIND_MISMATCH','본문형 문서에는 링크 원본을 가져올 수 없습니다.',409);
+  const parsed=await readJson(request);
+  if(parsed.invalidType)return fail('CONTENT_TYPE_INVALID','JSON 요청만 허용됩니다.',415);
+  const input=parsed.value&&typeof parsed.value==='object'?parsed.value:{};
+  const sourceUrl=input.url!=null&&clean(input.url)?normalizeSourceUrl(input.url):(doc.source_url||'');
+  if(!sourceUrl)return fail('SOURCE_URL_INVALID',LINK_MESSAGES.LINK_URL_INVALID);
+  const archive=(doc.mode||'sign')==='archive';
+  const stamp=new Date(now).toISOString(),nonce=crypto.randomUUID();
+  if(input.link_only===true){
+    if(!archive)return fail('SNAPSHOT_REQUIRED','서명할 문서는 링크만으로 등록할 수 없습니다. 내용이 바뀌지 않도록 파일 사본이 필요합니다.',409);
+    const sha=await sha256Hex('link:'+sourceUrl);
+    const results=await chainedBatch(env,doc.id,async prevHash=>{
+      const {statement:event}=await eventStatement(env,{docId:doc.id,action:'link_registered',actor,createdAt:stamp,prevHash,guard:nonceGuard(doc.id,nonce),
+        detail:{source_url:sourceUrl,sha256:sha,snapshot:false}});
+      return [
+        env.DB.prepare(`UPDATE cgma_edoc_documents SET source_url=?,file_key='',file_name='',file_mime='',file_size=0,content_sha256=?,op_nonce=?,updated_at=? WHERE id=? AND status='draft'`)
+          .bind(sourceUrl,sha,nonce,stamp,doc.id),
+        event,
+      ];
+    });
+    if(Number(results?.[0]?.meta?.changes||0)!==1)return fail('DOCUMENT_LOCKED','등록이 확정된 문서의 원본은 바꿀 수 없습니다.',409);
+    return json({ok:true,link_only:true,source_url:sourceUrl,content_sha256:sha});
+  }
+  const store=bucket(env);
+  if(!store?.put)return fail('FILE_STORAGE_UNAVAILABLE','파일 저장소를 사용할 수 없습니다.',503);
+  const snap=await fetchLinkSnapshot(sourceUrl,{fetchImpl,archive});
+  if(!snap.ok)return fail(snap.code,LINK_MESSAGES[snap.code]||LINK_MESSAGES.LINK_FETCH_FAILED,snap.code==='FILE_TOO_LARGE'?413:snap.code==='FILE_TYPE_INVALID'?415:422,undefined);
+  if(sourceUrl!==doc.source_url){
+    const moved=await env.DB.prepare(`UPDATE cgma_edoc_documents SET source_url=?,updated_at=? WHERE id=? AND status='draft'`).bind(sourceUrl,stamp,doc.id).run();
+    if(Number(moved?.meta?.changes||0)!==1)return fail('DOCUMENT_LOCKED','등록이 확정된 문서의 원본은 바꿀 수 없습니다.',409);
+  }
+  return storeOriginal(env,store,{doc,actor,now,bytes:snap.bytes,name:snap.name,type:snap.type,action:'link_imported',extra:{source_url:sourceUrl,provider:snap.provider}});
+}
+
 async function startDocument(env,{doc,actor,now}){
   if(doc.status!=='draft')return fail('ALREADY_STARTED','이미 서명 요청이 시작된 문서입니다.',409);
+  if((doc.mode||'sign')==='archive')return fail('ARCHIVE_DOCUMENT','보관 문서는 서명 요청 없이 ‘보관 확정’으로 등록합니다.',409);
   if(!doc.content_sha256)return fail('CONTENT_REQUIRED','원본 파일 또는 본문을 먼저 등록해 주세요.',409);
+  if(doc.content_kind==='file'&&!doc.file_key)return fail('SNAPSHOT_REQUIRED','서명할 원본 파일이 없습니다. 파일을 올리거나 링크에서 사본을 가져와 주세요.',409);
   const signers=await loadSigners(env,doc.id);
   if(!signers.length)return fail('SIGNERS_INVALID','서명자가 없습니다.',409);
+  const unnamed=signers.filter(s=>!String(s.signer_name||'').trim()).map(s=>s.role_title);
+  if(unnamed.length)return fail('SIGNER_NAMES_REQUIRED',`서명자 성명을 먼저 입력해 주세요: ${unnamed.join(', ')}`,409);
   const stamp=new Date(now).toISOString(),expires=new Date(now+LINK_TTL_MS).toISOString(),nonce=crypto.randomUUID();
   const guard=nonceGuard(doc.id,nonce);
   const tokens=[];
@@ -371,6 +547,47 @@ async function reissueLink(env,{doc,seq,actor,now}){
   });
   if(Number(results?.[0]?.meta?.changes||0)!==1)return fail('ALREADY_SIGNED','이미 서명한 서명자입니다.',409);
   return json({ok:true,seq,link:signLink(token),link_expires_at:expires});
+}
+
+// 보관 확정: a records-only document becomes a permanent completed record (no signatures involved).
+async function archiveDocument(env,{doc,actor,now}){
+  if((doc.mode||'sign')!=='archive')return fail('NOT_ARCHIVE_DOCUMENT','서명 문서는 서명 요청으로 진행합니다.',409);
+  if(doc.status!=='draft')return fail('ALREADY_FINALIZED','이미 보관 확정된 문서입니다.',409);
+  if(!doc.content_sha256)return fail('CONTENT_REQUIRED','원본 파일 또는 본문을 먼저 등록해 주세요.',409);
+  const stamp=new Date(now).toISOString(),nonce=crypto.randomUUID(),guard=nonceGuard(doc.id,nonce);
+  const results=await chainedBatch(env,doc.id,async prevHash=>{
+    const {statement:event}=await eventStatement(env,{docId:doc.id,action:'archived',actor,createdAt:stamp,prevHash,guard,
+      detail:{content_sha256:doc.content_sha256,file_name:doc.file_name,doc_date:doc.doc_date||'',source_url:doc.source_url||undefined}});
+    return [
+      env.DB.prepare(`UPDATE cgma_edoc_documents SET status='completed',completed_at=?,op_nonce=?,updated_at=? WHERE id=? AND status='draft' AND mode='archive' AND content_sha256<>''`).bind(stamp,nonce,stamp,doc.id),
+      event,
+    ];
+  });
+  if(Number(results?.[0]?.meta?.changes||0)!==1)return fail('ALREADY_FINALIZED','이미 보관 확정된 문서입니다.',409);
+  return json({ok:true,status:'completed',archived:true});
+}
+
+// Draft signer plan edit (names can be completed before the request starts; order is left → right).
+async function updateSigners(request,env,{doc,actor,now}){
+  if(doc.status!=='draft'||(doc.mode||'sign')!=='sign')return fail('DOCUMENT_LOCKED','서명 요청 전 초안에서만 서명자를 바꿀 수 있습니다.',409);
+  const parsed=await readJson(request);
+  if(parsed.invalidType)return fail('CONTENT_TYPE_INVALID','JSON 요청만 허용됩니다.',415);
+  const signers=validateSigners(parsed.value?.signers);
+  if(!signers)return fail('SIGNERS_INVALID','서명자 직책과 순서를 확인해 주세요.');
+  const stamp=new Date(now).toISOString(),nonce=crypto.randomUUID(),guard=nonceGuard(doc.id,nonce);
+  const results=await chainedBatch(env,doc.id,async prevHash=>{
+    const {statement:event}=await eventStatement(env,{docId:doc.id,action:'signers_updated',actor,createdAt:stamp,prevHash,guard,
+      detail:{order:signers.map((s,i)=>`${i+1}. ${s.roleTitle} ${s.signerName}`.trim())}});
+    return [
+      env.DB.prepare(`UPDATE cgma_edoc_documents SET signer_count=?,op_nonce=?,updated_at=? WHERE id=? AND status='draft' AND mode='sign'`).bind(signers.length,nonce,stamp,doc.id),
+      env.DB.prepare(`DELETE FROM cgma_edoc_signers WHERE doc_id=? AND ${guard.sql}`).bind(doc.id,...guard.binds),
+      ...signers.map((s,i)=>env.DB.prepare(`INSERT INTO cgma_edoc_signers (doc_id,seq,role_title,signer_name,status,created_at,updated_at) SELECT ?,?,?,?,'waiting',?,? WHERE ${guard.sql}`)
+        .bind(doc.id,i+1,s.roleTitle,s.signerName,stamp,stamp,...guard.binds)),
+      event,
+    ];
+  });
+  if(Number(results?.[0]?.meta?.changes||0)!==1)return fail('DOCUMENT_LOCKED','서명 요청 전 초안에서만 서명자를 바꿀 수 있습니다.',409);
+  return json({ok:true,signer_count:signers.length});
 }
 
 async function documentDetail(env,{doc,now}){
@@ -501,7 +718,7 @@ export async function handleCgmaEdocs(request,env,options={}){
       if(method==='POST')return createDocument(request,env,{actor,now});
       return fail('METHOD_NOT_ALLOWED','허용되지 않은 요청입니다.',405);
     }
-    const match=sub.match(/^\/([0-9a-f-]{36})(\/file|\/start|\/cancel|\/signers\/(\d{1,2})\/reissue)?$/);
+    const match=sub.match(/^\/([0-9a-f-]{36})(\/file|\/import|\/start|\/cancel|\/archive|\/signers|\/signers\/(\d{1,2})\/reissue)?$/);
     if(!match)return fail('NOT_FOUND','요청한 기능이 없습니다.',404);
     const doc=await loadDocument(env,match[1]);
     if(!doc)return fail('DOCUMENT_NOT_FOUND','문서를 찾을 수 없습니다.',404);
@@ -509,8 +726,11 @@ export async function handleCgmaEdocs(request,env,options={}){
     if(!action&&method==='GET')return documentDetail(env,{doc,now});
     if(action==='/file'&&method==='GET')return streamFile(env,doc);
     if(action==='/file'&&method==='PUT')return uploadFile(request,env,{doc,actor,now});
+    if(action==='/import'&&method==='POST')return importFromLink(request,env,{doc,actor,now,fetchImpl:options.fetch||fetch});
     if(action==='/start'&&method==='POST')return startDocument(env,{doc,actor,now});
     if(action==='/cancel'&&method==='POST')return cancelDocument(request,env,{doc,actor,now});
+    if(action==='/archive'&&method==='POST')return archiveDocument(env,{doc,actor,now});
+    if(action==='/signers'&&method==='PUT')return updateSigners(request,env,{doc,actor,now});
     if(match[3]&&method==='POST')return reissueLink(env,{doc,seq:Number(match[3]),actor,now});
     return fail('METHOD_NOT_ALLOWED','허용되지 않은 요청입니다.',405);
   }catch(error){

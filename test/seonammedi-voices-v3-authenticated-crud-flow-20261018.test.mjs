@@ -16,7 +16,9 @@ function store(denyWrite=false){
   };
 }
 function node(name=''){
-  return {name,children:[],hidden:false,disabled:false,value:'',textContent:'',className:'',style:{},
+  return {name,children:[],hidden:false,disabled:false,value:'',textContent:'',className:'',style:{},dataset:{},attributes:{},
+    setAttribute(key,value){this.attributes[key]=value},
+    classList:{add(){},remove(){},toggle(){}},
     append(...items){this.children.push(...items)},
     replaceChildren(){this.children=[]},
     focus(){this.focused=true},
@@ -36,6 +38,7 @@ function fakeDb(){
         return entries.find(x=>x.id===Number(args[0])&&x.status==='published')||null;
       },
       async all(){
+        if(sql.includes('FROM citizen_voice_replies_fresh'))return {results:[]};
         let listed=entries.filter(x=>x.status==='published');
         if(sql.includes('body LIKE ?'))listed=listed.filter(x=>(x.body+' '+(x.title||'')).includes(String(args[0]).replaceAll('%','')));
         return {results:listed.slice().sort((a,b)=>b.id-a.id).slice(0,100)};
@@ -146,10 +149,10 @@ test('Google handoff -> durable queue -> published list, with no admin controls 
     assert.equal(app.ids.freshForm.hidden,true);
     assert.match(app.ids.freshStatus.textContent,/저장됐습니다/);
     assert.equal(app.ids.freshList.children.length,1);
-    assert.equal(app.ids.freshList.children[0].children.length,4,'writer sees summary, body, one action row and the reply thread');
-    const writerActions=app.ids.freshList.children[0].children[2];
-    assert.equal(writerActions.className,'voice-actions');
-    assert.deepEqual(writerActions.children.map(c=>c.textContent),['답글','공유'],'writer never receives administrator buttons');
+    assert.equal(app.ids.freshList.children[0].children.length,4,'writer sees summary, body, one action row and replies');
+    assert.equal(app.ids.freshList.children[0].children[2].className,'voice-actions');
+    assert.deepEqual(app.ids.freshList.children[0].children[2].children.map(c=>c.textContent),['공유','수정','삭제'],'writer can edit only a server-verified own post, next to share');
+    assert.equal(app.ids.freshList.children[0].children[3].className,'fresh-replies','reply composer exists for verified users');
     assert.ok(calls.includes('queue:published'));
   }
 });
@@ -161,15 +164,16 @@ test('verified site-authorized admin can edit and delete the same newly-publishe
       googleSubject:'synthetic-writer',message:'수정 전 본문',createdAt:new Date().toISOString()});
     const app=await boot({host,role:'admin',env});
     const item=app.ids.freshList.children[0];
+    assert.equal(item.children.length,4,'server verified permission reveals edit/delete next to share, then replies');
     const actions=item.children[2];
     assert.equal(actions.className,'voice-actions');
-    assert.deepEqual(actions.children.map(c=>c.textContent),['답글','공유','수정','삭제'],'server verified permission reveals edit/delete in the same row as share');
+    assert.deepEqual(actions.children.map(c=>c.textContent),['공유','수정','삭제']);
     app.context.prompt=()=> '관리자 수정 성공';
-    await actions.children[2].onclick();
+    await actions.children[1].onclick();
     assert.equal(db.entries[0].body,'관리자 수정 성공');
     assert.match(app.ids.freshStatus.textContent,/수정되었습니다/);
     const newActions=app.ids.freshList.children[0].children[2];
-    await newActions.children[3].onclick();
+    await newActions.children[2].onclick();
     assert.equal(db.entries[0].status,'deleted');
     assert.equal(app.ids.freshList.children.length,1,'no results placeholder');
     assert.equal(app.ids.freshList.children[0].textContent,'등록된 시민의견이 없습니다.');

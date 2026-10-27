@@ -1,6 +1,30 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { handleCommerce } from './books-commerce.js';
 
+// BOOKS-COMMERCE-CSP-001: 공용 셸의 기본 CSP(script-src 'self')는 구글 로그인·토스 결제 스크립트를 막는다.
+// 구매·내 서재 화면에는 필요한 외부 출처만 명시한 CSP를 먼저 정해 두고, 셸은 그 위에 자기 출처만 더한다.
+export const COMMERCE_CSP = [
+  "default-src 'self'",
+  "script-src 'self' https://accounts.google.com/gsi/client https://js.tosspayments.com https://*.tosspayments.com",
+  "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
+  "connect-src 'self' https://renzehysxirjilvdxacv.supabase.co https://accounts.google.com/gsi/ https://*.tosspayments.com",
+  "frame-src https://accounts.google.com/gsi/ https://accounts.google.com/ https://*.tosspayments.com",
+  "img-src 'self' data: https:",
+  "font-src 'self' data: https:",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self' https://*.tosspayments.com",
+  "object-src 'none'",
+].join('; ');
+export const isCommercePage = (pathname) => /^\/(?:buy|library)(?:\/|$)/.test(pathname);
+function withCommerceCsp(response) {
+  const type = String(response.headers.get('content-type') || '').toLowerCase();
+  if (!type.includes('text/html')) return response;
+  const out = new Response(response.body, response);
+  out.headers.set('content-security-policy', COMMERCE_CSP);
+  return out;
+}
+
 function assetRequest(request, pathname) {
   const url = new URL(request.url);
   url.pathname = pathname;
@@ -35,6 +59,7 @@ export default {
       const response = await env.ASSETS.fetch(assetRequest(request, '/store/'));
       return injectEkodiShell(response, 'books');
     }
+    if (isCommercePage(url.pathname)) return injectEkodiShell(withCommerceCsp(await env.ASSETS.fetch(request)), 'books');
     return injectEkodiShell(await env.ASSETS.fetch(request), 'books');
   },
 };

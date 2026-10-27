@@ -52,7 +52,8 @@ test('preflight also requires the DB columns the code writes',async()=>{
   const q=contractQuery(['public.a(uuid)'],['public.t.c']);
   assert.match(q,/union all/);assert.match(q,/pg_catalog\.pg_attribute/);assert.match(q,/not a\.attisdropped/);
   assert.throws(()=>contractQuery([],["public.t.c';drop table x--"]),/invalid_column/);
-  const api=await readFile(new URL('../supabase/functions/singles-api/index.ts',import.meta.url),'utf8');
+  const api=await readFile(new URL('../supabase/functions/singles-api/index.ts',import.meta.url),'utf8')
+    +await readFile(new URL('../supabase/functions/singles-api/social.ts',import.meta.url),'utf8');
   for(const col of contract.required_columns){
     const [, table, name]=col.split('.');
     assert.ok(api.includes(table)&&api.includes(name+':'),col+' is written by the API');

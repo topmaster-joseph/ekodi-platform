@@ -32,7 +32,8 @@ test('one-time auth fragment is removed before onboarding status fetch or disabl
 
 test('token fragment is synchronously scrubbed even before a disabled onboarding response',async()=>{
  const start=app.indexOf('async function main(){')+'async function main(){'.length;
- const end=app.indexOf('\n showGuest();',start);
+ // v1.27.5: the token scrub still runs before any login UI decision (session-first rendering).
+ const end=app.indexOf('\n const resuming=',start);
  assert.ok(end>start,'startup token-scrub code exists');
  const setup=app.slice(start,end);
  const observed=[];

@@ -36,6 +36,9 @@ const realms={
   live:{name:'EKODI Live',returnTo:'https://ekodi.kr/live',open:true,kind:'live'},
   cloud:{name:'EKODI Cloud',returnTo:'https://ekodi.kr/cloud/',open:true,kind:'cloud'},
   cafe:{name:'EKODI Cafe',returnTo:'https://ekodi.kr/cafe/',open:true,kind:'cafe'},
+  // 청계면상인회: site=cgma logins (관리자 /cgma/admin/*, 정회원 등) return to the exact CGMA page they started
+  // from (AUTH-RETURN-CONTINUITY-001). Without this realm they fell back to the portal and landed on the homepage.
+  cgma:{name:'청계면상인회',returnTo:'https://ekodi.kr/cgma/',origins:['https://ekodi.kr','https://cgma.or.kr','https://www.cgma.or.kr'],open:true,kind:'cgma'},
   'cgma-client':{name:'청계상권 고객관리',returnTo:'https://ekodi.kr/cgma/client/',origins:['https://ekodi.kr','https://cgma.or.kr','https://cgma.ekodi.kr'],open:false,kind:'cgma-client'},
   'jadam-client':{name:'자담치킨 목포대점 고객관리',returnTo:'https://ekodi.kr/jadam/marketing/',origins:['https://jadam.ai.ekodi.kr','https://jadam.ekodi.kr'],open:false,kind:'jadam-client'},
   'pizzamaru-client':{name:'피자마루 목포대점 고객관리',returnTo:'https://ekodi.kr/pizzamaru/marketing/',origins:['https://pizzamaru.ai.ekodi.kr','https://pizzamaru.ekodi.kr'],open:false,kind:'pizzamaru-client'},
@@ -46,6 +49,8 @@ const site=params.get('site')||'portal';
 const DIRECT_LOGIN=params.get('direct')==='1'&&params.get('manage')!=='1'&&params.get('review')!=='1';
 const CHOOSE_ACCOUNT=site==='seonammedi'&&params.get('select_account')==='1';
 const CHURCH_CHOOSE_ACCOUNT=site==='church'&&params.get('select_account')==='1';
+// 동행: 저장된 로그인으로 자동 진행하지 않고 매번 Google 계정을 고르게 한다(2026-10-28).
+const SINGLES_CHOOSE_ACCOUNT=site==='singles'&&params.get('select_account')==='1';
 const PREOPENED_BRIDGE=DIRECT_LOGIN&&!CHOOSE_ACCOUNT&&params.get('bridge')==='preopened';
 const GOOGLE_BRIDGE_ORIGIN=location.origin;
 if(PREOPENED_BRIDGE)document.documentElement.dataset.adminDirectBridge='1';
@@ -339,15 +344,17 @@ async function renderGoogle(){
     const googleButtonOptions={type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340)),use_fedcm_for_button:true};
     if(CHOOSE_ACCOUNT)googleButtonOptions.use_fedcm_for_button=false;
     if(CHURCH_CHOOSE_ACCOUNT)googleButtonOptions.use_fedcm_for_button=false;
+    if(SINGLES_CHOOSE_ACCOUNT)googleButtonOptions.use_fedcm_for_button=false;
     window.google.accounts.id.renderButton(host,googleButtonOptions);
     if(CHOOSE_ACCOUNT)show('cancelSignedOut',true);
     if(CHURCH_CHOOSE_ACCOUNT)show('cancelSignedOut',true);
+    if(SINGLES_CHOOSE_ACCOUNT)show('cancelSignedOut',true);
     if(DIRECT_LOGIN){
       notice('Google 계정 선택창을 여는 중입니다.');
       window.google.accounts.id.prompt(notification=>{
         if(notification?.isNotDisplayed?.()||notification?.isSkippedMoment?.())notice('Google 계정 선택창을 바로 열 수 없습니다. 아래 Google 버튼으로 계속해 주세요.');
       });
-    }else notice((CHOOSE_ACCOUNT||CHURCH_CHOOSE_ACCOUNT)?'아래 Google 버튼을 눌러 사용할 계정을 선택해 주세요. 자동 로그인은 진행하지 않습니다.':'처음 한 번만 Google 계정으로 본인을 확인합니다.');
+    }else notice((CHOOSE_ACCOUNT||CHURCH_CHOOSE_ACCOUNT||SINGLES_CHOOSE_ACCOUNT)?'아래 Google 버튼을 눌러 사용할 계정을 선택해 주세요. 자동 로그인은 진행하지 않습니다.':'처음 한 번만 Google 계정으로 본인을 확인합니다.');
   }catch(error){
     console.error('prepare central identity',error);
     if(PREOPENED_BRIDGE)document.documentElement.dataset.adminDirectBridge='fallback';
@@ -362,6 +369,7 @@ async function prepare(){
   try{existing=await session()}catch(error){console.warn('central session bootstrap',error)}
   if(CHOOSE_ACCOUNT){await renderGoogle();return}
   if(CHURCH_CHOOSE_ACCOUNT){await renderGoogle();return}
+  if(SINGLES_CHOOSE_ACCOUNT){await renderGoogle();return}
   if(existing){
     if(FORCE_ACCOUNT&&String(existing.user?.email||'').trim().toLowerCase()!==EXPECTED_ACCOUNT){await clearStaleSession();await renderGoogle();return}
     if(await handoffExistingSession(existing))return;
@@ -394,6 +402,7 @@ $('logout')?.addEventListener('click',async()=>{
 
 await prepare();
 sb.auth.onAuthStateChange((event,s)=>{
+  if(SINGLES_CHOOSE_ACCOUNT&&event!=='SIGNED_OUT')return;
   if((event==='SIGNED_IN'||event==='TOKEN_REFRESHED')&&s&&!routing&&!handlingCredential&&!CHOOSE_ACCOUNT&&!CHURCH_CHOOSE_ACCOUNT)queueMicrotask(()=>void handoffExistingSession(s));
   if(event==='SIGNED_OUT'){routing=false;}
 });

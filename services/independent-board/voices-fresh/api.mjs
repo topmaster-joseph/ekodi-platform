@@ -9,7 +9,23 @@ const invalid=(code,status)=>reply({ok:false,error:code},status);
 const stamp=()=>new Date().toISOString();
 export const FRESH_QUEUE_KIND='citizen-voices-fresh.post.v1';
 export const FRESH_REPLY_QUEUE_KIND='citizen-voices-fresh.reply.v1';
-const REPLY_MAX=2000;
+export async function consumeFreshVoiceReplyQueue(env,payload){
+  const key=String(payload?.submissionId||'');
+  const voiceId=Number(payload?.voiceId||0);
+  if(!/^[a-f0-9-]{36}$/i.test(key)||!Number.isSafeInteger(voiceId)||voiceId<1||!payload?.googleSubject)throw Error('invalid_fresh_reply_submission');
+  const existing=await env.BOARD_DB.prepare('SELECT id FROM citizen_voice_replies_fresh WHERE submission_key=? LIMIT 1').bind(key).first();
+  if(existing?.id)return Number(existing.id);
+  const parent=await env.BOARD_DB.prepare("SELECT id FROM citizen_voices_fresh WHERE id=? AND status='published'").bind(voiceId).first();
+  if(!parent)return 0; // The parent was removed before a queued reply could be published.
+  const time=String(payload.createdAt||stamp());
+  const result=await env.BOARD_DB.prepare("INSERT OR IGNORE INTO citizen_voice_replies_fresh (voice_id,google_subject,submission_key,display_name,body,role,status,created_at,updated_at) VALUES (?,?,?,?,?,?,'published',?,?)")
+    .bind(voiceId,String(payload.googleSubject),key,String(payload.displayName||'회원').slice(0,40),String(payload.message||'').slice(0,1500),payload.role==='admin'?'admin':'member',time,time).run();
+  if(Number(result?.meta?.changes||0)>0&&Number(result?.meta?.last_row_id||0)>0)return Number(result.meta.last_row_id);
+  const duplicate=await env.BOARD_DB.prepare('SELECT id FROM citizen_voice_replies_fresh WHERE submission_key=? LIMIT 1').bind(key).first();
+  if(duplicate?.id)return Number(duplicate.id);
+  throw Error('fresh_reply_write_unconfirmed');
+}
+
 export async function consumeFreshVoiceQueue(env,payload){
   const key=String(payload?.submissionId||'');
   if(!/^[a-f0-9-]{36}$/i.test(key))throw Error('invalid_fresh_submission');
@@ -28,42 +44,6 @@ export async function consumeFreshVoiceQueue(env,payload){
   }
   throw Error('fresh_write_unconfirmed');
 }
-// Replies follow the same durable-queue path as voices. A reply whose voice is gone is dropped (returns 0).
-export async function consumeFreshReplyQueue(env,payload){
-  const key=String(payload?.submissionId||''),voiceId=Number(payload?.voiceId);
-  if(!/^[a-f0-9-]{36}$/i.test(key)||!Number.isSafeInteger(voiceId)||voiceId<1)throw Error('invalid_fresh_reply');
-  const existing=await env.BOARD_DB.prepare('SELECT id FROM citizen_voice_replies_fresh WHERE submission_key=? LIMIT 1').bind(key).first();
-  if(existing?.id)return Number(existing.id);
-  const parent=await env.BOARD_DB.prepare("SELECT id FROM citizen_voices_fresh WHERE id=? AND status='published'").bind(voiceId).first();
-  if(!parent?.id)return 0;
-  try{
-    const time=String(payload.createdAt||stamp());
-    const result=await env.BOARD_DB.prepare("INSERT INTO citizen_voice_replies_fresh(voice_id,google_subject,submission_key,body,status,created_at,updated_at) VALUES(?,?,?,?,'published',?,?)")
-      .bind(voiceId,String(payload.googleSubject||''),key,String(payload.message||'').slice(0,REPLY_MAX),time,time).run();
-    const id=Number(result?.meta?.last_row_id||0);
-    if(id>0)return id;
-  }catch(error){
-    const duplicate=await env.BOARD_DB.prepare('SELECT id FROM citizen_voice_replies_fresh WHERE submission_key=? LIMIT 1').bind(key).first().catch(()=>null);
-    if(duplicate?.id)return Number(duplicate.id);
-    throw error;
-  }
-  throw Error('fresh_reply_write_unconfirmed');
-}
-async function listReplies(env,ids){
-  if(!ids.length)return new Map();
-  const grouped=new Map();
-  try{
-    const result=await env.BOARD_DB.prepare("SELECT id,voice_id,body,created_at FROM citizen_voice_replies_fresh WHERE status='published' AND voice_id IN ("+ids.map(()=>'?').join(',')+") ORDER BY id ASC LIMIT 2000").bind(...ids).all();
-    for(const r of result?.results||[]){
-      const voiceId=Number(r.voice_id);
-      if(!ids.includes(voiceId)||typeof r.body!=='string')continue;
-      if(!grouped.has(voiceId))grouped.set(voiceId,[]);
-      grouped.get(voiceId).push({id:Number(r.id),message:r.body,createdAt:r.created_at});
-    }
-  }catch{}
-  // Replies are additive: if they cannot be read, voices are still listed.
-  return grouped;
-}
 export async function handleFreshVoiceApi(req,env,path,{google,admin,limit}){
   const root='/api/voices-fresh';
   if(!path.startsWith(root))return null;
@@ -76,22 +56,31 @@ export async function handleFreshVoiceApi(req,env,path,{google,admin,limit}){
   }
   const replyPolling=tail.match(/^\/replies\/submissions\/([a-f0-9-]{36})$/i);
   if(req.method==='GET'&&replyPolling){
-    const record=await env.BOARD_DB.prepare("SELECT id FROM citizen_voice_replies_fresh WHERE submission_key=? AND status='published'").bind(replyPolling[1]).first().catch(()=>null);
+    const record=await env.BOARD_DB.prepare("SELECT id FROM citizen_voice_replies_fresh WHERE submission_key=?").bind(replyPolling[1]).first().catch(()=>null);
     return reply({ok:true,status:record?.id?'published':'pending',...(record?.id?{id:Number(record.id)}:{})});
   }
   if(req.method==='GET'&&(tail===''||tail==='/admin')){
-    if(tail==='/admin'){
-      const gate=await admin(req);
-      if(!gate.ok)return gate.response;
-    }
+    if(tail==='/admin'){const gate=await admin(req);if(!gate.ok)return gate.response}
+    // Public records never disclose the stored Google subject. Ownership flags
+    // require a verified bearer and are computed on the server, never in JS.
+    const viewer=tail==='/admin'?null:(req.headers.get('authorization')?await google(req):null);
     const q=String(url.searchParams.get('q')||'').trim().slice(0,100);
-    const sql="SELECT id,title,body,created_at,updated_at FROM citizen_voices_fresh WHERE status='published'"+(q?" AND (body LIKE ? OR title LIKE ?)":"")+" ORDER BY id DESC LIMIT 100";
+    const sql="SELECT id,title,body,google_subject,created_at,updated_at FROM citizen_voices_fresh WHERE status='published'"+(q?" AND (body LIKE ? OR title LIKE ?)":"")+" ORDER BY id DESC LIMIT 100";
     try{
       const stmt=env.BOARD_DB.prepare(sql),result=await(q?stmt.bind('%'+q+'%','%'+q+'%').all():stmt.all());
-      const items=(result.results||[]).map(p=>({id:Number(p.id),title:String(p.title||''),message:p.body,createdAt:p.created_at,updatedAt:p.updated_at}));
-      const replies=await listReplies(env,items.map(p=>p.id).filter(id=>Number.isSafeInteger(id)&&id>0));
-      return reply({ok:true,items:items.map(p=>({...p,replies:replies.get(p.id)||[]}))});
-    }catch{return invalid('storage_unavailable',503)}
+      const voiceRows=result.results||[];
+      if(!voiceRows.length)return reply({ok:true,items:[]});
+      const ids=voiceRows.map(p=>Number(p.id));
+      const placeholders=ids.map(()=>'?').join(',');
+      const replyRows=await env.BOARD_DB.prepare("SELECT id,voice_id,google_subject,display_name,body,role,created_at,updated_at FROM citizen_voice_replies_fresh WHERE status='published' AND voice_id IN ("+placeholders+") ORDER BY id ASC LIMIT 1500").bind(...ids).all();
+      const grouped=new Map();
+      for(const r of replyRows.results||[]){
+        const voiceId=Number(r.voice_id);
+        if(!grouped.has(voiceId))grouped.set(voiceId,[]);
+        grouped.get(voiceId).push({id:Number(r.id),displayName:String(r.display_name||'회원'),message:String(r.body||''),role:r.role==='admin'?'admin':'member',mine:Boolean(viewer&&r.google_subject===viewer.id),createdAt:r.created_at,updatedAt:r.updated_at});
+      }
+      return reply({ok:true,items:voiceRows.map(p=>({id:Number(p.id),title:String(p.title||''),message:String(p.body||''),mine:Boolean(viewer&&p.google_subject===viewer.id),createdAt:p.created_at,updatedAt:p.updated_at,replies:grouped.get(Number(p.id))||[]}))});
+    }catch(error){console.error('fresh voices list failed',error);return invalid('storage_unavailable',503)}
   }
   if(req.method==='POST'&&tail===''){
     const identity=await google(req);
@@ -112,53 +101,63 @@ export async function handleFreshVoiceApi(req,env,path,{google,admin,limit}){
       return reply({ok:true,queued:true,submissionId,statusUrl:'/board/api/voices-fresh/submissions/'+submissionId},202);
     }catch{return invalid('durable_queue_unavailable',503)}
   }
-  const replyPost=tail.match(/^\/(\d+)\/replies$/);
-  if(req.method==='POST'&&replyPost){
+  const repliesForVoice=tail.match(/^\/(\d+)\/replies$/);
+  if(repliesForVoice&&req.method==='POST'){
     const identity=await google(req);
     if(!identity)return invalid('google_login_required',401);
-    const voiceId=Number(replyPost[1]);
+    const limited=await limit(req,env,'citizen-fresh-reply');
+    if(!limited.available)return invalid('write_protection_unavailable',503);
+    if(!limited.allowed)return invalid('rate_limited',429);
+    if(Number(req.headers.get('content-length')||0)>8192)return invalid('payload_too_large',413);
+    let payload;try{payload=await req.json()}catch{return invalid('invalid_json',400)}
+    const message=String(payload?.message||'').trim();
+    if(!message||message.length>1500)return invalid('invalid_message',400);
+    const displayName=String(payload?.displayName||'회원').trim().slice(0,40)||'회원';
+    const voiceId=Number(repliesForVoice[1]);
     if(!Number.isSafeInteger(voiceId)||voiceId<1)return invalid('invalid_post',400);
-    const limiter=await limit(req,env,'citizen-fresh-reply');
-    if(!limiter.available)return invalid('write_protection_unavailable',503);
-    if(!limiter.allowed)return invalid('rate_limited',429);
-    let data;try{data=await req.json()}catch{return invalid('invalid_json',400)}
-    const message=String(data?.message||'').trim();
-    if(!message||message.length>REPLY_MAX)return invalid('invalid_message',400);
-    const parent=await env.BOARD_DB.prepare("SELECT id FROM citizen_voices_fresh WHERE id=? AND status='published'").bind(voiceId).first().catch(()=>undefined);
-    if(parent===undefined)return invalid('storage_unavailable',503);
+    const parent=await env.BOARD_DB.prepare("SELECT id FROM citizen_voices_fresh WHERE id=? AND status='published'").bind(voiceId).first().catch(()=>null);
     if(!parent)return invalid('not_found',404);
-    const producer=env?.BOARD_WRITE_QUEUE;
-    if(!producer?.send)return invalid('durable_queue_unavailable',503);
+    const role=(await admin(req)).ok?'admin':'member';
+    if(!env?.BOARD_WRITE_QUEUE?.send)return invalid('durable_queue_unavailable',503);
     const submissionId=crypto.randomUUID();
     try{
-      await producer.send({kind:FRESH_REPLY_QUEUE_KIND,payload:{submissionId,voiceId,googleSubject:identity.id,message,createdAt:stamp()}},{contentType:'json'});
+      await env.BOARD_WRITE_QUEUE.send({kind:FRESH_REPLY_QUEUE_KIND,payload:{submissionId,voiceId,googleSubject:identity.id,displayName,message,role,createdAt:stamp()}},{contentType:'json'});
       return reply({ok:true,queued:true,submissionId,statusUrl:'/board/api/voices-fresh/replies/submissions/'+submissionId},202);
-    }catch{return invalid('durable_queue_unavailable',503)}
+    }catch(error){console.error('fresh reply ingress failed',error);return invalid('durable_queue_unavailable',503)}
   }
-  const replyItem=tail.match(/^\/replies\/(\d+)$/);
-  if(replyItem&&req.method==='DELETE'){
-    const gate=await admin(req);
-    if(!gate.ok)return gate.response;
-    const id=Number(replyItem[1]);
-    if(!Number.isSafeInteger(id)||id<1)return invalid('invalid_reply',400);
+  const replyItem=tail.match(/^\/(\d+)\/replies\/(\d+)$/);
+  if(replyItem&&(req.method==='PUT'||req.method==='DELETE')){
+    const identity=await google(req);
+    if(!identity)return invalid('google_login_required',401);
+    const voiceId=Number(replyItem[1]),id=Number(replyItem[2]);
+    if(!Number.isSafeInteger(voiceId)||voiceId<1||!Number.isSafeInteger(id)||id<1)return invalid('invalid_reply',400);
     try{
-      const found=await env.BOARD_DB.prepare("SELECT id FROM citizen_voice_replies_fresh WHERE id=? AND status='published'").bind(id).first();
-      if(!found)return invalid('not_found',404);
-      await env.BOARD_DB.prepare("UPDATE citizen_voice_replies_fresh SET status='deleted',updated_at=? WHERE id=?").bind(stamp(),id).run();
+      const existing=await env.BOARD_DB.prepare("SELECT r.id,r.google_subject FROM citizen_voice_replies_fresh r JOIN citizen_voices_fresh p ON p.id=r.voice_id WHERE r.id=? AND r.voice_id=? AND r.status='published' AND p.status='published'").bind(id,voiceId).first();
+      if(!existing)return invalid('not_found',404);
+      if(existing.google_subject!==identity.id){const gate=await admin(req);if(!gate.ok)return invalid('forbidden',403)}
+      if(req.method==='DELETE'){
+        await env.BOARD_DB.prepare("UPDATE citizen_voice_replies_fresh SET status='deleted',updated_at=? WHERE id=? AND voice_id=? AND status='published'").bind(stamp(),id,voiceId).run();
+        return reply({ok:true,id});
+      }
+      let payload;try{payload=await req.json()}catch{return invalid('invalid_json',400)}
+      const message=String(payload?.message||'').trim();
+      if(!message||message.length>1500)return invalid('invalid_message',400);
+      await env.BOARD_DB.prepare("UPDATE citizen_voice_replies_fresh SET body=?,updated_at=? WHERE id=? AND voice_id=? AND status='published'").bind(message,stamp(),id,voiceId).run();
       return reply({ok:true,id});
-    }catch{return invalid('storage_unavailable',503)}
+    }catch(error){console.error('fresh reply mutation failed',error);return invalid('storage_unavailable',503)}
   }
   const item=tail.match(/^\/(\d+)$/);
   if(item&&(req.method==='PUT'||req.method==='DELETE')){
-    const gate=await admin(req);
-    if(!gate.ok)return gate.response;
+    const identity=await google(req);
+    if(!identity)return invalid('google_login_required',401);
     const id=Number(item[1]);
     if(!Number.isSafeInteger(id)||id<1)return invalid('invalid_post',400);
     try{
-      const found=await env.BOARD_DB.prepare("SELECT id FROM citizen_voices_fresh WHERE id=? AND status='published'").bind(id).first();
+      const found=await env.BOARD_DB.prepare("SELECT id,google_subject FROM citizen_voices_fresh WHERE id=? AND status='published'").bind(id).first();
       if(!found)return invalid('not_found',404);
+      if(found.google_subject!==identity.id){const gate=await admin(req);if(!gate.ok)return invalid('forbidden',403)}
       if(req.method==='DELETE'){
-        await env.BOARD_DB.prepare("UPDATE citizen_voices_fresh SET status='deleted',updated_at=? WHERE id=?").bind(stamp(),id).run();
+        await env.BOARD_DB.prepare("UPDATE citizen_voices_fresh SET status='deleted',updated_at=? WHERE id=? AND status='published'").bind(stamp(),id).run();
         return reply({ok:true,id});
       }
       let payload;try{payload=await req.json()}catch{return invalid('invalid_json',400)}
@@ -166,9 +165,9 @@ export async function handleFreshVoiceApi(req,env,path,{google,admin,limit}){
       if(!message||message.length>12000)return invalid('invalid_message',400);
       const title=String(payload?.title??'').replace(/\s+/g,' ').trim();
       if(title.length>160)return invalid('invalid_title',400);
-      await env.BOARD_DB.prepare("UPDATE citizen_voices_fresh SET title=?,body=?,updated_at=? WHERE id=?").bind(title,message,stamp(),id).run();
+      await env.BOARD_DB.prepare("UPDATE citizen_voices_fresh SET title=?,body=?,updated_at=? WHERE id=? AND status='published'").bind(title,message,stamp(),id).run();
       return reply({ok:true,id});
-    }catch{return invalid('storage_unavailable',503)}
+    }catch(error){console.error('fresh post mutation failed',error);return invalid('storage_unavailable',503)}
   }
   return invalid('not_found',404);
 }

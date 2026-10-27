@@ -1,11 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import entryWorker from '../workspace-platform-entry-worker.js';
 import { handleInvestAutopilotApi } from '../invest-autopilot-runtime.js';
 
 const MIGRATION=fs.readFileSync(new URL('../migrations/202610251300_invest_autopilot.sql',import.meta.url),'utf8');
+const STEP_UP_MIGRATION=fs.readFileSync(new URL('../migrations/202610280100_invest_step_up.sql',import.meta.url),'utf8');
+// Pre-verified second-factor session (sha256 of 'S'.repeat(43)) so policy/paper tests run behind the step-up gate.
+const STEP_UP_TOKEN='S'.repeat(43);
 const LEGACY=fs.readFileSync(new URL('../migrations/0086_invest_autonomous_loop.sql',import.meta.url),'utf8');
 // 2026-10-26 (Mon) 10:00 KST, inside the configured trading window.
 const MONDAY=Date.UTC(2026,9,26,1,0,0);
@@ -13,7 +17,8 @@ const OWNER='owner@example.com';
 
 function d1(){
  const sqlite=new DatabaseSync(':memory:');
- sqlite.exec(LEGACY);sqlite.exec(MIGRATION);
+ sqlite.exec(LEGACY);sqlite.exec(MIGRATION);sqlite.exec(STEP_UP_MIGRATION);
+ sqlite.prepare(`INSERT INTO investment_step_up_sessions(token_hash,subject_email,expires_at,created_at) VALUES(?,?,?,?)`).run(crypto.createHash('sha256').update(STEP_UP_TOKEN).digest('hex'),'owner@example.com','2099-01-01T00:00:00.000Z','2026-10-01T00:00:00.000Z');
  const statement=(sql,params=[])=>({
   bind(...values){return statement(sql,values)},
   async first(){return sqlite.prepare(sql).get(...params)||null},
@@ -29,7 +34,7 @@ function harness(email=OWNER){
   const original=globalThis.fetch;
   globalThis.fetch=async()=>new Response(JSON.stringify({id:'owner-uuid',email,email_confirmed_at:'2026-10-01T00:00:00Z'}),{status:200});
   try{
-   const response=await handleInvestAutopilotApi(new Request('https://ekodi.kr'+path,{method,headers:{authorization:'Bearer '+'t'.repeat(40),'content-type':'application/json',origin:'https://ekodi.kr'},body:payload?JSON.stringify(payload):undefined}),env);
+   const response=await handleInvestAutopilotApi(new Request('https://ekodi.kr'+path,{method,headers:{authorization:'Bearer '+'t'.repeat(40),'content-type':'application/json','x-ekodi-invest-step-up':STEP_UP_TOKEN,origin:'https://ekodi.kr'},body:payload?JSON.stringify(payload):undefined}),env);
    return {status:response.status,body:await response.json()};
   }finally{globalThis.fetch=original}
  };

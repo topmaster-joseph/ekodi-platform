@@ -372,7 +372,7 @@ test('presenter AI demo: institutional FactChat through the EKODI server route o
   const src=await readFile(new URL('../education/study/live/engine/factchat-demo.js',import.meta.url),'utf8');
   assert.doesNotMatch(src,/FACTCHAT_MOKPO_API_KEY|mokpo\.factchat\.bot\/api|sk-[A-Za-z0-9]/,'no key or direct provider call in the browser');
   const auth=await readFile(new URL('../auth-site/admin-auth.js',import.meta.url),'utf8');
-  assert.match(auth,/u\.pathname==='\/edu\/study\/live\/'\|\|u\.pathname==='\/edu\/study\/live\/present\/'\)\)return u\.href;/,'exact presenter paths only');
+  assert.match(auth,/u\.pathname==='\/edu\/study\/live\/'\|\|u\.pathname==='\/edu\/study\/live\/present\/'\|\|u\.pathname==='\/edu\/study\/live\/unlock\/'\|\|u\.pathname==='\/edu\/study\/live\/docs\/'\)\)return u\.href;/,'exact instructor paths only (studio, presenter, unlock, docs)');
   assert.doesNotMatch(auth,/pathname\.startsWith\('\/edu/,'no /edu prefix wildcard');
 });
 
@@ -449,7 +449,8 @@ test('learner handout: lecture content only — practice materials, prompts, err
   const page=await read('education/study/live/handout/index.html');
   assert.doesNotMatch(page,/<script(?![^>]*\ssrc=)[^>]*>|<style[\s>]|\sstyle=|\son[a-z]+=/i);
   const js=await read('education/study/live/handout.js');
-  assert.doesNotMatch(js,/loadNotes|\.notes\.js|NOTES|fetch\(|localStorage/);
+  assert.doesNotMatch(js,/loadNotes|\.notes\.js|NOTES|localStorage/);
+  assert.equal((js.match(/fetch\(/g)||[]).length,1,'only the instructor-session check talks to the server');assert.match(js,/fetch\(livePath\(location\.pathname,'unlock'\+String\.fromCharCode\(47\)\+'session'\)/);
   assert.match(await read('education/study/live/index.html'),/id="openHandout"/);
   const {isGatedPath}=await import('../education-instructor-gate.js');
   assert.ok(!isGatedPath('/study/live/handout/')&&!isGatedPath('/study/live/handout.js'),'handout stays public');

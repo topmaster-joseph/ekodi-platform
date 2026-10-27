@@ -2,9 +2,9 @@
 'use strict';
 const $=id=>document.getElementById(id);
 const page=document.body.dataset.page||'';
-const labels={'':'처음','/my':'내 프로필','/events':'공개 행사','/groups':'우리 모임','/discover':'동행 찾기','/messages':'메시지','/subscribe':'구독·입금','/admin':'결제관리'};
-const state={client:null,session:null,status:null,member:null,subscription:{active:false}};
-const loginUrl=()=>{const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','singles');u.searchParams.set('return_to','https://ekodi.kr/singles'+page+location.search);return u.toString()};
+const labels={'':'처음','/my':'내 프로필','/events':'공개 행사','/groups':'우리 모임','/discover':'동행 찾기','/messages':'메시지','/subscribe':'동행 안내·가입','/admin':'결제관리'};
+const state={client:null,session:null,status:null,member:null,subscription:{active:false},pricing:null,paidModel:false,paid:false};
+const loginUrl=()=>{const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','singles');u.searchParams.set('select_account','1');u.searchParams.set('return_to','https://ekodi.kr/singles'+page+location.search);return u.toString()};
 const text=(tag,body,css='')=>{const n=document.createElement(tag);n.textContent=String(body??'');if(css)n.className=css;return n};
 const button=(label,handler,css='outline')=>{const n=document.createElement('button');n.type='button';n.textContent=label;n.className=css;n.addEventListener('click',handler);return n};
 const holder=()=>{const h=$('memberContent');h.replaceChildren();h.hidden=false;$('publicPanel').hidden=true;return h};
@@ -13,7 +13,7 @@ const notice=(h,value)=>h.append(text('p',value,'notice'));
 function showGuest(){
  $('sectionTitle').textContent=labels[page]||'처음';
  $('serviceStage').textContent='소개 공개 · 회원서비스 준비';
- document.querySelectorAll('[data-guest-nav]').forEach(link=>{link.href=loginUrl()});
+ document.querySelectorAll('[data-guest-nav]').forEach(link=>{link.href=loginUrl();link.hidden=false});
  $('contentDescription').textContent=page===''?'서로를 존중하며 천천히 알아가는 동행입니다.':'로그인 후 이용 가능한 기능은 개통 상태에 따라 달라집니다.';
  if(page!==''){
    const h=$('publicPanel');if(!h.querySelector('[data-donghaeng-login]')){const c=button('EKODI Google로 시작',()=>location.assign(loginUrl()),'primary');c.dataset.donghaengLogin='1';h.append(c);}
@@ -36,7 +36,7 @@ async function api(path,options={}){
   ...(options.body?{body:JSON.stringify(options.body)}:{}),cache:'no-store',credentials:'omit'
  });
  const data=await response.json().catch(()=>({}));
- if(!response.ok){const e=new Error(data.error||'server_unavailable');e.status=response.status;throw e}
+ if(!response.ok){const e=new Error(data.error||'server_unavailable');e.status=response.status;if(data.fee_krw)e.fee_krw=data.fee_krw;throw e}
  return data;
 }
 function paywall(h,action){
@@ -48,9 +48,22 @@ function errorText(error){
  if(error?.message==='monthly_pass_required')return '요청을 보내려면 월 이용권(30일 50,000원)이 필요합니다.';
  if(error?.message==='request_credit_required')return '적립금이 부족합니다. 요청은 상대가 수락할 때 1만원이 확정되며, 보낼 때는 1만원이 잠시 보류됩니다.';
  if(error?.message==='response_credit_required')return '수락하려면 적립금 1만원이 필요합니다. 수락하는 순간 양쪽에서 각 1만원이 확정됩니다.';
+ if(error?.message==='paid_membership_required')return '유료회원만 이용할 수 있습니다. 동행 안내·가입에서 유료회원 가입(가입비 500,000원 = 적립금 500,000원)을 진행해 주세요.';
+ if(error?.message==='credit_required')return '적립금이 부족합니다'+(error.fee_krw?' (필요 금액 '+Number(error.fee_krw).toLocaleString('ko-KR')+'원)':'')+'. 적립금을 추가 충전해 주세요.';
+ if(error?.message==='already_connected')return '이미 메시지를 주고받을 수 있게 연결된 회원입니다.';
+ if(error?.message==='contact_already_shared')return '이미 연락처 교환이 수락된 회원입니다.';
+ if(error?.message==='request_exists')return '같은 종류의 요청이 이미 대기 중입니다.';
+ if(error?.message==='pilot_only')return '지금은 시범 운영 중이라 지정된 계정만 이용할 수 있습니다. 공개 개통 후 이용해 주세요.';
+ if(error?.message==='join_order_already_open')return '이미 발급된 가입비 주문이 있습니다. 아래 입금·확인 내역을 확인해 주세요.';
+ if(error?.message==='already_paid_member')return '이미 유료회원입니다.';
+ if(error?.message==='verified_member_required')return '가입비 결제 전에 성인 본인확인이 필요합니다. 운영자 확인을 요청해 주세요.';
+ if(error?.message==='faith_consent_required')return '신앙 항목은 신앙·신념 민감정보 처리에 별도로 동의한 뒤 입력할 수 있습니다.';
+ if(error?.message==='invalid_region')return '지역은 목록에서 골라 주세요.';
+ if(error?.message==='invalid_profile'||error?.message==='invalid_profile_details')return '별명(2~32자)과 각 항목의 글자 수를 확인해 주세요.';
  if(error?.message==='initial_credit_required')return '추가 충전 전에 기본 적립금 50만원 충전이 먼저 필요합니다.';
  if(error?.status===402)return '행사 참가·메시지 발송·답장 또는 별도 컨설팅 이용에 필요한 구독을 확인해 주세요.';
  if(error?.status===403)return '권한이나 성인확인·상호동의 조건을 확인해 주세요.';
+ if(error?.message==='singles_enrollment_not_launched'||error?.message==='singles_social_not_launched')return '동행 회원 서비스는 아직 개통 전이라 저장되지 않습니다. 성인 본인확인 연동과 개인정보 안내 확정 후 열립니다.';
  if(error?.status===503)return '현재 안전한 서비스 개통을 준비 중입니다.';
  return '요청을 완료하지 못했습니다. 다시 확인해 주세요.';
 }
@@ -58,51 +71,84 @@ async function readSubscription(){
  try{const d=await api('/subscription');state.subscription={active:d.active===true,community_active:d.community_active===true,consulting_active:d.consulting_active===true,expires_at:d.expires_at||null};}
  catch{state.subscription={active:false}}
 }
+// 프로필 항목(서버 social.ts PROFILE_FIELDS·REGIONS와 같은 키). sensitive=신앙 항목: 민감정보 동의 회원만, 요금 점수 제외.
+const REGIONS=['서울','부산','대구','인천','대전','울산','세종','경기','강원','충북','충남','전북','전남광주','경북','경남','제주','해외'];
+const PROFILE_FIELDS=[
+ {key:'real_name',label:'공식 이름(실명)',max:32,detail:true},
+ {key:'broad_region',label:'지역(시·도)',options:REGIONS},
+ {key:'gender',label:'성별',options:['남성','여성'],detail:true},
+ {key:'age_band',label:'나이대',options:['20대 초반','20대 중반','20대 후반','30대 초반','30대 중반','30대 후반','40대 초반','40대 중반','40대 후반','50대 이상'],detail:true},
+ {key:'occupation',label:'직업 분야',max:40,detail:true},
+ {key:'education',label:'최종 학력',options:['고등학교','전문대학','대학교','대학원 이상'],detail:true},
+ {key:'hobbies',label:'취미·관심사',max:120,detail:true},
+ {key:'intro',label:'나를 소개하는 한마디',max:400,multi:true},
+ {key:'looking_for',label:'바라는 동행',max:200,multi:true,detail:true},
+ {key:'church',label:'출석 교회·교단',max:60,detail:true,sensitive:true},
+ {key:'faith_life',label:'신앙생활 소개',max:200,multi:true,detail:true,sensitive:true},
+ {key:'public_link',label:'공유할 프로필 HTTPS 링크',max:300,optional:true}
+];
+const LEGACY_PUBLIC=['broad_region','intro','public_link'];
 function profileForm(h){
- const box=text('section','','member-card');box.append(text('h3','나의 동행 프로필'));paragraph(box,'내가 직접 작성한 정보만 저장합니다. 프로필은 성인 본인확인과 별도 공개 동의 후에만 동행 찾기에 나옵니다.');
- const form=document.createElement('form');
- const input=(caption,key,max=150,multi=false)=>{
-  const label=text('label',caption,'field'),el=document.createElement(multi?'textarea':'input');
-  if(!multi)el.type='text';el.name=key;el.maxLength=max;el.autocomplete='off';el.placeholder=caption;label.append(el);form.append(label);return el;
- };
- const nickname=input('표시 이름','display_name',32),region=input('지역(광역 단위)','broad_region',40),intro=input('나를 소개하는 한마디','intro',400,true);
- const suggestedName=state.session?.user?.user_metadata?.full_name||state.session?.user?.user_metadata?.name;
- if(typeof suggestedName==='string'&&suggestedName.trim())nickname.value=suggestedName.trim().slice(0,32);
- const profileLink=input('공개할 명함·프로필 HTTPS 링크 (선택)','public_link',300);
- const importLabel=text('label','디지털 명함(.vcf)에서 초안 가져오기 · 브라우저 내 처리','field');
- const importFile=document.createElement('input');importFile.type='file';importFile.accept='.vcf,text/vcard,text/x-vcard';
- const imported=text('p','가져온 항목을 직접 확인한 후 저장할 수 있습니다. 연락처와 이메일은 가져오거나 공개하지 않습니다.','muted');
- importFile.addEventListener('change',async()=>{
-  const file=importFile.files?.[0];if(!file)return;
-  if(file.size>65536){imported.textContent='64KB 이하의 명함 파일만 허용합니다.';return}
-  try{
-   const card=(await file.text()).replace(/\r?\n[ \t]/g,'').split(/\r?\n/);
-   if(!card.some(line=>/^BEGIN:VCARD$/i.test(line.trim()))){imported.textContent='올바른 vCard 명함 파일이 아닙니다.';return}
-   const field=key=>{
-    const row=card.find(line=>line.split(':',1)[0].split(';',1)[0].toUpperCase()===key);
-    return row?row.slice(row.indexOf(':')+1).replace(/\\n/gi,' ').trim():'';
-   };
-   const name=field('FN'),organization=field('ORG'),title=field('TITLE'),link=field('URL');
-   if(name)nickname.value=name.slice(0,32);
-   if(organization||title)intro.value=[organization,title].filter(Boolean).join(' · ').slice(0,400);
-   if(link&&link.startsWith('https://'))profileLink.value=link.slice(0,300);
-   discover.checked=false;
-   imported.textContent='표시 이름·소속·직함·링크만 초안으로 입력했습니다. 공개 여부는 직접 선택하세요.';
-  }catch{imported.textContent='명함 파일을 읽을 수 없습니다.'}
- });
- importLabel.append(importFile);form.append(importLabel,imported);
- const verifiedInfo=text('p','Google 로그인은 계정 확인 수단입니다. 만 19세 이상 본인확인은 승인된 본인확인기관 연동이 완료된 뒤 별도로 진행하며, 정부 공공 마이데이터 조회에는 명시적 동의와 기관 연동이 필요합니다.','muted');
- form.append(verifiedInfo);
- const discoverLabel=text('label','성인 본인확인 및 민감정보 동의 후 공개하고 싶습니다.','field'),discover=document.createElement('input');
+ const box=text('section','','member-card');box.append(text('h3','나의 동행 프로필'));
+ paragraph(box,'항목마다 입력하고, 공개할지 직접 고르세요. 별명은 항상 공개되고, 나머지는 “공개”를 고른 항목만 다른 회원에게 보입니다. 프로필은 성인 본인확인과 별도 공개 동의 후에만 동행 찾기에 나옵니다.');
+ const price=text('div','','notice price-notice');
+ price.append(text('strong','요금 안내 · 기본 요금 + 입력·공개 할인'),text('p','요청·수락 요금은 종류별 기본 요금에서 프로필 입력·공개 정도에 따라 할인됩니다. 많이 입력하고 공개할수록 할인이 커지며, 입력·공개는 언제나 선택입니다. 신앙 정보 같은 민감정보는 할인 계산에 쓰지 않습니다. 현재 요금표는 동행 안내·가입에서 확인할 수 있습니다.'));
+ box.append(price);
+ const meter=text('p','','profile-meter');box.append(meter);
+ const form=document.createElement('form');form.className='profile-fields';
+ const nickLabel=text('label','별명 (항상 공개 · 필수)','field'),nickname=document.createElement('input');
+ nickname.type='text';nickname.name='display_name';nickname.maxLength=32;nickname.required=true;nickname.autocomplete='off';nickname.placeholder='다른 회원에게 보일 이름';
+ nickLabel.append(nickname);form.append(nickLabel);
+ const controls={},shows={};let faithAllowed=false;const faithRows=[];
+ const faithNote=text('p','신앙 항목은 회원 참여에서 신앙·신념 민감정보 처리에 별도로 동의한 뒤 입력할 수 있습니다.','muted');
+ for(const f of PROFILE_FIELDS){
+  const row=document.createElement('div');row.className='profile-row';
+  const label=text('label',f.label+(f.optional?' (선택)':''),'field');let el;
+  if(f.options){el=document.createElement('select');el.append(new Option('선택 안 함',''));for(const o of f.options)el.append(new Option(o,o))}
+  else{el=document.createElement(f.multi?'textarea':'input');if(!f.multi)el.type='text';el.maxLength=f.max;el.placeholder=f.label}
+  el.name=f.key;el.autocomplete='off';label.append(el);
+  const showLabel=text('label','공개','show-toggle'),show=document.createElement('input');show.type='checkbox';show.name='show_'+f.key;showLabel.prepend(show);
+  row.append(label,showLabel);form.append(row);controls[f.key]=el;shows[f.key]=show;
+  if(f.sensitive)faithRows.push(row);
+  el.addEventListener('input',updateMeter);el.addEventListener('change',updateMeter);show.addEventListener('change',updateMeter);
+ }
+ form.append(faithNote);
+ const setFaith=on=>{faithAllowed=on;for(const r of faithRows)r.hidden=!on;faithNote.hidden=on};setFaith(false);
+ function updateMeter(){
+  const scored=PROFILE_FIELDS.filter(f=>!f.sensitive&&!f.optional);
+  const filled=scored.filter(f=>controls[f.key].value.trim());
+  const pub=filled.filter(f=>shows[f.key].checked);
+  meter.textContent='입력 '+filled.length+'/'+scored.length+' · 공개 '+pub.length+'/'+scored.length+' — 입력·공개가 많을수록 할인이 커집니다.';
+ }
+ form.append(text('p','Google 로그인은 계정 확인 수단입니다. 만 19세 이상 본인확인은 승인된 본인확인기관 연동이 완료된 뒤 별도로 진행합니다.','muted'));
+ const discoverLabel=text('label','성인 본인확인 및 민감정보 동의 후 동행 찾기에 공개하고 싶습니다.','field'),discover=document.createElement('input');
  discover.type='checkbox';discover.name='discoverable';discoverLabel.prepend(discover);form.append(discoverLabel);
  form.append(text('p','공개를 체크하더라도 본인확인과 운영 검증 전에는 검색에 표시되지 않습니다.','muted'));
  const message=text('p','','status-text');form.append(button('프로필 저장',async()=>{
-  try{const result=await api('/profile',{method:'PUT',body:{display_name:nickname.value.trim(),broad_region:region.value.trim(),intro:intro.value.trim(),public_link:profileLink.value.trim(),discoverable:discover.checked}});
-   message.textContent=result.discoverable?'프로필이 저장되고 공개 설정이 적용됐습니다.':'프로필 초안을 저장했습니다. 공개는 본인확인 후 가능합니다.';
+  const details={},visibility={};
+  for(const f of PROFILE_FIELDS){
+   if(f.sensitive&&!faithAllowed)continue;
+   if(f.detail)details[f.key]=controls[f.key].value.trim();
+   visibility[f.key]=shows[f.key].checked;
+  }
+  try{const result=await api('/profile',{method:'PUT',body:{display_name:nickname.value.trim(),broad_region:controls.broad_region.value,intro:controls.intro.value.trim(),
+    public_link:controls.public_link.value.trim(),details,visibility,discoverable:discover.checked}});
+   message.textContent=result.discoverable?'프로필이 저장되고 공개 설정이 적용됐습니다.':'프로필을 저장했습니다. 동행 찾기 공개는 본인확인 후 가능합니다.';
   }catch(e){message.textContent=errorText(e)}
  },'primary'));
- form.append(message);box.append(form);h.append(box);
- api('/profile').then(d=>{if(d.profile){nickname.value=d.profile.display_name||'';region.value=d.profile.broad_region||'';intro.value=d.profile.intro||'';profileLink.value=d.profile.public_link||'';discover.checked=d.profile.discoverable===true}}).catch(()=>{});
+ form.append(message);box.append(form);h.append(box);updateMeter();
+ const suggested=state.session?.user?.user_metadata?.full_name||state.session?.user?.user_metadata?.name;
+ if(typeof suggested==='string'&&suggested.trim())controls.real_name.value=suggested.trim().slice(0,32);
+ api('/profile').then(d=>{
+  setFaith(d.faith_fields_allowed===true);
+  const p=d.profile;if(!p){updateMeter();return}
+  nickname.value=p.display_name||'';
+  for(const f of PROFILE_FIELDS){
+   const v=f.detail?p.details?.[f.key]:p[f.key];if(typeof v==='string'&&(!f.options||f.options.includes(v)))controls[f.key].value=v;
+   shows[f.key].checked=p.visibility?(p.visibility[f.key]===true):LEGACY_PUBLIC.includes(f.key);
+  }
+  discover.checked=p.discoverable===true;updateMeter();
+ }).catch(()=>{});
 }
 function startConsent(h){
  const p=$('enrollmentPanel');p.hidden=false;p.querySelector('#loginButton').hidden=true;
@@ -126,6 +172,8 @@ function startConsent(h){
   try{await api('/withdraw',{method:'DELETE'});form.reset();msg.textContent='동의 철회가 처리되었습니다. 프로필은 검색되지 않습니다.'}
   catch(e){msg.textContent=errorText(e)}
  });
+ // 유료회원 모델: 무료회원은 프로필을 입력·공개하지 않는다(서비스 안내만).
+ if(state.paidModel&&!state.paid){showGuide(h);return}
  profileForm(h);
 }
 function appendList(h,items,onItem){
@@ -155,14 +203,26 @@ async function showEvents(h){
  })}catch(e){notice(h,errorText(e))}
 }
 async function showDiscover(h){
- notice(h,'서로 공개를 선택하고 본인확인을 완료한 회원만 표시합니다. 호감 수락·거절은 언제나 무료입니다.');
+ notice(h,state.paidModel?'서로 공개를 선택하고 본인확인을 마친 유료회원만 표시합니다. 요청 요금은 보낼 때 보류되고 상대가 수락할 때 확정됩니다.':'서로 공개를 선택하고 본인확인을 완료한 회원만 표시합니다. 호감 수락·거절은 언제나 무료입니다.');
  try{const d=await api('/discover');appendList(h,d.profiles||[],(card,p)=>{
   card.append(text('span',p.broad_region||'지역 비공개','pill'));card.append(text('h3',p.display_name||'동행 회원'));paragraph(card,p.intro||'');
+  const shown=PROFILE_FIELDS.filter(f=>f.detail&&typeof p.details?.[f.key]==='string'&&p.details[f.key]);
+  if(shown.length){const dl=document.createElement('dl');dl.className='profile-facts';for(const f of shown)dl.append(text('dt',f.label),text('dd',p.details[f.key]));card.append(dl)}
   if(typeof p.public_link==='string'&&p.public_link.startsWith('https://')){
    const link=text('a','회원이 공유한 명함·프로필 링크 (공식 인증 아님)','outline');
    link.href=p.public_link;link.target='_blank';link.rel='noopener noreferrer';link.referrerPolicy='no-referrer';card.append(link);
   }
-  card.append(button('호감 보내기',async()=>{
+  if(state.paidModel){
+   const q=state.pricing?.quotes||{};
+   for(const [kind,label] of [['message','메시지 교환 요청'],['contact','연락처 교환 요청']]){
+    const fee=q[kind];
+    card.append(button(label+(typeof fee==='number'?' · '+money(fee):''),async()=>{
+     if(!confirm(label+'을 보낼까요? 요청 시 '+money(fee||0)+'이 보류되고, 상대가 수락하면 확정됩니다. 거절·14일 무응답이면 돌려드립니다.'))return;
+     try{const r=await api('/interests/'+p.id,{method:'POST',body:{kind}});notice(card,label+'을 보냈습니다. 보류 '+money(r.billing?.reserved_krw||0)+' · 상대가 수락하면 확정됩니다.')}
+     catch(e){notice(card,errorText(e))}
+    },kind==='contact'?'outline':'primary'));
+   }
+  }else card.append(button('호감 보내기',async()=>{
    try{await api('/interests/'+p.id,{method:'POST',body:{}});notice(card,'호감을 전했습니다. 상대가 동의하면 대화를 열 수 있습니다.')}
    catch(e){notice(card,errorText(e))}
   },'outline'));
@@ -178,7 +238,50 @@ async function showDiscover(h){
   }));
  })}catch(e){notice(h,errorText(e))}
 }
+const KIND_LABEL={message:'메시지 교환',contact:'연락처 교환'};
+const REQ_STATUS={pending:'대기',accepted:'수락',declined:'거절',expired:'만료(반환)',withdrawn:'탈퇴로 종료(반환)'};
+function messageThread(card,id){
+ return async()=>{try{const d=await api('/messages/'+id);const list=text('div','','member-card');
+  list.append(text('h3','서로 나눈 메시지'));
+  for(const m of (d.messages||[]))list.append(text('p',m.body,'muted'));
+  if(!(d.messages||[]).length)paragraph(list,'아직 주고받은 메시지가 없습니다.');
+  card.append(list);
+ }catch(e){notice(card,errorText(e))}};
+}
+async function showPaidMessages(h){
+ notice(h,'요청을 받은 사람은 수락할 때 자기 요금(기본 요금 + 입력·공개 할인)이 적립금에서 확정 차감됩니다. 거절은 무료입니다. 연락처 교환이 수락되기 전에는 메시지 속 전화번호·이메일·메신저 아이디가 자동으로 가려집니다.');
+ let d;try{d=await api('/requests')}catch(e){notice(h,errorText(e));return}
+ h.append(text('h3','받은·보낸 요청'));
+ appendList(h,d.requests||[],(card,r)=>{
+  card.append(text('span',KIND_LABEL[r.kind]||r.kind,'pill'));card.append(text('h3',r.display_name));
+  paragraph(card,(r.incoming?'받은 요청':'보낸 요청')+' · '+(REQ_STATUS[r.status]||r.status)+(typeof r.my_fee_krw==='number'?' · 내 요금 '+money(r.my_fee_krw):''));
+  if(r.status==='pending'&&r.incoming){
+   card.append(button('수락 ('+money(r.my_fee_krw||0)+' 차감)',async()=>{
+    if(!confirm(KIND_LABEL[r.kind]+' 요청을 수락할까요? 수락하는 순간 적립금에서 '+money(r.my_fee_krw||0)+'이 차감됩니다.'))return;
+    try{const x=await api('/requests/'+r.id+'/respond',{method:'POST',body:{decision:'accepted'}});notice(card,'수락했습니다. '+money(x.billing?.charged_krw||0)+' 차감 · 이제 메시지를 주고받을 수 있습니다.')}
+    catch(e){notice(card,errorText(e))}
+   },'primary'));
+   card.append(button('정중히 거절',async()=>{
+    try{await api('/requests/'+r.id+'/respond',{method:'POST',body:{decision:'declined'}});notice(card,'거절했습니다. 요금은 없습니다.')}
+    catch(e){notice(card,errorText(e))}
+   }));
+  }
+  if(r.status==='pending'&&!r.incoming)paragraph(card,'상대의 답을 기다리는 중입니다. 보류된 금액은 거절·14일 무응답 시 돌려드립니다.');
+ });
+ h.append(text('h3','연결된 회원'));
+ appendList(h,d.connections||[],(card,c)=>{
+  card.append(text('h3',c.display_name));
+  paragraph(card,c.contact_shared?'연락처 교환 수락됨 · 메시지 속 연락처가 그대로 보입니다.':'연락처 교환 전 · 메시지 속 연락처는 자동으로 가려집니다.');
+  card.append(button('대화 내용 보기',messageThread(card,c.id)));
+  card.append(button('메시지 보내기',async()=>{
+   const body=prompt('상대에게 보낼 메시지 (최대 1000자)');if(!body?.trim())return;
+   try{const x=await api('/messages/'+c.id,{method:'POST',body:{text:body.slice(0,1000)}});notice(card,x.masked?'메시지를 보냈습니다. 연락처로 보이는 부분은 가려졌습니다.':'메시지를 보냈습니다.')}
+   catch(e){notice(card,errorText(e))}
+  },'primary'));
+ });
+}
 async function showMessages(h){
+ if(state.paidModel){await showPaidMessages(h);return}
  notice(h,'관심 수락·거절과 상호 동의 후 메시지 열람은 무료입니다. 새 메시지와 답장을 보내려면 보내는 사람에게 유효한 기본 구독이 필요합니다. 차단·신고는 언제나 무료입니다.');
  try{const d=await api('/requests');appendList(h,d.requests||[],(card,r)=>{
   card.append(text('h3',r.display_name||'새로운 관심'));paragraph(card,r.status==='pending'?'상대의 관심이 도착했습니다.':'연결 상태: '+r.status);
@@ -224,7 +327,7 @@ async function reloadBankOrders(h){
   if(!rows.length){paragraph(panel,'아직 결제 내역이 없습니다.');return}
   for(const row of rows){
    const card=text('article','','mini-card');
-   card.append(text('h4',(row.plan_code==='consulting'?'선택형 컨설팅':'행사 참가 구독')+' · '+money(row.amount_krw)));
+   card.append(text('h4',({credit_initial:'유료회원 가입비(적립금 생성)',credit_topup:'적립금 추가 충전',consulting:'선택형 컨설팅'}[row.plan_code]||'행사 참가 구독')+' · '+money(row.amount_krw)));
    paragraph(card,'결제고유번호: '+row.reference);
    card.append(button('고유번호 복사',async()=>{
     try{await navigator.clipboard.writeText(row.reference);notice(card,'고유번호를 복사했습니다.');}
@@ -302,6 +405,124 @@ async function showSubscription(h){
   h.append(box2);
  }
  const adminLink=text('a','운영자 입금내역 관리 →','outline');adminLink.href='/singles/admin';h.append(adminLink);
+}
+// ── 유료회원 모델(2026-10-28) ──────────────────────────────
+async function loadPricing(){
+ try{state.pricing=await api('/pricing');state.paidModel=state.pricing.paid_model===true;state.paid=state.pricing.paid_member===true}
+ catch{state.pricing=null;state.paidModel=false;state.paid=false}
+}
+function priceTable(box){
+ const rules=state.pricing?.rules||[];if(!rules.length)return;
+ const table=document.createElement('table');table.className='price-table';
+ const head=document.createElement('tr');for(const t of ['요청 종류','기본 요금','입력·공개 할인','최저 요금'])head.append(text('th',t));table.append(head);
+ for(const r of rules.sort((a,b)=>a.standard_krw-b.standard_krw)){
+  const row=document.createElement('tr');
+  row.append(text('td',r.display_name),text('td',money(r.standard_krw)),text('td',r.max_discount_pct>0?'최대 '+r.max_discount_pct+'%':'없음'),text('td',money(r.floor_krw)));
+  table.append(row);
+ }
+ box.append(table);
+}
+function showGuide(h){
+ const box=text('section','','member-card guide');
+ box.append(text('h3','에코디 동행 이용 안내'));
+ paragraph(box,'에코디 동행은 결혼 전 성인이 서로를 존중하며 알아가는 교제·만남 공동체입니다. 운영자가 상대를 골라 소개하지 않고, 회원이 스스로 찾아 요청하며 상대가 수락할 때만 연결됩니다.');
+ const ul=document.createElement('ul');
+ for(const line of [
+  '무료회원: 서비스 안내만 볼 수 있습니다. 프로필 입력·공개, 요청·수락은 할 수 없습니다.',
+  '유료회원: 가입비 500,000원을 계좌이체하면 같은 금액(500,000원)이 적립금으로 생깁니다.',
+  '요청 요금은 "기본 요금 + 입력·공개 할인"입니다. 프로필을 많이 입력·공개할수록 할인이 커집니다. 민감정보(신앙)는 할인 계산에 쓰지 않습니다.',
+  '요청한 사람: 보낼 때 자기 요금이 보류되고, 상대가 수락하는 순간 확정됩니다. 거절·14일 무응답·탈퇴 시 보류액을 돌려드립니다.',
+  '요청받은 사람: 수락하는 순간 자기 요금이 적립금에서 확정 차감됩니다. 거절은 무료입니다.',
+  '메시지 교환으로 연결된 사이에서도 연락처 교환이 수락되기 전에는 메시지 속 연락처가 자동으로 가려집니다.',
+  '기간제 메시지 이용권(1일·10일·20일·1달)을 적립금으로 사면, 그 기간 동안 메시지 교환 요청·수락 요금이 면제됩니다(연락처 교환은 별도).',
+  '사용하지 않은 적립금은 약관에 따라 환불받을 수 있습니다.'
+ ])ul.append(text('li',line));
+ box.append(ul);
+ priceTable(box);
+ const passes=state.pricing?.passes||[];
+ if(passes.length)paragraph(box,'기간제 메시지 이용권: '+passes.map(x=>x.display_name+' '+money(x.price_krw)).join(' · '));
+ const steps=document.createElement('ol');steps.className='join-steps';
+ for(const t of ['로그인 후 참여 동의','성인 본인인증(휴대폰 본인인증 또는 운영자 확인)','가입비 500,000원 계좌이체 주문·입금','운영자 입금 확인 → 유료회원 전환·적립금 500,000원'])steps.append(text('li',t));
+ box.append(text('h4','유료회원 가입 순서'),steps);
+ h.append(box);
+}
+async function showJoin(h){
+ const box=text('section','','paywall');box.append(text('h3','유료회원 가입 · 가입비 500,000원 (적립금 500,000원 생성)'));
+ paragraph(box,'결제수단은 계좌이체입니다. 주문번호를 발급받아 입금하고 "입금 완료 신고"를 누르면 운영자가 은행 내역과 대조해 확인합니다. 확인되면 유료회원이 되고 같은 금액의 적립금이 생깁니다.');
+ let member=null;try{member=(await api('/me')).member}catch{}
+ if(!member){paragraph(box,'먼저 "내 정보"에서 참여 동의를 저장해 주세요.');box.append(button('참여 동의하러 가기',()=>location.assign('/singles/my'),'primary'));h.append(box);return}
+ if(!member.adult_verified){
+  if(state.status?.identity_verification){notice(box,'가입비 결제 전에 성인 본인인증이 필요합니다. 휴대폰 본인인증으로 1분 안에 끝납니다.');box.append(button('휴대폰 본인인증 하기',()=>location.assign('/singles/verify'),'primary'));}
+  else notice(box,'가입비 결제 전에 성인 본인확인이 필요합니다. 운영자(joseph@ekodi.kr)에게 신분증 확인을 요청해 주세요.');
+ }
+ box.append(button('가입비 주문번호 발급',async()=>{
+  try{const r=await api('/bank/orders',{method:'POST',body:{plan_code:'credit_initial'}});notice(box,'주문번호 '+r.order.reference+'가 발급되었습니다. 아래 계좌로 입금해 주세요.');await reloadBankOrders(h)}
+  catch(e){notice(box,errorText(e))}
+ },'primary'));
+ h.append(box);
+ await reloadBankOrders(h);
+}
+async function showPaidWallet(h){
+ const box=text('section','','member-card');box.append(text('h3','내 적립금'));
+ try{
+  const w=await api('/bank/wallet');
+  box.append(text('p','사용 가능 '+money(w.balance_krw)+' · 수락 대기로 보류 중 '+money(w.reserved_krw),'wallet-balance'));
+  const q=state.pricing?.quotes||{};
+  paragraph(box,'지금 내 요금(기본 요금 + 입력·공개 할인): 메시지 교환 '+money(q.message)+' · 연락처 교환 '+money(q.contact)+(state.pricing?.pass_expires_at?' · 메시지 이용권 '+state.pricing.pass_expires_at.slice(0,10)+'까지':''));
+  priceTable(box);
+  if((w.ledger||[]).length){
+   const LBL={join_fee:'가입비 적립',topup:'추가 충전',request_reserved:'요청 보류',request_released:'보류 반환',request_charged:'요청 확정',accept_charged:'수락 차감',pass_purchase:'이용권 구매',refund:'환불',adjustment:'조정'};
+   const ul=document.createElement('ul');ul.className='ledger';
+   for(const l of w.ledger)ul.append(text('li',l.created_at.slice(0,16).replace('T',' ')+' · '+(LBL[l.reason]||l.reason)+' · '+(l.delta_krw?(l.delta_krw>0?'+':'')+money(l.delta_krw):'보류 '+money(l.reserved_delta_krw))));
+   box.append(text('h4','최근 내역'),ul);
+  }
+ }catch(e){notice(box,errorText(e))}
+ h.append(box);
+ const passBox=text('section','','member-card');passBox.append(text('h3','기간제 메시지 이용권'));
+ paragraph(passBox,'적립금에서 결제합니다. 기간 동안 메시지 교환 요청·수락 요금이 면제되고, 연락처 교환은 별도 요금입니다.');
+ for(const pass of state.pricing?.passes||[]){
+  passBox.append(button(pass.display_name+' · '+money(pass.price_krw),async()=>{
+   if(!confirm(pass.display_name+'을 적립금 '+money(pass.price_krw)+'으로 구매할까요?'))return;
+   try{const r=await api('/passes/'+pass.code,{method:'POST',body:{}});notice(passBox,'구매했습니다. '+String(r.pass_expires_at).slice(0,10)+'까지 이용할 수 있습니다.');await loadPricing()}
+   catch(e){notice(passBox,errorText(e))}
+  }));
+ }
+ h.append(passBox);
+ const top=text('section','','member-card');top.append(text('h3','적립금 추가 충전 · 100,000원'));
+ top.append(button('충전 주문번호 발급',async()=>{
+  try{const r=await api('/bank/orders',{method:'POST',body:{plan_code:'credit_topup'}});notice(top,'주문번호 '+r.order.reference+'가 발급되었습니다.');await reloadBankOrders(h)}
+  catch(e){notice(top,errorText(e))}
+ },'primary'));
+ h.append(top);
+ await reloadBankOrders(h);
+}
+async function showMembersAdmin(h){
+ const box=text('section','','member-card');box.append(text('h3','회원·가입 기록 · 운영자 전용'));
+ paragraph(box,'가입 시도(시간·Google 계정)와 회원 상태입니다. 성인 확인은 신분증을 직접(대면·영상) 확인한 경우에만 처리하세요. 본인 계정은 처리할 수 없습니다.');
+ try{
+  const d=await api('/bank/admin/members');
+  for(const m of d.members||[]){
+   const card=text('article','','mini-card');
+   card.append(text('h4',(m.email||m.user_id)+' · '+(m.status==='active'?'참여 중':m.status)));
+   paragraph(card,'성인 확인: '+(m.adult_verified_at?m.adult_verified_at.slice(0,16).replace('T',' '):'미확인')+' · 유료회원: '+(m.paid_member_since?m.paid_member_since.slice(0,10):'아님'));
+   if(!m.adult_verified_at&&m.status==='active'){
+    const sel=document.createElement('select');
+    for(const [v,l] of [['id_document_in_person','신분증 대면 확인'],['id_document_video','신분증 영상 확인'],['certified_provider','인증기관 결과 확인']])sel.append(new Option(l,v));
+    card.append(sel,button('성인 확인 처리',async()=>{
+     const note=prompt('확인 메모(선택, 200자)')||'';
+     try{await api('/bank/admin/members/'+m.user_id+'/adult-verify',{method:'POST',body:{method:sel.value,note:note.slice(0,200)}});notice(card,'성인 확인을 기록했습니다.')}
+     catch(e){notice(card,e.message==='operator_self_verification_forbidden'?'본인 계정은 처리할 수 없습니다.':errorText(e))}
+    },'primary'));
+   }
+   box.append(card);
+  }
+  if(!(d.members||[]).length)paragraph(box,'아직 참여한 회원이 없습니다.');
+  const log=document.createElement('details');log.append(Object.assign(document.createElement('summary'),{textContent:'최근 가입 시도 기록 '+(d.attempts||[]).length+'건'}));
+  const LBL={enroll:'참여 동의 저장',enroll_failed:'참여 동의 실패',join_order:'가입비 주문',withdraw:'탈퇴'};
+  for(const a of d.attempts||[])log.append(text('p',a.created_at.slice(0,19).replace('T',' ')+' · '+(a.email||'-')+' · '+(LBL[a.action]||a.action)+(a.detail?' · '+a.detail:''),'muted'));
+  box.append(log);
+ }catch(e){notice(box,e.status===403?'운영자 권한이 필요합니다.':errorText(e))}
+ h.append(box);
 }
 async function showBankAdmin(h){
  const p=text('section','','member-card');p.append(text('h3','입금 확인 · 운영자 전용'));
@@ -385,7 +606,7 @@ async function showBankAdmin(h){
   for(const row of data.orders){
    const card=text('article','','mini-card');
    card.append(text('h4','결제고유번호 '+row.reference));
-   paragraph(card,'상품: '+(row.plan_code==='consulting'?'컨설팅':'행사 참여')+' / '+money(row.amount_krw));
+   paragraph(card,'상품: '+({credit_initial:'유료회원 가입비',credit_topup:'적립금 추가 충전',consulting:'컨설팅'}[row.plan_code]||'행사 참여')+' / '+money(row.amount_krw)+(row.email?' · '+row.email:''));
    paragraph(card,'상태: '+(stateLabel[row.status]||row.status));
    paragraph(card,'회원 입금 신고: '+(row.reported_paid_at||'없음'));
    paragraph(card,'관리자 확인: '+(row.verified_at||'미확인')+' / 회원 재확인: '+(row.member_acknowledged_at||'미확인'));
@@ -550,21 +771,40 @@ async function signedIn(status){
   notice(h,'로그인은 정상적으로 완료되었습니다. 동행 회원서비스(회원가입·프로필·행사·메시지·결제)는 운영 개통 전이라 아직 열리지 않았습니다. 개통되면 이 화면에서 바로 이어서 이용할 수 있습니다.');
   return;
  }
- document.querySelectorAll('[data-member-nav]').forEach(link=>{link.hidden=false});
  document.querySelectorAll('[data-guest-nav]').forEach(link=>{link.hidden=true});
  $('serviceStage').textContent='로그인 완료';
  await readSubscription();
+ if(status.social_enabled)await loadPricing();
+ // 유료회원 모델: 유료회원 전용 메뉴(동행 찾기·메시지·내 프로필)는 유료회원에게만 보인다.
+ const paidOnlyHidden=state.paidModel&&!state.paid;
+ document.querySelectorAll('[data-member-nav]').forEach(link=>{link.hidden=link.hasAttribute('data-paid-nav')&&paidOnlyHidden});
+ const subLink=document.querySelector('a[href="/singles/subscribe"]');
+ if(subLink&&state.paidModel)subLink.textContent=state.paid?'적립금·이용권':'동행 안내·가입';
+ if(state.paidModel){
+  $('serviceStage').textContent=state.paid?'유료회원':'무료회원 · 서비스 안내';
+  if(page==='/subscribe')$('sectionTitle').textContent=state.paid?'적립금·이용권':'동행 안내·가입';
+  const acct=document.querySelector('a.account[data-member-nav]');if(acct&&!state.paid)acct.textContent='내 정보';
+ }
  const h=holder();accountCard(h);
  if(!status.social_enabled&&page!=='/my')notice(h,'기능 구현을 검증하는 중입니다. 별도 권한 및 안전 검사가 완료되면 열립니다.');
  if(page==='/my')startConsent(h);
  else if(page==='/events')await showEvents(h);
+ else if(paidOnlyHidden&&['/discover','/messages'].includes(page)){notice(h,'유료회원 전용 메뉴입니다.');showGuide(h);await showJoin(h);}
  else if(page==='/discover')await showDiscover(h);
  else if(page==='/messages')await showMessages(h);
+ else if(page==='/subscribe'&&state.paidModel){if(state.paid)await showPaidWallet(h);else{showGuide(h);await showJoin(h);}}
  else if(page==='/subscribe'){await showWallet(h);await showSubscription(h);}
- else if(page==='/admin'){await showBankAdmin(h);await showEventPricing(h);await showReportModeration(h);await showAllPricing(h);await showBrokerageReadiness(h);}
+ else if(page==='/admin'){await showMembersAdmin(h);await showBankAdmin(h);await showEventPricing(h);await showReportModeration(h);await showAllPricing(h);await showBrokerageReadiness(h);}
  else if(page==='/groups')paragraph(h,'지역 공동체·소그룹 기능을 준비하고 있습니다. 행사 목록을 먼저 확인해 주세요.');
  else {paragraph(h,'반갑습니다. 나의 프로필, 공개 행사, 동행 찾기를 살펴보세요.');const row=text('div','','actions');for(const [name,href] of [['프로필 등록','/singles/my'],['공개 행사','/singles/events'],['동행 찾기','/singles/discover']]){const a=text('a',name,'outline');a.href=href;row.append(a)}h.append(row)}
 }
+// AUTH-RETURN-CONTINUITY-001 v1.27.5: a signed-in person is never shown a login entry or sent to login again.
+// A stored EKODI session is detected synchronously so no login button flashes before the session check.
+function storedSession(){
+ try{for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i)||'';if(!/^sb-[a-z0-9]+-auth-token(?:\.\d+)?$/i.test(key))continue;let v=null;try{v=JSON.parse(localStorage.getItem(key)||'null')}catch{continue}const s=v?.currentSession||v?.session||v;if(s?.user?.id&&(s?.refresh_token||Number(s?.expires_at||0)*1000>Date.now()))return true}}catch{}
+ return false;
+}
+function hideLoginEntries(){document.querySelectorAll('[data-guest-nav]').forEach(link=>{if(!link.dataset.signedIn)link.hidden=true});document.querySelectorAll('[data-donghaeng-login]').forEach(b=>b.remove())}
 async function main(){
  // Clear one-time credentials before any async work or feature flag checks.
  // The token remains only in memory for the current authentication attempt.
@@ -572,10 +812,12 @@ async function main(){
  const tokenHash=fragment.get('ekodi_token');
  const tokenType=fragment.get('ekodi_type')||'email';
  if(tokenHash)history.replaceState(null,'',location.pathname+location.search);
- showGuest();
+ const resuming=Boolean(tokenHash)||storedSession();
+ if(resuming){hideLoginEntries();$('serviceStage').textContent='로그인 확인 중';}
+ else showGuest();
  let status;
  try{status=await fetch('/singles/api/status',{cache:'no-store'}).then(r=>r.json())}
- catch{return}
+ catch{if(resuming)$('serviceStage').textContent='연결 점검 중';return}
  state.status=status;
  const prelaunchAdmin=page==='/admin'&&status?.admin_preparation_enabled===true&&status?.onboarding_enabled===false;
  // Public first-party EKODI identity settings are the same as the canonical auth hub.
@@ -599,7 +841,7 @@ async function main(){
  }
  const {data}=await state.client.auth.getSession();
  state.session=data?.session;
- if(!state.session)return;
+ if(!state.session){if(resuming)showGuest();return}
  if(prelaunchAdmin){
   showSignedInAccount();
   $('serviceStage').textContent='로그인 완료 · 운영 준비';
