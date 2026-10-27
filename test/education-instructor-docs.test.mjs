@@ -34,8 +34,11 @@ test('management API needs an instructor password session, even when the studio 
   const e=env();
   assert.equal((await call(e,'api/list')).status,401);
   assert.equal((await upload(e,{auth:false})).status,401);
+  // Without a configured password the only way to a valid cookie is the EKODI super-admin sign-in.
   const noPassword=env({EDU_INSTRUCTOR_GATE_SECRET:'',EDU_INSTRUCTOR_GATE:''});
-  assert.equal((await call(noPassword,'api/list',{headers:{cookie:await cookie()}})).status,401,'no configured password → no session');
+  assert.equal((await call(noPassword,'api/list')).status,401,'no cookie → refused even in open mode');
+  assert.equal((await call(noPassword,'api/list',{headers:{cookie:await cookie()}})).status,200,'super-admin minted cookie works without a password');
+  assert.equal((await call(e,'api/list',{headers:{cookie:GATE_COOKIE+'=v1.1999999999.'+'A'.repeat(43)}})).status,401,'forged cookie refused');
   assert.equal((await upload(e,{origin:'https://evil.example'})).status,403);
   assert.equal((await upload(e,{origin:''})).status,403,'POST without Origin refused');
   assert.equal((await call(env({EDU_DOCS:undefined}),'api/list',{headers:{cookie:await cookie()}})).status,503,'no storage binding (staging) → 503');

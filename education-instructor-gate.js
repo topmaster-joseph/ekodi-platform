@@ -167,7 +167,10 @@ function lockPage({message='',configured=true,course='',backHref=''}){
     (message?'<p class="gate-error" role="alert">'+esc(message)+'</p>':'')+
     '<p class="meta">한 번 열면 이 브라우저에서 12시간 동안 유지됩니다. 공용 PC에서는 수업 후 「노트 잠그기」를 누르세요.</p>'+
     (backHref?'<a class="btn" href="'+esc(backHref)+'">← 노트 없이 강의 화면으로</a> ':'')+
-    '<a class="btn btn-ghost" href="'+esc(lab)+'">수강생이신가요? 실습실로 가기 →</a></section></main></body></html>';
+    '<div class="gate-admin" id="gateAdmin" hidden><p class="meta">EKODI 최고관리자는 비밀번호 없이 들어갈 수 있습니다.</p>'+
+      '<a class="btn" id="gateAdminLogin" href="https://ekodi.kr/auth/?site=admin&amp;direct=1">EKODI 최고관리자로 로그인</a><p class="gate-error" id="gateAdminError" role="alert" hidden></p></div>'+
+    '<a class="btn btn-ghost" href="'+esc(lab)+'">수강생이신가요? 실습실로 가기 →</a></section></main>'+
+    '<script type="module" src="/study/live/gate-admin.js"></script></body></html>';
 }
 function htmlResponse(html,status,extra={}){
   return new Response(html,{status,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store, private','x-robots-tag':'noindex, nofollow',...extra}});
@@ -234,8 +237,37 @@ export async function instructorGate(request,env,{url=new URL(request.url)}={}){
 // A signed-in instructor session (password configured and a valid gate cookie). Used by APIs that hold the
 // instructor's own documents: unlike the notes, these never open in "open" mode without a password.
 export async function hasInstructorSession(request,env){
-  const verifier=activeVerifier(env),key=env?.EDU_GATE_SIGNING_KEY;
-  if(!parseVerifier(verifier)||!usableKey(key))return false;
+  const key=env?.EDU_GATE_SIGNING_KEY;
+  if(!usableKey(key))return false;
   return verifyGateToken(readCookie(request,GATE_COOKIE),key);
+}
+
+// EKODI super administrators may always sign in as the instructor: the central admin token (from
+// https://ekodi.kr/auth/?site=admin) is verified server-side against the central session API and, for
+// role super_admin only, exchanged for the same short-lived HttpOnly instructor cookie. The token itself is
+// never stored by Education.
+export const ADMIN_UNLOCK_PATH='/study/live/unlock/admin';
+export const ADMIN_SESSION_URL='https://ekodi.kr/api/session';
+export async function adminUnlock(request,env,{url=new URL(request.url),fetchImpl=globalThis.fetch}={}){
+  if(url.pathname!==ADMIN_UNLOCK_PATH)return null;
+  const reply=(data,status)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+  if(request.method.toUpperCase()!=='POST')return reply({ok:false,code:'method_not_allowed'},405);
+  if(!request.headers.get('origin')||!sameSiteOrigin(request,url))return reply({ok:false,code:'cross_site_refused'},403);
+  const key=env?.EDU_GATE_SIGNING_KEY;
+  if(!usableKey(key))return reply({ok:false,code:'gate_not_configured',message:'강사 세션 설정이 아직 완료되지 않았습니다.'},503);
+  const auth=String(request.headers.get('authorization')||'');
+  const token=auth.startsWith('Bearer ')?auth.slice(7).trim():'';
+  if(token.length<16||token.length>4096)return reply({ok:false,code:'admin_token_required',message:'EKODI 최고관리자 로그인이 필요합니다.'},401);
+  let session=null;
+  try{
+    const r=await fetchImpl(env?.EDU_ADMIN_SESSION_URL||ADMIN_SESSION_URL,{headers:{authorization:'Bearer '+token,accept:'application/json'},cache:'no-store'});
+    if(r.ok)session=await r.json().catch(()=>null);
+    else if(r.status!==401&&r.status!==403)return reply({ok:false,code:'admin_session_unavailable',message:'관리자 인증 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.'},502);
+  }catch{return reply({ok:false,code:'admin_session_unavailable',message:'관리자 인증 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.'},502);}
+  if(!session?.authenticated)return reply({ok:false,code:'admin_session_invalid',message:'관리자 로그인이 만료되었습니다. 다시 로그인해 주세요.'},401);
+  if(String(session.role||'')!=='super_admin')return reply({ok:false,code:'super_admin_required',message:'EKODI 최고관리자만 강사 화면을 열 수 있습니다.'},403);
+  const gateToken=await mintGateToken(key);
+  console.log('EKODI Education instructor session issued to super admin',{email:String(session.email||'').replace(/(^.).*(@.*$)/,'$1***$2')});
+  return new Response(JSON.stringify({ok:true}),{status:200,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','set-cookie':cookieHeader(url,gateToken,GATE_TTL_SECONDS)}});
 }
 export function isSameSiteRequest(request,url){return sameSiteOrigin(request,url);}

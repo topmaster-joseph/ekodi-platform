@@ -1,6 +1,6 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import researchWorker from './education/research/worker.js';
-import { instructorGate, isGatedPath } from './education-instructor-gate.js';
+import { instructorGate, isGatedPath, adminUnlock } from './education-instructor-gate.js';
 import { instructorDocs } from './education-instructor-docs.js';
 
 const SECURITY_HEADERS={
@@ -20,6 +20,9 @@ export default{
     if(url.pathname==='/health')return json({ok:true,service:'ekodi-education',surface:'education-platform',areas:['admission','study'],contextModel:'person-space-role',officialSourceRequired:true,submissionExecution:false,sensitiveDocumentStorage:false,instructorDocumentShare:'instructor-own-documents-expiring-links',dataMode:runtimeConfig(env).dataMode,ekodiShell:true});
     if(url.pathname==='/config.js')return new Response(`window.EKODI_EDU_CONFIG=${JSON.stringify(runtimeConfig(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}});
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/',307);
+    // EKODI super admin → instructor session (central admin token verified server-side, super_admin only).
+    const admin=await adminUnlock(request,env,{url});
+    if(admin)return admin;
     // Instructor document share: public expiring view links + instructor-session management API.
     const docs=await instructorDocs(request,env,{url});
     if(docs)return docs;
