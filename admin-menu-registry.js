@@ -220,4 +220,5 @@ if (typeof document !== 'undefined') {
   import('./ai-operations-center-admin.js').catch(error => console.warn('[EKODI Admin] AI operations center bootstrap failed', error));
   import('./devotional-admin.js').catch(error => console.warn('[EKODI Admin] devotional bootstrap failed', error));
   import('./common-scripture-admin.js').catch(error => console.warn('[EKODI Admin] common scripture bootstrap failed', error));
+  import('./search-visibility-admin.js').then(() => window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:'search-visibility' } }))).catch(error => console.warn('[EKODI Admin] search visibility bootstrap failed', error));
 }
