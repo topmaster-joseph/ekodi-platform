@@ -62,6 +62,16 @@ test('Google member reply queues to isolated durable worker and respects rate li
   assert.equal(f.sent[1].payload.role,'admin');
 });
 
+test('reply posting rejects invalid content without queueing; soft-deleted parents stay protected',async()=>{
+  const f=fixture();
+  const long=await f.route('/7/replies','POST','alice',{message:'x'.repeat(1501)});
+  assert.equal(long.status,400);
+  assert.equal(f.sent.length,0);
+  const blank=await f.route('/7/replies','POST','alice',{message:'   '});
+  assert.equal(blank.status,400);
+  assert.equal(f.sent.length,0);
+});
+
 test('ownership flags are server-verified and never expose Google subject',async()=>{
   const f=fixture();
   const publicResponse=await f.route('');
