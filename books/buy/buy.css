@@ -76,3 +76,5 @@
 .op-row b{color:var(--navy)}.op-row small{display:block;color:#7a7f8a}
 .op-row label{min-height:42px;display:inline-flex;align-items:center;padding:0 16px;background:var(--navy);color:#fff;font-family:Arial,sans-serif;font-size:.8rem;cursor:pointer}
 .op-row input{display:none}
+.widget-area{margin-top:14px;border-top:1px solid #eee6d6;padding-top:12px}
+.widget-area .pay-btn{margin-top:10px}

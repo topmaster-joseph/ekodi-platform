@@ -43,8 +43,9 @@
     $('ownedBox').hidden = true; $('payArea').hidden = false;
     const open = quote.checkout.open;
     $('payBtn').disabled = busy || !open || !quote.signedIn;
-    $('payBtn').textContent = !open ? '결제 준비 중' : quote.signedIn ? `${C.won(p?.amount)} 결제하기` : '로그인 후 결제';
-    $('payNote').textContent = !open ? '에코디서점 결제를 여는 중입니다. 지금은 아래의 다른 판매처를 이용하실 수 있습니다.' : quote.checkout.testOnly ? '운영자 시험 결제 모드입니다(실제 청구 없음).' : '안전한 토스페이먼츠 결제창이 열립니다. 결제 후 바로 내 서재에서 받으실 수 있습니다.';
+    const preparing = quote.checkout.fileReady === false && !quote.checkout.operator;
+    $('payBtn').textContent = !open ? (preparing ? '전자책 준비 중' : '결제 준비 중') : quote.signedIn ? `${C.won(p?.amount)} 결제하기` : '로그인 후 결제';
+    $('payNote').textContent = !open ? (preparing ? '판매용 전자책 파일을 마무리하고 있습니다. 준비되는 대로 이곳에서 바로 구매하실 수 있습니다.' : '에코디서점 결제를 여는 중입니다. 지금은 아래의 다른 판매처를 이용하실 수 있습니다.') : quote.checkout.testOnly ? '운영자 시험 결제 모드입니다(실제 청구 없음).' : quote.checkout.operator && quote.checkout.fileReady === false ? '운영자 확인용 결제입니다. 전자책 파일이 아직 없어 일반 고객에게는 판매가 열리지 않았습니다(실제 청구됩니다).' : '안전한 토스페이먼츠 결제창이 열립니다. 결제 후 바로 내 서재에서 받으실 수 있습니다.';
   }
   async function load() {
     try { quote = await C.api(`/quote?book=${encodeURIComponent(bookId)}`); render(); }
@@ -59,9 +60,27 @@
       const order = await C.api('/orders', { method: 'POST', body: { bookId: quote.book.id, consent: true, source } });
       if (typeof window.TossPayments !== 'function') throw new Error('결제 모듈을 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.');
       try { sessionStorage.setItem('ekodi-books-last-order', JSON.stringify({ orderId: order.orderId, bookId: quote.book.id })); } catch {}
-      const payment = window.TossPayments(order.clientKey).payment({ customerKey: order.customerKey });
-      await payment.requestPayment({ method: 'CARD', amount: { currency: 'KRW', value: order.amount }, orderId: order.orderId, orderName: order.orderName,
-        successUrl: order.successUrl, failUrl: order.failUrl, customerEmail: order.customerEmail, customerName: order.customerName });
+      const request = { orderId: order.orderId, orderName: order.orderName, successUrl: order.successUrl, failUrl: order.failUrl, customerEmail: order.customerEmail, customerName: order.customerName };
+      if (order.widget) {
+        // 결제위젯 연동 키(gck): 토스 결제 UI를 이 카드 안에 그리고, 고객이 수단을 고른 뒤 결제를 진행한다.
+        const widgets = window.TossPayments(order.clientKey).widgets({ customerKey: order.customerKey });
+        await widgets.setAmount({ currency: 'KRW', value: order.amount });
+        $('widgetArea').hidden = false; $('payBtn').hidden = true;
+        await Promise.all([
+          widgets.renderPaymentMethods({ selector: '#paymentMethods', variantKey: order.variantKey || 'qtin' }),
+          widgets.renderAgreement({ selector: '#agreement', variantKey: 'AGREEMENT' }),
+        ]);
+        $('widgetPay').disabled = false;
+        $('widgetPay').onclick = async () => {
+          $('widgetPay').disabled = true; msg('');
+          try { await widgets.requestPayment(request); }
+          catch (e) { msg(e?.message || '결제를 진행하지 못했습니다.'); $('widgetPay').disabled = false; }
+        };
+        $('widgetArea').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        const payment = window.TossPayments(order.clientKey).payment({ customerKey: order.customerKey });
+        await payment.requestPayment({ ...request, method: 'CARD', amount: { currency: 'KRW', value: order.amount } });
+      }
     } catch (e) { msg(e.code === 'ALREADY_OWNED' ? '이미 내 서재에 있는 도서입니다.' : (e.message || '결제를 시작하지 못했습니다.')); }
     finally { busy = false; render(); }
   }

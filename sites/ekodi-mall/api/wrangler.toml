@@ -1,5 +1,5 @@
 name = "ekodi-mall-api"
-main = "entry.js"
+main = "main.js"
 compatibility_date = "2026-08-14"
 workers_dev = true
 preview_urls = false
