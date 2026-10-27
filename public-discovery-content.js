@@ -123,7 +123,9 @@ async function seonamNoticeItems(env){
 export async function mallProductItems(env){
   if(!env?.MALL_API?.fetch)return [];
   try{
-    const response=await env.MALL_API.fetch(new Request('https://mall-api.internal/api/public/products?limit=48',{headers:{accept:'application/json'}}));
+    // EKODI-MALL-SEO-INDEX-001: 전체 공개 상품(최대 5000)을 사이트맵에 포함. 구버전 API면 최근 48개로 대체.
+    let response=await env.MALL_API.fetch(new Request('https://mall-api.internal/api/public/products/index?limit=5000',{headers:{accept:'application/json'}}));
+    if(!response.ok)response=await env.MALL_API.fetch(new Request('https://mall-api.internal/api/public/products?limit=48',{headers:{accept:'application/json'}}));
     if(!response.ok)return [];
     const body=await response.json().catch(()=>({}));
     return (Array.isArray(body?.products)?body.products:[]).map(item=>{
