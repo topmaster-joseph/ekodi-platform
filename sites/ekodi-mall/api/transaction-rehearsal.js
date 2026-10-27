@@ -16,8 +16,14 @@ function idsFor(runId) {
 }
 
 async function cleanup(env, ids, orderId = '') {
+  // MALL-REHEARSAL-CLEANUP-001: a retried attempt (same runId) or an attempt that died after createOrder
+  // leaves orders that still reference the synthetic product; remove every order of this run's product too,
+  // otherwise the product/store/seller deletes fail on foreign keys and every retry fails on seed.
+  let leftovers = { results: [] };
+  try { leftovers = (await env.DB.prepare('SELECT id FROM orders WHERE product_id=?').bind(ids.productId).all()) || leftovers; } catch {}
+  const orderIds = [...new Set([orderId, ...(leftovers.results || []).map((row) => row.id)].filter(Boolean))];
   const statements = [];
-  if (orderId) {
+  for (const orderId of orderIds) {
     statements.push(env.DB.prepare("DELETE FROM commerce_events WHERE aggregate_type='order' AND aggregate_id=?").bind(orderId));
     statements.push(env.DB.prepare('DELETE FROM settlement_ledger WHERE order_id=?').bind(orderId));
     statements.push(env.DB.prepare('DELETE FROM order_payments WHERE order_id=?').bind(orderId));

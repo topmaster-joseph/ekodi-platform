@@ -190,6 +190,8 @@ const controlApiTouched=changedFiles.some(file=>
   (file.startsWith('migrations/')&&file.endsWith('.sql')&&!file.includes('messenger'))||[
   // CGMA motor festival 2026 intake API (Control API, D1 ekodi-auth).
   'motor-festival-registration-api.js',
+  // cgmurrc booth shifts API (Control API, D1 ekodi-auth).
+  'cgmurrc-booth-api.js',
   // CGMA e-documents · sequential signing API (Control API, D1 ekodi-auth + private R2).
   'cgma-edoc-api.js','test/cgma-edoc-api.test.mjs',
 
@@ -385,6 +387,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   // The EKODI public homepage is compiled into the shared Site Core. GITHUB_TOKEN
   // merges do not trigger main push workflows: dispatch its guarded release here.
   ['index.html','homepage-ambient.js','homepage-ambient.css'].includes(file)||
+  // 에코디 공통본문 super-admin menu (2026-10-27) is a Site Core admin asset.
+  ['common-scripture-admin.js','common-scripture-admin.css'].includes(file)||
   // The resident-council public page (/cgmurrc) is a Site Core static asset.
   file==='cgmurrc.html'||
   // Static asset response headers (CSP, caching) ship with the Site Core build.

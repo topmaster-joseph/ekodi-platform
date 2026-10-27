@@ -11,7 +11,7 @@ test('Control API contains Community and Social as active services without legac
   assert.doesNotMatch(api, /id: 'mission'/);
   assert.doesNotMatch(api, /에코디선교회/);
   assert.match(api, /id: 'community'.*defaultState: 'active'.*defaultMonitor: true/);
-  assert.match(api, /id: 'social'.*social\.ekodi\.kr\/health.*defaultState: 'active'.*defaultMonitor: true/);
+  assert.match(api, /id: 'social'.*ekodi\.kr\/social.*defaultState: 'active'.*defaultMonitor: true/);
 });
 
 test('Community stays a routable site-owned section, out of the platform admin menu', async () => {

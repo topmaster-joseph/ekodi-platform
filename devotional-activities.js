@@ -3,9 +3,11 @@
 // Activities are curated per month; a passage-neutral fallback is served when a
 // month has an approved passage but no curated activities yet.
 import ACTIVITIES_2026_10 from './config/devotional-activities/2026-10.json' with { type: 'json' };
+import ACTIVITIES_2026_11 from './config/devotional-activities/2026-11.json' with { type: 'json' };
 import { resolveCommonScripture } from './common-scripture-registry.js';
 
-const ACTIVITY_REGISTRIES = Object.freeze({ '2026-10': ACTIVITIES_2026_10 });
+const ACTIVITY_REGISTRIES = Object.freeze({ '2026-10': ACTIVITIES_2026_10, '2026-11': ACTIVITIES_2026_11 });
+export function registeredActivityMonths() { return Object.keys(ACTIVITY_REGISTRIES).sort(); }
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export const DEVOTION_CANONICAL_BASE = 'https://ekodi.kr/bible/devotion';
