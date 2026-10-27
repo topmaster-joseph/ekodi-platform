@@ -73,7 +73,8 @@ test('central EKODI Google handoff can verify identity in prelaunch without bypa
   assert.ok(authUrl&&authKey);
   assert.ok(app.includes(authUrl[1])&&app.includes(authKey[1]),'fallback browser identity config must match canonical public auth hub');
   assert.match(app,/if\(!status\?\.onboarding_enabled\)\{/);
-  assert.match(app,/회원가입·프로필·행사·메시지·결제는 안전 검증을 마친 후 열립니다/);
+  assert.match(app,/동행 회원서비스\(회원가입·프로필·행사·메시지·결제\)는 운영 개통 전이라 아직 열리지 않았습니다/);
+  assert.match(app,/로그인은 정상적으로 완료되었습니다/,'v1.27.4: a prelaunch gate must state that login succeeded');
   assert.match(app,/if\(!h\.querySelector\('\[data-donghaeng-login\]'\)\)/);
   assert.match(app,/history\.replaceState\(null,'',location\.pathname\+location\.search\)/);
   const liveGate=await routeSinglesSurface(request('/singles/api/status'),env);

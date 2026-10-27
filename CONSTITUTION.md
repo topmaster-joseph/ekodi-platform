@@ -1,6 +1,6 @@
-# EKODI Platform Constitution v1.27.3
+# EKODI Platform Constitution v1.27.4
 
-Effective: 2026-10-26
+Effective: 2026-10-27
 
 This constitution is the highest architecture and operations rule for EKODI Platform. Existing validators remain authoritative implementation guards; this document unifies their intent and governs future changes.
 
@@ -132,7 +132,9 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Workspace/service administrator login must return to the original canonical admin path, including its child section such as `/{slug}/admin/menu`, `/{slug}/admin/delivery` or `/{slug}/admin/connections`.
 - One-time handoff tokens must be delivered directly to the intended destination when possible. If a token is accidentally delivered to My EKODI with a trusted non-My `return_to`, My EKODI must redirect it to that target before consuming the token. Pages that cannot consume a handoff fragment must erase it without navigating away.
 - Return targets are allowlisted trusted HTTPS EKODI/customer-owned destinations with credential-bearing URLs rejected. Authentication must preserve query context but never propagate reusable secrets in query parameters. Pre-login capture never weakens the platform `Referrer-Policy: no-referrer`; the explicit `return_to` is the only capture channel.
-- This rule applies to all current and future login adapters and is enforced by shared authentication routing tests, `validate:constitution` and production system verification.
+- (v1.27.4, 2026-10-27) Google sign-in UI is user-initiated and persistent. Automatic Google One Tap/FedCM prompts (`google.accounts.id.prompt`) are forbidden on user-facing service pages; they are allowed only on registered authentication surfaces where the user has just asked to sign in (explicit admin direct login, the Google origin bridge window, a privileged-action re-authentication overlay), and every such surface must also render a persistent Google button so a browser prompt that disappears never strands the user.
+- (v1.27.4) After authentication the returned page must visibly confirm the signed-in account (name or email) and offer sign-out. Prelaunch, subscription or permission gates must state that login succeeded and name the gate, so a service gate is never mistaken for a login failure. When an existing central session is reused, the authentication page names the reused account while it returns the user.
+- This rule applies to all current and future login adapters and is enforced by shared authentication routing tests, `validate:constitution` (including a repository-wide scan of `google.accounts.id.prompt` call sites) and production system verification.
 - Machine-readable authority: `governance/constitution/constitution.json` -> `authenticationReturnContinuityPolicy` and `config/service-workspace-policy.json` -> `authenticationReturnPolicy`.
 
 ## 3B. Canonical Human URL Query Hygiene Constitution
