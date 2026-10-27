@@ -3,7 +3,8 @@
   'use strict';
   const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
-  const IDENTITY = SUPABASE_URL + '/functions/v1/identity-api';
+  // 공용 게이트웨이(ekodi.kr/books)는 슬래시로 시작하는 문자열 앞에 /books를 덧붙인다. 그래서 경로는 항상 변수로 시작하는 템플릿으로 만든다.
+  const IDENTITY = `${SUPABASE_URL}/functions/v1/identity-api`;
   const OWN_KEY = 'ekodi-books-buyer-session';
   const CENTRAL_KEY = 'sb-renzehysxirjilvdxacv-auth-token';
   const BASE = location.pathname === '/books' || location.pathname.startsWith('/books/') ? '/books' : '';
@@ -44,7 +45,8 @@
     const headers = { accept: 'application/json' };
     if (s?.accessToken) headers.authorization = 'Bearer ' + s.accessToken;
     if (body) headers['content-type'] = 'application/json';
-    const r = await bounded(`${BASE}/api/commerce${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' });
+    const rel = String(path || '').replace(/^\/+/, '');
+    const r = await bounded(`${BASE}/api/commerce/${rel}`, { method, headers, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' });
     const d = await r.json().catch(() => ({}));
     if (r.status === 401 && s) forget();
     if (!r.ok) { const e = new Error(d.error || '요청을 처리하지 못했습니다.'); e.status = r.status; e.code = d.code || ''; throw e; }
@@ -63,13 +65,13 @@
   async function mountGoogle(host, onStatus, onSignedIn) {
     onStatus('구글 로그인을 준비하고 있습니다.');
     try {
-      const [challenge] = await Promise.all([post(IDENTITY + '/challenge'), waitForGoogle()]);
+      const [challenge] = await Promise.all([post(`${IDENTITY}/challenge`), waitForGoogle()]);
       window.google.accounts.id.initialize({ client_id: challenge.clientId, nonce: challenge.nonce, auto_select: false, use_fedcm_for_prompt: true, callback: async response => {
         if (!response?.credential) { onStatus('구글 인증이 완료되지 않았습니다. 다시 시도해 주세요.', true); return; }
         onStatus('구글 계정을 확인하고 있습니다.');
         try {
-          const proof = await post(IDENTITY + '/google/exchange', { credential: response.credential, nonce: challenge.nonce });
-          const verified = await post(SUPABASE_URL + '/auth/v1/verify', { token_hash: proof.tokenHash, type: 'email' });
+          const proof = await post(`${IDENTITY}/google/exchange`, { credential: response.credential, nonce: challenge.nonce });
+          const verified = await post(`${SUPABASE_URL}/auth/v1/verify`, { token_hash: proof.tokenHash, type: 'email' });
           const s = normalize(verified);
           if (!s.accessToken) throw new Error('session_not_created');
           save(s); onStatus(''); onSignedIn();
