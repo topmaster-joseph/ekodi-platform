@@ -14,7 +14,12 @@
 /* ADMIN-ARCHITECTURE-READABLE-20261028
    Scoped read-only System Structure presentation. Preserve Korean eojeol;
    allow wrapping inside technical identifiers, not arbitrary Korean syllables. */
-body.admin-compact .content > .architecture[data-panel~="architecture"]{
+/* ADMIN-PANEL-VISIBILITY-20261028: inactive architecture must not overpaint other admin tasks. */
+body.admin-compact .content > .architecture[data-panel~="architecture"].hidden-panel,
+body.admin-compact .content > .architecture[data-panel~="architecture"][hidden]{
+  display:none!important;
+}
+body.admin-compact .content > .architecture[data-panel~="architecture"]:not(.hidden-panel):not([hidden]){
   box-sizing:border-box!important;
   display:block!important;
   grid-column:1/-1;
