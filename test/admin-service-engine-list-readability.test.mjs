@@ -32,6 +32,9 @@ test('module health keeps separate runtime and activation statuses',()=>{
   assert.match(js,/const moduleMode=state\.category==='service-modules'/);
   assert.match(js,/class="common-service-runtime"/);
   assert.match(js,/class="common-service-activation"/);
+  assert.match(js,/공통·전문 모듈 점검/);
+  assert.match(js,/Core 제외/);
+  assert.match(js,/class="sr-only">기능/);
   assert.match(css,/\.common-services-panel\.module-health-mode \.common-service-card/);
 });
 test('compact list remains responsive and accessible',()=>{
