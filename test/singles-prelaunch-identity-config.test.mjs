@@ -7,9 +7,10 @@ const surface=await readFile(new URL('../singles-surface.js',import.meta.url),'u
 const edge=await readFile(new URL('../supabase/functions/singles-api/index.ts',import.meta.url),'utf8');
 
 test('EKODI Donghaeng can prepare authenticated operator controls without launching member storage, social or payments',()=>{
- // Owner decision 2026-10-27: M1 enrollment is open; social, paid and bank gates remain closed.
+ // Owner decisions: M1 enrollment 2026-10-27, social(profile) 2026-10-28; paid and bank gates remain closed.
  assert.match(worker,/^SINGLES_M1_ENABLED = "true"$/m);
- for(const flag of ['SINGLES_SOCIAL_ENABLED','SINGLES_PAID_ACTIONS_ENABLED','SINGLES_BANK_TRANSFER_ENABLED','SINGLES_BANK_VERIFICATION_ENABLED']){
+ assert.match(worker,/^SINGLES_SOCIAL_ENABLED = "true"$/m);
+ for(const flag of ['SINGLES_BANK_TRANSFER_ENABLED','SINGLES_BANK_VERIFICATION_ENABLED']){
   assert.match(worker,new RegExp('^'+flag+' = "false"$', 'm'),flag);
  }
  for(const field of ['SINGLES_API_URL','SUPABASE_URL','SUPABASE_PUBLISHABLE_KEY'])assert.match(worker,new RegExp('^'+field+' = "[^"\\n]+"$', 'm'));

@@ -21,7 +21,10 @@
       "name": "SINGLES_SOCIAL_ENABLED",
       "layer": "worker+edge",
       "default": "false",
-      "gates": "탐색·호감·메시지·행사·신고·차단·운영자 신고 처리"
+      "gates": "탐색·호감·메시지·행사·신고·차단·운영자 신고 처리",
+      "production": "true",
+      "launchedAt": "2026-10-28",
+      "launchDecision": "owner (topmaster-joseph) 2026-10-28: 동행 전체 개통 선택(프로필 저장·회원 기능). 탐색·호감은 성인 본인확인 연동 전까지 서버가 계속 차단, 유료 행동·계좌이체·요청 과금은 OFF 유지"
     },
     {
       "name": "SINGLES_PAID_ACTIONS_ENABLED",
