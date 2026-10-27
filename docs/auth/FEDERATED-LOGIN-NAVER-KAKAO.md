@@ -18,7 +18,7 @@
 | `auth-site/auth-router.js` | 콜백을 모든 사이트별 로그인 스크립트보다 먼저 처리, 관리자(`site=admin`) 화면에는 버튼 미표시 |
 | `public.identity_providers` | 운영 스위치 (`kakao`, `naver` 모두 `enabled=false`로 시드됨) |
 
-네이버·카카오 계정은 Supabase 인증사용자를 `{provider}.{sha256(provider:subject) 32자}@identity.ekodi.kr` 별칭으로 만든다. 실제 이메일(제공된 경우)은 `login_identities.email`에 저장된다. Google 경로는 변경 없음.
+네이버·카카오 계정은 Supabase 인증사용자를 `identity+{provider}.{sha256(provider:subject) 32자}@ekodi.kr`(메일 발송 없음) 별칭으로 만든다. 실제 이메일(제공된 경우)은 `login_identities.email`에 저장된다. Google 경로는 변경 없음.
 
 ## 활성화 조건 (두 관문이 모두 열려야 동작)
 

@@ -57,7 +57,7 @@ test('redirect providers get a subject-keyed alias auth user, never an email-mat
   const c=await providers.federatedAuthEmail('kakao','12345');
   assert.equal(a,b);
   assert.notEqual(a,c);
-  assert.match(a,/^naver\.[0-9a-f]{32}@identity\.ekodi\.kr$/);
+  assert.match(a,/^identity\+naver\.[0-9a-f]{32}@ekodi\.kr$/);
 });
 
 test('Naver adapter exchanges the code and maps the profile; email is never treated as verified',async()=>{
@@ -120,7 +120,7 @@ test('callback detection only claims callbacks this module started',()=>{
 });
 
 test('identity list shows the auth path and hides alias emails',()=>{
-  assert.deepEqual(login.identityLabel({provider:'kakao',email:'kakao.0123456789abcdef0123456789abcdef@identity.ekodi.kr'}),{label:'카카오',display:'카카오 계정'});
+  assert.deepEqual(login.identityLabel({provider:'kakao',email:'identity+kakao.0123456789abcdef0123456789abcdef@ekodi.kr'}),{label:'카카오',display:'카카오 계정'});
   assert.deepEqual(login.identityLabel({provider:'naver',email:'me@naver.com'}),{label:'네이버',display:'me@naver.com'});
   assert.deepEqual(login.identityLabel({provider:'google',email:'a@gmail.com'}),{label:'Google',display:'a@gmail.com'});
 });

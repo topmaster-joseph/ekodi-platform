@@ -13,7 +13,7 @@ const PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const IDENTITY = `${SUPABASE_URL}/functions/v1/identity-api`;
 const PENDING_KEY = 'ekodi.federated.pending';
 const PENDING_MAX_AGE_MS = 10 * 60 * 1000;
-const ALIAS_EMAIL = /@identity\.ekodi\.kr$/i;
+const ALIAS_EMAIL = /^identity\+[a-z0-9_-]+\.[0-9a-f]{32}@ekodi\.kr$/i;
 
 export const PROVIDER_LABELS = Object.freeze({
   google: 'Google', naver: '네이버', kakao: '카카오', apple: 'Apple', microsoft: 'Microsoft', passkey: '패스키',

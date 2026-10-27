@@ -1,7 +1,9 @@
 // Pure provider adapters for redirect (authorization-code) logins.
 // No Supabase or Deno-only imports, so the same code runs under Deno (edge) and Node (tests).
 export type VerifiedIdentity={subject:string;email:string;emailVerified:boolean;displayName:string|null};
-export const FEDERATED_ALIAS_DOMAIN="identity.ekodi.kr";
+// Apex-domain plus-address; no mail is sent to it (sessions are issued via generateLink token hashes).
+export const FEDERATED_ALIAS_LOCAL="identity";
+export const FEDERATED_ALIAS_DOMAIN="ekodi.kr";
 
 async function sha256Hex(value:string){
   const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value));
@@ -64,6 +66,6 @@ export async function verifyKakaoCode(code:string,_state:string,deps:{clientId:s
 // login paths into one EKODI account is done only through the explicit, signed-in link flow.
 export async function federatedAuthEmail(provider:string,subject:string){
   const digest=(await sha256Hex(`${provider}:${subject}`)).slice(0,32);
-  return `${provider}.${digest}@${FEDERATED_ALIAS_DOMAIN}`;
+  return `${FEDERATED_ALIAS_LOCAL}+${provider}.${digest}@${FEDERATED_ALIAS_DOMAIN}`;
 }
 
