@@ -150,6 +150,16 @@
       const data=await response.json();
       if(!data.ok||!Array.isArray(data.providers))throw new Error('원장 형식 오류');
       state.ledger=data;
+      if(Array.isArray(data.sites)){
+        const own=new Map(state.sites.map(site=>[site.url,site]));
+        for(const site of data.sites){
+          if(site.propertyType==='independent-domain'&&site.url?.startsWith('https://')){
+            own.set(site.url,{...site,name:site.name+' (독립 도메인)',type:'domain-alias'});
+          }
+        }
+        state.sites=[...own.values()];
+        renderProviderChoices();render();
+      }
       ledgerStatus('확인 근거 '+data.evidence.length+'건 · 최근 변경이력 '+data.audit.length+
         '건 · IndexNow: '+(data.indexNow?.status==='naver_submission_only'?'네이버 제출 이력 조회':'원장 확인 필요')+
         ' (제출 결과는 색인 증빙이 아닙니다)');
@@ -288,8 +298,10 @@
       const basic = document.createElement('td');basic.textContent=result ? result.basic : '미점검';
       const ai = document.createElement('td');ai.textContent=result ? result.ai : '미점검';
       const action = document.createElement('td');
+      const crossOrigin=new URL(site.url).origin!==location.origin;
       const button=document.createElement('button');button.type='button';button.className='secondary';
-      button.textContent='기술 점검';button.disabled=state.busy;
+      button.textContent=crossOrigin?'도메인 기술점검 별도':'기술 점검';button.disabled=state.busy||crossOrigin;
+      if(crossOrigin){basic.textContent='미측정 (별도 호스트)';ai.textContent='미측정 (별도 호스트)';}
       button.addEventListener('click',()=>auditOne(site));
       const review=document.createElement('button');review.type='button';review.className='secondary';
       review.textContent='서비스 검토';review.addEventListener('click',()=>{
@@ -340,6 +352,7 @@
     // Sequential bounded requests avoid overloading EKODI or the browser.
     try{
       for(const site of state.sites) {
+        if(new URL(site.url).origin!==location.origin)continue; // Never browser-fetch arbitrary independent hosts.
         if(!token())throw new Error('최고관리자 세션 종료');
         await auditOne(site,{quiet:true});
         completed++;status('전체 기술 점검: '+completed+' / '+state.sites.length);
