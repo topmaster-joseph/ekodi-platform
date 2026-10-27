@@ -93,7 +93,7 @@ export function bookContent(product, provider, runDate) {
   const body = [product.oneLine || `${name}을(를) 에코디서점에서 만나보세요.`, product.author ? `지은이 ${product.author}` : '', price ? `전자책 ${price} · 회원등급 할인` : '', '에코디서점에서 바로 구매하면 내 서재로 즉시 전달됩니다.'].filter(Boolean).join('\n');
   const link = new URL(product.publicUrl);
   link.searchParams.set('utm_source', provider); link.searchParams.set('utm_medium', 'social'); link.searchParams.set('utm_campaign', `book-${String(runDate).replaceAll('-', '')}`);
-  return { title: hooks[provider] || hooks.facebook, caption: `${body}\n\n#에코디서점 #에코디출판 #EKODI #전자책`, imageUrl: product.imageUrl, linkUrl: link.href, mode: 'rules' };
+  return { title: hooks[provider] || hooks.facebook, caption: `${body}\n\n#에코디서점 #출판 #EKODI #전자책`, imageUrl: product.imageUrl, linkUrl: link.href, mode: 'rules' };
 }
 async function pickDirectProduct(env, candidates, runDate, provider) {
   if (!candidates.length) return null;

@@ -46,7 +46,7 @@
   filterButtons.forEach((button) => button.addEventListener('click', () => {
     filterButtons.forEach((item) => item.classList.remove('active')); button.classList.add('active'); filter = button.dataset.filter || 'all'; render();
   }));
-  // MALL-BOOKSTORE-BRIDGE-001: ?category=book deep link (에코디서점·에코디출판 → 책·배움 코너)
+  // MALL-BOOKSTORE-BRIDGE-001: ?category=book deep link (에코디서점·출판 → 책·배움 코너)
   try {
     const wanted = new URLSearchParams(location.search).get('category');
     const target = wanted && filterButtons.find((button) => button.dataset.filter === wanted);
