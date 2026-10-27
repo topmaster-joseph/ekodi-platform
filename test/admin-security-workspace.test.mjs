@@ -24,6 +24,14 @@ test('Cloudflare target fallback stays available when provider inventory cannot 
   assert.match(provider, /data-ekodi-cf-worker/);
 });
 
+test('Cloudflare select layout survives the inserted heading and pending replacement cannot follow a changed Worker', () => {
+  assert.match(styles, /\.ekodi-provider-context>div:has\(\[data-ekodi-cf-worker\]\)/);
+  assert.doesNotMatch(styles, /\.ekodi-provider-context>div:nth-child\(2\)/);
+  assert.match(provider, /original\.dispatchEvent\(new Event\('change',\{bubbles:true\}\)\)/);
+  assert.match(generator, /field\.addEventListener\('change', resetReplaceMode\)/);
+  assert.match(generator, /replaceMode = false/);
+});
+
 test('security statuses are accessible and secrets remain hidden from automatic registration', () => {
   assert.match(generator, /data-cloudflare-status role="status" aria-live="polite"/);
   assert.match(generator, /data-cloudflare-readiness role="status" aria-live="polite"/);
