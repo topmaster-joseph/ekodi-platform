@@ -1205,9 +1205,12 @@ jobs:
             if curl -fsS -D /tmp/store-gateway.headers -o /tmp/store-gateway.body --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/cmpmyi' \
               && grep -Fq 'THREE STORES · ONE GATE' /tmp/store-gateway.body \
               && grep -Fiq 'x-ekodi-route: store-gateway' /tmp/store-gateway.headers \
-              && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/robots.txt' | grep -Fq 'OAI-SearchBot' \
-              && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/sitemap.xml' | grep -Fq '<loc>https://ekodi.kr/cmpmyi</loc>' \
-              && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/llms.txt' | grep -Fq 'https://ekodi.kr/cmpmyi'; then
+              && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/robots.txt' -o /tmp/store-gateway-robots.txt \
+              && grep -Fq 'OAI-SearchBot' /tmp/store-gateway-robots.txt \
+              && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/sitemap.xml' -o /tmp/store-gateway-sitemap.xml \
+              && grep -Fq '<loc>https://ekodi.kr/cmpmyi</loc>' /tmp/store-gateway-sitemap.xml \
+              && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/llms.txt' -o /tmp/store-gateway-llms.txt \
+              && grep -Fq 'https://ekodi.kr/cmpmyi' /tmp/store-gateway-llms.txt; then
               echo 'EKODI Store Gateway and Discovery Layer production endpoints verified.'
               break
             fi
