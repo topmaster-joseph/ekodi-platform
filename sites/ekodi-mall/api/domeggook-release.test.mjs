@@ -21,6 +21,7 @@ function setup() {
     db.prepare(`INSERT INTO products (id,seller_id,share_code,public_url,seller_display_name,seller_type,sale_type,category,name,one_line,price,stock_quantity,fulfillment,contact,status,published_at,created_at,updated_at,supply_provider,supply_item_no)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'published','t','t','t','domeggook',?)`).run(`prd_${i}`, 'u-1', `SC${i}`, 'u', '에코디몰', 'individual', 'direct', 'living', `상품${i}`, '소개', 9900, 10, '배송', 'joseph@ekodi.kr', `${1000 + i}`);
   }
+  db.prepare(`UPDATE products SET images_json='[{"id":"i","key":"ekodimall/products/p/i.jpg"}]'`).run();
   const env = { DB: d1(db), MALL_EKODIAN_EMAILS: 'joseph@ekodi.kr', DOMEGGOOK_AUTO_ORDER_ENABLED: 'true', DOMEMAE_API_KEY: 'K', DOMEMAE_USER_ID: 'u', DOMEMAE_PASSWORD: 'p', MALL_BASE_URL: 'https://ekodi.kr/ekodimall' };
   return { db, env };
 }
@@ -62,4 +63,15 @@ test('hourly ratchet raises the selection bar and boosts keywords that sell', as
   assert.equal(r2.minScore, 0.02);
   const w = Object.fromEntries(db.prepare('SELECT keyword,weight_adj FROM supply_curation_keywords').all().map((r) => [r.keyword, r.weight_adj]));
   assert.ok(w['차량용 수납'] > 1.09 && w['수면양말'] < 1);
+});
+
+test('staged supply products without photos are never released (image_hold)', async () => {
+  const { db, env } = setup();
+  db.prepare("UPDATE products SET images_json='[]' WHERE id='prd_3'").run();
+  await runSupplyGate(env);
+  db.prepare("INSERT INTO supplier_connector_checks (id,provider_id,check_type,external_ref,result_status,metadata_json,checked_at) VALUES ('c1','domemae-official','order_readiness','probe:login','ok','{}',?)").run(new Date().toISOString());
+  const live = await runSupplyGate(env);
+  assert.equal(live.gate.released, 2);
+  const p3 = db.prepare("SELECT status,supply_release FROM products WHERE id='prd_3'").get();
+  assert.equal(p3.status, 'draft'); assert.equal(p3.supply_release, 'image_hold');
 });

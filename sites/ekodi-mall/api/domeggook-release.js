@@ -56,6 +56,7 @@ export async function applySupplyGate(env, deps, { releaseBatch = 30 } = {}) {
     }
     return { approved: false, held: n };
   }
+  await env.DB.prepare(`UPDATE products SET supply_release='image_hold' WHERE supply_provider=? AND status='draft' AND supply_release='staged' AND (images_json IS NULL OR images_json IN ('','[]','null'))`).bind(PROVIDER).run().catch(() => {});
   const staged = await env.DB.prepare(`SELECT id,seller_id FROM products WHERE supply_provider=? AND status='draft' AND supply_release='staged' AND seller_id IN (${inList})
     AND COALESCE(stock_quantity,0)>0 ORDER BY created_at LIMIT ?`).bind(PROVIDER, ...sellers, releaseBatch).all();
   let released = 0, failed = 0;
