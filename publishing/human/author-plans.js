@@ -64,7 +64,7 @@ export function assessNewAuthorProject({ identity, entitlement, month, existing 
   if (!['simple', 'human'].includes(requestedMode)) return { allowed: false, reason: 'invalid_mode' };
   if (requestedMode === 'human' && !capability.canStartHuman) return { allowed: false, reason: 'paid_plan_required' };
   const own = existing.filter(item => item.personId === identity.personId);
-  const replay = own.find(item => item.requestKey === requestKey);
+  const replay = own.find(item => item.month === month && item.requestKey === requestKey);
   if (replay) return {
     allowed: true, idempotent: true, existingProjectId: replay.projectId,
     planId: capability.planId, remaining: Math.max(0, capability.monthlyNewProjects - own.filter(item => item.month === month && item.status !== 'void').length),
