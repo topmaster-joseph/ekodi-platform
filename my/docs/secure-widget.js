@@ -34,6 +34,8 @@ export async function mountSecureDocuments(root,opts={}){
       <h3>새 문서 등록</h3>
       <label>문서 종류 <select name="kind">${Object.entries(DEFAULT_KINDS).map(([id,label])=>`<option value="${id}">${label}</option>`).join("")}</select></label>
       <label>문서명 <input name="title" maxlength="120" required placeholder="예: 사업자등록증 최신본"></label>
+      <label>발급일 <input name="issued_on" type="date"></label>
+      <label>유효기간 (해당할 경우) <input name="valid_until" type="date"></label>
       <label>PDF 또는 이미지 <input name="file" required type="file" accept="application/pdf,image/png,image/jpeg,image/webp"></label>
       <label class="secure-check"><input type="checkbox" name="redacted_for_sharing" value="true"> 공유용 가림 처리가 완료된 문서입니다 (검증 없이는 공유되지 않음)</label>
       <button type="submit">안전하게 등록</button>
@@ -43,12 +45,13 @@ export async function mountSecureDocuments(root,opts={}){
  </section>`;
  const status=$(root,"[data-state]"),message=$(root,"[data-message]"),content=$(root,"[data-content]"),list=$(root,"[data-list]");
  const tell=(msg)=>text(message,msg);
- async function request(action,{method="GET",data=null,binary=false}={}){
+ async function request(action,{method="GET",data=null,binary=false,params={}}={}){
    if(!context)throw new Error("중앙 인증 환경이 연결되지 않았습니다.");
    const bearer=await context.token();
    if(!bearer)throw new Error("로그인 후 이용할 수 있습니다.");
    const qs=new URLSearchParams({action});
    if(action==="list"){qs.set("scope",scope);if(workspaceId)qs.set("workspace_id",workspaceId);}
+   for(const [key,value] of Object.entries(params))if(value!=null)qs.set(key,String(value));
    const isForm=data instanceof FormData;
    const response=await fetch(context.url+"?"+qs,{method,headers:{apikey:context.key,authorization:"Bearer "+bearer,...(!isForm&&data?{"content-type":"application/json"}:{})},body:data?(isForm?data:JSON.stringify(data)):undefined,cache:"no-store",credentials:"omit"});
    if(!response.ok){const error=await response.json().catch(()=>null);throw new Error(error?.error||"문서 요청을 처리하지 못했습니다.");}
@@ -57,7 +60,7 @@ export async function mountSecureDocuments(root,opts={}){
  async function refresh(){
    const records=(await request("list")).records||[];
    if(!records.length){list.innerHTML='<p class="secure-empty">등록한 문서가 없습니다.</p>';return;}
-   list.innerHTML=records.map(d=>`<article class="secure-doc" data-id="${esc(d.id)}"><div><strong>${esc(d.title)}</strong><small>${esc(DEFAULT_KINDS[d.kind]||d.kind)} · ${esc(d.status)} · ${esc(String(d.created_at||"").slice(0,10))}</small></div><div class="secure-row-actions"><button type="button" data-read>내 원본 열기</button><button type="button" data-share>기간제 공유</button></div></article>`).join("");
+   list.innerHTML=records.map(d=>`<article class="secure-doc" data-id="${esc(d.id)}"><div><strong>${esc(d.title)}</strong><small>${esc(DEFAULT_KINDS[d.kind]||d.kind)} · ${esc(d.status)} · 등록 ${esc(String(d.created_at||"").slice(0,10))}${d.issued_on?" · 발급 "+esc(d.issued_on):""}${d.valid_until?" · 유효 "+esc(d.valid_until):""}</small></div><div class="secure-row-actions"><button type="button" data-read>내 원본 열기</button><button type="button" data-share>기간제 공유</button><button type="button" data-shares>공유내역·철회</button></div><div class="secure-share-list" data-share-list hidden></div></article>`).join("");
  }
  const openBlob=(blob)=>{
    const url=URL.createObjectURL(blob);
@@ -98,6 +101,19 @@ export async function mountSecureDocuments(root,opts={}){
  list.addEventListener("click",event=>{
    const btn=event.target.closest("button"),doc=btn?.closest("[data-id]")?.dataset.id;
    if(!doc)return;
+   if(btn.matches("[data-shares]"))run(async()=>{
+     const target=btn.closest("[data-id]").querySelector("[data-share-list]");
+     if(!target.hidden){target.hidden=true;return;}
+     const response=await request("shares",{params:{document_id:doc}});
+     const shares=response.shares||[];
+     target.innerHTML=shares.length?shares.map(s=>`<p><span>공유 ${esc(String(s.created_at||"").slice(0,16).replace("T"," "))} · 만료 ${esc(String(s.expires_at||"").slice(0,16).replace("T"," "))} · ${esc(s.status)} · 열람 ${Number(s.view_count)||0}/${Number(s.max_views)||1}</span>${s.status==="active"?`<button type="button" data-revoke data-share-id="${esc(s.id)}">즉시 철회</button>`:""}</p>`).join(""):"<p>공유내역이 없습니다.</p>";
+     target.hidden=false;
+   });
+   if(btn.matches("[data-revoke]"))run(async()=>{
+     if(!confirm("이 공유권한을 즉시 철회합니까? 이미 내려받은 사본은 회수할 수 없습니다."))return;
+     await request("revoke",{method:"POST",data:{share_id:btn.dataset.shareId}});
+     btn.closest("[data-share-list]").hidden=true;
+   });
    if(btn.matches("[data-read]"))run(async()=>openBlob(await request("read",{method:"POST",data:{document_id:doc},binary:true})));
    if(btn.matches("[data-share]"))run(async()=>{
      const email=prompt("공유받을 사람의 로그인 이메일을 입력하세요.");if(!email)return;

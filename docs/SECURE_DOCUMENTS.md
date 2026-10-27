@@ -24,8 +24,10 @@ The public client only calls the central Edge Function `secure-documents-api` us
 - `POST /?action=upload` with multipart body: source filename never logged, file is encrypted before storage; uploads require scanner and compliance gates.
 - `POST /?action=share`: named verified recipient, step-up, max 168h, redacted version, one-time opaque token (only its hash is stored), recipient-bound view. Never expose storage signed URLs.
 - `POST /?action=revoke`: immediate recipient grant cutoff.
-- `POST /?action=delete`: owner/steward explicit deletion request; physical deletion is reconciled, never report deleted until verified.
-- `POST /?action=expire`: authenticated scheduler-only cleanup; expiry is also checked synchronously on every read.
+- `GET /?action=shares&document_id=...`: metadata-only grant list, only after ownership/tenant steward check.
+- `POST /?action=open`: verified recipient, active grant and atomic view-limit check, never a signed storage URL.
+- Original deletion and verifiable physical purge are **not implemented**. These remain blocked pending retention, scheduled cleanup and backup reconciliation review.
+- `POST /?action=expire`: secret-authenticated scheduler-only status cleanup (scheduler not yet configured). Expiry is still checked synchronously on every shared read; no separate share copy is stored.
 
 ## Caveats
-Network-delivered copies, screenshots and previously downloaded files cannot be remotely erased. Expiring access is not equivalent to deleting copies already distributed. Legal holds and backup lifecycles are separate from share grants. Audit contains only metadata and never the original document or token.
+This stage is **development only**: no real personal documents are permitted; encrypted upload, redaction, multi-tenant authorization and deletion have not passed end-to-end tests. Network-delivered copies, screenshots and previously downloaded files cannot be remotely erased. Expiring access is not equivalent to deleting copies already distributed. Legal holds and backup lifecycles are separate from share grants. Audit contains only metadata and never the original document or token.

@@ -51,7 +51,10 @@ test('reusable site UI is not an authorization boundary',()=>{
  assert.match(widget,/mountSecureDocuments/);
  assert.match(widget,/scope==="workspace"/);
  assert.match(widget,/authorization:"Bearer "/);
- assert.match(widget,/get\\(\"share\"\\)/);
+ assert.ok(widget.includes('.get("share")'));
  assert.match(widget,/history\.replaceState/);
  assert.match(read('my/docs/secure.html'),/secure-page\.js/);
+ assert.match(widget,/data-shares/);assert.match(widget,/data-revoke/);
+ assert.match(widget,/name="issued_on"/);assert.match(widget,/name="valid_until"/);
+ assert.match(api,/handleShares/);assert.match(api,/INVALID_DOCUMENT_DATES/);
 });
