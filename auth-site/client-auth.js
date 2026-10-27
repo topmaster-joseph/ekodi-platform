@@ -36,6 +36,9 @@ const realms={
   live:{name:'EKODI Live',returnTo:'https://ekodi.kr/live',open:true,kind:'live'},
   cloud:{name:'EKODI Cloud',returnTo:'https://ekodi.kr/cloud/',open:true,kind:'cloud'},
   cafe:{name:'EKODI Cafe',returnTo:'https://ekodi.kr/cafe/',open:true,kind:'cafe'},
+  // 청계면상인회: site=cgma logins (관리자 /cgma/admin/*, 정회원 등) return to the exact CGMA page they started
+  // from (AUTH-RETURN-CONTINUITY-001). Without this realm they fell back to the portal and landed on the homepage.
+  cgma:{name:'청계면상인회',returnTo:'https://ekodi.kr/cgma/',origins:['https://ekodi.kr','https://cgma.or.kr','https://www.cgma.or.kr'],open:true,kind:'cgma'},
   'cgma-client':{name:'청계상권 고객관리',returnTo:'https://ekodi.kr/cgma/client/',origins:['https://ekodi.kr','https://cgma.or.kr','https://cgma.ekodi.kr'],open:false,kind:'cgma-client'},
   'jadam-client':{name:'자담치킨 목포대점 고객관리',returnTo:'https://ekodi.kr/jadam/marketing/',origins:['https://jadam.ai.ekodi.kr','https://jadam.ekodi.kr'],open:false,kind:'jadam-client'},
   'pizzamaru-client':{name:'피자마루 목포대점 고객관리',returnTo:'https://ekodi.kr/pizzamaru/marketing/',origins:['https://pizzamaru.ai.ekodi.kr','https://pizzamaru.ekodi.kr'],open:false,kind:'pizzamaru-client'},
