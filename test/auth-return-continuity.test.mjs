@@ -74,8 +74,8 @@ test('My EKODI is not a cross-service token landing page',()=>{
 });
 
 test('auth and store releases are cache-busted for return continuity',()=>{
-  assert.match(router,/client-auth\.js\?v=20261019-seonam-admin-return-405/);
-  assert.match(entry,/auth-router\.js\?v=20261019-seonam-admin-return-405/);
+  assert.match(router,/client-auth\.js\?v=20261028-singles-choose-account/);
+  assert.match(entry,/auth-router\.js\?v=20261028-singles-choose-account/);
   assert.match(store,/store-admin\.css\?v=20261026-compact-head-v1/);
   assert.match(store,/20261026-compact-head-v1/);
 });

@@ -19,7 +19,55 @@ async function blocked(admin:Admin,a:string,b:string){
   .or('and(blocker_id.eq.'+a+',blocked_id.eq.'+b+'),and(blocker_id.eq.'+b+',blocked_id.eq.'+a+')').limit(1));
  return items.length>0;
 }
-async function body(req:Request){if(Number(req.headers.get('content-length')||0)>4096)throw new Error('payload_too_large');return await req.json()}
+async function body(req:Request,max=4096){if(Number(req.headers.get('content-length')||0)>max)throw new Error('payload_too_large');return await req.json()}
+
+// 프로필 항목 카탈로그(2026-10-28). 화면(app.js PROFILE_FIELDS)과 같은 키·한도를 쓴다.
+// sensitive=신앙 항목: 민감정보 별도 동의 회원만 저장, 입력·공개 점수(향후 요금 반영)에서 제외.
+export const PROFILE_FIELDS:Record<string,{max?:number,options?:string[],sensitive?:boolean}>={
+ real_name:{max:32},
+ gender:{options:['남성','여성']},
+ age_band:{options:['20대 초반','20대 중반','20대 후반','30대 초반','30대 중반','30대 후반','40대 초반','40대 중반','40대 후반','50대 이상']},
+ occupation:{max:40},
+ education:{options:['고등학교','전문대학','대학교','대학원 이상']},
+ hobbies:{max:120},
+ looking_for:{max:200},
+ church:{max:60,sensitive:true},
+ faith_life:{max:200,sensitive:true}
+};
+// 지역은 광역 시·도에서만 고른다(세부 주소는 받지 않음).
+// 전남광주특별시(2026-07-01 출범) 반영. 다른 광역 통합은 확인 후 갱신.
+export const REGIONS=['서울','부산','대구','인천','대전','울산','세종','경기','강원','충북','충남','전북','전남광주','경북','경남','제주','해외'];
+// 별명(display_name)은 항상 공개. 아래 항목은 회원이 하나씩 공개를 고른다.
+export const VISIBILITY_KEYS=['broad_region','intro','public_link',...Object.keys(PROFILE_FIELDS)];
+// 공개 선택 기능 이전에 저장된 프로필은 지역·소개·링크가 공개였으므로 그 동작을 유지한다.
+const LEGACY_PUBLIC=new Set(['broad_region','intro','public_link']);
+const isVisible=(vis:any,k:string)=>vis&&typeof vis==='object'&&k in vis?vis[k]===true:LEGACY_PUBLIC.has(k);
+export function profileScore(record:any){
+ const keys=['broad_region','intro',...Object.keys(PROFILE_FIELDS).filter(k=>!PROFILE_FIELDS[k].sensitive)];
+ const value=(k:string)=>k in PROFILE_FIELDS?record?.details?.[k]:record?.[k];
+ const filled=keys.filter(k=>typeof value(k)==='string'&&value(k).trim());
+ return {total:keys.length,filled:filled.length,public:filled.filter(k=>isVisible(record?.visibility,k)).length};
+}
+function cleanDetails(raw:unknown,faithAllowed:boolean){
+ if(raw===undefined)return {};
+ if(!raw||typeof raw!=='object'||Array.isArray(raw))return null;
+ const out:Record<string,string>={};
+ for(const [k,v] of Object.entries(raw as Record<string,unknown>)){
+  const f=PROFILE_FIELDS[k];if(!f||typeof v!=='string')return null;
+  const t=v.trim();if(!t)continue;
+  if(f.sensitive&&!faithAllowed)return 'faith';
+  if(f.options?!f.options.includes(t):t.length>(f.max||0))return null;
+  out[k]=t;
+ }
+ return out;
+}
+function cleanVisibility(raw:unknown){
+ if(raw===undefined)return undefined;
+ if(!raw||typeof raw!=='object'||Array.isArray(raw))return null;
+ const out:Record<string,boolean>={};
+ for(const [k,v] of Object.entries(raw as Record<string,unknown>)){if(!VISIBILITY_KEYS.includes(k)||typeof v!=='boolean')return null;out[k]=v}
+ return out;
+}
 const match=(p:string,re:RegExp)=>p.match(re)?.[1]||'';
 // Per-user write limits (EKODI-SINGLES-MVP abuse controls). Enforced atomically in
 // the database; an RPC failure throws so the request fails closed (503).
@@ -99,23 +147,32 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   return reply(req,{ok:true,id:reportReview,status:data});
  }
  if(p==='/profile'&&method==='GET'){
-  const record=await one(admin.from('singles_profiles').select('display_name,broad_region,intro,public_link').eq('user_id',userId));
-  return reply(req,{profile:record?{...record,discoverable:m?.discoverable===true}:null});
+  const record=await one(admin.from('singles_profiles').select('display_name,broad_region,intro,public_link,details,visibility').eq('user_id',userId));
+  const vis=Object.fromEntries(VISIBILITY_KEYS.map(k=>[k,isVisible(record?.visibility,k)]));
+  return reply(req,{profile:record?{...record,details:record.details||{},visibility:vis,discoverable:m?.discoverable===true}:null,
+   score:profileScore(record),faith_fields_allowed:m?.religion_consent===true});
  }
  if(p==='/profile'&&method==='PUT'){
   if(!active(m))return reply(req,{error:'membership_required'},403);
-  const v=await body(req);
-  if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>!['display_name','broad_region','intro','public_link','discoverable'].includes(k)))
+  const v=await body(req,12288);
+  if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>!['display_name','broad_region','intro','public_link','discoverable','details','visibility'].includes(k)))
    return reply(req,{error:'invalid_profile_fields'},400);
   if(typeof v.display_name!=='string'||v.display_name.trim().length<2||v.display_name.trim().length>32
     ||typeof v.broad_region!=='string'||v.broad_region.length>40||typeof v.intro!=='string'||v.intro.length>400
     ||typeof v.discoverable!=='boolean'||typeof v.public_link!=='string'||v.public_link.length>300)return reply(req,{error:'invalid_profile'},400);
+  if(v.broad_region.trim()&&!REGIONS.includes(v.broad_region.trim()))return reply(req,{error:'invalid_region'},400);
   const profileUrl=v.public_link.trim();
   if(profileUrl){try{const link=new URL(profileUrl);if(link.protocol!=='https:'||link.username||link.password||!link.hostname.includes('.')||link.hostname==='localhost')return reply(req,{error:'invalid_public_profile_link'},400)}catch{return reply(req,{error:'invalid_public_profile_link'},400)}}
   const visibilityRequested=v.discoverable===true;
   const allowDiscover=visibilityRequested&&verified(m)&&m.religion_consent===true;
+  const details=cleanDetails(v.details,m?.religion_consent===true);
+  if(details==='faith')return reply(req,{error:'faith_consent_required'},403);
+  if(details===null)return reply(req,{error:'invalid_profile_details'},400);
+  const visibility=cleanVisibility(v.visibility);
+  if(visibility===null)return reply(req,{error:'invalid_profile_visibility'},400);
   const {error:profileError}=await admin.from('singles_profiles').upsert({
-   user_id:userId,display_name:v.display_name.trim(),broad_region:v.broad_region.trim(),intro:v.intro.trim(),public_link:profileUrl||null,updated_at:new Date().toISOString()
+   user_id:userId,display_name:v.display_name.trim(),broad_region:v.broad_region.trim(),intro:v.intro.trim(),public_link:profileUrl||null,
+   ...(v.details!==undefined?{details}:{}),...(visibility?{visibility}:{}),updated_at:new Date().toISOString()
   },{onConflict:'user_id'});
   if(profileError)throw profileError;
   const {error:memberError}=await admin.from('singles_memberships').update({discoverable:allowDiscover})
@@ -177,8 +234,14 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   const blockedIds=new Set(ownBlocks.map((b:any)=>b.blocker_id===userId?b.blocked_id:b.blocker_id));
   const ids=eligible.map((x:any)=>x.user_id).filter((id:string)=>!blockedIds.has(id));
   if(!ids.length)return reply(req,{profiles:[]});
-  const profiles=await many(admin.from('singles_profiles').select('user_id,display_name,broad_region,intro,public_link').in('user_id',ids).limit(20));
-  return reply(req,{profiles:profiles.map((p:any)=>({id:p.user_id,display_name:p.display_name,broad_region:p.broad_region,intro:p.intro,public_link:p.public_link||null}))});
+  const profiles=await many(admin.from('singles_profiles').select('user_id,display_name,broad_region,intro,public_link,details,visibility').in('user_id',ids).limit(20));
+  // 회원이 공개로 고른 항목만 내보낸다(비공개 항목은 응답에 아예 싣지 않음).
+  return reply(req,{profiles:profiles.map((p:any)=>{
+   const show=(k:string)=>isVisible(p.visibility,k);
+   const details=Object.fromEntries(Object.keys(PROFILE_FIELDS).filter(k=>show(k)&&typeof p.details?.[k]==='string'&&p.details[k]).map(k=>[k,p.details[k]]));
+   return {id:p.user_id,display_name:p.display_name,broad_region:show('broad_region')?p.broad_region:'',intro:show('intro')?p.intro:'',
+    public_link:show('public_link')?p.public_link||null:null,details};
+  })});
  }
  const interestUser=match(p,/^\/interests\/([0-9a-f-]{36})$/i);
  if(interestUser&&method==='POST'){
