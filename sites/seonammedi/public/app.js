@@ -431,7 +431,7 @@ function renderOrganizationGroup(key){
   if(chart){
     const statusLabel=publicOrgStatusLabel(group);const status=statusLabel?'<p class="note org-status">'+escapeHtml(statusLabel)+'</p>':'';
     const levels=(group.levels||[]).map(level=>'<article class="org-level"><strong>'+escapeHtml(level.name)+'</strong>'+(Array.isArray(level.members)&&level.members.length?'<p>'+level.members.map(cleanOrgPublicText).filter(Boolean).map(escapeHtml).join(' · ')+'</p>':'')+'</article>').join('');
-    const committees=(group.committees||[]).map(item=>'<article class="org-committee"><strong>'+escapeHtml(item.name)+'</strong><span>'+escapeHtml(cleanOrgPublicText(item.lead)||'담당자 확인 중')+'</span></article>').join('');
+    const committees=(group.committees||[]).map(item=>'<article class="org-committee"><strong>'+escapeHtml(item.name).replace(/(.)(위원회)$/,'$1<wbr>$2')+'</strong><span>'+escapeHtml(cleanOrgPublicText(item.lead)||'담당자 확인 중')+'</span></article>').join('');
     chart.innerHTML=status+((levels||committees)?'<div class="org-levels">'+levels+'</div><div class="org-committees">'+committees+'</div>':'<p class="muted">등록된 조직 구성이 없습니다.</p>');
   }
   if(participantHost){
