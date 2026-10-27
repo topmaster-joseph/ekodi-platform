@@ -454,3 +454,30 @@ test('learner handout: lecture content only — practice materials, prompts, err
   const {isGatedPath}=await import('../education-instructor-gate.js');
   assert.ok(!isGatedPath('/study/live/handout/')&&!isGatedPath('/study/live/handout.js'),'handout stays public');
 });
+
+test('materials page: landscape slide deck, separate practice materials, open to learners via links',async()=>{
+  const {deckSlides,practiceHtml,practiceDocument}=await import('../education/study/live/engine/handout.js');
+  const deck=deckSlides(COURSE);
+  assert.ok(deck.length>=30);
+  assert.ok(!deck.some(s=>['mood','break','hunt'].includes(s.special)),'no photo/break/error-hunt slides in the printed deck');
+  assert.equal(deckSlides(COURSE,{sessions:[1]}).every(s=>s.sessionNo===1),true);
+  const track=COURSE.tracks[1].id;
+  const ph=practiceHtml(COURSE,{trackId:track,levelId:'basic'});
+  const esc=v=>String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  for(const id of Object.keys(COURSE.missions)){
+    for(const f of missionMaterials(COURSE,id,track))assert.ok(ph.includes(esc(f.text).slice(0,60)),'material '+id);
+    for(const p of buildPrompts(COURSE,id,track,'basic'))assert.ok(ph.includes(esc(p.text).slice(0,60)),'prompt '+id);
+  }
+  for(const n of Object.values(NOTES))if(n.answer)assert.ok(!ph.includes(esc(n.answer).slice(0,20)),'no instructor answer keys');
+  assert.match(practiceDocument(COURSE,{trackId:track}),/^<!doctype html>[\s\S]*\.ho-pre\{/);
+  const css=await read('education/study/live/live.css');
+  assert.match(css,/@page hoslides\{size:A4 landscape/);assert.match(css,/\.lv \.ho-deck\{[^}]*page:hoslides/);
+  const page=await read('education/study/live/handout/index.html');
+  for(const m of ['slides','summary','practice'])assert.match(page,new RegExp('data-mode="'+m+'"'));
+  assert.match(await read('education/study/live/lab/index.html'),/id="topHandout" href="\.\.\/handout\/"/);
+  assert.match(await read('education/study/live/lab.js'),/livePath\(location\.pathname,'handout\/'\)/);
+  assert.match(await read('education/factchat/index.html'),/href="\.\.\/study\/live\/handout\/\?c=mnu-factchat-2026"/);
+  assert.match(await read('education/study/live/lab/index.html'),/id="labHandout" href="\.\.\/handout\/"/,'small screens: link inside the settings');
+  const {isGatedPath}=await import('../education-instructor-gate.js');
+  assert.ok(!isGatedPath('/study/live/handout/')&&!isGatedPath('/study/live/engine/handout.js'));
+});

@@ -621,11 +621,27 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 .lv .ho-foot{margin-top:18px;font-size:.75rem;color:#5b6b82;border-top:1px solid #d5dde8;padding-top:6px}
 @media (max-width:760px){.lv .ho-page{margin:10px;padding:18px 14px}.lv .ho-check{font-size:.8rem}}
 @page handout{size:A4 portrait;margin:16mm 15mm}
+@page hoslides{size:A4 landscape;margin:8mm}
+.lv .ho-controls{max-width:1100px;margin:14px auto 0;padding:0 16px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+.lv .ho-controls .ho-field,.lv .ho-controls .ho-check{color:var(--ink-2)}
+.lv .ho-controls .ho-field select{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.lv .ho-controls .seg-btn small{font-weight:600;opacity:.75;margin-left:2px}
+.lv .ho-hint{flex-basis:100%;margin:0;font-size:.8125rem;color:var(--muted)}
+.lv .ho-pre{white-space:pre-wrap;word-break:break-word;background:#f5f7fa;border:1px solid #d5dde8;border-radius:6px;padding:8px 10px;font-size:.85rem;line-height:1.55;font-family:inherit;margin:4px 0 8px}
+.lv .ho-deck{max-width:1100px;margin:16px auto 48px;padding:0 16px;display:grid;gap:16px;page:hoslides}
+.lv .ho-deck .ho-slide{width:100%;box-shadow:0 6px 20px rgba(15,30,60,.12);border:1px solid #d5dde8}
 @media print{
   .lv.handout-body{background:#fff}
-  .lv.handout-body>*:not(.ho-page){display:none!important}
+  .lv.handout-body>*:not(#handout){display:none!important}
   .lv .ho-page{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;font-size:10pt;line-height:1.5}
   .lv .ho-module{padding:8px 0}
   .lv .ho-session{break-before:page}
   .lv .ho-session:first-of-type{break-before:auto}
+  .lv .ho-deck{display:block;max-width:none;margin:0;padding:0}
+  .lv .ho-deck .ho-slide{width:281mm;max-width:none;height:auto;aspect-ratio:16/9;margin:0 auto;box-shadow:none;border:0;border-radius:0;break-after:page;break-inside:avoid}
+  .lv .ho-deck .ho-slide:last-child{break-after:auto}
+  .lv .ho-pre{font-size:8.5pt}
 }
+.lv .lab-handout{margin:10px 0 2px;font-size:.875rem}
+.lv .lab-handout a{font-weight:650}
+@media (max-width:400px){.lv #labTop #topHandout{display:none}}

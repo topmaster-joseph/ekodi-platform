@@ -3,22 +3,32 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="description" content="EKODI Education 수강생 강의자료 — 강의 내용만 담은 인쇄·PDF용 자료 (실습자료 제외)">
+  <meta name="description" content="EKODI Education 수강생 강의자료 — 강의 슬라이드(가로)·강의 요약(세로)·실습자료를 인쇄·PDF·파일로 내려받기">
   <meta name="ekodi-ui-type" content="USER">
   <title>수강생 강의자료 · EKODI Education Premium Studio</title>
   <link rel="stylesheet" href="../../../fonts/pretendard/pretendardvariable-dynamic-subset.css">
   <link rel="stylesheet" href="../live.css">
 </head>
 <body class="lv handout-body" data-ekodi-ui="USER" data-live-surface="handout">
-<header class="lv-top ho-bar" id="hoTop" data-ekodi-fixed-header aria-label="강의자료 인쇄">
-  <a class="lv-brand" id="hoBack" href="../"><span class="lv-brand-mark" aria-hidden="true">E</span><span><strong>수강생 강의자료</strong><small>인쇄·PDF · 실습자료 제외</small></span></a>
+<header class="lv-top ho-bar" id="hoTop" data-ekodi-fixed-header aria-label="강의자료 인쇄·내려받기">
+  <a class="lv-brand" id="hoBack" href="../lab/"><span class="lv-brand-mark" aria-hidden="true">E</span><span><strong>강의자료</strong><small id="hoSub">인쇄 · PDF · 내려받기</small></span></a>
   <span class="grow"></span>
-  <label class="ho-field" for="hoSession">회차<select id="hoSession"><option value="all">전체</option></select></label>
-  <label class="ho-check"><input type="checkbox" id="hoAnswers"> OX 정답 포함</label>
-  <label class="ho-check"><input type="checkbox" id="hoNotes" checked> 메모 칸</label>
-  <button type="button" class="btn" id="hoDownload">파일 내려받기</button>
   <button type="button" class="btn btn-primary" id="hoPrint">인쇄 · PDF 저장</button>
+  <button type="button" class="btn" id="hoDownload">파일 내려받기</button>
 </header>
+<section class="ho-controls" id="hoControls" aria-label="자료 선택">
+  <div class="seg" role="group" aria-label="자료 종류">
+    <button type="button" class="seg-btn" data-mode="slides" aria-pressed="true">강의 슬라이드 <small>가로</small></button>
+    <button type="button" class="seg-btn" data-mode="summary" aria-pressed="false">강의 요약 <small>세로</small></button>
+    <button type="button" class="seg-btn" data-mode="practice" aria-pressed="false">실습자료</button>
+  </div>
+  <label class="ho-field" for="hoSession">회차 <select id="hoSession"><option value="all">전체</option></select></label>
+  <label class="ho-field" for="hoTrack" data-for="practice">내 분야 <select id="hoTrack"></select></label>
+  <label class="ho-field" for="hoLevel" data-for="practice">난이도 <select id="hoLevel"></select></label>
+  <label class="ho-check" data-for="summary"><input type="checkbox" id="hoAnswers"> OX 정답 포함</label>
+  <label class="ho-check" data-for="summary"><input type="checkbox" id="hoNotes" checked> 메모 칸</label>
+  <p class="ho-hint" id="hoHint" role="status"></p>
+</section>
 <main class="ho-page" id="handout" aria-live="polite"><p class="meta">강의자료를 불러오는 중…</p></main>
 <script type="module" src="../handout.js"></script>
 </body>
