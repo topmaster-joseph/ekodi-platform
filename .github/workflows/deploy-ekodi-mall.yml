@@ -337,7 +337,7 @@ jobs:
           set -euo pipefail
           code=000
           for attempt in $(seq 1 12); do
-            code=$(curl -sS -o /tmp/mall-transaction-rehearsal.json -w '%{http_code}' --connect-timeout 5 --max-time 30 \
+            code=$(curl -sS -o /tmp/mall-transaction-rehearsal.json -w '%{http_code}' --connect-timeout 5 --max-time 90 \
               -X POST -H 'content-type: application/json' -H "x-ekodi-rehearsal-token: $TRANSACTION_REHEARSAL_TOKEN" \
               --data "{\"runId\":\"gh-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT\"}" \
               "${STAGING_URL}/api/internal/rehearsal/transaction" || true)
