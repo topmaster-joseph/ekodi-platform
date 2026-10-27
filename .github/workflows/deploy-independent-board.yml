@@ -280,7 +280,16 @@ jobs:
           # Synthetic canary cleanup only; never touch arbitrary posts.
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-independent-board --remote --config "$GITHUB_WORKSPACE/.wrangler.independent-board.runtime.toml" --command "DELETE FROM citizen_voices_fresh WHERE id=$post_id AND body='$marker';"
           curl -fsS https://seonammedi.kr/board/api/voices-fresh | jq -e --argjson id "$post_id" '.items | all(.id!=$id)' >/dev/null
-      - name: Remove old citizen records and referenced photos after cutover
+      # Data-retention guard: deployment must NEVER invoke irreversible legacy
+      # deletion. The isolated purge-legacy.mjs remains an explicit operator-only
+      # command requiring independent retention/backup approval (Human Gate).
+      # Fresh board cutover, retired API and queue state have already been verified.
+      - name: Verify legacy write retirement and retain historical records
         run: |
           set -euo pipefail
-          node services/independent-board/voices-fresh/purge-legacy.mjs --execute
+          for origin in https://seonammedi.kr/board https://ekodi.kr/seonammedi/board; do
+            status="$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 8 --max-time 25 "$origin/api/posts")"
+            test "$status" = "410"
+            curl -fsS --connect-timeout 8 --max-time 25 "$origin/health" | jq -e '.legacyQueue=="disabled"' >/dev/null
+          done
+          echo 'Legacy writes retired; historical citizen records and media remain untouched.'
