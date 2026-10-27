@@ -192,3 +192,32 @@ test('member and admin views carry each member\'s 연번',async()=>{
   const adm=await (await handleCgmurrcBooth(new Request(ADMIN),env,admin)).json();
   assert.deepEqual(adm.members.map(m=>[m.no,m.name]),[[1,'가회원'],[2,'나회원'],[3,'다회원']]);
 });
+
+test('the secretary can confirm or reject many requests at once',async()=>{
+  const {env,keys}=await seed();
+  await handleCgmurrcBooth(memberPost(keys['가회원'],{slot:3,action:'request'}),env,at(NOW));
+  await handleCgmurrcBooth(memberPost(keys['가회원'],{slot:4,action:'request'}),env,at(NOW));
+  await handleCgmurrcBooth(memberPost(keys['나회원'],{slot:2,action:'drop'}),env,at(NOW));
+  await handleCgmurrcBooth(memberPost(keys['다회원'],{slot:5,action:'request'}),env,at(NOW));
+  let res=await handleCgmurrcBooth(adminPost({action:'bulk',decision:'confirm',items:[
+    {member_id:'m0',slot:3},{member_id:'m0',slot:4},{member_id:'m1',slot:2},{member_id:'m0',slot:3},{member_id:'m2',slot:7},{member_id:'nope',slot:1}]}),env,admin);
+  assert.equal(res.status,200);
+  assert.deepEqual((await res.json()).bulk,{decision:'confirm',done:3,skipped:3});
+  assert.deepEqual(rows(env),[{member_id:'m0',slot:3,status:'assigned'},{member_id:'m0',slot:4,status:'assigned'},{member_id:'m2',slot:5,status:'requested'}]);
+  res=await handleCgmurrcBooth(adminPost({action:'bulk',decision:'reject',items:[{member_id:'m2',slot:5}]}),env,admin);
+  assert.deepEqual((await res.json()).bulk,{decision:'reject',done:1,skipped:0});
+  assert.equal(rows(env).some(r=>r.member_id==='m2'),false);
+  const audit=env.DB.raw.prepare("SELECT action FROM cgmurrc_booth_audit WHERE action LIKE 'admin.bulk_%'").all().map(r=>r.action);
+  assert.deepEqual(audit,['admin.bulk_confirm','admin.bulk_confirm','admin.bulk_confirm','admin.bulk_reject']);
+});
+
+test('bulk requests are validated and members cannot use them',async()=>{
+  const {env,keys}=await seed();
+  for(const body of [{action:'bulk',decision:'approve',items:[{member_id:'m0',slot:1}]},{action:'bulk',decision:'confirm',items:[]},
+    {action:'bulk',decision:'confirm',items:[{member_id:'m0',slot:9}]},{action:'bulk',decision:'confirm',items:[{member_id:'m0',slot:1,x:1}]},
+    {action:'bulk',decision:'confirm',items:Array.from({length:101},()=>({member_id:'m0',slot:1}))}]){
+    assert.equal((await handleCgmurrcBooth(adminPost(body),env,admin)).status,400,JSON.stringify(body).slice(0,60));
+  }
+  assert.equal((await handleCgmurrcBooth(memberPost(keys['가회원'],{action:'bulk',decision:'confirm',items:[]}),env,at(NOW))).status,400);
+  assert.equal((await handleCgmurrcBooth(adminPost({action:'bulk',decision:'confirm',items:[{member_id:'m0',slot:1}]}),env,{now:()=>NOW,resolveAuthority:async()=>({ok:false,status:401})})).status,401);
+});

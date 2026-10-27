@@ -5,6 +5,7 @@ const $=id=>document.getElementById(id);
 const SHORT=['10시','11시','12시','13시','14시','15시','16시','17시'];
 const PER=2;
 let view=null,busy=false;
+const selected=new Set(); // 'member_id:slot' of pending requests ticked for bulk confirm/reject
 const issued=new Map(); // member_id -> {name,link} issued in this page session (plain links are shown once)
 
 // Central EKODI sign-in (ekodi.kr/auth, site=space) returns here with a one-use token in the
@@ -100,31 +101,43 @@ function render(){
   if(!view)return;
   const map=statusMap();
   // pending requests
-  const pend=view.entries.filter(e=>e.status!=='assigned').sort((a,b)=>a.slot-b.slot);
+  const pend=view.entries.filter(e=>e.status!=='assigned').sort((a,b)=>a.slot-b.slot||String(nameOf(a.member_id)).localeCompare(nameOf(b.member_id),'ko'));
+  const live=new Set(pend.map(e=>e.member_id+':'+e.slot));
+  for(const k of [...selected])if(!live.has(k))selected.delete(k);
   $('pendingCount').textContent=pend.length?`(${pend.length}건)`:'(없음)';
+  $('bulkBar').hidden=!pend.length;
+  $('selectAll').checked=pend.length>0&&selected.size===pend.length;
+  $('selectAll').indeterminate=selected.size>0&&selected.size<pend.length;
+  $('bulkConfirm').textContent=`선택 확정 (${selected.size})`;$('bulkReject').textContent=`선택 거절 (${selected.size})`;
   $('pending').replaceChildren(...(pend.length?pend.map(e=>{
-    const what=e.status==='requested'?`${view.slots[e.slot].label} 추가 희망`:`${view.slots[e.slot].label} 빠지기 요청`;
-    return el('div',{className:'req'},el('b',{},nameOf(e.member_id)),el('span',{},what),
+    const key=e.member_id+':'+e.slot, drop=e.status==='drop_requested';
+    const box=el('input',{type:'checkbox',checked:selected.has(key)});
+    box.setAttribute('aria-label',`${nameOf(e.member_id)} ${view.slots[e.slot].label} ${drop?'빠지기':'추가 희망'} 선택`);
+    box.addEventListener('change',()=>{box.checked?selected.add(key):selected.delete(key);render()});
+    return el('div',{className:'req'},
+      el('label',{},box,el('span',{},`${nameOf(e.member_id)} · ${SHORT[e.slot]}`),el('em',{className:'kind'+(drop?' drop':'')},drop?'빠지기':'희망')),
+      el('span'),
       btn('확정',()=>act({action:'confirm',member_id:e.member_id,slot:e.slot},`${nameOf(e.member_id)}님 ${SHORT[e.slot]} 요청을 확정했습니다.`),'primary'),
       btn('거절',()=>act({action:'reject',member_id:e.member_id,slot:e.slot},`${nameOf(e.member_id)}님 ${SHORT[e.slot]} 요청을 거절했습니다.`),'danger'));
   }):[el('p',{className:'muted'},'확정을 기다리는 요청이 없습니다.')]));
   // grid
-  $('head').replaceChildren(el('th',{},'이름'),...view.slots.map((s,i)=>el('th',{className:'s'},SHORT[i]+(s.tag?` ${s.tag}`:''))),el('th',{className:'s'},'배정'));
+  $('head').replaceChildren(el('th',{},'이름'),...view.slots.map((s,i)=>{const th=el('th',{className:'s'},String(10+i));if(s.tag)th.append(el('small',{},s.tag));return th}),el('th',{className:'s'},'수'));
   $('rows').replaceChildren(...view.members.map(m=>{
     let count=0;
     const cells=view.slots.map((_,i)=>{
       const st=map.get(m.id+':'+i)||'';
       if(st==='assigned'||st==='drop_requested')count++;
-      const label={assigned:'✓',requested:'희망',drop_requested:'빠짐'}[st]||'';
-      const b=btn(label,()=>{
+      const mark={assigned:'✓',requested:'희',drop_requested:'빠'}[st]||'';
+      const b=btn(mark,()=>{
         if(st==='assigned')act({action:'unassign',member_id:m.id,slot:i},`${m.name}님 ${SHORT[i]} 배정을 해제했습니다.`);
         else if(!st)act({action:'assign',member_id:m.id,slot:i},`${m.name}님을 ${SHORT[i]}에 배정했습니다.`);
         else say('회원 요청은 위 「확정 대기 요청」에서 확정·거절하세요.');
       },'cell '+st);
-      b.setAttribute('aria-label',`${m.name} ${view.slots[i].label} ${label||'비어 있음'}`);
+      b.setAttribute('aria-label',`${m.name} ${view.slots[i].label} ${mark||'비어 있음'}`);
       return el('td',{className:'s'},b);
     });
-    return el('tr',{},el('td',{className:'who'},label(m)),...cells,el('td',{className:'s'},`${count}회`));
+    const who=el('td',{className:'who',title:label(m)},label(m));
+    return el('tr',{},who,...cells,el('td',{className:'s'},String(count)));
   }));
   $('foot').replaceChildren(el('td',{},'인원'),...view.slots.map((_,i)=>{
     const n=view.entries.filter(e=>e.slot===i&&e.status!=='requested').length;
@@ -133,14 +146,16 @@ function render(){
   // links
   $('links').replaceChildren(...view.members.map(m=>{
     const got=issued.get(m.id);
-    const linkCell=el('td',{},got?el('code',{},got.link):el('span',{className:'muted'},m.link_issued?'발급됨 (보안상 다시 볼 수 없음)':'미발급'));
-    const label=m.link_issued?'재발급':'발급';
+    const linkCell=el('td',{},got?el('code',{},got.link):el('span',{className:'muted'},m.link_issued?'발급됨':'미발급'));
+    const verb=m.link_issued?'재발급':'발급';
     return el('tr',{},el('td',{className:'who'},label(m)),linkCell,el('td',{},
-      btn(label,()=>act({action:'issue_link',member_id:m.id})),' ',
+      btn(verb,()=>act({action:'issue_link',member_id:m.id})),' ',
       btn('삭제',()=>{if(confirmRemove(m))act({action:'remove_member',member_id:m.id},`${m.name}님을 명단에서 뺐습니다.`)},'danger')));
   }));
+  if(issued.size)$('linkPanel').open=true;
   $('kakao').value=[...issued.values()].map(x=>kakao(x.name,x.link)).join('\n\n---\n\n');
   for(const b of document.querySelectorAll('button'))b.disabled=busy;
+  if(!busy){$('bulkConfirm').disabled=!selected.size;$('bulkReject').disabled=!selected.size}
 }
 // confirm() dialogs are unreliable in some embedded views; use a two-tap confirmation instead.
 let pendingRemove=null;
@@ -153,6 +168,23 @@ $('copyAll').addEventListener('click',async()=>{
   const t=$('kakao').value;if(!t){say('이번에 발급한 링크가 없습니다.','err');return}
   try{await navigator.clipboard.writeText(t);say('카톡 문구를 복사했습니다.','ok')}catch{$('kakao').select();say('자동 복사가 막혀 문구를 선택해 두었습니다. 직접 복사하세요.')}
 });
+$('selectAll').addEventListener('change',()=>{
+  const pend=view?view.entries.filter(e=>e.status!=='assigned'):[];
+  selected.clear();if($('selectAll').checked)for(const e of pend)selected.add(e.member_id+':'+e.slot);
+  render();
+});
+function bulk(decision){
+  if(!selected.size){say('먼저 요청을 선택해 주세요.','err');return}
+  const items=[...selected].map(k=>{const i=k.lastIndexOf(':');return {member_id:k.slice(0,i),slot:Number(k.slice(i+1))}});
+  const n=items.length;
+  act({action:'bulk',decision,items}).then(()=>{
+    const r=view?.bulk;selected.clear();
+    if(r)say(`${r.done}건을 ${decision==='confirm'?'확정':'거절'}했습니다.${r.skipped?` (이미 처리된 ${r.skipped}건은 건너뜀)`:''}`,'ok');
+    render();
+  });
+}
+$('bulkConfirm').addEventListener('click',()=>bulk('confirm'));
+$('bulkReject').addEventListener('click',()=>bulk('reject'));
 $('retry').addEventListener('click',()=>{if(!busy)load()});
 // Switching accounts: the central sign-in reuses an existing Google session automatically, so a plain
 // re-login would come back as the same person. expected_account+force_account makes it drop a session
