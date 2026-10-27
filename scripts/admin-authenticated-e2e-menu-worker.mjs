@@ -614,6 +614,8 @@ async function verifySocialInventory(tab, alreadyActive, started) {
     // Only aggregate/safe policy evidence; never log account rows, user IDs or credentials.
     return {
       authenticatedStatus:response.status,guestStatus:guest.status,
+      noStoreCache: /(?:^|,)\s*no-store(?:,|$)/i.test(response.headers.get('cache-control')||'') &&
+        /(?:^|,)\s*no-store(?:,|$)/i.test(guest.headers.get('cache-control')||''),
       scope:data.ownerScope || '',storageReady:data.storageReady === true,
       providerCount:Array.isArray(data.providers) ? data.providers.length : 0,
       uiProviderCount:panel?.querySelectorAll('.ekodi-social-card').length || 0,
@@ -626,6 +628,7 @@ async function verifySocialInventory(tab, alreadyActive, started) {
     };
   });
   if(evidence.authenticatedStatus!==200 || evidence.guestStatus!==401 ||
+     evidence.noStoreCache!==true ||
      evidence.scope!=='platform'||!evidence.storageReady||
      evidence.providerCount!==13||evidence.uiProviderCount!==13||
      !evidence.uiSuccess||evidence.uiError||
