@@ -57,6 +57,14 @@ async function main(){
   check('회원 화면 스크립트 제공',p.status===200&&p.has,`HTTP ${p.status}`);
   p=await page('/cgmurrc/booth/admin/','/cgmurrc/booth/admin/app.js');
   check('관리자 화면 /cgmurrc/booth/admin/ 제공',p.status===200&&p.has,`HTTP ${p.status}`);
+  // A page whose CSP forbids scripts renders but never runs ("불러오는 중" forever): check the real headers.
+  for(const path of ['/cgmurrc/booth/','/cgmurrc/booth/admin/']){
+    const res=await fetch(BASE+path,{redirect:'manual'});
+    const csp=res.headers.get('content-security-policy')||'';
+    const scriptSrc=(csp.split(';').map(x=>x.trim()).find(x=>x.startsWith('script-src'))||'');
+    const ok=/'self'/.test(scriptSrc)&&!/'none'/.test(scriptSrc)&&(path.endsWith('admin/')?csp.includes('https://renzehysxirjilvdxacv.supabase.co'):true)&&/no-store/.test(res.headers.get('cache-control')||'');
+    check(`${path} 스크립트 실행 허용(CSP)·캐시 없음`,ok,`${scriptSrc||'script-src 없음'} / ${res.headers.get('cache-control')||''}`);
+  }
   p=await page('/cgmurrc/booth/admin/','id="loginBtn"');
   check('관리자 화면에 로그인 버튼',p.status===200&&p.has,`HTTP ${p.status}`);
   const adminJs=await fetch(BASE+'/cgmurrc/booth/admin/app.js',{redirect:'manual'});
