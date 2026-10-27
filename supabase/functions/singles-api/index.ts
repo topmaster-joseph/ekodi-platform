@@ -102,6 +102,10 @@ Deno.serve(async req => {
       return reply(req, { error: "adult_declaration_and_base_consent_required" }, 400);
     if (typeof b.religion_consent !== "boolean" || typeof b.marriage_opt_in !== "boolean")
       return reply(req, { error: "explicit_optional_choices_required" }, 400);
+    // Dating/community operating mode: marriage-purpose connection is not offered
+    // (결혼중개업 미신고 운영). Kept in the schema for a future registered brokerage.
+    if (b.marriage_opt_in === true)
+      return reply(req, { error: "marriage_connection_not_offered" }, 400);
     if (b.marriage_opt_in && !b.religion_consent)
       return reply(req, { error: "religion_consent_required_for_marriage" }, 400);
     const { data: link, error: linkError } = await admin.from("login_identities")

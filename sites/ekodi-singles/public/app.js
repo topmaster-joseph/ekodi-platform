@@ -108,12 +108,12 @@ function startConsent(h){
  const msg=$('enrollmentMessage');
  api('/me').then(d=>{
   const m=d.member||{};
-  for(const [key,field] of [['adult','age_19_confirmed'],['base','base_consent'],['sensitive','religion_consent'],['marriage','marriage_opt_in']])form.elements[key].checked=m[field]===true;
+  for(const [key,field] of [['adult','age_19_confirmed'],['base','base_consent'],['sensitive','religion_consent']])form.elements[key].checked=m[field]===true;
  }).catch(()=>{});
  form.addEventListener('submit',async event=>{
   event.preventDefault();
   const payload={age_19_confirmed:form.elements.adult.checked,base_consent:form.elements.base.checked,
-   religion_consent:form.elements.sensitive.checked,marriage_opt_in:form.elements.marriage.checked};
+   religion_consent:form.elements.sensitive.checked,marriage_opt_in:false}; // 교제·만남 플랫폼 운영: 결혼 목적 연결 미제공
   try{const r=await api('/me',{method:'PUT',body:payload});state.member=r.member;msg.textContent='참여 의사가 저장되었습니다. 성인 인증 전에는 상대에게 노출되지 않습니다.';}
   catch(e){msg.textContent=errorText(e)}
  });
