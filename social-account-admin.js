@@ -93,6 +93,7 @@
   }
   async function install(){
     if(document.getElementById(ROOT))return;
+    if(!document.getElementById('ekodi-social-account-css')){const style=document.createElement('link');style.id='ekodi-social-account-css';style.rel='stylesheet';style.href='/admin/social-account-admin.css';document.head.append(style)}
     const content=document.querySelector('.content');
     if(!content)return;
     const panel=el('section','','section ekodi-social-accounts hidden-panel');
