@@ -153,10 +153,10 @@ test('attribution and October original score are present',()=>{
   assert.ok(fs.existsSync(new URL('devotion-illustration.svg',bibleDir)));
 });
 
-test('page order: Scripture, tabs and panel, attribution, share — no summary card or standalone MR row', () => {
+test('page order: Scripture, tabs and panel, attribution, share, then admin menu with its inline views', () => {
   const js = fs.readFileSync(new URL('devotion.js', bibleDir), 'utf8');
   const line = js.match(/root\.append\(([^)]*)\);/)[1].split(',').map(s => s.trim());
-  assert.deepEqual(line, ['adminBar', 'datebar', 'status', 'scriptureBlock', 'tabbar', 'panelWrap', 'notice', 'shareRow', 'adminPanel', 'toastEl']);
+  assert.deepEqual(line, ['datebar', 'status', 'scriptureBlock', 'tabbar', 'panelWrap', 'notice', 'shareRow', 'adminBar', 'adminPanel', 'adminView', 'toastEl']);
   assert.doesNotMatch(js, /사용 권한이 확인된 반주 음원이 아직 등록되지 않았습니다/);
   assert.match(js, /panels\.get\('song'\) \|\| root\)\.append\(audioRow\)/);
 });
@@ -171,7 +171,12 @@ test('admin menu and 나의 묵상기록 tab are wired', () => {
   const js = fs.readFileSync(new URL('devotion.js', bibleDir), 'utf8');
   assert.match(js, /\{ id: 'records', label: '나의 묵상기록' \}/);
   assert.match(js, /fetch\(`\$\{API\}\/me`/);
-  for (const href of ['/admin#devotional', '/ekodichurch/admin/worship', '/ekodimission/admin/activities']) assert.ok(js.includes(`'${href}'`), href);
+  for (const href of ['/admin#devotional', '/ekodichurch/admin/worship', '/ekodimission/admin/saturday']) assert.ok(js.includes(`'${href}'`), href);
+  // Admin menu buttons open their content inline below the bar instead of navigating away.
+  assert.match(js, /button\.addEventListener\('click', \(\) => openAdminView\(adminSelection === key \? '' : key\)\)/);
+  for (const label of ['이 날짜 묵상 편집', '매일묵상 관리', '교회 · 주일모임', '선교회 · 토요모임']) assert.ok(js.includes(`'${label}'`), label);
+  assert.match(js, /\/api\/public\/scripture\/common\?month=/);
+  assert.match(js, /adminPanel\.hidden = adminSelection !== 'edit'/);
   assert.match(js, /bible_journeys\?topic=eq\./);
   assert.match(js, /method: 'DELETE'/);
 });
