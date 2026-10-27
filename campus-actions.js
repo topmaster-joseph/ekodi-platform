@@ -666,7 +666,7 @@
     if (!box) return;
     if (!site) {
       box.dataset.state = 'empty';
-      box.replaceChildren(element('p', 'campus-site-admin-hint', '위쪽 버튼에서 사이트를 선택하면 그 사이트의 관리자 화면이 여기에 열립니다.'));
+      box.replaceChildren(element('p', 'campus-site-admin-hint', '위에서 사이트를 선택하세요.'));
       if (grid) { grid.hidden = false; grid.style.removeProperty('display'); }
       return;
     }
@@ -675,15 +675,29 @@
     if (grid) { grid.hidden = true; grid.style.setProperty('display', 'none', 'important'); }
     const head = element('header', 'campus-site-admin-head');
     const title = element('div');
-    title.append(element('p', 'kicker', `${site.type || '사이트'} · ${LIFECYCLE_STATE[site.lifecycle]?.[1] || '운영 중'}`), element('h3', '', site.name), element('p', 'campus-site-admin-address', surfaceInfo(site).label));
+    title.className = 'campus-site-admin-summary';
+    title.append(element('h3', '', site.name), element('p', 'campus-site-admin-address', surfaceInfo(site).label));
     const actions = element('div', 'campus-site-admin-actions');
     if (site.adminRoot) {
-      const open = element('a', 'primary campus-row-action', '관리자 홈 열기 ↗');
-      open.href = site.adminRoot.adminPath; open.target = '_blank'; open.rel = 'noopener';
+      // Return to the selected site's own admin home in the pane below.
+      // Do not navigate the parent or bypass the site's existing authentication.
+      const open = element('button', 'primary campus-row-action', '관리자 화면');
+      open.type = 'button';
+      open.dataset.inlineAdmin = site.key;
+      open.addEventListener('click', () => {
+        if (box.dataset.siteKey !== site.key) return;
+        const current = box.querySelector('.campus-site-admin-frame');
+        const next = siteAdminFrame(site, target => renderSiteAdminLinks(site, target, window.EKODISiteAdminMenuTemplate));
+        if (current) current.replaceWith(next);
+        else box.append(next);
+        next.scrollIntoView({ block: 'start', behavior: 'auto' });
+      });
       actions.append(open);
     }
-    actions.append(makeButton('Status', 'secondary', 'status', site), makeOpenControl(site));
-    const back = element('button', 'secondary campus-row-action', '목록 보기');
+    const visit = makeOpenControl(site);
+    if (visit.tagName === 'A') visit.textContent = '사이트 방문 ↗';
+    actions.append(visit);
+    const back = element('button', 'secondary campus-row-action', '목록');
     back.type = 'button';
     back.addEventListener('click', () => selectSite(''));
     actions.append(back);
@@ -715,10 +729,12 @@
       if (settled) return;
       settled = true;
       wrap.dataset.state = 'refused';
-      const note = element('p', 'campus-site-admin-note', '이 사이트 관리자 화면은 아직 여기에 함께 표시할 수 없어 메뉴 바로가기로 보여드립니다. 위의 "관리자 홈 열기"로 새 창에서 열 수 있습니다.');
-      const links = element('div', 'campus-site-admin-menus');
-      fallback(links);
-      wrap.replaceChildren(note, ...links.childNodes);
+      const note = element('p', 'campus-site-admin-note', '관리자 화면을 이 영역에 표시할 수 없습니다. 별도 창에서 열어 주세요.');
+      const direct = element('a', 'campus-site-admin-link', '관리자 페이지 열기 ↗');
+      direct.href = site.adminRoot.adminPath;
+      direct.target = '_blank';
+      direct.rel = 'noopener';
+      wrap.replaceChildren(note, direct);
     };
     frame.addEventListener('load', () => {
       if (settled) return;
@@ -782,17 +798,24 @@
   function renderSiteStrip(section, sites = sitesForSection(section)) {
     const strip = window.EKODIAdminWorkStrip;
     if (!strip?.render || !section) return false;
-    strip.render(sites.map(site => {
+    const bar = strip.render(sites.map(site => {
       const [state, stateLabel] = LIFECYCLE_STATE[site.lifecycle] || LIFECYCLE_STATE.live;
       return { id: site.key, label: site.name, state, stateLabel: site.adminRoot ? stateLabel : `${stateLabel} · 관리자 주소 미등록`, className: site.adminRoot ? 'has-site-admin' : 'no-site-admin', dataset: { siteKey: site.key } };
     }), {
       owner: 'sites',
       key: section,
       active: activeSiteKey,
-      label: `사이트 ${sites.length}`,
-      ariaLabel: '분류에 속한 사이트',
+      label: '',
+      ariaLabel: '사이트 선택',
       onSelect: key => selectSite(key === activeSiteKey ? '' : key),
     });
+    // Keep deep-linked sites (e.g. ?site=pizzamaru) visible in the single-row strip.
+    const activeButton = bar?.querySelector('[aria-selected="true"]');
+    if (activeButton) {
+      const barRect = bar.getBoundingClientRect();
+      const itemRect = activeButton.getBoundingClientRect();
+      bar.scrollLeft += itemRect.left - barRect.left - (bar.clientWidth - itemRect.width) / 2;
+    }
     return true;
   }
 
