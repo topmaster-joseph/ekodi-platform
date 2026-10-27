@@ -20,7 +20,7 @@ export async function consumeFreshVoiceReplyQueue(env,payload){
   const time=String(payload.createdAt||stamp());
   const result=await env.BOARD_DB.prepare("INSERT OR IGNORE INTO citizen_voice_replies_fresh (voice_id,google_subject,submission_key,display_name,body,role,status,created_at,updated_at) VALUES (?,?,?,?,?,?,'published',?,?)")
     .bind(voiceId,String(payload.googleSubject),key,String(payload.displayName||'회원').slice(0,40),String(payload.message||'').slice(0,1500),payload.role==='admin'?'admin':'member',time,time).run();
-  if(Number(result?.meta?.last_row_id||0)>0)return Number(result.meta.last_row_id);
+  if(Number(result?.meta?.changes||0)>0&&Number(result?.meta?.last_row_id||0)>0)return Number(result.meta.last_row_id);
   const duplicate=await env.BOARD_DB.prepare('SELECT id FROM citizen_voice_replies_fresh WHERE submission_key=? LIMIT 1').bind(key).first();
   if(duplicate?.id)return Number(duplicate.id);
   throw Error('fresh_reply_write_unconfirmed');
@@ -63,7 +63,7 @@ export async function handleFreshVoiceApi(req,env,path,{google,admin,limit}){
     if(tail==='/admin'){const gate=await admin(req);if(!gate.ok)return gate.response}
     // Public records never disclose the stored Google subject. Ownership flags
     // require a verified bearer and are computed on the server, never in JS.
-    const viewer=req.headers.get('authorization')?await google(req):null;
+    const viewer=tail==='/admin'?null:(req.headers.get('authorization')?await google(req):null);
     const q=String(url.searchParams.get('q')||'').trim().slice(0,100);
     const sql="SELECT id,title,body,google_subject,created_at,updated_at FROM citizen_voices_fresh WHERE status='published'"+(q?" AND (body LIKE ? OR title LIKE ?)":"")+" ORDER BY id DESC LIMIT 100";
     try{
