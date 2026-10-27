@@ -427,3 +427,30 @@ test('presenter: practice timer and its controls live in the top bar; the side c
   assert.doesNotMatch(js,/presTimerTop/);
   assert.match(await read('education/study/live/live.css'),/\.lv \.pres-side\{position:sticky;top:calc\(var\(--lv-top-h\) \+ 16px\);overflow-y:auto/);
 });
+
+test('learner handout: lecture content only — practice materials, prompts, error hunts and notes excluded',async()=>{
+  const {handoutHtml,handoutDocument}=await import('../education/study/live/engine/handout.js');
+  const html=handoutHtml(COURSE,{});
+  for(const s of COURSE.sessions)for(const m of s.modules.filter(x=>['lecture','demo','review','share'].includes(x.kind))){
+    assert.ok(html.includes(m.title),m.id);for(const p of m.points||[])assert.ok(html.includes(p.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')),p);
+  }
+  for(const [id,m] of Object.entries(COURSE.missions)){
+    for(const p of buildPrompts(COURSE,id,COURSE.tracks[0].id,'basic'))assert.ok(!html.includes(p.text.slice(0,40)),'prompt of '+id);
+    for(const f of missionMaterials(COURSE,id,COURSE.tracks[0].id))assert.ok(!html.includes(f.text.slice(0,40)),'material of '+id);
+    for(const step of m.steps||[])assert.ok(!html.includes(step),'practice step of '+id);
+  }
+  for(const h of COURSE.errorHunts)assert.ok(!html.includes(h.text.slice(0,30)),'error hunt '+h.id);
+  for(const n of Object.values(NOTES))if(n.answer)assert.ok(!html.includes(n.answer.slice(0,20)),'instructor answer key');
+  assert.ok(!/정답 [OX] —/.test(html),'OX answers hidden by default');
+  assert.match(handoutHtml(COURSE,{withAnswers:true}),/정답 [OX] —/);
+  assert.equal((handoutHtml(COURSE,{sessions:[2]}).match(/class="ho-session"/g)||[]).length,1);
+  assert.doesNotMatch(handoutHtml(COURSE,{notes:false}),/ho-notes/);
+  assert.match(handoutDocument(COURSE,{}),/^<!doctype html>[\s\S]*@page\{size:A4/);
+  const page=await read('education/study/live/handout/index.html');
+  assert.doesNotMatch(page,/<script(?![^>]*\ssrc=)[^>]*>|<style[\s>]|\sstyle=|\son[a-z]+=/i);
+  const js=await read('education/study/live/handout.js');
+  assert.doesNotMatch(js,/loadNotes|\.notes\.js|NOTES|fetch\(|localStorage/);
+  assert.match(await read('education/study/live/index.html'),/id="openHandout"/);
+  const {isGatedPath}=await import('../education-instructor-gate.js');
+  assert.ok(!isGatedPath('/study/live/handout/')&&!isGatedPath('/study/live/handout.js'),'handout stays public');
+});
