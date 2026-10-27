@@ -190,6 +190,8 @@ const controlApiTouched=changedFiles.some(file=>
   (file.startsWith('migrations/')&&file.endsWith('.sql')&&!file.includes('messenger'))||[
   // CGMA motor festival 2026 intake API (Control API, D1 ekodi-auth).
   'motor-festival-registration-api.js',
+  // cgmurrc booth shifts API (Control API, D1 ekodi-auth).
+  'cgmurrc-booth-api.js',
   // CGMA e-documents · sequential signing API (Control API, D1 ekodi-auth + private R2).
   'cgma-edoc-api.js','test/cgma-edoc-api.test.mjs',
 

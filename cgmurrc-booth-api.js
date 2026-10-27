@@ -1,6 +1,7 @@
 // 청계면 도시재생 주민협의체(cgmurrc) 축제 부스 근무 분담 API — 회원별 개인 링크.
 //
 // Routes (Control API, same origin as ekodi.kr pages):
+//   GET  /api/cgmurrc/booth/board   public read-only board: confirmed names with their 연번, per slot
 //   GET  /api/cgmurrc/booth/me      member, authenticated by personal link key (header x-cgmurrc-booth-key)
 //   POST /api/cgmurrc/booth/me      member asks to add a slot / drop an assigned slot / withdraw the ask
 //   GET  /api/cgmurrc/booth/admin   cgmurrc administrators only
@@ -102,6 +103,20 @@ function board(rows,list){
   for(const e of rows)if(e.status!=='requested'&&names.has(e.member_id))out[e.slot].push(names.get(e.member_id));
   return out;
 }
+// 연번 = position in the member list (the order the secretary registered names), stable for the event.
+function numbering(list){return new Map(list.map((m,i)=>[m.id,i+1]))}
+function numberedBoard(rows,list){
+  const names=new Map(list.map(m=>[m.id,m.name])),no=numbering(list);
+  const out=SLOTS.map(()=>[]);
+  for(const e of rows)if(e.status!=='requested'&&names.has(e.member_id))out[e.slot].push({no:no.get(e.member_id),name:names.get(e.member_id)});
+  for(const slot of out)slot.sort((a,b)=>a.no-b.no);
+  return out;
+}
+async function publicBoard(env){
+  const [list,rows]=await Promise.all([members(env),entries(env)]);
+  // Names and 연번 only: no ids, no wishes, no link state.
+  return json({ok:true,event:BOOTH_EVENT,slots:SLOTS,board:numberedBoard(rows,list),member_count:list.length});
+}
 
 // ---------- member ----------
 async function memberFromKey(request,env,now){
@@ -116,7 +131,8 @@ async function memberFromKey(request,env,now){
 async function memberView(env,member,now){
   const [list,rows]=await Promise.all([members(env),entries(env)]);
   const mine={};for(const e of rows)if(e.member_id===member.id)mine[e.slot]=e.status;
-  return json({ok:true,event:BOOTH_EVENT,member:{name:member.name},slots:SLOTS,mine,board:board(rows,list),
+  return json({ok:true,event:BOOTH_EVENT,member:{name:member.name,no:numbering(list).get(member.id)??null},slots:SLOTS,mine,
+    board:board(rows,list),board_numbered:numberedBoard(rows,list),
     writable:now<MEMBER_WRITES_CLOSE_AT,writes_close_at:nowIso(MEMBER_WRITES_CLOSE_AT)});
 }
 // Allowed member transitions. Anything else is refused; confirmation belongs to the administrator.
@@ -157,7 +173,7 @@ async function adminAuthority(request,env,resolveAuthority){
 async function adminView(env,authority,extra={}){
   const [list,rows]=await Promise.all([members(env),entries(env)]);
   return json({ok:true,event:BOOTH_EVENT,slots:SLOTS,
-    members:list.map(m=>({id:m.id,name:m.name,link_issued:Boolean(m.token_issued_at)})),
+    members:list.map((m,i)=>({id:m.id,no:i+1,name:m.name,link_issued:Boolean(m.token_issued_at)})),
     entries:rows.map(e=>({member_id:e.member_id,slot:e.slot,status:e.status,updated_by:e.updated_by})),
     viewer:{email:authority.email,scope:authority.scope},...extra});
 }
@@ -231,11 +247,15 @@ export async function handleCgmurrcBooth(request,env,options={}){
   const url=new URL(request.url);
   if(!isBoothApiPath(url.pathname))return null;
   const sub=url.pathname.slice(BOOTH_API_PREFIX.length).replace(/\/$/,'');
-  if(sub!=='/me'&&sub!=='/admin')return fail('NOT_FOUND','찾을 수 없습니다.',404);
+  if(sub!=='/me'&&sub!=='/admin'&&sub!=='/board')return fail('NOT_FOUND','찾을 수 없습니다.',404);
   if(!env?.DB)return fail('STORAGE_UNAVAILABLE','저장소를 사용할 수 없습니다.',503);
   if(!['GET','POST'].includes(request.method))return fail('METHOD_NOT_ALLOWED','허용되지 않은 요청입니다.',405,{allow:'GET, POST'});
   const now=typeof options.now==='function'?options.now():Date.now();
   try{
+    if(sub==='/board'){
+      if(request.method!=='GET')return fail('METHOD_NOT_ALLOWED','허용되지 않은 요청입니다.',405,{allow:'GET'});
+      return await publicBoard(env);
+    }
     if(sub==='/me'){
       const {member,error}=await memberFromKey(request,env,now);
       if(error)return error;

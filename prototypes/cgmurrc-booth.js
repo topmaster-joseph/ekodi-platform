@@ -16,7 +16,7 @@ function el(tag,props={},...children){const e=document.createElement(tag);Object
 
 function render(){
   const {member,slots,mine,board,writable}=view;
-  $('title').textContent=`${member.name}님의 근무표`;
+  $('title').textContent=`${member.no?member.no+'. ':''}${member.name}님의 근무표`;
   $('mine').hidden=false;$('all').hidden=false;
   $('slots').replaceChildren(...slots.map((slot,i)=>{
     const st=STATE[mine[i]||'none'];
@@ -27,10 +27,11 @@ function render(){
     return el('div',{className:'slot '+st.cls},time,el('div',{className:'state'},st.text),btn);
   }));
   $('board').replaceChildren(...slots.map((slot,i)=>{
-    const names=board[i]||[];
+    // 연번이 붙은 목록(board_numbered)을 우선 쓰고, 이전 서버 응답(이름 문자열)도 그대로 표시한다.
+    const names=(view.board_numbered?.[i]||(board[i]||[]).map(name=>({name,no:null})));
     const td=el('td');
     if(!names.length)td.append('—');
-    names.forEach((n,k)=>{if(k)td.append(', ');td.append(n===member.name?el('mark',{},n):n)});
+    names.forEach((p,k)=>{if(k)td.append(', ');const label=(p.no?`${p.no}. `:'')+p.name;td.append(p.name===member.name?el('mark',{},label):label)});
     return el('tr',{},el('td',{className:'t'},slot.label+(slot.tag?` (${slot.tag})`:'')),td);
   }));
   if(!writable)say('행사가 끝나 더 이상 바꿀 수 없습니다.');

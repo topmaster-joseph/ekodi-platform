@@ -89,7 +89,8 @@ async function act(body,done){
   }catch{say('인터넷 연결을 확인해 주세요.','err')}
   finally{busy=false;render()}
 }
-const nameOf=id=>view.members.find(m=>m.id===id)?.name||'';
+const nameOf=id=>{const m=view.members.find(x=>x.id===id);return m?label(m):''};
+const label=m=>(m.no?`${m.no}. `:'')+m.name;
 function statusMap(){const m=new Map();for(const e of view.entries)m.set(e.member_id+':'+e.slot,e.status);return m}
 function kakao(name,link){
   return `[청계면 도시재생 주민협의체] ${name}님, 10/28(수) 누구나 라면 부스 근무표입니다.\n아래 본인 전용 링크에서 배정된 시간을 확인하시고, 더 하실 수 있는 시간은 「이 시간도 할 수 있어요」를 눌러 주세요. 사무국장이 확정해 드립니다.\n${link}\n※ 본인 전용 링크이니 다른 분께 전달하지 마세요.`;
@@ -123,7 +124,7 @@ function render(){
       b.setAttribute('aria-label',`${m.name} ${view.slots[i].label} ${label||'비어 있음'}`);
       return el('td',{className:'s'},b);
     });
-    return el('tr',{},el('td',{className:'who'},m.name),...cells,el('td',{className:'s'},`${count}회`));
+    return el('tr',{},el('td',{className:'who'},label(m)),...cells,el('td',{className:'s'},`${count}회`));
   }));
   $('foot').replaceChildren(el('td',{},'인원'),...view.slots.map((_,i)=>{
     const n=view.entries.filter(e=>e.slot===i&&e.status!=='requested').length;
@@ -134,7 +135,7 @@ function render(){
     const got=issued.get(m.id);
     const linkCell=el('td',{},got?el('code',{},got.link):el('span',{className:'muted'},m.link_issued?'발급됨 (보안상 다시 볼 수 없음)':'미발급'));
     const label=m.link_issued?'재발급':'발급';
-    return el('tr',{},el('td',{className:'who'},m.name),linkCell,el('td',{},
+    return el('tr',{},el('td',{className:'who'},label(m)),linkCell,el('td',{},
       btn(label,()=>act({action:'issue_link',member_id:m.id})),' ',
       btn('삭제',()=>{if(confirmRemove(m))act({action:'remove_member',member_id:m.id},`${m.name}님을 명단에서 뺐습니다.`)},'danger')));
   }));
