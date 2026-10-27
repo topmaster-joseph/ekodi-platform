@@ -52,3 +52,14 @@ test('access-api and church-pastor-api read the account proof',()=>{
   const pastor=read('supabase/functions/church-pastor-api/index.ts');
   assert.match(pastor,/if\(verified\.length&&!verified\.includes\(email\)\)email=verified\[0\]/);
 });
+
+test('store and merchant portals accept any login path of a registered EKODI account',()=>{
+  const portal=read('customer-federated-auth.js');
+  assert.match(portal,/identity-api\/identities/);
+  assert.match(portal,/data\?\.person\?\.verifiedEmails/);
+  assert.match(portal,/async function findGrant\(db, tenantId, identity\)/);
+  assert.match(portal,/email: normalizeEmail\(grant\.email\)/);
+  assert.doesNotMatch(portal,/이 Google 계정은 해당 고객/);
+  // The legacy customer password endpoint stays disabled at the entry worker.
+  assert.match(read('customer-entry-worker.js'),/LEGACY_CUSTOMER_PASSWORD_PATHS = new Set\(\['\/api\/customer\/login'\]\)/);
+});
