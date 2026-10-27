@@ -19,10 +19,10 @@ import { handleAdminConfirmations, handleConfirmationPublic, handleWorkspaceConf
 // customer tenants/workspaces through the customer directory, never as EKODI services.
 const SERVICE_CATALOG = [
   { id: 'root', name: 'EKODI Root', domain: 'ekodi.kr', url: 'https://ekodi.kr', group: 'platform', defaultState: 'active', defaultMonitor: true },
-  { id: 'admin', name: 'EKODI Control Center', domain: 'admin.ekodi.kr', url: 'https://admin.ekodi.kr', group: 'platform', defaultState: 'active', defaultMonitor: true },
+  { id: 'admin', name: 'EKODI Control Center', domain: 'ekodi.kr/admin', url: 'https://ekodi.kr/admin', group: 'platform', defaultState: 'active', defaultMonitor: true },
   { id: 'api', name: 'EKODI API', domain: 'ekodi.kr', url: 'https://ekodi.kr/api/health', group: 'platform', defaultState: 'active', defaultMonitor: false },
   { id: 'biz', name: '에코디비즈', domain: 'biz.ekodi.kr', url: 'https://biz.ekodi.kr', group: 'business', defaultState: 'planned', defaultMonitor: false },
-  { id: 'trade', name: 'EKODI Global Trading', domain: 'trade.ekodi.kr', url: 'https://trade.ekodi.kr', group: 'business', defaultState: 'planned', defaultMonitor: false },
+  { id: 'trade', name: 'EKODI Global Trading', domain: 'ekodi.kr/ekodibiz/trade', url: 'https://ekodi.kr/ekodibiz/trade', group: 'business', defaultState: 'planned', defaultMonitor: false },
   { id: 'mall', name: '에코디몰', domain: 'ekodi.kr/ekodimall', url: 'https://ekodi.kr/ekodimall', group: 'business', defaultState: 'active', defaultMonitor: true },
   { id: 'pay', name: '에코디결제', domain: 'ekodi.kr/ekodipay', url: 'https://ekodi.kr/ekodipay', group: 'business', defaultState: 'planned', defaultMonitor: false },
   { id: 'insurance', name: '에코디보험', domain: 'ekodi.kr/insurance', url: 'https://ekodi.kr/insurance', group: 'business', defaultState: 'planned', defaultMonitor: false },
@@ -33,7 +33,7 @@ const SERVICE_CATALOG = [
   { id: 'media', name: '에코디미디어', domain: 'media.ekodi.kr', url: 'https://media.ekodi.kr', group: 'knowledge', defaultState: 'planned', defaultMonitor: false },
   { id: 'church', name: '에코디교회', domain: 'church.ekodi.kr', url: 'https://church.ekodi.kr', group: 'ministry', defaultState: 'active', defaultMonitor: true },
   { id: 'community', name: '커뮤니티', domain: 'ekodi.kr/community', url: 'https://ekodi.kr/community', group: 'ministry', defaultState: 'active', defaultMonitor: true },
-  { id: 'social', name: 'EKODI Social', domain: 'social.ekodi.kr', url: 'https://social.ekodi.kr/health', group: 'platform', defaultState: 'active', defaultMonitor: true }
+  { id: 'social', name: 'EKODI Social', domain: 'ekodi.kr/social', url: 'https://ekodi.kr/social', group: 'platform', defaultState: 'active', defaultMonitor: true }
 ];
 
 const VALID_STATES = new Set(['planned', 'active', 'paused']);
