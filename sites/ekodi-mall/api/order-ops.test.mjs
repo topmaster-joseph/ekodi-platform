@@ -55,3 +55,17 @@ test('full buyer view is audited; retry only for failed supply orders', async ()
   db.prepare("UPDATE supplier_orders SET status='unknown'").run();
   assert.equal((await handleOrderOpsRequest(req('/api/internal/operations/orders/ord_a/retry-supply', 'POST'), env)).status, 409);
 });
+
+test('orders can be filtered and summarised by source', async () => {
+  const { db, env } = setup();
+  db.prepare(`INSERT INTO products (id,seller_id,share_code,public_url,seller_display_name,seller_type,sale_type,category,name,price,status,created_at,updated_at,source_kind,source_name,source_contact)
+    VALUES ('prd_m','u-1','SCM','u','에코디몰','individual','direct','living','청계 햅쌀',30000,'published','t','t','consigned_merchant','청계상회 홍길동','010-1')`).run();
+  db.prepare("UPDATE orders SET product_id='prd_m' WHERE id='ord_b'").run();
+  const all = await handleOrderOpsRequest(req('/api/internal/operations/orders'), env);
+  assert.equal(all.body.orders.find((o) => o.id === 'ord_b').source.label, '상인 청계상회 홍길동');
+  assert.deepEqual(Object.keys(all.body.summary.bySource).sort(), ['domeggook', 'merchant']);
+  const merchant = await handleOrderOpsRequest(req('/api/internal/operations/orders?source=merchant'), env);
+  assert.deepEqual(merchant.body.orders.map((o) => o.id), ['ord_b']);
+  const dg = await handleOrderOpsRequest(req('/api/internal/operations/orders?source=domeggook'), env);
+  assert.deepEqual(dg.body.orders.map((o) => o.id), ['ord_a']);
+});

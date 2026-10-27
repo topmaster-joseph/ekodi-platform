@@ -8,17 +8,36 @@ const isoNow = () => new Date().toISOString();
 const maskName = (v) => { const s = String(v || ''); return s.length <= 1 ? s : s.length === 2 ? `${s[0]}*` : `${s[0]}${'*'.repeat(s.length - 2)}${s[s.length - 1]}`; };
 const region = (addr) => String(addr || '').split(/\s+/).slice(0, 2).join(' ');
 
-export async function listOrderOps(env, { status = '', limit = 50 } = {}) {
+// 제공 출처: 도매꾹·오너클랜(API 공급사) / 상인 위탁(상인명) / 에코디비즈 자체 / 일반 판매자
+export function sourceOf(row) {
+  if (row.supply_provider === 'domeggook') return { key: 'domeggook', label: '도매꾹' };
+  if (row.supply_provider === 'ownerclan') return { key: 'ownerclan', label: '오너클랜' };
+  if (row.source_kind === 'consigned_merchant') return { key: 'merchant', label: `상인 ${row.source_name || ''}`.trim(), contact: row.source_contact || '' };
+  if (row.source_kind === 'ekodibiz_own') return { key: 'ekodibiz', label: '에코디비즈 자체' };
+  return { key: 'general', label: '일반 판매' };
+}
+const SOURCE_SQL = {
+  domeggook: "p.supply_provider='domeggook'", ownerclan: "p.supply_provider='ownerclan'",
+  merchant: "p.supply_provider='' AND p.source_kind='consigned_merchant'", ekodibiz: "p.supply_provider='' AND p.source_kind='ekodibiz_own'",
+  general: "p.supply_provider='' AND p.source_kind NOT IN ('consigned_merchant','ekodibiz_own')"
+};
+
+export async function listOrderOps(env, { status = '', limit = 50, source = '' } = {}) {
   const lim = Math.max(1, Math.min(200, Number(limit) || 50));
-  const where = status === 'supply_issue' ? "WHERE s.status IN ('failed','unknown','cancel_requested')"
-    : status === 'paid' ? "WHERE o.status='paid'" : status === 'refunded' ? "WHERE o.status IN ('refunded','partially_refunded')" : '';
-  const rows = await env.DB.prepare(`SELECT o.id,o.status,o.quantity,o.gross_amount,o.created_at,o.paid_at,p.name AS product_name,p.share_code,p.supply_provider,p.supply_item_no,
+  const conds = [];
+  if (status === 'supply_issue') conds.push("s.status IN ('failed','unknown','cancel_requested')");
+  else if (status === 'paid') conds.push("o.status='paid'");
+  else if (status === 'refunded') conds.push("o.status IN ('refunded','partially_refunded')");
+  if (SOURCE_SQL[source]) conds.push(SOURCE_SQL[source]);
+  const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
+  const rows = await env.DB.prepare(`SELECT o.id,o.status,o.quantity,o.gross_amount,o.created_at,o.paid_at,p.name AS product_name,p.share_code,p.supply_provider,p.supply_item_no,p.source_kind,p.source_name,p.source_contact,
       b.name AS buyer_name,b.address1,s.status AS supply_status,s.supplier_order_no,s.supplier_status,s.tracking_company,s.tracking_code,s.last_error,s.expected_cost,s.updated_at AS supply_updated_at
     FROM orders o JOIN products p ON p.id=o.product_id LEFT JOIN order_buyers b ON b.order_id=o.id LEFT JOIN supplier_orders s ON s.order_id=o.id
     ${where} ORDER BY o.created_at DESC LIMIT ?`).bind(lim).all();
   const orders = (rows.results || []).map((r) => ({
     id: r.id, status: r.status, quantity: r.quantity, amount: r.gross_amount, createdAt: r.created_at, paidAt: r.paid_at,
     product: { name: r.product_name, shareCode: r.share_code, supplier: r.supply_provider || '', supplierItemNo: r.supply_item_no || '' },
+    source: sourceOf(r),
     buyer: r.buyer_name ? { name: maskName(r.buyer_name), region: region(r.address1) } : null,
     supply: r.supply_status ? { status: r.supply_status, orderNo: r.supplier_order_no || '', supplierStatus: r.supplier_status || '', trackingCompany: r.tracking_company || '',
       trackingCode: r.tracking_code || '', error: r.last_error || '', expectedCost: r.expected_cost, updatedAt: r.supply_updated_at } : null
@@ -31,6 +50,10 @@ export async function listOrderOps(env, { status = '', limit = 50 } = {}) {
     issues: await one("SELECT COUNT(*) n FROM supplier_orders WHERE status IN ('failed','unknown','cancel_requested')"),
     awaitingSupply: await one("SELECT COUNT(*) n FROM orders o JOIN products p ON p.id=o.product_id LEFT JOIN supplier_orders s ON s.order_id=o.id WHERE o.status='paid' AND p.supply_provider<>'' AND s.id IS NULL")
   };
+  const bySource = await env.DB.prepare(`SELECT CASE WHEN p.supply_provider<>'' THEN p.supply_provider WHEN p.source_kind='consigned_merchant' THEN 'merchant'
+      WHEN p.source_kind='ekodibiz_own' THEN 'ekodibiz' ELSE 'general' END AS k, COUNT(*) n, SUM(CASE WHEN o.status='paid' THEN o.gross_amount ELSE 0 END) amount
+    FROM orders o JOIN products p ON p.id=o.product_id GROUP BY k`).all();
+  summary.bySource = Object.fromEntries((bySource.results || []).map((r) => [r.k, { orders: Number(r.n || 0), paidAmount: Number(r.amount || 0) }]));
   const probe = await env.DB.prepare("SELECT result_status,metadata_json,checked_at FROM supplier_connector_checks WHERE external_ref='probe:login' ORDER BY checked_at DESC LIMIT 1").first().catch(() => null);
   let emoney = null; try { emoney = JSON.parse(probe?.metadata_json || '{}').emoney ?? null; } catch {}
   return { orders, summary, supplier: { domeggookLogin: probe?.result_status || 'unknown', emoney, checkedAt: probe?.checked_at || null } };
@@ -48,7 +71,7 @@ export async function handleOrderOpsRequest(request, env) {
   const auth = await authorizeVerificationOperations(request, env);
   if (!auth.ok) return { status: auth.status, body: { error: auth.error } };
   if (request.method === 'GET' && url.pathname === BASE) {
-    return { status: 200, body: { ...(await listOrderOps(env, { status: url.searchParams.get('status') || '', limit: url.searchParams.get('limit') })), actor: auth.actor } };
+    return { status: 200, body: { ...(await listOrderOps(env, { status: url.searchParams.get('status') || '', source: url.searchParams.get('source') || '', limit: url.searchParams.get('limit') })), actor: auth.actor } };
   }
   const detail = url.pathname.match(/^\/api\/internal\/operations\/orders\/([A-Za-z0-9_-]{4,80})\/buyer$/);
   if (request.method === 'GET' && detail) {

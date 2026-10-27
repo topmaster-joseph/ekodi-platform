@@ -6,7 +6,7 @@
   if (!window.supabase) return;
   const sb = window.supabase.createClient(SUPABASE_URL, PUBLISHABLE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
   const $ = (s) => document.querySelector(s);
-  const ui = { status: $('#opsStatus'), login: $('#opsLogin'), logout: $('#opsLogout'), reload: $('#opsReload'), filter: $('#opsFilter'), summary: $('#opsSummary'), supplier: $('#opsSupplier'), list: $('#opsList') };
+  const ui = { status: $('#opsStatus'), login: $('#opsLogin'), logout: $('#opsLogout'), reload: $('#opsReload'), filter: $('#opsFilter'), source: $('#opsSource'), bySource: $('#opsBySource'), summary: $('#opsSummary'), supplier: $('#opsSupplier'), list: $('#opsList') };
   const won = (v) => `${new Intl.NumberFormat('ko-KR').format(Number(v) || 0)}원`;
   const when = (v) => (v ? new Date(v).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
@@ -25,7 +25,7 @@
   }
   async function exchangeCentralToken() { const p = new URLSearchParams(location.hash.slice(1)); const t = p.get('ekodi_token'); if (!t) return; const { error } = await sb.auth.verifyOtp({ token_hash: t, type: p.get('ekodi_type') || 'email' }); if (error) throw error; history.replaceState(null, '', location.pathname + location.search); }
   function login() { const a = new URL('https://ekodi.kr/auth/'); a.searchParams.set('site', 'mall-seller'); a.searchParams.set('return_to', location.href.split('#')[0]); location.assign(a.href); }
-  function sync() { const on = Boolean(session); ui.login.hidden = on; ui.logout.hidden = !on; ui.reload.disabled = !on; ui.filter.disabled = !on; }
+  function sync() { const on = Boolean(session); ui.login.hidden = on; ui.logout.hidden = !on; ui.reload.disabled = !on; ui.filter.disabled = !on; if (ui.source) ui.source.disabled = !on; }
   function badge(map, key) { const [t, c] = map[key] || [key || '-', 'mute']; return el('span', `oo-badge ${c}`.trim(), t); }
   function render(data) {
     const s = data.summary || {};
@@ -33,13 +33,15 @@
       const a = el('article', k === '발주 문제' && v ? 'alert' : ''); a.append(el('small', '', k), el('strong', '', String(v || 0))); return a; }));
     const sup = data.supplier || {};
     ui.supplier.textContent = `도매꾹 자동로그인 ${sup.domeggookLogin === 'ok' ? '정상' : '확인필요'} · 이머니 잔액 ${sup.emoney == null ? '확인필요' : won(sup.emoney)}${sup.checkedAt ? ` (${when(sup.checkedAt)} 확인)` : ''}`;
+    const names = { domeggook: '도매꾹', ownerclan: '오너클랜', merchant: '상인 위탁', ekodibiz: '에코디비즈 자체', general: '일반 판매' };
+    if (ui.bySource) ui.bySource.textContent = '출처별 주문 · ' + (Object.entries(s.bySource || {}).map(([k, v]) => `${names[k] || k} ${v.orders}건(결제 ${won(v.paidAmount)})`).join(' · ') || '아직 없음');
     const orders = data.orders || [];
     if (!orders.length) { ui.list.replaceChildren(el('p', 'empty', '해당하는 주문이 없습니다.')); return; }
     ui.list.replaceChildren(...orders.map((o) => {
       const card = el('article', 'oo-card');
       const top = el('div', 'oo-row'); const title = el('h3', '', o.product?.name || '상품');
       top.append(title, el('strong', '', won(o.amount)));
-      const meta = el('div', 'oo-meta'); meta.append(badge(ORDER, o.status), document.createTextNode(`${when(o.paidAt || o.createdAt)} · 수량 ${o.quantity} · 주문 ${o.id}${o.buyer ? ` · ${o.buyer.name} (${o.buyer.region})` : ''}`));
+      const meta = el('div', 'oo-meta'); meta.append(el('span', 'oo-src', o.source?.label || '일반 판매'), badge(ORDER, o.status), document.createTextNode(`${when(o.paidAt || o.createdAt)} · 수량 ${o.quantity} · 주문 ${o.id}${o.buyer ? ` · ${o.buyer.name} (${o.buyer.region})` : ''}`));
       card.append(top, meta);
       if (o.product?.supplier) {
         const box = el('div', 'oo-supply');
@@ -58,13 +60,14 @@
     }));
   }
   async function load() {
-    try { setStatus('주문을 불러오는 중입니다...'); const q = ui.filter.value ? `?status=${encodeURIComponent(ui.filter.value)}` : ''; const data = await api(`/api/internal/operations/orders${q}`); render(data); setStatus(`불러왔습니다 · ${data.actor || ''}`); }
+    try { setStatus('주문을 불러오는 중입니다...'); const qs = new URLSearchParams(); if (ui.filter.value) qs.set('status', ui.filter.value); if (ui.source?.value) qs.set('source', ui.source.value); const q = qs.toString() ? `?${qs}` : ''; const data = await api(`/api/internal/operations/orders${q}`); render(data); setStatus(`불러왔습니다 · ${data.actor || ''}`); }
     catch (e) { setStatus(e.message, true); }
   }
   ui.login.addEventListener('click', login);
   ui.logout.addEventListener('click', async () => { await sb.auth.signOut(); session = null; sync(); ui.list.replaceChildren(el('p', 'empty', '로그아웃했습니다.')); });
   ui.reload.addEventListener('click', load);
   ui.filter.addEventListener('change', load);
+  ui.source?.addEventListener('change', load);
   (async () => { try { await exchangeCentralToken(); } catch (e) { setStatus(e.message, true); } session = (await sb.auth.getSession()).data.session; sync(); if (session) load(); })();
   sb.auth.onAuthStateChange((_e, s) => { session = s; sync(); });
 })();
