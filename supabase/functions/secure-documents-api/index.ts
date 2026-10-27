@@ -225,6 +225,26 @@ async function handleRevoke(req,who,body){
  await audit("share_revoked",who.personId,share.document_id,share.id);
  return json(req,{ok:true,revoked:true});
 }
+async function handleDeletionRequest(req,who,body){
+ if(!who.aal2)return deny(req,"STEP_UP_REQUIRED");
+ const record=await requireRecord(who,body.document_id);
+ if(!record)return deny(req,"DOCUMENT_FORBIDDEN");
+ if(record.status==="deletion_pending")return json(req,{ok:true,deletion_pending:true,storage_purged:false,backup_purged:false});
+ if(!["active","archived"].includes(record.status))return deny(req,"DELETE_STATE_INVALID",409);
+ // Cut off every subsequent owner read and recipient open before any asynchronous purge.
+ // A request is NOT a claim that physical objects or provider backups were deleted.
+ const {data:changed,error}=await admin.from("secure_document_records")
+   .update({status:"deletion_pending",updated_at:new Date().toISOString()})
+   .eq("id",record.id).eq("status",record.status).select("id").maybeSingle();
+ if(error)return deny(req,"DELETE_REQUEST_FAILED",503);
+ if(!changed)return deny(req,"DELETE_STATE_CHANGED",409);
+ const {error:grantError}=await admin.from("secure_document_shares")
+   .update({status:"revoked",revoked_at:new Date().toISOString()})
+   .eq("document_id",record.id).eq("status","active");
+ if(grantError)return deny(req,"DELETE_GRANT_RECONCILIATION_PENDING",503);
+ await audit("deletion_requested",who.personId,record.id);
+ return json(req,{ok:true,deletion_pending:true,storage_purged:false,backup_purged:false});
+}
 async function handleOpen(req,who,body){
  if(!who.aal2)return deny(req,"STEP_UP_REQUIRED");
  const plain=str(body.token,100);
@@ -283,6 +303,7 @@ Deno.serve(async req=>{
      if(!body||typeof body!=="object")return deny(req,"INVALID_JSON",400);
      if(action==="share")return handleShare(req,who,body);
      if(action==="revoke")return handleRevoke(req,who,body);
+     if(action==="delete_request")return handleDeletionRequest(req,who,body);
      if(action==="open")return handleOpen(req,who,body);
      if(action==="read")return handleRead(req,who,body);
    }

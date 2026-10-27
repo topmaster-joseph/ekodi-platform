@@ -60,7 +60,7 @@ export async function mountSecureDocuments(root,opts={}){
  async function refresh(){
    const records=(await request("list")).records||[];
    if(!records.length){list.innerHTML='<p class="secure-empty">등록한 문서가 없습니다.</p>';return;}
-   list.innerHTML=records.map(d=>`<article class="secure-doc" data-id="${esc(d.id)}"><div><strong>${esc(d.title)}</strong><small>${esc(DEFAULT_KINDS[d.kind]||d.kind)} · ${esc(d.status)} · 등록 ${esc(String(d.created_at||"").slice(0,10))}${d.issued_on?" · 발급 "+esc(d.issued_on):""}${d.valid_until?" · 유효 "+esc(d.valid_until):""}</small></div><div class="secure-row-actions"><button type="button" data-read>내 원본 열기</button><button type="button" data-share>기간제 공유</button><button type="button" data-shares>공유내역·철회</button></div><div class="secure-share-list" data-share-list hidden></div></article>`).join("");
+   list.innerHTML=records.map(d=>`<article class="secure-doc" data-id="${esc(d.id)}"><div><strong>${esc(d.title)}</strong><small>${esc(DEFAULT_KINDS[d.kind]||d.kind)} · ${esc(d.status)} · 등록 ${esc(String(d.created_at||"").slice(0,10))}${d.issued_on?" · 발급 "+esc(d.issued_on):""}${d.valid_until?" · 유효 "+esc(d.valid_until):""}</small></div><div class="secure-row-actions">${d.status==="deletion_pending"?'<span class="secure-deletion-pending">삭제 요청됨 · 접근 차단 · 물리삭제 확인 대기</span>':'<button type="button" data-read>내 원본 열기</button><button type="button" data-share>기간제 공유</button><button type="button" data-shares>공유내역·철회</button><button type="button" data-delete-request>삭제 요청</button>'}</div><div class="secure-share-list" data-share-list hidden></div></article>`).join("");
  }
  const openBlob=(blob)=>{
    const url=URL.createObjectURL(blob);
@@ -108,6 +108,13 @@ export async function mountSecureDocuments(root,opts={}){
      const shares=response.shares||[];
      target.innerHTML=shares.length?shares.map(s=>`<p><span>공유 ${esc(String(s.created_at||"").slice(0,16).replace("T"," "))} · 만료 ${esc(String(s.expires_at||"").slice(0,16).replace("T"," "))} · ${esc(s.status)} · 열람 ${Number(s.view_count)||0}/${Number(s.max_views)||1}</span>${s.status==="active"?`<button type="button" data-revoke data-share-id="${esc(s.id)}">즉시 철회</button>`:""}</p>`).join(""):"<p>공유내역이 없습니다.</p>";
      target.hidden=false;
+   });
+   if(btn.matches("[data-delete-request]"))run(async()=>{
+     if(!confirm("이 문서의 열람·공유를 즉시 차단하고 삭제 처리를 요청합니까? 물리삭제·백업삭제 완료를 의미하지 않습니다."))return;
+     const result=await request("delete_request",{method:"POST",data:{document_id:doc}});
+     if(!result?.deletion_pending)throw new Error("삭제 요청 상태를 확인하지 못했습니다.");
+     await refresh();
+     tell("문서 접근을 차단했습니다. 원본 및 백업 정리는 보관 의무 검토 후 별도 확인됩니다.");
    });
    if(btn.matches("[data-revoke]"))run(async()=>{
      if(!confirm("이 공유권한을 즉시 철회합니까? 이미 내려받은 사본은 회수할 수 없습니다."))return;

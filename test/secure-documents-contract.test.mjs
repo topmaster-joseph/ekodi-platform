@@ -59,3 +59,15 @@ test('reusable site UI is not an authorization boundary',()=>{
  assert.match(widget,/name="issued_on"/);assert.match(widget,/name="valid_until"/);
  assert.match(api,/handleShares/);assert.match(api,/INVALID_DOCUMENT_DATES/);
 });
+
+test('deletion request is owner-verified, step-up gated and fails closed before physical purge',()=>{
+ assert.match(api,/async function handleDeletionRequest/);
+ assert.match(api,/if\(!who\.aal2\)return deny\(req,"STEP_UP_REQUIRED"\)/);
+ assert.match(api,/const record=await requireRecord\(who,body\.document_id\)/);
+ assert.match(api,/status:"deletion_pending"/);
+ assert.match(api,/DELETE_GRANT_RECONCILIATION_PENDING/);
+ assert.match(api,/storage_purged:false,backup_purged:false/);
+ assert.match(api,/action==="delete_request"/);
+ assert.ok(widget.includes('data-delete-request'));
+ assert.ok(widget.includes('물리삭제 확인 대기'));
+});

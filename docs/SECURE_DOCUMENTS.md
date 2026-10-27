@@ -46,3 +46,9 @@ await mountSecureDocuments(document.querySelector("#secure-documents"), {
 ```
 
 Personal mode: `mountSecureDocuments(element, {scope:"person"})`. All actual authorization is reverified by the central API; simply mounting or supplying an identifier never grants document access. Share recipients require verified EKODI authentication plus a recent strong MFA step-up to open the document. This adapter is a source integration contract; it is not yet live on every site.
+
+## Deletion request (access cut-off, not physical purge)
+- After verified EKODI authentication and recent MFA, an owner/tenant steward may request `delete_request`. This changes the record to `deletion_pending` with an optimistic status check. All subsequent owner reads and recipient opens reject pending records.
+- Active recipient grants are revoked in the same request where possible. If grant reconciliation fails, the record remains non-active and the caller receives an explicit retryable failure.
+- The result explicitly returns `storage_purged:false` and `backup_purged:false`; UI labels the document as awaiting physical deletion verification. No SQL-delete of Storage objects is attempted.
+- Actual object deletion, legal holds, retention periods, idempotent purge receipts, backup lifecycle, and scheduling remain *not implemented*. Do not claim fulfillment of data erasure requests until the storage API removal and backup policy are independently verified.

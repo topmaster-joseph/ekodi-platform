@@ -35,6 +35,10 @@ export function auditSecureDocuments({policy,release,sql,edge,widget}) {
     edge.includes('tenant_admin'),'verified central person and tenant authorization required');
   fail(edge.includes('recipientMac(who.email)')&&edge.includes('who.aal2') &&
     edge.includes('.lt("view_count",share.max_views)'),'verified recipient MFA, view count and expiry required');
+  fail(edge.includes('handleDeletionRequest')&&edge.includes('status:"deletion_pending"')&&
+    edge.includes('DELETE_GRANT_RECONCILIATION_PENDING')&&
+    edge.includes('storage_purged:false,backup_purged:false'),
+    'deletion must revoke access before asynchronous purge and never claim erased backups');
   fail(edge.includes('redaction_verified===true')&&edge.includes('pii_safe===true')&&
     edge.includes('engine_verified===true'),'independent file scan/redaction evidence required');
   fail(!/createSignedUrl|createSignedUploadUrl|publicUrl/.test(edge),'persistent signed URLs forbidden');
