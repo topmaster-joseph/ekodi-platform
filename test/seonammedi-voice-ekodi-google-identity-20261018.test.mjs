@@ -33,7 +33,7 @@ test('EKODI-verified Google login (Supabase email session + active current googl
   const r=await sessionWith(()=>Response.json({person:{id:'p'},identities:[
     {provider:'google',status:'active',is_current:true,email:'writer@example.com'}]}),{record});
   assert.equal(r.status,200);
-  assert.deepEqual(r.body,{ok:true,authenticated:true,provider:'google',email:'writer@example.com'});
+  assert.deepEqual(r.body,{ok:true,authenticated:true,provider:'ekodi',email:'writer@example.com'});
   const idCall=record.find(x=>x.path==='/functions/v1/identity-api/identities');
   assert.ok(idCall,'canonical EKODI identity registry must be consulted');
   assert.equal(idCall.headers.authorization,'Bearer fixture-email-session','the same user token is verified, never a service secret');
@@ -83,4 +83,17 @@ test('the same canonical check gates the write API, not only the session probe',
       body:JSON.stringify({message:'시민의견'})}),{BOARD_DB:{prepare(){throw new Error('must not touch storage')}}});
     assert.equal(res.status,401);
   }finally{globalThis.fetch=oldFetch}
+});
+
+// 2026-10-27: every login path is the same EKODI account. A Naver/Kakao session is
+// accepted through the same registry proof, and the account's verified email is used
+// instead of the internal alias email the session carries.
+test('a Naver or Kakao login of the same EKODI account may write, as the account email',async()=>{
+  for(const provider of ['naver','kakao']){
+    const aliasUser={...emailSessionUser,email:`identity+${provider}.0123456789abcdef0123456789abcdef@ekodi.kr`};
+    const r=await sessionWith(()=>Response.json({person:{id:'p',ekodiId:'EK1',accountEmail:'writer@example.com'},identities:[
+      {provider:'google',status:'active',is_current:false},{provider,status:'active',is_current:true}]}),{user:aliasUser});
+    assert.equal(r.status,200);
+    assert.deepEqual(r.body,{ok:true,authenticated:true,provider:'ekodi',email:'writer@example.com'});
+  }
 });

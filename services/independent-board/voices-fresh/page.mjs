@@ -76,7 +76,7 @@ export const freshVoiceClient = String.raw`
       try{
         const r=await fetch(root+'/api/auth/session',{headers:{authorization:'Bearer '+candidate},cache:'no-store'});
         const d=await r.json().catch(()=>({}));
-        if(r.ok&&d?.authenticated===true&&d?.provider==='google')return candidate;
+        if(r.ok&&d?.authenticated===true&&(d?.provider==='ekodi'||d?.provider==='google'))return candidate;
       }catch{}
     }
     return null;

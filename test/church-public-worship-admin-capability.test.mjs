@@ -12,6 +12,7 @@ function endpoint({role='pastor',bearer=true,method='GET',from=origin,registryAd
     const path=String(url);
     calls.push({path,method:init.method||'GET'});
     if(path.includes('/auth/v1/user'))return new Response(JSON.stringify({id:'verified-user-id',email:'church-operator@example.invalid',email_confirmed_at:'2026-10-01T00:00:00Z'}),{status:200});
+    if(path.includes('/rest/v1/rpc/ekodi_account_for_auth_user'))return new Response(JSON.stringify({person_id:'p',verified_emails:['church-operator@example.invalid'],providers:['google']}),{status:200});
     if(path.includes('/rest/v1/rpc/church_pastor_staff_for_user'))return new Response(JSON.stringify(role.startsWith('registry_')?null:{role}),{status:200});
     if(path.includes('/rest/v1/site_access_registry')){
       assert.match(path,/site_key=eq.church/);
@@ -33,14 +34,14 @@ test('worship edit capability follows church tenant-admin RLS, not staff role al
     const response=await api.run();
     assert.equal(response.status,403,role);
     assert.equal((await response.json()).error,'ROLE_NOT_ALLOWED');
-    assert.equal(api.calls.length,3,'verified user, staff RPC and user-scoped church registry');
+    assert.equal(api.calls.length,4,'verified user, EKODI account proof, staff RPC and user-scoped church registry');
   }
   for(const role of ['pastor','senior_pastor','staff','worship_admin','viewer','church_finance']){
     const api=endpoint({role,registryAdmin:true});
     const response=await api.run();
     assert.equal(response.status,200,role);
     assert.deepEqual(JSON.parse(await response.text()),{ok:true,permissions:{worship:true},churchSlug:'ekodi-church'});
-    assert.equal(api.calls.length,3,'tenant admin grant is verified for all staff types');
+    assert.equal(api.calls.length,4,'tenant admin grant is verified for all staff types');
   }
 });
 test('RLS-scoped tenant administrator has worship access without a church_staff row',async()=>{
@@ -48,22 +49,22 @@ test('RLS-scoped tenant administrator has worship access without a church_staff 
   const response=await api.run();
   assert.equal(response.status,200);
   assert.deepEqual(JSON.parse(await response.text()),{ok:true,permissions:{worship:true},churchSlug:'ekodi-church'});
-  assert.equal(api.calls.length,3);
+  assert.equal(api.calls.length,4);
 });
 test('active church tenant admin overrides an unrelated read-only staff role only for worship scope',async()=>{
   const api=endpoint({role:'viewer',registryAdmin:true});
   const response=await api.run();
   assert.equal(response.status,200);
   assert.deepEqual(JSON.parse(await response.text()),{ok:true,permissions:{worship:true},churchSlug:'ekodi-church'});
-  assert.equal(api.calls.length,3,'central user, verified church staff, then user-scoped church tenant registry');
-  assert.equal(api.calls[2].method,'GET');
+  assert.equal(api.calls.length,4,'central user, verified church staff, then user-scoped church tenant registry');
+  assert.equal(api.calls[3].method,'GET');
 });
 test('finance-only church staff remains denied even with no church tenant admin grant',async()=>{
   const api=endpoint({role:'church_finance'});
   const response=await api.run();
   assert.equal(response.status,403);
   assert.equal((await response.json()).error,'ROLE_NOT_ALLOWED');
-  assert.equal(api.calls.length,3,'non-worship role must be verified against user-scoped registry');
+  assert.equal(api.calls.length,4,'non-worship role must be verified against user-scoped registry');
 });
 test('worship capability endpoint rejects guests, mutation requests and foreign origin',async()=>{
   const guest=endpoint({bearer:false});

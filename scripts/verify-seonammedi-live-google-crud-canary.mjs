@@ -54,7 +54,7 @@ export async function runCanary({
   for(const origin of HOSTS){
     for(const [role,token] of [['writer',writerToken],['admin',adminToken]]){
       const proof=expect(await http(origin+'/api/auth/session',{token}),200,role+'_session');
-      if(proof.authenticated!==true||proof.provider!=='google'||!proof.email)fail(role+'_not_verified_Google');
+      if(proof.authenticated!==true||!['ekodi','google'].includes(proof.provider)||!proof.email)fail(role+'_not_verified_Google');
       identities[role].push(String(proof.email).toLowerCase());
     }
     const denied=await http(origin+'/api/voices-fresh/admin',{token:writerToken});
