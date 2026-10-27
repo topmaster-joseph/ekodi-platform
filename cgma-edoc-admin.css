@@ -107,3 +107,15 @@
   .cgma-edoc-chain{display:grid;grid-template-columns:minmax(0,1fr);overflow:visible}
   .cgma-edoc-chain li{min-width:0}
 }
+/* ---- 화면 구조: 상단 요약 상자 대신 목록 상태 막대 ---- */
+.cgma-edoc-intro{margin:0;color:#5b6b69;font-size:14px}
+.cgma-edoc-spacer{flex:1 1 auto}
+.cgma-edoc-statusbar{display:flex;flex-wrap:wrap;gap:6px}
+.cgma-edoc-chip{font:inherit;font-size:14px;display:inline-flex;gap:6px;align-items:center;padding:6px 12px;min-height:36px;border-radius:999px;border:1px solid #d6e0de;background:#fff;color:#3d4f4d;cursor:pointer}
+.cgma-edoc-chip strong{font-weight:700;color:#14302f}
+.cgma-edoc-chip[aria-pressed="true"]{background:#0f5f5c;border-color:#0f5f5c;color:#fff}
+.cgma-edoc-chip[aria-pressed="true"] strong{color:#fff}
+.cgma-edoc-head-actions{margin-left:auto}
+.cgma-edoc-head-actions .cgma-edoc-btn{min-height:36px;padding:6px 12px;font-size:14px}
+@media (max-width:640px){.cgma-edoc-head-actions{margin-left:0;width:100%}.cgma-edoc-spacer{display:none}}
+#summaryCards[hidden],.cards[hidden]{display:none!important}

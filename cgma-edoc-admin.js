@@ -3,7 +3,7 @@
 // by the Control API (cgma tenant authority or super_admin). Rendering uses textContent/DOM only and
 // signatures are inline SVG built from vector strokes, so the admin CSP (default-src 'self') holds.
 const API='/api/cgma/edocs';
-const STYLE='/cgma/admin/assets/cgma-edoc-admin.css?v=css-790581e33a';
+const STYLE='/cgma/admin/assets/cgma-edoc-admin.css?v=css-d897158e60';
 const SVG_NS='http://www.w3.org/2000/svg';
 const STATUS=Object.freeze({draft:'초안',in_progress:'서명 진행 중',completed:'서명 완료',archived:'보관',cancelled:'취소'});
 const statusOf=doc=>doc.archived?'archived':doc.status;
@@ -109,33 +109,39 @@ export async function mountCgmaEdocAdmin({root,summaryRoot,getToken,state=()=>{}
     if(navigator.share){try{await navigator.share({title,text});return}catch(error){if(error?.name==='AbortError')return}}
     await copy(text,'서명 요청 문구');
   }
-  function cards(summary){
-    summaryRoot.replaceChildren(...[['서명 진행 중',summary.in_progress,'링크 발송 후 서명 대기'],['서명 완료',summary.completed,'순차 서명 확정'],
-      ['보관 문서',summary.archived,'서명 없이 기록 보관'],['초안',summary.draft,'등록 · 서명 요청 전'],['취소',summary.cancelled,'기록 보존']].map(([label,n,hint])=>
-      el('article',{className:'card'},[el('span',{text:label}),el('strong',{text:String(n||0)}),el('small',{text:hint})])));
-  }
+  // The shell's summary cards are not used here: counts live in the list's status bar instead. The cards area is
+  // hidden while this menu is open and shows again as soon as another menu fills it.
+  summaryRoot.replaceChildren();summaryRoot.hidden=true;
+  const cardsWatch=typeof MutationObserver==='function'?new MutationObserver(()=>{if(summaryRoot.childElementCount)summaryRoot.hidden=false;}):null;
+  cardsWatch?.observe(summaryRoot,{childList:true});
+  const STATUS_BAR=[['','전체'],['in_progress','서명 진행'],['completed','서명 완료'],['archived','보관'],['draft','초안'],['cancelled','취소']];
 
   // ---------- list ----------
   async function showList(){
     state('불러오는 중');
     const params=new URLSearchParams(Object.entries(filters).filter(([,v])=>v));
     const data=await request(params.toString()?`?${params}`:'');
-    cards(data.summary||{});
-    const statusSelect=el('select',{attrs:{'aria-label':'상태'}},[el('option',{text:'전체 상태',attrs:{value:''}}),...Object.entries(STATUS).map(([v,t])=>el('option',{text:t,attrs:{value:v}}))]);
-    statusSelect.value=filters.status;
+    const sum=data.summary||{};
+    const total=['draft','in_progress','completed','archived','cancelled'].reduce((n,k)=>n+Number(sum[k]||0),0);
+    const statusBar=el('div',{className:'cgma-edoc-statusbar',attrs:{role:'group','aria-label':'상태별 보기'}},STATUS_BAR.map(([value,label])=>{
+      const b=button('',()=>{filters={...filters,status:value};showList().catch(fail);},'cgma-edoc-chip');
+      b.append(el('span',{text:label}),el('strong',{text:String(value?Number(sum[value]||0):total)}));
+      b.setAttribute('aria-pressed',filters.status===value?'true':'false');
+      return b;
+    }));
     const yearNow=new Date().getFullYear();
     const yearSelect=el('select',{attrs:{'aria-label':'연도'}},[el('option',{text:'전체 연도',attrs:{value:''}}),...[0,1,2,3].map(i=>el('option',{text:`${yearNow-i}년`,attrs:{value:String(yearNow-i)}}))]);
     yearSelect.value=filters.year;
     const search=el('input',{attrs:{type:'search',placeholder:'제목·문서번호·분류 검색','aria-label':'검색'}});
     search.value=filters.q;
-    const apply=()=>{filters={status:statusSelect.value,year:yearSelect.value,q:search.value.trim()};showList().catch(fail);};
-    statusSelect.addEventListener('change',apply);yearSelect.addEventListener('change',apply);
+    const apply=()=>{filters={status:filters.status,year:yearSelect.value,q:search.value.trim()};showList().catch(fail);};
+    yearSelect.addEventListener('change',apply);
     search.addEventListener('keydown',event=>{if(event.key==='Enter')apply();});
     const rows=(data.documents||[]).map(doc=>{
       const tr=el('tr',{className:'cgma-edoc-row',attrs:{tabindex:'0'}},[
         el('td',{className:'cgma-edoc-serial',text:doc.serial_no==null?'':String(doc.serial_no)}),
         el('td',{text:doc.doc_no}),el('td',{text:doc.source_url?`${doc.title} 🔗`:doc.title}),el('td',{text:doc.category}),
-        el('td',{text:doc.mode==='archive'?'보관':doc.status==='draft'?'-':`${doc.status==='completed'?doc.signer_count:Math.max(0,doc.current_seq-1)}/${doc.signer_count}`}),
+        el('td',{text:doc.mode==='archive'||doc.status==='draft'?'-':`${doc.status==='completed'?doc.signer_count:Math.max(0,doc.current_seq-1)}/${doc.signer_count}`}),
         el('td',{},[el('span',{className:'cgma-edoc-badge',text:STATUS[statusOf(doc)]||doc.status,attrs:{'data-status':statusOf(doc)}})]),
         el('td',{text:doc.doc_date?doc.doc_date.replaceAll('-','. ')+'.':kstDate(doc.created_at)}),el('td',{text:kstDate(doc.completed_at)})]);
       const open=()=>showDetail(doc.id).catch(fail);
@@ -143,7 +149,8 @@ export async function mountCgmaEdocAdmin({root,summaryRoot,getToken,state=()=>{}
       return tr;
     });
     body.replaceChildren(
-      el('div',{className:'cgma-edoc-toolbar'},[button('+ 새 전자문서',()=>showForm(data),'cgma-edoc-btn primary'),button('일괄 등록',()=>showBulk(data)),statusSelect,yearSelect,search,button('검색',apply)]),
+      el('div',{className:'cgma-edoc-toolbar'},[button('+ 새 전자문서',()=>showForm(data),'cgma-edoc-btn primary'),button('일괄 등록',()=>showBulk(data)),el('span',{className:'cgma-edoc-spacer'}),yearSelect,search,button('검색',apply)]),
+      statusBar,
       el('div',{className:'cgma-edoc-table-wrap'},[el('table',{className:'cgma-edoc-table'},[
         el('thead',{},[el('tr',{},['연번','문서번호','제목','분류','서명','상태','문서일자','완료일'].map(t=>el('th',{text:t})))]),
         el('tbody',{},rows.length?rows:[el('tr',{},[el('td',{className:'empty',text:'등록된 전자문서가 없습니다. ‘+ 새 전자문서’로 회의록·제안서 등을 올려 서명을 받거나 보관하세요.',attrs:{colspan:'8'}})])]),
@@ -363,7 +370,7 @@ export async function mountCgmaEdocAdmin({root,summaryRoot,getToken,state=()=>{}
       }
       chain.append(li);
     }
-    const actions=el('div',{className:'cgma-edoc-actions'},[button('목록으로',()=>showList().catch(fail))]);
+    const actions=el('div',{className:'cgma-edoc-actions cgma-edoc-head-actions'});
     if(doc.status==='in_progress'){
       actions.append(button('서명 요청 문구 복사',()=>copy(signRequestText(doc,signers),'서명 요청 문구'),'cgma-edoc-btn primary'),
         button('공유하기',()=>share(signRequestText(doc,signers),doc.title)));
@@ -380,7 +387,7 @@ export async function mountCgmaEdocAdmin({root,summaryRoot,getToken,state=()=>{}
       try{await request(`/${doc.id}/cancel`,{method:'POST',body:JSON.stringify({reason:reason.trim()})});await showDetail(doc.id,'문서를 취소했습니다.');}catch(error){fail(error);}
     },'cgma-edoc-btn danger'));
     const nodes=[
-      el('div',{className:'cgma-edoc-head'},[button('← 목록',()=>showList().catch(fail),'cgma-edoc-btn cgma-edoc-back'),el('h3',{text:doc.title}),el('span',{className:'cgma-edoc-badge',text:STATUS[statusOf(doc)]||doc.status,attrs:{'data-status':statusOf(doc)}})]),
+      el('div',{className:'cgma-edoc-head'},[button('← 목록으로',()=>showList().catch(fail),'cgma-edoc-btn cgma-edoc-back'),el('h3',{text:doc.title}),el('span',{className:'cgma-edoc-badge',text:STATUS[statusOf(doc)]||doc.status,attrs:{'data-status':statusOf(doc)}}),actions]),
       el('section',{className:'cgma-edoc-panel cgma-edoc-overview'},[el('dl',{className:'cgma-edoc-meta'},[el('dt',{text:'문서번호'}),el('dd',{text:doc.doc_no}),el('dt',{text:'분류'}),el('dd',{text:doc.category}),
         el('dt',{text:'등록 목적'}),el('dd',{text:doc.mode==='archive'?'보관 (서명 없이 기록)':'순차 전자서명'}),
         doc.doc_date?el('dt',{text:'문서일자'}):null,doc.doc_date?el('dd',{text:doc.doc_date}):null,
@@ -430,8 +437,8 @@ export async function mountCgmaEdocAdmin({root,summaryRoot,getToken,state=()=>{}
       nodes[1]=el('div',{className:'cgma-edoc-detail-grid'},[nodes[1],draft]);
     }
     if(doc.content_kind==='text')nodes.push(el('details',{className:'cgma-edoc-text'},[el('summary',{text:'문서 본문 보기'}),el('pre',{text:doc.body_text})]));
-    if(doc.mode==='archive')nodes.push(actions);
-    else nodes.push(el('h3',{text:'서명 순서 (왼쪽부터 오른쪽)'}),chain,actions);
+    // A draft's order is edited in its 서명자 panel; the live chain matters once signing has started.
+    if(doc.mode!=='archive'&&doc.status!=='draft')nodes.push(el('h3',{text:'서명 순서 (왼쪽부터 오른쪽)'}),chain);
     if(doc.status==='completed'&&doc.mode!=='archive'){
       const grid=el('div',{className:'cgma-edoc-cert-grid'});
       for(const s of signers)grid.append(el('div',{},[el('strong',{text:`${s.seq}. ${s.role_title}`}),el('span',{text:` ${s.signed_name||s.signer_name}`}),
@@ -453,9 +460,8 @@ export async function mountCgmaEdocAdmin({root,summaryRoot,getToken,state=()=>{}
   function fail(error){setMessage(error?.message||'처리하지 못했습니다.',true);state('확인 필요');}
 
   root.replaceChildren(el('div',{className:'cgma-edoc'},[
-    el('div',{className:'cgma-edoc-intro'},[el('h2',{text:'전자문서 · 전자서명'}),
-      el('p',{text:'회의록·제안서 등 주요 문서를 파일이나 링크(구글 문서·드라이브)로 올리고 서명자에게 링크를 보내 순서대로(왼쪽부터) 서명을 받습니다. 서명 일시는 자동으로 기록되며, 완료된 문서는 위변조 확인값과 함께 영구 보관됩니다.'})]),
+    el('p',{className:'cgma-edoc-intro',text:'회의록·제안서 등 주요 문서를 파일이나 링크로 올려 순서대로(왼쪽부터) 서명받거나 서명 없이 영구 보관합니다.'}),
     status,body]));
   try{await showList();}catch(error){fail(error);}
-  return {refresh:()=>showList().catch(fail),dispose(){}};
+  return {refresh:()=>showList().catch(fail),dispose(){cardsWatch?.disconnect();summaryRoot.hidden=false;}};
 }
