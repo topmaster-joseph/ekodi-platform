@@ -1,3 +1,5 @@
+import { searchVerificationFileResponse } from './search-engine-verification.js';
+
 const CANONICAL = Object.freeze({
   'ekodichurch.kr': 'https://ekodi.kr/ekodichurch',
   'ekodilab.kr': 'https://ekodi.kr/ekodilab',
@@ -19,6 +21,13 @@ function prefixedPath(prefix, pathname) {
 export default {
   async fetch(request) {
     const incoming = new URL(request.url);
+
+    // Search-engine ownership files must answer 200 at the legacy domain's own root,
+    // not via a redirect to another host (Naver Search Advisor HTML file method).
+    if (request.method === 'GET' || request.method === 'HEAD') {
+      const verificationFile = searchVerificationFileResponse(incoming.pathname, { head: request.method === 'HEAD' });
+      if (verificationFile) return verificationFile;
+    }
     const prefix = PATH_PREFIX_ALIASES[incoming.hostname];
 
     if (prefix) {
