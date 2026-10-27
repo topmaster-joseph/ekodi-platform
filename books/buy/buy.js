@@ -48,7 +48,7 @@
     $('payNote').textContent = !open ? (preparing ? '판매용 전자책 파일을 마무리하고 있습니다. 준비되는 대로 이곳에서 바로 구매하실 수 있습니다.' : '에코디서점 결제를 여는 중입니다. 지금은 아래의 다른 판매처를 이용하실 수 있습니다.') : quote.checkout.testOnly ? '운영자 시험 결제 모드입니다(실제 청구 없음).' : quote.checkout.operator && quote.checkout.fileReady === false ? '운영자 확인용 결제입니다. 전자책 파일이 아직 없어 일반 고객에게는 판매가 열리지 않았습니다(실제 청구됩니다).' : '안전한 토스페이먼츠 결제창이 열립니다. 결제 후 바로 내 서재에서 받으실 수 있습니다.';
   }
   async function load() {
-    try { quote = await C.api(`/quote?book=${encodeURIComponent(bookId)}`); render(); }
+    try { quote = await C.api(`quote?book=${encodeURIComponent(bookId)}`); render(); }
     catch (e) { $('buyRoot').hidden = true; $('buyError').hidden = false; $('buyErrorText').textContent = e.message; }
   }
   async function pay() {
@@ -57,7 +57,7 @@
     if (!$('consent').checked) { msg('전자책 구매·환불 안내에 동의해 주세요.'); return; }
     busy = true; render();
     try {
-      const order = await C.api('/orders', { method: 'POST', body: { bookId: quote.book.id, consent: true, source } });
+      const order = await C.api('orders', { method: 'POST', body: { bookId: quote.book.id, consent: true, source } });
       if (typeof window.TossPayments !== 'function') throw new Error('결제 모듈을 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.');
       try { sessionStorage.setItem('ekodi-books-last-order', JSON.stringify({ orderId: order.orderId, bookId: quote.book.id })); } catch {}
       const request = { orderId: order.orderId, orderName: order.orderName, successUrl: order.successUrl, failUrl: order.failUrl, customerEmail: order.customerEmail, customerName: order.customerName };

@@ -16,11 +16,11 @@
   }
   async function load() {
     try {
-      const data = await C.api('/library');
+      const data = await C.api('library');
       $('libLogin').hidden = true;
       $('libStatus').textContent = `${data.email} · ${data.items.length}권`;
       const list = $('libraryList'); list.replaceChildren();
-      if (!data.items.length) { const p = document.createElement('p'); p.innerHTML = '아직 구매한 책이 없습니다. '; const a = document.createElement('a'); a.href = C.BASE + '/#catalog'; a.textContent = '출판 목록 보기 →'; p.append(a); list.append(p); return; }
+      if (!data.items.length) { const p = document.createElement('p'); p.innerHTML = '아직 구매한 책이 없습니다. '; const a = document.createElement('a'); a.href = `${C.BASE}/#catalog`; a.textContent = '출판 목록 보기 →'; p.append(a); list.append(p); return; }
       for (const item of data.items) {
         const row = document.createElement('article'); row.className = 'library-item';
         const info = document.createElement('div'); const h = document.createElement('h3'); h.textContent = item.title; const p = document.createElement('p');
@@ -42,7 +42,7 @@
     const host = $('operatorBooks'); host.replaceChildren();
     for (const book of books) {
       let state;
-      try { state = await C.api(`/admin/files/${encodeURIComponent(book.id)}`); } catch (e) { if (e.status === 403 || e.status === 401) return; continue; }
+      try { state = await C.api(`admin/files/${encodeURIComponent(book.id)}`); } catch (e) { if (e.status === 403 || e.status === 401) return; continue; }
       $('operatorPanel').hidden = false;
       const row = document.createElement('div'); row.className = 'op-row';
       const info = document.createElement('div'); const b = document.createElement('b'); b.textContent = book.title; const sm = document.createElement('small');
