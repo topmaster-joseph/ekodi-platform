@@ -1,4 +1,4 @@
-(() => {
+(async () => {
   'use strict';
 
   const MAP_ID = 'ekodiArchitectureMap';
@@ -6,6 +6,36 @@
   const healthHost = document.querySelector('#ekodiSystemHealth');
   const host = architectureHost || healthHost;
   if (!host || document.getElementById(MAP_ID)) return;
+
+  // A direct /admin/ops/architecture activation loads this appended script
+  // without the health demand-loader's stylesheet. Keep the admin menu runtime
+  // within its 10KB performance contract by loading styles from this module.
+  if (architectureHost) {
+    const cssPath='/system-health-admin.css';
+    const hasStyles=[...document.querySelectorAll('link[rel="stylesheet"]')].some(link=>{
+      try { return new URL(link.href,location.href).pathname===cssPath; }
+      catch { return false; }
+    });
+    if (!hasStyles) {
+      try {
+        await new Promise((resolve,reject)=>{
+          const link=document.createElement('link');
+          link.rel='stylesheet'; link.href=cssPath;
+          link.dataset.adminArchitectureStyle='true';
+          link.addEventListener('load',resolve,{once:true});
+          link.addEventListener('error',()=>reject(new Error('system structure stylesheet unavailable')),{once:true});
+          document.head.append(link);
+        });
+      } catch(error) {
+        console.error('[EKODI Admin] architecture stylesheet failed',error);
+        const message=document.createElement('p');
+        message.role='alert';message.dataset.architectureLoadError='true';
+        message.textContent='시스템 구조 화면 스타일을 불러오지 못했습니다. 페이지를 새로고침하여 다시 시도하세요.';
+        architectureHost.prepend(message);
+        return;
+      }
+    }
+  }
 
   const infrastructure = [
     ['GitHub', 'Source of Truth', '코드 · 변경이력 · 배포 기준'],
