@@ -1,0 +1,41 @@
+name: EKODI Mall SEO Probe
+
+# 운영자 진단용(읽기 전용): 사이트맵·robots·IndexNow 키·상품 페이지 메타를 실제 운영 주소에서 확인해 체크런 주석으로 남긴다.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Probe ekodi.kr discovery surfaces
+        shell: python
+        run: |
+          import re, urllib.request
+          UA = {'User-Agent': 'Mozilla/5.0 (compatible; EKODI-SEO-Probe/1.0)'}
+          def get(url):
+              try:
+                  with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=40) as r:
+                      return r.status, r.read().decode('utf-8', 'replace')
+              except Exception as e:
+                  return getattr(e, 'code', 0), ''
+          def note(title, msg):
+              print(f"::notice title={title}::{msg.replace(chr(10), ' ')[:900]}")
+          code, sm = get('https://ekodi.kr/sitemap.xml')
+          locs = re.findall(r'<loc>([^<]+)</loc>', sm)
+          mall = [u for u in locs if '/ekodimall/p/' in u]
+          note('sitemap', f'http={code} urls={len(locs)} mallProducts={len(mall)} sample={mall[0] if mall else "-"}')
+          code, robots = get('https://ekodi.kr/robots.txt')
+          note('robots', f'http={code} ' + ' / '.join(l for l in robots.splitlines() if re.search(r'sitemap|ekodimall', l, re.I))[:600])
+          code, _ = get('https://ekodi.kr/e4c0d1a7b29f43d8a65c712fe9b3048c.txt')
+          note('indexnow-key', f'http={code}')
+          def meta(html, pat):
+              m = re.search(pat, html, re.I)
+              return m.group(1)[:90] if m else '-'
+          for url in ([mall[0]] if mall else []) + ['https://ekodi.kr/ekodimall/']:
+              code, html = get(url)
+              note('page', f'{url} http={code} title={meta(html, r"<title>([^<]*)")} | desc={meta(html, r"name=.description. content=.([^\"]*)")} | og={meta(html, r"property=.og:image. content=.([^\"]*)")} | jsonld={html.count("application/ld+json")} | robots={meta(html, r"name=.robots. content=.([^\"]*)")}')
