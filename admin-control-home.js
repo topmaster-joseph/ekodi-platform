@@ -5,6 +5,7 @@ const app=document.getElementById('app');
 const readToken=()=>{try{return sessionStorage.getItem('ekodi-auth-token')||''}catch{return''}};
 let authorizedToken='';
 let verificationId=0;
+let verifying=false;
 function isSuperAdmin(){
   const token=readToken();
   return Boolean(token&&token===authorizedToken&&app&&!app.hidden);
@@ -15,7 +16,7 @@ function sync(){
   if(atHome&&!region){
     const main=app?.querySelector('main');
     if(!main)return;
-    if(!document.querySelector('link[data-ekodi-control-home-style]')){
+    if(!document.querySelector('link[data-ekodi-control-home-style],link[data-ekodi-postauth-style="admin-control-home.css"]')){
       const style=document.createElement('link');
       const currentScript=document.querySelector('script[src*="admin-authenticated-shell.js"]');
       const assetVersion=new URL(currentScript?.src||location.href).searchParams.get('v')||'1';
@@ -50,13 +51,18 @@ function sync(){
   }
   document.body.classList.toggle('admin-control-home',Boolean(atHome));
   if(region)region.hidden=!atHome;
+  // ADMIN-HOME-NO-FLASH-001: the assist command view stays held (CSS) until Control owns
+  // the home or the session is known not to be a super admin.
+  document.body.classList.toggle('admin-control-home-released',!atHome&&!pendingVerification());
 }
+function pendingVerification(){return verifying&&Boolean(readToken())}
 async function verify(){
   const token=readToken();
   const requestId=++verificationId;
   authorizedToken='';
+  verifying=Boolean(token&&app&&!app.hidden);
   sync();
-  if(!token||!app||app.hidden)return;
+  if(!verifying)return;
   try{
     const response=await fetch('/api/session',{
       headers:{authorization:'Bearer '+token},
@@ -71,6 +77,7 @@ async function verify(){
   }catch{
     // Fail closed when authority cannot be verified.
   }
+  if(requestId===verificationId)verifying=false;
   sync();
 }
 window.addEventListener('ekodi-admin-ready',()=>void verify());
@@ -79,6 +86,7 @@ window.addEventListener('ekodi-session-validated',event=>{
   const session=event.detail;
   verificationId++;
   authorizedToken=token&&session?.authenticated===true&&session.role==='super_admin'?token:'';
+  verifying=false;
   sync();
 });
 window.addEventListener('ekodi-admin-section-changed',sync);
