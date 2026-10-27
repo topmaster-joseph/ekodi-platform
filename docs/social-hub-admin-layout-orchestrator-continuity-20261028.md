@@ -32,3 +32,9 @@ This note is not an approval of any unsupported action and does not grant author
 - Guarded Admin/Shared Site staging and production release only through EKODI workflows.
 - First-party authenticated browser: actual canonical route, tab switching, site search, scoped OAuth connections, publishing mapping, policy save; desktop 1366×768 and mobile 390×844 / 360×800.
 - Missing real operational evidence remains pending, never mark `production-verified-complete` based on source CI alone.
+
+## Latest-main convergence refresh (2026-10-28)
+- Prior continuity check head `00decc1b8d5e9c3c92cf9c7e2f20689516bf3e0c`: all 9 substantive workflows completed successfully, including full `CI` and `EKODI AI Orchestration Gate`.
+- Another authorized main change (system map admin layout) was synchronized into official head `e3a9affd78fa5d62345c2768394d6f608f212630` after the preceding checks.
+- GitHub marked the synchronized head `action_required` due to bot authorship. This owner-authored documentation-only refresh wakes **real** current-head checks, rather than copying prior statuses or bypassing source/receipt enforcement.
+- No application, tests, workflow, credential, release gate or user data are altered. Require fresh current-head green CI and protected release before any production claim.
