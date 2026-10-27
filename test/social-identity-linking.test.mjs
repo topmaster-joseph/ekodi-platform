@@ -76,3 +76,26 @@ test('schema and routing preserve account sovereignty and existing protected API
   assert.match(routing,/'social-accounts':'accounts'/);
   assert.match(loader,/'social-accounts':\s*\{/);
 });
+
+
+test('if later enabled, registration always binds the verified EKODI ID and remains unverified',async()=>{
+  const sql=[],params=[],batches=[];
+  const db={
+    prepare(statement){sql.push(statement);return {bind(...values){params.push(values);return {statement,values}}}},
+    async batch(statements){batches.push(statements);return [{success:true},{success:true}]}
+  };
+  const env={EKODI_SOCIAL_IDENTITY_REGISTRATION_ENABLED:'true',DB:db};
+  const request=new Request(endpoint,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({
+    provider:'instagram',providerAccountId:'my.verified.later',displayName:'Account holder'
+  })});
+  const response=await handleSocialIdentityControl(request,env,actor);
+  const body=await response.json();
+  assert.equal(response.status,201);
+  assert.equal(body.status,'pending_provider_verification');
+  assert.equal(body.oauthLinked,false);
+  assert.equal(body.autoPublishingEnabled,false);
+  assert.equal(params[0][1],actor.userId);
+  assert.ok(batches[0].length===2);
+  assert.match(sql[0],/pending_provider_verification/);
+  assert.ok(!JSON.stringify(params).includes('access_token'));
+});
