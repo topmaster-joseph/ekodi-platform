@@ -3,7 +3,7 @@
  * Fresh citizen page: intentionally independent of legacy boardPage and
  * queue/publish polling. Existing EKODI shell/header is reused, not the old UI.
  */
-const content = '<style>body.board-voices .notice-search{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}body.board-voices .notice-search label{font-weight:600;font-size:13px}body.board-voices .notice-search input{flex:1 1 220px;max-width:420px;min-height:36px;border:1px solid #cbd5e1;border-radius:6px;padding:7px 10px;box-sizing:border-box}body.board-voices #freshStatus{font-size:13px;margin:8px 0}body.board-voices #freshStatus:empty{display:none}body.board-voices #freshForm{margin:12px 0;padding:14px;border:1px solid #d7dfe8;border-radius:8px}body.board-voices #freshForm[hidden]{display:none}body.board-voices #freshMessage{display:block;box-sizing:border-box;width:100%;min-height:140px;margin:8px 0;padding:10px;border:1px solid #cbd5e1;border-radius:6px}body.board-voices #freshTitle{display:block;box-sizing:border-box;width:100%;min-height:40px;margin:6px 0 10px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-weight:600}body.board-voices .voice-share{margin-top:8px}body.board-voices details.is-shared>summary{outline:2px solid #2b6cb0;outline-offset:2px;border-radius:6px}</style>'+
+const content = '<style>body.board-voices .notice-search{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}body.board-voices .notice-search label{font-weight:600;font-size:13px}body.board-voices .notice-search input{flex:1 1 220px;max-width:420px;min-height:36px;border:1px solid #cbd5e1;border-radius:6px;padding:7px 10px;box-sizing:border-box}body.board-voices #freshStatus{font-size:13px;margin:8px 0}body.board-voices #freshStatus:empty{display:none}body.board-voices #freshForm{margin:12px 0;padding:14px;border:1px solid #d7dfe8;border-radius:8px}body.board-voices #freshForm[hidden]{display:none}body.board-voices #freshMessage{display:block;box-sizing:border-box;width:100%;min-height:140px;margin:8px 0;padding:10px;border:1px solid #cbd5e1;border-radius:6px}body.board-voices #freshTitle{display:block;box-sizing:border-box;width:100%;min-height:40px;margin:6px 0 10px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-weight:600}body.board-voices .row-body a{color:#1d4ed8;text-decoration:underline;overflow-wrap:anywhere;word-break:break-all}body.board-voices .voice-share{margin-top:8px}body.board-voices details.is-shared>summary{outline:2px solid #2b6cb0;outline-offset:2px;border-radius:6px}</style>'+
   '<div class="notice-search"><label for="freshSearch">의견 검색</label><input id="freshSearch" type="search" placeholder="제목·내용 검색"></div>'+
   '<p id="freshStatus" role="status" aria-live="polite"></p>'+
   '<form id="freshForm" hidden><label for="freshTitle">제목</label><input id="freshTitle" type="text" maxlength="160" required placeholder="제목을 입력해 주세요."><label for="freshMessage">시민의견</label><textarea id="freshMessage" maxlength="12000" rows="6" required placeholder="의견을 작성해 주세요."></textarea><div class="admin-actions"><button type="submit">등록</button><button id="freshCancel" type="button" class="secondary">취소</button></div></form>'+
@@ -111,7 +111,7 @@ export const freshVoiceClient = String.raw`
       const title=document.createElement('strong');title.textContent=heading;
       const date=document.createElement('small');date.textContent=(item.createdAt||'').slice(0,16).replace('T',' ');
       summary.append(title,date);details.append(summary);
-      const body=document.createElement('p');body.className='row-body';body.style.whiteSpace='pre-wrap';body.textContent=item.message;details.append(body);
+      const body=document.createElement('p');body.className='row-body';body.style.whiteSpace='pre-wrap';appendLinkedText(body,String(item.message||''));details.append(body);
       const share=document.createElement('button');share.type='button';share.className='secondary voice-share';share.textContent='공유';
       share.onclick=()=>shareVoice(item);details.append(share);
       if(adminAllowed){
@@ -125,6 +125,18 @@ export const freshVoiceClient = String.raw`
       list.append(details);
     }
     openSharedVoice();
+  }
+  // Citizen text stays text: only http(s) URLs become anchors, built via DOM (no innerHTML).
+  function appendLinkedText(node,text){
+    const re=/https?:\/\/[^\s<>"']+/g;let last=0,m;
+    while((m=re.exec(text))){
+      let url=m[0];while(/[.,;:!?)\]}]$/.test(url))url=url.slice(0,-1);
+      if(m.index>last)node.append(text.slice(last,m.index));
+      let safe=null;try{const u=new URL(url);if(u.protocol==='http:'||u.protocol==='https:')safe=u.href}catch{}
+      if(safe){const a=document.createElement('a');a.href=safe;a.target='_blank';a.rel='noopener noreferrer nofollow ugc';a.textContent=url;node.append(a)}else node.append(url);
+      last=m.index+url.length;re.lastIndex=last;
+    }
+    if(last<text.length)node.append(text.slice(last));
   }
   function voiceTitle(item){const t=String(item.title||'').trim();if(t)return t;const first=String(item.message||'').split('\n')[0].trim();return first.slice(0,75)+(first.length>75?'…':'')}
   function voiceUrl(id){const u=new URL(location.href);u.hash='';u.search='';u.searchParams.set('id',String(id));return u.href}
