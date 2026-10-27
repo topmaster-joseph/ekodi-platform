@@ -27,7 +27,7 @@ export const SLOTS=Object.freeze([
   {label:'10:00~11:00',tag:'준비'},{label:'11:00~12:00'},{label:'12:00~13:00'},{label:'13:00~14:00'},
   {label:'14:00~15:00'},{label:'15:00~16:00'},{label:'16:00~17:00'},{label:'17:00~18:00',tag:'마감'},
 ]);
-const MAX_MEMBERS=60, MAX_BODY=2048;
+const MAX_MEMBERS=60, MAX_BODY=2048, MAX_ADMIN_BODY=16384;
 const enc=new TextEncoder();
 
 function json(data,status=200,extra={}){
@@ -55,11 +55,11 @@ export async function hashBoothKey(key){
 }
 const validKeyShape=key=>typeof key==='string'&&/^[A-Za-z0-9_-]{40,64}$/.test(key);
 
-async function readJson(request){
+async function readJson(request,max=MAX_BODY){
   const length=Number(request.headers.get('content-length')||0);
-  if(length>MAX_BODY)return {tooLarge:true};
+  if(length>max)return {tooLarge:true};
   const raw=await request.text();
-  if(raw.length>MAX_BODY)return {tooLarge:true};
+  if(raw.length>max)return {tooLarge:true};
   try{return {value:JSON.parse(raw)}}catch{return {value:null}}
 }
 function sameOriginWrite(request){
@@ -181,10 +181,11 @@ async function memberById(env,id){
   if(typeof id!=='string'||id.length>64)return null;
   return env.DB.prepare('SELECT id,name FROM cgmurrc_booth_members WHERE id=? AND event=? AND active=1').bind(id,BOOTH_EVENT).first();
 }
-const ADMIN_KEYS=new Set(['action','member_id','slot','name']);
+const ADMIN_KEYS=new Set(['action','member_id','slot','name','decision','items']);
+const MAX_BULK=100;
 async function adminWrite(request,env,authority,now){
   if(!sameOriginWrite(request))return fail('ORIGIN_FORBIDDEN','허용되지 않은 요청입니다.',403);
-  const {value,tooLarge}=await readJson(request);
+  const {value,tooLarge}=await readJson(request,MAX_ADMIN_BODY);
   if(tooLarge)return fail('BODY_TOO_LARGE','요청이 너무 큽니다.',413);
   if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!ADMIN_KEYS.has(k)))
     return fail('INVALID_BODY','요청 형식이 올바르지 않습니다.');
@@ -204,6 +205,26 @@ async function adminWrite(request,env,authority,now){
       .bind(id,BOOTH_EVENT,name,Number(max?.m||0)+1,nowIso(now),nowIso(now)).run();
     await audit(env,actor,'admin.add_member',id,null,now);
     return adminView(env,authority);
+  }
+
+  if(action==='bulk'){
+    // 선택한 회원 요청(희망·빠지기)을 한 번에 확정 또는 거절. 그사이 바뀐 항목은 건너뛴다.
+    const decision=value.decision;
+    const items=Array.isArray(value.items)?value.items:null;
+    if(!['confirm','reject'].includes(decision)||!items||!items.length||items.length>MAX_BULK)return fail('INVALID_BODY','요청 형식이 올바르지 않습니다.');
+    if(items.some(it=>!it||typeof it!=='object'||Array.isArray(it)||Object.keys(it).some(k=>!['member_id','slot'].includes(k))||typeof it.member_id!=='string'||!isSlot(it.slot)))
+      return fail('INVALID_BODY','요청 형식이 올바르지 않습니다.');
+    let done=0,skipped=0;const seen=new Set();
+    for(const it of items){
+      const k=it.member_id+':'+it.slot;if(seen.has(k)){skipped++;continue}seen.add(k);
+      if(!await memberById(env,it.member_id)){skipped++;continue}
+      const current=(await entryOf(env,it.member_id,it.slot))?.status??null;
+      if(current==='requested')decision==='confirm'?await putEntry(env,it.member_id,it.slot,'assigned','admin',now):await deleteEntry(env,it.member_id,it.slot);
+      else if(current==='drop_requested')decision==='confirm'?await deleteEntry(env,it.member_id,it.slot):await putEntry(env,it.member_id,it.slot,'assigned','admin',now);
+      else{skipped++;continue}
+      await audit(env,actor,'admin.bulk_'+decision,it.member_id,it.slot,now);done++;
+    }
+    return adminView(env,authority,{bulk:{decision,done,skipped}});
   }
 
   const member=await memberById(env,value.member_id);

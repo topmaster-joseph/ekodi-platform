@@ -79,3 +79,24 @@ test('the public board is laid out to fit one screen at any size',()=>{
   assert.doesNotMatch(html,/#board\{[^}]*overflow:hidden/,'rows are never clipped on tiny screens');
   assert.match(read('prototypes/cgmurrc-booth-board.js'),/className:'slot'/);
 });
+
+test('the admin page offers select-all and bulk confirm/reject for pending requests',()=>{
+  const html=read('prototypes/cgmurrc-booth-admin.html'),js=read('prototypes/cgmurrc-booth-admin.js');
+  for(const id of ['selectAll','bulkConfirm','bulkReject','bulkBar'])assert.match(html,new RegExp(`id="${id}"`));
+  assert.match(js,/action:'bulk',decision,items/);
+  assert.match(js,/\$\('selectAll'\)\.indeterminate=/);
+  assert.match(js,/\$\('bulkConfirm'\)\.disabled=!selected\.size/);
+});
+
+test('the admin page never shadows the label() helper, which once stopped rendering the link list',()=>{
+  const js=read('prototypes/cgmurrc-booth-admin.js');
+  assert.match(js,/const label=m=>/);
+  assert.equal((js.match(/\bconst label\b/g)||[]).length,1,'only the helper may be named label');
+});
+
+test('the admin page fits a phone width and folds the long link list away',()=>{
+  const html=read('prototypes/cgmurrc-booth-admin.html');
+  assert.match(html,/#grid\{[^}]*table-layout:fixed/);
+  assert.match(html,/@media \(max-width:640px\)/);
+  assert.match(html,/<details id="linkPanel" class="panel">/);
+});

@@ -20,9 +20,11 @@ table{width:100%;border-collapse:collapse}
 td,th{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
 tr:last-child td{border-bottom:0}
 th{font-size:12px;color:var(--muted);background:var(--bg);white-space:nowrap}
-#grid{min-width:860px}
-#grid th.s,#grid td.s{text-align:center;width:72px;padding:6px 4px}
-#grid td.who{white-space:nowrap;font-weight:600}
+#grid{min-width:0;table-layout:fixed}
+#grid col.who{width:7.5rem}#grid col.cnt{width:3rem}
+#grid th.s,#grid td.s{text-align:center;padding:4px 2px}
+#grid th.s small{display:block;font-size:10px;color:var(--gold)}
+#grid td.who{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
 tfoot td{background:var(--bg);text-align:center;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
 tfoot td.short{color:var(--warn);font-weight:700}
 button{font:inherit;font-weight:600;padding:7px 12px;border-radius:8px;border:1px solid var(--teal);background:var(--card);color:var(--teal);cursor:pointer}
@@ -30,20 +32,55 @@ button.primary{background:var(--teal);color:var(--bg)}
 button.danger{border-color:var(--warn);color:var(--warn)}
 button:disabled{opacity:.45;cursor:wait}
 button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
-.cell{width:56px;height:36px;padding:0;font-size:13px}
+.cell{width:100%;max-width:56px;height:32px;padding:0;font-size:13px}
 .cell.assigned{background:var(--teal);color:var(--bg)}
 .cell.requested{background:var(--gold-soft);border-color:var(--gold);color:var(--gold)}
 .cell.drop_requested{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
 .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--muted)}
 .pending{display:grid;gap:8px}
-.req{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;border:1px solid var(--gold);border-radius:10px;background:var(--gold-soft)}
-.req b{min-width:90px}.req span{flex:1 1 160px}
+.pending{gap:4px}
+.req{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:6px;align-items:center;padding:5px 8px;border:1px solid var(--gold);border-radius:8px;background:var(--gold-soft);font-size:14px}
+.req label{display:flex;gap:8px;align-items:center;min-width:0;cursor:pointer}
+.req label span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.req .kind{font-size:12px;font-weight:700;padding:1px 6px;border-radius:6px;background:var(--card)}
+.req .kind.drop{color:var(--warn)}
+.req button{padding:4px 10px;font-size:13px}
+input[type=checkbox]{width:20px;height:20px;accent-color:var(--teal);flex:none}
+.bulk{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+.bulk[hidden]{display:none}
+.chk{display:flex;gap:6px;align-items:center;font-weight:700;margin-right:auto;cursor:pointer}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 input[type=text],input[type=email]{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;min-width:0;flex:1 1 160px}
 a.button{display:inline-block;text-decoration:none;font-weight:700;padding:10px 16px;border-radius:8px;border:1px solid var(--teal);background:var(--teal);color:var(--bg)}
 #authBar{margin-top:10px}
 a.button[hidden],.row[hidden]{display:none}
 textarea{width:100%;min-height:200px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:13px/1.5 inherit;padding:10px}
+details.panel>summary{cursor:pointer;list-style:none;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+details.panel>summary::-webkit-details-marker{display:none}
+details.panel>summary h2{display:inline;margin:0}
+details.panel>summary h2::before{content:"▸ ";color:var(--muted)}
+details.panel[open]>summary h2::before{content:"▾ "}
+details.panel[open]>summary .muted{display:none}
+details.panel[open]{display:grid;gap:10px}
+#linkTable td.who{white-space:nowrap}
+#linkTable td:last-child{white-space:nowrap;text-align:right}
+#linkTable td:last-child button{min-height:34px;padding:4px 10px}
+#linkTable code{word-break:break-all;font-size:12px}
+/* Phones: everything fits the width; requests are one line each. */
+@media (max-width:640px){
+  body{font-size:14px}
+  main{padding:12px max(10px,env(safe-area-inset-right)) 32px max(10px,env(safe-area-inset-left));gap:14px}
+  #app:not([hidden]){gap:16px}
+  h1{font-size:19px}h2{font-size:16px;margin-bottom:4px}
+  header p.muted{font-size:12px}
+  #grid col.who{width:4.6rem}#grid col.cnt{width:1.8rem}
+  #grid td.who{font-size:12px;padding:4px 4px}
+  #grid th{padding:4px 1px;font-size:11px}
+  .cell{height:28px;font-size:12px;border-radius:6px}
+  tfoot td{font-size:11px;padding:4px 1px}
+  #linkTable th,#linkTable td{padding:6px 6px;font-size:13px}
+  #linkTable td:last-child button{min-height:30px;padding:2px 8px;font-size:12px}
+}
 </style></head>
 <body><main>
 <header>
@@ -67,22 +104,27 @@ textarea{width:100%;min-height:200px;border:1px solid var(--line);border-radius:
 <div id="app" hidden>
   <section>
     <h2>확정 대기 요청 <span id="pendingCount" class="muted"></span></h2>
+    <div id="bulkBar" class="bulk" hidden>
+      <label class="chk" for="selectAll"><input id="selectAll" type="checkbox"> 모두 선택</label>
+      <button id="bulkConfirm" class="primary" type="button" disabled>선택 확정</button>
+      <button id="bulkReject" class="danger" type="button" disabled>선택 거절</button>
+    </div>
     <div id="pending" class="pending"></div>
   </section>
   <section>
     <h2>근무 배정표</h2>
     <p class="muted">빈칸을 누르면 배정, 배정된 칸(✓)을 누르면 배정 해제합니다. 회원 요청 칸은 위 목록에서 확정·거절하세요.</p>
-    <div class="legend"><span>✓ 배정</span><span>희망 = 회원이 추가 희망</span><span>빠짐 = 회원이 빠지기 요청</span></div>
-    <div class="box"><table id="grid"><thead><tr id="head"></tr></thead><tbody id="rows"></tbody><tfoot><tr id="foot"></tr></tfoot></table></div>
+    <div class="legend"><span>✓ 배정</span><span>희 = 회원 추가 희망</span><span>빠 = 회원 빠지기 요청</span></div>
+    <div class="box"><table id="grid"><colgroup><col class="who"><col span="8"><col class="cnt"></colgroup><thead><tr id="head"></tr></thead><tbody id="rows"></tbody><tfoot><tr id="foot"></tr></tfoot></table></div>
   </section>
-  <section>
-    <h2>회원 개인 링크</h2>
+  <details id="linkPanel" class="panel">
+    <summary><h2>회원 개인 링크 · 회원 추가</h2><span class="muted">눌러서 펼치기</span></summary>
     <p class="muted">링크는 발급할 때 한 번만 보입니다. 다시 발급하면 이전 링크는 바로 멈춥니다. 각자에게 1:1로 보내 주세요.</p>
-    <div class="box"><table><thead><tr><th>이름</th><th>링크</th><th></th></tr></thead><tbody id="links"></tbody></table></div>
+    <div class="box"><table id="linkTable"><thead><tr><th>이름</th><th>링크</th><th></th></tr></thead><tbody id="links"></tbody></table></div>
     <div class="row"><button id="copyAll" type="button">이번에 발급한 카톡 문구 전체 복사</button></div>
     <textarea id="kakao" readonly placeholder="링크를 발급하면 카톡 문구가 여기에 쌓입니다."></textarea>
     <div class="row"><input id="newName" type="text" maxlength="20" placeholder="새 회원 이름" autocomplete="off"><button id="add" type="button">회원 추가</button></div>
-  </section>
+  </details>
 </div>
 </main>
 <script type="module" src="/cgmurrc/booth/admin/app.js"></script>
