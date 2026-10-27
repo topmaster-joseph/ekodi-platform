@@ -46,3 +46,92 @@
 .infra-foot{margin-top:20px;font-size:.8rem}
 @media(max-width:1050px){.infra-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.infra-providers{grid-template-columns:repeat(2,minmax(0,1fr))}.infra-editor form{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.infra-summary,.infra-providers,.infra-editor form{grid-template-columns:minmax(0,1fr)}.infra-editor label.wide{grid-column:auto}.infra-summary article{padding:14px}.infra-costs .section-head{align-items:flex-start}.infra-editor{padding:10px}}
+
+/* Cost dashboard layout: scoped to the visible section, never other admin panels. */
+.app>main:has(#ekodiInfraCosts:not([hidden]):not(.hidden-panel)){
+  min-width:0;width:100%;max-width:none;
+}
+.app>main:has(#ekodiInfraCosts:not([hidden]):not(.hidden-panel)) .content{
+  box-sizing:border-box;width:100%!important;max-width:none!important;
+  margin-inline:0!important;padding-inline:clamp(12px,2vw,32px)!important;
+}
+body.admin-compact .content #ekodiInfraCosts,
+#ekodiInfraCosts:not([hidden]){
+  box-sizing:border-box;width:100%!important;max-width:none!important;
+  min-width:0;margin-inline:0;
+}
+#ekodiInfraCosts{--infra-border:#d9e2eb;--infra-muted:#526479;--infra-accent:#1559a0;scroll-margin-top:90px}
+#ekodiInfraCosts .infra-page-heading{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:14px}
+#ekodiInfraCosts .infra-page-heading>div:first-child{flex:1 1 500px;min-width:0}
+#ekodiInfraCosts .infra-page-heading h2{margin:5px 0;font-size:clamp(23px,2vw,30px)!important}
+#ekodiInfraCosts .infra-page-heading p:not(.kicker){max-width:78ch;margin:6px 0 0;font-size:14px!important;line-height:1.65;color:var(--infra-muted)}
+#ekodiInfraCosts .infra-heading-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap;flex:none}
+#ekodiInfraCosts .infra-heading-actions button{min-height:42px;white-space:nowrap}
+#ekodiInfraCosts .infra-jump-nav{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 18px;padding:6px;border:1px solid var(--infra-border);border-radius:12px;background:#f5f8fc}
+#ekodiInfraCosts .infra-jump-nav button{border:0;border-radius:8px;padding:9px 13px;background:transparent;color:#40556e;font:inherit;font-size:13px;font-weight:750;cursor:pointer}
+#ekodiInfraCosts .infra-jump-nav button:hover,#ekodiInfraCosts .infra-jump-nav button:focus-visible{background:#e3efff;color:#164c83}
+#ekodiInfraCosts .infra-note{margin:0;border-radius:10px;font-size:13px;line-height:1.65}
+#ekodiInfraCosts .infra-summary{margin:16px 0 18px;gap:14px}
+#ekodiInfraCosts .infra-summary article{padding:19px 20px;border-radius:14px;min-height:128px;gap:5px;box-shadow:0 1px 2px rgba(22,42,70,.04)}
+#ekodiInfraCosts .infra-summary small{font-size:13px;font-weight:700;color:#475b73}
+#ekodiInfraCosts .infra-summary strong{font-size:clamp(24px,2.3vw,32px);line-height:1.24;font-variant-numeric:tabular-nums;color:#102c47}
+#ekodiInfraCosts .infra-summary span{font-size:12px;line-height:1.45;color:#5a6b7f}
+#ekodiInfraCosts [data-infra-error]{font-size:13px;min-height:22px}
+#ekodiInfraCosts .infra-section-head{margin:26px 0 12px;scroll-margin-top:100px}
+#ekodiInfraCosts .infra-section-head h3{font-size:18px!important;font-weight:850;letter-spacing:-.02em}
+#ekodiInfraCosts .infra-section-head small{font-size:12px;line-height:1.5}
+#ekodiInfraCosts .infra-providers{grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+#ekodiInfraCosts .infra-providers article{padding:18px;border-radius:14px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-height:158px}
+#ekodiInfraCosts .infra-provider-head{width:100%;align-items:center}
+#ekodiInfraCosts .infra-provider-head strong{font-size:15px;color:#172e47}
+#ekodiInfraCosts .infra-chip{font-size:11px;white-space:nowrap;background:#edf2f7}
+#ekodiInfraCosts .infra-link-state{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:100px;font-size:12px;font-weight:750}
+#ekodiInfraCosts .infra-link-state::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor}
+#ekodiInfraCosts .infra-link-state.linked{background:#eaf7f1;color:#207453}
+#ekodiInfraCosts .infra-link-state.pending{background:#fff4e2;color:#8d5a12}
+#ekodiInfraCosts .infra-providers p{margin:2px 0 0;font-size:13px;line-height:1.5}
+#ekodiInfraCosts .infra-providers small{font-size:12px;line-height:1.55}
+#ekodiInfraCosts .infra-providers a{margin-top:auto;padding-top:5px;font-size:13px;font-weight:750;text-underline-offset:3px}
+#ekodiInfraCosts .infra-invoice-toolbar{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin:0 0 12px;padding:13px;border-radius:12px;background:#f4f7fb;border:1px solid var(--infra-border)}
+#ekodiInfraCosts .infra-invoice-toolbar label{display:flex;flex-direction:column;gap:5px;font-weight:700;font-size:12px;color:#42536a}
+#ekodiInfraCosts .infra-search-field{flex:1 1 300px;min-width:180px}
+#ekodiInfraCosts .infra-filter-field{flex:0 1 205px;min-width:160px}
+#ekodiInfraCosts .infra-invoice-toolbar input,#ekodiInfraCosts .infra-invoice-toolbar select{box-sizing:border-box;width:100%;height:43px;min-height:43px;padding:8px 12px;border:1px solid #9fb0c2;border-radius:9px;background:white;color:#172c44;font-size:14px}
+#ekodiInfraCosts .infra-invoice-toolbar button{min-height:43px;padding:9px 14px;white-space:nowrap}
+#ekodiInfraCosts [data-infra-filter-count]{margin-left:auto;align-self:center;font-size:12px;color:#536579;font-weight:750;font-variant-numeric:tabular-nums}
+#ekodiInfraCosts .infra-table-wrap{max-width:100%;box-shadow:0 1px 2px rgba(22,42,70,.03)}
+#ekodiInfraCosts .infra-table-wrap table{width:100%;min-width:760px}
+#ekodiInfraCosts .infra-table-wrap th,#ekodiInfraCosts .infra-table-wrap td{padding:13px 14px;font-size:13px;line-height:1.55}
+#ekodiInfraCosts .infra-row-actions{flex-wrap:nowrap}
+#ekodiInfraCosts .infra-row-actions select{min-width:142px;max-width:180px}
+#ekodiInfraCosts .infra-row-actions button{min-height:40px;font-size:12px}
+#ekodiInfraCosts .infra-editor{scroll-margin-top:100px;margin-top:12px;padding:15px 18px}
+#ekodiInfraCosts .infra-editor summary{font-size:14px;font-weight:800}
+#ekodiInfraCosts .infra-editor form{grid-template-columns:repeat(3,minmax(0,1fr))}
+#ekodiInfraCosts .infra-foot{font-size:12px;line-height:1.7}
+@media(min-width:1700px){
+  #ekodiInfraCosts .infra-providers{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media(max-width:1180px){
+  #ekodiInfraCosts .infra-providers{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #ekodiInfraCosts .infra-editor form{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:900px){
+  #ekodiInfraCosts .infra-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #ekodiInfraCosts .infra-page-heading{align-items:flex-start;flex-direction:column}
+  #ekodiInfraCosts .infra-heading-actions{width:100%}
+  #ekodiInfraCosts .infra-invoice-toolbar{align-items:stretch}
+}
+@media(max-width:640px){
+  #ekodiInfraCosts{padding:14px 12px}
+  #ekodiInfraCosts .infra-jump-nav{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}
+  #ekodiInfraCosts .infra-jump-nav button{flex:none;white-space:nowrap}
+  #ekodiInfraCosts .infra-summary,#ekodiInfraCosts .infra-providers{grid-template-columns:1fr}
+  #ekodiInfraCosts .infra-summary article{min-height:110px}
+  #ekodiInfraCosts .infra-heading-actions button{flex:1}
+  #ekodiInfraCosts .infra-filter-field,#ekodiInfraCosts .infra-search-field{flex:1 1 100%}
+  #ekodiInfraCosts [data-infra-filter-count]{margin-left:0}
+  #ekodiInfraCosts .infra-editor form{grid-template-columns:1fr}
+  #ekodiInfraCosts .infra-editor label.wide{grid-column:auto}
+  #ekodiInfraCosts .infra-table-wrap{overscroll-behavior-x:contain}
+}
