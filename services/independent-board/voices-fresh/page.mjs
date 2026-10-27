@@ -4,6 +4,7 @@
  * queue/publish polling. Existing EKODI shell/header is reused, not the old UI.
  */
 const content = '<style>body.board-voices .notice-search{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}body.board-voices .notice-search label{font-weight:600;font-size:13px}body.board-voices .notice-search input{flex:1 1 220px;max-width:420px;min-height:36px;border:1px solid #cbd5e1;border-radius:6px;padding:7px 10px;box-sizing:border-box}body.board-voices #freshStatus{font-size:13px;margin:8px 0}body.board-voices #freshStatus:empty{display:none}body.board-voices #freshForm{margin:12px 0;padding:14px;border:1px solid #d7dfe8;border-radius:8px}body.board-voices #freshForm[hidden]{display:none}body.board-voices #freshMessage{display:block;box-sizing:border-box;width:100%;min-height:140px;margin:8px 0;padding:10px;border:1px solid #cbd5e1;border-radius:6px}body.board-voices #freshTitle{display:block;box-sizing:border-box;width:100%;min-height:40px;margin:6px 0 10px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-weight:600}body.board-voices .voice-share{margin-top:8px}body.board-voices details.is-shared>summary{outline:2px solid #2b6cb0;outline-offset:2px;border-radius:6px}</style>'+
+  '<style>body.board-voices .fresh-replies{border-top:1px solid #d9e2ec;margin-top:12px;padding-top:10px}body.board-voices .fresh-replies h3{margin:0 0 8px;font-size:14px}body.board-voices .fresh-reply{border-top:1px solid #e5edf5;padding:9px 0}body.board-voices .fresh-reply small{display:block;color:#64748b;font-size:12px}body.board-voices .fresh-reply p{margin:5px 0 8px;white-space:pre-wrap;overflow-wrap:anywhere}body.board-voices .fresh-reply-actions,body.board-voices .fresh-reply-tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}body.board-voices .fresh-reply-form{margin-top:10px;display:grid;gap:7px}body.board-voices .fresh-reply-form[hidden]{display:none}body.board-voices .fresh-reply-form textarea,body.board-voices .fresh-reply-form input{box-sizing:border-box;width:100%;border:1px solid #bac8d7;border-radius:6px;padding:8px;font:inherit}body.board-voices .fresh-reply-form textarea{min-height:82px}body.board-voices .fresh-replies button{min-height:38px;padding:6px 10px}body.board-voices .fresh-reply-status{font-size:12px;color:#375473}</style>'+
   '<div class="notice-search"><label for="freshSearch">의견 검색</label><input id="freshSearch" type="search" placeholder="제목·내용 검색"></div>'+
   '<p id="freshStatus" role="status" aria-live="polite"></p>'+
   '<form id="freshForm" hidden><label for="freshTitle">제목</label><input id="freshTitle" type="text" maxlength="160" required placeholder="제목을 입력해 주세요."><label for="freshMessage">시민의견</label><textarea id="freshMessage" maxlength="12000" rows="6" required placeholder="의견을 작성해 주세요."></textarea><div class="admin-actions"><button type="submit">등록</button><button id="freshCancel" type="button" class="secondary">취소</button></div></form>'+
@@ -14,7 +15,7 @@ export const freshVoiceClient = String.raw`
   const root=location.pathname.startsWith('/seonammedi/board/')?'/seonammedi/board':'/board';
   const api=root+'/api/voices-fresh',KEY='sb-renzehysxirjilvdxacv-auth-token';
   const storageList=()=>{const items=[];try{items.push(localStorage)}catch{}try{items.push(sessionStorage)}catch{}return items};
-  let posts=[],adminAllowed=false;
+  let posts=[],adminAllowed=false,loggedIn=false;
   const readSessions=()=>{const list=[];for(const st of storageList())try{const d=JSON.parse(st.getItem(KEY)||'null'),s=d?.currentSession||d?.session||d;if(s?.access_token)list.push({s,st})}catch{}return list.sort((a,b)=>Number(b.s.expires_at||0)-Number(a.s.expires_at||0))};
   async function accessToken(){
     const sessions=readSessions(),now=Math.floor(Date.now()/1000);
@@ -81,9 +82,11 @@ export const freshVoiceClient = String.raw`
     }
     return null;
   }
-  function beginLogin(){
+  function beginLogin(intent='compose',voiceId=0){
     const dest=new URL(location.href);
-    dest.hash='';dest.searchParams.set('compose','1');dest.searchParams.delete('auth_attempt');dest.searchParams.delete('choose_account');
+    dest.hash='';dest.searchParams.delete('auth_attempt');dest.searchParams.delete('choose_account');
+    if(intent==='reply'&&voiceId>0){dest.searchParams.delete('compose');dest.searchParams.set('reply_to',String(voiceId));dest.searchParams.set('id',String(voiceId))}
+    else{dest.searchParams.delete('reply_to');dest.searchParams.set('compose','1')}
     const url=new URL('https://ekodi.kr/auth/');
     url.searchParams.set('site','seonammedi');url.searchParams.set('direct','1');
     url.searchParams.set('purpose','seonammedi-board-write');url.searchParams.set('select_account','1');
@@ -100,6 +103,67 @@ export const freshVoiceClient = String.raw`
     finally{btn.disabled=false}
   });
   el('freshCancel').addEventListener('click',closeEditor);
+  function renderReplyArea(details,item){
+    const wrapper=document.createElement('section');wrapper.className='fresh-replies';wrapper.setAttribute('aria-label','시민의견 답글');
+    const heading=document.createElement('h3');heading.textContent='답글 '+(item.replies||[]).length+'건';wrapper.append(heading);
+    for(const response of item.replies||[]){
+      const row=document.createElement('article');row.className='fresh-reply';
+      const by=document.createElement('small');
+      by.textContent=(response.role==='admin'?'관리자 · ':'')+(response.displayName||'회원')+' · '+String(response.createdAt||'').slice(0,16).replace('T',' ');
+      const body=document.createElement('p');body.textContent=String(response.message||'');row.append(by,body);
+      if(adminAllowed||response.mine){
+        const tools=document.createElement('div');tools.className='fresh-reply-tools';
+        const edit=document.createElement('button');edit.type='button';edit.textContent='답글 수정';edit.className='secondary';
+        edit.onclick=async()=>{
+          const value=prompt('답글 수정',response.message||'');if(value===null)return;
+          if(!value.trim()){message('답글 내용을 입력해 주세요.');return}
+          try{const token=await session();if(!token){message('로그인 후 수정할 수 있습니다.');return}
+            await request('/'+item.id+'/replies/'+response.id,{method:'PUT',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify({message:value.trim()})});
+            await reload();message('답글을 수정했습니다.');
+          }catch(error){message(error.message||'답글 수정 실패')}
+        };
+        const remove=document.createElement('button');remove.type='button';remove.textContent='답글 삭제';remove.className='secondary';
+        remove.onclick=async()=>{
+          if(!confirm('이 답글을 삭제할까요?'))return;
+          try{const token=await session();if(!token){message('로그인 후 삭제할 수 있습니다.');return}
+            await request('/'+item.id+'/replies/'+response.id,{method:'DELETE',headers:{authorization:'Bearer '+token}});
+            await reload();message('답글을 삭제했습니다.');
+          }catch(error){message(error.message||'답글 삭제 실패')}
+        };
+        tools.append(edit,remove);row.append(tools);
+      }
+      wrapper.append(row);
+    }
+    const toggle=document.createElement('button');toggle.type='button';toggle.className='secondary';
+    toggle.dataset.replyToggle=String(item.id);toggle.textContent=loggedIn?'답글 작성':'로그인 후 답글';
+    const editor=document.createElement('form');editor.className='fresh-reply-form';editor.hidden=true;
+    const nickname=document.createElement('input');nickname.type='text';nickname.maxLength=40;nickname.placeholder='표시 이름 (선택)';nickname.setAttribute('aria-label','답글 표시 이름');
+    const body=document.createElement('textarea');body.required=true;body.maxLength=1500;body.placeholder='답글을 입력해 주세요.';body.setAttribute('aria-label','답글 내용');
+    const submit=document.createElement('button');submit.type='submit';submit.textContent='답글 등록';
+    const cancel=document.createElement('button');cancel.type='button';cancel.className='secondary';cancel.textContent='취소';
+    cancel.onclick=()=>{editor.hidden=true;body.value=''};
+    const actions=document.createElement('div');actions.className='fresh-reply-actions';actions.append(submit,cancel);
+    const feedback=document.createElement('span');feedback.className='fresh-reply-status';feedback.setAttribute('role','status');
+    editor.append(nickname,body,actions,feedback);
+    toggle.onclick=async()=>{
+      const token=await session();
+      if(!token){message('답글 작성을 위해 Google 로그인 후 다시 이동합니다.');beginLogin('reply',item.id);return}
+      editor.hidden=!editor.hidden;if(!editor.hidden)body.focus();
+    };
+    editor.addEventListener('submit',async event=>{
+      event.preventDefault();submit.disabled=true;feedback.textContent='답글 저장 중…';
+      try{
+        const token=await session();if(!token){beginLogin('reply',item.id);return}
+        const saved=await request('/'+item.id+'/replies',{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify({message:body.value.trim(),displayName:nickname.value.trim()||'회원'})});
+        await waitUntilReplyPublished(saved);
+        await reload();const target=document.getElementById('voice-'+item.id);if(target)target.open=true;
+        message('답글을 등록했습니다.');
+      }catch(error){feedback.textContent=error.message||'답글 저장 오류'}
+      finally{submit.disabled=false}
+    });
+    wrapper.append(toggle,editor);details.append(wrapper);
+  }
+
   function render(){
     list.replaceChildren();
     const q=search.value.trim().toLowerCase(),shown=posts.filter(p=>!q||p.message.toLowerCase().includes(q)||String(p.title||'').toLowerCase().includes(q));
@@ -114,7 +178,7 @@ export const freshVoiceClient = String.raw`
       const body=document.createElement('p');body.className='row-body';body.style.whiteSpace='pre-wrap';body.textContent=item.message;details.append(body);
       const share=document.createElement('button');share.type='button';share.className='secondary voice-share';share.textContent='공유';
       share.onclick=()=>shareVoice(item);details.append(share);
-      if(adminAllowed){
+      if(adminAllowed||item.mine){
         const actions=document.createElement('div');actions.className='admin-actions';
         const edit=document.createElement('button');edit.type='button';edit.textContent='수정';
         edit.onclick=async()=>{const nextTitle=prompt('수정할 제목',item.title||'');if(nextTitle===null)return;const next=prompt('수정할 의견',item.message);if(next===null||!next.trim())return;try{await adminEdit(item.id,next,nextTitle);message('수정되었습니다.')}catch(e){message(e.message)}};
@@ -122,6 +186,7 @@ export const freshVoiceClient = String.raw`
         remove.onclick=async()=>{if(!confirm('이 의견을 삭제하시겠습니까?'))return;try{await adminDelete(item.id);message('삭제되었습니다.')}catch(e){message(e.message)}};
         actions.append(edit,remove);details.append(actions);
       }
+      renderReplyArea(details,item);
       list.append(details);
     }
     openSharedVoice();
@@ -140,11 +205,13 @@ export const freshVoiceClient = String.raw`
     sharedOpened=true;target.open=true;target.classList.add('is-shared');target.scrollIntoView({block:'center'});
   }
   async function reload(){
-    const d=await request(''+(search.value?'?q='+encodeURIComponent(search.value):''));
+    const token=await session();
+    loggedIn=Boolean(token);
+    const d=await request(''+(search.value?'?q='+encodeURIComponent(search.value):''),token?{headers:{authorization:'Bearer '+token}}:{});
     posts=d.items||[];render();
   }
   async function adminCheck(){
-    const token=await session();if(!token)return;
+    const token=await session();if(!token){adminAllowed=false;render();return}
     try{
       const r=await request('/admin',{headers:{authorization:'Bearer '+token}});
       adminAllowed=Array.isArray(r.items);render();
@@ -159,6 +226,15 @@ export const freshVoiceClient = String.raw`
     const t=await session();if(!t)throw Error('login_required');
     await request('/'+id,{method:'DELETE',headers:{authorization:'Bearer '+t}});
     await reload();
+  }
+  async function waitUntilReplyPublished(created){
+    if(!created?.queued||!created.submissionId)throw Error('답글 접수 확인 실패');
+    for(let attempt=0;attempt<20;attempt++){
+      await new Promise(resolve=>setTimeout(resolve,750));
+      const record=await request('/replies/submissions/'+encodeURIComponent(created.submissionId));
+      if(record.status==='published'&&Number(record.id)>0)return Number(record.id);
+    }
+    throw Error('답글은 접수됐지만 저장 결과를 아직 확인하지 못했습니다. 중복 등록하지 말고 새로고침해 주세요.');
   }
   async function waitUntilPublished(created){
     if(!created?.queued||!/^[a-f0-9-]{36}$/i.test(created.submissionId||''))throw Error('저장 접수 확인 실패');
@@ -188,7 +264,19 @@ export const freshVoiceClient = String.raw`
   try{await finishHandoff()}catch(e){handoffError=e.message||'인증 복귀 오류'}
   try{
     await reload();await adminCheck();
-    if(new URLSearchParams(location.search).get('compose')==='1'){
+    const replyTo=Number(new URLSearchParams(location.search).get('reply_to')||0);
+    if(replyTo>0&&Number.isSafeInteger(replyTo)){
+      if(await session()){
+        const target=document.getElementById('voice-'+replyTo);
+        if(target){
+          target.open=true;
+          const toggle=target.querySelector('[data-reply-toggle]');
+          if(toggle){await toggle.click();message('Google 로그인 확인 완료. 답글을 작성해 주세요.')}
+        }
+        const next=new URL(location.href);next.searchParams.delete('reply_to');
+        history.replaceState(null,'',next.pathname+next.search);
+      }else message(handoffError||'로그인 복귀에 실패했습니다. 답글 작성을 다시 선택해 주세요.');
+    }else if(new URLSearchParams(location.search).get('compose')==='1'){
       if(await session()){
         try{sessionStorage.removeItem(attemptKey)}catch{}
         showEditor();message('Google 로그인 확인 완료. 의견을 작성해 주세요.');
