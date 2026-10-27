@@ -372,7 +372,7 @@ test('presenter AI demo: institutional FactChat through the EKODI server route o
   const src=await readFile(new URL('../education/study/live/engine/factchat-demo.js',import.meta.url),'utf8');
   assert.doesNotMatch(src,/FACTCHAT_MOKPO_API_KEY|mokpo\.factchat\.bot\/api|sk-[A-Za-z0-9]/,'no key or direct provider call in the browser');
   const auth=await readFile(new URL('../auth-site/admin-auth.js',import.meta.url),'utf8');
-  assert.match(auth,/u\.pathname==='\/edu\/study\/live\/'\|\|u\.pathname==='\/edu\/study\/live\/present\/'\)\)return u\.href;/,'exact presenter paths only');
+  assert.match(auth,/u\.pathname==='\/edu\/study\/live\/'\|\|u\.pathname==='\/edu\/study\/live\/present\/'\|\|u\.pathname==='\/edu\/study\/live\/unlock\/'\|\|u\.pathname==='\/edu\/study\/live\/docs\/'\)\)return u\.href;/,'exact instructor paths only (studio, presenter, unlock, docs)');
   assert.doesNotMatch(auth,/pathname\.startsWith\('\/edu/,'no /edu prefix wildcard');
 });
 
