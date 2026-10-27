@@ -14,7 +14,7 @@ test('architecture direct route loads the CSS bundle before the JS bundle', () =
   assert.match(layout, /const path='\/system-health-admin\.css'/);
   assert.match(layout, /architectureAssetPromise=styles\.then\(\(\)=>import\('\.\/system-health-admin\.js'\)\)/);
   assert.match(layout, /if\(section==='architecture'\)void ensureArchitectureAssets\(\)/);
-  assert.match(layout, /data\.architectureLoadError='true'/);
+  assert.match(layout, /dataset\.architectureLoadError='true'/);
   assert.match(postbuild, /\$\{healthCss\}\\n\$\{mapCss\}/);
 });
 
