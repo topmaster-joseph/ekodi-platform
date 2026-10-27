@@ -280,7 +280,28 @@ jobs:
           # Synthetic canary cleanup only; never touch arbitrary posts.
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-independent-board --remote --config "$GITHUB_WORKSPACE/.wrangler.independent-board.runtime.toml" --command "DELETE FROM citizen_voices_fresh WHERE id=$post_id AND body='$marker';"
           curl -fsS https://seonammedi.kr/board/api/voices-fresh | jq -e --argjson id "$post_id" '.items | all(.id!=$id)' >/dev/null
-      - name: Remove old citizen records and referenced photos after cutover
+      # Data-retention guard: deployment must NEVER invoke irreversible legacy
+      # deletion. The isolated purge-legacy.mjs remains an explicit operator-only
+      # command requiring independent retention/backup approval (Human Gate).
+      # Fresh board cutover, retired API and queue state have already been verified.
+      - name: Verify legacy write retirement and retain historical records
         run: |
           set -euo pipefail
-          node services/independent-board/voices-fresh/purge-legacy.mjs --execute
+          for origin in https://seonammedi.kr/board https://ekodi.kr/seonammedi/board; do
+            status="$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 8 --max-time 25 "$origin/api/posts")"
+            test "$status" = "410"
+            curl -fsS --connect-timeout 8 --max-time 25 "$origin/health" | jq -e '.legacyQueue=="disabled"' >/dev/null
+            # Public reply representation stays readable, but anonymous writes
+            # must fail before touching any author-owned record.
+            curl -fsS --connect-timeout 8 --max-time 25 "$origin/api/voices-fresh" |
+              jq -e '.ok==true and (.items|type=="array") and ([.items[] | (.replies|type)=="array"] | all)' >/dev/null
+            guest_reply_status="$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 8 --max-time 25 -X POST "$origin/api/voices-fresh/1/replies" -H 'content-type: application/json' --data '{"message":"unauthorized-release-probe"}')"
+            test "$guest_reply_status" = "401"
+            guest_delete_status="$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 8 --max-time 25 -X DELETE "$origin/api/voices-fresh/1/replies/1")"
+            test "$guest_delete_status" = "401"
+          done
+          # Remote schema check confirms additive migration 0008 without
+          # reading or deleting any citizen data.
+          schema="$(npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-independent-board --remote --config "$GITHUB_WORKSPACE/.wrangler.independent-board.runtime.toml" --json --command "SELECT name FROM sqlite_master WHERE type='table' AND name='citizen_voice_replies_fresh'")"
+          jq -e 'any(.[]?.results[]?; .name=="citizen_voice_replies_fresh")' <<<"$schema" >/dev/null
+          echo 'Legacy writes retired, reply authorization and schema verified; historical records retained.'
