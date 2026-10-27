@@ -124,3 +124,14 @@ test('v1.27.4: Google sign-in is user-initiated and the returned page shows the 
   assert.match(singles,/button\('로그아웃'/);
   assert.match(client,/계정으로 로그인되어 있습니다\. 원래 보던 화면으로 돌아갑니다/);
 });
+
+test('v1.27.5: a signed-in person is never shown a login entry again',()=>{
+  const policy=registry.authenticationReturnContinuityPolicy;
+  for(const key of ['signedInPersonNeverPromptedToLoginAgain','existingSessionResolvedBeforeLoginEntry','loginUiOnlyWithoutSessionOrExplicitAccountSwitch']) assert.equal(policy[key],true,key);
+  const singles=read('sites/ekodi-singles/public/app.js');
+  assert.match(singles,/function storedSession\(\)/);
+  assert.match(singles,/const resuming=Boolean\(tokenHash\)\|\|storedSession\(\);/);
+  assert.match(singles,/if\(resuming\)\{hideLoginEntries\(\);/);
+  assert.match(singles,/else showGuest\(\);/);
+  assert.match(client,/if\(existing\)\{/,'central auth page reuses an existing session before rendering Google sign-in');
+});

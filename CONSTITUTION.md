@@ -1,6 +1,6 @@
-# EKODI Platform Constitution v1.27.4
+# EKODI Platform Constitution v1.27.5
 
-Effective: 2026-10-27
+Effective: 2026-10-28
 
 This constitution is the highest architecture and operations rule for EKODI Platform. Existing validators remain authoritative implementation guards; this document unifies their intent and governs future changes.
 
@@ -134,6 +134,7 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Return targets are allowlisted trusted HTTPS EKODI/customer-owned destinations with credential-bearing URLs rejected. Authentication must preserve query context but never propagate reusable secrets in query parameters. Pre-login capture never weakens the platform `Referrer-Policy: no-referrer`; the explicit `return_to` is the only capture channel.
 - (v1.27.4, 2026-10-27) Google sign-in UI is user-initiated and persistent. Automatic Google One Tap/FedCM prompts (`google.accounts.id.prompt`) are forbidden on user-facing service pages; they are allowed only on registered authentication surfaces where the user has just asked to sign in (explicit admin direct login, the Google origin bridge window, a privileged-action re-authentication overlay), and every such surface must also render a persistent Google button so a browser prompt that disappears never strands the user.
 - (v1.27.4) After authentication the returned page must visibly confirm the signed-in account (name or email) and offer sign-out. Prelaunch, subscription or permission gates must state that login succeeded and name the gate, so a service gate is never mistaken for a login failure. When an existing central session is reused, the authentication page names the reused account while it returns the user.
+- (v1.27.5, 2026-10-28) A signed-in person is never asked to log in again. Every service resolves an existing EKODI session (stored session or one-time handoff) before rendering any login entry, shows a neutral "로그인 확인 중" state meanwhile, and replaces login entries with the signed-in account. The central auth page reuses a valid session without showing Google sign-in UI. Login UI appears only when no valid session exists, or when the person explicitly asks to switch accounts.
 - This rule applies to all current and future login adapters and is enforced by shared authentication routing tests, `validate:constitution` (including a repository-wide scan of `google.accounts.id.prompt` call sites) and production system verification.
 - Machine-readable authority: `governance/constitution/constitution.json` -> `authenticationReturnContinuityPolicy` and `config/service-workspace-policy.json` -> `authenticationReturnPolicy`.
 
