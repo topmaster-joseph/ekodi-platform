@@ -44,3 +44,12 @@ test('compact list remains responsive and accessible',()=>{
   assert.match(css,/\.common-service-detail\[hidden\]\{display:none!important\}/);
   assert.match(js,/aria-label.*런타임/);
 });
+
+test('service engine stylesheet uses a root-absolute canonical URL on nested admin paths',()=>{
+  assert.match(js,/style\.href='\/common-services-admin\.css'/);
+  assert.doesNotMatch(js,/style\.href='common-services-admin\.css'/);
+  assert.match(read('site-worker.js'),/'\/common-services-admin\.css'/);
+  const e2e=read('scripts/verify-admin-production-ui-e2e.mjs');
+  assert.match(e2e,/ENGINE_CATALOG_STYLE_E2E/);
+  assert.match(e2e,/menu-engine-all-mobile\.png/);
+});
