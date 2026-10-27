@@ -148,6 +148,15 @@ async function handleList(req,who,search){
  if(error)return deny(req,"LIST_UNAVAILABLE",503);
  return json(req,{ok:true,records:data||[]});
 }
+async function handleShares(req,who,search){
+ const record=await requireRecord(who,search.get("document_id"));
+ if(!record)return deny(req,"DOCUMENT_FORBIDDEN");
+ const {data,error}=await admin.from("secure_document_shares")
+   .select("id,expires_at,max_views,view_count,status,created_at,revoked_at")
+   .eq("document_id",record.id).order("created_at",{ascending:false}).limit(50);
+ if(error)return deny(req,"SHARES_UNAVAILABLE",503);
+ return json(req,{ok:true,shares:data||[]});
+}
 async function handleUpload(req,who){
  if(!who.aal2)return deny(req,"STEP_UP_REQUIRED");
  const len=Number(req.headers.get("content-length")||0);
@@ -155,6 +164,9 @@ async function handleUpload(req,who){
  if(!Deno.env.get("SECURE_DOCUMENT_MASTER_KEY_B64")||!Deno.env.get("SECURE_DOCUMENT_SCAN_ENDPOINT"))return deny(req,"SECURE_UPLOAD_UNAVAILABLE",503);
  const form=await req.formData();
  const kind=str(form.get("kind"),60),title=str(form.get("title"),120),scope=str(form.get("scope"),12),wid=str(form.get("workspace_id"),50);
+ const issuedOn=str(form.get("issued_on"),10),validUntil=str(form.get("valid_until"),10);
+ const isoDate=/^\\d{4}-\\d{2}-\\d{2}$/;
+ if((issuedOn&&!isoDate.test(issuedOn))||(validUntil&&!isoDate.test(validUntil))||(issuedOn&&validUntil&&validUntil<issuedOn))return deny(req,"INVALID_DOCUMENT_DATES",400);
  const file=form.get("file");
  if(!KINDS.has(kind)||!title||!(file instanceof File)||file.size<1||file.size>MAX_BYTES)return deny(req,"UPLOAD_INVALID",400);
  const owner=await permit(who,scope,wid);
@@ -166,7 +178,7 @@ async function handleUpload(req,who){
  const verdict=await scan(raw,mime).catch(()=>null);
  if(!verdict)return deny(req,"FILE_SCAN_FAILED",422);
  const recordId=crypto.randomUUID(),versionId=crypto.randomUUID();
- const record={id:recordId,owner_scope:scope,owner_person_id:owner.ownerPersonId,workspace_id:owner.workspaceId,kind,title,created_by_person_id:who.personId};
+ const record={id:recordId,owner_scope:scope,owner_person_id:owner.ownerPersonId,workspace_id:owner.workspaceId,kind,title,issued_on:issuedOn||null,valid_until:validUntil||null,created_by_person_id:who.personId};
  const envelope=await encrypt(raw,record,versionId,mime);
  const objectKey=scope+"/"+(owner.ownerPersonId||owner.workspaceId)+"/"+recordId+"/"+versionId+".bin";
  const {error:storeError}=await admin.storage.from(BUCKET).upload(objectKey,envelope.cipher,{contentType:"application/octet-stream",upsert:false,cacheControl:"0"});
@@ -261,6 +273,7 @@ Deno.serve(async req=>{
  if(!who)return deny(req,"AUTH_REQUIRED",401);
  try{
    if(action==="list"&&req.method==="GET")return handleList(req,who,search);
+   if(action==="shares"&&req.method==="GET")return handleShares(req,who,search);
    if(action==="upload"&&req.method==="POST")return handleUpload(req,who);
    if(req.method==="POST"){
      const length=Number(req.headers.get("content-length")||0);
