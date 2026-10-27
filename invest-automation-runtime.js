@@ -5,7 +5,7 @@ const MODES=new Set(['shadow','simulation']);
 const ASSET_CLASSES=new Set(['stock','bond','real_estate','fund','alternative','portfolio']);
 const clean=(value,max=240)=>String(value??'').trim().slice(0,max);
 const num=(value,fallback,min,max)=>{const n=Number(value);return Number.isFinite(n)?Math.min(max,Math.max(min,n)):fallback};
-export function cors(request,env){const origin=String(request.headers.get('origin')||'');const allowed=String(env.ALLOWED_ORIGINS||'').split(',').map(v=>v.trim()).filter(Boolean);const ok=!origin||allowed.includes(origin);const headers={'access-control-allow-headers':'content-type, authorization','access-control-allow-methods':'GET, POST, PUT, OPTIONS','access-control-max-age':'86400',vary:'Origin'};if(origin&&ok)headers['access-control-allow-origin']=origin;return {ok,headers}}
+export function cors(request,env){const origin=String(request.headers.get('origin')||'');const allowed=String(env.ALLOWED_ORIGINS||'').split(',').map(v=>v.trim()).filter(Boolean);const ok=!origin||allowed.includes(origin);const headers={'access-control-allow-headers':'content-type, authorization, x-ekodi-invest-step-up','access-control-allow-methods':'GET, POST, PUT, DELETE, OPTIONS','access-control-max-age':'86400',vary:'Origin'};if(origin&&ok)headers['access-control-allow-origin']=origin;return {ok,headers}}
 export function json(request,env,data,status=200){const {headers}=cors(request,env);return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff',...headers}})}
 async function body(request){try{return await request.json()}catch{return null}}
 const nowIso=()=>new Date().toISOString();
