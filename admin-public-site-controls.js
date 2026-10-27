@@ -193,13 +193,13 @@ function ensurePanel() {
   });
   panel.querySelector('[data-psc-list]').addEventListener('click', event => {
     const button = event.target.closest('[data-psc-select]');
-    if (!button || !button.dataset.pscSelect || button.dataset.pscSelect === viewState.selectedId) return;
+    if (!button || !button.dataset.pscSelect || button.dataset.pscSelect === viewState.selectedId || viewState.loading) return;
     if (!confirmDiscard()) return;
     viewState.selectedId = button.dataset.pscSelect;
     renderList(panel); renderEditor(panel);
   });
   panel.querySelector('[data-psc-refresh]').addEventListener('click', () => {
-    if (confirmDiscard()) load();
+    if (confirmDiscard()) load({allowDiscard:true});
   });
   return panel;
 }
@@ -316,7 +316,7 @@ function renderEditor(panel) {
   updateDetails();
   form.addEventListener('input', updateDirty);
   form.addEventListener('change', () => { updateDetails();updateDirty(); });
-  form.querySelector('[data-psc-reset]').addEventListener('click', () => {renderEditor(panel);setMessage(panel, '선택한 사이트의 변경사항을 취소했습니다.');});
+  form.querySelector('[data-psc-reset]').addEventListener('click', () => {if (viewState.loading) return;renderEditor(panel);setMessage(panel, '선택한 사이트의 변경사항을 취소했습니다.');});
   form.addEventListener('submit', async event => {
     event.preventDefault();
     if (viewState.loading || !viewState.dirty) return;
@@ -342,10 +342,13 @@ function renderEditor(panel) {
     }
   });
 }
-async function load() {
+async function load({allowDiscard=false}={}) {
   const panel = ensurePanel();
-  if (!panel) return;
-  if (viewState.loading) return;
+  if (!panel || viewState.loading) return;
+  if (viewState.dirty && !allowDiscard) {
+    setMessage(panel, '저장하지 않은 변경사항이 있어 자동 새로고침을 중단했습니다. 저장하거나 취소한 뒤 다시 시도하세요.');
+    return;
+  }
   const requestId = ++viewState.requestId;
   viewState.loading = true;
   panel.querySelector('[data-psc-refresh]').disabled = true;
