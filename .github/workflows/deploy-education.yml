@@ -266,6 +266,7 @@ jobs:
             npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.education.toml
           else
             cat /tmp/edu-deployments.log
+            echo "::error title=Education deployments status failed::$(tail -c 700 /tmp/edu-deployments.log | tr '\r\n' '  ' | sed 's/%/%25/g')"
             exit 1
           fi
       # The instructor gate (education-instructor-gate.js) signs its session cookie with this Worker secret.
