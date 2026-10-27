@@ -21,7 +21,7 @@ test('Only registered public site/domain properties may receive manual evidence'
   const code=read('search-visibility-control.js');
   assert.match(code,/buildEkodiPublicRegistry\(env\)/);
   assert.match(code,/listSitePublicationSettings\(env\)/);
-  assert.match(code,/site\.publicStatus==='public'/);
+  assert.match(code,/s\.publicStatus==='public'/);
   assert.match(code,/SITE_NOT_PUBLIC/);
   assert.match(code,/UNKNOWN_PROVIDER/);
   assert.match(code,/AI_REGISTRATION_NOT_SUPPORTED/);
