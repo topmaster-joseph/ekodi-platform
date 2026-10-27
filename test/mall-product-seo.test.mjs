@@ -28,3 +28,13 @@ test('mall products flow into the public discovery set (sitemap/llms/IndexNow)',
   assert.ok((await collectPublicDiscoveryItems(env)).some(i => i.url === 'https://ekodi.kr/ekodimall/p/abc123'));
   assert.deepEqual(await mallProductItems({}), []);
 });
+
+test('top-level uploaded product images feed og:image and JSON-LD image', async () => {
+  const { buildMallProductJsonLd: buildProductJsonLd } = await import('../mall-product-jsonld.js');
+  const data = { shareCode: 'ABC123', product: { name: '대나무 칫솔', saleType: 'direct', price: 9900, oneLine: '대나무 칫솔 · 무료배송', story: '친환경 칫솔입니다.' }, images: [{ url: 'https://ekodi.kr/ekodimall/api/public/media/ekodimall/products/p/x.jpg' }], seller: {} };
+  const ld = buildProductJsonLd(data);
+  assert.deepEqual(ld.image, ['https://ekodi.kr/ekodimall/api/public/media/ekodimall/products/p/x.jpg']);
+  const seo = productSeo(data, ld);
+  assert.match(productMetaTags(seo), /og:image" content="https:\/\/ekodi\.kr\/ekodimall\/api\/public\/media/);
+  assert.match(seo.description, /친환경 칫솔입니다/);
+});
