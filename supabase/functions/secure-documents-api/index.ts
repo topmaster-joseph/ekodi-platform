@@ -165,7 +165,7 @@ async function handleUpload(req,who){
  const form=await req.formData();
  const kind=str(form.get("kind"),60),title=str(form.get("title"),120),scope=str(form.get("scope"),12),wid=str(form.get("workspace_id"),50);
  const issuedOn=str(form.get("issued_on"),10),validUntil=str(form.get("valid_until"),10);
- const isoDate=/^\\d{4}-\\d{2}-\\d{2}$/;
+ const isoDate=/^\d{4}-\d{2}-\d{2}$/;
  if((issuedOn&&!isoDate.test(issuedOn))||(validUntil&&!isoDate.test(validUntil))||(issuedOn&&validUntil&&validUntil<issuedOn))return deny(req,"INVALID_DOCUMENT_DATES",400);
  const file=form.get("file");
  if(!KINDS.has(kind)||!title||!(file instanceof File)||file.size<1||file.size>MAX_BYTES)return deny(req,"UPLOAD_INVALID",400);

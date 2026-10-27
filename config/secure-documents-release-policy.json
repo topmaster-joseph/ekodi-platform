@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "policyId": "SECURE-DOCUMENTS-RELEASE-001",
+  "status": "blocked",
+  "productionActivationDefault": false,
+  "requiredIndependentSecurityReview": true,
+  "requiredPrivacyAndDataResidencyReview": true,
+  "requiredExactShaHumanGate": true,
+  "manualApprovalCannotBeReplacedByStaticCi": true,
+  "orchestrator": "EKODI Orchestrator",
+  "reviewedScopes": [
+    "person",
+    "tenant"
+  ],
+  "forbiddenActiveContents": [
+    "government_identity_document",
+    "resident_registration_number_unredacted"
+  ],
+  "controls": [
+    {
+      "id": "P0-PRIVACY",
+      "owner": "independent privacy/legal reviewer",
+      "evidence": "data classes, legal basis, data transfer, retention and sharing consent"
+    },
+    {
+      "id": "P0-CRYPTO",
+      "owner": "independent security reviewer",
+      "evidence": "secret custody, key rotation/recovery, tamper resistance, no raw content in logs"
+    },
+    {
+      "id": "P0-SCANNER",
+      "owner": "independent security reviewer",
+      "evidence": "server-side trusted scanner and actual redaction of shared copy"
+    },
+    {
+      "id": "P0-AUTH",
+      "owner": "independent security reviewer",
+      "evidence": "verified account+MFA, wrong-person/wrong-tenant denial and replay/race tests"
+    },
+    {
+      "id": "P0-PURGE",
+      "owner": "operations and privacy reviewer",
+      "evidence": "idempotent deletion, backup retention, legal hold, scheduler audit and deletion receipts"
+    },
+    {
+      "id": "P0-CANARY",
+      "owner": "EKODI Orchestrator",
+      "evidence": "synthetic staging then production host/PC/mobile negative tests"
+    },
+    {
+      "id": "P0-OWNER",
+      "owner": "authenticated EKODI super administrator",
+      "evidence": "exact task and exact SHA gated approval receipt"
+    }
+  ],
+  "independentReviewReceiptVerified": false,
+  "privacyReviewReceiptVerified": false,
+  "exactShaHumanGateReceiptVerified": false,
+  "protectedMergeOnly": true,
+  "directProductionMutationsForbidden": true,
+  "forceEnabledWithoutReviewForbidden": true
+}

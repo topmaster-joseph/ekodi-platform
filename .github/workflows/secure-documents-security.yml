@@ -1,0 +1,45 @@
+name: EKODI Secure Documents Security Gate
+
+on:
+  pull_request:
+    paths:
+      - 'config/secure-documents-*.json'
+      - 'supabase/functions/secure-documents-api/**'
+      - 'supabase/migrations/*secure_documents*.sql'
+      - 'my/docs/secure-*'
+      - 'scripts/validate-secure-documents-security.mjs'
+      - 'test/secure-documents-*.test.mjs'
+      - '.github/workflows/secure-documents-security.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/secure-documents-*.json'
+      - 'supabase/functions/secure-documents-api/**'
+      - 'supabase/migrations/*secure_documents*.sql'
+      - 'my/docs/secure-*'
+      - 'scripts/validate-secure-documents-security.mjs'
+      - 'test/secure-documents-*.test.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-security-gate:
+    name: Secure Documents Static Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify least-privilege and blocked activation contract
+        run: node scripts/validate-secure-documents-security.mjs
+      - name: Execute deterministic security regression tests
+        run: |
+          node --test test/secure-documents-release-security.test.mjs test/secure-documents-contract.test.mjs
+      - name: Record independent-review boundary
+        run: |
+          echo 'Static verification only. Independent security/legal review and exact SHA human gate remain mandatory.'
+          node scripts/validate-secure-documents-security.mjs --release && exit 1 || test $? -eq 1
