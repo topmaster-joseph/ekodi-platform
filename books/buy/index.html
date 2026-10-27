@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ko" data-ekodi-progressive-home="off">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>도서 구매 | 에코디서점</title>
+  <meta name="description" content="에코디서점에서 전자책을 바로 구매하고 내 서재에서 받으세요." />
+  <meta name="robots" content="noindex,follow" />
+  <meta name="theme-color" content="#f6f2e8" />
+  <meta property="og:title" content="에코디서점" />
+  <meta property="og:description" content="현장을 기록하고, 다시 인용될 수 있는 지식으로." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://ekodi.kr/books/buy/" />
+  <meta property="og:site_name" content="에코디서점" />
+  <meta property="og:locale" content="ko_KR" />
+  <meta name="twitter:card" content="summary" />
+  <link rel="canonical" href="https://ekodi.kr/books/buy/" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/responsive.css" />
+  <link rel="stylesheet" href="/buy/buy.css" />
+</head>
+<body>
+  <a class="skip" href="#main">본문으로 바로가기</a>
+  <header class="site-header">
+    <div class="shell masthead">
+      <a class="brand" href="/" aria-label="에코디서점 홈">
+        <span class="brand-mark" aria-hidden="true">ES</span>
+        <span class="brand-copy"><b>에코디서점</b><small>Faith · Scholarship · Community</small></span>
+      </a>
+      <button class="menu-button" type="button" aria-expanded="false" aria-controls="site-nav">MENU</button>
+      <nav id="site-nav" class="nav" aria-label="주요 메뉴">
+        <a href="/">Home</a>
+        <a href="/#catalog">Books</a>
+        <a href="/series/">Series</a>
+        <a href="/research/">Research</a>
+        <a href="/notes/">Notes</a>
+        <a href="/#about">About</a>
+        <a href="/library/">내 서재</a>
+        <a href="https://ekodi.kr/">EKODI ↗</a>
+      </nav>
+    </div>
+  </header>
+  <main id="main" class="buy-page">
+    <section class="buy-hero">
+      <div class="shell" id="buyRoot">
+        <p class="buy-crumb"><a href="/">에코디서점</a> · <a href="/#catalog">출판 목록</a> · <span id="crumbTitle">도서</span></p>
+        <div class="buy-grid">
+          <div class="buy-cover" id="bookCover" aria-hidden="true"></div>
+          <div class="buy-info">
+            <p class="buy-kicker">EKODI BOOKS · 에코디서점 직접 판매</p>
+            <h1 class="buy-title" id="bookTitle">도서를 불러오는 중입니다</h1>
+            <p class="buy-subtitle" id="bookSubtitle" hidden></p>
+            <p class="buy-author" id="bookAuthor"></p>
+            <ul class="buy-points">
+              <li><span>결제 즉시 <b>내 서재</b>에 담기고, 언제든 다시 받을 수 있습니다.</span></li>
+              <li><span>EPUB 3 전자책 — 리디·교보·구글 플레이 북스 등 대부분의 전자책 앱에서 열립니다.</span></li>
+              <li><span>회원등급에 따라 할인된 가격이 자동으로 적용됩니다.</span></li>
+              <li><span>판매 수익은 에코디출판의 다음 책과 공동체 연구로 이어집니다.</span></li>
+            </ul>
+            <div class="buy-channels" id="otherChannels">
+              <h3>다른 판매처</h3>
+              <ul id="channelList"><li><b>유페이퍼</b><span>국내 전자책 판매처</span></li></ul>
+            </div>
+          </div>
+          <aside class="buy-card" aria-label="구매">
+            <h2>PURCHASE</h2>
+            <div class="price-now"><strong id="priceNow">—</strong><del id="priceList"></del></div>
+            <p class="price-tier" id="priceTier"></p>
+            <table class="tier-table" aria-label="회원등급별 가격">
+              <thead><tr><th>회원등급</th><th>가격</th></tr></thead>
+              <tbody id="tierRows"></tbody>
+            </table>
+            <a class="owned-badge" id="ownedBox" href="/library/" hidden>이미 내 서재에 있는 도서입니다 · 내 서재로 가기 →</a>
+            <div id="payArea">
+              <div class="account-box">
+                <div id="signedOut"><p>구매하려면 EKODI 계정(구글)으로 로그인해 주세요.</p><div id="googleButton"></div></div>
+                <div id="signedIn" hidden><p><b id="buyerEmail"></b> 계정으로 구매합니다. <button type="button" id="signOut" class="linklike">다른 계정</button></p></div>
+                <p id="accountStatus" class="buy-msg" role="status"></p>
+              </div>
+              <label class="consent"><input type="checkbox" id="consent" /><span>전자책은 다운로드 전 7일 이내 전액 환불, 다운로드 후에는 파일 결함 시에만 환불되는 것에 동의합니다.</span></label>
+              <button type="button" class="pay-btn" id="payBtn" disabled>불러오는 중</button>
+              <p class="buy-msg" id="buyMsg" role="alert"></p>
+              <p class="pay-note" id="payNote"></p>
+            </div>
+          </aside>
+        </div>
+      </div>
+      <div class="shell" id="buyError" hidden><div class="result-wrap"><h1>도서를 찾을 수 없습니다</h1><p id="buyErrorText"></p><div class="result-actions"><a class="primary" href="/#catalog">출판 목록 보기</a></div></div></div>
+    </section>
+    <section class="buy-policy">
+      <div class="shell policy-grid">
+        <article><h3>받는 방법</h3><p>결제가 끝나면 내 서재(ekodi.kr/books/library)에서 EPUB 파일을 바로 받습니다. 같은 계정으로 언제든 다시 받을 수 있습니다.</p></article>
+        <article><h3>환불</h3><p>다운로드 전에는 결제 후 7일 이내 전액 환불됩니다. 다운로드 후에는 파일 결함이 확인될 때 교환·환불해 드립니다.</p></article>
+        <article><h3>판매자</h3><p>에코디비즈 · 대표 정찬균 · 사업자등록번호 213-13-01959 · 통신판매업 2023-전남무안-0153 · 전남 무안군 청계면 백련동1길 17-4</p></article>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer">
+    <div class="shell footer-grid">
+      <div><b>에코디서점</b><p>Faith · Scholarship · Community</p></div>
+      <div><p>© <span id="year"></span> 에코디서점</p><a href="https://ekodi.kr/">ekodi.kr</a></div>
+    </div>
+  </footer>
+  <script src="https://js.tosspayments.com/v2/standard" defer></script>
+  <script src="https://accounts.google.com/gsi/client" async></script>
+  <script src="/buy/commerce-client.js" defer></script>
+  <script src="/buy/buy.js" defer></script>
+  <script src="/social-links.js" defer></script>
+</body>
+</html>

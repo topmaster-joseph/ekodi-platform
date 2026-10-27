@@ -33,6 +33,12 @@ test('a sale link opens a purchase button; no link never pretends to sell', () =
   assert.equal(pending.status, '판매처 등록 준비 중');
 });
 
+test('direct-sale titles send mall buyers to the bookstore checkout', () => {
+  const [direct] = bookstoreProducts({ books: [{ id: 'BOOK-X', catalogNo: 'EB-9', title: 'X', author: 'x', listPrice: { amount: 9900 }, links: { upaper: 'https://ekodi.upaper.kr/content/1' }, directSale: { enabled: true } }] });
+  assert.equal(direct.action.url, 'https://ekodi.kr/books/buy/?book=BOOK-X&from=mall');
+  assert.equal(direct.action.label, '에코디서점에서 구매하기');
+});
+
 test('hand-curated mall products win over mirrored ones', () => {
   const merged = mergeBookstoreProducts([{ id: 'bookstore-A', slug: 'x' }], [{ id: 'bookstore-A', slug: 'y' }, { id: 'n', slug: 'n' }]);
   assert.deepEqual(merged.map((p) => p.id), ['bookstore-A', 'n']);
