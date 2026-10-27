@@ -214,3 +214,18 @@ test('EKODI super admin can always sign in as the instructor (central session ve
   const auth=await readFile(new URL('../auth-site/admin-auth.js',import.meta.url),'utf8');
   assert.match(auth,/u\.pathname==='\/edu\/study\/live\/unlock\/'\|\|u\.pathname==='\/edu\/study\/live\/docs\/'/);
 });
+
+test('lecture summary / practice downloads: session status endpoint and handout return path',async()=>{
+  const {sessionStatus,unlockReturn}=await import('../education-instructor-gate.js');
+  assert.equal(unlockReturn(new URL('https://ekodi.kr/study/live/unlock/?c=mnu-factchat-2026&back=handout')),'../handout/?c=mnu-factchat-2026');
+  assert.equal(await sessionStatus(new Request('https://ekodi.kr/study/live/unlock/'),env()),null);
+  const anon=await worker.fetch(new Request('https://ekodi.kr/study/live/unlock/session'),env());
+  assert.deepEqual(await anon.json(),{instructor:false});assert.match(anon.headers.get('cache-control'),/no-store/);
+  const cookie=GATE_COOKIE+'='+await mintGateToken(KEY);
+  const ok=await worker.fetch(new Request('https://ekodi.kr/study/live/unlock/session',{headers:{cookie}}),env());
+  assert.deepEqual(await ok.json(),{instructor:true});
+  const js=await readFile(new URL('../education/study/live/handout.js',import.meta.url),'utf8');
+  assert.match(js,/INSTRUCTOR_MODES=new Set\(\['summary','practice'\]\)/);
+  assert.match(js,/if\(!instructor&&INSTRUCTOR_MODES\.has\(mode\)\)mode='slides'/);
+  assert.match(js,/if\(mode==='slides'\|\|!instructor\)\{window\.print\(\);return;\}/);
+});

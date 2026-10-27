@@ -144,7 +144,8 @@ function courseOf(url){return (url.searchParams.get('c')||'').replace(/[^a-z0-9-
 export function unlockReturn(url){
   const up=url.pathname.endsWith('/')?'../':'./';
   const c=courseOf(url),q=c?'?c='+encodeURIComponent(c):'';
-  return up+(url.searchParams.get('back')==='present'?'present/':'')+q;
+  const back=url.searchParams.get('back');
+  return up+(back==='present'?'present/':back==='handout'?'handout/':back==='docs'?'docs/':'')+q;
 }
 
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -247,6 +248,14 @@ export async function hasInstructorSession(request,env){
 // role super_admin only, exchanged for the same short-lived HttpOnly instructor cookie. The token itself is
 // never stored by Education.
 export const ADMIN_UNLOCK_PATH='/study/live/unlock/admin';
+export const SESSION_STATUS_PATH='/study/live/unlock/session';
+// Read-only: tells instructor-only UI (e.g. handout summary/practice downloads) whether this browser holds an
+// instructor session. Never reveals anything else.
+export async function sessionStatus(request,env,{url=new URL(request.url)}={}){
+  if(url.pathname!==SESSION_STATUS_PATH)return null;
+  const instructor=await hasInstructorSession(request,env);
+  return new Response(JSON.stringify({instructor}),{status:200,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store, private','x-content-type-options':'nosniff'}});
+}
 export const ADMIN_SESSION_URL='https://ekodi.kr/api/session';
 export async function adminUnlock(request,env,{url=new URL(request.url),fetchImpl=globalThis.fetch}={}){
   if(url.pathname!==ADMIN_UNLOCK_PATH)return null;
