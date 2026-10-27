@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {verifyIndependentBoardLive, LIVE_BOARDS} from '../scripts/verify-independent-board-live.mjs';
 import {readFile} from 'node:fs/promises';
 
-function fixture({mismatch = false, subscription = true, leak = false} = {}) {
+function fixture({mismatch = false, subscription = true, leak = false, social = false, singlesLeak = false} = {}) {
   const calls = [];
   const fetcher = async (url, options) => {
     calls.push({path: url.pathname, method: options.method, authorization: options.headers.authorization});
@@ -25,10 +25,10 @@ function fixture({mismatch = false, subscription = true, leak = false} = {}) {
     }
     if (path === '/singles/api/status') return new Response(JSON.stringify({
       service: 'ekodi-singles', messages_require_subscription: subscription,
-      paid_brokerage_enabled: false, social_enabled: false, bank_transfer_enabled: false,
+      paid_brokerage_enabled: false, social_enabled: social, bank_transfer_enabled: false,
     }), {status: 200, headers});
     if (path === '/singles/api/public') return new Response(JSON.stringify({description_only: true}), {status: 200, headers});
-    if (path.startsWith('/singles/api/')) return new Response('', {status: 503, headers});
+    if (path.startsWith('/singles/api/')) return new Response('', {status: social ? (singlesLeak ? 200 : 401) : 503, headers});
     if (path.startsWith('/singles')) return new Response('<!doctype html><title>EKODI Singles</title>', {status: 200, headers: {'content-type': 'text/html'}});
     throw new Error('Unexpected URL ' + path);
   };
@@ -73,4 +73,12 @@ test('Cloudflare HTTP 429 immediately stops the live sentinel without retries', 
     /Cloudflare traffic guard 429/,
   );
   assert.equal(attempts, 1);
+});
+
+test('singles member features open: anonymous member and bank APIs must still be refused', async () => {
+  const {fetcher} = fixture({social: true});
+  const result = await verifyIndependentBoardLive({fetcher, sleep: async () => {}});
+  assert.equal(result.singlesSocialEnabled, true);
+  const leaking = fixture({social: true, singlesLeak: true}).fetcher;
+  await assert.rejects(() => verifyIndependentBoardLive({fetcher: leaking, sleep: async () => {}}), /expected 401/);
 });

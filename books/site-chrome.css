@@ -1,0 +1,68 @@
+/* BOOKS-PUBLISHING-CHROME-001 — scripts/site-chrome.mjs가 생성합니다. 직접 고치지 말고 스크립트를 고친 뒤 다시 생성하세요. */
+.ekc-header,.ekc-footer{--ekc-paper:#f6f2e8;--ekc-ink:#152033;--ekc-accent:#10264f;--ekc-accent-2:#8a2e2e;--ekc-line:#cec6b7;--ekc-band:#10264f;--ekc-foot:#0f1a2c;--ekc-foot-ink:#e8e4db;--ekc-foot-muted:#aab3c0;--ekc-foot-line:#2d3a52;--ekc-max:1260px;box-sizing:border-box;width:auto;height:auto;min-height:0;max-width:none;margin:0;font-family:"Noto Serif KR","Nanum Myeongjo",Georgia,serif;text-align:left}
+.ekc-header *,.ekc-footer *{box-sizing:border-box}
+.ekc-shell{width:min(calc(100% - 44px),var(--ekc-max));margin:0 auto}
+.ekc-header{display:block;position:sticky;top:0;z-index:40;padding:0;background:var(--ekc-paper);color:var(--ekc-ink);border-bottom:2px solid var(--ekc-accent);box-shadow:0 1px 0 rgba(0,0,0,.02)}
+.ekc-network{background:var(--ekc-band);color:#f3efe6;font-family:Arial,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+.ekc-network .ekc-shell{display:flex;align-items:center;gap:18px;min-height:32px}
+.ekc-network-label{font-size:.62rem;letter-spacing:.14em;opacity:.72;white-space:nowrap}
+.ekc-network-links{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+.ekc-network-links::-webkit-scrollbar{display:none}
+.ekc-network-links a{display:inline-flex;align-items:baseline;gap:6px;padding:6px 10px;color:inherit;text-decoration:none;font-size:.72rem;white-space:nowrap;border-radius:2px;opacity:.82}
+.ekc-network-links a span{font-size:.62rem;opacity:.7}
+.ekc-network-links a:hover{opacity:1;background:rgba(255,255,255,.08)}
+.ekc-network-links a[aria-current]{opacity:1;background:rgba(255,255,255,.14);box-shadow:inset 0 -2px 0 #d9b56a}
+.ekc-masthead{position:relative;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:28px;min-height:72px}
+.ekc-brand{display:inline-flex;align-items:center;gap:13px;color:inherit;text-decoration:none}
+.ekc-mark{display:inline-grid;place-items:center;width:38px;height:44px;border:2px solid var(--ekc-accent);color:var(--ekc-accent);font-family:Georgia,serif;font-weight:700;font-size:.84rem;clip-path:polygon(50% 0,100% 12%,100% 78%,50% 100%,0 78%,0 12%);flex:none}
+.ekc-brand-copy b,.ekc-brand-copy small{display:block}
+.ekc-brand-copy b{font-size:1.05rem;letter-spacing:.04em;color:var(--ekc-accent)}
+.ekc-brand-copy small{margin-top:2px;font-family:Georgia,serif;font-size:.66rem;color:#5d6472}
+.ekc-nav{grid-column:2;grid-row:1;display:flex;justify-content:flex-end;align-items:center;gap:26px}
+.ekc-nav a{color:var(--ekc-ink);text-decoration:none;font-family:Arial,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-size:.8rem;letter-spacing:.02em;padding:6px 0;border-bottom:1px solid transparent}
+.ekc-nav a:hover,.ekc-nav a[aria-current="page"]{color:var(--ekc-accent-2);border-bottom-color:currentColor}
+.ekc-nav .ekc-nav-cta{display:none}
+.ekc-actions{grid-column:3;display:flex;align-items:center;gap:10px}
+.ekc-cta{display:inline-flex;align-items:center;min-height:38px;padding:0 16px;background:var(--ekc-accent);color:#fffdf8;text-decoration:none;font-family:Arial,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-size:.78rem;letter-spacing:.03em;border:1px solid var(--ekc-accent)}
+.ekc-cta:hover{background:transparent;color:var(--ekc-accent)}
+.ekc-header .ekc-menu{display:none;min-height:38px;border-radius:0;box-shadow:none;font-weight:400;padding:0 13px;border:1px solid var(--ekc-accent);background:transparent;color:var(--ekc-accent);font-family:Arial,sans-serif;font-size:.68rem;letter-spacing:.1em;cursor:pointer}
+.ekc-footer{display:block;padding:54px 0 26px;margin-top:0;background:var(--ekc-foot);color:var(--ekc-foot-ink);border-top:3px solid var(--ekc-accent)}
+.ekc-foot-grid{display:grid;grid-template-columns:1.5fr 1fr 1fr 1.3fr;gap:36px}
+.ekc-foot-name{display:flex;align-items:center;gap:12px;margin:0 0 14px}
+.ekc-foot-name b{font-size:1.1rem;letter-spacing:.04em}
+.ekc-footer .ekc-mark{border-color:var(--ekc-foot-ink);color:var(--ekc-foot-ink)}
+.ekc-footer p{margin:0;color:var(--ekc-foot-muted);font-size:.8rem;line-height:1.75}
+.ekc-footer h2{margin:0 0 12px;font-family:Arial,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.14em;color:#d9b56a}
+.ekc-footer ul{list-style:none;margin:0;padding:0}
+.ekc-footer li{margin:0 0 7px;font-size:.8rem;color:var(--ekc-foot-muted)}
+.ekc-footer a{color:var(--ekc-foot-ink);text-decoration:none;font-family:inherit;font-size:.8rem}
+.ekc-footer a:hover{text-decoration:underline;text-underline-offset:4px}
+.ekc-social{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:16px}
+.ekc-social:empty{display:none}
+.ekc-social a{font-family:Arial,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-size:.74rem;opacity:.9}
+.ekc-info li{font-family:Arial,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-size:.74rem}
+.ekc-foot-base{display:flex;justify-content:space-between;gap:20px;margin-top:40px;padding-top:18px;border-top:1px solid var(--ekc-foot-line)}
+.ekc-foot-base p{font-family:Arial,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-size:.72rem}
+.ekc-foot-base a{margin-left:16px;font-size:.72rem}
+@media(max-width:980px){
+.ekc-masthead{grid-template-columns:1fr auto;min-height:64px;gap:14px}
+.ekc-header .ekc-menu{display:inline-block}
+.ekc-cta{display:none}
+.ekc-nav{display:none;position:absolute;top:100%;left:-22px;right:-22px;grid-column:auto;flex-direction:column;align-items:stretch;gap:0;padding:6px 22px 14px;background:var(--ekc-paper);border-bottom:2px solid var(--ekc-accent);box-shadow:0 14px 28px rgba(16,26,44,.14)}
+.ekc-nav.open{display:flex}
+.ekc-nav a{padding:13px 0;font-size:.9rem;border-bottom:1px solid var(--ekc-line)}
+.ekc-nav .ekc-nav-cta,.ekc-nav .ekc-nav-cta[aria-current]{display:block;margin-top:10px;text-align:center;background:var(--ekc-accent);color:#fffdf8;border:0}
+.ekc-actions{grid-column:2}
+.ekc-foot-grid{grid-template-columns:1fr 1fr;gap:30px}
+.ekc-foot-brand{grid-column:1/-1}
+}
+@media(max-width:640px){
+.ekc-shell{width:min(calc(100% - 26px),var(--ekc-max))}
+.ekc-nav{left:-13px;right:-13px;padding-left:13px;padding-right:13px}
+.ekc-network-label{display:none}
+.ekc-network-links a span{display:none}
+.ekc-brand-copy small{display:none}
+.ekc-foot-grid{grid-template-columns:1fr}
+.ekc-foot-base{flex-direction:column}
+.ekc-foot-base a{margin:0 16px 0 0}
+}

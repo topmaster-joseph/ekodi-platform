@@ -102,9 +102,14 @@ export async function verifyIndependentBoardLive({
   if (!singles.body.social_enabled) {
     await request('/singles/api/discover', [503]);
     await request('/singles/api/events', [503]);
+  } else {
+    // Member features open (owner decision 2026-10-28): anonymous calls must still be refused.
+    await request('/singles/api/discover', [401]);
+    await request('/singles/api/events', [401]);
   }
   if (!singles.body.bank_transfer_enabled) {
-    await request('/singles/api/bank/plans', [503]);
+    // Bank collection stays closed; anonymously it is refused either at the launch gate (503) or for missing login (401).
+    await request('/singles/api/bank/plans', singles.body.social_enabled ? [401, 503] : [503]);
   }
   return {
     ok: true, boards: LIVE_BOARDS.map(x => x.site),

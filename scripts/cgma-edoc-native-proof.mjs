@@ -29,6 +29,7 @@ await fs.mkdir(outDir, { recursive: true });
 // ---------- production modules over a real database ----------
 const sqlite = new DatabaseSync(':memory:');
 sqlite.exec(await fs.readFile(new URL('migrations/202610250500_cgma_edocs.sql', ROOT), 'utf8'));
+sqlite.exec(await fs.readFile(new URL('migrations/202610280400_cgma_edocs_archive.sql', ROOT), 'utf8'));
 const stmt = (sql, params = []) => ({
   bind: (...v) => stmt(sql, v),
   first: async () => sqlite.prepare(sql).get(...params) || null,
@@ -196,6 +197,47 @@ try {
   check('처리 이력: 등록→원본→시작→서명×3→완료', audit.actions.join(',') === 'created,file_uploaded,started,signed,signed,signed,completed' && audit.chain_valid, audit);
   const pdfSha = (await import('node:crypto')).createHash('sha256').update(await fs.readFile(pdfPath)).digest('hex');
   check('문서 지문 = 원본 PDF의 SHA-256', audit.sha === pdfSha, { sha256: pdfSha });
+  // 5. 보관 문서: register a records-only document (no signatures) and confirm 연번 in the list.
+  await admin.getByRole('button', { name: '목록으로' }).first().click();
+  await admin.getByRole('button', { name: '+ 새 전자문서' }).click();
+  await admin.locator('input[name="cgmaEdocMode"][value="archive"]').check();
+  check('보관 모드: 서명자 입력란 숨김', await admin.locator('.cgma-edoc-signer-section').isHidden());
+  await admin.locator('.cgma-edoc-form input[type="text"]').first().fill('2026년 청계면 상인회 상반기 결산 (실증)');
+  await admin.locator('select').first().selectOption('회계·정산');
+  await admin.locator('input[type="date"]').fill('2026-06-24');
+  await admin.locator('input[type="file"]').setInputFiles(pdfPath);
+  await admin.getByRole('button', { name: '보관 등록' }).click();
+  await admin.locator('.cgma-edoc-head').waitFor();
+  const archivedBadge = await admin.locator('.cgma-edoc-head .cgma-edoc-badge').textContent();
+  check('보관 등록 → 상태 ‘보관’', archivedBadge === '보관', { badge: archivedBadge });
+  await admin.getByRole('button', { name: '목록으로' }).first().click();
+  await admin.locator('.cgma-edoc-row').first().waitFor();
+  const serials = await admin.locator('.cgma-edoc-serial').allTextContents();
+  const head = await admin.locator('.cgma-edoc-table thead th').first().textContent();
+  check('문서 목록 첫 열 ‘연번’, 최신순 2·1', head === '연번' && JSON.stringify(serials) === JSON.stringify(['2', '1']), { head, serials });
+  await shot(admin, '09-admin-list-serial-archive');
+  // 6. 일괄 등록: several files + manifest in one selection.
+  // (ASCII file names: this sandbox's Playwright drops non-ASCII names in multi-file selection; real browsers do not.)
+  const bulkDir = path.join(outDir, 'bulk'); await fs.mkdir(bulkDir, { recursive: true });
+  const pdfCopy = path.join(bulkDir, '240726_urban-regeneration-direction.pdf'); await fs.copyFile(pdfPath, pdfCopy);
+  const hwp = path.join(bulkDir, 'settlement-2026-h1.hwp'); await fs.writeFile(hwp, Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1, ...new Array(64).fill(0)]));
+  const manifestPath = path.join(bulkDir, 'cgma-edocs-manifest.json');
+  await fs.writeFile(manifestPath, JSON.stringify({ schema: 'cgma-edocs-manifest.v1', documents: [
+    { file: 'settlement-2026-h1.hwp', title: '2026년 상반기 결산 (실증)', category: '회계·정산', doc_date: '2026-06-24', mode: 'archive' }] }));
+  await admin.getByRole('button', { name: '일괄 등록' }).click();
+  await admin.locator('.cgma-edoc-bulk input[type="file"]').setInputFiles([pdfCopy, hwp, manifestPath]);
+  await admin.locator('.cgma-edoc-bulk tbody tr').nth(1).waitFor({ timeout: 8000 });
+  const proposed = await admin.locator('.cgma-edoc-bulk tbody tr').evaluateAll(rows => rows.map(r => [r.cells[1].textContent, r.querySelector('input[type=text]').value, r.querySelector('select').value, r.querySelector('input[type=date]').value]));
+  check('일괄 등록: manifest 반영 + 파일명 날짜 추정', proposed.some(r => r[1] === '2026년 상반기 결산 (실증)' && r[2] === '회계·정산' && r[3] === '2026-06-24') && proposed.some(r => r[3] === '2024-07-26'), { proposed });
+  await admin.getByRole('button', { name: '등록 시작' }).click();
+  await admin.waitForFunction(() => [...document.querySelectorAll('.cgma-edoc-bulk-state')].every(td => /완료|실패/.test(td.textContent)), null, { timeout: 30000 });
+  const states = await admin.locator('.cgma-edoc-bulk-state').allTextContents();
+  check('일괄 등록: 2건 모두 완료(한글 HWP 보관 포함)', states.every(t => t === '완료'), { states });
+  await shot(admin, '10-admin-bulk-registered');
+  await admin.getByRole('button', { name: '목록으로' }).click();
+  await admin.locator('.cgma-edoc-row').nth(3).waitFor();
+  const serialsAfter = await admin.locator('.cgma-edoc-serial').allTextContents();
+  check('일괄 등록 후 연번 4·3·2·1', JSON.stringify(serialsAfter) === JSON.stringify(['4', '3', '2', '1']), { serialsAfter });
   check('브라우저 콘솔 · CSP 위반 없음', report.consoleProblems.length === 0, { problems: report.consoleProblems });
 } finally {
   await browser.close();
