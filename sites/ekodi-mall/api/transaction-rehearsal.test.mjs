@@ -83,3 +83,30 @@ test('staging rehearsal proves order, synthetic payment, settlement idempotence 
     db.close();
   }
 });
+
+// MALL-REHEARSAL-CLEANUP-001: an attempt cancelled after createOrder (client timeout) must not
+// block retries of the same runId with a foreign-key failure on the synthetic product.
+test('retry after an attempt that died after createOrder recovers and leaves no synthetic rows', async () => {
+  const fs = await import('node:fs');
+  const { DatabaseSync } = await import('node:sqlite');
+  const db = new DatabaseSync(':memory:'); db.exec('PRAGMA foreign_keys=ON');
+  const dir = new URL('./migrations/', import.meta.url);
+  for (const f of fs.readdirSync(dir).filter((f) => f.endsWith('.sql')).sort()) db.exec(fs.readFileSync(new URL(f, dir), 'utf8'));
+  const stmt = (sql, args = []) => ({ sql, bind: (...a) => stmt(sql, a), first: async () => db.prepare(sql).get(...args) ?? null, all: async () => ({ results: db.prepare(sql).all(...args) }), run: async () => ({ meta: { changes: Number(db.prepare(sql).run(...args).changes) } }) });
+  let cancelled = false;
+  const DB = { prepare: (s) => stmt(s), batch: async (list) => {
+    // Simulate the runtime cancelling the request after createOrder: neither payment nor the finally-cleanup runs.
+    if (cancelled === false && list.some((s) => /INSERT INTO order_payments/.test(s.sql))) { cancelled = 'now'; throw new Error('cancelled'); }
+    if (cancelled === 'now' && list.some((s) => /DELETE FROM products/.test(s.sql))) { cancelled = true; throw new Error('cancelled'); }
+    db.exec('BEGIN'); try { for (const s of list) await s.run(); db.exec('COMMIT'); } catch (e) { db.exec('ROLLBACK'); throw e; }
+  } };
+  const env = { DB, ENVIRONMENT: 'staging', PAYMENTS_ENABLED: 'false', PAYMENT_PROVIDER: 'toss', TRANSACTION_REHEARSAL_ENABLED: 'true', TRANSACTION_REHEARSAL_TOKEN: 't', MALL_BASE_URL: 'https://ekodi.kr/ekodimall' };
+  const call = () => handleTransactionRehearsal(new Request('https://x/api/internal/rehearsal/transaction', { method: 'POST', headers: { 'x-ekodi-rehearsal-token': 't' }, body: JSON.stringify({ runId: 'gh-1-1' }) }), env);
+  await assert.rejects(call());
+  assert.equal(db.prepare('SELECT COUNT(*) c FROM orders').get().c, 1, 'cancelled attempt leaves an order behind');
+  const retry = await call();
+  assert.equal(retry.status, 200);
+  assert.equal(retry.body.ok, true);
+  assert.equal(db.prepare('SELECT COUNT(*) c FROM orders').get().c, 0);
+  assert.equal(db.prepare("SELECT COUNT(*) c FROM products WHERE id LIKE 'rehearsal%'").get().c, 0);
+});
