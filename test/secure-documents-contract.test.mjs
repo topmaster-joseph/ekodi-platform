@@ -38,7 +38,7 @@ test('scope and share are checked by server, not client identity hints',()=>{
  assert.match(api,/eq\("view_count",share\.view_count\)/);
  assert.match(api,/gt\("expires_at"/);
  assert.match(api,/who\.aal2/);
- assert.match(api,/handleOpen\\(req,who,body\\)\\{\\s*if\\(!who\\.aal2\\)/);
+ assert.ok(api.includes('async function handleOpen(req,who,body){\n if(!who.aal2)'), 'recipient open requires recent MFA');
  assert.doesNotMatch(api,/createSignedUrl|createSignedUploadUrl|publicUrl/);
 });
 test('server encrypts bytes and rejects unsafe formats',()=>{
