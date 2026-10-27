@@ -120,7 +120,7 @@
     section.dataset.panel = 'social'; section.id = 'socialAdmin';
     const head = el('div', '', 'social-admin-head');
     const copy = el('div');
-    copy.append(el('p','MULTI-CHANNEL CONTROL CENTER','kicker'), el('h2','소셜 채널 통합관리'), el('p','모든 현재·미래 EKODI 사이트와 서비스는 중앙 Social Hub 정책을 자동 상속합니다. 사이트별 채널 현황과 계정 연결·게시 배정·기관 정책을 관리합니다. 외부 로그인은 공식 OAuth를 사용하며 비밀값은 암호화 Vault에서 보호합니다.','operations-copy'));
+    copy.append(el('p','MULTI-CHANNEL CONTROL CENTER','kicker'), el('h2','소셜 채널 통합관리'), el('p','모든 현재·미래 EKODI 사이트와 서비스는 중앙 Social Hub 정책을 자동 상속합니다. 사이트별 채널 현황과 계정 연결·게시 배정·기관 정책을 관리합니다. 외부 로그인은 공식 OAuth를 사용하며 OAuth 비밀값은 암호화 Vault에만 보관됩니다.','operations-copy'));
     const actions = el('div','','social-admin-actions');
     const open = el('a','소셜 허브 열기 ↗','secondary'); open.href='https://social.ekodi.kr'; open.target='_blank'; open.rel='noopener';
     const refresh = el('button','전체 새로고침','secondary'); refresh.type='button';
