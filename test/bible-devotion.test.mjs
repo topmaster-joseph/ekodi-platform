@@ -213,3 +213,12 @@ test('Bible footer wraps on phones so links and copyright never overflow sideway
   const css = fs.readFileSync(new URL('styles.css', bibleDir), 'utf8');
   assert.match(css, /footer\{display:flex;flex-wrap:wrap;/);
 });
+
+test('phone layout keeps scripture side gutters minimal', () => {
+  const css = fs.readFileSync(new URL('devotion.css', bibleDir), 'utf8');
+  const tail = css.slice(css.lastIndexOf('@media (max-width:520px){'));
+  assert.match(tail, /\.devotion-page main\{padding-left:0;padding-right:0\}/);
+  assert.match(tail, /\.ekodi-devotion\{padding-left:max\(6px,env\(safe-area-inset-left,0px\)\);padding-right:max\(6px,env\(safe-area-inset-right,0px\)\)\}/);
+  assert.match(tail, /\.ekodi-devotion \.dv-panel\{padding-left:12px;padding-right:12px\}/);
+  assert.match(tail, /\.ekodi-devotion \.dv-scripture-section\{padding:16px 12px;/);
+});
