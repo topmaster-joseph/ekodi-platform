@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="description" content="EKODI Education 강사 서류 공유 — 신분증 사본·통장 사본을 기간 제한 링크로 전달">
+  <meta name="ekodi-ui-type" content="USER">
+  <meta name="robots" content="noindex">
+  <title>강사 서류 공유 · EKODI Education Premium Studio</title>
+  <link rel="stylesheet" href="../../../fonts/pretendard/pretendardvariable-dynamic-subset.css">
+  <link rel="stylesheet" href="../live.css">
+</head>
+<body class="lv docs-body" data-ekodi-ui="USER" data-live-surface="instructor-docs">
+<header class="lv-top" id="docsTop" data-ekodi-fixed-header aria-label="강사 서류 공유">
+  <a class="lv-brand" id="docsBack" href="../"><span class="lv-brand-mark" aria-hidden="true">E</span><span><strong>강사 서류 공유</strong><small>신분증 사본 · 통장 사본 · 기간 제한 링크</small></span></a>
+  <span class="grow"></span>
+  <a class="btn btn-small" id="docsLogout" href="./?gate=logout">잠그기</a>
+</header>
+<main class="docs-page" id="docsMain">
+  <p class="notice" id="docsNotice">파일을 올리면 링크가 만들어집니다. 링크를 받은 사람은 정한 기간 동안만 볼 수 있고, 기간이 지나면 파일이 자동으로 삭제됩니다.</p>
+  <div class="docs-grid">
+    <form class="panel docs-card" data-kind="id" aria-labelledby="docsIdTitle">
+      <h2 id="docsIdTitle">신분증 사본</h2>
+      <p class="meta">주민등록번호 뒷자리는 가린 사본을 권장합니다. 기관이 전체 번호를 요구하는 경우에만 가리지 않은 사본을 올려 주세요.</p>
+      <label class="field">파일 (JPG·PNG·WebP·PDF, 10MB 이하)<input type="file" name="file" accept="image/jpeg,image/png,image/webp,application/pdf" required></label>
+      <label class="field">열람 기간<select name="days"><option value="1">1일</option><option value="3">3일</option><option value="7" selected>7일</option><option value="14">14일</option><option value="30">30일</option></select></label>
+      <label class="field">용도 (화면 워터마크)<input type="text" name="purpose" maxlength="80" placeholder="예: 국립목포대학교 강사료 지급 확인용"></label>
+      <button type="submit" class="btn btn-primary">링크 만들기</button>
+    </form>
+    <form class="panel docs-card" data-kind="bank" aria-labelledby="docsBankTitle">
+      <h2 id="docsBankTitle">통장 사본</h2>
+      <p class="meta">예금주·은행·계좌번호가 보이는 면만 올려 주세요. 거래 내역은 가려 주세요.</p>
+      <label class="field">파일 (JPG·PNG·WebP·PDF, 10MB 이하)<input type="file" name="file" accept="image/jpeg,image/png,image/webp,application/pdf" required></label>
+      <label class="field">열람 기간<select name="days"><option value="1">1일</option><option value="3">3일</option><option value="7" selected>7일</option><option value="14">14일</option><option value="30">30일</option></select></label>
+      <label class="field">용도 (화면 워터마크)<input type="text" name="purpose" maxlength="80" placeholder="예: 국립목포대학교 강사료 지급 확인용"></label>
+      <button type="submit" class="btn btn-primary">링크 만들기</button>
+    </form>
+  </div>
+  <section class="panel" aria-labelledby="docsListTitle">
+    <h2 id="docsListTitle">공유 중인 링크</h2>
+    <div id="docsList" aria-live="polite"><p class="meta">불러오는 중…</p></div>
+  </section>
+</main>
+<div class="toast" id="toast" role="status" aria-live="assertive" hidden></div>
+<script type="module" src="../docs.js"></script>
+</body>
+</html>

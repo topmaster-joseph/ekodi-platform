@@ -645,3 +645,23 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 .lv .lab-handout{margin:10px 0 2px;font-size:.875rem}
 .lv .lab-handout a{font-weight:650}
 @media (max-width:400px){.lv #labTop #topHandout{display:none}}
+
+/* Instructor document share (강사 서류 공유) + public expiring viewer */
+.lv .docs-page{max-width:980px;margin:0 auto;padding:18px 16px 48px;display:grid;gap:14px}
+.lv .docs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.lv .docs-card{display:grid;gap:10px;align-content:start}
+.lv .docs-card input[type="text"],.lv .docs-card select,.lv .docs-card input[type="file"]{width:100%;min-height:40px;border:1px solid var(--line);border-radius:10px;padding:6px 10px;font:inherit;background:#fff}
+.lv .docs-list{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.lv .docs-item{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:#fff}
+.lv .docs-link{display:block;margin-top:4px;font-size:.75rem;color:var(--muted);word-break:break-all}
+.lv.doc-view-body{background:#eef2f7}
+.lv .doc-view{max-width:920px;margin:0 auto;padding:22px 16px 40px;display:grid;gap:14px}
+.lv .doc-head h1{font-size:1.5rem;margin:4px 0}
+.lv .doc-frame{position:relative;margin:0;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;min-height:200px}
+.lv .doc-img{display:block;width:100%;height:auto}
+.lv .doc-pdf{display:block;width:100%;height:78vh;border:0}
+.lv .doc-mark{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;text-align:center;padding:12%;
+  font-size:clamp(1rem,3.4vw,1.75rem);font-weight:800;color:rgba(180,35,24,.28);transform:rotate(-24deg);line-height:1.4;word-break:keep-all}
+.lv .doc-note{font-size:.8125rem}
+@media print{.lv.doc-view-body .btn-row{display:none}}
+.lv .docs-grid>.panel,.lv .docs-page>.panel{margin:0}

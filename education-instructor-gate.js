@@ -61,9 +61,11 @@ const b64u={
 // Paths are Education-origin paths (the /edu or /education prefix is already stripped by the router).
 export const UNLOCK_PATH='/study/live/unlock/';
 const isUnlockPath=p=>p==='/study/live/unlock'||p==='/study/live/unlock/'||p==='/study/live/unlock/index.html';
+// The instructor document-share manager page (its API checks the session itself; shared view links are public).
+export const isDocsManagerPath=p=>p==='/study/live/docs'||p==='/study/live/docs/'||p==='/study/live/docs/index.html';
 export function isGatedPath(pathname){
   const p=String(pathname||'').toLowerCase();
-  if(isUnlockPath(p))return true;
+  if(isUnlockPath(p)||isDocsManagerPath(p))return true;
   return /^\/study\/live\/courses\/[^/]+\.notes\.js$/.test(p);
 }
 const isDocumentPath=p=>!/\.(?:js|mjs|css|json|svg|png|jpe?g|webp|woff2?)$/i.test(String(p||''));
@@ -228,3 +230,12 @@ export async function instructorGate(request,env,{url=new URL(request.url)}={}){
   if(doc&&(method==='GET'||method==='HEAD'))return htmlResponse(lockPage({course,backHref:unlock?unlockReturn(url):''}),401);
   return new Response('instructor sign-in required',{status:401,headers:{'cache-control':'no-store','content-type':'text/plain; charset=utf-8'}});
 }
+
+// A signed-in instructor session (password configured and a valid gate cookie). Used by APIs that hold the
+// instructor's own documents: unlike the notes, these never open in "open" mode without a password.
+export async function hasInstructorSession(request,env){
+  const verifier=activeVerifier(env),key=env?.EDU_GATE_SIGNING_KEY;
+  if(!parseVerifier(verifier)||!usableKey(key))return false;
+  return verifyGateToken(readCookie(request,GATE_COOKIE),key);
+}
+export function isSameSiteRequest(request,url){return sameSiteOrigin(request,url);}

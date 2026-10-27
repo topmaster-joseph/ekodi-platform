@@ -221,7 +221,7 @@ function tick(){
 }
 function renderAll(){renderTop();renderTimerMissions();renderView();renderJoin();renderSlideInfo();renderHandoutLink();tick();}
 // Learner handout (lecture content only, practice material excluded) for the current session.
-function renderHandoutLink(){const a=$('#openHandout');if(a)a.href=livePath(location.pathname,'handout'+SLASH)+'?c='+encodeURIComponent(course.id)+'&s='+S().session;}
+function renderHandoutLink(){const d=$('#openDocs');if(d)d.href=livePath(location.pathname,'docs'+SLASH)+'?c='+encodeURIComponent(course.id);const a=$('#openHandout');if(a)a.href=livePath(location.pathname,'handout'+SLASH)+'?c='+encodeURIComponent(course.id)+'&s='+S().session;}
 
 function huntSource(hunt){
   const [group,track]=String(hunt.source||'').split('.');
