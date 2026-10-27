@@ -31,9 +31,38 @@
         row.append(C.cover(item), info, btn); list.append(row);
       }
     } catch (e) {
-      if (e.status === 401) { $('libStatus').textContent = '로그인이 필요합니다.'; $('libLogin').hidden = false; C.mountGoogle($('googleButton'), (t, err) => { $('accountStatus').textContent = t || ''; }, load); }
+      if (e.status === 401) { $('libStatus').textContent = '로그인이 필요합니다.'; $('libLogin').hidden = false; C.mountGoogle($('googleButton'), (t, err) => { $('accountStatus').textContent = t || ''; }, () => load().then(operatorPanel)); }
       else $('libStatus').textContent = e.message;
     }
   }
-  load();
+  async function operatorPanel() {
+    let catalog;
+    try { catalog = await (await fetch(`${C.BASE}/books.json`, { cache: 'no-store' })).json(); } catch { return; }
+    const books = (catalog.books || []).filter(b => b.directSale?.enabled);
+    const host = $('operatorBooks'); host.replaceChildren();
+    for (const book of books) {
+      let state;
+      try { state = await C.api(`/admin/files/${encodeURIComponent(book.id)}`); } catch (e) { if (e.status === 403 || e.status === 401) return; continue; }
+      $('operatorPanel').hidden = false;
+      const row = document.createElement('div'); row.className = 'op-row';
+      const info = document.createElement('div'); const b = document.createElement('b'); b.textContent = book.title; const sm = document.createElement('small');
+      sm.textContent = state.present ? `판매 파일 있음 · ${(state.size / 1024 / 1024).toFixed(2)}MB · ${new Date(state.uploaded).toLocaleString('ko-KR')}` : '판매 파일 없음 — EPUB를 올려 주세요';
+      info.append(b, sm);
+      const label = document.createElement('label'); label.textContent = state.present ? '새 판본 올리기' : 'EPUB 올리기';
+      const input = document.createElement('input'); input.type = 'file'; input.accept = '.epub,application/epub+zip';
+      input.addEventListener('change', async () => {
+        const file = input.files?.[0]; if (!file) return;
+        label.firstChild.textContent = '올리는 중…';
+        try {
+          const s = await C.session();
+          const r = await fetch(`${C.BASE}/api/commerce/admin/files/${encodeURIComponent(book.id)}`, { method: 'PUT', headers: { authorization: 'Bearer ' + (s?.accessToken || ''), 'content-type': 'application/epub+zip' }, body: file });
+          const d = await r.json().catch(() => ({}));
+          if (!r.ok) throw new Error(d.error || '올리지 못했습니다.');
+          alert(`${book.title} 판매 파일을 올렸습니다.`); operatorPanel(); load();
+        } catch (e) { alert(e.message); label.firstChild.textContent = '다시 올리기'; }
+      });
+      label.append(input); row.append(info, label); host.append(row);
+    }
+  }
+  load().then(operatorPanel);
 })();

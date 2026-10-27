@@ -69,3 +69,10 @@
 .buy-page [hidden],.buy-page[hidden]{display:none!important}
 .buy-points li>span{display:block}
 @media(max-width:700px){.buy-grid{display:flex;flex-direction:column}.buy-cover{order:1}.buy-info{order:3}.buy-card{order:2;width:100%}}
+.operator-panel{margin:10px 0 70px;padding:22px;border:1px dashed var(--gold);background:#fffdf6}
+.operator-panel h2{margin:0 0 6px;font-size:1.05rem;color:var(--navy)}
+.operator-panel p{margin:0 0 14px;color:#4a5263;font-size:.86rem}
+.op-row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:12px 0;border-top:1px solid #eee6d6}
+.op-row b{color:var(--navy)}.op-row small{display:block;color:#7a7f8a}
+.op-row label{min-height:42px;display:inline-flex;align-items:center;padding:0 16px;background:var(--navy);color:#fff;font-family:Arial,sans-serif;font-size:.8rem;cursor:pointer}
+.op-row input{display:none}

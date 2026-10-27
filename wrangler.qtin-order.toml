@@ -1,6 +1,6 @@
 # EKODI-QTIN-GROUP-ORDER-001 — 큐티인 월간 공동구매(에코디교회·에코디선교회 공용)
 name = "ekodi-qtin-order"
-main = "qtin-order-worker.js"
+main = "qtin-order-entry.js"
 compatibility_date = "2026-10-14"
 workers_dev = false
 preview_urls = false

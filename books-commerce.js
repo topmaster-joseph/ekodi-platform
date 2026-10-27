@@ -54,6 +54,44 @@ export function paymentState(env) {
   return ekodipay.readiness(env, { staging });
 }
 
+// EKODIPAY-GATEWAY-001: 키는 중앙 게이트웨이(ekodi-qtin-order RPC)에만 있다. 바인딩이 있으면 그쪽을 쓰고,
+// 없으면(테스트·로컬) 이 Worker 자신의 키 설정을 쓴다.
+export async function payments(env) {
+  const staging = String(env?.DATA_MODE || '') === 'isolated-staging';
+  if (!env?.EKODIPAY) {
+    const r = paymentState(env);
+    return { ...r, clientKey: ekodipay.merchantKeys(env, r.profile).clientKey, via: 'local' };
+  }
+  const enabled = flag(env.PAYMENTS_ENABLED) && !staging;
+  let state = null, key = null;
+  try {
+    [state, key] = await Promise.all([
+      env.EKODIPAY.readiness({ callerId: 'books', profileId: ekodipay.activeProfileId(env) }),
+      env.EKODIPAY.clientKey({ callerId: 'books', profileId: ekodipay.activeProfileId(env) }),
+    ]);
+  } catch { state = null; key = null; } // gateway not deployed/unreachable → fail closed
+  const r = state?.ok ? state.data : { ready: false, mode: 'none', missing: ['gateway-unavailable'] };
+  const ready = Boolean(enabled && r.ready && key?.ok && key.data);
+  return { ready, mode: r.mode || 'none', publicReady: ready && r.mode === 'live', profile: r.profile || ekodipay.activeProfileId(env), merchant: r.merchant || '', mid: r.mid || '', clientKey: key?.ok ? key.data : '', missing: enabled ? (r.missing || []) : ['payments-disabled'], via: 'gateway' };
+}
+
+/** Toss call through the gateway when bound, otherwise the local key. Throws TossError-like errors. */
+export function tossVia(env) {
+  if (!env?.EKODIPAY) return ekodipay.tossRequest;
+  return async (_env, profileId, path, options = {}) => {
+    const confirmMatch = path === '/v1/payments/confirm';
+    const getMatch = /^\/v1\/payments\/([^/]+)$/.exec(path);
+    let result;
+    try { result = confirmMatch
+      ? await env.EKODIPAY.confirm({ callerId: 'books', profileId, ...options.body, idempotencyKey: options.idempotencyKey })
+      : getMatch ? await env.EKODIPAY.getPayment({ callerId: 'books', profileId, paymentKey: decodeURIComponent(getMatch[1]) })
+      : { ok: false, error: { message: 'unsupported', code: 'UNSUPPORTED', status: 400 } }; }
+    catch { result = { ok: false, error: { message: '결제 게이트웨이에 연결하지 못했습니다.', code: 'GATEWAY_UNAVAILABLE', status: 503 } }; }
+    if (result?.ok) return result.data;
+    throw new ekodipay.TossError(result?.error?.message || '결제 서버 오류', { code: result?.error?.code || '', status: result?.error?.status || 502 });
+  };
+}
+
 async function assetJson(env, path) {
   const response = await env.ASSETS.fetch(new Request(`https://books.internal${path}`));
   if (!response.ok) throw new Error(`asset ${path} ${response.status}`);
@@ -96,7 +134,7 @@ export async function quote(env, request, bookId) {
   const buyer = await buyerIdentity(request);
   const tierId = await tierFor(env, buyer);
   const price = priceFor(book, policy, tierId === 'guest' ? 'member' : tierId);
-  const payments = paymentState(env);
+  const pay = await payments(env);
   const owned = buyer ? Boolean(await env.DB.prepare('SELECT 1 FROM books_entitlements WHERE buyer_user_id=? AND book_id=? AND revoked_at IS NULL').bind(buyer.userId, book.id).first()) : false;
   const operator = Boolean(buyer && operatorEmails(env).has(buyer.email));
   return {
@@ -105,17 +143,17 @@ export async function quote(env, request, bookId) {
       book: { id: book.id, title: book.title, subtitle: book.subtitle || '', author: book.author || '', coverImage: book.coverImage || '', format: book.format || [], edition: book.edition || '', links: { upaper: book.links?.upaper || '', google: book.links?.google || '', amazon: book.links?.amazon || '' } },
       signedIn: Boolean(buyer), buyerEmail: buyer?.email || '', tier: tierId, owned, price,
       tiers: (policy.tiers || []).map(t => ({ id: t.id, label: t.label, discountRate: t.discountRate || 0, description: t.description || '', price: priceFor(book, policy, t.id)?.amount ?? null })),
-      checkout: { open: payments.ready && (payments.mode === 'live' || operator), mode: payments.mode, testOnly: payments.ready && payments.mode !== 'live' },
+      checkout: { open: pay.ready && (pay.mode === 'live' || operator), mode: pay.mode, testOnly: pay.ready && pay.mode !== 'live' },
     },
   };
 }
 
 export async function createOrder(env, request, body, now = new Date()) {
-  const payments = paymentState(env);
-  if (!payments.ready) return { status: 503, data: { error: '에코디서점 결제 준비 중입니다. 결제가 열리면 바로 구매하실 수 있습니다.', code: 'PAYMENTS_NOT_READY' } };
+  const pay = await payments(env);
+  if (!pay.ready) return { status: 503, data: { error: '에코디서점 결제 준비 중입니다. 결제가 열리면 바로 구매하실 수 있습니다.', code: 'PAYMENTS_NOT_READY' } };
   const buyer = await buyerIdentity(request);
   if (!buyer) return { status: 401, data: { error: '구글 로그인 후 구매할 수 있습니다.', code: 'login_required' } };
-  if (payments.mode !== 'live' && !operatorEmails(env).has(buyer.email)) return { status: 503, data: { error: '에코디서점 결제 준비 중입니다.', code: 'PAYMENTS_TEST_ONLY' } };
+  if (pay.mode !== 'live' && !operatorEmails(env).has(buyer.email)) return { status: 503, data: { error: '에코디서점 결제 준비 중입니다.', code: 'PAYMENTS_TEST_ONLY' } };
   const [catalog, policy] = await Promise.all([loadCatalog(env), loadPolicy(env)]);
   const book = directSaleBook(catalog, body?.bookId);
   if (!book) return { status: 404, data: { error: '에코디서점 직접 판매 도서가 아닙니다.' } };
@@ -126,26 +164,26 @@ export async function createOrder(env, request, body, now = new Date()) {
   const tierId = await tierFor(env, buyer, now);
   const price = priceFor(book, policy, tierId);
   if (!price) return { status: 409, data: { error: '판매 가격이 확정되지 않은 도서입니다.' } };
-  const orderId = ekodipay.tagOrderId(newOrderId(now), payments.profile);
+  const orderId = ekodipay.tagOrderId(newOrderId(now), pay.profile);
   const createdAt = now.toISOString();
   const expiresAt = new Date(now.getTime() + PENDING_TTL_MS).toISOString();
   const name = clean(body?.name, 40) || buyer.name || buyer.email.split('@')[0];
   await env.DB.prepare(`INSERT INTO books_orders (id, book_id, book_title, buyer_user_id, buyer_email, buyer_name, tier_id, list_price, amount, status, source, expires_at, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'payment_pending', ?, ?, ?, ?)`)
     .bind(orderId, book.id, book.title, buyer.userId, buyer.email, name, price.tierId, price.listPrice, price.amount, clean(body?.source, 30) || 'bookstore', expiresAt, createdAt, createdAt).run();
-  await audit(env, orderId, buyer.email, 'order.created', { amount: price.amount, tier: price.tierId, mode: payments.mode });
+  await audit(env, orderId, buyer.email, 'order.created', { amount: price.amount, tier: price.tierId, mode: pay.mode });
   const base = String(env.PUBLIC_BASE_URL || 'https://ekodi.kr/books').replace(/\/$/, '');
   return {
     status: 201,
     data: {
       orderId, amount: price.amount, orderName: `전자책 · ${book.title}`.slice(0, 100), customerName: name, customerEmail: buyer.email,
-      clientKey: ekodipay.merchantKeys(env, payments.profile).clientKey, customerKey: `ekb-${crypto.randomUUID()}`,
+      clientKey: pay.clientKey, customerKey: `ekb-${crypto.randomUUID()}`,
       successUrl: `${base}/buy/success/`, failUrl: `${base}/buy/fail/?orderId=${encodeURIComponent(orderId)}`, expiresAt,
     },
   };
 }
 
-export async function confirm(env, { paymentKey, orderId, amount }, now = new Date(), toss = ekodipay.tossRequest) {
+export async function confirm(env, { paymentKey, orderId, amount }, now = new Date(), toss = tossVia(env)) {
   if (!isValidOrderId(orderId) || !clean(paymentKey, 220)) return { status: 400, data: { error: '결제 정보가 올바르지 않습니다.' } };
   const profileId = ekodipay.profileFromOrderId(orderId);
   const order = await env.DB.prepare('SELECT * FROM books_orders WHERE id=?').bind(orderId).first();
@@ -159,7 +197,7 @@ export async function confirm(env, { paymentKey, orderId, amount }, now = new Da
     return { status: 409, data: { error: '결제 금액이 주문과 일치하지 않습니다.' } };
   }
   if (order.expires_at < now.toISOString()) return { status: 410, data: { error: '결제 시간이 지났습니다. 다시 구매해 주세요.' } };
-  if (!paymentState(env).ready) return { status: 503, data: { error: '결제 승인 서비스가 준비되지 않았습니다.' } };
+  if (!(await payments(env)).ready) return { status: 503, data: { error: '결제 승인 서비스가 준비되지 않았습니다.' } };
   let payment;
   try {
     payment = await toss(env, profileId, '/v1/payments/confirm', { method: 'POST', body: { paymentKey, orderId, amount: Math.trunc(Number(order.amount)) }, idempotencyKey: `ekb-confirm-${orderId}` });
@@ -226,6 +264,17 @@ export async function download(env, request, bookId) {
   } });
 }
 
+export const MAX_EPUB_BYTES = 50 * 1024 * 1024;
+/** EPUB = ZIP whose first entry is an uncompressed 'mimetype' file containing 'application/epub+zip'. */
+export function validateEpub(bytes) {
+  if (!(bytes instanceof Uint8Array) || bytes.length < 60) return { ok: false, error: '빈 파일입니다.' };
+  if (bytes.length > MAX_EPUB_BYTES) return { ok: false, error: '파일이 너무 큽니다(최대 50MB).' };
+  if (bytes[0] !== 0x50 || bytes[1] !== 0x4b || bytes[2] !== 0x03 || bytes[3] !== 0x04) return { ok: false, error: 'EPUB(ZIP) 파일이 아닙니다.' };
+  const head = new TextDecoder('latin1').decode(bytes.subarray(30, 30 + 8 + 20));
+  if (!head.startsWith('mimetype') || !head.includes('application/epub+zip')) return { ok: false, error: 'EPUB 표준 형식(mimetype 첫 항목)이 아닙니다. EPUB 3 파일을 올려 주세요.' };
+  return { ok: true };
+}
+
 /** 운영자 전용: 주문 조회 · 회원등급 부여(구독 결제가 열리기 전까지 수동 운영). */
 export async function adminRoute(env, request, path, url, now = new Date()) {
   const buyer = await buyerIdentity(request);
@@ -234,7 +283,27 @@ export async function adminRoute(env, request, path, url, now = new Date()) {
     const rows = await env.DB.prepare(`SELECT id, book_id, book_title, buyer_email, tier_id, amount, status, payment_method, approved_at, created_at FROM books_orders ORDER BY created_at DESC LIMIT ?`)
       .bind(Math.min(200, Math.max(1, Number(url.searchParams.get('limit')) || 50))).all();
     const sum = await env.DB.prepare(`SELECT COUNT(*) AS paid, COALESCE(SUM(amount),0) AS revenue FROM books_orders WHERE status='paid'`).first();
-    return { status: 200, data: { orders: rows.results || [], paid: Number(sum?.paid || 0), revenue: Number(sum?.revenue || 0), payments: paymentState(env) } };
+    return { status: 200, data: { orders: rows.results || [], paid: Number(sum?.paid || 0), revenue: Number(sum?.revenue || 0), payments: await payments(env) } };
+  }
+  const fileMatch = /^\/admin\/files\/([A-Z0-9-]{3,40})$/.exec(path);
+  if (fileMatch && request.method === 'GET') {
+    const book = directSaleBook(await loadCatalog(env), fileMatch[1]);
+    if (!book) return { status: 404, data: { error: '직접 판매 도서가 아닙니다.' } };
+    const head = env.BOOK_FILES ? await env.BOOK_FILES.head(book.directSale.fileKey).catch(() => null) : null;
+    return { status: 200, data: { bookId: book.id, fileKey: book.directSale.fileKey, present: Boolean(head), size: head?.size || 0, uploaded: head?.uploaded || null } };
+  }
+  if (fileMatch && request.method === 'PUT') {
+    const book = directSaleBook(await loadCatalog(env), fileMatch[1]);
+    if (!book) return { status: 404, data: { error: '직접 판매 도서가 아닙니다.' } };
+    if (!env.BOOK_FILES) return { status: 503, data: { error: '전자책 보관함이 연결되지 않았습니다.' } };
+    const declared = Number(request.headers.get('content-length') || 0);
+    if (declared > MAX_EPUB_BYTES) return { status: 413, data: { error: '파일이 너무 큽니다(최대 50MB).' } };
+    const bytes = new Uint8Array(await request.arrayBuffer());
+    const check = validateEpub(bytes);
+    if (!check.ok) return { status: 400, data: { error: check.error } };
+    await env.BOOK_FILES.put(book.directSale.fileKey, bytes, { httpMetadata: { contentType: 'application/epub+zip' }, customMetadata: { bookId: book.id, uploadedBy: buyer.email } });
+    await audit(env, '', buyer.email, 'book.file_uploaded', { bookId: book.id, size: bytes.length });
+    return { status: 200, data: { ok: true, bookId: book.id, size: bytes.length } };
   }
   if (request.method === 'GET' && path === '/admin/tiers') {
     const rows = await env.DB.prepare('SELECT buyer_email, tier_id, source, expires_at, updated_at FROM books_member_tiers ORDER BY updated_at DESC LIMIT 500').all();
@@ -274,8 +343,8 @@ export async function handleCommerce(request, env) {
   if (!env.DB) return jsonResponse({ status: 503, data: { error: '에코디서점 주문 저장소가 연결되지 않았습니다.' } });
   try {
     if (request.method === 'GET' && path === '/status') {
-      const p = paymentState(env);
-      return jsonResponse({ status: 200, data: { ready: p.ready, mode: p.mode, publicReady: p.publicReady, merchant: p.merchant } });
+      const p = await payments(env);
+      return jsonResponse({ status: 200, data: { ready: p.ready, mode: p.mode, publicReady: p.publicReady, merchant: p.merchant, via: p.via } });
     }
     if (request.method === 'GET' && path === '/quote') return jsonResponse(await quote(env, request, url.searchParams.get('book')));
     if (request.method === 'GET' && path === '/library') return jsonResponse(await library(env, request));
