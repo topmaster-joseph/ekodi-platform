@@ -60,3 +60,6 @@
   .cgma-edoc-cert,.cgma-edoc-cert *{visibility:visible!important}
   .cgma-edoc-cert{position:absolute;left:0;top:0;width:100%;border:none}
 }
+.cgma-edoc-serial{text-align:center;color:#5b6b69;width:3.5em}
+.cgma-edoc-badge[data-status="archived"]{background:#e8eef7;color:#2c4a7a}
+.cgma-edoc-signer-section[hidden]{display:none}
