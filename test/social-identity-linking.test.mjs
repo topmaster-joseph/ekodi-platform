@@ -1,0 +1,78 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { SOCIAL_IDENTITY_PROVIDERS,socialIdentityPolicy,handleSocialIdentityControl } from '../social-identity-control.js';
+
+const endpoint='https://api.ekodi.kr/api/control/external-accounts/social-identities';
+const actor={userId:'ekodi-user-1',email:'member@example.test',superAdmin:false};
+const superAdmin={...actor,superAdmin:true};
+
+test('social identity feature is disabled by default and never enables social login or posting',()=>{
+  assert.deepEqual(socialIdentityPolicy({}),{
+    registrationEnabled:false,oauthLinkingEnabled:false,socialLoginEnabled:false,
+    autoPublishingEnabled:false,manualActivationRequired:true
+  });
+  const ids=SOCIAL_IDENTITY_PROVIDERS.map(item=>item.id);
+  for(const provider of ['youtube','facebook','instagram','threads','naver','kakao','tiktok','x','linkedin','pinterest','bluesky','discord','telegram'])
+    assert.ok(ids.includes(provider));
+});
+
+test('unverified request is denied, regardless of feature flag',async()=>{
+  const response=await handleSocialIdentityControl(new Request(endpoint,{method:'POST'}),{EKODI_SOCIAL_IDENTITY_REGISTRATION_ENABLED:'true'},null);
+  assert.equal(response.status,401);
+});
+
+test('registration is fail-closed with no write or provider network call',async()=>{
+  let writes=0;
+  const env={DB:{prepare(){writes++;throw new Error('should never run')}}};
+  const response=await handleSocialIdentityControl(new Request(endpoint,{method:'POST',body:JSON.stringify({provider:'instagram',providerAccountId:'myhandle'})}),env,actor);
+  assert.equal(response.status,423);
+  assert.equal((await response.json()).error,'social_identity_registration_disabled');
+  assert.equal(writes,0);
+});
+
+test('private accounts cannot query the platform-wide inventory',async()=>{
+  const response=await handleSocialIdentityControl(new Request(endpoint+'?scope=all'),{},actor);
+  assert.equal(response.status,403);
+});
+
+test('admin inventory discloses state truthfully and does not count legacy channels as new links',async()=>{
+  const env={DB:{prepare(){return {all:async()=>({results:[]})}}}};
+  const response=await handleSocialIdentityControl(new Request(endpoint+'?scope=all'),env,superAdmin,{
+    existing:[{source:'channel',provider:'instagram',providerAccountId:'ig-1',status:'active',displayName:'IG channel',workspaceSlug:'church'}]
+  });
+  const body=await response.json();
+  assert.equal(body.storageReady,true);
+  assert.equal(body.policy.registrationEnabled,false);
+  assert.equal(body.providers.find(x=>x.id==='instagram').registered,0);
+  assert.equal(body.providers.find(x=>x.id==='instagram').existingService,1);
+  assert.equal(body.existingServiceConnections[0].source,'existing_service');
+  assert.ok(!('credential' in body.existingServiceConnections[0]));
+});
+
+test('even with the server registration switch enabled, arbitrary active statuses and secrets are rejected',async()=>{
+  const env={EKODI_SOCIAL_IDENTITY_REGISTRATION_ENABLED:'true',DB:{prepare(){throw new Error('no writes expected')}}};
+  for(const payload of [
+    {provider:'instagram',providerAccountId:'hello',status:'active'},
+    {provider:'instagram',providerAccountId:'hello',access_token:'leak'},
+    {provider:'instagram',providerAccountId:'hello',ekodiUserId:'other-user'}
+  ]){
+    const response=await handleSocialIdentityControl(new Request(endpoint,{method:'POST',body:JSON.stringify(payload)}),env,actor);
+    assert.equal(response.status,400);
+  }
+});
+
+test('schema and routing preserve account sovereignty and existing protected API entry',()=>{
+  const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
+  const migration=read('migrations/202610280700_social_account_links.sql');
+  const route=read('external-account-control.js');
+  const menu=read('admin-menu-registry.js');
+  const routing=read('admin-canonical-routes.js');
+  const loader=read('admin-demand-loader.js');
+  assert.match(migration,/UNIQUE\(ekodi_user_id,provider,provider_account_id\)/);
+  assert.doesNotMatch(migration,/access_token|refresh_token|client_secret|password|credential_ciphertext/i);
+  assert.match(route,/handleSocialIdentityControl/);
+  assert.match(menu,/id: 'social-accounts'/);
+  assert.match(routing,/'social-accounts':'accounts'/);
+  assert.match(loader,/'social-accounts':\s*\{/);
+});
