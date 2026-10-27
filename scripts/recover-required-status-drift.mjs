@@ -43,6 +43,12 @@ export function closedPrNoop(pr) {
   return pr?.state === 'closed';
 }
 
+// Draft PRs can run tests and security reviews, but have no merge-ready
+// status to reconcile. Do not manufacture a merge success or mark the PR ready.
+export function draftPrNoop(pr) {
+  return pr?.state === 'open' && pr?.draft === true;
+}
+
 export function verifiedHeadPr(pr, expectedHead) {
   if (pr?.state !== 'open' || pr?.draft === true || pr?.base?.ref !== 'main')
     throw new Error('PR is no longer eligible for merge status reconciliation');
@@ -135,6 +141,11 @@ async function main() {
   };
 
   const initialPr = await api('/pulls/' + pr);
+  if (draftPrNoop(initialPr)) {
+    console.log('[EKODI][REQUIRED-STATUS-RECOVERY] PR #' + pr +
+      ' is draft; merge status reconciliation deferred until independent review and ready-for-review transition');
+    return;
+  }
   if (closedPrNoop(initialPr)) {
     console.log('[EKODI][REQUIRED-STATUS-RECOVERY] PR #' + pr + ' is closed' +
       (initialPr?.merged ? ' (merged)' : ' (superseded or abandoned)') + '; no merge commit to reconcile');
