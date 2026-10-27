@@ -98,7 +98,9 @@ export function normalizeDomeggookDetail(payload) {
     licenseUsable: truthy(desc.license?.usable),
     licenseMsg: clean(desc.license?.msg, 200),
     thumbUrl: clean(thumb.original || thumb.large || thumb.small, 600),
-    detailImages: detailImageUrls(desc.contents?.item)
+    detailImages: detailImageUrls(desc.contents?.item),
+    // 주문옵션(JSON 문자열, 도매꾹 문서: '상품 주문옵션 정보 (JSON 포맷)')
+    selectOpt: typeof root.selectOpt === 'string' ? root.selectOpt.slice(0, 4000) : (root.selectOpt ? JSON.stringify(root.selectOpt).slice(0, 4000) : '')
   };
 }
 

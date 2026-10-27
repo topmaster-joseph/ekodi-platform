@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readdirSync, readFileSync } from 'node:fs';
-import { placeSupplierOrders, trackSupplierOrders, buildDeliInfo, buildItemValue, probeDomeggookLogin } from './domeggook-order.js';
+import { placeSupplierOrders, trackSupplierOrders, buildDeliInfo, buildItemValue, probeDomeggookLogin, chooseOptionCode } from './domeggook-order.js';
 
 function d1(db) {
   const wrap = (sql) => { const stmt = db.prepare(sql); let args = []; const api = {
@@ -46,7 +46,7 @@ function supplier({ emoney = 100000, qty = 2, cost = 8000, setOrderOk = true, vi
 
 test('format helpers strip pipes and follow documented order', () => {
   assert.equal(buildDeliInfo({ name: '김|철수', email: 'a@b', postcode: '07328', address1: '주소', address2: '5층', phone: '010' }), '김 철수|a@b|07328|주소|5층|010|010|');
-  assert.equal(buildItemValue({}, { market: 'supply', qty: 2, deliMemo: '문앞|부탁' }), 'supply||P||01|2||에코디몰 위탁주문||문앞 부탁');
+  assert.equal(buildItemValue({}, { market: 'supply', qty: 2, deliMemo: '문앞|부탁' }), 'supply||P||00|2||에코디몰 위탁주문||문앞 부탁');
 });
 
 test('paid supply order is placed once, verified, then tracked to shipping', async () => {
@@ -56,7 +56,7 @@ test('paid supply order is placed once, verified, then tracked to shipping', asy
   assert.equal(r.placed, 1, JSON.stringify(r));
   const set = log.find((c) => c.mode === 'setOrder').params;
   assert.equal(set.get('sId'), 'SID1');
-  assert.equal(set.get('item[55501234]'), 'supply||P||01|2||에코디몰 위탁주문||문앞');
+  assert.equal(set.get('item[55501234]'), 'supply||P||00|2||에코디몰 위탁주문||문앞');
   assert.match(set.get('deliinfo'), /^김철수\|a@b\.kr\|07328\|/);
   const row = db.prepare('SELECT status,supplier_order_no,expected_cost FROM supplier_orders').get();
   assert.deepEqual({ ...row }, { status: 'placed', supplier_order_no: '9001', expected_cost: 19000 });
@@ -110,4 +110,10 @@ test('login probe records readiness and low e-money without secrets', async () =
   assert.ok(!row.metadata_json.includes('PW!') && !row.metadata_json.includes('SID1'));
   assert.ok(db.prepare("SELECT 1 FROM mall_ops_alerts WHERE kind='supply.emoney_low'").get());
   assert.equal((await probeDomeggookLogin(env, supplier())).skipped, 'recent');
+});
+
+test('option code is taken from selectOpt (in stock, no surcharge), defaulting to 00', () => {
+  assert.equal(chooseOptionCode(''), '00');
+  assert.equal(chooseOptionCode('{"type":"combination","data":{"00":{"name":"빨강","dom":0,"qty":0},"01":{"name":"파랑","dom":0,"qty":5},"02":{"name":"대형","dom":500,"qty":9}}}'), '01');
+  assert.equal(chooseOptionCode('not json'), '00');
 });
