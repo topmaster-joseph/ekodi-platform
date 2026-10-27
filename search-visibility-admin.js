@@ -57,6 +57,14 @@
     <h3>검색엔진 등록 · 인증 · 제출</h3>
     <p class="sv-intro">외부 업체의 소유권 승인 결과는 실제 공급자 API 연결로만 확정합니다. 현재 화면의 \"연동 확인 필요\"는 미등록을 뜻하지 않습니다.</p>
     <div class="sv-channels" data-sv-channels></div>
+    <h3>사이트별 검색엔진·IndexNow·AI 검색 검토</h3>
+    <p class="sv-intro">공개 사이트별 검색 공급자 상태를 확인합니다. 실제 공급자 계정·보고서 증거가 없는 상태는 미등록이나 등록완료가 아닌 '미확인'으로 표시합니다.</p>
+    <div class="sv-toolbar"><label for="sv-provider-site">검토할 사이트</label><select id="sv-provider-site" aria-label="검색 서비스 검토 사이트"><option value="">목록 조회 전</option></select>
+      <a href="/robots.txt" target="_blank" rel="noopener noreferrer">robots.txt</a><a href="/sitemap.xml" target="_blank" rel="noopener noreferrer">사이트맵</a>
+    </div>
+    <div class="sv-status" data-sv-provider-note role="status">공개 사이트 목록을 먼저 불러오세요.</div>
+    <div class="sv-scroll"><table class="sv-table"><thead><tr><th>구분</th><th>서비스</th><th>등록/연동</th><th>소유권·접근</th><th>제출·인용</th><th>확인</th></tr></thead>
+    <tbody data-sv-provider-rows><tr><td colspan="6">사이트를 선택하세요.</td></tr></tbody></table></div>
     <h3>최적화 운영 원칙</h3>
     <div class="sv-guide">① 공개 상태와 canonical·robots·사이트맵을 검증합니다. ② 제목·설명·구조화 데이터와 질문에 대한 직접 답변을 강화합니다.
       ③ 기관·사업자·저자·출처 표기와 최신성, 인용 가능한 근거를 정비합니다. ④ 변경된 공개 URL만 기존 IndexNow 자동 제출에 연계합니다.
@@ -86,7 +94,36 @@
     ['추가 검색엔진','IndexNow 참여사에 변경 알림. 별도 소유권·색인 상태 확인 필요','https://www.indexnow.org/']
   ];
   for (const c of channels) $('[data-sv-channels]').append(card(...c));
-  const state = { resources:[], sites:[], audited:new Map(), discovery:null, busy:false };
+
+  // Do not infer provider ownership, search indexing or AI citations from page accessibility.
+  const SEARCH_PROVIDERS = Object.freeze([["검색엔진","네이버","https://searchadvisor.naver.com/","console","호스트 단위"],["검색엔진","구글","https://search.google.com/search-console","console","도메인/URL 속성"],["검색엔진","다음","https://register.search.daum.net/","daum","사이트 검색등록·웹마스터"],["검색엔진","빙","https://www.bing.com/webmasters/","console","웹마스터 소유권"],["IndexNow","Bing","https://www.bing.com/indexnow","indexnow","참여사"],["IndexNow","Naver","https://searchadvisor.naver.com/indexnow","indexnow","참여사"],["IndexNow","Yandex","https://yandex.com/indexnow","indexnow","참여사"],["IndexNow","Seznam.cz","https://search.seznam.cz/indexnow","indexnow","참여사"],["IndexNow","Yep","https://indexnow.yep.com/indexnow","indexnow","참여사"],["IndexNow","Amazon","https://indexnow.amazonbot.amazon/indexnow","indexnow","참여사"],["AI 검색","ChatGPT Search","https://developers.openai.com/api/docs/bots","ai","OAI-SearchBot"],["AI 검색","Google AI Overviews/AI Mode","https://search.google.com/search-console","ai","Search Console 생성형 검색 설정"],["AI 검색","Microsoft Copilot","https://www.bing.com/webmasters/","ai","Bing AI Performance"],["AI 검색","Perplexity","https://docs.perplexity.ai/","ai","검색 크롤러·인용"],["AI 검색","Claude Search","https://support.claude.com/en/articles/8896518-does-anthropic-crawl-data-from-the-web-and-how-can-site-owners-block-the-crawler","ai","Claude-SearchBot"]]);
+  const state = { resources:[], sites:[], audited:new Map(), discovery:null, busy:false, selectedSite:'' };
+  function renderProviderMatrix(){
+    const site=state.sites.find(item=>item.url===state.selectedSite);
+    const target=$('[data-sv-provider-rows]');target.replaceChildren();
+    if(!site){$('[data-sv-provider-note]').textContent='사이트를 선택하세요.';return;}
+    const host=new URL(site.url).hostname;
+    $('[data-sv-provider-note]').textContent=(site.name||'사이트')+' · '+host+' — 하위 경로별 기술 진단과 호스트 단위 소유권 인증은 구분합니다. 외부 등록·수집·AI 인용 여부는 실제 공급자 자료가 있어야 확정됩니다.';
+    for(const [group,name,url,kind,scope] of SEARCH_PROVIDERS){
+      const row=document.createElement('tr');
+      const texts=kind==='indexnow'
+        ? [group,name,'공통 제출 연동 확인 필요','호스트 키·검증 확인 필요','제출 응답·시각 미연결']
+        : kind==='ai'
+          ? [group,name,'독립 사이트 등록으로 간주하지 않음',scope+' 접근 점검 필요','실제 인용 근거 미확인']
+          : [group,name,'등록 여부 미확인',scope+' 확인 미연결',kind==='daum'?'신청·심사 결과 미확인':'사이트맵·색인 실적 미연결'];
+      for(const str of texts){const cell=document.createElement('td');cell.textContent=str;row.append(cell);}
+      const action=document.createElement('td');const link=document.createElement('a');
+      link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='공식 확인';
+      action.append(link);row.append(action);target.append(row);
+    }
+  }
+  function renderProviderChoices(){
+    const select=$('#sv-provider-site'), prior=state.selectedSite;select.replaceChildren();
+    for(const site of state.sites){const option=document.createElement('option');option.value=site.url;option.textContent=(site.name||site.path||'사이트')+' · '+new URL(site.url).hostname;select.append(option);}
+    state.selectedSite=state.sites.some(site=>site.url===prior)?prior:(state.sites[0]?.url||'');
+    select.value=state.selectedSite;renderProviderMatrix();
+  }
+
   const normalize = item => {
     try {
       const u = new URL(item.url);
@@ -139,7 +176,11 @@
       const button=document.createElement('button');button.type='button';button.className='secondary';
       button.textContent='기술 점검';button.disabled=state.busy;
       button.addEventListener('click',()=>auditOne(site));
-      action.append(button);row.append(name,locationCell,basic,ai,action);target.append(row);
+      const review=document.createElement('button');review.type='button';review.className='secondary';
+      review.textContent='서비스 검토';review.addEventListener('click',()=>{
+        state.selectedSite=site.url;$('#sv-provider-site').value=site.url;renderProviderMatrix();$('#sv-provider-site').scrollIntoView({block:'nearest'});
+      });
+      action.append(button,review);row.append(name,locationCell,basic,ai,action);target.append(row);
     }
     if(!sites.length){const row=document.createElement('tr');const cell=document.createElement('td');cell.colSpan=5;cell.textContent='검색 결과가 없습니다.';row.append(cell);target.append(row);}
   }
@@ -156,6 +197,7 @@
       // A route-only installation still deserves visibility in the inventory.
       if(!byUrl.size)for(const resource of state.resources.filter(x=>x.type==='page'&&/^\/[^/]+\/?$/.test(x.path||'')))byUrl.set(resource.url,resource);
       state.sites=[...byUrl.values()];
+      renderProviderChoices();
       const [robots,sitemap]=await Promise.allSettled([fetchBounded('/robots.txt'),fetchBounded('/sitemap.xml')]);
       const ok=robots.status==='fulfilled' && sitemap.status==='fulfilled' && sitemap.value.includes('<urlset');
       $('[data-sv-infra]').textContent=ok?'기술파일 응답':'확인 필요';
@@ -193,6 +235,7 @@
   $('[data-sv-reload]').addEventListener('click',load);
   $('[data-sv-audit-all]').addEventListener('click',auditAll);
   $('#sv-search').addEventListener('input',render);
+  $('#sv-provider-site').addEventListener('change',event=>{state.selectedSite=event.target.value;renderProviderMatrix();});
   window.addEventListener('ekodi-admin-section-changed',event=>{
     if(event.detail?.section===SECTION&&!state.discovery)load();
   });
