@@ -134,6 +134,13 @@ async function gateProbe(browser){
     result.lab=lab.status();
     if(lab.status()!==200)fail('learner lab must stay public, got '+lab.status());
     if(!/frame-ancestors 'self'/.test(lab.headers()['content-security-policy']||''))fail('learner lab must be frameable by the same-origin presenter only');
+    // Materials page without a session: slides only; summary and practice downloads stay instructor-only.
+    await page.goto(ORIGIN+PREFIX+'/study/live/handout/?c='+encodeURIComponent(COURSE)+'&mode=practice',{waitUntil:'domcontentloaded',timeout:35000});
+    await page.locator('body[data-ready="true"]').waitFor({state:'attached',timeout:30000}).catch(()=>fail('materials page did not load for learners'));
+    if(await page.locator('#handout .ho-slide').count()<10)fail('learners must get the lecture slides');
+    if(await page.locator('[data-mode="summary"]:visible,[data-mode="practice"]:visible').count()!==0)fail('summary/practice downloads must be instructor-only');
+    if(await page.locator('#handout .ho-pre').count()!==0)fail('practice materials rendered for a learner');
+    result.handoutLearner='slides-only';
     report.gate={...result,passed:true};
   }finally{await context.close();}
 }

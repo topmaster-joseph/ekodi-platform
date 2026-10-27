@@ -56,7 +56,7 @@ export function buildMallProductJsonLd(data, { canonicalUrl = '' } = {}) {
   const description = text(product.oneLine || product.audience || product.story, 500);
   if (description) ld.description = description;
   // EKODI-MALL-SEO-IMAGE-001: 업로드·공급사 허용 사진은 공개 응답 최상위 images[{url}]에 있다(content.images 는 구형 위치).
-  const images = httpsImages({ images: [...(Array.isArray(data.images) ? data.images : []), ...[data.content?.images, data.content?.imageUrls, data.content?.image].flat().filter(Boolean)] });
+  const images = httpsImages({ images: [...(Array.isArray(data.images) ? data.images : []), ...(Array.isArray(data.product?.images) ? data.product.images : []), ...[data.content?.images, data.content?.imageUrls, data.content?.image].flat().filter(Boolean)] });
   if (images.length) ld.image = images;
   if (text(product.category, 60)) ld.category = text(product.category, 60);
   const seller = sellerEntity(data);

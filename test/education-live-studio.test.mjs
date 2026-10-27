@@ -449,7 +449,8 @@ test('learner handout: lecture content only — practice materials, prompts, err
   const page=await read('education/study/live/handout/index.html');
   assert.doesNotMatch(page,/<script(?![^>]*\ssrc=)[^>]*>|<style[\s>]|\sstyle=|\son[a-z]+=/i);
   const js=await read('education/study/live/handout.js');
-  assert.doesNotMatch(js,/loadNotes|\.notes\.js|NOTES|fetch\(|localStorage/);
+  assert.doesNotMatch(js,/loadNotes|\.notes\.js|NOTES|localStorage/);
+  assert.equal((js.match(/fetch\(/g)||[]).length,1,'only the instructor-session check talks to the server');assert.match(js,/fetch\(livePath\(location\.pathname,'unlock'\+String\.fromCharCode\(47\)\+'session'\)/);
   assert.match(await read('education/study/live/index.html'),/id="openHandout"/);
   const {isGatedPath}=await import('../education-instructor-gate.js');
   assert.ok(!isGatedPath('/study/live/handout/')&&!isGatedPath('/study/live/handout.js'),'handout stays public');

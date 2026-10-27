@@ -1,6 +1,6 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import researchWorker from './education/research/worker.js';
-import { instructorGate, isGatedPath, adminUnlock } from './education-instructor-gate.js';
+import { instructorGate, isGatedPath, adminUnlock, sessionStatus } from './education-instructor-gate.js';
 import { instructorDocs } from './education-instructor-docs.js';
 
 const SECURITY_HEADERS={
@@ -23,6 +23,8 @@ export default{
     // EKODI super admin → instructor session (central admin token verified server-side, super_admin only).
     const admin=await adminUnlock(request,env,{url});
     if(admin)return admin;
+    const status=await sessionStatus(request,env,{url});
+    if(status)return status;
     // Instructor document share: public expiring view links + instructor-session management API.
     const docs=await instructorDocs(request,env,{url});
     if(docs)return docs;
