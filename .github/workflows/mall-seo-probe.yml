@@ -1,0 +1,42 @@
+name: EKODI Mall SEO Probe
+
+# 운영자 진단용(읽기 전용): 사이트맵·robots·IndexNow 키·상품 페이지 메타를 실제 운영 주소에서 확인해 체크런 주석으로 남긴다.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Probe ekodi.kr discovery surfaces
+        shell: bash
+        run: |
+          set -uo pipefail
+          ua='Mozilla/5.0 (compatible; EKODI-SEO-Probe/1.0)'
+          sm=$(curl -sS --max-time 40 -A "$ua" https://ekodi.kr/sitemap.xml || true)
+          total=$(echo "$sm" | grep -o '<loc>' | wc -l)
+          mall=$(echo "$sm" | grep -o '<loc>https://ekodi.kr/ekodimall/p/[^<]*' | wc -l)
+          first=$(echo "$sm" | grep -o '<loc>https://ekodi.kr/ekodimall/p/[^<]*' | head -1 | sed 's/<loc>//')
+          echo "::notice title=sitemap::urls=$total mallProducts=$mall sample=$first"
+          robots=$(curl -sS --max-time 20 -A "$ua" https://ekodi.kr/robots.txt | grep -iE 'sitemap|disallow: /ekodimall' | head -5 | tr '\n' ' ')
+          echo "::notice title=robots::$robots"
+          key=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 https://ekodi.kr/e4c0d1a7b29f43d8a65c712fe9b3048c.txt)
+          echo "::notice title=indexnow-key::http=$key"
+          if [ -n "$first" ]; then
+            page=$(curl -sS --max-time 30 -A "$ua" "$first" || true)
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 -A "$ua" "$first")
+            title=$(echo "$page" | grep -o '<title>[^<]*' | head -1 | sed 's/<title>//')
+            desc=$(echo "$page" | grep -io '<meta name="description" content="[^"]*' | head -1 | sed 's/.*content="//')
+            og=$(echo "$page" | grep -io 'property="og:image" content="[^"]*' | head -1 | sed 's/.*content="//')
+            ld=$(echo "$page" | grep -c 'application/ld+json')
+            robotsmeta=$(echo "$page" | grep -io '<meta name="robots" content="[^"]*' | head -1 | sed 's/.*content="//')
+            echo "::notice title=product-page::http=$code title=$title | desc=${desc:0:80} | ogImage=${og:0:80} | jsonld=$ld | robots=$robotsmeta"
+          fi
+          home=$(curl -sS --max-time 30 -A "$ua" https://ekodi.kr/ekodimall/ || true)
+          htitle=$(echo "$home" | grep -o '<title>[^<]*' | head -1 | sed 's/<title>//')
+          hdesc=$(echo "$home" | grep -io '<meta name="description" content="[^"]*' | head -1 | sed 's/.*content="//')
+          echo "::notice title=mall-home::title=$htitle | desc=${hdesc:0:100}"
