@@ -137,3 +137,48 @@ test('a configured instructor PIN locks the notes even when the mode var says op
   const wrong=await get(UNLOCK,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded',origin:'https://ekodi.kr'},body:new URLSearchParams({password:'1234'})},e);
   assert.equal(wrong.status,401);
 });
+
+// 2026-10-27: instructors open the notes with their EKODI account (any login path).
+async function ekodiUnlock(identities,{status=200,e=env(),origin='https://ekodi.kr'}={}){
+  const oldFetch=globalThis.fetch;const calls=[];
+  globalThis.fetch=async(url,init={})=>{calls.push({url:String(url),init});return new Response(JSON.stringify(identities),{status});};
+  try{
+    const res=await get(UNLOCK,{method:'POST',headers:{'content-type':'application/json',origin},body:JSON.stringify({accessToken:'user-session-token'})},e);
+    return {res,body:await res.json().catch(()=>null),calls};
+  }finally{globalThis.fetch=oldFetch}
+}
+
+test('a registered instructor EKODI account (any login path) unlocks the notes',async()=>{
+  const {res,body,calls}=await ekodiUnlock({person:{ekodiId:'EK1',verifiedEmails:['joseph@ekodi.kr']},identities:[{provider:'kakao',is_current:true}]});
+  assert.equal(res.status,200);
+  assert.equal(body.ok,true);
+  assert.equal(body.location,'../present/?c=mnu-factchat-2026');
+  const cookie=res.headers.get('set-cookie')||'';
+  assert.match(cookie,new RegExp('^'+GATE_COOKIE+'='));
+  assert.match(cookie,/HttpOnly; Secure; SameSite=Lax/);
+  const token=cookie.split(';')[0].split('=')[1];
+  assert.equal(await verifyGateToken(token,KEY),true);
+  assert.equal(calls[0].url,'https://renzehysxirjilvdxacv.supabase.co/functions/v1/identity-api/identities');
+  assert.equal(calls[0].init.headers.authorization,'Bearer user-session-token');
+});
+
+test('EKODI accounts outside the instructor list, failed lookups and foreign origins never unlock',async()=>{
+  for(const [identities,status] of [[{person:{verifiedEmails:['someone@example.com']}},200],[{person:{verifiedEmails:[]}},200],[{error:'unauthorized'},401]]){
+    const {res,body}=await ekodiUnlock(identities,{status});
+    assert.equal(res.status,403);assert.equal(body.ok,false);
+    assert.equal(res.headers.get('set-cookie'),null);
+  }
+  const custom=await ekodiUnlock({person:{verifiedEmails:['teacher@school.kr']}},{e:env({EDU_INSTRUCTOR_EMAILS:'teacher@school.kr'})});
+  assert.equal(custom.res.status,200,'instructor list is configurable');
+  const foreign=await ekodiUnlock({person:{verifiedEmails:['joseph@ekodi.kr']}},{origin:'https://evil.example'});
+  assert.equal(foreign.res.status,403);
+  assert.equal(foreign.res.headers.get('set-cookie'),null);
+});
+
+test('unlock page offers the EKODI account first and keeps the password only as a folded fallback',async()=>{
+  const html=await (await get(UNLOCK)).text();
+  assert.match(html,/id="gateEkodi"/);
+  assert.match(html,/<script src="\/study\/live\/gate-ekodi\.js" defer><\/script>/);
+  assert.match(html,/<details class="gate-legacy">/);
+  assert.ok(html.indexOf('gateEkodi')<html.indexOf('gatePassword'));
+});

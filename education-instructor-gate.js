@@ -21,6 +21,32 @@
 //
 // Fail closed: without a verifier or a signing key, protected paths show the lock page and never the content.
 
+// EKODI account unlock (2026-10-27): instructors open the notes with their EKODI account (any login path:
+// Google, Naver, Kakao …). The account's verified emails come from the central identity registry and must
+// be listed in EDU_INSTRUCTOR_EMAILS (comma separated; defaults to the platform owner). The shared password
+// remains only as a transition fallback.
+const EKODI_IDENTITY_API='https://renzehysxirjilvdxacv.supabase.co/functions/v1/identity-api';
+const EKODI_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
+const EKODI_AUTH_URL='https://ekodi.kr/auth/';
+const DEFAULT_INSTRUCTOR_EMAILS=['topmaster.joseph@gmail.com','joseph@ekodi.kr'];
+export function instructorEmails(env){
+  const raw=String(env?.EDU_INSTRUCTOR_EMAILS||'').split(',').map(v=>v.trim().toLowerCase()).filter(v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v));
+  return new Set(raw.length?raw:DEFAULT_INSTRUCTOR_EMAILS);
+}
+export async function ekodiInstructor(accessToken,env,{fetcher=fetch}={}){
+  const token=String(accessToken||'');
+  if(!token||token.length>8192)return null;
+  try{
+    const response=await fetcher(EKODI_IDENTITY_API+'/identities',{headers:{apikey:EKODI_PUBLISHABLE_KEY,authorization:'Bearer '+token,origin:'https://ekodi.kr','cache-control':'no-store'}});
+    if(!response.ok)return null;
+    const data=await response.json().catch(()=>null);
+    const emails=Array.isArray(data?.person?.verifiedEmails)?data.person.verifiedEmails.map(e=>String(e).toLowerCase()):[];
+    const allowed=instructorEmails(env);
+    const email=emails.find(e=>allowed.has(e));
+    return email?{email,ekodiId:data?.person?.ekodiId||null}:null;
+  }catch{return null}
+}
+
 export const GATE_COOKIE='ekodi_edu_instructor';
 export const GATE_TTL_SECONDS=12*60*60;
 const TOKEN_CONTEXT='ekodi-edu-instructor-gate:v1:';
@@ -127,10 +153,14 @@ function lockPage({message='',configured=true,course='',backHref=''}){
     '<link rel="stylesheet" href="/fonts/pretendard/pretendardvariable-dynamic-subset.css"><link rel="stylesheet" href="/study/live/live.css"></head>'+
     '<body class="lv gate-body" data-ekodi-ui="USER" data-live-surface="gate"><main class="gate" id="gateMain">'+
     '<section class="gate-card" aria-labelledby="gateTitle"><p class="eyebrow">PREMIUM STUDIO · 강사 전용</p><h1 id="gateTitle">강사 노트 열기</h1>'+
-    '<p class="meta">진행 멘트와 정답 해설은 강사 비밀번호로 열립니다. 강의 화면과 발표 화면은 비밀번호 없이 쓸 수 있습니다.</p>'+
-    (configured?'<form method="post" action="" class="gate-form" autocomplete="on"><label class="field" for="gatePassword">강사 비밀번호</label>'+
-      '<input id="gatePassword" name="password" type="password" inputmode="text" autocomplete="current-password" required minlength="4" maxlength="256" autofocus>'+
-      '<button type="submit" class="btn btn-primary">노트 열기</button></form>'
+    '<p class="meta">진행 멘트와 정답 해설은 강사로 등록된 에코디 계정으로 열립니다. 강의 화면과 발표 화면은 로그인 없이 쓸 수 있습니다.</p>'+
+    (configured?'<div class="gate-form"><button type="button" id="gateEkodi" class="btn btn-primary" data-auth="'+esc(EKODI_AUTH_URL)+'">에코디 계정으로 노트 열기</button>'+
+      '<p class="meta" id="gateEkodiStatus" role="status"></p></div>'+
+      '<details class="gate-legacy"><summary>공용 강사 비밀번호로 열기 (전환 기간)</summary>'+
+      '<form method="post" action="" class="gate-form" autocomplete="on"><label class="field" for="gatePassword">강사 비밀번호</label>'+
+      '<input id="gatePassword" name="password" type="password" inputmode="text" autocomplete="current-password" required minlength="4" maxlength="256">'+
+      '<button type="submit" class="btn">비밀번호로 열기</button></form></details>'+
+      '<script src="/study/live/gate-ekodi.js" defer></script>'
       :'<p class="notice" role="alert">강사 운영실 잠금 설정이 아직 완료되지 않아 열 수 없습니다. 관리자에게 문의하세요.</p>')+
     (message?'<p class="gate-error" role="alert">'+esc(message)+'</p>':'')+
     '<p class="meta">한 번 열면 이 브라우저에서 12시간 동안 유지됩니다. 공용 PC에서는 수업 후 「노트 잠그기」를 누르세요.</p>'+
@@ -177,6 +207,15 @@ export async function instructorGate(request,env,{url=new URL(request.url)}={}){
   if(doc&&method==='POST'){
     if(!sameSiteOrigin(request,url))return htmlResponse(lockPage({message:'허용되지 않은 요청입니다.',course,backHref:unlock?unlockReturn(url):''}),403);
     const type=String(request.headers.get('content-type')||'').toLowerCase();
+    if(type.startsWith('application/json')){
+      const raw=await request.text();
+      if(raw.length>9000)return new Response(JSON.stringify({ok:false,error:'too_large'}),{status:413,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
+      let body=null;try{body=JSON.parse(raw)}catch{body=null}
+      const instructor=await ekodiInstructor(body?.accessToken,env);
+      if(!instructor)return new Response(JSON.stringify({ok:false,error:'ekodi_instructor_required',message:'강사로 등록된 에코디 계정이 아닙니다.'}),{status:403,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
+      const token=await mintGateToken(key);
+      return new Response(JSON.stringify({ok:true,location:unlock?unlockReturn(url):backTo(url)}),{status:200,headers:{'content-type':'application/json; charset=utf-8','set-cookie':cookieHeader(url,token,GATE_TTL_SECONDS),'cache-control':'no-store'}});
+    }
     if(!type.startsWith('application/x-www-form-urlencoded'))return htmlResponse(lockPage({message:'입력 형식이 올바르지 않습니다.',course,backHref:unlock?unlockReturn(url):''}),400);
     const raw=await request.text();
     if(raw.length>1024)return htmlResponse(lockPage({message:'입력이 너무 깁니다.',course,backHref:unlock?unlockReturn(url):''}),413);
