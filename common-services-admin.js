@@ -179,7 +179,7 @@ function serviceCard(service){
     '<span class="common-service-runtime"><i class="status '+esc(s.key)+'">'+esc(s.label)+'</i></span>'+
     (moduleMode?'<span class="common-service-activation"><b>'+esc(a.label)+'</b></span>':'')+
     '<span class="common-service-open">상세</span>'+
-    '<span class="sr-only">기능 '+esc(a.label)+' · 런타임 '+esc(s.label)+'</span>';
+    `<span class="sr-only">기능 ${esc(a.label)} · 런타임 ${esc(s.label)}</span>`;
   button.addEventListener('click',()=>{state.selected=service.id;state.detailOpen=true;syncServiceUrl(service.id);render();$('#commonServiceDetail')?.scrollIntoView?.({behavior:'smooth',block:'nearest'})});
   return button;
 }
@@ -192,6 +192,7 @@ function genericDetail(service){
     '<article><small>기능 활성</small><strong>'+esc(a.label)+'</strong><span>'+esc(a.note)+'</span></article>'+
     '<article><small>적용 · 비용</small><strong>'+esc(service.applyRule)+'</strong><span>'+esc(service.cost)+'</span></article>'+
     '<article><small>관리 경로</small><strong>'+esc(displayAddress(service.domain))+'</strong><span>'+(s.checkedAt?'최근 점검 '+esc(formatCheckTime(s.checkedAt)):'런타임 개별 점검 미확인')+'</span></article></div>'+
+    '<details class="common-service-policy-details"><summary>운영 기준</summary><p class="common-policy-note">'+(service.category==='common'?'공통 엔진은 기준 모델·상태값·권한·보안·배포 계약을 중앙에서 관리합니다. 공통 API 상태와 기능별 실제 검증은 구분합니다.':'기능 활성화 여부와 실제 런타임 점검 결과를 구분합니다.')+'</p></details>'+ 
     '<div class="common-detail-actions">'+routeButton(service.manage,'세부 관리')+'</div>';
 }
 function taskStatus(value){return({queued:'대기',allocating:'브랜치 할당',running:'실행',approval_required:'승인 대기',completed:'완료',failed:'실패',blocked_policy:'정책 차단'})[value]||value||'-'}
