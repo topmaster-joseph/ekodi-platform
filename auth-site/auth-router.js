@@ -59,7 +59,14 @@ async function loadClientAuth(){
   catch(error){console.warn('Versioned universal identity auth load failed; retrying canonical asset.',error);return await import('./client-auth.js')}
 }
 
-if(site==='admin')await import('./admin-auth.js?v=20260918-canonical-origin-2');
+// Naver/Kakao callbacks return here without site/return_to; the federated module restores them.
+// Dormant providers never issue a callback, so this is a no-op until an operator enables one.
+let federated=null;
+try{federated=await import('./federated-login.js?v=20261027-federated-1')}catch(error){console.warn('federated login module unavailable',error)}
+const federatedHandled=federated?await federated.handleCallback():false;
+
+if(federatedHandled){/* the federated module owns this page load */}
+else if(site==='admin')await import('./admin-auth.js?v=20260918-canonical-origin-2');
 else if(site==='author')await import('./author-auth.js?v=20260816-author-ai-1');
 else if(site==='business')await import('./business-auth.js?v=20260826-free-fallback-1');
 else if(site==='mission')await loadClientAuth();
@@ -77,3 +84,6 @@ else{
     await import('./membership-ui.js');
   }
 }
+
+// Additional sign-in paths for EKODI accounts (shown only when enabled; never on the admin console).
+if(!federatedHandled&&federated&&site!=='admin')federated.renderLoginButtons().catch(error=>console.warn('federated buttons',error));
