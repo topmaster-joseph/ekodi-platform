@@ -1,0 +1,31 @@
+{
+  "amendmentId": "AUTH-VISIBLE-STATE-USER-INITIATED-GOOGLE-20261027",
+  "constitutionVersion": "1.27.4",
+  "approvedAt": "2026-10-27",
+  "approvedBy": "topmaster-joseph",
+  "status": "approved",
+  "changeClass": "C2",
+  "taskId": "google-login-window-20261027",
+  "summary": "Google sign-in UI must be user-initiated with a persistent button (no automatic One Tap/FedCM prompt on service pages); after login the returned page visibly confirms the signed-in account and service gates never read as login failure.",
+  "approvalBasis": "The platform owner reported on 2026-10-27 (KST) that on EKODI 동행 a Google notice at the top of the screen appeared and vanished so login seemed impossible, and instructed EKODI to run the full audit → constitution/enforced-rule amendment → before/after tests → production deploy and live verification cycle.",
+  "adds": [
+    "automatic google.accounts.id.prompt forbidden outside registered auth surfaces (repository scan in validate:constitution)",
+    "prompt surfaces must render a persistent Google button",
+    "returned page shows signed-in account and sign-out",
+    "prelaunch/permission gates state that login succeeded",
+    "auth page names the reused account during central-session handoff"
+  ],
+  "preserves": [
+    "v1.27.3 mandatory pre-login page return",
+    "central session reuse without reauthentication",
+    "trusted return-target validation",
+    "Referrer-Policy no-referrer",
+    "one-time handoff token model"
+  ],
+  "rollback": "Revert only the v1.27.4 additions (constitution text, policy keys, prompt scan, Singles account card and auth-page account notice) while preserving v1.27.3.",
+  "approvalEvidence": {
+    "ownerInstructionRecorded": true,
+    "ownerInstructionDate": "2026-10-27",
+    "requiredPullRequestLabel": "constitution-approved"
+  }
+}

@@ -262,7 +262,8 @@ async function handoffExistingSession(s){
   lastHandoffError=null;
   $('serviceBadge').textContent='인증 완료';
   show('googleButtonHost',false);show('googleRetry',false);show('cancelSignedOut',false);
-  notice('로그인이 확인되었습니다. 서비스로 이동합니다.');
+  const who=String(s?.user?.email||'').trim();
+  notice(who?`${who} 계정으로 로그인되어 있습니다. 원래 보던 화면으로 돌아갑니다.`:'로그인이 확인되었습니다. 원래 보던 화면으로 돌아갑니다.');
   try{
     const proof=await identity('/session/handoff',{method:'POST',authenticated:true,session:s});
     routeTarget(proof);

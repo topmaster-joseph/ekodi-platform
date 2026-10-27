@@ -82,7 +82,8 @@ test('auth and store releases are cache-busted for return continuity',()=>{
 
 test('v1.27.3: login always returns to the exact pre-login page and never falls back to a My page',()=>{
   const policy=registry.authenticationReturnContinuityPolicy;
-  assert.equal(registry.version,'1.27.3');
+  const [maj,min,patch]=String(registry.version).split('.').map(Number);
+  assert.ok(maj>1||min>27||(min===27&&patch>=3),'pre-login return must stay binding in v1.27.3+');
   assert.match(constitution,/로그인 직전 페이지/);
   assert.match(constitution,/My pages are never a post-login fallback/);
   for(const key of ['preLoginPageReturnMandatory','everyLoginEntryMustCarryCurrentPageReturnTo','shellStampsMissingReturnTo','myPagesAsPostLoginFallbackForbidden','serviceLocalMyFallbackForbidden','myLandingOnlyWhenLoginStartedOnMyPageOrExplicitMyLink']) assert.equal(policy[key],true,key);
@@ -110,4 +111,16 @@ test('v1.27.3: known login entries carry the pre-login page instead of a My page
   assert.match(shell,/document\.addEventListener\('click',stampLoginReturn,true\)/);
   assert.ok(read('site-worker.js').includes("'/homepage-auth-state.js'"));
   assert.ok(read('scripts/build.mjs').includes("'homepage-auth-state.js'"));
+});
+
+test('v1.27.4: Google sign-in is user-initiated and the returned page shows the signed-in account',()=>{
+  const policy=registry.authenticationReturnContinuityPolicy;
+  for(const key of ['automaticGooglePromptForbiddenOnUserSurfaces','googlePromptRequiresPersistentButton','signedInAccountVisibleAfterReturn','serviceGateMustNotReadAsLoginFailure','reusedSessionAccountNamedOnAuthPage']) assert.equal(policy[key],true,key);
+  assert.match(constitution,/Automatic Google One Tap\/FedCM prompts/);
+  const singles=read('sites/ekodi-singles/public/app.js');
+  assert.match(singles,/function accountCard\(h\)/);
+  assert.match(singles,/로그인은 정상적으로 완료되었습니다/);
+  assert.doesNotMatch(singles,/로그인 확인 · 회원서비스 준비 중/);
+  assert.match(singles,/button\('로그아웃'/);
+  assert.match(client,/계정으로 로그인되어 있습니다\. 원래 보던 화면으로 돌아갑니다/);
 });
