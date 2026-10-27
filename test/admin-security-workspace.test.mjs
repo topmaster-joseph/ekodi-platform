@@ -27,7 +27,7 @@ test('Cloudflare target fallback stays available when provider inventory cannot 
 
 test('Cloudflare select layout survives the inserted heading and pending replacement cannot follow a changed Worker', () => {
   assert.match(styles, /\.ekodi-provider-context>div:has\(\[data-ekodi-cf-worker\]\)/);
-  assert.doesNotMatch(styles, /\.ekodi-provider-context>div:nth-child\(2\)/);
+  assert.ok(!styles.includes('.ekodi-provider-context>div:nth-child(2)'), 'No position-based Worker layout selector');
   assert.match(provider, /original\.dispatchEvent\(new Event\('change',\{bubbles:true\}\)\)/);
   assert.match(generator, /field\.addEventListener\('change', resetReplaceMode\)/);
   assert.match(generator, /replaceMode = false/);
