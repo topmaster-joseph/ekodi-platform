@@ -58,3 +58,11 @@ test('admin module URL carries its content hash, so an immutable-cached old modu
   assert.match(page, new RegExp(`/cgma/admin/assets/cgma-edoc-admin\\.js\\?v=edocs-${hash}'`),
     `cgma-edoc-admin.js changed: set the loader version in workspace-admin-page.js to ?v=edocs-${hash}`);
 });
+
+test('admin stylesheet URL carries the stylesheet content hash', async () => {
+  const { createHash } = await import('node:crypto');
+  const [module, css] = await Promise.all([read('cgma-edoc-admin.js'), readFile(new URL('../cgma-edoc-admin.css', import.meta.url))]);
+  const hash = createHash('sha256').update(css).digest('hex').slice(0, 10);
+  assert.match(module, new RegExp(`const STYLE='/cgma/admin/assets/cgma-edoc-admin\\.css\\?v=css-${hash}'`),
+    `cgma-edoc-admin.css changed: set STYLE in cgma-edoc-admin.js to ?v=css-${hash}`);
+});
