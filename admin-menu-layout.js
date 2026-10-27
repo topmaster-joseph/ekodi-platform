@@ -26,6 +26,38 @@ function replaceSectionUrl(section){const target=adminRoutes()?.navigationTarget
 let requestedSection = '';
 let sitesLoading,last='',queued=false,running=false,again=false,dc=false;
 const demandLoading=new Map();
+// ADMIN-ARCHITECTURE-READABLE-20261028: this direct route must load the
+// Health bundle stylesheet, which also contains the System Map CSS.
+// The health demand loader does this for #health, but a direct architecture
+// import bypasses that loader. Never show the structure map without its CSS.
+let architectureAssetPromise;
+function ensureArchitectureAssets(){
+  if(architectureAssetPromise)return architectureAssetPromise;
+  const path='/system-health-admin.css';
+  const existing=[...document.querySelectorAll('link[rel="stylesheet"]')].find(link=>{
+    try{return new URL(link.href,location.href).pathname===path}catch{return false}
+  });
+  const styles=existing?Promise.resolve():new Promise((resolve,reject)=>{
+    const link=document.createElement('link');
+    link.rel='stylesheet';link.href=path;link.dataset.adminArchitectureStyle='true';
+    link.addEventListener('load',resolve,{once:true});
+    link.addEventListener('error',()=>reject(new Error('시스템 구조 화면 스타일을 불러오지 못했습니다.')),{once:true});
+    document.head.append(link);
+  });
+  architectureAssetPromise=styles.then(()=>import('./system-health-admin.js')).catch(error=>{
+    architectureAssetPromise=null;
+    const panel=content.querySelector('.architecture[data-panel~="architecture"]');
+    if(panel&&!panel.querySelector('[data-architecture-load-error]')){
+      const message=document.createElement('p');
+      message.dataset.architectureLoadError='true';message.role='alert';
+      message.textContent='시스템 구조 화면을 불러오지 못했습니다. 메뉴를 다시 선택하면 재시도합니다.';
+      panel.prepend(message);
+    }
+    console.error('[EKODI Admin] architecture assets failed',error);
+  });
+  return architectureAssetPromise;
+}
+
 function sectionOf(item){
   if(window.EKODIAdminSidebar?.sectionOf)return window.EKODIAdminSidebar.sectionOf(item);
   if(item?.dataset?.deviceControlNav==='true')return'devices';
@@ -90,7 +122,7 @@ function activatePanel(section){
   for(const item of allNav())item.classList.toggle('active',!isInternalNav(item)&&sectionOf(item)===section);
   syncTitle(section);
   replaceSectionUrl(section);
-  if(section === 'architecture'&&!window.EKODISystemMap)import('./system-health-admin.js').catch(console.error);
+  if(section==='architecture')void ensureArchitectureAssets();
   if(section === 'public-site-controls')window.EKODIPublicSiteControls?.load?.();
   if(section === 'language-status')window.EKODILanguageStatus?.load?.();
   sidebar.classList.remove('open');
