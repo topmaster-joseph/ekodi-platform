@@ -3,6 +3,7 @@
 // remote crawling, paid API calls, or external verification are performed here.
 import authWorker from './auth-worker.js';
 import { buildEkodiPublicRegistry } from './public-discovery-registry.js';
+import { listSitePublicationSettings } from './site-publication-runtime.js';
 
 export const SEARCH_CONTROL_PATH='/api/control/search-visibility';
 export const SEARCH_PROVIDER_CATALOG=Object.freeze([
@@ -56,9 +57,22 @@ async function ensureSchema(db){
     "check_type TEXT NOT NULL,previous_state TEXT NOT NULL,new_state TEXT NOT NULL,"+
     "actor TEXT NOT NULL,observed_at TEXT NOT NULL,detail TEXT NOT NULL DEFAULT '')").run();
 }
+// Domain aliases are separate provider properties even when they 301 to a canonical /path.
+// They must never inherit proof of ownership, indexing, or submitted sitemap.
+const REGISTERED_LEGACY_HOSTS=Object.freeze({
+  '/ekodichurch':['ekodichurch.kr'],
+  '/ekodilab':['ekodilab.kr'],
+  '/ekodimall':['ekodimall.kr'],
+});
+const safeHost=value=>{
+  const h=safe(value,255).toLowerCase().replace(/^https?:\/\//,'').replace(/\/.*$/,'');
+  return h!=='ekodi.kr'&&/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(h)&&!h.startsWith('www.')?h:'';
+};
 async function publicSites(env){
   const registry=await buildEkodiPublicRegistry(env);
-  const items=(registry?.resources||[]).filter(r=>r.type==='site');
+  const all=registry?.resources||[];
+  const originals=all.filter(r=>r.type==='site');
+  const items=originals.length?originals:all.filter(r=>r.type==='page'&&/^\/[^/]+\/?$/.test(r.path||''));
   const unique=new Map();
   for(const site of items){
     try{
@@ -66,9 +80,26 @@ async function publicSites(env){
       if(u.protocol!=='https:'||u.hostname!=='ekodi.kr')continue;
       if(!unique.has(site.url))unique.set(site.url,{
         id:site.id||site.url,name:safe(site.name||site.path,160),
-        url:site.url,host:u.hostname,path:u.pathname,updatedAt:site.updatedAt||null,
+        url:site.url,host:u.hostname,path:u.pathname,propertyType:'canonical',
+        updatedAt:site.updatedAt||null,
       });
     }catch{}
+  }
+  let settings=[];
+  try{settings=await listSitePublicationSettings(env)}catch{settings=[]}
+  for(const site of [...unique.values()]){
+    const key=site.path.replace(/\/$/,'')||'/';
+    const matched=settings.find(s=>(s.canonicalPath?.replace(/\/$/,'')||'/')===key&&s.publicStatus==='public');
+    const aliases=[...(matched?.aliases||[]),...(REGISTERED_LEGACY_HOSTS[key]||[])];
+    for(const raw of aliases){
+      const host=safeHost(raw);
+      if(!host)continue;
+      const url='https://'+host+'/';
+      if(!unique.has(url))unique.set(url,{
+        id:'alias:'+host,name:site.name+' · '+host,url,host,path:'/',
+        propertyType:'independent-domain',canonicalUrl:site.url,updatedAt:site.updatedAt,
+      });
+    }
   }
   return [...unique.values()].slice(0,300);
 }
