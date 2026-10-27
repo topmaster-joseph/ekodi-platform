@@ -61,5 +61,5 @@ test('Provider matrix lists primary search engines, IndexNow participants and AI
   assert.match(src,/외부 등록 여부 미확인|등록 여부 미확인/);
   assert.match(src,/실제 인용 근거 미확인/);
   assert.match(src,/하위 경로별 기술 진단과 호스트 단위 소유권 인증은 구분/);
-  assert.doesNotMatch(src,/등록 완료['"]/);
+  assert.doesNotMatch(src,/providerStatus\s*=\s*['\"]verified/);
 });
