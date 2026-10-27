@@ -9,7 +9,23 @@ import { fetchDomeggookItem, PROVIDER } from './domeggook-import.js';
 import { raiseAlert } from './ops-alerts.js';
 
 const ENDPOINT = 'https://domeggook.com/ssl/api/';
-const DEFAULT_ITEM_TEMPLATE = '{market}||P||01|{qty}||{sellerMemo}||{deliMemo}';
+const DEFAULT_ITEM_TEMPLATE = '{market}||P||{opt}|{qty}||{sellerMemo}||{deliMemo}';
+
+/**
+ * selectOpt(JSON)에서 주문할 옵션 코드를 고른다. 형식은 공개 문서에 없어(확인필요) 방어적으로 해석:
+ *  - data/opts 맵이면 재고가 있고 추가금이 없는 첫 키, 없으면 첫 키
+ *  - 옵션이 없으면 '00'
+ * 실제 구조는 발주 실패 시 supplier_connector_checks(probe:selectOpt)에 기록되어 확인할 수 있다.
+ */
+export function chooseOptionCode(selectOpt) {
+  let parsed = null;
+  try { parsed = typeof selectOpt === 'string' ? JSON.parse(selectOpt) : selectOpt; } catch { return '00'; }
+  const map = parsed?.data && typeof parsed.data === 'object' ? parsed.data : null;
+  if (!map) return '00';
+  const entries = Object.entries(map).filter(([, v]) => v && typeof v === 'object' && !(v.hid === 1 || v.hid === '1'));
+  const good = entries.find(([, v]) => Number(v.qty ?? 1) > 0 && !Number(v.dom || v.domPrice || v.price || 0));
+  return (good || entries[0] || ['00'])[0];
+}
 const TRACK_INTERVAL_MS = 60 * 60 * 1000;
 const isoNow = () => new Date().toISOString();
 const pipeSafe = (v, max = 120) => String(v ?? '').replace(/[|\r\n]/g, ' ').trim().slice(0, max);
@@ -56,9 +72,9 @@ export async function emoneyBalance(env, session, fetchImpl = fetch) {
   return Number.isFinite(total) ? total : null;
 }
 
-export function buildItemValue(env, { market, qty, deliMemo }) {
+export function buildItemValue(env, { market, qty, deliMemo, opt = '00' }) {
   const template = String(env.DOMEGGOOK_ORDER_ITEM_TEMPLATE || DEFAULT_ITEM_TEMPLATE);
-  return template.replaceAll('{market}', market === 'dome' ? 'dome' : 'supply').replaceAll('{qty}', String(qty))
+  return template.replaceAll('{opt}', String(opt || '00')).replaceAll('{market}', market === 'dome' ? 'dome' : 'supply').replaceAll('{qty}', String(qty))
     .replaceAll('{sellerMemo}', '에코디몰 위탁주문').replaceAll('{deliMemo}', pipeSafe(deliMemo, 80));
 }
 
@@ -136,7 +152,7 @@ export async function placeSupplierOrders(env, fetchImpl = fetch, limit = 3) {
     try {
       r = await call(env, {
         ver: '4.3', mode: 'setOrder', id: session.id, sId: session.sId, receipt: '0', market: item.market === 'dome' ? 'dome' : 'supply',
-        [`item[${o.supply_item_no}]`]: buildItemValue(env, { market: item.market, qty: o.quantity, deliMemo: buyer.memo }),
+        [`item[${o.supply_item_no}]`]: buildItemValue(env, { market: item.market, qty: o.quantity, deliMemo: buyer.memo, opt: chooseOptionCode(item.selectOpt) }),
         deliinfo: buildDeliInfo(buyer), ie: 'utf-8', oe: 'utf-8'
       }, fetchImpl);
     } catch {
@@ -147,7 +163,13 @@ export async function placeSupplierOrders(env, fetchImpl = fetch, limit = 3) {
       continue;
     }
     const orderNoRaw = r.root?.order?.orderNo ?? (Array.isArray(r.root?.order) ? r.root.order[0]?.orderNo : undefined);
-    if (String(r.root?.result || '').toUpperCase() !== 'SUCCESS' || !orderNoRaw) { await fail('SET_ORDER', apiError(r, env) || `응답 ${r.status}`); continue; }
+    if (String(r.root?.result || '').toUpperCase() !== 'SUCCESS' || !orderNoRaw) {
+      // 옵션 형식 진단용: 해당 상품의 주문옵션 원문(공개 상품정보)을 남긴다.
+      await env.DB.prepare('INSERT INTO supplier_connector_checks (id,provider_id,check_type,external_ref,result_status,metadata_json,checked_at) VALUES (?,?,?,?,?,?,?)')
+        .bind(`chk_${crypto.randomUUID().replaceAll('-', '')}`, 'domemae-official', 'order_readiness', 'probe:selectOpt', 'failed',
+          JSON.stringify({ itemNo: o.supply_item_no, sent: buildItemValue(env, { market: item.market, qty: o.quantity, deliMemo: '', opt: chooseOptionCode(item.selectOpt) }), selectOpt: item.selectOpt || '', error: apiError(r, env) }).slice(0, 4000), isoNow()).run().catch(() => {});
+      await fail('SET_ORDER', apiError(r, env) || `응답 ${r.status}`); continue;
+    }
     const supplierOrderNo = String(orderNoRaw);
     await setRow(env, soId, { status: 'placed', supplier_order_no: supplierOrderNo, checked_at: isoNow() });
     // 발주 직후 실제 주문서를 조회해 품목·수량을 대조한다.
