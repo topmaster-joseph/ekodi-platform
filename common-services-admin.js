@@ -148,7 +148,7 @@ function installPanel(){
 function renderHeader(){
   const moduleMode=state.category==='service-modules';
   const host=panel();host?.classList.toggle('module-health-mode',moduleMode);
-  const title=$('#commonServicesTitle');if(title)title.textContent=moduleMode?'공통·전문 모듈':'서비스 엔진';
+  const title=$('#commonServicesTitle');if(title)title.textContent=moduleMode?'공통·전문 모듈 점검':'서비스 엔진';
   const head=host?.querySelector('.common-services-list-head');
   if(head)head.innerHTML=moduleMode?'<span>서비스 모듈</span><span>점검 상태</span><span>활성 상태</span><span>상세</span>':'<span>서비스 엔진</span><span>점검 상태</span><span>상세</span>';
   const checked=$('#commonServicesCheckedAt');
@@ -162,7 +162,7 @@ function renderSummary(){
   const attention=states.filter(item=>item.key==='attention'||item.key==='critical').length;
   const standby=states.filter(item=>item.key==='standby').length;
   host.innerHTML=
-    '<article><small>전체</small><strong>'+visible.length+'</strong></article>'+
+    '<article><small>'+(state.category==='service-modules'?'공통·전문 모듈':'전체')+'</small><strong>'+visible.length+'</strong>'+(state.category==='service-modules'?'<span>Core 제외</span>':'')+'</article>'+
     '<article><small>정상</small><strong>'+healthy+'</strong></article>'+
     '<article class="'+(attention?'warn':'')+'"><small>점검 필요</small><strong>'+(attention+standby)+'</strong><span>미점검 '+standby+' · 주의·장애 '+attention+'</span></article>';
 }
@@ -178,7 +178,8 @@ function serviceCard(service){
     '<span class="common-service-identity"><b>'+esc(service.name)+'</b><small>'+esc(service.role)+'</small></span>'+
     '<span class="common-service-runtime"><i class="status '+esc(s.key)+'">'+esc(s.label)+'</i></span>'+
     (moduleMode?'<span class="common-service-activation"><b>'+esc(a.label)+'</b></span>':'')+
-    '<span class="common-service-open">상세</span>';
+    '<span class="common-service-open">상세</span>'+
+    '<span class="sr-only">기능 '+esc(a.label)+' · 런타임 '+esc(s.label)+'</span>';
   button.addEventListener('click',()=>{state.selected=service.id;state.detailOpen=true;syncServiceUrl(service.id);render();$('#commonServiceDetail')?.scrollIntoView?.({behavior:'smooth',block:'nearest'})});
   return button;
 }
