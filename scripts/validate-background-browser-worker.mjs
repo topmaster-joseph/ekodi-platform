@@ -44,6 +44,10 @@ if(!workerWorkflow.includes("github.repository == 'topmaster-joseph/ekodi-platfo
 if(!sharedRelease.includes('native_surface_verification_desktop:')||!sharedRelease.includes('native_surface_verification_mobile:')) fail('shared-site production release must invoke the EKODI browser worker for desktop and mobile');
 if((sharedRelease.match(/uses:\s*\.\/\.github\/workflows\/ekodi-background-browser-worker\.yml/g)||[]).length<2) fail('shared-site production release must retain both native browser verification lanes');
 if(!sharedRelease.includes('needs: deploy')) fail('native browser verification must run after guarded production deploy');
+const desktopVerification=sharedRelease.match(/native_surface_verification_desktop:[\s\S]*?(?=\n\s{2}[a-zA-Z0-9_-]+:|$)/)?.[0]||'';
+const mobileVerification=sharedRelease.match(/native_surface_verification_mobile:[\s\S]*?(?=\n\s{2}[a-zA-Z0-9_-]+:|$)/)?.[0]||'';
+if(!/needs:\s*deploy/.test(desktopVerification)) fail('desktop native verification must run directly after guarded production deploy');
+if(!/needs:\s*native_surface_verification_desktop/.test(mobileVerification)) fail('mobile native verification must run after desktop to avoid self-induced canonical rate-limit bursts');
 if(!sharedRelease.includes('device_profile: desktop')||!sharedRelease.includes('device_profile: mobile-portrait')) fail('release browser verification must cover desktop and mobile portrait');
 if(!sharedRelease.includes('surface_paths: /,/my/,/admin/')) fail('shared-site production release must verify root, My and Admin canonical surfaces');
 if(boardRegistry.policyId!=='EKODI-BOARD-NATIVE-VERIFY-001'||boardRegistry.status!=='enforced'||boardRegistry.owner!=='ekodi-orchestrator') fail('board native verification registry identity/status drifted');
