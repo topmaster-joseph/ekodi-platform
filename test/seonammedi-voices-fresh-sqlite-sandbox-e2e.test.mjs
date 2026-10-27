@@ -110,7 +110,7 @@ test('in-memory D1-schema sandbox: guest denial, durable queue, ownership, admin
   assert.equal((await consumeFreshVoiceReplyQueue(f.env,queuedReply.payload)),rid,'duplicate reply event idempotent');
   assert.equal(f.native.prepare('SELECT count(*) AS n FROM citizen_voice_replies_fresh').get().n,1);
 
-  const reading=(await f.route('','GET','bob','', 'https://sandbox.ekodi.test/seonammedi/board')).data;
+  const reading=(await f.route('','GET','bob',undefined,'https://sandbox.ekodi.test/seonammedi/board')).data;
   assert.equal(reading.items[0].replies[0].mine,true);
   assert.equal(reading.items[0].replies[0].role,'member');
   assert.equal(JSON.stringify(reading).includes('google_subject'),false);
