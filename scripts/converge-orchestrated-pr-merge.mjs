@@ -374,6 +374,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   ['index.html','homepage-ambient.js','homepage-ambient.css'].includes(file)||
   // The resident-council public page (/cgmurrc) is a Site Core static asset.
   file==='cgmurrc.html'||
+  // Static asset response headers (CSP, caching) ship with the Site Core build.
+  file==='_headers'||
   // Control is a first-party Site Core surface, never a separate public Shell release.
   ['control.html','control.css','control.js','admin-control-home.js','admin-control-home.css'].includes(file)||
   // Shared administrator menu, canonical route registry and design contracts are production Site Core assets.
