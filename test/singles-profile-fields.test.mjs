@@ -65,8 +65,9 @@ test('화면 카탈로그가 서버와 같다(항목 키·지역·신앙 표시)
  assert.ok(app.includes('const REGIONS='+JSON.stringify(REGIONS).replace(/"/g,"'")+';'));
  for(const [k,f] of Object.entries(PROFILE_FIELDS)){assert.match(app,new RegExp("key:'"+k+"'[^}]*detail:true"+(f.sensitive?",sensitive:true":"")),k)}
  assert.doesNotMatch(app,/vcard|\.vcf/i,'디지털 명함 가져오기 제거');
- assert.match(app,/많이 입력하고 많이 공개할수록 같은 요청의 요금이 낮아지고/);
- assert.match(app,/민감정보는 요금 산정에 쓰지 않습니다/);
+ assert.match(app,/기본 요금 \+ 입력·공개 할인/);
+ assert.match(app,/민감정보는 할인 계산에 쓰지 않습니다/);
+ assert.doesNotMatch(app,/적게 입력·공개할수록 높아/,'불이익 표현 대신 할인 표현');
 });
 test('로그인은 매번 Google 계정 선택',()=>{
  const app=readFileSync(new URL('../sites/ekodi-singles/public/app.js',import.meta.url),'utf8');
