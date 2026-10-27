@@ -1,5 +1,5 @@
 const params = new URLSearchParams(location.search);
-const interactive = params.get('manage') === '1' || params.get('review') === '1' || params.get('purpose') === 'seonammedi-board-admin' || (params.get('site') === 'seonammedi' && params.get('select_account') === '1');
+const interactive = params.get('manage') === '1' || params.get('review') === '1' || params.get('purpose') === 'seonammedi-board-admin' || (params.get('site') === 'seonammedi' && params.get('select_account') === '1') || (params.get('site') === 'singles' && params.get('select_account') === '1');
 const site = params.get('site') || 'portal';
 const returnTo = params.get('return_to') || params.get('returnTo') || '';
 const guardKey = `ekodi-auth-entry:${site}:${returnTo}`;
@@ -20,7 +20,7 @@ if (!interactive) {
 }
 
 async function loadAuthRouter() {
-  return import('./auth-router.js?v=20261019-seonam-admin-return-405');
+  return import('./auth-router.js?v=20261028-singles-choose-account');
 }
 
 if (repeated) {

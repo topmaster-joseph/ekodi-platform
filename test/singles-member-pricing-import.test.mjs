@@ -23,13 +23,10 @@ test('anonymous navigation hides member-only profile, messages, discovery and fi
  assert.match(html,/data-member-nav hidden>내 프로필<\/a>/);
  assert.match(ui,/querySelectorAll\('\[data-guest-nav\]'\)/);
 });
-test('vCard import runs in browser and cannot itself publish or verify identity',()=>{
- assert.match(ui,/importFile\.addEventListener\('change'/);
- assert.match(ui,/file\.size>65536/);
- assert.match(ui,/discover\.checked=false/);
- assert.match(ui,/file\.text\(\)/);
+test('vCard import removed (2026-10-28); profile still never claims identity verification',()=>{
+ assert.doesNotMatch(ui,/importFile|vcard|\.vcf/i);
  assert.match(ui,/state\.session\?\.user\?\.user_metadata\?\.full_name/);
- assert.match(ui,/정부 공공 마이데이터/);
+ assert.match(ui,/승인된 본인확인기관 연동/);
  assert.doesNotMatch(ui,/adult_verified_at\s*:\s*true/);
 });
 test('profile share URL requires explicit visibility, verified adult, and https',()=>{
