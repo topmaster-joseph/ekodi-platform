@@ -38,3 +38,18 @@ test('readable system structure uses scoped layout and responsive reflow, never 
   assert.match(mapCss, /\.structure-section-nav button:focus-visible/);
   assert.doesNotMatch(mapCss, /\.sidebar\{/);
 });
+
+test('ADMIN-ARCH-GRID-001: map grids defeat the admin generic one-column contract only inside architecture', async () => {
+  const workbench = await read('admin-conversation-workbench.css');
+  assert.match(workbench, /data-admin-list-layout="single"/);
+  assert.match(workbench, /grid-template-columns:minmax\(0,1fr\)!important/);
+  assert.match(mapCss, /ADMIN-ARCH-GRID-001/);
+  for (const id of ['#structureLayers', '#structureServiceRegistry .structure-service-grid', '#ekodiArchitectureMap .system-map-platform-grid']) {
+    assert.ok(mapCss.includes(id), id);
+  }
+  assert.match(mapCss, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)!important/);
+  assert.match(mapCss, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important/);
+  assert.match(mapCss, /grid-template-columns:minmax\(0,1fr\)!important/);
+  assert.match(mapCss, /grid-template-columns:minmax\(0,1fr\) auto minmax\(0,1fr\) auto minmax\(0,1fr\) auto minmax\(0,1fr\)/);
+  assert.doesNotMatch(mapCss, /grid-template-columns:repeat\(7,minmax\(0,1fr\)\)/);
+});
