@@ -5,19 +5,9 @@ const menuButton=document.querySelector('.menu-button');
 const nav=document.querySelector('#site-nav');
 
 document.querySelector('#year').textContent=new Date().getFullYear();
-if(menuButton)menuButton.dataset.menuBound='1';
-menuButton?.addEventListener('click',()=>{const open=nav.classList.toggle('open');menuButton.setAttribute('aria-expanded',String(open));});
-function closeMenu(){if(!nav?.classList.contains('open'))return;nav.classList.remove('open');menuButton?.setAttribute('aria-expanded','false');}
-nav?.addEventListener('click',event=>{if(event.target.closest('a'))closeMenu();});
-document.addEventListener('keydown',event=>{if(event.key==='Escape'){closeMenu();menuButton?.focus();}});
-document.addEventListener('click',event=>{if(!event.target.closest('.masthead'))closeMenu();});
 
 function installPublishingEntry(){
-  if(nav&&!nav.querySelector('a[href="/publishing/"]')){
-    const link=document.createElement('a');link.href='/publishing/';link.textContent='출판';
-    const ekodi=nav.querySelector('a[href^="https://ekodi.kr"]');
-    if(ekodi)nav.insertBefore(link,ekodi);else nav.append(link);
-  }
+  // 출판 바로가기는 공용 머리말의 '출판 생태계' 띠가 맡는다(scripts/site-chrome.mjs).
   if(!document.querySelector('#publishing-service-callout')){
     const method=document.querySelector('#method');
     if(method){
