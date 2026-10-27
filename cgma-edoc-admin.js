@@ -3,7 +3,7 @@
 // by the Control API (cgma tenant authority or super_admin). Rendering uses textContent/DOM only and
 // signatures are inline SVG built from vector strokes, so the admin CSP (default-src 'self') holds.
 const API='/api/cgma/edocs';
-const STYLE='/cgma/admin/assets/cgma-edoc-admin.css';
+const STYLE='/cgma/admin/assets/cgma-edoc-admin.css?v=css-c0bb9585fe';
 const SVG_NS='http://www.w3.org/2000/svg';
 const STATUS=Object.freeze({draft:'초안',in_progress:'서명 진행 중',completed:'서명 완료',archived:'보관',cancelled:'취소'});
 const statusOf=doc=>doc.archived?'archived':doc.status;
