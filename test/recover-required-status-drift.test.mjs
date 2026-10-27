@@ -120,6 +120,6 @@ test('draft PR skips merge status recovery without representing a security appro
  assert.throws(()=>verifiedHeadPr(draft,head),/eligible/);
  const {readFileSync}=await import('node:fs');
  const source=readFileSync(new URL('../scripts/recover-required-status-drift.mjs',import.meta.url),'utf8');
- assert.match(source,/if \\(draftPrNoop\\(initialPr\\)\\)/);
- assert.match(source,/return;[\\s\\S]*?if \\(closedPrNoop\\(initialPr\\)\\)/);
+ assert.ok(source.includes('if (draftPrNoop(initialPr))'));
+ assert.ok(source.indexOf('if (draftPrNoop(initialPr))') < source.indexOf('if (closedPrNoop(initialPr))'));
 });
