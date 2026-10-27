@@ -120,7 +120,7 @@ export async function mountCgmaEdocAdmin({root,summaryRoot,getToken,state=()=>{}
       return tr;
     });
     body.replaceChildren(
-      el('div',{className:'cgma-edoc-toolbar'},[button('+ 새 전자문서',()=>showForm(data),'cgma-edoc-btn primary'),statusSelect,yearSelect,search,button('검색',apply)]),
+      el('div',{className:'cgma-edoc-toolbar'},[button('+ 새 전자문서',()=>showForm(data),'cgma-edoc-btn primary'),button('일괄 등록',()=>showBulk(data)),statusSelect,yearSelect,search,button('검색',apply)]),
       el('div',{className:'cgma-edoc-table-wrap'},[el('table',{className:'cgma-edoc-table'},[
         el('thead',{},[el('tr',{},['연번','문서번호','제목','분류','서명','상태','문서일자','완료일'].map(t=>el('th',{text:t})))]),
         el('tbody',{},rows.length?rows:[el('tr',{},[el('td',{className:'empty',text:'등록된 전자문서가 없습니다. ‘+ 새 전자문서’로 회의록·제안서 등을 올려 서명을 받거나 보관하세요.',attrs:{colspan:'8'}})])]),
@@ -213,6 +213,71 @@ export async function mountCgmaEdocAdmin({root,summaryRoot,getToken,state=()=>{}
       el('p',{className:'cgma-edoc-hint',text:'첫 번째 서명자부터 차례로 서명합니다. 앞 사람이 서명해야 다음 사람의 링크가 열립니다. 성명을 아직 모르면 비워 두고 ‘초안으로 저장’하세요.'}),
       signerList,el('div',{className:'cgma-edoc-actions'},[button('+ 서명자 추가',()=>addSigner())]));
     syncMode();
+    setMessage('');
+  }
+
+  // ---------- bulk registration (여러 파일 한 번에) ----------
+  // Select many files at once. An optional cgma-edocs-manifest.json in the same selection supplies exact
+  // titles, categories, document dates and purpose per file; otherwise sensible defaults are proposed
+  // (title from the file name, a leading YYMMDD/YYYYMMDD as the document date, 보관 as the purpose).
+  function showBulk(listData){
+    const categories=listData?.categories||['회의록','제안서·견적서','결의서','계약·협약','공문','회계·정산','기타'];
+    const picker=el('input',{attrs:{type:'file',multiple:'',accept:ARCHIVE_ACCEPT+',.json'}});
+    const tbody=el('tbody');
+    const run=button('등록 시작',()=>start(),'cgma-edoc-btn primary');run.disabled=true;
+    let items=[];
+    const render=()=>{
+      tbody.replaceChildren(...items.map((it,i)=>{
+        const title=el('input',{attrs:{type:'text',maxlength:'120',value:it.title,'aria-label':'제목'}});title.addEventListener('input',()=>{it.title=title.value});
+        const cat=el('select',{attrs:{'aria-label':'분류'}},categories.map(c=>el('option',{text:c,attrs:{value:c}})));cat.value=it.category;cat.addEventListener('change',()=>{it.category=cat.value});
+        const date=el('input',{attrs:{type:'date',value:it.doc_date||'','aria-label':'문서일자'}});date.addEventListener('change',()=>{it.doc_date=date.value});
+        const mode=el('select',{attrs:{'aria-label':'목적'}},[el('option',{text:'보관',attrs:{value:'archive'}}),el('option',{text:'서명(초안)',attrs:{value:'sign'}})]);mode.value=it.mode;mode.addEventListener('change',()=>{it.mode=mode.value});
+        return el('tr',{},[el('td',{className:'cgma-edoc-serial',text:String(i+1)}),el('td',{text:it.file.name}),el('td',{},[title]),el('td',{},[cat]),el('td',{},[date]),el('td',{},[mode]),el('td',{className:'cgma-edoc-bulk-state',text:it.state||''})]);
+      }));
+      run.disabled=!items.length;
+    };
+    picker.addEventListener('change',async()=>{
+      const files=[...(picker.files||[])];
+      const manifestFile=files.find(f=>/manifest.*\.json$/i.test(f.name));
+      let manifest=[];
+      if(manifestFile){try{manifest=JSON.parse(await manifestFile.text())?.documents||[]}catch{setMessage('목록 파일(manifest)을 읽지 못했습니다. 파일 이름 기준으로 채웁니다.',true)}}
+      items=files.filter(f=>f!==manifestFile).map(file=>{
+        const m=manifest.find(x=>x?.file===file.name)||{};
+        const base=file.name.replace(/\.[^.]+$/,'');
+        const d=base.match(/^(\d{2}|\d{4})(\d{2})(\d{2})(?!\d)/);
+        const guessed=d?`${d[1].length===2?'20'+d[1]:d[1]}-${d[2]}-${d[3]}`:'';
+        return {file,title:String(m.title||base).slice(0,120),category:categories.includes(m.category)?m.category:'기타',doc_date:m.doc_date||guessed,
+          mode:m.mode==='sign'?'sign':'archive',summary:String(m.summary||''),signers:Array.isArray(m.signers)?m.signers:null,state:''};
+      });
+      setMessage(items.length?`${items.length}개 파일을 확인했습니다. 제목·분류·문서일자를 확인한 뒤 ‘등록 시작’을 누르세요.`:'');
+      render();
+    });
+    const start=async()=>{
+      run.disabled=true;picker.disabled=true;let ok=0;
+      for(const it of items){
+        if(it.state==='완료')continue;
+        if(it.file.size>20*1024*1024){it.state='20MB 초과';render();continue;}
+        it.state='등록 중…';render();
+        try{
+          const signers=it.mode==='sign'?(it.signers||DEFAULT_ROLES.map(role_title=>({role_title,signer_name:''}))):[];
+          const created=await request('',{method:'POST',body:JSON.stringify({title:it.title.trim(),category:it.category,summary:it.summary,content_kind:'file',mode:it.mode,doc_date:it.doc_date||'',source_note:'일괄 등록',signers})});
+          await request(`/${created.id}/file`,{method:'PUT',body:it.file,headers:{'content-type':it.file.type||'application/octet-stream','x-ekodi-file-name':encodeURIComponent(it.file.name)}});
+          if(it.mode==='archive')await request(`/${created.id}/archive`,{method:'POST',body:'{}'});
+          it.state=it.mode==='archive'?'완료':'완료(초안)';ok++;
+        }catch(error){it.state='실패: '+(error?.message||'')}
+        render();
+      }
+      picker.disabled=false;run.disabled=false;
+      setMessage(`${ok}/${items.length}건을 등록했습니다.${ok<items.length?' 실패한 항목은 다시 ‘등록 시작’을 누르면 그 항목만 다시 시도합니다.':''}`,ok<items.length);
+    };
+    body.replaceChildren(el('div',{className:'cgma-edoc-form cgma-edoc-bulk'},[
+      el('h3',{text:'일괄 등록'}),
+      el('p',{className:'cgma-edoc-hint',text:'여러 파일을 한 번에 선택하세요(PDF·이미지·한글·워드·엑셀·파워포인트, 각 20MB 이하). 함께 받은 목록 파일(cgma-edocs-manifest.json)도 같이 선택하면 제목·분류·문서일자가 자동으로 채워집니다. ‘보관’은 서명 없이 영구 보관되고, ‘서명(초안)’은 서명자를 정한 뒤 서명 요청을 시작합니다.'}),
+      el('label',{className:'cgma-edoc-field'},[el('span',{text:'파일 선택 (여러 개)'}),picker]),
+      el('div',{className:'cgma-edoc-table-wrap'},[el('table',{className:'cgma-edoc-table'},[
+        el('thead',{},[el('tr',{},['연번','파일','제목','분류','문서일자','목적','결과'].map(t=>el('th',{text:t})))]),tbody])]),
+      el('div',{className:'cgma-edoc-actions'},[button('목록으로',()=>showList().catch(fail)),run]),
+    ]));
     setMessage('');
   }
 

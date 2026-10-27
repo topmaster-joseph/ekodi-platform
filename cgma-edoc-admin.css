@@ -63,3 +63,6 @@
 .cgma-edoc-serial{text-align:center;color:#5b6b69;width:3.5em}
 .cgma-edoc-badge[data-status="archived"]{background:#e8eef7;color:#2c4a7a}
 .cgma-edoc-signer-section[hidden]{display:none}
+.cgma-edoc-bulk .cgma-edoc-table input,.cgma-edoc-bulk .cgma-edoc-table select{font:inherit;padding:4px 6px;border:1px solid #d6e0de;border-radius:6px;max-width:100%}
+.cgma-edoc-bulk .cgma-edoc-table td:nth-child(3) input{min-width:220px;width:100%}
+.cgma-edoc-bulk-state{white-space:normal;font-size:13px;color:#0f5f5c}
