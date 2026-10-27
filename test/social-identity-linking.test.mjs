@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { SOCIAL_IDENTITY_PROVIDERS,socialIdentityPolicy,handleSocialIdentityControl } from '../social-identity-control.js';
 
-const endpoint='https://api.ekodi.kr/api/control/external-accounts/social-identities';
+const endpoint='https://ekodi.kr/api/control/external-accounts/social-identities';
 const actor={userId:'ekodi-user-1',email:'member@example.test',superAdmin:false};
 const superAdmin={...actor,superAdmin:true};
 
