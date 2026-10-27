@@ -23,7 +23,7 @@ const ENGINE_CATEGORY_LABELS=Object.freeze({
   'service-modules':'공통·전문 모듈',
 });
 const PANEL_TARGETS=[SECTION,...Object.keys(ENGINE_SECTION_FILTER)].join(' ');
-const style=document.createElement('link');style.rel='stylesheet';style.href='common-services-admin.css';style.dataset.ekodiCommonServicesStyle='1';document.head.append(style);
+const style=document.createElement('link');style.rel='stylesheet';style.href='/common-services-admin.css';style.dataset.ekodiCommonServicesStyle='1';document.head.append(style);
 const SERVICES=Object.freeze([
   {id:'auth',name:'인증 엔진',domain:'ekodi.kr/auth',category:'core',kind:'engine',layer:'Core',role:'통합인증 · SSO · 계정',manage:'admins',availability:'기본제공',applyRule:'필수',cost:'기본 제공',critical:true,operatorOnly:true},
   {id:'permission',name:'권한 엔진',domain:'ekodi.kr/api',category:'core',kind:'engine',layer:'Core',role:'역할 · 등급 · Capability 권한',manage:'admins',availability:'기본제공',applyRule:'필수',cost:'기본 제공',critical:true,operatorOnly:true},
