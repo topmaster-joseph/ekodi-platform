@@ -165,3 +165,12 @@ test('top-right shows one 본인인증 대기 button, a step-up dialog, and keep
  // Owner tools stay hidden until the second factor succeeds.
  assert.match(html,/<section id="owner" hidden>/);
 });
+
+test('every login step on /my/invest is time-boxed so the page never hangs on 확인 중',async()=>{
+ const js=await (await investMyRoute(new Request('https://ekodi.kr/invest/app.js'),{})).text();
+ assert.match(js,/function withTimeout\(/);
+ assert.match(js,/withTimeout\(import\('https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2\/\+esm'\),\d+\)/);
+ assert.match(js,/withTimeout\(sessionClient\.auth\.getSession\(\),\d+\)/);
+ assert.match(js,/withTimeout\(fetch\('\/my\/invest\/access'/);
+ assert.match(js,/withTimeout\(fetch\(autopilotApi\+'\/step-up'/);
+});
