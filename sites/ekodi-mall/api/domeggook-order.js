@@ -22,8 +22,10 @@ export function chooseOptionCode(selectOpt) {
   try { parsed = typeof selectOpt === 'string' ? JSON.parse(selectOpt) : selectOpt; } catch { return '00'; }
   const map = parsed?.data && typeof parsed.data === 'object' ? parsed.data : null;
   if (!map) return '00';
-  const entries = Object.entries(map).filter(([, v]) => v && typeof v === 'object' && !(v.hid === 1 || v.hid === '1'));
-  const good = entries.find(([, v]) => Number(v.qty ?? 1) > 0 && !Number(v.dom || v.domPrice || v.price || 0));
+  // 실제 구조(2026-10-27 운영 확인): data:{"00":{name,dom:"1",domPrice:"0",sup:"1",supPrice:"0",qty:"434",hid:"0",hash}}
+  //  dom/sup = 도매꾹/도매매 판매 여부, domPrice/supPrice = 옵션 추가금.
+  const entries = Object.entries(map).filter(([, v]) => v && typeof v === 'object' && String(v.hid ?? '0') !== '1');
+  const good = entries.find(([, v]) => Number(v.qty ?? 1) > 0 && String(v.sup ?? '1') !== '0' && !Number(v.supPrice || 0) && !Number(v.domPrice || 0));
   return (good || entries[0] || ['00'])[0];
 }
 const TRACK_INTERVAL_MS = 60 * 60 * 1000;
@@ -63,7 +65,8 @@ export async function login(env, fetchImpl = fetch) {
   const r = await call(env, { ver: '4.1', mode: 'setLogin', id: env.DOMEMAE_USER_ID, pw: env.DOMEMAE_PASSWORD, loginKeep: 'off', ip: env.DOMEGGOOK_CLIENT_IP || '127.0.0.1', device: 'Third Party' }, fetchImpl);
   const sId = r.root?.sId;
   if (!sId) throw new Error(`도매꾹 로그인 실패: ${apiError(r, env) || '세션 없음'}`);
-  return { id: env.DOMEMAE_USER_ID, sId: String(sId) };
+  // 로그인 응답의 회원 ID를 이후 호출에 쓴다(SNS 연동 계정은 입력 ID와 실제 회원 ID(sns@…)가 다를 수 있음 → '회원오류').
+  return { id: String(r.root?.id || env.DOMEMAE_USER_ID), sId: String(sId) };
 }
 
 export async function emoneyBalance(env, session, fetchImpl = fetch) {

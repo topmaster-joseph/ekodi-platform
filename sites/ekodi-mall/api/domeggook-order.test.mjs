@@ -34,7 +34,7 @@ function supplier({ emoney = 100000, qty = 2, cost = 8000, setOrderOk = true, vi
     const params = init.body ? new URLSearchParams(String(init.body)) : new URL(String(url)).searchParams;
     const mode = params.get('mode'); log.push({ mode, params });
     const J = (o) => new Response(JSON.stringify(o));
-    if (mode === 'setLogin') return J({ domeggook: { result: 'true', sId: 'SID1' } });
+    if (mode === 'setLogin') return J({ domeggook: { result: 'true', sId: 'SID1', id: 'sns@952821' } });
     if (mode === 'getItemView') return J({ domeggook: { basis: { no: '55501234', title: '대나무 칫솔', status: '판매중' }, price: { supply: cost }, qty: { inventory: 50 }, deli: { supply: { type: '고정', fee: 3000 } }, desc: { license: { usable: true } } } });
     if (mode === 'getMyAsset') return J({ domeggook: { result: 'true', data: { currEmoney: { total: emoney } } } });
     if (mode === 'setOrder') return J(setOrderOk ? { domeggook: { result: 'SUCCESS', order: { orderNo: 9001, itemNo: 55501234 } } } : { errors: { message: 'invalid item' } });
@@ -56,6 +56,7 @@ test('paid supply order is placed once, verified, then tracked to shipping', asy
   assert.equal(r.placed, 1, JSON.stringify(r));
   const set = log.find((c) => c.mode === 'setOrder').params;
   assert.equal(set.get('sId'), 'SID1');
+  assert.equal(set.get('id'), 'sns@952821', 'uses the member id returned by login');
   assert.equal(set.get('item[55501234]'), 'supply||P||00|2||에코디몰 위탁주문||문앞');
   assert.match(set.get('deliinfo'), /^김철수\|a@b\.kr\|07328\|/);
   const row = db.prepare('SELECT status,supplier_order_no,expected_cost FROM supplier_orders').get();
@@ -114,6 +115,6 @@ test('login probe records readiness and low e-money without secrets', async () =
 
 test('option code is taken from selectOpt (in stock, no surcharge), defaulting to 00', () => {
   assert.equal(chooseOptionCode(''), '00');
-  assert.equal(chooseOptionCode('{"type":"combination","data":{"00":{"name":"빨강","dom":0,"qty":0},"01":{"name":"파랑","dom":0,"qty":5},"02":{"name":"대형","dom":500,"qty":9}}}'), '01');
+  assert.equal(chooseOptionCode('{"type":"combination","data":{"00":{"name":"빨강","dom":"1","sup":"1","domPrice":"0","supPrice":"0","qty":"0"},"01":{"name":"파랑","dom":"1","sup":"1","domPrice":"0","supPrice":"0","qty":"5"},"02":{"name":"대형","dom":"1","sup":"1","supPrice":"500","qty":"9"}}}'), '01');
   assert.equal(chooseOptionCode('not json'), '00');
 });
