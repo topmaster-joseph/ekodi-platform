@@ -185,9 +185,10 @@ async function dispatchClick(locator, timeout = 5_000) {
 async function selectWorkArea(group) {
   if (selectedWorkArea === group) return;
   const global = globalButton(group);
-  await global.waitFor({ state: 'visible', timeout: 5_000 });
+  // ADMIN-LEFT-FLAT-MENU-001: area captions are hidden; activate the area control directly.
+  await global.waitFor({ state: 'attached', timeout: 5_000 });
   const active = await global.evaluate(node => node.getAttribute('aria-current') === 'page' || node.classList.contains('active'));
-  if (!active) await dispatchClick(global);
+  if (!active) await global.evaluate(node => { node.click(); return true; });
   await page.waitForFunction(target => [...document.querySelectorAll('button[data-admin-global-group]')].some(node => node.dataset.adminGlobalGroup === target && (node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))), group, { timeout: 5_000 });
   selectedWorkArea = group;
 }

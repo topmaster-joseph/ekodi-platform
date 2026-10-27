@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('Platform Admin uses eight control areas: every area menu visible on the left, details nested under the active menu', async () => {
+test('Platform Admin shows every menu on the left without area captions, details in the top strip', async () => {
   const [registry, sidebar] = await Promise.all([
     read('admin-menu-registry.js'),
     read('admin-sidebar.js'),
@@ -23,7 +23,7 @@ test('Platform Admin uses eight control areas: every area menu visible on the le
     "sections: ['security', 'audit-records']",
   ]) assert.ok(registry.includes(marker), marker);
   assert.match(sidebar, /adminMenusForGroup\(group\)/);
-  assert.match(sidebar, /group-menu-detail-v4/);
+  assert.match(sidebar, /flat-menu-top-detail-v5/);
   assert.doesNotMatch(sidebar, /PRIMARY_SECTIONS/);
   assert.match(sidebar, /nav\.querySelector\(':scope>\.admin-command-entry'\)\?\.remove\(\)/);
   assert.match(sidebar, /main\?\.querySelector\(':scope>\.admin-context-tabs-shell'\)\?\.remove\(\)/);
@@ -32,7 +32,7 @@ test('Platform Admin uses eight control areas: every area menu visible on the le
   assert.doesNotMatch(sidebar, /shell = document\.createElement/);
     assert.match(sidebar, /role-projected-sidebar-v4/);
   assert.match(sidebar, /renderSidebarDetails\(nav, globals, group, displayedSection \|\| section, locale\)/);
-  assert.match(registry, /ADMIN_LAYOUT_MODEL = 'left-menu-first-site-strip-v2'/);
+  assert.match(registry, /ADMIN_LAYOUT_MODEL = 'left-flat-menu-top-detail-v3'/);
   assert.match(sidebar, /const STRIP_CLASS = 'admin-work-strip'/);
 });
 test('Functional Admin pages keep only the bottom EKODI composer until conversation is opened', async () => {

@@ -16,20 +16,21 @@ const [sidebar, campus, templates, hierarchyRaw, principles, designCss] = await 
 ]);
 const hierarchy = JSON.parse(hierarchyRaw);
 
-test('ADMIN-LEFT-MENU-FIRST-001: every area menu on the left, details nested under the active menu, strip only for 사이트관리 sites', () => {
-  assert.equal(ADMIN_LAYOUT_MODEL, 'left-menu-first-site-strip-v2');
+test('ADMIN-LEFT-FLAT-MENU-001: menus on the left without area captions, details or sites in the top strip, content in the centre', async () => {
+  assert.equal(ADMIN_LAYOUT_MODEL, 'left-flat-menu-top-detail-v3');
   assert.match(sidebar, /const STRIP_CLASS = 'admin-work-strip'/);
-  assert.match(sidebar, /content\.insertAdjacentElement\('beforebegin', strip\)/, 'strip sits above the settings content');
+  assert.match(sidebar, /content\.insertAdjacentElement\('beforebegin', strip\)/, 'strip sits above the content');
   assert.match(sidebar, /export function renderAdminWorkStrip/);
   assert.match(sidebar, /window\.EKODIAdminWorkStrip = Object\.freeze\(\{ render: renderAdminWorkStrip \}\)/);
-  // details moved up one level: nested on the left under the active menu
-  assert.match(sidebar, /detailButton\(id, getAdminMenuLabel\(id, locale\), TAB_CLASS, id === section\)/);
-  assert.match(sidebar, /\/\/ Outside 사이트관리 the detail routes live on the left; the strip stays empty\./);
+  assert.doesNotMatch(sidebar, /admin-detail-nested/);
+  assert.match(sidebar, /if \(tabs\.length < 2\)/);
   assert.match(sidebar, /main\?\.querySelector\(':scope>\.admin-context-tabs-shell'\)\?\.remove\(\)/);
-  // the dark-sidebar tab palette must not leak into the light strip
+  const workbench = await readFile(new URL('../admin-conversation-workbench.css', import.meta.url), 'utf8');
+  assert.match(workbench, /\.sidebar \.admin-global-nav\{display:none!important\}/, 'area captions are not shown');
   assert.match(designCss, /\.admin-work-strip \.admin-work-strip-item\{\n  color:#26303d!important;/);
-  assert.match(principles, /ADMIN-LEFT-MENU-FIRST-001/);
+  assert.match(principles, /ADMIN-LEFT-FLAT-MENU-001/);
 });
+
 
 
 test('사이트관리 2차 menus are the site classifications the campus filter understands', () => {

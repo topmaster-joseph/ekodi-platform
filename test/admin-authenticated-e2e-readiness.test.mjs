@@ -37,7 +37,7 @@ test('authenticated Admin E2E gives demand-loaded navigation a bounded productio
   assert.match(worker, /const interactionReadyTimeoutMs = 15_000/);
   assert.match(worker, /locator\.waitFor\(\{ state: 'visible', timeout: interactionReadyTimeoutMs \}\)/);
   assert.match(worker, /locator\.click\(\{ force: true, noWaitAfter: true, timeout: interactionReadyTimeoutMs \}\)/);
-  assert.match(worker, /global\.waitFor\(\{ state: 'visible', timeout: interactionReadyTimeoutMs \}\)/);
+  assert.match(worker, /global\.waitFor\(\{ state: 'attached', timeout: interactionReadyTimeoutMs \}\)/);
   assert.match(worker, /group, \{ timeout: interactionReadyTimeoutMs \}\)/);
   assert.match(worker,/async function resolveMenuTrigger\(\)/);
   assert.match(worker,/:is\(\.admin-detail-item,\.admin-detail-tab\)\[data-admin-detail-section=/);
