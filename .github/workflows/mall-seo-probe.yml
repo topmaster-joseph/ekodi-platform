@@ -13,30 +13,29 @@ jobs:
     timeout-minutes: 6
     steps:
       - name: Probe ekodi.kr discovery surfaces
-        shell: bash
+        shell: python
         run: |
-          set -uo pipefail
-          ua='Mozilla/5.0 (compatible; EKODI-SEO-Probe/1.0)'
-          sm=$(curl -sS --max-time 40 -A "$ua" https://ekodi.kr/sitemap.xml || true)
-          total=$(echo "$sm" | grep -o '<loc>' | wc -l)
-          mall=$(echo "$sm" | grep -o '<loc>https://ekodi.kr/ekodimall/p/[^<]*' | wc -l)
-          first=$(echo "$sm" | grep -o '<loc>https://ekodi.kr/ekodimall/p/[^<]*' | head -1 | sed 's/<loc>//')
-          echo "::notice title=sitemap::urls=$total mallProducts=$mall sample=$first"
-          robots=$(curl -sS --max-time 20 -A "$ua" https://ekodi.kr/robots.txt | grep -iE 'sitemap|disallow: /ekodimall' | head -5 | tr '\n' ' ')
-          echo "::notice title=robots::$robots"
-          key=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 https://ekodi.kr/e4c0d1a7b29f43d8a65c712fe9b3048c.txt)
-          echo "::notice title=indexnow-key::http=$key"
-          if [ -n "$first" ]; then
-            page=$(curl -sS --max-time 30 -A "$ua" "$first" || true)
-            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 -A "$ua" "$first")
-            title=$(echo "$page" | grep -o '<title>[^<]*' | head -1 | sed 's/<title>//')
-            desc=$(echo "$page" | grep -io '<meta name="description" content="[^"]*' | head -1 | sed 's/.*content="//')
-            og=$(echo "$page" | grep -io 'property="og:image" content="[^"]*' | head -1 | sed 's/.*content="//')
-            ld=$(echo "$page" | grep -c 'application/ld+json')
-            robotsmeta=$(echo "$page" | grep -io '<meta name="robots" content="[^"]*' | head -1 | sed 's/.*content="//')
-            echo "::notice title=product-page::http=$code title=$title | desc=${desc:0:80} | ogImage=${og:0:80} | jsonld=$ld | robots=$robotsmeta"
-          fi
-          home=$(curl -sS --max-time 30 -A "$ua" https://ekodi.kr/ekodimall/ || true)
-          htitle=$(echo "$home" | grep -o '<title>[^<]*' | head -1 | sed 's/<title>//')
-          hdesc=$(echo "$home" | grep -io '<meta name="description" content="[^"]*' | head -1 | sed 's/.*content="//')
-          echo "::notice title=mall-home::title=$htitle | desc=${hdesc:0:100}"
+          import re, urllib.request
+          UA = {'User-Agent': 'Mozilla/5.0 (compatible; EKODI-SEO-Probe/1.0)'}
+          def get(url):
+              try:
+                  with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=40) as r:
+                      return r.status, r.read().decode('utf-8', 'replace')
+              except Exception as e:
+                  return getattr(e, 'code', 0), ''
+          def note(title, msg):
+              print(f"::notice title={title}::{msg.replace(chr(10), ' ')[:900]}")
+          code, sm = get('https://ekodi.kr/sitemap.xml')
+          locs = re.findall(r'<loc>([^<]+)</loc>', sm)
+          mall = [u for u in locs if '/ekodimall/p/' in u]
+          note('sitemap', f'http={code} urls={len(locs)} mallProducts={len(mall)} sample={mall[0] if mall else "-"}')
+          code, robots = get('https://ekodi.kr/robots.txt')
+          note('robots', f'http={code} ' + ' / '.join(l for l in robots.splitlines() if re.search(r'sitemap|ekodimall', l, re.I))[:600])
+          code, _ = get('https://ekodi.kr/e4c0d1a7b29f43d8a65c712fe9b3048c.txt')
+          note('indexnow-key', f'http={code}')
+          def meta(html, pat):
+              m = re.search(pat, html, re.I)
+              return m.group(1)[:90] if m else '-'
+          for url in ([mall[0]] if mall else []) + ['https://ekodi.kr/ekodimall/']:
+              code, html = get(url)
+              note('page', f'{url} http={code} title={meta(html, r"<title>([^<]*)")} | desc={meta(html, r"name=.description. content=.([^\"]*)")} | og={meta(html, r"property=.og:image. content=.([^\"]*)")} | jsonld={html.count("application/ld+json")} | robots={meta(html, r"name=.robots. content=.([^\"]*)")}')
