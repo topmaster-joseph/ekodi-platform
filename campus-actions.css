@@ -174,3 +174,57 @@ body.admin-compact .campus-empty-state[hidden]{display:none!important}
 .admin-work-strip .admin-work-strip-item.no-site-admin{opacity:.72}
 /* With a site selected, its admin page takes the space right below the site strip. */
 #campusPanel:has(#campusSiteAdmin[data-state="selected"]) .campus-toolbar{display:none!important}
+
+/* ADMIN-SITE-INLINE-COMPACT-20261028: one-row site selector and a single work area. */
+body.admin-compact .admin-work-strip[data-admin-strip-owner="sites"]{
+  flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;
+  gap:6px!important;padding:9px 14px!important;scrollbar-width:thin;max-width:100%;
+}
+body.admin-compact .admin-work-strip[data-admin-strip-owner="sites"] .admin-work-strip-item{
+  flex:0 0 auto!important;min-height:36px!important;
+}
+body.admin-compact #campusPanel .campus-site-admin{
+  gap:0!important;margin:0!important;min-width:0!important;
+}
+body.admin-compact #campusPanel .campus-site-admin-head{
+  align-items:center!important;gap:10px 20px!important;
+  padding:11px 14px!important;margin:0!important;border-radius:10px!important;
+}
+body.admin-compact #campusPanel .campus-site-admin-summary{
+  display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 13px;min-width:0;
+}
+body.admin-compact #campusPanel .campus-site-admin-head h3{
+  margin:0!important;font-size:17px!important;line-height:1.3!important;
+}
+body.admin-compact #campusPanel .campus-site-admin-address{
+  margin:0!important;color:#637184!important;font-size:12px!important;
+  overflow-wrap:anywhere;
+}
+body.admin-compact #campusPanel .campus-site-admin-actions{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+}
+body.admin-compact #campusPanel .campus-site-admin-actions .campus-row-action{
+  min-height:36px!important;min-width:auto!important;padding:8px 12px!important;
+}
+body.admin-compact #campusPanel .campus-site-admin-frame{
+  margin-top:9px!important;border-radius:10px!important;
+}
+body.admin-compact #campusPanel .campus-site-admin-frame iframe{
+  height:max(590px,calc(100dvh - 195px));min-height:0;
+}
+body.admin-compact #campusPanel .campus-site-admin-frame[data-state="refused"]{
+  display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+}
+body.admin-compact #campusPanel .campus-site-admin-hint{
+  margin:0!important;padding:16px!important;
+}
+@media (max-width:760px){
+  body.admin-compact #campusPanel .campus-site-admin-head{align-items:stretch!important;}
+  body.admin-compact #campusPanel .campus-site-admin-actions{width:100%;}
+  body.admin-compact #campusPanel .campus-site-admin-actions .campus-row-action{
+    flex:1 1 0!important;min-height:44px!important;padding:10px 8px!important;
+  }
+  body.admin-compact #campusPanel .campus-site-admin-frame iframe{
+    height:max(550px,calc(100dvh - 180px));
+  }
+}
