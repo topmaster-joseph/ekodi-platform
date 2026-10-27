@@ -9,7 +9,8 @@ test('protected release verifies fresh citizen UI, old API retirement and notice
  assert.match(workflow,/old API not retired|legacy citizen API must return HTTP 410/);
  assert.match(workflow,/legacy citizen composer was unexpectedly served/);
  assert.match(workflow,/Verify production Google login-first API without credentials/);
- assert.match(workflow,/Remove old citizen records and referenced photos after cutover/);
+ assert.match(workflow,/Verify legacy write retirement and retain historical records/);
+  assert.doesNotMatch(workflow,/node services\/independent-board\/voices-fresh\/purge-legacy\.mjs --execute/);
  assert.doesNotMatch(workflow,/verify_contains "voices search control" 'id="voiceSearch"'/);
 });
 
