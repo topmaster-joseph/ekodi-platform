@@ -310,6 +310,20 @@ async function instructorFlow(browser,profile){
     if(!md.suggestedFilename().endsWith('.md'))fail('lesson plan export missing');
     await md.delete().catch(()=>{});
     step('lesson plan Markdown export');
+    // Learner handout: lecture content only (practice materials excluded), printable and downloadable.
+    const handoutHref=await studio.locator('#openHandout').getAttribute('href')||'';
+    if(!/\/study\/live\/handout\/\?c=/.test(handoutHref))fail('studio handout link incorrect: '+handoutHref);
+    const handout=await context.newPage();watch(handout,profile.name);
+    await open(handout,new URL(handoutHref,ORIGIN+'/').href.replace(ORIGIN,''));
+    await handout.locator('#hoSession').selectOption('all');
+    if(await handout.locator('#handout .ho-module').count()<8)fail('handout lacks lecture modules');
+    const hoText=await handout.locator('#handout').innerText();
+    if(/\[가상 AI 요약|프롬프트 ①|가상 원문/.test(hoText))fail('handout leaked practice material');
+    const [hoFile]=await Promise.all([handout.waitForEvent('download',{timeout:10000}),handout.locator('#hoDownload').click()]);
+    if(!hoFile.suggestedFilename().endsWith('.html'))fail('handout download missing');
+    await hoFile.delete().catch(()=>{});
+    await handout.close();
+    step('learner handout (lecture only) renders and downloads');
     await studio.locator('#timerReset').click().catch(()=>{});
     await shot(studio,profile.name+'-studio');
     flow.overflow=await overflow(studio,profile.name+' studio');
