@@ -17,6 +17,8 @@ on:
       - 'ekodipay-core.js'
       - 'test/ekodipay-core.test.mjs'
       - 'qtin-order-worker.js'
+      - 'qtin-order-entry.js'
+      - 'ekodipay-gateway.js'
       - 'migrations/0201_qtin_group_orders.sql'
       - 'migrations/0202_qtin_buyer_accounts.sql'
       - 'migrations/0203_qtin_product_intros.sql'
@@ -58,6 +60,8 @@ jobs:
           set -euo pipefail
           node --check qtin-order-core.js
           node --check qtin-order-worker.js
+          node --check qtin-order-entry.js
+          node --check ekodipay-gateway.js
           node --check ekodipay-core.js
           node --test test/qtin-order.test.mjs test/ekodipay-core.test.mjs
           node scripts/validate-additive-migrations.mjs
