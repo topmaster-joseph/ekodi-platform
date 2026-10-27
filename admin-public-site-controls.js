@@ -274,7 +274,7 @@ function renderEditor(panel) {
         <select name="publicStatus"><option value="public">공개</option><option value="private">비공개</option><option value="maintenance">점검화면</option></select>
       </label>
       <div class="psc-subtext">공개 상태 변경은 사이트 방문자에게 즉시 영향을 줄 수 있습니다.</div>
-      <details class="psc-details" data-psc-maintenance>
+      <details class="psc-details" data-psc-maintenance data-maintenance-options>
         <summary>점검화면 상세 설정</summary>
         <div class="psc-details-body">
           <label class="psc-field">점검화면 방식
