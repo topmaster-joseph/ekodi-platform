@@ -79,6 +79,11 @@
               </div>
               <label class="consent"><input type="checkbox" id="consent" /><span>전자책은 다운로드 전 7일 이내 전액 환불, 다운로드 후에는 파일 결함 시에만 환불되는 것에 동의합니다.</span></label>
               <button type="button" class="pay-btn" id="payBtn" disabled>불러오는 중</button>
+              <div id="widgetArea" class="widget-area" hidden>
+                <div id="paymentMethods"></div>
+                <div id="agreement"></div>
+                <button type="button" class="pay-btn" id="widgetPay" disabled>결제 진행</button>
+              </div>
               <p class="buy-msg" id="buyMsg" role="alert"></p>
               <p class="pay-note" id="payNote"></p>
             </div>

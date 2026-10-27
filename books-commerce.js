@@ -60,7 +60,7 @@ export async function payments(env) {
   const staging = String(env?.DATA_MODE || '') === 'isolated-staging';
   if (!env?.EKODIPAY) {
     const r = paymentState(env);
-    return { ...r, clientKey: ekodipay.merchantKeys(env, r.profile).clientKey, via: 'local' };
+    return { ...r, widget: Boolean(r.widget), clientKey: ekodipay.merchantKeys(env, r.profile).clientKey, via: 'local' };
   }
   const enabled = flag(env.PAYMENTS_ENABLED) && !staging;
   let state = null, key = null;
@@ -72,7 +72,7 @@ export async function payments(env) {
   } catch { state = null; key = null; } // gateway not deployed/unreachable → fail closed
   const r = state?.ok ? state.data : { ready: false, mode: 'none', missing: ['gateway-unavailable'] };
   const ready = Boolean(enabled && r.ready && key?.ok && key.data);
-  return { ready, mode: r.mode || 'none', publicReady: ready && r.mode === 'live', profile: r.profile || ekodipay.activeProfileId(env), merchant: r.merchant || '', mid: r.mid || '', clientKey: key?.ok ? key.data : '', missing: enabled ? (r.missing || []) : ['payments-disabled'], via: 'gateway' };
+  return { ready, mode: r.mode || 'none', publicReady: ready && r.mode === 'live', widget: Boolean(r.widget), profile: r.profile || ekodipay.activeProfileId(env), merchant: r.merchant || '', mid: r.mid || '', clientKey: key?.ok ? key.data : '', missing: enabled ? (r.missing || []) : ['payments-disabled'], via: 'gateway' };
 }
 
 /** Toss call through the gateway when bound, otherwise the local key. Throws TossError-like errors. */
@@ -127,6 +127,13 @@ async function audit(env, orderId, actor, action, detail = '') {
     .bind(orderId || '', clean(actor, 120), clean(action, 60), typeof detail === 'string' ? clean(detail, 500) : JSON.stringify(detail).slice(0, 500), new Date().toISOString()).run();
 }
 
+/** BOOKS-SALE-FILE-GATE-001: 판매용 EPUB가 보관함에 없으면 공개 판매를 열지 않는다(운영자 시험 결제는 허용). */
+export async function fileReady(env, book) {
+  const key = book?.directSale?.fileKey;
+  if (!key || !env?.BOOK_FILES) return false;
+  try { return Boolean(await env.BOOK_FILES.head(key)); } catch { return false; }
+}
+
 export async function quote(env, request, bookId) {
   const [catalog, policy] = await Promise.all([loadCatalog(env), loadPolicy(env)]);
   const book = directSaleBook(catalog, bookId);
@@ -137,13 +144,14 @@ export async function quote(env, request, bookId) {
   const pay = await payments(env);
   const owned = buyer ? Boolean(await env.DB.prepare('SELECT 1 FROM books_entitlements WHERE buyer_user_id=? AND book_id=? AND revoked_at IS NULL').bind(buyer.userId, book.id).first()) : false;
   const operator = Boolean(buyer && operatorEmails(env).has(buyer.email));
+  const hasFile = await fileReady(env, book);
   return {
     status: 200,
     data: {
       book: { id: book.id, title: book.title, subtitle: book.subtitle || '', author: book.author || '', coverImage: book.coverImage || '', format: book.format || [], edition: book.edition || '', links: { upaper: book.links?.upaper || '', google: book.links?.google || '', amazon: book.links?.amazon || '' } },
       signedIn: Boolean(buyer), buyerEmail: buyer?.email || '', tier: tierId, owned, price,
       tiers: (policy.tiers || []).map(t => ({ id: t.id, label: t.label, discountRate: t.discountRate || 0, description: t.description || '', price: priceFor(book, policy, t.id)?.amount ?? null })),
-      checkout: { open: pay.ready && (pay.mode === 'live' || operator), mode: pay.mode, testOnly: pay.ready && pay.mode !== 'live' },
+      checkout: { open: pay.ready && ((pay.mode === 'live' && hasFile) || operator), mode: pay.mode, testOnly: pay.ready && pay.mode !== 'live', fileReady: hasFile, operator },
     },
   };
 }
@@ -159,6 +167,9 @@ export async function createOrder(env, request, body, now = new Date()) {
   if (!book) return { status: 404, data: { error: '에코디서점 직접 판매 도서가 아닙니다.' } };
   if (await env.DB.prepare('SELECT 1 FROM books_entitlements WHERE buyer_user_id=? AND book_id=? AND revoked_at IS NULL').bind(buyer.userId, book.id).first()) {
     return { status: 409, data: { error: '이미 내 서재에 있는 도서입니다.', code: 'ALREADY_OWNED' } };
+  }
+  if (!operatorEmails(env).has(buyer.email) && !(await fileReady(env, book))) {
+    return { status: 409, data: { error: '전자책 파일을 준비하고 있습니다. 준비되면 바로 구매하실 수 있습니다.', code: 'FILE_PREPARING' } };
   }
   if (body?.consent !== true) return { status: 400, data: { error: '전자책 구매·환불 안내에 동의해 주세요.' } };
   const tierId = await tierFor(env, buyer, now);
@@ -177,7 +188,7 @@ export async function createOrder(env, request, body, now = new Date()) {
     status: 201,
     data: {
       orderId, amount: price.amount, orderName: `전자책 · ${book.title}`.slice(0, 100), customerName: name, customerEmail: buyer.email,
-      clientKey: pay.clientKey, customerKey: `ekb-${crypto.randomUUID()}`,
+      clientKey: pay.clientKey, widget: Boolean(pay.widget) || /^(test|live)_gck_/.test(String(pay.clientKey || '')), variantKey: clean(env.TOSS_WIDGET_VARIANT_KEY, 60) || 'qtin', customerKey: `ekb-${crypto.randomUUID()}`,
       successUrl: `${base}/buy/success/`, failUrl: `${base}/buy/fail/?orderId=${encodeURIComponent(orderId)}`, expiresAt,
     },
   };

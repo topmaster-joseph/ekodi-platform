@@ -17,13 +17,14 @@ run_worker_first = true
 # BOOKS-DIRECT-COMMERCE-001 — 에코디서점 자체 판매
 # TOSS_SECRET_KEY / TOSS_CLIENT_KEY(live) are Worker secrets only (never in this file).
 # PAYMENTS_ENABLED approved by the owner 2026-10-27. Keys are never stored here:
-# payments go through the central EKODI Pay gateway (ekodi-qtin-order · EkodiPayGateway RPC).
+# payments go through the central EKODI Pay gateway (ekodi-mall-api · EkodiPayGateway RPC,
+# MID q_ekodib62hb live keys already installed on the mall worker).
 [vars]
 ENVIRONMENT = "production"
 PUBLIC_BASE_URL = "https://ekodi.kr/books"
 OPERATOR_EMAILS = "topmaster.joseph@gmail.com,joseph@ekodibiz.kr,joseph@ekodi.kr"
 PAYMENTS_ENABLED = "true"
-EKODIPAY_PROFILE = "ekodi"
+EKODIPAY_PROFILE = "mall"
 
 [[d1_databases]]
 binding = "DB"
@@ -36,5 +37,5 @@ bucket_name = "ekodi-book-files"
 
 [[services]]
 binding = "EKODIPAY"
-service = "ekodi-qtin-order"
+service = "ekodi-mall-api"
 entrypoint = "EkodiPayGateway"

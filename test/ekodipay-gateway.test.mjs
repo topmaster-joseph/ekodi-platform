@@ -39,8 +39,14 @@ test('errors cross the RPC boundary as plain objects', async () => {
 
 test('books worker binds the gateway; keys never live in its config', () => {
   const toml = fs.readFileSync(new URL('../wrangler.books.toml', import.meta.url), 'utf8');
-  assert.match(toml, /\[\[services\]\]\nbinding = "EKODIPAY"\nservice = "ekodi-qtin-order"\nentrypoint = "EkodiPayGateway"/);
+  assert.match(toml, /\[\[services\]\]\nbinding = "EKODIPAY"\nservice = "ekodi-mall-api"\nentrypoint = "EkodiPayGateway"/);
   assert.doesNotMatch(toml, /_sk_|TOSS_SECRET_KEY\s*=/);
+  const mall = fs.readFileSync(new URL('../sites/ekodi-mall/api/wrangler.toml', import.meta.url), 'utf8');
+  assert.match(mall, /^main = "main.js"$/m);
+  const mallMain = fs.readFileSync(new URL('../sites/ekodi-mall/api/main.js', import.meta.url), 'utf8');
+  assert.match(mallMain, /export class EkodiPayGateway extends WorkerEntrypoint/);
+  assert.match(mallMain, /export \{ MallCatalog \}/);
+  assert.match(fs.readFileSync(new URL('../wrangler.books.toml', import.meta.url), 'utf8'), /^EKODIPAY_PROFILE = "mall"$/m);
   const qtin = fs.readFileSync(new URL('../wrangler.qtin-order.toml', import.meta.url), 'utf8');
   assert.match(qtin, /^main = "qtin-order-entry.js"$/m);
   const entry = fs.readFileSync(new URL('../qtin-order-entry.js', import.meta.url), 'utf8');

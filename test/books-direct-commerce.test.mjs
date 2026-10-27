@@ -21,7 +21,8 @@ function d1() {
   return { raw: db, prepare: sql => stmt(sql), batch: async list => { db.exec('BEGIN'); try { const out = []; for (const s of list) out.push(await s.run()); db.exec('COMMIT'); return out; } catch (e) { db.exec('ROLLBACK'); throw e; } } };
 }
 const assets = { fetch: async req => new Response(JSON.stringify(new URL(req.url).pathname === '/books.json' ? catalog : policy), { status: 200 }) };
-const baseEnv = db => ({ DB: db, ASSETS: assets, PAYMENTS_ENABLED: 'true', TOSS_CLIENT_KEY: 'live_ck_abc', TOSS_SECRET_KEY: 'live_sk_abc', OPERATOR_EMAILS: 'op@ekodi.kr', PUBLIC_BASE_URL: 'https://ekodi.kr/books' });
+const files = { head: async key => (/ebook\.epub$/.test(key) ? { size: 1 } : null) };
+const baseEnv = db => ({ DB: db, ASSETS: assets, BOOK_FILES: files, PAYMENTS_ENABLED: 'true', TOSS_CLIENT_KEY: 'live_ck_abc', TOSS_SECRET_KEY: 'live_sk_abc', OPERATOR_EMAILS: 'op@ekodi.kr', PUBLIC_BASE_URL: 'https://ekodi.kr/books' });
 const user = { id: 'u-1', email: 'reader@example.com', email_confirmed_at: '2026-01-01', user_metadata: { name: '독자' } };
 const signedIn = () => new Request('https://ekodi.kr/books/api/commerce/orders', { method: 'POST', headers: { authorization: 'Bearer tok' } });
 const realFetch = globalThis.fetch;
@@ -119,7 +120,7 @@ test('with the gateway bound, books uses its readiness, client key and confirm (
     confirm: async input => { calls.push(input); return { ok: true, data: { orderId: input.orderId, totalAmount: input.amount, status: 'DONE', method: '카드' } }; },
     getPayment: async () => ({ ok: false, error: { message: 'x', code: 'NOT_FOUND', status: 404 } }),
   };
-  const env = { DB: db, ASSETS: assets, PAYMENTS_ENABLED: 'true', EKODIPAY, PUBLIC_BASE_URL: 'https://ekodi.kr/books' };
+  const env = { DB: db, ASSETS: assets, BOOK_FILES: files, PAYMENTS_ENABLED: 'true', EKODIPAY, PUBLIC_BASE_URL: 'https://ekodi.kr/books' };
   const p = await payments(env);
   assert.equal(p.ready, true); assert.equal(p.via, 'gateway'); assert.equal(p.clientKey, 'live_ck_gateway');
   assert.equal((await payments({ ...env, PAYMENTS_ENABLED: 'false' })).ready, false, 'local switch still closes checkout');
@@ -146,4 +147,23 @@ test('EPUB validation accepts real EPUB containers and rejects others', async ()
   assert.equal(validateEpub(enc.encode('%PDF-1.7 not an epub file at all, padded to be long enough........')).ok, false);
   const zipNotEpub = new Uint8Array([...header, ...enc.encode('word/document.xml'), ...new Uint8Array(40)]);
   assert.equal(validateEpub(zipNotEpub).ok, false);
+});
+
+test('live sales stay closed until the sale file is uploaded; operators can still test', async () => {
+  const db = d1();
+  const env = { ...baseEnv(db), BOOK_FILES: { head: async () => null } };
+  const blocked = await createOrder(env, signedIn(), { bookId: 'BOOK-EKODI-000001', consent: true });
+  assert.equal(blocked.status, 409); assert.equal(blocked.data.code, 'FILE_PREPARING');
+  const q = await quote(env, new Request('https://x/'), 'BOOK-EKODI-000001');
+  assert.equal(q.data.checkout.open, false); assert.equal(q.data.checkout.fileReady, false);
+  globalThis.fetch = async () => new Response(JSON.stringify({ ...user, email: 'op@ekodi.kr' }));
+  const op = await createOrder(env, signedIn(), { bookId: 'BOOK-EKODI-000001', consent: true });
+  assert.equal(op.status, 201);
+});
+
+test('widget keys are signalled to the client with the shared variant', async () => {
+  const db = d1();
+  const env = { ...baseEnv(db), TOSS_CLIENT_KEY: 'live_gck_abc', TOSS_SECRET_KEY: 'live_gsk_abc' };
+  const created = await createOrder(env, signedIn(), { bookId: 'BOOK-EKODI-000001', consent: true });
+  assert.equal(created.status, 201); assert.equal(created.data.widget, true); assert.equal(created.data.variantKey, 'qtin');
 });
