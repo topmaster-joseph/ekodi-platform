@@ -1,11 +1,12 @@
-// EKODI Education Premium Studio — learner materials page: lecture slides (A4 landscape), lecture summary
-// (A4 portrait) and the optional practice materials. Public and read-only for anyone with the link:
-// course data only (never instructor notes or answer keys), nothing stored or sent.
+// EKODI Education Premium Studio — materials page: lecture slides (A4 landscape) for anyone with the link;
+// lecture summary (A4 portrait) and practice materials for the instructor or an EKODI super admin only.
+// Course data only (never instructor notes or answer keys); the only server call is the session check.
 import {courseEntry} from './courses/registry.js';
 import {validateCourse,learnerUrl,livePath} from './engine/model.js';
 import {handoutHtml,handoutDocument,deckSlides,practiceHtml,practiceDocument} from './engine/handout.js';
 import {downloadText,bindChrome,esc,slideHtml} from './engine/render.js';
 import {qrSvg} from './engine/qr.js';
+import {acceptAdminHandoff,readToken,adminInstructorSession} from './engine/admin-instructor.js';
 
 const $=s=>document.querySelector(s);
 const $$=s=>[...document.querySelectorAll(s)];
@@ -13,6 +14,16 @@ const params=new URLSearchParams(location.search);
 const entry=courseEntry(params.get('c'));
 const MODES=['slides','summary','practice'];
 let course,mode=MODES.includes(params.get('mode'))?params.get('mode'):'slides';
+// Lecture slides are for everyone with the link; the lecture summary and the practice materials are
+// downloadable by the instructor (password) or an EKODI super admin only.
+let instructor=false;
+const INSTRUCTOR_MODES=new Set(['summary','practice']);
+async function checkInstructor(){
+  const ask=async()=>{try{const r=await fetch(livePath(location.pathname,'unlock'+String.fromCharCode(47)+'session'),{credentials:'same-origin',cache:'no-store'});return r.ok&&(await r.json()).instructor===true;}catch{return false;}};
+  if(await ask())return true;
+  if(readToken(window)&&(await adminInstructorSession(window)).ok)return ask();
+  return false;
+}
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
 const sessionsSel=()=>{const v=$('#hoSession').value;return v==='all'?null:[Number(v)];};
 const HINTS={
@@ -35,7 +46,10 @@ function options(){
     trackId:$('#hoTrack').value,levelId:$('#hoLevel').value,date:today()};
 }
 function render(){
+  if(!instructor&&INSTRUCTOR_MODES.has(mode))mode='slides';
   document.body.dataset.hoMode=mode;
+  $$('[data-mode]').forEach(b=>{if(INSTRUCTOR_MODES.has(b.dataset.mode))b.hidden=!instructor;});
+  $('#hoInstructor').hidden=instructor;
   $$('[data-mode]').forEach(b=>{const on=b.dataset.mode===mode;b.classList.toggle('is-on',on);b.setAttribute('aria-pressed',String(on));});
   $$('[data-for]').forEach(el=>{el.hidden=el.dataset.for!==mode;});
   $('#hoHint').textContent=HINTS[mode];
@@ -45,14 +59,16 @@ function render(){
   $('#hoDownload').textContent=mode==='slides'?'PDF로 저장':'파일 내려받기';
 }
 function download(){
-  if(mode==='slides'){window.print();return;}
+  if(mode==='slides'||!instructor){window.print();return;}
   const v=$('#hoSession').value,tag=v==='all'?'all':'session'+v;
   // ASCII file names: some browsers drop non-ASCII download names and save as 「download」.
   if(mode==='practice')downloadText(document,course.id+'_practice_'+$('#hoTrack').value+'_'+tag+'.html',practiceDocument(course,options()),'text/html;charset=utf-8');
   else downloadText(document,course.id+'_handout_'+tag+'.html',handoutDocument(course,options()),'text/html;charset=utf-8');
 }
 async function init(){
-  const data=await entry.load();
+  acceptAdminHandoff(window);
+  const [data,isInstructor]=await Promise.all([entry.load(),checkInstructor()]);
+  instructor=isInstructor;
   course=data.COURSE;validateCourse(course);
   $('#hoSession').insertAdjacentHTML('beforeend',course.sessions.map(s=>'<option value="'+s.no+'">'+s.no+'회차</option>').join(''));
   $('#hoTrack').innerHTML=course.tracks.map(t=>'<option value="'+esc(t.id)+'">'+esc(t.label)+'</option>').join('');
@@ -60,6 +76,7 @@ async function init(){
   const s=params.get('s');
   if(s&&course.sessions.some(x=>String(x.no)===s))$('#hoSession').value=s;
   const t=params.get('t');if(t&&course.tracks.some(x=>x.id===t))$('#hoTrack').value=t;
+  $('#hoInstructor').href=livePath(location.pathname,'unlock'+String.fromCharCode(47))+'?c='+encodeURIComponent(course.id)+'&back=handout';
   $('#hoBack').href=livePath(location.pathname,'lab'+String.fromCharCode(47))+'?c='+encodeURIComponent(course.id)+(s?'&s='+encodeURIComponent(s):'');
   document.title=course.title+' · 강의자료';
   $$('[data-mode]').forEach(b=>b.addEventListener('click',()=>{mode=b.dataset.mode;render();}));
