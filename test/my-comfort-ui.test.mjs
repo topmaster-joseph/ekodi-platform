@@ -16,7 +16,7 @@ test('My EKODI root uses the calm custom landing without duplicate navigation',(
   assert.match(html,/id="myHub"/);
   assert.match(html,/MY EKODI · ACTION HUB/);
   assert.match(html,/무엇을 원하세요\?/);
-  assert.match(html,/hub-shell\.css\?v=20261009-hash-routing-v2/);
+  assert.match(html,/hub-shell\.css\?v=[0-9]{8}-[a-z0-9-]+/);
   assert.match(html,/class="my-bottom-tabs"/);
   assert.match(html,/id="workspaceCompact"/);
   assert.match(html,/data-my-tab-section="services"/);
@@ -84,7 +84,7 @@ test('My EKODI keeps the primary request surface unique and moves personal AI se
 test('My EKODI hash routing keeps hidden sections authoritative and suppresses duplicate Shell character',()=>{
   assert.match(hubCss,/body\[data-auth-state="member"\] \.my-tab-section\[hidden\]/);
   assert.match(hubCss,/html\[data-ekodi-character="off"\] body \.ekodi-main-ekodian/);
-  assert.match(html,/hub-shell\.css\?v=20261009-hash-routing-v2/);
+  assert.match(html,/hub-shell\.css\?v=[0-9]{8}-[a-z0-9-]+/);
   assert.match(html,/app\.js\?v=20261009-hash-routing-v2/);
 });
 

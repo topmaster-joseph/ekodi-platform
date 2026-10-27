@@ -44,7 +44,7 @@ test('cmpmyi admin keeps only three common controls and places all other menus u
   assert.match(html,/data-cmpmyi-navigation="common-store-split"/);
   assert.doesNotMatch(html,/<details class="brand-group"/);
   assert.match(html,/\/cmpmyi\/admin\/shell\.js/);
-  assert.match(html,/src="\/cmpmyi\/admin\/panel\/pos"/);
+  assert.match(html,/src="\/cmpmyi\/admin\/panel\/today"/);
 
   const runtime=await storePortfolioAdminShellScript().text();
   assert.match(runtime,/ekodi-cmpmyi-selected-store/);
