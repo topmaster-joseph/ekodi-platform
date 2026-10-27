@@ -21,6 +21,6 @@ test('server refuses marriage-purpose connection in the dating operating mode',a
   const api=await read('supabase/functions/singles-api/index.ts');
   const i=api.indexOf('if (b.marriage_opt_in === true)');
   assert.ok(i>0);
-  assert.match(api.slice(i,i+160),/marriage_connection_not_offered"? *\}, *400/);
+  assert.match(api.slice(i,i+160),/marriage_connection_not_offered"? *(?:\}, *400|\))/);
   assert.ok(i<api.indexOf('.upsert(row'),'refusal happens before any write');
 });

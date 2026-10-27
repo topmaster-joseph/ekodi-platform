@@ -54,7 +54,13 @@
       "name": "SINGLES_REQUEST_BILLING_ENABLED",
       "layer": "edge",
       "default": "false",
-      "gates": "요청 과금: 요청 시 요청자 크레딧 1단위 잡아두기, 수락 시 요청자·응답자 각 1단위(1만원) 확정, 월 이용권 필요"
+      "gates": "유료회원 모델(2026-10-28): 가입비 50만원=적립금, 무료회원 기능 제한, 요청 보류·수락 확정 차감(기본 요금+입력·공개 할인), 기간제 메시지 이용권, 메시지 연락처 가림"
+    },
+    {
+      "name": "SINGLES_PUBLIC_LAUNCH_ENABLED",
+      "layer": "edge",
+      "default": "false",
+      "gates": "공개 개통. 'true'가 아니면 시범 명단(singles_pilot_users)과 운영자만 회원 기능 사용(실증 단계)"
     }
   ],
   "retired_names": [

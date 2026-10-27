@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { handleSinglesSocial } from '../supabase/functions/singles-api/social.ts';
+import { handleSinglesSocial, maskContacts } from '../supabase/functions/singles-api/social.ts';
 const uid='11111111-1111-4111-8111-111111111111', other='22222222-2222-4222-8222-222222222222';
 const id='33333333-3333-4333-8333-333333333333';
 const reply=(_req,body,status=200)=>new Response(JSON.stringify(body),{status});
@@ -227,46 +227,72 @@ test('review DB errors map to clear statuses',async()=>{
  }
 });
 
-// --- 요청 과금(2026-10-27): 수락 시 요청자·응답자 각 1단위 확정 ---
-const withBilling=async(fn)=>{settings.SINGLES_REQUEST_BILLING_ENABLED='true';settings.SINGLES_BANK_TRANSFER_ENABLED='true';try{await fn()}finally{delete settings.SINGLES_REQUEST_BILLING_ENABLED}};
+// --- 유료회원 모델(2026-10-28): 가입비=적립금, 요청 보류·수락 확정, 기본 요금+입력·공개 할인 ---
+const withPaid=async(fn)=>{settings.SINGLES_REQUEST_BILLING_ENABLED='true';try{await fn()}finally{delete settings.SINGLES_REQUEST_BILLING_ENABLED}};
 const rpcBy=(admin,map)=>{admin.rpc=async(name,params)=>{admin.calls.push({name,params});const r=map[name];return typeof r==='function'?r(params):(r||{data:0,error:null})};return admin};
-const interestReq=()=>new Request('https://ekodi.kr/interests/'+other,{method:'POST'});
+const paidReq=(kind)=>new Request('https://ekodi.kr/interests/'+other,{method:'POST',...(kind?{body:JSON.stringify({kind}),headers:{'content-length':'20'}}:{})});
 const respondReq=(decision)=>new Request('https://ekodi.kr/requests/'+id+'/respond',{method:'POST',body:JSON.stringify({decision})});
+const PAID={singles_is_paid_member:{data:true,error:null}},FREE={singles_is_paid_member:{data:false,error:null}};
 
-test('billing: a request needs an active monthly pass',()=>withBilling(async()=>{
- const admin=db({grant:false});
- const res=await handleSinglesSocial(interestReq(),'/interests/'+other,admin,uid,reply);
- assert.equal(res.status,402);assert.equal((await res.json()).error,'monthly_pass_required');
- assert.equal(admin.writes.length,0);
+test('paid model: free members cannot request, accept, or save a profile',()=>withPaid(async()=>{
+ let admin=rpcBy(db(),FREE);
+ let res=await handleSinglesSocial(paidReq(),'/interests/'+other,admin,uid,reply);
+ assert.equal(res.status,402);assert.equal((await res.json()).error,'paid_membership_required');
+ assert.ok(!admin.calls.some(c=>c.name==='singles_paid_request_create'));
+ admin=rpcBy(db(),FREE);
+ res=await handleSinglesSocial(new Request('https://ekodi.kr/profile',{method:'PUT',body:JSON.stringify({display_name:'동행',broad_region:'',intro:'',public_link:'',discoverable:false})}),'/profile',admin,uid,reply);
+ assert.equal(res.status,402);assert.equal(admin.writes.length,0);
+ admin=rpcBy(db(),FREE);
+ res=await handleSinglesSocial(new Request('https://ekodi.kr/discover'),'/discover',admin,uid,reply);
+ assert.equal(res.status,402);
 }));
-test('billing: request reserves through the atomic DB function, never a direct insert',()=>withBilling(async()=>{
- const admin=rpcBy(db({grant:true}),{singles_request_create:{data:id,error:null}});
- const res=await handleSinglesSocial(interestReq(),'/interests/'+other,admin,uid,reply);
- assert.equal(res.status,200);
- const body=await res.json();assert.equal(body.billing.charged_on,'acceptance');
- assert.deepEqual(admin.calls.find(c=>c.name==='singles_request_create').params,{p_requester:uid,p_responder:other});
- assert.equal(admin.writes.filter(w=>w.name==='singles_interests').length,0);
+test('paid model: message and contact requests reserve through the atomic DB function',()=>withPaid(async()=>{
+ for(const [kind,fee] of [[undefined,10000],['contact',75000]]){
+  const admin=rpcBy(db(),{...PAID,singles_paid_request_create:p=>({data:{request_id:id,fee_krw:fee,kind:p.p_kind},error:null})});
+  const res=await handleSinglesSocial(paidReq(kind),'/interests/'+other,admin,uid,reply);
+  assert.equal(res.status,200);const body=await res.json();
+  assert.equal(body.billing.reserved_krw,fee);assert.equal(body.billing.charged_on,'acceptance');
+  assert.deepEqual(admin.calls.find(c=>c.name==='singles_paid_request_create').params,{p_requester:uid,p_responder:other,p_kind:kind||'message'});
+  assert.equal(admin.writes.filter(w=>w.name==='singles_interests').length,0,'no direct interest insert');
+ }
+ const bad=await handleSinglesSocial(paidReq('marriage'),'/interests/'+other,rpcBy(db(),PAID),uid,reply);
+ assert.equal(bad.status,400);
 }));
-test('billing: no credit means 402 and nothing is created',()=>withBilling(async()=>{
- const admin=rpcBy(db({grant:true}),{singles_request_create:{data:null,error:{message:'insufficient_request_credit'}}});
- const res=await handleSinglesSocial(interestReq(),'/interests/'+other,admin,uid,reply);
- assert.equal(res.status,402);assert.equal((await res.json()).error,'request_credit_required');
+test('paid model: insufficient credit returns 402 with the needed amount',()=>withPaid(async()=>{
+ const admin=rpcBy(db(),{...PAID,singles_paid_request_create:{data:null,error:{message:'insufficient_credit:100000'}}});
+ const res=await handleSinglesSocial(paidReq('contact'),'/interests/'+other,admin,uid,reply);
+ assert.equal(res.status,402);assert.deepEqual(await res.json(),{error:'credit_required',fee_krw:100000});
 }));
-test('billing: accepting charges through the DB function; responder without credit gets 402',()=>withBilling(async()=>{
- const pending={id,from_user_id:other,to_user_id:uid,status:'pending'};
- let admin=rpcBy(db({interest:pending}),{singles_request_decide:p=>({data:p.p_decision,error:null})});
+test('paid model: accepting charges the responder through the DB function; short balance is 402',()=>withPaid(async()=>{
+ const pending={requester_id:other,status:'pending'};
+ let admin=rpcBy(db({extra:{singles_paid_requests:pending}}),{...PAID,singles_paid_request_decide:p=>({data:{status:p.p_decision,fee_krw:50000,interest_id:id,kind:'contact'},error:null})});
  let res=await handleSinglesSocial(respondReq('accepted'),'/requests/'+id+'/respond',admin,uid,reply);
- assert.equal(res.status,200);assert.equal((await res.json()).billing.charged_units,1);
- assert.deepEqual(admin.calls.find(c=>c.name==='singles_request_decide').params,{p_responder:uid,p_interest:id,p_decision:'accepted'});
- assert.equal(admin.writes.length,0,'no direct status write when billing handles it');
- admin=rpcBy(db({interest:pending}),{singles_request_decide:{data:null,error:{message:'responder_insufficient_credit'}}});
+ assert.equal(res.status,200);assert.equal((await res.json()).billing.charged_krw,50000);
+ assert.deepEqual(admin.calls.find(c=>c.name==='singles_paid_request_decide').params,{p_responder:uid,p_request:id,p_decision:'accepted'});
+ assert.equal(admin.writes.length,0,'no direct status write');
+ admin=rpcBy(db({extra:{singles_paid_requests:pending}}),{...PAID,singles_paid_request_decide:{data:null,error:{message:'responder_insufficient_credit:30000'}}});
  res=await handleSinglesSocial(respondReq('accepted'),'/requests/'+id+'/respond',admin,uid,reply);
- assert.equal(res.status,402);assert.equal((await res.json()).error,'response_credit_required');
- assert.equal(admin.writes.length,0);
+ assert.equal(res.status,402);assert.deepEqual(await res.json(),{error:'credit_required',fee_krw:30000});
+ admin=rpcBy(db({extra:{singles_paid_requests:{requester_id:other,status:'accepted'}}}),PAID);
+ res=await handleSinglesSocial(respondReq('declined'),'/requests/'+id+'/respond',admin,uid,reply);
+ assert.equal(res.status,409);
 }));
-test('billing: requests created before billing fall back to the free path',()=>withBilling(async()=>{
- const admin=rpcBy(db({interest:{id,from_user_id:other,to_user_id:uid,status:'pending'}}),{singles_request_decide:{data:null,error:{message:'request_not_found'}}});
- const res=await handleSinglesSocial(respondReq('declined'),'/requests/'+id+'/respond',admin,uid,reply);
- assert.equal(res.status,200);
- assert.equal(admin.writes.filter(w=>w.name==='singles_interests'&&w.kind==='update').length,1);
+test('contact masking hides phone, email, messenger IDs and links but keeps ordinary text',()=>{
+ for(const raw of ['제 번호는 010-1234-5678 이에요','01012345678','+82 10 1234 5678','메일 abc.def@gmail.com','abc (at) naver (dot) com',
+  '카톡 아이디: lovely_77','kakao id lovely77','인스타 @my.insta_','https://open.kakao.com/o/abc','www.example.kr','0 1 0 1 2 3 4 5 6 7 8']){
+  const r=maskContacts(raw);assert.ok(r.masked,raw);assert.match(r.text,/\[연락처 가림\]/,raw);
+  assert.doesNotMatch(r.text,/1234|gmail|lovely|insta_|kakao\.com|example/,raw);
+ }
+ for(const ok of ['주일 11시 예배 후에 카페에서 만나요','30대 초반이고 2026년에 이사했어요','온라인 모임 line up 좋네요','점심 1시 반 어때요?']){
+  const r=maskContacts(ok);assert.equal(r.masked,false,ok);assert.equal(r.text,ok);
+ }
+});
+test('paid model: messages are masked until a contact exchange is accepted',()=>withPaid(async()=>{
+ const send=(extra)=>{const admin=rpcBy(db({accepted:true,extra}),PAID);return [admin,handleSinglesSocial(new Request('https://ekodi.kr/messages/'+id,{method:'POST',body:JSON.stringify({text:'연락 주세요 010-9876-5432'})}),'/messages/'+id,admin,uid,reply)]};
+ let [admin,resP]=send({});let res=await resP;
+ assert.equal(res.status,200);assert.equal((await res.json()).masked,true);
+ assert.equal(admin.writes.find(w=>w.name==='singles_messages').row.body,'연락 주세요 [연락처 가림]');
+ [admin,resP]=send({singles_contact_unlocks:{request_id:id}});res=await resP;
+ assert.equal((await res.json()).masked,false);
+ assert.equal(admin.writes.find(w=>w.name==='singles_messages').row.body,'연락 주세요 010-9876-5432');
 }));
