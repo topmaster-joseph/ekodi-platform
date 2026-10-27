@@ -166,7 +166,6 @@ function requestDemand(section){
   if(section==='admins')return requestAdminAccess();
   if(section==='site-chrome')return import('./admin-site-chrome.js').then(()=>requestedSection===section&&window.EKODISiteChromeAdmin?.activate?.());
   if(section==='insurance')return import('./insurance-admin.js').then(()=>{if(requestedSection!==section)return;applyOrder();activatePanel(section);syncTitle(section);});
-  if(section==='search-visibility')return import('./search-visibility-admin.js').then(()=>{if(requestedSection!==section)return;applyOrder();activatePanel(section);syncTitle(section);});
   if(section==='invest')return import('./invest-admin.js').then(()=>{if(requestedSection!==section)return;applyOrder();activatePanel(section);syncTitle(section);});
   const demandKey=DEMAND_KEYS.get(section);
   if(!demandKey||!window.EKODIAdminDemand?.activate){fallbackDemand(section);return null;}
