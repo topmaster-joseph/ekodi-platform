@@ -21,7 +21,9 @@ test('production worker config keeps every member-facing switch off before launc
   for(const f of reg.flags.filter(f=>f.layer.includes('worker')&&f.default==='false')){
     const m=toml.match(new RegExp(f.name+'\\s*=\\s*"([^"]*)"'));
     assert.ok(m,f.name+' not set in wrangler.site.toml');
-    assert.equal(m[1],'false',f.name+' must stay "false" until the launch gates pass');
+    // A switch may be "true" in production only when the registry records an owner launch decision.
+    const expected=f.production==='true'&&f.launchedAt&&f.launchDecision?'true':'false';
+    assert.equal(m[1],expected,f.name+(expected==='true'?' was launched and must stay "true"':' must stay "false" until the launch gates pass'));
   }
 });
 test('docs mention only registered switch names',async()=>{
