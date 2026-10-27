@@ -532,6 +532,49 @@ for (const [id, group] of menus) {
     throw new Error(`${id} did not render a visible non-empty panel: ${JSON.stringify(visiblePanel)}`);
   }
   if (id === 'campus' && visiblePanel.id !== 'campusPanel') throw new Error(`Campus rendered unexpected panel: ${visiblePanel.id || '(no id)'}`);
+
+  if (id === 'engine-all') {
+    // ENGINE_CATALOG_STYLE_E2E: a non-empty DOM is not enough; CSS must load
+    // on nested admin URLs, and compact cards must remain readable on mobile.
+    const expectedStylePath = '/common-services-admin.css';
+    await page.waitForFunction(expected => {
+      const style = document.querySelector('link[data-ekodi-common-services-style]');
+      return style && new URL(style.href).pathname === expected
+        && Boolean(style.sheet)
+        && getComputedStyle(document.querySelector('.common-services-summary')).display === 'grid'
+        && getComputedStyle(document.querySelector('.common-service-card')).display === 'grid';
+    }, expectedStylePath, { timeout: 15000 });
+    const desktop = await page.evaluate(() => ({
+      link: new URL(document.querySelector('link[data-ekodi-common-services-style]').href).pathname,
+      summary: getComputedStyle(document.querySelector('.common-services-summary')).display,
+      list: getComputedStyle(document.querySelector('.common-services-list-head')).display,
+      detailHidden: document.querySelector('#commonServiceDetail')?.hidden === true,
+      summaryCount: document.querySelectorAll('.common-services-summary article').length,
+    }));
+    if (desktop.link !== expectedStylePath || desktop.summary !== 'grid' || desktop.list !== 'grid' || !desktop.detailHidden || desktop.summaryCount !== 3) {
+      throw new Error('ENGINE_CATALOG_STYLE_E2E desktop failed: ' + JSON.stringify(desktop));
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    try {
+      const mobile = await page.evaluate(() => {
+        const list = document.querySelector('.common-services-list-wrap');
+        const card = document.querySelector('.common-service-card');
+        return {
+          cardDisplay: card ? getComputedStyle(card).display : '',
+          headerDisplay: getComputedStyle(document.querySelector('.common-services-list-head')).display,
+          summaryDisplay: getComputedStyle(document.querySelector('.common-services-summary')).display,
+          scrollExcess: list ? Math.round(list.scrollWidth - list.clientWidth) : -1,
+        };
+      });
+      if (mobile.cardDisplay !== 'grid' || mobile.headerDisplay !== 'none' || mobile.summaryDisplay !== 'grid' || mobile.scrollExcess > 2) {
+        throw new Error('ENGINE_CATALOG_STYLE_E2E mobile failed: ' + JSON.stringify(mobile));
+      }
+      console.log('[PROD-E2E] engine-all: stylesheet and compact desktop/mobile layout verified');
+      await page.screenshot({ path:path.join(artifactsDir,'menu-engine-all-mobile.png'),fullPage:false });
+    } finally {
+      await page.setViewportSize({ width: 1440, height: 1000 });
+    }
+  }
   results.push({ id, group, kind: 'panel', ok: true, detail: `${visiblePanel.id || visiblePanel.tag}:${visiblePanel.textLength}` });
   console.log(`[PROD-E2E] ${id}: ok ${visiblePanel.id || visiblePanel.tag}:${visiblePanel.textLength}`);
   await page.screenshot({ path:path.join(artifactsDir,`menu-${id}.png`), fullPage:false });
