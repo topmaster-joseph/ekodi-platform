@@ -96,3 +96,88 @@ export async function pruneAdminAssistConversations(db, options = {}) {
     return freeze({ redacted: 0, error: String(error?.message || error).slice(0, 240) });
   }
 }
+
+/**
+ * Reading the record back.
+ *
+ * The question and reply were already being written down; what was missing was
+ * any way to read them. This is that path, and it is scoped in SQL rather than
+ * in the handler: `requested_by = ?` is part of every statement, so a bug in a
+ * route cannot widen it.
+ *
+ * Owner-only, deliberately — not owner-or-superadmin. These conversations carry
+ * pastoral and member-facing material. Someone else's administrative authority
+ * is not a reason to read them, and a platform that quietly allowed it would be
+ * one its administrators could not speak freely to.
+ */
+const MAX_RECALL = 50;
+
+function conversationRow(row) {
+  const redacted = Boolean(row.redacted_at);
+  return freeze({
+    id: Number(row.id),
+    createdAt: row.created_at,
+    // A redacted row has lost its words and kept its summary; say which it is
+    // rather than returning a marker that reads like content.
+    redacted,
+    redactedAt: row.redacted_at || null,
+    question: redacted ? '' : String(row.rationale || ''),
+    reply: redacted ? '' : String(row.reply_text || ''),
+    questionSummary: String(row.rationale_summary || ''),
+    replySummary: String(row.reply_summary || ''),
+    status: row.status,
+    target: row.target || '',
+    verifiedAt: row.verified_at || null,
+  });
+}
+
+export async function listOwnConversations(db, options = {}) {
+  const email = String(options.email ?? '').trim();
+  if (!db || !email) return freeze({ conversations: freeze([]), reason: 'owner_required' });
+  const limit = Math.max(1, Math.min(MAX_RECALL, Math.trunc(Number(options.limit) || 20)));
+  await ensureAdminAssistColumns(db);
+  const rows = await db.prepare(`SELECT id, created_at, rationale, reply_text, rationale_summary,
+      reply_summary, redacted_at, status, target, verified_at
+    FROM ai_agent_actions
+    WHERE action_type = 'admin.assist_chat' AND requested_by = ?
+    ORDER BY id DESC LIMIT ?`).bind(email, limit).all();
+  return freeze({
+    conversations: freeze((rows?.results || []).map(conversationRow)),
+    retentionDays: ADMIN_ASSIST_RETENTION.verbatimRetentionDays,
+    ownerScoped: true,
+  });
+}
+
+/**
+ * The administrator's own delete. It redacts rather than deletes: the words go,
+ * the audit row — who asked, when, which decision tier, what the provider was —
+ * stays. Erasing the row itself would erase the accountability along with the
+ * content, and that is not the administrator's to remove.
+ */
+export async function redactOwnConversation(db, options = {}) {
+  const email = String(options.email ?? '').trim();
+  const id = Math.trunc(Number(options.id));
+  if (!db || !email || !Number.isFinite(id) || id <= 0) {
+    return freeze({ redacted: false, reason: 'owner_and_id_required' });
+  }
+  await ensureAdminAssistColumns(db);
+  const row = await db.prepare(`SELECT id, rationale, reply_text, rationale_summary, reply_summary, redacted_at
+    FROM ai_agent_actions
+    WHERE id = ? AND action_type = 'admin.assist_chat' AND requested_by = ?`).bind(id, email).first();
+  if (!row) return freeze({ redacted: false, reason: 'not_found_or_not_owned' });
+  if (row.redacted_at) return freeze({ redacted: false, reason: 'already_redacted', redactedAt: row.redacted_at });
+  const redactedAt = new Date().toISOString();
+  await db.prepare(`UPDATE ai_agent_actions
+      SET rationale = ?, reply_text = ?, rationale_summary = ?, reply_summary = ?, redacted_at = ?
+      WHERE id = ? AND action_type = 'admin.assist_chat' AND requested_by = ?`)
+    .bind(
+      ADMIN_ASSIST_RETENTION.redactionMarker,
+      ADMIN_ASSIST_RETENTION.redactionMarker,
+      summarizeConversationText(row.rationale_summary || row.rationale),
+      summarizeConversationText(row.reply_summary || row.reply_text),
+      redactedAt,
+      id,
+      email,
+    ).run();
+  return freeze({ redacted: true, id, redactedAt, auditRowRetained: true });
+}
