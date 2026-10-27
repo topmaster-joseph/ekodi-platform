@@ -208,3 +208,8 @@ test('November 2026 activities cover all 30 registered days and match the regist
   assert.equal(resolved.passage, '고린도전서 12:27-13:3');
   assert.deepEqual(resolved.passageParts, ['고린도전서 12:27-999', '고린도전서 13:1-3']);
 });
+
+test('Bible footer wraps on phones so links and copyright never overflow sideways', () => {
+  const css = fs.readFileSync(new URL('styles.css', bibleDir), 'utf8');
+  assert.match(css, /footer\{display:flex;flex-wrap:wrap;/);
+});
