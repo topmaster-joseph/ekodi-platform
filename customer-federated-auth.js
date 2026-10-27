@@ -171,7 +171,42 @@ async function supabaseUser(accessToken) {
     id: user.id,
     email,
     displayName: String(user?.user_metadata?.full_name || user?.user_metadata?.name || '').slice(0, 100),
+    accountEmails: await ekodiAccountEmails(accessToken),
   };
+}
+
+// Every login path (Google, Naver, Kakao …) is one EKODI account. Grants are keyed by
+// email, so they are matched against the account's verified emails, not only the
+// email of whichever login path issued this session.
+async function ekodiAccountEmails(accessToken) {
+  try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/identity-api/identities`, {
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        authorization: `Bearer ${accessToken}`,
+        origin: 'https://ekodi.kr',
+        'cache-control': 'no-store',
+      },
+    });
+    if (!response.ok) return [];
+    const data = await response.json().catch(() => null);
+    const emails = Array.isArray(data?.person?.verifiedEmails) ? data.person.verifiedEmails : [];
+    return [...new Set(emails.map(normalizeEmail).filter(Boolean))];
+  } catch {
+    return [];
+  }
+}
+
+async function findGrant(db, tenantId, identity) {
+  const candidates = [identity.email, ...(identity.accountEmails || [])].filter((value, index, list) => value && list.indexOf(value) === index);
+  for (const email of candidates) {
+    const grant = await db.prepare(`SELECT email, role, enabled, last_verified_at, principal_type, github_username,
+        capabilities_json, denied_capabilities_json, expires_at
+      FROM customer_access_grants
+      WHERE tenant_id = ? AND email = ?`).bind(tenantId, email).first();
+    if (grant && accessGrantIsActive(grant)) return grant;
+  }
+  return null;
 }
 
 async function ensureRuntimeIdentity(db, tenant, identity, grant) {
@@ -214,16 +249,13 @@ async function federatedLogin(request, env) {
   const tenant = await env.DB.prepare('SELECT id, slug, name, domain, status FROM customer_tenants WHERE slug = ?').bind(tenantSlug).first();
   if (!tenant || tenant.status !== 'active') return json({ error: '등록된 고객사가 아닙니다.' }, 404, request, env);
 
-  const grant = await env.DB.prepare(`SELECT email, role, enabled, last_verified_at, principal_type, github_username,
-      capabilities_json, denied_capabilities_json, expires_at
-    FROM customer_access_grants
-    WHERE tenant_id = ? AND email = ?`).bind(tenant.id, identity.email).first();
-
-  if (!accessGrantIsActive(grant)) {
-    return json({ error: grant?.expires_at ? '이 계정의 접근기간이 만료되었거나 권한이 회수되었습니다.' : '이 Google 계정은 해당 고객 관리공간에 등록되어 있지 않습니다.', code: 'ACCESS_GRANT_INACTIVE' }, 403, request, env);
+  const grant = await findGrant(env.DB, tenant.id, identity);
+  if (!grant) {
+    return json({ error: '이 에코디 계정은 해당 고객 관리공간에 등록되어 있지 않거나 접근기간이 만료되었습니다.', code: 'ACCESS_GRANT_INACTIVE' }, 403, request, env);
   }
 
-  const user = await ensureRuntimeIdentity(env.DB, tenant, identity, grant);
+  // The portal identity is the EKODI account email that holds the grant.
+  const user = await ensureRuntimeIdentity(env.DB, tenant, { ...identity, email: normalizeEmail(grant.email) }, grant);
   if (!user) return json({ error: '비활성화된 고객 계정입니다.' }, 403, request, env);
 
   const session = await issueSession(env.DB, user.id, tenant.id, grant.expires_at || '');
@@ -233,7 +265,7 @@ async function federatedLogin(request, env) {
 
   return json({
     ok: true,
-    email: identity.email,
+    email: normalizeEmail(grant.email),
     displayName: user.display_name || identity.displayName,
     role: grant.role,
     principalType: grant.principal_type || 'member',
@@ -254,7 +286,7 @@ export async function handleFederatedCustomerAuth(request, env) {
   if (request.method === 'POST' && path === '/api/customer/federated-login') return federatedLogin(request, env);
   if (request.method === 'POST' && path === '/api/customer/accept-central-invite') {
     return json({
-      error: '초대 링크 방식은 종료되었습니다. 관리자가 고객 Google 이메일과 권한을 등록한 뒤 Google 인증으로 로그인해 주세요.',
+      error: '초대 링크 방식은 종료되었습니다. 관리자가 고객의 에코디 계정 이메일과 권한을 등록한 뒤 에코디 계정으로 로그인해 주세요.',
       code: 'GOOGLE_ACCESS_GRANT_REQUIRED',
     }, 410, request, env);
   }

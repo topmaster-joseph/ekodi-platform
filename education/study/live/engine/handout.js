@@ -1,9 +1,9 @@
-// EKODI Education Live — learner handout (강의자료) for printing.
+// EKODI Education Live — learner handout (강의자료) for printing, plus the optional practice materials.
 // Lecture content only: cover, timetable, lecture/demo/review/share modules (summary, key points, learner
 // tasks), the FactChat features shown in class and the OX quiz, with space for notes.
 // Practice materials are deliberately excluded: no virtual source texts, prompts, practice steps, criteria,
 // field tracks or AI error-hunt exercises. Instructor notes and answer keys are never read here.
-import {KIND_LABELS} from './model.js';
+import {KIND_LABELS,sessionSlides,missionMaterials,buildPrompts,trackById,levelById,criteriaFor} from './model.js';
 import {featureById} from '../tools/factchat.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -71,3 +71,47 @@ export function handoutDocument(course,opts={}){
     '<title>'+esc(course.title)+' · 수강생 강의자료</title><style>'+PRINT_CSS+'</style></head><body>'+handoutHtml(course,opts)+'</body></html>';
 }
 export const HANDOUT_PRINT_CSS=PRINT_CSS;
+
+// ── Landscape slide handout ───────────────────────────────────────────────────────────────────────────
+// The lecture deck as printed slides (16:9 → A4 landscape), without decorative photo/break slides and
+// without the AI error-hunt exercise slides (those are practice material).
+const DECK_SKIP=new Set(['mood','break','hunt']);
+export function deckSlides(course,{sessions=null}={}){
+  return (course.sessions||[]).filter(s=>!sessions||sessions.includes(s.no))
+    .flatMap(s=>sessionSlides(course,s.no).filter(x=>!DECK_SKIP.has(x.special)).map(x=>({...x,sessionNo:s.no})));
+}
+
+// ── Practice materials (실습자료) ─────────────────────────────────────────────────────────────────────
+// Separate, optional download for learners: for each practice mission of the chosen sessions, the
+// fictional source material and the prompts for one field (track) and level, the steps and the
+// completion criteria. Answer keys and instructor notes are never included.
+export function practiceHtml(course,{sessions=null,trackId='',levelId='basic',date=''}={}){
+  const track=trackById(course,trackId)||course.tracks?.[0];
+  const level=levelById(course,levelId);
+  const list=(course.sessions||[]).filter(s=>!sessions||sessions.includes(s.no));
+  const cover='<header class="ho-cover"><p class="ho-kicker">'+esc(course.org?.name||course.org||'')+' · 수강생 실습자료</p><h1>'+esc(course.title)+'</h1>'+
+    '<p class="ho-sub">분야: '+esc(track?.label||'')+' · 난이도: '+esc(level?.label||'')+'</p>'+
+    '<p class="ho-muted">모든 원문은 실습용 가상 자료입니다. 실제 개인정보·비공개 자료를 넣지 마세요. 결과는 반드시 원문과 대조합니다.'+(date?' · 인쇄 기준일 '+esc(date):'')+'</p></header>';
+  const body=list.map(s=>{
+    const missions=s.modules.filter(m=>m.kind==='practice'&&course.missions[m.missionId]);
+    if(!missions.length)return '';
+    return '<article class="ho-session"><h2>'+s.no+'회차 실습자료</h2>'+missions.map(mod=>{
+      const m=course.missions[mod.missionId];
+      const files=missionMaterials(course,m.id,track.id);
+      const prompts=buildPrompts(course,m.id,track.id,level.id);
+      return '<section class="ho-module"><p class="ho-kicker">'+mod.start+'–'+mod.end+'분 · 개인 실습</p><h3>'+esc(m.title)+'</h3>'+
+        (m.problem?'<p>'+esc(m.problem)+'</p>':'')+(m.deliverable?'<p><b>결과물</b> '+esc(m.deliverable)+'</p>':'')+
+        (m.steps?.length?'<h4>따라 하기</h4><ol>'+m.steps.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol>':'')+
+        files.map(f=>'<h4>'+esc(f.label)+'</h4><pre class="ho-pre">'+esc(f.text)+'</pre>').join('')+
+        prompts.map(p=>'<h4>프롬프트 · '+esc(p.label)+'</h4><pre class="ho-pre">'+esc(p.text)+'</pre>').join('')+
+        (criteriaFor(m,level).length?'<h4>완료 기준 ('+esc(level.label)+')</h4>'+ul(criteriaFor(m,level)):'')+
+        '</section>';
+    }).join('')+'</article>';
+  }).join('');
+  return cover+body+'<footer class="ho-foot">EKODI Education Premium Studio · '+esc(course.title)+' · 실습자료</footer>';
+}
+const PRE_CSS='.ho-pre{white-space:pre-wrap;word-break:break-word;background:#f5f7fa;border:1px solid #d5dde8;border-radius:4pt;padding:6pt 8pt;font-size:9pt;line-height:1.5;font-family:inherit}';
+export function practiceDocument(course,opts={}){
+  return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+
+    '<title>'+esc(course.title)+' · 수강생 실습자료</title><style>'+PRINT_CSS+PRE_CSS+'</style></head><body>'+practiceHtml(course,opts)+'</body></html>';
+}
