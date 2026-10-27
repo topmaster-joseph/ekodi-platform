@@ -65,6 +65,33 @@
     <div class="sv-status" data-sv-provider-note role="status">공개 사이트 목록을 먼저 불러오세요.</div>
     <div class="sv-scroll"><table class="sv-table"><thead><tr><th>구분</th><th>서비스</th><th>등록/연동</th><th>소유권·접근</th><th>제출·인용</th><th>확인</th></tr></thead>
     <tbody data-sv-provider-rows><tr><td colspan="6">사이트를 선택하세요.</td></tr></tbody></table></div>
+    <div class="sv-status" data-sv-ledger-status role="status">외부 서비스 확인 원장을 조회하기 전입니다.</div>
+    <div class="sv-guide" aria-label="검색 서비스 확인 근거 등록">
+      <strong>서비스별 확인 근거 등록 (최고관리자 전용)</strong>
+      <p>소유권 확인이나 색인 완료는 공식 계정에서 확인된 근거에 따라 직접 기록합니다. '수동 확인'은 공급자 API가 자동 검증한 상태가 아닙니다. 비밀번호, API 키, 인증 코드는 입력하지 마세요.</p>
+      <form id="sv-evidence-form">
+        <div class="sv-toolbar">
+          <label for="sv-evidence-provider">서비스</label><select id="sv-evidence-provider" required></select>
+          <label for="sv-evidence-check">항목</label><select id="sv-evidence-check">
+            <option value="registration">사이트 등록</option><option value="ownership">소유권 확인</option>
+            <option value="submission">제출·알림</option><option value="discovery">검색·크롤러 발견</option>
+            <option value="citation">AI 인용</option>
+          </select>
+          <label for="sv-evidence-state">상태</label><select id="sv-evidence-state">
+            <option value="unknown">미확인</option><option value="pending">확인 대기</option>
+            <option value="confirmed_manually">수동 근거 확인</option><option value="needs_action">조치 필요</option>
+            <option value="not_applicable">해당 없음</option>
+          </select>
+        </div>
+        <div class="sv-toolbar">
+          <label for="sv-evidence-link">근거 링크 (HTTPS)</label>
+          <input id="sv-evidence-link" type="url" maxlength="500" placeholder="https://공식-관리-화면/..." style="min-width:260px;max-width:100%" />
+          <label for="sv-evidence-detail">확인 내용</label>
+          <input id="sv-evidence-detail" type="text" maxlength="700" placeholder="확인 일자·결과 (인증코드 제외)" style="min-width:260px;max-width:100%" />
+          <button type="submit" data-sv-ledger-submit>근거 저장</button>
+        </div>
+      </form>
+    </div>
     <h3>최적화 운영 원칙</h3>
     <div class="sv-guide">① 공개 상태와 canonical·robots·사이트맵을 검증합니다. ② 제목·설명·구조화 데이터와 질문에 대한 직접 답변을 강화합니다.
       ③ 기관·사업자·저자·출처 표기와 최신성, 인용 가능한 근거를 정비합니다. ④ 변경된 공개 URL만 기존 IndexNow 자동 제출에 연계합니다.
@@ -97,14 +124,86 @@
 
   // Do not infer provider ownership, search indexing or AI citations from page accessibility.
   const SEARCH_PROVIDERS = Object.freeze([["검색엔진","네이버","https://searchadvisor.naver.com/","console","호스트 단위"],["검색엔진","구글","https://search.google.com/search-console","console","도메인/URL 속성"],["검색엔진","다음","https://register.search.daum.net/","daum","사이트 검색등록·웹마스터"],["검색엔진","빙","https://www.bing.com/webmasters/","console","웹마스터 소유권"],["IndexNow","Bing","https://www.bing.com/indexnow","indexnow","참여사"],["IndexNow","Naver","https://searchadvisor.naver.com/indexnow","indexnow","참여사"],["IndexNow","Yandex","https://yandex.com/indexnow","indexnow","참여사"],["IndexNow","Seznam.cz","https://search.seznam.cz/indexnow","indexnow","참여사"],["IndexNow","Yep","https://indexnow.yep.com/indexnow","indexnow","참여사"],["IndexNow","Amazon","https://indexnow.amazonbot.amazon/indexnow","indexnow","참여사"],["AI 검색","ChatGPT Search","https://developers.openai.com/api/docs/bots","ai","OAI-SearchBot"],["AI 검색","Google AI Overviews/AI Mode","https://search.google.com/search-console","ai","Search Console 생성형 검색 설정"],["AI 검색","Microsoft Copilot","https://www.bing.com/webmasters/","ai","Bing AI Performance"],["AI 검색","Perplexity","https://docs.perplexity.ai/","ai","검색 크롤러·인용"],["AI 검색","Claude Search","https://support.claude.com/en/articles/8896518-does-anthropic-crawl-data-from-the-web-and-how-can-site-owners-block-the-crawler","ai","Claude-SearchBot"]]);
-  const state = { resources:[], sites:[], audited:new Map(), discovery:null, busy:false, selectedSite:'' };
+  const PROVIDER_IDS=['naver','google','daum','bing','indexnow-bing','indexnow-naver',
+    'indexnow-yandex','indexnow-seznam','indexnow-yep','indexnow-amazon',
+    'ai-chatgpt','ai-google','ai-copilot','ai-perplexity','ai-claude'];
+  const CHECK_LABELS={registration:'등록',ownership:'소유권',submission:'제출',discovery:'발견',citation:'인용'};
+  const STATE_LABELS={unknown:'미확인',pending:'확인 대기',confirmed_manually:'수동 근거 확인',
+    needs_action:'조치 필요',not_applicable:'해당 없음'};
+  const state = { resources:[], sites:[], audited:new Map(), discovery:null, busy:false, selectedSite:'',
+    ledger:null,ledgerBusy:false };
+  const ledgerStatus=message=>{$('[data-sv-ledger-status]').textContent=message;};
+  const evidenceFor=(id,check)=>state.ledger?.evidence?.find(x=>x.site_url===state.selectedSite
+    && x.provider_id===id&&x.check_type===check);
+  function providerSummary(id,checks,fallback){
+    const items=checks.map(check=>({check,item:evidenceFor(id,check)})).filter(x=>x.item);
+    if(!items.length)return fallback;
+    return items.map(x=>CHECK_LABELS[x.check]+': '+(STATE_LABELS[x.item.state]||'미확인')+
+      ' ('+(x.item.source==='manual'?'수동 기록':'공급자 확인')+', '+(x.item.observed_at||'').slice(0,10)+')').join(' / ');
+  }
+  async function loadLedger(){
+    if(!token())return ledgerStatus('최고관리자 인증이 필요합니다.');
+    try{
+      const response=await fetch('/api/control/search-visibility',{headers:{authorization:'Bearer '+token()},
+        cache:'no-store',credentials:'same-origin'});
+      if(!response.ok)throw new Error('HTTP '+response.status);
+      const data=await response.json();
+      if(!data.ok||!Array.isArray(data.providers))throw new Error('원장 형식 오류');
+      state.ledger=data;
+      ledgerStatus('확인 근거 '+data.evidence.length+'건 · 최근 변경이력 '+data.audit.length+
+        '건 · IndexNow: '+(data.indexNow?.status==='naver_submission_only'?'네이버 제출 이력 조회':'원장 확인 필요')+
+        ' (제출 결과는 색인 증빙이 아닙니다)');
+      renderProviderMatrix();
+    }catch(error){
+      state.ledger=null;ledgerStatus('서버 확인 원장을 사용할 수 없습니다: '+error.message+
+        '. 수동 상태를 저장하거나 확인 완료로 표기할 수 없습니다.');
+      renderProviderMatrix();
+    }
+  }
+  function fillEvidenceForm(){
+    const providerId=$('#sv-evidence-provider').value,check=$('#sv-evidence-check').value;
+    const existing=evidenceFor(providerId,check);
+    $('#sv-evidence-state').value=existing?.state||'unknown';
+    $('#sv-evidence-link').value=existing?.evidence_url||'';
+    $('#sv-evidence-detail').value=existing?.detail||'';
+  }
+  function setupEvidenceForm(){
+    const select=$('#sv-evidence-provider');
+    for(let i=0;i<SEARCH_PROVIDERS.length;i++){
+      const option=document.createElement('option');option.value=PROVIDER_IDS[i];
+      option.textContent=SEARCH_PROVIDERS[i][1];select.append(option);
+    }
+    select.addEventListener('change',fillEvidenceForm);
+    $('#sv-evidence-check').addEventListener('change',fillEvidenceForm);
+    $('#sv-evidence-form').addEventListener('submit',async event=>{
+      event.preventDefault();
+      if(state.ledgerBusy||!state.ledger||!state.selectedSite)return;
+      const providerId=select.value,checkType=$('#sv-evidence-check').value;
+      const payload={siteUrl:state.selectedSite,providerId,checkType,
+        state:$('#sv-evidence-state').value,evidenceUrl:$('#sv-evidence-link').value.trim(),
+        detail:$('#sv-evidence-detail').value.trim()};
+      if(payload.state==='confirmed_manually'&&!payload.evidenceUrl&&!payload.detail)
+        return ledgerStatus('수동 확인 상태에는 근거 링크나 확인 내용이 반드시 필요합니다.');
+      state.ledgerBusy=true;$('[data-sv-ledger-submit]').disabled=true;
+      try{
+        const response=await fetch('/api/control/search-visibility',{method:'PATCH',
+          headers:{'content-type':'application/json',authorization:'Bearer '+token()},
+          body:JSON.stringify(payload),cache:'no-store',credentials:'same-origin'});
+        const result=await response.json();
+        if(!response.ok||!result.ok)throw new Error(result.code||'HTTP '+response.status);
+        await loadLedger();fillEvidenceForm();
+      }catch(error){ledgerStatus('확인 근거 저장 실패: '+error.message);}
+      finally{state.ledgerBusy=false;$('[data-sv-ledger-submit]').disabled=false;}
+    });
+  }
   function renderProviderMatrix(){
     const site=state.sites.find(item=>item.url===state.selectedSite);
     const target=$('[data-sv-provider-rows]');target.replaceChildren();
     if(!site){$('[data-sv-provider-note]').textContent='사이트를 선택하세요.';return;}
     const host=new URL(site.url).hostname;
     $('[data-sv-provider-note]').textContent=(site.name||'사이트')+' · '+host+' — 하위 경로별 기술 진단과 호스트 단위 소유권 인증은 구분합니다. 외부 등록·수집·AI 인용 여부는 실제 공급자 자료가 있어야 확정됩니다.';
-    for(const [group,name,url,kind,scope] of SEARCH_PROVIDERS){
+    for(const [i,[group,name,url,kind,scope]] of SEARCH_PROVIDERS.entries()){
+      const providerId=PROVIDER_IDS[i];
       const row=document.createElement('tr');
       const texts=kind==='indexnow'
         ? [group,name,'공통 제출 연동 확인 필요','호스트 키·검증 확인 필요','제출 응답·시각 미연결']
@@ -112,16 +211,32 @@
           ? [group,name,'독립 사이트 등록으로 간주하지 않음',scope+' 접근 점검 필요','실제 인용 근거 미확인']
           : [group,name,'등록 여부 미확인',scope+' 확인 미연결',kind==='daum'?'신청·심사 결과 미확인':'사이트맵·색인 실적 미연결'];
       for(const str of texts){const cell=document.createElement('td');cell.textContent=str;row.append(cell);}
+      // Only authorized, saved evidence may override the unknown provider state.
+      const cells=row.querySelectorAll('td');
+      cells[2].textContent=providerSummary(providerId,['registration'],cells[2].textContent);
+      cells[3].textContent=providerSummary(providerId,['ownership'],cells[3].textContent);
+      cells[4].textContent=providerSummary(providerId,kind==='ai'?['discovery','citation']:['submission','discovery'],cells[4].textContent);
+      if(kind==='indexnow'&&providerId==='indexnow-naver'){
+        const submission=state.ledger?.indexNow?.sites?.find(x=>x.siteUrl===state.selectedSite);
+        if(submission?.lastSubmittedAt)cells[4].textContent+=' / 네이버 자동제출 기록: '+submission.lastSubmittedAt.slice(0,10);
+      }
       const action=document.createElement('td');const link=document.createElement('a');
       link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='공식 확인';
-      action.append(link);row.append(action);target.append(row);
+      const edit=document.createElement('button');edit.type='button';edit.className='secondary';
+      edit.textContent='근거 관리';edit.disabled=!state.ledger;
+      edit.addEventListener('click',()=>{
+        $('#sv-evidence-provider').value=providerId;
+        $('#sv-evidence-check').value=kind==='ai'?'discovery':'registration';
+        fillEvidenceForm();$('#sv-evidence-form').scrollIntoView({block:'nearest'});
+      });
+      action.append(link,edit);row.append(action);target.append(row);
     }
   }
   function renderProviderChoices(){
     const select=$('#sv-provider-site'), prior=state.selectedSite;select.replaceChildren();
     for(const site of state.sites){const option=document.createElement('option');option.value=site.url;option.textContent=(site.name||site.path||'사이트')+' · '+new URL(site.url).hostname;select.append(option);}
     state.selectedSite=state.sites.some(site=>site.url===prior)?prior:(state.sites[0]?.url||'');
-    select.value=state.selectedSite;renderProviderMatrix();
+    select.value=state.selectedSite;renderProviderMatrix();fillEvidenceForm();
   }
 
   const normalize = item => {
@@ -203,6 +318,7 @@
       $('[data-sv-infra]').textContent=ok?'기술파일 응답':'확인 필요';
       status('공개 레지스트리 '+state.sites.length+'개 사이트 / '+state.resources.length+'개 URL. 검색엔진 등록 또는 색인 완료를 의미하지 않습니다.');
       render();
+      await loadLedger();
     }catch(error){status('공개 사이트 원장을 불러오지 못했습니다: '+error.message,true);$('[data-sv-infra]').textContent='확인 실패';}
   }
   async function auditOne(site,{quiet=false}={}) {
@@ -235,7 +351,8 @@
   $('[data-sv-reload]').addEventListener('click',load);
   $('[data-sv-audit-all]').addEventListener('click',auditAll);
   $('#sv-search').addEventListener('input',render);
-  $('#sv-provider-site').addEventListener('change',event=>{state.selectedSite=event.target.value;renderProviderMatrix();});
+  $('#sv-provider-site').addEventListener('change',event=>{state.selectedSite=event.target.value;renderProviderMatrix();fillEvidenceForm();});
+  setupEvidenceForm();
   window.addEventListener('ekodi-admin-section-changed',event=>{
     if(event.detail?.section===SECTION&&!state.discovery)load();
   });
