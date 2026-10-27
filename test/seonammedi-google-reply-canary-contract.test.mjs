@@ -29,13 +29,16 @@ test('real Google token exercises post owner and reply queue/create/edit/delete'
   assert.match(canary,/reply_original/);
   assert.match(canary,/reply_edited/);
   assert.match(canary,/https:\/\/ekodi\.kr\/seonammedi\/board\/api\/voices-fresh/);
-  assert.match(canary,/Real Google post ownership and reply create\/update\/delete VERIFIED/);
+  assert.match(canary,/post_update_payload/);
+  assert.match(canary,/post_edited/);
+  assert.match(canary,/api\/voices-fresh\/\$post_id" -H "authorization: Bearer \$BOARD_CANARY_GOOGLE_TOKEN"/);
+  assert.match(canary,/Real Google post\/reply create\/update\/delete VERIFIED/);
 });
 
 test('canary removes only its UUID-bound synthetic records, even after failure',()=>{
   assert.match(canary,/trap cleanup_canary EXIT/);
   assert.match(canary,/DELETE FROM citizen_voice_replies_fresh WHERE voice_id=\$post_id AND submission_key='\$reply_submission_id'/);
-  assert.match(canary,/DELETE FROM citizen_voices_fresh WHERE id=\$post_id AND submission_key='\$submission_id' AND body='\$marker'/);
+  assert.match(canary,/DELETE FROM citizen_voices_fresh WHERE id=\$post_id AND submission_key='\$submission_id' AND body IN \('\$marker','\$post_edited'\)/);
   assert.match(canary,/trap - EXIT/);
   assert.doesNotMatch(canary,/DELETE FROM board_posts|DELETE FROM board_replies|purge-legacy\.mjs --execute/);
 });
