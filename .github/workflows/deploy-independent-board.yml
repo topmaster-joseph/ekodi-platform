@@ -280,6 +280,7 @@ jobs:
           # Real Google canary: never use synthetic auth bypasses or modify member data.
           # Every statement is bound to the freshly created UUID and post ID.
           reply_submission_id=''
+          post_edited="$marker-POST-EDITED"
           cleanup_canary() {
             local errors=0
             if [[ "$reply_submission_id" =~ ^[a-fA-F0-9-]{36}$ ]]; then
@@ -287,7 +288,7 @@ jobs:
                 errors=1
               fi
             fi
-            if ! npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-independent-board --remote --config "$GITHUB_WORKSPACE/.wrangler.independent-board.runtime.toml" --command "DELETE FROM citizen_voices_fresh WHERE id=$post_id AND submission_key='$submission_id' AND body='$marker';" >/dev/null; then
+            if ! npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-independent-board --remote --config "$GITHUB_WORKSPACE/.wrangler.independent-board.runtime.toml" --command "DELETE FROM citizen_voices_fresh WHERE id=$post_id AND submission_key='$submission_id' AND body IN ('$marker','$post_edited');" >/dev/null; then
               errors=1
             fi
             if [[ "$errors" -ne 0 ]]; then
@@ -327,11 +328,20 @@ jobs:
           curl -fsS https://seonammedi.kr/board/api/voices-fresh |
             jq -e --argjson id "$post_id" --argjson replyId "$reply_id" '.items | any(.id==$id and (.replies | all(.id!=$replyId)))' >/dev/null
 
+          # Complete the real user-owned POST edit and soft-delete round trip.
+          post_update_payload="$(jq -nc --arg message "$post_edited" --arg title 'EKODI 검증' '{message:$message,title:$title}')"
+          curl -fsS -X PUT "https://seonammedi.kr/board/api/voices-fresh/$post_id" -H 'content-type: application/json' -H "authorization: Bearer $BOARD_CANARY_GOOGLE_TOKEN" --data "$post_update_payload" | jq -e '.ok==true' >/dev/null
+          curl -fsS https://ekodi.kr/seonammedi/board/api/voices-fresh -H "authorization: Bearer $BOARD_CANARY_GOOGLE_TOKEN" |
+            jq -e --argjson id "$post_id" --arg message "$post_edited" '.items | any(.id==$id and .message==$message and .mine==true)' >/dev/null
+          curl -fsS -X DELETE "https://seonammedi.kr/board/api/voices-fresh/$post_id" -H "authorization: Bearer $BOARD_CANARY_GOOGLE_TOKEN" | jq -e '.ok==true' >/dev/null
+          curl -fsS https://seonammedi.kr/board/api/voices-fresh |
+            jq -e --argjson id "$post_id" '.items | all(.id!=$id)' >/dev/null
+
           # Delete only this run's synthetic canary, never arbitrary citizen content.
           cleanup_canary
           trap - EXIT
           curl -fsS https://seonammedi.kr/board/api/voices-fresh | jq -e --argjson id "$post_id" '.items | all(.id!=$id)' >/dev/null
-          echo "::notice::Real Google post ownership and reply create/update/delete VERIFIED on both canonical hosts."
+          echo "::notice::Real Google post/reply create/update/delete VERIFIED on both canonical hosts."
       # Data-retention guard: deployment must NEVER invoke irreversible legacy
       # deletion. The isolated purge-legacy.mjs remains an explicit operator-only
       # command requiring independent retention/backup approval (Human Gate).
