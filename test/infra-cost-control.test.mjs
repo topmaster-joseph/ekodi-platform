@@ -32,3 +32,19 @@ test('backend guards financial records and does not infer bill payment from tele
   assert.match(code,/provider_quota_snapshots/);
   assert.doesNotMatch(code,/service_role.*=|secret.*=\s*['"]/i);
 });
+
+test('infra cost UI expands only visible finance panel and adapts to narrow screens',()=>{
+  const css=read('infra-cost-admin.css');
+  const js=read('infra-cost-admin.js');
+  assert.match(css,/\.app>main:has\(#ekodiInfraCosts:not\(\[hidden\]\):not\(\.hidden-panel\)\)/);
+  assert.match(css,/max-width:none!important/);
+  assert.match(css,/@media\(max-width:640px\)/);
+  assert.match(js,/data-infra-open-invoice/);
+  assert.match(js,/data-infra-jump="infra-billing"/);
+  assert.match(js,/data-infra-invoice-search/);
+  assert.match(js,/data-infra-invoice-filter/);
+  assert.match(js,/matched=all\.filter/);
+  assert.match(js,/if\(current\)renderInvoices\(current\)/);
+  assert.match(js,/사용량 연동 필요/);
+  assert.match(js,/청구서 직접 등록/);
+});

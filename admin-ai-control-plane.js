@@ -100,9 +100,10 @@
     const zones=[{name:'전체 Zone / 도메인',status:''},...(cf.zones||[])];
     const workers=(cf.workers||[]).filter(item=>item.allowed!==false);
     context.innerHTML=`
-      <div><label>Cloudflare 계정</label><select data-ekodi-cf-account ${providerData?'':'disabled'}><option>${esc(cf.account?.name||'연결 확인 필요')}</option></select></div>
-      <div><label>Zone / 도메인</label><select data-ekodi-cf-zone ${providerData?'':'disabled'}>${zones.map(zone=>`<option value="${esc(zone.name)}">${esc(zone.name)}${zone.status?` · ${esc(zone.status)}`:''}</option>`).join('')}</select></div>
-      <div><label>대상 Worker</label><select data-ekodi-cf-worker ${workers.length?'':'disabled'}>${workers.length?workers.map(worker=>`<option value="${esc(worker.name)}">${esc(worker.name)}</option>`).join(''):'<option>Worker 확인 필요</option>'}</select></div>
+      <div class="ekodi-provider-section-heading"><strong>① 연결 대상 선택</strong><small>계정·도메인·Worker 상태를 확인합니다.</small></div>
+      <div><label for="ekodiSecurityCfAccount">Cloudflare 계정</label><select id="ekodiSecurityCfAccount" data-ekodi-cf-account ${providerData?'':'disabled'}><option>${esc(cf.account?.name||'연결 확인 필요')}</option></select></div>
+      <div><label for="ekodiSecurityCfZone">Zone / 도메인</label><select id="ekodiSecurityCfZone" data-ekodi-cf-zone ${providerData?'':'disabled'}>${zones.map(zone=>`<option value="${esc(zone.name)}">${esc(zone.name)}${zone.status?` · ${esc(zone.status)}`:''}</option>`).join('')}</select></div>
+      <div><label for="ekodiSecurityCfWorker">대상 Worker</label><select id="ekodiSecurityCfWorker" data-ekodi-cf-worker ${workers.length?'':'disabled'}>${workers.length?workers.map(worker=>`<option value="${esc(worker.name)}">${esc(worker.name)}</option>`).join(''):'<option>Worker 확인 필요</option>'}</select></div>
       ${diagnosticMarkup()}
       <div class="ekodi-provider-note">계정 → Zone/도메인 → Worker 순서로 현재 위치를 확인합니다. Worker는 Zone에 종속되지 않을 수 있습니다. 권한·Account ID·API 오류를 숨기지 않고 총괄 AI가 원인을 구분해 표시합니다.</div>`;
     card.prepend(context);bindRetry(context);
@@ -117,7 +118,7 @@
     if(original)new MutationObserver(sync).observe(original,{childList:true,subtree:true});
     queueMicrotask(sync);
     const oldField=original?.closest('.admin-secret-field');
-    if(oldField){oldField.style.display='none';oldField.setAttribute('aria-hidden','true')}
+    if(oldField){oldField.style.display=workers.length?'none':'';if(workers.length)oldField.setAttribute('aria-hidden','true');else oldField.removeAttribute('aria-hidden')}
   }
 
   function providerCard(){

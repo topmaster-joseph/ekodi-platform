@@ -1,0 +1,35 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+
+const generator = fs.readFileSync(new URL('../admin-secret-generator.js', import.meta.url), 'utf8');
+const styles = fs.readFileSync(new URL('../admin-secret-generator.css', import.meta.url), 'utf8');
+const provider = fs.readFileSync(new URL('../admin-ai-control-plane.js', import.meta.url), 'utf8');
+
+test('security workspace groups Cloudflare target and secret registration without changing API boundaries', () => {
+  assert.match(generator, /class="admin-secret-auto-card"[^>]*|class="admin-secret-card admin-secret-auto-card"/);
+  assert.match(generator, /class="admin-secret-setup"/);
+  assert.match(generator, /class="admin-secret-setup-heading"/);
+  assert.match(provider, /class="ekodi-provider-section-heading"/);
+  assert.match(styles, /\.admin-secret-auto-card:has\(>\.ekodi-provider-context\)/);
+  assert.match(styles, /grid-template-columns:minmax\(0,1\.1fr\) minmax\(360px,\.9fr\)/);
+  assert.match(styles, /@media\(max-width:620px\)/);
+  assert.match(generator, /\/api\/control\/secrets\/generate/);
+});
+
+test('Cloudflare target fallback stays available when provider inventory cannot list workers', () => {
+  assert.match(provider, /oldField\.style\.display=workers\.length\?'none':''/);
+  assert.match(provider, /else oldField\.removeAttribute\('aria-hidden'\)/);
+  assert.match(generator, /data-cloudflare-target/);
+  assert.match(provider, /data-ekodi-cf-worker/);
+});
+
+test('security statuses are accessible and secrets remain hidden from automatic registration', () => {
+  assert.match(generator, /data-cloudflare-status role="status" aria-live="polite"/);
+  assert.match(generator, /data-cloudflare-readiness role="status" aria-live="polite"/);
+  assert.match(provider, /for="ekodiSecurityCfWorker"/);
+  assert.match(styles, /:focus-visible/);
+  assert.match(generator, /비밀값 자체는 브라우저로 반환되지 않았습니다/);
+  assert.match(generator, /response\.status === 409/);
+  assert.match(generator, /DISPLAY_TTL_MS = 30_000/);
+});
