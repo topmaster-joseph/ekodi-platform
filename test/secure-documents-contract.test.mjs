@@ -20,7 +20,10 @@ test('server-only tables and opaque nonpublic bucket',()=>{
    assert.ok(sql.includes('public.'+table));
  }
  assert.match(sql,/enable row level security/);
- assert.match(sql,/revoke all on public.%I from PUBLIC, anon, authenticated/);
+ for(const table of ['secure_document_records','secure_document_versions','secure_document_shares','secure_document_access_audit']){
+   assert.ok(sql.includes('alter table public.'+table+' enable row level security;'));
+   assert.ok(sql.includes('revoke all on table public.'+table+' from PUBLIC, anon, authenticated;'));
+ }
  assert.match(sql,/secure-documents-private/);
  assert.match(sql,/values \('secure-documents-private','secure-documents-private',false/);
  assert.match(sql,/token_hash text not null unique/);

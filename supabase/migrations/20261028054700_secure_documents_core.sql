@@ -69,16 +69,18 @@ create table if not exists public.secure_document_access_audit (
 );
 create index if not exists secure_doc_audit_doc_idx on public.secure_document_access_audit(document_id,created_at desc);
 -- No client grants, no anon read, and no RLS policies. Trusted server only.
-do $$
-declare t text;
-begin
-  foreach t in array array['secure_document_records','secure_document_versions','secure_document_shares','secure_document_access_audit']
-  loop
-    execute format('alter table public.%I enable row level security',t);
-    execute format('revoke all on public.%I from PUBLIC, anon, authenticated',t);
-    execute format('grant select, insert, update, delete on public.%I to service_role',t);
-  end loop;
-end $$;
+alter table public.secure_document_records enable row level security;
+revoke all on table public.secure_document_records from PUBLIC, anon, authenticated;
+grant select, insert, update, delete on table public.secure_document_records to service_role;
+alter table public.secure_document_versions enable row level security;
+revoke all on table public.secure_document_versions from PUBLIC, anon, authenticated;
+grant select, insert, update, delete on table public.secure_document_versions to service_role;
+alter table public.secure_document_shares enable row level security;
+revoke all on table public.secure_document_shares from PUBLIC, anon, authenticated;
+grant select, insert, update, delete on table public.secure_document_shares to service_role;
+alter table public.secure_document_access_audit enable row level security;
+revoke all on table public.secure_document_access_audit from PUBLIC, anon, authenticated;
+grant select, insert, update, delete on table public.secure_document_access_audit to service_role;
 grant usage, select on sequence public.secure_document_access_audit_id_seq to service_role;
 -- Service role is the only owner of this opaque ciphertext bucket.
 insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
