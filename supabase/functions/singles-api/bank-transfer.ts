@@ -6,7 +6,7 @@ type Reply=(req:Request,body:unknown,status?:number)=>Response;
 const bankOn=()=>Deno.env.get('SINGLES_BANK_TRANSFER_ENABLED')==='true';
 const verifyOn=()=>Deno.env.get('SINGLES_BANK_VERIFICATION_ENABLED')==='true';
 const REF=/^EDH-[A-F0-9]{32}$/;
-const CODES=['community','community_90','community_365','consulting'];
+const CODES=['community','community_90','community_365','consulting','credit_initial','credit_topup'];
 async function one(q:any){const {data,error}=await q.maybeSingle();if(error)throw error;return data}
 async function many(q:any){const {data,error}=await q;if(error)throw error;return data||[]}
 async function payload(req:Request){
@@ -54,6 +54,12 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   const plans=await many(admin.from('singles_bank_plans').select('code,display_name,amount_krw,duration_days').eq('active',true));
   return reply(req,{available:settings?.active===true,plans:settings?.active===true?plans:[],payment_method:'bank_transfer'});
  }
+ if(path==='/bank/wallet'&&method==='GET'){
+  const w=await one(admin.from('singles_message_credit_wallets').select('available,reserved').eq('user_id',userId).eq('scope','request'));
+  const ledger=await many(admin.from('singles_request_ledger').select('delta_units,reason,ref,created_at').eq('user_id',userId).order('created_at',{ascending:false}).limit(20));
+  return reply(req,{request_billing_enabled:Deno.env.get('SINGLES_REQUEST_BILLING_ENABLED')==='true',unit_krw:10000,available_units:w?.available||0,reserved_units:w?.reserved||0,
+   available_krw:(w?.available||0)*10000,reserved_krw:(w?.reserved||0)*10000,ledger});
+ }
  if(path==='/bank/orders'&&method==='GET'){
   const list=await many(admin.from('singles_bank_orders').select(columns).eq('user_id',userId).order('created_at',{ascending:false}).limit(30));
   return reply(req,{orders:list.map(publicOrder)});
@@ -72,6 +78,13 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   const v=await payload(req);
   if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>k!=='plan_code')||!CODES.includes(v.plan_code))
     return reply(req,{error:'invalid_plan'},400);
+  if(v.plan_code==='credit_initial'||v.plan_code==='credit_topup'){
+   // 최초 50만원 충전은 1회(진행 중 포함), 추가 충전은 최초 충전 확인 후에만.
+   const initial=await many(admin.from('singles_bank_orders').select('status').eq('user_id',userId).eq('plan_code','credit_initial')
+     .in('status',['awaiting_transfer','reported_paid','verified']));
+   if(v.plan_code==='credit_initial'&&initial.length)return reply(req,{error:'initial_credit_already_ordered'},409);
+   if(v.plan_code==='credit_topup'&&!initial.some((o:any)=>o.status==='verified'))return reply(req,{error:'initial_credit_required',initial_krw:500000},409);
+  }
   const plan=await one(admin.from('singles_bank_plans')
     .select('code,amount_krw,duration_days,active').eq('code',v.plan_code));
   const settings=await one(admin.from('singles_bank_settings')

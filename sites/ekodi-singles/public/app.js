@@ -45,6 +45,10 @@ function paywall(h,action){
  box.append(button('계좌이체 구독 안내',()=>location.assign('/singles/subscribe'),'primary'));h.append(box);
 }
 function errorText(error){
+ if(error?.message==='monthly_pass_required')return '요청을 보내려면 월 이용권(30일 50,000원)이 필요합니다.';
+ if(error?.message==='request_credit_required')return '적립금이 부족합니다. 요청은 상대가 수락할 때 1만원이 확정되며, 보낼 때는 1만원이 잠시 보류됩니다.';
+ if(error?.message==='response_credit_required')return '수락하려면 적립금 1만원이 필요합니다. 수락하는 순간 양쪽에서 각 1만원이 확정됩니다.';
+ if(error?.message==='initial_credit_required')return '추가 충전 전에 기본 적립금 50만원 충전이 먼저 필요합니다.';
  if(error?.status===402)return '행사 참가·메시지 발송·답장 또는 별도 컨설팅 이용에 필요한 구독을 확인해 주세요.';
  if(error?.status===403)return '권한이나 성인확인·상호동의 조건을 확인해 주세요.';
  if(error?.status===503)return '현재 안전한 서비스 개통을 준비 중입니다.';
@@ -249,6 +253,16 @@ async function reloadBankOrders(h){
    panel.append(card);
   }
  }catch(e){notice(panel,errorText(e))}
+}
+async function showWallet(h){
+ try{
+  const w=await api('/bank/wallet');
+  if(!w.request_billing_enabled)return;
+  const box=text('section','','member-card');box.append(text('h3','내 적립금'));
+  paragraph(box,'사용 가능 '+(w.available_krw||0).toLocaleString('ko-KR')+'원 · 수락 대기로 보류 중 '+(w.reserved_krw||0).toLocaleString('ko-KR')+'원');
+  paragraph(box,'요청을 보내면 1만원이 보류되고, 상대가 수락하는 순간 보낸 사람과 수락한 사람에게 각 1만원이 확정됩니다. 거절·14일 무응답·탈퇴 시 보류액은 돌려드립니다.');
+  h.append(box);
+ }catch(e){}
 }
 async function showSubscription(h){
  const box=text('section','','paywall');
@@ -546,7 +560,7 @@ async function signedIn(status){
  else if(page==='/events')await showEvents(h);
  else if(page==='/discover')await showDiscover(h);
  else if(page==='/messages')await showMessages(h);
- else if(page==='/subscribe')await showSubscription(h);
+ else if(page==='/subscribe'){await showWallet(h);await showSubscription(h);}
  else if(page==='/admin'){await showBankAdmin(h);await showEventPricing(h);await showReportModeration(h);await showAllPricing(h);await showBrokerageReadiness(h);}
  else if(page==='/groups')paragraph(h,'지역 공동체·소그룹 기능을 준비하고 있습니다. 행사 목록을 먼저 확인해 주세요.');
  else {paragraph(h,'반갑습니다. 나의 프로필, 공개 행사, 동행 찾기를 살펴보세요.');const row=text('div','','actions');for(const [name,href] of [['프로필 등록','/singles/my'],['공개 행사','/singles/events'],['동행 찾기','/singles/discover']]){const a=text('a',name,'outline');a.href=href;row.append(a)}h.append(row)}
