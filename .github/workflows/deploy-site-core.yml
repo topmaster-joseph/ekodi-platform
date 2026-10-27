@@ -1137,7 +1137,10 @@ jobs:
             [ -n "$title" ] || title='(no title)'
             printf '| %s | %s | %s | %s |\n' "$url" "$status" "$final" "$title" >> "$GITHUB_STEP_SUMMARY"
             printf '%s -> HTTP %s -> %s\n' "$url" "$status" "$final"
-            [[ "$status" =~ ^[23] ]]
+            if [[ "$status" =~ ^[23] ]]; then return 0; fi
+            # Name the failing service in the check run (readable via the API without log access).
+            echo "::error title=Production link audit failed::$url -> HTTP $status -> $final"
+            return 1
           }
 
           printf '## EKODI production link audit\n\n| URL | HTTP | final URL | title |\n|---|---:|---|---|\n' >> "$GITHUB_STEP_SUMMARY"
