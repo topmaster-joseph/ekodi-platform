@@ -70,3 +70,12 @@ test('Control API redeploys when only the booth API changes',()=>{
   const script=read('scripts/converge-orchestrated-pr-merge.mjs');
   assert.ok(block(script,'controlApiTouched').includes("'cgmurrc-booth-api.js'"));
 });
+
+test('the public board is laid out to fit one screen at any size',()=>{
+  const html=read('prototypes/cgmurrc-booth-board.html');
+  assert.match(html,/html\{font-size:clamp\([^)]*vh[^)]*\)/,'type scales with viewport height');
+  assert.match(html,/#board\{flex:1 0 auto;display:grid;grid-template-rows:repeat\(8,/,'8 rows share the screen');
+  assert.match(html,/@media \(min-width:760px\) and \(min-aspect-ratio:4\/3\)\{\s*#board\{grid-template-rows:repeat\(4,/,'wide screens use 2 x 4');
+  assert.doesNotMatch(html,/#board\{[^}]*overflow:hidden/,'rows are never clipped on tiny screens');
+  assert.match(read('prototypes/cgmurrc-booth-board.js'),/className:'slot'/);
+});

@@ -7,11 +7,11 @@ function say(text,kind=''){const s=$('status');s.textContent=text;s.className='m
 function render({slots,board}){
   $('board').replaceChildren(...slots.map((slot,i)=>{
     const people=board[i]||[];
-    const time=el('td',{className:'t'},slot.label);
+    const time=el('div',{className:'time'},slot.label);
     if(slot.tag)time.append(el('small',{},slot.tag));
     const names=el('div',{className:'names'},...people.map(p=>el('span',{className:'name'},el('b',{},String(p.no)),p.name)));
     if(!people.length)names.append(el('span',{className:'empty'},'담당 미정'));
-    return el('tr',{className:slot.tag?'edge':''},time,el('td',{},names));
+    return el('div',{className:'slot'+(slot.tag?' edge':'')},time,names);
   }));
   $('updated').textContent=`${new Date().toLocaleString('ko-KR',{month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'})} 기준`;
 }

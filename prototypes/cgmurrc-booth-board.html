@@ -3,54 +3,66 @@
 <meta name="robots" content="noindex, nofollow"><meta name="referrer" content="no-referrer">
 <title>누구나 라면 부스 전체 근무표 · 청계면 도시재생 주민협의체</title>
 <style>
+/* One-screen board: the 8 time slots share the viewport height (portrait: 8 rows; wide: 2 columns x 4 rows).
+   Type scales with the smaller of viewport height and width, so a phone and a TV both show the whole day. */
 :root{--bg:#f3f6f5;--card:#fff;--ink:#14302c;--muted:#556b67;--line:#d5e0dd;--teal:#0f5c55;--teal-soft:#dcefec;--gold:#9a6f1e;--gold-soft:#f6ecd6;--warn:#a4372a;--warn-soft:#f8e3df}
 @media (prefers-color-scheme:dark){:root{--bg:#0e1716;--card:#152321;--ink:#e4eeec;--muted:#9fb5b1;--line:#2a3d3a;--teal:#5fc0b5;--teal-soft:#173a36;--gold:#e0b25a;--gold-soft:#2d2616;--warn:#ff8a78;--warn-soft:#3a1f1a;color-scheme:dark}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.6 "Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif}
-main{max-width:720px;margin:0 auto;padding:24px max(16px,env(safe-area-inset-right)) 48px max(16px,env(safe-area-inset-left));display:grid;gap:20px}
-.eyebrow{font-size:14px;color:var(--gold);font-weight:700;letter-spacing:.06em}
-h1{margin:4px 0 6px;font-size:28px;line-height:1.3;color:var(--teal);word-break:keep-all;text-wrap:balance}
-h2{margin:0 0 8px;font-size:21px;color:var(--teal)}
-p{margin:0}.muted{color:var(--muted);font-size:16px}
-.msg{padding:14px 16px;border-radius:12px;background:var(--gold-soft);font-size:17px}
-.msg.err{background:var(--warn-soft);color:var(--warn);font-weight:600}
-.board{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--card)}
-table{width:100%;border-collapse:collapse}
-td,th{padding:12px 14px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
-tr:last-child td{border-bottom:0}
-th{font-size:14px;color:var(--muted);background:var(--bg)}
-td.t{white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:700;width:1%}
-td.t small{display:block;color:var(--gold);font-size:14px}
-tr.edge td{background:var(--gold-soft)}
-.names{display:flex;flex-wrap:wrap;gap:6px}
-.name{display:inline-flex;gap:6px;align-items:baseline;padding:4px 12px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-weight:600}
-.name b{color:var(--teal);font-variant-numeric:tabular-nums}
-.empty{color:var(--warn);font-weight:600}
-.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
-button{font:inherit;font-size:16px;font-weight:700;min-height:44px;padding:8px 16px;border-radius:12px;border:2px solid var(--teal);background:var(--card);color:var(--teal);cursor:pointer}
+html{font-size:clamp(12.5px,min(2.1vh,4vw),22px)}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:1rem/1.35 "Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif}
+main{height:100%;min-height:100dvh;max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:.6rem;
+  padding:.8rem max(12px,env(safe-area-inset-right)) max(.8rem,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:.3rem .8rem}
+.eyebrow{font-size:.78rem;color:var(--gold);font-weight:700;letter-spacing:.04em}
+h1{margin:.1rem 0 0;font-size:1.45rem;line-height:1.2;color:var(--teal);word-break:keep-all;text-wrap:balance}
+.sub{margin:.15rem 0 0;font-size:.8rem;color:var(--muted);word-break:keep-all}
+button{font:inherit;font-size:.85rem;font-weight:700;min-height:2.2rem;padding:.25rem .8rem;border-radius:.6rem;border:2px solid var(--teal);background:var(--card);color:var(--teal);cursor:pointer;white-space:nowrap}
 button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
-ul{margin:0;padding-left:22px}
+.msg{margin:0;padding:.5rem .8rem;border-radius:.6rem;background:var(--gold-soft);font-size:.9rem}
+.msg.err{background:var(--warn-soft);color:var(--warn);font-weight:600}
+#board{flex:1 0 auto;display:grid;grid-template-rows:repeat(8,minmax(min-content,1fr));border:1px solid var(--line);border-radius:.8rem;background:var(--card)}
+.slot:first-child{border-radius:.8rem .8rem 0 0}.slot:last-child{border-radius:0 0 .8rem .8rem}
+.slot{display:grid;grid-template-columns:max-content 1fr;align-items:center;gap:.5rem;padding:.3rem .7rem;border-bottom:1px solid var(--line);min-height:0}
+.slot:last-child{border-bottom:0}
+.slot.edge{background:var(--gold-soft)}
+.time{min-width:6.2rem;white-space:nowrap;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.15}
+.time small{display:block;font-size:.72rem;font-weight:700;color:var(--gold)}
+.names{display:flex;flex-wrap:wrap;gap:.25rem .35rem;min-width:0}
+.name{display:inline-flex;gap:.25rem;align-items:baseline;padding:.12rem .55rem;border-radius:999px;border:1px solid var(--line);background:var(--card);font-weight:700;white-space:nowrap}
+.name b{color:var(--teal);font-variant-numeric:tabular-nums}
+.empty{color:var(--warn);font-weight:700}
+footer{display:flex;flex-wrap:wrap;gap:.2rem .8rem;justify-content:space-between;font-size:.75rem;color:var(--muted)}
+details summary{cursor:pointer;font-weight:700}
+details ul{margin:.3rem 0 0;padding-left:1.1rem}
+/* Wide screens (PC, tablet landscape): two columns of four slots. */
+@media (min-width:760px) and (min-aspect-ratio:4/3){
+  #board{grid-template-rows:repeat(4,minmax(min-content,1fr));grid-auto-flow:column;grid-template-columns:1fr 1fr}
+  .slot:nth-child(4){border-bottom:0}
+  .slot:nth-child(-n+4){border-right:1px solid var(--line)}
+  .slot:first-child{border-radius:.8rem 0 0 0}.slot:nth-child(4){border-radius:0 0 0 .8rem}.slot:nth-child(5){border-radius:0 .8rem 0 0}.slot:last-child{border-radius:0 0 .8rem 0}
+  html{font-size:clamp(14px,min(3vh,1.9vw),26px)}
+}
 </style></head>
 <body><main>
 <header>
-  <div class="eyebrow">청계면 도시재생 주민협의체 · 2026. 10. 28.(수)</div>
-  <h1>누구나 라면 부스 전체 근무표</h1>
-  <p class="muted">목포대학교 후문 상권 일원 · 11:00~17:00 (준비 10시, 마감 18시) · 이름 앞 숫자는 회원 연번입니다.</p>
+  <div>
+    <div class="eyebrow">청계면 도시재생 주민협의체 · 2026. 10. 28.(수)</div>
+    <h1>누구나 라면 부스 전체 근무표</h1>
+    <p class="sub">목포대 후문 상권 · 11~17시 (준비 10시·마감 18시) · 숫자는 회원 연번</p>
+  </div>
+  <button id="refresh" type="button">새로 고침</button>
 </header>
 <p id="status" class="msg" role="status" aria-live="polite">근무표를 불러오는 중입니다.</p>
-<section>
-  <div class="row"><h2>시간대별 담당</h2><button id="refresh" type="button">새로 고침</button></div>
-  <div class="board"><table><thead><tr><th>시간</th><th>담당</th></tr></thead><tbody id="board"></tbody></table></div>
-  <p id="updated" class="muted" style="margin-top:8px"></p>
-</section>
-<section>
-  <h2>안내</h2>
-  <ul class="muted">
-    <li>교대 10분 전에 도착해 재료·판매수량·대기 인원·특이사항을 인수인계합니다.</li>
+<div id="board" aria-label="시간대별 담당"></div>
+<footer>
+  <details><summary>안내</summary><ul>
+    <li>교대 10분 전 도착해 재료·판매수량·대기 인원·특이사항을 인수인계합니다.</li>
     <li>조리는 전문 조리 인력이 맡고, 회원은 접수·배식·정리를 나눠 맡습니다.</li>
-    <li>내 시간을 바꾸고 싶으면 사무국에서 받은 <b>본인 전용 링크</b>에서 요청해 주세요.</li>
-  </ul>
-</section>
+    <li>내 시간을 바꾸려면 사무국에서 받은 본인 전용 링크에서 요청해 주세요.</li>
+  </ul></details>
+  <span id="updated"></span>
+</footer>
 </main>
 <script type="module" src="/cgmurrc/booth/board/app.js"></script>
 </body></html>
