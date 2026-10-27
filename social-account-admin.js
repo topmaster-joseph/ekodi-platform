@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const ROOT='ekodiSocialAccountRegistry';
-  const ENDPOINT='https://api.ekodi.kr/api/control/external-accounts/social-identities?scope=all';
+  const ENDPOINT='https://ekodi.kr/api/control/external-accounts/social-identities?scope=all';
   const sessionToken=()=>{try{return sessionStorage.getItem('ekodi-auth-token')||''}catch{return''}};
   const el=(tag,text='',className='')=>{
     const node=document.createElement(tag);
@@ -17,7 +17,7 @@
   async function authenticatedSuperAdmin(){
     const token=sessionToken();
     if(!token)return false;
-    const res=await fetch('https://api.ekodi.kr/api/session',{headers:{authorization:'Bearer '+token},cache:'no-store'});
+    const res=await fetch('https://ekodi.kr/api/session',{headers:{authorization:'Bearer '+token},cache:'no-store'});
     if(!res.ok)return false;
     const session=await res.json();
     return session?.authenticated===true&&session.role==='super_admin';
