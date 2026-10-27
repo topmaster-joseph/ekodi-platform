@@ -13,7 +13,7 @@ const notice=(h,value)=>h.append(text('p',value,'notice'));
 function showGuest(){
  $('sectionTitle').textContent=labels[page]||'처음';
  $('serviceStage').textContent='소개 공개 · 회원서비스 준비';
- document.querySelectorAll('[data-guest-nav]').forEach(link=>{link.href=loginUrl()});
+ document.querySelectorAll('[data-guest-nav]').forEach(link=>{link.href=loginUrl();link.hidden=false});
  $('contentDescription').textContent=page===''?'서로를 존중하며 천천히 알아가는 동행입니다.':'로그인 후 이용 가능한 기능은 개통 상태에 따라 달라집니다.';
  if(page!==''){
    const h=$('publicPanel');if(!h.querySelector('[data-donghaeng-login]')){const c=button('EKODI Google로 시작',()=>location.assign(loginUrl()),'primary');c.dataset.donghaengLogin='1';h.append(c);}
@@ -795,6 +795,13 @@ async function signedIn(status){
  else if(page==='/groups')paragraph(h,'지역 공동체·소그룹 기능을 준비하고 있습니다. 행사 목록을 먼저 확인해 주세요.');
  else {paragraph(h,'반갑습니다. 나의 프로필, 공개 행사, 동행 찾기를 살펴보세요.');const row=text('div','','actions');for(const [name,href] of [['프로필 등록','/singles/my'],['공개 행사','/singles/events'],['동행 찾기','/singles/discover']]){const a=text('a',name,'outline');a.href=href;row.append(a)}h.append(row)}
 }
+// AUTH-RETURN-CONTINUITY-001 v1.27.5: a signed-in person is never shown a login entry or sent to login again.
+// A stored EKODI session is detected synchronously so no login button flashes before the session check.
+function storedSession(){
+ try{for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i)||'';if(!/^sb-[a-z0-9]+-auth-token(?:\.\d+)?$/i.test(key))continue;let v=null;try{v=JSON.parse(localStorage.getItem(key)||'null')}catch{continue}const s=v?.currentSession||v?.session||v;if(s?.user?.id&&(s?.refresh_token||Number(s?.expires_at||0)*1000>Date.now()))return true}}catch{}
+ return false;
+}
+function hideLoginEntries(){document.querySelectorAll('[data-guest-nav]').forEach(link=>{if(!link.dataset.signedIn)link.hidden=true});document.querySelectorAll('[data-donghaeng-login]').forEach(b=>b.remove())}
 async function main(){
  // Clear one-time credentials before any async work or feature flag checks.
  // The token remains only in memory for the current authentication attempt.
@@ -802,10 +809,12 @@ async function main(){
  const tokenHash=fragment.get('ekodi_token');
  const tokenType=fragment.get('ekodi_type')||'email';
  if(tokenHash)history.replaceState(null,'',location.pathname+location.search);
- showGuest();
+ const resuming=Boolean(tokenHash)||storedSession();
+ if(resuming){hideLoginEntries();$('serviceStage').textContent='로그인 확인 중';}
+ else showGuest();
  let status;
  try{status=await fetch('/singles/api/status',{cache:'no-store'}).then(r=>r.json())}
- catch{return}
+ catch{if(resuming)$('serviceStage').textContent='연결 점검 중';return}
  state.status=status;
  const prelaunchAdmin=page==='/admin'&&status?.admin_preparation_enabled===true&&status?.onboarding_enabled===false;
  // Public first-party EKODI identity settings are the same as the canonical auth hub.
@@ -829,7 +838,7 @@ async function main(){
  }
  const {data}=await state.client.auth.getSession();
  state.session=data?.session;
- if(!state.session)return;
+ if(!state.session){if(resuming)showGuest();return}
  if(prelaunchAdmin){
   showSignedInAccount();
   $('serviceStage').textContent='로그인 완료 · 운영 준비';
