@@ -228,6 +228,9 @@ function fillRoles(){
 function renderSummary(){
   const role=roleById(course,rec.track,rec.role);
   $('#setSummary').textContent=session().no+'회차 · '+trackById(course,rec.track).label+(role?' · '+role.label:'')+' · '+levelById(course,rec.level).label;
+  // Materials page for anyone with the link: lecture slides/summary and this learner's field for practice materials.
+  const href=livePath(location.pathname,'handout/')+'?c='+encodeURIComponent(course.id)+'&s='+session().no+'&t='+encodeURIComponent(rec.track);
+  for(const id of ['#topHandout','#labHandout']){const a=$(id);if(a)a.href=href;}
 }
 // Sticky sub-navigation under the menu: the detailed order of the current menu. Scrolling selects the
 // section in view; tapping a title scrolls to it.
