@@ -13,7 +13,30 @@ async function many(query:any){const {data,error}=await query;if(error)throw err
 async function membership(admin:Admin,id:string){return one(admin.from('singles_memberships').select('status,base_consent,religion_consent,age_19_confirmed,adult_verified_at,discoverable').eq('user_id',id))}
 const active=(m:any)=>m?.status==='active'&&m.base_consent===true&&m.age_19_confirmed===true;
 const verified=(m:any)=>active(m)&&Boolean(m.adult_verified_at);
-async function subscribed(admin:Admin,userId:string){return hasBankPlan(admin,userId,'community')}
+// 유료회원 모델(2026-10-28): SINGLES_REQUEST_BILLING_ENABLED=true이면 가입비를 낸 유료회원만 회원 기능을 쓴다.
+const paidModel=()=>requestBilling();
+async function isPaid(admin:Admin,userId:string){const {data,error}=await admin.rpc('singles_is_paid_member',{p_user:userId});if(error)throw error;return data===true}
+async function subscribed(admin:Admin,userId:string){return paidModel()?isPaid(admin,userId):hasBankPlan(admin,userId,'community')}
+const feeFrom=(e:any)=>Number(rpcMsg(e).match(/insufficient_credit:(\d+)/)?.[1]||0);
+// 연락처 가림: 연락처 교환이 수락되지 않은 사이에서는 전화번호·이메일·메신저 아이디·링크를 서버가 가린다.
+const CONTACT_PATTERNS=[
+ /(?:\+?82[\s.-]?)?0?1[016789][\s.-]*\d{3,4}[\s.-]*\d{4}/g,
+ /\b0\d{1,2}[\s.-]*\d{3,4}[\s.-]*\d{4}\b/g,
+ /[A-Za-z0-9._%+-]+\s*(?:@|\(at\)|\[at\]|골뱅이)\s*[A-Za-z0-9.-]+\s*(?:\.|\(dot\)|점)\s*[A-Za-z]{2,}/gi,
+ /(?:https?:\/\/|www\.)\S+/gi,
+ /(?:카톡|카카오톡?|kakao(?:talk)?|오픈채팅|open\.kakao|라인|\bline\b|텔레그램|telegram|인스타(?:그램)?|instagram|\binsta\b|페북|facebook|위챗|wechat)\s*(?:id|아이디|ID)?\s*[:：]?\s*@?[A-Za-z0-9._-]{3,}/gi,
+ /(?:^|\s)@[A-Za-z0-9._]{3,}/g,
+ /\d(?:[\s.\-·]*\d){8,}/g
+];
+export function maskContacts(text:string){
+ let out=text,masked=false;
+ for(const re of CONTACT_PATTERNS)out=out.replace(re,m=>{masked=true;const lead=m.match(/^\s/)?.[0]||'';return lead+'[연락처 가림]'});
+ return {text:out,masked};
+}
+async function contactUnlocked(admin:Admin,a:string,b:string){
+ const [lo,hi]=a<b?[a,b]:[b,a];
+ return Boolean(await one(admin.from('singles_contact_unlocks').select('request_id').eq('user_low',lo).eq('user_high',hi)));
+}
 async function blocked(admin:Admin,a:string,b:string){
  const items=await many(admin.from('singles_blocks').select('blocker_id,blocked_id')
   .or('and(blocker_id.eq.'+a+',blocked_id.eq.'+b+'),and(blocker_id.eq.'+b+',blocked_id.eq.'+a+')').limit(1));
@@ -146,6 +169,28 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   }
   return reply(req,{ok:true,id:reportReview,status:data});
  }
+ if(p==='/pricing'&&method==='GET'){
+  const rules=await many(admin.from('singles_price_rules').select('kind,display_name,standard_krw,floor_krw,max_discount_pct'));
+  const passes=await many(admin.from('singles_pass_plans').select('code,display_name,days,price_krw').eq('active',true).order('days'));
+  const paid=paidModel()?await isPaid(admin,userId):false;
+  const quotes:Record<string,number>={};
+  if(paid)for(const k of ['message','contact']){const {data,error}=await admin.rpc('singles_price_quote',{p_user:userId,p_kind:k});if(error)throw error;quotes[k]=data}
+  const grant=await one(admin.from('singles_pass_grants').select('expires_at').eq('user_id',userId));
+  return reply(req,{paid_model:paidModel(),paid_member:paid,join_fee_krw:500000,rules,passes,quotes,
+   pass_expires_at:grant?.expires_at&&Date.parse(grant.expires_at)>Date.now()?grant.expires_at:null});
+ }
+ const passCode=match(p,/^\/passes\/(pass_(?:1|10|20|30)d)$/);
+ if(passCode&&method==='POST'){
+  if(!paidModel())return reply(req,{error:'paid_model_not_launched'},503);
+  const {data,error}=await admin.rpc('singles_pass_purchase',{p_user:userId,p_code:passCode});
+  if(error){
+   if(rpcMsg(error).includes('insufficient_credit'))return reply(req,{error:'credit_required',fee_krw:feeFrom(error)},402);
+   if(rpcMsg(error).includes('paid_membership_required'))return reply(req,{error:'paid_membership_required'},402);
+   if(rpcMsg(error).includes('pass_not_available'))return reply(req,{error:'pass_not_available'},404);
+   throw error;
+  }
+  return reply(req,{ok:true,pass_expires_at:data});
+ }
  if(p==='/profile'&&method==='GET'){
   const record=await one(admin.from('singles_profiles').select('display_name,broad_region,intro,public_link,details,visibility').eq('user_id',userId));
   const vis=Object.fromEntries(VISIBILITY_KEYS.map(k=>[k,isVisible(record?.visibility,k)]));
@@ -154,6 +199,7 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
  }
  if(p==='/profile'&&method==='PUT'){
   if(!active(m))return reply(req,{error:'membership_required'},403);
+  if(paidModel()&&!await isPaid(admin,userId))return reply(req,{error:'paid_membership_required'},402);
   const v=await body(req,12288);
   if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>!['display_name','broad_region','intro','public_link','discoverable','details','visibility'].includes(k)))
    return reply(req,{error:'invalid_profile_fields'},400);
@@ -226,8 +272,11 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
  }
  if(!verified(m))return reply(req,{error:'adult_verification_required'},403);
  if(p==='/discover'&&method==='GET'){
-  const eligible=await many(admin.from('singles_memberships').select('user_id').eq('status','active').eq('discoverable',true)
-   .eq('base_consent',true).eq('religion_consent',true).not('adult_verified_at','is',null).neq('user_id',userId).limit(30));
+  if(paidModel()&&!await isPaid(admin,userId))return reply(req,{error:'paid_membership_required'},402);
+  let eligibleQuery=admin.from('singles_memberships').select('user_id').eq('status','active').eq('discoverable',true)
+   .eq('base_consent',true).eq('religion_consent',true).not('adult_verified_at','is',null).neq('user_id',userId);
+  if(paidModel())eligibleQuery=eligibleQuery.not('paid_member_since','is',null);
+  const eligible=await many(eligibleQuery.limit(30));
   if(!eligible.length)return reply(req,{profiles:[]});
   const ownBlocks=await many(admin.from('singles_blocks').select('blocker_id,blocked_id')
     .or('blocker_id.eq.'+userId+',blocked_id.eq.'+userId));
@@ -249,21 +298,48 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   if(await blocked(admin,userId,interestUser))return reply(req,{error:'connection_unavailable'},403);
   const recipient=await membership(admin,interestUser);
   if(!verified(recipient)||recipient.discoverable!==true)return reply(req,{error:'connection_unavailable'},404);
-  const existing=await one(admin.from('singles_interests').select('id,status').eq('from_user_id',userId).eq('to_user_id',interestUser));
-  if(existing)return reply(req,{ok:true,status:existing.status,interest_id:existing.id});
-  if(requestBilling()&&!await subscribed(admin,userId))return reply(req,{error:'monthly_pass_required'},402);
-  {const retry=await rateLimited(admin,userId,'interest');if(retry)return tooMany(req,reply,'interest',retry);}
-  if(requestBilling()){
-   const {data:iid,error}=await admin.rpc('singles_request_create',{p_requester:userId,p_responder:interestUser});
+  if(paidModel()){
+   // 요청 종류: message(메시지 교환) | contact(연락처 교환). 요청자 요금은 보류되고 상대 수락 시 확정된다.
+   let kind='message';
+   if(Number(req.headers.get('content-length')||0)>0){const v=await body(req);if(v&&typeof v==='object'&&'kind' in v)kind=v.kind}
+   if(!['message','contact'].includes(kind))return reply(req,{error:'invalid_request_kind'},400);
+   if(!await isPaid(admin,userId))return reply(req,{error:'paid_membership_required'},402);
+   {const retry=await rateLimited(admin,userId,'interest');if(retry)return tooMany(req,reply,'interest',retry);}
+   const {data,error}=await admin.rpc('singles_paid_request_create',{p_requester:userId,p_responder:interestUser,p_kind:kind});
    if(error){
-    if(rpcMsg(error).includes('insufficient_request_credit'))return reply(req,{error:'request_credit_required',unit_krw:10000},402);
-    if(rpcMsg(error).includes('request_exists'))return reply(req,{error:'request_exists'},409);
+    const msg=rpcMsg(error);
+    if(msg.includes('insufficient_credit'))return reply(req,{error:'credit_required',fee_krw:feeFrom(error)},402);
+    if(msg.includes('paid_membership_required'))return reply(req,{error:'paid_membership_required'},402);
+    if(msg.includes('responder_unavailable'))return reply(req,{error:'connection_unavailable'},404);
+    for(const code of ['request_exists','already_connected','contact_already_shared'])if(msg.includes(code))return reply(req,{error:code},409);
     throw error;
    }
-   return reply(req,{ok:true,status:'pending',interest_id:iid,billing:{reserved_units:1,charged_on:'acceptance'}});
+   return reply(req,{ok:true,status:'pending',request_id:data.request_id,kind,billing:{reserved_krw:data.fee_krw,charged_on:'acceptance'}});
   }
+  const existing=await one(admin.from('singles_interests').select('id,status').eq('from_user_id',userId).eq('to_user_id',interestUser));
+  if(existing)return reply(req,{ok:true,status:existing.status,interest_id:existing.id});
+  {const retry=await rateLimited(admin,userId,'interest');if(retry)return tooMany(req,reply,'interest',retry);}
   const {data,error}=await admin.from('singles_interests').insert({from_user_id:userId,to_user_id:interestUser,status:'pending'}).select('id').single();
   if(error)throw error;return reply(req,{ok:true,status:'pending',interest_id:data.id});
+ }
+ if(p==='/requests'&&method==='GET'&&paidModel()){
+  const reqs=await many(admin.from('singles_paid_requests').select('id,requester_id,responder_id,kind,status,requester_fee_krw,responder_fee_krw,created_at')
+   .or('requester_id.eq.'+userId+',responder_id.eq.'+userId).order('created_at',{ascending:false}).limit(50));
+  const conns=await many(admin.from('singles_interests').select('id,from_user_id,to_user_id,status')
+   .or('from_user_id.eq.'+userId+',to_user_id.eq.'+userId).eq('status','accepted').limit(50));
+  const others=[...new Set([...reqs.map((r:any)=>r.requester_id===userId?r.responder_id:r.requester_id),...conns.map((c:any)=>c.from_user_id===userId?c.to_user_id:c.from_user_id)])];
+  const names=others.length?await many(admin.from('singles_profiles').select('user_id,display_name').in('user_id',others)):[];
+  const byId=new Map(names.map((x:any)=>[x.user_id,x.display_name]));
+  const quotes:Record<string,number>={};
+  for(const k of ['message','contact']){const {data,error}=await admin.rpc('singles_price_quote',{p_user:userId,p_kind:k});if(error)throw error;quotes[k]=data}
+  const unlocks=await many(admin.from('singles_contact_unlocks').select('user_low,user_high').or('user_low.eq.'+userId+',user_high.eq.'+userId));
+  const shared=new Set(unlocks.map((u:any)=>u.user_low===userId?u.user_high:u.user_low));
+  return reply(req,{paid_model:true,
+   requests:reqs.map((r:any)=>{const incoming=r.responder_id===userId,other=incoming?r.requester_id:r.responder_id;
+    return {id:r.id,kind:r.kind,status:r.status,incoming,display_name:byId.get(other)||'동행 회원',
+     my_fee_krw:incoming?(r.status==='accepted'?r.responder_fee_krw:quotes[r.kind]):r.requester_fee_krw}}),
+   connections:conns.map((c:any)=>{const other=c.from_user_id===userId?c.to_user_id:c.from_user_id;
+    return {id:c.id,display_name:byId.get(other)||'동행 회원',contact_shared:shared.has(other)}})});
  }
  if(p==='/requests'&&method==='GET'){
   const interests=await many(admin.from('singles_interests').select('id,from_user_id,to_user_id,status')
@@ -281,19 +357,24 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
  if(decisionId&&method==='POST'){
   const v=await body(req),decision=v?.decision;
   if(!['accepted','declined'].includes(decision))return reply(req,{error:'invalid_decision'},400);
+  if(paidModel()){
+   const q=await one(admin.from('singles_paid_requests').select('requester_id,status').eq('id',decisionId).eq('responder_id',userId));
+   if(!q||q.status!=='pending')return reply(req,{error:'connection_not_pending'},409);
+   if(await blocked(admin,userId,q.requester_id))return reply(req,{error:'blocked'},403);
+   const {data,error}=await admin.rpc('singles_paid_request_decide',{p_responder:userId,p_request:decisionId,p_decision:decision});
+   if(error){
+    const msg=rpcMsg(error);
+    if(msg.includes('responder_insufficient_credit'))return reply(req,{error:'credit_required',fee_krw:feeFrom(error)},402);
+    if(msg.includes('paid_membership_required'))return reply(req,{error:'paid_membership_required'},402);
+    if(msg.includes('request_not_pending'))return reply(req,{error:'request_state_changed'},409);
+    throw error;
+   }
+   return reply(req,{ok:true,status:data.status,kind:data.kind,interest_id:data.interest_id,billing:{charged_krw:data.fee_krw}});
+  }
   const interest=await one(admin.from('singles_interests').select('from_user_id,to_user_id,status')
    .eq('id',decisionId).eq('to_user_id',userId));
   if(!interest||interest.status!=='pending')return reply(req,{error:'connection_not_pending'},409);
   if(await blocked(admin,userId,interest.from_user_id))return reply(req,{error:'blocked'},403);
-  if(requestBilling()){
-   const {data:result,error:billError}=await admin.rpc('singles_request_decide',{p_responder:userId,p_interest:decisionId,p_decision:decision});
-   if(!billError)return reply(req,{ok:true,status:result,billing:decision==='accepted'?{charged_units:1}:{charged_units:0}});
-   const m=rpcMsg(billError);
-   if(m.includes('responder_insufficient_credit'))return reply(req,{error:'response_credit_required',unit_krw:10000},402);
-   if(m.includes('request_not_pending')||m.includes('request_state_changed'))return reply(req,{error:'request_state_changed'},409);
-   if(!m.includes('request_not_found'))throw billError;
-   // 과금 도입 전에 만들어진 요청은 기존(무과금) 방식으로 처리
-  }
   const {data,error}=await admin.from('singles_interests').update({status:decision,updated_at:new Date().toISOString()})
    .eq('id',decisionId).eq('status','pending').eq('to_user_id',userId).select('id').maybeSingle();
   if(error)throw error;if(!data)return reply(req,{error:'request_state_changed'},409);
@@ -319,8 +400,11 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   const v=await body(req);
   if(typeof v?.text!=='string'||!v.text.trim()||v.text.length>1000)return reply(req,{error:'invalid_message'},400);
   {const retry=await rateLimited(admin,userId,'message');if(retry)return tooMany(req,reply,'message',retry);}
-  const {error}=await admin.from('singles_messages').insert({interest_id:interestId,sender_id:userId,body:v.text.trim()});
-  if(error)throw error;return reply(req,{ok:true});
+  // 연락처 교환이 수락되지 않은 사이에서는 메시지 속 연락처를 가려서 저장한다(유료회원 모델).
+  let stored=v.text.trim(),masked=false;
+  if(paidModel()&&!await contactUnlocked(admin,userId,other)){const r=maskContacts(stored);stored=r.text;masked=r.masked}
+  const {error}=await admin.from('singles_messages').insert({interest_id:interestId,sender_id:userId,body:stored});
+  if(error)throw error;return reply(req,{ok:true,masked});
  }
  return reply(req,{error:'not_found'},404);
 }

@@ -78,6 +78,8 @@ export const SEARCH_VERIFICATION_FILES = Object.freeze({
   '/naverf72bebc155107dcad735d8178146679f.html': 'naver-site-verification: naverf72bebc155107dcad735d8178146679f.html',
   // 2026-10-24: file Naver issues for https://ekodi.kr (the f72… file belongs to another registered site).
   '/naver55dffd2edf849422807852a996ee52e6.html': 'naver-site-verification: naver55dffd2edf849422807852a996ee52e6.html',
+  // 2026-10-28: file Naver issues for https://ekodichurch.kr (served at that domain's root by legacy-redirect.js).
+  '/naver85321326d5553a0caa3a944158fc2969.html': 'naver-site-verification: naver85321326d5553a0caa3a944158fc2969.html',
 });
 
 export function searchVerificationFileResponse(pathname, { head = false } = {}, registry = SEARCH_VERIFICATION_FILES) {

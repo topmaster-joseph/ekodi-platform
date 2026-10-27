@@ -1,6 +1,6 @@
 # 에코디 동행 — 개통 관문 체크리스트 (현재 상태)
 
-기준일: 2026-10-26 (운영 방향·요청 과금 2026-10-27 갱신) · 근거: 저장소 main, 운영 Supabase(ekodi-platform-prod) 읽기 전용 조회
+기준일: 2026-10-26 (운영 방향·요청 과금 2026-10-27, 유료회원 모델 2026-10-28 갱신) · 근거: 저장소 main, 운영 Supabase(ekodi-platform-prod) 읽기 전용 조회
 판정: **2026-10-28 소유자 결정으로 회원 가입·프로필 개통.** 탐색·호감·메시지는 성인 본인확인(A3) 전까지 서버가 차단하고, 유료 기능은 계속 OFF. 아래 ⛔ 항목은 개통 후 보완 과제로 남는다.
 이전 판정: 미개통 유지. 아래 ⛔ 항목이 모두 ✅가 되기 전에는 `config/singles-feature-flags.json`의 회원 대상 스위치를 켜지 않는다.
 
@@ -67,6 +67,28 @@
 | F5 | 14일 미응답 자동 반환 실행 주기(`singles_request_release_for_user(null,'expired')`) 연결 | ⛔ 스케줄러 연결 필요 |
 | F6 | 적립금 환불 처리 절차(운영자 화면·원장 `refund` 기록) | ⛔ 미구현 |
 | F7 | PG(토스페이먼츠 등) 연동 — 현재는 계좌이체 + 운영자 확인만 | 👤 나중 |
+
+## G. 유료회원 모델(2026-10-28 결정) — 구축 → 실증 → 개통
+
+결정: 무료회원은 안내만, 유료회원 가입비 500,000원 = 적립금 500,000원. 요청 요금은 "기본 요금 + 입력·공개 할인"(메시지 교환 10,000원, 연락처 교환 100,000원·최대 50% 할인, 범위 1만~10만원). 요청자는 보류 후 수락 시 확정, 수락자는 수락 시 자기 요금 차감. 기간제 메시지 이용권(1·10·20·30일, 임시 금액). 연락처 교환 수락 전 메시지 속 연락처 자동 가림. 가입 시도(시간·Google 계정) 기록. 운영자 joseph@ekodi.kr. **모두 구축 후 실증하고 개통.**
+
+| # | 항목 | 상태 |
+|---|---|---|
+| G1 | DB(`20261028030000_singles_paid_membership`): 적립금(원)·요금 규칙·기간권·유료 요청·연락처 공개·가입 시도 기록·시범 명단·성인 확인 기록 | ✅ 로컬 시나리오 9종 통과, 운영 반영 후 롤백 검증 |
+| G2 | 서버: 무료/유료 구분, 요청·수락 차감, 연락처 가림, 가입 시도 기록, 시범 명단 제한(`SINGLES_PUBLIC_LAUNCH_ENABLED`가 true가 아니면 명단·운영자만) | ✅ 배포(스위치 OFF) |
+| G3 | 화면: 무료회원 안내·유료 전용 메뉴 숨김, 가입비 결제, 요청 종류·요금, 적립금·기간권, 운영자 회원·성인 확인 화면 | ✅ 배포 |
+| G4 | 운영자 지정: joseph@ekodi.kr(입금 확인·성인 확인·설정) | ✅ |
+| G5 | 실증: 시범 명단 계정으로 가입 → 성인 확인 → 가입비 입금·확인 → 요청·수락·거절·연락처 가림·기간권·탈퇴 반환 확인 | ⛔ 실증 대기 |
+| G6 | 14일 미응답 자동 반환 실행 주기 연결(`singles_paid_request_release(null,'expired')`) | ⛔ |
+| G7 | 적립금 환불 처리 화면 | ⛔ |
+| G8 | 법률 검토(선불금·결혼중개업·입력·공개 할인·수락자 과금), 무안군 회신 | ⛔ |
+| G9 | 공개 개통: `SINGLES_PUBLIC_LAUNCH_ENABLED=true` | 👤 실증·검토 후 소유자 결정 |
+
+**실증 시 켤 스위치(시범 명단 제한이 유지되는 상태):**
+- Edge(Supabase 비밀값): `SINGLES_ONBOARDING_ENABLED`, `SINGLES_SOCIAL_ENABLED`, `SINGLES_BANK_TRANSFER_ENABLED`, `SINGLES_BANK_VERIFICATION_ENABLED`, `SINGLES_REQUEST_BILLING_ENABLED` = `true` (`SINGLES_PUBLIC_LAUNCH_ENABLED`는 넣지 않음)
+- Worker: `SINGLES_BANK_TRANSFER_ENABLED`, `SINGLES_BANK_VERIFICATION_ENABLED` = `"true"` (별도 변경)
+- DB: `singles_bank_settings.active`, 가입비·충전 플랜 `active` = true
+- 운영자는 자기 계정의 성인 확인·입금 확인을 할 수 없으므로, 실증에는 운영자 외 회원 계정 2개 이상이 필요하다.
 
 ## 개통까지 권장 순서
 1. 👤 A1·A2·A5 법률 판단 → A6 문안 확정

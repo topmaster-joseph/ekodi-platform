@@ -4,15 +4,20 @@
   "required_functions": [
     "public.singles_bank_confirm_order(text,uuid,text,text,text)",
     "public.singles_brokerage_update_readiness(text,text,text,text,uuid)",
+    "public.singles_is_paid_member(uuid)",
+    "public.singles_operator_verify_adult(uuid,uuid,text,text)",
+    "public.singles_paid_request_create(uuid,uuid,text)",
+    "public.singles_paid_request_decide(uuid,uuid,text)",
+    "public.singles_pass_purchase(uuid,text)",
+    "public.singles_price_quote(uuid,text)",
     "public.singles_rate_take(uuid,text,integer,integer)",
     "public.singles_report_review(uuid,uuid,text,text)",
-    "public.singles_request_create(uuid,uuid)",
-    "public.singles_request_decide(uuid,uuid,text)",
     "public.singles_withdraw_member(uuid,text)"
   ],
   "required_columns": [
     "public.singles_consent_receipts.marriage_opt_in",
     "public.singles_consent_receipts.religion_consent",
+    "public.singles_memberships.paid_member_since",
     "public.singles_profiles.details",
     "public.singles_profiles.visibility"
   ],

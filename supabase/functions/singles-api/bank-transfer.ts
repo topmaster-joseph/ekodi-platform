@@ -6,7 +6,8 @@ type Reply=(req:Request,body:unknown,status?:number)=>Response;
 const bankOn=()=>Deno.env.get('SINGLES_BANK_TRANSFER_ENABLED')==='true';
 const verifyOn=()=>Deno.env.get('SINGLES_BANK_VERIFICATION_ENABLED')==='true';
 const REF=/^EDH-[A-F0-9]{32}$/;
-const CODES=['community','community_90','community_365','consulting','credit_initial','credit_topup'];
+// 유료회원 모델(2026-10-28): 가입비(credit_initial, 적립금 50만원 생성)와 추가 충전(credit_topup)만 판매. 이전 월 이용권은 판매 종료.
+const CODES=['consulting','credit_initial','credit_topup'];
 async function one(q:any){const {data,error}=await q.maybeSingle();if(error)throw error;return data}
 async function many(q:any){const {data,error}=await q;if(error)throw error;return data||[]}
 async function payload(req:Request){
@@ -14,6 +15,13 @@ async function payload(req:Request){
  const raw=await req.text();
  if(raw.length>2048)throw new Error('payload_too_large');
  try{return JSON.parse(raw)}catch{throw new Error('invalid_json')}
+}
+// 운영자 화면 표시용: 가입 시도 기록의 최근 Google 계정.
+async function emailsFor(admin:Admin,ids:string[]){
+ const map=new Map<string,string>();if(!ids.length)return map;
+ const rows=await many(admin.from('singles_signup_attempts').select('user_id,email,created_at').in('user_id',ids).order('created_at',{ascending:false}).limit(500));
+ for(const r of rows)if(r.email&&!map.has(r.user_id))map.set(r.user_id,r.email);
+ return map;
 }
 async function operator(admin:Admin,userId:string){
  const row=await one(admin.from('singles_bank_operators')
@@ -45,7 +53,7 @@ function publicOrder(row:any){
 const columns='reference,plan_code,amount_krw,status,bank_name,account_number,account_holder,created_at,reported_paid_at,verified_at,member_acknowledged_at,rejection_reason';
 const refFrom=(path:string)=>path.match(/^\/bank\/orders\/(EDH-[A-F0-9]{32})\/(report|acknowledge)$/)?.slice(1)||null;
 const decisionRef=(path:string)=>path.match(/^\/bank\/admin\/orders\/(EDH-[A-F0-9]{32})\/review$/)?.[1]||null;
-export async function handleSinglesBank(req:Request,path:string,admin:Admin,userId:string,reply:Reply):Promise<Response>{
+export async function handleSinglesBank(req:Request,path:string,admin:Admin,userId:string,reply:Reply,email:string|null=null):Promise<Response>{
  if(!path.startsWith('/bank/'))return reply(req,{error:'not_found'},404);
  const method=req.method;
  if(path==='/bank/plans'&&method==='GET'){
@@ -55,10 +63,12 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   return reply(req,{available:settings?.active===true,plans:settings?.active===true?plans:[],payment_method:'bank_transfer'});
  }
  if(path==='/bank/wallet'&&method==='GET'){
-  const w=await one(admin.from('singles_message_credit_wallets').select('available,reserved').eq('user_id',userId).eq('scope','request'));
-  const ledger=await many(admin.from('singles_request_ledger').select('delta_units,reason,ref,created_at').eq('user_id',userId).order('created_at',{ascending:false}).limit(20));
-  return reply(req,{request_billing_enabled:Deno.env.get('SINGLES_REQUEST_BILLING_ENABLED')==='true',unit_krw:10000,available_units:w?.available||0,reserved_units:w?.reserved||0,
-   available_krw:(w?.available||0)*10000,reserved_krw:(w?.reserved||0)*10000,ledger});
+  // 원 단위 적립금(유료회원 가입비 50만원 = 적립금 50만원).
+  const a=await one(admin.from('singles_credit_accounts').select('balance_krw,reserved_krw,joined_at').eq('user_id',userId));
+  const ledger=await many(admin.from('singles_credit_ledger').select('delta_krw,reserved_delta_krw,reason,ref,created_at').eq('user_id',userId).order('created_at',{ascending:false}).limit(30));
+  const member=await one(admin.from('singles_memberships').select('paid_member_since,status').eq('user_id',userId));
+  return reply(req,{paid_model:Deno.env.get('SINGLES_REQUEST_BILLING_ENABLED')==='true',paid_member:Boolean(member?.paid_member_since)&&member?.status==='active',
+   balance_krw:a?.balance_krw||0,reserved_krw:a?.reserved_krw||0,joined_at:a?.joined_at||null,ledger});
  }
  if(path==='/bank/orders'&&method==='GET'){
   const list=await many(admin.from('singles_bank_orders').select(columns).eq('user_id',userId).order('created_at',{ascending:false}).limit(30));
@@ -79,11 +89,12 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>k!=='plan_code')||!CODES.includes(v.plan_code))
     return reply(req,{error:'invalid_plan'},400);
   if(v.plan_code==='credit_initial'||v.plan_code==='credit_topup'){
-   // 최초 50만원 충전은 1회(진행 중 포함), 추가 충전은 최초 충전 확인 후에만.
+   // 가입비는 1회(진행 중 포함), 추가 충전은 유료회원만.
    const initial=await many(admin.from('singles_bank_orders').select('status').eq('user_id',userId).eq('plan_code','credit_initial')
      .in('status',['awaiting_transfer','reported_paid','verified']));
-   if(v.plan_code==='credit_initial'&&initial.length)return reply(req,{error:'initial_credit_already_ordered'},409);
-   if(v.plan_code==='credit_topup'&&!initial.some((o:any)=>o.status==='verified'))return reply(req,{error:'initial_credit_required',initial_krw:500000},409);
+   const paid=Boolean((await one(admin.from('singles_memberships').select('paid_member_since').eq('user_id',userId)))?.paid_member_since);
+   if(v.plan_code==='credit_initial'&&(initial.length||paid))return reply(req,{error:paid?'already_paid_member':'join_order_already_open'},409);
+   if(v.plan_code==='credit_topup'&&!paid)return reply(req,{error:'paid_membership_required',join_fee_krw:500000},409);
   }
   const plan=await one(admin.from('singles_bank_plans')
     .select('code,amount_krw,duration_days,active').eq('code',v.plan_code));
@@ -101,6 +112,10 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   const {error:auditError}=await admin.from('singles_bank_audit')
     .insert({reference,actor_id:userId,action:'opened'});
   if(auditError)throw auditError;
+  if(plan.code==='credit_initial'){
+   const {error:logError}=await admin.from('singles_signup_attempts').insert({user_id:userId,email,action:'join_order',detail:reference});
+   if(logError)throw logError;
+  }
   return reply(req,{order:publicOrder({...row,created_at:new Date().toISOString()})},201);
  }
  const rowParts=refFrom(path);
@@ -221,7 +236,36 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   const list=await many(admin.from('singles_bank_orders')
     .select('reference,user_id,plan_code,amount_krw,status,created_at,reported_paid_at,verified_at,member_acknowledged_at')
     .order('created_at',{ascending:false}).limit(50));
-  return reply(req,{orders:list});
+  const emails=await emailsFor(admin,[...new Set<string>(list.map((o:any)=>o.user_id))]);
+  return reply(req,{orders:list.map((o:any)=>({...o,email:emails.get(o.user_id)||null}))});
+ }
+ if(path==='/bank/admin/members'&&method==='GET'){
+  const role=await operator(admin,userId);
+  if(!role||role.can_verify!==true)return reply(req,{error:'verification_capability_required'},403);
+  const members=await many(admin.from('singles_memberships').select('user_id,status,adult_verified_at,paid_member_since,consented_at')
+    .order('consented_at',{ascending:false}).limit(100));
+  const attempts=await many(admin.from('singles_signup_attempts').select('user_id,email,action,detail,created_at')
+    .order('created_at',{ascending:false}).limit(100));
+  const emails=await emailsFor(admin,[...new Set<string>(members.map((m:any)=>m.user_id))]);
+  return reply(req,{members:members.map((m:any)=>({...m,email:emails.get(m.user_id)||null})),attempts});
+ }
+ const verifyAdultId=path.match(/^\/bank\/admin\/members\/([0-9a-f-]{36})\/adult-verify$/i)?.[1];
+ if(verifyAdultId&&method==='POST'){
+  const role=await operator(admin,userId);
+  if(!role||role.can_verify!==true)return reply(req,{error:'verification_capability_required'},403);
+  const v=await payload(req);
+  if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>!['method','note'].includes(k))||
+    !['id_document_in_person','id_document_video','certified_provider'].includes(v.method)||
+    (v.note!==undefined&&(typeof v.note!=='string'||v.note.length>200)))
+   return reply(req,{error:'invalid_adult_verification'},400);
+  const {data,error}=await admin.rpc('singles_operator_verify_adult',{p_operator:userId,p_user:verifyAdultId,p_method:v.method,p_note:v.note||''});
+  if(error){
+   const msg=String(error.message||'');
+   if(msg.includes('operator_self_verification_forbidden'))return reply(req,{error:'operator_self_verification_forbidden'},403);
+   if(msg.includes('member_not_found'))return reply(req,{error:'member_not_found'},404);
+   throw error;
+  }
+  return reply(req,{ok:true,adult_verified_at:data});
  }
  const adminRef=decisionRef(path);
  if(adminRef&&method==='POST'){
@@ -242,6 +286,8 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
     p_trace:trace||null,p_reason:reason||null});
   if(error&&String(error.message||'').includes('operator_self_confirmation_forbidden'))
    return reply(req,{error:'operator_self_confirmation_forbidden'},403);
+  if(error&&String(error.message||'').includes('member_no_longer_eligible'))
+   return reply(req,{error:'adult_verification_required_before_confirm'},409);
   if(error)return reply(req,{error:'bank_verification_failed_or_duplicate'},409);
   return reply(req,{reference:adminRef,status:data});
  }
