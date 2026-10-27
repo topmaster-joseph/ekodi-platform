@@ -278,6 +278,18 @@ try {
   await admin.locator('.cgma-edoc-row').nth(6).waitFor();
   const serialsLinks = await admin.locator('.cgma-edoc-serial').allTextContents();
   check('링크 등록 후 연번 7…1', JSON.stringify(serialsLinks) === JSON.stringify(['7', '6', '5', '4', '3', '2', '1']), { serialsLinks });
+  // 8b. 화면 구조: the shell's top summary boxes are gone; counts sit in the list's status bar (filter chips).
+  await admin.locator('.cgma-edoc-statusbar').waitFor();
+  const top = await admin.evaluate(() => ({ cardsHeight: document.getElementById('summaryCards').getBoundingClientRect().height,
+    chips: [...document.querySelectorAll('.cgma-edoc-chip')].map(c => c.textContent) }));
+  check('상단 요약 상자 제거 · 상태별 개수는 목록 위 상태 막대로', top.cardsHeight === 0 && top.chips[0] === '전체7' && top.chips.length === 6, top);
+  await admin.getByRole('button', { name: /^보관/ }).click();
+  await admin.waitForFunction(() => document.querySelector('.cgma-edoc-chip[aria-pressed="true"]')?.textContent.startsWith('보관'));
+  const archivedOnly = await admin.locator('.cgma-edoc-row .cgma-edoc-badge').allTextContents();
+  check('상태 막대로 보관 문서만 보기', archivedOnly.length > 0 && archivedOnly.every(t => t === '보관'), { archivedOnly });
+  await shot(admin, '12b-admin-list-statusbar');
+  await admin.getByRole('button', { name: /^전체/ }).click();
+  await admin.waitForFunction(() => document.querySelector('.cgma-edoc-chip[aria-pressed="true"]')?.textContent.startsWith('전체'));
   // 9. 화면 배치: a draft (names to fill in later) lays out facts left / work right on desktop, one column on a phone.
   await admin.getByRole('button', { name: '+ 새 전자문서' }).click();
   await admin.locator('.cgma-edoc-form input[type="text"]').first().fill('청계면상인회 홈페이지 제안서 및 견적서 (배치 실증)');
@@ -300,11 +312,11 @@ try {
   await phone.locator('.cgma-edoc-detail-grid').waitFor();
   const phoneLayout = await phone.evaluate(() => {
     const [left, right] = [...document.querySelector('.cgma-edoc-detail-grid').children].map(n => n.getBoundingClientRect());
-    const chain = [...document.querySelectorAll('.cgma-edoc-chain li')].map(li => li.getBoundingClientRect());
+    const chain = [...document.querySelectorAll('.cgma-edoc-signers-edit li')].map(li => li.getBoundingClientRect());
     return { stacked: right.top >= left.bottom - 1, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       chainVisible: chain.length === 3 && chain.every(r => r.right <= innerWidth + 1 && r.left >= -1) };
   });
-  check('배치(휴대폰): 한 열로 쌓이고 서명 순서 3개 모두 보임 · 가로 넘침 없음', phoneLayout.stacked && phoneLayout.overflow <= 1 && phoneLayout.chainVisible, phoneLayout);
+  check('배치(휴대폰): 한 열로 쌓이고 서명자 3명 모두 화면 안 · 가로 넘침 없음', phoneLayout.stacked && phoneLayout.overflow <= 1 && phoneLayout.chainVisible, phoneLayout);
   await shot(phone, '14-admin-draft-layout-phone');
   void draftUrl;
   // The private link's import answers 422 by design (then link-only is recorded); every other console problem fails.
