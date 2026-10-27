@@ -455,7 +455,7 @@ function fakeWeb(routes) {
 test('link addresses: public https only — no internal, IP, credential, port or own-platform hosts', () => {
   assert.equal(normalizeSourceUrl(GDOC + '#heading=h.1'), GDOC);
   for (const bad of ['http://example.com/a.pdf', 'https://127.0.0.1/a.pdf', 'https://[::1]/a', 'https://localhost/a', 'https://user:pw@example.com/a',
-    'https://example.com:8443/a', 'https://ekodi.kr/api/cgma/edocs', 'https://api.ekodi.kr/x', 'https://x.workers.dev/', 'https://intranet/x',
+    'https://example.com:8443/a', 'https://ekodi.kr/api/cgma/edocs', 'https://www.cgma.or.kr/x', 'https://x.workers.dev/', 'https://intranet/x',
     'https://printer.local/x', 'javascript:alert(1)', 'ftp://example.com/x', '', 'https://example.com/' + 'a'.repeat(2100)]) {
     assert.equal(normalizeSourceUrl(bad), '', bad);
   }
