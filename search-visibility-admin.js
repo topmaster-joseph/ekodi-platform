@@ -33,7 +33,7 @@
     .search-visibility .sv-channels article p{color:#5a6b81;font-size:13px;line-height:1.65}
     .search-visibility .sv-channels a{display:inline-block;margin-top:8px;font-size:13px}
     .search-visibility .sv-guide{padding:15px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;line-height:1.7}
-    @media(max-width:760px){.search-visibility .sv-table{min-width:680px}.search-visibility .sv-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:760px){.search-visibility .sv-table{min-width:760px}.search-visibility .sv-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
     </style>
     <header class="section-head"><div><p class="kicker">EKODI GROWTH OS · SEARCH DISCOVERY</p>
       <h2>통합 검색노출·홍보 관리</h2>
@@ -52,8 +52,8 @@
     </div>
     <div class="sv-status" data-sv-status role="status" aria-live="polite">관리자 인증 후 공개 사이트 목록을 불러옵니다.</div>
     <div class="sv-scroll"><table class="sv-table"><thead><tr>
-      <th>운영 사이트</th><th>주소</th><th>SEO 기본</th><th>AEO·GEO 준비</th><th>점검</th>
-    </tr></thead><tbody data-sv-rows><tr><td colspan="5">목록 조회 전</td></tr></tbody></table></div>
+      <th>운영 사이트</th><th>주소</th><th>SEO 기본</th><th>AEO·GEO 준비</th><th>검색 서비스 등록</th><th>점검</th>
+    </tr></thead><tbody data-sv-rows><tr><td colspan="6">목록 조회 전</td></tr></tbody></table></div>
     <h3>검색엔진 등록 · 인증 · 제출</h3>
     <p class="sv-intro">외부 업체의 소유권 승인 결과는 실제 공급자 API 연결로만 확정합니다. 현재 화면의 \"연동 확인 필요\"는 미등록을 뜻하지 않습니다.</p>
     <div class="sv-channels" data-sv-channels></div>
@@ -297,6 +297,14 @@
       const result=siteResult(site);
       const basic = document.createElement('td');basic.textContent=result ? result.basic : '미점검';
       const ai = document.createElement('td');ai.textContent=result ? result.ai : '미점검';
+      const providerCell=document.createElement('td');
+      const primaryIds=['naver','google','daum','bing'];
+      const manuallyConfirmed=primaryIds.filter(providerId=>state.ledger?.evidence?.some(x=>
+        x.site_url===site.url&&x.provider_id===providerId&&x.check_type==='registration'
+        &&x.state==='confirmed_manually')).length;
+      providerCell.textContent=state.ledger
+        ? manuallyConfirmed+'/4 주요 검색엔진 수동 확인 · 나머지는 미확인'
+        : '확인 원장 미연결';
       const action = document.createElement('td');
       const crossOrigin=new URL(site.url).origin!==location.origin;
       const button=document.createElement('button');button.type='button';button.className='secondary';
@@ -307,9 +315,9 @@
       review.textContent='서비스 검토';review.addEventListener('click',()=>{
         state.selectedSite=site.url;$('#sv-provider-site').value=site.url;renderProviderMatrix();$('#sv-provider-site').scrollIntoView({block:'nearest'});
       });
-      action.append(button,review);row.append(name,locationCell,basic,ai,action);target.append(row);
+      action.append(button,review);row.append(name,locationCell,basic,ai,providerCell,action);target.append(row);
     }
-    if(!sites.length){const row=document.createElement('tr');const cell=document.createElement('td');cell.colSpan=5;cell.textContent='검색 결과가 없습니다.';row.append(cell);target.append(row);}
+    if(!sites.length){const row=document.createElement('tr');const cell=document.createElement('td');cell.colSpan=6;cell.textContent='검색 결과가 없습니다.';row.append(cell);target.append(row);}
   }
   async function load() {
     if(!token())return status('최고관리자 로그인이 필요합니다.',true);
