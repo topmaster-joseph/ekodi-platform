@@ -152,6 +152,16 @@ a{color:inherit}.top{
   .brand-links{grid-template-columns:1fr}
   
 }
+.today-link{display:block;margin:0 0 12px;padding:12px 13px;border-radius:12px;background:#1f5b36;color:#fff;text-decoration:none;font-weight:900;font-size:15px}.today-link small{display:block;font-weight:600;font-size:11px;color:#cfe4d6;margin-top:2px}
+.mobile-tabs{display:none}
+@media (max-width:760px), (pointer:coarse) and (max-width:1024px){
+  .app{display:block}.portfolio-sidebar{display:none}
+  body.menu-open .portfolio-sidebar{display:block;position:fixed;inset:52px 0 64px 0;z-index:30;width:auto;height:auto;max-height:none;overflow:auto;background:#fff;border:0}
+  .workspace{padding:4px 4px 68px}.panel-frame{height:calc(100vh - 128px);min-height:420px}
+  .mobile-tabs{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:40;background:#fff;border-top:1px solid #dde3dd;padding:6px 0 calc(8px + env(safe-area-inset-bottom))}
+  .mobile-tabs button{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;font:inherit;font-size:11px;font-weight:700;color:#4a5a51;padding:4px 0;min-height:48px}
+  .mobile-tabs button[aria-current="page"],.mobile-tabs button[aria-expanded="true"]{color:#1f5b36;font-weight:900}
+}
 @media(max-width:760px){
   .top{height:52px;padding:0 9px}.brand small{display:none}.top-actions a{font-size:10px;padding:6px 8px}
   .app{display:block}.portfolio-sidebar{position:relative;top:auto;width:100%;height:auto;max-height:none;border-right:0;border-bottom:1px solid var(--line)}
@@ -235,6 +245,21 @@ function portfolioShellClient(){
   try{const saved=localStorage.getItem(key);if(valid(saved))initial=saved}catch{}
   apply(initial);
   select.addEventListener('change',()=>apply(select.value,{navigate:true}));
+  const tabs=document.querySelector('[data-cmpmyi-mobile-tabs]');
+  if(tabs&&frame){
+    const mark=go=>tabs.querySelectorAll('[data-mobile-go]').forEach(b=>{if(b.dataset.mobileGo==='menu')return;if(b.dataset.mobileGo===go)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
+    const menuBtn=tabs.querySelector('[data-mobile-go="menu"]');
+    const closeMenu=()=>{document.body.classList.remove('menu-open');if(menuBtn)menuBtn.setAttribute('aria-expanded','false')};
+    tabs.addEventListener('click',event=>{
+      const b=event.target.closest('[data-mobile-go]');if(!b)return;const go=b.dataset.mobileGo;
+      if(go==='menu'){const open=!document.body.classList.contains('menu-open');document.body.classList.toggle('menu-open',open);b.setAttribute('aria-expanded',String(open));return}
+      closeMenu();mark(go);
+      const slug=valid(select.value)?select.value:'jadam';
+      frame.src=go==='today'?'/cmpmyi/admin/panel/today':'/'+slug+'/admin/mobile?embed=cmpmyi'+(go==='orders'?'':'&tab='+go);
+    });
+    document.querySelector('.portfolio-sidebar')?.addEventListener('click',event=>{if(event.target.closest('a'))closeMenu()});
+    select.addEventListener('change',closeMenu);
+  }
   menu.addEventListener('click',()=>{try{localStorage.setItem(key,select.value)}catch{}});
 }
 
@@ -575,9 +600,9 @@ function portfolioPanelClient(){
   load();
   setInterval(()=>{if(document.visibilityState==='visible')load()},300000);
 }
-export function storePortfolioAdminPage(initialView='pos'){
-  const requested=String(initialView||'pos').toLowerCase();
-  const startView=COMMON_VIEWS[requested]?requested:'pos';
+export function storePortfolioAdminPage(initialView='today'){
+  const requested=String(initialView||'today').toLowerCase();
+  const startView=requested==='today'?'today':COMMON_VIEWS[requested]?requested:'today';
   const initialStore=STORES[0];
   const html=`<!doctype html><html lang="ko" data-ekodi-store-portfolio="cmpmyi" data-ekodi-authority-scope="platform-entry">
   <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><title>통합 매장 운영 · EKODI</title><style>${SHELL_STYLE}</style></head>
@@ -589,6 +614,7 @@ export function storePortfolioAdminPage(initialView='pos'){
     <div class="app">
       <aside class="portfolio-sidebar" aria-label="통합 매장 관리자 메뉴" data-cmpmyi-navigation="common-store-split">
         <div class="side-intro"><small>3 BRAND ADMIN</small><strong>통합 관리자</strong><span>공통 기능은 3개만 두고, 나머지는 선택한 매장의 전용 메뉴에서 관리합니다.</span></div>
+        <a class="today-link" href="/cmpmyi/admin/panel/today" target="cmpmyi-panel" data-cmpmyi-today-link>오늘의 3매장<small>주문·결제·홍보 한 화면</small></a>
         <div class="menu-title"><strong>공통관리</strong><small>3개 브랜드 공통</small></div>
         <nav class="common-nav">${COMMON_MENU.map(([view,label])=>`<a href="${commonHref(view)}" target="cmpmyi-panel">${label}</a>`).join('')}</nav>
         <div class="menu-title"><strong>매장 선택</strong><small>전용 메뉴</small></div>
@@ -597,9 +623,16 @@ export function storePortfolioAdminPage(initialView='pos'){
         <p class="portfolio-sidebar-note">POS 통합화면 · 연결관리 · 채널 자동게시는 공통관리에서 전환합니다. 그 밖의 운영·주문·메뉴·매출·고객·마케팅·정산·권한 메뉴는 선택한 매장 범위에서만 열립니다.</p>
       </aside>
       <main class="workspace">
-        <iframe class="panel-frame" name="cmpmyi-panel" title="통합 매장 관리자 작업영역" src="${commonHref(startView)}"></iframe>
+        <iframe class="panel-frame" name="cmpmyi-panel" title="통합 매장 관리자 작업영역" src="${startView==='today'?'/cmpmyi/admin/panel/today':commonHref(startView)}"></iframe>
       </main>
     </div>
+    <nav class="mobile-tabs" aria-label="휴대폰 하단 메뉴" data-cmpmyi-mobile-tabs>
+      <button type="button" data-mobile-go="today" aria-current="page"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg>할 일</button>
+      <button type="button" data-mobile-go="orders"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>주문</button>
+      <button type="button" data-mobile-go="pay"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/></svg>결제</button>
+      <button type="button" data-mobile-go="promo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 11l18-7-7 18-2-8z"/></svg>홍보</button>
+      <button type="button" data-mobile-go="menu" aria-expanded="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>매장·메뉴</button>
+    </nav>
     <script src="/cmpmyi/admin/shell.js" defer></script>
   </body></html>`;
   return new Response(html,{headers:{
