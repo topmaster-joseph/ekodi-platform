@@ -20,7 +20,7 @@ test('a malformed review policy cannot silently qualify',()=>{
  const {release}=checkRepository();
  assert.equal(productionReleaseAllowed({...release,status:'approved'}),false);
 });
-test('security audit rejects broadened document kind and unreviewed activation',()=>{
+test('security audit rejects broadened document kind and unreviewed activation',async()=>{
  const fs=await import('node:fs');
  const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
  const input={policy:JSON.parse(read('config/secure-documents-policy.json')),

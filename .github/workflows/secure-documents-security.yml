@@ -42,4 +42,8 @@ jobs:
       - name: Record independent-review boundary
         run: |
           echo 'Static verification only. Independent security/legal review and exact SHA human gate remain mandatory.'
-          node scripts/validate-secure-documents-security.mjs --release && exit 1 || test $? -eq 1
+          if node scripts/validate-secure-documents-security.mjs --release; then
+            echo 'Unexpected unreviewed production activation eligibility' >&2
+            exit 1
+          fi
+          echo 'Unapproved production activation remains blocked.'
