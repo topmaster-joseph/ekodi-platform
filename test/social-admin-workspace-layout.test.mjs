@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const [admin, styles] = await Promise.all([
   readFile(new URL('../social-admin.js', import.meta.url), 'utf8'),
-  readFile(new URL('../admin-compact.css', import.meta.url), 'utf8')
+  readFile(new URL('../social-admin.css', import.meta.url), 'utf8')
 ]);
 
 test('Social Hub defaults to a status-first four-workspace layout', () => {
