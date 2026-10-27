@@ -56,6 +56,8 @@ test('same idempotency key replays, distinct project beyond quota is blocked', (
   assert.equal(req(paid3, existing, 'other').allowed, true);
   const old = [{ ...existing[0], month: '2026-10', status: 'completed' }];
   assert.equal(req(paid1, old, 'new').allowed, true);
+  assert.equal(req(paid1, old, 'seed').allowed, true, 'request key may be reused in a different month');
+  assert.equal(req(paid1, old, 'seed').idempotent, false);
 });
 
 test('author conversation requires author input across stages', () => {
