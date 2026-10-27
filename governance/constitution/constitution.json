@@ -1,5 +1,5 @@
 {
-  "version": "1.27.4",
+  "version": "1.27.5",
   "effectiveDate": "2026-10-23",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -946,7 +946,7 @@
       "my-misroute-recovery",
       "system-verification"
     ],
-    "version": "1.27.4",
+    "version": "1.27.5",
     "preLoginPageReturnMandatory": true,
     "everyLoginEntryMustCarryCurrentPageReturnTo": true,
     "shellStampsMissingReturnTo": true,
@@ -964,7 +964,10 @@
     "googlePromptRequiresPersistentButton": true,
     "signedInAccountVisibleAfterReturn": true,
     "serviceGateMustNotReadAsLoginFailure": true,
-    "reusedSessionAccountNamedOnAuthPage": true
+    "reusedSessionAccountNamedOnAuthPage": true,
+    "signedInPersonNeverPromptedToLoginAgain": true,
+    "existingSessionResolvedBeforeLoginEntry": true,
+    "loginUiOnlyWithoutSessionOrExplicitAccountSwitch": true
   },
   "canonicalUrlQueryPolicy": {
     "id": "CANONICAL-URL-QUERY-001",

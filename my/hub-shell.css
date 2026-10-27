@@ -218,3 +218,11 @@ html[data-ekodi-character="off"] body .ekodi-main-ekodian{
   display:none!important;
   visibility:hidden!important;
 }
+
+/* 2026-10-28: 헤더·푸터 내용 폭을 본문 카드 폭(min(1180px, 100% - 36px))과 일치 */
+:root{--my-content-width:min(1180px,calc(100% - 36px));--my-content-gutter:max(18px,calc((100% - 1180px)/2))}
+@media(min-width:761px){
+  body[data-ekodi-ui="USER"] .topbar.my-comfort-header{padding-left:var(--my-content-gutter)!important;padding-right:var(--my-content-gutter)!important}
+}
+body[data-ekodi-ui="USER"] .my-custom-footer .my-footer-inner{width:var(--my-content-width)}
+body[data-ekodi-ui="USER"] .my-custom-footer .my-footer-credo{padding-left:var(--my-content-gutter);padding-right:var(--my-content-gutter)}
