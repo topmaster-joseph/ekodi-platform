@@ -100,6 +100,7 @@
     const zones=[{name:'전체 Zone / 도메인',status:''},...(cf.zones||[])];
     const workers=(cf.workers||[]).filter(item=>item.allowed!==false);
     context.innerHTML=`
+      <div class="ekodi-provider-section-heading"><strong>① 연결 대상 선택</strong><small>계정·도메인·Worker 상태를 확인합니다.</small></div>
       <div><label for="ekodiSecurityCfAccount">Cloudflare 계정</label><select id="ekodiSecurityCfAccount" data-ekodi-cf-account ${providerData?'':'disabled'}><option>${esc(cf.account?.name||'연결 확인 필요')}</option></select></div>
       <div><label for="ekodiSecurityCfZone">Zone / 도메인</label><select id="ekodiSecurityCfZone" data-ekodi-cf-zone ${providerData?'':'disabled'}>${zones.map(zone=>`<option value="${esc(zone.name)}">${esc(zone.name)}${zone.status?` · ${esc(zone.status)}`:''}</option>`).join('')}</select></div>
       <div><label for="ekodiSecurityCfWorker">대상 Worker</label><select id="ekodiSecurityCfWorker" data-ekodi-cf-worker ${workers.length?'':'disabled'}>${workers.length?workers.map(worker=>`<option value="${esc(worker.name)}">${esc(worker.name)}</option>`).join(''):'<option>Worker 확인 필요</option>'}</select></div>
