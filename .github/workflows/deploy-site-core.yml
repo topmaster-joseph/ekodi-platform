@@ -294,6 +294,8 @@ on:
       - 'common-services-admin.css'
       - 'devotional-admin.js'
       - 'devotional-admin.css'
+      - 'common-scripture-admin.js'
+      - 'common-scripture-admin.css'
       - 'system-health-admin.js'
       - 'system-health-admin.css'
       - 'communication-admin.js'
