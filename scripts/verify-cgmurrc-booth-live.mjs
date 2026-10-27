@@ -58,7 +58,7 @@ async function main(){
   p=await page('/cgmurrc/booth/admin/','/cgmurrc/booth/admin/app.js');
   check('관리자 화면 /cgmurrc/booth/admin/ 제공',p.status===200&&p.has,`HTTP ${p.status}`);
   // A page whose CSP forbids scripts renders but never runs ("불러오는 중" forever): check the real headers.
-  for(const path of ['/cgmurrc/booth/','/cgmurrc/booth/admin/']){
+  for(const path of ['/cgmurrc/booth/','/cgmurrc/booth/admin/','/cgmurrc/booth/board/']){
     const res=await fetch(BASE+path,{redirect:'manual'});
     const csp=res.headers.get('content-security-policy')||'';
     const scriptSrc=(csp.split(';').map(x=>x.trim()).find(x=>x.startsWith('script-src'))||'');
@@ -75,6 +75,13 @@ async function main(){
   const anon=await call('/admin');
   check('로그인 없는 관리자 API는 바로 401',anon.status===401&&Date.now()-started<10000,`HTTP ${anon.status} ${Date.now()-started}ms`);
 
+  // Public board: anyone, names with 연번 only
+  p=await page('/cgmurrc/booth/board/','/cgmurrc/booth/board/app.js');
+  check('전체 근무표 화면 /cgmurrc/booth/board/ 제공',p.status===200&&p.has,`HTTP ${p.status}`);
+  const pub=await call('/board');
+  const pubText=JSON.stringify(pub.data||{});
+  check('전체 근무표 API: 로그인 없이 연번·이름만',pub.status===200&&Array.isArray(pub.data?.board)&&pub.data.board.length===8
+    &&pub.data.board[6].some(x=>x.name===B.name&&Number.isInteger(x.no))&&!pubText.includes(B.id)&&!pubText.includes('requested'),`HTTP ${pub.status}`);
   // Authentication of personal links
   let r=await call('/me');
   check('키 없는 요청 거부',r.status===401&&r.route==='cgmurrc-booth',`HTTP ${r.status}`);

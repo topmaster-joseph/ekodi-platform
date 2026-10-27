@@ -45,11 +45,14 @@ await Promise.all([
 ]);
 // cgmurrc booth shifts: member personal-link page + administrator page; data only via the Control API.
 await mkdir(`${output}cgmurrc/booth/admin/`,{recursive:true});
+await mkdir(`${output}cgmurrc/booth/board/`,{recursive:true});
 await Promise.all([
   cp(`${root}prototypes/cgmurrc-booth.html`,`${output}cgmurrc/booth/index.html`),
   cp(`${root}prototypes/cgmurrc-booth.js`,`${output}cgmurrc/booth/app.js`),
   cp(`${root}prototypes/cgmurrc-booth-admin.html`,`${output}cgmurrc/booth/admin/index.html`),
   cp(`${root}prototypes/cgmurrc-booth-admin.js`,`${output}cgmurrc/booth/admin/app.js`),
+  cp(`${root}prototypes/cgmurrc-booth-board.html`,`${output}cgmurrc/booth/board/index.html`),
+  cp(`${root}prototypes/cgmurrc-booth-board.js`,`${output}cgmurrc/booth/board/app.js`),
 ]);
 await Promise.all([
   cp(`${root}pizzamaru-mokpodae.html`, `${output}pizzamaru-mokpodae.html`),

@@ -6,12 +6,12 @@ const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const block=(script,name)=>script.slice(script.indexOf(`const ${name}`),script.indexOf('\n);',script.indexOf(`const ${name}`)));
 
 test('booth pages ship no inline script and are not indexed',()=>{
-  for(const page of ['prototypes/cgmurrc-booth.html','prototypes/cgmurrc-booth-admin.html']){
+  for(const page of ['prototypes/cgmurrc-booth.html','prototypes/cgmurrc-booth-admin.html','prototypes/cgmurrc-booth-board.html']){
     const html=read(page);
     assert.match(html,/<meta name="robots" content="noindex, nofollow">/);
     assert.match(html,/<meta name="referrer" content="no-referrer">/);
     assert.equal((html.match(/<script\b/g)||[]).length,1);
-    assert.match(html,/<script type="module" src="\/cgmurrc\/booth\/(admin\/)?app\.js"><\/script>/);
+    assert.match(html,/<script type="module" src="\/cgmurrc\/booth\/((admin|board)\/)?app\.js"><\/script>/);
   }
 });
 
@@ -52,8 +52,21 @@ test('the admin page offers a real login button and never hangs on loading',()=>
 test('build ships the booth pages and convergent merges dispatch Site Core',()=>{
   const build=read('scripts/build.mjs');
   for(const [from,to] of [['cgmurrc-booth.html','cgmurrc/booth/index.html'],['cgmurrc-booth.js','cgmurrc/booth/app.js'],
-    ['cgmurrc-booth-admin.html','cgmurrc/booth/admin/index.html'],['cgmurrc-booth-admin.js','cgmurrc/booth/admin/app.js']]){
+    ['cgmurrc-booth-admin.html','cgmurrc/booth/admin/index.html'],['cgmurrc-booth-admin.js','cgmurrc/booth/admin/app.js'],
+    ['cgmurrc-booth-board.html','cgmurrc/booth/board/index.html'],['cgmurrc-booth-board.js','cgmurrc/booth/board/app.js']]){
     assert.ok(build.includes(`prototypes/${from}\`,\`\${output}${to}`),from);
   }
   assert.ok(block(read('scripts/converge-orchestrated-pr-merge.mjs'),'sharedSiteTouched').includes("file.startsWith('prototypes/cgmurrc-')"));
+});
+
+test('the public board page reads only the public endpoint and sends no credentials',()=>{
+  const js=read('prototypes/cgmurrc-booth-board.js');
+  assert.match(js,/const API='\/api\/cgmurrc\/booth\/board'/);
+  assert.match(js,/credentials:'omit'/);
+  assert.doesNotMatch(js,/x-cgmurrc-booth-key|authorization|sessionStorage|localStorage|innerHTML/);
+});
+
+test('Control API redeploys when only the booth API changes',()=>{
+  const script=read('scripts/converge-orchestrated-pr-merge.mjs');
+  assert.ok(block(script,'controlApiTouched').includes("'cgmurrc-booth-api.js'"));
 });

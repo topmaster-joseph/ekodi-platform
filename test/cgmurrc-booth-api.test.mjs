@@ -169,3 +169,26 @@ test('the Control API entry routes the booth API',async()=>{
   assert.equal(res.status,401);
   assert.equal(res.headers.get('x-ekodi-route'),'cgmurrc-booth');
 });
+
+test('the public board shows confirmed names with 연번 only, to anyone',async()=>{
+  const {env,keys}=await seed();
+  await handleCgmurrcBooth(memberPost(keys['가회원'],{slot:2,action:'request'}),env,at(NOW)); // a wish stays private
+  const res=await handleCgmurrcBooth(new Request('https://ekodi.kr'+BOOTH_API_PREFIX+'/board'),env,at(NOW));
+  assert.equal(res.status,200);
+  const body=await res.json();
+  assert.deepEqual(body.board[2],[{no:2,name:'나회원'}]);
+  assert.equal(body.board.length,8);
+  const text=JSON.stringify(body);
+  for(const leak of ['m0','m1','token','requested','member_id'])assert.equal(text.includes(leak),false,leak);
+  assert.equal((await handleCgmurrcBooth(new Request('https://ekodi.kr'+BOOTH_API_PREFIX+'/board',{method:'POST',body:'{}'}),env,at(NOW))).status,405);
+});
+
+test('member and admin views carry each member\'s 연번',async()=>{
+  const {env,keys}=await seed();
+  const me=await (await handleCgmurrcBooth(memberGet(keys['다회원']),env,at(NOW))).json();
+  assert.equal(me.member.no,3);
+  assert.deepEqual(me.board_numbered[2],[{no:2,name:'나회원'}]);
+  assert.deepEqual(me.board[2],['나회원'],'legacy shape kept for pages not yet redeployed');
+  const adm=await (await handleCgmurrcBooth(new Request(ADMIN),env,admin)).json();
+  assert.deepEqual(adm.members.map(m=>[m.no,m.name]),[[1,'가회원'],[2,'나회원'],[3,'다회원']]);
+});
