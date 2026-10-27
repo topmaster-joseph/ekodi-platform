@@ -265,7 +265,7 @@ function renderEditor(panel) {
   const url = safeSiteUrl(site);
   const status = STATUS_OPTIONS.includes(site.publicStatus) ? site.publicStatus : 'public';
   editor.innerHTML = `
-    <form class="psc-editor" data-psc-form>
+    <form class="psc-editor" data-psc-form data-public-site-id="${escapeHtml(site.id)}">
       <div class="psc-editor-header">
         <div><h3>${escapeHtml(site.name || info.label)}</h3><div class="psc-subtext">${escapeHtml(info.label)} · ${escapeHtml(site.workspaceId || '')}</div></div>
         <span class="psc-status" data-psc-badge data-status="${status}">${LABELS[status]}</span>
