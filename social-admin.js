@@ -120,21 +120,29 @@
     section.dataset.panel = 'social'; section.id = 'socialAdmin';
     const head = el('div', '', 'social-admin-head');
     const copy = el('div');
-    copy.append(el('p','MULTI-CHANNEL CONTROL CENTER','kicker'), el('h2','사이트·서비스 Social Hub'), el('p','모든 현재·미래 EKODI 사이트와 서비스는 중앙 Social Hub 정책을 자동 상속합니다. 게시 기능이 준비된 사이트는 자체 채널센터에서 같은 원장을 사용하고, 그 외 서비스는 중앙 허브로 자동 폴백합니다. 비밀번호는 저장하지 않으며 OAuth 비밀값은 암호화 Vault에만 보관됩니다.','operations-copy'));
+    copy.append(el('p','MULTI-CHANNEL CONTROL CENTER','kicker'), el('h2','소셜 채널 통합관리'), el('p','모든 현재·미래 EKODI 사이트와 서비스는 중앙 Social Hub 정책을 자동 상속합니다. 사이트별 채널 현황과 계정 연결·게시 배정·기관 정책을 관리합니다. 외부 로그인은 공식 OAuth를 사용하며 OAuth 비밀값은 암호화 Vault에만 보관됩니다.','operations-copy'));
     const actions = el('div','','social-admin-actions');
-    const open = el('a','Open Social ↗','secondary'); open.href='https://social.ekodi.kr'; open.target='_blank'; open.rel='noopener';
-    const refresh = el('button','↻ Refresh','secondary'); refresh.type='button';
-    const save = el('button','Save changes','primary'); save.type='button'; save.disabled=true;
-    actions.append(open, refresh, save); head.append(copy, actions);
+    const open = el('a','소셜 허브 열기 ↗','secondary'); open.href='https://social.ekodi.kr'; open.target='_blank'; open.rel='noopener';
+    const refresh = el('button','전체 새로고침','secondary'); refresh.type='button';
+    const save = el('button','정책 변경 저장','primary'); save.type='button'; save.disabled=true;
+    actions.append(open, refresh); head.append(copy, actions);
 
     const siteDirectoryPanel = el('section','','social-site-directory');
     siteDirectoryPanel.dataset.siteChannelDirectory='true';
     const siteDirectoryHead = el('div','','social-channel-head');
-    siteDirectoryHead.append(el('h3','전체 사이트·서비스 채널관리'),el('span','모든 현재·미래 서비스가 중앙 Social Hub 정책을 자동 상속'));
+    siteDirectoryHead.append(el('h3','전체 사이트·서비스 채널관리'),el('span','사이트별 채널센터로 바로 이동하거나 관리할 사이트를 선택하세요.'));
     const siteDirectoryStatus = el('p','사용자 사이트 관리자 목록을 불러오는 중입니다.','social-admin-status');
     siteDirectoryStatus.setAttribute('role','status');
     const siteDirectoryList = el('div','','social-site-directory-list');
-    siteDirectoryPanel.append(siteDirectoryHead,siteDirectoryStatus,siteDirectoryList);
+    const directoryToolbar = el('div','','social-directory-toolbar');
+    const directorySearch = input('', 'search', '사이트·서비스 이름으로 검색');
+    directorySearch.setAttribute('aria-label','사이트·서비스 검색');
+    directoryToolbar.append(directorySearch);
+    siteDirectoryPanel.append(siteDirectoryHead,directoryToolbar,siteDirectoryStatus,siteDirectoryList);
+    directorySearch.addEventListener('input',()=>{
+      const query=directorySearch.value.trim().toLocaleLowerCase('ko-KR');
+      for(const card of siteDirectoryList.children) card.hidden=Boolean(query)&&!card.textContent.toLocaleLowerCase('ko-KR').includes(query);
+    });
 
     async function renderSiteDirectory() {
       siteDirectoryStatus.textContent='사용자 사이트 관리자 목록을 불러오는 중입니다.';
@@ -163,9 +171,12 @@
           card.append(copy,controls);
           siteDirectoryList.append(card);
         }
-        siteDirectoryStatus.textContent=`${sites.length}개 사이트·서비스 · 게시 기능이 준비된 사이트는 로컬 채널센터를 사용하고, 나머지는 중앙 Social Hub에서 동일 정책·권한·감사 원장을 상속합니다.`;
+        setOverviewMetric('sites',sites.length);
+        directorySearch.dispatchEvent(new Event('input'));
+        siteDirectoryStatus.textContent=`${sites.length}개 사이트·서비스를 표시합니다. 게시 기능이 있는 사이트는 고유 채널센터로, 그 외는 중앙 허브로 연결됩니다.`;
         siteDirectoryStatus.dataset.state='ready';
       } catch(error) {
+        setOverviewMetric('sites','확인 필요');
         siteDirectoryStatus.textContent=`사이트별 관리자 목록을 불러오지 못했습니다: ${error.message}`;
         siteDirectoryStatus.dataset.state='error';
       }
@@ -213,7 +224,73 @@
     const status = el('p','Registry를 불러오지 않았습니다.','social-admin-status'); status.setAttribute('role','status');
     const list = el('div','','social-org-list');
     const addOrg = el('button','＋ 기관 추가','ghost social-add-org'); addOrg.type='button';
-    section.append(head, siteDirectoryPanel, connectionPanel, publishingPanel, summary, status, list, addOrg); content.append(section);
+    const policyPanel = el('section','','social-policy-panel');
+    const policyHead = el('div','','social-channel-head');
+    policyHead.append(el('h3','기관·채널 공개 정책'),el('span','공식 채널 목록·노출 순서·기관별 정책 편집'));
+    const policyActions = el('div','','social-policy-actions');
+    policyActions.append(addOrg,save);
+    policyPanel.append(policyHead,summary,status,policyActions,list);
+
+    const overview = el('div','','social-overview-metrics');
+    overview.setAttribute('aria-label','소셜 채널 통합 현황');
+    const metricNodes = new Map();
+    for(const [key,label] of [
+      ['sites','등록 사이트·서비스'],
+      ['connections','현재 범위 OAuth 연결'],
+      ['publishing','게시 가능 채널'],
+      ['attention','연결 확인 필요']
+    ]) {
+      const card=el('article','','social-overview-metric');
+      const value=el('strong','—');
+      card.append(el('small',label),value);
+      overview.append(card);
+      metricNodes.set(key,value);
+    }
+    function setOverviewMetric(key,value) {
+      const node=metricNodes.get(key);
+      if(node) node.textContent=String(value);
+    }
+
+    const tabBar=el('div','','social-workspace-tabs');
+    tabBar.setAttribute('role','tablist');
+    tabBar.setAttribute('aria-label','소셜 관리 업무');
+    const tabViews=[
+      ['sites','사이트별 채널',siteDirectoryPanel],
+      ['connections','계정 연결',connectionPanel],
+      ['publishing','게시 채널 배정',publishingPanel],
+      ['policy','기관·정책',policyPanel]
+    ];
+    const tabButtons=new Map();
+    function showTab(nextId) {
+      for(const [id,,panel] of tabViews){
+        const active=id===nextId, button=tabButtons.get(id);
+        panel.hidden=!active;
+        button.setAttribute('aria-selected',String(active));
+        button.tabIndex=active?0:-1;
+        button.classList.toggle('active',active);
+      }
+    }
+    tabViews.forEach(([id,label,panel],index)=>{
+      const button=el('button',label,'social-workspace-tab');
+      button.type='button';
+      button.id=`social-tab-${id}`;
+      button.setAttribute('role','tab');
+      button.setAttribute('aria-controls',`social-view-${id}`);
+      panel.id=`social-view-${id}`;
+      panel.setAttribute('role','tabpanel');
+      panel.setAttribute('aria-labelledby',button.id);
+      tabButtons.set(id,button);
+      button.addEventListener('click',()=>showTab(id));
+      button.addEventListener('keydown',event=>{
+        const offset=event.key==='ArrowRight'?1:event.key==='ArrowLeft'?-1:0;
+        const next=event.key==='Home'?0:event.key==='End'?tabViews.length-1:offset?(index+offset+tabViews.length)%tabViews.length:-1;
+        if(next>=0){event.preventDefault();showTab(tabViews[next][0]);tabButtons.get(tabViews[next][0]).focus();}
+      });
+      tabBar.append(button);
+    });
+    section.append(head,overview,tabBar,siteDirectoryPanel,connectionPanel,publishingPanel,policyPanel);
+    content.append(section);
+    showTab(initialIntent.provider?'connections':'sites');
 
     function renderSummary() {
       const orgs = registry.organizations || [];
@@ -284,6 +361,8 @@
     function renderConnections(data) {
       const connections = Array.isArray(data?.connections) ? data.connections : [];
       const active = connections.filter(row=>row.status==='active');
+      setOverviewMetric('connections',active.length);
+      setOverviewMetric('attention',connections.filter(row=>!['active','paused'].includes(String(row.status||'').toLowerCase())).length);
       const counts = new Map(); active.forEach(row=>counts.set(row.provider,(counts.get(row.provider)||0)+1));
       connectionMetrics.replaceChildren();
       [['전체 연결',active.length],['YouTube',counts.get('youtube')||0],['Facebook',counts.get('facebook')||0],['Instagram',counts.get('instagram')||0],['Threads',counts.get('threads')||0]].forEach(([label,value])=>{const metric=el('article');metric.append(el('small',String(label)),el('strong',String(value)));connectionMetrics.append(metric);});
@@ -374,10 +453,12 @@
         publishingChannels.replaceChildren();
         for(const channel of channelData.channels||[])publishingChannels.append(publishingChannelCard(channel,sites));
         if(!(channelData.channels||[]).length)publishingChannels.append(el('p','등록된 게시 채널이 없습니다. YouTube 계정·채널 연결을 눌러 최초 1회 공식 인증해 주세요.','social-connection-empty'));
-        publishingStatus.textContent=`등록 채널 ${(channelData.channels||[]).length}개 · OAuth는 공식 연결 원장, 게시·사이트 매핑은 게시 원장으로 분리 관리합니다.`;
+        setOverviewMetric('publishing',(channelData.channels||[]).length);
+        publishingStatus.textContent=`등록 채널 ${(channelData.channels||[]).length}개 · OAuth와 사이트별 게시 매핑은 별도 원장으로 관리됩니다.`;
         publishingStatus.dataset.state='ready';
       }catch(error){
         publishingConnections.replaceChildren();publishingChannels.replaceChildren();
+        setOverviewMetric('publishing','확인 필요');
         publishingStatus.textContent=error.code==='CHANNEL_SITE_BINDINGS_NOT_READY'?'채널-사이트 연결 스키마 배포가 필요합니다.':error.message;
         publishingStatus.dataset.state='error';
       }
@@ -386,7 +467,7 @@
     async function loadConnections() {
       connectionStatus.textContent='OAuth 연결상태를 확인하는 중입니다.'; connectionStatus.dataset.state='loading';
       try { renderConnections(await connectApi('/v1/connections')); }
-      catch(error) { connectionStatus.textContent=error.message; connectionStatus.dataset.state='error'; }
+      catch(error) { setOverviewMetric('connections','확인 필요');setOverviewMetric('attention','확인 필요');connectionStatus.textContent=error.message; connectionStatus.dataset.state='error'; }
     }
 
     async function load() {
@@ -413,7 +494,8 @@
     async function activate() {
       document.querySelectorAll('[data-panel]').forEach(panel=>{ const targets=String(panel.dataset.panel||'').split(' '); panel.classList.toggle('hidden-panel',!targets.includes('social')); });
       document.querySelectorAll('.sidebar .nav[data-section]').forEach(item=>item.classList.toggle('active',item.dataset.section==='social'));
-      const pageTitle=document.querySelector('#pageTitle'); if(pageTitle) pageTitle.textContent='사이트별 채널센터'; document.querySelector('.sidebar')?.classList.remove('open');
+      const pageTitle=document.querySelector('#pageTitle'); if(pageTitle) pageTitle.textContent='소셜 채널 통합관리'; document.querySelector('.sidebar')?.classList.remove('open');
+      if(initialIntent.provider) showTab('connections');
       await Promise.all([renderSiteDirectory(), registry.organizations.length ? Promise.resolve() : load(), loadConnections(), loadPublishingChannels()]);
     }
 
@@ -435,7 +517,8 @@
       siteDirectoryStatus.textContent=`${button.dataset.centralChannelName||key} 채널센터를 최고관리자 권한으로 불러오는 중입니다.`;siteDirectoryStatus.dataset.state='loading';
       await Promise.all([loadConnections(),loadPublishingChannels()]);
       siteDirectoryStatus.textContent=`${button.dataset.centralChannelName||key} 채널센터 · 사이트 관리자와 동일 원장`;siteDirectoryStatus.dataset.state='ready';
-      publishingPanel.scrollIntoView({behavior:'smooth',block:'start'});
+      showTab('publishing');
+      tabBar.scrollIntoView({behavior:'smooth',block:'start'});
     });
     publishingAddYoutube.addEventListener('click',async()=>{publishingAddYoutube.disabled=true;publishingStatus.textContent='EKODI 공식 YouTube 연결 인증을 준비하는 중입니다.';publishingStatus.dataset.state='loading';try{await startConnection('youtube')}catch(error){publishingStatus.textContent=error.message;publishingStatus.dataset.state='error';publishingAddYoutube.disabled=false}});
     publishingReload.addEventListener('click',loadPublishingChannels);

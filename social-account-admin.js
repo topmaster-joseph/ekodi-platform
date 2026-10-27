@@ -28,6 +28,7 @@
     if(!panel||busy)return;
     const status=panel.querySelector('[data-social-message]');
     busy=true;
+    panel.querySelector('[data-social-refresh]').disabled=true;
     status.classList.remove('ekodi-social-error');
     status.textContent='EKODI 인증 및 연결 현황을 확인하고 있습니다.';
     try{
@@ -44,7 +45,9 @@
       panel.querySelector('[data-social-providers]').replaceChildren();
       panel.querySelector('[data-social-links]').replaceChildren();
       panel.querySelector('[data-social-existing]').replaceChildren();
-    }finally{busy=false}
+      panel.querySelector('[data-social-result-count]').textContent='조회 실패';
+      panel.querySelector('[data-social-empty]').hidden=true;
+    }finally{busy=false;panel.querySelector('[data-social-refresh]').disabled=false}
   }
   function metric(label,value){
     const card=el('article');card.append(el('small',label),el('strong',String(value)));return card;
@@ -65,11 +68,30 @@
       target.append(row);
     }
   }
+
+  const serviceMarks={youtube:'YT',facebook:'f',instagram:'IG',threads:'@',naver:'N',kakao:'K',tiktok:'TT',x:'X',linkedin:'in',pinterest:'P',bluesky:'B',discord:'D',telegram:'TG'};
+  function filterProviders(panel){
+    const search=(panel.querySelector('[data-social-search]')?.value||'').trim().toLocaleLowerCase();
+    const filter=panel.querySelector('[data-social-filter]')?.value||'all';
+    const cards=[...panel.querySelectorAll('[data-social-provider-card]')];
+    let visible=0;
+    for(const card of cards){
+      const named=card.dataset.searchText.includes(search);
+      const registered=Number(card.dataset.registered)>0;
+      const existing=Number(card.dataset.existing)>0;
+      const matches=filter==='all'||(filter==='existing'&&existing)||(filter==='registered'&&registered)||(filter==='unregistered'&&!registered&&!existing);
+      card.hidden=!(named&&matches);
+      if(!card.hidden)visible++;
+    }
+    panel.querySelector('[data-social-result-count]').textContent='표시 '+visible+' / 전체 '+cards.length;
+    panel.querySelector('[data-social-empty]').hidden=visible!==0;
+  }
   function render(panel,data){
     const policy=data.policy||{};
     panel.querySelector('[data-social-feature]').textContent=policy.registrationEnabled
       ?'EKODI 인증 후 등록 요청: 제한적 허용 · 외부 공급자 인증과 자동게시: 비활성화'
       :'EKODI 인증 후 신규 등록: 비활성화 · 외부 소셜 로그인·OAuth·자동게시: 비활성화';
+    panel.querySelector('[data-social-policy-label]').textContent=policy.registrationEnabled?'제한적 등록 요청 허용':'안전 잠금 유지';
     panel.querySelector('[data-social-storage]').textContent=data.storageReady
       ?'등록 원장 조회 가능':'등록 원장 조회 불가 — DB 배포·연결 확인 필요';
     const providers=data.providers||[];
@@ -84,12 +106,20 @@
     const wrap=panel.querySelector('[data-social-providers]');wrap.replaceChildren();
     for(const item of providers){
       const card=el('article','','ekodi-social-card');
-      card.append(el('strong',item.name),el('span',stateText[item.status]||'비활성화','ekodi-social-badge'),
-        el('small','EKODI 등록 '+(item.registered||0)+'건 · 기존 서비스 '+(item.existingService||0)+'건'));
+      card.dataset.socialProviderCard='true';
+      card.dataset.searchText=String(item.name||item.id||'').toLocaleLowerCase();
+      card.dataset.registered=String(item.registered||0);
+      card.dataset.existing=String(item.existingService||0);
+      const head=el('div','','ekodi-social-card-head');
+      head.append(el('span',serviceMarks[item.id]||String(item.name||'?').slice(0,2),'ekodi-social-provider-mark'),el('span',stateText[item.status]||'비활성화','ekodi-social-badge'));
+      const counts=el('div','','ekodi-social-card-counts');
+      counts.append(el('small','신규 등록 '+(item.registered||0)),el('small','기존 서비스 '+(item.existingService||0)));
+      card.append(head,el('strong',item.name||item.id||'미확인'),counts);
       wrap.append(card);
     }
     renderRows(panel.querySelector('[data-social-links]'),links,'identity');
     renderRows(panel.querySelector('[data-social-existing]'),legacy,'existing');
+    filterProviders(panel);
   }
   async function install(){
     if(document.getElementById(ROOT))return;
@@ -97,10 +127,47 @@
     const content=document.querySelector('.content');
     if(!content)return;
     const panel=el('section','','section ekodi-social-accounts hidden-panel');
-    panel.id=ROOT;panel.dataset.panel='social-accounts';panel.hidden=true;
-    panel.innerHTML='<div class="ekodi-social-head"><div><p class="ekodi-social-caption">EKODI ORCHESTRATOR · IDENTITY CONTROL</p><h2>소셜계정 연결 현황</h2><p>EKODI 계정 ID가 기본 신원입니다. 공급자 소셜계정은 본인 인증 뒤에만 연결되며 현재는 신규 연결과 자동활동이 차단되어 있습니다.</p></div><button type="button" data-social-refresh>새로고침</button></div><div class="ekodi-social-state" data-social-feature>등록 기능 비활성화</div><p data-social-storage role="status">등록 원장 상태 확인 전</p><div class="ekodi-social-metrics" data-social-metrics></div><section><h3>지원 예정 소셜 서비스</h3><div class="ekodi-social-grid" data-social-providers></div></section><section class="ekodi-social-list"><h3>EKODI ID 기준 등록 기록</h3><p>등록이 허용되어도 외부 공급자 본인 확인 전에는 연결 완료가 아닙니다. 이곳에서는 활성화할 수 없습니다.</p><div class="ekodi-social-records" data-social-links></div></section><section class="ekodi-social-list"><h3>기존 사이트·채널 연결</h3><p>기존 업무·채널 연동 기록을 별도로 표시합니다. 기존의 연결 상태가 새 소셜계정 등록 기능을 활성화한다는 뜻은 아닙니다.</p><div class="ekodi-social-records" data-social-existing></div></section><p data-social-message role="status" aria-live="polite"></p>';
+    panel.id=ROOT;panel.dataset.panel='social-accounts';panel.dataset.adminListLayout='dashboard';panel.hidden=true;
+    panel.innerHTML=[
+      '<header class="ekodi-social-head">',
+        '<div class="ekodi-social-heading"><p class="ekodi-social-caption">EKODI ORCHESTRATOR · IDENTITY CONTROL</p>',
+        '<h2>소셜계정 연결 현황</h2><p>EKODI ID를 중심으로 신규 등록과 기존 사이트·채널 연동 기록을 구분하여 관리합니다.</p></div>',
+        '<button type="button" class="ekodi-social-refresh" data-social-refresh>↻ 새로고침</button>',
+      '</header>',
+      '<div class="ekodi-social-state" role="note"><span class="ekodi-social-lock-mark" aria-hidden="true">●</span>',
+        '<div><strong data-social-policy-label>안전 잠금 유지</strong><p data-social-feature>등록 기능 비활성화</p>',
+        '<small data-social-storage role="status">등록 원장 상태 확인 전</small></div></div>',
+      '<div class="ekodi-social-metrics" data-social-metrics aria-label="소셜계정 요약 현황"></div>',
+      '<section class="ekodi-social-directory" aria-labelledby="ekodiSocialProvidersTitle">',
+        '<div class="ekodi-social-section-head"><div><h3 id="ekodiSocialProvidersTitle">지원 예정 소셜 서비스</h3>',
+        '<p>표시된 상태는 기록 기준이며 실제 공급자 인증 상태와 다를 수 있습니다.</p></div>',
+        '<span class="ekodi-social-result-count" data-social-result-count>조회 중</span></div>',
+        '<div class="ekodi-social-toolbar">',
+          '<label class="ekodi-social-search-wrap"><span>서비스 검색</span>',
+          '<input type="search" data-social-search autocomplete="off" placeholder="서비스 이름 검색"></label>',
+          '<label class="ekodi-social-filter-wrap"><span>상태 필터</span>',
+          '<select data-social-filter><option value="all">전체 서비스</option>',
+          '<option value="existing">기존 서비스 기록 있음</option>',
+          '<option value="registered">EKODI ID 등록 있음</option>',
+          '<option value="unregistered">기록 없음</option></select></label>',
+        '</div>',
+        '<div class="ekodi-social-grid" data-social-providers></div>',
+        '<p class="ekodi-social-empty" data-social-empty hidden>조건에 맞는 서비스가 없습니다. 검색어나 필터를 변경하세요.</p>',
+      '</section>',
+      '<div class="ekodi-social-lower">',
+        '<section class="ekodi-social-list" aria-labelledby="ekodiSocialLinksTitle"><h3 id="ekodiSocialLinksTitle">EKODI ID 신규 등록 기록</h3>',
+        '<p>공급자 본인 확인 전에는 연결 완료가 아닙니다. 이 화면에서는 활성화할 수 없습니다.</p>',
+        '<div class="ekodi-social-records" data-social-links></div></section>',
+        '<section class="ekodi-social-list" aria-labelledby="ekodiSocialExistingTitle"><h3 id="ekodiSocialExistingTitle">기존 사이트·채널 연결</h3>',
+        '<p>기존 연동 기록을 별도로 표시합니다. 신규 소셜계정 등록 기능과는 구분됩니다.</p>',
+        '<div class="ekodi-social-records" data-social-existing></div></section>',
+      '</div>',
+      '<p class="ekodi-social-message" data-social-message role="status" aria-live="polite"></p>'
+    ].join('')
     content.append(panel);
     panel.querySelector('[data-social-refresh]').addEventListener('click',()=>{void load()});
+    panel.querySelector('[data-social-search]').addEventListener('input',()=>filterProviders(panel));
+    panel.querySelector('[data-social-filter]').addEventListener('change',()=>filterProviders(panel));
     window.addEventListener('ekodi-admin-section-changed',event=>{if(event.detail?.section==='social-accounts')void load()});
     window.dispatchEvent(new CustomEvent('ekodi-feature-installed',{detail:{feature:'social-accounts'}}));
     if(location.pathname==='/admin/accounts/social-accounts')void load();

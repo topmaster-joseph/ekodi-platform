@@ -59,6 +59,7 @@ html:not([data-ekodi-domctl-authorized="true"]) .sidebar [data-section="domain-c
 @media(max-width:1100px){.ekodi-domctl-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.ekodi-domctl-summary{grid-template-columns:1fr}.ekodi-domctl-row{grid-template-columns:1fr}.ekodi-domctl-side{flex-direction:row;align-items:center;justify-content:space-between;width:100%;border-top:1px solid var(--admin-border,#d9e2ec);padding-top:8px}.ekodi-domctl-form{grid-template-columns:1fr}}
 `;
+  style.textContent += "\n/* Compact domain control: native list, readable states, filterable records. */\n.ekodi-domctl{gap:12px;max-width:100%;padding-bottom:88px}\n.ekodi-domctl-head{align-items:center}\n.ekodi-domctl-head h2{font-size:23px;margin:2px 0 4px}\n.ekodi-domctl-head p:not(.ekodi-domctl-kicker){max-width:760px;font-size:12px;line-height:1.5}\n.ekodi-domctl-summary{gap:9px}\n.ekodi-domctl-card{padding:12px 14px;border-radius:10px;gap:4px}\n.ekodi-domctl-card strong{font-size:25px}\n.ekodi-domctl-card>span{font-size:11px;color:var(--admin-secondary,#64748b)}\n.ekodi-domctl-toolbar{display:flex;gap:12px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap}\n.ekodi-domctl-search{display:grid;gap:5px;min-width:220px;flex:1 1 230px;font-size:11px;font-weight:700;color:var(--admin-secondary,#64748b)}\n.ekodi-domctl-search input{width:100%;height:38px;padding:8px 12px;border:1px solid var(--admin-border,#d9e2ec);border-radius:9px;background:var(--ekodi-ui-surface,#fff);color:inherit;font:inherit;font-size:13px;font-weight:400}\n.ekodi-domctl-search input:focus-visible,.ekodi-domctl-filters button:focus-visible,.ekodi-domctl-rowact button:focus-visible,.ekodi-domctl-form :is(input,button):focus-visible{outline:2px solid var(--ekodi-ui-accent,#155eef);outline-offset:2px}\n.ekodi-domctl-filters{display:flex;gap:5px;flex-wrap:wrap;align-items:center}\n.ekodi-domctl-filters button{height:34px;white-space:nowrap;padding:5px 10px;border:1px solid var(--admin-border,#d9e2ec);border-radius:8px;background:var(--ekodi-ui-surface,#fff);color:var(--admin-secondary,#66768a);font:inherit;font-size:12px;cursor:pointer}\n.ekodi-domctl-filters button span{font-variant-numeric:tabular-nums;font-weight:750}\n.ekodi-domctl-filters button[aria-pressed=\"true\"]{border-color:var(--ekodi-ui-accent,#155eef);background:var(--ekodi-ui-surface-raised,#eef4ff);color:var(--ekodi-ui-accent,#155eef);font-weight:750}\n.ekodi-domctl-table{border:1px solid var(--admin-border,#d9e2ec);border-radius:11px;background:var(--ekodi-ui-surface,#fff);overflow:hidden}\n.ekodi-domctl-table-top{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px}\n.ekodi-domctl-table-top strong{font-size:14px}\n.ekodi-domctl-table-top span{font-size:12px;color:var(--admin-secondary,#66768a)}\n.ekodi-domctl-list-head,.ekodi-domctl-row{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(84px,.75fr) minmax(116px,1fr) minmax(120px,1fr) 178px;align-items:center;gap:12px}\n.ekodi-domctl-list-head{padding:10px 14px;background:var(--ekodi-ui-surface-raised,#f4f7fa);border-top:1px solid var(--admin-border,#d9e2ec);font-size:11px;font-weight:800;color:var(--admin-secondary,#66768a)}\n.ekodi-domctl-list{display:block}\n.ekodi-domctl-entry{border-top:1px solid var(--admin-border,#d9e2ec)}\n.ekodi-domctl-entry:first-child{border-top:0}\n.ekodi-domctl-row{border:0!important;border-radius:0;padding:12px 14px;background:transparent}\n.ekodi-domctl-entry:hover>.ekodi-domctl-row{background:var(--ekodi-ui-surface-raised,#f8fafc)}\n.ekodi-domctl-cell{min-width:0;font-size:12px}\n.ekodi-domctl-cell:not(.ekodi-domctl-identity){display:flex;flex-direction:column;align-items:flex-start;gap:3px}\n.ekodi-domctl-name{font-size:14px;font-weight:750;word-break:break-word}\n.ekodi-domctl-memo{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--admin-secondary,#66768a);margin-top:4px}\n.ekodi-domctl-expiry small{font-size:11px;color:var(--admin-secondary,#66768a);font-variant-numeric:tabular-nums}\n.ekodi-domctl-state{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}\n.ekodi-domctl-state.st-safe{color:#08734e}.ekodi-domctl-state.st-warn{color:#a35b00}\n.ekodi-domctl-state.st-danger{color:#bf3930}.ekodi-domctl-state.st-unknown{color:var(--admin-secondary,#64748b)}\n.ekodi-domctl-pill{display:inline-flex;align-items:center;padding:4px 8px;border-radius:7px;font-size:11px;line-height:1.3;font-weight:700}\n.ekodi-domctl-pill.yes{background:#e7f7ed;color:#146a40}\n.ekodi-domctl-pill.no{background:#fff4e5;color:#96540b}\n.ekodi-domctl-rowact{display:flex!important;flex-direction:row!important;gap:6px;align-items:center!important;white-space:nowrap}\n.ekodi-domctl-rowact button,.ekodi-domctl-rowact a{padding:7px 9px;font-size:11px;border-radius:7px}\n.ekodi-domctl-entry .ekodi-domctl-form{border-top:1px solid var(--admin-border,#d9e2ec);margin:0 12px 12px;padding:14px;background:var(--ekodi-ui-surface-raised,#f8fafc);border-radius:8px;grid-template-columns:repeat(2,minmax(0,1fr))}\n.ekodi-domctl-form input[type=number]{min-height:36px;padding:7px 10px;border:1px solid var(--admin-border,#d9e2ec);border-radius:8px;font:inherit}\n.ekodi-domctl-form .chk{display:flex;flex-direction:row;align-items:center}\n.ekodi-domctl-form .ekodi-domctl-wide{grid-column:1/-1}\n.ekodi-domctl-form-hint{grid-column:1/-1;margin:0;font-size:11px;color:var(--admin-secondary,#66768a)}\n.ekodi-domctl-note{margin:0;border-radius:7px}\n@media(max-width:1150px){.ekodi-domctl-toolbar{align-items:stretch}.ekodi-domctl-filters{width:100%}.ekodi-domctl-list-head,.ekodi-domctl-row{grid-template-columns:minmax(0,1.3fr) minmax(85px,.7fr) minmax(115px,.9fr) minmax(115px,.9fr) 170px;gap:7px}}\n@media(max-width:890px){.ekodi-domctl-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.ekodi-domctl-list-head{display:none}.ekodi-domctl-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.ekodi-domctl-cell::before{content:attr(data-label);display:block;margin-bottom:5px;font-size:10px;font-weight:700;color:var(--admin-secondary,#66768a)}.ekodi-domctl-cell.ekodi-domctl-identity{grid-column:1/-1}.ekodi-domctl-rowact{align-self:center}.ekodi-domctl-rowact::before{display:none}}\n@media(max-width:500px){.ekodi-domctl-head h2{font-size:21px}.ekodi-domctl-summary{gap:7px}.ekodi-domctl-card{padding:10px}.ekodi-domctl-card strong{font-size:22px}.ekodi-domctl-search{flex-basis:100%}.ekodi-domctl-filters{gap:4px}.ekodi-domctl-filters button{font-size:11px;padding:5px 8px}.ekodi-domctl-entry .ekodi-domctl-form{grid-template-columns:1fr}.ekodi-domctl-row{grid-template-columns:1fr}.ekodi-domctl-cell.ekodi-domctl-identity{grid-column:auto}}\n";
   document.head.append(style);
 
   const panel = document.createElement('section');
@@ -92,6 +93,8 @@ html:not([data-ekodi-domctl-authorized="true"]) .sidebar [data-section="domain-c
   let authorizationInFlight = null;
   let records = [];
   let editingDomain = null;
+  let searchTerm = '';
+  let activeFilter = 'all';
 
   const token = () => {
     try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; }
@@ -145,7 +148,7 @@ html:not([data-ekodi-domctl-authorized="true"]) .sidebar [data-section="domain-c
   }
 
   function statusClass(dd) {
-    if (dd === null) return 'st-safe';
+    if (dd === null) return 'st-unknown';
     if (dd <= 14) return 'st-danger';
     if (dd <= 45) return 'st-warn';
     return 'st-safe';
@@ -159,85 +162,137 @@ html:not([data-ekodi-domctl-authorized="true"]) .sidebar [data-section="domain-c
   }
 
   function render() {
+    if (!view) return;
     view.replaceChildren();
     view.hidden = false;
     if (status) status.hidden = true;
-
+  
     const sorted = [...records].sort((a, b) => {
-      const da = daysUntil(a.expiresAt), db = daysUntil(b.expiresAt);
-      if (da === null) return 1; if (db === null) return -1; return da - db;
+      const da = daysUntil(a.expiresAt);
+      const db = daysUntil(b.expiresAt);
+      if (da === null && db !== null) return 1;
+      if (db === null && da !== null) return -1;
+      if (da !== null && db !== null && da !== db) return da - db;
+      return String(a.domain).localeCompare(String(b.domain));
     });
-
-    let soon = 0, noRenew = 0, unset = 0;
-    sorted.forEach(r => {
+    const soon = sorted.filter(r => {
       const dd = daysUntil(r.expiresAt);
-      if (dd !== null && dd <= 45) soon += 1;
-      if (!r.autoRenew && dd !== null && dd <= 60) noRenew += 1;
-      if (dd === null) unset += 1;
-    });
-
+      return dd !== null && dd <= 45;
+    }).length;
+    const noRenew = sorted.filter(r => !r.autoRenew).length;
+    const unset = sorted.filter(r => daysUntil(r.expiresAt) === null).length;
+    const attention = sorted.filter(r => {
+      const dd = daysUntil(r.expiresAt);
+      return dd === null || dd <= 45 || !r.autoRenew;
+    }).length;
+  
     const summary = document.createElement('div');
     summary.className = 'ekodi-domctl-summary';
+    summary.setAttribute('aria-label', '도메인 상태 요약');
     summary.innerHTML = `
-      <article class="ekodi-domctl-card"><small>등록 도메인</small><strong>${sorted.length}</strong></article>
-      <article class="ekodi-domctl-card ${soon ? 'warn' : ''}"><small>45일 내 만료</small><strong>${soon}</strong></article>
-      <article class="ekodi-domctl-card ${noRenew ? 'danger' : ''}"><small>자동갱신 꺼짐·임박</small><strong>${noRenew}</strong></article>
-      <article class="ekodi-domctl-card"><small>만료일 미설정</small><strong>${unset}</strong></article>`;
+      <article class="ekodi-domctl-card"><small>보유 도메인</small><strong>${sorted.length}</strong><span>등록 원장 기준</span></article>
+      <article class="ekodi-domctl-card ${soon ? 'warn' : ''}"><small>45일 내 만료·경과</small><strong>${soon}</strong><span>만료일 입력분 기준</span></article>
+      <article class="ekodi-domctl-card ${noRenew ? 'warn' : ''}"><small>자동갱신 꺼짐</small><strong>${noRenew}</strong><span>만료일과 무관한 전체 건수</span></article>
+      <article class="ekodi-domctl-card ${unset ? 'warn' : ''}"><small>만료일 확인 필요</small><strong>${unset}</strong><span>미입력은 정상으로 분류하지 않음</span></article>`;
     view.append(summary);
-
+  
+    const toolbar = document.createElement('div');
+    toolbar.className = 'ekodi-domctl-toolbar';
+    toolbar.innerHTML = `
+      <label class="ekodi-domctl-search">도메인 검색
+        <input type="search" data-domctl-search placeholder="도메인·등록기관·메모 검색" autocomplete="off" value="${esc(searchTerm)}">
+      </label>
+      <div class="ekodi-domctl-filters" role="group" aria-label="도메인 상태 필터">
+        <button type="button" data-domctl-filter="all" aria-pressed="${activeFilter === 'all'}">전체 <span>${sorted.length}</span></button>
+        <button type="button" data-domctl-filter="attention" aria-pressed="${activeFilter === 'attention'}">확인 필요 <span>${attention}</span></button>
+        <button type="button" data-domctl-filter="expiring" aria-pressed="${activeFilter === 'expiring'}">만료 임박 <span>${soon}</span></button>
+        <button type="button" data-domctl-filter="no-renew" aria-pressed="${activeFilter === 'no-renew'}">갱신 꺼짐 <span>${noRenew}</span></button>
+        <button type="button" data-domctl-filter="unset" aria-pressed="${activeFilter === 'unset'}">만료일 미입력 <span>${unset}</span></button>
+      </div>`;
+    view.append(toolbar);
+  
+    const search = searchTerm.trim().toLowerCase();
+    const visible = sorted.filter(r => {
+      const dd = daysUntil(r.expiresAt);
+      const matchesSearch = !search || [r.domain,r.registrar,r.memo].some(value => String(value ?? '').toLowerCase().includes(search));
+      if (!matchesSearch) return false;
+      if (activeFilter === 'attention') return dd === null || dd <= 45 || !r.autoRenew;
+      if (activeFilter === 'expiring') return dd !== null && dd <= 45;
+      if (activeFilter === 'no-renew') return !r.autoRenew;
+      if (activeFilter === 'unset') return dd === null;
+      return true;
+    });
+  
+    const table = document.createElement('section');
+    table.className = 'ekodi-domctl-table';
+    table.setAttribute('aria-label', '도메인 목록');
+    table.innerHTML = `
+      <div class="ekodi-domctl-table-top"><strong>도메인 목록</strong><span aria-live="polite">총 ${sorted.length}개 중 ${visible.length}개 표시</span></div>
+      <div class="ekodi-domctl-list-head" aria-hidden="true">
+        <span>도메인</span><span>등록기관</span><span>만료일 / 잔여일</span><span>자동갱신</span><span>관리</span>
+      </div>`;
     const list = document.createElement('div');
     list.className = 'ekodi-domctl-list';
-    if (!sorted.length) {
+    list.setAttribute('role', 'list');
+    if (!visible.length) {
       const empty = document.createElement('div');
       empty.className = 'ekodi-domctl-empty';
-      empty.textContent = '등록된 도메인이 없습니다.';
+      empty.textContent = sorted.length ? '검색 또는 필터에 맞는 도메인이 없습니다.' : '등록된 도메인이 없습니다.';
       list.append(empty);
     }
-    sorted.forEach(r => {
+    visible.forEach(r => {
       const dd = daysUntil(r.expiresAt);
       const info = ddayText(dd, r.expiresAt);
-      const row = document.createElement('div');
-      row.className = `ekodi-domctl-row ${statusClass(dd)}`;
-      row.dataset.domain = r.domain;
-      row.innerHTML = `
-        <div class="ekodi-domctl-main">
-          <div class="ekodi-domctl-name">${esc(r.domain)}</div>
-          <div class="ekodi-domctl-meta">
-            <span class="ekodi-domctl-tag">${esc(r.registrar || '도메인클럽')}</span>
-            <span class="ekodi-domctl-tag${r.autoRenew ? '' : ' off'}">자동갱신 ${r.autoRenew ? '✓' : '✕'}</span>
-            ${r.registeredAt ? `<span class="ekodi-domctl-tag">등록 ${esc(r.registeredAt)}</span>` : ''}
-            ${r.memo ? `<span class="ekodi-domctl-tag">${esc(r.memo)}</span>` : ''}
+      const entry = document.createElement('article');
+      entry.className = 'ekodi-domctl-entry';
+      entry.setAttribute('role', 'listitem');
+      entry.dataset.domain = r.domain;
+      const expires = dd === null
+        ? '<strong class="ekodi-domctl-state st-unknown">확인 필요</strong><small>만료일 미입력</small>'
+        : `<strong class="ekodi-domctl-state ${statusClass(dd)}">${info.num}</strong><small>${info.label}</small>`;
+      const renewed = r.autoRenew
+        ? '<span class="ekodi-domctl-pill yes">켜짐 · 기록값</span>'
+        : '<span class="ekodi-domctl-pill no">꺼짐 · 확인 필요</span>';
+      entry.innerHTML = `
+        <div class="ekodi-domctl-row ${statusClass(dd)}">
+          <div class="ekodi-domctl-cell ekodi-domctl-identity" data-label="도메인">
+            <strong class="ekodi-domctl-name">${esc(r.domain)}</strong>
+            ${r.memo ? `<small class="ekodi-domctl-memo" title="${esc(r.memo)}">${esc(r.memo)}</small>` : ''}
           </div>
-        </div>
-        <div class="ekodi-domctl-side">
-          <div class="ekodi-domctl-dday">${info.num}<small>${info.label}</small></div>
-          <div class="ekodi-domctl-rowact">
-            <a href="${REGISTRAR_URL}" target="_blank" rel="noopener">도메인클럽 ↗</a>
-            <button type="button" data-domctl-edit="${esc(r.domain)}">편집</button>
+          <div class="ekodi-domctl-cell" data-label="등록기관"><span>${esc(r.registrar || '미기록')}</span></div>
+          <div class="ekodi-domctl-cell ekodi-domctl-expiry" data-label="만료일">${expires}</div>
+          <div class="ekodi-domctl-cell" data-label="자동갱신">${renewed}</div>
+          <div class="ekodi-domctl-cell ekodi-domctl-rowact" data-label="관리">
+            <button type="button" data-domctl-edit="${esc(r.domain)}" aria-expanded="${editingDomain === r.domain}" aria-label="${esc(r.domain)} 상세 편집">${editingDomain === r.domain ? '닫기' : '상세·편집'}</button>
+            <a href="${REGISTRAR_URL}" target="_blank" rel="noopener noreferrer" aria-label="${esc(r.domain)} 등록기관 사이트 새 창에서 열기">등록기관 ↗</a>
           </div>
         </div>`;
-      list.append(row);
-
       if (editingDomain === r.domain) {
         const form = document.createElement('form');
         form.className = 'ekodi-domctl-form';
         form.innerHTML = `
           <label>등록일<input type="date" name="registeredAt" value="${esc(r.registeredAt || '')}"></label>
           <label>만료일<input type="date" name="expiresAt" value="${esc(r.expiresAt || '')}"></label>
-          <label class="chk"><input type="checkbox" name="autoRenew" ${r.autoRenew ? 'checked' : ''}>자동갱신 켜짐</label>
-          <label>알림 시작(일 전)<input type="text" name="reminderDays" inputmode="numeric" value="${esc(r.reminderDays ?? 60)}"></label>
-          <label style="grid-column:1/-1">메모<input type="text" name="memo" maxlength="240" value="${esc(r.memo || '')}"></label>
-          <div class="acts"><button type="button" data-domctl-cancel>취소</button><button type="submit" class="save">저장</button></div>`;
+          <label class="chk"><input type="checkbox" name="autoRenew" ${r.autoRenew ? 'checked' : ''}>등록기관에서 자동갱신 확인됨</label>
+          <label>알림 시작(일 전)<input type="number" name="reminderDays" min="1" max="365" step="1" required value="${esc(r.reminderDays ?? 60)}"></label>
+          <label class="ekodi-domctl-wide">메모<input type="text" name="memo" maxlength="240" value="${esc(r.memo || '')}"></label>
+          <p class="ekodi-domctl-form-hint">이 변경은 내부 관리기록입니다. 실제 갱신 상태·만료일은 등록기관에서 확인한 후 입력하세요.</p>
+          <div class="acts"><button type="button" data-domctl-cancel>취소</button><button type="submit" class="save">변경 저장</button></div>`;
         form.addEventListener('submit', async event => {
           event.preventDefault();
           const fd = new FormData(form);
+          const reminderDays = Number(fd.get('reminderDays'));
+          if (!Number.isInteger(reminderDays) || reminderDays < 1 || reminderDays > 365) {
+            window.alert('알림 시작일은 1~365일 사이의 정수로 입력하세요.');
+            return;
+          }
           const body = {
             registeredAt: String(fd.get('registeredAt') || ''),
             expiresAt: String(fd.get('expiresAt') || ''),
             autoRenew: fd.get('autoRenew') === 'on',
             transferLock: Boolean(r.transferLock),
             whoisPrivacy: Boolean(r.whoisPrivacy),
-            reminderDays: Number(fd.get('reminderDays')) || 60,
+            reminderDays,
             memo: String(fd.get('memo') || ''),
           };
           const saveBtn = form.querySelector('button.save');
@@ -247,27 +302,49 @@ html:not([data-ekodi-domctl-authorized="true"]) .sidebar [data-section="domain-c
             editingDomain = null;
             await loadData(true);
           } catch (error) {
-            if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '저장'; }
+            if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '변경 저장'; }
             window.alert(error.message || '저장에 실패했습니다.');
           }
         });
-        form.querySelector('[data-domctl-cancel]')?.addEventListener('click', () => { editingDomain = null; render(); });
-        list.append(form);
+        form.querySelector('[data-domctl-cancel]')?.addEventListener('click', () => {
+          editingDomain = null;
+          render();
+        });
+        entry.append(form);
       }
+      list.append(entry);
     });
-    view.append(list);
-
-    list.querySelectorAll('[data-domctl-edit]').forEach(button => {
-      button.addEventListener('click', () => {
-        editingDomain = button.getAttribute('data-domctl-edit');
-        render();
-      });
-    });
-
+    table.append(list);
+    view.append(table);
+  
     const note = document.createElement('p');
     note.className = 'ekodi-domctl-note';
-    note.textContent = '만료일·자동갱신·메모는 이 화면에서 기록·관제합니다. 실제 등록·갱신·이전·DNS 변경은 등록기관(도메인클럽)에서 처리하세요. 변경 내역은 감사 기록에 남습니다.';
+    note.textContent = '만료일과 자동갱신은 내부 관리기록이며 실시간 등록기관 조회 결과가 아닙니다. 실제 등록·갱신·이전·DNS 변경은 등록기관에서 처리합니다. 저장 작업은 감사 기록 대상입니다.';
     view.append(note);
+  
+    toolbar.querySelector('[data-domctl-search]')?.addEventListener('input', event => {
+      searchTerm = event.target.value;
+      const position = event.target.selectionStart;
+      render();
+      const next = view.querySelector('[data-domctl-search]');
+      next?.focus();
+      if (position !== null && next?.setSelectionRange) next.setSelectionRange(position, position);
+    });
+    toolbar.querySelectorAll('[data-domctl-filter]').forEach(button => {
+      button.addEventListener('click', () => {
+        activeFilter = button.dataset.domctlFilter;
+        render();
+        view.querySelector(`[data-domctl-filter="${activeFilter}"]`)?.focus();
+      });
+    });
+    list.querySelectorAll('[data-domctl-edit]').forEach(button => {
+      button.addEventListener('click', () => {
+        const domain = button.getAttribute('data-domctl-edit');
+        editingDomain = editingDomain === domain ? null : domain;
+        render();
+        view.querySelector(`[data-domctl-edit="${CSS.escape(domain)}"]`)?.focus();
+      });
+    });
   }
 
   async function loadData(force = false) {
