@@ -10,22 +10,34 @@
   root.dataset.panel=SECTION;
   root.hidden=true;
   root.innerHTML= `
-    <div class="section-head"><div><p class="kicker">EKODI ORCHESTRATOR · STEWARDSHIP</p>
-      <h2>비용·인프라 관리</h2><p>클라우드 · DB · 개발 인프라 · 도메인 · AI · 업무 도구의 비용, 청구서, 갱신일을 통합 관리합니다.</p></div>
-      <button type="button" class="secondary" data-infra-refresh>↻ 최신 기록</button></div>
+    <div class="section-head infra-page-heading"><div><p class="kicker">EKODI ORCHESTRATOR · FINANCE CONTROL</p>
+      <h2>비용·인프라 관리</h2><p>클라우드 · 데이터베이스 · 개발 · 도메인 · AI · 업무 도구의 청구와 갱신 일정을 한곳에서 관리합니다.</p></div>
+      <div class="infra-heading-actions"><button type="button" class="primary" data-infra-open-invoice>＋ 청구서 등록</button><button type="button" class="secondary" data-infra-refresh>↻ 최신 기록</button></div></div>
+    <nav class="infra-jump-nav" aria-label="비용 관리 화면 빠른 이동">
+      <button type="button" data-infra-jump="infra-overview">전체 요약</button>
+      <button type="button" data-infra-jump="infra-billing">청구·납부</button>
+      <button type="button" data-infra-jump="infra-services">공급자 현황</button>
+      <button type="button" data-infra-jump="infra-budget">월간 예산</button>
+      <button type="button" data-infra-jump="infra-renewals">갱신 일정</button>
+    </nav>
     <p class="infra-note">청구액과 실사용 계측은 구분합니다. 자동 연동이 없는 업체는 청구번호와 납부 확인을 직접 등록합니다. 비밀번호, API 키, 카드번호는 입력하지 마세요.</p>
-    <div class="infra-summary">
+    <div class="infra-summary" id="infra-overview">
       <article><small>등록 청구액 · 통화별</small><strong data-infra-total>—</strong><span>환율을 추정해 합산하지 않습니다.</span></article>
       <article><small>결제 확인 전</small><strong data-infra-unverified>—</strong><span>청구서 존재 ≠ 미납 또는 결제완료</span></article>
       <article><small>연체 · 7일 이내</small><strong data-infra-due>—</strong><span>직접 확인한 미납 상태 기준</span></article>
       <article><small>30일 내 갱신</small><strong data-infra-renew>—</strong><span>도메인·계약·유료 서비스</span></article>
     </div>
     <div data-infra-error class="infra-message" role="status" aria-live="polite"></div>
-    <div class="infra-section-head"><h3>서비스별 현황</h3><small data-infra-updated>조회 전</small></div>
+    <div class="infra-section-head" id="infra-services"><h3>공급자별 서비스 현황</h3><small data-infra-updated>조회 전</small></div>
     <div class="infra-providers" data-infra-providers></div>
-    <div class="infra-section-head"><h3>청구·납부 원장</h3><small>상태 변경은 최고관리자 감사기록에 남습니다.</small></div>
-    <div class="infra-table-wrap"><table><thead><tr><th>공급자</th><th>청구번호</th><th>발행 / 납부기한</th><th>금액</th><th>확인 상태</th><th>관리</th></tr></thead><tbody data-infra-invoices></tbody></table></div>
-    <details class="infra-editor"><summary>＋ 청구서 등록</summary>
+    <div class="infra-section-head" id="infra-billing"><h3>청구·납부 원장</h3><small>상태 변경은 최고관리자 감사기록에 남습니다.</small></div>
+    <div class="infra-invoice-toolbar" role="search" aria-label="청구서 목록 검색 및 필터">
+      <label class="infra-search-field"><span>청구서 검색</span><input type="search" data-infra-invoice-search placeholder="공급자 · 청구번호 · 계정 검색" autocomplete="off"></label>
+      <label class="infra-filter-field"><span>납부 확인 상태</span><select data-infra-invoice-filter><option value="all">전체 상태</option><option value="unverified">결제 여부 미확인</option><option value="due">미납 확인</option><option value="paid">납부 확인</option><option value="cancelled">취소</option></select></label>
+      <button type="button" class="secondary" data-infra-filter-reset>초기화</button><span data-infra-filter-count role="status" aria-live="polite">전체 청구서</span>
+    </div>
+    <div class="infra-table-wrap" role="region" aria-label="청구서 목록, 좁은 화면에서는 가로로 스크롤"><table><thead><tr><th>공급자</th><th>청구번호</th><th>발행 / 납부기한</th><th>금액</th><th>확인 상태</th><th>관리</th></tr></thead><tbody data-infra-invoices></tbody></table></div>
+    <details class="infra-editor" data-infra-invoice-editor><summary>＋ 청구서 직접 등록</summary>
       <form data-infra-invoice-form>
         <label>공급자<select name="provider" data-infra-provider-options required></select></label>
         <label>청구번호<input name="invoiceNumber" maxlength="100" required placeholder="IN-..."></label>
@@ -41,7 +53,7 @@
         <button type="submit" class="primary">청구서 등록</button>
       </form>
     </details>
-    <div class="infra-section-head"><h3>공급자별 월간 예산</h3><small>예산의 80% 도달 시 화면에서 경고합니다.</small></div>
+    <div class="infra-section-head" id="infra-budget"><h3>공급자별 월간 예산</h3><small>예산의 80% 도달 시 화면에서 경고합니다.</small></div>
     <div data-infra-budget-alerts></div>
     <div class="infra-table-wrap"><table><thead><tr><th>공급자</th><th>설정 예산</th><th>당월 등록 청구액</th></tr></thead><tbody data-infra-budgets></tbody></table></div>
     <details class="infra-editor"><summary>＋ 월간 예산 설정</summary><form data-infra-budget-form>
@@ -50,7 +62,7 @@
       <label>통화<select name="currency"><option>USD</option><option>KRW</option><option>EUR</option><option>JPY</option></select></label>
       <button type="submit" class="primary">예산 저장</button>
     </form></details>
-    <div class="infra-section-head"><h3>도메인·서비스 갱신 일정</h3><small>갱신 현황 조회용 · 외부 자동 결제 없음</small></div>
+    <div class="infra-section-head" id="infra-renewals"><h3>도메인·서비스 갱신 일정</h3><small>갱신 현황 조회용 · 외부 자동 결제 없음</small></div>
     <div class="infra-table-wrap"><table><thead><tr><th>공급자</th><th>도메인/계약</th><th>갱신 예정일</th><th>예상 금액</th><th>자동갱신 설정</th></tr></thead><tbody data-infra-renewals></tbody></table></div>
     <details class="infra-editor"><summary>＋ 갱신 예정 등록·수정</summary><form data-infra-renewal-form>
       <label>공급자<select name="provider" data-infra-provider-options required></select></label>
@@ -91,6 +103,8 @@
       const card=document.createElement('article');
       const header=document.createElement('div');header.className='infra-provider-head';
       const name=document.createElement('strong');name.textContent=p.name;header.append(name,label(p.category,'infra-chip'));card.append(header);
+      const telemetry=label(relevant.length?'사용량 계측 있음':'사용량 연동 필요',relevant.length?'infra-link-state linked':'infra-link-state pending');
+      card.append(telemetry);
       const lines=document.createElement('p');
       lines.textContent=related.length+'건 청구 · '+(relevant.length?'사용량 계측 '+relevant.length+'개':'자동 사용량 연동 필요');
       card.append(lines);
@@ -108,7 +122,13 @@
   function renderInvoices(data){
     const host=$('[data-infra-invoices]');host.replaceChildren();
     const names=Object.fromEntries((data.providers||[]).map(p=>[p.id,p.name]));
-    for(const i of data.invoices||[]){
+    const search=($('[data-infra-invoice-search]')?.value||'').trim().toLocaleLowerCase('ko-KR');
+    const statusFilter=$('[data-infra-invoice-filter]')?.value||'all';
+    const all=data.invoices||[];
+    const matched=all.filter(i=>(statusFilter==='all'||i.status===statusFilter)&&
+      (!search||[names[i.provider],i.provider,i.invoice_number,i.account_label].some(v=>String(v||'').toLocaleLowerCase('ko-KR').includes(search))));
+    setText('[data-infra-filter-count]',matched.length+' / '+all.length+'건 표시');
+    for(const i of matched){
       const row=document.createElement('tr');
       td(row,names[i.provider]||i.provider);
       const inv=document.createElement('div');inv.append(label(i.invoice_number));if(i.source==='user-screenshot')inv.append(label(' 첨부 이미지 기준','infra-hint'));td(row,inv);
@@ -131,7 +151,7 @@
       const controls=document.createElement('div');controls.className='infra-row-actions';controls.append(select,button);td(row,controls);
       host.append(row);
     }
-    if(!host.children.length){const r=document.createElement('tr');const c=td(r,'아직 등록된 청구서가 없습니다.');c.colSpan=6;host.append(r);}
+    if(!host.children.length){const r=document.createElement('tr');const c=td(r,all.length?'검색 조건에 맞는 청구서가 없습니다.':'아직 등록된 청구서가 없습니다.');c.colSpan=6;host.append(r);}
   }
   function renderBudgets(data){
     const names=Object.fromEntries((data.providers||[]).map(p=>[p.id,p.name]));
@@ -190,6 +210,23 @@
   saveForm('[data-infra-budget-form]','/budgets');
   saveForm('[data-infra-renewal-form]','/renewals',(x,form)=>({...x,autoRenew:form.elements.autoRenew.checked}));
   $('[data-infra-refresh]').addEventListener('click',()=>load(true));
+  $('[data-infra-open-invoice]').addEventListener('click',()=>{
+    const editor=$('[data-infra-invoice-editor]');editor.open=true;
+    editor.scrollIntoView({behavior:'smooth',block:'start'});
+    editor.querySelector('[name="provider"]')?.focus({preventScroll:true});
+  });
+  root.querySelectorAll('[data-infra-jump]').forEach(button=>button.addEventListener('click',()=>{
+    const section=root.querySelector('#'+button.dataset.infraJump);
+    section?.scrollIntoView({behavior:'smooth',block:'start'});
+  }));
+  $('[data-infra-invoice-search]').addEventListener('input',()=>{if(current)renderInvoices(current)});
+  $('[data-infra-invoice-filter]').addEventListener('change',()=>{if(current)renderInvoices(current)});
+  $('[data-infra-filter-reset]').addEventListener('click',()=>{
+    $('[data-infra-invoice-search]').value='';
+    $('[data-infra-invoice-filter]').value='all';
+    if(current)renderInvoices(current);
+    $('[data-infra-invoice-search]').focus();
+  });
   const observer=new MutationObserver(()=>{if(!root.hidden&&!root.classList.contains('hidden-panel'))load()});
   observer.observe(root,{attributes:true,attributeFilter:['hidden','class']});
   if(location.pathname.endsWith('/'+SECTION)||location.hash==='#'+SECTION)queueMicrotask(()=>load());
