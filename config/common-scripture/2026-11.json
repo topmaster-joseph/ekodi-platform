@@ -1,0 +1,166 @@
+{
+  "schema": "ekodi.common-scripture.v1",
+  "id": "ekodi-common-scripture-2026-11",
+  "authority": "EKODI Orchestrator",
+  "approvedBy": "에코디교회 담임목사 정찬균",
+  "approvedAt": "2026-10-27",
+  "status": "approved",
+  "timezone": "Asia/Seoul",
+  "month": "2026-11",
+  "nameKo": "에코디 공통본문",
+  "book": "고린도전서",
+  "range": "고린도전서 3:1-15:22",
+  "continuesFrom": "ekodi-common-scripture-2026-10",
+  "continuesTo": "고린도전서 15:23",
+  "usage": [
+    "daily-devotional",
+    "ekodichurch",
+    "ekodimission",
+    "bible-devotion",
+    "youtube",
+    "ai-context"
+  ],
+  "resolution": {
+    "canonicalKey": "date",
+    "aliases": [
+      "에코디 공통본문",
+      "공통본문",
+      "매일묵상 본문",
+      "오늘 본문",
+      "에코디 매일묵상"
+    ],
+    "rule": "When an EKODI-authorized AI asks for the common scripture for a date, resolve from this registry before model memory or historical chat."
+  },
+  "readings": [
+    "고린도전서 3:1-9",
+    "고린도전서 3:10-23",
+    "고린도전서 4:1-13",
+    "고린도전서 4:14-21",
+    "고린도전서 5:1-13",
+    "고린도전서 6:1-11",
+    "고린도전서 6:12-20",
+    "고린도전서 7:1-9",
+    "고린도전서 7:10-16",
+    "고린도전서 7:17-28",
+    "고린도전서 7:29-40",
+    "고린도전서 8:1-13",
+    "고린도전서 9:1-12",
+    "고린도전서 9:13-18",
+    "고린도전서 9:19-27",
+    "고린도전서 10:1-13",
+    "고린도전서 10:14-22",
+    "고린도전서 10:23-11:1",
+    "고린도전서 11:2-16",
+    "고린도전서 11:17-26",
+    "고린도전서 11:27-34",
+    "고린도전서 12:1-11",
+    "고린도전서 12:12-26",
+    "고린도전서 12:27-13:3",
+    "고린도전서 13:4-13",
+    "고린도전서 14:1-12",
+    "고린도전서 14:13-25",
+    "고린도전서 14:26-40",
+    "고린도전서 15:1-11",
+    "고린도전서 15:12-22"
+  ],
+  "titles": [
+    "자라게 하시는 이는 하나님",
+    "그리스도라는 터 위에",
+    "맡은 자에게 구할 것은 충성",
+    "아비의 마음으로 권하다",
+    "묵은 누룩을 내버리라",
+    "씻음과 거룩함을 받은 사람들",
+    "몸으로 하나님께 영광을",
+    "각자 받은 은사대로",
+    "평화 가운데 부르심",
+    "부르심을 받은 그대로",
+    "때가 단축된 사람처럼",
+    "지식은 교만, 사랑은 세움",
+    "권리를 쓰지 않은 사도",
+    "값없이 전하는 복음",
+    "모든 사람에게 모든 것이 되어",
+    "피할 길을 내시는 하나님",
+    "우상숭배를 피하라",
+    "모든 것을 하나님의 영광을 위하여",
+    "예배 안의 질서와 존중",
+    "주의 죽으심을 전하는 식탁",
+    "자기를 살피고 서로 기다리라",
+    "공동의 유익을 위한 은사",
+    "한 몸, 많은 지체",
+    "사랑이 없으면",
+    "사랑은 오래 참고",
+    "교회를 세우는 말",
+    "영과 마음으로 함께",
+    "덕을 세우고 질서 있게",
+    "내가 받은 복음을 전하다",
+    "그리스도 안에서 다시 살리라"
+  ],
+  "weeks": [
+    {
+      "from": 1,
+      "to": 7,
+      "theme": "하나님의 동역자, 하나님의 성전"
+    },
+    {
+      "from": 8,
+      "to": 14,
+      "theme": "부르심과 사랑으로 세우는 지식"
+    },
+    {
+      "from": 15,
+      "to": 21,
+      "theme": "복음을 위한 자유와 주의 만찬"
+    },
+    {
+      "from": 22,
+      "to": 28,
+      "theme": "한 몸, 가장 좋은 길"
+    },
+    {
+      "from": 29,
+      "to": 30,
+      "theme": "부활의 복음"
+    }
+  ],
+  "observances": [
+    {
+      "date": "2026-11-29",
+      "nameKo": "대림절 첫째 주일"
+    }
+  ],
+  "siteApplications": {
+    "rule": "Every site reads the passage for a date from this registry; only the presentation differs per site. Sites must not store their own copy of the passage.",
+    "sites": [
+      {
+        "site": "bible-devotion",
+        "path": "/bible/devotion/{date}",
+        "use": "매일묵상 본문 읽기·공유 페이지"
+      },
+      {
+        "site": "ekodichurch",
+        "path": "/ekodichurch",
+        "use": "주보 '이달의 매일묵상', 주일모임(말씀나눔 원고·예배 PPT) 본문 자동 채움"
+      },
+      {
+        "site": "ekodimission",
+        "path": "/ekodimission",
+        "use": "토요모임 본문 자동 채움, 다음 날 주일 본문 예습"
+      },
+      {
+        "site": "cardnews",
+        "path": "/api/public/scripture/common?date={date}",
+        "use": "카드뉴스 1080x1350: 날짜·제목·장절"
+      },
+      {
+        "site": "youtube",
+        "path": "/api/public/scripture/common?month={month}",
+        "use": "재생목록 '에코디 매일묵상 | {month} {book}', 영상 제목 '[에코디 매일묵상] {M/D}({요일}) {passage} | {title}'"
+      },
+      {
+        "site": "ai-context",
+        "path": "mcp:get_common_scripture",
+        "use": "에코디AI·외부 AI가 날짜별 본문을 조회할 때의 기준"
+      }
+    ]
+  }
+}

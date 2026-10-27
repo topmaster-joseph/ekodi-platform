@@ -175,10 +175,11 @@ function pastorClient(POLICY){
       const scriptureField=f.elements.namedItem('scripture');
       async function refreshApprovedReading(){
         const date=String(dateField?.value||'');
-        scriptureField.readOnly=date.startsWith('2026-10-');
+        scriptureField.readOnly=/^\d{4}-\d{2}-\d{2}$/.test(date);
         if(!scriptureField.readOnly)return;
         try{
           const response=await fetch('/api/public/scripture/common?date='+encodeURIComponent(date),{cache:'no-store'});
+          if(response.status===404){scriptureField.readOnly=false;return;}
           if(!response.ok)throw new Error('공통본문 원본 조회 실패');
           const common=await response.json();
           if(!common.found||common.status!=='approved'||!common.passage)throw new Error('이 날짜에 승인된 공통본문이 없습니다.');
@@ -249,11 +250,11 @@ function pastorClient(POLICY){
         const payload={service_type:'sunday',service_date:date,service_name:'에코디 주일모임',service_time:data.service_time||'11:00',scripture:data.scripture||'',title:data.title||'',preacher:data.preacher||'',songs:data.songs||'',prayer:data.prayer||'',notice:data.notice||'',is_published:published,updated_at:new Date().toISOString()};
         try{
           state('저장 중');
-          if(date.startsWith('2026-10-')){
+          if(/^\d{4}-\d{2}-\d{2}$/.test(date)){
             const verify=await fetch('/api/public/scripture/common?date='+encodeURIComponent(date),{cache:'no-store'});
-            if(!verify.ok)throw new Error('공통본문 레지스트리를 확인할 수 없어 저장하지 않았습니다.');
+            if(verify.status!==404&&!verify.ok)throw new Error('공통본문 레지스트리를 확인할 수 없어 저장하지 않았습니다.');
             const canonical=await verify.json();
-            if(canonical.status!=='approved'||canonical.passage!==String(data.scripture||''))throw new Error('날짜별 승인 공통본문과 일치해야 저장할 수 있습니다.');
+            if(verify.status!==404&&(canonical.status!=='approved'||canonical.passage!==String(data.scripture||'')))throw new Error('날짜별 승인 공통본문과 일치해야 저장할 수 있습니다.');
           }
           const saved=await fetch(source+'?on_conflict=service_type,service_date',{method:'POST',headers:{...headers,'content-type':'application/json',Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(payload)});
           if(!saved.ok){const error=await saved.json().catch(()=>({}));throw new Error(error.message||('저장 실패 '+saved.status));}

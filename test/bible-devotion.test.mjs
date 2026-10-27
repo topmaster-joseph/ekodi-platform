@@ -53,7 +53,7 @@ test('resolveDevotion returns curated activities and a canonical share URL', () 
 });
 
 test('unregistered and invalid dates fail closed', () => {
-  assert.equal(resolveDevotion('2026-11-01').error, 'scripture_not_registered');
+  assert.equal(resolveDevotion('2026-12-01').error, 'scripture_not_registered');
   assert.equal(resolveDevotion('2026-02-30').error, 'invalid_date');
   assert.equal(resolveDevotion('<script>').error, 'invalid_date');
   assert.equal(isDevotionDate('2026-10-31'), true);

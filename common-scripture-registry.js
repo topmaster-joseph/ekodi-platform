@@ -1,18 +1,24 @@
 import COMMON_OCTOBER_2026 from './config/common-scripture/2026-10.json' with { type: 'json' };
+import COMMON_NOVEMBER_2026 from './config/common-scripture/2026-11.json' with { type: 'json' };
 
-const REGISTRIES=Object.freeze({'2026-10':COMMON_OCTOBER_2026});
+// One file per month under config/common-scripture; register it here to publish it.
+const REGISTRIES=Object.freeze({'2026-10':COMMON_OCTOBER_2026,'2026-11':COMMON_NOVEMBER_2026});
+
+export function registeredCommonScriptureMonths(){return Object.keys(REGISTRIES).sort();}
+export function commonScriptureRegistryId(month){return REGISTRIES[month]?.id||null;}
 
 export function resolveCommonScripture(dateValue=''){
   const date=dateValue?String(dateValue):new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return {found:false,date,month:''};
   const month=date.slice(0,7),day=Number(date.slice(8,10)),registry=REGISTRIES[month];
   if(!registry||day<1||day>registry.readings.length)return {found:false,date,month};
-  return {found:true,date,month,day,passage:registry.readings[day-1],registryId:registry.id,schema:registry.schema,status:registry.status,authority:registry.authority,name:registry.nameKo};
+  const title=Array.isArray(registry.titles)?registry.titles[day-1]||'':'';
+  return {found:true,date,month,day,passage:registry.readings[day-1],...(title?{title}:{}),registryId:registry.id,schema:registry.schema,status:registry.status,authority:registry.authority,name:registry.nameKo};
 }
 export function commonScriptureSnapshot(month='2026-10'){
   const registry=REGISTRIES[month];
   if(!registry)return null;
-  return {...registry,readings:registry.readings.map((passage,index)=>({date:`${month}-${String(index+1).padStart(2,'0')}`,day:index+1,passage}))};
+  return {...registry,readings:registry.readings.map((passage,index)=>({date:`${month}-${String(index+1).padStart(2,'0')}`,day:index+1,passage,...(registry.titles?.[index]?{title:registry.titles[index]}:{})}))};
 }
 export function handlePublicCommonScripture(request){
   const url=new URL(request.url);

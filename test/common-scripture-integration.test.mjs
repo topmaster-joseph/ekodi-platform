@@ -13,7 +13,7 @@ test('approved source of truth contains exactly October 2026 31 daily passages',
  assert.equal(resolveCommonScripture('2026-10-31').passage,'고린도전서 2:6-16');
  assert.equal(resolveCommonScripture('2026-10-00').found,false);
  assert.equal(resolveCommonScripture('bad-date').found,false);
- assert.equal(resolveCommonScripture('2026-11-11').found,false);
+ assert.equal(resolveCommonScripture('2026-12-11').found,false);
 });
 test('public JSON API responds by exact day or month and rejects unknown dates',async()=>{
  const req=url=>new Request('https://ekodi.kr'+url);
@@ -39,7 +39,10 @@ test('church and mission editors consult and enforce official reference before s
   assert.match(s,/refreshApprovedReading/);
   assert.match(s,/api\/public\/scripture\/common\?date=/);
   assert.match(s,/canonical\.passage!==String\(/);
-  assert.match(s,/scriptureField\.readOnly=date\.startsWith\('2026-10-'\)/);
+  assert.match(s,/scriptureField\.readOnly=\/\^\\d\{4\}-\\d\{2\}-\\d\{2\}\$\/\.test\(date\)/);
+  assert.doesNotMatch(s,/startsWith\('2026-10-'\)/);
+  assert.match(s,/response\.status===404\)\{scriptureField\.readOnly=false/);
+  assert.match(s,/verify\.status!==404&&\(canonical\.status!=='approved'/);
  }
 });
 test('daily devotional registration protects the 31-day approved source and no September fallback',()=>{
