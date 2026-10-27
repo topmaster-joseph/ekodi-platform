@@ -38,3 +38,9 @@ test('top-level uploaded product images feed og:image and JSON-LD image', async 
   assert.match(productMetaTags(seo), /og:image" content="https:\/\/ekodi\.kr\/ekodimall\/api\/public\/media/);
   assert.match(seo.description, /친환경 칫솔입니다/);
 });
+
+test('product-level images (public API shape) also feed og:image', async () => {
+  const { buildMallProductJsonLd } = await import('../mall-product-jsonld.js');
+  const data = { shareCode: 'ABC124', product: { name: '칫솔', saleType: 'direct', price: 1000, images: [{ url: 'https://ekodi.kr/ekodimall/api/public/media/ekodimall/products/q/y.jpg' }] }, seller: {} };
+  assert.deepEqual(buildMallProductJsonLd(data).image, ['https://ekodi.kr/ekodimall/api/public/media/ekodimall/products/q/y.jpg']);
+});
