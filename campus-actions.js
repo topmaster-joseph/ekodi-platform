@@ -798,7 +798,7 @@
   function renderSiteStrip(section, sites = sitesForSection(section)) {
     const strip = window.EKODIAdminWorkStrip;
     if (!strip?.render || !section) return false;
-    strip.render(sites.map(site => {
+    const bar = strip.render(sites.map(site => {
       const [state, stateLabel] = LIFECYCLE_STATE[site.lifecycle] || LIFECYCLE_STATE.live;
       return { id: site.key, label: site.name, state, stateLabel: site.adminRoot ? stateLabel : `${stateLabel} · 관리자 주소 미등록`, className: site.adminRoot ? 'has-site-admin' : 'no-site-admin', dataset: { siteKey: site.key } };
     }), {
@@ -809,6 +809,13 @@
       ariaLabel: '사이트 선택',
       onSelect: key => selectSite(key === activeSiteKey ? '' : key),
     });
+    // Keep deep-linked sites (e.g. ?site=pizzamaru) visible in the single-row strip.
+    const activeButton = bar?.querySelector('[aria-selected="true"]');
+    if (activeButton) {
+      const barRect = bar.getBoundingClientRect();
+      const itemRect = activeButton.getBoundingClientRect();
+      bar.scrollLeft += itemRect.left - barRect.left - (bar.clientWidth - itemRect.width) / 2;
+    }
     return true;
   }
 
