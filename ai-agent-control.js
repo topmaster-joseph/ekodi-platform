@@ -8,6 +8,8 @@ import { buildEkodianOperationSnapshot, getEkodian8GSummary } from './ekodian-8g
 import {
   ADMIN_ASSIST_RETENTION,
   ensureAdminAssistColumns,
+  listOwnConversations,
+  redactOwnConversation,
   summarizeConversationText as summarize,
 } from './admin-assist-retention.js';
 
@@ -452,6 +454,33 @@ export async function handleAgentMissionControl(request, env) {
 
   if (request.method === 'GET' && url.pathname === `${PREFIX}/actions`) {
     return json({ ok: true, actions: await listActions(env, url) }, 200, request, env);
+  }
+
+  // Reading the administrator's own conversation record back. Scoped to the
+  // session's own email, in SQL — never to another administrator's, and not
+  // widened by superadmin standing: these conversations carry pastoral and
+  // member-facing material.
+  if (request.method === 'GET' && url.pathname === `${PREFIX}/conversations`) {
+    const owner = String(auth.session?.email || '').trim();
+    if (!owner) return json({ error: '세션에서 소유자를 확인할 수 없습니다.', code: 'OWNER_UNRESOLVED' }, 403, request, env);
+    const recalled = await listOwnConversations(env.DB, {
+      email: owner,
+      limit: url.searchParams.get('limit'),
+    });
+    return json({ ok: true, ...recalled }, 200, request, env);
+  }
+
+  // The administrator's own delete. It removes the words and keeps the audit
+  // row; see redactOwnConversation for why the row is not the owner's to erase.
+  if (request.method === 'DELETE' && url.pathname.startsWith(`${PREFIX}/conversations/`)) {
+    const owner = String(auth.session?.email || '').trim();
+    if (!owner) return json({ error: '세션에서 소유자를 확인할 수 없습니다.', code: 'OWNER_UNRESOLVED' }, 403, request, env);
+    const id = url.pathname.slice(`${PREFIX}/conversations/`.length);
+    const result = await redactOwnConversation(env.DB, { email: owner, id });
+    if (!result.redacted && result.reason === 'not_found_or_not_owned') {
+      return json({ ok: false, ...result }, 404, request, env);
+    }
+    return json({ ok: result.redacted, ...result }, result.redacted ? 200 : 409, request, env);
   }
 
   if (request.method === 'POST' && url.pathname === `${PREFIX}/actions`) {
