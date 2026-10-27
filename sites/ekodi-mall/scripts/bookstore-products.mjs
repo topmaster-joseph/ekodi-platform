@@ -21,7 +21,9 @@ const absolute = (url) => {
 export function bookstoreProducts(catalog) {
   const books = Array.isArray(catalog?.books) ? catalog.books : [];
   return books.filter((book) => book?.id && book?.title).map((book) => {
-    const saleUrl = absolute(book.links?.upaper || book.links?.korea || book.links?.google || book.links?.amazon);
+    // BOOKS-DIRECT-COMMERCE-001: 에코디서점 자체 판매가 켜진 도서는 서점 결제 페이지로 보낸다.
+    const directUrl = book.directSale?.enabled ? `${BOOKSTORE_BASE}/buy/?book=${encodeURIComponent(book.id)}&from=mall` : '';
+    const saleUrl = directUrl || absolute(book.links?.upaper || book.links?.korea || book.links?.google || book.links?.amazon);
     const price = Number(book.listPrice?.amount);
     const detailUrl = absolute(book.detailUrl) || `${BOOKSTORE_BASE}/#catalog`;
     return {
@@ -41,7 +43,7 @@ export function bookstoreProducts(catalog) {
       image: absolute(book.coverImage) || '',
       source: { system: 'ekodi-bookstore', bookId: book.id, detailUrl },
       action: saleUrl
-        ? { type: 'external', label: '전자책 구매하기', url: saleUrl }
+        ? { type: 'external', label: directUrl ? '에코디서점에서 구매하기' : '전자책 구매하기', url: saleUrl }
         : { type: 'inquiry', label: '에코디서점에서 보기', url: detailUrl }
     };
   });

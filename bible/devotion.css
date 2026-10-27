@@ -103,3 +103,23 @@ body:has([data-mission-devotion]) .mission-site-header{max-width:840px;padding-i
 .ekodi-devotion .dv-tabs,.ekodi-devotion .dv-panel,.ekodi-devotion .dv-admin{scroll-margin-top:96px}
 .ekodi-devotion .dv-panel{position:relative;isolation:isolate}
 .ekodi-devotion .dv-poem p{position:relative;overflow-wrap:anywhere}
+/* 2026-10-27: 관리자 메뉴는 공유 버튼 아래, 누르면 바로 아래에 내용이 열린다. */
+.ekodi-devotion > .dv-adminbar{margin:18px 0 0}
+.ekodi-devotion .dv-adminbar-link{cursor:pointer;font-family:inherit;line-height:1.3}
+.ekodi-devotion .dv-adminbar-link.active{background:#4d3d10;border-color:#4d3d10;color:#fff}
+.ekodi-devotion .dv-adminbar-link:focus-visible{outline:3px solid #c49c45;outline-offset:2px}
+.ekodi-devotion .dv-admin-view{margin-top:10px}
+.ekodi-devotion .dv-admin-view[hidden]{display:none!important}
+.ekodi-devotion .dv-admin-view h3{margin:0 0 6px}
+.ekodi-devotion .dv-admin-list{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:0;max-height:420px;overflow:auto;border:1px solid var(--dv-line,#dde4de);border-radius:10px}
+.ekodi-devotion .dv-admin-list li{display:grid;grid-template-columns:5.5em minmax(0,11em) minmax(0,1fr);gap:10px;padding:7px 12px;border-bottom:1px solid var(--dv-line,#dde4de);font-size:.9rem;font-variant-numeric:tabular-nums}
+.ekodi-devotion .dv-admin-list li:last-child{border-bottom:0}
+.ekodi-devotion .dv-admin-list li.active{background:#f1e5bd}
+.ekodi-devotion .dv-admin-list a{font-weight:700;color:inherit;text-decoration:none}
+.ekodi-devotion .dv-admin-list a.sun{color:#a23a2a}
+.ekodi-devotion .dv-admin-list a.sat{color:#2d4f7c}
+.ekodi-devotion .dv-admin-title{color:#5b6b62}
+.ekodi-devotion .dv-admin-card{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:6px 14px;margin:10px 0}
+.ekodi-devotion .dv-admin-card dt{color:#5b6b62;font-size:.85rem}
+.ekodi-devotion .dv-admin-card dd{margin:0;font-weight:700}
+@media (max-width:520px){.ekodi-devotion .dv-admin-list li{grid-template-columns:5em minmax(0,1fr)}.ekodi-devotion .dv-admin-title{grid-column:2}}

@@ -81,7 +81,14 @@
         "google": "",
         "upaper": "https://ekodi.upaper.kr/content/1223429",
         "korea": "https://ekodi.upaper.kr/content/1223429"
-      }
+      },
+      "directSale": {
+        "enabled": true,
+        "fileKey": "BOOK-EKODI-000001/ebook.epub",
+        "format": "EPUB 3"
+      },
+      "buyUrl": "/buy/?book=BOOK-EKODI-000001",
+      "socialImage": "/assets/ekodian-cover.jpg"
     },
     {
       "id": "BOOK-EKODI-000002",
@@ -143,7 +150,15 @@
         "google": "",
         "upaper": "",
         "korea": ""
-      }
+      },
+      "directSale": {
+        "enabled": true,
+        "fileKey": "BOOK-EKODI-000002/ebook.epub",
+        "format": "EPUB 3"
+      },
+      "buyUrl": "/buy/?book=BOOK-EKODI-000002",
+      "coverImage": "/assets/ai-progress-poverty-cover.svg",
+      "socialImage": "/assets/ai-progress-poverty-cover.jpg"
     }
   ]
 }

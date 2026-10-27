@@ -53,7 +53,30 @@ export async function fetchDirectCandidates(env) {
     return (Array.isArray(data?.products) ? data.products : []).filter(p => p?.shareCode && p?.imageUrl && p?.publicUrl && !/coupang/i.test(`${p.publicUrl}${p.imageUrl}`));
   } catch { return []; }
 }
+// BOOKS-SOCIAL-PROMOTION-001: 에코디서점 직접판매 도서도 같은 비규칙 direct 레인으로 자동 홍보한다.
+// 서점 원장(books.json)에서 directSale + 래스터 표지(socialImage)가 있는 도서만 후보가 된다.
+export async function fetchBookCandidates(env) {
+  try {
+    const response = env?.BOOKS?.fetch
+      ? await env.BOOKS.fetch(new Request('https://books.internal/books.json'))
+      : await fetch('https://ekodi.kr/books/books.json');
+    if (!response.ok) return [];
+    return bookCandidatesFromCatalog(await response.json().catch(() => ({})));
+  } catch { return []; }
+}
+export function bookCandidatesFromCatalog(catalog) {
+  const base = 'https://ekodi.kr/books';
+  const abs = path => /^https:\/\//.test(String(path || '')) ? String(path) : String(path || '').startsWith('/') ? base + path : '';
+  return (Array.isArray(catalog?.books) ? catalog.books : [])
+    .filter(b => b?.id && b?.title && b?.directSale?.enabled === true && abs(b.socialImage))
+    .map(b => ({
+      kind: 'book', shareCode: `book-${String(b.id).toLowerCase()}`, name: b.subtitle ? `${b.title} — ${b.subtitle}` : b.title,
+      oneLine: clean(b.abstract || b.subtitle, 160), price: Number(b.listPrice?.amount) || 0, author: clean(b.author, 40),
+      imageUrl: abs(b.socialImage), publicUrl: `${base}/buy/?book=${encodeURIComponent(b.id)}&from=social`,
+    }));
+}
 export function directContent(product, provider, runDate) {
+  if (product?.kind === 'book') return bookContent(product, provider, runDate);
   const name = clean(product?.name, 90);
   const line = clean(product?.oneLine, 160);
   const price = Number(product?.price || 0) > 0 ? `${Number(product.price).toLocaleString('ko-KR')}원` : '';
@@ -62,6 +85,15 @@ export function directContent(product, provider, runDate) {
   const link = new URL(product.publicUrl);
   link.searchParams.set('utm_source', provider); link.searchParams.set('utm_medium', 'social'); link.searchParams.set('utm_campaign', `direct-${String(runDate).replaceAll('-', '')}`);
   return { title: hooks[provider] || hooks.facebook, caption: `${body}\n\n#에코디몰 #EKODI`, imageUrl: product.imageUrl, linkUrl: link.href, mode: 'rules' };
+}
+export function bookContent(product, provider, runDate) {
+  const name = clean(product?.name, 90);
+  const price = Number(product?.price || 0) > 0 ? `${Number(product.price).toLocaleString('ko-KR')}원` : '';
+  const hooks = { facebook: `에코디서점 · ${name}`, instagram: `이번 주 에코디서점의 책 · ${name}`, threads: `읽고 나누고 싶은 한 권 · ${name}` };
+  const body = [product.oneLine || `${name}을(를) 에코디서점에서 만나보세요.`, product.author ? `지은이 ${product.author}` : '', price ? `전자책 ${price} · 회원등급 할인` : '', '에코디서점에서 바로 구매하면 내 서재로 즉시 전달됩니다.'].filter(Boolean).join('\n');
+  const link = new URL(product.publicUrl);
+  link.searchParams.set('utm_source', provider); link.searchParams.set('utm_medium', 'social'); link.searchParams.set('utm_campaign', `book-${String(runDate).replaceAll('-', '')}`);
+  return { title: hooks[provider] || hooks.facebook, caption: `${body}\n\n#에코디서점 #출판 #EKODI #전자책`, imageUrl: product.imageUrl, linkUrl: link.href, mode: 'rules' };
 }
 async function pickDirectProduct(env, candidates, runDate, provider) {
   if (!candidates.length) return null;
@@ -314,7 +346,7 @@ export async function runMallPromotionAutomation(env,{reason='cron',force=false}
     const slotMinute=irregularSlotMinute(kst.date,connection.provider);
     if(!force&&kst.minute<slotMinute){ deferred.push({provider:connection.provider,slotKst:`${String(Math.floor(slotMinute/60)).padStart(2,'0')}:${String(slotMinute%60).padStart(2,'0')}`}); continue; }
     if(directReady&&promotionLane(kst.date,connection.provider)==='direct'){
-      if(directCandidates===null) directCandidates=await fetchDirectCandidates(env);
+      if(directCandidates===null) directCandidates=[...await fetchDirectCandidates(env), ...await fetchBookCandidates(env)];
       const direct=await pickDirectProduct(env,directCandidates,kst.date,connection.provider);
       if(direct){
         const dKey=`mall-direct-${String(kst.date).replaceAll('-','')}-${slug(connection.provider)}-${slug(direct.shareCode)}`;

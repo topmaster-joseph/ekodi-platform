@@ -33,3 +33,7 @@
 
 @media(min-width:821px){.hero-grid{min-height:0}.hero-main{padding:40px 56px 38px 0}.hero h1{font-size:clamp(2.3rem,3.6vw,3.4rem)}.catalog-section{padding-top:52px}}
 @media(max-width:640px){.nav{left:-13px;right:-13px;padding-left:26px;padding-right:26px}}
+
+.book-links a.buy-direct{background:var(--navy);border-color:var(--navy);color:var(--white);font-weight:600;min-height:44px;letter-spacing:.03em}
+.book-links a.buy-direct:hover{background:var(--burgundy);border-color:var(--burgundy)}
+@media(max-width:640px){.book-links>.buy-direct{grid-column:1/-1}}

@@ -13,3 +13,22 @@ custom_domain = true
 directory = "./books"
 binding = "ASSETS"
 run_worker_first = true
+
+# BOOKS-DIRECT-COMMERCE-001 — 에코디서점 자체 판매
+# TOSS_SECRET_KEY / TOSS_CLIENT_KEY(live) are Worker secrets only (never in this file).
+# PAYMENTS_ENABLED stays "false" until the owner approves opening payments.
+[vars]
+ENVIRONMENT = "production"
+PUBLIC_BASE_URL = "https://ekodi.kr/books"
+OPERATOR_EMAILS = "topmaster.joseph@gmail.com,joseph@ekodibiz.kr,joseph@ekodi.kr"
+PAYMENTS_ENABLED = "false"
+EKODIPAY_PROFILE = "ekodi"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ekodi-auth"
+database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
+
+[[r2_buckets]]
+binding = "BOOK_FILES"
+bucket_name = "ekodi-book-files"

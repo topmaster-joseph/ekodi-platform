@@ -16,6 +16,9 @@ on:
     paths:
       - 'books/**'
       - 'books-worker.js'
+      - 'books-commerce.js'
+      - 'ekodipay-core.js'
+      - 'migrations/202610271400_books_direct_commerce.sql'
       - 'scripts/validate-books.mjs'
       - 'wrangler.books.toml'
       - 'scripts/guarded-worker-release.mjs'
@@ -67,6 +70,17 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+      - name: Guard direct-commerce payment config (BOOKS-DIRECT-COMMERCE-001)
+        run: |
+          set -euo pipefail
+          grep -Eq '^PAYMENTS_ENABLED = "(false|true)"$' wrangler.books.toml
+          ! grep -Eq '^\s*TOSS_SECRET_KEY\s*=' wrangler.books.toml
+          ! grep -Eq 'live_(g?sk)_' wrangler.books.toml
+      - name: Apply additive books commerce schema (CREATE ... IF NOT EXISTS only)
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.119.0 d1 execute ekodi-auth --remote --config wrangler.books.toml --file migrations/202610271400_books_direct_commerce.sql
+          npx --yes wrangler@4.119.0 r2 bucket list | grep -q 'ekodi-book-files' || npx --yes wrangler@4.119.0 r2 bucket create ekodi-book-files
       - name: Candidate at 0%, verify, promote and auto-rollback on failure
         run: |
           set -euo pipefail
