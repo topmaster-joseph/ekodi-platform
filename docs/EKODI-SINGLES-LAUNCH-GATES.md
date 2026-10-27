@@ -1,7 +1,8 @@
 # 에코디 동행 — 개통 관문 체크리스트 (현재 상태)
 
 기준일: 2026-10-26 (운영 방향·요청 과금 2026-10-27 갱신) · 근거: 저장소 main, 운영 Supabase(ekodi-platform-prod) 읽기 전용 조회
-판정: **미개통 유지.** 아래 ⛔ 항목이 모두 ✅가 되기 전에는 `config/singles-feature-flags.json`의 회원 대상 스위치를 켜지 않는다.
+판정: **2026-10-28 소유자 결정으로 회원 가입·프로필 개통.** 탐색·호감·메시지는 성인 본인확인(A3) 전까지 서버가 차단하고, 유료 기능은 계속 OFF. 아래 ⛔ 항목은 개통 후 보완 과제로 남는다.
+이전 판정: 미개통 유지. 아래 ⛔ 항목이 모두 ✅가 되기 전에는 `config/singles-feature-flags.json`의 회원 대상 스위치를 켜지 않는다.
 
 범례: ✅ 완료 · 🟡 부분 완료 · ⛔ 미완(개통 차단) · 👤 사람 결정·법률 판단 필요
 
@@ -49,7 +50,8 @@
 
 | 스위치 | 위치 | 현재 값 |
 |---|---|---|
-| `SINGLES_M1_ENABLED`, `SINGLES_SOCIAL_ENABLED`, `SINGLES_PAID_ACTIONS_ENABLED`, `SINGLES_BANK_TRANSFER_ENABLED`, `SINGLES_BANK_VERIFICATION_ENABLED` | Worker(`wrangler.site.toml`) | 모두 `"false"` |
+| `SINGLES_M1_ENABLED` (2026-10-27), `SINGLES_SOCIAL_ENABLED` (2026-10-28) | Worker(`wrangler.site.toml`) | `"true"` — 소유자 개통 결정 |
+| `SINGLES_PAID_ACTIONS_ENABLED`, `SINGLES_BANK_TRANSFER_ENABLED`, `SINGLES_BANK_VERIFICATION_ENABLED` | Worker(`wrangler.site.toml`) | `"false"` |
 | `SINGLES_ONBOARDING_ENABLED`, `SINGLES_SOCIAL_ENABLED`, `SINGLES_BANK_*` | Edge(Supabase 비밀값) | 확인필요 — 저장소에서 볼 수 없음. Worker가 앞단에서 막고 있어 회원 노출은 없음 |
 
 ## F. 요청 과금(A안) 판매 개시 관문
