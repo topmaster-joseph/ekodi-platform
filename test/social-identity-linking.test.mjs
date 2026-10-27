@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { SOCIAL_IDENTITY_PROVIDERS,socialIdentityPolicy,handleSocialIdentityControl } from '../social-identity-control.js';
+import { handleExternalAccountControl } from '../external-account-control.js';
 
 const endpoint='https://ekodi.kr/api/control/external-accounts/social-identities';
 const actor={userId:'ekodi-user-1',email:'member@example.test',superAdmin:false};
@@ -98,4 +99,34 @@ test('if later enabled, registration always binds the verified EKODI ID and rema
   assert.ok(batches[0].length===2);
   assert.match(sql[0],/pending_provider_verification/);
   assert.ok(!JSON.stringify(params).includes('access_token'));
+});
+
+test('verified EKODI admin session can see all social account status without Supabase user token',async()=>{
+  let attemptedWrite=0;
+  const env={DB:{prepare(sql){
+    if(sql.includes('FROM sessions'))return {bind(){return {first:async()=>({
+      email:'owner@example.test',role:'super_admin',expires_at:'2099-01-01T00:00:00.000Z'
+    })}}};
+    return {all:async()=>({results:[]}),bind(){return {all:async()=>({results:[]})}},run(){attemptedWrite++;throw new Error('unexpected write')}};
+  }}};
+  const res=await handleExternalAccountControl(new Request(endpoint+'?scope=all',{
+    headers:{authorization:'Bearer active-ekodi-admin-session'}
+  }),env);
+  const body=await res.json();
+  assert.equal(res.status,200);
+  assert.equal(body.ownerScope,'platform');
+  assert.equal(body.policy.registrationEnabled,false);
+  assert.equal(attemptedWrite,0);
+});
+
+test('the EKODI admin-session inventory exception never authorizes social registrations',async()=>{
+  const env={EKODI_SOCIAL_IDENTITY_REGISTRATION_ENABLED:'true',DB:{
+    prepare(sql){if(sql.includes('FROM sessions'))throw new Error('admin login must not be used for POST');
+      return {all:async()=>({results:[]})}}
+  }};
+  const res=await handleExternalAccountControl(new Request(endpoint,{
+    method:'POST',headers:{authorization:'Bearer admin-only-token','content-type':'application/json'},
+    body:JSON.stringify({provider:'instagram',providerAccountId:'account'})
+  }),env);
+  assert.equal(res.status,401);
 });
