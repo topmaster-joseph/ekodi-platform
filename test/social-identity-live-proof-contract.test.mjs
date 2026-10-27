@@ -11,6 +11,8 @@ test('SOCIAL-ID-001 live verification uses existing authenticated Admin E2E path
   assert.match(body, /verifyNormal\(tab, alreadyActive, started\)/);
   assert.match(body, /authenticatedStatus!==200/);
   assert.match(body, /guestStatus!==401/);
+  assert.match(body, /noStoreCache!==true/);
+  assert.match(body, /cache-control/);
   assert.match(body, /registrationEnabled!==false/);
   assert.match(body, /providerCount!==13/);
   assert.match(body, /uiProviderCount!==13/);
