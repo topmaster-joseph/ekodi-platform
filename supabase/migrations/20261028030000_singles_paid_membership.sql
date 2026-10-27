@@ -129,14 +129,36 @@ create table if not exists public.singles_adult_verifications(
  check (user_id<>operator_id)
 );
 
-do $$ declare t text; begin
- foreach t in array array['singles_credit_accounts','singles_credit_ledger','singles_price_rules','singles_pass_plans','singles_pass_grants',
-  'singles_paid_requests','singles_contact_unlocks','singles_signup_attempts','singles_pilot_users','singles_adult_verifications'] loop
-  execute format('alter table public.%I enable row level security',t);
-  execute format('revoke all on table public.%I from public,anon,authenticated',t);
-  execute format('grant select,insert,update on table public.%I to service_role',t);
- end loop;
-end $$;
+alter table public.singles_credit_accounts enable row level security;
+revoke all on table public.singles_credit_accounts from public,anon,authenticated;
+grant select,insert,update on table public.singles_credit_accounts to service_role;
+alter table public.singles_credit_ledger enable row level security;
+revoke all on table public.singles_credit_ledger from public,anon,authenticated;
+grant select,insert,update on table public.singles_credit_ledger to service_role;
+alter table public.singles_price_rules enable row level security;
+revoke all on table public.singles_price_rules from public,anon,authenticated;
+grant select,insert,update on table public.singles_price_rules to service_role;
+alter table public.singles_pass_plans enable row level security;
+revoke all on table public.singles_pass_plans from public,anon,authenticated;
+grant select,insert,update on table public.singles_pass_plans to service_role;
+alter table public.singles_pass_grants enable row level security;
+revoke all on table public.singles_pass_grants from public,anon,authenticated;
+grant select,insert,update on table public.singles_pass_grants to service_role;
+alter table public.singles_paid_requests enable row level security;
+revoke all on table public.singles_paid_requests from public,anon,authenticated;
+grant select,insert,update on table public.singles_paid_requests to service_role;
+alter table public.singles_contact_unlocks enable row level security;
+revoke all on table public.singles_contact_unlocks from public,anon,authenticated;
+grant select,insert,update on table public.singles_contact_unlocks to service_role;
+alter table public.singles_signup_attempts enable row level security;
+revoke all on table public.singles_signup_attempts from public,anon,authenticated;
+grant select,insert,update on table public.singles_signup_attempts to service_role;
+alter table public.singles_pilot_users enable row level security;
+revoke all on table public.singles_pilot_users from public,anon,authenticated;
+grant select,insert,update on table public.singles_pilot_users to service_role;
+alter table public.singles_adult_verifications enable row level security;
+revoke all on table public.singles_adult_verifications from public,anon,authenticated;
+grant select,insert,update on table public.singles_adult_verifications to service_role;
 
 -- 입력·공개 점수: 표시 이름(별명)·신앙 항목 제외 9개 항목. 화면·서버(profileScore)와 같은 기준.
 create or replace function public.singles_profile_score(p_user uuid,out total integer,out filled integer,out shown integer)
@@ -378,14 +400,23 @@ begin
  return jsonb_build_object('closed_interests',closed_interests,'cancelled_rsvps',cancelled_rsvps);
 end $$;
 
-do $$ declare f text; begin
- foreach f in array array[
-  'public.singles_profile_score(uuid)','public.singles_price_quote(uuid,text)','public.singles_is_paid_member(uuid)',
-  'public.singles_paid_request_create(uuid,uuid,text)','public.singles_paid_request_decide(uuid,uuid,text)',
-  'public.singles_paid_request_release(uuid,text)','public.singles_pass_purchase(uuid,text)',
-  'public.singles_operator_verify_adult(uuid,uuid,text,text)','public.singles_bank_confirm_order(text,uuid,text,text,text)',
-  'public.singles_withdraw_member(uuid,text)'] loop
-  execute 'revoke all on function '||f||' from public,anon,authenticated';
-  execute 'grant execute on function '||f||' to service_role';
- end loop;
-end $$;
+revoke all on function public.singles_profile_score(uuid) from public,anon,authenticated;
+grant execute on function public.singles_profile_score(uuid) to service_role;
+revoke all on function public.singles_price_quote(uuid,text) from public,anon,authenticated;
+grant execute on function public.singles_price_quote(uuid,text) to service_role;
+revoke all on function public.singles_is_paid_member(uuid) from public,anon,authenticated;
+grant execute on function public.singles_is_paid_member(uuid) to service_role;
+revoke all on function public.singles_paid_request_create(uuid,uuid,text) from public,anon,authenticated;
+grant execute on function public.singles_paid_request_create(uuid,uuid,text) to service_role;
+revoke all on function public.singles_paid_request_decide(uuid,uuid,text) from public,anon,authenticated;
+grant execute on function public.singles_paid_request_decide(uuid,uuid,text) to service_role;
+revoke all on function public.singles_paid_request_release(uuid,text) from public,anon,authenticated;
+grant execute on function public.singles_paid_request_release(uuid,text) to service_role;
+revoke all on function public.singles_pass_purchase(uuid,text) from public,anon,authenticated;
+grant execute on function public.singles_pass_purchase(uuid,text) to service_role;
+revoke all on function public.singles_operator_verify_adult(uuid,uuid,text,text) from public,anon,authenticated;
+grant execute on function public.singles_operator_verify_adult(uuid,uuid,text,text) to service_role;
+revoke all on function public.singles_bank_confirm_order(text,uuid,text,text,text) from public,anon,authenticated;
+grant execute on function public.singles_bank_confirm_order(text,uuid,text,text,text) to service_role;
+revoke all on function public.singles_withdraw_member(uuid,text) from public,anon,authenticated;
+grant execute on function public.singles_withdraw_member(uuid,text) to service_role;
