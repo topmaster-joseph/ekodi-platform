@@ -226,6 +226,7 @@ async function handleRevoke(req,who,body){
  return json(req,{ok:true,revoked:true});
 }
 async function handleOpen(req,who,body){
+ if(!who.aal2)return deny(req,"STEP_UP_REQUIRED");
  const plain=str(body.token,100);
  if(!/^[a-f0-9]{64}$/.test(plain))return deny(req,"SHARE_NOT_FOUND",404);
  const hash=await sha256(enc.encode(plain));

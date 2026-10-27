@@ -31,3 +31,18 @@ The public client only calls the central Edge Function `secure-documents-api` us
 
 ## Caveats
 This stage is **development only**: no real personal documents are permitted; encrypted upload, redaction, multi-tenant authorization and deletion have not passed end-to-end tests. Network-delivered copies, screenshots and previously downloaded files cannot be remotely erased. Expiring access is not equivalent to deleting copies already distributed. Legal holds and backup lifecycles are separate from share grants. Audit contains only metadata and never the original document or token.
+
+## Reusable site adapter example
+
+A site must obtain its canonical, immutable tenant UUID from the trusted EKODI workspace context; never hardcode a slug as an authorization claim. The site must use the same-origin central module:
+
+```js
+import { mountSecureDocuments } from "/my/docs/secure-widget.js";
+await mountSecureDocuments(document.querySelector("#secure-documents"), {
+  scope: "workspace",
+  workspaceId: verifiedWorkspace.id,
+  config: window.EKODI_MY_CONFIG
+});
+```
+
+Personal mode: `mountSecureDocuments(element, {scope:"person"})`. All actual authorization is reverified by the central API; simply mounting or supplying an identifier never grants document access. Share recipients require verified EKODI authentication plus a recent strong MFA step-up to open the document. This adapter is a source integration contract; it is not yet live on every site.
