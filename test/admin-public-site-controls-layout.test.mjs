@@ -45,3 +45,11 @@ test('other admin features in the shared asset remain present', () => {
   assert.match(source, /window\.EKODIAuthProviderControl/);
   assert.match(source, /window\.EKODIPublicSiteControls/);
 });
+
+test('refresh and site transitions never silently overwrite unsaved publication changes', () => {
+  assert.match(source, /if \(viewState\.dirty && !allowDiscard\)/);
+  assert.match(source, /load\(\{allowDiscard:true\}\)/);
+  assert.match(source, /viewState\.loading\) return;/);
+  assert.match(source, /!button\.dataset\.pscSelect \|\| button\.dataset\.pscSelect === viewState\.selectedId \|\| viewState\.loading/);
+  assert.match(source, /if \(viewState\.loading\) return;renderEditor\(panel\)/);
+});
