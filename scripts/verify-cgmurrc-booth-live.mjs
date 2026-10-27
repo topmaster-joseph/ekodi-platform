@@ -71,6 +71,8 @@ async function main(){
   const adminJsText=await adminJs.text();
   check('관리자 화면 스크립트 제공(자바스크립트 형식)',adminJs.status===200&&/javascript/i.test(adminJs.headers.get('content-type')||'')&&adminJsText.includes('ekodi_token'),
     `HTTP ${adminJs.status} ${adminJs.headers.get('content-type')||''}`);
+  check('관리자 화면에 모두 선택·일괄 확정/거절 포함',['selectAll','bulkConfirm','bulkReject',"action:'bulk'"].every(x=>adminJsText.includes(x)),'admin/app.js');
+  check('관리자 화면 렌더 중단 버그(label 가림) 없음',(adminJsText.match(/\bconst label\b/g)||[]).length===1,'admin/app.js');
   const started=Date.now();
   const anon=await call('/admin');
   check('로그인 없는 관리자 API는 바로 401',anon.status===401&&Date.now()-started<10000,`HTTP ${anon.status} ${Date.now()-started}ms`);
