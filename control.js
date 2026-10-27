@@ -118,6 +118,34 @@
       pushMessage('assistant',FACTCHAT_ERRORS[code]||code||'기관계정 호출에 실패했습니다.',{provider:FACTCHAT_INSTITUTION_LABEL,status:'failed'});
     }
   }
+  // Prefill by URL where the service supports it (ChatGPT ?q=); otherwise the command is
+  // copied so it can be pasted. Nothing is ever sent automatically.
+  const EXTERNAL_AI=Object.freeze({
+    chatgpt:Object.freeze({label:'ChatGPT',prefill:true,url:q=>'https://chatgpt.com/?q='+encodeURIComponent(q)}),
+    claude:Object.freeze({label:'Claude',prefill:'try',url:q=>'https://claude.ai/new?q='+encodeURIComponent(q)}),
+    gemini:Object.freeze({label:'Gemini',prefill:false,url:()=>'https://gemini.google.com/app'}),
+    genspark:Object.freeze({label:'Genspark',prefill:false,url:()=>'https://www.genspark.ai/'}),
+    qwen:Object.freeze({label:'Qwen',prefill:false,url:()=>'https://chat.qwen.ai/'}),
+  });
+  function openExternalAi(provider,message){
+    if(EXTERNAL_SECRET_RE.test(message)){pushMessage('assistant','비밀번호·API 키·토큰처럼 보이는 값은 외부 AI로 보내지 않습니다. 민감정보를 제거한 뒤 다시 실행해 주세요.',{provider:provider.label,status:'failed'});return false}
+    const fits=message.length<=3500;
+    const popup=window.open(provider.url(provider.prefill&&fits?message:''),'_blank');
+    if(popup){try{popup.opener=null}catch{}}
+    let copied=false;
+    const copy=navigator.clipboard?.writeText?navigator.clipboard.writeText(message).then(()=>{copied=true},()=>{}):Promise.resolve();
+    copy.then(()=>{
+      if(!popup){pushMessage('assistant','브라우저가 새 창을 막았습니다. 주소창 오른쪽의 팝업 차단 표시에서 ekodi.kr 팝업을 허용한 뒤 다시 실행해 주세요.'+(copied?' 명령은 복사해 두었습니다.':''),{provider:provider.label,status:'failed'});return}
+      const filled=provider.prefill===true&&fits;
+      const text=filled
+        ?provider.label+' 새 창에 명령을 자동 입력했습니다. 내용을 확인한 뒤 전송하세요.'
+        :provider.prefill==='try'&&fits
+          ?provider.label+' 새 창을 열고 명령 자동 입력을 요청했습니다. 입력창이 비어 있으면 붙여넣기(Ctrl+V) 후 전송하세요.'
+          :provider.label+' 새 창을 열었습니다. 입력창에 붙여넣기(Ctrl+V) 후 전송하세요.';
+      pushMessage('assistant',text+(copied?' 명령은 클립보드에도 복사해 두었습니다.':filled?'':' 자동 복사가 차단되어 위의 내 명령을 직접 복사해 주세요.')+' 자동 전송은 하지 않습니다.',{provider:provider.label,target:'external',status:'assist_only'});
+    });
+    return Boolean(popup);
+  }
   function historyForAssist(){const s=state.sessions.find(x=>x.id===state.activeId);return (s?.messages||[]).filter(m=>m.role==='user'||m.role==='assistant').slice(-8).map(m=>({role:m.role,text:m.text}))}
   async function previewAiRoute(){
     const goal=String($('#commandInput')?.value||'').trim();
@@ -155,6 +183,10 @@
     if(state.busy)return;const message=String(value||'').trim();if(!message)return;
     state.busy=true;$('#sendButton').disabled=true;const target=$('#executionTarget').value;const executeNow=$('#executeNow').checked;const releaseMode=$('#orchestratorRelease')?.checked===true;
     const prior=historyForAssist();pushMessage('user',message,{target});$('#commandInput').value='';resizeInput();
+    // CONTROL-EXTERNAL-AI-001: an external AI opens in a new window synchronously, inside
+    // the click/Enter gesture, so pop-up blockers and the clipboard both allow it.
+    const external=!releaseMode&&EXTERNAL_AI[target];
+    if(external){openExternalAi(external,message);state.busy=false;$('#sendButton').disabled=false;return;}
     let queued=null;
     try{
       // Selecting the institution account is the consent; a protected release request still wins.
