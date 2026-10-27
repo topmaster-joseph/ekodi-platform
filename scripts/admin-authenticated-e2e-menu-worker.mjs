@@ -85,10 +85,11 @@ async function waitForAdminNavigationIdle() {
 async function selectWorkArea() {
   stage('global');
   const global = page.locator(`button.admin-global-nav[data-admin-global-group="${group}"]`);
-  await global.waitFor({ state: 'visible', timeout: interactionReadyTimeoutMs });
+  // ADMIN-LEFT-FLAT-MENU-001: area captions are hidden; activate the area control directly.
+  await global.waitFor({ state: 'attached', timeout: interactionReadyTimeoutMs });
   const aria = await global.getAttribute('aria-current');
   const classes = String(await global.getAttribute('class') || '');
-  if (aria !== 'page' && !classes.split(/\s+/).includes('active')) await clickFast(global);
+  if (aria !== 'page' && !classes.split(/\s+/).includes('active')) await global.evaluate(node => { node.click(); return true; });
   await page.waitForFunction(target => [...document.querySelectorAll('button[data-admin-global-group]')].some(node => node.dataset.adminGlobalGroup === target && (node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))), group, { timeout: interactionReadyTimeoutMs });
 }
 

@@ -17,7 +17,7 @@ test('Admin E2E retries only its requested submenu after delayed lazy mounting',
   assert.match(resolver,/data-admin-more-group/);
   assert.match(resolver,/if \(!expanded\) await dispatchClick\(more/);
   assert.match(resolver,/await detail\.waitFor\(\{ state: 'visible'/);
-  assert.match(resolver,/await dispatchClick\(groupButton/);
+  assert.match(resolver,/await dispatchAreaClick\(groupButton/);
 });
 
 test('missing submenu still fails visibly with bounded retries and diagnostic evidence',()=>{

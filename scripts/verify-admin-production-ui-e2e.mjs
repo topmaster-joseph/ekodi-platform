@@ -217,6 +217,11 @@ async function dispatchClick(locator, timeout = 10_000) {
   await locator.evaluate(node => { node.click(); return true; });
 }
 
+async function dispatchAreaClick(locator, timeout = 10_000) {
+  await locator.waitFor({ state: 'attached', timeout });
+  await locator.evaluate(node => { node.click(); return true; });
+}
+
 async function resolveMenuTrigger(id, group) {
   // ADMIN-IA-V3: a section is either a menu entry (.admin-detail-item) or a
   // detail route nested under its open menu (.admin-detail-tab).
@@ -256,8 +261,8 @@ async function resolveMenuTrigger(id, group) {
     } catch {
       // A menu that remains invisible is retried with the same group focus.
     }
-    if (attempt < 2 && await groupButton.isVisible().catch(() => false)) {
-      await dispatchClick(groupButton, 8_000);
+    if (attempt < 2 && await groupButton.count().catch(() => 0)) {
+      await dispatchAreaClick(groupButton, 8_000);
       await page.waitForTimeout(350);
     }
   }
@@ -319,9 +324,11 @@ for (const [id, group] of menus) {
   ), group);
   if (selectedWorkArea !== group || !await groupActive()) {
     const global = page.locator(`button[data-admin-global-group="${group}"]`).first();
-    await global.waitFor({ state: 'visible', timeout: 10000 });
+    // ADMIN-LEFT-FLAT-MENU-001: area captions are not shown; the area control stays in
+    // the DOM and is activated directly.
+    await global.waitFor({ state: 'attached', timeout: 10000 });
     for (let attempt=0; attempt<2; attempt++) {
-      if (!await groupActive()) await dispatchClick(global);
+      if (!await groupActive()) await dispatchAreaClick(global);
       try {
         await page.waitForFunction(target => [...document.querySelectorAll('button[data-admin-global-group]')].some(
           node => node.dataset.adminGlobalGroup === target && (node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))
@@ -444,7 +451,7 @@ for (const [id, group] of menus) {
     console.warn(`[PROD-E2E] ${id}: selected panel changed during mount; bounded real-navigation recovery ${JSON.stringify(before)}`);
     if (!await groupActive()) {
       const global = page.locator(`button[data-admin-global-group="${group}"]`).first();
-      await dispatchClick(global);
+      await dispatchAreaClick(global);
       await page.waitForFunction(target => [...document.querySelectorAll('button[data-admin-global-group]')].some(
         node => node.dataset.adminGlobalGroup===target && (node.getAttribute('aria-current')==='page'||node.classList.contains('active'))
       ), group, { timeout:12000 });

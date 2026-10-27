@@ -149,22 +149,21 @@ test('Operations, releases, devices and finance have distinct visible submenus',
   }
 });
 
-test('Services & Engines nests its engine details under the active menu on the left (ADMIN-LEFT-MENU-FIRST-001)', () => {
+test('Services & Engines shows its engine details in the top strip, never on the left (ADMIN-LEFT-FLAT-MENU-001)', () => {
   assert.match(sidebar, /FLAT_DETAIL_GROUPS = new Set\(\)/);
   assert.match(registry, /id: 'engines', group: 'services'[^\n]*sections: \['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'\]/);
   assert.match(sidebar, /details\.dataset\.adminFlatDetails = FLAT_DETAIL_GROUPS\.has\(group\) \? 'true' : 'false'/);
-  // Owner decision 2026-10-26: details move up one level, from the top strip to the left.
-  assert.match(sidebar, /if \(inMenu && !menu\.siteClass && tabs\.length > 1\) \{/);
-  assert.match(sidebar, /nested\.className = 'admin-detail-nested'/);
-  assert.match(sidebar, /if \(tabs\.length > 4\) nested\.dataset\.adminDetailColumns = '2'/);
-  assert.match(sidebar, /detailButton\(id, getAdminMenuLabel\(id, locale\), TAB_CLASS, id === section\)/);
-  // Only 사이트관리 keeps the workspace strip (its sites); every other menu clears it.
+  // Owner decision 2026-10-27: left = menus only; details go to the strip at the top right.
+  assert.doesNotMatch(sidebar, /admin-detail-nested/);
   assert.match(sidebar, /renderDetailStrip\(nav, activeMenu, section, locale\)/);
-  assert.match(sidebar, /\/\/ Outside 사이트관리 the detail routes live on the left; the strip stays empty\.\n  renderAdminWorkStrip\(\[\], \{ owner: 'menu', key: section, doc \}\);\n\}/);
+  assert.match(sidebar, /if \(tabs\.length < 2\) \{\n    renderAdminWorkStrip\(\[\]/);
+  assert.match(sidebar, /className: TAB_CLASS,/);
+  assert.match(sidebar, /dataset: \{ adminDetailSection: id \}/);
   assert.match(sidebar, /data-admin-flat-details="true"/);
   assert.doesNotMatch(sidebar, /function renderContextTabs/);
   assert.doesNotMatch(sidebar, /data-admin-context-section/);
 });
+
 
 
 

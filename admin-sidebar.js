@@ -358,10 +358,10 @@ function detailButton(id, label, className, active) {
   return button;
 }
 
-// ADMIN-LEFT-MENU-FIRST-001 (owner decision 2026-10-26): every area's menus are
-// shown directly, without opening the area first. Outside 사이트관리 the active
-// menu's detail routes sit right under it on the left (one level up from the
-// former top strip); 사이트관리 keeps the top strip for the sites of a class.
+// ADMIN-LEFT-FLAT-MENU-001 (owner decision 2026-10-27): the left shows every menu
+// directly, without area captions. Choosing a menu puts its detail routes (or, for
+// 사이트관리, the sites of a class) in the strip at the top right; choosing one of
+// those opens it in the centre.
 function renderGroupDetails(nav, globals, group, section, locale) {
   let details = globals.querySelector(`:scope>.${DETAILS_CLASS}[data-admin-detail-group="${group}"]`);
   if (!details) {
@@ -381,25 +381,13 @@ function renderGroupDetails(nav, globals, group, section, locale) {
     tabs.forEach(id => covered.add(id));
     const inMenu = tabs.includes(section);
     const target = inMenu ? section : tabs[0];
-    const menuButton = detailButton(target, getAdminMenuMenuLabel(menu.id, locale), 'admin-detail-item', inMenu && (tabs.length < 2 || Boolean(menu.siteClass)));
+    const menuButton = detailButton(target, getAdminMenuMenuLabel(menu.id, locale), 'admin-detail-item', inMenu);
     menuButton.dataset.adminDetailMenu = menu.id;
     menuButton.classList.toggle('open', inMenu);
     if (menu.siteClass) menuButton.dataset.adminSiteClass = 'true';
     if (tabs.length > 1) menuButton.dataset.adminDetailCount = String(tabs.length);
     nodes.push(menuButton);
     if (inMenu) activeMenu = { menu, tabs };
-    if (inMenu && !menu.siteClass && tabs.length > 1) {
-      const nested = document.createElement('div');
-      nested.className = 'admin-detail-nested';
-      nested.dataset.adminDetailNested = menu.id;
-      if (tabs.length > 4) nested.dataset.adminDetailColumns = '2';
-      nested.append(...tabs.map(id => {
-        const tab = detailButton(id, getAdminMenuLabel(id, locale), TAB_CLASS, id === section);
-        if (isAdminRiskSection(id)) tab.dataset.adminRisk = 'high';
-        return tab;
-      }));
-      nodes.push(nested);
-    }
   }
   for (const id of ids) {
     if (covered.has(id)) continue;
@@ -407,7 +395,7 @@ function renderGroupDetails(nav, globals, group, section, locale) {
   }
   details.dataset.adminFlatDetails = FLAT_DETAIL_GROUPS.has(group) ? 'true' : 'false';
   details.dataset.adminSiteClasses = group === 'sites' ? 'true' : 'false';
-  details.dataset.adminMenuModel = 'group-menu-detail-v4';
+  details.dataset.adminMenuModel = 'flat-menu-top-detail-v5';
   details.dataset.adminLayoutModel = ADMIN_LAYOUT_MODEL;
   details.replaceChildren(...nodes);
   details.hidden = nodes.length === 0;
@@ -524,8 +512,30 @@ function renderDetailStrip(nav, activeMenu, section, locale) {
     window.dispatchEvent(new CustomEvent('ekodi-admin-site-class-selected', { detail: { section, menu: activeMenu.menu.id } }));
     return;
   }
-  // Outside 사이트관리 the detail routes live on the left; the strip stays empty.
-  renderAdminWorkStrip([], { owner: 'menu', key: section, doc });
+  const tabs = activeMenu?.tabs || [];
+  if (tabs.length < 2) {
+    renderAdminWorkStrip([], { owner: 'menu', key: section, doc });
+    return;
+  }
+  renderAdminWorkStrip(tabs.map(id => ({
+    id,
+    label: getAdminMenuLabel(id, locale),
+    className: TAB_CLASS,
+    risk: isAdminRiskSection(id),
+    dataset: { adminDetailSection: id },
+  })), {
+    owner: 'menu',
+    key: activeMenu.menu.id,
+    active: section,
+    label: getAdminMenuMenuLabel(activeMenu.menu.id, locale),
+    ariaLabel: locale === 'en' ? 'Detail menu' : '세부 메뉴',
+    doc,
+    onSelect: id => {
+      delete nav.dataset.adminFocusedGroup;
+      activateSection(nav, id);
+      queueMicrotask(() => syncAdminSidebar(doc));
+    },
+  });
 }
 
 // ── ADMIN-RISK-GUARD-001 ──────────────────────────────────────────────────
