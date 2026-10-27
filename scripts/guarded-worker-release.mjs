@@ -441,6 +441,12 @@ try {
   console.log('✅ Guarded Worker release complete.');
 } catch (error) {
   console.error(`❌ Guarded Worker release failed: ${error?.message || error}`);
+  // Surface the reason in the check run (readable via the API without log access). Wrangler/HTTP
+  // diagnostics only; secrets are never part of these messages and GitHub masks registered values.
+  if (process.env.GITHUB_ACTIONS === 'true') {
+    const annotate = (value) => String(value ?? '').replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A').slice(0, 900);
+    console.log(`::error title=Guarded Worker release failed (${annotate(worker.name)})::${annotate(error?.message || error)}`);
+  }
   if (candidateAttached && previousVersion) {
     try {
       console.error(`Rolling back ${worker.name} to ${previousVersion} at 100%.`);
