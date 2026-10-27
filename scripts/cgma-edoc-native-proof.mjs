@@ -278,6 +278,35 @@ try {
   await admin.locator('.cgma-edoc-row').nth(6).waitFor();
   const serialsLinks = await admin.locator('.cgma-edoc-serial').allTextContents();
   check('링크 등록 후 연번 7…1', JSON.stringify(serialsLinks) === JSON.stringify(['7', '6', '5', '4', '3', '2', '1']), { serialsLinks });
+  // 9. 화면 배치: a draft (names to fill in later) lays out facts left / work right on desktop, one column on a phone.
+  await admin.getByRole('button', { name: '+ 새 전자문서' }).click();
+  await admin.locator('.cgma-edoc-form input[type="text"]').first().fill('청계면상인회 홈페이지 제안서 및 견적서 (배치 실증)');
+  await admin.locator('input[type="file"]').setInputFiles(pdfPath);
+  await admin.getByRole('button', { name: '초안으로 저장' }).click();
+  await admin.locator('.cgma-edoc-detail-grid').waitFor();
+  const layout = await admin.evaluate(() => {
+    const [left, right] = [...document.querySelector('.cgma-edoc-detail-grid').children].map(n => n.getBoundingClientRect());
+    const wide = [...document.querySelectorAll('.cgma-edoc-draft .cgma-edoc-btn')].map(b => b.getBoundingClientRect().width);
+    return { sideBySide: right.left >= left.right - 1 && Math.abs(right.top - left.top) < 4, maxButton: Math.round(Math.max(...wide)),
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
+  });
+  check('배치(데스크톱): 문서 정보 왼쪽 · 할 일 오른쪽, 버튼이 가로로 늘어나지 않음', layout.sideBySide && layout.maxButton < 260 && layout.overflow <= 1, layout);
+  await shot(admin, '13-admin-draft-layout-desktop');
+  const draftUrl = admin.url();
+  const phoneCtx = await context(true);
+  const phone = await phoneCtx.newPage(); watch(phone, 'admin-phone');
+  await phone.goto('https://ekodi.kr/cgma/admin/edocs');
+  await phone.locator('.cgma-edoc-row').first().click();
+  await phone.locator('.cgma-edoc-detail-grid').waitFor();
+  const phoneLayout = await phone.evaluate(() => {
+    const [left, right] = [...document.querySelector('.cgma-edoc-detail-grid').children].map(n => n.getBoundingClientRect());
+    const chain = [...document.querySelectorAll('.cgma-edoc-chain li')].map(li => li.getBoundingClientRect());
+    return { stacked: right.top >= left.bottom - 1, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      chainVisible: chain.length === 3 && chain.every(r => r.right <= innerWidth + 1 && r.left >= -1) };
+  });
+  check('배치(휴대폰): 한 열로 쌓이고 서명 순서 3개 모두 보임 · 가로 넘침 없음', phoneLayout.stacked && phoneLayout.overflow <= 1 && phoneLayout.chainVisible, phoneLayout);
+  await shot(phone, '14-admin-draft-layout-phone');
+  void draftUrl;
   // The private link's import answers 422 by design (then link-only is recorded); every other console problem fails.
   const unexpected = report.consoleProblems.filter(p => !/status of 422/.test(p));
   check('브라우저 콘솔 · CSP 위반 없음 (비공개 링크의 의도된 422 제외)', unexpected.length === 0 && report.consoleProblems.length <= 1, { problems: report.consoleProblems });
