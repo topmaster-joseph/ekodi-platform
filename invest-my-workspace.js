@@ -197,7 +197,7 @@ function lockOwner(message){
  status(message||'Google 로그인은 확인되었습니다. 안전을 위해 오른쪽 위 「본인인증 대기」 버튼을 눌러 추가 인증을 완료해 주세요.',false);
 }
 async function stepUpCall(method,payload){
- const response=await fetch(autopilotApi+'/step-up',{method,headers:{authorization:'Bearer '+ownerToken,'content-type':'application/json','x-ekodi-invest-step-up':stepUpToken},body:payload?JSON.stringify(payload):undefined,cache:'no-store'});
+ const response=await withTimeout(fetch(autopilotApi+'/step-up',{method,headers:{authorization:'Bearer '+ownerToken,'content-type':'application/json','x-ekodi-invest-step-up':stepUpToken},body:payload?JSON.stringify(payload):undefined,cache:'no-store'}),15000);
  return {ok:response.ok,status:response.status,data:await response.json().catch(()=>({}))};
 }
 async function checkStepUp(){
@@ -246,24 +246,27 @@ function availableTokens(){
  try{const s=sessionStorage.getItem('ekodi-auth-token');if(s)values.push(s)}catch{}
  return values;
 }
+// Every login step is time-boxed: an in-app browser that never resolves the module import,
+// the session lock or the network must fall back to a visible login prompt, not hang forever.
+function withTimeout(promise,ms){return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),ms))])}
 async function authenticate(){
  const handoff=removeHandoffFromUrl();
  const tokens=[];
  try{
-  const mod=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+  const mod=await withTimeout(import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'),10000);
   sessionClient=mod.createClient(supabaseUrl,supabaseKey,{auth:{detectSessionInUrl:false,persistSession:true,autoRefreshToken:true}});
   if(handoff){
-   const result=await sessionClient.auth.verifyOtp({token_hash:handoff.token,type:handoff.type});
+   const result=await withTimeout(sessionClient.auth.verifyOtp({token_hash:handoff.token,type:handoff.type}),8000);
    if(result.error)status('일회용 로그인 링크가 만료되었거나 이미 사용되었습니다. 저장된 로그인도 확인합니다.',false);
   }
-  const result=await sessionClient.auth.getSession();
+  const result=await withTimeout(sessionClient.auth.getSession(),8000);
   if(result.data&&result.data.session&&result.data.session.access_token)tokens.push(result.data.session.access_token);
  }catch{status('통합 로그인 연결을 확인하지 못했습니다. 기존 인증 정보를 다시 확인합니다.',false)}
  for(const token of availableTokens())if(!tokens.includes(token))tokens.push(token);
  if(!tokens.length){status('본인 확인이 필요합니다. EKODI 통합 로그인을 완료해 주세요. ',true);return}
  for(const token of tokens){
   try{
-   const response=await fetch('/my/invest/access',{headers:{authorization:'Bearer '+token},cache:'no-store'});
+   const response=await withTimeout(fetch('/my/invest/access',{headers:{authorization:'Bearer '+token},cache:'no-store'}),15000);
    if(!response.ok)continue;
    const result=await response.json();
    if(result&&result.ok===true&&result.scope==='self-research'){
