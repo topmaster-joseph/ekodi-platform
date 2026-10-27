@@ -15,7 +15,8 @@ async function state(env, key, value) {
     .bind(key, String(value), isoNow()).run();
 }
 
-export async function submitProductIndexNow(env, fetchImpl = fetch, { force = false, limit = 1000 } = {}) {
+// 첫 전송(1000건)에서 429(과다 요청)를 받아 한 번에 200건씩 나눠 보낸다(시간당 1회).
+export async function submitProductIndexNow(env, fetchImpl = fetch, { force = false, limit = 200 } = {}) {
   if (!env?.DB) return { skipped: 'no-db' };
   if (String(env.MALL_INDEXNOW_ENABLED || 'true').toLowerCase() === 'false') return { skipped: 'disabled' };
   const lastRun = await state(env, 'indexnow_run_at');
