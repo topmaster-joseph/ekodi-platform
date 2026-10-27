@@ -183,3 +183,23 @@ test('/me endpoint: anonymous viewers get no roles and the response is never cac
   assert.deepEqual({ a: body.authenticated, s: body.superAdmin, c: body.churchAdmin, m: body.missionAdmin }, { a: false, s: false, c: false, m: false });
   assert.match(response.headers.get('cache-control'), /no-store/);
 });
+
+test('November 2026 activities cover all 30 registered days and match the registry titles', async () => {
+  const { commonScriptureSnapshot } = await import('../common-scripture-registry.js');
+  const nov = JSON.parse(fs.readFileSync(new URL('../config/devotional-activities/2026-11.json', import.meta.url), 'utf8'));
+  const { validateDevotionActivities } = await import('../devotional-admin-api.js');
+  const registry = commonScriptureSnapshot('2026-11');
+  assert.equal(nov.days.length, registry.readings.length);
+  for (const reading of registry.readings) {
+    const day = nov.days.find(item => item.day === reading.day);
+    assert.ok(day, `missing ${reading.day}`);
+    assert.equal(day.passage, reading.passage, `day ${reading.day}`);
+    assert.equal(day.theme, registry.titles[reading.day - 1], `title ${reading.day}`);
+    assert.ok(validateDevotionActivities(day), `valid ${reading.day}`);
+    assert.deepEqual(day.questions.map(q => q.kind), ['마음', '관계', '삶']);
+  }
+  const resolved = resolveDevotion('2026-11-24');
+  assert.equal(resolved.activitySource, 'curated');
+  assert.equal(resolved.passage, '고린도전서 12:27-13:3');
+  assert.deepEqual(resolved.passageParts, ['고린도전서 12:27-999', '고린도전서 13:1-3']);
+});
