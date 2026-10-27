@@ -20,6 +20,12 @@ SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
 SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
 AUTH_URL = "https://ekodi.kr/auth/?site=edu"
 
+# Instructor document share (강사 서류 공유): the instructor's own ID/bank-book copies behind expiring links,
+# stored in the existing ekodi-storage bucket under edu/instructor-docs/ (see education-instructor-docs.js).
+[[r2_buckets]]
+binding = "EDU_DOCS"
+bucket_name = "ekodi-storage"
+
 [assets]
 directory = "./education"
 binding = "ASSETS"

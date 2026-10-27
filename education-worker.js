@@ -1,6 +1,7 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import researchWorker from './education/research/worker.js';
 import { instructorGate, isGatedPath } from './education-instructor-gate.js';
+import { instructorDocs } from './education-instructor-docs.js';
 
 const SECURITY_HEADERS={
   'x-content-type-options':'nosniff',
@@ -16,9 +17,12 @@ export default{
   async fetch(request,env){
     const url=new URL(request.url);
     if(url.pathname==='/research'||url.pathname.startsWith('/research/'))return researchWorker.fetch(request,env);
-    if(url.pathname==='/health')return json({ok:true,service:'ekodi-education',surface:'education-platform',areas:['admission','study'],contextModel:'person-space-role',officialSourceRequired:true,submissionExecution:false,sensitiveDocumentStorage:false,dataMode:runtimeConfig(env).dataMode,ekodiShell:true});
+    if(url.pathname==='/health')return json({ok:true,service:'ekodi-education',surface:'education-platform',areas:['admission','study'],contextModel:'person-space-role',officialSourceRequired:true,submissionExecution:false,sensitiveDocumentStorage:false,instructorDocumentShare:'instructor-own-documents-expiring-links',dataMode:runtimeConfig(env).dataMode,ekodiShell:true});
     if(url.pathname==='/config.js')return new Response(`window.EKODI_EDU_CONFIG=${JSON.stringify(runtimeConfig(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}});
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/',307);
+    // Instructor document share: public expiring view links + instructor-session management API.
+    const docs=await instructorDocs(request,env,{url});
+    if(docs)return docs;
     // Premium Studio operator surfaces (instructor studio, presenter, facilitation notes) are instructor-only.
     const gate=await instructorGate(request,env,{url});
     if(gate)return injectEkodiShell(withHeaders(gate),'edu');

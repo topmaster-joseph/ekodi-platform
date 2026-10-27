@@ -137,6 +137,39 @@ async function gateProbe(browser){
     report.gate={...result,passed:true};
   }finally{await context.close();}
 }
+// Instructor document share: the management API refuses anonymous callers; with a (probe-minted) instructor
+// session one synthetic 1×1 PNG is uploaded with a 1-day expiry, viewed through its public link, then deleted
+// at once so no test document stays in storage.
+async function docsProbe(browser){
+  const context=await browser.newContext({locale:'ko-KR'});
+  try{
+    const base=ORIGIN+PREFIX+'/study/live/docs/';
+    const anon=await context.request.get(base+'api/list',{failOnStatusCode:false});
+    if(anon.status()!==401)fail('docs API must refuse anonymous callers (401), got '+anon.status());
+    await authorize(context);
+    const list=await context.request.get(base+'api/list',{failOnStatusCode:false});
+    if(list.status()===503){report.docs={configured:false};return;}
+    if(list.status()!==200)fail('docs API list with instructor session returned '+list.status());
+    const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==','base64');
+    const up=await context.request.post(base+'api/upload',{failOnStatusCode:false,headers:{origin:new URL(ORIGIN).origin},
+      multipart:{kind:'id',days:'1',purpose:'EKODI 자동 점검 (즉시 삭제)',file:{name:'probe.png',mimeType:'image/png',buffer:png}}});
+    if(up.status()!==201)fail('docs upload returned '+up.status());
+    const {item}=await up.json();
+    try{
+      const viewer=await context.request.get(base+item.path,{failOnStatusCode:false,headers:{cookie:''}});
+      if(viewer.status()!==200||!(await viewer.text()).includes('EKODI 자동 점검'))fail('docs share view failed '+viewer.status());
+      if(!/noindex/.test(viewer.headers()['x-robots-tag']||''))fail('docs share view must be noindex');
+      const file=await context.request.get(base+item.path.replace(/^s\//,'f/'),{failOnStatusCode:false});
+      if(file.status()!==200||file.headers()['content-type']!=='image/png')fail('docs share file failed '+file.status());
+    }finally{
+      const del=await context.request.post(base+'api/delete',{failOnStatusCode:false,headers:{origin:new URL(ORIGIN).origin},data:{token:item.path.slice(2)}});
+      if(del.status()!==200)fail('docs probe could not delete its synthetic document: '+del.status());
+    }
+    const gone=await context.request.get(base+item.path,{failOnStatusCode:false});
+    if(gone.status()!==404)fail('deleted share link must answer 404, got '+gone.status());
+    report.docs={configured:true,passed:true};
+  }finally{await context.close();}
+}
 async function open(page,route,{ready=true}={}){
   // Production traffic protection may answer a burst of headless requests with 429 + Retry-After.
   // Respect it (never bypass), reload, and fail if the page still is not ready after two retries.
@@ -542,6 +575,7 @@ async function main(){
   try{
     browser=await chromium.launch({headless:true});
     await gateProbe(browser);
+    await docsProbe(browser);
     await bootcampRegressionProbe(browser);
     for(const profile of VIEWPORTS){
       if(profile.width>=1366)await instructorFlow(browser,profile);
