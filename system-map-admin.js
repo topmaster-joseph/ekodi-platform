@@ -1,4 +1,4 @@
-(() => {
+(async () => {
   'use strict';
 
   const MAP_ID = 'ekodiArchitectureMap';
@@ -6,6 +6,36 @@
   const healthHost = document.querySelector('#ekodiSystemHealth');
   const host = architectureHost || healthHost;
   if (!host || document.getElementById(MAP_ID)) return;
+
+  // A direct /admin/ops/architecture activation loads this appended script
+  // without the health demand-loader's stylesheet. Keep the admin menu runtime
+  // within its 10KB performance contract by loading styles from this module.
+  if (architectureHost) {
+    const cssPath='/system-health-admin.css';
+    const hasStyles=[...document.querySelectorAll('link[rel="stylesheet"]')].some(link=>{
+      try { return new URL(link.href,location.href).pathname===cssPath; }
+      catch { return false; }
+    });
+    if (!hasStyles) {
+      try {
+        await new Promise((resolve,reject)=>{
+          const link=document.createElement('link');
+          link.rel='stylesheet'; link.href=cssPath;
+          link.dataset.adminArchitectureStyle='true';
+          link.addEventListener('load',resolve,{once:true});
+          link.addEventListener('error',()=>reject(new Error('system structure stylesheet unavailable')),{once:true});
+          document.head.append(link);
+        });
+      } catch(error) {
+        console.error('[EKODI Admin] architecture stylesheet failed',error);
+        const message=document.createElement('p');
+        message.role='alert';message.dataset.architectureLoadError='true';
+        message.textContent='시스템 구조 화면 스타일을 불러오지 못했습니다. 페이지를 새로고침하여 다시 시도하세요.';
+        architectureHost.prepend(message);
+        return;
+      }
+    }
+  }
 
   const infrastructure = [
     ['GitHub', 'Source of Truth', '코드 · 변경이력 · 배포 기준'],
@@ -37,14 +67,21 @@
           <div class="structure-overview-badge">공간은 분리하되 기반은 공유한다</div>
         </div>
 
-        <div class="structure-flow" aria-label="에코디 시스템 기본 흐름">
+        <nav class="structure-section-nav" aria-label="시스템 구조 화면 바로가기">
+          <button type="button" data-structure-jump="structureFlow">핵심 흐름</button>
+          <button type="button" data-structure-jump="structureLayers">공통 계층</button>
+          <button type="button" data-structure-jump="structureServiceRegistry">서비스 공간</button>
+          <button type="button" data-structure-jump="ekodiArchitectureMap">실제 운영 구조</button>
+        </nav>
+
+        <div id="structureFlow" class="structure-flow" aria-label="에코디 시스템 기본 흐름">
           <div><small>ROOT</small><strong>ekodi.kr</strong><span>생태계 허브 · 정문</span></div><b>›</b>
           <div><small>IDENTITY</small><strong>ekodi.kr/auth</strong><span>Google 인증 · 권한</span></div><b>›</b>
           <div><small>SPACES</small><strong>전문 서비스 공간</strong><span>Church · Biz · Lab · Trade · 고객공간</span></div><b>›</b>
           <div><small>PERSONAL</small><strong>ekodi.kr/my</strong><span>나의 활동 · 서비스 · 여정</span></div>
         </div>
 
-        <div class="structure-layer-grid" aria-label="에코디 공통 플랫폼 계층">
+        <div id="structureLayers" class="structure-layer-grid" aria-label="에코디 공통 플랫폼 계층">
           <article><small>01 · 생태계 허브</small><strong>ekodi.kr</strong><span>전체 입구와 정체성</span></article>
           <article><small>02 · 전문 서비스 공간</small><strong>Church · Biz · Lab · Trade</strong><span>분야별 서비스와 고객별 공간</span></article>
           <article><small>03 · 사용자 공간</small><strong>ekodi.kr/my</strong><span>개인 중심 활동과 서비스</span></article>
@@ -93,11 +130,22 @@
           <p>새 서비스마다 서버와 인증을 다시 만드는 대신, 공통 기반에 새로운 ‘공간’을 꽂는 플러그인형 구조로 확장합니다. 교회·비즈니스·교육·연구·출판·상권·기업 맞춤형 AI가 같은 뿌리 위에서 서로 독립적으로 움직이는 것이 목표입니다.</p>
         </div>
 
-        <section class="structure-service-registry" aria-labelledby="structureServiceRegistryTitle">
+        <section id="structureServiceRegistry" class="structure-service-registry" aria-labelledby="structureServiceRegistryTitle">
           <div class="structure-section-head"><div><small>SERVICE REGISTRY</small><h3 id="structureServiceRegistryTitle">에코디 서비스 공간</h3><p>서비스 기준정보에서 자동으로 읽습니다.</p></div><span data-structure-service-count>—</span></div>
           <div class="structure-service-groups" data-structure-service-groups><p class="operations-loading">서비스 기준정보를 읽는 중입니다.</p></div>
         </section>
       </div>`;
+  }
+
+  if (architectureHost) {
+    architectureHost.addEventListener('click', event => {
+      const button = event.target.closest('button[data-structure-jump]');
+      if (!button || !architectureHost.contains(button)) return;
+      const target = document.getElementById(button.dataset.structureJump);
+      if (!target) return;
+      const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      target.scrollIntoView({ behavior:reducedMotion?'instant':'smooth', block:'start' });
+    });
   }
 
   const panel = document.createElement('article');
