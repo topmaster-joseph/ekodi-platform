@@ -49,3 +49,17 @@ test('Public read-only audit does not misrepresent indexing or submit provider c
   assert.doesNotMatch(src,/fetch\('https:\/\/indexing.googleapis.com/);
   assert.doesNotMatch(src,/localStorage\.setItem|POST.*indexnow/);
 });
+
+test('Provider matrix lists primary search engines, IndexNow participants and AI search separately',()=>{
+  const src=read('search-visibility-admin.js');
+  assert.match(src,/SEARCH_PROVIDERS/);
+  for(const engine of ['네이버','구글','다음','빙']) assert.ok(src.includes(engine),'missing '+engine);
+  for(const member of ['Yandex','Seznam.cz','Yep','Amazon']) assert.ok(src.includes(member),'missing '+member);
+  for(const assistant of ['ChatGPT Search','Google AI Overviews/AI Mode','Microsoft Copilot','Perplexity','Claude Search']) assert.ok(src.includes(assistant),'missing '+assistant);
+  assert.match(src,/data-sv-provider-rows/);
+  assert.match(src,/renderProviderMatrix/);
+  assert.match(src,/외부 등록 여부 미확인|등록 여부 미확인/);
+  assert.match(src,/실제 인용 근거 미확인/);
+  assert.match(src,/하위 경로별 기술 진단과 호스트 단위 소유권 인증은 구분/);
+  assert.doesNotMatch(src,/등록 완료['"]/);
+});
