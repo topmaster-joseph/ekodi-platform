@@ -67,21 +67,27 @@
   section.innerHTML = `
     <div class="section-head admin-secret-head">
       <div><p class="kicker">EKODI SECURITY</p><h2>Cloudflare Secret 자동 생성</h2><p>관리자가 타입과 Variable name만 지정하면 서버에서 암호학적 난수를 만들고 Cloudflare Worker Secret으로 바로 등록합니다. 자동등록 값은 브라우저에 표시하거나 반환하지 않습니다.</p></div>
-      <span class="admin-secret-local-badge" data-cloudflare-readiness>연결 확인 중</span>
+      <span class="admin-secret-local-badge" data-cloudflare-readiness role="status" aria-live="polite">연결 확인 중</span>
     </div>
 
-    <article class="admin-secret-card admin-secret-auto-card">
-      <div class="admin-secret-auto-grid">
+    <article class="admin-secret-card admin-secret-auto-card" aria-label="Cloudflare Secret 등록 작업공간">
+      <div class="admin-secret-setup">
+        <div class="admin-secret-setup-heading">
+          <h3>Secret 등록</h3>
+          <p>등록할 이름과 난수 강도를 지정한 후 실행합니다. Worker 대상은 왼쪽 연결 정보에서 선택합니다.</p>
+        </div>
+        <div class="admin-secret-auto-grid">
         <div class="admin-secret-field"><label for="adminSecretTarget">대상 Worker</label><select id="adminSecretTarget" data-cloudflare-target disabled><option>확인 중...</option></select></div>
         <div class="admin-secret-field"><label for="adminSecretType">타입</label><select id="adminSecretType" data-cloudflare-type disabled><option value="secret_text">Secret</option></select></div>
-        <div class="admin-secret-field admin-secret-name-field"><label for="adminCloudflareSecretVariable">Variable name</label><input id="adminCloudflareSecretVariable" data-cloudflare-name value="USER_AI_CREDENTIAL_ENCRYPTION_KEY" autocomplete="off" spellcheck="false"></div>
+        <div class="admin-secret-field admin-secret-name-field"><label for="adminCloudflareSecretVariable">환경변수 이름 (Variable name)</label><input id="adminCloudflareSecretVariable" data-cloudflare-name value="USER_AI_CREDENTIAL_ENCRYPTION_KEY" autocomplete="off" spellcheck="false"></div>
         <div class="admin-secret-field"><label for="adminCloudflareSecretBytes">무작위값 강도</label><select id="adminCloudflareSecretBytes" data-cloudflare-bytes><option value="32">32 bytes · 256-bit</option><option value="48" selected>48 bytes · 384-bit 권장</option><option value="64">64 bytes · 512-bit</option></select></div>
       </div>
       <div class="admin-secret-auto-action">
         <button type="button" class="primary" data-cloudflare-create disabled>무작위값 생성 + Cloudflare에 등록</button>
-        <span data-cloudflare-status>Cloudflare Secret Manager 연결 상태를 확인하고 있습니다.</span>
+        <span data-cloudflare-status role="status" aria-live="polite">Cloudflare Secret Manager 연결 상태를 확인하고 있습니다.</span>
       </div>
       <div class="admin-secret-safety-note">비밀값은 서버에서 생성되어 Cloudflare로 바로 전달되고 브라우저에는 돌아오지 않습니다. 같은 이름이 이미 있으면 자동으로 덮어쓰지 않고 별도 교체 승인을 요구합니다.</div>
+      </div>
     </article>
 
     <details class="admin-secret-local-details">
@@ -100,7 +106,7 @@
           <div class="admin-secret-output" data-secret-state="empty">
             <small>생성값</small>
             <textarea data-secret-output rows="3" readonly autocomplete="off" spellcheck="false" aria-label="생성된 비밀키" placeholder="생성하기 전에는 아무 값도 없습니다."></textarea>
-            <span data-secret-status>키는 생성 후 30초가 지나면 화면에서 지우고 JavaScript 참조를 제거합니다.</span>
+            <span data-secret-status role="status" aria-live="polite">키는 생성 후 30초가 지나면 화면에서 지우고 JavaScript 참조를 제거합니다.</span>
           </div>
         </article>
         <aside class="admin-secret-guide">
