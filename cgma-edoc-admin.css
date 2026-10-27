@@ -66,3 +66,5 @@
 .cgma-edoc-bulk .cgma-edoc-table input,.cgma-edoc-bulk .cgma-edoc-table select{font:inherit;padding:4px 6px;border:1px solid #d6e0de;border-radius:6px;max-width:100%}
 .cgma-edoc-bulk .cgma-edoc-table td:nth-child(3) input{min-width:220px;width:100%}
 .cgma-edoc-bulk-state{white-space:normal;font-size:13px;color:#0f5f5c}
+.cgma-edoc-bulk .cgma-edoc-table td:nth-child(2){white-space:normal;word-break:break-all;min-width:160px;max-width:260px;font-size:13px}
+.cgma-edoc-meta dd a{color:#0f5f5c;word-break:break-all}
