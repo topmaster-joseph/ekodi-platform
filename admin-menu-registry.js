@@ -52,6 +52,7 @@ export const ADMIN_MENUS = Object.freeze([
   { id: 'integrations', group: 'settings', labels: { ko: '연동·저장소', en: 'Integrations & Storage' }, sections: ['ai-module-spec', 'storage'] },
   { id: 'identity', group: 'accounts', labels: { ko: '계정·권한', en: 'Accounts & Access' }, sections: ['users-access', 'admins'] },
   { id: 'security', group: 'accounts', labels: { ko: '보안·감사', en: 'Security & Audit' }, sections: ['security', 'audit-records'] },
+  { id: 'social-accounts', group: 'accounts', labels: { ko: '소셜계정 연결 현황', en: 'Social Accounts' }, sections: ['social-accounts'] },
 ]);
 
 export const ADMIN_MENU_REGISTRY = Object.freeze([
@@ -88,6 +89,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'users-access', group: 'accounts', icon: 'U', delegateSection: 'clients', labels: { ko: '전체 사용자·접근', en: 'All Users & Access' }, risk: 'high' },
   { id: 'security', group: 'accounts', icon: 'S', labels: { ko: '보안·인증 기록', en: 'Security & Identity Records' }, risk: 'high' },
   { id: 'admins', group: 'accounts', icon: '♙', labels: { ko: '관리자 계정·권한', en: 'Administrator Accounts & Access' }, risk: 'high', superAdminOnly: true },
+  { id: 'social-accounts', group: 'accounts', icon: '↗', labels: { ko: '소셜계정 연결 현황', en: 'Social Account Connections' }, superAdminOnly: true },
   { id: 'ai-membership', group: 'ai', icon: '◈', labels: { ko: '사용자 AI 등급·한도', en: 'User AI Tiers & Limits' }, risk: 'high' },
 
   { id: 'work', group: 'services', icon: 'W', labels: { ko: '구인구직·채용', en: 'Jobs & Recruiting' }, href: 'https://ekodi.kr/work/admin', adminHandoff: true },
@@ -169,7 +171,7 @@ const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
   'platform-overview':'overview','command-home':'overview',
   'engine-all':'catalog','engine-core':'catalog','engine-common':'catalog','engine-operations':'catalog','engine-professional':'catalog','engine-ai':'catalog','engine-integration':'catalog','engine-preview':'catalog','service-modules':'catalog',
   'sites-all':'sites','menu-templates':'sites','sites-core':'sites','sites-business':'sites','sites-community':'sites','sites-clients':'sites','sites-knowledge':'sites','sites-communication':'sites','sites-worklife':'sites','sites-other':'sites','sites-preparing':'sites','sites-internal':'sites','sites-user':'sites','sites-customer-partner':'sites','sites-independent':'sites',campus:'sites',clients:'sites','site-chrome':'sites',cmpmyi:'sites',organization:'sites',workspace:'sites',
-  'users-access':'access',security:'security',admins:'access','ai-membership':'access',
+  'users-access':'access',security:'security',admins:'access','social-accounts':'access','ai-membership':'access',
   work:'content',communication:'content',community:'content',books:'content','common-scripture':'content',devotional:'content',social:'content',finance:'finance',tax:'content',
   health:'status','site-health':'status',deployments:'releases',aiops:'releases',devices:'devices','pos-agent':'devices','api-cost':'finance','infra-costs':'finance',architecture:'status',maturity:'status','domain-control':'status',services:'status',
   'public-site-controls':'settings','language-status':'settings','ai-module-spec':'settings',storage:'settings','ai-settings':'settings','audit-records':'security',policies:'settings',
@@ -218,4 +220,5 @@ if (typeof document !== 'undefined') {
   import('./ai-operations-center-admin.js').catch(error => console.warn('[EKODI Admin] AI operations center bootstrap failed', error));
   import('./devotional-admin.js').catch(error => console.warn('[EKODI Admin] devotional bootstrap failed', error));
   import('./common-scripture-admin.js').catch(error => console.warn('[EKODI Admin] common scripture bootstrap failed', error));
+  import('./social-account-admin.js').catch(error => console.warn('[EKODI Admin] social account inventory unavailable', error));
 }
