@@ -1,4 +1,4 @@
-import {handleFreshVoiceApi,FRESH_QUEUE_KIND,consumeFreshVoiceQueue} from './voices-fresh/api.mjs';
+import {handleFreshVoiceApi,FRESH_QUEUE_KIND,consumeFreshVoiceQueue,FRESH_REPLY_QUEUE_KIND,consumeFreshReplyQueue} from './voices-fresh/api.mjs';
 import {renderFreshVoicePage} from './voices-fresh/page.mjs';
 const json=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff',...extra}});
 const text=v=>String(v??'').trim();
@@ -537,6 +537,7 @@ async queue(batch,env){
     try{
       // New citizen posts use a durable queue and idempotent fresh table.
       if(message.body?.kind===FRESH_QUEUE_KIND){await consumeFreshVoiceQueue(env,message.body.payload||{});message.ack();continue}
+      if(message.body?.kind===FRESH_REPLY_QUEUE_KIND){await consumeFreshReplyQueue(env,message.body.payload||{});message.ack();continue}
       // Old citizen queue envelopes are retired; no old records can reappear.
       if(message.body?.kind===POST_QUEUE_KIND||message.body?.kind===REPLY_QUEUE_KIND){message.ack();continue}
       const handled=await consumeBoardWrite(message.body,env);
