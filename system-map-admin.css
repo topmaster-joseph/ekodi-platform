@@ -9,3 +9,251 @@
 .system-map-domains{display:flex;flex-wrap:wrap;gap:4px;margin:9px 0}.system-map-domains a{max-width:100%;overflow:hidden;text-overflow:ellipsis;padding:3px 6px;border-radius:6px;background:#eff6ff;color:#1d4ed8;font-size:9.5px;text-decoration:none}.system-map-domains a:hover{text-decoration:underline}.system-map-platform dl{display:grid;gap:5px;margin:8px 0 0}.system-map-platform dl>div{display:grid;grid-template-columns:48px minmax(0,1fr);gap:5px}.system-map-platform dt{color:#94a3b8;font-size:8px;font-weight:900;letter-spacing:.08em}.system-map-platform dd{margin:0;color:#475569;font-size:9.5px;line-height:1.4;overflow-wrap:anywhere}.system-map-deps{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}.system-map-chip{padding:3px 6px;border-radius:999px;background:#f1f5f9;color:#64748b;font-size:8.5px;line-height:1.3}.system-map-foot{display:flex;justify-content:space-between;gap:12px;margin-top:14px;padding-top:10px;border-top:1px dashed #cbd5e1;color:#94a3b8;font-size:9.5px}
 @media(max-width:1100px){.structure-layer-grid,.structure-service-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.system-map-infra{grid-template-columns:repeat(3,minmax(0,1fr))}.system-map-infra-card::after{display:none}.system-map-platform-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:720px){.structure-overview-head{display:block}.structure-overview-badge{display:inline-block;margin-top:10px}.structure-flow{display:grid;grid-template-columns:1fr}.structure-flow>b{display:none}.structure-layer-grid,.structure-columns,.structure-principles,.structure-service-grid{grid-template-columns:1fr}.ekodi-architecture-map{padding:14px}.system-map-head{display:block}.system-map-actions{justify-content:stretch;margin-top:12px}.system-map-actions label{flex:1}.system-map-actions input{width:100%}.system-map-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.system-map-infra{grid-template-columns:repeat(2,minmax(0,1fr))}.system-map-platform-grid{grid-template-columns:1fr}.system-map-foot{display:block}.system-map-foot span{display:block;margin-top:3px}}
+
+
+/* ADMIN-ARCHITECTURE-READABLE-20261028
+   Scoped read-only System Structure presentation. Preserve Korean eojeol;
+   allow wrapping inside technical identifiers, not arbitrary Korean syllables. */
+body.admin-compact .content > .architecture[data-panel~="architecture"]{
+  box-sizing:border-box!important;
+  display:block!important;
+  grid-column:1/-1;
+  inline-size:100%!important;
+  min-inline-size:0;
+  max-inline-size:none!important;
+  padding:clamp(16px,2vw,28px)!important;
+}
+body.admin-compact .architecture[data-panel~="architecture"] :is(.ekodi-structure-overview,.ekodi-architecture-map){
+  box-sizing:border-box;
+  inline-size:100%;
+  max-inline-size:none;
+  min-inline-size:0;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .ekodi-structure-overview{
+  gap:22px;
+  margin:0;
+  font-family:inherit;
+  word-break:keep-all;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-overview-head{
+  align-items:center;
+  gap:24px;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-overview-head h2{
+  margin:6px 0 9px;
+  font-size:clamp(24px,2.1vw,30px)!important;
+  line-height:1.27!important;
+  letter-spacing:-.035em;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-overview-head>div>p:last-child{
+  max-width:75ch;
+  font-size:14px!important;
+  line-height:1.65!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  color:#516174!important;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-overview-badge{
+  font-size:12px;
+  line-height:1.5;
+  white-space:normal;
+  text-align:center;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-section-nav{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
+  padding:0 0 14px;
+  border-bottom:1px solid #e2e8f0;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-section-nav button{
+  min-block-size:42px;
+  padding:9px 16px;
+  border:1px solid #dbe4ef;
+  border-radius:11px;
+  background:#f8fafc;
+  color:#24364c;
+  font:inherit;
+  font-size:13px;
+  font-weight:700;
+  cursor:pointer;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-section-nav button:hover{
+  border-color:#93b7e4;
+  background:#edf4ff;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-section-nav button:focus-visible{
+  outline:3px solid #2563eb;
+  outline-offset:2px;
+}
+body.admin-compact .architecture[data-panel~="architecture"] :is(#structureFlow,#structureLayers,#structureServiceRegistry,#ekodiArchitectureMap){scroll-margin-top:80px}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-flow{
+  display:grid;
+  grid-template-columns:repeat(7,minmax(0,1fr));
+  align-items:stretch;
+  gap:8px;
+  padding:14px;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-flow>div{
+  grid-column:span 1;
+  padding:16px;
+  min-inline-size:0;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-flow>b{
+  display:grid;
+  place-items:center;
+  font-size:22px;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-flow small,
+body.admin-compact .architecture[data-panel~="architecture"] .structure-layer-grid small,
+body.admin-compact .architecture[data-panel~="architecture"] .structure-card>small{
+  font-size:11px;
+  line-height:1.4;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-flow strong{
+  font-size:clamp(14px,1.2vw,17px);
+  line-height:1.45;
+  overflow-wrap:break-word;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-flow span{
+  font-size:12px;
+  line-height:1.55;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-layer-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-layer-grid article{
+  min-inline-size:0;
+  padding:17px 18px;
+  border-radius:13px;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-layer-grid strong{
+  font-size:15px;
+  line-height:1.5;
+  overflow-wrap:break-word;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-layer-grid span{
+  font-size:13px;
+  line-height:1.6;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-columns,
+body.admin-compact .architecture[data-panel~="architecture"] .structure-principles{
+  gap:12px;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-card{
+  min-inline-size:0;
+  padding:21px;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-card h3{
+  font-size:18px;
+  line-height:1.4;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-card p,
+body.admin-compact .architecture[data-panel~="architecture"] .structure-vision p{
+  font-size:14px!important;
+  line-height:1.7!important;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-mini-flow span,
+body.admin-compact .architecture[data-panel~="architecture"] .structure-tags span{
+  font-size:12px;
+  line-height:1.5;
+  overflow-wrap:break-word;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-principles>div{
+  min-inline-size:0;
+  padding:20px;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-principles strong{
+  font-size:16px;
+  line-height:1.55;
+  overflow-wrap:break-word;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-principles span{
+  font-size:13px;
+  line-height:1.6;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-vision{
+  padding:22px;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-vision h3{
+  font-size:22px;
+  line-height:1.4;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-service-registry{padding:22px}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-section-head h3{font-size:20px}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-section-head p,
+body.admin-compact .architecture[data-panel~="architecture"] .structure-service-group h4{font-size:13px}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-service-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:11px;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-service-card{
+  padding:16px;
+  min-inline-size:0;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-service-card strong{font-size:14px;line-height:1.5;overflow-wrap:break-word}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-service-card>span{font-size:12px;line-height:1.6}
+body.admin-compact .architecture[data-panel~="architecture"] .structure-service-card small{
+  font-size:12px;
+  white-space:normal;
+  overflow:visible;
+  text-overflow:clip;
+  overflow-wrap:anywhere;
+}
+body.admin-compact .architecture[data-panel~="architecture"] .ekodi-architecture-map{
+  margin:0 0 22px;
+  padding:clamp(16px,2vw,24px);
+}
+body.admin-compact .architecture[data-panel~="architecture"] .system-map-head h3{font-size:23px}
+body.admin-compact .architecture[data-panel~="architecture"] .system-map-head p{font-size:14px;line-height:1.6}
+body.admin-compact .architecture[data-panel~="architecture"] .system-map-platform-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+body.admin-compact .architecture[data-panel~="architecture"] .system-map-platform-top strong{font-size:14px}
+body.admin-compact .architecture[data-panel~="architecture"] .system-map-platform dd,
+body.admin-compact .architecture[data-panel~="architecture"] .system-map-group-head p{font-size:12px}
+body.admin-compact .architecture[data-panel~="architecture"] .system-map-domains a{font-size:11px;overflow-wrap:anywhere;white-space:normal}
+body.admin-compact .architecture[data-panel~="architecture"] [data-architecture-load-error]{
+  padding:12px 14px;
+  border:1px solid #f1c6c6;
+  border-radius:10px;
+  background:#fff4f4;
+  color:#932525;
+  font-size:14px;
+  line-height:1.5;
+}
+@media(max-width:1220px){
+  body.admin-compact .architecture[data-panel~="architecture"] .structure-flow{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  body.admin-compact .architecture[data-panel~="architecture"] .structure-flow>div{grid-column:auto}
+  body.admin-compact .architecture[data-panel~="architecture"] .structure-flow>b{display:none}
+  body.admin-compact .architecture[data-panel~="architecture"] .structure-layer-grid,
+  body.admin-compact .architecture[data-panel~="architecture"] .structure-service-grid,
+  body.admin-compact .architecture[data-panel~="architecture"] .system-map-platform-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:760px){
+  body.admin-compact .content > .architecture[data-panel~="architecture"]{padding:14px!important}
+  body.admin-compact .architecture[data-panel~="architecture"] .structure-overview-head{display:block}
+  body.admin-compact .architecture[data-panel~="architecture"] .structure-overview-badge{display:inline-block;margin-top:12px}
+  body.admin-compact .architecture[data-panel~="architecture"] .structure-section-nav{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  body.admin-compact .architecture[data-panel~="architecture"] .structure-section-nav button{padding:9px 10px}
+  body.admin-compact .architecture[data-panel~="architecture"] .structure-flow,
+  body.admin-compact .architecture[data-panel~="architecture"] .structure-layer-grid,
+  body.admin-compact .architecture[data-panel~="architecture"] .structure-columns,
+  body.admin-compact .architecture[data-panel~="architecture"] .structure-principles,
+  body.admin-compact .architecture[data-panel~="architecture"] .structure-service-grid,
+  body.admin-compact .architecture[data-panel~="architecture"] .system-map-platform-grid{grid-template-columns:minmax(0,1fr)}
+  body.admin-compact .architecture[data-panel~="architecture"] .structure-card,
+  body.admin-compact .architecture[data-panel~="architecture"] .structure-vision,
+  body.admin-compact .architecture[data-panel~="architecture"] .structure-service-registry{padding:16px}
+  body.admin-compact .architecture[data-panel~="architecture"] .system-map-infra{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
