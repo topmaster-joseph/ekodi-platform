@@ -12,7 +12,7 @@ const SECTION_GROUP=Object.freeze({
   'users-access':'accounts',security:'accounts',admins:'accounts','social-accounts':'accounts','ai-membership':'ai',
   work:'services',communication:'sites',community:'sites',books:'services','common-scripture':'services',devotional:'services',social:'services',finance:'finance',tax:'finance',
   health:'ops','site-health':'ops',deployments:'ops',aiops:'ai',devices:'ops','pos-agent':'ops','api-cost':'finance','infra-costs':'finance',architecture:'ops',maturity:'ops','domain-control':'ops',services:'ops',
-  'public-site-controls':'settings','language-status':'settings','ai-module-spec':'settings',storage:'settings','ai-settings':'ai','audit-records':'accounts',policies:'accounts',
+  'search-visibility':'settings','public-site-controls':'settings','language-status':'settings','ai-module-spec':'settings',storage:'settings','ai-settings':'ai','audit-records':'accounts',policies:'accounts',
 });
 const GROUP_DEFAULT=Object.freeze({
   home:'platform-overview',sites:'sites-all',ai:'aiops',services:'engine-all',finance:'finance',ops:'deployments',settings:'public-site-controls',accounts:'users-access',
@@ -91,6 +91,8 @@ function routeFromPath(pathname){
     const detailSegments=normalizeDetailSegments(parts.slice(2));
     return Object.freeze({section:'work',group:'content',detailSegments:Object.freeze(detailSegments)});
   }
+  // Friendly Growth OS search visibility route; canonical remains /admin/settings/search-visibility.
+  if(parts[0]==='admin'&&parts[1]==='growth'&&parts[2]==='search')return Object.freeze({section:'search-visibility',group:'settings',detailSegments:Object.freeze(normalizeDetailSegments(parts.slice(3)))});
   if(parts[0]!=='admin')return null;
   if(parts.length===1)return Object.freeze({section:COMMAND_HOME,group:'home',detailSegments:Object.freeze([])});
   const group=String(parts[1]||'').toLowerCase();
