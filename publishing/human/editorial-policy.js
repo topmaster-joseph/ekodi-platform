@@ -45,7 +45,7 @@ export function monthlyEditorialSlots(month, existing = []) {
       status: previous?.status || 'planned',
       title: previous?.title || null,
       publicationId: previous?.publicationId || null,
-      readyForSale: previous?.status === 'released',
+      readyForSale: previous?.status === 'released' && previous?.verifiedHandoff === true,
     });
   });
 }
@@ -105,15 +105,16 @@ export function evaluateReleaseReadiness(book) {
   if (!nonempty(book.releaseDigest)) blockers.push('releaseDigest');
   if (!Number.isInteger(book.priceKrw) || book.priceKrw < 0) blockers.push('priceKrw');
   if (book.collectionId === 'ekodian' || book.seriesId === 'EKODIAN') blockers.push('ekodian-series-excluded');
-  if (!Array.isArray(book.readerProfiles) || !book.readerProfiles.length || book.readerProfiles.some(x => !READER_PROFILES.includes(x))) blockers.push('readerProfiles');
+  const profiles = Array.isArray(book.readerProfiles) ? book.readerProfiles : [];
+  if (!profiles.length || profiles.some(x => !READER_PROFILES.includes(x))) blockers.push('readerProfiles');
   for (const [path] of baseChecks) needs(book, path, blockers);
-  if (book.readerProfiles?.includes('children')) {
+  if (profiles.includes('children')) {
     for (const path of ['audience.childAgeBandDefined', 'audience.childSafetyReviewed', 'audience.childReaderTested', 'graphics.childStoryboardReviewed']) needs(book, path, blockers);
   }
-  if (book.readerProfiles?.includes('teen')) {
+  if (profiles.includes('teen')) {
     for (const path of ['audience.teenDevelopmentReviewed', 'audience.teenReaderTested', 'audience.sensitiveSubjectAgeReviewed']) needs(book, path, blockers);
   }
-  if (book.readerProfiles?.includes('dyslexia')) {
+  if (profiles.includes('dyslexia')) {
     for (const path of ['accessibility.userFontOverride', 'accessibility.adjustableLineSpacing', 'accessibility.nonJustifiedReadingMode', 'accessibility.textToSpeechCompatible', 'accessibility.graphicTextEquivalents', 'audience.dyslexicReaderTested']) needs(book, path, blockers);
   }
   if (book.format === 'print') {
@@ -124,7 +125,7 @@ export function evaluateReleaseReadiness(book) {
   return { ready: blockers.length === 0, blockers };
 }
 
-/** Signed handoff payload for a later authenticated outbox dispatcher. */
+/** Approval-bound event proposal. The authenticated dispatcher must sign it before delivery. */
 export function approvedDualChannelHandoff(book) {
   const outcome = evaluateReleaseReadiness(book);
   if (!outcome.ready) throw new Error('release blocked: ' + outcome.blockers.join(', '));
