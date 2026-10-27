@@ -275,3 +275,9 @@ BEGIN
     'tenant',v_tenant.slug,'email',v_target_email,'role','tenant_admin');
 END;
 $function$;
+
+-- Explicit Data API privileges (unchanged from before: service role only).
+revoke all on function public.sync_person_access(uuid) from public, anon, authenticated;
+grant execute on function public.sync_person_access(uuid) to service_role;
+revoke all on function public.ekodi_bootstrap_vacant_site_admin(uuid,text,text,text) from public, anon, authenticated;
+grant execute on function public.ekodi_bootstrap_vacant_site_admin(uuid,text,text,text) to service_role;
