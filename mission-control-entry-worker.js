@@ -36,6 +36,7 @@ import { runAiProviderHealthSchedule } from './ai-provider-control.js';
 import { handleEkodiMcpGateway, handleEkodiMcpMetadata } from './ekodi-mcp-gateway.js';
 import { handleOrchestratorReleaseReceipt, handleOrchestratorCompletionReconciliation } from './ekodi-orchestrator-task-adapter.js';
 import { handleDevotionalControl } from './devotional-control.js';
+import { handleCommonScriptureControl } from './common-scripture-control.js';
 import { handlePublicChurchWorship } from './church-public-worship-control.js';
 import { handlePublicCommonScripture } from './common-scripture-registry.js';
 import { handleLearningControl } from './learning-control.js';
@@ -310,6 +311,11 @@ export default {
     if (path === '/api/control/api-cost') {
       try { const response = await handleApiCostControl(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('API cost control error', error); return errorResponse('API 비용 관리 처리 중 오류가 발생했습니다.', 'API_COST_CONTROL_ERROR'); }
+    }
+
+    if (path.startsWith('/api/control/common-scripture')) {
+      try { const response = await handleCommonScriptureControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Common scripture control error', error); return errorResponse('공통본문 관리 처리 중 오류가 발생했습니다.', 'COMMON_SCRIPTURE_CONTROL_ERROR'); }
     }
 
     if (path.startsWith('/api/control/devotional')) {

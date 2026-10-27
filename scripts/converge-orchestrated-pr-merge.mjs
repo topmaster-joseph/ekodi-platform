@@ -372,6 +372,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   // The EKODI public homepage is compiled into the shared Site Core. GITHUB_TOKEN
   // merges do not trigger main push workflows: dispatch its guarded release here.
   ['index.html','homepage-ambient.js','homepage-ambient.css'].includes(file)||
+  // 에코디 공통본문 super-admin menu (2026-10-27) is a Site Core admin asset.
+  ['common-scripture-admin.js','common-scripture-admin.css'].includes(file)||
   // The resident-council public page (/cgmurrc) is a Site Core static asset.
   file==='cgmurrc.html'||
   // Static asset response headers (CSP, caching) ship with the Site Core build.

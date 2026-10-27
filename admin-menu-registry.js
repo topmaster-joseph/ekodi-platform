@@ -39,7 +39,7 @@ export const ADMIN_MENUS = Object.freeze([
   { id: 'control', group: 'ai', labels: { ko: 'AI 운영센터', en: 'AI Operations Center' }, sections: ['aiops'] },
   { id: 'automation-policy', group: 'ai', labels: { ko: 'AI 정책·사용 등급', en: 'AI Policies & Usage Tiers' }, sections: ['ai-settings', 'ai-membership'] },
   { id: 'engines', group: 'services', labels: { ko: '서비스 엔진', en: 'Service Engines' }, sections: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'] },
-  { id: 'platform-content', group: 'services', labels: { ko: '플랫폼 콘텐츠 서비스', en: 'Platform Content Services' }, sections: ['books', 'devotional', 'social', 'work'] },
+  { id: 'platform-content', group: 'services', labels: { ko: '플랫폼 콘텐츠 서비스', en: 'Platform Content Services' }, sections: ['books', 'common-scripture', 'devotional', 'social', 'work'] },
   { id: 'revenue', group: 'finance', labels: { ko: '결제·정산', en: 'Payments & Settlement' }, sections: ['finance'] },
   { id: 'usage', group: 'finance', labels: { ko: '사용량·비용', en: 'Usage & Cost' }, sections: ['api-cost'] },
   { id: 'infrastructure-costs', group: 'finance', labels: { ko: '비용·인프라 관리', en: 'Infrastructure & Billing' }, sections: ['infra-costs'] },
@@ -94,6 +94,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'communication', group: 'sites', icon: '✉', labels: { ko: '일정·알림·메시지', en: 'Schedules, Alerts & Messages' }, internal: true, ownedBy: 'site-admin' },
   { id: 'community', group: 'sites', icon: '◌', labels: { ko: '행사·신청·예약', en: 'Events, Applications & Reservations' }, internal: true, ownedBy: 'site-admin' },
   { id: 'books', group: 'services', icon: 'B', labels: { ko: 'EKODI Books 출판', en: 'EKODI Books Publishing' } },
+  { id: 'common-scripture', group: 'services', icon: '經', labels: { ko: '에코디 공통본문', en: 'EKODI Common Scripture' } },
   { id: 'devotional', group: 'services', icon: 'V', labels: { ko: '묵상 자동게시', en: 'Devotional Autopost' } },
   { id: 'social', group: 'services', icon: '↗', labels: { ko: '방송·채널·자동게시', en: 'Broadcast, Channels & Autopost' } },
   { id: 'finance', group: 'finance', icon: '₩', labels: { ko: '결제·회계 운영', en: 'Finance Operations' }, risk: 'high' },
@@ -169,7 +170,7 @@ const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
   'engine-all':'catalog','engine-core':'catalog','engine-common':'catalog','engine-operations':'catalog','engine-professional':'catalog','engine-ai':'catalog','engine-integration':'catalog','engine-preview':'catalog','service-modules':'catalog',
   'sites-all':'sites','menu-templates':'sites','sites-core':'sites','sites-business':'sites','sites-community':'sites','sites-clients':'sites','sites-knowledge':'sites','sites-communication':'sites','sites-worklife':'sites','sites-other':'sites','sites-preparing':'sites','sites-internal':'sites','sites-user':'sites','sites-customer-partner':'sites','sites-independent':'sites',campus:'sites',clients:'sites','site-chrome':'sites',cmpmyi:'sites',organization:'sites',workspace:'sites',
   'users-access':'access',security:'security',admins:'access','ai-membership':'access',
-  work:'content',communication:'content',community:'content',books:'content',devotional:'content',social:'content',finance:'finance',tax:'content',
+  work:'content',communication:'content',community:'content',books:'content','common-scripture':'content',devotional:'content',social:'content',finance:'finance',tax:'content',
   health:'status','site-health':'status',deployments:'releases',aiops:'releases',devices:'devices','pos-agent':'devices','api-cost':'finance','infra-costs':'finance',architecture:'status',maturity:'status','domain-control':'status',services:'status',
   'public-site-controls':'settings','language-status':'settings','ai-module-spec':'settings',storage:'settings','ai-settings':'settings','audit-records':'security',policies:'settings',
   'common-services':'catalog',confirmations:'catalog','life-ai':'catalog','personal-finance':'catalog',invest:'catalog','marketing-ai':'catalog','supply-network':'catalog',insurance:'catalog',capabilities:'catalog',openai:'catalog',
@@ -216,4 +217,5 @@ if (typeof document !== 'undefined') {
   import('./admin-design-engine.js').catch(error => console.warn('[EKODI Admin] design engine bootstrap failed', error));
   import('./ai-operations-center-admin.js').catch(error => console.warn('[EKODI Admin] AI operations center bootstrap failed', error));
   import('./devotional-admin.js').catch(error => console.warn('[EKODI Admin] devotional bootstrap failed', error));
+  import('./common-scripture-admin.js').catch(error => console.warn('[EKODI Admin] common scripture bootstrap failed', error));
 }
