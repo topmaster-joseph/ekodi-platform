@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { authorizeUrl, federatedAuthEmail, verifyKakaoCode, verifyNaverCode, type VerifiedIdentity } from "./federated-providers.ts";
 
 const SUPABASE_URL=Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -19,10 +20,11 @@ const admin=createClient(SUPABASE_URL,SERVICE_ROLE,{auth:{persistSession:false}}
 const encoder=new TextEncoder();
 let googleJwksCache:{keys:any[],expiresAt:number}={keys:[],expiresAt:0};
 
-type VerifiedIdentity={subject:string;email:string;emailVerified:boolean;displayName:string|null};
 type ProviderAdapter={
   id:string;
   clientId?:string;
+  redirect?:boolean;
+  authorizeUrl?:(nonce:string)=>string;
   verify:(credential:string,nonce:string)=>Promise<VerifiedIdentity>;
 };
 
@@ -82,9 +84,39 @@ async function verifyGoogle(token:string,nonce:string):Promise<VerifiedIdentity>
   };
 }
 
+// ── Redirect (authorization-code) providers: Naver, Kakao ──────────────────
+// Dormant by default. A provider can sign anyone in only when BOTH gates open:
+//   1) its secrets are present in this function's environment (adapter is registered), and
+//   2) public.identity_providers.enabled = true for it (operator switch).
+// Every provider resolves to the same EKODI account model (people + login_identities);
+// login_identities.provider records which path a person authenticated through.
+const FEDERATED_REDIRECT_URI=String(Deno.env.get("EKODI_FEDERATED_REDIRECT_URI")||"https://ekodi.kr/auth/").trim();
+const envValue=(name:string)=>String(Deno.env.get(name)||"").trim();
+
 const adapters=new Map<string,ProviderAdapter>([
   ["google",{id:"google",clientId:GOOGLE_CLIENT_ID,verify:verifyGoogle}]
 ]);
+{
+  const naverId=envValue("NAVER_CLIENT_ID"),naverSecret=envValue("NAVER_CLIENT_SECRET");
+  if(naverId&&naverSecret)adapters.set("naver",{
+    id:"naver",clientId:naverId,redirect:true,
+    authorizeUrl:(nonce)=>authorizeUrl("https://nid.naver.com/oauth2.0/authorize",{response_type:"code",client_id:naverId,redirect_uri:FEDERATED_REDIRECT_URI,state:nonce}),
+    verify:(code,nonce)=>verifyNaverCode(code,nonce,{clientId:naverId,clientSecret:naverSecret})
+  });
+  const kakaoId=envValue("KAKAO_REST_API_KEY"),kakaoSecret=envValue("KAKAO_CLIENT_SECRET");
+  if(kakaoId)adapters.set("kakao",{
+    id:"kakao",clientId:kakaoId,redirect:true,
+    authorizeUrl:(nonce)=>authorizeUrl("https://kauth.kakao.com/oauth/authorize",{response_type:"code",client_id:kakaoId,redirect_uri:FEDERATED_REDIRECT_URI,state:nonce}),
+    verify:(code,nonce)=>verifyKakaoCode(code,nonce,{clientId:kakaoId,clientSecret:kakaoSecret,redirectUri:FEDERATED_REDIRECT_URI})
+  });
+}
+
+async function authEmailFor(provider:string,profile:VerifiedIdentity){
+  return adapters.get(provider)?.redirect?await federatedAuthEmail(provider,profile.subject):profile.email;
+}
+async function contactEmailFor(provider:string,profile:VerifiedIdentity){
+  return profile.email||await federatedAuthEmail(provider,profile.subject);
+}
 
 async function enabledProvider(provider:string){
   const normalized=String(provider||"").trim().toLowerCase();
@@ -108,6 +140,7 @@ async function listProviders(req:Request){
   const providers=(data??[]).filter((row:any)=>adapters.has(row.provider)).map((row:any)=>({
     id:row.provider,
     name:row.display_name,
+    redirect:adapters.get(row.provider)?.redirect===true,
     strategy:row.strategy,
     supportsLogin:row.supports_login,
     supportsLink:row.supports_link,
@@ -154,7 +187,7 @@ async function issueChallenge(req:Request,provider:string,purpose:"login"|"link"
   await admin.from("identity_challenges").delete().lte("expires_at",now.toISOString());
   const {error}=await admin.from("identity_challenges").insert({nonce_hash:nonceHash,expires_at:expires.toISOString(),purpose:storedPurpose,provider,initiator_user_id:initiatorUserId});
   if(error)throw error;
-  return json(req,{provider,nonce,clientId:config.adapter.clientId??null,expiresAt:expires.toISOString(),purpose},201);
+  return json(req,{provider,nonce,clientId:config.adapter.clientId??null,authorizeUrl:config.adapter.authorizeUrl?.(nonce)??null,expiresAt:expires.toISOString(),purpose},201);
 }
 
 async function consumeChallenge(nonce:string,provider:string,purpose:"login"|"link",initiatorUserId:string|null=null){
@@ -199,12 +232,13 @@ async function exchangeProvider(req:Request,provider:string){
   if(!(await consumeChallenge(nonce,provider,"login",null)))return json(req,{error:"challenge_expired_or_used"},400);
   const profile=await config.adapter.verify(credential,nonce);
   if(config.requires_verified_email&&!profile.emailVerified)return json(req,{error:"verified_email_required"},400);
-  const link=await issueSupabaseLink(profile.email);
+  const contactEmail=await contactEmailFor(provider,profile);
+  const link=await issueSupabaseLink(await authEmailFor(provider,profile));
   const {data:personId,error:personError}=await admin.rpc("ensure_person_identity",{
     p_auth_user_id:link.user.id,
     p_provider:provider,
     p_provider_subject:profile.subject,
-    p_email:profile.email,
+    p_email:contactEmail,
     p_display_name:profile.displayName
   });
   if(personError){
@@ -218,7 +252,7 @@ async function exchangeProvider(req:Request,provider:string){
   const platformAdmin=await platformAdminForUser(link.user.id);
   const ekodiId=await ekodiIdForPerson(personId);
   await writeIdentityAudit(personId,link.user.id,"identity.login",provider,null,{platformAdmin});
-  return json(req,{ok:true,provider,tokenHash:link.tokenHash,type:"email",platformAdmin,ekodiId,user:{email:profile.email,name:profile.displayName}},200);
+  return json(req,{ok:true,provider,tokenHash:link.tokenHash,type:"email",platformAdmin,ekodiId,user:{email:contactEmail,name:profile.displayName}},200);
 }
 
 async function sessionHandoff(req:Request,user:any){
@@ -275,13 +309,14 @@ async function finishLink(req:Request,userId:string,provider:string){
 
   const profile=await config.adapter.verify(credential,nonce);
   if(config.requires_verified_email&&!profile.emailVerified)return json(req,{error:"verified_email_required"},400);
-  const target=await issueSupabaseLink(profile.email);
+  const contactEmail=await contactEmailFor(provider,profile);
+  const target=await issueSupabaseLink(await authEmailFor(provider,profile));
   const {data:personId,error:linkError}=await admin.rpc("link_person_identity",{
     p_initiator_user_id:userId,
     p_target_user_id:target.user.id,
     p_provider:provider,
     p_provider_subject:profile.subject,
-    p_email:profile.email,
+    p_email:contactEmail,
     p_display_name:profile.displayName
   });
   if(linkError){
@@ -300,7 +335,7 @@ async function finishLink(req:Request,userId:string,provider:string){
     .eq("status","active")
     .order("is_primary",{ascending:false})
     .order("linked_at",{ascending:true});
-  return json(req,{ok:true,ekodiId,linked:{email:profile.email,provider},identities:data??[]},200);
+  return json(req,{ok:true,ekodiId,linked:{email:contactEmail,provider},identities:data??[]},200);
 }
 
 async function disconnectIdentity(req:Request,userId:string,identityId:string){
