@@ -84,3 +84,64 @@
   .common-service-activation{display:flex;align-items:center;gap:7px}
   .common-detail-policy{grid-template-columns:1fr}
 }
+
+/* EKODI service engine compact list v3: status first, details on demand. */
+.common-services-panel{gap:12px}
+.common-services-head{gap:12px}
+.common-services-head h2{margin:0;font-size:23px}
+.common-services-actions span{padding:0;border:0;background:transparent;font-size:11px;white-space:nowrap}
+.common-services-actions button{min-height:36px}
+.common-services-summary{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.common-services-summary article{padding:11px 14px;min-height:64px}
+.common-services-summary span{font-size:11px}
+.common-services-toolbar{padding:8px;gap:8px}
+.common-services-search input,.common-services-filter select{min-height:38px}
+.common-services-filter{min-width:136px;width:136px}
+.common-services-layout{grid-template-columns:1fr;gap:10px}
+.common-services-list-head,.common-service-card{
+  grid-template-columns:minmax(0,1fr) minmax(100px,120px) 72px;
+  gap:12px
+}
+.common-service-card{min-height:62px;padding:10px 13px}
+.common-service-identity small{display:block;white-space:normal;line-height:1.4}
+.common-service-runtime{justify-items:start}
+.common-service-open{font-size:12px}
+.common-service-detail[hidden]{display:none!important}
+.common-service-detail-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid #dce4eb}
+.common-service-detail-top strong{font-size:14px}
+.common-service-detail-top button{min-height:34px!important}
+.common-service-detail .common-detail-policy{grid-template-columns:repeat(2,minmax(0,1fr))}
+.common-service-detail .common-detail-policy strong{overflow-wrap:anywhere}
+.common-services-panel.module-health-mode .common-service-card,
+.common-services-panel.module-health-mode .common-services-list-head{
+  grid-template-columns:minmax(0,1fr) minmax(110px,130px) minmax(85px,105px) 72px;
+  gap:12px
+}
+.common-services-panel.module-health-mode .common-service-activation{grid-column:auto}
+@media(max-width:1250px){
+ .common-services-list-head,.common-service-card{grid-template-columns:minmax(0,1fr) 110px 60px}
+ .common-services-panel.module-health-mode .common-service-card,
+ .common-services-panel.module-health-mode .common-services-list-head{grid-template-columns:minmax(0,1fr) 110px 90px 60px}
+ .common-service-runtime,.common-service-open,.common-services-panel.module-health-mode .common-service-activation{grid-column:auto}
+ .common-service-open{text-align:right}
+}
+@media(max-width:760px){
+ .common-services-head{display:flex;flex-wrap:wrap;align-items:center}
+ .common-services-actions{margin-left:auto;justify-content:flex-end}
+ .common-services-toolbar{display:flex;flex-wrap:wrap}
+ .common-services-search{flex:1 1 200px}
+ .common-services-filter{width:136px;flex:0 0 136px}
+ .common-services-summary{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .common-services-summary article{min-height:58px;padding:9px}
+ .common-services-summary strong{font-size:19px}
+ .common-services-summary span{line-height:1.3}
+ .common-services-list-head{display:none}
+ .common-service-card,.common-services-panel.module-health-mode .common-service-card{
+   grid-template-columns:minmax(0,1fr) auto;gap:6px 8px
+ }
+ .common-service-identity{grid-column:1!important;grid-row:1}
+ .common-service-open{grid-column:2!important;grid-row:1}
+ .common-service-runtime{grid-column:1!important;grid-row:2}
+ .common-services-panel.module-health-mode .common-service-activation{grid-column:2!important;grid-row:2}
+ .common-service-detail .common-detail-policy{grid-template-columns:1fr}
+}
