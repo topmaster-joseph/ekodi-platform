@@ -176,7 +176,8 @@ test('independent board deployment provisions its own storage and verifies real 
   assert.match(workflow,/commits\/\$GITHUB_SHA\/pulls/);
   assert.match(workflow,/Requested release task does not match orchestrator branch/);
   assert.match(workflow,/Verify clean citizen authenticated write and legacy retirement/);
-  assert.match(workflow,/Remove old citizen records and referenced photos after cutover/);
+  assert.match(workflow,/Verify legacy write retirement and retain historical records/);
+  assert.doesNotMatch(workflow,/node services\/independent-board\/voices-fresh\/purge-legacy\.mjs --execute/);
   assert.match(workflow,/DELETE FROM citizen_voices_fresh WHERE id=\$post_id/);
 });
 
