@@ -1,0 +1,23 @@
+name: EKODI Mall Promotion Health Probe
+
+# 운영자 진단용: 공개 health 엔드포인트의 상태값(비밀값 없음)만 요약해 체크런 주석으로 남긴다.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Summarize marketing growth health
+        shell: bash
+        run: |
+          set -uo pipefail
+          body=$(curl -sS --max-time 30 -H 'accept: application/json' https://ekodi.kr/marketing-connect-api/health || true)
+          echo "$body" | head -c 200 >/dev/null
+          summary=$(echo "$body" | jq -c '{promo:(.mallPromotionAutomation|{enabled,scheduler,status,gate,today,lastRun,channels,channelReadiness,weekly:(.weeklyBoard|{status,weekKey,daySlot,todayProduct})}),loop:(.mallAutonomousProfitLoop|{state,status,reason,lastRun,blockers})}' 2>/dev/null || echo '"unparseable"')
+          echo "$summary" | fold -w 900 | while read -r line; do echo "::notice title=promo-health::$line"; done
+          echo "$summary" >> "$GITHUB_STEP_SUMMARY"
