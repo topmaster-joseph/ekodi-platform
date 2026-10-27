@@ -33,13 +33,13 @@ test('designated two recovery administrators cannot be demoted or deleted',async
   assert.match(d1,/if \(protectedBootstrapEmails\(env\)\.has\(normalizeEmail\(target\.email\)\)\)/);
 });
 
-test('any verified Google user can sign in; privileged actions remain server-gated',async()=>{
+test('any verified EKODI account (any login path) can sign in; privileged actions remain server-gated',async()=>{
   const direct=await read('admin-direct-google.js');
   const universal=await read('auth-site/client-auth.js');
   const access=await read('supabase/functions/access-api/index.ts');
   assert.match(direct,/auth\.searchParams\.get\('site'\)!=='admin'/);
   assert.match(universal,/google\.accounts\.id\.renderButton/);
-  assert.match(access,/async function verifiedGoogleIdentity/);
+  assert.match(access,/async function verifiedEkodiAccount/);
   assert.match(access,/verified_google_super_admin_required/);
   assert.match(access,/ekodi_bootstrap_vacant_site_admin/);
   assert.match(access,/pending_sync/);

@@ -27,11 +27,15 @@ test('no Google login gate relies on Supabase provider metadata without the EKOD
   assert.deepEqual(offenders,[],'Google gates must also accept EKODI login_identities proof: '+offenders.join(', '));
 });
 
-test('known Google gates use the canonical registry',()=>{
+test('known gates use the canonical EKODI account registry (any linked login path)',()=>{
   const board=readFileSync(new URL('services/independent-board/worker.js',root),'utf8');
   assert.match(board,/EKODI_IDENTITY_API\+'\/identities'/);
   assert.match(board,/x\?\.is_current===true/);
   const pastor=readFileSync(new URL('supabase/functions/church-pastor-api/index.ts',root),'utf8');
-  assert.match(pastor,/login_identities/);
-  assert.match(pastor,/provider:'eq\.google',status:'eq\.active'/);
+  assert.match(pastor,/rpc\('ekodi_account_for_auth_user'/);
+  assert.match(pastor,/verified_emails/);
+  assert.doesNotMatch(pastor,/provider:'eq\.google'/);
+  const access=readFileSync(new URL('supabase/functions/access-api/index.ts',root),'utf8');
+  assert.match(access,/rpc\("ekodi_account_for_auth_user"/);
+  assert.doesNotMatch(access,/\.eq\("provider","google"\)/);
 });

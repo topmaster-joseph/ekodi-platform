@@ -105,21 +105,24 @@ async function signedInGoogle(req){
     const providers=[user?.app_metadata?.provider,...(Array.isArray(user?.app_metadata?.providers)?user.app_metadata.providers:[]),...(Array.isArray(user?.identities)?user.identities.map(x=>x?.provider):[])].filter(Boolean).map(x=>String(x).toLowerCase());
     const verified={id:String(user.id),email:text(user.email).toLowerCase()};
     if(providers.includes('google'))return verified;
-    // EKODI verifies the Google ID token itself (identity-api) and then issues a
-    // Supabase email one-time session, so Supabase records provider "email".
-    // The canonical proof of a Google login is an active google login identity
-    // bound to this exact auth user in EKODI's identity registry.
-    return await ekodiGoogleIdentity(token)?verified:null;
+    // EKODI verifies each login path itself (identity-api) and issues a Supabase email
+    // one-time session. The canonical proof is an active login identity bound to this
+    // exact auth user in EKODI's identity registry (login_identities) — any path counts,
+    // because every path is the same EKODI account. The account's verified email is used.
+    const account=await ekodiAccountIdentity(token);
+    return account?{id:verified.id,email:account.email||verified.email,ekodiId:account.ekodiId}:null;
   }catch{return null}
 }
-async function ekodiGoogleIdentity(token){
+const EKODI_LOGIN_PROVIDERS=new Set(['google','naver','kakao','apple','microsoft','passkey']);
+async function ekodiAccountIdentity(token){
   try{
     const response=await fetch(EKODI_IDENTITY_API+'/identities',{headers:{apikey:SUPABASE_PUBLISHABLE_KEY,authorization:'Bearer '+token,origin:'https://ekodi.kr','cache-control':'no-store'}});
-    if(!response.ok)return false;
+    if(!response.ok)return null;
     const data=await response.json().catch(()=>null);
     const identities=Array.isArray(data?.identities)?data.identities:[];
-    return identities.some(x=>String(x?.provider||'').toLowerCase()==='google'&&x?.status==='active'&&x?.is_current===true);
-  }catch{return false}
+    if(!identities.some(x=>EKODI_LOGIN_PROVIDERS.has(String(x?.provider||'').toLowerCase())&&x?.status==='active'&&x?.is_current===true))return null;
+    return {email:String(data?.person?.accountEmail||'').toLowerCase(),ekodiId:data?.person?.ekodiId||null};
+  }catch{return null}
 }
 async function requireSignedInGoogle(req){
   const user=await signedInGoogle(req);
@@ -372,7 +375,7 @@ async function verifyVoiceAccount(allowRefresh=true){
     });}catch{throw new Error("인증 상태를 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.");}
     if(response.status===200){
       const data=await response.json().catch(()=>null);
-      if(data?.ok===true&&data.authenticated===true&&data.provider==="google"){
+      if(data?.ok===true&&data.authenticated===true&&(data.provider==="ekodi"||data.provider==="google")){
         voiceVerified=true;
         voiceAuthLabel("Google 로그인 완료");
         
@@ -477,7 +480,7 @@ export default {async fetch(req,env){
   if(path==='/api/posts'&&req.method==='GET')return list(env,url);
   if(path==='/api/auth/session'&&req.method==='GET'){
     const verified=await signedInGoogle(req);
-    return verified?json({ok:true,authenticated:true,provider:'google',email:verified.email}):
+    return verified?json({ok:true,authenticated:true,provider:'ekodi',email:verified.email}):
       json({ok:false,authenticated:false,error:'google_login_required',message:'Google 로그인 후 시민의견을 작성할 수 있습니다.'},401);
   }
   const submission=path.match(/^\/api\/submissions\/([0-9a-f-]{36})$/i);

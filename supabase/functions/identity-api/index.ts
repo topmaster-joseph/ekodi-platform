@@ -222,6 +222,50 @@ async function platformAdminForUser(userId:string){
   return data?.platform_admin===true;
 }
 
+async function recordEmailVerification(provider:string,subject:string,verified:boolean){
+  // Only verified emails may satisfy email-keyed grants (see sync_person_access).
+  const {error}=await admin.from("login_identities").update({email_verified:verified})
+    .eq("provider",provider).eq("provider_subject",subject).eq("status","active");
+  if(!error)return;
+  // Google rows are verified by default, so a deployment that briefly precedes the
+  // email_verified migration must not block Google sign-in. Other paths fail closed.
+  if(provider==="google"&&verified){console.error("email_verified update skipped",error.message);return;}
+  throw error;
+}
+
+async function accountProof(userId:string){
+  const {data,error}=await admin.rpc("ekodi_account_for_auth_user",{p_auth_user_id:userId});
+  if(error){console.error("ekodi_account_for_auth_user",error.message);return null;}
+  return data??null;
+}
+
+// Redirect-provider logins (Naver, Kakao) sign the person into the EKODI account's
+// primary auth user when one exists, so every feature — including those historically
+// bound to a Google identity — sees the same account. The primary is preferred, then
+// a Google identity, then the oldest link. A person with only this login path keeps
+// its own auth user.
+async function canonicalAccountSession(personId:string|null,link:{user:any;tokenHash:string}){
+  if(!personId)return {...link,canonical:false};
+  const {data,error}=await admin.from("login_identities")
+    .select("auth_user_id,provider,is_primary,linked_at")
+    .eq("person_id",personId).eq("status","active")
+    .order("is_primary",{ascending:false}).order("linked_at",{ascending:true});
+  if(error)throw error;
+  const rows=data??[];
+  const primary=rows.find((r:any)=>r.is_primary)??rows.find((r:any)=>r.provider==="google")??rows[0];
+  if(!primary||primary.auth_user_id===link.user.id)return {...link,canonical:false};
+  const {data:target,error:targetError}=await admin.auth.admin.getUserById(primary.auth_user_id);
+  const email=String(target?.user?.email||"").trim().toLowerCase();
+  if(targetError||!email){console.error("canonical account session",targetError?.message||"missing_email");return {...link,canonical:false};}
+  const canonical=await issueSupabaseLink(email);
+  if(canonical.user.id!==primary.auth_user_id){
+    console.error("canonical account session mismatch",{expected:primary.auth_user_id,got:canonical.user.id});
+    return {...link,canonical:false};
+  }
+  await syncPerson(canonical.user.id);
+  return {...canonical,canonical:true};
+}
+
 async function exchangeProvider(req:Request,provider:string){
   const config=await enabledProvider(provider);
   if(!config)return json(req,{error:"provider_unavailable"},404);
@@ -246,13 +290,16 @@ async function exchangeProvider(req:Request,provider:string){
     const conflict=/already_linked|subject_conflict|requires_relink/i.test(personError.message||"");
     return json(req,{error:conflict?"identity_conflict":"person_identity_failed"},conflict?409:500);
   }
+  await recordEmailVerification(provider,profile.subject,provider==="google"||profile.emailVerified===true);
   await syncPerson(link.user.id);
   const {error:legacyError}=await admin.rpc("apply_preregistered_access",{p_user_id:link.user.id});
   if(legacyError)console.error("apply_preregistered_access",legacyError.message);
-  const platformAdmin=await platformAdminForUser(link.user.id);
+  // Whatever door was used, the session is the EKODI account's canonical session.
+  const session=adapters.get(provider)?.redirect?await canonicalAccountSession(personId,link):{...link,canonical:false};
+  const platformAdmin=await platformAdminForUser(session.user.id);
   const ekodiId=await ekodiIdForPerson(personId);
-  await writeIdentityAudit(personId,link.user.id,"identity.login",provider,null,{platformAdmin});
-  return json(req,{ok:true,provider,tokenHash:link.tokenHash,type:"email",platformAdmin,ekodiId,user:{email:contactEmail,name:profile.displayName}},200);
+  await writeIdentityAudit(personId,session.user.id,"identity.login",provider,null,{platformAdmin,canonicalSession:session.canonical,loginAuthUser:link.user.id});
+  return json(req,{ok:true,provider,accountSession:session.canonical,tokenHash:session.tokenHash,type:"email",platformAdmin,ekodiId,user:{email:contactEmail,name:profile.displayName}},200);
 }
 
 async function sessionHandoff(req:Request,user:any){
@@ -290,7 +337,9 @@ async function listIdentities(req:Request,userId:string){
     last_seen_at:identity.last_seen_at,
     is_current:identity.auth_user_id===userId
   }));
-  return json(req,{person:{id:personId,ekodiId},identities,reloginRequired:false},200);
+  const account=await accountProof(userId);
+  const verifiedEmails=Array.isArray(account?.verified_emails)?account.verified_emails:[];
+  return json(req,{person:{id:personId,ekodiId,verifiedEmails,accountEmail:verifiedEmails[0]??null,providers:account?.providers??[]},identities,reloginRequired:false},200);
 }
 
 async function beginLink(req:Request,userId:string,provider:string){
@@ -325,6 +374,7 @@ async function finishLink(req:Request,userId:string,provider:string){
     return json(req,{error:conflict?"identity_already_linked":"identity_link_failed"},conflict?409:500);
   }
 
+  await recordEmailVerification(provider,profile.subject,provider==="google"||profile.emailVerified===true);
   await syncPerson(userId);
   if(target.user.id!==userId)await syncPerson(target.user.id);
   await writeIdentityAudit(personId,userId,"identity.linked",provider,null,{targetUserDifferent:target.user.id!==userId});

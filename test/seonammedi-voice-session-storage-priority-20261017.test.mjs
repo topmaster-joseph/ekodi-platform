@@ -37,7 +37,7 @@ test('expired refresh failure returns empty token without accepting unverified i
  const script=await scriptFor('https://seonammedi.kr/board/voices');
  const token=await storedToken(script,serialized('expired',1,'expired-refresh'),null,async()=>{throw Error('network unavailable')});
  assert.equal(token,'');
- assert.match(script,/d\?\.authenticated===true&&d\?\.provider==='google'/);
+ assert.match(script,/d\?\.authenticated===true&&\(d\?\.provider==='ekodi'\|\|d\?\.provider==='google'\)/);
  assert.match(script,/if\(await session\(\)\)/);
  assert.match(script,/beginLogin\(\)/);
 });

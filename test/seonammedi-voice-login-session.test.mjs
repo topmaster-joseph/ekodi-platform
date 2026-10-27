@@ -48,7 +48,7 @@ test('GET auth/session validates identity with upstream Google provider and hide
      headers:{authorization:'Bearer fixture-access-value'}
    }),{});
    assert.equal(res.status,200);
-   assert.deepEqual(await res.json(),{ok:true,authenticated:true,provider:'google',email:'writer@example.com'});
+   assert.deepEqual(await res.json(),{ok:true,authenticated:true,provider:'ekodi',email:'writer@example.com'});
    assert.equal(checks,1);
  }finally{globalThis.fetch=oldFetch}
 });

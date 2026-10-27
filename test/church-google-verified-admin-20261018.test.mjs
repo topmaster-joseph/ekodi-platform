@@ -21,11 +21,10 @@ function scenario({email='outsider@example.test',google=false,grantSource='',exi
     if(path.includes('/rest/v1/rpc/church_pastor_staff_for_user')){
       return new Response(JSON.stringify(existingStaff),{status:200});
     }
-    if(path.includes('/rest/v1/login_identities')){
-      assert.match(path,/provider=eq.google/);
-      assert.match(path,/status=eq.active/);
-      const results=google?[{provider_subject:'google-sub-test'}]:[];
-      return new Response(JSON.stringify(results),{status:200});
+    if(path.includes('/rest/v1/rpc/ekodi_account_for_auth_user')){
+      // Canonical EKODI account proof: verified emails of the person behind this session,
+      // whichever login path (Google, Naver, Kakao …) was used.
+      return new Response(JSON.stringify(google?{person_id:'p',verified_emails:[email],providers:['google']}:null),{status:200});
     }
     if(path.includes('/rest/v1/site_access_registry')){
       assert.match(path,/site_key=eq.church/);

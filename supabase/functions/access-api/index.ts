@@ -45,30 +45,27 @@ async function authClient(req:Request){
   return {db,user:data.user};
 }
 const BOOTSTRAP_SUPER_ADMIN_EMAILS=new Set(["topmaster.joseph@gmail.com","joseph@ekodi.kr"]);
-// Google sign-in is open to everyone. An active, verified Google identity is necessary
-// but never sufficient for privileged authorization.
-async function verifiedGoogleIdentity(user:any){
-  const email=String(user?.email??"").trim().toLowerCase();
-  if(!user?.id||!email||!user.email_confirmed_at)return false;
-  const {data,error}=await admin.from("login_identities")
-    .select("provider,provider_subject,email").eq("auth_user_id",user.id)
-    .eq("provider","google").eq("status","active").maybeSingle();
+// Sign-in is open to everyone through any enabled login path (Google, Naver, Kakao …).
+// Every path resolves to one EKODI account; a verified EKODI account is necessary but
+// never sufficient for privileged authorization.
+async function ekodiAccount(userId:string){
+  if(!userId)return null;
+  const {data,error}=await admin.rpc("ekodi_account_for_auth_user",{p_auth_user_id:userId});
   if(error)throw error;
-  return Boolean(data?.provider_subject&&String(data.email??"").trim().toLowerCase()===email);
+  return data&&typeof data==="object"?data as {person_id:string;auth_user_ids:string[];verified_emails:string[];providers:string[]}:null;
+}
+async function verifiedEkodiAccount(user:any){
+  const account=await ekodiAccount(String(user?.id||""));
+  return Boolean(account&&Array.isArray(account.verified_emails)&&account.verified_emails.length);
 }
 async function platformAdmin(userId:string){
-  const {data,error}=await admin.from("profiles").select("platform_admin").eq("user_id",userId).maybeSingle();
+  const account=await ekodiAccount(userId);
+  if(!account)return false;
+  const userIds=Array.isArray(account.auth_user_ids)&&account.auth_user_ids.length?account.auth_user_ids:[userId];
+  const {data,error}=await admin.from("profiles").select("platform_admin").in("user_id",userIds).eq("platform_admin",true).limit(1);
   if(error)throw error;
-  if(data?.platform_admin===true)return true;
-  const {data:identity, error:identityError}=await admin.from("login_identities")
-    .select("email,provider_subject").eq("auth_user_id",userId)
-    .eq("provider","google").eq("status","active").maybeSingle();
-  if(identityError)throw identityError;
-  if(!identity?.provider_subject||!BOOTSTRAP_SUPER_ADMIN_EMAILS.has(String(identity.email??"").toLowerCase()))return false;
-  const {data:verified,error:userError}=await admin.auth.admin.getUserById(userId);
-  if(userError)throw userError;
-  return Boolean(verified?.user?.email_confirmed_at&&
-    String(verified.user.email??"").toLowerCase()===String(identity.email??"").toLowerCase());
+  if(data?.length)return true;
+  return (account.verified_emails||[]).some(email=>BOOTSTRAP_SUPER_ADMIN_EMAILS.has(String(email).toLowerCase()));
 }
 async function tenantReviewerAuthorization(userId:string,tenantId:string|null){
   if(await platformAdmin(userId))return {allowed:true,roles:["platform_admin"],authority:"platform",role:"platform_admin"};
@@ -294,7 +291,7 @@ Deno.serve(async(req)=>{
       // Special recovery path for a site without a single active administrator.
       // It is NOT an unrestricted role-grant endpoint; the database function
       // serializes vacancy checks and enforces site/tenant binding a second time.
-      if(!await verifiedGoogleIdentity(auth.user)||!await platformAdmin(auth.user.id))
+      if(!await verifiedEkodiAccount(auth.user)||!await platformAdmin(auth.user.id))
         return json(req,{ok:false,error:"verified_google_super_admin_required"},403);
       const body=await req.json().catch(()=>null);
       const site=clip(body?.site,60).toLowerCase();
@@ -311,10 +308,10 @@ Deno.serve(async(req)=>{
       if(error)throw error;
       if(data?.ok!==true)return json(req,data??{ok:false,error:"bootstrap_denied"},
         data?.code==="SITE_ALREADY_HAS_ADMIN"?409:403);
-      // If this Google identity already exists, update the derived workspace
-      // context without altering any other tenant.
+      // If an EKODI account already holds this verified email (any login path),
+      // update the derived workspace context without altering any other tenant.
       const {data:targetUsers,error:targetError}=await admin.from("login_identities")
-        .select("auth_user_id").eq("email",email).eq("provider","google").eq("status","active").limit(1);
+        .select("auth_user_id").eq("email",email).eq("email_verified",true).eq("status","active").limit(1);
       if(targetError)throw targetError;
       let activationReady=!targetUsers?.[0]?.auth_user_id;
       if(targetUsers?.[0]?.auth_user_id){
@@ -327,8 +324,8 @@ Deno.serve(async(req)=>{
           console.error("site admin bootstrap: grant recorded but identity activation pending",error);
         }
       }
-      return json(req,{...data,authentication:"google_required",audit:"recorded",
-        activation:activationReady?"ready_or_awaiting_google":"pending_sync"},201);
+      return json(req,{...data,authentication:"ekodi_account_required",audit:"recorded",
+        activation:activationReady?"ready_or_awaiting_ekodi_login":"pending_sync"},201);
     }
 
     if(req.method==="GET"&&path==="/workspaces"){
@@ -362,7 +359,10 @@ Deno.serve(async(req)=>{
       if(site!=="marketing"&&(access?.status==="active"||access?.status==="pre_registered"))return json(req,{ok:true,already_authorized:true,access});
       const tenant=tenantSlug?await tenantBySlug(tenantSlug):null;
       if(tenantSlug&&!tenant)return json(req,{error:"tenant_not_found"},404);
-      const email=String(auth.user.email??"").toLowerCase();
+      // Record the EKODI account's verified email so reviewers see the real person,
+      // whichever login path this session came through.
+      const requester=await ekodiAccount(auth.user.id).catch(()=>null);
+      const email=String(requester?.verified_emails?.[0]??auth.user.email??"").toLowerCase();
       if(!email)return json(req,{error:"email_required"},400);
       const relatedUserIds=await personAuthUserIds(auth.user.id);
       let q=admin.from("site_access_requests").select("id,status,requested_at,requested_plan,business_name").in("user_id",relatedUserIds).eq("site_key",site).eq("status","pending");

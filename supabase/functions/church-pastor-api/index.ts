@@ -59,7 +59,15 @@ async function centralIdentity(req){
   const token=bearer(req);if(!token||token.length>8192)return null;
   const r=await fetch(`${CENTRAL_SUPABASE_URL}/auth/v1/user`,{headers:{apikey:CENTRAL_PUBLISHABLE_KEY,authorization:`Bearer ${token}`},cache:'no-store'});
   if(!r.ok)return null;const u=await r.json().catch(()=>null);if(!u?.id||!u?.email||!u?.email_confirmed_at)return null;
-  return{id:String(u.id),email:String(u.email).toLowerCase()};
+  // The EKODI account's verified email identifies the person, whichever login path issued
+  // this session (a Naver/Kakao-only session carries an internal alias email).
+  let email=String(u.email).toLowerCase();
+  try{
+    const account=await ekodiAccount(String(u.id));
+    const verified=Array.isArray(account?.verified_emails)?account.verified_emails.map(e=>String(e).toLowerCase()):[];
+    if(verified.length&&!verified.includes(email))email=verified[0];
+  }catch(error){console.error('ekodi account lookup',error?.message||error);}
+  return{id:String(u.id),email};
 }
 function centralConfig(){
   const url=(Deno.env.get('SUPABASE_URL')||'').replace(/\/+$/,'');
@@ -73,17 +81,18 @@ async function rpc(name,body){
   return fetch(`${url}/rest/v1/rpc/${name}`,{method:'POST',headers:{apikey:key,authorization:`Bearer ${key}`,'content-type':'application/json'},body:JSON.stringify(body),cache:'no-store'});
 }
 const PERMANENT_SUPER_ADMINS=new Set(['topmaster.joseph@gmail.com','joseph@ekodi.kr']);
+// Any login path linked to the same EKODI account counts (Google, Naver, Kakao …):
+// the account must hold this email as a verified identity email.
+async function ekodiAccount(userId){
+  const r=await rpc('ekodi_account_for_auth_user',{p_auth_user_id:userId});
+  if(!r.ok)throw new Error('EKODI_ACCOUNT_LOOKUP_FAILED');
+  const data=await r.json().catch(()=>null);
+  return data&&typeof data==='object'?data:null;
+}
 async function provenGoogleIdentity(userId,email){
-  const {url,key}=centralConfig();
-  const proof=new URL(url+'/rest/v1/login_identities');
-  proof.search=new URLSearchParams({
-    auth_user_id:'eq.'+userId,provider:'eq.google',status:'eq.active',
-    email:'eq.'+email,select:'provider_subject',limit:'1'
-  }).toString();
-  const response=await fetch(proof,{headers:{apikey:key,authorization:'Bearer '+key},cache:'no-store'});
-  if(!response.ok)throw new Error('GOOGLE_IDENTITY_LOOKUP_FAILED');
-  const identities=await response.json().catch(()=>[]);
-  return Array.isArray(identities)&&identities.some(row=>Boolean(row.provider_subject));
+  const account=await ekodiAccount(userId);
+  const target=String(email||'').toLowerCase();
+  return Boolean(target)&&Array.isArray(account?.verified_emails)&&account.verified_emails.some(e=>String(e).toLowerCase()===target);
 }
 async function staffFor(userId,email,{allowRegistryFallback=true}={}){
   const r=await rpc('church_pastor_staff_for_user',{p_church_slug:CHURCH_SLUG,p_user_id:userId});
@@ -91,13 +100,13 @@ async function staffFor(userId,email,{allowRegistryFallback=true}={}){
   const stored=await r.json().catch(()=>null);
   if(!allowRegistryFallback)return stored;
   // An existing local role cannot accidentally demote either owner-designated
-  // platform super administrator. Google subject proof is still required.
+  // platform super administrator. A verified EKODI account email is still required.
   const normalizedEmail=String(email||'').toLowerCase();
   if(PERMANENT_SUPER_ADMINS.has(normalizedEmail)&&await provenGoogleIdentity(userId,normalizedEmail))
     return{user_id:userId,email:normalizedEmail,display_name:'EKODI 최고관리자',role:'senior_pastor',active:true,source:'platform_super_admin'};
   if(stored&&normalizedEmail!=='ekodichurch@gmail.com')return stored;
-  // The additional church manager also requires an active first-party Google
-  // identity and an explicit church-scoped registration.
+  // The additional church manager also requires a verified EKODI account email
+  // and an explicit church-scoped registration.
   if(!await provenGoogleIdentity(userId,normalizedEmail))return stored||null;
   const {url,key}=centralConfig();
   const lookup=new URL(url+'/rest/v1/site_access_registry');
