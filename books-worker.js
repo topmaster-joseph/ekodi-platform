@@ -59,7 +59,7 @@ export default {
       const response = await env.ASSETS.fetch(assetRequest(request, '/store/'));
       return injectEkodiShell(response, 'books');
     }
-    const asset = await env.ASSETS.fetch(request);
-    return injectEkodiShell(isCommercePage(url.pathname) ? withCommerceCsp(asset) : asset, 'books');
+    if (isCommercePage(url.pathname)) return injectEkodiShell(withCommerceCsp(await env.ASSETS.fetch(request)), 'books');
+    return injectEkodiShell(await env.ASSETS.fetch(request), 'books');
   },
 };

@@ -12,7 +12,7 @@ const directive = (csp, name) => (csp.split(';').map(s => s.trim()).find(s => s.
 
 for (const path of ['/buy/', '/library/', '/buy/success/']) {
   test(`${path} allows Google sign-in, EKODI identity and Toss`, async () => {
-    const res = await worker.fetch(new Request(`https://books.ekodi.kr${path}`), env);
+    const res = await worker.fetch(new Request(`https://books.internal${path}`), env);
     const csp = res.headers.get('content-security-policy') || '';
     assert.match(directive(csp, 'script-src'), /https:\/\/accounts\.google\.com\/gsi\/client/);
     assert.match(directive(csp, 'script-src'), /https:\/\/js\.tosspayments\.com/);
@@ -26,6 +26,6 @@ for (const path of ['/buy/', '/library/', '/buy/success/']) {
 test('catalog pages keep the default shell policy', async () => {
   assert.equal(isCommercePage('/'), false);
   assert.equal(isCommercePage('/buyers-guide/'), false);
-  const res = await worker.fetch(new Request('https://books.ekodi.kr/'), env);
+  const res = await worker.fetch(new Request('https://books.internal/'), env);
   assert.doesNotMatch(res.headers.get('content-security-policy') || '', /tosspayments/);
 });
