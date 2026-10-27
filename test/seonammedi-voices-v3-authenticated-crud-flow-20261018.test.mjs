@@ -16,7 +16,9 @@ function store(denyWrite=false){
   };
 }
 function node(name=''){
-  return {name,children:[],hidden:false,disabled:false,value:'',textContent:'',className:'',style:{},
+  return {name,children:[],hidden:false,disabled:false,value:'',textContent:'',className:'',style:{},dataset:{},attributes:{},
+    setAttribute(key,value){this.attributes[key]=value},
+    classList:{add(){},remove(){},toggle(){}},
     append(...items){this.children.push(...items)},
     replaceChildren(){this.children=[]},
     focus(){this.focused=true},
@@ -36,6 +38,7 @@ function fakeDb(){
         return entries.find(x=>x.id===Number(args[0])&&x.status==='published')||null;
       },
       async all(){
+        if(sql.includes('FROM citizen_voice_replies_fresh'))return {results:[]};
         let listed=entries.filter(x=>x.status==='published');
         if(sql.includes('body LIKE ?'))listed=listed.filter(x=>(x.body+' '+(x.title||'')).includes(String(args[0]).replaceAll('%','')));
         return {results:listed.slice().sort((a,b)=>b.id-a.id).slice(0,100)};
@@ -146,9 +149,10 @@ test('Google handoff -> durable queue -> published list, with no admin controls 
     assert.equal(app.ids.freshForm.hidden,true);
     assert.match(app.ids.freshStatus.textContent,/저장됐습니다/);
     assert.equal(app.ids.freshList.children.length,1);
-    assert.equal(app.ids.freshList.children[0].children.length,3,'writer sees summary, body and share only');
+    assert.equal(app.ids.freshList.children[0].children.length,5,'writer sees summary, body, share, owner controls and replies');
     assert.equal(app.ids.freshList.children[0].children[2].textContent,'공유');
-    assert.ok(app.ids.freshList.children[0].children.every(c=>c.className!=='admin-actions'),'writer never receives administrator buttons');
+    assert.equal(app.ids.freshList.children[0].children[3].className,'admin-actions','writer can edit only a server-verified own post');
+    assert.equal(app.ids.freshList.children[0].children[4].className,'fresh-replies','reply composer exists for verified users');
     assert.ok(calls.includes('queue:published'));
   }
 });
@@ -160,7 +164,7 @@ test('verified site-authorized admin can edit and delete the same newly-publishe
       googleSubject:'synthetic-writer',message:'수정 전 본문',createdAt:new Date().toISOString()});
     const app=await boot({host,role:'admin',env});
     const item=app.ids.freshList.children[0];
-    assert.equal(item.children.length,4,'server verified permission reveals edit/delete next to share');
+    assert.equal(item.children.length,5,'server verified permission reveals edit/delete and replies next to share');
     const actions=item.children[3];
     assert.equal(actions.className,'admin-actions');
     app.context.prompt=()=> '관리자 수정 성공';
