@@ -532,6 +532,84 @@ for (const [id, group] of menus) {
     throw new Error(`${id} did not render a visible non-empty panel: ${JSON.stringify(visiblePanel)}`);
   }
   if (id === 'campus' && visiblePanel.id !== 'campusPanel') throw new Error(`Campus rendered unexpected panel: ${visiblePanel.id || '(no id)'}`);
+
+  // ADMIN-PANEL-VISIBILITY-20261028: a selected menu is not genuinely visible
+  // when the architecture panel is wrongly rendered above it by !important CSS.
+  if (id !== 'architecture') {
+    const architectureLeak = await page.evaluate(() => {
+      const panel = document.querySelector('.content > .architecture[data-panel~="architecture"]');
+      if (!panel) return null;
+      const style = getComputedStyle(panel);
+      const rect = panel.getBoundingClientRect();
+      return style.display !== 'none' && style.visibility !== 'hidden'
+        && rect.width > 0 && rect.height > 0
+        ? { display:style.display, width:rect.width, height:rect.height, hidden:panel.hidden,
+            hiddenClass:panel.classList.contains('hidden-panel') } : null;
+    });
+    if (architectureLeak) throw new Error(`${id}: hidden architecture panel overpaints active workspace: ${JSON.stringify(architectureLeak)}`);
+  }
+
+  if (id === 'social') {
+    // Read-only runtime interactions on the actually deployed Social Hub.
+    // Never connect accounts, change settings, or invoke publish mutations.
+    const tabKeys = ['sites','connections','publishing','policy'];
+    const tabs = page.locator('#socialAdmin .social-workspace-tabs [role="tab"]');
+    if (await tabs.count() !== tabKeys.length) throw new Error('social: expected exactly four operational tabs');
+    await page.waitForFunction(() =>
+      document.querySelectorAll('#socialAdmin [data-site-channel-admin]').length > 0,
+      null, { timeout:12000 });
+    for (const tab of tabKeys) {
+      await page.locator(`#social-tab-${tab}`).click();
+      const tabState = await page.evaluate(key => {
+        const current = document.querySelector(`#social-tab-${key}`);
+        const panel = document.querySelector(`#social-view-${key}`);
+        const tabs = [...document.querySelectorAll('#socialAdmin .social-workspace-tabs [role="tab"]')];
+        const panels = [...document.querySelectorAll('#socialAdmin [role="tabpanel"]')];
+        return {
+          selected:current?.getAttribute('aria-selected'),
+          hidden:panel?.hidden,
+          rendered:panel ? getComputedStyle(panel).display !== 'none' : false,
+          selectedCount:tabs.filter(node=>node.getAttribute('aria-selected')==='true').length,
+          renderedCount:panels.filter(node=>getComputedStyle(node).display !== 'none').length,
+        };
+      }, tab);
+      if (tabState.selected !== 'true' || tabState.hidden || !tabState.rendered
+        || tabState.selectedCount !== 1 || tabState.renderedCount !== 1) {
+        throw new Error(`social: ${tab} tab did not exclusively render its panel: ${JSON.stringify(tabState)}`);
+      }
+    }
+    await page.locator('#social-tab-sites').click();
+    const cards = page.locator('#socialAdmin [data-site-channel-admin]');
+    const siteCount = await cards.count();
+    const search = page.locator('#socialAdmin .social-directory-toolbar input[type="search"]');
+    await search.fill('__EKODI_UNMATCHABLE_SEARCH_PROBE__');
+    const hiddenCount = await cards.evaluateAll(nodes=>nodes.filter(node=>node.hidden).length);
+    if (hiddenCount !== siteCount) throw new Error(`social: site search did not hide unmatched entries (${hiddenCount}/${siteCount})`);
+    await search.fill('');
+    const restoredCount = await cards.evaluateAll(nodes=>nodes.filter(node=>!node.hidden).length);
+    if (restoredCount !== siteCount) throw new Error(`social: clearing search did not restore site cards (${restoredCount}/${siteCount})`);
+
+    await page.setViewportSize({width:390,height:844});
+    const mobile = await page.evaluate(() => {
+      const host = document.querySelector('#socialAdmin');
+      const tabs = document.querySelector('#socialAdmin .social-workspace-tabs');
+      const rect = host?.getBoundingClientRect();
+      return {
+        hostLeft:rect?.left, hostRight:rect?.right, viewport:innerWidth,
+        tabsHeight:tabs?.getBoundingClientRect().height,
+        tabsScrollWidth:tabs?.scrollWidth,
+        tabsClientWidth:tabs?.clientWidth,
+        selected:document.querySelector('#social-tab-sites')?.getAttribute('aria-selected'),
+      };
+    });
+    if (mobile.hostLeft < -2 || mobile.hostRight > mobile.viewport+2 ||
+        mobile.tabsHeight < 40 || mobile.selected !== 'true') {
+      throw new Error('social: responsive workspace clipping or tabs lost on 390px mobile: '+JSON.stringify(mobile));
+    }
+    await page.screenshot({path:path.join(artifactsDir,'menu-social-mobile.png'),fullPage:false});
+    await page.setViewportSize({width:1440,height:1000});
+    console.log(`[PROD-E2E] social: four tabs, ${siteCount} site cards, search reset, mobile 390px and architecture isolation verified`);
+  }
   results.push({ id, group, kind: 'panel', ok: true, detail: `${visiblePanel.id || visiblePanel.tag}:${visiblePanel.textLength}` });
   console.log(`[PROD-E2E] ${id}: ok ${visiblePanel.id || visiblePanel.tag}:${visiblePanel.textLength}`);
   await page.screenshot({ path:path.join(artifactsDir,`menu-${id}.png`), fullPage:false });
