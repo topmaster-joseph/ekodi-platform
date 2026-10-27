@@ -408,6 +408,9 @@
       "books": {
         "audience": "platform-super-admin"
       },
+      "common-scripture": {
+        "audience": "platform-super-admin"
+      },
       "devotional": {
         "audience": "platform-super-admin"
       },
