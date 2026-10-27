@@ -68,13 +68,13 @@ test('schema and routing preserve account sovereignty and existing protected API
   const route=read('external-account-control.js');
   const menu=read('admin-menu-registry.js');
   const routing=read('admin-canonical-routes.js');
-  const loader=read('admin-demand-loader.js');
+  const registry=read('admin-menu-registry.js');
   assert.match(migration,/UNIQUE\(ekodi_user_id,provider,provider_account_id\)/);
   assert.doesNotMatch(migration,/access_token|refresh_token|client_secret|password|credential_ciphertext/i);
   assert.match(route,/handleSocialIdentityControl/);
   assert.match(menu,/id: 'social-accounts'/);
   assert.match(routing,/'social-accounts':'accounts'/);
-  assert.match(loader,/'social-accounts':\s*\{/);
+  assert.match(registry,/import\('\.\/social-account-admin\.js'\)/);
 });
 
 
