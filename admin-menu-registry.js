@@ -89,7 +89,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'users-access', group: 'accounts', icon: 'U', delegateSection: 'clients', labels: { ko: '전체 사용자·접근', en: 'All Users & Access' }, risk: 'high' },
   { id: 'security', group: 'accounts', icon: 'S', labels: { ko: '보안·인증 기록', en: 'Security & Identity Records' }, risk: 'high' },
   { id: 'admins', group: 'accounts', icon: '♙', labels: { ko: '관리자 계정·권한', en: 'Administrator Accounts & Access' }, risk: 'high', superAdminOnly: true },
-  { id: 'social-accounts', group: 'accounts', icon: '↗', labels: { ko: '소셜계정 연결 현황', en: 'Social Account Connections' }, superAdminOnly: true, risk: 'high' },
+  { id: 'social-accounts', group: 'accounts', icon: '↗', labels: { ko: '소셜계정 연결 현황', en: 'Social Account Connections' }, superAdminOnly: true },
   { id: 'ai-membership', group: 'ai', icon: '◈', labels: { ko: '사용자 AI 등급·한도', en: 'User AI Tiers & Limits' }, risk: 'high' },
 
   { id: 'work', group: 'services', icon: 'W', labels: { ko: '구인구직·채용', en: 'Jobs & Recruiting' }, href: 'https://ekodi.kr/work/admin', adminHandoff: true },
