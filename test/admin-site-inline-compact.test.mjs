@@ -34,6 +34,8 @@ test('existing origin and tenant authentication contracts are preserved', () => 
 test('selected site strips remain one horizontal row, while site actions are responsive', () => {
   assert.match(js, /owner: 'sites'/);
   assert.match(js, /ariaLabel: '사이트 선택'/);
+  assert.match(js, /const activeButton = bar\\?\\.querySelector\\('\[aria-selected="true"\]'\\)/);
+  assert.match(js, /bar\\.scrollLeft \\+= itemRect\\.left/);
   assert.match(css, /admin-work-strip\[data-admin-strip-owner="sites"\]/);
   assert.match(css, /flex-wrap:nowrap!important;overflow-x:auto!important/);
   assert.match(css, /campus-site-admin-summary/);
