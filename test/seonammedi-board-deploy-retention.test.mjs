@@ -8,6 +8,11 @@ test('independent board deployment cannot auto-purge legacy citizen records',asy
   assert.match(workflow,/Verify legacy write retirement and retain historical records/);
   assert.match(workflow,/test "\$status" = "410"/);
   assert.match(workflow,/legacyQueue=="disabled"/);
+  assert.match(workflow,/guest_reply_status/);
+  assert.match(workflow,/guest_delete_status/);
+  assert.match(workflow,/citizen_voice_replies_fresh/);
+  assert.match(workflow,/sqlite_master/);
+  assert.match(workflow,/historical records retained/);
   const script=await readFile(new URL('../services/independent-board/voices-fresh/purge-legacy.mjs',import.meta.url),'utf8');
   assert.match(script,/explicit_execute_flag_required/);
   assert.match(script,/\bDELETE FROM board_replies; DELETE FROM board_files; DELETE FROM board_posts;/);
