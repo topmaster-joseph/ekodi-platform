@@ -21,7 +21,7 @@ test('guest cannot list events or see profiles; only descriptions are public',as
   const x=await routeSinglesSurface(request(p),env);
   assert.equal(x.status,503,p);
  }
- assert.match(ui,/if\(!state\.session\)return;/);
+ assert.match(ui,/if\(!state\.session\)\{if\(resuming\)showGuest\(\);return\}/);
  assert.match(ui,/if\(!h\.querySelector\('\[data-donghaeng-login\]'\)\)/);
 });
 test('event registration and message POST both require bank-confirmed subscription',()=>{

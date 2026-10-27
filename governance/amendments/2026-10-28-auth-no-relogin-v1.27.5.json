@@ -1,0 +1,27 @@
+{
+  "amendmentId": "AUTH-NO-RELOGIN-20261028",
+  "constitutionVersion": "1.27.5",
+  "approvedAt": "2026-10-28",
+  "approvedBy": "topmaster-joseph",
+  "status": "approved",
+  "changeClass": "C2",
+  "taskId": "no-relogin-20261028",
+  "summary": "A signed-in person is never asked to log in again: services resolve the existing session before rendering login entries and replace them with the signed-in account.",
+  "approvalBasis": "The platform owner instructed on 2026-10-28 04:27 KST: '로그인 되어 있는 경우 다시 로그인 시도하지 않도록 해.'",
+  "adds": [
+    "existing session resolved before any login entry",
+    "neutral '로그인 확인 중' state",
+    "login UI only without a session or on explicit account switch"
+  ],
+  "preserves": [
+    "v1.27.4 user-initiated Google sign-in and visible signed-in state",
+    "v1.27.3 pre-login page return",
+    "central session reuse"
+  ],
+  "rollback": "Revert only the v1.27.5 additions while preserving v1.27.4.",
+  "approvalEvidence": {
+    "ownerInstructionRecorded": true,
+    "ownerInstructionDate": "2026-10-28",
+    "requiredPullRequestLabel": "constitution-approved"
+  }
+}
