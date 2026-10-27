@@ -163,7 +163,12 @@ function boot(root) {
   const adminBar = el('nav', 'dv-adminbar');
   adminBar.setAttribute('aria-label', '관리자 메뉴');
   adminBar.hidden = true;
-  root.append(adminBar, datebar, status, scriptureBlock, tabbar, panelWrap, notice, shareRow, adminPanel, toastEl);
+  // 2026-10-27: 관리자 메뉴 sits under the share row; each menu opens its content inline below it.
+  const adminView = el('section', 'dv-admin dv-admin-view');
+  adminView.hidden = true;
+  adminView.setAttribute('aria-live', 'polite');
+  let adminSelection = '';
+  root.append(datebar, status, scriptureBlock, tabbar, panelWrap, notice, shareRow, adminBar, adminPanel, adminView, toastEl);
 
   function toast(message) {
     toastEl.textContent = message;
@@ -277,7 +282,7 @@ function boot(root) {
   }
 
   function renderAdminEditor(data) {
-    adminPanel.hidden = false;
+    adminPanel.hidden = adminSelection !== 'edit';
     const heading = el('h3','','관리자 · 묵상 적용 편집');
     const info = el('p','dv-meta',`승인된 공통본문 ${data.passage}은 수정하지 않습니다. 세부 적용 자료만 편집합니다. 상태: ${data.admin.status}`);
     const form = el('form','dv-editor-form');
@@ -366,28 +371,120 @@ function boot(root) {
   }
   function renderAdminBar(viewer) {
     adminBar.replaceChildren();
-    const links = [];
+    const items = [];
     if (viewer?.superAdmin) {
-      links.push(['이 날짜 묵상 편집', '#devotion-editor', 'edit']);
-      links.push(['매일묵상 관리', '/admin#devotional']);
+      items.push(['edit', '이 날짜 묵상 편집']);
+      items.push(['month', '매일묵상 관리']);
     }
-    if (viewer?.superAdmin || viewer?.churchAdmin) links.push(['교회 관리자 · 예배·말씀', '/ekodichurch/admin/worship']);
-    if (viewer?.superAdmin || viewer?.missionAdmin) links.push(['선교회 관리자', '/ekodimission/admin/activities']);
-    if (!links.length) { adminBar.hidden = true; return; }
+    if (viewer?.superAdmin || viewer?.churchAdmin) items.push(['church', '교회 · 주일모임']);
+    if (viewer?.superAdmin || viewer?.missionAdmin) items.push(['mission', '선교회 · 토요모임']);
+    if (!items.length) { adminBar.hidden = true; return; }
     adminBar.append(el('strong', 'dv-adminbar-title', '관리자 메뉴'));
-    for (const [label, href, action] of links) {
-      const link = el('a', 'dv-adminbar-link', label);
-      link.href = href;
-      if (action === 'edit') link.addEventListener('click', event => {
-        event.preventDefault();
-        if (adminPanel.hidden) { toast('편집기를 불러오는 중입니다. 잠시 후 다시 눌러 주세요.'); void reloadAsAdmin(); return; }
-        adminPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        adminPanel.querySelector('input,textarea')?.focus({ preventScroll: true });
-      });
-      adminBar.append(link);
+    for (const [key, label] of items) {
+      const button = el('button', 'dv-adminbar-link', label);
+      button.type = 'button';
+      button.dataset.adminView = key;
+      button.setAttribute('aria-expanded', 'false');
+      button.addEventListener('click', () => openAdminView(adminSelection === key ? '' : key));
+      adminBar.append(button);
     }
     adminBar.hidden = false;
     if (viewer?.superAdmin && current?.found && !current.admin?.canEdit) void reloadAsAdmin();
+  }
+  async function openAdminView(key) {
+    adminSelection = key;
+    for (const button of adminBar.querySelectorAll('[data-admin-view]')) {
+      const on = button.dataset.adminView === key;
+      button.classList.toggle('active', on);
+      button.setAttribute('aria-expanded', on ? 'true' : 'false');
+    }
+    adminView.replaceChildren();
+    adminView.hidden = !key || key === 'edit';
+    adminPanel.hidden = key !== 'edit' || !adminPanel.childElementCount;
+    if (!key) return;
+    if (key === 'edit') {
+      if (!adminPanel.childElementCount) {
+        adminView.hidden = false;
+        adminView.append(el('p', 'dv-meta', '편집기를 불러오는 중입니다.'));
+        await reloadAsAdmin();
+        if (adminSelection !== 'edit') return;
+        adminView.hidden = Boolean(adminPanel.childElementCount);
+        if (!adminPanel.childElementCount) adminView.replaceChildren(el('p', 'dv-meta', '편집 권한을 확인하지 못했습니다. 다시 로그인한 뒤 눌러 주세요.'));
+        adminPanel.hidden = !adminPanel.childElementCount;
+      }
+      adminPanel.querySelector('input,textarea')?.focus({ preventScroll: true });
+      adminBar.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    adminBar.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    try {
+      if (key === 'month') await renderMonthView();
+      else if (key === 'church') await renderMeetingView(0, '교회 · 주일모임', '주일', '/ekodichurch/admin/worship', '예배·말씀에서 주일모임 등록');
+      else if (key === 'mission') await renderMeetingView(6, '선교회 · 토요모임', '토요일', '/ekodimission/admin/saturday', '토요모임 관리에서 등록');
+    } catch {
+      if (adminSelection === key) adminView.append(el('p', 'dv-meta', '공통본문을 불러오지 못했습니다. 잠시 후 다시 눌러 주세요.'));
+    }
+  }
+  const commonCache = new Map();
+  async function commonMonth(month) {
+    if (!commonCache.has(month)) {
+      commonCache.set(month, fetch(`/api/public/scripture/common?month=${encodeURIComponent(month)}`, { cache: 'no-store' })
+        .then(response => response.ok ? response.json() : null).catch(() => null));
+    }
+    return commonCache.get(month);
+  }
+  function adminLink(label, href) {
+    const link = el('a', 'dv-btn', label);
+    link.href = href;
+    return link;
+  }
+  async function renderMonthView() {
+    const month = String(current?.date || '').slice(0, 7);
+    const data = await commonMonth(month);
+    if (adminSelection !== 'month') return;
+    adminView.append(el('h3', '', `${month.replace('-', '년 ')}월 공통본문`));
+    if (!data?.readings?.length) {
+      adminView.append(el('p', 'dv-meta', '이 달의 공통본문이 아직 등록되지 않았습니다.'));
+    } else {
+      adminView.append(el('p', 'dv-meta', `${data.range || ''} · ${data.readings.length}일 · 날짜를 누르면 그날 묵상으로 이동합니다.`));
+      const list = el('ol', 'dv-admin-list');
+      for (const item of data.readings) {
+        const row = el('li', item.date === current?.date ? 'active' : '');
+        const day = new Date(`${item.date}T12:00:00+09:00`).getUTCDay();
+        const link = el('a', day === 0 ? 'sun' : day === 6 ? 'sat' : '', `${Number(item.date.slice(8))}일 (${'일월화수목금토'[day]})`);
+        link.href = pageUrl(item.date);
+        row.append(link, el('span', '', item.passage), el('span', 'dv-admin-title', item.title || ''));
+        list.append(row);
+      }
+      adminView.append(list);
+    }
+    const row = el('div', 'dv-share-row');
+    row.append(adminLink('매일묵상 관리 화면 열기', '/admin#devotional'));
+    adminView.append(row);
+  }
+  async function renderMeetingView(weekday, title, dayName, href, cta) {
+    const key = adminSelection;
+    const base = String(current?.date || '');
+    const [y, m, d] = base.split('-').map(Number);
+    const start = new Date(Date.UTC(y, m - 1, d));
+    const offset = (weekday - start.getUTCDay() + 7) % 7;
+    const target = new Date(Date.UTC(y, m - 1, d + offset)).toISOString().slice(0, 10);
+    const data = await commonMonth(target.slice(0, 7));
+    if (adminSelection !== key) return;
+    const reading = data?.readings?.find(item => item.date === target);
+    adminView.append(el('h3', '', title));
+    const card = el('dl', 'dv-admin-card');
+    const add = (label, value) => { card.append(el('dt', '', label), el('dd', '', value)); };
+    add(offset ? `다가오는 ${dayName}` : `오늘 (${dayName})`, koreanDate(target));
+    add('공통본문', reading?.passage || '아직 등록되지 않음');
+    if (reading?.title) add('묵상 제목', reading.title);
+    adminView.append(card);
+    adminView.append(el('p', 'dv-meta', `${dayName} 날짜를 고르면 공통본문이 자동으로 채워지고 잠깁니다.`));
+    const row = el('div', 'dv-share-row');
+    const go = adminLink(cta, href);
+    go.classList.add('dv-btn-primary');
+    row.append(go, adminLink(`${dayName} 묵상 보기`, pageUrl(target)));
+    adminView.append(row);
   }
   async function reloadAsAdmin() {
     try {
