@@ -1,5 +1,6 @@
 // EKODI Education Premium Studio — Instructor Studio (강사 운영실).
 import {COURSES,courseEntry} from './courses/registry.js';
+import {acceptAdminHandoff,readToken,adminInstructorSession,reloadOnce} from './engine/admin-instructor.js';
 import {validateCourse,sessionByNo,sessionSlides,practiceMinutes,practiceModules,totalMinutes,learnerUrl,formatClock,courseMarkdown,KIND_LABELS,missionMaterials,liveBase,livePath,sitePath,SLASH,trackTaskTitle} from './engine/model.js';
 import {createLiveStore,lectureElapsedMs,timerRemainingMs,timerPhase,CHANNEL_NAME} from './engine/live-state.js';
 import {qrSvg} from './engine/qr.js';
@@ -324,7 +325,11 @@ function bind(){
 
 async function init(){
   loadPrefs();
-  const [data,noteState]=await Promise.all([entry.load(),loadNotesSafe(entry)]);
+  acceptAdminHandoff(window);
+  let noteState0=await loadNotesSafe(entry);
+  // EKODI super admin: exchange the admin sign-in for the instructor session, then load the notes.
+  if(noteState0.locked&&readToken(window)&&(await adminInstructorSession(window)).ok&&reloadOnce(window))return;
+  const [data,noteState]=await Promise.all([entry.load(),Promise.resolve(noteState0)]);
   course=data.COURSE;validateCourse(course);notes=noteState.notes;notesLocked=noteState.locked;
   unlockHref=notesUnlockUrl(location.pathname,course.id);lockHref=notesUnlockUrl(location.pathname,course.id,{lock:true});
   if(!course.tracks.some(t=>t.id===prefs.track))prefs.track=course.tracks[0].id;

@@ -182,3 +182,35 @@ test('unlock page offers the EKODI account first and keeps the password only as 
   assert.match(html,/<details class="gate-legacy">/);
   assert.ok(html.indexOf('gateEkodi')<html.indexOf('gatePassword'));
 });
+
+test('EKODI super admin can always sign in as the instructor (central session verified server-side)',async()=>{
+  const {adminUnlock,hasInstructorSession,ADMIN_SESSION_URL}=await import('../education-instructor-gate.js');
+  const url=new URL('https://ekodi.kr/study/live/unlock/admin');
+  const req=(init={})=>new Request(url,{method:'POST',...init,headers:{origin:'https://ekodi.kr',authorization:'Bearer '+'t'.repeat(40),...(init.headers||{})}});
+  const fake=(status,body)=>async(u,init)=>{assert.equal(u,ADMIN_SESSION_URL);assert.equal(init.headers.authorization,'Bearer '+'t'.repeat(40));return new Response(JSON.stringify(body),{status});};
+  const e=env();
+  assert.equal(await adminUnlock(new Request('https://ekodi.kr/study/live/unlock/'),e),null,'other paths untouched');
+  assert.equal((await adminUnlock(new Request(url),e,{fetchImpl:fake(200,{})})).status,405);
+  assert.equal((await adminUnlock(req({headers:{origin:'https://evil.example'}}),e,{fetchImpl:fake(200,{authenticated:true,role:'super_admin'})})).status,403);
+  assert.equal((await adminUnlock(req({headers:{authorization:''}}),e,{fetchImpl:fake(200,{authenticated:true,role:'super_admin'})})).status,401);
+  assert.equal((await adminUnlock(req(),e,{fetchImpl:fake(401,{authenticated:false})})).status,401,'expired admin sign-in');
+  assert.equal((await adminUnlock(req(),e,{fetchImpl:fake(200,{authenticated:true,role:'admin'})})).status,403,'ordinary admins are refused');
+  assert.equal((await adminUnlock(req(),e,{fetchImpl:async()=>{throw new Error('down');}})).status,502);
+  assert.equal((await adminUnlock(req(),env({EDU_GATE_SIGNING_KEY:''}),{fetchImpl:fake(200,{authenticated:true,role:'super_admin'})})).status,503);
+  const ok=await adminUnlock(req(),e,{fetchImpl:fake(200,{authenticated:true,role:'super_admin',email:'joseph@ekodi.kr'})});
+  assert.equal(ok.status,200);
+  const cookie=ok.headers.get('set-cookie');
+  assert.match(cookie,/Path=\/edu\/study\/live;/);assert.match(cookie,/HttpOnly/);assert.match(cookie,/SameSite=Lax/);
+  const token=cookie.split(';')[0];
+  const notes=await get('/study/live/courses/mnu-factchat-2026.notes.js',{headers:{cookie:token}},env({EDU_INSTRUCTOR_GATE_SECRET:await createVerifier('8542',{iterations:10000})}));
+  assert.equal(notes.status,200,'the super-admin session opens the notes like the password does');
+  assert.ok(await hasInstructorSession(new Request('https://ekodi.kr/x',{headers:{cookie:token}}),env({EDU_INSTRUCTOR_GATE:'',EDU_INSTRUCTOR_GATE_SECRET:''})),'valid even when no password is configured');
+  // The worker routes the endpoint before any asset or gate handling.
+  const orig=globalThis.fetch;globalThis.fetch=fake(200,{authenticated:true,role:'super_admin'});
+  try{const r=await worker.fetch(req(),e);assert.equal(r.status,200);assert.match(r.headers.get('set-cookie'),new RegExp('^'+GATE_COOKIE+'='));}
+  finally{globalThis.fetch=orig;}
+  const lock=await (await get(UNLOCK)).text();
+  assert.match(lock,/id="gateAdmin" hidden/);assert.match(lock,/<script type="module" src="\/study\/live\/gate-admin\.js"><\/script>/);
+  const auth=await readFile(new URL('../auth-site/admin-auth.js',import.meta.url),'utf8');
+  assert.match(auth,/u\.pathname==='\/edu\/study\/live\/unlock\/'\|\|u\.pathname==='\/edu\/study\/live\/docs\/'/);
+});

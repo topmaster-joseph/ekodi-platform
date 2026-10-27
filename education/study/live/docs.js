@@ -1,6 +1,7 @@
 // EKODI Education — instructor document share manager. Talks only to the same-origin docs API (instructor
 // session cookie, HttpOnly); never stores anything in the browser.
 import {bindChrome,copyText,esc} from './engine/render.js';
+import {acceptAdminHandoff,readToken,adminInstructorSession} from './engine/admin-instructor.js';
 
 const $=s=>document.querySelector(s);
 let toastTimer=0;
@@ -81,4 +82,9 @@ document.addEventListener('click',async e=>{
 const c=new URLSearchParams(location.search).get('c');
 if(c)$('#docsBack').href='../?c='+encodeURIComponent(c);
 bindChrome(document,{top:$('#docsTop')});
-refresh().finally(()=>{document.body.dataset.ready='true';});
+acceptAdminHandoff(window);
+(async()=>{
+  // EKODI super admin: open the instructor session from the admin sign-in when the password session is absent.
+  if(readToken(window)){const probe=await fetch(api('list'),{credentials:'same-origin'}).catch(()=>null);if(probe?.status===401)await adminInstructorSession(window);}
+  await refresh();
+})().finally(()=>{document.body.dataset.ready='true';});
