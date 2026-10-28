@@ -52,6 +52,7 @@ jobs:
           node --test test/human-author-schema-release.test.mjs test/human-publishing-private-author.test.mjs
           node scripts/validate-supabase-environment-boundary.mjs
           test -s "$MIGRATION"
+          test "$(git hash-object "$MIGRATION")" = "b3cdf0e9296ac7c4ac402d7fa0d56ced88ab3761"
           test -s "$PREFLIGHT"
           test -s "$POSTFLIGHT"
           ! grep -Eiq 'drop[[:space:]]+table|truncate[[:space:]]+table|drop[[:space:]]+column' "$MIGRATION"
@@ -82,6 +83,8 @@ jobs:
           [[ "$EXPECTED_SHA" =~ ^[a-f0-9]{40}$ ]]
           test "$GITHUB_SHA" = "$EXPECTED_SHA"
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          git merge-base --is-ancestor f9f0a95170090648c620b97dba30a5e0867160df "$EXPECTED_SHA"
+          test "$(git hash-object "$MIGRATION")" = "b3cdf0e9296ac7c4ac402d7fa0d56ced88ab3761"
           [[ "$RELEASE_BRANCH" =~ ^ai/[a-zA-Z0-9._-]+/orch_[a-zA-Z0-9_-]+$ ]]
           [[ "$RELEASE_TASK" =~ ^orch_[a-zA-Z0-9_-]+$ ]]
           test "${RELEASE_BRANCH##*/}" = "$RELEASE_TASK"
