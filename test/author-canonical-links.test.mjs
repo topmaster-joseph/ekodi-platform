@@ -9,9 +9,7 @@ test('Creator AI redirects legacy worker navigation to canonical ekodi.kr paths'
   assert.ok(worker.includes("https://ekodi.kr/books/"));
   assert.ok(worker.includes("https://ekodi.kr/my/"));
   assert.ok(worker.includes("https://ekodi.kr/community/"));
-  for (const retired of ['admin.ekodi.kr','auth.ekodi.kr','books.ekodi.kr']) {
-    assert.ok(!worker.includes(retired),'retired worker subdomain: '+retired);
-  }
+  assert.doesNotMatch(worker, /(?:admin|auth|books)[.]ekodi[.]kr/, 'retired worker subdomains must not appear');
 });
 test('Creator AI login and CSP form actions support the primary-domain route',()=>{
   assert.match(app,/const LOGIN_URL = 'https:\/\/ekodi[.]kr\/auth\/\?site=author&return_to=/);
