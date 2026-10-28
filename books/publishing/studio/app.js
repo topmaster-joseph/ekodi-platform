@@ -33,7 +33,7 @@ async function load(){
   }catch(error){
     if(error.status===401){
       const returnTo=encodeURIComponent(location.href);
-      state.innerHTML=`로그인이 필요합니다. <a href="https://auth.ekodi.kr/?site=books&return_to=${returnTo}">EKODI 통합인증으로 로그인</a>`;
+      state.innerHTML=`로그인이 필요합니다. <a href="https://ekodi.kr/auth/?site=books&return_to=${returnTo}">EKODI 통합인증으로 로그인</a>`;
     }else state.textContent=`연결 오류: ${error.message}`;
   }
 }

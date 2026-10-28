@@ -466,7 +466,7 @@ async function preregister(request, env, slug) {
       visibility,
       status: existing?.last_verified_at ? 'active' : 'pre_registered',
       tenant: tenant.slug,
-      loginUrl: `https://auth.ekodi.kr/?site=${TENANT_REALMS[slug] || `${slug}-client`}`,
+      loginUrl: `https://ekodi.kr/auth/?site=${TENANT_REALMS[slug] || `${slug}-client`}`,
     },
   }, existing ? 200 : 201, request, env);
 }
