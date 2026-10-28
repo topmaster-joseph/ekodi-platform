@@ -146,7 +146,8 @@ function ensureStyle() {
     #publicSiteControlsPanel .psc-unsaved{color:#b35c00;font-size:12px;font-weight:650}
     #publicSiteControlsPanel .psc-disabled-detail[hidden]{display:none!important}
     @media(max-width:1080px){#publicSiteControlsPanel .psc-workspace{grid-template-columns:minmax(220px,1fr) minmax(300px,1.2fr)}}
-    @media(max-width:760px){#publicSiteControlsPanel .psc-workspace{grid-template-columns:minmax(0,1fr)}#publicSiteControlsPanel .psc-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}#publicSiteControlsPanel .psc-list{max-height:280px}#publicSiteControlsPanel .psc-toolbar{flex-wrap:wrap}#publicSiteControlsPanel .psc-toolbar select{width:100%}#publicSiteControlsPanel .psc-toolbar input{flex-basis:100%}}
+    @media(max-width:900px){#publicSiteControlsPanel .psc-workspace{grid-template-columns:minmax(0,1fr)}}
+    @media(max-width:760px){#publicSiteControlsPanel .psc-button,#publicSiteControlsPanel .psc-row,#publicSiteControlsPanel .psc-metric{min-height:44px}#publicSiteControlsPanel .psc-workspace{grid-template-columns:minmax(0,1fr)}#publicSiteControlsPanel .psc-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}#publicSiteControlsPanel .psc-list{max-height:280px}#publicSiteControlsPanel .psc-toolbar{flex-wrap:wrap}#publicSiteControlsPanel .psc-toolbar select{width:100%}#publicSiteControlsPanel .psc-toolbar input{flex-basis:100%}}
     @media(max-width:360px){#publicSiteControlsPanel .psc-actions .psc-button{flex:1}}
   `;
   document.head.appendChild(css);
