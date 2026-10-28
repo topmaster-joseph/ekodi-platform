@@ -81,15 +81,7 @@ function activateCommandHome(){
 function activatePanel(section){
   if(!section||!hasPanel(section))return false;
   document.body.classList.remove('admin-command-home','admin-command-active');
-  const switchingSection=last!==section;
   requestedSection=section;
-  // A finance panel can be activated after the user scrolled far down in
-  // another section. Keep its heading and actions in the actual viewport.
-  // Do not reset scroll during refresh/reconciliation of the same section.
-  if(section==='infra-costs'&&switchingSection){
-    const scrollOwner=content.closest('main');
-    if(scrollOwner)scrollOwner.scrollTop=0;
-  }
   for(const panel of content.querySelectorAll('[data-panel]')){
     const visible=panelTargets(panel).includes(section);
     panel.classList.toggle('hidden-panel',!visible);
