@@ -470,10 +470,17 @@ function runtimeConfig(env){
   return {dataEnabled,dataMode:env.DATA_MODE||'isolated-staging',supabaseUrl:dataEnabled?env.SUPABASE_URL:'',supabasePublishableKey:dataEnabled?env.SUPABASE_PUBLISHABLE_KEY:'',workspaceApi:dataEnabled?`${env.SUPABASE_URL}/functions/v1/workspace-api`:'',authUrl:'https://ekodi.kr/auth/?site=space',canonicalOrigin:'https://ekodi.kr',routeModel:['/{slug}','/{slug}/{service}'],memberNamespaceRequired:false,identityModel:'path -> slug(locator) -> workspace_id -> relationship/policy -> role -> capability'};
 }
 function authRedirect(request,env){
-  const current=new URL(request.url);current.hash='';
-  const canonical=new URL(current.pathname+current.search,'https://ekodi.kr');
+  const current=new URL(request.url);
   const target=new URL('https://ekodi.kr/auth/?site=space');
-  target.searchParams.set('site','space');target.searchParams.set('return_to',canonical.href);
+  const requested=current.searchParams.get('return_to');
+  let trusted='https://ekodi.kr/space/';
+  try{
+    const candidate=new URL(requested||'');
+    if(candidate.protocol==='https:'&&candidate.hostname==='ekodi.kr'&&!candidate.username&&!candidate.password&&!/^\\/(?:admin|auth|api|mcp|webhooks)(?:\\/|$)/i.test(candidate.pathname)){
+      candidate.hash='';trusted=candidate.href;
+    }
+  }catch{}
+  target.searchParams.set('return_to',trusted);
   return withHeaders(env,Response.redirect(target.href,302),'auth-start');
 }
 async function appShell(request,env,route='space-home',profile=DEFAULT_PAGE_PROFILE){
