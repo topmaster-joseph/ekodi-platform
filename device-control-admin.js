@@ -627,6 +627,106 @@
     box.append(list); return box;
   }
 
+
+  // EKODI-WINDOWS-PERFORMANCE-001: online Windows optimization uses only
+  // the audited Device Control allowlist. This panel never calls the OS.
+  function windowsPerformancePanel(device) {
+    if (device.management?.type !== 'pc' || isInventory(device) || device.capabilities?.posAgent === true) return null;
+
+    const panel = document.createElement('section');
+    panel.className = 'device-windows-performance';
+    panel.dataset.windowsPerformance = 'v1';
+    const connected = device.status === 'online';
+    const snapshot = device.settings?.health?.system || device.diagnostics?.system || {};
+    const storage = device.settings?.health?.storage || device.diagnostics?.storage || {};
+    const startup = device.diagnostics?.startup || {};
+    const updates = device.diagnostics?.updates || {};
+    const completedAt = device.diagnosticsAt || null;
+    const reportAge = completedAt ? Date.now() - new Date(completedAt).getTime() : Infinity;
+    const reportFresh = connected && Number.isFinite(reportAge) && reportAge >= 0 && reportAge < 30 * 60 * 1000;
+    const commands = Array.isArray(device.recentCommands) ? device.recentCommands : [];
+    const cleanup = commands.find(row => row.type === 'maintenance.temp_cleanup') || null;
+    const cleanupPending = cleanup && ['queued', 'assigned', 'claimed'].includes(cleanup.status);
+    const cleanupFinished = cleanup?.status === 'succeeded' && cleanup.completedAt;
+    const postCleanupDiagnostic = Boolean(cleanupFinished && completedAt && new Date(completedAt).getTime() > new Date(cleanup.completedAt).getTime());
+
+    const title = document.createElement('div');
+    title.className = 'device-performance-heading';
+    const heading = document.createElement('div');
+    const eyebrow = document.createElement('small');
+    eyebrow.textContent = 'WINDOWS PERFORMANCE · EKODI DEVICE AGENT';
+    const h3 = document.createElement('h3');
+    h3.textContent = 'Windows 성능 관리';
+    const scope = document.createElement('p');
+    scope.textContent = '실제 Agent가 보고한 수치입니다. 점수는 벤치마크가 아니며, 원격 실행은 기존 승인·감사 정책을 따릅니다.';
+    heading.append(eyebrow, h3, scope);
+    const freshness = document.createElement('strong');
+    freshness.className = 'device-performance-freshness';
+    freshness.textContent = !connected ? '오프라인 · 실측 중단' : reportFresh ? '최근 30분 이내 진단' : '이전 진단 · 재확인 필요';
+    title.append(heading, freshness);
+
+    const stats = document.createElement('div');
+    stats.className = 'device-performance-stats';
+    function metric(label, raw, suffix, decimals = 0) {
+      const cell = document.createElement('div');
+      const small = document.createElement('small');
+      small.textContent = label;
+      const strong = document.createElement('strong');
+      const n = raw === null || raw === undefined || raw === '' ? NaN : Number(raw);
+      strong.textContent = Number.isFinite(n) && n >= 0 ? n.toFixed(decimals) + suffix : '—';
+      cell.append(small, strong);
+      stats.append(cell);
+    }
+    const freePct = Array.isArray(storage.volumes)
+      ? storage.volumes.map(v => Number(v.freePct)).filter(v => Number.isFinite(v) && v >= 0 && v <= 100)
+      : [];
+    const minFree = freePct.length ? Math.min(...freePct) : null;
+    metric('CPU 점유율', snapshot.cpuLoadPct, '%');
+    metric('메모리 사용률', snapshot.memoryUsedPct, '%');
+    metric('디스크 최소 여유', minFree, '%');
+    metric('부팅 후 경과', snapshot.uptimeHours, '시간');
+    metric('시작프로그램', startup.count, '개');
+    metric('대기 업데이트', updates.pendingCount, '개');
+
+    const assessment = document.createElement('p');
+    assessment.className = 'device-performance-assessment';
+    const recommendations = [];
+    if (!completedAt) recommendations.push('먼저 성능 진단을 실행하세요.');
+    if (Number(snapshot.cpuLoadPct) >= 85) recommendations.push('CPU 사용률이 높게 관찰되었습니다. 프로세스를 점검하세요.');
+    if (Number(snapshot.memoryUsedPct) >= 85) recommendations.push('메모리 사용량이 높습니다. 불필요한 앱을 확인하세요.');
+    if (minFree !== null && minFree < 15) recommendations.push('디스크 여유가 15% 미만입니다. 사용자 확인 후 안전 정리를 검토하세요.');
+    if (Number(startup.count) > 15) recommendations.push('시작프로그램을 검토하고 개별 승인으로 해제하세요.');
+    if (!recommendations.length) recommendations.push('현재 수치만으로 자동 조정이 필요한 상태로 판단하지 않습니다.');
+    assessment.textContent = recommendations.join(' ');
+
+    const actions = document.createElement('div');
+    actions.className = 'device-ops-grid device-performance-actions';
+    actions.append(
+      makeActionButton(device, 'diagnostics.collect', '성능 다시 진단', 'primary', {}, !capability(device, 'diagnostics')),
+      makeActionButton(device, 'startup.scan', '시작프로그램 조회', 'ghost', {}, !capability(device, 'startupManagement')),
+      makeActionButton(device, 'updates.scan', '업데이트 상태', 'ghost', {}, !capability(device, 'windowsUpdate')),
+      makeActionButton(device, 'maintenance.temp_cleanup', '안전한 임시파일 정리', 'secondary', {}, !connected || !capability(device, 'storageMaintenance') || cleanupPending),
+    );
+
+    const proof = document.createElement('p');
+    proof.className = 'device-performance-proof';
+    const diagnosis = completedAt ? '진단 기록 ' + timeLabel(completedAt) : '검증된 진단 기록 없음';
+    let action = '아직 안전 정리 실행 기록이 없습니다.';
+    if (cleanupPending) action = '임시파일 정리 ' + commandStatus(cleanup.status) + ' · 실제 완료 영수증 대기';
+    else if (cleanup?.status === 'failed') action = '임시파일 정리 실패 · 재시도 전 오류 확인 필요';
+    else if (cleanupFinished) {
+      const freed = Number(cleanup.result?.freedMB);
+      const files = Number(cleanup.result?.removedFiles);
+      action = '임시파일 정리 완료 ' + timeLabel(cleanup.completedAt)
+        + (Number.isFinite(freed) && freed >= 0 ? ' · ' + freed.toFixed(1) + ' MB 확보' : '')
+        + (Number.isFinite(files) && files >= 0 ? ' · ' + files + '개 파일' : '');
+      action += postCleanupDiagnostic ? ' · 이후 재진단 기록 확인' : ' · 효과 확인을 위해 다시 진단 필요';
+    }
+    proof.textContent = diagnosis + ' | ' + action + ' | 시작항목별 해제·복원은 아래 세부 관리에서 진행';
+    panel.append(title, stats, assessment, actions, proof);
+    return panel;
+  }
+
   function managementPanel(device) {
     const box = document.createElement('div'); box.className = 'device-management-row';
     const current = device.management || { type:'pc', locationLabel:'' };
@@ -733,7 +833,7 @@
     if (posStatus) {
       values[3].textContent = '상태 보고 전용';
       card.append(head, meta, posAgentSummary(device, posStatus), foot);
-    } else card.append(head, meta, health.firstElementChild, recommendationPanel(device), mainActions, ...(device.management?.type === 'pc' && !isInventory(device) && device.status !== 'revoked' ? [externalAuthPanel(device)] : []), advanced, foot);
+    } else card.append(head, meta, health.firstElementChild, recommendationPanel(device), ...(windowsPerformancePanel(device) ? [windowsPerformancePanel(device)] : []), mainActions, ...(device.management?.type === 'pc' && !isInventory(device) && device.status !== 'revoked' ? [externalAuthPanel(device)] : []), advanced, foot);
     const proofCommand = latestCommandByType(device, 'software.localai.verify');
     const proof = proofCommand?.result?.localAiProof || device.diagnostics?.localAiProof;
     if (proof) {
