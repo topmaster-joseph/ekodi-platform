@@ -1,6 +1,6 @@
 // EKODIAN-AUDIOBOOK-BONUS-001: ebook ownership is the ONLY authority for audiobook access.
 // Never return public R2 URLs or accept object keys from request input.
-import { buyerIdentity, directSaleBook, loadCatalog } from './books-commerce.js';
+import { buyerIdentity, loadCatalog } from './books-commerce.js';
 
 const BOOK_ID = /^[A-Z0-9-]{3,40}$/;
 const EDITION = /^[a-z0-9_-]{1,32}$/i;
@@ -28,7 +28,9 @@ async function gate(env, request, bookId) {
   const buyer = await buyerIdentity(request);
   if (!buyer) return { error: fail(401, 'LOGIN_REQUIRED', '구매자 로그인이 필요합니다.') };
   if (!BOOK_ID.test(String(bookId || ''))) return { error: fail(404, 'NOT_FOUND', '도서를 찾지 못했습니다.') };
-  const book = directSaleBook(await loadCatalog(env), bookId);
+  // Verified purchase grants may originate from EKODI checkout or a separately reviewed external retailer claim.
+  const catalog = await loadCatalog(env);
+  const book = (catalog?.books || []).find(item => item.id === bookId) || null;
   const config = audiobookConfig(book);
   if (!config) return { error: fail(404, 'NOT_FOUND', '등록된 오디오북 보너스가 없습니다.') };
   // Explicitly check the live, unrevoked ebook entitlement. No tier, payment intent,
