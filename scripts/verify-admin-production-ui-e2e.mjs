@@ -597,9 +597,34 @@ for (const [id, group] of menus) {
     const tabKeys = ['sites','connections','publishing','policy'];
     const tabs = page.locator('#socialAdmin .social-workspace-tabs [role="tab"]');
     if (await tabs.count() !== tabKeys.length) throw new Error('social: expected exactly four operational tabs');
-    await page.waitForFunction(() =>
-      document.querySelectorAll('#socialAdmin [data-site-channel-admin]').length > 0,
-      null, { timeout:12000 });
+    try {
+      await page.waitForFunction(() =>
+        document.querySelectorAll('#socialAdmin [data-site-channel-admin]').length > 0,
+        null, { timeout:12000 });
+    } catch (error) {
+      // Read-only evidence for the repeated production timeout. Never log tokens or page HTML.
+      const diagnosis = await page.evaluate(async () => {
+        const status = document.querySelector('#socialAdmin .social-site-directory .social-admin-status');
+        let catalog = {};
+        try {
+          const response = await fetch('/admin-service-catalog.js', { cache:'no-store', credentials:'same-origin' });
+          catalog = {
+            httpStatus: response.status,
+            contentType: response.headers.get('content-type') || '',
+            pathname: new URL(response.url).pathname,
+          };
+        } catch (requestError) {
+          catalog = { error: String(requestError?.message || requestError).slice(0,180) };
+        }
+        return {
+          directoryState: status?.dataset.state || 'missing',
+          directoryMessage: (status?.textContent || '').slice(0,280),
+          renderedCards: document.querySelectorAll('#socialAdmin [data-site-channel-admin]').length,
+          catalog,
+        };
+      });
+      throw new Error('social: directory did not render: ' + JSON.stringify(diagnosis), { cause:error });
+    }
     for (const tab of tabKeys) {
       await page.locator(`#social-tab-${tab}`).click();
       const tabState = await page.evaluate(key => {
