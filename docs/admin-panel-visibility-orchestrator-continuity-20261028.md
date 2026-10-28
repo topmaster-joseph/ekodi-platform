@@ -29,3 +29,9 @@ GitHub marks bot-authored official recovery PR workflow checks `action_required`
 6. Only mark `production-verified-complete` once release AND live browser evidence pass. If blocked, report exact failure without relaxing checks.
 
 No labels or release protections are bypassed by this documentation.
+
+## Current-main reconciliation (2026-10-28)
+- The official release commit `fb7cb3712b9965e3a61dc39e034608d423583820` passed all substantive workflow checks, including the full CI, genuine parallel review and orchestration gate.
+- The protected central convergence updated the official branch to `5e061f164b8e9d8bc8cbfc0f41f9dc5b841ef548` by synchronizing a newer main whose unrelated changes include admin secret generator CSS/JS, auth worker, and security test files.
+- This authorized *documentation-only* continuation is intended to run actual required CI on the synchronized SHA, which GitHub otherwise reported as `action_required`. It does not carry forward green statuses, alter app behavior, skip controls, or change any deployment configuration.
+- Reconfirm that Social Hub/architecture source remains unchanged and every required check is genuine green before merge. Confirm live browser and production runtime after protected release.
