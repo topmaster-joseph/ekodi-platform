@@ -39,7 +39,7 @@
 2. Resolve member enrollment identity and consent; demonstrate church member, mission member, unregistered Google user, revoked user and cross-tenant user test cases.
 3. Add separate mission donor/participation ledger mapping after reconciliation with primary records, preventing duplicate income entries.
 4. Create the protected migration using the repository's Supabase migration tool; apply and test on **development** first, check RLS, grants, schema diff and security advisors. Production DDL requires EKODI guarded change control.
-5. Implement a read-only authenticated server endpoint that calls the projection module after verifying bearer and membership. Deny any client-supplied tenant membership data.
+5. Complete the staged `ministry-member-finance-api` endpoint with a protected `ministry_finance_read_context` RPC; deploy only after the server-side auth, tenant-member database result and RLS contract have passed staging. Deny client-supplied membership data.
 6. Build tenant-local UI with date/category filtering and download only of approved aggregate fields.
 7. Test suppression by low count, unapproved row, invalid selection, cross-tenant ID, stale login, manipulated URL, revocation, empty data, mobile, screenshot and PDFs. Test that raw PII NEVER appears in an HTTP response, error or analytics.
 8. Run mandatory CI, protected PR review, owner Human Gate, staging and production verification under EKODI Orchestrator. No public disclosure until release evidence and accounting approval are recorded.
@@ -50,6 +50,6 @@
 - Immutable approval/status guard and per-section selection.
 - Privacy-aware suppression of small disclosure groups.
 - Fixed safe labels and numeric aggregate projection without donor/recipient/transaction identifiers.
-- Node test suite for denied identities, cross-tenant access, unapproved or revoked snapshots, small groups, malformed amounts and private-field removal.
+- Read-only Edge Function source `supabase/functions/ministry-member-finance-api/index.ts`. The service deliberately returns NOT_AVAILABLE until the authoritative RPC exists and verifies membership; it does not read raw ledger rows.\n- Node test suite for denied identities, cross-tenant access, unapproved or revoked snapshots, small groups, malformed amounts and private-field removal. Static endpoint contract tests are included.
 
-**Not yet implemented:** SQL tables, validated live read API, admin approval UI, mission personal donor ledger, church/mission UI routing, production deployment. This PR must not be described as a complete live service.
+**Not yet implemented:** protected RPC and SQL snapshot tables, actually deployed and validated live read API, admin approval UI, mission personal donor ledger, church/mission UI routing, production deployment. This PR must not be described as a complete live service.
