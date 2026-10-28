@@ -12,7 +12,7 @@ test('private interview and billing-critical JavaScript use no-store after prote
   assert.match(worker,/criticalClientModule \? 'no-store' : 'public, max-age=300'/);
   assert.match(worker,/Cache-Control', cache/);
   assert.match(worker,/cache = 'public, max-age=120'/);
-  assert.match(author,/import \{ latestSavedByStage, hasUnsavedInterviewDrafts, assemblePrivateInterviewNotes \} from '.\/human-writer-notes.js'/);
+  assert.match(author,/import \{[^}]*latestSavedByStage[^}]*hasUnsavedInterviewDrafts[^}]*assemblePrivateInterviewNotes[^}]*\} from '.\/human-writer-notes.js'/);
   assert.match(author,/import \{ mayAppendHumanInterview \} from '.\/human-writer-entitlement.js'/);
 });
 
