@@ -6,7 +6,7 @@ import {pathToFileURL} from 'node:url';
 
 export const STAGING_INTERNAL_AUTH_RETRY_DELAY_MS=18000;
 export const MAX_STAGING_DEPLOY_ATTEMPTS=2;
-const QUOTA_RESPONSE=/\b(?:429|1027)\b|quota (?:circuit|exhausted)|rate.limit(?:ed|ing)?|too many requests/i;
+const QUOTA_RESPONSE=/\b(?:HTTP\s*)?429\b|\b(?:error\s*)?1027\b|\bquota (?:circuit|exhausted)\b|\btoo many requests\b|\brate.limit(?:ed|ing)\b/i;
 const TRANSIENT_SECRETS_10500=/workers\/scripts\/[a-z0-9-]+\/secrets[\s\S]{0,800}?internal authentication error:\s*internal server error\s*\[code:\s*10500\]/i;
 
 export function mayRetryStaging10500(output){
