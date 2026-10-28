@@ -3,6 +3,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { isQuotaCircuitBreak } from './cloudflare-quota-guard-lib.mjs';
+import { verifyEkodiProtectedPromotion } from './verify-ekodi-final-promotion-receipt.mjs';
 
 const args = process.argv.slice(2);
 const readArg = (name, fallback = '') => {
@@ -51,6 +52,39 @@ const tag = `ekodi-${runId}-${attempt}`.toLowerCase().replace(/[^a-z0-9-]/g, '-'
 let previousVersion = '';
 let candidateVersion = '';
 let candidateAttached = false;
+
+const promotionMode = String(process.env.EKODI_FINAL_PROMOTION_MODE || '').trim();
+if (promotionMode && promotionMode !== 'enforced') {
+  throw new Error('EKODI_FINAL_PROMOTION_MODE_INVALID: only enforced or unset are supported');
+}
+/**
+ * This opt-in guard never treats an AI instruction, a workflow environment
+ * boolean, or a GitHub PR comment as owner authorization. Production jobs
+ * must supply official immutable task, merge SHA and artifact digest.
+ *
+ * Do not set EKODI_FINAL_PROMOTION_MODE=enforced in a live workflow until the
+ * OIDC staged-evidence writer, exact-artifact identity, and owner approval UI
+ * have been independently deployed and validated.
+ */
+async function requireEkodiFinalPromotionApproval() {
+  if (promotionMode !== 'enforced') return;
+  const taskId = String(process.env.EKODI_RELEASE_TASK_ID || '').trim();
+  const branchRef = String(process.env.EKODI_RELEASE_BRANCH_REF || '').trim();
+  const releaseSha = String(process.env.EKODI_RELEASE_SHA || '').trim();
+  const artifactDigest = String(process.env.EKODI_RELEASE_ARTIFACT_DIGEST || '').trim();
+  if (process.env.GITHUB_ACTIONS === 'true' && (
+    process.env.GITHUB_REF !== 'refs/heads/main' ||
+    releaseSha !== String(process.env.GITHUB_SHA || '').trim()
+  )) throw new Error('EKODI_FINAL_PROMOTION_MAIN_SHA_MISMATCH');
+  const approval = await verifyEkodiProtectedPromotion({
+    taskId, branchRef, releaseSha, artifactDigest,
+  });
+  if (approval.verified !== true) {
+    throw new Error('EKODI_FINAL_PROMOTION_OWNER_APPROVAL_REQUIRED');
+  }
+  console.log('EKODI authenticated final owner confirmation verified for exact release SHA/artifact.');
+}
+
 
 function runChangeOrchestrationGate() {
   const result = spawnSync(process.execPath, ['scripts/validate-ekodi-ai-change-orchestration.mjs', '--release'], {
@@ -381,6 +415,7 @@ async function bootstrapFirstDeploy() {
   console.log(`No existing ${worker.name} deployment found. Manifest explicitly allows one first deployment bootstrap.`);
   const deployArgs = ['deploy', '--config', worker.config];
   if (secretsFilePath) deployArgs.push('--secrets-file', secretsFilePath);
+  await requireEkodiFinalPromotionApproval();
   command(deployArgs);
   await verifyAll('');
   appendSummary([
@@ -422,7 +457,8 @@ try {
   await verifyAll(candidateVersion);
   await verifyReleaseAttestation(candidateVersion, 'candidate');
 
-  console.log('Phase 3/3: candidate passed, promote it to 100% and verify production without overrides.');
+  console.log('Phase 3/3: candidate passed; enforce owner confirmation before 100% production promotion.');
+  await requireEkodiFinalPromotionApproval();
   deployVersions([`${candidateVersion}@100%`], `EKODI guarded promote ${tag}`);
   await verifyAll('', 'production');
   await verifyReleaseAttestation(candidateVersion, 'production');
