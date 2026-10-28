@@ -23,11 +23,14 @@ export const GROWTH_PROFILES = Object.freeze({
 const known = new Set(GROWTH_DIMENSIONS.map(row=>row.id));
 const allowedStates = new Set(['observed','issue','not_connected','withheld']);
 function sanitize(value,max=160){return String(value??'').trim().slice(0,max);}
-function evidenceState(item){
+function evidenceState(item,workspaceId){
   if(!item || !allowedStates.has(item.status))return null;
   if(item.status==='not_connected'||item.status==='withheld')return {
     status:item.status, source:null, observedAt:null, value:null, authorized:false
   };
+  // A reported observation must identify the same immutable workspace and a
+  // delegated evidence adapter. A public slug alone grants no data access.
+  if(item.workspaceId!==workspaceId || item.authorization!=='authorized_scoped_aggregate')return null;
   // A reported number must have a verified source and observation time;
   // never substitute missing evidence with zero.
   const source=sanitize(item.source,120);
@@ -41,9 +44,10 @@ export function evaluateGrowthOrganization({workspaceId, profile='general', evid
   const id=sanitize(workspaceId,128);
   if(!id)throw new TypeError('workspaceId is required from an authorized context');
   const chosen=Object.hasOwn(GROWTH_PROFILES,profile)?profile:'general';
+  const safeEvidence=evidence&&typeof evidence==='object'&&!Array.isArray(evidence)?evidence:{};
   const dimensions=GROWTH_DIMENSIONS.map(def=>{
-    const raw=Object.hasOwn(evidence,def.id)?evidence[def.id]:null;
-    const normalized=evidenceState(raw);
+    const raw=Object.hasOwn(safeEvidence,def.id)?safeEvidence[def.id]:null;
+    const normalized=evidenceState(raw,id);
     return Object.freeze({
       id:def.id,label:def.label,expectedSource:def.source,
       ...normalized || {status:'not_connected',source:null,observedAt:null,value:null,authorized:false},
@@ -75,7 +79,7 @@ export function evaluateGrowthOrganization({workspaceId, profile='general', evid
     asOf:sanitize(asOf,40)||null,
   });
 }
-export function validateGrowthEvidenceContract(input){
-  if(!input||typeof input!=='object'||Array.isArray(input))return false;
-  return Object.entries(input).every(([key,value])=>known.has(key) && evidenceState(value)!==null);
+export function validateGrowthEvidenceContract(input,workspaceId){
+  if(!workspaceId||!input||typeof input!=='object'||Array.isArray(input))return false;
+  return Object.entries(input).every(([key,value])=>known.has(key) && evidenceState(value,String(workspaceId))!==null);
 }
