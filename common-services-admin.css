@@ -145,3 +145,18 @@
  .common-services-panel.module-health-mode .common-service-activation{grid-column:2!important;grid-row:2}
  .common-service-detail .common-detail-policy{grid-template-columns:1fr}
 }
+
+/* Accessible engine metadata must remain available to screen readers without
+   reappearing as a redundant extra row in the compact service catalog. */
+.common-services-panel .sr-only{
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  padding:0!important;
+  margin:-1px!important;
+  overflow:hidden!important;
+  clip:rect(0,0,0,0)!important;
+  clip-path:inset(50%)!important;
+  white-space:nowrap!important;
+  border:0!important;
+}
