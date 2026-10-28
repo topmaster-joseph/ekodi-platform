@@ -40,3 +40,35 @@ test('local commerce admin owns site-scoped language publication controls',()=>{
   assert.ok(language.includes('EKODILocalCommerceFetch'));
   assert.ok(language.includes('translation_not_ready'));
 });
+
+test('local commerce login preserves only canonical apex and trusted initiating path', async()=>{
+  const {runInNewContext}=await import('node:vm');
+  const account=fs.readFileSync(new URL('../local-commerce/account.js',import.meta.url),'utf8');
+  const line=account.split('\n').find(s=>s.startsWith('function loginUrl()'));
+  assert.ok(line,'account login function must exist');
+  const make=href=>new URL(runInNewContext('('+line+')()', {URL,location:{href}}));
+  const good=make('https://ekodi.kr/local-commerce/merchant/?program=autumn#untrusted-hash');
+  assert.equal(good.origin,'https://ekodi.kr');
+  assert.equal(good.pathname,'/auth/');
+  assert.equal(good.searchParams.get('site'),'local-commerce');
+  assert.equal(good.searchParams.get('return_to'),'https://ekodi.kr/local-commerce/merchant/?program=autumn');
+  for(const href of ['https://example.invalid/local-commerce/','https://ekodi.kr/local-commerce-fake/','https://ekodi.kr/admin/','http://ekodi.kr/local-commerce/']){
+    assert.equal(make(href).searchParams.get('return_to'),'https://ekodi.kr/local-commerce/');
+  }
+});
+
+test('local commerce runtime, CSP and staging/production vars use the canonical auth entry',async()=>{
+  const forgedEnv={DATA_MODE:'production',AUTH_URL:'https://legacy.invalid/?site=local-commerce'};
+  const response=await worker.fetch(new Request('https://ekodi.kr/local-commerce/config.js'),forgedEnv);
+  assert.equal(response.status,200);
+  const body=await response.text();
+  assert.ok(body.includes('"authUrl":"https://ekodi.kr/auth/?site=local-commerce"'));
+  assert.ok(!body.includes('legacy.invalid'));
+  assert.ok(response.headers.get('content-security-policy').includes("form-action 'self' https://ekodi.kr"));
+  for(const path of ['wrangler.local-commerce.toml','wrangler.local-commerce.staging.toml']){
+    const source=fs.readFileSync(new URL('../'+path,import.meta.url),'utf8');
+    assert.ok(source.includes('AUTH_URL = "https://ekodi.kr/auth/?site=local-commerce"'),path);
+    const oldHost=['auth','ekodi','kr'].join('.');
+    assert.ok(!source.includes('https://'+oldHost),path);
+  }
+});
