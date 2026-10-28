@@ -45,6 +45,9 @@ export function auditSecureDocuments({policy,release,sql,edge,widget}) {
     edge.includes('assertPurgeEligibility(current,{lease})')&&
     edge.includes('backup_erased:false'),
     'separate retention/backup-verified purge lane required');
+  fail(edge.includes('approvedScannerEndpoint(scanUrl)')&&
+    edge.includes('redirect:"error"')&&edge.includes('verifiedScannerVerdict(response.status,result,response.redirected)'),
+    'scanner must be canonical same-origin endpoint and block redirects');
   fail(edge.includes('redaction_verified===true')&&edge.includes('pii_safe===true')&&
     edge.includes('engine_verified===true'),'independent file scan/redaction evidence required');
   fail(!/createSignedUrl|createSignedUploadUrl|publicUrl/.test(edge),'persistent signed URLs forbidden');

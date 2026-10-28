@@ -36,3 +36,6 @@ Review `supabase/migrations/20261028093000_secure_documents_retention_purge.sql`
 
 ## Synthetic isolated purge canaries
 The shared `purge-guards.mjs` module is imported by the Deno API and also by `test/secure-documents-purge-canary.test.mjs`. Mock Storage API checks simulate successful deletion, missing-file idempotency, unauthorized owner/tenant path, duplicate or malformed versions, retention/hold/lease races, scanner-like storage API failures, and undocumented/orphan files left under the document prefix. Only `remove`, `info`, and `list` are invoked on a mock; **no real content is uploaded or deleted**. These deterministic tests are NOT an independently signed live authenticated upload/deletion end-to-end canary.
+
+## Scanner egress boundary (source gate, NOT proof of a live scanner)
+The Edge Function now accepts only the canonical `https://ekodi.kr/api/internal/security/scan` endpoint; all subdomains, alternate ports, credentials, URL parameters and redirects are rejected before sensitive plaintext is sent. The secret must contain at least 32 characters. Scanner responses must be HTTP 2xx and explicitly mark `clean`, `engine_verified` and `pii_safe`. This path is a **required interface contract**, not evidence a scanner endpoint exists or has passed independent malware/privacy review. Upload stays disabled until this is separately verified.

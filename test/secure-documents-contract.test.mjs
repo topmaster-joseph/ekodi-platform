@@ -95,3 +95,11 @@ test('purge engine is independently disabled and records only verified storage A
  assert.doesNotMatch(api,/delete\(\)\.eq\("bucket_id"/);
  assert.ok(widget.includes('백업 보존 확인 대기'));
 });
+
+test('scanner boundary follows canonical ekodi.kr and fails closed on redirects',()=>{
+ const api=read('supabase/functions/secure-documents-api/index.ts');
+ assert.match(api,/approvedScannerEndpoint\(scanUrl\)/);
+ assert.match(api,/redirect:"error"/);
+ assert.match(api,/verifiedScannerVerdict\(response.status,result,response.redirected\)/);
+ assert.doesNotMatch(api,/hostname.endsWith\("\.ekodi\.kr"\)/);
+});

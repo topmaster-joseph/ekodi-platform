@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import {assertPurgeEligibility, removeVerifiedCiphertexts} from "./purge-guards.mjs";
+import {approvedScannerEndpoint,verifiedScannerVerdict} from "./scanner-guards.mjs";
 
 // EKODI Secure Documents: server-encrypted, owner/recipient-bound, fail-closed.
 const BUCKET="secure-documents-private";
@@ -15,8 +16,8 @@ const enabled=()=>Deno.env.get("SECURE_DOCUMENTS_ACTIVE")==="true"
   && Deno.env.get("SECURE_DOCUMENTS_SCAN_APPROVED")==="true"
   && !!Deno.env.get("SECURE_DOCUMENT_MASTER_KEY_B64")
   && !!Deno.env.get("SECURE_DOCUMENT_RECIPIENT_HMAC_B64")
-  && !!Deno.env.get("SECURE_DOCUMENT_SCAN_ENDPOINT")
-  && !!Deno.env.get("SECURE_DOCUMENT_SCAN_TOKEN");
+  && approvedScannerEndpoint(Deno.env.get("SECURE_DOCUMENT_SCAN_ENDPOINT")||"")
+  && (Deno.env.get("SECURE_DOCUMENT_SCAN_TOKEN")||"").length>=32;
 const admin=baseUrl&&serviceKey?createClient(baseUrl,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}}):null;
 const enc=new TextEncoder();
 const hex=bytes=>Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");
@@ -117,13 +118,14 @@ function fileLooksValid(data,mime){
 async function scan(bytes,mime){
  const scanUrl=Deno.env.get("SECURE_DOCUMENT_SCAN_ENDPOINT")||"";
  const key=Deno.env.get("SECURE_DOCUMENT_SCAN_TOKEN")||"";
- let target;
- try{target=new URL(scanUrl);}catch{return false;}
- // Prevent inadvertent forwarding of sensitive bytes to arbitrary public scanners.
- if(target.protocol!=="https:"||!target.hostname.endsWith(".ekodi.kr")||!key)return false;
- const response=await fetch(scanUrl,{method:"POST",headers:{"content-type":"application/octet-stream","x-scanner-token":key,"x-file-mime":mime},body:bytes,signal:AbortSignal.timeout(10000)});
+ // Same-origin canonical internal scanner only; never forward sensitive
+ // plaintext to arbitrary subdomains or follow off-host redirects.
+ if(!approvedScannerEndpoint(scanUrl)||key.length<32)return null;
+ const response=await fetch(scanUrl,{method:"POST",redirect:"error",
+   headers:{"content-type":"application/octet-stream","x-scanner-token":key,"x-file-mime":mime},
+   body:bytes,signal:AbortSignal.timeout(10000)});
  const result=await response.json().catch(()=>null);
- return response.ok&&result?.verdict==="clean"&&result?.engine_verified===true&&result?.pii_safe===true?result:null;
+ return verifiedScannerVerdict(response.status,result,response.redirected)?result:null;
 }
 async function latestVersion(documentId){
  const {data,error}=await admin.from("secure_document_versions").select("*").eq("document_id",documentId).eq("state","active").order("version_number",{ascending:false}).limit(1).maybeSingle();

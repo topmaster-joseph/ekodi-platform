@@ -147,7 +147,7 @@ jobs:
             test -s scripts/validate-secure-documents-security.mjs
             test -s config/secure-documents-release-policy.json
             node scripts/validate-secure-documents-security.mjs
-            node --test test/secure-documents-release-security.test.mjs test/secure-documents-contract.test.mjs test/secure-documents-purge-canary.test.mjs
+            node --test test/secure-documents-release-security.test.mjs test/secure-documents-contract.test.mjs test/secure-documents-purge-canary.test.mjs test/secure-documents-scanner-guard.test.mjs
           fi
       - run: npm run build
         if: github.event_name != 'pull_request' || steps.scope.outputs.my_only != 'true'
