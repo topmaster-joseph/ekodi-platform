@@ -25,6 +25,9 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/deploy-site-core.yml'
+      - '.github/workflows/stage-shared-site-shell.yml'
+      - 'scripts/site-core-staging-10500-recovery.mjs'
+      - 'test/site-core-staging-10500-recovery.test.mjs'
       - 'scripts/converge-orchestrated-pr-merge.mjs'
       - 'site-worker.js'
       - 'mall-product-jsonld.js'
