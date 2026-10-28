@@ -104,3 +104,50 @@ test('module has no imports, localStorage, network, file writes or DOM side effe
   assert.match(src, /PBKDF2/);
   assert.match(src, /AES-GCM/);
 });
+
+
+test('merge preview retains every preexisting local field and original object reference', async () => {
+  const existingRow = {
+    id: 'old1', company: 'Current', product: 'Existing',
+    coverageNote: 'future metadata must not disappear',
+    nestedFutureField: { renew: 'unknown', tags: ['a', 'b'] }
+  };
+  const old = {
+    policies: [existingRow],
+    claims: [{ id: 'old-claim', detail: 'do not remove or mutate', unrecognizedLocalField: true }],
+    consultations: [{ id: 'server-item', contact: 'must remain' }],
+    advisorChat: { messages: [] }
+  };
+  const incoming = {
+    policies: [{ id: 'old1', company: 'Old version' }, { id: 'new1', company: 'Imported' }],
+    claims: []
+  };
+  const result = previewPortableMerge(old, incoming);
+  assert.equal(result.summary.addedPolicies, 1);
+  assert.strictEqual(result.nextState.policies[0], existingRow);
+  assert.strictEqual(result.nextState.claims[0], old.claims[0]);
+  assert.deepEqual(result.nextState.policies[0].nestedFutureField, existingRow.nestedFutureField);
+  assert.strictEqual(result.nextState.consultations, old.consultations);
+  assert.equal(old.policies.length, 1, 'merge preview must not alter original array');
+  assert.equal(result.nextState.policies[1].company, 'Imported');
+});
+
+test('corrupt local records fail closed instead of silently exporting empty lists', async () => {
+  await assert.rejects(encryptPortableRecords({ policies: null, claims: [] }, pw, { webcrypto }), /policies.*array/);
+  await assert.rejects(encryptPortableRecords({ policies: [], claims: null }, pw, { webcrypto }), /claims.*array/);
+  assert.throws(() => portableRecordPreview({ policies: { id: 'bad' }, claims: [] }), /policies.*array/);
+  assert.throws(() => previewPortableMerge({ policies: 'wrong', claims: [] }, { policies: [], claims: [] }), /policies.*array/);
+});
+
+test('encrypted envelope rejects covert unencrypted metadata or unexpected parameters', async () => {
+  const blob = await encryptPortableRecords(sample(), pw, { webcrypto });
+  const archive = JSON.parse(blob);
+  archive.accessToken = 'MUST-REJECT-PLAINTEXT';
+  await assert.rejects(decryptPortableRecords(JSON.stringify(archive), pw, { webcrypto }), /unexpected archive field/);
+  delete archive.accessToken;
+  archive.kdf.contact = 'unexpected-plaintext-contact';
+  await assert.rejects(decryptPortableRecords(JSON.stringify(archive), pw, { webcrypto }), /unexpected kdf field/);
+  delete archive.kdf.contact;
+  archive.cipher.note = 'untrusted-plain-text';
+  await assert.rejects(decryptPortableRecords(JSON.stringify(archive), pw, { webcrypto }), /unexpected cipher field/);
+});
