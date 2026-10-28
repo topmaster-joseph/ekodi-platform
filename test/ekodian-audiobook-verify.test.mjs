@@ -6,7 +6,7 @@ const plan=()=>({bookId:'BOOK-EKODI-000001',edition:'ko-v1',approvals:{
   editionApproved:true,authorApproved:true,commercialVoiceRightsVerified:true,
   speakerReviewComplete:true,audioQaApproved:true,purchaseBonusPolicyConfirmed:true
 },tracks:[{number:1,title:'서문',scriptFingerprint:'abc'}]});
-const good={ready:true,sha256:'f'.repeat(64),scriptFingerprint:'abc'};
+const good={ready:true,sha256:'f'.repeat(64),sourceSha256:'f'.repeat(64),scriptFingerprint:'abc'};
 test('good compressed audio with valid chapter rights is only a release candidate',()=>{
   const result=releasePreflight(plan(),new Map([[1,good]]));
   assert.deepEqual(result,{ready:true,issues:[]});
@@ -21,6 +21,7 @@ test('missing file, edition mismatch, bad file and surplus tracks block publicat
   assert.ok(releasePreflight(plan(),new Map()).issues.includes('MISSING_MP3_1'));
   assert.ok(releasePreflight(plan(),new Map([[1,{...good,scriptFingerprint:'other'}]])).issues.includes('SCRIPT_EDITION_MISMATCH_1'));
   assert.ok(releasePreflight(plan(),new Map([[1,{...good,ready:false}]])).issues.includes('UNUSABLE_MP3_1'));
+  assert.ok(releasePreflight(plan(),new Map([[1,{...good,sourceSha256:'c'.repeat(64)}]])).issues.includes('AUDIO_PROVENANCE_MISMATCH_1'));
   assert.ok(releasePreflight(plan(),new Map([[1,good],[2,good]])).issues.includes('UNEXPECTED_MP3_2'));
 });
 test('ffprobe enforces MP3 bitrate, valid duration and sample rate',()=>{
