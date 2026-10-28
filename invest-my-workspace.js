@@ -407,4 +407,7 @@ function init(){
 }
 init();
 }
-function ownerBrowserJs(){return '('+investBrowserClient.toString()+')();'}
+// Wrangler bundles with esbuild keepNames, which inserts __name(fn,"name") calls into the
+// serialized client. The browser has no __name, so ship the same prelude other EKODI pages use;
+// without it the script dies on its first line and the page stays on "확인하고 있습니다".
+function ownerBrowserJs(){return '(()=>{const __name=(target,value)=>Object.defineProperty(target,"name",{value,configurable:true});\n('+investBrowserClient.toString()+')();})();'}
