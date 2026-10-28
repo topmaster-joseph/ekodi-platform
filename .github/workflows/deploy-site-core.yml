@@ -1314,7 +1314,10 @@ jobs:
 
   native_surface_verification_mobile:
     name: EKODI Native Surface Verification · Mobile
-    needs: deploy
+    # Serialized production browser verification: do not weaken Cloudflare throttling.
+    # Still run after a failing prior verifier, preserving every failure in the run.
+    needs: [deploy, native_surface_verification_desktop]
+    if: ${{ always() && needs.deploy.result == 'success' }}
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
       verification_lane: site-core
@@ -1324,7 +1327,10 @@ jobs:
 
   native_research_verification_desktop:
     name: EKODI Research Native Verification · Desktop
-    needs: deploy
+    # Serialized production browser verification: do not weaken Cloudflare throttling.
+    # Still run after a failing prior verifier, preserving every failure in the run.
+    needs: [deploy, native_surface_verification_mobile]
+    if: ${{ always() && needs.deploy.result == 'success' }}
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
       verification_lane: research
@@ -1333,7 +1339,10 @@ jobs:
 
   native_research_verification_mobile:
     name: EKODI Research Native Verification · Mobile
-    needs: deploy
+    # Serialized production browser verification: do not weaken Cloudflare throttling.
+    # Still run after a failing prior verifier, preserving every failure in the run.
+    needs: [deploy, native_research_verification_desktop]
+    if: ${{ always() && needs.deploy.result == 'success' }}
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
       verification_lane: research
@@ -1342,5 +1351,8 @@ jobs:
 
   authenticated_admin_surface_verification:
     name: EKODI Authenticated Admin Surface Verification
-    needs: deploy
+    # Serialized production browser verification: do not weaken Cloudflare throttling.
+    # Still run after a failing prior verifier, preserving every failure in the run.
+    needs: [deploy, native_research_verification_mobile]
+    if: ${{ always() && needs.deploy.result == 'success' }}
     uses: ./.github/workflows/verify-admin-production-ui-e2e.yml
