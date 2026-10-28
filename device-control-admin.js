@@ -720,8 +720,8 @@
     if (cleanupPending) action = '임시파일 정리 ' + commandStatus(cleanup.status) + ' · 실제 완료 영수증 대기';
     else if (cleanup?.status === 'failed') action = '임시파일 정리 실패 · 재시도 전 오류 확인 필요';
     else if (cleanupFinished) {
-      const freed = Number(cleanup.result?.freedMB);
-      const files = Number(cleanup.result?.removedFiles);
+      const freed = cleanup.result?.freedMB == null ? NaN : Number(cleanup.result.freedMB);
+      const files = cleanup.result?.removedFiles == null ? NaN : Number(cleanup.result.removedFiles);
       action = '임시파일 정리 완료 ' + timeLabel(cleanup.completedAt)
         + (Number.isFinite(freed) && freed >= 0 ? ' · ' + freed.toFixed(1) + ' MB 확보' : '')
         + (Number.isFinite(files) && files >= 0 ? ' · ' + files + '개 파일' : '');
