@@ -48,6 +48,11 @@ test('standalone canonical Control and legacy /control both retain CSP and noind
  const iframe=await siteWorker.fetch(new Request('https://ekodi.kr/admin/control?embedded=admin'),env,{});
  assert.equal(iframe.headers.get('x-frame-options'),'SAMEORIGIN');
  assert.match(iframe.headers.get('content-security-policy'),/frame-ancestors 'self'/);
+ const legacyEmbed=await siteWorker.fetch(new Request('https://ekodi.kr/control?embedded=admin'),env,{});
+ assert.equal(legacyEmbed.status,200,'legacy embedded Control remains available');
+ assert.equal(legacyEmbed.headers.get('x-frame-options'),iframe.headers.get('x-frame-options'));
+ assert.equal(legacyEmbed.headers.get('content-security-policy'),iframe.headers.get('content-security-policy'));
+ assert.equal(await legacyEmbed.text(),await iframe.text(),'canonical and legacy embeds must be one identical Control document');
 });
 
 test('existing approved single-sidebar Admin workbench and task history remain unchanged',()=>{
