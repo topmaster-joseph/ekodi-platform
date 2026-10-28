@@ -139,6 +139,15 @@ function requestDelegated(section,delegate){
       await window.EKODIAdminDemand.activate(demandKey);
     }
     if(requestedSection!==section)return;
+    // The home overview delegates to the lazy Health surface. A completed
+    // demand-loader promise is not proof that its panel actually mounted:
+    // transient script/style load races can otherwise leave an empty Admin
+    // workspace while the navigation still reports platform-overview.
+    // Run the idempotent module once as a bounded same-origin fallback.
+    if(delegate==='health'&&!hasPanel(section)&&!hasPanel(delegate)){
+      await import('./system-health-admin.js');
+    }
+    if(requestedSection!==section)return;
     applyOrder();
     if(delegate==='common-services'){
       const mounted=window.EKODICommonServicesAdmin?.activate?.(section);
