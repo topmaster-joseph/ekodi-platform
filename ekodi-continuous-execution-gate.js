@@ -124,6 +124,17 @@ export async function evaluateEkodiContinuousExecutionFromLedger(db, input = {})
        proof.requiredCiVerified!==true || proof.stagingVerified!==true ||
        proof.rollbackReady!==true || proof.securityReviewVerified!==true ||
        !text(proof.verifiedAt,80))return preview;
+    const preproductionStageEvent=await db.prepare(
+      "SELECT actor,reason,evidence_json FROM ekodi_orchestrator_task_events WHERE task_id=? AND reason='verified_preproduction_evidence_recorded' ORDER BY seq DESC LIMIT 1"
+    ).bind(taskId).first();
+    if(preproductionStageEvent?.actor!=='ekodi-github-actions-oidc-reconciler')return preview;
+    let staged;
+    try{staged=JSON.parse(preproductionStageEvent.evidence_json||'{}')}catch{return preview}
+    if(staged?.authority!=='ekodi-orchestrator'||staged.source!=='github-actions-oidc'||
+       staged.taskId!==taskId||staged.branchRef!==branchRef||
+       staged.releaseSha!==releaseSha||staged.artifactDigest!==artifactDigest||
+       staged.verifiedAt!==proof.verifiedAt||
+       !Number.isSafeInteger(staged.workflowRunId)||staged.workflowRunId<1)return preview;
     event=await db.prepare(
       "SELECT actor,reason,evidence_json FROM ekodi_orchestrator_task_events WHERE task_id=? AND reason='final_promotion_approval_recorded' ORDER BY seq DESC LIMIT 1"
     ).bind(taskId).first();
