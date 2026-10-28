@@ -612,11 +612,12 @@ for (const [id, group] of menus) {
           cardRight: card ? Math.round(card.getBoundingClientRect().right) : -1,
           viewportWidth: window.innerWidth,
           sidebarOpen: Boolean(document.querySelector('.sidebar')?.classList.contains('open')),
+          srOnlyHidden: (() => {const note=card?.querySelector('.sr-only');const style=note&&getComputedStyle(note);return Boolean(note&&style?.position==='absolute'&&note.getBoundingClientRect().width<=1)})(),
         };
       });
       if (mobile.cardDisplay !== 'grid' || mobile.headerDisplay !== 'none' || mobile.summaryDisplay !== 'grid'
           || mobile.scrollExcess > 2 || mobile.sidebarOpen || mobile.cardLeft < -2
-          || mobile.cardRight > mobile.viewportWidth + 2) {
+          || mobile.cardRight > mobile.viewportWidth + 2 || !mobile.srOnlyHidden) {
         throw new Error('ENGINE_CATALOG_STYLE_E2E mobile failed: ' + JSON.stringify(mobile));
       }
       console.log('[PROD-E2E] engine-all: stylesheet and compact desktop/mobile layout verified');
