@@ -28,6 +28,8 @@
     $('bookSubtitle').hidden = !b.subtitle;
     $('bookAuthor').textContent = `${b.author} 지음 · ${(b.format || []).join(' · ') || 'EPUB 3'}${b.edition ? ' · ' + b.edition : ''}`;
     $('bookCover').replaceChildren(C.cover(b));
+    $('audioBonusNote').hidden = b.bonusAudio?.included !== true;
+    if (b.bonusAudio?.included) $('audioBonusNote').textContent = b.bonusAudio.published ? '이 전자책에는 무료 오디오북이 포함되어 있습니다. 구입 후 내 서재에서 이용하세요.' : '한국어 오디오북은 구매자 무료 보너스로 제작 중입니다. 현재 이용 불가하며 별도 구매금액은 없습니다.';
     const p = quote.price;
     $('priceNow').textContent = C.won(p?.amount);
     $('priceList').textContent = p && p.amount < p.listPrice ? C.won(p.listPrice) : '';
