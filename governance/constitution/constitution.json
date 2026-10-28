@@ -1358,10 +1358,6 @@
     "authenticationEntry": "https://ekodi.kr/auth/",
     "platformAdminEntry": "https://ekodi.kr/admin/",
     "siteAdminPattern": "https://ekodi.kr/{site}/admin",
-    "forbiddenFirstPartyBrowserAuthHosts": [
-      "auth.ekodi.kr",
-      "admin.ekodi.kr"
-    ],
     "appliesTo": "all-existing-and-future-ekodi-sites-services-workspaces-user-and-admin-pages",
     "rules": {
       "userFacingFirstPartyUrlsMustUseCanonicalApexPaths": true,
@@ -1399,6 +1395,11 @@
       "sourceRegressionGuard": "scripts/zero-subdomain-guard.mjs",
       "legacyRetirementIssue": 5798,
       "failClosedOnViolation": true
-    }
+    },
+    "forbiddenBrowserHostClasses": [
+      "auth-subdomain",
+      "admin-subdomain",
+      "all-first-party-subdomains"
+    ]
   }
 }
