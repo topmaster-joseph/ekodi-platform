@@ -121,7 +121,7 @@ test('dedicated URL actually resolves to devices and retains it across Google lo
   assert.equal(adminRoutes.sectionFromLocation(address), 'devices');
   assert.equal(adminRoutes.pathFor('devices', ['windows-performance']), address.pathname);
   assert.equal(adminRoutes.navigationTarget('devices', address), address.pathname);
-  const match = authSource.match(/function centralAdminAuthUrl\(v\)\{[\s\S]*?\}(?=function normalizeEntryRoute)/);
+  const match = authSource.match(/function centralAdminAuthUrl\(v\)\{[\s\S]*?\}(?=\s*function normalizeEntryRoute)/);
   assert.ok(match, 'canonical admin login handoff must be available');
   const getAuthUrl = new Function('routes', 'normalizeRoute', 'cleanRouteUrl', 'location', 'AUTH_URL', 'URL', match[0] + '; return centralAdminAuthUrl;')(
     () => adminRoutes,
