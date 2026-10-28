@@ -829,6 +829,13 @@ async function verifySocialInventory(tab, alreadyActive, started) {
           !document.body.classList.contains('admin-mobile-drawer-open')&&rect&&rect.right<=2);
       },null,{timeout:5000});
     }
+    // A tall panel screenshot at 320/390 can leave the document scrolled when
+    // the viewport grows to 768. Restore a real user-visible heading position
+    // before measuring hit-testing; never bypass an actual overlay.
+    await page.locator('#ekodiSocialAccountRegistry .ekodi-social-heading h2').evaluate(
+      heading=>heading.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'})
+    );
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(resolve)));
     const state=await page.evaluate(()=>{
       const panel=document.querySelector('#ekodiSocialAccountRegistry');
       const rect=panel?.getBoundingClientRect();
