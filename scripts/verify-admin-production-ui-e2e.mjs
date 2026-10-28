@@ -629,6 +629,16 @@ for (const [id, group] of menus) {
 
     await page.setViewportSize({width:390,height:844});
     try {
+      // Responsive screenshots must not be captured mid-transition.
+      // The desktop sidebar animates off-canvas after resizing to 390px.
+      // A partially visible sidebar can mask a broken mobile layout while
+      // computed grid/overflow metrics still pass.
+      await page.waitForFunction(() => {
+        const sidebar=document.querySelector('.sidebar');
+        const rect=sidebar?.getBoundingClientRect();
+        return sidebar && !sidebar.classList.contains('open') && rect && rect.right<=1;
+      }, null, {timeout:10000});
+      await page.evaluate(()=>{const main=document.querySelector('.app>main');if(main)main.scrollTop=0});
       const mobile=await page.evaluate(()=>{
         const p=document.querySelector('#ekodiInfraCosts');
         const summary=p.querySelector('.infra-summary');
@@ -640,12 +650,27 @@ for (const [id, group] of menus) {
           viewport:innerWidth,documentExcess:document.documentElement.scrollWidth-innerWidth,
           summaryColumns:colCount(summary),providerColumns:colCount(providers),
           invoiceTableScrollable:table.scrollWidth>table.clientWidth,
+          panelLeft:Math.round(p.getBoundingClientRect().left),
+          panelRight:Math.round(p.getBoundingClientRect().right),
+          sidebarRight:Math.round(document.querySelector('.sidebar').getBoundingClientRect().right),
+          headingBlockHeight:Math.round(p.querySelector('.infra-page-heading>div:first-child').getBoundingClientRect().height),
+          headingToActions:Math.round(
+            p.querySelector('.infra-heading-actions').getBoundingClientRect().top-
+            p.querySelector('.infra-page-heading>div:first-child').getBoundingClientRect().bottom
+          ),
+          actionsToNav:Math.round(
+            p.querySelector('.infra-jump-nav').getBoundingClientRect().top-
+            p.querySelector('.infra-heading-actions').getBoundingClientRect().bottom
+          ),
+          headingTop:Math.round(p.querySelector('h2').getBoundingClientRect().top),
         };
       });
       if(mobile.summaryColumns!==1||mobile.providerColumns!==1||
-         mobile.panelWidth>mobile.viewport+2||mobile.documentExcess>2||!mobile.invoiceTableScrollable)
-        throw new Error('INFRA_COST_MOBILE_LAYOUT_E2E failed: '+JSON.stringify(mobile));
-      await page.locator('#ekodiInfraCosts').scrollIntoViewIfNeeded();
+         mobile.panelWidth>mobile.viewport+2||mobile.documentExcess>2||!mobile.invoiceTableScrollable||
+         mobile.panelLeft<0||mobile.panelRight>mobile.viewport+2||mobile.sidebarRight>1||
+         mobile.headingBlockHeight>260||mobile.headingToActions<0||mobile.headingToActions>36||
+         mobile.actionsToNav<0||mobile.actionsToNav>36||mobile.headingTop<0||mobile.headingTop>240)
+        throw new Error('INFRA_COST_MOBILE_VISUAL_E2E failed: '+JSON.stringify(mobile));
       console.log('[PROD-E2E] infra-costs mobile responsive viewport verified: '+JSON.stringify(mobile));
       await page.screenshot({path:path.join(artifactsDir,'infra-costs-mobile-verified.png'),fullPage:false});
     } finally {
