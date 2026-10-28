@@ -48,6 +48,16 @@ export async function verifyEkodiFinalPromotionReceipt(db,input={}){
      ![proof.requiredCiVerified,proof.stagingVerified,proof.rollbackReady,proof.securityReviewVerified].every(x=>x===true)){
     return deny('authenticated_preproduction_proof_invalid');
   }
+  // Reuse of an old approval or one issued before staging would violate the
+  // requested single *final* confirmation for the exact release. No worker
+  // may override the freshness window with caller-controlled flags.
+  const nowMs=Date.now(),stageMs=Date.parse(proof.verifiedAt),
+    ownerMs=Date.parse(owner.approvedAt);
+  if(!Number.isFinite(stageMs)||!Number.isFinite(ownerMs)||
+     stageMs>ownerMs||ownerMs>nowMs+60_000||
+     nowMs-ownerMs>24*60*60*1000){
+    return deny('final_owner_confirmation_expired_or_out_of_order');
+  }
   if(!/^super-admin:[^\s]+$/.test(clean(approval.actor,300))||
      approval.reason!=='final_promotion_approval_recorded'||
      owner.approved!==true||owner.authority!=='ekodi-orchestrator'||
