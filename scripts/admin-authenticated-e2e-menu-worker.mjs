@@ -855,8 +855,11 @@ async function verifySocialInventory(tab, alreadyActive, started) {
     });
     if(state.width!==width||!state.headingAccessible||!state.panelVisible||!state.panelFitsViewport||state.horizontalOverflow||!state.architectureHidden||!state.selected)
       throw new Error('Social account viewport verification failed: '+JSON.stringify(state));
-    await page.screenshot({
-      path:path.join(artifactsDir,'social-accounts-'+width+'.png'),fullPage:false,
+    // Crop to the account workspace itself: a full-page screenshot can expose
+    // the signed-in account identifier in the Admin sidebar outside the record mask.
+    // Keep the per-record mask as a second, independent privacy boundary.
+    await page.locator('#ekodiSocialAccountRegistry').screenshot({
+      path:path.join(artifactsDir,'social-accounts-'+width+'.png'),
       mask:[page.locator('#ekodiSocialAccountRegistry [data-social-record]')],maskColor:'#d1d5db'
     });
     viewports.push(state);

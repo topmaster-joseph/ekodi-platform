@@ -43,6 +43,10 @@ test('live read-only DOM checks cover service search, all filters and bounded re
 test('five responsive screenshots redact account identifiers and assert architecture isolation',()=>{
   assert.match(worker,/const widths=\[320,390,768,1366,1440\]/);
   assert.match(worker,/mask:\[page\.locator\('#ekodiSocialAccountRegistry \[data-social-record\]'\)\]/);
+  // The full Admin shell contains the signed-in account in the sidebar; screenshots
+  // must be cropped to the Social Account workspace, not the entire viewport.
+  assert.match(worker,/await page\.locator\('#ekodiSocialAccountRegistry'\)\.screenshot\(\{/);
+  assert.doesNotMatch(worker,/await page\.screenshot\(\{\s*path:path\.join\(artifactsDir,'social-accounts-'/);
   assert.match(worker,/architectureHidden:!architectureVisible/);
   assert.match(worker,/await page\.keyboard\.press\('Escape'\)/);
   assert.match(worker,/headingAccessible/);
