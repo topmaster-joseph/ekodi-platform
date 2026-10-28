@@ -1,3 +1,4 @@
+import { verifyCooperativeProgress } from './cooperative-progress-proof.mjs';
 // Source-only QA using EKODI's browser task policy. Every browser request is
 // intercepted; this runner never reads or mutates a production database/session.
 import fs from 'node:fs/promises';
@@ -207,6 +208,7 @@ try {
   assert.equal(await page.locator('#workspace').isVisible(), false);
   checks.push({ surface: 'member-self-edit-cross-coop-and-admin-denied', width: 390, passed: true });
   await context.close();
+  await verifyCooperativeProgress({ contextFor, fixture: f, cooperatives: COOPERATIVES, checks, screenshot });
   await verifyCooperativeServiceWorkflows({ contextFor, fixture: f, cooperatives: COOPERATIVES, checks, screenshot });
   assert.ok(refreshCount >= 4);
   assert.deepEqual(pageErrors, []);

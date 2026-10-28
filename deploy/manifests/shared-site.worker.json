@@ -1,12 +1,14 @@
 {
-  "version": 111,
+  "version": 112,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
     "requests": [
       {
         "url": "https://ekodi.kr/admin/social-account-admin.js?social-id-ui=002",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
         "expect": [
           "data-social-search",
@@ -18,7 +20,9 @@
       },
       {
         "url": "https://ekodi.kr/admin/social-account-admin.css?social-id-ui=002",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
         "expect": [
           "SOCIAL-ID-UI-002",
@@ -3681,6 +3685,42 @@
         "headerExpect": [
           "content-type: text/css",
           "cache-control: private, no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/jubilee/assets/app.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "조합 출범 진행관리",
+          "progressFilter",
+          "data-progress-key",
+          "COOP_PROGRESS_EXCLUSION"
+        ],
+        "expectHeaders": [
+          "content-type: text/javascript",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/open/assets/app.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "조합 출범 진행관리",
+          "progressFilter",
+          "data-progress-key",
+          "COOP_PROGRESS_EXCLUSION"
+        ],
+        "expectHeaders": [
+          "content-type: text/javascript",
+          "cache-control: no-store"
         ],
         "rollbackVerify": false
       }
