@@ -31,3 +31,12 @@ test('Amazon cost governance and server-side credential protection remain in pla
   assert.match(source,/\/ekodimall\/api\/amazon\/approvals/);
   assert.match(source,/유료 기능 스위치를 켜더라도 기능별 승인 레코드와 금액 한도가 없으면/);
 });
+
+test('Mall product table adds row order and only verified registration dates',()=>{
+  assert.match(source,/products\.map\(\(item,index\)=>/);
+  assert.match(source,/<th>연번<\/th>/);
+  assert.match(source,/<th>등록일자<\/th>/);
+  assert.match(source,/item\.registeredAt\|\|item\.createdAt\|\|item\.created_at/);
+  assert.match(source,/미기록/);
+  assert.match(source,/최근 동기화 시각은 등록일자로 사용하지 않습니다/);
+});
