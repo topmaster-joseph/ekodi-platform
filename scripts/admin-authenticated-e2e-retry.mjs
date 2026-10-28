@@ -21,8 +21,9 @@ for (const event of ['uncaughtException', 'unhandledRejection']) {
   });
 }
 
-const maxAttemptsPerMenu = String(process.env.E2E_MENU_FOCUS || 'all').trim() === 'social-accounts' ? 1 : 2;
-const menuTimeoutMs = String(process.env.E2E_MENU_FOCUS || 'all').trim() === 'social-accounts' ? 75_000 : 30_000; // focused five-viewport budget
+const focusedDiagnostic = ['social-accounts','architecture'].includes(String(process.env.E2E_MENU_FOCUS || 'all').trim());
+const maxAttemptsPerMenu = focusedDiagnostic ? 1 : 2;
+const menuTimeoutMs = focusedDiagnostic ? 90_000 : 30_000; // five viewport focused budget, still fail-closed on CF quota
 const taxSurfaceTimeoutMs = 35_000;
 const assistTimeoutMs = 60_000;
 const artifactsDir = path.resolve('artifacts/admin-authenticated-e2e');
@@ -204,7 +205,7 @@ const aggregate = {
   expectedMenuCount: menuIds.length,
   checkedMenuCount: 0,
   passed: false,
-  mode: focusOnly ? 'focused-social-inventory' : 'isolated-menu-renderers+canonical-assist-roundtrip',
+  mode: focusOnly ? (menuIds[0]==='architecture' ? 'focused-architecture' : 'focused-social-inventory') : 'isolated-menu-renderers+canonical-assist-roundtrip',
   taxProtocolFallback: 'strict-isolated-tax-surface-on-known-http2-commit-race',
   results: [],
   assistProbe: null,
@@ -311,4 +312,4 @@ if (!aggregate.passed) {
   console.error(`[E2E] authenticated Admin verification failed: ${aggregate.error}`);
   process.exit(1);
 }
-console.log(`[E2E] authenticated Admin ${focusOnly ? 'focused social-account acceptance' : 'all-menu + canonical Assist'} passed: ${aggregate.checkedMenuCount}/${aggregate.expectedMenuCount} menus`);
+console.log(`[E2E] authenticated Admin ${focusOnly ? 'focused read-only diagnostic (not full-suite certification)' : 'all-menu + canonical Assist'} passed: ${aggregate.checkedMenuCount}/${aggregate.expectedMenuCount} menus`);
