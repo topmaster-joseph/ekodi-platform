@@ -7,7 +7,8 @@ const retrySource = () => readFile(new URL('../scripts/admin-authenticated-e2e-r
 test('authenticated Admin E2E waits for canonical production menu-registry convergence', async () => {
   const source = await retrySource();
   assert.match(source, /https:\/\/ekodi\.kr\/admin-menu-registry\.js/);
-  assert.match(source, /const productionConvergenceAttempts = 36/);
+  assert.match(source, /const productionConvergenceAttempts = focusOnly \? 1 : 36/);
+  assert.match(source, /if \(!focusOnly\) await waitForMaturityApi\(\)/);
   assert.match(source, /cache:'?no-store'?|cache: 'no-store'/);
   assert.match(source, /missingProductionMenus/);
   assert.match(source, /await waitForProductionMenuRegistry\(\)/);

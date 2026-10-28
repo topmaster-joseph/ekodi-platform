@@ -104,6 +104,7 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Verify Admin login and reload session continuity
+        if: ${{ inputs.focus_menu != 'social-accounts' }}
         shell: bash
         run: node scripts/verify-admin-login-continuity.mjs
 
@@ -112,6 +113,7 @@ jobs:
         run: node scripts/admin-authenticated-e2e-retry.mjs
 
       - name: Verify direct common/professional module health route
+        if: ${{ inputs.focus_menu != 'social-accounts' }}
         shell: bash
         run: node scripts/admin-service-modules-production-e2e.mjs
 
@@ -141,6 +143,20 @@ jobs:
             artifacts/admin-authenticated-e2e/service-modules-direct-route.json
             artifacts/admin-authenticated-e2e/service-modules-*.png
           if-no-files-found: warn
+          retention-days: 7
+
+      # Focused acceptance is separate from full-menu certification and must
+      # preserve its own private, short-retention evidence without exposing IDs.
+      - name: Upload focused social-account responsive E2E evidence
+        if: ${{ always() && inputs.focus_menu == 'social-accounts' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: social-account-focused-production-${{ github.run_id }}
+          path: |
+            artifacts/admin-authenticated-e2e/report.json
+            artifacts/admin-authenticated-e2e/menu-social-accounts.json
+            artifacts/admin-authenticated-e2e/social-accounts-*.png
+          if-no-files-found: error
           retention-days: 7
 
       - name: Revoke short-lived E2E session
