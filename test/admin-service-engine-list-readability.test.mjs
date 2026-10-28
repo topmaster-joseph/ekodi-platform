@@ -53,3 +53,23 @@ test('service engine stylesheet uses a root-absolute canonical URL on nested adm
   assert.match(e2e,/ENGINE_CATALOG_STYLE_E2E/);
   assert.match(e2e,/menu-engine-all-mobile\.png/);
 });
+
+test('service engine mobile evidence closes drawer and proves cards are unobscured',()=>{
+  const source=read('scripts/verify-admin-production-ui-e2e.mjs');
+  assert.match(source,/const drawerScrim = page\.locator\('\[data-admin-drawer-scrim\]'\)/);
+  assert.match(source,/if \(await drawerScrim\.isVisible\(\)\) await drawerScrim\.click\(\)/);
+  assert.match(source,/!document\.body\.classList\.contains\('admin-mobile-drawer-open'\)/);
+  assert.match(source,/mobile\.cardRight > mobile\.viewportWidth \+ 2/);
+  assert.match(source,/menu-engine-all-mobile\.png/);
+});
+
+test('screen-reader service metadata is visually hidden but preserved in DOM',()=>{
+  const css=read('common-services-admin.css');
+  const js=read('common-services-admin.js');
+  const e2e=read('scripts/verify-admin-production-ui-e2e.mjs');
+  assert.match(css,/\.common-services-panel \.sr-only\{/);
+  assert.match(css,/position:absolute!important/);
+  assert.match(css,/clip-path:inset\(50%\)!important/);
+  assert.match(js,/class="sr-only">기능/);
+  assert.match(e2e,/!mobile\.srOnlyHidden/);
+});
