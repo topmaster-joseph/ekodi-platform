@@ -21,7 +21,7 @@ for (const event of ['uncaughtException', 'unhandledRejection']) {
   });
 }
 
-const maxAttemptsPerMenu = 2;
+const maxAttemptsPerMenu = String(process.env.E2E_MENU_FOCUS || 'all').trim() === 'social-accounts' ? 1 : 2;
 const menuTimeoutMs = 30_000;
 const taxSurfaceTimeoutMs = 35_000;
 const assistTimeoutMs = 60_000;
@@ -116,7 +116,9 @@ async function waitForMaturityApi() {
 }
 
 await waitForProductionMenuRegistry();
-await waitForMaturityApi();
+// A focused social-account acceptance must not generate unrelated maturity API traffic.
+// The default all-menu certification retains the full maturity convergence gate.
+if (!focusOnly) await waitForMaturityApi();
 await fs.rm(artifactsDir, { recursive: true, force: true });
 await fs.mkdir(artifactsDir, { recursive: true });
 
@@ -269,7 +271,7 @@ for (const menuId of menuIds) {
   }
 }
 
-if (!fatal) {
+if (!fatal && !focusOnly) {
   console.log('[E2E] canonical Assist: verifying bottom input → lazy runtime → API → rendered reply');
   const outcome = await runCanonicalAssist();
   const assist = await readAssistReport();
@@ -285,8 +287,8 @@ if (!fatal) {
 aggregate.generatedAt = new Date().toISOString();
 aggregate.passed = !fatal
   && aggregate.checkedMenuCount === aggregate.expectedMenuCount
-  && aggregate.assistProbe?.passed === true
-  && aggregate.assistProbe?.visualContractVerified === true;
+  && (focusOnly || (aggregate.assistProbe?.passed === true
+  && aggregate.assistProbe?.visualContractVerified === true));
 aggregate.error = fatal ? fatal.message : null;
 aggregate.diagnostics.consoleErrors = aggregate.diagnostics.consoleErrors.slice(-80);
 await fs.writeFile(path.join(artifactsDir, 'report.json'), JSON.stringify(aggregate, null, 2));
@@ -309,4 +311,4 @@ if (!aggregate.passed) {
   console.error(`[E2E] authenticated Admin verification failed: ${aggregate.error}`);
   process.exit(1);
 }
-console.log(`[E2E] authenticated Admin verification passed: ${aggregate.checkedMenuCount}/${aggregate.expectedMenuCount} menus + canonical Assist command round-trip`);
+console.log(`[E2E] authenticated Admin ${focusOnly ? 'focused social-account acceptance' : 'all-menu + canonical Assist'} passed: ${aggregate.checkedMenuCount}/${aggregate.expectedMenuCount} menus`);
