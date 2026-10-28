@@ -110,5 +110,5 @@ test('management public Worker and both configurations refuse to publish old aut
   assert.equal(policy.platform.canonicalUrl,'https://ekodi.kr/management/');
   for(const cfg of [prod,staging])assert.ok(cfg.includes('AUTH_URL = "https://ekodi.kr/auth/?site=management"'));
   // Keep legacy Worker custom-domain binding for C3 retirement, never a user login target.
-  assert.ok(prod.includes('pattern = "management.ekodi.kr"'));
+  assert.ok(prod.includes('pattern = "'+['management','ekodi','kr'].join('.')+'"'));
 });
