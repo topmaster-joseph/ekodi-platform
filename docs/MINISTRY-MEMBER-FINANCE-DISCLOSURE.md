@@ -5,7 +5,7 @@
 - Production project: `ekodi-platform-prod` (Supabase). Development project is separate.
 - Church: `church_private.members`, `attendance_records`, `offerings`, `ledger_entries` exist.
 - Existing self-service is `church-member-giving-api`, `church-member-attendance-api` and the ekodi-church Pages surfaces `/my/giving/`, `/my/attendance/`.
-- Church private-member table currently has no member rows. Never generate fictitious attendance or giving history.
+- Church private-member table currently has no member rows, while the generic `tenant_members` registry has four active church relations. These are **different** membership scopes: generic membership must not automatically unlock personal church giving. Never generate fictitious attendance or giving history.
 - Mission: canonical tenant slug `ekodimission`; four active `tenant_members` relations observed in production. `presence-attendance-api`, mission event applications and public organization-finance schema exist, but a church-equivalent donor ledger/linked-person read API is not yet confirmed.
 - `organization_finance_reports` currently has zero `published` rows (across the current production database at inspection time).
 - A Google login alone does NOT constitute an active local membership. Account matching by email alone does not authorize a disclosure.
