@@ -56,5 +56,18 @@
         "admin": "https://ekodi.kr/ekodibiz/marketing/admin"
       }
     }
+  },
+  "canonicalAuthEntry": {
+    "policyId": "CANONICAL-AUTH-ENTRY-001",
+    "status": "enforced",
+    "authentication": "https://ekodi.kr/auth/",
+    "platformAdmin": "https://ekodi.kr/admin/",
+    "firstPartySubdomainLoginForbidden": true,
+    "inheritedByAllCurrentAndFutureSites": true,
+    "preserveTrustedExactReturnTo": true,
+    "postLoginCrossSiteFallbackForbidden": true,
+    "apexOriginNotSufficientForAuthorization": true,
+    "legacyProviderCallbackDependenciesRequireC3Evidence": true,
+    "sourceDriftBlocksCi": true
   }
 }

@@ -24,9 +24,18 @@ await context.addInitScript(({ token, email }) => {
 const page = await context.newPage();
 const pageErrors = [];
 const consoleErrors = [];
+const adminHttpErrors = [];
+let sessionRouteHits = 0;
 const retiredApiRequests = [];
 const retiredApiHost = ['api','ekodi','kr'].join('.');
 page.on('pageerror', error => pageErrors.push(String(error?.message || error)));
+page.on('response', response => {
+  if (response.status() < 400) return;
+  try {
+    const url = new URL(response.url());
+    if (url.origin === new URL(ADMIN_URL).origin) adminHttpErrors.push({ path:url.pathname, status:response.status() });
+  } catch {}
+});
 page.on('request', request => {
   try {
     if (new URL(request.url()).hostname === retiredApiHost) retiredApiRequests.push(request.url());
@@ -41,6 +50,7 @@ page.on('console', message => {
 
 // Admin session validation is canonically served through the apex Core route.
 await page.route('https://ekodi.kr/api/session', async route => {
+  sessionRouteHits += 1;
   await route.fulfill({
     status: 200,
     contentType: 'application/json; charset=utf-8',
@@ -68,6 +78,25 @@ const syntheticJson = body => ({
   body: JSON.stringify(body),
 });
 
+// Invoice controls must be tested against deterministic, non-sensitive
+// read-only fixtures. Never authenticate this synthetic browser to billing API.
+await page.route('**/api/control/infra-costs', async route => {
+  if (route.request().method() !== 'GET') throw new Error('Synthetic cost UI must not mutate production billing records');
+  await route.fulfill(syntheticJson({
+    ok: true,
+    generatedAt: '2026-10-28T00:00:00Z',
+    overview: { totalsMinorByCurrency:{USD:500,KRW:12000},unverified:1,overdue:0,dueSoon:0,renewSoon:0,budgetAlerts:[] },
+    providers: [
+      {id:'cloudflare',name:'Cloudflare',category:'호스팅·서버'},
+      {id:'github',name:'GitHub',category:'개발·CI'},
+    ],
+    invoices: [
+      {id:'fixture-cloudflare-1',provider:'cloudflare',invoice_number:'TEST-CF-001',account_label:'fixture cloud',amount_minor:500,currency:'USD',issued_on:'2026-10-25',due_on:'2026-10-30',status:'unverified'},
+      {id:'fixture-github-1',provider:'github',invoice_number:'TEST-GH-002',account_label:'fixture github',amount_minor:12000,currency:'KRW',issued_on:'2026-10-24',due_on:'2026-10-29',status:'paid'},
+    ],
+    budgets: [], renewals: [], usage: [],
+  }));
+});
 await page.route('**/api/control/overview', async route => {
   if (route.request().method() === 'OPTIONS') return route.fulfill(syntheticJson({ ok:true }));
   await route.fulfill(syntheticJson({ ok:true, services:[] }));
@@ -113,11 +142,34 @@ await page.route('https://ekodi.kr/api/control/ai/assist', async route => {
 });
 
 async function waitForAdminShell() {
-  await page.waitForFunction(() => document.documentElement.dataset.ekodiAdminReady === 'true', null, { timeout: 30000 });
-  await page.waitForFunction(() => window.EKODIAdminPanels && window.EKODIAdminSidebar, null, { timeout: 30000 });
-  await page.waitForFunction(expected => document.querySelectorAll('button[data-admin-global-group]').length >= expected, workAreas.length, { timeout: 30000 });
-  await page.waitForFunction(() => document.querySelectorAll('.admin-context-source .nav').length >= 1, null, { timeout: 30000 });
-  await page.waitForFunction(() => Boolean(document.documentElement.dataset.ekodiDesignEngine) && document.documentElement.dataset.ekodiDesignAudit === 'pass', null, { timeout: 30000 });
+  try {
+    await page.waitForFunction(() => document.documentElement.dataset.ekodiAdminReady === 'true', null, { timeout: 30000 });
+    await page.waitForFunction(() => window.EKODIAdminPanels && window.EKODIAdminSidebar, null, { timeout: 30000 });
+    await page.waitForFunction(expected => document.querySelectorAll('button[data-admin-global-group]').length >= expected, workAreas.length, { timeout: 30000 });
+    await page.waitForFunction(() => document.querySelectorAll('.admin-context-source .nav').length >= 1, null, { timeout: 30000 });
+    await page.waitForFunction(() => Boolean(document.documentElement.dataset.ekodiDesignEngine) && document.documentElement.dataset.ekodiDesignAudit === 'pass', null, { timeout: 30000 });
+  } catch (error) {
+    // Diagnostic is deliberately read-only and credential-free: only booleans,
+    // same-origin pathnames and bounded UI state are retained.
+    const state = await page.evaluate(() => ({
+      ready:document.documentElement.dataset.ekodiAdminReady || '',
+      booting:document.documentElement.dataset.ekodiAdminBooting || '',
+      bootAsset:document.documentElement.dataset.ekodiAdminBootAsset || '',
+      degraded:document.documentElement.dataset.ekodiAdminDegraded || '',
+      sessionDegraded:document.documentElement.dataset.ekodiSessionDegraded || '',
+      appHidden:Boolean(document.querySelector('#app')?.hidden),
+      loginVisible:Boolean(document.querySelector('#loginScreen') && !document.querySelector('#loginScreen').hidden),
+      hasCore:Boolean(window.EKODIAdminCore),
+      hasPanels:Boolean(window.EKODIAdminPanels),
+      hasSidebar:Boolean(window.EKODIAdminSidebar),
+      hasToken:Boolean(sessionStorage.getItem('ekodi-auth-token')),
+      scripts:[...document.querySelectorAll('script[src]')].filter(node => node.src.startsWith(location.origin)).map(node => new URL(node.src).pathname).slice(0,20),
+    })).catch(() => ({ unavailable:true }));
+    const diagnostic = { state, sessionRouteHits, httpErrors:adminHttpErrors.slice(-10), pageErrorCount:pageErrors.length, consoleErrorCount:consoleErrors.length };
+    console.error('[PROD-E2E] admin-shell-timeout ' + JSON.stringify(diagnostic));
+    await page.screenshot({ path:path.join(artifactsDir, 'admin-boot-timeout.png'), fullPage:true }).catch(() => {});
+    throw error;
+  }
 }
 
 async function resetAdminShellIfPoisoned() {
@@ -532,6 +584,75 @@ for (const [id, group] of menus) {
     throw new Error(`${id} did not render a visible non-empty panel: ${JSON.stringify(visiblePanel)}`);
   }
   if (id === 'campus' && visiblePanel.id !== 'campusPanel') throw new Error(`Campus rendered unexpected panel: ${visiblePanel.id || '(no id)'}`);
+  if (id === 'infra-costs') {
+    // PROD-E2E: accepting a DOM-only panel can still screenshot a different
+    // section when the Admin workspace retains a previous scroll position.
+    await page.waitForFunction(() => {
+      const panel=document.querySelector('#ekodiInfraCosts');
+      return panel && !panel.hidden && !panel.classList.contains('hidden-panel')
+        && panel.querySelectorAll('[data-infra-invoices] tr').length===2;
+    }, null, {timeout:15000});
+    const geometry=await page.evaluate(() => {
+      const panel=document.querySelector('#ekodiInfraCosts');
+      const main=document.querySelector('.app>main');
+      const rect=panel.getBoundingClientRect();
+      const mainRect=main.getBoundingClientRect();
+      const x=Math.min(innerWidth-10,Math.round(rect.left+Math.min(280,rect.width/2)));
+      const y=Math.min(innerHeight-10,Math.round(rect.top+35));
+      const hit=document.elementFromPoint(x,Math.max(10,y));
+      return {
+        panelTop:Math.round(rect.top),panelWidth:Math.round(rect.width),
+        mainWidth:Math.round(mainRect.width),viewportWidth:innerWidth,
+        mainScroll:Math.round(main.scrollTop),
+        hitInPanel:Boolean(hit&&panel.contains(hit)),hitTag:hit?.tagName||'',
+        heading:panel.querySelector('h2')?.textContent?.trim()||'',
+      };
+    });
+    if(geometry.heading!=='비용·인프라 관리'||geometry.panelTop < -5||geometry.panelTop>200||
+       geometry.mainScroll>30||geometry.panelWidth<geometry.mainWidth*.75||!geometry.hitInPanel)
+      throw new Error('INFRA_COST_VISIBLE_VIEWPORT_E2E failed: '+JSON.stringify(geometry));
+    console.log('[PROD-E2E] infra-costs desktop viewport and heading verified: '+JSON.stringify(geometry));
+    await page.screenshot({path:path.join(artifactsDir,'infra-costs-desktop-verified.png'),fullPage:false});
+
+    const search=page.locator('#ekodiInfraCosts [data-infra-invoice-search]');
+    const status=page.locator('#ekodiInfraCosts [data-infra-invoice-filter]');
+    const count=page.locator('#ekodiInfraCosts [data-infra-filter-count]');
+    await search.fill('TEST-CF-001');
+    if((await count.textContent())?.trim()!=='1 / 2건 표시')throw new Error('INFRA_COST_SEARCH_E2E failed');
+    await status.selectOption('paid');
+    if((await count.textContent())?.trim()!=='0 / 2건 표시')throw new Error('INFRA_COST_FILTER_E2E failed');
+    await page.locator('#ekodiInfraCosts [data-infra-filter-reset]').click();
+    if((await count.textContent())?.trim()!=='2 / 2건 표시')throw new Error('INFRA_COST_FILTER_RESET_E2E failed');
+    await page.locator('#ekodiInfraCosts [data-infra-open-invoice]').click();
+    if(!(await page.locator('#ekodiInfraCosts [data-infra-invoice-editor]').evaluate(node=>node.open)))
+      throw new Error('INFRA_COST_INVOICE_EDITOR_E2E failed');
+
+    await page.setViewportSize({width:390,height:844});
+    try {
+      const mobile=await page.evaluate(()=>{
+        const p=document.querySelector('#ekodiInfraCosts');
+        const summary=p.querySelector('.infra-summary');
+        const providers=p.querySelector('.infra-providers');
+        const table=p.querySelector('.infra-table-wrap');
+        const colCount=node=>getComputedStyle(node).gridTemplateColumns.split(' ').filter(Boolean).length;
+        return {
+          panelWidth:Math.round(p.getBoundingClientRect().width),
+          viewport:innerWidth,documentExcess:document.documentElement.scrollWidth-innerWidth,
+          summaryColumns:colCount(summary),providerColumns:colCount(providers),
+          invoiceTableScrollable:table.scrollWidth>table.clientWidth,
+        };
+      });
+      if(mobile.summaryColumns!==1||mobile.providerColumns!==1||
+         mobile.panelWidth>mobile.viewport+2||mobile.documentExcess>2||!mobile.invoiceTableScrollable)
+        throw new Error('INFRA_COST_MOBILE_LAYOUT_E2E failed: '+JSON.stringify(mobile));
+      await page.locator('#ekodiInfraCosts').scrollIntoViewIfNeeded();
+      console.log('[PROD-E2E] infra-costs mobile responsive viewport verified: '+JSON.stringify(mobile));
+      await page.screenshot({path:path.join(artifactsDir,'infra-costs-mobile-verified.png'),fullPage:false});
+    } finally {
+      await page.setViewportSize({width:1440,height:1000});
+      await page.evaluate(()=>{const main=document.querySelector('.app>main');if(main)main.scrollTop=0});
+    }
+  }
 
   if (id === 'engine-all') {
     // ENGINE_CATALOG_STYLE_E2E: a non-empty DOM is not enough; CSS must load
@@ -574,6 +695,108 @@ for (const [id, group] of menus) {
     } finally {
       await page.setViewportSize({ width: 1440, height: 1000 });
     }
+  }
+  // ADMIN-PANEL-VISIBILITY-20261028: a selected menu is not genuinely visible
+  // when the architecture panel is wrongly rendered above it by !important CSS.
+  if (id !== 'architecture') {
+    const architectureLeak = await page.evaluate(() => {
+      const panel = document.querySelector('.content > .architecture[data-panel~="architecture"]');
+      if (!panel) return null;
+      const style = getComputedStyle(panel);
+      const rect = panel.getBoundingClientRect();
+      return style.display !== 'none' && style.visibility !== 'hidden'
+        && rect.width > 0 && rect.height > 0
+        ? { display:style.display, width:rect.width, height:rect.height, hidden:panel.hidden,
+            hiddenClass:panel.classList.contains('hidden-panel') } : null;
+    });
+    if (architectureLeak) throw new Error(`${id}: hidden architecture panel overpaints active workspace: ${JSON.stringify(architectureLeak)}`);
+  }
+
+  if (id === 'social') {
+    // Read-only runtime interactions on the actually deployed Social Hub.
+    // Never connect accounts, change settings, or invoke publish mutations.
+    const tabKeys = ['sites','connections','publishing','policy'];
+    const tabs = page.locator('#socialAdmin .social-workspace-tabs [role="tab"]');
+    if (await tabs.count() !== tabKeys.length) throw new Error('social: expected exactly four operational tabs');
+    try {
+      await page.waitForFunction(() =>
+        document.querySelectorAll('#socialAdmin [data-site-channel-admin]').length > 0,
+        null, { timeout:12000 });
+    } catch (error) {
+      // Read-only evidence for the repeated production timeout. Never log tokens or page HTML.
+      const diagnosis = await page.evaluate(async () => {
+        const status = document.querySelector('#socialAdmin .social-site-directory .social-admin-status');
+        let catalog = {};
+        try {
+          const response = await fetch('/admin-service-catalog.js', { cache:'no-store', credentials:'same-origin' });
+          catalog = {
+            httpStatus: response.status,
+            contentType: response.headers.get('content-type') || '',
+            pathname: new URL(response.url).pathname,
+          };
+        } catch (requestError) {
+          catalog = { error: String(requestError?.message || requestError).slice(0,180) };
+        }
+        return {
+          directoryState: status?.dataset.state || 'missing',
+          directoryMessage: (status?.textContent || '').slice(0,280),
+          renderedCards: document.querySelectorAll('#socialAdmin [data-site-channel-admin]').length,
+          catalog,
+        };
+      });
+      throw new Error('social: directory did not render: ' + JSON.stringify(diagnosis), { cause:error });
+    }
+    for (const tab of tabKeys) {
+      await page.locator(`#social-tab-${tab}`).click();
+      const tabState = await page.evaluate(key => {
+        const current = document.querySelector(`#social-tab-${key}`);
+        const panel = document.querySelector(`#social-view-${key}`);
+        const tabs = [...document.querySelectorAll('#socialAdmin .social-workspace-tabs [role="tab"]')];
+        const panels = [...document.querySelectorAll('#socialAdmin [role="tabpanel"]')];
+        return {
+          selected:current?.getAttribute('aria-selected'),
+          hidden:panel?.hidden,
+          rendered:panel ? getComputedStyle(panel).display !== 'none' : false,
+          selectedCount:tabs.filter(node=>node.getAttribute('aria-selected')==='true').length,
+          renderedCount:panels.filter(node=>getComputedStyle(node).display !== 'none').length,
+        };
+      }, tab);
+      if (tabState.selected !== 'true' || tabState.hidden || !tabState.rendered
+        || tabState.selectedCount !== 1 || tabState.renderedCount !== 1) {
+        throw new Error(`social: ${tab} tab did not exclusively render its panel: ${JSON.stringify(tabState)}`);
+      }
+    }
+    await page.locator('#social-tab-sites').click();
+    const cards = page.locator('#socialAdmin [data-site-channel-admin]');
+    const siteCount = await cards.count();
+    const search = page.locator('#socialAdmin .social-directory-toolbar input[type="search"]');
+    await search.fill('__EKODI_UNMATCHABLE_SEARCH_PROBE__');
+    const hiddenCount = await cards.evaluateAll(nodes=>nodes.filter(node=>node.hidden).length);
+    if (hiddenCount !== siteCount) throw new Error(`social: site search did not hide unmatched entries (${hiddenCount}/${siteCount})`);
+    await search.fill('');
+    const restoredCount = await cards.evaluateAll(nodes=>nodes.filter(node=>!node.hidden).length);
+    if (restoredCount !== siteCount) throw new Error(`social: clearing search did not restore site cards (${restoredCount}/${siteCount})`);
+
+    await page.setViewportSize({width:390,height:844});
+    const mobile = await page.evaluate(() => {
+      const host = document.querySelector('#socialAdmin');
+      const tabs = document.querySelector('#socialAdmin .social-workspace-tabs');
+      const rect = host?.getBoundingClientRect();
+      return {
+        hostLeft:rect?.left, hostRight:rect?.right, viewport:innerWidth,
+        tabsHeight:tabs?.getBoundingClientRect().height,
+        tabsScrollWidth:tabs?.scrollWidth,
+        tabsClientWidth:tabs?.clientWidth,
+        selected:document.querySelector('#social-tab-sites')?.getAttribute('aria-selected'),
+      };
+    });
+    if (mobile.hostLeft < -2 || mobile.hostRight > mobile.viewport+2 ||
+        mobile.tabsHeight < 40 || mobile.selected !== 'true') {
+      throw new Error('social: responsive workspace clipping or tabs lost on 390px mobile: '+JSON.stringify(mobile));
+    }
+    await page.screenshot({path:path.join(artifactsDir,'menu-social-mobile.png'),fullPage:false});
+    await page.setViewportSize({width:1440,height:1000});
+    console.log(`[PROD-E2E] social: four tabs, ${siteCount} site cards, search reset, mobile 390px and architecture isolation verified`);
   }
   results.push({ id, group, kind: 'panel', ok: true, detail: `${visiblePanel.id || visiblePanel.tag}:${visiblePanel.textLength}` });
   console.log(`[PROD-E2E] ${id}: ok ${visiblePanel.id || visiblePanel.tag}:${visiblePanel.textLength}`);

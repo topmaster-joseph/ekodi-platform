@@ -38,3 +38,12 @@ test('readable system structure uses scoped layout and responsive reflow, never 
   assert.match(mapCss, /\.structure-section-nav button:focus-visible/);
   assert.doesNotMatch(mapCss, /\.sidebar\{/);
 });
+
+test('architecture never overpaints inactive Social Hub or other admin panels', () => {
+  assert.match(mapCss, /ADMIN-PANEL-VISIBILITY-20261028/);
+  assert.match(mapCss, /\.architecture\[data-panel~="architecture"\]\.hidden-panel\s*,/);
+  assert.match(mapCss, /\.architecture\[data-panel~="architecture"\]\[hidden\]\s*\{\s*display:none!important/);
+  assert.match(mapCss, /\.architecture\[data-panel~="architecture"\]:not\(\.hidden-panel\):not\(\[hidden\]\)/);
+  // Layout-level display:block!important must be scoped to the active panel.
+  assert.doesNotMatch(mapCss, /\.architecture\[data-panel~="architecture"\]\s*\{\s*box-sizing:border-box!important;\s*display:block!important/);
+});

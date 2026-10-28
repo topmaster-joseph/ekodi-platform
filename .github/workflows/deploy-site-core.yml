@@ -533,7 +533,8 @@ jobs:
   deploy:
     needs: [staging_gate, reliability_gate]
     runs-on: ubuntu-latest
-    timeout-minutes: 22
+    # 227 registered routes exceeded22m across candidate/production; preserve rollback headroom.
+    timeout-minutes: 45
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -703,7 +704,7 @@ jobs:
           test -f deploy/manifests/shared-site.worker.json
           grep -Fq '/auth-workspace-target.js' canonical-surface-router.js
           grep -Fq '/marketing-ai-admin.js' site-worker.js
-          grep -Fq "const LIVE = 'https://marketing.ekodi.kr/';" marketing-ai-admin.js
+          grep -Fq "const LIVE = 'https://ekodi.kr/ekodibiz/marketing-ai/';" marketing-ai-admin.js
           grep -Fq 'marketing-ai-user-link' marketing-ai-admin.js
           grep -Fq "styles: ['marketing-ai-admin.css']" admin-demand-loader.js
           grep -Fq "scripts: ['marketing-ai-admin.js']" admin-demand-loader.js

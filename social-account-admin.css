@@ -145,6 +145,14 @@ html body.admin-compact.ekodi-admin-design-engine .content > #ekodiSocialAccount
 .ekodi-social-card-counts small{font-size:12px;color:#68768a}
 .ekodi-social-empty{margin-top:14px!important;padding:16px;border:1px dashed #cbd5e1;border-radius:10px;color:#5d6d83}
 .ekodi-social-lower{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start;min-width:0}
+.ekodi-social-account-toolbar{display:grid;grid-template-columns:minmax(240px,2fr) minmax(130px,1fr) minmax(150px,1fr);gap:12px;align-items:end}
+.ekodi-social-account-toolbar label{display:grid;gap:6px;min-width:0;font-size:12px;font-weight:700;color:#46566b}
+.ekodi-social-account-toolbar :is(input,select){width:100%;min-height:44px;padding:10px 13px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#1e293b;font-size:14px}
+.ekodi-social-account-toolbar :is(input,select):focus-visible{outline:3px solid #a7c8ed;outline-offset:2px}
+.ekodi-social-account-count{margin:0!important;font-size:12px;color:#64748b;font-weight:650}
+.ekodi-social-account-empty{margin:0!important;padding:16px;border:1px dashed #cbd5e1;border-radius:10px;color:#5d6d83}
+.ekodi-social-accounts [data-social-provider-card][hidden],
+.ekodi-social-accounts [data-social-record][hidden]{display:none!important}
 .ekodi-social-records{display:grid;gap:8px;margin-top:16px}
 .ekodi-social-record{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px;border:1px solid #e3e9f0;border-radius:10px}
 .ekodi-social-record div{min-width:0}
@@ -159,11 +167,15 @@ html body.admin-compact.ekodi-admin-design-engine .content > #ekodiSocialAccount
   .ekodi-social-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
 }
 @media(max-width:990px){
+  .ekodi-social-account-toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ekodi-social-account-toolbar label:first-child{grid-column:1/-1}
   .ekodi-social-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
   .ekodi-social-metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important}
   .ekodi-social-lower{grid-template-columns:minmax(0,1fr)}
 }
 @media(max-width:760px){
+  .ekodi-social-account-toolbar{grid-template-columns:minmax(0,1fr)}
+  .ekodi-social-account-toolbar label:first-child{grid-column:auto}
   html body.admin-compact.ekodi-admin-design-engine .content > #ekodiSocialAccountRegistry,
   .ekodi-social-accounts{padding:12px!important;gap:12px}
   .ekodi-social-head{align-items:stretch}
