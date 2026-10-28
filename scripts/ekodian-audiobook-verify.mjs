@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // EKODIAN-AUDIOBOOK-RELEASE-001 — offline private asset validation before protected release.
 // This tool NEVER changes catalog flags, uploads to R2 or bills a speech provider.
-import { readFileSync, statSync, writeFileSync } from 'node:fs';
+import { readFileSync, statSync, writeFileSync, readdirSync } from 'node:fs';
 import { resolve, relative, sep } from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -45,7 +45,8 @@ export function releasePreflight(plan, examined) {
     const file=examined.get(number);
     if (!file) issues.push('MISSING_MP3_'+number);
     else if (!file.ready) issues.push('UNUSABLE_MP3_'+number);
-    if (track?.scriptFingerprint && file?.scriptFingerprint !== track.scriptFingerprint) issues.push('SCRIPT_EDITION_MISMATCH_'+number);
+    if (!track?.scriptFingerprint || !file?.scriptFingerprint || file.scriptFingerprint !== track.scriptFingerprint) issues.push('SCRIPT_EDITION_MISMATCH_'+number);
+    if (!file?.sha256 || file.sourceSha256 !== file.sha256) issues.push('AUDIO_PROVENANCE_MISMATCH_'+number);
   }
   for (const number of examined.keys()) if (!seen.has(number)) issues.push('UNEXPECTED_MP3_'+number);
   return { ready: issues.length===0, issues };
@@ -73,12 +74,25 @@ export function inspectLocalRelease(plan, audioDir, { ffprobe = execFileSync } =
       const bytes=readFileSync(path);
       const probe=JSON.parse(ffprobe('ffprobe',['-v','error','-show_streams','-show_format','-of','json',path], {encoding:'utf8',timeout:20000}));
       const quality=validateProbe(probe);
-      const meta={number, filename, bytes:size, sha256:digest(bytes), scriptFingerprint:track.scriptFingerprint||null,
+      // A generated audio asset must have independent, renderer-produced provenance.
+      // Never claim verified script continuity by copying the plan fingerprint.
+      const receiptPath=safeAudioPath(audioDir,filename).replace(/\.mp3$/, '.provenance.json');
+      const receipt=JSON.parse(readFileSync(receiptPath,'utf8'));
+      const meta={number, filename, bytes:size, sha256:digest(bytes),
+        sourceSha256:receipt.audioSha256||null,scriptFingerprint:receipt.scriptFingerprint||null,
         ...quality};
       examined.set(number,meta); entries.push(meta);
     } catch(error) {
       examined.set(number,{ready:false,issues:['MP3_NOT_VERIFIED']});
       entries.push({number,filename,ready:false,issues:['MP3_NOT_VERIFIED']});
+    }
+  }
+  // Treat unexpected MP3 files as release blockers instead of silently ignoring them.
+  for (const filename of readdirSync(audioDir)) {
+    const match=/^chapter-([0-9]{3})\.mp3$/.exec(filename);
+    if (match && !examined.has(Number(match[1]))) {
+      examined.set(Number(match[1]),{ready:false,issues:['UNEXPECTED_FILE']});
+      entries.push({number:Number(match[1]),filename,ready:false,issues:['UNEXPECTED_FILE']});
     }
   }
   return {examined, entries};
