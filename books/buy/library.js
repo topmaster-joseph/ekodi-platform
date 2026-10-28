@@ -14,6 +14,50 @@
     } catch (e) { alert(e.message); }
     finally { button.disabled = false; button.textContent = label; }
   }
+  // Licensed audio files are requested only after the server confirms ebook ownership.
+  let activeAudioUrl = null;
+  async function openAudiobook(item, host, trigger) {
+    trigger.disabled = true;
+    const prior = trigger.textContent;
+    trigger.textContent = '확인 중…';
+    try {
+      const info = await C.api('audiobook/' + encodeURIComponent(item.id));
+      host.replaceChildren();
+      if (info.status !== 'ready' || !info.tracks?.length) {
+        const p = document.createElement('p'); p.textContent = '고급 음성 오디오북을 제작하고 있습니다. 준비되면 이곳에서 무료로 들을 수 있습니다.';
+        host.append(p); return;
+      }
+      const player = document.createElement('audio'); player.controls = true; player.preload = 'none';
+      player.setAttribute('aria-label', item.title + ' 오디오북 재생기');
+      const list = document.createElement('div'); list.className = 'audio-track-list';
+      for (const track of info.tracks) {
+        const play = document.createElement('button'); play.type = 'button';
+        play.textContent = track.number + '. ' + track.title;
+        play.addEventListener('click', async () => {
+          play.disabled = true; const saved = play.textContent; play.textContent = '불러오는 중…';
+          try {
+            const session = await C.session();
+            const response = await fetch(C.BASE + '/api/commerce/audiobook/' + encodeURIComponent(item.id) + '/track/' + track.number, {
+              headers: { authorization: 'Bearer ' + (session?.accessToken || '') }, cache: 'no-store',
+            });
+            if (!response.ok) {
+              const err = await response.json().catch(() => ({}));
+              throw new Error(err.error || '음원을 불러오지 못했습니다.');
+            }
+            const blob = await response.blob();
+            if (activeAudioUrl) { player.pause(); URL.revokeObjectURL(activeAudioUrl); }
+            activeAudioUrl = URL.createObjectURL(blob);
+            player.src = activeAudioUrl;
+            await player.play();
+          } catch (e) { alert(e.message); }
+          finally { play.disabled = false; play.textContent = saved; }
+        });
+        list.append(play);
+      }
+      host.append(player, list);
+    } catch (error) { alert(error.message); }
+    finally { trigger.disabled = false; trigger.textContent = prior; }
+  }
   async function load() {
     try {
       const data = await C.api('library');
@@ -28,6 +72,14 @@
         const btn = document.createElement('button'); btn.type = 'button';
         btn.textContent = item.downloadReady ? 'EPUB 받기' : '파일 준비 중'; btn.disabled = !item.downloadReady;
         btn.addEventListener('click', () => download(item, btn));
+        if (item.audiobookBonus?.included === true) {
+          const area = document.createElement('div'); area.className = 'audiobook-bonus';
+          const label = document.createElement('p'); label.textContent = '구매자 전용 무료 보너스 · 고품질 오디오북';
+          const show = document.createElement('button'); show.type = 'button';
+          show.textContent = item.audiobookBonus.status === 'preparing' ? '오디오북 준비 현황' : '오디오북 듣기';
+          show.addEventListener('click', () => openAudiobook(item, area, show));
+          info.append(label, show, area);
+        }
         row.append(C.cover(item), info, btn); list.append(row);
       }
     } catch (e) {
