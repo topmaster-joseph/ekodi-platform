@@ -89,23 +89,28 @@ export async function recordEkodiFinalPromotionApproval(db,input={}){
     approvedByRole:'super_admin',approvedBy:actor,
     approvalId,stateVersion,approvedAt,
   };
-  // Conditional INSERT is attached to the new CAS task version, so a failed
-  // update cannot issue a valid approval. D1 batch is one transaction.
+  // Fail the D1 transaction (NOT NULL event.task_id) if the CAS did not
+  // persist or the audit already exists. An INSERT of zero rows would otherwise
+  // silently commit a version bump without a durable approval.
   const update=db.prepare(`UPDATE ekodi_orchestrator_tasks SET state_version=state_version+1,updated_at=?
     WHERE task_id=? AND state='staging' AND state_version=? AND branch_ref=?
     AND evidence_json=? AND permission_class='delegated' AND deployment_requested=1`)
     .bind(approvedAt,taskId,expectedStateVersion,branchRef,row.evidence_json);
   const insert=db.prepare(`INSERT INTO ekodi_orchestrator_task_events
     (task_id,seq,from_state,to_state,actor,reason,evidence_json,created_at)
-    SELECT ?,COALESCE((SELECT MAX(seq) FROM ekodi_orchestrator_task_events WHERE task_id=?),0)+1,
-      'staging','staging',?,'final_promotion_approval_recorded',?,?
-    FROM ekodi_orchestrator_tasks
-    WHERE task_id=? AND state='staging' AND state_version=? AND branch_ref=?
-      AND NOT EXISTS (SELECT 1 FROM ekodi_orchestrator_task_events
+    SELECT CASE WHEN EXISTS (
+        SELECT 1 FROM ekodi_orchestrator_tasks
+        WHERE task_id=? AND state='staging' AND state_version=?
+          AND branch_ref=? AND evidence_json=?
+      ) AND NOT EXISTS (
+        SELECT 1 FROM ekodi_orchestrator_task_events
         WHERE task_id=? AND reason='final_promotion_approval_recorded'
-          AND json_extract(evidence_json,'$.approvalId')=?)`)
-    .bind(taskId,taskId,`super-admin:${actor}`,JSON.stringify(receipt),approvedAt,
-      taskId,stateVersion,branchRef,taskId,approvalId);
+          AND json_extract(evidence_json,'$.approvalId')=?
+      ) THEN ? ELSE NULL END,
+      COALESCE((SELECT MAX(seq) FROM ekodi_orchestrator_task_events WHERE task_id=?),0)+1,
+      'staging','staging',?,'final_promotion_approval_recorded',?,?`)
+    .bind(taskId,stateVersion,branchRef,row.evidence_json,taskId,approvalId,taskId,taskId,
+      `super-admin:${actor}`,JSON.stringify(receipt),approvedAt);
   try{
     const operations=await db.batch([update,insert]);
     if(changes(operations?.[0])!==1||changes(operations?.[1])!==1){
