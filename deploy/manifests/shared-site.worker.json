@@ -1,5 +1,5 @@
 {
-  "version": 117,
+  "version": 118,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -3715,6 +3715,8 @@
           "data-launch-guidance",
           "data-guide-agenda",
           "progressSaveNext",
+          "data-preparation-drafts",
+          "preparationPacketText",
           "intervalConflict",
           "progressFilter",
           "data-progress-key",
@@ -3737,6 +3739,8 @@
           "data-launch-guidance",
           "data-guide-agenda",
           "progressSaveNext",
+          "data-preparation-drafts",
+          "preparationPacketText",
           "intervalConflict",
           "progressFilter",
           "data-progress-key",
