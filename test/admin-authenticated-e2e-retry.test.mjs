@@ -134,7 +134,7 @@ test('architecture focus is isolated, read-only and not mistaken for all-menu ac
   assert.match(worker,/verifyArchitectureResponsive\(trigger, alreadyActive, started\)/);
   assert.match(worker,/\[\[1440,3\],\[1366,3\],\[768,2\],\[390,1\],\[320,1\]\]/);
   assert.match(worker,/ADMIN_ARCHITECTURE_FOCUSED_LIVE_E2E/);
-  assert.match(worker,/architecture-.*\\.png/);
+  assert.ok(worker.includes("'architecture-'+width+'.png'"));
   assert.match(worker,/const sample = await page\.evaluate/);
   assert.match(worker,/sample\.overflow>2/);
   assert.match(worker,/sample\.layerOverflow>2/);
