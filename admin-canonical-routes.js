@@ -4,7 +4,7 @@
 // canonical /admin/{group}/{section} address resolvable; the entry handoff then
 // rewrites it to the v3 canonical path.
 const SECTION_GROUP=Object.freeze({
-  'platform-overview':'home',
+  'platform-overview':'home','growth-os':'ai',
   'engine-all':'services','engine-core':'services','engine-common':'services','engine-operations':'services','engine-professional':'services','engine-ai':'services','engine-integration':'services','engine-preview':'services',
   'sites-all':'sites','menu-templates':'sites','sites-core':'sites','sites-business':'sites','sites-community':'sites','sites-clients':'sites','sites-knowledge':'sites','sites-communication':'sites','sites-worklife':'sites','sites-other':'sites','sites-preparing':'sites','sites-internal':'sites','sites-user':'sites','sites-customer-partner':'sites','sites-independent':'sites',
   campus:'sites',clients:'sites','site-chrome':'sites',organization:'sites',workspace:'sites','cheonggye-members':'sites',
@@ -95,6 +95,7 @@ function routeFromPath(pathname){
   if(parts.length===1)return Object.freeze({section:COMMAND_HOME,group:'home',detailSegments:Object.freeze([])});
   const group=String(parts[1]||'').toLowerCase();
   if(parts.length===2){
+    if(group==='growth-os')return Object.freeze({section:'growth-os',group:'ai',detailSegments:Object.freeze([])});
     const section=group==='home'?COMMAND_HOME:(GROUP_DEFAULT[group]||V2_GROUP_DEFAULT[group]||LEGACY_GROUP_DEFAULT[group]||'');
     return section?Object.freeze({section,group,detailSegments:Object.freeze([])}):null;
   }
