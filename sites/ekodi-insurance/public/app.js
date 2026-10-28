@@ -26,10 +26,18 @@ function uid(){return crypto?.randomUUID?.()||String(Date.now())+Math.random().t
 function esc(v=''){return String(v).replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]));}
 function show(view){const exists=views.some(v=>v.id===view);const target=exists?view:'home';views.forEach(v=>v.classList.toggle('active',v.id===target));history.replaceState(null,'',target==='home'?'#home':'#'+target);window.scrollTo({top:0,behavior:'smooth'});if(target==='advisor')queueMicrotask(()=>document.getElementById('aiChatInput')?.focus());}
 function toast(msg){const el=document.createElement('div');el.className='toast';el.textContent=msg;document.body.append(el);setTimeout(()=>el.remove(),2400);}
-function ensureChatStyles(){if(document.querySelector('link[href="/chat.css"]'))return;const link=document.createElement('link');link.rel='stylesheet';link.href='/chat.css';document.head.append(link);}
+function ensureChatStyles(){
+  if(document.querySelector('link[data-insurance-chat]'))return;
+  const link=document.createElement('link');
+  link.rel='stylesheet';
+  link.dataset.insuranceChat='true';
+  // The canonical /insurance route must not request /chat.css at the apex root.
+  link.href=location.pathname==='/insurance'||location.pathname.startsWith('/insurance/')?'/insurance/chat.css':'/chat.css';
+  document.head.append(link);
+}
 
 document.addEventListener('click',e=>{const target=e.target.closest('[data-view]');if(target)show(target.dataset.view);});
-document.getElementById('memberBtn').addEventListener('click',()=>toast('통합회원 연결은 민감정보 저장구조와 권한 검증 후 활성화합니다.'));
+document.getElementById('memberBtn')?.addEventListener('click',()=>toast('통합회원 연결은 민감정보 저장구조와 권한 검증 후 활성화합니다.'));
 
 function diagnosisPriority(data){
   let flags=0;

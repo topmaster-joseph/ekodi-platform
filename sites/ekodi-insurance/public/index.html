@@ -21,9 +21,8 @@
       <button data-view="claims">청구도움</button>
       <button data-view="compare">비교 준비</button>
       <button data-view="advisor">상담</button>
-      <button data-view="privacy">Privacy</button>
+      <button data-view="privacy">개인정보</button>
     </nav>
-    <button id="memberBtn" class="ghost">통합회원 준비중</button>
   </header>
 
   <main id="app" class="shell">
@@ -37,10 +36,10 @@
             <button class="primary" data-view="diagnosis">3분 AI 보험점검</button>
             <button class="secondary" data-view="my-insurance">내 보험 정리하기</button>
           </div>
-          <p class="notice">현재 스테이징은 민감정보를 서버로 전송하지 않습니다. 입력 내용은 이 브라우저에만 임시 저장되며 언제든 전체 삭제할 수 있습니다.</p>
+          <p class="notice">보험목록·청구 메모·기본 AI 대화는 이 브라우저에 보관합니다. 실제 설계사 상담을 요청할 때만 이름과 연락처를 암호화해 전송하며, AI 대화 원문 공유는 별도로 선택할 수 있습니다.</p>
         </div>
         <aside class="score-card">
-          <span class="pill">STAGING · LOCAL ONLY</span>
+          <span class="pill">PRIVACY FIRST</span>
           <h2>보험관리 한눈에</h2>
           <div class="priority-card"><small>현재 점검상태</small><strong id="homePriority">아직 점검 전</strong><span id="homePriorityCopy">AI 점검을 시작하면 우선 확인할 항목을 보여드립니다.</span></div>
           <dl class="summary-list">
@@ -75,7 +74,7 @@
         <label>현재 보험 수<input name="policyCount" type="number" min="0" max="30" value="0" required /></label>
         <label>가장 걱정되는 위험<select name="concern" required><option value="">선택</option><option>큰 질병</option><option>병원비</option><option>사고·장해</option><option>소득중단</option><option>가족의 경제적 위험</option></select></label>
         <label class="wide">현재 가장 궁금한 점<textarea name="memo" rows="3" placeholder="질병명·주민번호 등 불필요한 민감정보는 입력하지 마세요. 예: 실손 보장은 있는데 전체 구조를 점검하고 싶어요."></textarea></label>
-        <div class="wide consent-box"><input id="diagnosisConsent" type="checkbox" required /><label for="diagnosisConsent"><strong>민감정보 입력 최소화 및 로컬 분석 확인</strong><span>건강·보험 관련 내용을 필요한 범위에서만 입력하며, 현재 스테이징에서는 서버·상담자·제3자에게 전송되지 않고 이 브라우저에서만 분석·임시 저장됨을 확인합니다.</span></label></div>
+        <div class="wide consent-box"><input id="diagnosisConsent" type="checkbox" required /><label for="diagnosisConsent"><strong>민감정보 입력 최소화 및 로컬 분석 확인</strong><span>건강·보험 관련 내용을 필요한 범위에서만 입력하며, 이 입력은 현재 브라우저에서만 분석·저장되며 별도 상담요청을 제출하지 않는 한 서버·상담자에게 전달되지 않음을 확인합니다.</span></label></div>
         <div class="wide"><button class="primary" type="submit">점검 결과 보기</button></div>
       </form>
       <div id="diagnosisResult" class="panel result-panel hidden" aria-live="polite"></div>
@@ -112,7 +111,7 @@
         <label>발생일<input name="date" type="date" required /></label>
         <label>등록 보험<select id="claimPolicy" name="policy"><option value="">선택 안 함</option></select></label>
         <label class="wide">상황을 간단히 적어 주세요<textarea name="detail" rows="3" required placeholder="주민번호·상세 진단기록 등은 입력하지 마세요. 예: 정형외과 통원 후 검사비와 진료비를 결제했습니다."></textarea></label>
-        <div class="wide consent-box"><input id="claimConsent" type="checkbox" required /><label for="claimConsent"><strong>청구 관련 민감정보 로컬 처리 확인</strong><span>현재 스테이징의 입력은 서버로 전송되지 않으며, AI 안내는 보험금 지급 확정이나 보험사의 심사를 대신하지 않음을 확인합니다.</span></label></div>
+        <div class="wide consent-box"><input id="claimConsent" type="checkbox" required /><label for="claimConsent"><strong>청구 관련 민감정보 로컬 처리 확인</strong><span>청구 준비 내용은 현재 브라우저에만 저장되고 보험사에 자동 접수되지 않으며, AI 안내는 보험금 지급 확정이나 보험사의 심사를 대신하지 않음을 확인합니다.</span></label></div>
         <div class="wide"><button class="primary" type="submit">청구 준비사항 확인</button></div>
       </form>
       <div id="claimResult" class="panel result-panel hidden" aria-live="polite"></div>
@@ -136,10 +135,10 @@
           <h3>상담 메모</h3>
           <label>이름<input name="name" required /></label>
           <label>연락 방법<select name="channel"><option>전화</option><option>문자</option><option>이메일</option></select></label>
-          <label>연락처<input name="contact" required placeholder="스테이징에서는 외부 전송되지 않습니다." /></label>
+          <label>연락처<input name="contact" required placeholder="상담요청 시 암호화해 전송됩니다." /></label>
           <label>상담 내용<textarea name="topic" rows="4" required placeholder="질병명 등 민감정보는 필요한 경우에도 최소화해 주세요."></textarea></label>
-          <div class="consent-box"><input id="advisorConsent" type="checkbox" required /><label for="advisorConsent"><strong>연락정보 로컬 저장 확인</strong><span>현재 단계에서는 실제 담당자에게 전송되지 않고 이 브라우저에만 임시 저장됩니다.</span></label></div>
-          <button class="primary" type="submit">상담 메모 임시 저장</button>
+          <div class="consent-box"><input id="advisorConsent" type="checkbox" required /><label for="advisorConsent"><strong>상담 연락정보 처리 안내</strong><span>상담요청 시 이름과 연락처를 암호화해 저장하며, AI 대화 원문 공유는 별도의 선택동의로만 처리합니다.</span></label></div>
+          <button class="primary" type="submit">설계사 상담 요청</button>
         </form>
       </div>
     </section>
@@ -148,9 +147,9 @@
       <div class="section-head"><div><p class="eyebrow">PRIVACY CENTER</p><h2>개인정보 보호센터</h2></div><button class="text-button" data-view="home">홈으로</button></div>
       <div class="privacy-grid">
         <article class="panel privacy-status">
-          <span class="pill">LOCAL ONLY</span>
+          <span class="pill">브라우저 중심 관리</span>
           <h3>지금 데이터는 어디에 있나요?</h3>
-          <p>이 스테이징 버전에서는 입력한 보험·청구·상담 정보가 EKODI 서버나 외부 분석서비스로 전송되지 않습니다. 현재 브라우저의 저장공간에만 임시 보관됩니다.</p>
+          <p>보험목록·청구 준비기록·기본 AI 대화는 현재 브라우저에 보관합니다. 설계사 상담을 직접 요청한 경우에만 연락정보를 암호화해 서버에 저장하며, AI 대화 원문은 별도 동의 시에만 공유합니다.</p>
           <dl class="summary-list">
             <div><dt>보험 기록</dt><dd id="privacyPolicyCount">0건</dd></div>
             <div><dt>청구 준비기록</dt><dd id="privacyClaimCount">0건</dd></div>
@@ -161,15 +160,15 @@
         <article class="panel">
           <h3>입력하지 않아야 할 정보</h3>
           <ul class="privacy-list"><li>주민등록번호·여권번호 등 고유식별정보</li><li>보험금 청구에 불필요한 상세 병력·검사 원문</li><li>보험증권 전체 이미지나 계좌 비밀번호</li><li>다른 사람의 건강·보험정보</li></ul>
-          <p class="muted">운영버전에서 서버 저장이 필요해지면 민감정보 동의, 보유기간, 접근권한, 삭제·철회 절차를 별도로 구현한 뒤에만 활성화합니다.</p>
+          <p class="muted">건강정보 등 추가 민감정보의 서버 보관 기능은 별도의 법적 근거·동의 및 보안 검토를 거친 경우에만 활성화합니다.</p>
         </article>
         <article class="panel wide-card">
-          <div class="panel-head"><div><h3>내 브라우저 데이터 관리</h3><p class="muted">스테이징 테스트가 끝났다면 아래 버튼으로 EKODI Insurance가 만든 로컬 기록을 한 번에 지울 수 있습니다.</p></div><button id="deleteAllDataBtn" class="danger-button">전체 데이터 삭제</button></div>
+          <div class="panel-head"><div><h3>내 브라우저 데이터 관리</h3><p class="muted">이 브라우저에 저장된 보험·청구·AI 기록을 모두 삭제할 수 있습니다. 서버에 접수한 설계사 상담요청은 아래의 상담요청 관리에서 별도로 철회해야 합니다.</p></div><button id="deleteAllDataBtn" class="danger-button">전체 데이터 삭제</button></div>
           <div id="deleteConfirm" class="delete-confirm hidden"><strong>정말 삭제할까요?</strong><span>보험 기록, 청구 준비기록, 상담 메모, AI 점검 결과가 이 브라우저에서 모두 삭제되며 되돌릴 수 없습니다.</span><div><button id="cancelDeleteBtn" class="secondary">취소</button><button id="confirmDeleteBtn" class="danger-button">모두 삭제</button></div></div>
         </article>
         <article class="panel wide-card boundary-panel">
           <h3>서비스 경계</h3>
-          <div class="boundary-grid"><div><strong>현재 제공</strong><span>자기점검, 보험목록 관리, 청구 준비, 상담 메모</span></div><div><strong>현재 미제공</strong><span>보험상품 비교·추천, 청약·계약체결, 보험금 지급판단, 보험사 API 자동청구</span></div><div><strong>운영 전 조건</strong><span>통합회원 영향검토, 민감정보 별도 동의, 분리 저장소, 권한·감사로그, 법규·모집자격 검토</span></div></div>
+          <div class="boundary-grid"><div><strong>현재 제공</strong><span>자기점검, 보험목록 관리, 청구 준비, AI 안내 및 상담요청</span></div><div><strong>현재 미제공</strong><span>보험상품 비교·추천, 청약·계약체결, 보험금 지급판단, 보험사 API 자동청구</span></div><div><strong>추가 기능 공개 조건</strong><span>통합회원 영향검토, 민감정보 별도 동의, 분리 저장소, 권한·감사로그, 법규·모집자격 검토</span></div></div>
         </article>
       </div>
     </section>
@@ -188,7 +187,7 @@
   <footer class="footer">
     <strong>EKODI Insurance</strong>
     <span>AI 보험점검 · 관리 · 청구준비</span>
-    <small>현재 스테이징은 특정 보험상품을 비교·추천하거나 청약·계약체결을 중개하지 않습니다. AI 결과는 일반적인 자기점검 및 상담 준비 정보이며 보험금 지급, 인수, 계약 체결을 확정하지 않습니다.</small>
+    <small>현재 특정 보험상품을 비교·추천하거나 청약·계약체결을 중개하지 않습니다. AI 결과는 일반적인 자기점검 및 상담 준비 정보이며 보험금 지급, 인수, 계약 체결을 확정하지 않습니다.</small>
   </footer>
 </body>
 </html>

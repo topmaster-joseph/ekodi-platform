@@ -14,6 +14,7 @@ test('insurance is a canonical public service path, not a workspace slug',()=>{
   assert.equal(insuranceAssetPath('/insurance'),'/insurance/');
   assert.equal(insuranceAssetPath('/insurance/advisor'),'/insurance/advisor');
   assert.equal(insuranceAssetPath('/insurance/styles.css'),'/insurance/styles.css');
+  assert.equal(insuranceAssetPath('/insurance/chat.css'),'/insurance/chat.css');
   assert.equal(insuranceAssetPath('/insurance/unknown.js'),null);
 });
 
@@ -24,17 +25,33 @@ test('insurance admin handoff follows the canonical apex admin path',async()=>{
   assert.equal(response.headers.get('x-ekodi-route'),'insurance-admin-handoff');
 });
 
+test('insurance chat stylesheet is served through the canonical route',async()=>{
+  const seen=[];
+  const response=await routeInsurancePublic(new Request('https://ekodi.kr/insurance/chat.css'),{
+    ASSETS:{fetch:async request=>{seen.push(new URL(request.url).pathname);return new Response('.chat-layout{}',{status:200,headers:{'content-type':'text/css'}});}}
+  });
+  assert.equal(response.status,200);
+  assert.deepEqual(seen,['/insurance/chat.css']);
+  assert.equal(response.headers.get('x-ekodi-route'),'public-insurance');
+  assert.match(await response.text(),/chat-layout/);
+});
+
 test('shared-site router owns insurance before workspace routing',async()=>{
-  const [router,wrangler,build,manifest,ecosystem,releaseManifest,stageWorkflow]=await Promise.all([
+  const [router,wrangler,build,manifest,ecosystem,releaseManifest,stageWorkflow,insuranceApp,bridge,index]=await Promise.all([
     read('platform-router-entry-worker.js'), read('wrangler.site.toml'), read('scripts/build.mjs'),
     read('ekodi-service-manifest.js'), read('config/ecosystem-services.json'),
     read('deploy/manifests/shared-site.worker.json'), read('.github/workflows/stage-shared-site-shell.yml'),
+    read('sites/ekodi-insurance/public/app.js'), read('sites/ekodi-insurance/public/server-bridge.js'),
+    read('sites/ekodi-insurance/public/index.html'),
   ]);
   const insuranceIndex=router.indexOf('isInsurancePublicPath(url.pathname)');
   const workspaceIndex=router.indexOf('isPublicWorkspacePath(url.pathname)');
   assert.ok(insuranceIndex>0 && workspaceIndex>insuranceIndex);
   assert.ok(wrangler.includes('"/insurance*"'));
   assert.ok(build.includes("sites/ekodi-insurance/public"));
+  assert.ok(insuranceApp.includes("'/insurance/chat.css'"));
+  assert.ok(bridge.includes('https://ekodi.kr/admin/services/insurance'));
+  assert.doesNotMatch(index,/현재 스테이징|스테이징 테스트|통합회원 준비중/);
   assert.ok(manifest.includes("url:'https://ekodi.kr/insurance'"));
   assert.ok(manifest.includes("state:'live'"));
   assert.ok(ecosystem.includes('"url": "https://ekodi.kr/insurance"'));

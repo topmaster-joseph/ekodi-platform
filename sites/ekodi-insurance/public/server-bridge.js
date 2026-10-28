@@ -241,7 +241,7 @@
     });
     root.querySelectorAll?.('.admin-preview-link').forEach(link => {
       link.textContent = IS_PRODUCTION_UI ? '상담관리 →' : '스테이징 상담관리 보기 →';
-      if (IS_PRODUCTION_UI) link.href = 'https://admin.ekodi.kr/';
+      if (IS_PRODUCTION_UI) link.href = 'https://ekodi.kr/admin/services/insurance';
     });
     renderWithdrawalPanel();
   }
