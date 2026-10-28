@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright';
+import { gotoAdminWith429Backoff } from './admin-e2e-429-backoff.mjs';
 import { adminMenuOrder, getAdminMenuForSection, getAdminMenuGroupForSection, getAdminMenuItem } from '../admin-menu-registry.js';
 
 const ADMIN_URL = process.env.ADMIN_URL || 'https://ekodi.kr/admin/';
@@ -187,12 +188,12 @@ async function resetAdminShellIfPoisoned() {
   });
   if (state.ready && state.panels && state.sidebar && state.token && state.visible) return false;
   console.warn(`[PROD-E2E] Admin shell degraded; bounded reload recovery ${JSON.stringify(state)}`);
-  await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
+  await gotoAdminWith429Backoff(page, ADMIN_URL);
   await waitForAdminShell();
   return true;
 }
 
-const response = await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
+const response = await gotoAdminWith429Backoff(page, ADMIN_URL);
 if (!response || response.status() !== 200) throw new Error(`Admin entry returned ${response?.status() ?? 'no response'}`);
 await waitForAdminShell();
 
