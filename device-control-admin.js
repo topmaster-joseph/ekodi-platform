@@ -641,14 +641,18 @@
     const storage = device.settings?.health?.storage || device.diagnostics?.storage || {};
     const startup = device.diagnostics?.startup || {};
     const updates = device.diagnostics?.updates || {};
-    const completedAt = device.diagnosticsAt || null;
-    const reportAge = completedAt ? Date.now() - new Date(completedAt).getTime() : Infinity;
+    // diagnosticsAt advances on ANY successful command in Device Control.
+    // A genuine post-cleanup diagnosis must be backed by its own succeeded receipt.
+    const telemetryAt = device.diagnosticsAt || null;
+    const reportAge = telemetryAt ? Date.now() - new Date(telemetryAt).getTime() : Infinity;
     const reportFresh = connected && Number.isFinite(reportAge) && reportAge >= 0 && reportAge < 30 * 60 * 1000;
     const commands = Array.isArray(device.recentCommands) ? device.recentCommands : [];
+    const lastDiagnostic = commands.find(row => row.type === 'diagnostics.collect' && row.status === 'succeeded') || null;
     const cleanup = commands.find(row => row.type === 'maintenance.temp_cleanup') || null;
     const cleanupPending = cleanup && ['queued', 'assigned', 'claimed'].includes(cleanup.status);
     const cleanupFinished = cleanup?.status === 'succeeded' && cleanup.completedAt;
-    const postCleanupDiagnostic = Boolean(cleanupFinished && completedAt && new Date(completedAt).getTime() > new Date(cleanup.completedAt).getTime());
+    const postCleanupDiagnostic = Boolean(cleanupFinished && lastDiagnostic?.completedAt &&
+      new Date(lastDiagnostic.completedAt).getTime() > new Date(cleanup.completedAt).getTime());
 
     const title = document.createElement('div');
     title.className = 'device-performance-heading';
@@ -662,7 +666,7 @@
     heading.append(eyebrow, h3, scope);
     const freshness = document.createElement('strong');
     freshness.className = 'device-performance-freshness';
-    freshness.textContent = !connected ? '오프라인 · 실측 중단' : reportFresh ? '최근 30분 이내 진단' : '이전 진단 · 재확인 필요';
+    freshness.textContent = !connected ? '오프라인 · 실측 중단' : reportFresh ? '최근 30분 이내 Agent 갱신' : '이전 상태 · 재확인 필요';
     title.append(heading, freshness);
 
     const stats = document.createElement('div');
@@ -691,7 +695,7 @@
     const assessment = document.createElement('p');
     assessment.className = 'device-performance-assessment';
     const recommendations = [];
-    if (!completedAt) recommendations.push('먼저 성능 진단을 실행하세요.');
+    if (!telemetryAt) recommendations.push('먼저 성능 진단을 실행하세요.');
     if (Number(snapshot.cpuLoadPct) >= 85) recommendations.push('CPU 사용률이 높게 관찰되었습니다. 프로세스를 점검하세요.');
     if (Number(snapshot.memoryUsedPct) >= 85) recommendations.push('메모리 사용량이 높습니다. 불필요한 앱을 확인하세요.');
     if (minFree !== null && minFree < 15) recommendations.push('디스크 여유가 15% 미만입니다. 사용자 확인 후 안전 정리를 검토하세요.');
@@ -710,7 +714,8 @@
 
     const proof = document.createElement('p');
     proof.className = 'device-performance-proof';
-    const diagnosis = completedAt ? '진단 기록 ' + timeLabel(completedAt) : '검증된 진단 기록 없음';
+    const diagnosis = (telemetryAt ? 'Agent 상태 갱신 ' + timeLabel(telemetryAt) : 'Agent 상태 기록 없음') +
+      ' · ' + (lastDiagnostic?.completedAt ? '진단 영수증 ' + timeLabel(lastDiagnostic.completedAt) : '최근 정밀 진단 영수증 없음');
     let action = '아직 안전 정리 실행 기록이 없습니다.';
     if (cleanupPending) action = '임시파일 정리 ' + commandStatus(cleanup.status) + ' · 실제 완료 영수증 대기';
     else if (cleanup?.status === 'failed') action = '임시파일 정리 실패 · 재시도 전 오류 확인 필요';
