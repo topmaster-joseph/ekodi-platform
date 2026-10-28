@@ -86,7 +86,7 @@ export async function revokeAudioClaim(env,req,id){
   if(!row||row.status!=='verified')return deny(409,'NOT_ACTIVE');
   const at=iso();
   await env.DB.batch([
-    env.DB.prepare("UPDATE books_audiobook_external_claims SET status='revoked',verified_by=?,revocation_reason=?,updated_at=? WHERE id=? AND status='verified'")
+    env.DB.prepare("UPDATE books_audiobook_external_claims SET status='revoked',revoked_by=?,revocation_reason=?,updated_at=? WHERE id=? AND status='verified'")
       .bind(user.email,b.reason,at,id),
     env.DB.prepare('UPDATE books_audiobook_external_grants SET revoked_at=? WHERE claim_id=? AND revoked_at IS NULL')
       .bind(at,id)
