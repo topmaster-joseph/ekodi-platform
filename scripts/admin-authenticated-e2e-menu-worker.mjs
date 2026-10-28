@@ -744,6 +744,17 @@ async function verifySocialInventory(tab, alreadyActive, started) {
   const widths=[320,390,768,1366,1440];
   for(const width of widths){
     await page.setViewportSize({width,height:980});
+    if(width<=390){
+      // Mobile navigation must not obscure the account workspace. Close it
+      // through the real keyboard handler rather than mutating DOM classes.
+      await page.keyboard.press('Escape');
+      await page.waitForFunction(()=>{
+        const sidebar=document.querySelector('.sidebar');
+        const rect=sidebar?.getBoundingClientRect();
+        return Boolean(sidebar&&!sidebar.classList.contains('open')&&
+          !document.body.classList.contains('admin-mobile-drawer-open')&&rect&&rect.right<=2);
+      },null,{timeout:5000});
+    }
     const state=await page.evaluate(()=>{
       const panel=document.querySelector('#ekodiSocialAccountRegistry');
       const rect=panel?.getBoundingClientRect();
@@ -753,14 +764,22 @@ async function verifySocialInventory(tab, alreadyActive, started) {
         const computed=getComputedStyle(node);
         return ids.includes('architecture')&&!node.hidden&&!node.classList.contains('hidden-panel')&&computed.display!=='none'&&computed.visibility!=='hidden';
       });
-      return {width:innerWidth,panelVisible:Boolean(rect&&rect.width>0&&rect.height>0&&style?.display!=='none'&&style?.visibility!=='hidden'),
+      const heading=panel?.querySelector('.ekodi-social-heading h2');
+      const headingRect=heading?.getBoundingClientRect();
+      const point=headingRect?document.elementFromPoint(
+        Math.min(innerWidth-4,Math.max(4,headingRect.left+12)),
+        Math.min(innerHeight-4,Math.max(4,headingRect.top+12))):null;
+      const headingAccessible=Boolean(headingRect&&headingRect.width>0&&headingRect.height>0&&
+        headingRect.left>=0&&headingRect.top>=0&&headingRect.top<innerHeight&&
+        point&&(point===heading||heading.contains(point)));
+      return {width:innerWidth,headingAccessible,panelVisible:Boolean(rect&&rect.width>0&&rect.height>0&&style?.display!=='none'&&style?.visibility!=='hidden'),
         panelFitsViewport:Boolean(rect&&rect.left>=-2&&rect.right<=innerWidth+2),
         documentScrollWidth:document.documentElement.scrollWidth,
         horizontalOverflow:document.documentElement.scrollWidth>innerWidth+2,
         architectureHidden:!architectureVisible,
         selected:window.EKODIAdminPanels?.current?.()==='social-accounts'};
     });
-    if(state.width!==width||!state.panelVisible||!state.panelFitsViewport||state.horizontalOverflow||!state.architectureHidden||!state.selected)
+    if(state.width!==width||!state.headingAccessible||!state.panelVisible||!state.panelFitsViewport||state.horizontalOverflow||!state.architectureHidden||!state.selected)
       throw new Error('Social account viewport verification failed: '+JSON.stringify(state));
     await page.screenshot({
       path:path.join(artifactsDir,'social-accounts-'+width+'.png'),fullPage:false,
