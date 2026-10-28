@@ -43,7 +43,7 @@
         ]
       },
       {
-        "url": "https://author.ekodi.kr/admin",
+        "url": "https://ekodi.kr/author/admin",
         "statuses": [
           307
         ],
@@ -53,7 +53,7 @@
         ]
       },
       {
-        "url": "https://author.ekodi.kr/books",
+        "url": "https://ekodi.kr/author/books",
         "statuses": [
           307
         ],
