@@ -1314,7 +1314,9 @@ jobs:
 
   native_surface_verification_mobile:
     name: EKODI Native Surface Verification · Mobile
-    needs: deploy
+    # CF-QUOTA-001: default success() gates subsequent browser requests; stop on
+    # first failed predecessor (including HTTP 429/1027) without any retry/fan-out.
+    needs: [deploy, native_surface_verification_desktop]
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
       verification_lane: site-core
@@ -1324,7 +1326,9 @@ jobs:
 
   native_research_verification_desktop:
     name: EKODI Research Native Verification · Desktop
-    needs: deploy
+    # CF-QUOTA-001: default success() gates subsequent browser requests; stop on
+    # first failed predecessor (including HTTP 429/1027) without any retry/fan-out.
+    needs: [deploy, native_surface_verification_mobile]
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
       verification_lane: research
@@ -1333,7 +1337,9 @@ jobs:
 
   native_research_verification_mobile:
     name: EKODI Research Native Verification · Mobile
-    needs: deploy
+    # CF-QUOTA-001: default success() gates subsequent browser requests; stop on
+    # first failed predecessor (including HTTP 429/1027) without any retry/fan-out.
+    needs: [deploy, native_research_verification_desktop]
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
       verification_lane: research
@@ -1342,5 +1348,66 @@ jobs:
 
   authenticated_admin_surface_verification:
     name: EKODI Authenticated Admin Surface Verification
-    needs: deploy
+    # CF-QUOTA-001: default success() gates subsequent browser requests; stop on
+    # first failed predecessor (including HTTP 429/1027) without any retry/fan-out.
+    needs: [deploy, native_research_verification_mobile]
     uses: ./.github/workflows/verify-admin-production-ui-e2e.yml
+
+  post_promotion_browser_verification_receipt:
+    name: EKODI Post-Promotion Browser Verification Receipt
+    # Receipt-only job: no calls to production hosts, even after quota circuit opens.
+    needs: [deploy, native_surface_verification_desktop, native_surface_verification_mobile, native_research_verification_desktop, native_research_verification_mobile, authenticated_admin_surface_verification]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+    steps:
+      - name: Record exact verifier results and blocked predecessors
+        shell: bash
+        env:
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+          NATIVE_DESKTOP_RESULT: ${{ needs.native_surface_verification_desktop.result }}
+          NATIVE_MOBILE_RESULT: ${{ needs.native_surface_verification_mobile.result }}
+          RESEARCH_DESKTOP_RESULT: ${{ needs.native_research_verification_desktop.result }}
+          RESEARCH_MOBILE_RESULT: ${{ needs.native_research_verification_mobile.result }}
+          ADMIN_RESULT: ${{ needs.authenticated_admin_surface_verification.result }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const jobs=[
+            ['deploy',process.env.DEPLOY_RESULT],
+            ['native_surface_verification_desktop',process.env.NATIVE_DESKTOP_RESULT],
+            ['native_surface_verification_mobile',process.env.NATIVE_MOBILE_RESULT],
+            ['native_research_verification_desktop',process.env.RESEARCH_DESKTOP_RESULT],
+            ['native_research_verification_mobile',process.env.RESEARCH_MOBILE_RESULT],
+            ['authenticated_admin_surface_verification',process.env.ADMIN_RESULT],
+          ];
+          const firstFailure=jobs.find(([name,state])=>state!=='success')?.[0]||null;
+          const evidence=jobs.map(([name,state],index)=>({
+            name,
+            result:state,
+            verification:state==='success'?'verified':state==='skipped'?'blocked':'failed',
+            reason:state==='skipped'?'upstream-failure-or-quota-circuit':state==='failure'?'see-failed-job-evidence':null,
+            predecessor:index===0?null:jobs[index-1][0],
+          }));
+          const verified=!firstFailure;
+          const receipt={policyId:'CF-QUOTA-001',schemaVersion:1,
+            releaseSha:process.env.GITHUB_SHA,
+            conclusion:verified?'verified':'blocked',
+            firstFailure,receiptJobProductionRequests:0,
+            evidence};
+          fs.writeFileSync('artifacts/site-core-postdeploy-browser-verification.json',JSON.stringify(receipt,null,2));
+          console.log('[EKODI][CF-QUOTA-001] postdeploy verification receipt:',JSON.stringify(receipt));
+          if(!verified)process.exitCode=1;
+          NODE
+      - name: Upload complete or blocked verification receipt
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-core-postdeploy-browser-verification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/site-core-postdeploy-browser-verification.json
+          if-no-files-found: error
+          retention-days: 30
