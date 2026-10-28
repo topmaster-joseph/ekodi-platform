@@ -160,6 +160,21 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      # ADMIN-ARCH-PROOF-ARTIFACT-001: all-menu run can fail later on unrelated
+      # Assist, but an already-passed architecture probe keeps its cropped,
+      # identity-free viewport images and numeric result for honest diagnosis.
+      # This does not change the conclusion of the full-menu job.
+      - name: Preserve completed architecture proof from full Admin verification
+        if: ${{ always() && inputs.focus_menu == 'all' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-architecture-proof-${{ github.run_id }}
+          path: |
+            artifacts/admin-authenticated-e2e/architecture-geometry.json
+            artifacts/admin-authenticated-e2e/architecture-*.png
+          if-no-files-found: warn
+          retention-days: 7
+
       # A separate proof lane cannot be held hostage by unrelated Social tabs,
       # and must never be mistaken for all-menu certification.
       - name: Upload focused architecture responsive E2E evidence

@@ -656,6 +656,16 @@ async function verifyArchitectureResponsive(tab, alreadyActive, started) {
   } finally {
     await page.setViewportSize({width:1440,height:1100});
   }
+  // ADMIN-ARCH-PROOF-ARTIFACT-001: persist only anonymized grid geometry before
+  // unrelated later menu/Assist checks. Cropped screenshots contain structure
+  // cards only, never the identity, account or admin header/sidebar.
+  await fs.writeFile(path.join(artifactsDir,'architecture-geometry.json'),JSON.stringify({
+    schemaVersion:1,
+    check:'authenticated-architecture-responsive',
+    passed:true,
+    measurements,
+    screenshotCount:3,
+  },null,2));
   const record=results.find(x=>x.id===menuId);
   if(record)Object.assign(record,{readOnly:true,isolatedArchitecture:true,measurements,screenshotCount:3});
   console.log('[E2E:architecture] authenticated independent five-width geometry PASS '+JSON.stringify(measurements));
