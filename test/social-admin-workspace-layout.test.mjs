@@ -35,6 +35,15 @@ test('Site discovery is filterable and central site selection opens the publishi
   assert.doesNotMatch(admin, /import\('\.\/admin-service-catalog\.js'\)/);
 });
 
+test('Site directory hydrates on lazy mount without requiring a second nav click', () => {
+  const mount = admin.indexOf("showTab(initialIntent.provider?'connections':'sites');");
+  const hydrate = admin.indexOf('void renderSiteDirectory();', mount);
+  const click = admin.indexOf("navButton.addEventListener('click',activate);", mount);
+  assert.ok(mount >= 0 && hydrate > mount && click > hydrate,
+    'read-only catalog must render when lazy Admin routing selects social without a click');
+  assert.match(admin, /await Promise\.all\(\[renderSiteDirectory\(\),/);
+});
+
 test('Registry edits are isolated from connection actions and preserve revision-based save', () => {
   assert.match(admin,/const policyPanel = el\('section','','social-policy-panel'\)/);
   assert.match(admin,/policyActions\.append\(addOrg,save\)/);

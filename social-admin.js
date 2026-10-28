@@ -292,6 +292,11 @@
     content.append(section);
     showTab(initialIntent.provider?'connections':'sites');
 
+    // The Admin router may select this lazily mounted panel without replaying a
+    // click on the original nav button. The directory reads only the static
+    // service catalog, so hydrate on mount as well as on explicit activation.
+    void renderSiteDirectory();
+
     function renderSummary() {
       const orgs = registry.organizations || [];
       const channels = orgs.flatMap(org => org.channels || []);
