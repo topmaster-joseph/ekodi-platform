@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS books_audiobook_external_claims (
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','verified','rejected','revoked')),
   verified_by TEXT,
   verification_method TEXT,
+  revoked_by TEXT,
   revocation_reason TEXT,
   reviewed_at TEXT,
   created_at TEXT NOT NULL,
