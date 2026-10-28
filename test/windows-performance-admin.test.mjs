@@ -1,0 +1,51 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+
+const [admin, css, api, agent, member] = await Promise.all([
+  readFile(new URL('../device-control-admin.js', import.meta.url), 'utf8'),
+  readFile(new URL('../device-control-admin.css', import.meta.url), 'utf8'),
+  readFile(new URL('../device-control.js', import.meta.url), 'utf8'),
+  readFile(new URL('../tools/ekodi-device-agent/windows/ekodi-device-agent.ps1', import.meta.url), 'utf8'),
+  readFile(new URL('../my/device-care.js', import.meta.url), 'utf8'),
+]);
+
+const panel = admin.match(/  function windowsPerformancePanel\(device\) \{[\s\S]*?\n  \}\n\n  function managementPanel/)?.[0] || '';
+
+test('Windows performance UI is integrated only into registered PC admin roster', () => {
+  assert.ok(panel, 'Windows panel must exist in canonical admin source');
+  assert.match(panel, /device\.management\?\.type !== 'pc'/);
+  assert.match(panel, /isInventory\(device\)/);
+  assert.match(panel, /device\.capabilities\?\.posAgent === true/);
+  assert.match(admin, /const performance = windowsPerformancePanel\(device\)/);
+  assert.match(admin, /\.\.\.\(performance \? \[performance\] : \[\]\)/);
+  assert.match(css, /EKODI-WINDOWS-PERFORMANCE-001/);
+  assert.match(css, /max-width:700px/);
+});
+
+test('safe optimization is explicit, constrained and receipt-aware', () => {
+  for (const command of ['diagnostics.collect', 'startup.scan', 'updates.scan', 'maintenance.temp_cleanup']) {
+    assert.match(panel, new RegExp('makeActionButton\\(device, \\x27' + command.replaceAll('.', '\\.') + '\\x27'));
+    assert.match(api, new RegExp('\\x27' + command.replaceAll('.', '\\.') + '\\x27'));
+    assert.match(agent, new RegExp('\\x27' + command.replaceAll('.', '\\.') + '\\x27'));
+  }
+  assert.match(panel, /!connected \|\| !capability\(device, 'storageMaintenance'\) \|\| cleanupPending/);
+  assert.match(panel, /cleanup\.status === 'failed'/);
+  assert.match(panel, /cleanup\.status === 'succeeded'/);
+  assert.match(panel, /postCleanupDiagnostic/);
+  assert.match(panel, /명령/);
+  assert.match(admin, /'maintenance\.temp_cleanup': '7일 이상 지난 사용자\/Windows 임시 파일만 정리합니다/);
+  assert.match(api, /'maintenance\.temp_cleanup': \{ risk: 'maintain', confirm: true \}/);
+  assert.match(agent, /function Clear-SafeTempFiles/);
+  assert.match(agent, /AddDays\(-7\)/);
+});
+
+test('metrics do not promise benchmark gains or expose generic shell', () => {
+  for (const marker of ['cpuLoadPct', 'memoryUsedPct', 'freePct', 'uptimeHours', 'diagnosticsAt', 'recentCommands']) {
+    assert.ok(panel.includes(marker), 'missing telemetry: ' + marker);
+  }
+  assert.match(panel, /점수는 벤치마크가 아니며/);
+  assert.doesNotMatch(panel, /Invoke-Expression|cmd\.exe|powershell\.exe|shell\.exec/);
+  assert.doesNotMatch(panel, /localStorage|sessionStorage|fetch\(/);
+  assert.doesNotMatch(member, /\/api\/control\/devices/);
+});
