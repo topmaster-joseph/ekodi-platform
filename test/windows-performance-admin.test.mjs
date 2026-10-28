@@ -89,7 +89,7 @@ test('dedicated Windows performance route uses canonical admin, authenticated ha
   assert.match(routes, /devices:'ops'/);
   assert.match(routes, /detailSegments/);
   assert.match(routes, /function navigationTarget\(section,loc=window.location,detailSegments=null\)/);
-  assert.match(handoff, /target\.pathname=routes\(\)\.pathFor\(r,current\?\.section===r\?current\.detailSegments:\[\]\)/);
+  assert.match(handoff, /target\.pathname=routes\(\)\.pathFor\(r,location\.pathname\.split\('\/'\)\.slice\(4\)\)/);
   assert.match(admin, /WINDOWS_PERFORMANCE_URL = '\/admin\/ops\/devices\/windows-performance'/);
   assert.match(admin, /function windowsPerformanceRoute\(\)/);
   assert.match(admin, /wrapper\.open = windowsPerformanceRoute\(\) \|\| openRosterGroups\.has\(group\.key\)/);
