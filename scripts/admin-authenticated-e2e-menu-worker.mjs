@@ -651,7 +651,7 @@ async function verifySocialInventory(tab, alreadyActive, started) {
     const source=panel?.querySelector('[data-social-account-source]');
     const status=panel?.querySelector('[data-social-account-filter]');
     const destination=panel?.querySelector('[data-social-links]');
-    const cards=[...panel?.querySelectorAll('[data-social-provider-card]')||[]];
+    const cards=Array.from(panel?.querySelectorAll('[data-social-provider-card]')||[]);
     if(!providerSearch||!providerCount||!recordSearch||!source||!status||!destination||cards.length!==13)
       return {controlsPresent:false};
     const original={
@@ -710,7 +710,7 @@ async function verifySocialInventory(tab, alreadyActive, started) {
       const grid=panel?.querySelector('[data-social-providers]');
       if(!panel||!directory||!grid)return {visible:false,contained:false,columns:0};
       const rect=panel.getBoundingClientRect();
-      const cols=getComputedStyle(grid).gridTemplateColumns.trim().split(/\\s+/).filter(Boolean).length;
+      const cols=getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length;
       const contained=rect.left>=-2&&rect.right<=window.innerWidth+3&&
         panel.scrollWidth<=panel.clientWidth+3&&directory.scrollWidth<=directory.clientWidth+3;
       return {visible:!panel.hidden&&grid.getBoundingClientRect().width>0,contained,columns:cols};
