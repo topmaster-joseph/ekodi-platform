@@ -115,3 +115,21 @@ The first preparation-meeting agenda button fills the existing meeting form as a
 unsaved draft. It never writes, publishes, dates or records a founding assembly merely
 by opening it, and never overwrites an existing unsaved or edited meeting draft.
 There is no new model invocation, permission, route, API, schema or legal submission.
+
+The documents tab provides administrator-private plan/budget worksheets backed by the
+existing progress09/10 note fields (2,000 characters), not the member-visible document
+status notes. Loading a template never writes or overwrites existing text. Draft edits
+and the corresponding progress note are synchronized after edits and draft restoration.
+Both editors enforce 2,000 characters; the API rejects overflow without truncation or
+revision/audit writes. Revisioned saves
+preserve other unsaved forms. Changing previously reviewed plan/budget note content
+clears its review server-side even if a client requests that review be retained.
+No document review status, task completion or legal formation is inferred from a draft.
+
+The saved preparation packet combines minimal profile/roster information with these
+two saved notes. Unconfirmed offices/budgets remain unknown; account emails, grants and
+unrelated task evidence are excluded. The inline packet and UTF-8 text download use
+the last saved snapshot; pending plan/budget edits must be saved before download.
+Templates are internal working notes, not statutory submission forms. The Government24
+formation guide links to the applicable submission requirements. No provider call,
+message, account operation or live filing is performed.
