@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { runInNewContext } from 'node:vm';
 
 const [admin, css, api, agent, member] = await Promise.all([
   readFile(new URL('../device-control-admin.js', import.meta.url), 'utf8'),
@@ -92,8 +93,44 @@ test('dedicated Windows performance route uses canonical admin, authenticated ha
   assert.match(admin, /WINDOWS_PERFORMANCE_URL = '\/admin\/ops\/devices\/windows-performance'/);
   assert.match(admin, /function windowsPerformanceRoute\(\)/);
   assert.match(admin, /wrapper\.open = windowsPerformanceRoute\(\) \|\| openRosterGroups\.has\(group\.key\)/);
+  assert.match(admin, /const counted = performanceMode \? current : showRetiredGroups \? grouped : current/);
+  assert.match(admin, /else if \(windowsPerformanceRoute\(\) && performance\)/);
+  assert.match(admin, /card\.append\(head, meta, performance, foot\)/);
   assert.match(admin, /windowsPerformanceRoute\(\) && \(device\.management\?\.type !== 'pc' \|\| isInventory\(device\) \|\| device\.capabilities\?\.posAgent === true\)/);
   assert.match(admin, /if \(location\.hash === '#devices' \|\| windowsPerformanceRoute\(\)\) showDevices\(\)/);
   assert.match(admin, /href="\$\{windowsPerformanceRoute\(\) \? '\/admin\/ops\/devices' : WINDOWS_PERFORMANCE_URL\}"/);
   assert.match(css, /EKODI-WINDOWS-PERFORMANCE-LINK-001/);
+});
+
+test('dedicated URL actually resolves to devices and retains it across Google login', async () => {
+  const [routeSource, authSource] = await Promise.all([
+    readFile(new URL('../admin-canonical-routes.js', import.meta.url), 'utf8'),
+    readFile(new URL('../admin-central-handoff.js', import.meta.url), 'utf8'),
+  ]);
+  const address = new URL('https://ekodi.kr/admin/ops/devices/windows-performance');
+  const context = {
+    window: {
+      location: address,
+      matchMedia: () => ({ matches: false }),
+    },
+    URL,
+    URLSearchParams,
+  };
+  runInNewContext(routeSource, context);
+  const adminRoutes = context.window.EKODIAdminRoutes;
+  assert.equal(adminRoutes.sectionFromLocation(address), 'devices');
+  assert.equal(adminRoutes.pathFor('devices', ['windows-performance']), address.pathname);
+  assert.equal(adminRoutes.navigationTarget('devices', address), address.pathname);
+  const match = authSource.match(/function centralAdminAuthUrl\(v\)\{[\s\S]*?\}(?=function normalizeEntryRoute)/);
+  assert.ok(match, 'canonical admin login handoff must be available');
+  const getAuthUrl = new Function('routes', 'normalizeRoute', 'location', 'AUTH_URL', 'URL', match[0] + '; return centralAdminAuthUrl;')(
+    () => adminRoutes,
+    adminRoutes.normalizeSection,
+    address,
+    'https://ekodi.kr/auth/?site=admin',
+    URL,
+  );
+  const login = new URL(getAuthUrl('devices'));
+  assert.equal(login.hostname, 'ekodi.kr');
+  assert.equal(login.searchParams.get('return_to'), address.href);
 });
