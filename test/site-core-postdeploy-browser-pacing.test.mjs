@@ -24,8 +24,8 @@ test('native Site Core and Admin probes are paced after the guarded deploy',()=>
     assert.doesNotMatch(src,/continue-on-error:\s*true/,'failed postdeploy checks must remain blocking');
     if(previous){
       assert.ok(src.includes('needs: [deploy, '+previous+']'),'expected previous verification for '+name);
-      assert.ok(src.includes("if: ${{ always() && needs.deploy.result == 'success' }}"),
-        'downstream browser verification must run after a failed prior probe but never after failed deployment');
+      assert.doesNotMatch(src,/if:\\s*\\$\\{\\{\\s*always\\(\\)/,
+        'CF-QUOTA-001 must stop downstream production requests after any failed predecessor');
     }else{
       assert.match(src,/needs: deploy/);
     }
@@ -39,4 +39,17 @@ test('native desktop, mobile and Admin remain genuine independent read-only veri
   assert.match(part('native_research_verification_desktop'),/surface_paths: \/research\//);
   assert.match(part('native_research_verification_mobile'),/surface_paths: \/research\//);
   assert.match(yaml,/Candidate at 0%, verify routes, promote and auto-rollback on failure/);
+});
+
+test('quota or any failed predecessor blocks later verifiers with an explicit receipt-only job',()=>{
+  const receipt=part('post_promotion_browser_verification_receipt');
+  assert.match(receipt,/needs: \[deploy, native_surface_verification_desktop, native_surface_verification_mobile,/);
+  assert.match(receipt,/if: \$\{\{ always\(\) \}\}/);
+  assert.match(receipt,/policyId:'CF-QUOTA-001'/);
+  assert.match(receipt,/verification:state==='success'\?'verified':state==='skipped'\?'blocked':'failed'/);
+  assert.match(receipt,/upstream-failure-or-quota-circuit/);
+  assert.match(receipt,/if\(!verified\)process\.exitCode=1/);
+  assert.match(receipt,/productionRequestsMade:0/);
+  assert.match(receipt,/actions\/upload-artifact@v4/);
+  assert.doesNotMatch(receipt,/curl |fetch\(|page\.goto|continue-on-error:\s*true/);
 });
