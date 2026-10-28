@@ -103,9 +103,10 @@ async function publicSites(env){
     for(const raw of aliases){
       const host=safeHost(raw);
       if(!host)continue;
+      const displayHost=safe(raw,255).replace(/^https?:\/\//i,'').replace(/\/.*$/,'');
       const url='https://'+host+'/';
       if(!unique.has(url))unique.set(url,{
-        id:'alias:'+host,name:site.name+' · '+host,url,host,path:'/',
+        id:'alias:'+host,name:site.name+' · '+displayHost,url,host,path:'/',
         propertyType:'independent-domain',canonicalUrl:DOMAIN_CANONICAL_FOR_PATH[key]||site.url,updatedAt:site.updatedAt,
       });
     }
