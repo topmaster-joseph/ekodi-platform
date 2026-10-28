@@ -105,6 +105,7 @@ export async function runTask(rawTask, options={}){
   });
   const page=await context.newPage();
   const consoleErrors=[],pageErrors=[],requestFailures=[],httpErrorResponses=[],blockedMutations=[];
+  let quotaCircuit=null;
   page.on('console',msg=>{ if(msg.type()==='error') consoleErrors.push(clean(msg.text(),500)); });
   page.on('pageerror',err=>pageErrors.push({
     name:clean(err?.name||'Error',120),
@@ -116,11 +117,13 @@ export async function runTask(rawTask, options={}){
   page.on('response',res=>{
     const status=res.status();
     if(status>=400) httpErrorResponses.push({url:clean(res.url(),500),status,statusText:clean(res.statusText(),120),resourceType:clean(res.request().resourceType(),80)});
+    if(status===429) quotaCircuit={status,path:clean(new URL(res.url()).pathname,200)};
   });
 
   await page.route('**/*',async route=>{
     const req=route.request();
     const method=req.method().toUpperCase();
+    if(quotaCircuit) return route.abort('blockedbyclient'); // CF-QUOTA-001: stop new production requests
     if(!task.allowMutation && !['GET','HEAD','OPTIONS'].includes(method)){
       blockedMutations.push({method,url:clean(req.url(),500)});
       return route.abort('blockedbyclient');
@@ -138,6 +141,7 @@ export async function runTask(rawTask, options={}){
   // Cloudflare rate limiting or conceal a failure after bounded retries.
   let lastNavigationAt=0;
   const goto=async p=>{
+    if(quotaCircuit) fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open before navigation; no retry');
     if(Date.now()>=deadline) fail('BROWSER_TASK_TIMEOUT','Browser task timed out');
     const canonicalPath=safePath(p);
     const target=ORIGIN+canonicalPath;
@@ -149,13 +153,27 @@ export async function runTask(rawTask, options={}){
       const startingResponses=httpErrorResponses.length;
       const startingPageErrors=pageErrors.length;
       const startingConsoleErrors=consoleErrors.length;
-      const response=await page.goto(target,{waitUntil:'domcontentloaded',timeout:Math.min(30000,remaining())});
+      let response;
+      try {
+        response=await page.goto(target,{waitUntil:'domcontentloaded',timeout:Math.min(30000,remaining())});
+      } catch(error) {
+        if(quotaCircuit) fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open during navigation; no retry');
+        throw error;
+      }
       lastNavigationAt=Date.now();
       if(new URL(page.url()).origin!==ORIGIN) fail('BROWSER_REDIRECT_ORIGIN_FORBIDDEN','Navigation escaped canonical origin');
-      // Allow critical dynamic imports to settle before evaluating transient status.
-      await page.waitForTimeout(Math.min(task.deviceProfile.includes('mobile')?650:250,remaining()));
       const status=response?.status()??null;
-      const transient=[429,502,503,504];
+      if(status===429 || quotaCircuit)
+        fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open: HTTP 429; no retry or further requests');
+      if(status!==null && status>=400) {
+        const text=await page.locator('body').innerText({timeout:Math.min(2000,remaining())}).catch(()=>'');
+        if(/Error 1027|temporarily rate limited|reached their plan limits/i.test(text.slice(0,2500)))
+          fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open: Cloudflare 1027; no retry or further requests');
+      }
+      // Allow dynamic imports to settle only while the quota circuit remains closed.
+      await page.waitForTimeout(Math.min(task.deviceProfile.includes('mobile')?650:250,remaining()));
+      if(quotaCircuit) fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open after navigation; no retry');
+      const transient=[502,503,504];
       const subresourceErrors=httpErrorResponses.slice(startingResponses).filter(item=>
         item.url.startsWith(ORIGIN+'/') && transient.includes(item.status));
       const transientStatus=transient.includes(status)?status:subresourceErrors[0]?.status;

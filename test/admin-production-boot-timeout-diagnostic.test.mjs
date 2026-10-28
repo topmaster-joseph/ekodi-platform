@@ -13,3 +13,10 @@ test('postdeploy Admin boot failure captures bounded credential-free evidence wi
   assert.ok(source.includes('throw error;'));
   assert.ok(!source.includes('console.log(SYNTHETIC_TOKEN)'));
 });
+
+// CF-QUOTA-001: synthetic production verification must not burn quota to hide 429.
+test('stop-on-first-quota circuit rejects Admin entry and degraded-shell reload 429 without retry', () => {
+  assert.match(source,/CF-QUOTA-001 circuit open on Admin entry: HTTP 429; no retry/);
+  assert.match(source,/CF-QUOTA-001 circuit open on Admin shell reload: HTTP 429; no retry/);
+  assert.doesNotMatch(source,/gotoAdminWith429Backoff|retryAfterMs/);
+});
