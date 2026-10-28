@@ -533,7 +533,8 @@ jobs:
   deploy:
     needs: [staging_gate, reliability_gate]
     runs-on: ubuntu-latest
-    timeout-minutes: 22
+    # 227 registered routes exceeded22m across candidate/production; preserve rollback headroom.
+    timeout-minutes: 45
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

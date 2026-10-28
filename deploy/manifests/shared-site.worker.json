@@ -1,5 +1,5 @@
 {
-  "version": 115,
+  "version": 116,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -3704,9 +3704,9 @@
           "data-progress-key",
           "COOP_PROGRESS_EXCLUSION"
         ],
-        "expectHeaders": [
+        "headerExpect": [
           "content-type: text/javascript",
-          "cache-control: no-store"
+          "cache-control: private, no-store"
         ],
         "rollbackVerify": false
       },
@@ -3726,9 +3726,9 @@
           "data-progress-key",
           "COOP_PROGRESS_EXCLUSION"
         ],
-        "expectHeaders": [
+        "headerExpect": [
           "content-type: text/javascript",
-          "cache-control: no-store"
+          "cache-control: private, no-store"
         ],
         "rollbackVerify": false
       }
