@@ -68,6 +68,20 @@ test('staging job alone or wrong rollback step does not count as preproduction p
     assert.equal(r.verified,false);
   }
 });
+test('staging evidence collected after production has started cannot count as prepromotion proof',async()=>{
+  for(const later of [
+    {name:'production',status:'in_progress',conclusion:null},
+    {name:'deploy-production',status:'completed',conclusion:'success'},
+    {name:'release',status:'completed',conclusion:'failure'},
+  ]){
+    const r=await collectEkodiPreproductionEvidence({
+      github:github({stages:[stage,later]}).client,...input,
+    });
+    assert.equal(r.verified,false);
+    assert.equal(r.reason,'staging_rollback_or_immutable_artifact_unverified');
+  }
+});
+
 test('missing, expired, wrong-run and forged artifact digest never authorize',async()=>{
   for(const artifacts of [
     [], [{...immutable,expired:true}], [{...immutable,name:'other'}],
