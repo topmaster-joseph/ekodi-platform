@@ -25,7 +25,7 @@
     education:'education',books:'education',publishing:'education',journal:'education',lab:'education',
     'seonammedi':'institution',community:'institution',management:'platform',
   });
-  let items=[],registry=null,authorized=false,loading=false,loadError='',search='',currentId='';
+  let items=[],registry=null,organizationSites=[],organizationSummary=null,authorized=false,loading=false,loadError='',search='',currentId='';
   const panel=document.createElement('section');
   panel.id=ROOT_ID;panel.className='section ekodi-growth-control hidden-panel';
   panel.dataset.panel='growth-os';panel.hidden=true;
@@ -55,7 +55,7 @@
   }
   function render(){
     if(!authorized){panel.innerHTML='<div class="growth-os-empty" role="alert">최고관리자 인증이 필요합니다.</div>';return;}
-    const catalog=items.filter(item=>item?.id&&item?.name);
+    const catalog=(organizationSites.length?organizationSites:items).filter(item=>item?.id&&item?.name);
     const filtered=catalog.filter(item=>!search||(item.name+' '+item.id+' '+item.group).toLowerCase().includes(search.toLowerCase()));
     const selected=catalog.find(item=>item.id===currentId)||null;
     const registered=publicPaths();
@@ -64,9 +64,9 @@
     const profile=profileOf(selected);
     const chosen=PROFILES[profile]||PROFILES.general;
     const stats=[
-      statusCard('중앙 등록 서비스',catalog.length,'기준: 기존 관리자 서비스 카탈로그'),
-      statusCard('카탈로그상 사이트',catalog.filter(item=>item.kind==='site').length,'비공개 조직 원장 전체와 다를 수 있음'),
-      statusCard('공개 검색 원장',registered ? registered.size : '미연동','공개 경로만 포함 · 비공개 조직 제외'),
+      statusCard('중앙 등록 서비스',items.length,'기존 서비스 카탈로그 전체 · 사이트 원장과 별도'),
+      statusCard('사이트 원장 대상',organizationSummary?.listedSiteSurfaces??'미연동','공개·비공개 사이트 포함 · 법인 전체 원장 아님'),
+      statusCard('비공개·상태 불명',(organizationSummary?.private??0)+(organizationSummary?.statusUnknown??0),'원장 조회가 된 경우만 표시 · 상태 불명은 공개가 아님'),
       statusCard('실측 조직 종합평가','미연동','인증된 목적·운영·재무·참여 증거 필요'),
     ].join('');
     panel.innerHTML=`<header class="growth-os-head"><div><small>EKODI GROWTH INTELLIGENCE CORE · PRIVATE</small>
@@ -80,13 +80,14 @@
           <header><h3>대상 선택</h3><small>공통 서비스 카탈로그를 기반으로 검색</small></header>
           <label>검색<input type="search" data-growth-search placeholder="조직·기관·서비스 검색" value="${esc(search)}" maxlength="80"></label>
           <label>조직·사이트·서비스<select data-growth-target>${options(filtered)}</select></label>
-          <p class="growth-os-note">현재 목록은 관리자 서비스 카탈로그입니다. 법인·기관·비공개 사업체 전체 원장과 동일하지 않습니다. 공개 원장의 포함 여부는 승인된 공개 정보만 표시합니다.</p>
+          <p class="growth-os-note">${organizationSites.length?'사이트 공개상태 원장을 최고관리자 읽기 전용으로 조회했습니다.':'조직·사이트 원장 조회 전에는 서비스 카탈로그만 참고합니다.'} 사이트는 법인·기관 전체 명부가 아니며 조직별 목적 및 평가 권한은 별도 확인합니다.</p>
           <div class="growth-os-links"><a href="/admin/sites/sites-all">사이트 현황</a><a href="/admin/ops/maturity">플랫폼 성숙도</a><a href="/admin/ops/site-health">사이트 상태</a><a href="/admin/ai/search-visibility">검색노출·AI 발견 관리</a></div>
         </section>
         <section class="growth-os-card" aria-live="polite"><header><h3>${selected?esc(selected.name):'조직별 판단 기준'}</h3><small>${selected?'목적별 프로필 · 참고 분류':'등록 대상을 선택하십시오'}</small></header>
           ${selected?`<div class="growth-os-profile"><strong>${esc(chosen.label)}</strong><p>${esc(chosen.purpose)}</p>
           <small>유형은 카탈로그 기반 안내입니다. 조직의 실제 목적·평가 기준은 책임자의 확인 전까지 확정되지 않습니다.</small></div>
           <p>공개 사이트 원장: <strong>${knownPublic===true?'공개 경로 등록 확인':knownPublic===false?'공개 경로 미확인':'연동 미확인'}</strong></p>
+          ${selected?.identityStatus?`<p>워크스페이스 식별: <strong>${selected.identityStatus==='registry_corresponds'?'등록값 일치 (권한 미확정)':selected.identityStatus==='identity_conflict'?'식별값 충돌 · 확인 필요':'등록값 확인 필요'}</strong> · 공개 상태: <strong>${esc(selected.publicStatus==='unknown'?'상태 불명':selected.publicStatus||'미확인')}</strong></p>`:''}
           <h4>목적별 주요 관점</h4><div class="growth-os-focus">${(chosen.focus.length?chosen.focus:['목적 확정 필요']).map(x=>'<span>'+esc(x)+'</span>').join('')}</div>
           <h4>7개 통합 판단 차원</h4><div class="growth-os-dimensions">${DIMENSIONS.map(x=>'<div><span>'+esc(x)+'</span><em>근거 미연동</em></div>').join('')}</div>
           <p class="growth-os-note">근거 미연동 ≠ 성과 0점. 재무·회원·개인정보는 이 화면에서 다른 조직의 데이터와 결합하지 않습니다.</p>`:
@@ -108,14 +109,18 @@
     if(items.length&&registry&&!force){render();return;}
     loading=true;render();
     try{
-      const [catalog,publicRegistry]=await Promise.all([
+      const [catalog,publicRegistry,inventory]=await Promise.all([
         import('/admin/admin-service-catalog.js'),
         api('/public-registry.json').catch(()=>null),
+        api('/api/control/growth-os/organizations',token()).catch(e=>({ok:false,code:String(e?.message||'조회 불가').slice(0,80)})),
       ]);
       items=Array.isArray(catalog.ADMIN_SERVICE_CATALOG)?catalog.ADMIN_SERVICE_CATALOG:[];
       registry=publicRegistry;
-      if(!currentId&&items.length)currentId=items.find(item=>item.kind==='site')?.id||items[0].id;
-      loadError=publicRegistry?'':'공개 검색 원장을 조회하지 못했습니다. 검색 등록 상태는 미확인으로 표시합니다.';
+      organizationSites=inventory?.ok&&Array.isArray(inventory.sites)?inventory.sites:[];
+      organizationSummary=inventory?.ok?inventory.summary:null;
+      const candidates=organizationSites.length?organizationSites:items;
+      if(!candidates.some(x=>x.id===currentId))currentId=candidates.find(x=>x.kind==='site')?.id||candidates[0]?.id||'';
+      loadError=[!inventory?.ok?'최고관리자 조직·사이트 원장 조회 불가 · '+String(inventory?.code||'연결 오류'):'',!publicRegistry?'공개 검색 원장 미확인':''].filter(Boolean).join(' / ');
     }catch(e){loadError='관리자 서비스 기준정보 연결 실패 · '+String(e?.message||'').slice(0,100);}
     finally{loading=false;render();}
   }
