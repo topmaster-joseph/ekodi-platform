@@ -91,7 +91,7 @@ jobs:
           test "${RELEASE_BRANCH##*/}" = "$RELEASE_TASK"
           branch_encoded=$(printf '%s' "$RELEASE_BRANCH" | jq -sRr @uri)
           task_encoded=$(printf '%s' "$RELEASE_TASK" | jq -sRr @uri)
-          curl --fail-with-body -fsS --max-time 20 \
+          curl --fail-with-body -sS --max-time 20 \
             "https://ekodi.kr/api/orchestrator/release-receipt?taskId=$task_encoded&branchRef=$branch_encoded" \
             | jq -e --arg task "$RELEASE_TASK" --arg branch "$RELEASE_BRANCH" \
               '.ok == true and .authorized == true and .authority == "ekodi-orchestrator" and .taskId == $task and .branchRef == $branch' >/dev/null
