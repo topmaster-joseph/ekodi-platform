@@ -22,7 +22,9 @@ test('site list offers summary, search, filter, selection and separate editor', 
     assert.ok(source.includes(marker),marker);
   }
   assert.match(source, /grid-template-columns:minmax\(260px,0\.88fr\) minmax\(370px,1\.35fr\)/);
+  assert.match(source, /@media\(max-width:900px\)/);
   assert.match(source, /@media\(max-width:760px\)/);
+  assert.match(source, /\.psc-button,#publicSiteControlsPanel \.psc-row,#publicSiteControlsPanel \.psc-metric\{min-height:44px\}/);
   assert.match(source, /grid-template-columns:minmax\(0,1fr\)/);
   assert.match(source, /data-maintenance-options/);
   assert.match(source, /role="status" aria-live="polite"/);
