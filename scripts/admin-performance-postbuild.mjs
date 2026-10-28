@@ -20,6 +20,10 @@ await Promise.all(sharedAdminMenuModules.map(asset => copyFile(`${root}${asset}`
 // only the generated runtime receives safe internal identifier compaction.
 const demandLoaderPath = `${dist}admin-demand-loader.js`;
 let demandLoaderSource = await readFile(demandLoaderPath, 'utf8');
+// Labels are retained in readable source for navigation contracts and regression
+// checks; none are read by the private FEATURES runtime. Strip only from the
+// built demand loader to preserve the strict first-path byte budget.
+demandLoaderSource = demandLoaderSource.replace(/\blabel:\s*'[^']*',\s*/g, '');
 for (const [from,to] of [
   ['secondaryScheduled','sec'],
   ['insertPlaceholder','insert'],
