@@ -37,7 +37,7 @@
           play.disabled = true; const saved = play.textContent; play.textContent = '불러오는 중…';
           try {
             const session = await C.session();
-            const response = await fetch(C.BASE + '/api/commerce/audiobook/' + encodeURIComponent(item.id) + '/track/' + track.number, {
+            const response = await fetch(`${C.BASE}/api/commerce/audiobook/${encodeURIComponent(item.id)}/track/${track.number}`, {
               headers: { authorization: 'Bearer ' + (session?.accessToken || '') }, cache: 'no-store',
             });
             if (!response.ok) {
