@@ -50,6 +50,12 @@ test('five responsive screenshots redact account identifiers and assert architec
   assert.match(worker,/architectureHidden:!architectureVisible/);
   assert.match(worker,/await page\.keyboard\.press\('Escape'\)/);
   assert.match(worker,/headingAccessible/);
+  // A prior narrow-width panel capture may scroll the page; a real scroll is
+  // allowed, but the original elementFromPoint occlusion assertion must remain.
+  assert.match(worker,/heading\.scrollIntoView\(\{block:'center',inline:'nearest',behavior:'instant'\}\)/);
+  assert.match(worker,/requestAnimationFrame\(resolve\)/);
+  assert.match(worker,/document\.elementFromPoint\(/);
+  assert.match(worker,/point===heading\|\|heading\.contains\(point\)/);
   assert.match(worker,/horizontalOverflow:document\.documentElement\.scrollWidth>innerWidth\+2/);
   assert.match(worker,/redactedScreenshots:viewports\.length/);
 });
