@@ -11,3 +11,9 @@
 - No production data mutation, security relaxation, or manual main push in this checkpoint.
 
 This owner-authored continuity commit is a normal source-evidence update on an Orchestrator-issued isolated branch so GitHub can run fresh, authentic checks. It does not publish any status or bypass an approval gate.
+
+## Protected synchronization — 2026-10-28, continuation
+
+- EKODI converger synchronized the release PR to protected `main@9386efa63febbd25755a1f127692e35102581020`, producing bot-authored head `9b5ffd9237a16e91ab2533260ae89310239d35c0`.
+- GitHub marked bot-owned checks `action_required` rather than granting CI success. This bounded source-evidence update triggers authentic current-head GitHub Actions without forging statuses, weakening checks, changing production data or assuming deployment.
+- Original functional release-selector change `b391b1e5b2dcb44c35dafe799f0f91d381184a4d` and test `a6f260accbd2a1954041731898d3eaa01e4197aa` remain in history; inspect the actual current head before promotion.
