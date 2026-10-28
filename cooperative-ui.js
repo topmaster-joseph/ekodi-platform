@@ -248,6 +248,7 @@ function clientMain(documents, launchTasks, launchStages, progressSummary, launc
       renderAdmin(drafts);
       const action = surface==='admin' ? guidance(project.state).actions[0] : null;
       setStatus(`저장되었습니다. 수정본 ${project.revision} · 다른 기기에서도 같은 내용을 확인합니다.${action?' 다음 행동: '+action.title:''}`);
+      if(lastSavedProgressKey){const feedback=$('#progressSaveNext');feedback.tabIndex=-1;feedback.focus({preventScroll:true});feedback.scrollIntoView({block:'center',behavior:'auto'});}
     } catch (error) { if (!authenticationFailure(error)) setStatus(error.message, true); }
     finally { saving = false; $('#workspace').querySelectorAll('button,input,textarea,select').forEach(el => { el.disabled = false; }); }
   }
