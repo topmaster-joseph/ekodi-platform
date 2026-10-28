@@ -79,3 +79,22 @@ responsive photographic business cards illustrate those clauses alongside
 the existing distinct hero photos. Captions and alt text identify all images
 as AI-generated; they do not claim actual facilities, members or completed
 operations. No charter provisions are amended by this visual update.
+
+## Private online launch checklist
+
+Each existing administrator page includes `출범 진행` (direct fragment `#progress`).
+The same reviewed 33-item template is bound to the immutable cooperative workspace;
+only the current `tenant.site.manage` capability can read/write its records through
+the existing revisioned project API. GET fills missing defaults without database writes.
+Each single-item save preserves other tasks, profile, documents, dates and drafts.
+The completion count requires status, completion date, evidence location and explicit
+review. Revising previously reviewed evidence/date clears review until saved and
+reviewed again. Required tasks cannot be excluded; conditional exclusions need a reason.
+Totals never change formation/legal status. Document/date tabs are independent source
+records and are reconciled manually against checklist evidence. No files are uploaded
+and the server never fetches evidence links. All progress details stay out of public
+and member projections. Existing JSON export includes private progress for administrators.
+
+Validation: `node --test test/cooperative-progress.test.mjs`; source browser verification
+exercises five widths, separate workspaces, save/reload, evidence gates, filtering,
+unsaved draft retention and stale revision409 input preservation without live writes.

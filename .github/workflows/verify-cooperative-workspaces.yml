@@ -12,6 +12,8 @@ on:
       - 'migrations/0134_cooperative_jubilee_name.sql'
       - 'sites/business-cooperative/**'
       - 'test/cooperative-workspaces.test.mjs'
+      - 'test/cooperative-progress.test.mjs'
+      - 'scripts/cooperative-progress-proof.mjs'
       - 'test/helpers/cooperative-fixture.mjs'
       - 'scripts/verify-cooperative-source-ui.mjs'
       - 'scripts/cooperative-bundle-client.mjs'
@@ -30,7 +32,7 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -39,7 +41,7 @@ jobs:
       - name: Validate EKODI source orchestration
         run: node scripts/validate-ekodi-ai-change-orchestration.mjs --ci
       - name: Verify storage and tenant authorization
-        run: node --test test/cooperative-workspaces.test.mjs
+        run: node --test test/cooperative-workspaces.test.mjs test/cooperative-progress.test.mjs
       - name: Prepare isolated Chromium test dependency
         run: |
           npm install --no-save --package-lock=false playwright@1.62.1

@@ -4,8 +4,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { loadCooperativeProject } from '../cooperative-store.js';
 
-const tabs = ['현황', '조합정보', '구성원·사업자', '설립서류', '총회·신고 일정', '공지', '회의록', '지원사업', '계정·권한'];
-const panelIds = ['overview', 'profile', 'founders', 'documents', 'schedule', 'notices', 'meetings', 'supports', 'accounts'];
+const tabs = ['현황', '출범 진행', '조합정보', '구성원·사업자', '설립서류', '총회·신고 일정', '공지', '회의록', '지원사업', '계정·권한'];
+const panelIds = ['overview', 'progress', 'profile', 'founders', 'documents', 'schedule', 'notices', 'meetings', 'supports', 'accounts'];
 
 export async function verifyCooperativeServiceWorkflows({ contextFor, fixture: f, cooperatives, checks, screenshot }) {
   const read = coop => loadCooperativeProject(f.db, coop);
@@ -91,7 +91,7 @@ export async function verifyCooperativeServiceWorkflows({ contextFor, fixture: f
     for (const [name, value] of Object.entries(dates)) await page.locator('#datesForm [name="' + name + '"]').fill(value);
     await submit(page, 'datesForm'); await reload(page); await tab(page, '총회·신고 일정');
     for (const [name, value] of Object.entries(dates)) assert.equal(await page.locator('#datesForm [name="' + name + '"]').inputValue(), value);
-    assert.deepEqual(await page.locator('.deadline-list b').allTextContents(), ['2026-11-13', '2026-12-13', '2026-12-16']);
+    assert.deepEqual(await page.locator('[data-panel="schedule"] .deadline-list b').allTextContents(), ['2026-11-12', '2026-12-13', '2026-12-16']);
     proof(coop, 'all-five-dates-persist-and-reference-calculations');
 
     const kinds = [
