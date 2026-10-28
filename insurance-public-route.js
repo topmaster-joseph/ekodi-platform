@@ -2,7 +2,7 @@ import { injectEkodiShell } from './ekodi-shell-injector.js';
 
 const PREFIX='/insurance';
 const STATIC_ASSETS=new Set([
-  'styles.css','privacy.css','app.js','server-bridge.js',
+  'styles.css','privacy.css','chat.css','app.js','server-bridge.js',
   'advisor.css','advisor.js'
 ]);
 const SECURITY_HEADERS=Object.freeze({
