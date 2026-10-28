@@ -35,7 +35,7 @@ test('remote reply cannot authorize a mismatched release or forged status',async
     {branchRef:'ai/claude/'+taskId},{releaseSha:'c'.repeat(40)},
     {artifactDigest:'sha256:'+'c'.repeat(64)},
     {approvalId:'fake'},{productionDeployed:true},
-    {purpose:'general'}, {},
+    {purpose:'general'},{approvalId:''},
   ]){
     const answer={...receipt,...override};
     await assert.rejects(
