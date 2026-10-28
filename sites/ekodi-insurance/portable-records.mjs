@@ -73,7 +73,12 @@ function safeRecords(input, options = {}) {
     claims: cleanList(Object.hasOwn(source, 'claims') ? source.claims : [], CLAIM_FIELDS, 'claims')
   };
   if (includeDiagnosis) result.diagnosis = cleanDiagnosis(source.diagnosis);
-  if (includeChat) result.messages = cleanMessages(source.advisorChat?.messages || []);
+  if (includeChat) {
+    const hasChat = Object.hasOwn(source, 'advisorChat');
+    const chat = hasChat ? object(source.advisorChat, 'advisorChat') : {};
+    const messages = Object.hasOwn(chat, 'messages') ? chat.messages : [];
+    result.messages = cleanMessages(messages);
+  }
   // Never export consultations, encrypted server data, callback/contact data,
   // bearer access tokens, cookies, cross-site sessions or unknown fields.
   return result;
