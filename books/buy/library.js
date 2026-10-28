@@ -123,7 +123,7 @@
   async function initExternalClaims() {
     const form = $('externalClaimForm');
     try {
-      const catalog = await (await fetch(C.BASE+'/books.json',{cache:'no-store'})).json();
+      const catalog = await (await fetch(`${C.BASE}/books.json`,{cache:'no-store'})).json();
       const select = $('audioClaimBook'); select.replaceChildren();
       for (const b of catalog.books || []) if (b.bonusAudio?.included === true) {
         const opt = document.createElement('option');opt.value=b.id;opt.textContent=b.title;select.append(opt);
