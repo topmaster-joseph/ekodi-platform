@@ -37,5 +37,5 @@ test('fixture checks role changes, owner isolation, valid paid proof, quotas and
   assert.ok(sql.includes('human_author_interview_turns'));
   assert.ok(sql.includes('human_author_enrollments'));
   assert.ok(sql.includes('human_author_subscriptions'));
-  assert.doesNotMatch(sql, /(?:api\\.stripe\\.com|js\\.tosspayments\\.com|payment\\/confirm)/i);
+  assert.doesNotMatch(sql, /(?:api[.]stripe[.]com|js[.]tosspayments[.]com|payment-confirm)/i);
 });
