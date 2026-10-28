@@ -643,7 +643,7 @@
     const updates = device.diagnostics?.updates || {};
     // diagnosticsAt advances on ANY successful command in Device Control.
     // A genuine post-cleanup diagnosis must be backed by its own succeeded receipt.
-    const telemetryAt = device.diagnosticsAt || null;
+    const telemetryAt = device.settings?.health?.generatedAt || null;
     const reportAge = telemetryAt ? Date.now() - new Date(telemetryAt).getTime() : Infinity;
     const reportFresh = connected && Number.isFinite(reportAge) && reportAge >= 0 && reportAge < 30 * 60 * 1000;
     const commands = Array.isArray(device.recentCommands) ? device.recentCommands : [];
