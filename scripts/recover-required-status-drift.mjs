@@ -89,7 +89,8 @@ export async function reconcileMergeStatuses({
       for (const context of required) {
         const source = by.get(context);
         const prior = existing.get(context);
-        if (prior?.state === 'success' && prior.target_url === source.target_url) continue;
+        if (prior?.state === 'success' && prior.target_url === source.target_url &&
+            prior.description === 'Recovered from verified head ' + head.slice(0, 12)) continue;
         await api('/statuses/' + mergeSha, {
           method: 'POST',
           body: JSON.stringify({
