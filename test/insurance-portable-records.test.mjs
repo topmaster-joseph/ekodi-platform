@@ -136,6 +136,7 @@ test('corrupt local records fail closed instead of silently exporting empty list
   await assert.rejects(encryptPortableRecords({ policies: null, claims: [] }, pw, { webcrypto }), /policies.*array/);
   await assert.rejects(encryptPortableRecords({ policies: [], claims: null }, pw, { webcrypto }), /claims.*array/);
   assert.throws(() => portableRecordPreview({ policies: { id: 'bad' }, claims: [] }), /policies.*array/);
+  await assert.rejects(encryptPortableRecords({ policies: [], claims: [], advisorChat: { messages: null } }, pw, { webcrypto, includeChat: true }), /messages.*array/);
   assert.throws(() => previewPortableMerge({ policies: 'wrong', claims: [] }, { policies: [], claims: [] }), /policies.*array/);
 });
 
