@@ -5,7 +5,7 @@ const worker=readFileSync(new URL('../author-worker.js',import.meta.url),'utf8')
 const author=readFileSync(new URL('../author/human-writer.js',import.meta.url),'utf8');
 
 test('private interview and billing-critical JavaScript use no-store after protected deployment',()=>{
-  assert.match(worker,/criticalClientModule\s*=\s*\/\^\\\//);
+  assert.match(worker,/const criticalClientModule =/);
   for(const name of ['app','billing','human-writer','-entitlement','-notes']){
     assert.ok(worker.includes(name),'missing critical client asset '+name);
   }
