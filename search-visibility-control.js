@@ -59,13 +59,22 @@ async function ensureSchema(db){
 }
 // Domain aliases are separate provider properties even when they 301 to a canonical /path.
 // They must never inherit proof of ownership, indexing, or submitted sitemap.
+// Public independent properties: English canonical domain and Korean IDN alias have
+// distinct ownership records; neither inherits ekodi.kr path verification.
+const DOMAIN_CANONICAL_FOR_PATH=Object.freeze({'/seonammedi':'https://seonammedi.kr/'});
 const REGISTERED_LEGACY_HOSTS=Object.freeze({
+  '/seonammedi':['seonammedi.kr','서남권국립의대.kr'],
   '/ekodichurch':['ekodichurch.kr'],
   '/ekodilab':['ekodilab.kr'],
   '/ekodimall':['ekodimall.kr'],
 });
 const safeHost=value=>{
-  const h=safe(value,255).toLowerCase().replace(/^https?:\/\//,'').replace(/\/.*$/,'');
+  // URL.hostname converts Unicode IDNs to ASCII/Punycode and rejects invalid hosts.
+  // Reject credentials, ports, queries and fragments rather than parsing them away.
+  const input=safe(value,255).toLowerCase().replace(/^https?:\/\//,'').replace(/\/.*$/,'');
+  if(!input||/[\\?#@:\s]/.test(input))return '';
+  let h='';
+  try{h=new URL('https://'+input).hostname}catch{return ''}
   return h!=='ekodi.kr'&&/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(h)&&!h.startsWith('www.')?h:'';
 };
 async function publicSites(env){
@@ -97,7 +106,7 @@ async function publicSites(env){
       const url='https://'+host+'/';
       if(!unique.has(url))unique.set(url,{
         id:'alias:'+host,name:site.name+' · '+host,url,host,path:'/',
-        propertyType:'independent-domain',canonicalUrl:site.url,updatedAt:site.updatedAt,
+        propertyType:'independent-domain',canonicalUrl:DOMAIN_CANONICAL_FOR_PATH[key]||site.url,updatedAt:site.updatedAt,
       });
     }
   }
