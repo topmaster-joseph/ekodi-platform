@@ -79,3 +79,21 @@ test('aggregate cleanup proof omits private paths, invalid counts and unrelated 
   assert.equal(summarize({ }, 'maintenance.temp_cleanup').removedFiles, undefined);
   assert.equal(summarize({ removedFiles: 7 }, 'updates.scan').removedFiles, undefined);
 });
+
+test('dedicated Windows performance route uses canonical admin, authenticated handoff and PC-only focus', async () => {
+  const [routes, handoff] = await Promise.all([
+    readFile(new URL('../admin-canonical-routes.js', import.meta.url), 'utf8'),
+    readFile(new URL('../admin-central-handoff.js', import.meta.url), 'utf8'),
+  ]);
+  assert.match(routes, /devices:'ops'/);
+  assert.match(routes, /detailSegments/);
+  assert.match(routes, /function navigationTarget\(section,loc=window.location,detailSegments=null\)/);
+  assert.match(handoff, /target\.pathname=routes\(\)\.pathFor\(r,current\?\.section===r\?current\.detailSegments:\[\]\)/);
+  assert.match(admin, /WINDOWS_PERFORMANCE_URL = '\/admin\/ops\/devices\/windows-performance'/);
+  assert.match(admin, /function windowsPerformanceRoute\(\)/);
+  assert.match(admin, /wrapper\.open = windowsPerformanceRoute\(\) \|\| openRosterGroups\.has\(group\.key\)/);
+  assert.match(admin, /windowsPerformanceRoute\(\) && \(device\.management\?\.type !== 'pc' \|\| isInventory\(device\) \|\| device\.capabilities\?\.posAgent === true\)/);
+  assert.match(admin, /if \(location\.hash === '#devices' \|\| windowsPerformanceRoute\(\)\) showDevices\(\)/);
+  assert.match(admin, /href="\$\{windowsPerformanceRoute\(\) \? '\/admin\/ops\/devices' : WINDOWS_PERFORMANCE_URL\}"/);
+  assert.match(css, /EKODI-WINDOWS-PERFORMANCE-LINK-001/);
+});
