@@ -34,7 +34,7 @@ test('focused production probe retains genuine super-admin session and full-suit
   const runner=read('scripts/admin-authenticated-e2e-retry.mjs');
   assert.match(workflow, /focus_menu:/);
   assert.match(workflow, /E2E_MENU_FOCUS:.*inputs\.focus_menu/);
-  assert.match(workflow, /role == \\\"super_admin\\\"/);
+  assert.match(workflow, /role == "super_admin"/);
   assert.match(workflow, /Issue short-lived genuine super-admin session/);
   assert.match(workflow, /Short-lived E2E session revoked/);
   assert.match(runner, /resolveAdminE2EMenus\(allMenuIds, process\.env\.E2E_MENU_FOCUS\)/);
