@@ -1,5 +1,5 @@
 {
-  "version": 113,
+  "version": 114,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -3696,6 +3696,9 @@
         "redirect": "manual",
         "expect": [
           "id=\"progressSummary\"",
+          "data-launch-guidance",
+          "data-guide-agenda",
+          "progressSaveNext",
           "progressFilter",
           "data-progress-key",
           "COOP_PROGRESS_EXCLUSION"
@@ -3714,6 +3717,9 @@
         "redirect": "manual",
         "expect": [
           "id=\"progressSummary\"",
+          "data-launch-guidance",
+          "data-guide-agenda",
+          "progressSaveNext",
           "progressFilter",
           "data-progress-key",
           "COOP_PROGRESS_EXCLUSION"
