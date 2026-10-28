@@ -18,7 +18,7 @@ test('management platform preserves EKODI guest and Google-free-entry policy',()
   assert.equal(MANAGEMENT_ACCESS_POLICY.guestMode,'guide-only');
   assert.equal(MANAGEMENT_ACCESS_POLICY.identityProvider,'google');
   assert.equal(MANAGEMENT_ACCESS_POLICY.minimumTier,'free');
-  assert.equal(policy.platform.authHub,'https://auth.ekodi.kr/');
+  assert.equal(policy.platform.authHub,'https://ekodi.kr/auth/');
   assert.equal(policy.platform.shellRequired,true);
 });
 
@@ -68,4 +68,47 @@ test('external channel mutations fail closed without approval and official adapt
 test('canonical data contract includes menu/order/review shared identifiers',()=>{
   for(const entity of ['product','menu','channel-menu-mapping','order','review']) assert.ok(policy.canonicalData.entities.includes(entity));
   assert.match(policy.canonicalData.crossModuleRule,/no private cross-module database reads/i);
+});
+
+test('management auth URLs are canonical and login return is limited to management path',async()=>{
+  const {runInNewContext}=await import('node:vm');
+  const app=readFileSync(new URL('../management/app.js',import.meta.url),'utf8');
+  const index=readFileSync(new URL('../management/index.html',import.meta.url),'utf8');
+  const authClient=readFileSync(new URL('../auth-site/client-auth.js',import.meta.url),'utf8');
+  const authRouter=readFileSync(new URL('../auth-site/auth-router.js',import.meta.url),'utf8');
+  const host=['auth','ekodi','kr'].join('.');
+  assert.ok(!index.includes('https://'+host));
+  assert.ok(!app.includes('https://'+host));
+  assert.ok(index.includes('https://ekodi.kr/auth/?site=management'));
+  assert.ok(authClient.includes("management:{name:'EKODI 경영플랫폼',returnTo:'https://ekodi.kr/management/'"));
+  assert.match(authRouter,/firstPartyClientSites=new Set\(\[[^\]]*'management'/);
+  const start=app.indexOf('function authUrl(){');
+  const end=app.indexOf('\n}',start);
+  assert.ok(start>=0&&end>start,'management authUrl function found');
+  const fn=app.slice(start,end+2);
+  const urlFor=href=>new URL(runInNewContext('('+fn+')()', {URL,location:{href}}));
+  const fromActual=urlFor('https://ekodi.kr/management/reports/?period=2026-Q4#private');
+  assert.equal(fromActual.origin,'https://ekodi.kr');
+  assert.equal(fromActual.pathname,'/auth/');
+  assert.equal(fromActual.searchParams.get('site'),'management');
+  assert.equal(fromActual.searchParams.get('return_to'),'https://ekodi.kr/management/reports/?period=2026-Q4');
+  const untrusted=urlFor('https://outside.example/management/?period=2026-Q4');
+  assert.equal(untrusted.searchParams.get('return_to'),'https://ekodi.kr/management/');
+  const anotherSite=urlFor('https://ekodi.kr/my/private');
+  assert.equal(anotherSite.searchParams.get('return_to'),'https://ekodi.kr/management/');
+});
+
+test('management public Worker and both configurations refuse to publish old auth hosts',()=>{
+  const worker=readFileSync(new URL('../management-worker.js',import.meta.url),'utf8');
+  const prod=readFileSync(new URL('../wrangler.management.toml',import.meta.url),'utf8');
+  const staging=readFileSync(new URL('../wrangler.management.staging.toml',import.meta.url),'utf8');
+  const management=readFileSync(new URL('../management-platform.js',import.meta.url),'utf8');
+  assert.ok(worker.includes("authUrl:'https://ekodi.kr/auth/?site=management'"));
+  assert.ok(!worker.includes('env.AUTH_URL||'));
+  assert.ok(worker.includes('https://ekodi.kr/admin/?route=organization&source=management'));
+  assert.ok(management.includes("authHub:'https://ekodi.kr/auth/'"));
+  assert.equal(policy.platform.canonicalUrl,'https://ekodi.kr/management/');
+  for(const cfg of [prod,staging])assert.ok(cfg.includes('AUTH_URL = "https://ekodi.kr/auth/?site=management"'));
+  // Keep legacy Worker custom-domain binding for C3 retirement, never a user login target.
+  assert.ok(prod.includes('pattern = "'+['management','ekodi','kr'].join('.')+'"'));
 });

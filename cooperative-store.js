@@ -1,3 +1,4 @@
+import { readCooperativeProgress, normalizeCooperativeProgress } from './cooperative-progress.js';
 import { cooperativeInitialState, COOP_DOCUMENTS } from './cooperative-registry.js';
 
 const text = (value, max = 2000) => String(value ?? '').trim().slice(0, max);
@@ -19,6 +20,7 @@ export function normalizeCooperativeState(input, coop, previous = cooperativeIni
   // Reject tenant/identity fields rather than allowing a client to move a record.
   for (const key of ['workspaceId', 'workspace_id', 'slug', 'tenant', 'tenantId', 'role', 'grants']) if (key in input) fail('COOP_IMMUTABLE_IDENTITY');
   const state = structuredClone(previous);
+  if ('progress' in input) state.progress = normalizeCooperativeProgress(input.progress, coop, previous.progress);
   if (input.profile) {
     const p = input.profile;
     if (p.status && p.status !== 'formation') fail('COOP_FORMATION_STATUS_ONLY');
@@ -80,7 +82,9 @@ export function normalizeCooperativeState(input, coop, previous = cooperativeIni
 export async function loadCooperativeProject(db, coop) {
   const row = await db.prepare('SELECT snapshot_json, revision, updated_at FROM cooperative_projects WHERE workspace_id = ? LIMIT 1').bind(coop.workspaceId).first();
   if (!row) throw Object.assign(new Error('COOP_PROJECT_NOT_PROVISIONED'), { status: 503, code: 'COOP_PROJECT_NOT_PROVISIONED' });
-  return { state: JSON.parse(row.snapshot_json), revision: Number(row.revision), updatedAt: row.updated_at };
+  const state = JSON.parse(row.snapshot_json);
+  state.progress = readCooperativeProgress(state.progress, coop);
+  return { state, revision: Number(row.revision), updatedAt: row.updated_at };
 }
 
 export async function saveCooperativeProject(db, coop, state, revision, access) {

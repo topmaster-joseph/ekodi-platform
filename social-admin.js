@@ -93,7 +93,7 @@
   }
 
   async function loadChannelAdminDirectory() {
-    const catalog = await import('./admin-service-catalog.js');
+    const catalog = await import('/admin-service-catalog.js');
     return catalog.socialManagedServices().map(item => ({
       ...item,
       publicUrl: catalog.canonicalServiceUrl(item.basePath),
@@ -291,6 +291,11 @@
     section.append(head,overview,tabBar,siteDirectoryPanel,connectionPanel,publishingPanel,policyPanel);
     content.append(section);
     showTab(initialIntent.provider?'connections':'sites');
+
+    // The Admin router may select this lazily mounted panel without replaying a
+    // click on the original nav button. The directory reads only the static
+    // service catalog, so hydrate on mount as well as on explicit activation.
+    void renderSiteDirectory();
 
     function renderSummary() {
       const orgs = registry.organizations || [];

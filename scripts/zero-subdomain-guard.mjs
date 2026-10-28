@@ -27,6 +27,13 @@ function requireValue(label, actual, expected) {
 
 if (policy.version < 2) fail('domain canonical policy must use site-boundary contract version 2 or later');
 requireValue('canonicalHost', policy.canonicalHost, 'ekodi.kr');
+// Constitutional forced auth entry: no first-party subdomain login/admin links in newly changed code.
+const canonicalAuth=policy.canonicalAuthEntry||{};
+if(canonicalAuth.policyId!=='CANONICAL-AUTH-ENTRY-001'||canonicalAuth.status!=='enforced') fail('canonical auth forced policy is missing or disabled');
+requireValue('canonicalAuthEntry.authentication',canonicalAuth.authentication,'https://ekodi.kr/auth/');
+requireValue('canonicalAuthEntry.platformAdmin',canonicalAuth.platformAdmin,'https://ekodi.kr/admin/');
+for(const flag of ['firstPartySubdomainLoginForbidden','inheritedByAllCurrentAndFutureSites','preserveTrustedExactReturnTo','postLoginCrossSiteFallbackForbidden','apexOriginNotSufficientForAuthorization','legacyProviderCallbackDependenciesRequireC3Evidence','sourceDriftBlocksCi']) if(canonicalAuth[flag]!==true) fail('canonical auth forced policy drift: '+flag);
+
 requireValue('publicAddressPolicy', policy.publicAddressPolicy, 'apex-path-only');
 requireValue('subdomainPolicy', policy.subdomainPolicy, 'forbidden');
 if (policy.legacySubdomainRedirects !== false) fail('legacy subdomain redirects must remain disabled');

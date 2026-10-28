@@ -146,7 +146,7 @@ const staticVersionInputs = [
   'ai-ops-admin.js','ai-ops-admin.css','ai-management-admin.js','ai-management-admin.css','ai-module-spec-admin.js','ai-module-spec-admin.css','life-ai-admin.js','life-ai-admin.css','mission-control-admin.js','mission-control-admin.css',
   'release-control-admin.js','release-control-admin.css','admin-lazy-features.js',
   'system-health-admin.js','system-health-admin.css','site-health-admin.js','site-health-admin.css','pos-agent-admin.js','pos-agent-admin.css','api-cost-admin.js','api-cost-admin.css','work-admin.js','work-admin.css','communication-admin.js','communication-admin.css',
-  'marketing-ai-admin.js','marketing-ai-admin.css','author-billing-admin.js','author-billing-admin.css',
+  'marketing-ai-admin.js','marketing-ai-admin.css','growth-os-admin.js','growth-os-admin.css','author-billing-admin.js','author-billing-admin.css',
   'admin-perf-diagnostics.js',
 ];
 function normalizeVersionedAdminAsset(value) {
