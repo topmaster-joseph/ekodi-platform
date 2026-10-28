@@ -3,7 +3,7 @@
   "constitutionVersion": "1.27.6",
   "approvedAt": "2026-10-28",
   "approvedBy": "topmaster-joseph",
-  "status": "approved-for-protected-promotion",
+  "status": "approved",
   "changeClass": "C2",
   "relatedDomainTopologyClass": "C3",
   "taskId": "canonical-apex-auth-inheritance-20261028",
