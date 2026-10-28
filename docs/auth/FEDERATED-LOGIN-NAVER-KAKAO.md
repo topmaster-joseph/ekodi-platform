@@ -48,3 +48,14 @@
 - 권한 판단은 로그인 경로가 아니라 `public.ekodi_account_for_auth_user()`가 돌려주는 **에코디 계정 증명**(연결된 모든 경로, 검증된 이메일)으로 한다: 회원권한 접근(access-api), 빈 사이트 관리자 지정, 교회 목회자 권한(church-pastor-api), 서남권 의대 시민의견 게시판.
 - 이메일로 부여된 권한은 **검증된 이메일**(`login_identities.email_verified`)에만 적용된다. 네이버 이메일은 검증으로 보지 않는다.
 - 마이그레이션: `supabase/migrations/20261027120000_ekodi_account_unified_proof.sql` (추가형, 함수 배포보다 먼저 적용).
+
+## 2026-10-28 — 키 전달 경로
+
+키는 채팅이나 코드가 아니라 GitHub 저장소 비밀값으로 넣는다. 로그인 서버 배포 때 자동으로 Supabase에 옮겨진다(키만 등록되고 로그인은 꺼진 상태 유지).
+
+| GitHub 비밀값 이름 | 넣을 값 |
+|---|---|
+| `NAVER_LOGIN_CLIENT_ID` | 네이버 애플리케이션 Client ID |
+| `NAVER_LOGIN_CLIENT_SECRET` | 네이버 애플리케이션 Client Secret |
+| `KAKAO_LOGIN_REST_API_KEY` | 카카오 앱 REST API 키 |
+| `KAKAO_LOGIN_CLIENT_SECRET` | 카카오 클라이언트 시크릿(사용 시) |

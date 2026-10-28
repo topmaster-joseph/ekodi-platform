@@ -37,3 +37,25 @@ test('manifest-only repair retains authorized protected dispatch and build inclu
   assert.match(converge, /release receipt is not authorized/);
   assert.match(recover, /release_branch_ref:branchRef,release_task_id:taskId/);
 });
+
+test('Social Hub and account Admin assets dispatch Site Core after both protected merge paths', () => {
+  const assets = [
+    'social-admin.js','social-admin.css',
+    'social-account-admin.js','social-account-admin.css',
+    'admin-service-catalog.js'
+  ];
+  for (const [label, source] of [['convergent', converge], ['immediate', recover]]) {
+    const start = source.indexOf('const sharedSiteTouched=');
+    assert.ok(start >= 0, label + ': missing Site Core change classifier');
+    const end = source.indexOf('\n);', start);
+    assert.ok(end > start, label + ': missing Site Core classifier terminator');
+    const classifier = source.slice(start, end);
+    for (const asset of assets) {
+      assert.ok(classifier.includes("'" + asset + "'"), label + ': ' + asset + ' must trigger Site Core');
+    }
+  }
+  assert.match(converge, /release_branch_ref:branch,release_task_id:taskId/);
+  assert.match(recover, /release_branch_ref:branchRef,release_task_id:taskId/);
+  assert.match(converge, /workflow:'deploy-site-core\.yml'/);
+  assert.match(recover, /shared_site_dispatch/);
+});

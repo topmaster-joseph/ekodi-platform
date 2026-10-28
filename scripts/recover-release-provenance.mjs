@@ -255,6 +255,8 @@ const sharedSiteTouched=sourceFiles.some(file=>
   // GITHUB_TOKEN merges do not fire ordinary main push workflows.
   file==='deploy/manifests/shared-site.worker.json'||
   file.startsWith('sites/seonammedi/public/')||
+  // Immediate provenance recovery must not strand lazy Social Hub/account Admin assets.
+  ['social-admin.js','social-admin.css','social-account-admin.js','social-account-admin.css','admin-service-catalog.js'].includes(file)||
   // The exact-approved Seasonal Workforce portal is owned by the shared Worker.
   file.startsWith('seasonal-workforce/')||
   ['site-worker.js','site-shell-worker.js','ekodi-shell-injector.js','seonammedi-admin-control.js',

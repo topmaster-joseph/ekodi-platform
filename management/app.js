@@ -8,10 +8,19 @@ function storedSession(){try{const value=JSON.parse(sessionStorage.getItem(SESSI
 function saveSession(value){state.session=value;sessionStorage.setItem(SESSION_KEY,JSON.stringify(value));renderIdentity()}
 function clearSession(){state.session=null;sessionStorage.removeItem(SESSION_KEY);renderIdentity()}
 function storedSelection(){try{return JSON.parse(localStorage.getItem(SELECTION_KEY)||'null')||{workspaceKind:'person',modules:['chief','marketing']}}catch{return{workspaceKind:'person',modules:['chief','marketing']}}}
-function authUrl(){return cfg.authUrl||'https://auth.ekodi.kr/?site=management&return_to=https%3A%2F%2Fmanagement.ekodi.kr%2F'}
+function authUrl(){
+  const canonical=new URL('https://ekodi.kr/auth/');
+  canonical.searchParams.set('site','management');
+  const source=new URL(location.href);
+  source.hash='';
+  const valid=source.protocol==='https:'&&source.hostname==='ekodi.kr'&&(source.pathname==='/management'||source.pathname.startsWith('/management/'));
+  canonical.searchParams.set('return_to',valid?source.href:'https://ekodi.kr/management/');
+  return canonical.href;
+}
 function renderIdentity(){
   const member=Boolean(state.session?.accessToken);document.body.dataset.member=member?'1':'0';$('memberApp').hidden=!member;
   const auth=$('authLink');auth.href=member?'#logout':authUrl();auth.textContent=member?'로그아웃':'Google 로그인';
+  const start=document.querySelector('.cta-row .button');if(start)start.href=authUrl();
   if(member)$('memberMeta').textContent=`무료등급 · ${state.session?.user?.email||'Google 회원'} · 기능 선택형`;
 }
 function sessionExpiry(value){const explicit=Number(value?.expiresAt||0);return explicit>0?explicit:Math.floor(Date.now()/1000)+Number(value?.expiresIn||3600)}
