@@ -64,3 +64,17 @@ test('cleanup receipt safely projects real aggregate counts and never fabricates
   assert.match(panel, /Number\.isFinite\(freed\) && freed >= 0/);
   assert.match(panel, /Number\.isFinite\(files\) && files >= 0/);
 });
+
+test('aggregate cleanup proof omits private paths, invalid counts and unrelated command counts', () => {
+  const fn = api.match(/function summarizeCommandResult\(result = \{\}, commandType = ''\) \{([\s\S]*?)\n\}\n\nfunction managementView/)?.[1];
+  assert.ok(fn, 'server projection function should remain testable');
+  const summarize = new Function('result', 'commandType', fn);
+  assert.deepEqual(
+    summarize({ freedMB: 12.1, removedFiles: 7, privatePath: 'C:\\private' }, 'maintenance.temp_cleanup'),
+    { freedMB: 12.1, removedFiles: 7 },
+  );
+  assert.equal(summarize({ removedFiles: -7 }, 'maintenance.temp_cleanup').removedFiles, undefined);
+  assert.equal(summarize({ removedFiles: 'not a number' }, 'maintenance.temp_cleanup').removedFiles, undefined);
+  assert.equal(summarize({ }, 'maintenance.temp_cleanup').removedFiles, undefined);
+  assert.equal(summarize({ removedFiles: 7 }, 'updates.scan').removedFiles, undefined);
+});
