@@ -1,0 +1,99 @@
+name: Retire legacy EKODI Church hostname (C3)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/retire-church-legacy-domain.mjs'
+      - 'test/church-apex-only-retirement.test.mjs'
+      - '.github/workflows/retire-church-legacy-domain.yml'
+      - 'api-worker.js'
+      - 'ekodi-site-policy.js'
+      - 'ai-ops-admin.js'
+      - 'admin-lazy-features.js'
+      - 'campus-actions.js'
+      - 'system-capacity-admin.js'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/retire-church-legacy-domain.mjs'
+      - '.github/workflows/retire-church-legacy-domain.yml'
+  workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'EKODI Orchestrator approved branch ref'
+        required: false
+        type: string
+      release_task_id:
+        description: 'EKODI Orchestrator task receipt ID'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: church-domain-C3-retirement
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Check source, immutable domain scope, safe retirement and canonical registry
+        run: |
+          set -euo pipefail
+          node --check scripts/retire-church-legacy-domain.mjs
+          node scripts/retire-church-legacy-domain.mjs --self-test
+          node --test test/church-apex-only-retirement.test.mjs
+
+  production:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      EKODI_APPROVED_CHURCH_RETIREMENT: C3-2026-09-13
+      EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+      EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: EKODI Orchestrator guarded release authorization
+        run: node scripts/validate-ekodi-ai-change-orchestration.mjs --release
+      - name: Validate production credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Production Cloudflare quota circuit check
+        id: quota
+        run: node scripts/cloudflare-production-budget.mjs --output=cloudflare-production-quota.json
+      - name: Stop without mutation on quota protection
+        if: steps.quota.outputs.skip_nonessential == 'true'
+        run: |
+          echo 'Church hostname retirement deferred: Cloudflare quota protection active.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Cloudflare inventory and canonical Church preflight (read only)
+        if: steps.quota.outputs.skip_nonessential != 'true'
+        run: node scripts/retire-church-legacy-domain.mjs
+      - name: Detach only the retired Church browser hostname and verify
+        if: steps.quota.outputs.skip_nonessential != 'true'
+        run: |
+          set -euo pipefail
+          node scripts/retire-church-legacy-domain.mjs --execute | tee /tmp/church-host-retirement-receipt.log
+          {
+            echo '### Church legacy hostname retirement'
+            echo '- Canonical: https://ekodi.kr/ekodichurch/'
+            echo '- Scope: only the old Church browser hostname'
+            echo '- Protected services: Church Pages project, public apex route, unrelated domains, mail/verification DNS'
+            echo '- See retained workflow log for exact Cloudflare inventory, detach and live verification evidence.'
+          } >> "$GITHUB_STEP_SUMMARY"
