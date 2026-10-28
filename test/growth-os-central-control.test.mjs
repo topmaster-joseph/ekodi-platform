@@ -74,8 +74,8 @@ test('new central route and lazy assets are served by canonical protected Admin 
   assert.match(canonical,/group==='growth-os'/);
   assert.match(layout,/\['growth-os','growth-os'\]/);
   assert.match(loader,/paths:\['\/admin\/ai\/growth-os','\/admin\/growth-os'\]/);
-  assert.match(site,/\/'growth-os-admin\.js'/);
-  assert.match(site,/\/'growth-os-admin\.css'/);
+  assert.ok(site.includes("'/growth-os-admin.js'"));
+  assert.ok(site.includes("'/growth-os-admin.css'"));
   assert.match(build,/growth-os-admin\.js/);
   assert.match(postbuild,/growth-os-admin\.css/);
 });
