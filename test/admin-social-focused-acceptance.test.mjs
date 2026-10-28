@@ -21,7 +21,7 @@ test('focused production probe avoids unrelated API polling and unrelated Assist
   assert.match(retry,/if \(!focusOnly\) await waitForMaturityApi\(\)/);
   assert.match(retry,/if \(!fatal && !focusOnly\)/);
   assert.match(retry,/focusOnly \|\| \(aggregate\.assistProbe\?\.passed === true/);
-  assert.match(retry,/maxAttemptsPerMenu = .*social-accounts.*\? 1 : 2/);
+  assert.match(retry,/maxAttemptsPerMenu = focusedDiagnostic \? 1 : 2/);
   assert.match(retry,/isAdminEntryQuotaCircuit\(report\)/);
 });
 
@@ -54,7 +54,7 @@ test('official workflow preserves full mode, uploads private focused screenshots
   assert.match(workflow,/workflow_dispatch:/);
   assert.match(workflow,/focus_menu:/);
   assert.match(workflow,/default: all/);
-  assert.match(workflow,/if: \$\{\{ inputs\.focus_menu != 'social-accounts' \}\}/);
+  assert.match(workflow,/if: \$\{\{ inputs\.focus_menu == 'all' \}\}/);
   assert.match(workflow,/social-account-focused-production-\$\{\{ github\.run_id \}\}/);
   assert.match(workflow,/artifacts\/admin-authenticated-e2e\/social-accounts-\*\.png/);
   assert.match(workflow,/retention-days: 7/);
