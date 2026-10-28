@@ -39,6 +39,11 @@ export function auditSecureDocuments({policy,release,sql,edge,widget}) {
     edge.includes('DELETE_GRANT_RECONCILIATION_PENDING')&&
     edge.includes('storage_purged:false,backup_purged:false'),
     'deletion must revoke access before asynchronous purge and never claim erased backups');
+  fail(edge.includes('async function handlePurge')&&edge.includes('SECURE_DOCUMENTS_PURGE_ACTIVE')&&
+    edge.includes('SECURE_DOCUMENT_PURGE_OPERATOR_TOKEN')&&
+    edge.includes('storage.from(BUCKET).remove(batch)')&&edge.includes('storage.from(BUCKET).info(key)')&&
+    edge.includes('backup_erased:false'),
+    'separate retention/backup-verified purge lane required');
   fail(edge.includes('redaction_verified===true')&&edge.includes('pii_safe===true')&&
     edge.includes('engine_verified===true'),'independent file scan/redaction evidence required');
   fail(!/createSignedUrl|createSignedUploadUrl|publicUrl/.test(edge),'persistent signed URLs forbidden');

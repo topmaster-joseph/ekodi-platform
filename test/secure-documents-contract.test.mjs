@@ -71,3 +71,27 @@ test('deletion request is owner-verified, step-up gated and fails closed before 
  assert.ok(widget.includes('data-delete-request'));
  assert.ok(widget.includes('물리삭제 확인 대기'));
 });
+
+test('purge engine is independently disabled and records only verified storage API removal',()=>{
+ const migration=read('supabase/migrations/20261028093000_secure_documents_retention_purge.sql');
+ assert.match(migration,/legal_hold boolean not null default true/);
+ assert.match(migration,/retention_until timestamptz/);
+ assert.match(migration,/purge_authorized_at timestamptz/);
+ assert.match(migration,/backup_policy_reviewed_at timestamptz/);
+ assert.match(migration,/backup_erased boolean not null default false/);
+ assert.match(migration,/revoke all on table public.secure_document_purge_receipts from PUBLIC, anon, authenticated/);
+ for(const key of ['SECURE_DOCUMENTS_PURGE_ACTIVE','SECURE_DOCUMENTS_PURGE_POLICY_APPROVED',
+    'SECURE_DOCUMENT_PURGE_OPERATOR_TOKEN','SECURE_DOCUMENT_SCHEDULER_TOKEN']){
+   assert.ok(api.includes(key),key);
+ }
+ assert.match(api,/async function handlePurge/);
+ assert.match(api,/action==="purge"/);
+ assert.match(api,/eq\("legal_hold",false\)/);
+ assert.match(api,/lte\("retention_until",now\)/);
+ assert.match(api,/lte\("purge_authorized_at",now\)/);
+ assert.match(api,/backup_erased:false/);
+ assert.match(api,/admin\.storage\.from\(BUCKET\)\.remove\(batch\)/);
+ assert.match(api,/admin\.storage\.from\(BUCKET\)\.info\(key\)/);
+ assert.doesNotMatch(api,/delete\(\)\.eq\("bucket_id"/);
+ assert.ok(widget.includes('백업 보존 확인 대기'));
+});

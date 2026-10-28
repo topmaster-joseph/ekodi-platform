@@ -142,7 +142,7 @@ async function handleList(req,who,search){
  const wid=search.get("workspace_id");
  const scopeGrant=await permit(who,scope,wid);
  if(!scopeGrant)return deny(req,"SCOPE_FORBIDDEN");
- let query=admin.from("secure_document_records").select("id,kind,title,status,issued_on,valid_until,created_at,updated_at").eq("owner_scope",scope).neq("status","deleted").order("created_at",{ascending:false}).limit(100);
+ let query=admin.from("secure_document_records").select("id,kind,title,status,storage_purged_at,issued_on,valid_until,created_at,updated_at").eq("owner_scope",scope).neq("status","deleted").order("created_at",{ascending:false}).limit(100);
  query=scope==="person"?query.eq("owner_person_id",who.personId):query.eq("workspace_id",wid);
  const {data,error}=await query;
  if(error)return deny(req,"LIST_UNAVAILABLE",503);
@@ -280,6 +280,98 @@ async function handleRead(req,who,body){
  await audit("viewed",who.personId,record.id);
  return readEncrypted(req,record,version);
 }
+// A separate, disabled-by-default lane; never activated from public requests or
+// static repository flags. The operator must possess two independent secrets.
+const purgeEnabled=()=>Deno.env.get("SECURE_DOCUMENTS_PURGE_ACTIVE")==="true"
+ && Deno.env.get("SECURE_DOCUMENTS_PURGE_POLICY_APPROVED")==="true"
+ && Deno.env.get("SECURE_DOCUMENTS_LEGAL_APPROVED")==="true";
+const isNotFound=error=>String(error?.statusCode||error?.status||"")==="404";
+async function handlePurge(req){
+ const scheduler=Deno.env.get("SECURE_DOCUMENT_SCHEDULER_TOKEN")||"";
+ const operator=Deno.env.get("SECURE_DOCUMENT_PURGE_OPERATOR_TOKEN")||"";
+ if(!purgeEnabled()||scheduler.length<32||operator.length<32)
+   return deny(req,"PURGE_NOT_AUTHORIZED",403);
+ if(req.headers.get("x-scheduler-token")!==scheduler||
+    req.headers.get("x-purge-token")!==operator)return deny(req,"PURGE_NOT_AUTHORIZED",403);
+ const now=new Date().toISOString();
+ const {data:candidates,error:queueError}=await admin.from("secure_document_records")
+   .select("id,owner_scope,owner_person_id,workspace_id,legal_hold,retention_until,purge_authorized_at,backup_policy_reviewed_at,purge_lease_until")
+   .eq("status","deletion_pending").eq("legal_hold",false)
+   .not("retention_until","is",null).lte("retention_until",now)
+   .not("purge_authorized_at","is",null).lte("purge_authorized_at",now)
+   .not("backup_policy_reviewed_at","is",null)
+   .is("storage_purged_at",null)
+   .order("retention_until",{ascending:true}).limit(4);
+ if(queueError)return deny(req,"PURGE_QUEUE_UNAVAILABLE",503);
+ let verified=0,blocked=0,failed=0;
+ for(const record of candidates||[]){
+   if(record.purge_lease_until&&record.purge_lease_until>now){blocked++;continue;}
+   const lease=new Date(Date.now()+240000).toISOString();
+   let claim=admin.from("secure_document_records")
+     .update({purge_lease_until:lease})
+     .eq("id",record.id).eq("status","deletion_pending").eq("legal_hold",false)
+     .is("storage_purged_at",null)
+     .lte("retention_until",now).lte("purge_authorized_at",now);
+   claim=record.purge_lease_until?claim.eq("purge_lease_until",record.purge_lease_until):claim.is("purge_lease_until",null);
+   const {data:locked,error:lockError}=await claim.select("id").maybeSingle();
+   if(lockError||!locked){blocked++;continue;}
+   let errorCode="";
+   let fileCount=0;
+   try{
+     const {data:current,error:currentError}=await admin.from("secure_document_records")
+       .select("id,owner_scope,owner_person_id,workspace_id,status,legal_hold,retention_until,purge_authorized_at,backup_policy_reviewed_at,purge_lease_until")
+       .eq("id",record.id).single();
+     if(currentError||!current||current.status!=="deletion_pending"||current.legal_hold!==false
+       ||!current.retention_until||current.retention_until>new Date().toISOString()
+       ||!current.purge_authorized_at||current.purge_authorized_at>new Date().toISOString()
+       ||!current.backup_policy_reviewed_at||current.purge_lease_until!==lease)
+       throw new Error("RETENTION_REVIEW_CHANGED");
+     const {data:versions,error:versionError}=await admin.from("secure_document_versions")
+       .select("id,storage_key").eq("document_id",current.id).neq("state","deleted")
+       .order("version_number",{ascending:true}).limit(10000);
+     if(versionError||!versions?.length)throw new Error("PURGE_VERSION_SET_INVALID");
+     const expected=current.owner_scope+"/"+(current.owner_person_id||current.workspace_id)+"/"+current.id+"/";
+     const keys=versions.map(v=>v.storage_key);
+     if(keys.some(k=>typeof k!=="string"||!k.startsWith(expected)||!k.endsWith(".bin")||k.includes("..")||k.length>260))
+       throw new Error("PURGE_KEY_SCOPE_INVALID");
+     fileCount=keys.length;
+     // Supabase explicitly prohibits SQL deletion of Storage metadata. Use
+     // Storage API to remove actual object bytes; retry safely when interrupted.
+     for(let i=0;i<keys.length;i+=100){
+       const batch=keys.slice(i,i+100);
+       const {error:removeError}=await admin.storage.from(BUCKET).remove(batch);
+       if(removeError)throw new Error("STORAGE_REMOVE_FAILED");
+       for(const key of batch){
+         const {data:stillPresent,error:infoError}=await admin.storage.from(BUCKET).info(key);
+         if(stillPresent||!isNotFound(infoError))throw new Error("STORAGE_REMOVAL_UNVERIFIED");
+       }
+     }
+     const {error:versionMarkError}=await admin.from("secure_document_versions")
+       .update({state:"deleted",deleted_at:new Date().toISOString()})
+       .eq("document_id",record.id).neq("state","deleted");
+     if(versionMarkError)throw new Error("PURGE_METADATA_UPDATE_FAILED");
+     const {error:doneError}=await admin.from("secure_document_records")
+       .update({storage_purged_at:new Date().toISOString(),purge_lease_until:null,updated_at:new Date().toISOString()})
+       .eq("id",record.id).eq("status","deletion_pending").eq("legal_hold",false)
+       .eq("purge_lease_until",lease).is("storage_purged_at",null);
+     if(doneError)throw new Error("PURGE_FINALIZATION_FAILED");
+     const {error:receiptError}=await admin.from("secure_document_purge_receipts")
+       .insert({document_id:record.id,operation:"storage_api_purge",result:"storage_confirmed",file_count:fileCount,backup_erased:false});
+     if(receiptError)throw new Error("PURGE_RECEIPT_FAILED");
+     await audit("purged",null,record.id);
+     verified++;
+   }catch(error){
+     const kind=String(error?.message||"PURGE_OPERATION_FAILED");
+     errorCode=/^[A-Z_]{8,50}$/.test(kind)?kind:"PURGE_OPERATION_FAILED";
+     await admin.from("secure_document_purge_receipts")
+       .insert({document_id:record.id,operation:"storage_api_purge",result:"retry_required",file_count:fileCount,backup_erased:false,error_code:errorCode});
+     await admin.from("secure_document_records")
+       .update({purge_lease_until:null}).eq("id",record.id).eq("purge_lease_until",lease);
+     failed++;
+   }
+ }
+ return json(req,{ok:true,storage_api_verified:verified,skipped:blocked,retry_required:failed,backup_erased:false});
+}
 async function handleExpire(req){
  const expect=Deno.env.get("SECURE_DOCUMENT_SCHEDULER_TOKEN")||"";
  const provided=req.headers.get("x-scheduler-token")||"";
@@ -295,6 +387,7 @@ Deno.serve(async req=>{
  if(action==="status")return json(req,{ok:true,contract:"ekodi.secure-documents.v1",active:enabled()&&!!admin});
  if(!enabled()||!admin||!publishable)return deny(req,"SERVICE_NOT_ACTIVATED",503);
  if(action==="expire"&&req.method==="POST")return handleExpire(req);
+ if(action==="purge"&&req.method==="POST")return handlePurge(req);
  const who=await auth(req);
  if(!who)return deny(req,"AUTH_REQUIRED",401);
  try{

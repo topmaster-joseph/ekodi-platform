@@ -30,3 +30,6 @@
 ## Records
 PR: https://github.com/topmaster-joseph/ekodi-platform/pull/6330
 Orchestrator tracker: https://github.com/topmaster-joseph/ekodi-platform/issues/6337
+
+## Retention and purge lane (added, NOT approved)
+Review `supabase/migrations/20261028093000_secure_documents_retention_purge.sql` and the disabled server-only `purge` endpoint. All records start with `legal_hold=true`, missing retention review and no purge authorization. Even with exact owner/SHA approval, do not activate without independent tests for races, metadata drift, transient Storage failures, restored DB metadata and backup policy. A Storage API removal receipt is **not** a certificate that backups or downloaded copies were erased.

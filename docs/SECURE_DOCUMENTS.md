@@ -52,3 +52,10 @@ Personal mode: `mountSecureDocuments(element, {scope:"person"})`. All actual aut
 - Active recipient grants are revoked in the same request where possible. If grant reconciliation fails, the record remains non-active and the caller receives an explicit retryable failure.
 - The result explicitly returns `storage_purged:false` and `backup_purged:false`; UI labels the document as awaiting physical deletion verification. No SQL-delete of Storage objects is attempted.
 - Actual object deletion, legal holds, retention periods, idempotent purge receipts, backup lifecycle, and scheduling remain *not implemented*. Do not claim fulfillment of data erasure requests until the storage API removal and backup policy are independently verified.
+
+## Storage purge reconciler (gated, not active)
+- The follow-up migration adds owner-independent, default-true `legal_hold`, `retention_until`, `purge_authorized_at`, `backup_policy_reviewed_at`, `storage_purged_at` and a server-only receipt ledger.
+- `POST action=purge` requires **both** independent scheduler/operator secrets and `SECURE_DOCUMENTS_PURGE_ACTIVE=true` plus `SECURE_DOCUMENTS_PURGE_POLICY_APPROVED=true`, central active/legal/scan gates; no public user can authorize purge.
+- A deleted-request record remains inaccessible while the reconciler checks no legal hold, elapsed retention, explicit human purge authorization, and an independently reviewed backup policy. An optimistic lease guards duplicate workers. Storage is removed exclusively using the Storage API, and `info()` must report 404 for every referenced version before `storage_purged_at` and an immutable receipt are recorded.
+- `storage_purged_at` means **live Storage API removal verified only**. The receipt always states `backup_erased:false`; provider snapshots, separate copies, legal holds, external downloads and restore scenarios require independent verification. The document stays `deletion_pending` until backup lifecycle review, never claiming total erasure.
+- This is unverified prototype code pending synthetic multi-tenant race/integration tests, independent review and protected activation. Scheduler not configured; default off.
