@@ -33,6 +33,10 @@ test('safe optimization is explicit, constrained and receipt-aware', () => {
   assert.match(panel, /cleanup\?\.status === 'failed'/);
   assert.match(panel, /cleanup\?\.status === 'succeeded'/);
   assert.match(panel, /postCleanupDiagnostic/);
+  assert.match(panel, /lastDiagnostic\?\.completedAt/);
+  assert.match(panel, /lastDiagnostic\.completedAt\)\.getTime\(\) > new Date\(cleanup\.completedAt\)\.getTime\(\)/);
+  assert.match(panel, /telemetryAt = device\.diagnosticsAt/);
+  assert.doesNotMatch(panel, /postCleanupDiagnostic = Boolean\(cleanupFinished && completedAt/);
   assert.match(panel, /실제 완료 영수증 대기/);
   assert.match(admin, /'maintenance\.temp_cleanup': '7일 이상 지난 사용자\/Windows 임시 파일만 정리합니다/);
   assert.match(api, /'maintenance\.temp_cleanup': \{ risk: 'maintain', confirm: true \}/);
