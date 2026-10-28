@@ -129,3 +129,13 @@ test('synthetic production Admin UI verifier stubs canonical AI runtime read rou
   ]) assert.ok(text.includes(route), route);
   assert.doesNotMatch(text, /\/api\/control\/common-services\/ai\/(status|tasks|nodes)/);
 });
+
+test('Social Hub mobile screenshot requires a closed overlay and visible real heading', async () => {
+  const text = await source();
+  assert.match(text, /await page\.keyboard\.press\('Escape'\)/);
+  assert.match(text, /!document\.body\.classList\.contains\('admin-mobile-drawer-open'\)/);
+  assert.match(text, /sidebarRight>2/);
+  assert.match(text, /!mobile\.headingVisible/);
+  assert.match(text, /point===heading \|\| heading\.contains\(point\)/);
+  assert.match(text, /menu-social-mobile\.png/);
+});
