@@ -682,7 +682,8 @@
       stats.append(cell);
     }
     const freePct = Array.isArray(storage.volumes)
-      ? storage.volumes.map(v => Number(v.freePct)).filter(v => Number.isFinite(v) && v >= 0 && v <= 100)
+      ? storage.volumes.map(v => v?.freePct == null || v.freePct === '' ? NaN : Number(v.freePct))
+        .filter(v => Number.isFinite(v) && v >= 0 && v <= 100)
       : [];
     const minFree = freePct.length ? Math.min(...freePct) : null;
     metric('CPU 점유율', snapshot.cpuLoadPct, '%');
