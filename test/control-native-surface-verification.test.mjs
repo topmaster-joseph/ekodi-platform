@@ -19,7 +19,7 @@ test('shared-site release must independently probe Control on desktop and mobile
   assert.ok(desktop.includes('device_profile: desktop'));
   assert.ok(mobile.includes('device_profile: mobile-portrait'));
   assert.ok(desktop.includes('needs: deploy'));
-  assert.ok(mobile.includes('needs: deploy'));
+  assert.match(mobile,/needs:\\s*\\[deploy,\\s*native_surface_verification_desktop\\]/);
 });
 
 test('Control native probes are immutable isolated EKODI browser checks', () => {
