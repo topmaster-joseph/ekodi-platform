@@ -48,3 +48,15 @@ test('infra cost UI expands only visible finance panel and adapts to narrow scre
   assert.match(js,/사용량 연동 필요/);
   assert.match(js,/청구서 직접 등록/);
 });
+
+test('infra cost navigation resets inherited workbench scroll and production browser checks real viewport',()=>{
+  const module=read('infra-cost-admin.js'),e2e=read('scripts/verify-admin-production-ui-e2e.mjs');
+  assert.match(module,/active&&!costPanelWasActive/);
+  assert.match(module,/workspace\.scrollTop=0/);
+  assert.match(e2e,/INFRA_COST_VISIBLE_VIEWPORT_E2E/);
+  assert.match(e2e,/INFRA_COST_SEARCH_E2E/);
+  assert.match(e2e,/INFRA_COST_FILTER_RESET_E2E/);
+  assert.match(e2e,/INFRA_COST_INVOICE_EDITOR_E2E/);
+  assert.match(e2e,/INFRA_COST_MOBILE_LAYOUT_E2E/);
+  assert.match(e2e,/Synthetic cost UI must not mutate production billing records/);
+});
