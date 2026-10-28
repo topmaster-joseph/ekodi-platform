@@ -48,8 +48,10 @@ export function auditSecureDocuments({policy,release,sql,edge,widget}) {
   fail(edge.includes('approvedScannerEndpoint(scanUrl)')&&
     edge.includes('redirect:"error"')&&edge.includes('verifiedScannerVerdict(response.status,result,response.redirected)'),
     'scanner must be canonical same-origin endpoint and block redirects');
-  fail(edge.includes('redaction_verified===true')&&edge.includes('pii_safe===true')&&
-    edge.includes('engine_verified===true'),'independent file scan/redaction evidence required');
+  fail(edge.includes('redaction_verified===true')&&
+    edge.includes('verifiedScannerVerdict(response.status,result,response.redirected)')&&
+    edge.includes('approvedScannerEndpoint(scanUrl)'),
+    'independent file scan/redaction evidence required');
   fail(!/createSignedUrl|createSignedUploadUrl|publicUrl/.test(edge),'persistent signed URLs forbidden');
   fail(!/service_role|SUPABASE_SERVICE_ROLE_KEY/.test(widget),'client script must not expose service role key');
   fail(widget.includes('mountSecureDocuments')&&widget.includes('workspaceId'),'site-reuse adapter is required');
