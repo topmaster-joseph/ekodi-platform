@@ -152,6 +152,8 @@ test('publication controls focused proof uses a genuine read-only Admin session 
   assert.match(retry,/\['social-accounts','architecture','public-site-controls'\]/);
   assert.match(workflow,/^\s*-\s*public-site-controls\s*$/m);
   assert.match(workflow,/public-site-controls-focused-production-/);
+  assert.match(workflow,/admin-public-site-controls-proof-/);
+  assert.match(workflow,/Preserve completed publication visual proof from full Admin verification/);
   assert.match(workflow,/public-site-controls-geometry\.json/);
   assert.match(workflow,/public-site-controls-\*\.png/);
   assert.match(worker,/verifyPublicationVisualProof\(page, artifactsDir\)/);
