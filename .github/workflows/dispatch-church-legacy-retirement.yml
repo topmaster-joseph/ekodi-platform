@@ -1,0 +1,61 @@
+name: Dispatch approved EKODI Church C3 retirement
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/dispatch-church-legacy-retirement.mjs'
+      - 'test/dispatch-church-legacy-retirement.test.mjs'
+      - '.github/workflows/dispatch-church-legacy-retirement.yml'
+
+permissions:
+  contents: read
+  actions: write
+  issues: read
+  pull-requests: read
+
+concurrency:
+  group: ekodi-church-C3-dispatch-gate
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - run: |
+          node --check scripts/dispatch-church-legacy-retirement.mjs
+          node --test test/dispatch-church-legacy-retirement.test.mjs
+
+  approved-owner-dispatch:
+    if: >-
+      github.event_name == 'issue_comment' &&
+      github.repository == 'topmaster-joseph/ekodi-platform' &&
+      github.actor == 'topmaster-joseph' &&
+      github.event.issue.number == 6533 &&
+      !github.event.issue.pull_request &&
+      github.event.comment.user.login == 'topmaster-joseph' &&
+      github.event.comment.body == 'EKODI-CHURCH-C3-EXECUTE'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: production
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout protected main dispatcher
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify owner command and approved EKODI receipt, then dispatch original guarded workflow
+        run: node scripts/dispatch-church-legacy-retirement.mjs
