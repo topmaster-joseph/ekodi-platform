@@ -24,8 +24,9 @@ const request=(overrides={})=>({
   authorizedSuperAdminPersonId:actor,...overrides,
 });
 
-function mockDb(row=buildRow(),{commit=true,failBatch=false}={}){
+function mockDb(row=buildRow(),{commit=true,failBatch=false,stagingAttestation=true,stagingAttestationValid=true}={}){
   const trace={sql:[],events:[],batchCalls:0};
+  const stagingEvent={actor:'ekodi-github-actions-oidc-reconciler',reason:'verified_preproduction_evidence_recorded',evidence_json:JSON.stringify({authority:'ekodi-orchestrator',source:'github-actions-oidc',taskId,branchRef,releaseSha:stagingAttestationValid?releaseSha:'3'.repeat(40),artifactDigest,verifiedAt:preproductionProof.verifiedAt,workflowRunId:123456})};
   const db={
     prepare(sql){
       trace.sql.push(sql);
@@ -34,7 +35,7 @@ function mockDb(row=buildRow(),{commit=true,failBatch=false}={}){
           sql,args,
           first:async()=>{
             if(sql.includes('FROM ekodi_orchestrator_tasks'))return args[0]===row?.task_id?row:null;
-            if(sql.includes('FROM ekodi_orchestrator_task_events'))return trace.events.at(-1)||null;
+            if(sql.includes('FROM ekodi_orchestrator_task_events'))return sql.includes('verified_preproduction_evidence_recorded')?(stagingAttestation?stagingEvent:null):(trace.events.at(-1)||null);
             throw Error('Unexpected query');
           },
         };
@@ -124,6 +125,16 @@ test('staging, branch and proof errors hold before the write transaction',async(
     const answer=await recordEkodiFinalPromotionApproval(db,request());
     assert.equal(answer.approved,false);
     assert.equal(trace.batchCalls,0);
+  }
+});
+
+test('unverified, missing or forged staging attestation cannot create an owner receipt',async()=>{
+  for(const config of [{stagingAttestation:false},{stagingAttestationValid:false}]){
+    const {db,trace}=mockDb(buildRow(),config);
+    const answer=await recordEkodiFinalPromotionApproval(db,request());
+    assert.equal(answer.approved,false);
+    assert.equal(trace.batchCalls,0);
+    assert.equal(trace.events.length,0);
   }
 });
 
