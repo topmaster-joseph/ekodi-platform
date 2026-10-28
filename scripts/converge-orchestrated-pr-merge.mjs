@@ -384,6 +384,9 @@ const sharedSiteTouched=changedFiles.some(file=>
   // MarketingAI admin console assets are served only by Site Core (single production owner).
   // Token merges skip push workflows, so these must dispatch Site Core explicitly (2026-10-23).
   ['marketing-ai-admin.js','marketing-ai-admin.css','marketing-ai-admin-live-ops.js','marketing-ai-admin-live-ops.css','marketing-ai-admin-posting-status.js','marketing-ai-channel-manager.js','test/marketing-admin-site-core-dispatch-20261023.test.mjs'].includes(file)||
+  // Infrastructure and Billing Admin lazy assets must trigger their guarded Site Core owner.
+  // GITHUB_TOKEN PR merges do not reliably trigger push-path deployment workflows.
+  ['infra-cost-admin.js','infra-cost-admin.css','test/infra-cost-control.test.mjs'].includes(file)||
   // Social Hub and EKODI account inventory are lazy Admin assets owned by Site Core.
   // GITHUB_TOKEN merges skip push workflows, so release their exact protected merge.
   ['social-admin.js','social-admin.css','social-account-admin.js','social-account-admin.css','admin-service-catalog.js'].includes(file)||
