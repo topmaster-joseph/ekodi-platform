@@ -27,3 +27,23 @@ test('Host normalization accepts canonical ASCII and Unicode IDN only, rejecting
     assert.equal(normalize(bad),'','must reject '+bad);
   }
 });
+
+test('Canonical Search Visibility UI has six ordered stages without inventing external success',()=>{
+  const ui=readFileSync(new URL('../search-visibility-admin.js',import.meta.url),'utf8');
+  const stages=['1. 대상과 대표 주소','2. 검색 수집 기술 점검',
+    '3. 검색엔진 소유권 확인','4. 사이트맵 제출 및 수집 알림',
+    '5. 색인·발견 확인','6. 노출·클릭 등 실측 성과'];
+  let previous=-1;
+  for(const stage of stages){
+    const index=ui.indexOf(stage);
+    assert.ok(index>previous,'stage missing or out of order: '+stage);
+    previous=index;
+  }
+  assert.match(ui,/data-sv-sequence/);
+  assert.match(ui,/renderExecutionSteps\(\)/);
+  assert.match(ui,/row\.site_url===site\.url&&primary\.has\(row\.provider_id\)/);
+  assert.match(ui,/수동 근거 기록 · 자동 검증 아님/);
+  assert.match(ui,/공식 공급자 성과 API 미연동 · 수치 미확인/);
+  assert.match(ui,/separate\?'별도 도메인 점검 필요/);
+  assert.doesNotMatch(ui,/localStorage\.setItem\(/);
+});
