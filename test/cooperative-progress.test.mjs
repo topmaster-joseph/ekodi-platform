@@ -4,11 +4,65 @@ import {COOPERATIVES} from '../cooperative-registry.js';
 import {COOP_LAUNCH_TASKS, initialCooperativeProgress, normalizeCooperativeProgress, cooperativeProgressSummary, cooperativeLaunchGuidance} from '../cooperative-progress.js';
 import {loadCooperativeProject,normalizeCooperativeState} from '../cooperative-store.js';
 import {routeCooperative} from '../cooperative-control.js';
+import {cooperativePreparation} from '../cooperative-preparation.js';
 import {fixture,authFetch} from './helpers/cooperative-fixture.mjs';
 const [jubilee,open]=COOPERATIVES;
 const patch=(coop,key,changes)=>({version:1,items:[{id:`${coop.workspaceId}:launch:${key}`,...changes}]});
 const request=(coop,token='',method='GET',body,endpoint='project',origin='https://ekodi.kr')=>new Request(`https://ekodi.kr/${coop.publicSlug}/api/${endpoint}`,{method,headers:{...(token?{authorization:'Bearer '+token}:{}),...(body?{origin,'content-type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});
 const sum=value=>cooperativeProgressSummary(value,COOP_LAUNCH_TASKS,'2026-10-28');
+
+test('preparation worksheets mark unknown facts and packets include saved notes only with minimal identity data',async()=>{
+ const f=fixture();
+ try{
+  for(const coop of COOPERATIVES){
+   const state=(await loadCooperativeProject(f.db,coop)).state;
+   state.founders[0].accountEmail='never-export@example.test';state.progress.items[0].evidence='unrelated-evidence-secret';
+   const before=JSON.stringify(state),p=cooperativePreparation(state);
+   assert.equal(JSON.stringify(state),before);
+   assert.ok(p.planTemplate.includes(coop.name));assert.ok(p.budgetTemplate.includes(coop.name));
+   assert.ok(p.planTemplate.length<2000&&p.budgetTemplate.length<2000);
+   assert.match(p.packet,/주사무소: 미확정/);assert.match(p.packet,/첫해 예산: 미정/);
+   assert.equal(p.packet.includes('never-export@example.test'),false);assert.equal(p.packet.includes('unrelated-evidence-secret'),false);
+   assert.match(p.packet,/저장된 초안 없음/);
+   state.progress.items[8].note='저장된 사업계획 초안';state.progress.items[9].note='저장된 예산 초안';
+   const saved=cooperativePreparation(state);assert.match(saved.packet,/저장된 사업계획 초안/);assert.match(saved.packet,/저장된 예산 초안/);
+  }
+ }finally{f.sqlite.close();}
+});
+test('editing plan or budget draft content clears prior review even if a client tries to preserve it',()=>{
+ for(const key of ['09','10','11']){
+  let progress=initialCooperativeProgress(jubilee);
+  progress=normalizeCooperativeProgress(patch(jubilee,key,{status:'완료',completedDate:'2026-10-28',evidence:'원본 위치',note:'이전 내용',verified:true}),jubilee,progress);
+  progress=normalizeCooperativeProgress(patch(jubilee,key,{note:'변경된 내용',verified:true}),jubilee,progress);
+  assert.equal(progress.items.find(r=>r.id.endsWith(':launch:'+key)).verified,key==='11');
+ }
+});
+test('private preparation notes persist through existing scoped API without changing shared documents, legal state or another cooperative',async()=>{
+ const f=fixture(),original=globalThis.fetch;globalThis.fetch=authFetch({owner:'chair@example.test',member:'member@example.test'});
+ f.grant(jubilee,'chair@example.test','owner');f.grant(jubilee,'member@example.test','member');
+ try{
+  const before=await loadCooperativeProject(f.db,jubilee),other=await loadCooperativeProject(f.db,open);
+  const state={progress:patch(jubilee,'09',{note:'private-preparation-content',verified:false})};
+  const body=await (await routeCooperative(request(jubilee,'owner','PUT',{revision:before.revision,state}),f.env)).json();
+  assert.equal(body.state.progress.items[8].note,'private-preparation-content');assert.deepEqual(body.state.documents,before.state.documents);assert.equal(body.state.profile.status,'formation');
+  assert.deepEqual(await loadCooperativeProject(f.db,open),other);
+  for(const endpoint of ['public','me']){const r=await routeCooperative(request(jubilee,endpoint==='me'?'member':'','GET',undefined,endpoint),f.env);assert.equal(r.status,200);assert.equal((await r.text()).includes('private-preparation-content'),false);}
+  assert.equal((await routeCooperative(request(jubilee,'member','PUT',{revision:body.revision,state}),f.env)).status,403);
+  assert.equal((await routeCooperative(request(jubilee,'owner','PUT',{revision:before.revision,state}),f.env)).status,409);
+ }finally{globalThis.fetch=original;f.sqlite.close();}
+});
+test('over-limit draft content is rejected without truncation, revision change or audit writes; 2000 characters persist intact',async()=>{
+ const f=fixture(),original=globalThis.fetch;globalThis.fetch=authFetch({owner:'chair@example.test'});f.grant(jubilee,'chair@example.test','owner');
+ try{
+  const before=await loadCooperativeProject(f.db,jubilee),auditBefore=f.sqlite.prepare('SELECT COUNT(*) AS n FROM cooperative_audit').get().n;
+  const response=await routeCooperative(request(jubilee,'owner','PUT',{revision:before.revision,state:{progress:patch(jubilee,'09',{note:'가'.repeat(2011)})}}),f.env);
+  assert.equal(response.status,400);assert.equal((await response.json()).code,'COOP_PROGRESS_NOTE_TOO_LONG');
+  assert.deepEqual(await loadCooperativeProject(f.db,jubilee),before);assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS n FROM cooperative_audit').get().n,auditBefore);
+  const exact='나'.repeat(2000);
+  const saved=await routeCooperative(request(jubilee,'owner','PUT',{revision:before.revision,state:{progress:patch(jubilee,'09',{note:exact})}}),f.env);
+  assert.equal(saved.status,200);assert.equal((await saved.json()).state.progress.items[8].note,exact);
+ }finally{globalThis.fetch=original;f.sqlite.close();}
+});
 
 test('next guidance groups early work and exposes unresolved facts without completing or mutating either cooperative',async()=>{
  const f=fixture();
