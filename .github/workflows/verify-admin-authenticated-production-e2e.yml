@@ -143,6 +143,17 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      - name: Upload sanitized social directory screenshots
+        if: always() && inputs.focus_menu == 'social-accounts'
+        uses: actions/upload-artifact@v4
+        with:
+          name: social-account-directory-responsive-${{ github.run_id }}
+          path: |
+            artifacts/admin-authenticated-e2e/social-accounts-directory-390.png
+            artifacts/admin-authenticated-e2e/social-accounts-directory-1440.png
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Revoke short-lived E2E session
         if: always() && env.E2E_TOKEN_HASH != '' && env.E2E_AUTH_DB_ID != ''
         shell: bash
