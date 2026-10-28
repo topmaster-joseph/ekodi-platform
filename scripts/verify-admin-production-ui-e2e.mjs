@@ -589,6 +589,17 @@ for (const [id, group] of menus) {
     }
     await page.setViewportSize({ width: 390, height: 844 });
     try {
+      // A desktop-to-mobile resize can leave the navigation drawer covering the
+      // content. Dismiss it through the real public scrim before taking evidence.
+      const drawerScrim = page.locator('[data-admin-drawer-scrim]');
+      if (await drawerScrim.isVisible()) await drawerScrim.click();
+      await page.waitForFunction(() => {
+        const drawer = document.querySelector('.sidebar');
+        const scrim = document.querySelector('[data-admin-drawer-scrim]');
+        return !document.body.classList.contains('admin-mobile-drawer-open')
+          && !drawer?.classList.contains('open')
+          && (!scrim || scrim.hidden);
+      }, null, { timeout: 5000 });
       const mobile = await page.evaluate(() => {
         const list = document.querySelector('.common-services-list-wrap');
         const card = document.querySelector('.common-service-card');
@@ -597,9 +608,15 @@ for (const [id, group] of menus) {
           headerDisplay: getComputedStyle(document.querySelector('.common-services-list-head')).display,
           summaryDisplay: getComputedStyle(document.querySelector('.common-services-summary')).display,
           scrollExcess: list ? Math.round(list.scrollWidth - list.clientWidth) : -1,
+          cardLeft: card ? Math.round(card.getBoundingClientRect().left) : -1,
+          cardRight: card ? Math.round(card.getBoundingClientRect().right) : -1,
+          viewportWidth: window.innerWidth,
+          sidebarOpen: Boolean(document.querySelector('.sidebar')?.classList.contains('open')),
         };
       });
-      if (mobile.cardDisplay !== 'grid' || mobile.headerDisplay !== 'none' || mobile.summaryDisplay !== 'grid' || mobile.scrollExcess > 2) {
+      if (mobile.cardDisplay !== 'grid' || mobile.headerDisplay !== 'none' || mobile.summaryDisplay !== 'grid'
+          || mobile.scrollExcess > 2 || mobile.sidebarOpen || mobile.cardLeft < -2
+          || mobile.cardRight > mobile.viewportWidth + 2) {
         throw new Error('ENGINE_CATALOG_STYLE_E2E mobile failed: ' + JSON.stringify(mobile));
       }
       console.log('[PROD-E2E] engine-all: stylesheet and compact desktop/mobile layout verified');
