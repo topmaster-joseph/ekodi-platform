@@ -358,7 +358,8 @@
         "core.automation",
         "core.analytics",
         "device.observe",
-        "device.remote-computer"
+        "device.remote-computer",
+        "core.growth-intelligence"
       ],
       "signals": [
         "플랫폼 운영",
