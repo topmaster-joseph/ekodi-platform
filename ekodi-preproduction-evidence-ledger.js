@@ -50,10 +50,26 @@ export async function recordVerifiedEkodiPreproductionEvidence(db,evidence,oidc=
   // The OIDC reconciler is scheduled. Do not reissue proof on every poll or
   // invalidate a final confirmation that was already granted.
   if(prior.preproductionProof?.taskId===taskId &&
+     prior.preproductionProof?.branchRef===branchRef &&
      prior.preproductionProof?.releaseSha===releaseSha &&
      prior.preproductionProof?.artifactDigest===artifactDigest){
-    return Object.freeze({recorded:true,idempotent:true,approvalGranted:false,
-      taskId,branchRef,releaseSha,artifactDigest,productionDeployed:false});
+    let previous;
+    try{
+      previous=await db.prepare(
+        "SELECT actor,reason,evidence_json FROM ekodi_orchestrator_task_events WHERE task_id=? AND reason='verified_preproduction_evidence_recorded' ORDER BY seq DESC LIMIT 1"
+      ).bind(taskId).first();
+    }catch{return fail('stage_audit_lookup_unavailable')}
+    let verified;
+    try{verified=JSON.parse(previous?.evidence_json||'{}')}catch{return fail('stage_audit_invalid')}
+    if(previous?.actor==='ekodi-github-actions-oidc-reconciler'&&
+       verified.authority==='ekodi-orchestrator'&&verified.source==='github-actions-oidc'&&
+       verified.taskId===taskId&&verified.branchRef===branchRef&&
+       verified.releaseSha===releaseSha&&verified.artifactDigest===artifactDigest&&
+       verified.verifiedAt===prior.preproductionProof.verifiedAt){
+      return Object.freeze({recorded:true,idempotent:true,approvalGranted:false,
+        taskId,branchRef,releaseSha,artifactDigest,productionDeployed:false});
+    }
+    return fail('matching_staging_proof_without_authoritative_audit');
   }
   try{
     const priorApproval=await db.prepare(
