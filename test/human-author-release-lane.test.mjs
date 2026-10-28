@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { requiresHumanAuthorSchemaRelease,requiresCreatorAuthorRelease,
   releaseSpecForHumanAuthorSchema,releaseSpecForCreatorAuthor } from '../scripts/lib/human-author-release-lane.mjs';
 
@@ -36,4 +37,20 @@ test('no author data, credential, or service role rides in a dispatch payload',(
   const spec=releaseSpecForHumanAuthorSchema({changedFiles:['scripts/lib/human-author-release-lane.mjs'],branch,mergeSha:sha});
   assert.deepEqual(Object.keys(spec.inputs).sort(),['expected_main_sha','release_branch_ref','release_task_id']);
   assert.doesNotMatch(JSON.stringify(spec),/service_role|SUPABASE_ACCESS_TOKEN|user_id|price|paymentKey/);
+});
+
+// No helper-level green result may replace the production dispatcher boundary.
+test('post-merge dispatcher proves real protected merge and current main before schema release',()=>{
+  const converge=readFileSync(new URL('../scripts/converge-orchestrated-pr-merge.mjs',import.meta.url),'utf8');
+  const begin=converge.indexOf('async function dispatchPostMergeDeploys(){');
+  const hook=converge.indexOf('if(humanAuthorSchemaTouched)',begin);
+  const mergeProof=converge.indexOf('mergedPr.data?.merged!==true',hook);
+  const mainProof=converge.indexOf('mainHead.data?.object?.sha',mergeProof);
+  const sealed=converge.indexOf('releaseSpecForHumanAuthorSchema',mainProof);
+  const dispatch=converge.indexOf('/actions/workflows/',sealed);
+  assert.ok(begin>=0 && hook>begin && mergeProof>hook && mainProof>mergeProof && sealed>mainProof && dispatch>sealed);
+  assert.match(converge,/if\(dispatch\.r\.status!==204\)fail\('human-author-schema-release dispatch rejected/);
+  const mergeSuccess=converge.indexOf('if(merged.r.ok&&merged.data?.merged===true)');
+  const postMerge=converge.indexOf('await dispatchPostMergeDeploys()',mergeSuccess);
+  assert.ok(mergeSuccess>=0 && postMerge>mergeSuccess);
 });
