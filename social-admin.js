@@ -93,7 +93,7 @@
   }
 
   async function loadChannelAdminDirectory() {
-    const catalog = await import('./admin-service-catalog.js');
+    const catalog = await import('/admin-service-catalog.js');
     return catalog.socialManagedServices().map(item => ({
       ...item,
       publicUrl: catalog.canonicalServiceUrl(item.basePath),
