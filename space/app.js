@@ -35,7 +35,7 @@ async function renderPublicStorefront(slug){
 }
 
 
-function authStart(){const target=new URL('/auth/start',location.origin);target.searchParams.set('return_to',location.href.split('#')[0]);location.assign(target.href)}
+function authStart(){const target=new URL('https://ekodi.kr/auth/');target.searchParams.set('site','space');const source=new URL(location.href);source.hash='';const valid=source.protocol==='https:'&&source.hostname==='ekodi.kr'&&!/^\/(?:admin|auth|api|mcp|webhooks)(?:\/|$)/i.test(source.pathname);target.searchParams.set('return_to',valid?source.href:'https://ekodi.kr/space/');location.assign(target.href)}
 function status(text,type=''){const el=$('status');if(!el)return;el.textContent=text;el.dataset.type=type}
 function show(id,on=true){$(id)?.classList.toggle('hidden',!on)}
 function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
