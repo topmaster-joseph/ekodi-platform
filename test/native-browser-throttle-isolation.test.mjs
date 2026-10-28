@@ -12,8 +12,12 @@ test('ordinary EKODI PR browser canaries do not silently run nine extra Church p
   assert.match(workflow,/name: Run EKODI-owned isolated browser/);
 });
 
-test('Cloudflare 429 remains a reported failure, never bypassed after native bounded retry',()=>{
-  assert.match(worker,/const transient=\[429,502,503,504\]/);
+test('Cloudflare 429 or 1027 opens the quota circuit immediately without retry or downstream requests',()=>{
+  assert.match(worker,/const transient=\[502,503,504\]/);
+  assert.match(worker,/CF_QUOTA_CIRCUIT_OPEN/);
+  assert.match(worker,/Error 1027/);
+  assert.match(worker,/if\(quotaCircuit\) return route\.abort\('blockedbyclient'\)/);
+  assert.doesNotMatch(worker,/const transient=\[429/);
   assert.match(worker,/BROWSER_NAVIGATION_THROTTLED/);
   assert.match(worker,/const headerRetry=Number\(response\?\.headers\(\)\?\.\['retry-after'\]\|\|0\)/);
   assert.match(worker,/recoveredNavigations\.push\(record\)/);
