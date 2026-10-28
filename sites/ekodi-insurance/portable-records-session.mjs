@@ -51,11 +51,18 @@ function unchanged(storage, plan) {
 // The UI must require explicit clicks and user-selected encrypted file.
 export async function planPortableImport({
   storage, encryptedFile, importPassphrase, backupPassphrase,
+  includeDiagnosis = false, includeChat = false,
   webcrypto = globalThis.crypto
 }) {
   const target = storageApi(storage);
   const before = readExisting(target);
   const imported = await decryptPortableRecords(encryptedFile, importPassphrase, { webcrypto });
+  if (imported.diagnosis && !includeDiagnosis) {
+    throw new Error('diagnosis import requires separate explicit consent');
+  }
+  if (imported.messages?.length && !includeChat) {
+    throw new Error('AI chat import requires separate explicit consent');
+  }
   const { summary, nextState } = previewPortableMerge(before.state, imported);
   // Backup covers existing self-care fields, including optional diagnosis/chat.
   // Submitted consultations and browser-side revoke credentials are never exported.
@@ -64,7 +71,8 @@ export async function planPortableImport({
   });
   const newRaw = JSON.stringify(nextState);
   return Object.freeze({
-    summary: Object.freeze({ ...summary }),
+    summary: Object.freeze({ ...summary, diagnosisInArchive: Boolean(imported.diagnosis),
+      messagesInArchive: imported.messages?.length || 0 }),
     encryptedBackup: backupEnvelope,
     originalMainRaw: before.currentMainRaw,
     legacyKey: before.legacyKey,
