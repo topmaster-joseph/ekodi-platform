@@ -273,3 +273,6 @@ body.admin-compact #deviceControlPanel .device-enrollment-result code{
 .device-performance-entry p{font-size:.79rem;line-height:1.55;margin:4px 0 0;opacity:.75}
 .device-performance-entry a{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;text-decoration:none;flex-shrink:0}
 @media(max-width:640px){.device-performance-entry{flex-direction:column;align-items:stretch}.device-performance-entry a{width:100%}}
+
+#deviceControlPanel[data-windows-performance-mode="true"] .device-roster-retired-label{display:none}
+#deviceControlPanel[data-windows-performance-mode="true"] .device-setup-tools:not([open]){margin-top:10px}
