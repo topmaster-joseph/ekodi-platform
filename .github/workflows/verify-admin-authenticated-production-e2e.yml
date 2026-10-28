@@ -161,6 +161,19 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      # An all-menu run can fail later in an unrelated section. Preserve the
+      # finished publication proof without falsely certifying the full suite.
+      - name: Preserve completed publication visual proof from full Admin verification
+        if: ${{ always() && inputs.focus_menu == 'all' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-public-site-controls-proof-${{ github.run_id }}
+          path: |
+            artifacts/admin-authenticated-e2e/public-site-controls-geometry.json
+            artifacts/admin-authenticated-e2e/public-site-controls-*.png
+          if-no-files-found: warn
+          retention-days: 7
+
       # Issue #6532: preserve identity-redacted, focused publication console
       # viewport images and numeric geometry; do not broaden Admin full-suite success.
       - name: Upload focused public-site publication responsive E2E evidence
