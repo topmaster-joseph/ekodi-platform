@@ -1,4 +1,6 @@
 import { getEkodiCommandTask, ingestEkodiPulse } from './ekodi-command-ledger.js';
+import { recordVerifiedEkodiPreproductionEvidence } from './ekodi-preproduction-evidence-ledger.js';
+import { verifyEkodiFinalPromotionReceipt } from './ekodi-final-promotion-receipt.js';
 import { runEkodiCommandQueue } from './ekodi-pulse-runtime.js';
 import { projectDeploymentGate } from './execution-state-projector.js';
 import authCore from './auth-worker-core.js';
@@ -269,6 +271,17 @@ export async function handleOrchestratorCompletionReconciliation(request,env,{fe
       'UPDATE ekodi_orchestrator_tasks SET reconciliation_checked_at=? WHERE task_id=? AND state NOT IN (\'completed\',\'blocked\',\'failed\',\'cancelled\')'
     ).bind(checkedAt,row.task_id)));
     return new Response(JSON.stringify({ok:true,authority:'ekodi-orchestrator',selection:'fair-round-robin',checkedAt,candidates:rows.map(row=>({taskId:row.task_id,branchRef:row.branch_ref,state:row.state,updatedAt:row.updated_at}))}),{status:200,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
+  }
+
+  if(action==='attest_staging'){
+    // OIDC is already verified above. Never accept model/worker attestation
+    // from a public endpoint, GitHub issue comment or requester token.
+    const recorded=await recordVerifiedEkodiPreproductionEvidence(db,body.evidence,oidc);
+    const status=recorded.recorded?200:
+      ['orchestrator_database_unavailable','task_lookup_failed','staging_evidence_transaction_failed'].includes(recorded.reason)?503:409;
+    return new Response(JSON.stringify({ok:recorded.recorded===true,...recorded}),{
+      status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'},
+    });
   }
 
   if(action==='complete'){
@@ -651,8 +664,22 @@ export async function verifyOrchestratorReleaseReceipt(env,{taskId:id,branchRef}
 
 export async function handleOrchestratorReleaseReceipt(request,env){
   const url=new URL(request.url);
-  if(url.pathname!=='/api/orchestrator/release-receipt')return null;
+  if(!['/api/orchestrator/release-receipt','/api/orchestrator/final-promotion-receipt'].includes(url.pathname))return null;
   if(!['GET','HEAD'].includes(request.method))return new Response(JSON.stringify({ok:false,authorized:false,reason:'method_not_allowed'}),{status:405,headers:{allow:'GET, HEAD','content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+  if(url.pathname==='/api/orchestrator/final-promotion-receipt'){
+    const result=await verifyEkodiFinalPromotionReceipt(dbFrom(env),{
+      taskId:url.searchParams.get('taskId'),
+      branchRef:url.searchParams.get('branchRef'),
+      releaseSha:url.searchParams.get('releaseSha'),
+      artifactDigest:url.searchParams.get('artifactDigest'),
+    });
+    // No secrets or personal approval identity exposed on the public receipt.
+    const status=result.authorized?200:403;
+    return new Response(request.method==='HEAD'?null:JSON.stringify({ok:result.authorized,authorized:result.authorized,...result}),{
+      status,
+      headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'},
+    });
+  }
   const result=await verifyOrchestratorReleaseReceipt(env,{taskId:url.searchParams.get('taskId'),branchRef:url.searchParams.get('branchRef')});
   const status=result.authorized?200:result.reason==='invalid_receipt'?400:404;
   return new Response(request.method==='HEAD'?null:JSON.stringify({ok:result.authorized,...result}),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'}});

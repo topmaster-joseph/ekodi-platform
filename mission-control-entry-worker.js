@@ -185,7 +185,7 @@ export default {
       catch (error) { console.error('EKODI MCP gateway error', error); return errorResponse('EKODI MCP 처리 중 오류가 발생했습니다.', 'MCP_GATEWAY_ERROR'); }
     }
 
-    if (path === '/api/orchestrator/release-receipt') {
+    if (path === '/api/orchestrator/release-receipt' || path === '/api/orchestrator/final-promotion-receipt') {
       try { return applyApiSecurityHeaders(await handleOrchestratorReleaseReceipt(request, env)); }
       catch (error) { console.error('EKODI Orchestrator release receipt error', error); return errorResponse('EKODI Orchestrator 릴리스 영수증 확인 중 오류가 발생했습니다.', 'ORCHESTRATOR_RELEASE_RECEIPT_ERROR'); }
     }
