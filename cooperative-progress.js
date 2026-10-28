@@ -294,7 +294,7 @@ export function cooperativeProgressSummary(progress,definitions,today) {
     row.overdue=!row.done&&!row.excluded&&!!limit&&limit<today;
   }
   const total=rows.filter(r=>!r.excluded).length,completed=rows.filter(r=>r.done).length;
-  return {rows,total,completed,percent:total?Math.round(completed/total*100):0,overdue:rows.filter(r=>r.overdue).length,
+  return {asOf:today,rows,total,completed,percent:total?Math.round(completed/total*100):0,overdue:rows.filter(r=>r.overdue).length,
     unplanned:rows.filter(r=>!r.done&&!r.excluded&&!r.targetDate).length,
     registrationDeadline,earliestMeeting:notice?.done?addDays(notice.completedDate,8):'',
     phases:[1,2,3,4,5,6].map(phase=>({phase,total:rows.filter(r=>r.phase===phase&&!r.excluded).length,completed:rows.filter(r=>r.phase===phase&&r.done).length,
@@ -305,9 +305,11 @@ export function cooperativeProgressSummary(progress,definitions,today) {
 // Keep self-contained: the same function is serialized into the browser client.
 export function cooperativeLaunchGuidance(state,definitions,summary) {
   const rows=summary.rows,founders=state.founders,profile=state.profile;
+  const meeting=rows.find(r=>r.key==='15');
+  const intervalConflict=meeting?.done&&!!summary.earliestMeeting&&meeting.completedDate<summary.earliestMeeting;
   const pending=rows.filter(r=>r.required&&!r.done&&r.phase<6);
-  const phase=pending[0]?.phase || rows.find(r=>!r.done&&!r.excluded&&r.phase<6)?.phase || 0;
-  const candidates=rows.filter(r=>r.phase===phase&&!r.done&&!r.excluded);
+  const phase=intervalConflict&&(!pending[0]||pending[0].phase>=3)?3:pending[0]?.phase || rows.find(r=>!r.done&&!r.excluded&&r.phase<6)?.phase || 0;
+  const candidates=intervalConflict&&phase===3?[{...meeting,status:'완료',done:false}]:rows.filter(r=>r.phase===phase&&!r.done&&!r.excluded);
   const groups=new Set();
   const actions=[];
   const describe=row=>{
@@ -317,14 +319,17 @@ export function cooperativeLaunchGuidance(state,definitions,summary) {
     if(!row.evidence)missing.push('증빙 보관 위치');
     if(!row.verified)missing.push('직접 확인 표시');
     const grouped=row.key==='01'||row.key==='02'?'founders':row.key==='04'||row.key==='05'||row.key==='06'?'preparation':row.key;
-    const title=row.status==='완료'&&!row.done?'완료 근거를 확인하세요':row.status==='보류'?'보류 사유와 재개 조건을 확인하세요':grouped==='founders'?'발기인과 가입자격을 확인하세요':row.key==='03'?'첫 공동사업 한 가지를 정하세요':grouped==='preparation'?'첫 준비회의에서 남은 기준을 정하세요':task.title;
-    const action=row.status==='완료'&&!row.done?`${task.title}: ${missing.join('·') || '입력된 근거'}를 확인하고 저장하세요.`:row.status==='보류'?`${task.title}: 보류 이유를 검토하고 담당자와 다시 확인할 날을 정하세요.`:grouped==='founders'?'명부의 실제 이름·개인/법인 가입주체·참여 의사와 정관상 자격을 확인하세요. 이름 입력만으로 참여가 확정되지는 않습니다.':row.key==='03'?'품목·고객·공급자·조합의 역할을 한 장으로 합의하세요. 정관의 사업 목록과 실제 첫 사업은 구분합니다.':grouped==='preparation'?`${task.title}: 준비회의에서 미정 사항의 담당자와 확인기한을 정하세요.`:task.guide;
+    const awaitingDate=row.key==='15'&&(!summary.earliestMeeting||!summary.asOf||summary.asOf<summary.earliestMeeting);
+    const title=row.status==='완료'&&!row.done?'완료 근거를 확인하세요':row.status==='보류'?'보류 사유와 재개 조건을 확인하세요':awaitingDate?'창립총회 자료를 준비하고 개최 기준일을 확인하세요':grouped==='founders'?'발기인과 가입자격을 확인하세요':row.key==='03'?'첫 공동사업 한 가지를 정하세요':grouped==='preparation'?'첫 준비회의에서 남은 기준을 정하세요':task.title;
+    const action=row.key==='15'&&intervalConflict?`총회 완료일 ${meeting.completedDate}이 공고 기록상 최소 기준일 ${summary.earliestMeeting}보다 빠릅니다. 공고·총회 원본과 날짜를 대조한 뒤 후속 절차를 준비하세요. 저장된 완료 기록은 자동으로 변경하지 않습니다.`:row.status==='완료'&&!row.done?`${task.title}: ${missing.join('·') || '입력된 근거'}를 확인하고 저장하세요.`:row.status==='보류'?`${task.title}: 보류 이유를 검토하고 담당자와 다시 확인할 날을 정하세요.`:awaitingDate?`공고 기록상 총회 최소 기준일: ${summary.earliestMeeting||'공고 완료 증빙 확인 필요'}. 기준일 전에는 안건·참석자·의결 자료를 준비하고 개최를 기다리세요. 실제 개최와 의결 결과는 별도로 확인합니다.`:grouped==='founders'?'명부의 실제 이름·개인/법인 가입주체·참여 의사와 정관상 자격을 확인하세요. 이름 입력만으로 참여가 확정되지는 않습니다.':row.key==='03'?'품목·고객·공급자·조합의 역할을 한 장으로 합의하세요. 정관의 사업 목록과 실제 첫 사업은 구분합니다.':grouped==='preparation'?`${task.title}: 준비회의에서 미정 사항의 담당자와 확인기한을 정하세요.`:task.guide;
     const tab=grouped==='founders'?'founders':row.phase===2?'documents':row.phase===3?'schedule':grouped==='preparation'?'profile':'';
-    return {key:row.key,group:grouped,title,action,tab,owner:row.owner,targetDate:row.targetDate,nextAction:row.nextAction,needsReview:row.status==='완료'&&!row.done};
+    return {key:row.key,group:grouped,title,action,tab,owner:row.owner,targetDate:row.targetDate,nextAction:row.nextAction,needsReview:row.status==='완료'&&!row.done,awaitingDate};
   };
-  for(const row of candidates){const item=describe(row);if(!groups.has(item.group)){groups.add(item.group);actions.push(item);}if(actions.length===3)break;}
+  // Draft preparation can run in parallel; legal execution follows one unresolved item at a time.
+  for(const row of candidates){const item=describe(row);if(!groups.has(item.group)){groups.add(item.group);actions.push(item);}if(actions.length===(phase<3?3:1))break;}
   const signals=[];
   const signal=(key,text,tab)=>signals.push({key,text,tab,reconcile:rows.find(r=>r.key===key)?.done===true});
+  if(intervalConflict)signal('15','총회 완료일과 공고 후 최소 기준일이 맞지 않습니다. 원본 날짜를 대조하세요.','schedule');
   const temporary=founders.filter(f=>!f.representative.trim()||/^(이남현[123]|미정|확인\s*전)$/.test(f.representative.trim()));
   if(founders.length<5||temporary.length)signal('01',`실제 발기인 명부 대조 필요${temporary.length?' · 임시 표기: '+temporary.map(f=>f.representative||'이름 미입력').join(', '):''}`,'founders');
   const unconfirmed=founders.filter(f=>f.consent!=='confirmed');
@@ -349,5 +354,5 @@ export function cooperativeLaunchGuidance(state,definitions,summary) {
     '원본·동의 근거 보관 위치: 민감정보를 본문에 넣지 말고 보관 위치만 기록',
     '다음 준비회의: 미정'
   ].join('\n');
-  return {phase,actions,signals,parallel:rows.filter(r=>r.phase===6&&!r.done&&!r.excluded).slice(0,1).map(describe),agendaTitle,agendaBody,allReviewed:rows.every(r=>r.done||r.excluded)};
+  return {phase,actions,signals,parallel:rows.filter(r=>r.phase===6&&!r.done&&!r.excluded).slice(0,1).map(describe),agendaTitle,agendaBody,allReviewed:!intervalConflict&&rows.every(r=>r.done||r.excluded)};
 }

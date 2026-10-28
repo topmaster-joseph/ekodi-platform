@@ -54,6 +54,33 @@ test('reviewed prerequisites advance guidance while later deadlines never jump p
   assert.equal(next.actions.some(a=>a.key==='23'),false);
  }finally{f.sqlite.close();}
 });
+test('legal execution stays sequential and founding assembly waits for its reviewed publication interval',async()=>{
+ const f=fixture();
+ try{
+  const state=(await loadCooperativeProject(f.db,jubilee)).state;
+  const done=key=>({id:`${jubilee.workspaceId}:launch:${key}`,status:'완료',completedDate:key==='14'?'2026-10-20':'2026-10-28',evidence:'시험 원본 위치',verified:true});
+  const completeThrough=count=>{state.progress=normalizeCooperativeProgress({version:1,items:COOP_LAUNCH_TASKS.slice(0,count).map(t=>done(t.key))},jubilee,initialCooperativeProgress(jubilee));};
+  completeThrough(13);
+  let next=cooperativeLaunchGuidance(state,COOP_LAUNCH_TASKS,sum(state.progress));
+  assert.deepEqual(next.actions.map(a=>a.key),['14']);
+  completeThrough(14);
+  state.progress.items[13].completedDate='2026-10-28';
+  next=cooperativeLaunchGuidance(state,COOP_LAUNCH_TASKS,sum(state.progress));
+  assert.deepEqual(next.actions.map(a=>a.key),['15']);assert.equal(next.actions[0].awaitingDate,true);assert.match(next.actions[0].action,/2026-11-05/);
+  const onDate=cooperativeProgressSummary(state.progress,COOP_LAUNCH_TASKS,'2026-11-05');
+  assert.equal(cooperativeLaunchGuidance(state,COOP_LAUNCH_TASKS,onDate).actions[0].awaitingDate,false);
+  completeThrough(21);
+  next=cooperativeLaunchGuidance(state,COOP_LAUNCH_TASKS,sum(state.progress));
+  assert.deepEqual(next.actions.map(a=>a.key),['22']);
+  state.progress.items[13].completedDate='2026-10-28';
+  next=cooperativeLaunchGuidance(state,COOP_LAUNCH_TASKS,sum(state.progress));
+  assert.deepEqual(next.actions.map(a=>a.key),['15']);assert.match(next.actions[0].action,/보다 빠릅니다/);
+  assert.equal(state.progress.items[14].verified,true);
+  state.progress.items[13].completedDate='2026-10-20';
+  completeThrough(22);
+  assert.deepEqual(cooperativeLaunchGuidance(state,COOP_LAUNCH_TASKS,sum(state.progress)).actions.map(a=>a.key),['23']);
+ }finally{f.sqlite.close();}
+});
 
 test('old snapshots gain 33 independent private defaults on read without writes or revision changes',async()=>{
  const f=fixture(),before=f.sqlite.prepare('SELECT * FROM cooperative_projects').all();
