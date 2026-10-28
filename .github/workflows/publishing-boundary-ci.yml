@@ -10,6 +10,7 @@ on:
       - 'platform-boundaries.json'
       - 'docs/operations/bookstore-publishing-boundary.md'
       - 'test/bookstore-publishing-boundary.test.mjs'
+      - 'test/jubilee-series-review-gate.test.mjs'
       - '.github/workflows/publishing-boundary-ci.yml'
 
 permissions:
@@ -38,6 +39,8 @@ jobs:
           node --check publishing-worker.js
           node --check ekodi-service-manifest.js
           node --test test/bookstore-publishing-boundary.test.mjs
+          node --check publishing/jubilee-series/review-gate.js
+          node --test test/jubilee-series-review-gate.test.mjs
           test -f wrangler.publishing.staging.toml
 
   isolated-staging:
