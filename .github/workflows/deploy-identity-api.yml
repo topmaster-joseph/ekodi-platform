@@ -110,6 +110,33 @@ jobs:
           fi
           echo "::add-mask::$token"
           echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+      - name: Sync dormant Naver/Kakao login keys (only when provided)
+        # Keys only register the adapters. Login stays off until public.identity_providers.enabled
+        # is switched on for that provider, so syncing keys never exposes a new login path by itself.
+        shell: bash
+        env:
+          NAVER_LOGIN_CLIENT_ID: ${{ secrets.NAVER_LOGIN_CLIENT_ID }}
+          NAVER_LOGIN_CLIENT_SECRET: ${{ secrets.NAVER_LOGIN_CLIENT_SECRET }}
+          KAKAO_LOGIN_REST_API_KEY: ${{ secrets.KAKAO_LOGIN_REST_API_KEY }}
+          KAKAO_LOGIN_CLIENT_SECRET: ${{ secrets.KAKAO_LOGIN_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          umask 077
+          env_file="$(mktemp)"
+          trap 'rm -f "$env_file"' EXIT
+          if [ -n "${NAVER_LOGIN_CLIENT_ID:-}" ] && [ -n "${NAVER_LOGIN_CLIENT_SECRET:-}" ]; then
+            printf 'NAVER_CLIENT_ID=%s\nNAVER_CLIENT_SECRET=%s\n' "$NAVER_LOGIN_CLIENT_ID" "$NAVER_LOGIN_CLIENT_SECRET" >> "$env_file"
+          fi
+          if [ -n "${KAKAO_LOGIN_REST_API_KEY:-}" ]; then
+            printf 'KAKAO_REST_API_KEY=%s\n' "$KAKAO_LOGIN_REST_API_KEY" >> "$env_file"
+            if [ -n "${KAKAO_LOGIN_CLIENT_SECRET:-}" ]; then printf 'KAKAO_CLIENT_SECRET=%s\n' "$KAKAO_LOGIN_CLIENT_SECRET" >> "$env_file"; fi
+          fi
+          if [ -s "$env_file" ]; then
+            npx --yes supabase@2.116.0 secrets set --project-ref "$PROJECT_REF" --env-file "$env_file" >/dev/null
+            echo "Federated login keys synced: $(cut -d= -f1 "$env_file" | tr '\n' ' ')"
+          else
+            echo 'No federated login keys provided; Naver/Kakao stay unregistered.'
+          fi
       - name: Deploy identity API
         run: npx --yes supabase@2.116.0 functions deploy identity-api --project-ref "$PROJECT_REF" --no-verify-jwt
       - name: Verify canonical auth origin and reject legacy origin
