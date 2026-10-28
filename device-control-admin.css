@@ -276,3 +276,13 @@ body.admin-compact #deviceControlPanel .device-enrollment-result code{
 
 #deviceControlPanel[data-windows-performance-mode="true"] .device-roster-retired-label{display:none}
 #deviceControlPanel[data-windows-performance-mode="true"] .device-setup-tools:not([open]){margin-top:10px}
+
+/* EKODI-WINDOWS-SETTINGS-001: reversible, consent-gated PC settings. */
+.device-performance-settings{border-top:1px solid var(--line,rgba(148,163,184,.26));padding-top:12px;min-width:0}
+.device-performance-settings>summary{cursor:pointer;font-weight:700;font-size:.92rem;padding:4px 0}
+.device-performance-settings>p{font-size:.79rem;line-height:1.55;margin:10px 0;color:var(--muted,#64748b)}
+.device-performance-power{display:grid;gap:10px;padding:13px;border:1px solid var(--line,rgba(148,163,184,.26));border-radius:12px;min-width:0}
+.device-performance-power>h4{font-size:.93rem;margin:0}
+.device-performance-power>p{margin:0;font-size:.8rem;line-height:1.55}
+.device-performance-settings .device-details{min-width:0;margin-top:10px}
+@media(max-width:640px){.device-performance-power{padding:11px}.device-performance-settings .device-ops-grid{grid-template-columns:1fr}.device-performance-settings button{max-width:100%}}
