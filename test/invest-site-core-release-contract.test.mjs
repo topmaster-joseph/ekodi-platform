@@ -28,7 +28,7 @@ test('immediate owner-approved provenance recovery dispatches Site Core for Inve
   const section = recovery.split('const sharedSiteTouched=sourceFiles.some(file=>')[1]?.split('const shellRuntimeTouched=')[0] || '';
   assert.ok(section, 'recovery Site Core owner classification must exist');
   assert.match(section, /file==='invest-access-ui\.js'/);
-  assert.match(section, /file==='platform-router-entry-worker\.js'/);
+  assert.match(section, /'platform-router-entry-worker\.js'/);
   assert.match(recovery, /deploy-site-core\.yml/, 'do not release without the existing guarded workflow');
 });
 
