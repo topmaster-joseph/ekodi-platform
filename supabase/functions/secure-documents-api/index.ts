@@ -322,12 +322,14 @@ async function handlePurge(req){
        .select("id,owner_scope,owner_person_id,workspace_id,status,legal_hold,retention_until,purge_authorized_at,backup_policy_reviewed_at,purge_lease_until")
        .eq("id",record.id).single();
      if(currentError||!current||current.status!=="deletion_pending"||current.legal_hold!==false
-       ||!current.retention_until||current.retention_until>new Date().toISOString()
-       ||!current.purge_authorized_at||current.purge_authorized_at>new Date().toISOString()
+       ||!current.retention_until||!Number.isFinite(Date.parse(current.retention_until))
+       ||Date.parse(current.retention_until)>Date.now()
+       ||!current.purge_authorized_at||!Number.isFinite(Date.parse(current.purge_authorized_at))
+       ||Date.parse(current.purge_authorized_at)>Date.now()
        ||!current.backup_policy_reviewed_at||current.purge_lease_until!==lease)
        throw new Error("RETENTION_REVIEW_CHANGED");
      const {data:versions,error:versionError}=await admin.from("secure_document_versions")
-       .select("id,storage_key").eq("document_id",current.id).neq("state","deleted")
+       .select("id,storage_key").eq("document_id",current.id)
        .order("version_number",{ascending:true}).limit(10000);
      if(versionError||!versions?.length)throw new Error("PURGE_VERSION_SET_INVALID");
      const expected=current.owner_scope+"/"+(current.owner_person_id||current.workspace_id)+"/"+current.id+"/";
@@ -350,11 +352,12 @@ async function handlePurge(req){
        .update({state:"deleted",deleted_at:new Date().toISOString()})
        .eq("document_id",record.id).neq("state","deleted");
      if(versionMarkError)throw new Error("PURGE_METADATA_UPDATE_FAILED");
-     const {error:doneError}=await admin.from("secure_document_records")
+     const {data:finalized,error:doneError}=await admin.from("secure_document_records")
        .update({storage_purged_at:new Date().toISOString(),purge_lease_until:null,updated_at:new Date().toISOString()})
        .eq("id",record.id).eq("status","deletion_pending").eq("legal_hold",false)
-       .eq("purge_lease_until",lease).is("storage_purged_at",null);
-     if(doneError)throw new Error("PURGE_FINALIZATION_FAILED");
+       .eq("purge_lease_until",lease).is("storage_purged_at",null)
+       .select("id").maybeSingle();
+     if(doneError||!finalized)throw new Error("PURGE_FINALIZATION_FAILED");
      const {error:receiptError}=await admin.from("secure_document_purge_receipts")
        .insert({document_id:record.id,operation:"storage_api_purge",result:"storage_confirmed",file_count:fileCount,backup_erased:false});
      if(receiptError)throw new Error("PURGE_RECEIPT_FAILED");
