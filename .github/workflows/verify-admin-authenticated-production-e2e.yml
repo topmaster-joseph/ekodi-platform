@@ -2,6 +2,15 @@ name: Verify Authenticated Admin Production E2E
 
 on:
   workflow_dispatch:
+    inputs:
+      focus_menu:
+        description: 'Optional diagnostic scope: all (default) or social-accounts; this cannot certify the full menu suite'
+        required: false
+        type: choice
+        default: all
+        options:
+          - all
+          - social-accounts
 permissions:
   contents: read
 
@@ -13,6 +22,7 @@ env:
   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
   CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
   E2E_TAX_WRITE_VERIFY: '1'
+  E2E_MENU_FOCUS: ${{ inputs.focus_menu }}
 
 jobs:
   authenticated-admin-e2e:

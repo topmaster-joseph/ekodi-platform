@@ -669,6 +669,9 @@ try {
     contentType: String(entryHeaders['content-type'] || '').split(';')[0].slice(0, 80),
     cfCacheStatus: String(entryHeaders['cf-cache-status'] || '').slice(0, 40),
   };
+  if (adminEntryTransport.status === 429) {
+    throw new Error('CF-QUOTA-001 circuit open: HTTP 429 at canonical Admin entry; no retry');
+  }
   if ([401, 403].includes(adminEntryTransport.status)) {
     throw new Error('Admin entry rejected by production authentication boundary');
   }
