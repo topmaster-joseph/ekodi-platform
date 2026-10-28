@@ -272,7 +272,10 @@ const sharedSiteTouched=sourceFiles.some(file=>
    'live-interpretation.js','live-interpretation.css',
    'realtime-tenant-registry.js',
    'scripts/converge-orchestrated-pr-merge.mjs',
-   'platform-router-entry-worker.js','.github/workflows/deploy-site-core.yml'].includes(file)
+   'platform-router-entry-worker.js','.github/workflows/deploy-site-core.yml',
+   'scripts/site-core-staging-10500-recovery.mjs',
+   '.github/workflows/stage-shared-site-shell.yml',
+   'test/site-core-staging-10500-recovery.test.mjs'].includes(file)
 );
 // First-party Shell is an independent guarded Worker. GitHub-token recovery
 // merges do not produce a regular main push event, so a successful immediate
