@@ -251,6 +251,9 @@ const controlApiTouched=sourceFiles.some(file=>[
 // filter for Site Core. Use only source paths owned by the existing Site Core
 // workflow and only its receipt-bound, staged, guarded workflow_dispatch.
 const sharedSiteTouched=sourceFiles.some(file=>
+  // A Site Core manifest canary update must deploy even if recovery merges immediately.
+  // GITHUB_TOKEN merges do not fire ordinary main push workflows.
+  file==='deploy/manifests/shared-site.worker.json'||
   file.startsWith('sites/seonammedi/public/')||
   // The exact-approved Seasonal Workforce portal is owned by the shared Worker.
   file.startsWith('seasonal-workforce/')||
