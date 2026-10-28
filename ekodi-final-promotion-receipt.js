@@ -41,10 +41,13 @@ export async function verifyEkodiFinalPromotionReceipt(db,input={}){
      stageAudit.authority!=='ekodi-orchestrator'||stageAudit.source!=='github-actions-oidc'||
      stageAudit.taskId!==taskId||stageAudit.branchRef!==branchRef||
      stageAudit.releaseSha!==releaseSha||stageAudit.artifactDigest!==artifactDigest||
+     !DIGEST.test(clean(stageAudit.archiveDigest,150))||
      !Number.isSafeInteger(stageAudit.workflowRunId)||stageAudit.workflowRunId<1||
      proof.authority!=='ekodi-orchestrator'||proof.taskId!==taskId||
      proof.branchRef!==branchRef||proof.releaseSha!==releaseSha||
-     proof.artifactDigest!==artifactDigest||proof.verifiedAt!==stageAudit.verifiedAt||
+     proof.artifactDigest!==artifactDigest||
+     proof.archiveDigest!==stageAudit.archiveDigest||
+     proof.verifiedAt!==stageAudit.verifiedAt||
      ![proof.requiredCiVerified,proof.stagingVerified,proof.rollbackReady,proof.securityReviewVerified].every(x=>x===true)){
     return deny('authenticated_preproduction_proof_invalid');
   }
