@@ -7,7 +7,7 @@ Issue: #6568 (canonical old-origin migration), #6569 (API host consolidation), p
 ## Verified boundaries
 
 - Current public URL: https://ekodi.kr/insurance.
-- Historic origin: https://ins.ekodi.kr. Each host has its own localStorage; moving a hostname cannot move browser records.
+- Historic origin: the historical Insurance subdomain (not a canonical public URL). Each host has its own localStorage; moving a hostname cannot move browser records.
 - Browser record keys: ekodi-insurance-staging-v3 with legacy v2/v1 variants. The server consultation revocation capability lives at a separate key, ekodi-insurance-consultation-access-v1. Never conflate the two.
 - The separate D1 consultation API may contain consented encrypted callback contact information. Local self-care transfer is **not** an API transfer.
 - Current insurance product catalog remains closed for compliance; no suggestion, quotation, enrollment or advisor authorization is implied.
