@@ -33,7 +33,9 @@ export function evaluateEkodiContinuousExecution(input = {}) {
   const riskFlags = Array.isArray(input.riskFlags) ? input.riskFlags : [];
   const protectedRisk = riskFlags.some(flag =>
     EKODI_CONTINUOUS_EXECUTION_GATE.protectedEarlyRisks.includes(text(flag, 60)));
-  if (protectedRisk && input.separateSafetyApprovalVerified !== true) {
+  // An external worker cannot assert that a mandatory Human Gate is approved.
+  // Official Human Gate approval is checked separately by EKODI's task owner.
+  if (protectedRisk) {
     return result('await_mandatory_early_gate', 'sovereign_safety_approval_required');
   }
 
@@ -104,14 +106,24 @@ export async function evaluateEkodiContinuousExecutionFromLedger(db, input = {})
   let task, event;
   try{
     task=await db.prepare(
-      'SELECT task_id,branch_ref,state,state_version,permission_class,deployment_requested FROM ekodi_orchestrator_tasks WHERE task_id=?'
+      'SELECT task_id,branch_ref,state,state_version,permission_class,deployment_requested,evidence_json FROM ekodi_orchestrator_tasks WHERE task_id=?'
     ).bind(taskId).first();
     if(!task || task.branch_ref!==branchRef ||
        Number(task.deployment_requested)!==1 || task.permission_class!=='delegated' ||
-       ['completed','blocked','failed','cancelled'].includes(task.state) ||
+       task.state!=='staging' ||
        !Number.isInteger(Number(task.state_version)) || Number(task.state_version)<1){
       return preview;
     }
+    // Read trusted preproduction evidence from the authoritative task record,
+    // never accept submitted CI/staging/security flags as verification.
+    let proof;
+    try{const recorded=JSON.parse(task.evidence_json||'{}'); proof=recorded.preproductionProof;}catch{return preview}
+    if(!proof || proof.authority!=='ekodi-orchestrator' ||
+       proof.taskId!==taskId || proof.branchRef!==branchRef ||
+       proof.releaseSha!==releaseSha || proof.artifactDigest!==artifactDigest ||
+       proof.requiredCiVerified!==true || proof.stagingVerified!==true ||
+       proof.rollbackReady!==true || proof.securityReviewVerified!==true ||
+       !text(proof.verifiedAt,80))return preview;
     event=await db.prepare(
       "SELECT actor,reason,evidence_json FROM ekodi_orchestrator_task_events WHERE task_id=? AND reason='final_promotion_approval_recorded' ORDER BY seq DESC LIMIT 1"
     ).bind(taskId).first();
