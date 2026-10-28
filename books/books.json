@@ -88,7 +88,13 @@
         "format": "EPUB 3"
       },
       "buyUrl": "/buy/?book=BOOK-EKODI-000001",
-      "socialImage": "/assets/ekodian-cover.jpg"
+      "socialImage": "/assets/ekodian-cover.jpg",
+      "bonusAudio": {
+        "included": true,
+        "published": false,
+        "edition": "ko-v1",
+        "chapterTitles": []
+      }
     },
     {
       "id": "BOOK-EKODI-000002",
