@@ -96,3 +96,19 @@ test('policy and implementation forbid API, mutation, cross-tenant aggregation a
   assert.equal(snap.governance.noCrossTenantJoin,true);
   assert.doesNotMatch(JSON.stringify(snap),/"(?:rank|overallScore|predictedRevenue|salesForecast|healthScore)":/);
 });
+
+test('Growth Intelligence is a private common capability scoped to platform operator pack',()=>{
+  const registry=JSON.parse(readFileSync(new URL('../config/capability-registry.json',import.meta.url),'utf8'));
+  const packs=JSON.parse(readFileSync(new URL('../config/workspace-packs.json',import.meta.url),'utf8'));
+  const cap=registry.capabilities.find(x=>x.id==='core.growth-intelligence');
+  assert.equal(cap.domain,'core');
+  assert.equal(cap.ownerAgent,'chief');
+  assert.equal(cap.actionTier,'observe');
+  assert.equal(cap.maturity,'contract');
+  assert.deepEqual(cap.surfaces,['dedicated']);
+  assert.ok(cap.tags.includes('platform-super-admin'));
+  const owners=packs.packs.filter(x=>x.capabilities.includes(cap.id));
+  assert.deepEqual(owners.map(x=>x.id),['platform-operations']);
+  assert.ok(!packs.packs.find(x=>x.id==='ministry-community').capabilities.includes(cap.id));
+  assert.ok(!packs.packs.find(x=>x.id==='small-business').capabilities.includes(cap.id));
+});
