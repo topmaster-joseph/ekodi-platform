@@ -102,3 +102,29 @@ test('corrupt existing browser records fail closed, without overwriting either o
   }), /malformed/);
   assert.deepEqual(local.snapshot(), before);
 });
+
+
+test('importing optional diagnosis and chat requires fresh target-side consent', async () => {
+  const sensitive = {
+    policies: [], claims: [],
+    diagnosis: { memo: 'fictional health-related note' },
+    advisorChat: { messages: [{ id: 'm2', role: 'user', text: 'fictional AI conversation' }] }
+  };
+  const encryptedFile = await encryptPortableRecords(sensitive, passphrase, {
+    includeDiagnosis: true, includeChat: true, webcrypto
+  });
+  const local = storage({ [INSURANCE_LOCAL_STATE_KEY]: JSON.stringify(existing()) });
+  const before = local.snapshot();
+  const args = {
+    storage: local, encryptedFile, importPassphrase: passphrase,
+    backupPassphrase: passphrase, webcrypto
+  };
+  await assert.rejects(planPortableImport(args), /diagnosis import requires separate explicit consent/);
+  await assert.rejects(planPortableImport({ ...args, includeDiagnosis: true }), /AI chat import requires separate explicit consent/);
+  assert.deepEqual(local.snapshot(), before, 'failed consent gates never mutate storage');
+  const plan = await planPortableImport({ ...args, includeDiagnosis: true, includeChat: true });
+  assert.equal(plan.summary.diagnosisInArchive, true);
+  assert.equal(plan.summary.messagesInArchive, 1);
+  assert.equal(plan.summary.addedMessages, 1);
+  assert.deepEqual(local.snapshot(), before, 'consent permits preview, not automatic commit');
+});
