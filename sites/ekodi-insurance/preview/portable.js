@@ -34,6 +34,7 @@ function sanitizedError(error) {
   const s = String(error?.message || '');
   if (/password|incorrect|damaged/i.test(s)) return '암호가 맞지 않거나 파일이 손상됐습니다.';
   if (/changed since/i.test(s)) return '미리보기 이후 현재 기록이 변경됐습니다. 다시 미리보기를 실행하세요.';
+  if (/separate explicit consent/i.test(s)) return '암호화 파일에 선택적인 AI 대화 또는 보험점검 메모가 포함되어 있습니다. 해당 항목의 별도 가져오기 동의를 선택하세요.';
   if (/limit|size/i.test(s)) return '파일 또는 기록의 허용 크기를 초과했습니다.';
   if (/backup|consent/i.test(s)) return '백업 확인과 명시적 동의가 필요합니다.';
   return '처리할 수 없는 기록 또는 파일입니다. 현재 기록은 변경되지 않았습니다.';
@@ -93,13 +94,16 @@ $('import-form').addEventListener('submit', async event => {
       storage: localStorage,
       encryptedFile,
       importPassphrase: $('import-password').value,
-      backupPassphrase: $('backup-password').value
+      backupPassphrase: $('backup-password').value,
+      includeDiagnosis: $('import-diagnosis').checked,
+      includeChat: $('import-chat').checked
     });
     pendingPlan = plan;
     const counts = plan.summary;
     $('import-count').textContent =
       '추가 예정: 보험 ' + counts.addedPolicies + '건, 청구메모 ' +
-      counts.addedClaims + '건. 기존 기록은 유지하며 중복은 제외합니다. 서버 상담기록과 철회 권한은 변경하지 않습니다.';
+      counts.addedClaims + '건. 선택한 점검 메모 ' + (counts.diagnosisInArchive ? '포함' : '없음') +
+      ', 선택한 AI 대화 ' + counts.messagesInArchive + '건. 기존 기록은 유지하며 중복은 제외합니다. 서버 상담기록과 철회 권한은 변경하지 않습니다.';
     $('import-preview').classList.remove('hidden');
     status('import-status', '미리보기만 완료했습니다. 아직 가져오거나 저장한 기록은 없습니다.');
     updateImportButton();
