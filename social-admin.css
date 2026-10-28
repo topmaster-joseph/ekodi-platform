@@ -80,3 +80,27 @@ body.admin-compact #socialAdmin .social-org-list{min-width:0}
   body.admin-compact #socialAdmin .social-site-directory-actions>*{min-height:44px}
 }
 @media(prefers-reduced-motion:reduce){body.admin-compact #socialAdmin .social-workspace-tab{transition:none}}
+
+/* SOCIAL-MOBILE-TABS-UNCLIPPED-20261028: 2x2 tab buttons must fit their grid cells. */
+@media(max-width:760px){
+  body.admin-compact #socialAdmin .social-workspace-tabs{
+    min-width:0;
+    width:100%;
+    box-sizing:border-box!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  body.admin-compact #socialAdmin .social-workspace-tabs > .social-workspace-tab{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    min-height:46px!important;
+    padding:9px 8px!important;
+    font-size:13px!important;
+    line-height:1.35!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+    word-break:keep-all!important;
+    text-overflow:clip!important;
+  }
+}

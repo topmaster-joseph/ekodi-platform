@@ -919,6 +919,21 @@ for (const [id, group] of menus) {
           const items=[...tabs.querySelectorAll('[role="tab"]')];
           const box=tabs.getBoundingClientRect();
           const columnCount=getComputedStyle(tabs).gridTemplateColumns.split(/\s+/).filter(Boolean).length;
+          const metrics=items.map(item=>{
+            const r=item.getBoundingClientRect();
+            const style=getComputedStyle(item);
+            return {
+              label:(item.textContent||'').trim().slice(0,36),
+              width:Math.round(r.width*10)/10,
+              height:Math.round(r.height*10)/10,
+              left:Math.round(r.left*10)/10,
+              right:Math.round(r.right*10)/10,
+              scrollWidth:item.scrollWidth,
+              clientWidth:item.clientWidth,
+              boxSizing:style.boxSizing,
+              whiteSpace:style.whiteSpace
+            };
+          });
           const unclipped=items.length===4 && tabs.scrollWidth <= tabs.clientWidth+2 &&
             items.every(item=>{
               const r=item.getBoundingClientRect();
@@ -926,7 +941,7 @@ for (const [id, group] of menus) {
                 r.left>=box.left-2 && r.right<=box.right+2 &&
                 r.right<=innerWidth+2 && r.height>=44;
             });
-          return {columnCount,unclipped};
+          return {columnCount,unclipped,metrics};
         })(),
         sidebarClosed:!document.querySelector('.sidebar')?.classList.contains('open')
           && !document.body.classList.contains('admin-mobile-drawer-open'),
