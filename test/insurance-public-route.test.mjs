@@ -61,3 +61,18 @@ test('shared-site router owns insurance before workspace routing',async()=>{
   assert.ok(stageWorkflow.includes("verify_public_path '/insurance'"));
   assert.ok(stageWorkflow.includes("test/insurance-public-route.test.mjs"));
 });
+
+
+test('insurance consultation withdrawal panel does not rerender inside DOM observer',async()=>{
+  const bridge=await read('sites/ekodi-insurance/public/server-bridge.js');
+  const start=bridge.indexOf('function reviseHandoffCopy(');
+  const end=bridge.indexOf("  document.addEventListener('submit'",start);
+  assert.ok(start>=0 && end>start,'handoff mutation-scoped copy handler must exist');
+  const observerCopy=bridge.slice(start,end);
+  assert.doesNotMatch(observerCopy,/renderWithdrawalPanel\s*\(/,
+    'mutation observer must never render its own monitored children');
+  assert.match(bridge,/function writeAccess\(items\)\s*\{[\s\S]*?renderWithdrawalPanel\(\)/,
+    'explicit consented server consultation mutations must refresh withdrawal actions');
+  assert.match(bridge,/DOMContentLoaded[^\n]*reviseHandoffCopy\(\); renderWithdrawalPanel\(\); loadReferenceCatalog\(\)/,
+    'initial withdrawal panel must still be visible before any request');
+});
