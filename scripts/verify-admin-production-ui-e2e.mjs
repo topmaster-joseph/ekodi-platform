@@ -146,7 +146,7 @@ async function waitForAdminShell() {
       hasToken:Boolean(sessionStorage.getItem('ekodi-auth-token')),
       scripts:[...document.querySelectorAll('script[src]')].filter(node => node.src.startsWith(location.origin)).map(node => new URL(node.src).pathname).slice(0,20),
     })).catch(() => ({ unavailable:true }));
-    const diagnostic = { state, sessionRouteHits, httpErrors:adminHttpErrors.slice(-10), pageErrors:pageErrors.slice(-5).map(message => message.slice(0,160)) };
+    const diagnostic = { state, sessionRouteHits, httpErrors:adminHttpErrors.slice(-10), pageErrorCount:pageErrors.length, consoleErrorCount:consoleErrors.length };
     console.error('[PROD-E2E] admin-shell-timeout ' + JSON.stringify(diagnostic));
     await page.screenshot({ path:path.join(artifactsDir, 'admin-boot-timeout.png'), fullPage:true }).catch(() => {});
     throw error;
