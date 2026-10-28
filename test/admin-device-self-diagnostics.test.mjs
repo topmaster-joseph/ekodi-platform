@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import vm from 'node:vm';
 
 const loader = fs.readFileSync(new URL('../admin-demand-loader.js', import.meta.url), 'utf8');
 const source = fs.readFileSync(new URL('../device-browser-diagnostics.js', import.meta.url), 'utf8');
@@ -32,4 +33,43 @@ test('admin browser diagnostics stays local and browser-scoped', () => {
 test('admin browser diagnostics remains responsive', () => {
   assert.match(style, /@media\(max-width:720px\)/);
   assert.match(style, /@media\(max-width:460px\)/);
+});
+
+test('admin browser text, confirmation, and cleanup remain canonical and /admin scoped', () => {
+  assert.doesNotMatch(source, /admin\.ekodi\.kr/);
+  assert.match(source, /ekodi\.kr\/admin의 관리자 전용 캐시/);
+  assert.match(source, /이 브라우저의 ekodi\.kr\/admin 화면만 진단합니다/);
+  assert.match(source, /if \(!isCanonicalAdmin\(\)\)/);
+  assert.match(source, /registrations\.filter\(adminServiceWorker\)/);
+  assert.match(source, /adminRegistrations\.map\(registration => registration\.update\(\)\)/);
+  const cacheLine = source.match(/const CACHE_ALLOWLIST = [^\n]+/)?.[0];
+  assert.ok(cacheLine, 'Admin CacheStorage allowlist should remain defined');
+  const checkCache = vm.runInNewContext(cacheLine + '\n(name) => CACHE_ALLOWLIST.test(name)', {});
+  assert.equal(checkCache('admin-ekodi-v1'), true);
+  assert.equal(checkCache('ekodi-admin-v1'), true);
+  assert.equal(checkCache('ekodi-site-public'), false);
+  assert.equal(checkCache('ekodi'), false);
+  const functions = [
+    source.match(/function isCanonicalAdmin\(\) \{[^\n]+\}/)?.[0],
+    source.match(/function adminServiceWorker\(registration\) \{[\s\S]*?\n  \}/)?.[0],
+  ];
+  assert.ok(functions.every(Boolean));
+  const context = { URL, window: { location:new URL('https://ekodi.kr/admin/ops/devices') } };
+  const scope = vm.runInNewContext(functions.join('\n') + '\n({isCanonicalAdmin,adminServiceWorker})', context);
+  assert.equal(scope.isCanonicalAdmin(), true);
+  assert.equal(scope.adminServiceWorker({scope:'https://ekodi.kr/admin/'}), true);
+  assert.equal(scope.adminServiceWorker({scope:'https://ekodi.kr/'}), false);
+  assert.equal(scope.adminServiceWorker({scope:'https://ekodi.kr/ekodichurch/'}), false);
+  assert.equal(scope.adminServiceWorker({scope:'https://admin.ekodi.kr/'}), false);
+  context.window.location = new URL('https://admin.ekodi.kr/admin/ops/devices');
+  assert.equal(scope.isCanonicalAdmin(), false);
+});
+
+test('device agent and admin AI registry use /admin, not retired Admin host as a destination', () => {
+  const agent = fs.readFileSync(new URL('../tools/ekodi-device-agent/windows/ekodi-device-agent.ps1', import.meta.url), 'utf8');
+  const chief = fs.readFileSync(new URL('../admin-lazy-features.js', import.meta.url), 'utf8');
+  assert.match(agent, /name = 'EKODI Admin'; url = 'https:\/\/ekodi\.kr\/admin'/);
+  assert.doesNotMatch(agent, /name = 'EKODI Admin'; url = 'https:\/\/admin\.ekodi\.kr'/);
+  assert.match(chief, /domain:'ekodi\.kr\/admin', name:'Control Center'/);
+  assert.doesNotMatch(chief, /domain:'admin\.ekodi\.kr', name:'Control Center'/);
 });
