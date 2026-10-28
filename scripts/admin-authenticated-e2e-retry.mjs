@@ -22,7 +22,7 @@ for (const event of ['uncaughtException', 'unhandledRejection']) {
 }
 
 const maxAttemptsPerMenu = String(process.env.E2E_MENU_FOCUS || 'all').trim() === 'social-accounts' ? 1 : 2;
-const menuTimeoutMs = 30_000;
+const menuTimeoutMs = focusOnly ? 75_000 : 30_000; // five real screenshots + live API, unchanged full-menu budget
 const taxSurfaceTimeoutMs = 35_000;
 const assistTimeoutMs = 60_000;
 const artifactsDir = path.resolve('artifacts/admin-authenticated-e2e');
