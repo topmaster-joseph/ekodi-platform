@@ -1,5 +1,6 @@
 import { getEkodiCommandTask, ingestEkodiPulse } from './ekodi-command-ledger.js';
 import { recordVerifiedEkodiPreproductionEvidence } from './ekodi-preproduction-evidence-ledger.js';
+import { verifyEkodiFinalPromotionReceipt } from './ekodi-final-promotion-receipt.js';
 import { runEkodiCommandQueue } from './ekodi-pulse-runtime.js';
 import { projectDeploymentGate } from './execution-state-projector.js';
 import authCore from './auth-worker-core.js';
@@ -663,8 +664,22 @@ export async function verifyOrchestratorReleaseReceipt(env,{taskId:id,branchRef}
 
 export async function handleOrchestratorReleaseReceipt(request,env){
   const url=new URL(request.url);
-  if(url.pathname!=='/api/orchestrator/release-receipt')return null;
+  if(!['/api/orchestrator/release-receipt','/api/orchestrator/final-promotion-receipt'].includes(url.pathname))return null;
   if(!['GET','HEAD'].includes(request.method))return new Response(JSON.stringify({ok:false,authorized:false,reason:'method_not_allowed'}),{status:405,headers:{allow:'GET, HEAD','content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+  if(url.pathname==='/api/orchestrator/final-promotion-receipt'){
+    const result=await verifyEkodiFinalPromotionReceipt(dbFrom(env),{
+      taskId:url.searchParams.get('taskId'),
+      branchRef:url.searchParams.get('branchRef'),
+      releaseSha:url.searchParams.get('releaseSha'),
+      artifactDigest:url.searchParams.get('artifactDigest'),
+    });
+    // No secrets or personal approval identity exposed on the public receipt.
+    const status=result.authorized?200:403;
+    return new Response(request.method==='HEAD'?null:JSON.stringify({ok:result.authorized,authorized:result.authorized,...result}),{
+      status,
+      headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'},
+    });
+  }
   const result=await verifyOrchestratorReleaseReceipt(env,{taskId:url.searchParams.get('taskId'),branchRef:url.searchParams.get('branchRef')});
   const status=result.authorized?200:result.reason==='invalid_receipt'?400:404;
   return new Response(request.method==='HEAD'?null:JSON.stringify({ok:result.authorized,...result}),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'}});
