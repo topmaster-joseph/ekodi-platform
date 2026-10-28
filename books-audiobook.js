@@ -59,7 +59,7 @@ export async function audiobookInfo(env, request, bookId) {
 export async function audiobookTrack(env, request, bookId, trackToken) {
   const gated = await gate(env, request, bookId);
   if (gated.error) return gated.error;
-  const { book, config, buyer } = gated;
+  const { book, config } = gated;
   if (!TRACK.test(String(trackToken || ''))) return fail(404, 'NOT_FOUND', '트랙을 찾지 못했습니다.');
   const number = Number(trackToken);
   if (!config.published || number > config.titles.length || !env.BOOK_FILES) {
