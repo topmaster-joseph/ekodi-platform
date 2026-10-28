@@ -103,22 +103,59 @@
       <div class="ekodi-provider-section-heading"><strong>① 연결 대상 선택</strong><small>계정·도메인·Worker 상태를 확인합니다.</small></div>
       <div><label for="ekodiSecurityCfAccount">Cloudflare 계정</label><select id="ekodiSecurityCfAccount" data-ekodi-cf-account ${providerData?'':'disabled'}><option>${esc(cf.account?.name||'연결 확인 필요')}</option></select></div>
       <div><label for="ekodiSecurityCfZone">Zone / 도메인</label><select id="ekodiSecurityCfZone" data-ekodi-cf-zone ${providerData?'':'disabled'}>${zones.map(zone=>`<option value="${esc(zone.name)}">${esc(zone.name)}${zone.status?` · ${esc(zone.status)}`:''}</option>`).join('')}</select></div>
-      <div><label for="ekodiSecurityCfWorker">대상 Worker</label><select id="ekodiSecurityCfWorker" data-ekodi-cf-worker ${workers.length?'':'disabled'}>${workers.length?workers.map(worker=>`<option value="${esc(worker.name)}">${esc(worker.name)}</option>`).join(''):'<option>Worker 확인 필요</option>'}</select></div>
+      <div><label for="ekodiSecurityCfWorker">대상 Worker</label><select id="ekodiSecurityCfWorker" data-ekodi-cf-worker disabled>${workers.length?workers.map(worker=>`<option value="${esc(worker.name)}">${esc(worker.name)}</option>`).join(''):'<option>Worker 확인 필요</option>'}</select><small data-ekodi-cf-worker-note aria-live="polite">Secret 등록 가능 Worker 확인 중</small></div>
       ${diagnosticMarkup()}
       <div class="ekodi-provider-note">계정 → Zone/도메인 → Worker 순서로 현재 위치를 확인합니다. Worker는 Zone에 종속되지 않을 수 있습니다. 권한·Account ID·API 오류를 숨기지 않고 총괄 AI가 원인을 구분해 표시합니다.</div>`;
     card.prepend(context);bindRetry(context);
     const original=section.querySelector('[data-cloudflare-target]');
     const workerSelect=context.querySelector('[data-ekodi-cf-worker]');
-    const sync=()=>{
-      if(!original||!workerSelect?.value||!workers.length)return;
-      const target=[...original.options].find(option=>option.value===workerSelect.value);
-      if(target){original.value=workerSelect.value;original.dispatchEvent(new Event('change',{bubbles:true}))}
-    };
-    workerSelect?.addEventListener('change',sync);
-    if(original)new MutationObserver(sync).observe(original,{childList:true,subtree:true});
-    queueMicrotask(sync);
+    const workerNote=context.querySelector('[data-ekodi-cf-worker-note]');
     const oldField=original?.closest('.admin-secret-field');
-    if(oldField){oldField.style.display=workers.length?'none':'';if(workers.length)oldField.setAttribute('aria-hidden','true');else oldField.removeAttribute('aria-hidden')}
+    const inventoryNames=new Set(workers.map(item=>String(item.name||'')).filter(Boolean));
+
+    // Only the Secret Manager status API authorizes writable Worker targets.
+    // Provider inventory is diagnostic and never expands that allowlist.
+    const synchronizeAuthorizedTargets=()=>{
+      if(!original||!workerSelect)return;
+      const authorized=original.disabled?[]:[...original.options]
+        .filter(option=>!option.disabled&&option.value)
+        .map(option=>String(option.value));
+      const complete=authorized.length>0&&authorized.every(name=>inventoryNames.has(name));
+      if(!complete){
+        workerSelect.disabled=true;
+        if(oldField){oldField.style.display='';oldField.removeAttribute('aria-hidden')}
+        if(workerNote)workerNote.textContent=original.disabled
+          ?'등록 가능 Worker 조회 중 · 원본 선택기를 유지합니다.'
+          :'Cloudflare 조회 목록과 Secret 등록 허용 목록이 달라 원본 선택기를 사용합니다.';
+        return;
+      }
+
+      const preferred=authorized.includes(original.value)?original.value:authorized[0];
+      workerSelect.replaceChildren(...authorized.map(name=>{
+        const option=document.createElement('option');
+        option.value=name;
+        option.textContent=name;
+        return option;
+      }));
+      workerSelect.value=preferred;
+      workerSelect.disabled=false;
+      if(oldField){oldField.style.display='none';oldField.setAttribute('aria-hidden','true')}
+      if(workerNote)workerNote.textContent='Secret 등록이 허용된 Worker만 선택할 수 있습니다.';
+    };
+    workerSelect?.addEventListener('change',()=>{
+      if(!original||original.disabled||workerSelect.disabled)return;
+      const selected=workerSelect.value;
+      if(![...original.options].some(option=>!option.disabled&&option.value===selected))return;
+      if(original.value!==selected){
+        original.value=selected;
+        // Changing the Worker invalidates any pending two-click replacement.
+        original.dispatchEvent(new Event('change',{bubbles:true}));
+      }
+    });
+    if(original)new MutationObserver(synchronizeAuthorizedTargets).observe(original,{
+      childList:true,subtree:true,attributes:true,attributeFilter:['disabled']
+    });
+    queueMicrotask(synchronizeAuthorizedTargets);
   }
 
   function providerCard(){
