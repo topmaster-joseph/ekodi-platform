@@ -434,6 +434,9 @@ export default {
     if (url.pathname.startsWith('/api/registry')) {
       const admin = await authenticate(request, env.DB);
       if (!admin) return reply({ error: '관리자 인증이 필요합니다.' }, 401);
+      // ADMIN-DOMAIN-CONTROL-001: registry reads and edits are platform-super-admin only.
+      // Reject lesser admin roles BEFORE the seed write, SELECT, UPDATE and audit path.
+      if (admin.role !== 'super_admin') return reply({ error: '최고관리자 권한이 필요합니다.' }, 403);
       const seed = env.DB.prepare(`INSERT OR IGNORE INTO domain_registry
         (domain, registrar, auto_renew, transfer_lock, whois_privacy, reminder_days, memo, updated_at)
         VALUES (?, '도메인클럽', 0, 1, 1, 60, '', ?)`);
