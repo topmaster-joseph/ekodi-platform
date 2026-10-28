@@ -45,7 +45,8 @@ export async function recordEkodiFinalPromotionApproval(db,input={}){
   const proof=stored.preproductionProof;
   if(!proof||proof.authority!=='ekodi-orchestrator'||proof.taskId!==taskId||
      proof.branchRef!==branchRef||proof.releaseSha!==releaseSha||
-     proof.artifactDigest!==artifactDigest||!clean(proof.verifiedAt,80)){
+     proof.artifactDigest!==artifactDigest||!digest.test(clean(proof.archiveDigest,150))||
+     !clean(proof.verifiedAt,80)){
     return result(false,'authoritative_staging_proof_missing');
   }
   // A worker-controlled task evidence object is NOT authoritative by itself.
@@ -66,6 +67,7 @@ export async function recordEkodiFinalPromotionApproval(db,input={}){
      attestation.source!=='github-actions-oidc' ||
      attestation.taskId!==taskId || attestation.branchRef!==branchRef ||
      attestation.releaseSha!==releaseSha || attestation.artifactDigest!==artifactDigest ||
+     attestation.archiveDigest!==proof.archiveDigest ||
      attestation.verifiedAt!==proof.verifiedAt ||
      !Number.isSafeInteger(attestation.workflowRunId) || attestation.workflowRunId<1){
     return result(false,'staging_attestation_mismatch');
