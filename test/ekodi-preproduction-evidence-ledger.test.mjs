@@ -5,11 +5,13 @@ import {recordVerifiedEkodiPreproductionEvidence} from '../ekodi-preproduction-e
 
 const taskId='orch_0123456789abcdef0123456789abcdef',branchRef='ai/gpt6/'+taskId;
 const releaseSha='b'.repeat(40),artifactDigest='sha256:'+'c'.repeat(64);
+const archiveDigest='sha256:'+'d'.repeat(64);
 const oidc={ok:true,repository:'topmaster-joseph/ekodi-platform',ref:'refs/heads/main',
   workflowRef:'topmaster-joseph/ekodi-platform/.github/workflows/reconcile-orchestrator-completions.yml@refs/heads/main',runId:'5020'};
 const evidence=()=>({
   verified:true,source:'github-actions-staging-verifier',taskId,branchRef,releaseSha,
-  artifactDigest,releaseAuthorized:false,productionDeployed:false,
+  artifactDigest,archiveDigest,applicationDigestSource:'staging-validated-immutable-manifest',
+  releaseAuthorized:false,productionDeployed:false,
   requiredCiVerified:true,securityReviewVerified:true,stagingVerified:true,rollbackReady:true,
   stagingRunId:4500,artifactId:5500,sourceHeadSha:'a'.repeat(40),
   verifiedAt:new Date().toISOString(),
@@ -74,7 +76,8 @@ test('unsafe, invalid and stale staging inputs fail before task write',async()=>
   for(const change of [
     {verified:false},{source:'model'},{releaseAuthorized:true},{productionDeployed:true},
     {requiredCiVerified:false},{securityReviewVerified:false},{stagingVerified:false},{rollbackReady:false},
-    {artifactDigest:'sha256:invalid'},{stagingRunId:0},
+    {artifactDigest:'sha256:invalid'},{archiveDigest:'sha256:invalid'},
+    {applicationDigestSource:'worker-supplied'},{stagingRunId:0},
     {branchRef:'ai/claude/issue-3805'},{verifiedAt:'2020-01-01T00:00:00Z'},
   ]){
     const {db,calls}=dbMock();
@@ -107,6 +110,7 @@ test('one authenticated staged proof commits a versioned task record and audit e
   assert.equal(calls.events[0].source,'github-actions-oidc');
   assert.equal(calls.events[0].workflowRunId,5020);
   assert.equal(calls.events[0].artifactDigest,artifactDigest);
+  assert.equal(calls.events[0].archiveDigest,archiveDigest);
   const taskProof=JSON.parse(task.evidence_json).preproductionProof;
   assert.equal(taskProof.verifiedAt,proof.verifiedAt);
   assert.equal(taskProof.rollbackReady,true);
@@ -118,7 +122,7 @@ test('one authenticated staged proof commits a versioned task record and audit e
 test('worker-authored matching task proof without OIDC audit cannot claim idempotent success',async()=>{
   const proof=evidence();
   const existing={...row(),evidence_json:JSON.stringify({preproductionProof:{
-    authority:'ekodi-orchestrator',taskId,branchRef,releaseSha,artifactDigest,
+    authority:'ekodi-orchestrator',taskId,branchRef,releaseSha,artifactDigest,archiveDigest,
     requiredCiVerified:true,securityReviewVerified:true,stagingVerified:true,
     rollbackReady:true,verifiedAt:proof.verifiedAt,
   }})};
