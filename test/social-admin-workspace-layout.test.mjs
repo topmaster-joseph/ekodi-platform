@@ -29,6 +29,10 @@ test('Site discovery is filterable and central site selection opens the publishi
   assert.match(admin,/showTab\('publishing'\)/);
   assert.match(admin,/dataset\.centralChannelSubject/);
   assert.match(admin,/canonicalServiceSocialAdminUrl/);
+  // Admin lazy scripts are served under /admin/, but catalog is a root asset.
+  // A relative import would request /admin/admin-service-catalog.js (HTML fallback).
+  assert.match(admin, /import\('\/admin-service-catalog\.js'\)/);
+  assert.doesNotMatch(admin, /import\('\.\/admin-service-catalog\.js'\)/);
 });
 
 test('Registry edits are isolated from connection actions and preserve revision-based save', () => {
