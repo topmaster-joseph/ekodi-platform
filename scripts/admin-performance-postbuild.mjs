@@ -20,6 +20,10 @@ await Promise.all(sharedAdminMenuModules.map(asset => copyFile(`${root}${asset}`
 // only the generated runtime receives safe internal identifier compaction.
 const demandLoaderPath = `${dist}admin-demand-loader.js`;
 let demandLoaderSource = await readFile(demandLoaderPath, 'utf8');
+// Labels are retained in readable source for navigation contracts and regression
+// checks; none are read by the private FEATURES runtime. Strip only from the
+// built demand loader to preserve the strict first-path byte budget.
+demandLoaderSource = demandLoaderSource.replace(/\blabel:\s*'[^']*',\s*/g, '');
 for (const [from,to] of [
   ['secondaryScheduled','sec'],
   ['insertPlaceholder','insert'],
@@ -146,7 +150,7 @@ const staticVersionInputs = [
   'ai-ops-admin.js','ai-ops-admin.css','ai-management-admin.js','ai-management-admin.css','ai-module-spec-admin.js','ai-module-spec-admin.css','life-ai-admin.js','life-ai-admin.css','mission-control-admin.js','mission-control-admin.css',
   'release-control-admin.js','release-control-admin.css','admin-lazy-features.js',
   'system-health-admin.js','system-health-admin.css','site-health-admin.js','site-health-admin.css','pos-agent-admin.js','pos-agent-admin.css','api-cost-admin.js','api-cost-admin.css','work-admin.js','work-admin.css','communication-admin.js','communication-admin.css',
-  'marketing-ai-admin.js','marketing-ai-admin.css','growth-os-admin.js','growth-os-admin.css','author-billing-admin.js','author-billing-admin.css',
+  'marketing-ai-admin.js','marketing-ai-admin.css','growth-os-admin.js','growth-os-admin.css','search-visibility-admin.js','search-visibility-admin.css','author-billing-admin.js','author-billing-admin.css',
   'admin-perf-diagnostics.js',
 ];
 function normalizeVersionedAdminAsset(value) {

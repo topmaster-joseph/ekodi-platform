@@ -50,6 +50,7 @@ export const ADMIN_MENUS = Object.freeze([
   { id: 'system', group: 'ops', labels: { ko: '시스템 구조', en: 'System Structure' }, sections: ['architecture', 'maturity'] },
   { id: 'infra', group: 'ops', labels: { ko: '실행 인프라', en: 'Execution Infrastructure' }, sections: ['devices', 'pos-agent'] },
   { id: 'design', group: 'settings', labels: { ko: '디자인·언어', en: 'Design & Language' }, sections: ['public-site-controls', 'language-status'] },
+  { id: 'search-visibility-management', group: 'settings', labels: { ko: '검색노출관리', en: 'Search Visibility' }, sections: ['search-visibility'] },
   { id: 'integrations', group: 'settings', labels: { ko: '연동·저장소', en: 'Integrations & Storage' }, sections: ['ai-module-spec', 'storage'] },
   { id: 'identity', group: 'accounts', labels: { ko: '계정·권한', en: 'Accounts & Access' }, sections: ['users-access', 'admins'] },
   { id: 'security', group: 'accounts', labels: { ko: '보안·감사', en: 'Security & Audit' }, sections: ['security', 'audit-records'] },
@@ -91,6 +92,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'security', group: 'accounts', icon: 'S', labels: { ko: '보안·인증 기록', en: 'Security & Identity Records' }, risk: 'high' },
   { id: 'admins', group: 'accounts', icon: '♙', labels: { ko: '관리자 계정·권한', en: 'Administrator Accounts & Access' }, risk: 'high', superAdminOnly: true },
   { id: 'social-accounts', group: 'accounts', icon: '↗', labels: { ko: '소셜계정 연결 현황', en: 'Social Account Connections' }, superAdminOnly: true },
+  { id: 'search-visibility', group: 'settings', icon: '↗', labels: { ko: '검색노출관리', en: 'Search Visibility' }, superAdminOnly: true },
   { id: 'growth-os', group: 'ai', icon: '↗', labels: { ko: 'EKODI Growth OS', en: 'EKODI Growth OS' }, superAdminOnly: true },
   { id: 'ai-membership', group: 'ai', icon: '◈', labels: { ko: '사용자 AI 등급·한도', en: 'User AI Tiers & Limits' }, risk: 'high' },
 
@@ -176,7 +178,7 @@ const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
   'users-access':'access',security:'security',admins:'access','social-accounts':'access','ai-membership':'access',
   work:'content',communication:'content',community:'content',books:'content','common-scripture':'content',devotional:'content',social:'content',finance:'finance',tax:'content',
   health:'status','site-health':'status',deployments:'releases',aiops:'releases',devices:'devices','pos-agent':'devices','api-cost':'finance','infra-costs':'finance',architecture:'status',maturity:'status','domain-control':'status',services:'status',
-  'public-site-controls':'settings','language-status':'settings','ai-module-spec':'settings',storage:'settings','ai-settings':'settings','audit-records':'security',policies:'settings',
+  'search-visibility':'settings','public-site-controls':'settings','language-status':'settings','ai-module-spec':'settings',storage:'settings','ai-settings':'settings','audit-records':'security',policies:'settings',
   'common-services':'catalog',confirmations:'catalog','life-ai':'catalog','personal-finance':'catalog',invest:'catalog','marketing-ai':'catalog','supply-network':'catalog',insurance:'catalog',capabilities:'catalog',openai:'catalog',
 });
 

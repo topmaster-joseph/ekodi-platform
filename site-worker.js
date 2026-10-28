@@ -189,6 +189,8 @@ const ADMIN_ASSETS = new Set([
   '/marketing-ai-admin.js',
   '/growth-os-admin.js',
   '/growth-os-admin.css',
+  '/search-visibility-admin.js',
+  '/search-visibility-admin.css',
   '/google-admin-auth.css',
   '/google-admin-auth.js',
   '/domains-hub.css',

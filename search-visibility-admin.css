@@ -1,0 +1,39 @@
+/* SEARCH-VISIBILITY-001 — super-admin guided search registration. */
+.ekodi-search-visibility{box-sizing:border-box;max-width:1160px;width:100%;margin:0 auto;padding:20px 18px;color:#172235}
+.ekodi-search-visibility *{box-sizing:border-box}
+.ekodi-search-visibility .sv-heading,.ekodi-search-visibility .sv-subhead{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.ekodi-search-visibility .sv-heading{margin:0 0 18px}
+.ekodi-search-visibility .sv-eyebrow{font-size:11px;font-weight:800;letter-spacing:.11em;color:#50657b;margin:0}
+.ekodi-search-visibility h2{font-size:clamp(23px,3vw,29px);margin:4px 0 7px}
+.ekodi-search-visibility h3{font-size:17px;margin:0 0 12px}
+.ekodi-search-visibility p{line-height:1.55;margin:6px 0}
+.ekodi-search-visibility .sv-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}
+.ekodi-search-visibility .sv-card{border:1px solid #d7e0e9;background:#fff;border-radius:13px;padding:16px;margin:12px 0;min-width:0}
+.ekodi-search-visibility .sv-grid>.sv-card{margin:0;display:flex;flex-direction:column;gap:6px}
+.ekodi-search-visibility .sv-grid .sv-card>strong{font-size:13px;overflow-wrap:anywhere}
+.ekodi-search-visibility .sv-grid .sv-card>span{font-size:12px;color:#5b7083}
+.ekodi-search-visibility .sv-grid .sv-card>small,.ekodi-search-visibility .sv-note{font-size:12px;color:#526679}
+.ekodi-search-visibility select,.ekodi-search-visibility button{border:1px solid #b9c9d7;border-radius:8px;background:#f7fafc;color:#132236;padding:10px 12px;font:inherit;max-width:100%}
+.ekodi-search-visibility button{cursor:pointer;font-weight:700}
+.ekodi-search-visibility button:disabled{opacity:.55;cursor:wait}
+.ekodi-search-visibility a{color:#165d96;overflow-wrap:anywhere;text-decoration:underline;text-underline-offset:2px}
+.ekodi-search-visibility .sv-phases{list-style:none;padding:0;margin:0}
+.ekodi-search-visibility .sv-phase{display:flex;justify-content:space-between;align-items:center;gap:15px;border-top:1px solid #e5edf3;padding:14px 0}
+.ekodi-search-visibility .sv-phase-main{min-width:0;flex:1}
+.ekodi-search-visibility .sv-phase-main small{color:#526679}
+.ekodi-search-visibility .sv-phase>label,.ekodi-search-visibility .sv-checkbox{display:flex;align-items:center;gap:7px;flex-shrink:0;font-size:12px}
+.ekodi-search-visibility input[type="checkbox"]{width:17px;height:17px;accent-color:#185d93}
+.ekodi-search-visibility .sv-scroll{overflow-x:auto}
+.ekodi-search-visibility table{width:100%;border-collapse:collapse;min-width:590px;text-align:left}
+.ekodi-search-visibility th,.ekodi-search-visibility td{padding:12px 10px;border-bottom:1px solid #e5edf3;font-size:13px;vertical-align:top}
+.ekodi-search-visibility td small{display:block;font-size:11px;margin-top:6px;color:#57687a}
+.ekodi-search-visibility .sv-status{display:inline-block;background:#eef1f4;border-radius:20px;padding:4px 8px;white-space:nowrap;font-size:11px}
+.ekodi-search-visibility .sv-done{background:#e5f2e8;color:#215537}
+.ekodi-search-visibility .sv-diagnostics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.ekodi-search-visibility .sv-diagnostics>div{background:#f5f8fb;border-radius:8px;padding:10px;min-width:0}
+.ekodi-search-visibility dt{font-size:11px;color:#53677b}
+.ekodi-search-visibility dd{font-size:13px;font-weight:650;overflow-wrap:anywhere;margin:5px 0 0}
+.ekodi-search-visibility .sv-actions{display:flex;flex-wrap:wrap;align-items:center;gap:14px}
+.ekodi-search-visibility .sv-alias,.ekodi-search-visibility .sv-error,.ekodi-search-visibility .sv-guard{padding:11px 13px;border-radius:8px;background:#f4f7fa;font-size:13px}
+.ekodi-search-visibility .sv-error{border:1px solid #cb7878;color:#862e2e;background:#fff7f7}
+@media(max-width:790px){.ekodi-search-visibility{padding:12px}.ekodi-search-visibility .sv-grid{grid-template-columns:1fr}.ekodi-search-visibility .sv-phase{flex-direction:column;align-items:stretch}.ekodi-search-visibility .sv-diagnostics{grid-template-columns:1fr}}

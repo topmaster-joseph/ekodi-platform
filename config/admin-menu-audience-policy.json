@@ -536,6 +536,9 @@
       },
       "growth-os": {
         "audience": "platform-super-admin"
+      },
+      "search-visibility": {
+        "audience": "platform-super-admin"
       }
     },
     "note": "; Growth OS platform-super-admin only by owner's 2026-10-28 instruction, no tenant privilege expansion."
