@@ -75,6 +75,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Verify production ref, exact source SHA and signed orchestrator receipt
         shell: bash
         run: |
