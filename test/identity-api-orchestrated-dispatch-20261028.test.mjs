@@ -39,3 +39,23 @@ test('Naver/Kakao keys sync from dedicated GitHub secrets without enabling login
   assert.doesNotMatch(sync,/\bupdate\s+public\.identity_providers\b|set\s+enabled\s*=\s*true/i,'syncing keys must not switch any login on');
   assert.ok(wf.indexOf('Sync dormant Naver/Kakao login keys')>wf.indexOf('EKODI AI Orchestration Gate'));
 });
+
+test('login path readiness exposes booleans only and is verified after deploy',async()=>{
+  const api=await read('supabase/functions/identity-api/index.ts');
+  const fn=api.slice(api.indexOf('async function providerReadiness'),api.indexOf('async function currentUser'));
+  assert.match(fn,/keysInstalled:adapters\.has\(row\.provider\)/);
+  assert.doesNotMatch(fn,/clientId|secret|Deno\.env/i,'readiness must never return key material');
+  assert.match(api,/path==="\/providers\/readiness"\)return await providerReadiness\(req\)/);
+  const wf=await read('.github/workflows/deploy-identity-api.yml');
+  assert.match(wf,/identity-api\/providers\/readiness/);
+});
+
+test('live Naver/Kakao paths are proven against the provider authorize endpoint on every deploy',async()=>{
+  const wf=await read('.github/workflows/deploy-identity-api.yml');
+  const probe=wf.slice(wf.indexOf('Prove live Naver/Kakao login paths'));
+  assert.ok(wf.indexOf('Prove live Naver/Kakao login paths')>wf.indexOf('- name: Deploy identity API'));
+  assert.match(probe,/keysInstalled\\":true,\\"enabled\\":true/,'only paths that are both keyed and switched on are probed');
+  assert.match(probe,/https:\/\/kauth\.kakao\.com\/oauth\/authorize\?/);
+  assert.match(probe,/redirect_uri=https%3A%2F%2Fekodi\.kr%2Fauth%2F/);
+  assert.match(probe,/KOE\[0-9\]\+/);
+});
