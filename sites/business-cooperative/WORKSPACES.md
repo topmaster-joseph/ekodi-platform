@@ -98,3 +98,20 @@ and member projections. Existing JSON export includes private progress for admin
 Validation: `node --test test/cooperative-progress.test.mjs`; source browser verification
 exercises five widths, separate workspaces, save/reload, evidence gates, filtering,
 unsaved draft retention and stale revision409 input preservation without live writes.
+
+The overview and progress tab also derive concrete next actions from this workspace's
+saved evidence-reviewed checklist. Early tasks are grouped into participant/eligibility,
+first business and preparation-meeting decisions. Earlier incomplete mandatory phases
+remain first; a late deadline does not authorize jumping past them. Unreviewed completion
+continues to request evidence. Pending digital tasks can be handled in parallel.
+Unresolved roster placeholders, consent, office, capital agreements and budget are shown
+as facts to verify, including a reconciliation flag when a checklist row is already done.
+Other tabs never auto-complete checklist items.
+
+After a successful save, the server-returned state determines the next guidance. On
+failure or revision409, the current draft and prior guidance are retained. Action buttons
+clear the checklist filter, switch to progress and open the actual target card.
+The first preparation-meeting agenda button fills the existing meeting form as an
+unsaved draft. It never writes, publishes, dates or records a founding assembly merely
+by opening it, and never overwrites an existing unsaved or edited meeting draft.
+There is no new model invocation, permission, route, API, schema or legal submission.

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {COOPERATIVES} from '../cooperative-registry.js';
-import {COOP_LAUNCH_TASKS, initialCooperativeProgress, normalizeCooperativeProgress, cooperativeProgressSummary} from '../cooperative-progress.js';
+import {COOP_LAUNCH_TASKS, initialCooperativeProgress, normalizeCooperativeProgress, cooperativeProgressSummary, cooperativeLaunchGuidance} from '../cooperative-progress.js';
 import {loadCooperativeProject,normalizeCooperativeState} from '../cooperative-store.js';
 import {routeCooperative} from '../cooperative-control.js';
 import {fixture,authFetch} from './helpers/cooperative-fixture.mjs';
@@ -9,6 +9,51 @@ const [jubilee,open]=COOPERATIVES;
 const patch=(coop,key,changes)=>({version:1,items:[{id:`${coop.workspaceId}:launch:${key}`,...changes}]});
 const request=(coop,token='',method='GET',body,endpoint='project',origin='https://ekodi.kr')=>new Request(`https://ekodi.kr/${coop.publicSlug}/api/${endpoint}`,{method,headers:{...(token?{authorization:'Bearer '+token}:{}),...(body?{origin,'content-type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});
 const sum=value=>cooperativeProgressSummary(value,COOP_LAUNCH_TASKS,'2026-10-28');
+
+test('next guidance groups early work and exposes unresolved facts without completing or mutating either cooperative',async()=>{
+ const f=fixture();
+ try{
+  const a=(await loadCooperativeProject(f.db,jubilee)).state,b=(await loadCooperativeProject(f.db,open)).state;
+  const before=JSON.stringify([a,b]);
+  const nextA=cooperativeLaunchGuidance(a,COOP_LAUNCH_TASKS,sum(a.progress));
+  const nextB=cooperativeLaunchGuidance(b,COOP_LAUNCH_TASKS,sum(b.progress));
+  assert.deepEqual(nextA.actions.map(a=>a.key),['01','03','04']);
+  assert.deepEqual(nextB.actions.map(a=>a.key),['01','03','04']);
+  assert.equal(nextB.signals.some(s=>s.text.includes('이남현1')),true);
+  assert.equal(nextA.signals.some(s=>s.text.includes('이남현1')),false);
+  assert.ok(nextA.parallel[0].key>='29');
+  assert.equal(nextA.agendaTitle.includes(jubilee.name),true);assert.equal(nextA.agendaBody.includes('미정'),true);
+  assert.equal(nextB.agendaTitle.includes(open.name),true);
+  assert.equal(JSON.stringify([a,b]),before);
+ }finally{f.sqlite.close();}
+});
+test('unreviewed completion and a hold keep the same prerequisite actionable; input names never prove participation',async()=>{
+ const f=fixture();
+ try{
+  const state=(await loadCooperativeProject(f.db,jubilee)).state;
+  state.progress=normalizeCooperativeProgress(patch(jubilee,'01',{status:'완료',nextAction:'확인 내용 <script>실행 금지</script>'}),jubilee,state.progress);
+  let next=cooperativeLaunchGuidance(state,COOP_LAUNCH_TASKS,sum(state.progress));
+  assert.equal(next.actions[0].key,'01');assert.equal(next.actions[0].needsReview,true);assert.match(next.actions[0].action,/완료일/);
+  assert.equal(next.actions[0].nextAction,'확인 내용 <script>실행 금지</script>');
+  state.progress=normalizeCooperativeProgress(patch(jubilee,'01',{status:'보류',note:'참여 의사 확인 중'}),jubilee,state.progress);
+  next=cooperativeLaunchGuidance(state,COOP_LAUNCH_TASKS,sum(state.progress));
+  assert.equal(next.actions[0].key,'01');assert.match(next.actions[0].title,/보류/);assert.equal(next.phase,1);
+ }finally{f.sqlite.close();}
+});
+test('reviewed prerequisites advance guidance while later deadlines never jump past earlier work',async()=>{
+ const f=fixture();
+ try{
+  const state=(await loadCooperativeProject(f.db,jubilee)).state;
+  const done=key=>({id:`${jubilee.workspaceId}:launch:${key}`,status:'완료',completedDate:'2026-10-28',evidence:'오프라인 시험 원본 위치',verified:true});
+  state.progress=normalizeCooperativeProgress({version:1,items:[done('01'),done('21')]},jubilee,state.progress);
+  let next=cooperativeLaunchGuidance(state,COOP_LAUNCH_TASKS,sum(state.progress));
+  assert.equal(next.actions[0].key,'02');assert.equal(next.signals.find(s=>s.key==='01').reconcile,true);
+  state.progress=normalizeCooperativeProgress({version:1,items:['02','03','04','05','06'].map(done)},jubilee,state.progress);
+  next=cooperativeLaunchGuidance(state,COOP_LAUNCH_TASKS,sum(state.progress));
+  assert.equal(next.phase,2);assert.equal(next.actions[0].key,'07');assert.equal(state.profile.status,'formation');
+  assert.equal(next.actions.some(a=>a.key==='23'),false);
+ }finally{f.sqlite.close();}
+});
 
 test('old snapshots gain 33 independent private defaults on read without writes or revision changes',async()=>{
  const f=fixture(),before=f.sqlite.prepare('SELECT * FROM cooperative_projects').all();

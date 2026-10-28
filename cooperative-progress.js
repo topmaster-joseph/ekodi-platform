@@ -300,3 +300,54 @@ export function cooperativeProgressSummary(progress,definitions,today) {
     phases:[1,2,3,4,5,6].map(phase=>({phase,total:rows.filter(r=>r.phase===phase&&!r.excluded).length,completed:rows.filter(r=>r.phase===phase&&r.done).length,
       ready:phase===6||rows.filter(r=>r.phase<phase&&r.required).every(r=>r.done),parallel:phase===6}))};
 }
+
+// Deterministic private guidance. Inputs and draft values never establish legal facts.
+// Keep self-contained: the same function is serialized into the browser client.
+export function cooperativeLaunchGuidance(state,definitions,summary) {
+  const rows=summary.rows,founders=state.founders,profile=state.profile;
+  const pending=rows.filter(r=>r.required&&!r.done&&r.phase<6);
+  const phase=pending[0]?.phase || rows.find(r=>!r.done&&!r.excluded&&r.phase<6)?.phase || 0;
+  const candidates=rows.filter(r=>r.phase===phase&&!r.done&&!r.excluded);
+  const groups=new Set();
+  const actions=[];
+  const describe=row=>{
+    const task=definitions.find(t=>t.key===row.key);
+    const missing=[];
+    if(!row.completedDate)missing.push('완료일');
+    if(!row.evidence)missing.push('증빙 보관 위치');
+    if(!row.verified)missing.push('직접 확인 표시');
+    const grouped=row.key==='01'||row.key==='02'?'founders':row.key==='04'||row.key==='05'||row.key==='06'?'preparation':row.key;
+    const title=row.status==='완료'&&!row.done?'완료 근거를 확인하세요':row.status==='보류'?'보류 사유와 재개 조건을 확인하세요':grouped==='founders'?'발기인과 가입자격을 확인하세요':row.key==='03'?'첫 공동사업 한 가지를 정하세요':grouped==='preparation'?'첫 준비회의에서 남은 기준을 정하세요':task.title;
+    const action=row.status==='완료'&&!row.done?`${task.title}: ${missing.join('·') || '입력된 근거'}를 확인하고 저장하세요.`:row.status==='보류'?`${task.title}: 보류 이유를 검토하고 담당자와 다시 확인할 날을 정하세요.`:grouped==='founders'?'명부의 실제 이름·개인/법인 가입주체·참여 의사와 정관상 자격을 확인하세요. 이름 입력만으로 참여가 확정되지는 않습니다.':row.key==='03'?'품목·고객·공급자·조합의 역할을 한 장으로 합의하세요. 정관의 사업 목록과 실제 첫 사업은 구분합니다.':grouped==='preparation'?`${task.title}: 준비회의에서 미정 사항의 담당자와 확인기한을 정하세요.`:task.guide;
+    const tab=grouped==='founders'?'founders':row.phase===2?'documents':row.phase===3?'schedule':grouped==='preparation'?'profile':'';
+    return {key:row.key,group:grouped,title,action,tab,owner:row.owner,targetDate:row.targetDate,nextAction:row.nextAction,needsReview:row.status==='완료'&&!row.done};
+  };
+  for(const row of candidates){const item=describe(row);if(!groups.has(item.group)){groups.add(item.group);actions.push(item);}if(actions.length===3)break;}
+  const signals=[];
+  const signal=(key,text,tab)=>signals.push({key,text,tab,reconcile:rows.find(r=>r.key===key)?.done===true});
+  const temporary=founders.filter(f=>!f.representative.trim()||/^(이남현[123]|미정|확인\s*전)$/.test(f.representative.trim()));
+  if(founders.length<5||temporary.length)signal('01',`실제 발기인 명부 대조 필요${temporary.length?' · 임시 표기: '+temporary.map(f=>f.representative||'이름 미입력').join(', '):''}`,'founders');
+  const unconfirmed=founders.filter(f=>f.consent!=='confirmed');
+  if(unconfirmed.length)signal('01',`명부에서 설립동의 확인 전 ${unconfirmed.length}명 · 체크리스트 증빙과 대조하세요.`,'founders');
+  if(!profile.officeConfirmed||!profile.office.trim())signal('04','주사무소 확정·사용권 확인 필요 · 정관 참고 주소를 확정 주소로 간주하지 않습니다.','profile');
+  if(!rows.find(r=>r.key==='03')?.done)signal('03','실제로 시작할 첫 공동사업의 합의 기록 확인 필요','profile');
+  if(founders.some(f=>!f.shares)||!rows.find(r=>r.key==='05')?.done)signal('05','출자 기준·인별 약정·설립비 분담 합의 확인 필요 · 입력값은 납입 사실이 아닙니다.','founders');
+  if(profile.firstYearBudget===null||profile.firstYearBudget===undefined)signal('10','첫 회계연도 예산 미정 · 사업계획과 함께 초안을 작성하세요.','profile');
+  const agendaTitle=`${profile.name} 1차 설립준비회의(초안)`;
+  const agendaBody=[
+    '설립준비회의 안건 초안 · 창립총회 의결 기록이 아닙니다.',
+    '회의일·장소·참석자: 미정 · 실제 확인 후 입력',
+    '1. 실제 발기인·가입주체·참여동의·정관상 자격 확인',
+    `명부 입력값(참여 확정 별도): ${founders.map(f=>f.representative||'이름 미입력').join(', ')}`,
+    '2. 첫 공동사업 한 가지: 품목 / 고객 / 공급자 / 조합의 역할 / 담당자',
+    `3. 주사무소·사용권: ${profile.officeConfirmed&&profile.office?profile.office+' (입력값 · 사용권 근거 대조)':'미확정 · 후보와 확인 담당자 결정'}`,
+    '4. 출자 1좌 금액·인별 약정·설립비·운영예산: 합의안과 근거 기록 · 납입 사실과 구분',
+    '5. 임원 후보·자격·겸직 제한 검토: 후보안 기록 · 선출 확정은 창립총회에서',
+    '6. 정관안 / 사업계획서 / 예산안 / 명부 / 출자명세: 각 작성 담당자와 초안 작성일',
+    '결정사항: 실제 회의 후 입력',
+    '미결사항: 확인할 내용 / 담당자 / 확인기한 / 다음 행동',
+    '원본·동의 근거 보관 위치: 민감정보를 본문에 넣지 말고 보관 위치만 기록',
+    '다음 준비회의: 미정'
+  ].join('\n');
+  return {phase,actions,signals,parallel:rows.filter(r=>r.phase===6&&!r.done&&!r.excluded).slice(0,1).map(describe),agendaTitle,agendaBody,allReviewed:rows.every(r=>r.done||r.excluded)};
+}
