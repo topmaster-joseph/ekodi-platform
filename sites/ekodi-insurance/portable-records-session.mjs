@@ -31,6 +31,14 @@ function readExisting(storage) {
   }
   return { raw, currentMainRaw: mainRaw, legacyKey: legacyKey || null, state: parsed };
 }
+// User-triggered local inspection for the future export screen (never auto-run).
+export function inspectPortableSource(storage) {
+  const found = readExisting(storageApi(storage));
+  return Object.freeze({
+    sourceKey: found.currentMainRaw !== null ? INSURANCE_LOCAL_STATE_KEY : found.legacyKey,
+    state: found.state
+  });
+}
 function unchanged(storage, plan) {
   if (storage.getItem(INSURANCE_LOCAL_STATE_KEY) !== plan.originalMainRaw) {
     throw new Error('browser data changed since preview; repeat import');
