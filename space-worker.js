@@ -476,7 +476,7 @@ function authRedirect(request,env){
   let trusted='https://ekodi.kr/space/';
   try{
     const candidate=new URL(requested||'');
-    if(candidate.protocol==='https:'&&candidate.hostname==='ekodi.kr'&&!candidate.username&&!candidate.password&&!/^\\/(?:admin|auth|api|mcp|webhooks)(?:\\/|$)/i.test(candidate.pathname)){
+    if(candidate.protocol==='https:'&&candidate.hostname==='ekodi.kr'&&!candidate.username&&!candidate.password&&!/^\/(?:admin|auth|api|mcp|webhooks)(?:\/|$)/i.test(candidate.pathname)){
       candidate.hash='';trusted=candidate.href;
     }
   }catch{}
