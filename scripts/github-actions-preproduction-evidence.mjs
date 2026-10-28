@@ -48,6 +48,17 @@ export async function collectEkodiPreproductionEvidence({github,owner='topmaster
       const id=Number(run.id);
       if(!Number.isSafeInteger(id)||id<1)continue;
       const jobs=await github.rest.actions.listJobsForWorkflowRun({owner,repo,run_id:id,per_page:100});
+      // A successful staging job from a run that has *already begun*
+      // production is post-hoc evidence, never a valid prepromotion approval.
+      const productionAlreadyStarted=(jobs.data?.jobs||[]).some(j=>{
+        const name=clean(j.name,120).toLowerCase();
+        if(name.includes('staging')||name.includes('rollback'))return false;
+        if(!/(production|promot|deploy-release|^deploy$|^release$)/.test(name))return false;
+        return j.status==='in_progress'||
+          (j.status==='completed'&&j.conclusion!=='skipped')||
+          Boolean(j.started_at);
+      });
+      if(productionAlreadyStarted)continue;
       const stages=(jobs.data?.jobs||[]).filter(j=>/\bstaging\b/i.test(clean(j.name,120))&&pass(j));
       if(!stages.length)continue;
       // A successful staging job alone is insufficient proof of a tested
