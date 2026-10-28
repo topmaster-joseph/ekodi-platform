@@ -57,7 +57,7 @@ test('infra cost navigation resets inherited workbench scroll and production bro
   assert.match(e2e,/INFRA_COST_SEARCH_E2E/);
   assert.match(e2e,/INFRA_COST_FILTER_RESET_E2E/);
   assert.match(e2e,/INFRA_COST_INVOICE_EDITOR_E2E/);
-  assert.match(e2e,/INFRA_COST_MOBILE_LAYOUT_E2E/);
+  assert.match(e2e,/INFRA_COST_MOBILE_VISUAL_E2E/);
   assert.match(e2e,/Synthetic cost UI must not mutate production billing records/);
 });
 
