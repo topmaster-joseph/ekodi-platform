@@ -69,8 +69,8 @@ function safeRecords(input, options = {}) {
   const source = object(input, 'local records');
   const { includeDiagnosis = false, includeChat = false } = options;
   const result = {
-    policies: cleanList(source.policies || [], POLICY_FIELDS, 'policies'),
-    claims: cleanList(source.claims || [], CLAIM_FIELDS, 'claims')
+    policies: cleanList(Object.hasOwn(source, 'policies') ? source.policies : [], POLICY_FIELDS, 'policies'),
+    claims: cleanList(Object.hasOwn(source, 'claims') ? source.claims : [], CLAIM_FIELDS, 'claims')
   };
   if (includeDiagnosis) result.diagnosis = cleanDiagnosis(source.diagnosis);
   if (includeChat) result.messages = cleanMessages(source.advisorChat?.messages || []);
@@ -178,6 +178,17 @@ export async function decryptPortableRecords(envelopeText, passphrase, { webcryp
       e.cipher?.name !== 'AES-256-GCM') {
     throw new Error('unsupported encrypted archive version');
   }
+  // Reject unexpected plaintext metadata: the encrypted file must never become
+  // a covert carrier for contact data or bearer capability outside ciphertext.
+  const exactly = (record, fields, label) => {
+    const names = Object.keys(object(record, label));
+    if (names.length !== fields.length || names.some(name => !fields.includes(name))) {
+      throw new Error('unexpected ' + label + ' field');
+    }
+  };
+  exactly(e, ['format', 'version', 'kdf', 'cipher', 'payload'], 'archive');
+  exactly(e.kdf, ['name', 'hash', 'iterations', 'salt'], 'kdf');
+  exactly(e.cipher, ['name', 'iv'], 'cipher');
   const salt = decode64(e.kdf.salt, 16);
   const iv = decode64(e.cipher.iv, 12);
   const cipher = decode64(e.payload);
@@ -196,9 +207,13 @@ function signature(record) {
   return record.id || JSON.stringify(record);
 }
 function mergeList(current, imported, fields, label) {
-  const left = cleanList(current || [], fields, label);
+  // Validate existing records for merge-key safety but preserve every original
+  // object and future field byte-for-byte: never replace local data with the
+  // portable export's intentionally reduced allowlist.
+  const existing = current == null ? [] : current;
+  const left = cleanList(existing, fields, label);
   const seen = new Set(left.map(signature));
-  const result = left.slice();
+  const result = existing.slice();
   let added = 0;
   for (const item of imported) {
     const key = signature(item);
