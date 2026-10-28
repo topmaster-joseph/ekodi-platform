@@ -30,8 +30,8 @@ test('safe optimization is explicit, constrained and receipt-aware', () => {
     assert.match(agent, new RegExp('\\x27' + command.replaceAll('.', '\\.') + '\\x27'));
   }
   assert.match(panel, /!connected \|\| !capability\(device, 'storageMaintenance'\) \|\| cleanupPending/);
-  assert.match(panel, /cleanup\.status === 'failed'/);
-  assert.match(panel, /cleanup\.status === 'succeeded'/);
+  assert.match(panel, /cleanup\?\.status === 'failed'/);
+  assert.match(panel, /cleanup\?\.status === 'succeeded'/);
   assert.match(panel, /postCleanupDiagnostic/);
   assert.match(panel, /명령/);
   assert.match(admin, /'maintenance\.temp_cleanup': '7일 이상 지난 사용자\/Windows 임시 파일만 정리합니다/);
