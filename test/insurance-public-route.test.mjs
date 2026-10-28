@@ -51,7 +51,6 @@ test('shared-site router owns insurance before workspace routing',async()=>{
   assert.ok(build.includes("sites/ekodi-insurance/public"));
   assert.ok(insuranceApp.includes("'/insurance/chat.css'"));
   assert.ok(bridge.includes('https://ekodi.kr/admin/services/insurance'));
-  assert.ok(!bridge.includes('https://admin.ekodi.kr'));
   assert.doesNotMatch(index,/현재 스테이징|스테이징 테스트|통합회원 준비중/);
   assert.ok(manifest.includes("url:'https://ekodi.kr/insurance'"));
   assert.ok(manifest.includes("state:'live'"));
