@@ -47,14 +47,13 @@ export function auditSecureDocuments({policy,release,sql,edge,widget}) {
   fail(edge.includes('const isoDate=/^\\d{4}-\\d{2}-\\d{2}$/;'),'real ISO date regular expression required');
   return issues;
 }
-export function productionReleaseAllowed(release) {
-  // These tests are static security checks, never an independent legal,
-  // privacy, cryptography, or owner signoff. Only the owner-gated protected
-  // release lane can later change this explicit blocked state.
-  return release.status==='approved' && release.productionActivationDefault===true &&
-    release.independentReviewReceiptVerified===true &&
-    release.privacyReviewReceiptVerified===true &&
-    release.exactShaHumanGateReceiptVerified===true;
+export function productionReleaseAllowed(_release) {
+  // Deliberate fail-closed rule: a repository JSON file cannot authenticate
+  // independent reviewer identity, attest an exact SHA, or prove a Human Gate
+  // receipt. This static validator must NEVER issue release authorization.
+  // Only the EKODI Orchestrator's independently verified protected release
+  // control plane can approve actual activation.
+  return false;
 }
 export function checkRepository() {
   const input={

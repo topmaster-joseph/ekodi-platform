@@ -36,3 +36,11 @@ test('security audit rejects broadened document kind and unreviewed activation',
  assert.ok(issues.some(x=>x.includes('independent reviewer')));
  assert.ok(issues.some(x=>x.includes('forbidden document kind')));
 });
+
+test('repository edits cannot forge a human security release',()=>{
+ const {release}=checkRepository();
+ const forged={...release,status:'approved',productionActivationDefault:true,
+   independentReviewReceiptVerified:true,privacyReviewReceiptVerified:true,
+   exactShaHumanGateReceiptVerified:true};
+ assert.equal(productionReleaseAllowed(forged),false);
+});
