@@ -37,6 +37,7 @@ export const ADMIN_MENUS = Object.freeze([
   { id: 'site-class-preparing', group: 'sites', siteClass: true, labels: { ko: '준비·비공개', en: 'Preparing & Private' }, sections: ['sites-preparing'] },
   { id: 'menu-templates', group: 'sites', labels: { ko: '관리자 메뉴 템플릿', en: 'Admin Menu Templates' }, sections: ['menu-templates'] },
   { id: 'control', group: 'ai', labels: { ko: 'AI 운영센터', en: 'AI Operations Center' }, sections: ['aiops'] },
+  { id: 'growth-intelligence', group: 'ai', labels: { ko: '통합 성장·지속가능성', en: 'Growth & Sustainability' }, sections: ['growth-os'] },
   { id: 'automation-policy', group: 'ai', labels: { ko: 'AI 정책·사용 등급', en: 'AI Policies & Usage Tiers' }, sections: ['ai-settings', 'ai-membership'] },
   { id: 'engines', group: 'services', labels: { ko: '서비스 엔진', en: 'Service Engines' }, sections: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'] },
   { id: 'platform-content', group: 'services', labels: { ko: '플랫폼 콘텐츠 서비스', en: 'Platform Content Services' }, sections: ['books', 'common-scripture', 'devotional', 'social', 'work'] },
@@ -90,6 +91,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'security', group: 'accounts', icon: 'S', labels: { ko: '보안·인증 기록', en: 'Security & Identity Records' }, risk: 'high' },
   { id: 'admins', group: 'accounts', icon: '♙', labels: { ko: '관리자 계정·권한', en: 'Administrator Accounts & Access' }, risk: 'high', superAdminOnly: true },
   { id: 'social-accounts', group: 'accounts', icon: '↗', labels: { ko: '소셜계정 연결 현황', en: 'Social Account Connections' }, superAdminOnly: true },
+  { id: 'growth-os', group: 'ai', icon: '↗', labels: { ko: 'EKODI Growth OS', en: 'EKODI Growth OS' }, superAdminOnly: true, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Platform Super Admin · read-only evidence', controlPlane: true, globalPolicyMutation: 'super_admin' } },
   { id: 'ai-membership', group: 'ai', icon: '◈', labels: { ko: '사용자 AI 등급·한도', en: 'User AI Tiers & Limits' }, risk: 'high' },
 
   { id: 'work', group: 'services', icon: 'W', labels: { ko: '구인구직·채용', en: 'Jobs & Recruiting' }, href: 'https://ekodi.kr/work/admin', adminHandoff: true },
@@ -145,6 +147,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
 
 export const ADMIN_MENU_CATEGORY_LABELS = Object.freeze({
   overview: { ko: '개요', en: 'Overview' },
+  intelligence: { ko: '통합 판단', en: 'Intelligence' },
   catalog: { ko: '서비스', en: 'Service Catalog' },
   sites: { ko: '사이트', en: 'Sites' },
   access: { ko: '사용자·권한', en: 'Users & Access' },
@@ -160,7 +163,7 @@ export const ADMIN_MENU_CATEGORY_LABELS = Object.freeze({
 const ADMIN_MENU_CATEGORY_ORDER = Object.freeze({
   home: ['overview','other'],
   sites: ['sites','access','content','other'],
-  ai: ['releases','settings','other'],
+  ai: ['releases','intelligence','settings','other'],
   services: ['catalog','other'],
   finance: ['finance','other'],
   ops: ['status','releases','devices','other'],
@@ -171,6 +174,7 @@ const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
   'platform-overview':'overview','command-home':'overview',
   'engine-all':'catalog','engine-core':'catalog','engine-common':'catalog','engine-operations':'catalog','engine-professional':'catalog','engine-ai':'catalog','engine-integration':'catalog','engine-preview':'catalog','service-modules':'catalog',
   'sites-all':'sites','menu-templates':'sites','sites-core':'sites','sites-business':'sites','sites-community':'sites','sites-clients':'sites','sites-knowledge':'sites','sites-communication':'sites','sites-worklife':'sites','sites-other':'sites','sites-preparing':'sites','sites-internal':'sites','sites-user':'sites','sites-customer-partner':'sites','sites-independent':'sites',campus:'sites',clients:'sites','site-chrome':'sites',cmpmyi:'sites',organization:'sites',workspace:'sites',
+  'growth-os':'intelligence',
   'users-access':'access',security:'security',admins:'access','social-accounts':'access','ai-membership':'access',
   work:'content',communication:'content',community:'content',books:'content','common-scripture':'content',devotional:'content',social:'content',finance:'finance',tax:'content',
   health:'status','site-health':'status',deployments:'releases',aiops:'releases',devices:'devices','pos-agent':'devices','api-cost':'finance','infra-costs':'finance',architecture:'status',maturity:'status','domain-control':'status',services:'status',
