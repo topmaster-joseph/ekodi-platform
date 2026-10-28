@@ -1,0 +1,34 @@
+name: Cooperative Read-only Actions API Budget Diagnostic
+
+on:
+  push:
+    branches: ['ai/chatgpt/coop-github-budget-diag-20261028']
+    paths: ['.github/workflows/coop-github-budget-diagnostic.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  api-budget:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Read installation budget metadata without production access or mutations
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'JS'
+          const response=await fetch('https://api.github.com/rate_limit',{
+            redirect:'error',signal:AbortSignal.timeout(15000),
+            headers:{authorization:'Bearer '+process.env.GH_TOKEN,accept:'application/vnd.github+json','x-github-api-version':'2022-11-28'}
+          });
+          const data=await response.json();
+          const core=data.resources?.core;
+          const headerNames=['x-ratelimit-limit','x-ratelimit-remaining','x-ratelimit-reset','x-ratelimit-resource','retry-after','x-github-request-id'];
+          const result={checkedAt:new Date().toISOString(),scope:'this-repository-github-actions-installation-rest-budget-only',status:response.status,
+            core:core?{limit:core.limit,remaining:core.remaining,used:core.used,reset:core.reset,resetAt:new Date(core.reset*1000).toISOString()}:null,
+            headers:Object.fromEntries(headerNames.map(name=>[name,response.headers.get(name)])),
+            error:response.ok?null:String(data.message||'unknown').slice(0,300)};
+          console.log(JSON.stringify(result));
+          if(!response.ok)process.exitCode=1;
+          JS
