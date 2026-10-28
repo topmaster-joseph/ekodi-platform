@@ -1,4 +1,5 @@
 import { pathToFileURL } from 'node:url';
+import { createGitHubBudgetClient } from './github-api-budget-guard.mjs';
 
 // Head and orchestration statuses are published by independent CI workflows.
 // Wait for them without weakening the production gate or treating pending as passed.
@@ -18,7 +19,7 @@ export async function waitForVerifiedHeadStatus({
   getStatuses, head, required = REQUIRED,
   now = Date.now,
   sleep = ms => new Promise(resolve => setTimeout(resolve, ms)),
-  timeoutMs = 90000, pollMs = 3000,
+  timeoutMs = 90000, pollMs = 7500,
 }) {
   const deadline = now() + timeoutMs;
   for (;;) {
@@ -82,8 +83,14 @@ export async function reconcileMergeStatuses({
       const currentPr = await api('/pulls/' + pr);
       if (closedPrNoop(currentPr)) return { closed: true };
       const mergeSha = verifiedHeadPr(currentPr, head);
+      // Read current merge statuses once. Repeated recovery runs must not
+      // re-publish identical verified evidence and consume scarce API budget.
+      const existing = latestStatusByContext((await api('/commits/' + mergeSha + '/status')).statuses);
       for (const context of required) {
         const source = by.get(context);
+        const prior = existing.get(context);
+        if (prior?.state === 'success' && prior.target_url === source.target_url &&
+            prior.description === 'Recovered from verified head ' + head.slice(0, 12)) continue;
         await api('/statuses/' + mergeSha, {
           method: 'POST',
           body: JSON.stringify({
@@ -119,20 +126,10 @@ async function main() {
       !/^\d+$/.test(pr) || !/^[a-f0-9]{40}$/i.test(head))
     throw new Error('missing or invalid recovery inputs');
 
-  const api = async (route, init = {}) => {
-    const response = await fetch('https://api.github.com/repos/' + repo + route, {
-      ...init,
-      headers: {
-        Authorization: 'Bearer ' + token,
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-        'Content-Type': 'application/json', ...(init.headers || {}),
-      },
-    });
-    if (!response.ok) throw new Error('GitHub API HTTP ' + response.status +
-      ': ' + String(await response.text()).slice(0, 300));
-    return response.status === 204 ? null : response.json();
-  };
+  // Each protected CI job gets one admission-controlled, fail-closed GitHub client.
+  // Installation-wide durable reservations are handled by a later EKODI queue release.
+  const client = createGitHubBudgetClient({ repo, token, reserve: 5 });
+  const api = (route, init = {}) => client.json(route, init);
 
   const initialPr = await api('/pulls/' + pr);
   if (closedPrNoop(initialPr)) {
