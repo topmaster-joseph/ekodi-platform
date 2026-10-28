@@ -253,7 +253,7 @@ export async function library(env, request) {
     const book = byId.get(row.book_id) || { id: row.book_id, title: row.book_id };
     const key = book.directSale?.fileKey || '';
     const ready = Boolean(key && env.BOOK_FILES && await env.BOOK_FILES.head(key).catch(() => null));
-    items.push({ id: book.id, title: book.title, subtitle: book.subtitle || '', author: book.author || '', coverImage: book.coverImage || '', grantedAt: row.granted_at, amount: row.amount, receiptUrl: row.receipt_url || '', downloadReady: ready });
+    items.push({ id: book.id, title: book.title, subtitle: book.subtitle || '', author: book.author || '', coverImage: book.coverImage || '', grantedAt: row.granted_at, amount: row.amount, receiptUrl: row.receipt_url || '', downloadReady: ready, audiobookBonus: book.bonusAudio?.included === true ? { included: true, status: book.bonusAudio?.published === true ? 'check' : 'preparing' } : null });
   }
   return { status: 200, data: { email: buyer.email, tier: await tierFor(env, buyer), items } };
 }
