@@ -265,14 +265,17 @@ export function normalizeCooperativeProgress(input,coop,previous) {
     if (!row || seen.has(raw.id)) reject('COOP_PROGRESS_ID'); seen.add(raw.id);
     const template=COOP_LAUNCH_TASKS.find(t=>row.id.endsWith(':launch:'+t.key));
     const old={...row};
-    for (const [key,max] of [['owner',100],['evidence',800],['nextAction',1000],['note',2000]]) if (key in raw) row[key]=clean(raw[key],max);
+    for (const [key,max] of [['owner',100],['evidence',800],['nextAction',1000],['note',2000]]) if (key in raw) {
+      if(key==='note'&&typeof raw[key]==='string'&&raw[key].trim().length>max)reject('COOP_PROGRESS_NOTE_TOO_LONG');
+      row[key]=clean(raw[key],max);
+    }
     for (const key of ['targetDate','completedDate']) if (key in raw) row[key]=validDate(raw[key]);
     if ('status' in raw) {if(!['확인필요','대기','진행중','검토중','완료','보류','해당없음'].includes(raw.status))reject('COOP_PROGRESS_STATUS');row.status=raw.status;}
     if ('verified' in raw) {if(typeof raw.verified!=='boolean')reject('COOP_PROGRESS_INVALID');row.verified=raw.verified;}
     if (row.status==='해당없음' && (template.required || !row.note)) reject('COOP_PROGRESS_EXCLUSION');
     if (row.status!=='완료' || !row.completedDate || !row.evidence) row.verified=false;
-    // Replacing previously reviewed evidence always clears its review; review again after saving.
-    if (old.verified && (old.evidence!==row.evidence || old.completedDate!==row.completedDate)) row.verified=false;
+    // Evidence/date edits and material plan/budget draft edits need review again after saving.
+    if (old.verified && (old.evidence!==row.evidence || old.completedDate!==row.completedDate || (['09','10'].includes(template.key)&&old.note!==row.note))) row.verified=false;
   }
   return result;
 }
