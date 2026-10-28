@@ -16,9 +16,10 @@ test('central auth blocks rapid repeated service handoff navigation',()=>{
   assert.match(entry,/sessionStorage\.removeItem\(guardKey\)/);
 });
 
-test('central auth loop guard does not block interactive management or reload recovery',()=>{
+test('central auth loop guard allows explicit management but blocks automatic reload loops',()=>{
   assert.match(entry,/const interactive = params\.get\('manage'\) === '1' \|\| params\.get\('review'\) === '1'/);
-  assert.match(entry,/navigationType !== 'reload'/);
+  assert.doesNotMatch(entry,/navigationType !== 'reload'/);
+  assert.match(entry,/const repeated = !interactive && previous > 0 && now - previous < 120000/);
   assert.match(entry,/if \(!interactive\)/);
 });
 
