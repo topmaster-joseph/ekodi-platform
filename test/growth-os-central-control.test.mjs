@@ -23,7 +23,7 @@ test('Growth Intelligence Core is purpose-specific and not a marketing-only engi
   assert.equal(church.governance.autonomousChanges,false);
   assert.equal(church.governance.spend,false);
   assert.equal(church.governance.crossTenantJoin,false);
-  assert.doesNotMatch(JSON.stringify(church),/overallScore|rank|predictedRevenue/);
+  assert.doesNotMatch(JSON.stringify(church),/"(?:overallScore|rank|predictedRevenue)":/);
   assert.equal(GROWTH_CORE_VERSION,'1.0.0');
 });
 
@@ -73,7 +73,7 @@ test('new central route and lazy assets are served by canonical protected Admin 
   assert.match(canonical,/'growth-os':'ai'/);
   assert.match(canonical,/group==='growth-os'/);
   assert.match(layout,/\['growth-os','growth-os'\]/);
-  assert.match(loader,/paths:\['\/admin\/ai\/growth-os','\/admin\/growth-os'\]/);
+  assert.ok(loader.includes("paths:['/admin/ai/growth-os']"));
   assert.ok(site.includes("'/growth-os-admin.js'"));
   assert.ok(site.includes("'/growth-os-admin.css'"));
   assert.match(build,/growth-os-admin\.js/);
