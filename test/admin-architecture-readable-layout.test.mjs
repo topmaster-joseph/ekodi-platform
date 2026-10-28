@@ -47,3 +47,21 @@ test('architecture never overpaints inactive Social Hub or other admin panels', 
   // Layout-level display:block!important must be scoped to the active panel.
   assert.doesNotMatch(mapCss, /\.architecture\[data-panel~="architecture"\]\s*\{\s*box-sizing:border-box!important;\s*display:block!important/);
 });
+
+test('ADMIN-ARCH-GRID-001: architecture-only cards retain 3/2/1 responsive columns', async () => {
+  const globalStyles = await read('admin-conversation-workbench.css');
+  assert.match(globalStyles, /data-admin-list-layout="single"/);
+  assert.match(globalStyles, /grid-template-columns:minmax\(0,1fr\)!important/);
+  assert.match(mapCss, /ADMIN-ARCH-GRID-001/);
+  for (const selector of ['#structureLayers', '#structureServiceRegistry .structure-service-grid', '#ekodiArchitectureMap .system-map-platform-grid']) {
+    assert.ok(mapCss.includes(selector), selector);
+  }
+  assert.match(mapCss, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)!important/);
+  assert.match(mapCss, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important/);
+  assert.match(mapCss, /grid-template-columns:minmax\(0,1fr\)!important/);
+  assert.match(mapCss, /grid-template-columns:minmax\(0,1fr\) auto minmax\(0,1fr\) auto minmax\(0,1fr\) auto minmax\(0,1fr\)/);
+  assert.doesNotMatch(mapCss, /grid-template-columns:repeat\(7,minmax\(0,1fr\)\)/);
+  // The previous priority fix must remain: hidden architecture cannot cover other panels.
+  assert.match(mapCss, /ADMIN-PANEL-VISIBILITY-20261028/);
+  assert.match(mapCss, /\.architecture\[data-panel~="architecture"\]\[hidden\]\s*\{\s*display:none!important/);
+});
