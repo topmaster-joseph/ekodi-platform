@@ -48,11 +48,16 @@ test('standalone canonical Control and legacy /control both retain CSP and noind
  const iframe=await siteWorker.fetch(new Request('https://ekodi.kr/admin/control?embedded=admin'),env,{});
  assert.equal(iframe.headers.get('x-frame-options'),'SAMEORIGIN');
  assert.match(iframe.headers.get('content-security-policy'),/frame-ancestors 'self'/);
+ assert.equal(iframe.headers.get('x-ekodi-canonical-path'),'/admin/control');
+ const legacyEmbed=await siteWorker.fetch(new Request('https://ekodi.kr/control?embedded=admin'),env,{});
+ assert.equal(legacyEmbed.status,200);
+ assert.equal(legacyEmbed.headers.get('x-frame-options'),'SAMEORIGIN');
+ assert.equal(await legacyEmbed.text(),await iframe.text(),'both entrypoints share the same Control HTML');
 });
 
 test('existing approved single-sidebar Admin workbench and task history remain unchanged',()=>{
  const home=read('admin-control-home.js'),nav=read('control.js'),style=read('control.css'),html=read('control.html');
- assert.match(home,/frame\.src='\/control\?embedded=admin'/);
+ assert.match(home,/frame\.src='\/admin\/control\?embedded=admin'/);
  assert.match(nav,/function mountEmbeddedToolbar\(\)/);
  assert.match(nav,/rail\.hidden=true/);
  assert.match(style,/\.control-embedded-toolbar/);
