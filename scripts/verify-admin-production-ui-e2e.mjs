@@ -654,6 +654,67 @@ for (const [id, group] of menus) {
     }
   }
 
+  if (id === 'security') {
+    // SECURITY_WORKSPACE_LAYOUT_E2E: inspect the deployed CSS and actual screen
+    // geometry at three widths. This is a synthetic UI session, not an
+    // authenticated Cloudflare Secret registration or replacement operation.
+    await page.locator('#ekodiAdminSecretGenerator .admin-secret-auto-card').waitFor({
+      state:'visible', timeout:15000,
+    });
+    await page.locator('#ekodiAdminSecretGenerator .ekodi-provider-context').waitFor({
+      state:'attached', timeout:15000,
+    });
+    await page.waitForFunction(() => [...document.querySelectorAll('link[rel="stylesheet"]')]
+      .some(link => new URL(link.href).pathname.endsWith('/admin-secret-generator.css') && Boolean(link.sheet)),
+    null,{timeout:15000});
+
+    for(const viewport of [
+      {width:1440,height:1000,name:'desktop'},
+      {width:1024,height:900,name:'tablet'},
+      {width:390,height:844,name:'mobile'},
+    ]){
+      await page.setViewportSize({width:viewport.width,height:viewport.height});
+      try{
+        const layout=await page.evaluate(()=>{
+          const panel=document.querySelector('#ekodiAdminSecretGenerator');
+          const card=panel?.querySelector('.admin-secret-auto-card');
+          const context=card?.querySelector('.ekodi-provider-context');
+          const setup=card?.querySelector('.admin-secret-setup');
+          const target=context?.getBoundingClientRect();
+          const form=setup?.getBoundingClientRect();
+          return {
+            panelVisible:Boolean(panel&&!panel.hidden&&getComputedStyle(panel).display!=='none'),
+            contextVisible:Boolean(target&&target.width>0&&target.height>0),
+            setupVisible:Boolean(form&&form.width>0&&form.height>0),
+            left:target?.left||0,right:target?.right||0,bottom:target?.bottom||0,
+            setupLeft:form?.left||0,setupTop:form?.top||0,
+            horizontalOverflow:panel?Math.round(panel.scrollWidth-panel.clientWidth):-1,
+            cardDisplay:card?getComputedStyle(card).display:'',
+            statusVisible:Boolean(panel?.querySelector('[data-cloudflare-readiness]')),
+            hasWorkerPicker:Boolean(panel?.querySelector('[data-ekodi-cf-worker]')),
+          };
+        });
+        if(!layout.panelVisible||!layout.contextVisible||!layout.setupVisible||layout.cardDisplay!=='grid'
+          ||!layout.statusVisible||!layout.hasWorkerPicker||layout.horizontalOverflow>4){
+          throw new Error(`SECURITY_WORKSPACE_LAYOUT_E2E ${viewport.name} failed: ${JSON.stringify(layout)}`);
+        }
+        if(viewport.width>1200&&layout.setupLeft<layout.right-4){
+          throw new Error(`SECURITY_WORKSPACE_LAYOUT_E2E desktop not two columns: ${JSON.stringify(layout)}`);
+        }
+        if(viewport.width<=1200&&layout.setupTop<layout.bottom-4){
+          throw new Error(`SECURITY_WORKSPACE_LAYOUT_E2E ${viewport.name} not stacked: ${JSON.stringify(layout)}`);
+        }
+        await page.screenshot({
+          path:path.join(artifactsDir,`menu-security-${viewport.name}.png`),
+          fullPage:false,
+        });
+        console.log(`[PROD-E2E] security ${viewport.name}: responsive geometry verified`);
+      }finally{
+        if(viewport.name==='mobile')await page.setViewportSize({width:1440,height:1000});
+      }
+    }
+  }
+
   if (id === 'engine-all') {
     // ENGINE_CATALOG_STYLE_E2E: a non-empty DOM is not enough; CSS must load
     // on nested admin URLs, and compact cards must remain readable on mobile.

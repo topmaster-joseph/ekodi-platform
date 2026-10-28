@@ -61,6 +61,8 @@ for(const check of [
   {path:'/admin/admin-secret-generator.js',markers:[
     'admin-secret-setup',
     "field.addEventListener('change', resetReplaceMode)",
+    'synchronizeAuthorizedTargets',
+    'authorized.every(name=>inventoryNames.has(name))',
     'EKODIAdminAIControlPlane'
   ]}
 ]){
