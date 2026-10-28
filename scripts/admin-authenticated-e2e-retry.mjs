@@ -205,7 +205,7 @@ const aggregate = {
   expectedMenuCount: menuIds.length,
   checkedMenuCount: 0,
   passed: false,
-  mode: focusOnly ? 'focused-social-inventory' : 'isolated-menu-renderers+canonical-assist-roundtrip',
+  mode: focusOnly ? (menuIds[0]==='architecture' ? 'focused-architecture' : 'focused-social-inventory') : 'isolated-menu-renderers+canonical-assist-roundtrip',
   taxProtocolFallback: 'strict-isolated-tax-surface-on-known-http2-commit-race',
   results: [],
   assistProbe: null,
