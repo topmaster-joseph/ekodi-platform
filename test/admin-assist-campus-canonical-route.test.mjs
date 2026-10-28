@@ -21,7 +21,7 @@ test('route registry campus path is the address production redirects to', () => 
 
 test('canonical Assist production browser stops on the first 429 before retry or selector wait', () => {
   const start = script.indexOf('for (let attempt = 1; attempt <= 2; attempt += 1) {');
-  const end = script.indexOf("await page.waitForFunction(() => (", start);
+  const end = script.indexOf("await page.waitForFunction(() => document.querySelector('#apiState')", start);
   assert.ok(start >= 0 && end > start, 'expected canonical Admin navigation retry loop');
   const loop = script.slice(start, end);
   const navigation = loop.indexOf('const response = await page.goto(canonicalBaseUrl');
