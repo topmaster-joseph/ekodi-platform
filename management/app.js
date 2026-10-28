@@ -20,6 +20,7 @@ function authUrl(){
 function renderIdentity(){
   const member=Boolean(state.session?.accessToken);document.body.dataset.member=member?'1':'0';$('memberApp').hidden=!member;
   const auth=$('authLink');auth.href=member?'#logout':authUrl();auth.textContent=member?'로그아웃':'Google 로그인';
+  const start=document.querySelector('.cta-row .button');if(start)start.href=authUrl();
   if(member)$('memberMeta').textContent=`무료등급 · ${state.session?.user?.email||'Google 회원'} · 기능 선택형`;
 }
 function sessionExpiry(value){const explicit=Number(value?.expiresAt||0);return explicit>0?explicit:Math.floor(Date.now()/1000)+Number(value?.expiresIn||3600)}
