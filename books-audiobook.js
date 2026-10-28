@@ -35,9 +35,17 @@ async function gate(env, request, bookId) {
   if (!config) return { error: fail(404, 'NOT_FOUND', '등록된 오디오북 보너스가 없습니다.') };
   // Explicitly check the live, unrevoked ebook entitlement. No tier, payment intent,
   // browser storage, operator email or catalog flag can replace this check.
-  const owned = await env.DB.prepare(
+  let owned = await env.DB.prepare(
     'SELECT 1 FROM books_entitlements WHERE buyer_user_id=? AND book_id=? AND revoked_at IS NULL'
   ).bind(buyer.userId, book.id).first();
+  if (!owned) {
+    // Do not grant EPUB access to third-party ebook buyers. This is an audiobook-only
+    // entitlement, independently verified by an operator and revoked on refund.
+    try {
+      owned = await env.DB.prepare("SELECT 1 FROM books_audiobook_external_grants g JOIN books_audiobook_external_claims c ON c.id=g.claim_id WHERE g.buyer_user_id=? AND g.book_id=? AND g.revoked_at IS NULL AND c.status='verified'")
+        .bind(buyer.userId, book.id).first();
+    } catch { owned = null; } // migration unavailable => fail closed
+  }
   if (!owned) return { error: fail(403, 'NOT_OWNED', '해당 전자책의 구매권한이 없습니다.') };
   return { book, config, buyer };
 }
