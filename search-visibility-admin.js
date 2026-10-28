@@ -33,6 +33,10 @@
     .search-visibility .sv-channels article p{color:#5a6b81;font-size:13px;line-height:1.65}
     .search-visibility .sv-channels a{display:inline-block;margin-top:8px;font-size:13px}
     .search-visibility .sv-guide{padding:15px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;line-height:1.7}
+    .search-visibility .sv-sequence{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;padding:0;list-style:none}
+    .search-visibility .sv-sequence li{border:1px solid #dbe4ef;border-radius:9px;padding:12px;background:#fff}
+    .search-visibility .sv-sequence strong,.search-visibility .sv-sequence small{display:block}
+    .search-visibility .sv-sequence small{margin-top:6px;color:#506378;line-height:1.5}
     @media(max-width:760px){.search-visibility .sv-table{min-width:760px}.search-visibility .sv-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
     </style>
     <header class="section-head"><div><p class="kicker">EKODI GROWTH OS · SEARCH DISCOVERY</p>
@@ -65,6 +69,11 @@
     <div class="sv-status" data-sv-provider-note role="status">공개 사이트 목록을 먼저 불러오세요.</div>
     <div class="sv-scroll"><table class="sv-table"><thead><tr><th>구분</th><th>서비스</th><th>등록/연동</th><th>소유권·접근</th><th>제출·인용</th><th>확인</th></tr></thead>
     <tbody data-sv-provider-rows><tr><td colspan="6">사이트를 선택하세요.</td></tr></tbody></table></div>
+    <section aria-label="사이트별 검색노출 실행 순서">
+      <h3>선택한 사이트의 실행 순서</h3>
+      <p class="sv-intro">단계 상태는 선택한 공개 사이트와 중앙 근거 원장에서 산출합니다. 수동 기록은 공급자 자동 인증이 아닙니다.</p>
+      <ol class="sv-sequence" data-sv-sequence><li>공개 사이트를 먼저 선택하세요.</li></ol>
+    </section>
     <div class="sv-status" data-sv-ledger-status role="status">외부 서비스 확인 원장을 조회하기 전입니다.</div>
     <div class="sv-guide" aria-label="검색 서비스 확인 근거 등록">
       <strong>서비스별 확인 근거 등록 (최고관리자 전용)</strong>
@@ -206,10 +215,44 @@
       finally{state.ledgerBusy=false;$('[data-sv-ledger-submit]').disabled=false;}
     });
   }
+  function renderExecutionSteps(){
+    const list=$('[data-sv-sequence]');
+    if(!list)return;
+    const site=state.sites.find(item=>item.url===state.selectedSite);
+    list.replaceChildren();
+    if(!site){const item=document.createElement('li');item.textContent='공개 사이트를 선택하세요.';list.append(item);return;}
+    const evidence=Array.isArray(state.ledger?.evidence)?state.ledger.evidence:[];
+    const primary=new Set(['naver','google','daum','bing']);
+    const mark=type=>{
+      if(!state.ledger)return '서버 확인 원장 미연결';
+      const matches=evidence.filter(row=>row.site_url===site.url&&primary.has(row.provider_id)&&row.check_type===type);
+      if(matches.some(row=>row.state==='needs_action'))return '조치 필요 · 원장 기록';
+      if(matches.some(row=>row.state==='confirmed_manually'))return '수동 근거 기록 · 자동 검증 아님';
+      if(matches.some(row=>row.state==='pending'))return '확인 대기';
+      return '공급자 확인 근거 없음';
+    };
+    const separate=new URL(site.url).origin!==location.origin;
+    const audit=state.audited.get(site.url);
+    const steps=[
+      ['1. 대상과 대표 주소',site.propertyType==='independent-domain'
+        ? '독립 도메인 · 정규 주소: '+(site.canonicalUrl||'별도 확인 필요')
+        : '에코디 공개 사이트 원장 등재'],
+      ['2. 검색 수집 기술 점검',separate?'별도 도메인 점검 필요 · 내부 점수 산출 제외':
+        audit?(audit.error?'기술 점검 실패: '+audit.error:'화면 기술 진단 기록됨'):'기술 점검 미실시'],
+      ['3. 검색엔진 소유권 확인',mark('ownership')],
+      ['4. 사이트맵 제출 및 수집 알림',mark('submission')],
+      ['5. 색인·발견 확인',mark('discovery')],
+      ['6. 노출·클릭 등 실측 성과','공식 공급자 성과 API 미연동 · 수치 미확인']
+    ];
+    for(const [title,summary] of steps){
+      const li=document.createElement('li'),heading=document.createElement('strong'),detail=document.createElement('small');
+      heading.textContent=title;detail.textContent=summary;li.append(heading,detail);list.append(li);
+    }
+  }
   function renderProviderMatrix(){
     const site=state.sites.find(item=>item.url===state.selectedSite);
     const target=$('[data-sv-provider-rows]');target.replaceChildren();
-    if(!site){$('[data-sv-provider-note]').textContent='사이트를 선택하세요.';return;}
+    if(!site){$('[data-sv-provider-note]').textContent='사이트를 선택하세요.';renderExecutionSteps();return;}
     const host=new URL(site.url).hostname;
     $('[data-sv-provider-note]').textContent=(site.name||'사이트')+' · '+host+' — 하위 경로별 기술 진단과 호스트 단위 소유권 인증은 구분합니다. 외부 등록·수집·AI 인용 여부는 실제 공급자 자료가 있어야 확정됩니다.';
     for(const [i,[group,name,url,kind,scope]] of SEARCH_PROVIDERS.entries()){
@@ -241,6 +284,7 @@
       });
       action.append(link,edit);row.append(action);target.append(row);
     }
+    renderExecutionSteps();
   }
   function renderProviderChoices(){
     const select=$('#sv-provider-site'), prior=state.selectedSite;select.replaceChildren();
@@ -319,6 +363,7 @@
       action.append(button,review);row.append(name,locationCell,basic,ai,providerCell,action);target.append(row);
     }
     if(!sites.length){const row=document.createElement('tr');const cell=document.createElement('td');cell.colSpan=6;cell.textContent='검색 결과가 없습니다.';row.append(cell);target.append(row);}
+    renderExecutionSteps();
   }
   async function load() {
     if(!token())return status('최고관리자 로그인이 필요합니다.',true);
