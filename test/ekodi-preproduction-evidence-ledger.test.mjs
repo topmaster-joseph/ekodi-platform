@@ -26,7 +26,13 @@ function dbMock(record=row(),options={}){
           sql,args,
           first:async()=>{
             if(sql.includes('FROM ekodi_orchestrator_tasks'))return record;
-            if(sql.includes('FROM ekodi_orchestrator_task_events'))return options.approved?{reason:'final_promotion_approval_recorded'}:null;
+            if(sql.includes('FROM ekodi_orchestrator_task_events')){
+              if(sql.includes('verified_preproduction_evidence_recorded')){
+                return options.fakeAudit?{actor:'ai:worker',evidence_json:'{}'}:
+                  calls.events.length?{actor:'ekodi-github-actions-oidc-reconciler',evidence_json:JSON.stringify(calls.events.at(-1))}:null;
+              }
+              return options.approved?{reason:'final_promotion_approval_recorded'}:null;
+            }
             throw Error('unexpected SQL');
           },
         };
@@ -109,6 +115,20 @@ test('one authenticated staged proof commits a versioned task record and audit e
   assert.equal(again.idempotent,true);
   assert.equal(calls.batches,1);
 });
+test('worker-authored matching task proof without OIDC audit cannot claim idempotent success',async()=>{
+  const proof=evidence();
+  const existing={...row(),evidence_json:JSON.stringify({preproductionProof:{
+    authority:'ekodi-orchestrator',taskId,branchRef,releaseSha,artifactDigest,
+    requiredCiVerified:true,securityReviewVerified:true,stagingVerified:true,
+    rollbackReady:true,verifiedAt:proof.verifiedAt,
+  }})};
+  const {db,calls}=dbMock(existing,{fakeAudit:true});
+  const r=await recordVerifiedEkodiPreproductionEvidence(db,proof,oidc);
+  assert.equal(r.recorded,false);
+  assert.equal(r.reason,'matching_staging_proof_without_authoritative_audit');
+  assert.equal(calls.batches,0);
+});
+
 test('stale concurrent CAS and D1 outage fail closed',async()=>{
   for(const options of [{conflict:true},{throwBatch:true}]){
     const {db}=dbMock(row(),options);
