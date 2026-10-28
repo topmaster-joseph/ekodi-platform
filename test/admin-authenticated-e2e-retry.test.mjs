@@ -127,7 +127,7 @@ test('architecture focus is isolated, read-only and not mistaken for all-menu ac
   assert.match(workflow,/inputs\.focus_menu == 'architecture'/);
   assert.match(workflow,/architecture-focused-production-/);
   assert.match(workflow,/if: \$\{\{ inputs\.focus_menu == 'all' \}\}/);
-  assert.match(retry,/const focusedDiagnostic = \['social-accounts','architecture'\]/);
+  assert.match(retry,/const focusedDiagnostic = \['social-accounts','architecture','public-site-controls'\]/);
   assert.match(retry,/productionConvergenceAttempts = focusOnly \? 1 : 36/);
   assert.match(retry,/focused read-only diagnostic \(not full-suite certification\)/);
   assert.match(worker,/ADMIN-ARCH-ISOLATED-PROOF-20261029/);
