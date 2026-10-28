@@ -71,3 +71,25 @@ test('My EKODI portfolio is person-scoped across linked identities with private 
   assert.match(optimizedRls, /\(select auth\.uid\(\)\)/);
   assert.match(optimizedRls, /\(select private\.current_person_id\(\)\)/);
 });
+
+test('Creator AI author redirects keep browser on canonical admin/books paths',async()=>{
+  const worker=await import('../author-worker.js');
+  const app=worker.default;
+  const forbidden=['admin','ekodi','kr'].join('.');
+  const authHost=['auth','ekodi','kr'].join('.');
+  const source=await read('author-worker.js');
+  const files=await read('books/publishing/workspace/index.html');
+  assert.doesNotMatch(source,new RegExp('https?://'+forbidden.replaceAll('.', '[.]')));
+  assert.doesNotMatch(source,new RegExp('https?://'+authHost.replaceAll('.', '[.]')));
+  for(const [path,expected] of [
+    ['/admin','https://ekodi.kr/admin/?route=books&source=author'],
+    ['/books','https://ekodi.kr/books/']
+  ]){
+    const response=await app.fetch(new Request('https://author.'+['ekodi','kr'].join('.')+path),{});
+    assert.equal(response.status,307,path);
+    assert.equal(response.headers.get('location'),expected,path);
+  }
+  assert.match(source,/form-action 'self' https:\/\/ekodi\.kr https:\/\/\*\.tosspayments\.com/);
+  assert.match(files,/href="https:\/\/ekodi\.kr\/admin\/books#BOOK-EKODI-000001"/);
+  assert.ok(!files.includes('https://'+forbidden+'/books'));
+});
