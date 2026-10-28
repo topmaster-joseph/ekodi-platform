@@ -25,6 +25,7 @@ test('Exact main SHA, receipt, restricted project and dev security gate precede 
     'test "$GITHUB_SHA" = "$EXPECTED_SHA"',
     'test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"',
     'git merge-base --is-ancestor f9f0a95170090648c620b97dba30a5e0867160df "$EXPECTED_SHA"',
+    'fetch-depth: 0',
     'b3cdf0e9296ac7c4ac402d7fa0d56ced88ab3761',
     'test "${RELEASE_BRANCH##*/}" = "$RELEASE_TASK"',
     'release-receipt?taskId=',
