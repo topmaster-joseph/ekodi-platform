@@ -18,3 +18,7 @@ Owner task: issue #6630. Church C3 PR #6560 is an affected release, **not** proo
 - `node --test test/github-api-budget-guard.test.mjs test/recover-required-status-drift.test.mjs`
 - Inspect guarded workflow results for the exact new PR head. In production compare 403 volume, Github API requests per task, duplicate workflow runs and protected merge success before/after.
 - For Church C3, separately prove canonical public/member pages, zero legacy Pages/Worker/DNS binding and independent legacy hostname non-service.
+
+## Official recovery PR exact-head verification
+
+EKODI Orchestrator automatically created recovery PR #6635 with a GitHub Actions bot-authored head. The repository owner requests authentic required checks for the newest exact head in the protected recovery branch. This documentation-only update is not evidence of deployment, not a substitute for required CI, and cannot authorize production operations. Preserve the underlying quota guard, tests and release provenance unchanged.
