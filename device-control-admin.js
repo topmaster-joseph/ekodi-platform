@@ -92,7 +92,11 @@
   let currentEnrollmentInstaller = '';
   let deviceCatalog = Object.values(TYPE_FALLBACK);
   let currentDevices = [];
-  let activeType = 'all';
+  const WINDOWS_PERFORMANCE_URL = '/admin/ops/devices/windows-performance';
+  function windowsPerformanceRoute() {
+    return window.location.pathname.replace(/\/$/, '') === WINDOWS_PERFORMANCE_URL;
+  }
+  let activeType = windowsPerformanceRoute() ? 'pc' : 'all';
   let rosterStatus = 'all';
   let rosterSearch = '';
   let showRetiredGroups = false;
@@ -135,7 +139,7 @@
       document.querySelectorAll('.sidebar .nav').forEach(item => item.classList.remove('active'));
       document.querySelector('[data-device-control-nav]')?.classList.add('active');
       setPageTitle('로컬컴퓨터·기기');
-      if (location.hash !== '#devices') history.replaceState(null, '', '#devices');
+      if (location.hash !== '#devices' && !windowsPerformanceRoute()) history.replaceState(null, '', '#devices');
     }
     document.querySelector('.sidebar')?.classList.remove('open');
     loadDevices();
@@ -936,7 +940,7 @@
     wrapper.className = 'device-roster-group';
     wrapper.dataset.rosterKey = group.key;
     wrapper.dataset.status = primary.status;
-    wrapper.open = openRosterGroups.has(group.key);
+    wrapper.open = windowsPerformanceRoute() || openRosterGroups.has(group.key);
     const heading = document.createElement('summary');
     heading.className = 'device-roster-summary';
     const name = document.createElement('span'); name.className = 'device-roster-name';
@@ -998,6 +1002,10 @@
   function renderTypeFilters(devices) {
     const host = document.querySelector('#deviceTypeFilters');
     if (!host) return;
+    if (windowsPerformanceRoute()) {
+      host.replaceChildren();
+      return;
+    }
     const groups = groupRosterDevices(devices).filter(group => showRetiredGroups || !group.retired);
     const counts = groups.reduce((map, group) => {
       const type = group.primary.management?.type || 'pc';
@@ -1075,6 +1083,7 @@
     const query = rosterSearch.trim().toLocaleLowerCase();
     const visible = counted.filter(group => {
       const device = group.primary;
+      if (windowsPerformanceRoute() && (device.management?.type !== 'pc' || isInventory(device) || device.capabilities?.posAgent === true)) return false;
       if (activeType !== 'all' && (device.management?.type || 'pc') !== activeType) return false;
       if (rosterStatus === 'online' && device.status !== 'online') return false;
       if (rosterStatus === 'attention' && !rosterNeedsAttention(device)) return false;
@@ -1147,8 +1156,12 @@
     const panel = document.createElement('section'); panel.id = 'deviceControlPanel'; panel.className = 'section ekodi-device-panel hidden-panel'; panel.dataset.panel = 'devices';
     panel.innerHTML = `
       <div class="device-panel-head">
-        <div><p class="kicker">REMOTE WORK & DEVICE MANAGEMENT · LOCAL COMPUTERS · DEVICES</p><h2>로컬컴퓨터·기기</h2><p>현재 연결 상태와 이용현황을 먼저 보고, 문제가 있는 기기만 빠르게 찾아 조치합니다. 원격 작업·연결·자동작업·고급 설정은 필요할 때 펼쳐 사용합니다.</p></div>
+        <div><p class="kicker">REMOTE WORK & DEVICE MANAGEMENT · LOCAL COMPUTERS · DEVICES</p><h2>${windowsPerformanceRoute() ? 'Windows 성능 관리' : '로컬컴퓨터·기기'}</h2><p>${windowsPerformanceRoute() ? '등록된 PC만 표시합니다. 실제 Agent 실측값과 허용된 진단·시작프로그램·업데이트·안전 정리의 실행 영수증을 확인합니다.' : '현재 연결 상태와 이용현황을 먼저 보고, 문제가 있는 기기만 빠르게 찾아 조치합니다. 원격 작업·연결·자동작업·고급 설정은 필요할 때 펼쳐 사용합니다.'}</p></div>
         <div class="device-head-actions"><span id="deviceGeneratedAt">연결 상태 확인 전</span><button type="button" class="secondary" id="refreshDevices">↻ 새로고침</button></div>
+      </div>
+      <div class="device-performance-entry" aria-label="Windows 성능 관리 전용 링크">
+        <div><strong>Windows 성능 관리 전용</strong><p>안전한 진단과 실행 영수증을 기존 EKODI Device Agent로 통합합니다. 설치 없는 브라우저 직접 제어는 허용하지 않습니다.</p></div>
+        <a class="button secondary" href="${windowsPerformanceRoute() ? '/admin/ops/devices' : WINDOWS_PERFORMANCE_URL}">${windowsPerformanceRoute() ? '전체 기기로 돌아가기' : 'Windows 성능 전용 화면'}</a>
       </div>
       <details class="device-status-tools" open>
         <summary><strong>연결된 기기 · 상태 보기</strong><span id="deviceStatusSummary">상태 확인 중</span></summary>
@@ -1216,6 +1229,11 @@
     const quickSetup = panel.querySelector('.device-setup-tools');
     const statusTools = panel.querySelector('.device-status-tools');
     if (quickSetup && statusTools) statusTools.before(quickSetup);
+    if (windowsPerformanceRoute()) {
+      panel.dataset.windowsPerformanceMode = 'true';
+      if (quickSetup) quickSetup.open = false;
+      if (statusTools) statusTools.open = true;
+    }
         content.append(panel);
     const demandLoader=globalThis.EKODIAdminDemand;
     const loadTapoScript=demandLoader?.loadScript||demandLoader?.loadJs;
@@ -1237,7 +1255,7 @@
       catch { event.currentTarget.textContent = '코드를 직접 선택해 복사하세요'; }
     });
 
-    if (location.hash === '#devices') showDevices();
+    if (location.hash === '#devices' || windowsPerformanceRoute()) showDevices();
     window.addEventListener('hashchange', () => { if (location.hash === '#devices') showDevices(); });
     timer = window.setInterval(() => { if (!panel.classList.contains('hidden-panel')) loadDevices(); }, 10000);
   }
