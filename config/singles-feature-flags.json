@@ -30,19 +30,28 @@
       "name": "SINGLES_PAID_ACTIONS_ENABLED",
       "layer": "worker",
       "default": "false",
-      "gates": "메시지 발송·행사 신청 쓰기(유료 행동). Edge는 구독 원장(singles_bank_grants)으로 별도 강제"
+      "gates": "메시지 발송·행사 신청 쓰기(유료 행동). Edge는 구독 원장(singles_bank_grants)으로 별도 강제",
+      "production": "true",
+      "launchedAt": "2026-10-28",
+      "launchDecision": "owner (topmaster-joseph) 2026-10-28: 유료회원 모델 실증 시작(시범 명단만 — Edge 시범 게이트가 SINGLES_PUBLIC_LAUNCH_ENABLED 전까지 명단·운영자 외 차단)"
     },
     {
       "name": "SINGLES_BANK_TRANSFER_ENABLED",
       "layer": "worker+edge",
       "default": "false",
-      "gates": "계좌이체 주문 접수"
+      "gates": "계좌이체 주문 접수",
+      "production": "true",
+      "launchedAt": "2026-10-28",
+      "launchDecision": "owner (topmaster-joseph) 2026-10-28: 유료회원 모델 실증 시작(시범 명단만 — Edge 시범 게이트가 SINGLES_PUBLIC_LAUNCH_ENABLED 전까지 명단·운영자 외 차단)"
     },
     {
       "name": "SINGLES_BANK_VERIFICATION_ENABLED",
       "layer": "worker+edge",
       "default": "false",
-      "gates": "운영자 입금 확인(승인)"
+      "gates": "운영자 입금 확인(승인)",
+      "production": "true",
+      "launchedAt": "2026-10-28",
+      "launchDecision": "owner (topmaster-joseph) 2026-10-28: 유료회원 모델 실증 시작(시범 명단만 — Edge 시범 게이트가 SINGLES_PUBLIC_LAUNCH_ENABLED 전까지 명단·운영자 외 차단)"
     },
     {
       "name": "SINGLES_ONBOARDING_ENABLED",
@@ -54,7 +63,19 @@
       "name": "SINGLES_REQUEST_BILLING_ENABLED",
       "layer": "edge",
       "default": "false",
-      "gates": "요청 과금: 요청 시 요청자 크레딧 1단위 잡아두기, 수락 시 요청자·응답자 각 1단위(1만원) 확정, 월 이용권 필요"
+      "gates": "유료회원 모델(2026-10-28): 가입비 50만원=적립금, 무료회원 기능 제한, 요청 보류·수락 확정 차감(기본 요금+입력·공개 할인), 기간제 메시지 이용권, 메시지 연락처 가림"
+    },
+    {
+      "name": "SINGLES_PUBLIC_LAUNCH_ENABLED",
+      "layer": "edge",
+      "default": "false",
+      "gates": "공개 개통. 'true'가 아니면 시범 명단(singles_pilot_users)과 운영자만 회원 기능 사용(실증 단계)"
+    },
+    {
+      "name": "SINGLES_IDENTITY_PROVIDER_ENABLED",
+      "layer": "edge",
+      "default": "false",
+      "gates": "본인확인기관(포트원 V2 본인인증) 연동. PORTONE_API_SECRET이 함께 있어야 동작. Worker는 SINGLES_PORTONE_STORE_ID·SINGLES_PORTONE_IDENTITY_CHANNEL_KEY(공개 식별자)가 있을 때만 인증 화면을 연다"
     }
   ],
   "retired_names": [

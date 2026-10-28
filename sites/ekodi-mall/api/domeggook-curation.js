@@ -159,6 +159,14 @@ export async function runCuration(env, deps, { fetchImpl = fetch, perRun = 3 } =
       continue;
     }
     const productId = result.body.product?.id;
+    const imageRow = await env.DB.prepare('SELECT images_json FROM products WHERE id=?').bind(productId).first().catch(() => null);
+    if (!imageRow?.images_json || ['', '[]', 'null'].includes(imageRow.images_json)) {
+      // 사진 없는 상품은 게시하지 않는다. backfillSupplyImages 가 사진을 채우면 자동 게시된다.
+      await env.DB.prepare("UPDATE products SET supply_release='image_hold' WHERE id=?").bind(productId).run();
+      await env.DB.prepare("UPDATE supply_candidates SET status='imported',product_id=?,title_key=?,updated_at=? WHERE item_no=?").bind(productId, key, now, pick.item_no).run();
+      summary.imported += 1;
+      continue;
+    }
     if (!approved) {
       // 도매꾹 구매 API 승인 전: 비공개 대기. 승인되면 applySupplyGate 가 게시한다.
       await env.DB.prepare("UPDATE products SET supply_release='staged' WHERE id=?").bind(productId).run();

@@ -11,7 +11,7 @@ import { handleVerificationRequest, verificationSchemaReady } from './verificati
 import { handleSupplierPilotRequest, supplierPilotSchemaReady } from './supplier-pilot.js';
 import { handleSupplierDiscoveryRequest, supplierDiscoverySchemaReady } from './supplier-discovery.js';
 import { handleDomemaeRequest, domemaeConnectorReady } from './domemae.js';
-import { probeDomeggookKey, syncSupplyProducts } from './domeggook-import.js';
+import { probeDomeggookKey, syncSupplyProducts, backfillSupplyImages } from './domeggook-import.js';
 import { probeOwnerclan } from './ownerclan.js';
 import { submitProductIndexNow } from './seo-indexnow.js';
 import { placeSupplierOrders, trackSupplierOrders, autoOrderEnabled, probeDomeggookLogin } from './domeggook-order.js';
@@ -308,6 +308,8 @@ export default {
       return trackSupplierOrders(env);
     }).then(() => probeOwnerclan(env)).then(() => probeDomeggookKey(env)).then(() => syncSupplyProducts(env)).then(summary => {
       if (summary.synced) console.log('mall supply sync', JSON.stringify(summary));
+      return backfillSupplyImages(env).then(r => { if (r.tried) console.log('mall supply images', JSON.stringify(r)); }).catch(e => console.error('mall supply images failed', e));
+    }).then(() => {
       return runSupplyCuration(env);
     }).then(summary => {
       if (summary?.imported || summary?.discovery) console.log('mall supply curation', JSON.stringify(summary));

@@ -4,11 +4,12 @@ import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import {
   handleCgmaEdocs, validateDraft, validateStrokes, sniffFileType, nextSignerState, normalizeName, sha256Hex, eventHash,
-  EDOC_API_PREFIX, LINK_TTL_MS, DEFAULT_SIGNER_ROLES,
+  EDOC_API_PREFIX, LINK_TTL_MS, DEFAULT_SIGNER_ROLES, normalizeSourceUrl, snapshotSource,
 } from '../cgma-edoc-api.js';
 
 const MIGRATION = fs.readFileSync(new URL('../migrations/202610250500_cgma_edocs.sql', import.meta.url), 'utf8');
 const MIGRATION_ARCHIVE = fs.readFileSync(new URL('../migrations/202610280400_cgma_edocs_archive.sql', import.meta.url), 'utf8');
+const MIGRATION_SOURCE_URL = fs.readFileSync(new URL('../migrations/202610280600_cgma_edocs_source_url.sql', import.meta.url), 'utf8');
 const ORIGIN = 'https://ekodi.kr';
 const T0 = Date.parse('2026-10-25T05:00:00Z');
 
@@ -16,6 +17,7 @@ function d1() {
   const sqlite = new DatabaseSync(':memory:');
   sqlite.exec(MIGRATION);
   sqlite.exec(MIGRATION_ARCHIVE);
+  sqlite.exec(MIGRATION_SOURCE_URL);
   const statement = (sql, params = []) => ({
     bind(...values) { return statement(sql, values); },
     async first() { return sqlite.prepare(sql).get(...params) || null; },
@@ -44,11 +46,12 @@ function r2() {
   return { store, async put(key, bytes, opts) { store.set(key, { bytes: new Uint8Array(bytes), opts }); },
     async get(key) { const v = store.get(key); return v ? { body: v.bytes } : null; } };
 }
-function setup({ scope = 'tenant' } = {}) {
+function setup({ scope = 'tenant', fetch: fetchImpl } = {}) {
   const env = { DB: d1(), CGMA_EDOC_FILES: r2() };
   let now = T0;
   const options = {
     now: () => now,
+    fetch: fetchImpl || (async () => { throw new Error('network disabled in tests'); }),
     resolveAuthority: async request => {
       const auth = request.headers.get('authorization');
       if (!auth) return { ok: false, status: 401 };
@@ -434,4 +437,113 @@ test('연번 is a stable registration-order serial, unaffected by filters; summa
   const archived = await (await ctx.call('?status=archived')).json();
   assert.deepEqual(archived.documents.map(d => d.serial_no), [3]);
   assert.equal(all.summary.archived, 1); assert.equal(all.summary.completed, 0); assert.equal(all.summary.draft, 2);
+});
+
+// ---------- 링크로 등록 ----------
+const GDOC = 'https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789/edit?usp=sharing';
+function fakeWeb(routes) {
+  const seen = [];
+  const impl = async (url, init) => {
+    seen.push({ url, redirect: init?.redirect });
+    const route = routes[url];
+    if (!route) return new Response('not found', { status: 404 });
+    return typeof route === 'function' ? route() : route;
+  };
+  return { impl, seen };
+}
+
+test('link addresses: public https only — no internal, IP, credential, port or own-platform hosts', () => {
+  assert.equal(normalizeSourceUrl(GDOC + '#heading=h.1'), GDOC);
+  for (const bad of ['http://example.com/a.pdf', 'https://127.0.0.1/a.pdf', 'https://[::1]/a', 'https://localhost/a', 'https://user:pw@example.com/a',
+    'https://example.com:8443/a', 'https://ekodi.kr/api/cgma/edocs', 'https://www.cgma.or.kr/x', 'https://x.workers.dev/', 'https://intranet/x',
+    'https://printer.local/x', 'javascript:alert(1)', 'ftp://example.com/x', '', 'https://example.com/' + 'a'.repeat(2100)]) {
+    assert.equal(normalizeSourceUrl(bad), '', bad);
+  }
+  assert.match(snapshotSource(GDOC).fetchUrl, /\/document\/d\/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789\/export\?format=pdf$/);
+  assert.match(snapshotSource('https://docs.google.com/spreadsheets/d/1AbCdEfGhIjKlMnOp/edit#gid=0').fetchUrl, /spreadsheets\/d\/1AbCdEfGhIjKlMnOp\/export\?format=pdf/);
+  assert.match(snapshotSource('https://docs.google.com/presentation/d/1AbCdEfGhIjKlMnOp/edit').fetchUrl, /presentation\/d\/1AbCdEfGhIjKlMnOp\/export\/pdf/);
+  assert.equal(snapshotSource('https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/view?usp=drive_link').fetchUrl,
+    'https://drive.usercontent.google.com/download?id=1AbCdEfGhIjKlMnOp&export=download&confirm=t');
+  assert.equal(snapshotSource('https://drive.google.com/open?id=1AbCdEfGhIjKlMnOp').provider, 'google-drive');
+  assert.equal(snapshotSource('https://example.org/files/plan.pdf').fetchUrl, 'https://example.org/files/plan.pdf');
+  assert.equal(validateDraft(draft({ source_url: 'https://127.0.0.1/x' })).code, 'SOURCE_URL_INVALID');
+  assert.equal(validateDraft(draft({ content_kind: 'text', body_text: 'x', source_url: GDOC })).code, 'SOURCE_URL_INVALID');
+});
+
+test('a Google Docs link becomes a PDF snapshot that can then be signed in order', async () => {
+  const web = fakeWeb({
+    'https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789/export?format=pdf':
+      new Response(null, { status: 307, headers: { location: 'https://doc-0s-docs.googleusercontent.com/export/abc/xyz' } }),
+    'https://doc-0s-docs.googleusercontent.com/export/abc/xyz':
+      () => new Response(PDF, { status: 200, headers: { 'content-type': 'application/pdf', 'content-disposition': "attachment; filename=\"Proposal.pdf\"; filename*=UTF-8''%EC%A0%9C%EC%95%88%EC%84%9C.pdf" } }),
+  });
+  const ctx = setup({ fetch: web.impl });
+  const created = await (await ctx.call('', { method: 'POST', body: draft({ source_url: GDOC }) })).json();
+  let r = await ctx.call(`/${created.id}/start`, { method: 'POST', body: '{}' });
+  assert.equal(r.status, 409, 'nothing to sign before the snapshot');
+  r = await ctx.call(`/${created.id}/import`, { method: 'POST', body: {} });
+  const imported = await r.json();
+  assert.equal(r.status, 200, JSON.stringify(imported));
+  assert.equal(imported.file_name, '제안서.pdf');
+  assert.equal(imported.content_sha256, await sha256Hex(PDF));
+  assert.ok(web.seen.every(x => x.redirect === 'manual'), 'every redirect hop is re-validated');
+  const detail = await (await ctx.call(`/${created.id}`)).json();
+  assert.equal(detail.document.source_url, GDOC);
+  assert.equal(detail.document.file_mime, 'application/pdf');
+  assert.equal(detail.events.at(-1).action, 'link_imported');
+  assert.equal(detail.events.at(-1).detail.provider, 'google-docs');
+  const started = await ctx.call(`/${created.id}/start`, { method: 'POST', body: '{}' });
+  assert.equal(started.status, 200);
+  assert.equal((await ctx.call(`/${created.id}/import`, { method: 'POST', body: {} })).status, 409, 'locked after start');
+  assert.throws(() => ctx.env.DB.sqlite.prepare("UPDATE cgma_edoc_documents SET source_url='https://evil.example/x'").run(), /locked/);
+  assert.equal((await (await ctx.call(`/${created.id}`)).json()).chain_valid, true);
+});
+
+test('private Google links, web pages and unsafe redirects are refused with a clear reason', async () => {
+  const web = fakeWeb({
+    'https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789/export?format=pdf':
+      new Response(null, { status: 302, headers: { location: 'https://accounts.google.com/ServiceLogin?continue=x' } }),
+    'https://accounts.google.com/ServiceLogin?continue=x': () => new Response('<html>로그인</html>', { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } }),
+    'https://example.org/notice': () => new Response('<html></html>', { status: 200, headers: { 'content-type': 'text/html' } }),
+    'https://example.org/redirect': new Response(null, { status: 302, headers: { location: 'https://169.254.169.254/latest/meta-data' } }),
+    'https://example.org/big.pdf': () => new Response(PDF, { status: 200, headers: { 'content-type': 'application/pdf', 'content-length': String(25 * 1024 * 1024) } }),
+    'https://example.org/run.exe': () => new Response(new Uint8Array([0x4d, 0x5a, 0, 0]), { status: 200, headers: { 'content-type': 'application/octet-stream' } }),
+  });
+  const ctx = setup({ fetch: web.impl });
+  const expect = async (url, code, status) => {
+    const created = await (await ctx.call('', { method: 'POST', body: draft({ source_url: url }) })).json();
+    const r = await ctx.call(`/${created.id}/import`, { method: 'POST', body: {} });
+    assert.equal(r.status, status, url);
+    assert.equal((await r.json()).code, code, url);
+  };
+  await expect(GDOC, 'LINK_NOT_PUBLIC', 422);
+  await expect('https://example.org/notice', 'LINK_NOT_A_FILE', 422);
+  await expect('https://example.org/redirect', 'LINK_URL_INVALID', 422);
+  await expect('https://example.org/big.pdf', 'FILE_TOO_LARGE', 413);
+  await expect('https://example.org/run.exe', 'FILE_TYPE_INVALID', 415);
+  assert.ok(!web.seen.some(x => x.url.includes('169.254')), 'the metadata address is never fetched');
+  assert.equal(ctx.env.CGMA_EDOC_FILES.store.size, 0, 'nothing stored for refused links');
+});
+
+test('a 보관 document may keep only the link when no copy can be downloaded; a 서명 document may not', async () => {
+  const ctx = setup();
+  const archiveDoc = await (await ctx.call('', { method: 'POST', body: { title: '상인회 공유 폴더', category: '기타', mode: 'archive', content_kind: 'file', source_url: GDOC } })).json();
+  let r = await ctx.call(`/${archiveDoc.id}/import`, { method: 'POST', body: { link_only: true } });
+  assert.equal(r.status, 200);
+  assert.equal((await r.json()).content_sha256, await sha256Hex('link:' + GDOC));
+  assert.equal((await ctx.call(`/${archiveDoc.id}/archive`, { method: 'POST', body: '{}' })).status, 200);
+  const detail = await (await ctx.call(`/${archiveDoc.id}`)).json();
+  assert.equal(detail.document.archived, true); assert.equal(detail.document.file_name, ''); assert.equal(detail.document.source_url, GDOC);
+  assert.deepEqual(detail.events.map(e => e.action), ['created', 'link_registered', 'archived']);
+  assert.equal((await ctx.call(`/${archiveDoc.id}/file`)).status, 404);
+  const listed = await (await ctx.call('?q=docs.google.com')).json();
+  assert.equal(listed.documents.length, 1, 'links are searchable');
+
+  const signDoc = await (await ctx.call('', { method: 'POST', body: draft({ source_url: GDOC }) })).json();
+  r = await ctx.call(`/${signDoc.id}/import`, { method: 'POST', body: { link_only: true } });
+  assert.equal(r.status, 409); assert.equal((await r.json()).code, 'SNAPSHOT_REQUIRED');
+  r = await ctx.call(`/${signDoc.id}/import`, { method: 'POST', body: { url: 'https://10.0.0.1/a.pdf' } });
+  assert.equal(r.status, 400);
+  assert.equal((await ctx.call(`/${signDoc.id}/import`, { method: 'POST', body: {}, headers: { origin: 'https://evil.example' } })).status, 403);
+  assert.equal((await ctx.call(`/${signDoc.id}/import`, { method: 'POST', body: {}, admin: false })).status, 401);
 });

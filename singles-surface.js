@@ -3,16 +3,16 @@ const PREFIX='/singles';
 const PUBLIC_PAGES=new Set(['','/','/groups','/events','/discover','/messages','/my','/subscribe','/admin','/privacy']);
 const PRIVATE_PATHS=new Set(['/discover','/messages','/my','/events','/groups','/subscribe','/admin']);
 const SAFE_METHODS=new Set(['GET','HEAD']);
-function headers(type='text/html; charset=utf-8',isPrivate=false){
+function headers(type='text/html; charset=utf-8',isPrivate=false,csp=null){
  const h=new Headers({'content-type':type,'cache-control':isPrivate?'private, no-store':'public, max-age=60',
  'referrer-policy':'no-referrer','x-content-type-options':'nosniff','x-frame-options':'DENY',
  'permissions-policy':'camera=(), microphone=(), geolocation=()',
- 'content-security-policy':"default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'; upgrade-insecure-requests",
+ 'content-security-policy':csp||"default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'; upgrade-insecure-requests",
  'x-ekodi-singles-stage':'social-gated'});
  if(isPrivate)h.set('x-robots-tag','noindex, nofollow, noarchive');return h;
 }
 function json(data,status=200,isPrivate=true){return new Response(JSON.stringify(data),{status,headers:headers('application/json; charset=utf-8',isPrivate)})}
-function html(body,{privateContent=false,status=200,head=false}={}){return new Response(head?null:body,{status,headers:headers('text/html; charset=utf-8',privateContent)})}
+function html(body,{privateContent=false,status=200,head=false,csp=null}={}){return new Response(head?null:body,{status,headers:headers('text/html; charset=utf-8',privateContent,csp)})}
 function pathAfterSingles(pathname){if(pathname===PREFIX)return '';if(!pathname.startsWith(PREFIX+'/'))return null;return pathname.slice(PREFIX.length).replace(/\/+$/,'')||'/'}
 export function isSinglesRoute(pathname){return pathAfterSingles(String(pathname||''))!==null}
 function enabled(env){return env?.SINGLES_M1_ENABLED==='true'&&Boolean(env?.SINGLES_API_URL)&&Boolean(env?.SUPABASE_URL)&&Boolean(env?.SUPABASE_PUBLISHABLE_KEY)}
@@ -20,6 +20,16 @@ function socialEnabled(env){return enabled(env)&&env?.SINGLES_SOCIAL_ENABLED==='
 function paymentEnabled(env){return socialEnabled(env)&&env?.SINGLES_PAID_ACTIONS_ENABLED==='true'}
 function bankEnabled(env){return socialEnabled(env)&&env?.SINGLES_BANK_TRANSFER_ENABLED==='true'}
 function bankVerifyEnabled(env){return bankEnabled(env)&&env?.SINGLES_BANK_VERIFICATION_ENABLED==='true'}
+// 본인확인기관(포트원 V2) 공개 식별자. 비밀키는 Edge에만 있다.
+function identityConfig(env){
+ const store=String(env?.SINGLES_PORTONE_STORE_ID||''),channel=String(env?.SINGLES_PORTONE_IDENTITY_CHANNEL_KEY||'');
+ return /^store-[A-Za-z0-9-]{8,64}$/.test(store)&&/^channel-key-[A-Za-z0-9-]{8,64}$/.test(channel)?{provider:'portone',store_id:store,channel_key:channel}:null;
+}
+// 본인인증 창(포트원·인증사)을 띄우는 페이지에만 넓힌 보안 정책.
+const VERIFY_CSP="default-src 'none'; script-src 'self' https://cdn.portone.io; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co https://*.portone.io; frame-src https://*.portone.io https://*.inicis.com https://*.danal.co.kr; frame-ancestors 'none'; base-uri 'none'; form-action 'self' https://*.portone.io https://*.inicis.com https://*.danal.co.kr; object-src 'none'; upgrade-insecure-requests";
+function verifyPage(){
+ return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>본인인증 · EKODI 동행</title><link rel="stylesheet" href="/singles/styles.css"><script src="/singles/vendor/supabase-js-2.117.3.umd.js" integrity="sha384-BWcjm9OdFth9TbhCxZPdm+gAOUMAzQy9nmTs12ioXdCcbVnJaPMn+fMUoQCLt60R" crossorigin="anonymous" defer></script><script src="/singles/verify.js" defer></script></head><body class="romantic-inner"><header class="mast"><div class="mast-inner"><a class="logo" href="/singles"><strong>EKODI</strong><span>동행</span></a><nav aria-label="주요 메뉴"><a href="/singles/subscribe">동행 안내·가입</a></nav></div></header><main id="main" class="singles-privacy"><p class="eyebrow">EKODI · VERIFY</p><h1>성인 본인인증</h1><p>휴대폰 본인인증으로 만 19세 이상인지 확인합니다. 에코디는 이름·생년월일·전화번호를 저장하지 않고, 성인 확인 결과와 한 사람이 여러 계정을 만들지 못하게 하는 식별값(암호화)만 보관합니다.</p><p id="verifyStatus" class="notice" role="status">준비 중입니다…</p><p><button id="verifyStart" class="primary" type="button" hidden>휴대폰 본인인증 시작</button></p><p><a class="outline" href="/singles/subscribe">동행 안내·가입으로 돌아가기</a></p></main></body></html>';
+}
 function configuredOrigin(raw){try{const u=new URL(String(raw||''));return u.protocol==='https:'?u:null}catch{return null}}
 function status(env){const active=enabled(env);
  // The Supabase publishable key is public; admin preparation still needs login and a separately provisioned operator capability.
@@ -30,6 +40,7 @@ function status(env){const active=enabled(env);
  matching_enabled:false,messaging_enabled:socialEnabled(env),messages_require_subscription:true,paid_brokerage_enabled:false,
  bank_transfer_enabled:bankEnabled(env),bank_verification_enabled:bankVerifyEnabled(env),consulting_optional:true,
  events:[],identity_provider:'ekodi',
+ identity_verification:identityConfig(env),
  ...(active||prepReady?{auth:{supabase_url:env.SUPABASE_URL,publishable_key:env.SUPABASE_PUBLISHABLE_KEY}}:{})
 }}
 function allowApi(path,method){
@@ -38,6 +49,12 @@ function allowApi(path,method){
  if(path==='/api/profile'&&['GET','PUT'].includes(method))return ['/profile',true];
  if(path==='/api/discover'&&method==='GET')return ['/discover',true];
  if(path==='/api/subscription'&&method==='GET')return ['/subscription',true];
+ // 유료회원 모델(2026-10-28): 요금표·내 요금, 기간권 구매, 운영자 회원 목록·수동 성인 확인.
+ if(path==='/api/pricing'&&method==='GET')return ['/pricing',true];
+ if((path==='/api/identity/start'||path==='/api/identity/complete')&&method==='POST')return [path.slice(4),true];
+ if(/^\/api\/passes\/pass_(?:1|10|20|30)d$/.test(path)&&method==='POST')return [path.slice(4),true];
+ if(path==='/api/bank/admin/members'&&method==='GET')return ['/bank/admin/members',true];
+ if(/^\/api\/bank\/admin\/members\/[0-9a-f-]{36}\/adult-verify$/i.test(path)&&method==='POST')return [path.slice(4),true];
  for(const [endpoint,methods] of [
   ['/api/bank/plans',['GET']],['/api/bank/wallet',['GET']],['/api/bank/orders',['GET','POST']],
   ['/api/bank/admin/orders',['GET']],['/api/bank/admin/config',['GET','PUT']],['/api/bank/admin/catalog',['GET']],['/api/bank/admin/brokerage-readiness',['GET','PUT']],['/api/bank/consulting/requests',['GET','POST']]]){
@@ -107,9 +124,9 @@ async function api(req,env,sub){
  return new Response(result.body,{status:result.status,headers:responseHeaders});
 }
 function page(active='처음'){
- const nav=[['/singles','처음',false],['/singles/groups','우리 모임',false],['/singles/events','공개 행사',false],['/singles/discover','동행 찾기',true],['/singles/messages','메시지',true],['/singles/my','내 프로필',true],['/singles/subscribe','구독·입금',true]];
+ const nav=[['/singles','처음',false],['/singles/groups','우리 모임',false],['/singles/events','공개 행사',false],['/singles/discover','동행 찾기','paid'],['/singles/messages','메시지','paid'],['/singles/my','내 프로필','paid'],['/singles/subscribe','동행 안내·가입',true]];
  const paths={'처음':'','동행 찾기':'/discover','우리 모임':'/groups','공개 행사':'/events','메시지':'/messages','내 프로필':'/my','구독':'/subscribe','결제관리':'/admin'};
- const p=paths[active]||'',isHome=active==='처음',links=nav.map(([href,name,member])=>'<a href="'+href+'"'+(member?' data-member-nav hidden':'')+(name===active?' aria-current="page"':'')+'>'+name+'</a>').join('');
+ const p=paths[active]||'',isHome=active==='처음',links=nav.map(([href,name,member])=>'<a href="'+href+'"'+(member==='paid'?' data-member-nav data-paid-nav hidden':member?' data-member-nav hidden':'')+(name===active?' aria-current="page"':'')+'>'+name+'</a>').join('');
  return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="신앙과 삶의 가치를 나누는 크리스천 싱글 공동체 EKODI 동행"><meta name="theme-color" content="#fff7f5"><title>'+active+' · EKODI 동행</title><link rel="stylesheet" href="/singles/styles.css"><script src="/singles/app.js" defer></script></head><body class="'+(isHome?'romantic-home':'romantic-inner')+'" data-page="'+p+'"><a class="skip" href="#main">본문 바로가기</a><header class="mast"><div class="mast-inner"><a class="logo" href="/singles"><strong>EKODI</strong><span>동행</span></a><nav aria-label="주요 메뉴">'+links+'</nav><a class="account" href="/singles/my" data-member-nav hidden>내 프로필</a><a class="account" href="/auth/?site=singles&amp;select_account=1&amp;return_to='+encodeURIComponent('https://ekodi.kr/singles'+p)+'" data-guest-nav>로그인</a></div></header><main id="main">'+(isHome?'<section class="romantic-hero" aria-label="에코디 동행 소개"><div class="romantic-copy"><span class="romantic-doodle" aria-hidden="true">♡</span><p class="romantic-kicker">EKODI · TOGETHER</p><h1>에코디 동행 <span aria-hidden="true">♡</span></h1><p class="romantic-tagline">함께라서 더 아름다운 우리</p><div class="romantic-cta"><a class="primary" href="/singles/my">지금 시작하기 <span aria-hidden="true">→</span></a><a class="outline" href="/singles/events">만남 둘러보기 <span aria-hidden="true">→</span></a></div></div><div class="romantic-photo"><img src="/singles/donghaeng-couple.webp" alt="노을빛 꽃밭을 배경으로 함께 웃는 두 사람" width="620" height="827" fetchpriority="high" decoding="async"></div></section><section class="romantic-links" aria-label="에코디 동행 서비스"><a href="/singles/discover"><span class="romantic-symbol" aria-hidden="true">♡</span><span><strong>좋은 인연</strong><small>서로를 존중하는 만남</small></span><span aria-hidden="true">→</span></a><a href="/singles/groups"><span class="romantic-symbol" aria-hidden="true">✿</span><span><strong>함께하는 일상</strong><small>천천히 알아가는 우리</small></span><span aria-hidden="true">→</span></a><a href="/singles/events"><span class="romantic-symbol" aria-hidden="true">❀</span><span><strong>더 빛나는 내일</strong><small>소중한 순간을 함께</small></span><span aria-hidden="true">→</span></a></section>':'<section class="intro"><p class="eyebrow">FAITH · COMMUNITY · RELATIONSHIP</p><h1>같은 믿음, 새로운 인연.<span> 설레는 동행을 시작해요.</span></h1><p class="lead">공동체에서 신뢰할 수 있는 사람을 만나고, 서로 동의할 때 대화를 시작합니다. 그 이후의 만남과 관계는 각자의 자유로운 선택과 책임입니다.</p><div class="actions"><a class="primary" href="/singles/my">나의 동행 시작하기 ↗</a><a class="outline" href="/singles/events">우리의 만남 둘러보기</a></div></section><section class="pillars" aria-label="함께하는 세 가지 방법"><article><small>01 · TOGETHER</small><h2>다정한 공동체</h2><p>말씀과 일상을 나누는 즐거운 소그룹</p></article><article><small>02 · ENCOUNTER</small><h2>새로운 교제</h2><p>서로 존중하며 천천히 알아가는 인연</p></article><article><small>03 · RESPECT</small><h2>존중하는 동행</h2><p>서로의 선택과 책임을 존중하는 관계</p></article></section>')+'<section class="content" id="content" aria-live="polite"><div class="section-heading"><div><p class="eyebrow">OUR JOURNEY</p><h2 id="sectionTitle">'+active+'</h2></div><span class="stage" id="serviceStage">서비스 준비 중</span></div><div id="publicPanel" class="panel"><p id="contentDescription">소개 화면은 누구나 볼 수 있습니다. 로그인 후에는 프로필·행사·동행 찾기를 이용할 수 있습니다.</p><div id="publicList" class="empty" hidden></div></div><div id="memberContent" hidden></div><div id="enrollmentPanel" class="panel" hidden><p class="muted">프로필 공개와 신앙정보 이용은 각각 별도로 동의합니다. 공개 설정은 기본적으로 꺼져 있습니다.</p><div id="accountStatus" role="status"></div><button id="loginButton" class="primary" type="button">EKODI Google로 시작</button><form id="consentForm" hidden><fieldset><legend>회원 참여</legend><label><input name="adult" type="checkbox" required> 만 19세 이상입니다(자기확인으로 본인인증이 대체되지 않습니다).</label><label><input name="base" type="checkbox" required> 기본 이용 및 필수 개인정보 처리 안내에 동의합니다.</label></fieldset><p class="singles-consent-context">회원가입 전 <a href="/singles/privacy" target="_blank" rel="noopener noreferrer">동행 개인정보 안내</a>를 확인해 주세요. 현재 문안은 검토 중이며 개통 전 확정됩니다.</p><fieldset><legend>선택 동의</legend><label><input name="sensitive" type="checkbox"> 신앙·신념에 관한 민감정보 처리에 별도로 동의합니다.</label></fieldset><button class="primary" type="submit">참여 의사 저장</button><button class="outline" id="withdrawButton" type="button">동의 철회</button></form><p id="enrollmentMessage" role="status"></p></div></section><section class="safety"><h2>서로의 마음과 선택을 지켜요</h2><p>'+(isHome?'내 정보는 내가 선택해 공개하고, 인연은 서로 동의할 때 이어집니다.':'동행은 사람을 점수로 평가하지 않습니다. 본인이 선택하기 전엔 프로필이 공개되지 않고, 서로 호감을 확인하기 전에는 메시지를 보낼 수 없습니다. 거절·차단·신고·동의 철회는 언제나 무료입니다.')+'</p></section></main><footer><p><strong>EKODI 동행</strong><span>믿음으로 만나고 존중으로 이어집니다</span></p><a href="/singles/privacy">동행 개인정보 안내</a><a href="/privacy">공통 개인정보 보호</a><a href="/terms">이용약관</a></footer></body></html>';
 }
 
@@ -160,8 +177,9 @@ export async function routeSinglesSurface(request,env){
     (sub==='/api/public'||!sub.startsWith('/api/'))){
   return json({error:'singles_unpublished'},404);
  }
- if(sub==='/styles.css'||sub==='/app.js'||sub==='/donghaeng-couple.webp'||sub==='/vendor/supabase-js-2.117.3.umd.js'){if(!SAFE_METHODS.has(request.method))return json({error:'method_not_allowed'},405);return env.ASSETS.fetch(request)}
+ if(sub==='/styles.css'||sub==='/app.js'||sub==='/verify.js'||sub==='/donghaeng-couple.webp'||sub==='/vendor/supabase-js-2.117.3.umd.js'){if(!SAFE_METHODS.has(request.method))return json({error:'method_not_allowed'},405);return env.ASSETS.fetch(request)}
  const fromApi=await api(request,env,sub);if(fromApi)return fromApi;
+ if(sub==='/verify'&&SAFE_METHODS.has(request.method))return html(verifyPage(),{privateContent:true,head:request.method==='HEAD',csp:VERIFY_CSP});
  if(sub==='/privacy'&&SAFE_METHODS.has(request.method))return html(singlesPrivacyReviewPage(),{privateContent:true,head:request.method==='HEAD'});
  if(sub==='/inquiry/muan-2026'&&SAFE_METHODS.has(request.method))return html(singlesMuanInquiryPage(),{privateContent:true,head:request.method==='HEAD'});
  if(!SAFE_METHODS.has(request.method))return json({error:'method_not_allowed'},405);

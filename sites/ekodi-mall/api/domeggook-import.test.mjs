@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readdirSync, readFileSync } from 'node:fs';
 import worker from './worker.js';
-import { parseItemNo, firstPrice, normalizeDomeggookDetail, quoteSalePrice, unitProfit, importBlockers, syncSupplyProducts, probeDomeggookKey, notifySupplyOrder } from './domeggook-import.js';
+import { parseItemNo, firstPrice, normalizeDomeggookDetail, quoteSalePrice, unitProfit, importBlockers, syncSupplyProducts, probeDomeggookKey, notifySupplyOrder, backfillSupplyImages } from './domeggook-import.js';
 
 function d1(db) {
   const wrap = (sql) => {
@@ -155,4 +155,35 @@ test('key probe records ok/failed without the key, at most every 6 hours', async
   const r2 = await probeDomeggookKey(env, async () => new Response(JSON.stringify({ domeggook: { header: { numberOfItems: 3 }, list: { item: [] } } }), { status: 200 }));
   assert.equal(r2.ok, true);
   assert.equal(db.prepare("SELECT COUNT(*) n FROM mall_ops_alerts WHERE kind='supply.key_failed' AND status='open'").get().n, 0);
+});
+
+test('image backfill fills licensed photos, falls back to smaller thumb, holds unlicensed', async () => {
+  const { db, env, stored } = setup();
+  const ins = (id, itemNo) => db.prepare(`INSERT INTO products (id,seller_id,share_code,public_url,seller_display_name,seller_type,sale_type,category,name,price,status,images_json,supply_provider,supply_item_no,created_at,updated_at,published_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(id, 'u-1', id, 'u', '에코디몰', 'individual', 'direct', 'living', 'n', 1000, 'published', '[]', 'domeggook', itemNo, 't', 't', 't');
+  db.exec('PRAGMA foreign_keys=OFF');
+  ins('prd_a', '111'); ins('prd_b', '222');
+  const big = new Uint8Array(5 * 1024 * 1024); big[0] = 0xff; big[1] = 0xd8;
+  const f = async (url) => {
+    const u = String(url);
+    if (u.startsWith('https://domeggook.com/ssl/api/')) {
+      const no = new URL(u).searchParams.get('no');
+      const d = detail({ usable: no === '111' });
+      d.domeggook.thumb = { original: 'https://img.supplier-cdn.co.kr/o.jpg', large: 'https://img.supplier-cdn.co.kr/l.jpg' };
+      d.domeggook.desc.contents.item = '';
+      return new Response(JSON.stringify(d), { status: 200 });
+    }
+    if (u.endsWith('/o.jpg')) return new Response(big, { status: 200 });
+    if (u.endsWith('/l.jpg')) return new Response(JPEG, { status: 200 });
+    return new Response('no', { status: 404 });
+  };
+  const r = await backfillSupplyImages(env, f);
+  assert.equal(r.filled, 1); assert.equal(r.held, 1);
+  const a = db.prepare("SELECT status,images_json FROM products WHERE id='prd_a'").get();
+  assert.equal(a.status, 'published'); assert.equal(JSON.parse(a.images_json).length, 1);
+  const b = db.prepare("SELECT status,supply_release FROM products WHERE id='prd_b'").get();
+  assert.equal(b.status, 'draft'); assert.equal(b.supply_release, 'image_hold');
+  assert.equal(stored.size, 1);
+  const again = await backfillSupplyImages(env, f);
+  assert.equal(again.tried, 0); // 12시간 내 재시도 안 함
 });

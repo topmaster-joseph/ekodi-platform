@@ -86,7 +86,7 @@ export const SITES = {
     ],
     pages: [
       'publishing/index.html', 'publishing/consultation/index.html', 'publishing/production/index.html',
-      'publishing/distribution/index.html', 'publishing/studio/index.html', 'publishing/upaper/index.html',
+      'publishing/distribution/index.html', 'publishing/studio/index.html', 'publishing/upaper/index.html', 'publishing/human/index.html',
       'books/publishing/workspace/index.html',
     ],
     assetDir: 'publishing',

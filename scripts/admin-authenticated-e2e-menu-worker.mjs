@@ -594,6 +594,50 @@ async function verifyNormal(tab, alreadyActive, started) {
   results.push({ id: menuId, group, ok: true, durationMs: Date.now() - started, ...state });
 }
 
+
+async function verifySocialInventory(tab, alreadyActive, started) {
+  // SOCIAL-ID-001: read-only live verification. Never create test social identities.
+  await verifyNormal(tab, alreadyActive, started);
+  stage('social-inventory-readonly');
+  await page.waitForFunction(() => {
+    const status = document.querySelector('#ekodiSocialAccountRegistry [data-social-message]');
+    return Boolean(status && (status.textContent.trim().startsWith('조회 시각:') || status.classList.contains('ekodi-social-error')));
+  }, null, { timeout: 12000 });
+  const evidence = await page.evaluate(async () => {
+    const token = sessionStorage.getItem('ekodi-auth-token') || '';
+    const url = '/api/control/external-accounts/social-identities?scope=all';
+    const response = await fetch(url, {method:'GET',headers:{authorization:'Bearer '+token},credentials:'omit',cache:'no-store'});
+    const data = await response.json().catch(() => ({}));
+    const guest = await fetch(url, {method:'GET',credentials:'omit',cache:'no-store'});
+    const panel = document.querySelector('#ekodiSocialAccountRegistry');
+    const message = panel?.querySelector('[data-social-message]');
+    // Only aggregate/safe policy evidence; never log account rows, user IDs or credentials.
+    return {
+      authenticatedStatus:response.status,guestStatus:guest.status,
+      scope:data.ownerScope || '',storageReady:data.storageReady === true,
+      providerCount:Array.isArray(data.providers) ? data.providers.length : 0,
+      uiProviderCount:panel?.querySelectorAll('.ekodi-social-card').length || 0,
+      registrationEnabled:data.policy?.registrationEnabled,
+      oauthLinkingEnabled:data.policy?.oauthLinkingEnabled,
+      socialLoginEnabled:data.policy?.socialLoginEnabled,
+      autoPublishingEnabled:data.policy?.autoPublishingEnabled,
+      uiSuccess:Boolean(message?.textContent?.trim().startsWith('조회 시각:')),
+      uiError:Boolean(message?.classList.contains('ekodi-social-error'))
+    };
+  });
+  if(evidence.authenticatedStatus!==200 || evidence.guestStatus!==401 ||
+     evidence.scope!=='platform'||!evidence.storageReady||
+     evidence.providerCount!==13||evidence.uiProviderCount!==13||
+     !evidence.uiSuccess||evidence.uiError||
+     evidence.registrationEnabled!==false || evidence.oauthLinkingEnabled!==false ||
+     evidence.socialLoginEnabled!==false || evidence.autoPublishingEnabled!==false){
+    throw new Error('Social account live inventory or dormant policy failed: '+JSON.stringify(evidence));
+  }
+  const outcome=results.find(x=>x.id===menuId);
+  if(outcome)Object.assign(outcome,{inventoryVerified:true,policyDisabled:true,authenticatedRead:true,anonymousDenied:true,providerCount:13});
+  console.log('[PROD-E2E] social-accounts: authorized inventory=200, guest=401, 13 providers, policy disabled');
+}
+
 try {
   stage('browser');
   browser = await chromium.launch({ headless: true, timeout: 20_000 });
@@ -659,6 +703,7 @@ try {
       else if (menuId === 'maturity') await verifyMaturity(trigger, alreadyActive, started);
       else if (menuId === 'ai-settings') await verifyAiSettings(trigger, alreadyActive, started);
       else if (menuId === 'personal-finance') await verifyPersonalFinance(trigger, alreadyActive, started);
+      else if (menuId === 'social-accounts') await verifySocialInventory(trigger, alreadyActive, started);
       else await verifyNormal(trigger, alreadyActive, started);
     }
   }

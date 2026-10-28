@@ -14,13 +14,13 @@ const [ui,router,social,bank,migration]=await Promise.all([
 test('anonymous navigation hides member-only profile, messages, discovery and finance links',async()=>{
  const response=await routeSinglesSurface(new Request('https://ekodi.kr/singles/'),{ASSETS:{fetch:async()=>new Response('asset')}});
  const html=await response.text();
- for(const title of ['내 프로필','메시지','동행 찾기','구독·입금']){
+ for(const title of ['내 프로필','메시지','동행 찾기','동행 안내·가입']){
   const anchor=html.match(new RegExp('<a[^>]+>'+title+'</a>'))?.[0];
-  assert.ok(anchor?.includes('data-member-nav hidden'),title);
+  assert.match(anchor||'',/data-member-nav(?: data-paid-nav)? hidden/,title);
  }
  assert.match(ui,/querySelectorAll\('\[data-member-nav\]'\)/);
  assert.match(html,/data-guest-nav>로그인<\/a>/);
- assert.match(html,/data-member-nav hidden>내 프로필<\/a>/);
+ assert.match(html,/data-member-nav data-paid-nav hidden>내 프로필<\/a>/);
  assert.match(ui,/querySelectorAll\('\[data-guest-nav\]'\)/);
 });
 test('vCard import removed (2026-10-28); profile still never claims identity verification',()=>{
