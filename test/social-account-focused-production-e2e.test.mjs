@@ -38,6 +38,6 @@ test('focused production probe retains genuine super-admin session and full-suit
   assert.match(workflow, /Issue short-lived genuine super-admin session/);
   assert.match(workflow, /Short-lived E2E session revoked/);
   assert.match(runner, /resolveAdminE2EMenus\(allMenuIds, process\.env\.E2E_MENU_FOCUS\)/);
-  assert.match(runner, /mode: focusOnly \? 'focused-social-inventory'/);
+  assert.match(runner, /mode: focusOnly \? \(menuIds\[0\]==='architecture' \? 'focused-architecture' : 'focused-social-inventory'\)/);
   assert.match(runner, /aggregate\.assistProbe\?\.passed === true/);
 });
