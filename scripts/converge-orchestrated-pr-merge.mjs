@@ -452,6 +452,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='seonammedi-monitor.js'||
   file==='seonammedi-relevance.js'||
   file==='wrangler.site.toml'||
+  // Invest's canonical public landing and member gate are shipped by Site Core.
+  file==='invest-access-ui.js'||
   file==='platform-router-entry-worker.js'||
   // Search-engine ownership meta tags and verification files are served by the Site Core router.
   file==='search-engine-verification.js'||
