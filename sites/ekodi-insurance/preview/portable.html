@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>EKODI 보험기록 이전 · 비공개 개발 검증용</title>
+  <link rel="stylesheet" href="./portable.css">
+  <script type="module" src="./portable.js"></script>
+</head>
+<body>
+<main class="shell">
+  <header>
+    <p class="eyebrow">EKODI Insurance · Security review candidate</p>
+    <h1>보험기록 안전 이전</h1>
+    <p>이 화면은 <strong>비공개 개발 검증용 시안</strong>입니다. 운영사이트에 연결되거나 공개된 서비스가 아닙니다. 실제 개인정보를 사용하지 말고 가상 데이터로만 시험하세요.</p>
+  </header>
+  <section class="notice" aria-label="중요 안내">
+    <h2>먼저 알아두세요</h2>
+    <p>이전 대상은 현재 브라우저에 직접 입력한 보험목록과 청구 준비메모입니다. 선택하면 점검 메모와 AI 대화도 포함됩니다. 실제 보험사 청구나 자동 추천은 실행하지 않습니다.</p>
+    <p><strong>서버에 제출한 설계사 상담요청, 연락처 및 철회 권한은 이전되지 않습니다.</strong> 기존 주소에 저장된 기록과 철회 기능은 자동으로 삭제하지 않습니다. 암호화 파일과 암호를 함께 잃으면 복구할 수 없습니다.</p>
+  </section>
+  <section class="panel" aria-labelledby="export-title">
+    <h2 id="export-title">1. 기존 브라우저에서 암호화 파일 만들기</h2>
+    <p>기록이 있는 기존 주소에서 사용자가 직접 실행하는 단계입니다. 화면을 여는 것만으로 기록을 조회하지 않습니다.</p>
+    <form id="export-form">
+      <label class="check"><input id="include-diagnosis" type="checkbox"> <span>보험점검 메모 포함 (선택·민감정보 주의)</span></label>
+      <label class="check"><input id="include-chat" type="checkbox"> <span>AI 대화 내용 포함 (선택·민감정보 주의)</span></label>
+      <label for="export-password">암호화 파일 암호 (12자 이상)</label>
+      <input id="export-password" type="password" minlength="12" maxlength="256" autocomplete="new-password" required>
+      <label for="export-password-again">암호 재입력</label>
+      <input id="export-password-again" type="password" minlength="12" maxlength="256" autocomplete="new-password" required>
+      <button type="submit">암호화 파일 저장</button>
+      <p id="export-status" class="status" role="status" aria-live="polite">아직 기존 기록을 조회하지 않았습니다.</p>
+    </form>
+  </section>
+  <section class="panel" aria-labelledby="import-title">
+    <h2 id="import-title">2. 정식 주소에서 암호화 파일 확인·가져오기</h2>
+    <p>정식 보험 화면에서 직접 파일을 선택합니다. 복호화와 중복 확인은 이 브라우저에서만 진행되며 기존 기록을 자동으로 덮어쓰지 않습니다.</p>
+    <form id="import-form">
+      <label for="import-file">암호화 파일 선택 (.json, 3MB 이하)</label>
+      <input id="import-file" type="file" accept=".json,application/json" required>
+      <label for="import-password">가져올 파일의 암호</label>
+      <input id="import-password" type="password" minlength="12" maxlength="256" autocomplete="off" required>
+      <label for="backup-password">기존 기록 백업 암호 (12자 이상)</label>
+      <input id="backup-password" type="password" minlength="12" maxlength="256" autocomplete="new-password" required>
+      <button type="submit">병합 내용 미리보기</button>
+    </form>
+    <div id="import-preview" class="hidden" aria-label="가져오기 검토">
+      <h3>가져오기 미리보기</h3>
+      <p id="import-count" class="status" aria-live="polite"></p>
+      <button type="button" id="save-backup">현재 기록의 암호화 백업 저장</button>
+      <label class="check"><input id="backup-ack" type="checkbox"> <span>백업 파일을 제 기기에 저장했고 암호를 별도로 보관했습니다.</span></label>
+      <label class="check"><input id="import-consent" type="checkbox"> <span>중복 기록은 현재 기록을 우선하며, 미리보기 내용을 확인한 후 가져오기에 동의합니다.</span></label>
+      <div class="actions">
+        <button id="confirm-import" type="button" disabled>확인 후 가져오기</button>
+        <button id="undo-import" type="button" disabled>가져오기 되돌리기</button>
+      </div>
+      <p>완료 후 현재 페이지를 새로 열어야 새 기록이 보입니다. 이미 제출한 서버 상담요청과 철회 기록은 별도 관리됩니다.</p>
+    </div>
+    <p id="import-status" class="status" role="status" aria-live="polite">선택된 파일이 없습니다.</p>
+  </section>
+  <footer>개발용 시안 · 보안/법무 심사 및 운영 배포 승인 이전에는 공개하지 않습니다.</footer>
+</main>
+</body>
+</html>
