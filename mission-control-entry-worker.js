@@ -24,6 +24,7 @@ import { handleMarketingOrderConnectors } from './marketing-order-connectors.js'
 import { handleAuthorBillingControl, runAuthorBillingSchedule } from './author-billing-control.js';
 import { handleSystemHealthControl } from './system-health-control.js';
 import { handleSearchVisibilityControl } from './search-visibility-control.js';
+import { handleGrowthOrganizationControl } from './growth-organization-control.js';
 import { handleTrafficIntelligence } from './traffic-intelligence-control.js';
 import { handleApiCostControl } from './api-cost-control.js';
 import { handleInfraCostControl } from './infra-cost-control.js';
@@ -297,6 +298,11 @@ export default {
     if (path === '/api/control/traffic-intelligence') {
       try { const response = await handleTrafficIntelligence(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('Traffic Intelligence control error', error); return errorResponse('Traffic Intelligence 처리 중 오류가 발생했습니다.', 'TRAFFIC_INTELLIGENCE_CONTROL_ERROR'); }
+    }
+
+    if (path === '/api/control/growth-os/organizations') {
+      try { const response = await handleGrowthOrganizationControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Growth OS protected inventory error', error); return errorResponse('조직·사이트 원장 조회에 실패했습니다.', 'GROWTH_ORGANIZATION_CONTROL_ERROR'); }
     }
 
     if (path === '/api/control/search-visibility') {
