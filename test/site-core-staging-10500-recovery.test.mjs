@@ -15,6 +15,8 @@ const event=(code,output='')=>({code,output});
 
 test('Cloudflare staging 10500 is the only eligible internal-auth failure',()=>{
   assert.equal(mayRetryStaging10500(internal10500),true);
+  assert.equal(mayRetryStaging10500('env.PLATFORM_SENSITIVE_RATE_LIMITER (120 requests/60s) Rate Limit\n'+internal10500),true,
+    'Wrangler may list configured Rate Limit bindings without an actual 429 error');
   for(const item of [
     internal10500+'\nCloudflare HTTP 429',
     internal10500+'\nCloudflare Error 1027 quota exhausted',
