@@ -464,7 +464,12 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='search-engine-verification.js'||
   file==='canonical-surface-router.js'||
   file==='admin-sidebar.js'||
+  // Native-browser postpromotion verification scripts run as part of the guarded
+  // Site Core release and must be checked against the exact protected merge.
+  // GITHUB_TOKEN merges cannot rely on main push workflow events.
+  // Preserve the existing explicit Admin verifier release contract.
   file==='scripts/verify-admin-production-ui-e2e.mjs'||
+  file==='scripts/ekodi-background-browser-worker.mjs'||
   // Hybrid native browser admin page shares the guarded Site Core release boundary.
   file==='hybrid-execution-admin.js'||
   file==='device-control-admin.js'||
