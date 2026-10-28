@@ -69,6 +69,7 @@ begin
    perform public.human_author_reserve_project('ffffeeee-0000-4000-8000-000000000206','human-B-test-key-206','human');
    raise exception 'writer3-fourth-project-bypass';
  exception when others then if sqlerrm<>'monthly_human_author_project_limit_reached' then raise; end if; end;
+ if (select count(*) from public.human_author_enrollments where owner_user_id='ffffeeee-0000-4000-8000-000000000102' and writing_mode='human')<>3 then raise exception 'writer3 allocation mode mismatch'; end if;
  insert into public.human_author_interview_turns(enrollment_id,owner_user_id,stage,question,author_answer)
  values(e,'ffffeeee-0000-4000-8000-000000000102','intent','test question','private synthetic answer');
  if (select count(*) from public.human_author_interview_turns where enrollment_id=e)<>1
