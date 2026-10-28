@@ -81,7 +81,7 @@
           <label>검색<input type="search" data-growth-search placeholder="조직·기관·서비스 검색" value="${esc(search)}" maxlength="80"></label>
           <label>조직·사이트·서비스<select data-growth-target>${options(filtered)}</select></label>
           <p class="growth-os-note">현재 목록은 관리자 서비스 카탈로그입니다. 법인·기관·비공개 사업체 전체 원장과 동일하지 않습니다. 공개 원장의 포함 여부는 승인된 공개 정보만 표시합니다.</p>
-          <div class="growth-os-links"><a href="/admin/sites/sites-all">사이트 현황</a><a href="/admin/ops/maturity">플랫폼 성숙도</a><a href="/admin/ops/site-health">사이트 상태</a></div>
+          <div class="growth-os-links"><a href="/admin/sites/sites-all">사이트 현황</a><a href="/admin/ops/maturity">플랫폼 성숙도</a><a href="/admin/ops/site-health">사이트 상태</a><a href="/admin/ai/search-visibility">검색노출·AI 발견 관리</a></div>
         </section>
         <section class="growth-os-card" aria-live="polite"><header><h3>${selected?esc(selected.name):'조직별 판단 기준'}</h3><small>${selected?'목적별 프로필 · 참고 분류':'등록 대상을 선택하십시오'}</small></header>
           ${selected?`<div class="growth-os-profile"><strong>${esc(chosen.label)}</strong><p>${esc(chosen.purpose)}</p>
