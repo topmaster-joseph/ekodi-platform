@@ -45,6 +45,8 @@
       panel.querySelector('[data-social-providers]').replaceChildren();
       panel.querySelector('[data-social-links]').replaceChildren();
       panel.querySelector('[data-social-existing]').replaceChildren();
+      panel.querySelector('[data-social-account-count]').textContent='조회 실패';
+      panel.querySelector('[data-social-account-empty]').hidden=true;
       panel.querySelector('[data-social-result-count]').textContent='조회 실패';
       panel.querySelector('[data-social-empty]').hidden=true;
     }finally{busy=false;panel.querySelector('[data-social-refresh]').disabled=false}
@@ -57,6 +59,12 @@
     if(!rows.length){target.append(el('p',kind==='identity'?'아직 등록된 EKODI 소셜계정 기록이 없습니다.':'기존 서비스 연결 기록이 없습니다.'));return}
     for(const account of rows){
       const row=el('article','','ekodi-social-record');
+      row.dataset.socialRecord=kind;
+      row.dataset.status=String(account.status||'unknown').toLowerCase();
+      row.dataset.searchText=[
+        account.provider,account.displayName,account.providerAccountId,
+        account.ekodiUserId,account.workspaceSlug,account.status,stateText[account.status]
+      ].filter(Boolean).join(' ').toLocaleLowerCase();
       const info=el('div');
       const provider=el('strong',(account.provider||'')+' · '+(account.displayName||account.providerAccountId||'미지정'));
       const owner=kind==='identity'
@@ -67,6 +75,25 @@
       row.append(info,el('span',stateText[account.status]||account.status||'미확인'));
       target.append(row);
     }
+  }
+
+  function filterAccounts(panel){
+    const query=(panel.querySelector('[data-social-account-search]')?.value||'').trim().toLocaleLowerCase();
+    const status=panel.querySelector('[data-social-account-filter]')?.value||'all';
+    const source=panel.querySelector('[data-social-account-source]')?.value||'all';
+    const rows=[...panel.querySelectorAll('[data-social-record]')];
+    let count=0;
+    for(const row of rows){
+      const allowedStatus=status==='all'||row.dataset.status===status;
+      const allowedSource=source==='all'||row.dataset.socialRecord===source;
+      row.hidden=!(allowedStatus&&allowedSource&&row.dataset.searchText.includes(query));
+      if(!row.hidden)count++;
+    }
+    const truncated=panel.dataset.recordsTruncated==='true';
+    const limit=panel.dataset.recordLimit||'500';
+    panel.querySelector('[data-social-account-count]').textContent='표시 '+count+' / 조회된 '+rows.length+'건'+
+      (truncated?' · 최근 '+limit+'건까지만 조회됨 (전체 건수 아님)':'');
+    panel.querySelector('[data-social-account-empty]').hidden=count!==0||rows.length===0;
   }
 
   const serviceMarks={youtube:'YT',facebook:'f',instagram:'IG',threads:'@',naver:'N',kakao:'K',tiktok:'TT',x:'X',linkedin:'in',pinterest:'P',bluesky:'B',discord:'D',telegram:'TG'};
@@ -99,8 +126,8 @@
     const legacy=data.existingServiceConnections||[];
     panel.querySelector('[data-social-metrics]').replaceChildren(
       metric('연결 대상 서비스',providers.length),
-      metric('신규 등록 기록',links.length),
-      metric('기존 서비스 연결 기록',legacy.length),
+      metric('조회된 신규 등록 기록',links.length),
+      metric('조회된 기존 서비스 기록',legacy.length),
       metric('새 연결 활성화',policy.oauthLinkingEnabled?'설정됨':'차단')
     );
     const wrap=panel.querySelector('[data-social-providers]');wrap.replaceChildren();
@@ -119,7 +146,10 @@
     }
     renderRows(panel.querySelector('[data-social-links]'),links,'identity');
     renderRows(panel.querySelector('[data-social-existing]'),legacy,'existing');
+    panel.dataset.recordsTruncated=String(data.recordsTruncated===true);
+    panel.dataset.recordLimit=String(Number(data.recordLimit)||500);
     filterProviders(panel);
+    filterAccounts(panel);
   }
   async function install(){
     if(document.getElementById(ROOT))return;
@@ -154,6 +184,20 @@
         '<div class="ekodi-social-grid" data-social-providers></div>',
         '<p class="ekodi-social-empty" data-social-empty hidden>조건에 맞는 서비스가 없습니다. 검색어나 필터를 변경하세요.</p>',
       '</section>',
+      '<div class="ekodi-social-account-toolbar" aria-label="계정 기록 검색 및 필터">',
+        '<label><span>계정 기록 검색</span><input type="search" data-social-account-search autocomplete="off" placeholder="EKODI ID·외부 ID·서비스 검색"></label>',
+        '<label><span>연결 출처</span><select data-social-account-source>',
+          '<option value="all">전체</option><option value="identity">EKODI ID 등록</option>',
+          '<option value="existing">기존 서비스</option></select></label>',
+        '<label><span>계정 상태</span><select data-social-account-filter>',
+          '<option value="all">전체 상태</option><option value="pending_provider_verification">공급자 인증 대기</option>',
+          '<option value="disabled">비활성화</option><option value="revoked">해제</option>',
+          '<option value="active">기존 서비스 활성</option><option value="paused">기존 서비스 중지</option>',
+          '<option value="reconnect_required">재연결 필요</option><option value="error">오류</option>',
+          '<option value="unknown">미확인</option></select></label>',
+      '</div>',
+      '<p class="ekodi-social-account-count" data-social-account-count role="status">계정별 기록 조회 전</p>',
+      '<p class="ekodi-social-account-empty" data-social-account-empty hidden>선택한 조건에 맞는 계정 기록이 없습니다.</p>',
       '<div class="ekodi-social-lower">',
         '<section class="ekodi-social-list" aria-labelledby="ekodiSocialLinksTitle"><h3 id="ekodiSocialLinksTitle">EKODI ID 신규 등록 기록</h3>',
         '<p>공급자 본인 확인 전에는 연결 완료가 아닙니다. 이 화면에서는 활성화할 수 없습니다.</p>',
@@ -168,6 +212,9 @@
     panel.querySelector('[data-social-refresh]').addEventListener('click',()=>{void load()});
     panel.querySelector('[data-social-search]').addEventListener('input',()=>filterProviders(panel));
     panel.querySelector('[data-social-filter]').addEventListener('change',()=>filterProviders(panel));
+    panel.querySelector('[data-social-account-search]').addEventListener('input',()=>filterAccounts(panel));
+    panel.querySelector('[data-social-account-source]').addEventListener('change',()=>filterAccounts(panel));
+    panel.querySelector('[data-social-account-filter]').addEventListener('change',()=>filterAccounts(panel));
     window.addEventListener('ekodi-admin-section-changed',event=>{if(event.detail?.section==='social-accounts')void load()});
     window.dispatchEvent(new CustomEvent('ekodi-feature-installed',{detail:{feature:'social-accounts'}}));
     if(location.pathname==='/admin/accounts/social-accounts')void load();

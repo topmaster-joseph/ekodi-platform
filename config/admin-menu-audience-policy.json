@@ -283,7 +283,7 @@
   ],
   "classification": {
     "decidedBy": "ekodi-ai-orchestrator",
-    "decidedAt": "2026-10-26",
+    "decidedAt": "2026-10-28",
     "source": "owner-approved admin IA v3 stage 2 (2026-10-22): platform-global content engines stay platform; per-site events and messages live in site admins; 2026-10-26 owner-directed platform-only infra cost menu (orchestrator recovery PR #6058)",
     "entries": {
       "platform-overview": {
@@ -477,6 +477,9 @@
       "domain-control": {
         "audience": "platform-super-admin"
       },
+      "search-visibility": {
+        "audience": "platform-super-admin"
+      },
       "services": {
         "audience": "platform-super-admin"
       },
@@ -533,7 +536,11 @@
       },
       "infra-costs": {
         "audience": "platform-super-admin"
+      },
+      "growth-os": {
+        "audience": "platform-super-admin"
       }
-    }
+    },
+    "note": "; Growth OS platform-super-admin only by owner's 2026-10-28 instruction, no tenant privilege expansion."
   }
 }

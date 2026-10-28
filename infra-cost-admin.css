@@ -119,6 +119,8 @@ body.admin-compact .content #ekodiInfraCosts,
 @media(max-width:900px){
   #ekodiInfraCosts .infra-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
   #ekodiInfraCosts .infra-page-heading{align-items:flex-start;flex-direction:column}
+  /* Desktop headline uses a 500px flex-basis; never carry that into column layout. */
+  #ekodiInfraCosts .infra-page-heading>div:first-child{flex:0 0 auto;width:100%;min-height:0}
   #ekodiInfraCosts .infra-heading-actions{width:100%}
   #ekodiInfraCosts .infra-invoice-toolbar{align-items:stretch}
 }

@@ -38,20 +38,24 @@ export function socialIdentityPolicy(env){
   return Object.freeze({registrationEnabled:enabled(env),oauthLinkingEnabled:false,socialLoginEnabled:false,autoPublishingEnabled:false,manualActivationRequired:true});
 }
 async function readLinks(db,all,userId){
-  if(!db)return {ready:false,accounts:[]};
+  const limit=all?500:100;
+  if(!db)return {ready:false,accounts:[],truncated:false,limit};
   try{
+    // Fetch one extra row to distinguish a complete result from a bounded preview.
+    // Never label counts computed from a preview as platform-wide totals.
     const stmt=all
-      ?db.prepare('SELECT id,ekodi_user_id,provider,provider_account_id,display_name,status,created_at,verified_at FROM ekodi_social_account_links ORDER BY created_at DESC LIMIT 500')
-      :db.prepare('SELECT id,ekodi_user_id,provider,provider_account_id,display_name,status,created_at,verified_at FROM ekodi_social_account_links WHERE ekodi_user_id=? ORDER BY created_at DESC LIMIT 100').bind(userId);
+      ?db.prepare('SELECT id,ekodi_user_id,provider,provider_account_id,display_name,status,created_at,verified_at FROM ekodi_social_account_links ORDER BY created_at DESC LIMIT 501')
+      :db.prepare('SELECT id,ekodi_user_id,provider,provider_account_id,display_name,status,created_at,verified_at FROM ekodi_social_account_links WHERE ekodi_user_id=? ORDER BY created_at DESC LIMIT 101').bind(userId);
     const result=await stmt.all();
-    return {ready:true,accounts:(result.results||[]).map(x=>({
+    const rows=Array.isArray(result.results)?result.results:[];
+    return {ready:true,truncated:rows.length>limit,limit,accounts:rows.slice(0,limit).map(x=>({
       id:x.id,ekodiUserId:x.ekodi_user_id,provider:x.provider,
       providerAccountId:x.provider_account_id,displayName:x.display_name,
       status:x.status,verifiedAt:x.verified_at||null,createdAt:x.created_at
     }))};
   }catch(error){
     console.error('Social identity registry read unavailable',error?.message||error);
-    return {ready:false,accounts:[]};
+    return {ready:false,accounts:[],truncated:false,limit};
   }
 }
 export async function handleSocialIdentityControl(request,env,actor,{existing=[]}={}){
@@ -68,6 +72,7 @@ export async function handleSocialIdentityControl(request,env,actor,{existing=[]
     for(const item of serviceConnections)counts.get(item.provider).existingService++;
     return response({
       ok:true,policy:socialIdentityPolicy(env),storageReady:links.ready,
+      recordsTruncated:links.truncated,recordLimit:links.limit,
       ownerScope:all?'platform':'person',
       providers:SOCIAL_IDENTITY_PROVIDERS.map(p=>({...p,status:'disabled',...counts.get(p.id)})),
       accounts:links.accounts,existingServiceConnections:serviceConnections,
