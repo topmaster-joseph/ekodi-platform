@@ -149,6 +149,24 @@ async function listProviders(req:Request){
   return json(req,{providers},200);
 }
 
+// Operator readiness: which login paths have their keys installed and which are switched on.
+// Booleans only — never key material. Lets the release lane and admins confirm that keys
+// synced from repository secrets actually reached this function before a path is enabled.
+async function providerReadiness(req:Request){
+  const {data,error}=await admin.from("identity_providers")
+    .select("provider,display_name,enabled,sort_order")
+    .order("sort_order",{ascending:true});
+  if(error)throw error;
+  const providers=(data??[]).map((row:any)=>({
+    id:row.provider,
+    name:row.display_name,
+    keysInstalled:adapters.has(row.provider),
+    enabled:row.enabled===true,
+    live:row.enabled===true&&adapters.has(row.provider)
+  }));
+  return json(req,{providers},200);
+}
+
 async function currentUser(req:Request){
   const authorization=req.headers.get("Authorization")||"";
   if(!authorization.startsWith("Bearer "))return null;
@@ -414,6 +432,7 @@ Deno.serve(async(req)=>{
   const path=new URL(req.url).pathname.replace(/^\/identity-api/,"")||"/";
   try{
     if(req.method==="GET"&&path==="/providers")return await listProviders(req);
+    if(req.method==="GET"&&path==="/providers/readiness")return await providerReadiness(req);
     if(req.method==="POST"&&path==="/challenge")return await issueChallenge(req,"google","login",null);
     if(req.method==="POST"&&path==="/google/exchange")return await exchangeProvider(req,"google");
 
