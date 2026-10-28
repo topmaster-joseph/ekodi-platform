@@ -203,7 +203,12 @@
     }
   });
 
-  for (const field of [cfTarget, cfType, cfName, cfBytes]) field.addEventListener('input', resetReplaceMode);
+  // Both typing and native/programmatic select changes must invalidate a pending
+  // second-click replacement approval when any Secret target or setting changes.
+  for (const field of [cfTarget, cfType, cfName, cfBytes]) {
+    field.addEventListener('input', resetReplaceMode);
+    field.addEventListener('change', resetReplaceMode);
+  }
 
   function scheduleClear(delay) {
     window.clearTimeout(clearTimer);
