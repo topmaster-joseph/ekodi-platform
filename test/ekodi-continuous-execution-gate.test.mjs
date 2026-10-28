@@ -123,6 +123,15 @@ const taskRow = {
   state_version:3, permission_class:'delegated', deployment_requested:1,
   evidence_json:JSON.stringify({preproductionProof}),
 };
+const stagingEvent = {
+  actor:'ekodi-github-actions-oidc-reconciler',
+  reason:'verified_preproduction_evidence_recorded',
+  evidence_json:JSON.stringify({
+    authority:'ekodi-orchestrator',source:'github-actions-oidc',
+    taskId,branchRef,releaseSha,artifactDigest,verifiedAt:preproductionProof.verifiedAt,
+    workflowRunId:123456,
+  }),
+};
 const eventRow = {
   actor:'super-admin:owner-1', reason:'final_promotion_approval_recorded',
   evidence_json:JSON.stringify(durableReceipt),
@@ -133,7 +142,8 @@ function ledger(task=taskRow,event=eventRow) {
       return {bind(id){return {first:async()=>id===taskId?task:null}}};
     }
     if(sql.includes('FROM ekodi_orchestrator_task_events')){
-      return {bind(id){return {first:async()=>id===taskId?event:null}}};
+      const row=sql.includes('verified_preproduction_evidence_recorded')?stagingEvent:event;
+      return {bind(id){return {first:async()=>id===taskId?row:null}}};
     }
     throw Error('Unexpected SQL');
   }};
