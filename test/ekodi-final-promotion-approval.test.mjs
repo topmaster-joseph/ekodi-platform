@@ -51,12 +51,13 @@ function mockDb(row=buildRow(),{commit=true,failBatch=false,stagingAttestation=t
       assert.match(update.sql,/evidence_json=\?/);
       assert.match(insert.sql,/final_promotion_approval_recorded/);
       assert.match(insert.sql,/NOT EXISTS/);
+      assert.match(insert.sql,/THEN \? ELSE NULL END/);
       if(!row || row.state_version!==update.args[2] ||
          row.evidence_json!==update.args[4])return [{meta:{changes:0}},{meta:{changes:0}}];
       row.state_version++;
       trace.events.push({
-        actor:insert.args[2],reason:'final_promotion_approval_recorded',
-        evidence_json:insert.args[3],
+        actor:insert.args[8],reason:'final_promotion_approval_recorded',
+        evidence_json:insert.args[9],
       });
       return [{meta:{changes:1}},{meta:{changes:1}}];
     },
