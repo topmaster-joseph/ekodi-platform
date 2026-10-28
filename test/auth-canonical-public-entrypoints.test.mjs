@@ -21,7 +21,7 @@ test('EKODI site login entrypoints exclusively use canonical /auth/', () => {
   for (const file of entrypoints) {
     const source = readFileSync(new URL('../' + file, import.meta.url), 'utf8');
     assert.ok(source.includes('https://ekodi.kr/auth/'), file + ': missing canonical auth URL');
-    assert.doesNotMatch(source, /https?:\\/\\/auth\\.ekodi\\.kr\\b/i, file + ': legacy auth host is forbidden');
+    assert.doesNotMatch(source, new RegExp('https?://auth[.]ekodi[.]kr', 'i'), file + ': legacy auth host is forbidden');
   }
 });
 
