@@ -49,7 +49,7 @@ test('quota or any failed predecessor blocks later verifiers with an explicit re
   assert.match(receipt,/verification:state==='success'\?'verified':state==='skipped'\?'blocked':'failed'/);
   assert.match(receipt,/upstream-failure-or-quota-circuit/);
   assert.match(receipt,/if\(!verified\)process\.exitCode=1/);
-  assert.match(receipt,/productionRequestsMade:0/);
+  assert.match(receipt,/receiptJobProductionRequests:0/);
   assert.match(receipt,/actions\/upload-artifact@v4/);
   assert.doesNotMatch(receipt,/curl |fetch\(|page\.goto|continue-on-error:\s*true/);
 });
