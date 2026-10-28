@@ -297,6 +297,7 @@
       const result=siteResult(site);
       const basic = document.createElement('td');basic.textContent=result ? result.basic : '미점검';
       const ai = document.createElement('td');ai.textContent=result ? result.ai : '미점검';
+      if(result?.improvements?.length){basic.title='우선 개선: '+result.improvements.join(' / ');ai.title=basic.title;}
       const providerCell=document.createElement('td');
       const primaryIds=['naver','google','daum','bing'];
       const manuallyConfirmed=primaryIds.filter(providerId=>state.ledger?.evidence?.some(x=>
@@ -348,8 +349,18 @@
       const correctCanonical=Boolean(result.canonical)&&new URL(result.canonical,site.url).href.replace(/\/$/,'')===site.url.replace(/\/$/,'');
       const basic=[result.title,result.description,correctCanonical,!result.noindex].filter(Boolean).length;
       const ai=[result.headings,result.schema,result.description].filter(Boolean).length;
-      state.audited.set(site.url,{basic:basic+'/4 기술항목',ai:ai+'/3 발견항목',raw:result});
-      if(!quiet)status(site.name+' 기술 점검 완료. 이는 등록·검색순위·AI 인용 검증이 아닙니다.');
+      const improvements=[!result.title?'고유 페이지 제목 보완':null,
+        !result.description?'검색 설명문 보완':null,
+        !correctCanonical?'정규 URL(canonical) 정비':null,
+        result.noindex?'공개페이지 noindex 설정 점검':null,
+        !result.headings?'H1 제목 보완':null,
+        !result.schema?'구조화 데이터 검토':null].filter(Boolean);
+      state.audited.set(site.url,{
+        basic:Math.round(basic/4*100)+'점 ('+basic+'/4) · 기술 준비도',
+        ai:Math.round(ai/3*100)+'점 ('+ai+'/3) · 발견 준비도',
+        improvements,raw:result
+      });
+      if(!quiet)status(site.name+' 기술 점검 완료. 우선 개선: '+(state.audited.get(site.url).improvements.join(', ')||'기본 항목 충족')+'. 이는 등록·검색순위·AI 인용 검증이 아닙니다.');
     }catch(error){state.audited.set(site.url,{basic:'점검 실패',ai:'근거 없음',error:error.message});if(!quiet)status(site.name+': '+error.message,true);}
     render();
   }
