@@ -48,6 +48,28 @@ export async function recordEkodiFinalPromotionApproval(db,input={}){
      proof.artifactDigest!==artifactDigest||!clean(proof.verifiedAt,80)){
     return result(false,'authoritative_staging_proof_missing');
   }
+  // A worker-controlled task evidence object is NOT authoritative by itself.
+  // Only a matching first-party OIDC-verified preproduction audit event may
+  // allow owner approval; staging validation must independently write it.
+  let stagedEvent;
+  try{
+    stagedEvent=await db.prepare(
+      "SELECT actor,reason,evidence_json FROM ekodi_orchestrator_task_events WHERE task_id=? AND reason='verified_preproduction_evidence_recorded' ORDER BY seq DESC LIMIT 1"
+    ).bind(taskId).first();
+  }catch{return result(false,'preproduction_attestation_lookup_failed')}
+  if(stagedEvent?.actor!=='ekodi-github-actions-oidc-reconciler' ||
+     stagedEvent?.reason!=='verified_preproduction_evidence_recorded'){
+    return result(false,'verified_staging_attestation_missing');
+  }
+  const attestation=parse(stagedEvent.evidence_json);
+  if(attestation.authority!=='ekodi-orchestrator' ||
+     attestation.source!=='github-actions-oidc' ||
+     attestation.taskId!==taskId || attestation.branchRef!==branchRef ||
+     attestation.releaseSha!==releaseSha || attestation.artifactDigest!==artifactDigest ||
+     attestation.verifiedAt!==proof.verifiedAt ||
+     !Number.isSafeInteger(attestation.workflowRunId) || attestation.workflowRunId<1){
+    return result(false,'staging_attestation_mismatch');
+  }
   const preview=evaluateEkodiContinuousExecution({
     phase:'production-promotion',taskId,branchRef,releaseSha,artifactDigest,
     requiredCiVerified:proof.requiredCiVerified===true,
