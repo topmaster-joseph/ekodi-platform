@@ -2,7 +2,7 @@
 
 **Current intended canonical browser entry:** https://ekodi.kr/ekodichurch/
 
-The legacy browser hostname `church.ekodi.kr` is **not** an approved fallback, mirror, or redirect. Production retirement must be proven in Cloudflare, not inferred from a PR, metadata link, canonical tag, or a simple HTTP redirect.
+The previous Church-specific first-party subdomain is **not** an approved fallback, mirror, or redirect. Production retirement must be proven in Cloudflare, not inferred from a PR, metadata link, canonical tag, or a simple HTTP redirect.
 
 ## EKODI Orchestrator ownership
 
