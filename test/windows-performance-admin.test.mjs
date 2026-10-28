@@ -33,7 +33,7 @@ test('safe optimization is explicit, constrained and receipt-aware', () => {
   assert.match(panel, /cleanup\?\.status === 'failed'/);
   assert.match(panel, /cleanup\?\.status === 'succeeded'/);
   assert.match(panel, /postCleanupDiagnostic/);
-  assert.match(panel, /명령/);
+  assert.match(panel, /실제 완료 영수증 대기/);
   assert.match(admin, /'maintenance\.temp_cleanup': '7일 이상 지난 사용자\/Windows 임시 파일만 정리합니다/);
   assert.match(api, /'maintenance\.temp_cleanup': \{ risk: 'maintain', confirm: true \}/);
   assert.match(agent, /function Clear-SafeTempFiles/);
