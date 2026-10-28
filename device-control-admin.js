@@ -765,6 +765,7 @@
     values[3].textContent = ({managed:'관리 작업',observe:'관찰 작업',none:'없음'})[device.management?.remoteCommandLevel] || '없음';
 
     const health = document.createElement('div'); health.innerHTML = healthMarkup(device);
+    const performance = windowsPerformancePanel(device);
     const mainActions = document.createElement('div'); mainActions.className = 'device-ops-grid device-primary-actions';
     mainActions.append(
       makeActionButton(device, 'diagnostics.collect', '전체 진단', 'primary', {}, !capability(device, 'diagnostics')),
@@ -833,7 +834,7 @@
     if (posStatus) {
       values[3].textContent = '상태 보고 전용';
       card.append(head, meta, posAgentSummary(device, posStatus), foot);
-    } else card.append(head, meta, health.firstElementChild, recommendationPanel(device), ...(windowsPerformancePanel(device) ? [windowsPerformancePanel(device)] : []), mainActions, ...(device.management?.type === 'pc' && !isInventory(device) && device.status !== 'revoked' ? [externalAuthPanel(device)] : []), advanced, foot);
+    } else card.append(head, meta, health.firstElementChild, recommendationPanel(device), ...(performance ? [performance] : []), mainActions, ...(device.management?.type === 'pc' && !isInventory(device) && device.status !== 'revoked' ? [externalAuthPanel(device)] : []), advanced, foot);
     const proofCommand = latestCommandByType(device, 'software.localai.verify');
     const proof = proofCommand?.result?.localAiProof || device.diagnostics?.localAiProof;
     if (proof) {
