@@ -44,6 +44,8 @@ test('five responsive screenshots redact account identifiers and assert architec
   assert.match(worker,/const widths=\[320,390,768,1366,1440\]/);
   assert.match(worker,/mask:\[page\.locator\('#ekodiSocialAccountRegistry \[data-social-record\]'\)\]/);
   assert.match(worker,/architectureHidden:!architectureVisible/);
+  assert.match(worker,/await page\.keyboard\.press\('Escape'\)/);
+  assert.match(worker,/headingAccessible/);
   assert.match(worker,/horizontalOverflow:document\.documentElement\.scrollWidth>innerWidth\+2/);
   assert.match(worker,/redactedScreenshots:viewports\.length/);
 });
