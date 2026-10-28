@@ -25,7 +25,7 @@ test('search visibility UI is shipped through versioned admin lazy assets',()=>{
   for(const asset of ['search-visibility-admin.js','search-visibility-admin.css']){
     assert.ok(read('scripts/build.mjs').includes("'"+asset+"'"));
     assert.ok(read('scripts/admin-performance-postbuild.mjs').includes("'"+asset+"'"));
-    assert.ok(read('site-worker.js').includes("'/'"+asset+"'"));
+    assert.ok(read('site-worker.js').includes("'/" + asset + "'"));
   }
 });
 test('never synthesize provider-indexed, GSC or search-performance numbers',()=>{
