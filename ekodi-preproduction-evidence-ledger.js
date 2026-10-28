@@ -5,7 +5,7 @@
 const BRANCH=/^ai\/[a-z0-9][a-z0-9._-]{0,31}\/(orch_[a-z0-9][a-z0-9_-]{15,120})$/i;
 const SHA=/^[a-f0-9]{40}$/i;
 const DIGEST=/^sha256:[a-f0-9]{64}$/i;
-const WORKFLOW='topmaster-joseph/ekodi-platform/.github/workflows/reconcile-orchestrator-completions.yml@';
+const WORKFLOW='topmaster-joseph/ekodi-platform/.github/workflows/reconcile-orchestrator-completions.yml@refs/heads/main';
 const clean=(v,max=300)=>String(v??'').trim().slice(0,max);
 const fail=reason=>Object.freeze({recorded:false,reason,productionDeployed:false});
 const changes=result=>Number(result?.meta?.changes??result?.changes??0);
@@ -13,7 +13,7 @@ const changes=result=>Number(result?.meta?.changes??result?.changes??0);
 export async function recordVerifiedEkodiPreproductionEvidence(db,evidence,oidc={}){
   if(!db?.prepare||!db?.batch)return fail('orchestrator_database_unavailable');
   if(oidc.ok!==true||oidc.repository!=='topmaster-joseph/ekodi-platform'||
-     oidc.ref!=='refs/heads/main'||!String(oidc.workflowRef||'').startsWith(WORKFLOW)||
+     oidc.ref!=='refs/heads/main'||String(oidc.workflowRef||'')!==WORKFLOW||
      !Number.isSafeInteger(Number(oidc.runId))||Number(oidc.runId)<1){
     return fail('trusted_reconciler_oidc_required');
   }
@@ -76,8 +76,9 @@ export async function recordVerifiedEkodiPreproductionEvidence(db,evidence,oidc=
   });
   const nextVersion=Number(row.state_version)+1,updatedAt=new Date().toISOString();
   const updatedEvidence=JSON.stringify({...prior,preproductionProof});
-  // A D1 batch transaction prevents the event from being committed if the
-  // task's state/evidence changed before the compare-and-swap update.
+  // A D1 batch transaction rolls back BOTH writes when the audit INSERT is
+  // invalid. The conditional event task_id becomes NULL on a lost CAS,
+  // deliberately violating task_id NOT NULL instead of silently writing 0 rows.
   const update=db.prepare(`UPDATE ekodi_orchestrator_tasks
     SET evidence_json=?,state_version=state_version+1,updated_at=?
     WHERE task_id=? AND state='staging' AND state_version=? AND branch_ref=?
@@ -85,12 +86,14 @@ export async function recordVerifiedEkodiPreproductionEvidence(db,evidence,oidc=
     .bind(updatedEvidence,updatedAt,taskId,Number(row.state_version),branchRef,row.evidence_json);
   const insert=db.prepare(`INSERT INTO ekodi_orchestrator_task_events
     (task_id,seq,from_state,to_state,actor,reason,evidence_json,created_at)
-    SELECT ?,COALESCE((SELECT MAX(seq) FROM ekodi_orchestrator_task_events WHERE task_id=?),0)+1,
+    SELECT CASE WHEN EXISTS (
+      SELECT 1 FROM ekodi_orchestrator_tasks WHERE task_id=? AND
+        state='staging' AND state_version=? AND evidence_json=?
+      ) THEN ? ELSE NULL END,
+      COALESCE((SELECT MAX(seq) FROM ekodi_orchestrator_task_events WHERE task_id=?),0)+1,
       'staging','staging','ekodi-github-actions-oidc-reconciler',
-      'verified_preproduction_evidence_recorded',?,?
-    FROM ekodi_orchestrator_tasks
-    WHERE task_id=? AND state='staging' AND state_version=? AND evidence_json=?`)
-    .bind(taskId,taskId,JSON.stringify(attestation),updatedAt,taskId,nextVersion,updatedEvidence);
+      'verified_preproduction_evidence_recorded',?,?`)
+    .bind(taskId,nextVersion,updatedEvidence,taskId,taskId,JSON.stringify(attestation),updatedAt);
   try{
     const results=await db.batch([update,insert]);
     if(changes(results?.[0])!==1||changes(results?.[1])!==1)return fail('staging_evidence_transaction_conflict');
