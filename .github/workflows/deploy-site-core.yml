@@ -77,6 +77,7 @@ on:
       - 'test/tenant-admin-command-home.test.mjs'
       - 'test/tenant-live-admin.test.mjs'
       - 'test/realtime-live-collaboration.test.mjs'
+      - 'invest-access-ui.js'
       - 'invest-user-page.js'
       - 'invest-subject-ui.js'
       - 'invest-site-system.js'
