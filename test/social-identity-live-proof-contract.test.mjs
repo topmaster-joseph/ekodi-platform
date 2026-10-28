@@ -21,6 +21,10 @@ test('SOCIAL-ID-001 live probe never mutates user-owned accounts or leaks identi
   assert.match(body, /credentials:'omit'/);
   assert.match(body, /method:'GET'/);
   assert.doesNotMatch(body, /method:'POST'|method:'DELETE'|method:'PATCH'|method:'PUT'/);
-  assert.doesNotMatch(body, /data\.accounts|data\.existingServiceConnections|token\)/);
+  // Only safe lengths may be read for count reconciliation; never persist rows or credentials.
+  assert.match(body, /identityCount:Array\.isArray\(data\.accounts\) \? data\.accounts\.length : 0/);
+  assert.match(body, /existingCount:Array\.isArray\(data\.existingServiceConnections\) \? data\.existingServiceConnections\.length : 0/);
+  assert.doesNotMatch(body, /accounts:data\.accounts|existingServiceConnections:data\.existingServiceConnections|token\)/);
+  assert.match(body, /mask:\[page\.locator\('#ekodiSocialAccountRegistry \[data-social-record\]'\)\]/);
   assert.match(body, /inventoryVerified:true,policyDisabled:true/);
 });

@@ -11,8 +11,9 @@ const productionGateSource = () => readFile(new URL('../.github/workflows/produc
 
 test('authenticated Admin E2E isolates every menu in a fresh Chromium process and retries only that menu once', async () => {
   const source = await retrySource();
-  assert.match(source, /const maxAttemptsPerMenu = 2/);
-  assert.match(source, /const menuTimeoutMs = 30_000/);
+  assert.match(source, /const maxAttemptsPerMenu = .*social-accounts.*\? 1 : 2/);
+  assert.match(source, /const menuTimeoutMs = .*social-accounts.*\? 75_000 : 30_000/);
+  assert.match(source, /if \(!fatal && !focusOnly\)/);
   assert.match(source, /adminMenuOrder\(\)/);
   assert.match(source, /spawn\(process\.execPath, \[script\]/);
   assert.match(source, /'scripts\/admin-authenticated-e2e-menu-worker\.mjs'/);
