@@ -31,7 +31,7 @@ test('Control native probes are immutable isolated EKODI browser checks', () => 
   assert.match(native, /maxActions=30/);
   assert.ok(native.includes("github.event_name == 'pull_request' && '/,/my/,/admin/'"),'PR browser must not gate an unreleased Control fix on the old live assets');
   assert.ok(native.includes("index===0||p==='/admin/control'||p.split('/').includes('board')"));
-  assert.match(native, /\.path == "\/control"/);
+  assert.match(native, /\.path == "\/admin\/control"/);
   assert.match(native, /\.type == "snapshot"/);
   assert.match(native, /\.bodyText \/\/ ""/);
   assert.ok(native.includes('contains("AI 경로 점검")'));
