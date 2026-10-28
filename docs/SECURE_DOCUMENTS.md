@@ -26,7 +26,7 @@ The public client only calls the central Edge Function `secure-documents-api` us
 - `POST /?action=revoke`: immediate recipient grant cutoff.
 - `GET /?action=shares&document_id=...`: metadata-only grant list, only after ownership/tenant steward check.
 - `POST /?action=open`: verified recipient, active grant and atomic view-limit check, never a signed storage URL.
-- Original deletion and verifiable physical purge are **not implemented**. These remain blocked pending retention, scheduled cleanup and backup reconciliation review.
+- Original deletion request and a guarded Storage API purge reconciler exist in source. **Actual purge is inactive, unverified, and not approved**; scheduled execution and backup reconciliation remain incomplete.
 - `POST /?action=expire`: secret-authenticated scheduler-only status cleanup (scheduler not yet configured). Expiry is still checked synchronously on every shared read; no separate share copy is stored.
 
 ## Caveats
@@ -51,7 +51,7 @@ Personal mode: `mountSecureDocuments(element, {scope:"person"})`. All actual aut
 - After verified EKODI authentication and recent MFA, an owner/tenant steward may request `delete_request`. This changes the record to `deletion_pending` with an optimistic status check. All subsequent owner reads and recipient opens reject pending records.
 - Active recipient grants are revoked in the same request where possible. If grant reconciliation fails, the record remains non-active and the caller receives an explicit retryable failure.
 - The result explicitly returns `storage_purged:false` and `backup_purged:false`; UI labels the document as awaiting physical deletion verification. No SQL-delete of Storage objects is attempted.
-- Actual object deletion, legal holds, retention periods, idempotent purge receipts, backup lifecycle, and scheduling remain *not implemented*. Do not claim fulfillment of data erasure requests until the storage API removal and backup policy are independently verified.
+- Storage API purge code, legal-hold metadata, retention constraints and a receipt ledger are implemented but **disabled and not end-to-end verified**; independent backup-lifecycle attestation and an authorized scheduler remain incomplete. Never claim full erasure from the request endpoint.
 
 ## Storage purge reconciler (gated, not active)
 - The follow-up migration adds owner-independent, default-true `legal_hold`, `retention_until`, `purge_authorized_at`, `backup_policy_reviewed_at`, `storage_purged_at` and a server-only receipt ledger.
