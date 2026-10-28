@@ -3,6 +3,8 @@
 const TARGET='deploy-human-author-schema.yml';
 const HUMAN_SCHEMA_FILES=new Set([
   'supabase/migrations/20261028010000_human_author_membership_writing.sql',
+  'supabase/migrations/20261029010000_human_author_revocation_guard.sql',
+  'scripts/sql/human-author-revocation-postflight.sql',
   '.github/workflows/deploy-human-author-schema.yml',
   'scripts/lib/human-author-release-lane.mjs',
   'scripts/sql/human-author-release-preflight.sql',
