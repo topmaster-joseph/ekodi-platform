@@ -117,7 +117,7 @@ export async function runTask(rawTask, options={}){
   page.on('response',res=>{
     const status=res.status();
     if(status>=400) httpErrorResponses.push({url:clean(res.url(),500),status,statusText:clean(res.statusText(),120),resourceType:clean(res.request().resourceType(),80)});
-    if(status===429) quotaCircuit={status,path:clean(new URL(res.url()).pathname,200)};
+    if(status===429 && new URL(res.url()).origin===ORIGIN) quotaCircuit={status,path:clean(new URL(res.url()).pathname,200)};
   });
 
   await page.route('**/*',async route=>{
@@ -204,6 +204,7 @@ export async function runTask(rawTask, options={}){
   try{
     results.push({type:'initial-goto',...(await goto(task.path))});
     for(let i=0;i<task.actions.length;i++){
+      if(quotaCircuit) fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open during browser actions; no further requests');
       if(Date.now()>=deadline) fail('BROWSER_TASK_TIMEOUT','Browser task timed out');
       const action=task.actions[i];
       if(action.type==='goto'){ results.push({type:'goto',...(await goto(action.path))}); continue; }
@@ -267,6 +268,7 @@ export async function runTask(rawTask, options={}){
       }
     }
 
+    if(quotaCircuit) fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open before success receipt; no false PASS');
     const finalUrl=page.url();
     if(new URL(finalUrl).origin!==ORIGIN) fail('BROWSER_FINAL_ORIGIN_FORBIDDEN','Final browser origin is not canonical');
     const report={
