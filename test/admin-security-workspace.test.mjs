@@ -18,11 +18,20 @@ test('security workspace groups Cloudflare target and secret registration withou
   assert.match(generator, /\/api\/control\/secrets\/generate/);
 });
 
-test('Cloudflare target fallback stays available when provider inventory cannot list workers', () => {
-  assert.match(provider, /oldField\.style\.display=workers\.length\?'none':''/);
-  assert.match(provider, /else oldField\.removeAttribute\('aria-hidden'\)/);
+test('Cloudflare inventory cannot expand Secret Manager authorized Worker scope', () => {
+  assert.match(provider, /const inventoryNames=new Set\(workers\.map/);
+  assert.match(provider, /const authorized=original\.disabled\?\[\]:\[\.\.\.original\.options\]/);
+  assert.match(provider, /authorized\.every\(name=>inventoryNames\.has\(name\)\)/);
+  assert.match(provider, /workerSelect\.disabled=true/);
+  assert.match(provider, /oldField\.style\.display=''/);
+  assert.match(provider, /oldField\.removeAttribute\('aria-hidden'\)/);
+  assert.match(provider, /option\.value=name/);
+  assert.match(provider, /option\.textContent=name/);
+  assert.match(provider, /workerSelect\.disabled=false/);
+  assert.match(provider, /original\.dispatchEvent\(new Event\('change',\{bubbles:true\}\)\)/);
   assert.match(generator, /data-cloudflare-target/);
   assert.match(provider, /data-ekodi-cf-worker/);
+  assert.match(provider, /data-ekodi-cf-worker-note aria-live="polite"/);
 });
 
 test('Cloudflare select layout survives the inserted heading and pending replacement cannot follow a changed Worker', () => {
