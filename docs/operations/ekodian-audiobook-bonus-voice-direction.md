@@ -26,3 +26,27 @@
 7. 정식 원고 승인·샘플 음질 승인·실제 트랙 전수검사·음원 저장 확인·권한 테스트를 모두 통과하기 전 공개 플래그 설정 금지.
 
 이 문서는 제작 사양이다. 실제 고급 음성 파일의 생성이나 에코디서점 운영 배포를 증명하지 않는다.
+
+
+## 실제 제작·출시 자동 검증 도구 (2026-10-29)
+
+- `scripts/ekodian-audio-preflight.mjs PRIVATE_SEGMENTS.json PRIVATE_CAST.json PRIVATE_REPORT.json`:
+  화자 미정·미승인 편집 캐스팅·음성 상업 라이선스 미확인·속도/감정 설정 오류를 감지한다.
+  원고 승인 및 대본 확정 플래그가 없으면 중단한다. 이 도구는 TTS 호출·과금·게시를 수행하지 않는다.
+- `scripts/ekodian-audiobook-verify.mjs PRIVATE_RELEASE_PLAN.json MASTERED_AUDIO_DIR PRIVATE_QA_RESULT.json`:
+  MP3 형식·비트레이트·샘플레이트·재생 길이·트랙 개수, 별도 렌더링 출처 지문과 원고 지문을 대조한다.
+  각 chapter-NNN.mp3에는 제작기가 별도로 기록한 `chapter-NNN.provenance.json`이 있어야 한다.
+  출처 JSON은 `{"scriptFingerprint":"…","audioSha256":"…"}` 형식이며, 출처 파일 자체와 마스터는 비공개 저장한다.
+- 두 검증 모두 별도 성공과 **저자 최종승인**이 필요하다. 준비 파일만으로 도서의 `bonusAudio.published`를 변경해서는 안 된다.
+- 제1권 오디오북 준비 원고는 현재 v1.10, 에코디서점 유통 메타데이터에는 v1.7 표기가 있어 출간 마스터 대조 필수.
+- 사용자가 수정 가능한 로컬 음성 캐스팅 작업 화면을 별도로 만들었으나, 원고 본문을 공개 GitHub에 넣지 않는다.
+
+## 외부서점 구매 확인 · 보호 초안
+
+- `books-audiobook-external.js`: 유페이퍼·Google Play Books·Amazon 구매자가 자신의 EKODI 계정으로 구매확인 요청.
+- 판매처 주문번호는 Worker에서 HMAC으로 변경하여 저장하고 원문은 DB/응답/로그에 저장하지 않는다. HMAC 비밀키는 `AUDIOBOOK_PURCHASE_PROOF_HMAC_KEY`로 별도 설정해야 하며, 길이가 짧거나 없으면 서비스는 실패 차단한다.
+- 하루 신청 3회 제한, 중복 주문번호 거부. **독립된 판매처 주문 내역 확인**과 운영자 Google 인증 후 정확한 주문번호 지문 일치 시에만 오디오 전용 권한 부여.
+- 운영 테이블은 `migrations/202610290200_books_audiobook_external_claims.sql`로 분리했다. **마이그레이션은 자동 실행하지 않으며** 운영 DB 백업·스테이징·승인 후 보호 배포 단계에서만 실행.
+- 외부 구매자의 전자책 다운로드권은 부여하지 않는다. 오디오 전용 권한은 `books_audiobook_external_grants`, 인증 근거와 환불/철회 사유는 `books_audiobook_external_claims`에 기록한다.
+- 환불/부정거래 시 운영자가 즉시 revoke하여 구매자 오디오 서버권한을 차단한다. 환불을 즉시 자동 감지하는 외부 서점 연동은 별도 후속 과제다.
+- 외부 구매자 이메일·주문정보를 표시하는 심사 메뉴는 운영자 권한으로만 접근해야 하며 개인정보 보존기간과 삭제 정책 최종 검토 필요.
