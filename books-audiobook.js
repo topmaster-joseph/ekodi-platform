@@ -82,7 +82,7 @@ export async function audiobookTrack(env, request, bookId, trackToken) {
 export async function handleAudiobook(request, env) {
   if (request.method !== 'GET') return fail(405, 'METHOD_NOT_ALLOWED', '허용되지 않은 요청입니다.');
   const path = new URL(request.url).pathname;
-  const match = /^\\/api\\/commerce\\/audiobook\\/([A-Z0-9-]{3,40})(?:\\/track\\/([1-9][0-9]{0,2}))?$/.exec(path);
+  const match = /^\/api\/commerce\/audiobook\/([A-Z0-9-]{3,40})(?:\/track\/([1-9][0-9]{0,2}))?$/.exec(path);
   if (!match) return fail(404, 'NOT_FOUND', '오디오북을 찾지 못했습니다.');
   try {
     return match[2]
