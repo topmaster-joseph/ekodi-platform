@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "policyId": "SECURE-DOCUMENTS-CORE-001",
+  "status": "security-review",
+  "canonicalSurface": "https://ekodi.kr/my/docs/secure.html",
+  "layer": "core-common-service",
+  "contract": "ekodi.secure-documents.v1",
+  "productionActivationDefault": false,
+  "dataOwnership": "person-or-immutable-workspace-id",
+  "accessPrinciple": "no-platform-admin-plaintext-override",
+  "siteReuse": {
+    "sameOriginWidget": "/my/docs/secure-widget.js",
+    "api": "/functions/v1/secure-documents-api",
+    "workspaceContext": "immutable-tenant-id-and-verified-membership"
+  },
+  "allowedDocumentKinds": [
+    "business_registration",
+    "bank_account_copy",
+    "organization_registration",
+    "license",
+    "other_redacted"
+  ],
+  "forbiddenKinds": [
+    "government_identity_document",
+    "unredacted_resident_registration_number",
+    "biometric_template",
+    "payment_card_cvv"
+  ],
+  "privacy": {
+    "redactedShareCopyRequired": true,
+    "plaintextInLogs": false,
+    "externalAiProcessing": false,
+    "searchIndexDocumentBody": false,
+    "recipientVerification": true,
+    "anonymousShares": false,
+    "downloadDefault": false,
+    "passiveAdminInspection": false
+  },
+  "security": {
+    "privateBucket": "secure-documents-private",
+    "noDirectClientStorageAccess": true,
+    "envelopeEncryption": "HKDF-SHA256 + AES-256-GCM",
+    "itemNonceBytes": 12,
+    "keyManagedServerSide": true,
+    "noSignedPublicUrls": true,
+    "stepUpForShare": true,
+    "stepUpForReveal": true,
+    "malwareScanRequired": true,
+    "legalResidencyGateRequired": true,
+    "denyByDefault": true
+  },
+  "sharing": {
+    "recipientBound": true,
+    "maxHours": 168,
+    "maxViews": 10,
+    "revocable": true,
+    "atomicViewCounter": true,
+    "immediateAccessExpiry": true,
+    "temporaryCopiesDeletionRequired": true
+  },
+  "retention": {
+    "originalSeparateFromShare": true,
+    "versioned": true,
+    "legalHoldOverridesAutomaticPurge": true,
+    "storageCleanupVerificationRequired": true,
+    "backupDeletionMayLag": true
+  },
+  "activationGates": [
+    "data-residency-and-legal-review",
+    "signed-off-file-scanner",
+    "encryption-key-management-and-rotation",
+    "step-up-auth-integration",
+    "recipient-access-negative-tests",
+    "RLS-and-storage-policy-review",
+    "expiry-and-delete-reconciliation",
+    "synthetic-file-canary",
+    "guarded-platform-deployment"
+  ]
+}

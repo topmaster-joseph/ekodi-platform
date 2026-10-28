@@ -1,0 +1,61 @@
+# EKODI Secure Documents Core (draft security-gated)
+  
+Common service contract: `ekodi.secure-documents.v1`.
+
+## Boundaries
+- Unlike `config/personal-credential-vault-policy.json`, this service holds only **documents**. It does not change the credential vault's prohibition of government identity documents.
+- Person scope uses the canonical EKODI `people.id`. Workspace scope is an immutable `tenants.id`, not a hostname or URL slug. Workspace authority must be checked server-side per operation; platform admin is not a tenant role.
+- Never upload an actual resident-registration-number-bearing ID, image of an ID, bank passbook, certificate or private key to a test system.
+- Redaction is an **explicit owner-provided redacted copy**, not an automatic OCR claim. Never promise that text is safely masked in arbitrary PDFs.
+- Every tenant site can mount the same UI adapter with an immutable workspace id and authenticated session provider; the site may not skip central authorization.
+
+## Service rollout
+1. Apply versioned migration only to an isolated staging database. Review existing `storage.objects` policies; a bucket with `public=false` is not sufficient if an old permissive RLS policy grants downloads.
+2. Configure the central server-side encryption key (rotateable and backed by managed secret storage), secure document scanner, host and strict allow list. Never embed keys in HTML or JavaScript.
+3. Verify data-residency/overseas-transfer and retention rules before any real customer document enters storage. Current production Supabase region must not be assumed adequate for regulated ID copies.
+4. Apply deploy gates: synthetic upload → authenticated scoped listing → denied other-person/other-workspace access → recipient authentication/step-up → expiring share → immediate revocation → ciphertext deletion and backup lifecycle checks.
+5. Turn on `SECURE_DOCUMENTS_ACTIVE` only after all checks are signed off, and run a guarded release. Without this flag the API must return inactive and never store bytes.
+
+## Endpoint contract
+The public client only calls the central Edge Function `secure-documents-api` using a verified EKODI access token. It cannot access private storage itself. The shared UI adapter lives at `/my/docs/secure-widget.js`; the personal entry is `/my/docs/secure.html`. A tenant site may embed the adapter but cannot pass arbitrary acting user IDs. User scope is `person`, workspace scope is `workspace`.
+
+- `GET /?action=status`: redacted activation state (no secrets).
+- `GET /?action=list&scope=person|workspace&workspace_id=...`: owner/authorized steward metadata only.
+- `POST /?action=upload` with multipart body: source filename never logged, file is encrypted before storage; uploads require scanner and compliance gates.
+- `POST /?action=share`: named verified recipient, step-up, max 168h, redacted version, one-time opaque token (only its hash is stored), recipient-bound view. Never expose storage signed URLs.
+- `POST /?action=revoke`: immediate recipient grant cutoff.
+- `GET /?action=shares&document_id=...`: metadata-only grant list, only after ownership/tenant steward check.
+- `POST /?action=open`: verified recipient, active grant and atomic view-limit check, never a signed storage URL.
+- Original deletion request and a guarded Storage API purge reconciler exist in source. **Actual purge is inactive, unverified, and not approved**; scheduled execution and backup reconciliation remain incomplete.
+- `POST /?action=expire`: secret-authenticated scheduler-only status cleanup (scheduler not yet configured). Expiry is still checked synchronously on every shared read; no separate share copy is stored.
+
+## Caveats
+This stage is **development only**: no real personal documents are permitted; encrypted upload, redaction, multi-tenant authorization and deletion have not passed end-to-end tests. Network-delivered copies, screenshots and previously downloaded files cannot be remotely erased. Expiring access is not equivalent to deleting copies already distributed. Legal holds and backup lifecycles are separate from share grants. Audit contains only metadata and never the original document or token.
+
+## Reusable site adapter example
+
+A site must obtain its canonical, immutable tenant UUID from the trusted EKODI workspace context; never hardcode a slug as an authorization claim. The site must use the same-origin central module:
+
+```js
+import { mountSecureDocuments } from "/my/docs/secure-widget.js";
+await mountSecureDocuments(document.querySelector("#secure-documents"), {
+  scope: "workspace",
+  workspaceId: verifiedWorkspace.id,
+  config: window.EKODI_MY_CONFIG
+});
+```
+
+Personal mode: `mountSecureDocuments(element, {scope:"person"})`. All actual authorization is reverified by the central API; simply mounting or supplying an identifier never grants document access. Share recipients require verified EKODI authentication plus a recent strong MFA step-up to open the document. This adapter is a source integration contract; it is not yet live on every site.
+
+## Deletion request (access cut-off, not physical purge)
+- After verified EKODI authentication and recent MFA, an owner/tenant steward may request `delete_request`. This changes the record to `deletion_pending` with an optimistic status check. All subsequent owner reads and recipient opens reject pending records.
+- Active recipient grants are revoked in the same request where possible. If grant reconciliation fails, the record remains non-active and the caller receives an explicit retryable failure.
+- The result explicitly returns `storage_purged:false` and `backup_purged:false`; UI labels the document as awaiting physical deletion verification. No SQL-delete of Storage objects is attempted.
+- Storage API purge code, legal-hold metadata, retention constraints and a receipt ledger are implemented but **disabled and not end-to-end verified**; independent backup-lifecycle attestation and an authorized scheduler remain incomplete. Never claim full erasure from the request endpoint.
+
+## Storage purge reconciler (gated, not active)
+- The follow-up migration adds owner-independent, default-true `legal_hold`, `retention_until`, `purge_authorized_at`, `backup_policy_reviewed_at`, `storage_purged_at` and a server-only receipt ledger.
+- `POST action=purge` requires **both** independent scheduler/operator secrets and `SECURE_DOCUMENTS_PURGE_ACTIVE=true` plus `SECURE_DOCUMENTS_PURGE_POLICY_APPROVED=true`, central active/legal/scan gates; no public user can authorize purge.
+- A deleted-request record remains inaccessible while the reconciler checks no legal hold, elapsed retention, explicit human purge authorization, and an independently reviewed backup policy. An optimistic lease guards duplicate workers. Storage is removed exclusively using the Storage API, and `info()` must report 404 for every referenced version before `storage_purged_at` and an immutable receipt are recorded.
+- `storage_purged_at` means **live Storage API removal verified only**. The receipt always states `backup_erased:false`; provider snapshots, separate copies, legal holds, external downloads and restore scenarios require independent verification. The document stays `deletion_pending` until backup lifecycle review, never claiming total erasure.
+- This is unverified prototype code pending synthetic multi-tenant race/integration tests, independent review and protected activation. Scheduler not configured; default off.
