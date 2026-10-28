@@ -821,7 +821,7 @@ for (const [id, group] of menus) {
           if(!tabs)return {columnCount:0,unclipped:false};
           const items=[...tabs.querySelectorAll('[role="tab"]')];
           const box=tabs.getBoundingClientRect();
-          const columnCount=getComputedStyle(tabs).gridTemplateColumns.split(/\\s+/).filter(Boolean).length;
+          const columnCount=getComputedStyle(tabs).gridTemplateColumns.split(/\s+/).filter(Boolean).length;
           const unclipped=items.length===4 && tabs.scrollWidth <= tabs.clientWidth+2 &&
             items.every(item=>{
               const r=item.getBoundingClientRect();
