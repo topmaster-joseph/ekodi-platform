@@ -9,7 +9,7 @@ const branchRef='ai/gpt6/'+taskId,releaseSha='a'.repeat(40),artifactDigest='sha2
 const proof={
   authority:'ekodi-orchestrator',taskId,branchRef,releaseSha,artifactDigest,
   requiredCiVerified:true,stagingVerified:true,rollbackReady:true,
-  securityReviewVerified:true,verifiedAt:'2026-10-29T00:30:00Z',
+  securityReviewVerified:true,verifiedAt:new Date(Date.now()-120_000).toISOString(),
 };
 const staged={
   actor:'ekodi-github-actions-oidc-reconciler',reason:'verified_preproduction_evidence_recorded',
@@ -26,7 +26,7 @@ const approval={
     approvedByRole:'super_admin',approvedBy,taskId,branchRef,
     releaseSha,artifactDigest,stateVersion:version,
     approvalId:`final_promotion_${taskId}_v${version}`,
-    approvedAt:'2026-10-29T00:40:00Z',
+    approvedAt:new Date(Date.now()-60_000).toISOString(),
   }),
 };
 const task={
@@ -77,6 +77,22 @@ test('missing or stale owner evidence always fails closed',async()=>{
     assert.equal(result.authorized,false);
   }
 });
+test('approval must follow verified staging and remain fresh for one production promotion',async()=>{
+  const valid=JSON.parse(approval.evidence_json);
+  const invalids=[
+    {...valid,approvedAt:'2020-01-01T00:00:00Z'},
+    {...valid,approvedAt:new Date(Date.now()+90_000).toISOString()},
+    {...valid,approvedAt:new Date(Date.parse(proof.verifiedAt)-60_000).toISOString()},
+    {...valid,approvedAt:'not-a-date'},
+  ];
+  for(const value of invalids){
+    const changed={...approval,evidence_json:JSON.stringify(value)};
+    const r=await verifyEkodiFinalPromotionReceipt(ledger(task,staged,changed),request);
+    assert.equal(r.authorized,false);
+    assert.equal(r.reason,'final_owner_confirmation_expired_or_out_of_order');
+  }
+});
+
 test('database outage cannot grant final promotion',async()=>{
   assert.equal((await verifyEkodiFinalPromotionReceipt(null,request)).authorized,false);
   assert.equal((await verifyEkodiFinalPromotionReceipt({prepare(){throw Error('offline')}},request)).authorized,false);
