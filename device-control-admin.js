@@ -716,7 +716,7 @@
       makeActionButton(device, 'diagnostics.collect', '성능 다시 진단', 'primary', {}, !capability(device, 'diagnostics')),
       makeActionButton(device, 'startup.scan', '시작프로그램 조회', 'ghost', {}, !capability(device, 'startupManagement')),
       makeActionButton(device, 'updates.scan', '업데이트 상태', 'ghost', {}, !capability(device, 'windowsUpdate')),
-      makeActionButton(device, 'maintenance.temp_cleanup', '안전한 임시파일 정리', 'secondary', {}, !connected || !capability(device, 'storageMaintenance') || cleanupPending),
+      makeActionButton(device, 'maintenance.temp_cleanup', '안전한 임시파일 정리', 'secondary', {}, !reportFresh || device.management?.remoteCommandLevel !== 'managed' || !capability(device, 'storageMaintenance') || cleanupPending),
     );
 
     const proof = document.createElement('p');
