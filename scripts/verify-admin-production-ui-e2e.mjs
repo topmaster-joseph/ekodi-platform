@@ -709,9 +709,12 @@ for (const [id, group] of menus) {
       await page.waitForFunction(() => {
         const drawer = document.querySelector('.sidebar');
         const scrim = document.querySelector('[data-admin-drawer-scrim]');
+        const style = drawer && getComputedStyle(drawer);
+        const drawerRect = drawer?.getBoundingClientRect();
         return !document.body.classList.contains('admin-mobile-drawer-open')
           && !drawer?.classList.contains('open')
-          && (!scrim || scrim.hidden);
+          && (!scrim || scrim.hidden)
+          && (style?.visibility === 'hidden' || (drawerRect && drawerRect.right <= 2));
       }, null, { timeout: 5000 });
       const mobile = await page.evaluate(() => {
         const list = document.querySelector('.common-services-list-wrap');
@@ -725,12 +728,22 @@ for (const [id, group] of menus) {
           cardRight: card ? Math.round(card.getBoundingClientRect().right) : -1,
           viewportWidth: window.innerWidth,
           sidebarOpen: Boolean(document.querySelector('.sidebar')?.classList.contains('open')),
+          drawerVisibility: getComputedStyle(document.querySelector('.sidebar')).visibility,
+          cardUnobscured: (() => {
+            if (!card) return false;
+            const rect = card.getBoundingClientRect();
+            const x = Math.round((rect.left + rect.right) / 2);
+            const y = Math.round((rect.top + rect.bottom) / 2);
+            const top = document.elementFromPoint(x,y);
+            return Boolean(top && (top===card || card.contains(top)));
+          })(),
           srOnlyHidden: (() => {const note=card?.querySelector('.sr-only');const style=note&&getComputedStyle(note);return Boolean(note&&style?.position==='absolute'&&note.getBoundingClientRect().width<=1)})(),
         };
       });
       if (mobile.cardDisplay !== 'grid' || mobile.headerDisplay !== 'none' || mobile.summaryDisplay !== 'grid'
           || mobile.scrollExcess > 2 || mobile.sidebarOpen || mobile.cardLeft < -2
-          || mobile.cardRight > mobile.viewportWidth + 2 || !mobile.srOnlyHidden) {
+          || mobile.cardRight > mobile.viewportWidth + 2 || !mobile.srOnlyHidden
+          || mobile.drawerVisibility !== 'hidden' || !mobile.cardUnobscured) {
         throw new Error('ENGINE_CATALOG_STYLE_E2E mobile failed: ' + JSON.stringify(mobile));
       }
       console.log('[PROD-E2E] engine-all: stylesheet and compact desktop/mobile layout verified');
