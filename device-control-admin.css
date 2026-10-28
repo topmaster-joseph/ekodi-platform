@@ -247,3 +247,21 @@ body.admin-compact #deviceControlPanel .device-enrollment-result code{
   body.admin-compact #deviceControlPanel .device-quick-connect{grid-template-columns:1fr!important}
 }
 .ekodi-pos-agent-summary{display:grid;gap:4px;padding:11px 12px;border:1px solid rgba(125,211,252,.2);border-radius:12px;background:rgba(2,6,23,.18)}.ekodi-pos-agent-summary strong{font-size:12px}.ekodi-pos-agent-summary span{font-size:11px;opacity:.78;overflow-wrap:anywhere}.ekodi-pos-agent-summary small{font-size:10px;opacity:.58}
+
+
+/* EKODI-WINDOWS-PERFORMANCE-001: existing authenticated Device Control card. */
+.device-windows-performance{display:grid;gap:12px;padding:16px;border:1px solid var(--line,rgba(148,163,184,.26));border-radius:16px;background:rgba(125,211,252,.045);min-width:0}
+.device-performance-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.device-performance-heading h3{margin:3px 0 6px;font-size:1.02rem}
+.device-performance-heading small{font-size:.67rem;letter-spacing:.05em;opacity:.64}
+.device-performance-heading p{margin:0;font-size:.8rem;line-height:1.55;opacity:.72}
+.device-performance-freshness{font-size:.72rem;white-space:nowrap;font-weight:650}
+.device-performance-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.device-performance-stats>div{display:grid;gap:3px;padding:12px;border:1px solid var(--line,rgba(148,163,184,.23));border-radius:11px;min-width:0}
+.device-performance-stats small{font-size:.72rem;opacity:.7}
+.device-performance-stats strong{font-size:1.05rem;font-variant-numeric:tabular-nums}
+.device-performance-assessment,.device-performance-proof{margin:0;line-height:1.55;font-size:.81rem}
+.device-performance-proof{opacity:.68;overflow-wrap:anywhere}
+.device-performance-actions{margin-top:3px}
+@media(max-width:700px){.device-performance-heading{flex-direction:column}.device-performance-freshness{white-space:normal}.device-performance-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:420px){.device-performance-stats{grid-template-columns:1fr 1fr}.device-performance-actions{display:grid;grid-template-columns:1fr}.device-performance-actions button{width:100%}}
