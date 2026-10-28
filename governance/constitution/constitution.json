@@ -1,6 +1,6 @@
 {
-  "version": "1.27.5",
-  "effectiveDate": "2026-10-23",
+  "version": "1.27.6",
+  "effectiveDate": "2026-10-28",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -44,7 +44,8 @@
     "evidence-gated-external-knowledge",
     "automatic-execution-background-only-enforced",
     "public-by-default-site-publication-control",
-    "native-browser-execution-order-enforced"
+    "native-browser-execution-order-enforced",
+    "canonical-auth-entrypoints-enforced"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -137,7 +138,11 @@
     "subdomainUserEntryForbidden": true,
     "newWebSubdomainsForbidden": true,
     "legacySubdomainRedirectsForbidden": true,
-    "legacyAliasRole": "retirement-inventory-only"
+    "legacyAliasRole": "retirement-inventory-only",
+    "firstPartyAuthSubdomainsForbidden": true,
+    "firstPartyAdminSubdomainsForbidden": true,
+    "canonicalAuthenticationEntry": "https://ekodi.kr/auth/",
+    "canonicalAdministrationEntry": "https://ekodi.kr/admin/"
   },
   "legacyPathAliases": {
     "https://space.ekodi.kr/{slug}": "https://ekodi.kr/{slug}",
@@ -312,7 +317,10 @@
       "config/virtualization-routing-policy.json",
       "config/background-browser-worker-policy.json",
       "scripts/validate-virtualization-routing.mjs",
-      "test/automatic-execution-constitution.test.mjs"
+      "test/automatic-execution-constitution.test.mjs",
+      "config/domain-canonical-policy.json",
+      "scripts/zero-subdomain-guard.mjs",
+      "test/canonical-auth-constitution.test.mjs"
     ],
     "owner": "topmaster-joseph",
     "rule": "C2/C3 changes are proposed first and applied only after explicit owner confirmation."
@@ -946,7 +954,7 @@
       "my-misroute-recovery",
       "system-verification"
     ],
-    "version": "1.27.5",
+    "version": "1.27.6",
     "preLoginPageReturnMandatory": true,
     "everyLoginEntryMustCarryCurrentPageReturnTo": true,
     "shellStampsMissingReturnTo": true,
@@ -1338,5 +1346,60 @@
       "production-verification"
     ],
     "exceptionPolicy": "constitutional-amendment-required"
+  },
+  "canonicalAuthenticationEntryPolicy": {
+    "id": "CANONICAL-AUTH-ENTRY-001",
+    "version": "1.0.0",
+    "status": "enforced",
+    "mode": "mandatory-inherited",
+    "constitutionalAuthority": "ekodi_platform_super_administrator",
+    "orchestrationOwner": "ekodi-ai-orchestrator",
+    "canonicalOrigin": "https://ekodi.kr",
+    "authenticationEntry": "https://ekodi.kr/auth/",
+    "platformAdminEntry": "https://ekodi.kr/admin/",
+    "siteAdminPattern": "https://ekodi.kr/{site}/admin",
+    "appliesTo": "all-existing-and-future-ekodi-sites-services-workspaces-user-and-admin-pages",
+    "rules": {
+      "userFacingFirstPartyUrlsMustUseCanonicalApexPaths": true,
+      "loginButtonsAndProgrammaticLoginMustUseCanonicalAuthPath": true,
+      "noNewFirstPartyAuthOrAdminSubdomainEntrypoints": true,
+      "authenticatedUsersReuseCentralSessionWithoutRepeatedLogin": true,
+      "allLoginEntriesCaptureExactTrustedInitiatingUrl": true,
+      "preserveFunctionalQueryAndAdminChildPath": true,
+      "fallbackOnlyToInitiatingServicePublicEntry": true,
+      "genericMyEkodiFallbackForbidden": true,
+      "serverSideRealmAndWorkspaceAuthorizationRequired": true,
+      "apexOriginAloneNeverGrantsCrossTenantAccess": true,
+      "loginHandoffTokensAreSingleUseAndDoNotLeakToQueriesOrLogs": true,
+      "serviceLocalOverrideForbidden": true,
+      "aiAgentBypassForbidden": true,
+      "newLegacyHostReferenceBlocksCi": true,
+      "liveCanaryRequiredBeforeDeclaringProductionComplete": true,
+      "oldSubdomainRedirectIsNotMigrationCompletion": true
+    },
+    "temporaryMigrationDependency": {
+      "onlyRegisteredProviderCallbacksAndInternalExecutionBindings": true,
+      "neverPublicCanonicalOrUserLoginLink": true,
+      "requiresPerHostInventoryAndOwnerApprovedC3Cutover": true,
+      "preserveOAuthCspCorsCsrfSessionsPaymentAndWebhooks": true,
+      "preserveCustomerOwnedDomainsAndMailDns": true,
+      "noBulkDnsDeletionOrWildcardApexOriginAuthorization": true,
+      "providerCallbackMigrationBeforeHostRetirement": true,
+      "rollbackAndIndependentProductionEvidenceRequired": true
+    },
+    "enforcement": {
+      "runtimeCanonicalRegistry": "platform-route-registry.js",
+      "websitePolicy": "config/domain-canonical-policy.json",
+      "workspacePolicy": "config/service-workspace-policy.json",
+      "constitutionValidator": "scripts/validate-constitution.mjs",
+      "sourceRegressionGuard": "scripts/zero-subdomain-guard.mjs",
+      "legacyRetirementIssue": 5798,
+      "failClosedOnViolation": true
+    },
+    "forbiddenBrowserHostClasses": [
+      "auth-subdomain",
+      "admin-subdomain",
+      "all-first-party-subdomains"
+    ]
   }
 }
