@@ -187,12 +187,14 @@ async function resetAdminShellIfPoisoned() {
   });
   if (state.ready && state.panels && state.sidebar && state.token && state.visible) return false;
   console.warn(`[PROD-E2E] Admin shell degraded; bounded reload recovery ${JSON.stringify(state)}`);
-  await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
+  const reloadResponse = await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
+  if (reloadResponse?.status() === 429) throw new Error('CF-QUOTA-001 circuit open on Admin shell reload: HTTP 429; no retry or further requests');
   await waitForAdminShell();
   return true;
 }
 
 const response = await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
+if (response?.status() === 429) throw new Error('CF-QUOTA-001 circuit open on Admin entry: HTTP 429; no retry or further requests');
 if (!response || response.status() !== 200) throw new Error(`Admin entry returned ${response?.status() ?? 'no response'}`);
 await waitForAdminShell();
 
