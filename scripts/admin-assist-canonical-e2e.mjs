@@ -72,6 +72,10 @@ try {
   // forge authentication, or bypass the central /api/session readiness check.
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     const response = await page.goto(canonicalBaseUrl, { waitUntil: 'domcontentloaded' });
+    // CF-QUOTA-001: never wait 15s or make a second production request after the first 429.
+    if (response?.status() === 429) {
+      throw new Error('CF-QUOTA-001: canonical Admin returned HTTP 429; stop on first response, no retry');
+    }
     await page.waitForFunction(() => Boolean(sessionStorage.getItem('ekodi-auth-token')));
     try {
       await page.waitForSelector('#app:not([hidden])', { timeout: 15_000 });
