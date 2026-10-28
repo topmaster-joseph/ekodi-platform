@@ -66,17 +66,29 @@ export async function collectEkodiPreproductionEvidence({github,owner='topmaster
       const rollbackVerified=stages.some(j=>(j.steps||[]).some(s=>
         /^Verify guarded rollback readiness$/.test(clean(s.name,160))&&pass(s)));
       if(!rollbackVerified)continue;
+      // Distinguish the GitHub ZIP archive checksum from the *application*
+      // checksum validated by the staging job. They are NOT interchangeable.
+      // The official staging uploader must derive its artifact name from the
+      // verified build manifest digest, never a user-provided string.
+      const applicationVerified=stages.some(j=>(j.steps||[]).some(s=>
+        s.name==='Verify immutable application payload digest'&&pass(s)));
+      if(!applicationVerified)continue;
       const artifacts=await github.rest.actions.listWorkflowRunArtifacts({owner,repo,run_id:id,per_page:100});
-      const expectedName=`ekodi-preproduction-${task}`;
+      const expectedPrefix=`ekodi-preproduction-${task}-sha256-`;
       const qualifying=(artifacts.data?.artifacts||[]).filter(a=>
-        a.name===expectedName&&a.expired===false&&Number(a.size_in_bytes)>0&&
+        typeof a.name==='string'&&a.name.startsWith(expectedPrefix)&&
+        /^[a-f0-9]{64}$/i.test(a.name.slice(expectedPrefix.length))&&
+        a.expired===false&&Number(a.size_in_bytes)>0&&
         DIGEST.test(clean(a.digest,150))&&(!a.workflow_run?.id||Number(a.workflow_run.id)===id));
       if(qualifying.length!==1)continue;
       const a=qualifying[0],verifiedAt=new Date().toISOString();
+      const artifactDigest='sha256:'+a.name.slice(expectedPrefix.length).toLowerCase();
+      const archiveDigest=clean(a.digest,150).toLowerCase();
       return Object.freeze({
         verified:true,authority:'ekodi-orchestrator',source:'github-actions-staging-verifier',
         taskId:task,branchRef:branch,releaseSha,
-        artifactDigest:clean(a.digest,150),artifactId:Number(a.id),
+        artifactDigest,archiveDigest,artifactId:Number(a.id),
+        applicationDigestSource:'staging-validated-immutable-manifest',
         pullRequest:Number(pr.number),sourceHeadSha:headSha,
         requiredCiVerified:true,securityReviewVerified:true,stagingVerified:true,
         rollbackReady:true,stagingRunId:id,verifiedAt,
