@@ -966,3 +966,18 @@ html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-global-details
 html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-global-details[data-admin-site-classes="true"] .admin-detail-item{min-height:26px!important;padding:2px 8px!important;font-size:13px!important}
 html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-global-details[data-admin-site-classes="true"] .admin-detail-item:not([data-admin-site-class]){grid-column:1 / -1!important}
 html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-global-details[data-admin-site-classes="true"] .admin-detail-item b{display:none!important}
+
+/* ADMIN-MOBILE-DRAWER-VISUAL-004
+ * Closing the mobile drawer must remove it from the visual stacking layer
+ * immediately, even while the off-canvas transform transition is settling.
+ * Open drawers retain the existing animated navigation behavior. */
+@media(max-width:760px){
+  html body.admin-compact.ekodi-admin-design-engine .sidebar:not(.open){
+    visibility:hidden!important;
+    pointer-events:none!important;
+  }
+  html body.admin-compact.ekodi-admin-design-engine .sidebar.open{
+    visibility:visible!important;
+    pointer-events:auto!important;
+  }
+}

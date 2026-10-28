@@ -1,5 +1,6 @@
 import { CONVERGE_MAX_RUNS_PER_HEAD, CONVERGE_RUN_BUDGET_MS, mayHandOff, requiredChecksToHeal, workflowsToRedispatch } from './lib/converge-stuck-check.mjs';
 import { lanesForChangedFiles } from './lib/worker-bundle-graph.mjs';
+import { requiresHumanAuthorSchemaRelease, requiresCreatorAuthorRelease, releaseSpecForHumanAuthorSchema, releaseSpecForCreatorAuthor } from './lib/human-author-release-lane.mjs';
 import { unapprovedReleaseRunIds, staleParkedReleaseRunIds } from './lib/converge-unapproved-runs.mjs';
 import { fileURLToPath } from 'node:url';
 const repo=String(process.env.GITHUB_REPOSITORY||'').trim();
@@ -220,6 +221,8 @@ const controlApiTouched=changedFiles.some(file=>
   'tenant-access-authority.js',
   'access-governance.js',
   'mission-control-entry-worker.js',
+  // Search Visibility evidence D1 API is part of Control API deployment ownership.
+  'search-visibility-control.js',
   // Church Live host authority and runtime tenant mapping execute in Control API.
   // A token-mediated merge skips main push; dispatch the guarded API on these edits.
   'realtime-control.js',
@@ -336,6 +339,10 @@ const booksTouched=changedFiles.some(file=>
   file==='scripts/validate-books.mjs'||
   file==='.github/workflows/deploy-books.yml'
 );
+// PUBLISHING-HUMAN-PROD-001: Explicit server-authorized Supabase private schema
+// and existing Creator AI source lanes. GITHUB_TOKEN merges suppress main push.
+const humanAuthorSchemaTouched=requiresHumanAuthorSchemaRelease(changedFiles);
+const creatorAuthorTouched=requiresCreatorAuthorRelease(changedFiles);
 // Publishing static pages (ekodi.kr/publishing) are served by the Publishing Worker's assets.
 const publishingSiteTouched=changedFiles.some(file=>
   file.startsWith('publishing/')||
@@ -410,6 +417,9 @@ const sharedSiteTouched=changedFiles.some(file=>
   // Public Site publication controls are a Site Core admin bundle asset. This must
   // dispatch the guarded release after token-mediated protected merges (issue #6508).
   file==='admin-public-site-controls.js'||
+  // Growth OS search specialist is a dynamic Site Core Admin asset.
+  // Dispatch guarded Site Core even when only the lazy module changes.
+  file==='search-visibility-admin.js'||
   ['admin-menu-registry.js','admin-sidebar.js','admin-canonical-routes.js','admin-menu-layout.js','admin-menu-layout.compact.js','admin-menu-runtime.js','admin-demand-loader.js','release-control-admin.js','system-health-admin.js','admin-design-engine.js','config/design-engine.json','config/admin-role-navigation.json'].includes(file)||
   file==='workspace-admin-page.js'||
   // The Church pastor admin page is compiled into the shared Site Core route.
@@ -447,6 +457,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='seonammedi-monitor.js'||
   file==='seonammedi-relevance.js'||
   file==='wrangler.site.toml'||
+  // Invest's canonical public landing and member gate are shipped by Site Core.
+  file==='invest-access-ui.js'||
   file==='platform-router-entry-worker.js'||
   // Search-engine ownership meta tags and verification files are served by the Site Core router.
   file==='search-engine-verification.js'||
@@ -566,6 +578,34 @@ async function dispatchBundleGraphLanes(){
   if(notDispatched.length)console.log(JSON.stringify({ok:true,action:'bundle-graph-not-dispatched',workers:notDispatched.map(({name,config,excluded,touched})=>({name,config,excluded:excluded||'no lane registered',touched})),pr:pr.number,taskId}));
 }
 async function dispatchPostMergeDeploys(){
+  // Never dispatch a private-schema production migration on the unmerged source SHA.
+  // Verify the official merged PR and protected main are exactly the same commit.
+  // If main advances before dispatch, fail closed: the production workflow will
+  // also independently check its checkout SHA and signed orchestrator receipt.
+  if(humanAuthorSchemaTouched){
+    const mergedPr=await api('/pulls/'+pr.number);
+    if(!mergedPr.r.ok||mergedPr.data?.merged!==true)fail('human-author-schema-release: PR is not protected-merged');
+    const productionSha=String(mergedPr.data.merge_commit_sha||'');
+    const mainHead=await api('/git/ref/heads/main');
+    if(!mainHead.r.ok||String(mainHead.data?.object?.sha||'')!==productionSha)
+      fail('human-author-schema-release: main SHA changed; release must be re-authorized');
+    const spec=releaseSpecForHumanAuthorSchema({changedFiles,branch,mergeSha:productionSha});
+    const dispatch=await api('/actions/workflows/'+spec.workflow+'/dispatches',{
+      method:'POST',body:JSON.stringify({ref:spec.ref,inputs:spec.inputs})
+    });
+    if(dispatch.r.status!==204)fail('human-author-schema-release dispatch rejected '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,350));
+    console.log(JSON.stringify({ok:true,action:'protected-schema-release-dispatched',workflow:spec.workflow,
+      pr:pr.number,mergeSha:productionSha,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+  if(creatorAuthorTouched){
+    const spec=releaseSpecForCreatorAuthor({changedFiles,branch});
+    const dispatch=await api('/actions/workflows/'+spec.workflow+'/dispatches',{
+      method:'POST',body:JSON.stringify({ref:spec.ref,inputs:spec.inputs})
+    });
+    if(dispatch.r.status!==204)fail('Creator AI guarded deploy dispatch rejected '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,350));
+    console.log(JSON.stringify({ok:true,action:'creator-author-release-dispatched',workflow:spec.workflow,
+      pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
   if(orchestratorLiveVerificationTouched){
     const response=await api('/actions/workflows/verify-ekodi-orchestrator-live-e2e.yml/dispatches',{
       method:'POST',

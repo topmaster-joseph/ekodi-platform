@@ -28,7 +28,7 @@
       { name: 'API', host: 'ekodi.kr/api/health', rps: 620.26, p95: 43.4, error: 0 },
       { name: 'Biz', host: 'biz.ekodi.kr', rps: 690.79, p95: 40.7, error: 0 },
       { name: 'Marketing', host: 'marketing.ekodi.kr', rps: 204.40, p95: 98.8, error: 0 },
-      { name: 'Church', host: 'church.ekodi.kr', rps: 403.55, p95: 61.9, error: 0 },
+      { name: 'Church', host: 'ekodi.kr/ekodichurch', rps: 403.55, p95: 61.9, error: 0 },
       { name: 'Lab', host: 'lab.ekodi.kr', rps: 471.48, p95: 57.2, error: 0 },
     ],
   });

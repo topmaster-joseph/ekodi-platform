@@ -477,6 +477,9 @@
       "domain-control": {
         "audience": "platform-super-admin"
       },
+      "search-visibility": {
+        "audience": "platform-super-admin"
+      },
       "services": {
         "audience": "platform-super-admin"
       },

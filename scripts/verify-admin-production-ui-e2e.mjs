@@ -629,6 +629,16 @@ for (const [id, group] of menus) {
 
     await page.setViewportSize({width:390,height:844});
     try {
+      // Responsive screenshots must not be captured mid-transition.
+      // The desktop sidebar animates off-canvas after resizing to 390px.
+      // A partially visible sidebar can mask a broken mobile layout while
+      // computed grid/overflow metrics still pass.
+      await page.waitForFunction(() => {
+        const sidebar=document.querySelector('.sidebar');
+        const rect=sidebar?.getBoundingClientRect();
+        return sidebar && !sidebar.classList.contains('open') && rect && rect.right<=1;
+      }, null, {timeout:10000});
+      await page.evaluate(()=>{const main=document.querySelector('.app>main');if(main)main.scrollTop=0});
       const mobile=await page.evaluate(()=>{
         const p=document.querySelector('#ekodiInfraCosts');
         const summary=p.querySelector('.infra-summary');
@@ -640,12 +650,27 @@ for (const [id, group] of menus) {
           viewport:innerWidth,documentExcess:document.documentElement.scrollWidth-innerWidth,
           summaryColumns:colCount(summary),providerColumns:colCount(providers),
           invoiceTableScrollable:table.scrollWidth>table.clientWidth,
+          panelLeft:Math.round(p.getBoundingClientRect().left),
+          panelRight:Math.round(p.getBoundingClientRect().right),
+          sidebarRight:Math.round(document.querySelector('.sidebar').getBoundingClientRect().right),
+          headingBlockHeight:Math.round(p.querySelector('.infra-page-heading>div:first-child').getBoundingClientRect().height),
+          headingToActions:Math.round(
+            p.querySelector('.infra-heading-actions').getBoundingClientRect().top-
+            p.querySelector('.infra-page-heading>div:first-child').getBoundingClientRect().bottom
+          ),
+          actionsToNav:Math.round(
+            p.querySelector('.infra-jump-nav').getBoundingClientRect().top-
+            p.querySelector('.infra-heading-actions').getBoundingClientRect().bottom
+          ),
+          headingTop:Math.round(p.querySelector('h2').getBoundingClientRect().top),
         };
       });
       if(mobile.summaryColumns!==1||mobile.providerColumns!==1||
-         mobile.panelWidth>mobile.viewport+2||mobile.documentExcess>2||!mobile.invoiceTableScrollable)
-        throw new Error('INFRA_COST_MOBILE_LAYOUT_E2E failed: '+JSON.stringify(mobile));
-      await page.locator('#ekodiInfraCosts').scrollIntoViewIfNeeded();
+         mobile.panelWidth>mobile.viewport+2||mobile.documentExcess>2||!mobile.invoiceTableScrollable||
+         mobile.panelLeft<0||mobile.panelRight>mobile.viewport+2||mobile.sidebarRight>1||
+         mobile.headingBlockHeight>260||mobile.headingToActions<0||mobile.headingToActions>36||
+         mobile.actionsToNav<0||mobile.actionsToNav>36||mobile.headingTop<0||mobile.headingTop>240)
+        throw new Error('INFRA_COST_MOBILE_VISUAL_E2E failed: '+JSON.stringify(mobile));
       console.log('[PROD-E2E] infra-costs mobile responsive viewport verified: '+JSON.stringify(mobile));
       await page.screenshot({path:path.join(artifactsDir,'infra-costs-mobile-verified.png'),fullPage:false});
     } finally {
@@ -684,9 +709,12 @@ for (const [id, group] of menus) {
       await page.waitForFunction(() => {
         const drawer = document.querySelector('.sidebar');
         const scrim = document.querySelector('[data-admin-drawer-scrim]');
+        const style = drawer && getComputedStyle(drawer);
+        const drawerRect = drawer?.getBoundingClientRect();
         return !document.body.classList.contains('admin-mobile-drawer-open')
           && !drawer?.classList.contains('open')
-          && (!scrim || scrim.hidden);
+          && (!scrim || scrim.hidden)
+          && (style?.visibility === 'hidden' || (drawerRect && drawerRect.right <= 2));
       }, null, { timeout: 5000 });
       const mobile = await page.evaluate(() => {
         const list = document.querySelector('.common-services-list-wrap');
@@ -700,12 +728,22 @@ for (const [id, group] of menus) {
           cardRight: card ? Math.round(card.getBoundingClientRect().right) : -1,
           viewportWidth: window.innerWidth,
           sidebarOpen: Boolean(document.querySelector('.sidebar')?.classList.contains('open')),
+          drawerVisibility: getComputedStyle(document.querySelector('.sidebar')).visibility,
+          cardUnobscured: (() => {
+            if (!card) return false;
+            const rect = card.getBoundingClientRect();
+            const x = Math.round((rect.left + rect.right) / 2);
+            const y = Math.round((rect.top + rect.bottom) / 2);
+            const top = document.elementFromPoint(x,y);
+            return Boolean(top && (top===card || card.contains(top)));
+          })(),
           srOnlyHidden: (() => {const note=card?.querySelector('.sr-only');const style=note&&getComputedStyle(note);return Boolean(note&&style?.position==='absolute'&&note.getBoundingClientRect().width<=1)})(),
         };
       });
       if (mobile.cardDisplay !== 'grid' || mobile.headerDisplay !== 'none' || mobile.summaryDisplay !== 'grid'
           || mobile.scrollExcess > 2 || mobile.sidebarOpen || mobile.cardLeft < -2
-          || mobile.cardRight > mobile.viewportWidth + 2 || !mobile.srOnlyHidden) {
+          || mobile.cardRight > mobile.viewportWidth + 2 || !mobile.srOnlyHidden
+          || mobile.drawerVisibility !== 'hidden' || !mobile.cardUnobscured) {
         throw new Error('ENGINE_CATALOG_STYLE_E2E mobile failed: ' + JSON.stringify(mobile));
       }
       console.log('[PROD-E2E] engine-all: stylesheet and compact desktop/mobile layout verified');
@@ -728,6 +766,63 @@ for (const [id, group] of menus) {
             hiddenClass:panel.classList.contains('hidden-panel') } : null;
     });
     if (architectureLeak) throw new Error(`${id}: hidden architecture panel overpaints active workspace: ${JSON.stringify(architectureLeak)}`);
+  }
+
+  // ADMIN-ARCH-GRID-LIVE-E2E-20261028: verify actual computed columns on the
+  // authenticated *production* Admin, not only the presence of CSS declarations.
+  // Read-only checks and screenshots; do not mutate any customer or platform data.
+  if (id === 'architecture') {
+    const widths = [[1440,3],[1366,3],[768,2],[390,1],[320,1]];
+    const proof = [];
+    try {
+      await page.waitForFunction(() => {
+        const panel=document.querySelector('.content > .architecture[data-panel~="architecture"]');
+        return panel && !panel.hidden && !panel.classList.contains('hidden-panel')
+          && getComputedStyle(panel).display!=='none'
+          && panel.querySelectorAll('#structureLayers > article').length>=9;
+      }, null, {timeout:15000});
+      for (const [width, expectedColumns] of widths) {
+        await page.setViewportSize({width,height:width<=390?844:1000});
+        const metrics = await page.evaluate(() => {
+          const panel=document.querySelector('.content > .architecture[data-panel~="architecture"]');
+          const layers=panel?.querySelector('#structureLayers');
+          const serviceGrid=panel?.querySelector('#structureServiceRegistry .structure-service-grid');
+          const platformGrid=panel?.querySelector('#ekodiArchitectureMap .system-map-platform-grid');
+          const flow=panel?.querySelector('#structureFlow');
+          const cols=node => node ? getComputedStyle(node).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length : 0;
+          const arrows=flow?[...flow.children].filter(el=>el.tagName==='B'):[],arrowWidths=arrows.map(el=>Math.round(el.getBoundingClientRect().width));
+          return {
+            viewport:innerWidth, panelVisible:Boolean(panel&&!panel.hidden&&!panel.classList.contains('hidden-panel')&&getComputedStyle(panel).display!=='none'),
+            layers:cols(layers), services:serviceGrid?cols(serviceGrid):null,
+            platform:platformGrid?cols(platformGrid):null,
+            layerCards:layers?.querySelectorAll(':scope > article').length||0,
+            flowCards:flow?.querySelectorAll(':scope > div').length||0,
+            arrows:arrowWidths, arrowVisible:arrows.filter(el=>getComputedStyle(el).display!=='none').length,
+            documentOverflow:Math.max(0,document.documentElement.scrollWidth-innerWidth),
+            layerOverflow:layers?Math.max(0,layers.scrollWidth-layers.clientWidth):0,
+            panelWidth:Math.round(panel?.getBoundingClientRect().width||0),
+          };
+        });
+        if(!metrics.panelVisible||metrics.layers!==expectedColumns||
+           (metrics.services!==null&&metrics.services!==expectedColumns)||
+           (metrics.platform!==null&&metrics.platform!==expectedColumns)||
+           metrics.layerCards<9||metrics.flowCards!==4||
+           metrics.documentOverflow>2||metrics.layerOverflow>2||
+           (width>=1366&&(metrics.arrowVisible!==3||metrics.arrows.some(w=>w>30)))||
+           (width<=390&&metrics.arrowVisible!==0)) {
+          throw new Error('ADMIN_ARCHITECTURE_GRID_LIVE_E2E failed: '+JSON.stringify({expectedColumns,...metrics}));
+        }
+        proof.push({width,columns:metrics.layers,documentOverflow:metrics.documentOverflow});
+        if (width===768||width===390) {
+          await page.locator('#structureLayers').evaluate(node=>node.scrollIntoView({block:'start'}));
+          await page.screenshot({path:path.join(artifactsDir,`menu-architecture-${width}.png`),fullPage:false});
+        }
+      }
+      console.log('[PROD-E2E] architecture: authenticated production columns + arrows + overflow verified '+JSON.stringify(proof));
+    } finally {
+      await page.setViewportSize({width:1440,height:1000});
+      await page.evaluate(()=>{const main=document.querySelector('.app>main');if(main)main.scrollTop=0;});
+    }
   }
 
   if (id === 'social') {
@@ -817,6 +912,20 @@ for (const [id, group] of menus) {
         tabsScrollWidth:tabs?.scrollWidth,
         tabsClientWidth:tabs?.clientWidth,
         selected:document.querySelector('#social-tab-sites')?.getAttribute('aria-selected'),
+        mobileTabLayout:(()=>{
+          if(!tabs)return {columnCount:0,unclipped:false};
+          const items=[...tabs.querySelectorAll('[role="tab"]')];
+          const box=tabs.getBoundingClientRect();
+          const columnCount=getComputedStyle(tabs).gridTemplateColumns.split(/\s+/).filter(Boolean).length;
+          const unclipped=items.length===4 && tabs.scrollWidth <= tabs.clientWidth+2 &&
+            items.every(item=>{
+              const r=item.getBoundingClientRect();
+              return r.width>60 && item.scrollWidth<=item.clientWidth+2 &&
+                r.left>=box.left-2 && r.right<=box.right+2 &&
+                r.right<=innerWidth+2 && r.height>=44;
+            });
+          return {columnCount,unclipped};
+        })(),
         sidebarClosed:!document.querySelector('.sidebar')?.classList.contains('open')
           && !document.body.classList.contains('admin-mobile-drawer-open'),
         sidebarRight:document.querySelector('.sidebar')?.getBoundingClientRect().right,
@@ -833,7 +942,8 @@ for (const [id, group] of menus) {
     });
     if (mobile.hostLeft < -2 || mobile.hostRight > mobile.viewport+2 ||
         mobile.tabsHeight < 40 || mobile.selected !== 'true' ||
-        !mobile.sidebarClosed || mobile.sidebarRight>2 || !mobile.headingVisible) {
+        !mobile.sidebarClosed || mobile.sidebarRight>2 || !mobile.headingVisible ||
+        mobile.mobileTabLayout.columnCount!==2 || !mobile.mobileTabLayout.unclipped) {
       throw new Error('social: mobile drawer overlays workspace, heading inaccessible or tabs clipped at 390px: '+JSON.stringify(mobile));
     }
     await page.screenshot({path:path.join(artifactsDir,'menu-social-mobile.png'),fullPage:false});
