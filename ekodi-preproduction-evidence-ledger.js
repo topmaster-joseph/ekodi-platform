@@ -19,10 +19,12 @@ export async function recordVerifiedEkodiPreproductionEvidence(db,evidence,oidc=
   }
   const taskId=clean(evidence?.taskId,160),branchRef=clean(evidence?.branchRef,220);
   const releaseSha=clean(evidence?.releaseSha,80),artifactDigest=clean(evidence?.artifactDigest,150);
+  const archiveDigest=clean(evidence?.archiveDigest,150);
   if(evidence?.verified!==true||evidence?.source!=='github-actions-staging-verifier'||
      evidence.releaseAuthorized!==false||evidence.productionDeployed!==false||
      !BRANCH.test(branchRef)||!branchRef.endsWith('/'+taskId)||
-     !SHA.test(releaseSha)||!DIGEST.test(artifactDigest)||
+     !SHA.test(releaseSha)||!DIGEST.test(artifactDigest)||!DIGEST.test(archiveDigest)||
+     evidence.applicationDigestSource!=='staging-validated-immutable-manifest'||
      evidence.requiredCiVerified!==true||evidence.securityReviewVerified!==true||
      evidence.stagingVerified!==true||evidence.rollbackReady!==true||
      !Number.isSafeInteger(evidence.stagingRunId)||evidence.stagingRunId<1||
@@ -52,7 +54,8 @@ export async function recordVerifiedEkodiPreproductionEvidence(db,evidence,oidc=
   if(prior.preproductionProof?.taskId===taskId &&
      prior.preproductionProof?.branchRef===branchRef &&
      prior.preproductionProof?.releaseSha===releaseSha &&
-     prior.preproductionProof?.artifactDigest===artifactDigest){
+     prior.preproductionProof?.artifactDigest===artifactDigest &&
+     prior.preproductionProof?.archiveDigest===archiveDigest){
     let previous;
     try{
       previous=await db.prepare(
@@ -65,6 +68,7 @@ export async function recordVerifiedEkodiPreproductionEvidence(db,evidence,oidc=
        verified.authority==='ekodi-orchestrator'&&verified.source==='github-actions-oidc'&&
        verified.taskId===taskId&&verified.branchRef===branchRef&&
        verified.releaseSha===releaseSha&&verified.artifactDigest===artifactDigest&&
+       verified.archiveDigest===archiveDigest&&
        verified.verifiedAt===prior.preproductionProof.verifiedAt){
       return Object.freeze({recorded:true,idempotent:true,approvalGranted:false,
         taskId,branchRef,releaseSha,artifactDigest,productionDeployed:false});
@@ -79,13 +83,13 @@ export async function recordVerifiedEkodiPreproductionEvidence(db,evidence,oidc=
   }catch{return fail('approval_state_lookup_unavailable')}
 
   const preproductionProof=Object.freeze({
-    authority:'ekodi-orchestrator',taskId,branchRef,releaseSha,artifactDigest,
+    authority:'ekodi-orchestrator',taskId,branchRef,releaseSha,artifactDigest,archiveDigest,
     requiredCiVerified:true,stagingVerified:true,rollbackReady:true,
     securityReviewVerified:true,verifiedAt,
   });
   const attestation=Object.freeze({
     authority:'ekodi-orchestrator',source:'github-actions-oidc',taskId,branchRef,
-    releaseSha,artifactDigest,verifiedAt,
+    releaseSha,artifactDigest,archiveDigest,verifiedAt,
     stagingRunId:evidence.stagingRunId,artifactId:evidence.artifactId,
     workflowRunId:Number(oidc.runId),workflowRef:oidc.workflowRef,
     reviewHeadSha:clean(evidence.sourceHeadSha,80),
