@@ -352,15 +352,17 @@ async function handlePurge(req){
        .update({state:"deleted",deleted_at:new Date().toISOString()})
        .eq("document_id",record.id).neq("state","deleted");
      if(versionMarkError)throw new Error("PURGE_METADATA_UPDATE_FAILED");
+     // Persist attestation before marking the record as storage-purged:
+     // a crash before receipt commit must never produce a false success.
+     const {error:receiptError}=await admin.from("secure_document_purge_receipts")
+       .insert({document_id:record.id,operation:"storage_api_purge",result:"storage_confirmed",file_count:fileCount,backup_erased:false});
+     if(receiptError)throw new Error("PURGE_RECEIPT_FAILED");
      const {data:finalized,error:doneError}=await admin.from("secure_document_records")
        .update({storage_purged_at:new Date().toISOString(),purge_lease_until:null,updated_at:new Date().toISOString()})
        .eq("id",record.id).eq("status","deletion_pending").eq("legal_hold",false)
        .eq("purge_lease_until",lease).is("storage_purged_at",null)
        .select("id").maybeSingle();
      if(doneError||!finalized)throw new Error("PURGE_FINALIZATION_FAILED");
-     const {error:receiptError}=await admin.from("secure_document_purge_receipts")
-       .insert({document_id:record.id,operation:"storage_api_purge",result:"storage_confirmed",file_count:fileCount,backup_erased:false});
-     if(receiptError)throw new Error("PURGE_RECEIPT_FAILED");
      await audit("purged",null,record.id);
      verified++;
    }catch(error){
@@ -373,7 +375,7 @@ async function handlePurge(req){
      failed++;
    }
  }
- return json(req,{ok:true,storage_api_verified:verified,skipped:blocked,retry_required:failed,backup_erased:false});
+ return json(req,{ok:failed===0,storage_api_verified:verified,skipped:blocked,retry_required:failed,backup_erased:false},failed?503:200);
 }
 async function handleExpire(req){
  const expect=Deno.env.get("SECURE_DOCUMENT_SCHEDULER_TOKEN")||"";
