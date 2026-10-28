@@ -24,7 +24,7 @@ test('native Site Core and Admin probes are paced after the guarded deploy',()=>
     assert.doesNotMatch(src,/continue-on-error:\s*true/,'failed postdeploy checks must remain blocking');
     if(previous){
       assert.ok(src.includes('needs: [deploy, '+previous+']'),'expected previous verification for '+name);
-      assert.doesNotMatch(src,/if:\\s*\\$\\{\\{\\s*always\\(\\)/,
+      assert.doesNotMatch(src,/if:\s*\$\{\{\s*always\(\)/,
         'CF-QUOTA-001 must stop downstream production requests after any failed predecessor');
     }else{
       assert.match(src,/needs: deploy/);
