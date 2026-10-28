@@ -844,6 +844,10 @@
     if (posStatus) {
       values[3].textContent = '상태 보고 전용';
       card.append(head, meta, posAgentSummary(device, posStatus), foot);
+    } else if (windowsPerformanceRoute() && performance) {
+      // Keep the dedicated screen focused on diagnosis and proof. Full controls
+      // are one click away in the existing device-management screen.
+      card.append(head, meta, performance, foot);
     } else card.append(head, meta, health.firstElementChild, recommendationPanel(device), ...(performance ? [performance] : []), mainActions, ...(device.management?.type === 'pc' && !isInventory(device) && device.status !== 'revoked' ? [externalAuthPanel(device)] : []), advanced, foot);
     const proofCommand = latestCommandByType(device, 'software.localai.verify');
     const proof = proofCommand?.result?.localAiProof || device.diagnostics?.localAiProof;
@@ -1060,8 +1064,11 @@
     const list = document.querySelector('#ekodiDeviceList');
     if (!list) return;
     const grouped = groupRosterDevices(currentDevices);
-    const current = grouped.filter(group => !group.retired);
-    const counted = showRetiredGroups ? grouped : current;
+    // A Windows-only deep link must not show POS/Kiosk or count them in its summary.
+    const performanceMode = windowsPerformanceRoute();
+    const current = grouped.filter(group => !group.retired && (!performanceMode
+      || (group.primary.management?.type === 'pc' && !isInventory(group.primary) && group.primary.capabilities?.posAgent !== true)));
+    const counted = performanceMode ? current : showRetiredGroups ? grouped : current;
     const onlineGroups = current.filter(group => group.primary.status === 'online');
     const attentionGroups = current.filter(group => rosterNeedsAttention(group.primary));
     const scored = onlineGroups.filter(group => hasRosterHealthScore(group.primary));
