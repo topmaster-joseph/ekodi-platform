@@ -15,7 +15,12 @@ export async function verifyCooperativeProgress({contextFor,fixture:f,cooperativ
       const response=page.waitForResponse(r=>r.request().method()==='PUT'&&r.url().includes('/api/project'));
       await form.locator('button[type="submit"]').click();const r=await response;assert.equal(r.status(),expected);
       await page.waitForFunction(expected=>document.querySelector('#status').textContent.includes(expected),expected===200?'저장되었습니다.':'다른 기기');
-      if(expected===200)await open();return r.json();
+      if(expected===200){
+        await page.waitForFunction(()=>document.activeElement?.id==='progressSaveNext');
+        const visible=await page.locator('#progressSaveNext').evaluate(el=>{const b=el.getBoundingClientRect();return b.top>=0&&b.bottom<=innerHeight;});
+        assert.equal(visible,true,'successful save must bring the next action into view');
+        await open();
+      }return r.json();
     };
     await form.locator('[name="owner"]').fill('시험 운영담당');
     await form.locator('[name="status"]').selectOption('완료');

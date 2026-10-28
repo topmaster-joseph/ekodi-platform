@@ -24,9 +24,18 @@ await context.addInitScript(({ token, email }) => {
 const page = await context.newPage();
 const pageErrors = [];
 const consoleErrors = [];
+const adminHttpErrors = [];
+let sessionRouteHits = 0;
 const retiredApiRequests = [];
 const retiredApiHost = ['api','ekodi','kr'].join('.');
 page.on('pageerror', error => pageErrors.push(String(error?.message || error)));
+page.on('response', response => {
+  if (response.status() < 400) return;
+  try {
+    const url = new URL(response.url());
+    if (url.origin === new URL(ADMIN_URL).origin) adminHttpErrors.push({ path:url.pathname, status:response.status() });
+  } catch {}
+});
 page.on('request', request => {
   try {
     if (new URL(request.url()).hostname === retiredApiHost) retiredApiRequests.push(request.url());
@@ -41,6 +50,7 @@ page.on('console', message => {
 
 // Admin session validation is canonically served through the apex Core route.
 await page.route('https://ekodi.kr/api/session', async route => {
+  sessionRouteHits += 1;
   await route.fulfill({
     status: 200,
     contentType: 'application/json; charset=utf-8',
@@ -113,11 +123,34 @@ await page.route('https://ekodi.kr/api/control/ai/assist', async route => {
 });
 
 async function waitForAdminShell() {
-  await page.waitForFunction(() => document.documentElement.dataset.ekodiAdminReady === 'true', null, { timeout: 30000 });
-  await page.waitForFunction(() => window.EKODIAdminPanels && window.EKODIAdminSidebar, null, { timeout: 30000 });
-  await page.waitForFunction(expected => document.querySelectorAll('button[data-admin-global-group]').length >= expected, workAreas.length, { timeout: 30000 });
-  await page.waitForFunction(() => document.querySelectorAll('.admin-context-source .nav').length >= 1, null, { timeout: 30000 });
-  await page.waitForFunction(() => Boolean(document.documentElement.dataset.ekodiDesignEngine) && document.documentElement.dataset.ekodiDesignAudit === 'pass', null, { timeout: 30000 });
+  try {
+    await page.waitForFunction(() => document.documentElement.dataset.ekodiAdminReady === 'true', null, { timeout: 30000 });
+    await page.waitForFunction(() => window.EKODIAdminPanels && window.EKODIAdminSidebar, null, { timeout: 30000 });
+    await page.waitForFunction(expected => document.querySelectorAll('button[data-admin-global-group]').length >= expected, workAreas.length, { timeout: 30000 });
+    await page.waitForFunction(() => document.querySelectorAll('.admin-context-source .nav').length >= 1, null, { timeout: 30000 });
+    await page.waitForFunction(() => Boolean(document.documentElement.dataset.ekodiDesignEngine) && document.documentElement.dataset.ekodiDesignAudit === 'pass', null, { timeout: 30000 });
+  } catch (error) {
+    // Diagnostic is deliberately read-only and credential-free: only booleans,
+    // same-origin pathnames and bounded UI state are retained.
+    const state = await page.evaluate(() => ({
+      ready:document.documentElement.dataset.ekodiAdminReady || '',
+      booting:document.documentElement.dataset.ekodiAdminBooting || '',
+      bootAsset:document.documentElement.dataset.ekodiAdminBootAsset || '',
+      degraded:document.documentElement.dataset.ekodiAdminDegraded || '',
+      sessionDegraded:document.documentElement.dataset.ekodiSessionDegraded || '',
+      appHidden:Boolean(document.querySelector('#app')?.hidden),
+      loginVisible:Boolean(document.querySelector('#loginScreen') && !document.querySelector('#loginScreen').hidden),
+      hasCore:Boolean(window.EKODIAdminCore),
+      hasPanels:Boolean(window.EKODIAdminPanels),
+      hasSidebar:Boolean(window.EKODIAdminSidebar),
+      hasToken:Boolean(sessionStorage.getItem('ekodi-auth-token')),
+      scripts:[...document.querySelectorAll('script[src]')].filter(node => node.src.startsWith(location.origin)).map(node => new URL(node.src).pathname).slice(0,20),
+    })).catch(() => ({ unavailable:true }));
+    const diagnostic = { state, sessionRouteHits, httpErrors:adminHttpErrors.slice(-10), pageErrorCount:pageErrors.length, consoleErrorCount:consoleErrors.length };
+    console.error('[PROD-E2E] admin-shell-timeout ' + JSON.stringify(diagnostic));
+    await page.screenshot({ path:path.join(artifactsDir, 'admin-boot-timeout.png'), fullPage:true }).catch(() => {});
+    throw error;
+  }
 }
 
 async function resetAdminShellIfPoisoned() {
