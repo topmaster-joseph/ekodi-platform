@@ -24,7 +24,7 @@ test('native Site Core and Admin probes are paced after the guarded deploy',()=>
     assert.doesNotMatch(src,/continue-on-error:\s*true/,'failed postdeploy checks must remain blocking');
     if(previous){
       assert.ok(src.includes('needs: [deploy, '+previous+']'),'expected previous verification for '+name);
-      assert.ok(src.includes("if: \${{ always() && needs.deploy.result == 'success' }}"),
+      assert.ok(src.includes("if: ${{ always() && needs.deploy.result == 'success' }}"),
         'downstream browser verification must run after a failed prior probe but never after failed deployment');
     }else{
       assert.match(src,/needs: deploy/);
