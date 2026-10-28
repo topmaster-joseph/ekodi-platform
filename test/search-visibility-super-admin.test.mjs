@@ -20,8 +20,8 @@ test('SEARCH-VISIBILITY-001 has one super-admin menu under canonical settings ro
 });
 test('search visibility UI is shipped through versioned admin lazy assets',()=>{
   assert.match(read('admin-demand-loader.js'),/'search-visibility':\{styles:\['search-visibility-admin.css'\]/);
-  assert.match(read('admin-menu-layout.js'),/\['search-visibility','search-visibility'\]/);
-  assert.match(read('admin-menu-layout.compact.js'),/\["search-visibility","search-visibility"\]/);
+  assert.match(read('admin-menu-layout.js'),/DEMAND_KEYS\.get\(section\)\|\|section/);
+  assert.match(read('admin-menu-layout.compact.js'),/m\.get\(e\)\|\|e/);
   for(const asset of ['search-visibility-admin.js','search-visibility-admin.css']){
     assert.ok(read('scripts/build.mjs').includes("'"+asset+"'"));
     assert.ok(read('scripts/admin-performance-postbuild.mjs').includes("'"+asset+"'"));
