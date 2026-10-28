@@ -743,6 +743,63 @@ for (const [id, group] of menus) {
     if (architectureLeak) throw new Error(`${id}: hidden architecture panel overpaints active workspace: ${JSON.stringify(architectureLeak)}`);
   }
 
+  // ADMIN-ARCH-GRID-LIVE-E2E-20261028: verify actual computed columns on the
+  // authenticated *production* Admin, not only the presence of CSS declarations.
+  // Read-only checks and screenshots; do not mutate any customer or platform data.
+  if (id === 'architecture') {
+    const widths = [[1440,3],[1366,3],[768,2],[390,1],[320,1]];
+    const proof = [];
+    try {
+      await page.waitForFunction(() => {
+        const panel=document.querySelector('.content > .architecture[data-panel~="architecture"]');
+        return panel && !panel.hidden && !panel.classList.contains('hidden-panel')
+          && getComputedStyle(panel).display!=='none'
+          && panel.querySelectorAll('#structureLayers > article').length>=9;
+      }, null, {timeout:15000});
+      for (const [width, expectedColumns] of widths) {
+        await page.setViewportSize({width,height:width<=390?844:1000});
+        const metrics = await page.evaluate(() => {
+          const panel=document.querySelector('.content > .architecture[data-panel~="architecture"]');
+          const layers=panel?.querySelector('#structureLayers');
+          const serviceGrid=panel?.querySelector('#structureServiceRegistry .structure-service-grid');
+          const platformGrid=panel?.querySelector('#ekodiArchitectureMap .system-map-platform-grid');
+          const flow=panel?.querySelector('#structureFlow');
+          const cols=node => node ? getComputedStyle(node).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length : 0;
+          const arrows=flow?[...flow.children].filter(el=>el.tagName==='B'):[],arrowWidths=arrows.map(el=>Math.round(el.getBoundingClientRect().width));
+          return {
+            viewport:innerWidth, panelVisible:Boolean(panel&&!panel.hidden&&!panel.classList.contains('hidden-panel')&&getComputedStyle(panel).display!=='none'),
+            layers:cols(layers), services:serviceGrid?cols(serviceGrid):null,
+            platform:platformGrid?cols(platformGrid):null,
+            layerCards:layers?.querySelectorAll(':scope > article').length||0,
+            flowCards:flow?.querySelectorAll(':scope > div').length||0,
+            arrows:arrowWidths, arrowVisible:arrows.filter(el=>getComputedStyle(el).display!=='none').length,
+            documentOverflow:Math.max(0,document.documentElement.scrollWidth-innerWidth),
+            layerOverflow:layers?Math.max(0,layers.scrollWidth-layers.clientWidth):0,
+            panelWidth:Math.round(panel?.getBoundingClientRect().width||0),
+          };
+        });
+        if(!metrics.panelVisible||metrics.layers!==expectedColumns||
+           (metrics.services!==null&&metrics.services!==expectedColumns)||
+           (metrics.platform!==null&&metrics.platform!==expectedColumns)||
+           metrics.layerCards<9||metrics.flowCards!==4||
+           metrics.documentOverflow>2||metrics.layerOverflow>2||
+           (width>=1366&&(metrics.arrowVisible!==3||metrics.arrows.some(w=>w>30)))||
+           (width<=390&&metrics.arrowVisible!==0)) {
+          throw new Error('ADMIN_ARCHITECTURE_GRID_LIVE_E2E failed: '+JSON.stringify({expectedColumns,...metrics}));
+        }
+        proof.push({width,columns:metrics.layers,documentOverflow:metrics.documentOverflow});
+        if (width===768||width===390) {
+          await page.locator('#structureLayers').evaluate(node=>node.scrollIntoView({block:'start'}));
+          await page.screenshot({path:path.join(artifactsDir,`menu-architecture-${width}.png`),fullPage:false});
+        }
+      }
+      console.log('[PROD-E2E] architecture: authenticated production columns + arrows + overflow verified '+JSON.stringify(proof));
+    } finally {
+      await page.setViewportSize({width:1440,height:1000});
+      await page.evaluate(()=>{const main=document.querySelector('.app>main');if(main)main.scrollTop=0;});
+    }
+  }
+
   if (id === 'social') {
     // Read-only runtime interactions on the actually deployed Social Hub.
     // Never connect accounts, change settings, or invoke publish mutations.
