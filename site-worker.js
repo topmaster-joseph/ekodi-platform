@@ -187,6 +187,8 @@ const ADMIN_ASSETS = new Set([
   '/insurance-practice-admin.js',
   '/marketing-ai-admin.css',
   '/marketing-ai-admin.js',
+  '/growth-os-admin.js',
+  '/growth-os-admin.css',
   '/google-admin-auth.css',
   '/google-admin-auth.js',
   '/domains-hub.css',
