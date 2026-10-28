@@ -58,13 +58,101 @@
     } catch (error) { alert(error.message); }
     finally { trigger.disabled = false; trigger.textContent = prior; }
   }
+  async function refreshExternal() {
+    $('externalAudioPanel').hidden = false;
+    const status = $('externalClaimStatus');
+    try {
+      const [claims, library] = await Promise.all([
+        C.api('audiobook/claims'), C.api('audiobook/external-library'),
+      ]);
+      $('externalClaimForm').querySelector('button[type="submit"]').disabled = false;
+      const host = $('externalClaimList'); host.replaceChildren();
+      for (const claim of claims.claims || []) {
+        const p = document.createElement('p');
+        p.textContent = claim.retailer + ' · ' + claim.book_id + ' · ' +
+          ({ pending:'구매확인 중', verified:'승인됨', rejected:'반려됨', revoked:'권한 철회' }[claim.status] || claim.status);
+        host.append(p);
+      }
+      const books = $('externalAudioBooks'); books.replaceChildren();
+      for (const item of library.items || []) {
+        const row = document.createElement('article'); row.className = 'library-item';
+        const info = document.createElement('div'); const title = document.createElement('h3');
+        title.textContent = item.title; const p = document.createElement('p');
+        p.textContent = '외부 서점 구매 확인 완료 · 무료 오디오북 전용 (전자책 다운로드 권한 없음)';
+        const button = document.createElement('button'); button.type = 'button';
+        button.textContent = item.bonusStatus === 'preparing' ? '오디오북 제작 현황' : '오디오북 듣기';
+        const details = document.createElement('div'); info.append(title,p,button,details);
+        button.addEventListener('click',()=>openAudiobook(item,details,button));
+        row.append(C.cover(item),info);books.append(row);
+      }
+      status.textContent = '외부 구매확인 요청은 판매처 결제 확인 후 처리됩니다.';
+    } catch (e) {
+      status.textContent = '외부 구매확인 기능은 아직 준비 중입니다. ' + (e.status === 503 ? '운영 저장소 적용이 필요합니다.' : e.message);
+      $('externalClaimForm').querySelector('button[type="submit"]').disabled = true;
+    }
+  }
+  async function refreshExternalAdmin() {
+    try {
+      const pending = await C.api('admin/audiobook/claims');
+      $('externalAudioAdmin').hidden = false;
+      const host = $('externalPendingClaims'); host.replaceChildren();
+      for (const item of pending.claims || []) {
+        const panel = document.createElement('article'); panel.className = 'library-item';
+        const info = document.createElement('div'); const p = document.createElement('p');
+        p.textContent = item.retailer + ' / ' + item.book_id + ' / ' + item.buyer_email + ' / 주문번호 끝 ' + item.order_suffix;
+        const label = document.createElement('label'); label.textContent = '판매처에서 직접 확인한 전체 주문번호';
+        const number = document.createElement('input'); number.autocomplete='off'; number.maxLength=128;
+        const checked = document.createElement('label');
+        const box = document.createElement('input'); box.type = 'checkbox';
+        checked.append(box, document.createTextNode(' 판매처에서 실제 결제내역과 환불 여부를 직접 확인했습니다.'));
+        const approve = document.createElement('button'); approve.type='button'; approve.textContent='구매확인 승인';
+        approve.addEventListener('click',async()=>{
+          if(!box.checked||!number.value.trim()){alert('판매처 확인과 주문번호가 필요합니다.');return;}
+          approve.disabled=true;
+          try{
+            await C.api('admin/audiobook/claims/'+encodeURIComponent(item.id)+'/approve',{
+              method:'POST',body:{orderNumber:number.value.trim(),confirmedWithRetailer:true,verificationMethod:'retailer_portal'}
+            });
+            number.value='';refreshExternalAdmin();
+          }catch(e){alert(e.message)}finally{approve.disabled=false}
+        });
+        info.append(p,label,number,checked,approve);panel.append(info);host.append(panel);
+      }
+    } catch (e) { if(e.status!==401&&e.status!==403) $('externalAudioAdmin').hidden = true; }
+  }
+  async function initExternalClaims() {
+    const form = $('externalClaimForm');
+    try {
+      const catalog = await (await fetch(C.BASE+'/books.json',{cache:'no-store'})).json();
+      const select = $('audioClaimBook'); select.replaceChildren();
+      for (const b of catalog.books || []) if (b.bonusAudio?.included === true) {
+        const opt = document.createElement('option');opt.value=b.id;opt.textContent=b.title;select.append(opt);
+      }
+      if (!select.options.length) form.querySelector('button[type="submit"]').disabled = true;
+    } catch { form.querySelector('button[type="submit"]').disabled = true; }
+    form.addEventListener('submit',async(e)=>{
+      e.preventDefault();
+      const btn=form.querySelector('button[type="submit"]');
+      if (!btn || btn.disabled || !$('externalClaimConsent').checked) return;
+      btn.disabled=true;
+      try {
+        await C.api('audiobook/claims',{method:'POST',body:{
+          bookId:$('audioClaimBook').value,retailer:$('audioRetailer').value,
+          orderNumber:$('externalOrderNumber').value.trim(),consent:true,
+        }});
+        $('externalOrderNumber').value='';$('externalClaimConsent').checked=false;
+        await refreshExternal();
+      } catch(err) { $('externalClaimStatus').textContent=err.message; }
+      finally {btn.disabled=false}
+    });
+  }
   async function load() {
     try {
       const data = await C.api('library');
       $('libLogin').hidden = true;
       $('libStatus').textContent = `${data.email} · ${data.items.length}권`;
       const list = $('libraryList'); list.replaceChildren();
-      if (!data.items.length) { const p = document.createElement('p'); p.innerHTML = '아직 구매한 책이 없습니다. '; const a = document.createElement('a'); a.href = `${C.BASE}/#catalog`; a.textContent = '출판 목록 보기 →'; p.append(a); list.append(p); return; }
+      if (!data.items.length) { const p = document.createElement('p'); p.innerHTML = '아직 구매한 책이 없습니다. '; const a = document.createElement('a'); a.href = `${C.BASE}/#catalog`; a.textContent = '출판 목록 보기 →'; p.append(a); list.append(p); await refreshExternal(); return; }
       for (const item of data.items) {
         const row = document.createElement('article'); row.className = 'library-item';
         const info = document.createElement('div'); const h = document.createElement('h3'); h.textContent = item.title; const p = document.createElement('p');
@@ -82,6 +170,7 @@
         }
         row.append(C.cover(item), info, btn); list.append(row);
       }
+      await refreshExternal();
     } catch (e) {
       if (e.status === 401) { $('libStatus').textContent = '로그인이 필요합니다.'; $('libLogin').hidden = false; C.mountGoogle($('googleButton'), (t, err) => { $('accountStatus').textContent = t || ''; }, () => load().then(operatorPanel)); }
       else $('libStatus').textContent = e.message;
@@ -116,5 +205,6 @@
       label.append(input); row.append(info, label); host.append(row);
     }
   }
-  load().then(operatorPanel);
+  initExternalClaims();
+  load().then(() => {operatorPanel(); refreshExternalAdmin();});
 })();
