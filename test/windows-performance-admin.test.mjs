@@ -55,12 +55,12 @@ test('metrics do not promise benchmark gains or expose generic shell', () => {
 });
 
 test('cleanup receipt safely projects real aggregate counts and never fabricates zero', () => {
-  assert.match(agent, /removedFiles = \\$removed/);
-  assert.match(api, /if \(commandType === 'maintenance\\.temp_cleanup'\) \\{/);
-  assert.match(api, /Number\\.isSafeInteger\\(removedFiles\\) && removedFiles >= 0/);
-  assert.match(api, /summary\\.removedFiles = removedFiles/);
-  assert.match(panel, /cleanup\\.result\\?\\.freedMB == null \\? NaN/);
-  assert.match(panel, /cleanup\\.result\\?\\.removedFiles == null \\? NaN/);
-  assert.match(panel, /Number\\.isFinite\\(freed\\) && freed >= 0/);
-  assert.match(panel, /Number\\.isFinite\\(files\\) && files >= 0/);
+  assert.match(agent, /removedFiles = \$removed/);
+  assert.match(api, /if \(commandType === 'maintenance\.temp_cleanup'\) \{/);
+  assert.match(api, /Number\.isSafeInteger\(removedFiles\) && removedFiles >= 0/);
+  assert.match(api, /summary\.removedFiles = removedFiles/);
+  assert.match(panel, /cleanup\.result\?\.freedMB == null \? NaN/);
+  assert.match(panel, /cleanup\.result\?\.removedFiles == null \? NaN/);
+  assert.match(panel, /Number\.isFinite\(freed\) && freed >= 0/);
+  assert.match(panel, /Number\.isFinite\(files\) && files >= 0/);
 });
