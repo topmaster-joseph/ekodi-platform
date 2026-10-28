@@ -29,6 +29,26 @@
     <p class="buy-author" id="libStatus">불러오는 중입니다.</p>
     <div class="account-box" id="libLogin" hidden><p>구매한 책을 보려면 EKODI 계정(구글)으로 로그인해 주세요.</p><div id="googleButton"></div><p id="accountStatus" class="buy-msg" role="status"></p></div>
     <div class="library-list" id="libraryList"></div>
+    <section id="externalAudioPanel" hidden aria-label="외부 서점 구매자 오디오북 인증">
+      <h2>외부 서점 전자책 구매자 · 무료 오디오북</h2>
+      <p>유페이퍼 등에서 전자책을 구매한 경우 무료 오디오북 혜택을 신청할 수 있습니다. 판매처에서 실제 구매를 확인한 뒤 제공되며 현재 음원은 제작 중입니다.</p>
+      <form id="externalClaimForm">
+        <label for="audioRetailer">구매처</label>
+        <select id="audioRetailer" required><option value="upaper">유페이퍼</option><option value="google-play">Google Play Books</option><option value="amazon">Amazon Kindle</option></select>
+        <label for="audioClaimBook">도서</label><select id="audioClaimBook" required></select>
+        <label for="externalOrderNumber">판매처 주문번호</label><input id="externalOrderNumber" required autocomplete="off" maxlength="128" placeholder="실제 전자책 주문번호" />
+        <label><input id="externalClaimConsent" type="checkbox" required /> 구매확인을 위해 주문번호의 안전한 지문과 계정정보를 처리하는 데 동의합니다.</label>
+        <button type="submit">구매확인 신청</button>
+      </form>
+      <p id="externalClaimStatus" role="status"></p>
+      <div id="externalAudioBooks"></div>
+      <h3>구매확인 요청 현황</h3><div id="externalClaimList"></div>
+    </section>
+    <section id="externalAudioAdmin" hidden aria-label="외부 구매확인 관리자">
+      <h2>외부 서점 구매확인 심사</h2>
+      <p>실제 판매처에서 결제 및 환불 여부를 독립 확인한 뒤 주문번호를 입력해 승인합니다. 임의 승인이나 자동 지급은 허용하지 않습니다.</p>
+      <div id="externalPendingClaims"></div>
+    </section>
     <section class="operator-panel" id="operatorPanel" hidden aria-label="운영자 전자책 파일">
       <h2>운영자 · 판매용 전자책 파일</h2>
       <p>EPUB 3 파일을 올리면 구매자 내 서재에서 바로 받을 수 있습니다. 같은 도서에 다시 올리면 새 판본으로 교체됩니다.</p>
