@@ -15,7 +15,7 @@ test('constitutional apex authentication is inherited and non-overridable', () =
   assert.equal(auth.authenticationEntry, 'https://ekodi.kr/auth/');
   assert.equal(auth.platformAdminEntry, 'https://ekodi.kr/admin/');
   assert.equal(auth.appliesTo, 'all-existing-and-future-ekodi-sites-services-workspaces-user-and-admin-pages');
-  for (const name of ['auth.ekodi.kr', 'admin.ekodi.kr']) assert.ok(auth.forbiddenFirstPartyBrowserAuthHosts.includes(name));
+  for (const hostClass of ['auth-subdomain', 'admin-subdomain', 'all-first-party-subdomains']) assert.ok(auth.forbiddenBrowserHostClasses.includes(hostClass));
   for (const flag of ['allLoginEntriesCaptureExactTrustedInitiatingUrl','authenticatedUsersReuseCentralSessionWithoutRepeatedLogin','preserveFunctionalQueryAndAdminChildPath','apexOriginAloneNeverGrantsCrossTenantAccess','newLegacyHostReferenceBlocksCi','liveCanaryRequiredBeforeDeclaringProductionComplete'])
     assert.equal(auth.rules[flag], true, flag);
 });
