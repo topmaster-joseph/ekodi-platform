@@ -29,3 +29,9 @@
 2. Protected merge to main, staging and guarded site-core promotion.
 3. Authenticated Admin production Chromium run: 49/49 (or current authoritative menu count), actual drawer offscreen/hidden, first engine card unobscured, verified mobile screenshot and no regressions to Social Hub/infra-costs.
 4. Only then close the issue as delivered. Any `action_required`, cancelled or skipped check is not proof of success.
+
+## Exact-head authenticated revalidation after protected main synchronization
+- The first owner-authored checkpoint `203c05e0f16460eb6239018775263f1675a1de67` passed all ten genuine CI/guard jobs, including overlap review and Admin production verifier contract.
+- EKODI later synchronized new main `bd3a65c4689df5d8d1bafa3f429c4633d23dde3b` into the official branch, producing `98364ec39deea96746e9eaadbb795bdedecebfba`, whose bot-triggered check set was `action_required` rather than passed. This is a legitimate new-source CI gap, not grounds to re-use old green results.
+- No runtime/config change is introduced here; this owner-written documentation checkpoint deliberately requests fresh required checks for the *current official branch tip*. The protected EKODI Orchestrator remains sole authority for integration order and release. Never merge merely because this document exists.
+- Related PR #6530 remains separate and must be considered by the parallel-change guard. Preserve both E2E logic blocks and do not bypass labels, owner review or production gates.
