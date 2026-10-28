@@ -1,5 +1,5 @@
 {
-  "version": 11,
+  "version": 12,
   "evidence": {
     "generation": 10,
     "ledger": "ai_production_evidence",
@@ -10,6 +10,15 @@
     "name": "ekodi-auth-api",
     "config": "wrangler.api.toml",
     "requests": [
+      {
+        "url": "https://ekodi.kr/api/control/search-visibility?growth-search=release-canary-001",
+        "statuses": [
+          401,
+          403
+        ],
+        "redirect": "manual",
+        "rollbackVerify": false
+      },
       {
         "url": "https://ekodi.kr/api/public/preview/map?scope=ekodi&mode=platform",
         "statuses": [
