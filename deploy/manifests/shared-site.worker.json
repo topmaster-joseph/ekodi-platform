@@ -1,9 +1,33 @@
 {
-  "version": 110,
+  "version": 111,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
     "requests": [
+      {
+        "url": "https://ekodi.kr/admin/social-account-admin.js?social-id-ui=002",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": [
+          "data-social-search",
+          "data-social-filter",
+          "panel.dataset.adminListLayout='dashboard'",
+          "data-social-result-count"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/admin/social-account-admin.css?social-id-ui=002",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": [
+          "SOCIAL-ID-UI-002",
+          ".ekodi-social-grid",
+          "grid-template-columns:repeat(4,minmax(0,1fr))!important",
+          "max-width:none!important"
+        ],
+        "rollbackVerify": false
+      },
       {
         "url": "https://ekodi.kr/ekodibiz/seasonal-workers/",
         "statuses": [
