@@ -35,7 +35,10 @@ test('search, filter and empty state are connected to actual controls and result
   assert.match(script, /addEventListener\('input',\(\)=>filterProviders\(panel\)\)/);
   assert.match(script, /addEventListener\('change',\(\)=>filterProviders\(panel\)\)/);
   assert.match(script, /renderRows\(panel\.querySelector\('\[data-social-existing\]'\),legacy,'existing'\)/);
-  assert.match(script, /filterProviders\(panel\);\s*\}/);
+  // Rendering now initializes both provider cards and account-record filters.
+  assert.match(script, /filterProviders\(panel\);\s*filterAccounts\(panel\);\s*\}/);
+  assert.match(script, /addEventListener\('input',\(\)=>filterAccounts\(panel\)\)/);
+  assert.match(script, /addEventListener\('change',\(\)=>filterAccounts\(panel\)\)/);
 });
 
 test('filter function keeps status truth separate from registered and legacy counts', () => {
