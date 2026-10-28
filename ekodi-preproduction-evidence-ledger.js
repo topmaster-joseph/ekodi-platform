@@ -47,6 +47,21 @@ export async function recordVerifiedEkodiPreproductionEvidence(db,evidence,oidc=
   try{prior=JSON.parse(row.evidence_json||'{}')}catch{return fail('task_evidence_invalid')}
   if(!prior||typeof prior!=='object')return fail('task_evidence_invalid');
   if(Array.isArray(prior))prior={items:prior};
+  // The OIDC reconciler is scheduled. Do not reissue proof on every poll or
+  // invalidate a final confirmation that was already granted.
+  if(prior.preproductionProof?.taskId===taskId &&
+     prior.preproductionProof?.releaseSha===releaseSha &&
+     prior.preproductionProof?.artifactDigest===artifactDigest){
+    return Object.freeze({recorded:true,idempotent:true,approvalGranted:false,
+      taskId,branchRef,releaseSha,artifactDigest,productionDeployed:false});
+  }
+  try{
+    const priorApproval=await db.prepare(
+      "SELECT reason FROM ekodi_orchestrator_task_events WHERE task_id=? AND reason='final_promotion_approval_recorded' ORDER BY seq DESC LIMIT 1"
+    ).bind(taskId).first();
+    if(priorApproval)return fail('approval_already_recorded');
+  }catch{return fail('approval_state_lookup_unavailable')}
+
   const preproductionProof=Object.freeze({
     authority:'ekodi-orchestrator',taskId,branchRef,releaseSha,artifactDigest,
     requiredCiVerified:true,stagingVerified:true,rollbackReady:true,
