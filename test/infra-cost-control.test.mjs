@@ -60,3 +60,13 @@ test('infra cost navigation resets inherited workbench scroll and production bro
   assert.match(e2e,/INFRA_COST_MOBILE_LAYOUT_E2E/);
   assert.match(e2e,/Synthetic cost UI must not mutate production billing records/);
 });
+
+test('infra cost mobile title has no desktop 500px flex-basis whitespace',()=>{
+  const css=read('infra-cost-admin.css');
+  const desktop=css.match(/#ekodiInfraCosts \.infra-page-heading>div:first-child\{([^}]+)\}/);
+  assert.ok(desktop&&desktop[1].includes('flex:1 1 500px'));
+  const mobile=css.match(/@media\(max-width:900px\)\{([\s\S]*?)@media\(max-width:640px\)/);
+  assert.ok(mobile,'900px reflow rules must exist');
+  assert.match(mobile[1],/#ekodiInfraCosts \.infra-page-heading\{align-items:flex-start;flex-direction:column\}/);
+  assert.match(mobile[1],/#ekodiInfraCosts \.infra-page-heading>div:first-child\{flex:0 0 auto;width:100%;min-height:0\}/);
+});
