@@ -38,7 +38,7 @@ jobs:
         run: node scripts/validate-secure-documents-security.mjs
       - name: Execute deterministic security regression tests
         run: |
-          node --test test/secure-documents-release-security.test.mjs test/secure-documents-contract.test.mjs
+          node --test test/secure-documents-release-security.test.mjs test/secure-documents-contract.test.mjs test/secure-documents-purge-canary.test.mjs
       - name: Record independent-review boundary
         run: |
           echo 'Static verification only. Independent security/legal review and exact SHA human gate remain mandatory.'

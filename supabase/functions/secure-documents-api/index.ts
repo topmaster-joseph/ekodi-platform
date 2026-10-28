@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import {assertPurgeEligibility, removeVerifiedCiphertexts} from "./purge-guards.mjs";
 
 // EKODI Secure Documents: server-encrypted, owner/recipient-bound, fail-closed.
 const BUCKET="secure-documents-private";
@@ -285,7 +286,6 @@ async function handleRead(req,who,body){
 const purgeEnabled=()=>Deno.env.get("SECURE_DOCUMENTS_PURGE_ACTIVE")==="true"
  && Deno.env.get("SECURE_DOCUMENTS_PURGE_POLICY_APPROVED")==="true"
  && Deno.env.get("SECURE_DOCUMENTS_LEGAL_APPROVED")==="true";
-const isNotFound=error=>String(error?.statusCode||error?.status||"")==="404";
 async function handlePurge(req){
  const scheduler=Deno.env.get("SECURE_DOCUMENT_SCHEDULER_TOKEN")||"";
  const operator=Deno.env.get("SECURE_DOCUMENT_PURGE_OPERATOR_TOKEN")||"";
@@ -321,33 +321,16 @@ async function handlePurge(req){
      const {data:current,error:currentError}=await admin.from("secure_document_records")
        .select("id,owner_scope,owner_person_id,workspace_id,status,legal_hold,retention_until,purge_authorized_at,backup_policy_reviewed_at,purge_lease_until")
        .eq("id",record.id).single();
-     if(currentError||!current||current.status!=="deletion_pending"||current.legal_hold!==false
-       ||!current.retention_until||!Number.isFinite(Date.parse(current.retention_until))
-       ||Date.parse(current.retention_until)>Date.now()
-       ||!current.purge_authorized_at||!Number.isFinite(Date.parse(current.purge_authorized_at))
-       ||Date.parse(current.purge_authorized_at)>Date.now()
-       ||!current.backup_policy_reviewed_at||current.purge_lease_until!==lease)
-       throw new Error("RETENTION_REVIEW_CHANGED");
+     if(currentError||!current)throw new Error("RETENTION_REVIEW_CHANGED");
+     assertPurgeEligibility(current,{lease});
      const {data:versions,error:versionError}=await admin.from("secure_document_versions")
        .select("id,storage_key").eq("document_id",current.id)
        .order("version_number",{ascending:true}).limit(10000);
-     if(versionError||!versions?.length)throw new Error("PURGE_VERSION_SET_INVALID");
-     const expected=current.owner_scope+"/"+(current.owner_person_id||current.workspace_id)+"/"+current.id+"/";
-     const keys=versions.map(v=>v.storage_key);
-     if(keys.some(k=>typeof k!=="string"||!k.startsWith(expected)||!k.endsWith(".bin")||k.includes("..")||k.length>260))
-       throw new Error("PURGE_KEY_SCOPE_INVALID");
-     fileCount=keys.length;
-     // Supabase explicitly prohibits SQL deletion of Storage metadata. Use
-     // Storage API to remove actual object bytes; retry safely when interrupted.
-     for(let i=0;i<keys.length;i+=100){
-       const batch=keys.slice(i,i+100);
-       const {error:removeError}=await admin.storage.from(BUCKET).remove(batch);
-       if(removeError)throw new Error("STORAGE_REMOVE_FAILED");
-       for(const key of batch){
-         const {data:stillPresent,error:infoError}=await admin.storage.from(BUCKET).info(key);
-         if(stillPresent||!isNotFound(infoError))throw new Error("STORAGE_REMOVAL_UNVERIFIED");
-       }
-     }
+     if(versionError)throw new Error("PURGE_VERSION_SET_INVALID");
+     // Testable, strict object-path isolation; includes checking the entire
+     // Storage prefix is empty before metadata success is recorded.
+     const verifiedObjects=await removeVerifiedCiphertexts(admin.storage.from(BUCKET),current,versions);
+     fileCount=verifiedObjects.fileCount;
      const {error:versionMarkError}=await admin.from("secure_document_versions")
        .update({state:"deleted",deleted_at:new Date().toISOString()})
        .eq("document_id",record.id).neq("state","deleted");

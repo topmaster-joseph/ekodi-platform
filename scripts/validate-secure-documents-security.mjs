@@ -41,7 +41,8 @@ export function auditSecureDocuments({policy,release,sql,edge,widget}) {
     'deletion must revoke access before asynchronous purge and never claim erased backups');
   fail(edge.includes('async function handlePurge')&&edge.includes('SECURE_DOCUMENTS_PURGE_ACTIVE')&&
     edge.includes('SECURE_DOCUMENT_PURGE_OPERATOR_TOKEN')&&
-    edge.includes('storage.from(BUCKET).remove(batch)')&&edge.includes('storage.from(BUCKET).info(key)')&&
+    edge.includes('removeVerifiedCiphertexts(admin.storage.from(BUCKET),current,versions)')&&
+    edge.includes('assertPurgeEligibility(current,{lease})')&&
     edge.includes('backup_erased:false'),
     'separate retention/backup-verified purge lane required');
   fail(edge.includes('redaction_verified===true')&&edge.includes('pii_safe===true')&&

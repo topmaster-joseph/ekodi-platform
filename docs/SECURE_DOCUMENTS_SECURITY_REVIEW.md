@@ -33,3 +33,6 @@ Orchestrator tracker: https://github.com/topmaster-joseph/ekodi-platform/issues/
 
 ## Retention and purge lane (added, NOT approved)
 Review `supabase/migrations/20261028093000_secure_documents_retention_purge.sql` and the disabled server-only `purge` endpoint. All records start with `legal_hold=true`, missing retention review and no purge authorization. Even with exact owner/SHA approval, do not activate without independent tests for races, metadata drift, transient Storage failures, restored DB metadata and backup policy. A Storage API removal receipt is **not** a certificate that backups or downloaded copies were erased.
+
+## Synthetic isolated purge canaries
+The shared `purge-guards.mjs` module is imported by the Deno API and also by `test/secure-documents-purge-canary.test.mjs`. Mock Storage API checks simulate successful deletion, missing-file idempotency, unauthorized owner/tenant path, duplicate or malformed versions, retention/hold/lease races, scanner-like storage API failures, and undocumented/orphan files left under the document prefix. Only `remove`, `info`, and `list` are invoked on a mock; **no real content is uploaded or deleted**. These deterministic tests are NOT an independently signed live authenticated upload/deletion end-to-end canary.

@@ -90,8 +90,8 @@ test('purge engine is independently disabled and records only verified storage A
  assert.match(api,/lte\("retention_until",now\)/);
  assert.match(api,/lte\("purge_authorized_at",now\)/);
  assert.match(api,/backup_erased:false/);
- assert.match(api,/admin\.storage\.from\(BUCKET\)\.remove\(batch\)/);
- assert.match(api,/admin\.storage\.from\(BUCKET\)\.info\(key\)/);
+ assert.match(api,/removeVerifiedCiphertexts\(admin\.storage\.from\(BUCKET\),current,versions\)/);
+ assert.match(api,/assertPurgeEligibility\(current,\{lease\}\)/);
  assert.doesNotMatch(api,/delete\(\)\.eq\("bucket_id"/);
  assert.ok(widget.includes('백업 보존 확인 대기'));
 });
