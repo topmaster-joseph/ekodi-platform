@@ -887,6 +887,20 @@ for (const [id, group] of menus) {
         tabsScrollWidth:tabs?.scrollWidth,
         tabsClientWidth:tabs?.clientWidth,
         selected:document.querySelector('#social-tab-sites')?.getAttribute('aria-selected'),
+        mobileTabLayout:(()=>{
+          if(!tabs)return {columnCount:0,unclipped:false};
+          const items=[...tabs.querySelectorAll('[role="tab"]')];
+          const box=tabs.getBoundingClientRect();
+          const columnCount=getComputedStyle(tabs).gridTemplateColumns.split(/\s+/).filter(Boolean).length;
+          const unclipped=items.length===4 && tabs.scrollWidth <= tabs.clientWidth+2 &&
+            items.every(item=>{
+              const r=item.getBoundingClientRect();
+              return r.width>60 && item.scrollWidth<=item.clientWidth+2 &&
+                r.left>=box.left-2 && r.right<=box.right+2 &&
+                r.right<=innerWidth+2 && r.height>=44;
+            });
+          return {columnCount,unclipped};
+        })(),
         sidebarClosed:!document.querySelector('.sidebar')?.classList.contains('open')
           && !document.body.classList.contains('admin-mobile-drawer-open'),
         sidebarRight:document.querySelector('.sidebar')?.getBoundingClientRect().right,
@@ -903,7 +917,8 @@ for (const [id, group] of menus) {
     });
     if (mobile.hostLeft < -2 || mobile.hostRight > mobile.viewport+2 ||
         mobile.tabsHeight < 40 || mobile.selected !== 'true' ||
-        !mobile.sidebarClosed || mobile.sidebarRight>2 || !mobile.headingVisible) {
+        !mobile.sidebarClosed || mobile.sidebarRight>2 || !mobile.headingVisible ||
+        mobile.mobileTabLayout.columnCount!==2 || !mobile.mobileTabLayout.unclipped) {
       throw new Error('social: mobile drawer overlays workspace, heading inaccessible or tabs clipped at 390px: '+JSON.stringify(mobile));
     }
     await page.screenshot({path:path.join(artifactsDir,'menu-social-mobile.png'),fullPage:false});

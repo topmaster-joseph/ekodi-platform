@@ -62,3 +62,12 @@ test('Social Hub layout is responsive and uses a contained workspace rather than
   assert.match(styles,/@media\(max-width:760px\)/);
   assert.match(styles,/@media\(prefers-reduced-motion:reduce\)/);
 });
+
+test('Social Hub mobile workflow tabs are a readable two-column grid without clipping', async () => {
+  assert.match(styles, /@media\(max-width:760px\)/);
+  assert.match(styles, /\.social-workspace-tabs\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(styles, /\.social-workspace-tab\{width:100%;min-width:0;max-width:100%;white-space:normal/);
+  const e2e=await readFile(new URL('../scripts/verify-admin-production-ui-e2e.mjs',import.meta.url),'utf8');
+  assert.match(e2e, /mobile\.mobileTabLayout\.columnCount!==2/);
+  assert.match(e2e, /!mobile\.mobileTabLayout\.unclipped/);
+});
