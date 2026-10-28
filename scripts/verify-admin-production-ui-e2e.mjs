@@ -690,6 +690,17 @@ for (const [id, group] of menus) {
     if (restoredCount !== siteCount) throw new Error(`social: clearing search did not restore site cards (${restoredCount}/${siteCount})`);
 
     await page.setViewportSize({width:390,height:844});
+    // The E2E navigates many desktop menus before resizing. Closing the
+    // mobile drawer through the real keyboard handler is essential: a DOM-only
+    // pass with the menu overlay still covering the content is not visual proof.
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => {
+      const sidebar=document.querySelector('.sidebar');
+      const rect=sidebar?.getBoundingClientRect();
+      return sidebar && !sidebar.classList.contains('open')
+        && !document.body.classList.contains('admin-mobile-drawer-open')
+        && rect && rect.right <= 2;
+    }, null, {timeout:5000});
     const mobile = await page.evaluate(() => {
       const host = document.querySelector('#socialAdmin');
       const tabs = document.querySelector('#socialAdmin .social-workspace-tabs');
@@ -700,11 +711,24 @@ for (const [id, group] of menus) {
         tabsScrollWidth:tabs?.scrollWidth,
         tabsClientWidth:tabs?.clientWidth,
         selected:document.querySelector('#social-tab-sites')?.getAttribute('aria-selected'),
+        sidebarClosed:!document.querySelector('.sidebar')?.classList.contains('open')
+          && !document.body.classList.contains('admin-mobile-drawer-open'),
+        sidebarRight:document.querySelector('.sidebar')?.getBoundingClientRect().right,
+        headingVisible:(()=>{
+          const heading=document.querySelector('#socialAdmin .social-admin-head h2');
+          if(!heading)return false;
+          const box=heading.getBoundingClientRect();
+          const point=document.elementFromPoint(Math.min(innerWidth-4,Math.max(4,box.left+12)),Math.min(innerHeight-4,Math.max(4,box.top+12)));
+          return box.width>0 && box.height>0 && box.left>=0 && box.top>=0
+            && box.left<innerWidth && box.top<innerHeight
+            && Boolean(point && (point===heading || heading.contains(point)));
+        })(),
       };
     });
     if (mobile.hostLeft < -2 || mobile.hostRight > mobile.viewport+2 ||
-        mobile.tabsHeight < 40 || mobile.selected !== 'true') {
-      throw new Error('social: responsive workspace clipping or tabs lost on 390px mobile: '+JSON.stringify(mobile));
+        mobile.tabsHeight < 40 || mobile.selected !== 'true' ||
+        !mobile.sidebarClosed || mobile.sidebarRight>2 || !mobile.headingVisible) {
+      throw new Error('social: mobile drawer overlays workspace, heading inaccessible or tabs clipped at 390px: '+JSON.stringify(mobile));
     }
     await page.screenshot({path:path.join(artifactsDir,'menu-social-mobile.png'),fullPage:false});
     await page.setViewportSize({width:1440,height:1000});
