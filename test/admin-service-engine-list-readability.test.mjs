@@ -62,3 +62,14 @@ test('service engine mobile evidence closes drawer and proves cards are unobscur
   assert.match(source,/mobile\.cardRight > mobile\.viewportWidth \+ 2/);
   assert.match(source,/menu-engine-all-mobile\.png/);
 });
+
+test('screen-reader service metadata is visually hidden but preserved in DOM',()=>{
+  const css=read('common-services-admin.css');
+  const js=read('common-services-admin.js');
+  const e2e=read('scripts/verify-admin-production-ui-e2e.mjs');
+  assert.match(css,/\.common-services-panel \.sr-only\{/);
+  assert.match(css,/position:absolute!important/);
+  assert.match(css,/clip-path:inset\(50%\)!important/);
+  assert.match(js,/class="sr-only">기능/);
+  assert.match(e2e,/!mobile\.srOnlyHidden/);
+});
