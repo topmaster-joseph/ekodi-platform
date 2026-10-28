@@ -141,3 +141,30 @@ test('architecture focus is isolated, read-only and not mistaken for all-menu ac
   assert.match(worker,/page\.setViewportSize\(\{width:1440,height:1100\}\)/);
   assert.doesNotMatch(worker,/setInterval\(|process\.env\.E2E_ADMIN_TOKEN\s*=/);
 });
+
+test('publication controls focused proof uses a genuine read-only Admin session and five redacted viewports',async()=>{
+  const [scope,worker,retry,workflow,visual]=await Promise.all([
+    readFile(new URL('../scripts/lib/admin-e2e-menu-scope.mjs',import.meta.url),'utf8'),
+    workerSource(),retrySource(),productionWorkflowSource(),
+    readFile(new URL('../scripts/lib/admin-public-site-visual-proof.mjs',import.meta.url),'utf8')
+  ]);
+  assert.match(scope,/\['social-accounts', 'architecture', 'public-site-controls'\]/);
+  assert.match(retry,/\['social-accounts','architecture','public-site-controls'\]/);
+  assert.match(workflow,/^\s*-\s*public-site-controls\s*$/m);
+  assert.match(workflow,/public-site-controls-focused-production-/);
+  assert.match(workflow,/public-site-controls-geometry\.json/);
+  assert.match(workflow,/public-site-controls-\*\.png/);
+  assert.match(worker,/verifyPublicationVisualProof\(page, artifactsDir\)/);
+  assert.match(visual,/PUBLIC_SITE_VISUAL_WIDTHS = Object\.freeze\(\[320, 390, 768, 1366, 1440\]\)/);
+  assert.match(visual,/page\.setViewportSize\(\{width, height:/);
+  assert.match(visual,/documentOverflow > 2/);
+  assert.match(visual,/trackCount !== \(width <= 900 \? 1 : 2\)/);
+  assert.match(visual,/search\.fill\('cgma'\)/);
+  assert.match(visual,/filter\.selectOption\('public'\)/);
+  assert.match(visual,/\[data-psc-reset\]/);
+  assert.match(visual,/if \(changes\.length !== 0\)/);
+  assert.match(visual,/maskColor:'#d1d5db'/);
+  assert.match(visual,/productionMutation:false/);
+  assert.doesNotMatch(visual,/method:\s*['"]PUT['"]|setInterval\(|process\.env\.E2E_ADMIN_TOKEN\s*=/);
+  assert.match(workflow,/Revoke short-lived E2E session/);
+});
