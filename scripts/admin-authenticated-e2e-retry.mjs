@@ -32,7 +32,7 @@ const focusOnly = menuIds.length !== allMenuIds.length;
 const productionRegistryUrl = 'https://ekodi.kr/admin-menu-registry.js';
 const maturityApiUrl = 'https://ekodi.kr/api/control/platform-maturity';
 const e2eAdminToken = String(process.env.E2E_ADMIN_TOKEN || '').trim();
-const productionConvergenceAttempts = 36;
+const productionConvergenceAttempts = focusOnly ? 1 : 36; // CF-QUOTA-001: focused acceptance never fans out preflight polls
 const productionConvergenceDelayMs = 5_000;
 const quotaConfig = JSON.parse(await fs.readFile(fileURLToPath(new URL('../config/cloudflare-production-quota-guard.json', import.meta.url)), 'utf8'));
 function throwIfQuotaCircuit(status, body, label) {
