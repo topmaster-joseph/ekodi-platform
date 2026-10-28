@@ -1397,7 +1397,7 @@ jobs:
           const receipt={policyId:'CF-QUOTA-001',schemaVersion:1,
             releaseSha:process.env.GITHUB_SHA,
             conclusion:verified?'verified':'blocked',
-            firstFailure,productionRequestsMade:0,
+            firstFailure,receiptJobProductionRequests:0,
             evidence};
           fs.writeFileSync('artifacts/site-core-postdeploy-browser-verification.json',JSON.stringify(receipt,null,2));
           console.log('[EKODI][CF-QUOTA-001] postdeploy verification receipt:',JSON.stringify(receipt));
