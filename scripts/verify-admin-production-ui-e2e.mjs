@@ -78,6 +78,25 @@ const syntheticJson = body => ({
   body: JSON.stringify(body),
 });
 
+// Invoice controls must be tested against deterministic, non-sensitive
+// read-only fixtures. Never authenticate this synthetic browser to billing API.
+await page.route('**/api/control/infra-costs', async route => {
+  if (route.request().method() !== 'GET') throw new Error('Synthetic cost UI must not mutate production billing records');
+  await route.fulfill(syntheticJson({
+    ok: true,
+    generatedAt: '2026-10-28T00:00:00Z',
+    overview: { totalsMinorByCurrency:{USD:500,KRW:12000},unverified:1,overdue:0,dueSoon:0,renewSoon:0,budgetAlerts:[] },
+    providers: [
+      {id:'cloudflare',name:'Cloudflare',category:'호스팅·서버'},
+      {id:'github',name:'GitHub',category:'개발·CI'},
+    ],
+    invoices: [
+      {id:'fixture-cloudflare-1',provider:'cloudflare',invoice_number:'TEST-CF-001',account_label:'fixture cloud',amount_minor:500,currency:'USD',issued_on:'2026-10-25',due_on:'2026-10-30',status:'unverified'},
+      {id:'fixture-github-1',provider:'github',invoice_number:'TEST-GH-002',account_label:'fixture github',amount_minor:12000,currency:'KRW',issued_on:'2026-10-24',due_on:'2026-10-29',status:'paid'},
+    ],
+    budgets: [], renewals: [], usage: [],
+  }));
+});
 await page.route('**/api/control/overview', async route => {
   if (route.request().method() === 'OPTIONS') return route.fulfill(syntheticJson({ ok:true }));
   await route.fulfill(syntheticJson({ ok:true, services:[] }));
@@ -565,6 +584,75 @@ for (const [id, group] of menus) {
     throw new Error(`${id} did not render a visible non-empty panel: ${JSON.stringify(visiblePanel)}`);
   }
   if (id === 'campus' && visiblePanel.id !== 'campusPanel') throw new Error(`Campus rendered unexpected panel: ${visiblePanel.id || '(no id)'}`);
+  if (id === 'infra-costs') {
+    // PROD-E2E: accepting a DOM-only panel can still screenshot a different
+    // section when the Admin workspace retains a previous scroll position.
+    await page.waitForFunction(() => {
+      const panel=document.querySelector('#ekodiInfraCosts');
+      return panel && !panel.hidden && !panel.classList.contains('hidden-panel')
+        && panel.querySelectorAll('[data-infra-invoices] tr').length===2;
+    }, null, {timeout:15000});
+    const geometry=await page.evaluate(() => {
+      const panel=document.querySelector('#ekodiInfraCosts');
+      const main=document.querySelector('.app>main');
+      const rect=panel.getBoundingClientRect();
+      const mainRect=main.getBoundingClientRect();
+      const x=Math.min(innerWidth-10,Math.round(rect.left+Math.min(280,rect.width/2)));
+      const y=Math.min(innerHeight-10,Math.round(rect.top+35));
+      const hit=document.elementFromPoint(x,Math.max(10,y));
+      return {
+        panelTop:Math.round(rect.top),panelWidth:Math.round(rect.width),
+        mainWidth:Math.round(mainRect.width),viewportWidth:innerWidth,
+        mainScroll:Math.round(main.scrollTop),
+        hitInPanel:Boolean(hit&&panel.contains(hit)),hitTag:hit?.tagName||'',
+        heading:panel.querySelector('h2')?.textContent?.trim()||'',
+      };
+    });
+    if(geometry.heading!=='비용·인프라 관리'||geometry.panelTop < -5||geometry.panelTop>200||
+       geometry.mainScroll>30||geometry.panelWidth<geometry.mainWidth*.75||!geometry.hitInPanel)
+      throw new Error('INFRA_COST_VISIBLE_VIEWPORT_E2E failed: '+JSON.stringify(geometry));
+    console.log('[PROD-E2E] infra-costs desktop viewport and heading verified: '+JSON.stringify(geometry));
+    await page.screenshot({path:path.join(artifactsDir,'infra-costs-desktop-verified.png'),fullPage:false});
+
+    const search=page.locator('#ekodiInfraCosts [data-infra-invoice-search]');
+    const status=page.locator('#ekodiInfraCosts [data-infra-invoice-filter]');
+    const count=page.locator('#ekodiInfraCosts [data-infra-filter-count]');
+    await search.fill('TEST-CF-001');
+    if((await count.textContent())?.trim()!=='1 / 2건 표시')throw new Error('INFRA_COST_SEARCH_E2E failed');
+    await status.selectOption('paid');
+    if((await count.textContent())?.trim()!=='0 / 2건 표시')throw new Error('INFRA_COST_FILTER_E2E failed');
+    await page.locator('#ekodiInfraCosts [data-infra-filter-reset]').click();
+    if((await count.textContent())?.trim()!=='2 / 2건 표시')throw new Error('INFRA_COST_FILTER_RESET_E2E failed');
+    await page.locator('#ekodiInfraCosts [data-infra-open-invoice]').click();
+    if(!(await page.locator('#ekodiInfraCosts [data-infra-invoice-editor]').evaluate(node=>node.open)))
+      throw new Error('INFRA_COST_INVOICE_EDITOR_E2E failed');
+
+    await page.setViewportSize({width:390,height:844});
+    try {
+      const mobile=await page.evaluate(()=>{
+        const p=document.querySelector('#ekodiInfraCosts');
+        const summary=p.querySelector('.infra-summary');
+        const providers=p.querySelector('.infra-providers');
+        const table=p.querySelector('.infra-table-wrap');
+        const colCount=node=>getComputedStyle(node).gridTemplateColumns.split(' ').filter(Boolean).length;
+        return {
+          panelWidth:Math.round(p.getBoundingClientRect().width),
+          viewport:innerWidth,documentExcess:document.documentElement.scrollWidth-innerWidth,
+          summaryColumns:colCount(summary),providerColumns:colCount(providers),
+          invoiceTableScrollable:table.scrollWidth>table.clientWidth,
+        };
+      });
+      if(mobile.summaryColumns!==1||mobile.providerColumns!==1||
+         mobile.panelWidth>mobile.viewport+2||mobile.documentExcess>2||!mobile.invoiceTableScrollable)
+        throw new Error('INFRA_COST_MOBILE_LAYOUT_E2E failed: '+JSON.stringify(mobile));
+      await page.locator('#ekodiInfraCosts').scrollIntoViewIfNeeded();
+      console.log('[PROD-E2E] infra-costs mobile responsive viewport verified: '+JSON.stringify(mobile));
+      await page.screenshot({path:path.join(artifactsDir,'infra-costs-mobile-verified.png'),fullPage:false});
+    } finally {
+      await page.setViewportSize({width:1440,height:1000});
+      await page.evaluate(()=>{const main=document.querySelector('.app>main');if(main)main.scrollTop=0});
+    }
+  }
 
   if (id === 'engine-all') {
     // ENGINE_CATALOG_STYLE_E2E: a non-empty DOM is not enough; CSS must load
@@ -589,6 +677,17 @@ for (const [id, group] of menus) {
     }
     await page.setViewportSize({ width: 390, height: 844 });
     try {
+      // A desktop-to-mobile resize can leave the navigation drawer covering the
+      // content. Dismiss it through the real public scrim before taking evidence.
+      const drawerScrim = page.locator('[data-admin-drawer-scrim]');
+      if (await drawerScrim.isVisible()) await drawerScrim.click();
+      await page.waitForFunction(() => {
+        const drawer = document.querySelector('.sidebar');
+        const scrim = document.querySelector('[data-admin-drawer-scrim]');
+        return !document.body.classList.contains('admin-mobile-drawer-open')
+          && !drawer?.classList.contains('open')
+          && (!scrim || scrim.hidden);
+      }, null, { timeout: 5000 });
       const mobile = await page.evaluate(() => {
         const list = document.querySelector('.common-services-list-wrap');
         const card = document.querySelector('.common-service-card');
@@ -597,9 +696,16 @@ for (const [id, group] of menus) {
           headerDisplay: getComputedStyle(document.querySelector('.common-services-list-head')).display,
           summaryDisplay: getComputedStyle(document.querySelector('.common-services-summary')).display,
           scrollExcess: list ? Math.round(list.scrollWidth - list.clientWidth) : -1,
+          cardLeft: card ? Math.round(card.getBoundingClientRect().left) : -1,
+          cardRight: card ? Math.round(card.getBoundingClientRect().right) : -1,
+          viewportWidth: window.innerWidth,
+          sidebarOpen: Boolean(document.querySelector('.sidebar')?.classList.contains('open')),
+          srOnlyHidden: (() => {const note=card?.querySelector('.sr-only');const style=note&&getComputedStyle(note);return Boolean(note&&style?.position==='absolute'&&note.getBoundingClientRect().width<=1)})(),
         };
       });
-      if (mobile.cardDisplay !== 'grid' || mobile.headerDisplay !== 'none' || mobile.summaryDisplay !== 'grid' || mobile.scrollExcess > 2) {
+      if (mobile.cardDisplay !== 'grid' || mobile.headerDisplay !== 'none' || mobile.summaryDisplay !== 'grid'
+          || mobile.scrollExcess > 2 || mobile.sidebarOpen || mobile.cardLeft < -2
+          || mobile.cardRight > mobile.viewportWidth + 2 || !mobile.srOnlyHidden) {
         throw new Error('ENGINE_CATALOG_STYLE_E2E mobile failed: ' + JSON.stringify(mobile));
       }
       console.log('[PROD-E2E] engine-all: stylesheet and compact desktop/mobile layout verified');
@@ -690,6 +796,17 @@ for (const [id, group] of menus) {
     if (restoredCount !== siteCount) throw new Error(`social: clearing search did not restore site cards (${restoredCount}/${siteCount})`);
 
     await page.setViewportSize({width:390,height:844});
+    // The E2E navigates many desktop menus before resizing. Closing the
+    // mobile drawer through the real keyboard handler is essential: a DOM-only
+    // pass with the menu overlay still covering the content is not visual proof.
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => {
+      const sidebar=document.querySelector('.sidebar');
+      const rect=sidebar?.getBoundingClientRect();
+      return sidebar && !sidebar.classList.contains('open')
+        && !document.body.classList.contains('admin-mobile-drawer-open')
+        && rect && rect.right <= 2;
+    }, null, {timeout:5000});
     const mobile = await page.evaluate(() => {
       const host = document.querySelector('#socialAdmin');
       const tabs = document.querySelector('#socialAdmin .social-workspace-tabs');
@@ -700,11 +817,24 @@ for (const [id, group] of menus) {
         tabsScrollWidth:tabs?.scrollWidth,
         tabsClientWidth:tabs?.clientWidth,
         selected:document.querySelector('#social-tab-sites')?.getAttribute('aria-selected'),
+        sidebarClosed:!document.querySelector('.sidebar')?.classList.contains('open')
+          && !document.body.classList.contains('admin-mobile-drawer-open'),
+        sidebarRight:document.querySelector('.sidebar')?.getBoundingClientRect().right,
+        headingVisible:(()=>{
+          const heading=document.querySelector('#socialAdmin .social-admin-head h2');
+          if(!heading)return false;
+          const box=heading.getBoundingClientRect();
+          const point=document.elementFromPoint(Math.min(innerWidth-4,Math.max(4,box.left+12)),Math.min(innerHeight-4,Math.max(4,box.top+12)));
+          return box.width>0 && box.height>0 && box.left>=0 && box.top>=0
+            && box.left<innerWidth && box.top<innerHeight
+            && Boolean(point && (point===heading || heading.contains(point)));
+        })(),
       };
     });
     if (mobile.hostLeft < -2 || mobile.hostRight > mobile.viewport+2 ||
-        mobile.tabsHeight < 40 || mobile.selected !== 'true') {
-      throw new Error('social: responsive workspace clipping or tabs lost on 390px mobile: '+JSON.stringify(mobile));
+        mobile.tabsHeight < 40 || mobile.selected !== 'true' ||
+        !mobile.sidebarClosed || mobile.sidebarRight>2 || !mobile.headingVisible) {
+      throw new Error('social: mobile drawer overlays workspace, heading inaccessible or tabs clipped at 390px: '+JSON.stringify(mobile));
     }
     await page.screenshot({path:path.join(artifactsDir,'menu-social-mobile.png'),fullPage:false});
     await page.setViewportSize({width:1440,height:1000});

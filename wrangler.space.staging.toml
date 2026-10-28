@@ -9,7 +9,7 @@ DATA_ENABLED = "false"
 DATA_MODE = "isolated-staging"
 SUPABASE_URL = ""
 SUPABASE_PUBLISHABLE_KEY = ""
-AUTH_URL = "https://auth.ekodi.kr/?site=space"
+AUTH_URL = "https://ekodi.kr/auth/?site=space"
 
 [assets]
 directory = "./space"

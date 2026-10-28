@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { isQuotaCircuitBreak } from './cloudflare-quota-guard-lib.mjs';
+import { resolveAdminE2EMenus, isAdminEntryQuotaCircuit } from './lib/admin-e2e-menu-scope.mjs';
 import path from 'node:path';
 import { adminMenuOrder } from '../admin-menu-registry.js';
 import ecosystemServices from '../config/ecosystem-services.json' with { type: 'json' };
@@ -25,7 +26,9 @@ const menuTimeoutMs = 30_000;
 const taxSurfaceTimeoutMs = 35_000;
 const assistTimeoutMs = 60_000;
 const artifactsDir = path.resolve('artifacts/admin-authenticated-e2e');
-const menuIds = adminMenuOrder();
+const allMenuIds = adminMenuOrder();
+const menuIds = resolveAdminE2EMenus(allMenuIds, process.env.E2E_MENU_FOCUS);
+const focusOnly = menuIds.length !== allMenuIds.length;
 const productionRegistryUrl = 'https://ekodi.kr/admin-menu-registry.js';
 const maturityApiUrl = 'https://ekodi.kr/api/control/platform-maturity';
 const e2eAdminToken = String(process.env.E2E_ADMIN_TOKEN || '').trim();
@@ -199,7 +202,7 @@ const aggregate = {
   expectedMenuCount: menuIds.length,
   checkedMenuCount: 0,
   passed: false,
-  mode: 'isolated-menu-renderers+canonical-assist-roundtrip',
+  mode: focusOnly ? 'focused-social-inventory' : 'isolated-menu-renderers+canonical-assist-roundtrip',
   taxProtocolFallback: 'strict-isolated-tax-surface-on-known-http2-commit-race',
   results: [],
   assistProbe: null,
@@ -229,10 +232,14 @@ for (const menuId of menuIds) {
     const failure = { menuId, attempt, ...outcome, error: report?.error || outcome.error || 'isolated menu verification failed' };
     aggregate.diagnostics.attemptFailures.push(failure);
     console.warn(`[E2E] ${menuId}: attempt ${attempt} failed; ${failure.error}`);
+    if (isAdminEntryQuotaCircuit(report)) {
+      fatal = new Error(`CF-QUOTA-001 production Admin 429 circuit open; no retry for ${menuId}`);
+      break;
+    }
     if (attempt < maxAttemptsPerMenu) console.warn(`[E2E] ${menuId}: retrying only this menu in a brand-new Chromium process`);
   }
 
-  if (!passed && menuId === 'tax' && isKnownTaxRendererProtocolRace(lastReport)) {
+  if (!fatal && !passed && menuId === 'tax' && isKnownTaxRendererProtocolRace(lastReport)) {
     console.warn('[E2E] tax: main-frame Tax request passed worker guards but Playwright hit the known cross-origin HTTP/2 commit race; running strict isolated Tax surface verification');
     const outcome = await runTaxSurface();
     const taxSurface = await readTaxSurfaceReport();
@@ -256,7 +263,7 @@ for (const menuId of menuIds) {
     }
   }
 
-  if (!passed) {
+  if (!passed && !fatal) {
     fatal = new Error(`${menuId}: failed after ${maxAttemptsPerMenu} isolated renderer attempts${menuId === 'tax' ? ' and strict Tax surface verification' : ''}`);
     break;
   }

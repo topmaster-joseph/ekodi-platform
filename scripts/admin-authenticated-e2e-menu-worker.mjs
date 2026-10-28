@@ -351,15 +351,18 @@ async function verifyPublicSiteControls(tab, alreadyActive, started) {
 
   stage('public-site-controls-render');
   await page.evaluate(() => window.EKODIPublicSiteControls.load());
-  const form = page.locator('form[data-public-site-id="cgma"]');
+  const siteChoice = page.locator('#publicSiteControlsPanel [data-psc-select="cgma"]');
+  await siteChoice.waitFor({ state: 'visible', timeout: 8_000 });
+  await siteChoice.click();
+  const form = page.locator('#publicSiteControlsPanel form[data-psc-form][data-public-site-id="cgma"]');
   await form.waitFor({ state: 'visible', timeout: 8_000 });
   const state = await visiblePanelState();
-  const domainText = String(await form.locator('.muted').first().textContent() || '');
+  const domainText = String(await form.locator('.psc-subtext').first().textContent() || '');
   const publicStatus = await form.locator('select[name="publicStatus"]').inputValue();
   const maintenanceDisplayType = await form.locator('select[name="maintenanceDisplayType"]').inputValue();
   const redirectMode = await form.locator('select[name="redirectMode"]').inputValue();
-  const badge = String(await form.locator('[data-public-site-status-badge]').textContent() || '').trim();
-  const message = String(await page.locator('#publicSiteControlsPanel [data-public-site-message]').textContent() || '').replace(/\s+/g, ' ').trim();
+  const badge = String(await form.locator('[data-psc-badge]').textContent() || '').trim();
+  const message = String(await page.locator('#publicSiteControlsPanel [data-psc-message]').textContent() || '').replace(/\s+/g, ' ').trim();
   if (!state.panelFound || !state.selected || state.busy) throw new Error(`public-site-controls panel invalid: ${JSON.stringify(state)}`);
   if (!domainText.includes('ekodi.kr/cgma')) throw new Error(`public-site-controls: CGMA canonical path missing: ${domainText}`);
   if (!['public', 'maintenance'].includes(publicStatus)) throw new Error(`public-site-controls: invalid publicStatus ${publicStatus}`);
@@ -666,6 +669,9 @@ try {
     contentType: String(entryHeaders['content-type'] || '').split(';')[0].slice(0, 80),
     cfCacheStatus: String(entryHeaders['cf-cache-status'] || '').slice(0, 40),
   };
+  if (adminEntryTransport.status === 429) {
+    throw new Error('CF-QUOTA-001 circuit open: HTTP 429 at canonical Admin entry; no retry');
+  }
   if ([401, 403].includes(adminEntryTransport.status)) {
     throw new Error('Admin entry rejected by production authentication boundary');
   }
