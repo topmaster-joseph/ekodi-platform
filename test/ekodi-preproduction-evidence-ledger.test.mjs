@@ -44,7 +44,10 @@ function dbMock(record=row(),options={}){
       record.evidence_json=update.args[0];
       record.state_version++;
       calls.updates.push(update);
-      calls.events.push(JSON.parse(insert.args[2]));
+      assert.match(insert.sql,/THEN \? ELSE NULL END/);
+      assert.equal(insert.args[0],taskId);
+      assert.equal(insert.args[1],record.state_version);
+      calls.events.push(JSON.parse(insert.args[5]));
       return [{meta:{changes:1}},{meta:{changes:1}}];
     },
   }};
@@ -53,7 +56,8 @@ test('signed main-branch reconciliation workflow is mandatory, no client boolean
   const {db,calls}=dbMock();
   for(const claim of [{},{...oidc,ok:false},{...oidc,ref:'refs/pull/1/merge'},
     {...oidc,workflowRef:'owner/repo/.github/workflows/reconcile-orchestrator-completions.yml@main'},
-    {...oidc,runId:'0'}]){
+    {...oidc,runId:'0'},
+    {...oidc,workflowRef:'topmaster-joseph/ekodi-platform/.github/workflows/reconcile-orchestrator-completions.yml@refs/heads/main-evil'}]){
     const res=await recordVerifiedEkodiPreproductionEvidence(db,evidence(),claim);
     assert.equal(res.recorded,false);
     assert.equal(res.reason,'trusted_reconciler_oidc_required');
