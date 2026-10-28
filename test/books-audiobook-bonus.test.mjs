@@ -7,10 +7,11 @@ const id = 'BOOK-EKODI-000001';
 const book = { id, title: '에코디언을 찾아서', directSale: { enabled: true, fileKey: id + '/ebook.epub' },
   bonusAudio: { included: true, published: false, edition: 'ko-v1', chapterTitles: [] } };
 let owned = false;
+let externalOwned = false;
 let calls = 0;
 const catalog = () => ({ books: [book] });
 const env = {
-  DB: { prepare: () => ({ bind: () => ({ first: async () => { calls++; return owned ? { '1': 1 } : null; } }) }) },
+  DB: { prepare: sql => ({ bind: () => ({ first: async () => { if (sql.includes('books_audiobook_external_grants')) return externalOwned ? { '1': 1 } : null; calls++; return owned ? { '1': 1 } : null; } }) }) },
   ASSETS: { fetch: async () => new Response(JSON.stringify(catalog())) },
   BOOK_FILES: {
     head: async () => ({ size: 20 }),
@@ -57,6 +58,10 @@ test('audio bonus uses the real ebook entitlement and never exposes unpublished 
     owned = false; // refund / revoke: existing audio immediately becomes inaccessible
     response = await handleAudiobook(req(base + '/track/1'), env);
     assert.equal(response.status, 403);
+    externalOwned = true;
+    response = await handleAudiobook(req(base + '/track/1'), env);
+    assert.equal(response.status, 200, 'verified external purchase grants audio but not ebook');
+    externalOwned = false;
   } finally {
     globalThis.fetch = originalFetch;
   }
