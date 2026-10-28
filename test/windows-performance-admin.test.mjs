@@ -30,7 +30,7 @@ test('safe optimization is explicit, constrained and receipt-aware', () => {
     assert.match(api, new RegExp('\\x27' + command.replaceAll('.', '\\.') + '\\x27'));
     assert.match(agent, new RegExp('\\x27' + command.replaceAll('.', '\\.') + '\\x27'));
   }
-  assert.match(panel, /!connected \|\| !capability\(device, 'storageMaintenance'\) \|\| cleanupPending/);
+  assert.match(panel, /!reportFresh \|\| device\.management\?\.remoteCommandLevel !== 'managed' \|\| !capability\(device, 'storageMaintenance'\) \|\| cleanupPending/);
   assert.match(panel, /cleanup\?\.status === 'failed'/);
   assert.match(panel, /cleanup\?\.status === 'succeeded'/);
   assert.match(panel, /postCleanupDiagnostic/);
@@ -134,4 +134,27 @@ test('dedicated URL actually resolves to devices and retains it across Google lo
   const login = new URL(getAuthUrl('devices'));
   assert.equal(login.hostname, 'ekodi.kr');
   assert.equal(login.searchParams.get('return_to'), address.href);
+});
+
+test('Windows settings are explicit, fresh, reversible and limited to enrolled managed PCs', () => {
+  assert.match(panel, /settings\.open = windowsPerformanceRoute\(\)/);
+  assert.match(panel, /자동 변경은 하지 않습니다/);
+  assert.match(panel, /powerBackupAvailable === true/);
+  assert.match(panel, /powerBackupAvailable !== true/);
+  assert.match(panel, /const mayChange = connected && reportFresh && device\.management\?\.remoteCommandLevel === 'managed' && !powerPending/);
+  assert.match(panel, /makeActionButton\(device, 'power\.normal', '일반 업무 전원 모드'/);
+  assert.match(panel, /makeActionButton\(device, 'power\.restore', '원래 전원 계획으로 복원'/);
+  assert.match(panel, /if \(windowsPerformanceRoute\(\)\) settings\.append\(startupPanel\(device\)\)/);
+  assert.match(panel, /powerReceipt\.completedAt \|\| powerReceipt\.claimedAt \|\| powerReceipt\.issuedAt/);
+  assert.match(admin, /'power\.normal': '현재 Windows 전원 시간을/);
+  assert.match(admin, /'power\.restore': '해당 PC에 보관된 EKODI 전원 계획 백업/);
+  assert.match(api, /'power\.normal': \{ risk: 'maintain' \}/);
+  assert.match(api, /'power\.restore': \{ risk: 'maintain' \}/);
+  assert.match(agent, /function Save-PowerBackup \{/);
+  assert.match(agent, /if \(Test-Path \$PowerBackupPath\) \{ return \}/);
+  assert.match(agent, /function Restore-PowerBackup \{/);
+  assert.match(agent, /\/import', \$PowerBackupPath, \$restoredGuid/);
+  assert.match(admin, /device\.management\?\.remoteCommandLevel !== 'managed'\)/);
+  assert.match(css, /EKODI-WINDOWS-SETTINGS-001/);
+  assert.doesNotMatch(panel, /'power\.presentation'|'power\.always_on'|'updates\.install'|'lock\.resume_off'/);
 });
