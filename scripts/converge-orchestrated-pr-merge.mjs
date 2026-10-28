@@ -489,6 +489,10 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='scripts/seonammedi-live-html-proof.mjs'||
   file==='scripts/seonammedi-cache-contract.mjs'||
   file==='test/seonammedi-cache-contract.test.mjs'||
+  // Shared staging upload and recovery policy belongs to guarded Site Core.
+  ['scripts/site-core-staging-10500-recovery.mjs',
+   '.github/workflows/stage-shared-site-shell.yml',
+   'test/site-core-staging-10500-recovery.test.mjs'].includes(file)||
   file==='.github/workflows/deploy-site-core.yml'||
   file==='scripts/converge-orchestrated-pr-merge.mjs'||
   file==='.github/workflows/converge-orchestrated-pr-merge.yml'
