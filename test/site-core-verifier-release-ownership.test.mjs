@@ -23,7 +23,7 @@ test('both exact-receipt merge paths classify native and Admin verifier code as 
   const merged=until(convergence,'const sharedSiteTouched=changedFiles.some','// Church public Pages');
   const immediate=until(recovery,'const sharedSiteTouched=sourceFiles.some','// First-party Shell');
   for(const path of verifierPaths){
-    assert.ok(merged.includes("'"+path+"'"),'convergent merge must include '+path);
+    assert.ok(merged.includes("file==='"+path+"'"),'explicit convergent merge contract must include '+path);
     assert.ok(immediate.includes("'"+path+"'"),'approved immediate recovery must include '+path);
   }
   assert.match(merged,/file==='invest-access-ui\.js'/);
