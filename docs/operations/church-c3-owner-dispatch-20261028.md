@@ -17,3 +17,7 @@ The dispatch result (HTTP 204) does **not** prove retirement. A successful post-
 ## Protected merge repair
 
 New PR #6560 is created automatically under the approved EKODI Orchestrator branch. GitHub may classify initial bot-authored checks as `action_required`. This owner-authored documentation changes the exact head SHA to initiate fresh required checks; it neither impersonates a Human Gate nor relaxes branch protection or releases DNS.
+
+## Owner verification after protected main synchronization
+
+The canonical EKODI release branch was synchronized to the newest protected main before merging. The repository owner requests fresh required CI checks for its updated exact head. This documentation-only commit does not modify dispatch authorization, Cloudflare configuration, or service code. Any further merge-base refresh must still re-run all required tests without weakening the official EKODI Orchestrator gate.
