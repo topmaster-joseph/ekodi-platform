@@ -4,6 +4,18 @@ import { readFile } from 'node:fs/promises';
 
 const source = () => readFile(new URL('../scripts/verify-admin-production-ui-e2e.mjs', import.meta.url), 'utf8');
 
+test('Admin production Chromium proves security workspace layout at desktop, tablet, mobile widths without mutating Secrets', async () => {
+  const text = await source();
+  assert.match(text, /SECURITY_WORKSPACE_LAYOUT_E2E/);
+  assert.match(text, /\{width:1440,height:1000,name:'desktop'\}/);
+  assert.match(text, /\{width:1024,height:900,name:'tablet'\}/);
+  assert.match(text, /\{width:390,height:844,name:'mobile'\}/);
+  assert.match(text, /menu-security-\$\{viewport\.name\}\.png/);
+  assert.match(text, /horizontalOverflow>4/);
+  assert.match(text, /new URL\(link\.href\)\.pathname\.endsWith\('\/admin-secret-generator\.css'\)/);
+  assert.doesNotMatch(text, /\/api\/control\/secrets\/generate/);
+});
+
 test('synthetic production Admin UI verifier waits for lazy panel content to settle', async () => {
   const text = await source();
   assert.match(text, /text\.length > 0/);
