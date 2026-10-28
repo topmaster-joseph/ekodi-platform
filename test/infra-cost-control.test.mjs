@@ -70,3 +70,16 @@ test('infra cost mobile title has no desktop 500px flex-basis whitespace',()=>{
   assert.match(mobile[1],/#ekodiInfraCosts \.infra-page-heading\{align-items:flex-start;flex-direction:column\}/);
   assert.match(mobile[1],/#ekodiInfraCosts \.infra-page-heading>div:first-child\{flex:0 0 auto;width:100%;min-height:0\}/);
 });
+
+test('finance mobile E2E rejects offscreen headings and an animating sidebar',()=>{
+  const e2e=read('scripts/verify-admin-production-ui-e2e.mjs');
+  assert.match(e2e,/INFRA_COST_MOBILE_VISUAL_E2E/);
+  assert.match(e2e,/sidebar\.classList\.contains\('open'\)/);
+  assert.match(e2e,/rect\.right<=1/);
+  assert.match(e2e,/mobile\.panelLeft<0\|\|mobile\.panelRight>mobile\.viewport\+2/);
+  assert.match(e2e,/mobile\.sidebarRight>1/);
+  assert.match(e2e,/mobile\.headingBlockHeight>260/);
+  assert.match(e2e,/mobile\.headingToActions>36/);
+  assert.match(e2e,/mobile\.actionsToNav>36/);
+  assert.doesNotMatch(e2e,/page\.locator\('#ekodiInfraCosts'\)\.scrollIntoViewIfNeeded\(\)/);
+});
