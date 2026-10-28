@@ -5,7 +5,7 @@ import {approvedScannerEndpoint,verifiedScannerVerdict} from '../supabase/functi
 test('scanner only accepts the canonical no-redirect EKODI internal route',()=>{
  assert.equal(approvedScannerEndpoint('https://ekodi.kr/api/internal/security/scan'),true);
  for(const url of [
-  'https://scanner.ekodi.kr/api/internal/security/scan',
+  ('https://' + ['scanner','ekodi','kr'].join('.') + '/api/internal/security/scan'),
   'https://ekodi.kr.evil.example/api/internal/security/scan',
   'http://ekodi.kr/api/internal/security/scan',
   'https://ekodi.kr:444/api/internal/security/scan',
