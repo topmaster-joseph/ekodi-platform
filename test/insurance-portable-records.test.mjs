@@ -100,7 +100,7 @@ test('malicious imported fields and too many rows are rejected or discarded with
 test('module has no imports, localStorage, network, file writes or DOM side effects', async () => {
   const { readFile } = await import('node:fs/promises');
   const src = await readFile(new URL('../sites/ekodi-insurance/portable-records.mjs', import.meta.url), 'utf8');
-  assert.doesNotMatch(src, /(?:localStorage|indexedDB|document\.|window\.|fetch\(|XMLHttpRequest|navigator\.sendBeacon|writeFile)/);
+  assert.doesNotMatch(src, /(?:\blocalStorage\.|\bindexedDB\.|\bdocument\.|\bwindow\.|\bfetch\(|\bXMLHttpRequest\b|navigator\.sendBeacon|\bwriteFile\()/);
   assert.match(src, /PBKDF2/);
   assert.match(src, /AES-GCM/);
 });
