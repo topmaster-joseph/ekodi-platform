@@ -21,8 +21,8 @@ for (const event of ['uncaughtException', 'unhandledRejection']) {
   });
 }
 
-const maxAttemptsPerMenu = 2;
-const menuTimeoutMs = 30_000;
+const maxAttemptsPerMenu = String(process.env.E2E_MENU_FOCUS || 'all').trim() === 'social-accounts' ? 1 : 2;
+const menuTimeoutMs = String(process.env.E2E_MENU_FOCUS || 'all').trim() === 'social-accounts' ? 75_000 : 30_000; // focused five-viewport budget
 const taxSurfaceTimeoutMs = 35_000;
 const assistTimeoutMs = 60_000;
 const artifactsDir = path.resolve('artifacts/admin-authenticated-e2e');
@@ -32,7 +32,7 @@ const focusOnly = menuIds.length !== allMenuIds.length;
 const productionRegistryUrl = 'https://ekodi.kr/admin-menu-registry.js';
 const maturityApiUrl = 'https://ekodi.kr/api/control/platform-maturity';
 const e2eAdminToken = String(process.env.E2E_ADMIN_TOKEN || '').trim();
-const productionConvergenceAttempts = 36;
+const productionConvergenceAttempts = focusOnly ? 1 : 36; // CF-QUOTA-001: focused acceptance never fans out preflight polls
 const productionConvergenceDelayMs = 5_000;
 const quotaConfig = JSON.parse(await fs.readFile(fileURLToPath(new URL('../config/cloudflare-production-quota-guard.json', import.meta.url)), 'utf8'));
 function throwIfQuotaCircuit(status, body, label) {
@@ -116,7 +116,9 @@ async function waitForMaturityApi() {
 }
 
 await waitForProductionMenuRegistry();
-await waitForMaturityApi();
+// A focused social-account acceptance must not generate unrelated maturity API traffic.
+// The default all-menu certification retains the full maturity convergence gate.
+if (!focusOnly) await waitForMaturityApi();
 await fs.rm(artifactsDir, { recursive: true, force: true });
 await fs.mkdir(artifactsDir, { recursive: true });
 
@@ -269,7 +271,7 @@ for (const menuId of menuIds) {
   }
 }
 
-if (!fatal) {
+if (!fatal && !focusOnly) {
   console.log('[E2E] canonical Assist: verifying bottom input → lazy runtime → API → rendered reply');
   const outcome = await runCanonicalAssist();
   const assist = await readAssistReport();
@@ -285,8 +287,8 @@ if (!fatal) {
 aggregate.generatedAt = new Date().toISOString();
 aggregate.passed = !fatal
   && aggregate.checkedMenuCount === aggregate.expectedMenuCount
-  && aggregate.assistProbe?.passed === true
-  && aggregate.assistProbe?.visualContractVerified === true;
+  && (focusOnly || (aggregate.assistProbe?.passed === true
+  && aggregate.assistProbe?.visualContractVerified === true));
 aggregate.error = fatal ? fatal.message : null;
 aggregate.diagnostics.consoleErrors = aggregate.diagnostics.consoleErrors.slice(-80);
 await fs.writeFile(path.join(artifactsDir, 'report.json'), JSON.stringify(aggregate, null, 2));
@@ -309,4 +311,4 @@ if (!aggregate.passed) {
   console.error(`[E2E] authenticated Admin verification failed: ${aggregate.error}`);
   process.exit(1);
 }
-console.log(`[E2E] authenticated Admin verification passed: ${aggregate.checkedMenuCount}/${aggregate.expectedMenuCount} menus + canonical Assist command round-trip`);
+console.log(`[E2E] authenticated Admin ${focusOnly ? 'focused social-account acceptance' : 'all-menu + canonical Assist'} passed: ${aggregate.checkedMenuCount}/${aggregate.expectedMenuCount} menus`);
