@@ -405,7 +405,10 @@ html:not([data-ekodi-domctl-authorized="true"]) .sidebar [data-section="domain-c
         authorized = true;
         root.dataset.ekodiDomctlAuthorized = 'true';
         ensureNav();
-        if (location.hash.toLowerCase() === '#domain-control' || window.EKODIAdminPanels?.current?.() === SECTION) await loadData();
+        if (location.hash.toLowerCase() === '#domain-control' || window.EKODIAdminPanels?.current?.() === SECTION) {
+          revealDomainWorkspace();
+          await loadData();
+        }
       } catch (error) {
         console.warn('[EKODI Domain Control] authorization check failed', error);
         deny();
@@ -414,12 +417,25 @@ html:not([data-ekodi-domctl-authorized="true"]) .sidebar [data-section="domain-c
     return authorizationInFlight;
   }
 
+  // Reset inherited Admin workspace scroll when switching to this page.
+  // A previous section can remain in the screenshot even when the domain
+  // menu is selected, if the shared scroll container keeps its old offset.
+  function revealDomainWorkspace() {
+    requestAnimationFrame(() => {
+      if (panel.hidden || panel.classList.contains('hidden-panel')) return;
+      const workspace = content?.closest('main');
+      if (workspace) workspace.scrollTop = 0;
+      if (content) content.scrollTop = 0;
+    });
+  }
+
   refreshButton?.addEventListener('click', () => loadData(true));
 
   window.addEventListener('ekodi-admin-section-changed', event => {
     if (event.detail?.section !== SECTION) return;
     if (!authorized) { void authorize(); return; }
     if (location.hash.toLowerCase() !== '#domain-control') history.replaceState(history.state, '', `${location.pathname}${location.search}#domain-control`);
+    revealDomainWorkspace();
     void loadData();
   });
 
