@@ -8,9 +8,10 @@ const taskId='orch_final_0123456789abcdefabcdef';
 const branchRef='ai/gpt6/'+taskId;
 const releaseSha='1'.repeat(40);
 const artifactDigest='sha256:'+'2'.repeat(64);
+const archiveDigest='sha256:'+'4'.repeat(64);
 const actor='platform-admin:123';
 const preproductionProof={
-  authority:'ekodi-orchestrator',taskId,branchRef,releaseSha,artifactDigest,
+  authority:'ekodi-orchestrator',taskId,branchRef,releaseSha,artifactDigest,archiveDigest,
   requiredCiVerified:true,stagingVerified:true,rollbackReady:true,
   securityReviewVerified:true,verifiedAt:'2026-10-28T20:00:00Z',
 };
@@ -26,7 +27,7 @@ const request=(overrides={})=>({
 
 function mockDb(row=buildRow(),{commit=true,failBatch=false,stagingAttestation=true,stagingAttestationValid=true}={}){
   const trace={sql:[],events:[],batchCalls:0};
-  const stagingEvent={actor:'ekodi-github-actions-oidc-reconciler',reason:'verified_preproduction_evidence_recorded',evidence_json:JSON.stringify({authority:'ekodi-orchestrator',source:'github-actions-oidc',taskId,branchRef,releaseSha:stagingAttestationValid?releaseSha:'3'.repeat(40),artifactDigest,verifiedAt:preproductionProof.verifiedAt,workflowRunId:123456})};
+  const stagingEvent={actor:'ekodi-github-actions-oidc-reconciler',reason:'verified_preproduction_evidence_recorded',evidence_json:JSON.stringify({authority:'ekodi-orchestrator',source:'github-actions-oidc',taskId,branchRef,releaseSha:stagingAttestationValid?releaseSha:'3'.repeat(40),artifactDigest,archiveDigest,verifiedAt:preproductionProof.verifiedAt,workflowRunId:123456})};
   const db={
     prepare(sql){
       trace.sql.push(sql);
@@ -119,6 +120,7 @@ test('staging, branch and proof errors hold before the write transaction',async(
     {branch_ref:'ai/claude/'+taskId}, {deployment_requested:0},
     {evidence_json:'{}'},
     {evidence_json:JSON.stringify({preproductionProof:{...preproductionProof,requiredCiVerified:false}})},
+    {evidence_json:JSON.stringify({preproductionProof:{...preproductionProof,archiveDigest:'sha256:'+'5'.repeat(64)}})},
     {evidence_json:JSON.stringify({preproductionProof:{...preproductionProof,artifactDigest:'sha256:'+'3'.repeat(64)}})},
   ];
   for(const mutation of changes){
