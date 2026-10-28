@@ -44,6 +44,8 @@
       <input id="import-password" type="password" minlength="12" maxlength="256" autocomplete="off" required>
       <label for="backup-password">기존 기록 백업 암호 (12자 이상)</label>
       <input id="backup-password" type="password" minlength="12" maxlength="256" autocomplete="new-password" required>
+      <label class="check"><input id="import-diagnosis" type="checkbox"> <span>파일에 보험점검 메모가 있으면 가져오기 허용 (선택·별도 동의)</span></label>
+      <label class="check"><input id="import-chat" type="checkbox"> <span>파일에 AI 대화 내용이 있으면 가져오기 허용 (선택·별도 동의)</span></label>
       <button type="submit">병합 내용 미리보기</button>
     </form>
     <div id="import-preview" class="hidden" aria-label="가져오기 검토">
