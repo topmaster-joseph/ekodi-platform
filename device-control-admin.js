@@ -70,6 +70,8 @@
     'computer.auth_session.start': '선택한 PC에 FactChat 공식 로그인 창을 EKODI 전용 임시 브라우저로 엽니다.\n\n• PC 화면에 동의창이 먼저 뜨며, PC 앞의 본인이 [예]를 눌러야 열립니다.\n• 비밀번호·인증번호는 열린 창의 FactChat 공식 페이지에만 직접 입력하세요. EKODI·AI·채팅으로 보내지 마세요.\n• 기존 Opera/Chrome/Edge 프로필은 사용하지 않으며 30분 후 자동 종료·삭제됩니다.\n\n진행할까요?',
     'computer.auth_session.verify': '로그인된 FactChat 화면에서 메뉴 표시와 크레딧·사용량 문구만 읽기 전용으로 점검합니다.\n파일 업로드·생성·크레딧 소모 작업은 실행하지 않습니다. 진행할까요?',
     'autologon.open': '자동로그인 암호는 클라우드에서 받지 않습니다. 이 PC에서 Microsoft Autologon 창을 열까요?',
+    'power.normal': '현재 Windows 전원 시간을 일반 업무 모드로 변경합니다. 기존 전원 계획을 백업하고, 같은 기기의 원상복구 기능으로 되돌릴 수 있습니다. PC 사용자 동의를 확인했나요?',
+    'power.restore': '해당 PC에 보관된 EKODI 전원 계획 백업으로 원상복구합니다. 실행할까요?',
     'maintenance.temp_cleanup': '7일 이상 지난 사용자/Windows 임시 파일만 정리합니다. 진행할까요?',
     'printing.image_preview.repair': '이미지 우클릭 인쇄가 바로 출력되지 않고 Windows 미리보기/레이아웃을 먼저 열도록 복구하고, 이후 변경도 자동 재복구할까요?',
     'printing.image_preview.restore': 'EKODI 인쇄 미리보기 강제 규칙을 해제하고 최초 변경 전 사용자 설정으로 복원할까요?',
@@ -626,8 +628,8 @@
       const p = document.createElement('p'); p.className = 'device-command-empty'; p.textContent = '“목록 새로 확인”을 누르면 명령문을 노출하지 않고 항목 이름과 안전 ID만 가져옵니다.'; box.append(p); return box;
     }
     const list = document.createElement('div'); list.className = 'device-startup-list';
-    items.forEach(item => { const row = document.createElement('div'); const text = document.createElement('span'); text.innerHTML = `<strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.scope)}</small>`; row.append(text, makeActionButton(device, 'startup.disable', '사용 안 함', 'ghost', { itemId: item.id })); list.append(row); });
-    disabled.forEach(item => { const row = document.createElement('div'); row.dataset.disabled = 'true'; const text = document.createElement('span'); text.innerHTML = `<strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.scope)} · 비활성</small>`; row.append(text, makeActionButton(device, 'startup.restore', '복원', 'secondary', { itemId: item.id })); list.append(row); });
+    items.forEach(item => { const row = document.createElement('div'); const text = document.createElement('span'); text.innerHTML = `<strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.scope)}</small>`; row.append(text, makeActionButton(device, 'startup.disable', '사용 안 함', 'ghost', { itemId: item.id }, device.status !== 'online' || !capability(device, 'startupManagement') || device.management?.remoteCommandLevel !== 'managed')); list.append(row); });
+    disabled.forEach(item => { const row = document.createElement('div'); row.dataset.disabled = 'true'; const text = document.createElement('span'); text.innerHTML = `<strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.scope)} · 비활성</small>`; row.append(text, makeActionButton(device, 'startup.restore', '복원', 'secondary', { itemId: item.id }, device.status !== 'online' || !capability(device, 'startupManagement') || device.management?.remoteCommandLevel !== 'managed')); list.append(row); });
     box.append(list); return box;
   }
 
@@ -732,8 +734,47 @@
         + (Number.isFinite(files) && files >= 0 ? ' · ' + files + '개 파일' : '');
       action += postCleanupDiagnostic ? ' · 이후 재진단 기록 확인' : ' · 효과 확인을 위해 다시 진단 필요';
     }
-    proof.textContent = diagnosis + ' | ' + action + ' | 시작항목별 해제·복원은 아래 세부 관리에서 진행';
-    panel.append(title, stats, assessment, actions, proof);
+    proof.textContent = diagnosis + ' | ' + action;
+
+    const settings = document.createElement('details');
+    settings.className = 'device-performance-settings';
+    settings.open = windowsPerformanceRoute();
+    const settingsTitle = document.createElement('summary');
+    settingsTitle.textContent = '안전 최적화 설정 · 개별 적용 및 복원';
+    const settingsIntro = document.createElement('p');
+    settingsIntro.textContent = '자동 변경은 하지 않습니다. PC 사용자의 동의를 확인한 뒤 각 항목을 개별 적용하세요. 백업 없는 복원·오프라인 수정은 차단합니다.';
+    const power = document.createElement('section');
+    power.className = 'device-performance-power';
+    const powerTitle = document.createElement('h4');
+    powerTitle.textContent = '전원 계획';
+    const powerNote = document.createElement('p');
+    powerNote.textContent = device.settings?.powerBackupAvailable === true
+      ? '이 PC에 기존 전원 계획 백업이 있습니다. 복원을 선택할 수 있습니다.'
+      : '기존 전원 계획 백업이 확인되지 않았습니다. 첫 변경 시 Agent가 백업을 시도하며, 검증된 백업 없이는 복원할 수 없습니다.';
+    const powerPending = commands.some(row => ['power.normal', 'power.restore'].includes(row.type) &&
+      ['queued', 'assigned', 'claimed'].includes(row.status));
+    const mayChange = connected && reportFresh && device.management?.remoteCommandLevel === 'managed' && !powerPending;
+    const powerActions = document.createElement('div');
+    powerActions.className = 'device-ops-grid device-performance-actions';
+    powerActions.append(
+      makeActionButton(device, 'power.normal', '일반 업무 전원 모드', 'secondary', {}, !mayChange),
+      makeActionButton(device, 'power.restore', '원래 전원 계획으로 복원', 'ghost', {}, !mayChange || device.settings?.powerBackupAvailable !== true),
+    );
+    const powerReceipt = commands.find(row => ['power.normal', 'power.restore'].includes(row.type));
+    const powerProof = document.createElement('p');
+    powerProof.className = 'device-performance-proof';
+    powerProof.textContent = powerReceipt
+      ? commandLabel(powerReceipt.type) + ' · ' + commandStatus(powerReceipt.status) + ' · ' +
+        timeLabel(powerReceipt.completedAt || powerReceipt.claimedAt || powerReceipt.issuedAt)
+      : '전원 설정 실행 영수증 없음 · 현재 적용 상태를 추정하지 않습니다.';
+    power.append(powerTitle, powerNote, powerActions, powerProof);
+    settings.append(settingsTitle, settingsIntro, power);
+    if (windowsPerformanceRoute()) settings.append(startupPanel(device));
+    const policyNote = document.createElement('p');
+    policyNote.className = 'device-performance-proof';
+    policyNote.textContent = '시작프로그램은 개별 항목만 해제·복원합니다. Defender·방화벽·레지스트리 임의 변경, 강제 재부팅, 임의 PowerShell 실행은 제공하지 않습니다.';
+    settings.append(policyNote);
+    panel.append(title, stats, assessment, actions, proof, settings);
     return panel;
   }
 
