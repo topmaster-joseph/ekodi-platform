@@ -6,6 +6,8 @@ on:
   pull_request:
     paths:
       - 'scripts/verify-admin-production-ui-e2e.mjs'
+      - 'scripts/admin-e2e-429-backoff.mjs'
+      - 'test/admin-e2e-429-backoff.test.mjs'
       - 'test/admin-production-ui-e2e-isolation.test.mjs'
       - '.github/workflows/verify-admin-production-ui-e2e.yml'
 permissions:
@@ -30,7 +32,7 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/validate-canonical-api-execution.mjs
-          node --test test/apex-api-retirement.test.mjs test/admin-production-ui-e2e-isolation.test.mjs
+          node --test test/apex-api-retirement.test.mjs test/admin-production-ui-e2e-isolation.test.mjs test/admin-e2e-429-backoff.test.mjs
       - name: Install isolated Chromium test runtime
         if: ${{ github.event_name != 'pull_request' }}
         shell: bash
