@@ -41,7 +41,7 @@ test('Research has dedicated native desktop and mobile verification without taki
   assert.ok(index>=0,'missing Research native job '+name);
   const segment=siteWorkflow.slice(index,siteWorkflow.indexOf('\n\n',index));
   assert.ok(segment.includes('needs: [deploy, '+previous+']'));
-  assert.ok(segment.includes("if: ${{ always() && needs.deploy.result == 'success' }}"));
+  assert.ok(!segment.includes("if: ${{ always() && needs.deploy.result == 'success' }}"),"quota failures must stop downstream probes");
   assert.ok(segment.includes('ekodi-background-browser-worker.yml'));
   assert.ok(segment.includes('surface_paths: /research/'));
   assert.ok(segment.includes('device_profile: '+device));
