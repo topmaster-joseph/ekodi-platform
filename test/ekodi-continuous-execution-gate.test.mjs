@@ -70,7 +70,7 @@ test('mandatory early owner/safety gates remain in force for protected risks', (
   }
   assert.equal(evaluateEkodiContinuousExecution({
     phase: 'implement', riskFlags: ['destructive_data'], separateSafetyApprovalVerified: true,
-  }).decision, 'continue_automatically');
+  }).decision, 'await_mandatory_early_gate');
 });
 
 test('final confirmation is not requested before authoritative CI, staging, rollback and provenance', () => {
@@ -113,9 +113,15 @@ const durableReceipt = {
   approved:true, approvedBy:'owner-1',
   approvalId:`final_promotion_${taskId}_v3`,
 };
+const preproductionProof = {
+  authority:'ekodi-orchestrator', taskId, branchRef, releaseSha, artifactDigest,
+  requiredCiVerified:true, stagingVerified:true, rollbackReady:true,
+  securityReviewVerified:true, verifiedAt:'2026-10-18T06:29:00Z',
+};
 const taskRow = {
   task_id:taskId, branch_ref:branchRef, state:'staging',
   state_version:3, permission_class:'delegated', deployment_requested:1,
+  evidence_json:JSON.stringify({preproductionProof}),
 };
 const eventRow = {
   actor:'super-admin:owner-1', reason:'final_promotion_approval_recorded',
@@ -160,6 +166,11 @@ test('stale, mismatched, corrupt or unprivileged DB approvals fail closed',async
     [{...taskRow,branch_ref:'ai/gpt6/'+taskId},eventRow],
     [{...taskRow,state_version:4},eventRow],
     [{...taskRow,permission_class:'unapproved'},eventRow],
+    [{...taskRow,state:'assigned'},eventRow],
+    [{...taskRow,evidence_json:JSON.stringify({preproductionProof:{...preproductionProof,releaseSha:'c'.repeat(40)}})},eventRow],
+    [{...taskRow,evidence_json:JSON.stringify({preproductionProof:{...preproductionProof,stagingVerified:false}})},eventRow],
+    [{...taskRow,evidence_json:'{}'},eventRow],
+
     [{...taskRow,deployment_requested:0},eventRow],
     [taskRow,null],
     [taskRow,{...eventRow,actor:'ai:claude'}],
