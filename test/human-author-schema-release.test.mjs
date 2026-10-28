@@ -44,6 +44,14 @@ test('Exact main SHA, receipt, restricted project and dev security gate precede 
   assert.ok(!wf.includes('--no-verify-jwt'));
 });
 
+test('Signed orchestrator receipt GET uses valid curl fail-with-body arguments',()=>{
+  const receiptLine=wf.split('\n').find(line=>line.includes('release-receipt?taskId='));
+  assert.ok(receiptLine, 'signed receipt endpoint must be used');
+  assert.match(wf,/curl --fail-with-body -sS --max-time 20/);
+  assert.doesNotMatch(wf,/curl --fail-with-body\s+-[^\n]*f/, 'curl -f conflicts with --fail-with-body');
+  assert.match(wf,/\.authorized == true and \.authority == "ekodi-orchestrator"/);
+});
+
 test('Migration is additive, paid entitlements fail closed, and interview records are private',()=>{
   assert.doesNotMatch(migration,/\b(?:drop\s+table|truncate\s+table|alter\s+table\s+[^;]*drop\s+column)\b/i);
   for (const term of ['enable row level security','human_author_subscriptions','human_author_enrollments',
