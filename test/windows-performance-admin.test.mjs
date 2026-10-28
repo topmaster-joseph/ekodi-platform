@@ -89,7 +89,7 @@ test('dedicated Windows performance route uses canonical admin, authenticated ha
   assert.match(routes, /devices:'ops'/);
   assert.match(routes, /detailSegments/);
   assert.match(routes, /function navigationTarget\(section,loc=window.location,detailSegments=null\)/);
-  assert.match(handoff, /target\.pathname=routes\(\)\.pathFor\(r,location\.pathname\.split\('\/'\)\.slice\(4\)\)/);
+  assert.match(handoff, /target\.pathname=cleanRouteUrl\(r\)\.split\('\?'\)\[0\]/);
   assert.match(admin, /WINDOWS_PERFORMANCE_URL = '\/admin\/ops\/devices\/windows-performance'/);
   assert.match(admin, /function windowsPerformanceRoute\(\)/);
   assert.match(admin, /wrapper\.open = windowsPerformanceRoute\(\) \|\| openRosterGroups\.has\(group\.key\)/);
@@ -123,9 +123,10 @@ test('dedicated URL actually resolves to devices and retains it across Google lo
   assert.equal(adminRoutes.navigationTarget('devices', address), address.pathname);
   const match = authSource.match(/function centralAdminAuthUrl\(v\)\{[\s\S]*?\}(?=function normalizeEntryRoute)/);
   assert.ok(match, 'canonical admin login handoff must be available');
-  const getAuthUrl = new Function('routes', 'normalizeRoute', 'location', 'AUTH_URL', 'URL', match[0] + '; return centralAdminAuthUrl;')(
+  const getAuthUrl = new Function('routes', 'normalizeRoute', 'cleanRouteUrl', 'location', 'AUTH_URL', 'URL', match[0] + '; return centralAdminAuthUrl;')(
     () => adminRoutes,
     adminRoutes.normalizeSection,
+    route => adminRoutes.navigationTarget(route, address),
     address,
     'https://ekodi.kr/auth/?site=admin',
     URL,
