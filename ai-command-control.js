@@ -22,6 +22,7 @@ import { getEkodiProviderOperationalReadiness, runEkodiCommandQueue } from './ek
 import { getLatestAutonomousHealthSnapshot } from './ekodi-autonomous-health-telemetry.js';
 import {
   approveOrchestratorTaskForPlatformAdmin,
+  approveOrchestratorFinalPromotionForPlatformAdmin,
   getOrchestratorTaskStatusForPlatformAdmin,
   listOrchestratorHumanGatesForPlatformAdmin,
   submitOrchestratorTask,
@@ -279,6 +280,32 @@ export async function handleEkodiV8CommandControl(request, env) {
     );
     if (!task) return json(request, env, { error:'Orchestrator task를 찾을 수 없습니다.', code:'ORCHESTRATOR_TASK_NOT_FOUND' }, 404);
     return json(request, env, { ok:task.approved===true, task }, task.approved===true ? 200 : 409);
+  }
+
+  // Final production confirmation is separate from the earlier human/safety gate.
+  // No release is triggered here; the official protected deploy lane must
+  // independently enforce this durable exact-artifact receipt.
+  const finalPromotionMatch=url.pathname.match(/^\/api\/control\/ai\/v8\/orchestrator\/tasks\/([^/]+)\/final-promotion\/approve$/);
+  if(request.method==='POST' && finalPromotionMatch){
+    const denied=requirePlatformSuperAdmin('ai:operate');if(denied)return denied;
+    if(!isSameOriginAdminMutation(request))return json(request,env,{ok:false,code:'ORCHESTRATOR_SAME_ORIGIN_REQUIRED'},403);
+    if(!(request.headers.get('content-type')||'').toLowerCase().startsWith('application/json')){
+      return json(request,env,{ok:false,code:'JSON_CONTENT_TYPE_REQUIRED'},415);
+    }
+    const body=await readJson(request);
+    if(!body||typeof body!=='object'||Array.isArray(body))return json(request,env,{ok:false,code:'INVALID_FINAL_APPROVAL'},400);
+    const taskId=decodeURIComponent(finalPromotionMatch[1]);
+    const decision=await approveOrchestratorFinalPromotionForPlatformAdmin(env,auth.session,taskId,{
+      expectedStateVersion:body.expectedStateVersion,
+      releaseSha:body.releaseSha,
+      artifactDigest:body.artifactDigest,
+    });
+    return json(request,env,{
+      ok:decision.approved===true,
+      code:decision.approved?'FINAL_PROMOTION_APPROVAL_RECORDED':'FINAL_PROMOTION_APPROVAL_REJECTED',
+      ...decision,
+      productionDeployed:false,
+    },decision.approved?200:409);
   }
 
   const commandMutation = request.method === 'POST' && (url.pathname === `${PREFIX}/pulse` || url.pathname === `${PREFIX}/drain`);
