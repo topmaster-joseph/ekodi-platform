@@ -70,6 +70,10 @@ export default {
     if (url.pathname === '/community' || url.pathname === '/community/') return Response.redirect('https://ekodi.kr/community/', 307);
     const response = await env.ASSETS.fetch(request);
     if (url.pathname === '/' || url.pathname === '/index.html') return injectEkodiShell(await authorHtml(response), 'author');
-    return injectEkodiShell(secure(response, 'public, max-age=300'), 'author');
+    // Privacy- and payment-critical browser modules must not retain obsolete
+    // authorization/UI contracts after a protected Creator AI release.
+    // Cache public noncritical static assets normally for performance.
+    const criticalClientModule = /^\/(?:app|billing|human-writer(?:-entitlement|-notes)?)\.js$/.test(url.pathname);
+    return injectEkodiShell(secure(response, criticalClientModule ? 'no-store' : 'public, max-age=300'), 'author');
   },
 };
