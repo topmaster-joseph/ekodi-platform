@@ -639,9 +639,102 @@ async function verifySocialInventory(tab, alreadyActive, started) {
      evidence.socialLoginEnabled!==false || evidence.autoPublishingEnabled!==false){
     throw new Error('Social account live inventory or dormant policy failed: '+JSON.stringify(evidence));
   }
+  // Test the real production event handlers without creating identities, altering
+  // the production API, or logging any owner/account identifiers. The temporary
+  // DOM-only sentinel is removed synchronously before further navigation.
+  stage('social-ui-filter-controls');
+  const filters = await page.evaluate(() => {
+    const panel=document.getElementById('ekodiSocialAccountRegistry');
+    const providerSearch=panel?.querySelector('[data-social-search]');
+    const providerCount=panel?.querySelector('[data-social-result-count]');
+    const recordSearch=panel?.querySelector('[data-social-account-search]');
+    const source=panel?.querySelector('[data-social-account-source]');
+    const status=panel?.querySelector('[data-social-account-filter]');
+    const destination=panel?.querySelector('[data-social-links]');
+    const cards=[...panel?.querySelectorAll('[data-social-provider-card]')||[]];
+    if(!providerSearch||!providerCount||!recordSearch||!source||!status||!destination||cards.length!==13)
+      return {controlsPresent:false};
+    const original={
+      provider:providerSearch.value,search:recordSearch.value,
+      source:source.value,status:status.value
+    };
+    const change=(control,value,event)=>{
+      control.value=value;
+      control.dispatchEvent(new Event(event,{bubbles:true}));
+    };
+    // Browser-local DOM fixture only; this is NOT a registered social identity.
+    const fixture=document.createElement('article');
+    fixture.dataset.socialRecord='identity';
+    fixture.dataset.status='pending_provider_verification';
+    fixture.dataset.searchText='ekodi-e2e-dom-only-sentinel';
+    fixture.hidden=true;
+    let serviceZero=false,serviceRestored=false,matching=false,wrongSource=false,wrongStatus=false,wrongSearch=false;
+    try{
+      change(providerSearch,'ekodi-e2e-no-provider-match','input');
+      serviceZero=cards.every(card=>card.hidden)&&providerCount.textContent.includes('표시 0 / 전체 13');
+      change(providerSearch,'','input');
+      serviceRestored=cards.every(card=>!card.hidden);
+      destination.append(fixture);
+      change(recordSearch,'ekodi-e2e-dom-only-sentinel','input');
+      change(source,'identity','change');
+      change(status,'pending_provider_verification','change');
+      matching=!fixture.hidden;
+      change(source,'existing','change');
+      wrongSource=fixture.hidden;
+      change(source,'identity','change');
+      change(status,'error','change');
+      wrongStatus=fixture.hidden;
+      change(status,'pending_provider_verification','change');
+      change(recordSearch,'ekodi-e2e-no-record-match','input');
+      wrongSearch=fixture.hidden;
+    }finally{
+      fixture.remove();
+      change(recordSearch,original.search,'input');
+      change(source,original.source,'change');
+      change(status,original.status,'change');
+      change(providerSearch,original.provider,'input');
+    }
+    return {controlsPresent:true,serviceZero,serviceRestored,matching,wrongSource,wrongStatus,wrongSearch};
+  });
+  if(Object.values(filters).some(value=>value!==true)){
+    throw new Error('Social account live UI filter controls failed: '+JSON.stringify(filters));
+  }
+
+  stage('social-responsive-visual');
+  const responsive=[];
+  for(const [width,expectedColumns] of [[320,1],[390,1],[768,2],[1366,4],[1440,4]]){
+    await page.setViewportSize({width,height:1100});
+    const proof=await page.evaluate(() => {
+      const panel=document.getElementById('ekodiSocialAccountRegistry');
+      const directory=panel?.querySelector('.ekodi-social-directory');
+      const grid=panel?.querySelector('[data-social-providers]');
+      if(!panel||!directory||!grid)return {visible:false,contained:false,columns:0};
+      const rect=panel.getBoundingClientRect();
+      const cols=getComputedStyle(grid).gridTemplateColumns.trim().split(/\\s+/).filter(Boolean).length;
+      const contained=rect.left>=-2&&rect.right<=window.innerWidth+3&&
+        panel.scrollWidth<=panel.clientWidth+3&&directory.scrollWidth<=directory.clientWidth+3;
+      return {visible:!panel.hidden&&grid.getBoundingClientRect().width>0,contained,columns:cols};
+    });
+    responsive.push({width,pass:proof.visible&&proof.contained&&proof.columns===expectedColumns});
+    if(width===390||width===1440){
+      // Screenshots contain only the service directory and aggregate numbers;
+      // account record lists and EKODI IDs are outside the captured element.
+      await page.locator('#ekodiSocialAccountRegistry .ekodi-social-directory').screenshot({
+        path:path.join(artifactsDir,'social-accounts-directory-'+width+'.png'),
+        timeout:10000
+      });
+    }
+  }
+  await page.setViewportSize({width:1440,height:1100});
+  if(responsive.some(result=>!result.pass))
+    throw new Error('Social account responsive layout failed at widths: '+responsive.filter(x=>!x.pass).map(x=>x.width).join(','));
   const outcome=results.find(x=>x.id===menuId);
-  if(outcome)Object.assign(outcome,{inventoryVerified:true,policyDisabled:true,authenticatedRead:true,anonymousDenied:true,providerCount:13});
-  console.log('[PROD-E2E] social-accounts: authorized inventory=200, guest=401, 13 providers, policy disabled');
+  if(outcome)Object.assign(outcome,{
+    inventoryVerified:true,policyDisabled:true,authenticatedRead:true,
+    anonymousDenied:true,providerCount:13,accountFilterControlsVerified:true,
+    responsiveWidthsVerified:responsive.map(item=>item.width)
+  });
+  console.log('[PROD-E2E] social-accounts: authorized inventory=200, guest=401, 13 providers, disabled policy, filters tested, responsive 320/390/768/1366/1440');
 }
 
 try {
