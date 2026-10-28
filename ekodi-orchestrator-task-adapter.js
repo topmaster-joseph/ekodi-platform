@@ -1,4 +1,5 @@
 import { getEkodiCommandTask, ingestEkodiPulse } from './ekodi-command-ledger.js';
+import { recordEkodiFinalPromotionApproval } from './ekodi-final-promotion-approval.js';
 import { runEkodiCommandQueue } from './ekodi-pulse-runtime.js';
 import { projectDeploymentGate } from './execution-state-projector.js';
 import authCore from './auth-worker-core.js';
@@ -610,6 +611,19 @@ export async function approveOrchestratorTaskForPlatformAdmin(env,session,id,arg
   const db=dbFrom(env),identity=await platformAdminIdentityFromSession(db,session);
   if(!identity)throw new Error('EKODI_PLATFORM_SUPER_ADMIN_REQUIRED');
   return approveOrchestratorTask(env,identity,id,args);
+}
+
+// Admin-only, server-verified, exact-artifact approval record.
+export async function approveOrchestratorFinalPromotionForPlatformAdmin(env,session,id,args={}){
+  const db=dbFrom(env),identity=await platformAdminIdentityFromSession(db,session);
+  if(!identity)throw new Error('EKODI_PLATFORM_SUPER_ADMIN_REQUIRED');
+  return recordEkodiFinalPromotionApproval(db,{
+    taskId:id,
+    expectedStateVersion:args.expectedStateVersion,
+    releaseSha:args.releaseSha,
+    artifactDigest:args.artifactDigest,
+    authorizedSuperAdminPersonId:identity.personId,
+  });
 }
 
 export async function getOrchestratorTaskStatus(env,identity,id){
