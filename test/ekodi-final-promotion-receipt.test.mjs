@@ -6,8 +6,9 @@ import { handleOrchestratorReleaseReceipt } from '../ekodi-orchestrator-task-ada
 
 const taskId='orch_0123456789abcdef0123456789abcdef';
 const branchRef='ai/gpt6/'+taskId,releaseSha='a'.repeat(40),artifactDigest='sha256:'+'b'.repeat(64);
+const archiveDigest='sha256:'+'c'.repeat(64);
 const proof={
-  authority:'ekodi-orchestrator',taskId,branchRef,releaseSha,artifactDigest,
+  authority:'ekodi-orchestrator',taskId,branchRef,releaseSha,artifactDigest,archiveDigest,
   requiredCiVerified:true,stagingVerified:true,rollbackReady:true,
   securityReviewVerified:true,verifiedAt:new Date(Date.now()-120_000).toISOString(),
 };
@@ -15,7 +16,7 @@ const staged={
   actor:'ekodi-github-actions-oidc-reconciler',reason:'verified_preproduction_evidence_recorded',
   evidence_json:JSON.stringify({
     authority:'ekodi-orchestrator',source:'github-actions-oidc',
-    taskId,branchRef,releaseSha,artifactDigest,verifiedAt:proof.verifiedAt,workflowRunId:123,
+    taskId,branchRef,releaseSha,artifactDigest,archiveDigest,verifiedAt:proof.verifiedAt,workflowRunId:123,
   }),
 };
 const approvedBy='platform-admin:001',version=4;
@@ -69,6 +70,8 @@ test('missing or stale owner evidence always fails closed',async()=>{
     [{...task,state_version:5},staged,approval],
     [{...task,evidence_json:'{}'},staged,approval],
     [task,null,approval],[task,{...staged,actor:'ai:claude'},approval],
+    [task,{...staged,evidence_json:JSON.stringify({...JSON.parse(staged.evidence_json),archiveDigest:'sha256:'+'d'.repeat(64)})},approval],
+    [{...task,evidence_json:JSON.stringify({preproductionProof:{...proof,archiveDigest:'sha256:'+'d'.repeat(64)}})},staged,approval],
     [task,{...staged,evidence_json:JSON.stringify({...JSON.parse(staged.evidence_json),workflowRunId:0})},approval],
     [task,staged,null],[task,staged,{...approval,actor:'ai:claude'}],
     [task,staged,{...approval,evidence_json:JSON.stringify({...JSON.parse(approval.evidence_json),releaseSha:'c'.repeat(40)})}],
