@@ -1,5 +1,5 @@
 -- EKODI Orchestrator read-only GitHub REST quota telemetry foundation.
--- No tokens, response bodies, actors, request URLs or IP addresses.
+-- No credentials, response bodies, actors, request URLs or IP addresses.
 -- Absence of verified GitHub response data must display as unknown.
 CREATE TABLE IF NOT EXISTS github_operations_api_budgets (
   installation_id INTEGER NOT NULL CHECK(installation_id > 0),
