@@ -317,7 +317,7 @@ function shell(req,active,title,eyebrow,note,controls,content,script,headExtra='
   // customer domain is canonical. Notice-detail pages supply their own
   // evidence-specific canonical and must never receive a duplicate.
   const discoveryMeta=(!headExtra&&(active==='voices'||active==='notices'))?(()=>{
-    const canonical='https://seonammedi.kr/board/'+active;
+    const canonical='https://xn--3e0b8b58jw4co4mnpll3k.kr/board/'+active;
     const description=active==='voices'
       ? '서남권 국립의대 소통센터 시민의견. 공개된 의견을 읽고, Google 로그인 후 의견을 등록할 수 있습니다.'
       : '서남권 국립의대 소통센터 공식 공지와 주요 안내를 확인합니다.';
@@ -445,7 +445,7 @@ function noticesPage(req){
 }
 // Notice photos must be visible without client JS for link previews (KakaoTalk,
 // Facebook) and on a stable per-notice page. Public URLs use the canonical host.
-const SEONAM_PUBLIC_ORIGIN='https://seonammedi.kr';
+const SEONAM_PUBLIC_ORIGIN='https://xn--3e0b8b58jw4co4mnpll3k.kr';
 const htmlEsc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function publicFileUrl(key){return SEONAM_PUBLIC_ORIGIN+'/board/api/files/'+encodeURIComponent(key)}
 async function publishedNotice(env,id){
