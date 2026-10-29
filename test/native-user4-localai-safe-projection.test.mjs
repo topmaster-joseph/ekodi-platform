@@ -66,6 +66,20 @@ test('contradictory local AI diagnosis does not count as completed inference',()
   assert.equal(projection.localAi.diagnosticCode,'wrong_bind');
 });
 
+test('older genuine local inference receipts without a diagnostic category retain verification',()=>{
+  const localAiProof=summarizeCommandResult({localAiProof:{
+    ...base,ollamaApi:'ready',inference:'passed',credentialCollection:false
+  }},'software.localai.verify');
+  assert.equal(Object.hasOwn(localAiProof.localAiProof,'diagnosticCode'),false);
+  const projection=projectNativeDeviceProofs([{
+    command_type:'software.localai.verify',status:'succeeded',
+    completed_at:checkedAt,issued_at:checkedAt,
+    result_json:JSON.stringify(localAiProof)
+  }],now);
+  assert.equal(projection.localAi.verified,true);
+  assert.equal(projection.localAi.diagnosticCode,'unclassified');
+});
+
 test('scheduled authenticated USER4 GET emits only bounded diagnostic code, no raw fields or mutation',async()=>{
   const requests=[];
   const fetchImpl=async(url,init)=>{
