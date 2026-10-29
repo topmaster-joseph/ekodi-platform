@@ -119,3 +119,12 @@
 - 관리자 전용 POST `/api/internal/connectors/domemae/auth-probe`는 로그인/잔액 조회만 실행하며 최소 15분 간격으로 제한한다. 일반 Cron은 6시간 간격 제한 유지.
 - 로그인 실패를 안전한 오류코드(`LOGIN_REJECTED`, `PASSWORD_REJECTED`, `SNS_PASSWORD_REQUIRED` 등)로 분류하고 공급사 원문·계정 ID·잔액 금액·Secret을 D1이나 사용자 화면에 기록하지 않는다.
 - 유상 `setOrder`, 자동발주, 구매자 정보 이전은 계속 OFF. **로그인 확인만으로 실거래를 승인하지 않는다.**
+
+
+## LOGIN_REJECTED 지속 시 비결제 원인 분리 (2026-10-29)
+
+- 비밀번호 변경 후에도 로그인 실패면 비밀번호 문제라고 단정하지 않는다. 공식 `setLogin v4.1` Request는 POST, `aid`, `id`, `pw`, `ip`, `device=Third Party` 등을 요구한다.
+- **중요:** 기존 코드의 `DOMEGGOOK_CLIENT_IP` 미설정 fallback은 `127.0.0.1`(루프백)이며 실제 Cloudflare Worker 출구 IP가 아니다. 이는 공급사의 검증에 따라 로그인 거절 원인이 될 가능성이 있다. 공급사에 Worker 환경에서 `ip`로 허용되는 값을 확인받기 전까지 임의의 IP를 꾸며 넣지 않는다.
+- 관리자 인증 화면은 HTTP 상태·JSON 응답 여부·공급사 `result`의 범주(true/false/other/missing)·IP 설정 종류만 저장/표시한다. 실제 응답 원문, 회원 ID, 비밀번호, 세션, API Key는 데이터베이스/화면/메일에 기록하지 않는다.
+- 공급사 공식 로그인 요청 예시에는 `oe=euc-kr`가 포함되지만 파라미터 표에는 필수로 표기되지 않았다. 별도 인코딩 사용 여부도 공급사 확인 전 임의로 바꾸지 않는다.
+- 점검은 최소 15분 제한을 유지하며, 실제 발주 `setOrder`는 OFF 상태로 계속 차단한다.
