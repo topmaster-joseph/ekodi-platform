@@ -104,7 +104,10 @@ test('synthetic production Admin UI verifier exercises the native Control comman
   assert.match(text,/admin-control-home/);
   assert.match(text,/frameWidth<300/);
   assert.match(text,/command-roundtrip/);
-  assert.match(text,/expectedCount = menus\.length \+ 1/);
+  assert.match(text,/supplementalVerifications = \['command-home'\]/);
+  assert.match(text,/supplementalVerifications\.push\('search-visibility-interactions'\)/);
+  assert.match(text,/expectedCount = requiredVerificationIds\.size/);
+  assert.match(text,/duplicates\.length\|\|missing\.length\|\|unexpected\.length/);
 });
 
 
