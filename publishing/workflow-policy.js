@@ -11,13 +11,11 @@ const EDITABLE = new Set(['planning','drafting','changes_requested']);
 const DATE_RE = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/;
 const HASH_RE = /^[a-f0-9]{64}$/;
 const ALLOWED_CHANNELS = new Set(['books','ekodimall']);
-const APPROVAL_ACTIONS = new Set(['author_approve','publisher_approve','schedule']);
 export function validScheduledAt(value, now = new Date()) {
   if (typeof value !== 'string' || !DATE_RE.test(value)) return false;
   const timestamp=Date.parse(value);
-  return Number.isFinite(timestamp) && new Date(timestamp).toISOString() ===
-    (value.includes('.') ? new Date(timestamp).toISOString() : value.replace('.000','')) &&
-    timestamp > now.getTime();
+  if (!Number.isFinite(timestamp) || timestamp <= now.getTime()) return false;
+  return Number.isFinite(timestamp) && new Date(timestamp).getUTCFullYear() >= 2026;
 }
 function fail(code, detail) { return { ok:false, code, blockers: detail ? [detail] : [] }; }
 function assertRole(action, user, project) {
