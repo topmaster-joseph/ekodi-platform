@@ -148,6 +148,12 @@ export async function handlePublishingWorkflow(req,env){
     if(!p||!visible(p,u,r))return error(404,'NOT_FOUND');
     const endpoint=match[2]||'';
     if(!endpoint&&req.method==='GET')return result(200,{ok:true,project:safe(p)});
+    if(endpoint==='readiness'&&req.method==='GET'){
+      const gate=await verifyCommercialRelease(env,p);
+      return result(200,{ok:true,stage:p.stage,saleReadyForPublisherReview:gate.ready,
+        blocker:gate.ready?null:gate.reason,publicationActive:false,
+        note:'이 결과는 비공개 계약·오디오 검수 기록이며 실제 서점·몰 상품 등록과 결제를 증명하지 않습니다.'});
+    }
     if(endpoint==='transition'&&req.method==='POST')return transition(env,db,p,req,u,r);
     if(endpoint==='evidence'&&req.method==='POST')return evidence(db,p,req,u,r);
     if(endpoint==='ai'&&req.method==='POST')return ai(db,p,req,u);
