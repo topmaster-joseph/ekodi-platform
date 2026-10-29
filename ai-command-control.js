@@ -30,6 +30,7 @@ import {
 import { collectPlatformRuntimeObservations } from './ekodi-platform-observer.js';
 import { runRuntimeAutonomicControlPlane } from './ekodi-autonomic-control-plane.js';
 import { buildFleetStatus, renderFleetStatusHtml } from './ekodi-fleet-status.js';
+import { githubOperationsSnapshot } from './github-operations-webhook.js';
 
 const PREFIX = '/api/control/ai/v8';
 const COLLABORATION_PATH = `${PREFIX}/collaboration-settings`;
@@ -162,6 +163,18 @@ export async function handleEkodiV8CommandControl(request, env) {
     if (!sessionCapabilityGranted(auth.session, requiredCapability)) return json(request, env, { error:'capability_required', capability:requiredCapability }, 403);
     return null;
   };
+
+  // Read-only GitHub operational evidence under existing platform super-admin authorization.
+  if (url.pathname === PREFIX + '/github') {
+    const denied = requirePlatformSuperAdmin('ai:read'); if (denied) return denied;
+    if (request.method !== 'GET') return json(request, env, {ok:false,code:'GITHUB_CONTROL_READ_ONLY'},405);
+    try {
+      const snapshot = await githubOperationsSnapshot(env,url.searchParams.get('limit')||30);
+      return json(request, env, {ok:true,...snapshot});
+    } catch {
+      return json(request, env, {ok:false,code:'GITHUB_OPERATIONS_STORAGE_UNAVAILABLE'},503);
+    }
+  }
 
   // Read-only decision preview; never runs AI, issues tokens, or grants execution rights.
   if (request.method === 'POST' && url.pathname === `${PREFIX}/sovereignty/preview`) {
