@@ -905,8 +905,8 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
 
 test('seonammedi customer domain cache-busts public and admin static assets',async()=>{
   const [html,adminHtml]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('admin/index.html',root),'utf8')]);
-  const cssVersion=html.match(/\/seonammedi\/app\.css\?v=(20261013-[a-z0-9-]+)/)?.[1];
-  const jsVersion=html.match(/\/seonammedi\/app\.js\?v=(20261013-[a-z0-9-]+)/)?.[1];
+  const cssVersion=html.match(/\/seonammedi\/app\.css\?v=(20[0-9]{6}-[a-z0-9-]+)/)?.[1];
+  const jsVersion=html.match(/\/seonammedi\/app\.js\?v=(20[0-9]{6}-[a-z0-9-]+)/)?.[1];
   assert.ok(cssVersion,'public stylesheet must carry an explicit release cache-buster');
   assert.equal(jsVersion,cssVersion,'public script and stylesheet must share one cache-buster');
   assert.ok(adminHtml.includes('<a class="brand" href="./">'));
