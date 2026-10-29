@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS publishing_workflow_projects (
  release_candidate_json TEXT NOT NULL DEFAULT '{}',
  author_approval_json TEXT, publisher_approval_json TEXT, channels_json TEXT,
  scheduled_at TEXT, ready_at TEXT, released_at TEXT,
- revision INTEGER NOT NULL DEFAULT 1,
+ revision INTEGER NOT NULL DEFAULT 1, last_event_id TEXT,
  created_at TEXT NOT NULL, updated_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_publishing_workflow_author
