@@ -49,3 +49,21 @@ test('canonical apex edge routes reach Storage and Marketing callback workers wi
   assert.equal(response.headers.get('x-ekodi-canonical-surface'), 'marketing-connect-api');
   assert.equal(response.headers.get('x-ekodi-canonical-path'), '/marketing-connect-api');
 });
+
+
+test('YouTube OAuth return URLs and fallback links stay on canonical apex routes', async () => {
+  const src = await fs.promises.readFile(new URL('../channel-oauth-control.js', import.meta.url), 'utf8');
+  const retired = ['admin','ekodi','kr'].join('.');
+  assert.ok(!src.includes('https://' + retired), 'Do not emit old admin link');
+  assert.match(src, /https:\/\/ekodi\.kr\/admin\/services\/marketing-ai/);
+  const fn = src.match(/function safeReturnTo\(value\) \{[\s\S]*?\n\}/)?.[0];
+  assert.ok(fn, 'Keep validated OAuth return handling');
+  const safeReturnTo = new Function('URL', fn + '\nreturn safeReturnTo;')(URL);
+  assert.equal(safeReturnTo('https://ekodi.kr/admin/services/marketing-ai?connected=1'), 'https://ekodi.kr/admin/services/marketing-ai?connected=1');
+  assert.equal(safeReturnTo('https://' + retired + '/?route=marketing-ai'), 'https://ekodi.kr/admin/services/marketing-ai');
+  assert.equal(safeReturnTo('https://' + ['marketing','ekodi','kr'].join('.')), 'https://ekodi.kr/ekodibiz/marketing-ai');
+  assert.equal(safeReturnTo('https://evil.example/admin'), '');
+  assert.equal(safeReturnTo('http://ekodi.kr/admin'), '');
+  assert.equal(safeReturnTo('https://user:pass@ekodi.kr/admin'), '');
+  assert.equal(safeReturnTo('https://ekodi.kr:8000/admin'), '');
+});

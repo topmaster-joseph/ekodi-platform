@@ -76,3 +76,11 @@ test('insurance consultation withdrawal panel does not rerender inside DOM obser
   assert.match(bridge,/DOMContentLoaded[^\n]*reviseHandoffCopy\(\); renderWithdrawalPanel\(\); loadReferenceCatalog\(\)/,
     'initial withdrawal panel must still be visible before any request');
 });
+
+
+test('standalone insurance Worker admin redirect uses canonical apex, not retired hostname', async () => {
+  const source = await read('sites/ekodi-insurance/worker.js');
+  const retired = ['admin','ekodi','kr'].join('.');
+  assert.match(source, /if\(production\)return Response\.redirect\('https:\/\/ekodi\.kr\/admin',302\)/);
+  assert.ok(!source.includes('https://' + retired + '/'));
+});

@@ -69,7 +69,7 @@ export default {
     }),{headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}});
     if(url.pathname==='/advisor'||url.pathname==='/advisor/')return secureAsset(await fetchAsset(request,env,'/advisor.html'),production);
     if(url.pathname==='/admin'||url.pathname==='/admin/'){
-      if(production)return Response.redirect('https://admin.ekodi.kr/',302);
+      if(production)return Response.redirect('https://ekodi.kr/admin',302);
       return secureAsset(await fetchAsset(request,env,'/admin.html'),false);
     }
     return secureAsset(await fetchAsset(request,env),production);
