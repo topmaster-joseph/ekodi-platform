@@ -78,7 +78,7 @@ function shell(title,main,method='GET',status=200) {
     '<meta name="color-scheme" content="light"><title>',esc(title),' | EKODI Pay</title><style>',STYLES,'</style></head><body>',
     '<header class="top"><div class="wrap"><a class="brand" href="/ekodipay/" aria-label="에코디페이 홈">EKODI <b>Pay</b></a>',
     '<nav class="toplinks" aria-label="사이트 메뉴"><a href="/ekodipay/#services">서비스</a><a href="/ekodipay/#flow">이용방법</a>',
-    '<a href="/ekodipay/demo" class="pill-link">테스트 체험</a></nav></div></header>',
+    '<a href="/ekodipay/admin">결제 운영관리</a><a href="/ekodipay/demo" class="pill-link">테스트 체험</a></nav></div></header>',
     main,
     '<footer class="foot"><div class="wrap">EKODI Pay · 공식 주소 ekodi.kr/ekodipay · 실제 결제는 별도 PG 계약·운영 승인 후 제공됩니다.</div></footer>',
     '</body></html>'].join('');
@@ -87,18 +87,49 @@ function shell(title,main,method='GET',status=200) {
 function demoUrl(service,step,method='') {
   return PREFIX+'/demo?service='+encodeURIComponent(service)+'&step='+encodeURIComponent(step)+(method?'&method='+encodeURIComponent(method):'');
 }
+// Public service-owned entrypoints, never payment initiation endpoints.
+export const SERVICE_ENTRYPOINTS = Object.freeze({
+  mall: Object.freeze({label:'에코디몰',path:'/ekodimall/',description:'상품 구매 및 주문조회'}),
+  biz: Object.freeze({label:'에코디비즈',path:'/ekodibiz/',description:'견적·계약 및 청구'}),
+  edu: Object.freeze({label:'에코디교육',path:'/edu/',description:'수강 신청 및 교육비'}),
+  together: Object.freeze({label:'동행 프로그램',path:null,description:'해당 프로그램의 신청 화면에서 이용'})
+});
+const PAYMENT_STATUS = 'disabled-until-human-approved-pg-activation';
+function serviceDirectory(request,url) {
+  if(url.search)return new Response(JSON.stringify({error:'query_not_supported'}),{status:400,headers:{...headers('application/json; charset=utf-8'),'x-robots-tag':'noindex, nofollow'}});
+  const services=Object.entries(SERVICE_ENTRYPOINTS).map(([id,s])=>({
+    id,label:s.label,entry:s.path,description:s.description,
+    checkoutOwner:'originating-service',
+    livePaymentStatus:'not-verified',
+  }));
+  return new Response(request.method==='HEAD'?null:JSON.stringify({
+    service:'ekodipay',purpose:'shared-payment-infrastructure',
+    consumerCheckout:'originating-service-only',
+    publicPaymentInitiation:false,
+    realMoneyProcessing:PAYMENT_STATUS,
+    services
+  }),{status:200,headers:{...headers('application/json; charset=utf-8'),'x-robots-tag':'noindex, nofollow'}});
+}
+function centralFinanceAdmin(request,url) {
+  // The central admin owns authentication and tenant/RBAC checks. This public
+  // Worker deliberately never renders or accepts business/settlement data.
+  if(url.search)return new Response('Invalid admin link',{status:400,headers:{...headers('text/plain; charset=utf-8'),'x-robots-tag':'noindex, nofollow'}});
+  return new Response(null,{status:307,headers:{...headers('text/plain; charset=utf-8'),location:'/admin?route=finance&source=ekodipay','x-robots-tag':'noindex, nofollow'}});
+}
+
 function home(method) {
-  const cards=Object.entries(DEMO_CATALOG).map(([id,item])=>[
-    '<article class="card"><span class="label">',esc(item.tag),'</span><h3>',esc(item.name),'</h3><p>',esc(item.title),
-    ' · 서비스별 주문과 별도로 결제 화면을 미리 체험합니다.</p><a class="cta" href="',demoUrl(id,'review'),'">시연하기 →</a></article>'
-  ].join('')).join('');
+  const cards=Object.entries(DEMO_CATALOG).map(([id,item])=>{
+    const service=SERVICE_ENTRYPOINTS[id];
+    const link=service.path?'<a class="cta" href="'+esc(service.path)+'">서비스에서 이용하기 →</a>':'<span class="muted">실제 신청은 해당 프로그램에서 진행됩니다.</span>';
+    return '<article class="card"><span class="label">'+esc(item.tag)+'</span><h3>'+esc(item.name)+'</h3><p>'+esc(service.description)+' · 결제는 해당 서비스에서 진행합니다.</p>'+link+' <a class="cta" href="'+demoUrl(id,'review')+'">화면 시연</a></article>';
+  }).join('');
   const main=[
     '<main><section class="hero"><div class="wrap hero-grid"><div><span class="eyebrow">ONE PAYMENT EXPERIENCE · EKODI</span>',
     '<h1>에코디의 모든 서비스를<br>하나의 결제 경험으로</h1>',
-    '<p class="lead">에코디몰·에코디비즈·에코디교육·동행 서비스를 위한 공통 결제 창구입니다. ',
-    '현재는 안전한 화면 시연을 제공하며, 실제 카드 청구나 입금은 발생하지 않습니다.</p>',
-    '<div class="actions"><a class="primary" href="/ekodipay/demo">테스트 결제 체험</a>',
-    '<a class="secondary" href="#services">연결 서비스 보기</a><a class="secondary" href="/ekodipay/preview">통합 운영 시안</a></div></div>',
+    '<p class="lead">EKODI Pay는 각 서비스가 함께 사용하는 청구·결제·환불·정산 공통 기반입니다. ',
+    '고객은 별도 결제 사이트로 이동하지 않고 이용 중인 서비스에서 신청·주문합니다. 현재 이 공개 페이지에서는 실결제를 수행하지 않습니다.</p>',
+    '<div class="actions"><a class="primary" href="#services">연결 서비스에서 이용</a>',
+    '<a class="secondary" href="/ekodipay/admin">결제 운영관리</a><a class="secondary" href="/ekodipay/demo">테스트 결제 체험</a><a class="secondary" href="/ekodipay/preview">통합 운영 시안</a></div></div>',
     '<aside class="state"><span class="status-mark">TEST EXPERIENCE · 실결제 미사용</span><h2>안전한 테스트 환경</h2>',
     '<p class="muted">서비스 선택부터 결제수단 선택·결과 화면까지 직접 확인할 수 있습니다.</p>',
     '<ul><li><span class="dot">✓</span>가상 금액만 표시하며 실제 청구하지 않습니다.</li>',
@@ -106,14 +137,14 @@ function home(method) {
     '<li><span class="dot">✓</span>승인·환불·정산 내역을 생성하지 않습니다.</li>',
     '<li><span class="dot">✓</span>PG 계약 및 별도 금융 승인 전 실제 결제는 차단됩니다.</li></ul></aside></div></section>',
     '<section id="services" class="section"><div class="wrap"><div class="section-head"><div>',
-    '<span class="eyebrow">CONNECTED SERVICES</span><h2>서비스별 결제 시연</h2>',
-    '<p class="muted">아래 금액·상품은 실제 판매·계약과 무관한 가상 예시입니다.</p></div></div>',
+    '<span class="eyebrow">CONNECTED SERVICES</span><h2>서비스별 신청·결제 안내</h2>',
+    '<p class="muted">서비스별 버튼은 각 사이트로 연결됩니다. 화면 시연은 실제 주문·금전거래와 무관합니다.</p></div></div>',
     '<div class="grid">',cards,'</div></div></section>',
     '<section id="flow" class="section"><div class="wrap"><span class="eyebrow">HOW IT WORKS</span>',
-    '<h2>결제 흐름은 간단하게, 검증은 확실하게</h2><div class="steps">',
-    '<div class="step"><span class="num">01 / SERVICE</span><strong>서비스 선택</strong><span class="muted">시연할 상품·교육·사업 유형을 고릅니다.</span></div>',
-    '<div class="step"><span class="num">02 / REVIEW</span><strong>가상 주문 확인</strong><span class="muted">실제 주문과 분리된 예시 금액·수단을 살펴봅니다.</span></div>',
-    '<div class="step"><span class="num">03 / RESULT</span><strong>시연 종료 확인</strong><span class="muted">실제 결제 없이 흐름 종료 화면만 보여줍니다.</span></div>',
+    '<h2>서비스별 주문, 사업자별 검증, 공통 결제 기반</h2><div class="steps">',
+    '<div class="step"><span class="num">01 / SERVICE</span><strong>원래 서비스에서 신청</strong><span class="muted">몰·교육·비즈 등의 실제 주문은 해당 서비스가 소유합니다.</span></div>',
+    '<div class="step"><span class="num">02 / REVIEW</span><strong>사업자·금액 검증</strong><span class="muted">해당 사업자의 계약·MID·주문 금액과 운영 승인을 서버에서 확인해야 합니다.</span></div>',
+    '<div class="step"><span class="num">03 / RESULT</span><strong>승인·정산은 별도 확인</strong><span class="muted">거래 원장과 PG 결과 및 정산계좌 확인 후에만 실제 상태가 확정됩니다.</span></div>',
     '</div><div class="notice"><strong>현재 운영 원칙</strong> · 테스트 시연은 PG사 샌드박스 승인이나 실제 결제 성공을 뜻하지 않습니다. ',
     'PG 연동은 서버 원장·결제 승인 검증·환불 정책을 갖춘 뒤 별도 활성화합니다.</div></div></section></main>'
   ].join('');
@@ -215,8 +246,10 @@ const searchExposureEntry= {
     if(path===PREFIX+'/api/health')return new Response(request.method==='HEAD'?null:JSON.stringify({
       service:'ekodipay',canonical:CANONICAL_PAYMENT_ROOT,status:'public-entry-ready',
       realMoneyProcessing:'disabled-until-human-approved-pg-activation',
-      demoMode:'read-only-no-transactions',paymentSecretsExposed:false
+      demoMode:'read-only-no-transactions',paymentSecretsExposed:false,consumerCheckout:'originating-service-only'
     }),{status:200,headers:headers('application/json; charset=utf-8')});
+    if(path===PREFIX+'/api/services')return serviceDirectory(request,url);
+    if(path===PREFIX+'/admin'||path===PREFIX+'/admin/')return centralFinanceAdmin(request,url);
     if(path===PREFIX+'/preview')return preview(request,url);
     if(path===PREFIX+'/demo')return demo(request,url);
     if(path===PREFIX+'/checkout')return checkout(request,url);
