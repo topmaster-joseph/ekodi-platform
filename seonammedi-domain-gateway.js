@@ -52,7 +52,7 @@ function rewriteText(text, incoming, contentType) {
   output = output.replaceAll('https://ekodi.kr/seonammedi', customerOrigin);
   if (contentType.includes('text/html')) {
     // Normalize legacy canonical from proxied HTML only, never sign-in or content links.
-    output = output.replace(/(<link\\s+rel=["']canonical["']\\s+href=["'])https:\/\/(?:seonammedi\\.kr|xn--3e0b8b58jw4co4mnpll3k\\.kr)/gi, '$1' + CANONICAL_ORIGIN);
+    output = output.replace(/(<link\s+rel=["']canonical["']\s+href=["'])https:\/\/(?:seonammedi\.kr|xn--3e0b8b58jw4co4mnpll3k\.kr)/gi, '$1' + CANONICAL_ORIGIN);
     output = output.replaceAll('href="/seonammedi/', 'href="/');
     output = output.replaceAll('src="/seonammedi/', 'src="/');
     output = injectVerificationMeta(output, incoming.hostname);
