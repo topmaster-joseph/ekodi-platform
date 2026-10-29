@@ -128,16 +128,19 @@
         const ownerChecked = document.createElement('label');
         const ownerBox = document.createElement('input'); ownerBox.type='checkbox';
         ownerChecked.append(ownerBox,document.createTextNode(' 구매자 동일인 여부를 판매처 기록으로 확인했습니다.'));
+        const editionChecked = document.createElement('label');
+        const editionBox = document.createElement('input'); editionBox.type='checkbox';
+        editionChecked.append(editionBox,document.createTextNode(' 판매처 구매 도서명·판본이 해당 전자책과 일치합니다.'));
         const approve = document.createElement('button'); approve.type='button'; approve.textContent='구매확인 승인';
         approve.addEventListener('click',async()=>{
-          if(!box.checked||!ownerBox.checked||!number.value.trim()){
-            alert('구매자 동일인 확인, 결제·환불 확인, 판매처 주문번호가 모두 필요합니다.');return;
+          if(!box.checked||!ownerBox.checked||!editionBox.checked||!number.value.trim()){
+            alert('구매자 동일인, 도서명·판본, 결제·환불 및 주문번호 확인이 모두 필요합니다.');return;
           }
           approve.disabled=true;
           try{
             await C.api(`admin/audiobook/claims/${encodeURIComponent(item.id)}/approve`,{
               method:'POST',body:{orderNumber:number.value.trim(),confirmedWithRetailer:true,
-                buyerIdentityMatched:true,refundStatusChecked:true,verificationMethod:'retailer_portal'}
+                buyerIdentityMatched:true,refundStatusChecked:true,productEditionMatched:true,verificationMethod:'retailer_portal'}
             });
             number.value='';refreshExternalAdmin();refreshExternal();
           }catch(e){alert(e.message)}finally{approve.disabled=false}
@@ -160,7 +163,7 @@
             refreshExternalAdmin();refreshExternal();
           }catch(e){alert(e.message)}finally{reject.disabled=false}
         });
-        info.append(p,label,number,checked,ownerChecked,approve,rejectReason,reject);
+        info.append(p,label,number,checked,ownerChecked,editionChecked,approve,rejectReason,reject);
         panel.append(info);host.append(panel);
       }
     } catch (e) { if(e.status!==401&&e.status!==403) $('externalAudioAdmin').hidden = true; }
