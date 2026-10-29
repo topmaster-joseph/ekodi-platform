@@ -83,6 +83,15 @@
           "마케팅AI",
           "주문AI"
         ]
+      },
+      {
+        "url": "https://ekodi.kr/management/api/spaces",
+        "statuses": [
+          401
+        ],
+        "expect": [
+          "\"error\":\"unauthorized\""
+        ]
       }
     ]
   }
