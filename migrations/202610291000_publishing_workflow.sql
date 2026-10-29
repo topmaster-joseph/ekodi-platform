@@ -38,3 +38,15 @@ CREATE TABLE IF NOT EXISTS publishing_workflow_ai_jobs (
 CREATE INDEX IF NOT EXISTS idx_publishing_workflow_jobs_project
  ON publishing_workflow_ai_jobs(project_id,created_at);
 -- Deliberately no trigger setting a book 'live', no job that charges a paid LLM.
+
+
+CREATE TABLE IF NOT EXISTS publishing_workflow_handoff_outbox (
+ id TEXT PRIMARY KEY, project_id TEXT NOT NULL, edition_id TEXT NOT NULL,
+ release_digest TEXT NOT NULL, idempotency_key TEXT NOT NULL UNIQUE,
+ payload_json TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending'
+ CHECK(status IN ('pending','dispatched','confirmed','blocked')),
+ created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_publishing_workflow_handoff
+ ON publishing_workflow_handoff_outbox(status,created_at);
+-- The outbox carries proposed, never pre-authorized sale activations.
