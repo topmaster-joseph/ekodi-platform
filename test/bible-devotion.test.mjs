@@ -225,9 +225,15 @@ test('phone layout keeps scripture side gutters minimal', () => {
 
 test('church, mission, and Bible share a fail-closed tomorrow navigation control',()=>{
  const client=fs.readFileSync(new URL('../bible/devotion.js',import.meta.url),'utf8');
- const churches=['/bible/devotion','/ekodichurch/devotion/','/ekodimission/devotion'];
  assert.ok(client.includes('const siteKey = root.dataset.siteKey'), 'shared renderer identifies the host');
- for(const path of churches)assert.ok(client.includes(path),'missing host in canonical renderer');
+ assert.match(client,/base\.startsWith\('\/ekodichurch'\)/);
+ assert.match(client,/base\.startsWith\('\/ekodimission'\)/);
+ const bible=fs.readFileSync(new URL('../bible/devotion.html',import.meta.url),'utf8');
+ const mission=fs.readFileSync(new URL('../space/ekodimission-devotion.page',import.meta.url),'utf8');
+ const verify=fs.readFileSync(new URL('../scripts/verify-devotion-native-sandbox.mjs',import.meta.url),'utf8');
+ assert.match(bible,/data-base="\/bible\/devotion"/);
+ assert.match(mission,/data-base="\/ekodimission\/devotion"/);
+ assert.match(verify,/\/ekodichurch\/devotion\/\?date=/);
  assert.match(client,/next\.hidden = true;/);
  assert.match(client,/next\.removeAttribute\('href'\)/);
  assert.match(client,/next\.setAttribute\('aria-disabled', String\(!allowed\)\)/);
