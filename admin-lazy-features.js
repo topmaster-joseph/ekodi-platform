@@ -18,6 +18,7 @@
     'release-control-admin.js',
     'work-admin.js',
     'marketing-ai-admin.js',
+    'github-operations-admin.js',
   ];
 
   const SITE_META = [
