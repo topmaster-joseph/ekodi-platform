@@ -84,8 +84,22 @@ test('even completed editorial checkboxes cannot bypass server signature checks'
   const good = candidate(draft.volumes[0]);
   const verdict = evaluateJubileeReleaseCandidate(draft.volumes[0], good);
   assert.equal(verdict.ready, false);
-  assert.deepEqual(verdict.blockers, ['trusted-signature-and-asset-evidence']);
-  assert.deepEqual(evaluateJubileeReleaseCandidate(draft.volumes[0], good, syntheticVerified), { ready:true, blockers:[] });
+  assert.ok(verdict.blockers.includes('trusted-signature-and-asset-evidence'));
+  // Editorial checkboxes and even a synthetic signature claim must not bypass
+  // the newer publisher-owned membership, rights and free-audiobook sale gates.
+  const asserted = evaluateJubileeReleaseCandidate(draft.volumes[0], good, syntheticVerified);
+  assert.equal(asserted.ready, false);
+  for (const required of [
+    'authorMembership.verifiedSaleEligible',
+    'rights.authorCopyrightRetained',
+    'rights.distributionLicenseApproved',
+    'audiobook.qualityAndVersionApproved',
+    'audiobook.freeBuyerBundleVerified',
+  ]) {
+    assert.ok(verdict.blockers.includes(required), required);
+    assert.ok(asserted.blockers.includes(required), required);
+  }
+  assert.ok(!asserted.blockers.includes('trusted-signature-and-asset-evidence'));
 });
 
 test('a changed manuscript digest or disabled rights check invalidates old approvals', () => {
