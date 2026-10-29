@@ -45,7 +45,8 @@ test('Public read-only audit does not misrepresent indexing or submit provider c
   const src=read('search-visibility-admin.js');
   assert.match(src,/public-registry.json/);
   assert.match(src,/EKODI-PUBLIC-DISCOVERY-002/);
-  assert.match(src,/SEO\(검색\) · AEO\(답변\) · GEO/);
+  assert.match(src,/사이트별 검색 준비도와 등록 확인 현황/);
+  assert.match(src,/AEO·GEO/);
   assert.match(src,/색인/);
   assert.doesNotMatch(src,/fetch\('https:\/\/indexing.googleapis.com/);
   assert.doesNotMatch(src,/localStorage\.setItem|POST.*indexnow/);
@@ -63,4 +64,19 @@ test('Provider matrix lists primary search engines, IndexNow participants and AI
   assert.match(src,/실제 인용 근거 미확인/);
   assert.match(src,/하위 경로별 기술 진단과 호스트 단위 소유권 인증은 구분/);
   assert.doesNotMatch(src,/providerStatus\s*=\s*['\"]verified/);
+});
+
+test('Site inventory presents a single-line classified register with numbered rows and a separate management panel',()=>{
+  const src=read('search-visibility-admin.js');
+  for(const label of ['번호','분류','사이트','주소','SEO','AEO·GEO','검색등록','관리'])
+    assert.ok(src.includes('<th scope="col">'+label+'</th>'), 'missing compact column '+label);
+  assert.match(src,/data-sv-manage-panel hidden/);
+  assert.match(src,/siteCategory\(site\)/);
+  assert.match(src,/index\+1/);
+  assert.match(src,/row\.append\(num,category,name,locationCell,basic,ai,providerCell,action\)/);
+  assert.match(src,/\.sv-site-name\{max-width:190px;overflow:hidden;text-overflow:ellipsis/);
+  assert.match(src,/refreshManage\(\)/);
+  assert.match(src,/\$\('#sv-category-filter'\)\.addEventListener\('change',render\)/);
+  assert.match(src,/confirmed_manually/);
+  assert.doesNotMatch(src,/미등록 확정/);
 });
