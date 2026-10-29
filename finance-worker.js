@@ -70,23 +70,35 @@ async function tossPayment(env, paymentKey, orderId) {
 }
 
 async function routeForOrder(env, orderId) {
-  const order = await env.DB.prepare(`SELECT organization_id, business_unit_id, project_id, source_domain
+  // Never infer a legal payee from an untrusted orderId or webhook prefix.
+  // A server-owned order is the only authority for organization and amount.
+  if (!orderId || typeof orderId !== 'string' || orderId.length > 160)
+    throw new Error('ORDER_ID_REQUIRED');
+  const order = await env.DB.prepare(`SELECT organization_id, business_unit_id, project_id, source_domain, amount, currency
     FROM payment_orders WHERE order_id = ?`).bind(orderId).first();
-  if (order) return order;
-  if (/^CHURCH_/.test(String(orderId || ''))) {
-    return { organization_id: 'EKODICHURCH', business_unit_id: 'CHURCH', project_id: null, source_domain: 'church.ekodi.kr' };
-  }
-  return {
-    organization_id: 'EKODIBIZ',
-    business_unit_id: 'PAY',
-    project_id: null,
-    source_domain: 'ekodi.kr'
-  };
+  if (!order || !order.organization_id || !order.business_unit_id || !order.source_domain)
+    throw new Error('ORDER_NOT_REGISTERED');
+  const expectedAmount=Number(order.amount);
+  if (!Number.isSafeInteger(expectedAmount) || expectedAmount <= 0)
+    throw new Error('ORDER_AMOUNT_NOT_VERIFIED');
+  if (String(order.currency || 'KRW') !== 'KRW')
+    throw new Error('ORDER_CURRENCY_NOT_SUPPORTED');
+  return order;
 }
 
 async function upsertPayment(env, payment) {
   if (!payment?.paymentKey || !payment?.orderId) throw new Error('INVALID_PAYMENT');
   const route = await routeForOrder(env, payment.orderId);
+  const approvedAmount = Number(payment.totalAmount);
+  if (!Number.isSafeInteger(approvedAmount) || approvedAmount !== Number(route.amount))
+    throw new Error('PG_ORDER_AMOUNT_MISMATCH');
+  if (String(payment.currency || '') !== String(route.currency || 'KRW'))
+    throw new Error('PG_ORDER_CURRENCY_MISMATCH');
+  // In the legacy single-MID lane, reject PG events for another MID if a
+  // merchant MID is explicitly configured. Multi-MID must be keyed by the
+  // trusted order's merchant profile, never the webhook payload.
+  if (env.TOSS_MID && String(payment.mId || '') !== String(env.TOSS_MID))
+    throw new Error('PG_MID_MISMATCH');
   const now = new Date().toISOString();
   const gross = Math.trunc(Number(payment.totalAmount ?? payment.balanceAmount ?? 0) || 0);
   const vat = Number.isFinite(Number(payment.vat)) ? Math.trunc(Number(payment.vat)) : null;
