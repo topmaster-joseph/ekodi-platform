@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { HUMAN_AUTHOR_PLANS, resolveAuthorCapability, assessNewAuthorProject, DIALOGUE_STAGES, nextAuthorConversationStep, canSubmitToPublisher } from '../publishing/human/author-plans.js';
+import { HUMAN_AUTHOR_PLANS, resolveAuthorCapability, assessNewAuthorProject, DIALOGUE_STAGES, nextAuthorConversationStep, canSubmitToPublisher, expertWritingGuidance, assessSaleRegistrationRequest } from '../publishing/human/author-plans.js';
 
 const identity = { verified: true, personId: 'person-1', verifiedChiefAdmin: false, publisherEditorScope: false };
 const free = { planId: 'free' };
@@ -75,4 +75,42 @@ test('interview completion is not legal authorization to sell', () => {
   assert.equal(canSubmitToPublisher({ ...project, finalDigest: 'sha256:changed' }), false);
   assert.equal(canSubmitToPublisher({ ...project, rightsAttested: false }), false);
   assert.equal(canSubmitToPublisher({ ...project, editorialAccessibilityReviewed: false }), false);
+});
+
+test('all tiers receive field-aware inspiration coaching and retain private drafts', () => {
+  assert.equal(EXPECTED_FREE(), true);
+  function EXPECTED_FREE() {
+    const cap = resolveAuthorCapability(identity, free);
+    return cap.canKeepPrivateManuscript && cap.canUseExpertGuidanceAllFields && !cap.canRequestSaleRegistration;
+  }
+  assert.equal(resolveAuthorCapability(identity, paid1).canRequestSaleRegistration, true);
+  assert.equal(resolveAuthorCapability({ ...identity, verifiedChiefAdmin: true, publisherEditorScope: true }, null).canStartPlannedWriting, true);
+  assert.equal(resolveAuthorCapability(identity, paid3).canStartPlannedWriting, false);
+  const guidance = expertWritingGuidance({ field: '신학·종교', stage: 'critique', authorIntent: '희년과 삶' });
+  assert.match(guidance.prompt, /반대할 지점/);
+  assert.equal(guidance.authorIntent, '희년과 삶');
+  assert.equal(guidance.availableTo.includes('free'), true);
+});
+
+test('free writing can never request sale; paid authors need signed separate royalty/commission terms', () => {
+  const project = {
+    authorId: identity.personId, copyrightOwnerPersonId: identity.personId,
+    finalDigest: 'sha256:author-final', authorApproval: { approved: true, digest: 'sha256:author-final' },
+    completedStages: DIALOGUE_STAGES.map(x => x.id), rightsAttested: true,
+    humanEditingComplete: true, editorialAccessibilityReviewed: true,
+    publisherLicenseAccepted: true
+  };
+  const contract = {
+    verified: true, signedByAuthorId: identity.personId, editionDigest: project.finalDigest,
+    royaltyTermsAccepted: true, salesCommissionTermsAccepted: true
+  };
+  assert.equal(assessSaleRegistrationRequest({ identity, entitlement: free, project, salesContract: contract }).reason, 'free_personal_use_only');
+  assert.equal(assessSaleRegistrationRequest({ identity, entitlement: paid1, project }).reason, 'separate_royalty_and_commission_agreement_required');
+  assert.equal(assessSaleRegistrationRequest({ identity, entitlement: paid1, project, salesContract: { ...contract, editionDigest: 'sha256:wrong' } }).allowed, false);
+  assert.equal(assessSaleRegistrationRequest({ identity, entitlement: paid1, project: { ...project, copyrightOwnerPersonId: 'other' }, salesContract: contract }).allowed, false);
+  assert.equal(assessSaleRegistrationRequest({ identity, entitlement: paid1, project, salesContract: contract }).state, 'review_requested');
+  assert.equal(assessSaleRegistrationRequest({ identity, entitlement: paid1, project, salesContract: contract }).listingCreated, false);
+  const publisher = { ...identity, verifiedChiefAdmin: true, publisherEditorScope: true };
+  assert.equal(assessSaleRegistrationRequest({ identity: publisher, project }).allowed, true);
+  assert.equal(assessSaleRegistrationRequest({ identity: { ...publisher, publisherEditorScope: false }, entitlement: free, project }).allowed, false);
 });

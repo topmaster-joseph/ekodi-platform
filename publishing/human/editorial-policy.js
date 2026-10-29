@@ -101,13 +101,48 @@ export function evaluateReleaseReadiness(book) {
   if (!nonempty(book.editionId)) blockers.push('editionId');
   if (!nonempty(book.title)) blockers.push('title');
   if (!nonempty(book.authorId)) blockers.push('authorId');
-  if (!fieldIds.has(book.fieldId)) blockers.push('fieldId');
+  if (typeof book.fieldId !== 'string' || !/^[a-z][a-z0-9-]{1,63}$/.test(book.fieldId)) blockers.push('fieldId');
   if (!nonempty(book.releaseDigest)) blockers.push('releaseDigest');
   if (!Number.isInteger(book.priceKrw) || book.priceKrw < 0) blockers.push('priceKrw');
   if (book.collectionId === 'ekodian' || book.seriesId === 'EKODIAN') blockers.push('ekodian-series-excluded');
   const profiles = Array.isArray(book.readerProfiles) ? book.readerProfiles : [];
   if (!profiles.length || profiles.some(x => !READER_PROFILES.includes(x))) blockers.push('readerProfiles');
   for (const [path] of baseChecks) needs(book, path, blockers);
+  // Sales eligibility is verified by the publisher's own server, never the UI.
+  // A free-tier personal manuscript can never produce a public sale listing.
+  const membership = book.authorMembership;
+  if (!['writer1', 'writer3', 'publisher_editor'].includes(membership?.planId) ||
+      membership?.serverVerified !== true || membership?.authorId !== book.authorId) {
+    blockers.push('authorMembership.verifiedSaleEligible');
+  }
+  if (membership?.planId === 'publisher_editor' &&
+      (membership?.verifiedChiefAdmin !== true || membership?.publisherEditorScope !== true)) {
+    blockers.push('authorMembership.verifiedPlanningScope');
+  }
+  if (book.rights?.copyrightOwnerId !== book.authorId) blockers.push('rights.authorCopyrightRetained');
+  needs(book, 'rights.distributionLicenseApproved', blockers);
+  if (membership?.planId === 'writer1' || membership?.planId === 'writer3') {
+    if (book.salesContract?.verified !== true ||
+        book.salesContract?.signedByAuthorId !== book.authorId ||
+        book.salesContract?.editionDigest !== book.releaseDigest ||
+        book.salesContract?.royaltyTermsAccepted !== true ||
+        book.salesContract?.salesCommissionTermsAccepted !== true) {
+      blockers.push('salesContract.royaltyAndCommissionSignedForEdition');
+    }
+  }
+  // Every book registered for sale includes a premium, human-reviewed
+  // audiobook at zero additional price for the verified purchaser.
+  const audio = book.audiobook;
+  if (audio?.highQualityApproved !== true || audio?.humanListeningQaPassed !== true ||
+      audio?.dialogueNarrationReviewed !== true || !nonempty(audio?.masterAssetDigest) ||
+      audio?.pairedEditionDigest !== book.releaseDigest) {
+    blockers.push('audiobook.qualityAndVersionApproved');
+  }
+  if (audio?.additionalBuyerPriceKrw !== 0 ||
+      audio?.buyerBundleEntitlementVerified !== true ||
+      audio?.refundRevocationVerified !== true) {
+    blockers.push('audiobook.freeBuyerBundleVerified');
+  }
   if (profiles.includes('children')) {
     for (const path of ['audience.childAgeBandDefined', 'audience.childSafetyReviewed', 'audience.childReaderTested', 'graphics.childStoryboardReviewed']) needs(book, path, blockers);
   }
@@ -140,6 +175,13 @@ export function approvedDualChannelHandoff(book) {
     format: book.format,
     priceKrw: book.priceKrw,
     releaseDigest: book.releaseDigest,
+    copyrightOwnerId: book.authorId,
+    audiobook: Object.freeze({
+      bundlePriceKrw: 0,
+      masterAssetDigest: book.audiobook.masterAssetDigest,
+      access: 'verified_purchase_only',
+      refundRevokesAccess: true,
+    }),
     publisherApprovedAt: book.publisherApproval.approvedAt,
     channels: Object.freeze(['books', 'ekodimall']),
     deliveryState: 'not_dispatched',
