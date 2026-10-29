@@ -36,12 +36,11 @@ export async function runPrivateScheduleTick({
         await savePrivateTransition(db,record,next,nowIso);
         record=next;
       };
-      if (record.state === 'scheduled') {
+      if (record.state === 'scheduled' || record.state === 'preparing') {
+        // Every due-date or resumed delivery is revalidated before channel calls.
         await save(claimScheduledEdition(record,candidate,evidence,nowIso));
       }
       if (record.state === 'preparing') {
-        // A resumed/retried delivery must be revalidated every tick.
-        await save(claimScheduledEdition(record,candidate,evidence,nowIso));
         for (const channel of RELEASE_CHANNELS) {
           if (record.channels[channel].prepared) continue;
           const response=await prepareChannel(channel,record,candidate);
@@ -49,7 +48,7 @@ export async function runPrivateScheduleTick({
         }
       }
       if (record.state === 'prepared' || record.state === 'activating') {
-        const proposal=record.state === 'prepared' ? activationProposal(record,nowIso) : null;
+        const proposal=activationProposal(record,nowIso);
         for (const channel of RELEASE_CHANNELS) {
           if (record.channels[channel].activated) continue;
           const response=await activateChannel(channel,record,candidate,proposal);
