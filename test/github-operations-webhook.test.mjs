@@ -113,6 +113,8 @@ test('canonical route and server-side super-admin API guard remain required',asy
   const entry=await readFile(new URL('../mission-control-entry-worker.js',import.meta.url),'utf8');
   const control=await readFile(new URL('../ai-command-control.js',import.meta.url),'utf8');
   const migration=await readFile(new URL('../migrations/202610290930_github_operations_control.sql',import.meta.url),'utf8');
+  const build=await readFile(new URL('../scripts/build.mjs',import.meta.url),'utf8');
+  assert.match(build,/github-operations-admin\\.js/);
   assert.match(entry,/acceptGitHubWebhook/);
   assert.match(control,/requirePlatformSuperAdmin\('ai:read'\)/);
   assert.match(control,/githubOperationsSnapshot/);
