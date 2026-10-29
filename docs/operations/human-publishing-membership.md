@@ -4,6 +4,8 @@ Status: proposal / preview only. Billing, renewal, AI writing execution, product
 Owner: independent EKODI Publishing. Command: EKODI Orchestrator. Related issue #6331, PR #6339.
 Excluded: EKODIAN series content and manuscript pipeline.
 
+정책 업데이트(2026-10-29): [통합 저자 저작권·집필 권한·무료 오디오북 정책](publishing-author-rights-audiobooks.md)이 권리·판매·오디오북 제공의 우선 기준이다. 무료회원의 판매등록은 불가하고, 최고관리자만 기획집필 가능하다. 구독권 자체는 판매 등록 승인이나 유통 권리를 부여하지 않는다.
+
 ## Role and plan separation
 - **Publisher editorial author**: verified chief administrator AND publishing-editor scope from trusted server authorization. Owns the six categories' monthly editorial automation. An ordinary paid plan never grants this role.
 - **Free personal author**: existing EKODI universal FREE member; simple AI outline/editing for one active personal project, a proposed max 5000 characters for free draft. Private save/export. No promise of publishing quality, distribution or sale.
