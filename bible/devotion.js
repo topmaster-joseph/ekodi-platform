@@ -925,7 +925,7 @@ function boot(root) {
         // Only use the authoritative Asia/Seoul "today" from that 403 response.
         // A legitimate admin receives HTTP 200 for an authorized future date.
         if (siteKey === 'mission' && date && data.error === 'future_unavailable' &&
-            typeof data.today === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(data.today) && data.today < date) {
+            typeof data.today === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.today) && data.today < date) {
           const today = data.today;
           history.replaceState(null, '', `${pageUrl(today)}${location.hash}`);
           const todayResponse = await fetch(`${API}?date=${today}`,
