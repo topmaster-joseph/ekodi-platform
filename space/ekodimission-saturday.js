@@ -119,5 +119,21 @@
   });
   window.addEventListener('ekodi:mission-auth-changed',()=>{void load()});
   window.addEventListener('ekodi:auth-logout',()=>{editing=false;if(form){form.reset()}void load()});
+  // Current Saturday remains visible through Saturday 23:59:59 in Seoul.
+  // On Sunday the RSVP window rolls to the following Saturday.
+  const kstDay=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  let observedDay=kstDay();
+  const refreshAfterDayChange=()=>{
+    const nowDay=kstDay();
+    if(nowDay===observedDay)return;
+    observedDay=nowDay;editing=false;
+    form?.reset();
+    if(count)count.textContent='다음 모임 확인 중';
+    void load();
+  };
+  const rolloverTimer=setInterval(refreshAfterDayChange,60000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshAfterDayChange()});
+  window.addEventListener('focus',refreshAfterDayChange);
+  window.addEventListener('pagehide',()=>clearInterval(rolloverTimer),{once:true});
   void load();
 })();
