@@ -12,6 +12,7 @@
       : STAGING_API;
   const STATE_KEY = 'ekodi-insurance-staging-v3';
   const ACCESS_KEY = 'ekodi-insurance-consultation-access-v1';
+  const MAX_ACCESS_ITEMS = 256;
 
   function toast(message) {
     const el = document.createElement('div');
@@ -33,8 +34,35 @@
     } catch { return []; }
   }
   function writeAccess(items) {
-    localStorage.setItem(ACCESS_KEY, JSON.stringify(items.slice(0, 20)));
+    // Never silently evict an older, still-valid consultation revocation token.
+    if (!Array.isArray(items) || items.length > MAX_ACCESS_ITEMS) {
+      throw new Error('revocation_access_capacity');
+    }
+    localStorage.setItem(ACCESS_KEY, JSON.stringify(items));
     renderWithdrawalPanel();
+  }
+  function canPersistRevocationAccess() {
+    // Fail closed BEFORE sending contact data if storage is disabled, corrupt,
+    // at the protected capacity, or cannot accept an extra token record.
+    const probeKey = ACCESS_KEY + '-probe-' + Math.random().toString(36).slice(2);
+    try {
+      const raw = localStorage.getItem(ACCESS_KEY);
+      if (raw !== null) {
+        const entries = JSON.parse(raw);
+        if (!Array.isArray(entries) || entries.length >= MAX_ACCESS_ITEMS ||
+            entries.some(item => !item || typeof item.id !== 'string' ||
+              typeof item.accessToken !== 'string' || !item.id || !item.accessToken)) {
+          return false;
+        }
+      }
+      const sample = 'x'.repeat(512);
+      localStorage.setItem(probeKey, sample);
+      return localStorage.getItem(probeKey) === sample;
+    } catch {
+      return false;
+    } finally {
+      try { localStorage.removeItem(probeKey); } catch { /* no credentials stored in probe */ }
+    }
   }
   function handoffForm(form) {
     return form instanceof HTMLFormElement && form.querySelector('[name="contact"]') && form.querySelector('[name="name"]');
@@ -103,7 +131,7 @@
     };
   }
   function saveAccess(consultation, accessToken) {
-    if (!consultation?.id || !accessToken) return;
+    if (!consultation?.id || !accessToken) throw new Error('revocation_access_missing');
     const items = loadAccess().filter(item => item.id !== consultation.id);
     items.unshift({ id: consultation.id, accessToken, status: consultation.status, createdAt: consultation.createdAt });
     writeAccess(items);
@@ -113,8 +141,13 @@
       toast('설계사 연락요청에는 연락정보 처리 동의가 필요합니다. AI 대화 공유는 선택입니다.');
       return;
     }
+    if (!canPersistRevocationAccess()) {
+      toast('브라우저에 철회 권한을 보관할 수 없어 상담요청을 보내지 않았습니다. 저장공간과 브라우저 설정을 확인해 주세요.');
+      return;
+    }
     const submit = form?.querySelector('button[type="submit"]');
     if (submit) submit.disabled = true;
+    let serverAccepted = false;
     try {
       const response = await fetch(`${API}/api/consultations`, {
         method: 'POST',
@@ -123,6 +156,7 @@
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || '상담요청 저장 실패');
+      serverAccepted = true;
       saveAccess(body.consultation, body.accessToken);
       form?.reset();
       form?.classList.add('hidden');
@@ -130,8 +164,24 @@
         ? '상담요청과 선택한 AI 대화가 암호화되어 등록되었습니다.'
         : '상담요청이 등록되었습니다. AI 대화 원문은 공유하지 않았습니다.');
     } catch (error) {
-      console.error('Insurance handoff bridge', error);
-      toast('상담요청 서버 연결을 확인해 주세요. 브라우저의 보험관리 기록은 그대로 유지됩니다.');
+      // Network rejection and post-acceptance local token failure are radically
+      // different. Never prompt a second server POST after an accepted response:
+      // that may create an unrevocable duplicate consultation.
+      console.error('Insurance handoff bridge', error?.message === 'revocation_access_missing' ? 'missing revocation credential' : 'request or storage error');
+      if (serverAccepted) {
+        let warning = form?.querySelector('#insuranceRevokeSaveFailure');
+        if (!warning && form) {
+          warning = document.createElement('p');
+          warning.id = 'insuranceRevokeSaveFailure';
+          warning.setAttribute('role', 'alert');
+          warning.className = 'notice';
+          form.append(warning);
+        }
+        if (warning) warning.textContent = '상담요청은 서버에 접수되었지만 철회용 인증정보를 이 브라우저에 보관하지 못했습니다. 중복 요청을 보내지 말고 상담 관리자에게 직접 철회를 문의하세요.';
+        toast('서버 상담요청은 접수되었습니다. 철회 권한 보관에 실패했습니다. 중복 등록하지 마세요.');
+      } else {
+        toast('상담요청 서버 연결을 확인해 주세요. 브라우저의 보험관리 기록은 그대로 유지됩니다.');
+      }
     } finally {
       if (submit) submit.disabled = false;
     }
