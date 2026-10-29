@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {handleSiteBoardRequest,missionSaturdayFor} from '../site-board-control.js';
+import {handleSiteBoardRequest,missionSaturdayFor,missionSaturdayLastPast,missionKstToday,MISSION_SATURDAY_STARTED} from '../site-board-control.js';
 
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 const url='https://ekodi.kr/ekodimission/board/api/saturday';
@@ -26,6 +26,9 @@ function fakeDb(){
               const key=a[2]+'|'+date;
               if(!events.has(key))events.set(key,{meeting_date:date,starts_at:'11:00',venue:'에코디교회',title:'토요 성경토론과 함께하는 식사',status:date<a[3]?'completed':'scheduled'});
             }
+          }
+          if(sql.includes("UPDATE ekodi_mission_saturday_events")){
+            for(const item of events.values())if(item.meeting_date<a[1]&&item.status==='scheduled')item.status='completed';
           }
           if(sql.includes('INSERT INTO ekodi_mission_saturday_replies')){
             const key=a[0]+'|'+a[1]+'|'+a[2],old=replies.get(key);
@@ -80,6 +83,18 @@ test('KST weekly dates always target Saturday with year-end rollover',()=>{
   assert.equal(missionSaturdayFor('2026-10-31'),'2026-10-31');
   assert.equal(missionSaturdayFor('2026-11-01'),'2026-11-07');
   assert.equal(missionSaturdayFor('2026-12-31'),'2027-01-02');
+});
+
+test('KST midnight rolls current Saturday into last history and advances RSVP Sunday',()=>{
+  const before=new Date('2026-10-31T14:59:59Z');
+  const after=new Date('2026-10-31T15:00:00Z');
+  assert.equal(missionKstToday(before),'2026-10-31');
+  assert.equal(missionKstToday(after),'2026-11-01');
+  assert.equal(missionSaturdayFor(missionKstToday(before)),'2026-10-31');
+  assert.equal(missionSaturdayFor(missionKstToday(after)),'2026-11-07');
+  assert.equal(missionSaturdayLastPast('2026-10-31'),'2026-10-24');
+  assert.equal(missionSaturdayLastPast('2026-11-07'),'2026-10-31');
+  assert.equal(MISSION_SATURDAY_STARTED,'2024-02-03');
 });
 
 test('anonymous visitors can see a single upcoming weekly meeting but cannot submit a reply',async()=>{
