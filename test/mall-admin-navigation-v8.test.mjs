@@ -5,13 +5,15 @@ import { readFile } from 'node:fs/promises';
 const source = await readFile(new URL('../workspace-admin-page.js', import.meta.url), 'utf8');
 
 test('Mall admin exposes operator-first direct navigation', () => {
-  const direct = "const mallDirectSections=[['overview','홈'],['products','상품'],['sourcing','판매채널 · 공급망'],['amazon','Amazon'],['analytics','주문 · 성과'],['channels','게시채널'],['growth','자동운영'],['confirmations','지급 · 수령'],['design','몰 설정']]";
+  const direct = "const mallDirectSections=[['overview','홈'],['products','상품'],['sourcing','판매채널 · 공급망'],['analytics','주문 · 성과'],['channels','게시채널'],['growth','자동운영'],['confirmations','지급 · 수령'],['design','몰 설정']]";
   assert.ok(source.includes(direct));
   assert.ok(source.includes("const mallDelegatedGroups=["));
   assert.ok(source.includes("const mallLocalGroups=["));
   assert.ok(source.includes("function groupsForRole(role=workspaceRole)"));
   assert.ok(source.includes("if(service==='mall')"));
   assert.ok(source.includes("adminBase=standaloneMall?'/ekodimall/admin':service==='mall'?'/ekodimall/admin'"));
+  assert.equal(direct.includes("['amazon','Amazon']"), false);
+  assert.ok(source.includes("activeKey=service==='mall'&&section==='languages'?'design':service==='mall'&&section==='amazon'?'sourcing':section"));
   assert.equal(direct.includes("['sales','영업장부']"), false);
   assert.equal(direct.includes("['automation','자동화']"), false);
   assert.ok(source.includes('@media(max-width:620px){.heading{display:grid}'));

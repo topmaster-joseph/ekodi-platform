@@ -4,12 +4,14 @@ import { readFile } from 'node:fs/promises';
 
 const source=await readFile(new URL('../workspace-admin-page.js',import.meta.url),'utf8');
 
-test('Amazon remains routed as a Mall sales-channel subitem without changing existing canonical URLs',()=>{
-  assert.match(source,/판매채널 \/ 아마존/);
-  assert.match(source,/admin-nav-nested/);
-  assert.match(source,/key==='amazon'&&service==='mall'/);
-  assert.match(source,/if\(section==='amazon'\)return amazonAdmin\(\)/);
+test('Amazon joins the Mall provider selector while its legacy URL stays compatible',()=>{
+  assert.match(source,/function mallSourcingHeader\(sources,active\)/);
+  assert.match(source,/data-mall-source-channel/);
+  assert.match(source,/aria-pressed=/);
+  assert.match(source,/if\(section==='amazon'\)return affiliateSourcingPanel\('amazon'\)/);
+  assert.match(source,/await amazonAdmin\(\)/);
   assert.match(source,/\/ekodimall\/api\/amazon\/status/);
+  assert.doesNotMatch(source,/\['sourcing','판매채널 · 공급망'\],\['amazon','Amazon'\]/);
 });
 test('Amazon workbench separates seller connection, read-only operations and costly optional settings',()=>{
   assert.match(source,/amazonAccountSettings/);

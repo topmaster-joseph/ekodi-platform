@@ -60,14 +60,14 @@ test('standalone Open Table application link is action-first, compact, and write
 });
 
 test('EKODI Mission shared assets and unknown child routes are guarded',async()=>{
-  for(const path of ['/ekodimission/assets/site.css','/ekodimission/assets/site.js','/ekodimission/assets/shell.css','/ekodimission/assets/shell.js','/ekodimission/assets/share.css','/ekodimission/assets/mission-table-hero.svg','/ekodimission/assets/open-table-hero-260926.svg','/ekodimission/assets/open-table-meal-260925.jpg']){const response=await spaceWorker.fetch(new Request(`https://ekodi.kr${path}`),env);assert.equal(response.status,200,path);assert.equal(response.headers.get('x-ekodi-route'),'ekodimission-asset',path);assert.equal(response.headers.get('x-ekodi-publication-status'),'published',path)}
+  for(const path of ['/ekodimission/assets/site.css','/ekodimission/assets/site.js','/ekodimission/assets/saturday.js','/ekodimission/assets/shell.css','/ekodimission/assets/shell.js','/ekodimission/assets/share.css','/ekodimission/assets/mission-table-hero.svg','/ekodimission/assets/open-table-hero-260926.svg','/ekodimission/assets/open-table-meal-260925.jpg']){const response=await spaceWorker.fetch(new Request(`https://ekodi.kr${path}`),env);assert.equal(response.status,200,path);assert.equal(response.headers.get('x-ekodi-route'),'ekodimission-asset',path);assert.equal(response.headers.get('x-ekodi-publication-status'),'published',path)}
   const missing=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/not-published'),env);assert.equal(missing.status,404);assert.equal(missing.headers.get('x-ekodi-route'),'ekodimission-not-found');
 });
 
 test('Open Table is first-party EKODI application UI with corrected Sep 26 schedule',async()=>{
   const [event,activities,script,css,admin]=await Promise.all([readFile(new URL('../space/ekodimission-open-table-apply.page',import.meta.url),'utf8'),readFile(new URL('../space/ekodimission-activities.page',import.meta.url),'utf8'),readFile(new URL('../space/ekodimission.js',import.meta.url),'utf8'),readFile(new URL('../space/ekodimission.css',import.meta.url),'utf8'),readFile(new URL('../workspace-admin-page.js',import.meta.url),'utf8')]);
   assert.match(event,/260926-chuseok-open-table/);assert.match(event,/9월 26일 토요일/);assert.match(event,/16:00–18:00/);assert.match(event,/자담치킨 목포대점/);assert.match(event,/id="apply"/);assert.match(event,/data-event-application/);assert.doesNotMatch(event,/docs\.google\.com|forms\/d\//i);
-  assert.match(activities,/\/ekodimission\/apply\/260926-open-table/);assert.match(activities,/9월 26일 토요일 16:00–18:00/);const home=await readFile(new URL('../space/ekodimission.page',import.meta.url),'utf8');assert.match(home,/진행·예정 행사/);assert.match(home,/10\.10/);assert.match(home,/SAT · 2026/);assert.doesNotMatch(home,/09\.26|09\.25|15:00–17:00/);assert.doesNotMatch(home,/\/ekodimission\/apply\/260926-open-table/);assert.doesNotMatch(script,/docs\.google\.com|forms\/d\//i);assert.match(script,/ekodimission\/apply\/260926-open-table/);assert.match(script,/2026년 9월 26일 토요일 오후 4시/);
+  assert.match(activities,/\/ekodimission\/apply\/260926-open-table/);assert.match(activities,/9월 26일 토요일 16:00–18:00/);const home=await readFile(new URL('../space/ekodimission.page',import.meta.url),'utf8');assert.match(home,/이번 주 토요모임/);assert.match(home,/data-mission-saturday/);assert.match(home,/오전 11:00/);assert.doesNotMatch(home,/09\.26|09\.25|15:00–17:00/);assert.doesNotMatch(home,/\/ekodimission\/apply\/260926-open-table/);assert.doesNotMatch(script,/docs\.google\.com|forms\/d\//i);assert.match(script,/ekodimission\/apply\/260926-open-table/);assert.match(script,/2026년 9월 26일 토요일 오후 4시/);
   assert.match(script,/applications/);assert.match(css,/word-break:keep-all/);assert.match(css,/overflow-wrap:break-word/);assert.match(css,/hyphens:none/);assert.match(css,/\.open-table-hero\{/);assert.match(css,/\.mobile-apply-cta\{/);
   assert.match(admin,/'ekodimission':'에코디선교회'/);assert.match(admin,/'ekodimission':'mission'/);
 });
@@ -193,7 +193,7 @@ test('every EKODI Mission page consumes one shared shell with published-only lan
   assert.doesNotMatch(liveHtml,/class="live-header"/);
 });
 
-test('mission hero visuals are first-party SVG assets and pages render the complete artwork',async()=>{
+test('mission landing uses an existing first-party meal photograph while archive SVG assets remain available',async()=>{
   const [home,event,worker,homeSvg,eventSvg,css]=await Promise.all([
     readFile(new URL('../space/ekodimission.page',import.meta.url),'utf8'),
     readFile(new URL('../space/ekodimission-activity.page',import.meta.url),'utf8'),
@@ -202,7 +202,7 @@ test('mission hero visuals are first-party SVG assets and pages render the compl
     readFile(new URL('../space/open-table-hero-260926.svg',import.meta.url),'utf8'),
     readFile(new URL('../space/ekodimission.css',import.meta.url),'utf8')
   ]);
-  assert.match(home,/mission-table-hero\.svg/);assert.match(event,/Chuseok Open Table & Sharing Market/);assert.doesNotMatch(event,/open-table-hero-260926\.svg/);
+  assert.match(home,/open-table-meal-260925\.jpg/);assert.match(event,/Chuseok Open Table & Sharing Market/);assert.doesNotMatch(event,/open-table-hero-260926\.svg/);
   assert.match(worker,/mission-table-hero\.svg/);assert.match(worker,/open-table-hero-260926\.svg/);
   assert.match(homeSvg,/<svg[\s\S]*한 식탁이/);assert.match(eventSvg,/<svg[\s\S]*2026 에코디 추석 열린식탁/);
   assert.match(css,/\.event-visual img\{[^}]*object-fit:contain/);assert.match(css,/\.hero-visual img\{[^}]*object-fit:cover/);
