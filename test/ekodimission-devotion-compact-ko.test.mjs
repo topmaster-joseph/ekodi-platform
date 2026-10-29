@@ -95,3 +95,21 @@ test('Mission devotional login controls sit in the lower admin row without chang
  assert.match(shell,/missionAuthUi\?\.logout\.addEventListener\('click'/);
  assert.match(shell,/window\.EKODIMissionAuth=Object\.freeze/);
 });
+
+test('Mission login is only a guest button or verified account with logout',async()=>{
+ const [shell,board,css]=await Promise.all([
+  read('space/ekodimission-shell.js'),
+  read('site-board-control.js'),
+  read('bible/devotion.css')
+ ]);
+ assert.doesNotMatch(shell,/로그인됨|비로그인|로그인 확인 중|로그인 확인 불가/);
+ assert.match(shell,/state\.textContent='';\s*state\.hidden=true;/);
+ assert.match(shell,/missionAuthUi\.state\.textContent=authenticated\?\(String\(account\|\|'계정'\)\.slice\(0,90\)\):''/);
+ assert.match(shell,/missionAuthUi\.state\.hidden=!authenticated/);
+ assert.match(shell,/verifiedToken=token;paintMissionAuth\('in',data\.account\)/);
+ assert.match(shell,/missionAuthUi\.login\.hidden=authenticated/);
+ assert.match(shell,/missionAuthUi\.logout\.hidden=!authenticated/);
+ assert.match(board,/account:who\.authenticated\?who\.email:''/);
+ assert.match(board,/response\.headers\.set\('cache-control','private, no-store'\)/);
+ assert.match(css,/\.mission-auth-state\[hidden\]\{display:none!important\}/);
+});
