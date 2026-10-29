@@ -61,6 +61,8 @@ await Promise.all([
 ]);
 await cp(`${root}sites/ekodi-insurance/public`, `${output}insurance`, { recursive: true });
 await cp(`${root}sites/ekodi-singles/public`, `${output}singles`, { recursive: true });
+// EKODI Proposal Studio: local-only static draft editor, no server persistence.
+await cp(`${root}proposal`, `${output}proposal`, { recursive: true });
 await cp(`${root}sites/business-cooperative/public`, `${output}business-coop`, { recursive: true });
 await cp(`${root}sites/seonammedi/public`, `${output}seonammedi`, { recursive: true });
 await finalizeSeonamMediRelease(output);

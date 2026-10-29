@@ -176,6 +176,9 @@ test('named highest administrator alone can inspect live trading readiness after
  assert.equal(result.body.scope,'owner_self_funds_only');
  assert.equal(result.body.ownerVerified,true);
  assert.equal(result.body.secondFactorVerified,true);
+ assert.equal(result.body.strongMfa.requiredForLive,true);
+ assert.equal(result.body.strongMfa.verified,false);
+ assert.equal(result.body.strongMfa.level,'not_aal2');
  assert.equal(result.body.workspaceVisible,true);
  assert.equal(result.body.liveExecutionEnabled,false);
  assert.equal(result.body.liveOrdersAccepted,false);
