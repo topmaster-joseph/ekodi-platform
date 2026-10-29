@@ -388,6 +388,10 @@ const shellRuntimeTouched=changedFiles.some(file=>
    'scripts/converge-orchestrated-pr-merge.mjs'].includes(file)
 );
 const sharedSiteTouched=changedFiles.some(file=>
+  // AI Ops source and its shared readable-command stylesheet ship in Site Core.
+  // A token-mediated protected merge does not trigger main push workflows.
+  // Dispatch only the existing receipt-bound Site Core lane for these UI assets.
+  ['ai-ops-admin.js','admin-readable-command.css'].includes(file)||
   // MarketingAI admin console assets are served only by Site Core (single production owner).
   // Token merges skip push workflows, so these must dispatch Site Core explicitly (2026-10-23).
   ['marketing-ai-admin.js','marketing-ai-admin.css','marketing-ai-admin-live-ops.js','marketing-ai-admin-live-ops.css','marketing-ai-admin-posting-status.js','marketing-ai-channel-manager.js','test/marketing-admin-site-core-dispatch-20261023.test.mjs'].includes(file)||
