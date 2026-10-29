@@ -140,7 +140,7 @@ function setupAdvisorChat(){
           <div class="consent-box"><input id="humanConsent" type="checkbox" required /><label for="humanConsent"><strong>설계사 연락 요청</strong><span>${canonicalInsurancePage ? '설계사 연락을 요청하면 동의한 연락정보를 암호화해 저장하며, AI 대화 원문은 별도 선택 동의가 필요합니다. 서버 연결이 안 되면 요청이 접수되지 않습니다.' : '스테이징에서는 요청과 상담대화가 같은 브라우저에만 보관됩니다.'}</span></label></div>
           <button class="primary" type="submit">상담요청 등록</button>
         </form>
-        <div class="handoff-note"><strong>관리자 관리항목</strong><span>상담동의 연락정보 · 일반 상담요약 · 선택 공유된 대화만 · 요청시각 · 처리상태</span></div>
+        <div class="handoff-note"><strong>관리자 관리항목</strong><span>상담동의 연락정보 · AI 상담요약 · 선택 공유된 대화만 · 요청시각 · 처리상태</span></div>
         <a class="admin-preview-link" href="${canonicalInsurancePage ? '/admin/services/insurance' : '/admin'}" target="_blank" rel="noopener">${canonicalInsurancePage ? '상담관리 →' : '스테이징 상담관리 보기 →'}</a>
       </aside>
     </div>`;
