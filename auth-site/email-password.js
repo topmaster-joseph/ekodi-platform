@@ -47,6 +47,14 @@ function emailError(error){
 function validEmail(email){
   return email.length<=254&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
+// Keep password recovery separate from normal Auth client listeners: a
+// recovery OTP creates a temporary Supabase session before updateUser runs.
+// Normal client-auth listeners could otherwise navigate to a service first.
+export function isolatedRecoveryPath(search){
+  const url=new URL(authReturnPath(search),ORIGIN);
+  url.searchParams.set('ekodi_email_action','reset');
+  return url.pathname+url.search;
+}
 function emailReturnUrl(){
   const to=new URL('/auth/',ORIGIN);
   // Signup email links must return to the same, canonical Auth origin.
@@ -179,6 +187,13 @@ export async function mountEmailPassword({resetOnly=false}={}){
   codeTab.addEventListener('click',()=>setMode('verify'));
   secondary.addEventListener('click',async()=>{
     if(busy)return;
+    // Do not initiate password recovery in a page where the normal sign-in
+    // listener can consume the temporary recovery session. Enter isolated
+    // reset-only mode first, without putting email addresses in URLs/storage.
+    if(mode!=='verify'&&mode!=='reset'){
+      location.assign(isolatedRecoveryPath(location.search));
+      return;
+    }
     const address=String(email.value||'').trim().toLowerCase();
     if(!validEmail(address)){message('먼저 이메일 주소를 입력해 주세요.');return;}
     busy=true;secondary.disabled=true;
@@ -189,10 +204,9 @@ export async function mountEmailPassword({resetOnly=false}={}){
         if(error)throw error;
       }else{
         const {error}=await supabase.auth.resetPasswordForEmail(address,{
-          redirectTo:new URL('/auth/?ekodi_email_action=reset',ORIGIN).toString()
+          redirectTo:new URL(isolatedRecoveryPath(location.search),ORIGIN).toString()
         });
         if(error)throw error;
-        setMode('reset');
       }
       message('메일 발송을 요청했습니다. 받은 편지함과 스팸함을 확인해 주세요.');
     }catch(error){message(emailError(error));}
