@@ -35,7 +35,12 @@ export async function verifyEkodiFinalPromotionReceipt(db,input={}){
   const proof=parse(task.evidence_json)?.preproductionProof;
   const stageAudit=parse(stage?.evidence_json);
   const owner=parse(approval?.evidence_json);
-  if(!proof||!stageAudit||!owner)return deny('staging_or_owner_confirmation_missing');
+  // Missing rows must fail closed before reading any actor or accepting
+  // default-parsed empty JSON. Missing event JSON is not a receipt.
+  if(!stage||!approval||!proof||!stageAudit||!owner||
+     !stage.evidence_json||!approval.evidence_json){
+    return deny('staging_or_owner_confirmation_missing');
+  }
   if(stage.actor!=='ekodi-github-actions-oidc-reconciler'||
      stage.reason!=='verified_preproduction_evidence_recorded'||
      stageAudit.authority!=='ekodi-orchestrator'||stageAudit.source!=='github-actions-oidc'||
