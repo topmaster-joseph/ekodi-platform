@@ -56,7 +56,7 @@ export async function listMyClaims(env,req){
 }
 export async function listPendingClaims(env,req){
   const {error}=await identify(req,env,true);if(error)return error;
-  const rows=await env.DB.prepare("SELECT id,book_id,buyer_email,retailer,order_suffix,created_at FROM books_audiobook_external_claims WHERE status='pending' ORDER BY created_at LIMIT 100").all();
+  const rows=await env.DB.prepare("SELECT id,book_id,buyer_email,retailer,order_suffix,status,created_at FROM books_audiobook_external_claims WHERE status IN ('pending','verified') ORDER BY CASE WHEN status='pending' THEN 0 ELSE 1 END, created_at LIMIT 100").all();
   return reply(200,{claims:rows.results||[]});
 }
 export async function approveAudioClaim(env,req,id){
