@@ -66,3 +66,13 @@ export async function listDuePrivateEditions(db, nowIso, max=20) {
       AND publish_at_utc <= ? ORDER BY publish_at_utc, edition_id LIMIT ?`).bind(nowIso,max).all();
   return (result.results || []).map(r => { const item=JSON.parse(r.record_json);check(item);return item; });
 }
+
+/** Publisher-admin only: non-public edition queue, newest edits first. */
+export async function listPrivateReleaseRecords(db, max=50) {
+  invariant(db?.prepare && Number.isInteger(max) && max > 0 && max <= 100, 'invalid-list');
+  const result=await db.prepare(`SELECT record_json FROM publishing_private_editions
+    ORDER BY updated_at_utc DESC, edition_id LIMIT ?`).bind(max).all();
+  return (result.results || []).map(row => {
+    const record=JSON.parse(row.record_json); check(record); return record;
+  });
+}
