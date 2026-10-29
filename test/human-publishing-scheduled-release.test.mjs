@@ -19,7 +19,17 @@ const candidate = () => ({
   title: '검토된 완성 도서', authorId: 'author-test', publicationId: 'pub-test', editionId: 'pub-test-v1',
   fieldId: 'humanities', collectionId: 'jubilee-theology', format: 'epub',
   priceKrw: 9900, releaseDigest: DIGEST, readerProfiles: ['general'],
-  rights: allTrue(['licenseChecked','authorContractApproved']),
+  // Synthetic fixtures only: preserve all current sale eligibility requirements.
+  // In production these attestations must come from independently verified backend records.
+  authorMembership: {planId:'writer1',serverVerified:true,authorId:'author-test'},
+  rights: {...allTrue(['licenseChecked','authorContractApproved','distributionLicenseApproved']),
+    copyrightOwnerId:'author-test'},
+  salesContract: {verified:true,signedByAuthorId:'author-test',editionDigest:DIGEST,
+    royaltyTermsAccepted:true,salesCommissionTermsAccepted:true},
+  audiobook: {highQualityApproved:true,humanListeningQaPassed:true,
+    dialogueNarrationReviewed:true,masterAssetDigest:'sha256:'+'c'.repeat(64),
+    pairedEditionDigest:DIGEST,additionalBuyerPriceKrw:0,
+    buyerBundleEntitlementVerified:true,refundRevocationVerified:true},
   originality: allTrue(['provenanceReviewed','verifiedNoUnauthorizedImitation']),
   craft: allTrue(['realHumanExperienceReviewed','characterAndMotivationReviewed',
     'logicAndContinuityReviewed','readerFeedbackReviewed','editorialRevisionComplete']),
