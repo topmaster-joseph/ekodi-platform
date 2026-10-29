@@ -4,7 +4,8 @@
 # Do not log response bodies: Cloudflare D1 responses can contain private data.
 ekodi_cf_initialize() {
   export EKODI_CF_QUOTA_FLAG="${RUNNER_TEMP:-/tmp}/ekodi-admin-e2e-cf-quota-${GITHUB_RUN_ID:-$$}-${GITHUB_JOB:-session}"
-  rm -f "$EKODI_CF_QUOTA_FLAG"
+  # Deliberately do not clear an existing marker: workflow steps share this job-level circuit.
+  # The marker is scoped to GITHUB_RUN_ID and GITHUB_JOB; cleanup must not retry after 429.
 }
 
 ekodi_cf_assert_clean() {
