@@ -31,7 +31,8 @@ test('only a successfully verified email session resumes navigation; no unauthen
   assert.match(verify,/supabase\.auth\.verifyOtp\(\{email:address,token:otp\.value\.trim\(\),type:'signup'\}\)/);
   assert.ok(verify.indexOf('if(error)throw error;')<verify.indexOf('resumeAfterVerifiedEmailSession();'));
   assert.match(login,/supabase\.auth\.signInWithPassword\(\{email:address,password:secret\}\)/);
-  assert.ok(login.indexOf('if(!data?.user?.email_confirmed_at)throw')<login.indexOf('resumeAfterVerifiedEmailSession();'));
+  assert.ok(login.indexOf('if(!data?.session||!data?.user?.email_confirmed_at)')<login.indexOf('resumeAfterVerifiedEmailSession();'));
+  assert.ok(verify.indexOf('if(!data?.session||!data?.user?.email_confirmed_at)')<verify.indexOf('resumeAfterVerifiedEmailSession();'));
   assert.doesNotMatch(signup,/resumeAfterVerifiedEmailSession/);
   assert.equal((email.match(/resumeAfterVerifiedEmailSession\(\);/g)||[]).length,2);
   assert.match(client,/async function handoffExistingSession\(s\)/);
