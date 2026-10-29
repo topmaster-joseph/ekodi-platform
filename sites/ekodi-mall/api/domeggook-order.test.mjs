@@ -118,3 +118,76 @@ test('option code is taken from selectOpt (in stock, no surcharge), defaulting t
   assert.equal(chooseOptionCode('{"type":"combination","data":{"00":{"name":"빨강","dom":"1","sup":"1","domPrice":"0","supPrice":"0","qty":"0"},"01":{"name":"파랑","dom":"1","sup":"1","domPrice":"0","supPrice":"0","qty":"5"},"02":{"name":"대형","dom":"1","sup":"1","supPrice":"500","qty":"9"}}}'), '01');
   assert.equal(chooseOptionCode('not json'), '00');
 });
+
+
+test('supplier member error is preserved as a diagnostic and stops further order attempts', async () => {
+  const { db, env } = setup();
+  const log = [];
+  const base = supplier({}, log);
+  const fetchImpl = async (url, init) => {
+    const params = init?.body ? new URLSearchParams(String(init.body)) : new URL(String(url)).searchParams;
+    if (params.get('mode') === 'setOrder') {
+      log.push({ mode: 'setOrder', params });
+      return new Response(JSON.stringify({ domeggook: { result: '회원 오류' } }));
+    }
+    return base(url, init);
+  };
+  const result = await placeSupplierOrders(env, fetchImpl);
+  assert.equal(result.placed, 0);
+  assert.equal(result.error, 'member-auth');
+  assert.match(db.prepare('SELECT last_error FROM supplier_orders').get().last_error, /AUTH_MEMBER_ERROR: 회원 오류/);
+  const probe = db.prepare("SELECT metadata_json FROM supplier_connector_checks WHERE external_ref='probe:setOrder'").get();
+  assert.ok(probe);
+  assert.equal(JSON.parse(probe.metadata_json).mode, 'setOrder');
+  assert.ok(!probe.metadata_json.includes('SID1') && !probe.metadata_json.includes('PW!') && !probe.metadata_json.includes('AK'));
+  assert.equal(log.filter((v) => v.mode === 'setOrder').length, 1);
+  await placeSupplierOrders(env, fetchImpl);
+  assert.equal(log.filter((v) => v.mode === 'setOrder').length, 1, 'failed auth is never blindly retried');
+});
+
+test('missing or failed e-money probe must never result in a paid order', async () => {
+  for (const response of [{ domeggook: { result: 'true', data: {} } }, { domeggook: { result: '회원 오류' } }]) {
+    const { db, env } = setup();
+    const log = [];
+    const base = supplier({}, log);
+    const fetchImpl = async (url, init) => {
+      const params = init?.body ? new URLSearchParams(String(init.body)) : new URL(String(url)).searchParams;
+      if (params.get('mode') === 'getMyAsset') return new Response(JSON.stringify(response));
+      return base(url, init);
+    };
+    const result = await placeSupplierOrders(env, fetchImpl);
+    assert.equal(result.placed, 0);
+    assert.equal(log.some((v) => v.mode === 'setOrder'), false);
+    assert.match(db.prepare('SELECT last_error FROM supplier_orders').get().last_error, /EMONEY_(UNKNOWN|PROBE)/);
+  }
+});
+
+test('failed login response containing a session ID is still rejected', async () => {
+  const { db, env } = setup();
+  const log = [];
+  const base = supplier({}, log);
+  const fetchImpl = async (url, init) => {
+    const params = init?.body ? new URLSearchParams(String(init.body)) : new URL(String(url)).searchParams;
+    if (params.get('mode') === 'setLogin') return new Response(JSON.stringify({ domeggook: { result: '회원 오류', sId: 'BAD', id: 'ekodi' } }));
+    return base(url, init);
+  };
+  const r = await placeSupplierOrders(env, fetchImpl);
+  assert.equal(r.error, 'login');
+  assert.equal(log.some((v) => v.mode === 'setOrder'), false);
+  assert.equal(db.prepare('SELECT count(*) AS n FROM supplier_orders').get().n, 0);
+});
+
+test('private order calls use canonical HTTPS and prohibit automatic redirects', async () => {
+  const { env } = setup();
+  const log = [];
+  const base = supplier({}, log);
+  const urls = [];
+  const fetchImpl = async (url, init) => {
+    urls.push(String(url));
+    assert.equal(init?.redirect, 'error');
+    return base(url, init);
+  };
+  const r = await placeSupplierOrders(env, fetchImpl);
+  assert.equal(r.placed, 1);
+  assert.ok(urls.every((url) => url.startsWith('https://www.domeggook.com/ssl/api/')));
+});
