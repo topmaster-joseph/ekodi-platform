@@ -66,10 +66,12 @@ It is not a direct external host proxy and it does not look up production secret
 - Rejects redirects, malformed/non-JSON, oversized backend responses and
   private service exceptions. Returns only JSON with no-store/nosniff; strips
   upstream Set-Cookie, CORS, and cache headers.
-- **WARNING**: the current Insurance API production origin allowlist does not
-  yet include the apex source, so even an otherwise valid private binding
-  will be blocked until a *separately approved* effective-Origin/CORS change.
-  No spoofed historical Origin is permitted to work around this.
+- **REVIEW CANDIDATE**: this Draft also updates the Insurance API production
+  source configuration to permit **exact** canonical apex and existing historical
+  origins, with no wildcard and no removal of old-origin users. This is only a
+  source proposal: effective runtime settings, actual deployment, browser CORS,
+  and consented POST/revoke have NOT been verified. Do not spoof historical
+  Origin or treat the proposed allowlist as proof of public API availability.
 
 New offline Node tests use a fake injected service, synthetic request payloads
 and deterministic verified visitor fixture. They confirm no private service
@@ -79,7 +81,8 @@ stream size overflow, upstream redirects, or open quota circuit.
 ### Before wiring any real route
 
 Confirm Worker service binding name/target, apex edge-verified identity derivation,
-backend \`ALLOWED_ORIGINS\` effective deployment configuration, and that a
+backend \`ALLOWED_ORIGINS\` effective deployed configuration and dual-origin
+backward compatibility, and that a
 same-origin call is not inadvertently treated as authenticated admin. Independently
 test the backend hourly rate-limit fingerprint to ensure that users do not all
 collapse into an IP \`unknown\` bucket. Require a restrictive request timeout
