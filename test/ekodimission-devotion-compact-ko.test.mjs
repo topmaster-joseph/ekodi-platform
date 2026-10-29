@@ -80,6 +80,12 @@ test('Mission devotional login controls sit in the lower admin row without chang
  assert.match(shell,/renderer\.querySelector\('\.dv-adminbar'\)/);
  assert.match(shell,/adminBar\.before\(tools\)/);
  assert.match(shell,/tools\.append\(adminBar,authRow\)/);
+ assert.match(shell,/adminBar\.before\(tools\)/);
+ assert.match(shell,/const renderer=devotion\.querySelector\('\[data-ekodi-devotion\]'\)/);
+ assert.match(shell,/observer\.observe\(renderer,\{childList:true\}\)/);
+ assert.match(renderer,/root\.append\(datebar, status, scriptureBlock, tabbar, panelWrap, notice, shareRow, adminBar, adminPanel, adminView, toastEl\)/);
+ assert.match(css,/main\[data-mission-devotion\] \.mission-devotion-tools .mission-auth-button\{\s*min-height:36px/);
+
  assert.match(shell,/new MutationObserver/);
  assert.match(shell,/if\(mount\(\)\)observer\.disconnect\(\)/);
  assert.match(css,/main\[data-mission-devotion\] \.mission-devotion-tools/);
