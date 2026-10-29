@@ -1,6 +1,6 @@
 // EKODI GitHub Operations. Ingress only: never perform GitHub writes or deploy.
 const CANONICAL_REPO = 'topmaster-joseph/ekodi-platform';
-const ALLOWED = new Set(['push','pull_request','workflow_run','check_run','issues','issue_comment']);
+const ALLOWED = new Set(['push','pull_request','workflow_run','check_run','issues','issue_comment','ping']);
 const MAX_BYTES = 262144;
 const response = (status, data) => new Response(JSON.stringify(data), {status, headers:{
   'content-type':'application/json; charset=utf-8','cache-control':'no-store',
@@ -77,6 +77,11 @@ export async function acceptGitHubWebhook(request,env) {
   let payload;
   try{payload=JSON.parse(new TextDecoder().decode(raw));}
   catch{return response(400,{ok:false,code:'GITHUB_WEBHOOK_JSON_INVALID'});}
+  // GitHub App setup sends signed ping without repository/installation data.
+  // A ping is an acknowledgment only; it never writes D1 or dispatches work.
+  if(event==='ping')return response(200,{
+    ok:true,pingVerified:true,accepted:false,releaseAuthorized:false,githubApiCalls:0
+  });
   const p=projectGitHubEvent(event,payload);
   if(p.repository!==CANONICAL_REPO)
     return response(403,{ok:false,code:'GITHUB_WEBHOOK_REPOSITORY_DENIED'});

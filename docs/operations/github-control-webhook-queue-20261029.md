@@ -21,3 +21,7 @@ Tracking issue #6630. All work is under EKODI Orchestrator; this is not a second
 Installation-wide API budget reservations, priority-aware GitHub API write dispatch, multi-run durable leases, accurate live API usage and full operation authority are **not** enabled by an observation queue. These require a separate protected release including authenticated GitHub app permissions and tested owner gates. Do not claim they are live merely because this PR was merged.
 
 Verification: `node --test test/github-operations-webhook.test.mjs`, protected full CI and external production canaries. Related Church C3 #6533 remains unfinished until exact old-host Cloudflare retirement is externally verified.
+
+## GitHub App webhook, not repository webhook
+
+The receiver deliberately requires a verified installation.id on all operational events. GitHub documents that installation is delivered with GitHub App webhooks. Configure the owner-authorized **GitHub App webhook** in Developer settings > GitHub Apps > Edit > Webhook; a plain repository webhook may not include installation.id and will fail closed. The App's subscribed events must match the read-only allowlist and its permissions. A valid signed `ping` is acknowledged with HTTP 200 **without** an installation, D1 write, or GitHub command. Invalid signatures are rejected. A successful ping is not evidence of an accepted workflow event or a completed deployment.
