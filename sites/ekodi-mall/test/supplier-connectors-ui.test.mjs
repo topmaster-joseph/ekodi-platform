@@ -39,4 +39,7 @@ test('status is concise and never exposes the actor email, and login is canonica
   assert.match(js,/\.connector-panel input,\.connector-panel button/);
   assert.match(html,/aria-live="polite"/);
   assert.match(css,/@media\(max-width:520px\)/);
+  assert.match(html,/id="connectorLogout"[^>]*hidden/);
+  assert.match(css,/\.connector-page \.connector-actions button\[hidden\]\{display:none!important\}/);
+  assert.match(js,/login\.hidden=signed;logout\.hidden=!signed/);
 });

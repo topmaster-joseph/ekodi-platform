@@ -8,6 +8,8 @@
 .connector-intro{margin:8px 0 0;font-size:.86rem;line-height:1.5;color:#596b62}
 .connector-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;align-items:center;gap:8px}
 .connector-page .connector-actions button{min-height:38px}
+/* Global .btn/.smallbtn display rules must not override the HTML hidden attribute. */
+.connector-page .connector-actions button[hidden]{display:none!important}
 .connector-provider-switch{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 .connector-switch-label{font-size:.76rem;font-weight:750;color:#596b62;margin-right:3px}
 .connector-provider-current,.connector-provider-link{display:inline-flex;align-items:center;min-height:35px;border:1px solid #d6dfda;border-radius:10px;padding:7px 13px;background:#fff;color:#263d33;text-decoration:none;font-size:.78rem;font-weight:800}
