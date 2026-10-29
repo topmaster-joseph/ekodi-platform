@@ -24,6 +24,36 @@ const CF_NONCE="(?:[a-z]\\.nonce='[A-Za-z0-9+\\/=]{0,128}';)?";
 const CF_LOADER_BODIES=[
   new RegExp("^var a=document\\.createElement\\('script'\\);"+CF_NONCE.replace('[a-z]','a')+"a\\.src='\\/cdn-cgi\\/challenge-platform\\/scripts\\/jsd\\/main\\.js';document\\.getElementsByTagName\\('head'\\)\\[0\\]\\.appendChild\\(a\\);$"),
   new RegExp("^\\(function\\(\\)\\{if\\(!document\\.body\\)return;var s=document\\.createElement\\('script'\\);"+CF_NONCE.replace('[a-z]','s')+"s\\.src='\\/cdn-cgi\\/challenge-platform\\/scripts\\/precursor\\/main\\.js';document\\.head\\.appendChild\\(s\\);\\}\\)\\(\\);$"),
+  // 2026-10-29 owner-read-only edge fingerprint (issue #6810): same-origin
+  // precursor loader with a lower-case 16-hex Cloudflare ray query. Preserve
+  // the fail-closed contract: arbitrary URL, loader, query or code is rejected.
+  new RegExp(String.raw`^\(function\(\)\{if\(!document\.body\)return;var l=window\.location,o;try\{o=new URL\(l\.origin\)\.origin\}catch\(e\)\{try\{o=new URL\(new URL\(l\.href\)\.origin\)\.origin\}catch\(e\)\{o=''\}\}var u='\/cdn-cgi\/challenge-platform\/scripts\/precursor\/main\.js\?ray=[0-9a-f]{16}',s=document\.createElement\('script'\);s\.src=o\?new URL\(u,o\)\.href:u;document\.head\.appendChild\(s\);\}\)\(\);/**
+ * Strictly verify the emitted source against the known live HTML transformations.
+ * Never silently normalize unknown content: every removed fragment belongs to a
+ * specific, already-audited first-party or Cloudflare edge transformation.
+ */
+import { verificationMetaTags } from '../search-engine-verification.js';
+
+const origins=new Set(['https://ekodi.kr/seonammedi','https://seonammedi.kr']);
+const adminExtension='<link rel="stylesheet" href="/site-publication-admin.css" data-ekodi-site-publication-admin-style><script src="/site-publication-admin.js" defer data-ekodi-site-publication-admin data-site-id="seonammedi"></script>';
+const cfBeacon=/\n<script type="module" src="https:\/\/static\.cloudflareinsights\.com\/beacon\.min\.js\/[a-zA-Z0-9]+" integrity="sha512-[a-zA-Z0-9+/=]+" data-cf-beacon='([^']+)' crossorigin="anonymous"><\/script>(?=\n<\/body>)/g;
+
+// Cloudflare Bot Management / Bot Fight Mode "JavaScript detections" injects one
+// inline script before </body> that loads a same-origin /cdn-cgi challenge script.
+// Recognize only that exact shape: hex ray id, base64 token, same-origin jsd path,
+// no external URL, no nested markup. Anything else stays a mismatch.
+const cfJsd=/<script>window\.__CF\$cv\$params=\{r:'([0-9a-f]{16})',t:'([A-Za-z0-9+\/=]+)'((?:,[a-z]{1,8}:(?:'[A-Za-z0-9+\/=_.\-]*'|\d{1,6}))*)\};([^<]*)<\/script>(?=(?:\n?<script type="module" src="https:\/\/static\.cloudflareinsights\.com\/|<\/body>))/g;
+// Cloudflare serves either the classic jsd loader or the newer precursor loader.
+// The loader body is fixed edge code; only __CF$cv$params varies per request.
+// Accept exactly these audited bodies (optionally with Cloudflare's CSP nonce).
+// A body that merely *mentions* a jsd path is not trusted: arbitrary same-origin
+// or protocol-relative script would otherwise be stripped as "Cloudflare".
+// New Cloudflare templates fail closed with a diagnostic fragment for audit.
+const CF_NONCE="(?:[a-z]\\.nonce='[A-Za-z0-9+\\/=]{0,128}';)?";
+const CF_LOADER_BODIES=[
+  new RegExp("^var a=document\\.createElement\\('script'\\);"+CF_NONCE.replace('[a-z]','a')+"a\\.src='\\/cdn-cgi\\/challenge-platform\\/scripts\\/jsd\\/main\\.js';document\\.getElementsByTagName\\('head'\\)\\[0\\]\\.appendChild\\(a\\);$"),
+  new RegExp("^\\(function\\(\\)\\{if\\(!document\\.body\\)return;var s=document\\.createElement\\('script'\\);"+CF_NONCE.replace('[a-z]','s')+"s\\.src='\\/cdn-cgi\\/challenge-platform\\/scripts\\/precursor\\/main\\.js';document\\.head\\.appendChild\\(s\\);\\}\\)\\(\\);$"),
+),
 ];
 
 function stripCloudflareJsDetections(html){
