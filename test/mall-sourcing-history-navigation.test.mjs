@@ -100,6 +100,7 @@ test('reselecting current tab never inserts redundant history entries',()=>{
   ui.bind();
   merchant.click();
   assert.equal(ui.paths.length,1);
+  assert.equal(ui.navCalls.length,0,'reselecting the current tab must not refetch tenant APIs');
   assert.deepEqual(ui.state(),{view:'channels',channel:'amazon',detail:'status'});
 });
 
