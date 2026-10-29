@@ -45,7 +45,8 @@ test('Public read-only audit does not misrepresent indexing or submit provider c
   const src=read('search-visibility-admin.js');
   assert.match(src,/public-registry.json/);
   assert.match(src,/EKODI-PUBLIC-DISCOVERY-002/);
-  assert.match(src,/SEO\(검색\) · AEO\(답변\) · GEO/);
+  assert.match(src,/사이트별 검색 준비도와 등록 확인 현황/);
+  assert.match(src,/AEO·GEO/);
   assert.match(src,/색인/);
   assert.doesNotMatch(src,/fetch\('https:\/\/indexing.googleapis.com/);
   assert.doesNotMatch(src,/localStorage\.setItem|POST.*indexnow/);
