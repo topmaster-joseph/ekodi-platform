@@ -66,6 +66,16 @@ try{federated=await import('./federated-login.js?v=20261027-federated-1')}catch(
 const federatedHandled=federated?await federated.handleCallback():false;
 
 if(federatedHandled){/* the federated module owns this page load */}
+else if(site!=='admin'&&params.get('ekodi_email_action')==='reset'){
+  // A recovery OTP screen must run before regular session handoff/Google auto-login.
+  const mounted=await import('./email-password.js').then(m=>m.mountEmailPassword({resetOnly:true})).catch(()=>false);
+  if(!mounted){
+    const status=document.getElementById('authStatus');
+    if(status)status.textContent='이메일 비밀번호 재설정은 현재 준비 중입니다. 기존 로그인 방식을 사용해 주세요.';
+    const back=document.getElementById('cancelSignedOut');
+    if(back){back.classList.remove('hide');back.addEventListener('click',()=>location.replace('/auth/'));}
+  }
+}
 else if(site==='admin')await import('./admin-auth.js?v=20260918-canonical-origin-2');
 else if(site==='author')await import('./author-auth.js?v=20260816-author-ai-1');
 else if(site==='business')await import('./business-auth.js?v=20260826-free-fallback-1');
@@ -87,3 +97,9 @@ else{
 
 // Additional sign-in paths for EKODI accounts (shown only when enabled; never on the admin console).
 if(!federatedHandled&&federated&&site!=='admin')federated.renderLoginButtons().catch(error=>console.warn('federated buttons',error));
+
+// Optional EKODI Mail/password entry stays hidden until the identity backend
+// confirms BOTH email ownership enforcement and EKODI Mail sender readiness.
+if(!federatedHandled&&site!=='admin'&&params.get('ekodi_email_action')!=='reset'){
+  import('./email-password.js').then(m=>m.mountEmailPassword()).catch(error=>console.warn('email auth module unavailable',error));
+}
