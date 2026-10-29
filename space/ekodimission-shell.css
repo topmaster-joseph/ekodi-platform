@@ -166,6 +166,7 @@ main[data-mission-devotion] .mission-devotion-tools{
   margin:8px 0 0;padding:7px 9px;
   border:1px solid #d8cba8;border-radius:12px;background:#fbf6e6
 }
+html:lang(ko) main[data-mission-devotion] .mission-devotion-tools > .dv-adminbar,
 main[data-mission-devotion] .mission-devotion-tools > .dv-adminbar{
   display:flex;flex:1 1 auto;align-items:center;flex-wrap:wrap;min-width:0;
   gap:6px;margin:0;padding:0;border:0;background:transparent
