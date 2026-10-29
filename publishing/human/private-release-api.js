@@ -100,6 +100,7 @@ export async function handlePrivateReleaseAdmin(request,env){
     if(parts.length===1 && parts[0]==='register'){
       if(!safeId(input.editionId)||Object.keys(input).some(k=>k!=='editionId'))
         return fail(400,'only-edition-id-allowed');
+      if(await readPrivateEdition(db,input.editionId))return fail(409,'edition-already-registered');
       const candidate=await env.PUBLISHING_RELEASE_VERIFIER.loadCandidate(input.editionId);
       if(!candidate||candidate.editionId!==input.editionId)
         return fail(422,'verified-edition-not-found');
@@ -133,7 +134,9 @@ export async function handlePrivateReleaseAdmin(request,env){
   } catch(e){
     const msg=String(e?.message||'');
     if(msg.startsWith('RELEASE_BLOCKED:'))return fail(422,msg.slice('RELEASE_BLOCKED:'.length));
-    if(msg.includes('stale-revision')||msg.includes('edition-exists'))return fail(409,'conflict');
+    if(msg.includes('stale-revision')||msg.includes('edition-exists')||
+      msg.includes('batch-missing-mutation')||msg.includes('PUBLISHING_ATOMIC:stale-or-audit-outbox-missing')||
+      msg.includes('UNIQUE constraint failed'))return fail(409,'conflict');
     return fail(503,'private-release-operation-failed');
   }
 }
