@@ -66,6 +66,24 @@ test('loader body must be an audited Cloudflare template, not any script that me
   }
 });
 
+test('2026-10-29 verified Cloudflare origin-aware precursor ray loader is byte-exact only',()=>{
+  const body="(function(){if(!document.body)return;var l=window.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/precursor/main.js?ray=a4f86d6a3ac8a1e8',s=document.createElement('script');s.src=o?new URL(u,o).href:u;document.head.appendChild(s);})();";
+  assert.equal(body.length,341,'owner read-only edge diagnostic body length');
+  const tag="<script>window.__CF$cv$params={r:'a4f86d6a3ac8a1e8',t:'MTc5MjgzOTA5Nw=='};"+body+"</script>";
+  assert.equal(norm(source.replace('\n</body>','\n'+tag+'</body>')).html,source);
+  for(const modified of [
+    body.replace("u='/cdn-cgi","u='https://evil.example/cdn-cgi"),
+    body.replace('?ray=a4f86d6a3ac8a1e8','?ray=a4f86d6a3ac8a1e8&next=https://evil.example'),
+    body.replace('?ray=a4f86d6a3ac8a1e8','?ray=nothex'),
+    body.replace("document.head.appendChild(s);","document.head.appendChild(s);alert(1);"),
+    body.replace("s.src=o?new URL(u,o).href:u;","s.src='https://evil.example/payload.js';"),
+    body.replace("/precursor/main.js","/jsd/main.js"),
+  ]){
+    const altered="<script>window.__CF$cv$params={r:'a4f86d6a3ac8a1e8',t:'MTc5MjgzOTA5Nw=='};"+modified+"</script>";
+    assert.throws(()=>norm(source.replace('\n</body>','\n'+altered+'</body>')),/untrusted_cloudflare_js_detection_injection/);
+  }
+});
+
 test('Cloudflare CSP nonce variant of both loaders is accepted; a script-breaking nonce is not',()=>{
   const jsdNonce=jsd.replace("a.src=","a.nonce='aGVsbG8=';a.src=");
   const preNonce=precursor.replace("s.src=","s.nonce='aGVsbG8=';s.src=");
