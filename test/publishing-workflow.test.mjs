@@ -8,10 +8,19 @@ const now=new Date('2026-10-29T01:30:00.000Z');
 const author={userId:'writer',role:'author'}, editor={userId:'editor',role:'editor'};
 const publisher={userId:'publisher',role:'publisher'}, admin={userId:'administrator',role:'admin'};
 function quality(){
-  const base={format:'epub',priceKrw:9900,readerProfiles:['general'],collectionId:'human'};
+  const base={format:'epub',priceKrw:9900,readerProfiles:['general'],collectionId:'human',
+    // Strict test-only backend attestations, NOT browser-supplied approvals.
+    authorMembership:{planId:'writer1',serverVerified:true,authorId:'writer'},
+    rights:{copyrightOwnerId:'writer',distributionLicenseApproved:true},
+    salesContract:{verified:true,signedByAuthorId:'writer',editionDigest:later,
+      royaltyTermsAccepted:true,salesCommissionTermsAccepted:true},
+    audiobook:{highQualityApproved:true,humanListeningQaPassed:true,
+      dialogueNarrationReviewed:true,masterAssetDigest:'c'.repeat(64),
+      pairedEditionDigest:later,additionalBuyerPriceKrw:0,
+      buyerBundleEntitlementVerified:true,refundRevocationVerified:true}};
   const blockers=evaluateReleaseReadiness({publicationId:'p',editionId:'p:v1',title:'새 도서',
-    authorId:'writer',fieldId:'literature',releaseDigest:digest,...base,
-    publisherApproval:{approvedBy:'publisher',approvedAt:now.toISOString(),digest}}).blockers;
+    authorId:'writer',fieldId:'literature',releaseDigest:later,...base,
+    publisherApproval:{approvedBy:'publisher',approvedAt:now.toISOString(),digest:later}}).blockers;
   for(const key of blockers) {
     const parts=key.split('.');
     if(parts.length!==2)throw Error('Unknown QA blocker '+key);
@@ -65,8 +74,10 @@ test('stale content, empty rights and missing QA block author and publisher appr
   assert.equal(publicationTransition(p,'author_approve',{digest:later,rightsConsent:true},author,now).code,'EDITION_MISMATCH');
   assert.equal(publicationTransition(p,'author_approve',{digest,rightsConsent:false},author,now).code,'AUTHOR_RIGHTS_CONSENT_REQUIRED');
   const q={...p,stage:'author_approved',authorApproval:{digest,actor:'writer'},releaseCandidate:{}};
-  assert.equal(publicationTransition(q,'publisher_approve',{digest},publisher,now).code,'RELEASE_QA_BLOCKED');
-  assert.equal(publicationTransition({...q,stage:'publisher_approved'},'schedule',{digest,scheduledAt:'2026-12-01T01:00:00Z',channels:['books']},publisher,now).code,'DUAL_CHANNEL_REQUIRED');
+  assert.equal(publicationTransition(q,'publisher_approve',{digest},publisher,now,
+    {ready:true}).code,'RELEASE_QA_BLOCKED');
+  assert.equal(publicationTransition({...q,stage:'publisher_approved'},'schedule',{digest,scheduledAt:'2026-12-01T01:00:00Z',channels:['books']},publisher,now,
+    {ready:true}).code,'DUAL_CHANNEL_REQUIRED');
 });
 test('editing after frozen edition and early schedule manipulation are blocked',()=>{
   const p={...initial(),stage:'scheduled',manuscriptDigest:digest};
