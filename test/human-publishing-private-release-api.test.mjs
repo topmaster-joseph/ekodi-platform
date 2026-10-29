@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DatabaseSync } from 'node:sqlite';
-import { readFileSync } from 'node:fs';
+import { makePrivateReleaseTestDb } from './private-release-sqlite-test-support.mjs';
 import { handlePrivateReleaseAdmin } from '../publishing/human/private-release-api.js';
 
 const DIGEST='sha256:'+'e'.repeat(64);
@@ -28,16 +27,7 @@ const candidate=()=>({
   authorApproval:{approvedBy:'AUTHOR-001',approvedAt:'2026-10-29T09:00:00+09:00',digest:DIGEST},
 });
 function fixture(){
-  const db=new DatabaseSync(':memory:');
-  db.exec(readFileSync(new URL('../publishing/human/sql/001_private_scheduled_editions.sql',import.meta.url),'utf8'));
-  const adapt={prepare(sql){const statement=db.prepare(sql);return{
-    bind(...values){return{
-      run:async()=>({meta:{changes:Number(statement.run(...values).changes)}}),
-      first:async()=>statement.get(...values)||null,
-      all:async()=>({results:statement.all(...values)}),
-    }},
-  }}};
-  const changes=[];
+  const adapt=makePrivateReleaseTestDb();
   const env={
     PUBLISHING_PRIVATE_RELEASE_ENABLED:'true',
     PUBLISHING_RELEASE_DB:adapt,
@@ -57,16 +47,14 @@ function fixture(){
         rightsEvidenceValid:true,assetDigestValid:true,digest:record.releaseDigest,
       }),
     },
-    PUBLISHING_RELEASE_AUDIT:{record:async message=>{
-      changes.push(message);return {persisted:true};
-    }},
+
   };
   const post=(path,payload,headers={})=>new Request(ENDPOINT+path,{
     method:'POST',headers:{origin:'https://ekodi.kr','content-type':'application/json',
       'x-ekodi-csrf':'verified-value',...headers},body:JSON.stringify(payload),
   });
   const get=path=>new Request(ENDPOINT+path);
-  return {env,changes,post,get,close:()=>db.close()};
+  return {env,post,get,close:()=>adapt.close()};
 }
 async function send(req,env){const response=await handlePrivateReleaseAdmin(req,env);
   return {status:response.status,data:await response.json(),headers:response.headers};}
@@ -90,7 +78,7 @@ test('POST requires exact same-origin, server-verified CSRF and privileged autho
     const blocked={...f.env,PUBLISHING_RELEASE_AUTH:{verifyRequest:async()=>({
       authorized:false,subjectId:'unauthorized',csrfVerified:true})}};
     assert.equal((await send(f.get(''),blocked)).status,403);
-    assert.equal(f.changes.length,0);
+    assert.equal((await f.env.PUBLISHING_RELEASE_DB.prepare('SELECT * FROM publishing_release_audit').bind().all()).results.length,0);
   }finally{f.close();}
 });
 test('registration uses only verified private file, never trusts client title or public URL',async()=>{
@@ -111,7 +99,7 @@ test('registration uses only verified private file, never trusts client title or
     assert.equal((await send(f.get(''),f.env)).data.records.length,1);
     assert.equal((await send(f.get('/PRIVATE-EDITION-001'),f.env)).data.record.revision,1);
     assert.equal((await send(f.post('/register',{editionId:'PRIVATE-EDITION-001'}),f.env)).status,409);
-    assert.deepEqual(f.changes.map(x=>x.action),['private-register']);
+    assert.deepEqual((await f.env.PUBLISHING_RELEASE_DB.prepare('SELECT transition FROM publishing_release_audit ORDER BY revision').bind().all()).results.map(x=>x.transition),['private-registered']);
   }finally{f.close();}
 });
 test('schedule is explicit future date, signatures and rights; cancellation prevents publication',async()=>{
@@ -134,7 +122,7 @@ test('schedule is explicit future date, signatures and rights; cancellation prev
     assert.equal(cancelled.data.record.state,'cancelled');
     assert.equal(cancelled.data.record.publishAt,null);
     assert.equal(cancelled.data.record.checkoutEnabled,false);
-    assert.deepEqual(f.changes.map(x=>x.action),['private-register','schedule','cancel']);
+    assert.deepEqual((await f.env.PUBLISHING_RELEASE_DB.prepare('SELECT transition FROM publishing_release_audit ORDER BY revision').bind().all()).results.map(x=>x.transition),['private-registered','approved-schedule-saved','cancelled:author-requested-withdrawal']);
   }finally{f.close();}
 });
 test('publisher signature revocation blocks even a previously registered completed book',async()=>{
