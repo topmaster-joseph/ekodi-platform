@@ -23,8 +23,9 @@ function fail(code, detail) { return { ok:false, code, blockers: detail ? [detai
 function assertRole(action, user, project) {
   const role=user?.role;
   if (!user?.userId) return false;
-  if (role === 'admin') return true;
+  // Even a highest administrator may not forge the author's personal consent.
   if (action === 'author_approve') return user.userId === project.authorUserId;
+  if (role === 'admin') return true;
   if (action === 'publisher_approve' || action === 'schedule' || action === 'prepare_handoff' ||
     action === 'release_receipt') return role === 'publisher';
   if (action === 'editor_pass' || action === 'request_changes') return role === 'editor' || role === 'publisher';
