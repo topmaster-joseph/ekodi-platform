@@ -22,6 +22,11 @@ export const SEARCH_VERIFICATION_CODES = Object.freeze({
     google: [],
     naver: [NAVER_OWNER_CODE_20261021],
   }),
+  // Owner-issued 2026-10-30 for the Korean IDN specifically.
+  'xn--3e0b8b58jw4co4mnpll3k.kr': Object.freeze({
+    google: [],
+    naver: ['24ca4ba6e96faad3747dd25f3df3b1748384771a'],
+  }),
 });
 
 const META_NAMES = Object.freeze({
