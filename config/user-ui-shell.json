@@ -87,7 +87,23 @@
       "public": "brand and service identity only; do not expose internal operating-space or administrator terminology",
       "workspace": "operating context may be shown when it helps distinguish an authenticated workspace"
     },
-    "nativeStyleAuthority": "site-owned; shell may not override adopted native positioning, typography or layout"
+    "nativeStyleAuthority": "site-owned; shell may not override adopted native positioning, typography or layout",
+    "sharedGeometryGrammar": {
+      "version": 1,
+      "appliesTo": "non-mall public/workspace pages with simple brand-and-navigation row",
+      "method": "progressive css class adoption via shell/user-ui-header.js",
+      "brandAndNavOwnership": "service",
+      "layout": "left-brand-right-navigation; responsive second-row nav",
+      "exclude": [
+        "mall",
+        "admin",
+        "header opt-out",
+        "complex headers without direct brand/nav row"
+      ],
+      "optOutAttribute": "data-ekodi-header-standard=off",
+      "authAndPermissionOwnership": "service",
+      "preserveNativePositioning": true
+    }
   },
   "footer": {
     "owner": "service",
