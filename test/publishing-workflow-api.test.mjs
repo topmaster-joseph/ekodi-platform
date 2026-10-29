@@ -96,9 +96,13 @@ test('revision conflict, hash binding and no direct-release API',async()=>{
   changed=await handlePublishingWorkflow(request('projects/'+p.id+'/transition',{method:'POST',body:{
     revision:2,action:'submit'
   }}),env);
+  assert.equal(changed.status,409,'free personal draft cannot request publisher review');
+  assert.equal((await changed.json()).code,'PAID_PUBLISHING_SUBMISSION_REQUIRED');
+  changed=await handlePublishingWorkflow(request('projects/'+p.id+'/transition',{method:'POST',body:{
+    revision:2,action:'revise',manuscriptDigest:'c'.repeat(64)
+  }}),env);
   assert.equal(changed.status,200);
-  const frozen=(await changed.json()).project;
-  assert.equal(frozen.stage,'in_review');
+  assert.equal((await changed.json()).project.stage,'drafting');
   const release=await handlePublishingWorkflow(request('projects/'+p.id+'/transition',{method:'POST',body:{
     revision:3,action:'release_receipt',serverVerified:true
   }}),env);
