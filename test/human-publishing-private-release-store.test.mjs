@@ -84,7 +84,7 @@ test('successful due tick releases both channels only after verified prepare+act
     const result=await runPrivateScheduleTick({db,nowIso:AFTER,
       loadCandidate:async()=>candidate(),verifyEvidence:async()=>evidence(),
       prepareChannel:async(channel,record)=>{calls.push('prepare:'+channel);return ack(channel,record,'prepared');},
-      activateChannel:async(channel,record,event)=>{
+      activateChannel:async(channel,record,_candidate,event)=>{
         calls.push('activate:'+channel);assert.equal(event.deliveryState,'not_dispatched');
         return ack(channel,record,'activated');
       }});
