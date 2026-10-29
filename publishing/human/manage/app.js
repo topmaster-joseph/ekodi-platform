@@ -124,6 +124,12 @@ function renderDetail(){
     e.textContent=(i+1)+'. '+label;$('stageStrip').append(e);
   });
   $('actions').replaceChildren();tell('');
+  button('판매 준비조건 확인',async()=>{
+    const info=await api('/projects/'+p.id+'/readiness');
+    tell(info.saleReadyForPublisherReview
+      ? '비공개 자격·계약·오디오 검수 기록 확인됨. 실제 서점·몰 판매 및 구매자 제공은 별도 배포 승인 전입니다.'
+      : '판매 불가: '+(info.blocker||'준비 조건 확인 필요')+' · 개인 원고 보관 및 집필은 계속 가능합니다.');
+  });
   if(['planning','drafting','changes_requested'].includes(p.stage)){
     button('원고 새 판본 기록',async()=>{
       const digest=askDigest('실제 원고 파일의 SHA-256 지문을 입력하세요.',$('manuscriptDigest').value);
