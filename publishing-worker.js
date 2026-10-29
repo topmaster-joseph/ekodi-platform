@@ -1,3 +1,4 @@
+import { handlePublishingWorkflow } from './publishing-workflow-api.js';
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 
 const SECURITY_HEADERS={
@@ -11,6 +12,7 @@ function withHeaders(response){const headers=new Headers(response.headers);for(c
 export default {
   async fetch(request,env){
     const url=new URL(request.url);
+    if (url.pathname.startsWith('/publishing/api/workflow/') || url.pathname.startsWith('/api/workflow/')) return handlePublishingWorkflow(request,env);
     if(url.pathname==='/health')return json({
       ok:true,
       service:'ekodi-publishing',
