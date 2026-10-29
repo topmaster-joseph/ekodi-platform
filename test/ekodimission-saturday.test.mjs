@@ -204,3 +204,19 @@ test('Mission landing, login state and image remain first-party and without hard
  assert.match(css,/\.mission-auth-actions/);
  assert.match(worker,/\/ekodimission\/assets\/saturday.js/);
 });
+
+test('Sunday headline, live rollover, history browser and first-party asset remain connected',async()=>{
+ const [home,client,history,activities,worker]=await Promise.all([
+   read('space/ekodimission.page'),read('space/ekodimission-saturday.js'),
+   read('space/ekodimission-saturday-history.js'),read('space/ekodimission-activities.page'),
+   read('space-worker.js')
+ ]);
+ assert.match(home,/2024년 2월 3일부터/);
+ assert.match(home,/<\/figure><\/section>\s*<section class="activities mission-home-current"/);
+ assert.match(client,/heading\.textContent=day==='Sun'\?'다음 토요모임':'이번 주 토요모임'/);
+ assert.match(client,/refreshAfterDayChange/);
+ assert.match(history,/data-saturday-history-more/);
+ assert.match(activities,/data-mission-saturday-history/);
+ assert.match(activities,/2024년 2월 3일부터/);
+ assert.match(worker,/\/ekodimission\/assets\/saturday-history.js/);
+});
