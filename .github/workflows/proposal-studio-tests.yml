@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - 'proposal/**'
+      - '_headers'
+      - 'test/proposal-csp-live-policy.test.mjs'
       - 'test/proposal-studio.test.mjs'
       - '.github/workflows/proposal-studio-tests.yml'
       - 'site-worker.js'
@@ -42,4 +44,4 @@ jobs:
           node --check proposal/pptx.js
           node --check site-worker.js
       - name: Proposal unit and privacy tests
-        run: node --test test/proposal-studio*.test.mjs
+        run: node --test test/proposal-studio*.test.mjs test/proposal-csp-live-policy.test.mjs
