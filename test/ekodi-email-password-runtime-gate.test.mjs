@@ -56,7 +56,6 @@ test('simple email sign-up, OTP confirmation, reset and login reuse central orig
 
 test('assets and canonical routes keep Google/Naver/Kakao entry unchanged',()=>{
   assert.match(build,/'email-password\.js'/);
-  assert.match(surface,/\/'email-password\.js'/); // replaced in test below with actual path check
   assert.ok(surface.includes("'/email-password.js'"));
   assert.match(css,/ekodi-email-password/);
   assert.match(router,/site==='admin'\)await import\('\.\/admin-auth\.js/);
