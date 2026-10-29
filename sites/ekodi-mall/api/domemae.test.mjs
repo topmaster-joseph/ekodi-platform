@@ -73,3 +73,18 @@ test('readiness exposes only safe allowlisted authentication diagnostic fields',
   for (const secret of ['SECRET_API','SECRET_PASSWORD','SECRET_MALL_OPS']) assert.ok(!responseText.includes(secret));
   assert.ok(!responseText.includes('rawResponse'));
 });
+
+test('manual auth check is protected and returns no raw supplier content', async () => {
+  const { handleDomemaeRequest } = await import('./domemae.js');
+  const env={DB:{},MALL_OPERATIONS_TOKEN:'OPS_SECRET'};
+  let called=false;
+  const url='https://example.com/api/internal/connectors/domemae/auth-probe';
+  const noAuth=await handleDomemaeRequest(new Request(url,{method:'POST'}),env,{runAuthProbe:async()=>{called=true;return {ok:true};}});
+  assert.equal(noAuth.status,401);assert.equal(called,false);
+  const yesAuth=await handleDomemaeRequest(new Request(url,{method:'POST',headers:{'x-ekodi-mall-ops-token':'OPS_SECRET'}}),env,
+    {runAuthProbe:async(_env,_fetch,opts)=>{assert.equal(opts.operatorRetry,true);return {ok:false,login:'failed',asset:'not-checked',errorCode:'PASSWORD_REJECTED',rawResponse:'SENSITIVE_TOKEN'};}});
+  assert.equal(yesAuth.status,200);
+  assert.equal(yesAuth.body.probe.errorCode,'PASSWORD_REJECTED');
+  assert.equal(yesAuth.body.probe.ok,false);
+  assert.ok(!JSON.stringify(yesAuth.body).includes('SENSITIVE_TOKEN'));
+});

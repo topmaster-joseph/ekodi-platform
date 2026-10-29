@@ -1,3 +1,5 @@
+import { probeDomeggookLogin } from './domeggook-order.js';
+
 const PROVIDER_ID = 'domemae-official';
 const ENDPOINT = 'https://www.domeggook.com/ssl/api/';
 const clean = (value, max = 500) => String(value ?? '').trim().slice(0, max);
@@ -99,7 +101,7 @@ async function readOnlyAuthProbeStatus(env) {
     .bind(PROVIDER_ID).first().catch(() => null);
   let meta = {};
   try { meta = JSON.parse(row?.metadata_json || '{}'); } catch {}
-  const allowed = new Set(['MEMBER_ERROR', 'LOGIN_FAILED', 'ASSET_PROBE_FAILED', 'ACCOUNT_BINDING_MISMATCH']);
+  const allowed = new Set(['MEMBER_ERROR', 'LOGIN_FAILED', 'ASSET_PROBE_FAILED', 'ACCOUNT_BINDING_MISMATCH', 'SNS_PASSWORD_REQUIRED', 'PASSWORD_REJECTED', 'LOGIN_REJECTED', 'PRIVATE_API_PERMISSION', 'CLIENT_IP_REJECTED']);
   return {
     enabled: flag(env.DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED),
     result: row?.result_status === 'ok' ? 'ok' : row?.result_status === 'failed' ? 'failed' : 'not-checked',
@@ -195,7 +197,7 @@ async function itemLookup(env, actor, body) {
   };
 }
 
-export async function handleDomemaeRequest(request, env) {
+export async function handleDomemaeRequest(request, env, { runAuthProbe = probeDomeggookLogin } = {}) {
   const url = new URL(request.url);
   const path = url.pathname;
   if (!path.startsWith('/api/internal/connectors/domemae')) return null;
@@ -204,6 +206,20 @@ export async function handleDomemaeRequest(request, env) {
   if (!auth.ok) return { status: auth.status, body: { error: auth.error } };
   if (request.method === 'GET' && path === '/api/internal/connectors/domemae/readiness') {
     return { status: 200, body: { readiness: await readiness(env, auth.actor), actor: auth.actor } };
+  }
+  if (request.method === 'POST' && path === '/api/internal/connectors/domemae/auth-probe') {
+    // Operator-only and throttled. No setOrder, setOrdDeny or customer/PII request.
+    const result = await runAuthProbe(env, fetch, { operatorRetry: true });
+    const codes = new Set(['SNS_PASSWORD_REQUIRED', 'PASSWORD_REJECTED', 'LOGIN_REJECTED', 'LOGIN_FAILED',
+      'MEMBER_ERROR', 'PRIVATE_API_PERMISSION', 'CLIENT_IP_REJECTED', 'ACCOUNT_BINDING_MISMATCH', 'ASSET_PROBE_FAILED']);
+    return { status: 200, body: { probe: {
+      ok: result.ok === true,
+      skipped: ['recent', 'disabled-or-no-credentials'].includes(result.skipped) ? result.skipped : null,
+      nextEligibleAt: typeof result.nextEligibleAt === 'string' && /^\d{4}-/.test(result.nextEligibleAt) ? result.nextEligibleAt : null,
+      errorCode: codes.has(result.errorCode) ? result.errorCode : null,
+      login: result.login === 'ok' ? 'ok' : result.login === 'failed' ? 'failed' : 'unknown',
+      asset: result.asset === 'ok' ? 'ok' : result.asset === 'failed' ? 'failed' : 'unknown'
+    } } };
   }
   if (request.method === 'POST' && path === '/api/internal/connectors/domemae/item-lookup') {
     const body = await readJson(request);

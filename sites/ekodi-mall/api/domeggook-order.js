@@ -274,12 +274,29 @@ export function readonlyAuthProbeEnabled(env) {
     && (autoOrderEnabled(env) || String(env.DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED || '').toLowerCase() === 'true');
 }
 
+/** An allowlist of error codes, never a persisted supplier response or credential. */
+export function classifySupplierAuthError(message, stage = 'login') {
+  const value = String(message || '').slice(0, 500);
+  if (/ACCOUNT_BINDING_MISMATCH|승인 회원과 로그인 회원이 일치하지 않습니다/i.test(value)) return 'ACCOUNT_BINDING_MISMATCH';
+  if (/(SNS|소셜|카카오|네이버|애플)/i.test(value) && /(비밀번호|인증|로그인|오류)/i.test(value)) return 'SNS_PASSWORD_REQUIRED';
+  if (/(비밀번호|패스워드|password|wrong pw|invalid pw|비번)/i.test(value)) return 'PASSWORD_REJECTED';
+  if (/(회원\s*오류|member\s*error|invalid member)/i.test(value)) return 'MEMBER_ERROR';
+  if (/(권한|승인|not authorized|unauthorized|permission denied)/i.test(value)) return 'PRIVATE_API_PERMISSION';
+  if (/(ip\s*(?:오류|제한)|아이피|접속\s*IP)/i.test(value)) return 'CLIENT_IP_REJECTED';
+  if (stage !== 'login') return 'ASSET_PROBE_FAILED';
+  if (/(false|error|실패|invalid|bad response)/i.test(value)) return 'LOGIN_REJECTED';
+  return 'LOGIN_FAILED';
+}
+
 /** Login and getMyAsset ONLY, max once per 6h. No account identifiers, sessions, secrets,
  * raw supplier errors, balance amounts or buyer PII are retained in the probe evidence. */
-export async function probeDomeggookLogin(env, fetchImpl = fetch) {
+export async function probeDomeggookLogin(env, fetchImpl = fetch, { operatorRetry = false } = {}) {
   if (!readonlyAuthProbeEnabled(env)) return { skipped: 'disabled-or-no-credentials' };
   const last = await env.DB.prepare("SELECT checked_at FROM supplier_connector_checks WHERE external_ref='probe:login' ORDER BY checked_at DESC LIMIT 1").first().catch(() => null);
-  if (last && Date.now() - Date.parse(last.checked_at) < 6 * 60 * 60 * 1000) return { skipped: 'recent' };
+  const cooldown = operatorRetry ? 15 * 60 * 1000 : 6 * 60 * 60 * 1000;
+  const lastTime = last?.checked_at ? Date.parse(last.checked_at) : NaN;
+  if (Number.isFinite(lastTime) && Date.now() - lastTime < cooldown)
+    return { skipped: 'recent', nextEligibleAt: new Date(lastTime + cooldown).toISOString() };
   let ok = false, stage = 'login', meta = {};
   try {
     const session = await login(env, fetchImpl);
@@ -295,11 +312,9 @@ export async function probeDomeggookLogin(env, fetchImpl = fetch) {
     }
   } catch (error) {
     // Vendor error text can contain identifiers/credentials: persist only a bounded category.
-    const message = String(error?.message || '');
-    const accountMismatch = /승인 회원과 로그인 회원이 일치하지 않습니다/i.test(message);
-    const memberError = /회원\s*오류|member\s*error/i.test(message);
+    // Only persist a bounded category. Never store the supplier's error body.
     meta = { login: stage === 'login' ? 'failed' : 'ok', asset: stage === 'asset' ? 'failed' : 'not-checked',
-      errorCode: accountMismatch ? 'ACCOUNT_BINDING_MISMATCH' : memberError ? 'MEMBER_ERROR' : stage === 'login' ? 'LOGIN_FAILED' : 'ASSET_PROBE_FAILED' };
+      errorCode: classifySupplierAuthError(error?.message, stage) };
     await raiseAlert(env, { severity: 'error', kind: 'supply.login_failed', message: `도매꾹 읽기 전용 인증 점검 실패: ${meta.errorCode}` });
   }
   await env.DB.prepare('INSERT INTO supplier_connector_checks (id,provider_id,check_type,external_ref,result_status,metadata_json,checked_at) VALUES (?,?,?,?,?,?,?)')
