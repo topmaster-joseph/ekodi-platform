@@ -35,7 +35,7 @@ export function classifyInsuranceGatewayRequest(request) {
   const suffix = url.pathname.slice(PREFIX.length);
   // Lowercase exact public routes; reject percent encoding, duplicate slashes,
   // dot segments, uppercase alias paths, unrecognized or internal endpoints.
-  if (!/^\/[a-z0-9/-]+$/.test(suffix) || suffix.includes('//') ||
+  if (!/^\/[a-z0-9/_-]+$/.test(suffix) || suffix.includes('//') ||
       suffix.endsWith('/') || suffix.includes('/./') || suffix.includes('/../')) {
     return deny(404, 'unknown_api_route');
   }
