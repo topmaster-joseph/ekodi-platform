@@ -25,7 +25,8 @@ test('logged-out state hides logout and clears retained partner data',()=>{
   assert.match(css,/#opsLogout\[hidden\]\{display:none!important\}/);
   assert.match(js,/login\.hidden=signed/);
   assert.match(js,/logout\.hidden=!signed/);
-  assert.match(js,/if\(!signed\)\{context=\{partners:\[\],sellers:\[\],sources:\[\],products:\[\],skus:\[\],mappings:\[\],gates:\{\}\}/);
+  assert.match(js,/if\(!canOperate\)\{/);
+  assert.match(js,/context=blankContext\(\); selectedPartnerId=''/);
   assert.match(js,/renderGates\(\);renderSummary\(\);renderPartners\(\)/);
 });
 test('existing gated Supplier Ops forms and API calls are retained',()=>{
@@ -36,4 +37,16 @@ test('existing gated Supplier Ops forms and API calls are retained',()=>{
   assert.match(html,/aria-live="polite"/);
   assert.match(html,/자동발주 OFF/);
   assert.doesNotMatch(html,/name="password"|name="apiKey"/);
+});
+
+test('ops UI only enables mutation after server authorization and discards stale results',()=>{
+  assert.match(js,/const signed=Boolean\(session\), canOperate=signed&&operationsAuthorized/);
+  assert.match(js,/el.disabled=!canOperate/);
+  assert.match(js,/operationsAuthorized = true;/);
+  assert.match(js,/operationsAuthorized = false;/);
+  assert.match(js,/const result = await api\('\/api\/internal\/supplier-pilot\/context'\)/);
+  assert.match(js,/revision !== authRevision/);
+  assert.match(js,/session.user\?\.id !== actor/);
+  assert.match(js,/\+\+authRevision; operationsAuthorized=false; session=null; syncUi\(\)/);
+  assert.match(js,/if\(!canOperate\)/);
 });
