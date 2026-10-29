@@ -5,7 +5,7 @@ import {evaluateAuthSenderDns} from '../scripts/verify-ekodi-auth-sender-dns.mjs
 
 const good={
   senderDomain:'ekodi.kr',
-  spfHost:'send.ekodi.kr',
+  spfHost:'mailfrom.sender.example',
   dkimHost:'selector._domainkey.ekodi.kr',
   spfTxt:['v=spf1 include:mail.provider.example ~all'],
   dmarcTxt:['v=DMARC1; p=quarantine; rua=mailto:dmarc@example.invalid'],
@@ -16,7 +16,7 @@ const good={
 test('Sender DNS preflight recognizes provider-assigned sender domain records but NEVER claims SMTP activated',()=>{
   const r=evaluateAuthSenderDns(good);
   assert.equal(r.senderDomain,'ekodi.kr');
-  assert.equal(r.spfHost,'send.ekodi.kr');
+  assert.equal(r.spfHost,'mailfrom.sender.example');
   assert.equal(r.dmarcHost,'_dmarc.ekodi.kr');
   assert.equal(r.dnsPrerequisitesPassed,true);
   assert.equal(r.smtpCredentialsVerified,false);
