@@ -17,6 +17,7 @@
     links:Object.freeze([
       Object.freeze({href:'/ekodimission/devotion',label:'매일묵상'}),
       Object.freeze({href:'/ekodimission/activities',label:'활동'}),
+      Object.freeze({href:'/ekodimission#saturday',label:'토요모임'}),
       Object.freeze({href:'/ekodimission/history',label:'연혁'}),
       Object.freeze({href:'/ekodimission/live',label:'라이브'}),
       Object.freeze({href:'/ekodimission/participate',label:'함께하기'}),
