@@ -13,7 +13,7 @@ function withHeaders(response){const headers=new Headers(response.headers);for(c
 export default {
   async fetch(request,env){
     const url=new URL(request.url);
-    if(url.pathname==='/api/publishing/private-releases'||url.pathname.startsWith('/api/publishing/private-releases/')){
+    if(url.pathname==='/api/private-releases'||url.pathname.startsWith('/api/private-releases/')){
       const reply=await handlePrivateReleaseAdmin(request,env);
       if(reply)return reply;
     }
