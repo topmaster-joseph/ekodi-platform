@@ -38,20 +38,22 @@ export async function verifyCommercialRelease(env,project,at=new Date()){
   const chief=await approvedChief(db,env,project.authorUserId);
   const plan=chief?{active:true,planId:'publisher_editor'}:
     await activePaidAuthorPlan(env,project.authorUserId,at);
-  if(!plan.active)return {ready:false,reason:'PAID_OR_CHIEF_REQUIRED'};
-  const contract=await db.prepare("SELECT author_user_id,edition_digest,status,author_signed_at,publisher_signed_at,royalty_terms_accepted,commission_terms_accepted,distribution_license_accepted FROM publishing_workflow_release_contracts WHERE project_id=? AND edition_digest=?")
+  if(!plan.active)return {ready:false,reason:plan.reason||'PAID_OR_CHIEF_REQUIRED'};
+  const contract=await db.prepare("SELECT author_user_id,edition_digest,status,author_signed_at,publisher_signed_at,royalty_terms_accepted,commission_terms_accepted,distribution_license_accepted,sealed_contract_sha256 FROM publishing_workflow_release_contracts WHERE project_id=? AND edition_digest=?")
     .bind(project.id,project.releaseDigest).first();
   if(!contract||contract.status!=='signed'||contract.author_user_id!==project.authorUserId||
     !contract.author_signed_at||!contract.publisher_signed_at||
+    !SHA.test(String(contract.sealed_contract_sha256||''))||
     !isTrue(contract.distribution_license_accepted)||
     (!chief&&(!isTrue(contract.royalty_terms_accepted)||!isTrue(contract.commission_terms_accepted))))
     return {ready:false,reason:'SEPARATE_SIGNED_PUBLISHING_CONTRACT_REQUIRED'};
-  const audio=await db.prepare("SELECT edition_digest,stage,master_sha256,voice_license_verified,dialogue_qa_passed,full_track_qa_passed,buyer_access_verified,refund_revoke_verified,bonus_price_krw FROM publishing_workflow_audio_release_qa WHERE project_id=? AND edition_digest=?")
+  const audio=await db.prepare("SELECT edition_digest,stage,master_sha256,voice_license_verified,dialogue_qa_passed,full_track_qa_passed,buyer_access_verified,refund_revoke_verified,bonus_price_krw,verified_by,verified_at FROM publishing_workflow_audio_release_qa WHERE project_id=? AND edition_digest=?")
     .bind(project.id,project.releaseDigest).first();
   if(!audio||audio.stage!=='approved'||!SHA.test(String(audio.master_sha256||''))||
     !isTrue(audio.voice_license_verified)||!isTrue(audio.dialogue_qa_passed)||
     !isTrue(audio.full_track_qa_passed)||!isTrue(audio.buyer_access_verified)||
-    !isTrue(audio.refund_revoke_verified)||audio.bonus_price_krw!==0)
+    !isTrue(audio.refund_revoke_verified)||audio.bonus_price_krw!==0||
+    !audio.verified_by||!audio.verified_at)
     return {ready:false,reason:'FREE_PREMIUM_AUDIOBOOK_QA_REQUIRED'};
   // Rights and QC records are private attestations. A future independent asset/retailer
   // attestation is still necessary before any real commercial dispatch.
