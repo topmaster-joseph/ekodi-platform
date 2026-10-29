@@ -63,7 +63,7 @@ test('stale update and failed auditing roll back with no partial mutation',async
     await commitPrivateRegistration(db,first,'staff-editor-01',AT);
     await commitPrivateTransition(db,first,second,'staff-editor-01',AT);
     await assert.rejects(commitPrivateTransition(db,first,
-      {...second,title:'unapproved replacement'},'staff-editor-01',AT),
+      second,'staff-editor-01',AT),
       /batch-missing-mutation|constraint/i);
     assert.equal((await readPrivateEdition(db,first.editionId)).title,first.title);
     assert.equal((await rows(db,'publishing_release_audit')).length,2);
