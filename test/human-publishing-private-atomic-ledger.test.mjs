@@ -70,6 +70,21 @@ test('stale update and failed auditing roll back with no partial mutation',async
     assert.equal((await rows(db,'publishing_release_outbox')).length,2);
   }finally{db.close();}
 });
+test('existing edition author and title are immutable between revisions',async()=>{
+  const db=makePrivateReleaseTestDb();try{
+    const first=initial();
+    await commitPrivateRegistration(db,first,'staff-editor-01',AT);
+    await assert.rejects(commitPrivateTransition(db,first,{
+      ...edited(first),authorId:'injected-author',
+    },'staff-editor-01',AT),/immutable-edition/);
+    await assert.rejects(commitPrivateTransition(db,first,{
+      ...edited(first),title:'injected-new-title',
+    },'staff-editor-01',AT),/immutable-edition/);
+    assert.equal((await rows(db,'publishing_release_audit')).length,1);
+    assert.equal((await rows(db,'publishing_release_outbox')).length,1);
+  }finally{db.close();}
+});
+
 test('missing batch transaction fails closed before any registration',async()=>{
   const db=makePrivateReleaseTestDb();try{
     await assert.rejects(commitPrivateRegistration({prepare:db.prepare},initial(),'staff-editor-01',AT),
