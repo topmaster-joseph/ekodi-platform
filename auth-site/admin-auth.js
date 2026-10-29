@@ -165,4 +165,73 @@ async function prepare(){
   }catch(e){console.error('admin central auth',e);if(directEntry)directBridgeRoot.dataset.adminDirectBridge='fallback';notice(preparationFailureMessage(e),'error');show('googleRetry',true)}
 }
 $('googleRetry').addEventListener('click',prepare);
+// Alternative provider entry is optional. Only the EKODI Person bridge may
+// create an Admin session; merely having an OAuth user never opens /admin.
+const EKODI_BRIDGE_INTENT='ekodi-admin-alternative-login-pending';
+const EKODI_SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
+const EKODI_SUPABASE_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
+function alternativeLoginUrl(){
+  const callback=new URL('/auth/',CANONICAL_AUTH_ORIGIN);
+  callback.searchParams.set('site','admin');
+  callback.searchParams.set('via','ekodi');
+  callback.searchParams.set('return_to',safeReturn);
+  const login=new URL('/auth/',CANONICAL_AUTH_ORIGIN);
+  login.searchParams.set('site','portal');
+  login.searchParams.set('return_to',callback.href);
+  return login.href;
+}
+async function completeEkodiAdminLogin(){
+  const sdk=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+  const client=sdk.createClient(EKODI_SUPABASE_URL,EKODI_SUPABASE_PUBLISHABLE_KEY,{
+    auth:{persistSession:true,detectSessionInUrl:false}
+  });
+  const {data,error}=await client.auth.getSession();
+  if(error||!data?.session?.access_token)throw new Error('ekodi_auth_session_required');
+  const challenge=await request('/api/ekodi/admin/challenge',{method:'POST'});
+  if(!challenge.nonce)throw new Error('ekodi_admin_challenge_missing');
+  const result=await request('/api/ekodi/admin/login',{
+    method:'POST',
+    headers:{authorization:`Bearer ${data.session.access_token}`},
+    body:JSON.stringify({nonce:challenge.nonce})
+  });
+  if(!result.token)throw new Error('ekodi_admin_session_missing');
+  const verified=await request('/api/session',{
+    headers:{authorization:`Bearer ${result.token}`}
+  });
+  if(verified.authenticated!==true)throw new Error('ekodi_admin_session_not_ready');
+  try{sessionStorage.setItem('ekodi-auth-token',result.token)}catch{}
+  navigateToAdmin(result);
+}
+async function showEkodiAlternative(){
+  let config=null;
+  try{config=await request('/api/ekodi/admin/config')}catch{}
+  if(!config?.enabled||config.identityOrigin!==CANONICAL_AUTH_ORIGIN)return;
+  const host=$('googleButtonHost');
+  const button=document.createElement('button');
+  button.type='button';button.className='google-btn';
+  button.textContent='다른 로그인 방식';
+  button.id='ekodiAlternateLogin';
+  button.addEventListener('click',async()=>{
+    button.disabled=true;
+    if(params.get('via')==='ekodi'){
+      try{await completeEkodiAdminLogin()}catch(error){
+        notice(error?.data?.error||'EKODI 계정에 관리자 권한이 없거나 인증이 만료되었습니다. 다시 로그인해 주세요.','error');
+        button.disabled=false;
+      }
+      return;
+    }
+    try{sessionStorage.setItem(EKODI_BRIDGE_INTENT,'1')}catch{}
+    location.assign(alternativeLoginUrl());
+  });
+  host.insertAdjacentElement('afterend',button);
+  if(params.get('via')==='ekodi'){
+    // An explicit, same-tab login request triggers one automatic callback.
+    // Without that marker, an ordinary sign-out does not re-login by itself.
+    let pending=false;
+    try{pending=sessionStorage.getItem(EKODI_BRIDGE_INTENT)==='1';
+      sessionStorage.removeItem(EKODI_BRIDGE_INTENT);}catch{}
+    if(pending)button.click();
+  }
+}
 show('signedOut',true);show('signedIn',false);await prepare();
+await showEkodiAlternative();
