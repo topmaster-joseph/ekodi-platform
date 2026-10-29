@@ -64,3 +64,28 @@ test('Mission devotion route keeps independent header/footer, stylesheet and ren
  assert.match(page,/href="\/ekodimission\/assets\/shell.css"/);
  assert.match(page,/src="\/bible\/devotion.js"/);
 });
+
+test('Mission devotional login controls sit in the lower admin row without changing shared devotion renderer',async()=>{
+ const [shell,css,renderer,missionPage]=await Promise.all([
+  read('space/ekodimission-shell.js'),
+  read('space/ekodimission-shell.css'),
+  read('bible/devotion.js'),
+  read('space/ekodimission-devotion.page')
+ ]);
+ assert.match(missionPage,/main class="subpage" data-mission-devotion/);
+ assert.match(shell,/const devotion=document\.querySelector\('main\[data-mission-devotion\]'\)/);
+ assert.match(shell,/const target=devotion\|\|document\.querySelector\('\.mission-site-header'\)/);
+ assert.match(shell,/if\(devotion\)mountDevotionAuthNextToAdmin\(row,devotion\)/);
+ assert.doesNotMatch(shell,/header\.append\(row\)/);
+ assert.match(shell,/renderer\.querySelector\('\.dv-adminbar'\)/);
+ assert.match(shell,/adminBar\.before\(tools\)/);
+ assert.match(shell,/tools\.append\(adminBar,authRow\)/);
+ assert.match(shell,/new MutationObserver/);
+ assert.match(shell,/if\(mount\(\)\)observer\.disconnect\(\)/);
+ assert.match(css,/main\[data-mission-devotion\] \.mission-devotion-tools/);
+ assert.match(css,/mission-devotion-tools > \.dv-adminbar\[hidden\]\{display:none!important\}/);
+ assert.match(css,/mission-devotion-tools > \.mission-auth-actions/);
+ assert.match(renderer,/root\.append\(datebar, status, scriptureBlock, tabbar, panelWrap, notice, shareRow, adminBar, adminPanel, adminView, toastEl\)/);
+ assert.match(shell,/missionAuthUi\.logout\.addEventListener\('click'/);
+ assert.match(shell,/window\.EKODIMissionAuth=Object\.freeze/);
+});
