@@ -4,7 +4,7 @@
 
 EKODI에서는 사람은 한 번만 회원이 된다. 서비스가 늘어나도 회원가입은 늘어나지 않는다.
 
-**단일 내부 ID / 다중 외부 로그인 수단:** EKODI 내 회원·권한·활동은 `people.ekodi_id` 중심으로 운영한다. Google·네이버·카카오 등은 로그인할 때 선택하는 본인확인 수단일 뿐 내부 회원 ID가 아니다. 추가 로그인 수단은 본인이 로그인 후 소유권을 검증해 명시적으로 연결하며, 이메일 일치만으로 자동 병합하지 않는다. 현재 Google 경로는 기존대로 유지하고 네이버·카카오 경로는 운영 승인 전 휴면 상태다. 유튜브·인스타그램 등의 **외부 채널 계정 관리**(`admin/accounts/social-accounts`)는 회원 소셜 로그인과 완전히 별개다. 세부 경계는 [`EKODI-ID-LOGIN-CHANNEL-BOUNDARY.md`](auth/EKODI-ID-LOGIN-CHANNEL-BOUNDARY.md)를 참조한다.
+**단일 내부 ID / 다중 외부 로그인 수단:** EKODI 내 회원·권한·활동은 `people.ekodi_id` 중심으로 운영한다. Google·네이버·카카오 등은 로그인할 때 선택하는 본인확인 수단일 뿐 내부 회원 ID가 아니다. 추가 로그인 수단은 본인이 로그인 후 소유권을 검증해 명시적으로 연결하며, 이메일 일치만으로 자동 병합하지 않는다. 현재 Google 경로는 유지한다. 제공자별 운영 가능 여부는 별도 키 설치와 로그인 정책 스위치 모두 확인해야 한다. 2026-10-29 DB 스위치 확인 결과 Google 활성, Kakao 활성, Naver 비활성이며 Kakao 키 설치와 실제 로그인 성공 여부는 미검증이다. 유튜브·인스타그램 등의 **외부 채널 계정 관리**(`admin/accounts/social-accounts`)는 회원 소셜 로그인과 완전히 별개다. 세부 경계는 [`EKODI-ID-LOGIN-CHANNEL-BOUNDARY.md`](auth/EKODI-ID-LOGIN-CHANNEL-BOUNDARY.md)를 참조한다.
 
 EKODI 인증은 `사람(Person)`, `로그인 수단(Identity)`, `기본 무료회원 자격(Free Membership)`, `소속/공간(Workspace)`, `권한(Permission)`, `구독(Subscription)`을 분리한다.
 

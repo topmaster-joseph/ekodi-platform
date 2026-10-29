@@ -16,7 +16,7 @@
 
 | 관리 대상 | 정식 위치 / 기술 원장 | 현재 의미 |
 |---|---|---|
-| EKODI 회원·로그인 수단 | `/auth/`, `people`, `login_identities`, `identity-api`, `identity_providers` | Google 경로 사용, 네이버·카카오는 구현됐으나 두 관문(비밀값 + 운영 enabled)을 열기 전까지 휴면 |
+| EKODI 회원·로그인 수단 | `/auth/`, `people`, `login_identities`, `identity-api`, `identity_providers` | Google은 운영 스위치 활성; 2026-10-29 운영 DB 조회에서 카카오는 enabled=true, 네이버는 enabled=false. 카카오 인증키 설치·실제 로그인 성공 여부는 확인 전이며, 두 조건이 충족돼야 버튼 표시 가능 |
 | 외부 유튜브·인스타그램·페이스북 등 채널 계정 | `/admin/accounts/social-accounts`, `ekodi_social_account_links` 및 기존 서비스 연동기록 | 채널/계정 기록 조회용, 로그인 수단이나 사용자 인증의 원장이 아님. 신규 메타데이터 등록·채널 OAuth·자동게시 기본 차단 |
 | 로그인 제공자 운영 스위치 | `identity_providers.enabled` + 로그인 공급자 서버 비밀값 | 최고관리자 외부 채널 목록의 13개 서비스 표시와 별개. 화면의 채널 '비활성화'를 회원 로그인 비활성화로 해석하면 안 됨 |
 
