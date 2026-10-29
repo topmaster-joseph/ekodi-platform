@@ -80,3 +80,21 @@ jobs:
             if [ "$code" != "301" ] || ! printf '%s' "$location" | grep -q 'https://ekodi.kr/ekodibiz/domain-check?source=biz-legacy'; then failed=1; fi
           done
           exit "$failed"
+
+      - name: Verify Naver owner file on ekodibiz.kr before claiming release success
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected='naver-site-verification: naverf72bebc155107dcad735d8178146679f.html'
+          url='https://ekodibiz.kr/naverf72bebc155107dcad735d8178146679f.html'
+          ok=0
+          for attempt in $(seq 1 15); do
+            curl -fsS --connect-timeout 10 --max-time 20 -o /tmp/biz-naver-owner "$url" || true
+            if [ -s /tmp/biz-naver-owner ] && [ "$(cat /tmp/biz-naver-owner)" = "$expected" ]; then
+              ok=1
+              break
+            fi
+            sleep 4
+          done
+          echo "ekodibiz.kr Naver HTML owner proof verified=$ok"
+          test "$ok" = 1
