@@ -57,7 +57,8 @@ test('author/editor/publisher independently approve and reserve, but cannot auto
   p=advance(p,'schedule',{digest:later,scheduledAt,channels:['books','ekodimall']},publisher);
   assert.equal(p.stage,'scheduled');
   assert.equal(scheduleReadiness(p,now),false);
-  assert.equal(publicationTransition(p,'prepare_handoff',{},publisher,now).code,'NOT_DUE');
+  assert.equal(publicationTransition(p,'prepare_handoff',{},publisher,now,
+    {ready:true}).code,'NOT_DUE');
   p=advance(p,'prepare_handoff',{},publisher,new Date(scheduledAt));
   assert.equal(p.stage,'handoff_ready');
   assert.equal(p.handoffProposal.deliveryState,'not_dispatched');
