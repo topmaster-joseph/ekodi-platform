@@ -123,13 +123,13 @@ test('webhook cannot replay another order or payment key from a valid Toss looku
  const originalFetch=globalThis.fetch;
  globalThis.fetch=async()=>new Response(JSON.stringify(data),{status:200,headers:{'content-type':'application/json'}});
  try{
-   const forgedOrder=await worker.fetch(new Request('https://finance-api.ekodi.kr/webhooks/toss',{
+   const forgedOrder=await worker.fetch(new Request('https://ekodi.kr/webhooks/toss',{
       method:'POST',headers:{'content-type':'application/json'},
       body:JSON.stringify({eventType:'PAYMENT_STATUS_CHANGED',data:{paymentKey:data.paymentKey,orderId:'OTHER_ORDER',status:'DONE'}})
     }),{DB:a.DB,TOSS_SECRET_KEY:'server-secret-for-test'});
    assert.equal(forgedOrder.status,502);
    assert.equal(a.calls.some(x=>/INSERT INTO payments/.test(x.sql)),false);
-   const forgedKey=await worker.fetch(new Request('https://finance-api.ekodi.kr/webhooks/toss',{
+   const forgedKey=await worker.fetch(new Request('https://ekodi.kr/webhooks/toss',{
       method:'POST',headers:{'content-type':'application/json'},
       body:JSON.stringify({eventType:'PAYMENT_STATUS_CHANGED',data:{paymentKey:'another_payment_key',orderId:data.orderId,status:'DONE'}})
     }),{DB:a.DB,TOSS_SECRET_KEY:'server-secret-for-test'});
