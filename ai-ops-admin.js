@@ -9,7 +9,7 @@
   const SITE_AGENTS = [
     { domain:'ekodi.kr', name:'EKODI Home', group:'Core & Access', role:'생태계 정문·서비스 레지스트리', manage:'services', critical:true },
     { domain:'ekodi.kr/admin', name:'Control Center', group:'Core & Access', role:'통합운영·권한·감사', manage:'admins', critical:true },
-    { domain:'auth.ekodi.kr', name:'EKODI Auth', group:'Core & Access', role:'통합인증·계정·SSO', manage:'admins', critical:true },
+    { domain:'ekodi.kr/auth', name:'EKODI Auth', group:'Core & Access', role:'통합인증·계정·SSO', manage:'admins', critical:true },
     { domain:'ekodi.kr/ekodichurch', name:'에코디교회', group:'Community', role:'예배·사역·공동체 운영', manage:'services' },
     { domain:'ekodi.kr/community', name:'커뮤니티', group:'Community', role:'관계·그룹·참여·소통', manage:'community' },
     { domain:'social.ekodi.kr', name:'에코디 소셜', group:'Community', role:'소셜채널·미디어 연동', manage:'social' },
@@ -169,7 +169,7 @@
   }
 
   function agentState(agent, map = serviceMap()) {
-    const service = map.get(agent.domain) || (agent.domain === 'ekodi.kr/admin' ? map.get(['admin','ekodi','kr'].join('.')) : null);
+    const service = map.get(agent.domain) || (agent.domain === 'ekodi.kr/admin' ? map.get(['admin','ekodi','kr'].join('.')) : agent.domain === 'ekodi.kr/auth' ? map.get(['auth','ekodi','kr'].join('.')) : null);
     if (!service) return { key:'standby', label:'연결대기', note:'Control API 상태점검 연결 대기', response:null, service:null };
     if (service.state && service.state !== 'active') return { key:'standby', label:'점검중', note:'운영상태 확인 필요', response:service.latest?.responseTime ?? null, service };
     const health = service.latest?.status || 'pending';
