@@ -85,8 +85,8 @@ jobs:
           for host in seonammedi.kr xn--3e0b8b58jw4co4mnpll3k.kr; do
             ok=0
             for attempt in $(seq 1 12); do
-              if curl -fsS --max-time 20 "https://$host/robots.txt" | grep -Fq 'Sitemap: https://seonammedi.kr/sitemap.xml' \
-                && curl -fsS --max-time 20 "https://$host/sitemap.xml" | grep -Fq '<loc>https://seonammedi.kr/</loc>'; then ok=1; break; fi
+              if curl -fsS --max-time 20 "https://$host/robots.txt" | grep -Fq 'Sitemap: https://xn--3e0b8b58jw4co4mnpll3k.kr/sitemap.xml' \
+                && curl -fsS --max-time 20 "https://$host/sitemap.xml" | grep -Fq '<loc>https://xn--3e0b8b58jw4co4mnpll3k.kr/</loc>'; then ok=1; break; fi
               sleep 5
             done
             echo "$host search discovery ok=$ok"

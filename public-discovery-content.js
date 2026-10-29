@@ -153,7 +153,7 @@ async function seonamNoticePage(env,id){
   const body=clean(row.body,12000);
   const kind=row.notice_kind==='event'?'행사':'공지사항';
   const published=clean(row.published_at||row.updated_at,80);
-  const canonical=`https://ekodi.kr/seonammedi/notices/${Number(row.id)}`;
+  const canonical=`https://xn--3e0b8b58jw4co4mnpll3k.kr/notices/${Number(row.id)}`;
   let imageCount=0;
   try{const keys=JSON.parse(row.image_keys_json||'[]');if(Array.isArray(keys))imageCount=Math.min(5,keys.filter(Boolean).length)}catch{}
   if(!imageCount&&row.image_key)imageCount=1;
@@ -167,7 +167,7 @@ async function seonamNoticePage(env,id){
   const page=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${html(title)} | 서남권 국립의대 소통센터</title><meta name="description" content="${html(body.slice(0,180))}">
 <link rel="canonical" href="${canonical}"><meta name="robots" content="index,follow,max-image-preview:large">
-<meta property="og:type" content="article"><meta property="og:title" content="${html(title)}"><meta property="og:url" content="${canonical}">${imageCount?`<meta property="og:image" content="https://seonammedi.kr/api/seonammedi/notices/${Number(row.id)}/image/0"><meta name="twitter:card" content="summary_large_image">`:''}
+<meta property="og:type" content="article"><meta property="og:title" content="${html(title)}"><meta property="og:url" content="${canonical}">${imageCount?`<meta property="og:image" content="https://xn--3e0b8b58jw4co4mnpll3k.kr/api/seonammedi/notices/${Number(row.id)}/image/0"><meta name="twitter:card" content="summary_large_image">`:''}
 <script type="application/ld+json">${jsonLd}</script>
 <style>body{margin:0;background:#fff;color:#111;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Noto Sans KR",sans-serif}.wrap{max-width:760px;margin:auto;padding:20px 16px 56px}a{color:#111}.back{display:inline-block;margin-bottom:28px;font-weight:800;text-decoration:none}.eyebrow{font-size:12px;font-weight:900;letter-spacing:.08em}.title{font-size:clamp(28px,6vw,46px);line-height:1.18;margin:8px 0 12px}.meta{font-size:13px;color:#555;margin-bottom:28px}.body{white-space:pre-wrap;font-size:17px;line-height:1.8}.images{display:grid;gap:10px;margin:0 0 24px}.images img{width:100%;height:auto;border-radius:12px}.share{margin-top:28px;padding-top:18px;border-top:1px solid #ddd}.share button{border:1px solid #111;background:#fff;color:#111;border-radius:8px;padding:10px 14px;font-weight:800;cursor:pointer}</style></head><body><main class="wrap"><a class="back" href="/seonammedi#notices">← 공지사항 목록</a><div class="eyebrow">${kind}</div><h1 class="title">${html(title)}</h1><div class="meta">${date}</div><div class="images">${images}</div><article class="body">${html(body)}</article><div class="share"><button type="button" id="share">공유</button></div></main><script>document.getElementById('share').onclick=async()=>{const url=location.href,title=document.title;try{if(navigator.share)await navigator.share({title,url});else{await navigator.clipboard.writeText(url);alert('링크를 복사했습니다.')}}catch{}}</script></body></html>`;
   return new Response(page,{status:200,headers:{'content-type':'text/html; charset=utf-8','cache-control':'public, max-age=60, stale-while-revalidate=300','x-content-type-options':'nosniff','x-ekodi-route':'public-discovery-content'}});
