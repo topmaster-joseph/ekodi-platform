@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readdirSync, readFileSync } from 'node:fs';
-import { placeSupplierOrders, trackSupplierOrders, buildDeliInfo, buildItemValue, probeDomeggookLogin, chooseOptionCode } from './domeggook-order.js';
+import { placeSupplierOrders, trackSupplierOrders, buildDeliInfo, buildItemValue, probeDomeggookLogin, approvedMemberBindingReady, autoOrderEnabled, chooseOptionCode } from './domeggook-order.js';
 
 function d1(db) {
   const wrap = (sql) => { const stmt = db.prepare(sql); let args = []; const api = {
@@ -26,7 +26,7 @@ function setup(extra = {}) {
   db.prepare(`INSERT INTO orders (${names.join(',')}) VALUES (${names.map(() => '?').join(',')})`).run(...v);
   db.prepare("UPDATE orders SET status='paid', quantity=2, seller_settlement_amount=27900, paid_at='2026-10-25T00:00:00Z' WHERE id='ord_1'").run();
   db.prepare(`INSERT INTO order_buyers (order_id,name,phone,email,postcode,address1,address2,memo,privacy_consent_at,created_at) VALUES ('ord_1','김철수','010-1111-2222','a@b.kr','07328','서울 영등포구 국제금융로6길 30','5층|A','문앞','t','t')`).run();
-  const env = { DB: d1(db), DOMEMAE_API_KEY: 'AK', DOMEMAE_USER_ID: 'ekodi', DOMEMAE_PASSWORD: 'PW!', DOMEGGOOK_AUTO_ORDER_ENABLED: 'true', ...extra };
+  const env = { DB: d1(db), DOMEMAE_API_KEY: 'AK', DOMEMAE_USER_ID: 'test-approved-member', DOMEMAE_APPROVED_MEMBER_ID: 'test-approved-member', DOMEMAE_PASSWORD: 'PW!', DOMEGGOOK_AUTO_ORDER_ENABLED: 'true', ...extra };
   return { db, env };
 }
 function supplier({ emoney = 100000, qty = 2, cost = 8000, setOrderOk = true, viewMode = 'WAITCHK', delivery = {} } = {}, log = []) {
@@ -34,7 +34,7 @@ function supplier({ emoney = 100000, qty = 2, cost = 8000, setOrderOk = true, vi
     const params = init.body ? new URLSearchParams(String(init.body)) : new URL(String(url)).searchParams;
     const mode = params.get('mode'); log.push({ mode, params });
     const J = (o) => new Response(JSON.stringify(o));
-    if (mode === 'setLogin') return J({ domeggook: { result: 'true', sId: 'SID1', id: 'sns@952821' } });
+    if (mode === 'setLogin') return J({ domeggook: { result: 'true', sId: 'SID1', id: 'test-approved-member' } });
     if (mode === 'getItemView') return J({ domeggook: { basis: { no: '55501234', title: '대나무 칫솔', status: '판매중' }, price: { supply: cost }, qty: { inventory: 50 }, deli: { supply: { type: '고정', fee: 3000 } }, desc: { license: { usable: true } } } });
     if (mode === 'getMyAsset') return J({ domeggook: { result: 'true', data: { currEmoney: { total: emoney } } } });
     if (mode === 'setOrder') return J(setOrderOk ? { domeggook: { result: 'SUCCESS', order: { orderNo: 9001, itemNo: 55501234 } } } : { errors: { message: 'invalid item' } });
@@ -56,7 +56,7 @@ test('paid supply order is placed once, verified, then tracked to shipping', asy
   assert.equal(r.placed, 1, JSON.stringify(r));
   const set = log.find((c) => c.mode === 'setOrder').params;
   assert.equal(set.get('sId'), 'SID1');
-  assert.equal(set.get('id'), 'sns@952821', 'uses the member id returned by login');
+  assert.equal(set.get('id'), 'test-approved-member', 'uses the member id returned by login');
   assert.equal(set.get('item[55501234]'), 'supply||P||00|2||에코디몰 위탁주문||문앞');
   assert.match(set.get('deliinfo'), /^김철수\|a@b\.kr\|07328\|/);
   const row = db.prepare('SELECT status,supplier_order_no,expected_cost FROM supplier_orders').get();
@@ -203,10 +203,10 @@ test('read-only login probe runs with paid auto-order OFF without issuing a setO
   assert.equal(r.ok, true);
   assert.equal(r.login, 'ok');
   assert.equal(r.asset, 'ok');
-  assert.equal(r.loginIdMatchesConfigured, false, 'SNS login ID mismatch is diagnostic only');
+  assert.equal(r.loginIdMatchesConfigured, true, 'probe uses the individually approved login member');
   assert.deepEqual(log.map(x => x.mode), ['setLogin','getMyAsset']);
   const check = db.prepare("SELECT metadata_json FROM supplier_connector_checks WHERE external_ref='probe:login'").get().metadata_json;
-  for (const secret of ['AK', 'PW!', 'SID1', 'sns@952821', '100000']) assert.ok(!check.includes(secret), 'probe metadata excludes secrets, account identifiers and balance');
+  for (const secret of ['AK', 'PW!', 'SID1', 'test-approved-member', '100000']) assert.ok(!check.includes(secret), 'probe metadata excludes secrets, account identifiers and balance');
   assert.equal((await probeDomeggookLogin(env, supplier({}, log))).skipped, 'recent');
 });
 
@@ -241,4 +241,50 @@ test('read-only probe sanitizes a supplier member-error response and never place
   const check = db.prepare("SELECT metadata_json FROM supplier_connector_checks WHERE external_ref='probe:login'").get().metadata_json;
   assert.ok(!check.includes('SID1') && !check.includes('PW!') && !check.includes('AK'));
   assert.deepEqual(calls.map(x => x.mode), ['setLogin','getMyAsset']);
+});
+
+test('supplier-approved account secret is required even when the paid-order flag is enabled', async () => {
+  for (const extra of [
+    { DOMEMAE_APPROVED_MEMBER_ID: '' },
+    { DOMEMAE_APPROVED_MEMBER_ID: 'other-approved-member' },
+    { DOMEMAE_USER_ID: 'other-login-member' },
+  ]) {
+    const { env } = setup(extra), requests = [];
+    assert.equal(approvedMemberBindingReady(env), false);
+    assert.equal(autoOrderEnabled(env), false);
+    assert.equal((await placeSupplierOrders(env, supplier({}, requests))).skipped, 'disabled');
+    assert.equal(requests.length, 0, 'no supplier request for an unapproved account');
+  }
+});
+
+test('read-only supplier probe never logs in with an unapproved or unconfigured account', async () => {
+  for (const extra of [
+    { DOMEMAE_APPROVED_MEMBER_ID: '', DOMEGGOOK_AUTO_ORDER_ENABLED: 'false', DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED: 'true' },
+    { DOMEMAE_USER_ID: 'not-the-approved-member', DOMEGGOOK_AUTO_ORDER_ENABLED: 'false', DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED: 'true' }
+  ]) {
+    const { env } = setup(extra), calls = [];
+    const r = await probeDomeggookLogin(env, supplier({}, calls));
+    assert.equal(r.skipped, 'disabled-or-no-credentials');
+    assert.equal(calls.length, 0);
+  }
+});
+
+test('supplier login session must belong to the separately approved member', async () => {
+  const { db, env } = setup({ DOMEGGOOK_AUTO_ORDER_ENABLED: 'false', DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED: 'true' });
+  const calls = [];
+  const base = supplier({}, calls);
+  const fetchImpl = async (url, init) => {
+    const params = init?.body ? new URLSearchParams(String(init.body)) : new URL(String(url)).searchParams;
+    if (params.get('mode') === 'setLogin') {
+      calls.push({ mode: 'setLogin' });
+      return new Response(JSON.stringify({ domeggook: { result: 'true', sId: 'UNAPPROVED_SESSION', id: 'another-member' } }));
+    }
+    return base(url, init);
+  };
+  const r = await probeDomeggookLogin(env, fetchImpl);
+  assert.equal(r.ok, false);
+  assert.equal(r.errorCode, 'ACCOUNT_BINDING_MISMATCH');
+  assert.deepEqual(calls.map(x => x.mode), ['setLogin'], 'do not call getMyAsset or setOrder on mismatched session');
+  const saved = db.prepare("SELECT metadata_json FROM supplier_connector_checks WHERE external_ref='probe:login'").get().metadata_json;
+  assert.ok(!saved.includes('another-member') && !saved.includes('UNAPPROVED_SESSION'));
 });
