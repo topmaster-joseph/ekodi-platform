@@ -784,9 +784,10 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       else nextUrl.searchParams.set('detail',mallSourcingDetail);
       const canonicalPath=section==='amazon'?adminBase+'/sourcing':nextUrl.pathname;
       const nextPath=canonicalPath+nextUrl.search+nextUrl.hash;
-      if(nextPath!==location.pathname+location.search+location.hash){
-        history.pushState(history.state,'',nextPath);
-      }
+      // A selected tab is already rendered; avoid redundant tenant API reads
+      // (important when the shared Cloudflare quota circuit is near its limit).
+      if(nextPath===location.pathname+location.search+location.hash)return;
+      history.pushState(history.state,'',nextPath);
       affiliateSourcingPanel(mallSourcingCurrent);
     };
     const pairs=[['data-mall-source-view','view'],['data-mall-source-channel','channel'],['data-mall-source-detail','detail']];
