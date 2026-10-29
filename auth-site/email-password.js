@@ -65,8 +65,9 @@ export async function mountEmailPassword({resetOnly=false}={}){
   const tabs=node('div','','ekodi-email-tabs');
   const loginTab=node('button','이메일 로그인');
   const signupTab=node('button','이메일 가입');
-  for(const tab of [loginTab,signupTab])tab.type='button';
-  tabs.append(loginTab,signupTab);
+  const codeTab=node('button','인증코드 확인');
+  for(const tab of [loginTab,signupTab,codeTab])tab.type='button';
+  tabs.append(loginTab,signupTab,codeTab);
   const form=node('form','','ekodi-email-form');
   form.noValidate=true;
   const label=(title,input)=>{
@@ -99,7 +100,8 @@ export async function mountEmailPassword({resetOnly=false}={}){
     if(mode==='reset')password.autocomplete='new-password';
     else password.autocomplete=mode==='signup'?'new-password':'current-password';
     loginTab.setAttribute('aria-pressed',String(mode==='login'));
-    signupTab.setAttribute('aria-pressed',String(mode==='signup'||mode==='verify'));
+    signupTab.setAttribute('aria-pressed',String(mode==='signup'));
+    codeTab.setAttribute('aria-pressed',String(mode==='verify'));
     submit.textContent={login:'이메일 로그인',signup:'인증메일 보내고 가입',verify:'인증코드 확인',reset:'인증코드 확인 후 비밀번호 변경'}[mode];
     secondary.textContent=mode==='reset'?'재설정 메일 보내기':mode==='verify'?'인증메일 다시 보내기':'비밀번호 찾기';
     hint.textContent=mode==='verify'?'받은 메일의 인증코드를 입력하세요. 확인 전에는 로그인할 수 없습니다.':
@@ -159,6 +161,7 @@ export async function mountEmailPassword({resetOnly=false}={}){
   form.addEventListener('submit',submitRequest);
   loginTab.addEventListener('click',()=>setMode('login'));
   signupTab.addEventListener('click',()=>setMode('signup'));
+  codeTab.addEventListener('click',()=>setMode('verify'));
   secondary.addEventListener('click',async()=>{
     if(busy)return;
     const address=String(email.value||'').trim().toLowerCase();
