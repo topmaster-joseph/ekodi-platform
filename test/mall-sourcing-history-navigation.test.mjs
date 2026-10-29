@@ -104,6 +104,23 @@ test('reselecting current tab never inserts redundant history entries',()=>{
   assert.deepEqual(ui.state(),{view:'channels',channel:'amazon',detail:'status'});
 });
 
+test('reselecting the current feature and detail stays read-only and adds no history',()=>{
+  const ui=harness('/ekodimall/admin/sourcing?view=channels&channel=amazon&detail=cost');
+  const view=ui.add('view','channels');
+  const detail=ui.add('detail','cost');
+  ui.bind();
+  detail.click();
+  assert.equal(ui.paths.length,1);
+  assert.equal(ui.navCalls.length,0);
+  view.click();
+  assert.equal(ui.paths.length,2,'changing view also restores its default status detail');
+  const reselectView=ui.add('view','channels');
+  ui.bind();
+  reselectView.click();
+  assert.equal(ui.paths.length,2,'repeat view choice must not add a second entry');
+  assert.equal(ui.navCalls.length,1,'repeat choice must not fetch the tenant API again');
+});
+
 test('legacy Amazon entry canonicalizes on interaction but Back restores original deep link',()=>{
   const ui=harness('/ekodimall/admin/amazon?view=connection&channel=amazon&detail=account','amazon');
   const detail=ui.add('detail','cost');ui.bind();
