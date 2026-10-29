@@ -135,7 +135,15 @@ function navigateToAdmin(result){
   try{location.replace(targetHref)}catch{try{location.assign(targetHref)}catch{showNavigationFallback(targetHref)}}
 }
 async function prepare(){
-  const host=$('googleButtonHost');host.replaceChildren();show('googleRetry',false);notice('관리자 전용 Google 인증을 준비하고 있습니다.');
+  const host=$('googleButtonHost');host.replaceChildren();show('googleRetry',false);
+  if(params.get('via')==='ekodi'){
+    const config=await request('/api/ekodi/admin/config').catch(()=>null);
+    if(config?.enabled&&config.identityOrigin===CANONICAL_AUTH_ORIGIN){
+      notice('EKODI 계정 확인 후 서버의 관리자 권한을 검증합니다.');
+      return;
+    }
+  }
+  notice('관리자 전용 Google 인증을 준비하고 있습니다.');
   if(isEmbeddedWebView){if(directEntry)directBridgeRoot.dataset.adminDirectBridge='fallback';renderExternalBrowserGate();return;}
   try{
     if(!ADMIN_API||!CANONICAL_AUTH_ORIGIN)throw Object.assign(new Error('unsupported_admin_auth_environment'),{code:'UNSUPPORTED_ADMIN_AUTH_ENVIRONMENT'});
