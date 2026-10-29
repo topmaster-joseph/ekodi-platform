@@ -104,3 +104,14 @@ test('the default administrator form is hidden; UI label is not an authorization
   assert.match(control,/link\.textContent='로그인'/);
   assert.match(handoff,/\/api\/session/);
 });
+
+test('independently registered Persons cannot merge before recurring billing reconciliation',()=>{
+  const api=read('supabase/functions/identity-api/index.ts');
+  const ui=read('auth-site/federated-login.js');
+  const link=api.slice(api.indexOf('async function finishLink'),api.indexOf('async function disconnectIdentity'));
+  assert.match(link,/targetPersonId&&targetPersonId!==initiatorPersonId/);
+  assert.match(link,/error:"account_merge_review_required"/);
+  assert.ok(link.indexOf('targetPersonId&&targetPersonId!==initiatorPersonId')<
+    link.indexOf('admin.rpc("link_person_identity"'),'check must precede merge transaction');
+  assert.match(ui,/code === 'account_merge_review_required'/);
+});
