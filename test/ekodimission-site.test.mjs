@@ -60,7 +60,7 @@ test('standalone Open Table application link is action-first, compact, and write
 });
 
 test('EKODI Mission shared assets and unknown child routes are guarded',async()=>{
-  for(const path of ['/ekodimission/assets/site.css','/ekodimission/assets/site.js','/ekodimission/assets/saturday.js','/ekodimission/assets/shell.css','/ekodimission/assets/shell.js','/ekodimission/assets/share.css','/ekodimission/assets/mission-table-hero.svg','/ekodimission/assets/open-table-hero-260926.svg','/ekodimission/assets/open-table-meal-260925.jpg']){const response=await spaceWorker.fetch(new Request(`https://ekodi.kr${path}`),env);assert.equal(response.status,200,path);assert.equal(response.headers.get('x-ekodi-route'),'ekodimission-asset',path);assert.equal(response.headers.get('x-ekodi-publication-status'),'published',path)}
+  for(const path of ['/ekodimission/assets/site.css','/ekodimission/assets/site.js','/ekodimission/assets/saturday.js','/ekodimission/assets/home-photo.js','/ekodimission/assets/shell.css','/ekodimission/assets/shell.js','/ekodimission/assets/share.css','/ekodimission/assets/mission-table-hero.svg','/ekodimission/assets/open-table-hero-260926.svg','/ekodimission/assets/open-table-meal-260925.jpg']){const response=await spaceWorker.fetch(new Request(`https://ekodi.kr${path}`),env);assert.equal(response.status,200,path);assert.equal(response.headers.get('x-ekodi-route'),'ekodimission-asset',path);assert.equal(response.headers.get('x-ekodi-publication-status'),'published',path)}
   const missing=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/not-published'),env);assert.equal(missing.status,404);assert.equal(missing.headers.get('x-ekodi-route'),'ekodimission-not-found');
 });
 
