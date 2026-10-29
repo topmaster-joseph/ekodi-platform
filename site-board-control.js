@@ -340,6 +340,11 @@ async function missionEnsureWeeklyDates(env,boardId,today,nextSaturday){
     CASE WHEN meeting_date < ? THEN 'completed' ELSE 'scheduled' END,?
   FROM weekly WHERE meeting_date <= ?`)
     .bind(MISSION_SATURDAY_STARTED,until,boardId,today,now(),until).run();
+  // A completed calendar day is archived after 00:00 Asia/Seoul.
+  // Preserve cancelled/modified statuses; only scheduled dates roll to completed.
+  await env.DB.prepare(`UPDATE ekodi_mission_saturday_events
+    SET status='completed' WHERE board_id=? AND meeting_date<? AND status='scheduled'`)
+    .bind(boardId,today).run();
 }
 async function missionSaturdayHistory(request,env,instance,method){
   if(method!=='GET')return boardJson(instance,{error:'method_not_allowed'},405);
