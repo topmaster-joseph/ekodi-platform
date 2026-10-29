@@ -20,7 +20,8 @@ export const SEARCH_VERIFICATION_CODES = Object.freeze({
   }),
   'seonammedi.kr': Object.freeze({
     google: [],
-    naver: [NAVER_OWNER_CODE_20261021],
+    // Owner-issued to this English domain on 2026-10-30, separate from IDN.
+    naver: [NAVER_OWNER_CODE_20261021, 'fda2f0e54ea106c29233baaa602aa5a551c79b88'],
   }),
   // Owner-issued 2026-10-30 for the Korean IDN specifically.
   'xn--3e0b8b58jw4co4mnpll3k.kr': Object.freeze({
