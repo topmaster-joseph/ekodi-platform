@@ -10,7 +10,7 @@ test('canonical EKODI Control exposes a GitHub operations view',()=>{
     'id="githubOperationsSummary"','id="githubOperationsCards"'])
     assert.ok(html.includes(value),value);
 });
-test('GitHub observability is manual refresh and does not create a polling storm',()=>{
+test('GitHub observability is manual refresh and does not create a polling storm',async()=>{
   assert.match(js,/function refreshGitHubOperations\(\)/);
   assert.ok(js.includes("if(view==='github')void refreshGitHubOperations()"));
   assert.ok(js.includes("api('/api/control/ai/v8/github?limit=30')"));
