@@ -59,3 +59,13 @@ export async function verifyCommercialRelease(env,project,at=new Date()){
   // attestation is still necessary before any real commercial dispatch.
   return {ready:true,planId:plan.planId,chief,reason:'PRIVATE_QA_ATTESTED'};
 }
+
+
+export async function verifyPublishingSubmission(env,project,at=new Date()){
+  if(!env?.PUBLISH_DB||!project?.authorUserId)return {ready:false,reason:'PUBLISHER_DATABASE_UNAVAILABLE'};
+  if(await approvedChief(env.PUBLISH_DB,env,project.authorUserId))
+    return {ready:true,planId:'publisher_editor'};
+  const plan=await activePaidAuthorPlan(env,project.authorUserId,at);
+  return plan.active?{ready:true,planId:plan.planId}:
+    {ready:false,reason:plan.reason||'FREE_PERSONAL_ARCHIVE_ONLY'};
+}
