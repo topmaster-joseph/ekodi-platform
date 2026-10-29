@@ -94,6 +94,17 @@ Task: `invest-autonomous-wealth-p0p3` · Branch: `ai/claude/invest-autonomous-we
 - 사용하지 않은 경로: 플랫폼 운영 보고서(`ekodi_owner_reports`)는 투자정보 분리 원칙 때문에, GitHub 이슈 알림은 저장소가 공개 저장소라서 사용하지 않습니다.
 - 한계: 시세가 직접 입력값이라 Sentinel은 마지막 입력 시세 기준으로만 판단합니다. 실시간 시세 연결 전에는 장중 급락을 감지하지 못합니다.
 
+
+## 최고관리자 전용 AI 실거래 준비 화면 (2026-10-29)
+
+- 정식 주소 `https://ekodi.kr/my/invest`에 **AI 실거래 매매 · 최고관리자 전용** 패널을 추가합니다. 공개 투자 안내·공통분석에는 보이지 않습니다.
+- 서버에서 검증한 최고관리자 `topmaster.joseph@gmail.com`과 추가 본인인증이 모두 충족되어야 `GET /v1/invest/autopilot/live/readiness?broker=toss|ibkr`를 조회할 수 있습니다. `INVEST_OWNER_EMAIL`을 타인으로 잘못 구성해도 Live 전용 라우트는 고정된 본인 이메일 이외에는 403을 반환합니다.
+- 기존 `evaluateBrokerReadiness`, `evaluateLiveActivation`, 사용자 지정 투자 한도를 합쳐 거래 가능한 상태가 아닌 경우에도 증권사별 미충족 조건을 구체적으로 표시합니다. 현재 공식 증권사 연동 및 데이터 증빙은 없으므로 `brokerLivePolicyEnabled`와 `globalLivePolicyEnabled` 등 게이트는 **false**로 유지합니다.
+- **계좌 키를 웹에 입력하거나 저장하지 않습니다.** 실거래 주문 버튼은 제공하지 않으며, 직접 `POST /v1/invest/autopilot/live/orders`를 시도해도 HTTP 423 `LIVE_EXECUTION_LOCKED`가 반환되고 실제 브로커 요청은 전혀 하지 않습니다.
+- 이 단계는 **실거래 제어 화면 활성화**이지 **실제 주문 기능 가동**이 아닙니다. 소유자의 개발 승인과 실제 매수·매도 승인도 별개입니다.
+- 실제 주문을 허용하려면 증권사 공식 API·본인 명의·고정 출구 IP 또는 허용 인프라·실시간 시세 라이선스·계좌/주문 조회·중복주문 차단·리스크 감시·긴급정지·최소 60일 모의 검증·별도 명시적 승인·정식 보안심사와 가드레일 배포를 각각 증명해야 합니다.
+- 테스트: 타인과 미인증자 403/401, 최고관리자 추가 인증 후 준비도 조회, 미등록 증권사 400, 실주문 423, 주문/체결 DB 비변경, 비밀키·계좌번호 응답 금지, owner 섹션 초기 숨김.
+
 ## 다음 단계
 
 - P1: 토스 조회 전용 어댑터(`/api/v1/holdings`, `/accounts`), 서버 측 토큰 캐시(24h, 단일 토큰), `X-RateLimit-*` 준수. 고정 IP 중계 승인 후(보류 중).
