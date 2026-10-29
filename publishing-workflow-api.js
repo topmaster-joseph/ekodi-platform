@@ -152,3 +152,36 @@ export async function handlePublishingWorkflow(req,env){
     return error(404,'NOT_FOUND');
   }catch{return error(503,'PUBLISHING_WORKFLOW_UNAVAILABLE')}
 }
+
+/** Cloudflare Cron only. Never exposed as an HTTP action or user-callable dispatcher. */
+export async function prepareScheduledPublishing(env, at=new Date()) {
+  if(!env?.PUBLISH_DB)return {ok:false,code:'PUBLISH_DB_NOT_CONFIGURED',prepared:0};
+  const db=env.PUBLISH_DB,time=at.toISOString(),summary={ok:true,prepared:0,blocked:0};
+  const due=await db.prepare("SELECT * FROM publishing_workflow_projects WHERE stage='scheduled' AND scheduled_at<=? ORDER BY scheduled_at LIMIT 50")
+    .bind(time).all();
+  for(const row of due.results||[]){
+    const p=project(row),system={userId:'system:publishing-cron',role:'publisher'};
+    const checked=publicationTransition(p,'prepare_handoff',{},system,at);
+    if(!checked.ok){summary.blocked++;continue}
+    const event=checked.next.handoffProposal;
+    if(!event?.idempotencyKey||!event?.releaseDigest){summary.blocked++;continue}
+    const eventId=crypto.randomUUID(),revision=p.revision+1;
+    try {
+      const actions=await db.batch([
+        db.prepare("UPDATE publishing_workflow_projects SET stage='handoff_ready',ready_at=?,revision=?,last_event_id=?,updated_at=? WHERE id=? AND stage='scheduled' AND revision=? AND scheduled_at<=? AND release_digest=?")
+          .bind(time,revision,eventId,time,p.id,p.revision,time,p.releaseDigest),
+        db.prepare("INSERT OR IGNORE INTO publishing_workflow_handoff_outbox (id,project_id,edition_id,release_digest,idempotency_key,payload_json,status,created_at,updated_at) SELECT ?,?,?,?,?,?,'pending',?,? WHERE EXISTS (SELECT 1 FROM publishing_workflow_projects WHERE id=? AND revision=? AND last_event_id=?)")
+          .bind(eventId,p.id,p.editionId,p.releaseDigest,event.idempotencyKey,JSON.stringify(event),time,time,
+            p.id,revision,eventId),
+        db.prepare("INSERT INTO publishing_workflow_audit (id,project_id,actor_user_id,action,from_stage,to_stage,revision,created_at) SELECT ?,?,'system:publishing-cron','prepare_handoff','scheduled','handoff_ready',?,? WHERE EXISTS (SELECT 1 FROM publishing_workflow_projects WHERE id=? AND revision=? AND last_event_id=?)")
+          .bind(crypto.randomUUID(),p.id,revision,time,p.id,revision,eventId)
+      ]);
+      if(Number(actions?.[0]?.meta?.changes??actions?.[0]?.changes??0)===1 &&
+        Number(actions?.[1]?.meta?.changes??actions?.[1]?.changes??0)===1 &&
+        Number(actions?.[2]?.meta?.changes??actions?.[2]?.changes??0)===1)summary.prepared++;
+      else summary.blocked++;
+    }catch{summary.blocked++}
+  }
+  // This function never signs, sends or activates a product.
+  return summary;
+}
