@@ -8,16 +8,19 @@ export const INVEST_PERMISSION = Object.freeze({
 export const BROKER_ADAPTERS = Object.freeze({
   toss:{
     id:'toss',name:'토스증권',markets:['KR','US'],
+    docsUrl:'https://developers.tossinvest.com/docs',
     capabilities:['quotes','positions','orders'],
     liveTradingEnabled:false,credentialMode:'user_authorized_official_api'
   },
   kis:{
     id:'kis',name:'한국투자증권 (KIS Developers)',markets:['KR','US'],
+    docsUrl:'https://apiportal.koreainvestment.com/about-howto',
     capabilities:['quotes','positions','orders'],
     liveTradingEnabled:false,credentialMode:'user_authorized_official_api'
   },
   ibkr:{
     id:'ibkr',name:'Interactive Brokers',markets:['GLOBAL'],
+    docsUrl:'https://www.interactivebrokers.com/docs/web-api/',
     capabilities:['quotes','positions','orders'],
     liveTradingEnabled:false,credentialMode:'user_authorized_official_api'
   }
