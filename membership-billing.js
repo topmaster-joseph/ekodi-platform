@@ -1,4 +1,5 @@
 import authWorker, { isAllowedOrigin } from './auth-worker.js';
+import { loadBillingIdentity, personalSubscriptionLookupKeys, choosePersonalSubscription } from './membership-identity.js';
 
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -153,7 +154,13 @@ async function supabaseUser(accessToken) {
   };
 }
 async function identityFromRequest(request) {
-  return supabaseUser(bearerToken(request));
+  const accessToken = bearerToken(request);
+  const user = await supabaseUser(accessToken);
+  if (!user) return null;
+  return loadBillingIdentity({
+    accessToken, authUser:user,
+    supabaseUrl:SUPABASE_URL, publishableKey:SUPABASE_PUBLISHABLE_KEY,
+  });
 }
 async function supabaseWorkspaces(request, site = 'marketing') {
   const token = bearerToken(request);
@@ -202,7 +209,10 @@ async function resolveStoreSubject(request, identity, site, storeId) {
 }
 async function resolveSubject(env, identity, tenantSlug = '') {
   const tenant = normalizeTenant(tenantSlug);
-  if (!tenant) return { type:'person', key:identity.id, email:identity.email, tenant:null, basePlan:'free' };
+  if (!tenant) return {
+    type:'person', key:identity.subjectKey, legacyKeys:identity.legacySubjectKeys,
+    email:identity.email, tenant:null, basePlan:'free'
+  };
 
   const row = await env.DB.prepare('SELECT id,slug,status FROM customer_tenants WHERE slug = ?').bind(tenant).first();
   if (!row || row.status !== 'active') return null;
@@ -225,6 +235,19 @@ async function subjectFor(request, env, identity, site, tenantSlug = '', storeId
 async function subscriptionFor(env, subject, site) {
   let row = await env.DB.prepare('SELECT * FROM service_subscriptions WHERE subject_type = ? AND subject_key = ? AND site = ?')
     .bind(subject.type, subject.key, site).first();
+  if (subject.type === 'person') {
+    const rows = row ? [row] : [];
+    for (const key of personalSubscriptionLookupKeys({
+      subjectKey:subject.key, legacySubjectKeys:subject.legacyKeys,
+    }).filter(key => key !== subject.key)) {
+      const old = await env.DB.prepare('SELECT * FROM service_subscriptions WHERE subject_type = ? AND subject_key = ? AND site = ?')
+        .bind('person', key, site).first();
+      if (old) rows.push(old);
+    }
+    // Exact verified Person aliases, not email equality. Keep historical billing
+    // records intact; reject conflicting paid records rather than double charging.
+    row = choosePersonalSubscription(rows);
+  }
   const basePlan = subject.type === 'store' && site === 'marketing' && subject.basePlan === 'basic' ? 'basic' : 'free';
   const baseStatus = basePlan === 'basic' ? 'active' : 'free';
   if (row) {
@@ -319,7 +342,7 @@ async function me(request, env) {
   const url = new URL(request.url);
   const site = normalizeSite(url.searchParams.get('site'));
   const identity = await identityFromRequest(request);
-  if (!site || !identity) return json({ error:'Google 로그인 세션을 확인해 주세요.' }, 401, request, env);
+  if (!site || !identity) return json({ error:'EKODI 로그인 세션을 확인해 주세요.' }, 401, request, env);
   const subject = await subjectFor(request, env, identity, site, url.searchParams.get('tenant'), url.searchParams.get('store'));
   if (!subject) return json({ error:'이 계정은 해당 조직·점포에 등록되어 있지 않습니다.' }, 403, request, env);
   const subscription = await subscriptionFor(env, subject, site);
@@ -371,6 +394,7 @@ async function billingStart(request, env) {
   const site = normalizeSite(body?.site);
   const plan = planFor(site, body?.planId);
   if (!identity || !site || !plan || plan.monthlyFee <= 0) return json({ error:'유료 구독 플랜을 선택해 주세요.' }, 400, request, env);
+  if (!identity.verifiedEmails?.length) return json({ error:'유료 결제 전 인증된 이메일을 EKODI ID에 연결해 주세요.', code:'VERIFIED_EMAIL_REQUIRED' }, 403, request, env);
   if (!billingReady(env)) return json({ error:'자동결제 계약 또는 결제키 연결이 아직 완료되지 않았습니다.', code:'BILLING_NOT_READY' }, 503, request, env);
   const subject = await subjectFor(request, env, identity, site, body?.tenant, body?.store);
   if (!subject) return json({ error:'이 계정은 해당 조직·점포에 등록되어 있지 않습니다.' }, 403, request, env);
@@ -394,7 +418,7 @@ async function billingStart(request, env) {
     .bind(checkout, subject.type, subject.key, site, plan.id, plan.monthlyFee, customerKey, identity.email, expires.toISOString(), now.toISOString()).run();
 
   const returnTo = String(body?.returnTo || '').slice(0, 500);
-  const callback = new URL('https://auth.ekodi.kr/');
+  const callback = new URL('https://ekodi.kr/auth/');
   callback.searchParams.set('site', site);
   callback.searchParams.set('billing', 'success');
   callback.searchParams.set('checkout', checkout);
@@ -417,8 +441,13 @@ async function billingStart(request, env) {
 }
 
 async function authorizeCheckout(request, env, identity, row) {
+  if (row.subject_type === 'person') {
+    // A payment intent belongs to the linked EKODI Person, not the browser's
+    // current login provider. Payment contact email must also be verified.
+    return Boolean(identity.verifiedEmails?.includes(String(row.email || '').toLowerCase())
+      && personalSubscriptionLookupKeys(identity).includes(String(row.subject_key)));
+  }
   if (String(row.email || '').toLowerCase() !== identity.email) return false;
-  if (row.subject_type === 'person') return row.subject_key === identity.id;
   if (row.subject_type === 'store') {
     const subject = await resolveStoreSubject(request, identity, row.site, row.subject_key);
     return Boolean(subject && canManagePlan(subject));
@@ -435,6 +464,7 @@ async function billingComplete(request, env) {
   const identity = await identityFromRequest(request);
   const body = await readJson(request);
   if (!identity || !body?.checkout || !body?.authKey || !body?.customerKey) return json({ error:'결제 인증 정보를 확인해 주세요.' }, 400, request, env);
+  if (!identity.verifiedEmails?.length) return json({ error:'인증된 이메일이 필요합니다.', code:'VERIFIED_EMAIL_REQUIRED' }, 403, request, env);
   if (!billingReady(env)) return json({ error:'자동결제 연결이 준비되지 않았습니다.', code:'BILLING_NOT_READY' }, 503, request, env);
 
   const checkout = await env.DB.prepare('SELECT * FROM membership_checkout_intents WHERE id = ?').bind(String(body.checkout)).first();
@@ -548,6 +578,7 @@ export async function handleMembershipBilling(request, env) {
   if (request.method === 'OPTIONS') return new Response(null, { status:204, headers:cors(origin, env) });
   await ensureSchema(env.DB);
   const path = new URL(request.url).pathname;
+  try {
   if (request.method === 'GET' && path === '/api/membership/catalog') return catalog(request, env);
   if (request.method === 'GET' && path === '/api/membership/me') return me(request, env);
   if (request.method === 'POST' && path === '/api/membership/select') return selectFree(request, env);
@@ -557,6 +588,13 @@ export async function handleMembershipBilling(request, env) {
   if (request.method === 'GET' && path === '/api/membership/admin/subscriptions') return adminSubscriptions(request, env);
   if (request.method === 'GET' && path === '/api/membership/admin/charges') return adminCharges(request, env);
   return null;
+  } catch (error) {
+    if (error?.code === 'ACCOUNT_BILLING_RECONCILIATION_REQUIRED') {
+      return json({ error:'연결된 로그인 계정에 여러 유료 구독이 있습니다. 자동 통합하지 않고 결제 내역 검증이 필요합니다.',
+        code:'ACCOUNT_BILLING_RECONCILIATION_REQUIRED' }, 409, request, env);
+    }
+    throw error;
+  }
 }
 
 export async function runMembershipBillingSchedule(env) {
