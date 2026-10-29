@@ -1,4 +1,4 @@
-const API='/api/publishing/private-releases';
+const API='/api/private-releases';
 const $=id=>document.getElementById(id);
 const msg=(message,error=false)=>{const el=$('status');el.textContent=message;el.dataset.error=String(error);};
 let records=[],selected=null,csrf=null;
