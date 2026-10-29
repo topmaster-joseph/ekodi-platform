@@ -63,7 +63,7 @@ test('readiness exposes only safe allowlisted authentication diagnostic fields',
       }
     }
   };
-  const req = new Request('https://mall-api.ekodi.kr/api/internal/connectors/domemae/readiness', { headers: { 'x-ekodi-mall-ops-token': 'SECRET_MALL_OPS' } });
+  const req = new Request('https://example.com/api/internal/connectors/domemae/readiness', { headers: { 'x-ekodi-mall-ops-token': 'SECRET_MALL_OPS' } });
   const result = await handleDomemaeRequest(req, env);
   assert.equal(result.status, 200);
   assert.equal(result.body.readiness.readOnlyAuthProbe.errorCode, 'MEMBER_ERROR');
