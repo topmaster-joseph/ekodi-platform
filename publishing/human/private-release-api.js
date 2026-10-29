@@ -80,6 +80,17 @@ export async function handlePrivateReleaseAdmin(request,env){
 
   const db=env.PUBLISHING_RELEASE_DB;
   try {
+    if(request.method==='GET' && parts.length===1 && parts[0]==='csrf'){
+      if(typeof env.PUBLISHING_RELEASE_AUTH.issueCsrf!=='function')
+        return fail(503,'csrf-service-not-configured');
+      const token=await env.PUBLISHING_RELEASE_AUTH.issueCsrf({
+        subjectId:identity.subjectId,capability:'publishing.private-release.schedule',
+        origin:url.origin,
+      });
+      if(typeof token?.value!=='string' || token.value.length<32 || token.value.length>512 ||
+        token.subjectId!==identity.subjectId)return fail(503,'csrf-unavailable');
+      return json({ok:true,csrfToken:token.value,expiresAt:token.expiresAt||null});
+    }
     if(request.method==='GET' && parts.length===0){
       const records=await listPrivateReleaseRecords(db,Math.min(100,Math.max(1,Number(url.searchParams.get('limit'))||50)));
       return json({ok:true,records:records.map(summary)});
