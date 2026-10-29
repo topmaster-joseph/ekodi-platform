@@ -9,3 +9,7 @@ Rollout: protected CI, protected Site Core deployment, signed Webhook/Cloudflare
 ## Exact-head EKODI protected convergence
 
 Official Orchestrator recovery PR #6684 for issue #6630 supersedes source PR #6682. The authenticated read-only Control panel update needs owner-authored exact-head checks; no source-only or bot-event check is treated as a release receipt. Protected Site Core deployment, production canary, and actual super-admin session rendering remain independent acceptance criteria. Webhook secret, install identity and D1 migration are not enabled by this UI change.
+
+## Protected merge-base refresh, 2026-10-29
+
+The EKODI Orchestrator merged the latest main branch into recovery PR #6684 after the prior exact-head CI passed. The refreshed head must receive fresh authentic required CI and AI Orchestration Gate checks. This note is not itself a release receipt, approval, or permission to bypass guarded production verification. The GitHub Control tab remains a read-only super-admin screen and webhook secret provisioning remains a separate human-owned prerequisite.
