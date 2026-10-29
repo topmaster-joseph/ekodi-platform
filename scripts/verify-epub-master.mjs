@@ -3,7 +3,7 @@
  * This is NOT EPUBCheck, Ace, human review, a signed release or a publication action.
  */
 import { createHash } from 'node:crypto';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile, stat } from 'node:fs/promises';
 import { inflateRawSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -113,6 +113,8 @@ export async function inspectEpubMaster({file, expected={}}={}) {
   const blockers=[];
   let digest=null, packagePath=null, files=0, spineItems=0, navPresent=false, digestMatched=false;
   try {
+    const fileInfo=await stat(file);
+    if(!fileInfo.isFile() || fileInfo.size<22 || fileInfo.size>MAX_FILE) throw new Error('file_size_invalid');
     const data=await readFile(file);
     if(data.length>MAX_FILE) throw new Error('file_size_invalid');
     digest=createHash('sha256').update(data).digest('hex');
