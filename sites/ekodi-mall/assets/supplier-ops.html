@@ -23,7 +23,7 @@
       <button type="button" role="tab" id="ops-tab-sku" aria-controls="ops-step-sku" aria-selected="false" tabindex="-1" data-ops-tab="sku">4. SKU 등록</button>
       <button type="button" role="tab" id="ops-tab-mapping" aria-controls="ops-step-mapping" aria-selected="false" tabindex="-1" data-ops-tab="mapping">5. 상품 연결</button>
     </div>
-    <section class="ops-grid">
+    <section class="ops-grid ops-step-panels">
       <article class="ops-panel" id="ops-step-partner" role="tabpanel" aria-labelledby="ops-tab-partner" data-ops-step="partner">
         <div class="ops-panel-head"><div><p class="eyebrow">1 · PARTNER</p><h2>공급자 등록</h2></div></div>
         <form id="partnerCreateForm" class="ops-form"><label>Partner Code<input name="partnerCode" placeholder="muan-farm-01" required></label><label>표시명<input name="displayName" placeholder="예: 무안 로컬푸드 공급자" required></label><label>법인/사업체명<input name="legalName" placeholder="확인된 명칭만 입력"></label><label>방식<select name="providerType"><option value="contract_supplier">수동 계약 직배송</option><option value="supplier_api">공식 Supplier API</option></select></label><label>메모<textarea name="statusNote" rows="2"></textarea></label><button class="btn primary" type="submit">Partner 등록</button></form>
