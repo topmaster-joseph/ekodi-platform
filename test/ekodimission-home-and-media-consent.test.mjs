@@ -44,7 +44,7 @@ test('Home loads only consent-screened first-party direct photos, otherwise show
   assert.match(client,/probe\.naturalWidth<640/);
   assert.match(client,/fallback\.hidden=true/);
   assert.match(client,/image\.hidden=false/);
-  assert.match(client,/\/ekodimission\/activities\/');
+  assert.match(client,/\/ekodimission\/activities\//);
   assert.doesNotMatch(client,/drive\.google\.com|images\.unsplash\.com/);
   assert.match(css,/\.mission-home-photo \[hidden\]\{display:none!important\}/);
   assert.match(css,/\.mission-home-photo-fallback\{/);
