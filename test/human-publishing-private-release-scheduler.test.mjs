@@ -5,7 +5,7 @@ import { privateSchedulerReady, runConfiguredPublishingReleaseTick } from '../pu
 
 const now='2026-10-29T10:00:00.000Z';
 test('Publishing API is invisible by default to anonymous users',async()=>{
-  const request=new Request('https://ekodi.kr/api/publishing/private-releases');
+  const request=new Request('https://publishing.ekodi.kr/api/private-releases');
   const response=await publishingWorker.fetch(request,{});
   assert.equal(response.status,404);
   assert.equal(response.headers.get('cache-control'),'private, no-store');
