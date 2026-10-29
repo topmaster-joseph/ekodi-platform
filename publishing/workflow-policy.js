@@ -31,7 +31,7 @@ function assertRole(action, user, project) {
   return false;
 }
 const isSha=value => HASH_RE.test(String(value || ''));
-export function publicationTransition(project, action, input, user, now=new Date()) {
+export function publicationTransition(project, action, input, user, now=new Date(), verification={}) {
   if (!project || !STAGES.includes(project.stage)) return fail('BAD_PROJECT');
   if (!assertRole(action,user,project)) return fail('FORBIDDEN');
   const copy={...project};
@@ -76,6 +76,7 @@ export function publicationTransition(project, action, input, user, now=new Date
   }
   if (action==='publisher_approve') {
     if (original!=='author_approved') return fail('WRONG_STAGE');
+    if (verification.ready!==true) return fail('COMMERCIAL_VERIFICATION_REQUIRED',verification.reason||'');
     if (!isSha(project.releaseDigest)||project.authorApproval?.digest!==project.releaseDigest)
       return fail('AUTHOR_APPROVAL_STALE');
     if (input?.digest!==project.releaseDigest) return fail('EDITION_MISMATCH');
@@ -90,6 +91,7 @@ export function publicationTransition(project, action, input, user, now=new Date
   }
   if (action==='schedule') {
     if(original!=='publisher_approved')return fail('WRONG_STAGE');
+    if(verification.ready!==true)return fail('COMMERCIAL_VERIFICATION_REQUIRED',verification.reason||'');
     if (input?.digest!==project.releaseDigest) return fail('EDITION_MISMATCH');
     if (!validScheduledAt(input?.scheduledAt,now)) return fail('INVALID_RELEASE_SCHEDULE');
     const channels=input?.channels;
@@ -100,6 +102,7 @@ export function publicationTransition(project, action, input, user, now=new Date
   }
   if (action==='prepare_handoff') {
     if(original!=='scheduled')return fail('WRONG_STAGE');
+    if(verification.ready!==true)return fail('COMMERCIAL_VERIFICATION_REQUIRED',verification.reason||'');
     if (!project.scheduledAt||Date.parse(project.scheduledAt)>now.getTime())return fail('NOT_DUE');
     if (!isSha(project.releaseDigest) || project.publisherApproval?.digest!==project.releaseDigest ||
       project.authorApproval?.digest!==project.releaseDigest) return fail('STALE_APPROVALS');
@@ -115,6 +118,7 @@ export function publicationTransition(project, action, input, user, now=new Date
   }
   if (action==='release_receipt') {
     // A signed channel dispatcher, not a user form, is responsible for proof of sale-ready activation.
+    if(verification.ready!==true)return fail('COMMERCIAL_VERIFICATION_REQUIRED');
     if (original!=='handoff_ready')return fail('WRONG_STAGE');
     if(input?.serverVerified!==true || input?.digest!==project.releaseDigest ||
        input?.booksReceipt?.editionDigest!==project.releaseDigest ||
