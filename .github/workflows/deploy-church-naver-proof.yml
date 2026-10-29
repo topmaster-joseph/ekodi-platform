@@ -48,6 +48,10 @@ jobs:
           echo "$raw" | jq -e '.success == true and any(.result[]; .name == "ekodichurch.kr" and .status == "active")' >/dev/null
       - name: Deploy exact Naver proof route, without touching other domains
         run: npx --yes wrangler@4.119.0 deploy --config wrangler.church-naver-proof.toml
+      - name: Inspect exact existing church Cloudflare Single Redirect
+        run: node scripts/cloudflare-church-naver-redirect-exception.mjs --inspect
+      - name: Exclude only Naver proof URL from existing church redirect (one-rule PATCH)
+        run: node scripts/cloudflare-church-naver-redirect-exception.mjs
       - name: Verify real Naver owner proof and preserve church homepage
         shell: bash
         run: |
