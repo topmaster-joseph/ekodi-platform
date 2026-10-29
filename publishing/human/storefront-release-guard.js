@@ -1,4 +1,4 @@
-// 에코디출판 -> Books/Mall: secure storefront visibility boundary.
+// 출판 -> Books/Mall: secure storefront visibility boundary.
 // Static JSON metadata and browser-supplied flags are NEVER publication authorization.
 // Only authenticated, publisher-owned runtime verification may unlock NEW editions.
 // The two previously published catalogue entries retain their pre-existing behavior.
