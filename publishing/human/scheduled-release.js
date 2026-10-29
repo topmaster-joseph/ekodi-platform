@@ -104,16 +104,27 @@ export function scheduleApprovedEdition(record, candidate, publishAt, trustedEvi
   }, 'approved-schedule-saved');
 }
 
-/** Cron retries can only claim an unchanged, newly revalidated approved candidate. */
-export function claimScheduledEdition(record, candidate, trustedEvidence, now) {
-  invariant(record?.state === 'scheduled' || record?.state === 'preparing', 'not-scheduled');
-  assertEditionMatch(record, candidate);
+/** Revalidate even when retrying a partially staged or activated release. */
+export function assertStillApproved(record,candidate,trustedEvidence,now) {
+  invariant(record && ['scheduled','preparing','prepared','activating','ready_to_release'].includes(record.state),
+    'not-active-schedule');
+  assertEditionMatch(record,candidate);
   invariant(instant(record.publishAt) <= assertNow(now), 'not-due');
-  const gate = evaluateReleaseReadiness(candidate);
+  const gate=evaluateReleaseReadiness(candidate);
   invariant(gate.ready, 'editorial-gate:' + gate.blockers.join(','));
   invariant(candidate.authorApproval?.digest === record.releaseDigest &&
     candidate.authorApproval?.approvedBy === candidate.authorId, 'author-approval-invalidated');
-  invariant(validAttestation(trustedEvidence, record.releaseDigest), 'trusted-approval-proof-invalidated');
+  invariant(candidate.publisherApproval?.digest === record.releaseDigest &&
+    valid(candidate.publisherApproval?.approvedBy), 'publisher-approval-invalidated');
+  invariant(validAttestation(trustedEvidence,record.releaseDigest),
+    'trusted-approval-proof-invalidated');
+  return true;
+}
+
+/** Cron retries can only claim an unchanged, newly revalidated approved candidate. */
+export function claimScheduledEdition(record, candidate, trustedEvidence, now) {
+  invariant(record?.state === 'scheduled' || record?.state === 'preparing', 'not-scheduled');
+  assertStillApproved(record,candidate,trustedEvidence,now);
   return change(record, { state: 'preparing', visibility: 'private', checkoutEnabled: false },
     'due-candidate-claimed');
 }
