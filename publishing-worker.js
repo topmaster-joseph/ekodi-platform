@@ -1,5 +1,6 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { handlePrivateReleaseAdmin } from './publishing/human/private-release-api.js';
+import { runConfiguredPublishingReleaseTick } from './publishing/human/private-release-scheduler.js';
 
 const SECURITY_HEADERS={
   'x-content-type-options':'nosniff',
@@ -47,5 +48,15 @@ export default {
     if(url.pathname.startsWith('/publishing/studio'))return Response.redirect('https://ekodi.kr/publishing/studio/',308);
     if(url.pathname.startsWith('/publishing/upaper'))return Response.redirect('https://ekodi.kr/publishing/upaper/',308);
     return injectEkodiShell(withHeaders(await env.ASSETS.fetch(request)),'publishing');
+  },
+  // Intentionally inert until an owner-reviewed separate Worker binding and
+  // cron configuration explicitly enable the private publishing release lane.
+  async scheduled(controller,env,ctx){
+    if(env?.PUBLISHING_PRIVATE_RELEASE_ENABLED!=='true')return;
+    const scheduledTime=controller?.scheduledTime;
+    const nowIso=new Date(Number.isFinite(scheduledTime)?scheduledTime:Date.now()).toISOString();
+    const task=runConfiguredPublishingReleaseTick(env,nowIso);
+    if(ctx?.waitUntil)ctx.waitUntil(task);
+    else await task;
   }
 };
