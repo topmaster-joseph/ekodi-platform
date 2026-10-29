@@ -2,7 +2,7 @@
 // authenticated Publishing Worker with its own private DB, signed channel adapters,
 // and a configured cron. This module alone does not schedule or publish anything.
 import {
-  claimScheduledEdition, recordPrepared, activationProposal,
+  assertStillApproved, claimScheduledEdition, recordPrepared, activationProposal,
   recordActivated, grantJointPublicVisibility, canExposePublicly, RELEASE_CHANNELS,
 } from './scheduled-release.js';
 import { readPrivateEdition, savePrivateTransition, listDuePrivateEditions } from './private-release-store.js';
@@ -32,6 +32,7 @@ export async function runPrivateScheduleTick({
       const evidence=await verifyEvidence(record,candidate);
       // The backend verifies cryptographic evidence; any revoked approval must stop processing.
       invariant(evidence?.trustedBackend === true, 'verification-unavailable');
+      assertStillApproved(record,candidate,evidence,nowIso);
       const save=async next=>{
         await savePrivateTransition(db,record,next,nowIso);
         record=next;
@@ -57,12 +58,7 @@ export async function runPrivateScheduleTick({
       }
       if (record.state === 'ready_to_release') {
         const finalEvidence=await verifyEvidence(record,candidate);
-        invariant(finalEvidence?.trustedBackend === true &&
-          finalEvidence?.assetDigestValid === true &&
-          finalEvidence?.authorSignatureValid === true &&
-          finalEvidence?.publisherSignatureValid === true &&
-          finalEvidence?.rightsEvidenceValid === true &&
-          finalEvidence?.digest === record.releaseDigest,'approval-revoked-before-publication');
+        assertStillApproved(record,candidate,finalEvidence,nowIso);
         await save(grantJointPublicVisibility(record,nowIso));
       }
       results.push({ editionId:record.editionId,state:record.state,ok:record.state === 'released' });
