@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   parseBillingIdentity, loadBillingIdentity,
-  personalSubscriptionLookupKeys, choosePersonalSubscription,
+  personalSubscriptionLookupKeys, choosePersonalSubscription, saveVerifiedBillingAliases, recurringBillingCollision,
 } from '../membership-identity.js';
 
 const root = new URL('../', import.meta.url);
@@ -114,4 +114,72 @@ test('independently registered Persons cannot merge before recurring billing rec
   assert.ok(link.indexOf('targetPersonId&&targetPersonId!==initiatorPersonId')<
     link.indexOf('admin.rpc("link_person_identity"'),'check must precede merge transaction');
   assert.match(ui,/code === 'account_merge_review_required'/);
+});
+
+function memoryD1(initialSubs = []) {
+  const aliases=new Map();
+  const subscriptions=initialSubs;
+  const prepare=sql=>({
+    bind(...args) {
+      return {
+        async run() {
+          if(sql.startsWith('INSERT OR IGNORE INTO membership_person_aliases')) {
+            if(!aliases.has(args[0])) aliases.set(args[0],args[1]);
+          }
+          return {success:true};
+        },
+        async first() {
+          if(sql.startsWith('SELECT person_key FROM membership_person_aliases'))
+            return aliases.has(args[0])?{person_key:aliases.get(args[0])}:null;
+          if(sql.includes('JOIN membership_person_aliases a'))
+            return {count:subscriptions.filter(s=>
+              s.subject_type==='person'&&s.site===args[1]&&
+              aliases.get(s.subject_key)===args[0]&&s.monthly_fee>0&&
+              ['active','trialing','grace','past_due'].includes(s.status)).length};
+          throw Error('Unmocked SQL: '+sql);
+        }
+      };
+    },
+    async run() { return {success:true}; }
+  });
+  return {db:{prepare, async batch(stmts) { for(const s of stmts) await s.run(); }},
+    aliases,subscriptions};
+}
+test('server-proved aliases are written in a batch and reveal duplicate scheduled charges',async()=>{
+  const google=parseBillingIdentity(proof,user(USER_GOOGLE));
+  const kakao=parseBillingIdentity(proof,user(USER_KAKAO));
+  const {db,aliases}=memoryD1([
+    {subject_type:'person',subject_key:USER_GOOGLE,site:'marketing',monthly_fee:9900,status:'active'},
+    {subject_type:'person',subject_key:USER_KAKAO,site:'marketing',monthly_fee:39900,status:'active'},
+  ]);
+  await saveVerifiedBillingAliases(db,google);
+  await saveVerifiedBillingAliases(db,kakao);
+  assert.equal(aliases.get(USER_KAKAO), 'person:'+PERSON);
+  assert.equal(await recurringBillingCollision(db,{
+    subject_type:'person',subject_key:USER_GOOGLE,site:'marketing'
+  }),true);
+  assert.equal(await recurringBillingCollision(db,{
+    subject_type:'tenant',subject_key:'other',site:'marketing'
+  }),false);
+});
+test('an alias cannot be silently reassigned to a second EKODI Person',async()=>{
+  const {db}=memoryD1([]);
+  const good=parseBillingIdentity(proof,user(USER_GOOGLE));
+  await saveVerifiedBillingAliases(db,good);
+  const secondPerson='f79b7dca-3d20-4d0e-9abb-4b19ef699c77';
+  const malicious=parseBillingIdentity({...proof,person_id:secondPerson},
+    user(USER_GOOGLE));
+  await assert.rejects(()=>saveVerifiedBillingAliases(db,malicious),
+    {code:'BILLING_IDENTITY_ALIAS_CONFLICT'});
+});
+test('scheduler checks verified duplicate subscriptions before any charge',()=>{
+  const billing=read('membership-billing.js');
+  const universal=read('universal-membership.js');
+  assert.match(billing,/recurringBillingCollision\(env\.DB, row\)/);
+  const schedule=billing.slice(billing.indexOf('export async function runMembershipBillingSchedule'));
+  assert.ok(schedule.indexOf('recurringBillingCollision(env.DB, row)') <
+            schedule.indexOf('await charge(env,'));
+  assert.match(billing,/saveVerifiedBillingAliases\(env\.DB, identity\)/);
+  assert.match(universal,/saveVerifiedBillingAliases\(env\.DB, identity\)/);
+  assert.match(billing,/membership_billing_collision_audit/);
 });
