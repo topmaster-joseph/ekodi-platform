@@ -261,3 +261,15 @@ test('Bible and Church show only Login for guest, verified account plus Logout a
  assert.match(css,/\.dv-shared-tools > \.dv-adminbar\[hidden\]\{display:none!important\}/);
  assert.match(css,/\.dv-shared-account\{max-width:210px/);
 });
+
+test('sign-out revokes future dates before any network sign-out can delay the UI',()=>{
+ const shared=fs.readFileSync(new URL('../bible/devotion.js',import.meta.url),'utf8');
+ const mission=fs.readFileSync(new URL('../space/ekodimission-shell.js',import.meta.url),'utf8');
+ const sharedSignout=shared.slice(shared.indexOf('async function signOutDevotion(button){'),shared.indexOf('  showSharedAccount(null);\n\n  function toast'));
+ const missionSignout=mission.slice(mission.indexOf('async function missionLogout(){'),mission.indexOf("missionAuthUi?.logout.addEventListener"));
+ assert.ok(sharedSignout.includes("window.dispatchEvent(new Event('ekodi:auth-logout'))"));
+ assert.ok(sharedSignout.indexOf("window.dispatchEvent(new Event('ekodi:auth-logout'))") < sharedSignout.indexOf("await fetch("));
+ assert.ok(missionSignout.includes("window.dispatchEvent(new Event('ekodi:auth-logout'))"));
+ assert.ok(missionSignout.indexOf("window.dispatchEvent(new Event('ekodi:auth-logout'))") < missionSignout.indexOf("await fetch("));
+ assert.match(shared,/next\.removeAttribute\('href'\)/);
+});
