@@ -5,6 +5,7 @@
  */
 import {writeFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
+import {AUTOMATION_MIGRATION_PR,projectEkodiNativeMigration,renderEkodiMigrationSummary} from './ekodi-native-migration-status.mjs';
 
 const OWNER='topmaster-joseph';
 const REPO='ekodi-platform';
@@ -156,6 +157,18 @@ export async function collectEkodiNativeWatch({
         updatedAt:compact(pr.data?.updated_at)}):
       check('board-pr-3794','warning',pr.reason));
   }
+  // Reuse this existing EKODI hourly runner; no extra cron or OpenAI scheduler.
+  // PR state is only a prerequisite: no merge or health check can prove that
+  // actual worship documents, books, live streams or UI E2E were delivered.
+  const snapshots=[];
+  if(!report.circuitOpen){
+    for(const expected of AUTOMATION_MIGRATION_PR){
+      const result=await get(BASE+'/pulls/'+expected.number);
+      snapshots.push({id:expected.id,ok:result.ok,response:result.ok?result.data:null});
+      if(result.circuitOpen){report.circuitOpen=true;break;}
+    }
+  }
+  report.automationMigration=projectEkodiNativeMigration({proposals:snapshots,checks:report.checks});
   report.result=report.circuitOpen?'deferred':
     report.checks.some(x=>x.status==='alert')?'attention':
     report.checks.some(x=>x.status==='warning')?'partial':'ok';
@@ -176,6 +189,7 @@ export function renderEkodiWatchSummary(report){
     ...report.checks.map(x=>'- '+x.name+': '+x.status+(x.reason?' ('+x.reason+')':'')),
     '- Daily traffic totals: consult the authoritative System Health/Traffic Intelligence collector; unavailable here is not zero.',
     '- Missionary bi-monthly narrative: requires a distinct EKODI-owned source and distribution mapping; not falsely generated.',
+    ...(report.automationMigration?[renderEkodiMigrationSummary(report.automationMigration)]:[]),
   ].join('\n')+'\n';
 }
 
