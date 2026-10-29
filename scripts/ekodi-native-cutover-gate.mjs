@@ -43,7 +43,7 @@ const timestamp=value=>{
  */
 export function projectNativeCutover({
   jobId,legacyState='enabled',nativeRun=null,receipts=[],verifiedSources=[],
-  ownerApproval=null,lease=null,nowMs=Date.now()
+  ownerApproval=null,lease=null,legacyDisableReceipt=null,nowMs=Date.now()
 }={}){
   const job=NATIVE_JOB_REQUIREMENTS[jobId];
   if(!job)return Object.freeze({jobId:text(jobId),state:'blocked',reason:'unknown_job',cutoverAllowed:false});
@@ -83,6 +83,14 @@ export function projectNativeCutover({
       ownerApproval.authority!=='verified-human-gate'||ownerApproval.revision!==nativeRun?.headSha||
       !sourceKeys.has(ownerApproval.verificationId)))
     reasons.push('human_approval_missing');
+  if(legacyState==='disabled'){
+    const proof=legacyDisableReceipt;
+    const time=timestamp(proof?.verifiedAt);
+    if(!proof||proof.taskId!==jobId||proof.platform!=='chatgpt-automations'||
+        proof.isEnabled!==false||!sourceKeys.has(proof.verificationId)||
+        !Number.isFinite(time)||time>nowMs+60000||time<nowMs-30*86400000)
+      reasons.push('legacy_disable_receipt_missing');
+  }
   // A successful monitor is not a complete content-producing replacement.
   const ready=reasons.length===0;
   const state=legacyState==='disabled'
