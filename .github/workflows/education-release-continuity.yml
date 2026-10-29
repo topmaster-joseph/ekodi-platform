@@ -17,6 +17,7 @@ on:
       - 'scripts/education-native-security-observations.mjs'
       - 'education/study/ai-bootcamp/material-source.js'
       - 'scripts/verify-education-material-studio-native.mjs'
+      - 'scripts/verify-education-farm-marketing-native.mjs'
       - 'test/education-material-studio.test.mjs'
 
 permissions:
@@ -66,6 +67,7 @@ jobs:
           node scripts/verify-education-bootcamp-native.mjs
           node scripts/verify-education-material-studio-native.mjs
           node scripts/verify-education-documents-native.mjs
+          node scripts/verify-education-farm-marketing-native.mjs
       - uses: actions/upload-artifact@v4
         if: always() && github.event_name == 'pull_request'
         with:
@@ -74,6 +76,7 @@ jobs:
             artifacts/education-native/
             artifacts/education-studio-native/
             artifacts/education-documents-native/
+            artifacts/education-farm-marketing-native/
           retention-days: 7
 
   reconcile:
