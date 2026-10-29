@@ -39,6 +39,8 @@ const checks = [
   ['assets/sourcing-lab.html', ['EKODI SOURCING LAB', 'Auto Source', 'Dry-run', '계약 공급자', '/assets/sourcing-lab.js']],
   ['assets/sourcing-lab.js', ['/api/sourcing/providers', '/api/sourcing/sources', '/plan', 'auction-reference', '자동발주 OFF']],
   ['assets/fulfillment-lab.js', ['/api/fulfillment', '배송정보 승인 대기', '공급자 전달']],
+  ['assets/fulfillment-lab.html', ['배송·발주 관리', 'fulfillment-tabs', 'fulfillment-panel-orders', 'fulfillment-panel-stages', '/assets/fulfillment-layout.css']],
+  ['assets/fulfillment-layout.css', ['fulfillment-summary', 'fulfillment-tabs', 'fulfillment-panel[hidden]', 'fulfillmentLogout']],
   ['assets/supplier-ops.html', ['SUPPLIER OPS', '공급처 운영 관리', 'ops-step-tabs', 'SKU → EKODI 상품 매핑', '/assets/supplier-ops.js']],
   ['assets/supplier-ops.js', ['/api/internal/supplier-pilot/context', '/create-source', '/verify-contract', '/products', 'Auto Order OFF']],
   ['assets/supplier-ops.css', ['ops-grid', 'ops-map-form', 'ops-table']],
