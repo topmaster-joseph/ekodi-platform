@@ -486,6 +486,12 @@ jobs:
       AI_GROQ_API_KEY: ${{ secrets.AI_CONTROL_GROQ_API_KEY }}
       AI_EXTERNAL_WORKER_URL: ${{ secrets.AI_CONTROL_WORKER_URL }}
       AI_EXTERNAL_WORKER_TOKEN: ${{ secrets.AI_CONTROL_WORKER_TOKEN }}
+      # Defaults to unset; this candidate does NOT activate enforcement.
+      EKODI_FINAL_PROMOTION_MODE: ${{ vars.EKODI_FINAL_PROMOTION_MODE }}
+      EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id }}
+      EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref }}
+      EKODI_RELEASE_SHA: ${{ github.sha }}
+      EKODI_RELEASE_ARTIFACT_DIGEST: ${{ needs.deploy-staging.outputs.artifact_digest }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -521,6 +527,33 @@ jobs:
           if(!isReservedPlatformRoot('ai')){console.error('Production blocked: /ai is not reserved in the platform route registry.');process.exit(1)}
           const wrangler=fs.readFileSync('wrangler.ai.release.toml','utf8');
           if(/pattern\s*=\s*"ai\.ekodi\.kr"/.test(wrangler)){console.error('Production blocked: AI public subdomain route must remain retired.');process.exit(1)}
+          NODE
+      - name: Confirm exact-artifact owner approval before any production D1 writes
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module - <<'NODE'
+          import { verifyEkodiProtectedPromotion } from './scripts/verify-ekodi-final-promotion-receipt.mjs';
+          const mode=String(process.env.EKODI_FINAL_PROMOTION_MODE||'').trim();
+          if(mode!=='enforced'&&mode!==''){
+            throw new Error('EKODI_FINAL_PROMOTION_MODE_INVALID');
+          }
+          if(mode==='enforced'){
+            if(process.env.GITHUB_REF!=='refs/heads/main' ||
+              process.env.EKODI_RELEASE_SHA!==process.env.GITHUB_SHA){
+              throw new Error('EKODI_FINAL_PROMOTION_MAIN_SHA_MISMATCH');
+            }
+            const receipt=await verifyEkodiProtectedPromotion({
+              taskId:process.env.EKODI_RELEASE_TASK_ID,
+              branchRef:process.env.EKODI_RELEASE_BRANCH_REF,
+              releaseSha:process.env.EKODI_RELEASE_SHA,
+              artifactDigest:process.env.EKODI_RELEASE_ARTIFACT_DIGEST,
+            });
+            if(receipt.verified!==true)throw new Error('EKODI_FINAL_PROMOTION_OWNER_APPROVAL_REQUIRED');
+            console.log('Approved exact immutable artifact before production D1 mutations.');
+          }else{
+            console.log('EKODI final promotion enforcement is not activated; legacy protected release rules remain active.');
+          }
           NODE
       - name: Capture production D1 recovery bookmark
         id: d1_bookmark
