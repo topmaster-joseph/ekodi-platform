@@ -32,3 +32,12 @@ test('IndexNow requires the Korean canonical public domain and correct key, with
   assert.match(workflow, /permissions:\s+contents: read/);
   assert.doesNotMatch(workflow, /CLOUDFLARE_API_TOKEN|CLOUDFLARE_DNS_TXT_TOKEN|GOOGLE_SEARCH_SA_KEY_JSON/);
 });
+
+test('IndexNow preflight downloads full SEO responses before checking, avoiding curl SIGPIPE exit 23', () => {
+  assert.match(workflow, /probe_dir=\$\(mktemp -d\)/);
+  assert.match(workflow, /curl -fsS --retry 3 --retry-delay 2 -o "\$probe_dir\/robots"/);
+  assert.match(workflow, /curl -fsS --retry 3 --retry-delay 2 -o "\$probe_dir\/sitemap"/);
+  assert.match(workflow, /curl -fsS --retry 3 --retry-delay 2 -o "\$probe_dir\/home"/);
+  assert.match(workflow, /grep -Fq .*"\$probe_dir\/sitemap"/);
+  assert.doesNotMatch(workflow, /^\s*curl[^\n]*\|\s*grep -Fq/m);
+});
