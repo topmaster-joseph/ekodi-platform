@@ -5,6 +5,10 @@ const ORIGIN = 'https://ekodi.kr';
 const SITE_PREFIX = '/seonammedi';
 const API_PREFIX = '/api/seonammedi';
 const DOMAIN_HOSTS = new Set(['seonammedi.kr', 'xn--3e0b8b58jw4co4mnpll3k.kr']);
+// Naver Search Advisor: owner-issued HTML upload verification for the Korean IDN.
+// Explicitly scope this root file to its issued host; never alter other hosts.
+export const SEONAMMEDI_NAVER_FILE_PATH = '/naver2d4965e691c1cb3786d93044f2ad2f01.html';
+export const SEONAMMEDI_NAVER_FILE_BODY = 'naver-site-verification: naver2d4965e691c1cb3786d93044f2ad2f01.html';
 
 function upstreamPath(pathname) {
   const path = pathname || '/';
@@ -148,6 +152,10 @@ function discoveryResponse(body, contentType, route, method) {
 
 export function seonammediDiscoveryResponse(request, incoming) {
   if (!['GET', 'HEAD'].includes(request.method)) return null;
+  if (incoming.hostname.toLowerCase() === 'xn--3e0b8b58jw4co4mnpll3k.kr' &&
+      incoming.pathname === SEONAMMEDI_NAVER_FILE_PATH) {
+    return discoveryResponse(SEONAMMEDI_NAVER_FILE_BODY, 'text/html; charset=utf-8', 'seonammedi-naver-ownership', request.method);
+  }
   if (incoming.pathname === '/robots.txt') return discoveryResponse(seonammediRobotsTxt(), 'text/plain; charset=utf-8', 'seonammedi-robots', request.method);
   if (incoming.pathname === '/sitemap.xml') return discoveryResponse(seonammediSitemapXml(), 'application/xml; charset=utf-8', 'seonammedi-sitemap', request.method);
   if (incoming.pathname === EKODI_INDEXNOW_KEY_PATH) return ekodiIndexNowKeyResponse();
