@@ -55,6 +55,8 @@ function updateStatement(db,previous,record,nowIso){
   check(previous?.editionId===record.editionId&&
     previous?.publicationId===record.publicationId&&
     previous?.releaseDigest===record.releaseDigest&&
+    previous?.authorId===record.authorId&&previous?.title===record.title&&
+    previous?.createdAt===record.createdAt&&
     record.revision===previous.revision+1,'immutable-edition');
   return db.prepare(`UPDATE publishing_private_editions
       SET state=?,visibility=?,checkout_enabled=?,publish_at_utc=?,revision=?,
