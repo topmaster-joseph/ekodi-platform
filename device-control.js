@@ -613,6 +613,14 @@ function summarizeCommandResult(result = {}, commandType = '') {
   for (const key of ['message', 'freedMB', 'pendingCount', 'installedCount', 'failedCount', 'rebootRequired', 'profile']) {
     if (result[key] !== undefined) summary[key] = result[key];
   }
+  // The Agent returns only aggregate cleanup proof. Project the removed file
+  // COUNT for this exact allowlisted command, without exposing file names or
+  // paths, or treating a missing/malformed count as a measured zero.
+  if (commandType === 'maintenance.temp_cleanup') {
+    const removedFiles = finiteNumber(result.removedFiles);
+    if (removedFiles !== null && Number.isSafeInteger(removedFiles) && removedFiles >= 0)
+      summary.removedFiles = removedFiles;
+  }
   // Explicitly project only bounded proof fields. Never expose the full
   // Device Agent result, host environment, provider credentials, or model output.
   if (result.localAiProof && typeof result.localAiProof === 'object') {

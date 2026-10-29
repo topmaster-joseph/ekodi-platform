@@ -1,7 +1,16 @@
 (() => {
   'use strict';
 
-  const CACHE_ALLOWLIST = /^(ekodi|admin-ekodi|ekodi-admin)([-_:].*)?$/i;
+  const CACHE_ALLOWLIST = /^(admin-ekodi|ekodi-admin)([-_:].*)?$/i;
+  const CANONICAL_ADMIN = 'https://ekodi.kr/admin';
+  const adminPath = /^\/admin(?:\/|$)/;
+  function isCanonicalAdmin() { return window.location.origin === 'https://ekodi.kr' && adminPath.test(window.location.pathname); }
+  function adminServiceWorker(registration) {
+    try {
+      const scope = new URL(registration.scope);
+      return scope.origin === window.location.origin && adminPath.test(scope.pathname);
+    } catch { return false; }
+  }
   const PANEL_ID = 'adminDeviceBrowserDiagnostics';
 
   function esc(value) {
@@ -70,7 +79,7 @@
     try {
       if ('serviceWorker' in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations();
-        state.serviceWorkers = registrations.length;
+        state.serviceWorkers = registrations.filter(adminServiceWorker).length;
       }
     } catch {}
     try {
@@ -159,7 +168,11 @@
   }
 
   async function safeOptimize(host) {
-    if (!window.confirm('admin.ekodi.kr의 EKODI 전용 캐시와 Service Worker 업데이트만 진행합니다. 로그인 정보, 다른 사이트 데이터, 개인 파일은 건드리지 않습니다. 계속할까요?')) return;
+    if (!isCanonicalAdmin()) {
+      host.querySelector('[data-browser-diagnostic-status]').textContent = '관리자 화면의 정식 주소(ekodi.kr/admin)에서만 안전 최적화를 실행할 수 있습니다.';
+      return;
+    }
+    if (!window.confirm('ekodi.kr/admin의 관리자 전용 캐시와 관리자 범위 Service Worker만 점검합니다. 로그인 정보, 다른 사이트 데이터, 개인 파일은 건드리지 않습니다. 계속할까요?')) return;
     const button = host.querySelector('[data-browser-safe-optimize]');
     button.disabled = true;
     const messages = [];
@@ -167,13 +180,14 @@
       if ('caches' in window) {
         const names = await caches.keys();
         const targets = names.filter(name => CACHE_ALLOWLIST.test(name));
-        await Promise.all(targets.map(name => caches.delete(name)));
-        messages.push(`EKODI 캐시 ${targets.length}개 정리`);
+        const deleted = await Promise.all(targets.map(name => caches.delete(name)));
+        messages.push(`관리자 캐시 ${deleted.filter(Boolean).length}개 정리`);
       }
       if ('serviceWorker' in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations.map(registration => registration.update()));
-        messages.push(`Service Worker ${registrations.length}개 업데이트 확인`);
+        const adminRegistrations = registrations.filter(adminServiceWorker);
+        await Promise.all(adminRegistrations.map(registration => registration.update()));
+        messages.push(`관리자 범위 Service Worker ${adminRegistrations.length}개 업데이트 확인`);
       }
       performance.clearResourceTimings?.();
       host.querySelector('[data-browser-diagnostic-status]').textContent = messages.length ? `${messages.join(' · ')} 완료` : '정리할 항목이 없었습니다.';
@@ -194,7 +208,7 @@
     section.className = 'admin-browser-diagnostic';
     section.innerHTML = `
       <div class="admin-browser-diagnostic-head">
-        <div><p class="kicker">CURRENT ADMIN BROWSER</p><h3>현재 관리자 브라우저 진단</h3><p>이 브라우저와 admin.ekodi.kr 웹 환경만 확인합니다. Windows 설정, 다른 사이트 데이터, 개인 파일에는 접근하지 않습니다.</p></div>
+        <div><p class="kicker">CURRENT ADMIN BROWSER</p><h3>현재 관리자 브라우저 진단</h3><p>이 브라우저의 ekodi.kr/admin 화면만 진단합니다. Windows 설정, 다른 사이트 데이터, 개인 파일에는 접근하지 않습니다.</p></div>
         <span data-browser-diagnostic-stamp>아직 진단하지 않음</span>
       </div>
       <div class="admin-browser-diagnostic-actions">

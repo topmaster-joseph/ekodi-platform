@@ -829,6 +829,13 @@ async function verifySocialInventory(tab, alreadyActive, started) {
           !document.body.classList.contains('admin-mobile-drawer-open')&&rect&&rect.right<=2);
       },null,{timeout:5000});
     }
+    // A tall panel screenshot at 320/390 can leave the document scrolled when
+    // the viewport grows to 768. Restore a real user-visible heading position
+    // before measuring hit-testing; never bypass an actual overlay.
+    await page.locator('#ekodiSocialAccountRegistry .ekodi-social-heading h2').evaluate(
+      heading=>heading.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'})
+    );
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(resolve)));
     const state=await page.evaluate(()=>{
       const panel=document.querySelector('#ekodiSocialAccountRegistry');
       const rect=panel?.getBoundingClientRect();
@@ -855,8 +862,11 @@ async function verifySocialInventory(tab, alreadyActive, started) {
     });
     if(state.width!==width||!state.headingAccessible||!state.panelVisible||!state.panelFitsViewport||state.horizontalOverflow||!state.architectureHidden||!state.selected)
       throw new Error('Social account viewport verification failed: '+JSON.stringify(state));
-    await page.screenshot({
-      path:path.join(artifactsDir,'social-accounts-'+width+'.png'),fullPage:false,
+    // Crop to the account workspace itself: a full-page screenshot can expose
+    // the signed-in account identifier in the Admin sidebar outside the record mask.
+    // Keep the per-record mask as a second, independent privacy boundary.
+    await page.locator('#ekodiSocialAccountRegistry').screenshot({
+      path:path.join(artifactsDir,'social-accounts-'+width+'.png'),
       mask:[page.locator('#ekodiSocialAccountRegistry [data-social-record]')],maskColor:'#d1d5db'
     });
     viewports.push(state);
