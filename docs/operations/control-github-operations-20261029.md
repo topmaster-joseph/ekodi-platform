@@ -13,3 +13,7 @@ Official Orchestrator recovery PR #6684 for issue #6630 supersedes source PR #66
 ## Protected merge-base refresh, 2026-10-29
 
 The EKODI Orchestrator merged the latest main branch into recovery PR #6684 after the prior exact-head CI passed. The refreshed head must receive fresh authentic required CI and AI Orchestration Gate checks. This note is not itself a release receipt, approval, or permission to bypass guarded production verification. The GitHub Control tab remains a read-only super-admin screen and webhook secret provisioning remains a separate human-owned prerequisite.
+
+## Second protected-main synchronization
+
+The first verified head `80e44adc11d2563ac65adced9eca6e29a2248e25` completed all required CI checks. EKODI Orchestrator synchronized a subsequent main commit into the PR, generating an updated head and requiring new exact-SHA checks. This authored note triggers genuine source checks on that updated head without bypassing GitHub protection. The approval and release status must always be evaluated against the **latest** head SHA.
