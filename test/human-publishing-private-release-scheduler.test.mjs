@@ -28,12 +28,13 @@ test('Worker scheduled handler exits safely without config or real cron',async()
 test('scheduler requires explicit verification of both channel acknowledgements',()=>{
   const base={
     PUBLISHING_PRIVATE_RELEASE_ENABLED:'true',
-    PUBLISHING_RELEASE_DB:{prepare(){}},
+    PUBLISHING_RELEASE_DB:{prepare(){},batch(){}},
     PUBLISHING_RELEASE_VERIFIER:{
       loadCandidate(){},verifyApprovalEvidence(){},verifyChannelAck(){}},
     PUBLISHING_RELEASE_CHANNELS:{prepare(){},activate(){}},
   };
   assert.equal(privateSchedulerReady(base),true);
+  assert.equal(privateSchedulerReady({...base,PUBLISHING_RELEASE_DB:{prepare(){}}}),false);
   assert.equal(privateSchedulerReady({...base,PUBLISHING_RELEASE_VERIFIER:{
     loadCandidate(){},verifyApprovalEvidence(){}}}),false);
   assert.equal(privateSchedulerReady({...base,PUBLISHING_RELEASE_CHANNELS:{
