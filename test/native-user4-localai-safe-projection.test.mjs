@@ -80,6 +80,26 @@ test('older genuine local inference receipts without a diagnostic category retai
   assert.equal(projection.localAi.diagnosticCode,'unclassified');
 });
 
+test('failed or stale native receipts never become local inference success',()=>{
+  const good=summarizeCommandResult({localAiProof:{
+    ...base,ollamaApi:'ready',inference:'passed',
+    diagnosticCode:'api_ready',credentialCollection:false
+  }},'software.localai.verify');
+  const malformed=[
+    {status:'failed',completed_at:checkedAt},
+    {status:'succeeded',completed_at:new Date(now-25*60*60*1000).toISOString()}
+  ];
+  for(const row of malformed){
+    const projection=projectNativeDeviceProofs([{
+      command_type:'software.localai.verify',
+      issued_at:row.completed_at,completed_at:row.completed_at,
+      status:row.status,result_json:JSON.stringify(good)
+    }],now);
+    assert.equal(projection.localAi.verified,false);
+    assert.equal(projection.localAi.inference,'passed');
+  }
+});
+
 test('scheduled authenticated USER4 GET emits only bounded diagnostic code, no raw fields or mutation',async()=>{
   const requests=[];
   const fetchImpl=async(url,init)=>{
