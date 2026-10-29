@@ -1,7 +1,7 @@
 (() => {
   const ALL_SITES = [
     { type: 'Core', name: 'EKODI Home', domain: 'ekodi.kr', section: 'services', group: 'core' },
-    { type: 'Control', name: 'EKODI Admin', domain: 'admin.ekodi.kr', section: 'admins', fallback: 'services', group: 'core' },
+    { type: 'Control', name: 'EKODI Admin', domain: 'ekodi.kr/admin', section: 'admins', fallback: 'services', group: 'core' },
     { type: 'Auth', name: 'EKODI Auth', domain: 'auth.ekodi.kr', section: 'admins', fallback: 'services', group: 'core' },
     { type: '교회', name: '에코디교회', domain: 'ekodi.kr/ekodichurch', section: 'services', group: 'community' },
     { type: '비즈', name: '에코디비즈', domain: 'biz.ekodi.kr', section: 'organization', fallback: 'services', group: 'business' },
@@ -526,6 +526,7 @@
 
   function publicServiceUrl(domain) {
     const host = String(domain || '').trim().toLowerCase();
+    if (host === 'ekodi.kr/admin') return 'https://ekodi.kr/admin';
     if (!host || !/^[a-z0-9.-]+$/.test(host) || !host.includes('.')) return '';
     return `https://${host}`;
   }
