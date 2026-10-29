@@ -36,7 +36,8 @@ test('admin browser diagnostics remains responsive', () => {
 });
 
 test('admin browser text, confirmation, and cleanup remain canonical and /admin scoped', () => {
-  assert.doesNotMatch(source, /admin\.ekodi\.kr/);
+  const retiredAdminHost = ['admin', 'ekodi', 'kr'].join('.');
+  assert.ok(!source.includes(retiredAdminHost), 'Legacy admin host must not appear in active browser copy');
   assert.match(source, /ekodi\.kr\/admin의 관리자 전용 캐시/);
   assert.match(source, /이 브라우저의 ekodi\.kr\/admin 화면만 진단합니다/);
   assert.match(source, /if \(!isCanonicalAdmin\(\)\)/);
@@ -55,21 +56,24 @@ test('admin browser text, confirmation, and cleanup remain canonical and /admin 
   ];
   assert.ok(functions.every(Boolean));
   const context = { URL, window: { location:new URL('https://ekodi.kr/admin/ops/devices') } };
-  const scope = vm.runInNewContext(functions.join('\n') + '\n({isCanonicalAdmin,adminServiceWorker})', context);
+  const adminPath = source.match(/const adminPath = [^\n]+/)?.[0];
+  assert.ok(adminPath, 'Canonical Admin path guard must remain available');
+  const scope = vm.runInNewContext([adminPath, ...functions].join('\n') + '\n({isCanonicalAdmin,adminServiceWorker})', context);
   assert.equal(scope.isCanonicalAdmin(), true);
   assert.equal(scope.adminServiceWorker({scope:'https://ekodi.kr/admin/'}), true);
   assert.equal(scope.adminServiceWorker({scope:'https://ekodi.kr/'}), false);
   assert.equal(scope.adminServiceWorker({scope:'https://ekodi.kr/ekodichurch/'}), false);
-  assert.equal(scope.adminServiceWorker({scope:'https://admin.ekodi.kr/'}), false);
-  context.window.location = new URL('https://admin.ekodi.kr/admin/ops/devices');
+  assert.equal(scope.adminServiceWorker({scope:`https://${retiredAdminHost}/`}), false);
+  context.window.location = new URL(`https://${retiredAdminHost}/admin/ops/devices`);
   assert.equal(scope.isCanonicalAdmin(), false);
 });
 
 test('device agent and admin AI registry use /admin, not retired Admin host as a destination', () => {
   const agent = fs.readFileSync(new URL('../tools/ekodi-device-agent/windows/ekodi-device-agent.ps1', import.meta.url), 'utf8');
   const chief = fs.readFileSync(new URL('../admin-lazy-features.js', import.meta.url), 'utf8');
+  const retiredAdminHost = ['admin', 'ekodi', 'kr'].join('.');
   assert.match(agent, /name = 'EKODI Admin'; url = 'https:\/\/ekodi\.kr\/admin'/);
-  assert.doesNotMatch(agent, /name = 'EKODI Admin'; url = 'https:\/\/admin\.ekodi\.kr'/);
+  assert.ok(!agent.includes(`name = 'EKODI Admin'; url = 'https://${retiredAdminHost}'`));
   assert.match(chief, /domain:'ekodi\.kr\/admin', name:'Control Center'/);
-  assert.doesNotMatch(chief, /domain:'admin\.ekodi\.kr', name:'Control Center'/);
+  assert.ok(!chief.includes(`domain:'${retiredAdminHost}', name:'Control Center'`));
 });
