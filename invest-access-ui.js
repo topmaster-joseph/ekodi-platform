@@ -1,4 +1,5 @@
 // The only unauthenticated /invest response is descriptive education.
+import { INVEST_MEMBER_SESSION_BROWSER_SOURCE } from './invest-auth-browser.js';
 const headers={'content-type':'text/html; charset=utf-8','cache-control':'private, no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'};
 const login='/auth/?site=invest&return_to='+encodeURIComponent('https://ekodi.kr/invest/analysis');
 function page(name,inner,script=''){
@@ -18,14 +19,15 @@ export function investAnalysisScript(){
  "(()=>{'use strict';",
  "const el=id=>document.getElementById(id);",
  "const login='/auth/?site=invest&return_to='+encodeURIComponent('https://ekodi.kr/invest/analysis');",
+ INVEST_MEMBER_SESSION_BROWSER_SOURCE,
  "let candidates=[],token='',requestId=0;",
  "const periodLabels={'1w':'1주','1m':'1개월','3m':'3개월','1y':'1년','3y':'3년 이상'};",
  "function showGate(message){el('analysis').hidden=true;const gate=el('gate');gate.hidden=false;gate.textContent=message;const link=document.createElement('a');link.href=login;link.textContent='로그인';gate.append(link)}",
  "function render(filters){const table=document.createElement('table');const head=document.createElement('tr');['비교대상','종목코드','검토 요인'].forEach(label=>{const th=document.createElement('th');th.textContent=label;head.append(th)});table.append(head);candidates.forEach(c=>{const tr=document.createElement('tr');[c[0],c[1],c[3]].forEach(val=>{const td=document.createElement('td');td.textContent=val;tr.append(td)});table.append(tr)});const root=el('result');const title=document.createElement('h2');title.textContent='공통 참고 후보';const note=document.createElement('p');note.textContent=periodLabels[filters.period]+' · 목표 '+filters.target+'% 적용 · 조건별 예상수익률과 순위는 산출하지 않습니다.';root.replaceChildren(title,note,table)}",
  "async function load(){const id=++requestId;const filters={market:el('market').value,period:el('period').value,target:el('target').value};el('apply').disabled=true;el('result').textContent='선택한 조건을 확인하고 있습니다.';try{const response=await fetch('/workspace-api/v1/invest/common-analysis?'+new URLSearchParams(filters).toString(),{headers:{authorization:'Bearer '+token},cache:'no-store'});if(id!==requestId)return;if(!response.ok)throw Error();const data=await response.json();if(id!==requestId)return;if(!Array.isArray(data.candidates)||data.policy?.memberOnly!==true||data.policy?.personalized!==false||data.policy?.estimatedReturnAvailable!==false||data.market!==filters.market||data.period!==filters.period||data.targetReturnPct!==Number(filters.target))throw Error();candidates=data.candidates.map(x=>[x.name,x.ticker,x.market,x.factors]);el('gate').hidden=true;el('analysis').hidden=false;render(filters)}catch{if(id!==requestId)return;candidates=[];showGate('회원 인증 또는 분석 데이터를 확인할 수 없습니다. 다시 로그인해 주세요. ')}finally{if(id===requestId)el('apply').disabled=false}}",
- "async function verify(){token='';try{token=JSON.parse(localStorage.getItem('ekodi_platform_session_v1')||'null')?.access_token||''}catch{}if(!token){showGate('로그인 후 분석을 볼 수 있습니다. ');return}await load()}",
+ "async function verify(){token=readEkodiMemberToken();if(!token){showGate('로그인 후 분석을 볼 수 있습니다. ');return}await load()}",
  "el('apply')?.addEventListener('click',()=>{if(token)load()});",
- "window.addEventListener('storage',e=>{if(e.key==='ekodi_platform_session_v1')location.reload()});verify();",
+ "window.addEventListener('storage',e=>{if(e.key&&EKODI_MEMBER_SESSION_KEY.test(e.key))location.reload()});verify();",
  "})();",
  ];
  return new Response(lines.join('\n'),{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
