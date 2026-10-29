@@ -77,3 +77,54 @@ export function choosePersonalSubscription(rows) {
   }
   return historicallyPaid[0] || candidates[0] || null;
 }
+
+const collisionError = () => Object.assign(
+  new Error('account_billing_reconciliation_required'),
+  { code:'ACCOUNT_BILLING_RECONCILIATION_REQUIRED' }
+);
+
+// Maintain a server-verified alias projection in the D1 billing database.
+// This is additive, contains no provider emails, and does not move or erase payments.
+export async function saveVerifiedBillingAliases(db, identity) {
+  if (!identity?.personId || identity.subjectKey !== `person:${identity.personId}`) {
+    throw Object.assign(new Error('invalid_canonical_billing_identity'), {code:'BILLING_IDENTITY_REQUIRED'});
+  }
+  await db.prepare(`CREATE TABLE IF NOT EXISTS membership_person_aliases (
+    alias_key TEXT PRIMARY KEY,
+    person_key TEXT NOT NULL,
+    verified_at TEXT NOT NULL
+  )`).run();
+  const keys = personalSubscriptionLookupKeys(identity);
+  const now = new Date().toISOString();
+  for (const alias of keys) {
+    const previous = await db.prepare('SELECT person_key FROM membership_person_aliases WHERE alias_key=?')
+      .bind(alias).first();
+    if (previous?.person_key && previous.person_key !== identity.subjectKey) {
+      throw Object.assign(new Error('billing_identity_alias_conflict'), {code:'BILLING_IDENTITY_ALIAS_CONFLICT'});
+    }
+    await db.prepare('INSERT OR IGNORE INTO membership_person_aliases(alias_key,person_key,verified_at) VALUES (?,?,?)')
+      .bind(alias, identity.subjectKey, now).run();
+    const inserted = await db.prepare('SELECT person_key FROM membership_person_aliases WHERE alias_key=?')
+      .bind(alias).first();
+    if (inserted?.person_key !== identity.subjectKey) {
+      throw Object.assign(new Error('billing_identity_alias_conflict'), {code:'BILLING_IDENTITY_ALIAS_CONFLICT'});
+    }
+  }
+}
+
+// Used before *every scheduled charge*. A linked Person may retain two legacy
+// recurring subscriptions from separate login methods. Never charge either
+// until an operator reconciles the historical payment and subscription ledger.
+export async function recurringBillingCollision(db, row) {
+  if (row?.subject_type !== 'person') return false;
+  const identity = await db.prepare('SELECT person_key FROM membership_person_aliases WHERE alias_key=?')
+    .bind(String(row.subject_key || '')).first();
+  if (!identity?.person_key) return false; // Historical unmapped rows are unchanged.
+  const found = await db.prepare(`SELECT COUNT(*) AS count
+    FROM service_subscriptions s
+    JOIN membership_person_aliases a ON a.alias_key=s.subject_key
+    WHERE s.subject_type='person' AND a.person_key=? AND s.site=?
+      AND s.monthly_fee>0 AND s.status IN ('active','trialing','grace','past_due')`)
+    .bind(identity.person_key, String(row.site || '')).first();
+  return Number(found?.count || 0) > 1;
+}
