@@ -96,17 +96,15 @@ export async function saveVerifiedBillingAliases(db, identity) {
   )`).run();
   const keys = personalSubscriptionLookupKeys(identity);
   const now = new Date().toISOString();
+  // D1 batch is transactional: the scheduler never sees half of a verified
+  // alias group during a provider-link or paid checkout race.
+  await db.batch(keys.map(alias => db.prepare(
+    'INSERT OR IGNORE INTO membership_person_aliases(alias_key,person_key,verified_at) VALUES (?,?,?)'
+  ).bind(alias,identity.subjectKey,now)));
   for (const alias of keys) {
-    const previous = await db.prepare('SELECT person_key FROM membership_person_aliases WHERE alias_key=?')
+    const stored = await db.prepare('SELECT person_key FROM membership_person_aliases WHERE alias_key=?')
       .bind(alias).first();
-    if (previous?.person_key && previous.person_key !== identity.subjectKey) {
-      throw Object.assign(new Error('billing_identity_alias_conflict'), {code:'BILLING_IDENTITY_ALIAS_CONFLICT'});
-    }
-    await db.prepare('INSERT OR IGNORE INTO membership_person_aliases(alias_key,person_key,verified_at) VALUES (?,?,?)')
-      .bind(alias, identity.subjectKey, now).run();
-    const inserted = await db.prepare('SELECT person_key FROM membership_person_aliases WHERE alias_key=?')
-      .bind(alias).first();
-    if (inserted?.person_key !== identity.subjectKey) {
+    if (stored?.person_key !== identity.subjectKey) {
       throw Object.assign(new Error('billing_identity_alias_conflict'), {code:'BILLING_IDENTITY_ALIAS_CONFLICT'});
     }
   }
