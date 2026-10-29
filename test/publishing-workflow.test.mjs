@@ -27,7 +27,7 @@ const initial=()=>({
   publisherApproval:null,scheduledAt:null,revision:1
 });
 function advance(p,action,input,actor=author,at=now){
-  const verified=['publisher_approve','schedule','prepare_handoff'].includes(action) ? {ready:true} : {};
+  const verified=['submit','publisher_approve','schedule','prepare_handoff'].includes(action) ? {ready:true} : {};
   const v=publicationTransition(p,action,input,actor,at,verified);
   assert.equal(v.ok,true,action+': '+JSON.stringify(v));
   return v.next;
@@ -83,6 +83,7 @@ test('paid/provider API calls and no-consent jobs are rejected',()=>{
 test('free/unsigned author sale is blocked even when a publisher approves the editorial draft',()=>{
   let p={...initial(),stage:'author_approved',releaseDigest:digest,
     authorApproval:{actor:'writer',digest,approvedAt:now.toISOString()},releaseCandidate:quality()};
+  assert.equal(publicationTransition({...p,stage:'drafting',manuscriptDigest:digest},'submit',{},author,now).code,'PAID_PUBLISHING_SUBMISSION_REQUIRED');
   assert.equal(publicationTransition(p,'publisher_approve',{digest},publisher,now).code,'COMMERCIAL_VERIFICATION_REQUIRED');
   assert.equal(publicationTransition(p,'publisher_approve',{digest},publisher,now,
     {ready:false,reason:'PAID_OR_CHIEF_REQUIRED'}).code,'COMMERCIAL_VERIFICATION_REQUIRED');
