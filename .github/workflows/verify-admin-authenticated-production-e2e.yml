@@ -165,6 +165,21 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      # SOCIAL-READONLY-PROOF-ARTIFACT-001: preserve already-measured,
+      # panel-cropped and per-record-masked social evidence in full mode even
+      # when an unrelated later module or Assist step fails. This does not
+      # turn a failed full run into PASS or certify focus_menu=social-accounts.
+      - name: Preserve sanitized social-account proof from full Admin verification
+        if: ${{ always() && inputs.focus_menu == 'all' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-social-accounts-proof-${{ github.run_id }}
+          path: |
+            artifacts/admin-authenticated-e2e/menu-social-accounts.json
+            artifacts/admin-authenticated-e2e/social-accounts-*.png
+          if-no-files-found: warn
+          retention-days: 7
+
       # ADMIN-ARCH-PROOF-ARTIFACT-001: all-menu run can fail later on unrelated
       # Assist, but an already-passed architecture probe keeps its cropped,
       # identity-free viewport images and numeric result for honest diagnosis.
