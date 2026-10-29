@@ -186,8 +186,18 @@
   };
   const candidateTokens=()=>[safeRead(sessionStorage,'ekodi-auth-token'),centralSession()?.access_token||'',window.EKODI_MY_AUTH?.getAccessToken?.()||''].filter((value,index,all)=>value&&all.indexOf(value)===index);
   function normalizeMissionFooter(){
-    const footer=document.querySelector('.site-footer');
-    if(!footer)return;
+    let footer=document.querySelector('.site-footer');
+    if(!footer){
+      // Dynamic photo/archive pages also inherit the same public footer.
+      footer=document.createElement('footer');
+      footer.className='site-footer';
+      const content=document.createElement('div'),name=document.createElement('strong');
+      const description=document.createElement('p'),meta=document.createElement('p');
+      meta.className='footnote';
+      content.append(name,description);
+      footer.append(content,meta);
+      document.body.append(footer);
+    }
     const brand=footer.querySelector('strong');
     const description=footer.querySelector('div > p');
     const meta=footer.querySelector('.footnote');
