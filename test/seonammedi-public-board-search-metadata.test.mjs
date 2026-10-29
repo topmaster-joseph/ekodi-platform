@@ -16,7 +16,7 @@ test('Public board list pages on all mounts resolve to their one independent-dom
     assert.equal(result.status,200,root+page.path);
     assert.match(result.headers.get('content-type')||'',/text\/html/);
     const html=await result.text();
-    const canonical='https://seonammedi.kr'+page.path;
+    const canonical='https://xn--3e0b8b58jw4co4mnpll3k.kr'+page.path;
     assert.ok(html.includes('<link rel="canonical" href="'+canonical+'">'),root+page.path);
     assert.equal((html.match(/<link rel="canonical"/g)||[]).length,1,root+page.path);
     assert.ok(html.includes('<meta name="description" content="'),root+page.path);

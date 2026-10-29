@@ -51,16 +51,17 @@ function rewriteText(text, incoming, contentType) {
   output = output.replaceAll('https://ekodi.kr/seonammedi/', customerOrigin + '/');
   output = output.replaceAll('https://ekodi.kr/seonammedi', customerOrigin);
   if (contentType.includes('text/html')) {
+    // Normalize legacy canonical from proxied HTML only, never sign-in or content links.
+    output = output.replace(/(<link\s+rel=["']canonical["']\s+href=["'])https:\/\/(?:seonammedi\.kr|xn--3e0b8b58jw4co4mnpll3k\.kr)/gi, '$1' + CANONICAL_ORIGIN);
     output = output.replaceAll('href="/seonammedi/', 'href="/');
     output = output.replaceAll('src="/seonammedi/', 'src="/');
     output = injectVerificationMeta(output, incoming.hostname);
   }
   return output;
 }
-// Search discovery for the customer domains. seonammedi.kr is the canonical
-// host (index.html declares it); the Korean IDN host serves the same pages and
-// points crawlers to the canonical sitemap so both names resolve to one index.
-const CANONICAL_ORIGIN = 'https://seonammedi.kr';
+// Search discovery: one Korean IDN canonical on both publicly reachable hosts.
+// The English customer domain continues to serve its existing functionality.
+const CANONICAL_ORIGIN = 'https://xn--3e0b8b58jw4co4mnpll3k.kr';
 export const SEONAMMEDI_SITEMAP_PATHS = Object.freeze(['/', '/board/notices', '/board/voices']);
 // Daum Webmaster Tool ownership line (public value issued for https://seonammedi.kr,
 // owner-provided 2026-10-19). Daum has no IndexNow/API registration lane.
