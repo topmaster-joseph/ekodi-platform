@@ -1,26 +1,44 @@
 const KEY='ekodi-insurance-staging-v3';
 const LEGACY_KEYS=['ekodi-insurance-staging-v2','ekodi-insurance-staging-v1'];
+let localRecordsUnreadable=false;
 const state=loadState();
 const views=[...document.querySelectorAll('.view')];
 
 function blankState(){return{policies:[],claims:[],consultations:[],diagnosis:null,advisorChat:{messages:[]}};}
+function parsedBrowserRecords(raw){
+  // Do not treat corrupt or truncated local records as an empty account.
+  // Otherwise the next ordinary save could overwrite the only original.
+  const value=JSON.parse(raw);
+  if(!value||typeof value!=='object'||Array.isArray(value)||
+    ['policies','claims','consultations'].some(key=>Object.hasOwn(value,key)&&!Array.isArray(value[key]))||
+    (Object.hasOwn(value,'advisorChat')&&
+      (!value.advisorChat||typeof value.advisorChat!=='object'||Array.isArray(value.advisorChat)||
+      (Object.hasOwn(value.advisorChat,'messages')&&!Array.isArray(value.advisorChat.messages))))){
+    throw new Error('UNREADABLE_INSURANCE_LOCAL_RECORDS');
+  }
+  return normalizeState(value);
+}
 function loadState(){
   try{
     const current=localStorage.getItem(KEY);
-    if(current)return normalizeState(JSON.parse(current));
+    if(current!==null)return parsedBrowserRecords(current);
     for(const legacyKey of LEGACY_KEYS){
       const legacy=localStorage.getItem(legacyKey);
-      if(!legacy)continue;
-      const migrated=normalizeState(JSON.parse(legacy));
+      if(legacy===null)continue;
+      const migrated=parsedBrowserRecords(legacy);
       localStorage.setItem(KEY,JSON.stringify(migrated));
-      LEGACY_KEYS.forEach(k=>localStorage.removeItem(k));
+      // Keep legacy v1/v2 source for recovery. Only a separate explicit user
+      // deletion can remove it after safe archive/rollback review.
       return migrated;
     }
     return blankState();
-  }catch{return blankState();}
+  }catch{
+    localRecordsUnreadable=true;
+    return blankState();
+  }
 }
 function normalizeState(value){const base=blankState();const merged={...base,...(value||{})};merged.advisorChat={...base.advisorChat,...(value?.advisorChat||{})};if(!Array.isArray(merged.advisorChat.messages))merged.advisorChat.messages=[];if(!Array.isArray(merged.consultations))merged.consultations=[];return merged;}
-function saveState(){localStorage.setItem(KEY,JSON.stringify(state));renderDashboard();renderPolicies();renderClaimPolicies();renderPrivacy();renderAdvisorChat();}
+function saveState(){if(localRecordsUnreadable)return;localStorage.setItem(KEY,JSON.stringify(state));renderDashboard();renderPolicies();renderClaimPolicies();renderPrivacy();renderAdvisorChat();}
 function money(v){return new Intl.NumberFormat('ko-KR').format(Number(v||0))+'원';}
 function uid(){return crypto?.randomUUID?.()||String(Date.now())+Math.random().toString(16).slice(2);}
 function esc(v=''){return String(v).replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]));}
@@ -149,7 +167,7 @@ function aiReply(text){
   if(/(안녕|처음|무엇을|뭘 물어)/i.test(q))return '저는 기존 보험 정리, 보험료 점검, 보장 확인 순서, 보험금 청구 준비를 도와드릴 수 있습니다. 특정 상품을 확정적으로 추천하거나 보험금 지급을 보장하지는 않습니다. 궁금한 상황을 한 문장으로 적어 주세요.';
   return '말씀하신 내용을 기준으로 먼저 사실관계를 정리하는 것이 좋겠습니다. 현재 가입한 보험이 무엇인지, 월 보험료가 어느 정도인지, 그리고 가장 걱정되는 위험이나 해결하고 싶은 문제가 무엇인지 알려주시면 확인 순서를 함께 정리해 드릴게요. 상세 병명이나 주민번호 같은 민감정보는 적지 않으셔도 됩니다.';
 }
-function sendUserMessage(text){const clean=String(text||'').trim();if(!clean)return;addChatMessage('user',clean,false);addChatMessage('assistant',aiReply(clean),false);localStorage.setItem(KEY,JSON.stringify(state));renderAdvisorChat();renderDashboard();renderPrivacy();if(needsHuman(clean))showHumanRequest(true);}
+function sendUserMessage(text){if(localRecordsUnreadable)return;const clean=String(text||'').trim();if(!clean)return;addChatMessage('user',clean,false);addChatMessage('assistant',aiReply(clean),false);localStorage.setItem(KEY,JSON.stringify(state));renderAdvisorChat();renderDashboard();renderPrivacy();if(needsHuman(clean))showHumanRequest(true);}
 function handleChatSubmit(e){e.preventDefault();const input=e.currentTarget.querySelector('#aiChatInput');sendUserMessage(input.value);input.value='';input.focus();}
 function showHumanRequest(on=true){const form=document.getElementById('humanRequestForm');if(!form)return;form.classList.toggle('hidden',!on);if(on)form.querySelector('input')?.focus();}
 function summarizeConversation(messages){const userMessages=messages.filter(m=>m.role==='user').slice(-5).map(m=>m.text.trim()).filter(Boolean);if(!userMessages.length)return 'AI 상담 후 설계사 전화연락 요청';const text=userMessages.join(' / ');return text.length>260?text.slice(0,257)+'...':text;}
@@ -209,3 +227,14 @@ document.getElementById('confirmDeleteBtn').addEventListener('click',()=>{
 });
 
 setupAdvisorChat();renderDashboard();renderPolicies();renderClaimPolicies();renderPrivacy();show((location.hash||'#home').slice(1));
+if(localRecordsUnreadable){
+  const notice=document.createElement('p');
+  notice.className='panel notice';
+  notice.setAttribute('role','alert');
+  notice.textContent='기존 보험기록을 안전하게 불러오지 못했습니다. 데이터 손실을 막기 위해 저장·삭제·상담 입력을 중단했습니다. 브라우저 기록을 삭제하거나 초기화하지 말고 관리자에게 복구를 요청하세요.';
+  document.getElementById('app')?.prepend(notice);
+  document.querySelectorAll('button,input,textarea,select').forEach(control=>{
+    if(control.matches('[data-view], .nav button'))return;
+    control.disabled=true;
+  });
+}
