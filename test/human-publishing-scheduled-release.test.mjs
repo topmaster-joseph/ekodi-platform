@@ -78,6 +78,8 @@ test('a private book cannot schedule sale without an explicit timezone, a future
     'explicit-timezone-required');
   throws(() => scheduleApprovedEdition(registered(),candidate(),NOW,EVIDENCE,NOW),
     'publish-time-not-future');
+  throws(() => scheduleApprovedEdition(registered(),candidate(),'2026-02-30T09:00:00+09:00',EVIDENCE,NOW),
+    'invalid-time');
   throws(() => scheduleApprovedEdition(registered(),candidate(),DUE,null,NOW),
     'trusted-approval-proof-required');
   const missingRights = candidate();
