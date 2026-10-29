@@ -601,6 +601,14 @@ function projectCommandResult(result = {}, commandType = '') {
   };
 }
 
+const SAFE_LOCALAI_DIAGNOSTIC_CODES = [
+  'not_checked','api_ready','process_not_running','loopback_port_not_listening',
+  'wrong_bind','port_bound_unresponsive','api_timeout',
+  'version_response_invalid','api_unavailable_unclassified'
+];
+const safeLocalAiDiagnostic = value =>
+  SAFE_LOCALAI_DIAGNOSTIC_CODES.includes(value) ? value : 'unclassified';
+
 function summarizeCommandResult(result = {}, commandType = '') {
   const summary = {};
   // Expose only a bounded version for approved native Agent self-update receipts.
@@ -630,8 +638,15 @@ function summarizeCommandResult(result = {}, commandType = '') {
       checkedAt: safeText(proof.checkedAt, 45),
       ollamaApi: oneOf(proof.ollamaApi, ['ready', 'unavailable'], 'unknown'),
       ollamaVersion: safeText(proof.ollamaVersion, 70),
+      // Only closed categorical diagnostics may cross the authenticated API.
+      // Never return process IDs, executable paths, raw exceptions, or AI output.
+      diagnosticCode: safeLocalAiDiagnostic(proof.diagnosticCode),
+      ollamaProcess: oneOf(proof.ollamaProcess, ['running','not_running','unknown'], 'unknown'),
+      ollamaSocket: oneOf(proof.ollamaSocket, ['listening','not_listening','timeout','unknown'], 'unknown'),
+      ollamaBind: oneOf(proof.ollamaBind, ['listener_present','other_address_only','not_listening','unknown'], 'unknown'),
+      ollamaService: oneOf(proof.ollamaService, ['running','stopped','not_registered','unknown'], 'unknown'),
       selectedModel: oneOf(proof.selectedModel, ['qwen2.5-coder:1.5b', 'qwen3:0.6b', ''], ''),
-      inference: oneOf(proof.inference, ['passed', 'not_checked', 'nonmatching_response', 'approved_model_missing', 'api_error_or_timeout'], 'unknown'),
+      inference: oneOf(proof.inference, ['passed', 'not_checked', 'nonmatching_response', 'approved_model_missing', 'api_error_or_timeout', 'empty_or_incomplete_response'], 'unknown'),
       claudeCli: oneOf(proof.claudeCli, ['visible_in_agent_context', 'not_visible_to_agent'], 'unknown'),
       claudeAuth: 'requires_interactive_user_verification',
       credentialCollection: proof.credentialCollection === true,
@@ -1246,9 +1261,13 @@ export function projectNativeDeviceProofs(rows = [], now = Date.now()) {
         status, completedAt, fresh,
         ollamaApi: proof.ollamaApi === 'ready' ? 'ready' : 'unverified',
         inference: proof.inference === 'passed' ? 'passed' : 'unverified',
+        diagnosticCode: safeLocalAiDiagnostic(proof.diagnosticCode),
         verified: status === 'succeeded' && fresh && proof.ollamaApi === 'ready' &&
           proof.inference === 'passed' && proof.credentialCollection === false &&
-          proof.executionMode === 'fixed_loopback_api',
+          proof.executionMode === 'fixed_loopback_api' &&
+          // Legacy agents may omit the field. A contradictory explicit failure
+          // diagnosis must never be converted into an inference success receipt.
+          (proof.diagnosticCode === undefined || proof.diagnosticCode === 'api_ready'),
       };
     }
   }
