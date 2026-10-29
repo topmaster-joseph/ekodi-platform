@@ -81,7 +81,7 @@ test('Amazon forms and readonly synchronization keep their server-side protectio
   assert.match(source,/if\(panel\?\.tagName==='DETAILS'\)panel\.open=true/);
   assert.match(source,/for\(const child of \[\.\.\.workbench\.children\]\)child\.hidden=/);
   assert.match(source,/\.amazon-workbench>\[hidden\]\{display:none!important\}/);
-  assert.match(source,/mallSourcingSelectionPatch\(chosen,new FormData\(form\)\)/);
+  assert.match(source,/mallSourcingSelectionPatch\(chosen,formData,freshRoutes,bootstrap\)/);
   assert.match(source,/\/ekodimall\/api\/amazon\/sync\/read-only/);
   assert.match(source,/유료 기능 스위치를 켜더라도 기능별 승인 레코드와 금액 한도가 없으면/);
 });
