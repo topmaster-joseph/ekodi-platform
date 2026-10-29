@@ -303,8 +303,9 @@ function postPage(route,post){
 }
 
 
-function missionKstToday(){
-  const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+export const MISSION_SATURDAY_STARTED='2024-02-03';
+export function missionKstToday(at=new Date()){
+  const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(at);
   const get=part=>parts.find(item=>item.type===part)?.value||'';
   return [get('year'),get('month'),get('day')].join('-');
 }
@@ -319,17 +320,61 @@ function missionSaturdayFollowing(date,weeks){
   start.setUTCDate(start.getUTCDate()+7*weeks);
   return start.toISOString().slice(0,10);
 }
+
+export function missionSaturdayLastPast(nextSaturday){
+  return missionSaturdayFollowing(nextSaturday,-1);
+}
+async function missionEnsureWeeklyDates(env,boardId,today,nextSaturday){
+  // A single, idempotent D1 statement registers every Saturday since 2024-02-03.
+  // INSERT OR IGNORE preserves operator changes (cancelled/rescheduled) and prior replies.
+  // Read-time synthesis needs no fixed cron; the window rolls indefinitely.
+  const until=missionSaturdayFollowing(nextSaturday,7);
+  await env.DB.prepare(`WITH RECURSIVE weekly(meeting_date) AS (
+    SELECT ?
+    UNION ALL
+    SELECT date(meeting_date,'+7 days') FROM weekly WHERE meeting_date < ?
+  )
+  INSERT OR IGNORE INTO ekodi_mission_saturday_events
+   (board_id,meeting_date,starts_at,venue,title,status,created_at)
+  SELECT ?,meeting_date,'11:00','에코디교회','토요 성경토론과 함께하는 식사',
+    CASE WHEN meeting_date < ? THEN 'completed' ELSE 'scheduled' END,?
+  FROM weekly WHERE meeting_date <= ?`)
+    .bind(MISSION_SATURDAY_STARTED,until,boardId,today,now(),until).run();
+}
+async function missionSaturdayHistory(request,env,instance,method){
+  if(method!=='GET')return boardJson(instance,{error:'method_not_allowed'},405);
+  const today=missionKstToday(),next=missionSaturdayFor(today);
+  await missionEnsureWeeklyDates(env,instance.board_id,today,next);
+  const url=new URL(request.url),params=url.searchParams;
+  const year=params.get('year')||'all',month=params.get('month')||'all',cursor=params.get('cursor')||'';
+  const currentYear=Number(today.slice(0,4));
+  if(year!=='all'&&(!/^\\d{4}$/.test(year)||Number(year)<2024||Number(year)>currentYear))return boardJson(instance,{error:'invalid_year'},400);
+  if(month!=='all'&&!/^(0[1-9]|1[012])$/.test(month))return boardJson(instance,{error:'invalid_month'},400);
+  if(cursor&&(!/^\\d{4}-\\d{2}-\\d{2}$/.test(cursor)||cursor<MISSION_SATURDAY_STARTED||cursor>next))return boardJson(instance,{error:'invalid_cursor'},400);
+  const requested=Number(params.get('limit')||12);
+  const limit=Number.isFinite(requested)?Math.max(1,Math.min(24,Math.trunc(requested))):12;
+  const rows=await env.DB.prepare(`SELECT meeting_date,starts_at,venue,title,status
+    FROM ekodi_mission_saturday_events
+    WHERE board_id=? AND meeting_date>=? AND meeting_date<?
+      AND (?='all' OR substr(meeting_date,1,4)=?)
+      AND (?='all' OR substr(meeting_date,6,2)=?)
+      AND meeting_date<?
+    ORDER BY meeting_date DESC LIMIT ?`)
+    .bind(instance.board_id,MISSION_SATURDAY_STARTED,next,year,year,month,month,cursor||next,limit+1).all();
+  const results=rows.results||[],hasMore=results.length>limit,visible=results.slice(0,limit);
+  const years=Array.from({length:currentYear-2024+1},(_,i)=>String(currentYear-i));
+  return boardJson(instance,{
+    ok:true,startedOn:MISSION_SATURDAY_STARTED,nextMeetingDate:next,
+    lastPastDate:missionSaturdayLastPast(next),years,year,month,
+    items:visible.map(row=>({date:row.meeting_date,time:row.starts_at,venue:row.venue,title:row.title,status:row.status})),
+    nextCursor:hasMore?visible.at(-1)?.meeting_date:null,
+  });
+}
+
 async function missionSaturdayBoard(request,env,instance,who,method){
-  // One mission-local recurring schedule; future eight Saturdays are materialized
-  // idempotently on read, without a cron or human re-entry each week.
-  const date=missionSaturdayFor(missionKstToday());
+  const today=missionKstToday(),date=missionSaturdayFor(today);
   const stamp=now();
-  for(let week=0;week<8;week++){
-    await env.DB.prepare(`INSERT OR IGNORE INTO ekodi_mission_saturday_events
-      (board_id,meeting_date,starts_at,venue,title,status,created_at)
-      VALUES (?,?,'11:00','에코디교회','토요 성경토론과 함께하는 식사','scheduled',?)`)
-      .bind(instance.board_id,missionSaturdayFollowing(date,week),stamp).run();
-  }
+  await missionEnsureWeeklyDates(env,instance.board_id,today,date);
   const meeting=await env.DB.prepare(`SELECT meeting_date,starts_at,venue,title,status
     FROM ekodi_mission_saturday_events WHERE board_id=? AND meeting_date=? LIMIT 1`)
     .bind(instance.board_id,date).first();
@@ -377,6 +422,9 @@ export async function handleSiteBoardRequest(request,env){
   if(!instance)return new Response('Board unavailable',{status:503,headers:{'cache-control':'no-store'}});
   const method=request.method.toUpperCase(),sub=route.subPath.replace(/\/+$/,'')||'/';
   const who=await actor(request,env,instance);
+  if(route.siteId==='ekodimission'&&sub==='/api/saturday/history'){
+    return missionSaturdayHistory(request,env,instance,method);
+  }
   if(route.siteId==='ekodimission'&&sub==='/api/saturday'){
     return missionSaturdayBoard(request,env,instance,who,method);
   }
