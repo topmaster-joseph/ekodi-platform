@@ -9,7 +9,9 @@
   const partnerSelect = $('#partnerSelect'); const sellerSelect = $('#sellerSelect'); const existingSourceSelect = $('#existingSourceSelect');
   const partnerSourceSelect = $('#partnerSourceSelect'); const skuSourceSelect = $('#skuSourceSelect'); const skuSelect = $('#skuSelect'); const productSelect = $('#productSelect');
   const mappingRows = $('#mappingRows'); const summary = $('#opsSummary'); const gates = $('#opsGates'); const partnerReadiness = $('#partnerReadiness');
-  let session = null; let context = { partners: [], sellers: [], sources: [], products: [], skus: [], mappings: [], gates: {} }; let selectedPartnerId = '';
+  let session = null; let operationsAuthorized = false; let authRevision = 0;
+  const blankContext = () => ({ partners: [], sellers: [], sources: [], products: [], skus: [], mappings: [], gates: {} });
+  let context = blankContext(); let selectedPartnerId = '';
   const transitions = {
     candidate: ['due_diligence','rejected'], due_diligence: ['contracted','rejected','suspended'], contracted: ['pilot_ready','suspended'],
     pilot_ready: ['pilot_active','suspended'], pilot_active: ['active','suspended'], active: ['suspended'],
@@ -86,7 +88,26 @@
       mappingRows.append(tr); }
   }
   async function loadContext() {
-    if (!session) return; const result=await api('/api/internal/supplier-pilot/context'); context=result.context || context; renderGates(); renderSummary(); renderPartners(); setStatus(`공급처 ${context.partners.length}개 · 검증된 공급경로 ${context.sources.filter((s)=>['contract_verified','pilot','active'].includes(s.partnerMappingStatus)).length}개 · 자동발주 OFF`);
+    if (!session) { operationsAuthorized = false; syncUi(); return; }
+    // The server allowlist is authoritative; a valid Google session alone grants no operations.
+    const revision = ++authRevision;
+    const actor = session.user?.id;
+    operationsAuthorized = false;
+    syncUi();
+    try {
+      const result = await api('/api/internal/supplier-pilot/context');
+      if (!session || revision !== authRevision || session.user?.id !== actor) return;
+      operationsAuthorized = true;
+      context = result.context || blankContext();
+      renderGates(); renderSummary(); renderPartners(); syncUi();
+      setStatus(`공급처 ${context.partners.length}개 · 검증된 공급경로 ${context.sources.filter((s)=>['contract_verified','pilot','active'].includes(s.partnerMappingStatus)).length}개 · 자동발주 OFF`);
+    } catch (error) {
+      if (revision !== authRevision) return;
+      operationsAuthorized = false;
+      syncUi();
+      setStatus(error.message, true);
+      throw error;
+    }
   }
   async function post(path, body) { return api(path,{method:'POST',body:JSON.stringify(body)}); }
   $('#partnerCreateForm')?.addEventListener('submit', async (e)=>{e.preventDefault();const f=e.currentTarget.elements;try{const r=await post('/api/internal/supplier-partners',{partnerCode:f.partnerCode.value,displayName:f.displayName.value,legalName:f.legalName.value,providerType:f.providerType.value,statusNote:f.statusNote.value});selectedPartnerId=r.partner.id;e.currentTarget.reset();await loadContext();setStatus('Supplier Partner를 등록했습니다.');}catch(err){setStatus(err.message,true);}});
@@ -134,8 +155,27 @@
   activateStep(new URLSearchParams(location.search).get('step'));
   window.addEventListener('popstate',()=>activateStep(new URLSearchParams(location.search).get('step')));
   login?.addEventListener('click',()=>{location.href='https://ekodi.kr/auth/?site=mall-seller&return_to='+encodeURIComponent(location.href.split('#')[0]);});
-  logout?.addEventListener('click',async()=>{await sb.auth.signOut();session=null;syncUi();setStatus('로그아웃했습니다.');}); reload?.addEventListener('click',()=>loadContext().catch((e)=>setStatus(e.message,true)));
-  function syncUi(){const signed=Boolean(session);if(login)login.hidden=signed;if(logout)logout.hidden=!signed;document.querySelectorAll('.ops-panel input,.ops-panel select,.ops-panel textarea,.ops-panel button').forEach((el)=>{el.disabled=!signed;});if(reload)reload.disabled=!signed;if(!signed){context={partners:[],sellers:[],sources:[],products:[],skus:[],mappings:[],gates:{}};selectedPartnerId='';renderGates();renderSummary();renderPartners();}}
-  exchangeCentralToken().catch((e)=>setStatus(`인증 연결 실패: ${e.message}`,true)).finally(async()=>{session=(await sb.auth.getSession()).data.session;syncUi();if(session)loadContext().catch((e)=>setStatus(e.message,true));});
-  sb.auth.onAuthStateChange((_e,next)=>{session=next;syncUi();if(session)loadContext().catch(()=>{});});
+  logout?.addEventListener('click',async()=>{
+    ++authRevision; operationsAuthorized=false; session=null; syncUi();
+    try { await sb.auth.signOut(); setStatus('로그아웃했습니다.'); }
+    catch(error) { setStatus(`로그아웃 확인 실패: ${error.message}`,true); session=(await sb.auth.getSession()).data.session; if(session)loadContext().catch(e=>setStatus(e.message,true)); }
+  });
+  reload?.addEventListener('click',()=>loadContext().catch((e)=>setStatus(e.message,true)));
+  function syncUi(){
+    const signed=Boolean(session), canOperate=signed&&operationsAuthorized;
+    if(login)login.hidden=signed;
+    if(logout)logout.hidden=!signed;
+    document.querySelectorAll('.ops-panel input,.ops-panel select,.ops-panel textarea,.ops-panel button').forEach((el)=>{el.disabled=!canOperate;});
+    if(reload)reload.disabled=!signed;
+    if(!canOperate){
+      context=blankContext(); selectedPartnerId='';
+      renderGates();renderSummary();renderPartners();
+    }
+  }
+  exchangeCentralToken().catch((e)=>setStatus(`인증 연결 실패: ${e.message}`,true)).finally(async()=>{session=(await sb.auth.getSession()).data.session;operationsAuthorized=false;syncUi();if(session)loadContext().catch((e)=>setStatus(e.message,true));});
+  sb.auth.onAuthStateChange((_e,next)=>{
+    if(session?.access_token===next?.access_token)return;
+    ++authRevision; session=next; operationsAuthorized=false; syncUi();
+    if(session)loadContext().catch(e=>setStatus(e.message,true));
+  });
 })();
