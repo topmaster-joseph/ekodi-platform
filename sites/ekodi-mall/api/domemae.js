@@ -96,6 +96,19 @@ export async function domemaeConnectorReady(env) {
   } catch { return false; }
 }
 
+/** Explicit whitelist: never return raw vendor JSON, supplier identifiers or secrets. */
+function safeAuthEvidence(input) {
+  if (!input || typeof input !== 'object') return null;
+  const resultTypes = new Set(['success','false','other','missing']);
+  const modes = new Set(['loopback-fallback','loopback-configured','configured']);
+  return {
+    httpStatus: Number.isInteger(input.httpStatus) && input.httpStatus >= 100 && input.httpStatus <= 599 ? input.httpStatus : null,
+    jsonParsed: input.jsonParsed === true,
+    supplierResult: resultTypes.has(input.supplierResult) ? input.supplierResult : 'missing',
+    clientIpMode: modes.has(input.clientIpMode) ? input.clientIpMode : 'unknown'
+  };
+}
+
 async function readOnlyAuthProbeStatus(env) {
   const row = await env.DB.prepare("SELECT result_status,checked_at,metadata_json FROM supplier_connector_checks WHERE provider_id=? AND external_ref='probe:login' ORDER BY checked_at DESC LIMIT 1")
     .bind(PROVIDER_ID).first().catch(() => null);
@@ -109,7 +122,8 @@ async function readOnlyAuthProbeStatus(env) {
     login: meta.login === 'ok' ? 'ok' : meta.login === 'failed' ? 'failed' : 'unknown',
     asset: meta.asset === 'ok' ? 'ok' : meta.asset === 'failed' ? 'failed' : 'unknown',
     loginIdMatchesConfigured: typeof meta.loginIdMatchesConfigured === 'boolean' ? meta.loginIdMatchesConfigured : null,
-    errorCode: allowed.has(meta.errorCode) ? meta.errorCode : null
+    errorCode: allowed.has(meta.errorCode) ? meta.errorCode : null,
+    diagnostic: safeAuthEvidence(meta.diagnostic)
   };
 }
 
@@ -218,7 +232,8 @@ export async function handleDomemaeRequest(request, env, { runAuthProbe = probeD
       nextEligibleAt: typeof result.nextEligibleAt === 'string' && /^\d{4}-/.test(result.nextEligibleAt) ? result.nextEligibleAt : null,
       errorCode: codes.has(result.errorCode) ? result.errorCode : null,
       login: result.login === 'ok' ? 'ok' : result.login === 'failed' ? 'failed' : 'unknown',
-      asset: result.asset === 'ok' ? 'ok' : result.asset === 'failed' ? 'failed' : 'unknown'
+      asset: result.asset === 'ok' ? 'ok' : result.asset === 'failed' ? 'failed' : 'unknown',
+      diagnostic: safeAuthEvidence(result.diagnostic)
     } } };
   }
   if (request.method === 'POST' && path === '/api/internal/connectors/domemae/item-lookup') {
