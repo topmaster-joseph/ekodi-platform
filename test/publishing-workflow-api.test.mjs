@@ -120,7 +120,15 @@ test('cloud scheduler advances only a fully reviewed due edition into nonpublic 
   sql.prepare('UPDATE publishing_workflow_projects SET author_user_id=? WHERE id=?').run(chief,p.id);
   sql.prepare('INSERT INTO publishing_workflow_roles (user_id,role,granted_by,granted_at) VALUES (?,?,?,?)')
     .run(chief,'admin','protected-bootstrap','2026-10-29T00:00:00Z');
-  const candidate={format:'epub',priceKrw:9900,readerProfiles:['general'],collectionId:'human'};
+  const candidate={format:'epub',priceKrw:9900,readerProfiles:['general'],collectionId:'human',
+    // Isolated unit-test-only attestations; production reads trusted DB records.
+    authorMembership:{planId:'publisher_editor',serverVerified:true,authorId:chief,
+      verifiedChiefAdmin:true,publisherEditorScope:true},
+    rights:{copyrightOwnerId:chief,distributionLicenseApproved:true},
+    audiobook:{highQualityApproved:true,humanListeningQaPassed:true,
+      dialogueNarrationReviewed:true,masterAssetDigest:'d'.repeat(64),
+      pairedEditionDigest:hash,additionalBuyerPriceKrw:0,
+      buyerBundleEntitlementVerified:true,refundRevocationVerified:true}};
   const placeholders={publicationId:p.id,editionId:p.editionId,title:p.title,authorId:chief,
     fieldId:'literature',releaseDigest:hash,
     publisherApproval:{approvedBy:'publisher',approvedAt:'2026-11-20T00:00:00Z',digest:hash}};
