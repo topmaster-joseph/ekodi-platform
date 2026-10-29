@@ -1,5 +1,6 @@
 // /my/invest: future paid service is disabled. Only the verified owner can use private research tools.
 import { investOwnerEmail as ownerEmail } from './invest-autopilot-core.js';
+import { INVEST_MEMBER_SESSION_BROWSER_SOURCE } from './invest-auth-browser.js';
 const HEAD={'cache-control':'private, no-store','x-content-type-options':'nosniff','x-robots-tag':'noindex, nofollow, noarchive','referrer-policy':'no-referrer','vary':'authorization'};
 const SUPABASE='https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -242,7 +243,7 @@ function removeHandoffFromUrl(){
 }
 function availableTokens(){
  const values=[];
- try{const s=JSON.parse(localStorage.getItem('ekodi_platform_session_v1')||'null');if(s&&s.access_token)values.push(s.access_token)}catch{}
+ const memberToken=readEkodiMemberToken();if(memberToken)values.push(memberToken);
  try{const s=sessionStorage.getItem('ekodi-auth-token');if(s)values.push(s)}catch{}
  return values;
 }
@@ -410,4 +411,4 @@ init();
 // Wrangler bundles with esbuild keepNames, which inserts __name(fn,"name") calls into the
 // serialized client. The browser has no __name, so ship the same prelude other EKODI pages use;
 // without it the script dies on its first line and the page stays on "확인하고 있습니다".
-function ownerBrowserJs(){return '(()=>{const __name=(target,value)=>Object.defineProperty(target,"name",{value,configurable:true});\n('+investBrowserClient.toString()+')();})();'}
+function ownerBrowserJs(){return '(()=>{const __name=(target,value)=>Object.defineProperty(target,"name",{value,configurable:true});\n'+INVEST_MEMBER_SESSION_BROWSER_SOURCE+'\n('+investBrowserClient.toString()+')();})();'}
