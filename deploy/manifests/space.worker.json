@@ -172,10 +172,10 @@
           "data-mission-nav",
           "/ekodimission/assets/shell.css",
           "/ekodimission/assets/shell.js",
-          "CURRENT ACTIVITIES",
-          "진행·예정 행사",
-          "data-mission-home-event",
-          "/ekodimission/activities/261010-naju-yeongsan"
+          "EVERY SATURDAY",
+          "이번 주 토요모임",
+          "data-mission-saturday",
+          "/ekodimission/assets/saturday.js"
         ],
         "headerExpect": [
           "x-ekodi-route: ekodimission-public",
