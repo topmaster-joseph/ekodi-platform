@@ -17,7 +17,7 @@ test('production Admin browser verifier exercises all five AI Ops stages',()=>{
   assert.match(e2e,/await verifyAiOpsStageWorkspace\(\)/);
   assert.match(e2e,/getAttribute\('aria-pressed'\)/);
   assert.match(e2e,/Site detail exposed before selecting a site/);
-  assert.match(e2e,/\\.ai-fleet-row\\.selected/);
+  assert.ok(e2e.includes('.ai-fleet-row.selected'));
   assert.match(e2e,/ArrowRight/);
   assert.match(e2e,/width:390,height:844/);
   assert.match(e2e,/AI Ops mobile tab layout clipped/);
