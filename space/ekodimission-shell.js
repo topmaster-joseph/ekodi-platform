@@ -105,6 +105,19 @@
     nav.replaceChildren(...links,language);
     return {nav,select};
   }
+  // Keep the canonical Korean page and its accessible DOM free of English eyebrow text.
+  // Create a label only for a published non-Korean locale before catalog translation.
+  function syncDevotionEyebrow(locale){
+    const heading=document.querySelector('main[data-mission-devotion] .dv-page-title');
+    if(!heading)return;
+    const old=heading.querySelector('[data-mission-devotion-eyebrow]');
+    if(String(locale||'').toLowerCase().startsWith('ko')){old?.remove();return;}
+    if(old)return;
+    const eyebrow=document.createElement('small');
+    eyebrow.dataset.missionDevotionEyebrow='';
+    eyebrow.textContent='EKODI MISSION · DAILY DEVOTION';
+    heading.insertBefore(eyebrow,heading.querySelector('h1'));
+  }
   async function initLanguage(select){
     if(!select)return;
     try{
@@ -146,6 +159,7 @@
       }
       select.value=active;
       document.documentElement.lang=active;
+      syncDevotionEyebrow(active);
       if(active!==sourceLocale){
         const catalogResponse=await fetch(languageCatalogUrl(active),{headers:{accept:'application/json'},cache:'no-store'});
         if(catalogResponse.ok){
@@ -166,6 +180,7 @@
       select.replaceChildren(Object.assign(document.createElement('option'),{value:sourceLocale,textContent:'한국어'}));
       select.value=sourceLocale;
       document.documentElement.lang=sourceLocale;
+      syncDevotionEyebrow(sourceLocale);
     }
   }
 

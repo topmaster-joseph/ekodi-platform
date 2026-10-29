@@ -141,3 +141,20 @@ html:lang(ko) main[data-mission-devotion] .dv-record p{margin:3px 0;line-height:
   html:lang(ko) main[data-mission-devotion] .dv-scripture-section{padding:10px 11px}
   html:lang(ko) main[data-mission-devotion] .dv-tabs{flex-wrap:nowrap}
 }
+
+/* Mission devotional: header/body/footer share one centered column without double padding. */
+body:has(main[data-mission-devotion]) .mission-site-header,
+body:has(main[data-mission-devotion]) .site-footer,
+main[data-mission-devotion]{
+  width:100%;max-width:840px;margin-left:auto;margin-right:auto;
+  padding-left:16px;padding-right:16px
+}
+main[data-mission-devotion] .ekodi-devotion{padding-left:0;padding-right:0}
+body:has(main[data-mission-devotion]) .site-footer{padding-top:12px;padding-bottom:18px}
+html:lang(ko) main[data-mission-devotion] .dv-page-title{padding-left:0;padding-right:0}
+@media(max-width:520px){
+  body:has(main[data-mission-devotion]) .mission-site-header,
+  body:has(main[data-mission-devotion]) .site-footer,
+  main[data-mission-devotion]{padding-left:8px;padding-right:8px}
+  main[data-mission-devotion] .ekodi-devotion{padding-left:0;padding-right:0}
+}
