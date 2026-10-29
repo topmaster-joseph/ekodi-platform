@@ -27,7 +27,8 @@ const initial=()=>({
   publisherApproval:null,scheduledAt:null,revision:1
 });
 function advance(p,action,input,actor=author,at=now){
-  const v=publicationTransition(p,action,input,actor,at);
+  const verified=['publisher_approve','schedule','prepare_handoff'].includes(action) ? {ready:true} : {};
+  const v=publicationTransition(p,action,input,actor,at,verified);
   assert.equal(v.ok,true,action+': '+JSON.stringify(v));
   return v.next;
 }
@@ -77,4 +78,15 @@ test('paid/provider API calls and no-consent jobs are rejected',()=>{
   assert.equal(permittedAiRequest('draft',{provider:'paid',ownerConsent:true}).code,'PAID_PROVIDER_APPROVAL_REQUIRED');
   assert.equal(permittedAiRequest('draft',{spendKrw:1,ownerConsent:true}).code,'PAID_PROVIDER_APPROVAL_REQUIRED');
   assert.equal(permittedAiRequest('draft',{ownerConsent:true}).state,'queued');
+});
+
+test('free/unsigned author sale is blocked even when a publisher approves the editorial draft',()=>{
+  let p={...initial(),stage:'author_approved',releaseDigest:digest,
+    authorApproval:{actor:'writer',digest,approvedAt:now.toISOString()},releaseCandidate:quality()};
+  assert.equal(publicationTransition(p,'publisher_approve',{digest},publisher,now).code,'COMMERCIAL_VERIFICATION_REQUIRED');
+  assert.equal(publicationTransition(p,'publisher_approve',{digest},publisher,now,
+    {ready:false,reason:'PAID_OR_CHIEF_REQUIRED'}).code,'COMMERCIAL_VERIFICATION_REQUIRED');
+  p.stage='publisher_approved';p.publisherApproval={approvedBy:'publisher',digest,approvedAt:now.toISOString()};
+  assert.equal(publicationTransition(p,'schedule',{digest,scheduledAt:'2026-11-25T01:30:00.000Z',
+    channels:['books','ekodimall']},publisher,now).code,'COMMERCIAL_VERIFICATION_REQUIRED');
 });
