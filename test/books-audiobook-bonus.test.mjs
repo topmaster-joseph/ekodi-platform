@@ -48,6 +48,12 @@ test('audio bonus uses the real ebook entitlement and never exposes unpublished 
     const listing = await response.json();
     assert.equal(listing.status, 'ready');
     assert.equal(listing.tracks.length, 2);
+    const originalHead = env.BOOK_FILES.head;
+    env.BOOK_FILES.head = async key => key.endsWith('chapter-002.mp3') ? null : { size: 20 };
+    try {
+      response = await handleAudiobook(req(base + '/track/1'), env);
+      assert.equal(response.status, 409, 'one ready track cannot be downloaded while another track is missing');
+    } finally { env.BOOK_FILES.head = originalHead; }
     response = await handleAudiobook(req(base + '/track/1'), env);
     assert.equal(response.status, 200);
     assert.equal(response.headers.get('content-type'), 'audio/mpeg');
