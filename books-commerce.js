@@ -148,7 +148,7 @@ export async function quote(env, request, bookId) {
   return {
     status: 200,
     data: {
-      book: { id: book.id, title: book.title, subtitle: book.subtitle || '', author: book.author || '', coverImage: book.coverImage || '', format: book.format || [], edition: book.edition || '', links: { upaper: book.links?.upaper || '', google: book.links?.google || '', amazon: book.links?.amazon || '' } },
+      book: { id: book.id, title: book.title, subtitle: book.subtitle || '', author: book.author || '', coverImage: book.coverImage || '', format: book.format || [], edition: book.edition || '', bonusAudio: book.bonusAudio?.included === true ? { included: true, published: book.bonusAudio?.published === true } : null, links: { upaper: book.links?.upaper || '', google: book.links?.google || '', amazon: book.links?.amazon || '' } },
       signedIn: Boolean(buyer), buyerEmail: buyer?.email || '', tier: tierId, owned, price,
       tiers: (policy.tiers || []).map(t => ({ id: t.id, label: t.label, discountRate: t.discountRate || 0, description: t.description || '', price: priceFor(book, policy, t.id)?.amount ?? null })),
       checkout: { open: pay.ready && ((pay.mode === 'live' && hasFile) || operator), mode: pay.mode, testOnly: pay.ready && pay.mode !== 'live', fileReady: hasFile, operator },
@@ -253,7 +253,7 @@ export async function library(env, request) {
     const book = byId.get(row.book_id) || { id: row.book_id, title: row.book_id };
     const key = book.directSale?.fileKey || '';
     const ready = Boolean(key && env.BOOK_FILES && await env.BOOK_FILES.head(key).catch(() => null));
-    items.push({ id: book.id, title: book.title, subtitle: book.subtitle || '', author: book.author || '', coverImage: book.coverImage || '', grantedAt: row.granted_at, amount: row.amount, receiptUrl: row.receipt_url || '', downloadReady: ready });
+    items.push({ id: book.id, title: book.title, subtitle: book.subtitle || '', author: book.author || '', coverImage: book.coverImage || '', grantedAt: row.granted_at, amount: row.amount, receiptUrl: row.receipt_url || '', downloadReady: ready, audiobookBonus: book.bonusAudio?.included === true ? { included: true, status: book.bonusAudio?.published === true ? 'check' : 'preparing' } : null });
   }
   return { status: 200, data: { email: buyer.email, tier: await tierFor(env, buyer), items } };
 }
