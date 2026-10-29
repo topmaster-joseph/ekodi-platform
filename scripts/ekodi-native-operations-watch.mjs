@@ -102,6 +102,24 @@ async function boundedJson(fetchImpl,url,token){
   }catch{return {ok:false,reason:'read_only_probe_unreachable'}}
   if(response.status===429||response.status===1027)
     return {ok:false,reason:'provider_quota_protection',circuitOpen:true};
+  // GitHub API 403 may mean an exhausted installation quota, a secondary
+  // rate limit, or insufficient permissions. Never treat it as an ordinary
+  // missing resource and keep scanning: that can worsen the rate limit.
+  // Inspect only response headers and the message; never persist the body.
+  if(url.startsWith(BASE+'/')&&response.status===403){
+    const remaining=response.headers?.get('x-ratelimit-remaining');
+    const retryAfter=response.headers?.get('retry-after');
+    let message='';
+    try{
+      const payload=await response.json();
+      message=typeof payload?.message==='string'?payload.message:'';
+    }catch{ /* a 403 is still a stop condition, even with invalid JSON */ }
+    const exhausted=remaining==='0'||!!retryAfter||
+      /(?:rate limit|secondary rate|abuse detection)/i.test(message);
+    return {ok:false,
+      reason:exhausted?'github_api_quota_exhausted':'github_api_permission_denied_or_policy',
+      circuitOpen:true};
+  }
   if(!response.ok)return {ok:false,reason:'http_'+Number(response.status)};
   try{
     const data=await response.json();
