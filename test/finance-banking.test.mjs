@@ -42,6 +42,9 @@ test('banking API fixes tenant scope server-side and fails closed for real trans
   assert.match(worker,/RECIPIENT_ACCOUNT_NUMBER_REQUIRED_AT_EXECUTION/);
   assert.match(worker,/bank_audit_log/);
   assert.doesNotMatch(worker,/recipient_account_number\s*[),]/i);
+  assert.match(worker,/bankConnectionId,transactions/);
+  assert.match(worker,/slice\(0,500\)/);
+  assert.match(worker,/ON CONFLICT\(bank_connection_id,external_id\)/);
 });
 
 test('tenant and church admin surfaces expose scoped banking without duplicating credentials',()=>{
@@ -58,6 +61,11 @@ test('tenant and church admin surfaces expose scoped banking without duplicating
   assert.match(churchApi,/church_finance/);
   assert.match(tenantUi,/수취계좌 전체번호는 요청 단계에서 저장하지 않습니다/);
   assert.match(tenantUi,/recipientAccountNumber/);
+  assert.match(tenantUi,/bankCsvImportForm/);
+  assert.match(tenantUi,/accept=".csv,text\/csv"/);
+  assert.match(tenantUi,/\/transactions\/import/);
+  assert.match(tenantUi,/csvTransactions/);
+  assert.match(tenantUi,/한 번에 최대 500건/);
 });
 
 test('superadmin and shared-site delivery include banking control and asset publication',()=>{
