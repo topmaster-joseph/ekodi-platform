@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-AUTOMATION-OWNERSHIP-HANDOFF-20261030",
+  "owner": "EKODI Orchestrator",
+  "policy": "All schedules, decisions, audit and execution shall be owned by EKODI infrastructure. ChatGPT/OpenAI are optional tools, never scheduler, operator, release authority or system of record.",
+  "measuredChatgptTasksAt": "2026-10-30",
+  "activeChatgptCount": 5,
+  "previousMonitoringClaimCorrected": true,
+  "mode": "shadow_read_only_until_parity_verified",
+  "preserveExistingUntilVerified": true,
+  "execution": {
+    "runtime": "GitHub Actions EKODI repo",
+    "timezone": "Asia/Seoul",
+    "workflow": ".github/workflows/ekodi-native-handoff-watch.yml",
+    "script": "scripts/ekodi-native-handoff-watch.mjs",
+    "standaloneNoOpenaiApi": true,
+    "mutatingJobsEnabled": false,
+    "productionRelease": "EKODI Orchestrator protected CI + official branch + staging + verified production",
+    "notify": "EKODI-owned channels only after opt-in",
+    "secrets": "server-side GitHub Actions or Cloudflare secrets; never repository/frontend"
+  },
+  "jobs": [
+    {
+      "id": "social-accounts-release",
+      "label": "에코디 소셜계정 화면 배포 검증",
+      "legacyId": "6ae13b03e77081919d7aee2bc099b53f",
+      "schedule": "hourly",
+      "sourceStatus": "chatgpt_active",
+      "nativeStatus": "shadow_read_only",
+      "nativeEvidence": [
+        "ekodi-native-operations-watch.yml",
+        "github workflow/PR status"
+      ],
+      "blockingToCutover": [
+        "verified native scheduled run",
+        "equivalent social UI production-state E2E"
+      ]
+    },
+    {
+      "id": "human-publishing-editorial",
+      "label": "에코디 휴먼출판 월간 제작",
+      "legacyId": "6ae1171f2cf08191bf6b98e23f57e96d",
+      "schedule": "monday-0800-kst",
+      "sourceStatus": "chatgpt_active",
+      "nativeStatus": "shadow_read_only",
+      "nativeEvidence": [
+        "publishing/human/editorial-policy.js"
+      ],
+      "blockingToCutover": [
+        "authenticated EKODI manuscript and edition store",
+        "six editorial slots persisted",
+        "human approval and ePub/accessibility checks",
+        "authorized native content-writing pipeline"
+      ]
+    },
+    {
+      "id": "church-live-release",
+      "label": "에코디교회 방송 배포 점검",
+      "legacyId": "6adf48bdbfdc8191945b92073f6060a3",
+      "schedule": "hourly",
+      "sourceStatus": "chatgpt_active",
+      "nativeStatus": "shadow_read_only",
+      "nativeEvidence": [
+        "watch-ekodi-church-source.yml",
+        "church-live-production-e2e.yml"
+      ],
+      "blockingToCutover": [
+        "verified native schedule execution",
+        "production receipt and actual live player E2E"
+      ]
+    },
+    {
+      "id": "church-weekly-worship",
+      "label": "에코디교회 주일예배 자료 준비",
+      "legacyId": "6ad9c4646a708191af2a45eeb1629075",
+      "schedule": "wednesday-0826-kst",
+      "sourceStatus": "chatgpt_active",
+      "nativeStatus": "shadow_read_only",
+      "nativeEvidence": [
+        "config/common-scripture/YYYY-MM.json",
+        "church worship authorization service"
+      ],
+      "blockingToCutover": [
+        "first-party Google Docs/Slides writing connector with durable storage",
+        "approved service-specific sermon manuscript workflow",
+        "verified live document links",
+        "pastor/owner approval gate"
+      ]
+    },
+    {
+      "id": "p0-p1-stability",
+      "label": "EKODI 안정화 추적",
+      "legacyId": "6acec9c5dd5c8191b46638dc705d4a2a",
+      "schedule": "expired-legacy-count-72",
+      "sourceStatus": "chatgpt_enabled_but_schedule_expired",
+      "nativeStatus": "covered_by_native_operations_watch",
+      "nativeEvidence": [
+        "ekodi-native-operations-watch.yml",
+        "reconcile-orchestrator-completions.yml"
+      ],
+      "blockingToCutover": [
+        "explicit confirmation no active legacy delivery"
+      ]
+    },
+    {
+      "id": "common-header-release",
+      "label": "에코디 공통 헤더 배포 검증",
+      "legacyId": null,
+      "schedule": "hourly",
+      "sourceStatus": "not_scheduled_on_chatgpt",
+      "nativeStatus": "shadow_read_only",
+      "nativeEvidence": [
+        "PR #6869"
+      ],
+      "blockingToCutover": [
+        "official PR exact SHA checks",
+        "protected merge",
+        "shell production and site PC/mobile proof"
+      ]
+    }
+  ],
+  "guardrails": {
+    "oneOwnerOnly": true,
+    "noDuplicatedMutation": true,
+    "sourceChecksPerSha": true,
+    "noAutomaticPayments": true,
+    "noCredentialLeak": true,
+    "noExternalAiScheduling": true,
+    "noHumanGateSpoof": true,
+    "noPublishingWithoutEditionOwnerApproval": true,
+    "noAutoChatgptDisableBeforeParity": true
+  }
+}
