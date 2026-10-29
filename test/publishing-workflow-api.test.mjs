@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { handlePublishingWorkflow } from '../publishing-workflow-api.js';
+import { handlePublishingWorkflow, prepareScheduledPublishing } from '../publishing-workflow-api.js';
+import { evaluateReleaseReadiness } from '../publishing/human/editorial-policy.js';
 
 function memory(){
   const db=new DatabaseSync(':memory:');
@@ -102,4 +103,41 @@ test('revision conflict, hash binding and no direct-release API',async()=>{
     revision:3,action:'release_receipt',serverVerified:true
   }}),env);
   assert.equal(release.status,403);
+});
+
+test('cloud scheduler advances only a fully reviewed due edition into nonpublic outbox',async()=>{
+  const {sql,api}=memory(),env={PUBLISH_DB:api};
+  const res=await handlePublishingWorkflow(request('projects',{method:'POST',body:{
+    title:'예약 출간 테스트',fieldId:'literature'
+  }}),env);
+  const {project:p}=await res.json(),hash='c'.repeat(64);
+  const candidate={format:'epub',priceKrw:9900,readerProfiles:['general'],collectionId:'human'};
+  const placeholders={publicationId:p.id,editionId:p.editionId,title:p.title,authorId:p.authorUserId,
+    fieldId:'literature',releaseDigest:hash,
+    publisherApproval:{approvedBy:'publisher',approvedAt:'2026-11-20T00:00:00Z',digest:hash}};
+  for(const name of evaluateReleaseReadiness({...candidate,...placeholders}).blockers){
+    const pieces=name.split('.');assert.equal(pieces.length,2);
+    candidate[pieces[0]]??={};candidate[pieces[0]][pieces[1]]=true;
+  }
+  sql.prepare("UPDATE publishing_workflow_projects SET stage='scheduled',manuscript_digest=?,release_digest=?,release_candidate_json=?,author_approval_json=?,publisher_approval_json=?,scheduled_at=? WHERE id=?")
+    .run('b'.repeat(64),hash,JSON.stringify(candidate),JSON.stringify({digest:hash,approvedAt:'2026-11-19T00:00:00Z'}),
+      JSON.stringify(placeholders.publisherApproval),'2026-11-25T01:00:00.000Z',p.id);
+  const run=await prepareScheduledPublishing(env,new Date('2026-11-25T01:00:01.000Z'));
+  assert.deepEqual(run,{ok:true,prepared:1,blocked:0});
+  const row=sql.prepare("SELECT stage FROM publishing_workflow_projects WHERE id=?").get(p.id);
+  assert.equal(row.stage,'handoff_ready');
+  const outbox=sql.prepare("SELECT status,payload_json FROM publishing_workflow_handoff_outbox").get();
+  assert.equal(outbox.status,'pending');
+  assert.equal(JSON.parse(outbox.payload_json).deliveryState,'not_dispatched');
+  assert.deepEqual(await prepareScheduledPublishing(env,new Date('2026-11-25T01:20:00.000Z')),
+    {ok:true,prepared:0,blocked:0});
+});
+test('cron cannot bypass a missing author digest or reviewer compliance flags',async()=>{
+  const {sql,api}=memory();
+  sql.prepare("INSERT INTO publishing_workflow_projects (id,author_user_id,title,field_id,collection_id,edition_id,stage,release_digest,scheduled_at,created_at,updated_at) VALUES (?,?,?,?,'human',?,'scheduled',?,?,?,?)")
+    .run('00000000-0000-4000-8000-000000000001','writer','미승인','literature','v1','d'.repeat(64),
+      '2026-11-25T01:00:00.000Z','2026-10-29T00:00:00Z','2026-10-29T00:00:00Z');
+  const v=await prepareScheduledPublishing({PUBLISH_DB:api},new Date('2026-11-26T00:00:00Z'));
+  assert.deepEqual(v,{ok:true,prepared:0,blocked:1});
+  assert.equal(sql.prepare('SELECT COUNT(*) n FROM publishing_workflow_handoff_outbox').get().n,0);
 });
