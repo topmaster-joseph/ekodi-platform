@@ -1,5 +1,5 @@
 const PROVIDER_ID = 'domemae-official';
-const ENDPOINT = 'https://domeggook.com/ssl/api/';
+const ENDPOINT = 'https://www.domeggook.com/ssl/api/';
 const clean = (value, max = 500) => String(value ?? '').trim().slice(0, max);
 const flag = (value) => String(value || '').toLowerCase() === 'true';
 const nowIso = () => new Date().toISOString();
@@ -39,6 +39,8 @@ function configured(env) {
     apiKeyConfigured: Boolean(env.DOMEMAE_API_KEY),
     userIdConfigured: Boolean(env.DOMEMAE_USER_ID),
     sessionConfigured: Boolean(env.DOMEMAE_SESSION_ID),
+    passwordConfigured: Boolean(env.DOMEMAE_PASSWORD),
+    readOnlyProbeEnabled: flag(env.DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED),
     lookupEnabled: flag(env.DOMEMAE_LOOKUP_ENABLED),
     orderEnabled: false,
     autoOrderEnabled: false,
@@ -90,20 +92,40 @@ export async function domemaeConnectorReady(env) {
   } catch { return false; }
 }
 
+async function readOnlyAuthProbeStatus(env) {
+  const row = await env.DB.prepare("SELECT result_status,checked_at,metadata_json FROM supplier_connector_checks WHERE provider_id=? AND external_ref='probe:login' ORDER BY checked_at DESC LIMIT 1")
+    .bind(PROVIDER_ID).first().catch(() => null);
+  let meta = {};
+  try { meta = JSON.parse(row?.metadata_json || '{}'); } catch {}
+  const allowed = new Set(['MEMBER_ERROR', 'LOGIN_FAILED', 'ASSET_PROBE_FAILED']);
+  return {
+    enabled: flag(env.DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED),
+    result: row?.result_status === 'ok' ? 'ok' : row?.result_status === 'failed' ? 'failed' : 'not-checked',
+    checkedAt: /^\d{4}-\d{2}-\d{2}T/.test(String(row?.checked_at || '')) ? row.checked_at : null,
+    login: meta.login === 'ok' ? 'ok' : meta.login === 'failed' ? 'failed' : 'unknown',
+    asset: meta.asset === 'ok' ? 'ok' : meta.asset === 'failed' ? 'failed' : 'unknown',
+    loginIdMatchesConfigured: typeof meta.loginIdMatchesConfigured === 'boolean' ? meta.loginIdMatchesConfigured : null,
+    errorCode: allowed.has(meta.errorCode) ? meta.errorCode : null
+  };
+}
+
 async function readiness(env, actor) {
   const cfg = configured(env);
   const providerReady = await domemaeConnectorReady(env);
+  const readOnlyAuthProbe = await readOnlyAuthProbeStatus(env);
   const body = {
     providerId: PROVIDER_ID,
     providerReady,
+    readOnlyAuthProbe,
     credentials: {
       apiKeyConfigured: cfg.apiKeyConfigured,
       userIdConfigured: cfg.userIdConfigured,
-      sessionConfigured: cfg.sessionConfigured
+      sessionConfigured: cfg.sessionConfigured,
+      passwordConfigured: cfg.passwordConfigured
     },
     capabilities: {
       itemLookup: cfg.lookupEnabled && cfg.apiKeyConfigured,
-      orderPrepare: cfg.apiKeyConfigured && cfg.userIdConfigured && cfg.sessionConfigured,
+      orderPrepare: cfg.apiKeyConfigured && cfg.userIdConfigured && cfg.passwordConfigured,
       orderExecute: false,
       cancellationExecute: false,
       autoOrder: false,
@@ -111,6 +133,7 @@ async function readiness(env, actor) {
     },
     gates: {
       lookupEnabled: cfg.lookupEnabled,
+      readOnlyAuthProbeEnabled: cfg.readOnlyProbeEnabled,
       orderEnabled: false,
       autoOrderEnabled: false,
       customerPiiReleaseEnabled: false
@@ -118,7 +141,7 @@ async function readiness(env, actor) {
     nextRequired: [
       !cfg.apiKeyConfigured ? 'DOMEMAE_API_KEY secret' : null,
       !cfg.userIdConfigured ? 'DOMEMAE_USER_ID secret' : null,
-      !cfg.sessionConfigured ? 'DOMEMAE_SESSION_ID secret/login lifecycle' : null,
+      !cfg.passwordConfigured ? 'DOMEMAE_PASSWORD secret for on-demand login' : null,
       !cfg.lookupEnabled ? 'DOMEMAE_LOOKUP_ENABLED staging approval' : null,
       'private/order permission review, e-money test, cancellation/idempotency and PII Vault validation before order execution'
     ].filter(Boolean)
@@ -137,7 +160,7 @@ async function itemLookup(env, actor, body) {
   const params = new URLSearchParams({ ver: '4.6', mode: 'getItemView', aid: env.DOMEMAE_API_KEY, no: itemNo, om: 'json' });
   let response;
   try {
-    response = await fetch(`${ENDPOINT}?${params.toString()}`, { method: 'GET', headers: { accept: 'application/json' } });
+    response = await fetch(`${ENDPOINT}?${params.toString()}`, { method: 'GET', headers: { accept: 'application/json' }, redirect: 'error' });
   } catch {
     await recordCheck(env, 'item_lookup', itemNo, 'failed', { actor, reason: 'network' });
     return { status: 502, body: { error: '도매매 공식 API 연결에 실패했습니다.', code: 'DOMEMAE_NETWORK_ERROR' } };
@@ -186,11 +209,11 @@ export async function handleDomemaeRequest(request, env) {
     const quantity = Math.max(1, Math.min(99, Math.trunc(Number(body?.quantity) || 1)));
     if (!itemNo) return { status: 400, body: { error: '숫자 상품번호(itemNo)가 필요합니다.' } };
     const cfg = configured(env);
-    await recordCheck(env, 'order_readiness', itemNo, 'blocked', { actor: auth.actor, quantity, credentialsReady: cfg.apiKeyConfigured && cfg.userIdConfigured && cfg.sessionConfigured });
+    await recordCheck(env, 'order_readiness', itemNo, 'blocked', { actor: auth.actor, quantity, credentialsReady: cfg.apiKeyConfigured && cfg.userIdConfigured && cfg.passwordConfigured });
     return {
       status: 200,
       body: {
-        dryRun: { itemNo, quantity, credentialsReady: cfg.apiKeyConfigured && cfg.userIdConfigured && cfg.sessionConfigured },
+        dryRun: { itemNo, quantity, credentialsReady: cfg.apiKeyConfigured && cfg.userIdConfigured && cfg.passwordConfigured },
         executionAllowed: false,
         blockers: ['DOMEMAE_ORDER_EXECUTION_NOT_IMPLEMENTED', 'PII_VAULT_RELEASE_REQUIRED', 'E_MONEY_AND_CANCEL_FLOW_TEST_REQUIRED', 'SUPPLIER_API_V1_PILOT_LOCKED'],
         note: '공식 setOrder 호출은 아직 구현하지 않았습니다. 샌드박스가 없어 실거래 계정에서 별도 승인된 파일럿 검증 후에만 추가합니다.'

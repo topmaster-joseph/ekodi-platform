@@ -47,7 +47,7 @@ const checks = [
   ['assets/verification-ops.css', ['verify-layout', 'verify-queue', 'readiness-grid', 'commerce-cockpit', 'cockpit-summary', 'ops-exceptions']],
   ['assets/supplier-discovery.html', ['SUPPLIER DISCOVERY', '증거 기반 평가', 'PILOT PREFLIGHT', '/assets/supplier-discovery.js']],
   ['assets/supplier-discovery.js', ['/api/internal/supplier-discovery/context', '/assessment', '/evidence', '/outreach-draft', '/api/internal/supplier-preflight', '자동 발송하지 않습니다']],
-  ['assets/supplier-connectors.html', ['OFFICIAL SUPPLIER CONNECTORS', '도매매 · 도매꾹 공식 API', 'ORDER DRY-RUN', '/assets/supplier-connectors.js', '코드 없음']],
+  ['assets/supplier-connectors.html', ['OFFICIAL SUPPLIER CONNECTORS', '도매매 · 도매꾹 공식 API', 'ORDER DRY-RUN', '/assets/supplier-connectors.js', '자동발주 OFF']],
   ['assets/supplier-connectors.js', ['/api/internal/connectors/domemae/readiness', '/api/internal/connectors/domemae/item-lookup', '/api/internal/connectors/domemae/order-dry-run', '실제 주문 API는 호출하지 않았습니다']],
   ['assets/shared-product.html', ['PUBLIC PRODUCT', '/assets/public-product.js']],
   ['_redirects', ['/p/* /assets/shared-product 200', '/store/* /assets/shared-store 200', '/free-ops /assets/free-ops 200', '/sourcing /assets/sourcing-lab 200', '/fulfillment', '/supplier-ops /assets/supplier-ops 200', '/verification-ops /assets/verification-ops 200', '/supplier-discovery /assets/supplier-discovery 200', '/supplier-connectors /assets/supplier-connectors 200']],

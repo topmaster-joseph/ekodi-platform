@@ -40,3 +40,36 @@ test('credentials are referenced only as environment secrets and never returned'
   assert.match(source, /apiKeyConfigured/);
   assert.doesNotMatch(source, /apiKey:\s*env\.DOMEMAE_API_KEY/);
 });
+
+
+test('readiness exposes only safe allowlisted authentication diagnostic fields', async () => {
+  const { handleDomemaeRequest } = await import('./domemae.js');
+  const env = {
+    MALL_OPERATIONS_TOKEN: 'SECRET_MALL_OPS', DOMEMAE_API_KEY: 'SECRET_API', DOMEMAE_USER_ID: 'user123',
+    DOMEMAE_PASSWORD: 'SECRET_PASSWORD', DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED: 'true', DOMEMAE_LOOKUP_ENABLED: 'false',
+    DB: {
+      prepare(sql) {
+        let args = [];
+        return {
+          bind(...values) { args = values; return this; },
+          async first() {
+            if (sql.includes('FROM sourcing_providers')) return { provider_type: 'supplier_api', integration_mode: 'api', catalog_policy: 'reference_only', order_mode: 'api_order', auto_order_enabled: 0, customer_pii_allowed: 0 };
+            if (sql.includes('FROM supplier_connector_checks')) return { result_status: 'failed', checked_at: '2026-10-29T03:00:00Z',
+              metadata_json: JSON.stringify({ login: 'ok', asset: 'failed', errorCode: 'MEMBER_ERROR', rawResponse: 'SECRET_PASSWORD', extra: 'SECRET_API' }) };
+            return null;
+          },
+          async run() { return {}; }
+        };
+      }
+    }
+  };
+  const req = new Request('https://example.com/api/internal/connectors/domemae/readiness', { headers: { 'x-ekodi-mall-ops-token': 'SECRET_MALL_OPS' } });
+  const result = await handleDomemaeRequest(req, env);
+  assert.equal(result.status, 200);
+  assert.equal(result.body.readiness.readOnlyAuthProbe.errorCode, 'MEMBER_ERROR');
+  assert.equal(result.body.readiness.readOnlyAuthProbe.result, 'failed');
+  assert.equal(result.body.readiness.gates.autoOrderEnabled, false);
+  const responseText = JSON.stringify(result.body);
+  for (const secret of ['SECRET_API','SECRET_PASSWORD','SECRET_MALL_OPS']) assert.ok(!responseText.includes(secret));
+  assert.ok(!responseText.includes('rawResponse'));
+});
