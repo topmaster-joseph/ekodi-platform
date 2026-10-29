@@ -6,6 +6,10 @@ const CANONICAL = Object.freeze({
   'ekodimall.kr': 'https://ekodi.kr/ekodimall'
 });
 
+// The owner-supplied 2026-10-30 church verification URL must respond on
+// ekodichurch.kr itself, before the existing permanent path redirect.
+export const EKODICHURCH_NAVER_FILE_PATH = '/naver85321326d5553a0caa3a944158fc2969.html';
+
 const PATH_PREFIX_ALIASES = Object.freeze({
   'seonammedi.kr': '/seonammedi',
   'xn--3e0b8b58jw4co4mnpll3k.kr': '/seonammedi'
@@ -26,6 +30,11 @@ export default {
     // not via a redirect to another host (Naver Search Advisor HTML file method).
     if (request.method === 'GET' || request.method === 'HEAD') {
       const verificationFile = searchVerificationFileResponse(incoming.pathname, { head: request.method === 'HEAD' });
+      if (incoming.hostname === 'ekodichurch.kr' &&
+          incoming.pathname === EKODICHURCH_NAVER_FILE_PATH) {
+        if (!verificationFile) return new Response('Not found', { status: 404 });
+        return verificationFile;
+      }
       if (verificationFile) return verificationFile;
     }
     const prefix = PATH_PREFIX_ALIASES[incoming.hostname];
