@@ -670,6 +670,12 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   function workspaceSourceState(item){if(item.effectiveEnabled)return '운영';if(item.selected)return '선택됨 · 연결대기';if(item.recommendationReady)return '사용 가능';return '준비 중'}
   function workspaceSourceRow(item){const route=ae(item.routeKey||'');const network=item.networkName||item.affiliateMode||'direct';const detail=`${item.marketCountry||'-'} · ${network} · 제휴 ${item.affiliateStatus||'-'} · 추적 ${item.trackingStatus||'-'} · 상품 ${item.catalogStatus||'-'}`;return `<label class="service-row"><div><strong>${ae(item.merchantName||item.merchantKey)}</strong><p>${ae(detail)}</p>${item.notes?`<p>${ae(item.notes)}</p>`:''}${item.programUrl?`<a href="${ae(item.programUrl)}" target="_blank" rel="noopener">공식 연결/관리 ↗</a>`:''}</div><span><span class="tag ${item.effectiveEnabled?'live':item.selected?'warn':''}">${ae(workspaceSourceState(item))}</span> <input type="checkbox" name="route:${route}" ${item.selected?'checked':''}></span></label>`}
 
+  // The backend PUT accepts a partial route list and audits only submitted keys.
+  // Never rewrite other merchants from a stale workspace GET snapshot.
+  const mallSourcingSelectionPatch=(visibleRoutes,formData)=>visibleRoutes
+    .filter(item=>Boolean(item.routeKey))
+    .map(item=>({routeKey:item.routeKey,enabled:formData.has('route:'+item.routeKey)}));
+
   // Every sales/affiliate route uses a tenant-scoped selector; Amazon keeps its
   // existing credential and paid-feature gates inside the same selection view.
   const mallSourcingIsAmazon=item=>/amazon|아마존/i.test([item.merchantName,item.merchantKey,item.routeKey].join(' '));
@@ -815,8 +821,8 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       const form=$('affiliateWorkspaceSourcesForm');
       if(form)form.onsubmit=async event=>{
         event.preventDefault();
-        const fd=new FormData(form),visible=new Set(chosen.map(item=>item.routeKey));
-        const selections=sources.map(item=>({routeKey:item.routeKey,enabled:visible.has(item.routeKey)?fd.has('route:'+item.routeKey):Boolean(item.selected)}));
+        const selections=mallSourcingSelectionPatch(chosen,new FormData(form));
+        if(!selections.length){state('저장할 판매처가 없습니다.');return;}
         const saveButton=form.querySelector('button[type="submit"]');
         if(saveButton)saveButton.disabled=true;
         state('판매처 설정 저장 중');
