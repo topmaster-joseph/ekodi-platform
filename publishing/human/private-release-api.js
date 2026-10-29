@@ -59,8 +59,9 @@ export async function handlePrivateReleaseAdmin(request,env){
   if(parts.length>2)return fail(404,'not-found');
 
   // All mutations require same-origin AND a *server-verified* anti-CSRF token.
+  const canonicalOrigin='https://ekodi.kr'; // apex origin is preserved across the publishing service binding
   if(write) {
-    if(request.headers.get('origin')!==url.origin ||
+    if(request.headers.get('origin')!==canonicalOrigin ||
       !request.headers.get('x-ekodi-csrf') ||
       request.headers.get('content-type')?.split(';')[0].trim()!=='application/json')
       return fail(403,'origin-or-csrf-rejected');
@@ -71,7 +72,7 @@ export async function handlePrivateReleaseAdmin(request,env){
   let identity;
   try {
     identity=await env.PUBLISHING_RELEASE_AUTH.verifyRequest(request,{
-      capability,requiresCsrf:write,origin:url.origin,
+      capability,requiresCsrf:write,origin:canonicalOrigin,
     });
   } catch {return fail(503,'authentication-unavailable');}
   if(identity?.authorized!==true || typeof identity.subjectId!=='string' ||
@@ -85,7 +86,7 @@ export async function handlePrivateReleaseAdmin(request,env){
         return fail(503,'csrf-service-not-configured');
       const token=await env.PUBLISHING_RELEASE_AUTH.issueCsrf({
         subjectId:identity.subjectId,capability:'publishing.private-release.schedule',
-        origin:url.origin,
+        origin:canonicalOrigin,
       });
       if(typeof token?.value!=='string' || token.value.length<32 || token.value.length>512 ||
         token.subjectId!==identity.subjectId)return fail(503,'csrf-unavailable');
