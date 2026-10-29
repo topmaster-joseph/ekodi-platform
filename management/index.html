@@ -43,7 +43,16 @@
             <option value="project">프로젝트</option>
             <option value="franchise">프랜차이즈</option>
           </select>
-          <p class="note">실제 My EKODI 공간 목록과 권한 연결은 중앙 Workspace 계약을 통해 이어집니다.</p>
+          <p class="note">위 유형은 새 공간 구상을 위한 임시 선택입니다. 실제 운영 공간의 권한과는 별개입니다.</p>
+          <div class="verified-spaces">
+            <div class="verified-spaces-head">
+              <h3>내 운영 공간</h3>
+              <button id="refreshSpaces" type="button" class="secondary">새로고침</button>
+            </div>
+            <p id="spacesStatus" class="note" role="status" aria-live="polite">권한을 확인하고 있습니다.</p>
+            <div id="verifiedSpacesList" class="verified-spaces-list" aria-live="polite"></div>
+            <p class="note">중앙 EKODI의 실제 소속·역할 확인 결과만 표시합니다. 선택만으로 권한이 변경되지 않습니다.</p>
+          </div>
         </article>
         <article class="panel">
           <h2>2. 필요한 AI 선택</h2>
