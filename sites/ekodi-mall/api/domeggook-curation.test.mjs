@@ -18,7 +18,7 @@ function setup(extra = {}) {
   for (const f of readdirSync(dir).filter((n) => n.endsWith('.sql')).sort()) db.exec(readFileSync(new URL(f, dir), 'utf8'));
   db.prepare("INSERT INTO seller_profiles (user_id,email,display_name,seller_type,verification_status,direct_sale_status,created_at,updated_at) VALUES ('u-1','joseph@ekodi.kr','에코디몰','individual','google_verified','verified','t','t')").run();
   db.prepare("INSERT INTO supplier_connector_checks (id,provider_id,check_type,external_ref,result_status,metadata_json,checked_at) VALUES ('chk_ok','domemae-official','order_readiness','probe:login','ok','{}',?)").run(new Date().toISOString());
-  const env = { DOMEGGOOK_AUTO_ORDER_ENABLED: 'true', DOMEMAE_USER_ID: 'u', DOMEMAE_PASSWORD: 'p', DB: d1(db), MALL_BASE_URL: 'https://ekodi.kr/ekodimall', MALL_EKODIAN_EMAILS: 'joseph@ekodi.kr', DOMEMAE_API_KEY: 'K',
+  const env = { DOMEGGOOK_AUTO_ORDER_ENABLED: 'true', DOMEMAE_USER_ID: 'u', DOMEMAE_APPROVED_MEMBER_ID: 'u', DOMEMAE_PASSWORD: 'p', DB: d1(db), MALL_BASE_URL: 'https://ekodi.kr/ekodimall', MALL_EKODIAN_EMAILS: 'joseph@ekodi.kr', DOMEMAE_API_KEY: 'K',
     DOMEGGOOK_CURATION_ENABLED: 'true', DOMEGGOOK_CURATION_TARGET: '3', MEDIA: { async put() {} }, ...extra };
   return { db, env };
 }
