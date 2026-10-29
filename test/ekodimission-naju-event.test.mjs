@@ -10,7 +10,7 @@ const env={ASSETS:{fetch:async request=>{
   catch{return new Response('Not Found',{status:404})}
 }}};
 
-test('10 October Naju festival page and homepage links',async()=>{
+test('10 October Naju festival remains archived while recurring Saturday meeting owns homepage',async()=>{
   const route='/ekodimission/activities/261010-naju-yeongsan';
   const a=await spaceWorker.fetch(new Request('https://ekodi.kr'+route),env);
   const b=await spaceWorker.fetch(new Request('https://ekodi.kr'+route+'/'),env);
@@ -30,7 +30,9 @@ test('10 October Naju festival page and homepage links',async()=>{
     readFile(new URL('ekodimission.page',base),'utf8'),
     readFile(new URL('ekodimission-activities.page',base),'utf8')
   ]);
-  assert.ok(home.includes('href="'+route+'"'));
+  assert.ok(!home.includes('href="'+route+'"'),'Completed one-off event must not appear as upcoming on homepage');
+  assert.ok(home.includes('data-mission-saturday'),'Recurring Saturday event must be featured');
+  assert.ok(home.includes('href="/ekodimission/activities"'),'History remains reachable');
   assert.ok(list.includes('href="'+route+'"'));
   assert.ok(list.indexOf('2026-10-10')<list.indexOf('2026-10-03'));
 });

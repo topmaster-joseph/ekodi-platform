@@ -19,3 +19,19 @@
 @media(max-width:900px){.mission-site-header{align-items:flex-start}.mission-site-header nav{flex-wrap:wrap}}
 @media(max-width:620px){.mission-site-header{padding:.8rem 1rem;gap:.75rem}.mission-site-header nav{gap:.58rem}.mission-site-header nav a{font-size:.76rem}.mission-language select{min-width:78px;max-width:108px;font-size:.74rem}.mission-live-state{width:calc(100% - 2rem)}}
 @media(max-width:520px){.mission-site-header{flex-direction:column;align-items:stretch}.mission-site-header nav{justify-content:flex-start}.mission-site-header .mission-brand{align-self:flex-start}}
+/* One centered content grid for site chrome, hero, activity content and footer. */
+:root{--mission-max:var(--max,1120px)}
+.mission-site-header,main,.site-footer{width:100%;max-width:var(--mission-max);margin-left:auto;margin-right:auto}
+.mission-site-header,.site-footer{padding-left:1.25rem;padding-right:1.25rem}
+.mission-site-header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.6rem 1.1rem;border-bottom:1px solid var(--mission-line)}
+.mission-site-header nav{flex:1 1 auto;flex-wrap:wrap;justify-content:flex-end;row-gap:.32rem}
+.mission-site-header nav a{font-size:.77rem}
+.mission-auth-actions{display:flex;align-items:center;gap:.45rem;white-space:nowrap;margin-left:auto}
+.mission-auth-state{font-size:.73rem;color:var(--mission-muted);font-weight:750}
+.mission-auth-button{font:750 .76rem/1.2 system-ui,-apple-system,"Noto Sans KR",sans-serif;color:var(--mission-ink);border:1px solid var(--mission-line);border-radius:999px;background:var(--mission-card);padding:.5rem .75rem;min-height:34px;text-decoration:none;cursor:pointer}
+.mission-auth-button:hover,.mission-auth-button:focus-visible{border-color:var(--mission-accent);outline-offset:2px}
+.mission-auth-button[hidden]{display:none!important}
+.site-footer{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;font-size:.84rem;border-top:1px solid var(--mission-line);line-height:1.55}
+.site-footer strong{color:var(--mission-ink)}.site-footer div p{margin:.25rem 0 0;color:var(--mission-muted)}.site-footer .footnote{margin:0;font-size:.75rem;text-align:right;color:var(--mission-muted)}
+@media(max-width:850px){.mission-site-header nav{order:3;flex:1 0 100%;justify-content:flex-start;overflow-x:auto;scrollbar-width:thin}.mission-auth-actions{order:2}.mission-site-header .mission-brand{order:1}.mission-site-header{align-items:center}.site-footer{flex-direction:column}.site-footer .footnote{text-align:left}}
+@media(max-width:520px){.mission-site-header{flex-direction:row;align-items:center;padding:.8rem 1rem}.mission-site-header nav{order:3;width:100%;flex:1 0 100%}.mission-site-header .mission-brand{align-self:auto}.mission-auth-state{font-size:.68rem}.mission-auth-button{font-size:.7rem}.site-footer{padding-left:1rem;padding-right:1rem}}
