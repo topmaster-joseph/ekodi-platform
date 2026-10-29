@@ -165,3 +165,14 @@ body.mission-pay-open{overflow:hidden}
 .mission-saturday-status[data-state=error]{color:#a22b2b}
 .mission-saturday-status[data-state=success]{color:var(--accent)}
 @media(max-width:760px){.mission-saturday-card{grid-template-columns:1fr}.mission-saturday-date{min-height:auto;flex-direction:row;align-items:center;justify-content:space-between}.mission-saturday-form-fields{grid-template-columns:1fr}.mission-home-photo{min-height:220px}.hero-split{grid-template-columns:1fr!important}}
+
+/* Historical Saturday fellowship: compact, searchable schedules alongside one-off activities. */
+.mission-saturday-archive{padding:1rem 0 2.3rem;border-bottom:1px solid var(--line);margin-bottom:2.3rem}
+.mission-saturday-archive-lead{color:var(--muted);font-size:.9rem;line-height:1.75;max-width:820px;margin:.8rem 0 1rem}
+.mission-saturday-archive-filters{margin-bottom:1rem}
+.mission-saturday-history-row{grid-template-columns:84px minmax(0,1fr);padding:.8rem 0;gap:1rem}
+.mission-saturday-history-row h3{font-size:1.03rem}
+.mission-saturday-history-row .mission-status{font-size:.7rem}
+.mission-saturday-history-status{color:var(--muted);font-size:.78rem;margin:1rem 0 .4rem}
+[data-saturday-history-more][hidden]{display:none!important}
+@media(max-width:700px){.mission-saturday-history-row{grid-template-columns:64px minmax(0,1fr);gap:.75rem}.mission-saturday-archive .mission-activity-index-head{align-items:flex-start;flex-direction:column}.mission-saturday-archive-lead{font-size:.84rem}}

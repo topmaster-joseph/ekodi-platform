@@ -49,6 +49,11 @@
   function render(data){
     if(!data?.ok||!data.meeting?.date||!Array.isArray(data.replies))throw new Error('모임 안내를 확인하지 못했습니다.');
     meetingDate=data.meeting.date;
+    const heading=document.getElementById('mission-next-event');
+    if(heading){
+      const day=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Seoul',weekday:'short'}).format(new Date());
+      heading.textContent=day==='Sun'?'다음 토요모임':'이번 주 토요모임';
+    }
     const day=new Date(meetingDate+'T00:00:00Z');
     if(!Number.isNaN(day.getTime()))dateText.textContent=day.toLocaleDateString('ko-KR',{timeZone:'UTC',month:'long',day:'numeric',weekday:'short'});
     const attendees=data.replies.filter(item=>item.attendance==='join').length;
@@ -119,5 +124,25 @@
   });
   window.addEventListener('ekodi:mission-auth-changed',()=>{void load()});
   window.addEventListener('ekodi:auth-logout',()=>{editing=false;if(form){form.reset()}void load()});
+  // Current Saturday remains visible through Saturday 23:59:59 in Seoul.
+  // On Sunday the RSVP window rolls to the following Saturday.
+  const kstDay=()=>{
+    const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+    const part=kind=>parts.find(item=>item.type===kind)?.value||'';
+    return [part('year'),part('month'),part('day')].join('-');
+  };
+  let observedDay=kstDay();
+  const refreshAfterDayChange=()=>{
+    const nowDay=kstDay();
+    if(nowDay===observedDay)return;
+    observedDay=nowDay;editing=false;
+    form?.reset();
+    if(count)count.textContent='다음 모임 확인 중';
+    void load();
+  };
+  const rolloverTimer=setInterval(refreshAfterDayChange,60000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshAfterDayChange()});
+  window.addEventListener('focus',refreshAfterDayChange);
+  window.addEventListener('pagehide',()=>clearInterval(rolloverTimer),{once:true});
   void load();
 })();
