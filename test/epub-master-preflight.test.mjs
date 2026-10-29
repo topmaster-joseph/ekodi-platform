@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, writeFile, rm, open } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
@@ -95,4 +95,17 @@ test('missing source or missing expected identity block preflight',async()=>{
   assert.equal(r.technicalStatus,'blocked');
   const noidentity=await check(makeZip(entries()),{});
   assert.ok(noidentity.blockers.includes('expected_identity_missing'));
+});
+
+test('oversized sparse EPUB is rejected before allocating its content',async()=>{
+  const root=await mkdtemp(path.join(tmpdir(),'epubqa-size-'));
+  try{
+    const file=path.join(root,'oversized.epub');
+    const handle=await open(file,'w');
+    try{await handle.truncate(50*1024*1024+1);}finally{await handle.close();}
+    const result=await inspectEpubMaster({file,expected:{bookId:'BOOK-EKODI-000001',edition:'v1.0'}});
+    assert.equal(result.technicalStatus,'blocked');
+    assert.ok(result.blockers.includes('file_size_invalid'));
+    assert.equal(result.releaseReady,false);
+  }finally{await rm(root,{recursive:true,force:true});}
 });
