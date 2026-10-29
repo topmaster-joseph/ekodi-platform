@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS books_audiobook_external_claims (
   verification_method TEXT,
   revoked_by TEXT,
   revocation_reason TEXT,
+  rejection_reason TEXT,
   reviewed_at TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
