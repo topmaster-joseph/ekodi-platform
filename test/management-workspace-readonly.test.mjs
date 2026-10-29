@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../management-worker.js';
 
-const base='https://management.ekodi.kr/api/spaces'; // The canonical edge router strips /management before dispatch to this Worker.
+const base='https://ekodi.kr/api/spaces'; // Worker-unit test only: the public /management prefix is stripped by the canonical router.
 const env={INTEGRATIONS_ENABLED:'true',SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'test-publishable'};
 const request=(headers={},method='GET')=>new Request(base,{method,headers});
 
