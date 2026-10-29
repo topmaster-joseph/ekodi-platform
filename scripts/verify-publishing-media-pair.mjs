@@ -119,6 +119,20 @@ export async function inspectEditionMediaPair({
     e.validators.ace.violations!==0)
     blockers.push('epub.formal_qa_failed');
   if(blockers.length)return blocked(bookId,edition,blockers,compactEpub(e),compactAudio(a));
+  // The external EPUB validators can run for minutes: re-hash MP3 bytes before
+  // reporting a stable pair, so audio cannot silently change mid-validation.
+  let recheck=null;
+  try{recheck=await inspectAudio({catalog,submission:audioSubmission,root:audioRoot});}
+  catch{blockers.push('audio.recheck_exception');}
+  const recheckTracks=Array.isArray(recheck?.chapters)?recheck.chapters:[];
+  if(!recheck||recheck.technicalStatus!=='passed'||recheck.blockers?.length||
+    recheck.bookId!==bookId||recheck.edition!==edition||
+    recheckTracks.length!==pins.length||pins.some((pin,i)=>{
+      const actual=recheckTracks[i];
+      return !actual||actual.number!==pin.number||actual.title!==pin.title||
+        actual.sha256!==pin.sha256||actual.format!=='mp3';
+    }))blockers.push('audio.changed_during_epub_validation');
+  if(blockers.length)return blocked(bookId,edition,blockers,compactEpub(e),compactAudio(recheck||a));
   // Deterministic version-bound digest, without raw audio/manuscript content.
   const fingerprint=createHash('sha256').update(JSON.stringify({
     schema:'ekodi-edition-audio-fingerprint-v1',bookId,edition,
