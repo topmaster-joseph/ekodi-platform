@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DatabaseSync } from 'node:sqlite';
-import { readFileSync } from 'node:fs';
+import { makePrivateReleaseTestDb } from './private-release-sqlite-test-support.mjs';
 import { registerCompletedEdition, scheduleApprovedEdition, canExposePublicly } from '../publishing/human/scheduled-release.js';
-import { storePrivateEdition, savePrivateTransition, readPrivateEdition, listDuePrivateEditions } from '../publishing/human/private-release-store.js';
+import { readPrivateEdition, listDuePrivateEditions } from '../publishing/human/private-release-store.js';
+import { commitPrivateRegistration, commitPrivateTransition } from '../publishing/human/private-release-atomic-ledger.js';
 import { runPrivateScheduleTick, getPublicVisibility } from '../publishing/human/scheduled-release-runner.js';
 
 const DIGEST='sha256:'+'c'.repeat(64);
@@ -34,26 +34,14 @@ const evidence=()=>({
   trustedBackend:true,authorSignatureValid:true,publisherSignatureValid:true,
   assetDigestValid:true,rightsEvidenceValid:true,digest:DIGEST,
 });
-function setup() {
-  const sqlite=new DatabaseSync(':memory:');
-  sqlite.exec(readFileSync(new URL('../publishing/human/sql/001_private_scheduled_editions.sql',import.meta.url),'utf8'));
-  return {
-    close:()=>sqlite.close(),
-    prepare(sql){const st=sqlite.prepare(sql);return {
-      bind(...values){return {
-        async run(){const result=st.run(...values);return {meta:{changes:Number(result.changes)}};},
-        async first(){return st.get(...values)||null;},
-        async all(){return {results:st.all(...values)};},
-      }},
-    }},
-  };
-}
+const setup=makePrivateReleaseTestDb;
+
 async function readyScheduled(db) {
   const c=candidate(),r=registerCompletedEdition(c,{trustedBackend:true,privateFileVerified:true,
     editorialCompleteVerified:true,artifactDigest:DIGEST},NOW);
-  await storePrivateEdition(db,r,NOW);
+  await commitPrivateRegistration(db,r,'publisher-test',NOW);
   const s=scheduleApprovedEdition(r,c,DATE,evidence(),NOW);
-  await savePrivateTransition(db,r,s,NOW);
+  await commitPrivateTransition(db,r,s,'publisher-test',NOW);
   return s;
 }
 const ack=(channel,rec,stage)=>({trustedBackend:true,channel,stage,
@@ -66,8 +54,8 @@ test('SQL constraint forbids exposure of private or unapproved edition',async()=
     assert.equal((await listDuePrivateEditions(db,AFTER)).length,1);
     assert.equal(await getPublicVisibility(db,r.editionId,'books',AFTER),false);
     assert.equal(await getPublicVisibility(db,r.editionId,'ekodimall',AFTER),false);
-    await assert.rejects(storePrivateEdition(db,{...r,state:'private_registered',revision:1,
-      checkoutEnabled:true,visibility:'public'},NOW),/PRIVATE_RELEASE_STORE:visibility-fail-closed/);
+    await assert.rejects(commitPrivateRegistration(db,{...r,state:'private_registered',revision:1,
+      checkoutEnabled:true,visibility:'public'},'publisher-test',NOW),/PUBLISHING_ATOMIC:private-registration-only/);
     const duplicate=await readPrivateEdition(db,r.editionId);
     assert.equal(duplicate.state,'scheduled');
   }finally{db.close();}
@@ -128,9 +116,9 @@ test('CAS prevents two writers from overwriting cancellation or changed state',a
     const r=await readyScheduled(db);
     const next={...r,state:'blocked',revision:r.revision+1,visibility:'private',
       checkoutEnabled:false,publishAt:null};
-    await savePrivateTransition(db,r,next,AFTER);
-    await assert.rejects(savePrivateTransition(db,r,{...r,state:'preparing',
-      revision:r.revision+1},AFTER),/stale-revision/);
+    await commitPrivateTransition(db,r,next,'publisher-test',AFTER);
+    await assert.rejects(commitPrivateTransition(db,r,{...r,state:'preparing',
+      revision:r.revision+1},'publisher-test',AFTER),/batch-missing-mutation|stale-or-audit-outbox/);
     assert.equal((await readPrivateEdition(db,r.editionId)).state,'blocked');
     assert.equal((await listDuePrivateEditions(db,AFTER)).length,0);
   }finally{db.close();}
