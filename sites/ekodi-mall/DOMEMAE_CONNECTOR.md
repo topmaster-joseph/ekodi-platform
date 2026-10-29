@@ -100,3 +100,13 @@
 - 로그인 응답의 계정 ID가 설정 ID와 다르면 `loginIdMatchesConfigured=false`만 기록하며, SNS 계정 차이일 수 있으므로 자동 발주 승인 근거로 해석하지 않는다.
 - API 키/암호/세션/계정 ID/잔액 금액/원문 Response/구매자 주소는 DB·로그·메일에 저장하지 않는다. 공급사 추가 확인이 필요하면 보안 제출 경로를 별도로 확정한다.
 - **이 점검 성공은 단지 로그인과 잔액 조회 성공을 의미한다. 구매용 API 승인/거래권한/공급계약/개인정보 이전/실주문 파일럿 승인이 아니다.**
+
+
+## 2026-10-29 18:14 KST 도매꾹 Private API 승인 계정 확인 및 강제 보호
+
+- 공급사가 **Private API는 회원별 개별 승인**이며 특정 도매꾹 계정이 승인된 사실을 메일로 확인했다. 계정 ID는 GitHub/프런트/D1 등에 기록하지 않는다.
+- 신규 Cloudflare Worker Secret `DOMEMAE_APPROVED_MEMBER_ID`는 공급사 회신에서 확인한 승인 회원 ID를 운영자가 공식 Cloudflare 인증 경로로 설정한다. **이 Secret이 없거나 `DOMEMAE_USER_ID`와 불일치하면**, 유상 자동발주와 읽기 전용 로그인 호출 모두 차단한다.
+- `setLogin` 응답의 회원 ID 역시 승인 회원 Secret과 일치해야만 유효하다. 불일치 시 `ACCOUNT_BINDING_MISMATCH`만 남기고 `getMyAsset`, `setOrder` 등은 호출하지 않는다.
+- SNS 가입 회원은 API 로그인 지원 여부를 공급사에 재확인한다. **별도의 샌드박스는 없다.** Private API 키만으로 자동발주 권한을 추정하거나 계정 ID를 임의로 바꾸지 않는다.
+- 운영 전제는 계속 `DOMEGGOOK_AUTO_ORDER_ENABLED=false` 및 `BUYER_PII_RELEASE_ENABLED=false`다. Secret을 설정하더라도 **유상 자동발주가 자동 활성화되지는 않는다.**
+- 관리 화면에는 승인 회원 ID나 원문 비밀값 대신 `approvedMemberConfigured`/ `approvedMemberBindingReady` 진리값만 보여준다. 비결제 인증 및 이머니 조회의 성공 여부는 관리자 보호 화면에서 확인한다.
