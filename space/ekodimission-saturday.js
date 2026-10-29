@@ -49,6 +49,11 @@
   function render(data){
     if(!data?.ok||!data.meeting?.date||!Array.isArray(data.replies))throw new Error('모임 안내를 확인하지 못했습니다.');
     meetingDate=data.meeting.date;
+    const heading=document.getElementById('mission-next-event');
+    if(heading){
+      const day=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Seoul',weekday:'short'}).format(new Date());
+      heading.textContent=day==='Sun'?'다음 토요모임':'이번 주 토요모임';
+    }
     const day=new Date(meetingDate+'T00:00:00Z');
     if(!Number.isNaN(day.getTime()))dateText.textContent=day.toLocaleDateString('ko-KR',{timeZone:'UTC',month:'long',day:'numeric',weekday:'short'});
     const attendees=data.replies.filter(item=>item.attendance==='join').length;
