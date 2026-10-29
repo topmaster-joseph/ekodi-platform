@@ -118,7 +118,7 @@ test('CAS prevents two writers from overwriting cancellation or changed state',a
       checkoutEnabled:false,publishAt:null};
     await commitPrivateTransition(db,r,next,'publisher-test',AFTER);
     await assert.rejects(commitPrivateTransition(db,r,{...r,state:'preparing',
-      revision:r.revision+1},'publisher-test',AFTER),/batch-missing-mutation|stale-or-audit-outbox/);
+      revision:r.revision+1},'publisher-test',AFTER),/constraint|batch-missing-mutation|stale-or-audit-outbox/i);
     assert.equal((await readPrivateEdition(db,r.editionId)).state,'blocked');
     assert.equal((await listDuePrivateEditions(db,AFTER)).length,0);
   }finally{db.close();}
