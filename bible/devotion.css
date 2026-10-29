@@ -130,3 +130,12 @@ body:has([data-mission-devotion]) .mission-site-header{max-width:840px;padding-i
 .ekodi-devotion .dv-scripture-section{padding:16px 12px;border-radius:14px}
 .ekodi-devotion .dv-panel{padding-left:12px;padding-right:12px}
 }
+
+/* Mobile: keep the daily devotion heading immediately below the site navigation. */
+@media (max-width:700px){
+  main[data-mission-devotion].subpage{min-height:0!important;padding-top:8px!important;margin-top:0!important}
+  main[data-mission-devotion] .dv-page-title{padding:8px 12px 4px!important;margin-top:0!important}
+  main[data-mission-devotion] .dv-page-title h1{margin:0 0 3px}
+  main[data-mission-devotion] .dv-page-title p{margin:0}
+  main[data-mission-devotion] .ekodi-devotion{margin-top:0!important}
+}
