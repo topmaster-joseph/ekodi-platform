@@ -1031,8 +1031,21 @@ for (const [id, group] of menus) {
   if (recoveredShell) selectedWorkArea = null;
 }
 
+// The real menu registry is authoritative, but two separately exercised,
+// read-only acceptance contracts also append results: native Control command
+// roundtrip and the Search Visibility filter/Manage interaction. Fail closed
+// on missing, duplicate or unexpected proof instead of assuming menuCount+1.
+const supplementalVerifications = ['command-home'];
+if (menuIds.includes('search-visibility')) supplementalVerifications.push('search-visibility-interactions');
+const requiredVerificationIds = new Set([...menuIds, ...supplementalVerifications]);
+const actualVerificationIds = results.map(result => result.id);
 const activeCount = results.filter(result => result.ok).length;
-const expectedCount = menus.length + 1;
+const expectedCount = requiredVerificationIds.size;
+const duplicates = actualVerificationIds.filter((id,idx) => actualVerificationIds.indexOf(id)!==idx);
+const missing = [...requiredVerificationIds].filter(id => !actualVerificationIds.includes(id));
+const unexpected = actualVerificationIds.filter(id => !requiredVerificationIds.has(id));
+if(duplicates.length||missing.length||unexpected.length)
+  throw new Error('Admin E2E proof inventory mismatch: '+JSON.stringify({duplicates,missing,unexpected}));
 console.log(`ADMIN_PRODUCTION_UI_E2E=${activeCount}/${expectedCount}`);
 console.log(`ADMIN_WORK_AREAS=${workAreas.join(',')}`);
 console.log(`ADMIN_FINGERPRINT=${assetVersion}`);
