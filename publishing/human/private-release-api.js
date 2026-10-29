@@ -2,8 +2,8 @@
 // Off by default. Only real trusted Service Binding RPC verification, not any
 // body-supplied flag/approval, can authorize file registration or scheduling.
 import { registerCompletedEdition, scheduleApprovedEdition, cancelUnreleasedEdition } from './scheduled-release.js';
-import { readPrivateEdition, listPrivateReleaseRecords,
-  savePrivateTransition, storePrivateEdition } from './private-release-store.js';
+import { readPrivateEdition, listPrivateReleaseRecords } from './private-release-store.js';
+import { commitPrivateRegistration, commitPrivateTransition } from './private-release-atomic-ledger.js';
 
 const PREFIX='/api/private-releases';
 const ID=/^[A-Za-z0-9][A-Za-z0-9._-]{2,159}$/;
@@ -18,7 +18,7 @@ const enabled=env=>env?.PUBLISHING_PRIVATE_RELEASE_ENABLED==='true' &&
   typeof env?.PUBLISHING_RELEASE_VERIFIER?.loadCandidate==='function' &&
   typeof env?.PUBLISHING_RELEASE_VERIFIER?.verifyCompletedFile==='function' &&
   typeof env?.PUBLISHING_RELEASE_VERIFIER?.verifyApprovalEvidence==='function' &&
-  typeof env?.PUBLISHING_RELEASE_AUDIT?.record==='function';
+  typeof env?.PUBLISHING_RELEASE_DB?.batch==='function';
 const safeId=id=>typeof id==='string' && ID.test(id);
 const body=async request=>{
   const declared=Number(request.headers.get('content-length')||0);
@@ -36,12 +36,6 @@ const summary=v=>({
 });
 const now=()=>new Date().toISOString();
 
-async function audit(env,action,subject,editionId,revision){
-  // The backend audit adapter is mandatory, and must persist a journal entry
-  // for the relevant revision. Missing audit receipts block confirmation.
-  const receipt=await env.PUBLISHING_RELEASE_AUDIT.record({action,subject,editionId,revision});
-  if(receipt?.persisted!==true)throw new Error('audit-not-persisted');
-}
 
 /**
  * Requests arrive ONLY via the publishing Worker router, never through public
@@ -111,8 +105,7 @@ export async function handlePrivateReleaseAdmin(request,env){
         return fail(422,'verified-edition-not-found');
       const proof=await env.PUBLISHING_RELEASE_VERIFIER.verifyCompletedFile(candidate);
       const record=registerCompletedEdition(candidate,proof,now());
-      await storePrivateEdition(db,record,now());
-      await audit(env,'private-register',identity.subjectId,record.editionId,record.revision);
+      await commitPrivateRegistration(db,record,identity.subjectId,now());
       return json({ok:true,record:summary(record)},201);
     }
     if(parts.length===2 && safeId(parts[0]) && ['schedule','cancel'].includes(parts[1])){
@@ -133,8 +126,7 @@ export async function handlePrivateReleaseAdmin(request,env){
           Object.keys(input).some(k=>!['revision','reason'].includes(k)))return fail(400,'invalid-cancellation');
         next=cancelUnreleasedEdition(current,input.reason);
       }
-      await savePrivateTransition(db,current,next,now());
-      await audit(env,parts[1],identity.subjectId,next.editionId,next.revision);
+      await commitPrivateTransition(db,current,next,identity.subjectId,now());
       return json({ok:true,record:summary(next)});
     }
     return fail(404,'not-found');
