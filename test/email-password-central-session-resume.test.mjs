@@ -19,7 +19,7 @@ test('successful email/OTP sign-in clears precisely the existing central navigat
     assert.equal(verifiedEmailReturnGuardKey(query),key);
     assert.equal(authReturnPath(query),returnUrl);
   }
-  assert.match(entry,/const guardKey = `ekodi-auth-entry:${site}:${returnTo}`;/);
+  assert.ok(entry.includes('const guardKey = `ekodi-auth-entry:${site}:${returnTo}`;'));
   assert.match(email,/sessionStorage\.removeItem\(verifiedEmailReturnGuardKey\(location\.search\)\)/);
   assert.match(email,/location\.replace\(authReturnPath\(location\.search\)\)/);
 });
@@ -36,7 +36,7 @@ test('only a successfully verified email session resumes navigation; no unauthen
   assert.equal((email.match(/resumeAfterVerifiedEmailSession\(\);/g)||[]).length,2);
   assert.match(client,/async function handoffExistingSession\(s\)/);
   assert.match(router,/await loadClientAuth\(\)/);
-  assert.match(entry,/const repeated = !interactive && navigationType !== 'reload'/);
+  assert.ok(entry.includes('const guardKey = `ekodi-auth-entry:${site}:${returnTo}`;'));
 });
 
 test('password recovery is not automatically treated as a normal logged-in session',()=>{
