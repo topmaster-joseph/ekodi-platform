@@ -137,6 +137,7 @@ test('forged or stale signature / wrong source edition / unapproved stage all bl
     p=>{p.project.authorApproval.approvedBy='chief-admin';},
     p=>{p.project.publisherApproval.digest='b'.repeat(64);},
     p=>{p.project.editionId='other:v1';},
+    p=>{p.project.id='00000000-0000-4000-8000-000000000043';},
     p=>{p.project.releaseDigest='sha256:'+hex;},
   ]){
     const snap=snapshot();change(snap);
