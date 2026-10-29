@@ -40,6 +40,8 @@ DOMEGGOOK_MARGIN_PCT = "25"
 MALL_CURATION_SELLER_EMAIL = "joseph@ekodi.kr"
 # EKODI-MALL-DOMEGGOOK-AUTOORDER-001: provider paid API must remain OFF until account binding, contractual/PII permissions, and supervised pilot are verified.
 DOMEGGOOK_AUTO_ORDER_ENABLED = "false"
+# Login/getMyAsset only. Independent from paid order permission. Rate limited to once per 6 hours.
+DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED = "true"
 
 # DOMEMAE_API_KEY, DOMEMAE_USER_ID, DOMEMAE_PASSWORD (auto-order login) are Worker secrets only.
 # Do not put provider credentials in this file, browser assets or D1.
