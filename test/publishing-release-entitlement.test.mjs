@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
-import {activePaidAuthorPlan,verifyCommercialRelease} from '../publishing/release-entitlement.js';
+import {activePaidAuthorPlan,verifyCommercialRelease,verifyPublishingSubmission} from '../publishing/release-entitlement.js';
 const UUID='00000000-0000-4000-8000-000000000101';
 const DIGEST='a'.repeat(64),SECRET='test_subscription_reader_secret_abcdefghijklmnopqrstuvwxyz0123456789';
 const at=new Date('2026-11-01T01:00:00Z');
@@ -74,4 +74,26 @@ test('chief requires two independent server controls plus publisher copyright li
  assert.equal((await verifyCommercialRelease(env,project,at)).ready,true);
  db.prepare("UPDATE publishing_workflow_release_contracts SET distribution_license_accepted=0 WHERE project_id=?").run(id);
  assert.equal((await verifyCommercialRelease(env,project,at)).ready,false);
+});
+
+test('free publication submission cannot be forged by request body or bypass an expired subscription',async()=>{
+  const {db,id,env}=sqlite();
+  const project={id,authorUserId:UUID,releaseDigest:DIGEST};
+  assert.equal((await verifyPublishingSubmission(env,project,at)).ready,false);
+  env.PUBLISH_SUBSCRIPTION_READ_KEY=SECRET;
+  globalThis.fetch=async()=>new Response(JSON.stringify([{
+    plan_id:'writer1',status:'active',verified_payment_at:'2026-10-25T00:00:00Z',
+    paid_until:'2026-10-29T00:00:00Z'
+  }]));
+  assert.equal((await verifyPublishingSubmission(env,project,at)).ready,false);
+  globalThis.fetch=async()=>new Response(JSON.stringify([{
+    plan_id:'writer1',status:'active',verified_payment_at:'2026-10-25T00:00:00Z',
+    paid_until:'2026-11-30T00:00:00Z'
+  }]));
+  assert.equal((await verifyPublishingSubmission(env,project,at)).ready,true);
+  env.PUBLISH_CHIEF_AUTHOR_IDS=UUID;env.PUBLISH_SUBSCRIPTION_READ_KEY='';
+  assert.equal((await verifyPublishingSubmission(env,project,at)).ready,false);
+  db.prepare("INSERT INTO publishing_workflow_roles (user_id,role,granted_by,granted_at) VALUES (?,'admin','bootstrap',?)")
+    .run(UUID,at.toISOString());
+  assert.equal((await verifyPublishingSubmission(env,project,at)).ready,true);
 });
