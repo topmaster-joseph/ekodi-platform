@@ -29,7 +29,10 @@ function d1(){
 }
 
 function harness(email=OWNER){
- const env={DB:d1(),ALLOW_MUTATIONS:'true',ALLOWED_ORIGINS:'https://ekodi.kr',INVEST_OWNER_EMAIL:OWNER};
+ const db=d1();
+ // The seeded 2FA session belongs to the identity being tested; never waive the step-up check.
+ if(email!==OWNER)db.sqlite.prepare('UPDATE investment_step_up_sessions SET subject_email=?').run(email.toLowerCase());
+ const env={DB:db,ALLOW_MUTATIONS:'true',ALLOWED_ORIGINS:'https://ekodi.kr',INVEST_OWNER_EMAIL:OWNER};
  const call=async(method,path,payload)=>{
   const original=globalThis.fetch;
   globalThis.fetch=async()=>new Response(JSON.stringify({id:'owner-uuid',email,email_confirmed_at:'2026-10-01T00:00:00Z'}),{status:200});
