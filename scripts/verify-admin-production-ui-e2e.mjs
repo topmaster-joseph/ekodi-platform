@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright';
+import { verifySearchVisibilityInteractions } from './verify-search-visibility-interactions.mjs';
 import { adminMenuOrder, getAdminMenuForSection, getAdminMenuGroupForSection, getAdminMenuItem } from '../admin-menu-registry.js';
 
 const ADMIN_URL = process.env.ADMIN_URL || 'https://ekodi.kr/admin/';
@@ -637,6 +638,7 @@ for (const [id, group] of menus) {
   }
   if (id === 'campus' && visiblePanel.id !== 'campusPanel') throw new Error(`Campus rendered unexpected panel: ${visiblePanel.id || '(no id)'}`);
   if (id === 'aiops') await verifyAiOpsStageWorkspace();
+  if (id === 'search-visibility') await verifySearchVisibilityInteractions(page,artifactsDir,results);
   if (id === 'infra-costs') {
     // PROD-E2E: accepting a DOM-only panel can still screenshot a different
     // section when the Admin workspace retains a previous scroll position.
