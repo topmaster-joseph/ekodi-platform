@@ -12,7 +12,7 @@ export async function subscribeDevotionalPush({site, publicKey, endpoint='/api/m
   if (!pushCapability().supported) return {ok:false,reason:'unsupported'};
   const permission = await requestDevotionalPushPermission();
   if (!permission.ok) return permission;
-  const registration = await navigator.serviceWorker.register('/message/devotion-push-sw.js',{scope:'/'});
+  const registration = await navigator.serviceWorker.register('/devotion-push-sw.js',{scope:'/'});
   const existing = await registration.pushManager.getSubscription();
   const subscription = existing || await registration.pushManager.subscribe({
     userVisibleOnly:true,applicationServerKey:decodeBase64Url(publicKey)
