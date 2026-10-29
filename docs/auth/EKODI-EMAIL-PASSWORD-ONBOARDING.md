@@ -1,6 +1,6 @@
 # EKODI 이메일·비밀번호 간편 가입 / 단일 EKODI ID 도입 계약
 
-상태: **운영 기능 신규 활성화 전 단계 — 기술·운영 승인과 실증 필요** (2026-10-29).
+상태: **이메일·비밀번호 가입/로그인/6자리 메일 인증/복구 및 인증 후 EKODI ID 연결 소스 구현 — 운영 발송 설정·실증 전까지 3중 게이트 비활성** (2026-10-29).
 
 ## 원하는 이용 흐름
 
@@ -34,3 +34,11 @@
 4. EKODI Orchestrator 보호 CI → 명시적 운영 승인 → 단계적 배포 → 실제 인증/원위치 복귀 브라우저 E2E 이후에만 실제 이용 가능으로 표시
 
 참고: `docs/AUTH-CENTER.md`, `docs/auth/FEDERATED-LOGIN-NAVER-KAKAO.md`, `supabase/functions/identity-api/index.ts`, `supabase/migrations/20260815020000_person_identity_workspaces.sql`. 비밀번호 원문은 코드/문서/로그에 기록하지 않는다.
+
+## 2026-10-29 실제 구현 근거
+
+- 인증 프런트엔드: `auth-site/email-password.js`, `auth-site/auth-router.js`, `auth-site/auth.css`. 가입·로그인·OTP 확인·재발송·비밀번호 재설정, 기존 로그인 수단과 별도로 표시.
+- 서버: `supabase/functions/identity-api/index.ts`. `/email/readiness`의 서버 관리 3중 게이트, 이메일 소유권이 검증된 `auth.users`만 `ensure_person_identity`로 EKODI Person/ID를 생성하고 기존 서비스를 handoff.
+- 운영 게이트 `EKODI_EMAIL_PASSWORD_ENABLED`, `EKODI_AUTH_EMAIL_CONFIRM_VERIFIED`, `EKODI_AUTH_SMTP_VERIFIED` 모두 true인 경우에만 버튼과 회원 원장 신규 생성 허용. 초기값은 모두 비활성으로 간주.
+- `docs/auth/EKODI-MAIL-EMAIL-SIGNUP-RELEASE.md`에서 Custom SMTP, EKODI 인증 발신자, 6자리 메일 코드 템플릿 및 테스트 증거 확인.
+- 이 코드가 병합됐다는 사실만으로 SMTP 발송·최초 회원가입·복구 흐름이 운영 실증됐다고 주장할 수 없다.
