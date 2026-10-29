@@ -61,8 +61,8 @@ test('main EKODI hourly watch adds native migration evidence without generating 
   const urls=[];
   const fetchImpl=async(url,opts)=>{
     urls.push({url,opts});
-    if(url.endsWith('/api/health'))return new Response(JSON.stringify({ok:true}),{status:200});
     if(url.endsWith('/cgma/board/api/health'))return new Response(JSON.stringify({ok:true,boardId:'site:cgma:main',siteId:'cgma',independent:true}),{status:200});
+    if(url.endsWith('/api/health'))return new Response(JSON.stringify({ok:true}),{status:200});
     if(url.endsWith('/marketing-connect-api/health'))return new Response(JSON.stringify({ok:true,schemaReady:true,oauthBroker:true,encryptedVault:true,platform:{youtubeConfigured:true,metaConfigured:true,threadsConfigured:true},mallPromotionAutomation:{channelReadiness:{youtubeConnected:true,socialPublishReady:true}}}),{status:200});
     if(url.includes('/api/seonammedi/monitor'))return new Response(JSON.stringify({ok:true,lastRun:{id:1,started_at:'2026-10-30T01:20:00Z',status:'ok',sources_checked:2,items_seen:3}}),{status:200});
     if(url.includes('/release-receipt?'))return new Response(JSON.stringify({ok:true,authorized:true,state:'completed'}),{status:200});
