@@ -6,7 +6,7 @@ import { ekodiBizAdminScopeSnapshot } from './ekodibiz-admin-registry.js';
 import { channelTargetOptions } from './channel-publishing-catalog.js';
 
 const WORKSPACE_SECTION_CAPABILITY=Object.freeze({
-  root:Object.freeze({chrome:TENANT_ADMIN_CAPABILITIES.site,design:TENANT_ADMIN_CAPABILITIES.site,languages:TENANT_ADMIN_CAPABILITIES.language,overview:TENANT_ADMIN_CAPABILITIES.dashboard,'business-center':TENANT_ADMIN_CAPABILITIES.operations,activities:TENANT_ADMIN_CAPABILITIES.activities,saturday:TENANT_ADMIN_CAPABILITIES.activities,mall:TENANT_ADMIN_CAPABILITIES.dashboard,mail:TENANT_ADMIN_CAPABILITIES.connections,publishing:TENANT_ADMIN_CAPABILITIES.marketing,marketing:TENANT_ADMIN_CAPABILITIES.marketing,work:TENANT_ADMIN_CAPABILITIES.operations,finance:TENANT_ADMIN_CAPABILITIES.finance,tax:TENANT_ADMIN_CAPABILITIES.finance,confirmations:TENANT_ADMIN_CAPABILITIES.confirmations,members:TENANT_ADMIN_CAPABILITIES.access,member:TENANT_ADMIN_CAPABILITIES.memberRoster,festival:TENANT_ADMIN_CAPABILITIES.access,edocs:TENANT_ADMIN_CAPABILITIES.access}),
+  root:Object.freeze({chrome:TENANT_ADMIN_CAPABILITIES.site,design:TENANT_ADMIN_CAPABILITIES.site,languages:TENANT_ADMIN_CAPABILITIES.language,overview:TENANT_ADMIN_CAPABILITIES.dashboard,'business-center':TENANT_ADMIN_CAPABILITIES.operations,activities:TENANT_ADMIN_CAPABILITIES.activities,saturday:TENANT_ADMIN_CAPABILITIES.activities,mall:TENANT_ADMIN_CAPABILITIES.dashboard,mail:TENANT_ADMIN_CAPABILITIES.connections,publishing:TENANT_ADMIN_CAPABILITIES.marketing,marketing:TENANT_ADMIN_CAPABILITIES.marketing,work:TENANT_ADMIN_CAPABILITIES.operations,finance:TENANT_ADMIN_CAPABILITIES.finance,tax:TENANT_ADMIN_CAPABILITIES.finance,confirmations:TENANT_ADMIN_CAPABILITIES.confirmations,members:TENANT_ADMIN_CAPABILITIES.access,member:TENANT_ADMIN_CAPABILITIES.memberRoster,festival:TENANT_ADMIN_CAPABILITIES.access,edocs:TENANT_ADMIN_CAPABILITIES.access,status:TENANT_ADMIN_CAPABILITIES.logs,records:TENANT_ADMIN_CAPABILITIES.reports}),
   mall:Object.freeze({design:TENANT_ADMIN_CAPABILITIES.site,languages:TENANT_ADMIN_CAPABILITIES.language,overview:TENANT_ADMIN_CAPABILITIES.dashboard,sales:TENANT_ADMIN_CAPABILITIES.sales,products:TENANT_ADMIN_CAPABILITIES.catalog,sourcing:TENANT_ADMIN_CAPABILITIES.supplyNetwork,marketing:TENANT_ADMIN_CAPABILITIES.marketing,channels:TENANT_ADMIN_CAPABILITIES.marketing,automation:TENANT_ADMIN_CAPABILITIES.marketing,growth:TENANT_ADMIN_CAPABILITIES.marketing,analytics:TENANT_ADMIN_CAPABILITIES.sales,confirmations:TENANT_ADMIN_CAPABILITIES.confirmations}),
 });
 export function workspaceAdminCanAccess(role,section,service='root'){const key=service==='mall'?'mall':'root';const capability=WORKSPACE_SECTION_CAPABILITY[key][String(section||'overview').toLowerCase()];if(!capability)return false;const policy=tenantAdminPolicySnapshot();const allowed=policy.roleCapabilities[String(role||'').trim().toLowerCase()]||[];return allowed.includes('*')||allowed.includes(capability);}
@@ -47,6 +47,20 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   const workspace=(standaloneMall?'ekodibiz':genericService?.[1]||root?.[1]||'ekodibiz').toLowerCase();
   const service=mall?'mall':(genericService?.[2]?.toLowerCase()||null);
   const MISSION_DEFAULT_ACTIVITY='260926-chuseok-open-table';
+  const MISSION_ACTIVITY_PUBLIC_PATHS=Object.freeze({
+    '260926-chuseok-open-table':'/ekodimission/apply/260926-open-table',
+    '261003-autumn-community-trip':'/ekodimission/apply/261003-autumn-trip'
+  });
+  function missionActivityPublicUrl(activity,activityKey){
+    const candidate=[activity?.public_url,activity?.application_url,activity?.public_path].find(value=>typeof value==='string'&&value.trim());
+    if(candidate){
+      try{
+        const url=new URL(candidate,location.origin);
+        if(url.origin===location.origin&&url.pathname.startsWith('/ekodimission/'))return url.pathname+url.search+url.hash;
+      }catch{}
+    }
+    return MISSION_ACTIVITY_PUBLIC_PATHS[activityKey]||'/ekodimission/activities';
+  }
   const defaultSection='overview';
   const rawSection=standaloneMall?.[1]||(genericService?.[3]||root?.[2]||((workspace==='ekodibiz'||workspace==='ekodi-biz')&&!service?'business-center':defaultSection));
   const section=(rawSection==='channel-settings'?'channels':rawSection).toLowerCase();
@@ -470,7 +484,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
           +'<td><div class="actions"><button class="button primary" type="button" data-activity-save>저장</button><button class="button" type="button" data-activity-checkin>체크인</button></div></td>'
           +'</tr>';
       }).join('');
-      const activityHeading=workspace==='ekodimission'?'행사 · 신청자':'활동 · 참가자';const publicActivityUrl=workspace==='ekodimission'&&requested===MISSION_DEFAULT_ACTIVITY?'/ekodimission/apply/260926-open-table':workspacePublicUrl();const sharePolicy=shareInfo?.field_policy||{};const shareExpiry=shareInfo?.expires_at?new Date(shareInfo.expires_at).toLocaleString('ko-KR'):'-';
+      const activityHeading=workspace==='ekodimission'?'행사 · 신청자':'활동 · 참가자';const publicActivityUrl=workspace==='ekodimission'?missionActivityPublicUrl(selected,requested):workspacePublicUrl();const sharePolicy=shareInfo?.field_policy||{};const shareExpiry=shareInfo?.expires_at?new Date(shareInfo.expires_at).toLocaleString('ko-KR'):'-';
       $('mainPanel').innerHTML='<div class="activity-toolbar"><div class="activity-context"><strong>'+activityHeading+'</strong><span class="tag '+(selected?.registration_open?'live':'warn')+'">'+(selected?.registration_open?'신청 가능':'신청 마감')+'</span><select id="activityPicker">'+activityOptions+'</select></div><input id="activitySearch" type="search" placeholder="이름 · 연락처 · 역할 검색"><select id="activityStatusFilter"><option value="">전체 상태</option>'+Object.entries(ACTIVITY_STATUS_LABEL).map(([v,l])=>'<option value="'+v+'">'+l+'</option>').join('')+'</select><select id="activityCheckinFilter"><option value="">체크인 전체</option><option value="1">체크인 완료</option><option value="0">미체크인</option></select><a class="button activity-public-link" href="'+ae(publicActivityUrl)+'" target="_blank" rel="noopener">공개 행사 보기</a><button class="button primary" id="activityMessageButton" type="button">단체 메시지</button><button class="button activity-share-button" id="activityShareButton" type="button">외부 공유</button></div>'
         +'<div class="activity-payment-summary"><span>납부완료 <strong>'+fmt(paymentSummary.paid||0)+'</strong></span><span>미납 <strong>'+fmt(paymentSummary.unpaid||0)+'</strong></span><span>납부액 <strong>'+fmt(paymentSummary.paid_amount||0)+'원</strong></span></div>'
         +(rows?'<div class="table-wrap activity-table-wrap"><table class="activity-table"><thead><tr><th class="activity-seq-head" scope="col">연번</th><th scope="col"><label><input id="activitySelectAll" type="checkbox"> 신청자</label></th><th scope="col">상태 · 참가비</th><th scope="col">인원</th><th scope="col">관리</th><th scope="col">조치</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p class="empty">이 활동의 참가자가 없습니다.</p>')
