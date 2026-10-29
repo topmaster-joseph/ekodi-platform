@@ -915,10 +915,33 @@ function boot(root) {
         {cache:'no-store',headers:token?{authorization:`Bearer ${token}`}:{}});
       const data = await response.json();
       if (!response.ok) {
+        const futureNotice = '아직 공개되지 않은 날짜입니다. 오늘 날짜까지만 열람할 수 있습니다.';
         status.textContent = data.error === 'future_unavailable'
-          ? '아직 공개되지 않은 날짜입니다. 오늘 날짜까지만 열람할 수 있습니다.'
+          ? futureNotice
           : data.error === 'invalid_date' ? '날짜를 확인해 주세요.' : '묵상 자료를 불러올 수 없습니다.';
         summary.hidden = scriptureBlock.hidden = notice.hidden = shareRow.hidden = tabbar.hidden = panelWrap.hidden = audioRow.hidden = true;
+        // Mission guests should see the privacy notice, then the current day's
+        // devotion immediately. The API itself still denies future dates (403).
+        // Only use the authoritative Asia/Seoul "today" from that 403 response.
+        // A legitimate admin receives HTTP 200 for an authorized future date.
+        if (siteKey === 'mission' && date && data.error === 'future_unavailable' &&
+            typeof data.today === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.today) && data.today < date) {
+          const today = data.today;
+          history.replaceState(null, '', `${pageUrl(today)}${location.hash}`);
+          const todayResponse = await fetch(`${API}?date=${today}`,
+            {cache:'no-store',headers:token?{authorization:`Bearer ${token}`}:{}});
+          if (!todayResponse.ok) {
+            status.textContent = futureNotice + ' 오늘의 묵상 자료를 불러올 수 없습니다.';
+            return;
+          }
+          const todayDevotion = await todayResponse.json();
+          render(todayDevotion);
+          if (todayDevotion.found) {
+            const movedNotice = futureNotice + ' 오늘의 묵상으로 이동했습니다.';
+            status.textContent = movedNotice;
+            setTimeout(() => { if (status.textContent === movedNotice) status.textContent = ''; }, 2300);
+          }
+        }
         return;
       }
       if (!date && data.date && dateMode === 'path') history.replaceState(null, '', `${pageUrl(data.date)}${location.hash}`);

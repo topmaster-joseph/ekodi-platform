@@ -119,18 +119,41 @@ try {
         waitUntil:'domcontentloaded',timeout:35000
       });
       await page.locator('[data-ekodi-devotion] .dv-status').waitFor({state:'attached',timeout:20000});
-      await page.waitForTimeout(1800);
+      if(process.env.EKODI_EXPECT_AUTO_TODAY==='1'){
+        // Production release check waits for the actual today URL and visible passage;
+        // a screenshot of the old blocked screen is not a passing result.
+        await page.waitForFunction(iso=>{
+          const date=new URL(location.href).searchParams.get('date');
+          const passage=document.querySelector('[data-ekodi-devotion] .dv-scripture-section');
+          return date===iso && passage?.hidden===false && (passage?.innerText?.trim().length||0)>30;
+        },today,{timeout:18000});
+      } else {
+        await page.waitForTimeout(1800);
+      }
       const futureState=await page.evaluate(()=>{
         const el=document.querySelector('[data-ekodi-devotion]');
         const verses=el?.querySelector('.dv-scripture-section');
         const status=el?.querySelector('.dv-status');
+        const date=el?.querySelector('.dv-date');
         return {verseHidden:verses?.hidden??null,status:status?.textContent?.trim()||'',
-          futureNextHidden:el?.querySelector('.dv-datebar a:last-child')?.hidden??null};
+          visibleVerses:verses?.innerText?.trim().length||0,dateLabel:date?.textContent?.trim()||'',
+          nextHidden:el?.querySelector('.dv-datebar a:last-child')?.hidden??null,
+          currentUrl:location.href};
       });
+      const redirectedToToday=new URL(futureState.currentUrl).searchParams.get('date')===today;
+      const stillSecurelyBlocked=new URL(futureState.currentUrl).searchParams.get('date')===tomorrow&&
+        futureState.verseHidden===true&&/아직 공개되지|오늘 날짜까지만/.test(futureState.status);
+      const todayShown=redirectedToToday&&futureState.verseHidden===false&&futureState.visibleVerses>30;
+      // Pull requests may verify against the previous production release.
+      // After an official Bible release, the strict run requires auto-return.
       record(device.name+'-future-page-content-private',
-        futureState.verseHidden===true&&
-        /아직 공개되지|오늘 날짜까지만|접근할 수 없|열람할 수 없/.test(futureState.status),
-        {status:futurePage?.status(),...futureState});
+        todayShown||stillSecurelyBlocked,
+        {requestStatus:futurePage?.status(),redirectedToToday,todayShown,stillSecurelyBlocked,...futureState});
+      if(process.env.EKODI_EXPECT_AUTO_TODAY==='1'){
+        record(device.name+'-future-auto-returns-to-today',todayShown&&
+          /아직 공개되지|오늘 날짜까지만|오늘의 묵상으로 이동/.test(futureState.status),
+          {today,redirectedToToday,...futureState});
+      }
       record(device.name+'-pageerror-free',failures.length===0,{failures});
       await page.screenshot({path:path.join(DIR,'devotion-guest-'+device.name+'.png'),fullPage:true});
       report.browsers.push({device:device.name,checks:report.checks.filter(x=>x.name.startsWith(device.name)).length});
