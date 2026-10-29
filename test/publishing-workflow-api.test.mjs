@@ -106,13 +106,18 @@ test('revision conflict, hash binding and no direct-release API',async()=>{
 });
 
 test('cloud scheduler advances only a fully reviewed due edition into nonpublic outbox',async()=>{
-  const {sql,api}=memory(),env={PUBLISH_DB:api};
+  const {sql,api}=memory();
+  const chief='00000000-0000-4000-8000-000000000777';
+  const env={PUBLISH_DB:api,PUBLISH_CHIEF_AUTHOR_IDS:chief};
   const res=await handlePublishingWorkflow(request('projects',{method:'POST',body:{
     title:'예약 출간 테스트',fieldId:'literature'
   }}),env);
   const {project:p}=await res.json(),hash='c'.repeat(64);
+  sql.prepare('UPDATE publishing_workflow_projects SET author_user_id=? WHERE id=?').run(chief,p.id);
+  sql.prepare('INSERT INTO publishing_workflow_roles (user_id,role,granted_by,granted_at) VALUES (?,?,?,?)')
+    .run(chief,'admin','protected-bootstrap','2026-10-29T00:00:00Z');
   const candidate={format:'epub',priceKrw:9900,readerProfiles:['general'],collectionId:'human'};
-  const placeholders={publicationId:p.id,editionId:p.editionId,title:p.title,authorId:p.authorUserId,
+  const placeholders={publicationId:p.id,editionId:p.editionId,title:p.title,authorId:chief,
     fieldId:'literature',releaseDigest:hash,
     publisherApproval:{approvedBy:'publisher',approvedAt:'2026-11-20T00:00:00Z',digest:hash}};
   for(const name of evaluateReleaseReadiness({...candidate,...placeholders}).blockers){
@@ -122,6 +127,11 @@ test('cloud scheduler advances only a fully reviewed due edition into nonpublic 
   sql.prepare("UPDATE publishing_workflow_projects SET stage='scheduled',manuscript_digest=?,release_digest=?,release_candidate_json=?,author_approval_json=?,publisher_approval_json=?,scheduled_at=? WHERE id=?")
     .run('b'.repeat(64),hash,JSON.stringify(candidate),JSON.stringify({digest:hash,approvedAt:'2026-11-19T00:00:00Z'}),
       JSON.stringify(placeholders.publisherApproval),'2026-11-25T01:00:00.000Z',p.id);
+  // Audio and contracts are protected, separately attested database records, not client toggles.
+  sql.prepare("INSERT INTO publishing_workflow_release_contracts (project_id,author_user_id,edition_digest,status,author_signed_at,publisher_signed_at,distribution_license_accepted,sealed_contract_sha256,created_at,updated_at) VALUES (?,?,?,'signed',?,?,1,?,?,?)")
+    .run(p.id,chief,hash,'2026-11-19T00:00:00Z','2026-11-20T00:00:00Z','a'.repeat(64),'2026-11-20T00:00:00Z','2026-11-20T00:00:00Z');
+  sql.prepare("INSERT INTO publishing_workflow_audio_release_qa (project_id,edition_digest,stage,master_sha256,voice_license_verified,dialogue_qa_passed,full_track_qa_passed,buyer_access_verified,refund_revoke_verified,bonus_price_krw,verified_at) VALUES (?,?,'approved',?,1,1,1,1,1,0,?)")
+    .run(p.id,hash,'b'.repeat(64),'2026-11-20T00:00:00Z');
   const run=await prepareScheduledPublishing(env,new Date('2026-11-25T01:00:01.000Z'));
   assert.deepEqual(run,{ok:true,prepared:1,blocked:0});
   const row=sql.prepare("SELECT stage FROM publishing_workflow_projects WHERE id=?").get(p.id);
