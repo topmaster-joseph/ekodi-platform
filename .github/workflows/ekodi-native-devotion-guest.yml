@@ -1,0 +1,60 @@
+name: EKODI Native Devotion Guest Browser
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/verify-devotion-guest-native-browser.mjs'
+      - '.github/workflows/ekodi-native-devotion-guest.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/verify-devotion-guest-native-browser.mjs'
+      - '.github/workflows/ekodi-native-devotion-guest.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-native-devotion-guest-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  guest-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Check EKODI first-party browser script
+        run: |
+          node --check scripts/verify-devotion-guest-native-browser.mjs
+          node --check scripts/ekodi-background-browser-worker.mjs
+      - name: Prepare EKODI-owned Chromium on isolated cloud runner
+        shell: bash
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          browser_path="$(command -v chromium || command -v google-chrome || true)"
+          if [ -n "$browser_path" ]; then
+            echo "EKODI_NATIVE_CHROME=$browser_path" >> "$GITHUB_ENV"
+            echo "EKODI native runner Chromium: $browser_path"
+          else
+            npx playwright install --with-deps chromium
+          fi
+      - name: Verify real public future-date lockdown and login labels in desktop/mobile
+        run: node scripts/verify-devotion-guest-native-browser.mjs
+      - name: Write verification receipt
+        if: always()
+        shell: bash
+        run: |
+          if [ -f artifacts/devotion-guest-native/report.json ]; then
+            echo '### EKODI first-party guest browser' >> "$GITHUB_STEP_SUMMARY"
+            jq -r '"- Passed: \(.passed)\n- Checks: \(.checks|length)\n- Failures: \([.checks[]|select(.passed==false)|.name]|join(", "))\n- Error: \(.error // "none")"' artifacts/devotion-guest-native/report.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ekodi-native-guest-${{ github.run_id }}
+          path: artifacts/devotion-guest-native
+          retention-days: 14
