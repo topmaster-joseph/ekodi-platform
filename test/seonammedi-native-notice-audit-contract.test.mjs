@@ -54,6 +54,7 @@ test('native audit proves non-default category click, reload, history and deep-l
     "await page.reload({waitUntil:'domcontentloaded',timeout:25000})",
     "await page.goBack({timeout:15000,waitUntil:'domcontentloaded'})",
     "await page.goForward({timeout:15000,waitUntil:'domcontentloaded'})",
+    "await page.goto('about:blank',{waitUntil:'domcontentloaded'})",
     "await page.goto(target+selectedHash,{waitUntil:'domcontentloaded',timeout:25000})",
     "selected?.getAttribute(attribute)===category",
     "document.getElementById('central-category-panel')?.hidden===true"
