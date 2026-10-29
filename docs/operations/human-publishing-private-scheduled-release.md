@@ -31,3 +31,18 @@
 - [ ] 기존 유통계약, 성경 번역·외부 표지 사용권, ISBN·정가/할인/취소·환불 정책 검수.
 
 **주의:** 본 PR은 파일·상태 전이·테스트를 제공하지만, 아직 운영용 예약 출판 API·스케줄러·두 소비 서비스 연동의 최종 배포를 의미하지 않는다. 두 권의 원고 자체를 공개 Git 저장소에 업로드하지 않는다. 기존 `books/books.json` 및 결제 활성화 상태는 변경하지 않는다.
+
+
+## 관리자 화면 및 비공개 API 계약 (추가 구현, 아직 비활성)
+
+- 관리자 화면 소스: `publishing/private-releases/index.html`, `private-releases.js`. 실제 운영 게이트웨이에서 확인해야 할 표준 진입 URL은 `https://ekodi.kr/publishing/private-releases/`. 이 경로는 **아직 실서비스에서 검증·배포되지 않았으며 링크만으로 기능을 증명하지 않는다.**
+- 출판 Worker 라우터: `publishing-worker.js`의 `/api/publishing/private-releases`. `PUBLISHING_PRIVATE_RELEASE_ENABLED`가 문자열 `true`가 아니면 404, 필수 결합 서비스가 하나라도 빠지면 503. 이 기능은 기존 예약도서·카탈로그에 영향을 주지 않는다.
+- 읽기: `GET /api/publishing/private-releases` (비공개 등록된 전체 작품 목록), `GET /api/publishing/private-releases/:editionId`, `GET /api/publishing/private-releases/csrf`. 읽기까지 출판 권한 인증이 필요하다.
+- 쓰기: `POST /api/publishing/private-releases/register` with `{"editionId":"..."}`; `POST /api/publishing/private-releases/:editionId/schedule` with `{"revision":2,"publishAt":"2026-11-15T09:00:00+09:00"}`; `POST /api/publishing/private-releases/:editionId/cancel` with `{"revision":3,"reason":"..."}`. 날짜는 단순 예시. 일정 변경마다 optimistic CAS 적용, 이전 revision은 거절한다.
+- 인증: `PUBLISHING_RELEASE_AUTH.verifyRequest`는 서버 세션·`publishing.private-release.{read,register,schedule,cancel}` 세분 권한·same-origin/anti-CSRF를 확인하는 신뢰된 출판 전용 RPC. 관리자 이메일 문자열을 클라이언트에서 비교하는 방식 금지. `issueCsrf`는 인증된 요청에만 서버가 토큰을 발급하며, 브라우저의 저장소에 인증정보를 남기지 않는다.
+- 파일·승인: `PUBLISHING_RELEASE_VERIFIER.loadCandidate`, `verifyCompletedFile`, `verifyApprovalEvidence`, `verifyChannelAck`는 출판사 서버만 보유하는 검증 RPC. 요청 본문에 전달한 서명 유효 플래그/가격/파일위치는 무시. 승인 후보 판본 해시와 비공개 파일·저자/출판자 서명을 직접 대조해야 한다.
+- 감사: `PUBLISHING_RELEASE_AUDIT.record`은 성공적인 영속 기록 확인을 반환해야 관리 요청이 성공한다. 다만 **현 API에는 상태 저장과 감사가 하나의 DB 트랜잭션으로 묶여 있지 않으므로** 운영 활성화 전 동일 트랜잭션 감사·영구 송신함을 구현해야 한다. 실패 후 재요청 시 운영자가 상태를 조회·조정할 수 있는 복구 절차가 필요하다.
+- 예약 실행: `publishing-worker.js`에 `scheduled()`를 추가했지만 **Wrangler cron 트리거는 추가하지 않았다.** `PUBLISHING_PRIVATE_RELEASE_ENABLED=true`와 서명된 채널 RPC 및 독립 저장소가 모두 있을 때만 `runConfiguredPublishingReleaseTick`이 수행된다. 별도 검토된 배포 작업으로 격리 staging과 실제 일정 실행 테스트를 통과해야 운영 cron을 설정할 수 있다.
+
+### 완료됐다고 주장할 수 없는 운영 항목
+`PUBLISHING_RELEASE_DB`, `PUBLISHING_RELEASE_AUTH`, `PUBLISHING_RELEASE_VERIFIER`, `PUBLISHING_RELEASE_AUDIT`, `PUBLISHING_RELEASE_CHANNELS` 서비스 바인딩은 **이번 PR에서 실제 발급/설정하지 않았다.** Books/Mall의 진열·검색·가격·결제·파일 다운로드 진입점은 아직 신설 출판 판본의 중앙 공개 승인을 호출하지 않는다. 그러므로 이 두 채널에 신규 도서를 인계하거나 공개할 수 없다. 기존 판매 도서는 변경하지 않았다.
