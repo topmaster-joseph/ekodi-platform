@@ -10,13 +10,19 @@ export const RELEASE_STATUSES = Object.freeze([
 ]);
 const HASH = /^sha256:[a-f0-9]{64}$/;
 const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-](?:0\d|1[0-4]):[0-5]\d)$/;
-const own = (obj, key) => Object.prototype.hasOwnProperty.call(obj || {}, key);
 const valid = str => typeof str === 'string' && str.trim() !== '';
 const invariant = (ok, message) => { if (!ok) throw new Error('RELEASE_BLOCKED:' + message); };
 const instant = value => {
   invariant(typeof value === 'string' && ISO_INSTANT.test(value), 'explicit-timezone-required');
   const date = new Date(value);
-  invariant(Number.isFinite(date.valueOf()) && date.toISOString() === new Date(date.valueOf()).toISOString(), 'invalid-time');
+  invariant(Number.isFinite(date.valueOf()), 'invalid-time');
+  // Date.parse may silently normalize February 30; detect invalid calendar days too.
+  const [year,month,day,hour,minute,second] = value.slice(0,19).match(/\\d+/g).map(Number);
+  const check = new Date(Date.UTC(year,month-1,day,hour,minute,second));
+  invariant(year >= 2000 && check.getUTCFullYear() === year &&
+    check.getUTCMonth()+1 === month && check.getUTCDate() === day &&
+    check.getUTCHours() === hour && check.getUTCMinutes() === minute &&
+    check.getUTCSeconds() === second, 'invalid-time');
   return date.valueOf();
 };
 function assertNow(now) {
