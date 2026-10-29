@@ -119,15 +119,16 @@ function setupAdvisorChat(){
   ensureChatStyles();
   document.querySelectorAll('[data-view="advisor"]').forEach(button=>{const strong=button.querySelector('strong');const small=button.querySelector('small');if(strong)strong.textContent='AI 상담';else if(button.closest('.nav'))button.textContent='AI 상담';if(small)small.textContent='AI 채팅 후 필요할 때 설계사 전화 연결';});
   const section=document.getElementById('advisor');
+  const canonicalInsurancePage=location.hostname==='ekodi.kr' && /^\/insurance(?:\/|$)/.test(location.pathname);
   section.innerHTML=`<div class="section-head"><div><p class="eyebrow">AI INSURANCE CONCIERGE</p><h2>AI 보험상담</h2></div><button class="text-button" data-view="home">홈으로</button></div>
     <div class="boundary-banner"><strong>AI가 먼저 충분히 상담합니다.</strong><span>기존 보험 이해, 보장 점검, 청구 준비를 돕습니다. 특정 상품의 가입을 확정적으로 권유하거나 보험금 지급을 보장하지 않습니다. 꼭 필요하고 사용자가 요청할 때만 실제 설계사 전화상담으로 연결합니다.</span></div>
     <div class="chat-layout">
       <div class="panel chat-panel">
-        <div class="chat-head"><div><span class="ai-dot"></span><strong>EKODI Insurance AI</strong><small>STAGING · 외부 AI 전송 없음</small></div><button id="resetChatBtn" class="text-button" type="button">대화 지우기</button></div>
+        <div class="chat-head"><div><span class="ai-dot"></span><strong>EKODI Insurance AI</strong><small>${canonicalInsurancePage ? '무료 안내 · 대화는 브라우저에 보관' : 'STAGING · 외부 AI 전송 없음'}</small></div><button id="resetChatBtn" class="text-button" type="button">대화 지우기</button></div>
         <div id="chatMessages" class="chat-messages" aria-live="polite"></div>
         <div class="quick-prompts" aria-label="빠른 질문"><button type="button" data-chat-prompt="내 보험을 어떻게 점검하면 좋을까요?">내 보험 점검</button><button type="button" data-chat-prompt="병원비를 냈는데 보험청구는 무엇부터 확인해야 하나요?">보험청구</button><button type="button" data-chat-prompt="보험료가 부담되는데 무엇을 먼저 확인해야 하나요?">보험료</button></div>
         <form id="aiChatForm" class="chat-compose"><textarea id="aiChatInput" rows="2" maxlength="1200" required placeholder="보험에 대해 편하게 물어보세요. 주민번호, 상세 병명 등 불필요한 민감정보는 입력하지 마세요."></textarea><button class="primary" type="submit">보내기</button></form>
-        <p class="notice">현재 스테이징에서는 대화가 이 브라우저에만 저장됩니다. 실제 생성형 AI 모델에는 전송하지 않고 상담 흐름과 안전경계를 검증합니다.</p>
+        <p class="notice">${canonicalInsurancePage ? 'AI 대화는 기본적으로 이 브라우저에 보관됩니다. 연락처 처리를 동의하고 서버 상담요청을 접수할 때만 연락정보를 암호화해 전송하며, 대화 원문 공유는 별도 선택사항입니다.' : '현재 스테이징에서는 대화가 이 브라우저에만 저장되며 외부 생성형 AI로 전송하지 않습니다.'}</p>
       </div>
       <aside class="panel handoff-panel">
         <span class="pill">HUMAN HANDOFF</span><h3>실제 설계사가 꼭 필요할 때</h3><p>AI 상담으로 해결되지 않거나 실제 상품 설명·가입 절차가 필요하면 사용자가 직접 전화상담을 요청할 수 있습니다.</p>
@@ -136,11 +137,11 @@ function setupAdvisorChat(){
           <label>이름<input name="name" required maxlength="60" /></label>
           <label>연락처<input name="contact" required maxlength="80" placeholder="전화번호 또는 연락 가능한 번호" /></label>
           <label>연락 희망시간<select name="preferredTime"><option>시간 관계없음</option><option>오전</option><option>오후</option><option>저녁</option></select></label>
-          <div class="consent-box"><input id="humanConsent" type="checkbox" required /><label for="humanConsent"><strong>설계사 연락 요청</strong><span>AI 상담내용의 요약과 연락처를 상담 담당자가 확인하는 것에 동의합니다. 스테이징에서는 같은 브라우저의 관리자 화면에만 저장됩니다.</span></label></div>
+          <div class="consent-box"><input id="humanConsent" type="checkbox" required /><label for="humanConsent"><strong>설계사 연락 요청</strong><span>${canonicalInsurancePage ? '설계사 연락을 요청하면 동의한 연락정보를 암호화해 저장하며, AI 대화 원문은 별도 선택 동의가 필요합니다. 서버 연결이 안 되면 요청이 접수되지 않습니다.' : '스테이징에서는 요청과 상담대화가 같은 브라우저에만 보관됩니다.'}</span></label></div>
           <button class="primary" type="submit">상담요청 등록</button>
         </form>
-        <div class="handoff-note"><strong>관리자 관리항목</strong><span>고객명 · 연락처 · AI 상담요약 · 대화내용 · 요청시각 · 처리상태</span></div>
-        <a class="admin-preview-link" href="/admin" target="_blank" rel="noopener">스테이징 상담관리 보기 →</a>
+        <div class="handoff-note"><strong>관리자 관리항목</strong><span>상담동의 연락정보 · 일반 상담요약 · 선택 공유된 대화만 · 요청시각 · 처리상태</span></div>
+        <a class="admin-preview-link" href="${canonicalInsurancePage ? '/admin/services/insurance' : '/admin'}" target="_blank" rel="noopener">${canonicalInsurancePage ? '상담관리 →' : '스테이징 상담관리 보기 →'}</a>
       </aside>
     </div>`;
   section.querySelector('#aiChatForm').addEventListener('submit',handleChatSubmit);
