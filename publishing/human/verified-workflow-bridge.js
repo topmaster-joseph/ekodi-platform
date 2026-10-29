@@ -57,8 +57,8 @@ function versionBoundSnapshot(snapshot,sourceEditionId){
     !STAGES.has(p.stage)||!string(p.title)||!string(p.authorUserId)||
     !string(p.fieldId)||!string(p.collectionId)||
     !Number.isSafeInteger(p.revision)||p.revision<1||
-    typeof p.id!=='string'||p.id.length<8||
-    p.editionId!==sourceEditionId||privateEditionId(p.editionId).slice(0,-3).length<8)
+    typeof p.id!=='string'||p.editionId!==sourceEditionId||
+    !EDITION.test(p.editionId)||p.id.toLowerCase()!==EDITION.exec(p.editionId)[1].toLowerCase())
     throw new Error('UNAPPROVED_OR_MALFORMED_WORKFLOW');
   const source={projectId:p.id,sourceEditionId:p.editionId,authorUserId:p.authorUserId,
     title:p.title,fieldId:p.fieldId,collectionId:p.collectionId,
