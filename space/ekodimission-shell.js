@@ -300,31 +300,26 @@
     return '';
   }
   async function missionLogout(){
-    const auth=verifiedToken;
-    if(missionAuthUi){missionAuthUi.logout.disabled=true;}
-    let remoteOk=true;
-    try{
-      const platform=safeRead(sessionStorage,'ekodi-auth-token');
-      if(platform)await fetch('/api/logout',{method:'POST',headers:{authorization:'Bearer '+platform},credentials:'same-origin',signal:AbortSignal.timeout(5000)}).catch(()=>{remoteOk=false});
-      const supabase=centralSession();
-      if(supabase?.access_token){
-        const result=await fetch(SUPABASE_ORIGIN+'/auth/v1/logout',{method:'POST',headers:{apikey:SUPABASE_PUBLIC_KEY,authorization:'Bearer '+supabase.access_token},signal:AbortSignal.timeout(5000)}).catch(()=>null);
-        if(!result||(!result.ok&&result.status!==401))remoteOk=false;
-      }
-    }finally{
-      for(const store of [sessionStorage,localStorage]){
-        try{store.removeItem(CENTRAL_AUTH_KEY)}catch{}
-        try{store.removeItem('ekodi-auth-token')}catch{}
-      }
-      verifiedToken='';++authGeneration;
-      paintMissionAuth('out');
-      if(missionAuthUi){
-        missionAuthUi.logout.disabled=false;
-        if(!remoteOk)missionAuthUi.logout.title='이 기기에서 로그아웃되었습니다.';
-      }
-      window.dispatchEvent(new Event('ekodi:auth-logout'));
-      window.dispatchEvent(new Event('ekodi:mission-auth-changed'));
+    const platform=safeRead(sessionStorage,'ekodi-auth-token');
+    const supabase=centralSession();
+    // Revoke local capability and navigation immediately, before remote sign-out.
+    verifiedToken='';++authGeneration;
+    for(const store of [sessionStorage,localStorage]){
+      try{store.removeItem(CENTRAL_AUTH_KEY)}catch{}
+      try{store.removeItem('ekodi-auth-token')}catch{}
     }
+    paintMissionAuth('out');
+    if(missionAuthUi)missionAuthUi.logout.disabled=true;
+    window.dispatchEvent(new Event('ekodi:auth-logout'));
+    window.dispatchEvent(new Event('ekodi:mission-auth-changed'));
+    try{
+      if(platform)await fetch('/api/logout',{method:'POST',
+        headers:{authorization:'Bearer '+platform},credentials:'same-origin',
+        signal:AbortSignal.timeout(5000)}).catch(()=>null);
+      if(supabase?.access_token)await fetch(SUPABASE_ORIGIN+'/auth/v1/logout',{method:'POST',
+        headers:{apikey:SUPABASE_PUBLIC_KEY,authorization:'Bearer '+supabase.access_token},
+        signal:AbortSignal.timeout(5000)}).catch(()=>null);
+    }finally{if(missionAuthUi)missionAuthUi.logout.disabled=false}
   }
   missionAuthUi?.logout.addEventListener('click',()=>{void missionLogout()});
   window.EKODIMissionAuth=Object.freeze({loginUrl:MISSION_LOGIN,getToken:()=>verifiedToken,refresh:refreshMissionAuth,logout:missionLogout});
