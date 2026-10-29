@@ -85,7 +85,7 @@ try {
           nextTabIndex:next?.tabIndex??null,nextAriaDisabled:next?.getAttribute('aria-disabled'),
           loginVisible:Boolean(login && getComputedStyle(login).display!=='none'),
           loginText:login?.textContent?.trim()||'',
-          authText:bar?.textContent?.trim()||'',
+          authText:bar?.innerText?.trim()||'',
           accountHidden:account?.hidden??null,
           logoutHidden:logout?.hidden??null,
           adminHidden:admin?.hidden??null,
@@ -97,7 +97,7 @@ try {
         state.nextHidden&&state.nextHref===null&&state.nextTabIndex===-1&&state.nextAriaDisabled==='true',state);
       record(device.name+'-guest-login-only',
         state.loginVisible&&state.loginText==='로그인'&&
-        !/비로그인|로그인됨|로그인 상태/.test(state.authText)&&
+        state.authText==='로그인'&&
         state.accountHidden===true&&state.logoutHidden===true&&state.adminHidden===true,
         {loginText:state.loginText,authText:state.authText,accountHidden:state.accountHidden,
          logoutHidden:state.logoutHidden,adminHidden:state.adminHidden});
