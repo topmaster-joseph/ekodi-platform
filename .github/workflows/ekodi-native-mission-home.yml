@@ -1,6 +1,11 @@
 name: EKODI Native Mission Home Browser
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/verify-mission-home-native-browser.mjs'
+      - '.github/workflows/ekodi-native-mission-home.yml'
   workflow_run:
     workflows: ['Deploy EKODI Operating Space']
     types: [completed]
