@@ -274,3 +274,116 @@ body.admin-compact #aiOpsPanel .ekodi-ai-center-content{
     grid-template-columns:minmax(0,1fr) auto!important;
   }
 }
+
+/* AIOPS-STAGED-WORKSPACE-20261029
+   View-only information hierarchy; existing API, provider actions and guardrails stay intact.
+   The existing readable/flat stylesheet forces all blocks to remain visible; these scoped
+   rules opt only AI Ops into progressive disclosure. */
+body.admin-compact #aiOpsPanel[data-aiops-stage] {
+  width:100%!important;max-width:none!important;min-width:0!important;
+  align-items:stretch!important;gap:10px!important;
+}
+body.admin-compact #aiOpsPanel[data-aiops-stage] > .ai-ops-head {order:0}
+body.admin-compact #aiOpsPanel[data-aiops-stage] > .ai-ops-metrics {order:1}
+body.admin-compact #aiOpsPanel[data-aiops-stage] > .ai-ops-stage-nav {order:2}
+body.admin-compact #aiOpsPanel[data-aiops-stage] > .ai-ops-stage-help {order:3}
+body.admin-compact #aiOpsPanel[data-aiops-stage] > :is(.ai-ops-main,[data-ekodi-ai-provider-center],#aiOperationsCenter) {order:4}
+body.admin-compact #aiOpsPanel[data-aiops-stage] > .ai-ops-side {display:none!important}
+body.admin-compact #aiOpsPanel[data-aiops-stage] > [data-ekodi-ai-provider-center],
+body.admin-compact #aiOpsPanel[data-aiops-stage] > #aiOperationsCenter,
+body.admin-compact #aiOpsPanel[data-aiops-stage] .ai-ops-main > :is(.ai-ops-stage-summary,.ai-evolution-block,.ai-ops-observe,.ai-chief-chat) {display:none!important}
+body.admin-compact #aiOpsPanel[data-aiops-stage="overview"] .ai-ops-main > .ai-ops-stage-summary,
+body.admin-compact #aiOpsPanel[data-aiops-stage="reports"] .ai-ops-main > .ai-evolution-block {display:block!important}
+body.admin-compact #aiOpsPanel[data-aiops-stage="sites"] .ai-ops-main > .ai-ops-observe {display:flex!important;flex-direction:column!important;gap:10px}
+body.admin-compact #aiOpsPanel[data-aiops-stage="sites"] .ai-ops-observe > .ai-fleet-block {display:flex!important}
+body.admin-compact #aiOpsPanel[data-aiops-stage="sites"] .ai-selected-detail:not([hidden]) {display:block!important}
+body.admin-compact #aiOpsPanel[data-aiops-stage="providers"] > [data-ekodi-ai-provider-center] {display:block!important}
+body.admin-compact #aiOpsPanel[data-aiops-stage="command"] > #aiOperationsCenter {display:block!important}
+body.admin-compact #aiOpsPanel[data-aiops-stage="command"] .ai-ops-main > .ai-chief-chat {
+  display:flex!important;max-height:none!important;min-height:300px!important;
+}
+body.admin-compact #aiOpsPanel[data-aiops-stage="providers"] > .ai-ops-main,
+body.admin-compact #aiOpsPanel[data-aiops-stage="providers"] > .ai-ops-metrics,
+body.admin-compact #aiOpsPanel[data-aiops-stage="command"] > .ai-ops-metrics,
+body.admin-compact #aiOpsPanel[data-aiops-stage="reports"] > .ai-ops-metrics,
+body.admin-compact #aiOpsPanel[data-aiops-stage="sites"] > .ai-ops-metrics {display:none!important}
+body.admin-compact #aiOpsPanel .ai-ops-stage-nav {
+  display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  gap:6px!important;margin:0!important;padding:5px!important;
+  border:1px solid #d5d5d5;border-radius:12px;background:#f6f6f6;
+}
+body.admin-compact #aiOpsPanel .ai-ops-stage-nav button {
+  min-height:44px!important;padding:8px 10px!important;border:1px solid transparent!important;
+  border-radius:8px;background:transparent!important;color:#444!important;
+  font:inherit!important;font-size:14px!important;font-weight:700!important;
+  cursor:pointer;white-space:nowrap;
+}
+body.admin-compact #aiOpsPanel .ai-ops-stage-nav button[aria-pressed="true"] {
+  color:#111!important;background:#fff!important;border-color:#b9b9b9!important;
+  box-shadow:0 1px 3px rgba(0,0,0,.07);
+}
+body.admin-compact #aiOpsPanel .ai-ops-stage-nav button:focus-visible {outline:3px solid #555!important;outline-offset:1px}
+body.admin-compact #aiOpsPanel .ai-ops-stage-help {
+  display:block!important;margin:-2px 2px 3px!important;color:#555!important;font-size:13px!important;line-height:1.5!important;
+}
+body.admin-compact #aiOpsPanel .ai-ops-stage-summary {padding:16px!important}
+body.admin-compact #aiOpsPanel .ai-ops-stage-summary-head {display:flex;justify-content:space-between;gap:12px;align-items:center}
+body.admin-compact #aiOpsPanel .ai-ops-stage-summary-head small {font-size:11px!important;color:#666!important;letter-spacing:.04em}
+body.admin-compact #aiOpsPanel .ai-ops-stage-summary-head h3 {font-size:18px!important;margin:3px 0!important}
+body.admin-compact #aiOpsPanel .ai-ops-stage-summary-head > span {font-size:12px!important;color:#555!important}
+body.admin-compact #aiOpsPanel .ai-ops-stage-issues {display:grid;gap:7px;margin-top:12px}
+body.admin-compact #aiOpsPanel .ai-ops-stage-issue {
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) auto;
+  align-items:center;gap:10px;min-height:48px;width:100%;padding:10px 12px;
+  border:1px solid #ddd;border-radius:8px;background:#fff!important;
+  color:#222!important;text-align:left;font:inherit;cursor:default;
+}
+body.admin-compact #aiOpsPanel button.ai-ops-stage-issue {cursor:pointer}
+body.admin-compact #aiOpsPanel .ai-ops-stage-issue strong {font-size:14px!important}
+body.admin-compact #aiOpsPanel .ai-ops-stage-issue span {font-size:13px!important;color:#555!important}
+body.admin-compact #aiOpsPanel .ai-ops-stage-issue b {font-size:12px!important;color:#111!important;white-space:nowrap}
+body.admin-compact #aiOpsPanel .ai-ops-stage-empty {padding:12px;margin:0;font-size:13px;color:#555}
+body.admin-compact #aiOpsPanel[data-aiops-stage="sites"] .ai-fleet-scroll {
+  max-height:60dvh!important;min-height:180px!important;padding:6px!important;
+}
+body.admin-compact #aiOpsPanel[data-aiops-stage="sites"] .ai-fleet-table {display:block!important;width:100%!important}
+body.admin-compact #aiOpsPanel[data-aiops-stage="sites"] .ai-fleet-table thead {display:block!important;padding:8px 12px}
+body.admin-compact #aiOpsPanel[data-aiops-stage="sites"] .ai-fleet-table thead tr,
+body.admin-compact #aiOpsPanel[data-aiops-stage="sites"] .ai-fleet-row {
+  display:grid!important;grid-template-columns:minmax(190px,2.3fr) 80px 100px 120px minmax(130px,1.5fr)!important;
+  grid-template-areas:"site status response check issue"!important;gap:8px!important;align-items:center!important;
+}
+body.admin-compact #aiOpsPanel[data-aiops-stage="sites"] .ai-fleet-table th {
+  text-align:left;padding:0!important;font-size:12px!important;color:#555!important;
+}
+body.admin-compact #aiOpsPanel[data-aiops-stage="sites"] .ai-fleet-table :is(th:nth-child(4),td:nth-child(4)) {display:none!important}
+body.admin-compact #aiOpsPanel[data-aiops-stage="sites"] .ai-fleet-table tbody {display:grid!important;grid-template-columns:1fr!important;gap:4px!important}
+body.admin-compact #aiOpsPanel[data-aiops-stage="sites"] .ai-fleet-row {
+  min-height:48px!important;padding:8px 12px!important;border-radius:7px!important;
+}
+body.admin-compact #aiOpsPanel[data-aiops-stage="sites"] .ai-fleet-row td {font-size:12px!important;white-space:nowrap!important}
+body.admin-compact #aiOpsPanel[data-aiops-stage="sites"] .ai-fleet-row td:nth-child(6) {
+  display:block!important;grid-area:issue!important;border:0!important;
+  margin:0!important;padding:0!important;font-size:12px!important;
+}
+body.admin-compact #aiOpsPanel[data-aiops-stage="sites"] .ai-fleet-row td::before {display:none!important}
+body.admin-compact #aiOpsPanel[data-aiops-stage="sites"] .ai-fleet-site strong {font-size:13px!important}
+body.admin-compact #aiOpsPanel[data-aiops-stage="sites"] .ai-fleet-site small {font-size:11px!important}
+body.admin-compact #aiOpsPanel[data-aiops-stage="sites"] .ai-selected-detail {padding:14px!important}
+body.admin-compact #aiOpsPanel[data-aiops-stage="sites"] .ai-selected-detail :is(strong,span) {white-space:normal!important;overflow-wrap:anywhere}
+@media(max-width:1000px){
+  body.admin-compact #aiOpsPanel[data-aiops-stage="sites"] .ai-fleet-table thead {display:none!important}
+  body.admin-compact #aiOpsPanel[data-aiops-stage="sites"] .ai-fleet-row {
+    grid-template-columns:minmax(0,1fr) auto!important;
+    grid-template-areas:"site status" "response check" "issue issue"!important;
+    row-gap:4px!important;
+  }
+  body.admin-compact #aiOpsPanel[data-aiops-stage="sites"] .ai-fleet-row td:nth-child(6) {padding-top:4px!important;border-top:1px solid #eee!important}
+}
+@media(max-width:760px){
+  body.admin-compact #aiOpsPanel .ai-ops-stage-nav {display:flex!important;overflow-x:auto!important;scroll-snap-type:x proximity}
+  body.admin-compact #aiOpsPanel .ai-ops-stage-nav button {flex:0 0 auto;min-width:108px;scroll-snap-align:start;font-size:13px!important}
+  body.admin-compact #aiOpsPanel .ai-ops-stage-summary-head {align-items:flex-start;flex-direction:column}
+  body.admin-compact #aiOpsPanel .ai-ops-stage-issue {grid-template-columns:1fr!important}
+  body.admin-compact #aiOpsPanel .ai-ops-stage-issue b {justify-self:start}
+}
