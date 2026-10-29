@@ -167,3 +167,38 @@ test('widget keys are signalled to the client with the shared variant', async ()
   const created = await createOrder(env, signedIn(), { bookId: 'BOOK-EKODI-000001', consent: true });
   assert.equal(created.status, 201); assert.equal(created.data.widget, true); assert.equal(created.data.variantKey, 'qtin');
 });
+
+
+test('unapproved NEW ebook stays invisible at quote, no charge or entitlement even with directSale=true',async()=>{
+  const db=d1();
+  const book={...catalog.books[0],id:'BOOK-EKODI-NEW-003',title:'미승인 예약 출판물',
+    directSale:{enabled:true,fileKey:'BOOK-EKODI-NEW-003/ebook.epub',format:'EPUB 3'},
+    publisherRelease:{publicationId:'pub-new-003',editionId:'edition-new-003',
+      releaseDigest:'sha256:'+'f'.repeat(64),approved:true,checkoutEnabled:true}};
+  const stagingCatalog={...catalog,books:[...catalog.books,book]};
+  const env={...baseEnv(db),ASSETS:{fetch:async req=>new Response(JSON.stringify(
+    new URL(req.url).pathname==='/books.json'?stagingCatalog:policy))}};
+  const a=await quote(env,new Request('https://ekodi.kr/books/api/commerce/quote'),book.id);
+  assert.equal(a.status,404);
+  const b=await createOrder(env,signedIn(),{bookId:book.id,consent:true});
+  assert.equal(b.status,404);
+  assert.equal(db.raw.prepare('SELECT COUNT(*) n FROM books_orders').get().n,0);
+  assert.equal(db.raw.prepare('SELECT COUNT(*) n FROM books_entitlements').get().n,0);
+
+  const approved={verifyPublicRelease:async req=>({
+    authorized:true,state:'released',visibility:'public',checkoutEnabled:true,...req})};
+  const ready={...env,PUBLISHING_RELEASE_GATE:approved};
+  assert.equal((await quote(ready,new Request('https://ekodi.kr/books/api/commerce/quote'),book.id)).status,200);
+  const pending=await createOrder(ready,signedIn(),{bookId:book.id,consent:true});
+  assert.equal(pending.status,201);
+  let externalConfirmCalls=0;
+  const cancelled={...ready,PUBLISHING_RELEASE_GATE:{verifyPublicRelease:async req=>({
+    authorized:true,state:'scheduled',visibility:'private',checkoutEnabled:false,...req})}};
+  const attempted=await confirm(cancelled,{
+    paymentKey:'pk',orderId:pending.data.orderId,amount:pending.data.amount,
+  },new Date(),async()=>{externalConfirmCalls++;return {}});
+  assert.equal(attempted.status,409);
+  assert.equal(attempted.data.code,'BOOK_NOT_RELEASED');
+  assert.equal(externalConfirmCalls,0,'payment must not be charged after publisher release revoked');
+  assert.equal(db.raw.prepare('SELECT COUNT(*) n FROM books_entitlements').get().n,0);
+});
