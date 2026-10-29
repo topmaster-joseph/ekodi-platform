@@ -262,16 +262,21 @@
     login.className='mission-auth-button';login.textContent='로그인';
     const logout=document.createElement('button');logout.type='button';
     logout.className='mission-auth-button';logout.hidden=true;logout.textContent='로그아웃';
+    state.hidden=true;
     row.append(state,login,logout);
     target.append(row);
     if(devotion)mountDevotionAuthNextToAdmin(row,devotion);
     return {state,login,logout};
   }
+  const mobileStyle=document.createElement('style');
+  mobileStyle.textContent=`@media(max-width:700px){.mission-site-header{padding:12px 16px!important;gap:8px!important}.mission-site-header .mission-brand{min-width:0}.mission-site-header .mission-brand-mark{width:42px;height:42px}.mission-site-header .mission-brand small{font-size:10px}.mission-site-header .mission-auth-actions{margin-left:auto;gap:0}.mission-site-header .mission-auth-state{display:none!important}.mission-site-header .mission-auth-button{padding:9px 13px!important;white-space:nowrap}.mission-site-header [data-mission-nav]{gap:8px 14px!important}.hero.hero-split{padding-top:24px!important;min-height:0!important;gap:20px!important}.hero.hero-split .hero-copy{padding-top:0!important}.hero.hero-split .eyebrow{margin-bottom:10px!important}.hero.hero-split .actions{gap:8px!important}}`;
+  document.head.append(mobileStyle);
   const missionAuthUi=mountMissionAuth();
   function paintMissionAuth(status){
     if(!missionAuthUi)return;
     const authenticated=status==='in';
-    missionAuthUi.state.textContent=status==='checking'?'로그인 확인 중':status==='unavailable'?'로그인 확인 불가':authenticated?'로그인됨':'비로그인';
+    missionAuthUi.state.hidden=true;
+    missionAuthUi.state.textContent='';
     missionAuthUi.login.hidden=authenticated;
     missionAuthUi.logout.hidden=!authenticated;
   }
@@ -299,7 +304,7 @@
   }
   async function missionLogout(){
     const auth=verifiedToken;
-    if(missionAuthUi){missionAuthUi.logout.disabled=true;missionAuthUi.state.textContent='로그아웃 중';}
+    if(missionAuthUi){missionAuthUi.logout.disabled=true;missionAuthUi.state.textContent='';}
     let remoteOk=true;
     try{
       const platform=safeRead(sessionStorage,'ekodi-auth-token');
