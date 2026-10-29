@@ -670,6 +670,19 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   function workspaceSourceState(item){if(item.effectiveEnabled)return '운영';if(item.selected)return '선택됨 · 연결대기';if(item.recommendationReady)return '사용 가능';return '준비 중'}
   function workspaceSourceRow(item){const route=ae(item.routeKey||'');const network=item.networkName||item.affiliateMode||'direct';const detail=`${item.marketCountry||'-'} · ${network} · 제휴 ${item.affiliateStatus||'-'} · 추적 ${item.trackingStatus||'-'} · 상품 ${item.catalogStatus||'-'}`;return `<label class="service-row"><div><strong>${ae(item.merchantName||item.merchantKey)}</strong><p>${ae(detail)}</p>${item.notes?`<p>${ae(item.notes)}</p>`:''}${item.programUrl?`<a href="${ae(item.programUrl)}" target="_blank" rel="noopener">공식 연결/관리 ↗</a>`:''}</div><span><span class="tag ${item.effectiveEnabled?'live':item.selected?'warn':''}">${ae(workspaceSourceState(item))}</span> <input type="checkbox" name="route:${route}" ${item.selected?'checked':''}></span></label>`}
 
+  // The backend PUT accepts a partial route list and audits only submitted keys.
+  // Never rewrite other merchants from a stale workspace GET snapshot.
+  const mallSourcingSelectionPatch=(visibleRoutes,formData,allRoutes=[],initialDefaults=false)=>{
+    const selected=visibleRoutes.filter(item=>Boolean(item.routeKey))
+      .map(item=>({routeKey:item.routeKey,enabled:formData.has('route:'+item.routeKey)}));
+    if(!initialDefaults)return selected;
+    // The backend treats the first explicit workspace selection as disabling
+    // inheritance for *all* other routes. Materialize fresh defaults once.
+    const overrides=new Map(selected.map(item=>[item.routeKey,item]));
+    return allRoutes.filter(item=>Boolean(item.routeKey))
+      .map(item=>overrides.get(item.routeKey)||{routeKey:item.routeKey,enabled:Boolean(item.selected)});
+  };
+
   // Every sales/affiliate route uses a tenant-scoped selector; Amazon keeps its
   // existing credential and paid-feature gates inside the same selection view.
   const mallSourcingIsAmazon=item=>/amazon|아마존/i.test([item.merchantName,item.merchantKey,item.routeKey].join(' '));
@@ -815,12 +828,20 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       const form=$('affiliateWorkspaceSourcesForm');
       if(form)form.onsubmit=async event=>{
         event.preventDefault();
-        const fd=new FormData(form),visible=new Set(chosen.map(item=>item.routeKey));
-        const selections=sources.map(item=>({routeKey:item.routeKey,enabled:visible.has(item.routeKey)?fd.has('route:'+item.routeKey):Boolean(item.selected)}));
+        const formData=new FormData(form);
         const saveButton=form.querySelector('button[type="submit"]');
         if(saveButton)saveButton.disabled=true;
-        state('판매처 설정 저장 중');
+        state('판매처 설정 확인 중');
         try{
+          // Recheck the authoritative inherited-default policy immediately
+          // before saving; a prior GET cannot safely decide bootstrap mode.
+          const latest=await workspaceAffiliateApi('/workspace/sources');
+          const freshRoutes=Array.isArray(latest.sources)?latest.sources:[];
+          const bootstrap=latest.policy?.inheritedDefaults===true;
+          if(bootstrap&&freshRoutes.length>100)throw new Error('초기 설정 대상이 100개를 초과하여 저장을 중단했습니다.');
+          const selections=mallSourcingSelectionPatch(chosen,formData,freshRoutes,bootstrap);
+          if(!selections.length)throw new Error('저장할 판매처가 없습니다.');
+          state('판매처 설정 저장 중');
           await workspaceAffiliateApi('/workspace/sources',{method:'PUT',body:JSON.stringify({selections})});
           state('판매처 설정 저장됨');
           await affiliateSourcingPanel(selected);
