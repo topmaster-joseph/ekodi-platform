@@ -134,8 +134,63 @@ try {
             ];
             const expectedPath=root.prefix+'/board/notices';
             record.noticeAfterCategory=[];
+            record.menuClickReloadParity=[];
+            const parityViews={
+              '활동이력':{hash:'#committee-activity',sectionId:'committee-activity',filterId:'committeeActivityFilters'},
+              '관련소식':{hash:'#timeline',sectionId:'timeline',filterId:'timelineFilters'},
+              '소통채널':{hash:'#channels',sectionId:'channels',filterId:'publicChannelTabs'}
+            };
+            const menuSnapshot=async expected=>page.evaluate(({hash,sectionId,filterId})=>{
+              const section=document.getElementById(sectionId);
+              const filter=document.getElementById(filterId);
+              const panel=document.getElementById('central-category-panel');
+              const active=[...document.querySelectorAll('[data-view-section]')]
+                .filter(node=>!node.hidden&&getComputedStyle(node).display!=='none')
+                .map(node=>node.id);
+              const selected=section&&!section.hidden&&getComputedStyle(section).display!=='none';
+              const filterVisible=filter&&getComputedStyle(filter).display!=='none';
+              const nav=[...document.querySelectorAll('header.site-header nav a[aria-current="page"]')]
+                .map(node=>node.dataset.viewLink||node.textContent.trim());
+              return {
+                hash:location.hash,
+                expectedHash:hash,
+                section:sectionId,
+                active,
+                selectedVisible:!!selected,
+                filterVisible:!!filterVisible,
+                activeNav:nav,
+                legacyPanelHidden:!!panel?.hidden,
+                legacyTopic:document.body.dataset.seonammediCentralTopic||'',
+                heroHidden:!!document.querySelector('.hero')?.hidden
+              };
+            },expected);
             for(const item of contexts){
               await page.locator('header.site-header nav '+item.selector).first().click({timeout:6000});
+              const parity=parityViews[item.label];
+              if(parity){
+                await page.waitForFunction(({hash,sectionId})=>
+                  location.hash===hash&&document.getElementById(sectionId)?.hidden===false,
+                  parity,{timeout:9000});
+                const clicked=await menuSnapshot(parity);
+                const response=await page.reload({waitUntil:'domcontentloaded',timeout:25000});
+                if(!response?.ok())throw Error('menu_reload_http_'+item.label+'_'+String(response?.status()||0));
+                await page.waitForFunction(({hash,sectionId})=>
+                  location.hash===hash&&document.getElementById(sectionId)?.hidden===false,
+                  parity,{timeout:9000});
+                const reloaded=await menuSnapshot(parity);
+                const expectedNav={ '활동이력':'committee','관련소식':'status','소통채널':'channels'}[item.label];
+                const valid=clicked.hash===parity.hash&&reloaded.hash===parity.hash
+                  &&clicked.selectedVisible&&reloaded.selectedVisible
+                  &&clicked.filterVisible&&reloaded.filterVisible
+                  &&clicked.activeNav.length===1&&clicked.activeNav[0]===expectedNav
+                  &&reloaded.activeNav.length===1&&reloaded.activeNav[0]===expectedNav
+                  &&clicked.legacyPanelHidden&&reloaded.legacyPanelHidden
+                  &&!clicked.legacyTopic&&!reloaded.legacyTopic
+                  &&clicked.heroHidden&&reloaded.heroHidden
+                  &&JSON.stringify(clicked)===JSON.stringify(reloaded);
+                record.menuClickReloadParity.push({view:item.label,clicked,reloaded,ok:valid});
+                if(!valid)throw Error('native_click_reload_view_mismatch_'+item.label);
+              }
               await page.locator('header.site-header nav a[href*="board/notices"]').first().click({timeout:8000});
               await page.waitForURL(url=>url.origin===root.origin&&url.pathname.replace(/[/]$/,'')===expectedPath,{timeout:10000});
               const actualPath=new URL(page.url()).pathname.replace(/[/]$/,'');
