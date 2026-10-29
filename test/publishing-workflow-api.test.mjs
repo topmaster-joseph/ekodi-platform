@@ -130,8 +130,8 @@ test('cloud scheduler advances only a fully reviewed due edition into nonpublic 
   // Audio and contracts are protected, separately attested database records, not client toggles.
   sql.prepare("INSERT INTO publishing_workflow_release_contracts (project_id,author_user_id,edition_digest,status,author_signed_at,publisher_signed_at,distribution_license_accepted,sealed_contract_sha256,created_at,updated_at) VALUES (?,?,?,'signed',?,?,1,?,?,?)")
     .run(p.id,chief,hash,'2026-11-19T00:00:00Z','2026-11-20T00:00:00Z','a'.repeat(64),'2026-11-20T00:00:00Z','2026-11-20T00:00:00Z');
-  sql.prepare("INSERT INTO publishing_workflow_audio_release_qa (project_id,edition_digest,stage,master_sha256,voice_license_verified,dialogue_qa_passed,full_track_qa_passed,buyer_access_verified,refund_revoke_verified,bonus_price_krw,verified_at) VALUES (?,?,'approved',?,1,1,1,1,1,0,?)")
-    .run(p.id,hash,'b'.repeat(64),'2026-11-20T00:00:00Z');
+  sql.prepare("INSERT INTO publishing_workflow_audio_release_qa (project_id,edition_digest,stage,master_sha256,voice_license_verified,dialogue_qa_passed,full_track_qa_passed,buyer_access_verified,refund_revoke_verified,bonus_price_krw,verified_by,verified_at) VALUES (?,?,'approved',?,1,1,1,1,1,0,?,?)")
+    .run(p.id,hash,'b'.repeat(64),'audio-editor','2026-11-20T00:00:00Z');
   const run=await prepareScheduledPublishing(env,new Date('2026-11-25T01:00:01.000Z'));
   assert.deepEqual(run,{ok:true,prepared:1,blocked:0});
   const row=sql.prepare("SELECT stage FROM publishing_workflow_projects WHERE id=?").get(p.id);
