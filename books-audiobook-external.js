@@ -63,7 +63,7 @@ export async function approveAudioClaim(env,req,id){
   const {user,error}=await identify(req,env,true);if(error)return error;
   const b=await input(req);
   if(!b||b.confirmedWithRetailer!==true||b.buyerIdentityMatched!==true||
-    b.refundStatusChecked!==true||b.verificationMethod!=='retailer_portal'
+    b.refundStatusChecked!==true||b.productEditionMatched!==true||b.verificationMethod!=='retailer_portal'
     ||!codePattern.test(String(b.orderNumber||'')))return deny(400,'INDEPENDENT_VERIFICATION_REQUIRED');
   const claim=await env.DB.prepare('SELECT * FROM books_audiobook_external_claims WHERE id=?').bind(id).first();
   if(!claim||claim.status!=='pending')return deny(409,'NOT_PENDING');
