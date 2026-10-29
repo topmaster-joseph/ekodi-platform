@@ -66,7 +66,7 @@ test('no query string, token, alternative host, auth, cookie or secret forwardin
   assert.equal(check(make('/health?token=secret')).allowed, false);
   assert.equal(check(make('/health#frag')).allowed, false);
   assert.equal(check(make('/health', { origin: 'http://ekodi.kr/api/insurance' })).allowed, false);
-  assert.equal(check(make('/health', { origin: 'https://www.ekodi.kr/api/insurance' })).allowed, false);
+  assert.equal(check(make('/health', { origin: 'https://example.org/api/insurance' })).allowed, false);
   assert.equal(check(make('/health', { origin: 'https://ekodi.kr:8080/api/insurance' })).allowed, false);
   const headers = {
     'origin': 'https://ekodi.kr', 'content-type': 'application/json',
