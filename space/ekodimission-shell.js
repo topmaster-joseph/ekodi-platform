@@ -257,7 +257,8 @@
     const state=document.createElement('span');
     state.className='mission-auth-state';state.dataset.missionAuthState='';
     state.setAttribute('role','status');state.setAttribute('aria-live','polite');
-    state.textContent='로그인 확인 중';
+    state.textContent='';
+    state.hidden=true;
     const login=document.createElement('a');login.href=MISSION_LOGIN;
     login.className='mission-auth-button';login.textContent='로그인';
     const logout=document.createElement('button');logout.type='button';
@@ -268,10 +269,11 @@
     return {state,login,logout};
   }
   const missionAuthUi=mountMissionAuth();
-  function paintMissionAuth(status){
+  function paintMissionAuth(status,account=''){
     if(!missionAuthUi)return;
     const authenticated=status==='in';
-    missionAuthUi.state.textContent=status==='checking'?'로그인 확인 중':status==='unavailable'?'로그인 확인 불가':authenticated?'로그인됨':'비로그인';
+    missionAuthUi.state.textContent=authenticated?(String(account||'계정').slice(0,90)):'';
+    missionAuthUi.state.hidden=!authenticated;
     missionAuthUi.login.hidden=authenticated;
     missionAuthUi.logout.hidden=!authenticated;
   }
@@ -286,7 +288,7 @@
         const data=await response.json();
         if(data.authenticated===true){
           if(epoch!==authGeneration)return '';
-          verifiedToken=token;paintMissionAuth('in');
+          verifiedToken=token;paintMissionAuth('in',data.account);
           window.dispatchEvent(new Event('ekodi:mission-auth-changed'));
           return verifiedToken;
         }
@@ -299,7 +301,7 @@
   }
   async function missionLogout(){
     const auth=verifiedToken;
-    if(missionAuthUi){missionAuthUi.logout.disabled=true;missionAuthUi.state.textContent='로그아웃 중';}
+    if(missionAuthUi){missionAuthUi.logout.disabled=true;}
     let remoteOk=true;
     try{
       const platform=safeRead(sessionStorage,'ekodi-auth-token');
@@ -318,7 +320,7 @@
       paintMissionAuth('out');
       if(missionAuthUi){
         missionAuthUi.logout.disabled=false;
-        if(!remoteOk)missionAuthUi.state.textContent='이 기기에서 로그아웃됨';
+        if(!remoteOk)missionAuthUi.logout.title='이 기기에서 로그아웃되었습니다.';
       }
       window.dispatchEvent(new Event('ekodi:auth-logout'));
       window.dispatchEvent(new Event('ekodi:mission-auth-changed'));
