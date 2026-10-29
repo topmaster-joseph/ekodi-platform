@@ -640,7 +640,7 @@ function summarizeCommandResult(result = {}, commandType = '') {
       ollamaVersion: safeText(proof.ollamaVersion, 70),
       // Only closed categorical diagnostics may cross the authenticated API.
       // Never return process IDs, executable paths, raw exceptions, or AI output.
-      diagnosticCode: safeLocalAiDiagnostic(proof.diagnosticCode),
+
       ollamaProcess: oneOf(proof.ollamaProcess, ['running','not_running','unknown'], 'unknown'),
       ollamaSocket: oneOf(proof.ollamaSocket, ['listening','not_listening','timeout','unknown'], 'unknown'),
       ollamaBind: oneOf(proof.ollamaBind, ['listener_present','other_address_only','not_listening','unknown'], 'unknown'),
@@ -652,6 +652,10 @@ function summarizeCommandResult(result = {}, commandType = '') {
       credentialCollection: proof.credentialCollection === true,
       executionMode: 'fixed_loopback_api',
     };
+    // Absence of a category on an older signed native receipt must not turn
+    // otherwise genuine passed inference into an invented diagnostic failure.
+    if (proof.diagnosticCode !== undefined)
+      summary.localAiProof.diagnosticCode = safeLocalAiDiagnostic(proof.diagnosticCode);
   }
   if (result.desktopSessionCanary && typeof result.desktopSessionCanary === 'object') {
     summary.desktopSessionCanary = {
