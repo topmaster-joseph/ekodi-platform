@@ -190,6 +190,45 @@ try {
                   &&JSON.stringify(clicked)===JSON.stringify(reloaded);
                 record.menuClickReloadParity.push({view:item.label,clicked,reloaded,ok:valid});
                 if(!valid)throw Error('native_click_reload_view_mismatch_'+item.label);
+                // Read-only subcategory parity: verify the selected chip and hash
+                // across refresh, browser history, and a fresh deep-link.
+                const filterRoute=item.label==='활동이력'
+                  ?{prefix:'committee-activity',id:'committeeActivityFilters',attribute:'data-committee-filter'}
+                  :item.label==='관련소식'
+                    ?{prefix:'timeline',id:'timelineFilters',attribute:'data-cat'}
+                    :null;
+                if(filterRoute){
+                  record.filterClickReloadHistoryParity ||= [];
+                  const filterSelector='#'+filterRoute.id+' button['+filterRoute.attribute+']';
+                  if(await page.locator(filterSelector).count()<2)throw Error('native_filter_options_missing_'+item.label);
+                  const nonDefault=page.locator(filterSelector).nth(1);
+                  const category=String(await nonDefault.getAttribute(filterRoute.attribute)||'').trim();
+                  if(!category||category==='전체')throw Error('native_nondefault_category_missing_'+item.label);
+                  const selectedHash='#'+filterRoute.prefix+'/'+encodeURIComponent(category);
+                  const defaultHash='#'+filterRoute.prefix;
+                  const observe=async expectedHash=>page.waitForFunction(({hash,id,attribute,category})=>{
+                    const selected=document.querySelector('#'+id+' button.active['+attribute+']');
+                    return location.hash===hash&&selected?.getAttribute(attribute)===category
+                      &&document.getElementById(id)?.getBoundingClientRect().width>0
+                      &&document.getElementById('central-category-panel')?.hidden===true;
+                  },{hash:expectedHash,id:filterRoute.id,attribute:filterRoute.attribute,
+                     category:expectedHash===defaultHash?'전체':category},{timeout:9000});
+                  await nonDefault.click({timeout:7000});
+                  await observe(selectedHash);
+                  const clickedFilter=page.url();
+                  const filteredReload=await page.reload({waitUntil:'domcontentloaded',timeout:25000});
+                  if(!filteredReload?.ok())throw Error('native_filter_reload_http_'+item.label);
+                  await observe(selectedHash);
+                  await page.goBack({timeout:15000,waitUntil:'domcontentloaded'});
+                  await observe(defaultHash);
+                  await page.goForward({timeout:15000,waitUntil:'domcontentloaded'});
+                  await observe(selectedHash);
+                  const direct=await page.goto(target+selectedHash,{waitUntil:'domcontentloaded',timeout:25000});
+                  if(!direct?.ok())throw Error('native_filter_direct_link_http_'+item.label);
+                  await observe(selectedHash);
+                  record.filterClickReloadHistoryParity.push({view:item.label,category,clickedFilter,
+                    selectedHash,defaultHash,clicked:true,reloaded:true,back:true,forward:true,direct:true,ok:true});
+                }
               }
               await page.locator('header.site-header nav a[href*="board/notices"]').first().click({timeout:8000});
               await page.waitForURL(url=>url.origin===root.origin&&url.pathname.replace(/[/]$/,'')===expectedPath,{timeout:10000});
