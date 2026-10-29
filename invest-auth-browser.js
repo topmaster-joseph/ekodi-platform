@@ -1,22 +1,3 @@
-// Shared *read-only* Supabase OAuth session lookup for EKODI Invest public/member and My Invest.
-// Match the canonical EKODI homepage-auth-state.js convention, not an ad-hoc localStorage key.
-// Server endpoints still independently validate Bearer tokens; this never grants permissions.
-export const INVEST_MEMBER_SESSION_BROWSER_SOURCE = String.raw\`
-const EKODI_MEMBER_SESSION_KEY=/^sb-[a-z0-9]+-auth-token(?:\\.\\d+)?$/i;
-function readEkodiMemberToken(){
-  try{
-    for(let i=0;i<localStorage.length;i++){
-      const key=localStorage.key(i)||'';
-      if(!EKODI_MEMBER_SESSION_KEY.test(key))continue;
-      let raw;
-      try{raw=JSON.parse(localStorage.getItem(key)||'null')}catch{continue}
-      const s=raw?.currentSession||raw?.session||raw;
-      const expires=Number(s?.expires_at||0);
-      if(!s?.user?.id||typeof s.access_token!=='string'||!s.access_token||s.access_token.length>8192)continue;
-      if(!Number.isFinite(expires)||(expires>0&&expires*1000<=Date.now()))continue;
-      return s.access_token;
-    }
-  }catch{}
-  return '';
-}
-\`;
+// Read-only browser session resolver matching the existing EKODI Supabase OAuth client.
+// Real access decisions remain server-side; never trust this as an authorization result.
+export const INVEST_MEMBER_SESSION_BROWSER_SOURCE = "const EKODI_MEMBER_SESSION_KEY=/^sb-[a-z0-9]+-auth-token(?:\\.\\d+)?$/i;\nfunction readEkodiMemberToken(){\n  try{\n    for(let i=0;i<localStorage.length;i++){\n      const key=localStorage.key(i)||'';\n      if(!EKODI_MEMBER_SESSION_KEY.test(key))continue;\n      let raw;\n      try{raw=JSON.parse(localStorage.getItem(key)||'null')}catch{continue}\n      const s=raw?.currentSession||raw?.session||raw;\n      const expires=Number(s?.expires_at||0);\n      if(!s?.user?.id||typeof s.access_token!=='string'||!s.access_token||s.access_token.length>8192)continue;\n      if(!Number.isFinite(expires)||(expires>0&&expires*1000<=Date.now()))continue;\n      return s.access_token;\n    }\n  }catch{}\n  return '';\n}";
