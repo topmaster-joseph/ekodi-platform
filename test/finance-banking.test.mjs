@@ -42,7 +42,7 @@ test('banking API fixes tenant scope server-side and fails closed for real trans
   assert.match(worker,/RECIPIENT_ACCOUNT_NUMBER_REQUIRED_AT_EXECUTION/);
   assert.match(worker,/bank_audit_log/);
   assert.doesNotMatch(worker,/recipient_account_number\s*[),]/i);
-  assert.match(worker,/bankConnectionId,transactions/);
+  assert.match(worker,/url\.pathname==='\/api\/finance\/banking\/transactions\/import'/);
   assert.match(worker,/slice\(0,500\)/);
   assert.match(worker,/ON CONFLICT\(bank_connection_id,external_id\)/);
 });
