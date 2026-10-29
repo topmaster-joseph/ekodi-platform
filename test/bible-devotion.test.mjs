@@ -222,3 +222,20 @@ test('phone layout keeps scripture side gutters minimal', () => {
   assert.match(tail, /\.ekodi-devotion \.dv-panel\{padding-left:12px;padding-right:12px\}/);
   assert.match(tail, /\.ekodi-devotion \.dv-scripture-section\{padding:16px 12px;/);
 });
+
+test('church, mission, and Bible share a fail-closed tomorrow navigation control',()=>{
+ const client=fs.readFileSync(new URL('../bible/devotion.js',import.meta.url),'utf8');
+ const churches=['/bible/devotion','/ekodichurch/devotion/','/ekodimission/devotion'];
+ assert.ok(client.includes('const siteKey = root.dataset.siteKey'), 'shared renderer identifies the host');
+ for(const path of churches)assert.ok(client.includes(path),'missing host in canonical renderer');
+ assert.match(client,/next\.hidden = true;/);
+ assert.match(client,/next\.removeAttribute\('href'\)/);
+ assert.match(client,/next\.setAttribute\('aria-disabled', String\(!allowed\)\)/);
+ assert.match(client,/current\.nextDate <= today \|\| \(current\.admin\?\.canEdit && !futurePermissionRevoked\)/);
+ assert.match(client,/window\.addEventListener\('ekodi:auth-logout',revokeFutureNavigation\)/);
+ assert.match(client,/window\.addEventListener\('storage',event=>/);
+ assert.match(client,/location\.replace\(pageUrl\(seoulToday\(\)\)\)/);
+ assert.match(client,/next\.addEventListener\('click',async event=>/);
+ assert.match(client,/if \(!await verifyFuturePermission\(date\)\)/);
+ assert.match(client,/timeZone:'Asia\/Seoul'/);
+});
