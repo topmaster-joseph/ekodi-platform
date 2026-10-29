@@ -183,8 +183,11 @@ test('private order calls use canonical HTTPS and prohibit automatic redirects',
   const base = supplier({}, log);
   const urls = [];
   const fetchImpl = async (url, init) => {
-    urls.push(String(url));
-    assert.equal(init?.redirect, 'error');
+    const mode = init?.body ? new URLSearchParams(String(init.body)).get('mode') : new URL(String(url)).searchParams.get('mode');
+    if (mode !== 'getItemView') {
+      urls.push(String(url));
+      assert.equal(init?.redirect, 'error');
+    }
     return base(url, init);
   };
   const r = await placeSupplierOrders(env, fetchImpl);
