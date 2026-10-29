@@ -22,17 +22,23 @@ function statements(db,record,actor,nowIso){
   // Construct the SQL explicitly below to avoid an untrusted/reused actor from
   // becoming part of an interpolated query.
   return {
+    // A scalar subquery returns NULL if the preceding CAS/INSERT did not persist
+    // this exact record. The NOT NULL constraint then fails the D1 batch, forcing
+    // rollback instead of silently committing a zero-row INSERT ... SELECT.
     audit:db.prepare(`INSERT INTO publishing_release_audit
       (edition_id,revision,transition,actor_id,release_digest,recorded_at_utc)
-      SELECT edition_id,revision,?,?,release_digest,?
-      FROM publishing_private_editions WHERE edition_id=? AND revision=? AND record_json=?`)
-      .bind(String(record.lastTransition||record.state).slice(0,160),
-        actor,nowIso,record.editionId,record.revision,raw),
+      VALUES ((SELECT edition_id FROM publishing_private_editions
+        WHERE edition_id=? AND revision=? AND record_json=?),?,?,?,?,?)`)
+      .bind(record.editionId,record.revision,raw,record.revision,
+        String(record.lastTransition||record.state).slice(0,160),
+        actor,record.releaseDigest,nowIso),
     outbox:db.prepare(`INSERT INTO publishing_release_outbox
       (event_key,edition_id,revision,release_digest,event_type,payload_json,created_at_utc)
-      SELECT ?,edition_id,revision,release_digest,'publishing.edition.state.v1',?,?
-      FROM publishing_private_editions WHERE edition_id=? AND revision=? AND record_json=?`)
-      .bind(key,event(record,nowIso),nowIso,record.editionId,record.revision,raw),
+      VALUES (?,(SELECT edition_id FROM publishing_private_editions
+        WHERE edition_id=? AND revision=? AND record_json=?),?,
+        ?,'publishing.edition.state.v1',?,?)`)
+      .bind(key,record.editionId,record.revision,raw,record.revision,
+        record.releaseDigest,event(record,nowIso),nowIso),
   };
 }
 function validateBatch(results) {
