@@ -28,6 +28,7 @@ const make=(token,body)=>new Request('https://x/api/commerce/audiobook/claims',{
   body:body?JSON.stringify(body):undefined
 });
 test.beforeEach(()=>{
+  db.exec('DELETE FROM books_audiobook_external_grants; DELETE FROM books_audiobook_external_claims;');
   globalThis.fetch=async(_,options)=>new Response(JSON.stringify(
     String(options?.headers?.authorization||'').includes('operator')?oper:ident));
 });
