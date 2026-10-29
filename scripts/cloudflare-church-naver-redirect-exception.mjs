@@ -124,8 +124,11 @@ export async function reconcileChurchNaverRedirect({ token, accountId, mode = 'a
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     const mode = process.argv.includes('--inspect') ? 'inspect' : 'apply';
+    if (!process.env.CLOUDFLARE_CHURCH_RULES_API_TOKEN) {
+      throw new Error('Missing CLOUDFLARE_CHURCH_RULES_API_TOKEN: create a zone-scoped token with Zone Read and Single Redirect Edit for ekodichurch.kr; add it as a GitHub Actions secret');
+    }
     const result = await reconcileChurchNaverRedirect({
-      token: process.env.CLOUDFLARE_API_TOKEN,
+      token: process.env.CLOUDFLARE_CHURCH_RULES_API_TOKEN,
       accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
       mode,
     });
