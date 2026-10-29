@@ -332,7 +332,7 @@ async function openProject(id) {
   });
   overlay.querySelector('[data-my-ekodi]').addEventListener('click', async () => { if (canShare) await publishToMyEkodi(project, overlay); });
   const books = overlay.querySelector('[data-books]');
-  if (books) books.addEventListener('click', () => { recordEvent(project.id, 'books', 'books.handoff.requested', { target: 'EKODI BOOKS' }); location.assign('https://books.ekodi.kr/'); });
+  if (books) books.addEventListener('click', () => { recordEvent(project.id, 'books', 'books.handoff.requested', { target: 'EKODI BOOKS' }); location.assign('https://ekodi.kr/books/'); });
 }
 async function publishToMyEkodi(project, overlay) {
   const button = overlay.querySelector('[data-my-ekodi]');

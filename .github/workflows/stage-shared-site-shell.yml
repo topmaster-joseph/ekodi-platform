@@ -205,7 +205,8 @@ jobs:
           test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
           test -n "$CLOUDFLARE_API_TOKEN"
       - name: Deploy no-route staging Worker
-        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.site-staging.toml
+        # CF-QUOTA-001: never retry quota responses; only one 10500 internal-auth recovery.
+        run: node scripts/site-core-staging-10500-recovery.mjs
       - name: Verify protected shared-site staging
         shell: bash
         run: |

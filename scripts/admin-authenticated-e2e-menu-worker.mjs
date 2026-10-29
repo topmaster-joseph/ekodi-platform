@@ -598,6 +598,80 @@ async function verifyNormal(tab, alreadyActive, started) {
 }
 
 
+// ADMIN-ARCH-ISOLATED-PROOF-20261029 — independent actual authenticated
+// production viewport measurement, no Social Hub dependency and no mutation.
+// Screenshots crop the read-only architecture layers, not account/identity UI.
+async function verifyArchitectureResponsive(tab, alreadyActive, started) {
+  await verifyNormal(tab, alreadyActive, started);
+  stage('architecture-viewport-proof');
+  await page.waitForFunction(() => {
+    const panel = document.querySelector('.content > .architecture[data-panel~="architecture"]');
+    return Boolean(panel && !panel.hidden && !panel.classList.contains('hidden-panel')
+      && getComputedStyle(panel).display!=='none'
+      && panel.querySelectorAll('#structureLayers > article').length>=9);
+  }, null, {timeout:15000});
+
+  const expected = [[1440,3],[1366,3],[768,2],[390,1],[320,1]];
+  const measurements=[];
+  try {
+    for (const [width, columns] of expected) {
+      await page.setViewportSize({width,height:width<=390?844:1000});
+      const sample = await page.evaluate(() => {
+        const panel=document.querySelector('.content > .architecture[data-panel~="architecture"]');
+        const layers=panel?.querySelector('#structureLayers');
+        const registry=panel?.querySelector('#structureServiceRegistry .structure-service-grid');
+        const platforms=panel?.querySelector('#ekodiArchitectureMap .system-map-platform-grid');
+        const flow=panel?.querySelector('#structureFlow');
+        const colCount=node => node?getComputedStyle(node).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length:null;
+        const arrows=flow?[...flow.children].filter(x=>x.tagName==='B'):[];
+        return {
+          width:innerWidth,
+          panelVisible:Boolean(panel&&!panel.hidden&&!panel.classList.contains('hidden-panel')&&getComputedStyle(panel).display!=='none'),
+          layers:colCount(layers),registry:colCount(registry),platforms:colCount(platforms),
+          cards:layers?.querySelectorAll(':scope > article').length||0,
+          flowCards:flow?.querySelectorAll(':scope > div').length||0,
+          arrowsVisible:arrows.filter(x=>getComputedStyle(x).display!=='none').length,
+          arrowWidths:arrows.map(x=>Math.round(x.getBoundingClientRect().width)),
+          overflow:Math.max(0,document.documentElement.scrollWidth-innerWidth),
+          layerOverflow:layers?Math.max(0,layers.scrollWidth-layers.clientWidth):0,
+        };
+      });
+      if (!sample.panelVisible || sample.width!==width || sample.layers!==columns
+          || (sample.registry!==null&&sample.registry!==columns)
+          || (sample.platforms!==null&&sample.platforms!==columns)
+          || sample.cards<9 || sample.flowCards!==4
+          || sample.overflow>2 || sample.layerOverflow>2
+          || (width>=1366&&(sample.arrowsVisible!==3||sample.arrowWidths.some(w=>w>30)))
+          || (width<=390&&sample.arrowsVisible!==0)) {
+        throw new Error('ADMIN_ARCHITECTURE_FOCUSED_LIVE_E2E: '+JSON.stringify({expectedColumns:columns,...sample}));
+      }
+      measurements.push({width,columns:sample.layers,overflow:sample.overflow});
+      if ([768,390,320].includes(width)) {
+        await page.locator('#structureLayers').screenshot({
+          path:path.join(artifactsDir,'architecture-'+width+'.png'),
+          timeout:12000,
+        });
+      }
+    }
+  } finally {
+    await page.setViewportSize({width:1440,height:1100});
+  }
+  // ADMIN-ARCH-PROOF-ARTIFACT-001: persist only anonymized grid geometry before
+  // unrelated later menu/Assist checks. Cropped screenshots contain structure
+  // cards only, never the identity, account or admin header/sidebar.
+  await fs.writeFile(path.join(artifactsDir,'architecture-geometry.json'),JSON.stringify({
+    schemaVersion:1,
+    check:'authenticated-architecture-responsive',
+    passed:true,
+    measurements,
+    screenshotCount:3,
+  },null,2));
+  const record=results.find(x=>x.id===menuId);
+  if(record)Object.assign(record,{readOnly:true,isolatedArchitecture:true,measurements,screenshotCount:3});
+  console.log('[E2E:architecture] authenticated independent five-width geometry PASS '+JSON.stringify(measurements));
+}
+
+
 async function verifySocialInventory(tab, alreadyActive, started) {
   // SOCIAL-ID-001: read-only live verification. Never create test social identities.
   await verifyNormal(tab, alreadyActive, started);
@@ -755,6 +829,13 @@ async function verifySocialInventory(tab, alreadyActive, started) {
           !document.body.classList.contains('admin-mobile-drawer-open')&&rect&&rect.right<=2);
       },null,{timeout:5000});
     }
+    // A tall panel screenshot at 320/390 can leave the document scrolled when
+    // the viewport grows to 768. Restore a real user-visible heading position
+    // before measuring hit-testing; never bypass an actual overlay.
+    await page.locator('#ekodiSocialAccountRegistry .ekodi-social-heading h2').evaluate(
+      heading=>heading.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'})
+    );
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(resolve)));
     const state=await page.evaluate(()=>{
       const panel=document.querySelector('#ekodiSocialAccountRegistry');
       const rect=panel?.getBoundingClientRect();
@@ -781,8 +862,11 @@ async function verifySocialInventory(tab, alreadyActive, started) {
     });
     if(state.width!==width||!state.headingAccessible||!state.panelVisible||!state.panelFitsViewport||state.horizontalOverflow||!state.architectureHidden||!state.selected)
       throw new Error('Social account viewport verification failed: '+JSON.stringify(state));
-    await page.screenshot({
-      path:path.join(artifactsDir,'social-accounts-'+width+'.png'),fullPage:false,
+    // Crop to the account workspace itself: a full-page screenshot can expose
+    // the signed-in account identifier in the Admin sidebar outside the record mask.
+    // Keep the per-record mask as a second, independent privacy boundary.
+    await page.locator('#ekodiSocialAccountRegistry').screenshot({
+      path:path.join(artifactsDir,'social-accounts-'+width+'.png'),
       mask:[page.locator('#ekodiSocialAccountRegistry [data-social-record]')],maskColor:'#d1d5db'
     });
     viewports.push(state);
@@ -866,6 +950,7 @@ try {
       else if (menuId === 'ai-settings') await verifyAiSettings(trigger, alreadyActive, started);
       else if (menuId === 'personal-finance') await verifyPersonalFinance(trigger, alreadyActive, started);
       else if (menuId === 'social-accounts') await verifySocialInventory(trigger, alreadyActive, started);
+      else if (menuId === 'architecture') await verifyArchitectureResponsive(trigger, alreadyActive, started);
       else await verifyNormal(trigger, alreadyActive, started);
     }
   }

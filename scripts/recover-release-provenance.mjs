@@ -251,6 +251,11 @@ const controlApiTouched=sourceFiles.some(file=>[
 // filter for Site Core. Use only source paths owned by the existing Site Core
 // workflow and only its receipt-bound, staged, guarded workflow_dispatch.
 const sharedSiteTouched=sourceFiles.some(file=>
+  // The guarded Site Core release executes these read-only verification scripts.
+  // Source-pinned immediate recovery must dispatch the release even when a
+  // GITHUB_TOKEN merge does not emit an ordinary main push workflow event.
+  ['scripts/verify-admin-production-ui-e2e.mjs',
+   'scripts/ekodi-background-browser-worker.mjs'].includes(file)||
   // Public Invest education / member-entry markup lives in the shared Site Core worker.
   file==='invest-access-ui.js'||
   // A Site Core manifest canary update must deploy even if recovery merges immediately.
@@ -267,7 +272,10 @@ const sharedSiteTouched=sourceFiles.some(file=>
    'live-interpretation.js','live-interpretation.css',
    'realtime-tenant-registry.js',
    'scripts/converge-orchestrated-pr-merge.mjs',
-   'platform-router-entry-worker.js','.github/workflows/deploy-site-core.yml'].includes(file)
+   'platform-router-entry-worker.js','.github/workflows/deploy-site-core.yml',
+   'scripts/site-core-staging-10500-recovery.mjs',
+   '.github/workflows/stage-shared-site-shell.yml',
+   'test/site-core-staging-10500-recovery.test.mjs'].includes(file)
 );
 // First-party Shell is an independent guarded Worker. GitHub-token recovery
 // merges do not produce a regular main push event, so a successful immediate

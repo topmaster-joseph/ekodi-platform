@@ -10,7 +10,7 @@ const html = read('control.html');
 const ui = read('control.js');
 
 test('shared-site release must independently probe Control on desktop and mobile', () => {
-  const scoped = 'surface_paths: /,/my/,/admin/,/ekodimall/admin,/control';
+  const scoped = 'surface_paths: /,/my/,/admin/,/ekodimall/admin,/admin/control';
   assert.equal(release.split(scoped).length - 1, 2);
   const desktop = release.slice(release.indexOf('native_surface_verification_desktop:'), release.indexOf('native_surface_verification_mobile:'));
   const mobile = release.slice(release.indexOf('native_surface_verification_mobile:'), release.indexOf('authenticated_admin_surface_verification:'));
@@ -30,13 +30,14 @@ test('Control native probes are immutable isolated EKODI browser checks', () => 
   assert.match(native, /horizontalOverflow == true/);
   assert.match(native, /maxActions=30/);
   assert.ok(native.includes("github.event_name == 'pull_request' && '/,/my/,/admin/'"),'PR browser must not gate an unreleased Control fix on the old live assets');
-  assert.ok(native.includes("index===0||p==='/control'||p.split('/').includes('board')"));
-  assert.match(native, /\.path == "\/control"/);
+  assert.ok(native.includes("index===0||p==='/admin/control'||p.split('/').includes('board')"));
+  assert.match(native, /\.path == "\/admin\/control"/);
   assert.match(native, /\.type == "snapshot"/);
   assert.match(native, /\.bodyText \/\/ ""/);
   assert.ok(native.includes('contains("AI 경로 점검")'));
   assert.ok(native.includes('contains("보호된 배포 요청")'));
-  assert.ok(native.includes('test("^https://ekodi[.]kr/control/?$")'));
+  assert.ok(native.includes('(.path == "/admin/control"'),'browser explicitly checks canonical Control route');
+  assert.ok(native.includes('test("^https://ekodi[.]kr/admin/control/?$")'));
 
 });
 

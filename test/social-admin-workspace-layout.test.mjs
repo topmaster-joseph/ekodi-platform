@@ -71,3 +71,16 @@ test('Social Hub mobile workflow tabs are a readable two-column grid without cli
   assert.match(e2e, /mobile\.mobileTabLayout\.columnCount!==2/);
   assert.match(e2e, /!mobile\.mobileTabLayout\.unclipped/);
 });
+
+test('mobile Social workspace tabs are border-box grid items with fit-to-cell geometry diagnostics',async()=>{
+  assert.match(styles,/SOCIAL-MOBILE-TABS-UNCLIPPED-20261028/);
+  assert.match(styles,/\.social-workspace-tabs > \.social-workspace-tab\{/);
+  assert.match(styles,/box-sizing:border-box!important/);
+  assert.match(styles,/min-height:46px!important/);
+  assert.match(styles,/white-space:normal!important/);
+  assert.match(styles,/max-width:100%!important/,'mobile Social tabs must stay within grid cells');
+  assert.match(styles,/overflow-wrap:anywhere!important/,'long translated tab labels must wrap');
+  const source=await readFile(new URL('../scripts/verify-admin-production-ui-e2e.mjs',import.meta.url),'utf8');
+  assert.match(source,/return \{columnCount,unclipped,metrics\}/);
+  assert.match(source,/scrollWidth:item.scrollWidth/);
+});

@@ -464,7 +464,12 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='search-engine-verification.js'||
   file==='canonical-surface-router.js'||
   file==='admin-sidebar.js'||
+  // Native-browser postpromotion verification scripts run as part of the guarded
+  // Site Core release and must be checked against the exact protected merge.
+  // GITHUB_TOKEN merges cannot rely on main push workflow events.
+  // Preserve the existing explicit Admin verifier release contract.
   file==='scripts/verify-admin-production-ui-e2e.mjs'||
+  file==='scripts/ekodi-background-browser-worker.mjs'||
   // Hybrid native browser admin page shares the guarded Site Core release boundary.
   file==='hybrid-execution-admin.js'||
   file==='device-control-admin.js'||
@@ -484,6 +489,10 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='scripts/seonammedi-live-html-proof.mjs'||
   file==='scripts/seonammedi-cache-contract.mjs'||
   file==='test/seonammedi-cache-contract.test.mjs'||
+  // Shared staging upload and recovery policy belongs to guarded Site Core.
+  ['scripts/site-core-staging-10500-recovery.mjs',
+   '.github/workflows/stage-shared-site-shell.yml',
+   'test/site-core-staging-10500-recovery.test.mjs'].includes(file)||
   file==='.github/workflows/deploy-site-core.yml'||
   file==='scripts/converge-orchestrated-pr-merge.mjs'||
   file==='.github/workflows/converge-orchestrated-pr-merge.yml'

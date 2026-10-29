@@ -117,7 +117,8 @@ async function lastIndexNow(db,sites){
       })};
   }catch{return {source:'marketing_indexnow_url_state',status:'unavailable',truncated:false,sites:[]};}
 }
-function validateEvidence(body,sites){
+// Pure validator exported for executable security/regression tests; HTTP entry still requires super_admin.
+export function validateEvidence(body,sites){
   if(!body||typeof body!=='object'||Array.isArray(body))throw new Error('INVALID_BODY');
   const siteUrl=safe(body.siteUrl,500),providerId=safe(body.providerId,64);
   const checkType=safe(body.checkType,32),state=safe(body.state,32);

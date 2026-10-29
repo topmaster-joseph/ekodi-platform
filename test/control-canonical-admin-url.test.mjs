@@ -52,7 +52,7 @@ test('standalone canonical Control and legacy /control both retain CSP and noind
 
 test('existing approved single-sidebar Admin workbench and task history remain unchanged',()=>{
  const home=read('admin-control-home.js'),nav=read('control.js'),style=read('control.css'),html=read('control.html');
- assert.match(home,/frame\.src='\/control\?embedded=admin'/);
+ assert.match(home,/frame\.src='\/admin\/control\?embedded=admin'/);
  assert.match(nav,/function mountEmbeddedToolbar\(\)/);
  assert.match(nav,/rail\.hidden=true/);
  assert.match(style,/\.control-embedded-toolbar/);
