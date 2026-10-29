@@ -22,7 +22,7 @@
 
   const SITE_META = [
     { domain:'ekodi.kr', name:'EKODI Home', group:'Core & Access', role:'생태계 정문·서비스 레지스트리', aliases:['에코디 홈','에코디','홈','root','home'] },
-    { domain:'admin.ekodi.kr', name:'Control Center', group:'Core & Access', role:'통합운영·권한·감사', aliases:['관리자','관리자페이지','컨트롤센터','control center','admin'] },
+    { domain:'ekodi.kr/admin', name:'Control Center', group:'Core & Access', role:'통합운영·권한·감사', aliases:['관리자','관리자페이지','컨트롤센터','control center','admin'] },
     { domain:'auth.ekodi.kr', name:'EKODI Auth', group:'Core & Access', role:'통합인증·계정·SSO', aliases:['인증센터','통합인증','인증','auth','로그인'] },
     { domain:'life.ekodi.kr', name:'오늘의 질문', group:'Life & Community', role:'삶의 질문·성찰·말씀 연결·실천', aliases:['오늘의 질문','인생ai','인생 ai','life ai','life'] },
     { domain:'ekodi.kr/ekodichurch', name:'에코디교회', group:'Community', role:'예배·사역·공동체 운영', aliases:['에코디교회','교회','church'] },
@@ -200,7 +200,7 @@
 
   function statusFor(site, overview = latestOverview) {
     if (!site) return null;
-    const service = (overview?.services || []).find(item => String(item.domain || '').toLowerCase() === site.domain);
+    const service = (overview?.services || []).find(item => String(item.domain || '').toLowerCase() === site.domain || (site.domain === 'ekodi.kr/admin' && String(item.domain || '').toLowerCase() === 'admin.ekodi.kr'));
     if (!service) return { key:'standby', label:'연결 대기', note:'Control API 실시간 점검 레지스트리 미연결', service:null };
     if (service.state && service.state !== 'active') return { key:'standby', label:String(service.state).toUpperCase(), note:'운영상태가 active가 아님', service };
     const health = service.latest?.status || 'pending';
@@ -426,7 +426,7 @@
       let overview = latestOverview;
       try { overview = await fetchOverview(false); } catch {}
       const issues = overviewIssues(overview);
-      const critical = issues.filter(item => ['admin','auth','api','pay'].includes(String(item.id||'').toLowerCase()) || ['admin.ekodi.kr','auth.ekodi.kr','ekodi.kr/ekodipay'].includes(String(item.domain||'').toLowerCase()));
+      const critical = issues.filter(item => ['admin','auth','api','pay'].includes(String(item.id||'').toLowerCase()) || ['ekodi.kr/admin','auth.ekodi.kr','ekodi.kr/ekodipay'].includes(String(item.domain||'').toLowerCase()));
       return {
         role:'assistant', classification:critical.length ? 'DECISION' : 'INFO',
         content:critical.length
@@ -476,10 +476,10 @@
         if (service?.stats24h) content += `\n24시간 가용률: ${service.stats24h.availabilityPercent ?? '—'}% · 평균응답 ${service.stats24h.averageResponseTime ?? '—'}ms`;
         if (!service) content += '\n\n이 사이트는 AI Ops에는 등록되어 있지만 Control API 실시간 점검 레지스트리에는 아직 직접 연결되지 않았습니다. 상태판에서는 “연결 대기”로 표시합니다.';
         return {
-          role:'assistant', classification:status?.key === 'critical' && ['admin.ekodi.kr','auth.ekodi.kr','ekodi.kr/ekodipay'].includes(site.domain) ? 'DECISION' : status?.key === 'critical' || status?.key === 'attention' ? 'REPORT' : 'INFO',
+          role:'assistant', classification:status?.key === 'critical' && ['ekodi.kr/admin','auth.ekodi.kr','ekodi.kr/ekodipay'].includes(site.domain) ? 'DECISION' : status?.key === 'critical' || status?.key === 'attention' ? 'REPORT' : 'INFO',
           content,
           council:councilFor(site, status, input, status?.key === 'healthy' ? 'INFO' : 'REPORT'),
-          actions:actionSet(site, { includeReview:!force, includeDecision:status?.key === 'critical' && ['admin.ekodi.kr','auth.ekodi.kr','ekodi.kr/ekodipay'].includes(site.domain) }),
+          actions:actionSet(site, { includeReview:!force, includeDecision:status?.key === 'critical' && ['ekodi.kr/admin','auth.ekodi.kr','ekodi.kr/ekodipay'].includes(site.domain) }),
         };
       }
       const issues = overviewIssues(overview);

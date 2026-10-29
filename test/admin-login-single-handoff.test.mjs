@@ -32,8 +32,10 @@ test('every Admin Shell preopens the canonical Google chooser before navigating 
 
 test('platform admin keeps canonical return_to while the direct helper owns the click handoff', () => {
   assert.match(adminCore, /return_to=https%3A%2F%2Fekodi\.kr%2Fadmin%2F/);
-  assert.match(adminCore, /loginLink\.href=route\?centralAdminAuthUrl\(route\):AUTH_URL/);
-  assert.match(adminCore, /loginLink\.onclick=null/);
+  const linkName = adminCore.match(/let (\w+)=document\.querySelector\('#centralAdminLogin'\)/)?.[1];
+  assert.ok(linkName, 'canonical admin login anchor must be bound');
+  assert.ok(adminCore.includes(`${linkName}.href=route?centralAdminAuthUrl(route):AUTH_URL`));
+  assert.ok(adminCore.includes(`${linkName}.onclick=null`));
 });
 
 test('platform and tenant auth both consume a preopened Google bridge without showing the intermediate card', () => {
