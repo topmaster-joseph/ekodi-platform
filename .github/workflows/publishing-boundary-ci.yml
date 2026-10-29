@@ -41,6 +41,8 @@ jobs:
           node --test test/bookstore-publishing-boundary.test.mjs
           node --check publishing/jubilee-series/review-gate.js
           node --test test/jubilee-series-review-gate.test.mjs
+          node --check publishing/human/scheduled-release.js
+          node --test test/human-publishing-scheduled-release.test.mjs
           test -f wrangler.publishing.staging.toml
 
   isolated-staging:
