@@ -61,7 +61,7 @@ function createHarness({ initial = {}, blocked = false, failAccessWrite = false,
       });
     }
   });
-  vm.runInContext("const ACCESS_KEY='ekodi-insurance-consultation-access-v1';const MAX_ACCESS_ITEMS=256;\n"+
+  vm.runInContext("const ACCESS_KEY='ekodi-insurance-consultation-access-v1';const MAX_ACCESS_ITEMS=256;const API='https://insurance.internal.invalid';\n"+
     accessFunctions+writeFunctions,ctx);
   return { ctx, calls, form, button, warnings, snapshot:()=>Object.fromEntries(data),
     run:()=>ctx.submitHandoff({shareConsent:true,name:'Synthetic',contact:'010-0000-0000'},form) };
