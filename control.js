@@ -301,6 +301,7 @@
       const total=counts.reduce((sum,item)=>sum+Math.max(0,Number(item.count)||0),0);
       summary.textContent='관측 작업 '+total+'건 · GitHub API 잔여 한도: '+
         (Number.isFinite(data.githubApiRemaining)?data.githubApiRemaining:'실측 미연결')+
+        ' · Webhook '+(data.activation?.ready?'활성 준비 확인':'미활성 또는 설정 미완료')+
         ' · 배포 권한 없음';
       if(!jobs.length){
         root.textContent='관측 기록이 없습니다. GitHub Webhook과 D1 마이그레이션 상태를 확인하세요.';

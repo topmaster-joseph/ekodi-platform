@@ -118,7 +118,17 @@ export async function githubOperationsSnapshot(env,limit=30) {
       'FROM github_operations_jobs ORDER BY created_at DESC LIMIT ?').bind(max).all(),
     env.DB.prepare('SELECT state,COUNT(*) count FROM github_operations_jobs GROUP BY state').all(),
   ]);
+  // Admin-only, presence-only readiness diagnostics. Never reveal secrets or tokens.
+  const enabled=env.EKODI_GITHUB_WEBHOOK_ENABLED==='true';
+  const secretReady=typeof env.EKODI_GITHUB_WEBHOOK_SECRET==='string' &&
+    env.EKODI_GITHUB_WEBHOOK_SECRET.length>=32;
+  const installationReady=Number.isSafeInteger(Number(env.EKODI_GITHUB_INSTALLATION_ID)) &&
+    Number(env.EKODI_GITHUB_INSTALLATION_ID)>0;
+  const activation={ready:enabled&&secretReady&&installationReady,
+    enabled,secretConfigured:secretReady,installationConfigured:installationReady,
+    observationCount:(events.results||[]).length};
   return {schemaVersion:1,authority:'EKODI Orchestrator',integration:'observation_only',
+    activation,
     releaseAuthorized:false,githubApiRemaining:null,githubApiBudgetSource:'not_connected',
     tokenExposed:false,events:events.results||[],jobs:jobs.results||[],
     counts:summary.results||[]};

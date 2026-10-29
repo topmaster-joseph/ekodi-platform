@@ -15,6 +15,13 @@ test('GitHub observability is manual refresh and does not create a polling storm
   assert.ok(js.includes("if(view==='github')void refreshGitHubOperations()"));
   assert.ok(js.includes("api('/api/control/ai/v8/github?limit=30')"));
   assert.ok(js.includes('실측 미연결'));
+  assert.ok(js.includes('data.activation?.ready'));
+  assert.ok(api.includes('githubOperationsSnapshot'));
+  const hook=await read('github-operations-webhook.js');
+  assert.ok(hook.includes('secretConfigured:secretReady'));
+  assert.ok(hook.includes('installationConfigured:installationReady'));
+  assert.ok(!hook.includes('secretValueReturned:true'));
+
   assert.doesNotMatch(js,/setInterval\(refreshGitHubOperations/);
 });
 test('auth and release boundaries remain server side',()=>{
