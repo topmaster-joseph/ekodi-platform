@@ -1,4 +1,4 @@
-import { handlePublishingWorkflow } from './publishing-workflow-api.js';
+import { handlePublishingWorkflow, prepareScheduledPublishing } from './publishing-workflow-api.js';
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 
 const SECURITY_HEADERS={
@@ -10,6 +10,11 @@ function json(data,status=200){return new Response(JSON.stringify(data),{status,
 function withHeaders(response){const headers=new Headers(response.headers);for(const [key,value] of Object.entries(SECURITY_HEADERS))headers.set(key,value);return new Response(response.body,{status:response.status,statusText:response.statusText,headers})}
 
 export default {
+  async scheduled(event,env,ctx){
+    // Due approved work moves into a protected outbox, never directly to public sale.
+    if(!env?.PUBLISH_DB)return;
+    await prepareScheduledPublishing(env);
+  },
   async fetch(request,env){
     const url=new URL(request.url);
     if (url.pathname.startsWith('/publishing/api/workflow/') || url.pathname.startsWith('/api/workflow/')) return handlePublishingWorkflow(request,env);
