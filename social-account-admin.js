@@ -30,14 +30,14 @@
     busy=true;
     panel.querySelector('[data-social-refresh]').disabled=true;
     status.classList.remove('ekodi-social-error');
-    status.textContent='EKODI 인증 및 연결 현황을 확인하고 있습니다.';
+    status.textContent='외부 채널 계정 연결 현황을 확인하고 있습니다.';
     try{
       if(!await authenticatedSuperAdmin())throw new Error('최고관리자 인증이 필요합니다.');
       const res=await fetch(ENDPOINT,{headers:{authorization:'Bearer '+sessionToken()},cache:'no-store'});
       const data=await res.json().catch(()=>({}));
       if(!res.ok)throw new Error(data.error||'연결 현황을 불러올 수 없습니다.');
       render(panel,data);
-      status.textContent='조회 시각: '+new Date().toLocaleString('ko-KR')+' · 계정 연결 검증은 별도이며 이 표는 기록 기준입니다.';
+      status.textContent='조회 시각: '+new Date().toLocaleString('ko-KR')+' · 외부 채널 기록 기준이며 회원 로그인 수단과는 별개입니다.';
     }catch(error){
       status.textContent=error?.message||'상태 조회에 실패했습니다.';
       status.classList.add('ekodi-social-error');
@@ -116,8 +116,8 @@
   function render(panel,data){
     const policy=data.policy||{};
     panel.querySelector('[data-social-feature]').textContent=policy.registrationEnabled
-      ?'EKODI 인증 후 등록 요청: 제한적 허용 · 외부 공급자 인증과 자동게시: 비활성화'
-      :'EKODI 인증 후 신규 등록: 비활성화 · 외부 소셜 로그인·OAuth·자동게시: 비활성화';
+      ?'외부 채널 메타데이터 등록: 제한적 허용 · 채널 OAuth·자동게시: 비활성화'
+      :'외부 채널 신규 등록: 비활성화 · 채널 OAuth·자동게시: 비활성화 (회원 로그인 정책은 별도)';
     panel.querySelector('[data-social-policy-label]').textContent=policy.registrationEnabled?'제한적 등록 요청 허용':'안전 잠금 유지';
     panel.querySelector('[data-social-storage]').textContent=data.storageReady
       ?'등록 원장 조회 가능':'등록 원장 조회 불가 — DB 배포·연결 확인 필요';
@@ -160,16 +160,16 @@
     panel.id=ROOT;panel.dataset.panel='social-accounts';panel.dataset.adminListLayout='dashboard';panel.hidden=true;
     panel.innerHTML=[
       '<header class="ekodi-social-head">',
-        '<div class="ekodi-social-heading"><p class="ekodi-social-caption">EKODI ORCHESTRATOR · IDENTITY CONTROL</p>',
-        '<h2>소셜계정 연결 현황</h2><p>EKODI ID를 중심으로 신규 등록과 기존 사이트·채널 연동 기록을 구분하여 관리합니다.</p></div>',
+        '<div class="ekodi-social-heading"><p class="ekodi-social-caption">EKODI ORCHESTRATOR · EXTERNAL CHANNELS</p>',
+        '<h2>외부 채널 계정 현황</h2><p>유튜브·인스타그램 등의 운영 계정을 EKODI ID별로 조회합니다. 회원 로그인(Google·네이버·카카오)은 EKODI 통합 인증에서 별도로 관리합니다.</p></div>',
         '<button type="button" class="ekodi-social-refresh" data-social-refresh>↻ 새로고침</button>',
       '</header>',
       '<div class="ekodi-social-state" role="note"><span class="ekodi-social-lock-mark" aria-hidden="true">●</span>',
-        '<div><strong data-social-policy-label>안전 잠금 유지</strong><p data-social-feature>등록 기능 비활성화</p>',
+        '<div><strong data-social-policy-label>안전 잠금 유지</strong><p data-social-feature>외부 채널 등록 기능 비활성화</p>',
         '<small data-social-storage role="status">등록 원장 상태 확인 전</small></div></div>',
       '<div class="ekodi-social-metrics" data-social-metrics aria-label="소셜계정 요약 현황"></div>',
       '<section class="ekodi-social-directory" aria-labelledby="ekodiSocialProvidersTitle">',
-        '<div class="ekodi-social-section-head"><div><h3 id="ekodiSocialProvidersTitle">지원 예정 소셜 서비스</h3>',
+        '<div class="ekodi-social-section-head"><div><h3 id="ekodiSocialProvidersTitle">지원 예정 외부 채널 서비스</h3>',
         '<p>표시된 상태는 기록 기준이며 실제 공급자 인증 상태와 다를 수 있습니다.</p></div>',
         '<span class="ekodi-social-result-count" data-social-result-count>조회 중</span></div>',
         '<div class="ekodi-social-toolbar">',
@@ -185,7 +185,7 @@
         '<p class="ekodi-social-empty" data-social-empty hidden>조건에 맞는 서비스가 없습니다. 검색어나 필터를 변경하세요.</p>',
       '</section>',
       '<div class="ekodi-social-account-toolbar" aria-label="계정 기록 검색 및 필터">',
-        '<label><span>계정 기록 검색</span><input type="search" data-social-account-search autocomplete="off" placeholder="EKODI ID·외부 ID·서비스 검색"></label>',
+        '<label><span>외부 채널 계정 검색</span><input type="search" data-social-account-search autocomplete="off" placeholder="EKODI ID·외부 ID·서비스 검색"></label>',
         '<label><span>연결 출처</span><select data-social-account-source>',
           '<option value="all">전체</option><option value="identity">EKODI ID 등록</option>',
           '<option value="existing">기존 서비스</option></select></label>',
@@ -199,7 +199,7 @@
       '<p class="ekodi-social-account-count" data-social-account-count role="status">계정별 기록 조회 전</p>',
       '<p class="ekodi-social-account-empty" data-social-account-empty hidden>선택한 조건에 맞는 계정 기록이 없습니다.</p>',
       '<div class="ekodi-social-lower">',
-        '<section class="ekodi-social-list" aria-labelledby="ekodiSocialLinksTitle"><h3 id="ekodiSocialLinksTitle">EKODI ID 신규 등록 기록</h3>',
+        '<section class="ekodi-social-list" aria-labelledby="ekodiSocialLinksTitle"><h3 id="ekodiSocialLinksTitle">EKODI ID별 외부 채널 등록 기록</h3>',
         '<p>공급자 본인 확인 전에는 연결 완료가 아닙니다. 이 화면에서는 활성화할 수 없습니다.</p>',
         '<div class="ekodi-social-records" data-social-links></div></section>',
         '<section class="ekodi-social-list" aria-labelledby="ekodiSocialExistingTitle"><h3 id="ekodiSocialExistingTitle">기존 사이트·채널 연결</h3>',
