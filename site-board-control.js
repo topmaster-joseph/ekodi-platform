@@ -348,9 +348,9 @@ async function missionSaturdayHistory(request,env,instance,method){
   const url=new URL(request.url),params=url.searchParams;
   const year=params.get('year')||'all',month=params.get('month')||'all',cursor=params.get('cursor')||'';
   const currentYear=Number(today.slice(0,4));
-  if(year!=='all'&&(!/^\\d{4}$/.test(year)||Number(year)<2024||Number(year)>currentYear))return boardJson(instance,{error:'invalid_year'},400);
+  if(year!=='all'&&(!/^\d{4}$/.test(year)||Number(year)<2024||Number(year)>currentYear))return boardJson(instance,{error:'invalid_year'},400);
   if(month!=='all'&&!/^(0[1-9]|1[012])$/.test(month))return boardJson(instance,{error:'invalid_month'},400);
-  if(cursor&&(!/^\\d{4}-\\d{2}-\\d{2}$/.test(cursor)||cursor<MISSION_SATURDAY_STARTED||cursor>next))return boardJson(instance,{error:'invalid_cursor'},400);
+  if(cursor&&(!/^\d{4}-\d{2}-\d{2}$/.test(cursor)||cursor<MISSION_SATURDAY_STARTED||cursor>next))return boardJson(instance,{error:'invalid_cursor'},400);
   const requested=Number(params.get('limit')||12);
   const limit=Number.isFinite(requested)?Math.max(1,Math.min(24,Math.trunc(requested))):12;
   const rows=await env.DB.prepare(`SELECT meeting_date,starts_at,venue,title,status
