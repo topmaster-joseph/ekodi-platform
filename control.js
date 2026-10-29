@@ -56,7 +56,7 @@
     const s=ensureSession(text);s.messages=s.messages||[];s.messages.push({role,text:String(text||'').slice(0,12000),at:now(),...extra});s.updatedAt=now();if(extra.status)s.status=extra.status;
     state.sessions=[s,...state.sessions.filter(x=>x.id!==s.id)].slice(0,24);saveHistory();renderRecent();renderMessages({scrollToEnd:true});
   }
-  function setView(view){state.view=view;$$('[data-view]').forEach(n=>n.classList.toggle('active',n.dataset.view===view));$$('[data-view-panel]').forEach(n=>n.classList.toggle('active',n.dataset.viewPanel===view));if(view!=='chat')renderPanels();closeRail()}
+  function setView(view){state.view=view;$('[data-view]').forEach(n=>n.classList.toggle('active',n.dataset.view===view));$('[data-view-panel]').forEach(n=>n.classList.toggle('active',n.dataset.viewPanel===view));if(view!=='chat')renderPanels();if(view==='github')void refreshGitHubOperations();closeRail()}
   function renderRecent(){const root=$('#recentTasks');const items=state.sessions.slice(0,14);root.innerHTML=items.length?items.map(s=>'<button type="button" class="recent-item" data-session="'+esc(s.id)+'">'+esc(s.title||'새 작업')+'</button>').join(''):'<div class="section-title">아직 작업이 없습니다.</div>';root.querySelectorAll('[data-session]').forEach(b=>b.onclick=()=>{state.activeId=b.dataset.session;setView('chat');renderMessages({scrollToEnd:true})})}
   function renderMessages({scrollToEnd=false}={}){const s=state.sessions.find(x=>x.id===state.activeId);const messages=s?.messages||[];$('#emptyState').hidden=messages.length>0;$('#messages').innerHTML=messages.map(m=>{
     const meta=[m.provider,m.target,m.status&&statusLabel(m.status)].filter(Boolean).join(' · ');
@@ -284,6 +284,45 @@
     $('#workerCards').innerHTML=WORKERS.map(([id,name])=>card(name,'상태는 실행 시 확인',id+' 실행계층')).join('');
     $('#resultCards').innerHTML=state.results.length?state.results.map(r=>card(r.title,statusLabel(r.status),(r.provider||'EKODI')+(r.taskId?' · '+r.taskId:r.actionId?' · Action #'+r.actionId:'')+'\n'+r.summary)).join(''):card('아직 결과가 없습니다','대기','명령 처리 후 검증된 결과가 이곳에 누적됩니다.');
   }
+  // GitHub observations are read-only and require the existing super-admin
+  // authorization; no GitHub token is used by this browser UI.
+  async function refreshGitHubOperations(){
+    const summary=$('#githubOperationsSummary');
+    const root=$('#githubOperationsCards');
+    if(!summary||!root)return;
+    summary.textContent='GitHub 작업 원장을 확인하는 중입니다.';
+    root.replaceChildren();
+    try{
+      const data=await api('/api/control/ai/v8/github?limit=30');
+      if(data?.ok!==true||data?.integration!=='observation_only')
+        throw new Error('관측 데이터 계약을 확인할 수 없습니다.');
+      const jobs=Array.isArray(data.jobs)?data.jobs:[];
+      const counts=Array.isArray(data.counts)?data.counts:[];
+      const total=counts.reduce((sum,item)=>sum+Math.max(0,Number(item.count)||0),0);
+      summary.textContent='관측 작업 '+total+'건 · GitHub API 잔여 한도: '+
+        (Number.isFinite(data.githubApiRemaining)?data.githubApiRemaining:'실측 미연결')+
+        ' · 배포 권한 없음';
+      if(!jobs.length){
+        root.textContent='관측 기록이 없습니다. GitHub Webhook과 D1 마이그레이션 상태를 확인하세요.';
+        return;
+      }
+      for(const job of jobs){
+        const article=document.createElement('article');
+        article.className='card';
+        const title=document.createElement('strong');
+        title.textContent=(job.state||'상태 미확인')+' · '+(job.kind||'관측');
+        const detail=document.createElement('p');
+        detail.textContent='작업 '+String(job.operation_key||'').slice(0,12)+' · '+String(job.updated_at||'날짜 미확인');
+        article.append(title,detail);
+        root.append(article);
+      }
+    }catch(error){
+      summary.textContent=error?.auth?'최고관리자 로그인이 필요합니다.':
+        'GitHub 관측 상태 조회 실패: '+String(error?.message||'unknown');
+      root.textContent='실제 확인되지 않은 성공 상태나 API 수치는 표시하지 않습니다.';
+    }
+  }
+
   async function refreshOrchestratorTasks(){
     const recent=state.tasks.filter(item=>item.target==='EKODI Orchestrator' && /^orch_[a-z0-9_-]{16,}$/i.test(item.id||'')).slice(0,10);
     let updated=0,unavailable=0;
@@ -351,7 +390,8 @@
     $('#commandInput').addEventListener('input',resizeInput);
     $('#commandInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#commandForm').requestSubmit()}});
     $$('[data-prompt]').forEach(b=>b.onclick=()=>{$('#commandInput').value=b.dataset.prompt;resizeInput();$('#commandInput').focus({preventScroll:true})});
-    $$('[data-refresh]').forEach(b=>b.onclick=()=>{refreshOrchestratorTasks().catch(()=>toast('오케스트레이터 상태 갱신 실패'))});
+    $('[data-refresh]').forEach(b=>b.onclick=()=>{refreshOrchestratorTasks().catch(()=>toast('오케스트레이터 상태 갱신 실패'))});
+    $('#githubOperationsRefresh').addEventListener('click',()=>void refreshGitHubOperations());
   }
   async function acceptVerifiedAdminControlHandoff(){
     // Google Admin returns to the exact Control deep-link with an ephemeral
