@@ -49,6 +49,8 @@ jobs:
           node --check publishing/human/private-release-api.js
           node --check publishing-worker.js
           node --test test/human-publishing-private-release-api.test.mjs
+          node --check publishing/human/private-release-scheduler.js
+          node --test test/human-publishing-private-release-scheduler.test.mjs
           test -f wrangler.publishing.staging.toml
 
   isolated-staging:
