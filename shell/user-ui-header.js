@@ -321,7 +321,7 @@ function applySiteChromeHeader(header,chrome){const cfg=chrome?.header;if(!heade
 // authenticated workspaces and Mall commerce may retain their native layout.
 function standardHeaderRow(header){
   if(!header||header.hasAttribute(FALLBACK_ATTR)||!shouldEnable())return null;
-  if(serviceId()==='mall'||/^\\/ekodimall(?:\\/|$)/i.test(location.pathname))return null;
+  if(serviceId()==='mall'||location.pathname.toLowerCase()==='/ekodimall'||location.pathname.toLowerCase().startsWith('/ekodimall/'))return null;
   if(header.dataset.ekodiHeaderStandard==='off'||document.documentElement.dataset.ekodiHeaderStandard==='off')return null;
   const candidates=[header,...header.children].filter(node=>node instanceof HTMLElement);
   for(const row of candidates){
