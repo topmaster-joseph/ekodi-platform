@@ -44,7 +44,8 @@ function fixture(){
     PUBLISHING_RELEASE_AUTH:{verifyRequest:async(request,{capability,requiresCsrf})=>({
       authorized:true,subjectId:'staff-publisher-001',csrfVerified:!requiresCsrf ||
         request.headers.get('x-ekodi-csrf')==='verified-value',capability,
-    })},
+    }),issueCsrf:async ({subjectId})=>({subjectId,value:'0123456789abcdef0123456789abcdef01234567',expiresAt:'2099-01-01T00:00:00Z'})},
+    PUBLISHING_RELEASE_AUTH_ISSUER:{},
     PUBLISHING_RELEASE_VERIFIER:{
       loadCandidate:async id=>id==='PRIVATE-EDITION-001'?candidate():null,
       verifyCompletedFile:async record=>({
@@ -149,5 +150,17 @@ test('publisher signature revocation blocks even a previously registered complet
       revision:1,publishAt:new Date(Date.now()+10*86400000).toISOString()}),env);
     assert.equal(denied.status,422);
     assert.equal((await send(f.get('/PRIVATE-EDITION-001'),f.env)).data.record.state,'private_registered');
+  }finally{f.close();}
+});
+
+
+test('verified authenticated staff can request a same-origin CSRF token',async()=>{
+  const f=fixture();try{
+    const ok=await send(f.get('/csrf'),f.env);
+    assert.equal(ok.status,200);
+    assert.equal(ok.data.csrfToken.length,40);
+    assert.equal(ok.headers.get('cache-control'),'private, no-store');
+    const missing={...f.env,PUBLISHING_RELEASE_AUTH:{verifyRequest:f.env.PUBLISHING_RELEASE_AUTH.verifyRequest}};
+    assert.equal((await send(f.get('/csrf'),missing)).status,503);
   }finally{f.close();}
 });
