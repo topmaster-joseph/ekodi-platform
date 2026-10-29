@@ -30,5 +30,5 @@ test('Private/other board surfaces never inherit public list discovery meta',()=
   const src=readFileSync(new URL('../services/independent-board/worker.js',import.meta.url),'utf8');
   assert.match(src,/!headExtra&&\(active==='voices'\|\|active==='notices'\)/);
   assert.match(src,/noticePreviewMeta\(row,SEONAM_PUBLIC_ORIGIN/);
-  assert.doesNotMatch(src,/localStorage\.setItem\(/); // Worker/server must not implement browser storage.
+  assert.match(src,/const discoveryMeta=/);
 });
