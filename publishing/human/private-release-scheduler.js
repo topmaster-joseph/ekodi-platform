@@ -7,6 +7,7 @@ const isMethod=(obj,method)=>typeof obj?.[method]==='function';
 export function privateSchedulerReady(env){
   return env?.PUBLISHING_PRIVATE_RELEASE_ENABLED==='true' &&
     isMethod(env?.PUBLISHING_RELEASE_DB,'prepare') &&
+    isMethod(env?.PUBLISHING_RELEASE_DB,'batch') &&
     isMethod(env?.PUBLISHING_RELEASE_VERIFIER,'loadCandidate') &&
     isMethod(env?.PUBLISHING_RELEASE_VERIFIER,'verifyApprovalEvidence') &&
     isMethod(env?.PUBLISHING_RELEASE_VERIFIER,'verifyChannelAck') &&
