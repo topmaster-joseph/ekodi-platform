@@ -100,6 +100,23 @@ test('failed or stale native receipts never become local inference success',()=>
   }
 });
 
+test('read-only native observer denies unauthorized and malformed-hostname requests before network access',async()=>{
+  let requests=0;
+  const fetchImpl=async()=>{requests++;throw new Error('network_must_not_be_called');};
+  await assert.rejects(
+    observeNativeDeviceReadiness({token:'short',hostname:'user4',fetchImpl}),
+    /trusted_admin_session_required/
+  );
+  await assert.rejects(
+    observeNativeDeviceReadiness({
+      token:'valid-temporary-admin-session-string',
+      hostname:'user4/../other',fetchImpl
+    }),
+    /invalid_target_hostname/
+  );
+  assert.equal(requests,0);
+});
+
 test('scheduled authenticated USER4 GET emits only bounded diagnostic code, no raw fields or mutation',async()=>{
   const requests=[];
   const fetchImpl=async(url,init)=>{
