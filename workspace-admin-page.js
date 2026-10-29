@@ -730,7 +730,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   }
   // Only Mall sourcing state is owned by this handler; other admin routes
   // retain their native history behavior and navigation permissions.
-  if(service==='mall'&&['sourcing','amazon'].includes(section)&&typeof window!=='undefined'){
+  if(typeof window!=='undefined'&&service==='mall'&&['sourcing','amazon'].includes(section)){
     window.addEventListener('popstate',()=>{
       if(![adminBase+'/sourcing',adminBase+'/amazon'].includes(location.pathname))return;
       affiliateSourcingPanel(mallSourcingRestoreFromLocation());
