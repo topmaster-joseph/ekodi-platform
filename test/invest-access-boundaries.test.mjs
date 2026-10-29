@@ -155,3 +155,19 @@ test('private owner scenario entry does not expose analysis to unverified browse
  assert.equal(response.status,401);
  assert.equal(response.headers.get('cache-control'),'private, no-store');
 });
+
+test('member comparison filters submit valid API enum values, avoid phantom returns, and do not fan out on selection change',async()=>{
+ const html=await investAnalysisPage().text();
+ for(const [key,label] of [['1w','1주'],['1m','1개월'],['3m','3개월'],['1y','1년'],['3y','3년 이상']])assert.ok(html.includes(`value="${key}"`)&&html.includes(label));
+ for(const key of ['5','10','20','30'])assert.match(html,new RegExp(`value="${key}"`));
+ assert.match(html,/id="apply"/);
+ assert.match(html,/조건별 수익률·추천 순위를 산출하지 않습니다/);
+ const js=await investAnalysisScript().text();
+ assert.match(js,/new URLSearchParams\(filters\)/);
+ assert.match(js,/const filters=\{market:el\('market'\)\.value,period:el\('period'\)\.value,target:el\('target'\)\.value\}/);
+ assert.match(js,/data\.targetReturnPct!==Number\(filters\.target\)/);
+ assert.match(js,/id!==requestId/);
+ assert.match(js,/el\('apply'\)\?\.addEventListener\('click'/);
+ assert.match(js,/조건별 예상수익률과 순위는 산출하지 않습니다/);
+ assert.doesNotMatch(js,/market=all&period=3m&target=10|addEventListener\('change',load\)/);
+});
