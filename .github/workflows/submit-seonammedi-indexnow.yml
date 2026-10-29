@@ -79,9 +79,16 @@ jobs:
           idn='xn--3e0b8b58jw4co4mnpll3k.kr'
           body=$(curl -fsS --retry 3 --retry-delay 2 "https://$idn/$key.txt")
           test "$body" = "$key"
-          curl -fsS --retry 3 "https://$idn/robots.txt" | grep -Fq "Sitemap: https://$idn/sitemap.xml"
-          curl -fsS --retry 3 "https://$idn/sitemap.xml" | grep -Fq "<loc>https://$idn/</loc>"
-          curl -fsS --retry 3 "https://$idn/" | grep -Fq "<link rel=\"canonical\" href=\"https://$idn/\">"
+          # Do not use curl | grep -q with pipefail: grep quits on a match
+          # and curl may fail with EPIPE / exit 23 despite valid SEO metadata.
+          probe_dir=$(mktemp -d)
+          trap 'rm -rf "$probe_dir"' EXIT
+          curl -fsS --retry 3 --retry-delay 2 -o "$probe_dir/robots" "https://$idn/robots.txt"
+          curl -fsS --retry 3 --retry-delay 2 -o "$probe_dir/sitemap" "https://$idn/sitemap.xml"
+          curl -fsS --retry 3 --retry-delay 2 -o "$probe_dir/home" "https://$idn/"
+          grep -Fq "Sitemap: https://$idn/sitemap.xml" "$probe_dir/robots"
+          grep -Fq "<loc>https://$idn/</loc>" "$probe_dir/sitemap"
+          grep -Fq "<link rel=\"canonical\" href=\"https://$idn/\">" "$probe_dir/home"
       - name: Submit canonical SeonamMedi URL from EKODI isolated browser
         if: steps.decision.outputs.submit == 'true'
         run: node scripts/ekodi-search-index-submit.mjs
