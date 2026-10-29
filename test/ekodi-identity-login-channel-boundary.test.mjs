@@ -42,7 +42,7 @@ test('existing federated auth is independent, gated and no automatic account tak
   assert.match(login,/redirectProviders/);
   assert.match(login,/purpose === 'link' \? `\/providers\/\$\{provider\.id\}\/link\/challenge`/);
   assert.match(login,/sessionStorage\.setItem\(PENDING_KEY/);
-  assert.match(router,/site!=='admin'\)federated\.renderLoginButtons\(\)/);
+  assert.match(router,/site!=='admin'&&params\.get\('ekodi_email_action'\)!=='reset'\)federated\.renderLoginButtons\(\)/);
   assert.match(read('docs/auth/FEDERATED-LOGIN-NAVER-KAKAO.md'),/enabled=false/);
   assert.match(boundaryDoc,/외부 채널 계정 연결·게시 권한은 로그인 제공자 활성화와 독립적으로/);
 });

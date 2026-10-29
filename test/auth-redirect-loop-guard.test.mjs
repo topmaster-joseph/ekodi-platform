@@ -17,7 +17,7 @@ test('central auth blocks rapid repeated service handoff navigation',()=>{
 });
 
 test('central auth loop guard does not block interactive management or reload recovery',()=>{
-  assert.match(entry,/const interactive = params\.get\('manage'\) === '1' \|\| params\.get\('review'\) === '1'/);
+  assert.match(entry,/const interactive = params\.get\('ekodi_email_action'\) === 'reset' \|\| params\.get\('manage'\) === '1' \|\| params\.get\('review'\) === '1'/);
   assert.match(entry,/navigationType !== 'reload'/);
   assert.match(entry,/if \(!interactive\)/);
 });

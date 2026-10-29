@@ -96,7 +96,7 @@ else{
 }
 
 // Additional sign-in paths for EKODI accounts (shown only when enabled; never on the admin console).
-if(!federatedHandled&&federated&&site!=='admin')federated.renderLoginButtons().catch(error=>console.warn('federated buttons',error));
+if(!federatedHandled&&federated&&site!=='admin'&&params.get('ekodi_email_action')!=='reset')federated.renderLoginButtons().catch(error=>console.warn('federated buttons',error));
 
 // Optional EKODI Mail/password entry stays hidden until the identity backend
 // confirms BOTH email ownership enforcement and EKODI Mail sender readiness.
