@@ -25,7 +25,7 @@ test('single merchant save affects only the selected merchant; no stale snapshot
  assert.equal(updated.some(x=>x.routeKey==='11st'),false);
  // A different admin could have updated Trip.com after the initial GET:
  // omitted routes must not be persisted or audited by this API call.
- assert.match(frontend,/const selections=mallSourcingSelectionPatch\(chosen,new FormData\(form\)\)/);
+ assert.match(frontend,/const selections=mallSourcingSelectionPatch\(chosen,formData,freshRoutes,bootstrap\)/);
  assert.doesNotMatch(frontend,/const selections=sources\.map\(item=>/);
 });
 
@@ -42,7 +42,7 @@ test('selected Amazon marketplace tab updates its own grouped source rows only',
 test('unchecked toggles are explicit false; duplicate or empty route names do not expand write scope',()=>{
  assert.deepEqual(selectionPatch([{routeKey:''}],form()),[]);
  assert.deepEqual(selectionPatch(rows.filter(x=>x.routeKey==='trip'),form('route:trip')),[{routeKey:'trip',enabled:true}]);
- assert.match(frontend,/if\(!selections\.length\)\{state\('저장할 판매처가 없습니다\.'\);return;\}/);
+ assert.match(frontend,/if\(!selections\.length\)throw new Error\('저장할 판매처가 없습니다\.'\)/);
 });
 
 test('server accepts partial selected rows, still enforces roles and audits only submitted keys',()=>{
@@ -52,4 +52,24 @@ test('server accepts partial selected rows, still enforces roles and audits only
  assert.match(backend,/INSERT INTO affiliate_workspace_sources\(/);
  assert.match(backend,/INSERT INTO affiliate_workspace_source_audit\(/);
  assert.match(backend,/if \(known\.size !== keys\.length\) return json\(\{ error:'unknown_affiliate_route' \}/);
+});
+
+test('first workspace write materializes inherited ready defaults without disabling unrelated routes',()=>{
+ const initial=[
+  {routeKey:'coupang',selected:true},
+  {routeKey:'amazon-us',selected:false},
+  {routeKey:'11st',selected:true}
+ ];
+ const full=selectionPatch([initial[0]],form(),initial,true);
+ assert.deepEqual(full,[
+  {routeKey:'coupang',enabled:false},
+  {routeKey:'amazon-us',enabled:false},
+  {routeKey:'11st',enabled:true}
+ ]);
+ const later=selectionPatch([initial[0]],form(),initial,false);
+ assert.deepEqual(later,[{routeKey:'coupang',enabled:false}]);
+ assert.match(frontend,/const latest=await workspaceAffiliateApi\('\/workspace\/sources'\)/);
+ assert.match(frontend,/latest\.policy\?\.inheritedDefaults===true/);
+ assert.match(frontend,/bootstrap&&freshRoutes\.length>100/);
+ assert.match(backend,/const inheritedDefaults = Number\(configured\?\.count \|\| 0\) === 0/);
 });
