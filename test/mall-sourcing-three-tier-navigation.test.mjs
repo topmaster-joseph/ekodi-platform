@@ -21,7 +21,7 @@ function model(search='',section='sourcing'){
     addEventListener(event,callback){if(event==='click')item.click=callback}
   }))}};
   const loc={search,href:'https://ekodi.kr/ekodimall/admin/'+section+search};
-  const history={state:null,replaceState(...args){urlChanges.push(args[2])}};
+  const history={state:null,replaceState(...args){urlChanges.push(args[2])},pushState(...args){urlChanges.push(args[2])}};
   const api=new Function('location','section','ae','history','adminBase','document','affiliateSourcingPanel',
     compiled+'\nreturn {header:mallSourcingHeader,bind:bindMallSourcingTabs,state:()=>({view:mallSourcingView,detail:mallSourcingDetail,channel:mallSourcingCurrent})};'
   );
