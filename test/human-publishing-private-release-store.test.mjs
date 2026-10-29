@@ -15,7 +15,17 @@ const candidate=()=>({
   publicationId:'book-01',editionId:'edition-01',title:'출판 준비 완료된 도서',
   authorId:'author-a',format:'epub',fieldId:'humanities',collectionId:'human',
   priceKrw:9900,releaseDigest:DIGEST,readerProfiles:['general'],
-  rights:fields(['licenseChecked','authorContractApproved']),
+  // Synthetic test-only attestations. The production publisher service must
+  // verify identity, paid membership, contracts and actual audiobook QA.
+  authorMembership:{planId:'writer1',serverVerified:true,authorId:'author-a'},
+  rights:{...fields(['licenseChecked','authorContractApproved','distributionLicenseApproved']),
+    copyrightOwnerId:'author-a'},
+  salesContract:{verified:true,signedByAuthorId:'author-a',editionDigest:DIGEST,
+    royaltyTermsAccepted:true,salesCommissionTermsAccepted:true},
+  audiobook:{highQualityApproved:true,humanListeningQaPassed:true,
+    dialogueNarrationReviewed:true,masterAssetDigest:'sha256:'+'d'.repeat(64),
+    pairedEditionDigest:DIGEST,additionalBuyerPriceKrw:0,
+    buyerBundleEntitlementVerified:true,refundRevocationVerified:true},
   originality:fields(['provenanceReviewed','verifiedNoUnauthorizedImitation']),
   craft:fields(['realHumanExperienceReviewed','characterAndMotivationReviewed',
     'logicAndContinuityReviewed','readerFeedbackReviewed','editorialRevisionComplete']),
