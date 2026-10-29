@@ -39,10 +39,10 @@
     return article;
   }
   async function load(reset=false){
-    if(loading)return;
-    if(reset){generation++;cursor='';list.replaceChildren();more.hidden=true;yearsLoaded=false}
+    if(loading&&!reset)return;
+    if(reset){cursor='';list.replaceChildren();more.hidden=true}
+    const current=++generation;
     loading=true;more.disabled=true;
-    const current=generation;
     const query=new URLSearchParams({year:year.value,month:month.value,limit:'12'});
     if(cursor)query.set('cursor',cursor);
     report('지난 토요모임 일정을 확인하고 있습니다.');
@@ -53,7 +53,7 @@
       if(current!==generation)return;
       if(!yearsLoaded){
         for(const value of data.years||[]){
-          if(!/^\\d{4}$/.test(value))continue;
+          if(!/^\d{4}$/.test(value))continue;
           const option=document.createElement('option');option.value=value;option.textContent=value+'년';year.append(option);
         }
         yearsLoaded=true;
@@ -73,7 +73,7 @@
         empty.textContent='현재 지난 모임 일정을 표시할 수 없습니다.';list.append(empty);
       }
     }finally{
-      loading=false;more.disabled=false;
+      if(current===generation){loading=false;more.disabled=false}
     }
   }
   year.addEventListener('change',()=>{void load(true)});
