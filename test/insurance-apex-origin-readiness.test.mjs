@@ -50,3 +50,28 @@ test('a valid apex Origin never bypasses backend D1 readiness or private admin c
   assert.equal(response.headers.get('cache-control'), 'no-store');
   assert.equal((await response.json()).error, 'Insurance D1 데이터베이스 연결이 없습니다.');
 });
+
+
+test('candidate production config preserves both exact insurance origins without wildcard', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const path = new URL('../sites/ekodi-insurance/api/wrangler.toml', import.meta.url);
+  const config = await readFile(path, 'utf8');
+  const declaration = /^ALLOWED_ORIGINS\s*=\s*"([^"]+)"\s*$/m.exec(config);
+  assert.ok(declaration, 'explicit production Origin allowlist must be configured');
+  const allowed = declaration[1].split(',').map(s => s.trim());
+  assert.equal(new Set(allowed).size, 2);
+  assert.ok(allowed.includes(ORIGIN), 'canonical apex origin must be explicitly allowed');
+  assert.ok(allowed.every(s => /^https:\/\/[a-z0-9.-]+$/.test(s)), 'no wildcard, path or scheme downgrades');
+  assert.ok(!allowed.includes('*'));
+  const historical = allowed.find(s => s !== ORIGIN);
+  assert.ok(historical, 'historic browser origin must not be retired prematurely');
+  const env = { ...safeEnv, ALLOWED_ORIGINS: declaration[1] };
+  for (const origin of [ORIGIN, historical]) {
+    const response = await insuranceApi.fetch(req('/api/consultations', 'OPTIONS', origin), env);
+    assert.equal(response.status, 204, 'known origin preflight must be allowed');
+    assert.equal(response.headers.get('access-control-allow-origin'), origin);
+  }
+  const foreign = await insuranceApi.fetch(req('/api/consultations', 'OPTIONS', 'https://untrusted.invalid'), env);
+  assert.equal(foreign.status, 403);
+  assert.equal(foreign.headers.get('access-control-allow-origin'), null);
+});
