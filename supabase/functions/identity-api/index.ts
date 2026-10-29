@@ -335,17 +335,26 @@ function emailPasswordReadiness(req:Request){
 async function sessionHandoff(req:Request,user:any){
   const email=String(user?.email||"").trim().toLowerCase();
   if(!email)return json(req,{error:"verified_email_required"},400);
+  const personBeforeHandoff=await personForUser(user.id);
+  // Google logins also use email-backed Supabase magic-link sessions. Only an
+  // UNPROVISIONED password-style email user must pass these additional gates;
+  // never block already-linked Google identities just because app_metadata
+  // reports "email" for their underlying Supabase Auth user.
+  const newEmailPerson=!personBeforeHandoff&&user.app_metadata?.provider==="email";
+  if(newEmailPerson){
+    if(!emailPasswordReady())return json(req,{error:"email_password_unavailable"},503);
+    if(!user.email_confirmed_at)return json(req,{error:"verified_email_required"},403);
+  }
+  // Gate the account *before* minting a one-use session link. Link ownership
+  // must be checked before provisioning the EKODI Person as well.
   const link=await issueSupabaseLink(email);
   if(link.user.id!==user.id){
     console.error("session handoff user mismatch",{source:user.id,target:link.user.id});
     return json(req,{error:"session_identity_mismatch"},409);
   }
-  let personId=await personForUser(user.id);
-  // The password identity only becomes an EKODI account AFTER the auth service
-  // confirms email ownership. Never infer the person from matching email text.
-  if(!personId && user.app_metadata?.provider==="email"){
-    if(!emailPasswordReady())return json(req,{error:"email_password_unavailable"},503);
-    if(!user.email_confirmed_at)return json(req,{error:"verified_email_required"},403);
+  let personId=personBeforeHandoff;
+  // Never infer the person from matching email text.
+  if(newEmailPerson){
     const {data:created,error:createError}=await admin.rpc("ensure_person_identity",{
       p_auth_user_id:user.id,
       p_provider:"email",
