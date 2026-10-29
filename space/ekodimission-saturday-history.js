@@ -67,6 +67,7 @@
       more.hidden=!cursor;
       report(cursor?'더 오래된 모임 일정도 확인할 수 있습니다.':'표시할 지난 모임 일정을 모두 확인했습니다.');
     }catch(error){
+      if(current!==generation)return;
       report(error.message||'지난 모임을 불러오지 못했습니다. 다시 시도해 주세요.');
       if(!list.children.length){
         const empty=document.createElement('p');empty.className='mission-activity-empty';
