@@ -121,7 +121,11 @@
   window.addEventListener('ekodi:auth-logout',()=>{editing=false;if(form){form.reset()}void load()});
   // Current Saturday remains visible through Saturday 23:59:59 in Seoul.
   // On Sunday the RSVP window rolls to the following Saturday.
-  const kstDay=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const kstDay=()=>{
+    const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+    const part=kind=>parts.find(item=>item.type===kind)?.value||'';
+    return [part('year'),part('month'),part('day')].join('-');
+  };
   let observedDay=kstDay();
   const refreshAfterDayChange=()=>{
     const nowDay=kstDay();
