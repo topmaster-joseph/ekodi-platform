@@ -19,8 +19,8 @@ function signed(db,id,flags={}){
  db.prepare("INSERT INTO publishing_workflow_release_contracts (project_id,author_user_id,edition_digest,status,author_signed_at,publisher_signed_at,royalty_terms_accepted,commission_terms_accepted,distribution_license_accepted,sealed_contract_sha256,created_at,updated_at) VALUES (?,?,?,'signed',?,?, ?,?,?, ?,?,?)")
  .run(id,UUID,DIGEST,'2026-10-29T00:00:00Z','2026-10-29T00:00:00Z',
   flags.royalty??1,flags.commission??1,flags.distribution??1,'b'.repeat(64),'2026-10-29T00:00:00Z','2026-10-29T00:00:00Z');
- db.prepare("INSERT INTO publishing_workflow_audio_release_qa (project_id,edition_digest,stage,master_sha256,voice_license_verified,dialogue_qa_passed,full_track_qa_passed,buyer_access_verified,refund_revoke_verified,bonus_price_krw) VALUES (?,?,'approved',?,1,1,1,1,1,0)")
- .run(id,DIGEST,'c'.repeat(64));
+ db.prepare("INSERT INTO publishing_workflow_audio_release_qa (project_id,edition_digest,stage,master_sha256,voice_license_verified,dialogue_qa_passed,full_track_qa_passed,buyer_access_verified,refund_revoke_verified,bonus_price_krw,verified_by,verified_at) VALUES (?,?,'approved',?,1,1,1,1,1,0,?,?)")
+ .run(id,DIGEST,'c'.repeat(64),'audio-editor','2026-10-29T00:00:00Z');
 }
 const oldFetch=globalThis.fetch;
 test.after(()=>{globalThis.fetch=oldFetch});
