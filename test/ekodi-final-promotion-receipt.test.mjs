@@ -96,6 +96,17 @@ test('approval must follow verified staging and remain fresh for one production 
   }
 });
 
+test('missing audit rows never throw or produce an approved receipt',async()=>{
+  for(const [staging,owner] of [[null,approval],[staged,null],[null,null],
+    [{...staged,evidence_json:null},approval],
+    [staged,{...approval,evidence_json:null}]]){
+    const answer=await verifyEkodiFinalPromotionReceipt(ledger(task,staging,owner),request);
+    assert.equal(answer.authorized,false);
+    assert.equal(answer.productionDeployed,false);
+    assert.equal(answer.reason,'staging_or_owner_confirmation_missing');
+  }
+});
+
 test('database outage cannot grant final promotion',async()=>{
   assert.equal((await verifyEkodiFinalPromotionReceipt(null,request)).authorized,false);
   assert.equal((await verifyEkodiFinalPromotionReceipt({prepare(){throw Error('offline')}},request)).authorized,false);
