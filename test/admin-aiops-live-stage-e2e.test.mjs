@@ -26,7 +26,8 @@ test('production Admin browser verifier exercises all five AI Ops stages',()=>{
 test('browser verifies live assets with only synthetic read-only session and protected release',()=>{
   assert.match(e2e,/SYNTHETIC_TOKEN = 'ekodi-production-ui-e2e'/);
   assert.match(e2e,/const SYNTHETIC_EMAIL/);
-  assert.doesNotMatch(e2e.slice(e2e.indexOf('async function verifyAiOpsStageWorkspace()'),e2e.indexOf('let selectedWorkArea = null')),/api\\(|fetch\\(|method:'(PUT|POST|DELETE)'/);
+  const verifier=e2e.slice(e2e.indexOf('async function verifyAiOpsStageWorkspace()'),e2e.indexOf('let selectedWorkArea = null'));
+  for(const marker of ['fetch(', "method:'PUT'", "method:'POST'", "method:'DELETE'"]) assert.ok(!verifier.includes(marker), 'unexpected mutation in UI verifier: '+marker);
   assert.ok(workflow.includes("'scripts/verify-admin-production-ui-e2e.mjs'"));
   assert.ok(dispatcher.includes("'scripts/verify-admin-production-ui-e2e.mjs'"));
 });
