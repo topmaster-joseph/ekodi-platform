@@ -91,3 +91,12 @@
 3. 비결제 점검: `setLogin` → `getMyAsset` → `getItemView` 순으로 상태만 확인한다. 에러가 발생하면 날짜·API 모드·응답 오류코드·익명화된 안전 진단을 수집한다.
 4. 자동발주 실행은 차단한 채 `supplier_connector_checks` `probe:setOrder`, `supplier_orders.last_error`를 확인하여 인증/형식 문제를 구분한다.
 5. 주문 권한·공급계약·개인정보 처리권한·고객 결제/취소 원장·중복 방지까지 검증한 뒤 제한된 소액 파일럿을 인적 승인하에 진행한다.
+
+
+## 2026-10-29: 자동발주 OFF 상태에서 읽기 전용 인증 점검
+
+- 유상 발주는 `DOMEGGOOK_AUTO_ORDER_ENABLED=false` 유지한다. `DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED=true`는 구매권한이 아니라 `setLogin v4.1` → `getMyAsset v1.0`만 호출하는 별도의 진단 게이트다.
+- 6시간 제한(기존 `supplier_connector_checks` `probe:login`)을 유지한다. 요청 실패는 비밀정보 없는 `MEMBER_ERROR` / `LOGIN_FAILED` / `ASSET_PROBE_FAILED` 상태로만 남긴다.
+- 로그인 응답의 계정 ID가 설정 ID와 다르면 `loginIdMatchesConfigured=false`만 기록하며, SNS 계정 차이일 수 있으므로 자동 발주 승인 근거로 해석하지 않는다.
+- API 키/암호/세션/계정 ID/잔액 금액/원문 Response/구매자 주소는 DB·로그·메일에 저장하지 않는다. 공급사 추가 확인이 필요하면 보안 제출 경로를 별도로 확정한다.
+- **이 점검 성공은 단지 로그인과 잔액 조회 성공을 의미한다. 구매용 API 승인/거래권한/공급계약/개인정보 이전/실주문 파일럿 승인이 아니다.**
