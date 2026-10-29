@@ -37,6 +37,25 @@ Supabase 기본 메일발송은 운영 서비스용이 아니다. 일반 EKODI M
 
 위 3개 값 모두 **identity-api Edge Function**의 서버 환경에서 관리한다. 프런트엔드나 Git 저장소에 비밀값을 넣지 않는다. 비밀값을 설정했어도 Auth 자체의 SMTP 구성과 템플릿이 자동 설정되는 것은 아니며, 설정값/작동검증 일치 여부는 별도 운영 기록으로 확인한다. 실패·장애 시 `EKODI_EMAIL_PASSWORD_ENABLED=false`로 다시 닫는다.
 
+
+## 무료로 시작하는 SMTP 연결 및 공개 DNS 사전점검 (2026-10-29 확인)
+
+Supabase의 [공식 Resend 연동](https://supabase.com/partners/catalog/resend)을 통한 **EKODI 인증 전용 발송 서비스**를 우선 적용 후보로 한다. [Resend 무료 플랜](https://resend.com/pricing)은 현재 월 3,000건, 하루 100건(확인 시점 기준)을 제공한다. 제한 초과나 별도의 유료 결제는 승인 없이 진행하지 않는다. EKODI Mail 수신·전달 구조와 분리하고 대량 홍보 메일은 이 인증메일 경로에서 발송하지 않는다.
+
+1. 승인된 소유자가 Resend 무료 계정을 연결하고 EKODI가 소유한 발신 도메인 또는 인증 전용 하위 도메인을 등록한다.
+2. Resend에서 표시하는 **실제** 도메인 DNS 레코드(SPF/발송용 메일 경로, DKIM, DMARC)를 확인한 뒤 Cloudflare DNS에 적용한다. 예시 레코드 값을 실제 인증값으로 오인하여 붙여넣지 않는다.
+3. 공개 DNS만 조회하는 다음 명령으로 **발송 준비의 일부 조건**을 확인한다. `EKODI_AUTH_SPF_HOST`는 이메일 발송 서비스가 안내하는 실제 SPF/MAIL FROM 호스트로 정하고, `EKODI_AUTH_DKIM_HOST`는 실제 DKIM 레코드 이름을 입력한다.
+
+```bash
+EKODI_AUTH_SENDER_DOMAIN=ekodi.kr \
+EKODI_AUTH_SPF_HOST="<provider-assigned-sender-host>" \
+EKODI_AUTH_DKIM_HOST="<provider-assigned-selector>._domainkey.ekodi.kr" \
+node scripts/verify-ekodi-auth-sender-dns.mjs
+```
+
+4. 검사 결과의 `dnsPrerequisitesPassed=true`는 공개 DNS가 준비됐다는 뜻**만** 갖는다. 검사기는 SMTP/인증 템플릿/외부 인증코드 수신을 검증하지 않으며 `releaseEligible`은 항상 `false`이다. 이 스크립트가 0으로 종료되어도 운영 가입 기능은 열리지 않는다.
+5. Supabase Auth의 Resend Custom SMTP 연동, Confirm Email ON, 두 인증코드 템플릿 적용 및 외부 소유 메일함 실제 수신을 **별도로** 검증한 뒤 EKODI Orchestrator의 승인으로 3중 서버 스위치를 열 수 있다. 무료 한도가 소진되면 무단 유료 전환 대신 가입 발송을 보수적으로 제한한다.
+
 ## 사용자 검증 시나리오
 
 - 비운영 신규 이메일 가입 → 확인 전 로그인 차단 → EKODI Mail OTP → 인증 후 자동 Person/ekodi_id 최초 생성 → 이전 페이지 복귀
