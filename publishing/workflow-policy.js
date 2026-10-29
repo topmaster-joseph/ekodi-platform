@@ -53,6 +53,7 @@ export function publicationTransition(project, action, input, user, now=new Date
   }
   if (action==='submit') {
     if (!['drafting','changes_requested'].includes(original)) return fail('WRONG_STAGE');
+    if (verification.ready!==true) return fail('PAID_PUBLISHING_SUBMISSION_REQUIRED',verification.reason||'');
     if (!isSha(project.manuscriptDigest)) return fail('MANUSCRIPT_REQUIRED');
     copy.stage='in_review';return {ok:true,next:copy};
   }
