@@ -106,6 +106,10 @@ function boot(root) {
   const prev = el('a', 'dv-date-link', '‹ 이전');
   const dateLabel = el('strong', 'dv-date', '불러오는 중');
   const next = el('a', 'dv-date-link', '다음 ›');
+  // Never display an actionable future link while the session is unresolved.
+  next.hidden = true;
+  next.setAttribute('aria-disabled','true');
+  next.tabIndex = -1;
   datebar.append(prev, dateLabel, next);
   const status = el('p', 'dv-status');
   status.setAttribute('role', 'status');
@@ -599,12 +603,77 @@ function boot(root) {
     });
   }
 
+  // All 3 public devotion hosts share these navigation guards.
+  const seoulToday = () => {
+    const parts = new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+    const value = type => parts.find(part=>part.type===type)?.value||'';
+    return [value('year'),value('month'),value('day')].join('-');
+  };
+  let futurePermissionRevoked = false;
+  let permissionCheck = 0;
+  function updateNextAccess() {
+    const today = seoulToday();
+    const allowed = Boolean(current?.nextDate) &&
+      (current.nextDate <= today || (current.admin?.canEdit && !futurePermissionRevoked));
+    // No href, keyboard target, or click action is left for an inaccessible date.
+    next.hidden = !allowed;
+    next.tabIndex = allowed ? 0 : -1;
+    next.setAttribute('aria-disabled', String(!allowed));
+    if (allowed) next.href = pageUrl(current.nextDate);
+    else next.removeAttribute('href');
+  }
+  function revokeFutureNavigation() {
+    futurePermissionRevoked = true;
+    permissionCheck += 1;
+    if (current) current.admin = null;
+    updateNextAccess();
+    // If an administrator signs out while already viewing tomorrow, remove
+    // previously rendered private content instead of leaving it onscreen.
+    if (current?.date > seoulToday()) location.replace(pageUrl(seoulToday()));
+  }
+  async function verifyFuturePermission(date) {
+    const epoch = ++permissionCheck;
+    const bearer = await requestToken();
+    if (!bearer || epoch !== permissionCheck) return false;
+    try {
+      const response = await fetch(`${API}?date=${encodeURIComponent(date)}`,{
+        cache:'no-store',headers:{authorization:`Bearer ${bearer}`}
+      });
+      const data = await response.json().catch(()=>null);
+      if(epoch !== permissionCheck)return false;
+      return response.ok && data?.admin?.canEdit === true;
+    } catch { return false; }
+  }
+  next.addEventListener('click',async event=>{
+    if (!current?.nextDate || next.hidden || !next.hasAttribute('href')) {
+      event.preventDefault();return;
+    }
+    if (current.nextDate <= seoulToday()) return;
+    event.preventDefault();
+    const date=current.nextDate;
+    if (!await verifyFuturePermission(date)) {revokeFutureNavigation();return;}
+    if (date !== current?.nextDate || next.hidden) return;
+    location.assign(pageUrl(date));
+  });
+  window.addEventListener('ekodi:auth-logout',revokeFutureNavigation);
+  const reevaluate = () => {
+    updateNextAccess();
+    if(current?.date > seoulToday() || (current?.nextDate > seoulToday() && current.admin?.canEdit)){
+      void verifyFuturePermission(current.date > seoulToday()?current.date:current.nextDate)
+        .then(valid=>{if(!valid)revokeFutureNavigation()});
+    }
+  };
+  window.addEventListener('pageshow',reevaluate);
+  window.addEventListener('focus',reevaluate);
+  window.addEventListener('storage',event=>{
+    if(event.key===null || event.key==='ekodi-auth-token' || /^sb-.*-auth-token$/.test(event.key||''))reevaluate();
+  });
+
   function render(data) {
     current = data;
     dateLabel.textContent = koreanDate(data.date);
     prev.href = pageUrl(data.prevDate);
-    next.href = pageUrl(data.nextDate);
-    next.hidden = !data.admin?.canEdit && data.nextDate > (data.today || data.date);
+    updateNextAccess();
     for (const panel of panels.values()) panel.replaceChildren();
     scriptureBlock.replaceChildren();
     audioRow.replaceChildren();
