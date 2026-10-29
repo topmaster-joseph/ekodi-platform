@@ -303,8 +303,51 @@
         (Number.isFinite(data.githubApiRemaining)?data.githubApiRemaining:'실측 미연결')+
         ' · Webhook '+(data.activation?.ready?'활성 준비 확인':'미활성 또는 설정 미완료')+
         ' · 배포 권한 없음';
+      // Signed event reception is distinct from provisioned secret/installation
+      // settings. Never leak the configured secret, installation token or actor.
+      const activation=data.activation||{};
+      const diagnostics=document.createElement('article');
+      diagnostics.className='card';
+      const heading=document.createElement('strong');
+      heading.textContent='GitHub App 연결 검증';
+      diagnostics.append(heading);
+      for(const [label,ok] of [
+        ['Webhook 서버 활성화',activation.enabled===true],
+        ['서명 비밀키 존재',activation.secretConfigured===true],
+        ['GitHub App 설치 ID 존재',activation.installationConfigured===true],
+        ['실제 서명된 이벤트 수신',activation.receivingVerifiedEvents===true]
+      ]){
+        const line=document.createElement('p');
+        line.textContent=label+' · '+(ok?'확인':'미확인');
+        diagnostics.append(line);
+      }
+      const last=document.createElement('p');
+      last.textContent='마지막 서명 이벤트: '+String(activation.lastSignedEventAt||'수신 기록 없음')+
+        ' · 누적 수신 '+Math.max(0,Number(activation.verifiedEventCount)||0)+'건';
+      diagnostics.append(last);
+      root.append(diagnostics);
+      const rate=data.apiQuota||{};
+      const quotaCard=document.createElement('article');
+      quotaCard.className='card';
+      const quotaHeading=document.createElement('strong');
+      quotaHeading.textContent='GitHub REST API 공동 한도 관측';
+      quotaCard.append(quotaHeading);
+      const quotaHelp=document.createElement('p');
+      quotaHelp.textContent='관측 원장: '+String(rate.state||'미연결')+
+        ' · 전체 실행기 공동 차감·명령 실행: 미연결';
+      quotaCard.append(quotaHelp);
+      for(const bucket of Array.isArray(rate.buckets)?rate.buckets:[]){
+        const line=document.createElement('p');
+        line.textContent=String(bucket.resource||'unknown')+' · '+
+          (bucket.measured?'최근 실측 '+bucket.remaining+'/'+bucket.limit:'실측값 만료 · 미확인')+
+          ' · 측정 '+String(bucket.lastObservedAt||'없음');
+        quotaCard.append(line);
+      }
+      root.append(quotaCard);
       if(!jobs.length){
-        root.textContent='관측 기록이 없습니다. GitHub Webhook과 D1 마이그레이션 상태를 확인하세요.';
+        const empty=document.createElement('p');
+        empty.textContent='관측 작업 기록이 없습니다. GitHub App Webhook 서명·설치 설정과 D1 상태를 확인하세요.';
+        root.append(empty);
         return;
       }
       for(const job of jobs){
