@@ -387,3 +387,22 @@ body.admin-compact #aiOpsPanel[data-aiops-stage="sites"] .ai-selected-detail :is
   body.admin-compact #aiOpsPanel .ai-ops-stage-issue {grid-template-columns:1fr!important}
   body.admin-compact #aiOpsPanel .ai-ops-stage-issue b {justify-self:start}
 }
+
+/* Preserve all six genuine overview metrics, including owner decisions, which
+   legacy flat layout previously hid after the fourth card. */
+body.admin-compact #aiOpsPanel[data-aiops-stage="overview"] .ai-ops-metrics {
+  display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:8px!important;
+}
+body.admin-compact #aiOpsPanel[data-aiops-stage="overview"] .ai-ops-metrics article:nth-child(n+5) {display:block!important}
+body.admin-compact #aiOpsPanel[data-aiops-stage="overview"] .ai-ops-metrics article {padding:12px!important}
+body.admin-compact #aiOpsPanel[data-aiops-stage="overview"] .ai-ops-metrics article small {font-size:12px!important}
+body.admin-compact #aiOpsPanel[data-aiops-stage="overview"] .ai-ops-metrics article strong {font-size:24px!important}
+body.admin-compact #aiOpsPanel[data-aiops-stage="providers"] .ekodi-ai-readiness-row :is(strong,span) {font-size:13px!important}
+body.admin-compact #aiOpsPanel[data-aiops-stage="providers"] .ekodi-ai-provider-title h3 {font-size:19px!important}
+body.admin-compact #aiOpsPanel[data-aiops-stage="providers"] .ekodi-ai-center-tabs button {font-size:13px!important}
+@media(max-width:1100px){
+ body.admin-compact #aiOpsPanel[data-aiops-stage="overview"] .ai-ops-metrics {grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media(max-width:600px){
+ body.admin-compact #aiOpsPanel[data-aiops-stage="overview"] .ai-ops-metrics {grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
