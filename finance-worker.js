@@ -228,6 +228,12 @@ export default {
       const now = new Date().toISOString();
       try {
         const verified = await tossPayment(env, paymentKey, orderId);
+        // The untrusted callback may supply either identifier, but each
+        // supplied identifier must refer to the payment returned by Toss.
+        if (paymentKey && String(verified.paymentKey || '') !== String(paymentKey))
+          throw new Error('PG_PAYMENT_KEY_MISMATCH');
+        if (orderId && String(verified.orderId || '') !== String(orderId))
+          throw new Error('PG_ORDER_ID_MISMATCH');
         const route = await upsertPayment(env, verified);
         await env.DB.prepare(`INSERT INTO integration_events
           (provider,external_id,event_type,status,received_at,processed_at,detail)
