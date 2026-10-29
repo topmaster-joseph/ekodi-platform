@@ -31,6 +31,8 @@ curl() {
 }
 first=0
 ekodi_cf_request 'https://example.invalid/first' >/dev/null || first=$?
+# Simulate the separate cleanup step re-sourcing and initializing the helper in the same job.
+ekodi_cf_initialize
 second=0
 ekodi_cf_request 'https://example.invalid/second' >/dev/null || second=$?
 if [[ -f "$EKODI_CF_QUOTA_FLAG" ]]; then state=open; else state=clear; fi
