@@ -29,6 +29,12 @@ function json(data, status = 200, baseHeaders = null, origin = '') {
   return new Response(JSON.stringify(data), { status, headers });
 }
 
+// Legacy global Finance API includes cross-organization accounting and order writes.
+// Tenant-specific permissions are handled by finance-banking-worker separately.
+export function hasGlobalFinanceAccess(session) {
+  return session?.authenticated === true && session?.role === 'super_admin';
+}
+
 async function sessionCheck(request, env) {
   const url = new URL(request.url);
   url.pathname = '/api/session';
@@ -254,6 +260,8 @@ export default {
 
     const auth = await sessionCheck(request, env);
     if (!auth.session) return auth.response;
+    if (!hasGlobalFinanceAccess(auth.session))
+      return json({ error: '최고관리자 금융 권한이 필요합니다.' }, 403, auth.response.headers, origin);
 
     try {
       if (request.method === 'GET' && url.pathname === '/api/finance/overview') {
@@ -271,19 +279,26 @@ export default {
       }
       if (request.method === 'POST' && url.pathname === '/api/finance/orders') {
         const body = await readJson(request);
-        const amount = Math.trunc(Number(body?.amount));
-        if (!body?.orderId || !body?.organizationId || !body?.businessUnitId || !body?.sourceDomain || !Number.isFinite(amount) || amount < 0) {
-          return json({ error: '주문 분류값을 확인해 주세요.' }, 400, auth.response.headers, origin);
+        const amount = Number(body?.amount);
+        if (!body?.orderId || !body?.organizationId || !body?.businessUnitId || !body?.sourceDomain ||
+            !Number.isSafeInteger(amount) || amount <= 0 || String(body.currency || 'KRW') !== 'KRW') {
+          return json({ error: '주문 분류값과 양의 정수 원화 금액을 확인해 주세요.' }, 400, auth.response.headers, origin);
         }
+        // The legacy admin issuer is create-only. Neither tenant assignment nor
+        // the financial amount of a registered order may be rewritten via POST.
+        // A protected migration/reclassification flow must be built separately.
         const now = new Date().toISOString();
-        await env.DB.prepare(`INSERT INTO payment_orders
+        const result = await env.DB.prepare(`INSERT INTO payment_orders
           (order_id,organization_id,business_unit_id,project_id,source_domain,amount,currency,status,created_at,updated_at)
           VALUES (?,?,?,?,?,?,?,'CREATED',?,?)
-          ON CONFLICT(order_id) DO UPDATE SET organization_id=excluded.organization_id,business_unit_id=excluded.business_unit_id,
-            project_id=excluded.project_id,source_domain=excluded.source_domain,amount=excluded.amount,currency=excluded.currency,updated_at=excluded.updated_at`)
+          ON CONFLICT(order_id) DO NOTHING`)
           .bind(String(body.orderId), String(body.organizationId), String(body.businessUnitId), body.projectId || null,
-            String(body.sourceDomain), amount, String(body.currency || 'KRW'), now, now).run();
-        await audit(env, auth.session, 'finance.order.classify', String(body.orderId), JSON.stringify({ organizationId: body.organizationId, businessUnitId: body.businessUnitId, projectId: body.projectId || null }));
+            String(body.sourceDomain), amount, 'KRW', now, now).run();
+        if (Number(result?.meta?.changes ?? 0) !== 1)
+          return json({ error: '이미 등록된 주문이거나 생성 여부를 확인할 수 없습니다.' }, 409, auth.response.headers, origin);
+        await audit(env, auth.session, 'finance.order.create', String(body.orderId), JSON.stringify({
+          organizationId: body.organizationId, businessUnitId: body.businessUnitId, projectId: body.projectId || null
+        }));
         return json({ ok: true }, 201, auth.response.headers, origin);
       }
       if (request.method === 'POST' && url.pathname === '/api/finance/entries') {
