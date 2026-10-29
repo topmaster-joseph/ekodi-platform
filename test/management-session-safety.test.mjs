@@ -31,7 +31,7 @@ function createPage({session,sharedStorage=memoryStorage(),url='https://ekodi.kr
       return {ok:true,json:async()=>({accessToken:'new-token',refreshToken:'new-refresh',expiresAt:Math.floor(Date.now()/1000)+3600,user:{id:'new-user'}})};
     }
     assert.equal(path,'/api/catalog');
-    return {ok:true,json:async()=>({modules:[{id:'chief',name:'경영비서AI',state:'foundation',phase:1},{id:'marketing',name:'마케팅AI',state:'existing',phase:1}]})};
+    return {ok:true,json:async()=>({modules:[{id:'chief',name:'경영비서AI',state:'foundation',phase:1},{id:'marketing',name:'마케팅AI',state:'existing',phase:1,reuseExisting:true,url:'https://ekodi.kr/ekodibiz/marketing-ai'}]})};
   };
   const context=createContext({window:{EKODI_MANAGEMENT_CONFIG:{}},document,location,history,sessionStorage,localStorage:sharedStorage,fetch,console:{error(){}},URL,URLSearchParams,Date});
   runInContext(source,context);
@@ -68,4 +68,34 @@ test('expired browser session cannot unlock member controls',async()=>{
   await page.flush();
   assert.equal(page.getElementById('memberApp').hidden,true);
   assert.equal(page.sessionStorage.getItem('ekodi-management-session'),null);
+});
+
+test('management UI uses general login and canonical institution workspace kind',()=>{
+  const html=readFileSync(new URL('../management/index.html',import.meta.url),'utf8');
+  assert.match(html,/<option value="institution">기관<\/option>/);
+  assert.doesNotMatch(html,/<option value="organization">기관<\/option>/);
+  assert.doesNotMatch(html,/Google 로그인/);
+  assert.match(html,/id="memberModuleLinks"/);
+});
+
+test('approved existing specialist receives a canonical launch without unlocking planned modules',async()=>{
+  const expiry=Math.floor(Date.now()/1000)+3600;
+  const session={accessToken:'token-a',refreshToken:'refresh-a',expiresAt:expiry,user:{id:'alice'}};
+  const page=createPage({session});
+  await page.flush();
+  const links=page.getElementById('memberModuleLinks').children.filter(node=>node.href);
+  assert.equal(links.length,1);
+  assert.equal(links[0].href,'https://ekodi.kr/ekodibiz/marketing-ai');
+  assert.equal(runInContext("safeModuleUrl({id:'order',state:'foundation',reuseExisting:true,url:'https://ekodi.kr/ekodibiz/marketing-ai'})",page.context),null);
+  assert.equal(runInContext("safeModuleUrl({id:'marketing',state:'existing',reuseExisting:true,url:'https://outside.example/orders'})",page.context),null);
+  assert.equal(runInContext("safeModuleUrl({id:'marketing',state:'existing',reuseExisting:true,url:'https://ekodi.kr/ekodibiz/marketing-ai?redirect=evil'})",page.context),null);
+});
+
+test('legacy organization type is normalized to institution and unselected modules do not launch',async()=>{
+  const expiry=Math.floor(Date.now()/1000)+3600;
+  const sharedStorage=memoryStorage({'ekodi-management-selection-v1:alice':JSON.stringify({workspaceKind:'organization',modules:['chief']})});
+  const page=createPage({session:{accessToken:'token-a',refreshToken:'refresh-a',expiresAt:expiry,user:{id:'alice'}},sharedStorage});
+  await page.flush();
+  assert.equal(page.getElementById('workspaceKind').value,'institution');
+  assert.equal(page.getElementById('memberModuleLinks').children.filter(node=>node.href).length,0);
 });
