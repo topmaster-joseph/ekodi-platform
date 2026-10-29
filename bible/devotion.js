@@ -199,27 +199,27 @@ function boot(root) {
     sharedAuthBar.append(account,logout);
   }
   async function signOutDevotion(button){
+    const member=memberSessionEntry()?.session?.access_token||'';
+    const consoleToken=adminConsoleToken();
     button.disabled=true;
-    try {
-      const member=memberSessionEntry()?.session?.access_token||'';
-      const consoleToken=adminConsoleToken();
-      if(consoleToken) await fetch('/api/logout',{method:'POST',headers:{authorization:'Bearer '+consoleToken},credentials:'same-origin'}).catch(()=>null);
-      if(member) await fetch(SUPABASE_URL+'/auth/v1/logout',{method:'POST',
-        headers:{apikey:SUPABASE_KEY,authorization:'Bearer '+member}}).catch(()=>null);
-    }finally{
-      try{sessionStorage.removeItem(ADMIN_TOKEN_KEY)}catch{}
-      try{localStorage.removeItem(ADMIN_TOKEN_KEY)}catch{}
-      try{
-        for(let i=localStorage.length-1;i>=0;i--){
-          const key=localStorage.key(i)||'';
-          if(/^sb-.*-auth-token$/.test(key))localStorage.removeItem(key);
-        }
-      }catch{}
-      futurePermissionRevoked=true;
-      renderAdminBar(null);
-      showSharedAccount(null);
-      window.dispatchEvent(new Event('ekodi:auth-logout'));
-    }
+    try{sessionStorage.removeItem(ADMIN_TOKEN_KEY)}catch{}
+    try{localStorage.removeItem(ADMIN_TOKEN_KEY)}catch{}
+    try{
+      for(let i=localStorage.length-1;i>=0;i--){
+        const key=localStorage.key(i)||'';
+        if(/^sb-.*-auth-token$/.test(key))localStorage.removeItem(key);
+      }
+    }catch{}
+    // Clear the privileged navigation before waiting for a network reply.
+    renderAdminBar(null);
+    showSharedAccount(null);
+    window.dispatchEvent(new Event('ekodi:auth-logout'));
+    if(consoleToken)await fetch('/api/logout',{method:'POST',
+      headers:{authorization:'Bearer '+consoleToken},credentials:'same-origin',
+      signal:AbortSignal.timeout(5000)}).catch(()=>null);
+    if(member)await fetch(SUPABASE_URL+'/auth/v1/logout',{method:'POST',
+      headers:{apikey:SUPABASE_KEY,authorization:'Bearer '+member},
+      signal:AbortSignal.timeout(5000)}).catch(()=>null);
   }
   showSharedAccount(null);
 
@@ -685,13 +685,14 @@ function boot(root) {
   async function verifyFuturePermission(date) {
     const epoch = ++permissionCheck;
     const bearer = await requestToken();
-    if (!bearer || epoch !== permissionCheck) return false;
+    if (!bearer) return false;
+    if (epoch !== permissionCheck) return null;
     try {
       const response = await fetch(`${API}?date=${encodeURIComponent(date)}`,{
         cache:'no-store',headers:{authorization:`Bearer ${bearer}`}
       });
       const data = await response.json().catch(()=>null);
-      if(epoch !== permissionCheck)return false;
+      if(epoch !== permissionCheck)return null;
       return response.ok && data?.admin?.canEdit === true;
     } catch { return false; }
   }
@@ -702,7 +703,9 @@ function boot(root) {
     if (current.nextDate <= seoulToday()) return;
     event.preventDefault();
     const date=current.nextDate;
-    if (!await verifyFuturePermission(date)) {revokeFutureNavigation();return;}
+    const authorized=await verifyFuturePermission(date);
+    if(authorized===false){revokeFutureNavigation();return;}
+    if(authorized!==true)return;
     if (date !== current?.nextDate || next.hidden) return;
     location.assign(pageUrl(date));
   });
@@ -711,7 +714,7 @@ function boot(root) {
     updateNextAccess();
     if(current?.date > seoulToday() || (current?.nextDate > seoulToday() && current.admin?.canEdit)){
       void verifyFuturePermission(current.date > seoulToday()?current.date:current.nextDate)
-        .then(valid=>{if(!valid)revokeFutureNavigation()});
+        .then(valid=>{if(valid===false)revokeFutureNavigation()});
     }
   };
   window.addEventListener('pageshow',reevaluate);
