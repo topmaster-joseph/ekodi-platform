@@ -21,6 +21,7 @@ Supabase 기본 메일발송은 운영 서비스용이 아니다. 일반 EKODI M
 1. 이메일/비밀번호 제공자 허용, **Confirm Email ON**, 임의 이메일에 대해 확인 없이 세션이 생기지 않는지 비운영에서 실증
 2. **Redirect URL allowlist**에 실제 필요한 `https://ekodi.kr/auth/` 및 허용된 `site/return_to` 패턴만 등록. 별도 하위도메인 사용 금지
 3. 확인메일 Template: 인증용 6자리 OTP `{{ .Token }}` 표시, 제목 `[EKODI] 이메일 회원가입 인증`, 발신자 `EKODI 인증`; 비밀번호복구 Template에서도 `{{ .Token }}`을 출력하며 제목 `[EKODI] 비밀번호 재설정` 설정. 링크 템플릿은 별도로 동작할 수 있지만 본 UI는 코드 입력을 사용한다
+   - 저장소의 검토 완료 초안 `docs/auth/templates/ekodi-signup-confirmation.html`과 `docs/auth/templates/ekodi-password-recovery.html`을 각각 Supabase Authentication → Email Templates → Confirm signup / Reset password 본문으로 적용할 수 있다. **Git 병합만으로 Supabase 운영 템플릿이 변경되지 않는다.** 발송자 인증 및 실제 테스트 수신 전에는 적용 완료로 표시하지 않는다.
 4. Confirm Email 설정과 SMTP 발송/수신/재전송/만료/스팸 처리/복구 실증, 서비스별 세션 handoff와 동일 EKODI ID 조회가 성공했을 때만 게이트 승인
 5. 로그인/회원가입 남용 방지: CAPTCHA, 이메일 요청 한도, 비밀번호 길이·유출 여부 검사, 브루트포스 차단. 외부 이메일을 대상으로 반복 대량 테스트하지 않음
 6. 계정 복구는 일반 자동 SSO handoff보다 우선 실행되며, 인증코드 검증 후 비밀번호를 갱신하고 로그아웃한 뒤 재로그인하게 함
