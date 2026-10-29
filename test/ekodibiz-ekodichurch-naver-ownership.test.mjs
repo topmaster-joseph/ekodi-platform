@@ -52,5 +52,5 @@ test('unrelated domain remains isolated from church and biz proof paths', async 
   const a = await biz.fetch(new Request('https://ekodichurch.kr' + EKODIBIZ_NAVER_FILE_PATH));
   assert.equal(a.status, 404);
   const b = await church.fetch(new Request('https://invalid.example' + EKODICHURCH_NAVER_FILE_PATH));
-  assert.equal(b.status, 200); // Existing legacy verification helper is path-based.
+  assert.equal(b.status, 404);
 });
