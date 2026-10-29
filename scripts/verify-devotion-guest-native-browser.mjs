@@ -119,7 +119,17 @@ try {
         waitUntil:'domcontentloaded',timeout:35000
       });
       await page.locator('[data-ekodi-devotion] .dv-status').waitFor({state:'attached',timeout:20000});
-      await page.waitForTimeout(1800);
+      if(process.env.EKODI_EXPECT_AUTO_TODAY==='1'){
+        // Production release check waits for the actual today URL and visible passage;
+        // a screenshot of the old blocked screen is not a passing result.
+        await page.waitForFunction(iso=>{
+          const date=new URL(location.href).searchParams.get('date');
+          const passage=document.querySelector('[data-ekodi-devotion] .dv-scripture-section');
+          return date===iso && passage?.hidden===false && (passage?.innerText?.trim().length||0)>30;
+        },today,{timeout:18000});
+      } else {
+        await page.waitForTimeout(1800);
+      }
       const futureState=await page.evaluate(()=>{
         const el=document.querySelector('[data-ekodi-devotion]');
         const verses=el?.querySelector('.dv-scripture-section');
