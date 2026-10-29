@@ -21,7 +21,7 @@
     $('#readOnlyProbe').textContent=`읽기 전용 인증: ${probe.enabled?'ON':'OFF'} · ${desc} · 최근 ${checked}${mismatch}${error} · 실제 주문 OFF`;
     const hints={
       LOGIN_FAILED:'로그인 실패: SNS 가입 계정에 별도 비밀번호가 설정되어 있는지 확인하세요.',
-      LOGIN_REJECTED:'로그인 거절: 별도 비밀번호와 Cloudflare DOMEMAE_PASSWORD를 확인하세요.',
+      LOGIN_REJECTED:'로그인 거절: 비밀번호 변경을 반복하지 마세요. 아래 HTTP·JSON·응답유형·요청 IP 증거를 확인해 공급사와 원인을 구분합니다.',
       SNS_PASSWORD_REQUIRED:'SNS 가입 회원은 도매꾹 회원정보에서 별도 비밀번호를 설정해야 합니다.',
       PASSWORD_REJECTED:'비밀번호가 거절됐습니다. 도매꾹 계정과 Cloudflare Secret을 확인하세요.',
       MEMBER_ERROR:'회원 오류: 공급사 승인 회원과 실제 로그인 계정을 확인하세요.',
@@ -30,6 +30,11 @@
       ACCOUNT_BINDING_MISMATCH:'회원 식별자 불일치: 승인 계정·로그인 응답을 확인하세요.',
       ASSET_PROBE_FAILED:'로그인은 통과했으나 잔액 조회에 실패했습니다.'
     };
+    const diag=probe.diagnostic||null;
+    const evidence=diag
+      ? `진단: HTTP ${diag.httpStatus||'미확인'} · JSON ${diag.jsonParsed?'정상':'해석 실패'} · 결과 ${diag.supplierResult||'미확인'} · 요청 IP ${diag.clientIpMode==='loopback-fallback'?'기본값(127.0.0.1)':diag.clientIpMode==='configured'?'별도 설정':diag.clientIpMode==='loopback-configured'?'루프백 설정':'확인 불가'}`
+      : '구체적인 응답 진단은 다음 읽기 전용 재점검부터 표시됩니다.';
+    $('#authEvidence').textContent=evidence;
     $('#probeHelp').dataset.state=probe.result==='failed'?'error':'ok';
     $('#probeHelp').textContent=probe.result==='ok'?'로그인·잔액 조회 성공. 유상 자동발주와 배송정보 전송은 OFF입니다.':hints[probe.errorCode]||'SNS 계정이라면 도매꾹 회원정보에서 비밀번호를 설정하고 Cloudflare Secret을 변경하세요. 비밀번호를 이 화면에 입력하지 마세요.';
     setStatus(`도매매·도매꾹 · ${x.providerReady?'인증정보 설정됨':'인증정보 설정 필요'} · ${probe.result==='failed'?'읽기 전용 인증 점검 실패':probe.result==='ok'?'읽기 전용 인증 확인':'인증 점검 대기'} · 상품조회 ${x.capabilities.itemLookup?'가능':'차단'} · 실주문 OFF`,probe.result==='failed');}

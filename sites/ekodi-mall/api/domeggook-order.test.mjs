@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readdirSync, readFileSync } from 'node:fs';
-import { placeSupplierOrders, trackSupplierOrders, buildDeliInfo, buildItemValue, probeDomeggookLogin, approvedMemberBindingReady, autoOrderEnabled, classifySupplierAuthError, chooseOptionCode } from './domeggook-order.js';
+import { placeSupplierOrders, trackSupplierOrders, buildDeliInfo, buildItemValue, probeDomeggookLogin, approvedMemberBindingReady, autoOrderEnabled, classifySupplierAuthError, safeDomeggookLoginDiagnostic, chooseOptionCode } from './domeggook-order.js';
 
 function d1(db) {
   const wrap = (sql) => { const stmt = db.prepare(sql); let args = []; const api = {
@@ -315,4 +315,35 @@ test('operator read-only retry permits one login in 15 minutes, cron keeps 6-hou
   r=await probeDomeggookLogin(env,supplier({},calls),{operatorRetry:true});
   assert.equal(r.ok,true);
   assert.equal(calls.filter(x=>x.mode==='setOrder').length,0);
+});
+
+test('supplier false login records only safe HTTP/JSON/IP diagnostics; no order occurs', async () => {
+  const { db, env } = setup({ DOMEGGOOK_AUTO_ORDER_ENABLED: 'false', DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED: 'true' });
+  const calls = [];
+  const fetchImpl = async (_url, init) => {
+    const params = new URLSearchParams(String(init?.body || ''));
+    calls.push(params.get('mode'));
+    return new Response(JSON.stringify({
+      domeggook: { result: 'false', message: 'private: PW! AK SID1 ID test-approved-member' }
+    }), { status: 200, headers: { 'content-type': 'application/json' } });
+  };
+  const result = await probeDomeggookLogin(env, fetchImpl, { operatorRetry: true });
+  assert.equal(result.ok, false);
+  assert.equal(result.errorCode, 'LOGIN_REJECTED');
+  assert.deepEqual(result.diagnostic, {
+    httpStatus: 200, jsonParsed: true, supplierResult: 'false', clientIpMode: 'loopback-fallback'
+  });
+  assert.deepEqual(calls, ['setLogin']);
+  const saved = db.prepare("SELECT metadata_json FROM supplier_connector_checks WHERE external_ref='probe:login'").get().metadata_json;
+  for (const raw of ['PW!', 'AK', 'SID1', 'test-approved-member', 'private:']) assert.ok(!saved.includes(raw));
+});
+
+test('supplier login evidence tracks HTTP and JSON shape but never raw response values', () => {
+  const env = { DOMEMAE_API_KEY: 'secret' };
+  assert.deepEqual(safeDomeggookLoginDiagnostic(env, { status: 403, parsedJson: false, root: {} }), {
+    httpStatus: 403, jsonParsed: false, supplierResult: 'missing', clientIpMode: 'loopback-fallback'
+  });
+  assert.equal(safeDomeggookLoginDiagnostic({ DOMEGGOOK_CLIENT_IP: '198.51.100.20' }, {
+    status: 200, parsedJson: true, root: { result: 'unexpected-PII' }
+  }).supplierResult, 'other');
 });

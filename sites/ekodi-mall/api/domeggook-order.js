@@ -61,7 +61,8 @@ async function call(env, params, fetchImpl, method = 'POST') {
   const text = await res.text();
   let payload = null; try { payload = JSON.parse(text); } catch {}
   const root = payload?.domeggook && typeof payload.domeggook === 'object' ? payload.domeggook : payload;
-  return { ok: res.ok && Boolean(root), status: res.status, root: root || {} };
+  return { ok: res.ok && Boolean(root), status: res.status, root: root || {},
+    parsedJson: Boolean(payload && typeof payload === 'object') };
 }
 
 function apiError(r, env) {
@@ -74,11 +75,31 @@ function apiError(r, env) {
   return '';
 }
 
+/** Fixed-value, secret-free diagnostic facts for failed setLogin only.
+ * No API response body, user ID, credentials, session or e-money amount is stored. */
+export function safeDomeggookLoginDiagnostic(env, response) {
+  const rawResult = String(response?.root?.result ?? '').trim().toLowerCase();
+  const supplierResult = rawResult === 'true' || rawResult === '1' || rawResult === 'success'
+    ? 'success' : rawResult === 'false' ? 'false' : rawResult ? 'other' : 'missing';
+  const configuredIp = String(env?.DOMEGGOOK_CLIENT_IP ?? '').trim();
+  const clientIpMode = !configuredIp ? 'loopback-fallback'
+    : /^(127\.|::1$|0:0:0:0:0:0:0:0$)/.test(configuredIp) ? 'loopback-configured' : 'configured';
+  return {
+    httpStatus: Number.isInteger(response?.status) && response.status >= 100 && response.status <= 599 ? response.status : null,
+    jsonParsed: response?.parsedJson === true,
+    supplierResult,
+    clientIpMode
+  };
+}
+
 export async function login(env, fetchImpl = fetch) {
   const r = await call(env, { ver: '4.1', mode: 'setLogin', id: env.DOMEMAE_USER_ID, pw: env.DOMEMAE_PASSWORD, loginKeep: 'off', ip: env.DOMEGGOOK_CLIENT_IP || '127.0.0.1', device: 'Third Party' }, fetchImpl);
   const sId = r.root?.sId;
-  if (!r.ok || apiError(r, env) || !sId || !String(r.root?.id || '').trim())
-    throw new Error(`도매꾹 로그인 실패: ${apiError(r, env) || '인증 결과/회원 ID/세션 불명'}`);
+  if (!r.ok || apiError(r, env) || !sId || !String(r.root?.id || '').trim()) {
+    const error = new Error(`도매꾹 로그인 실패: ${apiError(r, env) || '인증 결과/회원 ID/세션 불명'}`);
+    error.safeDiagnostic = safeDomeggookLoginDiagnostic(env, r);
+    throw error;
+  }
   // Deny any session bound to another member even when the supplier returned success.
   // The vendor-approved account ID is set only in a Cloudflare secret.
   if (!approvedMemberBindingReady(env) || String(r.root.id).trim() !== String(env.DOMEMAE_APPROVED_MEMBER_ID).trim())
@@ -315,6 +336,15 @@ export async function probeDomeggookLogin(env, fetchImpl = fetch, { operatorRetr
     // Only persist a bounded category. Never store the supplier's error body.
     meta = { login: stage === 'login' ? 'failed' : 'ok', asset: stage === 'asset' ? 'failed' : 'not-checked',
       errorCode: classifySupplierAuthError(error?.message, stage) };
+    if (stage === 'login' && error?.safeDiagnostic) {
+      // Safe facts only; never persist raw result or API parameters.
+      meta.diagnostic = safeDomeggookLoginDiagnostic(env, {
+        status: error.safeDiagnostic.httpStatus, parsedJson: error.safeDiagnostic.jsonParsed,
+        root: { result: error.safeDiagnostic.supplierResult === 'success' ? 'true'
+          : error.safeDiagnostic.supplierResult === 'false' ? 'false'
+          : error.safeDiagnostic.supplierResult === 'other' ? 'other' : '' }
+      });
+    }
     await raiseAlert(env, { severity: 'error', kind: 'supply.login_failed', message: `도매꾹 읽기 전용 인증 점검 실패: ${meta.errorCode}` });
   }
   await env.DB.prepare('INSERT INTO supplier_connector_checks (id,provider_id,check_type,external_ref,result_status,metadata_json,checked_at) VALUES (?,?,?,?,?,?,?)')
