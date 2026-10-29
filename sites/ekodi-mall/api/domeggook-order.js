@@ -8,7 +8,7 @@
 import { fetchDomeggookItem, PROVIDER } from './domeggook-import.js';
 import { raiseAlert } from './ops-alerts.js';
 
-const ENDPOINT = 'https://domeggook.com/ssl/api/';
+const ENDPOINT = 'https://www.domeggook.com/ssl/api/';
 const DEFAULT_ITEM_TEMPLATE = '{market}||P||{opt}|{qty}||{sellerMemo}||{deliMemo}';
 
 /**
@@ -45,34 +45,43 @@ function redact(text, env) {
 
 async function call(env, params, fetchImpl, method = 'POST') {
   const body = new URLSearchParams({ aid: env.DOMEMAE_API_KEY, om: 'json', ...params });
+  // Never silently follow a redirect for a paid order: some redirects convert POST into GET.
   const res = method === 'GET'
-    ? await fetchImpl(`${ENDPOINT}?${body}`, { headers: { accept: 'application/json' } })
-    : await fetchImpl(ENDPOINT, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' }, body });
+    ? await fetchImpl(`${ENDPOINT}?${body}`, { headers: { accept: 'application/json' }, redirect: 'error' })
+    : await fetchImpl(ENDPOINT, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' }, body, redirect: 'error' });
   const text = await res.text();
   let payload = null; try { payload = JSON.parse(text); } catch {}
   const root = payload?.domeggook && typeof payload.domeggook === 'object' ? payload.domeggook : payload;
-  return { ok: res.ok && Boolean(root), status: res.status, root: root || {}, raw: text.slice(0, 300) };
+  return { ok: res.ok && Boolean(root), status: res.status, root: root || {} };
 }
 
 function apiError(r, env) {
   const e = r.root?.errors || r.root?.error;
   if (e) return redact(e.message || e.msg || JSON.stringify(e), env);
-  if (!r.ok) return redact(`HTTP ${r.status} ${r.raw}`, env);
+  // The supplier may return HTTP 200 with its failure string only in result (e.g. '회원 오류').
+  const result = String(r.root?.result ?? '').trim();
+  if (result && !['SUCCESS', 'TRUE', '1'].includes(result.toUpperCase())) return redact(result, env);
+  if (!r.ok) return `HTTP ${r.status} (API 응답 확인 필요)`;
   return '';
 }
 
 export async function login(env, fetchImpl = fetch) {
   const r = await call(env, { ver: '4.1', mode: 'setLogin', id: env.DOMEMAE_USER_ID, pw: env.DOMEMAE_PASSWORD, loginKeep: 'off', ip: env.DOMEGGOOK_CLIENT_IP || '127.0.0.1', device: 'Third Party' }, fetchImpl);
   const sId = r.root?.sId;
-  if (!sId) throw new Error(`도매꾹 로그인 실패: ${apiError(r, env) || '세션 없음'}`);
+  if (!r.ok || apiError(r, env) || !sId || !String(r.root?.id || '').trim())
+    throw new Error(`도매꾹 로그인 실패: ${apiError(r, env) || '인증 결과/회원 ID/세션 불명'}`);
   // 로그인 응답의 회원 ID를 이후 호출에 쓴다(SNS 연동 계정은 입력 ID와 실제 회원 ID(sns@…)가 다를 수 있음 → '회원오류').
   return { id: String(r.root?.id || env.DOMEMAE_USER_ID), sId: String(sId) };
 }
 
 export async function emoneyBalance(env, session, fetchImpl = fetch) {
   const r = await call(env, { ver: '1.0', mode: 'getMyAsset', id: session.id, sId: session.sId }, fetchImpl);
-  const total = Number(r.root?.data?.currEmoney?.total);
-  return Number.isFinite(total) ? total : null;
+  const error = apiError(r, env);
+  if (error) throw new Error(`도매꾹 이머니 조회 실패: ${error}`);
+  const raw = r.root?.data?.currEmoney?.total;
+  if (raw === undefined || raw === null || raw === '') return null;
+  const total = Number(raw);
+  return Number.isFinite(total) && total >= 0 ? total : null;
 }
 
 export function buildItemValue(env, { market, qty, deliMemo, opt = '00' }) {
@@ -143,8 +152,11 @@ export async function placeSupplierOrders(env, fetchImpl = fetch, limit = 3) {
     if (item.inventory !== null && item.inventory < o.quantity) { await fail('ITEM_STOCK', `공급처 재고 ${item.inventory}개 — 고객 환불 필요`); continue; }
     const cost = (item.cost || 0) * o.quantity + (item.shipping || 0);
     if (!item.cost || cost > Number(o.seller_settlement_amount || 0)) { await fail('NEGATIVE_MARGIN', `공급비 ${cost.toLocaleString('ko-KR')}원이 정산액을 넘어 발주를 멈췄습니다`); continue; }
-    const balance = await emoneyBalance(env, session, fetchImpl);
-    if (balance !== null && balance < cost) {
+    let balance;
+    try { balance = await emoneyBalance(env, session, fetchImpl); }
+    catch (error) { await fail('EMONEY_PROBE', redact(error.message, env)); continue; }
+    if (balance === null) { await fail('EMONEY_UNKNOWN', '이머니 잔액 미확인: 발주를 중단했습니다'); continue; }
+    if (balance < cost) {
       await setRow(env, soId, { status: 'failed', last_error: `EMONEY_SHORT: 잔액 ${balance} < 필요 ${cost}` });
       await raiseAlert(env, { severity: 'error', kind: 'supply.emoney_short', orderId: o.id, message: `도매꾹 이머니 충전 필요: 잔액 ${balance.toLocaleString('ko-KR')}원, 이 주문에 ${cost.toLocaleString('ko-KR')}원 필요. 충전되면 자동으로 발주합니다.` });
       summary.failed += 1;
@@ -168,10 +180,18 @@ export async function placeSupplierOrders(env, fetchImpl = fetch, limit = 3) {
     const orderNoRaw = r.root?.order?.orderNo ?? (Array.isArray(r.root?.order) ? r.root.order[0]?.orderNo : undefined);
     if (String(r.root?.result || '').toUpperCase() !== 'SUCCESS' || !orderNoRaw) {
       // 옵션 형식 진단용: 해당 상품의 주문옵션 원문(공개 상품정보)을 남긴다.
+      const error = apiError(r, env) || `응답 ${r.status}`;
+      const memberError = /회원\s*오류|member\s*error|invalid\s*(member|user|login)|인증\s*오류/i.test(error);
+      // Only safe diagnostic metadata. NEVER persist aid, sId, password, delivery PII or full request/response.
       await env.DB.prepare('INSERT INTO supplier_connector_checks (id,provider_id,check_type,external_ref,result_status,metadata_json,checked_at) VALUES (?,?,?,?,?,?,?)')
-        .bind(`chk_${crypto.randomUUID().replaceAll('-', '')}`, 'domemae-official', 'order_readiness', 'probe:selectOpt', 'failed',
-          JSON.stringify({ itemNo: o.supply_item_no, sent: buildItemValue(env, { market: item.market, qty: o.quantity, deliMemo: '', opt: chooseOptionCode(item.selectOpt) }), selectOpt: item.selectOpt || '', error: apiError(r, env) }).slice(0, 4000), isoNow()).run().catch(() => {});
-      await fail('SET_ORDER', apiError(r, env) || `응답 ${r.status}`); continue;
+        .bind(`chk_${crypto.randomUUID().replaceAll('-', '')}`, 'domemae-official', 'order_readiness', 'probe:setOrder', 'failed',
+          JSON.stringify({ mode: 'setOrder', ver: '4.3', itemNo: o.supply_item_no, market: item.market, httpStatus: r.status,
+            responseResult: redact(String(r.root?.result || ''), env), loggedInIdDiffersFromConfigured: session.id !== env.DOMEMAE_USER_ID,
+            sessionPresent: Boolean(session.sId), apiKeyConfigured: Boolean(env.DOMEMAE_API_KEY),
+            optionCode: chooseOptionCode(item.selectOpt), error }).slice(0, 4000), isoNow()).run().catch(() => {});
+      await fail(memberError ? 'AUTH_MEMBER_ERROR' : 'SET_ORDER', error);
+      if (memberError) { summary.error = 'member-auth'; break; } // do not repeat bad authorization across paid orders
+      continue;
     }
     const supplierOrderNo = String(orderNoRaw);
     await setRow(env, soId, { status: 'placed', supplier_order_no: supplierOrderNo, checked_at: isoNow() });

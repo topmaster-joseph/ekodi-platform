@@ -13,10 +13,14 @@ test('Mission Korean devotion subtitle is visually absent without changing other
  ]);
  assert.match(html,/<html lang="ko"/);
  assert.match(html,/<main class="subpage" data-mission-devotion>/);
- assert.match(html,/<small data-mission-devotion-eyebrow>EKODI MISSION · DAILY DEVOTION<\/small>/);
+ assert.doesNotMatch(html,/EKODI MISSION · DAILY DEVOTION/);
  assert.match(css,/html:lang\(ko\) main\[data-mission-devotion\] \[data-mission-devotion-eyebrow\]\{display:none!important\}/);
  assert.doesNotMatch(css,/html\s*\[lang\]\s+\[data-mission-devotion-eyebrow\]/);
  assert.match(shell,/document\.documentElement\.lang=active/);
+ assert.match(shell,/syncDevotionEyebrow\(active\)/);
+ assert.match(shell,/syncDevotionEyebrow\(sourceLocale\)/);
+ assert.match(shell,/heading\.insertBefore\(eyebrow/);
+ assert.match(shell,/eyebrow\.textContent='EKODI MISSION · DAILY DEVOTION'/);
  assert.match(html,/<h1>오늘의 매일묵상<\/h1>/);
 });
 
@@ -33,6 +37,8 @@ test('Mission-only compact rhythm preserves readable verse spacing and focus beh
  assert.match(css,/\.dv-date-link\{\s*padding:5px 10px;min-height:36px/);
  assert.match(css,/\.dv-btn\{\s*padding:6px 11px;min-height:38px/);
  assert.match(css,/@media\(max-width:520px\)/);
+ assert.match(css,/body:has\(main\[data-mission-devotion\]\) \.site-footer/);
+ assert.match(css,/main\[data-mission-devotion\] \.ekodi-devotion\{padding-left:0;padding-right:0\}/);
  assert.match(html,/<link rel="stylesheet" href="\/ekodimission\/assets\/shell.css">/);
  assert.match(html,/<link rel="stylesheet" href="\/bible\/devotion.css">/);
  assert.match(shared,/\.ekodi-devotion \.dv-poem p/);
