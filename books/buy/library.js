@@ -100,6 +100,26 @@
         const panel = document.createElement('article'); panel.className = 'library-item';
         const info = document.createElement('div'); const p = document.createElement('p');
         p.textContent = item.retailer + ' / ' + item.book_id + ' / ' + item.buyer_email + ' / 주문번호 끝 ' + item.order_suffix;
+        if (item.status === 'verified') {
+          const reason = document.createElement('select');
+          reason.setAttribute('aria-label','오디오북 접근권 철회 사유');
+          for (const [v,t] of [['refund','구매 환불'],['chargeback','결제 취소'],['fraud','부정구매'],['owner_request','구매자 요청']]) {
+            const option=document.createElement('option');option.value=v;option.textContent=t;reason.append(option);
+          }
+          const revoke=document.createElement('button');revoke.type='button';revoke.textContent='오디오북 접근권 철회';
+          revoke.addEventListener('click',async()=>{
+            if(!window.confirm('구매자 오디오북 접근권을 철회하시겠습니까?'))return;
+            revoke.disabled=true;
+            try {
+              await C.api(`admin/audiobook/claims/${encodeURIComponent(item.id)}/revoke`,{
+                method:'POST',body:{confirm:true,reason:reason.value}
+              });
+              await refreshExternalAdmin();await refreshExternal();
+            } catch(e) { alert(e.message); }
+            finally { revoke.disabled=false; }
+          });
+          info.append(p,reason,revoke);panel.append(info);host.append(panel);continue;
+        }
         const label = document.createElement('label'); label.textContent = '판매처에서 직접 확인한 전체 주문번호';
         const number = document.createElement('input'); number.autocomplete='off'; number.maxLength=128;
         const checked = document.createElement('label');
