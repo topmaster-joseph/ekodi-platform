@@ -30,6 +30,12 @@ test('finance API rejects untrusted browser origins', async () => {
   assert.match(data.error, /허용되지 않은/);
 });
 
+test('canonical EKODI admin origin is accepted without weakening D1 protection', async()=>{
+ const r=await worker.fetch(new Request('https://ekodi.kr/api/finance/overview',{headers:{origin:'https://ekodi.kr'}}),{});
+ assert.equal(r.status,503);
+ assert.match((await r.json()).error,/D1/);
+});
+
 test('finance API fails closed without its D1 binding', async () => {
   const response = await worker.fetch(new Request('https://finance-api.ekodi.kr/api/finance/overview'), {});
   assert.equal(response.status, 503);
