@@ -154,7 +154,26 @@ function handleChatSubmit(e){e.preventDefault();const input=e.currentTarget.quer
 function showHumanRequest(on=true){const form=document.getElementById('humanRequestForm');if(!form)return;form.classList.toggle('hidden',!on);if(on)form.querySelector('input')?.focus();}
 function summarizeConversation(messages){const userMessages=messages.filter(m=>m.role==='user').slice(-5).map(m=>m.text.trim()).filter(Boolean);if(!userMessages.length)return 'AI 상담 후 설계사 전화연락 요청';const text=userMessages.join(' / ');return text.length>260?text.slice(0,257)+'...':text;}
 function handleHumanRequest(e){
-  e.preventDefault();const data=Object.fromEntries(new FormData(e.currentTarget));const transcript=state.advisorChat.messages.slice(-30).map(m=>({role:m.role,text:m.text,createdAt:m.createdAt}));
+  e.preventDefault();
+  // The production submit listener in server-bridge.js intercepts this form
+  // before the local staging handler. If that bridge is missing, never create a
+  // fake "registered" consultation, store unconsented contact/transcript in
+  // localStorage, clear the form, or imply that an adviser will call back.
+  if(location.hostname==='ekodi.kr' && /^\/insurance(?:\/|$)/.test(location.pathname)){
+    let status=e.currentTarget.querySelector('#insuranceHandoffFallbackStatus');
+    if(!status){
+      status=document.createElement('p');
+      status.id='insuranceHandoffFallbackStatus';
+      status.setAttribute('role','alert');
+      status.setAttribute('aria-live','assertive');
+      status.className='notice';
+      e.currentTarget.append(status);
+    }
+    status.textContent='상담요청이 서버에 접수되지 않았습니다. 현재 연결 상태를 확인한 후 다시 시도해 주세요. 입력한 연락처와 대화는 서버로 전송되지 않았습니다.';
+    toast('서버 연결이 준비되지 않아 상담요청을 접수하지 않았습니다.');
+    return;
+  }
+  const data=Object.fromEntries(new FormData(e.currentTarget));const transcript=state.advisorChat.messages.slice(-30).map(m=>({role:m.role,text:m.text,createdAt:m.createdAt}));
   const item={id:uid(),name:data.name.trim(),contact:data.contact.trim(),preferredTime:data.preferredTime,summary:summarizeConversation(transcript),transcript,createdAt:new Date().toISOString(),status:'신규',source:'AI_CHAT_HANDOFF',sharedScope:'conversation_summary_and_contact'};
   state.consultations.unshift(item);addChatMessage('assistant','설계사 전화상담 요청이 등록되었습니다. 실제 운영에서는 담당자가 상담요약과 연락처를 확인한 뒤 연락드리도록 연결합니다. 현재 스테이징에서는 같은 브라우저의 관리자 화면에만 저장됩니다.',false);saveState();e.currentTarget.reset();showHumanRequest(false);toast('설계사 상담요청을 등록했습니다.');
 }
