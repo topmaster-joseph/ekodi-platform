@@ -426,8 +426,8 @@
     auth.searchParams.set('return_to','https://ekodi.kr/admin/control');
     const link=document.createElement('a');
     link.href=auth.toString();
-    link.textContent='관리자 Google 로그인';
-    link.setAttribute('aria-label','최고관리자 Google 로그인 후 EKODI Control로 복귀');
+    link.textContent='로그인';
+    link.setAttribute('aria-label','로그인 후 최고관리자 권한을 검증하고 EKODI Control로 복귀');
     status.replaceChildren(link);
   }
   async function boot(){
