@@ -48,13 +48,13 @@ test('Official guarded manual deployment modifies no unrelated topology and chec
   assert.match(wf, /https:\/\/ekodichurch\.kr\//);
   // Cloudflare One-Rule PATCH is permitted only through our guarded, target-
   // checked script. The workflow must still never mutate DNS or Pages.
-  assert.doesNotMatch(wf, /\\bDELETE\\b|dns_records\\b|pages\\/projects\\b/);
-  assert.doesNotMatch(wf, /curl[^\\n]*-X\\s+PATCH/);
-  assert.match(wf, /node scripts\\/cloudflare-church-naver-redirect-exception\\.mjs/);
+  assert.doesNotMatch(wf, /\bDELETE\b|dns_records\b|pages\/projects\b/);
+  assert.doesNotMatch(wf, /curl[^\n]*-X\s+PATCH/);
+  assert.match(wf, /node scripts\/cloudflare-church-naver-redirect-exception\.mjs/);
   const fix = await readFile(new URL('../scripts/cloudflare-church-naver-redirect-exception.mjs', import.meta.url), 'utf8');
   assert.match(fix, /'PATCH'/);
   assert.match(fix, /RULE_NAME = 'EKODI Church canonical path redirect'/);
-  assert.doesNotMatch(fix, /['"]PUT['"]|dns_records|pages\\/projects/);
+  assert.doesNotMatch(fix, /['"]PUT['"]|dns_records|pages\/projects/);
   const lanes = JSON.parse(await readFile(new URL('../config/worker-deploy-lanes.json', import.meta.url), 'utf8'));
   assert.equal(lanes.workers['wrangler.church-naver-proof.toml']?.workflow, 'deploy-church-naver-proof.yml');
 });
