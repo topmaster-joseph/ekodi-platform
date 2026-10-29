@@ -47,6 +47,11 @@ test('Mission admin root stays on overview and applicant roster opens from its m
   assert.match(script,/href="\$\{adminBase\}\/activities">관리<\/a>/);
   assert.match(script,/\['activities','행사 · 신청자'\]/);
   assert.match(script,/\/ekodimission\/apply\/260926-open-table/);
+  assert.match(script,/261003-autumn-community-trip/);
+  assert.match(script,/\/ekodimission\/apply\/261003-autumn-trip/);
+  assert.match(script,/missionActivityPublicUrl\(selected,requested\)/);
+  assert.match(script,/activity\?\.public_url,activity\?\.application_url,activity\?\.public_path/);
+  assert.match(script,/return MISSION_ACTIVITY_PUBLIC_PATHS\[activityKey\]\|\|'\/ekodimission\/activities'/);
   assert.match(script,/activityCheckinFilter/);
   assert.match(script,/data-checkin/);
   assert.match(script,/공개 행사 보기/);
