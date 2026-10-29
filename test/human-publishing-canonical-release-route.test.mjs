@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { routeCanonicalSurface } from '../canonical-surface-router.js';
 import publishingWorker from '../publishing-worker.js';
 
@@ -40,4 +41,16 @@ test('the public admin shell path also traverses the publisher Worker, not centr
   assert.ok(response);
   assert.equal(response.status,200);
   assert.deepEqual(paths,['/private-releases/']);
+});
+
+test('canonical router rewrites private publishing UI script API prefix to the real apex route',async()=>{
+  const script=readFileSync(new URL('../publishing/private-releases/private-releases.js',import.meta.url),'utf8');
+  const env={PUBLISHING:{fetch:async()=>new Response(script,{
+    headers:{'content-type':'application/javascript; charset=utf-8'}})}};
+  const response=await routeCanonicalSurface(new Request(
+    'https://ekodi.kr/publishing/private-releases/private-releases.js'),env);
+  assert.equal(response.status,200);
+  const output=await response.text();
+  assert.match(output,/const API='\\/publishing\\/api\\/private-releases'/);
+  assert.doesNotMatch(output,/const API='\\/api\\/private-releases'/);
 });
