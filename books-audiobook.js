@@ -2,6 +2,7 @@
 // This is a RIGHTS / R2 readiness policy, not a synthetic TTS generator.
 // No additional checkout or audio-only entitlement is ever created.
 const KEY = /^BOOK-[A-Z0-9-]+\/audiobook\/[A-Za-z0-9._-]+\.mp3$/;
+const SHA256 = /^[a-f0-9]{64}$/;
 const SAFE_EDITION = value => typeof value === 'string' && value.length > 0 && value.length <= 160;
 
 export function complimentaryAudiobookPolicy(book) {
@@ -27,7 +28,7 @@ export function complimentaryAudiobookPolicy(book) {
     tracks.every((t, i) =>
       t?.number === i + 1 && typeof t.title === 'string' &&
       t.title.trim().length > 0 && t.title.length <= 150 &&
-      KEY.test(t.key || '') && t.key.startsWith(book.id + '/audiobook/') &&
+      KEY.test(t.key || '') && SHA256.test(t.sha256 || '') && t.key.startsWith(book.id + '/audiobook/') &&
       t.format === 'mp3');
   return Object.freeze({
     included: bonusIncluded, priceKrw: 0,
@@ -49,7 +50,7 @@ export async function availableAudiobook(env, book) {
         metadata.bookId !== book.id ||
         metadata.kind !== 'audiobook-chapter' ||
         metadata.edition !== book.edition ||
-        metadata.approved !== 'true') {
+        metadata.approved !== 'true' || metadata.sha256 !== track.sha256) {
       return { included: true, ready: false, state: 'preparing', priceKrw: 0, tracks: [] };
     }
     available.push({ number: track.number, title: track.title, format: 'mp3' });
@@ -58,6 +59,10 @@ export async function availableAudiobook(env, book) {
 }
 
 export const MAX_AUDIO_CHAPTER_BYTES = 32 * 1024 * 1024;
+export async function audioSha256(bytes) {
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
 export function validateAudioChapter(bytes) {
   if (!(bytes instanceof Uint8Array) || bytes.length < 128) return { ok: false, error: '오디오 파일이 비어 있습니다.' };
   if (bytes.length > MAX_AUDIO_CHAPTER_BYTES) return { ok: false, error: '한 파일은 최대 32MB입니다. 장별로 나누어 주세요.' };
