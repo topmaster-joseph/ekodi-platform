@@ -1,4 +1,5 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
+import { handlePrivateReleaseAdmin } from './publishing/human/private-release-api.js';
 
 const SECURITY_HEADERS={
   'x-content-type-options':'nosniff',
@@ -11,6 +12,10 @@ function withHeaders(response){const headers=new Headers(response.headers);for(c
 export default {
   async fetch(request,env){
     const url=new URL(request.url);
+    if(url.pathname==='/api/publishing/private-releases'||url.pathname.startsWith('/api/publishing/private-releases/')){
+      const reply=await handlePrivateReleaseAdmin(request,env);
+      if(reply)return reply;
+    }
     if(url.pathname==='/health')return json({
       ok:true,
       service:'ekodi-publishing',
