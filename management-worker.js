@@ -34,6 +34,35 @@ async function exchangeAuth(request,env){
   const data=result.data||{};if(!data.access_token||!data.refresh_token)return json({error:'session_not_created'},502);
   return json({accessToken:data.access_token,refreshToken:data.refresh_token,expiresIn:Number(data.expires_in||3600),expiresAt:Number(data.expires_at||0),user:{id:data.user?.id||'',email:data.user?.email||''},tier:'free'});
 }
+async function managementSpaces(request,env){
+  const bearer=String(request.headers.get('authorization')||'');
+  if(!bearer.startsWith('Bearer '))return json({error:'unauthorized'},401);
+  const token=cleanToken(bearer.slice(7));
+  if(!token||!/^[-A-Za-z0-9._~+/=]+$/.test(token))return json({error:'unauthorized'},401);
+  if(!supabaseReady(env))return json({error:'identity_integration_disabled'},503);
+  let response;
+  try{
+    response=await fetch(`${env.SUPABASE_URL}/functions/v1/workspace-api/spaces`,{
+      method:'GET',
+      headers:{authorization:`Bearer ${token}`,apikey:env.SUPABASE_PUBLISHABLE_KEY,accept:'application/json'},
+      redirect:'error'
+    });
+  }catch{return json({error:'workspace_service_unavailable'},503)}
+  if(response.status===401||response.status===403)return json({error:'workspace_access_denied'},response.status);
+  if(!response.ok)return json({error:'workspace_service_unavailable'},503);
+  let data;
+  try{data=await response.json()}catch{return json({error:'invalid_workspace_response'},502)}
+  if(!Array.isArray(data?.spaces)||!data?.user?.id)return json({error:'invalid_workspace_response'},502);
+  const spaces=data.spaces.slice(0,200).map(space=>({
+    id:String(space?.workspace_id||space?.id||'').slice(0,100),
+    slug:String(space?.slug||'').slice(0,100),
+    name:String(space?.name||'').slice(0,160),
+    role:String(space?.role||'member').slice(0,80),
+    kind:String(space?.kind||'').slice(0,50),
+    status:String(space?.status||'').slice(0,40)
+  })).filter(space=>space.id&&space.slug&&space.name);
+  return json({spaces,scope:'authenticated-member-only',identityKey:'ekodi_id',workspaceKey:'workspace_id'});
+}
 function publicCatalog(){return MANAGEMENT_MODULES.map(module=>({id:module.id,name:module.name,phase:module.phase,state:module.state,role:module.role,url:module.url||null,reuseExisting:Boolean(module.reuseExisting)}))}
 function publicWorkspaceTypes(){return MANAGEMENT_WORKSPACE_TYPES.map(type=>({id:type.id,canonicalKind:type.canonicalKind,label:type.label,hierarchy:Boolean(type.hierarchy),profile:type.profile||null}))}
 
@@ -41,6 +70,7 @@ export default{async fetch(request,env,ctx){
   const url=new URL(request.url);
   if(url.pathname==='/config.js')return new Response(`window.EKODI_MANAGEMENT_CONFIG=${JSON.stringify(cfg(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...securityHeaders()}});
   if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/?route=organization&source=management',307);
+  if(url.pathname==='/api/spaces'){if(request.method!=='GET')return json({error:'method_not_allowed'},405);return managementSpaces(request,env)}
   if(request.method==='GET'&&url.pathname==='/api/catalog')return json({platform:'management',guestMode:MANAGEMENT_ACCESS_POLICY.guestMode,minimumTier:MANAGEMENT_ACCESS_POLICY.minimumTier,workspaceKinds:MANAGEMENT_WORKSPACE_KINDS,workspaceTypes:publicWorkspaceTypes(),modules:publicCatalog()});
   if(request.method==='POST'&&url.pathname==='/api/auth/exchange')return exchangeAuth(request,env);
   const asset=await env.ASSETS.fetch(request);
