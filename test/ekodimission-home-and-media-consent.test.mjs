@@ -13,8 +13,10 @@ test('Mission home keeps only introduction + active/upcoming event while retaini
   const sections=[...home.matchAll(/<section\b/g)];
   assert.equal(sections.length,2,'No completed events, long index or history duplicated on home');
   assert.match(home,/class="hero hero-split"/);
-  assert.match(home,/data-mission-home-event data-event-last-day="2026-10-10"/);
-  assert.match(home,/data-mission-home-empty hidden/);
+  assert.match(home,/open-table-meal-260925.jpg/);
+  assert.match(home,/\/ekodimission\/assets\/saturday.js/);
+  assert.match(home,/data-mission-saturday/);
+  assert.match(home,/data-mission-saturday-replies/);
   assert.match(home,/\/ekodimission\/history/);
   assert.match(home,/\/ekodimission\/activities/);
   for(const obsolete of ['RECENT ACTIVITY','PAST ACTIVITY','OUR JOURNEY · SINCE 2018','MISSION SERVICES','2026 가을 공동체 여행'])
