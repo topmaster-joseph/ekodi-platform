@@ -72,7 +72,11 @@ export function publicationTransition(project, action, input, user, now=new Date
     if (original!=='ready_for_author') return fail('WRONG_STAGE');
     if (!isSha(project.releaseDigest)||input?.digest!==project.releaseDigest) return fail('EDITION_MISMATCH');
     if(input?.rightsConsent!==true)return fail('AUTHOR_RIGHTS_CONSENT_REQUIRED');
-    copy.authorApproval={actor:user.userId,digest:project.releaseDigest,approvedAt:now.toISOString()};
+    // Preserve the audit actor and expose the same authenticated author ID
+    // under the name required by the protected scheduled-release contract.
+    // This is NOT a signature or independently verified rights attestation.
+    copy.authorApproval={actor:user.userId,approvedBy:user.userId,
+      digest:project.releaseDigest,approvedAt:now.toISOString()};
     copy.stage='author_approved';return {ok:true,next:copy};
   }
   if (action==='publisher_approve') {
