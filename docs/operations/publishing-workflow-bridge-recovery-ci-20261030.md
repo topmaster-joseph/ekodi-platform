@@ -8,3 +8,8 @@
 - Critical executable and test content remains byte-identical to previously verified version: `publishing/human/verified-workflow-bridge.js`, `test/publishing-verified-workflow-bridge.test.mjs`, `docs/operations/publishing-verified-workflow-bridge.md` (including project/edition UUID ownership test).
 - No R2/D1/cron, live payments, author signature keys, storefront channel ACK, commercial product status or publication changes; no release/merge declaration before official required checks succeed.
 - `createVerifiedPublishingWorkflowBridge` remains a fail-closed **adapter only**. Privileged Workflow, private-asset and signed-channel receipt RPCs must be independently implemented and later bound by protected publisher; no unverified JSON can enable sales.
+
+## Latest exact-head revalidation after second main advance
+- The previous exact head `7771e80f17a2172a9b140cd5fcfe5b217b320eef` obtained **real success**: CI #40921440114, Publishing Boundary #40921439985 and Orchestrator #40921440087, plus the other source safeguards.
+- Orchestrator regenerated recovery branch at `5da369902293d8c2c62f35fe55ec28e63ed063d5`; its initial workflows were `action_required`. Those are not successful checks and cannot be used for guarded merge.
+- This amendment changes documentation only to solicit new authenticated CI on current revision, while preserving releaseReady=no and all unmet production requirements.
