@@ -194,3 +194,51 @@ test('private order calls use canonical HTTPS and prohibit automatic redirects',
   assert.equal(r.placed, 1);
   assert.ok(urls.every((url) => url.startsWith('https://www.domeggook.com/ssl/api/')));
 });
+
+
+test('read-only login probe runs with paid auto-order OFF without issuing a setOrder request', async () => {
+  const { db, env } = setup({ DOMEGGOOK_AUTO_ORDER_ENABLED: 'false', DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED: 'true' });
+  const log = [];
+  const r = await probeDomeggookLogin(env, supplier({}, log));
+  assert.equal(r.ok, true);
+  assert.equal(r.login, 'ok');
+  assert.equal(r.asset, 'ok');
+  assert.equal(r.loginIdMatchesConfigured, false, 'SNS login ID mismatch is diagnostic only');
+  assert.deepEqual(log.map(x => x.mode), ['setLogin','getMyAsset']);
+  const check = db.prepare("SELECT metadata_json FROM supplier_connector_checks WHERE external_ref='probe:login'").get().metadata_json;
+  for (const secret of ['AK', 'PW!', 'SID1', 'sns@952821', '100000']) assert.ok(!check.includes(secret), 'probe metadata excludes secrets, account identifiers and balance');
+  assert.equal((await probeDomeggookLogin(env, supplier({}, log))).skipped, 'recent');
+});
+
+test('read-only probe does not execute with missing credentials or without a separate opt-in', async () => {
+  for (const opts of [
+    { DOMEGGOOK_AUTO_ORDER_ENABLED: 'false', DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED: 'false' },
+    { DOMEGGOOK_AUTO_ORDER_ENABLED: 'false', DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED: 'true', DOMEMAE_PASSWORD: '' },
+  ]) {
+    const { env } = setup(opts);
+    const calls = [];
+    const result = await probeDomeggookLogin(env, supplier({}, calls));
+    assert.equal(result.skipped, 'disabled-or-no-credentials');
+    assert.equal(calls.length, 0);
+  }
+});
+
+test('read-only probe sanitizes a supplier member-error response and never places an order', async () => {
+  const { db, env } = setup({ DOMEGGOOK_AUTO_ORDER_ENABLED: 'false', DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED: 'true' });
+  const calls = [];
+  const base = supplier({}, calls);
+  const fetchImpl = async (url, init) => {
+    const params = init?.body ? new URLSearchParams(String(init.body)) : new URL(String(url)).searchParams;
+    if (params.get('mode') === 'getMyAsset') {
+      calls.push({ mode: 'getMyAsset' });
+      return new Response(JSON.stringify({ domeggook: { result: '회원 오류', debug: 'SID1 AK PW!' } }));
+    }
+    return base(url, init);
+  };
+  const r = await probeDomeggookLogin(env, fetchImpl);
+  assert.equal(r.ok, false);
+  assert.equal(r.errorCode, 'MEMBER_ERROR');
+  const check = db.prepare("SELECT metadata_json FROM supplier_connector_checks WHERE external_ref='probe:login'").get().metadata_json;
+  assert.ok(!check.includes('SID1') && !check.includes('PW!') && !check.includes('AK'));
+  assert.deepEqual(calls.map(x => x.mode), ['setLogin','getMyAsset']);
+});
