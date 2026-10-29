@@ -253,8 +253,10 @@ function download(name,body,mime){
 function basename(){const raw=(project?.title||'proposal').replace(/[\\/:*?"<>|\x00-\x1f]/g,'_').slice(0,45).trim();return raw||'proposal';}
 byId('exportMd').addEventListener('click',()=>{
   if(!snapshot())return status('먼저 제안서 구조를 만들어 주세요.');
-  download(basename()+'_초안.md',proposalToMarkdownWithBudget(project),'text/markdown;charset=utf-8');
-  status('제안서 Markdown 초안을 다운로드했습니다. 최종 제출 문서는 아닙니다.');
+  try{
+    download(basename()+'_초안.md',proposalToMarkdownWithBudget(project),'text/markdown;charset=utf-8');
+    status('제안서 Markdown 초안을 다운로드했습니다. 최종 제출 문서는 아닙니다.');
+  }catch(error){status('초안 저장 실패: '+error.message);}
 });
 
 byId('exportBudget').addEventListener('click',()=>{
@@ -277,7 +279,7 @@ byId('exportSlides').addEventListener('click',()=>{
   if(!snapshot())return status('먼저 제안서를 생성하세요.');
   try{
     download(basename()+'_발표구성.md',proposalToPresentationMd(project),'text/markdown;charset=utf-8');
-    status('발표 구성 Markdown을 저장했습니다. 실제 PPTX 생성은 아직 지원하지 않습니다.');
+    status('발표 구성 Markdown을 저장했습니다. 신규 PowerPoint PPTX 파일은 별도 PPTX 저장 버튼으로 만들 수 있습니다.');
   }catch(error){status('발표구성 생성 실패: '+error.message);}
 });
 
