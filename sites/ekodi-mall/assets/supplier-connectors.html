@@ -2,46 +2,95 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#173f35">
-  <meta name="description" content="EKODI Mall 공식 공급망 API 연결 준비·조회·Dry-run 콘솔">
-  <link rel="stylesheet" href="/assets/styles.css"><link rel="stylesheet" href="/assets/platform.css"><link rel="stylesheet" href="/assets/supplier-ops.css">
-  <title>Supplier Connectors | EKODI MALL</title>
+  <meta name="description" content="EKODI Mall 공식 공급망 API 연결·조회·Dry-run 관리">
+  <link rel="stylesheet" href="/assets/styles.css"><link rel="stylesheet" href="/assets/platform.css"><link rel="stylesheet" href="/assets/supplier-ops.css"><link rel="stylesheet" href="/assets/supplier-connectors.css">
+  <title>공급망 연결 관리 | EKODI MALL</title>
 </head>
-<body>
-  <div class="notice" id="connectorStatus">운영자 Google 로그인 후 공식 공급망 커넥터를 점검할 수 있습니다.</div>
-  <header class="header"><a class="brand" href="/"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a><nav><a href="/supplier-discovery">DISCOVERY</a><a href="/supplier-ops">SUPPLIER OPS</a><a href="/fulfillment">FULFILLMENT</a></nav></header>
-  <main class="ops-main">
-    <section class="ops-hero"><div><p class="eyebrow">OFFICIAL SUPPLIER CONNECTORS</p><h1>공식 API는 연결하되<br>실주문은 검증 뒤에 엽니다</h1><p>도매매·도매꾹 공식 Open API를 첫 공급망 커넥터로 준비합니다. 연결 상태와 읽기 전용 인증 결과를 확인합니다. 유상 자동발주·고객정보 전달은 운영 게이트에서 차단됩니다.</p><div class="cta"><button class="btn primary" id="connectorLogin" type="button">운영자 Google 로그인</button><button class="smallbtn" id="connectorLogout" type="button" hidden>로그아웃</button><button class="smallbtn" id="connectorReload" type="button">상태 새로고침</button></div></div>
-      <div class="ops-gates"><article><small>OFFICIAL LOOKUP</small><strong id="lookupGate">OFF</strong></article><article><small>ORDER EXECUTION</small><strong>OFF</strong></article><article><small>BUYER PII</small><strong>OFF</strong></article><article><small>AUTO ORDER</small><strong>OFF</strong></article></div>
+<body class="connector-page">
+  <header class="header connector-header">
+    <a class="brand" href="/ekodimall"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a>
+    <nav aria-label="에코디몰 관련 메뉴"><a href="/ekodimall/supplier-discovery">공급처 발굴</a><a href="/ekodimall/supplier-ops">공급처 관리</a><a href="/ekodimall/fulfillment">배송·발주</a></nav>
+  </header>
+  <main class="ops-main connector-main">
+    <section class="connector-heading" aria-labelledby="pageTitle">
+      <div>
+        <p class="eyebrow">EKODI MALL · SUPPLIER CONNECTORS</p>
+        <h1 id="pageTitle">공급망 연결 관리</h1>
+        <p class="connector-intro">공급처 연결상태를 확인하고, 상품조회와 주문 준비를 단계별로 점검합니다.</p>
+      </div>
+      <div class="connector-actions">
+        <button class="smallbtn" id="connectorReload" type="button">상태 새로고침</button>
+        <button class="btn primary" id="connectorLogin" type="button">Google 로그인</button>
+        <button class="smallbtn" id="connectorLogout" type="button" hidden>로그아웃</button>
+      </div>
     </section>
 
-    <section class="ops-grid">
-      <article class="ops-panel ops-wide"><div class="ops-panel-head"><div><p class="eyebrow">1 · READINESS</p><h2>도매매 · 도매꾹 공식 API</h2></div><span id="providerReady">확인 전</span></div>
-        <div class="ops-summary" id="credentialSummary"><article><small>API KEY</small><strong>?</strong></article><article><small>USER ID</small><strong>?</strong></article><article><small>SESSION</small><strong>?</strong></article><article><small>LOOKUP GATE</small><strong>?</strong></article></div>
-        <p class="ops-hint" id="nextRequired">비밀값은 브라우저에 표시하거나 입력하지 않습니다.</p><p class="ops-hint" id="readOnlyProbe">읽기 전용 인증 점검 상태 확인 전</p><p class="ops-hint" id="probeHelp">SNS 가입 계정이라면 도매꾹 회원정보에서 별도 비밀번호 설정 여부를 확인하세요. 비밀번호는 이 화면에 입력하지 않습니다.</p><button class="smallbtn" id="authProbeRetry" type="button">읽기 전용 인증 재점검 (15분 제한)</button>
-      </article>
+    <div class="connector-provider-switch" aria-label="공급처 선택">
+      <span class="connector-switch-label">공급처</span>
+      <span class="connector-provider-current" aria-current="true">도매매 · 도매꾹 공식 API</span>
+      <a href="/ekodimall/supplier-ops" class="connector-provider-link">기타 공급처 관리</a>
+    </div>
 
-      <article class="ops-panel"><div class="ops-panel-head"><div><p class="eyebrow">2 · LIVE ITEM CHECK</p><h2>공식 상품번호 조회</h2></div></div>
-        <form id="itemLookupForm" class="ops-form"><label>도매매/도매꾹 상품번호<input name="itemNo" inputmode="numeric" pattern="[0-9]+" placeholder="상품번호" required></label><button class="btn primary" type="submit">공식 API로 확인</button></form>
-        <pre id="lookupResult" class="ops-hint">API KEY와 조회 gate가 준비되기 전에는 호출되지 않습니다.</pre>
-      </article>
+    <section class="connector-overview-strip" aria-label="주요 연결 상태">
+      <article><small>공급처 설정</small><strong id="providerReady">확인 전</strong></article>
+      <article><small>상품조회</small><strong id="lookupGate">확인 전</strong></article>
+      <article><small>실주문</small><strong class="connector-off">차단</strong></article>
+      <article><small>고객정보 · 자동발주</small><strong class="connector-off">차단</strong></article>
+    </section>
+    <div class="connector-status" id="connectorStatus" role="status" aria-live="polite">운영자 로그인 후 연결 상태를 확인할 수 있습니다.</div>
 
-      <article class="ops-panel"><div class="ops-panel-head"><div><p class="eyebrow">3 · ORDER DRY-RUN</p><h2>주문 준비도 점검</h2></div></div>
-        <form id="orderDryRunForm" class="ops-form"><label>상품번호<input name="itemNo" inputmode="numeric" pattern="[0-9]+" required></label><label>수량<input name="quantity" type="number" min="1" max="99" value="1"></label><button class="btn primary" type="submit">Dry-run</button></form>
-        <pre id="dryRunResult" class="ops-hint">실제 주문 API는 호출하지 않습니다.</pre>
-      </article>
+    <div class="connector-tablist" role="tablist" aria-label="공급망 연결 작업">
+      <button type="button" role="tab" id="connector-tab-overview" aria-controls="connector-panel-overview" aria-selected="true" tabindex="0" data-connector-tab="overview">연결 현황</button>
+      <button type="button" role="tab" id="connector-tab-lookup" aria-controls="connector-panel-lookup" aria-selected="false" tabindex="-1" data-connector-tab="lookup">상품 조회</button>
+      <button type="button" role="tab" id="connector-tab-dry-run" aria-controls="connector-panel-dry-run" aria-selected="false" tabindex="-1" data-connector-tab="dry-run">주문 점검</button>
+      <button type="button" role="tab" id="connector-tab-gates" aria-controls="connector-panel-gates" aria-selected="false" tabindex="-1" data-connector-tab="gates">개방 조건</button>
+    </div>
 
-      <article class="ops-panel ops-wide"><div class="ops-panel-head"><div><p class="eyebrow">4 · RELEASE GATES</p><h2>실주문 기능을 열기 전 필요한 조건</h2></div></div>
-        <div class="ops-table-wrap"><table class="ops-table"><thead><tr><th>검증</th><th>현재</th><th>개방 조건</th></tr></thead><tbody>
-          <tr><td>상품조회</td><td>기본 OFF</td><td>공식 API KEY secret + staging 조회검증</td></tr>
-          <tr><td>주문준비</td><td>Dry-run</td><td>계정 ID·세션 lifecycle·Private API 권한 검토</td></tr>
-          <tr><td>실주문</td><td>자동발주 OFF</td><td>인증·계약·PII 검증 및 승인된 소액 파일럿 이후 별도 활성화</td></tr>
-          <tr><td>구매자 정보</td><td>OFF</td><td>PII Vault + 처리위탁 범위 + 최소정보 release</td></tr>
-          <tr><td>자동발주</td><td>DB 잠금</td><td>수동 파일럿 완료 후 별도 Supplier API V2 심사</td></tr>
-        </tbody></table></div>
-      </article>
+    <section class="connector-panel" id="connector-panel-overview" data-connector-panel="overview" role="tabpanel" aria-labelledby="connector-tab-overview">
+      <div class="connector-panel-head">
+        <div><p class="eyebrow">01 · READINESS</p><h2>도매매 · 도매꾹 공식 API</h2><p>비밀키는 노출하지 않고 설정 여부와 읽기 전용 인증 상태만 표시합니다.</p></div>
+        <button class="smallbtn" id="authProbeRetry" type="button">인증 재점검</button>
+      </div>
+      <div class="connector-credentials" id="credentialSummary" aria-label="공급처 인증 설정">
+        <article><small>API KEY</small><strong>확인 전</strong></article><article><small>USER ID</small><strong>확인 전</strong></article>
+      </div>
+      <div class="connector-feedback">
+        <p id="readOnlyProbe">읽기 전용 인증 점검 상태 확인 전</p>
+        <p id="probeHelp">로그인 오류가 있다면 인증 정보를 점검하세요. 비밀번호는 이 화면에 입력하지 않습니다.</p>
+      </div>
+      <details class="connector-more">
+        <summary>다음 조치 및 기술 점검 상세</summary>
+        <p id="nextRequired">API 및 권한 설정을 확인하고 있습니다.</p>
+        <p>실주문·구매자 정보 전달·자동발주 OFF. 비밀키는 Cloudflare Secret으로만 관리합니다.</p>
+      </details>
+    </section>
+
+    <section class="connector-panel" id="connector-panel-lookup" data-connector-panel="lookup" role="tabpanel" aria-labelledby="connector-tab-lookup" hidden>
+      <div class="connector-panel-head"><div><p class="eyebrow">02 · LIVE ITEM CHECK</p><h2>공식 상품번호 조회</h2><p>공식 API의 조회 권한이 검증된 경우에만 실행됩니다.</p></div></div>
+      <form id="itemLookupForm" class="connector-form"><label for="lookupItemNo">도매매/도매꾹 상품번호</label><input id="lookupItemNo" name="itemNo" inputmode="numeric" pattern="[0-9]+" placeholder="숫자로 된 상품번호" required><button class="btn primary" type="submit">상품 확인</button></form>
+      <pre id="lookupResult" class="connector-result" aria-live="polite">API KEY와 조회 gate가 준비되기 전에는 호출되지 않습니다.</pre>
+    </section>
+
+    <section class="connector-panel" id="connector-panel-dry-run" data-connector-panel="dry-run" role="tabpanel" aria-labelledby="connector-tab-dry-run" hidden>
+      <div class="connector-panel-head"><div><p class="eyebrow">03 · ORDER DRY-RUN</p><h2>주문 준비도 점검</h2><p>실제 주문은 발생하지 않습니다. 차단 조건만 확인합니다.</p></div></div>
+      <form id="orderDryRunForm" class="connector-form"><label for="dryItemNo">상품번호</label><input id="dryItemNo" name="itemNo" inputmode="numeric" pattern="[0-9]+" placeholder="상품번호" required><label for="dryQty">수량</label><input id="dryQty" name="quantity" type="number" min="1" max="99" value="1" required><button class="btn primary" type="submit">Dry-run 점검</button></form>
+      <pre id="dryRunResult" class="connector-result" aria-live="polite">실제 주문 API는 호출하지 않습니다.</pre>
+    </section>
+
+    <section class="connector-panel" id="connector-panel-gates" data-connector-panel="gates" role="tabpanel" aria-labelledby="connector-tab-gates" hidden>
+      <div class="connector-panel-head"><div><p class="eyebrow">04 · RELEASE GATES</p><h2>기능 개방 조건</h2><p>승인 전에는 유상 주문과 구매자 정보 전달을 활성화하지 않습니다.</p></div></div>
+      <div class="ops-table-wrap connector-table-wrap">
+        <table class="ops-table"><thead><tr><th scope="col">기능</th><th scope="col">현재</th><th scope="col">개방 조건</th></tr></thead><tbody>
+          <tr><td>상품조회</td><td>기본 OFF</td><td>공식 API KEY Secret 및 staging 조회검증</td></tr>
+          <tr><td>주문준비</td><td>Dry-run</td><td>계정 ID · 세션 lifecycle · Private API 권한</td></tr>
+          <tr><td>실주문</td><td>OFF</td><td>계약·인증·개인정보 검증 및 별도 승인된 파일럿</td></tr>
+          <tr><td>구매자 정보</td><td>OFF</td><td>PII Vault · 처리위탁 범위 · 최소정보 제공 승인</td></tr>
+          <tr><td>자동발주</td><td>DB 잠금</td><td>파일럿 완료 후 별도 Supplier API V2 심사</td></tr>
+        </tbody></table>
+      </div>
     </section>
   </main>
-  <footer class="footer compact"><div class="bottom"><span>© 2026 EKODI MALL · Official Supplier Connectors</span><span>Official API, staged execution</span></div></footer>
+  <footer class="footer compact"><div class="bottom"><span>© 2026 EKODI MALL</span><span>공급망 연결 관리 · 자동발주 OFF</span></div></footer>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script><script src="/assets/supplier-connectors.js" defer></script>
 </body>
 </html>
