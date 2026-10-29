@@ -41,8 +41,13 @@ export function projectGitHubEvent(event,payload) {
 export async function eventOperationKey(event,payload,subtle=crypto.subtle) {
   const p=projectGitHubEvent(event,payload);
   const attempt=payload?.workflow_run?.run_attempt||0;
+  // Different comments on the same issue are different operations, despite
+  // having the same issue number, action, and absent commit SHA.
+  const eventIdentity=event==='issue_comment'?payload?.comment?.id||''
+    :event==='issues'?payload?.issue?.updated_at||''
+    :event==='push'?payload?.ref||'' :'';
   return hex(await subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify([
-    p.repository,p.type,p.action,p.headSha,p.sourceNumber,attempt
+    p.repository,p.type,p.action,p.headSha,p.sourceNumber,attempt,eventIdentity
   ]))));
 }
 
