@@ -1,6 +1,14 @@
 name: EKODI Native Devotion Guest Browser
 on:
   workflow_dispatch:
+    inputs:
+      expect_today_redirect:
+        description: 'Require the deployed Mission page to auto-return from future date to today'
+        type: boolean
+        default: false
+  workflow_run:
+    workflows: ['Deploy EKODI Bible Conversation']
+    types: [completed]
   pull_request:
     paths:
       - 'scripts/verify-devotion-guest-native-browser.mjs'
@@ -20,6 +28,7 @@ concurrency:
 
 jobs:
   guest-browser:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -43,6 +52,8 @@ jobs:
             npx playwright install --with-deps chromium
           fi
       - name: Verify real public future-date lockdown and login labels in desktop/mobile
+        env:
+          EKODI_EXPECT_AUTO_TODAY: ${{ (github.event_name == 'workflow_run' || inputs.expect_today_redirect == true) && '1' || '0' }}
         run: node scripts/verify-devotion-guest-native-browser.mjs
       - name: Write verification receipt
         if: always()
