@@ -1,0 +1,54 @@
+name: EKODI Native Mission Home Browser
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ['Deploy EKODI Operating Space']
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-native-mission-home-${{ github.event.workflow_run.id || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  home-browser:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Syntax gate for EKODI native home browser
+        run: |
+          node --check scripts/verify-mission-home-native-browser.mjs
+          node --check scripts/ekodi-background-browser-worker.mjs
+      - name: Install first-party Chromium browser
+        shell: bash
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          browser_path="$(command -v chromium || command -v google-chrome || true)"
+          if [ -n "$browser_path" ]; then
+            echo "EKODI_NATIVE_CHROME=$browser_path" >> "$GITHUB_ENV"
+          else
+            npx playwright install --with-deps chromium
+          fi
+      - name: Verify production hero, approved photo, layout and Saturday gathering
+        run: node scripts/verify-mission-home-native-browser.mjs
+      - name: Publish evidence summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f artifacts/mission-home-native/report.json ]; then
+            echo '### EKODI Mission native browser' >> "$GITHUB_STEP_SUMMARY"
+            jq -r '"- Passed: \(.passed)\n- Checks: \(.checks|length)\n- Error: \(.error // "none")"' artifacts/mission-home-native/report.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ekodi-mission-home-${{ github.run_id }}
+          path: artifacts/mission-home-native
+          retention-days: 14
