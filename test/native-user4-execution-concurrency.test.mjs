@@ -6,8 +6,8 @@ const workflow=readFileSync(new URL('../.github/workflows/device-agent-productio
 const source=readFileSync(new URL('../scripts/verify-native-user4-acceptance.mjs',import.meta.url),'utf8');
 
 test('passive postdeploy and cron checks cannot cancel active approved USER4 verification',()=>{
-  assert.match(workflow,/group: device-agent-production-verification-\$\{\{ github\.ref \}\}-\$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.execution_mode \|\| 'passive' \}\}/);
-  assert.match(workflow,/cancel-in-progress: \$\{\{ github\.event_name != 'workflow_dispatch' \}\}/);
+  assert.match(workflow,/group: device-agent-production-verification-\$\{\{ github\.ref \}\}-\$\{\{ github\.event_name == 'schedule' && 'scheduled-observe' \|\| github\.event_name == 'workflow_dispatch' && inputs\.execution_mode \|\| 'passive' \}\}/);
+  assert.match(workflow,/cancel-in-progress: \$\{\{ github\.event_name != 'workflow_dispatch' && github\.event_name != 'schedule' \}\}/);
   assert.match(workflow,/execution_mode == 'user4-acceptance'/);
   assert.match(workflow,/run: node scripts\/verify-native-user4-acceptance\.mjs/);
 });
