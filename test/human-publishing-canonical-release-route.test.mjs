@@ -51,6 +51,6 @@ test('canonical router rewrites private publishing UI script API prefix to the r
     'https://ekodi.kr/publishing/private-releases/private-releases.js'),env);
   assert.equal(response.status,200);
   const output=await response.text();
-  assert.match(output,/const API='\\/publishing\\/api\\/private-releases'/);
-  assert.doesNotMatch(output,/const API='\\/api\\/private-releases'/);
+  assert.ok(output.includes("const API='/publishing/api/private-releases'"));
+  assert.ok(!output.includes("const API='/api/private-releases'"));
 });
