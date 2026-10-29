@@ -17,7 +17,7 @@ const instant = value => {
   const date = new Date(value);
   invariant(Number.isFinite(date.valueOf()), 'invalid-time');
   // Date.parse may silently normalize February 30; detect invalid calendar days too.
-  const [year,month,day,hour,minute,second] = value.slice(0,19).match(/\\d+/g).map(Number);
+  const [year,month,day,hour,minute,second] = value.slice(0,19).match(/\d+/g).map(Number);
   const check = new Date(Date.UTC(year,month-1,day,hour,minute,second));
   invariant(year >= 2000 && check.getUTCFullYear() === year &&
     check.getUTCMonth()+1 === month && check.getUTCDate() === day &&
