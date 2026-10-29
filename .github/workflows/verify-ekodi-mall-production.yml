@@ -131,6 +131,22 @@ jobs:
           fi
           echo 'productionRehearsalSurface=closed'
 
+          # EKODI-DOMEMAE-PRODUCTION-GUARD: never use paid setOrder as a health check.
+          # Inspect only public Worker health and the unauthenticated boundary.
+          domemae_auth_code=$(curl -sS -o /tmp/mall-domemae-unauth.json -w '%{http_code}' --retry 2 --connect-timeout 5 --max-time 15 'https://ekodi.kr/ekodimall/api/internal/connectors/domemae/readiness' || true)
+          if [ "$domemae_auth_code" != "401" ]; then
+            echo "Domemae credential and probe readiness must require operator authentication: HTTP $domemae_auth_code"
+            exit 1
+          fi
+          echo 'domemaeReadinessAuthBoundary=verified'
+
+          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodimall/assets/supplier-connectors.js' -o /tmp/mall-supplier-connectors.js
+          if ! grep -Fq 'readOnlyProbe' /tmp/mall-supplier-connectors.js; then
+            echo 'Mall supplier connector console missing safe read-only probe status display'
+            exit 1
+          fi
+          echo 'domemaeReadonlyConsole=verified'
+
           curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://mall-api.ekodi.kr/health' -o /tmp/mall-health.json
           node <<'NODE'
           const fs = require('node:fs');
@@ -156,6 +172,13 @@ jobs:
           for (const key of ['payoutExecutionEnabled', 'buyerPiiReleaseEnabled', 'supplierForwardEnabled', 'refundExecutionEnabled']) {
             if (health[key] !== false) throw new Error(`high-impact transaction gate unexpectedly enabled: ${key}`);
           }
+          // A supplier login/e-money read-only probe never constitutes permission to buy.
+          if (!/^DOMEGGOOK_AUTO_ORDER_ENABLED = "false"$/m.test(wrangler)) throw new Error('Domeggook paid-order flag must remain explicitly OFF');
+          if (!/^DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED = "true"$/m.test(wrangler)) throw new Error('Domeggook read-only diagnostic gate missing');
+          for (const key of ['domemaeOrderEnabled', 'domeggookAutoOrderReady']) {
+            if (health[key] !== false) throw new Error(`supplier paid-order execution unexpectedly enabled: ${key}`);
+          }
+          console.log('domemaePaidOrder=OFF; authProbe=read-only');
           console.log(`mallApiVersion=${health.version}`);
           console.log(`operationsReviewConfigured=${Boolean(health.operationsReviewConfigured)}`);
           console.log('transactionSafety=verified');
