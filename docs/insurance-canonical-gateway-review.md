@@ -40,3 +40,49 @@ Only these exact public methods/paths are in scope. **No** internal admin, netwo
 - Exact EKODI Orchestrator \`orch_\` task and receipt, protected main checks, staging/reliability, guarded release, independent real browser proof and owner gate for host retirement.
 
 **This PR is a policy/classifier scaffold only.** It must stay Draft and must not be advertised as a functioning API or production-ready integration.
+
+
+## Isolated request-dispatch prototype (no public deployment)
+
+New module: \`sites/ekodi-insurance/api/canonical-gateway-dispatch-preview.mjs\`.
+This is **not imported into site-worker.js or any active API Worker**. It accepts
+a previously validated apex request and an injected *private service binding* only.
+It is not a direct external host proxy and it does not look up production secrets.
+
+- Does exact classifier allowlist before contacting the injected binding.
+- Rejects active CF quota-circuit requests with status 429 and no retry.
+- Requires a verified edge visitor identity for every POST: the future caller
+  must supply trusted client IP + user agent from a proven apex Worker/Cloudflare
+  boundary; it must **never construct this object from caller-supplied headers**.
+  Without it, all POST is 503; read-only GET can be mock-tested.
+- Bounded streaming payload reader rejects POST bytes exceeding route-specific
+  limits even with missing/false \`Content-Length\`. JSON must decode to a
+  non-array object; consultation consent/revocation remain validated again by
+  the actual API Worker.
+- Sends only a new fixed internal-target request with \`Origin:
+  https://ekodi.kr\`, JSON Content-Type, Accept, and *verified* rate identity.
+  It never forwards incoming session Cookie, Authorization, arbitrary
+  X-headers, referrer, query strings, or backend internal/admin token.
+- Rejects redirects, malformed/non-JSON, oversized backend responses and
+  private service exceptions. Returns only JSON with no-store/nosniff; strips
+  upstream Set-Cookie, CORS, and cache headers.
+- **WARNING**: the current Insurance API production origin allowlist does not
+  yet include the apex source, so even an otherwise valid private binding
+  will be blocked until a *separately approved* effective-Origin/CORS change.
+  No spoofed historical Origin is permitted to work around this.
+
+New offline Node tests use a fake injected service, synthetic request payloads
+and deterministic verified visitor fixture. They confirm no private service
+request is performed on input failure, spoofed identity, cross-site POST,
+stream size overflow, upstream redirects, or open quota circuit.
+
+### Before wiring any real route
+
+Confirm Worker service binding name/target, apex edge-verified identity derivation,
+backend \`ALLOWED_ORIGINS\` effective deployment configuration, and that a
+same-origin call is not inadvertently treated as authenticated admin. Independently
+test the backend hourly rate-limit fingerprint to ensure that users do not all
+collapse into an IP \`unknown\` bucket. Require a restrictive request timeout
+and abuse controls before production, plus compliance review of stored contact
+and shared transcript. Neither these tests nor a successfully compiled build
+can replace official browser proof or a human authorization gate.
