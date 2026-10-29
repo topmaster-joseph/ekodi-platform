@@ -423,6 +423,19 @@ async function finishLink(req:Request,userId:string,provider:string){
   if(config.requires_verified_email&&!profile.emailVerified)return json(req,{error:"verified_email_required"},400);
   const contactEmail=await contactEmailFor(provider,profile);
   const target=await issueSupabaseLink(await authEmailFor(provider,profile));
+  // A second provider can belong to a second independently registered Person,
+  // with its own paid D1 subscriptions and recurring billing keys. Supabase
+  // cannot atomically reconcile that external ledger. Do not merge Person rows
+  // just because both OAuth proofs passed: manual billing/role/points review
+  // must happen first. Linking a previously unclaimed identity remains allowed.
+  const initiatorPersonId=await personForUser(userId);
+  const targetPersonId=await personForUser(target.user.id);
+  if(targetPersonId&&targetPersonId!==initiatorPersonId){
+    await writeIdentityAudit(initiatorPersonId,userId,"identity.merge_review_required",provider,null,{
+      independentAccount:true
+    });
+    return json(req,{error:"account_merge_review_required"},409);
+  }
   const {data:personId,error:linkError}=await admin.rpc("link_person_identity",{
     p_initiator_user_id:userId,
     p_target_user_id:target.user.id,
