@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {handleSiteBoardRequest,missionSaturdayFor} from '../site-board-control.js';
+import {handleSiteBoardRequest,missionSaturdayFor,missionSaturdayLastPast,missionKstToday,MISSION_SATURDAY_STARTED} from '../site-board-control.js';
 
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 const url='https://ekodi.kr/ekodimission/board/api/saturday';
@@ -20,8 +20,15 @@ function fakeDb(){
         async run(){
           const a=this.args;
           if(sql.includes('INSERT OR IGNORE INTO ekodi_mission_saturday_events')){
-            const key=a[0]+'|'+a[1];
-            if(!events.has(key))events.set(key,{meeting_date:a[1],starts_at:'11:00',venue:'에코디교회',title:'토요 성경토론과 함께하는 식사',status:'scheduled'});
+            const start=new Date(a[0]+'T00:00:00Z'),until=new Date(a[1]+'T00:00:00Z');
+            for(let time=start.getTime();time<=until.getTime();time+=7*86400000){
+              const date=new Date(time).toISOString().slice(0,10);
+              const key=a[2]+'|'+date;
+              if(!events.has(key))events.set(key,{meeting_date:date,starts_at:'11:00',venue:'에코디교회',title:'토요 성경토론과 함께하는 식사',status:date<a[3]?'completed':'scheduled'});
+            }
+          }
+          if(sql.includes("UPDATE ekodi_mission_saturday_events")){
+            for(const item of events.values())if(item.meeting_date<a[1]&&item.status==='scheduled')item.status='completed';
           }
           if(sql.includes('INSERT INTO ekodi_mission_saturday_replies')){
             const key=a[0]+'|'+a[1]+'|'+a[2],old=replies.get(key);
@@ -36,6 +43,14 @@ function fakeDb(){
           return null;
         },
         async all(){
+          if(sql.includes('FROM ekodi_mission_saturday_events')){
+            const a=this.args;
+            const items=[...events.values()].filter(x=>x.meeting_date>=a[1]&&x.meeting_date<a[2]&&
+              (a[3]==='all'||x.meeting_date.slice(0,4)===a[4])&&
+              (a[5]==='all'||x.meeting_date.slice(5,7)===a[6])&&
+              x.meeting_date<a[7]).sort((left,right)=>right.meeting_date.localeCompare(left.meeting_date));
+            return {results:items.slice(0,a[8])};
+          }
           if(sql.includes('FROM ekodi_mission_saturday_replies')){
             return {results:[...replies.values()].filter(item=>item.meeting_date===this.args[1]).sort((a,b)=>a.id-b.id)};
           }
@@ -70,6 +85,18 @@ test('KST weekly dates always target Saturday with year-end rollover',()=>{
   assert.equal(missionSaturdayFor('2026-12-31'),'2027-01-02');
 });
 
+test('KST midnight rolls current Saturday into last history and advances RSVP Sunday',()=>{
+  const before=new Date('2026-10-31T14:59:59Z');
+  const after=new Date('2026-10-31T15:00:00Z');
+  assert.equal(missionKstToday(before),'2026-10-31');
+  assert.equal(missionKstToday(after),'2026-11-01');
+  assert.equal(missionSaturdayFor(missionKstToday(before)),'2026-10-31');
+  assert.equal(missionSaturdayFor(missionKstToday(after)),'2026-11-07');
+  assert.equal(missionSaturdayLastPast('2026-10-31'),'2026-10-24');
+  assert.equal(missionSaturdayLastPast('2026-11-07'),'2026-10-31');
+  assert.equal(MISSION_SATURDAY_STARTED,'2024-02-03');
+});
+
 test('anonymous visitors can see a single upcoming weekly meeting but cannot submit a reply',async()=>{
   const db=fakeDb(),e=env(db);
   const one=await handleSiteBoardRequest(request(),e);
@@ -80,9 +107,11 @@ test('anonymous visitors can see a single upcoming weekly meeting but cannot sub
   assert.equal(state.meeting.time,'11:00');
   assert.equal(state.me.authenticated,false);
   assert.equal(state.replies.length,0);
-  assert.equal(db.events.size,8);
+  assert.ok(db.events.size>=151,'All historical Saturdays and eight future dates must be registered');
+  assert.equal(db.events.get('site:ekodimission:main|2024-02-03')?.status,'completed');
+  const firstCount=db.events.size;
   await handleSiteBoardRequest(request(),e);
-  assert.equal(db.events.size,8,'Repeated visits must not create duplicate weekly events');
+  assert.equal(db.events.size,firstCount,'Repeated visits must not create duplicate weekly events');
   const attempt=await handleSiteBoardRequest(request('POST',{meetingDate:state.meeting.date,displayName:'방문자',attendance:'join',body:'참석합니다',publicConsent:true}),e);
   assert.equal(attempt.status,401);
 });
@@ -115,6 +144,47 @@ test('verified members create or revise one public answer per date; contact deta
   assert.equal(crossOrigin.status,403);
 });
 
+
+test('registration history includes the first 2024-02-03 Saturday and remains paginated',async()=>{
+  const db=fakeDb(),e=env(db);
+  const api='https://ekodi.kr/ekodimission/board/api/saturday/history';
+  const first=await handleSiteBoardRequest(new Request(api+'?year=2024&limit=24'),e);
+  assert.equal(first.status,200);
+  const data=await first.json();
+  assert.equal(data.ok,true);
+  assert.equal(data.startedOn,'2024-02-03');
+  assert.equal(data.years.at(-1),'2024');
+  assert.equal(data.items.length,24);
+  assert.ok(data.items.every(entry=>entry.date.startsWith('2024-')));
+  assert.ok(data.nextCursor);
+  let cursor=data.nextCursor;
+  let all=[...data.items];
+  while(cursor){
+    const response=await handleSiteBoardRequest(new Request(api+'?year=2024&limit=24&cursor='+cursor),e);
+    assert.equal(response.status,200);
+    const page=await response.json();
+    all.push(...page.items);
+    cursor=page.nextCursor;
+  }
+  assert.equal(all.at(-1).date,'2024-02-03');
+  assert.equal(new Set(all.map(item=>item.date)).size,all.length);
+  assert.equal(all.length,48,'Saturdays 2024-02-03 through 2024-12-28 inclusive');
+  assert.equal(all.at(-1).time,'11:00');
+  assert.equal(all.at(-1).venue,'에코디교회');
+  const october=await (await handleSiteBoardRequest(new Request(api+'?year=2024&month=02'),e)).json();
+  assert.equal(october.items.length,4,'February 2024 contains four Saturdays, starting 2024-02-03');
+  assert.equal(october.items.at(-1).date,'2024-02-03');
+  const invalid=await handleSiteBoardRequest(new Request(api+'?year=2023'),e);
+  assert.equal(invalid.status,400);
+  const invalidCursor=await handleSiteBoardRequest(new Request(api+'?cursor=INVALID'),e);
+  assert.equal(invalidCursor.status,400);
+  const repeat=await handleSiteBoardRequest(new Request(api+'?year=2024&limit=1'),e);
+  assert.equal(repeat.status,200);
+  const size=db.events.size;
+  await handleSiteBoardRequest(new Request(api+'?year=2024&limit=1'),e);
+  assert.equal(db.events.size,size,'Repeated archive reads are idempotent');
+});
+
 test('Mission landing, login state and image remain first-party and without hardcoded replies',async()=>{
  const [page,client,shell,css,worker]=await Promise.all([
   read('space/ekodimission.page'),read('space/ekodimission-saturday.js'),
@@ -133,4 +203,20 @@ test('Mission landing, login state and image remain first-party and without hard
  assert.match(shell,/normalizeMissionFooter/);
  assert.match(css,/\.mission-auth-actions/);
  assert.match(worker,/\/ekodimission\/assets\/saturday.js/);
+});
+
+test('Sunday headline, live rollover, history browser and first-party asset remain connected',async()=>{
+ const [home,client,history,activities,worker]=await Promise.all([
+   read('space/ekodimission.page'),read('space/ekodimission-saturday.js'),
+   read('space/ekodimission-saturday-history.js'),read('space/ekodimission-activities.page'),
+   read('space-worker.js')
+ ]);
+ assert.match(home,/2024년 2월 3일부터/);
+ assert.match(home,/<\/figure><\/section>\s*<section class="activities mission-home-current"/);
+ assert.match(client,/heading\.textContent=day==='Sun'\?'다음 토요모임':'이번 주 토요모임'/);
+ assert.match(client,/refreshAfterDayChange/);
+ assert.match(history,/data-saturday-history-more/);
+ assert.match(activities,/data-mission-saturday-history/);
+ assert.match(activities,/2024년 2월 3일부터/);
+ assert.match(worker,/\/ekodimission\/assets\/saturday-history.js/);
 });
