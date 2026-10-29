@@ -676,6 +676,18 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   const mallSourcingTabKey=item=>mallSourcingIsAmazon(item)?'amazon':'route:'+String(item.routeKey||'');
   let mallSourcingCurrent=new URLSearchParams(location.search).get('channel')||(section==='amazon'?'amazon':'overview');
   let mallSourcingRequestId=0;
+
+  const mallSourcingViews=[
+    ['overview','개요'],['usage','에코디 사용설정'],['channels','판매채널'],
+    ['connection','연동·인증'],['inventory','주문·재고'],['cost','비용정책'],['supply','공급망']
+  ];
+  const mallSourcingDetails=[
+    ['status','연결 개요'],['account','Seller Central · SP-API'],
+    ['readonly','상품 · 재고 · 주문'],['cost','비용정책'],['extras','기타 연동'],['usage','사용 설정']
+  ];
+  let mallSourcingView=new URLSearchParams(location.search).get('view')||'channels';
+  let mallSourcingDetail=new URLSearchParams(location.search).get('detail')||'status';
+  const mallSourcingDefaultDetail=view=>({connection:'account',inventory:'readonly',cost:'cost',usage:'usage',supply:'official'})[view]||'status';
   function mallSourcingHeader(sources,active){
     const entries=[{key:'overview',label:'전체'}],known=new Set(['overview']);
     for(const item of sources){
@@ -685,23 +697,51 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       entries.push({key,label:mallSourcingIsAmazon(item)?'Amazon':String(item.merchantName||item.merchantKey||item.routeKey),item});
     }
     if(!known.has('amazon'))entries.push({key:'amazon',label:'Amazon'});
-    const tabs=entries.map(entry=>{
+    const first=mallSourcingViews.map(([key,label])=>
+      '<button type="button" class="mall-source-tab mall-source-level-one'+(mallSourcingView===key?' is-active':'')+'" data-mall-source-view="'+key+'" aria-pressed="'+(mallSourcingView===key)+'">'+ae(label)+'</button>'
+    ).join('');
+    const second=entries.map(entry=>{
       const pressed=entry.key===active;
       const stateClass=entry.item?.effectiveEnabled?' mall-source-tab-live':entry.item?.selected?' mall-source-tab-pending':'';
-      return `<button type="button" class="mall-source-tab${stateClass}${pressed?' is-active':''}" data-mall-source-channel="${ae(entry.key)}" aria-pressed="${pressed}">${ae(entry.label)}</button>`;
+      return '<button type="button" class="mall-source-tab'+stateClass+(pressed?' is-active':'')+'" data-mall-source-channel="'+ae(entry.key)+'" aria-pressed="'+pressed+'">'+ae(entry.label)+'</button>';
     }).join('');
-    return `<div class="mall-sourcing-head"><div class="mall-sourcing-heading"><h2>에코디몰 판매채널 · 공급망 설정</h2><p class="empty">플랫폼 공통 판매·공급망 엔진에 등록된 Provider 중 판매처를 선택하면 연결 상태와 사용 여부를 관리할 수 있습니다. Amazon도 같은 목록에서 선택합니다.</p></div><div class="mall-sourcing-tabs" role="group" aria-label="판매채널 선택">${tabs}</div></div>`;
+    const amazon=active==='amazon';
+    const details=amazon?mallSourcingDetails:[['status','연결 현황'],['usage','사용 설정'],['official','공식 연결']];
+    const showDetail=active!=='overview'&&!['overview','usage','supply'].includes(mallSourcingView);
+    const third=details.map(([key,label])=>
+      '<button type="button" class="mall-source-tab mall-source-level-three'+(mallSourcingDetail===key?' is-active':'')+'" data-mall-source-detail="'+key+'" aria-pressed="'+(mallSourcingDetail===key)+'">'+ae(label)+'</button>'
+    ).join('');
+    return '<div class="mall-sourcing-head"><div class="mall-sourcing-heading"><h2>판매채널 · 공급망</h2><p class="empty">기능을 선택한 뒤 판매처와 작업을 선택하세요. 현재 연결 상태만 표시합니다.</p></div></div>'+
+      '<nav class="mall-sourcing-level mall-sourcing-primary" aria-label="1단계 기능 메뉴">'+first+'</nav>'+
+      (mallSourcingView==='overview'?'':'<nav class="mall-sourcing-level mall-sourcing-tabs" aria-label="2단계 판매처 메뉴">'+second+'</nav>')+
+      (showDetail?'<nav class="mall-sourcing-level mall-sourcing-detail-tabs" aria-label="3단계 작업 메뉴">'+third+'</nav>':'');
   }
   function bindMallSourcingTabs(){
-    document.querySelectorAll('[data-mall-source-channel]').forEach(button=>button.addEventListener('click',()=>{
-      const selected=button.getAttribute('data-mall-source-channel')||'overview';
-      mallSourcingCurrent=selected;
+    const select=(kind,value)=>{
+      if(kind==='view'){
+        mallSourcingView=mallSourcingViews.some(([key])=>key===value)?value:'channels';
+        mallSourcingDetail=mallSourcingDefaultDetail(mallSourcingView);
+      }
+      if(kind==='channel'){
+        mallSourcingCurrent=value;
+        mallSourcingDetail=mallSourcingDefaultDetail(mallSourcingView);
+        if(mallSourcingCurrent!=='amazon'&&['account','readonly','cost','extras'].includes(mallSourcingDetail))mallSourcingDetail='status';
+      }
+      if(kind==='detail')mallSourcingDetail=value;
       const nextUrl=new URL(location.href);
-      if(selected==='overview')nextUrl.searchParams.delete('channel');else nextUrl.searchParams.set('channel',selected);
+      nextUrl.searchParams.set('view',mallSourcingView);
+      if(mallSourcingCurrent==='overview')nextUrl.searchParams.delete('channel');
+      else nextUrl.searchParams.set('channel',mallSourcingCurrent);
+      if(mallSourcingDetail==='status')nextUrl.searchParams.delete('detail');
+      else nextUrl.searchParams.set('detail',mallSourcingDetail);
       const canonicalPath=section==='amazon'?adminBase+'/sourcing':nextUrl.pathname;
       history.replaceState(history.state,'',canonicalPath+nextUrl.search+nextUrl.hash);
-      affiliateSourcingPanel(selected);
-    }));
+      affiliateSourcingPanel(mallSourcingCurrent);
+    };
+    const pairs=[['data-mall-source-view','view'],['data-mall-source-channel','channel'],['data-mall-source-detail','detail']];
+    for(const [attr,kind] of pairs){
+      document.querySelectorAll('['+attr+']').forEach(button=>button.addEventListener('click',()=>select(kind,button.getAttribute(attr)||'overview')));
+    }
   }
   async function affiliateSourcingPanel(requestedChannel=mallSourcingCurrent){
     const requestId=++mallSourcingRequestId;
