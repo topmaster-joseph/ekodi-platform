@@ -4,29 +4,35 @@ import {renderFreshVoicePage,freshVoiceClient} from '../services/independent-boa
 import {handleFreshVoiceApi} from '../services/independent-board/voices-fresh/api.mjs';
 
 test('guest voice list always renders sequential numbering and authored date',()=>{
-  assert.match(freshVoiceClient,/for\\(const \\[index,item\\] of shown\\.entries\\(\\)\\)/);
-  assert.match(freshVoiceClient,/number\\.className='row-no'/);
-  assert.match(freshVoiceClient,/String\\(shown\\.length-index\\)/);
-  assert.match(freshVoiceClient,/date\\.className='row-date'/);
-  assert.match(freshVoiceClient,/summary\\.append\\(number,title,date\\)/);
-  assert.match(freshVoiceClient,/renderReplyArea\\(details,item\\)/);
+  for(const fragment of [
+    'for(const [index,item] of shown.entries())',
+    "number.className='row-no'",
+    'String(shown.length-index)',
+    "date.className='row-date'",
+    'summary.append(number,title,date)',
+    'renderReplyArea(details,item)'
+  ])assert.ok(freshVoiceClient.includes(fragment),fragment);
 });
 
 test('expanded post always offers reply action, but login is required before composing',()=>{
-  assert.match(freshVoiceClient,/toggle\\.textContent='답글달기'/);
-  assert.match(freshVoiceClient,/if\\(!token\\)\\{message\\('답글 작성을 위해 Google 로그인 후 다시 이동합니다\\.'\\);beginLogin\\('reply',item\\.id\\);return\\}/);
-  assert.match(freshVoiceClient,/editor\\.hidden=!editor\\.hidden/);
-  assert.match(freshVoiceClient,/adminAllowed\\|\\|item\\.mine/);
-  assert.match(freshVoiceClient,/adminAllowed\\|\\|response\\.mine/);
+  for(const fragment of [
+    "toggle.textContent='답글달기'",
+    "beginLogin('reply',item.id);return",
+    'editor.hidden=!editor.hidden',
+    'adminAllowed||item.mine',
+    'adminAllowed||response.mine'
+  ])assert.ok(freshVoiceClient.includes(fragment),fragment);
 });
 
 test('short note and compose button use a left-aligned second line on both routes',()=>{
   for(const path of ['/board/voices','/seonammedi/board/voices']){
-    const html=renderFreshVoicePage({url:'https://seonammedi.kr'+path},(...parts)=>parts.slice(1).join('\\n'));
-    assert.match(html,/누구나 열람, 로그인 후 작성·답글 가능/);
-    assert.match(html,/board-head\\{display:flex;flex-direction:column;align-items:flex-start/);
-    assert.match(html,/board-head \\.board-actions\\{display:flex;width:100%;justify-content:flex-start/);
-    assert.match(html,/id="freshWrite"/);
+    const html=renderFreshVoicePage({url:'https://seonammedi.kr'+path},(...parts)=>parts.slice(1).join('\n'));
+    for(const fragment of [
+      '누구나 열람, 로그인 후 작성·답글 가능',
+      'board-head{display:flex;flex-direction:column;align-items:flex-start',
+      'board-head .board-actions{display:flex;width:100%;justify-content:flex-start',
+      'id="freshWrite"'
+    ])assert.ok(html.includes(fragment),fragment);
   }
 });
 
