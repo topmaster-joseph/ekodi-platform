@@ -25,7 +25,7 @@
 
 - [ ] 독립된 출판사 전용 D1 DB 생성, 비공개 migration 공식 보호 실행 및 감사.
 - [ ] 저자·출판자 서명의 인증과 승인 해시를 검증할 수 있는 **서버 전용** 인증 API 및 파일 보관소 binding.
-- [ ] 오케스트레이터 서명/인증을 통과한 운영 cron 배치, 트랜잭션 outbox, 장애 재시도·경고.
+- [ ] 오케스트레이터 서명/인증을 통과한 운영 cron 배치, **현재 구현한** 트랜잭션 outbox의 검증된 배포·소비자·장애 재시도·경고.
 - [ ] 서점·몰 **양쪽 모두** 신규 수신 adapter와 중앙 공개 허가 검사를 모든 상품 표시·결제·검색 진열 경로에 연결. 중앙 비공개 여부와 관계없이 기존 공개 도서의 판매는 보존해야 한다.
 - [ ] 실제 고객과 별도 격리된 staging에 2채널 E2E, 결제/환불/구매권한 검증. 소스 정확 SHA의 필수 CI, Human Gate, 보호 병합 및 운영 배포 검증.
 - [ ] 기존 유통계약, 성경 번역·외부 표지 사용권, ISBN·정가/할인/취소·환불 정책 검수.
@@ -41,12 +41,22 @@
 - 쓰기: `POST /api/publishing/private-releases/register` with `{"editionId":"..."}`; `POST /api/publishing/private-releases/:editionId/schedule` with `{"revision":2,"publishAt":"2026-11-15T09:00:00+09:00"}`; `POST /api/publishing/private-releases/:editionId/cancel` with `{"revision":3,"reason":"..."}`. 날짜는 단순 예시. 일정 변경마다 optimistic CAS 적용, 이전 revision은 거절한다.
 - 인증: `PUBLISHING_RELEASE_AUTH.verifyRequest`는 서버 세션·`publishing.private-release.{read,register,schedule,cancel}` 세분 권한·same-origin/anti-CSRF를 확인하는 신뢰된 출판 전용 RPC. 관리자 이메일 문자열을 클라이언트에서 비교하는 방식 금지. `issueCsrf`는 인증된 요청에만 서버가 토큰을 발급하며, 브라우저의 저장소에 인증정보를 남기지 않는다.
 - 파일·승인: `PUBLISHING_RELEASE_VERIFIER.loadCandidate`, `verifyCompletedFile`, `verifyApprovalEvidence`, `verifyChannelAck`는 출판사 서버만 보유하는 검증 RPC. 요청 본문에 전달한 서명 유효 플래그/가격/파일위치는 무시. 승인 후보 판본 해시와 비공개 파일·저자/출판자 서명을 직접 대조해야 한다.
-- 감사: `PUBLISHING_RELEASE_AUDIT.record`은 성공적인 영속 기록 확인을 반환해야 관리 요청이 성공한다. 다만 **현 API에는 상태 저장과 감사가 하나의 DB 트랜잭션으로 묶여 있지 않으므로** 운영 활성화 전 동일 트랜잭션 감사·영구 송신함을 구현해야 한다. 실패 후 재요청 시 운영자가 상태를 조회·조정할 수 있는 복구 절차가 필요하다.
+- 감사·송신함: 새 `publishing/human/private-release-atomic-ledger.js`는 출판 전용 D1 `batch()`로 **상태 변경 + 배우자/관리자 식별 감사기록 + 비공개 outbox**를 원자적으로 기록한다. `sql/002_private_release_audit_outbox.sql`을 001 뒤에 적용해야 한다. 실제 메타데이터 외 고객 정보·원고 전문·서명 증빙은 outbox에 넣지 않는다. 운영 환경의 D1 트랜잭션·CAS·outbox 소비자·복구 절차 검증은 여전히 필요하다.
 - 예약 실행: `publishing-worker.js`에 `scheduled()`를 추가했지만 **Wrangler cron 트리거는 추가하지 않았다.** `PUBLISHING_PRIVATE_RELEASE_ENABLED=true`와 서명된 채널 RPC 및 독립 저장소가 모두 있을 때만 `runConfiguredPublishingReleaseTick`이 수행된다. 별도 검토된 배포 작업으로 격리 staging과 실제 일정 실행 테스트를 통과해야 운영 cron을 설정할 수 있다.
 
 ### 완료됐다고 주장할 수 없는 운영 항목
-`PUBLISHING_RELEASE_DB`, `PUBLISHING_RELEASE_AUTH`, `PUBLISHING_RELEASE_VERIFIER`, `PUBLISHING_RELEASE_AUDIT`, `PUBLISHING_RELEASE_CHANNELS` 서비스 바인딩은 **이번 PR에서 실제 발급/설정하지 않았다.** Books/Mall의 진열·검색·가격·결제·파일 다운로드 진입점은 아직 신설 출판 판본의 중앙 공개 승인을 호출하지 않는다. 그러므로 이 두 채널에 신규 도서를 인계하거나 공개할 수 없다. 기존 판매 도서는 변경하지 않았다.
+`PUBLISHING_RELEASE_DB`, `PUBLISHING_RELEASE_AUTH`, `PUBLISHING_RELEASE_VERIFIER`, `PUBLISHING_RELEASE_CHANNELS` 서비스 바인딩은 **이번 PR에서 실제 발급/설정하지 않았다.** Books/Mall의 진열·검색·가격·결제·파일 다운로드 진입점은 아직 신설 출판 판본의 중앙 공개 승인을 호출하지 않는다. 그러므로 이 두 채널에 신규 도서를 인계하거나 공개할 수 없다. 기존 판매 도서는 변경하지 않았다.
 
 ### 중앙 라우트 실증 계약
 
 `platform-route-registry.js`의 `/publishing` 서비스 바인딩은 요청을 출판 Worker로 전달하기 전에 해당 접두어를 제거한다. 따라서 화면 `/publishing/private-releases/`는 Worker의 `/private-releases/`, API `/publishing/api/private-releases`는 Worker의 `/api/private-releases`에 대응한다. 반면 브라우저의 `Origin`은 `https://ekodi.kr` 그대로이므로, 출판 API는 보안 검사에 정규 Apex Origin을 사용한다. 이 경로는 `test/human-publishing-canonical-release-route.test.mjs`에서 회귀 검증한다.
+
+## 원자적 감사·배포 대기 장부 (추가 구현)
+
+- `publishing/human/private-release-atomic-ledger.js`: 등록과 상태 변경이 승인된 단일 D1 `batch()`에 포함됨. (1) 등록/상태변경, (2) 변경자·판본·revision 감사, (3) 오케스트레이터가 읽는 최소 메타데이터 outbox를 **한 트랜잭션에서** 생성한다. D1 batch가 없으면 변경은 거부.
+- `publishing/human/sql/002_private_release_audit_outbox.sql`: `publishing_release_audit`과 `publishing_release_outbox`만 생성. 기존 사용자·몰·서점 DB를 변경하지 않으며, 001 이후 보호된 DB 마이그레이션 필요.
+- `publishing/human/private-release-api.js` 및 `scheduled-release-runner.js`: 새 원자적 장부에 연결. 저자·제목·정본 해시·정본 생성 식별자는 같은 판본의 이력 중 변경할 수 없다. 변경 시 새 판본 생성과 재승인이 필요하다.
+- `test/private-release-sqlite-test-support.mjs`, `test/human-publishing-private-atomic-ledger.test.mjs`: SQLite 트랜잭션/중복·동시 수정·권한 없는 변경·롤백을 검증. 기존 관리자 API/예약 재시도 테스트 역시 원자적 장부와 연동하여 수행.
+- 아직 운영 DB를 만들거나 `002` 마이그레이션을 적용한 것은 아니다. 기존 판매 서비스에 대한 자동 릴리스 outbox 소비도 개통하지 않았다.
+
+> 판본 상태가 `released`여도 신규 도서 공개는 에코디서점·에코디몰의 각 사용자 접점이 보호된 중앙 공개 승인 조회를 실제로 시행할 때만 가능하도록 해야 한다. 이 두 판매 채널의 운영 수신·검색·결제 차단 연결은 별도 최종 검증 항목이다.
