@@ -23,8 +23,8 @@ function fixtureBook(){
     rightsApproved:true,authorApproved:true,publisherApproved:true,
     voicePerformanceApproved:true,accessibilityReviewed:true,
     tracks:[
-      {number:1,title:'서문',format:'mp3',key:book.id+'/audiobook/01-preface.mp3'},
-      {number:2,title:'첫 장',format:'mp3',key:book.id+'/audiobook/02-chapter.mp3'},
+      {number:1,title:'서문',format:'mp3',key:book.id+'/audiobook/01-preface.mp3',sha256:'0b4d32ac99bf6d4ba36fc9e507653e8cb2ca2b16d1fa8549a24c6ade1379064c'},
+      {number:2,title:'첫 장',format:'mp3',key:book.id+'/audiobook/02-chapter.mp3',sha256:'0b4d32ac99bf6d4ba36fc9e507653e8cb2ca2b16d1fa8549a24c6ade1379064c'},
     ],
   };
   return book;
@@ -48,7 +48,7 @@ function fileBucket(book,{missing=false,unapproved=false}={}){
     if(missing && track.number===2)continue;
     objects.set(track.key,{body:bytes,size:bytes.length,customMetadata:{
       bookId:book.id,kind:'audiobook-chapter',edition:book.edition,
-      approved:unapproved?'false':'true',
+      approved:unapproved?'false':'true',sha256:track.sha256,
     }});
   }
   return{
@@ -86,6 +86,8 @@ test('every editorial and voice/rights gate, source edition and catalog track mu
   }
   const traversal=structuredClone(book);traversal.audiobook.tracks[0].key='../other-book.mp3';
   assert.equal(complimentaryAudiobookPolicy(traversal).approved,false);
+  const digestMismatch=structuredClone(book);digestMismatch.audiobook.tracks[0].sha256='not-a-digest';
+  assert.equal(complimentaryAudiobookPolicy(digestMismatch).approved,false);
   const ordered=structuredClone(book);ordered.audiobook.tracks[0].number=3;
   assert.equal(complimentaryAudiobookPolicy(ordered).approved,false);
 });
@@ -143,4 +145,14 @@ test('MP3 upload validates frame header and size; operator upload draft never si
   assert.equal(uploaded.data.approvedForDelivery,false);
   assert.equal(bucket.objects.get(book.audiobook.tracks[0].key).customMetadata.approved,'false');
   assert.equal((await availableAudiobook(env,book)).ready,false);
+  // Even when catalog human-review flags are later completed, the uploaded
+  // actual bytes must exactly match the protected reviewed MP3 master hash.
+  book.audiobook.status='approved';
+  const wrong=new Uint8Array(180);wrong.set([0x49,0x44,0x33]);wrong[90]=1;
+  const wrongReq=new Request('https://ekodi.kr/books/api/commerce'+path,{method:'PUT',headers:{authorization:'Bearer token','content-type':'audio/mpeg'},body:wrong});
+  const rejected=await adminRoute(env,wrongReq,path,new URL(wrongReq.url));
+  assert.equal(rejected.status,409);
+  assert.equal(rejected.data.error.includes('해시'),true);
+  assert.equal(bucket.objects.get(book.audiobook.tracks[0].key).customMetadata.approved,'false');
+
 });
