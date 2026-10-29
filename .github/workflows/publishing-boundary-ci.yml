@@ -41,6 +41,7 @@ jobs:
           node --test test/bookstore-publishing-boundary.test.mjs
           node --check publishing/jubilee-series/review-gate.js
           node --test test/jubilee-series-review-gate.test.mjs
+          node --test test/jubilee-series-review-evidence.test.mjs
           node --check publishing/human/scheduled-release.js
           node --test test/human-publishing-scheduled-release.test.mjs
           node --check publishing/human/private-release-store.js
