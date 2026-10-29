@@ -6,12 +6,14 @@ import {resolve} from 'node:path';
 
 const stripDot=value=>String(value||'').trim().toLowerCase().replace(/\.$/,'');
 const hostPattern=/^(?=.{1,253}$)(?!-)[a-z0-9-]+(?:\.(?!-)[a-z0-9-]+)+$/;
+// TXT/CNAME owner names legitimately contain underscore service labels such as _dmarc and _domainkey.
+const dnsOwnerPattern=/^(?=.{1,253}$)[a-z0-9_-]+(?:\.[a-z0-9_-]+)+$/;
 
 export function evaluateAuthSenderDns({senderDomain,spfHost,dkimHost,spfTxt=[],dmarcTxt=[],dkimTxt=[],dkimCname=[]}){
   const domain=stripDot(senderDomain),spf=stripDot(spfHost),dkim=stripDot(dkimHost);
   const validDomain=hostPattern.test(domain);
   const validSpf=hostPattern.test(spf);
-  const validDkim=hostPattern.test(dkim);
+  const validDkim=dnsOwnerPattern.test(dkim)&&dkim.includes('._domainkey.');
   const spfRecords=spfTxt.filter(x=>/^v=spf1(?:\s|$)/i.test(String(x).trim()));
   const dmarcRecords=dmarcTxt.filter(x=>/^v=DMARC1\s*;/i.test(String(x).trim()));
   const dkimPublished=validDkim&&(
@@ -43,7 +45,7 @@ export function evaluateAuthSenderDns({senderDomain,spfHost,dkimHost,spfTxt=[],d
 
 const normalizeTxt=records=>records.map(parts=>parts.join(''));
 const safeDns=async(fn,host)=>{
-  if(!host||!hostPattern.test(host))return [];
+  if(!host||!dnsOwnerPattern.test(host))return [];
   try{return await fn(host);}catch(error){
     if(['ENOTFOUND','ENODATA','ESERVFAIL','ETIMEOUT','EREFUSED','EAI_AGAIN'].includes(String(error?.code)))return [];
     throw error;
