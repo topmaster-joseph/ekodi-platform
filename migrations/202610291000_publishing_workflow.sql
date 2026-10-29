@@ -50,3 +50,32 @@ CREATE TABLE IF NOT EXISTS publishing_workflow_handoff_outbox (
 CREATE INDEX IF NOT EXISTS idx_publishing_workflow_handoff
  ON publishing_workflow_handoff_outbox(status,created_at);
 -- The outbox carries proposed, never pre-authorized sale activations.
+
+
+-- Protected private attestations: the public UI may READ their boolean result, but
+-- must not create/update these tables. These are not client-input checkboxes.
+CREATE TABLE IF NOT EXISTS publishing_workflow_release_contracts (
+ project_id TEXT PRIMARY KEY, author_user_id TEXT NOT NULL, edition_digest TEXT NOT NULL,
+ status TEXT NOT NULL CHECK(status IN ('draft','signed','revoked')),
+ author_signed_at TEXT, publisher_signed_at TEXT,
+ royalty_terms_accepted INTEGER NOT NULL DEFAULT 0 CHECK(royalty_terms_accepted IN (0,1)),
+ commission_terms_accepted INTEGER NOT NULL DEFAULT 0 CHECK(commission_terms_accepted IN (0,1)),
+ distribution_license_accepted INTEGER NOT NULL DEFAULT 0 CHECK(distribution_license_accepted IN (0,1)),
+ sealed_contract_sha256 TEXT NOT NULL,
+ created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+ FOREIGN KEY(project_id) REFERENCES publishing_workflow_projects(id)
+);
+CREATE TABLE IF NOT EXISTS publishing_workflow_audio_release_qa (
+ project_id TEXT PRIMARY KEY, edition_digest TEXT NOT NULL,
+ stage TEXT NOT NULL CHECK(stage IN ('preparing','under_review','approved','revoked')),
+ master_sha256 TEXT NOT NULL, voice_license_verified INTEGER NOT NULL DEFAULT 0 CHECK(voice_license_verified IN (0,1)),
+ dialogue_qa_passed INTEGER NOT NULL DEFAULT 0 CHECK(dialogue_qa_passed IN (0,1)),
+ full_track_qa_passed INTEGER NOT NULL DEFAULT 0 CHECK(full_track_qa_passed IN (0,1)),
+ buyer_access_verified INTEGER NOT NULL DEFAULT 0 CHECK(buyer_access_verified IN (0,1)),
+ refund_revoke_verified INTEGER NOT NULL DEFAULT 0 CHECK(refund_revoke_verified IN (0,1)),
+ bonus_price_krw INTEGER NOT NULL DEFAULT 0 CHECK(bonus_price_krw=0),
+ verified_by TEXT, verified_at TEXT,
+ FOREIGN KEY(project_id) REFERENCES publishing_workflow_projects(id)
+);
+-- Important: neither table has a public write API; an auditor's statement must
+-- be reconciled against actual signed contracts/audio assets before sale launch.
