@@ -713,7 +713,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     ).join('');
     return '<div class="mall-sourcing-head"><div class="mall-sourcing-heading"><h2>판매채널 · 공급망</h2><p class="empty">기능을 선택한 뒤 판매처와 작업을 선택하세요. 현재 연결 상태만 표시합니다.</p></div></div>'+
       '<nav class="mall-sourcing-level mall-sourcing-primary" aria-label="1단계 기능 메뉴">'+first+'</nav>'+
-      (mallSourcingView==='overview'?'':'<nav class="mall-sourcing-level mall-sourcing-tabs" aria-label="2단계 판매처 메뉴">'+second+'</nav>')+
+      (mallSourcingView==='overview'?'':'<nav class="mall-sourcing-level mall-sourcing-tabs" aria-label="판매채널 선택" data-menu-level="2">'+second+'</nav>')+
       (showDetail?'<nav class="mall-sourcing-level mall-sourcing-detail-tabs" aria-label="3단계 작업 메뉴">'+third+'</nav>':'');
   }
   function bindMallSourcingTabs(){
