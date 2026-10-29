@@ -129,7 +129,7 @@ export function recordPrepared(record, channel, verifiedChannelAck) {
 
 /** Activation intent is emitted only after BOTH channels staged the same edition invisibly. */
 export function activationProposal(record, now) {
-  invariant(record?.state === 'prepared', 'not-dual-prepared');
+  invariant(record?.state === 'prepared' || record?.state === 'activating', 'not-dual-prepared');
   invariant(instant(record.publishAt) <= assertNow(now), 'not-due');
   invariant(RELEASE_CHANNELS.every(c => record.channels[c]?.prepared), 'missing-prepared-channel');
   return Object.freeze({
