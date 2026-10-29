@@ -9,6 +9,8 @@ const read=(h,k)=>typeof h?.get==='function'?h.get(k):Object.entries(h||{})
   .find(([name])=>name.toLowerCase()===k)?.[1]??null;
 const int=(v)=>v!=null&&/^\d+$/.test(String(v))&&Number.isSafeInteger(Number(v))?
   Number(v):null;
+const safeDate=(v)=>Number.isSafeInteger(v)&&v>0&&v<=8640000000000000;
+const isoOrNull=(v)=>safeDate(v)?new Date(v).toISOString():null;
 
 export function parseGitHubQuotaObservation(headers,{observedAtMs=Date.now(),status=200}={}){
   const resource=String(read(headers,'x-ratelimit-resource')||'');
@@ -16,8 +18,7 @@ export function parseGitHubQuotaObservation(headers,{observedAtMs=Date.now(),sta
   const remaining=int(read(headers,'x-ratelimit-remaining'));
   const resetSec=int(read(headers,'x-ratelimit-reset'));
   if(!RESOURCES.has(resource)||limit==null||remaining==null||
-     remaining>limit||resetSec==null||!Number.isSafeInteger(resetSec*1000)||
-     !Number.isSafeInteger(observedAtMs)||observedAtMs<=0)return null;
+     remaining>limit||resetSec==null||!safeDate(resetSec*1000)||!safeDate(observedAtMs))return null;
   const resetAtMs=resetSec*1000;
   // A recorded 0 is real, but it is not permission to extrapolate another worker's
   // remaining quota. 403 permission errors and 429 with no rate headers are unknown.
@@ -72,9 +73,9 @@ export function projectGitHubQuotaRows(rows,{nowMs=Date.now()}={}){
         resource:row.resource,installationId:row.installation_id,
         measured:valid&&fresh,remaining:valid&&fresh?remaining:null,
         limit:valid&&fresh?limit:null,
-        resetAt:reset>0?new Date(reset).toISOString():null,
-        lastObservedAt:observed>0?new Date(observed).toISOString():null,
-        blockedUntil:row.blocked_until_ms>nowMs?new Date(row.blocked_until_ms).toISOString():null,
+        resetAt:isoOrNull(reset),
+        lastObservedAt:isoOrNull(observed),
+        blockedUntil:row.blocked_until_ms>nowMs?isoOrNull(row.blocked_until_ms):null,
         state:!valid?'invalid_evidence':fresh?'fresh':'stale'
       };
     });
