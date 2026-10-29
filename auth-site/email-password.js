@@ -16,6 +16,21 @@ export function authReturnPath(search){
   q.delete('ekodi_email_mode');
   return '/auth/'+(q.size?'?'+q.toString():'');
 }
+// EMAIL-ID-001: successful password/OTP login intentionally reloads /auth/ so
+// the pre-existing central session handoff can run. That one verified
+// transition is NOT a login loop. Reset only its exact navigation guard, and
+// only after Supabase Auth returned a verified session; the global loop guard
+// stays in place for all unrelated or failed navigations.
+export function verifiedEmailReturnGuardKey(search){
+  const q=new URLSearchParams(search);
+  const site=q.get('site')||'portal';
+  const returnTo=q.get('return_to')||q.get('returnTo')||'';
+  return `ekodi-auth-entry:${site}:${returnTo}`;
+}
+function resumeAfterVerifiedEmailSession(){
+  try{sessionStorage.removeItem(verifiedEmailReturnGuardKey(location.search));}catch{}
+  location.replace(authReturnPath(location.search));
+}
 function node(tag,text,cls){
   const el=document.createElement(tag);
   if(text)el.textContent=text;
@@ -138,13 +153,13 @@ export async function mountEmailPassword({resetOnly=false}={}){
         const {error}=await supabase.auth.verifyOtp({email:address,token:otp.value.trim(),type:'signup'});
         if(error)throw error;
         password.value='';otp.value='';
-        location.replace(authReturnPath(location.search));
+        resumeAfterVerifiedEmailSession();
       }else if(mode==='login'){
         const {data,error}=await supabase.auth.signInWithPassword({email:address,password:secret});
         if(error)throw error;
         if(!data?.user?.email_confirmed_at)throw new Error('email_not_confirmed');
         password.value='';
-        location.replace(authReturnPath(location.search));
+        resumeAfterVerifiedEmailSession();
       }else{
         const {error:verifyError}=await supabase.auth.verifyOtp({email:address,token:otp.value.trim(),type:'recovery'});
         if(verifyError)throw verifyError;
