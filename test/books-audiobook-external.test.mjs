@@ -44,9 +44,9 @@ test('external claims do not issue rights without provider review',async()=>{
   assert.equal(db.prepare('SELECT COUNT(*) n FROM books_audiobook_external_grants').get().n,0);
   assert.equal((await listMyClaims(env,make('buyer'))).status,200);
   assert.equal((await submitAudioClaim(env,make('buyer',body))).status,409,'same external order cannot be claimed twice');
-  assert.equal((await approveAudioClaim(env,make('buyer',{orderNumber:body.orderNumber,confirmedWithRetailer:true,buyerIdentityMatched:true,refundStatusChecked:true,verificationMethod:'retailer_portal'}),claim.claimId)).status,403,'buyer cannot approve own order');
-  assert.equal((await approveAudioClaim(env,make('operator',{orderNumber:'WRONG-ORDER',confirmedWithRetailer:true,buyerIdentityMatched:true,refundStatusChecked:true,verificationMethod:'retailer_portal'}),claim.claimId)).status,409);
-  const approved=await approveAudioClaim(env,make('operator',{orderNumber:body.orderNumber,confirmedWithRetailer:true,buyerIdentityMatched:true,refundStatusChecked:true,verificationMethod:'retailer_portal'}),claim.claimId);
+  assert.equal((await approveAudioClaim(env,make('buyer',{orderNumber:body.orderNumber,confirmedWithRetailer:true,buyerIdentityMatched:true,refundStatusChecked:true,productEditionMatched:true,verificationMethod:'retailer_portal'}),claim.claimId)).status,403,'buyer cannot approve own order');
+  assert.equal((await approveAudioClaim(env,make('operator',{orderNumber:'WRONG-ORDER',confirmedWithRetailer:true,buyerIdentityMatched:true,refundStatusChecked:true,productEditionMatched:true,verificationMethod:'retailer_portal'}),claim.claimId)).status,409);
+  const approved=await approveAudioClaim(env,make('operator',{orderNumber:body.orderNumber,confirmedWithRetailer:true,buyerIdentityMatched:true,refundStatusChecked:true,productEditionMatched:true,verificationMethod:'retailer_portal'}),claim.claimId);
   assert.equal(approved.status,200);
   assert.equal(db.prepare('SELECT COUNT(*) n FROM books_audiobook_external_grants WHERE revoked_at IS NULL').get().n,1);
   assert.equal((await revokeAudioClaim(env,make('buyer',{confirm:true,reason:'refund'}),claim.claimId)).status,403);
@@ -57,7 +57,7 @@ test('external claims do not issue rights without provider review',async()=>{
   const next=await second.json();
   const again=await approveAudioClaim(env,make('operator',{
     orderNumber:'PURCHASE-20261029-DEF',confirmedWithRetailer:true,buyerIdentityMatched:true,
-    refundStatusChecked:true,verificationMethod:'retailer_portal'
+    refundStatusChecked:true,productEditionMatched:true,verificationMethod:'retailer_portal'
   }),next.claimId);
   assert.equal(again.status,200,'a newly verified purchase may restore a previously revoked audio-only grant');
   const grant=db.prepare("SELECT claim_id,revoked_at FROM books_audiobook_external_grants WHERE buyer_user_id='buyer-id'").get();
@@ -79,7 +79,7 @@ test('operator can reject unverifiable orders without issuing any new access',as
   const row=db.prepare('SELECT status,rejection_reason FROM books_audiobook_external_claims WHERE id=?').get(claim.claimId);
   assert.equal(row.status,'rejected');assert.equal(row.rejection_reason,'identity_mismatch');
   assert.equal((await approveAudioClaim(env,make('operator',{orderNumber:'GOOGLE-ORDER-12345',
-    confirmedWithRetailer:true,buyerIdentityMatched:true,refundStatusChecked:true,
+    confirmedWithRetailer:true,buyerIdentityMatched:true,refundStatusChecked:true,productEditionMatched:true,
     verificationMethod:'retailer_portal'}),claim.claimId)).status,409);
 });
 test('approval cannot skip proof of purchaser identity or refund status',async()=>{
