@@ -11,6 +11,11 @@ export const BROKER_ADAPTERS = Object.freeze({
     capabilities:['quotes','positions','orders'],
     liveTradingEnabled:false,credentialMode:'user_authorized_official_api'
   },
+  kis:{
+    id:'kis',name:'한국투자증권 (KIS Developers)',markets:['KR','US'],
+    capabilities:['quotes','positions','orders'],
+    liveTradingEnabled:false,credentialMode:'user_authorized_official_api'
+  },
   ibkr:{
     id:'ibkr',name:'Interactive Brokers',markets:['GLOBAL'],
     capabilities:['quotes','positions','orders'],
