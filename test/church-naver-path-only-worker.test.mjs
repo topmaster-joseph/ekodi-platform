@@ -48,5 +48,5 @@ test('Official guarded manual deployment modifies no unrelated topology and chec
   assert.match(wf, /https:\/\/ekodichurch\.kr\//);
   assert.doesNotMatch(wf, /\bDELETE\b|\bPATCH\b|dns_records\b|pages\/projects\b/);
   const lanes = JSON.parse(await readFile(new URL('../config/worker-deploy-lanes.json', import.meta.url), 'utf8'));
-  assert.equal(lanes.configs['wrangler.church-naver-proof.toml']?.workflow, 'deploy-church-naver-proof.yml');
+  assert.equal(lanes.workers['wrangler.church-naver-proof.toml']?.workflow, 'deploy-church-naver-proof.yml');
 });
