@@ -11,7 +11,17 @@ const candidate=()=>({
   title:'권리 검수 완료된 비공개 도서',authorId:'AUTHOR-001',releaseDigest:DIGEST,
   fieldId:'humanities',collectionId:'general-theology',priceKrw:9900,
   format:'epub',readerProfiles:['general'],
-  rights:truth(['licenseChecked','authorContractApproved']),
+  // Synthetic backend evidence for a valid publisher-side test candidate.
+  // Production approvals remain server-verified and cannot be client asserted.
+  authorMembership:{planId:'writer1',serverVerified:true,authorId:'AUTHOR-001'},
+  rights:{...truth(['licenseChecked','authorContractApproved','distributionLicenseApproved']),
+    copyrightOwnerId:'AUTHOR-001'},
+  salesContract:{verified:true,signedByAuthorId:'AUTHOR-001',editionDigest:DIGEST,
+    royaltyTermsAccepted:true,salesCommissionTermsAccepted:true},
+  audiobook:{highQualityApproved:true,humanListeningQaPassed:true,
+    dialogueNarrationReviewed:true,masterAssetDigest:'sha256:'+'f'.repeat(64),
+    pairedEditionDigest:DIGEST,additionalBuyerPriceKrw:0,
+    buyerBundleEntitlementVerified:true,refundRevocationVerified:true},
   originality:truth(['provenanceReviewed','verifiedNoUnauthorizedImitation']),
   craft:truth(['realHumanExperienceReviewed','characterAndMotivationReviewed',
     'logicAndContinuityReviewed','readerFeedbackReviewed','editorialRevisionComplete']),
