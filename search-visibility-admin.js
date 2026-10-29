@@ -294,7 +294,7 @@
   ];
   function siteCategory(site) {
     if (site.propertyType === 'independent-domain' || site.type === 'domain-alias') return '독립 도메인';
-    const path = new URL(site.url).pathname.replace(/^\\/+|\\/+$/g, '').split('/')[0].toLowerCase();
+    const path = new URL(site.url).pathname.replace(/^\/+|\/+$/g, '').split('/')[0].toLowerCase();
     if (!path || path === 'ekodi') return '플랫폼';
     const known = CATEGORY_RULES.find(([,pattern]) => pattern.test(path));
     if (known) return known[0];
