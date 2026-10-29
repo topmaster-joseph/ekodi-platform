@@ -29,9 +29,10 @@ test('password credentials remain only with the supported Auth service and never
   assert.match(spec,/운영 스위치.*닫아 둔다/);
 });
 test('provider switch observations are documented as runtime DB state, not live OAuth proof',()=>{
-  for(const text of [spec,boundary,auth,emailProviders]){
+  for(const text of [spec,boundary,emailProviders]){
     assert.ok(/Kakao.*true|카카오.*true/.test(text), 'Kakao enabled DB snapshot required');
     assert.ok(/Naver.*false|네이버.*false/.test(text), 'Naver disabled DB snapshot required');
   }
+  assert.match(auth,/Kakao 활성, Naver 비활성/);
   assert.match(spec,/키 설치나 성공 로그인까지 입증하지는 않는다/);
 });
