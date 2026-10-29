@@ -239,3 +239,18 @@ test('church, mission, and Bible share a fail-closed tomorrow navigation control
  assert.match(client,/if \(!await verifyFuturePermission\(date\)\)/);
  assert.match(client,/timeZone:'Asia\/Seoul'/);
 });
+
+test('Bible and Church show only Login for guest, verified account plus Logout after authentication',()=>{
+ const client=fs.readFileSync(new URL('../bible/devotion.js',import.meta.url),'utf8');
+ const css=fs.readFileSync(new URL('../bible/devotion.css',import.meta.url),'utf8');
+ assert.match(client,/siteKey==='mission' \? null : el\('div','dv-shared-auth'\)/);
+ assert.match(client,/if\(!signedIn\)\{/);
+ assert.match(client,/el\('a','dv-date-link','로그인'\)/);
+ assert.match(client,/el\('span','dv-shared-account',String\(viewer\.email\|\|'계정'\)/);
+ assert.match(client,/el\('button','dv-date-link','로그아웃'\)/);
+ assert.match(client,/showSharedAccount\(viewer\)/);
+ assert.match(client,/const response = await fetch\(\x60\$\{API\}\/me\x60/);
+ assert.match(client,/window\.dispatchEvent\(new Event\('ekodi:auth-logout'\)\)/);
+ assert.match(css,/\.dv-shared-tools > \.dv-adminbar\[hidden\]\{display:none!important\}/);
+ assert.match(css,/\.dv-shared-account\{max-width:210px/);
+});
