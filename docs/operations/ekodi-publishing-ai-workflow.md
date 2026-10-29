@@ -29,7 +29,7 @@ changes_requested leads back to drafting; any content change must invalidate for
 
 ## Unfinished
 - D1 not provisioned; actual AI writing runner, private source connector, EPUB production, signed release dispatch, commercial booking scheduler and production UI not activated.
-- Legacy /publishing/studio/ client still contains an old api.ekodi.kr/auth.ekodi.kr path and is not yet replaced.
+- Legacy /publishing/studio/ still uses old host-based API and login URLs; it must migrate to canonical apex subpaths in a separate protected task.
 - Up to six monthly discipline slots remain planning targets, NOT automatically published books.
 
 ## Verification
