@@ -13,7 +13,7 @@
   Access-Control-Allow-Origin: *
 
 # Proposal Studio is a read-only browser-local editor; globally locked-down CSP
- # would otherwise block its same-origin JS/CSS. This exception is path-only.
+# Otherwise the global CSP blocks its same-origin JS/CSS.
 /proposal/
   ! Content-Security-Policy
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; object-src 'none'
