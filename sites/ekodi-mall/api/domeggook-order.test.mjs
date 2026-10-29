@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readdirSync, readFileSync } from 'node:fs';
-import { placeSupplierOrders, trackSupplierOrders, buildDeliInfo, buildItemValue, probeDomeggookLogin, approvedMemberBindingReady, autoOrderEnabled, chooseOptionCode } from './domeggook-order.js';
+import { placeSupplierOrders, trackSupplierOrders, buildDeliInfo, buildItemValue, probeDomeggookLogin, approvedMemberBindingReady, autoOrderEnabled, classifySupplierAuthError, chooseOptionCode } from './domeggook-order.js';
 
 function d1(db) {
   const wrap = (sql) => { const stmt = db.prepare(sql); let args = []; const api = {
@@ -287,4 +287,32 @@ test('supplier login session must belong to the separately approved member', asy
   assert.deepEqual(calls.map(x => x.mode), ['setLogin'], 'do not call getMyAsset or setOrder on mismatched session');
   const saved = db.prepare("SELECT metadata_json FROM supplier_connector_checks WHERE external_ref='probe:login'").get().metadata_json;
   assert.ok(!saved.includes('another-member') && !saved.includes('UNAPPROVED_SESSION'));
+});
+
+test('supplier errors are classified to safe codes', () => {
+  assert.equal(classifySupplierAuthError('도매꾹 로그인 실패: false'), 'LOGIN_REJECTED');
+  assert.equal(classifySupplierAuthError('SNS 회원 로그인은 별도 비밀번호 필요'), 'SNS_PASSWORD_REQUIRED');
+  assert.equal(classifySupplierAuthError('비밀번호 오류'), 'PASSWORD_REJECTED');
+  assert.equal(classifySupplierAuthError('회원 오류'), 'MEMBER_ERROR');
+  assert.equal(classifySupplierAuthError('Private API 권한 거절'), 'PRIVATE_API_PERMISSION');
+  assert.equal(classifySupplierAuthError('승인 회원과 로그인 회원이 일치하지 않습니다'), 'ACCOUNT_BINDING_MISMATCH');
+  assert.equal(classifySupplierAuthError('unrecognized failure', 'asset'), 'ASSET_PROBE_FAILED');
+});
+
+test('operator read-only retry permits one login in 15 minutes, cron keeps 6-hour limit', async () => {
+  const { db, env } = setup({ DOMEGGOOK_AUTO_ORDER_ENABLED: 'false', DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED: 'true' });
+  const calls=[];
+  let r=await probeDomeggookLogin(env,supplier({},calls),{operatorRetry:true});
+  assert.equal(r.ok,true);
+  const first=calls.length;
+  r=await probeDomeggookLogin(env,supplier({},calls),{operatorRetry:true});
+  assert.equal(r.skipped,'recent');
+  assert.ok(r.nextEligibleAt);
+  assert.equal(calls.length,first);
+  db.prepare("UPDATE supplier_connector_checks SET checked_at=? WHERE external_ref='probe:login'").run(new Date(Date.now()-16*60*1000).toISOString());
+  r=await probeDomeggookLogin(env,supplier({},calls));
+  assert.equal(r.skipped,'recent');
+  r=await probeDomeggookLogin(env,supplier({},calls),{operatorRetry:true});
+  assert.equal(r.ok,true);
+  assert.equal(calls.filter(x=>x.mode==='setOrder').length,0);
 });
