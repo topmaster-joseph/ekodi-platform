@@ -2,7 +2,7 @@ import { handleMembershipBilling as handleLegacyMembershipBilling, runMembership
 import { isAllowedOrigin } from './auth-worker.js';
 import { USER_SERVICES, USER_SERVICE_IDS } from './generated/user-services.js';
 import { canonicalAiSubject, legacyAiSubject } from './personal-ai-bridge.js';
-import { loadBillingIdentity, personalSubscriptionLookupKeys, choosePersonalSubscription } from './membership-identity.js';
+import { loadBillingIdentity, personalSubscriptionLookupKeys, choosePersonalSubscription, saveVerifiedBillingAliases } from './membership-identity.js';
 import { AI_ENTITLEMENT_POLICY, buildAiEntitlementSnapshot } from './ai-entitlement-engine.js';
 
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
@@ -61,7 +61,7 @@ function oauthClientToken(token) {
   } catch { return false; }
 }
 
-async function userIdentity(request) {
+async function userIdentity(request, env) {
   const token = bearerToken(request);
   if (!token || token.length > 8192 || oauthClientToken(token)) return null;
   const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
@@ -74,6 +74,7 @@ async function userIdentity(request) {
   const identity = await loadBillingIdentity({ accessToken:token,
     authUser:{id:String(user.id),email}, supabaseUrl:SUPABASE_URL,
     publishableKey:SUPABASE_PUBLISHABLE_KEY });
+  if (identity) await saveVerifiedBillingAliases(env.DB, identity);
   return identity ? {...identity, canonical:true} : null;
 }
 
@@ -233,7 +234,7 @@ export async function aiEntitlementSnapshotForIdentity(request, env, identity) {
 }
 
 async function entitlementSnapshot(request, env) {
-  const identity = await userIdentity(request);
+  const identity = await userIdentity(request, env);
   if (!identity) return json({ error:'EKODI 로그인 세션을 확인해 주세요.' }, 401, request, env);
   return aiEntitlementSnapshotForIdentity(request, env, identity);
 }
@@ -269,7 +270,7 @@ export async function membershipPortfolioForIdentity(request, env, identity) {
 }
 
 async function portfolio(request, env) {
-  const identity = await userIdentity(request);
+  const identity = await userIdentity(request, env);
   if (!identity) return json({ error: 'EKODI 로그인 세션을 확인해 주세요.' }, 401, request, env);
   return portfolioForIdentity(request, env, identity);
 }
@@ -286,7 +287,7 @@ async function genericCatalog(request, env, site) {
 }
 
 async function genericMe(request, env, site) {
-  const identity = await userIdentity(request);
+  const identity = await userIdentity(request, env);
   if (!identity) return json({ error: 'EKODI 로그인 세션을 확인해 주세요.' }, 401, request, env);
   await ensureFreeSchema(env.DB);
   const row = await materializeFree(env.DB, identity, site);
@@ -307,7 +308,7 @@ async function genericMe(request, env, site) {
 }
 
 async function genericSelect(request, env) {
-  const identity = await userIdentity(request);
+  const identity = await userIdentity(request, env);
   let body = null;
   try { body = await request.json(); } catch {}
   const site = normalizeRegistrySite(body?.site);
