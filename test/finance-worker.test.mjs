@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import worker from '../finance-worker.js';
+import worker, { hasGlobalFinanceAccess } from '../finance-worker.js';
 import { namespaceFinanceSql } from '../finance-entry-worker.js';
 
 test('finance SQL is isolated from pre-existing application tables', () => {
@@ -136,4 +136,20 @@ test('webhook cannot replay another order or payment key from a valid Toss looku
    assert.equal(forgedKey.status,502);
    assert.equal(a.calls.some(x=>/INSERT INTO payments/.test(x.sql)),false);
  }finally{globalThis.fetch=originalFetch;}
+});
+
+test('global cross-organization Finance access is reserved to authenticated platform superadmin',()=>{
+ assert.equal(hasGlobalFinanceAccess({authenticated:true,role:'super_admin'}),true);
+ assert.equal(hasGlobalFinanceAccess({authenticated:true,role:'admin'}),false);
+ assert.equal(hasGlobalFinanceAccess({authenticated:true,role:'site_manager'}),false);
+ assert.equal(hasGlobalFinanceAccess({authenticated:false,role:'super_admin'}),false);
+ assert.equal(hasGlobalFinanceAccess(null),false);
+});
+test('financial admin order creation is immutable and rejects nonpositive or fractional input',async()=>{
+ const source=await import('node:fs/promises').then(x=>x.readFile(new URL('../finance-worker.js',import.meta.url),'utf8'));
+ assert.match(source,/ON CONFLICT\(order_id\) DO NOTHING/);
+ assert.doesNotMatch(source,/ON CONFLICT\(order_id\) DO UPDATE SET/);
+ assert.match(source,/Number\.isSafeInteger\(amount\) \|\| amount <= 0/);
+ assert.match(source,/result\?\.meta\?\.changes/);
+ assert.match(source,/finance\.order\.create/);
 });
