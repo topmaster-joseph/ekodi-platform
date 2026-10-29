@@ -690,7 +690,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       const stateClass=entry.item?.effectiveEnabled?' mall-source-tab-live':entry.item?.selected?' mall-source-tab-pending':'';
       return `<button type="button" class="mall-source-tab${stateClass}${pressed?' is-active':''}" data-mall-source-channel="${ae(entry.key)}" aria-pressed="${pressed}">${ae(entry.label)}</button>`;
     }).join('');
-    return `<div class="mall-sourcing-head"><div class="mall-sourcing-heading"><h2>에코디몰 판매채널 · 공급망 설정</h2><p class="empty">판매처를 선택해 연결 상태와 사용 여부를 관리합니다. Amazon도 같은 목록에서 선택합니다.</p></div><div class="mall-sourcing-tabs" role="group" aria-label="판매채널 선택">${tabs}</div></div>`;
+    return `<div class="mall-sourcing-head"><div class="mall-sourcing-heading"><h2>에코디몰 판매채널 · 공급망 설정</h2><p class="empty">플랫폼 공통 판매·공급망 엔진에 등록된 Provider 중 판매처를 선택하면 연결 상태와 사용 여부를 관리할 수 있습니다. Amazon도 같은 목록에서 선택합니다.</p></div><div class="mall-sourcing-tabs" role="group" aria-label="판매채널 선택">${tabs}</div></div>`;
   }
   function bindMallSourcingTabs(){
     document.querySelectorAll('[data-mall-source-channel]').forEach(button=>button.addEventListener('click',()=>{
@@ -718,7 +718,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       const header=mallSourcingHeader(sources,selected);
       const chosen=sources.filter(item=>mallSourcingTabKey(item)===selected);
       const sourceForm=chosen.length?`<form id="affiliateWorkspaceSourcesForm"><div class="service-list">${chosen.map(workspaceSourceRow).join('')}</div><div class="actions"><button class="button primary" type="submit">에코디몰 사용 설정 저장</button><a class="button" href="/admin/services/supply-network" target="_blank" rel="noopener">플랫폼 공급망 엔진 ↗</a></div></form>`:'';
-      const explanation='<p class="empty mall-source-policy">여기의 ON/OFF는 플랫폼 연동 자체가 아니라 에코디몰 사용 여부입니다. 승인·추적링크·상품/가격 공급이 검증된 경로만 고객 노출과 자동영업에 사용됩니다. Secret과 API Key는 서버에서만 관리합니다.</p>';
+      const explanation='<p class="empty mall-source-policy">여기의 ON/OFF는 플랫폼 연동 자체가 아니라 에코디몰 사용 여부입니다. 승인·추적링크·상품/가격 공급이 검증된 경로만 고객 노출과 자동영업에 사용됩니다. 플랫폼 관리자는 Provider·Adapter·Secret을 공통 엔진에서 관리하고, 에코디몰 관리자는 사용 여부만 관리합니다. Secret/API Key는 이 화면에 표시하지 않습니다. 자동게시 채널·일일 한도는 자동운영에서 관리합니다.</p>';
       let amazonReady=true;
       if(selected==='amazon'){
         amazonReady=await amazonAdmin();
