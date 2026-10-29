@@ -92,3 +92,23 @@ test('production workflow gates the single-rule API patch, deploys proof and ver
   assert.match(src,/'PATCH'/);
   assert.doesNotMatch(src,/['"]PUT['"]|dns_records|pages\/projects/);
 });
+
+
+test('dedicated Cloudflare church Single Redirect token cannot leak to generic worker release stages', async () => {
+  const workflow = await readFile(new URL('../.github/workflows/deploy-church-naver-proof.yml', import.meta.url), 'utf8');
+  const script = await readFile(new URL('../scripts/cloudflare-church-naver-redirect-exception.mjs', import.meta.url), 'utf8');
+  const name = 'CLOUDFLARE_CHURCH_RULES_API_TOKEN';
+  assert.ok(workflow.includes('secrets.' + name));
+  assert.equal((workflow.match(new RegExp('secrets\\.' + name, 'g')) || []).length, 2);
+  // Token is step-scoped, never included in the whole job or worker deployment.
+  const workerStart = workflow.indexOf('name: Deploy exact Naver proof route');
+  const inspectStart = workflow.indexOf('name: Inspect exact existing church');
+  const applyStart = workflow.indexOf('name: Exclude only Naver proof URL');
+  const liveStart = workflow.indexOf('name: Verify real Naver owner proof');
+  assert.ok(workerStart >= 0 && inspectStart > workerStart && applyStart > inspectStart && liveStart > applyStart);
+  assert.ok(!workflow.slice(0,inspectStart).includes(name));
+  assert.ok(!workflow.slice(liveStart).includes(name));
+  assert.match(script, /process\.env\.CLOUDFLARE_CHURCH_RULES_API_TOKEN/);
+  assert.doesNotMatch(script, /token: process\.env\.CLOUDFLARE_API_TOKEN/);
+  assert.ok(script.includes('Single Redirect Edit'));
+});
