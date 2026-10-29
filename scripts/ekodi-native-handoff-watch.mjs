@@ -53,10 +53,13 @@ function latestRun(value){
   const list=Array.isArray(value?.workflow_runs)?value.workflow_runs:[];
   return list.find(item=>['schedule','workflow_dispatch'].includes(item.event))||null;
 }
-function classifyWorkflowRun(value){
+function classifyWorkflowRun(value,nowMs=Date.now()){
   const run=latestRun(value);
   if(!run)return check('native-schedule','blocked','no_native_scheduled_run');
   const base={runId:Number(run.id)||null,conclusion:limit(run.conclusion||run.status)};
+  const timestamp=Date.parse(run.created_at||'');
+  if(!Number.isFinite(timestamp)||timestamp>nowMs+60000||nowMs-timestamp>4*3600000)
+    return check('native-schedule','blocked','native_scheduled_run_stale_or_undated',base);
   if(run.status!=='completed')return check('native-schedule','observing','run_in_progress',base);
   if(run.conclusion!=='success')return check('native-schedule','blocked','scheduled_run_not_successful',base);
   return check('native-schedule','observed','scheduled_run_successful',base);
@@ -88,7 +91,7 @@ async function publishingEvidence(now){
   return check('human-publishing','blocked','authorized_editorial_store_and_authoring_not_verified',
     {month,plannedSlots:slots.length,verifiedReleases:0,publicationsDispatched:false});
 }
-async function githubEvidence(job,get){
+async function githubEvidence(job,get,now){
   const id=job.id,workflows=GITHUB_WORKFLOWS;
   const evidence=[];
   if(id==='church-live-release'){
@@ -107,7 +110,7 @@ async function githubEvidence(job,get){
   const workflow=workflows[id];
   if(workflow){
     const run=await get(API+'/actions/workflows/'+workflow+'/runs?per_page=15');
-    evidence.push(run.ok?classifyWorkflowRun(run.value):check('native-schedule','blocked',run.reason));
+    evidence.push(run.ok?classifyWorkflowRun(run.value,now.getTime()):check('native-schedule','blocked',run.reason));
   }
   if(id==='social-accounts-release')evidence.push(check('social-e2e','blocked','read_only_watch_does_not_prove_signed_in_e2e'));
   if(id==='church-live-release')evidence.push(check('live-viewer-e2e','blocked','requires_exact_release_and_authenticated_viewer_evidence'));
@@ -134,7 +137,7 @@ export async function collectNativeHandoff({
     if(stop)checks=[check('source','deferred','provider_circuit_open')];
     else if(job.id==='human-publishing-editorial')checks=[await publishingEvidence(now)];
     else if(job.id==='church-weekly-worship')checks=[await churchWorshipEvidence(now)];
-    else checks=await githubEvidence(job,get);
+    else checks=await githubEvidence(job,get,now);
     data.records.push({id:job.id,schedule:job.schedule,mode:sourceState(job),
       state:checks.some(x=>x.state==='blocked')?'handoff_not_ready':'evidence_only',
       checks,cutoverAllowed:false});
