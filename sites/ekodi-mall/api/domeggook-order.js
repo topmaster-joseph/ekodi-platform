@@ -32,9 +32,18 @@ const TRACK_INTERVAL_MS = 60 * 60 * 1000;
 const isoNow = () => new Date().toISOString();
 const pipeSafe = (v, max = 120) => String(v ?? '').replace(/[|\r\n]/g, ' ').trim().slice(0, max);
 
+/** The supplier confirms Private API is approved for one member only.
+ * Compare the separately provisioned approved account secret; never disclose identifiers. */
+export function approvedMemberBindingReady(env) {
+  const configured = String(env?.DOMEMAE_USER_ID || '').trim();
+  const approved = String(env?.DOMEMAE_APPROVED_MEMBER_ID || '').trim();
+  return Boolean(configured && approved && configured === approved);
+}
+
 export function autoOrderEnabled(env) {
   return String(env?.DOMEGGOOK_AUTO_ORDER_ENABLED || '').toLowerCase() === 'true'
-    && Boolean(env.DOMEMAE_API_KEY && env.DOMEMAE_USER_ID && env.DOMEMAE_PASSWORD);
+    && Boolean(env?.DOMEMAE_API_KEY && env?.DOMEMAE_USER_ID && env?.DOMEMAE_PASSWORD)
+    && approvedMemberBindingReady(env);
 }
 
 function redact(text, env) {
@@ -70,8 +79,11 @@ export async function login(env, fetchImpl = fetch) {
   const sId = r.root?.sId;
   if (!r.ok || apiError(r, env) || !sId || !String(r.root?.id || '').trim())
     throw new Error(`도매꾹 로그인 실패: ${apiError(r, env) || '인증 결과/회원 ID/세션 불명'}`);
-  // 로그인 응답의 회원 ID를 이후 호출에 쓴다(SNS 연동 계정은 입력 ID와 실제 회원 ID(sns@…)가 다를 수 있음 → '회원오류').
-  return { id: String(r.root?.id || env.DOMEMAE_USER_ID), sId: String(sId) };
+  // Deny any session bound to another member even when the supplier returned success.
+  // The vendor-approved account ID is set only in a Cloudflare secret.
+  if (!approvedMemberBindingReady(env) || String(r.root.id).trim() !== String(env.DOMEMAE_APPROVED_MEMBER_ID).trim())
+    throw new Error('도매꾹 Private API 승인 회원과 로그인 회원이 일치하지 않습니다');
+  return { id: String(r.root.id), sId: String(sId) };
 }
 
 export async function emoneyBalance(env, session, fetchImpl = fetch) {
@@ -257,7 +269,8 @@ export async function trackSupplierOrders(env, fetchImpl = fetch, limit = 10) {
 /** Read-only authentication probe independent of the paid setOrder switch.
  * This never invokes setOrder, setOrdDeny or customer/PII endpoints. */
 export function readonlyAuthProbeEnabled(env) {
-  return Boolean(env?.DB && env.DOMEMAE_API_KEY && env.DOMEMAE_USER_ID && env.DOMEMAE_PASSWORD)
+  return Boolean(env?.DB && env?.DOMEMAE_API_KEY && env?.DOMEMAE_USER_ID && env?.DOMEMAE_PASSWORD)
+    && approvedMemberBindingReady(env)
     && (autoOrderEnabled(env) || String(env.DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED || '').toLowerCase() === 'true');
 }
 
@@ -282,9 +295,11 @@ export async function probeDomeggookLogin(env, fetchImpl = fetch) {
     }
   } catch (error) {
     // Vendor error text can contain identifiers/credentials: persist only a bounded category.
-    const memberError = /회원\s*오류|member\s*error/i.test(String(error?.message || ''));
+    const message = String(error?.message || '');
+    const accountMismatch = /승인 회원과 로그인 회원이 일치하지 않습니다/i.test(message);
+    const memberError = /회원\s*오류|member\s*error/i.test(message);
     meta = { login: stage === 'login' ? 'failed' : 'ok', asset: stage === 'asset' ? 'failed' : 'not-checked',
-      errorCode: memberError ? 'MEMBER_ERROR' : stage === 'login' ? 'LOGIN_FAILED' : 'ASSET_PROBE_FAILED' };
+      errorCode: accountMismatch ? 'ACCOUNT_BINDING_MISMATCH' : memberError ? 'MEMBER_ERROR' : stage === 'login' ? 'LOGIN_FAILED' : 'ASSET_PROBE_FAILED' };
     await raiseAlert(env, { severity: 'error', kind: 'supply.login_failed', message: `도매꾹 읽기 전용 인증 점검 실패: ${meta.errorCode}` });
   }
   await env.DB.prepare('INSERT INTO supplier_connector_checks (id,provider_id,check_type,external_ref,result_status,metadata_json,checked_at) VALUES (?,?,?,?,?,?,?)')
