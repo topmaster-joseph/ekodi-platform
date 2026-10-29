@@ -163,3 +163,53 @@ test('migration is additive and stores no credentials',()=>{
  const ddl=MIGRATION.replace(/--[^\n]*/g,'');
  assert.doesNotMatch(ddl,/password|secret|token|account_number|client_id/i);
 });
+
+test('named highest administrator alone can inspect live trading readiness after step-up; no orders are sent',async()=>{
+ const {env,call}=harness('topmaster.joseph@gmail.com');
+ env.INVEST_OWNER_EMAIL='topmaster.joseph@gmail.com';
+ const result=await call('GET','/v1/invest/autopilot/live/readiness?broker=toss');
+ assert.equal(result.status,200);
+ assert.equal(result.body.schema,'ekodi.invest.owner-live-readiness.v1');
+ assert.equal(result.body.scope,'owner_self_funds_only');
+ assert.equal(result.body.ownerVerified,true);
+ assert.equal(result.body.secondFactorVerified,true);
+ assert.equal(result.body.workspaceVisible,true);
+ assert.equal(result.body.liveExecutionEnabled,false);
+ assert.equal(result.body.liveOrdersAccepted,false);
+ assert.equal(result.body.broker.id,'toss');
+ assert.equal(result.body.broker.permission,'read_only');
+ assert.equal(result.body.broker.credentialsIncluded,false);
+ assert.equal(result.body.broker.liveEligible,false);
+ assert.ok(result.body.broker.blockers.includes('READINESS_GLOBAL_LIVE_POLICY_ENABLED'));
+ assert.ok(result.body.activation.blockers.includes('platformLiveSwitch'));
+ assert.equal((await call('GET','/v1/invest/autopilot/live/readiness?broker=unknown')).status,400);
+ const blocked=await call('POST','/v1/invest/autopilot/live/orders',{symbol:'069500',side:'BUY',qty:1,limitPrice:10000});
+ assert.equal(blocked.status,423);
+ assert.equal(blocked.body.error,'LIVE_EXECUTION_LOCKED');
+ assert.equal(blocked.body.executionPerformed,false);
+ assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM investment_autopilot_orders').get().n,0);
+ const untrusted=harness('other@example.com');
+ untrusted.env.INVEST_OWNER_EMAIL='other@example.com';
+ assert.equal((await untrusted.call('GET','/v1/invest/autopilot/live/readiness')).body.error,'LIVE_OWNER_ONLY');
+ assert.equal((await untrusted.call('POST','/v1/invest/autopilot/live/orders',{})).status,403);
+ const anonymous=await handleInvestAutopilotApi(new Request('https://ekodi.kr/v1/invest/autopilot/live/readiness'),{DB:d1()});
+ assert.equal(anonymous.status,401);
+ const keys=[];
+ JSON.stringify(result.body,(key,value)=>{keys.push(key);return value});
+ assert.equal(keys.some(key=>/account_?number|secret|access_?token|client_?id|credential(?!sIncluded)/i.test(key)),false);
+});
+
+test('My Invest live workspace is under owner second-factor gate and never presents an enabled order form',async()=>{
+ const {investMyRoute}=await import('../invest-my-workspace.js');
+ const html=await (await investMyRoute(new Request('https://ekodi.kr/invest'),{})).text();
+ assert.match(html,/<section id="owner" hidden>/);
+ assert.match(html,/id="liveTrading"/);
+ assert.match(html,/id="liveBroker"/);
+ assert.match(html,/id="liveRefresh"/);
+ assert.doesNotMatch(html,/id="liveOrderSubmit"|name="liveOrderAmount"/);
+ const js=await (await investMyRoute(new Request('https://ekodi.kr/invest/app.js'),{})).text();
+ assert.match(js,/async function loadLiveReadiness/);
+ assert.match(js,/\/live\/readiness\?broker=/);
+ assert.match(js,/r\.ownerVerified!==true/);
+ assert.doesNotMatch(js,/\/live\/orders['"`]/);
+});
