@@ -66,6 +66,9 @@ function rewriteText(text, incoming, contentType) {
 // Search discovery: one Korean IDN canonical on both publicly reachable hosts.
 // The English customer domain continues to serve its existing functionality.
 const CANONICAL_ORIGIN = 'https://xn--3e0b8b58jw4co4mnpll3k.kr';
+// Naver Search Advisor owner-issued 2026-10-30 for the English alias only.
+export const SEONAMMEDI_ENGLISH_NAVER_FILE_PATH = '/navera1df00235ac98ccb6796021cd7feb55a.html';
+export const SEONAMMEDI_ENGLISH_NAVER_FILE_BODY = 'naver-site-verification: navera1df00235ac98ccb6796021cd7feb55a.html';
 export const SEONAMMEDI_SITEMAP_PATHS = Object.freeze(['/', '/board/notices', '/board/voices']);
 // Daum Webmaster Tool ownership line (public value issued for https://seonammedi.kr,
 // owner-provided 2026-10-19). Daum has no IndexNow/API registration lane.
@@ -152,6 +155,10 @@ function discoveryResponse(body, contentType, route, method) {
 
 export function seonammediDiscoveryResponse(request, incoming) {
   if (!['GET', 'HEAD'].includes(request.method)) return null;
+  if (incoming.hostname.toLowerCase() === 'seonammedi.kr' &&
+      incoming.pathname === SEONAMMEDI_ENGLISH_NAVER_FILE_PATH) {
+    return discoveryResponse(SEONAMMEDI_ENGLISH_NAVER_FILE_BODY, 'text/html; charset=utf-8', 'seonammedi-english-naver-ownership', request.method);
+  }
   if (incoming.hostname.toLowerCase() === 'xn--3e0b8b58jw4co4mnpll3k.kr' &&
       incoming.pathname === SEONAMMEDI_NAVER_FILE_PATH) {
     return discoveryResponse(SEONAMMEDI_NAVER_FILE_BODY, 'text/html; charset=utf-8', 'seonammedi-naver-ownership', request.method);
