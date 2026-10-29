@@ -145,6 +145,28 @@ test('future content is not exposed to unauthenticated clients or link crawlers'
   assert.doesNotMatch(html,/2099-01-01.*오바댜/);
   assert.match(html,/오늘의 매일묵상/);
 });
+test('Mission guest future 403 explains the restriction and immediately restores today without exposing future content',()=>{
+  const js=fs.readFileSync(new URL('devotion.js',bibleDir),'utf8');
+  const fallback=js.slice(js.indexOf("const futureNotice = '아직 공개되지"),js.indexOf("if (!date && data.date && dateMode === 'path')"));
+  assert.ok(fallback.length>400 && fallback.length<3800);
+  assert.ok(fallback.includes("if (siteKey === 'mission' && date && data.error === 'future_unavailable'"));
+  assert.ok(fallback.includes("typeof data.today === 'string'"));
+  assert.ok(fallback.includes("data.today < date"));
+  assert.ok(fallback.includes("history.replaceState(null, '', `${pageUrl(today)}${location.hash}`)"));
+  assert.ok(fallback.includes("fetch(`${API}?date=${today}`"));
+  assert.ok(fallback.includes("render(todayDevotion)"));
+  assert.ok(fallback.includes("아직 공개되지 않은 날짜입니다. 오늘 날짜까지만 열람할 수 있습니다."));
+  assert.ok(fallback.includes("오늘의 묵상으로 이동했습니다."));
+  assert.ok(fallback.includes("setTimeout("));
+  assert.ok(!fallback.includes("location.assign("));
+  assert.ok(!fallback.includes("window.location.href ="));
+  assert.ok(js.includes("if (!date && data.date && dateMode === 'path')"));
+  // The shared Bible and Church clients preserve their existing denied-future behavior.
+  assert.ok(fallback.includes("siteKey === 'mission'"));
+  assert.ok(js.includes("if (!response.ok)"));
+  assert.ok(js.includes("render(data);"));
+});
+
 test('attribution and October original score are present',()=>{
   assert.equal(activities.notice,'묵상 적용(시·노래·질문·기도)은 에코디언 정찬균목사가 공통본문을 바탕으로 AI 도움을 받아 만든 창작 묵상 자료입니다. 성경 본문은 개역한글(대한성서공회, 1961) 원문을 그대로 표시합니다.');
   const song=activities.days.find(d=>d.day===26)?.song;
