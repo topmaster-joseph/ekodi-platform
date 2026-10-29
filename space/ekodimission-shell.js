@@ -220,8 +220,36 @@
     if(description)description.textContent='말씀으로 만나고, 식탁으로 연결하며, 이웃과 함께하는 선교.';
     if(meta)meta.textContent='EKODI MISSION · ekodi.kr/ekodimission';
   }
+  function mountDevotionAuthNextToAdmin(authRow, devotion){
+    const renderer=devotion.querySelector('[data-ekodi-devotion]');
+    if(!renderer)return;
+    const mount=()=>{
+      const adminBar=renderer.querySelector('.dv-adminbar');
+      if(!adminBar)return false;
+      let tools=renderer.querySelector('[data-mission-devotion-tools]');
+      if(!tools){
+        tools=document.createElement('div');
+        tools.className='mission-devotion-tools';
+        tools.dataset.missionDevotionTools='';
+        // The existing admin controls keep their event handlers and their detail
+        // views remain immediately beneath this common row.
+        adminBar.before(tools);
+      }
+      tools.append(adminBar,authRow);
+      return true;
+    };
+    // The shared devotional renderer is a module and usually mounts after this
+    // deferred shell. Observe only until its own lower admin row appears.
+    if(mount())return;
+    const observer=new MutationObserver(()=>{
+      if(mount())observer.disconnect();
+    });
+    observer.observe(renderer,{childList:true});
+  }
   function mountMissionAuth(){
-    const header=document.querySelector('.mission-site-header');if(!header)return null;
+    const devotion=document.querySelector('main[data-mission-devotion]');
+    const target=devotion||document.querySelector('.mission-site-header');
+    if(!target)return null;
     const row=document.createElement('div');
     row.className='mission-auth-actions';
     row.dataset.autoI18nIgnore='';
@@ -234,7 +262,9 @@
     login.className='mission-auth-button';login.textContent='로그인';
     const logout=document.createElement('button');logout.type='button';
     logout.className='mission-auth-button';logout.hidden=true;logout.textContent='로그아웃';
-    row.append(state,login,logout);header.append(row);
+    row.append(state,login,logout);
+    target.append(row);
+    if(devotion)mountDevotionAuthNextToAdmin(row,devotion);
     return {state,login,logout};
   }
   const missionAuthUi=mountMissionAuth();
