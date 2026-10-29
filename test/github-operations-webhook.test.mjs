@@ -68,6 +68,10 @@ test('event key is deterministic across retransmissions; event projection has no
   assert.equal(key,await eventOperationKey('workflow_run',payload));
   assert.notEqual(key,await eventOperationKey('workflow_run',{...payload,action:'requested'}));
   assert.equal(key.length,64);
+  const commentPayload={repository:{full_name:repo},action:'created',issue:{number:77}};
+  const commentA=await eventOperationKey('issue_comment',{...commentPayload,comment:{id:11}});
+  const commentB=await eventOperationKey('issue_comment',{...commentPayload,comment:{id:12}});
+  assert.notEqual(commentA,commentB,'two legitimate comments must never collide');
   const projected=projectGitHubEvent('workflow_run',payload);
   assert.equal(projected.repository,repo);
   assert.equal(projected.headSha,'a'.repeat(40));
