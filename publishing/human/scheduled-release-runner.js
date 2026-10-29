@@ -5,7 +5,8 @@ import {
   assertStillApproved, claimScheduledEdition, recordPrepared, activationProposal,
   recordActivated, grantJointPublicVisibility, canExposePublicly, RELEASE_CHANNELS,
 } from './scheduled-release.js';
-import { readPrivateEdition, savePrivateTransition, listDuePrivateEditions } from './private-release-store.js';
+import { readPrivateEdition, listDuePrivateEditions } from './private-release-store.js';
+import { commitPrivateTransition } from './private-release-atomic-ledger.js';
 
 const ready = f => typeof f === 'function';
 const invariant = (ok, reason) => { if (!ok) throw new Error('RELEASE_RUNNER:' + reason); };
@@ -20,7 +21,7 @@ const invariant = (ok, reason) => { if (!ok) throw new Error('RELEASE_RUNNER:' +
 export async function runPrivateScheduleTick({
   db, nowIso, loadCandidate, verifyEvidence, prepareChannel, activateChannel, max=20,
 }) {
-  invariant(db?.prepare && ready(loadCandidate) && ready(verifyEvidence) &&
+  invariant(db?.prepare && typeof db?.batch === 'function' && ready(loadCandidate) && ready(verifyEvidence) &&
     ready(prepareChannel) && ready(activateChannel), 'trusted-adapters-required');
   const results=[];
   const due=await listDuePrivateEditions(db,nowIso,max);
@@ -34,7 +35,7 @@ export async function runPrivateScheduleTick({
       invariant(evidence?.trustedBackend === true, 'verification-unavailable');
       assertStillApproved(record,candidate,evidence,nowIso);
       const save=async next=>{
-        await savePrivateTransition(db,record,next,nowIso);
+        await commitPrivateTransition(db,record,next,'ekodi-orchestrator',nowIso);
         record=next;
       };
       if (record.state === 'scheduled' || record.state === 'preparing') {
