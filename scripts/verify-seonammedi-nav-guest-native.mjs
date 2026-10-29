@@ -223,6 +223,10 @@ try {
                   await observe(defaultHash);
                   await page.goForward({timeout:15000,waitUntil:'domcontentloaded'});
                   await observe(selectedHash);
+                  // Leave the document before testing a direct URL: navigating
+                  // only to another fragment in the same document returns no HTTP
+                  // response from Playwright, even when the route works correctly.
+                  await page.goto('about:blank',{waitUntil:'domcontentloaded'});
                   const direct=await page.goto(target+selectedHash,{waitUntil:'domcontentloaded',timeout:25000});
                   if(!direct?.ok())throw Error('native_filter_direct_link_http_'+item.label);
                   await observe(selectedHash);
