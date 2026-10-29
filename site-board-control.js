@@ -308,7 +308,7 @@ function missionKstToday(){
   const get=part=>parts.find(item=>item.type===part)?.value||'';
   return [get('year'),get('month'),get('day')].join('-');
 }
-function missionSaturdayFor(today){
+export function missionSaturdayFor(today){
   const start=new Date(today+'T00:00:00Z');
   const days=(6-start.getUTCDay()+7)%7;
   start.setUTCDate(start.getUTCDate()+days);
@@ -346,7 +346,7 @@ async function missionSaturdayBoard(request,env,instance,who,method){
     const displayName=clean(body?.displayName,30),reply=clean(body?.body,500);
     const attendance=lower(body?.attendance);
     if(displayName.length<2||reply.length<2||!['join','question','cancel'].includes(attendance))return boardJson(instance,{error:'invalid_reply'},400);
-    if(/[\\w.+-]+@[\\w.-]+\\.[A-Za-z]{2,}/.test(reply)||/(?:01[016789])[\\s-]?\\d{3,4}[\\s-]?\\d{4}/.test(reply))return boardJson(instance,{error:'private_information_in_public_reply'},400);
+    if(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/.test(reply)||/(?:01[016789])[\s-]?\d{3,4}[\s-]?\d{4}/.test(reply))return boardJson(instance,{error:'private_information_in_public_reply'},400);
     await env.DB.prepare(`INSERT INTO ekodi_mission_saturday_replies
       (board_id,meeting_date,author_person_id,display_name,body,attendance,created_at,updated_at)
       VALUES (?,?,?,?,?,?,?,?)
