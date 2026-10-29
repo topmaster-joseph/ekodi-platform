@@ -24,7 +24,7 @@ test('canonical /insurance displays accurate privacy and admin messaging without
   assert.match(html,/서버 연결이 안 되면 요청이 접수되지 않습니다/);
   assert.match(html,/연락정보를 암호화해 전송/);
   assert.match(html,/대화 원문 공유는 별도 선택사항/);
-  assert.match(html,/선택 공유된 대화만/);
+  assert.match(html,/선택동의한 대화내용만/);
   assert.match(html,/설계사 연락 요청/);
 });
 
