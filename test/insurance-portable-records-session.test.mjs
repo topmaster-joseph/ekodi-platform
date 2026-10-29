@@ -128,3 +128,42 @@ test('importing optional diagnosis and chat requires fresh target-side consent',
   assert.equal(plan.summary.addedMessages, 1);
   assert.deepEqual(local.snapshot(), before, 'consent permits preview, not automatic commit');
 });
+
+
+test('storage quota failure never overwrites original records, token or legacy backup', async () => {
+  const old = existing();
+  const original = JSON.stringify(old);
+  const token = JSON.stringify([{ id: 'revoker', accessToken: 'PRESERVE' }]);
+  const base = storage({
+    [INSURANCE_LOCAL_STATE_KEY]: original,
+    [legacyKey]: JSON.stringify({ policies: [{ id: 'history' }], claims: [] }),
+    [revocationKey]: token
+  });
+  const plan = await planPortableImport({
+    storage: base, encryptedFile: await archive(), importPassphrase: passphrase,
+    backupPassphrase: passphrase, webcrypto
+  });
+  const before = base.snapshot();
+  const quota = {
+    getItem: key => base.getItem(key),
+    setItem() { throw new Error('QuotaExceededError'); },
+    removeItem: key => base.removeItem(key)
+  };
+  assert.throws(() => commitPortableImport({
+    storage: quota, plan, acknowledgedBackup: true, explicitUserConsent: true
+  }), /QuotaExceededError/);
+  assert.deepEqual(base.snapshot(), before);
+  assert.equal(base.getItem(revocationKey), token);
+  assert.equal(base.getItem(legacyKey), before[legacyKey]);
+});
+
+test('encrypted backup failure cannot generate a commit-ready migration plan', async () => {
+  const local = storage({ [INSURANCE_LOCAL_STATE_KEY]: JSON.stringify(existing()) });
+  const before = local.snapshot();
+  await assert.rejects(planPortableImport({
+    storage: local, encryptedFile: await archive(),
+    importPassphrase: passphrase, backupPassphrase: 'short',
+    webcrypto
+  }), /12/);
+  assert.deepEqual(local.snapshot(), before);
+});
