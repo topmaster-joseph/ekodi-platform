@@ -135,3 +135,17 @@ test('untrusted catalog cannot create an apparently approved pair',async()=>{
     assert.ok(other.blockers.includes('catalog.book_missing_or_duplicate'));
   });
 });
+
+test('audio changed while EPUBCheck/Ace runs is never marked as a stable pair',async()=>{
+  await fixture(async inputs=>{
+    const r=await inspectEditionMediaPair({...inputs,inspectEpub:async request=>{
+      await writeFile(path.join(inputs.audioRoot,'two.mp3'),frame(99));
+      return mockEpub(request);
+    }});
+    assert.equal(r.technicalStatus,'blocked');
+    assert.ok(r.blockers.includes('audio.changed_during_epub_validation'));
+    assert.equal(r.bundleSha256,null);
+    assert.equal(r.saleReady,false);
+    assert.equal(r.releaseReady,false);
+  });
+});
