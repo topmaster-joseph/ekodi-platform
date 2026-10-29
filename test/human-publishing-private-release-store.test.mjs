@@ -136,6 +136,35 @@ test('CAS prevents two writers from overwriting cancellation or changed state',a
   }finally{db.close();}
 });
 
+
+test('rights revoked after both staged prevents publication and remains private',async()=>{
+  const db=setup();try{
+    const r=await readyScheduled(db);
+    let altered=false;
+    const fail=await runPrivateScheduleTick({db,nowIso:AFTER,
+      loadCandidate:async()=>{const c=candidate();if(altered)c.rights.licenseChecked=false;return c;},
+      verifyEvidence:async()=>evidence(),
+      prepareChannel:async(channel,record)=>ack(channel,record,'prepared'),
+      activateChannel:async(channel,record)=>{
+        altered=true;
+        if(channel==='ekodimall')throw Error('temporary activation outage');
+        return ack(channel,record,'activated');
+      }});
+    assert.equal(fail.results[0].ok,false);
+    const partial=await readPrivateEdition(db,r.editionId);
+    assert.equal(partial.state,'activating');
+    assert.equal(await getPublicVisibility(db,r.editionId,'books',AFTER),false);
+    const retry=await runPrivateScheduleTick({db,nowIso:AFTER,
+      loadCandidate:async()=>{const c=candidate();c.rights.licenseChecked=false;return c;},
+      verifyEvidence:async()=>evidence(),
+      prepareChannel:async()=>{throw Error('must-not-call-prepare');},
+      activateChannel:async()=>{throw Error('must-not-call-activate');}});
+    assert.equal(retry.results[0].ok,false);
+    assert.match(retry.results[0].error,/editorial-gate/);
+    assert.equal(await getPublicVisibility(db,r.editionId,'ekodimall',AFTER),false);
+  }finally{db.close();}
+});
+
 test('public gate fails closed if edition DB inaccessible or record missing',async()=>{
   assert.equal(await getPublicVisibility(null,'missing','books',AFTER),false);
   const db=setup();try{
