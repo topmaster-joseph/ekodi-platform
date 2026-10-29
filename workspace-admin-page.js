@@ -669,22 +669,101 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   function bindAffiliateAdmin(kind){const root=document.querySelector('[data-affiliate-admin-console]');if(!root)return;root.addEventListener('click',async event=>{const save=event.target.closest('[data-affiliate-program-save]'),provider=event.target.closest('[data-affiliate-provider-sync]'),action=event.target.closest('[data-affiliate-action]');if(!save&&!provider&&!action)return;const button=save||provider||action,message=root.querySelector('[data-affiliate-console-message]');button.disabled=true;try{if(save){const row=save.closest('[data-affiliate-program]'),key=row?.dataset.affiliateProgram||'';await affiliateApi('/programs/'+encodeURIComponent(key),{method:'PUT',body:JSON.stringify({applicationStatus:row.querySelector('[data-affiliate-application]')?.value,integrationStatus:row.querySelector('[data-affiliate-integration]')?.value,outreachStatus:row.querySelector('[data-affiliate-outreach]')?.value})});if(message)message.textContent=key+' 상태 저장 완료'}else if(provider){const key=provider.dataset.affiliateProviderSync||'';await affiliateApi('/providers/'+encodeURIComponent(key)+'/sync',{method:'POST',body:'{}'});if(message)message.textContent=key+' Feed 동기화 완료'}else if(action?.dataset.affiliateAction==='automation'){await affiliateApi('/automation/run',{method:'POST',body:'{}'});if(message)message.textContent='쿠팡 상품 자동수집 실행 완료'}else if(action?.dataset.affiliateAction==='reporting'){await affiliateApi('/reporting/sync',{method:'POST',body:'{}'});if(message)message.textContent='쿠팡 실적 동기화 완료'}await growthPolicyPanel(kind)}catch(err){if(message)message.textContent=err.message;state('제휴관리 확인 필요')}finally{button.disabled=false}})}
   function workspaceSourceState(item){if(item.effectiveEnabled)return '운영';if(item.selected)return '선택됨 · 연결대기';if(item.recommendationReady)return '사용 가능';return '준비 중'}
   function workspaceSourceRow(item){const route=ae(item.routeKey||'');const network=item.networkName||item.affiliateMode||'direct';const detail=`${item.marketCountry||'-'} · ${network} · 제휴 ${item.affiliateStatus||'-'} · 추적 ${item.trackingStatus||'-'} · 상품 ${item.catalogStatus||'-'}`;return `<label class="service-row"><div><strong>${ae(item.merchantName||item.merchantKey)}</strong><p>${ae(detail)}</p>${item.notes?`<p>${ae(item.notes)}</p>`:''}${item.programUrl?`<a href="${ae(item.programUrl)}" target="_blank" rel="noopener">공식 연결/관리 ↗</a>`:''}</div><span><span class="tag ${item.effectiveEnabled?'live':item.selected?'warn':''}">${ae(workspaceSourceState(item))}</span> <input type="checkbox" name="route:${route}" ${item.selected?'checked':''}></span></label>`}
-  async function affiliateSourcingPanel(){
+
+  // Every sales/affiliate route uses a tenant-scoped selector; Amazon keeps its
+  // existing credential and paid-feature gates inside the same selection view.
+  const mallSourcingIsAmazon=item=>/amazon|아마존/i.test([item.merchantName,item.merchantKey,item.routeKey].join(' '));
+  const mallSourcingTabKey=item=>mallSourcingIsAmazon(item)?'amazon':'route:'+String(item.routeKey||'');
+  let mallSourcingCurrent=new URLSearchParams(location.search).get('channel')||(section==='amazon'?'amazon':'overview');
+  let mallSourcingRequestId=0;
+  function mallSourcingHeader(sources,active){
+    const entries=[{key:'overview',label:'전체'}],known=new Set(['overview']);
+    for(const item of sources){
+      const key=mallSourcingTabKey(item);
+      if(!key||known.has(key))continue;
+      known.add(key);
+      entries.push({key,label:mallSourcingIsAmazon(item)?'Amazon':String(item.merchantName||item.merchantKey||item.routeKey),item});
+    }
+    if(!known.has('amazon'))entries.push({key:'amazon',label:'Amazon'});
+    const tabs=entries.map(entry=>{
+      const pressed=entry.key===active;
+      const stateClass=entry.item?.effectiveEnabled?' mall-source-tab-live':entry.item?.selected?' mall-source-tab-pending':'';
+      return `<button type="button" class="mall-source-tab${stateClass}${pressed?' is-active':''}" data-mall-source-channel="${ae(entry.key)}" aria-pressed="${pressed}">${ae(entry.label)}</button>`;
+    }).join('');
+    return `<div class="mall-sourcing-head"><div class="mall-sourcing-heading"><h2>에코디몰 판매채널 · 공급망 설정</h2><p class="empty">판매처를 선택해 연결 상태와 사용 여부를 관리합니다. Amazon도 같은 목록에서 선택합니다.</p></div><div class="mall-sourcing-tabs" role="group" aria-label="판매채널 선택">${tabs}</div></div>`;
+  }
+  function bindMallSourcingTabs(){
+    document.querySelectorAll('[data-mall-source-channel]').forEach(button=>button.addEventListener('click',()=>{
+      const selected=button.getAttribute('data-mall-source-channel')||'overview';
+      mallSourcingCurrent=selected;
+      const nextUrl=new URL(location.href);
+      if(selected==='overview')nextUrl.searchParams.delete('channel');else nextUrl.searchParams.set('channel',selected);
+      const canonicalPath=section==='amazon'?adminBase+'/sourcing':nextUrl.pathname;
+      history.replaceState(history.state,'',canonicalPath+nextUrl.search+nextUrl.hash);
+      affiliateSourcingPanel(selected);
+    }));
+  }
+  async function affiliateSourcingPanel(requestedChannel=mallSourcingCurrent){
+    const requestId=++mallSourcingRequestId;
     try{
       await exchangeCentralToken();
       if(!(await accessToken()))return loginPanel('제휴·소싱 설정에는 운영공간 로그인이 필요합니다.');
-      state('제휴·소싱 상태 확인 중');
+      state('판매채널 상태 확인 중');
       const workspaceData=await workspaceAffiliateApi('/workspace/sources');
-      let affiliate=null;
-      if(platformAdminToken()){try{affiliate=await affiliateAdminSnapshot()}catch(e){if(e.status!==401)throw e}}
-      const sources=workspaceData.sources||[],summary=workspaceData.summary||{};
-      $('summaryCards').innerHTML=[card('연결 후보',String(summary.total||sources.length),'공통 엔진에 등록된 판매처'),card('몰 사용',String(summary.selected||0),'에코디몰에서 ON'),card('실사용 가능',String(summary.effective||0),'승인·추적·상품공급 검증 완료'),card('조치 필요',String(summary.pending||0),'승인·연동·상품공급 확인 필요')].join('');
-      $('mainPanel').innerHTML=`<h2>에코디몰 판매채널 · 공급망 설정</h2><p class="empty">플랫폼 공통 판매·공급망 엔진에 등록된 Provider 가운데 에코디몰이 실제 사용할 판매채널만 선택합니다. 여기의 ON/OFF는 플랫폼 연동 자체가 아니라 에코디몰 사용 여부입니다. 제휴 승인·추적링크·상품/가격 공급·추천 허용이 모두 확인된 경로만 고객 노출과 자동영업에 사용됩니다.</p>${affiliate?affiliateAdminConsole(affiliate):affiliateAdminLocked()}<h2 style="margin-top:18px">대상 제휴몰 · 공식몰 · 해외 판매처</h2><form id="affiliateWorkspaceSourcesForm"><div class="service-list">${sources.map(workspaceSourceRow).join('')||'<p class="empty">등록된 대상 판매처가 없습니다.</p>'}</div><div class="actions"><button class="button primary" type="submit">에코디몰 사용 설정 저장</button><a class="button" href="/admin/services/supply-network" target="_blank" rel="noopener">플랫폼 공급망 엔진 ↗</a></div></form><p class="empty">역할 분리: 플랫폼 관리자는 Provider·Adapter·Secret을 공통 엔진에서 관리하고, 에코디몰 관리자는 이 화면에서 사용 여부와 운영정책만 결정합니다. 자동게시 채널·일일 한도는 자동운영에서 관리하며 Secret/API Key는 이 화면에 표시하지 않습니다.</p>`;
-      bindAffiliateAdmin('sourcing');
+      if(requestId!==mallSourcingRequestId)return;
+      const sources=Array.isArray(workspaceData.sources)?workspaceData.sources:[],summary=workspaceData.summary||{};
+      const valid=new Set(['overview','amazon',...sources.map(mallSourcingTabKey)]);
+      const selected=valid.has(requestedChannel)?requestedChannel:'overview';
+      mallSourcingCurrent=selected;
+      const header=mallSourcingHeader(sources,selected);
+      const chosen=sources.filter(item=>mallSourcingTabKey(item)===selected);
+      const sourceForm=chosen.length?`<form id="affiliateWorkspaceSourcesForm"><div class="service-list">${chosen.map(workspaceSourceRow).join('')}</div><div class="actions"><button class="button primary" type="submit">에코디몰 사용 설정 저장</button><a class="button" href="/admin/services/supply-network" target="_blank" rel="noopener">플랫폼 공급망 엔진 ↗</a></div></form>`:'';
+      const explanation='<p class="empty mall-source-policy">여기의 ON/OFF는 플랫폼 연동 자체가 아니라 에코디몰 사용 여부입니다. 승인·추적링크·상품/가격 공급이 검증된 경로만 고객 노출과 자동영업에 사용됩니다. Secret과 API Key는 서버에서만 관리합니다.</p>';
+      if(selected==='amazon'){
+        await amazonAdmin();
+        if(requestId!==mallSourcingRequestId)return;
+        $('mainPanel').insertAdjacentHTML('afterbegin',header+(sourceForm?`<section class="mall-source-detail"><h3>에코디몰 사용 설정</h3>${sourceForm}${explanation}</section>`:'<p class="empty">Amazon 판매처 사용 여부는 공통 공급망 엔진 등록 후 관리할 수 있습니다.</p>'));
+      }else{
+        $('summaryCards').innerHTML=[card('연결 후보',String(summary.total??sources.length),'공통 엔진 등록 판매처'),card('몰 사용',String(summary.selected||0),'에코디몰 선택'),card('실사용 가능',String(summary.effective||0),'승인·연동·상품공급 확인'),card('조치 필요',String(summary.pending||0),'연결 검토 대상')].join('');
+        if(selected==='overview'){
+          let affiliate=null;
+          if(platformAdminToken()){try{affiliate=await affiliateAdminSnapshot()}catch(e){if(e.status!==401)throw e}}
+          if(requestId!==mallSourcingRequestId)return;
+          $('mainPanel').innerHTML=header+`<section class="mall-source-detail"><h3>판매채널 현황</h3><p class="empty">오른쪽 상단에서 판매처를 선택하면 해당 채널의 설정만 아래에 표시됩니다.</p><details class="mall-source-advanced"><summary>공통 제휴 프로그램 · Provider 상세관리</summary>${affiliate?affiliateAdminConsole(affiliate):affiliateAdminLocked()}</details><div class="actions"><a class="button" href="/admin/services/supply-network" target="_blank" rel="noopener">플랫폼 공급망 엔진 ↗</a></div></section>`;
+          if(affiliate)bindAffiliateAdmin('sourcing');
+        }else{
+          $('mainPanel').innerHTML=header+`<section class="mall-source-detail"><h3>${ae(chosen[0]?.merchantName||chosen[0]?.merchantKey||'판매처')} 연결 · 사용 설정</h3>${sourceForm}${explanation}</section>`;
+        }
+      }
+      // The API accepts a full selection snapshot. Preserve untouched routes
+      // when only the currently visible channel is submitted.
       const form=$('affiliateWorkspaceSourcesForm');
-      if(form)form.onsubmit=async e=>{e.preventDefault();state('연결 대상 저장 중');const fd=new FormData(form),selections=sources.map(item=>({routeKey:item.routeKey,enabled:fd.has('route:'+item.routeKey)}));await workspaceAffiliateApi('/workspace/sources',{method:'PUT',body:JSON.stringify({selections})});state('저장됨');await affiliateSourcingPanel()};
-      state('제휴·소싱 운영');
-    }catch(e){if(e.code==='AUTH_REQUIRED'||e.status===401)return loginPanel();$('summaryCards').innerHTML=[card('제휴·소싱','확인 필요','실패를 성공으로 표시하지 않음')].join('');$('mainPanel').innerHTML=`<h2>제휴·소싱</h2><p class="empty">${ae(e.message)}</p>`;state('확인 필요')}
+      if(form)form.onsubmit=async event=>{
+        event.preventDefault();
+        const fd=new FormData(form),visible=new Set(chosen.map(item=>item.routeKey));
+        const selections=sources.map(item=>({routeKey:item.routeKey,enabled:visible.has(item.routeKey)?fd.has('route:'+item.routeKey):Boolean(item.selected)}));
+        const saveButton=form.querySelector('button[type="submit"]');
+        if(saveButton)saveButton.disabled=true;
+        state('판매처 설정 저장 중');
+        try{
+          await workspaceAffiliateApi('/workspace/sources',{method:'PUT',body:JSON.stringify({selections})});
+          state('판매처 설정 저장됨');
+          await affiliateSourcingPanel(selected);
+        }catch(error){
+          state('저장 실패 · 재시도 가능');
+          $('pageCopy').textContent=error.message||'판매처 사용 설정을 저장하지 못했습니다.';
+          if(saveButton)saveButton.disabled=false;
+        }
+      };
+      bindMallSourcingTabs();
+      state(selected==='amazon'?'Amazon 설정':selected==='overview'?'판매채널 현황':'판매처 설정');
+    }catch(e){
+      if(e.code==='AUTH_REQUIRED'||e.status===401)return loginPanel();
+      $('summaryCards').innerHTML=[card('판매채널','확인 필요','상태 조회 실패')].join('');
+      $('mainPanel').innerHTML=`<h2>판매채널 · 공급망</h2><p class="empty">${ae(e.message)}</p><button class="button" type="button" id="mallSourcingRetry">다시 조회</button>`;
+      $('mallSourcingRetry')?.addEventListener('click',()=>affiliateSourcingPanel(requestedChannel));
+      state('확인 필요');
+    }
   }
   async function growthPolicyPanel(kind){
     if(kind==='sourcing')return affiliateSourcingPanel();
@@ -1064,7 +1143,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
         const out=await save.json().catch(()=>({}));
         if(!save.ok){state('계정 연결 저장 실패');$('pageCopy').textContent=out.message||out.error||'Amazon 계정 연결을 저장하지 못했습니다.';return}
         state('Amazon 계정 연결 저장 완료');
-        amazonAdmin();
+        affiliateSourcingPanel('amazon');
       });
       $('amazonConnectionTest')?.addEventListener('click',async()=>{
         state('Amazon 읽기 전용 연결 테스트 중');
@@ -1072,7 +1151,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
         const out=await test.json().catch(()=>({}));
         if(!test.ok){state('Amazon 연결 확인 실패');$('pageCopy').textContent=out.code||out.error||'Amazon 연결을 확인하지 못했습니다.';return}
         state('Amazon 연결 확인 완료');
-        amazonAdmin();
+        affiliateSourcingPanel('amazon');
       });
       $('amazonConnectionRemove')?.addEventListener('click',async()=>{
         if(!confirm('Amazon Seller Central 연결을 해제할까요? 저장된 암호화 자격정보와 Marketplace 캐시가 삭제됩니다.'))return;
@@ -1081,7 +1160,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
         const out=await remove.json().catch(()=>({}));
         if(!remove.ok){state('Amazon 연결 해제 실패');$('pageCopy').textContent=out.error||'연결을 해제하지 못했습니다.';return}
         state('Amazon 연결 해제 완료');
-        amazonAdmin();
+        affiliateSourcingPanel('amazon');
       });
       const renderReadonlySnapshot=s=>{
         const el=$('amazonReadonlyResults'); if(!el)return;
@@ -1114,7 +1193,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
         const out=await save.json().catch(()=>({}));
         if(!save.ok){state('승인 권한 또는 설정 확인 필요');$('pageCopy').textContent=out.error||'승인을 저장하지 못했습니다.';return}
         state('Amazon 유료기능 승인 완료');
-        amazonAdmin();
+        affiliateSourcingPanel('amazon');
       });
       const form=$('amazonCostPolicyForm');
       form?.addEventListener('submit',async event=>{
@@ -1134,7 +1213,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
         const out=await save.json().catch(()=>({}));
         if(!save.ok){state('저장 권한 또는 설정 확인 필요');$('pageCopy').textContent=out.error||'비용정책을 저장하지 못했습니다.';return}
         state('Amazon 비용정책 저장 완료');
-        amazonAdmin();
+        affiliateSourcingPanel('amazon');
       });
       state((cost.warnings||[]).length?'비용 주의 필요':seller.configured?'무료우선 운영 준비':'Amazon 설정 필요');
     }catch(e){
@@ -1143,7 +1222,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       state('확인 필요');
     }
   }
-  async function render(){if(!service){if(section==='overview')return rootHome();if(isBizWorkspace&&section==='business-center')return bizCenter();if(section==='saturday')return saturdayMeeting();if(section==='activities')return activityAdmin();if(section==='status')return statusAdmin();if(section==='records')return recordsAdmin();if(section==='members')return membersAdmin();if(workspace==='cgma'&&section==='member')return cgmaMemberAdmin();if(workspace==='cgma'&&section==='festival')return cgmaFestivalAdmin();if(workspace==='cgma'&&section==='edocs')return cgmaEdocAdmin();if(section==='chrome')return siteChromeAdmin();if(section==='design')return designAdmin();if(section==='languages')return languageAdmin();if(section==='mail')return mailAdmin();if(section==='confirmations')return confirmationAdmin();if(section==='finance')return financeAdmin();if(isBizWorkspace&&section==='tax')return taxAdmin();if(section==='publishing'||section==='marketing')return channel();if(section==='mall')return location.replace('/ekodimall/admin');$('summaryCards').innerHTML=[card('운영공간',workspaceLabel(),'tenant scoped'),card('메뉴',meta[section]?.[0]||section,'로컬 관리')].join('');$('mainPanel').innerHTML='<p class="empty">이 운영공간의 독립 모듈입니다.</p>';return state('운영')}if(service!=='mall'){if(section==='overview'){$('summaryCards').innerHTML=[card('운영공간',workspaceLabel(),'tenant scoped'),card('하위서비스',service,'service scoped'),card('공통엔진','Channel · OAuth · Vault','shared capability'),card('권한',workspaceRole||'-','tenant role')].join('');$('mainPanel').innerHTML=`<h2>${ae(service)} 서비스 관리</h2><p class="empty">상위 운영공간의 권한을 상속하되 채널·게시 설정은 이 서비스 문맥에서 관리합니다.</p><div class="actions"><a class="button primary" href="${adminBase}/publishing">채널·자동게시</a><a class="button" href="${adminBase}/design">사이트 스타일</a><a class="button" href="${adminBase}/languages">다국어</a></div>`;return state('운영')}if(section==='chrome')return siteChromeAdmin();if(section==='design')return designAdmin();if(section==='languages')return languageAdmin();if(section==='confirmations')return confirmationAdmin();if(section==='finance')return financeAdmin();if(section==='publishing'||section==='marketing'||section==='channels')return channel();$('summaryCards').innerHTML=[card('하위서비스',service,'service scoped'),card('운영공간',workspaceLabel(),'tenant authority')].join('');$('mainPanel').innerHTML='<p class="empty">이 하위서비스는 공통 시스템 기능을 상속합니다.</p>';return state('운영')}if(section==='chrome')return siteChromeAdmin();if(section==='design')return designAdmin();if(section==='languages')return languageAdmin();if(section==='sales')return location.replace(`${adminBase}/analytics`);if(section==='analytics')return mallAnalytics();if(section==='confirmations')return confirmationAdmin();if(section==='overview')return mallHome();if(section==='amazon')return amazonAdmin();if(section==='sourcing'||section==='growth')return growthPolicyPanel(section);if(['marketing','automation'].includes(section))return location.replace(`${adminBase}/channel-settings`);if(section==='channels'||section==='publishing')return channel();if(section==='products')return mallProducts();$('summaryCards').innerHTML=[card('상품 서비스','에코디몰','EKODIBIZ 소유 운영'),card('공개주소','/ekodimall','ekodi.kr')].join('');$('mainPanel').innerHTML='<h2>상품 관리</h2><p class="empty">상품 원본은 에코디몰 독립 상품 모듈에서 관리합니다.</p>';state('운영')}
+  async function render(){if(!service){if(section==='overview')return rootHome();if(isBizWorkspace&&section==='business-center')return bizCenter();if(section==='saturday')return saturdayMeeting();if(section==='activities')return activityAdmin();if(section==='status')return statusAdmin();if(section==='records')return recordsAdmin();if(section==='members')return membersAdmin();if(workspace==='cgma'&&section==='member')return cgmaMemberAdmin();if(workspace==='cgma'&&section==='festival')return cgmaFestivalAdmin();if(workspace==='cgma'&&section==='edocs')return cgmaEdocAdmin();if(section==='chrome')return siteChromeAdmin();if(section==='design')return designAdmin();if(section==='languages')return languageAdmin();if(section==='mail')return mailAdmin();if(section==='confirmations')return confirmationAdmin();if(section==='finance')return financeAdmin();if(isBizWorkspace&&section==='tax')return taxAdmin();if(section==='publishing'||section==='marketing')return channel();if(section==='mall')return location.replace('/ekodimall/admin');$('summaryCards').innerHTML=[card('운영공간',workspaceLabel(),'tenant scoped'),card('메뉴',meta[section]?.[0]||section,'로컬 관리')].join('');$('mainPanel').innerHTML='<p class="empty">이 운영공간의 독립 모듈입니다.</p>';return state('운영')}if(service!=='mall'){if(section==='overview'){$('summaryCards').innerHTML=[card('운영공간',workspaceLabel(),'tenant scoped'),card('하위서비스',service,'service scoped'),card('공통엔진','Channel · OAuth · Vault','shared capability'),card('권한',workspaceRole||'-','tenant role')].join('');$('mainPanel').innerHTML=`<h2>${ae(service)} 서비스 관리</h2><p class="empty">상위 운영공간의 권한을 상속하되 채널·게시 설정은 이 서비스 문맥에서 관리합니다.</p><div class="actions"><a class="button primary" href="${adminBase}/publishing">채널·자동게시</a><a class="button" href="${adminBase}/design">사이트 스타일</a><a class="button" href="${adminBase}/languages">다국어</a></div>`;return state('운영')}if(section==='chrome')return siteChromeAdmin();if(section==='design')return designAdmin();if(section==='languages')return languageAdmin();if(section==='confirmations')return confirmationAdmin();if(section==='finance')return financeAdmin();if(section==='publishing'||section==='marketing'||section==='channels')return channel();$('summaryCards').innerHTML=[card('하위서비스',service,'service scoped'),card('운영공간',workspaceLabel(),'tenant authority')].join('');$('mainPanel').innerHTML='<p class="empty">이 하위서비스는 공통 시스템 기능을 상속합니다.</p>';return state('운영')}if(section==='chrome')return siteChromeAdmin();if(section==='design')return designAdmin();if(section==='languages')return languageAdmin();if(section==='sales')return location.replace(`${adminBase}/analytics`);if(section==='analytics')return mallAnalytics();if(section==='confirmations')return confirmationAdmin();if(section==='overview')return mallHome();if(section==='amazon')return affiliateSourcingPanel('amazon');if(section==='sourcing'||section==='growth')return growthPolicyPanel(section);if(['marketing','automation'].includes(section))return location.replace(`${adminBase}/channel-settings`);if(section==='channels'||section==='publishing')return channel();if(section==='products')return mallProducts();$('summaryCards').innerHTML=[card('상품 서비스','에코디몰','EKODIBIZ 소유 운영'),card('공개주소','/ekodimall','ekodi.kr')].join('');$('mainPanel').innerHTML='<h2>상품 관리</h2><p class="empty">상품 원본은 에코디몰 독립 상품 모듈에서 관리합니다.</p>';state('운영')}
   $('workspaceLogout')?.addEventListener('click',()=>{suppressWorkspaceSsoRecovery();clearSession();location.assign(adminBase)});
   async function boot(){setup();acceptPlatformAdminHandoff();try{await exchangeCentralToken()}catch{clearSession();return loginPanel('통합인증 연결에 실패했습니다. 다시 로그인해 주세요.')}if(!(await accessToken())){if(platformAdminToken()){markPlatformAdminIntent();platformAdminSessionToken=''}if(beginWorkspaceSsoRecovery())return;if(section==='channels'||section==='publishing'||section==='marketing')return channelPreAuth();return loginPanel(hasPlatformAdminIntent()?'1단계 운영공간 로그인 후 플랫폼 관리자 인증으로 자동 이어집니다.':'중앙 EKODI 로그인 상태가 없거나 만료되었습니다. 관리자 로그인을 진행해 주세요.')}state('권한 확인 중');let context;try{context=await loadWorkspaceContext()}catch(e){if(e.status===401){clearSession();return loginPanel()}$('summaryCards').innerHTML=[card('운영공간',workspaceLabel(),'권한 확인 필요')].join('');$('mainPanel').innerHTML=`<h2>권한 확인 실패</h2><p class="empty">${e.message}</p>`;return state('확인 필요')}if(!context)return deniedPanel();applyWorkspaceContext(context);if(!roleCapabilities(workspaceRole).length)return deniedPanel();const missionReturn=consumeMissionReturn();if(missionReturn){location.replace(missionReturn);return}if(!canSection(section))return permissionPanel();if(service==='mall'&&section==='sourcing'&&hasPlatformAdminIntent()&&!platformAdminToken()){clearPlatformAdminIntent();state('플랫폼 관리자 인증으로 연결 중');location.assign(platformAdminAuthUrl());return}return render()}
 
