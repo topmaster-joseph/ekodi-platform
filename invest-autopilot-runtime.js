@@ -11,6 +11,7 @@ import {
 import { buildChannelEnvelope, dispatchChannelEnvelope } from './messenger-channel-adapters.js';
 import { stepUpStatus, verifyStepUp, revokeStepUp, stepUpSession } from './invest-step-up.js';
 import { BROKER_ADAPTERS, INVEST_PERMISSION, evaluateBrokerReadiness } from './invest-market-core.js';
+import { verifiedOwnerAal2 } from './invest-owner-mfa.js';
 
 const clean=(value,max=240)=>String(value??'').trim().slice(0,max);
 const nowIso=()=>new Date().toISOString();
@@ -139,10 +140,13 @@ async function ownerLiveReadiness(request,env,ctx){
   globalLiveTradingEnabled:false,brokerLiveTradingEnabled:false
  });
  const activation=evaluateLiveActivation(liveGates(account,validation));
+ // The preceding ownerContext has already validated this exact bearer with Supabase Auth.
+ const strongMfaVerified=verifiedOwnerAal2(request,ctx.identity.id);
  await auditPrincipal(env,ctx.principal,'invest:owner-live-readiness');
  return json(request,env,{
   schema:'ekodi.invest.owner-live-readiness.v1',scope:'owner_self_funds_only',
   workspaceVisible:true,ownerVerified:true,secondFactorVerified:true,
+  strongMfa:{requiredForLive:true,provider:'supabase-totp',verified:strongMfaVerified,level:strongMfaVerified?'aal2':'not_aal2'},
   liveExecutionEnabled:false,liveOrdersAccepted:false,
   state:account.state,
   broker:{id:broker.brokerId,name:broker.brokerName,permission:broker.permission,
@@ -150,7 +154,7 @@ async function ownerLiveReadiness(request,env,ctx){
    liveEligible:broker.liveEligible,blockers:broker.liveBlockers,
    checks:broker.checks,credentialsIncluded:false},
   activation:{eligible:activation.eligible,blockers:activation.blockers},
-  requirements:['본인 명의 증권사 계정과 공식 API 권한','검증된 최신 시세·주문 조회 및 장부 대사',
+  requirements:['Supabase OTP 2차 인증 AAL2 완료','본인 명의 증권사 계정과 공식 API 권한','검증된 최신 시세·주문 조회 및 장부 대사',
    '투자금·1회 주문·손실 한도 설정','최소 60일 모의투자와 검증된 전략 평가',
    '비용·위험 고지와 별도 명시적 실거래 승인','별도 승인된 플랫폼·증권사 실거래 잠금 해제'],
   message:'최고관리자 전용 실거래 준비 화면입니다. 실제 주문 전송은 필수 증빙과 별도 보호 배포가 완료될 때까지 차단됩니다.'
