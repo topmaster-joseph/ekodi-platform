@@ -715,6 +715,27 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   let mallSourcingView=new URLSearchParams(location.search).get('view')||'channels';
   let mallSourcingDetail=new URLSearchParams(location.search).get('detail')||'status';
   const mallSourcingDefaultDetail=view=>({connection:'account',inventory:'readonly',cost:'cost',usage:'usage',supply:'official'})[view]||'status';
+  function mallSourcingRestoreFromLocation(){
+    const params=new URLSearchParams(location.search);
+    const requestedView=params.get('view')||'channels';
+    mallSourcingView=mallSourcingViews.some(([key])=>key===requestedView)?requestedView:'channels';
+    mallSourcingCurrent=params.get('channel')||(location.pathname===adminBase+'/amazon'?'amazon':'overview');
+    const requestedDetail=params.get('detail');
+    const allowed=mallSourcingCurrent==='amazon'
+      ?mallSourcingDetails.map(([key])=>key)
+      :['status','usage','official'];
+    const fallback=mallSourcingDefaultDetail(mallSourcingView);
+    mallSourcingDetail=allowed.includes(requestedDetail)?requestedDetail:allowed.includes(fallback)?fallback:'status';
+    return mallSourcingCurrent;
+  }
+  // Only Mall sourcing state is owned by this handler; other admin routes
+  // retain their native history behavior and navigation permissions.
+  if(typeof window!=='undefined'&&service==='mall'&&['sourcing','amazon'].includes(section)){
+    window.addEventListener('popstate',()=>{
+      if(![adminBase+'/sourcing',adminBase+'/amazon'].includes(location.pathname))return;
+      affiliateSourcingPanel(mallSourcingRestoreFromLocation());
+    });
+  }
   function mallSourcingHeader(sources,active){
     const entries=[{key:'overview',label:'전체'}],known=new Set(['overview']);
     for(const item of sources){
@@ -762,7 +783,11 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       if(mallSourcingDetail==='status')nextUrl.searchParams.delete('detail');
       else nextUrl.searchParams.set('detail',mallSourcingDetail);
       const canonicalPath=section==='amazon'?adminBase+'/sourcing':nextUrl.pathname;
-      history.replaceState(history.state,'',canonicalPath+nextUrl.search+nextUrl.hash);
+      const nextPath=canonicalPath+nextUrl.search+nextUrl.hash;
+      // A selected tab is already rendered; avoid redundant tenant API reads
+      // (important when the shared Cloudflare quota circuit is near its limit).
+      if(nextPath===location.pathname+location.search+location.hash)return;
+      history.pushState(history.state,'',nextPath);
       affiliateSourcingPanel(mallSourcingCurrent);
     };
     const pairs=[['data-mall-source-view','view'],['data-mall-source-channel','channel'],['data-mall-source-detail','detail']];
