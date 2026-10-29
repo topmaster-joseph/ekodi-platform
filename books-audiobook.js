@@ -23,6 +23,15 @@ export function audiobookObjectKey(book, edition, trackNo) {
   if (!BOOK_ID.test(String(book?.id || '')) || !EDITION.test(String(edition || '')) || !Number.isInteger(trackNo) || trackNo < 1 || trackNo > 100) return null;
   return `${book.id}/audiobook/${edition}/chapter-${String(trackNo).padStart(3, '0')}.mp3`;
 }
+export async function audiobookPublishedTracks(env, book, config) {
+  if (!config?.published || !config?.titles?.length || !env?.BOOK_FILES) return null;
+  // One missing track keeps the entire bonus unpublished, even for direct track URLs.
+  const tracks = await Promise.all(config.titles.map(async (title, i) => {
+    const head = await env.BOOK_FILES.head(audiobookObjectKey(book, config.edition, i + 1)).catch(() => null);
+    return { number: i + 1, title, ready: Boolean(head?.size > 0) };
+  }));
+  return tracks.every(track => track.ready) ? tracks : null;
+}
 async function gate(env, request, bookId) {
   if (!env?.DB) return { error: fail(503, 'STORAGE_UNAVAILABLE', '서재 서비스를 사용할 수 없습니다.') };
   const buyer = await buyerIdentity(request);
@@ -54,16 +63,9 @@ export async function audiobookInfo(env, request, bookId) {
   const gated = await gate(env, request, bookId);
   if (gated.error) return gated.error;
   const { book, config } = gated;
-  if (!config.published || !config.titles.length || !env.BOOK_FILES) {
-    return json(200, { bookId: book.id, included: true, status: 'preparing', tracks: [] });
-  }
-  // Fail closed when a track is not yet uploaded. No incomplete product is "ready".
-  const tracks = await Promise.all(config.titles.map(async (title, i) => {
-    const head = await env.BOOK_FILES.head(audiobookObjectKey(book, config.edition, i + 1)).catch(() => null);
-    return { number: i + 1, title, ready: Boolean(head?.size > 0) };
-  }));
+  const tracks = await audiobookPublishedTracks(env, book, config);
   return json(200, { bookId: book.id, included: true,
-    status: tracks.every(t => t.ready) ? 'ready' : 'preparing', tracks: tracks.every(t => t.ready) ? tracks : [] });
+    status: tracks ? 'ready' : 'preparing', tracks: tracks || [] });
 }
 
 export async function audiobookTrack(env, request, bookId, trackToken) {
@@ -72,8 +74,8 @@ export async function audiobookTrack(env, request, bookId, trackToken) {
   const { book, config } = gated;
   if (!TRACK.test(String(trackToken || ''))) return fail(404, 'NOT_FOUND', '트랙을 찾지 못했습니다.');
   const number = Number(trackToken);
-  if (!config.published || number > config.titles.length || !env.BOOK_FILES) {
-    return fail(409, 'NOT_PUBLISHED', '오디오북 보너스를 준비하고 있습니다.');
+  if (number > config.titles.length || !(await audiobookPublishedTracks(env, book, config))) {
+    return fail(409, 'NOT_PUBLISHED', '전권 오디오북 보너스를 준비하고 있습니다.');
   }
   const key = audiobookObjectKey(book, config.edition, number);
   const object = key && await env.BOOK_FILES.get(key).catch(() => null);
