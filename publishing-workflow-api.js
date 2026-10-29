@@ -45,14 +45,20 @@ async function audit(db,p,u,action,from,to,revision,detail={}){
     .bind(crypto.randomUUID(),p.id,u.userId,action,from,to,revision,JSON.stringify(detail).slice(0,500),now()).run();
 }
 async function persist(db,p,n,u,action){
-  const revision=p.revision+1;
-  const r=await db.prepare("UPDATE publishing_workflow_projects SET stage=?,manuscript_digest=?,release_digest=?,release_candidate_json=?,author_approval_json=?,publisher_approval_json=?,scheduled_at=?,ready_at=?,released_at=?,channels_json=?,revision=?,updated_at=? WHERE id=? AND revision=?")
-    .bind(n.stage,n.manuscriptDigest||null,n.releaseDigest||null,JSON.stringify(n.releaseCandidate||{}),
-      JSON.stringify(n.authorApproval||null),JSON.stringify(n.publisherApproval||null),
-      n.scheduledAt||null,n.readyAt||null,n.releasedAt||null,JSON.stringify(n.releaseChannels||null),
-      revision,now(),p.id,p.revision).run();
-  if(Number(r?.meta?.changes??r?.changes??0)!==1)return null;
-  await audit(db,p,u,action,p.stage,n.stage,revision);
+  const revision=p.revision+1,eventId=crypto.randomUUID(),time=now();
+  // D1 batch is transactional: an audit record is inserted only when THIS update wins
+  // the optimistic revision check. Both statements roll back together on failure.
+  const outcomes=await db.batch([
+    db.prepare("UPDATE publishing_workflow_projects SET stage=?,manuscript_digest=?,release_digest=?,release_candidate_json=?,author_approval_json=?,publisher_approval_json=?,scheduled_at=?,ready_at=?,released_at=?,channels_json=?,revision=?,last_event_id=?,updated_at=? WHERE id=? AND revision=?")
+      .bind(n.stage,n.manuscriptDigest||null,n.releaseDigest||null,JSON.stringify(n.releaseCandidate||{}),
+        JSON.stringify(n.authorApproval||null),JSON.stringify(n.publisherApproval||null),
+        n.scheduledAt||null,n.readyAt||null,n.releasedAt||null,JSON.stringify(n.releaseChannels||null),
+        revision,eventId,time,p.id,p.revision),
+    db.prepare("INSERT INTO publishing_workflow_audit (id,project_id,actor_user_id,action,from_stage,to_stage,revision,created_at) SELECT ?,?,?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM publishing_workflow_projects WHERE id=? AND revision=? AND last_event_id=?)")
+      .bind(eventId,p.id,u.userId,action,p.stage,n.stage,revision,time,p.id,revision,eventId)
+  ]);
+  if(Number(outcomes?.[0]?.meta?.changes??outcomes?.[0]?.changes??0)!==1)return null;
+  if(Number(outcomes?.[1]?.meta?.changes??outcomes?.[1]?.changes??0)!==1)throw Error('MISSING_AUDIT');
   return {...n,revision};
 }
 async function create(db,req,u){
