@@ -62,20 +62,37 @@ export async function listPendingClaims(env,req){
 export async function approveAudioClaim(env,req,id){
   const {user,error}=await identify(req,env,true);if(error)return error;
   const b=await input(req);
-  if(!b||b.confirmedWithRetailer!==true||b.verificationMethod!=='retailer_portal'
+  if(!b||b.confirmedWithRetailer!==true||b.buyerIdentityMatched!==true||
+    b.refundStatusChecked!==true||b.verificationMethod!=='retailer_portal'
     ||!codePattern.test(String(b.orderNumber||'')))return deny(400,'INDEPENDENT_VERIFICATION_REQUIRED');
   const claim=await env.DB.prepare('SELECT * FROM books_audiobook_external_claims WHERE id=?').bind(id).first();
   if(!claim||claim.status!=='pending')return deny(409,'NOT_PENDING');
   if(await orderHash(env,claim.retailer,claim.book_id,String(b.orderNumber))!==claim.external_order_hmac)
     return deny(409,'PROOF_MISMATCH');
+  const active=await env.DB.prepare('SELECT 1 FROM books_audiobook_external_grants WHERE buyer_user_id=? AND book_id=? AND revoked_at IS NULL')
+    .bind(claim.buyer_user_id,claim.book_id).first();
+  if(active)return deny(409,'AUDIO_ALREADY_GRANTED');
   const at=iso();
   await env.DB.batch([
     env.DB.prepare("UPDATE books_audiobook_external_claims SET status='verified', verified_by=?,verification_method='retailer_portal',reviewed_at=?,updated_at=? WHERE id=? AND status='pending'")
       .bind(user.email,at,at,id),
-    env.DB.prepare("INSERT INTO books_audiobook_external_grants (buyer_user_id,book_id,claim_id,granted_at) SELECT buyer_user_id,book_id,id,? FROM books_audiobook_external_claims WHERE id=? AND status='verified' ON CONFLICT DO NOTHING")
+    env.DB.prepare("INSERT INTO books_audiobook_external_grants (buyer_user_id,book_id,claim_id,granted_at) SELECT buyer_user_id,book_id,id,? FROM books_audiobook_external_claims WHERE id=? AND status='verified' ON CONFLICT(buyer_user_id,book_id) DO UPDATE SET claim_id=excluded.claim_id,granted_at=excluded.granted_at,revoked_at=NULL WHERE books_audiobook_external_grants.revoked_at IS NOT NULL")
       .bind(at,id)
   ]);
   return reply(200,{ok:true,status:'verified',claimId:id});
+}
+export async function rejectAudioClaim(env,req,id){
+  const {user,error}=await identify(req,env,true);if(error)return error;
+  const b=await input(req);
+  const reasons=['invalid_order','cancelled','duplicate','identity_mismatch','other'];
+  if(!b||b.confirm!==true||!reasons.includes(b.reason))return deny(400,'REJECTION_REASON_REQUIRED');
+  const row=await env.DB.prepare('SELECT status FROM books_audiobook_external_claims WHERE id=?').bind(id).first();
+  if(!row||row.status!=='pending')return deny(409,'NOT_PENDING');
+  const at=iso();
+  const updated=await env.DB.prepare("UPDATE books_audiobook_external_claims SET status='rejected',verified_by=?,verification_method='retailer_portal',rejection_reason=?,reviewed_at=?,updated_at=? WHERE id=? AND status='pending'")
+    .bind(user.email,b.reason,at,at,id).run();
+  if(Number(updated?.meta?.changes??updated?.changes??0)!==1)return deny(409,'CLAIM_CHANGED');
+  return reply(200,{ok:true,status:'rejected',claimId:id});
 }
 export async function revokeAudioClaim(env,req,id){
   const {user,error}=await identify(req,env,true);if(error)return error;
@@ -95,7 +112,7 @@ export async function revokeAudioClaim(env,req,id){
 }
 export async function externalAudioLibrary(env,req){
   const {user,error}=await identify(req,env);if(error)return error;
-  const rows=await env.DB.prepare('SELECT book_id,granted_at FROM books_audiobook_external_grants WHERE buyer_user_id=? AND revoked_at IS NULL')
+  const rows=await env.DB.prepare("SELECT g.book_id,g.granted_at FROM books_audiobook_external_grants g JOIN books_audiobook_external_claims c ON c.id=g.claim_id WHERE g.buyer_user_id=? AND g.revoked_at IS NULL AND c.status='verified'")
     .bind(user.userId).all();
   const catalog=await loadCatalog(env),byId=new Map((catalog.books||[]).map(b=>[b.id,b]));
   return reply(200,{items:(rows.results||[]).map(g=>{
@@ -107,10 +124,11 @@ export async function externalAudioLibrary(env,req){
 export async function handleExternalAudioClaims(request,env){
   if(!env?.DB)return deny(503,'DB_UNAVAILABLE');
   const path=new URL(request.url).pathname;
-  const action=/^\/api\/commerce\/admin\/audiobook\/claims\/([a-f0-9-]{36})\/(approve|revoke)$/.exec(path);
+  const action=/^\/api\/commerce\/admin\/audiobook\/claims\/([a-f0-9-]{36})\/(approve|revoke|reject)$/.exec(path);
   try{
     if(action&&request.method==='POST')return action[2]==='approve'
-      ?approveAudioClaim(env,request,action[1]):revokeAudioClaim(env,request,action[1]);
+      ?approveAudioClaim(env,request,action[1])
+      :action[2]==='reject'?rejectAudioClaim(env,request,action[1]):revokeAudioClaim(env,request,action[1]);
     if(path==='/api/commerce/admin/audiobook/claims'&&request.method==='GET')return listPendingClaims(env,request);
     if(path==='/api/commerce/audiobook/claims'&&request.method==='POST')return submitAudioClaim(env,request);
     if(path==='/api/commerce/audiobook/claims'&&request.method==='GET')return listMyClaims(env,request);
