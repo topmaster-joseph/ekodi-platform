@@ -242,7 +242,8 @@ test('church, mission, and Bible share a fail-closed tomorrow navigation control
  assert.match(client,/window\.addEventListener\('storage',event=>/);
  assert.match(client,/location\.replace\(pageUrl\(seoulToday\(\)\)\)/);
  assert.match(client,/next\.addEventListener\('click',async event=>/);
- assert.match(client,/if \(!await verifyFuturePermission\(date\)\)/);
+ assert.match(client,/const authorized=await verifyFuturePermission\(date\)/);
+ assert.match(client,/if\(authorized===false\)\{revokeFutureNavigation\(\);return;\}/);
  assert.match(client,/timeZone:'Asia\/Seoul'/);
 });
 
