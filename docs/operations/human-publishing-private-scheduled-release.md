@@ -36,7 +36,7 @@
 ## 관리자 화면 및 비공개 API 계약 (추가 구현, 아직 비활성)
 
 - 관리자 화면 소스: `publishing/private-releases/index.html`, `private-releases.js`. 실제 운영 게이트웨이에서 확인해야 할 표준 진입 URL은 `https://ekodi.kr/publishing/private-releases/`. 이 경로는 **아직 실서비스에서 검증·배포되지 않았으며 링크만으로 기능을 증명하지 않는다.**
-- 출판 Worker 라우터: `publishing-worker.js`의 `/api/publishing/private-releases`. `PUBLISHING_PRIVATE_RELEASE_ENABLED`가 문자열 `true`가 아니면 404, 필수 결합 서비스가 하나라도 빠지면 503. 이 기능은 기존 예약도서·카탈로그에 영향을 주지 않는다.
+- 출판 Worker 라우터: `publishing-worker.js`의 내부 경로 `/api/private-releases` (중앙 정규 경로는 `https://ekodi.kr/publishing/api/private-releases`; 라우터가 `/publishing`을 제거하여 전달). `PUBLISHING_PRIVATE_RELEASE_ENABLED`가 문자열 `true`가 아니면 404, 필수 결합 서비스가 하나라도 빠지면 503. 이 기능은 기존 예약도서·카탈로그에 영향을 주지 않는다.
 - 읽기: `GET /api/publishing/private-releases` (비공개 등록된 전체 작품 목록), `GET /api/publishing/private-releases/:editionId`, `GET /api/publishing/private-releases/csrf`. 읽기까지 출판 권한 인증이 필요하다.
 - 쓰기: `POST /api/publishing/private-releases/register` with `{"editionId":"..."}`; `POST /api/publishing/private-releases/:editionId/schedule` with `{"revision":2,"publishAt":"2026-11-15T09:00:00+09:00"}`; `POST /api/publishing/private-releases/:editionId/cancel` with `{"revision":3,"reason":"..."}`. 날짜는 단순 예시. 일정 변경마다 optimistic CAS 적용, 이전 revision은 거절한다.
 - 인증: `PUBLISHING_RELEASE_AUTH.verifyRequest`는 서버 세션·`publishing.private-release.{read,register,schedule,cancel}` 세분 권한·same-origin/anti-CSRF를 확인하는 신뢰된 출판 전용 RPC. 관리자 이메일 문자열을 클라이언트에서 비교하는 방식 금지. `issueCsrf`는 인증된 요청에만 서버가 토큰을 발급하며, 브라우저의 저장소에 인증정보를 남기지 않는다.
@@ -46,3 +46,7 @@
 
 ### 완료됐다고 주장할 수 없는 운영 항목
 `PUBLISHING_RELEASE_DB`, `PUBLISHING_RELEASE_AUTH`, `PUBLISHING_RELEASE_VERIFIER`, `PUBLISHING_RELEASE_AUDIT`, `PUBLISHING_RELEASE_CHANNELS` 서비스 바인딩은 **이번 PR에서 실제 발급/설정하지 않았다.** Books/Mall의 진열·검색·가격·결제·파일 다운로드 진입점은 아직 신설 출판 판본의 중앙 공개 승인을 호출하지 않는다. 그러므로 이 두 채널에 신규 도서를 인계하거나 공개할 수 없다. 기존 판매 도서는 변경하지 않았다.
+
+### 중앙 라우트 실증 계약
+
+`platform-route-registry.js`의 `/publishing` 서비스 바인딩은 요청을 출판 Worker로 전달하기 전에 해당 접두어를 제거한다. 따라서 화면 `/publishing/private-releases/`는 Worker의 `/private-releases/`, API `/publishing/api/private-releases`는 Worker의 `/api/private-releases`에 대응한다. 반면 브라우저의 `Origin`은 `https://ekodi.kr` 그대로이므로, 출판 API는 보안 검사에 정규 Apex Origin을 사용한다. 이 경로는 `test/human-publishing-canonical-release-route.test.mjs`에서 회귀 검증한다.
