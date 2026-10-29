@@ -190,7 +190,8 @@ test('Mission landing, login state and image remain first-party and without hard
   read('space/ekodimission.page'),read('space/ekodimission-saturday.js'),
   read('space/ekodimission-shell.js'),read('space/ekodimission-shell.css'),read('space-worker.js')
  ]);
- assert.match(page,/open-table-meal-260925.jpg/);
+ assert.doesNotMatch(page,/open-table-meal-260925.jpg/);
+ assert.match(page,/data-mission-public-photo/);
  assert.doesNotMatch(page,/mission-table-hero\.svg/);
  assert.match(page,/data-mission-saturday/);
  assert.match(page,/publicConsent/);
