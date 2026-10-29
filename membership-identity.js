@@ -1,7 +1,6 @@
 // Verified, provider-independent membership subject.
 // A provider email or the current Supabase auth user id is never the paid account key.
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const CURRENT_ACTIVE = new Set(['active','trialing','grace']);
 
 export function parseBillingIdentity(payload, authUser) {
   const personId = String(payload?.person_id || '').trim().toLowerCase();
@@ -59,23 +58,17 @@ export function personalSubscriptionLookupKeys(identity) {
 // different login method, and never invent a winner between two active payers.
 export function choosePersonalSubscription(rows) {
   const candidates = rows.filter(Boolean);
-  const activePaid = candidates.filter(row => Number(row.monthly_fee || 0) > 0
-    && CURRENT_ACTIVE.has(String(row.status || '').toLowerCase()));
-  if (activePaid.length > 1) {
+  const paid = candidates.filter(row => Number(row.monthly_fee || 0) > 0);
+  // An active and a past-due billing key still represent two independent
+  // charges. Never display one as safe to re-subscribe while hiding the other.
+  if (paid.length > 1) {
     const error = new Error('account_billing_reconciliation_required');
     error.code = 'ACCOUNT_BILLING_RECONCILIATION_REQUIRED';
     throw error;
   }
-  if (activePaid.length === 1) return activePaid[0];
-  // Preserve a legacy past-due/cancelled billing record for a support review
-  // rather than overwriting it with an inherited FREE record.
-  const historicallyPaid = candidates.filter(row => Number(row.monthly_fee || 0) > 0);
-  if (historicallyPaid.length > 1) {
-    const error = new Error('account_billing_reconciliation_required');
-    error.code = 'ACCOUNT_BILLING_RECONCILIATION_REQUIRED';
-    throw error;
-  }
-  return historicallyPaid[0] || candidates[0] || null;
+  // Preserve a legacy past-due/cancelled billing record for review rather
+  // than overwriting its paid history with an inherited FREE record.
+  return paid[0] || candidates[0] || null;
 }
 
 const collisionError = () => Object.assign(
