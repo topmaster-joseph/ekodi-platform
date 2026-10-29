@@ -32,6 +32,18 @@
     $('priceNow').textContent = C.won(p?.amount);
     $('priceList').textContent = p && p.amount < p.listPrice ? C.won(p.listPrice) : '';
     $('priceTier').textContent = quote.signedIn ? `${quote.buyerEmail} · ${p?.tierLabel || ''} 가격` : '로그인하면 회원등급 가격이 적용됩니다.';
+    let bonusNote = $('audiobookBonusNote');
+    if (!bonusNote) {
+      bonusNote = document.createElement('p');
+      bonusNote.id = 'audiobookBonusNote'; bonusNote.className = 'buy-msg';
+      $('priceTier').insertAdjacentElement('afterend',bonusNote);
+    }
+    bonusNote.textContent = quote.audiobook?.included
+      ? (quote.audiobook.ready
+        ? '이 전자책에는 승인된 오디오북이 무료 포함됩니다. 구매 후 같은 서재에서 함께 받으세요.'
+        : '오디오북 무료 제공 대상 도서입니다. 오디오북은 음성·권리 검수 중이며, 준비가 완료되면 기존 구매자에게 추가 결제 없이 열립니다.')
+      : '전자책 출판 검수 완료 후 무료 오디오북 제공 여부를 확인합니다.';
+
     renderTiers();
     const list = $('channelList'); list.replaceChildren();
     const channels = [['유페이퍼', b.links?.upaper], ['Google Play Books', b.links?.google], ['Amazon Kindle', b.links?.amazon]].filter(([, url]) => url);
