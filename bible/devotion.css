@@ -134,3 +134,14 @@ body:has([data-mission-devotion]) .mission-site-header{max-width:840px;padding-i
 /* Minimal identity text: account only after verified login, no guest/status labels. */
 .mission-auth-state[hidden]{display:none!important}
 .mission-auth-state{max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Shared devotional account actions: Bible and Church, next to admin controls. */
+.ekodi-devotion .dv-shared-tools{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin-top:8px;padding:7px 9px;border:1px solid var(--dv-line);border-radius:12px;background:#faf8f0}
+.ekodi-devotion .dv-shared-tools > .dv-adminbar{display:flex;flex:1 1 auto;min-width:0;flex-wrap:wrap;align-items:center;gap:6px;margin:0;padding:0;border:0;background:transparent}
+.ekodi-devotion .dv-shared-tools > .dv-adminbar[hidden]{display:none!important}
+.ekodi-devotion .dv-shared-auth{display:flex;align-items:center;gap:6px;margin-left:auto;min-width:0}
+.ekodi-devotion .dv-shared-account{max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.78rem;font-weight:650;color:var(--dv-accent-dark)}
+.ekodi-devotion .dv-shared-auth .dv-date-link{font:inherit;font-size:.79rem;min-height:36px;cursor:pointer}
+.ekodi-devotion .dv-date-link[hidden]{display:none!important}
+.ekodi-devotion .dv-date-link[aria-disabled="true"]{pointer-events:none}
+@media(max-width:520px){.ekodi-devotion .dv-shared-tools{padding:6px 7px;gap:5px}.ekodi-devotion .dv-shared-account{max-width:135px;font-size:.73rem}}
