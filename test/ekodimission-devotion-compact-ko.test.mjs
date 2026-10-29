@@ -86,6 +86,6 @@ test('Mission devotional login controls sit in the lower admin row without chang
  assert.match(css,/mission-devotion-tools > \.dv-adminbar\[hidden\]\{display:none!important\}/);
  assert.match(css,/mission-devotion-tools > \.mission-auth-actions/);
  assert.match(renderer,/root\.append\(datebar, status, scriptureBlock, tabbar, panelWrap, notice, shareRow, adminBar, adminPanel, adminView, toastEl\)/);
- assert.match(shell,/missionAuthUi\.logout\.addEventListener\('click'/);
+ assert.match(shell,/missionAuthUi\?\.logout\.addEventListener\('click'/);
  assert.match(shell,/window\.EKODIMissionAuth=Object\.freeze/);
 });
