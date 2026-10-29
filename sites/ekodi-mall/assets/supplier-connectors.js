@@ -12,8 +12,8 @@
   async function api(path,options={}){const t=await token();if(!t)throw new Error('운영자 Google 로그인이 필요합니다.');const h=new Headers(options.headers||{});h.set('authorization',`Bearer ${t}`);if(options.body&&!h.has('content-type'))h.set('content-type','application/json');const r=await fetch(`${API}${path}`,{...options,headers:h});const b=await r.json().catch(()=>({}));if(!r.ok)throw new Error(b.error||`Mall API ${r.status}`);return b;}
   async function post(path,body){return api(path,{method:'POST',body:JSON.stringify(body)});}
   async function exchangeCentralToken(){const p=new URLSearchParams(location.hash.slice(1));const central=p.get('ekodi_token');if(!central)return;const type=p.get('ekodi_type')||'email';const {error}=await sb.auth.verifyOtp({token_hash:central,type});if(error)throw error;history.replaceState(null,'',location.pathname+location.search);}
-  const card=(name,value)=>{const a=document.createElement('article'),s=document.createElement('small'),b=document.createElement('strong');s.textContent=name;b.textContent=value?'READY':'MISSING';a.append(s,b);return a;};
-  async function load(){const r=await api('/api/internal/connectors/domemae/readiness');const x=r.readiness;providerReady.textContent=x.providerReady?'PROVIDER READY':'PROVIDER BLOCKED';lookupGate.textContent=x.gates.lookupEnabled?'ON':'OFF';credentialSummary.replaceChildren(card('API KEY',x.credentials.apiKeyConfigured),card('USER ID',x.credentials.userIdConfigured),card('LOGIN SECRET',x.credentials.passwordConfigured),card('APPROVED ACCOUNT',x.credentials.approvedMemberBindingReady),card('PROBE SWITCH',x.gates.readOnlyAuthProbeEnabled),card('LOOKUP GATE',x.gates.lookupEnabled));nextRequired.textContent=x.nextRequired.length?`다음 필요: ${x.nextRequired.join(' · ')}`:'조회 준비가 완료되었습니다. 주문 실행은 계속 OFF입니다.';
+  const card=(name,value)=>{const a=document.createElement('article'),s=document.createElement('small'),b=document.createElement('strong');s.textContent=name;b.textContent=value?'설정됨':'미설정';b.dataset.state=value?'ready':'missing';a.append(s,b);return a;};
+  async function load(){const r=await api('/api/internal/connectors/domemae/readiness');const x=r.readiness;providerReady.textContent=x.providerReady?'설정 완료':'설정 필요';lookupGate.textContent=x.capabilities.itemLookup?'조회 가능':'조회 차단';credentialSummary.replaceChildren(card('API KEY',x.credentials.apiKeyConfigured),card('USER ID',x.credentials.userIdConfigured),card('LOGIN SECRET',x.credentials.passwordConfigured),card('APPROVED ACCOUNT',x.credentials.approvedMemberBindingReady),card('PROBE SWITCH',x.gates.readOnlyAuthProbeEnabled),card('LOOKUP GATE',x.gates.lookupEnabled));nextRequired.textContent=x.nextRequired.length?`다음 필요: ${x.nextRequired.join(' · ')}`:'조회 준비가 완료되었습니다. 주문 실행은 계속 OFF입니다.';
     const probe=x.readOnlyAuthProbe||{}, desc=probe.result==='ok'?'인증·잔액 조회 성공':probe.result==='failed'?'점검 실패':'점검 기록 없음';
     const checked=probe.checkedAt?new Date(probe.checkedAt).toLocaleString('ko-KR'):'미실행';
     const mismatch=probe.loginIdMatchesConfigured===false?' · ID 차이 감지(SNS 연동 가능)':probe.loginIdMatchesConfigured===true?' · ID 일치':'';
@@ -30,8 +30,9 @@
       ACCOUNT_BINDING_MISMATCH:'회원 식별자 불일치: 승인 계정·로그인 응답을 확인하세요.',
       ASSET_PROBE_FAILED:'로그인은 통과했으나 잔액 조회에 실패했습니다.'
     };
+    $('#probeHelp').dataset.state=probe.result==='failed'?'error':'ok';
     $('#probeHelp').textContent=probe.result==='ok'?'로그인·잔액 조회 성공. 유상 자동발주와 배송정보 전송은 OFF입니다.':hints[probe.errorCode]||'SNS 계정이라면 도매꾹 회원정보에서 비밀번호를 설정하고 Cloudflare Secret을 변경하세요. 비밀번호를 이 화면에 입력하지 마세요.';
-    setStatus(`${r.actor} · Domemae provider ${x.providerReady?'READY':'BLOCKED'} · lookup ${x.capabilities.itemLookup?'READY':'LOCKED'} · order OFF`);}
+    setStatus(`도매매·도매꾹 · ${x.providerReady?'인증정보 설정됨':'인증정보 설정 필요'} · ${probe.result==='failed'?'읽기 전용 인증 점검 실패':probe.result==='ok'?'읽기 전용 인증 확인':'인증 점검 대기'} · 상품조회 ${x.capabilities.itemLookup?'가능':'차단'} · 실주문 OFF`,probe.result==='failed');}
   $('#authProbeRetry')?.addEventListener('click',async()=>{
     const btn=$('#authProbeRetry');btn.disabled=true;
     try{
@@ -45,9 +46,33 @@
   });
   $('#itemLookupForm')?.addEventListener('submit',async(e)=>{e.preventDefault();const itemNo=e.currentTarget.elements.itemNo.value;try{const r=await post('/api/internal/connectors/domemae/item-lookup',{itemNo});lookupResult.textContent=JSON.stringify(r.item,null,2);setStatus('공식 상품조회가 완료됐습니다. 원본 payload는 저장하지 않았습니다.');}catch(err){lookupResult.textContent=err.message;setStatus(err.message,true);}});
   $('#orderDryRunForm')?.addEventListener('submit',async(e)=>{e.preventDefault();const f=e.currentTarget.elements;try{const r=await post('/api/internal/connectors/domemae/order-dry-run',{itemNo:f.itemNo.value,quantity:f.quantity.value});dryRunResult.textContent=`실행 허용: ${r.executionAllowed?'YES':'NO'}\nBlockers: ${(r.blockers||[]).join('\n')}\n${r.note||''}`;setStatus('주문 Dry-run을 기록했습니다. 실제 주문 API는 호출하지 않았습니다.');}catch(err){dryRunResult.textContent=err.message;setStatus(err.message,true);}});
+  // Accessible task tabs preserve state across refresh without using the auth-token hash.
+  const tabs=[...document.querySelectorAll('[data-connector-tab]')];
+  const panels=[...document.querySelectorAll('[data-connector-panel]')];
+  const validTabs=new Set(tabs.map((tab)=>tab.dataset.connectorTab));
+  function activateTab(value,updateUrl=false){
+    const selected=validTabs.has(value)?value:'overview';
+    for(const tab of tabs){const active=tab.dataset.connectorTab===selected;tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;}
+    for(const panel of panels)panel.hidden=panel.dataset.connectorPanel!==selected;
+    if(updateUrl){const url=new URL(location.href);if(selected==='overview')url.searchParams.delete('tab');else url.searchParams.set('tab',selected);history.replaceState(null,'',url.pathname+url.search+url.hash);}
+  }
+  for(const [index,tab] of tabs.entries()){
+    tab.addEventListener('click',()=>activateTab(tab.dataset.connectorTab,true));
+    tab.addEventListener('keydown',(event)=>{
+      let next=-1;
+      if(event.key==='ArrowRight')next=(index+1)%tabs.length;
+      else if(event.key==='ArrowLeft')next=(index+tabs.length-1)%tabs.length;
+      else if(event.key==='Home')next=0;
+      else if(event.key==='End')next=tabs.length-1;
+      if(next<0)return;
+      event.preventDefault();activateTab(tabs[next].dataset.connectorTab,true);tabs[next].focus();
+    });
+  }
+  activateTab(new URLSearchParams(location.search).get('tab'));
+  window.addEventListener('popstate',()=>activateTab(new URLSearchParams(location.search).get('tab')));
   login?.addEventListener('click',()=>{location.href='https://ekodi.kr/auth/?site=mall-seller&return_to='+encodeURIComponent(location.href.split('#')[0]);});
   logout?.addEventListener('click',async()=>{await sb.auth.signOut();session=null;sync();setStatus('로그아웃했습니다.');});reload?.addEventListener('click',()=>load().catch((e)=>setStatus(e.message,true)));
-  function sync(){const signed=Boolean(session);login.hidden=signed;logout.hidden=!signed;document.querySelectorAll('.ops-panel input,.ops-panel button').forEach((el)=>{el.disabled=!signed;});reload.disabled=!signed;}
+  function sync(){const signed=Boolean(session);login.hidden=signed;logout.hidden=!signed;document.querySelectorAll('.connector-panel input,.connector-panel button').forEach((el)=>{el.disabled=!signed;});reload.disabled=!signed;}
   exchangeCentralToken().catch((e)=>setStatus(`인증 연결 실패: ${e.message}`,true)).finally(async()=>{session=(await sb.auth.getSession()).data.session;sync();if(session)load().catch((e)=>setStatus(e.message,true));});
   sb.auth.onAuthStateChange((_e,next)=>{session=next;sync();if(session)load().catch(()=>{});});
 })();
