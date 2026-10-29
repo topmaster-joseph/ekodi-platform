@@ -104,19 +104,44 @@
         const number = document.createElement('input'); number.autocomplete='off'; number.maxLength=128;
         const checked = document.createElement('label');
         const box = document.createElement('input'); box.type = 'checkbox';
-        checked.append(box, document.createTextNode(' 판매처에서 실제 결제내역과 환불 여부를 직접 확인했습니다.'));
+        checked.append(box, document.createTextNode(' 판매처의 결제 완료·환불 여부를 확인했습니다.'));
+        const ownerChecked = document.createElement('label');
+        const ownerBox = document.createElement('input'); ownerBox.type='checkbox';
+        ownerChecked.append(ownerBox,document.createTextNode(' 구매자 동일인 여부를 판매처 기록으로 확인했습니다.'));
         const approve = document.createElement('button'); approve.type='button'; approve.textContent='구매확인 승인';
         approve.addEventListener('click',async()=>{
-          if(!box.checked||!number.value.trim()){alert('판매처 확인과 주문번호가 필요합니다.');return;}
+          if(!box.checked||!ownerBox.checked||!number.value.trim()){
+            alert('구매자 동일인 확인, 결제·환불 확인, 판매처 주문번호가 모두 필요합니다.');return;
+          }
           approve.disabled=true;
           try{
             await C.api(`admin/audiobook/claims/${encodeURIComponent(item.id)}/approve`,{
-              method:'POST',body:{orderNumber:number.value.trim(),confirmedWithRetailer:true,verificationMethod:'retailer_portal'}
+              method:'POST',body:{orderNumber:number.value.trim(),confirmedWithRetailer:true,
+                buyerIdentityMatched:true,refundStatusChecked:true,verificationMethod:'retailer_portal'}
             });
-            number.value='';refreshExternalAdmin();
+            number.value='';refreshExternalAdmin();refreshExternal();
           }catch(e){alert(e.message)}finally{approve.disabled=false}
         });
-        info.append(p,label,number,checked,approve);panel.append(info);host.append(panel);
+        const rejectReason = document.createElement('select');
+        for (const [value,labelText] of [
+          ['invalid_order','주문 확인 불가'],['cancelled','취소·환불'],
+          ['duplicate','중복 신청'],['identity_mismatch','구매자 불일치'],['other','기타 사유']]) {
+          const option=document.createElement('option');option.value=value;option.textContent=labelText;rejectReason.append(option);
+        }
+        rejectReason.setAttribute('aria-label','반려 사유');
+        const reject=document.createElement('button');reject.type='button';reject.textContent='신청 반려';
+        reject.addEventListener('click',async()=>{
+          if(!window.confirm('구매확인 신청을 반려하시겠습니까?'))return;
+          reject.disabled=true;
+          try{
+            await C.api(`admin/audiobook/claims/${encodeURIComponent(item.id)}/reject`,{
+              method:'POST',body:{confirm:true,reason:rejectReason.value}
+            });
+            refreshExternalAdmin();refreshExternal();
+          }catch(e){alert(e.message)}finally{reject.disabled=false}
+        });
+        info.append(p,label,number,checked,ownerChecked,approve,rejectReason,reject);
+        panel.append(info);host.append(panel);
       }
     } catch (e) { if(e.status!==401&&e.status!==403) $('externalAudioAdmin').hidden = true; }
   }
