@@ -609,7 +609,7 @@ const SAFE_LOCALAI_DIAGNOSTIC_CODES = [
 const safeLocalAiDiagnostic = value =>
   SAFE_LOCALAI_DIAGNOSTIC_CODES.includes(value) ? value : 'unclassified';
 
-function summarizeCommandResult(result = {}, commandType = '') {
+export function summarizeCommandResult(result = {}, commandType = '') {
   const summary = {};
   // Expose only a bounded version for approved native Agent self-update receipts.
   if (commandType === 'agent.self_update' && result?.version !== undefined)
