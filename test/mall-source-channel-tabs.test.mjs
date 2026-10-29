@@ -46,7 +46,7 @@ test('provider names are escaped and single-route saves preserve other routes',(
   assert.doesNotMatch(markup,/<img src=x/);
   assert.match(markup,/&lt;img/);
   assert.match(source,/const chosen=sources\.filter\(item=>mallSourcingTabKey\(item\)===selected\)/);
-  assert.match(source,/mallSourcingSelectionPatch\(chosen,new FormData\(form\)\)/);
+  assert.match(source,/mallSourcingSelectionPatch\(chosen,formData,freshRoutes,bootstrap\)/);
   assert.match(source,/await workspaceAffiliateApi\('\/workspace\/sources',\{method:'PUT'/);
   assert.match(source,/const canonicalPath=section==='amazon'\?adminBase\+'\/sourcing'/);
   assert.match(source,/MALL_SOURCING_TABS_CSS/);
