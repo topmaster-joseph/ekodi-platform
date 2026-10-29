@@ -101,7 +101,7 @@ async function readOnlyAuthProbeStatus(env) {
   return {
     enabled: flag(env.DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED),
     result: row?.result_status === 'ok' ? 'ok' : row?.result_status === 'failed' ? 'failed' : 'not-checked',
-    checkedAt: /^\\d{4}-\\d{2}-\\d{2}T/.test(String(row?.checked_at || '')) ? row.checked_at : null,
+    checkedAt: /^\d{4}-\d{2}-\d{2}T/.test(String(row?.checked_at || '')) ? row.checked_at : null,
     login: meta.login === 'ok' ? 'ok' : meta.login === 'failed' ? 'failed' : 'unknown',
     asset: meta.asset === 'ok' ? 'ok' : meta.asset === 'failed' ? 'failed' : 'unknown',
     loginIdMatchesConfigured: typeof meta.loginIdMatchesConfigured === 'boolean' ? meta.loginIdMatchesConfigured : null,
@@ -125,7 +125,7 @@ async function readiness(env, actor) {
     },
     capabilities: {
       itemLookup: cfg.lookupEnabled && cfg.apiKeyConfigured,
-      orderPrepare: cfg.apiKeyConfigured && cfg.userIdConfigured && cfg.sessionConfigured,
+      orderPrepare: cfg.apiKeyConfigured && cfg.userIdConfigured && cfg.passwordConfigured,
       orderExecute: false,
       cancellationExecute: false,
       autoOrder: false,
@@ -209,11 +209,11 @@ export async function handleDomemaeRequest(request, env) {
     const quantity = Math.max(1, Math.min(99, Math.trunc(Number(body?.quantity) || 1)));
     if (!itemNo) return { status: 400, body: { error: '숫자 상품번호(itemNo)가 필요합니다.' } };
     const cfg = configured(env);
-    await recordCheck(env, 'order_readiness', itemNo, 'blocked', { actor: auth.actor, quantity, credentialsReady: cfg.apiKeyConfigured && cfg.userIdConfigured && cfg.sessionConfigured });
+    await recordCheck(env, 'order_readiness', itemNo, 'blocked', { actor: auth.actor, quantity, credentialsReady: cfg.apiKeyConfigured && cfg.userIdConfigured && cfg.passwordConfigured });
     return {
       status: 200,
       body: {
-        dryRun: { itemNo, quantity, credentialsReady: cfg.apiKeyConfigured && cfg.userIdConfigured && cfg.sessionConfigured },
+        dryRun: { itemNo, quantity, credentialsReady: cfg.apiKeyConfigured && cfg.userIdConfigured && cfg.passwordConfigured },
         executionAllowed: false,
         blockers: ['DOMEMAE_ORDER_EXECUTION_NOT_IMPLEMENTED', 'PII_VAULT_RELEASE_REQUIRED', 'E_MONEY_AND_CANCEL_FLOW_TEST_REQUIRED', 'SUPPLIER_API_V1_PILOT_LOCKED'],
         note: '공식 setOrder 호출은 아직 구현하지 않았습니다. 샌드박스가 없어 실거래 계정에서 별도 승인된 파일럿 검증 후에만 추가합니다.'
