@@ -11,7 +11,7 @@ custom_domain = true
 [vars]
 ENVIRONMENT = "production"
 INSURANCE_COMPARISON_PUBLIC_ENABLED = "false"
-ALLOWED_ORIGINS = "https://ins.ekodi.kr"
+ALLOWED_ORIGINS = "https://ekodi.kr,https://ins.ekodi.kr"
 SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
 SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
 
