@@ -80,3 +80,16 @@ test('Site inventory presents a single-line classified register with numbered ro
   assert.match(src,/confirmed_manually/);
   assert.doesNotMatch(src,/미등록 확정/);
 });
+
+test('Production browser exercises Search Visibility filters, Manage and mobile without writes',()=>{
+  const script=read('scripts/verify-admin-production-ui-e2e.mjs');
+  const coverage=read('scripts/verify-search-visibility-interactions.mjs');
+  assert.match(script,/verifySearchVisibilityInteractions\(page,artifactsDir,results\)/);
+  assert.match(coverage,/await filter\.selectOption\(group\)/);
+  assert.match(coverage,/await search\.fill\(firstName\)/);
+  assert.match(coverage,/await first\.locator\('button'\)\.click\(\)/);
+  assert.match(coverage,/await panel\.locator\('\[data-sv-manage-close\]'\)\.click\(\)/);
+  assert.match(coverage,/page\.setViewportSize\(\{width:390,height:844\}\)/);
+  assert.match(coverage,/forbiddenWrites\.length/);
+  assert.match(coverage,/read-only-interaction/);
+});
