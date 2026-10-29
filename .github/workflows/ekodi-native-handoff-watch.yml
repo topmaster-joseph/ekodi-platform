@@ -1,0 +1,76 @@
+name: EKODI Native Automation Handoff
+
+# EKODI controls these schedules. The GitHub runner observes only; no OpenAI
+# scheduled task, model endpoint, account token, mail send or deployment here.
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Read-only handoff profile
+        required: true
+        default: hourly
+        type: choice
+        options: [hourly, publishing, worship, all]
+  schedule:
+    - cron: '43 * * * *'       # EKODI hourly monitoring; stagger native watch :37
+    - cron: '0 23 * * 0'      # Monday 08:00 KST publishing editorial snapshot
+    - cron: '26 23 * * 2'     # Wednesday 08:26 KST worship readiness snapshot
+  pull_request:
+    paths:
+      - '.github/workflows/ekodi-native-handoff-watch.yml'
+      - 'scripts/ekodi-native-handoff-watch.mjs'
+      - 'config/ekodi-native-automation-handoff.json'
+      - 'test/ekodi-native-handoff-watch.test.mjs'
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: ekodi-native-handoff-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'scheduled' }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate native automation owner and fail-closed contracts
+        run: |
+          node --check scripts/ekodi-native-handoff-watch.mjs
+          node --test test/ekodi-native-handoff-watch.test.mjs
+
+  observe:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      EKODI_NATIVE_PROFILE: ${{ inputs.profile || (github.event.schedule == '0 23 * * 0' && 'publishing' || github.event.schedule == '26 23 * * 2' && 'worship' || 'hourly') }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Collect bounded first-party evidence only
+        run: |
+          node scripts/ekodi-native-handoff-watch.mjs \
+            --profile="$EKODI_NATIVE_PROFILE" \
+            --output=ekodi-native-handoff-evidence.json
+      - name: Retain idempotent and privacy-safe observation
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ekodi-native-handoff-${{ github.run_id }}
+          path: ekodi-native-handoff-evidence.json
+          if-no-files-found: warn
+          retention-days: 14
