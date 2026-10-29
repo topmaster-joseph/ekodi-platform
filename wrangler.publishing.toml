@@ -17,3 +17,7 @@ service = "ekodi-books"
 directory = "./publishing"
 binding = "ASSETS"
 run_worker_first = true
+
+# Runs only protected release-candidate preparation. Does not publish products.
+[triggers]
+crons = ["*/15 * * * *"]
