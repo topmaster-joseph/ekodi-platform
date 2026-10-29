@@ -110,3 +110,12 @@
 - SNS 가입 회원은 API 로그인 지원 여부를 공급사에 재확인한다. **별도의 샌드박스는 없다.** Private API 키만으로 자동발주 권한을 추정하거나 계정 ID를 임의로 바꾸지 않는다.
 - 운영 전제는 계속 `DOMEGGOOK_AUTO_ORDER_ENABLED=false` 및 `BUYER_PII_RELEASE_ENABLED=false`다. Secret을 설정하더라도 **유상 자동발주가 자동 활성화되지는 않는다.**
 - 관리 화면에는 승인 회원 ID나 원문 비밀값 대신 `approvedMemberConfigured`/ `approvedMemberBindingReady` 진리값만 보여준다. 비결제 인증 및 이머니 조회의 성공 여부는 관리자 보호 화면에서 확인한다.
+
+
+## 2026-10-29 SNS 로그인 오류 분류·관리자 재검증
+
+- 공식 setLogin v4.1 API 문서는 **SNS 가입 회원도 회원정보에서 별도 비밀번호 설정 후 사용할 수 있다**고 안내한다: https://openapi.domeggook.com/ko/articles/%EB%A1%9C%EA%B7%B8%EC%9D%B8-e4aaf7c2
+- 도매꾹에 승인 SNS 계정으로 로그인한 뒤 회원정보수정에서 별도 비밀번호를 설정했는지 확인한다. 필요하면 `DOMEMAE_PASSWORD` Worker Secret만 안전하게 갱신한다. 비밀번호·API 키·sId는 브라우저 관리자 페이지, GitHub, 로그에 입력하지 않는다.
+- 관리자 전용 POST `/api/internal/connectors/domemae/auth-probe`는 로그인/잔액 조회만 실행하며 최소 15분 간격으로 제한한다. 일반 Cron은 6시간 간격 제한 유지.
+- 로그인 실패를 안전한 오류코드(`LOGIN_REJECTED`, `PASSWORD_REJECTED`, `SNS_PASSWORD_REQUIRED` 등)로 분류하고 공급사 원문·계정 ID·잔액 금액·Secret을 D1이나 사용자 화면에 기록하지 않는다.
+- 유상 `setOrder`, 자동발주, 구매자 정보 이전은 계속 OFF. **로그인 확인만으로 실거래를 승인하지 않는다.**
