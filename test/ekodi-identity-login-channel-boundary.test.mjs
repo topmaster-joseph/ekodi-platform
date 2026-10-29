@@ -17,7 +17,7 @@ test('EKODI one-person ID is distinct from social provider login and channel rec
   assert.match(boundaryDoc,/login_identities/);
   assert.match(boundaryDoc,/identity_providers\.enabled/);
   assert.match(boundaryDoc,/ekodi_social_account_links/);
-  assert.match(boundaryDoc,/이메일.*자동.*병합하지 않는다/);
+  assert.match(boundaryDoc,/이메일이라고 자동으로 같은 사람이라고 판단하지 않는다/);
   assert.match(login,/Every login path signs the person into ONE EKODI account/);
   assert.match(identityApi,/canonicalAccountSession/);
   assert.match(identityApi,/ensure_person_identity/);
@@ -44,7 +44,7 @@ test('existing federated auth is independent, gated and no automatic account tak
   assert.match(login,/sessionStorage\.setItem\(PENDING_KEY/);
   assert.match(router,/site!=='admin'\)federated\.renderLoginButtons\(\)/);
   assert.match(read('docs/auth/FEDERATED-LOGIN-NAVER-KAKAO.md'),/enabled=false/);
-  assert.match(boundaryDoc,/활성화.*별도/);
+  assert.match(boundaryDoc,/외부 채널 계정 연결·게시 권한은 로그인 제공자 활성화와 독립적으로/);
 });
 
 test('external channel admin keeps existing selectors and route unchanged for compatible E2E', () => {
