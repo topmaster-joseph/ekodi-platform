@@ -84,12 +84,53 @@ export function seonammediRobotsTxt() {
   ].join('\n');
 }
 
-export function seonammediSitemapXml() {
-  const urls = SEONAMMEDI_SITEMAP_PATHS.map(path => {
+// Only public, live independent-board notices belong in customer-domain discovery.
+// The API itself selects status='published'; check the returned status again to
+// fail closed if the API contract or upstream source changes.
+export function seonammediPublicNoticeSitemapEntries(payload) {
+  if (payload?.ok !== true || payload?.boardId !== 'seonammedi.notice' || !Array.isArray(payload.items)) return [];
+  const seen = new Set();
+  const items = [];
+  for (const row of payload.items.slice(0, 100)) {
+    const id = row?.id;
+    if (!Number.isSafeInteger(id) || id < 1 || row.status !== 'published' || seen.has(id)) continue;
+    seen.add(id);
+    const rawDate = String(row.updatedAt || row.createdAt || '');
+    const time = /^\d{4}-\d{2}-\d{2}T/.test(rawDate) ? Date.parse(rawDate) : NaN;
+    items.push({ path: '/board/notices/' + id, lastmod: Number.isFinite(time) ? new Date(time).toISOString().slice(0, 10) : '' });
+  }
+  return items;
+}
+
+export function seonammediSitemapXml(publishedNotices = []) {
+  const base = SEONAMMEDI_SITEMAP_PATHS.map(path => {
     const priority = path === '/' ? '1.0' : '0.8';
     return '  <url><loc>' + xmlEscape(CANONICAL_ORIGIN + path) + '</loc><changefreq>daily</changefreq><priority>' + priority + '</priority></url>';
-  }).join('\n');
-  return '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + urls + '\n</urlset>\n';
+  });
+  const details = publishedNotices.map(({ path, lastmod }) => {
+    if (!/^\/board\/notices\/[1-9]\d*$/.test(String(path || ''))) return '';
+    const lastmodXml = /^\d{4}-\d{2}-\d{2}$/.test(String(lastmod || '')) ? '<lastmod>' + lastmod + '</lastmod>' : '';
+    return '  <url><loc>' + xmlEscape(CANONICAL_ORIGIN + path) + '</loc>' + lastmodXml + '<changefreq>weekly</changefreq><priority>0.7</priority></url>';
+  }).filter(Boolean);
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + [...base, ...details].join('\n') + '\n</urlset>\n';
+}
+
+// The board's public endpoint is deliberately read-only and limits results.
+// Never query admin/finance/voice endpoints or publish a draft, deleted post or
+// user-submitted private data in the sitemap. On failure retain the three
+// already indexed static pages rather than failing the whole sitemap.
+export async function seonammediLiveSitemapXml(fetchPublic = fetch) {
+  try {
+    const response = await fetchPublic(ORIGIN + SITE_PREFIX + '/board/api/notices', {
+      method: 'GET',
+      headers: { accept: 'application/json' },
+    });
+    if (!response?.ok) return seonammediSitemapXml();
+    const payload = await response.json();
+    return seonammediSitemapXml(seonammediPublicNoticeSitemapEntries(payload));
+  } catch {
+    return seonammediSitemapXml();
+  }
 }
 
 function discoveryResponse(body, contentType, route, method) {
@@ -118,6 +159,12 @@ export default {
     const incoming = new URL(request.url);
     if (!DOMAIN_HOSTS.has(incoming.hostname.toLowerCase())) {
       return new Response('Not found', { status: 404 });
+    }
+    // Generate the live sitemap only on GET, after the protected domain gate.
+    // HEAD remains a cheap, side-effect-free static discovery response.
+    if (request.method === 'GET' && incoming.pathname === '/sitemap.xml') {
+      const xml = await seonammediLiveSitemapXml();
+      return discoveryResponse(xml, 'application/xml; charset=utf-8', 'seonammedi-sitemap', request.method);
     }
     const discovery = seonammediDiscoveryResponse(request, incoming);
     if (discovery) return discovery;
