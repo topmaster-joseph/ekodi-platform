@@ -91,3 +91,40 @@
 3. 비결제 점검: `setLogin` → `getMyAsset` → `getItemView` 순으로 상태만 확인한다. 에러가 발생하면 날짜·API 모드·응답 오류코드·익명화된 안전 진단을 수집한다.
 4. 자동발주 실행은 차단한 채 `supplier_connector_checks` `probe:setOrder`, `supplier_orders.last_error`를 확인하여 인증/형식 문제를 구분한다.
 5. 주문 권한·공급계약·개인정보 처리권한·고객 결제/취소 원장·중복 방지까지 검증한 뒤 제한된 소액 파일럿을 인적 승인하에 진행한다.
+
+
+## 2026-10-29: 자동발주 OFF 상태에서 읽기 전용 인증 점검
+
+- 유상 발주는 `DOMEGGOOK_AUTO_ORDER_ENABLED=false` 유지한다. `DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED=true`는 구매권한이 아니라 `setLogin v4.1` → `getMyAsset v1.0`만 호출하는 별도의 진단 게이트다.
+- 6시간 제한(기존 `supplier_connector_checks` `probe:login`)을 유지한다. 요청 실패는 비밀정보 없는 `MEMBER_ERROR` / `LOGIN_FAILED` / `ASSET_PROBE_FAILED` 상태로만 남긴다.
+- 로그인 응답의 계정 ID가 설정 ID와 다르면 `loginIdMatchesConfigured=false`만 기록하며, SNS 계정 차이일 수 있으므로 자동 발주 승인 근거로 해석하지 않는다.
+- API 키/암호/세션/계정 ID/잔액 금액/원문 Response/구매자 주소는 DB·로그·메일에 저장하지 않는다. 공급사 추가 확인이 필요하면 보안 제출 경로를 별도로 확정한다.
+- **이 점검 성공은 단지 로그인과 잔액 조회 성공을 의미한다. 구매용 API 승인/거래권한/공급계약/개인정보 이전/실주문 파일럿 승인이 아니다.**
+
+
+## 2026-10-29 18:14 KST 도매꾹 Private API 승인 계정 확인 및 강제 보호
+
+- 공급사가 **Private API는 회원별 개별 승인**이며 특정 도매꾹 계정이 승인된 사실을 메일로 확인했다. 계정 ID는 GitHub/프런트/D1 등에 기록하지 않는다.
+- 신규 Cloudflare Worker Secret `DOMEMAE_APPROVED_MEMBER_ID`는 공급사 회신에서 확인한 승인 회원 ID를 운영자가 공식 Cloudflare 인증 경로로 설정한다. **이 Secret이 없거나 `DOMEMAE_USER_ID`와 불일치하면**, 유상 자동발주와 읽기 전용 로그인 호출 모두 차단한다.
+- `setLogin` 응답의 회원 ID 역시 승인 회원 Secret과 일치해야만 유효하다. 불일치 시 `ACCOUNT_BINDING_MISMATCH`만 남기고 `getMyAsset`, `setOrder` 등은 호출하지 않는다.
+- SNS 가입 회원은 API 로그인 지원 여부를 공급사에 재확인한다. **별도의 샌드박스는 없다.** Private API 키만으로 자동발주 권한을 추정하거나 계정 ID를 임의로 바꾸지 않는다.
+- 운영 전제는 계속 `DOMEGGOOK_AUTO_ORDER_ENABLED=false` 및 `BUYER_PII_RELEASE_ENABLED=false`다. Secret을 설정하더라도 **유상 자동발주가 자동 활성화되지는 않는다.**
+- 관리 화면에는 승인 회원 ID나 원문 비밀값 대신 `approvedMemberConfigured`/ `approvedMemberBindingReady` 진리값만 보여준다. 비결제 인증 및 이머니 조회의 성공 여부는 관리자 보호 화면에서 확인한다.
+
+
+## 2026-10-29 SNS 로그인 오류 분류·관리자 재검증
+
+- 공식 setLogin v4.1 API 문서는 **SNS 가입 회원도 회원정보에서 별도 비밀번호 설정 후 사용할 수 있다**고 안내한다: https://openapi.domeggook.com/ko/articles/%EB%A1%9C%EA%B7%B8%EC%9D%B8-e4aaf7c2
+- 도매꾹에 승인 SNS 계정으로 로그인한 뒤 회원정보수정에서 별도 비밀번호를 설정했는지 확인한다. 필요하면 `DOMEMAE_PASSWORD` Worker Secret만 안전하게 갱신한다. 비밀번호·API 키·sId는 브라우저 관리자 페이지, GitHub, 로그에 입력하지 않는다.
+- 관리자 전용 POST `/api/internal/connectors/domemae/auth-probe`는 로그인/잔액 조회만 실행하며 최소 15분 간격으로 제한한다. 일반 Cron은 6시간 간격 제한 유지.
+- 로그인 실패를 안전한 오류코드(`LOGIN_REJECTED`, `PASSWORD_REJECTED`, `SNS_PASSWORD_REQUIRED` 등)로 분류하고 공급사 원문·계정 ID·잔액 금액·Secret을 D1이나 사용자 화면에 기록하지 않는다.
+- 유상 `setOrder`, 자동발주, 구매자 정보 이전은 계속 OFF. **로그인 확인만으로 실거래를 승인하지 않는다.**
+
+
+## LOGIN_REJECTED 지속 시 비결제 원인 분리 (2026-10-29)
+
+- 비밀번호 변경 후에도 로그인 실패면 비밀번호 문제라고 단정하지 않는다. 공식 `setLogin v4.1` Request는 POST, `aid`, `id`, `pw`, `ip`, `device=Third Party` 등을 요구한다.
+- **중요:** 기존 코드의 `DOMEGGOOK_CLIENT_IP` 미설정 fallback은 `127.0.0.1`(루프백)이며 실제 Cloudflare Worker 출구 IP가 아니다. 이는 공급사의 검증에 따라 로그인 거절 원인이 될 가능성이 있다. 공급사에 Worker 환경에서 `ip`로 허용되는 값을 확인받기 전까지 임의의 IP를 꾸며 넣지 않는다.
+- 관리자 인증 화면은 HTTP 상태·JSON 응답 여부·공급사 `result`의 범주(true/false/other/missing)·IP 설정 종류만 저장/표시한다. 실제 응답 원문, 회원 ID, 비밀번호, 세션, API Key는 데이터베이스/화면/메일에 기록하지 않는다.
+- 공급사 공식 로그인 요청 예시에는 `oe=euc-kr`가 포함되지만 파라미터 표에는 필수로 표기되지 않았다. 별도 인코딩 사용 여부도 공급사 확인 전 임의로 바꾸지 않는다.
+- 점검은 최소 15분 제한을 유지하며, 실제 발주 `setOrder`는 OFF 상태로 계속 차단한다.

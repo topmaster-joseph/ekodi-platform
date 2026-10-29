@@ -158,3 +158,29 @@ html:lang(ko) main[data-mission-devotion] .dv-page-title{padding-left:0;padding-
   main[data-mission-devotion]{padding-left:8px;padding-right:8px}
   main[data-mission-devotion] .ekodi-devotion{padding-left:0;padding-right:0}
 }
+
+/* Mission devotion only: login and authenticated admin controls share the
+   lower action row under devotional sharing, not the site header. */
+main[data-mission-devotion] .mission-devotion-tools{
+  display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;
+  margin:8px 0 0;padding:7px 9px;
+  border:1px solid #d8cba8;border-radius:12px;background:#fbf6e6
+}
+html:lang(ko) main[data-mission-devotion] .mission-devotion-tools > .dv-adminbar,
+main[data-mission-devotion] .mission-devotion-tools > .dv-adminbar{
+  display:flex;flex:1 1 auto;align-items:center;flex-wrap:wrap;min-width:0;
+  gap:6px;margin:0;padding:0;border:0;background:transparent
+}
+main[data-mission-devotion] .mission-devotion-tools > .dv-adminbar[hidden]{display:none!important}
+main[data-mission-devotion] .mission-devotion-tools > .mission-auth-actions{
+  display:flex;flex:0 0 auto;align-items:center;gap:6px;
+  margin-left:auto;white-space:nowrap
+}
+main[data-mission-devotion] .mission-devotion-tools .mission-auth-button{
+  min-height:36px;padding:6px 10px
+}
+@media(max-width:520px){
+  main[data-mission-devotion] .mission-devotion-tools{padding:6px 7px;gap:6px}
+  main[data-mission-devotion] .mission-devotion-tools > .mission-auth-actions{margin-left:auto}
+  main[data-mission-devotion] .mission-devotion-tools .mission-auth-state{font-size:.7rem}
+}

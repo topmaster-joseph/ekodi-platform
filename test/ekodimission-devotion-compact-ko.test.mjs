@@ -64,3 +64,52 @@ test('Mission devotion route keeps independent header/footer, stylesheet and ren
  assert.match(page,/href="\/ekodimission\/assets\/shell.css"/);
  assert.match(page,/src="\/bible\/devotion.js"/);
 });
+
+test('Mission devotional login controls sit in the lower admin row without changing shared devotion renderer',async()=>{
+ const [shell,css,renderer,missionPage]=await Promise.all([
+  read('space/ekodimission-shell.js'),
+  read('space/ekodimission-shell.css'),
+  read('bible/devotion.js'),
+  read('space/ekodimission-devotion.page')
+ ]);
+ assert.match(missionPage,/main class="subpage" data-mission-devotion/);
+ assert.match(shell,/const devotion=document\.querySelector\('main\[data-mission-devotion\]'\)/);
+ assert.match(shell,/const target=devotion\|\|document\.querySelector\('\.mission-site-header'\)/);
+ assert.match(shell,/if\(devotion\)mountDevotionAuthNextToAdmin\(row,devotion\)/);
+ assert.doesNotMatch(shell,/header\.append\(row\)/);
+ assert.match(shell,/renderer\.querySelector\('\.dv-adminbar'\)/);
+ assert.match(shell,/adminBar\.before\(tools\)/);
+ assert.match(shell,/tools\.append\(adminBar,authRow\)/);
+ assert.match(shell,/adminBar\.before\(tools\)/);
+ assert.match(shell,/const renderer=devotion\.querySelector\('\[data-ekodi-devotion\]'\)/);
+ assert.match(shell,/observer\.observe\(renderer,\{childList:true\}\)/);
+ assert.match(renderer,/root\.append\(datebar, status, scriptureBlock, tabbar, panelWrap, notice, shareRow, adminBar, adminPanel, adminView, toastEl\)/);
+ assert.match(css,/main\[data-mission-devotion\] \.mission-devotion-tools .mission-auth-button\{\s*min-height:36px/);
+
+ assert.match(shell,/new MutationObserver/);
+ assert.match(shell,/if\(mount\(\)\)observer\.disconnect\(\)/);
+ assert.match(css,/main\[data-mission-devotion\] \.mission-devotion-tools/);
+ assert.match(css,/mission-devotion-tools > \.dv-adminbar\[hidden\]\{display:none!important\}/);
+ assert.match(css,/mission-devotion-tools > \.mission-auth-actions/);
+ assert.match(renderer,/root\.append\(datebar, status, scriptureBlock, tabbar, panelWrap, notice, shareRow, adminBar, adminPanel, adminView, toastEl\)/);
+ assert.match(shell,/missionAuthUi\?\.logout\.addEventListener\('click'/);
+ assert.match(shell,/window\.EKODIMissionAuth=Object\.freeze/);
+});
+
+test('Mission login is only a guest button or verified account with logout',async()=>{
+ const [shell,board,css]=await Promise.all([
+  read('space/ekodimission-shell.js'),
+  read('site-board-control.js'),
+  read('bible/devotion.css')
+ ]);
+ assert.doesNotMatch(shell,/로그인됨|비로그인|로그인 확인 중|로그인 확인 불가/);
+ assert.match(shell,/state\.textContent='';\s*state\.hidden=true;/);
+ assert.match(shell,/missionAuthUi\.state\.textContent=authenticated\?\(String\(account\|\|'계정'\)\.slice\(0,90\)\):''/);
+ assert.match(shell,/missionAuthUi\.state\.hidden=!authenticated/);
+ assert.match(shell,/verifiedToken=token;paintMissionAuth\('in',data\.account\)/);
+ assert.match(shell,/missionAuthUi\.login\.hidden=authenticated/);
+ assert.match(shell,/missionAuthUi\.logout\.hidden=!authenticated/);
+ assert.match(board,/account:who\.authenticated\?who\.email:''/);
+ assert.match(board,/response\.headers\.set\('cache-control','private, no-store'\)/);
+ assert.match(css,/\.mission-auth-state\[hidden\]\{display:none!important\}/);
+});

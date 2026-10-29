@@ -18,7 +18,7 @@ test('seonammedi.kr preserves host and proxies root to canonical path', async ()
     assert.equal(response.status, 200);
     assert.equal(response.headers.get('x-ekodi-domain-mode'), 'customer-domain-preserved');
     const html = await response.text();
-    assert.match(html, /https:\/\/seonammedi\.kr\//);
+    assert.match(html, /https:\/\/xn--3e0b8b58jw4co4mnpll3k\.kr\//);
     assert.match(html, /href="\/app\.css"/);
     assert.doesNotMatch(html, /https:\/\/ekodi\.kr\/seonammedi\//);
   } finally {
@@ -89,7 +89,7 @@ test('search-bot verification follows the preserved public canonical', async () 
   const { readFile } = await import('node:fs/promises');
   const verify = await readFile(new URL('../.github/workflows/verify-seonammedi-domains.yml', import.meta.url), 'utf8');
   assert.match(verify, /https:\/\/seonammedi\.kr\//);
-  assert.match(verify, /<link rel="canonical" href="https:\/\/seonammedi\.kr\/">/);
+  assert.match(verify, /<link rel="canonical" href="https:\/\/xn--3e0b8b58jw4co4mnpll3k\.kr\/">/);
   assert.match(verify, /customer-domain-preserved/);
   assert.doesNotMatch(verify, /<link rel="canonical" href="https:\/\/ekodi\.kr\/seonammedi\/">/);
 });

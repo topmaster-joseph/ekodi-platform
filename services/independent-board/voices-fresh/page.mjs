@@ -3,7 +3,7 @@
  * Fresh citizen page: intentionally independent of legacy boardPage and
  * queue/publish polling. Existing EKODI shell/header is reused, not the old UI.
  */
-const content = '<style>body.board-voices .notice-search{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}body.board-voices .notice-search label{font-weight:600;font-size:13px}body.board-voices .notice-search input{flex:1 1 220px;max-width:420px;min-height:36px;border:1px solid #cbd5e1;border-radius:6px;padding:7px 10px;box-sizing:border-box}body.board-voices #freshStatus{font-size:13px;margin:8px 0}body.board-voices #freshStatus:empty{display:none}body.board-voices #freshForm{margin:12px 0;padding:14px;border:1px solid #d7dfe8;border-radius:8px}body.board-voices #freshForm[hidden]{display:none}body.board-voices #freshMessage{display:block;box-sizing:border-box;width:100%;min-height:140px;margin:8px 0;padding:10px;border:1px solid #cbd5e1;border-radius:6px}body.board-voices #freshTitle{display:block;box-sizing:border-box;width:100%;min-height:40px;margin:6px 0 10px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-weight:600}body.board-voices .voice-share{margin-top:8px}body.board-voices details.is-shared>summary{outline:2px solid #2b6cb0;outline-offset:2px;border-radius:6px}</style>'+
+const content = '<style>body.board-voices .board-head{display:flex;flex-direction:column;align-items:flex-start;gap:6px}body.board-voices .board-head .note{margin:0;font-size:13px}body.board-voices .board-head .board-actions{display:flex;width:100%;justify-content:flex-start;align-items:center;margin:4px 0 0;gap:8px}body.board-voices details.notice-record>summary.row-head{display:flex;flex-wrap:nowrap;align-items:center;gap:10px}body.board-voices details.notice-record>summary.row-head>.row-no{flex:0 0 3ch;text-align:center;font-size:12px;color:#64748b;font-variant-numeric:tabular-nums}body.board-voices details.notice-record>summary.row-head>strong{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}body.board-voices details.notice-record[open]>summary.row-head>strong{white-space:normal}body.board-voices details.notice-record>summary.row-head>.row-date{flex:0 0 auto;white-space:nowrap;font-size:12px;color:#64748b}@media(max-width:600px){body.board-voices details.notice-record>summary.row-head{gap:6px}body.board-voices details.notice-record>summary.row-head>.row-no{flex-basis:2ch}body.board-voices details.notice-record>summary.row-head>.row-date{font-size:11px}}body.board-voices .notice-search{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}body.board-voices .notice-search label{font-weight:600;font-size:13px}body.board-voices .notice-search input{flex:1 1 220px;max-width:420px;min-height:36px;border:1px solid #cbd5e1;border-radius:6px;padding:7px 10px;box-sizing:border-box}body.board-voices #freshStatus{font-size:13px;margin:8px 0}body.board-voices #freshStatus:empty{display:none}body.board-voices #freshForm{margin:12px 0;padding:14px;border:1px solid #d7dfe8;border-radius:8px}body.board-voices #freshForm[hidden]{display:none}body.board-voices #freshMessage{display:block;box-sizing:border-box;width:100%;min-height:140px;margin:8px 0;padding:10px;border:1px solid #cbd5e1;border-radius:6px}body.board-voices #freshTitle{display:block;box-sizing:border-box;width:100%;min-height:40px;margin:6px 0 10px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-weight:600}body.board-voices .voice-share{margin-top:8px}body.board-voices details.is-shared>summary{outline:2px solid #2b6cb0;outline-offset:2px;border-radius:6px}</style>'+
   '<style>body.board-voices .fresh-replies{border-top:1px solid #d9e2ec;margin-top:12px;padding-top:10px}body.board-voices .fresh-replies h3{margin:0 0 8px;font-size:14px}body.board-voices .fresh-reply{border-top:1px solid #e5edf5;padding:9px 0}body.board-voices .fresh-reply small{display:block;color:#64748b;font-size:12px}body.board-voices .fresh-reply p{margin:5px 0 8px;white-space:pre-wrap;overflow-wrap:anywhere}body.board-voices .fresh-reply-actions,body.board-voices .fresh-reply-tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}body.board-voices .fresh-reply-form{margin-top:10px;display:grid;gap:7px}body.board-voices .fresh-reply-form[hidden]{display:none}body.board-voices .fresh-reply-form textarea,body.board-voices .fresh-reply-form input{box-sizing:border-box;width:100%;border:1px solid #bac8d7;border-radius:6px;padding:8px;font:inherit}body.board-voices .fresh-reply-form textarea{min-height:82px}body.board-voices .fresh-replies button{min-height:38px;padding:6px 10px}body.board-voices .fresh-reply-status{font-size:12px;color:#375473}</style>'+
   '<div class="notice-search"><label for="freshSearch">의견 검색</label><input id="freshSearch" type="search" placeholder="제목·내용 검색"></div>'+
   '<p id="freshStatus" role="status" aria-live="polite"></p>'+
@@ -135,7 +135,7 @@ export const freshVoiceClient = String.raw`
       wrapper.append(row);
     }
     const toggle=document.createElement('button');toggle.type='button';toggle.className='secondary';
-    toggle.dataset.replyToggle=String(item.id);toggle.textContent=loggedIn?'답글 작성':'로그인 후 답글';
+    toggle.dataset.replyToggle=String(item.id);toggle.textContent='답글달기';
     const editor=document.createElement('form');editor.className='fresh-reply-form';editor.hidden=true;
     const nickname=document.createElement('input');nickname.type='text';nickname.maxLength=40;nickname.placeholder='표시 이름 (선택)';nickname.setAttribute('aria-label','답글 표시 이름');
     const body=document.createElement('textarea');body.required=true;body.maxLength=1500;body.placeholder='답글을 입력해 주세요.';body.setAttribute('aria-label','답글 내용');
@@ -168,13 +168,14 @@ export const freshVoiceClient = String.raw`
     list.replaceChildren();
     const q=search.value.trim().toLowerCase(),shown=posts.filter(p=>!q||p.message.toLowerCase().includes(q)||String(p.title||'').toLowerCase().includes(q));
     if(!shown.length){const p=document.createElement('p');p.textContent='등록된 시민의견이 없습니다.';list.append(p);return}
-    for(const item of shown){
+    for(const [index,item] of shown.entries()){
       const details=document.createElement('details');details.className='board-row notice-record';details.id='voice-'+item.id;
       const summary=document.createElement('summary');summary.className='row-head';
       const heading=voiceTitle(item);
+      const number=document.createElement('span');number.className='row-no';number.textContent=String(shown.length-index);number.setAttribute('aria-label','연번 '+number.textContent);
       const title=document.createElement('strong');title.textContent=heading;
-      const date=document.createElement('small');date.textContent=(item.createdAt||'').slice(0,16).replace('T',' ');
-      summary.append(title,date);details.append(summary);
+      const date=document.createElement('small');date.className='row-date';date.textContent='작성일 '+(String(item.createdAt||'').slice(0,16).replace('T',' ')||'-');
+      summary.append(number,title,date);details.append(summary);
       const body=document.createElement('p');body.className='row-body';body.style.whiteSpace='pre-wrap';body.textContent=item.message;details.append(body);
       const share=document.createElement('button');share.type='button';share.className='secondary voice-share';share.textContent='공유';
       share.onclick=()=>shareVoice(item);details.append(share);
@@ -291,7 +292,7 @@ export const freshVoiceClient = String.raw`
 })();
 `;
 export function renderFreshVoicePage(req,shell){
-  return shell(req,'voices','시민의견','CITIZEN VOICES','누구나 읽을 수 있으며 Google 로그인 후 간단히 의견을 등록할 수 있습니다.',
+  return shell(req,'voices','시민의견','CITIZEN VOICES','누구나 열람, 로그인 후 작성·답글 가능',
     '<button id="freshWrite" type="button">글쓰기</button>',content,
     freshVoiceClient);
 }

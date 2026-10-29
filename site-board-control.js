@@ -434,7 +434,12 @@ export async function handleSiteBoardRequest(request,env){
     return missionSaturdayBoard(request,env,instance,who,method);
   }
   if(method==='GET'&&sub==='/api/me'){
-    return boardJson(instance,{authenticated:who.authenticated,role:who.role});
+    const response=boardJson(instance,{
+      authenticated:who.authenticated,role:who.role,
+      account:who.authenticated?who.email:''
+    });
+    response.headers.set('cache-control','private, no-store');
+    return response;
   }
 
   if(method==='POST'&&sub==='/api/memberships/bootstrap'){

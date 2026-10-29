@@ -34,5 +34,6 @@ test('UI-only synthetic Admin verifier does not mutate real production authentic
   assert.match(e2e,/SYNTHETIC_TOKEN = 'ekodi-production-ui-e2e'/);
   assert.match(e2e,/page\.route\('https:\/\/ekodi\.kr\/api\/session'/);
   assert.match(e2e,/if \(!response \|\| response\.status\(\) !== 200\)/);
-  assert.match(e2e,/if \(activeCount !== expectedCount\) throw new Error/);
+  assert.match(e2e,/if \(!coverage\.ok\) throw new Error/);
+  assert.match(e2e,/auditAdminProductionUiCoverage\(menuIds, results\)/);
 });

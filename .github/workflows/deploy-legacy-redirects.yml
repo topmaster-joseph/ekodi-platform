@@ -78,3 +78,21 @@ jobs:
             if [ "$code" != "301" ] || ! printf '%s' "$location" | grep -q "https://$new/domain-check?source=legacy"; then failed=1; fi
           done
           exit "$failed"
+
+      - name: Verify Naver owner file on ekodichurch.kr before claiming release success
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected='naver-site-verification: naver85321326d5553a0caa3a944158fc2969.html'
+          url='https://ekodichurch.kr/naver85321326d5553a0caa3a944158fc2969.html'
+          ok=0
+          for attempt in $(seq 1 12); do
+            curl -fsS --connect-timeout 10 --max-time 20 -o /tmp/church-naver-owner "$url" || true
+            if [ -s /tmp/church-naver-owner ] && [ "$(cat /tmp/church-naver-owner)" = "$expected" ]; then
+              ok=1
+              break
+            fi
+            sleep 5
+          done
+          echo "ekodichurch.kr Naver HTML owner proof verified=$ok"
+          test "$ok" = 1

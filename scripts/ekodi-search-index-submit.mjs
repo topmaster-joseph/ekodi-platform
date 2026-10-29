@@ -3,9 +3,9 @@ import { EKODI_INDEXNOW_KEY } from '../platform-indexnow.js';
 import { SEONAMMEDI_SITEMAP_PATHS } from '../seonammedi-domain-gateway.js';
 
 // Submit the canonical customer-domain URLs. The key file is served by the
-// domain gateway at https://seonammedi.kr/<key>.txt, as IndexNow requires.
+// domain gateway at https://xn--3e0b8b58jw4co4mnpll3k.kr/<key>.txt, as IndexNow requires.
 const key = EKODI_INDEXNOW_KEY;
-const pageUrls = SEONAMMEDI_SITEMAP_PATHS.map(path => 'https://seonammedi.kr' + path);
+const pageUrls = SEONAMMEDI_SITEMAP_PATHS.map(path => 'https://xn--3e0b8b58jw4co4mnpll3k.kr' + path);
 const targets = [
   ['naver', 'https://searchadvisor.naver.com/indexnow'],
   ['bing', 'https://www.bing.com/indexnow'],
