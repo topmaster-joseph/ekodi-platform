@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { handlePrivateReleaseAdmin } from '../publishing/human/private-release-api.js';
 
 const DIGEST='sha256:'+'e'.repeat(64);
-const ENDPOINT='https://publishing.ekodi.kr/api/private-releases';
+const ENDPOINT='https://ekodi.kr/api/private-releases';
 const truth=keys=>Object.fromEntries(keys.map(k=>[k,true]));
 const candidate=()=>({
   publicationId:'PRIVATE-BOOK-001',editionId:'PRIVATE-EDITION-001',
