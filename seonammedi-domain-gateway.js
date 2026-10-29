@@ -96,7 +96,7 @@ export function seonammediPublicNoticeSitemapEntries(payload) {
     if (!Number.isSafeInteger(id) || id < 1 || row.status !== 'published' || seen.has(id)) continue;
     seen.add(id);
     const rawDate = String(row.updatedAt || row.createdAt || '');
-    const time = /^\\d{4}-\\d{2}-\\d{2}T/.test(rawDate) ? Date.parse(rawDate) : NaN;
+    const time = /^\d{4}-\d{2}-\d{2}T/.test(rawDate) ? Date.parse(rawDate) : NaN;
     items.push({ path: '/board/notices/' + id, lastmod: Number.isFinite(time) ? new Date(time).toISOString().slice(0, 10) : '' });
   }
   return items;
@@ -108,11 +108,11 @@ export function seonammediSitemapXml(publishedNotices = []) {
     return '  <url><loc>' + xmlEscape(CANONICAL_ORIGIN + path) + '</loc><changefreq>daily</changefreq><priority>' + priority + '</priority></url>';
   });
   const details = publishedNotices.map(({ path, lastmod }) => {
-    if (!/^\\/board\\/notices\\/[1-9]\\d*$/.test(String(path || ''))) return '';
-    const lastmodXml = /^\\d{4}-\\d{2}-\\d{2}$/.test(String(lastmod || '')) ? '<lastmod>' + lastmod + '</lastmod>' : '';
+    if (!/^\/board\/notices\/[1-9]\d*$/.test(String(path || ''))) return '';
+    const lastmodXml = /^\d{4}-\d{2}-\d{2}$/.test(String(lastmod || '')) ? '<lastmod>' + lastmod + '</lastmod>' : '';
     return '  <url><loc>' + xmlEscape(CANONICAL_ORIGIN + path) + '</loc>' + lastmodXml + '<changefreq>weekly</changefreq><priority>0.7</priority></url>';
   }).filter(Boolean);
-  return '<?xml version="1.0" encoding="UTF-8"?>\\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\\n' + [...base, ...details].join('\\n') + '\\n</urlset>\\n';
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + [...base, ...details].join('\n') + '\n</urlset>\n';
 }
 
 // The board's public endpoint is deliberately read-only and limits results.
