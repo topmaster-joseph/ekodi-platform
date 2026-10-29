@@ -110,7 +110,7 @@
           if(!box.checked||!number.value.trim()){alert('판매처 확인과 주문번호가 필요합니다.');return;}
           approve.disabled=true;
           try{
-            await C.api('admin/audiobook/claims/'+encodeURIComponent(item.id)+'/approve',{
+            await C.api(`admin/audiobook/claims/${encodeURIComponent(item.id)}/approve`,{
               method:'POST',body:{orderNumber:number.value.trim(),confirmedWithRetailer:true,verificationMethod:'retailer_portal'}
             });
             number.value='';refreshExternalAdmin();
