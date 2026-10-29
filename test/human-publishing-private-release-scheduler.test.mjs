@@ -35,7 +35,7 @@ test('scheduler requires explicit verification of both channel acknowledgements'
   };
   assert.equal(privateSchedulerReady(base),true);
   assert.equal(privateSchedulerReady({...base,PUBLISHING_RELEASE_VERIFIER:{
-    loadCandidate(){},verifyApprovalEvidence(){}}),false);
+    loadCandidate(){},verifyApprovalEvidence(){}}}),false);
   assert.equal(privateSchedulerReady({...base,PUBLISHING_RELEASE_CHANNELS:{
     prepare(){}}}),false);
 });
