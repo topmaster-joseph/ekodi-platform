@@ -169,7 +169,7 @@
     }
   }
 
-  const MISSION_LOGIN='/auth/?site=mission&return_to='+encodeURIComponent('https://ekodi.kr/ekodimission#saturday');
+  const MISSION_LOGIN='/auth/?site=mission&return_to='+encodeURIComponent(location.origin==='https://ekodi.kr'&&location.pathname.startsWith('/ekodimission')?location.href:'https://ekodi.kr/ekodimission');
   const CENTRAL_AUTH_KEY='sb-renzehysxirjilvdxacv-auth-token';
   const SUPABASE_ORIGIN='https://renzehysxirjilvdxacv.supabase.co';
   const SUPABASE_PUBLIC_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
