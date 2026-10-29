@@ -173,6 +173,55 @@ function boot(root) {
   adminView.setAttribute('aria-live', 'polite');
   let adminSelection = '';
   root.append(datebar, status, scriptureBlock, tabbar, panelWrap, notice, shareRow, adminBar, adminPanel, adminView, toastEl);
+  // Mission supplies this control through its own site shell.  Church and
+  // Bible share the same concise account/logout convention alongside admin.
+  const sharedAuthBar = siteKey==='mission' ? null : el('div','dv-shared-auth');
+  if(sharedAuthBar){
+    const controls=el('div','dv-shared-tools');
+    adminBar.before(controls);
+    controls.append(adminBar,sharedAuthBar);
+  }
+  function showSharedAccount(viewer){
+    if(!sharedAuthBar)return;
+    sharedAuthBar.replaceChildren();
+    const signedIn=viewer?.authenticated===true;
+    if(!signedIn){
+      const login=el('a','dv-date-link','로그인');
+      login.href=`${ORIGIN}/auth/?site=${siteKey}&return_to=${encodeURIComponent(location.href)}`;
+      sharedAuthBar.append(login);
+      return;
+    }
+    const account=el('span','dv-shared-account',String(viewer.email||'계정').slice(0,90));
+    account.title=account.textContent;
+    const logout=el('button','dv-date-link','로그아웃');
+    logout.type='button';
+    logout.addEventListener('click',()=>void signOutDevotion(logout));
+    sharedAuthBar.append(account,logout);
+  }
+  async function signOutDevotion(button){
+    button.disabled=true;
+    try {
+      const member=memberSessionEntry()?.session?.access_token||'';
+      const consoleToken=adminConsoleToken();
+      if(consoleToken) await fetch('/api/logout',{method:'POST',headers:{authorization:'Bearer '+consoleToken},credentials:'same-origin'}).catch(()=>null);
+      if(member) await fetch(SUPABASE_URL+'/auth/v1/logout',{method:'POST',
+        headers:{apikey:SUPABASE_KEY,authorization:'Bearer '+member}}).catch(()=>null);
+    }finally{
+      try{sessionStorage.removeItem(ADMIN_TOKEN_KEY)}catch{}
+      try{localStorage.removeItem(ADMIN_TOKEN_KEY)}catch{}
+      try{
+        for(let i=localStorage.length-1;i>=0;i--){
+          const key=localStorage.key(i)||'';
+          if(/^sb-.*-auth-token$/.test(key))localStorage.removeItem(key);
+        }
+      }catch{}
+      futurePermissionRevoked=true;
+      renderAdminBar(null);
+      showSharedAccount(null);
+      window.dispatchEvent(new Event('ekodi:auth-logout'));
+    }
+  }
+  showSharedAccount(null);
 
   function toast(message) {
     toastEl.textContent = message;
@@ -367,11 +416,13 @@ function boot(root) {
     let viewer = null;
     try {
       const token = await requestToken();
-      if (!token) return;
-      const response = await fetch(`${API}/me`, { cache: 'no-store', headers: { authorization: `Bearer ${token}` } });
-      if (response.ok) viewer = await response.json();
+      if (token) {
+        const response = await fetch(`${API}/me`, { cache: 'no-store', headers: { authorization: `Bearer ${token}` } });
+        if (response.ok) viewer = await response.json();
+      }
     } catch {}
     renderAdminBar(viewer);
+    showSharedAccount(viewer);
   }
   function renderAdminBar(viewer) {
     adminBar.replaceChildren();
@@ -831,6 +882,15 @@ function boot(root) {
     selectTab(nextId);
     tabButtons.get(nextId).focus();
   });
+  if(sharedAuthBar){
+    window.addEventListener('focus',()=>void loadViewer());
+    window.addEventListener('storage',event=>{
+      if(event.key===null || event.key===ADMIN_TOKEN_KEY || /^sb-.*-auth-token$/.test(event.key||'')){
+        revokeFutureNavigation();
+        void loadViewer();
+      }
+    });
+  }
   window.addEventListener('hashchange', () => {
     const hash = location.hash.slice(1), legacy = {passage:'poem',action:'questions',mine:'records'}[hash];
     if (current?.found) selectTab(legacy || hash || 'poem', { updateHash: false });
