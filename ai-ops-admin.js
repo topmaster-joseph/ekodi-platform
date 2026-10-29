@@ -2,6 +2,8 @@
   const API = 'https://ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   const SECTION = 'aiops';
+  const STAGE_LABELS = Object.freeze({ overview:'운영 현황', providers:'AI 공급자', sites:'사이트 관리', reports:'운영보고', command:'AI 지휘' });
+  let selectedDetailOpen = false;
   const REVIEW_STALE_MS = 30 * 60 * 1000;
 
   const SITE_AGENTS = [
@@ -60,6 +62,47 @@
 
   function nav() { return $('.sidebar nav'); }
   function panel() { return $('#aiOpsPanel'); }
+
+  function setStage(requested) {
+    const section = panel();
+    if (!section || !Object.prototype.hasOwnProperty.call(STAGE_LABELS, requested)) return;
+    section.dataset.aiopsStage = requested;
+    const buttons = section.querySelectorAll('[data-aiops-stage-tab]');
+    buttons.forEach(button => {
+      const active = button.dataset.aiopsStageTab === requested;
+      button.setAttribute('aria-pressed', String(active));
+    });
+    const hint = $('#aiOpsStageHelp');
+    if (hint) hint.textContent = ({
+      overview:'실측 상태 요약과 지금 확인할 항목만 표시합니다.',
+      providers:'공급자 연결과 무료 우선 라우팅을 기존 검증·승인 절차에서 관리합니다.',
+      sites:'사이트를 선택하면 아래에 상태와 관리 기능이 펼쳐집니다.',
+      reports:'운영보고와 플랫폼 개선 제안을 확인합니다.',
+      command:'Chief AI 명령과 실행·감사 작업공간을 엽니다.',
+    })[requested];
+    const detail = $('#aiSelectedDetail');
+    if (detail) detail.hidden = requested !== 'sites' || !selectedDetailOpen;
+  }
+
+  function renderStageSummary(data) {
+    const host = $('#aiOpsStageSummary');
+    if (!host) return;
+    const issues = data.cases.slice(0, 5);
+    const verified = Boolean(overview?.generatedAt) && !monitorFreshness().stale;
+    const heading = !verified ? '운영 집계 확인 필요'
+      : issues.length ? '지금 확인할 운영 항목 ' + issues.length + '건'
+      : '현재 집계에서 즉시 확인할 장애 없음';
+    const empty = '<p class="ai-ops-stage-empty">긴급 항목이 없으면 기존 자동 관측을 유지합니다. 실제 연결이 확인되지 않은 사이트는 연결대기로 표시합니다.</p>';
+    const rows = issues.map(item => {
+      const content = '<strong>' + esc(item.title) + '</strong><span>' + esc(item.action) + '</span>';
+      return SITE_AGENTS.some(agent => agent.domain === item.domain)
+        ? '<button type="button" class="ai-ops-stage-issue" data-aiops-issue-domain="' + esc(item.domain) + '">' + content + '<b>상세 보기</b></button>'
+        : '<article class="ai-ops-stage-issue">' + content + '</article>';
+    }).join('');
+    host.innerHTML = '<div class="ai-ops-stage-summary-head"><div><small>PRIORITY · VERIFIED SIGNALS</small><h3>' + esc(heading) + '</h3></div><span>' + (verified ? '최근 집계 기준' : '현재 시점 검증 대기') + '</span></div>'
+      + '<div class="ai-ops-stage-issues">' + (rows || empty) + '</div>';
+  }
+
 
   function authHeaders() {
     const current = token();
@@ -237,13 +280,23 @@
     section.id = 'aiOpsPanel';
     section.className = 'section ai-ops-panel hidden-panel';
     section.dataset.panel = `${SECTION} audit-records`;
+    section.dataset.aiopsStage = 'overview';
     section.innerHTML = `
       <div class="ai-ops-head">
         <div class="ai-ops-title"><p class="kicker">EKODI DIGITAL CAMPUS · AI OPERATIONS</p><h2>AI Ops</h2><p>사이트 상태를 보면서 Chief AI와 바로 대화하고, 저위험 조치는 자동 처리하며 중요한 변경만 Decision Gate로 올립니다.</p></div>
         <div class="ai-ops-head-actions"><span class="ai-ops-auto">30초 자동 갱신</span><button class="secondary" id="aiOpsRefresh" type="button">↻ 전체 점검</button><button class="primary" id="aiOpsDecisions" type="button">Decision Gate · <span id="aiOpsDecisionCompact">0</span></button></div>
       </div>
       <div class="ai-ops-metrics" id="aiOpsMetrics"></div>
+      <nav class="ai-ops-stage-nav" id="aiOpsStageNav" aria-label="AI 운영센터 주요 보기">
+        <button type="button" data-aiops-stage-tab="overview" aria-pressed="true">운영 현황</button>
+        <button type="button" data-aiops-stage-tab="providers" aria-pressed="false">AI 공급자</button>
+        <button type="button" data-aiops-stage-tab="sites" aria-pressed="false">사이트 관리</button>
+        <button type="button" data-aiops-stage-tab="reports" aria-pressed="false">운영보고</button>
+        <button type="button" data-aiops-stage-tab="command" aria-pressed="false">AI 지휘</button>
+      </nav>
+      <p class="ai-ops-stage-help" id="aiOpsStageHelp" role="status">실측 상태 요약과 지금 확인할 항목만 표시합니다.</p>
       <div class="ai-ops-main">
+        <section class="ai-ops-block ai-ops-stage-summary" id="aiOpsStageSummary" aria-label="핵심 운영 상황" aria-live="polite"></section>
         <section class="ai-ops-block ai-evolution-block ai-owner-report-block" aria-live="polite">
           <div class="ai-evolution-head"><div><small>EKODI AUTONOMOUS REPORT</small><h3>중요 운영보고</h3></div><span id="aiOwnerReportMeta">EKODI Orchestrator</span></div>
           <div class="ai-evolution-cards" id="aiOwnerReportCards"></div>
@@ -265,7 +318,28 @@
     content.prepend(section);
 
     $('#aiOpsRefresh')?.addEventListener('click', runReview);
-    $('#aiOpsDecisions')?.addEventListener('click', () => promptChat('결정 대기사항 보여줘'));
+    $('#aiOpsDecisions')?.addEventListener('click', () => { setStage('command'); promptChat('결정 대기사항 보여줘'); });
+    const stageNav = $('#aiOpsStageNav');
+    stageNav?.addEventListener('click', event => {
+      const button = event.target.closest('[data-aiops-stage-tab]');
+      if (button) setStage(button.dataset.aiopsStageTab);
+    });
+    stageNav?.addEventListener('keydown', event => {
+      if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+      const buttons = [...stageNav.querySelectorAll('[data-aiops-stage-tab]')];
+      const current = buttons.findIndex(button => button.getAttribute('aria-pressed') === 'true');
+      if (current < 0) return;
+      event.preventDefault();
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1
+        : (current + (event.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length;
+      setStage(buttons[next].dataset.aiopsStageTab);
+      buttons[next].focus();
+    });
+    $('#aiOpsStageSummary')?.addEventListener('click', event => {
+      const button = event.target.closest('[data-aiops-issue-domain]');
+      if (button) openSite(button.dataset.aiopsIssueDomain);
+    });
+    setStage('overview');
     $('#aiFleetSearch')?.addEventListener('input', event => { fleetQuery = String(event.target.value || '').trim().toLowerCase(); renderFleet(); });
     $('#aiFleetFilter')?.addEventListener('change', event => { fleetFilter = event.target.value || 'all'; renderFleet(); });
     return true;
@@ -505,6 +579,8 @@
     const agent = SITE_AGENTS.find(item => item.domain === domain);
     if (!agent) return;
     selectedDomain = domain;
+    selectedDetailOpen = true;
+    setStage('sites');
     renderFleet();
     renderSelectedDetail();
     syncChatScope(domain);
@@ -543,6 +619,7 @@
     const data = summary();
     data.decisions += evolutionRecommendations().filter(item => item?.approval?.required).length;
     renderMetrics(data);
+    renderStageSummary(data);
     renderOwnerReport();
     renderEvolution();
     renderFleet();
