@@ -17,7 +17,7 @@ function fingerprint(body){
 }
 function loaderMetadata(body){
   // Extract only safe taxonomy and lengths, never the inline loader URL itself.
-  const hit=String(body).match(/var u='([^']*)',s=document\\.createElement\\('([^']*)'\\)/);
+  const hit=String(body).match(/var u='([^']*)',s=document\.createElement\('([^']*)'\)/);
   if(!hit)return {template:'unknown'};
   const literal=hit[1];
   const safePrefix='/cdn-cgi/challenge-platform/scripts/';
@@ -34,7 +34,7 @@ function loaderMetadata(body){
       }
     }catch{}
   }
-  const fallback=String(body).match(/catch\\(e\\)\\{o='([^']*)'\\}\\}/);
+  const fallback=String(body).match(/catch\(e\)\{o='([^']*)'\}\}/);
   return {template:'origin-resolving-loader',kind,relativePathLength:literal.length,
     queryKeys:keys,queryLength,createsScript:hit[2]==='script',
     fallbackLiteralLength:fallback?fallback[1].length:null};
