@@ -117,6 +117,21 @@ test('read-only native observer denies unauthorized and malformed-hostname reque
   assert.equal(requests,0);
 });
 
+test('native AI proof with credential collection can never be a verified inference',()=>{
+  const proof=summarizeCommandResult({localAiProof:{
+    ...base,ollamaApi:'ready',inference:'passed',
+    diagnosticCode:'api_ready',credentialCollection:true
+  }},'software.localai.verify');
+  const result=projectNativeDeviceProofs([{
+    command_type:'software.localai.verify',status:'succeeded',
+    completed_at:checkedAt,issued_at:checkedAt,
+    result_json:JSON.stringify(proof)
+  }],now);
+  assert.equal(result.localAi.verified,false);
+  assert.equal(result.localAi.diagnosticCode,'api_ready');
+  assert.equal(result.localAi.inference,'passed');
+});
+
 test('scheduled authenticated USER4 GET emits only bounded diagnostic code, no raw fields or mutation',async()=>{
   const requests=[];
   const fetchImpl=async(url,init)=>{
