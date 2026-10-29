@@ -711,7 +711,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     const third=details.map(([key,label])=>
       '<button type="button" class="mall-source-tab mall-source-level-three'+(mallSourcingDetail===key?' is-active':'')+'" data-mall-source-detail="'+key+'" aria-pressed="'+(mallSourcingDetail===key)+'">'+ae(label)+'</button>'
     ).join('');
-    return '<div class="mall-sourcing-head"><div class="mall-sourcing-heading"><h2>판매채널 · 공급망</h2><p class="empty">기능을 선택한 뒤 판매처와 작업을 선택하세요. 현재 연결 상태만 표시합니다.</p></div></div>'+
+    return '<div class="mall-sourcing-head"><div class="mall-sourcing-heading"><h2>판매채널 · 공급망</h2><p class="empty">플랫폼 공통 판매·공급망 엔진에 등록된 Provider 중 기능과 판매처를 선택하세요.</p></div></div>'+
       '<nav class="mall-sourcing-level mall-sourcing-primary" aria-label="1단계 기능 메뉴">'+first+'</nav>'+
       (mallSourcingView==='overview'?'':'<nav class="mall-sourcing-level mall-sourcing-tabs" aria-label="판매채널 선택" data-menu-level="2">'+second+'</nav>')+
       (showDetail?'<nav class="mall-sourcing-level mall-sourcing-detail-tabs" aria-label="3단계 작업 메뉴">'+third+'</nav>':'');
