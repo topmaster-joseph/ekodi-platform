@@ -1,7 +1,7 @@
 // PUBLISH-PIPELINE-001 — Publisher owns private manuscripts; no bookstore DB access.
 import { FIELD_CATALOG } from './publishing/human/editorial-policy.js';
 import { publicationTransition, permittedAiRequest } from './publishing/workflow-policy.js';
-import { verifyCommercialRelease } from './publishing/release-entitlement.js';
+import { verifyCommercialRelease, verifyPublishingSubmission } from './publishing/release-entitlement.js';
 
 const fields = new Set(FIELD_CATALOG.map(x=>x.id));
 const HASH=/^[a-f0-9]{64}$/, UUID=/^[0-9a-f-]{36}$/;
@@ -86,8 +86,9 @@ async function transition(env,db,p,req,u,r){
   if(x.revision!==p.revision)return error(409,'REVISION_CONFLICT');
   // Signed dual-channel dispatch is intentionally unavailable through HTTP.
   if(x.action==='release_receipt')return error(403,'SIGNED_DISPATCHER_REQUIRED');
-  const verification=['publisher_approve','schedule','prepare_handoff'].includes(x.action)
-    ? await verifyCommercialRelease(env,p):{};
+  const verification=x.action==='submit' ? await verifyPublishingSubmission(env,p) :
+    ['publisher_approve','schedule','prepare_handoff'].includes(x.action)
+      ? await verifyCommercialRelease(env,p):{};
   const changed=publicationTransition(p,x.action,x,{...u,role:r},new Date(),verification);
   if(!changed.ok)return result(changed.code==='FORBIDDEN'?403:409,changed);
   const saved=await persist(db,p,changed.next,u,x.action);
