@@ -8,7 +8,7 @@
 // • 결제 승인 후 내 서재 권한(books_entitlements)을 부여하고, 매출을 출판 재무 원장
 //   (books_finance_transactions · ekodi-direct 채널)에 기록한다.
 import * as ekodipay from './ekodipay-core.js';
-import { complimentaryAudiobookPolicy, availableAudiobook, audioChapterFor, validateAudioChapter, MAX_AUDIO_CHAPTER_BYTES } from './books-audiobook.js';
+import { complimentaryAudiobookPolicy, availableAudiobook, audioChapterFor, validateAudioChapter, MAX_AUDIO_CHAPTER_BYTES, audioSha256 } from './books-audiobook.js';
 
 export const ORDER_PREFIX = 'EKB';
 export const PENDING_TTL_MS = 30 * 60 * 1000;
@@ -293,7 +293,7 @@ export async function downloadAudiobook(env, request, bookId, trackNo) {
   }
   const object = env.BOOK_FILES ? await env.BOOK_FILES.get(track.key) : null;
   const meta = object?.customMetadata || {};
-  if (!object || meta.bookId !== book.id || meta.kind !== 'audiobook-chapter' || meta.edition !== book.edition || meta.approved !== 'true') {
+  if (!object || meta.bookId !== book.id || meta.kind !== 'audiobook-chapter' || meta.edition !== book.edition || meta.approved !== 'true' || meta.sha256 !== track.sha256) {
     return new Response(JSON.stringify({ error: '오디오북 파일을 준비하고 있습니다.', code: 'AUDIOBOOK_PREPARING' }), { status: 409, headers });
   }
   await audit(env, '', buyer.email, 'audiobook.bonus_download', { bookId: book.id, track: track.number });
@@ -367,9 +367,11 @@ export async function adminRoute(env, request, path, url, now = new Date()) {
     const bytes = new Uint8Array(await request.arrayBuffer());
     const result = validateAudioChapter(bytes);
     if (!result.ok) return { status: 400, data: { error: result.error } };
+    const sha256 = await audioSha256(bytes);
+    if (approved && sha256 !== track.sha256) return { status: 409, data: { error: '권리·음질 검수로 승인한 MP3와 파일 해시가 다릅니다.' } };
     await env.BOOK_FILES.put(track.key, bytes, {
       httpMetadata: { contentType: 'audio/mpeg' },
-      customMetadata: { bookId: book.id, edition: book.edition, kind: 'audiobook-chapter', approved: approved ? 'true' : 'false', uploadedBy: buyer.email },
+      customMetadata: { bookId: book.id, edition: book.edition, kind: 'audiobook-chapter', approved: approved ? 'true' : 'false', sha256, uploadedBy: buyer.email },
     });
     await audit(env, '', buyer.email, 'audiobook.track_uploaded', { bookId: book.id, track: index, approved });
     return { status: 200, data: { ok: true, bookId: book.id, track: index, size: bytes.length, approvedForDelivery: approved, priceKrw: 0 } };
