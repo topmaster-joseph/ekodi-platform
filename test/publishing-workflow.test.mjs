@@ -40,6 +40,9 @@ test('author/editor/publisher independently approve and reserve, but cannot auto
   p.releaseDigest=later;p.releaseCandidate=quality();
   p=advance(p,'editor_pass',{checklist:{completed:true}},editor);
   p=advance(p,'author_approve',{digest:later,rightsConsent:true},author);
+  assert.equal(p.authorApproval.actor,'writer');
+  assert.equal(p.authorApproval.approvedBy,'writer');
+  assert.equal(p.authorApproval.digest,later);
   p=advance(p,'publisher_approve',{digest:later},publisher);
   const scheduledAt='2026-11-25T01:30:00.000Z';
   p=advance(p,'schedule',{digest:later,scheduledAt,channels:['books','ekodimall']},publisher);
