@@ -28,7 +28,7 @@ concurrency:
 
 jobs:
   guest-browser:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -53,7 +53,7 @@ jobs:
           fi
       - name: Verify real public future-date lockdown and login labels in desktop/mobile
         env:
-          EKODI_EXPECT_AUTO_TODAY: ${{ (github.event_name == 'workflow_run' || inputs.expect_today_redirect == true) && '1' || '0' }}
+          EKODI_EXPECT_AUTO_TODAY: ${{ (github.event_name == 'workflow_run' || github.event_name == 'push' || github.event_name == 'pull_request' || inputs.expect_today_redirect == true) && '1' || '0' }}
         run: node scripts/verify-devotion-guest-native-browser.mjs
       - name: Write verification receipt
         if: always()
