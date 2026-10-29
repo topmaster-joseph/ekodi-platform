@@ -43,6 +43,9 @@ jobs:
           node --test test/jubilee-series-review-gate.test.mjs
           node --check publishing/human/scheduled-release.js
           node --test test/human-publishing-scheduled-release.test.mjs
+          node --check publishing/human/private-release-store.js
+          node --check publishing/human/scheduled-release-runner.js
+          node --test test/human-publishing-private-release-store.test.mjs
           test -f wrangler.publishing.staging.toml
 
   isolated-staging:
