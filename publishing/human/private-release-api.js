@@ -5,7 +5,7 @@ import { registerCompletedEdition, scheduleApprovedEdition, cancelUnreleasedEdit
 import { readPrivateEdition, listPrivateReleaseRecords,
   savePrivateTransition, storePrivateEdition } from './private-release-store.js';
 
-const PREFIX='/api/publishing/private-releases';
+const PREFIX='/api/private-releases';
 const ID=/^[A-Za-z0-9][A-Za-z0-9._-]{2,159}$/;
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{
   'content-type':'application/json; charset=utf-8','cache-control':'private, no-store',
