@@ -1,6 +1,7 @@
 // PUBLISH-PIPELINE-001 — Publisher owns private manuscripts; no bookstore DB access.
 import { FIELD_CATALOG } from './publishing/human/editorial-policy.js';
 import { publicationTransition, permittedAiRequest } from './publishing/workflow-policy.js';
+import { verifyCommercialRelease } from './publishing/release-entitlement.js';
 
 const fields = new Set(FIELD_CATALOG.map(x=>x.id));
 const HASH=/^[a-f0-9]{64}$/, UUID=/^[0-9a-f-]{36}$/;
@@ -79,13 +80,15 @@ async function list(db,u,r){
   const rows=await statement.all();
   return result(200,{ok:true,role:r,projects:(rows.results||[]).map(x=>safe(project(x)))});
 }
-async function transition(db,p,req,u,r){
+async function transition(env,db,p,req,u,r){
   const x=await input(req);
   if(!x||!Number.isInteger(x.revision))return error(400,'REVISION_REQUIRED');
   if(x.revision!==p.revision)return error(409,'REVISION_CONFLICT');
   // Signed dual-channel dispatch is intentionally unavailable through HTTP.
   if(x.action==='release_receipt')return error(403,'SIGNED_DISPATCHER_REQUIRED');
-  const changed=publicationTransition(p,x.action,x,{...u,role:r});
+  const verification=['publisher_approve','schedule','prepare_handoff'].includes(x.action)
+    ? await verifyCommercialRelease(env,p):{};
+  const changed=publicationTransition(p,x.action,x,{...u,role:r},new Date(),verification);
   if(!changed.ok)return result(changed.code==='FORBIDDEN'?403:409,changed);
   const saved=await persist(db,p,changed.next,u,x.action);
   return saved?result(200,{ok:true,project:safe(saved)}):error(409,'REVISION_CONFLICT');
@@ -145,7 +148,7 @@ export async function handlePublishingWorkflow(req,env){
     if(!p||!visible(p,u,r))return error(404,'NOT_FOUND');
     const endpoint=match[2]||'';
     if(!endpoint&&req.method==='GET')return result(200,{ok:true,project:safe(p)});
-    if(endpoint==='transition'&&req.method==='POST')return transition(db,p,req,u,r);
+    if(endpoint==='transition'&&req.method==='POST')return transition(env,db,p,req,u,r);
     if(endpoint==='evidence'&&req.method==='POST')return evidence(db,p,req,u,r);
     if(endpoint==='ai'&&req.method==='POST')return ai(db,p,req,u);
     if(endpoint==='ai'&&req.method==='GET')return jobs(db,p);
@@ -161,7 +164,8 @@ export async function prepareScheduledPublishing(env, at=new Date()) {
     .bind(time).all();
   for(const row of due.results||[]){
     const p=project(row),system={userId:'system:publishing-cron',role:'publisher'};
-    const checked=publicationTransition(p,'prepare_handoff',{},system,at);
+    const verification=await verifyCommercialRelease(env,p,at).catch(()=>({ready:false,reason:'VERIFICATION_UNAVAILABLE'}));
+    const checked=publicationTransition(p,'prepare_handoff',{},system,at,verification);
     if(!checked.ok){summary.blocked++;continue}
     const event=checked.next.handoffProposal;
     if(!event?.idempotencyKey||!event?.releaseDigest){summary.blocked++;continue}
