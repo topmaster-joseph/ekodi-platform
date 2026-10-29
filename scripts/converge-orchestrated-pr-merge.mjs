@@ -333,6 +333,7 @@ const booksTouched=changedFiles.some(file=>
   file.startsWith('books/')||
   file==='books-worker.js'||
   file==='books-commerce.js'||
+  file==='books-audiobook.js'||
   file==='migrations/202610271400_books_direct_commerce.sql'||
   file==='wrangler.books.toml'||
   file==='deploy/manifests/books.worker.json'||
