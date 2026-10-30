@@ -117,7 +117,17 @@ export class EducationScreenRoom {
   if(from.role==='student'&&from.id===selected&&msg.type==='status'&&['sharing','stopped','unsupported','denied','connecting'].includes(msg.status))
     this.send(recipient,{type:'status',id:from.id,status:msg.status});
  }
- async webSocketClose(ws){const who=this.role(ws),selected=await this.ctx.storage.get('selected');if(who.role==='student'&&selected===who.id){await this.ctx.storage.delete('selected');const host=this.host();if(host)this.send(host,{type:'stopped'});}await this.roster();}
+ async webSocketClose(ws){
+  const who=this.role(ws),selected=await this.ctx.storage.get('selected');
+  if(who.role==='host'){
+   if(selected){const student=this.student(selected);if(student)this.send(student,{type:'stop',reason:'instructor_disconnected'});}
+   await this.ctx.storage.delete('selected');
+  }else if(who.role==='student'&&selected===who.id){
+   await this.ctx.storage.delete('selected');const host=this.host();
+   if(host)this.send(host,{type:'stopped'});
+  }
+  await this.roster();
+ }
  async webSocketError(ws){await this.webSocketClose(ws);}
  async alarm(){
   for(const socket of this.sockets()){this.send(socket,{type:'room_closed'});socket.close(4001,'expired');}
