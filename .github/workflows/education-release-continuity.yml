@@ -73,6 +73,10 @@ jobs:
           node scripts/verify-education-material-studio-native.mjs
           node scripts/verify-education-documents-native.mjs
           node scripts/verify-education-farm-marketing-native.mjs
+      - name: Read-only live Cloudflare inline CSP fingerprint (no tokens or script content)
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        run: node scripts/diagnose-education-cloudflare-inline.mjs
       - uses: actions/upload-artifact@v4
         if: always() && github.event_name == 'pull_request'
         with:
