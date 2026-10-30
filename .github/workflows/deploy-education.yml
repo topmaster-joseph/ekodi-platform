@@ -97,6 +97,7 @@ jobs:
           node --check education-instructor-docs.js
           node --check scripts/edu-instructor-gate-verifier.mjs
           node --check scripts/verify-education-live-studio-native.mjs
+          node --check scripts/verify-education-screen-share-native.mjs
           node --check scripts/education-probe-annotate.mjs
           node --check education/research/worker.js
           node --check education/research/planner.js
@@ -370,6 +371,8 @@ jobs:
         run: node scripts/verify-education-documents-native.mjs || { node scripts/education-probe-annotate.mjs artifacts/education-documents-native; exit 1; }
       - name: Verify Premium Studio instructor, presenter and learner flows on desktop and mobile
         run: node scripts/verify-education-live-studio-native.mjs || { node scripts/education-probe-annotate.mjs artifacts/education-live-native; exit 1; }
+      - name: Verify instructor QR room and learner-approved screen preview in real Education production
+        run: node scripts/verify-education-screen-share-native.mjs || { node scripts/education-probe-annotate.mjs artifacts/education-screen-share-native; exit 1; }
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -380,6 +383,7 @@ jobs:
             artifacts/education-documents-native/
             artifacts/education-live-native/
             artifacts/education-farm-marketing-native/
+            artifacts/education-screen-share-native/
           retention-days: 7
       - name: Publish Education production status
         if: always()
