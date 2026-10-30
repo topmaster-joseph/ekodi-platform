@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {
-  educationReleaseChanged,approvedEducationMerge,releaseQuotaBudget,
+  educationReleaseChanged,approvedEducationMerge,selectMergedEducationPRForConvergence,releaseQuotaBudget,
   latestEducationMergeFromGit,EDUCATION_LOCAL_PATHS
 } from '../scripts/education-release-continuity.mjs';
 import {ORIGIN,ROUTE,VIEWPORTS} from '../scripts/verify-education-bootcamp-native.mjs';
@@ -64,6 +64,33 @@ test('Quota-limited continuity retains protected release and defers exhausted AP
  assert.match(workflow,/fetch-depth: 200/);
  assert.match(runner,/verifyEducationReleaseSnapshot/);
  assert.match(runner,/release_sha:releaseSha/);
+});
+
+test('select only exact official protected merged PR while old convergence SHA is stale',()=>{
+ const branch='ai/chatgpt/orch_recovery_92640ebb79b88060e47ed32e9104581e';
+ const base={number:7017,state:'closed',merged_at:'2026-10-30T05:07:51Z',
+   base:{ref:'main'},head:{ref:branch,sha:sha('b')},merge_commit_sha:sha('c')};
+ assert.deepEqual(selectMergedEducationPRForConvergence({pulls:[base],branch}),base);
+ // A stale successful runner event may be on sha('a'): the actual merged
+ // sha('b') must still pass the later source CI and canonical receipt.
+ assert.equal(selectMergedEducationPRForConvergence({pulls:[base],branch}).head.sha,sha('b'));
+ assert.equal(selectMergedEducationPRForConvergence({pulls:[base,base],branch}),null);
+ assert.equal(selectMergedEducationPRForConvergence({pulls:[],branch}),null);
+ assert.equal(selectMergedEducationPRForConvergence({pulls:[{...base,merged_at:null}],branch}),null);
+ assert.equal(selectMergedEducationPRForConvergence({pulls:[{...base,state:'open'}],branch}),null);
+ assert.equal(selectMergedEducationPRForConvergence({pulls:[{...base,base:{ref:'develop'}}],branch}),null);
+ assert.equal(selectMergedEducationPRForConvergence({pulls:[{...base,head:{...base.head,ref:'ai/chatgpt/other'}}],branch}),null);
+ assert.equal(selectMergedEducationPRForConvergence({pulls:[{...base,head:{...base.head,sha:'bad'}}],branch}),null);
+ assert.equal(selectMergedEducationPRForConvergence({pulls:[{...base,merge_commit_sha:'bad'}],branch}),null);
+ assert.equal(selectMergedEducationPRForConvergence({pulls:[base],branch:'ai/chatgpt/unsafe'}),null);
+ assert.equal(selectMergedEducationPRForConvergence({pulls:null,branch}),null);
+ const runner=read('scripts/education-release-continuity.mjs');
+ assert.match(runner,/selectMergedEducationPRForConvergence\(\{pulls,branch\}\)/);
+ assert.match(runner,/convergence_head_advanced_before_protected_merge/);
+ assert.doesNotMatch(runner,/pulls\.find\(p=>p\.head\?\.sha===run\.head_sha/);
+ assert.match(runner,/verifyEducationReleaseSnapshot/);
+ assert.match(runner,/receiptVerifier:verifyOrchestratorReleaseReceipt/);
+ assert.match(runner,/required source status not successful/);
 });
 
 test('Legacy workflow_run decision accepts only its exact source on current main',()=>{
