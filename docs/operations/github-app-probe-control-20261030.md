@@ -28,3 +28,8 @@ Connect the previously protected-merged `github-app-readonly-probe.js` to a **su
 This is **a deliberately bounded read-only observation bridge, not the live issuer for all GitHub operation clients.** Shared-budget enforcement, signed webhook event reception and mutation clients remain separately gated. A successful CI run or D1 schema deployment is not evidence that the real app was installed, that API quota was recovered, or that any GitHub API client is admitted.
 
 Test: `node --test test/github-app-probe-control.test.mjs test/github-app-readonly-probe.test.mjs`.
+
+
+## Audit receipt integrity follow-up (issue #6630)
+
+The D1 audit transition from claimed to verified or denied must affect exactly one row. A successful SQL transport response with meta.changes=0, missing changes metadata or multiple affected rows is not proof of persistence. Return audit_unavailable (fail-closed), with sanitized call count. The 6-hour lease remains conservatively consumed and no automatic retry or token mint is issued. Synthetic regression tests cover both missing and zero-row receipts. No token, App secret or rate quota is invented.

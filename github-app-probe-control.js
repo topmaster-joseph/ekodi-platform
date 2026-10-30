@@ -68,11 +68,15 @@ export async function runGithubAppReadonlyCanary(env,{
   catch{result=safeResult({reason:'probe_unavailable'});}
   try{
     // The audit row contains only fixed-state vocabulary and number of calls.
-    await env.DB.prepare(
+    const audited=await env.DB.prepare(
       "UPDATE github_app_probe_attempts SET state=?,reason=?,github_api_calls=?,finished_at=? "+
       "WHERE slot_key=? AND state='claimed'"
     ).bind(result.ok?'verified':'denied',result.reason,result.githubApiCalls,
       new Date(nowMs).toISOString(),slotKey).run();
+    // A successful SQL response without an updated row is NOT an audit receipt.
+    // If the claim was removed or raced, never report unrecorded success.
+    if(audited?.meta?.changes!==1)
+      return safeResult({reason:'audit_unavailable',githubApiCalls:result.githubApiCalls});
   }catch{return safeResult({reason:'audit_unavailable',githubApiCalls:result.githubApiCalls});}
   return result;
 }
