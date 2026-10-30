@@ -180,7 +180,7 @@ test('stale, mismatched, corrupt or unprivileged DB approvals fail closed',async
     [{...taskRow,state:'assigned'},eventRow],
     [taskRow,eventRow,{...stagingEvent,actor:'worker'}],
     [taskRow,eventRow,{...stagingEvent,evidence_json:JSON.stringify({...JSON.parse(stagingEvent.evidence_json),requiredCiVerified:false})}],
-    [taskRow,eventRow,{...stagingEvent,evidence_json:JSON.stringify({...JSON.parse(stagingEvent.evidence_json),archiveDigest:'sha256:'+'e'.repeat(64)})}],
+    [taskRow,eventRow,{...stagingEvent,evidence_json:JSON.stringify({...JSON.parse(stagingEvent.evidence_json),archiveDigest:'bad-digest'})}],
     [taskRow,eventRow,null],
 
     [{...taskRow,deployment_requested:0},eventRow],
