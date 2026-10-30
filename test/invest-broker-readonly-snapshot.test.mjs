@@ -90,6 +90,11 @@ test('comparison is limited to the same account, currency, environment, and incr
  }
  assert.equal(compareBrokerReadOnlySnapshots(original,original).error,'DUPLICATE_SNAPSHOT');
  assert.equal(compareBrokerReadOnlySnapshots({...original,scheme:'forged'},changed).error,'SNAPSHOT_NOT_ACCEPTED');
+ for(const bad of ['oops','-1','1e12','123abc',null,{},'9'.repeat(100)]){
+  assert.equal(compareBrokerReadOnlySnapshots({...original,totalMinor:bad},changed).error,'INVALID_NORMALIZED_SNAPSHOT');
+ }
+ assert.equal(compareBrokerReadOnlySnapshots({...original,cashMinor:'1'},changed).error,'INCONSISTENT_NORMALIZED_TOTAL');
+ assert.equal(compareBrokerReadOnlySnapshots({...original,accountRef:'not-a-uuid'},changed).error,'INVALID_NORMALIZED_SNAPSHOT');
  const earlier=run(base({snapshotRef:Y,capturedAt:'2026-10-30T00:58:00.000Z'}));
  assert.equal(compareBrokerReadOnlySnapshots(original,earlier).error,'NON_MONOTONIC_SNAPSHOT');
 });
