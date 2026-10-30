@@ -71,11 +71,16 @@ async function main(){
  }else{
    // Only a previously merged, source-checked and EKODI-receipted PR is eligible.
    // The schedule never manufactures an orchestration receipt or a successful CI result.
-   const recent=await api('/pulls?state=closed&base=main&sort=updated&direction=desc&per_page=100');
-   if(!Array.isArray(recent)||recent.length===100){log('pending_scan_incomplete');return;}
+   const recent=[];
+   for(let page=1;page<=4;page++){
+     const batch=await api('/pulls?state=closed&base=main&sort=updated&direction=desc&per_page=50&page='+page);
+     if(!Array.isArray(batch))fail('recent protected PR scan must be an array');
+     recent.push(...batch);
+     if(batch.length<50)break;
+   }
    const candidates=recent.filter(p=>p.merged_at&&p.base?.ref==='main'&&parseOrchestratorReleaseBranch(p.head?.ref))
      .sort((a,b)=>Date.parse(b.merged_at)-Date.parse(a.merged_at));
-   for(const candidate of candidates){
+   for(const candidate of candidates.slice(0,40)){
      const changed=await api('/pulls/'+candidate.number+'/files?per_page=100');
      if(!Array.isArray(changed)||changed.length===100)fail('PR files must be exhaustively inspectable');
      const changedFiles=changed.map(item=>item.filename);
