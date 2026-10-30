@@ -7,6 +7,14 @@ const view=document.getElementById('balanceView');
 const balance=document.getElementById('balance');
 const historyList=document.getElementById('history');
 let viewRevision=0;
+const referralSection=document.getElementById('referralSection');
+const referralConfirmSection=document.getElementById('referralConfirmSection');
+const referralLink=document.getElementById('referralLink');
+const referralStatus=document.getElementById('referralStatus');
+const referralConfirmStatus=document.getElementById('referralConfirmStatus');
+const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const inviteCode=new URLSearchParams(location.search).get('invite')||'';
+
 const enabled=Boolean(config.dataEnabled&&config.pointsEnabled===true&&config.supabaseUrl&&config.supabasePublishableKey);
 const sb=enabled?createClient(config.supabaseUrl,config.supabasePublishableKey,
   {auth:{detectSessionInUrl:true,persistSession:true}}):null;
@@ -33,6 +41,73 @@ async function handoff(){
   }
 }
 function showMessage(text){notice.textContent=text;view.hidden=true;}
+function showReferralControls(site,authorized){
+  const active=enabled&&authorized===true&&site==='my';
+  referralSection.hidden=!active;
+  referralConfirmSection.hidden=!active||!uuidPattern.test(inviteCode);
+}
+function removeConfirmedInviteFromUrl(){
+  const url=new URL(location.href);
+  url.searchParams.delete('invite');
+  window.history.replaceState({},document.title,url.pathname+url.search);
+  authUrl.searchParams.set('return_to',url.toString());
+  login.href=authUrl.toString();
+}
+async function issueReferralInvite(){
+  if(!enabled||select.value!=='my'||!sb)return;
+  const button=document.getElementById('createReferralInvite');
+  button.disabled=true;
+  referralStatus.textContent='가입확인용 링크를 발급하고 있습니다.';
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session?.access_token)throw Error('AUTH_REQUIRED');
+    const {data,error}=await sb.rpc('ekodi_points_issue_share_invite',{p_site:'my'});
+    if(error||!uuidPattern.test(data?.invite_code||''))throw Error('INVITE_NOT_AVAILABLE');
+    const share=new URL('https://ekodi.kr/my/points/');
+    share.searchParams.set('site','my');
+    share.searchParams.set('invite',data.invite_code);
+    referralLink.value=share.toString();
+    referralLink.hidden=false;
+    document.getElementById('copyReferralInvite').hidden=false;
+    referralStatus.textContent='초대 링크를 만들었습니다. 공유만으로 포인트는 적립되지 않습니다.';
+  }catch{
+    referralStatus.textContent='초대 기능을 사용할 수 없습니다. 사이트별 운영 정책과 로그인 상태를 확인해 주세요.';
+  }finally{button.disabled=false;}
+}
+async function confirmReferralInvite(){
+  if(!enabled||!uuidPattern.test(inviteCode)||!sb||select.value!=='my')return;
+  const button=document.getElementById('confirmReferralInvite');
+  button.disabled=true;
+  referralConfirmStatus.textContent='가입·인증 완료 여부를 확인하고 있습니다.';
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session?.access_token)throw Error('AUTH_REQUIRED');
+    const {data,error}=await sb.rpc('ekodi_points_confirm_shared_signup',{p_code:inviteCode});
+    if(error)throw error;
+    if(data?.confirmed===true){
+      referralConfirmStatus.textContent='신규 회원 연결이 확인되었습니다. 초대한 회원의 소액 포인트가 정책에 따라 반영되었습니다.';
+      removeConfirmedInviteFromUrl();
+      button.hidden=true;
+      return;
+    }
+    if(data?.reason==='ALREADY_CREDITED'){
+      referralConfirmStatus.textContent='이미 확인된 초대입니다.';
+      removeConfirmedInviteFromUrl();button.hidden=true;
+      return;
+    }
+    referralConfirmStatus.textContent='적립 조건 또는 오늘의 한도로 인해 초대가 확정되지 않았습니다.';
+  }catch{
+    referralConfirmStatus.textContent='가입·인증 조건을 충족하는 신규 회원만 확인할 수 있습니다. 기존 회원과 자기초대는 인정되지 않습니다.';
+  }finally{button.disabled=false;}
+}
+document.getElementById('createReferralInvite').addEventListener('click',issueReferralInvite);
+document.getElementById('confirmReferralInvite').addEventListener('click',confirmReferralInvite);
+document.getElementById('copyReferralInvite').addEventListener('click',async()=>{
+  if(!referralLink.value)return;
+  try{await navigator.clipboard.writeText(referralLink.value);referralStatus.textContent='초대 링크를 복사했습니다. 실제 신규 회원 가입이 확인되어야 포인트가 적립됩니다.';}
+  catch{referralLink.focus();referralLink.select();referralStatus.textContent='링크를 선택했습니다. 직접 복사해 주세요.';}
+});
+
 function clearPrivateView(message){
   ++viewRevision;
   view.hidden=true;
@@ -41,6 +116,10 @@ function clearPrivateView(message){
   select.disabled=true;
   select.replaceChildren(new Option('사이트 선택',''));
   login.hidden=false;
+  referralSection.hidden=true;
+  referralConfirmSection.hidden=true;
+  referralLink.value='';referralLink.hidden=true;
+  document.getElementById('copyReferralInvite').hidden=true;
   showMessage(message);
 }
 async function request(path,token){
@@ -95,7 +174,8 @@ async function start(){
     const wanted=new URLSearchParams(location.search).get('site');
     if(wanted&&sites.some(site=>site.id===wanted))select.value=wanted;
     select.disabled=false;
-    select.onchange=()=>{const next=++viewRevision;void loadWallet(session.access_token,select.value,next);};
+    select.onchange=()=>{const next=++viewRevision;showReferralControls(select.value,true);void loadWallet(session.access_token,select.value,next);};
+    showReferralControls(select.value,true);
     await loadWallet(session.access_token,select.value,revision);
   }catch(e){if(revision===viewRevision)showMessage('포인트 목록을 확인할 수 없습니다. 연결 상태를 확인해 주세요.');}
 }

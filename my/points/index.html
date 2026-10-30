@@ -24,6 +24,20 @@
         <h3>최근 거래</h3><div id="history" class="history" aria-live="polite"></div>
       </div>
     </section>
+    <section class="panel invite-panel" id="referralSection" hidden aria-labelledby="referralTitle">
+      <h2 id="referralTitle">새 회원 초대</h2>
+      <p>초대 링크를 만들어 전달할 수 있습니다. 링크 복사나 공유만으로는 포인트가 적립되지 않습니다.</p>
+      <div class="invite-tools"><button type="button" id="createReferralInvite">초대 링크 만들기</button>
+        <input id="referralLink" readonly aria-label="새 회원 초대 링크" placeholder="발급된 링크" hidden>
+        <button type="button" id="copyReferralInvite" hidden>링크 복사</button></div>
+      <p id="referralStatus" role="status" aria-live="polite"></p>
+    </section>
+    <section class="panel invite-panel" id="referralConfirmSection" hidden aria-labelledby="referralConfirmTitle">
+      <h2 id="referralConfirmTitle">새 회원 초대 확인</h2>
+      <p>이 링크로 처음 가입한 회원만 확인할 수 있습니다. 기존 회원·자기초대·중복 가입은 보상 대상이 아닙니다.</p>
+      <button type="button" id="confirmReferralInvite">가입 후 초대 확인</button>
+      <p id="referralConfirmStatus" role="status" aria-live="polite">로그인 후 직접 확인해 주세요.</p>
+    </section>
     <p class="footnote">활동포인트는 현금과 다르며, 기부만으로 기부금영수증이 발급되지 않습니다. 포인트 적립과 전환·기부는 사이트별 운영 정책을 따릅니다.</p>
   </main>
   <footer>© EKODI</footer>
