@@ -85,6 +85,9 @@ export async function recordEkodiFinalPromotionApproval(db,input={}){
     approvedByRole:'super_admin',approvedBy:actor,
     approvalId,stateVersion,approvedAt,
   };
+  // Every task receives at most ONE final owner confirmation. A reissued
+  // approval with a new stateVersion/approvalId must never reset its TTL.
+  // The guard checks all historical final_promotion_approval_recorded events.
   // Fail the D1 transaction (NOT NULL event.task_id) if the CAS did not
   // persist or the audit already exists. An INSERT of zero rows would otherwise
   // silently commit a version bump without a durable approval.
@@ -101,11 +104,10 @@ export async function recordEkodiFinalPromotionApproval(db,input={}){
       ) AND NOT EXISTS (
         SELECT 1 FROM ekodi_orchestrator_task_events
         WHERE task_id=? AND reason='final_promotion_approval_recorded'
-          AND json_extract(evidence_json,'$.approvalId')=?
       ) THEN ? ELSE NULL END,
       COALESCE((SELECT MAX(seq) FROM ekodi_orchestrator_task_events WHERE task_id=?),0)+1,
       'staging','staging',?,'final_promotion_approval_recorded',?,?`)
-    .bind(taskId,stateVersion,branchRef,row.evidence_json,taskId,approvalId,taskId,taskId,
+    .bind(taskId,stateVersion,branchRef,row.evidence_json,taskId,taskId,taskId,
       `super-admin:${actor}`,JSON.stringify(receipt),approvedAt);
   try{
     const operations=await db.batch([update,insert]);
