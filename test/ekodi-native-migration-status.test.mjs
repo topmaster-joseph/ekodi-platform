@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {
-  AUTOMATION_MIGRATION_PR,LEGACY_MIGRATION_WORKLOADS,
+  AUTOMATION_MIGRATION_PR,LEGACY_MIGRATION_WORKLOADS,LEGACY_TASK_SNAPSHOT,
   projectEkodiNativeMigration,renderEkodiMigrationSummary
 } from '../scripts/ekodi-native-migration-status.mjs';
 import {collectEkodiNativeWatch} from '../scripts/ekodi-native-operations-watch.mjs';
@@ -94,15 +94,21 @@ test('privacy and fail-closed behavior are preserved, no forged legacy task disa
   assert.ok(!JSON.stringify(d).includes('not-to-be-retained'));
 });
 
-test('Mission home becomes fifth active first-party monitoring workload, never falsely cut over',()=>{
+test('fifth active workload is Church Naver and stale Mission remains inactive historical',()=>{
   const x=projectEkodiNativeMigration({proposals:htmls});
-  const mission=x.tasks.find(t=>t.id==='mission-home-production-e2e');
-  assert.ok(mission);
-  assert.equal(mission.kind,'monitor');
-  assert.equal(mission.deliveryVerified,false);
-  assert.equal(mission.cutoverAllowed,false);
-  assert.ok(mission.missingEvidence.includes('first_party_chromium_mobile_390x844'));
-  assert.ok(mission.missingEvidence.includes('public_photo_consent_and_media_fallback'));
-  assert.ok(mission.missingEvidence.includes('protected_space_release_sha'));
-  assert.equal(LEGACY_MIGRATION_WORKLOADS.find(t=>t.id===mission.id).trackingIssue,6875);
+  const naver=x.tasks.find(t=>t.id==='church-naver-ownership-and-index');
+  assert.ok(naver);
+  assert.equal(naver.kind,'monitor');
+  assert.equal(naver.deliveryVerified,false);
+  assert.equal(naver.cutoverAllowed,false);
+  assert.ok(naver.missingEvidence.includes('native_naver_ownership_status_evidence'));
+  assert.ok(naver.missingEvidence.includes('verified_production_cloudflare_release_sha'));
+  assert.ok(naver.missingEvidence.includes('legacy_disable_receipt'));
+  assert.equal(LEGACY_MIGRATION_WORKLOADS.find(t=>t.id===naver.id).trackingPr,7036);
+  assert.equal(x.tasks.some(t=>t.id==='mission-home-production-e2e'),false);
+  assert.ok(x.importedTaskSnapshot.inactivePreviouslyTracked.includes('mission-home-production-e2e'));
+  assert.equal(LEGACY_TASK_SNAPSHOT.activeTaskCount,5);
+  assert.equal(LEGACY_TASK_SNAPSHOT.freshness,'historical_snapshot_not_live');
+  assert.equal(LEGACY_TASK_SNAPSHOT.canDisableLegacy,false);
+  assert.equal(x.authorizedToChangeLegacy,false);
 });
