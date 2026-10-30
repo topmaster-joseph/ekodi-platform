@@ -8,11 +8,12 @@ import {fileURLToPath} from 'node:url';
 
 const helper=fileURLToPath(new URL('../scripts/github-status-transient.sh',import.meta.url));
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
-function simulate(codes,{twoCalls=false,quotaHeader=false}={}){
+function simulate(codes,{twoCalls=false,quotaHeader=false,withSummary=false}={}){
   const dir=mkdtempSync(join(tmpdir(),'ekodi-status-'));
   try{
     const bin=join(dir,'bin');mkdirSync(bin);
-    const sequence=join(dir,'codes'),hits=join(dir,'hits');
+    const sequence=join(dir,'codes'),hits=join(dir,'hits'),summaryPath=join(dir,'summary.md');
+    writeFileSync(summaryPath,'');
     writeFileSync(sequence,codes.join('\n')+'\n');writeFileSync(hits,'');
     const fake=[
       '#!/usr/bin/env bash','set -euo pipefail',
@@ -47,10 +48,12 @@ function simulate(codes,{twoCalls=false,quotaHeader=false}={}){
       encoding:'utf8',timeout:15000,
       env:{...process.env,PATH:bin+':'+process.env.PATH,FAKE_HITS:hits,FAKE_CODES:sequence,
         FAKE_QUOTA_HEADER:quotaHeader?'1':'0',RUNNER_TEMP:twoCalls?dir:'',
+        GITHUB_ACTIONS:withSummary?'true':'false',GITHUB_STEP_SUMMARY:withSummary?summaryPath:'',
         GITHUB_RUN_ID:twoCalls?'12345':'',GITHUB_RUN_ATTEMPT:'1',GITHUB_JOB:twoCalls?'test':''}
     });
     return {code:result.status,stdout:result.stdout,stderr:result.stderr,
-      calls:readFileSync(hits,'utf8').trim().split('\n').filter(Boolean)};
+      calls:readFileSync(hits,'utf8').trim().split('\n').filter(Boolean),
+      summary:readFileSync(summaryPath,'utf8')};
   }finally{rmSync(dir,{recursive:true,force:true});}
 }
 
@@ -104,4 +107,32 @@ test('HTTP 429 blocks repeated same-job GitHub status attempts without a second 
   const x=simulate([429,200],{twoCalls:true});
   assert.notEqual(x.code,0);
   assert.deepEqual(x.calls,['429']);
+});
+
+test('verified GitHub primary limit is visible in nonsecret Actions summary',()=>{
+  const x=simulate([403,200],{twoCalls:true,quotaHeader:true,withSummary:true});
+  assert.notEqual(x.code,0);
+  assert.deepEqual(x.calls,['403']);
+  assert.match(x.summary,/quota_primary/);
+  assert.match(x.summary,/quota_circuit_suppressed/);
+  assert.match(x.summary,/HTTP \`403\`/);
+  assert.doesNotMatch(x.summary,/Bearer|Server Error|api\.github\.com|FAKE_|x-ratelimit|secret/i);
+});
+test('HTTP 429 is a limit event, not a fabricated 403 primary limit',()=>{
+  const x=simulate([429],{withSummary:true});
+  assert.notEqual(x.code,0);
+  assert.match(x.summary,/rate_limited_429/);
+  assert.doesNotMatch(x.summary,/quota_primary|quota_secondary/);
+});
+test('permission-only HTTP 403 is never classified as rate limit in summary',()=>{
+  const x=simulate([403],{withSummary:true});
+  assert.notEqual(x.code,0);
+  assert.match(x.summary,/permission_denied/);
+  assert.doesNotMatch(x.summary,/quota_primary|quota_secondary|quota_circuit_suppressed/);
+});
+test('disabled summary produces no additional network calls or artifacts',()=>{
+  const x=simulate([403],{quotaHeader:true});
+  assert.notEqual(x.code,0);
+  assert.deepEqual(x.calls,['403']);
+  assert.equal(x.summary,'');
 });
