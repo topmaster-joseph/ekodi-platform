@@ -4,7 +4,7 @@ const $=id=>document.getElementById(id);
 const BASE='/edu/study/live/screen-share/api/rooms';
 const params=new URLSearchParams(location.search);
 const roomId=params.get('r')||'';
-const invite=params.get('k')||sessionStorage.getItem('screen-invite-'+roomId)||'';
+const invite=new URLSearchParams(location.hash.slice(1)).get('k')||params.get('k')||sessionStorage.getItem('screen-invite-'+roomId)||'';
 const guest=/^[a-f0-9]{32}$/.test(roomId)&&/^[a-f0-9]{64}$/.test(invite);
 let room=null,ws=null,pc=null,stream=null,selected='',side=guest?'student':'host';
 const ice=[{urls:'stun:stun.cloudflare.com:3478'}];
