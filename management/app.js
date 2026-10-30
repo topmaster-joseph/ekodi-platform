@@ -55,6 +55,52 @@ function validSpaceUrl(slug){
   if(typeof slug!=='string'||!(/^[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?$/.test(slug)))return null;
   return `https://ekodi.kr/${slug}`;
 }
+function storeSummaryIsValid(data,space){
+  const metrics=data?.summary;
+  return Boolean(data?.dataPolicy==='verified-read-only'
+    &&data?.workspace?.id===space.id&&data?.workspace?.slug===space.slug
+    &&data?.workspace?.kind==='store'&&metrics
+    &&['canonicalMenuCount','platformListingCount','connectedChannelCount']
+      .every(key=>Number.isSafeInteger(metrics[key])&&metrics[key]>=0)
+    &&typeof metrics.orderEnabled==='boolean');
+}
+function storeKpiRow(label,value){
+  const cell=document.createElement('div');cell.className='store-kpi-cell';
+  const term=document.createElement('dt');term.textContent=label;
+  const amount=document.createElement('dd');amount.textContent=String(value);
+  cell.append(term,amount);return cell;
+}
+async function loadStoreSummary(space,host,button){
+  if(!activeSession()||space.kind!=='store'||!validSpaceUrl(space.slug))return;
+  const token=state.session.accessToken,userId=state.session.user.id,epoch=state.spacesRequest;
+  if(!state.spaces.some(item=>item.id===space.id&&item.slug===space.slug&&item.kind==='store'))return;
+  button.disabled=true;host.replaceChildren();host.textContent='매장 운영현황을 확인하고 있습니다.';
+  const stillCurrent=()=>activeSession()&&state.session.accessToken===token
+    &&state.session.user.id===userId&&epoch===state.spacesRequest
+    &&state.spaces.some(item=>item.id===space.id&&item.slug===space.slug&&item.kind==='store');
+  try{
+    const path='/api/store-summary?slug='+encodeURIComponent(space.slug);
+    const response=await fetch(path,{method:'GET',headers:{authorization:`Bearer ${token}`,accept:'application/json'},cache:'no-store'});
+    if(!stillCurrent())return;
+    if(response.status===401){clearSession();return}
+    if(!response.ok)throw new Error('store_kpi_'+response.status);
+    const data=await response.json();
+    if(!stillCurrent())return;
+    if(!storeSummaryIsValid(data,space))throw new Error('invalid_store_kpi_projection');
+    const grid=document.createElement('dl');grid.className='store-kpi-grid';
+    grid.append(
+      storeKpiRow('메뉴 원본',data.summary.canonicalMenuCount),
+      storeKpiRow('판매채널 등록',data.summary.platformListingCount),
+      storeKpiRow('연결 채널',data.summary.connectedChannelCount),
+      storeKpiRow('주문 설정',data.summary.orderEnabled?'활성':'비활성')
+    );
+    host.replaceChildren(grid);
+  }catch(error){
+    if(!stillCurrent())return;
+    host.replaceChildren();host.textContent='운영현황을 확인할 수 없습니다. 잠시 후 다시 조회해 주세요.';
+    console.error('management store read-only summary',error);
+  }finally{if(stillCurrent())button.disabled=false}
+}
 function renderVerifiedSpaces(){
   const host=$('verifiedSpacesList');host.replaceChildren();
   if(!activeSession())return;
@@ -65,6 +111,12 @@ function renderVerifiedSpaces(){
     card.append(name,role);
     const url=validSpaceUrl(space.slug);
     if(url){const link=document.createElement('a');link.href=url;link.textContent='공간 열기';link.className='space-entry';card.append(link)}
+    if(space.kind==='store'&&url){
+      const button=document.createElement('button');button.type='button';button.className='store-kpi-button';button.textContent='운영현황 조회';
+      const panel=document.createElement('div');panel.className='store-kpi-panel';panel.setAttribute('role','status');panel.setAttribute('aria-live','polite');
+      button.addEventListener('click',()=>loadStoreSummary(space,panel,button));
+      card.append(button,panel);
+    }
     host.append(card);
   });
 }
