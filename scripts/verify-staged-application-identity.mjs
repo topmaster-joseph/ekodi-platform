@@ -57,7 +57,7 @@ export function verifyStagedApplicationIdentity({
   // Preserve the existing builder's canonical hash formula and ordering.
   // Preserve upstream JS Array.sort codepoint order, not locale collation.
   const ordered=[...m.files].sort((a,b)=>a.path<b.path?-1:a.path>b.path?1:0);
-  const canonical=ordered.map(x=>x.sha256+'  '+x.path+'\\n').join('');
+  const canonical=ordered.map(x=>x.sha256+'  '+x.path+'\n').join('');
   if(digest(Buffer.from(canonical,'utf8'))!==m.artifactDigest)fail('AGGREGATE_DIGEST_MISMATCH');
 
   for(const cfg of ['wrangler.ai.staging.release.toml','wrangler.ai.release.toml']){
@@ -66,7 +66,7 @@ export function verifyStagedApplicationIdentity({
     const text=fs.readFileSync(configFile,'utf8');
     if(configValue(text,'main')!==CANONICAL_MAIN||
        configValue(text,'directory')!==CANONICAL_ASSETS||
-       !/^no_bundle\\s*=\\s*true\\s*$/m.test(text)||
+       !/^no_bundle\s*=\s*true\s*$/m.test(text)||
        configValue(text,'compatibility_date')!==m.compatibilityDate){
       fail('STAGING_PRODUCTION_CONFIG_MISMATCH');
     }
@@ -81,7 +81,7 @@ if(process.argv.includes('--verify')){
       expectedDigest:process.env.EXPECTED_AI_ARTIFACT_DIGEST,
       sourceSha:process.env.GITHUB_SHA,
     });
-    process.stdout.write(JSON.stringify(proof)+'\\n');
+    process.stdout.write(JSON.stringify(proof)+'\n');
   }catch(error){
     console.error(String(error?.message||error));
     process.exitCode=1;
