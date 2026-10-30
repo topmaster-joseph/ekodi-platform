@@ -4,7 +4,8 @@ import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 export function makePrivateReleaseTestDb() {
   const sqlite=new DatabaseSync(':memory:');
-  for(const name of ['001_private_scheduled_editions.sql','002_private_release_audit_outbox.sql']){
+  for(const name of ['001_private_scheduled_editions.sql','002_private_release_audit_outbox.sql',
+    '003_private_jubilee_ingest_receipts.sql']){
     sqlite.exec(readFileSync(new URL('../publishing/human/sql/'+name,import.meta.url),'utf8'));
   }
   const prepare=sql=>({
