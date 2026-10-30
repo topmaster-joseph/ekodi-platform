@@ -73,6 +73,16 @@ test('only host selects a learner and only the selected learner signals media or
  assert.equal(ctx.map.get('config').ended,true);
  assert.equal(host.messages.at(-1).type,'room_closed');
  assert.equal(personA.messages.at(-1).type,'room_closed');
+ // A disconnected instructor must revoke screen selection even if the share is active.
+ const ctx2=createContext(),room2=new EducationScreenRoom(ctx2,{});
+ await room2.fetch(post('/init',{id:'d'.repeat(32),hostKey:key('a'),joinKey:key('b'),createdAt:Date.now()}));
+ const joined=await (await room2.fetch(post('/join',{joinKey:key('b'),name:'수강생C'}))).json();
+ const h2=fake('host','host'),c2=fake('student',joined.id,'수강생C');
+ ctx2.sockets.push(h2,c2);
+ await room2.webSocketMessage(h2,JSON.stringify({type:'select',id:joined.id}));
+ await room2.webSocketClose(h2);
+ assert.equal(ctx2.map.get('selected'),undefined);
+ assert.equal(c2.messages.at(-1).type,'stop','host disappearance must stop learner capture');
 });
 test('Education QR sharing pages and gateway respect consent and no-unapproved-host authority',async()=>{
  const [worker,api,html,client,css,prod,stage,studio]=await Promise.all([
@@ -87,6 +97,10 @@ test('Education QR sharing pages and gateway respect consent and no-unapproved-h
  assert.match(worker,/EducationScreenRoom/);
  assert.match(api,/ekodiInstructor\(token,env\)/);
  assert.match(api,/origin_forbidden/);
+ assert.match(api,/#k='/,'QR join secret must remain in a URL fragment, not the network-visible query');
+ assert.doesNotMatch(api,/joinUrl:.*+'&k='/,'do not leak join invitation into HTTP request URL');
+ assert.match(client,/location\.hash\.slice\(1\)/,'browser consumes private QR fragment');
+ assert.match(client,/history\.replaceState/,'private QR fragment removed after reading');
  assert.match(api,/instructor_login_required/);
  assert.match(api,/EDU_SCREEN_SHARE_ENABLED!=='true'/);
  assert.match(api,/new Request\('https:\/\/room\/init'/);
