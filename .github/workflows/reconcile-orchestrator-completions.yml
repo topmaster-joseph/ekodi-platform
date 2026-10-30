@@ -67,9 +67,18 @@ jobs:
             const report = [];
 
             for (const candidate of candidates) {
+              // OIDC audit/owner event existence is projected by the first-party
+              // D1 ledger. It is only a query optimization: a server-side
+              // exact-artifact receipt still gates production completion.
+              if(candidate.state === 'staging' && candidate.stagingAttested === true &&
+                 candidate.ownerConfirmationRecorded !== true){
+                report.push({taskId:candidate.taskId,state:'await_final_owner_confirmation'});
+                continue;
+              }
               // Staging verification is independent of post-production
-              // completion. Missing proof is a safe non-terminal deferral.
-              if (candidate.state === 'staging' || candidate.state === 'production_verifying') {
+              // completion. Never re-collect an OIDC stage already recorded.
+              if ((candidate.state === 'staging' || candidate.state === 'production_verifying') &&
+                  !(candidate.state === 'staging' && candidate.stagingAttested === true)) {
                 // Command completion historically maps to production_verifying.
                 // Only independently verified GitHub staging proof can advance
                 // it to the final-owner-approval staging checkpoint.
@@ -92,18 +101,20 @@ jobs:
                   continue;
                 }
                 if (candidate.state === 'staging') {
-                  // Post-production completion is possible *after* owner
-                  // approval and a genuine guarded promotion. The server must
-                  // independently re-check its immutable owner receipt before
-                  // marking this task complete.
-                  report.push({taskId:candidate.taskId,state:'production_completion_check',
-                    reason:proof?.reason||'preproduction_not_reusable_after_promotion'});
+                  // Without an attested stage, a production completion is
+                  // never substituted for the missing proof.
+                  report.push({taskId:candidate.taskId,state:'preproduction_deferred',
+                    reason:proof?.reason||'preproduction_proof_unverified'});
+                  continue;
                 }
                 // Unattested legacy production_verifying tasks still undergo
                 // independent post-production completion verification. Neither
                 // state can create a synthetic staging attestation or owner
                 // approval, and the server safeguards staged completion.
               }
+              // Already attested and approved staging tasks go directly to
+              // independent production evidence verification, saving GitHub
+              // API calls. This is not the actual owner approval check.
               let evidence;
               try {
                 evidence = await collectAuthenticatedCompletionEvidence({
