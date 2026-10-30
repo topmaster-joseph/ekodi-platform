@@ -23,14 +23,16 @@ function googleIdentityCheck(rows=[],error=null) {
     };
     return query;
   }};
-  const source=api.match(/async function hasVerifiedGoogleAdminIdentity\([^\n]+\)\{[\s\S]*?\n\}/)?.[0];
+  const source=api.match(/async function verifiedGoogleAdminEmails\([^\n]+\)\{[\s\S]*?\n\}/)?.[0];
   assert.ok(source,'server-side identity helper missing');
   const js=source.replace('account:{person_id:string;verified_emails:string[]}', 'account');
   return {guard:new Function('admin','return ('+js+');')(admin),seen};
 }
 
 test('root admin requires Google proof, a server role and email verification',()=>{
-  assert.match(api,/if\(!account\|\|!await hasVerifiedGoogleAdminIdentity\(account\)\)return false/);
+  assert.match(api,/const googleEmails=await verifiedGoogleAdminEmails\(account\)/);
+  assert.match(api,/if\(!googleEmails\.length\)return false/);
+  assert.match(api,/return googleEmails\.some\(email=>BOOTSTRAP_SUPER_ADMIN_EMAILS\.has\(email\)\)/);
   assert.match(api,/\.from\("profiles"\)\.select\("platform_admin"\)/);
   assert.match(api,/BOOTSTRAP_SUPER_ADMIN_EMAILS\.has/);
   assert.match(api,/\.eq\("provider","google"\)/);
@@ -44,7 +46,7 @@ test('verified Google identity on same Person satisfies the extra platform-admin
   const {guard,seen}=googleIdentityCheck([
     {person_id:'person-a',provider:'google',status:'active',email_verified:true,email:'owner@example.test'}
   ]);
-  assert.equal(await guard({person_id:'person-a',verified_emails:['OWNER@example.test']}),true);
+  assert.deepEqual(await guard({person_id:'person-a',verified_emails:['OWNER@example.test']}),['owner@example.test']);
   assert.ok(seen.length===1);
 });
 test('different provider, different Person or unverified Google cannot become root admin',async()=>{
@@ -56,9 +58,12 @@ test('different provider, different Person or unverified Google cannot become ro
     {person_id:'person-a',provider:'google',status:'active',email_verified:true,email:'different@example.test'}
   ];
   const {guard}=googleIdentityCheck(rows);
-  assert.equal(await guard({person_id:'person-a',verified_emails:['owner@example.test']}),false);
-  assert.equal(await guard({person_id:'person-a',verified_emails:[]}),false);
-  assert.equal(await guard({person_id:'',verified_emails:['owner@example.test']}),false);
+  assert.deepEqual(await guard({person_id:'person-a',verified_emails:['owner@example.test']}),[]);
+  assert.deepEqual(await guard({person_id:'person-a',verified_emails:['different@example.test']}),['different@example.test']);
+  // A different Google email cannot activate a recovery grant for owner@example.test.
+  assert.match(api,/return googleEmails\.some\(email=>BOOTSTRAP_SUPER_ADMIN_EMAILS\.has\(email\)\)/);
+  assert.deepEqual(await guard({person_id:'person-a',verified_emails:[]}),[]);
+  assert.deepEqual(await guard({person_id:'',verified_emails:['owner@example.test']}),[]);
 });
 test('errors fail closed; Google administrator D1 also pins subject, issuer and audience',async()=>{
   const {guard}=googleIdentityCheck([],new Error('db_unavailable'));
