@@ -14,7 +14,11 @@ const CF_JSD_TAG=/<script>(window\.__CF\$cv\$params=\{r:'[0-9a-f]{16}',t:'[A-Za-
 const CF_NONCE="(?:[a-z]\\.nonce='[A-Za-z0-9+\\/=]{0,128}';)?";
 const CF_LOADER_BODIES=[
   new RegExp("^var a=document\\.createElement\\('script'\\);"+CF_NONCE.replace('[a-z]','a')+"a\\.src='\\/cdn-cgi\\/challenge-platform\\/scripts\\/jsd\\/main\\.js';document\\.getElementsByTagName\\('head'\\)\\[0\\]\\.appendChild\\(a\\);$"),
-  new RegExp("^\\(function\\(\\)\\{if\\(!document\\.body\\)return;var s=document\\.createElement\\('script'\\);"+CF_NONCE.replace('[a-z]','s')+"s\\.src='\\/cdn-cgi\\/challenge-platform\\/scripts\\/precursor\\/main\\.js';document\\.head\\.appendChild\\(s\\);\\}\\)\\(\\);$")
+  new RegExp("^\\(function\\(\\)\\{if\\(!document\\.body\\)return;var s=document\\.createElement\\('script'\\);"+CF_NONCE.replace('[a-z]','s')+"s\\.src='\\/cdn-cgi\\/challenge-platform\\/scripts\\/precursor\\/main\\.js';document\\.head\\.appendChild\\(s\\);\\}\\)\\(\\);$"),
+  // Observed 2026-10-30 on real ekodi.kr Chromium: Cloudflare Precursor
+  // normalizes URL origins before loading its own fixed same-origin script.
+  // Only the exact grammar and EKODI-owned fallback origins are accepted.
+  /^\(function\(\)\{if\(!document\.body\)return;var l=window\.location,o;try\{o=new URL\(l\.origin\)\.origin\}catch\(e\)\{try\{o=new URL\(new URL\(l\.href\)\.origin\)\.origin\}catch\(e\)\{o='https:\/\/(?:ekodi\.kr(?:\/edu)?\/?|edu\.ekodi\.kr\/?)'\}\}var u='\/cdn-cgi\/challenge-platform\/scripts\/precursor\/main\.js',s=document\.createElement\('script'\);s\.src=o\?new URL\(u,o\)\.href:u;document\.head\.appendChild\(s\);\}\)\(\);$/
 ];
 const trustedInlineHashes=new Set();
 export function cloudflareJsDetectionHashes(html){
