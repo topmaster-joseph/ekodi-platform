@@ -27,3 +27,25 @@ unregistered clients using the same GitHub App installation token.
 Run node --test test/github-api-budget-admission.test.mjs. Use EKODI protected
 source PR, exact-head CI, staged D1 migration, guarded production and
 production read-only verification. No paid service or independent scheduler.
+
+## Authenticated installation attestation (source-only, default disabled)
+
+A JSON field saying verifiedInstallationToken=true is not proof of authentication.
+The admission primitive now requires a non-serializable WeakSet-branded
+25-second context minted by the trusted EKODI server after GitHub authenticates
+both the intended App installation (App ID + installation ID) and canonical
+repository access over HTTPS. Only actual rate-limit headers returned from the
+verified repository request are persisted in D1. A copied context, outdated
+proof, absent signed-in token, missing headers or D1 error fails closed.
+No bearer tokens, response bodies, user identities or URLs are persisted.
+
+fetchImpl is only an internal unit-testing injection. Never accept a transport,
+token, identity or proof from a user request. Token issuance is still a distinct
+owner-provisioned GitHub App integration; this patch does not issue a token,
+publish an HTTP route, change permissions, or trigger GitHub mutations.
+
+Keep the production enable flag unset. Before activation require owner setup
+of EKODI_GITHUB_APP_ID and installation ID, live token issuer, signed webhook,
+verified response telemetry, all GitHub callers routed through admissions,
+multi-worker concurrency tests and guarded production evidence.
+Run tests for github-api-installation-proof and github-api-budget-admission.

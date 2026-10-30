@@ -2,11 +2,31 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {reserveTrustedGitHubApiBudget,INSERT_GITHUB_API_RESERVATION} from '../github-api-budget-admission.js';
+import {attestGitHubInstallationToken} from '../github-api-installation-proof.js';
 const NOW=Date.parse('2026-10-30T03:00:00Z');
-const ID=54321,SHA='a'.repeat(40),key=n=>n.toString(16).padStart(64,'0');
-const ctx={source:'ekodi-orchestrator',verifiedInstallationToken:true,installationId:ID};
+const ID=54321,APP=76,SHA='a'.repeat(40),key=n=>n.toString(16).padStart(64,'0');
+const issuerEnv={EKODI_GITHUB_BUDGET_ADMISSION_ENABLED:'true',
+  EKODI_GITHUB_INSTALLATION_ID:String(ID),EKODI_GITHUB_APP_ID:String(APP),
+  DB:{prepare(){return {bind(){return {run:async()=>({meta:{changes:1}})};}};}}};
+const mockResponse=(data,headers=new Headers())=>({
+  ok:true,status:200,headers,json:async()=>data
+});
+const attestation=await attestGitHubInstallationToken(issuerEnv,{
+  installationToken:'internal-unit-test-installation-token',
+  nowMs:NOW,
+  fetchImpl:async url=>url.endsWith('/installation')
+    ?mockResponse({id:ID,app_id:APP})
+    :mockResponse({full_name:'topmaster-joseph/ekodi-platform'},new Headers({
+      'x-ratelimit-resource':'core','x-ratelimit-limit':'5000',
+      'x-ratelimit-remaining':'4999',
+      'x-ratelimit-reset':String(Math.floor((NOW+3600000)/1000))
+    }))
+});
+if(!attestation.verified)throw Error('test attestation setup failed');
+const ctx=attestation.context;
 const request=(n,other={})=>({installationId:ID,resource:'core',operationKey:key(n),headSha:SHA,nowMs:NOW,authContext:ctx,...other});
-const env=DB=>({DB,EKODI_GITHUB_BUDGET_ADMISSION_ENABLED:'true',EKODI_GITHUB_INSTALLATION_ID:String(ID)});
+const env=DB=>({DB,EKODI_GITHUB_BUDGET_ADMISSION_ENABLED:'true',
+  EKODI_GITHUB_APP_ID:String(APP),EKODI_GITHUB_INSTALLATION_ID:String(ID)});
 test('not connected by default; no D1 read or write',async()=>{
   let n=0;const DB={prepare(){n++;throw Error('no calls');}};
   assert.deepEqual(await reserveTrustedGitHubApiBudget({DB},request(1)),{admitted:false,reason:'not_connected'});
@@ -14,10 +34,16 @@ test('not connected by default; no D1 read or write',async()=>{
 });
 test('unverified App context and wrong installation never touch DB',async()=>{
   let n=0;const e=env({prepare(){n++;throw Error('no calls');}});
-  for(const change of [{installationId:99},{authContext:null},{authContext:{...ctx,verifiedInstallationToken:false}}]){
+  for(const change of [{installationId:99},{authContext:null},
+    {authContext:{...ctx,verifiedInstallationToken:true}}]){
     assert.equal((await reserveTrustedGitHubApiBudget(e,request(1,change))).reason,'not_authorized');
   }
   assert.equal(n,0);
+});
+test('copied JSON context and expired proof cannot authorize reservation',async()=>{
+  const e=env({prepare(){throw Error('must not use storage');}});
+  assert.equal((await reserveTrustedGitHubApiBudget(e,request(22,{authContext:{...ctx}}))).reason,'not_authorized');
+  assert.equal((await reserveTrustedGitHubApiBudget(e,request(23,{nowMs:NOW+25001}))).reason,'not_authorized');
 });
 test('bad key, SHA, resource, units or timestamp rejected before DB',async()=>{
   let n=0;const e=env({prepare(){n++;throw Error('no calls');}});
