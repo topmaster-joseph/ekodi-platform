@@ -84,6 +84,46 @@ test('refused App token remains denied in D1 without retry storm',async t=>{
   assert.equal(native.prepare('SELECT state FROM github_app_probe_attempts').get().state,'denied');
   assert.ok(!JSON.stringify(native.prepare('SELECT * FROM github_app_probe_attempts').get()).includes('not-for-audit'));
 });
+test('zero-row D1 audit update fails closed after actual provider call',async()=>{
+  let writes=0,probes=0;
+  const DB={prepare(sql){return {bind(){return {run:async()=>{
+    if(sql.includes('INSERT OR IGNORE')){writes++;return {meta:{changes:1}};}
+    if(sql.includes('UPDATE github_app_probe_attempts')){writes++;return {meta:{changes:0}};}
+    throw Error('unrecognized query');
+  }};}};}};
+  const result=await runGithubAppReadonlyCanary({...control(),DB},{
+    nowMs:NOW,probeImpl:async()=>{
+      probes++;return {ok:true,reason:'verified_readonly_observation',githubApiCalls:2};
+    }
+  });
+  assert.deepEqual(result,{ok:false,reason:'audit_unavailable',githubApiCalls:2,
+    releaseAuthorized:false,admissionEnabled:false,tokenExposed:false});
+  assert.equal(probes,1);assert.equal(writes,2);
+});
+test('missing D1 audit receipt never claims canary success',async()=>{
+  let probes=0;
+  const DB={prepare(sql){return {bind(){return {run:async()=>
+    sql.includes('INSERT OR IGNORE')?{meta:{changes:1}}:{meta:{}}};}};}};
+  const result=await runGithubAppReadonlyCanary({...control(),DB},{
+    nowMs:NOW,probeImpl:async()=>{probes++;return {ok:true,githubApiCalls:2};}
+  });
+  assert.equal(result.ok,false);assert.equal(result.reason,'audit_unavailable');
+  assert.equal(probes,1);
+});
+test('multirow D1 audit response is not accepted as canary evidence',async()=>{
+  let calls=0;
+  const DB={prepare(sql){return {bind(){return {run:async()=>
+    sql.includes('INSERT OR IGNORE')?{meta:{changes:1}}:{meta:{changes:2}}};}}}};
+  const result=await runGithubAppReadonlyCanary({...control(),DB},{
+    nowMs:NOW,probeImpl:async()=>{
+      calls++;return {ok:true,reason:'verified_readonly_observation',githubApiCalls:2};
+    }
+  });
+  assert.equal(calls,1);
+  assert.equal(result.ok,false);
+  assert.equal(result.reason,'audit_unavailable');
+  assert.equal(result.tokenExposed,false);
+});
 test('missing migration, invalid time and D1 write error fail closed',async()=>{
   let c=0;const malformed={prepare(){throw Error('private D1 details')}};
   const e={...control(),DB:malformed};
