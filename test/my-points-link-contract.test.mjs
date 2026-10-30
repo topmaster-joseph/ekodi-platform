@@ -21,3 +21,13 @@ test('site points cannot call unlaunched API without a separately enabled capabi
   assert.match(production,/POINTS_ENABLED = "false"/);
   assert.match(staging,/POINTS_ENABLED = "false"/);
 });
+
+test('points sign-in returns to exact initiating URL via canonical /auth and sanitizes token handoff',()=>{
+  const app=fs.readFileSync(new URL('../my/points/app.js',import.meta.url),'utf8');
+  assert.match(app,/new URL\('https:\/\/ekodi\.kr\/auth\/\?site=my'\)/);
+  assert.match(app,/authUrl\.searchParams\.set\('return_to',returnTo\.href\)/);
+  assert.match(app,/sb\.auth\.verifyOtp\(\{token_hash:token,type\}\)/);
+  assert.match(app,/history\.replaceState\(\{\},document\.title,location\.pathname\+location\.search\)/);
+  assert.match(app,/try\{await handoff\(\);\}/);
+  assert.doesNotMatch(app,/login\.href='\/auth\//);
+});

@@ -11,7 +11,26 @@ const sb=enabled?createClient(config.supabaseUrl,config.supabasePublishableKey,
   {auth:{detectSessionInUrl:true,persistSession:true}}):null;
 const api=enabled?config.supabaseUrl.replace(/\/$/,'')+'/functions/v1/points-api':'';
 const returnTo=new URL(location.href);returnTo.hash='';
-login.href='/auth/?site=my&return_to='+encodeURIComponent(returnTo.href);
+const authUrl=new URL('https://ekodi.kr/auth/?site=my');
+authUrl.searchParams.set('return_to',returnTo.href);
+login.href=authUrl.toString();
+
+// Reuse the same canonical one-time My EKODI auth handoff as /my/app.js.
+// The OTP proof is never sent to the points API or retained in navigation history.
+async function handoff(){
+  if(!location.hash.startsWith('#'))return;
+  const params=new URLSearchParams(location.hash.slice(1));
+  const token=params.get('ekodi_token');
+  if(!token)return;
+  try{
+    if(!sb)return;
+    const type=params.get('ekodi_type')||'email';
+    const {error}=await sb.auth.verifyOtp({token_hash:token,type});
+    if(error)throw error;
+  } finally {
+    history.replaceState({},document.title,location.pathname+location.search);
+  }
+}
 function showMessage(text){notice.textContent=text;view.hidden=true;}
 async function request(path,token){
   const res=await fetch(api+path,{headers:{Authorization:'Bearer '+token,apikey:config.supabasePublishableKey},cache:'no-store'});
@@ -45,6 +64,8 @@ async function loadWallet(token,site){
   }catch(e){showMessage('포인트 내역을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.');}
 }
 async function start(){
+  try{await handoff();}
+  catch{showMessage('로그인 인계에 실패했습니다. 로그인 후 다시 시도해 주세요.');login.hidden=false;return;}
   if(!enabled){showMessage('포인트 조회 서비스 준비 중입니다.');return;}
   const {data:{session}}=await sb.auth.getSession();
   if(!session?.access_token){showMessage('로그인하면 사이트별 활동포인트를 확인할 수 있습니다.');login.hidden=false;return;}
