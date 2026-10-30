@@ -46,7 +46,8 @@ export async function runGithubAppReadonlyCanary(env,{
   if(!githubProbeConfigured(env))
     return {...safeResult({reason:env?.EKODI_GITHUB_READONLY_PROBE_ENABLED!=='true'
       ?'not_enabled':'not_provisioned'}),githubApiCalls:0};
-  if(!env?.DB?.prepare||!Number.isSafeInteger(nowMs)||nowMs<1000000000000)
+  if(!env?.DB?.prepare||!Number.isSafeInteger(nowMs)||
+     nowMs<1000000000000||nowMs>8640000000000000-60000)
     return safeResult({reason:'storage_unavailable'});
   const installationId=Number(env.EKODI_GITHUB_INSTALLATION_ID);
   const slotKey=installationId+':'+Math.floor(nowMs/SIX_HOURS);
