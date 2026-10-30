@@ -14,6 +14,8 @@ on:
   pull_request:
     paths:
       - 'my/**'
+      - 'points-active-client.js'
+      - 'test/points-active-client.test.mjs'
       - 'my-worker.js'
       - 'invest-my-workspace.js'
       - 'invest-autopilot-core.js'
@@ -61,6 +63,8 @@ on:
     branches: [main]
     paths:
       - 'my/**'
+      - 'points-active-client.js'
+      - 'test/points-active-client.test.mjs'
       - 'my-worker.js'
       - 'invest-my-workspace.js'
       - 'invest-autopilot-core.js'
@@ -135,6 +139,7 @@ jobs:
           node --check invest-autopilot-core.js
           node --check my/app.js
           node --check my/points/app.js
+          node --check points-active-client.js
           node --check my/public-profile.js
           node --check my/person-digital-card.js
           node --check my/digital-card-admin.js
@@ -171,7 +176,7 @@ jobs:
           grep -Fq 'private.person_messenger_contacts' "$MESSENGER_MIGRATION"
           grep -Fq 'person_identity_share_capabilities' "$MESSENGER_MIGRATION"
           grep -Fq 'set_my_identity_share_config_v2' "$MESSENGER_MIGRATION"
-          node --test test/universal-membership-contract.test.mjs test/my-ekodi-contract.test.mjs test/my-private-workspace-routing.test.mjs test/my-manifest-services.test.mjs test/my-life-journey.test.mjs test/my-life-communication.test.mjs test/my-progressive-personalization.test.mjs test/my-docs-ai.test.mjs test/my-intent-os.test.mjs test/my-intent-execution-bridge.test.mjs test/person-public-profile.test.mjs test/person-messenger-sharing.test.mjs test/person-digital-card-qr-ui.test.mjs test/invest-access-boundaries.test.mjs test/invest-my-autopilot-ui.test.mjs test/my-points-link-contract.test.mjs test/my-points-worker-runtime.test.mjs
+          node --test test/universal-membership-contract.test.mjs test/my-ekodi-contract.test.mjs test/my-private-workspace-routing.test.mjs test/my-manifest-services.test.mjs test/my-life-journey.test.mjs test/my-life-communication.test.mjs test/my-progressive-personalization.test.mjs test/my-docs-ai.test.mjs test/my-intent-os.test.mjs test/my-intent-execution-bridge.test.mjs test/person-public-profile.test.mjs test/person-messenger-sharing.test.mjs test/person-digital-card-qr-ui.test.mjs test/invest-access-boundaries.test.mjs test/invest-my-autopilot-ui.test.mjs test/my-points-link-contract.test.mjs test/my-points-worker-runtime.test.mjs test/points-active-client.test.mjs test/points-active-heartbeat-contract.test.mjs
           test -f deploy/manifests/my.worker.json
 
   staging:
