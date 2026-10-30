@@ -1,17 +1,24 @@
 // QR screen sharing: only verified EKODI instructors create a room.
 // Invites grant learner access only. Room signaling is scoped to one object.
-import {ekodiInstructor} from './education-instructor-gate.js';
+import {ekodiInstructor,GATE_COOKIE,verifyGateToken} from './education-instructor-gate.js';
 const BASE='/study/live/screen-share/api/';
 const response=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json','cache-control':'no-store','referrer-policy':'no-referrer'}});
 const secret=()=>Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,'0')).join('');
 const object=(env,id)=>env.EDU_SCREEN_ROOMS.get(env.EDU_SCREEN_ROOMS.idFromName('edu-screen:'+id));
+const hasInstructorGate=async(request,env)=>{
+ const key=env.EDU_GATE_SIGNING_KEY;
+ if(typeof key!=='string'||key.length<32)return false;
+ const cookie=(request.headers.get('cookie')||'').split(';').map(s=>s.trim()).find(s=>s.startsWith(GATE_COOKIE+'='));
+ if(!cookie)return false;
+ return verifyGateToken(cookie.slice(GATE_COOKIE.length+1),key);
+};
 export async function educationScreenApi(request,env,{url=new URL(request.url)}={}){
  if(!url.pathname.startsWith(BASE))return null;
  if(env.EDU_SCREEN_SHARE_ENABLED!=='true'||!env.EDU_SCREEN_ROOMS)return response({ok:false,code:'not_enabled'},503);
  if(request.headers.get('origin')!=='https://ekodi.kr')return response({ok:false,code:'origin_forbidden'},403);
  if(url.pathname===BASE+'rooms'&&request.method==='POST'){
   const token=(request.headers.get('authorization')||'').match(/^Bearer ([^\s]{15,8192})$/i)?.[1];
-  if(!token||!await ekodiInstructor(token,env))return response({ok:false,code:'instructor_login_required'},401);
+  if(!(token&&await ekodiInstructor(token,env))&&!await hasInstructorGate(request,env))return response({ok:false,code:'instructor_login_required'},401);
   const id=crypto.randomUUID().replaceAll('-',''),hostKey=secret(),joinKey=secret();
   const initialized=await object(env,id).fetch(new Request('https://room/init',{
    method:'POST',headers:{'content-type':'application/json'},
