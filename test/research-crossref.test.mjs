@@ -27,6 +27,7 @@ test('metadata normalization supplies canonical DOI and bounded publication fiel
  assert.deepEqual(item.authors,['Jane Kim']);
  assert.equal(item.title,'AI Adoption in Small Businesses');
  assert.equal(normalizeCrossrefRecord({DOI:'not-a-doi'}),null);
+ assert.equal(normalizeCrossrefRecord(null),null);
 });
 
 test('Crossref bibliographic search returns registered metadata without quality claims',async()=>{
@@ -54,6 +55,9 @@ test('exact DOI lookup validates metadata and reports no-match separately',async
  const missing=await lookupCrossref('10.1000/missing',async()=>new Response(null,{status:404}));
  assert.equal(missing.metadataFound,false);
  assert.deepEqual(missing.records,[]);
+ const mismatch=await lookupCrossref('10.1000/abc-2026',mocked({message:{...record,DOI:'10.1000/other'}}));
+ assert.equal(mismatch.metadataFound,false);
+ assert.deepEqual(mismatch.records,[]);
 });
 
 test('upstream failures, rate limits and malformed responses fail closed',async()=>{
