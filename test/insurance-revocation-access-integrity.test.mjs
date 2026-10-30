@@ -18,6 +18,7 @@ const largeEntries=Array.from({length:21},(_,i)=>({
 }));
 
 function createHarness({ initial = {}, blocked = false, failAccessWrite = false, revokeStatus = 200,
+  revokeReply = { consultation:{ id:'con_new',status:'revoked' } },
   reply = { consultation: { id:'con_new', status:'new', createdAt:'2026-10-30' }, accessToken:'ic_synthetic_new' }
 } = {}) {
   const data=new Map(Object.entries(initial));
@@ -63,7 +64,7 @@ function createHarness({ initial = {}, blocked = false, failAccessWrite = false,
         calls.revokes++;
         assert.match(String(url), /\/api\/consultations\/con_new\/revoke$/);
         assert.deepEqual(JSON.parse(opts.body),{accessToken:'ic_synthetic_new'});
-        return new Response(JSON.stringify({ consultation:{ status:'revoked' } }),{
+        return new Response(JSON.stringify(revokeReply),{
           status:revokeStatus,headers:{'content-type':'application/json'}
         });
       }
@@ -263,4 +264,39 @@ test('withdrawal panel states recovery needed instead of claiming no consultatio
   assert.match(bridge,/확인 필요/);
   assert.match(bridge,/기록을 삭제하거나 초기화하지 말고/);
   assert.match(bridge,/setAttribute\('role', 'alert'\)/);
+});
+
+
+test('HTTP 200 without matching signed revocation receipt is not a confirmed auto-withdrawal',async()=>{
+  for(const revokeReply of [
+    { consultation:{ id:'con_another',status:'revoked' } },
+    { consultation:{ id:'con_new',status:'new' } },
+    { ok:true },
+  ]){
+    const h=createHarness({failAccessWrite:true,revokeReply});
+    await h.run();
+    assert.equal(h.calls.fetch,2);
+    assert.equal(h.calls.revokes,1,'must not retry an ambiguous acknowledgment');
+    assert.equal(h.button.disabled,true);
+    assert.match(h.warnings[0].textContent,/자동 철회도 확인되지 않았습니다/);
+  }
+});
+
+test('manual revoke cannot claim success on ambiguous or mismatched server acknowledgment',async()=>{
+  const item={id:'con_new',accessToken:'ic_synthetic_new'};
+  for(const revokeReply of [
+    {consultation:{id:'con_other',status:'revoked'}},
+    {consultation:{id:'con_new',status:'processing'}},
+    {error:'irrelevant'}
+  ]){
+    const raw=JSON.stringify([item]);
+    const h=createHarness({initial:{[ACCESS_KEY]:raw},revokeReply});
+    await h.ctx.revokeConsultation(item,h.button);
+    assert.equal(h.calls.fetch,1);
+    assert.equal(h.calls.revokes,1);
+    assert.equal(h.snapshot()[ACCESS_KEY],raw,'ambiguous server receipt cannot erase bearer token');
+    assert.equal(h.warnings.length,0);
+    assert.equal(h.button.disabled,false,'the user may later retry once backend state is known');
+    assert.match(h.calls.notifications.at(-1),/철회를 확인하지 못했습니다/);
+  }
 });
