@@ -9,6 +9,17 @@ export const AUTOMATION_MIGRATION_PR = Object.freeze([
   Object.freeze({id:'native-cutover-gate',number:6920}),
 ]);
 
+// This is an imported ChatGPT task snapshot for review, NOT an EKODI-live
+// authenticated API feed. It MUST NOT authorize task retirement or publication.
+export const LEGACY_TASK_SNAPSHOT=Object.freeze({
+  observedAt:'2026-10-30T19:08:00+09:00',
+  source:'operator_verified_chatgpt_automations_listing',
+  freshness:'historical_snapshot_not_live',
+  activeTaskCount:5,
+  inactivePreviouslyTracked:['mission-home-production-e2e'],
+  canDisableLegacy:false
+});
+
 export const LEGACY_MIGRATION_WORKLOADS=Object.freeze([
   Object.freeze({id:'social-accounts-release',kind:'monitor',missing:[
     'native_scheduled_job_artifact','authenticated_social_ui_e2e',
@@ -28,6 +39,14 @@ export const LEGACY_MIGRATION_WORKLOADS=Object.freeze([
     'pastor_approved_scripture','real_sermon_google_doc',
     'real_bulletin_google_doc','real_worship_google_slides',
     'owner_approval','exclusive_writer_lease','legacy_disable_receipt'
+  ]}),
+  Object.freeze({id:'church-naver-ownership-and-index',kind:'monitor',trackingPr:7036,missing:[
+    'native_naver_ownership_status_evidence',
+    'church_canonical_ekodi_kr_path_and_sitemap',
+    'verified_production_cloudflare_release_sha',
+    'first_party_desktop_mobile_e2e',
+    'owner_authorized_search_console_submission_evidence',
+    'legacy_disable_receipt'
   ]}),
 ]);
 
@@ -66,6 +85,7 @@ export function projectEkodiNativeMigration({proposals=[],checks=[]}={}){
   });
   return Object.freeze({
     owner:'EKODI Orchestrator',
+    importedTaskSnapshot:LEGACY_TASK_SNAPSHOT,
     mode:'read_only_no_legacy_cutover',
     purpose:'migration_gap_audit_not_approval',
     nativePrs:stages,tasks,

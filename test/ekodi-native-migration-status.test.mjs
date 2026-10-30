@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {
-  AUTOMATION_MIGRATION_PR,LEGACY_MIGRATION_WORKLOADS,
+  AUTOMATION_MIGRATION_PR,LEGACY_MIGRATION_WORKLOADS,LEGACY_TASK_SNAPSHOT,
   projectEkodiNativeMigration,renderEkodiMigrationSummary
 } from '../scripts/ekodi-native-migration-status.mjs';
 import {collectEkodiNativeWatch} from '../scripts/ekodi-native-operations-watch.mjs';
@@ -20,7 +20,7 @@ test('migration is independently classified for two official EKODI protected PRs
   assert.equal(data.authorizedToChangeLegacy,false);
   assert.equal(data.verifiedLegacyDisabledCount,0);
   assert.equal(data.migrationCompleted,false);
-  assert.equal(data.tasks.length,4);
+  assert.equal(data.tasks.length,5);
   assert.ok(data.tasks.every(x=>x.cutoverAllowed===false));
 });
 test('a merged source is NOT proof that real automation delivery exists',()=>{
@@ -85,11 +85,30 @@ test('main EKODI hourly watch adds native migration evidence without generating 
 test('privacy and fail-closed behavior are preserved, no forged legacy task disable',async()=>{
   const script=await readFile(new URL('../scripts/ekodi-native-migration-status.mjs',import.meta.url),'utf8');
   const runner=await readFile(new URL('../scripts/ekodi-native-operations-watch.mjs',import.meta.url),'utf8');
-  assert.equal(LEGACY_MIGRATION_WORKLOADS.length,4);
+  assert.equal(LEGACY_MIGRATION_WORKLOADS.length,5);
   assert.doesNotMatch(script,/fetch\(|api\.openai\.com|chatgpt\.com|method:'POST'|updateAutomation/);
   assert.match(runner,/AUTOMATION_MIGRATION_PR/);
   assert.match(runner,/projectEkodiNativeMigration/);
   assert.match(runner,/report\.automationMigration/);
   const d=projectEkodiNativeMigration({proposals:[{...htmls[0],response:{number:6890,base:{ref:'main'},head:{sha:SHA},merged_at:'2026-10-30',merge_commit_sha:SHA,accessToken:'not-to-be-retained'}}]});
   assert.ok(!JSON.stringify(d).includes('not-to-be-retained'));
+});
+
+test('fifth active workload is Church Naver and stale Mission remains inactive historical',()=>{
+  const x=projectEkodiNativeMigration({proposals:htmls});
+  const naver=x.tasks.find(t=>t.id==='church-naver-ownership-and-index');
+  assert.ok(naver);
+  assert.equal(naver.kind,'monitor');
+  assert.equal(naver.deliveryVerified,false);
+  assert.equal(naver.cutoverAllowed,false);
+  assert.ok(naver.missingEvidence.includes('native_naver_ownership_status_evidence'));
+  assert.ok(naver.missingEvidence.includes('verified_production_cloudflare_release_sha'));
+  assert.ok(naver.missingEvidence.includes('legacy_disable_receipt'));
+  assert.equal(LEGACY_MIGRATION_WORKLOADS.find(t=>t.id===naver.id).trackingPr,7036);
+  assert.equal(x.tasks.some(t=>t.id==='mission-home-production-e2e'),false);
+  assert.ok(x.importedTaskSnapshot.inactivePreviouslyTracked.includes('mission-home-production-e2e'));
+  assert.equal(LEGACY_TASK_SNAPSHOT.activeTaskCount,5);
+  assert.equal(LEGACY_TASK_SNAPSHOT.freshness,'historical_snapshot_not_live');
+  assert.equal(LEGACY_TASK_SNAPSHOT.canDisableLegacy,false);
+  assert.equal(x.authorizedToChangeLegacy,false);
 });
