@@ -55,10 +55,8 @@ export function verifyStagedApplicationIdentity({
     if(digest(fs.readFileSync(path.join(release,file.path)))!==file.sha256)fail('APPLICATION_BYTES_MISMATCH');
   }
   // Preserve the existing builder's canonical hash formula and ordering.
-  const ordered=[...m.files].sort((a,b)=>a.path.localeCompare(b.path,'en'));
-  // The upstream builder sorts paths with JS Array.sort, so do NOT use a
-  // locale-aware comparer, which can silently reorder punctuation.
-  ordered.sort((a,b)=>a.path<b.path?-1:a.path>b.path?1:0);
+  // Preserve upstream JS Array.sort codepoint order, not locale collation.
+  const ordered=[...m.files].sort((a,b)=>a.path<b.path?-1:a.path>b.path?1:0);
   const canonical=ordered.map(x=>x.sha256+'  '+x.path+'\\n').join('');
   if(digest(Buffer.from(canonical,'utf8'))!==m.artifactDigest)fail('AGGREGATE_DIGEST_MISMATCH');
 
