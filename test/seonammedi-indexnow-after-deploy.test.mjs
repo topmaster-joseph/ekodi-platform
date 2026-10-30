@@ -14,14 +14,18 @@ test('IndexNow submission is re-triggered by successful official domain gateway 
   assert.match(workflow, /github\.event\.workflow_run\.event == 'workflow_dispatch'/);
 });
 
-test('scheduled reconciliation submits only if the last official release is newer', () => {
-  assert.match(workflow, /schedule:\s+\- cron: '[^']+'/);
-  assert.match(workflow, /github\.event_name != 'workflow_run'/);
-  assert.match(workflow, /GITHUB_EVENT_NAME\" != 'schedule'/);
-  assert.match(workflow, /deploy-seonammedi-domains\.yml\/runs\?status=success&per_page=1/);
-  assert.match(workflow, /submit-seonammedi-indexnow\.yml\/runs\?status=success&per_page=1/);
-  assert.match(workflow, /submit=false/);
+test('daily reconciliation submits live database-published notices even with no new Worker deployment', () => {
+  assert.match(workflow, /schedule:\s+\- cron: '31 0 \* \* \*'/);
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /echo 'submit=true' >> "\$GITHUB_OUTPUT"/);
   assert.match(workflow, /steps\.decision\.outputs\.submit == 'true'/);
+  assert.match(workflow, /Reconciling published Korean canonical sitemap/);
+  // No extra GitHub REST calls per day: hourly API-budget exhaustion
+  // previously blocked status publication and protected merges.
+  assert.doesNotMatch(workflow, /GH_TOKEN:/);
+  assert.doesNotMatch(workflow, /deploy-seonammedi-domains\.yml\/runs\?status=success/);
+  assert.doesNotMatch(workflow, /submit-seonammedi-indexnow\.yml\/runs\?status=success/);
+  assert.doesNotMatch(workflow, /submit=false/);
 });
 
 test('IndexNow requires the Korean canonical public domain and correct key, without elevated credentials', () => {
