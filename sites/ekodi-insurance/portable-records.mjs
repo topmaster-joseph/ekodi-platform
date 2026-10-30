@@ -242,8 +242,12 @@ export function previewPortableMerge(existingState, importedRecords) {
   };
   if (Object.hasOwn(imported, 'messages')) {
     const chat = mergeList(current.advisorChat?.messages, imported.messages, MESSAGE_FIELDS, 'messages');
-    // Existing local chat log has its own 60-message retention bound.
-    nextState.advisorChat = { ...current.advisorChat, messages: chat.entries.slice(-60) };
+    // Import must never silently discard an existing local conversation.
+    // The app's 60-message cap is enforced before a user consents to commit.
+    if (chat.entries.length > 60) {
+      throw new Error('chat import exceeds 60-message limit; no existing messages were changed');
+    }
+    nextState.advisorChat = { ...current.advisorChat, messages: chat.entries };
     summary.addedMessages = chat.added;
   }
   // No localStorage writes here. The UI must require explicit confirm + backup
