@@ -160,6 +160,15 @@ test('stale concurrent CAS and D1 outage fail closed',async()=>{
     assert.equal(res.productionDeployed,false);
   }
 });
+test('verified command progress cannot erase staging hold or mutable task evidence',()=>{
+  const adapter=readFileSync(new URL('../ekodi-orchestrator-task-adapter.js',import.meta.url),'utf8');
+  const stageWriter=readFileSync(new URL('../ekodi-preproduction-evidence-ledger.js',import.meta.url),'utf8');
+  assert.match(adapter,/next=row\.state==='staging'\?'staging':'production_verifying'/);
+  assert.match(adapter,/const evidencePayload=rawEvidence/);
+  assert.doesNotMatch(stageWriter,/SET evidence_json=\?/);
+  assert.match(stageWriter,/audit event is the sole authoritative source/);
+});
+
 test('OIDC receiver and scheduled verifier remain first-party and never deploy',()=>{
   const adapter=readFileSync(new URL('../ekodi-orchestrator-task-adapter.js',import.meta.url),'utf8');
   const workflow=readFileSync(new URL('../.github/workflows/reconcile-orchestrator-completions.yml',import.meta.url),'utf8');
