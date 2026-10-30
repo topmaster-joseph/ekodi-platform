@@ -36,3 +36,14 @@ test('points API accepts only canonical apex and actual development staging orig
   assert.doesNotMatch(src, /topmaster-joseph\.workers\.dev/);
   assert.match(src, /if \(!ORIGINS\.has\(req\.headers\.get\("Origin"\) \|\| ""\)\)/);
 });
+
+test('admin dashboard verifies current platform_admin in the database before returning policies', () => {
+  assert.match(src, /path === "\/admin\/overview"/);
+  assert.match(src, /db\.auth\.getUser\(bearer\.slice\(7\)\)/);
+  assert.match(src, /from\("profiles"\)/);
+  assert.match(src, /eq\("user_id", auth\.user\.id\)/);
+  assert.match(src, /eq\("platform_admin", true\)/);
+  assert.match(src, /error: "admin_forbidden"/);
+  assert.match(src, /read_only: true/);
+  assert.doesNotMatch(src, /\.insert\(|\.update\(|\.delete\(|\.rpc\(/);
+});
