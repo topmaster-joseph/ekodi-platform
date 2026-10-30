@@ -11,7 +11,7 @@
 
 ## Service binding contract (illustration, **NOT** deployable as-is)
 
-Publisher Worker deployment requires an owner-reviewed entry change to `main = "publishing-release-entry.js"` after the private D1, author/publisher approval verifier, edition R2 store, audit and required bindings are live in isolated staging.
+The Draft branch now selects `main = "publishing-release-entry.js"` in **staging only**, with `PUBLISHING_PRIVATE_RELEASE_ENABLED = "false"`. This exposes no new HTTP route and does not enable registration, sale, cron or a real RPC consumer binding. Promoting this staging change or enabling the flag still requires owner-reviewed private D1, author/publisher approval verifier, R2 object store, audit and role-specific bindings.
 
 The **Books Worker** must bind `PUBLISHING_RELEASE_GATE` to the publisher's exact, protected Worker name with `entrypoint = "BooksPublisherReleaseGate"`. The **Mall Worker** must separately bind its server-only gate with `entrypoint = "MallPublisherReleaseGate"`. Publishing service credentials must not be exposed to browser JS; HTTP fallback and unauthorized default entrypoint must not accept release RPC.
 
