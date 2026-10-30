@@ -69,7 +69,7 @@ jobs:
           # Fetch merge and labels once. Expensive comments/reviews are read
           # only when actual or semantic overlap requires cross-PR review.
           gh_retry pr view "$PR_NUMBER" --repo "$REPOSITORY" \
-            --json number,baseRefOid,changedFiles,files,labels,mergeable,mergeStateStatus > "$governance_snapshot"
+            --json number,baseRefOid,changedFiles,labels,mergeable,mergeStateStatus > "$governance_snapshot"
 
           current_base_oid=$(jq -r '.baseRefOid // empty' "$governance_snapshot")
           if [[ -z "$current_base_oid" ]]; then
