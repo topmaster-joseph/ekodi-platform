@@ -113,3 +113,19 @@ test('public page collects no anonymous intake while backend safeguards remain e
   assert.match(worker, /containsContactData: false/);
   assert.match(worker, /personalDataMode: 'anonymous-goal-only'/);
 });
+test('Toss merchant contact disclosure is present in static homepage and all six locales', () => {
+  const phone='010-3501-8542', link='tel:+821035018542';
+  assert.ok(html.includes(phone) && html.includes(link), 'phone and click-to-call must be available without JS');
+  const entries=[...site.matchAll(/footerCompany:/g)].map(match=>site.slice(match.index,match.index+400));
+  assert.equal(entries.length,6, 'every localized legal footer must be independently testable');
+  for (const entry of entries) {
+    assert.ok(entry.includes(phone) && entry.includes(link), 'business phone absent in a translated footer');
+  }
+});
+test('Biz production release verifies public canonical legal contact, including localized asset', () => {
+  const workflow=fs.readFileSync(new URL('../.github/workflows/deploy-ekodibiz.yml',import.meta.url),'utf8');
+  assert.ok(workflow.includes('https://ekodi.kr/ekodibiz'));
+  assert.ok(workflow.includes('https://ekodi.kr/_ekodi/ekodibiz/site.js'));
+  assert.ok(workflow.includes("grep -Fq 'tel:+821035018542' <<<\"$root\""));
+  assert.ok(workflow.includes("grep -Fq '010-3501-8542' <<<\"$public_js\""));
+});
