@@ -76,7 +76,7 @@ export async function verifyPublicationVisualProof(page, artifactsDir) {
           listFits:Boolean(l && l.left>=-2 && l.right<=innerWidth+2),
           editorFits:Boolean(e && e.left>=-2 && e.right<=innerWidth+2),
           listVisible:visible(list), editorVisible:visible(editor), formVisible:visible(form),
-          trackCount:grid?getComputedStyle(grid).gridTemplateColumns.split(/\\s+/).filter(Boolean).length:0,
+          trackCount:grid?getComputedStyle(grid).gridTemplateColumns.split(/\s+/).filter(Boolean).length:0,
           selected:form?.getAttribute('data-public-site-id')==='cgma',
           pageRoute:location.pathname.startsWith('/admin/')
         };

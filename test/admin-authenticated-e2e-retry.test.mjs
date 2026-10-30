@@ -161,6 +161,7 @@ test('publication controls focused proof uses a genuine read-only Admin session 
   assert.match(visual,/page\.setViewportSize\(\{width, height:/);
   assert.match(visual,/documentOverflow > 2/);
   assert.match(visual,/trackCount !== \(width <= 900 \? 1 : 2\)/);
+  assert.ok(visual.includes(String.raw`gridTemplateColumns.split(/\s+/)`), 'measure real CSS grid columns by whitespace');
   assert.match(visual,/search\.fill\('cgma'\)/);
   assert.match(visual,/filter\.selectOption\('public'\)/);
   assert.match(visual,/\[data-psc-reset\]/);
