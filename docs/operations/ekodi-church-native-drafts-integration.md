@@ -17,7 +17,7 @@ EKODI Orchestrator owner, continued from automation handoff issue #6895. This is
 
 1. EKODI Storage: add an internal-only token broker using existing encrypted credential vault and verify drive.file authorization, canonical Church folder `EKODI/02_CHURCH` and that the specific target folder is **not shared publicly**. For sensitive drafts, prefer a dedicated pastor-only subfolder. Turn on Google Docs API and Google Slides API in the same Google Cloud project; reauthorization may be needed.
 2. EKODI Orchestrator: build the server-only authority callback backed by verified EKODI identity/role; never accept `verifiedServerSide`, `folderPrivateVerified` or `targetChurchFolderId` from the user's HTTP body.
-3. Durable claim/store: D1 or equivalent encrypted persistence implementing `claim`, `record`, `finish`, `block`; enforce `UNIQUE(job_id)`, atomic conditional claims, owner-only leases, full audit and document IDs. Handle partial failures with explicit manual/approved reconciliation.
+3. Durable claim/store: implemented as `scripts/ekodi-native-worship-d1-ledger.mjs` and additive `migrations/202610300300_church_native_draft_ledger.sql`. It enforces a unique job claim and stores all three Google asset IDs without manuscript text or tokens. **Still requires applying this reviewed migration to the intended EKODI D1 binding and wiring the ledger only inside the authenticated Worker; do not assume it is deployed.** Recover partial jobs through separately approved owner reconciliation, never automatic retry.
 4. Authorized content writer: compose the actual sermon text, bulletin and worship slides from the approved scripture and pastor's instructions. Different AI providers may assist if the EKODI Orchestrator explicitly approves usage; avoid automatic external API cost and never claim generated text as a pastor-approved interpretation.
 5. Google asset-level readback and sharing audit: validate Google Docs/Slides IDs, folder ACL, true content; keep drafts unpublished until human pastor/owner approval. Google sharing and publishing are separate later tasks.
 6. Stage in a dedicated approved Google test folder and EKODI test service identity, then verify real Docs and Slides UI on desktop/mobile. Exact SHA CI, Orchestrator protected merge, staging and production only after evidence.
@@ -31,7 +31,7 @@ This adapter intentionally does not implement approval, OCR, audio insertion, no
 
 ```sh
 node --check scripts/ekodi-native-worship-google-drafts.mjs
-node --test test/ekodi-native-worship-google-drafts.test.mjs
+node --test test/ekodi-native-worship-google-drafts.test.mjs test/ekodi-native-worship-d1-ledger.test.mjs
 ```
 
 All tests use mocked Google API calls. No live API mutation from CI.
