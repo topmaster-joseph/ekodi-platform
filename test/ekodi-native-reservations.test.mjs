@@ -81,5 +81,6 @@ test('existing EKODI native hourly watcher owns recurring schedules without extr
   assert.match(wf,/cron: '26 23 \* \* 2'/);
   assert.match(wf,/scripts\/ekodi-native-reservations\.mjs/);
   assert.match(wf,/ekodi-native-reservations-evidence\.json/);
+  assert.ok(wf.includes("if: github.event.schedule != '0 23 * * 0' && github.event.schedule != '26 23 * * 2'"));
   assert.doesNotMatch(wf,/contents: write|issues: write|id-token: write/);
 });
