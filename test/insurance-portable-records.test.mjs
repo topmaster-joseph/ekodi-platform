@@ -152,3 +152,28 @@ test('encrypted envelope rejects covert unencrypted metadata or unexpected param
   archive.cipher.note = 'untrusted-plain-text';
   await assert.rejects(decryptPortableRecords(JSON.stringify(archive), pw, { webcrypto }), /unexpected cipher field/);
 });
+
+test('chat merge over capacity fails without silently discarding older browser messages', () => {
+  const oldMessages = Array.from({ length: 60 }, (_, i) => ({
+    id: 'old-' + i, role: 'user', text: 'Existing message ' + i
+  }));
+  const existing = {
+    policies: [], claims: [], consultations: [{ id: 'unrelated-consultation' }],
+    advisorChat: { messages: oldMessages }
+  };
+  const archive = {
+    policies: [], claims: [],
+    messages: [{ id: 'new-1', role: 'assistant', text: 'New message' }]
+  };
+  assert.throws(() => previewPortableMerge(existing, archive),
+    /chat import exceeds 60-message limit/);
+  assert.equal(existing.advisorChat.messages.length, 60);
+  assert.strictEqual(existing.advisorChat.messages, oldMessages);
+  assert.equal(oldMessages[0].id, 'old-0', 'oldest message must survive the rejected import');
+  const duplicate = previewPortableMerge(existing, {
+    policies: [], claims: [], messages: [{ id: 'old-0', role: 'user', text: 'changed' }]
+  });
+  assert.equal(duplicate.summary.addedMessages, 0);
+  assert.equal(duplicate.nextState.advisorChat.messages.length, 60);
+  assert.strictEqual(duplicate.nextState.advisorChat.messages[0], oldMessages[0]);
+});
