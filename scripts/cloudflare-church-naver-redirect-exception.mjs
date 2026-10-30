@@ -35,6 +35,14 @@ export function planChurchNaverExclusion(rule) {
   if (rule.expression.includes(NAVER_FILE_PATH)) {
     throw new Error('Existing special handling for the Naver path must be inspected manually');
   }
+  // Cloudflare permits `true` as a whole-rule match-all expression, but
+  // rejects `(true) and (...)` when PATCHing this Single Redirect. Replacing
+  // the match-all with the sole negative path check is semantically identical
+  // for every URL except the one owner-issued Naver verification file.
+  const original = rule.expression.trim();
+  if (original === 'true' || original === '(true)') {
+    return { changed: true, expression: EXCLUSION };
+  }
   // Retain the old expression and precedence exactly. Only one equality
   // exception is appended. All other URLs still match as before.
   return { changed: true, expression: '(' + rule.expression + ') and ' + EXCLUSION };
