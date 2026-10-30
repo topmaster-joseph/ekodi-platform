@@ -16,11 +16,11 @@ const largeEntries=Array.from({length:21},(_,i)=>({
   id:'con_test-'+i, accessToken:'ic_synthetic_'+i, status:'new'
 }));
 
-function createHarness({ initial = {}, blocked = false, failAccessWrite = false,
+function createHarness({ initial = {}, blocked = false, failAccessWrite = false, revokeStatus = 200,
   reply = { consultation: { id:'con_new', status:'new', createdAt:'2026-10-30' }, accessToken:'ic_synthetic_new' }
 } = {}) {
   const data=new Map(Object.entries(initial));
-  const calls={ fetch:0, renders:0, notifications:[], errors:[], set:[], remove:[] };
+  const calls={ fetch:0, revokes:0, renders:0, notifications:[], errors:[], set:[], remove:[] };
   const button={ disabled:false };
   const warnings=[];
   const form={
@@ -54,8 +54,16 @@ function createHarness({ initial = {}, blocked = false, failAccessWrite = false,
     console:{error(...args){calls.errors.push(args)}},
     fetch:async (url,opts)=>{
       calls.fetch++;
-      assert.match(String(url), /\/api\/consultations$/);
       assert.equal(opts.method,'POST');
+      if(String(url).endsWith('/revoke')){
+        calls.revokes++;
+        assert.match(String(url), /\/api\/consultations\/con_new\/revoke$/);
+        assert.deepEqual(JSON.parse(opts.body),{accessToken:'ic_synthetic_new'});
+        return new Response(JSON.stringify({ consultation:{ status:'revoked' } }),{
+          status:revokeStatus,headers:{'content-type':'application/json'}
+        });
+      }
+      assert.match(String(url), /\/api\/consultations$/);
       return new Response(JSON.stringify(reply),{
         status:201,headers:{'content-type':'application/json'}
       });
@@ -106,13 +114,13 @@ test('corrupt, disabled, or full browser storage blocks server submission entire
 test('accepted server submission with failed browser token storage is not mislabeled as network failure',async()=>{
   const h=createHarness({failAccessWrite:true});
   await h.run();
-  assert.equal(h.calls.fetch,1);
+  assert.equal(h.calls.fetch,2,'one accepted server POST and one automatic revoke');
+  assert.equal(h.calls.revokes,1);
   assert.equal(h.form.resetCount,0,'do not clear form after failed token save');
   assert.equal(h.warnings.length,1);
-  assert.match(h.warnings[0].textContent,/서버에 접수되었지만/);
-  assert.match(h.warnings[0].textContent,/중복 요청을 보내지 말고/);
-  assert.match(h.calls.notifications.at(-1),/서버 상담요청은 접수되었습니다/);
-  assert.equal(h.button.disabled,false);
+  assert.match(h.warnings[0].textContent,/접수 직후 자동 철회되었습니다/);
+  assert.match(h.calls.notifications.at(-1),/자동 철회했습니다/);
+  assert.equal(h.button.disabled,false,'retry is permitted only after confirmed cancellation');
   assert.equal(h.snapshot()[ACCESS_KEY],undefined);
 });
 
@@ -137,6 +145,9 @@ test('malformed successful response cannot falsely claim local revocation record
   assert.equal(h.calls.fetch,1);
   assert.equal(h.form.resetCount,0);
   assert.equal(h.warnings.length,1);
+  assert.match(h.warnings[0].textContent,/자동 철회도 확인되지 않았습니다/);
+  assert.equal(h.button.disabled,true,'unknown server outcome must block repeated submit');
+  assert.equal(h.calls.revokes,0);
   assert.equal(h.snapshot()[ACCESS_KEY],undefined);
 });
 
@@ -145,4 +156,29 @@ test('bridge never exposes tokens to URL or logs complete error payload',()=>{
   assert.doesNotMatch(writeFunctions, /\bwindow\.location\s*=|\blocation\.href\s*=/);
   assert.match(accessFunctions,/MAX_ACCESS_ITEMS/);
   assert.doesNotMatch(accessFunctions,/items\.slice\(0,\s*20\)/);
+});
+
+
+test('auto-revoke blocked by quota 429 is not retried and requires manual contact',async()=>{
+  const h=createHarness({failAccessWrite:true,revokeStatus:429});
+  await h.run();
+  assert.equal(h.calls.fetch,2,'one create plus just one revoke, never repeated');
+  assert.equal(h.calls.revokes,1);
+  assert.equal(h.form.resetCount,0);
+  assert.equal(h.warnings.length,1);
+  assert.match(h.warnings[0].textContent,/자동 철회도 확인되지 않았습니다/);
+  assert.match(h.warnings[0].textContent,/중복 신청하지 말고/);
+  assert.equal(h.button.disabled,true);
+  assert.equal(h.snapshot()[ACCESS_KEY],undefined);
+});
+
+test('after token was safely persisted, panel rendering errors do not trigger auto-revoke',async()=>{
+  const h=createHarness();
+  h.ctx.renderWithdrawalPanel=()=>{throw new Error('synthetic redraw failure')};
+  await h.run();
+  assert.equal(h.calls.fetch,1);
+  assert.equal(h.calls.revokes,0);
+  assert.equal(JSON.parse(h.snapshot()[ACCESS_KEY])[0].id,'con_new');
+  assert.equal(h.form.resetCount,1);
+  assert.equal(h.warnings.length,0);
 });
