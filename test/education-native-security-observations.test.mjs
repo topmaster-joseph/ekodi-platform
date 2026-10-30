@@ -184,7 +184,9 @@ test('read-only live Cloudflare CSP diagnostics reveal hashes and structure, nev
  const workflow=read('.github/workflows/education-release-continuity.yml');
  assert.match(workflow,/Read-only live Cloudflare inline CSP fingerprint/);
  assert.match(workflow,/continue-on-error: true/);
-});\n\ntest('a failing native probe surfaces its reason as bounded, sanitized workflow annotations',async()=>{
+});
+
+test('a failing native probe surfaces its reason as bounded, sanitized workflow annotations',async()=>{
   const {annotationsFrom}=await import('../scripts/education-probe-annotate.mjs');
   const lines=annotationsFrom({error:'boom\nnext',httpErrors:Array.from({length:6},(_,i)=>({profile:'mobile',status:404,url:'https://ekodi.kr/x'+i}))},'education-native');
   assert.equal(lines[0],'::error title=education-native failed::boom%0Anext');
