@@ -144,6 +144,15 @@ test('observed Cloudflare Precursor origin-normalizing script is hash-audited, n
    const msg="Executing inline script violates the following Content Security Policy directive 'script-src 'self' https://cdn.jsdelivr.net https://ekodi.kr'. Either the 'unsafe-inline' keyword, a hash ('sha256-"+hash+"'), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.";
    assert.deepEqual(m.verifyKnownSecurityBlocks({consoleBlocks:[{message:msg}]}),{ok:true,reason:'known-security-blocks-observed-and-enforced'});
  }
+ const observed=params+loader('').replace('/cdn-cgi/challenge-platform/scripts/precursor/main.js',
+   '/cdn-cgi/challenge-platform/scripts/precursor/main.js?ray=b1c2d3e4f5a69788');
+ const observedHash=createHash('sha256').update(observed).digest('base64');
+ assert.deepEqual(m.cloudflareJsDetectionHashes('<script>'+observed+'</script>'),[observedHash],
+   'actual 625-byte browser-injected precursor with empty fallback and 16-hex ray is recognized by exact SHA');
+ assert.deepEqual(m.cloudflareJsDetectionHashes('<script>'+observed.replace('ray=b1c2d3e4f5a69788','ray=evil')+'</script>'),[],
+   'Cloudflare query must be an exact ray parameter and 16 hexadecimal characters');
+ assert.deepEqual(m.cloudflareJsDetectionHashes('<script>'+observed.replace('?ray=b1c2d3e4f5a69788','?other=b1c2d3e4f5a69788')+'</script>'),[],
+   'unknown query parameters remain rejected');
  const doubleQuoted=params+loader('https://ekodi.kr/edu/')
    .replace("o='https://ekodi.kr/edu/'",'o="https://ekodi.kr/edu/"')
    .replace("u='/cdn-cgi/challenge-platform/scripts/precursor/main.js'",'u="/cdn-cgi/challenge-platform/scripts/precursor/main.js"')
