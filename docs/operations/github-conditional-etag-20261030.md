@@ -30,3 +30,16 @@ References:
 A second scoped safety measure in `scripts/github-status-transient.sh` prevents unnecessary repeated GitHub REST status calls after **this exact GitHub Actions job** has already observed a verified primary/secondary quota error. The on-runner `RUNNER_TEMP` marker is keyed by run ID + attempt + job name, and contains no credentials or response body. On any subsequent call in that job the helper exits with code 22, leaving required checks blocked. Every job/attempt continues to require its own genuine GitHub response and authenticated required statuses; no fabricated success or release authorization is possible.
 
 The circuit only activates on HTTP 429, or HTTP 403 with measured `x-ratelimit-remaining: 0` or an explicit rate-limit response message. Permission-only 403, authentication 401, invalid 422 and transient 5xx retain their existing behavior. In particular, this does not refresh the budget or retry after its reset, and must not be used as an excuse to skip status publishing. Synthetic tests cover same-job repeated 403/429 and distinguish unrelated permission denials. The official GitHub App signed webhook / D1 shared admission / protected release are separate work items.
+
+## GitHub Actions quota diagnostics without more API requests (2026-10-31)
+
+The existing `scripts/github-status-transient.sh` now writes one bounded, credential-free line into `GITHUB_STEP_SUMMARY` **only after** a failed request or a same-job quota-circuit suppression. Fixed labels distinguish:
+- `quota_primary`: HTTP 403 with authoritative `x-ratelimit-remaining: 0`.
+- `quota_secondary`: HTTP 403 whose body explicitly contains a rate-limit indication but no measured zero.
+- `rate_limited_429`: HTTP 429, not silently recast as primary quota exhaustion.
+- `permission_denied`: HTTP 403 without rate-limit evidence (auth/permission).
+- `authentication_denied`, `validation_denied`, `transient_exhausted`, `transport_error`, and `quota_circuit_suppressed`.
+
+Each note exposes only the fixed label, a verified numeric HTTP status, bounded 0–2 transient retry count, and an explicit statement that the failed request did not publish success; only genuine protected GitHub statuses determine the final required-check outcome. It never includes a GitHub URL, token, request headers/body, actor, repository secret or fabricated remaining quota. It adds **zero GitHub HTTP requests**, cannot mutate a required check, and only writes to the GitHub-provided local job summary file when `GITHUB_ACTIONS=true`.
+
+Fail-closed remains mandatory: do not merge or auto-rerun on quota outages. Diagnose the CF-QUOTA-001 Cloudflare 429 failures independently from GitHub API rate limits. Run `node --test test/github-status-transient-retry.test.mjs` as part of the protected CI suite.
