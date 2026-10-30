@@ -5,6 +5,9 @@ on:
     branches:
       - 'ai/*/orch_*'
   workflow_dispatch:
+  # Reuse this same protected release lane after an owner's genuine re-review.
+  pull_request_review:
+    types: [submitted]
 
 permissions:
   contents: write
@@ -21,18 +24,29 @@ permissions:
 # runs of the same branch still never overlap. The continuity watchdog remains
 # the safety net for cancelled, timed-out or never-started runs.
 concurrency:
-  group: ekodi-orchestrated-merge-${{ github.ref }}
+  group: ekodi-orchestrated-merge-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
   converge:
+    # Never run privileged PR code from a foreign repository or unapproved
+    # review. Normal issued orchestrator push/dispatch still uses receipt gate.
+    if: >-
+      github.event_name != 'pull_request_review' ||
+      (github.event.review.state == 'approved' &&
+       github.event.review.user.login == 'topmaster-joseph' &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       startsWith(github.event.pull_request.head.ref, 'ai/'))
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
       GH_TOKEN: ${{ github.token }}
+      EKODI_PR_REF_NAME: ${{ github.event.pull_request.head.ref || github.ref_name }}
+      EKODI_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@v7
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 1
       - uses: actions/setup-node@v7
         with:

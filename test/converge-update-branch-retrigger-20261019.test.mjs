@@ -28,8 +28,11 @@ globalThis.fetch = async (input, init = {}) => {
   if (method === 'GET' && p === '/pulls') {
     if (scenario === 'merged') return json(200, [{ number: 7, state: 'closed', merged_at: '2026-10-20T00:00:00Z', draft: false, head: { sha: '${H1}' } }]);
     if (scenario === 'newer-head') return json(200, [{ number: 7, state: 'open', draft: false, head: { sha: '${H2}' } }]);
-    return json(200, [{ number: 7, state: 'open', draft: false, head: { sha: head } }]);
+    return json(200, [{ number: 7, state: 'open', draft: false,
+      requested_reviewers: scenario === 'review-request-pending' ? [{ login: 'topmaster-joseph' }] : [],
+      head: { sha: head } }]);
   }
+  if (method === 'GET' && p === '/pulls/7/reviews') return json(200, scenario === 'review-hold' ? [{ user: { login: 'topmaster-joseph' }, author_association: 'OWNER', state: 'CHANGES_REQUESTED' }] : []);
   if (method === 'GET' && p === '/pulls/7/files') return json(200, [{ filename: 'README.md' }]);
   if (method === 'GET' && p === '/pulls/7') return json(200, { number: 7, merged: false, draft: false, head: { sha: head }, merge_commit_sha: '${M}', title: 't' });
   if (method === 'GET' && /\\/commits\\/[a-f0-9]{40}\\/status$/.test(p)) {
@@ -77,6 +80,24 @@ test('behind: update-branch hands off by dispatching required checks and converg
   assert.match(out, /"action":"branch-updated"/);
   assert.match(out, new RegExp('"nextHead":"' + H2 + '"'));
   assert.ok(!calls.some(c => c.path.endsWith('/pulls/7/merge')), 'stale run must not merge');
+});
+
+
+test('pending human change request parks before branch sync, status writes or CI fan-out', () => {
+  const {code,out,calls}=run('review-hold');
+  assert.equal(code,0,out);
+  assert.match(out,/"action":"human-review-hold"/);
+  assert.equal(dispatches(calls).length,0);
+  assert.ok(!calls.some(x=>/\/update-branch$|\/merge$|\/statuses\//.test(x.path)));
+  assert.ok(!calls.some(x=>x.path.endsWith('/pulls/7/files')));
+});
+
+test('pending owner review request parks before costly base sync without a change request', () => {
+  const {code,out,calls}=run('review-request-pending');
+  assert.equal(code,0,out);
+  assert.match(out,/"action":"human-review-hold"/);
+  assert.equal(dispatches(calls).length,0);
+  assert.ok(!calls.some(x=>/\/update-branch$|\/merge$|\/statuses\//.test(x.path)));
 });
 
 test('workflow-file base: fails fast with a clear reason and one PR comment, never spins on merges', () => {

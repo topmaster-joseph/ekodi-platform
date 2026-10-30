@@ -4,10 +4,13 @@ import { requiresHumanAuthorSchemaRelease, requiresCreatorAuthorRelease, release
 import { unapprovedReleaseRunIds, staleParkedReleaseRunIds } from './lib/converge-unapproved-runs.mjs';
 import { fileURLToPath } from 'node:url';
 import { safeGitHubHttpDiagnostic } from './github-http-diagnostic.mjs';
+import { pendingReviewBlocks } from './lib/converge-review-hold.mjs';
 const repo=String(process.env.GITHUB_REPOSITORY||'').trim();
 const token=String(process.env.GH_TOKEN||'').trim();
-const branch=String(process.env.GITHUB_REF_NAME||'').trim();
-const headSha=String(process.env.GITHUB_SHA||'').trim();
+// The approved-review event uses an explicit immutable PR branch/head context.
+// GITHUB_* defaults cannot safely be overridden by a workflow environment.
+const branch=String(process.env.EKODI_PR_REF_NAME||process.env.GITHUB_REF_NAME||'').trim();
+const headSha=String(process.env.EKODI_PR_HEAD_SHA||process.env.GITHUB_SHA||'').trim();
 const required=['test','EKODI AI Orchestration Gate'];
 // User-authored reconciliation touch: retrigger protected PR checks after GitHub update-branch.
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -147,6 +150,28 @@ for(let i=0;i<20&&!pr;i++){
 if(!pr)fail('open PR not found');
 // Draft PRs remain unpublished and must not be merged or deployed.
 if(pr.draft===true){console.log('[EKODI][ORCH-AUTO-MERGE] draft PR; unpublished hold, no merge');process.exit(0)}
+
+// An outstanding human CHANGES_REQUESTED blocks protected merge. Previously
+// we updated-branch/re-dispatched three workflows on EVERY moving main head
+// before GitHub could reject the merge. Park before those API/CI expenditures.
+// Re-approval from the same sovereign GitHub reviewer triggers this EXISTING
+// convergence workflow via its pull_request_review event (no new scheduler).
+let reviews=[];
+for(let page=1;page<=5;page++){
+  const result=await api('/pulls/'+pr.number+'/reviews?per_page=100&page='+page);
+  if(!result.r.ok)fail('review state lookup failed '+result.r.status);
+  if(!Array.isArray(result.data))fail('review state unavailable');
+  reviews.push(...result.data);
+  const more=/(?:^|,)\s*<[^>]+>;\s*rel="next"/.test(result.r.headers.get('link')||'');
+  if(!more)break;
+  if(page===5)fail('review history exceeds bounded lookup; no merge');
+}
+const unresolved=pendingReviewBlocks(reviews,{requestedReviewers:pr.requested_reviewers});
+if(unresolved.length){
+  console.log(JSON.stringify({ok:true,action:'human-review-hold',pr:pr.number,head:headSha,
+    blockedReviewers:unresolved,merge:false,dispatched:false}));
+  process.exit(0);
+}
 const filesLookup=await api('/pulls/'+pr.number+'/files?per_page=100');
 if(!filesLookup.r.ok)fail('PR file lookup failed '+filesLookup.r.status);
 const changedFiles=(Array.isArray(filesLookup.data)?filesLookup.data:[]).map(file=>String(file.filename||''));
