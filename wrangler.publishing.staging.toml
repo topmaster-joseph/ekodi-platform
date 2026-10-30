@@ -1,5 +1,5 @@
 name = "ekodi-publishing-staging"
-main = "publishing-worker.js"
+main = "publishing-release-entry.js"
 compatibility_date = "2026-08-26"
 workers_dev = true
 preview_urls = false
@@ -12,3 +12,8 @@ run_worker_first = true
 [observability.logs]
 enabled = true
 invocation_logs = true
+
+# Draft gated release: module entrypoints are importable, but no publishing
+# private D1, R2 or Books/Mall service binding is configured here.
+[vars]
+PUBLISHING_PRIVATE_RELEASE_ENABLED = "false"
