@@ -199,3 +199,16 @@ test('customer-initiated revoke also prevents credential-bearing redirects',()=>
   assert.match(customerRevoke, /cache:\s*'no-store'/);
   assert.doesNotMatch(customerRevoke, /accessToken:\s*item\.accessToken.*(?:location|url)/);
 });
+
+
+test('post-save form exception preserves consultation and revoke token without auto-cancellation',async()=>{
+  const h=createHarness();
+  h.form.reset=()=>{throw new Error('synthetic redraw/reset failure')};
+  await h.run();
+  assert.equal(h.calls.fetch,1);
+  assert.equal(h.calls.revokes,0);
+  assert.equal(JSON.parse(h.snapshot()[ACCESS_KEY])[0].id,'con_new');
+  assert.equal(h.button.disabled,false);
+  assert.equal(h.warnings.length,0);
+  assert.match(h.calls.notifications.at(-1),/철회 권한은 이 브라우저에 저장되었습니다/);
+});
