@@ -9,7 +9,7 @@ const extract = (startLabel,endLabel) => {
   assert.ok(from>=0 && to>from,'actual bridge function boundary must exist');
   return source.slice(from,to);
 };
-const accessFunctions = extract('  function loadAccess() {', '  function handoffForm(');
+const accessFunctions = extract('  function readAccessStrict() {', '  function handoffForm(');
 const writeFunctions = extract('  function saveAccess(', '  async function revokeConsultation(');
 const customerRevoke = extract('  async function revokeConsultation(', '  function renderWithdrawalPanel(');
 const ACCESS_KEY='ekodi-insurance-consultation-access-v1';
