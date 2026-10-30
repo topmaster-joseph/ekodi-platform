@@ -1,4 +1,4 @@
-// EKODI Publishing: server-only Cloudflare named WorkerEntrypoint RPC adapter.
+// 출판: server-only Cloudflare named WorkerEntrypoint RPC adapter.
 // No HTTP route and no client-controlled principal/clock. The deployment must bind
 // each destination ONLY to its corresponding named entrypoint. Do not expose
 // either gate via a generic HTTP proxy, service wildcard, or browser credential.
