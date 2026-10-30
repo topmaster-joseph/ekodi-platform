@@ -11,7 +11,7 @@ declare
   v_count integer;
 begin
   if p_auth_user is null then return null; end if;
-  select count(distinct li.person_id),min(li.person_id)
+  select count(distinct li.person_id),(array_agg(li.person_id))[1]
     into v_count,v_person
   from public.login_identities li
   join public.people p on p.id=li.person_id
