@@ -13,6 +13,12 @@ on:
       - 'scripts/ekodi-native-operations-watch.mjs'
       - 'config/ekodi-native-monitoring-ownership.json'
       - 'test/ekodi-native-operations-watch.test.mjs'
+      - 'scripts/ekodi-native-migration-status.mjs'
+      - 'test/ekodi-native-migration-status.test.mjs'
+      - 'scripts/ekodi-native-workload-preparation.mjs'
+      - 'test/ekodi-native-workload-preparation.test.mjs'
+      - 'config/common-scripture/**'
+      - 'publishing/human/editorial-policy.js'
 
 permissions:
   contents: read
@@ -36,7 +42,7 @@ jobs:
       - name: Verify owned, read-only monitoring contract
         run: |
           node --check scripts/ekodi-native-operations-watch.mjs
-          node --test test/ekodi-native-operations-watch.test.mjs
+          node --test test/ekodi-native-operations-watch.test.mjs test/ekodi-native-migration-status.test.mjs test/ekodi-native-workload-preparation.test.mjs
 
   observe:
     if: github.event_name != 'pull_request'

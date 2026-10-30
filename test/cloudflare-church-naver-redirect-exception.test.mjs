@@ -35,6 +35,42 @@ test('patch targets only exact church rule and exact owner-issued path', () => {
   assert.equal(planChurchNaverExclusion({ ...originalRule, expression: planned.expression }).changed, false);
 });
 
+test('Cloudflare match-all true is replaced with the exact Naver path exclusion, not invalid (true) and (...)', async () => {
+  for (const expression of ['true', '(true)', ' true ']) {
+    const rule = { ...originalRule, expression };
+    const plan = planChurchNaverExclusion(rule);
+    assert.equal(plan.changed, true);
+    assert.equal(plan.expression, EXCLUSION);
+    assert.equal(planChurchNaverExclusion({ ...rule, expression: plan.expression }).changed, false);
+    assert.deepEqual(patchBody(rule, plan.expression).action_parameters, rule.action_parameters);
+  }
+
+  // Production observed an existing one-rule "true" expression. Ensure the
+  // remote PATCH is surgical and preserves the redirect target and other rules.
+  let current = structuredClone({...ruleset, rules: [{ ...originalRule, expression: 'true' }, otherRule]});
+  let writes = 0;
+  const request = async (_token, endpoint, method = 'GET', payload) => {
+    if (endpoint.startsWith('/zones?')) return [{id:zoneId,name:DOMAIN,status:'active'}];
+    if (endpoint.endsWith('/entrypoint')) return structuredClone(current);
+    if (endpoint.includes('/rules/')) {
+      assert.equal(method, 'PATCH');
+      assert.equal(payload.expression, EXCLUSION);
+      writes++;
+      current = {...current, rules: [{...current.rules[0],...payload},otherRule]};
+      return structuredClone(current);
+    }
+    throw new Error('Unexpected API call ' + endpoint);
+  };
+  const result = await reconcileChurchNaverRedirect({token:'test',accountId,request});
+  assert.equal(result.outcome,'updated');
+  assert.equal(writes,1);
+  assert.deepEqual(current.rules[1],otherRule);
+  assert.deepEqual(current.rules[0].action_parameters,originalRule.action_parameters);
+  const repeat = await reconcileChurchNaverRedirect({token:'test',accountId,request});
+  assert.equal(repeat.outcome,'already_excluded');
+  assert.equal(writes,1);
+});
+
 test('deny ambiguous, disabled, unrelated or previously special-cased redirect', () => {
   assert.throws(() => findChurchRule({...ruleset, rules: [originalRule, originalRule]}), /exactly one/);
   assert.throws(() => findChurchRule({...ruleset, rules: [otherRule]}), /exactly one/);
@@ -91,4 +127,24 @@ test('production workflow gates the single-rule API patch, deploys proof and ver
   assert.match(src,/\/rulesets\/phases\//);
   assert.match(src,/'PATCH'/);
   assert.doesNotMatch(src,/['"]PUT['"]|dns_records|pages\/projects/);
+});
+
+
+test('dedicated Cloudflare church Single Redirect token cannot leak to generic worker release stages', async () => {
+  const workflow = await readFile(new URL('../.github/workflows/deploy-church-naver-proof.yml', import.meta.url), 'utf8');
+  const script = await readFile(new URL('../scripts/cloudflare-church-naver-redirect-exception.mjs', import.meta.url), 'utf8');
+  const name = 'CLOUDFLARE_CHURCH_RULES_API_TOKEN';
+  assert.ok(workflow.includes('secrets.' + name));
+  assert.equal((workflow.match(new RegExp('secrets\\.' + name, 'g')) || []).length, 2);
+  // Token is step-scoped, never included in the whole job or worker deployment.
+  const workerStart = workflow.indexOf('name: Deploy exact Naver proof route');
+  const inspectStart = workflow.indexOf('name: Inspect exact existing church');
+  const applyStart = workflow.indexOf('name: Exclude only Naver proof URL');
+  const liveStart = workflow.indexOf('name: Verify real Naver owner proof');
+  assert.ok(workerStart >= 0 && inspectStart > workerStart && applyStart > inspectStart && liveStart > applyStart);
+  assert.ok(!workflow.slice(0,inspectStart).includes(name));
+  assert.ok(!workflow.slice(liveStart).includes(name));
+  assert.match(script, /process\.env\.CLOUDFLARE_CHURCH_RULES_API_TOKEN/);
+  assert.doesNotMatch(script, /token: process\.env\.CLOUDFLARE_API_TOKEN/);
+  assert.ok(script.includes('Single Redirect Edit'));
 });
