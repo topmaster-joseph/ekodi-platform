@@ -11,7 +11,7 @@ const SLIDES='https://slides.googleapis.com/v1/presentations';
 const FOLDER=/^[A-Za-z0-9_-]{10,120}$/;
 const DATE=/^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])$/;
 const safeText=(v,n=250000)=>typeof v==='string'?v.slice(0,n).trim():'';
-const isDate=s=>DATE.test(s)&&new Date(s+'T00:00:00Z').toISOString().slice(0,10)===s;
+const isDate=s=>{if(typeof s!=='string'||!DATE.test(s))return false;const value=Date.parse(s+'T00:00:00Z');return Number.isFinite(value)&&new Date(value).toISOString().slice(0,10)===s;};
 const forbidden=/\u0000|\u0008|\u000b|\u000c|\u000e|\u000f/;
 const fail=code=>{const e=new Error(code);e.code=code;return e;};
 function checkContent(value,label,min=12,max=80000){
@@ -44,7 +44,7 @@ export function validateWorshipDraftJob(job){
 }
 const uri=(base,id,suffix='')=>base+'/'+encodeURIComponent(id)+suffix;
 async function google(fetchImpl,token,url,method='GET',body){
-  if(![DRIVE,DOCS,SLIDES].some(root=>url===root||url.startsWith(root+'/')))
+  if(![DRIVE,DOCS,SLIDES].some(root=>url===root||url.startsWith(root+'/')||url.startsWith(root+'?')))
     throw fail('GOOGLE_HOST_NOT_ALLOWED');
   let response;
   try{
@@ -123,9 +123,13 @@ export async function executeWorshipDraftJob(job,{authority,ledger,tokens,fetchI
     throw fail('EKODI_SECURE_DEPENDENCIES_MISSING');
   if(!validId(ctx.targetChurchFolderId))throw fail('EKODI_CHURCH_FOLDER_REQUIRED');
   const allowed=await authority.verify(ctx,plan);
+  // The hosting folder must be checked for visibility by EKODI storage;
+  // sharing to a public Church folder would inherit unsafe Drive permissions.
   if(allowed?.ok!==true||allowed.service!=='church'||
-      !['pastor','super_admin'].includes(allowed.role)||allowed.verifiedServerSide!==true)
-    throw fail('EKODI_AUTHORIZATION_DENIED');
+      !['pastor','super_admin'].includes(allowed.role)||allowed.verifiedServerSide!==true||
+      allowed.verifiedFolderId!==ctx.targetChurchFolderId||
+      allowed.folderPrivateVerified!==true)
+    throw fail('EKODI_AUTHORIZATION_OR_PRIVATE_FOLDER_DENIED');
   const tokenResult=await tokens.getChurchDriveToken(ctx);
   if(typeof tokenResult?.token!=='string'||tokenResult.token.length<12||
       !Array.isArray(tokenResult.scopes)||!tokenResult.scopes.includes('https://www.googleapis.com/auth/drive.file'))
