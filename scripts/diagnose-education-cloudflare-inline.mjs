@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 import {resolve} from 'node:path';
 import {blockedInlineScriptHash,cloudflareJsDetectionHashes} from './education-native-security-observations.mjs';
-const URL='https://ekodi.kr/edu/study/ai-bootcamp/';
+const TARGET_URL='https://ekodi.kr/edu/study/ai-bootcamp/';
 export function summarizeInlineScriptHashes(html,blocked=[]){
  const scripts=[...String(html||'').matchAll(/<script(?:\\s[^>]*)?>([\\s\\S]*?)<\\/script>/gi)];
  return scripts.slice(0,40).map((part,i)=>{
@@ -38,7 +38,7 @@ async function main(){
   const page=await ctx.newPage();
   await page.route('**/*',route=>['GET','HEAD','OPTIONS'].includes(route.request().method().toUpperCase())?route.continue():route.abort('blockedbyclient'));
   page.on('console',msg=>{const hash=blockedInlineScriptHash(msg.text());if(hash)blocked.push(hash);});
-  const response=await page.goto(URL,{waitUntil:'domcontentloaded',timeout:30000});
+  const response=await page.goto(TARGET_URL,{waitUntil:'domcontentloaded',timeout:30000});
   await page.waitForTimeout(800);
   await Promise.all(audits);
   const dom=summarizeInlineScriptHashes(await page.content(),blocked);
