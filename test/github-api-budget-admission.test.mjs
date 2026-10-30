@@ -2,11 +2,37 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {reserveTrustedGitHubApiBudget,INSERT_GITHUB_API_RESERVATION} from '../github-api-budget-admission.js';
+import {attestGitHubInstallationToken} from '../github-api-installation-proof.js';
 const NOW=Date.parse('2026-10-30T03:00:00Z');
-const ID=54321,SHA='a'.repeat(40),key=n=>n.toString(16).padStart(64,'0');
-const ctx={source:'ekodi-orchestrator',verifiedInstallationToken:true,installationId:ID};
+const ID=54321,APP=76,SHA='a'.repeat(40),key=n=>n.toString(16).padStart(64,'0');
+const rsa=(await import('node:crypto')).generateKeyPairSync('rsa',{modulusLength:2048});
+const issuerEnv={
+  EKODI_GITHUB_BUDGET_ADMISSION_ENABLED:'true',
+  EKODI_GITHUB_READONLY_PROBE_ENABLED:'true',
+  EKODI_GITHUB_APP_ID:String(APP),EKODI_GITHUB_INSTALLATION_ID:String(ID),
+  EKODI_GITHUB_APP_PRIVATE_KEY:rsa.privateKey.export({type:'pkcs8',format:'pem'}),
+  DB:{prepare(){return {bind(){return {run:async()=>({meta:{changes:1}})};}};}}
+};
+const mk=(status,data,h={})=>new Response(JSON.stringify(data),{status,headers:h});
+const attestation=await attestGitHubInstallationToken(issuerEnv,{
+  nowMs:NOW,subtle:(await import('node:crypto')).webcrypto.subtle,
+  fetchImpl:async(url,opts)=>url.endsWith('/access_tokens')
+    ?mk(201,{token:'test-valid-installation-token-with-metadata-only',
+      expires_at:new Date(NOW+3600000).toISOString(),
+      repository_selection:'selected',
+      repositories:[{full_name:'topmaster-joseph/ekodi-platform'}],
+      permissions:{metadata:'read'}})
+    :mk(200,{full_name:'topmaster-joseph/ekodi-platform'},{
+      'x-ratelimit-resource':'core','x-ratelimit-limit':'5000',
+      'x-ratelimit-remaining':'4999',
+      'x-ratelimit-reset':String(Math.floor((NOW+3600000)/1000))
+    })
+});
+if(!attestation.verified)throw Error('test attestation setup failed');
+const ctx=attestation.context;
 const request=(n,other={})=>({installationId:ID,resource:'core',operationKey:key(n),headSha:SHA,nowMs:NOW,authContext:ctx,...other});
-const env=DB=>({DB,EKODI_GITHUB_BUDGET_ADMISSION_ENABLED:'true',EKODI_GITHUB_INSTALLATION_ID:String(ID)});
+const env=DB=>({DB,EKODI_GITHUB_BUDGET_ADMISSION_ENABLED:'true',
+  EKODI_GITHUB_APP_ID:String(APP),EKODI_GITHUB_INSTALLATION_ID:String(ID)});
 test('not connected by default; no D1 read or write',async()=>{
   let n=0;const DB={prepare(){n++;throw Error('no calls');}};
   assert.deepEqual(await reserveTrustedGitHubApiBudget({DB},request(1)),{admitted:false,reason:'not_connected'});
@@ -14,17 +40,26 @@ test('not connected by default; no D1 read or write',async()=>{
 });
 test('unverified App context and wrong installation never touch DB',async()=>{
   let n=0;const e=env({prepare(){n++;throw Error('no calls');}});
-  for(const change of [{installationId:99},{authContext:null},{authContext:{...ctx,verifiedInstallationToken:false}}]){
+  for(const change of [{installationId:99},{authContext:null},
+    {authContext:{...ctx,verifiedInstallationToken:true}}]){
     assert.equal((await reserveTrustedGitHubApiBudget(e,request(1,change))).reason,'not_authorized');
   }
   assert.equal(n,0);
 });
+test('copied JSON context and expired proof cannot authorize reservation',async()=>{
+  const e=env({prepare(){throw Error('must not use storage');}});
+  assert.equal((await reserveTrustedGitHubApiBudget(e,request(22,{authContext:{...ctx}}))).reason,'not_authorized');
+  assert.equal((await reserveTrustedGitHubApiBudget(e,request(23,{nowMs:NOW+25001}))).reason,'not_authorized');
+});
 test('bad key, SHA, resource, units or timestamp rejected before DB',async()=>{
   let n=0;const e=env({prepare(){n++;throw Error('no calls');}});
   for(const change of [{operationKey:'email'},{headSha:'invalid'},{resource:'bad'},{
-    unitCost:6},{unitCost:0},{nowMs:0}]){
+    unitCost:6},{unitCost:0}]){
     assert.equal((await reserveTrustedGitHubApiBudget(e,request(1,change))).reason,'invalid_request');
   }
+  // An impossible clock invalidates the time-bound proof first. It is a
+  // genuine authorization denial, not a reason to bypass authentication.
+  assert.equal((await reserveTrustedGitHubApiBudget(e,request(1,{nowMs:0}))).reason,'not_authorized');
   assert.equal(n,0);
 });
 test('single parameterized insert-select reserves a bounded lease',async()=>{
