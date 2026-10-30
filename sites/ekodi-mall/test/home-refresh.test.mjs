@@ -17,7 +17,11 @@ test('premium home renders navigation and retains core commerce entrypoints', ()
   }
   assert.ok(template.indexOf('mall-category-shortcuts') < template.indexOf('context-recommend'));
   assert.ok(template.indexOf('class="shop"') < template.indexOf('affiliate-gates'));
-  assert.ok(template.indexOf('class="shop"') > template.indexOf('context-recommend'));
+  assert.ok(template.indexOf('class="shop"') > template.indexOf('mall-category-shortcuts'));
+  assert.ok(template.indexOf('class="shop"') < template.indexOf('mall-editorial'));
+  assert.ok(template.indexOf('class="shop"') < template.indexOf('context-recommend'));
+  assert.ok(css.includes('@media(min-width:641px)'));
+  assert.ok(css.includes('.mall-category-shortcuts{display:none}'));
 });
 
 test('category shortcuts map only to existing filters and destinations', () => {
