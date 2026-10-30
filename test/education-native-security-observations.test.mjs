@@ -131,6 +131,27 @@ test('Cloudflare JS detections blocked by the Education CSP: accepted only for t
 });
 
 
+test('observed Cloudflare Precursor origin-normalizing script is hash-audited, never CSP-bypassed',async()=>{
+ const m=await import('../scripts/education-native-security-observations.mjs');
+ const {createHash}=await import('node:crypto');
+ const params="window.__CF$cv$params={r:'abcdef1234567890',t:'MTc5MzA3OTA0NQ==',u:'01a17bd6',ut:'abcdef-1793079045-1.2.1.1-zz',i:60};";
+ const loader=origin=>`(function(){if(!document.body)return;var l=window.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o='${origin}'}}var u='/cdn-cgi/challenge-platform/scripts/precursor/main.js',s=document.createElement('script');s.src=o?new URL(u,o).href:u;document.head.appendChild(s);})();`;
+ for(const origin of ['https://ekodi.kr/','https://ekodi.kr/edu/','https://edu.ekodi.kr/']){
+   const body=params+loader(origin);
+   const hash=createHash('sha256').update(body,'utf8').digest('base64');
+   assert.deepEqual(m.cloudflareJsDetectionHashes('<html><script>'+body+'</script></html>'),[hash]);
+   m.trustCloudflareJsDetections('<html><script>'+body+'</script></html>');
+   const msg="Executing inline script violates the following Content Security Policy directive 'script-src 'self' https://cdn.jsdelivr.net https://ekodi.kr'. Either the 'unsafe-inline' keyword, a hash ('sha256-"+hash+"'), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.";
+   assert.deepEqual(m.verifyKnownSecurityBlocks({consoleBlocks:[{message:msg}]}),{ok:true,reason:'known-security-blocks-observed-and-enforced'});
+ }
+ for(const bad of [loader('https://evil.example/'),loader('https://ekodi.kr/').replace('/cdn-cgi/challenge-platform/scripts/precursor/main.js','https://evil.example/loader.js'),loader('https://ekodi.kr/').replace('document.head.appendChild(s);',"alert('unexpected');document.head.appendChild(s);")]){
+   assert.deepEqual(m.cloudflareJsDetectionHashes('<script>'+params+bad+'</script>'),[],'modified executable or fallback must never be trusted');
+ }
+ const unknown=createHash('sha256').update('alert(1)').digest('base64');
+ const msg="Executing inline script violates the following Content Security Policy directive 'script-src 'self' https://cdn.jsdelivr.net https://ekodi.kr'. Either the 'unsafe-inline' keyword, a hash ('sha256-"+unknown+"'), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.";
+ assert.equal(m.verifyKnownSecurityBlocks({consoleBlocks:[{message:msg}]}).reason,'blocked-inline-script-not-an-audited-cloudflare-js-detection');
+});
+
 test('native CSP decision awaits Cloudflare detector in every document including iframe',async()=>{
   const mod=await import('../scripts/education-native-security-observations.mjs');
   const {createHash}=await import('node:crypto');
