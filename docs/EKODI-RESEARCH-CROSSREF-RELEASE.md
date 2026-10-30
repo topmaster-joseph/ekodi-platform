@@ -21,13 +21,13 @@
 2. Standard repository CI, security, source provenance and canonical routing regression checks.
 3. Staging: Research UI loads on PC/mobile, link/button layout, keyboard focus, no generic workspace or redirect loop.
 4. Staging API: valid title search returns bounded metadata, exact DOI lookup matches registration record, absent DOI returns no result, rate limit and provider errors are not false successes.
-5. Protected production release only through EKODI Orchestrator with exact source approval, receipt, canary, rollback and independently collected PC/mobile evidence.
+5. Protected production release only through EKODI Orchestrator with exact-SHA required CI, protected convergence, receipt, canary, rollback and independently collected PC/mobile evidence.
 6. Confirm `/research/health` continues to report high-risk functions as disabled unless independently authorized and implemented.
 
 ## Acceptance and stop conditions
 - No operator may mark production complete solely from source commit, PR, or passing unit tests.
 - Abort promotion on stale route assets, unexpected redirect, missing receipt, failed tests, provider outage, leaked research inputs, WAF/rate-limit failure or rollback mismatch.
-- Do not bypass the existing Human Gate, protected branch policy or the orchestration chain to force deployment.
+- Per owner decision of 2026-10-19, no per-PR human approval comment or approval label is required. Do not bypass required exact-SHA CI, protected-branch policy, EKODI Orchestrator, staging, production verification or rollback.
 
 ## Next milestones
 - Author identity resolution/verified ORCID link and DOI deduplication.
@@ -39,4 +39,4 @@
 - Authoritative implementation source is immutable SHA `96cbfa181c3d429ddfa9d494125fc9f0b38bbc87` under task `orch_recovery_96cbfa181c3d429ddfa9d494125fc9f0`.
 - GitHub Actions generated `action_required` workflow placeholders after bot-issued PR creation. This **documentation-only** commit on the official recovery branch requests authentic PR CI; no executable code, identity, permission, API key, production flag, payment, rollback or approval policy is changed.
 - Prior source CI showed `test` and `EKODI AI Orchestration Gate` status successes, but an earlier draft PR reconciliation step failed on a draft-state guard. Revalidate against the current recovery merge SHA; do not equate past head status with accepted merge status.
-- No exact-SHA owner Human Gate approval, protected merge, staging receipt or successful production canary is asserted. Maintain the release stop conditions listed above.
+- The owner removed the per-PR Human Gate on 2026-10-19 (see `docs/OWNER-DECISION-REMOVE-PER-PR-HUMAN-GATE-20261019.md`). No protected merge, staging receipt or successful production canary is asserted. Maintain the release stop conditions listed above.
