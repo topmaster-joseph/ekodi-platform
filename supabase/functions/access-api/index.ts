@@ -62,27 +62,31 @@ async function verifiedEkodiAccount(user:any){
 // Google identity on the canonical EKODI Person, not simply the caller's email.
 // A linked Naver/Kakao session may retain that Person's existing grants, but
 // cannot manufacture an administrator by sending a matching email or metadata.
-async function hasVerifiedGoogleAdminIdentity(account:{person_id:string;verified_emails:string[]}){
+async function verifiedGoogleAdminEmails(account:{person_id:string;verified_emails:string[]}){
   const personId=String(account?.person_id||"").trim();
   const verified=new Set((Array.isArray(account?.verified_emails)?account.verified_emails:[])
     .map(value=>String(value||"").trim().toLowerCase()).filter(Boolean));
-  if(!personId||!verified.size)return false;
+  if(!personId||!verified.size)return [];
   const {data,error}=await admin.from("login_identities")
     .select("email").eq("person_id",personId).eq("provider","google")
     .eq("status","active").eq("email_verified",true);
   if(error)throw error;
-  // The account RPC emits a Google email only when auth.users confirms ownership.
-  return (data||[]).some(row=>verified.has(String(row?.email||"").trim().toLowerCase()));
+  // The account RPC emits Google emails only when auth.users confirms ownership.
+  return [...new Set((data||[]).map(row=>String(row?.email||"").trim().toLowerCase())
+    .filter(email=>verified.has(email)))];
 }
 async function platformAdmin(userId:string){
   const account=await ekodiAccount(userId);
-  if(!account||!await hasVerifiedGoogleAdminIdentity(account))return false;
+  if(!account)return false;
+  const googleEmails=await verifiedGoogleAdminEmails(account);
+  if(!googleEmails.length)return false;
   const userIds=Array.isArray(account.auth_user_ids)&&account.auth_user_ids.length?account.auth_user_ids:[userId];
   const {data,error}=await admin.from("profiles").select("platform_admin").in("user_id",userIds).eq("platform_admin",true).limit(1);
   if(error)throw error;
   if(data?.length)return true;
-  // Recovery email allowlist is only valid after the verified Google-backed proof.
-  return (account.verified_emails||[]).some(email=>BOOTSTRAP_SUPER_ADMIN_EMAILS.has(String(email).toLowerCase()));
+  // Recovery allowlist is matched against a verified *Google* email, never
+  // another provider's verified email on the same Person.
+  return googleEmails.some(email=>BOOTSTRAP_SUPER_ADMIN_EMAILS.has(email));
 }
 async function tenantReviewerAuthorization(userId:string,tenantId:string|null){
   if(await platformAdmin(userId))return {allowed:true,roles:["platform_admin"],authority:"platform",role:"platform_admin"};
