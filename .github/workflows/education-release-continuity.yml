@@ -4,9 +4,13 @@ on:
   workflow_run:
     workflows: ["EKODI Orchestrated PR Convergent Merge"]
     types: [completed]
+  schedule:
+    - cron: "17 * * * *"
   pull_request:
     paths:
       - 'scripts/education-release-continuity.mjs'
+      - 'scripts/verify-education-release-snapshot.mjs'
+      - 'test/education-release-snapshot.test.mjs'
       - 'test/education-release-continuity.test.mjs'
       - '.github/workflows/education-release-continuity.yml'
       - 'education/study/ai-bootcamp/studio/**'
@@ -42,9 +46,10 @@ jobs:
       - name: Validate read-only release continuity
         run: |
           node --check scripts/education-release-continuity.mjs
+          node --check scripts/verify-education-release-snapshot.mjs
           node --check scripts/education-native-security-observations.mjs
           node --check scripts/verify-education-documents-native.mjs
-          node --test test/education-release-continuity.test.mjs test/education-native-security-observations.test.mjs
+          node --test test/education-release-continuity.test.mjs test/education-release-snapshot.test.mjs test/education-native-security-observations.test.mjs
       - name: Install EKODI-native disposable Chromium for pre-approval preview
         if: github.event_name == 'pull_request'
         run: |
@@ -81,8 +86,8 @@ jobs:
 
   reconcile:
     if: >-
-      github.event_name == 'workflow_run' &&
-      github.event.workflow_run.conclusion == 'success' &&
+      (github.event_name == 'schedule' ||
+       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')) &&
       github.repository == 'topmaster-joseph/ekodi-platform'
     needs: contract
     runs-on: ubuntu-latest
