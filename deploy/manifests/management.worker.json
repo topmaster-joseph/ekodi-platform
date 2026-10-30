@@ -92,6 +92,15 @@
         "expect": [
           "\"error\":\"unauthorized\""
         ]
+      },
+      {
+        "url": "https://ekodi.kr/management/api/store-summary?slug=jadam",
+        "statuses": [
+          401
+        ],
+        "expect": [
+          "\"error\":\"unauthorized\""
+        ]
       }
     ]
   }
