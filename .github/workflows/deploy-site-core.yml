@@ -30,6 +30,7 @@ on:
       - 'test/site-core-staging-10500-recovery.test.mjs'
       - 'scripts/converge-orchestrated-pr-merge.mjs'
       - 'site-worker.js'
+      - 'admin-address-policy.js'
       - 'mall-product-jsonld.js'
       - 'site-shell-worker.js'
       - 'ekodi-shell-injector.js'

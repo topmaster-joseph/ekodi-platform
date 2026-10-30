@@ -29,8 +29,10 @@ import {
 } from './ekodi-orchestrator-task-adapter.js';
 import { collectPlatformRuntimeObservations } from './ekodi-platform-observer.js';
 import { runRuntimeAutonomicControlPlane } from './ekodi-autonomic-control-plane.js';
-import { buildFleetStatus, renderFleetStatusHtml } from './ekodi-fleet-status.js';
+import { buildFleetStatus, projectLiveFleetRegistry, renderFleetStatusHtml } from './ekodi-fleet-status.js';
+import ecosystemServices from './config/ecosystem-services.json' with { type: 'json' };
 import { githubOperationsSnapshot } from './github-operations-webhook.js';
+import {githubProbeReadModel,runGithubAppReadonlyCanary} from './github-app-probe-control.js';
 
 const PREFIX = '/api/control/ai/v8';
 const COLLABORATION_PATH = `${PREFIX}/collaboration-settings`;
@@ -164,13 +166,34 @@ export async function handleEkodiV8CommandControl(request, env) {
     return null;
   };
 
+  // Super-admin only: the explicit probe is a bounded READ-ONLY GitHub API
+  // measurement, not a GitHub write, dispatch or release. Browser cannot
+  // select repository, installation, scope, secret, operation or arbitrary URL.
+  if (url.pathname === PREFIX + '/github/readonly-probe') {
+    const denied = requirePlatformSuperAdmin('ai:operate'); if (denied) return denied;
+    if (request.method !== 'POST')
+      return json(request, env, {ok:false,code:'GITHUB_PROBE_POST_ONLY'},405);
+    if (!isSameOriginAdminMutation(request))
+      return json(request, env, {ok:false,code:'GITHUB_PROBE_SAME_ORIGIN_REQUIRED'},403);
+    if (!(request.headers.get('content-type')||'').toLowerCase().startsWith('application/json'))
+      return json(request, env, {ok:false,code:'GITHUB_PROBE_JSON_REQUIRED'},415);
+    const input=await readJson(request);
+    if (!input || Object.keys(input).length!==1 || input.confirm!=='readonly_quota_probe')
+      return json(request, env, {ok:false,code:'GITHUB_PROBE_CONFIRMATION_REQUIRED'},400);
+    const result=await runGithubAppReadonlyCanary(env);
+    return json(request,env,result,result.ok?200:503);
+  }
+
   // Read-only GitHub operational evidence under existing platform super-admin authorization.
   if (url.pathname === PREFIX + '/github') {
     const denied = requirePlatformSuperAdmin('ai:read'); if (denied) return denied;
     if (request.method !== 'GET') return json(request, env, {ok:false,code:'GITHUB_CONTROL_READ_ONLY'},405);
     try {
-      const snapshot = await githubOperationsSnapshot(env,url.searchParams.get('limit')||30);
-      return json(request, env, {ok:true,...snapshot});
+      const [snapshot,probe]=await Promise.all([
+        githubOperationsSnapshot(env,url.searchParams.get('limit')||30),
+        githubProbeReadModel(env),
+      ]);
+      return json(request, env, {ok:true,...snapshot,probe});
     } catch {
       return json(request, env, {ok:false,code:'GITHUB_OPERATIONS_STORAGE_UNAVAILABLE'},503);
     }
@@ -374,6 +397,7 @@ export async function handleEkodiV8CommandControl(request, env) {
       now: new Date().toISOString(),
       latestChecks: latestRes.rows,
       environmentChecks: envRes.rows,
+      registryServices: projectLiveFleetRegistry(ecosystemServices.services),
       observationFailures: [
         latestRes.failed && 'service_check_latest',
         envRes.failed && 'cloudflare_environment_checks',
