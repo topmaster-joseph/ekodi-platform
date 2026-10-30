@@ -47,7 +47,7 @@ function paywall(h,action){
 function errorText(error){
  if(error?.message==='monthly_pass_required')return '요청을 보내려면 월 이용권(30일 50,000원)이 필요합니다.';
  if(error?.message==='request_credit_required')return '적립금이 부족합니다. 요청은 상대가 수락할 때 1만원이 확정되며, 보낼 때는 1만원이 잠시 보류됩니다.';
- if(error?.message==='response_credit_required')return '수락하려면 적립금 1만원이 필요합니다. 수락하는 순간 양쪽에서 각 1만원이 확정됩니다.';
+ if(error?.message==='response_credit_required')return '수락에 필요한 적립금이 부족합니다. 수락하면 표시된 본인 요금이 확정 차감됩니다.';
  if(error?.message==='paid_membership_required')return '유료회원만 이용할 수 있습니다. 동행 안내·가입에서 유료회원 가입(가입비 500,000원 = 적립금 500,000원)을 진행해 주세요.';
  if(error?.message==='credit_required')return '적립금이 부족합니다'+(error.fee_krw?' (필요 금액 '+Number(error.fee_krw).toLocaleString('ko-KR')+'원)':'')+'. 적립금을 추가 충전해 주세요.';
  if(error?.message==='already_connected')return '이미 메시지를 주고받을 수 있게 연결된 회원입니다.';
@@ -363,7 +363,7 @@ async function showWallet(h){
   if(!w.request_billing_enabled)return;
   const box=text('section','','member-card');box.append(text('h3','내 적립금'));
   paragraph(box,'사용 가능 '+(w.available_krw||0).toLocaleString('ko-KR')+'원 · 수락 대기로 보류 중 '+(w.reserved_krw||0).toLocaleString('ko-KR')+'원');
-  paragraph(box,'요청을 보내면 1만원이 보류되고, 상대가 수락하는 순간 보낸 사람과 수락한 사람에게 각 1만원이 확정됩니다. 거절·14일 무응답·탈퇴 시 보류액은 돌려드립니다.');
+  paragraph(box,'요청 종류와 개인별 할인에 따라 표시된 요금이 보류됩니다. 상대가 수락하면 양측에 각각 표시된 본인 요금이 확정됩니다. 거절·탈퇴 시 보류액이 반환되며, 14일 무응답은 만료 정리 후 반환됩니다.');
   h.append(box);
  }catch(e){}
 }
@@ -417,7 +417,8 @@ function priceTable(box){
  const head=document.createElement('tr');for(const t of ['요청 종류','기본 요금','입력·공개 할인','최저 요금'])head.append(text('th',t));table.append(head);
  for(const r of rules.sort((a,b)=>a.standard_krw-b.standard_krw)){
   const row=document.createElement('tr');
-  row.append(text('td',r.display_name),text('td',money(r.standard_krw)),text('td',r.max_discount_pct>0?'최대 '+r.max_discount_pct+'%':'없음'),text('td',money(r.floor_krw)));
+  const effectiveFloor=Math.max(Number(r.floor_krw)||0,Math.floor(Number(r.standard_krw)*(1-Number(r.max_discount_pct)/100)/1000)*1000);
+  row.append(text('td',r.display_name),text('td',money(r.standard_krw)),text('td',r.max_discount_pct>0?'최대 '+r.max_discount_pct+'%':'없음'),text('td',money(effectiveFloor)));
   table.append(row);
  }
  box.append(table);
@@ -431,11 +432,11 @@ function showGuide(h){
   '무료회원: 서비스 안내만 볼 수 있습니다. 프로필 입력·공개, 요청·수락은 할 수 없습니다.',
   '유료회원: 가입비 500,000원을 계좌이체하면 같은 금액(500,000원)이 적립금으로 생깁니다.',
   '요청 요금은 "기본 요금 + 입력·공개 할인"입니다. 프로필을 많이 입력·공개할수록 할인이 커집니다. 민감정보(신앙)는 할인 계산에 쓰지 않습니다.',
-  '요청한 사람: 보낼 때 자기 요금이 보류되고, 상대가 수락하는 순간 확정됩니다. 거절·14일 무응답·탈퇴 시 보류액을 돌려드립니다.',
+  '요청한 사람: 보낼 때 자기 요금이 보류되고, 수락하면 확정됩니다. 거절·탈퇴 시 반환되며, 14일 무응답은 만료 처리 후 반환됩니다.',
   '요청받은 사람: 수락하는 순간 자기 요금이 적립금에서 확정 차감됩니다. 거절은 무료입니다.',
   '메시지 교환으로 연결된 사이에서도 연락처 교환이 수락되기 전에는 메시지 속 연락처가 자동으로 가려집니다.',
   '기간제 메시지 이용권(1일·10일·20일·1달)을 적립금으로 사면, 그 기간 동안 메시지 교환 요청·수락 요금이 면제됩니다(연락처 교환은 별도).',
-  '사용하지 않은 적립금은 약관에 따라 환불받을 수 있습니다.'
+  '미사용 적립금 환불 기준과 신청 절차는 현재 법률 검토·운영 준비 중입니다. 환불 가능 범위를 확정하기 전에는 유료 이용 조건을 확인하세요.'
  ])ul.append(text('li',line));
  box.append(ul);
  priceTable(box);
