@@ -74,6 +74,15 @@ export function normalizeBrokerReadOnlySnapshot(input,{now=Date.now(),maxAgeMs=5
 }
 export function compareBrokerReadOnlySnapshots(previous,current){
  if(previous?.accepted!==true||current?.accepted!==true||previous.scheme!=='ekodi.invest.read-only-snapshot.v1'||current.scheme!=='ekodi.invest.read-only-snapshot.v1')return fail('SNAPSHOT_NOT_ACCEPTED');
+ // Never trust a caller-supplied object solely because it claims accepted:true.
+ // Validate all minor-unit strings before BigInt; reject forged or inconsistent totals.
+ const validMinor=x=>typeof x==='string'&&/^(?:0|[1-9]\\d{0,17})$/.test(x);
+ for(const snapshot of [previous,current]){
+  if(!UUID.test(String(snapshot.accountRef||''))||!UUID.test(String(snapshot.snapshotRef||''))||
+     !ALLOWED_CURRENCIES.has(snapshot.currency)||!ISO_UTC.test(String(snapshot.capturedAt||''))||
+     ![snapshot.cashMinor,snapshot.holdingsMinor,snapshot.totalMinor].every(validMinor))return fail('INVALID_NORMALIZED_SNAPSHOT');
+  if(BigInt(snapshot.cashMinor)+BigInt(snapshot.holdingsMinor)!==BigInt(snapshot.totalMinor))return fail('INCONSISTENT_NORMALIZED_TOTAL');
+ }
  if(!checkIdentity(previous,current))return fail('CROSS_ACCOUNT_OR_ENVIRONMENT');
  if(previous.snapshotRef===current.snapshotRef)return fail('DUPLICATE_SNAPSHOT');
  const t0=Date.parse(previous.capturedAt),t1=Date.parse(current.capturedAt);
