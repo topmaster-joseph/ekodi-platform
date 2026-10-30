@@ -13,33 +13,63 @@ export function isVerifiedGitHubInstallationProof(ctx,{installationId,appId,nowM
 // Production transport and token must come from trusted EKODI server code,
 // not from a browser-provided function, token, installation ID or request JSON.
 export async function attestGitHubInstallationToken(env,{
-  installationToken,fetchImpl=fetch,nowMs=Date.now()
+  appJwt,fetchImpl=fetch,nowMs=Date.now()
 }={}){
   if(env?.EKODI_GITHUB_BUDGET_ADMISSION_ENABLED!=='true')
     return denied('not_connected');
   const installationId=id(env?.EKODI_GITHUB_INSTALLATION_ID);
   const appId=id(env?.EKODI_GITHUB_APP_ID);
   if(!installationId||!appId||!env?.DB?.prepare||
-    typeof installationToken!=='string'||installationToken.length<20||
+    typeof appJwt!=='string'||appJwt.length<20||
     !Number.isSafeInteger(nowMs)||nowMs<=0||nowMs>8640000000000000-25000)
     return denied('not_provisioned');
-  const headers={authorization:'Bearer '+installationToken,
-    accept:'application/vnd.github+json','x-github-api-version':'2022-11-28'};
+  const jwtHeaders={authorization:'Bearer '+appJwt,
+    accept:'application/vnd.github+json',
+    'x-github-api-version':'2022-11-28'};
   try{
-    const request=path=>fetchImpl('https://api.github.com'+path,{
-      method:'GET',headers,redirect:'error',signal:AbortSignal.timeout(8000)
-    });
-    const installation=await request('/installation');
+    // Only a GitHub App JWT can inspect this official installation endpoint.
+    const installation=await fetchImpl(
+      'https://api.github.com/app/installations/'+installationId,{
+        method:'GET',headers:jwtHeaders,redirect:'error',
+        signal:AbortSignal.timeout(8000)
+      });
     if(!installation?.ok||installation.status!==200)
       return denied('installation_verification_failed');
     const identity=await installation.json();
-    if(id(identity?.id)!==installationId||id(identity?.app_id)!==appId)
+    if(id(identity?.id)!==installationId||id(identity?.app_id)!==appId||
+      identity?.suspended_at)
       return denied('installation_mismatch');
-    const response=await request('/repos/'+repo);
+    // GitHub, not an input flag, issues the matching installation token.
+    // Scope that token to this one repository; it is never returned/stored.
+    const issued=await fetchImpl(
+      'https://api.github.com/app/installations/'+installationId+'/access_tokens',{
+        method:'POST',headers:{...jwtHeaders,'content-type':'application/json'},
+        body:JSON.stringify({repositories:['ekodi-platform']}),
+        redirect:'error',signal:AbortSignal.timeout(8000)
+      });
+    if(!issued?.ok||issued.status!==201)
+      return denied('token_issue_failed');
+    const mintedToken=await issued.json();
+    const token=mintedToken?.token;
+    const expiry=Date.parse(String(mintedToken?.expires_at||''));
+    if(typeof token!=='string'||token.length<20||
+      !Number.isFinite(expiry)||expiry<=nowMs+25000)
+      return denied('issued_token_invalid');
+    // This endpoint requires an installation-scoped token. The freshly
+    // minted token is bound to the installation by the issuing GitHub API.
+    const response=await fetchImpl(
+      'https://api.github.com/installation/repositories?per_page=100',{
+        method:'GET',
+        headers:{authorization:'Bearer '+token,
+          accept:'application/vnd.github+json',
+          'x-github-api-version':'2022-11-28'},
+        redirect:'error',signal:AbortSignal.timeout(8000)
+      });
     if(!response?.ok||response.status!==200)
       return denied('repository_verification_failed');
     const repository=await response.json();
-    if(repository?.full_name!==repo)
+    if(!Array.isArray(repository?.repositories)||
+      !repository.repositories.some(x=>x?.full_name===repo))
       return denied('repository_mismatch');
     // Verified response headers, never caller-supplied quota numbers, enter D1.
     const recorded=await recordTrustedGitHubQuota(env,{
