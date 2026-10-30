@@ -13,3 +13,7 @@
 - Official recovery branch synchronized with a newer protected `main`; bot-generated pull_request checks on synchronized SHA can be `action_required`, which does **not** prove CI success.
 - This evidence-only owner-authored commit re-requests **authentic source CI and EKODI Orchestration Gate** on the exact current head. No executable source, deployment permission or safety policy changed.
 - Do not mark #6936 complete without production 200 and full Chromium verification.
+
+## Repeat main synchronization · authentic check requested
+- After an authentic full green run, trusted orchestrator rebased this branch on newer `main` and resulting bot-authored check runs became `action_required`. This new owner-authored evidence checkpoint starts authentic checks on the new exact head without changing the production code or bypassing any human/security gate.
+- Do not force merge, directly release, or treat superseded SHA checks as success. Reference the current official PR head in all release decisions.
