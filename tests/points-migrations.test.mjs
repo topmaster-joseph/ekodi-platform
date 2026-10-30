@@ -14,8 +14,8 @@ test('all point ledgers and wallets have RLS and no browser write privileges', (
   for (const table of ['ekodi_point_wallets','ekodi_point_ledger','ekodi_point_rules','ekodi_point_sites','ekodi_point_transfer_policies']) {
     assert.match(foundation, new RegExp('alter table public\\.' + table + ' enable row level security', 'i'));
   }
-  assert.match(foundation, /revoke all on table public\\.ekodi_point_sites,[\\s\\S]*from public, anon, authenticated, service_role/i);
-  assert.match(foundation, /grant select on table public\\.ekodi_point_sites,[\\s\\S]*to service_role/i);
+  assert.match(foundation, /revoke all on table public\.ekodi_point_sites,[\s\S]*from public, anon, authenticated, service_role/i);
+  assert.match(foundation, /grant select on table public\.ekodi_point_sites,[\s\S]*to service_role/i);
   for (const table of ['ekodi_point_donation_campaigns','ekodi_point_donations']) {
     assert.match(donation, new RegExp('alter table public\\.' + table + ' enable row level security', 'i'));
   }
