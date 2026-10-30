@@ -6,11 +6,12 @@ const NOW = '2026-10-21T00:00:00.000Z';
 const fresh = '2026-10-21T00:00:00.000Z';
 const old = '2026-10-20T00:00:00.000Z'; // 24h old → stale under 2h threshold
 
-test('empty input yields a frozen, mutation-free, healthy model', () => {
+test('empty input remains frozen but cannot report a healthy fleet without evidence', () => {
   const m = buildFleetStatus({ now: NOW });
   assert.equal(m.mutation, false);
-  assert.equal(m.overall.health, 'healthy');
+  assert.equal(m.overall.health, 'partial');
   assert.equal(m.overall.counts.total, 0);
+  assert.equal(m.overall.label, '부분 관측');
   assert.equal(Object.isFrozen(m), true);
   assert.equal(Object.isFrozen(m.services), true);
 });
@@ -61,6 +62,38 @@ test('stale checks are flagged and degrade the fleet', () => {
   assert.equal(m.services[0].stale, true);
   assert.equal(m.overall.counts.stale, 1);
   assert.equal(m.overall.health, 'degraded');
+});
+
+test('missing, malformed and implausibly future-dated timestamps cannot prove green health', () => {
+  for (const checked_at of [undefined, '', 'not-a-date', '2026-10-22T00:00:00Z']) {
+    const m = buildFleetStatus({
+      now: NOW,
+      latestChecks: [{ service_id: 'church', status: 'online', checked_at }],
+    });
+    assert.equal(m.services[0].stale, true, String(checked_at));
+    assert.equal(m.overall.health, 'degraded', String(checked_at));
+    assert.equal(m.overall.counts.stale, 1, String(checked_at));
+  }
+});
+
+test('small future clock skew remains fresh and existing failure signals stay critical', () => {
+  const withinSkew = buildFleetStatus({
+    now: NOW,
+    latestChecks: [{ service_id: 'church', status: 'online', checked_at: '2026-10-21T00:00:30Z' }],
+  });
+  assert.equal(withinSkew.overall.health, 'healthy');
+  const failure = buildFleetStatus({
+    now: NOW,
+    latestChecks: [{ service_id: 'church', status: 'offline' }],
+  });
+  assert.equal(failure.overall.health, 'critical');
+  assert.equal(failure.services[0].stale, true);
+});
+
+test('empty fleet HTML must not display a healthy summary', () => {
+  const html = renderFleetStatusHtml(buildFleetStatus({ now: NOW }));
+  assert.match(html, /부분 관측/);
+  assert.doesNotMatch(html, /<div class="h">정상<\/div>/);
 });
 
 test('registry service with no health signal is an unmonitored blind spot', () => {
