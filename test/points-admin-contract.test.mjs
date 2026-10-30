@@ -21,7 +21,7 @@ test('points is registered as a canonical super-admin service section',()=>{
 test('admin points view is read-only and renders server values as text',()=>{
   assert.match(view,/root\.dataset\.panel='points'/);
   assert.match(view,/sessionStorage\.getItem\('ekodi-auth-token'\)/);
-  assert.match(view,/\/functions\/v1\/points-api\/admin\/overview/);
+  assert.match(view,/\/api\/control\/points\/overview/);
   assert.match(view,/if\(body\.read_only!==true\)/);
   assert.match(view,/response\.status===403/);
   assert.match(view,/td\.textContent=/);
