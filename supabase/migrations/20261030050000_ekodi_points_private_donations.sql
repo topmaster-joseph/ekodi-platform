@@ -15,7 +15,7 @@ create table if not exists public.ekodi_point_donations (
   donation_id bigint generated always as identity primary key,
   campaign_id uuid not null references public.ekodi_point_donation_campaigns(campaign_id),
   site_id text not null references public.ekodi_point_sites(site_id),
-  user_id uuid not null references auth.users(id),
+  user_id uuid not null references public.people(id),
   points integer not null check(points between 1 and 100000),
   event_key text not null,
   created_at timestamptz not null default now(),

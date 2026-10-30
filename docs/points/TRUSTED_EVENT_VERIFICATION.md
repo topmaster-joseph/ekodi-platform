@@ -9,7 +9,7 @@ The browser **must never** call `ekodi_points_private.*`, write wallets or ledge
 ## Award acceptance checklist
 
 1. Resolve `site_id` from the server's approved site registry, not a client-supplied arbitrary value.
-2. Resolve `user_id` from the verified EKODI identity mapping. **Block activation until canonical identity mapping is checked against `auth.users(id)` foreign keys**.
+2. Resolve `user_id` as canonical `public.people.id` by looking up the authenticated provider's `auth.users.id` in `public.login_identities.auth_user_id` where `status='active'`, then confirming the associated `public.people.status='active'`. Never use the provider auth ID as the wallet owner; two verified login methods linked to the same person must share a wallet.
 3. Validate the event against the original authoritative record (published comment, approved content, verified attendance, completed learning unit, etc.). Recheck ownership, timestamps, status, and revocation.
 4. Derive a stable, server-generated `event_key` from event type, site, canonical user and immutable source record. Reject replay; never rely on a random key supplied by the browser.
 5. For dwell time, count **foreground, user-active, server-observed** intervals only; exclude hidden/background tabs, idle periods and concurrent tab overlap. Rate-limit heartbeat ingestion. Never award from elapsed wall-clock time alone.

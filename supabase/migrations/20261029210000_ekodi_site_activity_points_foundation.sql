@@ -1,4 +1,5 @@
 -- EKODI per-site activity points: private ledger foundation.
+-- user_id means the canonical public.people.id, NOT auth.users.id.
 -- No automatic grants or production backfill.
 create table if not exists public.ekodi_point_sites (
   site_id text primary key check (site_id ~ '^[a-z0-9_-]{2,64}$'),
@@ -19,7 +20,7 @@ create table if not exists public.ekodi_point_rules (
 );
 create table if not exists public.ekodi_point_wallets (
   site_id text not null references public.ekodi_point_sites(site_id),
-  user_id uuid not null references auth.users(id),
+  user_id uuid not null references public.people(id),
   balance bigint not null default 0 check (balance >= 0),
   updated_at timestamptz not null default now(),
   primary key(site_id,user_id)

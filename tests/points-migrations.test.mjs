@@ -41,3 +41,10 @@ test('transfers and donations cannot run without enabled policy/campaign', () =>
   assert.match(donation, /DONATION_CAMPAIGN_INACTIVE/);
   assert.match(donation, /INSUFFICIENT_BALANCE/);
 });
+
+test('wallets and donations bind to canonical EKODI person rather than OAuth identity', () => {
+  assert.match(foundation, /user_id uuid not null references public\.people\(id\)/i);
+  assert.match(donation, /user_id uuid not null references public\.people\(id\)/i);
+  assert.doesNotMatch(foundation, /references auth\.users\(id\)/i);
+  assert.doesNotMatch(donation, /references auth\.users\(id\)/i);
+});
