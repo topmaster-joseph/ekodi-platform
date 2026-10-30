@@ -65,7 +65,9 @@ async function run(){
   await accept('unselected learner never receives share controls',await second.locator('#shareControls').isHidden());
   // A synthetic 1-pixel input is selected by the test, exactly like a learner
   // voluntarily choosing a picture. No phone display is recorded.
-  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/a9kAAAAASUVORK5CYII=','base64');
+  // Preverified 1x1 RGB PNG (IHDR, IDAT and IEND CRCs valid); the earlier
+  // source fixture had an invalid IDAT CRC and failed browser image decoding.
+  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4//8/AAX+Av4N70a4AAAAAElFTkSuQmCC','base64');
   await first.locator('#snapshotFile').setInputFiles({name:'sample.png',mimeType:'image/png',buffer:png});
   await first.locator('#sendSnapshot').click();
   await teacher.locator('#remoteImage:not([hidden])').waitFor({timeout:15000});
