@@ -115,6 +115,14 @@ Task: `invest-autonomous-wealth-p0p3` · Branch: `ai/claude/invest-autonomous-we
 - 기존 연결된 계정의 MFA 설정 여부를 임의로 변경하지 않습니다. 등록은 사용자 클릭 시에만 실행합니다.
 - 이 단계는 Supabase TOTP 본인인증 등록 UI와 서버 준비도 판정까지이며, 브로커 계좌 및 자금이 이동하는 실거래 활성화는 아직 아닙니다.
 
+## 증권사 API 공식 준비도 (2026-10-30)
+
+- `/my/invest` 본인 전용 영역의 증권사 선택에 **토스증권, 한국투자증권(KIS Developers), Interactive Brokers**를 제공한다. 모든 항목은 `liveTradingEnabled:false`이며 보안정보 저장·계좌조회·주문 호출을 하지 않는 **카탈로그/준비도** 단계다.
+- 공식 증권사 안내만 표시한다: 토스증권 `https://developers.tossinvest.com/docs`, 한국투자증권 `https://apiportal.koreainvestment.com/about-howto`, Interactive Brokers `https://www.interactivebrokers.com/docs/web-api/`. 링크는 애플리케이션 허용 목록과 서버 응답이 일치할 때에만 표시한다.
+- KIS는 개인이 본인 계좌로 Open API를 신청할 수 있고 별도 모의 API 환경을 제공하지만, 본인 명의 계좌/앱키/약관의 실제 등록 여부는 **미검증** 상태다. 제3자 자산 관리 또는 타인에게 실시간 시세 제공은 해당 증권사 허용 조건을 별도로 검토한다.
+- 서버 준비도는 `broker.connectionStatus:'disconnected'`, `broker.readOnlyConnectionVerified:false`, `liveExecutionEnabled:false`, `liveOrdersAccepted:false`를 반환한다. `strongMfa.verified!==true`이면 `activation.blockers`에 반드시 `strongMfaAal2`를 추가한다. **MFA 통과만으로 주문을 허용하지 않는다.**
+- 실계좌나 API Secret을 채팅/공개화면에 입력하지 않는다. 본인 계좌 공식 키 발급, 서버 Vault 등록, read-only 조회, 시세 라이선스, 장부 대조, 위험 엔진, 실제 주문 재승인은 모두 분리해 검증해야 한다. 실주문은 여전히 423 잠금이다.
+
 ## 다음 단계
 
 - P1: 토스 조회 전용 어댑터(`/api/v1/holdings`, `/accounts`), 서버 측 토큰 캐시(24h, 단일 토큰), `X-RateLimit-*` 준수. 고정 IP 중계 승인 후(보류 중).
