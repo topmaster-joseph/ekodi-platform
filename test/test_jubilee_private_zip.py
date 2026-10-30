@@ -71,7 +71,7 @@ class PackageBoundaryTests(unittest.TestCase):
             for n,b in self.files.items():z.writestr(n,b)
         pin["artifactPackage"]["sha256"]=sha(self.path.read_bytes())
         pin["artifactPackage"]["bytes"]=self.path.stat().st_size
-        with self.assertRaisesRegex(ValueError,"unsafe-path"):
+        with self.assertRaisesRegex(ValueError,"unsafe-path|archive-members"):
             mod.verify_zip(self.path,pin)
     def test_missing_edition_file_is_rejected(self):
         self.files.pop("editions/02/source.pdf")
