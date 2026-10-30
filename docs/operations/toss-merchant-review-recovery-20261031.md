@@ -37,3 +37,10 @@ Only merchant telephone disclosure is modified: common legal footer configuratio
 - EKODI protected convergence updated PR #7104 with bot-authored main synchronization SHA `a0ccf8bf3df763b9b0fe9ec95dc9482e64918060` after the owner's regression correction passed on `4e1a4fd253215fb7707ca701da2fea43e22af400`.
 - This documentation-only owner-authored checkpoint requests genuine checks on that synchronized release branch. No release policy, pricing, payment authorization, credentials, business identity, payment execution, customer records or infrastructure scripts are changed here.
 - Release remains blocked until authentic green checks on the current head, exact protected CI provenance and staging + production phone verification. A later main advance requires a fresh protected synchronization; never paste fake check statuses.
+
+## 2026-10-31 merchant contact production-verification checkpoint
+- Source PR #7123 (closed, superseded, not merged) owner-authored HEAD: `67cbfaf37ab0d768300eda4566276a33075a3b0a`.
+- Official orchestrator recovery PR #7124 and task `orch_recovery_67cbfaf37ab0d768300eda4566276a33`, branch `ai/chatgpt/orch_recovery_67cbfaf37ab0d768300eda4566276a33`.
+- The original source CI and orchestration gate succeeded on the exact source HEAD, but bot-created PR checks showed `action_required`. This **documentation-only owner-authored checkpoint** requests authentic checks for the official protected recovery PR. Do not forge statuses or weaken protection; retain the original executable SHA in ancestry.
+- The narrowly-scoped change adds exact public phone verification in `deploy-ekodibiz.yml` after staging and guarded production promotion, checking `https://ekodi.kr/ekodibiz` HTML and `/_ekodi/ekodibiz/site.js`, plus all six locale footers. Phone verification failure is not merchant-readiness success.
+- This does **not** open the payment gateway, make a product sellable, create reviewer credentials, submit identity documents, or request reassessment. Those are separate business/policy approvals and real flows to be verified.
