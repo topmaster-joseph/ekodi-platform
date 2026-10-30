@@ -26,3 +26,8 @@ No direct push to main, forged statuses, manual production changes, bypassed hum
 ## Current-main synchronization checkpoint
 - GitHub reported an automated update-branch source head `bcb4921a491a1b3e1b109856906fe31e64f44927` after main advanced. That bot-authored head's PR checks were parked as `action_required`; they are **not passing evidence**.
 - This note is a documentation-only owner-authored retrigger to obtain actual current-head required checks. It does not approve a merge or production release, and the functional source SHA `93e6ec40075b1b7c82cad67e7616ec050b39eece` must remain an ancestor.
+
+## Latest guarded synchronization (2026-10-30)
+- The orchestrator advanced the release candidate to `a107894b6fc58f497d6a182cdf97d399cfdc40b0` after the protected main branch advanced again. Bot-generated pull-request checks were parked as `action_required` on that exact head.
+- This owner-authored evidence-only continuation must trigger fresh actual checks on its resulting SHA. It does not waive the current-base requirement or permit any `action_required` result to count as success.
+- Continuous main movement and repeated parked bot checks require an EKODI-owned automatic check-retrigger solution; do not spend unbounded CI/API quota on repeated guesses.
