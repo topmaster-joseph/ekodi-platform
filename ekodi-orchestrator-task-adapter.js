@@ -439,7 +439,14 @@ async function syncFromCommandLedger(db,env,row){
   if(!command)return row;
   let next=mapCommandState(command.state);
   if(!next)return row;
-  if(next==='completed'&&Number(row.deployment_requested||0)===1&&!row.production_evidence_json)next='production_verifying';
+  // A completed command is not proof that its deployment has been promoted.
+  // Once staging is verified, retain its final-owner-approval checkpoint;
+  // otherwise ordinary progress polling would move the task into
+  // production_verifying and invalidate the immutable staging receipt.
+  // A restarted/failed/blocked command remains actionable and fails closed.
+  if(next==='completed'&&Number(row.deployment_requested||0)===1&&!row.production_evidence_json){
+    next=row.state==='staging'?'staging':'production_verifying';
+  }
   const terminal=TERMINAL_STATES.has(next);
   const updated=now();
   const stateChanged=next!==row.state;
