@@ -25,7 +25,7 @@ export function makeEkodiStagingEvidence({
   if(!Number.isFinite(Date.parse(verifiedAt))||Math.abs(Date.now()-Date.parse(verifiedAt))>15*60*1000){
     fail('STALE_VERIFICATION_TIMESTAMP');
   }
-  const artifactName=`ekodi-preproduction-${taskId}-sha256-${applicationDigest.slice(7)}`;
+  const artifactName=`ekodi-staging-pending-${taskId}-sha256-${applicationDigest.slice(7)}`;
   const record=Object.freeze({
     schemaVersion:1,authority:'ekodi-staging-metadata-only',
     taskId,branchRef,sourceSha,applicationDigest,stagingUrl:u.toString(),
