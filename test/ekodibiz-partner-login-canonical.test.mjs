@@ -38,7 +38,7 @@ test('all eight EKODIBIZ partner links use canonical apex auth and scoped return
       assert.equal(destination.pathname, '/ekodibiz/');
       assert.equal(destination.searchParams.get('business'), slug);
     }
-    assert.doesNotMatch(url.href, /https?:\\/\\/(?:auth|biz)\\.ekodi\\.kr/, slug);
+    assert.ok(!url.href.includes('auth.ekodi.kr') && !url.href.includes('biz.ekodi.kr'), slug);
   }
 });
 
@@ -66,7 +66,7 @@ test('public business cards stay accessible without login and no legacy auth hos
     assert.ok(html.includes('data-business="' + slug + '"'), slug);
     assert.ok(html.includes('href="#business/' + slug + '"'), slug);
   }
-  assert.doesNotMatch(site, /auth\\.ekodi\\.kr|biz\\.ekodi\\.kr/);
+  assert.ok(!site.includes('auth.ekodi.kr') && !site.includes('biz.ekodi.kr'));
   assert.ok(site.includes('detailSlug()'));
   assert.ok(clientAuth.includes("target.hash=''"), 'auth handoff must remain one-use-token compatible');
 });
