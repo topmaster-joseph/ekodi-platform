@@ -7,7 +7,7 @@ import {resolve} from 'node:path';
 import {blockedInlineScriptHash,cloudflareJsDetectionHashes} from './education-native-security-observations.mjs';
 const TARGET_URL='https://ekodi.kr/edu/study/ai-bootcamp/';
 export function summarizeInlineScriptHashes(html,blocked=[]){
- const scripts=[...String(html||'').matchAll(/<script(?:\\s[^>]*)?>([\\s\\S]*?)<\\/script>/gi)];
+ const scripts=[...String(html||'').matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)];
  return scripts.slice(0,40).map((part,i)=>{
   const body=part[1];
   const hash=createHash('sha256').update(body,'utf8').digest('base64');
