@@ -17,6 +17,7 @@ const staged={
   evidence_json:JSON.stringify({
     authority:'ekodi-orchestrator',source:'github-actions-oidc',
     taskId,branchRef,releaseSha,artifactDigest,archiveDigest,verifiedAt:proof.verifiedAt,workflowRunId:123,
+    requiredCiVerified:true,stagingVerified:true,rollbackReady:true,securityReviewVerified:true,
   }),
 };
 const approvedBy='platform-admin:001',version=4;
@@ -32,7 +33,9 @@ const approval={
 };
 const task={
   task_id:taskId,branch_ref:branchRef,state:'staging',state_version:version,
-  permission_class:'delegated',deployment_requested:1,evidence_json:JSON.stringify({preproductionProof:proof}),
+  permission_class:'delegated',deployment_requested:1,evidence_json:JSON.stringify({
+    commandLedger:{state:'staging',attemptCount:2},items:[{source:'worker',safe:true}],
+  }),
 };
 const request={taskId,branchRef,releaseSha,artifactDigest};
 function ledger(t=task,s=staged,a=approval){
@@ -68,10 +71,9 @@ test('missing or stale owner evidence always fails closed',async()=>{
     [null,staged,approval],[{...task,state:'completed'},staged,approval],
     [{...task,permission_class:'unapproved'},staged,approval],
     [{...task,state_version:5},staged,approval],
-    [{...task,evidence_json:'{}'},staged,approval],
     [task,null,approval],[task,{...staged,actor:'ai:claude'},approval],
     [task,{...staged,evidence_json:JSON.stringify({...JSON.parse(staged.evidence_json),archiveDigest:'sha256:'+'d'.repeat(64)})},approval],
-    [{...task,evidence_json:JSON.stringify({preproductionProof:{...proof,archiveDigest:'sha256:'+'d'.repeat(64)}})},staged,approval],
+    [task,{...staged,evidence_json:JSON.stringify({...JSON.parse(staged.evidence_json),stagingVerified:false})},approval],
     [task,{...staged,evidence_json:JSON.stringify({...JSON.parse(staged.evidence_json),workflowRunId:0})},approval],
     [task,staged,null],[task,staged,{...approval,actor:'ai:claude'}],
     [task,staged,{...approval,evidence_json:JSON.stringify({...JSON.parse(approval.evidence_json),releaseSha:'c'.repeat(40)})}],
@@ -80,6 +82,15 @@ test('missing or stale owner evidence always fails closed',async()=>{
     assert.equal(result.authorized,false);
   }
 });
+test('command-ledger refresh does not erase independently verified OIDC promotion evidence',async()=>{
+  for(const workerEvidence of ['[]','{}',JSON.stringify({commandLedger:{state:'verified',attemptCount:4}}),
+    JSON.stringify({items:[{source:'ai-worker'}],preproductionProof:{verified:false}})]){
+    const r=await verifyEkodiFinalPromotionReceipt(
+      ledger({...task,evidence_json:workerEvidence},staged,approval),request);
+    assert.equal(r.authorized,true,'worker evidence must not be treated as approval authority');
+  }
+});
+
 test('approval must follow verified staging and remain fresh for one production promotion',async()=>{
   const valid=JSON.parse(approval.evidence_json);
   const invalids=[
