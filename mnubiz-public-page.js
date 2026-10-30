@@ -194,7 +194,7 @@ export function renderMnuBizPublicPage(){
   <section class="mnubiz-section" id="news">
     <div class="mnubiz-shell">
       <div class="mnubiz-section__head"><div><p class="mnubiz-section__eyebrow">NEWS & EVENTS</p><h2>소식 · 행사</h2></div><p class="mnubiz-section__desc">동문회에서 확인한 공지와 일정을 공개하며, 행사 신청과 참여 기록도 같은 흐름에서 연결합니다.</p></div>
-      <div class="mnubiz-empty"><span class="mnubiz-empty__date">READY</span><div><strong>공개된 동문회 공지·행사를 준비하고 있습니다.</strong><p>운영자가 확인한 내용부터 순서대로 표시됩니다.</p></div></div>
+      <div class="mnubiz-empty"><span class="mnubiz-empty__date">2026.11</span><div><strong>순천·광양 해양비즈니스 연구 세미나(계획안)</strong><p>2026년 11월 26일~27일 · 연구발표·산학협의·해양물류 연구방법론 · 참가예정 6명</p><p><a href="/mnubiz/seminars/suncheon-2026">세미나 기본계획 보기</a> · <a href="/mnubiz/seminars/suncheon-2026/settlement">회원용 정산</a></p><p>학교 지원금·공간·세부 일정은 아직 승인 또는 예약 전입니다.</p></div></div>
     </div>
   </section>
 </main>

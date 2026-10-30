@@ -65,6 +65,16 @@ for (const [relative, needles] of checks) {
   for (const needle of needles) if (!content.includes(needle)) errors.push(`${relative} is missing marker: ${needle}`);
   if (/\{\{[A-Z0-9_]+\}\}/.test(content)) errors.push(`${relative} contains unresolved template tokens`);
 }
+// Keep the customer purchase path ahead of editorial and AI storytelling after static rendering.
+const homepage = await readFile(path.join(dist, 'index.html'), 'utf8');
+const buyerOrder = ['class="mall-category-shortcuts"', 'class="shop" id="shop"', 'class="mall-editorial"', 'class="context-recommend"'];
+const buyerPositions = buyerOrder.map((marker) => homepage.indexOf(marker));
+if (buyerPositions.some((pos) => pos < 0) || buyerPositions.some((pos, index) => index > 0 && pos <= buyerPositions[index - 1])) {
+  errors.push('Mall buyer-first homepage order drift: product grid must precede editorial and AI recommendations');
+}
+const homeCss = await readFile(path.join(dist, 'assets/home-refresh.css'), 'utf8');
+if (!homeCss.includes('.mall-category-shortcuts{display:none}')) errors.push('Mall desktop duplicated category shortcuts must remain hidden');
+
 if (errors.length) {
   console.error(`EKODI Mall build verification failed (${errors.length})`);
   errors.forEach((error) => console.error(`- ${error}`));

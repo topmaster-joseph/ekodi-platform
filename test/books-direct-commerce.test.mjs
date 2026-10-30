@@ -81,7 +81,7 @@ test('client-sent amounts are ignored; tier price is charged; confirm grants lib
 test('Toss mismatch never grants the book', async () => {
   const db = d1();
   const env = baseEnv(db);
-  const created = await createOrder(env, signedIn(), { bookId: 'BOOK-EKODI-000002', consent: true });
+  const created = await createOrder(env, signedIn(), { bookId: 'BOOK-EKODI-000001', consent: true });
   const toss = async () => ({ orderId: created.data.orderId, totalAmount: 1, status: 'DONE' });
   const r = await confirm(env, { paymentKey: 'pk', orderId: created.data.orderId, amount: created.data.amount }, new Date(), toss);
   assert.equal(r.status, 409);

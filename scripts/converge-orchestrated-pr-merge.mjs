@@ -338,6 +338,7 @@ const booksTouched=changedFiles.some(file=>
   file==='books-worker.js'||
   file==='books-commerce.js'||
   file==='books-audiobook.js'||
+  file==='books-sale-readiness.js'||
   file==='migrations/202610271400_books_direct_commerce.sql'||
   file==='wrangler.books.toml'||
   file==='deploy/manifests/books.worker.json'||
@@ -586,11 +587,25 @@ const handDispatchedLanes=new Set([
   [sharedSiteTouched,'deploy-site-core.yml'],
 ].filter(([touched])=>touched).map(([,workflow])=>workflow));
 async function dispatchBundleGraphLanes(){
+  // WORKER-LANE-MERGE-SHA-001: Some guarded workflows (Education) require
+  // the exact protected merge SHA in addition to the orchestrator receipt.
+  // Resolve it from the merged PR and current main; never use a PR head SHA.
+  const needsMergeSha=bundleLanes.dispatches.some(lane=>Object.values(lane.inputs||{}).includes('$PROTECTED_MERGE_SHA'));
+  let protectedMergeSha='';
+  if(needsMergeSha){
+    const mergedPr=await api('/pulls/'+pr.number);
+    if(!mergedPr.r.ok||mergedPr.data?.merged!==true)fail('protected-merge-sha: PR is not merged');
+    protectedMergeSha=String(mergedPr.data.merge_commit_sha||'');
+    if(!/^[a-f0-9]{40}$/i.test(protectedMergeSha))fail('protected-merge-sha: invalid merge commit');
+    const mainRef=await api('/git/ref/heads/main');
+    if(!mainRef.r.ok||String(mainRef.data?.object?.sha||'')!==protectedMergeSha)
+      fail('protected-merge-sha: main advanced before receipt-bound dispatch; retry on current protected release');
+  }
   for(const lane of bundleLanes.dispatches){
     if(handDispatchedLanes.has(lane.workflow))continue;
     const dispatch=await api('/actions/workflows/'+lane.workflow+'/dispatches',{
       method:'POST',
-      body:JSON.stringify({ref:'main',inputs:{...lane.inputs,release_branch_ref:branch,release_task_id:taskId}})
+      body:JSON.stringify({ref:'main',inputs:{...Object.fromEntries(Object.entries(lane.inputs||{}).map(([key,value])=>[key,value==='$PROTECTED_MERGE_SHA'?protectedMergeSha:value])),release_branch_ref:branch,release_task_id:taskId}})
     });
     if(!dispatch.r.ok)fail('bundle-graph deploy dispatch failed for '+lane.workflow+' '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
     const workers=bundleLanes.affected.filter(item=>item.workflow===lane.workflow).map(item=>item.name);

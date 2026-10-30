@@ -15,7 +15,7 @@
     "wrangler.church-naver-proof.toml": { "workflow": "deploy-church-naver-proof.yml", "watch_files": ["scripts/cloudflare-church-naver-redirect-exception.mjs"] },
     "wrangler.community.toml": { "workflow": "deploy-community.yml" },
     "wrangler.delivery.toml": { "workflow": "deploy-delivery-hub-ai.yml" },
-    "wrangler.education.toml": { "workflow": "deploy-education.yml" },
+    "wrangler.education.toml": { "workflow": "deploy-education.yml", "inputs": { "release_sha": "$PROTECTED_MERGE_SHA" } },
     "wrangler.ekodibiz-pay-gateway.toml": { "workflow": "deploy-ekodibiz-payment-gateway.yml" },
     "wrangler.ekodibiz.toml": { "workflow": "deploy-ekodibiz.yml" },
     "wrangler.ekodipay.toml": { "workflow": "deploy-ekodipay.yml" },
