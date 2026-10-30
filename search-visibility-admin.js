@@ -95,8 +95,11 @@
     <p class="sv-intro">공개 사이트별 검색 공급자 상태를 확인합니다. 실제 공급자 계정·보고서 증거가 없는 상태는 미등록이나 등록완료가 아닌 '미확인'으로 표시합니다.</p>
     <div class="sv-toolbar"><label for="sv-provider-site">검토할 사이트</label><select id="sv-provider-site" aria-label="검색 서비스 검토 사이트"><option value="">목록 조회 전</option></select>
       <a href="/robots.txt" target="_blank" rel="noopener noreferrer">robots.txt</a><a href="/sitemap.xml" target="_blank" rel="noopener noreferrer">사이트맵</a>
+      <button type="button" class="secondary" data-sv-google-read>Google 실측 조회</button>
     </div>
     <div class="sv-status" data-sv-provider-note role="status">공개 사이트 목록을 먼저 불러오세요.</div>
+    <div class="sv-status" data-sv-google-status role="status">Google Search Console은 읽기 전용으로 선택한 사이트의 실제 계정 권한과 데이터만 조회합니다. 미연결 상태는 미확인으로 유지합니다.</div>
+    <div class="sv-status" data-sv-google-summary role="status"></div>
     <div class="sv-scroll"><table class="sv-table"><thead><tr><th>구분</th><th>서비스</th><th>등록/연동</th><th>소유권·접근</th><th>제출·인용</th><th>확인</th></tr></thead>
     <tbody data-sv-provider-rows><tr><td colspan="6">사이트를 선택하세요.</td></tr></tbody></table></div>
     <div class="sv-status" data-sv-ledger-status role="status">외부 서비스 확인 원장을 조회하기 전입니다.</div>
@@ -204,6 +207,52 @@
         '. 수동 상태를 저장하거나 확인 완료로 표기할 수 없습니다.');
       renderProviderMatrix();
     }
+  }
+  // Operator-initiated only. Google data is neither auto-saved as provider
+  // ownership evidence nor treated as proof that every public URL is indexed.
+  const googleStatus=message=>{$('[data-sv-google-status]').textContent=message;};
+  async function loadGoogleSearch(){
+    const button=$('[data-sv-google-read]');
+    const siteUrl=state.selectedSite;
+    if(!siteUrl)return googleStatus('먼저 조회할 사이트를 선택하세요.');
+    if(!token())return googleStatus('최고관리자 로그인 후 조회할 수 있습니다.');
+    button.disabled=true;
+    $('[data-sv-google-summary]').textContent='';
+    googleStatus('Google 공식 Search Console의 계정 접근 권한과 실측 데이터를 확인 중입니다.');
+    try{
+      const response=await fetch('/api/control/search-visibility?googleSiteUrl='+encodeURIComponent(siteUrl),{
+        method:'GET',headers:{authorization:'Bearer '+token()},cache:'no-store',credentials:'same-origin'});
+      if(!response.ok)throw new Error('권한 또는 서버 응답 HTTP '+response.status);
+      const data=await response.json();
+      if(!data.ok||!data.google)throw new Error('조회 결과 형식 확인 필요');
+      const report=data.google;
+      const labels={
+        not_configured:'Google Search Console 읽기 전용 서비스 계정이 아직 서버에 연결되지 않았습니다.',
+        invalid_configuration:'Google 서비스 계정 설정이 올바르지 않습니다.',
+        not_connected:'현재 계정에 이 사이트의 Search Console 속성 접근 권한이 없습니다.',
+        not_verified:'Google Search Console에서 해당 속성이 검증되지 않았습니다.',
+        site_not_supported:'지원하지 않는 사이트 속성입니다.',
+        quota_limited:'Google 공식 API 요청 한도에 도달했습니다. 자동 재시도하지 않습니다.',
+        google_access_denied:'Google에서 해당 속성 접근을 거부했습니다.',
+        google_unavailable:'Google 공식 API 데이터를 조회하지 못했습니다.',
+        google_response_too_large:'Google 응답 크기 제한으로 조회하지 못했습니다.',
+        google_bad_response:'Google 응답 형식을 확인할 수 없습니다.'
+      };
+      if(report.state!=='connected'){
+        googleStatus(labels[report.state]||'연결 상태 미확인');
+        return;
+      }
+      if(state.selectedSite!==siteUrl){googleStatus('사이트 선택이 변경되어 조회 결과를 폐기했습니다.');return;}
+      googleStatus('Google 공식 실측 · '+report.property+' · '+report.period.startDate+' ~ '+report.period.endDate);
+      const metrics=report.metrics;
+      const metricText=metrics
+        ? '검색 클릭 '+metrics.clicks.toLocaleString()+'회 · 노출 '+metrics.impressions.toLocaleString()+
+          '회 · CTR '+metrics.ctrPercent.toFixed(2)+'% · 평균 순위 '+metrics.avgPosition.toFixed(1)
+        : '현재 기간에 반환된 검색 성과 행이 없어 실측치를 확정할 수 없습니다.';
+      $('[data-sv-google-summary]').textContent=metricText+' · Google 제출 사이트맵 '+
+        report.sitemaps.length+'건. 이 수치는 전체 페이지 색인 완료나 AI 검색 인용을 의미하지 않습니다.';
+    }catch(error){googleStatus('실측 조회 실패: '+error.message);}
+    finally{button.disabled=false;}
   }
   function fillEvidenceForm(){
     const providerId=$('#sv-evidence-provider').value,check=$('#sv-evidence-check').value;
@@ -470,13 +519,17 @@
     }catch(error){status('점검 중단: '+error.message,true);}
     finally{state.busy=false;$('[data-sv-audit-all]').disabled=false;render();}
   }
+  $('[data-sv-google-read]').addEventListener('click',loadGoogleSearch);
   $('[data-sv-reload]').addEventListener('click',load);
   $('[data-sv-audit-all]').addEventListener('click',auditAll);
   $('#sv-search').addEventListener('input',render);
   $('#sv-category-filter').addEventListener('change',render);
   $('[data-sv-manage-close]').addEventListener('click',()=>{$('[data-sv-manage-panel]').hidden=true;});
   $('[data-sv-manage-audit]').addEventListener('click',()=>{const site=state.sites.find(s=>s.url===state.selectedSite);if(site&&new URL(site.url).origin===location.origin)auditOne(site);});
-  $('#sv-provider-site').addEventListener('change',event=>{state.selectedSite=event.target.value;renderProviderMatrix();fillEvidenceForm();refreshManage();});
+  $('#sv-provider-site').addEventListener('change',event=>{state.selectedSite=event.target.value;
+    googleStatus('선택한 사이트의 Google 실측을 확인하려면 조회 버튼을 누르세요.');
+    $('[data-sv-google-summary]').textContent='';
+    renderProviderMatrix();fillEvidenceForm();refreshManage();});
   setupEvidenceForm();
   window.addEventListener('ekodi-admin-section-changed',event=>{
     if(event.detail?.section===SECTION&&!state.discovery)load();
