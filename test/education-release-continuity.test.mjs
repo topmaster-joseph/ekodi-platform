@@ -5,7 +5,7 @@ import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {
   educationReleaseChanged,approvedEducationMerge,selectMergedEducationPRForConvergence,releaseQuotaBudget,
-  latestEducationMergeFromGit,EDUCATION_LOCAL_PATHS
+  latestEducationMergeFromGit,EDUCATION_LOCAL_PATHS,approvedEducationRecoverySignal
 } from '../scripts/education-release-continuity.mjs';
 import {ORIGIN,ROUTE,VIEWPORTS} from '../scripts/verify-education-bootcamp-native.mjs';
 import {EKODI_SERVICE_MANIFEST} from '../ekodi-service-manifest.js';
@@ -17,6 +17,26 @@ const source=sha('a'),merged=sha('b');
 const event={action:'completed',workflow_run:{conclusion:'success',head_branch:branch,head_sha:source}};
 const pr={number:4689,state:'closed',merged_at:'2026-10-14T11:20:01Z',
  head:{ref:branch,sha:source},base:{ref:'main'},merge_commit_sha:merged};
+
+test('owner recovery signal is exact, issue-only and does not bypass protected release',()=>{
+ const genuine={action:'created',issue:{number:7084},comment:{user:{login:'topmaster-joseph'},body:'EKODI-EDUCATION-RECONCILE'}};
+ assert.equal(approvedEducationRecoverySignal(genuine),true);
+ assert.equal(approvedEducationRecoverySignal({...genuine,action:'edited'}),false);
+ assert.equal(approvedEducationRecoverySignal({...genuine,comment:{...genuine.comment,user:{login:'attacker'}}}),false);
+ assert.equal(approvedEducationRecoverySignal({...genuine,comment:{...genuine.comment,body:'EKODI-EDUCATION-RECONCILE:force'}}),false);
+ assert.equal(approvedEducationRecoverySignal({...genuine,issue:{number:7084,pull_request:{url:'https://example.invalid'}}}),false);
+ assert.equal(approvedEducationRecoverySignal(null),false);
+ const workflow=read('.github/workflows/education-release-continuity.yml');
+ const runner=read('scripts/education-release-continuity.mjs');
+ assert.match(workflow,/issue_comment:/);
+ assert.match(workflow,/github\.actor == 'topmaster-joseph'/);
+ assert.match(workflow,/EKODI-EDUCATION-RECONCILE/);
+ assert.match(runner,/approvedEducationRecoverySignal\(event\)/);
+ assert.match(runner,/verifyEducationReleaseSnapshot/);
+ assert.match(runner,/previous_dispatch_exists/);
+ assert.match(runner,/release_attempt_limit_reached/);
+ assert.doesNotMatch(runner,/wrangler\s+(?:deploy|publish)/);
+});
 
 test('Education-only changed path is explicit and guarded',()=>{
   assert.equal(educationReleaseChanged(['education/study/ai-bootcamp/index.html']),true);
