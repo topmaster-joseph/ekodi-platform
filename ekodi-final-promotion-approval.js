@@ -54,6 +54,15 @@ export async function recordEkodiFinalPromotionApproval(db,input={}){
      stagedEvent?.reason!=='verified_preproduction_evidence_recorded'){
     return result(false,'verified_staging_attestation_missing');
   }
+  // Idempotency is task-scoped, never approvalId-scoped. This inexpensive
+  // read avoids unnecessary D1 writes; the atomic INSERT below independently
+  // blocks a concurrent second approver that raced this check.
+  try{
+    const existing=await db.prepare(
+      "SELECT id FROM ekodi_orchestrator_task_events WHERE task_id=? AND reason='final_promotion_approval_recorded' LIMIT 1"
+    ).bind(taskId).first();
+    if(existing)return result(false,'final_promotion_approval_already_recorded');
+  }catch{return result(false,'final_promotion_approval_lookup_unavailable')}
   const attestation=parse(stagedEvent.evidence_json);
   if(attestation.authority!=='ekodi-orchestrator' ||
      attestation.source!=='github-actions-oidc' ||
