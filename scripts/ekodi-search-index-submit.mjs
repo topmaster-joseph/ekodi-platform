@@ -1,11 +1,19 @@
 import { chromium } from 'playwright';
 import { EKODI_INDEXNOW_KEY } from '../platform-indexnow.js';
-import { SEONAMMEDI_SITEMAP_PATHS } from '../seonammedi-domain-gateway.js';
+import { SEONAMMEDI_CANONICAL_ORIGIN, canonicalIndexNowUrlsFromSitemap } from './seonammedi-indexnow-public-sitemap.mjs';
 
 // Submit the canonical customer-domain URLs. The key file is served by the
 // domain gateway at https://xn--3e0b8b58jw4co4mnpll3k.kr/<key>.txt, as IndexNow requires.
 const key = EKODI_INDEXNOW_KEY;
-const pageUrls = SEONAMMEDI_SITEMAP_PATHS.map(path => 'https://xn--3e0b8b58jw4co4mnpll3k.kr' + path);
+const sitemapUrl = SEONAMMEDI_CANONICAL_ORIGIN + '/sitemap.xml';
+const sitemapResponse = await fetch(sitemapUrl, {
+  headers: { accept: 'application/xml' },
+  signal: AbortSignal.timeout(25000),
+});
+if (!sitemapResponse.ok) {
+  throw new Error('Public Korean sitemap not available: HTTP ' + sitemapResponse.status);
+}
+const pageUrls = canonicalIndexNowUrlsFromSitemap(await sitemapResponse.text());
 const targets = [
   ['naver', 'https://searchadvisor.naver.com/indexnow'],
   ['bing', 'https://www.bing.com/indexnow'],
