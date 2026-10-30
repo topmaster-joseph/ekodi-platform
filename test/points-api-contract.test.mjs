@@ -29,3 +29,10 @@ test('sites discovery only returns enabled point sites to a verified member', ()
   assert.match(src, /\.eq\("enabled", true\)/);
   assert.match(src, /resolvePerson\(bearer\.slice\(7\)\)/);
 });
+
+test('points API accepts only canonical apex and actual development staging origins', () => {
+  assert.match(src, /"https:\/\/ekodi\.kr"/);
+  assert.match(src, /"https:\/\/ekodi-my-staging\.ekodi-development\.workers\.dev"/);
+  assert.doesNotMatch(src, /topmaster-joseph\.workers\.dev/);
+  assert.match(src, /if \(!ORIGINS\.has\(req\.headers\.get\("Origin"\) \|\| ""\)\)/);
+});

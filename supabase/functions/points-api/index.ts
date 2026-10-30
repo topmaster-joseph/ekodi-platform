@@ -8,7 +8,7 @@ const secret = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const db = createClient(url, secret, { auth: { persistSession: false } });
 const ORIGINS = new Set([
   "https://ekodi.kr",
-  "https://ekodi-my-staging.topmaster-joseph.workers.dev",
+  "https://ekodi-my-staging.ekodi-development.workers.dev",
 ]);
 const sitePattern = /^[a-z0-9_-]{2,64}$/;
 function headers(req: Request) {
