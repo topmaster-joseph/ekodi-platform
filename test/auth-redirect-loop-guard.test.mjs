@@ -8,7 +8,8 @@ const entry=await readFile(new URL('auth-site/auth-entry.js',root),'utf8');
 
 test('central auth blocks rapid repeated service handoff navigation',()=>{
   assert.match(entry,/ekodi-auth-entry:/);
-  assert.match(entry,/now - previous < 120000/);
+  assert.match(entry,/LOOP_WINDOW_MS = 15000/);
+  assert.match(entry,/LOOP_VISITS = 3/);
   assert.match(entry,/authLoopBlocked/);
   assert.match(entry,/site === 'admin' && params\.get\('direct'\) === '1'/);
   assert.match(entry,/adminDirectBridge = 'fallback'/);

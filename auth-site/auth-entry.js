@@ -5,17 +5,24 @@ const returnTo = params.get('return_to') || params.get('returnTo') || '';
 const guardKey = `ekodi-auth-entry:${site}:${returnTo}`;
 const now = Date.now();
 const navigationType = performance.getEntriesByType?.('navigation')?.[0]?.type || '';
-let previous = 0;
-
+// A second deliberate login is not a redirect loop. Count only rapid hops.
+const LOOP_WINDOW_MS = 15000;
+const LOOP_VISITS = 3;
+let recentVisits = [];
 try {
-  previous = Number(sessionStorage.getItem(guardKey) || 0);
+  const stored = JSON.parse(sessionStorage.getItem(guardKey) || '[]');
+  if (Array.isArray(stored)) {
+    recentVisits = stored.filter(value => Number.isFinite(value) && value <= now && now - value < LOOP_WINDOW_MS);
+  }
 } catch {}
 
-const repeated = !interactive && navigationType !== 'reload' && previous > 0 && now - previous < 120000;
+// Reload deliberately resets the guard, allowing a user to recover.
+if (navigationType === 'reload') recentVisits = [];
+const repeated = !interactive && navigationType !== 'reload' && recentVisits.length >= LOOP_VISITS - 1;
 
 if (!interactive) {
   try {
-    sessionStorage.setItem(guardKey, String(now));
+    sessionStorage.setItem(guardKey, JSON.stringify([...recentVisits, now].slice(-LOOP_VISITS)));
   } catch {}
 }
 
