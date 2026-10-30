@@ -35,6 +35,8 @@ export class EducationScreenRoom {
    if(!validId(body?.id)||!Number.isSafeInteger(body?.createdAt)||Math.abs(now-body.createdAt)>30000||!(/^[a-f0-9]{64}$/.test(body?.hostKey||''))||!(/^[a-f0-9]{64}$/.test(body?.joinKey||'')))return reply({ok:false,code:'invalid_room'},400);
    const saved={id:body.id,createdAt:now,expiresAt:now+ROOM_TTL_MS,hostHash:await hash(body.hostKey),joinHash:await hash(body.joinKey),ended:false};
    await this.ctx.storage.put('config',saved);
+   // Expiry is enforced on every request and backed by automatic erasure.
+   await this.ctx.storage.setAlarm(saved.expiresAt);
    return reply({ok:true,expiresAt:saved.expiresAt});
   }
   if(!config||config.ended||now>=config.expiresAt)return reply({ok:false,code:'room_closed'},410);
@@ -117,4 +119,8 @@ export class EducationScreenRoom {
  }
  async webSocketClose(ws){const who=this.role(ws),selected=await this.ctx.storage.get('selected');if(who.role==='student'&&selected===who.id){await this.ctx.storage.delete('selected');const host=this.host();if(host)this.send(host,{type:'stopped'});}await this.roster();}
  async webSocketError(ws){await this.webSocketClose(ws);}
+ async alarm(){
+  for(const socket of this.sockets()){this.send(socket,{type:'room_closed'});socket.close(4001,'expired');}
+  await this.ctx.storage.deleteAll();
+ }
 }
