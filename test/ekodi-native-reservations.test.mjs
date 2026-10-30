@@ -79,7 +79,9 @@ test('existing EKODI native hourly watcher owns recurring schedules without extr
   assert.match(wf,/cron: '37 \* \* \* \*'/);
   assert.match(wf,/cron: '0 23 \* \* 0'/);
   assert.match(wf,/cron: '26 23 \* \* 2'/);
-  assert.match(wf,/scripts\/ekodi-native-reservations\.mjs/);
+  // The weekly checks are source-only and do not repeat hourly GitHub API reads.
+  assert.match(wf,/if: github\.event\.schedule != '0 23 \* \* 0' && github\.event\.schedule != '26 23 \* \* 2'/);
+  assert.match(wf,/scripts\\/ekodi-native-reservations\\.mjs/);
   assert.match(wf,/ekodi-native-reservations-evidence\.json/);
   assert.doesNotMatch(wf,/contents: write|issues: write|id-token: write/);
 });
