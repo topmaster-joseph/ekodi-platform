@@ -5,7 +5,7 @@ import { resolveBrokerReadOnlyTarget } from './invest-broker-readonly-contract.j
 
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SYMBOL=/^[A-Z0-9.\-]{1,20}$/;
-const ISO_UTC=/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/;
+const ISO_UTC=/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/;
 const AMOUNT=/^(?:0|[1-9]\d{0,12})(?:\.\d{1,2})?$/;
 const QTY=/^(?:0|[1-9]\d{0,9})(?:\.\d{1,8})?$/;
 const ALLOWED_CURRENCIES=new Set(['KRW','USD']);
@@ -37,8 +37,8 @@ export function normalizeBrokerReadOnlySnapshot(input,{now=Date.now(),maxAgeMs=5
  if(!ALLOWED_CURRENCIES.has(input.currency))return fail('UNSUPPORTED_CURRENCY');
  if(typeof input.capturedAt!=='string'||!ISO_UTC.test(input.capturedAt))return fail('INVALID_CAPTURE_TIME');
  const captured=Date.parse(input.capturedAt);
- if(!Number.isFinite(captured)||new Date(captured).toISOString()!==new Date(input.capturedAt).toISOString())return fail('INVALID_CAPTURE_TIME');
- if(!Number.isFinite(now)||!Number.isFinite(maxAgeMs)||maxAgeMs<0||captured>now+30000||now-captured>maxAgeMs)return fail('STALE_OR_FUTURE_SNAPSHOT');
+ if(!Number.isFinite(captured)||new Date(captured).toISOString()!==input.capturedAt)return fail('INVALID_CAPTURE_TIME');
+ if(!Number.isFinite(now)||!Number.isFinite(maxAgeMs)||maxAgeMs<0||maxAgeMs>5*60*1000||captured>now+30000||now-captured>maxAgeMs)return fail('STALE_OR_FUTURE_SNAPSHOT');
  const cash=amountMinor(input.cashAmount);
  if(cash===null)return fail('INVALID_CASH_AMOUNT');
  if(!Array.isArray(input.positions)||input.positions.length>300)return fail('INVALID_POSITION_COUNT');
@@ -73,7 +73,7 @@ export function normalizeBrokerReadOnlySnapshot(input,{now=Date.now(),maxAgeMs=5
  });
 }
 export function compareBrokerReadOnlySnapshots(previous,current){
- if(previous?.accepted!==true||current?.accepted!==true)return fail('SNAPSHOT_NOT_ACCEPTED');
+ if(previous?.accepted!==true||current?.accepted!==true||previous.scheme!=='ekodi.invest.read-only-snapshot.v1'||current.scheme!=='ekodi.invest.read-only-snapshot.v1')return fail('SNAPSHOT_NOT_ACCEPTED');
  if(!checkIdentity(previous,current))return fail('CROSS_ACCOUNT_OR_ENVIRONMENT');
  if(previous.snapshotRef===current.snapshotRef)return fail('DUPLICATE_SNAPSHOT');
  const t0=Date.parse(previous.capturedAt),t1=Date.parse(current.capturedAt);
