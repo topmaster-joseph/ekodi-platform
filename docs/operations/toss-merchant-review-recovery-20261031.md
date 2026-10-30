@@ -37,3 +37,11 @@ Only merchant telephone disclosure is modified: common legal footer configuratio
 - EKODI protected convergence updated PR #7104 with bot-authored main synchronization SHA `a0ccf8bf3df763b9b0fe9ec95dc9482e64918060` after the owner's regression correction passed on `4e1a4fd253215fb7707ca701da2fea43e22af400`.
 - This documentation-only owner-authored checkpoint requests genuine checks on that synchronized release branch. No release policy, pricing, payment authorization, credentials, business identity, payment execution, customer records or infrastructure scripts are changed here.
 - Release remains blocked until authentic green checks on the current head, exact protected CI provenance and staging + production phone verification. A later main advance requires a fresh protected synchronization; never paste fake check statuses.
+
+## 2026-10-31 read-only merchant-underwriting gate
+- Original source PR #7128 HEAD `34293bb2a17a77b5dd47e43cd8a6fa2db9915003` was superseded without merge. Official protected recovery is #7129, source branch `ai/chatgpt/orch_recovery_34293bb2a17a77b5dd47e43cd8a6fa2d`.
+- A first-party read-only CLI and workflow inspect public merchant identity/phone, translations, Biz quote-only catalog and consultation basket with GET requests only.
+- Protected `main` changes to this auditor trigger a single report; owner can rerun it with `workflow_dispatch`. Artifact is a JSON classification; a green GitHub job only means the audit ran, **not** that Toss accepted the application or payment works.
+- Expected initial overall result is `blocked` while pricing/real sellable SKU and guest checkout are not independently validated. Never invent price, customer/reviewer credentials, completed purchase, test-payment window, representative residence or formal Toss approval.
+- Merchant may manually add authenticated business documents only at Toss after verifying certificate business name/address; final `재심사 요청` remains the owner action.
+- The evidence-preflight never posts purchase requests or touches settlement, and only EKODI Orchestrator handles protected merge and any release work.
