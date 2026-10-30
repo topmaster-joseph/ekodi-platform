@@ -139,11 +139,26 @@ function initialLocale(){return normalizeLocale(cookieLocale()||localStorage.get
 let locale=initialLocale();
 function text(){return TEXT[locale]||TEXT['ko-KR']}
 function gmailHref(subject){return `https://mail.google.com/mail/?view=cm&fs=1&to=ekodibiz%40gmail.com&su=${encodeURIComponent(subject)}`}
-function commonLogin(slug){return `https://auth.ekodi.kr/?site=biz&return_to=${encodeURIComponent(`https://biz.ekodi.kr/#business/${slug}`)}`}
+// Auth handoff uses the fragment for a one-time proof, so preserve the selected
+// business area in a validated query parameter rather than a #business/... hash.
+function commonLogin(slug){
+  const auth=new URL('https://ekodi.kr/auth/');
+  const returnTo=new URL('https://ekodi.kr/ekodibiz/');
+  returnTo.searchParams.set('business',slug);
+  auth.searchParams.set('site','biz');
+  auth.searchParams.set('return_to',returnTo.href);
+  return auth.href;
+}
+function scopedLogin(site,returnTo){
+  const auth=new URL('https://ekodi.kr/auth/');
+  auth.searchParams.set('site',site);
+  auth.searchParams.set('return_to',returnTo);
+  return auth.href;
+}
 function partnerHref(slug){
   const type=BUSINESS[slug]?.login;
-  if(type==='trade')return 'https://ekodi.kr/ekodibiz/trade';
-  if(type==='mall')return 'https://ekodi.kr/ekodibiz/ekodimall/admin/';
+  if(type==='trade')return scopedLogin('trade','https://ekodi.kr/ekodibiz/trade');
+  if(type==='mall')return scopedLogin('mall','https://ekodi.kr/ekodimall/admin/');
   return commonLogin(slug);
 }
 function persistLocale(){
@@ -151,7 +166,14 @@ function persistLocale(){
   const domain=location.hostname==='ekodi.kr'||location.hostname.endsWith('.ekodi.kr')?'; Domain=.ekodi.kr; Secure':'';
   document.cookie=`ekodi_locale=${encodeURIComponent(locale)}; Path=/; Max-Age=31536000; SameSite=Lax${domain}`;
 }
-function detailSlug(){const match=location.hash.match(/^#business\/([a-z0-9-]+)$/);return match?.[1]&&BUSINESS[match[1]]?match[1]:null}
+function detailSlug(){
+  // "All areas" must override any post-login ?business=... fallback.
+  if(location.hash==='#business')return null;
+  const match=location.hash.match(/^#business\/([a-z0-9-]+)$/);
+  if(match?.[1]&&BUSINESS[match[1]])return match[1];
+  const selected=new URLSearchParams(location.search).get('business');
+  return selected&&BUSINESS[selected]?selected:null;
+}
 function renderDetail(slug){
   const t=text();const meta=BUSINESS[slug];if(!meta)return;
   $('#detailTitle').textContent=t[meta.title];$('#detailLead').textContent=t[meta.summary];
