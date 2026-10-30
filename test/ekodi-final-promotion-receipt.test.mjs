@@ -72,7 +72,7 @@ test('missing or stale owner evidence always fails closed',async()=>{
     [{...task,permission_class:'unapproved'},staged,approval],
     [{...task,state_version:5},staged,approval],
     [task,null,approval],[task,{...staged,actor:'ai:claude'},approval],
-    [task,{...staged,evidence_json:JSON.stringify({...JSON.parse(staged.evidence_json),archiveDigest:'sha256:'+'d'.repeat(64)})},approval],
+    [task,{...staged,evidence_json:JSON.stringify({...JSON.parse(staged.evidence_json),archiveDigest:'invalid-archive-digest'})},approval],
     [task,{...staged,evidence_json:JSON.stringify({...JSON.parse(staged.evidence_json),stagingVerified:false})},approval],
     [task,{...staged,evidence_json:JSON.stringify({...JSON.parse(staged.evidence_json),workflowRunId:0})},approval],
     [task,staged,null],[task,staged,{...approval,actor:'ai:claude'}],
