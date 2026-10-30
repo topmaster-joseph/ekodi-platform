@@ -17,3 +17,4 @@ invocation_logs = true
 # private D1, R2 or Books/Mall service binding is configured here.
 [vars]
 PUBLISHING_PRIVATE_RELEASE_ENABLED = "false"
+PUBLISHING_PRIVATE_INGEST_ENABLED = "false"
