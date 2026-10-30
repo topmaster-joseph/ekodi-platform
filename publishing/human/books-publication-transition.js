@@ -9,7 +9,11 @@ const deepValue=v=>{
   return v;
 };
 const parse=s=>{try{return deepValue(JSON.parse(s||'{}'));}catch{return null;}};
-const equalJson=(oldValue,newValue)=>JSON.stringify(parse(oldValue))===JSON.stringify(parse(newValue));
+const equalJson=(oldValue,newValue)=>{
+  const original=parse(oldValue),candidate=parse(newValue);
+  return original!==null && candidate!==null &&
+    JSON.stringify(original)===JSON.stringify(candidate);
+};
 const same=(a,b)=>String(a??'')===String(b??'');
 
 /**
@@ -23,10 +27,12 @@ export function genericAdminPublicMutationAllowed(existing,candidate){
   if(!existing || existing.is_public!==1 && existing.is_public!==true)return false;
   const immutable=[
     ['catalog_no','catalogNo'],['title','title'],['author','author'],
-    ['edition','edition'],['isbn_ebook','isbnEbook'],['cover_image','coverImage'],
+    ['edition','edition'],['status','status'],['stage','stage'],
+    ['isbn_ebook','isbnEbook'],['cover_image','coverImage'],
     ['detail_url','detailUrl'],['price_krw','priceKrw'],
   ];
   if(immutable.some(([key,next])=>!same(existing[key],candidate[next])))return false;
+  if(!equalJson(existing.format_json,candidate.formatJson))return false;
   if(!equalJson(existing.links_json,candidate.linksJson))return false;
   if(!equalJson(existing.distribution_json,candidate.distributionJson))return false;
   return true;
