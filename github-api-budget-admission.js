@@ -1,5 +1,6 @@
 // EKODI Orchestrator. Internal, fail-closed GitHub API capacity reservation.
 // No public route, token issuance, GitHub call, merge, or deployment action.
+import {isVerifiedGitHubInstallationProof} from './github-api-installation-proof.js';
 const resources=new Set(['core','search','graphql','integration_manifest','source_import',
   'code_scanning_upload','actions_runner_registration','audit_log','code_search']);
 const positive=n=>Number.isSafeInteger(n)&&n>0;
@@ -23,8 +24,8 @@ export const INSERT_GITHUB_API_RESERVATION=[
   'AND NOT EXISTS(SELECT 1 FROM github_operations_api_admissions AS q WHERE q.operation_key=?)'
 ].join('\n');
 
-// The internal caller must independently verify the App installation token.
-// The authContext object is NOT itself a cryptographic token verification.
+// Only a short-lived, privately minted GitHub HTTPS installation proof is valid.
+// A caller-supplied JSON object or boolean never authorizes a reservation.
 // Do not expose this primitive to untrusted request payloads.
 export async function reserveTrustedGitHubApiBudget(env,{
   installationId,resource,operationKey,headSha,unitCost=1,
@@ -34,9 +35,9 @@ export async function reserveTrustedGitHubApiBudget(env,{
     return {admitted:false,reason:'not_connected'};
   const id=numericId(installationId);
   if(!id||id!==numericId(env.EKODI_GITHUB_INSTALLATION_ID)||
-    authContext?.source!=='ekodi-orchestrator'||
-    authContext?.verifiedInstallationToken!==true||
-    authContext?.installationId!==id)
+    !isVerifiedGitHubInstallationProof(authContext,{
+      installationId:id,appId:env.EKODI_GITHUB_APP_ID,nowMs
+    }))
     return {admitted:false,reason:'not_authorized'};
   if(!resources.has(resource)||!/^[a-f0-9]{64}$/.test(String(operationKey||''))||
     !/^[a-f0-9]{40}$/.test(String(headSha||''))||
