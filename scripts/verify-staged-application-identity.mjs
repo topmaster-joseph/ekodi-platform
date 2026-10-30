@@ -33,7 +33,11 @@ export function verifyStagedApplicationIdentity({
   root=process.cwd(),expectedDigest,sourceSha,
 }={}){
   if(typeof root!=='string'||!path.isAbsolute(root))fail('INVALID_ROOT');
-  const release=path.join(root,'.release','ai-control');
+  const releaseParent=path.join(root,'.release');
+  const release=path.join(releaseParent,'ai-control');
+  if(!fs.existsSync(releaseParent)||!fs.existsSync(release)||
+     fs.lstatSync(releaseParent).isSymbolicLink()||
+     fs.lstatSync(release).isSymbolicLink())fail('RELEASE_ROOT_UNTRUSTED');
   const manifestPath=path.join(release,'artifact-manifest.json');
   if(!fs.existsSync(manifestPath))fail('MANIFEST_MISSING');
   let m;
@@ -73,7 +77,7 @@ export function verifyStagedApplicationIdentity({
   }
   return Object.freeze({verified:true,applicationDigest:m.artifactDigest,
     sourceSha,workerEntry:'worker.js',fileCount:actual.length,
-    stagingAndProductionReferenceIdenticalBytes:true,productionDeployed:false});
+    configurationsReferenceIdenticalArtifactPaths:true,productionDeployed:false});
 }
 if(process.argv.includes('--verify')){
   try{
