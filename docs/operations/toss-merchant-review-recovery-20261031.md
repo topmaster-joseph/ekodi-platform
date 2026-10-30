@@ -45,3 +45,8 @@ Only merchant telephone disclosure is modified: common legal footer configuratio
 - Expected initial overall result is `blocked` while pricing/real sellable SKU and guest checkout are not independently validated. Never invent price, customer/reviewer credentials, completed purchase, test-payment window, representative residence or formal Toss approval.
 - Merchant may manually add authenticated business documents only at Toss after verifying certificate business name/address; final `재심사 요청` remains the owner action.
 - The evidence-preflight never posts purchase requests or touches settlement, and only EKODI Orchestrator handles protected merge and any release work.
+
+## 2026-10-31 synchronized-main review-preflight check 6eafd026b774
+- EKODI protected convergence synchronized PR #7129 with main at bot-authored SHA `6eafd026b7740fdbbb44a5f56ca18d4066d359e8`. GitHub's bot-created pull_request checks were `action_required` although the original owner changes passed genuine CI.
+- This owner-authored **documentation-only** checkpoint requests authentic protected CI/AI checks on the synchronized branch; the source functional commit remains in ancestry.
+- Never bypass protection, invent merchant SKUs/prices, activate live checkout or claim Toss reassessment. The read-only audit and its report are the only new capabilities until owner-supplied sales evidence is available.
