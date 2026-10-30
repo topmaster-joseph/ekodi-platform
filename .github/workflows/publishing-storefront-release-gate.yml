@@ -9,6 +9,9 @@ on:
       - 'sites/ekodi-mall/test/bookstore-bridge.test.mjs'
       - 'test/books-direct-commerce.test.mjs'
       - 'test/publishing-storefront-release-guard.test.mjs'
+      - 'books-control.js'
+      - 'publishing/human/books-publication-transition.js'
+      - 'test/books-publication-transition.test.mjs'
       - '.github/workflows/publishing-storefront-release-gate.yml'
 permissions:
   contents: read
@@ -31,5 +34,8 @@ jobs:
           node --check books-commerce.js
           node --check sites/ekodi-mall/scripts/bookstore-products.mjs
           node --test test/publishing-storefront-release-guard.test.mjs
+          node --check publishing/human/books-publication-transition.js
+          node --check books-control.js
+          node --test test/books-publication-transition.test.mjs
           node --test test/books-direct-commerce.test.mjs
           node --test sites/ekodi-mall/test/bookstore-bridge.test.mjs
