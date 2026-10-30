@@ -1,5 +1,11 @@
 name: EKODI Toss Merchant Review Readiness (Read Only)
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/toss-merchant-review-preflight.mjs'
+      - 'test/toss-merchant-review-preflight.test.mjs'
+      - '.github/workflows/verify-toss-merchant-review.yml'
   workflow_dispatch:
 permissions:
   contents: read
