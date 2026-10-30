@@ -275,6 +275,26 @@ jobs:
           done
           exit 1
 
+
+      - name: Verify Cloudflare Access protects points page and assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The entire isolated hostname is Access-protected. Verify the new
+          # member points route, JS, CSS and config do not bypass that boundary.
+          for route in /points/ /points/app.js /points/styles.css /config.js; do
+            safe_name=$(printf '%s' "$route" | tr '/' '_' | tr -cd 'a-zA-Z0-9_.')
+            body="/tmp/my-points-access-${safe_name}.html"
+            code=$(curl -L -sS -o "$body" -w '%{http_code}' \
+              --connect-timeout 5 --max-time 20 "${STAGING_URL}${route}")
+            test "$code" = '200' || { echo "Points access HTTP check failed: ${route} ${code}"; exit 1; }
+            grep -Fq 'Cloudflare Access' "$body" || {
+              echo "Points path does not show Cloudflare Access login: ${route}"; exit 1;
+            }
+          done
+          echo 'All four isolated My points paths are protected by Cloudflare Access.'
+
+
   production:
     if: >-
       always() && needs.validate.result == 'success' &&
