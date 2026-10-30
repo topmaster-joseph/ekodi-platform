@@ -76,6 +76,31 @@ test('missing, malformed and implausibly future-dated timestamps cannot prove gr
   }
 });
 
+test('partial or failed D1 source reads never claim whole fleet green', () => {
+  const oneReadFailed = buildFleetStatus({
+    now: NOW,
+    latestChecks: [{ service_id: 'church', status: 'online', checked_at: fresh }],
+    observationFailures: ['cloudflare_environment_checks'],
+  });
+  assert.equal(oneReadFailed.overall.health, 'partial');
+  assert.deepEqual(oneReadFailed.sources.observationFailures, ['cloudflare_environment_checks']);
+  assert.match(renderFleetStatusHtml(oneReadFailed), /관측 자료 일부 조회 실패/);
+
+  const bothReadsFailed = buildFleetStatus({
+    now: NOW,
+    observationFailures: ['service_check_latest', 'cloudflare_environment_checks'],
+  });
+  assert.equal(bothReadsFailed.overall.health, 'partial');
+  assert.equal(bothReadsFailed.overall.counts.total, 0);
+
+  const failureStillWins = buildFleetStatus({
+    now: NOW,
+    latestChecks: [{ service_id: 'pay', status: 'down', checked_at: fresh }],
+    observationFailures: ['cloudflare_environment_checks'],
+  });
+  assert.equal(failureStillWins.overall.health, 'critical');
+});
+
 test('small future clock skew remains fresh and existing failure signals stay critical', () => {
   const withinSkew = buildFleetStatus({
     now: NOW,
