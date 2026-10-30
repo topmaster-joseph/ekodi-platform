@@ -29,9 +29,11 @@ export const LEGACY_MIGRATION_WORKLOADS=Object.freeze([
     'real_bulletin_google_doc','real_worship_google_slides',
     'owner_approval','exclusive_writer_lease','legacy_disable_receipt'
   ]}),
-  Object.freeze({id:'church-naver-owner',kind:'monitor',missing:[
+  Object.freeze({id:'church-naver-owner',kind:'monitor',trackingPr:7036,missing:[
     'native_scheduled_job_artifact','public_naver_proof_http_200',
-    'legacy_home_redirect_301','naver_provider_ownership_confirmation',
+    'legacy_home_redirect_301','canonical_path_and_sitemap',
+    'verified_cloudflare_release_sha','first_party_desktop_mobile_e2e',
+    'naver_provider_ownership_confirmation','search_console_submission_evidence',
     'legacy_disable_receipt'
   ]}),
 ]);
