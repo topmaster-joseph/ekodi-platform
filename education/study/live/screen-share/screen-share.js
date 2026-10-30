@@ -81,12 +81,11 @@ function connect(id,role,credential){
 }
 async function create(){
  const access=readToken(window);
- if(!access){say('먼저 에코디 강사 계정으로 로그인해 주세요.');return;}
  $('createRoom').disabled=true;
  try{
-  const r=await fetch(BASE,{method:'POST',headers:{authorization:'Bearer '+access},credentials:'same-origin'});
+  const r=await fetch(BASE,{method:'POST',headers:access?{authorization:'Bearer '+access}:{},credentials:'same-origin'});
   const data=await r.json();
-  if(!r.ok)throw Error(data.code||'create_failed');
+  if(!r.ok)throw Error(r.status===401?'강사 인증이 필요합니다. 강사 로그인 후 다시 시도해 주세요.':data.code||'create_failed');
   room=data;
   $('invitePanel').hidden=false;$('inviteLink').value=data.joinUrl;
   $('qr').innerHTML=qrSvg(data.joinUrl,{label:'수강생 QR 접속'});
