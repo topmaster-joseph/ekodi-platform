@@ -262,6 +262,7 @@ jobs:
           node --check scripts/ai-account-node.mjs
           node --check scripts/build-ai-control-release.mjs
           node --check scripts/verify-staged-application-identity.mjs
+          node --check scripts/write-ekodi-staging-evidence.mjs
           node --check scripts/validate-cognitive-control-plane.mjs
           node --check scripts/validate-additive-migrations.mjs
           node --check scripts/guarded-worker-release.mjs
@@ -472,6 +473,25 @@ jobs:
           cat "$headers" >&2 || true
           cat "$body" >&2 || true
           exit 1
+
+      # Staging metadata is intentionally NOT the authenticated preproduction
+      # release permit: production rollback readiness has not been verified.
+      - name: Preserve task-bound immutable staging metadata (not release approval)
+        if: github.event_name == 'workflow_dispatch' && inputs.release_task_id != '' && inputs.release_branch_ref != ''
+        id: staging_metadata
+        env:
+          EXPECTED_AI_ARTIFACT_DIGEST: ${{ needs.validate.outputs.artifact_digest }}
+          EKODI_STAGING_URL: ${{ steps.deploy.outputs.url }}
+        run: node scripts/write-ekodi-staging-evidence.mjs --write
+      - name: Upload pending staging evidence only
+        if: github.event_name == 'workflow_dispatch' && inputs.release_task_id != '' && inputs.release_branch_ref != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.staging_metadata.outputs.artifact_name }}
+          path: ${{ steps.staging_metadata.outputs.artifact_path }}/staging-metadata.json
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 0
 
   deploy-production:
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.release_branch_ref != '' && inputs.release_task_id != ''))
