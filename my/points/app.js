@@ -5,7 +5,7 @@ const notice=document.getElementById('notice');
 const login=document.getElementById('loginLink');
 const view=document.getElementById('balanceView');
 const balance=document.getElementById('balance');
-const history=document.getElementById('history');
+const historyList=document.getElementById('history');
 let viewRevision=0;
 const enabled=Boolean(config.dataEnabled&&config.pointsEnabled===true&&config.supabaseUrl&&config.supabasePublishableKey);
 const sb=enabled?createClient(config.supabaseUrl,config.supabasePublishableKey,
@@ -29,7 +29,7 @@ async function handoff(){
     const {error}=await sb.auth.verifyOtp({token_hash:token,type});
     if(error)throw error;
   } finally {
-    history.replaceState({},document.title,location.pathname+location.search);
+    window.history.replaceState({},document.title,location.pathname+location.search);
   }
 }
 function showMessage(text){notice.textContent=text;view.hidden=true;}
@@ -37,7 +37,7 @@ function clearPrivateView(message){
   ++viewRevision;
   view.hidden=true;
   balance.textContent='0';
-  history.replaceChildren();
+  historyList.replaceChildren();
   select.disabled=true;
   select.replaceChildren(new Option('사이트 선택',''));
   login.hidden=false;
@@ -50,8 +50,8 @@ async function request(path,token){
   return body;
 }
 function renderRows(rows){
-  history.replaceChildren();
-  if(!Array.isArray(rows)||!rows.length){history.textContent='아직 거래 내역이 없습니다.';return;}
+  historyList.replaceChildren();
+  if(!Array.isArray(rows)||!rows.length){historyList.textContent='아직 거래 내역이 없습니다.';return;}
   const names={earn:'적립',spend:'사용',transfer_in:'전환 받음',transfer_out:'전환 보냄',donation:'포인트 기부'};
   for(const row of rows){
     const div=document.createElement('div');div.className='record';
@@ -62,7 +62,7 @@ function renderRows(rows){
     const amount=document.createElement('strong');const value=Number(row.amount)||0;
     amount.textContent=(value>0?'+':'')+value.toLocaleString('ko-KR')+' P';
     amount.className=value>=0?'positive':'negative';
-    div.append(summary,amount);history.append(div);
+    div.append(summary,amount);historyList.append(div);
   }
 }
 async function loadWallet(token,site,revision){

@@ -27,7 +27,7 @@ test('points sign-in returns to exact initiating URL via canonical /auth and san
   assert.match(app,/new URL\('https:\/\/ekodi\.kr\/auth\/\?site=my'\)/);
   assert.match(app,/authUrl\.searchParams\.set\('return_to',returnTo\.href\)/);
   assert.match(app,/sb\.auth\.verifyOtp\(\{token_hash:token,type\}\)/);
-  assert.match(app,/history\.replaceState\(\{\},document\.title,location\.pathname\+location\.search\)/);
+  assert.match(app,/window\.history\.replaceState\(\{\},document\.title,location\.pathname\+location\.search\)/);
   assert.match(app,/try\{await handoff\(\);\}/);
   assert.doesNotMatch(app,/login\.href='\/auth\//);
 });
@@ -38,7 +38,14 @@ test('member points clears balance on sign out and ignores stale API responses',
   assert.match(app,/event==='SIGNED_OUT'/);
   assert.match(app,/clearPrivateView\('로그아웃되었습니다/);
   assert.match(app,/balance\.textContent='0'/);
-  assert.match(app,/history\.replaceChildren\(\)/);
+  assert.match(app,/historyList\.replaceChildren\(\)/);
   assert.match(app,/if\(revision!==viewRevision\)return/);
   assert.match(app,/select\.onchange=/);
+});
+
+test('points transactions cannot shadow the native browser History API during auth handoff',()=>{
+  const app=fs.readFileSync(new URL('../my/points/app.js',import.meta.url),'utf8');
+  assert.match(app,/const historyList=document\.getElementById\('history'\)/);
+  assert.match(app,/window\.history\.replaceState\(/);
+  assert.doesNotMatch(app,/const history=document/);
 });
