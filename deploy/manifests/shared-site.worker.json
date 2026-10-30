@@ -1,5 +1,5 @@
 {
-  "version": 118,
+  "version": 119,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -14,7 +14,10 @@
           "const SECTION = 'search-visibility'",
           "data-sv-provider-rows",
           "/api/control/search-visibility",
-          "Math.round(basic/4*100)"
+          "Math.round(basic/4*100)",
+          "data-sv-google-read",
+          "Google 실측 조회",
+          "googleSiteUrl="
         ],
         "candidateVerify": false,
         "candidateVerifyReason": "Canonical /admin static asset paths are asset-first; verify exact postbuild mirror after promotion.",

@@ -11,7 +11,7 @@ function memoryStorage(entries={}) {
   return {getItem:key=>map.get(key)??null,setItem:(key,value)=>map.set(key,String(value)),removeItem:key=>map.delete(key)};
 }
 function element(){
-  return {hidden:false,href:'',value:'person',textContent:'',dataset:{},children:[],addEventListener(){},setAttribute(){},replaceChildren(...parts){this.children=parts},append(...parts){this.children.push(...parts)}};
+  return {hidden:false,href:'',value:'person',textContent:'',dataset:{},children:[],handlers:{},attributes:{},addEventListener(type,fn){this.handlers[type]=fn},setAttribute(name,value){this.attributes[name]=value},replaceChildren(...parts){this.children=parts},append(...parts){this.children.push(...parts)}};
 }
 function page({loggedIn=false,spaces=[],spaceStatus=200,deferred=null}={}){
   const nodes=new Map(),calls=[];
@@ -87,4 +87,56 @@ test('forbidden or unavailable upstream does not display any assumed workspace',
     assert.equal(p.get('verifiedSpacesList').children.length,0);
     assert.match(p.get('spacesStatus').textContent,/불러오지 못했습니다/);
   }
+});
+
+test('member chooses only current verified active space; no implicit authority from local type selector',async()=>{
+  const p=page({loggedIn:true,spaces:[
+    {id:'store-1',slug:'jadam',name:'자담치킨',role:'store_owner',kind:'store',status:'active'},
+    {id:'tenant-1',slug:'cgma',name:'청계상인회',role:'tenant_admin',kind:'tenant',status:'active'},
+    {id:'blocked-1',slug:'blocked',name:'미활성',role:'member',kind:'tenant',status:'disabled'}
+  ]});
+  await p.flush();
+  const entries=p.get('verifiedSpacesList').children;
+  assert.equal(entries.length,3);
+  const select=entry=>entry.children.find(x=>x.className==='space-select');
+  assert.ok(select(entries[0]));
+  assert.ok(select(entries[1]));
+  assert.equal(select(entries[2]),undefined);
+  assert.match(p.get('selectedWorkspaceStatus').textContent,/선택하지 않았습니다/);
+  select(entries[0]).handlers.click();
+  assert.match(p.get('selectedWorkspaceStatus').textContent,/자담치킨 · store_owner/);
+  assert.equal(select(entries[0]).attributes['aria-pressed'],'true');
+  assert.equal(select(entries[1]).attributes['aria-pressed'],'false');
+  select(entries[1]).handlers.click();
+  assert.match(p.get('selectedWorkspaceStatus').textContent,/청계상인회 · tenant_admin/);
+  assert.equal(select(entries[0]).attributes['aria-pressed'],'false');
+  assert.equal(select(entries[1]).attributes['aria-pressed'],'true');
+  assert.equal(p.calls.filter(x=>x.path==='/api/spaces').length,1);
+});
+
+test('selection never outlives logout or subsequent membership refresh',async()=>{
+  const p=page({loggedIn:true,spaces:[{id:'store-1',slug:'jadam',name:'자담치킨',role:'store_owner',kind:'store',status:'active'}]});
+  await p.flush();
+  const card=p.get('verifiedSpacesList').children[0];
+  card.children.find(x=>x.className==='space-select').handlers.click();
+  assert.match(p.get('selectedWorkspaceStatus').textContent,/자담치킨/);
+  await runInContext('loadVerifiedSpaces()',p.context);
+  assert.match(p.get('selectedWorkspaceStatus').textContent,/선택하지 않았습니다/);
+  assert.equal(runInContext('selectedVerifiedWorkspace()',p.context),null);
+  const fresh=p.get('verifiedSpacesList').children[0];
+  fresh.children.find(x=>x.className==='space-select').handlers.click();
+  runInContext('clearSession()',p.context);
+  assert.equal(p.get('verifiedSpacesList').children.length,0);
+  assert.match(p.get('selectedWorkspaceStatus').textContent,/선택하지 않았습니다/);
+  assert.equal(runInContext('selectedVerifiedWorkspace()',p.context),null);
+});
+
+test('forged local objects cannot become active workspace without matching server membership',async()=>{
+  const p=page({loggedIn:true,spaces:[{id:'store-1',slug:'jadam',name:'자담',role:'member',kind:'store',status:'active'}]});
+  await p.flush();
+  runInContext("selectVerifiedWorkspace({id:'other-store',slug:'jadam',name:'타인',status:'active'})",p.context);
+  assert.equal(runInContext('selectedVerifiedWorkspace()',p.context),null);
+  runInContext("selectVerifiedWorkspace({id:'store-1',slug:'other',name:'다른 경로',status:'active'})",p.context);
+  assert.equal(runInContext('selectedVerifiedWorkspace()',p.context),null);
+  assert.match(p.get('selectedWorkspaceStatus').textContent,/선택하지 않았습니다/);
 });

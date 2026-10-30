@@ -12,7 +12,7 @@
     "wrangler.cgma-board-internal.toml": { "workflow": "deploy-cgma-apex-edge.yml" },
     "wrangler.cgma-naver-proof.toml": { "workflow": "deploy-cgma-naver-proof.yml" },
     "wrangler.church-history.toml": { "workflow": "deploy-church-history.yml" },
-    "wrangler.church-naver-proof.toml": { "workflow": "deploy-church-naver-proof.yml" },
+    "wrangler.church-naver-proof.toml": { "workflow": "deploy-church-naver-proof.yml", "watch_files": ["scripts/cloudflare-church-naver-redirect-exception.mjs"] },
     "wrangler.community.toml": { "workflow": "deploy-community.yml" },
     "wrangler.delivery.toml": { "workflow": "deploy-delivery-hub-ai.yml" },
     "wrangler.education.toml": { "workflow": "deploy-education.yml" },

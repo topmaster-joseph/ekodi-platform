@@ -207,7 +207,8 @@ body:has(.hero-split) .mission-site-header nav a{font-size:clamp(.81rem,.9vw,.89
   color:#fff;font-size:.84rem;font-weight:800
 }
 @media(max-width:760px){
-  .mission-home-photo{min-height:240px}
-  .mission-home-photo-fallback{min-height:240px}
+  /* Avoid 16:9 aspect ratio min-content transfer: 240px height formerly forced 427px width on 390px mobile. */
+  .hero-split .mission-home-photo{aspect-ratio:auto;width:100%;max-width:100%;min-width:0;min-height:240px;align-self:stretch}
+  .mission-home-photo-fallback{height:auto;min-width:0;min-height:240px}
   .mission-home-photo-fallback strong{font-size:clamp(1.85rem,7vw,2.8rem)}
 }
