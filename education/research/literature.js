@@ -21,6 +21,7 @@ export function normalizeResearchQuery(value) {
 }
 
 export function normalizeCrossrefRecord(item) {
+  if (!item || typeof item !== 'object') return null;
   const doi = plain(item?.DOI, 220);
   if (!DOI.test(doi)) return null;
   const first = value => Array.isArray(value) ? value[0] : value;
@@ -75,6 +76,6 @@ export async function lookupCrossref(raw, fetcher = fetch) {
   }
   const rawItems = doi ? [payload?.message] : payload?.message?.items;
   if (!Array.isArray(rawItems)) throw problem(502, 'literature_metadata_invalid');
-  const records = rawItems.map(normalizeCrossrefRecord).filter(Boolean);
+  const records = rawItems.map(normalizeCrossrefRecord).filter(record => record && (!doi || record.doi.toLowerCase() === doi.toLowerCase()));
   return { source: 'Crossref', query, mode: doi ? 'doi' : 'search', records, metadataFound: records.length > 0 };
 }
