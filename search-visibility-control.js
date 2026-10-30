@@ -67,6 +67,9 @@ const DOMAIN_CANONICAL_FOR_PATH=Object.freeze({
 });
 const REGISTERED_LEGACY_HOSTS=Object.freeze({
   '/seonammedi':['seonammedi.kr','서남권국립의대.kr'],
+  // This original-domain property remains distinct even when it redirects to /ekodibiz.
+  // Hosting the Naver proof file does not establish Search Advisor ownership or indexing.
+  '/ekodibiz':['ekodibiz.kr'],
   '/ekodichurch':['ekodichurch.kr'],
   '/ekodilab':['ekodilab.kr'],
   '/ekodimall':['ekodimall.kr'],
