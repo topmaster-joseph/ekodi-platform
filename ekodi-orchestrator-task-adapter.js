@@ -164,7 +164,7 @@ export async function stagingPromotionApprovalIsValid(db,row,evidence){
   return receipt.authorized===true;
 }
 
-async function persistCompletionEvidence(db,row,evidence,{actor='ekodi-orchestrator-reconciler',reason='verified_production_evidence_reconciled'}={}){
+export async function persistCompletionEvidence(db,row,evidence,{actor='ekodi-orchestrator-reconciler',reason='verified_production_evidence_reconciled'}={}){
   if(!row||TERMINAL_STATES.has(row.state)||Number(row.deployment_requested||0)!==1)return row;
   if(!await stagingPromotionApprovalIsValid(db,row,evidence))return row;
   const updated=now();
