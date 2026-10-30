@@ -7,8 +7,7 @@ import {createWorshipD1Ledger} from '../scripts/ekodi-native-worship-d1-ledger.m
 const date='2026-11-01',key='ekodi:church-weekly:'+date;
 function db(){
   const sqlite=new DatabaseSync(':memory:');
-  const migration=awaitMigration();
-  sqlite.exec(migration);
+  sqlite.exec(MIGRATION);
   function prepared(sql,values=[]){
     return{
       bind(...params){return prepared(sql,params);},
@@ -19,17 +18,15 @@ function db(){
   }
   return{sqlite,prepare:sql=>prepared(sql)};
 }
-let migration='';
-function awaitMigration(){return migration;}
+const MIGRATION=await readFile(new URL('../migrations/202610300300_church_native_draft_ledger.sql',import.meta.url),'utf8');
 const types=['sermonGoogleDocId','bulletinGoogleDocId','worshipGoogleSlidesId'];
 const ids=['ekodi_sermon_file_0001','ekodi_bulletin_file_0002','ekodi_presentation_file_0003'];
 
 test('native worship D1 schema is additive, private and strict on job/asset identity',async()=>{
-  migration=await readFile(new URL('../migrations/202610300300_church_native_draft_ledger.sql',import.meta.url),'utf8');
   const b=db();
   assert.equal(b.sqlite.prepare("SELECT count(*) AS n FROM sqlite_master WHERE type='table' AND name LIKE 'ekodi_church_native_draft_%'").get().n,2);
   assert.equal(b.sqlite.prepare('SELECT count(*) AS n FROM ekodi_church_native_draft_runs').get().n,0);
-  assert.doesNotMatch(migration,/token|authorization|plaintext|sermon_body/i);
+  assert.doesNotMatch(MIGRATION,/token|authorization|plaintext|sermon_body/i);
 });
 test('atomic unique claim blocks duplicate draft creation on the same Sunday',async()=>{
   const b=db();const store=createWorshipD1Ledger(b,{newLease:()=> 'ekodi_test_lease_1234'});
