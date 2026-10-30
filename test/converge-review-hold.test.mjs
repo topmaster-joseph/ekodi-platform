@@ -22,6 +22,12 @@ test('genuine same-owner APPROVED or dismissal clears earlier block',()=>{
   assert.deepEqual(pendingReviewBlocks([...a,review('topmaster-joseph','APPROVED')]),[]);
   assert.deepEqual(pendingReviewBlocks([...a,review('topmaster-joseph','DISMISSED')]),[]);
 });
+test('explicit human review request holds even before review or after older approval',()=>{
+  const requestedReviewers=[{login:'topmaster-joseph'}];
+  assert.deepEqual(pendingReviewBlocks([],{requestedReviewers}),['topmaster-joseph']);
+  assert.deepEqual(pendingReviewBlocks([review('topmaster-joseph','APPROVED')],{requestedReviewers}),['topmaster-joseph']);
+  assert.deepEqual(pendingReviewBlocks([],{requestedReviewers:[{login:'external-user'}]}),[]);
+});
 test('newer owner re-request blocks after previous approval',()=>{
   assert.deepEqual(pendingReviewBlocks([review('topmaster-joseph','APPROVED'),
     review('topmaster-joseph','CHANGES_REQUESTED')]),['topmaster-joseph']);

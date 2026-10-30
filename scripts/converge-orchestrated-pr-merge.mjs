@@ -166,7 +166,7 @@ for(let page=1;page<=5;page++){
   if(!more)break;
   if(page===5)fail('review history exceeds bounded lookup; no merge');
 }
-const unresolved=pendingReviewBlocks(reviews);
+const unresolved=pendingReviewBlocks(reviews,{requestedReviewers:pr.requested_reviewers});
 if(unresolved.length){
   console.log(JSON.stringify({ok:true,action:'human-review-hold',pr:pr.number,head:headSha,
     blockedReviewers:unresolved,merge:false,dispatched:false}));

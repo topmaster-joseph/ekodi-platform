@@ -10,6 +10,9 @@ Reuse the existing convergent release workflow:
   GitHub REST reviews before file scan, branch synchronization or writes.
   Trust only the canonical owner or GitHub-declared OWNER/MEMBER/COLLABORATOR;
   arbitrary public reviews must never prevent an otherwise protected merge.
+  An explicit request for review from the sovereign owner also holds a PR
+  before its first review and even after a previous stale approval; GitHub's
+  requested-reviewer list is the source of truth until the request is fulfilled.
 - An unresolved latest CHANGES_REQUESTED review blocks all syncs/merge/status
   writes and exits with honest \`human-review-hold\` evidence. COMMENTED never
   overrides a requested change. Missing or inaccessible reviews fail closed.
