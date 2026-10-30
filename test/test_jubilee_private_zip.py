@@ -74,7 +74,7 @@ class PackageBoundaryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"unsafe-path|archive-members"):
             mod.verify_zip(self.path,pin)
     def test_missing_edition_file_is_rejected(self):
-        self.files.pop("editions/02/source.pdf")
+        # Retain the bytes for the expected edition hash, but drop the manifest record.
         self.manifest["fileDigests"]=[v for v in self.manifest["fileDigests"] if
             v["path"]!="editions/02/source.pdf"]
         pin=self.build()
