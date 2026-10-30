@@ -22,3 +22,7 @@
 
 ## Guardrails
 No direct push to main, forged statuses, manual production changes, bypassed human gates, unreviewed DNS edits, or claim of completed deployment without production verification.
+
+## Current-main synchronization checkpoint
+- GitHub reported an automated update-branch source head `bcb4921a491a1b3e1b109856906fe31e64f44927` after main advanced. That bot-authored head's PR checks were parked as `action_required`; they are **not passing evidence**.
+- This note is a documentation-only owner-authored retrigger to obtain actual current-head required checks. It does not approve a merge or production release, and the functional source SHA `93e6ec40075b1b7c82cad67e7616ec050b39eece` must remain an ancestor.
