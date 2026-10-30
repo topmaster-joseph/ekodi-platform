@@ -46,7 +46,7 @@ test('zero changes and D1 error never issue an admission',async()=>{
   const a=await reserveTrustedGitHubApiBudget(broken,request(1));
   assert.deepEqual(a,{admitted:false,reason:'storage_unavailable'});
 });
-test('SQLite atomic quota floor, idempotency, stale snapshot, newer real measurement',async t=>{
+test('SQLite quota floor preserves in-flight leases across newer measurements',async t=>{
   let DatabaseSync;
   try{({DatabaseSync}=await import('node:sqlite'));}catch{t.skip('requires node sqlite');return;}
   const db=new DatabaseSync(':memory:');
@@ -71,7 +71,10 @@ test('SQLite atomic quota floor, idempotency, stale snapshot, newer real measure
     upsert(26,NOW);
     assert.equal((await reserveTrustedGitHubApiBudget(e,request(5))).admitted,false);
     upsert(26,NOW+1);
-    assert.equal((await reserveTrustedGitHubApiBudget(e,request(6,{nowMs:NOW+1}))).admitted,true);
+    // New response headers do not prove earlier 15-second leases were consumed.
+    // Keep the 25-unit floor while those unexpired leases may still execute.
+    assert.equal((await reserveTrustedGitHubApiBudget(e,request(6,{nowMs:NOW+1}))).admitted,false);
+    assert.equal((await reserveTrustedGitHubApiBudget(e,request(7,{nowMs:NOW+15001}))).admitted,true);
     assert.equal(db.prepare('SELECT COUNT(*) AS n FROM github_operations_api_admissions').get().n,3);
   }finally{db.close();}
 });
