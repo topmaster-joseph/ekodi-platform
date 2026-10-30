@@ -6,6 +6,18 @@ import {pathToFileURL} from 'node:url';
 import {resolve} from 'node:path';
 import {blockedInlineScriptHash,cloudflareJsDetectionHashes} from './education-native-security-observations.mjs';
 const TARGET_URL='https://ekodi.kr/edu/study/ai-bootcamp/';
+// Reveal only code grammar after Cloudflare's parameter object. Every quoted
+// value is redacted, including potential nonces. Never log the parameter values.
+export function redactedCloudflareSuffix(body){
+ if(!String(body).startsWith('window.__CF$cv$params={'))return null;
+ const at=body.indexOf('};');
+ if(at<0)return null;
+ const params=body.slice('window.__CF$cv$params={'.length,at);
+ const keys=[...params.matchAll(/(?:^|,)([a-z]{1,12}):/g)].map(m=>m[1]);
+ const suffix=body.slice(at+2);
+ return {paramKeys:keys,paramLength:params.length,suffixLength:suffix.length,
+   suffixGrammar:suffix.replace(/'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"/g,"'<quoted>'").slice(0,850)};
+}
 export function summarizeInlineScriptHashes(html,blocked=[]){
  const scripts=[...String(html||'').matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)];
  return scripts.slice(0,40).map((part,i)=>{
@@ -19,7 +31,8 @@ export function summarizeInlineScriptHashes(html,blocked=[]){
     hasIframeWrapper:body.includes("createElement('iframe')")||body.includes('createElement("iframe")'),
     beginsParams:body.startsWith('window.__CF$cv$params='),
     beginsSelfInvoking:body.startsWith('(function()'),
-    containsInnerHtml:body.includes('.innerHTML=')};
+    containsInnerHtml:body.includes('.innerHTML='),
+    redactedShape:(body.includes('/cdn-cgi/challenge-platform/')?redactedCloudflareSuffix(body):null)};
  });
 }
 async function main(){
