@@ -122,3 +122,16 @@ test('readiness detects missing channel registrations without changing any data'
   assert.match(list.children[0].textContent,/채널 등록 상태/);
   assert.equal(p.calls.filter(x=>x.options.method!=='GET'&&x.path.includes('store-summary')).length,0);
 });
+
+test('channel listings with no canonical menu raise a data consistency warning',async()=>{
+  const p=page({result:{dataPolicy:'verified-read-only',workspace:{id:'store-1',slug:'jadam',kind:'store'},
+    summary:{canonicalMenuCount:0,platformListingCount:7,connectedChannelCount:2,orderEnabled:true}}});
+  await p.flush();
+  const {button,panel}=kpiControl(p);
+  await button.handlers.click();
+  const list=panel.children[1].children[1];
+  assert.equal(list.children.length,2);
+  assert.match(list.children[0].textContent,/메뉴 원본이 0개/);
+  assert.match(list.children[1].textContent,/원본 데이터 연결·동기화/);
+  assert.equal(p.calls.filter(x=>x.path.includes('store-summary')).length,1);
+});
