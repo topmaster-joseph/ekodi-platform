@@ -31,7 +31,16 @@
         });
         if(!response.ok)throw new Error('관리자 권한 또는 작업 DB를 확인하세요. HTTP '+response.status);
         const data=await response.json();
-        summary.textContent='이벤트 관측 전용 · GitHub API 실측 한도 미연결 · 자동 배포 권한 없음';
+        const a=data.activation||{};
+        const quota=data.apiQuota||{};
+        summary.textContent='이벤트 관측 전용 · Webhook '+(a.ready?'서버 설정 확인':'서버 설정 미완료')+
+          ' · 서명 이벤트 '+(a.receivingVerifiedEvents?'수신 확인':'수신 미확인')+
+          ' · 공동 API 호출 차감 기능 미연결 · 자동 배포 권한 없음';
+        const details=document.createElement('p');
+        details.textContent='서명 이벤트 누적 '+Math.max(0,Number(a.verifiedEventCount)||0)+
+          '건 · 마지막 수신 '+String(a.lastSignedEventAt||'없음')+
+          ' · API 실측 '+String(quota.state||'미연결');
+        rows.append(details);
         for(const job of data.jobs||[]){
           const line=document.createElement('p');
           line.textContent=[job.state,job.kind,job.operation_key?.slice(0,12),job.updated_at].join(' · ');
