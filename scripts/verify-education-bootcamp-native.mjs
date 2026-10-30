@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {EKODI_SERVICE_MANIFEST} from '../ekodi-service-manifest.js';
 import {classifyConsoleSecurityBlock,classifyRequestSecurityBlock,
-  classifyMutationSecurityBlock,verifyKnownSecurityBlocks,observeCloudflareJsDetections
+  classifyMutationSecurityBlock,verifyKnownSecurityBlocks,observeCloudflareJsDetections,trustCloudflareJsDetections
 } from './education-native-security-observations.mjs';
 
 // Reuse the existing registered Education boundary; never mint a new hostname.
@@ -88,6 +88,13 @@ async function checkProfile(browser,profile){
     const response=await page.goto(TARGET_ORIGIN+TARGET_ROUTE,{waitUntil:'domcontentloaded',timeout:35000});
     if(!response||response.status()!==200)fail(profile.name+' classroom returned HTTP '+response?.status());
     if(new URL(page.url()).origin!==TARGET_ORIGIN)fail('redirect escaped Education origin');
+    // The Cloudflare inline detector's CSP console error can be emitted before
+    // the context's asynchronous response.text() listener finishes auditing.
+    // Audit the exact successful main-document RESPONSE synchronously before
+    // classifying its blocked inline-script SHA256. Never relax CSP, hash
+    // allowlists, or permissions; unrecognized snippets still fail closed.
+    if(response.request().resourceType()==='document')
+      trustCloudflareJsDetections(await response.text());
     await page.locator('[data-view="overview"]').waitFor({state:'visible',timeout:15000});
     await page.locator('.course-cards .lesson-card').first().waitFor({state:'visible',timeout:15000});
     if(await page.locator('.course-cards .lesson-card').count()!==4)fail('not exactly four lesson cards');
@@ -135,6 +142,10 @@ async function checkProfile(browser,profile){
       if(await dialog.evaluate(el=>el.open))fail('presentation dialog did not close');
       slideCounts.push(9);
     }
+    // Browser-rendered markup may expose Cloudflare-injected inline scripts that
+    // are not present in an earlier transport observer snapshot. Hash-audit only
+    // the exact recognized Cloudflare JSD snippet shape before final verdict.
+    trustCloudflareJsDetections(await page.content());
     const known=report.observedSecurityBlocks.filter(x=>x.profile===profile.name);
     const securityResult=verifyKnownSecurityBlocks({
       consoleBlocks:known.filter(x=>x.type==='console').map(x=>({message:x.message})),

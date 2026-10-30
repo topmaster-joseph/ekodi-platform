@@ -1,0 +1,33 @@
+name: EKODI Human Private EPUB Builder Guard
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/build-private-human-epub.mjs'
+      - 'test/human-private-epub-producer.test.mjs'
+      - '.github/workflows/ekodi-human-private-epub-guard.yml'
+      - 'docs/operations/human-publishing-private-epub-builder.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-private-epub-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate genuine manuscript-only private EPUB output and preflight
+        run: |
+          node --check scripts/build-private-human-epub.mjs
+          node --test test/human-private-epub-producer.test.mjs test/epub-master-preflight.test.mjs
