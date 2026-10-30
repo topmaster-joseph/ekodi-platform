@@ -215,7 +215,7 @@ function renderTimelineFilters(){
   host.innerHTML=TIMELINE_FILTERS.map(cat=>'<button data-cat="'+escapeHtml(cat)+'" class="'+(cat===activeTimelineCategory?'active':'')+'">'+escapeHtml(cat)+'</button>').join('');
   if(host.dataset.bound!=='1'){
     host.dataset.bound='1';
-    host.addEventListener('click',event=>{const button=event.target.closest('button[data-cat]');if(!button)return;activeTimelineCategory=button.dataset.cat;renderTimelineFilters();renderPublicTimeline();});
+    host.addEventListener('click',event=>{const button=event.target.closest('button[data-cat]');if(!button)return;const category=button.dataset.cat;if(!TIMELINE_FILTERS.includes(category))return;activeTimelineCategory=category;setCategoryRoute('timeline',category);renderTimelineFilters();renderPublicTimeline();});
   }
 }
 const relatedNewsFilterMatches=(item,selected)=>{
@@ -598,6 +598,15 @@ function categoryFromMenuHash(prefix,allowed){
     const value=decodeURIComponent(raw.slice(prefix.length+1).split('/')[0]);
     return allowed.includes(value)?value:'전체';
   }catch{return '전체'}
+}
+// Keep a public category selection in the canonical URL for reload, sharing
+// and browser back/forward. pushState does not fire hashchange; click handlers
+// update the visible filter immediately, popstate restores it on navigation.
+function setCategoryRoute(prefix,category){
+  const allowed=prefix==='timeline'?TIMELINE_FILTERS:prefix==='committee-activity'?COMMITTEE_FILTERS:null;
+  if(!allowed||!allowed.includes(category))return;
+  const next='#'+prefix+(category==='전체'?'':'/'+encodeURIComponent(category));
+  if(location.hash!==next)history.pushState({view:viewAliases[prefix],category},'',next);
 }
 function showView(view,{updateHash=false}={}){
   if(view==='finance'){location.assign('https://ekodi.kr/seonammedi/admin/?panel=finance');return}
@@ -1473,7 +1482,8 @@ function renderCommitteeActivity(){
     filters.innerHTML=COMMITTEE_FILTERS.map(kind=>'<button type="button" data-committee-filter="'+escapeHtml(kind)+'" class="'+(kind===selectedCommitteeFilter?'active':'')+'">'+escapeHtml(kind)+'</button>').join('');
     if(filters.dataset.bound!=='1'){filters.dataset.bound='1';filters.addEventListener('click',event=>{
       const control=event.target.closest('[data-committee-filter]');if(!control)return;
-      selectedCommitteeFilter=control.dataset.committeeFilter;renderCommitteeActivity();
+      const category=control.dataset.committeeFilter;if(!COMMITTEE_FILTERS.includes(category))return;
+      selectedCommitteeFilter=category;setCategoryRoute('committee-activity',category);renderCommitteeActivity();
     })}
   }
   const search=el('committeeActivitySearch');

@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import {pathToFileURL} from 'node:url';
 import {resolve} from 'node:path';
 import {parseOrchestratorReleaseBranch,verifyOrchestratorReleaseReceipt} from './orchestrator-release-receipt.mjs';
+import {verifyEducationReleaseSnapshot,validOfficialEducationCandidate} from './verify-education-release-snapshot.mjs';
 
 export const EDUCATION_RELEASE_PATHS=Object.freeze(new Set([
  'education-worker.js','ekodi-service-manifest.js',
@@ -38,17 +39,16 @@ async function main(){
  const repo=String(process.env.GITHUB_REPOSITORY||'');
  const token=String(process.env.GH_TOKEN||'');
  const eventPath=String(process.env.GITHUB_EVENT_PATH||'');
+ const eventName=process.env.GITHUB_EVENT_NAME||'';
  if(repo!=='topmaster-joseph/ekodi-platform'||!token||!eventPath||!fs.existsSync(eventPath))
-   fail('trusted repository, Actions token and workflow_run event required');
- if(process.env.GITHUB_EVENT_NAME!=='workflow_run'||process.env.GITHUB_REF_NAME!=='main')
-   fail('read-only release convergence must start on trusted main workflow_run');
+   fail('trusted repository, Actions token and event required');
+ if(!['workflow_run','schedule'].includes(eventName)||process.env.GITHUB_REF_NAME!=='main')
+   fail('protected main workflow_run or read-only scheduled recovery required');
  const event=JSON.parse(fs.readFileSync(eventPath,'utf8'));
  const run=event.workflow_run||{};
- if(event.action!=='completed'||run.conclusion!=='success'||!parseOrchestratorReleaseBranch(run.head_branch)){
+ if(eventName==='workflow_run'&&(event.action!=='completed'||run.conclusion!=='success'||!parseOrchestratorReleaseBranch(run.head_branch))){
    log('non_release_run');return;
  }
- // A completed convergence run may only *prepare* another release; never infer
- // actual merge solely from its success conclusion.
  const headers={authorization:'Bearer '+token,accept:'application/vnd.github+json',
   'x-github-api-version':'2022-11-28','content-type':'application/json'};
  const api=async(path,init={})=>{
@@ -59,36 +59,67 @@ async function main(){
   return data;
  };
  const owner=repo.split('/')[0];
- const branch=run.head_branch;
- const pulls=await api('/pulls?state=all&base=main&head='+encodeURIComponent(owner+':'+branch)+'&per_page=100');
- const pr=Array.isArray(pulls)?pulls.find(p=>p.head?.sha===run.head_sha&&p.merged_at!=null):null;
- if(!pr){log('no_exact_verified_merge',{branch,sourceSha:run.head_sha});return;}
- const [main,changed]=await Promise.all([
-  api('/git/ref/heads/main'),
-  api('/pulls/'+pr.number+'/files?per_page=100')
- ]);
- if(!Array.isArray(changed)||changed.length===100)fail('PR files must be exhaustively inspectable (under 100)');
- const files=changed.map(item=>item.filename);
- const decision=approvedEducationMerge({event,pr,files,mainSha:main.object?.sha});
- if(!decision.ready){log('not_eligible',{reason:decision.reason,pr:pr.number});return;}
- const mergedPrs=await api('/commits/'+decision.mergeSha+'/pulls?per_page=100');
- if(!Array.isArray(mergedPrs)||!mergedPrs.some(item=>item.number===pr.number&&item.merged_at!=null))
-   fail('merge commit not associated with the exact approved PR');
- await verifyOrchestratorReleaseReceipt(branch,{explicitTaskId:decision.taskId});
+ let pr=null,files=[];
+ if(eventName==='workflow_run'){
+   const branch=run.head_branch;
+   const pulls=await api('/pulls?state=all&base=main&head='+encodeURIComponent(owner+':'+branch)+'&per_page=100');
+   pr=Array.isArray(pulls)?pulls.find(p=>p.head?.sha===run.head_sha&&p.merged_at!=null):null;
+   if(!pr){log('no_exact_verified_merge',{branch,sourceSha:run.head_sha});return;}
+   const changed=await api('/pulls/'+pr.number+'/files?per_page=100');
+   if(!Array.isArray(changed)||changed.length===100)fail('PR files must be exhaustively inspectable');
+   files=changed.map(item=>item.filename);
+ }else{
+   // Only a previously merged, source-checked and EKODI-receipted PR is eligible.
+   // The schedule never manufactures an orchestration receipt or a successful CI result.
+   const recent=[];
+   for(let page=1;page<=4;page++){
+     const batch=await api('/pulls?state=closed&base=main&sort=updated&direction=desc&per_page=50&page='+page);
+     if(!Array.isArray(batch))fail('recent protected PR scan must be an array');
+     recent.push(...batch);
+     if(batch.length<50)break;
+   }
+   const candidates=recent.filter(p=>p.merged_at&&p.base?.ref==='main'&&parseOrchestratorReleaseBranch(p.head?.ref))
+     .sort((a,b)=>Date.parse(b.merged_at)-Date.parse(a.merged_at));
+   for(const candidate of candidates.slice(0,40)){
+     const changed=await api('/pulls/'+candidate.number+'/files?per_page=100');
+     if(!Array.isArray(changed)||changed.length===100)fail('PR files must be exhaustively inspectable');
+     const changedFiles=changed.map(item=>item.filename);
+     if(validOfficialEducationCandidate(candidate,changedFiles)){pr=candidate;files=changedFiles;break;}
+   }
+   if(!pr){log('no_recent_official_education_merge');return;}
+ }
+ if(!validOfficialEducationCandidate(pr,files)){log('not_eligible',{reason:'no_education_changes_or_unapproved_pr',pr:pr.number});return;}
+ const main=await api('/git/ref/heads/main');
+ const releaseSha=String(main.object?.sha||'');
+ if(!/^[a-f0-9]{40}$/i.test(releaseSha))fail('trusted main SHA missing');
+ const branch=pr.head.ref;
+ // A later unrelated protected merge is not new Education release authority.
+ // Verify its ancestry and absence of all subsequent Education changes, in both
+ // the dispatcher and the production workflow.
+ const decision=await verifyEducationReleaseSnapshot({
+   repo,token,branch,taskId:parseOrchestratorReleaseBranch(branch).taskId,releaseSha,
+   receiptVerifier:verifyOrchestratorReleaseReceipt
+ });
+ // Preserve auditable individual source CI context independently of the snapshot check.
  const status=await api('/commits/'+decision.sourceSha+'/status');
  const statuses=new Map((status.statuses||[]).map(item=>[item.context,item.state]));
  for(const name of ['test','EKODI AI Orchestration Gate']){
-  if(statuses.get(name)!=='success')fail('required source status not successful: '+name);
+   if(statuses.get(name)!=='success')fail('required source status not successful: '+name);
  }
  const history=await api('/actions/workflows/deploy-education.yml/runs?event=workflow_dispatch&per_page=100');
- const duplicate=(history.workflow_runs||[]).some(item=>
-   item.head_sha===decision.mergeSha&&(item.status==='queued'||item.status==='in_progress'||item.status==='waiting'||(item.status==='completed'&&item.conclusion==='success')));
- if(duplicate){log('previous_dispatch_exists',{pr:pr.number,mergeSha:decision.mergeSha});return;}
+ const attempts=(history.workflow_runs||[]).filter(item=>item.head_sha===releaseSha);
+ const duplicate=attempts.some(item=>['queued','in_progress','waiting'].includes(item.status)||
+   (item.status==='completed'&&item.conclusion==='success'));
+ if(duplicate){log('previous_dispatch_exists',{pr:pr.number,releaseSha});return;}
+ // Bound unintended repeated actions when the same release consistently fails.
+ if(attempts.filter(item=>item.status==='completed'&&item.conclusion!=='success').length>=3){
+   log('release_attempt_limit_reached',{pr:pr.number,releaseSha});return;
+ }
  await api('/actions/workflows/deploy-education.yml/dispatches',{method:'POST',body:JSON.stringify({
-  ref:'main',inputs:{release_branch_ref:decision.branch,release_task_id:decision.taskId,release_sha:decision.mergeSha}
+  ref:'main',inputs:{release_branch_ref:branch,release_task_id:decision.taskId,release_sha:releaseSha}
  })});
- log('guarded_release_dispatched',{pr:pr.number,mergeSha:decision.mergeSha,sourceSha:decision.sourceSha,
-  branch:decision.branch,taskId:decision.taskId,verification:'pending'});
+ log('guarded_release_dispatched',{pr:pr.number,mergeSha:decision.mergeSha,releaseSha,
+   sourceSha:decision.sourceSha,branch,taskId:decision.taskId,verification:'pending',event:eventName});
 }
 if(process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
  main().catch(error=>{console.error(error);process.exitCode=1});

@@ -8,7 +8,7 @@
 import { fetchDomeggookItem, PROVIDER } from './domeggook-import.js';
 import { raiseAlert } from './ops-alerts.js';
 
-const ENDPOINT = 'https://domeggook.com/ssl/api/';
+const ENDPOINT = 'https://www.domeggook.com/ssl/api/';
 const DEFAULT_ITEM_TEMPLATE = '{market}||P||{opt}|{qty}||{sellerMemo}||{deliMemo}';
 
 /**
@@ -32,9 +32,18 @@ const TRACK_INTERVAL_MS = 60 * 60 * 1000;
 const isoNow = () => new Date().toISOString();
 const pipeSafe = (v, max = 120) => String(v ?? '').replace(/[|\r\n]/g, ' ').trim().slice(0, max);
 
+/** The supplier confirms Private API is approved for one member only.
+ * Compare the separately provisioned approved account secret; never disclose identifiers. */
+export function approvedMemberBindingReady(env) {
+  const configured = String(env?.DOMEMAE_USER_ID || '').trim();
+  const approved = String(env?.DOMEMAE_APPROVED_MEMBER_ID || '').trim();
+  return Boolean(configured && approved && configured === approved);
+}
+
 export function autoOrderEnabled(env) {
   return String(env?.DOMEGGOOK_AUTO_ORDER_ENABLED || '').toLowerCase() === 'true'
-    && Boolean(env.DOMEMAE_API_KEY && env.DOMEMAE_USER_ID && env.DOMEMAE_PASSWORD);
+    && Boolean(env?.DOMEMAE_API_KEY && env?.DOMEMAE_USER_ID && env?.DOMEMAE_PASSWORD)
+    && approvedMemberBindingReady(env);
 }
 
 function redact(text, env) {
@@ -45,34 +54,67 @@ function redact(text, env) {
 
 async function call(env, params, fetchImpl, method = 'POST') {
   const body = new URLSearchParams({ aid: env.DOMEMAE_API_KEY, om: 'json', ...params });
+  // Never silently follow a redirect for a paid order: some redirects convert POST into GET.
   const res = method === 'GET'
-    ? await fetchImpl(`${ENDPOINT}?${body}`, { headers: { accept: 'application/json' } })
-    : await fetchImpl(ENDPOINT, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' }, body });
+    ? await fetchImpl(`${ENDPOINT}?${body}`, { headers: { accept: 'application/json' }, redirect: 'error' })
+    : await fetchImpl(ENDPOINT, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' }, body, redirect: 'error' });
   const text = await res.text();
   let payload = null; try { payload = JSON.parse(text); } catch {}
   const root = payload?.domeggook && typeof payload.domeggook === 'object' ? payload.domeggook : payload;
-  return { ok: res.ok && Boolean(root), status: res.status, root: root || {}, raw: text.slice(0, 300) };
+  return { ok: res.ok && Boolean(root), status: res.status, root: root || {},
+    parsedJson: Boolean(payload && typeof payload === 'object') };
 }
 
 function apiError(r, env) {
   const e = r.root?.errors || r.root?.error;
   if (e) return redact(e.message || e.msg || JSON.stringify(e), env);
-  if (!r.ok) return redact(`HTTP ${r.status} ${r.raw}`, env);
+  // The supplier may return HTTP 200 with its failure string only in result (e.g. '회원 오류').
+  const result = String(r.root?.result ?? '').trim();
+  if (result && !['SUCCESS', 'TRUE', '1'].includes(result.toUpperCase())) return redact(result, env);
+  if (!r.ok) return `HTTP ${r.status} (API 응답 확인 필요)`;
   return '';
+}
+
+/** Fixed-value, secret-free diagnostic facts for failed setLogin only.
+ * No API response body, user ID, credentials, session or e-money amount is stored. */
+export function safeDomeggookLoginDiagnostic(env, response) {
+  const rawResult = String(response?.root?.result ?? '').trim().toLowerCase();
+  const supplierResult = rawResult === 'true' || rawResult === '1' || rawResult === 'success'
+    ? 'success' : rawResult === 'false' ? 'false' : rawResult ? 'other' : 'missing';
+  const configuredIp = String(env?.DOMEGGOOK_CLIENT_IP ?? '').trim();
+  const clientIpMode = !configuredIp ? 'loopback-fallback'
+    : /^(127\.|::1$|0:0:0:0:0:0:0:0$)/.test(configuredIp) ? 'loopback-configured' : 'configured';
+  return {
+    httpStatus: Number.isInteger(response?.status) && response.status >= 100 && response.status <= 599 ? response.status : null,
+    jsonParsed: response?.parsedJson === true,
+    supplierResult,
+    clientIpMode
+  };
 }
 
 export async function login(env, fetchImpl = fetch) {
   const r = await call(env, { ver: '4.1', mode: 'setLogin', id: env.DOMEMAE_USER_ID, pw: env.DOMEMAE_PASSWORD, loginKeep: 'off', ip: env.DOMEGGOOK_CLIENT_IP || '127.0.0.1', device: 'Third Party' }, fetchImpl);
   const sId = r.root?.sId;
-  if (!sId) throw new Error(`도매꾹 로그인 실패: ${apiError(r, env) || '세션 없음'}`);
-  // 로그인 응답의 회원 ID를 이후 호출에 쓴다(SNS 연동 계정은 입력 ID와 실제 회원 ID(sns@…)가 다를 수 있음 → '회원오류').
-  return { id: String(r.root?.id || env.DOMEMAE_USER_ID), sId: String(sId) };
+  if (!r.ok || apiError(r, env) || !sId || !String(r.root?.id || '').trim()) {
+    const error = new Error(`도매꾹 로그인 실패: ${apiError(r, env) || '인증 결과/회원 ID/세션 불명'}`);
+    error.safeDiagnostic = safeDomeggookLoginDiagnostic(env, r);
+    throw error;
+  }
+  // Deny any session bound to another member even when the supplier returned success.
+  // The vendor-approved account ID is set only in a Cloudflare secret.
+  if (!approvedMemberBindingReady(env) || String(r.root.id).trim() !== String(env.DOMEMAE_APPROVED_MEMBER_ID).trim())
+    throw new Error('도매꾹 Private API 승인 회원과 로그인 회원이 일치하지 않습니다');
+  return { id: String(r.root.id), sId: String(sId) };
 }
 
 export async function emoneyBalance(env, session, fetchImpl = fetch) {
   const r = await call(env, { ver: '1.0', mode: 'getMyAsset', id: session.id, sId: session.sId }, fetchImpl);
-  const total = Number(r.root?.data?.currEmoney?.total);
-  return Number.isFinite(total) ? total : null;
+  const error = apiError(r, env);
+  if (error) throw new Error(`도매꾹 이머니 조회 실패: ${error}`);
+  const raw = r.root?.data?.currEmoney?.total;
+  if (raw === undefined || raw === null || raw === '') return null;
+  const total = Number(raw);
+  return Number.isFinite(total) && total >= 0 ? total : null;
 }
 
 export function buildItemValue(env, { market, qty, deliMemo, opt = '00' }) {
@@ -143,8 +185,11 @@ export async function placeSupplierOrders(env, fetchImpl = fetch, limit = 3) {
     if (item.inventory !== null && item.inventory < o.quantity) { await fail('ITEM_STOCK', `공급처 재고 ${item.inventory}개 — 고객 환불 필요`); continue; }
     const cost = (item.cost || 0) * o.quantity + (item.shipping || 0);
     if (!item.cost || cost > Number(o.seller_settlement_amount || 0)) { await fail('NEGATIVE_MARGIN', `공급비 ${cost.toLocaleString('ko-KR')}원이 정산액을 넘어 발주를 멈췄습니다`); continue; }
-    const balance = await emoneyBalance(env, session, fetchImpl);
-    if (balance !== null && balance < cost) {
+    let balance;
+    try { balance = await emoneyBalance(env, session, fetchImpl); }
+    catch (error) { await fail('EMONEY_PROBE', redact(error.message, env)); continue; }
+    if (balance === null) { await fail('EMONEY_UNKNOWN', '이머니 잔액 미확인: 발주를 중단했습니다'); continue; }
+    if (balance < cost) {
       await setRow(env, soId, { status: 'failed', last_error: `EMONEY_SHORT: 잔액 ${balance} < 필요 ${cost}` });
       await raiseAlert(env, { severity: 'error', kind: 'supply.emoney_short', orderId: o.id, message: `도매꾹 이머니 충전 필요: 잔액 ${balance.toLocaleString('ko-KR')}원, 이 주문에 ${cost.toLocaleString('ko-KR')}원 필요. 충전되면 자동으로 발주합니다.` });
       summary.failed += 1;
@@ -168,10 +213,18 @@ export async function placeSupplierOrders(env, fetchImpl = fetch, limit = 3) {
     const orderNoRaw = r.root?.order?.orderNo ?? (Array.isArray(r.root?.order) ? r.root.order[0]?.orderNo : undefined);
     if (String(r.root?.result || '').toUpperCase() !== 'SUCCESS' || !orderNoRaw) {
       // 옵션 형식 진단용: 해당 상품의 주문옵션 원문(공개 상품정보)을 남긴다.
+      const error = apiError(r, env) || `응답 ${r.status}`;
+      const memberError = /회원\s*오류|member\s*error|invalid\s*(member|user|login)|인증\s*오류/i.test(error);
+      // Only safe diagnostic metadata. NEVER persist aid, sId, password, delivery PII or full request/response.
       await env.DB.prepare('INSERT INTO supplier_connector_checks (id,provider_id,check_type,external_ref,result_status,metadata_json,checked_at) VALUES (?,?,?,?,?,?,?)')
-        .bind(`chk_${crypto.randomUUID().replaceAll('-', '')}`, 'domemae-official', 'order_readiness', 'probe:selectOpt', 'failed',
-          JSON.stringify({ itemNo: o.supply_item_no, sent: buildItemValue(env, { market: item.market, qty: o.quantity, deliMemo: '', opt: chooseOptionCode(item.selectOpt) }), selectOpt: item.selectOpt || '', error: apiError(r, env) }).slice(0, 4000), isoNow()).run().catch(() => {});
-      await fail('SET_ORDER', apiError(r, env) || `응답 ${r.status}`); continue;
+        .bind(`chk_${crypto.randomUUID().replaceAll('-', '')}`, 'domemae-official', 'order_readiness', 'probe:setOrder', 'failed',
+          JSON.stringify({ mode: 'setOrder', ver: '4.3', itemNo: o.supply_item_no, market: item.market, httpStatus: r.status,
+            responseResult: redact(String(r.root?.result || ''), env), loggedInIdDiffersFromConfigured: session.id !== env.DOMEMAE_USER_ID,
+            sessionPresent: Boolean(session.sId), apiKeyConfigured: Boolean(env.DOMEMAE_API_KEY),
+            optionCode: chooseOptionCode(item.selectOpt), error }).slice(0, 4000), isoNow()).run().catch(() => {});
+      await fail(memberError ? 'AUTH_MEMBER_ERROR' : 'SET_ORDER', error);
+      if (memberError) { summary.error = 'member-auth'; break; } // do not repeat bad authorization across paid orders
+      continue;
     }
     const supplierOrderNo = String(orderNoRaw);
     await setRow(env, soId, { status: 'placed', supplier_order_no: supplierOrderNo, checked_at: isoNow() });
@@ -234,23 +287,65 @@ export async function trackSupplierOrders(env, fetchImpl = fetch, limit = 10) {
   return summary;
 }
 
-/** 로그인·이머니 잔액 확인(6시간 1회, 비밀값·세션은 기록하지 않음). 자동발주 준비상태를 운영자가 볼 수 있게 남긴다. */
-export async function probeDomeggookLogin(env, fetchImpl = fetch) {
-  if (!autoOrderEnabled(env) || !env.DB) return { skipped: 'disabled' };
+/** Read-only authentication probe independent of the paid setOrder switch.
+ * This never invokes setOrder, setOrdDeny or customer/PII endpoints. */
+export function readonlyAuthProbeEnabled(env) {
+  return Boolean(env?.DB && env?.DOMEMAE_API_KEY && env?.DOMEMAE_USER_ID && env?.DOMEMAE_PASSWORD)
+    && approvedMemberBindingReady(env)
+    && (autoOrderEnabled(env) || String(env.DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED || '').toLowerCase() === 'true');
+}
+
+/** An allowlist of error codes, never a persisted supplier response or credential. */
+export function classifySupplierAuthError(message, stage = 'login') {
+  const value = String(message || '').slice(0, 500);
+  if (/ACCOUNT_BINDING_MISMATCH|승인 회원과 로그인 회원이 일치하지 않습니다/i.test(value)) return 'ACCOUNT_BINDING_MISMATCH';
+  if (/(SNS|소셜|카카오|네이버|애플)/i.test(value) && /(비밀번호|인증|로그인|오류)/i.test(value)) return 'SNS_PASSWORD_REQUIRED';
+  if (/(비밀번호|패스워드|password|wrong pw|invalid pw|비번)/i.test(value)) return 'PASSWORD_REJECTED';
+  if (/(회원\s*오류|member\s*error|invalid member)/i.test(value)) return 'MEMBER_ERROR';
+  if (/(권한|승인|not authorized|unauthorized|permission denied)/i.test(value)) return 'PRIVATE_API_PERMISSION';
+  if (/(ip\s*(?:오류|제한)|아이피|접속\s*IP)/i.test(value)) return 'CLIENT_IP_REJECTED';
+  if (stage !== 'login') return 'ASSET_PROBE_FAILED';
+  if (/(false|error|실패|invalid|bad response)/i.test(value)) return 'LOGIN_REJECTED';
+  return 'LOGIN_FAILED';
+}
+
+/** Login and getMyAsset ONLY, max once per 6h. No account identifiers, sessions, secrets,
+ * raw supplier errors, balance amounts or buyer PII are retained in the probe evidence. */
+export async function probeDomeggookLogin(env, fetchImpl = fetch, { operatorRetry = false } = {}) {
+  if (!readonlyAuthProbeEnabled(env)) return { skipped: 'disabled-or-no-credentials' };
   const last = await env.DB.prepare("SELECT checked_at FROM supplier_connector_checks WHERE external_ref='probe:login' ORDER BY checked_at DESC LIMIT 1").first().catch(() => null);
-  if (last && Date.now() - Date.parse(last.checked_at) < 6 * 60 * 60 * 1000) return { skipped: 'recent' };
-  let ok = false; let meta = {};
+  const cooldown = operatorRetry ? 15 * 60 * 1000 : 6 * 60 * 60 * 1000;
+  const lastTime = last?.checked_at ? Date.parse(last.checked_at) : NaN;
+  if (Number.isFinite(lastTime) && Date.now() - lastTime < cooldown)
+    return { skipped: 'recent', nextEligibleAt: new Date(lastTime + cooldown).toISOString() };
+  let ok = false, stage = 'login', meta = {};
   try {
     const session = await login(env, fetchImpl);
+    stage = 'asset';
     const balance = await emoneyBalance(env, session, fetchImpl);
-    ok = true; meta = { login: 'ok', emoney: balance };
+    if (balance === null) throw new Error('asset-balance-unavailable');
+    const emoneyLow = balance < Number(env.DOMEGGOOK_EMONEY_MIN || 30000);
+    ok = true;
+    meta = { login: 'ok', asset: 'ok', loginIdMatchesConfigured: session.id === env.DOMEMAE_USER_ID, emoneyLow };
     await env.DB.prepare("UPDATE mall_ops_alerts SET status='resolved',resolved_at=?,updated_at=? WHERE status='open' AND kind='supply.login_failed'").bind(isoNow(), isoNow()).run().catch(() => {});
-    if (balance !== null && balance < Number(env.DOMEGGOOK_EMONEY_MIN || 30000)) {
-      await raiseAlert(env, { severity: 'warn', kind: 'supply.emoney_low', message: `도매꾹 이머니 잔액 ${balance.toLocaleString('ko-KR')}원 — 자동발주를 위해 충전을 권장합니다.` });
+    if (emoneyLow) {
+      await raiseAlert(env, { severity: 'warn', kind: 'supply.emoney_low', message: '도매꾹 이머니 잔액이 운영 최소 기준 미만입니다. 유상 자동발주는 OFF 상태를 유지합니다.' });
     }
   } catch (error) {
-    meta = { login: 'failed', error: redact(error.message, env) };
-    await raiseAlert(env, { severity: 'error', kind: 'supply.login_failed', message: meta.error });
+    // Vendor error text can contain identifiers/credentials: persist only a bounded category.
+    // Only persist a bounded category. Never store the supplier's error body.
+    meta = { login: stage === 'login' ? 'failed' : 'ok', asset: stage === 'asset' ? 'failed' : 'not-checked',
+      errorCode: classifySupplierAuthError(error?.message, stage) };
+    if (stage === 'login' && error?.safeDiagnostic) {
+      // Safe facts only; never persist raw result or API parameters.
+      meta.diagnostic = safeDomeggookLoginDiagnostic(env, {
+        status: error.safeDiagnostic.httpStatus, parsedJson: error.safeDiagnostic.jsonParsed,
+        root: { result: error.safeDiagnostic.supplierResult === 'success' ? 'true'
+          : error.safeDiagnostic.supplierResult === 'false' ? 'false'
+          : error.safeDiagnostic.supplierResult === 'other' ? 'other' : '' }
+      });
+    }
+    await raiseAlert(env, { severity: 'error', kind: 'supply.login_failed', message: `도매꾹 읽기 전용 인증 점검 실패: ${meta.errorCode}` });
   }
   await env.DB.prepare('INSERT INTO supplier_connector_checks (id,provider_id,check_type,external_ref,result_status,metadata_json,checked_at) VALUES (?,?,?,?,?,?,?)')
     .bind(`chk_${crypto.randomUUID().replaceAll('-', '')}`, 'domemae-official', 'order_readiness', 'probe:login', ok ? 'ok' : 'failed', JSON.stringify(meta), isoNow()).run().catch(() => {});

@@ -251,6 +251,10 @@ const controlApiTouched=sourceFiles.some(file=>[
 // filter for Site Core. Use only source paths owned by the existing Site Core
 // workflow and only its receipt-bound, staged, guarded workflow_dispatch.
 const sharedSiteTouched=sourceFiles.some(file=>
+  // AI Ops source and its shared readable-command stylesheet ship in Site Core.
+  // A token-mediated protected merge does not trigger main push workflows.
+  // Dispatch only the existing receipt-bound Site Core lane for these UI assets.
+  ['ai-ops-admin.js','admin-readable-command.css'].includes(file)||
   // The guarded Site Core release executes these read-only verification scripts.
   // Source-pinned immediate recovery must dispatch the release even when a
   // GITHUB_TOKEN merge does not emit an ordinary main push workflow event.

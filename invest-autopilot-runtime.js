@@ -4,12 +4,14 @@ import { resolveWorkspacePrincipal, auditPrincipal } from './ekodi-principal.js'
 import { cors, json } from './invest-automation-runtime.js';
 import {
  AUTOPILOT_DEFAULT_STATE,AUTOPILOT_POLICY_FIELDS,AUTOPILOT_HARD_LIMITS,ALLOCATION_EXAMPLE,AUTOPILOT_BROKER_STATUS,DEFAULT_ACCEPTANCE,
- investOwnerEmail,emptyAutopilotPolicy,normalizeAutopilotPolicy,missingPolicyFields,policyFingerprint,policyChangeRequiresReapproval,
+ INVEST_DEFAULT_OWNER,investOwnerEmail,emptyAutopilotPolicy,normalizeAutopilotPolicy,missingPolicyFields,policyFingerprint,policyChangeRequiresReapproval,
  transitionAutopilotState,evaluateLiveActivation,evaluateAutopilotOrder,evaluateAutopilotSentinel,createPaperBroker,buildAutopilotReport,
  autopilotReportPeriods,periodPerformance,kstDay
 } from './invest-autopilot-core.js';
 import { buildChannelEnvelope, dispatchChannelEnvelope } from './messenger-channel-adapters.js';
 import { stepUpStatus, verifyStepUp, revokeStepUp, stepUpSession } from './invest-step-up.js';
+import { BROKER_ADAPTERS, INVEST_PERMISSION, evaluateBrokerReadiness } from './invest-market-core.js';
+import { verifiedOwnerAal2 } from './invest-owner-mfa.js';
 
 const clean=(value,max=240)=>String(value??'').trim().slice(0,max);
 const nowIso=()=>new Date().toISOString();
@@ -119,6 +121,43 @@ async function status(request,env,ctx){
   latestReport:noticeRows.find(n=>n.kind==='weekly')||noticeRows.find(n=>n.kind==='monthly')||null,
   alerts:noticeRows.filter(n=>n.kind==='alert').slice(0,5),
   execution:{liveOrders:false,reason:'LIVE_EXECUTION_REQUIRES_SEPARATE_GOVERNED_APPROVAL'}
+ });
+}
+
+
+async function ownerLiveReadiness(request,env,ctx){
+ const brokerId=clean(new URL(request.url).searchParams.get('broker')||'toss',30);
+ if(!Object.hasOwn(BROKER_ADAPTERS,brokerId))return json(request,env,{error:'BROKER_NOT_REGISTERED'},400);
+ const account=await loadAccount(env,ctx);
+ const validation=await paperValidation(env,ctx,account);
+ // Only independently verified server evidence may change these flags. A UI selection is not broker authorization.
+ const broker=evaluateBrokerReadiness({
+  brokerId,permission:INVEST_PERMISSION.READ_ONLY,connectionStatus:'disconnected',
+  accountReferencePresent:false,authorizationEvidencePresent:false,
+  marketDataReady:false,marketDataFresh:false,
+  riskPolicyReady:missingPolicyFields(account.policy).length===0,
+  killSwitchReady:true,auditReady:true,managedInvestmentServiceEnabled:false,
+  globalLiveTradingEnabled:false,brokerLiveTradingEnabled:false
+ });
+ const activation=evaluateLiveActivation(liveGates(account,validation));
+ // The preceding ownerContext has already validated this exact bearer with Supabase Auth.
+ const strongMfaVerified=verifiedOwnerAal2(request,ctx.identity.id);
+ await auditPrincipal(env,ctx.principal,'invest:owner-live-readiness');
+ return json(request,env,{
+  schema:'ekodi.invest.owner-live-readiness.v1',scope:'owner_self_funds_only',
+  workspaceVisible:true,ownerVerified:true,secondFactorVerified:true,
+  strongMfa:{requiredForLive:true,provider:'supabase-totp',verified:strongMfaVerified,level:strongMfaVerified?'aal2':'not_aal2'},
+  liveExecutionEnabled:false,liveOrdersAccepted:false,
+  state:account.state,
+  broker:{id:broker.brokerId,name:broker.brokerName,permission:broker.permission,
+   limitedLivePrerequisitesReady:broker.limitedLivePrerequisitesReady,
+   liveEligible:broker.liveEligible,blockers:broker.liveBlockers,
+   checks:broker.checks,credentialsIncluded:false},
+  activation:{eligible:activation.eligible,blockers:activation.blockers},
+  requirements:['Supabase OTP 2차 인증 AAL2 완료','본인 명의 증권사 계정과 공식 API 권한','검증된 최신 시세·주문 조회 및 장부 대사',
+   '투자금·1회 주문·손실 한도 설정','최소 60일 모의투자와 검증된 전략 평가',
+   '비용·위험 고지와 별도 명시적 실거래 승인','별도 승인된 플랫폼·증권사 실거래 잠금 해제'],
+  message:'최고관리자 전용 실거래 준비 화면입니다. 실제 주문 전송은 필수 증빙과 별도 보호 배포가 완료될 때까지 차단됩니다.'
  });
 }
 
@@ -360,6 +399,12 @@ export async function handleInvestAutopilotApi(request,env){
  }
  const stepUp=await stepUpSession(request,env,ctx);
  if(!stepUp.verified)return json(request,env,{error:'STEP_UP_REQUIRED'},403);
+ // Live control is pinned to the named highest administrator, regardless of env override.
+ if(path.startsWith('/v1/invest/autopilot/live/')&&String(ctx.identity.email||'').trim().toLowerCase()!==INVEST_DEFAULT_OWNER)
+  return json(request,env,{error:'LIVE_OWNER_ONLY'},403);
+ if(path==='/v1/invest/autopilot/live/readiness'&&request.method==='GET')return ownerLiveReadiness(request,env,ctx);
+ if(path==='/v1/invest/autopilot/live/orders'&&request.method==='POST')
+  return json(request,env,{error:'LIVE_EXECUTION_LOCKED',executionPerformed:false,reason:'BROKER_AND_POLICY_GATES_NOT_VERIFIED'},423);
  if(path==='/v1/invest/autopilot/status'&&request.method==='GET')return status(request,env,ctx);
  if(path==='/v1/invest/autopilot/policy'&&request.method==='PUT')return updatePolicy(request,env,ctx);
  if(path==='/v1/invest/autopilot/state'&&request.method==='POST')return changeState(request,env,ctx);

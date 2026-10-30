@@ -3,6 +3,7 @@ import { lanesForChangedFiles } from './lib/worker-bundle-graph.mjs';
 import { requiresHumanAuthorSchemaRelease, requiresCreatorAuthorRelease, releaseSpecForHumanAuthorSchema, releaseSpecForCreatorAuthor } from './lib/human-author-release-lane.mjs';
 import { unapprovedReleaseRunIds, staleParkedReleaseRunIds } from './lib/converge-unapproved-runs.mjs';
 import { fileURLToPath } from 'node:url';
+import { safeGitHubHttpDiagnostic } from './github-http-diagnostic.mjs';
 const repo=String(process.env.GITHUB_REPOSITORY||'').trim();
 const token=String(process.env.GH_TOKEN||'').trim();
 const branch=String(process.env.GITHUB_REF_NAME||'').trim();
@@ -14,6 +15,7 @@ function fail(m){throw new Error('[EKODI][ORCH-AUTO-MERGE] '+m)}
 async function api(path,init={}){
   const r=await fetch('https://api.github.com/repos/'+repo+path,{...init,headers:{authorization:`Bearer ${token}`,accept:'application/vnd.github+json','x-github-api-version':'2022-11-28','content-type':'application/json',...(init.headers||{})}});
   const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={raw:text}};
+  if(!r.ok && [401,403,429].includes(r.status)) console.error(safeGitHubHttpDiagnostic({status:r.status,headers:r.headers,data}));
   return {r,data};
 }
 async function statusMap(sha){
@@ -223,6 +225,8 @@ const controlApiTouched=changedFiles.some(file=>
   'mission-control-entry-worker.js',
   // Search Visibility evidence D1 API is part of Control API deployment ownership.
   'search-visibility-control.js',
+  // Read-only first-party Search Console reporter is imported by Search Visibility Control API.
+  'google-search-console-readonly.js',
   // Church Live host authority and runtime tenant mapping execute in Control API.
   // A token-mediated merge skips main push; dispatch the guarded API on these edits.
   'realtime-control.js',
@@ -333,6 +337,7 @@ const booksTouched=changedFiles.some(file=>
   file.startsWith('books/')||
   file==='books-worker.js'||
   file==='books-commerce.js'||
+  file==='books-audiobook.js'||
   file==='migrations/202610271400_books_direct_commerce.sql'||
   file==='wrangler.books.toml'||
   file==='deploy/manifests/books.worker.json'||
@@ -388,6 +393,10 @@ const shellRuntimeTouched=changedFiles.some(file=>
    'scripts/converge-orchestrated-pr-merge.mjs'].includes(file)
 );
 const sharedSiteTouched=changedFiles.some(file=>
+  // AI Ops source and its shared readable-command stylesheet ship in Site Core.
+  // A token-mediated protected merge does not trigger main push workflows.
+  // Dispatch only the existing receipt-bound Site Core lane for these UI assets.
+  ['ai-ops-admin.js','admin-readable-command.css'].includes(file)||
   // MarketingAI admin console assets are served only by Site Core (single production owner).
   // Token merges skip push workflows, so these must dispatch Site Core explicitly (2026-10-23).
   ['marketing-ai-admin.js','marketing-ai-admin.css','marketing-ai-admin-live-ops.js','marketing-ai-admin-live-ops.css','marketing-ai-admin-posting-status.js','marketing-ai-channel-manager.js','test/marketing-admin-site-core-dispatch-20261023.test.mjs'].includes(file)||

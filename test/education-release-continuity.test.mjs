@@ -28,7 +28,7 @@ test('Education-only changed path is explicit and guarded',()=>{
   assert.equal(educationReleaseChanged([]),false);
 });
 
-test('Only a merged exact source on current main can dispatch',()=>{
+test('Legacy workflow_run decision accepts only its exact source on current main',()=>{
   const accepted=approvedEducationMerge({event,pr,files:['education/study/ai-bootcamp/index.html'],mainSha:merged});
   assert.deepEqual(accepted,{ready:true,reason:'verified_source_and_main',branch,
     taskId:'orch_recovery_08f0272aefb8910b6d5c5b2578160cf0',mergeSha:merged,sourceSha:source,pr:4689});
@@ -49,14 +49,16 @@ test('Final approval remains required by the existing canonical Orchestrator rec
   const runner=read('scripts/education-release-continuity.mjs');
   const workflow=read('.github/workflows/education-release-continuity.yml');
   const deploy=read('.github/workflows/deploy-education.yml');
-  assert.match(runner,/verifyOrchestratorReleaseReceipt\(branch/);
+  assert.match(runner,/receiptVerifier:verifyOrchestratorReleaseReceipt/);
   assert.match(runner,/status\.statuses/);
   assert.match(runner,/no_education_changes/);
-  assert.match(runner,/merge_commit_sha/);
+  assert.match(runner,/verifyEducationReleaseSnapshot/);
   assert.match(runner,/event\.workflow_run/);
-  assert.match(runner,/release_sha:decision\.mergeSha/);
+  assert.match(runner,/release_sha:releaseSha/);
   assert.doesNotMatch(runner,/wrangler\s+(deploy|publish)/);
   assert.match(workflow,/workflow_run:/);
+  assert.match(workflow,/schedule:/);
+  assert.match(workflow,/17 \* \* \* \*/);
   assert.match(workflow,/EKODI Orchestrated PR Convergent Merge/);
   assert.match(workflow,/ref: main/);
   assert.match(workflow,/GH_TOKEN: \$\{\{ github\.token \}\}/);
@@ -66,7 +68,7 @@ test('Final approval remains required by the existing canonical Orchestrator rec
   assert.match(deploy,/Confirm final-approved merged release provenance/);
   assert.match(deploy,/scripts\/preflight-merged-release\.mjs/);
   assert.match(deploy,/REQUESTED_SHA.*GITHUB_SHA/);
-  assert.match(deploy,/gh api "repos\/\$GITHUB_REPOSITORY\/commits\/\$GITHUB_SHA\/pulls"/);
+  assert.match(deploy,/node scripts\/verify-education-release-snapshot\.mjs/);
   assert.match(deploy,/EKODI_RELEASE_BRANCH_REF/);
   assert.match(deploy,/Validate AI bootcamp native verification harness/);
   assert.match(deploy,/EKODI AI Orchestration Gate/);
