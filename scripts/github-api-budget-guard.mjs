@@ -67,13 +67,23 @@ export function createGitHubBudgetClient({
     if (!/^\/(?!\/)[\w?=./&%+,:-]+$/.test(route) || route.includes('..'))
       throw new Error('GitHub API path outside canonical repository is forbidden');
     const method = String(init.method || 'GET').toUpperCase();
+    // Headers() normalizes spelling/casing and detects privileged credentials
+    // even when callers provide a Headers object instead of a plain object.
+    const callerHeaders = new Headers(init.headers || {});
+    const callerHeaderNames = [...callerHeaders.keys()];
+    if (callerHeaderNames.some(name =>
+      /^(authorization|proxy-authorization|accept|if-none-match|x-github-api-version)$/i.test(name)))
+      throw new Error('GitHub client does not allow overriding authenticated or conditional headers');
     const nowMs = now();
     if (state.until > nowMs) {
       state.blocked++;
       onMetric({ type: 'blocked', reason: state.reason, retryAt: state.until });
       throw new GitHubRateDeferredError(state.until, 429, state.reason);
     }
-    const key = method === 'GET' && !init.body ? route : null;
+    // Extra headers can change provider response semantics and identity;
+    // never reuse a route-only validator or TTL entry for such requests.
+    const key = method === 'GET' && !init.body && callerHeaderNames.length === 0
+      ? route : null;
     if (key) {
       const cached = cache.get(key);
       if (cached?.expires > nowMs) {
@@ -91,11 +101,11 @@ export function createGitHubBudgetClient({
       const response = await fetchImpl('https://api.github.com/repos/' + repo + route, {
         ...init,
         headers: {
+          ...Object.fromEntries(callerHeaders),
           authorization: 'Bearer ' + token,
           accept: 'application/vnd.github+json',
           'x-github-api-version': '2022-11-28',
           ...(init.body ? { 'content-type': 'application/json' } : {}),
-          ...(init.headers || {}),
           ...(validator ? { 'if-none-match': validator.etag } : {}),
         },
         signal: init.signal || AbortSignal.timeout(12000),
