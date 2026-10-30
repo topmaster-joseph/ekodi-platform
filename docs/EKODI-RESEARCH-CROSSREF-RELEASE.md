@@ -40,3 +40,8 @@
 - GitHub Actions generated `action_required` workflow placeholders after bot-issued PR creation. This **documentation-only** commit on the official recovery branch requests authentic PR CI; no executable code, identity, permission, API key, production flag, payment, rollback or approval policy is changed.
 - Prior source CI showed `test` and `EKODI AI Orchestration Gate` status successes, but an earlier draft PR reconciliation step failed on a draft-state guard. Revalidate against the current recovery merge SHA; do not equate past head status with accepted merge status.
 - The owner removed the per-PR Human Gate on 2026-10-19 (see `docs/OWNER-DECISION-REMOVE-PER-PR-HUMAN-GATE-20261019.md`). No protected merge, staging receipt or successful production canary is asserted. Maintain the release stop conditions listed above.
+
+## Post-main-synchronization CI renewal
+- Official convergence synchronized the recovery branch with current protected main, producing synchronization head `fef121188218ffebe3abe72a1124842b9445f37e`. The bot-created pull-request checks returned `action_required` without executing jobs.
+- This documentation-only renewal requests authentic required checks on the latest synchronized recovery head, without modifying the original executable research source `96cbfa181c3d429ddfa9d494125fc9f0b38bbc87` or removing protected merge, staging, production verification or rollback requirements.
+- Do not mistake source-level test success for verified checks on a newer synchronized head. Production still requires independently evidenced successful release and canonical Research browser proof.
