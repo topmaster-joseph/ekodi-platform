@@ -127,3 +127,10 @@ test('draft PR skips merge-only reconciliation without weakening ready PR valida
     new URL('../scripts/recover-required-status-drift.mjs',import.meta.url),'utf8');
   assert.ok(src.indexOf('if (draftPrNoop(initialPr, head))') < src.indexOf('const by = await waitForVerifiedHeadStatus'));
 });
+
+test('draft-to-ready event reruns mandatory merge status verification',()=>{
+  const workflow=readFileSync(new URL('../.github/workflows/ci.yml',import.meta.url),'utf8');
+  assert.match(workflow,/types: \[opened, synchronize, reopened, ready_for_review\]/);
+  assert.match(workflow,/name: Recover regenerated merge required statuses/);
+  assert.match(workflow,/Revoke premature legacy success if late recovery step fails/);
+});
