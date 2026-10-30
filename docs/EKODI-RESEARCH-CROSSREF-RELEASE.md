@@ -33,3 +33,10 @@
 - Author identity resolution/verified ORCID link and DOI deduplication.
 - Evidence table for primary studies, method/design and theoretical contribution; human-checked references.
 - Reproducible statistical workspaces, secure datasets and consent/IRB review before storing real field research.
+
+## Official EKODI recovery and CI renewal (2026-10-30)
+- The initial implementation PR #7058 has been superseded, not merged, by EKODI Orchestrator recovery PR #7073.
+- Authoritative implementation source is immutable SHA `96cbfa181c3d429ddfa9d494125fc9f0b38bbc87` under task `orch_recovery_96cbfa181c3d429ddfa9d494125fc9f0`.
+- GitHub Actions generated `action_required` workflow placeholders after bot-issued PR creation. This **documentation-only** commit on the official recovery branch requests authentic PR CI; no executable code, identity, permission, API key, production flag, payment, rollback or approval policy is changed.
+- Prior source CI showed `test` and `EKODI AI Orchestration Gate` status successes, but an earlier draft PR reconciliation step failed on a draft-state guard. Revalidate against the current recovery merge SHA; do not equate past head status with accepted merge status.
+- No exact-SHA owner Human Gate approval, protected merge, staging receipt or successful production canary is asserted. Maintain the release stop conditions listed above.
