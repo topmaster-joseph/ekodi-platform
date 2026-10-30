@@ -28,6 +28,25 @@ export const EKODI_FLEET_STATUS = Object.freeze({
 
 const DEFAULT_FRESHNESS_MS = 2 * 60 * 60 * 1000; // 2h
 
+// The canonical registry is the only source of expected live services.
+// Beta/preparing/retired entries are visible elsewhere but must not trigger
+// a false outage in this read-only production fleet view.
+export function projectLiveFleetRegistry(services = []) {
+  const seen = new Set();
+  return (Array.isArray(services) ? services : []).flatMap(service => {
+    const id = typeof service?.id === 'string' ? service.id.trim() : '';
+    if (!id || seen.has(id) || service.productionVerified !== true ||
+      service.status !== 'live') return [];
+    seen.add(id);
+    return [{
+      id,
+      name: typeof service.name === 'string' ? service.name : id,
+      url: typeof service.url === 'string' ? service.url : null,
+      status: 'live',
+    }];
+  });
+}
+
 // Normalize the many status spellings into four operator-facing states.
 const STATUS_ALIASES = Object.freeze({
   online: 'online', ok: 'online', healthy: 'online', up: 'online', live: 'online', pass: 'online', green: 'online',
