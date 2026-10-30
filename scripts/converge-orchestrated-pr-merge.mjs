@@ -225,6 +225,8 @@ const controlApiTouched=changedFiles.some(file=>
   'mission-control-entry-worker.js',
   // Search Visibility evidence D1 API is part of Control API deployment ownership.
   'search-visibility-control.js',
+  // Read-only first-party Search Console reporter is imported by Search Visibility Control API.
+  'google-search-console-readonly.js',
   // Church Live host authority and runtime tenant mapping execute in Control API.
   // A token-mediated merge skips main push; dispatch the guarded API on these edits.
   'realtime-control.js',
