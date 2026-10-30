@@ -158,3 +158,42 @@ test('quota exhausted after a cached ETag still fails closed',async()=>{
     e=>e instanceof GitHubRateDeferredError);
   assert.equal(calls,2,'no stale success or repeated quota requests');
 });
+
+test('user-supplied identity or conditional headers cannot override client token',async()=>{
+  const requests=[];
+  const client=createGitHubBudgetClient({...args,fetchImpl:async(_url,opts)=>{
+    requests.push(opts);return response(200,{ok:true},{etag:'"verified"'});
+  }});
+  for(const bad of [
+    {Authorization:'Bearer other-user'},
+    new Headers({'authorization':'Bearer alternate'}),
+    {'If-None-Match':'"fake-proof"'},
+    {Accept:'application/vnd.github.raw'},
+    {'X-GitHub-Api-Version':'1970-01-01'},
+    {'Proxy-Authorization':'Basic secret'},
+  ]) {
+    await assert.rejects(client.json('/pulls/12',{headers:bad}),/does not allow overriding/);
+  }
+  assert.equal(requests.length,0,'reject spoofed headers before network I/O');
+  await client.json('/pulls/12');
+  assert.equal(requests[0].headers.authorization,'Bearer unit-test-token');
+});
+
+test('custom-header GETs are never coalesced or validated from route-only ETags',async()=>{
+  const calls=[];
+  const client=createGitHubBudgetClient({...args,cacheMs:60000,fetchImpl:async(_url,opts)=>{
+    calls.push(opts.headers);
+    return response(200,{result:calls.length},{etag:'"same-route"'});
+  }});
+  const cached=await client.json('/pulls/15');
+  assert.equal((await client.json('/pulls/15')).result,cached.result);
+  const variant=await client.json('/pulls/15',{headers:{'x-ekodi-purpose':'one'}});
+  const other=await client.json('/pulls/15',{headers:{'x-ekodi-purpose':'two'}});
+  assert.equal(calls.length,3,'first route-only response coalesces only with itself');
+  assert.equal(variant.result,2);
+  assert.equal(other.result,3);
+  assert.equal(calls[1]['if-none-match'],undefined);
+  assert.equal(calls[2]['if-none-match'],undefined);
+  assert.equal(calls[1]['x-ekodi-purpose'],'one');
+  assert.equal(calls[2]['x-ekodi-purpose'],'two');
+});
