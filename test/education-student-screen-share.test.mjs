@@ -122,3 +122,21 @@ test('Education QR sharing pages and gateway respect consent and no-unapproved-h
  assert.match(studio,/screen-share\/">수강생 QR 화면 공유/);
  assert.doesNotMatch(client,/MediaRecorder|startRecording|captureStream|autoStartScreenShare|eval\(/);
 });
+
+
+test('canonical /edu service binding preserves native websocket handshake without reconstructing 101',async()=>{
+ const {routeCanonicalSurface}=await import('../canonical-surface-router.js');
+ const nativeUpgrade={status:101,webSocket:{id:'accepted'},headers:new Headers()};
+ const id='a'.repeat(32);let upstream=null;
+ const req=new Request('https://ekodi.kr/edu/study/live/screen-share/api/rooms/'+id+'/ws',{
+  headers:{upgrade:'websocket','sec-websocket-protocol':'ekodi-screen-v1, host.'+'a'.repeat(64)}
+ });
+ const actual=await routeCanonicalSurface(req,{
+  EDUCATION:{fetch:async request=>{upstream=request;return nativeUpgrade;}}
+ });
+ assert.equal(actual,nativeUpgrade,'websocket 101 must preserve attached Cloudflare native socket');
+ assert.equal(new URL(upstream.url).pathname,'/study/live/screen-share/api/rooms/'+id+'/ws');
+ assert.equal(upstream.headers.get('upgrade'),'websocket');
+ const canonical=await read('canonical-surface-router.js');
+ assert.match(canonical,/if\(response\.status===101&&response\.webSocket\)return response/);
+});
