@@ -375,6 +375,8 @@ async function verifyAiOpsStageWorkspace() {
   const root=page.locator('#aiOpsPanel');
   const stages=['overview','providers','sites','reports','command'];
   const targets={overview:'#aiOpsStageSummary',providers:'[data-ekodi-ai-provider-center]',sites:'.ai-ops-observe',reports:'.ai-evolution-block',command:'#aiChiefChat'};
+  const inventoryCard=root.locator('[data-ekodi-provider-card]');
+  await inventoryCard.waitFor({state:'attached',timeout:12000});
   await root.locator('[data-aiops-stage-tab]').first().waitFor({state:'visible',timeout:12000});
   if(await root.locator('[data-aiops-stage-tab]').count()!==5)throw new Error('AI Ops primary tab count is not five');
   for(const stage of stages){
@@ -386,6 +388,15 @@ async function verifyAiOpsStageWorkspace() {
         && panel.querySelector('[data-aiops-stage-tab="'+key+'"]')?.getAttribute('aria-pressed')==='true';
     },stage,{timeout:6000});
     await root.locator(targets[stage]).first().waitFor({state:'visible',timeout:12000});
+    // Infrastructure details must not dominate overview, but remain accessible
+    // next to Provider settings. This is live CSS visibility, not a DOM-only test.
+    const inventoryVisible=await inventoryCard.isVisible();
+    if((stage==='providers')!==inventoryVisible)
+      throw new Error('AI Ops infrastructure card staged visibility mismatch: '+stage);
+    if(stage==='providers'){
+      const summary=await inventoryCard.innerText();
+      if(/\\b0 repositories\\b/.test(summary))throw new Error('GitHub inventory status must not misreport zero repositories');
+    }
     if(stage==='sites'){
       const detail=root.locator('#aiSelectedDetail');
       if(await detail.isVisible())throw new Error('Site detail exposed before selecting a site');
