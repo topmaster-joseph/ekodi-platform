@@ -1,6 +1,7 @@
 // The legacy brand domain leads to the apex-path service; never to retired subdomains.
 // Keep authentication/payment service bindings independent from this redirect.
 const TARGET = 'https://ekodi.kr/ekodibiz';
+const CANONICAL_SITEMAP = 'https://ekodi.kr/sitemap.xml';
 const ALLOWED_HOSTS = new Set(['ekodibiz.kr', 'www.ekodibiz.kr']);
 
 // Naver Search Advisor file issued by the owner for the apex host ekodibiz.kr.
@@ -24,6 +25,25 @@ export default {
           'cache-control': 'public, max-age=300',
           'x-content-type-options': 'nosniff',
           'x-ekodi-route': 'ekodibiz-naver-ownership',
+        },
+      });
+    }
+
+    // Keep historical sitemap requests away from the nonexistent
+    // /ekodibiz/sitemap.xml path. The apex public registry owns discovery.
+    if (incoming.pathname === '/sitemap.xml') {
+      return Response.redirect(CANONICAL_SITEMAP, 301);
+    }
+    if (incoming.pathname === '/robots.txt' &&
+        (request.method === 'GET' || request.method === 'HEAD')) {
+      const body = 'User-agent: *\nAllow: /\nSitemap: ' + CANONICAL_SITEMAP + '\n';
+      return new Response(request.method === 'HEAD' ? null : body, {
+        status: 200,
+        headers: {
+          'content-type': 'text/plain; charset=utf-8',
+          'cache-control': 'public, max-age=300',
+          'x-content-type-options': 'nosniff',
+          'x-ekodi-route': 'ekodibiz-legacy-robots',
         },
       });
     }
