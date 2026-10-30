@@ -24,6 +24,14 @@ async function run(){
   const page=await teacher.goto(ORIGIN+PATH,{waitUntil:'domcontentloaded',timeout:30000});
   await accept('host page 200',page?.status()===200);
   await accept('host entry markup',await teacher.locator('#roster').count()===1);
+  for(const width of [320,390,768,1366,1440]){
+   const view=await browser.newContext({viewport:{width,height:820}});
+   const probe=await view.newPage();
+   const response=await probe.goto(ORIGIN+PATH,{waitUntil:'domcontentloaded',timeout:30000});
+   const overflow=await probe.evaluate(()=>document.documentElement.scrollWidth-innerWidth);
+   await accept('QR classroom responsive '+width+'px',response?.status()===200&&overflow<=4);
+   await view.close();
+  }
   const unauth=await browser.newContext();
   const deny=await unauth.request.post(ORIGIN+PATH+'api/rooms',{headers:{origin:ORIGIN},failOnStatusCode:false});
   await accept('anonymous cannot create room',deny.status()===401);
