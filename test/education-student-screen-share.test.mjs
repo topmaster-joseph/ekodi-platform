@@ -91,7 +91,7 @@ test('Education QR sharing pages and gateway respect consent and no-unapproved-h
  assert.match(html,/id="roster"/);assert.match(html,/id="qr"/);
  assert.match(client,/getDisplayMedia/);
  assert.match(client,/navigator\.mediaDevices\?\.getDisplayMedia/);
- assert.match(client,/data:image\/jpeg/);
+ assert.match(client,/toDataURL\('image\/jpeg'/);
  assert.match(client,/iceServers:ice/);
  assert.match(client,/send\(\{type:'select'/);
  assert.match(client,/stream\.getTracks\(\)\.forEach\(t=>t\.stop\(\)\)/);
