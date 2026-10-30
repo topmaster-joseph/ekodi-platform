@@ -39,4 +39,8 @@ test('Site offers member-only settlement with wider line-height and server-side 
   assert.match(worker,/isMnuBizSuncheonPath\(url.pathname\)/);
   assert.match(worker,/env.ASSETS.fetch\(request\)/);
   assert.match(publicSite,/세미나 기본계획 보기/);
+  const postgresMigration=await readFile(new URL('../supabase/migrations/20261031090000_mnubiz_suncheon_seminar_settlement.sql',import.meta.url),'utf8');
+  assert.match(postgresMigration,/alter table public\.mnubiz_suncheon_claims enable row level security/);
+  const {access}=await import('node:fs/promises');
+  await assert.rejects(access(new URL('../migrations/202610310900_mnubiz_suncheon_seminar_settlement.sql',import.meta.url)),/ENOENT/);
 });
