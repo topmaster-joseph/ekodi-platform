@@ -1,7 +1,10 @@
 # EKODI GitHub API shared-budget admission foundation, issue 6630
 
 This is a source-only server-side reservation primitive, disabled by default.
-It does not issue a GitHub token, activate a webhook, merge PRs or dispatch actions.
+The reservation function issues no token. A separate, disabled-by-default
+attestation helper uses the official GitHub App JWT API to mint an ephemeral
+installation token for proof only; it does not activate a webhook, merge PRs,
+dispatch actions, or expose a token to a caller.
 
 Existing D1 quota observations from real REST response headers are authoritative.
 A single SQLite INSERT SELECT atomically checks verified observation freshness
