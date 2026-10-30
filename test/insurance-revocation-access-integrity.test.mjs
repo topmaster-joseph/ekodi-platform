@@ -22,7 +22,7 @@ function createHarness({ initial = {}, blocked = false, failAccessWrite = false,
 } = {}) {
   const data=new Map(Object.entries(initial));
   const calls={ fetch:0, revokes:0, renders:0, notifications:[], errors:[], set:[], remove:[] };
-  const button={ disabled:false };
+  const button={ disabled:false, after(node){warnings.push(node)} };
   const warnings=[];
   const form={
     resetCount:0,
@@ -74,7 +74,7 @@ function createHarness({ initial = {}, blocked = false, failAccessWrite = false,
     }
   });
   vm.runInContext("const ACCESS_KEY='ekodi-insurance-consultation-access-v1';const MAX_ACCESS_ITEMS=256;const API='https://insurance.internal.invalid';\n"+
-    accessFunctions+writeFunctions,ctx);
+    accessFunctions+writeFunctions+customerRevoke,ctx);
   return { ctx, calls, form, button, warnings, snapshot:()=>Object.fromEntries(data),
     run:()=>ctx.submitHandoff({shareConsent:true,name:'Synthetic',contact:'010-0000-0000'},form) };
 }
@@ -211,4 +211,56 @@ test('post-save form exception preserves consultation and revoke token without a
   assert.equal(h.button.disabled,false);
   assert.equal(h.warnings.length,0);
   assert.match(h.calls.notifications.at(-1),/철회 권한은 이 브라우저에 저장되었습니다/);
+});
+
+
+test('manual revoke reports server success even when local token deletion fails',async()=>{
+  const record={ id:'con_new', accessToken:'ic_synthetic_new' };
+  const raw=JSON.stringify([record]);
+  const h=createHarness({initial:{[ACCESS_KEY]:raw},failAccessWrite:true});
+  await h.ctx.revokeConsultation(record,h.button);
+  assert.equal(h.calls.fetch,1);
+  assert.equal(h.calls.revokes,1);
+  assert.equal(h.snapshot()[ACCESS_KEY],raw,'the old token is preserved if write fails');
+  assert.equal(h.warnings.length,1);
+  assert.match(h.warnings[0].textContent,/서버 상담요청 철회는 완료되었습니다/);
+  assert.equal(h.warnings[0].setAttribute instanceof Function,true);
+  assert.match(h.calls.notifications.at(-1),/서버 철회는 완료되었지만/);
+  assert.equal(h.button.disabled,true,'no duplicate bearer request after server success');
+});
+
+test('manual revoke removes only matched token and never follows redirected URL',async()=>{
+  const record={ id:'con_new', accessToken:'ic_synthetic_new' };
+  const retained={ id:'con_old', accessToken:'ic_synthetic_old' };
+  const h=createHarness({initial:{[ACCESS_KEY]:JSON.stringify([record,retained])}});
+  await h.ctx.revokeConsultation(record,h.button);
+  assert.equal(h.calls.fetch,1);
+  assert.equal(h.calls.revokes,1);
+  assert.deepEqual(JSON.parse(h.snapshot()[ACCESS_KEY]),[retained]);
+  assert.equal(h.warnings.length,0);
+  assert.equal(h.button.disabled,true,'row is removed on success');
+  assert.match(h.calls.notifications.at(-1),/철회하고 서버의 연락처/);
+});
+
+test('malformed existing revoke storage can never be overwritten as empty',async()=>{
+  for(const raw of ['{broken','null','{}',JSON.stringify([{id:'con_new',accessToken:null}])]){
+    const h=createHarness({initial:{[ACCESS_KEY]:raw}});
+    assert.deepEqual(h.ctx.loadAccess(),[],'display can be empty but storage cannot mutate');
+    assert.throws(()=>h.ctx.writeAccess([{ id:'con_new',accessToken:'ic_new' }]));
+    assert.equal(h.snapshot()[ACCESS_KEY],raw);
+    assert.equal(h.calls.renders,0);
+    await h.ctx.revokeConsultation({id:'con_new',accessToken:'ic_synthetic_new'},h.button);
+    assert.equal(h.calls.fetch,1,'server may accept a user-held valid revoke token');
+    assert.equal(h.calls.revokes,1);
+    assert.equal(h.snapshot()[ACCESS_KEY],raw,'corrupt prior browser data is never deleted');
+    assert.equal(h.warnings.length,1,'server success and local failure must be distinguished');
+  }
+});
+
+test('withdrawal panel states recovery needed instead of claiming no consultations for corrupted storage',()=>{
+  const bridge = source.slice(source.indexOf('  function renderWithdrawalPanel()'),source.indexOf('  async function loadReferenceCatalog()'));
+  assert.match(bridge,/try \{ items = readAccessStrict\(\); \}/);
+  assert.match(bridge,/확인 필요/);
+  assert.match(bridge,/기록을 삭제하거나 초기화하지 말고/);
+  assert.match(bridge,/setAttribute\('role', 'alert'\)/);
 });
