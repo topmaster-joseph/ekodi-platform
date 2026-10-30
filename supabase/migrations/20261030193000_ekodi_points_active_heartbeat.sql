@@ -59,6 +59,11 @@ begin
   if v_rule.min_active_seconds not between 60 and 3600 then
     raise exception 'ACTIVE_RULE_MINIMUM_INTERVAL_INVALID';
   end if;
+  -- Untrusted interaction hints may never become high-value currency,
+  -- even after a mistaken policy edit. Keep this stricter than the site cap.
+  if v_rule.points>5 or v_rule.daily_cap>50 or v_rule.daily_events>10 then
+    raise exception 'ACTIVE_RULE_RISK_LIMIT_EXCEEDED';
+  end if;
   v_person := ekodi_points_private.resolve_person_for_auth(v_auth);
   if v_person is null then raise exception 'POINT_IDENTITY_NOT_LINKED'; end if;
 

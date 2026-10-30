@@ -24,6 +24,19 @@ begin
     (site_id,rule_id,points,daily_cap,daily_events,min_active_seconds,enabled)
     values('qa-clock','active',5,15,3,60,true);
 
+  -- Deliberately excessive time rewards are refused before wallet credit.
+  update public.ekodi_point_rules set points=100
+    where site_id='qa-clock' and rule_id='active';
+  perform set_config('request.jwt.claim.sub',v_auth::text,true);
+  v_denied:=false;
+  begin
+    perform public.ekodi_points_active_heartbeat('qa-clock',null,true,true);
+  exception when raise_exception then v_denied:=true; end;
+  if not v_denied then raise exception 'Excessive time reward was not refused'; end if;
+  update public.ekodi_point_rules set points=5
+    where site_id='qa-clock' and rule_id='active';
+  perform set_config('request.jwt.claim.sub','',true);
+
   v_denied:=false;
   begin
     perform public.ekodi_points_active_heartbeat('qa-clock',null,true,true);

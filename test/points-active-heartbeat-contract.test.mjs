@@ -9,6 +9,7 @@ test('activity time comes from server clock, never client supplied seconds or ev
     'for update','primary key (site_id,user_id)','v_session.kst_day<>v_day',
     'v_person := ekodi_points_private.resolve_person_for_auth(v_auth)',
     "v_rule.min_active_seconds not between 60 and 3600",
+    "v_rule.points>5 or v_rule.daily_cap>50 or v_rule.daily_events>10",
     "'active',v_key"
   ])assert.ok(sql.includes(clause),clause);
   assert.doesNotMatch(sql,/p_seconds|p_event_key|p_user uuid/);
