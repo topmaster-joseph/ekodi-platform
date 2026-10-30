@@ -32,3 +32,20 @@ node publishing/jubilee-series/verify-private-handoff.mjs --help
 - This PR is draft. Tests only prove local package integrity/policy, not actual device, EPUBCheck, accessibility, source citations or production sales.
 
 **Security:** The ZIP in the conversation is not encrypted. Treat it as confidential; do not put it on a public URL, public GitHub repository, unprotected drive folder or logs.
+
+
+## Private ingest implementation — added after offline package readback
+
+- `scripts/verify-jubilee-private-zip.py`: trusted-pin archive SHA, manifest SHA, every one of the nine original file hashes, ZIP entry traversal/symlink/encryption/decompression limits, and all source release flags; it **does not extract or upload**. Invoke with the private ZIP and the repository-owned `publishing/jubilee-series/review-9-private-handoff-intent.json`. A local immutable receipt is written only when `--receipt` is specified.
+- `publishing/jubilee-series/private-r2-ingest.mjs`: backend-only protected ingest. Requires publisher verified internal caller identity, manifest digest pinned by the trusted intent, exact six edition hashes and three editorial artifacts; uploads all nine original files to **private content-addressed immutable R2 object keys**, then reads each back and checks SHA-256. Uses atomic create-if-absent conditional R2 writes; a preexisting key is checked, never silently overwritten.
+- `publishing/human/sql/003_private_jubilee_ingest_receipts.sql` and `publishing/jubilee-series/private-ingest-receipt.mjs`: separate private D1 receipt plus audit schema, in one `batch()` transaction; duplicate identical handoff is idempotent and conflicting digest rejected. DB receipt must be durably reread before reporting any success.
+- `publishing/jubilee-series/publisher-private-ingest-service.mjs` connects trusted R2 readback to the D1 receipt. There is **no public HTTP route**. Staging `PUBLISHING_PRIVATE_INGEST_ENABLED="false"` remains explicitly OFF and currently no actual private R2/D1 bindings are provisioned.
+- End-to-end mocked R2 + real in-memory SQLite contract tests, revoked actor, corrupt readback, duplicate receipt, fail-closed input, and ZIP file checks run in `Publishing Boundary CI`.
+
+### Actual local preservation
+The review-9 ZIP was independently copied into the user's own ChatGPT Library in a separate unpublished `EKODI Books` archive folder. Library readback returned the **exact same 2,883,756 bytes and package SHA-256**, and all nine entries passed an independent archive verifier. This is a **persistent private backup** only; it is not the publisher R2 ingress service and cannot replace authenticated storage readback and a D1 receipt.
+
+### Activation still blocked
+The required publisher R2 and D1 bindings, a verified `PUBLISHING_INGEST_AUTH` service, source-asset transport, installed migrations, per-book editorial review and author/publisher signatures are not configured on the live Worker. Do not switch the feature flag to `true` without a protected Orchestrator staging run and actual off-repo private storage receipt. Do not merge this Draft solely because unit tests pass.
+
+**Privacy:** the remote Desktop Commander monthly usage limit remained exhausted; it did not upload any manuscript to EKODI's actual publisher servers. No customer data, manuscript bytes, prices, signed credentials or publicly accessible links are added to GitHub.
