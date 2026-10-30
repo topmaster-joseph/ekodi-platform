@@ -80,6 +80,7 @@ test('production cannot accidentally expose RPC gate over the HTTP handler',asyn
  const wrangler=readFileSync(new URL('../wrangler.publishing.staging.toml',import.meta.url),'utf8');
  assert.match(entry,/class BooksPublisherReleaseGate extends WorkerEntrypoint/);
  assert.match(entry,/class MallPublisherReleaseGate extends WorkerEntrypoint/);
- assert.match(wrangler,/main = "publishing-worker.js"/);
+ assert.match(wrangler,/main = "publishing-release-entry.js"/);
+ assert.match(wrangler,/PUBLISHING_PRIVATE_RELEASE_ENABLED = "false"/);
  assert.doesNotMatch(wrangler,/\[\[services\]\]/);
 });
