@@ -646,7 +646,7 @@ jobs:
               && grep -Fq 'api/public/checkout/quote' /tmp/mall-public-js \
               && grep -Fq 'api/public/products?limit=24' /tmp/mall-live-js \
               && grep -Fq '/share-links' /tmp/mall-seller-js \
-              && node -e 'const s=require("fs").readFileSync("/tmp/mall-root.html","utf8");const tags=["class=\\"mall-category-shortcuts\\"","class=\\"shop\\" id=\\"shop\\"","class=\\"mall-editorial","class=\\"context-recommend"];const p=tags.map(t=>s.indexOf(t));if(p.some((v,i)=>v<0||(i>0&&v<=p[i-1])))process.exit(1);' ; then
+              && node -e 'const s=require("fs").readFileSync("/tmp/mall-root.html","utf8");const tags=[`class="mall-category-shortcuts"`,`class="shop" id="shop"`,`class="mall-editorial`,`class="context-recommend`];const p=tags.map(t=>s.indexOf(t));if(p.some((v,i)=>v<0||(i>0&&v<=p[i-1])))process.exit(1);' ; then
               echo "EKODI Mall production smoke test passed."
               exit 0
             fi
