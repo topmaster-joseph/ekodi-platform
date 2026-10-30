@@ -3,6 +3,12 @@
  * This is a safe guest projection. The workspace ID remains the authorization key;
  * no membership, officer, finance or meeting data is synthesized here.
  */
+const BN_SHEET = "    :root{font-family:Pretendard,\"Noto Sans KR\",system-ui,-apple-system,sans-serif;color:#1b2925;background:#f6f7f3;--ink:#1b2925;--muted:#57655e;--line:#dbe3dc;--accent:#1f6950;--cream:#f6f7f3;--panel:#fff}\n    *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:86px}\n    body{margin:0;min-width:0;background:var(--cream);color:var(--ink);line-height:1.6;word-break:keep-all;overflow-wrap:normal}\n    a{color:inherit}a:focus-visible{outline:3px solid #358266;outline-offset:4px;border-radius:4px}\n    .wrap{width:min(1120px,calc(100% - 36px));margin-inline:auto}\n    .top{position:sticky;top:0;z-index:5;background:rgba(246,247,243,.96);border-bottom:1px solid var(--line);backdrop-filter:blur(10px)}\n    .top-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:70px}\n    .brand{display:flex;gap:9px;align-items:center;text-decoration:none;font-size:20px;font-weight:850;letter-spacing:-.045em;white-space:nowrap}\n    .skip-link{position:absolute;left:-9999px;top:8px;background:white;padding:10px 14px;z-index:20}.skip-link:focus{left:12px}\n    .symbol{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:11px;background:var(--accent);color:white;font-size:18px}\n    .nav{display:flex;flex-wrap:wrap;gap:clamp(8px,1.4vw,20px);align-items:center}\n    .nav a{text-decoration:none;color:#47564e;font-size:14px;font-weight:650}\n    .nav a:hover,.nav a:focus-visible{color:var(--accent)}\n    .pill{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 17px;border:1px solid #28765b;background:var(--accent);color:#fff!important;text-decoration:none;border-radius:999px;font-weight:750;line-height:1.3;text-align:center}\n    .pill.secondary{background:transparent;color:var(--accent)!important;border-color:#aabfb2}\n    .hero{background:linear-gradient(120deg,#e9f0e9 0%,#f6f7f3 56%,#e5ede6 100%);border-bottom:1px solid var(--line)}\n    .hero-inner{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(220px,.75fr);gap:30px;align-items:center;min-height:540px;padding-block:76px}\n    .eyebrow{display:block;color:#34664f;font-weight:800;letter-spacing:.11em;font-size:12px}\n    h1{margin:18px 0 20px;font-size:clamp(39px,6.4vw,70px);letter-spacing:-.065em;line-height:1.12;font-weight:850;max-width:720px}\n    .lead{font-size:clamp(16px,2vw,20px);color:#4c5d52;max-width:620px;margin:0;line-height:1.8}\n    .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:30px}\n    .hero-art{min-height:310px;border:1px solid #d3e1d7;border-radius:28px;display:grid;place-items:center;position:relative;background:linear-gradient(150deg,#dce9dd,#f4f8ed);overflow:hidden}\n    .hero-art::before,.hero-art::after{content:\"\";position:absolute;border-radius:50%;border:22px solid rgba(36,116,81,.12)}\n    .hero-art::before{width:260px;height:260px;right:-60px;top:-80px}\n    .hero-art::after{width:180px;height:180px;left:-70px;bottom:-50px}\n    .art-content{z-index:1;text-align:center;color:#315e48;padding:28px}\n    .art-content strong{display:block;font-size:clamp(50px,7vw,100px);font-weight:400;line-height:1}\n    .art-content span{display:block;margin-top:16px;font-size:15px;font-weight:700;letter-spacing:.04em}\n    .section{padding-block:74px;border-bottom:1px solid var(--line)}\n    .section-head{max-width:750px;margin-bottom:28px}\n    .section h2{font-size:clamp(26px,3vw,35px);letter-spacing:-.045em;line-height:1.35;margin:9px 0 12px}\n    .section p{margin:0;color:var(--muted)}\n    .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}\n    .card{padding:25px;background:var(--panel);border:1px solid var(--line);border-radius:18px;min-width:0}\n    .card .number{color:var(--accent);font-size:13px;font-weight:850}\n    .card h3{font-size:20px;letter-spacing:-.035em;margin:18px 0 8px}\n    .card p{font-size:14px}\n    .two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}\n    .notice{display:flex;flex-direction:column;gap:12px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:26px;min-height:160px}\n    .notice h3{font-size:20px;margin:0;letter-spacing:-.035em}\n    .notice p{font-size:14px}\n    .notice small{color:#41745b;font-weight:750}\n    .cta{background:#225840;color:#fff;border-radius:22px;padding:clamp(26px,4vw,48px);display:flex;justify-content:space-between;gap:24px;align-items:center}\n    .cta h2{margin:8px 0;font-size:clamp(24px,3vw,34px)}\n    .cta p{color:#dfebe1}\n    .cta .pill{background:#fff;color:#225840!important;border-color:#fff}\n    .cta .eyebrow{color:#d4e9da}\n    footer{padding:28px 0 40px;color:#67736c;font-size:13px}\n    .foot-inner{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}\n    footer a{color:#3b5f4b;text-decoration:none}\n    @media(max-width:850px){.hero-inner{grid-template-columns:1fr;min-height:0}.hero-art{min-height:230px}.nav{gap:12px}}\n    @media(max-width:640px){.wrap{width:min(100% - 28px,1120px)}.top-inner{min-height:64px;align-items:flex-start;padding-block:12px;flex-direction:column;gap:9px}.nav{width:100%;flex-wrap:nowrap;overflow-x:auto;padding-bottom:5px;scrollbar-width:thin}.nav a{white-space:nowrap;font-size:13px}.hero-inner{padding-block:46px;gap:24px}.hero-art{min-height:185px}.section{padding-block:48px}.cards,.two{grid-template-columns:1fr}.cta{flex-direction:column;align-items:flex-start}.actions{gap:8px}.pill{font-size:14px}}\n    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}";
+
+export function bnslovePublicCss() {
+  return new Response(BN_SHEET, {headers: {'content-type':'text/css; charset=utf-8', 'cache-control':'public, max-age=300','x-content-type-options':'nosniff'}});
+}
+
 export function renderBnslovePublicPage() {
   const html = `<!doctype html>
 <html lang="ko" data-ekodi-ui-surface="user-public" data-ekodi-workspace="bnslove">
@@ -17,60 +23,7 @@ export function renderBnslovePublicPage() {
   <meta property="og:title" content="형제사랑회">
   <meta property="og:description" content="형제사랑회 공식 운영공간">
   <meta property="og:url" content="https://ekodi.kr/bnslove/">
-  <style>
-    :root{font-family:Pretendard,"Noto Sans KR",system-ui,-apple-system,sans-serif;color:#1b2925;background:#f6f7f3;--ink:#1b2925;--muted:#57655e;--line:#dbe3dc;--accent:#1f6950;--cream:#f6f7f3;--panel:#fff}
-    *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:86px}
-    body{margin:0;min-width:0;background:var(--cream);color:var(--ink);line-height:1.6;word-break:keep-all;overflow-wrap:normal}
-    a{color:inherit}a:focus-visible{outline:3px solid #358266;outline-offset:4px;border-radius:4px}
-    .wrap{width:min(1120px,calc(100% - 36px));margin-inline:auto}
-    .top{position:sticky;top:0;z-index:5;background:rgba(246,247,243,.96);border-bottom:1px solid var(--line);backdrop-filter:blur(10px)}
-    .top-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:70px}
-    .brand{display:flex;gap:9px;align-items:center;text-decoration:none;font-size:20px;font-weight:850;letter-spacing:-.045em;white-space:nowrap}
-    .skip-link{position:absolute;left:-9999px;top:8px;background:white;padding:10px 14px;z-index:20}.skip-link:focus{left:12px}
-    .symbol{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:11px;background:var(--accent);color:white;font-size:18px}
-    .nav{display:flex;flex-wrap:wrap;gap:clamp(8px,1.4vw,20px);align-items:center}
-    .nav a{text-decoration:none;color:#47564e;font-size:14px;font-weight:650}
-    .nav a:hover,.nav a:focus-visible{color:var(--accent)}
-    .pill{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 17px;border:1px solid #28765b;background:var(--accent);color:#fff!important;text-decoration:none;border-radius:999px;font-weight:750;line-height:1.3;text-align:center}
-    .pill.secondary{background:transparent;color:var(--accent)!important;border-color:#aabfb2}
-    .hero{background:linear-gradient(120deg,#e9f0e9 0%,#f6f7f3 56%,#e5ede6 100%);border-bottom:1px solid var(--line)}
-    .hero-inner{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(220px,.75fr);gap:30px;align-items:center;min-height:540px;padding-block:76px}
-    .eyebrow{display:block;color:#34664f;font-weight:800;letter-spacing:.11em;font-size:12px}
-    h1{margin:18px 0 20px;font-size:clamp(39px,6.4vw,70px);letter-spacing:-.065em;line-height:1.12;font-weight:850;max-width:720px}
-    .lead{font-size:clamp(16px,2vw,20px);color:#4c5d52;max-width:620px;margin:0;line-height:1.8}
-    .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:30px}
-    .hero-art{min-height:310px;border:1px solid #d3e1d7;border-radius:28px;display:grid;place-items:center;position:relative;background:linear-gradient(150deg,#dce9dd,#f4f8ed);overflow:hidden}
-    .hero-art::before,.hero-art::after{content:"";position:absolute;border-radius:50%;border:22px solid rgba(36,116,81,.12)}
-    .hero-art::before{width:260px;height:260px;right:-60px;top:-80px}
-    .hero-art::after{width:180px;height:180px;left:-70px;bottom:-50px}
-    .art-content{z-index:1;text-align:center;color:#315e48;padding:28px}
-    .art-content strong{display:block;font-size:clamp(50px,7vw,100px);font-weight:400;line-height:1}
-    .art-content span{display:block;margin-top:16px;font-size:15px;font-weight:700;letter-spacing:.04em}
-    .section{padding-block:74px;border-bottom:1px solid var(--line)}
-    .section-head{max-width:750px;margin-bottom:28px}
-    .section h2{font-size:clamp(26px,3vw,35px);letter-spacing:-.045em;line-height:1.35;margin:9px 0 12px}
-    .section p{margin:0;color:var(--muted)}
-    .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-    .card{padding:25px;background:var(--panel);border:1px solid var(--line);border-radius:18px;min-width:0}
-    .card .number{color:var(--accent);font-size:13px;font-weight:850}
-    .card h3{font-size:20px;letter-spacing:-.035em;margin:18px 0 8px}
-    .card p{font-size:14px}
-    .two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-    .notice{display:flex;flex-direction:column;gap:12px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:26px;min-height:160px}
-    .notice h3{font-size:20px;margin:0;letter-spacing:-.035em}
-    .notice p{font-size:14px}
-    .notice small{color:#41745b;font-weight:750}
-    .cta{background:#225840;color:#fff;border-radius:22px;padding:clamp(26px,4vw,48px);display:flex;justify-content:space-between;gap:24px;align-items:center}
-    .cta h2{margin:8px 0;font-size:clamp(24px,3vw,34px)}
-    .cta p{color:#dfebe1}
-    .cta .pill{background:#fff;color:#225840!important;border-color:#fff}
-    footer{padding:28px 0 40px;color:#67736c;font-size:13px}
-    .foot-inner{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
-    footer a{color:#3b5f4b;text-decoration:none}
-    @media(max-width:850px){.hero-inner{grid-template-columns:1fr;min-height:0}.hero-art{min-height:230px}.nav{gap:12px}}
-    @media(max-width:640px){.wrap{width:min(100% - 28px,1120px)}.top-inner{min-height:64px;align-items:flex-start;padding-block:12px;flex-direction:column;gap:9px}.nav{width:100%;flex-wrap:nowrap;overflow-x:auto;padding-bottom:5px;scrollbar-width:thin}.nav a{white-space:nowrap;font-size:13px}.hero-inner{padding-block:46px;gap:24px}.hero-art{min-height:185px}.section{padding-block:48px}.cards,.two{grid-template-columns:1fr}.cta{flex-direction:column;align-items:flex-start}.actions{gap:8px}.pill{font-size:14px}}
-    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
-  </style>
+  <link rel="stylesheet" href="/bnslove/site.css">
 </head>
 <body>
   <a class="skip-link" href="#main">본문으로 이동</a>
@@ -112,7 +65,7 @@ export function renderBnslovePublicPage() {
       </div>
     </div></section>
     <section class="section" id="participate"><div class="wrap">
-      <div class="cta"><div><span class="eyebrow" style="color:#d4e9da">PARTICIPATE</span><h2>형제사랑회와 함께하기</h2><p>로그인하면 허용된 회원 기능을 이용할 수 있습니다. 로그인만으로 회원 가입이나 모임 신청이 완료되지는 않습니다.</p></div>
+      <div class="cta"><div><span class="eyebrow">PARTICIPATE</span><h2>형제사랑회와 함께하기</h2><p>로그인하면 허용된 회원 기능을 이용할 수 있습니다. 로그인만으로 회원 가입이나 모임 신청이 완료되지는 않습니다.</p></div>
       <a class="pill" href="/auth/?site=space&amp;return_to=https%3A%2F%2Fekodi.kr%2Fbnslove%2F">로그인</a></div>
     </div></section>
   </main>
