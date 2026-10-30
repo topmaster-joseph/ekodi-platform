@@ -54,6 +54,8 @@ jobs:
           node --test test/human-publishing-private-release-api.test.mjs
           node --check publishing/human/private-release-scheduler.js
           node --test test/human-publishing-private-release-scheduler.test.mjs
+          node --check publishing/human/private-publisher-release-authority.js
+          node --test test/private-publisher-release-authority.test.mjs
           node --test test/human-publishing-canonical-release-route.test.mjs
           node --check publishing/private-releases/private-releases.js
           test -s publishing/private-releases/index.html
