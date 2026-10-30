@@ -129,7 +129,7 @@ export function createGitHubBudgetClient({
       if (key && response.ok) {
         const etag = response.headers.get('etag');
         if (typeof etag === 'string' && etag.length <= 256 &&
-            /^(?:W\/)?\"[^\\r\\n]*\"$/.test(etag)) validators.set(key, { etag, result });
+            /^(?:W\/)?\"[^\r\n]*\"$/.test(etag)) validators.set(key, { etag, result });
         else validators.delete(key);
       }
       if (key && response.ok && cacheMs > 0)
