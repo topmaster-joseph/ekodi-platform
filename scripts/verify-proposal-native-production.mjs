@@ -21,12 +21,12 @@ for(const profile of ['desktop','mobile-portrait']){
    {type:'click',selector:'#generateBtn'},
    // Editor export controls are hidden until createProposalDraft succeeds.
    {type:'snapshot'},
+   {type:'screenshot',name:'proposal-'+profile,fullPage:true},
    {type:'waitFor',selector:'#exportDocx',timeoutMs:15000},
    {type:'waitFor',selector:'#exportXlsx',timeoutMs:15000},
    {type:'waitFor',selector:'#exportPptx',timeoutMs:15000},
    {type:'assertText',text:'Word DOCX 저장'},
-   {type:'assertText',text:'PowerPoint PPTX 저장'},
-   {type:'screenshot',name:'proposal-'+profile,fullPage:true}
+   {type:'assertText',text:'PowerPoint PPTX 저장'}
   ]
  };
  const result=await runTask(task,{artifactRoot});
