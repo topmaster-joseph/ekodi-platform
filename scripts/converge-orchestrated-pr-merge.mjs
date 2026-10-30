@@ -3,6 +3,7 @@ import { lanesForChangedFiles } from './lib/worker-bundle-graph.mjs';
 import { requiresHumanAuthorSchemaRelease, requiresCreatorAuthorRelease, releaseSpecForHumanAuthorSchema, releaseSpecForCreatorAuthor } from './lib/human-author-release-lane.mjs';
 import { unapprovedReleaseRunIds, staleParkedReleaseRunIds } from './lib/converge-unapproved-runs.mjs';
 import { fileURLToPath } from 'node:url';
+import { safeGitHubHttpDiagnostic } from './github-http-diagnostic.mjs';
 const repo=String(process.env.GITHUB_REPOSITORY||'').trim();
 const token=String(process.env.GH_TOKEN||'').trim();
 const branch=String(process.env.GITHUB_REF_NAME||'').trim();
@@ -14,6 +15,7 @@ function fail(m){throw new Error('[EKODI][ORCH-AUTO-MERGE] '+m)}
 async function api(path,init={}){
   const r=await fetch('https://api.github.com/repos/'+repo+path,{...init,headers:{authorization:`Bearer ${token}`,accept:'application/vnd.github+json','x-github-api-version':'2022-11-28','content-type':'application/json',...(init.headers||{})}});
   const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={raw:text}};
+  if(!r.ok && [401,403,429].includes(r.status)) console.error(safeGitHubHttpDiagnostic({status:r.status,headers:r.headers,data}));
   return {r,data};
 }
 async function statusMap(sha){

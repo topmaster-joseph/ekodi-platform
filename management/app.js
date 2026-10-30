@@ -2,7 +2,7 @@ const cfg=window.EKODI_MANAGEMENT_CONFIG||{};
 const SESSION_KEY='ekodi-management-session';
 const SELECTION_KEY='ekodi-management-selection-v1';
 const $=id=>document.getElementById(id);
-const state={session:null,catalog:[],selection:null};
+const state={session:null,catalog:[],selection:null,spaces:[],spacesRequest:0};
 
 function storedSession(){
   try{
@@ -14,8 +14,8 @@ function storedSession(){
 }
 function activeSession(){return Boolean(state.session?.accessToken&&state.session?.user?.id&&Number(state.session?.expiresAt||0)>Math.floor(Date.now()/1000)+30)}
 function selectionKey(){return activeSession()?`${SELECTION_KEY}:${state.session.user.id}`:null}
-function saveSession(value){state.session=value;state.selection=null;sessionStorage.setItem(SESSION_KEY,JSON.stringify(value));renderIdentity();if(state.catalog.length)renderMemberPicker()}
-function clearSession(){state.session=null;state.selection=null;sessionStorage.removeItem(SESSION_KEY);renderIdentity()}
+function saveSession(value){clearSpaces();state.session=value;state.selection=null;sessionStorage.setItem(SESSION_KEY,JSON.stringify(value));renderIdentity();if(state.catalog.length)renderMemberPicker()}
+function clearSession(){state.session=null;state.selection=null;clearSpaces();sessionStorage.removeItem(SESSION_KEY);renderIdentity()}
 function storedSelection(){
   const fallback={workspaceKind:'person',modules:['chief','marketing']};
   const key=selectionKey();
@@ -40,6 +40,51 @@ function renderIdentity(){
   const auth=$('authLink');auth.href=member?'#logout':authUrl();auth.textContent=member?'로그아웃':'Google 로그인';
   const start=document.querySelector('.cta-row .button');if(start)start.href=authUrl();
   if(member)$('memberMeta').textContent=`무료등급 · ${state.session?.user?.email||'Google 회원'} · 기능 선택형`;
+}
+function clearSpaces(){
+  state.spacesRequest+=1;
+  state.spaces=[];
+  $('verifiedSpacesList').replaceChildren();
+  $('spacesStatus').textContent='로그인 후 내 운영 공간을 확인할 수 있습니다.';
+}
+function validSpaceUrl(slug){
+  if(typeof slug!=='string'||!(/^[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?$/.test(slug)))return null;
+  return `https://ekodi.kr/${slug}`;
+}
+function renderVerifiedSpaces(){
+  const host=$('verifiedSpacesList');host.replaceChildren();
+  if(!activeSession())return;
+  state.spaces.forEach(space=>{
+    const card=document.createElement('article');card.className='verified-space';
+    const name=document.createElement('strong');name.textContent=space.name;
+    const role=document.createElement('small');role.textContent=`역할: ${space.role||'member'} · ${space.kind||'공간'}`;
+    card.append(name,role);
+    const url=validSpaceUrl(space.slug);
+    if(url){const link=document.createElement('a');link.href=url;link.textContent='공간 열기';link.className='space-entry';card.append(link)}
+    host.append(card);
+  });
+}
+async function loadVerifiedSpaces(){
+  if(!activeSession()){clearSpaces();return}
+  const token=state.session.accessToken,userId=state.session.user.id,serial=++state.spacesRequest;
+  state.spaces=[];$('verifiedSpacesList').replaceChildren();$('spacesStatus').textContent='중앙 회원 권한을 확인하고 있습니다.';
+  try{
+    const response=await fetch('/api/spaces',{method:'GET',headers:{authorization:`Bearer ${token}`,accept:'application/json'},cache:'no-store'});
+    if(serial!==state.spacesRequest||!activeSession()||state.session.user.id!==userId||state.session.accessToken!==token)return;
+    if(response.status===401){clearSession();return}
+    if(!response.ok)throw new Error('spaces_'+response.status);
+    const data=await response.json();
+    if(!Array.isArray(data.spaces)||data.scope!=='authenticated-member-only')throw new Error('spaces_invalid');
+    if(serial!==state.spacesRequest||!activeSession())return;
+    state.spaces=data.spaces.filter(space=>space&&typeof space.id==='string'&&typeof space.name==='string'&&typeof space.slug==='string').slice(0,200);
+    renderVerifiedSpaces();
+    $('spacesStatus').textContent=state.spaces.length?`접근 가능한 운영 공간 ${state.spaces.length}곳 · 중앙 권한 확인 완료`:'현재 계정에 연결된 운영 공간이 없습니다.';
+  }catch(error){
+    if(serial!==state.spacesRequest||!activeSession())return;
+    state.spaces=[];$('verifiedSpacesList').replaceChildren();
+    $('spacesStatus').textContent='운영 공간을 불러오지 못했습니다. 계정이나 권한이 변경되지는 않았습니다.';
+    console.error('management workspace read-only',error);
+  }
 }
 function sessionExpiry(value){const explicit=Number(value?.expiresAt||0);return explicit>0?explicit:Math.floor(Date.now()/1000)+Number(value?.expiresIn||3600)}
 async function exchangeCentralToken(){
@@ -69,7 +114,9 @@ function logout(){clearSession();location.hash='';$('saveStatus').textContent='�
 async function boot(){
   state.session=storedSession();renderIdentity();try{await exchangeCentralToken()}catch(error){console.error('management auth exchange',error);clearSession()}
   try{await loadCatalog()}catch(error){console.error(error);$('publicModuleGrid').textContent='서비스 목록을 불러오지 못했습니다.'}
+  if(activeSession())await loadVerifiedSpaces();
 }
 
+$('refreshSpaces').addEventListener('click',loadVerifiedSpaces);
 $('saveSelection').addEventListener('click',saveSelection);$('logoutButton').addEventListener('click',logout);$('authLink').addEventListener('click',event=>{if(activeSession()){event.preventDefault();logout()}});
 boot();

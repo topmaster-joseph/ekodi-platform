@@ -115,6 +115,7 @@ async function start(provider, purpose, el, statusId) {
 
 export function errorMessage(code, name) {
   if (code === 'challenge_expired_or_used') return `${name} 인증 시간이 만료되었습니다. 다시 시도해 주세요.`;
+  if (code === 'account_merge_review_required') return `${name}으로 이미 별도의 EKODI 계정을 사용하고 있습니다. 기존 유료구독·포인트·권한을 확인한 뒤 연결할 수 있습니다.`;
   if (code === 'identity_conflict' || code === 'identity_already_linked') return `이 ${name} 계정은 다른 EKODI 계정에 이미 연결되어 있습니다. 관리자 확인이 필요합니다.`;
   if (code === 'provider_unavailable') return `${name} 로그인은 현재 사용하지 않습니다.`;
   if (code === 'access_denied') return `${name} 인증이 취소되었습니다.`;
