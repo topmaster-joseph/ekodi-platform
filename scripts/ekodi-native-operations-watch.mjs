@@ -5,6 +5,7 @@
  */
 import {writeFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
+import {collectNativePreparation} from './ekodi-native-workload-preparation.mjs';
 import {AUTOMATION_MIGRATION_PR,projectEkodiNativeMigration,renderEkodiMigrationSummary} from './ekodi-native-migration-status.mjs';
 
 const OWNER='topmaster-joseph';
@@ -187,6 +188,10 @@ export async function collectEkodiNativeWatch({
     }
   }
   report.automationMigration=projectEkodiNativeMigration({proposals:snapshots,checks:report.checks});
+  // EKODI native documents/editions: disclose their authoritative inputs and
+  // missing receipts in the same existing scheduled artifact. Never mutate.
+  report.automationPreparation=await collectNativePreparation({now:new Date(nowMs)});
+
   report.result=report.circuitOpen?'deferred':
     report.checks.some(x=>x.status==='alert')?'attention':
     report.checks.some(x=>x.status==='warning')?'partial':'ok';
@@ -208,6 +213,13 @@ export function renderEkodiWatchSummary(report){
     '- Daily traffic totals: consult the authoritative System Health/Traffic Intelligence collector; unavailable here is not zero.',
     '- Missionary bi-monthly narrative: requires a distinct EKODI-owned source and distribution mapping; not falsely generated.',
     ...(report.automationMigration?[renderEkodiMigrationSummary(report.automationMigration)]:[]),
+    ...(report.automationPreparation?[
+      '- EKODI Sunday: '+report.automationPreparation.church.status+
+        ' / '+(report.automationPreparation.church.scripture||report.automationPreparation.church.reason||'unavailable'),
+      '- EKODI Human Publishing: '+report.automationPreparation.publishing.status+
+        ', verified publications: '+(report.automationPreparation.publishing.verifiedPublications||0),
+      '- Native document and publication work: no writes; owner-approved output receipts still required.'
+    ]:[]),
   ].join('\n')+'\n';
 }
 
