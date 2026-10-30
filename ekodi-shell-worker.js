@@ -129,7 +129,7 @@ async function bundledShell(request,env,ctx){
   headers.set('x-ekodi-link-compat',linkCompat?'v1':'missing');
   headers.set('x-ekodi-user-shortcuts','my-only');
   headers.set('x-ekodi-shell-bundle-cache',releaseRefresh?'refresh':'miss');
-  const bundle=canonicalizeBundledServiceUrls(`${USER_SHORTCUT_GUARD}\n${USER_FOOTER_BOOTSTRAP}\n${USER_EXPERIENCE_PROFILES_BOOTSTRAP}\n${LANGUAGE_REGISTRY_BOOTSTRAP}\n${characterRegistry}\n${characterIdentity}\n${shell}\n${globalNav}\n${userContext}\n${userHeader}\n${unifiedAuth}\n${userFooter}\n${userLanguage}\n${mediaMeeting}\n${userCharacter}\n${ccmMrPlayer}\n${adminShell}\n${fixedHeader}\n${userAiEntry}\n${uiGovernor}\n${publicSurfaceAdmin}\n${messageUI}\n${illustrationSystem}\n${designInheritance}\n${linkCompat}\n`);
+  const bundle=canonicalizeBundledServiceUrls(`${USER_SHORTCUT_GUARD}\n${USER_FOOTER_BOOTSTRAP}\n${USER_EXPERIENCE_PROFILES_BOOTSTRAP}\n${LANGUAGE_REGISTRY_BOOTSTRAP}\n${characterRegistry}\n${characterIdentity}\n${shell}\n${globalNav}\n${userContext}\n${userHeader}\n${userFooter}\n${userLanguage}\n${mediaMeeting}\n${userCharacter}\n${ccmMrPlayer}\n${adminShell}\n${fixedHeader}\n${userAiEntry}\n${uiGovernor}\n${publicSurfaceAdmin}\n${messageUI}\n${illustrationSystem}\n${designInheritance}\n${linkCompat}\n${unifiedAuth}\n`);
   const response=withHeaders(new Response(bundle,{status:200,headers}));
   if(bundleCache&&bundleCacheKey&&ctx?.waitUntil){
     const stored=response.clone();
