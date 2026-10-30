@@ -47,7 +47,7 @@ test('identical staging and production entry/assets and exact validated bytes pa
   assert.equal(result.applicationDigest,f.applicationDigest);
   assert.equal(result.sourceSha,sha);
   assert.equal(result.fileCount,2);
-  assert.equal(result.stagingAndProductionReferenceIdenticalBytes,true);
+  assert.equal(result.configurationsReferenceIdenticalArtifactPaths,true);
   assert.equal(result.productionDeployed,false);
 });
 
@@ -95,6 +95,14 @@ test('independent canonical aggregate checksum rejects fabricated manifest claim
   f.manifest.artifactDigest='sha256:'+'1'.repeat(64);
   f.write();
   assert.throws(()=>verifyStagedApplicationIdentity({root:f.root,expectedDigest:f.manifest.artifactDigest,sourceSha:sha}),/AGGREGATE_DIGEST_MISMATCH/);
+});
+
+test('a symlinked application release root is not trusted even when its bytes match',t=>{
+  const f=fixture(t);
+  const moved=f.release+'-real';
+  fs.renameSync(f.release,moved);
+  fs.symlinkSync(moved,f.release,'dir');
+  assert.throws(f.verify,/RELEASE_ROOT_UNTRUSTED/);
 });
 
 test('production Worker config mismatch, bundling, or asset directory mismatch fails',t=>{
