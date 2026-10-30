@@ -8,15 +8,18 @@ const ID=54321,APP=76,SHA='a'.repeat(40),key=n=>n.toString(16).padStart(64,'0');
 const issuerEnv={EKODI_GITHUB_BUDGET_ADMISSION_ENABLED:'true',
   EKODI_GITHUB_INSTALLATION_ID:String(ID),EKODI_GITHUB_APP_ID:String(APP),
   DB:{prepare(){return {bind(){return {run:async()=>({meta:{changes:1}})};}};}}};
-const mockResponse=(data,headers=new Headers())=>({
-  ok:true,status:200,headers,json:async()=>data
+const mockResponse=(data,headers=new Headers(),status=200)=>({
+  ok:true,status,headers,json:async()=>data
 });
 const attestation=await attestGitHubInstallationToken(issuerEnv,{
-  installationToken:'internal-unit-test-installation-token',
+  appJwt:'internal-unit-test-app-signed-jwt',
   nowMs:NOW,
-  fetchImpl:async url=>url.endsWith('/installation')
-    ?mockResponse({id:ID,app_id:APP})
-    :mockResponse({full_name:'topmaster-joseph/ekodi-platform'},new Headers({
+  fetchImpl:async url=>url.includes('/app/installations/')&&!url.endsWith('/access_tokens')
+    ?mockResponse({id:ID,app_id:APP,suspended_at:null})
+    :url.endsWith('/access_tokens')
+      ?mockResponse({token:'internal-unit-test-issued-installation-token',
+        expires_at:new Date(NOW+3600000).toISOString()},new Headers(),201)
+      :mockResponse({repositories:[{full_name:'topmaster-joseph/ekodi-platform'}]},new Headers({
       'x-ratelimit-resource':'core','x-ratelimit-limit':'5000',
       'x-ratelimit-remaining':'4999',
       'x-ratelimit-reset':String(Math.floor((NOW+3600000)/1000))
