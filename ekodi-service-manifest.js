@@ -3,7 +3,7 @@ const COMMON_USER_ACCESS_POLICY = Object.freeze({
   scope:'user-pages',
   guestMode:'guide-only',
   minimumTier:'free',
-  identityProvider:'ekodi-person',
+  identityProvider:'google',
   mandatoryUnifiedAuthOnUserPages:true,
   publicViewingRequiresLogin:false,
   exactInitiatingPageReturn:true,
