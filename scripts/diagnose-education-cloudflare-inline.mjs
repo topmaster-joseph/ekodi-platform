@@ -15,9 +15,10 @@ export function redactedCloudflareSuffix(body){
  const params=body.slice('window.__CF$cv$params={'.length,at);
  const keys=[...params.matchAll(/(?:^|,)([a-z]{1,12}):/g)].map(m=>m[1]);
  const suffix=body.slice(at+2);
- const fallback=/\}catch\(e\)\{o='([^']{0,100})'\}\}var u=/.exec(suffix)?.[1]||'';
+ const fallbackMatch=/\}catch\(e\)\{o=(['"])([^'"]{0,100})\1\}\}var u=/.exec(suffix);
+ const fallback=fallbackMatch?.[2]||'';
  return {paramKeys:keys,paramLength:params.length,suffixLength:suffix.length,
-   apexFallbackOnly:/^https:\/\/ekodi\.kr(?:\/edu)?\/?$/.test(fallback),fallbackLength:fallback.length,
+   apexFallbackOnly:/^https:\/\/ekodi\.kr(?:\/edu)?\/?$/.test(fallback),fallbackLength:fallback.length,fallbackQuote:fallbackMatch?.[1]==='"'?'double':fallbackMatch?.[1]==="'"?'single':'unmatched',
    suffixGrammar:suffix.replace(/'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"/g,"'<quoted>'").slice(0,850)};
 }
 export function summarizeInlineScriptHashes(html,blocked=[]){
