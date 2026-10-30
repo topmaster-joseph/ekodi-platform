@@ -481,6 +481,7 @@ const sharedSiteTouched=changedFiles.some(file=>
   // GITHUB_TOKEN merges cannot rely on main push workflow events.
   // Preserve the existing explicit Admin verifier release contract.
   file==='scripts/verify-admin-production-ui-e2e.mjs'||
+  file==='scripts/admin-production-ui-coverage.mjs'||
   file==='scripts/ekodi-background-browser-worker.mjs'||
   // Hybrid native browser admin page shares the guarded Site Core release boundary.
   file==='hybrid-execution-admin.js'||
