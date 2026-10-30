@@ -158,6 +158,9 @@
       const response = await fetch(`${API}/api/consultations`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
+        credentials: 'omit',
+        redirect: 'error',
+        cache: 'no-store',
         body: JSON.stringify(payload)
       });
       const body = await response.json().catch(() => ({}));
@@ -184,6 +187,9 @@
             const rollback = await fetch(`${API}/api/consultations/${encodeURIComponent(serverReceipt.id)}/revoke`, {
               method: 'POST',
               headers: { 'content-type': 'application/json' },
+              credentials: 'omit',
+              redirect: 'error',
+              cache: 'no-store',
               body: JSON.stringify({ accessToken: serverReceipt.accessToken })
             });
             autoRevoked = rollback.ok;
@@ -220,6 +226,9 @@
       const response = await fetch(`${API}/api/consultations/${encodeURIComponent(item.id)}/revoke`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
+        credentials: 'omit',
+        redirect: 'error',
+        cache: 'no-store',
         body: JSON.stringify({ accessToken: item.accessToken })
       });
       const body = await response.json().catch(() => ({}));
