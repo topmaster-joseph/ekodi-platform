@@ -31,43 +31,46 @@ Run node --test test/github-api-budget-admission.test.mjs. Use EKODI protected
 source PR, exact-head CI, staged D1 migration, guarded production and
 production read-only verification. No paid service or independent scheduler.
 
-## GitHub App JWT and installed-repository proof (source-only; OFF)
+## Read-only signed GitHub App attestation (source-only, OFF)
 
-A user-provided JSON field verifiedInstallationToken=true is not authentication.
-The admission primitive instead requires a non-serializable WeakSet-branded,
-immutable 25-second proof issued only after the trusted EKODI server calls:
-1. Official GitHub App JWT endpoint GET /app/installations/{installation_id}.
-   GitHub authenticates the App JWT and returns the actual installation ID,
-   App ID and suspension state; these must match owner-controlled environment.
-2. Official POST /app/installations/{installation_id}/access_tokens with
-   repository scope restricted to ekodi-platform. GitHub, not the caller,
-   issues the installation token. It is not saved in D1 or exposed in output.
-3. Official installation-token endpoint GET /installation/repositories,
-   confirming the canonical repository, and storing only GitHub's real
-   x-ratelimit-* core headers in the existing D1 measurement ledger.
+This module now REUSES the existing verified read-only signing and measured
+quota provider github-app-readonly-probe.js. It does not maintain a second
+JWT generator, installation-token issuer, identity lookup, D1 reporter, or
+duplicate GitHub call path. Exactly two outbound GitHub API calls occur only
+after BOTH EKODI_GITHUB_BUDGET_ADMISSION_ENABLED and
+EKODI_GITHUB_READONLY_PROBE_ENABLED are explicitly set true and the real
+server-side private key, App ID and installation ID are provisioned:
 
-A copied proof, expired context, missing App ID or JWT, wrong repository,
-permission error, missing budget headers or D1 failure all reject admission.
-The fetchImpl parameter is strictly an internal deterministic-test seam:
-never accept a browser/request-provided fetch, token, JWT, proof or identity.
+1. The existing probe signs an RS256 JWT using the protected App PKCS#8 key.
+   Official POST /app/installations/{id}/access_tokens explicitly requests
+   only metadata:read permission and a single canonical repository.
+   The actual GitHub grant response is verified for precise repository scope,
+   no extra write rights and a future expiry.
+2. The issued short-lived read-only installation token makes the sole
+   GET /repos/topmaster-joseph/ekodi-platform request, verifies repository
+   identity, and persists only actual GitHub core rate-limit headers to D1.
 
-This implementation does NOT generate the signed App JWT: an owner-provisioned
-EKODI signer is still required. The minted installation access token is used
-only within this bootstrap attestation and is deliberately not exported to
-arbitrary code; issuing a verified token for actual API operations, their
-same-session admission, and safe token refresh are separate pending gates.
+Only successful read-only evidence returns a private WeakSet-branded, frozen,
+25-second in-process attestation proof. Copied object fields and a plain
+verifiedInstallationToken=true boolean cannot mint or impersonate the proof.
+It is proof of the observed App identity, NOT a write-capable installation
+token, operation authorization or release approval. The only outward object
+contains booleans and IDs, not JWTs, tokens or private keys.
 
-Each attestation currently costs GitHub API requests. It must NOT be invoked
-once per operation or per 25-second interval at platform scale. Before
-activation, batch and reuse a trusted server-side issuer session, verify
-measured quota freshness and load-test rate consumption, and connect every
-official GitHub caller to the same authenticated D1 reservation. A new App
-is not a loophole for GitHub primary/secondary rate limits.
+The deterministic test fetchImpl/subtle injection is for trusted internal tests
+only. Never pass a transport, key, proof or identity from HTTP input. The
+existing separate App probe is also OFF by default; keeping either flag absent
+prevents GitHub API requests and D1 mutation.
 
-Keep EKODI_GITHUB_BUDGET_ADMISSION_ENABLED unset. Before activation require
-sovereign GitHub App/JWT setup, least-privilege installed permissions, GitHub
-webhook HMAC, measured telemetry, multi-worker tests, guarded rollout and
-production evidence. This code has no public route or protected merge API.
+The short-lived proof MUST NOT trigger new JWT signing and token issuance for
+every operation. Before activating shared admission, implement a trusted
+bounded issuer/call-session cache, preserve verified same-installation token
+identity on real operations, enroll all official GitHub API callers, load-test
+D1 concurrent leases, signed webhook, actual rate headers, rollback, and
+owner-authorized protected release. No feature flag is changed in this PR.
 
-Run node --test test/github-api-installation-proof.test.mjs
-test/github-api-budget-admission.test.mjs test/github-api-budget-control.test.mjs.
+Tests:
+node --test test/github-api-installation-proof.test.mjs
+test/github-api-budget-admission.test.mjs
+test/github-app-readonly-probe.test.mjs
+test/github-api-budget-control.test.mjs

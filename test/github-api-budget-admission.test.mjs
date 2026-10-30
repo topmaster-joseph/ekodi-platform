@@ -5,25 +5,28 @@ import {reserveTrustedGitHubApiBudget,INSERT_GITHUB_API_RESERVATION} from '../gi
 import {attestGitHubInstallationToken} from '../github-api-installation-proof.js';
 const NOW=Date.parse('2026-10-30T03:00:00Z');
 const ID=54321,APP=76,SHA='a'.repeat(40),key=n=>n.toString(16).padStart(64,'0');
-const issuerEnv={EKODI_GITHUB_BUDGET_ADMISSION_ENABLED:'true',
-  EKODI_GITHUB_INSTALLATION_ID:String(ID),EKODI_GITHUB_APP_ID:String(APP),
-  DB:{prepare(){return {bind(){return {run:async()=>({meta:{changes:1}})};}};}}};
-const mockResponse=(data,headers=new Headers(),status=200)=>({
-  ok:true,status,headers,json:async()=>data
-});
+const rsa=(await import('node:crypto')).generateKeyPairSync('rsa',{modulusLength:2048});
+const issuerEnv={
+  EKODI_GITHUB_BUDGET_ADMISSION_ENABLED:'true',
+  EKODI_GITHUB_READONLY_PROBE_ENABLED:'true',
+  EKODI_GITHUB_APP_ID:String(APP),EKODI_GITHUB_INSTALLATION_ID:String(ID),
+  EKODI_GITHUB_APP_PRIVATE_KEY:rsa.privateKey.export({type:'pkcs8',format:'pem'}),
+  DB:{prepare(){return {bind(){return {run:async()=>({meta:{changes:1}})};}};}}
+};
+const mk=(status,data,h={})=>new Response(JSON.stringify(data),{status,headers:h});
 const attestation=await attestGitHubInstallationToken(issuerEnv,{
-  appJwt:'internal-unit-test-app-signed-jwt',
-  nowMs:NOW,
-  fetchImpl:async url=>url.includes('/app/installations/')&&!url.endsWith('/access_tokens')
-    ?mockResponse({id:ID,app_id:APP,suspended_at:null})
-    :url.endsWith('/access_tokens')
-      ?mockResponse({token:'internal-unit-test-issued-installation-token',
-        expires_at:new Date(NOW+3600000).toISOString()},new Headers(),201)
-      :mockResponse({repositories:[{full_name:'topmaster-joseph/ekodi-platform'}]},new Headers({
+  nowMs:NOW,subtle:(await import('node:crypto')).webcrypto.subtle,
+  fetchImpl:async(url,opts)=>url.endsWith('/access_tokens')
+    ?mk(201,{token:'test-valid-installation-token-with-metadata-only',
+      expires_at:new Date(NOW+3600000).toISOString(),
+      repository_selection:'selected',
+      repositories:[{full_name:'topmaster-joseph/ekodi-platform'}],
+      permissions:{metadata:'read'}})
+    :mk(200,{full_name:'topmaster-joseph/ekodi-platform'},{
       'x-ratelimit-resource':'core','x-ratelimit-limit':'5000',
       'x-ratelimit-remaining':'4999',
       'x-ratelimit-reset':String(Math.floor((NOW+3600000)/1000))
-    }))
+    })
 });
 if(!attestation.verified)throw Error('test attestation setup failed');
 const ctx=attestation.context;
