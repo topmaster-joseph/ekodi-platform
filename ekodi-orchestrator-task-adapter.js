@@ -173,12 +173,33 @@ async function persistCompletionEvidence(db,row,evidence,{actor='ekodi-orchestra
   const completionRecord={kind:'production-completion-reconciliation',source:evidence.source,pr:evidence.pr,requiredWorkflows:evidence.requiredWorkflows,deployments:evidence.deployments,live:evidence.live};
   const previousResult=parseJson(row.result_json,{});
   const resultJson={...(previousResult&&typeof previousResult==='object'&&!Array.isArray(previousResult)?previousResult:{}),ok:true,completion:'reconciled',mergeCommitSha:evidence.pr.mergeCommitSha,completedBy:'ekodi-orchestrator'};
-  const result=await db.prepare(`UPDATE ekodi_orchestrator_tasks SET state='completed',state_version=state_version+1,pr_ref=?,
+  const productionEvidence=safeJson(evidence);
+  const nextVersion=Number(row.state_version)+1;
+  const update=db.prepare(`UPDATE ekodi_orchestrator_tasks SET state='completed',state_version=state_version+1,pr_ref=?,
     result_json=?,evidence_json=?,production_evidence_json=?,updated_at=?,completed_at=?
-    WHERE task_id=? AND requester_id=? AND state=? AND state_version=?
-      AND branch_ref=?`)
-    .bind(evidence.pr.url,safeJson(resultJson),safeJson([...evidenceList,completionRecord]),safeJson(evidence),updated,updated,row.task_id,row.requester_id,row.state,Number(row.state_version),row.branch_ref).run();
-  if(changes(result)<1)return ownedTask(db,row.task_id,row.requester_id);
+    WHERE task_id=? AND requester_id=? AND state=? AND state_version=? AND branch_ref=?`)
+    .bind(evidence.pr.url,safeJson(resultJson),safeJson([...evidenceList,completionRecord]),
+      productionEvidence,updated,updated,row.task_id,row.requester_id,row.state,
+      Number(row.state_version),row.branch_ref);
+  // D1 batch is atomic. If the CAS misses, the audit INSERT deliberately
+  // violates the NOT NULL event.task_id constraint, rolling back the update.
+  // Never mark a production task complete without its durable audit event.
+  const audit=db.prepare(`INSERT INTO ekodi_orchestrator_task_events
+    (task_id,seq,from_state,to_state,actor,reason,evidence_json,created_at)
+    SELECT CASE WHEN EXISTS (
+      SELECT 1 FROM ekodi_orchestrator_tasks WHERE task_id=? AND
+        state='completed' AND state_version=? AND branch_ref=?
+        AND production_evidence_json=?
+    ) THEN ? ELSE NULL END,
+      COALESCE((SELECT MAX(seq) FROM ekodi_orchestrator_task_events WHERE task_id=?),0)+1,
+      ?, 'completed', ?, ?, ?, ?`)
+    .bind(row.task_id,nextVersion,row.branch_ref,productionEvidence,row.task_id,row.task_id,
+      row.state,actor,reason,safeJson(completionRecord),updated);
+  let operations;
+  try{operations=await db.batch([update,audit])}catch{return ownedTask(db,row.task_id,row.requester_id)}
+  if(changes(operations?.[0])!==1||changes(operations?.[1])!==1){
+    return ownedTask(db,row.task_id,row.requester_id);
+  }
   await db.prepare(`UPDATE ai_command_tasks SET state='verified',result_json=?,evidence_json=?,updated_at=?,closed_at=?,lease_until=NULL
     WHERE id=? AND state NOT IN ('verified','ignored','failed')`)
     .bind(safeJson(resultJson),safeJson(completionRecord),updated,updated,row.task_id).run().catch(()=>null);
@@ -186,7 +207,6 @@ async function persistCompletionEvidence(db,row,evidence,{actor='ekodi-orchestra
     db.prepare('INSERT OR IGNORE INTO ekodi_orchestrator_external_refs (task_id,provider,ref_type,ref_value,created_at) VALUES (?,?,?,?,?)').bind(row.task_id,'github','pull_request',String(evidence.pr.number),updated),
     db.prepare('INSERT OR IGNORE INTO ekodi_orchestrator_external_refs (task_id,provider,ref_type,ref_value,created_at) VALUES (?,?,?,?,?)').bind(row.task_id,'github','merge_commit',evidence.pr.mergeCommitSha,updated),
   ]).catch(()=>null);
-  await appendEvent(db,row.task_id,row.state,'completed',actor,reason,completionRecord);
   return ownedTask(db,row.task_id,row.requester_id);
 }
 
