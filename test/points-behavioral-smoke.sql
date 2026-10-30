@@ -4,7 +4,7 @@
 -- Never run this fixture outside a rollback transaction.
 DO $points_test$
 DECLARE
-  auth_id uuid; person_id uuid; campaign_id uuid;
+  auth_id uuid; person_id uuid; v_campaign_id uuid;
   site_a text := 'qa_' || left(replace(gen_random_uuid()::text,'-',''),12);
   site_b text := 'qb_' || left(replace(gen_random_uuid()::text,'-',''),12);
   result jsonb;
@@ -31,7 +31,7 @@ BEGIN
     values(site_a,site_b,1,2,150,true);
   insert into public.ekodi_point_donation_campaigns(site_id,title,recipient_name,enabled)
     values(site_b,'QA donation campaign','QA recipient',true)
-    returning campaign_id into campaign_id;
+    returning campaign_id into v_campaign_id;
   begin
     perform ekodi_points_private.award_activity(site_a,person_id,'active','points-invalid-0001',
       '{"verified_active_seconds":10}'::jsonb);
@@ -53,9 +53,9 @@ BEGIN
   if (result->>'credited')::bigint <> 5 then raise exception 'Transfer failed: %',result; end if;
   result := ekodi_points_private.transfer_points(site_a,site_b,person_id,10,'points-transfer-0001');
   if result->>'reason' <> 'DUPLICATE' then raise exception 'Transfer replay'; end if;
-  result := ekodi_points_private.donate_points(campaign_id,person_id,3,'points-donate-0001');
+  result := ekodi_points_private.donate_points(v_campaign_id,person_id,3,'points-donate-0001');
   if (result->>'balance')::bigint <> 2 then raise exception 'Donation failed: %',result; end if;
-  result := ekodi_points_private.donate_points(campaign_id,person_id,3,'points-donate-0001');
+  result := ekodi_points_private.donate_points(v_campaign_id,person_id,3,'points-donate-0001');
   if result->>'reason' <> 'DUPLICATE' then raise exception 'Donation replay'; end if;
   select balance into amt from public.ekodi_point_wallets where site_id=site_a and user_id=person_id;
   if amt <> 25 then raise exception 'Incorrect source balance %',amt; end if;
