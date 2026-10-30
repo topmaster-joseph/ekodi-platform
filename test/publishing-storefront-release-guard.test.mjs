@@ -18,11 +18,16 @@ const live=channel=>({verifyPublicRelease:async req=>({
 })});
 test('only matching pre-existing catalogue identities remain in legacy sale lane',async()=>{
   assert.equal(existingEditionAllowed({
-    id:'BOOK-EKODI-000001',title:'에코디언을 찾아서',author:'정찬균'}),true);
+    id:'BOOK-EKODI-000001',title:'에코디언을 찾아서',author:'정찬균',catalogNo:'EB-MONO-001'}),true);
   assert.equal(existingEditionAllowed({
-    id:'BOOK-EKODI-000002',title:'AI 시대의 진보와 빈곤',author:'정찬균'}),true);
+    id:'BOOK-EKODI-000002',title:'AI 시대의 진보와 빈곤',author:'정찬균',catalogNo:'EB-MONO-002'}),true);
   assert.equal(existingEditionAllowed({...newBook,id:'BOOK-EKODI-000001'}),false);
   assert.equal(existingEditionAllowed(newBook),false);
+  assert.equal(existingEditionAllowed({id:'BOOK-EKODI-000001',catalogNo:'EB-MONO-001',
+    title:'에코디언을 찾아서',author:'정찬균',publisherRelease:newBook.publisherRelease}),false);
+  assert.equal(existingEditionAllowed({id:'BOOK-EKODI-000001',catalogNo:'EB-MONO-001',
+    title:'에코디언을 찾아서',author:'정찬균',
+    directSale:{enabled:true,fileKey:'BOOK-EKODI-NEW-003/ebook.epub'}}),false);
 });
 test('new private JSON entry cannot self-authorize checkout without publisher RPC',async()=>{
   assert.equal(directSaleBook(cat,newBook.id),newBook,'admin may stage EPUB but not sell');
