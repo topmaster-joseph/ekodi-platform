@@ -26,6 +26,7 @@ export function renderBnslovePublicPage() {
     .top{position:sticky;top:0;z-index:5;background:rgba(246,247,243,.96);border-bottom:1px solid var(--line);backdrop-filter:blur(10px)}
     .top-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:70px}
     .brand{display:flex;gap:9px;align-items:center;text-decoration:none;font-size:20px;font-weight:850;letter-spacing:-.045em;white-space:nowrap}
+    .skip-link{position:absolute;left:-9999px;top:8px;background:white;padding:10px 14px;z-index:20}.skip-link:focus{left:12px}
     .symbol{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:11px;background:var(--accent);color:white;font-size:18px}
     .nav{display:flex;flex-wrap:wrap;gap:clamp(8px,1.4vw,20px);align-items:center}
     .nav a{text-decoration:none;color:#47564e;font-size:14px;font-weight:650}
@@ -72,7 +73,7 @@ export function renderBnslovePublicPage() {
   </style>
 </head>
 <body>
-  <a class="brand" href="#main" style="position:absolute;left:-9999px" onfocus="this.style.left='12px'" onblur="this.style.left='-9999px'">본문으로 이동</a>
+  <a class="skip-link" href="#main">본문으로 이동</a>
   <header class="top"><div class="wrap top-inner">
     <a class="brand" href="/bnslove/"><span class="symbol" aria-hidden="true">♥</span>형제사랑회</a>
     <nav class="nav" aria-label="형제사랑회 주요 메뉴">
