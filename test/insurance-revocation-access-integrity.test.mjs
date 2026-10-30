@@ -87,10 +87,15 @@ test('21 or more valid revocation credentials are retained, not silently discard
   assert.equal(h.ctx.canPersistRevocationAccess(),true);
   assert.equal(JSON.parse(h.snapshot()[ACCESS_KEY]).length,21);
   assert.equal(h.calls.remove.length,1,'temporary storage-check key must be cleaned');
-  assert.throws(()=>h.ctx.writeAccess(Array.from({length:257},(_,i)=>({
+  const older=Array.from({length:257},(_,i)=>({
     id:'con_'+i,accessToken:'ic_'+i
-  }))),/capacity/);
-  assert.equal(JSON.parse(h.snapshot()[ACCESS_KEY]).length,21);
+  }));
+  h.ctx.writeAccess(older);
+  assert.equal(JSON.parse(h.snapshot()[ACCESS_KEY]).length,257,'historical over-capacity tokens stay available');
+  assert.throws(()=>h.ctx.saveAccess({ id:'con_new',status:'new' },'ic_new'),/capacity/);
+  assert.equal(JSON.parse(h.snapshot()[ACCESS_KEY]).length,257,'failed new create must not remove existing tokens');
+  h.ctx.writeAccess(h.ctx.loadAccess().filter(item=>item.id!=='con_0'));
+  assert.equal(JSON.parse(h.snapshot()[ACCESS_KEY]).length,256,'customer may still revoke old tokens');
 });
 
 test('corrupt, disabled, or full browser storage blocks server submission entirely',async()=>{
