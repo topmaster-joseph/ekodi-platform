@@ -3,10 +3,11 @@ import {analyzeProposalSources,makeGuidedProposalDraft,calculateProposalBudget,r
 import {buildProposalDocx} from './docx.js';
 import {buildProposalBudgetXlsx} from './xlsx.js';
 import {buildProposalPptx} from './pptx.js';
+import {inspectOfficeDocument} from './import.js';
 const byId=id=>document.getElementById(id);
 let project=null;
 let sources=[];
-const LABEL={text:'텍스트 미리보기',url:'웹주소 · 미검증',unsupported:'내용 분석 미지원',tooLarge:'허용 용량 초과'};
+const LABEL={text:'텍스트 미리보기',url:'웹주소 · 미검증',unsupported:'본문 분석 미지원',inspected:'구조 확인 · 발췌 없음',tooLarge:'허용 용량 초과'};
 function status(message){byId('status').textContent=message;}
 function make(tag,content,className){
   const element=document.createElement(tag);
@@ -22,7 +23,7 @@ function renderSourceList(){
   for(const source of sources){
     const li=make('li');
     const name=make('strong',source.name+' ');
-    const label=make('span',LABEL[source.kind]||source.kind,'filetag');
+    const label=make('span',(source.format?source.format.toUpperCase()+' · ':'')+(LABEL[source.kind]||source.kind),'filetag');
     li.append(name,label);
     if(source.kind==='text'){
       const details=make('details');
@@ -31,6 +32,7 @@ function renderSourceList(){
       pre.style.whiteSpace='pre-wrap';pre.style.overflowWrap='anywhere';
       details.append(pre);li.append(details);
     }
+    if(source.inspectionNote)li.append(make('p',source.inspectionNote,'muted'));
     list.append(li);
   }
 }
@@ -41,12 +43,20 @@ async function addSources(files){
     if(sources.length>=20){status('프로젝트당 자료는 최대 20개로 제한됩니다.');break;}
     const ext=(file.name.split('.').pop()||'').toLowerCase();
     const isText=['txt','md','csv','json'].includes(ext);
-    const kind=file.size>750000?'tooLarge':isText?'text':'unsupported';
-    let excerpt='';
-    if(kind==='text'){try{excerpt=(await file.text()).slice(0,6000);}catch{excerpt='';}}
-    sources.push({name:file.name.slice(0,240),kind,excerpt});
+    const isOffice=['hwpx','docx','xlsx','pptx'].includes(ext);
+    let kind=file.size>(isOffice?12_000_000:750000)?'tooLarge':isText?'text':'unsupported';
+    let excerpt='',inspectionNote='';
+    if(kind==='text'){try{excerpt=(await file.text()).slice(0,6000);}catch{kind='unsupported';}}
+    else if(isOffice&&kind!=='tooLarge'){
+      try{
+        const inspected=await inspectOfficeDocument(file);
+        excerpt=inspected.excerpt;inspectionNote=inspected.note;
+        kind=excerpt?'text':'inspected';
+      }catch(error){kind='unsupported';inspectionNote=error.message;}
+    }
+    sources.push({name:file.name.slice(0,240),kind,excerpt,format:isOffice?ext:'',inspectionNote});
   }
-  renderSourceList();status('자료 '+sources.length+'건을 브라우저에서 분류했습니다. 실제 근거 확인과 문서 변환은 수행하지 않았습니다.');
+  renderSourceList();status('자료 '+sources.length+'건을 로컬에서 분류·발췌했습니다. 원본 서식 보존·근거 사실 확인·자동 변환은 수행하지 않았습니다.');
 }
 byId('sourceInput').addEventListener('change',event=>{addSources(event.target.files).catch(()=>status('첨부 자료를 읽지 못했습니다.'));event.target.value='';});
 function addReferenceUrl(){
