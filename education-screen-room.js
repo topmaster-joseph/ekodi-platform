@@ -8,7 +8,7 @@ const hash=async s=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',enc.
 const key=()=>{const a=crypto.getRandomValues(new Uint8Array(32));return [...a].map(x=>x.toString(16).padStart(2,'0')).join('');};
 const validId=s=>/^[a-f0-9]{32}$/.test(String(s||''));
 const cleanName=s=>String(s||'').replace(/[<>&"']/g,'').trim().slice(0,36);
-export const ROOM_TTL_MS=2*60*60*1000;
+export const ROOM_TTL_MS=4*60*60*1000;
 export const MAX_LEARNERS=30;
 export class EducationScreenRoom {
  constructor(ctx,env){this.ctx=ctx;this.env=env;}
