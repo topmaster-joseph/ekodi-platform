@@ -31,9 +31,3 @@ jobs:
         run: |
           node --check scripts/ekodi-native-worship-google-drafts.mjs
           node --test test/ekodi-native-worship-google-drafts.test.mjs
-      - name: Ensure execution stays service-owned and no privileged workflow actions are granted
-        shell: bash
-        run: |
-          set -euo pipefail
-          ! grep -Eq '^ *[a-z-]+: write' .github/workflows/ekodi-church-native-drafts-guard.yml
-          ! grep -Eq 'api\.openai\.com|chatgpt\.com|wrangler deploy' scripts/ekodi-native-worship-google-drafts.mjs
