@@ -18,7 +18,7 @@ const CF_LOADER_BODIES=[
   // Observed 2026-10-30 on real ekodi.kr Chromium: Cloudflare Precursor
   // normalizes URL origins before loading its own fixed same-origin script.
   // Only the exact grammar and EKODI-owned fallback origins are accepted.
-  /^\(function\(\)\{if\(!document\.body\)return;var l=window\.location,o;try\{o=new URL\(l\.origin\)\.origin\}catch\(e\)\{try\{o=new URL\(new URL\(l\.href\)\.origin\)\.origin\}catch\(e\)\{o='https:\/\/(?:ekodi\.kr(?:\/edu)?\/?|edu\.ekodi\.kr\/?)'\}\}var u='\/cdn-cgi\/challenge-platform\/scripts\/precursor\/main\.js',s=document\.createElement\('script'\);s\.src=o\?new URL\(u,o\)\.href:u;document\.head\.appendChild\(s\);\}\)\(\);$/
+  /^\(function\(\)\{if\(!document\.body\)return;var l=window\.location,o;try\{o=new URL\(l\.origin\)\.origin\}catch\(e\)\{try\{o=new URL\(new URL\(l\.href\)\.origin\)\.origin\}catch\(e\)\{o='https:\/\/ekodi\.kr(?:\/edu)?\/?'\}\}var u='\/cdn-cgi\/challenge-platform\/scripts\/precursor\/main\.js',s=document\.createElement\('script'\);s\.src=o\?new URL\(u,o\)\.href:u;document\.head\.appendChild\(s\);\}\)\(\);$/
 ];
 const trustedInlineHashes=new Set();
 export function cloudflareJsDetectionHashes(html){
