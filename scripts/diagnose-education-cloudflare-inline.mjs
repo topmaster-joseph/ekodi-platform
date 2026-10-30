@@ -17,7 +17,11 @@ export function redactedCloudflareSuffix(body){
  const suffix=body.slice(at+2);
  const fallbackMatch=/\}catch\(e\)\{o=(['"])([^'"]{0,100})\1\}\}var u=/.exec(suffix);
  const fallback=fallbackMatch?.[2]||'';
+ const loader=/var u=(['"])([^'"]{0,300})\\1,s=document\\.createElement/.exec(suffix)?.[2]||'';
+ const loaderURL=loader.startsWith('/cdn-cgi/challenge-platform/')?new URL(loader,'https://ekodi.kr'):null;
  return {paramKeys:keys,paramLength:params.length,suffixLength:suffix.length,
+   loaderLength:loader.length,loaderPath:loaderURL?.pathname||null,
+   loaderQueryKeys:loaderURL?[...new Set(loaderURL.searchParams.keys())]:[],
    apexFallbackOnly:/^https:\/\/ekodi\.kr(?:\/edu)?\/?$/.test(fallback),fallbackLength:fallback.length,fallbackQuote:fallbackMatch?.[1]==='"'?'double':fallbackMatch?.[1]==="'"?'single':'unmatched',
    suffixGrammar:suffix.replace(/'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"/g,"'<quoted>'").slice(0,850)};
 }
