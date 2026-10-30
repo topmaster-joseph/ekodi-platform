@@ -55,7 +55,7 @@ function roster(list,active){
 }
 function connect(id,role,credential){
  const proto=role==='host'?'host.'+credential:'student.'+credential.id+'.'+credential.token;
- const url=new URL(BASE+'/'+id+'/ws',location.origin);
+ const url=new URL(`${BASE}/${id}/ws`,location.origin);
  url.protocol=location.protocol==='https:'?'wss:':'ws:';
  ws=new WebSocket(url.toString(),['ekodi-screen-v1',proto]);
  ws.addEventListener('open',()=>say(role==='host'?'수업방 연결됨 · 수강생 QR을 보여주세요.':'수업에 연결됐습니다. 강사의 선택을 기다립니다.'));
@@ -100,7 +100,7 @@ async function join(){
  if(name.length<2){say('이름을 두 글자 이상 입력하세요.');return;}
  $('joinRoom').disabled=true;
  try{
-  const r=await fetch(BASE+'/'+roomId+'/join',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({joinKey:invite,name}),credentials:'same-origin'});
+  const r=await fetch(`${BASE}/${roomId}/join`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({joinKey:invite,name}),credentials:'same-origin'});
   const data=await r.json();
   if(!r.ok)throw Error(data.code||'join_failed');
   room=data;
