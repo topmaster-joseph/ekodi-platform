@@ -35,9 +35,11 @@
   }
   function writeAccess(items) {
     // Never silently evict an older, still-valid consultation revocation token.
-    if (!Array.isArray(items) || items.length > MAX_ACCESS_ITEMS) {
-      throw new Error('revocation_access_capacity');
+    if (!Array.isArray(items)) {
+      throw new Error('revocation_access_invalid');
     }
+    // Capacity must only block NEW requests, never a customer attempting
+    // to remove a token from a historical over-capacity browser store.
     const encoded = JSON.stringify(items);
     localStorage.setItem(ACCESS_KEY, encoded);
     if (localStorage.getItem(ACCESS_KEY) !== encoded) throw new Error('revocation_access_verify_failed');
@@ -137,6 +139,7 @@
   function saveAccess(consultation, accessToken) {
     if (!consultation?.id || !accessToken) throw new Error('revocation_access_missing');
     const items = loadAccess().filter(item => item.id !== consultation.id);
+    if (items.length >= MAX_ACCESS_ITEMS) throw new Error('revocation_access_capacity');
     items.unshift({ id: consultation.id, accessToken, status: consultation.status, createdAt: consultation.createdAt });
     writeAccess(items);
   }
