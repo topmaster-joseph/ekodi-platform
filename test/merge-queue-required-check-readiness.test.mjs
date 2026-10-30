@@ -6,7 +6,7 @@ const ci=readFileSync('.github/workflows/ci.yml','utf8');
 const gate=readFileSync('.github/workflows/ekodi-ai-orchestration-gate.yml','utf8');
 for(const [name,w] of [['CI',ci],['EKODI AI Orchestration Gate',gate]]){
   test(name+' checks genuinely run on merge_group rather than copying legacy PR statuses',()=>{
-    assert.match(w,/\n  pull_request:\s*\n  merge_group:\s*\n    types: \[checks_requested\]/);
+    assert.match(w,/\n  pull_request:(?:\s*\n    (?:#.*|types: \[[^\]\n]+\]))*\s*\n  merge_group:\s*\n    types: \[checks_requested\]/);
     assert.match(w,/on:\s*\n  (?:push:|pull_request:)/);
     assert.match(w,/STATUS_HEAD_SHA: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/);
     assert.match(w,/STATUS_PR_NUMBER: \$\{\{ github\.event\.pull_request\.number \|\| '' \}\}/);
