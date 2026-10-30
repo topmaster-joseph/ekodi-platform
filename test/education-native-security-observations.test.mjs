@@ -144,6 +144,13 @@ test('observed Cloudflare Precursor origin-normalizing script is hash-audited, n
    const msg="Executing inline script violates the following Content Security Policy directive 'script-src 'self' https://cdn.jsdelivr.net https://ekodi.kr'. Either the 'unsafe-inline' keyword, a hash ('sha256-"+hash+"'), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.";
    assert.deepEqual(m.verifyKnownSecurityBlocks({consoleBlocks:[{message:msg}]}),{ok:true,reason:'known-security-blocks-observed-and-enforced'});
  }
+ const doubleQuoted=params+loader('https://ekodi.kr/edu/')
+   .replace("o='https://ekodi.kr/edu/'",'o="https://ekodi.kr/edu/"')
+   .replace("u='/cdn-cgi/challenge-platform/scripts/precursor/main.js'",'u="/cdn-cgi/challenge-platform/scripts/precursor/main.js"')
+   .replace("createElement('script')",'createElement("script")');
+ assert.deepEqual(m.cloudflareJsDetectionHashes('<script>'+doubleQuoted+'</script>'),
+   [createHash('sha256').update(doubleQuoted).digest('base64')],
+   'strict Cloudflare grammar supports either consistent quote style but not other executable changes');
  for(const bad of [loader('https://evil.example/'),loader('https://ekodi.kr/').replace('/cdn-cgi/challenge-platform/scripts/precursor/main.js','https://evil.example/loader.js'),loader('https://ekodi.kr/').replace('document.head.appendChild(s);',"alert('unexpected');document.head.appendChild(s);")]){
    assert.deepEqual(m.cloudflareJsDetectionHashes('<script>'+params+bad+'</script>'),[],'modified executable or fallback must never be trusted');
  }
