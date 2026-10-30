@@ -280,9 +280,19 @@
       panel.innerHTML = '<div class="panel-head"><div><p class="eyebrow">SERVER CONSULTATIONS</p><h3>설계사 상담요청 관리</h3></div><span class="pill neutral" id="serverConsultationCount">0건</span></div><p class="muted">이 브라우저에서 요청한 서버 상담만 표시합니다. 철회하면 서버의 암호화 연락처와 선택 공유대화가 제거됩니다.</p><div id="serverConsultationList" class="list-empty">현재 브라우저에 철회 가능한 상담요청 기록이 없습니다.</div>';
       privacy.append(panel);
     }
-    const items = loadAccess();
     const count = panel.querySelector('#serverConsultationCount');
     const list = panel.querySelector('#serverConsultationList');
+    let items;
+    try { items = readAccessStrict(); }
+    catch {
+      if (count) count.textContent = '확인 필요';
+      if (list) {
+        list.className = 'notice';
+        list.textContent = '이 브라우저의 상담 철회 기록을 안전하게 읽을 수 없습니다. 기록을 삭제하거나 초기화하지 말고 관리자에게 복구를 요청하세요.';
+        list.setAttribute('role', 'alert');
+      }
+      return;
+    }
     if (count) count.textContent = `${items.length}건`;
     if (!list) return;
     if (!items.length) {
