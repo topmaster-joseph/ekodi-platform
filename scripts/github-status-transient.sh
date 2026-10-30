@@ -14,7 +14,7 @@ ekodi_github_status_note() {
         -n "${GITHUB_STEP_SUMMARY:-}" &&
         -f "${GITHUB_STEP_SUMMARY:-}" &&
         -w "${GITHUB_STEP_SUMMARY:-}" ]]; then
-    printf '\n- EKODI GitHub status transport: `%s` · HTTP `%s` · transient retries `%s` · required gate stays blocked; no credentials recorded.\n' \
+    printf '\n- EKODI GitHub status transport: `%s` · HTTP `%s` · transient retries `%s` · this request did not publish success; check outcome requires independent verification. No credentials recorded.\n' \
       "$kind" "$code" "$attempts" >> "$GITHUB_STEP_SUMMARY" || :
   fi
 }
