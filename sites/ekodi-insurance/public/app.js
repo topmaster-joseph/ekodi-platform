@@ -39,6 +39,19 @@ function loadState(){
 }
 function normalizeState(value){const base=blankState();const merged={...base,...(value||{})};merged.advisorChat={...base.advisorChat,...(value?.advisorChat||{})};if(!Array.isArray(merged.advisorChat.messages))merged.advisorChat.messages=[];if(!Array.isArray(merged.consultations))merged.consultations=[];return merged;}
 function saveState(){if(localRecordsUnreadable)return;localStorage.setItem(KEY,JSON.stringify(state));renderDashboard();renderPolicies();renderClaimPolicies();renderPrivacy();renderAdvisorChat();}
+// Keep malformed browser records strictly read-only even if a later view
+// dynamically inserts an enabled control after initial page setup.
+function guardUnreadableRecordInteraction(event){
+  if(!localRecordsUnreadable)return;
+  if(event.type==='click'){
+    const control=event.target?.closest?.('button,input,[role="button"]');
+    if(!control||control.matches('[data-view], .nav button'))return;
+  }
+  event.preventDefault();
+  event.stopImmediatePropagation();
+}
+document.addEventListener('click',guardUnreadableRecordInteraction,true);
+document.addEventListener('submit',guardUnreadableRecordInteraction,true);
 function money(v){return new Intl.NumberFormat('ko-KR').format(Number(v||0))+'원';}
 function uid(){return crypto?.randomUUID?.()||String(Date.now())+Math.random().toString(16).slice(2);}
 function esc(v=''){return String(v).replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]));}
