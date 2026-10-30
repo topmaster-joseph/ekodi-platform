@@ -13,14 +13,14 @@ const okSnap=(id,number)=>({id,ok:true,response:repo(number)});
 const htmls=AUTOMATION_MIGRATION_PR.map(x=>okSnap(x.id,x.number));
 test('migration is independently classified for two official EKODI protected PRs',()=>{
   const data=projectEkodiNativeMigration({proposals:htmls});
-  assert.deepEqual(data.nativePrs.map(x=>x.pr),[6890,6920]);
+  assert.deepEqual(data.nativePrs.map(x=>x.pr),[7044,6920]);
   assert.ok(data.nativePrs.every(x=>x.state==='pending'));
   assert.equal(data.owner,'EKODI Orchestrator');
   assert.equal(data.externalActionsTaken,0);
   assert.equal(data.authorizedToChangeLegacy,false);
   assert.equal(data.verifiedLegacyDisabledCount,0);
   assert.equal(data.migrationCompleted,false);
-  assert.equal(data.tasks.length,4);
+  assert.equal(data.tasks.length,5);
   assert.ok(data.tasks.every(x=>x.cutoverAllowed===false));
 });
 test('a merged source is NOT proof that real automation delivery exists',()=>{
@@ -56,6 +56,8 @@ test('social and church public signals are only preliminary infrastructure obser
   assert.ok(d.tasks[1].missingEvidence.includes('anonymous_viewer_e2e'));
   assert.ok(d.tasks[2].missingEvidence.includes('actual_manuscript'));
   assert.ok(d.tasks[3].missingEvidence.includes('real_worship_google_slides'));
+  assert.ok(d.tasks[4].missingEvidence.includes('public_naver_proof_http_200'));
+  assert.ok(d.tasks[4].missingEvidence.includes('naver_provider_ownership_confirmation'));
 });
 test('main EKODI hourly watch adds native migration evidence without generating new scheduled automation',async()=>{
   const urls=[];
@@ -68,7 +70,7 @@ test('main EKODI hourly watch adds native migration evidence without generating 
     if(url.includes('/release-receipt?'))return new Response(JSON.stringify({ok:true,authorized:true,state:'completed'}),{status:200});
     if(url.includes('/actions/workflows/'))return new Response(JSON.stringify({workflow_runs:[{event:'schedule',status:'completed',conclusion:'success',id:11,created_at:'2026-10-30T01:37:00Z'}]}),{status:200});
     if(url.endsWith('/pulls/3794'))return new Response(JSON.stringify({state:'closed',merged:true}),{status:200});
-    if(url.endsWith('/pulls/6890'))return new Response(JSON.stringify(repo(6890)),{status:200});
+    if(url.endsWith('/pulls/7044'))return new Response(JSON.stringify(repo(7044)),{status:200});
     if(url.endsWith('/pulls/6920'))return new Response(JSON.stringify(repo(6920)),{status:200});
     return new Response('',{status:404});
   };
@@ -79,17 +81,17 @@ test('main EKODI hourly watch adds native migration evidence without generating 
   assert.equal(report.automationMigration.nativePrs[1].state,'pending');
   assert.ok(urls.every(x=>x.opts.method==='GET'&&x.opts.redirect==='error'));
   assert.ok(urls.every(x=>!String(x.url).includes('openai.com')));
-  assert.equal(urls.filter(x=>x.url.includes('/pulls/6890')).length,1);
+  assert.equal(urls.filter(x=>x.url.includes('/pulls/7044')).length,1);
   assert.equal(urls.filter(x=>x.url.includes('/pulls/6920')).length,1);
 });
 test('privacy and fail-closed behavior are preserved, no forged legacy task disable',async()=>{
   const script=await readFile(new URL('../scripts/ekodi-native-migration-status.mjs',import.meta.url),'utf8');
   const runner=await readFile(new URL('../scripts/ekodi-native-operations-watch.mjs',import.meta.url),'utf8');
-  assert.equal(LEGACY_MIGRATION_WORKLOADS.length,4);
+  assert.equal(LEGACY_MIGRATION_WORKLOADS.length,5);
   assert.doesNotMatch(script,/fetch\(|api\.openai\.com|chatgpt\.com|method:'POST'|updateAutomation/);
   assert.match(runner,/AUTOMATION_MIGRATION_PR/);
   assert.match(runner,/projectEkodiNativeMigration/);
   assert.match(runner,/report\.automationMigration/);
-  const d=projectEkodiNativeMigration({proposals:[{...htmls[0],response:{number:6890,base:{ref:'main'},head:{sha:SHA},merged_at:'2026-10-30',merge_commit_sha:SHA,accessToken:'not-to-be-retained'}}]});
+  const d=projectEkodiNativeMigration({proposals:[{...htmls[0],response:{number:7044,base:{ref:'main'},head:{sha:SHA},merged_at:'2026-10-30',merge_commit_sha:SHA,accessToken:'not-to-be-retained'}}]});
   assert.ok(!JSON.stringify(d).includes('not-to-be-retained'));
 });
