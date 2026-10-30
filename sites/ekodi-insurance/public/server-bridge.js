@@ -183,7 +183,11 @@
       // different. Never prompt a second server POST after an accepted response:
       // that may create an unrevocable duplicate consultation.
       console.error('Insurance handoff bridge', error?.message === 'revocation_access_missing' ? 'missing revocation credential' : 'request or storage error');
-      if (serverAccepted) {
+      if (serverAccepted && tokenSaved) {
+        // An incidental form/UI failure after safely storing the bearer token
+        // must not cancel a valid customer request or lose revoke access.
+        toast('상담요청이 등록되었습니다. 철회 권한은 이 브라우저에 저장되었습니다.');
+      } else if (serverAccepted) {
         // When the server has accepted but the one-time revoke capability
         // cannot be kept, use that capability exactly once to cancel the
         // newly created request. Never retry on 429/quota or network errors.
