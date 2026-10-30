@@ -155,6 +155,7 @@
     const submit = form?.querySelector('button[type="submit"]');
     if (submit) submit.disabled = true;
     let serverAccepted = false;
+    let tokenSaved = false;
     let autoRevoked = false;
     let serverReceipt = null;
     try {
@@ -171,6 +172,7 @@
       serverAccepted = true;
       serverReceipt = { id: body.consultation?.id, accessToken: body.accessToken };
       saveAccess(body.consultation, body.accessToken);
+      tokenSaved = true;
       form?.reset();
       form?.classList.add('hidden');
       toast(body.consultation?.transcriptShared
@@ -219,7 +221,7 @@
     } finally {
       // An accepted but unconfirmed server request must never be accidentally
       // submitted a second time by repeated clicks.
-      if (submit) submit.disabled = serverAccepted && !autoRevoked;
+      if (submit) submit.disabled = serverAccepted && !tokenSaved && !autoRevoked;
     }
   }
   async function revokeConsultation(item, button) {
