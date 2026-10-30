@@ -7,7 +7,7 @@
   "visibility": "private-editorial-review",
   "publicCatalog": false,
   "commercialActivation": false,
-  "notice": "Public repository stores only noncommercial draft metadata. No full manuscripts, private Drive links, signed agreements, ISBN guesses, or release assets.",
+  "notice": "Review-9 fingerprints and gate status are local conversation artifact evidence only. Public repository contains no manuscript bytes, contracts, keys, private source URLs, or sale authorization. No book can be published without signed author and publisher release approvals.",
   "volumes": [
     {
       "reviewId": "EJT-01-REVIEW",
@@ -17,7 +17,7 @@
       "author": "정찬균",
       "genre": "academic-theology",
       "fieldId": "humanities",
-      "manuscriptRevision": "review-8",
+      "manuscriptRevision": "review-9",
       "stage": "citation-and-rights-review",
       "language": "ko",
       "sourceAssetLocation": "private-external-not-linked",
@@ -49,7 +49,7 @@
       "author": "정찬균",
       "genre": "general-theology",
       "fieldId": "humanities",
-      "manuscriptRevision": "review-8",
+      "manuscriptRevision": "review-9",
       "stage": "literary-and-rights-review",
       "language": "ko",
       "sourceAssetLocation": "private-external-not-linked",
